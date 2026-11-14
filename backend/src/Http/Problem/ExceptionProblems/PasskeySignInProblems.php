@@ -6,9 +6,9 @@ namespace App\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
-use App\Service\Passkey\Exception\AssertionRejectedException;
-use App\Service\Passkey\Exception\PasskeySignInDisabledException;
-use App\Service\Passkey\Exception\UnknownPasskeyCredentialException;
+use App\Service\Identity\Passkey\Exception\AssertionRejectedException;
+use App\Service\Identity\Passkey\Exception\PasskeySignInDisabledException;
+use App\Service\Identity\Passkey\Exception\UnknownPasskeyCredentialException;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class PasskeySignInProblems implements ExceptionProblemsInterface

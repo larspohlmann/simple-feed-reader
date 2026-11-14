@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\Model;
+namespace App\Service\Ingestion\Parser\Model;
 
 /** What a `media[]` element shows. Backed by the string the API emits. */
 enum VisualMediaKind: string

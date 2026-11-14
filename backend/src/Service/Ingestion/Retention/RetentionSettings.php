@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Retention;
+namespace App\Service\Ingestion\Retention;
 
 use App\Entity\RetentionSetting;
 use App\Entity\RetentionWindows;
-use App\Service\Retention\StoredRetentionSetting\StoredRetentionSettingInterface;
+use App\Service\Ingestion\Retention\StoredRetentionSetting\StoredRetentionSettingInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class RetentionSettings

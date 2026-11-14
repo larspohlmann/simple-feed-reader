@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Scoring\Factory;
+namespace App\Tests\Service\Curation\Recommendation\Scoring\Factory;
 
-use App\Service\Recommendation\Pool\Model\ArticleLineModel;
-use App\Service\Recommendation\Scoring\Factory\RerankQueryFactory;
-use App\Service\Recommendation\Scoring\Factory\RerankRequestFactory;
-use App\Service\Recommendation\Scoring\Model\ScoringBudgetModel;
-use App\Service\Recommendation\Scoring\Model\ScoringReaderModel;
-use App\Service\Recommendation\Scoring\Model\ScoringRequestModel;
+use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Curation\Recommendation\Scoring\Factory\RerankQueryFactory;
+use App\Service\Curation\Recommendation\Scoring\Factory\RerankRequestFactory;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringBudgetModel;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringReaderModel;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringRequestModel;
 use PHPUnit\Framework\TestCase;
 
 final class RerankRequestFactoryTest extends TestCase

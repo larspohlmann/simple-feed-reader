@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Scoring\Factory;
+namespace App\Service\Curation\Recommendation\Scoring\Factory;
 
-use App\Service\Recommendation\Pool\Model\ArticleLineModel;
-use App\Service\Recommendation\Scoring\Model\ScoringRequestModel;
-use App\Service\Recommendation\Scoring\Model\SystemOneRequestModel;
-use App\Service\Recommendation\Scoring\Support\QuestionId;
-use App\Service\Recommendation\Scoring\Support\ScoringArticle;
+use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringRequestModel;
+use App\Service\Curation\Recommendation\Scoring\Model\SystemOneRequestModel;
+use App\Service\Curation\Recommendation\Scoring\Support\QuestionId;
+use App\Service\Curation\Recommendation\Scoring\Support\ScoringArticle;
 
 final readonly class SystemOneRequestFactory
 {

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Discovery\FeedOffer;
+namespace App\Tests\Service\Sourcing\Discovery\FeedOffer;
 
 use App\Enum\SourceFormat;
-use App\Service\Discovery\FeedOffer\WordPressRestProbe;
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\Model\FetchResponseModel;
+use App\Service\Sourcing\Discovery\FeedOffer\WordPressRestProbe;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
 use App\Tests\Support\StubFeedFetcher;
 use PHPUnit\Framework\TestCase;
 

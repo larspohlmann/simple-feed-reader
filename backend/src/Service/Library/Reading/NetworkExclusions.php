@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reading;
+namespace App\Service\Library\Reading;
 
 use App\Entity\NetworkExclusion;
 use App\Entity\User;

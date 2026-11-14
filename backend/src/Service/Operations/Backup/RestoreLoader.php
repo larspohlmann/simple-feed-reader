@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup;
+namespace App\Service\Operations\Backup;
 
 use App\Entity\User;
 use App\Repository\FeedRepository;
-use App\Service\Account\AccountSettings;
-use App\Service\Backup\Factory\RestoredFoundationFactory;
-use App\Service\Backup\Model\RestoreResultModel;
-use App\Service\Backup\Pass\RestoreLoadPass;
-use App\Service\Search\SavedSearchSlug;
+use App\Service\Identity\Account\AccountSettings;
+use App\Service\Operations\Backup\Factory\RestoredFoundationFactory;
+use App\Service\Operations\Backup\Model\RestoreResultModel;
+use App\Service\Operations\Backup\Pass\RestoreLoadPass;
+use App\Service\Library\Search\SavedSearchSlug;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**

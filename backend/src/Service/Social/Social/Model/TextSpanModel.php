@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Model;
+namespace App\Service\Social\Social\Model;
 
 /** A run of a post's text, addressed in UTF-8 bytes as Bluesky facets are. */
 final readonly class TextSpanModel

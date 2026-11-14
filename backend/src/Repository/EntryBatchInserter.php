@@ -10,9 +10,9 @@ use App\Entity\EntryMedia;
 use App\Entity\QuotedPostContent;
 use App\Enum\CommentsLoad;
 use App\Enum\ShareKind;
-use App\Service\Backup\Dto\EntryLine;
-use App\Service\SavedPosts\Support\SavedFeedUrl;
-use App\Service\Url\EntryUrlHash;
+use App\Service\Operations\Backup\Dto\EntryLine;
+use App\Service\Library\SavedPosts\Support\SavedFeedUrl;
+use App\Service\Foundation\Url\EntryUrlHash;
 use Doctrine\DBAL\Connection;
 
 /**

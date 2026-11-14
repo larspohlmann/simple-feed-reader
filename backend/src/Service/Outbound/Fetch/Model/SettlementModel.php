@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\Model;
+namespace App\Service\Outbound\Fetch\Model;
 
 /**
  * What a key comes to: its finished value, or a request for it.

@@ -6,7 +6,7 @@ namespace App\Dto\Social;
 
 use App\Entity\LinkCardContent;
 use App\Enum\SocialNetwork;
-use App\Service\Social\Model\LinkTargetModel;
+use App\Service\Social\Social\Model\LinkTargetModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class LinkTargetQuery

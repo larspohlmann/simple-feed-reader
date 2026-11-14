@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Recommendation\Feed\Model\RecommendationRunStatusModel;
+use App\Service\Curation\Recommendation\Feed\Model\RecommendationRunStatusModel;
 
 /**
  * The shape every /api/recommendations/runs* action returns. `elapsedSeconds` comes from the server's clock, so the

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Share\Support;
+namespace App\Service\Social\Share\Support;
 
 use App\Entity\LinkCardContent;
-use App\Service\Html\Support\HtmlDocumentParser;
-use App\Service\Html\Support\TextNodes;
-use App\Service\Share\Model\SharedLinksModel;
-use App\Service\Text\Support\LinkedPlainText;
-use App\Service\Url\Support\AbsoluteHttpUrl;
+use App\Service\Foundation\Html\Support\HtmlDocumentParser;
+use App\Service\Foundation\Html\Support\TextNodes;
+use App\Service\Social\Share\Model\SharedLinksModel;
+use App\Service\Foundation\Text\Support\LinkedPlainText;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Dom\Text;

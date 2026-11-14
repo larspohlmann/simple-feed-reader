@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Passkey\Model;
+namespace App\Service\Identity\Passkey\Model;
 
 /**
  * A redeemed challenge: its account and, for a registration, the user handle minted for it (both null for a

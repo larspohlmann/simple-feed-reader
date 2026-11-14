@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Settings\Crypto;
+namespace App\Service\Outbound\Mail\Settings\Crypto;
 
 use App\Entity\SealedSecret;
-use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Crypto\Model\SecretBindingModel;
+use App\Service\Foundation\Crypto\InstanceSecretCipher;
+use App\Service\Foundation\Crypto\Model\SecretBindingModel;
 
 /** The instance-wide mail password; its own binding keeps it apart from every other sealed secret. */
 final readonly class MailPasswordCipher

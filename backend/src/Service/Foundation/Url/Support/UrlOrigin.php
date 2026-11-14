@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Url\Support;
+namespace App\Service\Foundation\Url\Support;
 
 /** The one definition of a URL's origin, so no caller re-assembles one and forgets the port. */
 final class UrlOrigin

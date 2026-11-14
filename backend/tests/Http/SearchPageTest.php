@@ -11,7 +11,7 @@ use App\Pagination\EntryCursor;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowMarks;
 use App\Repository\EntryListRowSubscription;
-use App\Service\Search\Model\EntrySearchResultModel;
+use App\Service\Library\Search\Model\EntrySearchResultModel;
 use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\JsonMappers;
 use PHPUnit\Framework\TestCase;

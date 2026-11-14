@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Model;
+namespace App\Service\Content\Reader\Model;
 
 /** What IntlDateFormatter::parse() counts its offset in: PHP 8.4.27 switched from code points to bytes. */
 enum ParseOffsetUnit

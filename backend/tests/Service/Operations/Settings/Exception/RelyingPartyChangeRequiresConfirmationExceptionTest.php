@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Settings\Exception;
+namespace App\Tests\Service\Operations\Settings\Exception;
 
-use App\Service\Settings\Exception\RelyingPartyChangeRequiresConfirmationException;
+use App\Service\Operations\Settings\Exception\RelyingPartyChangeRequiresConfirmationException;
 use PHPUnit\Framework\TestCase;
 
 final class RelyingPartyChangeRequiresConfirmationExceptionTest extends TestCase

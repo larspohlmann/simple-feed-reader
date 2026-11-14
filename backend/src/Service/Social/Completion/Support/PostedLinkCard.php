@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Completion\Support;
+namespace App\Service\Social\Completion\Support;
 
 use App\Entity\Entry;
 use App\Entity\LinkCardContent;
-use App\Service\LinkCard\Support\StorableLinkCard;
-use App\Service\Share\Support\ShareTargets;
+use App\Service\Content\LinkCard\Support\StorableLinkCard;
+use App\Service\Social\Share\Support\ShareTargets;
 
 /**
  * A network's card filed under the link the entry shares. Mastodon builds it from the status's first link but names

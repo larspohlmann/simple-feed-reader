@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Search\Support;
+namespace App\Tests\Service\Library\Search\Support;
 
-use App\Service\Search\Support\LikePattern;
+use App\Service\Library\Search\Support\LikePattern;
 use PHPUnit\Framework\TestCase;
 
 final class LikePatternTest extends TestCase

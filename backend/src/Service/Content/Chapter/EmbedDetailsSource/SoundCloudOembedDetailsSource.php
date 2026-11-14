@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Chapter\EmbedDetailsSource;
+namespace App\Service\Content\Chapter\EmbedDetailsSource;
 
-use App\Service\Chapter\GuardedDescriptionRequest;
-use App\Service\Chapter\Model\ChapteredEmbed;
-use App\Service\Chapter\Model\EmbedAddressModel;
-use App\Service\Chapter\Model\EmbedDescriptionModel;
-use App\Service\Fetch\Model\ApiRequestModel;
-use App\Service\Url\Support\HttpsImageUrl;
+use App\Service\Content\Chapter\GuardedDescriptionRequest;
+use App\Service\Content\Chapter\Model\ChapteredEmbed;
+use App\Service\Content\Chapter\Model\EmbedAddressModel;
+use App\Service\Content\Chapter\Model\EmbedDescriptionModel;
+use App\Service\Outbound\Fetch\Model\ApiRequestModel;
+use App\Service\Foundation\Url\Support\HttpsImageUrl;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /** Reads a track's title, description and artwork from SoundCloud's oEmbed endpoint, which needs no key and tells no length. */

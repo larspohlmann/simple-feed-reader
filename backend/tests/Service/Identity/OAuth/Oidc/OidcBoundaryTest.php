@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\OAuth\Oidc;
+namespace App\Tests\Service\Identity\OAuth\Oidc;
 
-use App\Service\OAuth\OAuthProvider\AbstractOidcProvider;
-use App\Service\OAuth\Oidc\Model\IdTokenModel;
-use App\Service\OAuth\Oidc\Pass\IdTokenVerifier;
-use App\Service\OAuth\Oidc\Pass\TokenEndpoint;
+use App\Service\Identity\OAuth\OAuthProvider\AbstractOidcProvider;
+use App\Service\Identity\OAuth\Oidc\Model\IdTokenModel;
+use App\Service\Identity\OAuth\Oidc\Pass\IdTokenVerifier;
+use App\Service\Identity\OAuth\Oidc\Pass\TokenEndpoint;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -136,7 +136,7 @@ final class OidcBoundaryTest extends TestCase
         $file = (new \ReflectionClass(IdTokenModel::class))->getFileName();
         self::assertIsString($file);
 
-        // src/Service/OAuth/Oidc/Model/IdTokenModel.php -> src/
+        // src/Service/Identity/OAuth/Oidc/Model/IdTokenModel.php -> src/
         $src = \dirname($file, 5);
         self::assertSame('src', basename($src));
 

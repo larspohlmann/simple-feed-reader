@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Support;
+namespace App\Tests\Service\Social\Social\Support;
 
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Parser\Support\EntryTitle;
-use App\Service\Social\Support\BlueskyTimelinePage;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Ingestion\Parser\Support\EntryTitle;
+use App\Service\Social\Social\Support\BlueskyTimelinePage;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch;
+namespace App\Tests\Service\Outbound\Fetch;
 
-use App\Service\Fetch\HostThrottle;
+use App\Service\Outbound\Fetch\HostThrottle;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;

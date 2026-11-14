@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Account;
+namespace App\Service\Identity\Account;
 
 use App\Entity\User;
 use App\Repository\DigestSettingsRepository;
 use App\Repository\FeedDirectoryScopeRepository;
 use App\Repository\ReadingSettingsRepository;
 use App\Repository\SharingSettingsRepository;
-use App\Service\Account\Model\AccountSettingsModel;
+use App\Service\Identity\Account\Model\AccountSettingsModel;
 
 final readonly class AccountSettings
 {

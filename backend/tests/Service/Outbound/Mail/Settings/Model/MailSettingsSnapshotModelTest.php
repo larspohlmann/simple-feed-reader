@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\Settings\Model;
+namespace App\Tests\Service\Outbound\Mail\Settings\Model;
 
 use App\Entity\MailConnection;
 use App\Entity\MailServerSettings;
 use App\Entity\SealedSecret;
 use App\Enum\MailEncryption;
-use App\Service\Mail\Settings\Model\MailSettingsSnapshotModel;
+use App\Service\Outbound\Mail\Settings\Model\MailSettingsSnapshotModel;
 use PHPUnit\Framework\TestCase;
 
 final class MailSettingsSnapshotModelTest extends TestCase

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialAccountStatus;
-use App\Service\Social\ActingAccountGuard;
-use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\ActingAccountGuard;
+use App\Service\Social\Social\Exception\SocialAccountNeedsReconnectException;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;

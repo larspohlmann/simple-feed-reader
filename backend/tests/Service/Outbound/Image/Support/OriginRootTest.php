@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Image\Support;
+namespace App\Tests\Service\Outbound\Image\Support;
 
-use App\Service\Image\Support\OriginRoot;
+use App\Service\Outbound\Image\Support\OriginRoot;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run;
+namespace App\Service\Curation\Recommendation\Run;
 
 use App\Entity\RecommendationRun;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
-use App\Service\Recommendation\Exception\RecommendationTickLockLostException;
-use App\Service\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive;
+use App\Service\Curation\Recommendation\Exception\RecommendationRunCancelledException;
+use App\Service\Curation\Recommendation\Exception\RecommendationTickLockLostException;
+use App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive;
 
 /**
  * Where a tick finds out it must stop: the user cancelled the run, or TickLockKeepalive saw another process take the

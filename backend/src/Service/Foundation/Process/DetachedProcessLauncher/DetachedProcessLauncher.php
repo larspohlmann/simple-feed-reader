@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Process\DetachedProcessLauncher;
+namespace App\Service\Foundation\Process\DetachedProcessLauncher;
 
-use App\Service\Process\DetachedConsoleCommandLine;
-use App\Service\Process\ShellCommandRunner\ShellCommandRunnerInterface;
+use App\Service\Foundation\Process\DetachedConsoleCommandLine;
+use App\Service\Foundation\Process\ShellCommandRunner\ShellCommandRunnerInterface;
 use Psr\Log\LoggerInterface;
 
 final readonly class DetachedProcessLauncher implements DetachedProcessLauncherInterface

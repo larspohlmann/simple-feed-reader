@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader;
+namespace App\Tests\Service\Content\Reader;
 
-use App\Service\Html\DesktopViewport;
-use App\Service\Html\PictureSources;
-use App\Service\Html\Support\HtmlDocumentParser;
-use App\Service\Reader\Model\LeadImageCandidateModel;
-use App\Service\Reader\Model\PageImageInventoryModel;
-use App\Service\Reader\PageRepair\LazyImageSources;
-use App\Service\Reader\ReaderLeadImage;
+use App\Service\Foundation\Html\DesktopViewport;
+use App\Service\Foundation\Html\PictureSources;
+use App\Service\Foundation\Html\Support\HtmlDocumentParser;
+use App\Service\Content\Reader\Model\LeadImageCandidateModel;
+use App\Service\Content\Reader\Model\PageImageInventoryModel;
+use App\Service\Content\Reader\PageRepair\LazyImageSources;
+use App\Service\Content\Reader\ReaderLeadImage;
 use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 

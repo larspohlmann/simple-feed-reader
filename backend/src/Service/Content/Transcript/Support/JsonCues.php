@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Transcript\Support;
+namespace App\Service\Content\Transcript\Support;
 
-use App\Service\Transcript\Exception\TranscriptUnusableException;
-use App\Service\Transcript\Model\TranscriptCueModel;
+use App\Service\Content\Transcript\Exception\TranscriptUnusableException;
+use App\Service\Content\Transcript\Model\TranscriptCueModel;
 
 /** The podcast namespace's JSON transcript: `segments[]` of `startTime`, `speaker`, `body`. */
 final class JsonCues

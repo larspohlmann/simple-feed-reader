@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Html\Support;
+namespace App\Service\Foundation\Html\Support;
 
 use Dom\Element;
 

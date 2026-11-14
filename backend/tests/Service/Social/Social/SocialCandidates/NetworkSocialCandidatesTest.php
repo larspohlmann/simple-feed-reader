@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\SocialCandidates;
+namespace App\Tests\Service\Social\Social\SocialCandidates;
 
 use App\Entity\SocialAccount;
-use App\Service\Social\CandidateSource\CandidateSourceInterface;
-use App\Service\Social\Model\NetworkCandidatesModel;
-use App\Service\Social\Model\NetworkCollectionsModel;
-use App\Service\Social\Model\SocialCollectionModel;
-use App\Service\Social\SocialCandidates\NetworkSocialCandidates;
+use App\Service\Social\Social\CandidateSource\CandidateSourceInterface;
+use App\Service\Social\Social\Model\NetworkCandidatesModel;
+use App\Service\Social\Social\Model\NetworkCollectionsModel;
+use App\Service\Social\Social\Model\SocialCollectionModel;
+use App\Service\Social\Social\SocialCandidates\NetworkSocialCandidates;
 use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ServiceLocator;

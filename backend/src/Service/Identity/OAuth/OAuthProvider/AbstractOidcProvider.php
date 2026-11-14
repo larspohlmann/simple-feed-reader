@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\OAuth\OAuthProvider;
+namespace App\Service\Identity\OAuth\OAuthProvider;
 
-use App\Service\OAuth\Exception\OAuthFailedException;
-use App\Service\OAuth\Model\OAuthIdentityModel;
-use App\Service\OAuth\Oidc\Pass\IdTokenVerifier;
-use App\Service\OAuth\Oidc\Pass\TokenEndpoint;
+use App\Service\Identity\OAuth\Exception\OAuthFailedException;
+use App\Service\Identity\OAuth\Model\OAuthIdentityModel;
+use App\Service\Identity\OAuth\Oidc\Pass\IdTokenVerifier;
+use App\Service\Identity\OAuth\Oidc\Pass\TokenEndpoint;
 use Psr\Clock\ClockInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 

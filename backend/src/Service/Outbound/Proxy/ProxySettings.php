@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Proxy;
+namespace App\Service\Outbound\Proxy;
 
 use App\Entity\ProxyServerSettings;
-use App\Service\Proxy\Crypto\ProxyPasswordCipher;
-use App\Service\Proxy\Model\ProxySettingsSnapshotModel;
-use App\Service\Proxy\Model\ProxySettingsUpdateModel;
-use App\Service\Proxy\StoredProxySettings\StoredProxySettingsInterface;
+use App\Service\Outbound\Proxy\Crypto\ProxyPasswordCipher;
+use App\Service\Outbound\Proxy\Model\ProxySettingsSnapshotModel;
+use App\Service\Outbound\Proxy\Model\ProxySettingsUpdateModel;
+use App\Service\Outbound\Proxy\StoredProxySettings\StoredProxySettingsInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class ProxySettings

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Auth;
+namespace App\Tests\Service\Identity\Auth;
 
 use App\Exception\ValidationException;
-use App\Service\Auth\AltchaService;
+use App\Service\Identity\Auth\AltchaService;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;

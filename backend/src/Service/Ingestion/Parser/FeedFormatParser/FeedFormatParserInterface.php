@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\FeedFormatParser;
+namespace App\Service\Ingestion\Parser\FeedFormatParser;
 
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Parser\Model\ParsedFeedModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
 
 /**
  * A parser for one feed dialect (RSS 2.0, RSS 1.0, Atom 1.0/0.3). Each claims its own document root through

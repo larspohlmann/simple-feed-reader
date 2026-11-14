@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\Support;
+namespace App\Service\Ingestion\Parser\Support;
 
 use App\Entity\EntryTranscript;
 use App\Enum\TranscriptFormat;
-use App\Service\Parser\Model\FeedNamespace;
-use App\Service\Parser\Model\ParsedTranscriptModel;
-use App\Service\Parser\Pass\CoreElement;
+use App\Service\Ingestion\Parser\Model\FeedNamespace;
+use App\Service\Ingestion\Parser\Model\ParsedTranscriptModel;
+use App\Service\Ingestion\Parser\Pass\CoreElement;
 
 final class DeclaredTranscripts
 {

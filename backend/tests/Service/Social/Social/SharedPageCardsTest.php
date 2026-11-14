@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\LinkCardContent;
-use App\Service\LinkCard\Model\PageCardModel;
-use App\Service\LinkCard\PageCardReader\PageCardReaderInterface;
-use App\Service\Reader\Exception\PageFetchException;
-use App\Service\Social\SharedPageCards;
+use App\Service\Content\LinkCard\Model\PageCardModel;
+use App\Service\Content\LinkCard\PageCardReader\PageCardReaderInterface;
+use App\Service\Content\Reader\Exception\PageFetchException;
+use App\Service\Social\Social\SharedPageCards;
 use App\Tests\Support\RecordingLogger;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LogLevel;

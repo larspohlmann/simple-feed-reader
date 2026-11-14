@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reading;
+namespace App\Service\Library\Reading;
 
 use App\Entity\User;
 use App\Repository\EntryListRepository;
 use App\Repository\EntrySearchQuery;
-use App\Service\Search\Model\SearchTermsModel;
+use App\Service\Library\Search\Model\SearchTermsModel;
 
 /** Marks read every unread entry matching a search term. A search spans every feed, so no watermark scopes it. */
 final readonly class SearchMarkReadService

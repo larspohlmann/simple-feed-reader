@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Proxy\ProxySettings;
+use App\Service\Outbound\Proxy\ProxySettings;
 
 trait ConfiguresAProxy
 {

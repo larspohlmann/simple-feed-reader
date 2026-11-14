@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Support;
+namespace App\Tests\Service\Social\Social\Support;
 
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Comments\Model\CommentCountsModel;
-use App\Service\Comments\Model\CommentPostModel;
-use App\Service\Comments\Model\CommentViewerModel;
-use App\Service\Social\Support\CommentPost;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Content\Comments\Model\CommentCountsModel;
+use App\Service\Content\Comments\Model\CommentPostModel;
+use App\Service\Content\Comments\Model\CommentViewerModel;
+use App\Service\Social\Social\Support\CommentPost;
 use PHPUnit\Framework\TestCase;
 
 final class CommentPostTest extends TestCase

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Content\Reader;
 
-use App\Service\Text\Support\Whitespace;
+use App\Service\Foundation\Text\Support\Whitespace;
 use Dom\Element;
 
 /** Removes what a removal leaves empty, wrapper by wrapper, up to but never including <body>. */

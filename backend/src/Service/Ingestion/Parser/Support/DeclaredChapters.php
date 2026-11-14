@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\Support;
+namespace App\Service\Ingestion\Parser\Support;
 
 use App\Entity\EntryChapter;
-use App\Service\Chapter\Support\ChapterClock;
-use App\Service\Chapter\Support\ChapterSequence;
-use App\Service\Parser\Model\FeedNamespace;
-use App\Service\Parser\Model\ParsedChaptersModel;
-use App\Service\Parser\Pass\CoreElement;
+use App\Service\Content\Chapter\Support\ChapterClock;
+use App\Service\Content\Chapter\Support\ChapterSequence;
+use App\Service\Ingestion\Parser\Model\FeedNamespace;
+use App\Service\Ingestion\Parser\Model\ParsedChaptersModel;
+use App\Service\Ingestion\Parser\Pass\CoreElement;
 
 final class DeclaredChapters
 {

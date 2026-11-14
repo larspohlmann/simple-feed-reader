@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\Exception;
+namespace App\Service\Outbound\Fetch\Exception;
 
-use App\Service\Fetch\Model\ResponseSizeLimit;
+use App\Service\Outbound\Fetch\Model\ResponseSizeLimit;
 
 final class ResponseTooLargeException extends FetchException
 {

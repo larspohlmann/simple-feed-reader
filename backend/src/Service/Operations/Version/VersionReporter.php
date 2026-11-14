@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Version;
+namespace App\Service\Operations\Version;
 
-use App\Service\Version\LatestReleaseReader\LatestReleaseReaderInterface;
-use App\Service\Version\Model\LatestReleaseModel;
-use App\Service\Version\Model\SemanticVersionModel;
-use App\Service\Version\Model\VersionReportModel;
-use App\Service\Version\ReleaseVersionReader\ReleaseVersionReaderInterface;
+use App\Service\Operations\Version\LatestReleaseReader\LatestReleaseReaderInterface;
+use App\Service\Operations\Version\Model\LatestReleaseModel;
+use App\Service\Operations\Version\Model\SemanticVersionModel;
+use App\Service\Operations\Version\Model\VersionReportModel;
+use App\Service\Operations\Version\ReleaseVersionReader\ReleaseVersionReaderInterface;
 
 final readonly class VersionReporter
 {

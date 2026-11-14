@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Maintenance\MaintenanceSweep;
+namespace App\Service\Operations\Maintenance\MaintenanceSweep;
 
-use App\Service\Image\ImageVerificationSweep;
-use App\Service\Image\Model\ImageVerificationBudgetModel;
-use App\Service\Image\Model\ImageVerificationReportModel;
+use App\Service\Outbound\Image\ImageVerificationSweep;
+use App\Service\Outbound\Image\Model\ImageVerificationBudgetModel;
+use App\Service\Outbound\Image\Model\ImageVerificationReportModel;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 

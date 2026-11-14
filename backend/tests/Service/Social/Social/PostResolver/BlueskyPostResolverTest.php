@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\PostResolver;
+namespace App\Tests\Service\Social\Social\PostResolver;
 
 use App\Entity\LinkCardContent;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\Model\PostPreviewModel;
-use App\Service\Social\Model\PostReferenceModel;
-use App\Service\Social\Model\SocialCountsModel;
-use App\Service\Social\PostResolver\BlueskyPostResolver;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Model\PostPreviewModel;
+use App\Service\Social\Social\Model\PostReferenceModel;
+use App\Service\Social\Social\Model\SocialCountsModel;
+use App\Service\Social\Social\PostResolver\BlueskyPostResolver;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\Attributes\DataProvider;

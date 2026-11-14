@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Maintenance\MaintenanceSweep;
+namespace App\Service\Operations\Maintenance\MaintenanceSweep;
 
-use App\Service\Trending\Model\TrendingRebuildReportModel;
-use App\Service\Trending\TrendingRebuild;
+use App\Service\Curation\Trending\Model\TrendingRebuildReportModel;
+use App\Service\Curation\Trending\TrendingRebuild;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: 'trending', priority: 10)]

@@ -7,8 +7,8 @@ namespace App\Http;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Repository\RecommendationRunLogRepository;
-use App\Service\Recommendation\Feed\Model\RecommendationDebugLogModel;
-use App\Service\Recommendation\Profile\Model\ProfileDebugLogModel;
+use App\Service\Curation\Recommendation\Feed\Model\RecommendationDebugLogModel;
+use App\Service\Curation\Recommendation\Profile\Model\ProfileDebugLogModel;
 
 /**
  * Response shapes for the recommendation debug log: poll-cheap, bodies never ride along, only sizes, except

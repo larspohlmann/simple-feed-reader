@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Profile;
+namespace App\Tests\Service\Curation\Recommendation\Profile;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\ProfileRun;
@@ -16,20 +16,20 @@ use App\Enum\ProfileRunTrigger;
 use App\Enum\RequestAdjustment;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunLogRepository;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Ai\Exception\CredentialsRejectedException;
-use App\Service\Ai\Exception\ProviderRejectedRequestException;
-use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\Exception\RetryableProviderException;
-use App\Service\Ai\Model\RetryPlanModel;
-use App\Service\Ai\RateLimitedCalls;
-use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
-use App\Service\Recommendation\Profile\ProfileConnections;
-use App\Service\Recommendation\Profile\ProfileRunFailure;
-use App\Service\Recommendation\Profile\ProfileRunTick;
-use App\Service\Recommendation\Run\Model\TickDriver;
-use App\Service\Recommendation\Run\RecommendationRunAdvancer;
-use App\Service\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Ai\Exception\CredentialsRejectedException;
+use App\Service\Curation\Ai\Exception\ProviderRejectedRequestException;
+use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
+use App\Service\Curation\Ai\Exception\RetryableProviderException;
+use App\Service\Curation\Ai\Model\RetryPlanModel;
+use App\Service\Curation\Ai\RateLimitedCalls;
+use App\Service\Curation\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
+use App\Service\Curation\Recommendation\Profile\ProfileConnections;
+use App\Service\Curation\Recommendation\Profile\ProfileRunFailure;
+use App\Service\Curation\Recommendation\Profile\ProfileRunTick;
+use App\Service\Curation\Recommendation\Run\Model\TickDriver;
+use App\Service\Curation\Recommendation\Run\RecommendationRunAdvancer;
+use App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AiSettingsRowMover;
 use App\Tests\Support\RecommendationRunFixtures;

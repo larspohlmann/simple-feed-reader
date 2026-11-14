@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\SavedPosts\Factory;
+namespace App\Service\Library\SavedPosts\Factory;
 
 use App\Entity\Feed;
 use App\Entity\InclusionChange;
@@ -10,9 +10,9 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Feed\Factory\FeedFactory;
-use App\Service\SavedPosts\Support\SavedFeedUrl;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Ingestion\Feed\Factory\FeedFactory;
+use App\Service\Library\SavedPosts\Support\SavedFeedUrl;
 
 final readonly class SavedFeedFactory
 {

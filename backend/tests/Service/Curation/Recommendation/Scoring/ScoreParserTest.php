@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Scoring;
+namespace App\Tests\Service\Curation\Recommendation\Scoring;
 
-use App\Service\Ai\Model\ProviderCallReceiptModel;
-use App\Service\Recommendation\Scoring\Model\ScoringReplyModel;
-use App\Service\Recommendation\Scoring\ScoreParser;
+use App\Service\Curation\Ai\Model\ProviderCallReceiptModel;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringReplyModel;
+use App\Service\Curation\Recommendation\Scoring\ScoreParser;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

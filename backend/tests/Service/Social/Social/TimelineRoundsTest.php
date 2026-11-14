@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
-use App\Service\Social\Model\SocialAccountSlotModel;
-use App\Service\Social\Model\SocialServerSlotModel;
-use App\Service\Social\TimelineRounds;
+use App\Service\Social\Social\Model\SocialAccountSlotModel;
+use App\Service\Social\Social\Model\SocialServerSlotModel;
+use App\Service\Social\Social\TimelineRounds;
 use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\PrivateFeeds;
 use App\Tests\Support\SocialAccounts;

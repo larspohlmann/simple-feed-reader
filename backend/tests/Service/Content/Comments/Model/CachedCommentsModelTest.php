@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Comments\Model;
+namespace App\Tests\Service\Content\Comments\Model;
 
-use App\Service\Comments\Model\CachedCommentsModel;
+use App\Service\Content\Comments\Model\CachedCommentsModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

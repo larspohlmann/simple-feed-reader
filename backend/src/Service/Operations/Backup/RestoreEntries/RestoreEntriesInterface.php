@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\RestoreEntries;
+namespace App\Service\Operations\Backup\RestoreEntries;
 
 use App\Entity\Entry;
 

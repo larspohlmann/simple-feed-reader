@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\Exception;
+namespace App\Service\Outbound\Fetch\Exception;
 
 /** A direct request after a proxy refusal is not allowed: there is no proxy, or it forbids falling back. */
 final class DirectRouteUnavailableException extends \RuntimeException

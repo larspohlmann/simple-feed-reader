@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Exception;
+namespace App\Service\Curation\Recommendation\Exception;
 
 /**
  * Control flow, not a fault: another process holds this tick's per-user lock now, and writing this tick's result would

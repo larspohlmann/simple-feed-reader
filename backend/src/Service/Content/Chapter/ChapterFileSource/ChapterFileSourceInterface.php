@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Chapter\ChapterFileSource;
+namespace App\Service\Content\Chapter\ChapterFileSource;
 
 use App\Entity\EntryChapter;
-use App\Service\Chapter\Exception\ChapterFileUnreachableException;
+use App\Service\Content\Chapter\Exception\ChapterFileUnreachableException;
 
 interface ChapterFileSourceInterface
 {

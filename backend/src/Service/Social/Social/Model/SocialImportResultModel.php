@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Model;
+namespace App\Service\Social\Social\Model;
 
-use App\Service\Subscription\Model\BulkSubscribeResultModel;
+use App\Service\Library\Subscription\Model\BulkSubscribeResultModel;
 
 final readonly class SocialImportResultModel
 {

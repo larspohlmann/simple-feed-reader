@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Catalog\Factory;
+namespace App\Service\Sourcing\Catalog\Factory;
 
 use App\Entity\CatalogCategory;
 use App\Repository\CatalogCategoryRepository;
-use App\Service\Catalog\Model\CatalogCategoryDetailsModel;
+use App\Service\Sourcing\Catalog\Model\CatalogCategoryDetailsModel;
 
 final readonly class CatalogCategoryFactory
 {

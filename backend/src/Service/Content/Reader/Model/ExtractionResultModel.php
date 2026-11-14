@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Model;
+namespace App\Service\Content\Reader\Model;
 
 /**
  * An extraction's outcome: the cleaned article, or why it failed, so the client falls back to the feed body.

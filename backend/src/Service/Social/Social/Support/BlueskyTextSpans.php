@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
-use App\Service\Social\Model\TextSpanModel;
+use App\Service\Social\Social\Model\TextSpanModel;
 
 /** Finds the links, hashtags and mentions in a post's text, the way Bluesky's own clients detect them. */
 final class BlueskyTextSpans

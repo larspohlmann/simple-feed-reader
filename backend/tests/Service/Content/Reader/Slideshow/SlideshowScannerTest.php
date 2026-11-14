@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Slideshow;
+namespace App\Tests\Service\Content\Reader\Slideshow;
 
-use App\Service\Reader\Slideshow\SlideCaptionResolver;
-use App\Service\Reader\Slideshow\SlideImageResolver;
-use App\Service\Reader\Slideshow\SlideshowRecognizer\MarkupCarouselRecognizer;
-use App\Service\Reader\Slideshow\SlideshowRecognizer\TagesschauCarouselRecognizer;
-use App\Service\Reader\Slideshow\SlideshowScanner;
+use App\Service\Content\Reader\Slideshow\SlideCaptionResolver;
+use App\Service\Content\Reader\Slideshow\SlideImageResolver;
+use App\Service\Content\Reader\Slideshow\SlideshowRecognizer\MarkupCarouselRecognizer;
+use App\Service\Content\Reader\Slideshow\SlideshowRecognizer\TagesschauCarouselRecognizer;
+use App\Service\Content\Reader\Slideshow\SlideshowScanner;
 use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 

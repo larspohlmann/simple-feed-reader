@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Sanitize;
+namespace App\Tests\Service\Foundation\Sanitize;
 
-use App\Service\Sanitize\EntrySanitizer;
-use App\Service\Sanitize\TrailingBlankRemover;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Foundation\Sanitize\TrailingBlankRemover;
 use PHPUnit\Framework\TestCase;
 
 final class EntrySanitizerTest extends TestCase

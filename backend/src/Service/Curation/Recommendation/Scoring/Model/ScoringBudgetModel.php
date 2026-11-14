@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Scoring\Model;
+namespace App\Service\Curation\Recommendation\Scoring\Model;
 
 /** One scoring request's limits: the model's window, how many articles it may carry, and the reader's share. */
 final readonly class ScoringBudgetModel

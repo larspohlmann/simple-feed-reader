@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Scoring\Support;
+namespace App\Tests\Service\Curation\Recommendation\Scoring\Support;
 
-use App\Service\Ai\Model\ProviderCallUsageModel;
-use App\Service\Recommendation\Scoring\Support\RerankReplyDecoder;
+use App\Service\Curation\Ai\Model\ProviderCallUsageModel;
+use App\Service\Curation\Recommendation\Scoring\Support\RerankReplyDecoder;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

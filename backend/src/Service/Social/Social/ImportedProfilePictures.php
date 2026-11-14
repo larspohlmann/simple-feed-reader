@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\Feed;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Repository\FeedRepository;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Social\Model\FollowAvatarsModel;
-use App\Service\Social\Support\ProfileFeedUrl;
-use App\Service\Url\Support\AbsoluteHttpUrl;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Social\Social\Model\FollowAvatarsModel;
+use App\Service\Social\Social\Support\ProfileFeedUrl;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 
 final readonly class ImportedProfilePictures
 {

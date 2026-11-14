@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\SocialAccount;
-use App\Service\Bluesky\AppViewClient;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Fetch\Model\ApiRequestModel;
-use App\Service\Fetch\Model\ApiResponseModel;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Model\NetworkCollectionsModel;
-use App\Service\Social\Model\ResolvedCollectionsModel;
-use App\Service\Social\Model\SavedItemsModel;
-use App\Service\Social\Model\SocialCollectionModel;
-use App\Service\Social\Support\CuratedBlueskyList;
+use App\Service\Social\Bluesky\AppViewClient;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Outbound\Fetch\Model\ApiRequestModel;
+use App\Service\Outbound\Fetch\Model\ApiResponseModel;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Model\NetworkCollectionsModel;
+use App\Service\Social\Social\Model\ResolvedCollectionsModel;
+use App\Service\Social\Social\Model\SavedItemsModel;
+use App\Service\Social\Social\Model\SocialCollectionModel;
+use App\Service\Social\Social\Support\CuratedBlueskyList;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class BlueskySavedCollections

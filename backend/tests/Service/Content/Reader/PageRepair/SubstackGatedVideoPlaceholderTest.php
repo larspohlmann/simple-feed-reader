@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\PageRepair;
+namespace App\Tests\Service\Content\Reader\PageRepair;
 
-use App\Service\Reader\PageRepair\SubstackGatedVideoPlaceholder;
+use App\Service\Content\Reader\PageRepair\SubstackGatedVideoPlaceholder;
 use App\Tests\Support\ParsesHtml;
 use Dom\Element;
 use Dom\HTMLDocument;

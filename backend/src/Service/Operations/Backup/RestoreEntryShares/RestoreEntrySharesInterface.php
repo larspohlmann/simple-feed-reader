@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\RestoreEntryShares;
+namespace App\Service\Operations\Backup\RestoreEntryShares;
 
 interface RestoreEntrySharesInterface
 {

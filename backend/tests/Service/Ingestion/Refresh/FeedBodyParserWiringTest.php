@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Refresh;
+namespace App\Tests\Service\Ingestion\Refresh;
 
 use App\Entity\Feed;
 use App\Enum\SourceFormat;
-use App\Service\Parser\Exception\FeedParseException;
-use App\Service\Refresh\FeedBodyParser;
-use App\Tests\Service\Scraper\ScrapedFixtures;
+use App\Service\Ingestion\Parser\Exception\FeedParseException;
+use App\Service\Ingestion\Refresh\FeedBodyParser;
+use App\Tests\Service\Ingestion\Scraper\ScrapedFixtures;
 use App\Tests\Support\ReadsFixtures;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 

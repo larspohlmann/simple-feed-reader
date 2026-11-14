@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Scraper\Model;
+namespace App\Service\Ingestion\Scraper\Model;
 
 /** One article-like item found on a scraped HTML page, before ParsedEntryModel mapping. */
 final readonly class ScrapedItemModel

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\LinkCard;
+namespace App\Tests\Service\Content\LinkCard;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
@@ -10,9 +10,9 @@ use App\Entity\Headline;
 use App\Entity\LinkCardContent;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
-use App\Service\Bluesky\AppViewClient;
-use App\Service\Fetch\HostThrottle;
-use App\Service\LinkCard\Model\LinkCardBudgetModel;
+use App\Service\Social\Bluesky\AppViewClient;
+use App\Service\Outbound\Fetch\HostThrottle;
+use App\Service\Content\LinkCard\Model\LinkCardBudgetModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FakeAppView;
 use App\Tests\Support\PostEnrichers;

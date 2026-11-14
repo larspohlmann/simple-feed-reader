@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup;
+namespace App\Service\Operations\Backup;
 
 use App\Entity\User;
 use App\Exception\ValidationException;
-use App\Service\Account\AccountReset;
-use App\Service\Backup\Model\RestoreResultModel;
+use App\Service\Identity\Account\AccountReset;
+use App\Service\Operations\Backup\Model\RestoreResultModel;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**

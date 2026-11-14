@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\OAuth\Model;
+namespace App\Tests\Service\Identity\OAuth\Model;
 
-use App\Service\OAuth\Model\OAuthIdentityModel;
+use App\Service\Identity\OAuth\Model\OAuthIdentityModel;
 use PHPUnit\Framework\TestCase;
 
 final class OAuthIdentityModelTest extends TestCase

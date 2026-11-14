@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Comments\Model;
+namespace App\Tests\Service\Content\Comments\Model;
 
-use App\Service\Comments\Model\CommentAuthorModel;
-use App\Service\Comments\Model\EntryCommentModel;
+use App\Service\Content\Comments\Model\CommentAuthorModel;
+use App\Service\Content\Comments\Model\EntryCommentModel;
 use PHPUnit\Framework\TestCase;
 
 final class EntryCommentModelTest extends TestCase

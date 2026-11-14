@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\Factory;
+namespace App\Service\Ingestion\Parser\Factory;
 
-use App\Service\Parser\Exception\FeedParseException;
-use App\Service\Parser\FeedFormatParser\FeedFormatParserInterface;
+use App\Service\Ingestion\Parser\Exception\FeedParseException;
+use App\Service\Ingestion\Parser\FeedFormatParser\FeedFormatParserInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 final readonly class FeedParserFactory

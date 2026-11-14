@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\ReaderAudit\Model;
+namespace App\Tests\Service\Content\ReaderAudit\Model;
 
-use App\Service\ReaderAudit\Model\ReaderLinkModel;
-use App\Service\ReaderAudit\Model\SampledEntryModel;
+use App\Service\Content\ReaderAudit\Model\ReaderLinkModel;
+use App\Service\Content\ReaderAudit\Model\SampledEntryModel;
 use PHPUnit\Framework\TestCase;
 
 final class ReaderLinkModelTest extends TestCase

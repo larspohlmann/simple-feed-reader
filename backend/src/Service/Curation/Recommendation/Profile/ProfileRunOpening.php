@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Profile;
+namespace App\Service\Curation\Recommendation\Profile;
 
 use App\Enum\ProfileRunOutcome;
 use App\Enum\ProfileRunTrigger;
 use App\Repository\ProfileRunRepository;
 use App\Repository\RecommendationSettingsRepository;
-use App\Service\Ai\Support\ProviderHost;
-use App\Service\Recommendation\Profile\Pass\ProfileTick;
-use App\Service\Recommendation\Profile\Support\ProfileInputFingerprint;
+use App\Service\Curation\Ai\Support\ProviderHost;
+use App\Service\Curation\Recommendation\Profile\Pass\ProfileTick;
+use App\Service\Curation\Recommendation\Profile\Support\ProfileInputFingerprint;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 

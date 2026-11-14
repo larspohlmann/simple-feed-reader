@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Factory;
+namespace App\Service\Social\Social\Factory;
 
 use App\Entity\SocialAccount;
 use App\Entity\User;
-use App\Service\Social\Crypto\SocialCredentialCipher;
-use App\Service\Social\Model\SocialCredentialsModel;
-use App\Service\Social\Model\VerifiedAccountModel;
+use App\Service\Social\Social\Crypto\SocialCredentialCipher;
+use App\Service\Social\Social\Model\SocialCredentialsModel;
+use App\Service\Social\Social\Model\VerifiedAccountModel;
 use Psr\Clock\ClockInterface;
 
 final readonly class SocialAccountFactory

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Factory;
 
-use App\Service\Backup\Model\BackupFilenameModel;
-use App\Service\Backup\Model\BackupPartModel;
-use App\Service\Version\ReleaseVersionReader\ReleaseVersionReaderInterface;
+use App\Service\Operations\Backup\Model\BackupFilenameModel;
+use App\Service\Operations\Backup\Model\BackupPartModel;
+use App\Service\Operations\Version\ReleaseVersionReader\ReleaseVersionReaderInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use ZipStream\CompressionMethod;

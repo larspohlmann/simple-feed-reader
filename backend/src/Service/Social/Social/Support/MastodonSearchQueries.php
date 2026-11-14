@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
-use App\Service\Social\Exception\SearchQueryTooBroadException;
-use App\Service\Social\Pass\SearchQueryAlternatives;
+use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
+use App\Service\Social\Social\Pass\SearchQueryAlternatives;
 
 /** A query as Mastodon can run it: one search per `||` alternative, an operator Mastodon's search does not know. */
 final class MastodonSearchQueries

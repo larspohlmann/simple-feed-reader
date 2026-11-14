@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\SocialSearch;
+namespace App\Tests\Service\Social\Social\SocialSearch;
 
 use App\Enum\SocialAccountStatus;
-use App\Service\Fetch\AnswerSettler\PassThroughSettler;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Social\ActingAccountGuard;
-use App\Service\Social\Exception\SearchQueryTooBroadException;
-use App\Service\Social\Model\BlueskySessionModel;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\SocialSearch\NetworkSocialSearch;
+use App\Service\Outbound\Fetch\AnswerSettler\PassThroughSettler;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Social\Social\ActingAccountGuard;
+use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
+use App\Service\Social\Social\Model\BlueskySessionModel;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\SocialSearch\NetworkSocialSearch;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;

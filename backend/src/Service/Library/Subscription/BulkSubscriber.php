@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Subscription;
+namespace App\Service\Library\Subscription;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
@@ -10,13 +10,13 @@ use App\Entity\User;
 use App\Repository\FeedRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
-use App\Service\Feed\Factory\FeedFactory;
-use App\Service\Subscription\Model\BulkSubscribeItemModel;
-use App\Service\Subscription\Model\BulkSubscribeResultModel;
-use App\Service\Subscription\Pass\BulkSubscribeBatch;
-use App\Service\Subscription\Pass\BulkSubscribePositions;
-use App\Service\Subscription\Pass\BulkSubscribeTagTree;
-use App\Service\Tag\TagStructureLock;
+use App\Service\Ingestion\Feed\Factory\FeedFactory;
+use App\Service\Library\Subscription\Model\BulkSubscribeItemModel;
+use App\Service\Library\Subscription\Model\BulkSubscribeResultModel;
+use App\Service\Library\Subscription\Pass\BulkSubscribeBatch;
+use App\Service\Library\Subscription\Pass\BulkSubscribePositions;
+use App\Service\Library\Subscription\Pass\BulkSubscribeTagTree;
+use App\Service\Library\Tag\TagStructureLock;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 

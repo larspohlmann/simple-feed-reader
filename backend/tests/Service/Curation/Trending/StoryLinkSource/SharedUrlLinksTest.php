@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Trending\StoryLinkSource;
+namespace App\Tests\Service\Curation\Trending\StoryLinkSource;
 
 use App\Enum\TrendingWindow;
-use App\Service\Trending\Model\StoryLinkModel;
-use App\Service\Trending\StoryLinkSource\SharedUrlLinks;
+use App\Service\Curation\Trending\Model\StoryLinkModel;
+use App\Service\Curation\Trending\StoryLinkSource\SharedUrlLinks;
 use App\Tests\Support\TrendingRuns;
 use PHPUnit\Framework\TestCase;
 

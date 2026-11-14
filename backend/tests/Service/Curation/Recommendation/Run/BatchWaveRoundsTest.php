@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Run;
+namespace App\Tests\Service\Curation\Recommendation\Run;
 
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Enum\CallVerdict;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Ai\Exception\ProviderRateLimitedException;
-use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\Model\RateLimitedResultModel;
-use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
-use App\Service\Recommendation\Pool\Model\ArticleLineModel;
-use App\Service\Recommendation\Run\BatchWaveRounds;
-use App\Service\Recommendation\Run\Model\BatchWaveResultModel;
-use App\Service\Recommendation\Run\Model\WaveBatchModel;
-use App\Service\Recommendation\Run\RecommendationCallRecorder;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Ai\Exception\ProviderRateLimitedException;
+use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
+use App\Service\Curation\Ai\Model\RateLimitedResultModel;
+use App\Service\Curation\Recommendation\Exception\RecommendationRunCancelledException;
+use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Curation\Recommendation\Run\BatchWaveRounds;
+use App\Service\Curation\Recommendation\Run\Model\BatchWaveResultModel;
+use App\Service\Curation\Recommendation\Run\Model\WaveBatchModel;
+use App\Service\Curation\Recommendation\Run\RecommendationCallRecorder;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BuildsTickContexts;
 use App\Tests\Support\RecommendationRunFixtures;

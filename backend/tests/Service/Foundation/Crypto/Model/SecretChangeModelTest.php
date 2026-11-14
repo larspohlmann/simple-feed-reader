@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Crypto\Model;
+namespace App\Tests\Service\Foundation\Crypto\Model;
 
-use App\Service\Crypto\Model\SecretChangeModel;
+use App\Service\Foundation\Crypto\Model\SecretChangeModel;
 use PHPUnit\Framework\TestCase;
 
 final class SecretChangeModelTest extends TestCase

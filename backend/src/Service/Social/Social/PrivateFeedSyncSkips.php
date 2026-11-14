@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\SocialAccount;
 use App\Enum\PrivateFeedSyncSkip;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Social\Model\PrivateFeedSyncOutcomeModel;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Social\Social\Model\PrivateFeedSyncOutcomeModel;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Doctrine\Persistence\ObjectManager;

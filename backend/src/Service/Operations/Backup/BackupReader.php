@@ -2,25 +2,25 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup;
+namespace App\Service\Operations\Backup;
 
-use App\Service\Backup\Dto\AccountLine;
-use App\Service\Backup\Dto\BackupHeader;
-use App\Service\Backup\Dto\EntryLine;
-use App\Service\Backup\Dto\EntryShareLine;
-use App\Service\Backup\Dto\EntryStateLine;
-use App\Service\Backup\Dto\FeedLine;
-use App\Service\Backup\Dto\FooterLine;
-use App\Service\Backup\Dto\SavedSearchLine;
-use App\Service\Backup\Dto\SubscriptionLine;
-use App\Service\Backup\Dto\TagLine;
-use App\Service\Backup\Exception\InvalidBackupException;
-use App\Service\Backup\Model\BackupLineOrderModel;
-use App\Service\Backup\Pass\BackupPartGuard;
-use App\Service\Backup\Support\BackupSchema;
-use App\Service\Backup\Support\GzipLineReader;
-use App\Service\Backup\Support\LineField;
-use App\Service\SavedPosts\Support\SavedFeedUrl;
+use App\Service\Operations\Backup\Dto\AccountLine;
+use App\Service\Operations\Backup\Dto\BackupHeader;
+use App\Service\Operations\Backup\Dto\EntryLine;
+use App\Service\Operations\Backup\Dto\EntryShareLine;
+use App\Service\Operations\Backup\Dto\EntryStateLine;
+use App\Service\Operations\Backup\Dto\FeedLine;
+use App\Service\Operations\Backup\Dto\FooterLine;
+use App\Service\Operations\Backup\Dto\SavedSearchLine;
+use App\Service\Operations\Backup\Dto\SubscriptionLine;
+use App\Service\Operations\Backup\Dto\TagLine;
+use App\Service\Operations\Backup\Exception\InvalidBackupException;
+use App\Service\Operations\Backup\Model\BackupLineOrderModel;
+use App\Service\Operations\Backup\Pass\BackupPartGuard;
+use App\Service\Operations\Backup\Support\BackupSchema;
+use App\Service\Operations\Backup\Support\GzipLineReader;
+use App\Service\Operations\Backup\Support\LineField;
+use App\Service\Library\SavedPosts\Support\SavedFeedUrl;
 
 /**
  * Reads a backup front to back in the order BackupLineOrderModel admits. The footer's counts are the truncation

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Worker;
+namespace App\Tests\Service\Operations\Worker;
 
-use App\Service\Worker\Handler\CompleteQueuedLinkCardsHandler;
-use App\Service\Worker\Message\CompleteQueuedLinkCards;
+use App\Service\Operations\Worker\Handler\CompleteQueuedLinkCardsHandler;
+use App\Service\Operations\Worker\Message\CompleteQueuedLinkCards;
 use App\Tests\DbTestCase;
 use App\Tests\Support\LinkCardSweepWiring;
 use App\Tests\Support\RecordingLogger;

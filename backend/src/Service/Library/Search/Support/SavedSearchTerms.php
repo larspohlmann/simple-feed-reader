@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search\Support;
+namespace App\Service\Library\Search\Support;
 
 use App\Entity\SavedSearch;
-use App\Service\Search\Model\SavedSearchTermModel;
-use App\Service\Search\Model\SearchMode;
-use App\Service\Search\Model\SearchTermsModel;
+use App\Service\Library\Search\Model\SavedSearchTermModel;
+use App\Service\Library\Search\Model\SearchMode;
+use App\Service\Library\Search\Model\SearchTermsModel;
 
 /**
  * A saved search's stored shape — a bare term plus two mode columns — read as

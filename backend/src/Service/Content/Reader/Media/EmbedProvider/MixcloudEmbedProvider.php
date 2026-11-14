@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\EmbedProvider;
+namespace App\Service\Content\Reader\Media\EmbedProvider;
 
-use App\Service\Reader\Media\Model\EmbedFrameModel;
-use App\Service\Reader\Media\Model\EmbedKind;
-use App\Service\Reader\Media\Model\EmbedShape;
-use App\Service\Reader\Media\Model\EmbedTargetModel;
-use App\Service\Url\Support\MixcloudUrl;
+use App\Service\Content\Reader\Media\Model\EmbedFrameModel;
+use App\Service\Content\Reader\Media\Model\EmbedKind;
+use App\Service\Content\Reader\Media\Model\EmbedShape;
+use App\Service\Content\Reader\Media\Model\EmbedTargetModel;
+use App\Service\Foundation\Url\Support\MixcloudUrl;
 
 /**
  * The Mixcloud widget. A show is its key, `/<user>/<show>/`; the URL is rebuilt from the key alone, so `autoplay`

@@ -2,27 +2,27 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Exception\InvalidSelectionException;
-use App\Service\Social\Exception\InvalidSocialImportFeedException;
-use App\Service\Social\Model\HiddenProfileModel;
-use App\Service\Social\Model\PrivateFeedImportModel;
-use App\Service\Social\Model\PrivateFeedModel;
-use App\Service\Social\Model\SocialImportFeedModel;
-use App\Service\Social\Model\SocialImportModel;
-use App\Service\Social\Model\SocialImportResultModel;
-use App\Service\Social\Support\PrivateFeedRules;
-use App\Service\Social\Support\ProfileFeedUrl;
-use App\Service\Subscription\BulkSubscriber;
-use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
-use App\Service\Subscription\Model\BulkSubscribeItemModel;
-use App\Service\Subscription\OwnedSubscriptions;
-use App\Service\Subscription\SubscriptionService;
-use App\Service\Tag\TagStructureLock;
+use App\Service\Social\Social\Exception\InvalidSocialImportFeedException;
+use App\Service\Social\Social\Model\HiddenProfileModel;
+use App\Service\Social\Social\Model\PrivateFeedImportModel;
+use App\Service\Social\Social\Model\PrivateFeedModel;
+use App\Service\Social\Social\Model\SocialImportFeedModel;
+use App\Service\Social\Social\Model\SocialImportModel;
+use App\Service\Social\Social\Model\SocialImportResultModel;
+use App\Service\Social\Social\Support\PrivateFeedRules;
+use App\Service\Social\Social\Support\ProfileFeedUrl;
+use App\Service\Library\Subscription\BulkSubscriber;
+use App\Service\Library\Subscription\Exception\SubscriptionLimitReachedException;
+use App\Service\Library\Subscription\Model\BulkSubscribeItemModel;
+use App\Service\Library\Subscription\OwnedSubscriptions;
+use App\Service\Library\Subscription\SubscriptionService;
+use App\Service\Library\Tag\TagStructureLock;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class SocialImporter

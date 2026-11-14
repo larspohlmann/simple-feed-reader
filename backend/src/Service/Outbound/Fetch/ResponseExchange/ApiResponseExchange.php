@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\ResponseExchange;
+namespace App\Service\Outbound\Fetch\ResponseExchange;
 
-use App\Service\Fetch\CrossFamilyFailover;
-use App\Service\Fetch\FetchRetryPolicy;
-use App\Service\Fetch\Model\ApiResponseModel;
-use App\Service\Fetch\Model\ExchangeStepModel;
-use App\Service\Fetch\Model\FetchAttemptModel;
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Fetch\Model\ResponseExchangeKind;
-use App\Service\Fetch\Support\ResponseBody;
+use App\Service\Outbound\Fetch\CrossFamilyFailover;
+use App\Service\Outbound\Fetch\FetchRetryPolicy;
+use App\Service\Outbound\Fetch\Model\ApiResponseModel;
+use App\Service\Outbound\Fetch\Model\ExchangeStepModel;
+use App\Service\Outbound\Fetch\Model\FetchAttemptModel;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Outbound\Fetch\Model\ResponseExchangeKind;
+use App\Service\Outbound\Fetch\Support\ResponseBody;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 

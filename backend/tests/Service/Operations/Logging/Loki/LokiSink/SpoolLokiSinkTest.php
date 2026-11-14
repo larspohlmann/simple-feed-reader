@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Logging\Loki\LokiSink;
+namespace App\Tests\Service\Operations\Logging\Loki\LokiSink;
 
-use App\Service\Logging\Loki\LokiSink\SpoolLokiSink;
+use App\Service\Operations\Logging\Loki\LokiSink\SpoolLokiSink;
 use PHPUnit\Framework\TestCase;
 
 final class SpoolLokiSinkTest extends TestCase

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ingest\Model;
+namespace App\Service\Ingestion\Ingest\Model;
 
 use App\Entity\EntryAttachment;
 use App\Entity\EntryMedium;

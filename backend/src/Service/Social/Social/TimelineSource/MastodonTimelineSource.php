@@ -2,26 +2,26 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\TimelineSource;
+namespace App\Service\Social\Social\TimelineSource;
 
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Fetch\Model\ApiRequestModel;
-use App\Service\Fetch\Model\ApiResponseModel;
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Social\Exception\SearchQueryTooBroadException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\MastodonAccountApi;
-use App\Service\Social\MastodonApiClient;
-use App\Service\Social\Model\TimelinePageModel;
-use App\Service\Social\Support\MastodonSearchPage;
-use App\Service\Social\Support\MastodonSearchQueries;
-use App\Service\Social\Support\MastodonTimelinePage;
-use App\Service\Social\Support\PrivateFeedRules;
-use App\Service\Social\Support\SocialSearchPaths;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Outbound\Fetch\Model\ApiRequestModel;
+use App\Service\Outbound\Fetch\Model\ApiResponseModel;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\MastodonAccountApi;
+use App\Service\Social\Social\MastodonApiClient;
+use App\Service\Social\Social\Model\TimelinePageModel;
+use App\Service\Social\Social\Support\MastodonSearchPage;
+use App\Service\Social\Social\Support\MastodonSearchQueries;
+use App\Service\Social\Social\Support\MastodonTimelinePage;
+use App\Service\Social\Social\Support\PrivateFeedRules;
+use App\Service\Social\Social\Support\SocialSearchPaths;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Mastodon->value)]

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\ClientError\Model;
+namespace App\Service\Operations\ClientError\Model;
 
 final readonly class ClientErrorModel
 {

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Category;
+namespace App\Service\Ingestion\Category;
 
-use App\Service\Category\Model\NormalizedCategoryModel;
-use App\Service\Parser\Model\ParsedCategoryModel;
+use App\Service\Ingestion\Category\Model\NormalizedCategoryModel;
+use App\Service\Ingestion\Parser\Model\ParsedCategoryModel;
 
 /**
  * Turns the raw categories a feed declared for one entry into the rows to

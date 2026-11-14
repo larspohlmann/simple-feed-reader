@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Trending;
+namespace App\Tests\Service\Curation\Trending;
 
-use App\Service\Trending\TrendingRebuild;
+use App\Service\Curation\Trending\TrendingRebuild;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
 

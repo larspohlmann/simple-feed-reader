@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Support;
+namespace App\Tests\Service\Social\Social\Support;
 
-use App\Service\Social\Model\TextSpanModel;
-use App\Service\Social\Support\BlueskyTextSpans;
+use App\Service\Social\Social\Model\TextSpanModel;
+use App\Service\Social\Social\Support\BlueskyTextSpans;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

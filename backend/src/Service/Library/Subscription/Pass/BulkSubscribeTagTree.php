@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Subscription\Pass;
+namespace App\Service\Library\Subscription\Pass;
 
 use App\Entity\Tag;
-use App\Service\Tag\Pass\TagTree;
+use App\Service\Library\Tag\Pass\TagTree;
 
 /** The user's tags as this batch leaves them, keyed by spl_object_id: a tag created here has no id until the flush. */
 final class BulkSubscribeTagTree

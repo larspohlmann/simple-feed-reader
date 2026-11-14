@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Trending;
+namespace App\Service\Curation\Trending;
 
 use App\Enum\TrendingWindow;
 use App\Repository\TrendingHiddenEntryRepository;
 use App\Repository\TrendingStoryRepository;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Trending\Exception\TrendingStoryNotFoundException;
-use App\Service\Trending\Model\ReaderWindowModel;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Curation\Trending\Exception\TrendingStoryNotFoundException;
+use App\Service\Curation\Trending\Model\ReaderWindowModel;
 
 /** Hides a Trending story for one reader, by its entries, so a rebuild that regroups the event cannot bring it back. */
 final readonly class TrendingStoryHiding

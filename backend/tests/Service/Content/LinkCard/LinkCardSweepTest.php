@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\LinkCard;
+namespace App\Tests\Service\Content\LinkCard;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Service\LinkCard\LinkCardSweep;
-use App\Service\LinkCard\Model\LinkCardBudgetModel;
-use App\Service\LinkCard\Model\LinkCardSweepReportModel;
+use App\Service\Content\LinkCard\LinkCardSweep;
+use App\Service\Content\LinkCard\Model\LinkCardBudgetModel;
+use App\Service\Content\LinkCard\Model\LinkCardSweepReportModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\LinkCardSweepWiring;
 use App\Tests\Support\PostEnrichers;

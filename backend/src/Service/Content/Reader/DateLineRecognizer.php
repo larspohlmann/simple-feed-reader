@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Content\Reader;
 
 use App\DependencyInjection\ProcessLifetimeState;
-use App\Service\Reader\Factory\DateFormatterFactoryInterface;
-use App\Service\Reader\Model\ParseOffsetUnit;
+use App\Service\Content\Reader\Factory\DateFormatterFactoryInterface;
+use App\Service\Content\Reader\Model\ParseOffsetUnit;
 
 #[ProcessLifetimeState('Formatters are immutable per locale and format, and the offset unit per PHP build')]
 final class DateLineRecognizer

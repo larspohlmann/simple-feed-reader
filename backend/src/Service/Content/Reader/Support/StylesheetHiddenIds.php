@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Support;
+namespace App\Service\Content\Reader\Support;
 
 /**
  * The ids a stylesheet hides outright: a top-level rule whose selector is a bare `#id` and that sets `display: none`.

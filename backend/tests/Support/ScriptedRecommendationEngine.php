@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Enum\RecommendationEngineKind;
-use App\Service\Recommendation\Engine\RecommendationEngine\RecommendationEngineInterface;
-use App\Service\Recommendation\Engine\RecommendationEngineResolver;
-use App\Service\Recommendation\Pool\Model\ArticleLineModel;
-use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
-use App\Service\Recommendation\Run\Pass\TickContext;
+use App\Service\Curation\Recommendation\Engine\RecommendationEngine\RecommendationEngineInterface;
+use App\Service\Curation\Recommendation\Engine\RecommendationEngineResolver;
+use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Curation\Recommendation\Run\Model\RecommendationRunReportModel;
+use App\Service\Curation\Recommendation\Run\Pass\TickContext;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 
 /** An engine that is not the LLM: it packs and advances as scripted and records what it was asked. */

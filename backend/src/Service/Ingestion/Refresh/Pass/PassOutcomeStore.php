@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh\Pass;
+namespace App\Service\Ingestion\Refresh\Pass;
 
 use App\Entity\Feed;
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Refresh\FeedOutcomePersister;
-use App\Service\Refresh\Model\FeedOutcome;
-use App\Service\Refresh\Model\FeedRefreshResultModel;
-use App\Service\Social\Model\TimelineOutcome\AccountPausedTimelineModel;
-use App\Service\Social\Model\TimelineOutcome\AccountThrottledTimelineModel;
-use App\Service\Social\Model\TimelineOutcome\FailedTimelineModel;
-use App\Service\Social\Model\TimelineOutcome\FetchedTimelineModel;
-use App\Service\Social\Model\TimelineOutcome\ThrottledTimelineModel;
-use App\Service\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Ingestion\Refresh\FeedOutcomePersister;
+use App\Service\Ingestion\Refresh\Model\FeedOutcome;
+use App\Service\Ingestion\Refresh\Model\FeedRefreshResultModel;
+use App\Service\Social\Social\Model\TimelineOutcome\AccountPausedTimelineModel;
+use App\Service\Social\Social\Model\TimelineOutcome\AccountThrottledTimelineModel;
+use App\Service\Social\Social\Model\TimelineOutcome\FailedTimelineModel;
+use App\Service\Social\Social\Model\TimelineOutcome\FetchedTimelineModel;
+use App\Service\Social\Social\Model\TimelineOutcome\ThrottledTimelineModel;
+use App\Service\Social\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
 
 /** Stores one refresh's outcomes as they land, each as of the moment the refresh started. */
 final readonly class PassOutcomeStore

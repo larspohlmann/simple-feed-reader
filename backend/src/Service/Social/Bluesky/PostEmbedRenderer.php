@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Bluesky;
+namespace App\Service\Social\Bluesky;
 
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Bluesky\Model\RenderedEmbedModel;
-use App\Service\Image\Model\DeclaredImageModel;
-use App\Service\Bluesky\Support\AtPostUri;
-use App\Service\Bluesky\Support\BlueskyEmbedMedia;
-use App\Service\Bluesky\Support\BlueskyExternalCard;
-use App\Service\Bluesky\Support\QuotedViewRecord;
-use App\Service\Text\Support\HtmlEscape;
-use App\Service\Url\Support\AbsoluteHttpUrl;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Bluesky\Model\RenderedEmbedModel;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
+use App\Service\Social\Bluesky\Support\AtPostUri;
+use App\Service\Social\Bluesky\Support\BlueskyEmbedMedia;
+use App\Service\Social\Bluesky\Support\BlueskyExternalCard;
+use App\Service\Social\Bluesky\Support\QuotedViewRecord;
+use App\Service\Foundation\Text\Support\HtmlEscape;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 
 final readonly class PostEmbedRenderer
 {

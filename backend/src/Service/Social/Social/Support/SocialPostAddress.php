@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
 use App\Entity\Entry;
 use App\Enum\SocialNetwork;
-use App\Service\Bluesky\Support\AtPostUri;
-use App\Service\Social\Exception\NotASocialPostException;
-use App\Service\Social\Model\SocialPostAddressModel;
-use App\Service\Url\Support\AbsoluteHttpUrl;
+use App\Service\Social\Bluesky\Support\AtPostUri;
+use App\Service\Social\Social\Exception\NotASocialPostException;
+use App\Service\Social\Social\Model\SocialPostAddressModel;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 
 /** Which network post an entry is: the one rule every interaction with a post (a like, later a reply) starts from. */
 final class SocialPostAddress

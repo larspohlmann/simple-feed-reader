@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Trending\Model;
+namespace App\Tests\Service\Curation\Trending\Model;
 
 use App\Enum\TrendingWindow;
-use App\Service\Trending\Model\TrendingBuildReportModel;
+use App\Service\Curation\Trending\Model\TrendingBuildReportModel;
 use PHPUnit\Framework\TestCase;
 
 final class TrendingBuildReportModelTest extends TestCase

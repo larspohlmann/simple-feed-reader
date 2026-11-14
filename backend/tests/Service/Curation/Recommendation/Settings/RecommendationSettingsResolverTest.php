@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Settings;
+namespace App\Tests\Service\Curation\Recommendation\Settings;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\ModelDescriptor;
@@ -13,9 +13,9 @@ use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
 use App\Enum\ScoringProtocol;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
-use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
+use App\Service\Curation\Recommendation\Settings\RecommendationSettingsResolver;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AiProviderSettingsFactory;
 use App\Tests\Support\UserFactory;

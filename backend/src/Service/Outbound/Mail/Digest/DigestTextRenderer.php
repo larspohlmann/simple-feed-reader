@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Digest;
+namespace App\Service\Outbound\Mail\Digest;
 
-use App\Service\Mail\Digest\Model\DigestEntryModel;
-use App\Service\Mail\Digest\Model\DigestGroupModel;
-use App\Service\Mail\Digest\Model\DigestModel;
-use App\Service\Mail\Digest\Model\DigestRenderedMailModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestEntryModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestGroupModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestRenderedMailModel;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 /** Renders a DigestModel to the subject and the plain-text body, which an HTML digest keeps as its alternative part. */

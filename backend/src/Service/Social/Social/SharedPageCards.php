@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\LinkCardContent;
-use App\Service\Fetch\Support\HostKey;
-use App\Service\LinkCard\PageCardReader\PageCardReaderInterface;
-use App\Service\LinkCard\Support\StorableLinkCard;
-use App\Service\Reader\Exception\PageFetchException;
+use App\Service\Outbound\Fetch\Support\HostKey;
+use App\Service\Content\LinkCard\PageCardReader\PageCardReaderInterface;
+use App\Service\Content\LinkCard\Support\StorableLinkCard;
+use App\Service\Content\Reader\Exception\PageFetchException;
 use Psr\Log\LoggerInterface;
 
 /** The card a shared link goes out with: the page's own, else one titled with the link's host. */

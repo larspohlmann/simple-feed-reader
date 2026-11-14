@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search;
+namespace App\Service\Library\Search;
 
 use App\Entity\SavedSearch;
 use Symfony\Component\String\Slugger\SluggerInterface;

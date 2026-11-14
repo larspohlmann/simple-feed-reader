@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\Model;
+namespace App\Service\Outbound\Fetch\Model;
 
-use App\Service\Fetch\Model\RequestSlot\HostSlotModel;
-use App\Service\Fetch\Model\RequestSlot\RequestSlotModelInterface;
-use App\Service\Fetch\Support\CapacityGuard;
+use App\Service\Outbound\Fetch\Model\RequestSlot\HostSlotModel;
+use App\Service\Outbound\Fetch\Model\RequestSlot\RequestSlotModelInterface;
+use App\Service\Outbound\Fetch\Support\CapacityGuard;
 
 /** One request the concurrent engine sends: what goes on the wire, which exchange reads the answer, what it holds. */
 final readonly class RequestTicketModel

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch;
+namespace App\Service\Outbound\Fetch;
 
-use App\Service\Fetch\DnsResolver\DnsResolverInterface;
-use App\Service\Fetch\Exception\SsrfBlockedException;
-use App\Service\Fetch\Exception\UnresolvableHostException;
-use App\Service\Fetch\Model\GuardedUrlModel;
+use App\Service\Outbound\Fetch\DnsResolver\DnsResolverInterface;
+use App\Service\Outbound\Fetch\Exception\SsrfBlockedException;
+use App\Service\Outbound\Fetch\Exception\UnresolvableHostException;
+use App\Service\Outbound\Fetch\Model\GuardedUrlModel;
 
 /**
  * Validates an outbound URL before any connection: scheme allowlist, DNS resolved up front, no private or reserved

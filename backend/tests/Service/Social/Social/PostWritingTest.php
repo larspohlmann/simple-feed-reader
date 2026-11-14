@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\SocialAccount;
-use App\Service\Social\ActingAccountGuard;
-use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
-use App\Service\Social\Model\PostDraftModel;
-use App\Service\Social\PostWriting;
+use App\Service\Social\Social\ActingAccountGuard;
+use App\Service\Social\Social\Exception\SocialAccountNeedsReconnectException;
+use App\Service\Social\Social\Model\PostDraftModel;
+use App\Service\Social\Social\PostWriting;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FakeMastodonNetwork;
 use App\Tests\Support\SeedsUsers;

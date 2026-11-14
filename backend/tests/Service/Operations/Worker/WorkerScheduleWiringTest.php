@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Worker;
+namespace App\Tests\Service\Operations\Worker;
 
-use App\Service\Worker\Message\AdvanceRecommendationRuns;
-use App\Service\Worker\Message\CompleteQueuedLinkCards;
-use App\Service\Worker\Message\CompleteQueuedTranscripts;
-use App\Service\Worker\Message\PurgeFailedMessages;
-use App\Service\Worker\Message\RebuildDueTrendingStories;
-use App\Service\Worker\Message\RefreshDueFeeds;
-use App\Service\Worker\Message\RefreshProfileImages;
-use App\Service\Worker\Message\SendDueDigests;
-use App\Service\Worker\Message\StartDueProfileRuns;
-use App\Service\Worker\Message\StartDueRecommendationRuns;
-use App\Service\Worker\Message\SweepSavedSearchMemberships;
-use App\Service\Worker\Message\SwitchHiddenProfileFeeds;
-use App\Service\Worker\Message\SyncPrivateFeeds;
-use App\Service\Worker\Message\VerifyPendingImages;
-use App\Service\Worker\WorkerSchedule;
+use App\Service\Operations\Worker\Message\AdvanceRecommendationRuns;
+use App\Service\Operations\Worker\Message\CompleteQueuedLinkCards;
+use App\Service\Operations\Worker\Message\CompleteQueuedTranscripts;
+use App\Service\Operations\Worker\Message\PurgeFailedMessages;
+use App\Service\Operations\Worker\Message\RebuildDueTrendingStories;
+use App\Service\Operations\Worker\Message\RefreshDueFeeds;
+use App\Service\Operations\Worker\Message\RefreshProfileImages;
+use App\Service\Operations\Worker\Message\SendDueDigests;
+use App\Service\Operations\Worker\Message\StartDueProfileRuns;
+use App\Service\Operations\Worker\Message\StartDueRecommendationRuns;
+use App\Service\Operations\Worker\Message\SweepSavedSearchMemberships;
+use App\Service\Operations\Worker\Message\SwitchHiddenProfileFeeds;
+use App\Service\Operations\Worker\Message\SyncPrivateFeeds;
+use App\Service\Operations\Worker\Message\VerifyPendingImages;
+use App\Service\Operations\Worker\WorkerSchedule;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;

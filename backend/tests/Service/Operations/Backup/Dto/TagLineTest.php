@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Backup\Dto;
+namespace App\Tests\Service\Operations\Backup\Dto;
 
 use App\Entity\InclusionChange;
 use App\Entity\Tag;
-use App\Service\Backup\Dto\TagLine;
+use App\Service\Operations\Backup\Dto\TagLine;
 use App\Tests\Support\BackupLineRecords;
 use PHPUnit\Framework\TestCase;
 

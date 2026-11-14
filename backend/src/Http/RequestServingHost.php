@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Settings\PublicBaseUrl\PublicBaseUrlInterface;
-use App\Service\Settings\ServingHost\ServingHostInterface;
+use App\Service\Operations\Settings\PublicBaseUrl\PublicBaseUrlInterface;
+use App\Service\Operations\Settings\ServingHost\ServingHostInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 
 /** A proxy that rewrites Host rather than passing it through needs

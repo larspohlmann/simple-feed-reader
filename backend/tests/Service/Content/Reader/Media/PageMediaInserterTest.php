@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media;
+namespace App\Tests\Service\Content\Reader\Media;
 
-use App\Service\Reader\Media\AudioPlayerMarkup;
-use App\Service\Reader\Media\MediaMarkup;
-use App\Service\Reader\Media\Model\ArticleMediaModel;
-use App\Service\Reader\Media\Model\MediaCandidateModel;
-use App\Service\Reader\Media\Model\MediaKind;
-use App\Service\Reader\Media\PageMediaInserter;
+use App\Service\Content\Reader\Media\AudioPlayerMarkup;
+use App\Service\Content\Reader\Media\MediaMarkup;
+use App\Service\Content\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Content\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Content\Reader\Media\Model\MediaKind;
+use App\Service\Content\Reader\Media\PageMediaInserter;
 use App\Tests\Support\ParsesHtml;
 use App\Tests\Support\ProseParagraphs;
 use Dom\HTMLDocument;

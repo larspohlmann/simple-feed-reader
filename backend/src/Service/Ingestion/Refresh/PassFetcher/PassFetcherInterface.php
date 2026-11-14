@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh\PassFetcher;
+namespace App\Service\Ingestion\Refresh\PassFetcher;
 
 use App\Entity\SocialFeed;
-use App\Service\Refresh\Model\PassOutcome\PassOutcomeModelInterface;
-use App\Service\Refresh\Pass\RefreshPass;
+use App\Service\Ingestion\Refresh\Model\PassOutcome\PassOutcomeModelInterface;
+use App\Service\Ingestion\Refresh\Pass\RefreshPass;
 
 interface PassFetcherInterface
 {

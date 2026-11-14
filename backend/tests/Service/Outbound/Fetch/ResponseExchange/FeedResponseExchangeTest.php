@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch\ResponseExchange;
+namespace App\Tests\Service\Outbound\Fetch\ResponseExchange;
 
-use App\Service\Fetch\Exception\FeedGoneException;
-use App\Service\Fetch\Exception\FeedThrottledException;
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\Exception\ResponseTooLargeException;
-use App\Service\Fetch\Model\FetchAttemptModel;
-use App\Service\Fetch\Model\ResponseSizeLimit;
-use App\Service\Fetch\ResponseExchange\FeedResponseExchange;
+use App\Service\Outbound\Fetch\Exception\FeedGoneException;
+use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Outbound\Fetch\Model\FetchAttemptModel;
+use App\Service\Outbound\Fetch\Model\ResponseSizeLimit;
+use App\Service\Outbound\Fetch\ResponseExchange\FeedResponseExchange;
 use App\Tests\Support\CorruptGzip;
 use App\Tests\Support\FeedTickets;
 use App\Tests\Support\GzipBomb;

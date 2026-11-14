@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Slideshow;
+namespace App\Tests\Service\Content\Reader\Slideshow;
 
-use App\Service\Reader\Slideshow\SlideshowScanner;
+use App\Service\Content\Reader\Slideshow\SlideshowScanner;
 use App\Tests\Support\ParsesHtml;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Tag\Factory;
+namespace App\Tests\Service\Library\Tag\Factory;
 
 use App\Entity\User;
-use App\Service\Tag\Factory\TagFactory;
-use App\Service\Tag\Model\TagDetailsModel;
+use App\Service\Library\Tag\Factory\TagFactory;
+use App\Service\Library\Tag\Model\TagDetailsModel;
 use PHPUnit\Framework\TestCase;
 
 final class TagFactoryTest extends TestCase

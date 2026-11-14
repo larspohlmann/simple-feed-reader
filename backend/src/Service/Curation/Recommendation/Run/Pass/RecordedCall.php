@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run\Pass;
+namespace App\Service\Curation\Recommendation\Run\Pass;
 
 use App\Entity\CallOutcome;
 use App\Enum\CallVerdict;
 use App\Repository\CallingRun;
 use App\Repository\CallSettlement;
 use App\Repository\RecommendationCallRepository;
-use App\Service\Ai\Model\ProviderCallReceiptModel;
-use App\Service\Ai\Model\ProviderCallUsageModel;
-use App\Service\Recommendation\Run\Model\CallProgressModel;
+use App\Service\Curation\Ai\Model\ProviderCallReceiptModel;
+use App\Service\Curation\Ai\Model\ProviderCallUsageModel;
+use App\Service\Curation\Recommendation\Run\Model\CallProgressModel;
 use Symfony\Component\Clock\ClockInterface;
 
 /** One recorded provider call: checkpoints its transcript while it runs and settles its run-log row. */

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Logging;
+namespace App\Tests\Service\Operations\Logging;
 
-use App\Service\Logging\RequestIdProvider;
+use App\Service\Operations\Logging\RequestIdProvider;
 use PHPUnit\Framework\TestCase;
 
 final class RequestIdProviderTest extends TestCase

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Chapter\Model;
+namespace App\Service\Content\Chapter\Model;
 
 enum StampPosition
 {

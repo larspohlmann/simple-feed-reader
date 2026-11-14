@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Discovery;
+namespace App\Service\Sourcing\Discovery;
 
 use App\Entity\User;
 use App\Repository\ReadingSettingsRepository;
-use App\Service\Discovery\Exception\ScrapingDisabledException;
-use App\Service\Discovery\Model\ScrapeFallback;
+use App\Service\Sourcing\Discovery\Exception\ScrapingDisabledException;
+use App\Service\Sourcing\Discovery\Model\ScrapeFallback;
 
 /**
  * The only place an account's preference becomes a discovery mode. Keeping the

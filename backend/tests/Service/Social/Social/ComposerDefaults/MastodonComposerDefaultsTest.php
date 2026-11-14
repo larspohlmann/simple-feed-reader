@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\ComposerDefaults;
+namespace App\Tests\Service\Social\Social\ComposerDefaults;
 
-use App\Service\Social\ComposerDefaults\MastodonComposerDefaults;
-use App\Service\Social\Model\ComposerDefaultsModel;
-use App\Service\Social\Model\ResponseContextModel;
-use App\Service\Social\Model\SocialPostModel;
+use App\Service\Social\Social\ComposerDefaults\MastodonComposerDefaults;
+use App\Service\Social\Social\Model\ComposerDefaultsModel;
+use App\Service\Social\Social\Model\ResponseContextModel;
+use App\Service\Social\Social\Model\SocialPostModel;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;

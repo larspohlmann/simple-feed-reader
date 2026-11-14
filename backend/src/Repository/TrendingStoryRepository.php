@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\TrendingStory;
-use App\Service\Trending\Exception\TrendingStoryNotFoundException;
-use App\Service\Trending\Model\RankedStoryModel;
-use App\Service\Trending\Model\ReaderWindowModel;
+use App\Service\Curation\Trending\Exception\TrendingStoryNotFoundException;
+use App\Service\Curation\Trending\Model\RankedStoryModel;
+use App\Service\Curation\Trending\Model\ReaderWindowModel;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;

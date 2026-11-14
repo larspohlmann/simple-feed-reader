@@ -2,28 +2,28 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Preview;
+namespace App\Tests\Service\Sourcing\Preview;
 
 use App\Entity\Headline;
 use App\Entity\ReadingSettings;
 use App\Entity\User;
 use App\Enum\SourceFormat;
 use App\Repository\ReadingSettingsRepository;
-use App\Service\Discovery\AccountOnlyFeed\AccountOnlyFeedInterface;
-use App\Service\Discovery\FeedDiscovery\FeedDiscoveryInterface;
-use App\Service\Discovery\Model\DiscoveredFeedModel;
-use App\Service\Discovery\Model\FeedCandidateModel;
-use App\Service\Discovery\Model\FeedDiscoveryResultModel;
-use App\Service\Discovery\Model\NoPreviewReason;
-use App\Service\Discovery\Model\ScrapeFailureReason;
-use App\Service\Discovery\Model\ScrapeFallback;
-use App\Service\Discovery\ScrapeFallbackPolicy;
-use App\Service\Parser\Model\FeedSyntax;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Parser\Model\ParsedFeedModel;
-use App\Service\Preview\Factory\FeedPreviewFactory;
-use App\Service\Preview\Model\PreviewedCandidateModel;
-use App\Service\Preview\PreviewedDiscovery;
+use App\Service\Sourcing\Discovery\AccountOnlyFeed\AccountOnlyFeedInterface;
+use App\Service\Sourcing\Discovery\FeedDiscovery\FeedDiscoveryInterface;
+use App\Service\Sourcing\Discovery\Model\DiscoveredFeedModel;
+use App\Service\Sourcing\Discovery\Model\FeedCandidateModel;
+use App\Service\Sourcing\Discovery\Model\FeedDiscoveryResultModel;
+use App\Service\Sourcing\Discovery\Model\NoPreviewReason;
+use App\Service\Sourcing\Discovery\Model\ScrapeFailureReason;
+use App\Service\Sourcing\Discovery\Model\ScrapeFallback;
+use App\Service\Sourcing\Discovery\ScrapeFallbackPolicy;
+use App\Service\Ingestion\Parser\Model\FeedSyntax;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
+use App\Service\Sourcing\Preview\Factory\FeedPreviewFactory;
+use App\Service\Sourcing\Preview\Model\PreviewedCandidateModel;
+use App\Service\Sourcing\Preview\PreviewedDiscovery;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecordingFeedDiscovery;
 use App\Tests\Support\SeedsUsers;

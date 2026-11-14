@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\PostLiker;
+namespace App\Service\Social\Social\PostLiker;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Social\BlueskyRecords;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Model\SocialLikeResultModel;
-use App\Service\Social\Model\SocialPostModel;
-use App\Service\Social\Support\BlueskyRecordUri;
+use App\Service\Social\Social\BlueskyRecords;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Model\SocialLikeResultModel;
+use App\Service\Social\Social\Model\SocialPostModel;
+use App\Service\Social\Social\Support\BlueskyRecordUri;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Bluesky->value)]

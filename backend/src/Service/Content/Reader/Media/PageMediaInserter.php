@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media;
+namespace App\Service\Content\Reader\Media;
 
-use App\Service\Image\Model\ImageIdentityModel;
-use App\Service\Reader\Media\Model\ArticleMediaModel;
-use App\Service\Reader\Media\Model\EmbedTargetModel;
-use App\Service\Reader\Media\Model\MediaCandidateModel;
-use App\Service\Reader\Media\Model\MediaInsertionPlanModel;
-use App\Service\Reader\Media\Model\MediaKind;
-use App\Service\Reader\Media\Model\PageTextBlocksModel;
+use App\Service\Outbound\Image\Model\ImageIdentityModel;
+use App\Service\Content\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Content\Reader\Media\Model\EmbedTargetModel;
+use App\Service\Content\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Content\Reader\Media\Model\MediaInsertionPlanModel;
+use App\Service\Content\Reader\Media\Model\MediaKind;
+use App\Service\Content\Reader\Media\Model\PageTextBlocksModel;
 use Dom\Element;
 use Dom\HTMLDocument;
 

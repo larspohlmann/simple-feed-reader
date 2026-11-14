@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Tag;
+namespace App\Tests\Service\Library\Tag;
 
-use App\Service\Tag\TagStructureLock;
+use App\Service\Library\Tag\TagStructureLock;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
 

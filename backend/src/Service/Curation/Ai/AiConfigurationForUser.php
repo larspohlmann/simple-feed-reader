@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai;
+namespace App\Service\Curation\Ai;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Repository\AiProviderSettingsRepository;
-use App\Service\Ai\Exception\ConfigurationNotFoundException;
+use App\Service\Curation\Ai\Exception\ConfigurationNotFoundException;
 
 /**
  * Finds the configurations an account owns. A route's `{id}` resolves through require(): another account's row reads

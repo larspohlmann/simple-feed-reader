@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Scoring\Model;
+namespace App\Service\Curation\Recommendation\Scoring\Model;
 
 final readonly class SystemOneRequestModel
 {

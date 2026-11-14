@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\Support;
+namespace App\Service\Ingestion\Parser\Support;
 
-use App\Service\Html\Support\PastedTextBreaks;
-use App\Service\Text\Support\PlainTextBody;
+use App\Service\Foundation\Html\Support\PastedTextBreaks;
+use App\Service\Foundation\Text\Support\PlainTextBody;
 
 final class FeedBodyHtml
 {

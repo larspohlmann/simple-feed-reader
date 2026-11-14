@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Profile\Support;
+namespace App\Service\Curation\Recommendation\Profile\Support;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationHistoryCaps;
-use App\Service\Recommendation\Pool\Model\ArticleLineModel;
-use App\Service\Recommendation\Profile\Model\ProfileInputsModel;
+use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Curation\Recommendation\Profile\Model\ProfileInputsModel;
 
 /**
  * What a profile depends on: the history's entry ids per section, the saved-search terms, the caps,

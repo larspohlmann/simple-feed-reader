@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media\Model;
+namespace App\Tests\Service\Content\Reader\Media\Model;
 
-use App\Service\Reader\Media\Model\PageTextBlocksModel;
+use App\Service\Content\Reader\Media\Model\PageTextBlocksModel;
 use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 

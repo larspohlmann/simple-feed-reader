@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Transcript;
+namespace App\Service\Content\Transcript;
 
 use App\Entity\EntryTranscript;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Transcript\Exception\TranscriptUnreachableException;
-use App\Service\Transcript\Exception\TranscriptUnusableException;
-use App\Service\Transcript\TranscriptSource\TranscriptSourceInterface;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Content\Transcript\Exception\TranscriptUnreachableException;
+use App\Service\Content\Transcript\Exception\TranscriptUnusableException;
+use App\Service\Content\Transcript\TranscriptSource\TranscriptSourceInterface;
 use Psr\Log\LoggerInterface;
 
 /** Fills one queued transcript, or fails it for good, or backs it off. The caller flushes. */

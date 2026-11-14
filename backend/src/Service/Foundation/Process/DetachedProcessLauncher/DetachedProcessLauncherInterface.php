@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Process\DetachedProcessLauncher;
+namespace App\Service\Foundation\Process\DetachedProcessLauncher;
 
 /**
  * Best-effort: an implementation never throws, and a host that cannot spawn is a silent no-op, so the caller's slow

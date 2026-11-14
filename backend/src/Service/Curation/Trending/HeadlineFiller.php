@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Trending;
+namespace App\Service\Curation\Trending;
 
 final readonly class HeadlineFiller
 {

@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run;
+namespace App\Service\Curation\Recommendation\Run;
 
 use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Ai\Exception\AiKeyUnreadableException;
-use App\Service\Ai\Exception\AiNotConfiguredException;
-use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
-use App\Service\Recommendation\Exception\RecommendationTickLockLostException;
-use App\Service\Recommendation\Run\Factory\TickContextFactory;
-use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
-use App\Service\Recommendation\Run\Model\TickDriver;
+use App\Service\Curation\Ai\Exception\AiKeyUnreadableException;
+use App\Service\Curation\Ai\Exception\AiNotConfiguredException;
+use App\Service\Curation\Recommendation\Exception\RecommendationRunCancelledException;
+use App\Service\Curation\Recommendation\Exception\RecommendationTickLockLostException;
+use App\Service\Curation\Recommendation\Run\Factory\TickContextFactory;
+use App\Service\Curation\Recommendation\Run\Model\RecommendationRunReportModel;
+use App\Service\Curation\Recommendation\Run\Model\TickDriver;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 

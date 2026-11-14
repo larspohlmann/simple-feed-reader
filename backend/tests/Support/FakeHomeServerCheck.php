@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Enum\SocialNetwork;
-use App\Service\Social\HomeServerCheck\HomeServerCheckInterface;
+use App\Service\Social\Social\HomeServerCheck\HomeServerCheckInterface;
 
 /** A post's home server that confirms a deletion only when told to; it records each address asked about. */
 final class FakeHomeServerCheck implements HomeServerCheckInterface

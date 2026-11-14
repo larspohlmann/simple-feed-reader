@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Grafana;
+namespace App\Tests\Service\Operations\Grafana;
 
 use App\Entity\GrafanaConnection;
 use App\Entity\GrafanaSettings as GrafanaSettingsEntity;
-use App\Service\Grafana\GrafanaEnvDefaults;
-use App\Service\Grafana\SettingsLokiEndpoint;
+use App\Service\Operations\Grafana\GrafanaEnvDefaults;
+use App\Service\Operations\Grafana\SettingsLokiEndpoint;
 use App\Tests\Support\BuildsEffectiveGrafanaSettings;
 use App\Tests\Support\GrafanaApiKeyCiphers;
 use PHPUnit\Framework\TestCase;

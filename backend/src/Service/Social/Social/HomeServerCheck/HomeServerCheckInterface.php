@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\HomeServerCheck;
+namespace App\Service\Social\Social\HomeServerCheck;
 
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /** One network's anonymous question to a post's own server, keyed by its SocialNetwork value. */

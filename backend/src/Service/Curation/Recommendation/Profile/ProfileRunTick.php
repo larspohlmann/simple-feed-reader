@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Profile;
+namespace App\Service\Curation\Recommendation\Profile;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\ProfileRun;
 use App\Enum\RunStatus;
-use App\Service\Ai\Exception\AiKeyUnreadableException;
-use App\Service\Ai\Exception\CredentialsRejectedException;
-use App\Service\Ai\Exception\ProviderRateLimitedException;
-use App\Service\Ai\Exception\ProviderRejectedRequestException;
-use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\Exception\RetryableProviderException;
-use App\Service\Recommendation\Exception\RecommendationTickLockLostException;
-use App\Service\Recommendation\Profile\Pass\ProfileTick;
-use App\Service\Recommendation\Run\Model\TickDriver;
-use App\Service\Recommendation\Run\RecommendationRunAdvancer;
-use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
+use App\Service\Curation\Ai\Exception\AiKeyUnreadableException;
+use App\Service\Curation\Ai\Exception\CredentialsRejectedException;
+use App\Service\Curation\Ai\Exception\ProviderRateLimitedException;
+use App\Service\Curation\Ai\Exception\ProviderRejectedRequestException;
+use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
+use App\Service\Curation\Ai\Exception\RetryableProviderException;
+use App\Service\Curation\Recommendation\Exception\RecommendationTickLockLostException;
+use App\Service\Curation\Recommendation\Profile\Pass\ProfileTick;
+use App\Service\Curation\Recommendation\Run\Model\TickDriver;
+use App\Service\Curation\Recommendation\Run\RecommendationRunAdvancer;
+use App\Service\Curation\Recommendation\Settings\RecommendationSettingsResolver;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**

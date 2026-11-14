@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use PHPUnit\Framework\Assert;
 
 final class Bluesky

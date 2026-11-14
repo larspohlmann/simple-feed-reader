@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
-use App\Service\Comments\Model\CommentAuthorModel;
-use App\Service\Comments\Model\EntryCommentModel;
-use App\Service\Social\Model\SocialCountsModel;
-use App\Service\Social\Pass\ReplyNode;
-use App\Service\Social\ReplyThreadOrder;
+use App\Service\Content\Comments\Model\CommentAuthorModel;
+use App\Service\Content\Comments\Model\EntryCommentModel;
+use App\Service\Social\Social\Model\SocialCountsModel;
+use App\Service\Social\Social\Pass\ReplyNode;
+use App\Service\Social\Social\ReplyThreadOrder;
 use PHPUnit\Framework\TestCase;
 
 final class ReplyThreadOrderTest extends TestCase

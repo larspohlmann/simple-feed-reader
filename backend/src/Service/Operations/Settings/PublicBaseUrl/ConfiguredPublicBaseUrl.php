@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Settings\PublicBaseUrl;
+namespace App\Service\Operations\Settings\PublicBaseUrl;
 
-use App\Service\Settings\InstanceSettings;
+use App\Service\Operations\Settings\InstanceSettings;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\Service\ResetInterface;
 

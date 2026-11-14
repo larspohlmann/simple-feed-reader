@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Parser\Pass;
+namespace App\Tests\Service\Ingestion\Parser\Pass;
 
-use App\Service\Parser\FeedFormatParser\FeedFormatParserInterface;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Parser\Model\ParsedFeedModel;
+use App\Service\Ingestion\Parser\FeedFormatParser\FeedFormatParserInterface;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
 
 /** Treats every element named item as an entry and records what the stream hands it. */
 final class RecordingItemParser implements FeedFormatParserInterface

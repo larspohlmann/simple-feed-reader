@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Run;
+namespace App\Tests\Service\Curation\Recommendation\Run;
 
 use App\Entity\CallOutcome;
 use App\Entity\RecommendationRun;
@@ -11,9 +11,9 @@ use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Enum\RecommendationEngineKind;
 use App\Repository\RecommendationRunTimingRepository;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
-use App\Service\Recommendation\Run\RecommendationRunForecaster;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Recommendation\Run\Model\RecommendationRunReportModel;
+use App\Service\Curation\Recommendation\Run\RecommendationRunForecaster;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;

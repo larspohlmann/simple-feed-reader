@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\ResponseExchange;
+namespace App\Service\Outbound\Fetch\ResponseExchange;
 
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\Model\ExchangeStepModel;
-use App\Service\Fetch\Model\FetchAttemptModel;
-use App\Service\Fetch\Model\FetchOutcomeModel;
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\Model\ExchangeStepModel;
+use App\Service\Outbound\Fetch\Model\FetchAttemptModel;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;

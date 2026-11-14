@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Image;
+namespace App\Service\Outbound\Image;
 
 use App\Repository\PendingImageVerificationRepository;
-use App\Service\Image\Model\ImageVerificationBudgetModel;
-use App\Service\Image\Model\ImageVerificationReportModel;
-use App\Service\Image\Model\ImageVerifyOutcome;
+use App\Service\Outbound\Image\Model\ImageVerificationBudgetModel;
+use App\Service\Outbound\Image\Model\ImageVerificationReportModel;
+use App\Service\Outbound\Image\Model\ImageVerifyOutcome;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 

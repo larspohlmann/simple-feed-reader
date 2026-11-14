@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Catalog;
+namespace App\Service\Sourcing\Catalog;
 
 use App\Enum\SourceFormat;
-use App\Service\Catalog\Exception\InvalidCatalogDocumentException;
-use App\Service\Catalog\Model\CatalogDocumentCategoryModel;
-use App\Service\Catalog\Model\CatalogDocumentFeedModel;
-use App\Service\Catalog\Model\ParsedCatalogModel;
-use App\Service\Opml\Exception\InvalidOpmlException;
-use App\Service\Opml\OpmlBodyReader;
-use App\Service\Url\Support\AbsoluteHttpUrl;
+use App\Service\Sourcing\Catalog\Exception\InvalidCatalogDocumentException;
+use App\Service\Sourcing\Catalog\Model\CatalogDocumentCategoryModel;
+use App\Service\Sourcing\Catalog\Model\CatalogDocumentFeedModel;
+use App\Service\Sourcing\Catalog\Model\ParsedCatalogModel;
+use App\Service\Library\Opml\Exception\InvalidOpmlException;
+use App\Service\Library\Opml\OpmlBodyReader;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 
 /**
  * Parses and fully validates a catalog OPML: one level of category outlines (`text` plus the extra `key`, `icon`,

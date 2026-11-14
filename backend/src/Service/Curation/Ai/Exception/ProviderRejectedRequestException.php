@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai\Exception;
+namespace App\Service\Curation\Ai\Exception;
 
-use App\Service\Ai\Model\ProviderErrorIdentifiersModel;
+use App\Service\Curation\Ai\Model\ProviderErrorIdentifiersModel;
 
 /** Resending the same request earns the same answer, so unlike ProviderUnreachableException it spends no strike. */
 final class ProviderRejectedRequestException extends \RuntimeException

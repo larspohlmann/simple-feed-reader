@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Parser\Model;
+namespace App\Tests\Service\Ingestion\Parser\Model;
 
 use App\Entity\Headline;
-use App\Service\Parser\Model\ParsedCategoryModel;
-use App\Service\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Model\ParsedCategoryModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use PHPUnit\Framework\TestCase;
 
 final class ParsedEntryModelTest extends TestCase

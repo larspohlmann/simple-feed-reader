@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\SocialFeed;
 use App\Entity\Subscription;
@@ -10,17 +10,17 @@ use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Repository\RetentionRepository;
 use App\Repository\SocialFeedRepository;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Search\EntryIndexer;
-use App\Service\Social\Exception\NotASearchFeedException;
-use App\Service\Social\Exception\SearchQueryTooBroadException;
-use App\Service\Social\Model\PrivateFeedModel;
-use App\Service\Social\Support\MastodonSearchQueries;
-use App\Service\Social\Support\PrivateFeedSite;
-use App\Service\Social\Support\SocialFeedUrl;
-use App\Service\Social\Support\SocialSearchMatch;
-use App\Service\Social\Support\StoredSearchedPost;
-use App\Service\Subscription\Exception\AlreadySubscribedException;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Library\Search\EntryIndexer;
+use App\Service\Social\Social\Exception\NotASearchFeedException;
+use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
+use App\Service\Social\Social\Model\PrivateFeedModel;
+use App\Service\Social\Social\Support\MastodonSearchQueries;
+use App\Service\Social\Social\Support\PrivateFeedSite;
+use App\Service\Social\Social\Support\SocialFeedUrl;
+use App\Service\Social\Social\Support\SocialSearchMatch;
+use App\Service\Social\Social\Support\StoredSearchedPost;
+use App\Service\Library\Subscription\Exception\AlreadySubscribedException;
 use Doctrine\ORM\EntityManagerInterface;
 
 /** Points a search feed at another query in place, its stored posts that no longer match removed unless protected. */

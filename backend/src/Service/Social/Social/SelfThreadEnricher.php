@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
@@ -12,18 +12,18 @@ use App\Enum\ShareEnrichmentKind;
 use App\Repository\LinkCardRepository;
 use App\Repository\ShareEnrichmentRepository;
 use App\Repository\ThreadPostRepository;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Comments\Exception\CommentsUnavailableException;
-use App\Service\Comments\Model\EntryCommentModel;
-use App\Service\Completion\SelfThreadPass\SelfThreadPassInterface;
-use App\Service\Social\Exception\SocialNetworkThrottledException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\Model\SelfThreadBudgetModel;
-use App\Service\Social\Model\SocialPostAddressModel;
-use App\Service\Share\Support\ShareTargets;
-use App\Service\Social\ReplyThreadSource\ReplyThreadSourceInterface;
-use App\Service\Social\Support\SocialPostAddress;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Content\Comments\Exception\CommentsUnavailableException;
+use App\Service\Content\Comments\Model\EntryCommentModel;
+use App\Service\Social\Completion\SelfThreadPass\SelfThreadPassInterface;
+use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Model\SelfThreadBudgetModel;
+use App\Service\Social\Social\Model\SocialPostAddressModel;
+use App\Service\Social\Share\Support\ShareTargets;
+use App\Service\Social\Social\ReplyThreadSource\ReplyThreadSourceInterface;
+use App\Service\Social\Social\Support\SocialPostAddress;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;

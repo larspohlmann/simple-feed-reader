@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\LinkCard\Model;
+namespace App\Tests\Service\Content\LinkCard\Model;
 
 use App\Entity\ShareEnrichment;
-use App\Service\LinkCard\Model\LinkCardBudgetModel;
-use App\Service\Reader\PageHeadFetcher;
+use App\Service\Content\LinkCard\Model\LinkCardBudgetModel;
+use App\Service\Content\Reader\PageHeadFetcher;
 use PHPUnit\Framework\TestCase;
 
 final class LinkCardBudgetModelTest extends TestCase

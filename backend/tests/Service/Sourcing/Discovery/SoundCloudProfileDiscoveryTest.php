@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Discovery;
+namespace App\Tests\Service\Sourcing\Discovery;
 
-use App\Service\Discovery\Model\ScrapeFallback;
+use App\Service\Sourcing\Discovery\Model\ScrapeFallback;
 use App\Tests\Support\ReadsFixtures;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 

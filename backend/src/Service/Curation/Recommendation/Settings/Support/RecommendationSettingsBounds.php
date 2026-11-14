@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Settings\Support;
+namespace App\Service\Curation\Recommendation\Settings\Support;
 
 /**
  * The expert-settings limits, shared by the request validator and the JSON

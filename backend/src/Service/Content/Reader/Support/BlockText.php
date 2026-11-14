@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Support;
+namespace App\Service\Content\Reader\Support;
 
-use App\Service\Text\Support\Whitespace;
+use App\Service\Foundation\Text\Support\Whitespace;
 use Dom\Element;
 
 /** Block text measured collapsed: indentation between list items is markup and would dilute a list's link share. */

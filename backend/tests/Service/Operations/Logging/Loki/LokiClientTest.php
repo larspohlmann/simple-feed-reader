@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Logging\Loki;
+namespace App\Tests\Service\Operations\Logging\Loki;
 
-use App\Service\Logging\Loki\LokiClient;
-use App\Service\Logging\Loki\LokiEndpoint\LokiEndpointInterface;
+use App\Service\Operations\Logging\Loki\LokiClient;
+use App\Service\Operations\Logging\Loki\LokiEndpoint\LokiEndpointInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;

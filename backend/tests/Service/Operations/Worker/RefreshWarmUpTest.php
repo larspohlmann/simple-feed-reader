@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Worker;
+namespace App\Tests\Service\Operations\Worker;
 
-use App\Service\Refresh\Model\RefreshRequestModel;
-use App\Service\Worker\RefreshWarmUp;
+use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
+use App\Service\Operations\Worker\RefreshWarmUp;
 use PHPUnit\Framework\TestCase;
 
 final class RefreshWarmUpTest extends TestCase

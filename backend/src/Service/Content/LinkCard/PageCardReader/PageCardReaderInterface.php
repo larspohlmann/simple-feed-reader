@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\LinkCard\PageCardReader;
+namespace App\Service\Content\LinkCard\PageCardReader;
 
-use App\Service\LinkCard\Model\PageCardModel;
-use App\Service\Reader\Exception\PageFetchException;
+use App\Service\Content\LinkCard\Model\PageCardModel;
+use App\Service\Content\Reader\Exception\PageFetchException;
 
 interface PageCardReaderInterface
 {

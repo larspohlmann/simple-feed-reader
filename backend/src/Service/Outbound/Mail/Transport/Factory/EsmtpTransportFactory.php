@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Transport\Factory;
+namespace App\Service\Outbound\Mail\Transport\Factory;
 
 use App\Enum\MailEncryption;
-use App\Service\Mail\Settings\Model\ResolvedMailTransportModel;
+use App\Service\Outbound\Mail\Settings\Model\ResolvedMailTransportModel;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;

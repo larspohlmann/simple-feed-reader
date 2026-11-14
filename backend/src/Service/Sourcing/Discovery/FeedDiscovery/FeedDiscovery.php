@@ -2,29 +2,29 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Discovery\FeedDiscovery;
+namespace App\Service\Sourcing\Discovery\FeedDiscovery;
 
 use App\Enum\SourceFormat;
-use App\Service\Discovery\BotChallengePage;
-use App\Service\Discovery\Exception\SiteThrottledException;
-use App\Service\Discovery\FeedLinkScanner;
-use App\Service\Discovery\FeedOffer\FeedOfferInterface;
-use App\Service\Discovery\Model\DiscoveredFeedModel;
-use App\Service\Discovery\Model\FeedCandidateModel;
-use App\Service\Discovery\Model\FeedDiscoveryResultModel;
-use App\Service\Discovery\Model\ScrapeFailureReason;
-use App\Service\Discovery\Model\ScrapeFallback;
-use App\Service\Discovery\ShareLinkFeed\ShareLinkFeedInterface;
-use App\Service\Discovery\WellKnownFeedProbe;
-use App\Service\Fetch\Exception\FeedThrottledException;
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\Exception\ResponseTooLargeException;
-use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
-use App\Service\Fetch\Model\FetchResponseModel;
-use App\Service\Parser\Exception\FeedParseException;
-use App\Service\Parser\FeedParser;
-use App\Service\Scraper\HtmlItemExtractor;
+use App\Service\Sourcing\Discovery\BotChallengePage;
+use App\Service\Sourcing\Discovery\Exception\SiteThrottledException;
+use App\Service\Sourcing\Discovery\FeedLinkScanner;
+use App\Service\Sourcing\Discovery\FeedOffer\FeedOfferInterface;
+use App\Service\Sourcing\Discovery\Model\DiscoveredFeedModel;
+use App\Service\Sourcing\Discovery\Model\FeedCandidateModel;
+use App\Service\Sourcing\Discovery\Model\FeedDiscoveryResultModel;
+use App\Service\Sourcing\Discovery\Model\ScrapeFailureReason;
+use App\Service\Sourcing\Discovery\Model\ScrapeFallback;
+use App\Service\Sourcing\Discovery\ShareLinkFeed\ShareLinkFeedInterface;
+use App\Service\Sourcing\Discovery\WellKnownFeedProbe;
+use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Outbound\Fetch\FeedFetcher\FeedFetcherInterface;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
+use App\Service\Ingestion\Parser\Exception\FeedParseException;
+use App\Service\Ingestion\Parser\FeedParser;
+use App\Service\Ingestion\Scraper\HtmlItemExtractor;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 use Symfony\Component\HttpFoundation\Response;
 

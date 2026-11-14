@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\ArticleExtractor;
+namespace App\Service\Content\Reader\ArticleExtractor;
 
-use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Model\EntryHintsModel;
-use App\Service\Reader\Model\ExtractionFailure;
-use App\Service\Reader\Model\ExtractionResultModel;
+use App\Service\Content\Reader\Media\EmbedProviders;
+use App\Service\Content\Reader\Model\EntryHintsModel;
+use App\Service\Content\Reader\Model\ExtractionFailure;
+use App\Service\Content\Reader\Model\ExtractionResultModel;
 use Symfony\Component\DependencyInjection\Attribute\AsDecorator;
 use Symfony\Component\DependencyInjection\Attribute\AutowireDecorated;
 

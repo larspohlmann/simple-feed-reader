@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ExceptionProblems\ChapterProblems;
-use App\Service\Chapter\Exception\EmbedDescriptionUnreachableException;
+use App\Service\Content\Chapter\Exception\EmbedDescriptionUnreachableException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Response;
 

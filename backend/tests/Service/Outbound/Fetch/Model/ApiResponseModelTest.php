@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch\Model;
+namespace App\Tests\Service\Outbound\Fetch\Model;
 
-use App\Service\Fetch\Model\ApiResponseModel;
+use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Response;

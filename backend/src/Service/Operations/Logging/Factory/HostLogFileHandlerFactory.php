@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Logging\Factory;
+namespace App\Service\Operations\Logging\Factory;
 
 use Monolog\Formatter\FormatterInterface;
 use Monolog\Handler\RotatingFileHandler;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Support;
+namespace App\Service\Operations\Backup\Support;
 
 /** How every backup line is written: one JSON object per line, instants in UTC as ATOM strings. */
 final class BackupLineFormat

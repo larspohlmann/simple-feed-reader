@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Grafana;
+namespace App\Tests\Service\Operations\Grafana;
 
 use App\Entity\GrafanaConnection;
 use App\Entity\GrafanaSettings as GrafanaSettingsEntity;
-use App\Service\Grafana\GrafanaSettingsCache;
-use App\Service\Grafana\Model\GrafanaSettingsSnapshotModel;
+use App\Service\Operations\Grafana\GrafanaSettingsCache;
+use App\Service\Operations\Grafana\Model\GrafanaSettingsSnapshotModel;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 

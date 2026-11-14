@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Model;
+namespace App\Tests\Service\Social\Social\Model;
 
 use App\Enum\SocialFeedKind;
-use App\Service\Social\Model\PrivateFeedModel;
+use App\Service\Social\Social\Model\PrivateFeedModel;
 use PHPUnit\Framework\TestCase;
 
 final class PrivateFeedModelTest extends TestCase

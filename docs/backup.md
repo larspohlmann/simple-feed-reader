@@ -414,7 +414,7 @@ a guard test:
 
 Read these before you change a backed-up entity or the restore endpoints.
 
-- `backend/tests/Service/Backup/Support/BackupSchemaCoverageTest.php` reads the ORM
+- `backend/tests/Service/Operations/Backup/Support/BackupSchemaCoverageTest.php` reads the ORM
   mapping and demands a decision for each persisted field of each backed-up
   entity. A new column on a backed-up table makes this test red. The test also
   asserts that this page names each dropped entity and each dropped field, so
@@ -422,7 +422,7 @@ Read these before you change a backed-up entity or the restore endpoints.
   also proves that a fully populated account never exports a backed-up field
   as null, so a field cannot pass this test merely because its test fixture
   left it empty.
-- `backend/tests/Service/Backup/AccountRestorerTest.php::testEveryBackedUpFieldSurvivesTheRestoreRoundTrip`
+- `backend/tests/Service/Operations/Backup/AccountRestorerTest.php::testEveryBackedUpFieldSurvivesTheRestoreRoundTrip`
   guards the other direction. It exports a fully populated account to parts,
   restores the foundation part with `AccountRestorer::start`, restores each
   entry part with `EntryPartRestorer::load`, and then compares source and
@@ -433,16 +433,16 @@ Read these before you change a backed-up entity or the restore endpoints.
   closes that gap. Both tests read the same field list, from
   `backend/tests/Support/BackupFieldDeclarations.php`. A field added to that
   list gets both tests for free.
-- `backend/tests/Service/Backup/AccountBackupExporterTest.php` guards what the
+- `backend/tests/Service/Operations/Backup/AccountBackupExporterTest.php` guards what the
   exporter writes.
-- `backend/tests/Service/Backup/GoldenBackupRestoreTest.php` restores two
+- `backend/tests/Service/Operations/Backup/GoldenBackupRestoreTest.php` restores two
   frozen fixture directories on each run, `backend/tests/Fixtures/backup/current/`
   and `backend/tests/Fixtures/backup/oldest-supported/`, each holding a
   `000-foundation.ndjson` and a `001-entries.ndjson`. They guard what the
   reader still accepts. `oldest-supported/` is frozen the moment it is
   created; only `current/` moves when the format changes, and an additive
   field adds nothing to either fixture.
-- `backend/tests/Service/Backup/EntryPartRestorerTest.php` guards the rules in
+- `backend/tests/Service/Operations/Backup/EntryPartRestorerTest.php` guards the rules in
   section 8.2 directly, including
   `testARetriedPartCreatesNothingAndFailsNothing` (a resent part is a no-op)
   and `testAnExistingStateRowIsLeftUntouched` (a mark set during the restore

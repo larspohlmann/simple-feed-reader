@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Bluesky\Support;
+namespace App\Tests\Service\Social\Bluesky\Support;
 
 use App\Entity\EntryMedium;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostReference;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Bluesky\Support\QuotedViewRecord;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Bluesky\Support\QuotedViewRecord;
 use App\Tests\Support\Bluesky;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

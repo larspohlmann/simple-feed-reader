@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Pass;
+namespace App\Service\Operations\Backup\Pass;
 
 /**
  * One feed's scalars for the entry and state phases, captured before the entity manager is cleared: its id, the

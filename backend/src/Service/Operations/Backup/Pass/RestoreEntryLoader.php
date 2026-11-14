@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Pass;
+namespace App\Service\Operations\Backup\Pass;
 
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\User;
 use App\Repository\EntryBatchInserter;
-use App\Service\Backup\Dto\EntryLine;
-use App\Service\Backup\Dto\EntryShareLine;
-use App\Service\Backup\Dto\EntryStateLine;
-use App\Service\Backup\Exception\BackupLoadFailedException;
-use App\Service\Backup\Factory\RestoredEntryStateFactory;
-use App\Service\Backup\RestoreEntries\RestoreEntriesInterface;
-use App\Service\Backup\RestoreEntryShares\RestoreEntrySharesInterface;
-use App\Service\Backup\RestoreEntryStates\RestoreEntryStatesInterface;
-use App\Service\Backup\Support\PrivateFeedRefusal;
-use App\Service\Search\EntryIndexer;
+use App\Service\Operations\Backup\Dto\EntryLine;
+use App\Service\Operations\Backup\Dto\EntryShareLine;
+use App\Service\Operations\Backup\Dto\EntryStateLine;
+use App\Service\Operations\Backup\Exception\BackupLoadFailedException;
+use App\Service\Operations\Backup\Factory\RestoredEntryStateFactory;
+use App\Service\Operations\Backup\RestoreEntries\RestoreEntriesInterface;
+use App\Service\Operations\Backup\RestoreEntryShares\RestoreEntrySharesInterface;
+use App\Service\Operations\Backup\RestoreEntryStates\RestoreEntryStatesInterface;
+use App\Service\Operations\Backup\Support\PrivateFeedRefusal;
+use App\Service\Library\Search\EntryIndexer;
 use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\ORM\EntityManagerInterface;
 

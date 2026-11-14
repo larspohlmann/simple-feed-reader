@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Backup;
+namespace App\Tests\Service\Operations\Backup;
 
 use App\Entity\Entry;
 use App\Entity\EntryAttachment;
@@ -18,16 +18,16 @@ use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\SubscribedEntryCountRepository;
 use App\Repository\FeedRepository;
-use App\Service\Backup\BackupFitCheck;
-use App\Service\Backup\BackupReader;
-use App\Service\Backup\EntryPartInspector;
-use App\Service\Backup\EntryPartRestorer;
-use App\Service\Backup\Exception\BackupDoesNotFitException;
-use App\Service\Backup\Exception\InvalidBackupException;
-use App\Service\Backup\Factory\RestoreEntryLoaderFactory;
-use App\Service\Backup\Factory\RestoredEntryStateFactory;
+use App\Service\Operations\Backup\BackupFitCheck;
+use App\Service\Operations\Backup\BackupReader;
+use App\Service\Operations\Backup\EntryPartInspector;
+use App\Service\Operations\Backup\EntryPartRestorer;
+use App\Service\Operations\Backup\Exception\BackupDoesNotFitException;
+use App\Service\Operations\Backup\Exception\InvalidBackupException;
+use App\Service\Operations\Backup\Factory\RestoreEntryLoaderFactory;
+use App\Service\Operations\Backup\Factory\RestoredEntryStateFactory;
 use App\Tests\DbTestCase;
-use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\UserFactory;

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Maintenance\MaintenanceSweep;
+namespace App\Tests\Service\Operations\Maintenance\MaintenanceSweep;
 
-use App\Service\Image\Model\ImageVerificationReportModel;
+use App\Service\Outbound\Image\Model\ImageVerificationReportModel;
 use App\Entity\Feed;
-use App\Service\Maintenance\MaintenanceSweep\ImageVerificationTickSweep;
+use App\Service\Operations\Maintenance\MaintenanceSweep\ImageVerificationTickSweep;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ImageVerificationSweepWiring;
 use App\Tests\Support\PendingImageFixtures;

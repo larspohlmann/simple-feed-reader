@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Scoring;
+namespace App\Service\Curation\Recommendation\Scoring;
 
 use App\Enum\RecommendationEngineKind;
-use App\Service\Recommendation\Engine\RecommendationEngine\RecommendationEngineInterface;
-use App\Service\Recommendation\Pool\RecommendationHistoryLoader;
-use App\Service\Recommendation\Run\BatchWavePhase;
-use App\Service\Recommendation\Run\BatchWaveRounds;
-use App\Service\Recommendation\Run\Model\BatchWaveResultModel;
-use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
-use App\Service\Recommendation\Run\Model\WaveBatchModel;
-use App\Service\Recommendation\Run\Pass\TickContext;
-use App\Service\Recommendation\Run\RecommendationRunFailure;
-use App\Service\Recommendation\Run\RecommendationRunFinalizer;
-use App\Service\Recommendation\Run\RecommendationWinnerRanker;
-use App\Service\Recommendation\Scoring\Model\ScoringReaderModel;
-use App\Service\Recommendation\Scoring\Pass\ScoringWave;
+use App\Service\Curation\Recommendation\Engine\RecommendationEngine\RecommendationEngineInterface;
+use App\Service\Curation\Recommendation\Pool\RecommendationHistoryLoader;
+use App\Service\Curation\Recommendation\Run\BatchWavePhase;
+use App\Service\Curation\Recommendation\Run\BatchWaveRounds;
+use App\Service\Curation\Recommendation\Run\Model\BatchWaveResultModel;
+use App\Service\Curation\Recommendation\Run\Model\RecommendationRunReportModel;
+use App\Service\Curation\Recommendation\Run\Model\WaveBatchModel;
+use App\Service\Curation\Recommendation\Run\Pass\TickContext;
+use App\Service\Curation\Recommendation\Run\RecommendationRunFailure;
+use App\Service\Curation\Recommendation\Run\RecommendationRunFinalizer;
+use App\Service\Curation\Recommendation\Run\RecommendationWinnerRanker;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringReaderModel;
+use App\Service\Curation\Recommendation\Scoring\Pass\ScoringWave;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: RecommendationEngineKind::Scoring->value)]

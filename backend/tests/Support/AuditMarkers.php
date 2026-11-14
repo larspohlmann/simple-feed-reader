@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Reader\LeadingEngagementRules;
-use App\Service\ReaderAudit\BodyShapeMarkers;
-use App\Service\ReaderAudit\CleanupMarkers;
-use App\Service\ReaderAudit\LeadingChromeMarkers;
-use App\Service\ReaderAudit\LeadingEngagementMarkers;
-use App\Service\ReaderAudit\LeadingRegion;
-use App\Service\ReaderAudit\PhraseMarkers;
-use App\Service\ReaderAudit\SocialWidgetMarkers;
-use App\Service\ReaderAudit\SuspiciousPhrases;
+use App\Service\Content\Reader\LeadingEngagementRules;
+use App\Service\Content\ReaderAudit\BodyShapeMarkers;
+use App\Service\Content\ReaderAudit\CleanupMarkers;
+use App\Service\Content\ReaderAudit\LeadingChromeMarkers;
+use App\Service\Content\ReaderAudit\LeadingEngagementMarkers;
+use App\Service\Content\ReaderAudit\LeadingRegion;
+use App\Service\Content\ReaderAudit\PhraseMarkers;
+use App\Service\Content\ReaderAudit\SocialWidgetMarkers;
+use App\Service\Content\ReaderAudit\SuspiciousPhrases;
 
 /** The audit's marker rules over the reader's real leading-block rules, wired as the container wires them. */
 final class AuditMarkers

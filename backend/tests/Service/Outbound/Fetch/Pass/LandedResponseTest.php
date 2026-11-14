@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch\Pass;
+namespace App\Tests\Service\Outbound\Fetch\Pass;
 
-use App\Service\Fetch\Pass\LandedResponse;
+use App\Service\Outbound\Fetch\Pass\LandedResponse;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;

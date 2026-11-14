@@ -2,29 +2,29 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\FeedFormatParser;
+namespace App\Service\Ingestion\Parser\FeedFormatParser;
 
 use App\Entity\Discussion;
 use App\Enum\CommentsLoad;
-use App\Service\Parser\Exception\FeedParseException;
-use App\Service\Parser\FeedItemImageSelector;
-use App\Service\Parser\ItemMediaExtractor;
-use App\Service\Parser\Model\FeedNamespace;
-use App\Service\Parser\Model\FeedSyntax;
-use App\Service\Parser\Model\ParsedEntryMediaModel;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Parser\Model\ParsedFeedModel;
-use App\Service\Parser\Pass\CoreElement;
-use App\Service\Parser\Support\DateParser;
-use App\Service\Parser\Support\EntryTitle;
-use App\Service\Parser\Support\FeedBodyHtml;
-use App\Service\Parser\Support\FeedImageExtractor;
-use App\Service\Parser\Support\GuidFallback;
-use App\Service\Parser\Support\ItemCategoryExtractor;
-use App\Service\Parser\Support\MediaDescription;
-use App\Service\Parser\Support\PodcastArtwork;
-use App\Service\Parser\Support\XmlHelper;
-use App\Service\Text\Support\PlainText;
+use App\Service\Ingestion\Parser\Exception\FeedParseException;
+use App\Service\Ingestion\Parser\FeedItemImageSelector;
+use App\Service\Ingestion\Parser\ItemMediaExtractor;
+use App\Service\Ingestion\Parser\Model\FeedNamespace;
+use App\Service\Ingestion\Parser\Model\FeedSyntax;
+use App\Service\Ingestion\Parser\Model\ParsedEntryMediaModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
+use App\Service\Ingestion\Parser\Pass\CoreElement;
+use App\Service\Ingestion\Parser\Support\DateParser;
+use App\Service\Ingestion\Parser\Support\EntryTitle;
+use App\Service\Ingestion\Parser\Support\FeedBodyHtml;
+use App\Service\Ingestion\Parser\Support\FeedImageExtractor;
+use App\Service\Ingestion\Parser\Support\GuidFallback;
+use App\Service\Ingestion\Parser\Support\ItemCategoryExtractor;
+use App\Service\Ingestion\Parser\Support\MediaDescription;
+use App\Service\Ingestion\Parser\Support\PodcastArtwork;
+use App\Service\Ingestion\Parser\Support\XmlHelper;
+use App\Service\Foundation\Text\Support\PlainText;
 
 final readonly class Rss2Parser implements FeedFormatParserInterface
 {

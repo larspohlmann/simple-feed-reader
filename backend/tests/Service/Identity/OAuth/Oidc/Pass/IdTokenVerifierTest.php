@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\OAuth\Oidc\Pass;
+namespace App\Tests\Service\Identity\OAuth\Oidc\Pass;
 
-use App\Service\OAuth\Exception\OAuthFailedException;
-use App\Service\OAuth\Model\OAuthIdentityModel;
-use App\Service\OAuth\Oidc\Model\IdTokenModel;
-use App\Service\OAuth\Oidc\Pass\IdTokenVerifier;
+use App\Service\Identity\OAuth\Exception\OAuthFailedException;
+use App\Service\Identity\OAuth\Model\OAuthIdentityModel;
+use App\Service\Identity\OAuth\Oidc\Model\IdTokenModel;
+use App\Service\Identity\OAuth\Oidc\Pass\IdTokenVerifier;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;

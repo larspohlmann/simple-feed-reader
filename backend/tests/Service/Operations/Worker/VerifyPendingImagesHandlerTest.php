@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Worker;
+namespace App\Tests\Service\Operations\Worker;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Service\Worker\Handler\VerifyPendingImagesHandler;
-use App\Service\Worker\Message\VerifyPendingImages;
+use App\Service\Operations\Worker\Handler\VerifyPendingImagesHandler;
+use App\Service\Operations\Worker\Message\VerifyPendingImages;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ImageVerificationSweepWiring;
 use App\Tests\Support\PngImageFactory;

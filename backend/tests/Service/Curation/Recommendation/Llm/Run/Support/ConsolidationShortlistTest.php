@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Llm\Run\Support;
+namespace App\Tests\Service\Curation\Recommendation\Llm\Run\Support;
 
-use App\Service\Recommendation\Llm\Run\Support\ConsolidationShortlist;
+use App\Service\Curation\Recommendation\Llm\Run\Support\ConsolidationShortlist;
 use PHPUnit\Framework\TestCase;
 
 final class ConsolidationShortlistTest extends TestCase

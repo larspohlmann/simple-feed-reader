@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Scoring\Pass;
+namespace App\Service\Curation\Recommendation\Scoring\Pass;
 
-use App\Service\Recommendation\Run\BatchWave\BatchWaveInterface;
-use App\Service\Recommendation\Run\Model\WaveBatchModel;
-use App\Service\Recommendation\Run\Pass\TickContext;
-use App\Service\Recommendation\Scoring\Model\ScoringReaderModel;
+use App\Service\Curation\Recommendation\Run\BatchWave\BatchWaveInterface;
+use App\Service\Curation\Recommendation\Run\Model\WaveBatchModel;
+use App\Service\Curation\Recommendation\Run\Pass\TickContext;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringReaderModel;
 
 final readonly class ScoringWave implements BatchWaveInterface
 {

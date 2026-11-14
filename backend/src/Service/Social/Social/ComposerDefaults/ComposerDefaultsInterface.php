@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\ComposerDefaults;
+namespace App\Service\Social\Social\ComposerDefaults;
 
 use App\Entity\SocialAccount;
-use App\Service\Social\Model\ComposerDefaultsModel;
-use App\Service\Social\Model\SocialPostModel;
+use App\Service\Social\Social\Model\ComposerDefaultsModel;
+use App\Service\Social\Social\Model\SocialPostModel;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 #[AutoconfigureTag('app.social_composer_defaults')]

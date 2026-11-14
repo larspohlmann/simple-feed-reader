@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Transport\Support;
+namespace App\Service\Outbound\Mail\Transport\Support;
 
 use App\Enum\MailEncryption;
-use App\Service\Fetch\Model\ProxyConfigModel;
-use App\Service\Mail\Settings\Model\ResolvedMailTransportModel;
+use App\Service\Outbound\Fetch\Model\ProxyConfigModel;
+use App\Service\Outbound\Mail\Settings\Model\ResolvedMailTransportModel;
 use Symfony\Component\Mailer\Envelope;
 use Symfony\Component\Mime\Address;
 

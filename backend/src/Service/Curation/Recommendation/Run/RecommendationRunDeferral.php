@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run;
+namespace App\Service\Curation\Recommendation\Run;
 
 use App\Entity\RecommendationRun;
-use App\Service\Ai\Exception\ProviderRateLimitedException;
-use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
+use App\Service\Curation\Ai\Exception\ProviderRateLimitedException;
+use App\Service\Curation\Recommendation\Run\Model\RecommendationRunReportModel;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 

@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\ReplyThreadSource;
+namespace App\Service\Social\Social\ReplyThreadSource;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Comments\Model\CommentsAnswerModel;
-use App\Service\Comments\Model\EntryCommentModel;
-use App\Service\Fetch\Model\ApiRequestModel;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\MastodonAccountApi;
-use App\Service\Social\MastodonApiClient;
-use App\Service\Social\MastodonContextReplies;
-use App\Service\Social\PostResolver\MastodonPostResolver;
-use App\Service\Social\Support\MastodonStatusAddress;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Content\Comments\Model\CommentsAnswerModel;
+use App\Service\Content\Comments\Model\EntryCommentModel;
+use App\Service\Outbound\Fetch\Model\ApiRequestModel;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\MastodonAccountApi;
+use App\Service\Social\Social\MastodonApiClient;
+use App\Service\Social\Social\MastodonContextReplies;
+use App\Service\Social\Social\PostResolver\MastodonPostResolver;
+use App\Service\Social\Social\Support\MastodonStatusAddress;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Mastodon->value)]

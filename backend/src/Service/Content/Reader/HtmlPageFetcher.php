@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Content\Reader;
 
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\Exception\ResponseTooLargeException;
-use App\Service\Fetch\Model\ResponseSizeLimit;
-use App\Service\Fetch\Pass\LandedResponse;
-use App\Service\Fetch\Pass\RedirectBudget;
-use App\Service\Fetch\Support\PersistentConnection;
-use App\Service\Fetch\Support\ResponseBody;
-use App\Service\Reader\Exception\PageFetchException;
-use App\Service\Reader\Model\PageResponseModel;
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Outbound\Fetch\Model\ResponseSizeLimit;
+use App\Service\Outbound\Fetch\Pass\LandedResponse;
+use App\Service\Outbound\Fetch\Pass\RedirectBudget;
+use App\Service\Outbound\Fetch\Support\PersistentConnection;
+use App\Service\Outbound\Fetch\Support\ResponseBody;
+use App\Service\Content\Reader\Exception\PageFetchException;
+use App\Service\Content\Reader\Model\PageResponseModel;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 
 /**

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Trending;
+namespace App\Service\Curation\Trending;
 
 use App\Enum\TrendingWindow;
-use App\Service\Trending\Model\TrendingExplanationModel;
-use App\Service\Trending\Model\TrendingStoryModel;
-use App\Service\Trending\Pass\BuildStopwatch;
-use App\Service\Trending\StoryLinkSource\HeadlineLinks;
+use App\Service\Curation\Trending\Model\TrendingExplanationModel;
+use App\Service\Curation\Trending\Model\TrendingStoryModel;
+use App\Service\Curation\Trending\Pass\BuildStopwatch;
+use App\Service\Curation\Trending\StoryLinkSource\HeadlineLinks;
 
 /** One window grouped in memory, every group and the near misses: tuning without writing a row (#2017). */
 final readonly class TrendingExplainer

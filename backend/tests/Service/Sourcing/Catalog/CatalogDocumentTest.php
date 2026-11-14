@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Catalog;
+namespace App\Tests\Service\Sourcing\Catalog;
 
-use App\Service\Catalog\CatalogDocument;
-use App\Service\Catalog\Exception\InvalidCatalogDocumentException;
-use App\Service\Opml\OpmlBodyReader;
+use App\Service\Sourcing\Catalog\CatalogDocument;
+use App\Service\Sourcing\Catalog\Exception\InvalidCatalogDocumentException;
+use App\Service\Library\Opml\OpmlBodyReader;
 use PHPUnit\Framework\TestCase;
 
 /**

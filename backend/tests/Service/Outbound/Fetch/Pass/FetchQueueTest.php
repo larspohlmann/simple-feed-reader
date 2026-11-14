@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch\Pass;
+namespace App\Tests\Service\Outbound\Fetch\Pass;
 
 use App\Enum\ProxyType;
-use App\Service\Fetch\Model\FetchAttemptModel;
-use App\Service\Fetch\Model\ProxyConfigModel;
-use App\Service\Fetch\Model\RequestTicketModel;
-use App\Service\Fetch\Pass\FetchQueue;
-use App\Service\Fetch\Pass\RequestSlots;
+use App\Service\Outbound\Fetch\Model\FetchAttemptModel;
+use App\Service\Outbound\Fetch\Model\ProxyConfigModel;
+use App\Service\Outbound\Fetch\Model\RequestTicketModel;
+use App\Service\Outbound\Fetch\Pass\FetchQueue;
+use App\Service\Outbound\Fetch\Pass\RequestSlots;
 use App\Tests\Support\FeedTickets;
 use PHPUnit\Framework\TestCase;
 

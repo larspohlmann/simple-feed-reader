@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Support;
+namespace App\Tests\Service\Content\Reader\Support;
 
-use App\Service\Reader\Support\LeadingEngagementBlocks;
+use App\Service\Content\Reader\Support\LeadingEngagementBlocks;
 use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Prompt;
+namespace App\Service\Curation\Recommendation\Llm\Prompt;
 
 /**
  * A dedup reply may name at most half its pool: the pool is twice the final list, so more would shorten it. In

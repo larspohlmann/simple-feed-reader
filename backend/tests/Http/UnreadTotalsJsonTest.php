@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Http\UnreadTotalsJson;
-use App\Service\Subscription\Model\UnreadTotalsModel;
+use App\Service\Library\Subscription\Model\UnreadTotalsModel;
 use PHPUnit\Framework\TestCase;
 
 final class UnreadTotalsJsonTest extends TestCase

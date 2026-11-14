@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch\Support;
+namespace App\Tests\Service\Outbound\Fetch\Support;
 
-use App\Service\Fetch\Support\PersistentConnection;
+use App\Service\Outbound\Fetch\Support\PersistentConnection;
 use PHPUnit\Framework\TestCase;
 
 final class PersistentConnectionTest extends TestCase

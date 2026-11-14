@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\PostLiker;
+namespace App\Tests\Service\Social\Social\PostLiker;
 
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkThrottledException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostRefusedException;
-use App\Service\Social\Model\SocialPostModel;
-use App\Service\Social\PostLiker\BlueskyPostLiker;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Social\Model\SocialPostModel;
+use App\Service\Social\Social\PostLiker\BlueskyPostLiker;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\Attributes\DataProvider;

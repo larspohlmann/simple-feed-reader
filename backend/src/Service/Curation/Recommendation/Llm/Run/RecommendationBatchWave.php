@@ -2,30 +2,30 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Run;
+namespace App\Service\Curation\Recommendation\Llm\Run;
 
-use App\Service\Ai\Factory\ProviderConnectionFactory;
-use App\Service\Ai\Model\RateLimitedResultModel;
-use App\Service\Recommendation\Llm\Completion\Model\CompletionOutcomeModel;
-use App\Service\Recommendation\Llm\Completion\Model\CompletionRequestModel;
-use App\Service\Recommendation\Llm\Completion\Pass\ConcurrentCompletion;
-use App\Service\Recommendation\Llm\Completion\RateLimitedCompletion;
-use App\Service\Recommendation\Llm\Prompt\Factory\RecommendationCompletionRequestFactory;
-use App\Service\Recommendation\Llm\Prompt\Model\CallPromptModel;
-use App\Service\Recommendation\Llm\Prompt\Model\RecommendationPickModel;
-use App\Service\Recommendation\Llm\Prompt\Model\RecommendationResponseSchema;
-use App\Service\Recommendation\Llm\Prompt\RecommendationPickParser;
-use App\Service\Recommendation\Llm\Prompt\RecommendationPromptBuilder;
-use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
-use App\Service\Recommendation\Llm\Run\Pass\RecordedCallObserver;
-use App\Service\Recommendation\Llm\Run\Pass\WaveContext;
-use App\Service\Recommendation\Run\BatchCallOutcome\BatchCallOutcomeInterface;
-use App\Service\Recommendation\Run\BatchWave\BatchWaveInterface;
-use App\Service\Recommendation\Run\BatchWaveEngine\BatchWaveEngineInterface;
-use App\Service\Recommendation\Run\Model\BatchReplyVerdictModel;
-use App\Service\Recommendation\Run\Model\CallSlotModel;
-use App\Service\Recommendation\Run\Model\WaveBatchModel;
-use App\Service\Recommendation\Run\Pass\BatchCall;
+use App\Service\Curation\Ai\Factory\ProviderConnectionFactory;
+use App\Service\Curation\Ai\Model\RateLimitedResultModel;
+use App\Service\Curation\Recommendation\Llm\Completion\Model\CompletionOutcomeModel;
+use App\Service\Curation\Recommendation\Llm\Completion\Model\CompletionRequestModel;
+use App\Service\Curation\Recommendation\Llm\Completion\Pass\ConcurrentCompletion;
+use App\Service\Curation\Recommendation\Llm\Completion\RateLimitedCompletion;
+use App\Service\Curation\Recommendation\Llm\Prompt\Factory\RecommendationCompletionRequestFactory;
+use App\Service\Curation\Recommendation\Llm\Prompt\Model\CallPromptModel;
+use App\Service\Curation\Recommendation\Llm\Prompt\Model\RecommendationPickModel;
+use App\Service\Curation\Recommendation\Llm\Prompt\Model\RecommendationResponseSchema;
+use App\Service\Curation\Recommendation\Llm\Prompt\RecommendationPickParser;
+use App\Service\Curation\Recommendation\Llm\Prompt\RecommendationPromptBuilder;
+use App\Service\Curation\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
+use App\Service\Curation\Recommendation\Llm\Run\Pass\RecordedCallObserver;
+use App\Service\Curation\Recommendation\Llm\Run\Pass\WaveContext;
+use App\Service\Curation\Recommendation\Run\BatchCallOutcome\BatchCallOutcomeInterface;
+use App\Service\Curation\Recommendation\Run\BatchWave\BatchWaveInterface;
+use App\Service\Curation\Recommendation\Run\BatchWaveEngine\BatchWaveEngineInterface;
+use App\Service\Curation\Recommendation\Run\Model\BatchReplyVerdictModel;
+use App\Service\Curation\Recommendation\Run\Model\CallSlotModel;
+use App\Service\Curation\Recommendation\Run\Model\WaveBatchModel;
+use App\Service\Curation\Recommendation\Run\Pass\BatchCall;
 
 /**
  * The batch phase's streamed completions: a batch's retry quotes its own last invalid reply back.

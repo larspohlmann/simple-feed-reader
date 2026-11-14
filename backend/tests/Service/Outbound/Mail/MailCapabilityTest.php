@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail;
+namespace App\Tests\Service\Outbound\Mail;
 
-use App\Service\Mail\MailCapability;
-use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
+use App\Service\Outbound\Mail\MailCapability;
+use App\Service\Outbound\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use PHPUnit\Framework\TestCase;
 
 final class MailCapabilityTest extends TestCase

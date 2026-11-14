@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Slideshow\Model;
+namespace App\Tests\Service\Content\Reader\Slideshow\Model;
 
-use App\Service\Reader\BodyCleaning\Model\BodyCleaningInputModel;
-use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
-use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Media\Model\ArticleMediaModel;
-use App\Service\Reader\Model\FeedMediaModel;
-use App\Service\Reader\ReaderBodyCleaner;
-use App\Service\Reader\Slideshow\SlideCaptionResolver;
-use App\Service\Reader\Slideshow\SlideImageResolver;
-use App\Service\Reader\Slideshow\SlideshowRecognizer\MarkupCarouselRecognizer;
-use App\Service\Reader\Slideshow\SlideshowRecognizer\TagesschauCarouselRecognizer;
-use App\Service\Reader\Slideshow\SlideshowScanner;
-use App\Service\Sanitize\EntrySanitizer;
-use App\Service\Sanitize\TrailingBlankRemover;
-use App\Tests\Service\Reader\ReaderBodyCleanerTest;
+use App\Service\Content\Reader\BodyCleaning\Model\BodyCleaningInputModel;
+use App\Service\Content\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
+use App\Service\Content\Reader\Media\EmbedProviders;
+use App\Service\Content\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Content\Reader\Model\FeedMediaModel;
+use App\Service\Content\Reader\ReaderBodyCleaner;
+use App\Service\Content\Reader\Slideshow\SlideCaptionResolver;
+use App\Service\Content\Reader\Slideshow\SlideImageResolver;
+use App\Service\Content\Reader\Slideshow\SlideshowRecognizer\MarkupCarouselRecognizer;
+use App\Service\Content\Reader\Slideshow\SlideshowRecognizer\TagesschauCarouselRecognizer;
+use App\Service\Content\Reader\Slideshow\SlideshowScanner;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Foundation\Sanitize\TrailingBlankRemover;
+use App\Tests\Service\Content\Reader\ReaderBodyCleanerTest;
 use App\Tests\Support\BodyCleaningInputs;
 use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;

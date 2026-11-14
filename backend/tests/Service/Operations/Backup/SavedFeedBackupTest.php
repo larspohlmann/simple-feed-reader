@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Backup;
+namespace App\Tests\Service\Operations\Backup;
 
 use App\Entity\Entry;
 use App\Entity\EntryOrigin;
@@ -13,10 +13,10 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SourceFormat;
 use App\Repository\SavedEntryOriginRepository;
-use App\Service\Backup\AccountBackupExporter;
-use App\Service\Backup\AccountRestorer;
-use App\Service\Backup\BackupInspector;
-use App\Service\Backup\EntryPartRestorer;
+use App\Service\Operations\Backup\AccountBackupExporter;
+use App\Service\Operations\Backup\AccountRestorer;
+use App\Service\Operations\Backup\BackupInspector;
+use App\Service\Operations\Backup\EntryPartRestorer;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SavedPostFixtures;
 use App\Tests\Support\UserFactory;

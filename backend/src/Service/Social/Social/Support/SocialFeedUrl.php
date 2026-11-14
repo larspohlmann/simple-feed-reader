@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
-use App\Service\Social\Model\PrivateFeedModel;
-use App\Service\Social\Model\SocialFeedAddressModel;
+use App\Service\Social\Social\Model\PrivateFeedModel;
+use App\Service\Social\Social\Model\SocialFeedAddressModel;
 
 /**
  * A private feed's synthetic URL, `social:<network>:<accountId>:<kind>[:<remoteId>]`. Keyed by the account, never the

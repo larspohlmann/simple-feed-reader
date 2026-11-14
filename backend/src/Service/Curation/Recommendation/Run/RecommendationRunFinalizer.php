@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run;
+namespace App\Service\Curation\Recommendation\Run;
 
 use App\Entity\Entry;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Repository\EntryRepository;
-use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
-use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
+use App\Service\Curation\Recommendation\Run\Model\RecommendationRunReportModel;
+use App\Service\Curation\Recommendation\Settings\RecommendationSettingsResolver;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 

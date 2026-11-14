@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Model;
+namespace App\Service\Content\Reader\Model;
 
-use App\Service\Html\Support\Srcset;
-use App\Service\Image\Model\ImageIdentityModel;
+use App\Service\Foundation\Html\Support\Srcset;
+use App\Service\Outbound\Image\Model\ImageIdentityModel;
 use Dom\HTMLDocument;
 
 /**

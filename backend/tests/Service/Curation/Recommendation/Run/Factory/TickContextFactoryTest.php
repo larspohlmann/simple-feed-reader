@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Run\Factory;
+namespace App\Tests\Service\Curation\Recommendation\Run\Factory;
 
 use App\Enum\RecommendationEngineKind;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Ai\Exception\AiNotConfiguredException;
-use App\Service\Recommendation\Run\Factory\TickContextFactory;
-use App\Service\Recommendation\Run\Model\TickDriver;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Ai\Exception\AiNotConfiguredException;
+use App\Service\Curation\Recommendation\Run\Factory\TickContextFactory;
+use App\Service\Curation\Recommendation\Run\Model\TickDriver;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AiProviderSettingsFactory;
 use App\Tests\Support\RecommendationRunFixtures;

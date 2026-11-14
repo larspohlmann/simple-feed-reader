@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Settings\PublicBaseUrl;
+namespace App\Service\Operations\Settings\PublicBaseUrl;
 
 /**
  * The one externally reachable base URL every mail link is built from: a serving origin such as a LAN host or a

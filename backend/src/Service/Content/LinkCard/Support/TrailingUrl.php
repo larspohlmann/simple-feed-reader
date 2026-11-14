@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\LinkCard\Support;
+namespace App\Service\Content\LinkCard\Support;
 
-use App\Service\Html\Support\HtmlDocumentParser;
+use App\Service\Foundation\Html\Support\HtmlDocumentParser;
 use Dom\Element;
 use Dom\Node;
 use Dom\Text;

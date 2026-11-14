@@ -6,7 +6,7 @@ namespace App\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
-use App\Service\Preview\Exception\FeedPreviewException;
+use App\Service\Sourcing\Preview\Exception\FeedPreviewException;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class PreviewProblems implements ExceptionProblemsInterface

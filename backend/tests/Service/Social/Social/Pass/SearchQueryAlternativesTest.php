@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Pass;
+namespace App\Tests\Service\Social\Social\Pass;
 
-use App\Service\Social\Exception\SearchQueryTooBroadException;
-use App\Service\Social\Pass\SearchQueryAlternatives;
-use App\Service\Social\Support\SearchQueryTokens;
+use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
+use App\Service\Social\Social\Pass\SearchQueryAlternatives;
+use App\Service\Social\Social\Support\SearchQueryTokens;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

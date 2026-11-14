@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Trending\Pass;
+namespace App\Service\Curation\Trending\Pass;
 
 use App\Enum\TrendingWindow;
-use App\Service\Trending\Model\WindowEntryModel;
-use App\Service\Trending\Support\EntryText;
+use App\Service\Curation\Trending\Model\WindowEntryModel;
+use App\Service\Curation\Trending\Support\EntryText;
 
 /** One rebuild of one window: who published each entry when, which URLs it carries, and the headline index. */
 final class TrendingRun

@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
 use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\LinkCard\Support\QuoteLine;
-use App\Service\LinkCard\Support\StorableQuotedPost;
-use App\Service\Parser\Support\DateParser;
-use App\Service\Text\Support\PlainText;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Content\LinkCard\Support\QuoteLine;
+use App\Service\Content\LinkCard\Support\StorableQuotedPost;
+use App\Service\Ingestion\Parser\Support\DateParser;
+use App\Service\Foundation\Text\Support\PlainText;
 
 /** A status another one quotes, as its quote card shows it. */
 final class MastodonQuotedStatus

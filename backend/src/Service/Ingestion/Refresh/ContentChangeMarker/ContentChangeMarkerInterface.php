@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh\ContentChangeMarker;
+namespace App\Service\Ingestion\Refresh\ContentChangeMarker;
 
 /**
  * Moves the public change marker an open reader polls before it asks the API

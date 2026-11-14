@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Ai\Model;
+namespace App\Tests\Service\Curation\Ai\Model;
 
-use App\Service\Ai\Model\ProviderTimeoutsModel;
+use App\Service\Curation\Ai\Model\ProviderTimeoutsModel;
 use PHPUnit\Framework\TestCase;
 
 final class ProviderTimeoutsModelTest extends TestCase

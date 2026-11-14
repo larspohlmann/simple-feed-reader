@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Logging\Loki;
+namespace App\Service\Operations\Logging\Loki;
 
-use App\Service\Logging\Loki\LokiEndpoint\LokiEndpointInterface;
+use App\Service\Operations\Logging\Loki\LokiEndpoint\LokiEndpointInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**

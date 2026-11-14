@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh\Model;
+namespace App\Service\Ingestion\Refresh\Model;
 
 /**
  * One feed's outcome plus how many entries its fetch created. The count feeds

@@ -2,26 +2,26 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\PostResolver;
+namespace App\Service\Social\Social\PostResolver;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Bluesky\Support\AtPostUri;
-use App\Service\Bluesky\Support\BlueskyActorKey;
-use App\Service\Bluesky\Support\BlueskyExternalCard;
-use App\Service\Social\BlueskyIdentityResolver;
-use App\Service\Social\BlueskySessions;
-use App\Service\Social\Exception\SocialAccountUnresolvableException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\Model\PostPreviewModel;
-use App\Service\Social\Model\PostReferenceModel;
-use App\Service\Social\Model\ResponseContextModel;
-use App\Service\Social\Model\SocialPostModel;
-use App\Service\Social\Support\BlueskyAuthor;
-use App\Service\Social\Support\BlueskyRecordUri;
-use App\Service\Social\Support\PostCounts;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Bluesky\Support\AtPostUri;
+use App\Service\Social\Bluesky\Support\BlueskyActorKey;
+use App\Service\Social\Bluesky\Support\BlueskyExternalCard;
+use App\Service\Social\Social\BlueskyIdentityResolver;
+use App\Service\Social\Social\BlueskySessions;
+use App\Service\Social\Social\Exception\SocialAccountUnresolvableException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Model\PostPreviewModel;
+use App\Service\Social\Social\Model\PostReferenceModel;
+use App\Service\Social\Social\Model\ResponseContextModel;
+use App\Service\Social\Social\Model\SocialPostModel;
+use App\Service\Social\Social\Support\BlueskyAuthor;
+use App\Service\Social\Social\Support\BlueskyRecordUri;
+use App\Service\Social\Social\Support\PostCounts;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Bluesky->value)]

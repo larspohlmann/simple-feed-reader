@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\RestoreFeeds;
+namespace App\Service\Operations\Backup\RestoreFeeds;
 
 use App\Entity\Feed;
 

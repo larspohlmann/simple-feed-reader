@@ -6,21 +6,21 @@ namespace App\Tests\Http;
 
 use App\Enum\TrendingWindow;
 use App\Http\MaintenanceTickJson;
-use App\Service\Image\Model\ImageVerificationReportModel;
-use App\Service\LinkCard\Model\LinkCardSweepReportModel;
-use App\Service\Logging\Loki\Model\LokiSpoolReportModel;
-use App\Service\Mail\Digest\Model\DigestSweepReportModel;
-use App\Service\Maintenance\Model\MaintenanceSweepsModel;
-use App\Service\Maintenance\Model\MaintenanceTickReportModel;
-use App\Service\Recommendation\Run\Model\ForYouSweepReportModel;
-use App\Service\Refresh\Model\RefreshReportModel;
-use App\Service\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
-use App\Service\Social\Model\HiddenProfileSwitchReportModel;
-use App\Service\Social\Model\PrivateFeedSyncReportModel;
-use App\Service\Social\Model\ProfileImageSweepReportModel;
-use App\Service\Transcript\Model\TranscriptSweepReportModel;
-use App\Service\Trending\Model\TrendingBuildReportModel;
-use App\Service\Trending\Model\TrendingRebuildReportModel;
+use App\Service\Outbound\Image\Model\ImageVerificationReportModel;
+use App\Service\Content\LinkCard\Model\LinkCardSweepReportModel;
+use App\Service\Operations\Logging\Loki\Model\LokiSpoolReportModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestSweepReportModel;
+use App\Service\Operations\Maintenance\Model\MaintenanceSweepsModel;
+use App\Service\Operations\Maintenance\Model\MaintenanceTickReportModel;
+use App\Service\Curation\Recommendation\Run\Model\ForYouSweepReportModel;
+use App\Service\Ingestion\Refresh\Model\RefreshReportModel;
+use App\Service\Library\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
+use App\Service\Social\Social\Model\HiddenProfileSwitchReportModel;
+use App\Service\Social\Social\Model\PrivateFeedSyncReportModel;
+use App\Service\Social\Social\Model\ProfileImageSweepReportModel;
+use App\Service\Content\Transcript\Model\TranscriptSweepReportModel;
+use App\Service\Curation\Trending\Model\TrendingBuildReportModel;
+use App\Service\Curation\Trending\Model\TrendingRebuildReportModel;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class MaintenanceTickJsonTest extends KernelTestCase

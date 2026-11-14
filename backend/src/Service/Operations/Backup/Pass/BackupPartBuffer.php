@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Pass;
+namespace App\Service\Operations\Backup\Pass;
 
-use App\Service\Backup\Model\BackupPartModel;
+use App\Service\Operations\Backup\Model\BackupPartModel;
 
 /**
  * Accumulates one entry part's lines until its byte or entry budget is hit, then drains them as gzip bytes and resets

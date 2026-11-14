@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Model;
+namespace App\Service\Content\Reader\Model;
 
 /**
  * The lead image ReaderLeadImage may restore, with the evidence to decide it: readability's og:image URL (null or

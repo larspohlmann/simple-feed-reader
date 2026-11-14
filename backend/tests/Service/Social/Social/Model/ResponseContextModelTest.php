@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Model;
+namespace App\Tests\Service\Social\Social\Model;
 
-use App\Service\Social\Model\ResponseContextModel;
-use App\Service\Social\Model\ResponseKind;
+use App\Service\Social\Social\Model\ResponseContextModel;
+use App\Service\Social\Social\Model\ResponseKind;
 use PHPUnit\Framework\TestCase;
 
 final class ResponseContextModelTest extends TestCase

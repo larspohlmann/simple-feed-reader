@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\AnswerSettler;
+namespace App\Service\Outbound\Fetch\AnswerSettler;
 
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Fetch\Model\SettlementModel;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Outbound\Fetch\Model\SettlementModel;
 
 /**
  * For callers that fetch feeds without a pass: every request goes out, and every outcome is yielded as it is.

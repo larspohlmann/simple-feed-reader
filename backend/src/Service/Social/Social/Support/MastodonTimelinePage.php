@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Completion\Model\KnownSharesModel;
-use App\Service\Image\Model\DeclaredImageModel;
-use App\Service\Parser\Model\ParsedEntryMediaModel;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Parser\Model\ParsedMediaBundleModel;
-use App\Service\Parser\Model\ParsedMediumModel;
-use App\Service\Parser\Model\VisualMediaKind;
-use App\Service\Parser\Support\DateParser;
-use App\Service\Parser\Support\EntryTitle;
-use App\Service\Social\Model\TimelinePageModel;
-use App\Service\Social\Model\TimelineSelfReplyModel;
-use App\Service\Text\Support\HtmlEscape;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Completion\Model\KnownSharesModel;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryMediaModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Model\ParsedMediaBundleModel;
+use App\Service\Ingestion\Parser\Model\ParsedMediumModel;
+use App\Service\Ingestion\Parser\Model\VisualMediaKind;
+use App\Service\Ingestion\Parser\Support\DateParser;
+use App\Service\Ingestion\Parser\Support\EntryTitle;
+use App\Service\Social\Social\Model\TimelinePageModel;
+use App\Service\Social\Social\Model\TimelineSelfReplyModel;
+use App\Service\Foundation\Text\Support\HtmlEscape;
 
 /** A home or list timeline answer as entries; a thread of the author's own replies on the page is handed on. */
 final class MastodonTimelinePage

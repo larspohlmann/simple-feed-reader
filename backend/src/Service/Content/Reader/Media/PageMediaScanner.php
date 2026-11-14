@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media;
+namespace App\Service\Content\Reader\Media;
 
-use App\Service\Reader\Media\MediaCandidateSource\MediaCandidateSourceInterface;
-use App\Service\Reader\Media\Model\ArticleMediaModel;
-use App\Service\Reader\Media\Model\MediaCandidateModel;
-use App\Service\Reader\Media\Model\RawPageModel;
-use App\Service\Reader\Model\FeedMediaModel;
+use App\Service\Content\Reader\Media\MediaCandidateSource\MediaCandidateSourceInterface;
+use App\Service\Content\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Content\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Content\Reader\Media\Model\RawPageModel;
+use App\Service\Content\Reader\Model\FeedMediaModel;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /**

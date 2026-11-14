@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\SavedPosts;
+namespace App\Tests\Service\Library\SavedPosts;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
@@ -12,10 +12,10 @@ use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\FeedRepository;
 use App\Repository\SubscriptionRepository;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Feed\Factory\FeedFactory;
-use App\Service\SavedPosts\Factory\SavedFeedFactory;
-use App\Service\SavedPosts\SavedFeeds;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Ingestion\Feed\Factory\FeedFactory;
+use App\Service\Library\SavedPosts\Factory\SavedFeedFactory;
+use App\Service\Library\SavedPosts\SavedFeeds;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\Clock\MockClock;

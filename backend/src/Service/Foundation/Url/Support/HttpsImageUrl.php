@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Url\Support;
+namespace App\Service\Foundation\Url\Support;
 
 /**
  * Accepts a feed-supplied image URL only as https (a //host URL is upgraded) and within MAX_LENGTH, never repairing

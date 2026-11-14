@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\RateLimit\Exception;
+namespace App\Tests\Service\Foundation\RateLimit\Exception;
 
-use App\Service\RateLimit\Exception\RateLimitedException;
+use App\Service\Foundation\RateLimit\Exception\RateLimitedException;
 use PHPUnit\Framework\TestCase;
 
 final class RateLimitedExceptionTest extends TestCase

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\Transport\Factory;
+namespace App\Tests\Service\Outbound\Mail\Transport\Factory;
 
 use App\Enum\MailEncryption;
-use App\Service\Mail\Settings\Model\ResolvedMailTransportModel;
-use App\Service\Mail\Transport\Factory\EsmtpTransportFactory;
+use App\Service\Outbound\Mail\Settings\Model\ResolvedMailTransportModel;
+use App\Service\Outbound\Mail\Transport\Factory\EsmtpTransportFactory;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;

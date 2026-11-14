@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Passkey;
+namespace App\Tests\Service\Identity\Passkey;
 
 use App\Entity\UserPasskey;
-use App\Service\Passkey\Exception\PasskeySignInDisabledException;
-use App\Service\Passkey\PasskeySignInAvailability;
-use App\Service\Settings\InstanceSettings;
-use App\Service\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
-use App\Service\Settings\RelyingPartyIdRule;
+use App\Service\Identity\Passkey\Exception\PasskeySignInDisabledException;
+use App\Service\Identity\Passkey\PasskeySignInAvailability;
+use App\Service\Operations\Settings\InstanceSettings;
+use App\Service\Operations\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
+use App\Service\Operations\Settings\RelyingPartyIdRule;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\PasskeyRegistrations;
 use App\Tests\Support\TogglesPasskeySignIn;

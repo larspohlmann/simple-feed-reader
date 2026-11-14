@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Grafana;
+namespace App\Service\Operations\Grafana;
 
-use App\Service\Logging\Loki\LokiEndpoint\LokiEndpointInterface;
+use App\Service\Operations\Logging\Loki\LokiEndpoint\LokiEndpointInterface;
 
 final readonly class SettingsLokiEndpoint implements LokiEndpointInterface
 {

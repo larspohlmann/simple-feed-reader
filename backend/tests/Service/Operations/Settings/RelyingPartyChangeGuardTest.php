@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Settings;
+namespace App\Tests\Service\Operations\Settings;
 
 use App\Exception\ValidationException;
 use App\Http\RequestServingHost;
-use App\Service\Settings\EffectivePasskeyRelyingPartyId;
-use App\Service\Settings\EnrolledPasskeys\EnrolledPasskeysInterface;
-use App\Service\Settings\Model\RelyingPartyIdChoiceModel;
-use App\Service\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
-use App\Service\Settings\RelyingPartyChangeGuard;
-use App\Service\Settings\RelyingPartyIdRule;
+use App\Service\Operations\Settings\EffectivePasskeyRelyingPartyId;
+use App\Service\Operations\Settings\EnrolledPasskeys\EnrolledPasskeysInterface;
+use App\Service\Operations\Settings\Model\RelyingPartyIdChoiceModel;
+use App\Service\Operations\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
+use App\Service\Operations\Settings\RelyingPartyChangeGuard;
+use App\Service\Operations\Settings\RelyingPartyIdRule;
 use App\Tests\Support\FixedPublicBaseUrl;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\RequestStack;

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Discovery\FeedOffer;
+namespace App\Service\Sourcing\Discovery\FeedOffer;
 
-use App\Service\Discovery\Model\FeedCandidateModel;
+use App\Service\Sourcing\Discovery\Model\FeedCandidateModel;
 
 /** A feed a fetched page implies without advertising it; discovery lists every offer after the advertised links. */
 interface FeedOfferInterface

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Profile;
+namespace App\Tests\Service\Curation\Recommendation\Profile;
 
 use App\Entity\ProfileRun;
 use App\Entity\ProfileSettingsValues;
@@ -10,13 +10,13 @@ use App\Entity\User;
 use App\Enum\ProfileRunTrigger;
 use App\Enum\RunStatus;
 use App\Repository\ProfileRunRepository;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Recommendation\Profile\DueProfileRunFinder;
-use App\Service\Recommendation\Profile\ProfileRunAdvancer;
-use App\Service\Recommendation\Profile\ProfileRunStarter;
-use App\Service\Recommendation\Profile\ProfileRunSweep;
-use App\Service\Recommendation\Run\Model\TickDriver;
-use App\Service\Recommendation\Settings\RecommendationSettingsWriter;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Recommendation\Profile\DueProfileRunFinder;
+use App\Service\Curation\Recommendation\Profile\ProfileRunAdvancer;
+use App\Service\Curation\Recommendation\Profile\ProfileRunStarter;
+use App\Service\Curation\Recommendation\Profile\ProfileRunSweep;
+use App\Service\Curation\Recommendation\Run\Model\TickDriver;
+use App\Service\Curation\Recommendation\Settings\RecommendationSettingsWriter;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\RecordingLogger;

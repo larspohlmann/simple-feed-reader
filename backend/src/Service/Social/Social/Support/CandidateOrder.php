@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
-use App\Service\Social\Model\ImportCandidateModel;
-use App\Service\Social\Model\SocialCollectionModel;
+use App\Service\Social\Social\Model\ImportCandidateModel;
+use App\Service\Social\Social\Model\SocialCollectionModel;
 
 final class CandidateOrder
 {

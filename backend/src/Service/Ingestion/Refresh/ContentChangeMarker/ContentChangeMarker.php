@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh\ContentChangeMarker;
+namespace App\Service\Ingestion\Refresh\ContentChangeMarker;
 
-use App\Service\Clock\NaiveUtcClock;
+use App\Service\Foundation\Clock\NaiveUtcClock;
 use Psr\Log\LoggerInterface;
 
 /**

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Ai\RateLimitedOutcome\RateLimitedOutcomeInterface;
+use App\Service\Curation\Ai\RateLimitedOutcome\RateLimitedOutcomeInterface;
 
 /** An outcome that is no chat completion: proves the rate-limit loop knows only the interface. */
 final readonly class ScriptedRateLimitedOutcome implements RateLimitedOutcomeInterface

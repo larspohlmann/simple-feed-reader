@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ingest\Support;
+namespace App\Service\Ingestion\Ingest\Support;
 
-use App\Service\Text\Support\EntryPlainText;
+use App\Service\Foundation\Text\Support\EntryPlainText;
 
 /**
  * An entry body as PLAIN TEXT (EntryPlainText's rules) cut to MAX_LENGTH. Never sanitized: it may hold literal <, >

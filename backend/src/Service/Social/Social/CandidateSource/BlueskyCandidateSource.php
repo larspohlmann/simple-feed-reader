@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\CandidateSource;
+namespace App\Service\Social\Social\CandidateSource;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Bluesky\AppViewClient;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Fetch\Model\ApiRequestModel;
-use App\Service\Social\BlueskyApiClient;
-use App\Service\Social\BlueskySavedCollections;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Model\CollectedItemsModel;
-use App\Service\Social\Model\FollowedAccountModel;
-use App\Service\Social\Model\NetworkCandidatesModel;
-use App\Service\Social\Model\NetworkCollectionsModel;
-use App\Service\Social\Model\SocialCollectionModel;
-use App\Service\Social\Support\CuratedBlueskyList;
-use App\Service\Social\Support\ProfileFeedUrl;
-use App\Service\Url\Support\AbsoluteHttpUrl;
+use App\Service\Social\Bluesky\AppViewClient;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Outbound\Fetch\Model\ApiRequestModel;
+use App\Service\Social\Social\BlueskyApiClient;
+use App\Service\Social\Social\BlueskySavedCollections;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Model\CollectedItemsModel;
+use App\Service\Social\Social\Model\FollowedAccountModel;
+use App\Service\Social\Social\Model\NetworkCandidatesModel;
+use App\Service\Social\Social\Model\NetworkCollectionsModel;
+use App\Service\Social\Social\Model\SocialCollectionModel;
+use App\Service\Social\Social\Support\CuratedBlueskyList;
+use App\Service\Social\Social\Support\ProfileFeedUrl;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Bluesky->value)]

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Pass;
+namespace App\Service\Social\Social\Pass;
 
 use App\Enum\SocialNetwork;
-use App\Service\Bluesky\Support\BlueskyActorKey;
-use App\Service\Social\Model\FollowedAccountModel;
-use App\Service\Social\Model\ImportCandidateModel;
-use App\Service\Social\Model\ProfileFeedSubscriptionModel;
-use App\Service\Social\Support\ProfileFeedUrl;
+use App\Service\Social\Bluesky\Support\BlueskyActorKey;
+use App\Service\Social\Social\Model\FollowedAccountModel;
+use App\Service\Social\Social\Model\ImportCandidateModel;
+use App\Service\Social\Social\Model\ProfileFeedSubscriptionModel;
+use App\Service\Social\Social\Support\ProfileFeedUrl;
 
 /** One picker load's matching: each follow answers to its identity, its handle and its own feed's key. */
 final class FollowMatching

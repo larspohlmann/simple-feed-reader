@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search\Index\SearchIndexWriter;
+namespace App\Service\Library\Search\Index\SearchIndexWriter;
 
-use App\Service\Search\Exception\SearchEngineUnavailableException;
-use App\Service\Search\Index\Model\IndexedEntryModel;
+use App\Service\Library\Search\Exception\SearchEngineUnavailableException;
+use App\Service\Library\Search\Index\Model\IndexedEntryModel;
 
 /**
  * The write side of the index gateway. See SearchIndexReaderInterface for why this is

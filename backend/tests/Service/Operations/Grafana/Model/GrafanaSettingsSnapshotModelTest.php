@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Grafana\Model;
+namespace App\Tests\Service\Operations\Grafana\Model;
 
 use App\Entity\GrafanaConnection;
 use App\Entity\GrafanaSettings as GrafanaSettingsEntity;
 use App\Entity\SealedSecret;
-use App\Service\Grafana\Model\GrafanaSettingsSnapshotModel;
+use App\Service\Operations\Grafana\Model\GrafanaSettingsSnapshotModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

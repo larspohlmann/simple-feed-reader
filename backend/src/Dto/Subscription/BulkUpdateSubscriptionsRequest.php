@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Dto\Subscription;
 
 use App\Entity\InclusionChange;
-use App\Service\Subscription\Model\BulkSubscriptionChangeModel;
-use App\Service\Subscription\SubscriptionService;
+use App\Service\Library\Subscription\Model\BulkSubscriptionChangeModel;
+use App\Service\Library\Subscription\SubscriptionService;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**

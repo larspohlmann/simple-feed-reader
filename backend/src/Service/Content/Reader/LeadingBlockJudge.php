@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Content\Reader;
 
-use App\Service\Reader\Model\LeadingBlockModel;
-use App\Service\Reader\Support\BlockText;
+use App\Service\Content\Reader\Model\LeadingBlockModel;
+use App\Service\Content\Reader\Support\BlockText;
 use Dom\Element;
 
 /** The tuned verdicts on a block above the article body; LeadingEngagementBlocks only finds the blocks. */

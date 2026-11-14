@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Entity\EntryState;
@@ -15,13 +15,13 @@ use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Repository\EntryStateRepository;
 use App\Repository\SocialAccountRepository;
-use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Social\BlueskySessionCache;
-use App\Service\Social\Crypto\BlueskySessionCipher;
-use App\Service\Social\Model\BlueskySessionModel;
-use App\Service\Social\Model\PrivateFeedModel;
-use App\Service\Social\PrivateFeeds;
-use App\Service\Social\SocialAccountEditor;
+use App\Service\Foundation\Crypto\InstanceSecretCipher;
+use App\Service\Social\Social\BlueskySessionCache;
+use App\Service\Social\Social\Crypto\BlueskySessionCipher;
+use App\Service\Social\Social\Model\BlueskySessionModel;
+use App\Service\Social\Social\Model\PrivateFeedModel;
+use App\Service\Social\Social\PrivateFeeds;
+use App\Service\Social\Social\SocialAccountEditor;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PrivateFeedsWiring;
 use App\Tests\Support\ProfileFeedSubscriptions;

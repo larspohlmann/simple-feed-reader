@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Model;
+namespace App\Service\Social\Social\Model;
 
 /** A Bluesky strong reference: the post's AT URI and the CID of the record it names. */
 final readonly class PostReferenceModel

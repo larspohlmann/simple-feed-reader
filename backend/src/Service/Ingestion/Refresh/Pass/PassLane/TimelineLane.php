@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh\Pass\PassLane;
+namespace App\Service\Ingestion\Refresh\Pass\PassLane;
 
 use App\Entity\Feed;
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Fetch\Model\SettlementModel;
-use App\Service\Refresh\Model\PassOutcome\TimelinePassOutcomeModel;
-use App\Service\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
-use App\Service\Social\Pass\TimelineRound;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Outbound\Fetch\Model\SettlementModel;
+use App\Service\Ingestion\Refresh\Model\PassOutcome\TimelinePassOutcomeModel;
+use App\Service\Social\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
+use App\Service\Social\Social\Pass\TimelineRound;
 
 /** A private feed: its ticket, gate and answers through the pass's timeline round. */
 final readonly class TimelineLane implements PassLaneInterface

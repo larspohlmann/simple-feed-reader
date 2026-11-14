@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Scraper;
+namespace App\Tests\Service\Ingestion\Scraper;
 
-use App\Service\Scraper\HtmlItemExtractor;
+use App\Service\Ingestion\Scraper\HtmlItemExtractor;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**

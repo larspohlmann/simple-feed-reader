@@ -13,7 +13,7 @@ use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\DueFeedCriteria;
 use App\Repository\NetworkScope;
-use App\Service\Refresh\Model\RefreshTarget\NetworkTargetModel;
+use App\Service\Ingestion\Refresh\Model\RefreshTarget\NetworkTargetModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\QueriesDueFeeds;

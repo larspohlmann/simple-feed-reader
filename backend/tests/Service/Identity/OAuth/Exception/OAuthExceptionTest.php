@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\OAuth\Exception;
+namespace App\Tests\Service\Identity\OAuth\Exception;
 
-use App\Service\OAuth\Exception\OAuthException;
-use App\Service\OAuth\Exception\OAuthFailedException;
-use App\Service\OAuth\Exception\UnknownProviderException;
+use App\Service\Identity\OAuth\Exception\OAuthException;
+use App\Service\Identity\OAuth\Exception\OAuthFailedException;
+use App\Service\Identity\OAuth\Exception\UnknownProviderException;
 use PHPUnit\Framework\TestCase;
 
 final class OAuthExceptionTest extends TestCase

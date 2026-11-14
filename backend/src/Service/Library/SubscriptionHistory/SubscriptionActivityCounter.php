@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Service\SubscriptionHistory;
+namespace App\Service\Library\SubscriptionHistory;
 
 use App\Entity\User;
 use App\Repository\SubscriptionActivityRepository;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\SubscriptionHistory\Factory\DaySourcesFactory;
-use App\Service\SubscriptionHistory\Model\DayWindowModel;
-use App\Service\SubscriptionHistory\Model\FeedArrivalRateModel;
-use App\Service\SubscriptionHistory\Model\SubscriptionActivityModel;
-use App\Service\SubscriptionHistory\Pass\AccountDayCounts;
-use App\Service\SubscriptionHistory\Support\UtcDay;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Library\SubscriptionHistory\Factory\DaySourcesFactory;
+use App\Service\Library\SubscriptionHistory\Model\DayWindowModel;
+use App\Service\Library\SubscriptionHistory\Model\FeedArrivalRateModel;
+use App\Service\Library\SubscriptionHistory\Model\SubscriptionActivityModel;
+use App\Service\Library\SubscriptionHistory\Pass\AccountDayCounts;
+use App\Service\Library\SubscriptionHistory\Support\UtcDay;
 
 final readonly class SubscriptionActivityCounter
 {

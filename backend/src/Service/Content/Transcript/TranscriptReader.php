@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Transcript;
+namespace App\Service\Content\Transcript;
 
 use App\Entity\TranscriptParagraph;
 use App\Enum\TranscriptFormat;
-use App\Service\Sanitize\EntrySanitizer;
-use App\Service\Text\Support\PlainText;
-use App\Service\Transcript\Exception\TranscriptUnusableException;
-use App\Service\Transcript\Model\ReadTranscriptModel;
-use App\Service\Transcript\Support\JsonCues;
-use App\Service\Transcript\Support\TimedCues;
-use App\Service\Transcript\Support\TranscriptParagraphs;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Foundation\Text\Support\PlainText;
+use App\Service\Content\Transcript\Exception\TranscriptUnusableException;
+use App\Service\Content\Transcript\Model\ReadTranscriptModel;
+use App\Service\Content\Transcript\Support\JsonCues;
+use App\Service\Content\Transcript\Support\TimedCues;
+use App\Service\Content\Transcript\Support\TranscriptParagraphs;
 
 final readonly class TranscriptReader
 {

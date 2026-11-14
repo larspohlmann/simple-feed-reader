@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\OAuth\Factory;
+namespace App\Tests\Service\Identity\OAuth\Factory;
 
 use App\Enum\UserStatus;
-use App\Service\OAuth\Factory\OAuthUserFactory;
-use App\Service\OAuth\Model\OAuthIdentityModel;
+use App\Service\Identity\OAuth\Factory\OAuthUserFactory;
+use App\Service\Identity\OAuth\Model\OAuthIdentityModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RegistrationPolicies;
 use Symfony\Component\Clock\MockClock;

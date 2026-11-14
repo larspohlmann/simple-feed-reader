@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Backup\Model\RestorePreviewModel;
+use App\Service\Operations\Backup\Model\RestorePreviewModel;
 
 /**
  * The restore preview: the file's provenance, what it would load, and what

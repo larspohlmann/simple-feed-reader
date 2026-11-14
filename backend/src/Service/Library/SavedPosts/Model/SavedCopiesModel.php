@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\SavedPosts\Model;
+namespace App\Service\Library\SavedPosts\Model;
 
 /** Original entry id to its copy in the saved feed. */
 final readonly class SavedCopiesModel

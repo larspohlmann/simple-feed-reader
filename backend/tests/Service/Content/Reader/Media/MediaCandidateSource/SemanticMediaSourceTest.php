@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media\MediaCandidateSource;
+namespace App\Tests\Service\Content\Reader\Media\MediaCandidateSource;
 
-use App\Service\Reader\Media\DurableMediaUrl;
-use App\Service\Reader\Media\EmbedProvider\SoundCloudEmbedProvider;
-use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
-use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Media\MediaCandidateSource\SemanticMediaSource;
-use App\Service\Reader\Media\MediaUrlKind;
-use App\Service\Reader\Media\Model\MediaKind;
-use App\Service\Reader\Media\NarrationSignals;
-use App\Service\Reader\Media\PageFurniture;
+use App\Service\Content\Reader\Media\DurableMediaUrl;
+use App\Service\Content\Reader\Media\EmbedProvider\SoundCloudEmbedProvider;
+use App\Service\Content\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
+use App\Service\Content\Reader\Media\EmbedProviders;
+use App\Service\Content\Reader\Media\MediaCandidateSource\SemanticMediaSource;
+use App\Service\Content\Reader\Media\MediaUrlKind;
+use App\Service\Content\Reader\Media\Model\MediaKind;
+use App\Service\Content\Reader\Media\NarrationSignals;
+use App\Service\Content\Reader\Media\PageFurniture;
 use App\Tests\Support\ProseParagraphs;
 use PHPUnit\Framework\TestCase;
 

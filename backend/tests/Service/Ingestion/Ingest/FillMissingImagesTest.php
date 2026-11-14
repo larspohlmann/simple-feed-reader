@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service;
+namespace App\Tests\Service\Ingestion\Ingest;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Headline;
-use App\Service\Image\Model\DeclaredImageModel;
-use App\Service\Ingest\EntryIngestor;
-use App\Service\Ingest\Pass\FeedIngestContext;
-use App\Service\Parser\Model\ParsedEntryMediaModel;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Parser\Model\ParsedFeedModel;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
+use App\Service\Ingestion\Ingest\EntryIngestor;
+use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
+use App\Service\Ingestion\Parser\Model\ParsedEntryMediaModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
 use App\Tests\DbTestCase;
 
 final class FillMissingImagesTest extends DbTestCase

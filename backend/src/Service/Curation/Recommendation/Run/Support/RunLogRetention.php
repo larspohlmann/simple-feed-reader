@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run\Support;
+namespace App\Service\Curation\Recommendation\Run\Support;
 
 /**
  * How many runs keep their run log: the debug panel compares runs, and the ETA averages their phase timings. Ten

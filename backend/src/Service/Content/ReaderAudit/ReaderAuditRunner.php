@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Service\ReaderAudit;
+namespace App\Service\Content\ReaderAudit;
 
-use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
-use App\Service\Reader\ExtractionCoverageGate;
-use App\Service\Reader\Model\EntryHintsModel;
-use App\Service\Reader\Model\ExtractionResultModel;
-use App\Service\ReaderAudit\Model\AuditFindingModel;
-use App\Service\ReaderAudit\Model\CleanupMarkerModel;
-use App\Service\ReaderAudit\Model\ExtractedBodyModel;
-use App\Service\ReaderAudit\Model\ReaderLinkModel;
-use App\Service\ReaderAudit\Model\SampledEntryModel;
+use App\Service\Content\Reader\ArticleExtractor\ArticleExtractorInterface;
+use App\Service\Content\Reader\ExtractionCoverageGate;
+use App\Service\Content\Reader\Model\EntryHintsModel;
+use App\Service\Content\Reader\Model\ExtractionResultModel;
+use App\Service\Content\ReaderAudit\Model\AuditFindingModel;
+use App\Service\Content\ReaderAudit\Model\CleanupMarkerModel;
+use App\Service\Content\ReaderAudit\Model\ExtractedBodyModel;
+use App\Service\Content\ReaderAudit\Model\ReaderLinkModel;
+use App\Service\Content\ReaderAudit\Model\SampledEntryModel;
 
 /**
  * Runs the reader pipeline over sampled articles as the reader endpoint does (extract, then the coverage gate) and

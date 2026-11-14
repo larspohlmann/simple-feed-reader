@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Slideshow\Model;
+namespace App\Service\Content\Reader\Slideshow\Model;
 
 /**
  * The text that sits with a slide and, when the slide is a link, the URL it

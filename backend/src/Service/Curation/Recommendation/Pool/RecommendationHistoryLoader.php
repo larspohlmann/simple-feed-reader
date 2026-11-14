@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Pool;
+namespace App\Service\Curation\Recommendation\Pool;
 
 use App\Repository\ReadingHistoryRepository;
-use App\Service\Recommendation\Pool\Model\ArticleLineModel;
-use App\Service\Recommendation\Pool\Model\RecommendationHistoryModel;
-use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
+use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Curation\Recommendation\Pool\Model\RecommendationHistoryModel;
+use App\Service\Curation\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
 
 /** The reader's weighted history: four capped, newest-first sections. */
 final readonly class RecommendationHistoryLoader

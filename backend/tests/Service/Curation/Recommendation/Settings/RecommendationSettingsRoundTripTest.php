@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Settings;
+namespace App\Tests\Service\Curation\Recommendation\Settings;
 
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
-use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
-use App\Service\Recommendation\Settings\RecommendationSettingsWriter;
+use App\Service\Curation\Recommendation\Settings\RecommendationSettingsResolver;
+use App\Service\Curation\Recommendation\Settings\RecommendationSettingsWriter;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 

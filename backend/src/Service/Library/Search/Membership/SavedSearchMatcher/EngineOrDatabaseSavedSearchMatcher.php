@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search\Membership\SavedSearchMatcher;
+namespace App\Service\Library\Search\Membership\SavedSearchMatcher;
 
 use App\Repository\DatabaseSavedSearchMatcher;
-use App\Service\Search\SearchEngineCapability;
+use App\Service\Library\Search\SearchEngineCapability;
 
 /**
  * The engine when one is configured, the database otherwise, and never the database after an engine failure: two

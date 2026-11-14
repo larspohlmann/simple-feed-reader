@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Prompt\Pass;
+namespace App\Service\Curation\Recommendation\Llm\Prompt\Pass;
 
-use App\Service\Recommendation\Pool\Model\RecommendationHistoryModel;
-use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
+use App\Service\Curation\Recommendation\Pool\Model\RecommendationHistoryModel;
+use App\Service\Curation\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
 
 final readonly class PromptContext
 {

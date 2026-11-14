@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Run;
+namespace App\Service\Curation\Recommendation\Llm\Run;
 
 use App\Entity\AiProviderSettings;
-use App\Service\Ai\Exception\ProviderRejectedRequestException;
-use App\Service\Recommendation\Engine\Model\RecommendationTuningField;
-use App\Service\Recommendation\Engine\RecommendationEngineResolver;
-use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
-use App\Service\Recommendation\Run\Model\RequestAdjustmentModel;
-use App\Service\Recommendation\Run\RejectedRequestFallback\RejectedRequestFallbackInterface;
+use App\Service\Curation\Ai\Exception\ProviderRejectedRequestException;
+use App\Service\Curation\Recommendation\Engine\Model\RecommendationTuningField;
+use App\Service\Curation\Recommendation\Engine\RecommendationEngineResolver;
+use App\Service\Curation\Recommendation\Llm\Completion\Model\Reasoning;
+use App\Service\Curation\Recommendation\Run\Model\RequestAdjustmentModel;
+use App\Service\Curation\Recommendation\Run\RejectedRequestFallback\RejectedRequestFallbackInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Response;
 

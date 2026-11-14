@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Entity\EntryGuid;
 use App\Repository\PostRemovalRepository;
 use App\Repository\StoredPostCopy;
-use App\Service\Search\EntryIndexer;
+use App\Service\Library\Search\EntryIndexer;
 
 /** Removes a post its network no longer has: every stored copy, each kept with its replies from being stored again. */
 final readonly class LocalPostRemoval

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Model;
+namespace App\Service\Social\Social\Model;
 
 /** What replying to or quoting a post needs to know about it beyond its id. */
 final readonly class ResponseContextModel

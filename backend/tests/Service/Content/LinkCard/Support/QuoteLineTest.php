@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\LinkCard\Support;
+namespace App\Tests\Service\Content\LinkCard\Support;
 
-use App\Service\LinkCard\Support\QuoteLine;
+use App\Service\Content\LinkCard\Support\QuoteLine;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

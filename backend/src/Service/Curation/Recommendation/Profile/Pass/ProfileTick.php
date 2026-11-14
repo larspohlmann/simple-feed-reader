@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Profile\Pass;
+namespace App\Service\Curation\Recommendation\Profile\Pass;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\ProfileRun;
-use App\Service\Recommendation\Profile\Model\ProfileInputsModel;
-use App\Service\Recommendation\Run\Model\ProviderCallRouteModel;
-use App\Service\Recommendation\Run\Model\TickDriver;
-use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
+use App\Service\Curation\Recommendation\Profile\Model\ProfileInputsModel;
+use App\Service\Curation\Recommendation\Run\Model\ProviderCallRouteModel;
+use App\Service\Curation\Recommendation\Run\Model\TickDriver;
+use App\Service\Curation\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
 
 /** What one profile tick reads about its account, read once before the tick does anything. */
 final readonly class ProfileTick

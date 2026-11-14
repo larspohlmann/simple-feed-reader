@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\Feed;
 use App\Repository\FeedRepository;
-use App\Service\Bluesky\AppViewClient;
-use App\Service\Bluesky\Exception\AppViewAnswerException;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Social\Model\ProfileCallBudgetModel;
-use App\Service\Social\Model\ProfileImageSweepReportModel;
-use App\Service\Social\Support\BlueskyProfileLabels;
-use App\Service\Social\Support\ProfileIdentity;
-use App\Service\Url\Support\AbsoluteHttpUrl;
+use App\Service\Social\Bluesky\AppViewClient;
+use App\Service\Social\Bluesky\Exception\AppViewAnswerException;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Social\Social\Model\ProfileCallBudgetModel;
+use App\Service\Social\Social\Model\ProfileImageSweepReportModel;
+use App\Service\Social\Social\Support\BlueskyProfileLabels;
+use App\Service\Social\Social\Support\ProfileIdentity;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 

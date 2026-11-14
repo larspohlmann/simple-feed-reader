@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch\Pass;
+namespace App\Tests\Service\Outbound\Fetch\Pass;
 
-use App\Service\Fetch\Pass\RedirectBudget;
+use App\Service\Outbound\Fetch\Pass\RedirectBudget;
 use PHPUnit\Framework\TestCase;
 
 final class RedirectBudgetTest extends TestCase

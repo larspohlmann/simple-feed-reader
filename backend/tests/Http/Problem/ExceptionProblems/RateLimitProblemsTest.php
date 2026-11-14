@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ExceptionProblems\RateLimitProblems;
-use App\Service\RateLimit\Exception\RateLimitedException;
+use App\Service\Foundation\RateLimit\Exception\RateLimitedException;
 use PHPUnit\Framework\TestCase;
 
 final class RateLimitProblemsTest extends TestCase

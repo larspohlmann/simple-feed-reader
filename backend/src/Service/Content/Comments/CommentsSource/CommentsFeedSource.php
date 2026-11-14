@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Comments\CommentsSource;
+namespace App\Service\Content\Comments\CommentsSource;
 
 use App\Entity\Entry;
 use App\Entity\User;
-use App\Service\Comments\CommentsEndpointFetcher;
-use App\Service\Comments\Exception\CommentsUnavailableException;
-use App\Service\Comments\Model\CommentAuthorModel;
-use App\Service\Comments\Model\CommentsAnswerModel;
-use App\Service\Comments\Model\CommentsAudienceModel;
-use App\Service\Comments\Model\CommentsEndpointModel;
-use App\Service\Comments\Model\CommentsPageModel;
-use App\Service\Comments\Model\EntryCommentModel;
-use App\Service\Comments\Pass\CommentsRequest;
-use App\Service\Parser\Exception\FeedParseException;
-use App\Service\Parser\FeedParser;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Sanitize\EntrySanitizer;
+use App\Service\Content\Comments\CommentsEndpointFetcher;
+use App\Service\Content\Comments\Exception\CommentsUnavailableException;
+use App\Service\Content\Comments\Model\CommentAuthorModel;
+use App\Service\Content\Comments\Model\CommentsAnswerModel;
+use App\Service\Content\Comments\Model\CommentsAudienceModel;
+use App\Service\Content\Comments\Model\CommentsEndpointModel;
+use App\Service\Content\Comments\Model\CommentsPageModel;
+use App\Service\Content\Comments\Model\EntryCommentModel;
+use App\Service\Content\Comments\Pass\CommentsRequest;
+use App\Service\Ingestion\Parser\Exception\FeedParseException;
+use App\Service\Ingestion\Parser\FeedParser;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
 
 final readonly class CommentsFeedSource implements CommentsSourceInterface
 {

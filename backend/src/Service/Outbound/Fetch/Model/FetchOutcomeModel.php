@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\Model;
+namespace App\Service\Outbound\Fetch\Model;
 
-use App\Service\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\Exception\FetchException;
 
 /**
  * One request's result inside a batch. Failure is a value here rather than a thrown

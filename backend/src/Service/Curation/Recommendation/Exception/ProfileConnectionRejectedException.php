@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Exception;
+namespace App\Service\Curation\Recommendation\Exception;
 
 final class ProfileConnectionRejectedException extends \RuntimeException
 {

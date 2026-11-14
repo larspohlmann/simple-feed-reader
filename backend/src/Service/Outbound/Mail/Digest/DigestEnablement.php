@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Digest;
+namespace App\Service\Outbound\Mail\Digest;
 
 use App\Entity\DigestSettings;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Mail\Digest\Model\DigestConfigurationModel;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Outbound\Mail\Digest\Model\DigestConfigurationModel;
 
 /**
  * Applies a digest configuration write. The first enable (no lastSentAt yet) seeds it to now, so the first

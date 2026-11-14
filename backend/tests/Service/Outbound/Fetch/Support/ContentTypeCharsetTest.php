@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch\Support;
+namespace App\Tests\Service\Outbound\Fetch\Support;
 
-use App\Service\Fetch\Support\ContentTypeCharset;
+use App\Service\Outbound\Fetch\Support\ContentTypeCharset;
 use PHPUnit\Framework\TestCase;
 
 final class ContentTypeCharsetTest extends TestCase

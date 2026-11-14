@@ -7,8 +7,8 @@ namespace App\Tests\Support;
 use App\Entity\SocialAccount;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
-use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Social\Crypto\SocialCredentialCipher;
+use App\Service\Foundation\Crypto\InstanceSecretCipher;
+use App\Service\Social\Social\Crypto\SocialCredentialCipher;
 
 /** In-memory social accounts for unit tests, their secrets sealed with cipher() for their owner. */
 final class SocialAccounts

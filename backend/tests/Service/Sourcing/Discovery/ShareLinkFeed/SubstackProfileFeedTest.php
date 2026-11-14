@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Discovery\ShareLinkFeed;
+namespace App\Tests\Service\Sourcing\Discovery\ShareLinkFeed;
 
-use App\Service\Discovery\ShareLinkFeed\SubstackProfileFeed;
-use App\Service\Fetch\Exception\FeedUnreachableException;
+use App\Service\Sourcing\Discovery\ShareLinkFeed\SubstackProfileFeed;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
 use App\Tests\Support\StubFeedFetcher;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

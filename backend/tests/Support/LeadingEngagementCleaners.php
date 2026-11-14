@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\LeadingEngagementCleaner;
-use App\Service\Reader\DateLineRecognizer;
-use App\Service\Reader\Factory\StrictDateFormatterFactory;
-use App\Service\Reader\LeadingBlockJudge;
-use App\Service\Reader\LeadingEngagementRules;
+use App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\LeadingEngagementCleaner;
+use App\Service\Content\Reader\DateLineRecognizer;
+use App\Service\Content\Reader\Factory\StrictDateFormatterFactory;
+use App\Service\Content\Reader\LeadingBlockJudge;
+use App\Service\Content\Reader\LeadingEngagementRules;
 
 /** The leading-engagement cleaner over the real date, block and text rules, wired as the container wires it. */
 final class LeadingEngagementCleaners

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\MailSendingSettings;
+namespace App\Service\Outbound\Mail\MailSendingSettings;
 
 use App\Repository\MailServerSettingsRepository;
-use App\Service\Mail\Settings\Crypto\MailPasswordCipher;
-use App\Service\Mail\Settings\MailFallback;
-use App\Service\Mail\Settings\Model\MailIdentityModel;
-use App\Service\Mail\Settings\Model\ResolvedMailTransportModel;
+use App\Service\Outbound\Mail\Settings\Crypto\MailPasswordCipher;
+use App\Service\Outbound\Mail\Settings\MailFallback;
+use App\Service\Outbound\Mail\Settings\Model\MailIdentityModel;
+use App\Service\Outbound\Mail\Settings\Model\ResolvedMailTransportModel;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 final readonly class EffectiveMailSettings implements MailSendingSettingsInterface

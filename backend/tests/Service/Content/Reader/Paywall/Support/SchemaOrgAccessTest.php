@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Paywall\Support;
+namespace App\Tests\Service\Content\Reader\Paywall\Support;
 
-use App\Service\Reader\Paywall\Model\AccessDeclaration;
-use App\Service\Reader\Paywall\Support\SchemaOrgAccess;
+use App\Service\Content\Reader\Paywall\Model\AccessDeclaration;
+use App\Service\Content\Reader\Paywall\Support\SchemaOrgAccess;
 use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 

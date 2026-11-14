@@ -6,11 +6,11 @@ namespace App\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
-use App\Service\Passkey\Exception\AttestationRejectedException;
-use App\Service\Passkey\Exception\DuplicatePasskeyException;
-use App\Service\Passkey\Exception\LastSignInMethodException;
-use App\Service\Passkey\Exception\PasskeyChallengeOwnershipException;
-use App\Service\Passkey\Exception\PasskeyNotFoundException;
+use App\Service\Identity\Passkey\Exception\AttestationRejectedException;
+use App\Service\Identity\Passkey\Exception\DuplicatePasskeyException;
+use App\Service\Identity\Passkey\Exception\LastSignInMethodException;
+use App\Service\Identity\Passkey\Exception\PasskeyChallengeOwnershipException;
+use App\Service\Identity\Passkey\Exception\PasskeyNotFoundException;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class PasskeyRegistrationProblems implements ExceptionProblemsInterface

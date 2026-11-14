@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Text\Support;
+namespace App\Tests\Service\Foundation\Text\Support;
 
-use App\Service\Text\Support\Whitespace;
+use App\Service\Foundation\Text\Support\Whitespace;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

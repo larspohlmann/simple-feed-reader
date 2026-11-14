@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\BodyCleaning\Pass;
+namespace App\Tests\Service\Content\Reader\BodyCleaning\Pass;
 
-use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
-use App\Service\Reader\Media\Model\ArticleMediaModel;
-use App\Service\Reader\Media\Model\MediaCandidateModel;
-use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Content\Reader\BodyCleaning\Pass\BodyCleaningPass;
+use App\Service\Content\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Content\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Content\Reader\Media\Model\MediaKind;
 use App\Tests\Support\BodyCleaningInputs;
 use App\Tests\Support\ParsesHtml;
 use App\Tests\Support\ReadsCandidateUrls;

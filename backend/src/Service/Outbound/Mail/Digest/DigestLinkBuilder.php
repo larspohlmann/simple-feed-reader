@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Digest;
+namespace App\Service\Outbound\Mail\Digest;
 
-use App\Service\Settings\PublicBaseUrl\PublicBaseUrlInterface;
+use App\Service\Operations\Settings\PublicBaseUrl\PublicBaseUrlInterface;
 
 /**
  * Builds absolute reader deep links from the public base URL every account email uses, so a digest link cannot point

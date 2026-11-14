@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Digest\DigestRecipients;
+namespace App\Service\Outbound\Mail\Digest\DigestRecipients;
 
 use App\Entity\DigestSettings;
 

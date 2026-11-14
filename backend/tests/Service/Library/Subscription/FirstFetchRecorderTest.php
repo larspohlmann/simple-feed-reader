@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Subscription;
+namespace App\Tests\Service\Library\Subscription;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
-use App\Service\Discovery\Model\DiscoveredFeedModel;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Parser\Model\ParsedFeedModel;
-use App\Service\Subscription\FirstFetchRecorder;
+use App\Service\Sourcing\Discovery\Model\DiscoveredFeedModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
+use App\Service\Library\Subscription\FirstFetchRecorder;
 use App\Tests\DbTestCase;
-use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\EntryIngestors;
 use App\Tests\Support\FeedSchedulers;

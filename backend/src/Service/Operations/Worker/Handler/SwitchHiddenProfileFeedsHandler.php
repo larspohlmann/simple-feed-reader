@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Worker\Handler;
+namespace App\Service\Operations\Worker\Handler;
 
-use App\Service\Social\HiddenProfileSwitchSweep;
-use App\Service\Social\Model\ProfileCallBudgetModel;
-use App\Service\Worker\Message\SwitchHiddenProfileFeeds;
+use App\Service\Social\Social\HiddenProfileSwitchSweep;
+use App\Service\Social\Social\Model\ProfileCallBudgetModel;
+use App\Service\Operations\Worker\Message\SwitchHiddenProfileFeeds;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 

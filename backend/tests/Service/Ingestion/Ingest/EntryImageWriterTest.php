@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Ingest;
+namespace App\Tests\Service\Ingestion\Ingest;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\ImageRendition;
 use App\Enum\SocialNetwork;
-use App\Service\Image\Model\DeclaredImageModel;
-use App\Service\Ingest\EntryImageWriter;
-use App\Service\Parser\FeedItemImageSelector;
-use App\Service\Parser\ItemImageExtractor;
-use App\Service\Parser\Pass\CoreElement;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
+use App\Service\Ingestion\Ingest\EntryImageWriter;
+use App\Service\Ingestion\Parser\FeedItemImageSelector;
+use App\Service\Ingestion\Parser\ItemImageExtractor;
+use App\Service\Ingestion\Parser\Pass\CoreElement;
 use PHPUnit\Framework\TestCase;
 
 final class EntryImageWriterTest extends TestCase

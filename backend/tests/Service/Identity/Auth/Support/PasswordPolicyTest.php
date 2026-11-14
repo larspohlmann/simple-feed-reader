@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Auth\Support;
+namespace App\Tests\Service\Identity\Auth\Support;
 
-use App\Service\Auth\Support\PasswordPolicy;
+use App\Service\Identity\Auth\Support\PasswordPolicy;
 use PHPUnit\Framework\TestCase;
 
 final class PasswordPolicyTest extends TestCase

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run;
+namespace App\Service\Curation\Recommendation\Run;
 
 use App\Entity\User;
-use App\Service\Recommendation\Run\Pass\HeldTickLock;
-use App\Service\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive;
+use App\Service\Curation\Recommendation\Run\Pass\HeldTickLock;
+use App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive;
 use Symfony\Component\Lock\LockFactory;
 
 /** The per-user lock every tick takes, a recommendation run's or a profile run's, so the two take turns. */

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Scoring;
+namespace App\Tests\Service\Curation\Recommendation\Scoring;
 
 use App\Entity\Entry;
 use App\Entity\ModelDescriptor;
@@ -13,20 +13,20 @@ use App\Entity\StoredProfile;
 use App\Entity\User;
 use App\Enum\CallVerdict;
 use App\Enum\ScoringProtocol;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Ai\Exception\AiKeyUnreadableException;
-use App\Service\Ai\Exception\CredentialsRejectedException;
-use App\Service\Ai\Exception\ProviderRejectedRequestException;
-use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\Exception\RetryableProviderException;
-use App\Service\Recommendation\Engine\RecommendationEngineResolver;
-use App\Service\Recommendation\Pool\Model\ArticleLineModel;
-use App\Service\Recommendation\Run\Model\TickDriver;
-use App\Service\Recommendation\Run\TickPhases;
-use App\Service\Recommendation\Scoring\ScoringProtocol\SystemOneProtocol;
-use App\Service\Recommendation\Scoring\ScoringRecommendationEngine;
-use App\Service\Recommendation\Support\CompactJson;
-use App\Service\Recommendation\Support\TokenEstimate;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Ai\Exception\AiKeyUnreadableException;
+use App\Service\Curation\Ai\Exception\CredentialsRejectedException;
+use App\Service\Curation\Ai\Exception\ProviderRejectedRequestException;
+use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
+use App\Service\Curation\Ai\Exception\RetryableProviderException;
+use App\Service\Curation\Recommendation\Engine\RecommendationEngineResolver;
+use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Curation\Recommendation\Run\Model\TickDriver;
+use App\Service\Curation\Recommendation\Run\TickPhases;
+use App\Service\Curation\Recommendation\Scoring\ScoringProtocol\SystemOneProtocol;
+use App\Service\Curation\Recommendation\Scoring\ScoringRecommendationEngine;
+use App\Service\Curation\Recommendation\Support\CompactJson;
+use App\Service\Curation\Recommendation\Support\TokenEstimate;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BuildsTickContexts;
 use App\Tests\Support\DrivesRecommendationRuns;

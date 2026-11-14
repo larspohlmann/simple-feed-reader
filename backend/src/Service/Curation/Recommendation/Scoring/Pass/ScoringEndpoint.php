@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Scoring\Pass;
+namespace App\Service\Curation\Recommendation\Scoring\Pass;
 
-use App\Service\Recommendation\Scoring\Model\ScoringReplyModel;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringReplyModel;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /** Where one protocol's requests go and how it reads a 2xx reply. */

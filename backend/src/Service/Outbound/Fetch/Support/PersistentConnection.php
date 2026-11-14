@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\Support;
+namespace App\Service\Outbound\Fetch\Support;
 
 /**
  * Options for the hot fetch paths: connections, TLS sessions and DNS kept per worker process, and a connect phase

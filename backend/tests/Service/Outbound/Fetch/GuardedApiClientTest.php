@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch;
+namespace App\Tests\Service\Outbound\Fetch;
 
 use App\Tests\Support\PinnedRequestOptions;
-use App\Service\Fetch\Exception\DirectRouteUnavailableException;
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\Exception\ResponseTooLargeException;
-use App\Service\Fetch\Exception\SsrfBlockedException;
+use App\Service\Outbound\Fetch\Exception\DirectRouteUnavailableException;
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Outbound\Fetch\Exception\SsrfBlockedException;
 use App\Enum\ProxyType;
-use App\Service\Fetch\GuardedApiClient;
-use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\Model\ApiBudgetModel;
-use App\Service\Fetch\Model\ApiRequestModel;
-use App\Service\Fetch\Model\ProxyConfigModel;
-use App\Service\Fetch\Model\ResponseSizeLimit;
-use App\Service\Fetch\UrlGuard;
+use App\Service\Outbound\Fetch\GuardedApiClient;
+use App\Service\Outbound\Fetch\IpValidator;
+use App\Service\Outbound\Fetch\Model\ApiBudgetModel;
+use App\Service\Outbound\Fetch\Model\ApiRequestModel;
+use App\Service\Outbound\Fetch\Model\ProxyConfigModel;
+use App\Service\Outbound\Fetch\Model\ResponseSizeLimit;
+use App\Service\Outbound\Fetch\UrlGuard;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\GzipBomb;
 use App\Tests\Support\StaticDnsResolver;

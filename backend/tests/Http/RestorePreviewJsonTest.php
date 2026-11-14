@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Http\RestorePreviewJson;
-use App\Service\Backup\Model\BackupInventoryModel;
-use App\Service\Backup\Model\RestorePreviewModel;
-use App\Service\Backup\Model\RestoreSourceModel;
+use App\Service\Operations\Backup\Model\BackupInventoryModel;
+use App\Service\Operations\Backup\Model\RestorePreviewModel;
+use App\Service\Operations\Backup\Model\RestoreSourceModel;
 use PHPUnit\Framework\TestCase;
 
 final class RestorePreviewJsonTest extends TestCase

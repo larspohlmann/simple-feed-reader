@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Ai\Support;
+namespace App\Tests\Service\Curation\Ai\Support;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\ModelDescriptor;
 use App\Entity\User;
-use App\Service\Ai\Support\AiReadiness;
+use App\Service\Curation\Ai\Support\AiReadiness;
 use App\Tests\Support\AiProviderSettingsFactory;
 use PHPUnit\Framework\TestCase;
 

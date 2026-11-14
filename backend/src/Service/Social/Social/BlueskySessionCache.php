@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\SocialAccount;
-use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Social\Crypto\BlueskySessionCipher;
-use App\Service\Social\Model\BlueskySessionModel;
-use App\Service\Social\Model\SealedBlueskySessionModel;
+use App\Service\Foundation\Crypto\Exception\SecretUnreadableException;
+use App\Service\Social\Social\Crypto\BlueskySessionCipher;
+use App\Service\Social\Social\Model\BlueskySessionModel;
+use App\Service\Social\Social\Model\SealedBlueskySessionModel;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 

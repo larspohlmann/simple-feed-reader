@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail;
+namespace App\Service\Outbound\Mail;
 
-use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
+use App\Service\Outbound\Mail\MailSendingSettings\MailSendingSettingsInterface;
 
 /**
  * Whether this instance may send mail at all. A saved admin toggle governs;

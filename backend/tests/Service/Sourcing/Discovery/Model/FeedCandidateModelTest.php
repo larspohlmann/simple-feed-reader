@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Discovery\Model;
+namespace App\Tests\Service\Sourcing\Discovery\Model;
 
-use App\Service\Discovery\Model\DiscoveredFeedModel;
-use App\Service\Discovery\Model\FeedCandidateModel;
-use App\Service\Parser\Model\FeedSyntax;
-use App\Service\Parser\Model\ParsedFeedModel;
+use App\Service\Sourcing\Discovery\Model\DiscoveredFeedModel;
+use App\Service\Sourcing\Discovery\Model\FeedCandidateModel;
+use App\Service\Ingestion\Parser\Model\FeedSyntax;
+use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
 use PHPUnit\Framework\TestCase;
 
 final class FeedCandidateModelTest extends TestCase

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Scoring\Model;
+namespace App\Tests\Service\Curation\Recommendation\Scoring\Model;
 
-use App\Service\Recommendation\Scoring\Model\ScoringBudgetModel;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringBudgetModel;
 use PHPUnit\Framework\TestCase;
 
 final class ScoringBudgetModelTest extends TestCase

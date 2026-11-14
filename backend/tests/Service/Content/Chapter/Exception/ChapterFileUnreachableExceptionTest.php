@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Chapter\Exception;
+namespace App\Tests\Service\Content\Chapter\Exception;
 
-use App\Service\Chapter\Exception\ChapterFileUnreachableException;
-use App\Service\Fetch\Exception\FeedUnreachableException;
+use App\Service\Content\Chapter\Exception\ChapterFileUnreachableException;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Response;
 

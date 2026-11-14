@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Social\Model\RefusedFeedPositionModel;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Social\Social\Model\RefusedFeedPositionModel;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 

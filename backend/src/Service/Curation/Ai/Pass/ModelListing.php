@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai\Pass;
+namespace App\Service\Curation\Ai\Pass;
 
 use App\Entity\ModelDescriptor;
 use App\Enum\ScoringProtocol;
-use App\Service\Ai\Exception\CredentialsRejectedException;
-use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\Model\ProviderCredentialsModel;
-use App\Service\Ai\ModelCatalog\ModelCatalogInterface;
+use App\Service\Curation\Ai\Exception\CredentialsRejectedException;
+use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
+use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
+use App\Service\Curation\Ai\ModelCatalog\ModelCatalogInterface;
 
 /** One composite listing: the models by id, and the failures of the catalogs that did not recognise the provider. */
 final class ModelListing

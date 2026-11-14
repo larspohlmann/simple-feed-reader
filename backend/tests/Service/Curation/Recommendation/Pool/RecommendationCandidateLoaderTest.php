@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Pool;
+namespace App\Tests\Service\Curation\Recommendation\Pool;
 
 use App\Entity\Entry;
 use App\Entity\EntryShare;
@@ -11,8 +11,8 @@ use App\Entity\Feed;
 use App\Entity\InclusionChange;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Service\Recommendation\Pool\Model\CandidatePoolRequestModel;
-use App\Service\Recommendation\Pool\RecommendationCandidateLoader;
+use App\Service\Curation\Recommendation\Pool\Model\CandidatePoolRequestModel;
+use App\Service\Curation\Recommendation\Pool\RecommendationCandidateLoader;
 use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
 

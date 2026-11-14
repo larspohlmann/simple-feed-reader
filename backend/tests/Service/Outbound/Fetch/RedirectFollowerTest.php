@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch;
+namespace App\Tests\Service\Outbound\Fetch;
 
-use App\Service\Fetch\DnsResolver\DnsResolverInterface;
-use App\Service\Fetch\Exception\RedirectChainException;
-use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\Pass\RedirectBudget;
-use App\Service\Fetch\RedirectFollower;
-use App\Service\Fetch\UrlGuard;
+use App\Service\Outbound\Fetch\DnsResolver\DnsResolverInterface;
+use App\Service\Outbound\Fetch\Exception\RedirectChainException;
+use App\Service\Outbound\Fetch\IpValidator;
+use App\Service\Outbound\Fetch\Pass\RedirectBudget;
+use App\Service\Outbound\Fetch\RedirectFollower;
+use App\Service\Outbound\Fetch\UrlGuard;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;

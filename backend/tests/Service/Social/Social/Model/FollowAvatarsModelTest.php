@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Model;
+namespace App\Tests\Service\Social\Social\Model;
 
-use App\Service\Social\Model\FollowAvatarsModel;
-use App\Service\Social\Model\FollowedAccountModel;
+use App\Service\Social\Social\Model\FollowAvatarsModel;
+use App\Service\Social\Social\Model\FollowedAccountModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

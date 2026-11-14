@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Opml;
+namespace App\Service\Library\Opml;
 
-use App\Service\Opml\Exception\InvalidOpmlException;
+use App\Service\Library\Opml\Exception\InvalidOpmlException;
 
 /**
  * The one hardened OPML parser (no network, no DTD, an <opml> root), shared by the OPML import and the catalog: a

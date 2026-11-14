@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Http\SocialCountsJson;
-use App\Service\Social\Model\SocialCountsModel;
+use App\Service\Social\Social\Model\SocialCountsModel;
 use PHPUnit\Framework\TestCase;
 
 final class SocialCountsJsonTest extends TestCase

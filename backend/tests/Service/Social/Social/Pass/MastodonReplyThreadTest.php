@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Pass;
+namespace App\Tests\Service\Social\Social\Pass;
 
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Social\Pass\MastodonReplyThread;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Social\Pass\MastodonReplyThread;
 use PHPUnit\Framework\TestCase;
 
 final class MastodonReplyThreadTest extends TestCase

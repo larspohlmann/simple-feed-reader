@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Prompt;
+namespace App\Service\Curation\Recommendation\Llm\Prompt;
 
-use App\Service\Recommendation\Llm\Prompt\Model\OutputLimitModel;
-use App\Service\Recommendation\Llm\Prompt\Model\RecommendationResponseSchema;
-use App\Service\Recommendation\Llm\Prompt\Pass\PromptContext;
-use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
-use App\Service\Recommendation\Pool\Model\ArticleLineModel;
-use App\Service\Recommendation\Pool\Model\CandidatePoolSummaryModel;
-use App\Service\Recommendation\Pool\Model\RecommendationHistoryModel;
-use App\Service\Recommendation\Profile\Model\ProfileInputsModel;
-use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
-use App\Service\Recommendation\Support\TokenEstimate;
-use App\Service\Text\Support\ClippedText;
+use App\Service\Curation\Recommendation\Llm\Prompt\Model\OutputLimitModel;
+use App\Service\Curation\Recommendation\Llm\Prompt\Model\RecommendationResponseSchema;
+use App\Service\Curation\Recommendation\Llm\Prompt\Pass\PromptContext;
+use App\Service\Curation\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
+use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Curation\Recommendation\Pool\Model\CandidatePoolSummaryModel;
+use App\Service\Curation\Recommendation\Pool\Model\RecommendationHistoryModel;
+use App\Service\Curation\Recommendation\Profile\Model\ProfileInputsModel;
+use App\Service\Curation\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
+use App\Service\Curation\Recommendation\Support\TokenEstimate;
+use App\Service\Foundation\Text\Support\ClippedText;
 
 /**
  * Renders the recommendation prompts and packs the candidate pool into batches that fit the context window.

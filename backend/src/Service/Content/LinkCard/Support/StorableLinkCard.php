@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\LinkCard\Support;
+namespace App\Service\Content\LinkCard\Support;
 
 use App\Entity\LinkCardContent;
-use App\Service\Text\Support\WordBoundary;
-use App\Service\Url\Support\AbsoluteHttpUrl;
-use App\Service\Url\Support\HttpsImageUrl;
+use App\Service\Foundation\Text\Support\WordBoundary;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
+use App\Service\Foundation\Url\Support\HttpsImageUrl;
 
 /**
  * A card as link_card may hold it, whoever made it: none for a blank title or a URL that is no web page or too long

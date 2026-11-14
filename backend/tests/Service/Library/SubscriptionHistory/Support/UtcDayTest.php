@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\SubscriptionHistory\Support;
+namespace App\Tests\Service\Library\SubscriptionHistory\Support;
 
-use App\Service\SubscriptionHistory\Support\UtcDay;
+use App\Service\Library\SubscriptionHistory\Support\UtcDay;
 use PHPUnit\Framework\TestCase;
 
 final class UtcDayTest extends TestCase

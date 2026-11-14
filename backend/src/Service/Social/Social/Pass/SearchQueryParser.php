@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Pass;
+namespace App\Service\Social\Social\Pass;
 
-use App\Service\Social\Model\SearchExpression\AllOfSearchModel;
-use App\Service\Social\Model\SearchExpression\AnyOfSearchModel;
-use App\Service\Social\Model\SearchExpression\AuthorSearchModel;
-use App\Service\Social\Model\SearchExpression\NotSearchModel;
-use App\Service\Social\Model\SearchExpression\SearchExpressionModelInterface;
-use App\Service\Social\Model\SearchExpression\SearchTermModel;
-use App\Service\Social\Model\SearchExpression\UncheckedSearchModel;
-use App\Service\Social\Support\SearchQueryTokens;
+use App\Service\Social\Social\Model\SearchExpression\AllOfSearchModel;
+use App\Service\Social\Social\Model\SearchExpression\AnyOfSearchModel;
+use App\Service\Social\Social\Model\SearchExpression\AuthorSearchModel;
+use App\Service\Social\Social\Model\SearchExpression\NotSearchModel;
+use App\Service\Social\Social\Model\SearchExpression\SearchExpressionModelInterface;
+use App\Service\Social\Social\Model\SearchExpression\SearchTermModel;
+use App\Service\Social\Social\Model\SearchExpression\UncheckedSearchModel;
+use App\Service\Social\Social\Support\SearchQueryTokens;
 
 /**
  * One query read as `||` over runs of ANDed terms, `-` and `( )`; the network has validated it already, so odd input

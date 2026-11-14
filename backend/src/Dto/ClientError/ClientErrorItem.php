@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\ClientError;
 
-use App\Service\ClientError\Model\ClientErrorModel;
+use App\Service\Operations\ClientError\Model\ClientErrorModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class ClientErrorItem

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Crypto\Model;
+namespace App\Service\Foundation\Crypto\Model;
 
 final readonly class SecretChangeModel
 {

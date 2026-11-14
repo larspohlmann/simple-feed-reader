@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Auth;
+namespace App\Tests\Service\Identity\Auth;
 
 use App\Enum\UserStatus;
-use App\Service\Auth\BootstrapAdminProvisioner;
+use App\Service\Identity\Auth\BootstrapAdminProvisioner;
 use App\Tests\DbTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 

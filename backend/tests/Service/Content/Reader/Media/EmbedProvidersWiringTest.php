@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media;
+namespace App\Tests\Service\Content\Reader\Media;
 
-use App\Service\Reader\Media\EmbedProviders;
+use App\Service\Content\Reader\Media\EmbedProviders;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class EmbedProvidersWiringTest extends KernelTestCase

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai\Exception;
+namespace App\Service\Curation\Ai\Exception;
 
 /**
  * A rate-limited provider call its caller will not wait out: it defers for waitSeconds() instead.
- * Named apart from App\Service\RateLimit\Exception\RateLimitedException, our own limiter's refusal.
+ * Named apart from App\Service\Foundation\RateLimit\Exception\RateLimitedException, our own limiter's refusal.
  */
 final class ProviderRateLimitedException extends \RuntimeException
 {

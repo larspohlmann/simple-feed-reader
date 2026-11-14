@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Version\LatestReleaseReader;
+namespace App\Service\Operations\Version\LatestReleaseReader;
 
-use App\Service\Version\Model\LatestReleaseModel;
+use App\Service\Operations\Version\Model\LatestReleaseModel;
 use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Log\LoggerInterface;

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Queue\Model;
+namespace App\Tests\Service\Operations\Queue\Model;
 
-use App\Service\Queue\Model\QueueBacklogModel;
-use App\Service\Queue\Model\QueueName;
+use App\Service\Operations\Queue\Model\QueueBacklogModel;
+use App\Service\Operations\Queue\Model\QueueName;
 use PHPUnit\Framework\TestCase;
 
 final class QueueBacklogModelTest extends TestCase

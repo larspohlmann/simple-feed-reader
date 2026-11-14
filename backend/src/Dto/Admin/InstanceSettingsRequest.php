@@ -6,7 +6,7 @@ namespace App\Dto\Admin;
 
 use App\Entity\InstanceSettingsUpdate;
 use App\Http\FullReplacePayload;
-use App\Service\Settings\Model\RelyingPartyIdChoiceModel;
+use App\Service\Operations\Settings\Model\RelyingPartyIdChoiceModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**

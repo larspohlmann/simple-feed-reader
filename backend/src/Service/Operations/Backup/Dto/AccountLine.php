@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Dto;
+namespace App\Service\Operations\Backup\Dto;
 
 use App\Entity\User;
 use App\Enum\Handedness;
 use App\Enum\InclusionSurface;
 use App\Enum\MagazineStyle;
 use App\Enum\SocialNetwork;
-use App\Service\Account\Model\AccountSettingsModel;
-use App\Service\Backup\Model\AccountNetworkSwitchesModel;
-use App\Service\Backup\Support\BackupLineFormat;
-use App\Service\Backup\Support\BackupSchema;
-use App\Service\Backup\Support\LineField;
-use App\Service\Backup\Support\LineFieldWithDefault;
-use App\Service\FeedDirectory\Model\FeedDirectoryScopeModel;
+use App\Service\Identity\Account\Model\AccountSettingsModel;
+use App\Service\Operations\Backup\Model\AccountNetworkSwitchesModel;
+use App\Service\Operations\Backup\Support\BackupLineFormat;
+use App\Service\Operations\Backup\Support\BackupSchema;
+use App\Service\Operations\Backup\Support\LineField;
+use App\Service\Operations\Backup\Support\LineFieldWithDefault;
+use App\Service\Sourcing\FeedDirectory\Model\FeedDirectoryScopeModel;
 
 /**
  * The account's own settings, exactly once per backup.

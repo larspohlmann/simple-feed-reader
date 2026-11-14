@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Discovery\FeedOffer;
+namespace App\Service\Sourcing\Discovery\FeedOffer;
 
-use App\Service\Discovery\Model\FeedCandidateModel;
-use App\Service\Html\Support\HtmlDocumentParser;
-use App\Service\Html\Support\MetaProperty;
-use App\Service\Parser\Model\FeedSyntax;
-use App\Service\Scraper\Support\TextNormalizer;
+use App\Service\Sourcing\Discovery\Model\FeedCandidateModel;
+use App\Service\Foundation\Html\Support\HtmlDocumentParser;
+use App\Service\Foundation\Html\Support\MetaProperty;
+use App\Service\Ingestion\Parser\Model\FeedSyntax;
+use App\Service\Ingestion\Scraper\Support\TextNormalizer;
 use Dom\HTMLDocument;
 
 /**

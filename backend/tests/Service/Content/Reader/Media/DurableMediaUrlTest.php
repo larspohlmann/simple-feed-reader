@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media;
+namespace App\Tests\Service\Content\Reader\Media;
 
-use App\Service\Reader\Media\DurableMediaUrl;
+use App\Service\Content\Reader\Media\DurableMediaUrl;
 use PHPUnit\Framework\TestCase;
 
 final class DurableMediaUrlTest extends TestCase

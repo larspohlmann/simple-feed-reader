@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Chapter;
+namespace App\Tests\Service\Content\Chapter;
 
 use App\Entity\EntryChapter;
-use App\Service\Chapter\EmbedDetails;
-use App\Service\Chapter\EmbedDetailsCache;
-use App\Service\Chapter\EmbedDetailsSource\EmbedDetailsSourceInterface;
-use App\Service\Chapter\Exception\EmbedDescriptionUnreachableException;
-use App\Service\Chapter\Model\ChapteredEmbed;
-use App\Service\Chapter\Model\EmbedAddressModel;
-use App\Service\Chapter\Model\EmbedDescriptionModel;
-use App\Service\Chapter\Model\EmbedDetailsModel;
+use App\Service\Content\Chapter\EmbedDetails;
+use App\Service\Content\Chapter\EmbedDetailsCache;
+use App\Service\Content\Chapter\EmbedDetailsSource\EmbedDetailsSourceInterface;
+use App\Service\Content\Chapter\Exception\EmbedDescriptionUnreachableException;
+use App\Service\Content\Chapter\Model\ChapteredEmbed;
+use App\Service\Content\Chapter\Model\EmbedAddressModel;
+use App\Service\Content\Chapter\Model\EmbedDescriptionModel;
+use App\Service\Content\Chapter\Model\EmbedDetailsModel;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\DependencyInjection\ServiceLocator;

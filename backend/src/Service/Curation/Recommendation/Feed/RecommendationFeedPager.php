@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Feed;
+namespace App\Service\Curation\Recommendation\Feed;
 
 use App\Pagination\Exception\MalformedCursorException;
 use App\Pagination\RecommendationCursor;
 use App\Repository\ForYouFeedQuery;
 use App\Repository\RecommendationFeedRow;
 use App\Repository\RecommendationItemRepository;
-use App\Service\Recommendation\Feed\Model\RecommendationFeedPageModel;
+use App\Service\Curation\Recommendation\Feed\Model\RecommendationFeedPageModel;
 
 final readonly class RecommendationFeedPager
 {

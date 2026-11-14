@@ -2,28 +2,28 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Run;
+namespace App\Service\Curation\Recommendation\Llm\Run;
 
-use App\Service\Recommendation\Llm\Completion\Support\CompletionFinishReason;
-use App\Service\Recommendation\Llm\Prompt\Factory\RecommendationCompletionRequestFactory;
-use App\Service\Recommendation\Llm\Prompt\Model\CallPromptModel;
-use App\Service\Recommendation\Llm\Prompt\Model\ConsolidationParseResultModel;
-use App\Service\Recommendation\Llm\Prompt\Model\OutputLimitModel;
-use App\Service\Recommendation\Llm\Prompt\Model\RecommendationPickModel;
-use App\Service\Recommendation\Llm\Prompt\Model\RecommendationResponseSchema;
-use App\Service\Recommendation\Llm\Prompt\Pass\PromptContext;
-use App\Service\Recommendation\Llm\Prompt\RecommendationConsolidationParser;
-use App\Service\Recommendation\Llm\Prompt\RecommendationPromptBuilder;
-use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
-use App\Service\Recommendation\Llm\Run\Model\ConsolidationOutcomeModel;
-use App\Service\Recommendation\Llm\Run\Support\ConsolidationShortlist;
-use App\Service\Recommendation\Pool\Model\ArticleLineModel;
-use App\Service\Recommendation\Pool\RecommendationCandidateLoader;
-use App\Service\Recommendation\Pool\RecommendationHistoryLoader;
-use App\Service\Recommendation\Run\Model\CallSlotModel;
-use App\Service\Recommendation\Run\Pass\TickContext;
-use App\Service\Recommendation\Run\RecommendationTickCheckpoint;
-use App\Service\Recommendation\Run\RecommendationWinnerRanker;
+use App\Service\Curation\Recommendation\Llm\Completion\Support\CompletionFinishReason;
+use App\Service\Curation\Recommendation\Llm\Prompt\Factory\RecommendationCompletionRequestFactory;
+use App\Service\Curation\Recommendation\Llm\Prompt\Model\CallPromptModel;
+use App\Service\Curation\Recommendation\Llm\Prompt\Model\ConsolidationParseResultModel;
+use App\Service\Curation\Recommendation\Llm\Prompt\Model\OutputLimitModel;
+use App\Service\Curation\Recommendation\Llm\Prompt\Model\RecommendationPickModel;
+use App\Service\Curation\Recommendation\Llm\Prompt\Model\RecommendationResponseSchema;
+use App\Service\Curation\Recommendation\Llm\Prompt\Pass\PromptContext;
+use App\Service\Curation\Recommendation\Llm\Prompt\RecommendationConsolidationParser;
+use App\Service\Curation\Recommendation\Llm\Prompt\RecommendationPromptBuilder;
+use App\Service\Curation\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
+use App\Service\Curation\Recommendation\Llm\Run\Model\ConsolidationOutcomeModel;
+use App\Service\Curation\Recommendation\Llm\Run\Support\ConsolidationShortlist;
+use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Curation\Recommendation\Pool\RecommendationCandidateLoader;
+use App\Service\Curation\Recommendation\Pool\RecommendationHistoryLoader;
+use App\Service\Curation\Recommendation\Run\Model\CallSlotModel;
+use App\Service\Curation\Recommendation\Run\Pass\TickContext;
+use App\Service\Curation\Recommendation\Run\RecommendationTickCheckpoint;
+use App\Service\Curation\Recommendation\Run\RecommendationWinnerRanker;
 
 /**
  * The consolidation phase's one provider call: re-score, reason and dedupe the top of the pool in one pass. A pool

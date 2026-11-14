@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Feed;
+namespace App\Service\Curation\Recommendation\Feed;
 
 use App\Entity\User;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationItemRepository;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Recommendation\Feed\Model\RecommendationForYouSummaryModel;
+use App\Service\Curation\Recommendation\Feed\Model\RecommendationForYouSummaryModel;
 
 final readonly class RecommendationForYouSummaryProvider
 {

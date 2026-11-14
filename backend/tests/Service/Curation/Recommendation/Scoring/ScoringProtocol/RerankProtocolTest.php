@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Scoring\ScoringProtocol;
+namespace App\Tests\Service\Curation\Recommendation\Scoring\ScoringProtocol;
 
-use App\Service\Ai\Model\ProviderCredentialsModel;
-use App\Service\Recommendation\Pool\Model\ArticleLineModel;
-use App\Service\Recommendation\Scoring\Factory\RerankQueryFactory;
-use App\Service\Recommendation\Scoring\Factory\RerankRequestFactory;
-use App\Service\Recommendation\Scoring\Model\RerankRequestModel;
-use App\Service\Recommendation\Scoring\Model\ScoringBudgetModel;
-use App\Service\Recommendation\Scoring\Model\ScoringReaderModel;
-use App\Service\Recommendation\Scoring\Model\ScoringRequestModel;
-use App\Service\Recommendation\Scoring\ScoringProtocol\RerankProtocol;
-use App\Service\Recommendation\Support\PrettyJson;
+use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
+use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Curation\Recommendation\Scoring\Factory\RerankQueryFactory;
+use App\Service\Curation\Recommendation\Scoring\Factory\RerankRequestFactory;
+use App\Service\Curation\Recommendation\Scoring\Model\RerankRequestModel;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringBudgetModel;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringReaderModel;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringRequestModel;
+use App\Service\Curation\Recommendation\Scoring\ScoringProtocol\RerankProtocol;
+use App\Service\Curation\Recommendation\Support\PrettyJson;
 use App\Tests\Support\StubRerankClient;
 use PHPUnit\Framework\TestCase;
 

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media\EmbedProvider;
+namespace App\Tests\Service\Content\Reader\Media\EmbedProvider;
 
-use App\Service\Reader\Media\EmbedProvider\EmbedProviderInterface;
-use App\Service\Reader\Media\Model\EmbedFrameModel;
+use App\Service\Content\Reader\Media\EmbedProvider\EmbedProviderInterface;
+use App\Service\Content\Reader\Media\Model\EmbedFrameModel;
 
 trait MatchesEmbedFrames
 {

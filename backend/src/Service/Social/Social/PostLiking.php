@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\SocialAccount;
-use App\Service\Social\Model\SocialLikeResultModel;
-use App\Service\Social\Model\SocialPostModel;
-use App\Service\Social\PostLiker\PostLikerInterface;
+use App\Service\Social\Social\Model\SocialLikeResultModel;
+use App\Service\Social\Social\Model\SocialPostModel;
+use App\Service\Social\Social\PostLiker\PostLikerInterface;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 

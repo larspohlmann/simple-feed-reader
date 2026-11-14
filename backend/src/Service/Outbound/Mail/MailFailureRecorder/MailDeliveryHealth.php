@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\MailFailureRecorder;
+namespace App\Service\Outbound\Mail\MailFailureRecorder;
 
 use App\Entity\MailSendFailure;
 use App\Enum\MailKind;
 use App\Repository\MailSendFailureRepository;
-use App\Service\Clock\NaiveUtcClock;
+use App\Service\Foundation\Clock\NaiveUtcClock;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**

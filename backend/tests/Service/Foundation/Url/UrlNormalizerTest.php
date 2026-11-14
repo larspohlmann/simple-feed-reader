@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Url;
+namespace App\Tests\Service\Foundation\Url;
 
-use App\Service\Url\UrlNormalizer;
+use App\Service\Foundation\Url\UrlNormalizer;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

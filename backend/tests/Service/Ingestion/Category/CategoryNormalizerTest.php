@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Category;
+namespace App\Tests\Service\Ingestion\Category;
 
-use App\Service\Category\CategoryNormalizer;
-use App\Service\Parser\Model\ParsedCategoryModel;
+use App\Service\Ingestion\Category\CategoryNormalizer;
+use App\Service\Ingestion\Parser\Model\ParsedCategoryModel;
 use PHPUnit\Framework\TestCase;
 
 final class CategoryNormalizerTest extends TestCase

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Trending\Pass;
+namespace App\Tests\Service\Curation\Trending\Pass;
 
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowMarks;
 use App\Repository\EntryListRowSubscription;
-use App\Service\Trending\Model\RankedStoryModel;
-use App\Service\Trending\Pass\StoryCardSource;
+use App\Service\Curation\Trending\Model\RankedStoryModel;
+use App\Service\Curation\Trending\Pass\StoryCardSource;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Account;
+namespace App\Service\Identity\Account;
 
 use App\Entity\ReadingSettingsChange;
 use App\Entity\User;
@@ -10,12 +10,12 @@ use App\Repository\DigestSettingsRepository;
 use App\Repository\FeedDirectoryScopeRepository;
 use App\Repository\ReadingSettingsRepository;
 use App\Repository\SharingSettingsRepository;
-use App\Service\Account\Model\SharingSettingsModel;
-use App\Service\FeedDirectory\FeedDirectoryFiles;
-use App\Service\FeedDirectory\Model\FeedDirectoryScopeModel;
-use App\Service\Mail\Digest\DigestEnablement;
-use App\Service\Mail\Digest\Model\DigestConfigurationModel;
-use App\Service\Passkey\PasskeyOffer;
+use App\Service\Identity\Account\Model\SharingSettingsModel;
+use App\Service\Sourcing\FeedDirectory\FeedDirectoryFiles;
+use App\Service\Sourcing\FeedDirectory\Model\FeedDirectoryScopeModel;
+use App\Service\Outbound\Mail\Digest\DigestEnablement;
+use App\Service\Outbound\Mail\Digest\Model\DigestConfigurationModel;
+use App\Service\Identity\Passkey\PasskeyOffer;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class AccountPreferencesWriter

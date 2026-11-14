@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Entity\SocialAccount;
@@ -10,18 +10,18 @@ use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
 use App\Repository\ThreadPostRepository;
-use App\Service\Social\Exception\NotASocialPostException;
-use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkThrottledException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostRefusedException;
-use App\Service\Social\Exception\SocialTokenScopeMissingException;
-use App\Service\Social\Model\PostDeletion;
-use App\Service\Social\Support\OwnPostIds;
-use App\Service\Social\Support\OwnReplyGuids;
-use App\Service\Social\Support\PostAuthor;
-use App\Service\Social\Support\SocialPostAddress;
+use App\Service\Social\Social\Exception\NotASocialPostException;
+use App\Service\Social\Social\Exception\SocialAccountNeedsReconnectException;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
+use App\Service\Social\Social\Model\PostDeletion;
+use App\Service\Social\Social\Support\OwnPostIds;
+use App\Service\Social\Social\Support\OwnReplyGuids;
+use App\Service\Social\Social\Support\PostAuthor;
+use App\Service\Social\Social\Support\SocialPostAddress;
 
 /** Deletes one of the user's own posts on its network, its folded replies newest first, then every copy here. */
 final readonly class OwnPostDeletion

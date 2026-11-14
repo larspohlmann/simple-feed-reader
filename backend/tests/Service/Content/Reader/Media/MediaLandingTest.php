@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media;
+namespace App\Tests\Service\Content\Reader\Media;
 
-use App\Service\Fetch\DnsResolver\DnsResolverInterface;
-use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\UrlGuard;
-use App\Service\Reader\Media\MediaLanding;
+use App\Service\Outbound\Fetch\DnsResolver\DnsResolverInterface;
+use App\Service\Outbound\Fetch\IpValidator;
+use App\Service\Outbound\Fetch\UrlGuard;
+use App\Service\Content\Reader\Media\MediaLanding;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;

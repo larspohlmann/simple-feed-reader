@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Completion;
+namespace App\Service\Curation\Recommendation\Llm\Completion;
 
-use App\Service\Ai\Model\ProviderCallUsageModel;
-use App\Service\Ai\Support\ReplyField;
-use App\Service\Ai\Support\ReportedCost;
+use App\Service\Curation\Ai\Model\ProviderCallUsageModel;
+use App\Service\Curation\Ai\Support\ReplyField;
+use App\Service\Curation\Ai\Support\ReportedCost;
 
 /**
  * Finds a /chat/completions answer in the provider's JSON, a blocking envelope or one SSE event; the framing is

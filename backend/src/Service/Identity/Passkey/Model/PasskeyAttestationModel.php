@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Passkey\Model;
+namespace App\Service\Identity\Passkey\Model;
 
 final readonly class PasskeyAttestationModel
 {

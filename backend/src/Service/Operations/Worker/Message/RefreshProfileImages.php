@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Worker\Message;
+namespace App\Service\Operations\Worker\Message;
 
 final readonly class RefreshProfileImages
 {

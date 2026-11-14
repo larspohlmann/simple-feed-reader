@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run;
+namespace App\Service\Curation\Recommendation\Run;
 
 /**
  * Ranks the pooled batch winners by score for the global cut. The sort is stable, so ties keep batch order, which is

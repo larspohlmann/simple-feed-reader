@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Settings\Exception;
+namespace App\Service\Outbound\Mail\Settings\Exception;
 
 /** Refuses to persist an enabled row that could not send: it would accept every message and deliver none. */
 final class IncompleteMailConfigurationException extends \RuntimeException

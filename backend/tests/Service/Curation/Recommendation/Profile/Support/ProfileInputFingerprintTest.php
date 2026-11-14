@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Profile\Support;
+namespace App\Tests\Service\Curation\Recommendation\Profile\Support;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\ModelDescriptor;
 use App\Entity\RecommendationHistoryCaps;
 use App\Entity\SealedSecret;
 use App\Entity\User;
-use App\Service\Recommendation\Pool\Model\ArticleLineModel;
-use App\Service\Recommendation\Pool\Model\RecommendationHistoryModel;
-use App\Service\Recommendation\Profile\Model\ProfileInputsModel;
-use App\Service\Recommendation\Profile\Support\ProfileInputFingerprint;
+use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Curation\Recommendation\Pool\Model\RecommendationHistoryModel;
+use App\Service\Curation\Recommendation\Profile\Model\ProfileInputsModel;
+use App\Service\Curation\Recommendation\Profile\Support\ProfileInputFingerprint;
 use App\Tests\Support\AssignsEntityIds;
 use PHPUnit\Framework\TestCase;
 

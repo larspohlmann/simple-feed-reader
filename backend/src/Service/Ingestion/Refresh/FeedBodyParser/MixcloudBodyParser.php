@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh\FeedBodyParser;
+namespace App\Service\Ingestion\Refresh\FeedBodyParser;
 
 use App\Enum\SourceFormat;
-use App\Service\Parser\MixcloudJsonParser;
-use App\Service\Parser\Model\ParsedFeedModel;
+use App\Service\Ingestion\Parser\MixcloudJsonParser;
+use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /** Refresh strategy for a Mixcloud user's cloudcasts list, through the parser the subscribe preview uses too. */

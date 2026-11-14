@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Parser\Support;
+namespace App\Tests\Service\Ingestion\Parser\Support;
 
-use App\Service\Parser\Model\FeedMediaKind;
-use App\Service\Parser\Support\FeedMediaClassifier;
+use App\Service\Ingestion\Parser\Model\FeedMediaKind;
+use App\Service\Ingestion\Parser\Support\FeedMediaClassifier;
 use PHPUnit\Framework\TestCase;
 
 final class FeedMediaClassifierTest extends TestCase

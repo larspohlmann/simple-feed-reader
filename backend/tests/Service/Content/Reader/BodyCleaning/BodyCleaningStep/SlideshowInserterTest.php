@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
+namespace App\Tests\Service\Content\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\SlideshowInserter;
-use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
-use App\Service\Reader\Slideshow\Model\ContainerSignatureModel;
-use App\Service\Reader\Slideshow\Model\SlideModel;
-use App\Service\Reader\Slideshow\Model\SlideshowModel;
-use App\Service\Reader\Slideshow\SlideshowMarkup;
+use App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\SlideshowInserter;
+use App\Service\Content\Reader\BodyCleaning\Pass\BodyCleaningPass;
+use App\Service\Content\Reader\Slideshow\Model\ContainerSignatureModel;
+use App\Service\Content\Reader\Slideshow\Model\SlideModel;
+use App\Service\Content\Reader\Slideshow\Model\SlideshowModel;
+use App\Service\Content\Reader\Slideshow\SlideshowMarkup;
 use App\Tests\Support\BodyCleaningInputs;
 use App\Tests\Support\ParsesHtml;
 use Dom\HTMLDocument;

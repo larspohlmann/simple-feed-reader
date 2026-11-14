@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\OAuth;
+namespace App\Tests\Service\Identity\OAuth;
 
-use App\Service\OAuth\Exception\InvalidOAuthStateException;
-use App\Service\OAuth\OAuthStateStore;
+use App\Service\Identity\OAuth\Exception\InvalidOAuthStateException;
+use App\Service\Identity\OAuth\OAuthStateStore;
 use App\Tests\Support\AssertsRefusal;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;

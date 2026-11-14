@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Settings;
+namespace App\Service\Outbound\Mail\Settings;
 
 use App\Entity\MailConnection;
 use App\Enum\MailEncryption;
-use App\Service\Mail\Settings\Model\MailIdentityModel;
+use App\Service\Outbound\Mail\Settings\Model\MailIdentityModel;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mailer\Exception\InvalidArgumentException;
 use Symfony\Component\Mailer\Transport\Dsn;

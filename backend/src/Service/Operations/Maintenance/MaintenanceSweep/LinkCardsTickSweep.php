@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Maintenance\MaintenanceSweep;
+namespace App\Service\Operations\Maintenance\MaintenanceSweep;
 
-use App\Service\LinkCard\LinkCardSweep;
-use App\Service\LinkCard\Model\LinkCardBudgetModel;
-use App\Service\LinkCard\Model\LinkCardSweepReportModel;
+use App\Service\Content\LinkCard\LinkCardSweep;
+use App\Service\Content\LinkCard\Model\LinkCardBudgetModel;
+use App\Service\Content\LinkCard\Model\LinkCardSweepReportModel;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 

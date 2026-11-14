@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Pass;
+namespace App\Tests\Service\Social\Social\Pass;
 
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Enum\SocialAccountStatus;
 use App\Enum\SocialFeedKind;
-use App\Service\Fetch\Model\ApiResponseModel;
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Social\Exception\PrivateFeedOrphanedException;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Model\BlueskySessionModel;
-use App\Service\Social\Model\TimelineOutcome\AccountPausedTimelineModel;
-use App\Service\Social\Model\TimelineOutcome\FailedTimelineModel;
-use App\Service\Social\Model\TimelineOutcome\FetchedTimelineModel;
-use App\Service\Social\Model\TimelineSlotsModel;
-use App\Service\Social\Pass\TimelineRound;
+use App\Service\Outbound\Fetch\Model\ApiResponseModel;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Social\Social\Exception\PrivateFeedOrphanedException;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Model\BlueskySessionModel;
+use App\Service\Social\Social\Model\TimelineOutcome\AccountPausedTimelineModel;
+use App\Service\Social\Social\Model\TimelineOutcome\FailedTimelineModel;
+use App\Service\Social\Social\Model\TimelineOutcome\FetchedTimelineModel;
+use App\Service\Social\Social\Model\TimelineSlotsModel;
+use App\Service\Social\Social\Pass\TimelineRound;
 use App\Tests\Support\CountingArrayAdapter;
 use App\Tests\Support\PrivateFeeds;
 use App\Tests\Support\RoutedHttpClient;

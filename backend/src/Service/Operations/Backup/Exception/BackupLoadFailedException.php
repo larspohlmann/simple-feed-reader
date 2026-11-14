@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Exception;
+namespace App\Service\Operations\Backup\Exception;
 
 /**
  * A restore load failed after grammar validation: the storage layer refused a value the grammar accepts, or a

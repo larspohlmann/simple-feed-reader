@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\OAuth;
+namespace App\Service\Identity\OAuth;
 
-use App\Service\Auth\Exception\InvalidTokenException;
+use App\Service\Identity\Auth\Exception\InvalidTokenException;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Cache\InvalidArgumentException;
 use Psr\Clock\ClockInterface;

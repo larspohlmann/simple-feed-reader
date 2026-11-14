@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Refresh\ContentChangeMarker;
+namespace App\Tests\Service\Ingestion\Refresh\ContentChangeMarker;
 
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Refresh\ContentChangeMarker\ContentChangeMarker;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Ingestion\Refresh\ContentChangeMarker\ContentChangeMarker;
 use App\Tests\Support\RecordingLogger;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;

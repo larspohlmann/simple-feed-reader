@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\PageRepair;
+namespace App\Tests\Service\Content\Reader\PageRepair;
 
-use App\Service\Html\DesktopViewport;
-use App\Service\Html\PictureSources;
-use App\Service\Reader\PageRepair\LazyImageSources;
+use App\Service\Foundation\Html\DesktopViewport;
+use App\Service\Foundation\Html\PictureSources;
+use App\Service\Content\Reader\PageRepair\LazyImageSources;
 use App\Tests\Support\ParsesHtml;
 use Dom\Element;
 use Dom\HTMLDocument;

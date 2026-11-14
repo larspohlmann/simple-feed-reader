@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
-use App\Service\Social\Model\HiddenProfileModel;
-use App\Service\Social\Model\ProfileVisibilityModel;
+use App\Service\Social\Social\Model\HiddenProfileModel;
+use App\Service\Social\Social\Model\ProfileVisibilityModel;
 use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;

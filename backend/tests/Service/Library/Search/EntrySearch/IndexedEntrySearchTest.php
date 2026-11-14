@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Search\EntrySearch;
+namespace App\Tests\Service\Library\Search\EntrySearch;
 
 use App\Entity\Entry;
 use App\Entity\EntryState;
@@ -15,11 +15,11 @@ use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
 use App\Repository\EntrySearchQuery;
 use App\Repository\FeedRepository;
-use App\Service\Search\EntrySearch\IndexedEntrySearch;
-use App\Service\Search\Model\EntrySearchResultModel;
-use App\Service\Search\Model\SearchTermsModel;
+use App\Service\Library\Search\EntrySearch\IndexedEntrySearch;
+use App\Service\Library\Search\Model\EntrySearchResultModel;
+use App\Service\Library\Search\Model\SearchTermsModel;
 use App\Tests\DbTestCase;
-use App\Tests\Service\Search\FakeSearchIndexReader;
+use App\Tests\Service\Library\Search\FakeSearchIndexReader;
 
 /** What IndexedEntrySearch does with a faked reader; rowsByIdsForUser's own security is EntryRowsByIdsTest's job. */
 final class IndexedEntrySearchTest extends DbTestCase

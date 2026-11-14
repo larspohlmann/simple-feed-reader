@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\Digest\DigestMailer;
+namespace App\Tests\Service\Outbound\Mail\Digest\DigestMailer;
 
-use App\Service\Mail\Digest\DigestMailer\DigestMailerInterface;
-use App\Service\Mail\Digest\DigestMailer\MailGatedDigestMailer;
-use App\Service\Mail\Digest\Model\DigestModel;
-use App\Service\Mail\MailCapability;
-use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
+use App\Service\Outbound\Mail\Digest\DigestMailer\DigestMailerInterface;
+use App\Service\Outbound\Mail\Digest\DigestMailer\MailGatedDigestMailer;
+use App\Service\Outbound\Mail\Digest\Model\DigestModel;
+use App\Service\Outbound\Mail\MailCapability;
+use App\Service\Outbound\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use App\Tests\Support\UnsavedUserSettings;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;

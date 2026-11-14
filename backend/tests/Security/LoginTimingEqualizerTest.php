@@ -7,7 +7,7 @@ namespace App\Tests\Security;
 use App\Entity\User;
 use App\Security\AccountStatusException;
 use App\Security\LoginTimingEqualizer;
-use App\Service\Auth\UserByEmail\UserByEmailInterface;
+use App\Service\Identity\Auth\UserByEmail\UserByEmailInterface;
 use App\Tests\Support\HashCountingWork;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Security\Core\Exception\BadCredentialsException;

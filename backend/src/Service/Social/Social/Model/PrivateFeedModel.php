@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Model;
+namespace App\Service\Social\Social\Model;
 
 use App\Enum\SocialFeedKind;
-use App\Service\Social\Support\SocialSearchQuery;
+use App\Service\Social\Social\Support\SocialSearchQuery;
 
 final readonly class PrivateFeedModel
 {

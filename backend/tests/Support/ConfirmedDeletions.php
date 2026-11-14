@@ -6,12 +6,12 @@ namespace App\Tests\Support;
 
 use App\Repository\PostRemovalRepository;
 use App\Repository\RowIds;
-use App\Service\Social\ConfirmedDeletion;
-use App\Service\Social\DeletedPostTombstones;
-use App\Service\Social\HomeServerCheck\HomeServerCheckInterface;
-use App\Service\Social\LocalPostRemoval;
-use App\Service\Social\SocialCountsCache;
-use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Service\Social\Social\ConfirmedDeletion;
+use App\Service\Social\Social\DeletedPostTombstones;
+use App\Service\Social\Social\HomeServerCheck\HomeServerCheckInterface;
+use App\Service\Social\Social\LocalPostRemoval;
+use App\Service\Social\Social\SocialCountsCache;
+use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;

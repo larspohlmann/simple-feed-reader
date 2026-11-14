@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Profile;
+namespace App\Service\Curation\Recommendation\Profile;
 
 use App\Entity\User;
 use App\Repository\ProfileRunRepository;
 use App\Repository\RecommendationRunLogRepository;
-use App\Service\Recommendation\Profile\Model\ProfileDebugLogModel;
+use App\Service\Curation\Recommendation\Profile\Model\ProfileDebugLogModel;
 
 final readonly class ProfileDebugLogLoader
 {

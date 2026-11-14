@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Worker\Handler;
+namespace App\Service\Operations\Worker\Handler;
 
-use App\Service\Recommendation\Run\ForYouSweep;
-use App\Service\Worker\Message\StartDueRecommendationRuns;
+use App\Service\Curation\Recommendation\Run\ForYouSweep;
+use App\Service\Operations\Worker\Message\StartDueRecommendationRuns;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 /** Only starts due runs; advancing them stays AdvanceRecommendationRuns' job, so the two never share a message. */

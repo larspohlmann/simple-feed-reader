@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Account;
+namespace App\Tests\Service\Identity\Account;
 
 use App\Entity\ReadingSettingsChange;
 use App\Enum\DigestCadence;
@@ -10,11 +10,11 @@ use App\Enum\DigestFormat;
 use App\Enum\Handedness;
 use App\Enum\MagazineStyle;
 use App\Enum\SupportedLocale;
-use App\Service\Account\AccountPreferencesWriter;
-use App\Service\Account\Model\SharingSettingsModel;
-use App\Service\FeedDirectory\Exception\InvalidFeedDirectoryScopeException;
-use App\Service\FeedDirectory\Model\FeedDirectoryScopeModel;
-use App\Service\Mail\Digest\Model\DigestConfigurationModel;
+use App\Service\Identity\Account\AccountPreferencesWriter;
+use App\Service\Identity\Account\Model\SharingSettingsModel;
+use App\Service\Sourcing\FeedDirectory\Exception\InvalidFeedDirectoryScopeException;
+use App\Service\Sourcing\FeedDirectory\Model\FeedDirectoryScopeModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestConfigurationModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\SeedsUsers;

@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\Digest\DigestMailer;
+namespace App\Tests\Service\Outbound\Mail\Digest\DigestMailer;
 
 use App\Entity\DigestSettings;
 use App\Enum\DigestFormat;
-use App\Service\Mail\Digest\DigestBrandLogo;
-use App\Service\Mail\Digest\DigestHtmlRenderer;
-use App\Service\Mail\Digest\DigestImageEmbedder\DigestImageEmbedderInterface;
-use App\Service\Mail\Digest\DigestLinkBuilder;
-use App\Service\Mail\Digest\DigestMailer\DigestMailer;
-use App\Service\Mail\Digest\DigestTextRenderer;
-use App\Service\Mail\Digest\Factory\DigestMailFactory;
-use App\Service\Mail\Digest\Factory\DigestPageFactory;
-use App\Service\Mail\Digest\Model\DigestEntryModel;
-use App\Service\Mail\Digest\Model\DigestGroupModel;
-use App\Service\Mail\Digest\Model\DigestImageSetModel;
-use App\Service\Mail\Digest\Model\DigestModel;
-use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
-use App\Service\Mail\Settings\Model\MailIdentityModel;
+use App\Service\Outbound\Mail\Digest\DigestBrandLogo;
+use App\Service\Outbound\Mail\Digest\DigestHtmlRenderer;
+use App\Service\Outbound\Mail\Digest\DigestImageEmbedder\DigestImageEmbedderInterface;
+use App\Service\Outbound\Mail\Digest\DigestLinkBuilder;
+use App\Service\Outbound\Mail\Digest\DigestMailer\DigestMailer;
+use App\Service\Outbound\Mail\Digest\DigestTextRenderer;
+use App\Service\Outbound\Mail\Digest\Factory\DigestMailFactory;
+use App\Service\Outbound\Mail\Digest\Factory\DigestPageFactory;
+use App\Service\Outbound\Mail\Digest\Model\DigestEntryModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestGroupModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestImageSetModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestModel;
+use App\Service\Outbound\Mail\MailSendingSettings\MailSendingSettingsInterface;
+use App\Service\Outbound\Mail\Settings\Model\MailIdentityModel;
 use App\Tests\Support\DigestTwigEnvironment;
 use App\Tests\Support\FixedPublicBaseUrl;
 use App\Tests\Support\UnsavedUserSettings;

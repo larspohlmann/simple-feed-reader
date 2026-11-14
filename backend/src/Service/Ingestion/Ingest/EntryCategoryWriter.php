@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ingest;
+namespace App\Service\Ingestion\Ingest;
 
 use App\Entity\Category;
 use App\Entity\Entry;
 use App\Entity\EntryCategory;
 use App\Repository\CategoryRepository;
-use App\Service\Category\CategoryNormalizer;
-use App\Service\Category\Model\NormalizedCategoryModel;
-use App\Service\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Category\CategoryNormalizer;
+use App\Service\Ingestion\Category\Model\NormalizedCategoryModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**

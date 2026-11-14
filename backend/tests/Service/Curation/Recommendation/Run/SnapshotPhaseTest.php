@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Run;
+namespace App\Tests\Service\Curation\Recommendation\Run;
 
 use App\Entity\Entry;
 use App\Entity\ProfileRun;
@@ -11,12 +11,12 @@ use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\RunStatus;
 use App\Repository\ProfileRunRepository;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Recommendation\Pool\Model\ArticleLineModel;
-use App\Service\Recommendation\Pool\RecommendationCandidateLoader;
-use App\Service\Recommendation\Profile\ProfileForRun\ProfileForRunInterface;
-use App\Service\Recommendation\Run\RecommendationRunFailure;
-use App\Service\Recommendation\Run\SnapshotPhase;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Curation\Recommendation\Pool\RecommendationCandidateLoader;
+use App\Service\Curation\Recommendation\Profile\ProfileForRun\ProfileForRunInterface;
+use App\Service\Curation\Recommendation\Run\RecommendationRunFailure;
+use App\Service\Curation\Recommendation\Run\SnapshotPhase;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BuildsTickContexts;
 use App\Tests\Support\RecommendationRunFixtures;

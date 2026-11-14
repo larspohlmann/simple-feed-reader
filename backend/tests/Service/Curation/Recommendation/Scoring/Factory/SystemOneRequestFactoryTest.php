@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Scoring\Factory;
+namespace App\Tests\Service\Curation\Recommendation\Scoring\Factory;
 
-use App\Service\Recommendation\Pool\Model\ArticleLineModel;
-use App\Service\Recommendation\Scoring\Factory\ScoringStateFactory;
-use App\Service\Recommendation\Scoring\Factory\SystemOneRequestFactory;
-use App\Service\Recommendation\Scoring\Model\ScoringBudgetModel;
-use App\Service\Recommendation\Scoring\Model\ScoringReaderModel;
-use App\Service\Recommendation\Scoring\Model\ScoringRequestModel;
-use App\Service\Recommendation\Support\CompactJson;
+use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Curation\Recommendation\Scoring\Factory\ScoringStateFactory;
+use App\Service\Curation\Recommendation\Scoring\Factory\SystemOneRequestFactory;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringBudgetModel;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringReaderModel;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringRequestModel;
+use App\Service\Curation\Recommendation\Support\CompactJson;
 use PHPUnit\Framework\TestCase;
 
 final class SystemOneRequestFactoryTest extends TestCase

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Chapter\Exception;
+namespace App\Service\Content\Chapter\Exception;
 
-use App\Service\Chapter\Model\EmbedAddressModel;
-use App\Service\Fetch\Exception\FetchException;
+use App\Service\Content\Chapter\Model\EmbedAddressModel;
+use App\Service\Outbound\Fetch\Exception\FetchException;
 
 /** The provider did not answer for the embed; nothing is cached, the next open asks again. */
 final class EmbedDescriptionUnreachableException extends \RuntimeException

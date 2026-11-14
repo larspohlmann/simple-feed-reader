@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
+namespace App\Tests\Service\Content\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\DuplicateBlockCollapser;
-use App\Service\Reader\EmptiedWrapperRemover;
-use App\Service\Reader\Media\EmbedProvider\VimeoEmbedProvider;
-use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
-use App\Service\Reader\Media\EmbedProviders;
+use App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\DuplicateBlockCollapser;
+use App\Service\Content\Reader\EmptiedWrapperRemover;
+use App\Service\Content\Reader\Media\EmbedProvider\VimeoEmbedProvider;
+use App\Service\Content\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
+use App\Service\Content\Reader\Media\EmbedProviders;
 use App\Tests\Support\BodyCleaningPasses;
 use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;

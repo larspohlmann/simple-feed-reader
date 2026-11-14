@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media\EmbedProvider;
+namespace App\Tests\Service\Content\Reader\Media\EmbedProvider;
 
-use App\Service\Reader\Media\EmbedProvider\MixcloudEmbedProvider;
-use App\Service\Reader\Media\Model\EmbedKind;
-use App\Service\Reader\Media\Model\EmbedShape;
+use App\Service\Content\Reader\Media\EmbedProvider\MixcloudEmbedProvider;
+use App\Service\Content\Reader\Media\Model\EmbedKind;
+use App\Service\Content\Reader\Media\Model\EmbedShape;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

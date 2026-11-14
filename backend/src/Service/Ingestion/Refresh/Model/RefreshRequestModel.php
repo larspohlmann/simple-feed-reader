@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh\Model;
+namespace App\Service\Ingestion\Refresh\Model;
 
-use App\Service\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
-use App\Service\Refresh\Model\RefreshTarget\FeedTargetModel;
-use App\Service\Refresh\Model\RefreshTarget\RefreshTargetModelInterface;
+use App\Service\Ingestion\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
+use App\Service\Ingestion\Refresh\Model\RefreshTarget\FeedTargetModel;
+use App\Service\Ingestion\Refresh\Model\RefreshTarget\RefreshTargetModelInterface;
 
 final readonly class RefreshRequestModel
 {

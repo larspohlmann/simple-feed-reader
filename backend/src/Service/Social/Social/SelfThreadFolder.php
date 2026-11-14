@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Enum\ShareKind;
 use App\Repository\LinkCardRepository;
-use App\Service\Comments\Model\EntryCommentModel;
-use App\Service\Social\Factory\ThreadPostFactory;
+use App\Service\Content\Comments\Model\EntryCommentModel;
+use App\Service\Social\Social\Factory\ThreadPostFactory;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class SelfThreadFolder

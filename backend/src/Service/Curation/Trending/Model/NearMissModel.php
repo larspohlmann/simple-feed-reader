@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Trending\Model;
+namespace App\Service\Curation\Trending\Model;
 
 /** A pair that fails exactly one link rule, with the rule and its numbers ("shared weight 12.8 < 14"). */
 final readonly class NearMissModel

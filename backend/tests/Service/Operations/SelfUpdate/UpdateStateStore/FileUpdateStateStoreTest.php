@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\SelfUpdate\UpdateStateStore;
+namespace App\Tests\Service\Operations\SelfUpdate\UpdateStateStore;
 
-use App\Service\SelfUpdate\Exception\MalformedUpdateStateException;
-use App\Service\SelfUpdate\Exception\UpdateRequestNotSavedException;
-use App\Service\SelfUpdate\Model\SelfUpdatePhase;
-use App\Service\SelfUpdate\Model\UpdateRequestModel;
-use App\Service\SelfUpdate\UpdateStateStore\FileUpdateStateStore;
+use App\Service\Operations\SelfUpdate\Exception\MalformedUpdateStateException;
+use App\Service\Operations\SelfUpdate\Exception\UpdateRequestNotSavedException;
+use App\Service\Operations\SelfUpdate\Model\SelfUpdatePhase;
+use App\Service\Operations\SelfUpdate\Model\UpdateRequestModel;
+use App\Service\Operations\SelfUpdate\UpdateStateStore\FileUpdateStateStore;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Filesystem\Filesystem;

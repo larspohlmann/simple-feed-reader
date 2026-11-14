@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\Subscription;
 use App\Repository\RefusedProfileSubscriptionRepository;
-use App\Service\Bluesky\AppViewClient;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\HiddenProfiles\CachedHiddenProfiles;
-use App\Service\Social\Model\HiddenProfileModel;
-use App\Service\Social\Model\HiddenProfileMoveOutcome;
-use App\Service\Social\Model\HiddenProfileSwitchReportModel;
-use App\Service\Social\Model\ProfileCallBudgetModel;
-use App\Service\Social\Model\ProfileVisibilityModel;
-use App\Service\Social\Model\RefusedProfileSubscriptionModel;
-use App\Service\Social\Pass\RefusedSubscriptionSelection;
-use App\Service\Social\Support\ProfileIdentity;
-use App\Service\Subscription\Exception\AlreadySubscribedException;
-use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
+use App\Service\Social\Bluesky\AppViewClient;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\HiddenProfiles\CachedHiddenProfiles;
+use App\Service\Social\Social\Model\HiddenProfileModel;
+use App\Service\Social\Social\Model\HiddenProfileMoveOutcome;
+use App\Service\Social\Social\Model\HiddenProfileSwitchReportModel;
+use App\Service\Social\Social\Model\ProfileCallBudgetModel;
+use App\Service\Social\Social\Model\ProfileVisibilityModel;
+use App\Service\Social\Social\Model\RefusedProfileSubscriptionModel;
+use App\Service\Social\Social\Pass\RefusedSubscriptionSelection;
+use App\Service\Social\Social\Support\ProfileIdentity;
+use App\Service\Library\Subscription\Exception\AlreadySubscribedException;
+use App\Service\Library\Subscription\Exception\SubscriptionLimitReachedException;
 use Psr\Log\LoggerInterface;
 
 /**

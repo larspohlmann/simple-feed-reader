@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Discovery;
+namespace App\Tests\Service\Sourcing\Discovery;
 
-use App\Service\Discovery\WellKnownFeedProbe;
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\Exception\SsrfBlockedException;
-use App\Service\Fetch\Model\FetchResponseModel;
-use App\Service\Parser\FeedParser;
+use App\Service\Sourcing\Discovery\WellKnownFeedProbe;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\Exception\SsrfBlockedException;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
+use App\Service\Ingestion\Parser\FeedParser;
 use App\Tests\Support\StubFeedFetcher;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;

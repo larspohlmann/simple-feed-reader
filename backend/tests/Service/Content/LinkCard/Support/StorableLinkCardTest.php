@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\LinkCard\Support;
+namespace App\Tests\Service\Content\LinkCard\Support;
 
 use App\Entity\LinkCardContent;
-use App\Service\LinkCard\Support\StorableLinkCard;
+use App\Service\Content\LinkCard\Support\StorableLinkCard;
 use PHPUnit\Framework\TestCase;
 
 final class StorableLinkCardTest extends TestCase

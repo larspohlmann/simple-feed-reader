@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Factory;
+namespace App\Service\Social\Social\Factory;
 
 use App\Entity\Entry;
 use App\Entity\ThreadPost;
 use App\Entity\ThreadPostContent;
-use App\Service\Comments\Model\EntryCommentModel;
+use App\Service\Content\Comments\Model\EntryCommentModel;
 
 final readonly class ThreadPostFactory
 {

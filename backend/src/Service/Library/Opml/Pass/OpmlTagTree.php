@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Opml\Pass;
+namespace App\Service\Library\Opml\Pass;
 
 use App\Entity\Tag;
-use App\Service\Social\Model\ExportedSubscriptionModel;
+use App\Service\Social\Social\Model\ExportedSubscriptionModel;
 
 /** One export's tags and their feeds, arranged for nesting: an ancestor appears even when only a tag below it has feeds. */
 final class OpmlTagTree

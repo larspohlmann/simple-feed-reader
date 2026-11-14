@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\ReaderAudit;
+namespace App\Tests\Service\Content\ReaderAudit;
 
-use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
-use App\Service\Reader\ExtractionCoverageGate;
-use App\Service\Reader\Model\EntryHintsModel;
-use App\Service\Reader\Model\ExtractionFailure;
-use App\Service\Reader\Model\ExtractionResultModel;
-use App\Service\ReaderAudit\Model\AuditFindingModel;
-use App\Service\ReaderAudit\Model\ReaderLinkModel;
-use App\Service\ReaderAudit\Model\SampledEntryModel;
-use App\Service\ReaderAudit\ReaderAuditRunner;
+use App\Service\Content\Reader\ArticleExtractor\ArticleExtractorInterface;
+use App\Service\Content\Reader\ExtractionCoverageGate;
+use App\Service\Content\Reader\Model\EntryHintsModel;
+use App\Service\Content\Reader\Model\ExtractionFailure;
+use App\Service\Content\Reader\Model\ExtractionResultModel;
+use App\Service\Content\ReaderAudit\Model\AuditFindingModel;
+use App\Service\Content\ReaderAudit\Model\ReaderLinkModel;
+use App\Service\Content\ReaderAudit\Model\SampledEntryModel;
+use App\Service\Content\ReaderAudit\ReaderAuditRunner;
 use App\Tests\Support\AuditMarkers;
 use App\Tests\Support\FakeArticleExtractor;
 use PHPUnit\Framework\TestCase;

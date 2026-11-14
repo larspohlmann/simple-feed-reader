@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Model;
+namespace App\Service\Social\Social\Model;
 
-use App\Service\Fetch\Model\RequestSlot\RequestSlotModelInterface;
+use App\Service\Outbound\Fetch\Model\RequestSlot\RequestSlotModelInterface;
 
 /** A timeline read's account: Bluesky and Mastodon ration requests per account. */
 final readonly class SocialAccountSlotModel implements RequestSlotModelInterface

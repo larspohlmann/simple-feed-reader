@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\Model;
+namespace App\Service\Content\Reader\Media\Model;
 
-use App\Service\Html\Support\HtmlDocumentParser;
+use App\Service\Foundation\Html\Support\HtmlDocumentParser;
 use Dom\HTMLDocument;
 
 /** One parse of the raw article page, shared by every MediaCandidateSource. */

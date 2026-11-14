@@ -2,25 +2,25 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Bluesky\Model\RenderedEmbedModel;
-use App\Service\Bluesky\PostEmbedRenderer;
-use App\Service\Bluesky\Support\AtPostUri;
-use App\Service\Bluesky\Support\BlueskyRichText;
-use App\Service\Comments\Exception\CommentsUnavailableException;
-use App\Service\Comments\Model\CommentAuthorModel;
-use App\Service\Comments\Model\CommentEmbedsModel;
-use App\Service\Comments\Model\EntryCommentModel;
-use App\Service\Ingest\Support\EntryMediaAssembler;
-use App\Service\Parser\Support\DateParser;
-use App\Service\Sanitize\EntrySanitizer;
-use App\Service\Social\Pass\ReplyNode;
-use App\Service\Social\Support\BlueskyAuthor;
-use App\Service\Social\Support\CommentPost;
-use App\Service\Social\Support\PostCounts;
-use App\Service\Text\Support\HtmlAnchor;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Bluesky\Model\RenderedEmbedModel;
+use App\Service\Social\Bluesky\PostEmbedRenderer;
+use App\Service\Social\Bluesky\Support\AtPostUri;
+use App\Service\Social\Bluesky\Support\BlueskyRichText;
+use App\Service\Content\Comments\Exception\CommentsUnavailableException;
+use App\Service\Content\Comments\Model\CommentAuthorModel;
+use App\Service\Content\Comments\Model\CommentEmbedsModel;
+use App\Service\Content\Comments\Model\EntryCommentModel;
+use App\Service\Ingestion\Ingest\Support\EntryMediaAssembler;
+use App\Service\Ingestion\Parser\Support\DateParser;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Social\Social\Pass\ReplyNode;
+use App\Service\Social\Social\Support\BlueskyAuthor;
+use App\Service\Social\Social\Support\CommentPost;
+use App\Service\Social\Social\Support\PostCounts;
+use App\Service\Foundation\Text\Support\HtmlAnchor;
 
 final readonly class BlueskyThreadReplies
 {

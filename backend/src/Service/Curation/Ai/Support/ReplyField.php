@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai\Support;
+namespace App\Service\Curation\Ai\Support;
 
 /** One field of a provider's decoded reply, which is untrusted: a wrong type reads as absent. */
 final class ReplyField

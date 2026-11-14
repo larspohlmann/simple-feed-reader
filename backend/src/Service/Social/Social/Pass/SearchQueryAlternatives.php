@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Pass;
+namespace App\Service\Social\Social\Pass;
 
-use App\Service\Social\Exception\SearchQueryTooBroadException;
-use App\Service\Social\Support\SearchQueryTokens;
+use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
+use App\Service\Social\Social\Support\SearchQueryTokens;
 
 /**
  * One query spelled out as the ANDed queries it is the `||` of, for a network without `||`. A negated group is left

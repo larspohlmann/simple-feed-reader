@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Digest\DigestMailer;
+namespace App\Service\Outbound\Mail\Digest\DigestMailer;
 
 use App\Entity\DigestSettings;
-use App\Service\Mail\Digest\Factory\DigestMailFactory;
-use App\Service\Mail\Digest\Model\DigestModel;
+use App\Service\Outbound\Mail\Digest\Factory\DigestMailFactory;
+use App\Service\Outbound\Mail\Digest\Model\DigestModel;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
 

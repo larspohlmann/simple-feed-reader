@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh\RefreshRunner;
+namespace App\Service\Ingestion\Refresh\RefreshRunner;
 
 use App\Repository\DueFeedCriteria;
 use App\Repository\FeedRepository;
-use App\Service\Refresh\ContentChangeMarker\ContentChangeMarkerInterface;
-use App\Service\Refresh\MissingFaviconResolver;
-use App\Service\Refresh\Model\RefreshReportModel;
-use App\Service\Refresh\Model\RefreshRequestModel;
-use App\Service\Refresh\Pass\RefreshPass;
-use App\Service\Refresh\RefreshHousekeeping;
-use App\Service\Refresh\RefreshPassRecorder;
+use App\Service\Ingestion\Refresh\ContentChangeMarker\ContentChangeMarkerInterface;
+use App\Service\Ingestion\Refresh\MissingFaviconResolver;
+use App\Service\Ingestion\Refresh\Model\RefreshReportModel;
+use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
+use App\Service\Ingestion\Refresh\Pass\RefreshPass;
+use App\Service\Ingestion\Refresh\RefreshHousekeeping;
+use App\Service\Ingestion\Refresh\RefreshPassRecorder;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\Exception\ORMException;
 use Psr\Log\LoggerInterface;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search\TranscriptText;
+namespace App\Service\Library\Search\TranscriptText;
 
 interface TranscriptTextInterface
 {

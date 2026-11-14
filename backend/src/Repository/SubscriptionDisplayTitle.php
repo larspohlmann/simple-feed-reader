@@ -6,7 +6,7 @@ namespace App\Repository;
 
 use App\Entity\Subscription;
 use App\Enum\SocialFeedKind;
-use App\Service\Social\Support\SocialFeedUrl;
+use App\Service\Social\Social\Support\SocialFeedUrl;
 
 /** The one definition of a subscription's display title, shared by every projection that names a subscription. */
 final class SubscriptionDisplayTitle

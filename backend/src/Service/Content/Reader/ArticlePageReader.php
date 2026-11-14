@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Content\Reader;
 
-use App\Service\Reader\Media\Model\RawPageModel;
-use App\Service\Reader\Media\PageMediaScanner;
-use App\Service\Reader\Media\Teaser\TeaserPlayerScanner;
-use App\Service\Reader\Model\ArticlePageModel;
-use App\Service\Reader\Model\FeedMediaModel;
-use App\Service\Reader\Model\LeadFigureCaptionsModel;
-use App\Service\Reader\Model\PageImageInventoryModel;
-use App\Service\Reader\Model\PageResponseModel;
-use App\Service\Reader\Paywall\PaywallSignals;
-use App\Service\Reader\Slideshow\SlideshowScanner;
+use App\Service\Content\Reader\Media\Model\RawPageModel;
+use App\Service\Content\Reader\Media\PageMediaScanner;
+use App\Service\Content\Reader\Media\Teaser\TeaserPlayerScanner;
+use App\Service\Content\Reader\Model\ArticlePageModel;
+use App\Service\Content\Reader\Model\FeedMediaModel;
+use App\Service\Content\Reader\Model\LeadFigureCaptionsModel;
+use App\Service\Content\Reader\Model\PageImageInventoryModel;
+use App\Service\Content\Reader\Model\PageResponseModel;
+use App\Service\Content\Reader\Paywall\PaywallSignals;
+use App\Service\Content\Reader\Slideshow\SlideshowScanner;
 
 /** Every read of a fetched page, taken before readability consumes the normalised document. */
 final readonly class ArticlePageReader

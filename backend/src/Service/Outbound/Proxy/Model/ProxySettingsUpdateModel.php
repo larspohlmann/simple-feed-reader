@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Proxy\Model;
+namespace App\Service\Outbound\Proxy\Model;
 
 use App\Entity\ProxyConnection;
-use App\Service\Crypto\Model\SecretChangeModel;
+use App\Service\Foundation\Crypto\Model\SecretChangeModel;
 
 final readonly class ProxySettingsUpdateModel
 {

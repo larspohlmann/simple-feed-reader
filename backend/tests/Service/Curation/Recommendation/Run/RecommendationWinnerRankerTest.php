@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Run;
+namespace App\Tests\Service\Curation\Recommendation\Run;
 
-use App\Service\Recommendation\Run\RecommendationWinnerRanker;
+use App\Service\Curation\Recommendation\Run\RecommendationWinnerRanker;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationWinnerRankerTest extends TestCase

@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Chapter\EmbedDetailsSource;
+namespace App\Service\Content\Chapter\EmbedDetailsSource;
 
-use App\Service\Chapter\Exception\EmbedDescriptionUnreachableException;
-use App\Service\Chapter\GuardedDescriptionRequest;
-use App\Service\Chapter\Model\ChapteredEmbed;
-use App\Service\Chapter\Model\EmbedAddressModel;
-use App\Service\Chapter\Model\EmbedDescriptionModel;
-use App\Service\Fetch\Exception\DirectRouteUnavailableException;
-use App\Service\Fetch\Model\ApiRequestModel;
+use App\Service\Content\Chapter\Exception\EmbedDescriptionUnreachableException;
+use App\Service\Content\Chapter\GuardedDescriptionRequest;
+use App\Service\Content\Chapter\Model\ChapteredEmbed;
+use App\Service\Content\Chapter\Model\EmbedAddressModel;
+use App\Service\Content\Chapter\Model\EmbedDescriptionModel;
+use App\Service\Outbound\Fetch\Exception\DirectRouteUnavailableException;
+use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 

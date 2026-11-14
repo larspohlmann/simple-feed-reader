@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Passkey;
+namespace App\Tests\Service\Identity\Passkey;
 
 use App\Entity\User;
 use App\Entity\UserPasskey;
-use App\Service\Passkey\Exception\LastSignInMethodException;
-use App\Service\Passkey\PasskeyCount\PasskeyCountInterface;
-use App\Service\Passkey\PasskeyRemovalPolicy;
-use App\Service\Passkey\SignInIdentities\SignInIdentitiesInterface;
+use App\Service\Identity\Passkey\Exception\LastSignInMethodException;
+use App\Service\Identity\Passkey\PasskeyCount\PasskeyCountInterface;
+use App\Service\Identity\Passkey\PasskeyRemovalPolicy;
+use App\Service\Identity\Passkey\SignInIdentities\SignInIdentitiesInterface;
 use App\Tests\Support\PasskeyRegistrations;
 use PHPUnit\Framework\TestCase;
 

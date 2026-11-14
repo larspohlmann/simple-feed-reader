@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Run\Model;
+namespace App\Tests\Service\Curation\Recommendation\Run\Model;
 
 use App\Enum\CallPhase;
-use App\Service\Recommendation\Run\Model\CallSlotModel;
+use App\Service\Curation\Recommendation\Run\Model\CallSlotModel;
 use PHPUnit\Framework\TestCase;
 
 final class CallSlotModelTest extends TestCase

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Maintenance\MaintenanceSweep;
+namespace App\Tests\Service\Operations\Maintenance\MaintenanceSweep;
 
-use App\Service\Social\Model\PrivateFeedSyncReportModel;
-use App\Service\Maintenance\MaintenanceSweep\PrivateFeedSyncTickSweep;
-use App\Service\Social\Model\NetworkCandidatesModel;
-use App\Service\Social\Model\NetworkCollectionsModel;
+use App\Service\Social\Social\Model\PrivateFeedSyncReportModel;
+use App\Service\Operations\Maintenance\MaintenanceSweep\PrivateFeedSyncTickSweep;
+use App\Service\Social\Social\Model\NetworkCandidatesModel;
+use App\Service\Social\Social\Model\NetworkCollectionsModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PrivateFeedSyncWiring;
 use App\Tests\Support\SocialAccounts;

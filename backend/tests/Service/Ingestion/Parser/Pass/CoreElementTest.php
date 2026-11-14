@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Parser\Pass;
+namespace App\Tests\Service\Ingestion\Parser\Pass;
 
-use App\Service\Parser\Model\FeedNamespace;
-use App\Service\Parser\Pass\CoreElement;
+use App\Service\Ingestion\Parser\Model\FeedNamespace;
+use App\Service\Ingestion\Parser\Pass\CoreElement;
 use PHPUnit\Framework\TestCase;
 
 final class CoreElementTest extends TestCase

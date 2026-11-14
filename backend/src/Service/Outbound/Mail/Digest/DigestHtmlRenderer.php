@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Digest;
+namespace App\Service\Outbound\Mail\Digest;
 
-use App\Service\Mail\Digest\Model\DigestEntryModel;
-use App\Service\Mail\Digest\Model\DigestImageSetModel;
-use App\Service\Mail\Digest\Model\DigestPageGroupModel;
-use App\Service\Mail\Digest\Model\DigestPageModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestEntryModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestImageSetModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestPageGroupModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestPageModel;
 use Psr\Clock\ClockInterface;
 use Twig\Environment;
 

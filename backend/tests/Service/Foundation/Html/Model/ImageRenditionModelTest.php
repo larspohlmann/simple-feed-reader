@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Html\Model;
+namespace App\Tests\Service\Foundation\Html\Model;
 
-use App\Service\Html\Model\ImageRenditionModel;
+use App\Service\Foundation\Html\Model\ImageRenditionModel;
 use PHPUnit\Framework\TestCase;
 
 final class ImageRenditionModelTest extends TestCase

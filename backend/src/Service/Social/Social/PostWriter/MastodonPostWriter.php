@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\PostWriter;
+namespace App\Service\Social\Social\PostWriter;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Fetch\Model\ApiRequestModel;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\MastodonAccountApi;
-use App\Service\Social\Model\PostDeletion;
-use App\Service\Social\Model\PublishedPostModel;
-use App\Service\Social\Model\PostDraftModel;
-use App\Service\Social\Model\SocialPostModel;
-use App\Service\Social\Support\MastodonStatusAction;
-use App\Service\Url\Support\AbsoluteHttpUrl;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Outbound\Fetch\Model\ApiRequestModel;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\MastodonAccountApi;
+use App\Service\Social\Social\Model\PostDeletion;
+use App\Service\Social\Social\Model\PublishedPostModel;
+use App\Service\Social\Social\Model\PostDraftModel;
+use App\Service\Social\Social\Model\SocialPostModel;
+use App\Service\Social\Social\Support\MastodonStatusAction;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Mastodon->value)]

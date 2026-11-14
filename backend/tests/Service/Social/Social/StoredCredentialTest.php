@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
-use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Social\Crypto\SocialCredentialCipher;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\StoredCredential;
+use App\Service\Foundation\Crypto\InstanceSecretCipher;
+use App\Service\Social\Social\Crypto\SocialCredentialCipher;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\StoredCredential;
 use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\TestCase;
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ingest\Pass;
+namespace App\Service\Ingestion\Ingest\Pass;
 
 /**
  * Whether an incoming item is one the feed already gave us, by GUID or by stable URL (which survives BBC's revision

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Worker\Handler;
+namespace App\Service\Operations\Worker\Handler;
 
 use App\Repository\FailedMessageRepository;
-use App\Service\Worker\Message\PurgeFailedMessages;
+use App\Service\Operations\Worker\Message\PurgeFailedMessages;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 

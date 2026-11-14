@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Opml;
+namespace App\Service\Library\Opml;
 
 use App\Entity\User;
 use App\Enum\SourceFormat;
-use App\Service\Opml\Exception\InvalidOpmlException;
-use App\Service\Opml\Model\OpmlImportResultModel;
-use App\Service\Subscription\BulkSubscriber;
-use App\Service\Subscription\Model\BulkSubscribeItemModel;
-use App\Service\Url\Support\MixcloudUrl;
+use App\Service\Library\Opml\Exception\InvalidOpmlException;
+use App\Service\Library\Opml\Model\OpmlImportResultModel;
+use App\Service\Library\Subscription\BulkSubscriber;
+use App\Service\Library\Subscription\Model\BulkSubscribeItemModel;
+use App\Service\Foundation\Url\Support\MixcloudUrl;
 
 /** Imports OPML into subscriptions WITHOUT fetching anything, mapping its outline tree onto BulkSubscriber items. */
 final readonly class OpmlImporter

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\Feed;
 use App\Entity\InclusionChange;
@@ -14,15 +14,15 @@ use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\KnownSocialCollectionRepository;
 use App\Repository\SocialFeedRepository;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Social\Model\PrivateFeedModel;
-use App\Service\Social\Model\PrivateFeedOutcome;
-use App\Service\Social\Support\PrivateFeedSite;
-use App\Service\Social\Support\SocialFeedUrl;
-use App\Service\Subscription\Exception\AlreadySubscribedException;
-use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
-use App\Service\Subscription\SubscriptionCreator;
-use App\Service\Subscription\SubscriptionService;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Social\Social\Model\PrivateFeedModel;
+use App\Service\Social\Social\Model\PrivateFeedOutcome;
+use App\Service\Social\Social\Support\PrivateFeedSite;
+use App\Service\Social\Social\Support\SocialFeedUrl;
+use App\Service\Library\Subscription\Exception\AlreadySubscribedException;
+use App\Service\Library\Subscription\Exception\SubscriptionLimitReachedException;
+use App\Service\Library\Subscription\SubscriptionCreator;
+use App\Service\Library\Subscription\SubscriptionService;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class PrivateFeeds

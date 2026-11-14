@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai\Model;
+namespace App\Service\Curation\Ai\Model;
 
 /**
  * How a caller handles a provider rate limit: a blocking plan waits and retries within a budget,

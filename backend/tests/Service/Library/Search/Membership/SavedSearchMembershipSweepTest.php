@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Search\Membership;
+namespace App\Tests\Service\Library\Search\Membership;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Repository\SavedSearchEntryMembershipRepository;
-use App\Service\Search\Exception\SearchEngineUnavailableException;
-use App\Service\Search\Membership\Model\SweepBudgetModel;
-use App\Service\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
-use App\Service\Search\Membership\SavedSearchMembershipSweep;
-use App\Service\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface;
+use App\Service\Library\Search\Exception\SearchEngineUnavailableException;
+use App\Service\Library\Search\Membership\Model\SweepBudgetModel;
+use App\Service\Library\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
+use App\Service\Library\Search\Membership\SavedSearchMembershipSweep;
+use App\Service\Library\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface;
 use App\Tests\DbTestCase;
 use App\Tests\Support\MembershipSweepFactory;
 use App\Tests\Support\RecordingLogger;

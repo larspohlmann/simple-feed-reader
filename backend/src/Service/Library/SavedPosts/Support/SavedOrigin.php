@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\SavedPosts\Support;
+namespace App\Service\Library\SavedPosts\Support;
 
 use App\Entity\EntryAuthor;
 use App\Entity\EntryOrigin;
 use App\Entity\Subscription;
 use App\Enum\SourceFormat;
 use App\Repository\SubscriptionDisplayTitle;
-use App\Service\Url\Support\AbsoluteHttpUrl;
-use App\Service\Url\Support\FeedWebsite;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
+use App\Service\Foundation\Url\Support\FeedWebsite;
 
 /** What a saved copy keeps of the feed it is leaving: the profile it was posted on, or the RSS feed's name and icon. */
 final class SavedOrigin

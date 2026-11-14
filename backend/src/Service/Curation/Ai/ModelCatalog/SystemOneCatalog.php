@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai\ModelCatalog;
+namespace App\Service\Curation\Ai\ModelCatalog;
 
 use App\Entity\ModelDescriptor;
 use App\Enum\ScoringProtocol;
-use App\Service\Ai\Exception\CredentialsRejectedException;
-use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\Model\ProviderCredentialsModel;
-use App\Service\Ai\Support\RejectingStatus;
+use App\Service\Curation\Ai\Exception\CredentialsRejectedException;
+use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
+use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
+use App\Service\Curation\Ai\Support\RejectingStatus;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;

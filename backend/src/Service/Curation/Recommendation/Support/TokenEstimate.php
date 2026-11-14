@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Support;
+namespace App\Service\Curation\Recommendation\Support;
 
 /** Four bytes a token, both engines' estimate of what a provider bills. */
 final class TokenEstimate

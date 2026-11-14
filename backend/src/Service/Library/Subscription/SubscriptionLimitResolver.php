@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Subscription;
+namespace App\Service\Library\Subscription;
 
 use App\Entity\User;
 

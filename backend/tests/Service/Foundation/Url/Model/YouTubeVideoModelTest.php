@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Url\Model;
+namespace App\Tests\Service\Foundation\Url\Model;
 
-use App\Service\Url\Model\YouTubeVideoModel;
+use App\Service\Foundation\Url\Model\YouTubeVideoModel;
 use PHPUnit\Framework\TestCase;
 
 final class YouTubeVideoModelTest extends TestCase

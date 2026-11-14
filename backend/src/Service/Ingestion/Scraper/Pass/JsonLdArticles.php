@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Scraper\Pass;
+namespace App\Service\Ingestion\Scraper\Pass;
 
-use App\Service\Fetch\Pass\PageUrls;
-use App\Service\Parser\Support\DateParser;
-use App\Service\Scraper\Model\ScrapedItemModel;
-use App\Service\Scraper\Support\TextNormalizer;
+use App\Service\Outbound\Fetch\Pass\PageUrls;
+use App\Service\Ingestion\Parser\Support\DateParser;
+use App\Service\Ingestion\Scraper\Model\ScrapedItemModel;
+use App\Service\Ingestion\Scraper\Support\TextNormalizer;
 
 /** The articles a page's JSON-LD describes, found by recursing through lists, @graph and ItemList entries. */
 final class JsonLdArticles

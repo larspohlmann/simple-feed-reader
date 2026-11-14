@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\Feed;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
-use App\Service\Social\FeedNetworkListener;
+use App\Service\Social\Social\FeedNetworkListener;
 use App\Tests\DbTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 

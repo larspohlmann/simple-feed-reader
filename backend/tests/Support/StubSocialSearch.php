@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\SocialAccount;
-use App\Service\Social\Model\TimelinePageModel;
-use App\Service\Social\SocialSearch\SocialSearchInterface;
+use App\Service\Social\Social\Model\TimelinePageModel;
+use App\Service\Social\Social\SocialSearch\SocialSearchInterface;
 
 final class StubSocialSearch implements SocialSearchInterface
 {

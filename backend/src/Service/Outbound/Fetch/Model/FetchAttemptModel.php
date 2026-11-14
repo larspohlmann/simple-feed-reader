@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\Model;
+namespace App\Service\Outbound\Fetch\Model;
 
 /** One ticket's attempt on the wire: its redirect hop, its address family and its route. */
 final readonly class FetchAttemptModel

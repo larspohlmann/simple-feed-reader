@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader;
+namespace App\Tests\Service\Content\Reader;
 
-use App\Service\Reader\ArticleContentGate;
-use App\Service\Reader\ArticleReadability;
-use App\Service\Reader\FetchedPageNormalizer;
-use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Model\PageResponseModel;
-use App\Service\Reader\RelatedTeaserGridRemover;
+use App\Service\Content\Reader\ArticleContentGate;
+use App\Service\Content\Reader\ArticleReadability;
+use App\Service\Content\Reader\FetchedPageNormalizer;
+use App\Service\Content\Reader\Media\EmbedProviders;
+use App\Service\Content\Reader\Model\PageResponseModel;
+use App\Service\Content\Reader\RelatedTeaserGridRemover;
 use PHPUnit\Framework\TestCase;
 
 final class ArticleReadabilityTest extends TestCase

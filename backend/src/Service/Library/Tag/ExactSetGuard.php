@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Tag;
+namespace App\Service\Library\Tag;
 
 use App\Exception\InvalidSelectionException;
 

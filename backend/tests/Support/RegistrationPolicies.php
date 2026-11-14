@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\InstanceSettingsUpdate;
-use App\Service\Auth\RegistrationPolicy;
-use App\Service\Mail\MailCapability;
-use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
-use App\Service\Settings\InstanceSettings;
+use App\Service\Identity\Auth\RegistrationPolicy;
+use App\Service\Outbound\Mail\MailCapability;
+use App\Service\Outbound\Mail\MailSendingSettings\MailSendingSettingsInterface;
+use App\Service\Operations\Settings\InstanceSettings;
 
 /** The real InstanceSettings (final, so it cannot be doubled) behind a mail capability that always sends. */
 trait RegistrationPolicies

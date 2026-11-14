@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\ArticleExtractor;
+namespace App\Service\Content\Reader\ArticleExtractor;
 
-use App\Service\Reader\Model\EntryHintsModel;
-use App\Service\Reader\Model\ExtractionResultModel;
+use App\Service\Content\Reader\Model\EntryHintsModel;
+use App\Service\Content\Reader\Model\ExtractionResultModel;
 
 /** The reader endpoint's seam: tests swap in a fake with the test container's set(). */
 interface ArticleExtractorInterface

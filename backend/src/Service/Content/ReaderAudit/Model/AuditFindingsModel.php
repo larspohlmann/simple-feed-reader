@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\ReaderAudit\Model;
+namespace App\Service\Content\ReaderAudit\Model;
 
 /**
  * The sweep's JSONL files read back, with the report's three views: worst articles, worst feeds, busiest stages.

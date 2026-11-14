@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\HomeServerCheck;
+namespace App\Service\Social\Social\HomeServerCheck;
 
 use App\Enum\SocialNetwork;
-use App\Service\Fetch\Model\ApiRequestModel;
-use App\Service\Social\MastodonApiClient;
-use App\Service\Social\Support\MastodonStatusAddress;
+use App\Service\Outbound\Fetch\Model\ApiRequestModel;
+use App\Service\Social\Social\MastodonApiClient;
+use App\Service\Social\Social\Support\MastodonStatusAddress;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 use Symfony\Component\HttpFoundation\Response;
 

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Bluesky\Support;
+namespace App\Service\Social\Bluesky\Support;
 
-use App\Service\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
 
 final class BlueskyPostView
 {

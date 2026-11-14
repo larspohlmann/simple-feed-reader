@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Comments\Model;
+namespace App\Service\Content\Comments\Model;
 
 final readonly class CommentAuthorModel
 {

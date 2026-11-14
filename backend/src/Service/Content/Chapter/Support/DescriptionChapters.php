@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Chapter\Support;
+namespace App\Service\Content\Chapter\Support;
 
 use App\Entity\EntryChapter;
-use App\Service\Chapter\Model\ChapterRunRule;
-use App\Service\Chapter\Model\ServedChaptersModel;
-use App\Service\Chapter\Pass\DescriptionLine;
-use App\Service\Html\Support\HtmlDocumentParser;
+use App\Service\Content\Chapter\Model\ChapterRunRule;
+use App\Service\Content\Chapter\Model\ServedChaptersModel;
+use App\Service\Content\Chapter\Pass\DescriptionLine;
+use App\Service\Foundation\Html\Support\HtmlDocumentParser;
 use Dom\Element;
 use Dom\Text;
 

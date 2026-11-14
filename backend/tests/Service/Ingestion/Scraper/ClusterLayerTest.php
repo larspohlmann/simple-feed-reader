@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Scraper;
+namespace App\Tests\Service\Ingestion\Scraper;
 
-use App\Service\Scraper\CardTitle;
-use App\Service\Scraper\ScrapeLayer\ClusterLayer;
+use App\Service\Ingestion\Scraper\CardTitle;
+use App\Service\Ingestion\Scraper\ScrapeLayer\ClusterLayer;
 use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
@@ -15,7 +15,7 @@ final class ClusterLayerTest extends TestCase
 
     use ScrapedFixtures;
 
-    /** @return list<\App\Service\Scraper\Model\ScrapedItemModel> */
+    /** @return list<\App\Service\Ingestion\Scraper\Model\ScrapedItemModel> */
     private function extract(string $fixture, string $baseUrl): array
     {
         $document = $this->document($this->scrapedFixture($fixture));

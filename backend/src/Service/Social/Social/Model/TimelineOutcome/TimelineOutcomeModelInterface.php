@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Model\TimelineOutcome;
+namespace App\Service\Social\Social\Model\TimelineOutcome;
 
 /**
  * What one private feed's read came to, for the refresh to store.

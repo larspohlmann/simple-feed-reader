@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\TimelineSource;
+namespace App\Service\Social\Social\TimelineSource;
 
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
-use App\Service\Fetch\Model\ApiRequestModel;
-use App\Service\Fetch\Model\ApiResponseModel;
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkThrottledException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialSessionStaleException;
-use App\Service\Social\Model\TimelinePageModel;
+use App\Service\Outbound\Fetch\Model\ApiRequestModel;
+use App\Service\Outbound\Fetch\Model\ApiResponseModel;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialSessionStaleException;
+use App\Service\Social\Social\Model\TimelinePageModel;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /** One network's private feeds: the request a poll sends and the page its answer maps to, keyed by SocialNetwork. */

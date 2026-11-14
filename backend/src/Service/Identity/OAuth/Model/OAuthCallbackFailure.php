@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\OAuth\Model;
+namespace App\Service\Identity\OAuth\Model;
 
 /** The reason code the SPA receives in the failure redirect; the values are wire contract. */
 enum OAuthCallbackFailure: string

@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Scoring\ScoringProtocol;
+namespace App\Tests\Service\Curation\Recommendation\Scoring\ScoringProtocol;
 
-use App\Service\Ai\Model\ProviderCredentialsModel;
-use App\Service\Recommendation\Pool\Model\ArticleLineModel;
-use App\Service\Recommendation\Scoring\Factory\ScoringStateFactory;
-use App\Service\Recommendation\Scoring\Factory\SystemOneRequestFactory;
-use App\Service\Recommendation\Scoring\Model\ScoringBudgetModel;
-use App\Service\Recommendation\Scoring\Model\ScoringReaderModel;
-use App\Service\Recommendation\Scoring\Model\ScoringRequestModel;
-use App\Service\Recommendation\Scoring\Model\SystemOneRequestModel;
-use App\Service\Recommendation\Scoring\ScoringBatchPacker;
-use App\Service\Recommendation\Scoring\ScoringProtocol\SystemOneProtocol;
-use App\Service\Recommendation\Support\CompactJson;
-use App\Service\Recommendation\Support\PrettyJson;
-use App\Service\Recommendation\Support\TokenEstimate;
+use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
+use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Curation\Recommendation\Scoring\Factory\ScoringStateFactory;
+use App\Service\Curation\Recommendation\Scoring\Factory\SystemOneRequestFactory;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringBudgetModel;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringReaderModel;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringRequestModel;
+use App\Service\Curation\Recommendation\Scoring\Model\SystemOneRequestModel;
+use App\Service\Curation\Recommendation\Scoring\ScoringBatchPacker;
+use App\Service\Curation\Recommendation\Scoring\ScoringProtocol\SystemOneProtocol;
+use App\Service\Curation\Recommendation\Support\CompactJson;
+use App\Service\Curation\Recommendation\Support\PrettyJson;
+use App\Service\Curation\Recommendation\Support\TokenEstimate;
 use App\Tests\Support\StubSystemOneClient;
 use PHPUnit\Framework\TestCase;
 

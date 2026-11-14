@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\ReaderAudit;
+namespace App\Service\Content\ReaderAudit;
 
-use App\Service\ReaderAudit\Model\BodyBlockModel;
-use App\Service\ReaderAudit\Model\CleanupMarkerModel;
-use App\Service\ReaderAudit\Model\ExtractedBodyModel;
-use App\Service\ReaderAudit\Model\PhraseFamilyModel;
-use App\Service\ReaderAudit\Model\PhraseScope;
-use App\Service\Text\Support\ClippedText;
+use App\Service\Content\ReaderAudit\Model\BodyBlockModel;
+use App\Service\Content\ReaderAudit\Model\CleanupMarkerModel;
+use App\Service\Content\ReaderAudit\Model\ExtractedBodyModel;
+use App\Service\Content\ReaderAudit\Model\PhraseFamilyModel;
+use App\Service\Content\ReaderAudit\Model\PhraseScope;
+use App\Service\Foundation\Text\Support\ClippedText;
 
 /**
  * Scans short blocks for SuspiciousPhrases' wording, each family over the region it may match, and reports each family

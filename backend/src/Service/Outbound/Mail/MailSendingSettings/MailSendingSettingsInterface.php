@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\MailSendingSettings;
+namespace App\Service\Outbound\Mail\MailSendingSettings;
 
-use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Mail\Settings\Model\MailIdentityModel;
-use App\Service\Mail\Settings\Model\ResolvedMailTransportModel;
+use App\Service\Foundation\Crypto\Exception\SecretUnreadableException;
+use App\Service\Outbound\Mail\Settings\Model\MailIdentityModel;
+use App\Service\Outbound\Mail\Settings\Model\ResolvedMailTransportModel;
 
 interface MailSendingSettingsInterface
 {

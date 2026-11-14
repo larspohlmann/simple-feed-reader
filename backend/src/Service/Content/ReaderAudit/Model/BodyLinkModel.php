@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\ReaderAudit\Model;
+namespace App\Service\Content\ReaderAudit\Model;
 
 /**
  * One anchor of the cleaned article. An empty or fragment-only href points into the article itself (its table of

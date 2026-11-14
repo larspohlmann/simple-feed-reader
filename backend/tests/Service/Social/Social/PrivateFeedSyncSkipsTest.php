@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\SocialAccount;
 use App\Enum\PrivateFeedSyncSkip;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Social\PrivateFeedSyncSkips;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Social\Social\PrivateFeedSyncSkips;
 use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\SocialAccounts;
 use Doctrine\ORM\EntityManagerInterface;

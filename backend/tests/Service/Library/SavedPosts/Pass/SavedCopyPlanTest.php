@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\SavedPosts\Pass;
+namespace App\Tests\Service\Library\SavedPosts\Pass;
 
 use App\Entity\EntryGuid;
-use App\Service\SavedPosts\Pass\SavedCopyPlan;
+use App\Service\Library\SavedPosts\Pass\SavedCopyPlan;
 use PHPUnit\Framework\TestCase;
 
 final class SavedCopyPlanTest extends TestCase

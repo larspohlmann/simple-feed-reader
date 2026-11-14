@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
 use App\Entity\SocialAccount;
-use App\Service\Comments\Model\EntryCommentModel;
+use App\Service\Content\Comments\Model\EntryCommentModel;
 
 /** Marks the replies one of the viewer's own accounts wrote, so the panel can offer to delete them. */
 final class OwnReplies

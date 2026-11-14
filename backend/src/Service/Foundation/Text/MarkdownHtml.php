@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Text;
+namespace App\Service\Foundation\Text;
 
 use League\CommonMark\ConverterInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\SavedSearch;
-use App\Service\Search\Model\SavedSearchTallyModel;
+use App\Service\Library\Search\Model\SavedSearchTallyModel;
 
 final class SavedSearchJson
 {

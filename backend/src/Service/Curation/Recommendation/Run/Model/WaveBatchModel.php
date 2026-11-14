@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run\Model;
+namespace App\Service\Curation\Recommendation\Run\Model;
 
-use App\Service\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
 
 /**
  * One batch of the frozen plan in a wave: its plan position, its snapshot-order ids, and the article lines those ids

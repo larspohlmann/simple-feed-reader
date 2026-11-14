@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Parser\Factory;
+namespace App\Tests\Service\Ingestion\Parser\Factory;
 
-use App\Service\Parser\Exception\FeedParseException;
-use App\Service\Parser\Factory\FeedParserFactory;
-use App\Service\Parser\FeedFormatParser\Atom03Parser;
-use App\Service\Parser\FeedFormatParser\Atom10Parser;
-use App\Service\Parser\FeedFormatParser\Rss1Parser;
-use App\Service\Parser\FeedFormatParser\Rss2Parser;
+use App\Service\Ingestion\Parser\Exception\FeedParseException;
+use App\Service\Ingestion\Parser\Factory\FeedParserFactory;
+use App\Service\Ingestion\Parser\FeedFormatParser\Atom03Parser;
+use App\Service\Ingestion\Parser\FeedFormatParser\Atom10Parser;
+use App\Service\Ingestion\Parser\FeedFormatParser\Rss1Parser;
+use App\Service\Ingestion\Parser\FeedFormatParser\Rss2Parser;
 use App\Tests\Support\FeedFormatParsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

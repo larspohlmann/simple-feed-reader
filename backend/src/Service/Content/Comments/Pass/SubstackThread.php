@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Comments\Pass;
+namespace App\Service\Content\Comments\Pass;
 
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Comments\Model\CommentAuthorModel;
-use App\Service\Comments\Model\EntryCommentModel;
-use App\Service\Comments\Model\SubstackPostModel;
-use App\Service\Parser\Support\DateParser;
-use App\Service\Text\Support\LinkedPlainText;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Content\Comments\Model\CommentAuthorModel;
+use App\Service\Content\Comments\Model\EntryCommentModel;
+use App\Service\Content\Comments\Model\SubstackPostModel;
+use App\Service\Ingestion\Parser\Support\DateParser;
+use App\Service\Foundation\Text\Support\LinkedPlainText;
 
 final readonly class SubstackThread
 {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Refresh;
+namespace App\Tests\Service\Ingestion\Refresh;
 
 use App\Entity\Entry;
 use App\Entity\EntryGuid;
@@ -12,14 +12,14 @@ use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Enum\FeedStatus;
 use App\Enum\SocialNetwork;
-use App\Service\Fetch\Exception\FeedGoneException;
-use App\Service\Fetch\Exception\FeedThrottledException;
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Fetch\Model\FetchResponseModel;
-use App\Service\Refresh\FeedOutcomePersister;
-use App\Service\Refresh\Model\FeedOutcome;
-use App\Service\Refresh\Model\FeedRefreshResultModel;
+use App\Service\Outbound\Fetch\Exception\FeedGoneException;
+use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
+use App\Service\Ingestion\Refresh\FeedOutcomePersister;
+use App\Service\Ingestion\Refresh\Model\FeedOutcome;
+use App\Service\Ingestion\Refresh\Model\FeedRefreshResultModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\DuplicateKeyViolation;
 use App\Tests\Support\FeedOutcomePersisters;

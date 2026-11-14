@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Dto\Me;
 
 use App\Entity\SharingSettings;
-use App\Service\Account\Model\SharingSettingsModel;
+use App\Service\Identity\Account\Model\SharingSettingsModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /** No defaults: an empty body must never switch sharing off or unhide every target. */

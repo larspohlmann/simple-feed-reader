@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\SubscriptionHistory\Support;
+namespace App\Service\Library\SubscriptionHistory\Support;
 
 /** UTC calendar days as 'Y-m-d' strings, which compare correctly as strings. */
 final class UtcDay

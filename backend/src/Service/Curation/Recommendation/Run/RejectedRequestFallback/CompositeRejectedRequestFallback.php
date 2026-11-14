@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run\RejectedRequestFallback;
+namespace App\Service\Curation\Recommendation\Run\RejectedRequestFallback;
 
 use App\Entity\AiProviderSettings;
-use App\Service\Ai\Exception\ProviderRejectedRequestException;
-use App\Service\Recommendation\Run\Model\RequestAdjustmentModel;
+use App\Service\Curation\Ai\Exception\ProviderRejectedRequestException;
+use App\Service\Curation\Recommendation\Run\Model\RequestAdjustmentModel;
 
 /** Specific readings first: the suppressed-reasoning member answers any 400 and would misfile the others' refusals. */
 final readonly class CompositeRejectedRequestFallback implements RejectedRequestFallbackInterface

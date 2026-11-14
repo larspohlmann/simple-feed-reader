@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Image;
+namespace App\Service\Outbound\Image;
 
-use App\Service\Fetch\Exception\RedirectChainException;
-use App\Service\Fetch\Exception\ResponseTooLargeException;
-use App\Service\Fetch\Model\ResponseSizeLimit;
-use App\Service\Fetch\Pass\LandedResponse;
-use App\Service\Fetch\Pass\RedirectBudget;
-use App\Service\Fetch\RedirectFollower;
-use App\Service\Fetch\Support\HostKey;
-use App\Service\Fetch\Support\ResponseHeader;
-use App\Service\Image\Support\CookieHeader;
-use App\Service\Image\Support\OriginRoot;
+use App\Service\Outbound\Fetch\Exception\RedirectChainException;
+use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Outbound\Fetch\Model\ResponseSizeLimit;
+use App\Service\Outbound\Fetch\Pass\LandedResponse;
+use App\Service\Outbound\Fetch\Pass\RedirectBudget;
+use App\Service\Outbound\Fetch\RedirectFollower;
+use App\Service\Outbound\Fetch\Support\HostKey;
+use App\Service\Outbound\Fetch\Support\ResponseHeader;
+use App\Service\Outbound\Image\Support\CookieHeader;
+use App\Service\Outbound\Image\Support\OriginRoot;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;

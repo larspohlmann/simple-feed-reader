@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\Entry;
-use App\Service\Social\Model\SocialCountsModel;
-use App\Service\Social\Model\SocialPostAddressModel;
-use App\Service\Social\Support\SocialPostAddress;
+use App\Service\Social\Social\Model\SocialCountsModel;
+use App\Service\Social\Social\Model\SocialPostAddressModel;
+use App\Service\Social\Social\Support\SocialPostAddress;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 

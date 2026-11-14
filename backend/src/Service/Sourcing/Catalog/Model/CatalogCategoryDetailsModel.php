@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Catalog\Model;
+namespace App\Service\Sourcing\Catalog\Model;
 
 /** A catalog category as the admin edits it. The key is set once, on create. */
 final readonly class CatalogCategoryDetailsModel

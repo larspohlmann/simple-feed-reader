@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Model;
+namespace App\Tests\Service\Content\Reader\Model;
 
-use App\Service\Reader\Model\ExtractionFailure;
+use App\Service\Content\Reader\Model\ExtractionFailure;
 use PHPUnit\Framework\TestCase;
 
 final class ExtractionFailureTest extends TestCase

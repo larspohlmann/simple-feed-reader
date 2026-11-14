@@ -7,12 +7,12 @@ namespace App\Tests\Http;
 use App\Enum\SourceFormat;
 use App\Http\FeedPreviewJson;
 use App\Http\PreviewedDiscoveryJson;
-use App\Service\Discovery\Model\FeedCandidateModel;
-use App\Service\Discovery\Model\NoPreviewReason;
-use App\Service\Discovery\Model\ScrapeFailureReason;
-use App\Service\Preview\Model\FeedPreviewModel;
-use App\Service\Preview\Model\PreviewedCandidateModel;
-use App\Service\Preview\Model\PreviewedDiscoveryModel;
+use App\Service\Sourcing\Discovery\Model\FeedCandidateModel;
+use App\Service\Sourcing\Discovery\Model\NoPreviewReason;
+use App\Service\Sourcing\Discovery\Model\ScrapeFailureReason;
+use App\Service\Sourcing\Preview\Model\FeedPreviewModel;
+use App\Service\Sourcing\Preview\Model\PreviewedCandidateModel;
+use App\Service\Sourcing\Preview\Model\PreviewedDiscoveryModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

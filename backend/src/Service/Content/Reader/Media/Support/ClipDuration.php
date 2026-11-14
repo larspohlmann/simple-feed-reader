@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\Support;
+namespace App\Service\Content\Reader\Media\Support;
 
 /** A clip's length as the body carries it: an ISO `PT…S` for machines, a clock for readers. */
 final class ClipDuration

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Pass;
+namespace App\Service\Social\Social\Pass;
 
-use App\Service\Comments\Model\EntryCommentModel;
+use App\Service\Content\Comments\Model\EntryCommentModel;
 
 final class ThreadWalk
 {

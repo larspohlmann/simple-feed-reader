@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh;
+namespace App\Service\Ingestion\Refresh;
 
-use App\Service\Feed\OrphanedFeedReclaimer;
-use App\Service\Refresh\Model\RefreshRequestModel;
-use App\Service\Retention\EntryPruner;
-use App\Service\SubscriptionHistory\SubscriptionHistoryRecorder;
+use App\Service\Ingestion\Feed\OrphanedFeedReclaimer;
+use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
+use App\Service\Ingestion\Retention\EntryPruner;
+use App\Service\Library\SubscriptionHistory\SubscriptionHistoryRecorder;
 use Psr\Log\LoggerInterface;
 
 /** The work only a pruning (maintenance) refresh does; a user-triggered refresh skips it to stay fast. */

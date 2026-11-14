@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Chapter\Model;
+namespace App\Tests\Service\Content\Chapter\Model;
 
-use App\Service\Chapter\Model\ChapteredEmbed;
-use App\Service\Chapter\Model\EmbedAddressModel;
+use App\Service\Content\Chapter\Model\ChapteredEmbed;
+use App\Service\Content\Chapter\Model\EmbedAddressModel;
 use PHPUnit\Framework\TestCase;
 
 final class EmbedAddressModelTest extends TestCase

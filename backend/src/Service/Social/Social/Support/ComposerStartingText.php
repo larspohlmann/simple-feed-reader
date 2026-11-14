@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
 use App\Enum\SocialNetwork;
-use App\Service\Social\Model\SharedLinkModel;
-use App\Service\Text\Support\WordBoundary;
+use App\Service\Social\Social\Model\SharedLinkModel;
+use App\Service\Foundation\Text\Support\WordBoundary;
 
 /** Where the composer's text starts before the reader types. */
 final class ComposerStartingText

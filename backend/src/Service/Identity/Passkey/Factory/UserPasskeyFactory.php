@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Passkey\Factory;
+namespace App\Service\Identity\Passkey\Factory;
 
 use App\Entity\PasskeyRegistration;
 use App\Entity\User;
 use App\Entity\UserPasskey;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Passkey\Exception\AttestationRejectedException;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Identity\Passkey\Exception\AttestationRejectedException;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 use Symfony\Component\Uid\NilUuid;
 use Symfony\Component\Uid\Uuid;

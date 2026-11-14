@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Completion\Model;
+namespace App\Service\Curation\Recommendation\Llm\Completion\Model;
 
 use App\Entity\AiProviderSettings;
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh\Model;
+namespace App\Service\Ingestion\Refresh\Model;
 
 /**
  * What one slice did (the report) and where its run now stands (the progress). Kept apart so the CLI and

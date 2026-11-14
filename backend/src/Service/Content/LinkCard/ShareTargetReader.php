@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Service\LinkCard;
+namespace App\Service\Content\LinkCard;
 
 use App\Entity\Entry;
 use App\Entity\LinkCardContent;
-use App\Service\LinkCard\Exception\QuotedPostUnavailableException;
-use App\Service\LinkCard\Model\EntryCardsModel;
-use App\Service\LinkCard\Model\PageCardModel;
-use App\Service\LinkCard\Model\QuotedTargetModel;
-use App\Service\LinkCard\PageCardReader\PageCardReaderInterface;
-use App\Service\LinkCard\QuotedPostSource\QuotedPostSourceInterface;
-use App\Service\LinkCard\Support\QuoteLine;
-use App\Service\Reader\Exception\PageFetchException;
+use App\Service\Content\LinkCard\Exception\QuotedPostUnavailableException;
+use App\Service\Content\LinkCard\Model\EntryCardsModel;
+use App\Service\Content\LinkCard\Model\PageCardModel;
+use App\Service\Content\LinkCard\Model\QuotedTargetModel;
+use App\Service\Content\LinkCard\PageCardReader\PageCardReaderInterface;
+use App\Service\Content\LinkCard\QuotedPostSource\QuotedPostSourceInterface;
+use App\Service\Content\LinkCard\Support\QuoteLine;
+use App\Service\Content\Reader\Exception\PageFetchException;
 use Psr\Log\LoggerInterface;
 
 /** Reads what a share's uncarded targets show: the post its "RE:" line quotes, and a page card for every other link. */

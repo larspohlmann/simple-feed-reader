@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Url\Support;
+namespace App\Service\Foundation\Url\Support;
 
-use App\Service\Url\Model\YouTubeVideoModel;
+use App\Service\Foundation\Url\Model\YouTubeVideoModel;
 
 /** Every rule for reading a YouTube URL: its hosts, its video id, and whether it is a Short. */
 final class YouTubeUrl

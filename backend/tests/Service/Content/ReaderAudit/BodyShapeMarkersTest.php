@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\ReaderAudit;
+namespace App\Tests\Service\Content\ReaderAudit;
 
-use App\Service\ReaderAudit\BodyShapeMarkers;
-use App\Service\ReaderAudit\Model\CleanupMarkerModel;
-use App\Service\ReaderAudit\Model\ExtractedBodyModel;
-use App\Service\ReaderAudit\Model\SampledEntryModel;
+use App\Service\Content\ReaderAudit\BodyShapeMarkers;
+use App\Service\Content\ReaderAudit\Model\CleanupMarkerModel;
+use App\Service\Content\ReaderAudit\Model\ExtractedBodyModel;
+use App\Service\Content\ReaderAudit\Model\SampledEntryModel;
 use PHPUnit\Framework\TestCase;
 
 final class BodyShapeMarkersTest extends TestCase

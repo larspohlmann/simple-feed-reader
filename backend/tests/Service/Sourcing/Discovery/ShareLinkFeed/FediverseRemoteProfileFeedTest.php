@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Discovery\ShareLinkFeed;
+namespace App\Tests\Service\Sourcing\Discovery\ShareLinkFeed;
 
-use App\Service\Discovery\ShareLinkFeed\FediverseRemoteProfileFeed;
+use App\Service\Sourcing\Discovery\ShareLinkFeed\FediverseRemoteProfileFeed;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

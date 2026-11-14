@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Digest\Exception;
+namespace App\Service\Outbound\Mail\Digest\Exception;
 
 final class TestDigestUnavailableException extends \RuntimeException
 {

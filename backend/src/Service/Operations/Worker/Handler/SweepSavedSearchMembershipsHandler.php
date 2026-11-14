@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Worker\Handler;
+namespace App\Service\Operations\Worker\Handler;
 
-use App\Service\Search\Membership\Model\SweepBudgetModel;
-use App\Service\Search\Membership\SavedSearchMembershipSweep;
-use App\Service\Worker\Message\SweepSavedSearchMemberships;
+use App\Service\Library\Search\Membership\Model\SweepBudgetModel;
+use App\Service\Library\Search\Membership\SavedSearchMembershipSweep;
+use App\Service\Operations\Worker\Message\SweepSavedSearchMemberships;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 

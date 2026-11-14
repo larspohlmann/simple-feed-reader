@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
-use App\Service\Reader\Model\ExtractionFailure;
-use App\Service\Reader\Model\ExtractionResultModel;
+use App\Service\Content\Reader\Model\ExtractionFailure;
+use App\Service\Content\Reader\Model\ExtractionResultModel;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\ReaderEndpointFixtures;
 use App\Tests\Support\SignsReaderUrls;

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch;
+namespace App\Service\Outbound\Fetch;
 
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\Exception\RedirectChainException;
-use App\Service\Fetch\Pass\LandedResponse;
-use App\Service\Fetch\Pass\RedirectBudget;
-use App\Service\Fetch\Support\ResponseHeader;
-use App\Service\Fetch\Support\UrlResolver;
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\Exception\RedirectChainException;
+use App\Service\Outbound\Fetch\Pass\LandedResponse;
+use App\Service\Outbound\Fetch\Pass\RedirectBudget;
+use App\Service\Outbound\Fetch\Support\ResponseHeader;
+use App\Service\Outbound\Fetch\Support\UrlResolver;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Discovery\ShareLinkFeed;
+namespace App\Service\Sourcing\Discovery\ShareLinkFeed;
 
 /**
  * Maps any page of a GitHub repository to the repository's releases feed, which GitHub fills from the tags when the

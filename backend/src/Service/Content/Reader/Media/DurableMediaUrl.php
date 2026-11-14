@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media;
+namespace App\Service\Content\Reader\Media;
 
-use App\Service\Reader\Media\Support\LiveAudioStream;
+use App\Service\Content\Reader\Media\Support\LiveAudioStream;
 
 /**
  * Whether a media URL may enter a body the client caches without a TTL: https, no query, and no shape that belongs

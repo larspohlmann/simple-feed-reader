@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Transport\Factory;
+namespace App\Service\Outbound\Mail\Transport\Factory;
 
-use App\Service\Mail\Transport\DynamicMailTransport;
+use App\Service\Outbound\Mail\Transport\DynamicMailTransport;
 use Symfony\Component\Mailer\Transport\Dsn;
 use Symfony\Component\Mailer\Transport\TransportFactoryInterface;
 use Symfony\Component\Mailer\Transport\TransportInterface;

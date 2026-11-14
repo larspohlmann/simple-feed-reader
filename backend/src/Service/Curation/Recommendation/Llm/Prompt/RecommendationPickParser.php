@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Prompt;
+namespace App\Service\Curation\Recommendation\Llm\Prompt;
 
-use App\Service\Recommendation\Llm\Prompt\Model\PickParseResultModel;
+use App\Service\Curation\Recommendation\Llm\Prompt\Model\PickParseResultModel;
 
 /**
  * Turns one batch reply into validated picks, the defensive boundary between the model and the run. Unusable only

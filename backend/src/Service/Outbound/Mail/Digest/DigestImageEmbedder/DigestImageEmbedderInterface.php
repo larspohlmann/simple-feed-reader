@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Digest\DigestImageEmbedder;
+namespace App\Service\Outbound\Mail\Digest\DigestImageEmbedder;
 
-use App\Service\Mail\Digest\Model\DigestImageSetModel;
-use App\Service\Mail\Digest\Model\DigestPageModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestImageSetModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestPageModel;
 
 interface DigestImageEmbedderInterface
 {

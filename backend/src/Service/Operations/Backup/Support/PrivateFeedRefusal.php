@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Support;
+namespace App\Service\Operations\Backup\Support;
 
 use App\Enum\SourceFormat;
-use App\Service\Backup\Exception\InvalidBackupException;
-use App\Service\Social\Support\SocialFeedUrl;
+use App\Service\Operations\Backup\Exception\InvalidBackupException;
+use App\Service\Social\Social\Support\SocialFeedUrl;
 
 /**
  * A backup never carries a private social feed: referenced by URL, it would hand over another user's timeline, and

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Logging\Loki\Exception;
+namespace App\Service\Operations\Logging\Loki\Exception;
 
 final class CorruptSpoolFileException extends \RuntimeException
 {

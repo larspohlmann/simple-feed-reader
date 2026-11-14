@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Share\Support;
+namespace App\Tests\Service\Social\Share\Support;
 
-use App\Service\Share\Support\SharedLinks;
+use App\Service\Social\Share\Support\SharedLinks;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

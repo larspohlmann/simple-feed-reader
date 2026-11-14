@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\OAuth\Oidc\Pass;
+namespace App\Tests\Service\Identity\OAuth\Oidc\Pass;
 
-use App\Service\OAuth\Exception\OAuthFailedException;
-use App\Service\OAuth\Oidc\Pass\TokenEndpoint;
+use App\Service\Identity\OAuth\Exception\OAuthFailedException;
+use App\Service\Identity\OAuth\Oidc\Pass\TokenEndpoint;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Scoring\SystemOneClient;
+namespace App\Service\Curation\Recommendation\Scoring\SystemOneClient;
 
-use App\Service\Ai\Model\ProviderCredentialsModel;
-use App\Service\Recommendation\Scoring\Model\ScoringOutcomeModel;
-use App\Service\Recommendation\Scoring\Model\SystemOneRequestModel;
+use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringOutcomeModel;
+use App\Service\Curation\Recommendation\Scoring\Model\SystemOneRequestModel;
 
 interface SystemOneClientInterface
 {

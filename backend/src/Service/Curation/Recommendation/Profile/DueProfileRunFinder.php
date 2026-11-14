@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Profile;
+namespace App\Service\Curation\Recommendation\Profile;
 
 use App\Entity\RecommendationSettings;
 use App\Entity\User;
 use App\Repository\ProfileRunRepository;
 use App\Repository\RecommendationSettingsRepository;
-use App\Service\Recommendation\Run\Support\IntervalElapsed;
+use App\Service\Curation\Recommendation\Run\Support\IntervalElapsed;
 use Symfony\Component\Clock\ClockInterface;
 
 /**

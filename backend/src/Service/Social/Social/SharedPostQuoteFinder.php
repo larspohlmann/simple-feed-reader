@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\SocialAccount;
-use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\Model\ResponseKind;
-use App\Service\Social\Model\SocialPostModel;
-use App\Service\Social\Support\SocialPostAddress;
+use App\Service\Social\Social\Exception\SocialAccountNeedsReconnectException;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Model\ResponseKind;
+use App\Service\Social\Social\Model\SocialPostModel;
+use App\Service\Social\Social\Support\SocialPostAddress;
 
 /** A shared URL that names a post on the sharing account's own network is quoted, when the post lets it be. */
 final readonly class SharedPostQuoteFinder

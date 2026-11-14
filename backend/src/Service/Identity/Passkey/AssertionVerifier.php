@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Passkey;
+namespace App\Service\Identity\Passkey;
 
 use App\Entity\UserPasskey;
 use App\Repository\UserPasskeyRepository;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Passkey\Exception\AssertionRejectedException;
-use App\Service\Passkey\Exception\UnknownPasskeyCredentialException;
-use App\Service\Passkey\Factory\AssertionOptionsFactory;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Identity\Passkey\Exception\AssertionRejectedException;
+use App\Service\Identity\Passkey\Exception\UnknownPasskeyCredentialException;
+use App\Service\Identity\Passkey\Factory\AssertionOptionsFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 use Psr\Cache\InvalidArgumentException;

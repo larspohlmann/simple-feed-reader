@@ -18,31 +18,31 @@ services:
         autowire: true
 
     # Every test talks to StubChatClient, never to a real provider.
-    App\Service\Recommendation\Llm\Completion\ChatCompletionClient\ChatCompletionClientInterface:
+    App\Service\Curation\Recommendation\Llm\Completion\ChatCompletionClient\ChatCompletionClientInterface:
         alias: App\Tests\Support\StubChatClient
 
     App\Tests\Support\StubSystemOneClient:
         autowire: true
 
     # Every test talks to StubSystemOneClient, never to a real System One endpoint.
-    App\Service\Recommendation\Scoring\SystemOneClient\SystemOneClientInterface:
+    App\Service\Curation\Recommendation\Scoring\SystemOneClient\SystemOneClientInterface:
         alias: App\Tests\Support\StubSystemOneClient
 
     App\Tests\Support\StubRerankClient:
         autowire: true
 
     # Every test talks to StubRerankClient, never to a real rerank endpoint.
-    App\Service\Recommendation\Scoring\RerankClient\RerankClientInterface:
+    App\Service\Curation\Recommendation\Scoring\RerankClient\RerankClientInterface:
         alias: App\Tests\Support\StubRerankClient
 
     App\Tests\Support\StubHiddenProfiles: ~
 
     # Every test asks StubHiddenProfiles, never the public AppView, whether a Bluesky profile hides itself.
-    App\Service\Social\HiddenProfiles\HiddenProfilesInterface:
+    App\Service\Social\Social\HiddenProfiles\HiddenProfilesInterface:
         alias: App\Tests\Support\StubHiddenProfiles
 
     # The switch sweep takes the cache by its class; here it caches StubHiddenProfiles, not the decorated AppView.
-    App\Service\Social\HiddenProfiles\CachedHiddenProfiles:
+    App\Service\Social\Social\HiddenProfiles\CachedHiddenProfiles:
         autowire: true
         arguments:
             $inner: '@App\Tests\Support\StubHiddenProfiles'
@@ -50,22 +50,22 @@ services:
     # No container-wired code path may exec() a real drainer process against the test database.
     App\Tests\Support\NullShellCommandRunner:
         autowire: true
-    App\Service\Process\ShellCommandRunner\ShellCommandRunnerInterface:
+    App\Service\Foundation\Process\ShellCommandRunner\ShellCommandRunnerInterface:
         alias: App\Tests\Support\NullShellCommandRunner
 
     # Public: nothing here takes it, as StubChatClient replaces its one consumer, OpenAiCompatibleChatClient.
-    App\Service\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface:
-        alias: App\Service\Recommendation\Run\ProviderCallHeartbeat\CompositeProviderCallHeartbeat
+    App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface:
+        alias: App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\CompositeProviderCallHeartbeat
         public: true
 
     # Public: ImageProxyControllerTest replaces it, and its one consumer would otherwise inline it away.
-    App\Service\Image\ImageProxy\ImageProxyInterface:
-        alias: App\Service\Image\ImageProxy\ImageProxy
+    App\Service\Outbound\Image\ImageProxy\ImageProxyInterface:
+        alias: App\Service\Outbound\Image\ImageProxy\ImageProxy
         public: true
 
     # Public: the refresh tests replace it, and its one consumer would otherwise inline it away.
-    App\Service\Refresh\PassFetcher\PassFetcherInterface:
-        alias: App\Service\Refresh\PassFetcher\ConcurrentPassFetcher
+    App\Service\Ingestion\Refresh\PassFetcher\PassFetcherInterface:
+        alias: App\Service\Ingestion\Refresh\PassFetcher\ConcurrentPassFetcher
         public: true
 
     test.cache.passkey_challenge:
@@ -77,7 +77,7 @@ services:
         alias: refresh.run.cache
 
     # The feed directory endpoints serve the AT and DE fixtures, not the bundled snapshot.
-    App\Service\FeedDirectory\FeedDirectoryFiles:
+    App\Service\Sourcing\FeedDirectory\FeedDirectoryFiles:
         autowire: true
         arguments:
             $directory: '%kernel.project_dir%/tests/Fixtures/feed-directory'

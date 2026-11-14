@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
-use App\Service\Url\Support\UrlOrigin;
+use App\Service\Foundation\Url\Support\UrlOrigin;
 
 final class LinkHeader
 {

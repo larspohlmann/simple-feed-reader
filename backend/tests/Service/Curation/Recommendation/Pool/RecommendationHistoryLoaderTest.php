@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Pool;
+namespace App\Tests\Service\Curation\Recommendation\Pool;
 
 use App\Entity\Entry;
 use App\Entity\EntryShare;
@@ -14,9 +14,9 @@ use App\Entity\RecommendationSettings;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
-use App\Service\Recommendation\Pool\RecommendationHistoryLoader;
-use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
-use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
+use App\Service\Curation\Recommendation\Pool\RecommendationHistoryLoader;
+use App\Service\Curation\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
+use App\Service\Curation\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 use App\Tests\DbTestCase;
 
 final class RecommendationHistoryLoaderTest extends DbTestCase

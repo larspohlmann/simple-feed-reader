@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Share\Support;
+namespace App\Tests\Service\Social\Share\Support;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Enum\ShareKind;
-use App\Service\Share\Support\ShareTargets;
+use App\Service\Social\Share\Support\ShareTargets;
 use PHPUnit\Framework\TestCase;
 
 final class ShareTargetsTest extends TestCase

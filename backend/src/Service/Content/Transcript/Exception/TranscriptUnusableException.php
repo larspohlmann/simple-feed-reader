@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Transcript\Exception;
+namespace App\Service\Content\Transcript\Exception;
 
 /** The transcript will never be usable: refused, missing, too large or unreadable. Its row is failed for good. */
 final class TranscriptUnusableException extends \RuntimeException

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\Pass;
+namespace App\Service\Ingestion\Parser\Pass;
 
-use App\Service\Parser\Model\FeedNamespace;
-use App\Service\Parser\Support\XmlHelper;
-use App\Service\Url\Support\AbsoluteHttpUrl;
+use App\Service\Ingestion\Parser\Model\FeedNamespace;
+use App\Service\Ingestion\Parser\Support\XmlHelper;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 
 /** A feed element whose children are read in exactly one namespace, so an extension never shadows a core child. */
 final readonly class CoreElement

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Auth;
+namespace App\Service\Identity\Auth;
 
 use App\Exception\ValidationException;
-use App\Service\Auth\Model\AltchaChallengeModel;
+use App\Service\Identity\Auth\Model\AltchaChallengeModel;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Cache\InvalidArgumentException;
 use Psr\Clock\ClockInterface;

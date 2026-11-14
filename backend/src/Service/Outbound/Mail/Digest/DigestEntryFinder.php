@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Digest;
+namespace App\Service\Outbound\Mail\Digest;
 
 use App\Entity\SavedSearch;
 use App\Repository\EntryListRepository;
 use App\Repository\SavedSearchEntryRepository;
-use App\Service\Mail\Digest\Model\DigestSearchMatchesModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestSearchMatchesModel;
 
 /**
  * The digest's read of a saved search: everything unread in its membership table since the last send, capped for one

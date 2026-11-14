@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\SocialSearch;
+namespace App\Service\Social\Social\SocialSearch;
 
 use App\Entity\SocialAccount;
-use App\Service\Social\Exception\SearchQueryTooBroadException;
-use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkThrottledException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Model\TimelinePageModel;
+use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
+use App\Service\Social\Social\Exception\SocialAccountNeedsReconnectException;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Model\TimelinePageModel;
 
 interface SocialSearchInterface
 {

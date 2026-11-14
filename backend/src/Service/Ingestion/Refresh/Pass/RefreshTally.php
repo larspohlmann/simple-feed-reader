@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh\Pass;
+namespace App\Service\Ingestion\Refresh\Pass;
 
 use App\Entity\Feed;
-use App\Service\Refresh\Model\FeedOutcome;
-use App\Service\Refresh\Model\FeedRefreshResultModel;
+use App\Service\Ingestion\Refresh\Model\FeedOutcome;
+use App\Service\Ingestion\Refresh\Model\FeedRefreshResultModel;
 
 /** Running counts for one refresh pass; only record() moves them. */
 final class RefreshTally

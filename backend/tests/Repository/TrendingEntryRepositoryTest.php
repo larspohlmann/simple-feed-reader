@@ -8,7 +8,7 @@ use App\Entity\Entry;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 use App\Repository\TrendingEntryRepository;
-use App\Service\Trending\Model\WindowEntryModel;
+use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
 

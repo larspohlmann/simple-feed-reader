@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\Teaser;
+namespace App\Service\Content\Reader\Media\Teaser;
 
-use App\Service\Reader\Media\AudioPlayerMarkup;
-use App\Service\Reader\Media\Model\AudioClipModel;
-use App\Service\Reader\Media\Model\MediaKind;
-use App\Service\Reader\Media\Teaser\Model\TeaserPlayerModel;
+use App\Service\Content\Reader\Media\AudioPlayerMarkup;
+use App\Service\Content\Reader\Media\Model\AudioClipModel;
+use App\Service\Content\Reader\Media\Model\MediaKind;
+use App\Service\Content\Reader\Media\Teaser\Model\TeaserPlayerModel;
 use Dom\Element;
 use Dom\HTMLDocument;
 

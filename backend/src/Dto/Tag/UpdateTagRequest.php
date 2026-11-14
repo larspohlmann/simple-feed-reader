@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Dto\Tag;
 
 use App\Entity\InclusionChange;
-use App\Service\Tag\Model\TagDetailsModel;
+use App\Service\Library\Tag\Model\TagDetailsModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /** Every detail is required, as a missing parentId would read as null and un-parent the tag; a missing switch stays. */

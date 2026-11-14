@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Tag;
+namespace App\Tests\Service\Library\Tag;
 
-use App\Service\Tag\ExactSetGuard;
+use App\Service\Library\Tag\ExactSetGuard;
 use PHPUnit\Framework\TestCase;
 use App\Exception\InvalidSelectionException;
 

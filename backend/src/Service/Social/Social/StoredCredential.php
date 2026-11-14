@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\SocialAccount;
-use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Social\Crypto\SocialCredentialCipher;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Foundation\Crypto\Exception\SecretUnreadableException;
+use App\Service\Social\Social\Crypto\SocialCredentialCipher;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 
 final readonly class StoredCredential
 {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Html\Exception;
+namespace App\Service\Foundation\Html\Exception;
 
 final class UnparseableHtmlException extends \RuntimeException
 {

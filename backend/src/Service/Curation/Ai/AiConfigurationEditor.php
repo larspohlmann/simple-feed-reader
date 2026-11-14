@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai;
+namespace App\Service\Curation\Ai;
 
 use App\Entity\AiProviderSettings;
 use Doctrine\ORM\EntityManagerInterface;

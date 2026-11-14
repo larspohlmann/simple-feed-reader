@@ -6,10 +6,10 @@ namespace App\Tests\Support;
 
 use App\Entity\KnownSocialCollection;
 use App\Repository\KnownSocialCollectionRepository;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Social\PrivateFeeds;
-use App\Service\Subscription\SubscriptionCreator;
-use App\Service\Subscription\SubscriptionService;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Social\Social\PrivateFeeds;
+use App\Service\Library\Subscription\SubscriptionCreator;
+use App\Service\Library\Subscription\SubscriptionService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Assert;
 use Psr\Clock\ClockInterface;

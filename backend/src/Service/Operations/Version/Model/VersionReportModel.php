@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Version\Model;
+namespace App\Service\Operations\Version\Model;
 
 /**
  * The whole version picture the API hands the client: which build is running,

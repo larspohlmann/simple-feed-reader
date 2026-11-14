@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Fetch\DnsResolver\DnsResolverInterface;
+use App\Service\Outbound\Fetch\DnsResolver\DnsResolverInterface;
 
 final readonly class StaticDnsResolver implements DnsResolverInterface
 {

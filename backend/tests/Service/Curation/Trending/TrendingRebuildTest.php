@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Trending;
+namespace App\Tests\Service\Curation\Trending;
 
 use App\Entity\TrendingSnapshot;
 use App\Enum\TrendingWindow;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Trending\Model\TrendingBuildReportModel;
-use App\Service\Trending\Model\TrendingRebuildReportModel;
-use App\Service\Trending\SnapshotBuilder\SnapshotBuilderInterface;
-use App\Service\Trending\TrendingRebuild;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Curation\Trending\Model\TrendingBuildReportModel;
+use App\Service\Curation\Trending\Model\TrendingRebuildReportModel;
+use App\Service\Curation\Trending\SnapshotBuilder\SnapshotBuilderInterface;
+use App\Service\Curation\Trending\TrendingRebuild;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingWiring;
 use PHPUnit\Framework\Attributes\DataProvider;

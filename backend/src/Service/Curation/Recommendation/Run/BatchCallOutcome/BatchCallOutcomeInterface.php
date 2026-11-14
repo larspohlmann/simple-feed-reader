@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run\BatchCallOutcome;
+namespace App\Service\Curation\Recommendation\Run\BatchCallOutcome;
 
-use App\Service\Ai\RateLimitedOutcome\RateLimitedOutcomeInterface;
+use App\Service\Curation\Ai\RateLimitedOutcome\RateLimitedOutcomeInterface;
 
 /** One batch call's result in a wave, as the atomic-wave rule reads it. */
 interface BatchCallOutcomeInterface extends RateLimitedOutcomeInterface

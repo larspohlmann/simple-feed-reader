@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Backup\Factory;
+namespace App\Tests\Service\Operations\Backup\Factory;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\User;
-use App\Service\Backup\Dto\EntryStateLine;
-use App\Service\Backup\Factory\RestoredEntryStateFactory;
+use App\Service\Operations\Backup\Dto\EntryStateLine;
+use App\Service\Operations\Backup\Factory\RestoredEntryStateFactory;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 

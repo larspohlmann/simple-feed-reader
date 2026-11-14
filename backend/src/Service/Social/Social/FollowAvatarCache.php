@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Social\Model\FollowAvatarsModel;
-use App\Service\Social\Model\FollowedAccountModel;
+use App\Service\Social\Social\Model\FollowAvatarsModel;
+use App\Service\Social\Social\Model\FollowedAccountModel;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 

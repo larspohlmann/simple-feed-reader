@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Preview;
+namespace App\Service\Sourcing\Preview;
 
 use App\Entity\User;
 use App\Enum\SourceFormat;
-use App\Service\Discovery\ScrapeFallbackPolicy;
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\Exception\ResponseTooLargeException;
-use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
-use App\Service\Parser\Exception\FeedParseException;
-use App\Service\Preview\Exception\FeedPreviewException;
-use App\Service\Preview\Factory\FeedPreviewFactory;
-use App\Service\Preview\Model\FeedPreviewModel;
-use App\Service\Refresh\FeedBodyParser;
+use App\Service\Sourcing\Discovery\ScrapeFallbackPolicy;
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Outbound\Fetch\FeedFetcher\FeedFetcherInterface;
+use App\Service\Ingestion\Parser\Exception\FeedParseException;
+use App\Service\Sourcing\Preview\Exception\FeedPreviewException;
+use App\Service\Sourcing\Preview\Factory\FeedPreviewFactory;
+use App\Service\Sourcing\Preview\Model\FeedPreviewModel;
+use App\Service\Ingestion\Refresh\FeedBodyParser;
 
 /**
  * Fetches a feed URL and summarizes its content shape — how many items it has,

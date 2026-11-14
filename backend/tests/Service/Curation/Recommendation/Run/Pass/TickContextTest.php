@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Run\Pass;
+namespace App\Tests\Service\Curation\Recommendation\Run\Pass;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\ModelDescriptor;
@@ -13,11 +13,11 @@ use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\ScoringProtocol;
-use App\Service\Ai\Model\RetryPlanModel;
-use App\Service\Recommendation\Run\Model\TickDriver;
-use App\Service\Recommendation\Run\Pass\TickContext;
-use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
-use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
+use App\Service\Curation\Ai\Model\RetryPlanModel;
+use App\Service\Curation\Recommendation\Run\Model\TickDriver;
+use App\Service\Curation\Recommendation\Run\Pass\TickContext;
+use App\Service\Curation\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
+use App\Service\Curation\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 use App\Tests\Support\AiProviderSettingsFactory;
 use PHPUnit\Framework\TestCase;
 

@@ -6,7 +6,7 @@ namespace App\Repository;
 
 use App\Doctrine\BulkInsert;
 use App\Entity\SavedSearchEntry;
-use App\Service\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface;
+use App\Service\Library\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Content\Reader\Media\Model\MediaCandidateModel;
 
 trait ReadsCandidateUrls
 {

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ingest\PlatformEntryRule;
+namespace App\Service\Ingestion\Ingest\PlatformEntryRule;
 
 use App\Entity\Discussion;
 use App\Enum\CommentsLoad;
-use App\Service\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 
 final readonly class RedditEntryRule implements PlatformEntryRuleInterface
 {

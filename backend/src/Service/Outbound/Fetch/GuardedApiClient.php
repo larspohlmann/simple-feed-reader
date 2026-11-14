@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch;
+namespace App\Service\Outbound\Fetch;
 
-use App\Service\Fetch\Exception\DirectRouteUnavailableException;
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\Exception\ResponseTooLargeException;
-use App\Service\Fetch\Model\ApiBudgetModel;
-use App\Service\Fetch\Model\ApiRequestModel;
-use App\Service\Fetch\Model\ApiResponseModel;
-use App\Service\Fetch\Model\ResponseSizeLimit;
-use App\Service\Fetch\Support\ResponseBody;
+use App\Service\Outbound\Fetch\Exception\DirectRouteUnavailableException;
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Outbound\Fetch\Model\ApiBudgetModel;
+use App\Service\Outbound\Fetch\Model\ApiRequestModel;
+use App\Service\Outbound\Fetch\Model\ApiResponseModel;
+use App\Service\Outbound\Fetch\Model\ResponseSizeLimit;
+use App\Service\Outbound\Fetch\Support\ResponseBody;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 

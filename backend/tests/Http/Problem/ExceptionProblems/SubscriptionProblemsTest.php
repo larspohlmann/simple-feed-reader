@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ExceptionProblems\SubscriptionProblems;
-use App\Service\Subscription\Exception\AlreadySubscribedException;
-use App\Service\Subscription\Exception\NotAFeedException;
-use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
+use App\Service\Library\Subscription\Exception\AlreadySubscribedException;
+use App\Service\Library\Subscription\Exception\NotAFeedException;
+use App\Service\Library\Subscription\Exception\SubscriptionLimitReachedException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Response;
 

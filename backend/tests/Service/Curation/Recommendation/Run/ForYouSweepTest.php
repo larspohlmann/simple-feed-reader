@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Run;
+namespace App\Tests\Service\Curation\Recommendation\Run;
 
 use App\Entity\Feed;
 use App\Entity\ProfileRun;
@@ -17,16 +17,16 @@ use App\Enum\ProfileRunTrigger;
 use App\Enum\RecommendationBatchSize;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Recommendation\Profile\ProfileRunSweep;
-use App\Service\Recommendation\Run\DueRecommendationRunFinder;
-use App\Service\Recommendation\Run\ForYouSweep;
-use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
-use App\Service\Recommendation\Run\ProviderCallHeartbeat\SweepStreamHeartbeat;
-use App\Service\Recommendation\Run\RecommendationRunAdvancer;
-use App\Service\Recommendation\Run\RecommendationRunStarter;
-use App\Service\Recommendation\Run\WorkerPresence;
-use App\Service\Recommendation\Settings\RecommendationSettingsWriter;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Recommendation\Profile\ProfileRunSweep;
+use App\Service\Curation\Recommendation\Run\DueRecommendationRunFinder;
+use App\Service\Curation\Recommendation\Run\ForYouSweep;
+use App\Service\Curation\Recommendation\Run\Model\RecommendationDriverKind;
+use App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\SweepStreamHeartbeat;
+use App\Service\Curation\Recommendation\Run\RecommendationRunAdvancer;
+use App\Service\Curation\Recommendation\Run\RecommendationRunStarter;
+use App\Service\Curation\Recommendation\Run\WorkerPresence;
+use App\Service\Curation\Recommendation\Settings\RecommendationSettingsWriter;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ProvidesWorkerHeartbeats;
 use App\Tests\Support\RecommendationRunFixtures;

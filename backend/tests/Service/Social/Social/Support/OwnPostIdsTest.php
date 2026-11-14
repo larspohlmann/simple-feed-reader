@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Support;
+namespace App\Tests\Service\Social\Social\Support;
 
 use App\Enum\SocialNetwork;
-use App\Service\Social\Exception\SocialPostRefusedException;
-use App\Service\Social\Model\SocialPostAddressModel;
-use App\Service\Social\Support\OwnPostIds;
+use App\Service\Social\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Social\Model\SocialPostAddressModel;
+use App\Service\Social\Social\Support\OwnPostIds;
 use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

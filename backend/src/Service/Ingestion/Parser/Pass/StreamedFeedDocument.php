@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\Pass;
+namespace App\Service\Ingestion\Parser\Pass;
 
-use App\Service\Parser\Exception\FeedParseException;
-use App\Service\Parser\Factory\FeedParserFactory;
-use App\Service\Parser\FeedFormatParser\FeedFormatParserInterface;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Parser\Model\ParsedFeedModel;
+use App\Service\Ingestion\Parser\Exception\FeedParseException;
+use App\Service\Ingestion\Parser\Factory\FeedParserFactory;
+use App\Service\Ingestion\Parser\FeedFormatParser\FeedFormatParserInterface;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
 
 /**
  * One feed read as a stream: each entry is expanded into a DOM of its own and parsed on the spot, and the skeleton

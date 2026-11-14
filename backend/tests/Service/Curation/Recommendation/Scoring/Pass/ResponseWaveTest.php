@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Scoring\Pass;
+namespace App\Tests\Service\Curation\Recommendation\Scoring\Pass;
 
-use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\Model\ProviderCredentialsModel;
-use App\Service\Recommendation\Scoring\Model\ScoringOutcomeModel;
-use App\Service\Recommendation\Scoring\Model\ScoringReplyModel;
-use App\Service\Recommendation\Scoring\Pass\ResponseWave;
-use App\Service\Recommendation\Scoring\Pass\ScoringEndpoint;
-use App\Service\Recommendation\Scoring\Support\SystemOneReplyDecoder;
+use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
+use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringOutcomeModel;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringReplyModel;
+use App\Service\Curation\Recommendation\Scoring\Pass\ResponseWave;
+use App\Service\Curation\Recommendation\Scoring\Pass\ScoringEndpoint;
+use App\Service\Curation\Recommendation\Scoring\Support\SystemOneReplyDecoder;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Profile;
+namespace App\Tests\Service\Curation\Recommendation\Profile;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Recommendation\Profile\ProfileConnections;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Recommendation\Profile\ProfileConnections;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\SeedsUsers;

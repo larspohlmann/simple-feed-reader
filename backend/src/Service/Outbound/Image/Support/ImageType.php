@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Image\Support;
+namespace App\Service\Outbound\Image\Support;
 
 /** A downloaded image's type: the one its response declares, or the one its bytes show when it declares none. */
 final class ImageType

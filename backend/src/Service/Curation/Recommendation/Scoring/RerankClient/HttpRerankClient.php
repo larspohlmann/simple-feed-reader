@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Scoring\RerankClient;
+namespace App\Service\Curation\Recommendation\Scoring\RerankClient;
 
 use App\Enum\ScoringProtocol;
-use App\Service\Ai\Model\ProviderCredentialsModel;
-use App\Service\Recommendation\Scoring\Model\RerankRequestModel;
-use App\Service\Recommendation\Scoring\Model\ScoringReplyModel;
-use App\Service\Recommendation\Scoring\Pass\ScoringEndpoint;
-use App\Service\Recommendation\Scoring\ScoringHttpTransport;
-use App\Service\Recommendation\Scoring\Support\RerankReplyDecoder;
-use App\Service\Recommendation\Support\CompactJson;
+use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
+use App\Service\Curation\Recommendation\Scoring\Model\RerankRequestModel;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringReplyModel;
+use App\Service\Curation\Recommendation\Scoring\Pass\ScoringEndpoint;
+use App\Service\Curation\Recommendation\Scoring\ScoringHttpTransport;
+use App\Service\Curation\Recommendation\Scoring\Support\RerankReplyDecoder;
+use App\Service\Curation\Recommendation\Support\CompactJson;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /** Sends `POST {baseUrl}/rerank` through the scoring transport. */

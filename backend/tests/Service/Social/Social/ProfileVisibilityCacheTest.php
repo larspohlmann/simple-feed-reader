@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
-use App\Service\Social\Model\HiddenProfileModel;
-use App\Service\Social\Model\ProfileVisibilityModel;
-use App\Service\Social\ProfileVisibilityCache;
+use App\Service\Social\Social\Model\HiddenProfileModel;
+use App\Service\Social\Social\Model\ProfileVisibilityModel;
+use App\Service\Social\Social\ProfileVisibilityCache;
 use App\Tests\Support\BlueskyProfiles;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;

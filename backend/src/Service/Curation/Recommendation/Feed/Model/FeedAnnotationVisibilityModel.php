@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Feed\Model;
+namespace App\Service\Curation\Recommendation\Feed\Model;
 
 /**
  * Which recommendation annotations a for-you page carries: the score, and the reason where the engine writes one. One

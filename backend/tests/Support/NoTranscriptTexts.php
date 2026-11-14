@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Search\TranscriptText\TranscriptTextInterface;
+use App\Service\Library\Search\TranscriptText\TranscriptTextInterface;
 
 final readonly class NoTranscriptTexts implements TranscriptTextInterface
 {

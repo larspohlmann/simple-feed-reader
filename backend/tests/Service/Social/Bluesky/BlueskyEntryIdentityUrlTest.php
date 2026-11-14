@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Bluesky;
+namespace App\Tests\Service\Social\Bluesky;
 
-use App\Service\Bluesky\BlueskyEntryIdentityUrl;
+use App\Service\Social\Bluesky\BlueskyEntryIdentityUrl;
 use PHPUnit\Framework\TestCase;
 
 final class BlueskyEntryIdentityUrlTest extends TestCase

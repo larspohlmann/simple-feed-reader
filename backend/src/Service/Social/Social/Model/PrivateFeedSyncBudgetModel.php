@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Model;
+namespace App\Service\Social\Social\Model;
 
 /** How many accounts one private feed sync pass may check. */
 final readonly class PrivateFeedSyncBudgetModel

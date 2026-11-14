@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\NetworkVerifier;
+namespace App\Service\Social\Social\NetworkVerifier;
 
-use App\Service\Social\Exception\SocialAccountUnresolvableException;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Model\SocialCredentialsModel;
-use App\Service\Social\Model\VerifiedAccountModel;
+use App\Service\Social\Social\Exception\SocialAccountUnresolvableException;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Model\SocialCredentialsModel;
+use App\Service\Social\Social\Model\VerifiedAccountModel;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /** One network's live credential check, keyed by its SocialNetwork value in NetworkAccountVerifier's locator. */

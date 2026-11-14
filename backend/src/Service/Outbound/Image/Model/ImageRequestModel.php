@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Image\Model;
+namespace App\Service\Outbound\Image\Model;
 
 final readonly class ImageRequestModel
 {

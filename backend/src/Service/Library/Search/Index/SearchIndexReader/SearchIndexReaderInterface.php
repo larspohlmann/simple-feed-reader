@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search\Index\SearchIndexReader;
+namespace App\Service\Library\Search\Index\SearchIndexReader;
 
-use App\Service\Search\Exception\SearchEngineUnavailableException;
-use App\Service\Search\Index\Model\IndexMatchesModel;
-use App\Service\Search\Index\Model\IndexSearchModel;
+use App\Service\Library\Search\Exception\SearchEngineUnavailableException;
+use App\Service\Library\Search\Index\Model\IndexMatchesModel;
+use App\Service\Library\Search\Index\Model\IndexSearchModel;
 
 /** The read side of the index gateway, apart from SearchIndexWriterInterface so a searcher is never handed a writer. */
 interface SearchIndexReaderInterface

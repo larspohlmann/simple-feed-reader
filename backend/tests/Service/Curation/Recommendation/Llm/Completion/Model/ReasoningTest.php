@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Llm\Completion\Model;
+namespace App\Tests\Service\Curation\Recommendation\Llm\Completion\Model;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\ModelDescriptor;
 use App\Entity\User;
-use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
+use App\Service\Curation\Recommendation\Llm\Completion\Model\Reasoning;
 use App\Tests\Support\AiProviderSettingsFactory;
 use PHPUnit\Framework\TestCase;
 

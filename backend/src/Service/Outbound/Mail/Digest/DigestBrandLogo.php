@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Digest;
+namespace App\Service\Outbound\Mail\Digest;
 
-use App\Service\Image\Exception\ImageProcessingException;
+use App\Service\Outbound\Image\Exception\ImageProcessingException;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /** The digest header's brand mark, read from disk: unlike thumbnails and favicons it is never fetched or resized. */

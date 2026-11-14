@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Passkey;
+namespace App\Service\Identity\Passkey;
 
 use App\Entity\User;
-use App\Service\Clock\NaiveUtcClock;
+use App\Service\Foundation\Clock\NaiveUtcClock;
 
 /**
  * Records that an account answered the one-time passkey offer. Idempotent: a retried or doubled answer must not move

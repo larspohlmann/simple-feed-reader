@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Scoring\Support;
+namespace App\Tests\Service\Curation\Recommendation\Scoring\Support;
 
-use App\Service\Recommendation\Pool\Model\ArticleLineModel;
-use App\Service\Recommendation\Scoring\Support\ScoringArticle;
+use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Curation\Recommendation\Scoring\Support\ScoringArticle;
 use PHPUnit\Framework\TestCase;
 
 final class ScoringArticleTest extends TestCase

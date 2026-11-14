@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch\Model;
+namespace App\Tests\Service\Outbound\Fetch\Model;
 
-use App\Service\Fetch\Model\ApiRequestModel;
-use App\Service\Fetch\Model\FetchTicketModel;
-use App\Service\Fetch\Model\RequestSlot\HostSlotModel;
-use App\Service\Fetch\Model\RequestTicketModel;
-use App\Service\Fetch\Model\ResponseExchangeKind;
+use App\Service\Outbound\Fetch\Model\ApiRequestModel;
+use App\Service\Outbound\Fetch\Model\FetchTicketModel;
+use App\Service\Outbound\Fetch\Model\RequestSlot\HostSlotModel;
+use App\Service\Outbound\Fetch\Model\RequestTicketModel;
+use App\Service\Outbound\Fetch\Model\ResponseExchangeKind;
 use App\Tests\Support\FixedKeySlot;
 use PHPUnit\Framework\TestCase;
 

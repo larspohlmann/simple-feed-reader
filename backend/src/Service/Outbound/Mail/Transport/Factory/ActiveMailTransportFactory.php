@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Transport\Factory;
+namespace App\Service\Outbound\Mail\Transport\Factory;
 
-use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
-use App\Service\Mail\Settings\Model\ResolvedMailTransportModel;
-use App\Service\Mail\Transport\Pass\CurlSmtpTransport;
-use App\Service\Proxy\ConfiguredProxySource\ConfiguredProxySourceInterface;
+use App\Service\Outbound\Mail\Settings\Exception\IncompleteMailConfigurationException;
+use App\Service\Outbound\Mail\Settings\Model\ResolvedMailTransportModel;
+use App\Service\Outbound\Mail\Transport\Pass\CurlSmtpTransport;
+use App\Service\Outbound\Proxy\ConfiguredProxySource\ConfiguredProxySourceInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\Transport;

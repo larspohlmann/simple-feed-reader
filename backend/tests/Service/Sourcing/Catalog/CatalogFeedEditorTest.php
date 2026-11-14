@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Catalog;
+namespace App\Tests\Service\Sourcing\Catalog;
 
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
 use App\Enum\SourceFormat;
 use App\Repository\Exception\RecordNotFoundException;
-use App\Service\Catalog\CatalogFeedEditor;
-use App\Service\Catalog\Model\CatalogFeedDetailsModel;
+use App\Service\Sourcing\Catalog\CatalogFeedEditor;
+use App\Service\Sourcing\Catalog\Model\CatalogFeedDetailsModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ReloadsEntities;
 

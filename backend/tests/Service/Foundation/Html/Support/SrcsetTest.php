@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Html\Support;
+namespace App\Tests\Service\Foundation\Html\Support;
 
-use App\Service\Html\Support\Srcset;
+use App\Service\Foundation\Html\Support\Srcset;
 use PHPUnit\Framework\TestCase;
 
 final class SrcsetTest extends TestCase

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Backup\Dto;
+namespace App\Tests\Service\Operations\Backup\Dto;
 
 use App\Entity\EntryState;
-use App\Service\Backup\Dto\EntryStateLine;
+use App\Service\Operations\Backup\Dto\EntryStateLine;
 use App\Tests\Support\BackupLineRecords;
 use PHPUnit\Framework\TestCase;
 

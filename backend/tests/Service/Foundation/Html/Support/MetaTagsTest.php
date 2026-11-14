@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Html\Support;
+namespace App\Tests\Service\Foundation\Html\Support;
 
-use App\Service\Html\Support\HtmlDocumentParser;
-use App\Service\Html\Support\MetaTags;
+use App\Service\Foundation\Html\Support\HtmlDocumentParser;
+use App\Service\Foundation\Html\Support\MetaTags;
 use PHPUnit\Framework\TestCase;
 
 final class MetaTagsTest extends TestCase

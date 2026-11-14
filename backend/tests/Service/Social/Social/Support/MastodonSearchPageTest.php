@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Support;
+namespace App\Tests\Service\Social\Social\Support;
 
-use App\Service\Fetch\Model\ApiResponseModel;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Support\MastodonSearchPage;
+use App\Service\Outbound\Fetch\Model\ApiResponseModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Support\MastodonSearchPage;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Response;

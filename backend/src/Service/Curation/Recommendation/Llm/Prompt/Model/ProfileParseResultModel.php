@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Prompt\Model;
+namespace App\Service\Curation\Recommendation\Llm\Prompt\Model;
 
 /**
  * One distillation reply's outcome: LlmProfileRunDistiller passes a usable profile on, and an unusable reply is

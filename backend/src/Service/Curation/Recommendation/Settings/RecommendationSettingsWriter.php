@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Settings;
+namespace App\Service\Curation\Recommendation\Settings;
 
 use App\Entity\ProfileSettingsValues;
 use App\Entity\RecommendationSettings;

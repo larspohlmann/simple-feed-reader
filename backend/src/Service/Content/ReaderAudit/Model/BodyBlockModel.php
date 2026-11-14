@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\ReaderAudit\Model;
+namespace App\Service\Content\ReaderAudit\Model;
 
 /** One paragraph-level line of the cleaned article, with its links, to tell prose from chrome. */
 final readonly class BodyBlockModel

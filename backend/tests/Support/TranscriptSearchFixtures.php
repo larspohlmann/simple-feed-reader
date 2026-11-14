@@ -7,9 +7,9 @@ namespace App\Tests\Support;
 use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Repository\DatabaseSavedSearchMatcher;
-use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
-use App\Service\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
-use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Service\Library\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
+use App\Service\Library\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
+use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\DependencyInjection\Container;
 

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh\Pass\PassLane;
+namespace App\Service\Ingestion\Refresh\Pass\PassLane;
 
 use App\Entity\Feed;
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Fetch\Model\RequestTicketModel;
-use App\Service\Fetch\Model\SettlementModel;
-use App\Service\Refresh\Model\PassOutcome\PassOutcomeModelInterface;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Outbound\Fetch\Model\RequestTicketModel;
+use App\Service\Outbound\Fetch\Model\SettlementModel;
+use App\Service\Ingestion\Refresh\Model\PassOutcome\PassOutcomeModelInterface;
 
 /** How one kind of feed goes through a pass: its tickets, the gate, its answers, and what settles without a request. */
 interface PassLaneInterface

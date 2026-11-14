@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Dto;
+namespace App\Service\Operations\Backup\Dto;
 
-use App\Service\Backup\Exception\InvalidBackupException;
-use App\Service\Backup\Support\BackupLineFormat;
-use App\Service\Backup\Support\BackupSchema;
+use App\Service\Operations\Backup\Exception\InvalidBackupException;
+use App\Service\Operations\Backup\Support\BackupLineFormat;
+use App\Service\Operations\Backup\Support\BackupSchema;
 
 /**
  * The backup file's closing line: a count per line kind, so the reader can

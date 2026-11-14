@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\SweepReportJson;
 
-use App\Service\Social\Model\HiddenProfileSwitchReportModel;
+use App\Service\Social\Social\Model\HiddenProfileSwitchReportModel;
 
 final readonly class HiddenProfileSwitchJson implements SweepReportJsonInterface
 {

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Image;
+namespace App\Tests\Service\Outbound\Image;
 
-use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\UrlGuard;
-use App\Service\Image\Exception\ImageRefusedException;
-use App\Service\Image\Exception\ImageUnavailableException;
-use App\Service\Image\ImageDownloader;
-use App\Service\Image\Model\ImageRequestModel;
+use App\Service\Outbound\Fetch\IpValidator;
+use App\Service\Outbound\Fetch\UrlGuard;
+use App\Service\Outbound\Image\Exception\ImageRefusedException;
+use App\Service\Outbound\Image\Exception\ImageUnavailableException;
+use App\Service\Outbound\Image\ImageDownloader;
+use App\Service\Outbound\Image\Model\ImageRequestModel;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
 use App\Tests\Support\StaticDnsResolver;

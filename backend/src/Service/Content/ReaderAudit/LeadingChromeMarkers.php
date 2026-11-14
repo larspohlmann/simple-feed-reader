@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\ReaderAudit;
+namespace App\Service\Content\ReaderAudit;
 
-use App\Service\ReaderAudit\Model\BodyBlockModel;
-use App\Service\ReaderAudit\Model\CleanupMarkerModel;
-use App\Service\ReaderAudit\Model\ExtractedBodyModel;
+use App\Service\Content\ReaderAudit\Model\BodyBlockModel;
+use App\Service\Content\ReaderAudit\Model\CleanupMarkerModel;
+use App\Service\Content\ReaderAudit\Model\ExtractedBodyModel;
 
 /**
  * What stands between the top of the reader view and the article's first paragraph, read from LeadingRegion only:

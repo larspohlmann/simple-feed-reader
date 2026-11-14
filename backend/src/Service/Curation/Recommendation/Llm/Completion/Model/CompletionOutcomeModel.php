@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Completion\Model;
+namespace App\Service\Curation\Recommendation\Llm\Completion\Model;
 
-use App\Service\Ai\Exception\ProviderReplyFailureExceptionInterface;
-use App\Service\Ai\Exception\RetryableProviderException;
-use App\Service\Recommendation\Run\BatchCallOutcome\BatchCallOutcomeInterface;
+use App\Service\Curation\Ai\Exception\ProviderReplyFailureExceptionInterface;
+use App\Service\Curation\Ai\Exception\RetryableProviderException;
+use App\Service\Curation\Recommendation\Run\BatchCallOutcome\BatchCallOutcomeInterface;
 
 /**
  * One call's result in a concurrent wave: an answer, a spoiled reply or the failure it hit. Returned, not thrown, so

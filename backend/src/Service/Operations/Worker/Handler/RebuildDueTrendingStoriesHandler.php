@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Worker\Handler;
+namespace App\Service\Operations\Worker\Handler;
 
-use App\Service\Trending\TrendingRebuild;
-use App\Service\Worker\Message\RebuildDueTrendingStories;
+use App\Service\Curation\Trending\TrendingRebuild;
+use App\Service\Operations\Worker\Message\RebuildDueTrendingStories;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 

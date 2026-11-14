@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\OAuth;
+namespace App\Service\Identity\OAuth;
 
 use App\Entity\User;
 use App\Entity\UserIdentity;
@@ -11,9 +11,9 @@ use App\Enum\UserStatus;
 use App\Event\UserAwaitingApproval;
 use App\Repository\UserIdentityRepository;
 use App\Repository\UserRepository;
-use App\Service\Auth\RegistrationPolicy;
-use App\Service\OAuth\Factory\OAuthUserFactory;
-use App\Service\OAuth\Model\OAuthIdentityModel;
+use App\Service\Identity\Auth\RegistrationPolicy;
+use App\Service\Identity\OAuth\Factory\OAuthUserFactory;
+use App\Service\Identity\OAuth\Model\OAuthIdentityModel;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;

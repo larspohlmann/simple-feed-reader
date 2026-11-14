@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run\Model;
+namespace App\Service\Curation\Recommendation\Run\Model;
 
 /** When a run began and whether its first batch call has started. */
 final readonly class RunStartModel

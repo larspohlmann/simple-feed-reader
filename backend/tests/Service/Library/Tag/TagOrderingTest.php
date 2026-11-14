@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Tag;
+namespace App\Tests\Service\Library\Tag;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
@@ -10,7 +10,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Exception\InvalidSelectionException;
 use App\Repository\TagRepository;
-use App\Service\Tag\TagOrdering;
+use App\Service\Library\Tag\TagOrdering;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
 

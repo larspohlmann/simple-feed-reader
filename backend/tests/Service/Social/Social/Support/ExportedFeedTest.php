@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Support;
+namespace App\Tests\Service\Social\Social\Support;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Enum\SourceFormat;
-use App\Service\Social\Model\ExportedSubscriptionModel;
-use App\Service\Social\Support\ExportedFeed;
+use App\Service\Social\Social\Model\ExportedSubscriptionModel;
+use App\Service\Social\Social\Support\ExportedFeed;
 use App\Tests\Support\BlueskyProfiles;
 use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\TestCase;

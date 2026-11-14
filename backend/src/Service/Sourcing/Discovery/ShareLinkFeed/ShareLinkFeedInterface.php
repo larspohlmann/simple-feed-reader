@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Discovery\ShareLinkFeed;
+namespace App\Service\Sourcing\Discovery\ShareLinkFeed;
 
 /**
  * The feed a platform's share link points at, resolved before anything is fetched. A null means "not my link" or

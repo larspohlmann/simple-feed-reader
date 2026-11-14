@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search\Index\SearchIndexReader;
+namespace App\Service\Library\Search\Index\SearchIndexReader;
 
-use App\Service\Search\Exception\SearchEngineUnavailableException;
-use App\Service\Search\Index\Model\IndexedEntryModel;
-use App\Service\Search\Index\Model\IndexMatchesModel;
-use App\Service\Search\Index\Model\IndexSearchModel;
-use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
-use App\Service\Search\Model\SearchTermsModel;
-use App\Service\Search\SearchEngineCapability;
+use App\Service\Library\Search\Exception\SearchEngineUnavailableException;
+use App\Service\Library\Search\Index\Model\IndexedEntryModel;
+use App\Service\Library\Search\Index\Model\IndexMatchesModel;
+use App\Service\Library\Search\Index\Model\IndexSearchModel;
+use App\Service\Library\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
+use App\Service\Library\Search\Model\SearchTermsModel;
+use App\Service\Library\Search\SearchEngineCapability;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;

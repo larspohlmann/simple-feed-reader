@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
-use App\Service\Social\Model\MastodonStatusModel;
+use App\Service\Social\Social\Model\MastodonStatusModel;
 
 /** Where a Mastodon status address's own instance serves the status to anyone: its two address shapes only. */
 final class MastodonStatusAddress

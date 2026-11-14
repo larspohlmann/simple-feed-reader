@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Search\Membership\Pass;
+namespace App\Tests\Service\Library\Search\Membership\Pass;
 
-use App\Service\Search\Membership\Pass\SweepTally;
+use App\Service\Library\Search\Membership\Pass\SweepTally;
 use PHPUnit\Framework\TestCase;
 
 final class SweepTallyTest extends TestCase

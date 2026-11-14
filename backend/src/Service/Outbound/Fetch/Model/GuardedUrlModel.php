@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\Model;
+namespace App\Service\Outbound\Fetch\Model;
 
 /**
  * A URL that passed the SSRF guard, paired with every IP it resolved to. The

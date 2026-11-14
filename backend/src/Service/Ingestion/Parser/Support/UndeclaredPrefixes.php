@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\Support;
+namespace App\Service\Ingestion\Parser\Support;
 
-use App\Service\Parser\Model\FeedNamespace;
+use App\Service\Ingestion\Parser\Model\FeedNamespace;
 
 /** WordPress plugins emit `<media:content>` without `xmlns:media`; libxml then files the element under no namespace. */
 final class UndeclaredPrefixes

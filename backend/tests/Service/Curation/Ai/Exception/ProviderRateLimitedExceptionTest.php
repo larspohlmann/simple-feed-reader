@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Ai\Exception;
+namespace App\Tests\Service\Curation\Ai\Exception;
 
-use App\Service\Ai\Exception\ProviderRateLimitedException;
+use App\Service\Curation\Ai\Exception\ProviderRateLimitedException;
 use PHPUnit\Framework\TestCase;
 
 final class ProviderRateLimitedExceptionTest extends TestCase

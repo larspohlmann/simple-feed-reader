@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Model;
+namespace App\Service\Social\Social\Model;
 
 use App\Entity\ShareEnrichment;
-use App\Service\Fetch\Model\ApiBudgetModel;
+use App\Service\Outbound\Fetch\Model\ApiBudgetModel;
 
 /** How many self-reply threads one pass may read, each starting only while its longest call still ends inside the lease. */
 final readonly class SelfThreadBudgetModel

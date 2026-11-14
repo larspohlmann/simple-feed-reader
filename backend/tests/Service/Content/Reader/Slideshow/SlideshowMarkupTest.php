@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Slideshow;
+namespace App\Tests\Service\Content\Reader\Slideshow;
 
-use App\Service\Reader\Slideshow\Model\SlideCaptionModel;
-use App\Service\Reader\Slideshow\Model\SlideModel;
-use App\Service\Reader\Slideshow\Model\SlideshowModel;
-use App\Service\Reader\Slideshow\SlideshowMarkup;
+use App\Service\Content\Reader\Slideshow\Model\SlideCaptionModel;
+use App\Service\Content\Reader\Slideshow\Model\SlideModel;
+use App\Service\Content\Reader\Slideshow\Model\SlideshowModel;
+use App\Service\Content\Reader\Slideshow\SlideshowMarkup;
 use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 

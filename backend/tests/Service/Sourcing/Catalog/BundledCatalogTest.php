@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Catalog;
+namespace App\Tests\Service\Sourcing\Catalog;
 
-use App\Service\Catalog\BundledCatalog;
-use App\Service\Catalog\CatalogDocument;
+use App\Service\Sourcing\Catalog\BundledCatalog;
+use App\Service\Sourcing\Catalog\CatalogDocument;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class BundledCatalogTest extends KernelTestCase

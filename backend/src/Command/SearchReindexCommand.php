@@ -6,10 +6,10 @@ namespace App\Command;
 
 use App\Repository\EntryRepository;
 use App\Repository\SavedSearchRepository;
-use App\Service\Search\EntryIndexer;
-use App\Service\Search\Exception\SearchEngineUnavailableException;
-use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
-use App\Service\Search\SearchEngineCapability;
+use App\Service\Library\Search\EntryIndexer;
+use App\Service\Library\Search\Exception\SearchEngineUnavailableException;
+use App\Service\Library\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
+use App\Service\Library\Search\SearchEngineCapability;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;

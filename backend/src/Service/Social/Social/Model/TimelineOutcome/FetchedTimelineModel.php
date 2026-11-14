@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Model\TimelineOutcome;
+namespace App\Service\Social\Social\Model\TimelineOutcome;
 
-use App\Service\Social\Model\TimelinePageModel;
+use App\Service\Social\Social\Model\TimelinePageModel;
 
 final readonly class FetchedTimelineModel implements TimelineOutcomeModelInterface
 {

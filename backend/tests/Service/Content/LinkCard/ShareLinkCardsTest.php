@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\LinkCard;
+namespace App\Tests\Service\Content\LinkCard;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
@@ -14,11 +14,11 @@ use App\Enum\ShareKind;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Repository\ShareEnrichmentRepository;
-use App\Service\LinkCard\Model\LinkCardBudgetModel;
-use App\Service\LinkCard\ShareLinkCards;
-use App\Service\Reader\Exception\PageFetchException;
+use App\Service\Content\LinkCard\Model\LinkCardBudgetModel;
+use App\Service\Content\LinkCard\ShareLinkCards;
+use App\Service\Content\Reader\Exception\PageFetchException;
 use App\Tests\DbTestCase;
-use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\ShareLinkCardsWiring;
 use App\Tests\Support\RecordingLogger;

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Process;
+namespace App\Tests\Service\Foundation\Process;
 
-use App\Service\Process\DetachedConsoleCommandLine;
+use App\Service\Foundation\Process\DetachedConsoleCommandLine;
 use PHPUnit\Framework\TestCase;
 
 final class DetachedConsoleCommandLineTest extends TestCase

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Admin;
+namespace App\Tests\Service\Operations\Admin;
 
 use App\Enum\UserStatus;
-use App\Service\Admin\UserLimits;
+use App\Service\Operations\Admin\UserLimits;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\Clock\MockClock;

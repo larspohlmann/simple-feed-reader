@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Profile\ProfileForRun;
+namespace App\Service\Curation\Recommendation\Profile\ProfileForRun;
 
 use App\Entity\User;
 use App\Enum\ProfileRunTrigger;
 use App\Enum\RunStatus;
 use App\Repository\ProfileRunRepository;
 use App\Repository\RecommendationSettingsRepository;
-use App\Service\Recommendation\Profile\Model\RunProfileModel;
-use App\Service\Recommendation\Profile\ProfileRunStarter;
+use App\Service\Curation\Recommendation\Profile\Model\RunProfileModel;
+use App\Service\Curation\Recommendation\Profile\ProfileRunStarter;
 
 final readonly class ProvisionedProfileForRun implements ProfileForRunInterface
 {

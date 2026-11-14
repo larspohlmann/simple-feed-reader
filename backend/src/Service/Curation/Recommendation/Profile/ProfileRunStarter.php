@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Profile;
+namespace App\Service\Curation\Recommendation\Profile;
 
 use App\Entity\ProfileRun;
 use App\Entity\User;
 use App\Enum\ProfileRunTrigger;
 use App\Repository\ProfileRunRepository;
 use App\Repository\RecommendationRunLogRepository;
-use App\Service\RateLimit\Exception\RateLimitedException;
-use App\Service\RateLimit\RateLimitGuard;
-use App\Service\Recommendation\Profile\Exception\ProfileConnectionMissingException;
-use App\Service\Recommendation\Run\Support\RunLogRetention;
+use App\Service\Foundation\RateLimit\Exception\RateLimitedException;
+use App\Service\Foundation\RateLimit\RateLimitGuard;
+use App\Service\Curation\Recommendation\Profile\Exception\ProfileConnectionMissingException;
+use App\Service\Curation\Recommendation\Run\Support\RunLogRetention;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Attribute\Target;

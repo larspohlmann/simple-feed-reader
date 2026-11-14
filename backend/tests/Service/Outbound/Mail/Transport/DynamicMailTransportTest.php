@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\Transport;
+namespace App\Tests\Service\Outbound\Mail\Transport;
 
 use App\Entity\MailConnection;
 use App\Entity\MailServerSettings;
 use App\Entity\SealedSecret;
 use App\Enum\MailEncryption;
 use App\Enum\ProxyType;
-use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Fetch\Model\ProxyConfigModel;
-use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
-use App\Service\Mail\Settings\Crypto\MailPasswordCipher;
-use App\Service\Mail\Settings\MailSettings;
-use App\Service\Mail\Settings\Model\ResolvedMailTransportModel;
-use App\Service\Mail\Transport\DynamicMailTransport;
-use App\Service\Mail\Transport\Factory\ActiveMailTransportFactory;
-use App\Service\Mail\Transport\Factory\EsmtpTransportFactory;
-use App\Service\Mail\Transport\Pass\CurlSmtpTransport;
-use App\Service\Proxy\ConfiguredProxySource\ConfiguredProxySourceInterface;
+use App\Service\Foundation\Crypto\Exception\SecretUnreadableException;
+use App\Service\Outbound\Fetch\Model\ProxyConfigModel;
+use App\Service\Outbound\Mail\MailSendingSettings\MailSendingSettingsInterface;
+use App\Service\Outbound\Mail\Settings\Crypto\MailPasswordCipher;
+use App\Service\Outbound\Mail\Settings\MailSettings;
+use App\Service\Outbound\Mail\Settings\Model\ResolvedMailTransportModel;
+use App\Service\Outbound\Mail\Transport\DynamicMailTransport;
+use App\Service\Outbound\Mail\Transport\Factory\ActiveMailTransportFactory;
+use App\Service\Outbound\Mail\Transport\Factory\EsmtpTransportFactory;
+use App\Service\Outbound\Mail\Transport\Pass\CurlSmtpTransport;
+use App\Service\Outbound\Proxy\ConfiguredProxySource\ConfiguredProxySourceInterface;
 use App\Tests\Support\ConfiguresAProxy;
 use App\Tests\Support\SettingsRequests;
 use App\Tests\Support\UnreadableProxyPasswordRows;

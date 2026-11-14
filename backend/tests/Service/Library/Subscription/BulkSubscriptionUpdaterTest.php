@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Subscription;
+namespace App\Tests\Service\Library\Subscription;
 
 use App\Entity\Feed;
 use App\Entity\InclusionChange;
@@ -11,8 +11,8 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\InclusionSurface;
 use App\Exception\InvalidSelectionException;
-use App\Service\Subscription\BulkSubscriptionUpdater;
-use App\Service\Subscription\Model\BulkSubscriptionChangeModel;
+use App\Service\Library\Subscription\BulkSubscriptionUpdater;
+use App\Service\Library\Subscription\Model\BulkSubscriptionChangeModel;
 use App\Tests\Support\SeedsUsers;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;

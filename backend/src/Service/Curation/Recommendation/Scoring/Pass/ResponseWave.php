@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Scoring\Pass;
+namespace App\Service\Curation\Recommendation\Scoring\Pass;
 
-use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\Model\ProviderCredentialsModel;
-use App\Service\Recommendation\Scoring\Model\ScoringOutcomeModel;
+use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
+use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringOutcomeModel;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 

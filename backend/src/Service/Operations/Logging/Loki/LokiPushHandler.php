@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Logging\Loki;
+namespace App\Service\Operations\Logging\Loki;
 
-use App\Service\Logging\Loki\LokiSink\LokiSinkInterface;
+use App\Service\Operations\Logging\Loki\LokiSink\LokiSinkInterface;
 use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\AbstractProcessingHandler;
 use Monolog\Level;

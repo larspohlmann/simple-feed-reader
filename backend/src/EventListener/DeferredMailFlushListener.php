@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\EventListener;
 
 use App\Enum\MailKind;
-use App\Service\Mail\DeferredMailer;
-use App\Service\Mail\MailFailureRecorder\MailFailureRecorderInterface;
+use App\Service\Outbound\Mail\DeferredMailer;
+use App\Service\Outbound\Mail\MailFailureRecorder\MailFailureRecorderInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Event\ConsoleTerminateEvent;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;

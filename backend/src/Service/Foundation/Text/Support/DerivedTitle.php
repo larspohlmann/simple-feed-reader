@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Text\Support;
+namespace App\Service\Foundation\Text\Support;
 
 /**
  * A headline for a post its feed gave none: the first sentence of its first line that holds words, cut to fit.

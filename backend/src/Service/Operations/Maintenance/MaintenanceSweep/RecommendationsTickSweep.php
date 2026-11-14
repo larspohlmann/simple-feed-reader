@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Maintenance\MaintenanceSweep;
+namespace App\Service\Operations\Maintenance\MaintenanceSweep;
 
-use App\Service\Recommendation\Run\ForYouSweep;
-use App\Service\Recommendation\Run\Model\ForYouSweepReportModel;
+use App\Service\Curation\Recommendation\Run\ForYouSweep;
+use App\Service\Curation\Recommendation\Run\Model\ForYouSweepReportModel;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: 'recommendations', priority: 100)]

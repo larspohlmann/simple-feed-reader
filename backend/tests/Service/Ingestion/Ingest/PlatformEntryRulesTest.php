@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Ingest;
+namespace App\Tests\Service\Ingestion\Ingest;
 
 use App\Entity\Headline;
-use App\Service\Ingest\PlatformEntryRule\RedditEntryRule;
-use App\Service\Ingest\PlatformEntryRules;
-use App\Service\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Ingest\PlatformEntryRule\RedditEntryRule;
+use App\Service\Ingestion\Ingest\PlatformEntryRules;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use PHPUnit\Framework\TestCase;
 
 final class PlatformEntryRulesTest extends TestCase

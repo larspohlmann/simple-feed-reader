@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Version\Model;
+namespace App\Service\Operations\Version\Model;
 
 /**
  * The newest published release upstream: the tag it carries and the page that

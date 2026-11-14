@@ -620,7 +620,7 @@ say) does not fit `AbstractOidcProvider` and needs its own implementation of
 
 ### 8.1 The class
 
-One file in `src/Service/OAuth/OAuthProvider/`, extending `AbstractOidcProvider`.
+One file in `src/Service/Identity/OAuth/OAuthProvider/`, extending `AbstractOidcProvider`.
 Eight methods, none of which contain a decision worth agonising over:
 
 | Method | What goes in it |

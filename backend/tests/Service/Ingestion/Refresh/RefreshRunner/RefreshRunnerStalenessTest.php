@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Refresh\RefreshRunner;
+namespace App\Tests\Service\Ingestion\Refresh\RefreshRunner;
 
 use App\Entity\Feed;
 use App\Entity\SocialAccount;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SocialFeedKind;
-use App\Service\Fetch\Model\FetchResponseModel;
-use App\Service\Refresh\Model\RefreshRequestModel;
-use App\Service\Refresh\RefreshRunner\RefreshRunner;
-use App\Service\Social\Model\PrivateFeedModel;
-use App\Service\Social\Model\TimelineOutcome\ThrottledTimelineModel;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
+use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
+use App\Service\Ingestion\Refresh\RefreshRunner\RefreshRunner;
+use App\Service\Social\Social\Model\PrivateFeedModel;
+use App\Service\Social\Social\Model\TimelineOutcome\ThrottledTimelineModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PrivateFeedsWiring;
 use App\Tests\Support\RefreshRunners;

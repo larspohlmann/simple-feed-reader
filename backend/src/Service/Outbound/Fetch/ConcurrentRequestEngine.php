@@ -2,26 +2,26 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch;
+namespace App\Service\Outbound\Fetch;
 
-use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Fetch\AnswerSettler\AnswerSettlerInterface;
-use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\Exception\ResponseTooLargeException;
-use App\Service\Fetch\Model\ExchangeStepModel;
-use App\Service\Fetch\Model\FetchAttemptModel;
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Fetch\Model\RequestTicketModel;
-use App\Service\Fetch\Pass\FetchQueue;
-use App\Service\Fetch\Pass\RequestSlots;
-use App\Service\Fetch\Pass\SettledAnswers;
-use App\Service\Fetch\ResponseExchange\ResponseExchangeInterface;
-use App\Service\Fetch\Support\CapacityGuard;
-use App\Service\Fetch\Support\EgressOptions;
-use App\Service\Fetch\Support\PersistentConnection;
-use App\Service\Fetch\Support\ResponseBody;
+use App\Service\Foundation\Crypto\Exception\SecretUnreadableException;
+use App\Service\Outbound\Fetch\AnswerSettler\AnswerSettlerInterface;
+use App\Service\Outbound\Fetch\EgressProxySource\EgressProxySourceInterface;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Outbound\Fetch\Model\ExchangeStepModel;
+use App\Service\Outbound\Fetch\Model\FetchAttemptModel;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Outbound\Fetch\Model\RequestTicketModel;
+use App\Service\Outbound\Fetch\Pass\FetchQueue;
+use App\Service\Outbound\Fetch\Pass\RequestSlots;
+use App\Service\Outbound\Fetch\Pass\SettledAnswers;
+use App\Service\Outbound\Fetch\ResponseExchange\ResponseExchangeInterface;
+use App\Service\Outbound\Fetch\Support\CapacityGuard;
+use App\Service\Outbound\Fetch\Support\EgressOptions;
+use App\Service\Outbound\Fetch\Support\PersistentConnection;
+use App\Service\Outbound\Fetch\Support\ResponseBody;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;

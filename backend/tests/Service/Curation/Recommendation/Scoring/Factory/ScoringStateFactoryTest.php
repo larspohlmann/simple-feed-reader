@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Scoring\Factory;
+namespace App\Tests\Service\Curation\Recommendation\Scoring\Factory;
 
-use App\Service\Recommendation\Pool\Model\ArticleLineModel;
-use App\Service\Recommendation\Scoring\Factory\ScoringStateFactory;
-use App\Service\Recommendation\Scoring\Model\ScoringReaderModel;
-use App\Service\Recommendation\Scoring\Support\ScoringArticle;
-use App\Service\Recommendation\Support\CompactJson;
-use App\Service\Recommendation\Support\TokenEstimate;
+use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Curation\Recommendation\Scoring\Factory\ScoringStateFactory;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringReaderModel;
+use App\Service\Curation\Recommendation\Scoring\Support\ScoringArticle;
+use App\Service\Curation\Recommendation\Support\CompactJson;
+use App\Service\Curation\Recommendation\Support\TokenEstimate;
 use PHPUnit\Framework\TestCase;
 
 final class ScoringStateFactoryTest extends TestCase

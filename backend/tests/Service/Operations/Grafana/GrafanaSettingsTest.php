@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Grafana;
+namespace App\Tests\Service\Operations\Grafana;
 
 use App\Entity\GrafanaSettings as GrafanaSettingsEntity;
 use App\Http\Admin\GrafanaSettingsJson;
-use App\Service\Grafana\EffectiveGrafanaSettings;
-use App\Service\Grafana\GrafanaEnvDefaults;
-use App\Service\Grafana\GrafanaSettings;
-use App\Service\Grafana\GrafanaSettingsCache;
-use App\Service\Grafana\StoredGrafanaSettings\StoredGrafanaSettingsInterface;
+use App\Service\Operations\Grafana\EffectiveGrafanaSettings;
+use App\Service\Operations\Grafana\GrafanaEnvDefaults;
+use App\Service\Operations\Grafana\GrafanaSettings;
+use App\Service\Operations\Grafana\GrafanaSettingsCache;
+use App\Service\Operations\Grafana\StoredGrafanaSettings\StoredGrafanaSettingsInterface;
 use App\Tests\Support\BuildsEffectiveGrafanaSettings;
 use App\Tests\Support\GrafanaApiKeyCiphers;
 use App\Tests\Support\SettingsRequests;

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\ReaderAudit\Model;
+namespace App\Service\Content\ReaderAudit\Model;
 
-use App\Service\ReaderAudit\Support\DatabaseValue;
+use App\Service\Content\ReaderAudit\Support\DatabaseValue;
 
 /**
  * What the audit learned about one article, and the row the report prints. It

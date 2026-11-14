@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\Pass;
+namespace App\Service\Outbound\Fetch\Pass;
 
-use App\Service\Fetch\AnswerSettler\AnswerSettlerInterface;
-use App\Service\Fetch\Model\FetchAttemptModel;
-use App\Service\Fetch\Model\FetchOutcomeModel;
+use App\Service\Outbound\Fetch\AnswerSettler\AnswerSettlerInterface;
+use App\Service\Outbound\Fetch\Model\FetchAttemptModel;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
 
 /**
  * One engine run's settler and queue: a first send goes out only when the settler admits it, and a raw outcome

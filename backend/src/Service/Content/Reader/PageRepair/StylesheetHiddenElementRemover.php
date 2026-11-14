@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\PageRepair;
+namespace App\Service\Content\Reader\PageRepair;
 
-use App\Service\Reader\Support\StylesheetHiddenIds;
+use App\Service\Content\Reader\Support\StylesheetHiddenIds;
 use Dom\HTMLDocument;
 
 /**

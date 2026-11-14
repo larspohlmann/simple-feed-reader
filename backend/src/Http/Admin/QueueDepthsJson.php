@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Admin;
 
-use App\Service\Queue\Model\QueueDepthModel;
+use App\Service\Operations\Queue\Model\QueueDepthModel;
 
 final readonly class QueueDepthsJson
 {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\Model;
+namespace App\Service\Ingestion\Parser\Model;
 
 /**
  * One category a feed declared for an entry, as read from the document: the

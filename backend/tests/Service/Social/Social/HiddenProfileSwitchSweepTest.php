@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Entity\EntryState;
@@ -21,22 +21,22 @@ use App\Repository\EntryTwinRepository;
 use App\Repository\RefusedProfileSubscriptionRepository;
 use App\Repository\SocialAccountRepository;
 use App\Repository\SocialLikeRepository;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\SavedPosts\SavedStateMover;
-use App\Service\SavedPosts\Support\SavedFeedUrl;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\HiddenProfileMove;
-use App\Service\Social\HiddenProfiles\CachedHiddenProfiles;
-use App\Service\Social\HiddenProfileSwitchCursor;
-use App\Service\Social\HiddenProfileSwitchSweep;
-use App\Service\Social\Model\HiddenProfileModel;
-use App\Service\Social\Model\HiddenProfileMoveOutcome;
-use App\Service\Social\Model\HiddenProfileSwitchReportModel;
-use App\Service\Social\Model\PrivateFeedModel;
-use App\Service\Social\Model\ProfileCallBudgetModel;
-use App\Service\Social\PrivateFeeds;
-use App\Service\Social\ProfileVisibilityCache;
-use App\Service\Subscription\SubscriptionService;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Library\SavedPosts\SavedStateMover;
+use App\Service\Library\SavedPosts\Support\SavedFeedUrl;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\HiddenProfileMove;
+use App\Service\Social\Social\HiddenProfiles\CachedHiddenProfiles;
+use App\Service\Social\Social\HiddenProfileSwitchCursor;
+use App\Service\Social\Social\HiddenProfileSwitchSweep;
+use App\Service\Social\Social\Model\HiddenProfileModel;
+use App\Service\Social\Social\Model\HiddenProfileMoveOutcome;
+use App\Service\Social\Social\Model\HiddenProfileSwitchReportModel;
+use App\Service\Social\Social\Model\PrivateFeedModel;
+use App\Service\Social\Social\Model\ProfileCallBudgetModel;
+use App\Service\Social\Social\PrivateFeeds;
+use App\Service\Social\Social\ProfileVisibilityCache;
+use App\Service\Library\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BlueskyProfiles;
 use App\Tests\Support\ConnectsBlueskyAccounts;

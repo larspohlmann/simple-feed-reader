@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Model;
+namespace App\Service\Operations\Backup\Model;
 
-use App\Service\Backup\Exception\BackupCompressionException;
+use App\Service\Operations\Backup\Exception\BackupCompressionException;
 
 /**
  * One gzip member of a split backup: its archive file name and the already

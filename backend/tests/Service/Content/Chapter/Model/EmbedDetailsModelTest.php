@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Chapter\Model;
+namespace App\Tests\Service\Content\Chapter\Model;
 
 use App\Entity\EntryChapter;
-use App\Service\Chapter\Model\EmbedDetailsModel;
+use App\Service\Content\Chapter\Model\EmbedDetailsModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

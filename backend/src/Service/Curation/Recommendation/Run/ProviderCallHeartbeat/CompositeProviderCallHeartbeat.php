@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run\ProviderCallHeartbeat;
+namespace App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat;
 
 /**
  * One beat for two named members, keepalive first: a throwing member skips the rest, and a missed lock refresh risks

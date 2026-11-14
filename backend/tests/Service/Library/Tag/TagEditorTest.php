@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Tag;
+namespace App\Tests\Service\Library\Tag;
 
 use App\Entity\Feed;
 use App\Entity\InclusionChange;
@@ -11,10 +11,10 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\InclusionSurface;
 use App\Repository\TagRepository;
-use App\Service\Tag\Exception\InvalidTagParentException;
-use App\Service\Tag\Exception\TagNameTakenException;
-use App\Service\Tag\Model\TagDetailsModel;
-use App\Service\Tag\TagEditor;
+use App\Service\Library\Tag\Exception\InvalidTagParentException;
+use App\Service\Library\Tag\Exception\TagNameTakenException;
+use App\Service\Library\Tag\Model\TagDetailsModel;
+use App\Service\Library\Tag\TagEditor;
 use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\ReloadsEntities;

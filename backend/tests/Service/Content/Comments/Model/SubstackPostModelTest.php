@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Comments\Model;
+namespace App\Tests\Service\Content\Comments\Model;
 
-use App\Service\Comments\Model\SubstackPostModel;
+use App\Service\Content\Comments\Model\SubstackPostModel;
 use PHPUnit\Framework\TestCase;
 
 final class SubstackPostModelTest extends TestCase

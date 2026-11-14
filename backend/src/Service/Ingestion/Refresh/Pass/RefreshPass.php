@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh\Pass;
+namespace App\Service\Ingestion\Refresh\Pass;
 
 use App\Entity\Feed;
-use App\Service\Refresh\Model\RefreshReportModel;
+use App\Service\Ingestion\Refresh\Model\RefreshReportModel;
 use Symfony\Component\Clock\ClockInterface;
 
 /** One run's due feeds, its budget queue and its tally, and the report they add up to. */

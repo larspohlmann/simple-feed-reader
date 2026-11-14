@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Slideshow\Model;
+namespace App\Tests\Service\Content\Reader\Slideshow\Model;
 
-use App\Service\Reader\Slideshow\Model\SlideModel;
-use App\Service\Reader\Slideshow\Model\SlideshowModel;
+use App\Service\Content\Reader\Slideshow\Model\SlideModel;
+use App\Service\Content\Reader\Slideshow\Model\SlideshowModel;
 use PHPUnit\Framework\TestCase;
 
 final class SlideshowModelTest extends TestCase

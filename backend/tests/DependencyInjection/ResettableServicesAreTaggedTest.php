@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\DependencyInjection;
 
-use App\Service\Settings\InstanceSettings;
+use App\Service\Operations\Settings\InstanceSettings;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Contracts\Service\ResetInterface;
 

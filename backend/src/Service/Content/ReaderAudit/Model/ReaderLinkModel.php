@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\ReaderAudit\Model;
+namespace App\Service\Content\ReaderAudit\Model;
 
 /**
  * The deep link that opens one audited article in the SPA, in the shape frontend/src/app/reader/query/slug.ts writes: a

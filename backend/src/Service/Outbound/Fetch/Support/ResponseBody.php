@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\Support;
+namespace App\Service\Outbound\Fetch\Support;
 
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\Exception\ResponseTooLargeException;
-use App\Service\Fetch\Model\ResponseSizeLimit;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Outbound\Fetch\Model\ResponseSizeLimit;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 

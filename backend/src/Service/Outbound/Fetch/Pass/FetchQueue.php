@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\Pass;
+namespace App\Service\Outbound\Fetch\Pass;
 
-use App\Service\Fetch\Model\FetchAttemptModel;
-use App\Service\Fetch\Model\ProxyConfigModel;
-use App\Service\Fetch\Model\RequestTicketModel;
+use App\Service\Outbound\Fetch\Model\FetchAttemptModel;
+use App\Service\Outbound\Fetch\Model\ProxyConfigModel;
+use App\Service\Outbound\Fetch\Model\RequestTicketModel;
 
 /**
  * The engine's work list. A redirect hop, a retry or a follow-up jumps the queue so an open feed never sits

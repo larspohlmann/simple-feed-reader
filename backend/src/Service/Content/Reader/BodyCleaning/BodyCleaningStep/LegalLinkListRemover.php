@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\BodyCleaning\BodyCleaningStep;
+namespace App\Service\Content\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
-use App\Service\Reader\LinkListDetector;
+use App\Service\Content\Reader\BodyCleaning\Pass\BodyCleaningPass;
+use App\Service\Content\Reader\LinkListDetector;
 use Dom\Element;
 
 /**

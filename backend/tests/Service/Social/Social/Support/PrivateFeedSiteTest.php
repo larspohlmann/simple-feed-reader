@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Support;
+namespace App\Tests\Service\Social\Social\Support;
 
-use App\Service\Social\Model\PrivateFeedModel;
-use App\Service\Social\Support\PrivateFeedSite;
+use App\Service\Social\Social\Model\PrivateFeedModel;
+use App\Service\Social\Social\Support\PrivateFeedSite;
 use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

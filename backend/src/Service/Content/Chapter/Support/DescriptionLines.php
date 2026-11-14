@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Chapter\Support;
+namespace App\Service\Content\Chapter\Support;
 
-use App\Service\Chapter\Pass\DescriptionLine;
+use App\Service\Content\Chapter\Pass\DescriptionLine;
 use Dom\Document;
 use Dom\Element;
 

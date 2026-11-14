@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\OAuth;
+namespace App\Service\Identity\OAuth;
 
-use App\Service\OAuth\Exception\InvalidOAuthStateException;
-use App\Service\OAuth\Model\OAuthStartStateModel;
+use App\Service\Identity\OAuth\Exception\InvalidOAuthStateException;
+use App\Service\Identity\OAuth\Model\OAuthStartStateModel;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Cache\InvalidArgumentException;

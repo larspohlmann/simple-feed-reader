@@ -9,8 +9,8 @@ use App\Entity\ProxyConnection;
 use App\Enum\MailEncryption;
 use App\Enum\ProxyType;
 use App\Http\Admin\MailSettingsJson;
-use App\Service\Mail\Settings\Model\MailSettingsOverviewModel;
-use App\Service\Mail\Settings\Model\MailSettingsSnapshotModel;
+use App\Service\Outbound\Mail\Settings\Model\MailSettingsOverviewModel;
+use App\Service\Outbound\Mail\Settings\Model\MailSettingsSnapshotModel;
 use PHPUnit\Framework\TestCase;
 
 final class MailSettingsJsonTest extends TestCase

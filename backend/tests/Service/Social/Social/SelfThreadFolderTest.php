@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Entity\EntryMedium;
@@ -12,12 +12,12 @@ use App\Entity\LinkCardContent;
 use App\Enum\ShareKind;
 use App\Repository\LinkCardRepository;
 use App\Repository\ThreadPostRepository;
-use App\Service\Comments\Model\CommentAuthorModel;
-use App\Service\Comments\Model\CommentEmbedsModel;
-use App\Service\Comments\Model\EntryCommentModel;
-use App\Service\Social\Factory\ThreadPostFactory;
-use App\Service\Social\Model\ThreadPostModel;
-use App\Service\Social\SelfThreadFolder;
+use App\Service\Content\Comments\Model\CommentAuthorModel;
+use App\Service\Content\Comments\Model\CommentEmbedsModel;
+use App\Service\Content\Comments\Model\EntryCommentModel;
+use App\Service\Social\Social\Factory\ThreadPostFactory;
+use App\Service\Social\Social\Model\ThreadPostModel;
+use App\Service\Social\Social\SelfThreadFolder;
 use App\Tests\DbTestCase;
 
 final class SelfThreadFolderTest extends DbTestCase

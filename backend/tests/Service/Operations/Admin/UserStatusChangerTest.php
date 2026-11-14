@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Admin;
+namespace App\Tests\Service\Operations\Admin;
 
 use App\Enum\UserStatus;
 use App\Exception\ValidationException;
-use App\Service\Admin\SelfActionGuard;
-use App\Service\Admin\UserStatusChanger;
-use App\Service\Mail\AccountMailer\AccountMailerInterface;
+use App\Service\Operations\Admin\SelfActionGuard;
+use App\Service\Operations\Admin\UserStatusChanger;
+use App\Service\Outbound\Mail\AccountMailer\AccountMailerInterface;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
 use PHPUnit\Framework\Attributes\DataProvider;

@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Search\Index\SearchIndexReader;
+namespace App\Tests\Service\Library\Search\Index\SearchIndexReader;
 
 use App\Enum\ListOrder;
 use App\Pagination\EntryCursor;
-use App\Service\Search\Exception\SearchEngineUnavailableException;
-use App\Service\Search\Index\Model\IndexedEntryModel;
-use App\Service\Search\Index\Model\IndexSearchModel;
-use App\Service\Search\Index\SearchIndexReader\MeilisearchIndex;
-use App\Service\Search\Model\SearchTermsModel;
-use App\Service\Search\SearchEngineCapability;
+use App\Service\Library\Search\Exception\SearchEngineUnavailableException;
+use App\Service\Library\Search\Index\Model\IndexedEntryModel;
+use App\Service\Library\Search\Index\Model\IndexSearchModel;
+use App\Service\Library\Search\Index\SearchIndexReader\MeilisearchIndex;
+use App\Service\Library\Search\Model\SearchTermsModel;
+use App\Service\Library\Search\SearchEngineCapability;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;

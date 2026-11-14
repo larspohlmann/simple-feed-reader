@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Completion;
+namespace App\Service\Social\Completion;
 
 use App\Entity\Entry;
 use App\Entity\ShareEnrichment;
@@ -11,11 +11,11 @@ use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowEnricher;
 use App\Repository\ShareEnrichmentRepository;
-use App\Service\Bluesky\PostEnricher;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Completion\SelfThreadPass\SelfThreadPassInterface;
-use App\Service\LinkCard\Model\LinkCardBudgetModel;
-use App\Service\LinkCard\ShareLinkCards;
+use App\Service\Social\Bluesky\PostEnricher;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Social\Completion\SelfThreadPass\SelfThreadPassInterface;
+use App\Service\Content\LinkCard\Model\LinkCardBudgetModel;
+use App\Service\Content\LinkCard\ShareLinkCards;
 
 final readonly class EntryCompletion
 {

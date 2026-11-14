@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch;
+namespace App\Service\Outbound\Fetch;
 
-use App\Service\Fetch\Exception\FeedThrottledException;
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\Exception\ResponseTooLargeException;
-use App\Service\Fetch\Model\FetchAttemptModel;
+use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Outbound\Fetch\Model\FetchAttemptModel;
 
 /**
  * What a failed fetch attempt earns next: the one direct fallback for a proxied attempt, or the next address family

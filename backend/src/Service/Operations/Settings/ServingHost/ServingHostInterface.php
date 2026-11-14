@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Settings\ServingHost;
+namespace App\Service\Operations\Settings\ServingHost;
 
 interface ServingHostInterface
 {

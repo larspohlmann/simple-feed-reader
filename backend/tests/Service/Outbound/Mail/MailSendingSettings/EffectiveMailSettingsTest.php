@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\MailSendingSettings;
+namespace App\Tests\Service\Outbound\Mail\MailSendingSettings;
 
 use App\Enum\MailEncryption;
 use App\Repository\MailServerSettingsRepository;
-use App\Service\Mail\MailSendingSettings\EffectiveMailSettings;
-use App\Service\Mail\Settings\Crypto\MailPasswordCipher;
-use App\Service\Mail\Settings\MailFallback;
-use App\Service\Mail\Settings\MailSettings;
+use App\Service\Outbound\Mail\MailSendingSettings\EffectiveMailSettings;
+use App\Service\Outbound\Mail\Settings\Crypto\MailPasswordCipher;
+use App\Service\Outbound\Mail\Settings\MailFallback;
+use App\Service\Outbound\Mail\Settings\MailSettings;
 use App\Tests\Support\ConfiguresAProxy;
 use App\Tests\Support\SettingsRequests;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;

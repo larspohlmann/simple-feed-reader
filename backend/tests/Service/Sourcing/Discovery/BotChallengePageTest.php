@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Discovery;
+namespace App\Tests\Service\Sourcing\Discovery;
 
-use App\Service\Discovery\BotChallengePage;
+use App\Service\Sourcing\Discovery\BotChallengePage;
 use PHPUnit\Framework\TestCase;
 
 final class BotChallengePageTest extends TestCase

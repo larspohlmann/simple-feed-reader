@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\OAuth\Factory;
+namespace App\Service\Identity\OAuth\Factory;
 
-use App\Service\OAuth\Exception\OAuthFailedException;
+use App\Service\Identity\OAuth\Exception\OAuthFailedException;
 use Lcobucci\JWT\Encoding\ChainedFormatter;
 use Lcobucci\JWT\Encoding\JoseEncoder;
 use Lcobucci\JWT\Signer\Ecdsa\Sha256;

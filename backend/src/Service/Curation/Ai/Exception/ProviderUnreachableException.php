@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai\Exception;
+namespace App\Service\Curation\Ai\Exception;
 
 /**
  * The endpoint did not answer, or answered something that is not a model list.

@@ -7,8 +7,8 @@ namespace App\Dto\Admin;
 use App\Entity\ProxyConnection;
 use App\Enum\ProxyType;
 use App\Http\FullReplacePayload;
-use App\Service\Crypto\Model\SecretChangeModel;
-use App\Service\Proxy\Model\ProxySettingsUpdateModel;
+use App\Service\Foundation\Crypto\Model\SecretChangeModel;
+use App\Service\Outbound\Proxy\Model\ProxySettingsUpdateModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**

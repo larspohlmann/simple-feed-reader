@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Admin;
 
 use App\Controller\Admin\AdminVersionController;
-use App\Service\Version\Model\LatestReleaseModel;
-use App\Service\Version\Model\ReleaseVersionModel;
+use App\Service\Operations\Version\Model\LatestReleaseModel;
+use App\Service\Operations\Version\Model\ReleaseVersionModel;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\VersionReporters;
 use Symfony\Component\HttpFoundation\Response;

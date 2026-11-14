@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Passkey;
+namespace App\Tests\Service\Identity\Passkey;
 
 use PHPUnit\Framework\TestCase;
 use Webauthn\CeremonyStep\CeremonyStepManagerFactory;

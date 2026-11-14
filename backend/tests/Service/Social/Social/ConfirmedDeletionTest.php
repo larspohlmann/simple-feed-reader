@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Enum\SourceFormat;
-use App\Service\Social\Exception\SocialPostRemovedException;
+use App\Service\Social\Social\Exception\SocialPostRemovedException;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ConfirmedDeletions;
 use App\Tests\Support\FakeHomeServerCheck;

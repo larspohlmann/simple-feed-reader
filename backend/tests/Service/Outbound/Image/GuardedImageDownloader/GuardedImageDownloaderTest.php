@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Image\GuardedImageDownloader;
+namespace App\Tests\Service\Outbound\Image\GuardedImageDownloader;
 
-use App\Service\Image\GuardedImageDownloader\GuardedImageDownloader;
-use App\Service\Image\Exception\GuardedImageRejectedException;
-use App\Service\Image\Exception\GuardedImageUnavailableException;
-use App\Service\Fetch\DnsResolver\DnsResolverInterface;
-use App\Service\Fetch\Exception\ResponseTooLargeException;
-use App\Service\Fetch\Model\ResponseSizeLimit;
-use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\UrlGuard;
+use App\Service\Outbound\Image\GuardedImageDownloader\GuardedImageDownloader;
+use App\Service\Outbound\Image\Exception\GuardedImageRejectedException;
+use App\Service\Outbound\Image\Exception\GuardedImageUnavailableException;
+use App\Service\Outbound\Fetch\DnsResolver\DnsResolverInterface;
+use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Outbound\Fetch\Model\ResponseSizeLimit;
+use App\Service\Outbound\Fetch\IpValidator;
+use App\Service\Outbound\Fetch\UrlGuard;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\Attributes\DataProvider;

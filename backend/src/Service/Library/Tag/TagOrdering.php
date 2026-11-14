@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Tag;
+namespace App\Service\Library\Tag;
 
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Exception\InvalidSelectionException;
 use App\Repository\SubscriptionTagRepository;
 use App\Repository\TagRepository;
-use App\Service\Ordering\PositionReorderer;
+use App\Service\Foundation\Ordering\PositionReorderer;
 
 final readonly class TagOrdering
 {

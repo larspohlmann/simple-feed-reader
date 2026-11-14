@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Admin;
+namespace App\Service\Operations\Admin;
 
 use App\Entity\User;
 use App\Enum\UserStatus;
-use App\Service\Mail\AccountMailer\AccountMailerInterface;
+use App\Service\Outbound\Mail\AccountMailer\AccountMailerInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;

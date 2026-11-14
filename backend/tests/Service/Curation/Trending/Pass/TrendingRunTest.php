@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Trending\Pass;
+namespace App\Tests\Service\Curation\Trending\Pass;
 
 use App\Enum\TrendingWindow;
-use App\Service\Trending\Model\WindowEntryModel;
+use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Tests\Support\TrendingRuns;
 use PHPUnit\Framework\TestCase;
 

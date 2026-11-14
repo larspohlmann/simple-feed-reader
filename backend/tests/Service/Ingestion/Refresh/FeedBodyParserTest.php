@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Refresh;
+namespace App\Tests\Service\Ingestion\Refresh;
 
 use App\Entity\Feed;
 use App\Enum\SourceFormat;
-use App\Service\Parser\MixcloudJsonParser;
-use App\Service\Refresh\FeedBodyParser;
-use App\Service\Refresh\FeedBodyParser\MixcloudBodyParser;
+use App\Service\Ingestion\Parser\MixcloudJsonParser;
+use App\Service\Ingestion\Refresh\FeedBodyParser;
+use App\Service\Ingestion\Refresh\FeedBodyParser\MixcloudBodyParser;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 

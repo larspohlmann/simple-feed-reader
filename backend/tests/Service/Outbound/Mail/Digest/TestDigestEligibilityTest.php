@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\Digest;
+namespace App\Tests\Service\Outbound\Mail\Digest;
 
 use App\Entity\User;
-use App\Service\Mail\Digest\Exception\TestDigestUnavailableException;
-use App\Service\Mail\Digest\TestDigestEligibility;
+use App\Service\Outbound\Mail\Digest\Exception\TestDigestUnavailableException;
+use App\Service\Outbound\Mail\Digest\TestDigestEligibility;
 use App\Tests\DbTestCase;
 use App\Tests\Support\EnablesMailInTests;
 

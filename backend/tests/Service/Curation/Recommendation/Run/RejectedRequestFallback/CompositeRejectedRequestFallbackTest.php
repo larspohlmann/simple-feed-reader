@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Run\RejectedRequestFallback;
+namespace App\Tests\Service\Curation\Recommendation\Run\RejectedRequestFallback;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
-use App\Service\Ai\Exception\ProviderRejectedRequestException;
-use App\Service\Ai\Model\ProviderErrorIdentifiersModel;
-use App\Service\Recommendation\Run\Model\RequestAdjustmentModel;
-use App\Service\Recommendation\Run\RejectedRequestFallback\CompositeRejectedRequestFallback;
+use App\Service\Curation\Ai\Exception\ProviderRejectedRequestException;
+use App\Service\Curation\Ai\Model\ProviderErrorIdentifiersModel;
+use App\Service\Curation\Recommendation\Run\Model\RequestAdjustmentModel;
+use App\Service\Curation\Recommendation\Run\RejectedRequestFallback\CompositeRejectedRequestFallback;
 use App\Tests\Support\AiProviderSettingsFactory;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Response;

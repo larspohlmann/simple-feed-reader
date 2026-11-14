@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Process\ShellCommandRunner;
+namespace App\Service\Foundation\Process\ShellCommandRunner;
 
 /**
  * The one real side effect of a detached launch, isolated so the launcher's

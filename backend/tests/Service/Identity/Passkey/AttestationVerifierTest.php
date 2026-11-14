@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Passkey;
+namespace App\Tests\Service\Identity\Passkey;
 
 use App\Entity\User;
-use App\Service\Passkey\AttestationVerifier;
-use App\Service\Passkey\Exception\AttestationRejectedException;
-use App\Service\Passkey\Model\PasskeyAttestationModel;
-use App\Service\Passkey\PasskeyChallengeStore;
+use App\Service\Identity\Passkey\AttestationVerifier;
+use App\Service\Identity\Passkey\Exception\AttestationRejectedException;
+use App\Service\Identity\Passkey\Model\PasskeyAttestationModel;
+use App\Service\Identity\Passkey\PasskeyChallengeStore;
 use App\Tests\Support\PasskeyFixtures;
 use App\Tests\Support\PinsPasskeyRelyingParty;
 use App\Tests\Support\SeedsUsers;

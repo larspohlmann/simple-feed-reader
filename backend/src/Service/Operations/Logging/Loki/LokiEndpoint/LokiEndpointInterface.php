@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Logging\Loki\LokiEndpoint;
+namespace App\Service\Operations\Logging\Loki\LokiEndpoint;
 
 interface LokiEndpointInterface
 {

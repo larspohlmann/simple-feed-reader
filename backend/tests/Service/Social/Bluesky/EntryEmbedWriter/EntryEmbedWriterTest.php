@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Bluesky\EntryEmbedWriter;
+namespace App\Tests\Service\Social\Bluesky\EntryEmbedWriter;
 
 use App\Entity\Entry;
 use App\Entity\EntryMedium;
@@ -11,13 +11,13 @@ use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 use App\Enum\ShareKind;
 use App\Repository\LinkCardRepository;
-use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriter;
-use App\Service\Bluesky\Model\FillOutcome;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Bluesky\PostEmbedRenderer;
-use App\Service\Ingest\EntryImageWriter;
-use App\Service\Sanitize\EntrySanitizer;
-use App\Service\Sanitize\TrailingBlankRemover;
+use App\Service\Social\Bluesky\EntryEmbedWriter\EntryEmbedWriter;
+use App\Service\Social\Bluesky\Model\FillOutcome;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Bluesky\PostEmbedRenderer;
+use App\Service\Ingestion\Ingest\EntryImageWriter;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Foundation\Sanitize\TrailingBlankRemover;
 use App\Tests\DbTestCase;
 use App\Tests\Support\Bluesky;
 

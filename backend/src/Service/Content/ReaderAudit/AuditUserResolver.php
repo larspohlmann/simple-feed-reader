@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\ReaderAudit;
+namespace App\Service\Content\ReaderAudit;
 
 use App\Repository\ReaderAuditRepository;
-use App\Service\ReaderAudit\Exception\NoAuditUserException;
+use App\Service\Content\ReaderAudit\Exception\NoAuditUserException;
 
 /** No account given resolves to the one with the most subscriptions: installations keep test accounts beside it. */
 final readonly class AuditUserResolver

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\Support;
+namespace App\Service\Ingestion\Parser\Support;
 
 use App\Entity\Discussion;
 use App\Enum\CommentsLoad;
-use App\Service\Parser\Pass\CoreElement;
-use App\Service\Url\Support\AbsoluteHttpUrl;
+use App\Service\Ingestion\Parser\Pass\CoreElement;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 
 final class AtomDiscussion
 {

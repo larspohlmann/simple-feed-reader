@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup;
+namespace App\Service\Operations\Backup;
 
 use App\Entity\SavedSearch;
 use App\Entity\Tag;
@@ -14,23 +14,23 @@ use App\Repository\SavedSearchRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use App\Repository\UserRepository;
-use App\Service\Account\AccountSettings;
-use App\Service\Backup\Dto\AccountLine;
-use App\Service\Backup\Dto\BackupHeader;
-use App\Service\Backup\Dto\FeedLine;
-use App\Service\Backup\Dto\FooterLine;
-use App\Service\Backup\Dto\SavedSearchLine;
-use App\Service\Backup\Dto\SubscriptionLine;
-use App\Service\Backup\Dto\TagLine;
-use App\Service\Backup\Factory\BackupPartWalkFactory;
-use App\Service\Backup\Model\AccountNetworkSwitchesModel;
-use App\Service\Backup\Model\BackupPartModel;
-use App\Service\Backup\Model\BackupProvenanceModel;
-use App\Service\Backup\Model\FoundationSnapshotModel;
-use App\Service\Backup\Pass\BackupPartWalk;
-use App\Service\Social\Model\ExportedSubscriptionModel;
-use App\Service\Social\Support\ExportedFeed;
-use App\Service\Tag\Pass\TagTree;
+use App\Service\Identity\Account\AccountSettings;
+use App\Service\Operations\Backup\Dto\AccountLine;
+use App\Service\Operations\Backup\Dto\BackupHeader;
+use App\Service\Operations\Backup\Dto\FeedLine;
+use App\Service\Operations\Backup\Dto\FooterLine;
+use App\Service\Operations\Backup\Dto\SavedSearchLine;
+use App\Service\Operations\Backup\Dto\SubscriptionLine;
+use App\Service\Operations\Backup\Dto\TagLine;
+use App\Service\Operations\Backup\Factory\BackupPartWalkFactory;
+use App\Service\Operations\Backup\Model\AccountNetworkSwitchesModel;
+use App\Service\Operations\Backup\Model\BackupPartModel;
+use App\Service\Operations\Backup\Model\BackupProvenanceModel;
+use App\Service\Operations\Backup\Model\FoundationSnapshotModel;
+use App\Service\Operations\Backup\Pass\BackupPartWalk;
+use App\Service\Social\Social\Model\ExportedSubscriptionModel;
+use App\Service\Social\Social\Support\ExportedFeed;
+use App\Service\Library\Tag\Pass\TagTree;
 use Psr\Clock\ClockInterface;
 
 /**

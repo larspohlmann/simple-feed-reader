@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Chapter;
+namespace App\Tests\Service\Content\Chapter;
 
 use App\Entity\EntryChapter;
-use App\Service\Chapter\EmbedDetailsCache;
-use App\Service\Chapter\Model\ChapteredEmbed;
-use App\Service\Chapter\Model\EmbedAddressModel;
-use App\Service\Chapter\Model\EmbedDetailsModel;
+use App\Service\Content\Chapter\EmbedDetailsCache;
+use App\Service\Content\Chapter\Model\ChapteredEmbed;
+use App\Service\Content\Chapter\Model\EmbedAddressModel;
+use App\Service\Content\Chapter\Model\EmbedDetailsModel;
 use PHPUnit\Framework\TestCase;
 use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\OAuth\OAuthProvider;
+namespace App\Tests\Service\Identity\OAuth\OAuthProvider;
 
-use App\Service\OAuth\OAuthProvider\GoogleOAuthProvider;
+use App\Service\Identity\OAuth\OAuthProvider\GoogleOAuthProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;

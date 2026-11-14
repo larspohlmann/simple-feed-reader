@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Service\Queue\Model\QueueBacklogModel;
+use App\Service\Operations\Queue\Model\QueueBacklogModel;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception\TableNotFoundException;
 

@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\ReplyThreadSource;
+namespace App\Tests\Service\Social\Social\ReplyThreadSource;
 
-use App\Service\Comments\Exception\CommentsUnavailableException;
-use App\Service\Comments\Model\CommentsAnswerModel;
-use App\Service\Sanitize\EntrySanitizer;
-use App\Service\Sanitize\TrailingBlankRemover;
-use App\Service\Social\Exception\SocialNetworkThrottledException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\MastodonContextReplies;
-use App\Service\Social\PostResolver\MastodonPostResolver;
-use App\Service\Social\ReplyThreadSource\MastodonReplyThreadSource;
+use App\Service\Content\Comments\Exception\CommentsUnavailableException;
+use App\Service\Content\Comments\Model\CommentsAnswerModel;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Foundation\Sanitize\TrailingBlankRemover;
+use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\MastodonContextReplies;
+use App\Service\Social\Social\PostResolver\MastodonPostResolver;
+use App\Service\Social\Social\ReplyThreadSource\MastodonReplyThreadSource;
 use App\Tests\Support\AssertsRefusal;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;

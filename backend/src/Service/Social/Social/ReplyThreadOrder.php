@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
-use App\Service\Comments\Model\CommentsPageModel;
-use App\Service\Social\Pass\ReplyNode;
-use App\Service\Social\Pass\ThreadWalk;
+use App\Service\Content\Comments\Model\CommentsPageModel;
+use App\Service\Social\Social\Pass\ReplyNode;
+use App\Service\Social\Social\Pass\ThreadWalk;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 final readonly class ReplyThreadOrder

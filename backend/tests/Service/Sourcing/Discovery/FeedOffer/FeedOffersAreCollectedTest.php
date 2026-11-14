@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Discovery\FeedOffer;
+namespace App\Tests\Service\Sourcing\Discovery\FeedOffer;
 
-use App\Service\Discovery\FeedDiscovery\FeedDiscovery;
-use App\Service\Discovery\FeedOffer\FeedOfferInterface;
-use App\Service\Discovery\FeedOffer\MixcloudProfileFeed;
-use App\Service\Discovery\FeedOffer\SoundCloudProfileFeed;
-use App\Service\Discovery\FeedOffer\WordPressRestProbe;
-use App\Service\Discovery\FeedOffer\YouTubeVideoChannelFeed;
+use App\Service\Sourcing\Discovery\FeedDiscovery\FeedDiscovery;
+use App\Service\Sourcing\Discovery\FeedOffer\FeedOfferInterface;
+use App\Service\Sourcing\Discovery\FeedOffer\MixcloudProfileFeed;
+use App\Service\Sourcing\Discovery\FeedOffer\SoundCloudProfileFeed;
+use App\Service\Sourcing\Discovery\FeedOffer\WordPressRestProbe;
+use App\Service\Sourcing\Discovery\FeedOffer\YouTubeVideoChannelFeed;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /** An untagged interface leaves #[AutowireIterator] empty without an error; this reads what discovery really got. */

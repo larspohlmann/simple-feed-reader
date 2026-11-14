@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\RecipeFacts;
+namespace App\Tests\Service\Content\Reader\RecipeFacts;
 
-use App\Service\Reader\RecipeFacts\Model\RecipeCardModel;
-use App\Service\Reader\RecipeFacts\RecipeFactsRecognizer;
+use App\Service\Content\Reader\RecipeFacts\Model\RecipeCardModel;
+use App\Service\Content\Reader\RecipeFacts\RecipeFactsRecognizer;
 use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 

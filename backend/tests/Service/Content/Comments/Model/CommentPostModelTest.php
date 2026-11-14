@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Comments\Model;
+namespace App\Tests\Service\Content\Comments\Model;
 
-use App\Service\Comments\Model\CommentCountsModel;
-use App\Service\Comments\Model\CommentPostModel;
-use App\Service\Comments\Model\CommentViewerModel;
+use App\Service\Content\Comments\Model\CommentCountsModel;
+use App\Service\Content\Comments\Model\CommentPostModel;
+use App\Service\Content\Comments\Model\CommentViewerModel;
 use PHPUnit\Framework\TestCase;
 
 final class CommentPostModelTest extends TestCase

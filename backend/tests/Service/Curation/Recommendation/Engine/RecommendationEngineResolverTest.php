@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Engine;
+namespace App\Tests\Service\Curation\Recommendation\Engine;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\ModelDescriptor;
@@ -10,9 +10,9 @@ use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\RecommendationProfileSource;
 use App\Enum\ScoringProtocol;
-use App\Service\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
-use App\Service\Recommendation\Engine\Model\RecommendationTuningField;
-use App\Service\Recommendation\Engine\RecommendationEngineResolver;
+use App\Service\Curation\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
+use App\Service\Curation\Recommendation\Engine\Model\RecommendationTuningField;
+use App\Service\Curation\Recommendation\Engine\RecommendationEngineResolver;
 use App\Tests\Support\AiProviderSettingsFactory;
 use App\Tests\Support\ScriptedRecommendationEngine;
 use PHPUnit\Framework\Attributes\DataProvider;

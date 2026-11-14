@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\PageRepair;
+namespace App\Service\Content\Reader\PageRepair;
 
-use App\Service\Reader\EmptiedWrapperRemover;
+use App\Service\Content\Reader\EmptiedWrapperRemover;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Dom\Text;

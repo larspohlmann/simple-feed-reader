@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Process\DetachedProcessLauncher;
+namespace App\Tests\Service\Foundation\Process\DetachedProcessLauncher;
 
-use App\Service\Process\DetachedConsoleCommandLine;
-use App\Service\Process\DetachedProcessLauncher\DetachedProcessLauncher;
-use App\Service\Process\ShellCommandRunner\ShellCommandRunnerInterface;
+use App\Service\Foundation\Process\DetachedConsoleCommandLine;
+use App\Service\Foundation\Process\DetachedProcessLauncher\DetachedProcessLauncher;
+use App\Service\Foundation\Process\ShellCommandRunner\ShellCommandRunnerInterface;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 

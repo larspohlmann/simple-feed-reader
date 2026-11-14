@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\FeedFetcher;
+namespace App\Service\Outbound\Fetch\FeedFetcher;
 
-use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
-use App\Service\Fetch\Model\FetchResponseModel;
-use App\Service\Fetch\Model\FetchTicketModel;
+use App\Service\Outbound\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
+use App\Service\Outbound\Fetch\Model\FetchTicketModel;
 
 /**
  * Single-URL adapter over the batch engine, for the callers that can block on one feed. It delegates instead of

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\MailFailureRecorder;
+namespace App\Tests\Service\Outbound\Mail\MailFailureRecorder;
 
 use App\Enum\MailKind;
 use App\Repository\MailSendFailureRepository;
-use App\Service\Mail\MailFailureRecorder\MailDeliveryHealth;
+use App\Service\Outbound\Mail\MailFailureRecorder\MailDeliveryHealth;
 use App\Tests\DbTestCase;
 
 final class MailDeliveryHealthTest extends DbTestCase

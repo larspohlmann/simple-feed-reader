@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Discovery\ShareLinkFeed;
+namespace App\Tests\Service\Sourcing\Discovery\ShareLinkFeed;
 
-use App\Service\Discovery\FeedDiscovery\FeedDiscovery;
-use App\Service\Discovery\Model\ScrapeFallback;
-use App\Service\Discovery\ShareLinkFeed\ApplePodcastShowFeed;
-use App\Service\Discovery\ShareLinkFeed\FediverseRemoteProfileFeed;
-use App\Service\Discovery\ShareLinkFeed\GitHubRepositoryFeed;
-use App\Service\Discovery\ShareLinkFeed\ShareLinkFeedInterface;
-use App\Service\Discovery\ShareLinkFeed\SubstackProfileFeed;
-use App\Service\Discovery\ShareLinkFeed\YouTubePlaylistFeed;
-use App\Tests\Service\Discovery\BuildsFeedDiscovery;
+use App\Service\Sourcing\Discovery\FeedDiscovery\FeedDiscovery;
+use App\Service\Sourcing\Discovery\Model\ScrapeFallback;
+use App\Service\Sourcing\Discovery\ShareLinkFeed\ApplePodcastShowFeed;
+use App\Service\Sourcing\Discovery\ShareLinkFeed\FediverseRemoteProfileFeed;
+use App\Service\Sourcing\Discovery\ShareLinkFeed\GitHubRepositoryFeed;
+use App\Service\Sourcing\Discovery\ShareLinkFeed\ShareLinkFeedInterface;
+use App\Service\Sourcing\Discovery\ShareLinkFeed\SubstackProfileFeed;
+use App\Service\Sourcing\Discovery\ShareLinkFeed\YouTubePlaylistFeed;
+use App\Tests\Service\Sourcing\Discovery\BuildsFeedDiscovery;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /** An untagged interface leaves #[AutowireIterator] empty without an error; this reads what discovery really got. */

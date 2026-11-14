@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Content\Reader;
 
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\Exception\RedirectChainException;
-use App\Service\Fetch\Model\ResponseSizeLimit;
-use App\Service\Fetch\Pass\LandedResponse;
-use App\Service\Fetch\Pass\RedirectBudget;
-use App\Service\Fetch\RedirectFollower;
-use App\Service\Fetch\Support\ContentTypeCharset;
-use App\Service\Fetch\Support\ResponseBody;
-use App\Service\Html\Support\HtmlTranscoder;
-use App\Service\Reader\Exception\PageFetchException;
-use App\Service\Reader\StatusReasonPhrases\StatusReasonPhrasesInterface;
-use App\Service\Text\Support\ClippedText;
-use App\Service\Text\Support\Whitespace;
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\Exception\RedirectChainException;
+use App\Service\Outbound\Fetch\Model\ResponseSizeLimit;
+use App\Service\Outbound\Fetch\Pass\LandedResponse;
+use App\Service\Outbound\Fetch\Pass\RedirectBudget;
+use App\Service\Outbound\Fetch\RedirectFollower;
+use App\Service\Outbound\Fetch\Support\ContentTypeCharset;
+use App\Service\Outbound\Fetch\Support\ResponseBody;
+use App\Service\Foundation\Html\Support\HtmlTranscoder;
+use App\Service\Content\Reader\Exception\PageFetchException;
+use App\Service\Content\Reader\StatusReasonPhrases\StatusReasonPhrasesInterface;
+use App\Service\Foundation\Text\Support\ClippedText;
+use App\Service\Foundation\Text\Support\Whitespace;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 

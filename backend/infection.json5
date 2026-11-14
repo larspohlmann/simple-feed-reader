@@ -13,53 +13,53 @@
         // FeedParser::parse(): UnwrapFinally, since the empty-body guard precedes loadXML() and nothing in the try
         // throws; BitwiseOr, since LIBXML_DTDLOAD is off: with the flag mutated to '&',
         // testDoesNotFetchAnExternalDtdOverTheNetwork still sees no connection (measured).
-        UnwrapFinally: { ignore: ['App\\Service\\Parser\\FeedParser::parse'] },
-        BitwiseOr: { ignore: ['App\\Service\\Parser\\FeedParser::parse'] },
+        UnwrapFinally: { ignore: ['App\\Service\\Ingestion\\Parser\\FeedParser::parse'] },
+        BitwiseOr: { ignore: ['App\\Service\\Ingestion\\Parser\\FeedParser::parse'] },
         // CastString, equivalent: SubstackProfileFeed::feedUrl()'s regex refuses null and '' alike, and
         // ClientErrorScrubber::redact()'s preg_replace() returns null only on a PCRE failure its fixed patterns
         // never hit; the cast is for PHPStan.
         CastString: {
             ignore: [
-                'App\\Service\\Discovery\\SubstackProfileFeed::feedUrl',
-                'App\\Service\\ClientError\\ClientErrorScrubber::redact',
+                'App\\Service\\Sourcing\\Discovery\\SubstackProfileFeed::feedUrl',
+                'App\\Service\\Operations\\ClientError\\ClientErrorScrubber::redact',
             ],
         },
         // cancel() on a landed response only frees the connection early: against MockHttpClient it has no
         // observable effect, and a spy on it would test the mock.
         MethodCallRemoval: {
             ignore: [
-                'App\\Service\\Fetch\\RedirectFollower::redirectTarget',
-                'App\\Service\\Reader\\HtmlPageFetcher::fetch',
-                'App\\Service\\Reader\\Media\\StreamLocationResolver::landingUrlOf',
-                'App\\Service\\Image\\ImageDownloader::assertServed',
-                'App\\Service\\Image\\ImageDownloader::servedType',
-                'App\\Service\\Image\\OriginCookies::visit',
+                'App\\Service\\Outbound\\Fetch\\RedirectFollower::redirectTarget',
+                'App\\Service\\Content\\Reader\\HtmlPageFetcher::fetch',
+                'App\\Service\\Content\\Reader\\Media\\StreamLocationResolver::landingUrlOf',
+                'App\\Service\\Outbound\\Image\\ImageDownloader::assertServed',
+                'App\\Service\\Outbound\\Image\\ImageDownloader::servedType',
+                'App\\Service\\Outbound\\Image\\OriginCookies::visit',
             ],
         },
         // Both read the body only after isSuccess() was confirmed, and getContent()'s flag differs only on a non-2xx.
         FalseValue: {
             ignore: [
-                'App\\Service\\Reader\\HtmlPageFetcher::content',
-                'App\\Service\\Image\\ImageDownloader::body',
+                'App\\Service\\Content\\Reader\\HtmlPageFetcher::content',
+                'App\\Service\\Outbound\\Image\\ImageDownloader::body',
             ],
         },
         // mb_strlen() vs strlen() on the ASCII LINK_GAP constant "\n\n": both count 2.
-        MBString: { ignore: ['App\\Service\\Social\\Support\\ComposerStartingText::sharingQuote'] },
+        MBString: { ignore: ['App\\Service\\Social\\Social\\Support\\ComposerStartingText::sharingQuote'] },
         // Only the first item goes: without 'private', Symfony still marks a max-age response private (no s-maxage).
         ArrayItemRemoval: { ignore: ['App\\Http\\ProxiedImageResponse::of'] },
         // explode()'s limit only bounds the tail; the name=value pair is element 0 at any limit above 1.
-        IncrementInteger: { ignore: ['App\\Service\\Image\\Support\\CookieHeader::fromSetCookies'] },
+        IncrementInteger: { ignore: ['App\\Service\\Outbound\\Image\\Support\\CookieHeader::fromSetCookies'] },
         // The 3 MB cap is checked twice, while streaming and after the read: `>` vs `>=` on it is not worth a 3 MB
         // fixture, and dropping the streaming throw leaves the post-read check.
         GreaterThan: {
             ignore: [
-                'App\\Service\\Reader\\HtmlPageFetcher::fetch',
-                'App\\Service\\Reader\\HtmlPageFetcher::options',
+                'App\\Service\\Content\\Reader\\HtmlPageFetcher::fetch',
+                'App\\Service\\Content\\Reader\\HtmlPageFetcher::options',
             ],
         },
-        Throw_: { ignore: ['App\\Service\\Reader\\HtmlPageFetcher::options'] },
+        Throw_: { ignore: ['App\\Service\\Content\\Reader\\HtmlPageFetcher::options'] },
         // EntryMediaAssembler::visualMedia() reads $seen only through isset(), which true and false both satisfy.
-        TrueValue: { ignore: ['App\\Service\\Ingest\\Support\\EntryMediaAssembler::visualMedia'] },
+        TrueValue: { ignore: ['App\\Service\\Ingestion\\Ingest\\Support\\EntryMediaAssembler::visualMedia'] },
         // The COUNT() cast matters on MySQL, which returns a numeric string; SQLite returns an int, so on the native
         // mutation run dropping it is equivalent.
         CastInt: {
@@ -80,7 +80,7 @@
         // SocialAccountRepository: findBy() returns a list today; the wrap keeps the list guarantee its own (#334).
         UnwrapArrayValues: {
             ignore: [
-                'App\\Service\\Recommendation\\Scoring\\Pass\\ResponseWave::outcomes',
+                'App\\Service\\Curation\\Recommendation\\Scoring\\Pass\\ResponseWave::outcomes',
                 'App\\Repository\\SocialAccountRepository::findAllForUserId',
             ],
         },
@@ -88,9 +88,9 @@
         ArrayOneItem: { ignore: ['App\\Repository\\SavedSearchEntryRepository::memberCountsBySavedSearch'] },
         // A slideshow always has 2+ images, so querySelector('img') never returns
         // null here; the `?->` exists only for PHPStan.
-        NullSafeMethodCall: { ignore: ['App\\Service\\Reader\\Slideshow\\SlideshowMarkup::loadFirstSlideEagerly'] },
+        NullSafeMethodCall: { ignore: ['App\\Service\\Content\\Reader\\Slideshow\\SlideshowMarkup::loadFirstSlideEagerly'] },
         // toDto()'s default arm is unreachable: BackupLineOrderModel refuses every other kind first.
-        MatchArmRemoval: { ignore: ['App\\Service\\Backup\\BackupReader::toDto'] },
+        MatchArmRemoval: { ignore: ['App\\Service\\Operations\\Backup\\BackupReader::toDto'] },
     },
     phpUnit: {
         configDir: '.',

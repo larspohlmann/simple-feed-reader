@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Preview\Model;
+namespace App\Service\Sourcing\Preview\Model;
 
 final readonly class FeedPreviewModel
 {

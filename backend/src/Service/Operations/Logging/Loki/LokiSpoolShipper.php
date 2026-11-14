@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Logging\Loki;
+namespace App\Service\Operations\Logging\Loki;
 
-use App\Service\Logging\Loki\Exception\CorruptSpoolFileException;
-use App\Service\Logging\Loki\Model\LokiSpoolReportModel;
+use App\Service\Operations\Logging\Loki\Exception\CorruptSpoolFileException;
+use App\Service\Operations\Logging\Loki\Model\LokiSpoolReportModel;
 
 /**
  * Drains the Loki spool out-of-band. LokiClient::push() is fail-open, so a

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\SweepReportJson;
 
-use App\Service\Social\Model\ProfileImageSweepReportModel;
+use App\Service\Social\Social\Model\ProfileImageSweepReportModel;
 
 final readonly class ProfileImageSweepJson implements SweepReportJsonInterface
 {

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media\Teaser;
+namespace App\Tests\Service\Content\Reader\Media\Teaser;
 
-use App\Service\Reader\Media\AudioPlayerMarkup;
-use App\Service\Reader\Media\Model\MediaKind;
-use App\Service\Reader\Media\Teaser\Model\TeaserPlayerModel;
-use App\Service\Reader\Media\Teaser\TeaserPlayerMarkup;
+use App\Service\Content\Reader\Media\AudioPlayerMarkup;
+use App\Service\Content\Reader\Media\Model\MediaKind;
+use App\Service\Content\Reader\Media\Teaser\Model\TeaserPlayerModel;
+use App\Service\Content\Reader\Media\Teaser\TeaserPlayerMarkup;
 use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 

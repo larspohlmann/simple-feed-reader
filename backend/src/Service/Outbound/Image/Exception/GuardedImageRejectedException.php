@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Image\Exception;
+namespace App\Service\Outbound\Image\Exception;
 
 /** The host answered, but access control or this downloader's own type/size policy
  *  stopped the download; a browser may still render the resource. */

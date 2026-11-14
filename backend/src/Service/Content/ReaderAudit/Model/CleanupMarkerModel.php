@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\ReaderAudit\Model;
+namespace App\Service\Content\ReaderAudit\Model;
 
 /**
  * One signal that the reader pipeline probably did not clean an article well.

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Chapter\Support;
+namespace App\Service\Content\Chapter\Support;
 
 use App\Entity\EntryChapter;
 

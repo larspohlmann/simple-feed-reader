@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Comments\Model;
+namespace App\Service\Content\Comments\Model;
 
 /** What the reader has done to a comment's network post, and what the network lets them do with it. */
 final readonly class CommentViewerModel

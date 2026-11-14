@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Enum\SocialNetwork;
-use App\Service\Sanitize\EntrySanitizer;
-use App\Service\Sanitize\TrailingBlankRemover;
-use App\Service\Social\MastodonContextReplies;
-use App\Service\Social\Model\ThreadPostModel;
-use App\Service\Social\PostResolver\MastodonPostResolver;
-use App\Service\Social\ReplyThreadSource\MastodonReplyThreadSource;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Foundation\Sanitize\TrailingBlankRemover;
+use App\Service\Social\Social\MastodonContextReplies;
+use App\Service\Social\Social\Model\ThreadPostModel;
+use App\Service\Social\Social\PostResolver\MastodonPostResolver;
+use App\Service\Social\Social\ReplyThreadSource\MastodonReplyThreadSource;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SelfThreadEnrichers;

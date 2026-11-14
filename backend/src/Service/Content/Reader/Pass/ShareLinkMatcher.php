@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Pass;
+namespace App\Service\Content\Reader\Pass;
 
 use Dom\Element;
 use Dom\HTMLDocument;

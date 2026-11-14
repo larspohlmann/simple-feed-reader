@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\Model;
+namespace App\Service\Content\Reader\Media\Model;
 
 /** One audio clip as the body plays it; title and duration only when the page stated them. */
 final readonly class AudioClipModel

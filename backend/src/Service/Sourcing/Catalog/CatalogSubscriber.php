@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Catalog;
+namespace App\Service\Sourcing\Catalog;
 
 use App\Entity\CatalogFeed;
 use App\Entity\User;
 use App\Repository\CatalogFeedRepository;
-use App\Service\Subscription\BulkSubscriber;
-use App\Service\Subscription\Model\BulkSubscribeItemModel;
-use App\Service\Subscription\Model\BulkSubscribeResultModel;
-use App\Service\Subscription\Model\TagStyleModel;
+use App\Service\Library\Subscription\BulkSubscriber;
+use App\Service\Library\Subscription\Model\BulkSubscribeItemModel;
+use App\Service\Library\Subscription\Model\BulkSubscribeResultModel;
+use App\Service\Library\Subscription\Model\TagStyleModel;
 
 /**
  * Turns a picker selection into subscriptions WITHOUT discovery: catalog rows carry a verified feed URL and format.

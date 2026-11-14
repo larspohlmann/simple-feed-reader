@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Backup\Pass;
+namespace App\Tests\Service\Operations\Backup\Pass;
 
-use App\Service\Backup\Pass\RestoreFeedTarget;
+use App\Service\Operations\Backup\Pass\RestoreFeedTarget;
 use PHPUnit\Framework\TestCase;
 
 final class RestoreFeedTargetTest extends TestCase

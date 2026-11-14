@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Bluesky\Model;
+namespace App\Tests\Service\Social\Bluesky\Model;
 
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
-use App\Service\Bluesky\Model\RenderedEmbedModel;
+use App\Service\Social\Bluesky\Model\RenderedEmbedModel;
 use PHPUnit\Framework\TestCase;
 
 final class RenderedEmbedModelTest extends TestCase

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\SubscriptionHistory\Model;
+namespace App\Tests\Service\Library\SubscriptionHistory\Model;
 
-use App\Service\SubscriptionHistory\Model\DayCountModel;
-use App\Service\SubscriptionHistory\Model\DayCountsModel;
+use App\Service\Library\SubscriptionHistory\Model\DayCountModel;
+use App\Service\Library\SubscriptionHistory\Model\DayCountsModel;
 use PHPUnit\Framework\TestCase;
 
 final class DayCountsModelTest extends TestCase

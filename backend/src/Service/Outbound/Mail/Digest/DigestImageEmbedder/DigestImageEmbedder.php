@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Digest\DigestImageEmbedder;
+namespace App\Service\Outbound\Mail\Digest\DigestImageEmbedder;
 
-use App\Service\Image\Exception\GuardedImageUnavailableException;
-use App\Service\Image\Exception\ImageProcessingException;
-use App\Service\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
-use App\Service\Image\ImageResizer\ImageResizerInterface;
-use App\Service\Mail\Digest\Model\DigestImageKind;
-use App\Service\Mail\Digest\Model\DigestImageSetModel;
-use App\Service\Mail\Digest\Model\DigestPageModel;
-use App\Service\Mail\Digest\Model\EmbeddedImageModel;
+use App\Service\Outbound\Image\Exception\GuardedImageUnavailableException;
+use App\Service\Outbound\Image\Exception\ImageProcessingException;
+use App\Service\Outbound\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
+use App\Service\Outbound\Image\ImageResizer\ImageResizerInterface;
+use App\Service\Outbound\Mail\Digest\Model\DigestImageKind;
+use App\Service\Outbound\Mail\Digest\Model\DigestImageSetModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestPageModel;
+use App\Service\Outbound\Mail\Digest\Model\EmbeddedImageModel;
 use Psr\Log\LoggerInterface;
 
 /**

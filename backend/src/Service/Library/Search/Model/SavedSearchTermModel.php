@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search\Model;
+namespace App\Service\Library\Search\Model;
 
 /**
  * One saved search as the search domain runs it: what it matches, and which

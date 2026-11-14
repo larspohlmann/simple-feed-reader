@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Auth\Factory;
+namespace App\Tests\Service\Identity\Auth\Factory;
 
 use App\Entity\User;
 use App\Enum\UserStatus;
-use App\Service\Auth\Factory\SignupUserFactory;
+use App\Service\Identity\Auth\Factory\SignupUserFactory;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RegistrationPolicies;
 use PHPUnit\Framework\Attributes\DataProvider;

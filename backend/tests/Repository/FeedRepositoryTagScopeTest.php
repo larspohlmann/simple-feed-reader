@@ -10,7 +10,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Repository\DueFeedCriteria;
 use App\Repository\FeedRepository;
-use App\Service\Refresh\Model\RefreshTarget\TagTargetModel;
+use App\Service\Ingestion\Refresh\Model\RefreshTarget\TagTargetModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;

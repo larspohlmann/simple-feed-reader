@@ -14,7 +14,7 @@ use App\Entity\TrendingStoryEntry;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
-use App\Service\Url\UrlNormalizer;
+use App\Service\Foundation\Url\UrlNormalizer;
 use Doctrine\ORM\EntityManagerInterface;
 
 /** Feeds, entries and stored stories for the Trending integration tests; dates are naive UTC strings. */

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\MailFailureRecorder;
+namespace App\Service\Outbound\Mail\MailFailureRecorder;
 
 use App\Enum\MailKind;
 

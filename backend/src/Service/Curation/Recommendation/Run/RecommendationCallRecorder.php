@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run;
+namespace App\Service\Curation\Recommendation\Run;
 
 use App\Entity\ProfileRun;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Repository\CallingRun;
 use App\Repository\RecommendationCallRepository;
-use App\Service\Recommendation\Run\Factory\RecommendationRunLogFactory;
-use App\Service\Recommendation\Run\Model\CallSlotModel;
-use App\Service\Recommendation\Run\Pass\RecordedCall;
+use App\Service\Curation\Recommendation\Run\Factory\RecommendationRunLogFactory;
+use App\Service\Curation\Recommendation\Run\Model\CallSlotModel;
+use App\Service\Curation\Recommendation\Run\Pass\RecordedCall;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 

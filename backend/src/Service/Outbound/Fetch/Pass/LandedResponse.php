@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\Pass;
+namespace App\Service\Outbound\Fetch\Pass;
 
-use App\Service\Fetch\Support\ResponseHeader;
+use App\Service\Outbound\Fetch\Support\ResponseHeader;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 

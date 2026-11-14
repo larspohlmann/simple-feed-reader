@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Html\Support\HtmlDocumentParser;
-use App\Service\Reader\BodyCleaning\Model\BodyCleaningInputModel;
-use App\Service\Reader\Media\Model\ArticleMediaModel;
-use App\Service\Reader\Media\Teaser\Model\TeaserPlayerModel;
-use App\Service\Reader\Model\FeedMediaModel;
-use App\Service\Reader\Model\LeadImageCandidateModel;
-use App\Service\Reader\Model\PageImageInventoryModel;
-use App\Service\Reader\Slideshow\Model\SlideshowModel;
+use App\Service\Foundation\Html\Support\HtmlDocumentParser;
+use App\Service\Content\Reader\BodyCleaning\Model\BodyCleaningInputModel;
+use App\Service\Content\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Content\Reader\Media\Teaser\Model\TeaserPlayerModel;
+use App\Service\Content\Reader\Model\FeedMediaModel;
+use App\Service\Content\Reader\Model\LeadImageCandidateModel;
+use App\Service\Content\Reader\Model\PageImageInventoryModel;
+use App\Service\Content\Reader\Slideshow\Model\SlideshowModel;
 
 final class BodyCleaningInputs
 {

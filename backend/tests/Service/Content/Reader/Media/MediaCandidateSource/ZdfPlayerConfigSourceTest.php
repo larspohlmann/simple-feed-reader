@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media\MediaCandidateSource;
+namespace App\Tests\Service\Content\Reader\Media\MediaCandidateSource;
 
-use App\Service\Reader\Media\DurableMediaUrl;
-use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Media\MediaCandidateSource\ZdfPlayerConfigSource;
-use App\Service\Reader\Media\MediaUrlKind;
-use App\Service\Reader\Media\Model\MediaKind;
-use App\Service\Reader\Media\Sibling\NearbyPoster;
+use App\Service\Content\Reader\Media\DurableMediaUrl;
+use App\Service\Content\Reader\Media\EmbedProviders;
+use App\Service\Content\Reader\Media\MediaCandidateSource\ZdfPlayerConfigSource;
+use App\Service\Content\Reader\Media\MediaUrlKind;
+use App\Service\Content\Reader\Media\Model\MediaKind;
+use App\Service\Content\Reader\Media\Sibling\NearbyPoster;
 use PHPUnit\Framework\TestCase;
 
 final class ZdfPlayerConfigSourceTest extends TestCase

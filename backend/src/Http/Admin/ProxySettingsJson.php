@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Admin;
 
-use App\Service\Proxy\Model\ProxySettingsSnapshotModel;
+use App\Service\Outbound\Proxy\Model\ProxySettingsSnapshotModel;
 
 /**
  * The admin proxy payload. The password is absent by construction: only a

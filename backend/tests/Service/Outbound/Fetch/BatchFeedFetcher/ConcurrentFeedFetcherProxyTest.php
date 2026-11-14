@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch\BatchFeedFetcher;
+namespace App\Tests\Service\Outbound\Fetch\BatchFeedFetcher;
 
 use App\Enum\ProxyType;
-use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Fetch\AnswerSettler\PassThroughSettler;
-use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
-use App\Service\Fetch\DnsResolver\DnsResolverInterface;
-use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
-use App\Service\Fetch\Exception\FeedThrottledException;
-use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\Model\FetchTicketModel;
-use App\Service\Fetch\Model\ProxyConfigModel;
-use App\Service\Fetch\UrlGuard;
+use App\Service\Foundation\Crypto\Exception\SecretUnreadableException;
+use App\Service\Outbound\Fetch\AnswerSettler\PassThroughSettler;
+use App\Service\Outbound\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
+use App\Service\Outbound\Fetch\DnsResolver\DnsResolverInterface;
+use App\Service\Outbound\Fetch\EgressProxySource\EgressProxySourceInterface;
+use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
+use App\Service\Outbound\Fetch\IpValidator;
+use App\Service\Outbound\Fetch\Model\FetchTicketModel;
+use App\Service\Outbound\Fetch\Model\ProxyConfigModel;
+use App\Service\Outbound\Fetch\UrlGuard;
 use App\Tests\Support\FetchWiring;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -63,9 +63,9 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
     }
 
     /**
-     * @param iterable<int|string, \App\Service\Fetch\Model\FetchOutcomeModel> $outcomes
+     * @param iterable<int|string, \App\Service\Outbound\Fetch\Model\FetchOutcomeModel> $outcomes
      *
-     * @return array<int|string, \App\Service\Fetch\Model\FetchOutcomeModel>
+     * @return array<int|string, \App\Service\Outbound\Fetch\Model\FetchOutcomeModel>
      */
     private function collect(iterable $outcomes): array
     {

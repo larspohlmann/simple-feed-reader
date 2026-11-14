@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
-use App\Service\Social\Model\SocialPostModel;
+use App\Service\Social\Social\Model\SocialPostModel;
 
 /** A com.atproto.repo.strongRef: how a Bluesky record names the exact version of the post it is about. */
 final class BlueskyStrongRef

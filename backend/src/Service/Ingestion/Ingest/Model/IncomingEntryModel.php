@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ingest\Model;
+namespace App\Service\Ingestion\Ingest\Model;
 
-use App\Service\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 
 /** A parsed item with the two identities that dedup and the stored row both use, hashed once. */
 final readonly class IncomingEntryModel

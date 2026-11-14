@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Trending\Pass;
+namespace App\Service\Curation\Trending\Pass;
 
-use App\Service\Trending\HeadlineFiller;
-use App\Service\Trending\Support\HeadlineStems;
+use App\Service\Curation\Trending\HeadlineFiller;
+use App\Service\Curation\Trending\Support\HeadlineStems;
 
 /** Lookups cache per feed and entry: add every entry before asking for a weight. */
 final class HeadlineWindow

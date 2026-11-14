@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\OAuth;
+namespace App\Service\Identity\OAuth;
 
-use App\Service\OAuth\Exception\InvalidOAuthStateException;
-use App\Service\OAuth\Exception\OAuthCallbackRefusedException;
-use App\Service\OAuth\Exception\OAuthFailedException;
-use App\Service\OAuth\Model\OAuthCallbackAttemptModel;
-use App\Service\OAuth\Model\OAuthCallbackFailure;
-use App\Service\OAuth\Model\OAuthIdentityModel;
-use App\Service\OAuth\Model\OAuthStartStateModel;
+use App\Service\Identity\OAuth\Exception\InvalidOAuthStateException;
+use App\Service\Identity\OAuth\Exception\OAuthCallbackRefusedException;
+use App\Service\Identity\OAuth\Exception\OAuthFailedException;
+use App\Service\Identity\OAuth\Model\OAuthCallbackAttemptModel;
+use App\Service\Identity\OAuth\Model\OAuthCallbackFailure;
+use App\Service\Identity\OAuth\Model\OAuthIdentityModel;
+use App\Service\Identity\OAuth\Model\OAuthStartStateModel;
 use Psr\Cache\InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use Random\RandomException;

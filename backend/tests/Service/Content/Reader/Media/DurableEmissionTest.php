@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media;
+namespace App\Tests\Service\Content\Reader\Media;
 
-use App\Service\Reader\Media\AudioClipFacts;
-use App\Service\Reader\Media\DurableMediaUrl;
-use App\Service\Reader\Media\EmbedProvider\SoundCloudEmbedProvider;
-use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
-use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Media\MediaCandidateSource\AttributeMediaSource;
-use App\Service\Reader\Media\MediaCandidateSource\JsonLdMediaSource;
-use App\Service\Reader\Media\MediaCandidateSource\MediaCandidateSourceInterface;
-use App\Service\Reader\Media\MediaCandidateSource\MetaMediaSource;
-use App\Service\Reader\Media\MediaCandidateSource\SemanticMediaSource;
-use App\Service\Reader\Media\MediaRelevance;
-use App\Service\Reader\Media\MediaUrlKind;
-use App\Service\Reader\Media\Model\RawPageModel;
-use App\Service\Reader\Media\NarrationSignals;
-use App\Service\Reader\Media\PageFurniture;
-use App\Service\Reader\Media\PlayerPoster;
+use App\Service\Content\Reader\Media\AudioClipFacts;
+use App\Service\Content\Reader\Media\DurableMediaUrl;
+use App\Service\Content\Reader\Media\EmbedProvider\SoundCloudEmbedProvider;
+use App\Service\Content\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
+use App\Service\Content\Reader\Media\EmbedProviders;
+use App\Service\Content\Reader\Media\MediaCandidateSource\AttributeMediaSource;
+use App\Service\Content\Reader\Media\MediaCandidateSource\JsonLdMediaSource;
+use App\Service\Content\Reader\Media\MediaCandidateSource\MediaCandidateSourceInterface;
+use App\Service\Content\Reader\Media\MediaCandidateSource\MetaMediaSource;
+use App\Service\Content\Reader\Media\MediaCandidateSource\SemanticMediaSource;
+use App\Service\Content\Reader\Media\MediaRelevance;
+use App\Service\Content\Reader\Media\MediaUrlKind;
+use App\Service\Content\Reader\Media\Model\RawPageModel;
+use App\Service\Content\Reader\Media\NarrationSignals;
+use App\Service\Content\Reader\Media\PageFurniture;
+use App\Service\Content\Reader\Media\PlayerPoster;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Logging\Factory;
+namespace App\Tests\Service\Operations\Logging\Factory;
 
-use App\Service\Logging\Factory\HostLogFileHandlerFactory;
+use App\Service\Operations\Logging\Factory\HostLogFileHandlerFactory;
 use Monolog\Formatter\JsonFormatter;
 use Monolog\Level;
 use Monolog\Logger;

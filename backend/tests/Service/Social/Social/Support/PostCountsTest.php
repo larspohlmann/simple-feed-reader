@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Support;
+namespace App\Tests\Service\Social\Social\Support;
 
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Social\Model\SocialCountsModel;
-use App\Service\Social\Support\PostCounts;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Social\Model\SocialCountsModel;
+use App\Service\Social\Social\Support\PostCounts;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

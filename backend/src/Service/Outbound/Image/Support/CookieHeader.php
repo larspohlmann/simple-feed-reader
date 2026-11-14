@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Image\Support;
+namespace App\Service\Outbound\Image\Support;
 
 final class CookieHeader
 {

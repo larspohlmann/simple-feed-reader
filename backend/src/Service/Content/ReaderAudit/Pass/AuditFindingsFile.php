@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\ReaderAudit\Pass;
+namespace App\Service\Content\ReaderAudit\Pass;
 
-use App\Service\ReaderAudit\Exception\UnwritableFindingsFileException;
-use App\Service\ReaderAudit\Model\AuditFindingModel;
+use App\Service\Content\ReaderAudit\Exception\UnwritableFindingsFileException;
+use App\Service\Content\ReaderAudit\Model\AuditFindingModel;
 
 final readonly class AuditFindingsFile
 {

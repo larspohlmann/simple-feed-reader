@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Chapter;
+namespace App\Service\Content\Chapter;
 
 use App\Entity\Entry;
-use App\Service\Chapter\ChapterFileSource\ChapterFileSourceInterface;
-use App\Service\Chapter\Exception\ChapterFileUnreachableException;
+use App\Service\Content\Chapter\ChapterFileSource\ChapterFileSourceInterface;
+use App\Service\Content\Chapter\Exception\ChapterFileUnreachableException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\Model;
+namespace App\Service\Content\Reader\Media\Model;
 
 /** What a URL is, paired with the durable form a layer must emit. */
 final readonly class ResolvedMediaUrlModel

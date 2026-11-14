@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media\Sibling;
+namespace App\Tests\Service\Content\Reader\Media\Sibling;
 
-use App\Service\Reader\Media\Sibling\NearbyPoster;
+use App\Service\Content\Reader\Media\Sibling\NearbyPoster;
 use PHPUnit\Framework\TestCase;
 
 final class NearbyPosterTest extends TestCase

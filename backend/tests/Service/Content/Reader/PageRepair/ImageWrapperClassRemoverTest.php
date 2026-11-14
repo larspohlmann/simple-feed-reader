@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\PageRepair;
+namespace App\Tests\Service\Content\Reader\PageRepair;
 
-use App\Service\Reader\Media\PageFurniture;
-use App\Service\Reader\PageRepair\ImageWrapperClassRemover;
+use App\Service\Content\Reader\Media\PageFurniture;
+use App\Service\Content\Reader\PageRepair\ImageWrapperClassRemover;
 use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 

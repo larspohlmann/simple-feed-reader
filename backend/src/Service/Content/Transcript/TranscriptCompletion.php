@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Transcript;
+namespace App\Service\Content\Transcript;
 
 use App\Entity\Entry;
 use App\Entity\EntryTranscript;
-use App\Service\Search\EntryIndexer;
-use App\Service\Search\Membership\SavedSearchRematch;
+use App\Service\Library\Search\EntryIndexer;
+use App\Service\Library\Search\Membership\SavedSearchRematch;
 use Doctrine\ORM\EntityManagerInterface;
 
 /** Fills claimed transcripts, then indexes the episodes that gained one and re-matches them against the saved searches. */

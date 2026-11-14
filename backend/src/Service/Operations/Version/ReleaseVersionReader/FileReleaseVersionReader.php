@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Version\ReleaseVersionReader;
+namespace App\Service\Operations\Version\ReleaseVersionReader;
 
-use App\Service\Version\Exception\MalformedVersionFileException;
-use App\Service\Version\Model\ReleaseVersionModel;
+use App\Service\Operations\Version\Exception\MalformedVersionFileException;
+use App\Service\Operations\Version\Model\ReleaseVersionModel;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**

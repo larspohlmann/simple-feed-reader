@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Settings;
+namespace App\Tests\Service\Operations\Settings;
 
-use App\Service\Settings\RelyingPartyIdRule;
+use App\Service\Operations\Settings\RelyingPartyIdRule;
 use PHPUnit\Framework\TestCase;
 
 final class RelyingPartyIdRuleTest extends TestCase

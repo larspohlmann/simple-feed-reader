@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Comments;
+namespace App\Service\Content\Comments;
 
-use App\Service\Comments\Model\CachedCommentsModel;
-use App\Service\Comments\Model\CommentsAnswerModel;
+use App\Service\Content\Comments\Model\CachedCommentsModel;
+use App\Service\Content\Comments\Model\CommentsAnswerModel;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 

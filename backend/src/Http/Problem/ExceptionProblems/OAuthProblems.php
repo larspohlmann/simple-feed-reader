@@ -6,8 +6,8 @@ namespace App\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
-use App\Service\OAuth\Exception\OAuthFailedException;
-use App\Service\OAuth\Exception\UnknownProviderException;
+use App\Service\Identity\OAuth\Exception\OAuthFailedException;
+use App\Service\Identity\OAuth\Exception\UnknownProviderException;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class OAuthProblems implements ExceptionProblemsInterface

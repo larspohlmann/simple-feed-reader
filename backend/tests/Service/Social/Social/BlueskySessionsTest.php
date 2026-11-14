@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
-use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Fetch\Model\ApiResponseModel;
-use App\Service\Social\BlueskySessionCache;
-use App\Service\Social\BlueskySessions;
-use App\Service\Social\Crypto\BlueskySessionCipher;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\Exception\SocialPostRefusedException;
-use App\Service\Social\Model\BlueskySessionModel;
+use App\Service\Foundation\Crypto\InstanceSecretCipher;
+use App\Service\Outbound\Fetch\Model\ApiResponseModel;
+use App\Service\Social\Social\BlueskySessionCache;
+use App\Service\Social\Social\BlueskySessions;
+use App\Service\Social\Social\Crypto\BlueskySessionCipher;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Social\Model\BlueskySessionModel;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;

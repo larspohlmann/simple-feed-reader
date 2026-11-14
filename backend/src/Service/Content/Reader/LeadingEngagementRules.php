@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Content\Reader;
 
 final readonly class LeadingEngagementRules
 {
@@ -19,7 +19,7 @@ final readonly class LeadingEngagementRules
     private const int KICKER_MAX_WORDS = 3;
     private const int KICKER_MAX_CHARS = 30;
 
-    /** Callers pass text already collapsed by {@see \App\Service\Text\Support\Whitespace::collapse()}. */
+    /** Callers pass text already collapsed by {@see \App\Service\Foundation\Text\Support\Whitespace::collapse()}. */
     public function isProse(string $text, int $linkTextLength): bool
     {
         $textLength = mb_strlen($text);

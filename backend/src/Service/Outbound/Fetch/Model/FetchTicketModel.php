@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\Model;
+namespace App\Service\Outbound\Fetch\Model;
 
 /**
  * One feed's fetch request. Bundles the conditional-GET headers with the URL so

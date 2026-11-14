@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Trending\Model;
+namespace App\Tests\Service\Curation\Trending\Model;
 
-use App\Service\Trending\Model\StoryLinkModel;
+use App\Service\Curation\Trending\Model\StoryLinkModel;
 use PHPUnit\Framework\TestCase;
 
 final class StoryLinkModelTest extends TestCase

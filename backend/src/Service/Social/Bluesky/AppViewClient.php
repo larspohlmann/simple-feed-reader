@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Bluesky;
+namespace App\Service\Social\Bluesky;
 
-use App\Service\Bluesky\Exception\AppViewAnswerException;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Bluesky\Support\BlueskyActorKey;
-use App\Service\Fetch\Exception\FeedGoneException;
-use App\Service\Fetch\Exception\FeedThrottledException;
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
-use App\Service\Fetch\HostThrottle;
+use App\Service\Social\Bluesky\Exception\AppViewAnswerException;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Bluesky\Support\BlueskyActorKey;
+use App\Service\Outbound\Fetch\Exception\FeedGoneException;
+use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\FeedFetcher\FeedFetcherInterface;
+use App\Service\Outbound\Fetch\HostThrottle;
 
 /** Bluesky's public AppView, asked anonymously through the SSRF-guarded fetcher. */
 final readonly class AppViewClient

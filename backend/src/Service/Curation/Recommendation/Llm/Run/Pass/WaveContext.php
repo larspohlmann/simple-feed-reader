@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Run\Pass;
+namespace App\Service\Curation\Recommendation\Llm\Run\Pass;
 
-use App\Service\Recommendation\Llm\Prompt\Pass\PromptContext;
-use App\Service\Recommendation\Pool\Model\CandidatePoolSummaryModel;
-use App\Service\Recommendation\Run\BatchWave\BatchWaveInterface;
-use App\Service\Recommendation\Run\Model\WaveBatchModel;
-use App\Service\Recommendation\Run\Pass\TickContext;
+use App\Service\Curation\Recommendation\Llm\Prompt\Pass\PromptContext;
+use App\Service\Curation\Recommendation\Pool\Model\CandidatePoolSummaryModel;
+use App\Service\Curation\Recommendation\Run\BatchWave\BatchWaveInterface;
+use App\Service\Curation\Recommendation\Run\Model\WaveBatchModel;
+use App\Service\Curation\Recommendation\Run\Pass\TickContext;
 
 final class WaveContext implements BatchWaveInterface
 {

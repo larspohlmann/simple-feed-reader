@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Text\Support;
+namespace App\Tests\Service\Foundation\Text\Support;
 
-use App\Service\Text\Support\LinkedPlainText;
+use App\Service\Foundation\Text\Support\LinkedPlainText;
 use PHPUnit\Framework\TestCase;
 
 final class LinkedPlainTextTest extends TestCase

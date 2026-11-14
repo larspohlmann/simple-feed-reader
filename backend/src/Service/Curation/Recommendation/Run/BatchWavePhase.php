@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run;
+namespace App\Service\Curation\Recommendation\Run;
 
 use App\Entity\RecommendationRun;
-use App\Service\Ai\Exception\ProviderRateLimitedException;
-use App\Service\Ai\Exception\RetryableProviderException;
-use App\Service\Recommendation\Run\Model\BatchWaveResultModel;
-use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
-use App\Service\Recommendation\Run\Model\TickDriver;
-use App\Service\Recommendation\Run\Model\WaveBatchModel;
-use App\Service\Recommendation\Run\Pass\TickContext;
+use App\Service\Curation\Ai\Exception\ProviderRateLimitedException;
+use App\Service\Curation\Ai\Exception\RetryableProviderException;
+use App\Service\Curation\Recommendation\Run\Model\BatchWaveResultModel;
+use App\Service\Curation\Recommendation\Run\Model\RecommendationRunReportModel;
+use App\Service\Curation\Recommendation\Run\Model\TickDriver;
+use App\Service\Curation\Recommendation\Run\Model\WaveBatchModel;
+use App\Service\Curation\Recommendation\Run\Pass\TickContext;
 use Doctrine\ORM\EntityManagerInterface;
 
 /** The batch phase every engine shares; the engine supplies only the wave itself. */

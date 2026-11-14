@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\ReaderAudit;
+namespace App\Service\Content\ReaderAudit;
 
 use App\Repository\ReaderAuditRepository;
-use App\Service\ReaderAudit\Model\AuditSampleModel;
-use App\Service\ReaderAudit\Model\SampledEntryModel;
-use App\Service\ReaderAudit\Support\DatabaseValue;
+use App\Service\Content\ReaderAudit\Model\AuditSampleModel;
+use App\Service\Content\ReaderAudit\Model\SampledEntryModel;
+use App\Service\Content\ReaderAudit\Support\DatabaseValue;
 
 /**
  * Draws the audit sample stratified by feed: every feed gives one article before any gives a second. The shuffle is

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search\EntrySearch;
+namespace App\Service\Library\Search\EntrySearch;
 
 use App\Repository\EntryListRepository;
 use App\Repository\EntrySearchQuery;
-use App\Service\Search\Model\EntrySearchResultModel;
+use App\Service\Library\Search\Model\EntrySearchResultModel;
 
 /**
  * Matching by an AND of escaped LIKE predicates — the one implementation the

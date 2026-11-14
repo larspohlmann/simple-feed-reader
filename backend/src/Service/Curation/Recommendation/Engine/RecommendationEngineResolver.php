@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Engine;
+namespace App\Service\Curation\Recommendation\Engine;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
-use App\Service\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
-use App\Service\Recommendation\Engine\RecommendationEngine\RecommendationEngineInterface;
+use App\Service\Curation\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
+use App\Service\Curation\Recommendation\Engine\RecommendationEngine\RecommendationEngineInterface;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;

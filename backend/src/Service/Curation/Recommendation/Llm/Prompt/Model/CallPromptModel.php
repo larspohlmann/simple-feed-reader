@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Prompt\Model;
+namespace App\Service\Curation\Recommendation\Llm\Prompt\Model;
 
 final readonly class CallPromptModel
 {

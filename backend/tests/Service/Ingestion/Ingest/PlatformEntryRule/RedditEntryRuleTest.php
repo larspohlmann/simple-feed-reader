@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Ingest\PlatformEntryRule;
+namespace App\Tests\Service\Ingestion\Ingest\PlatformEntryRule;
 
 use App\Entity\Headline;
 use App\Enum\CommentsLoad;
-use App\Service\Ingest\PlatformEntryRule\RedditEntryRule;
-use App\Service\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Ingest\PlatformEntryRule\RedditEntryRule;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Tests\Support\FeedFormatParsers;
 use App\Tests\Support\ReadsFixtures;
 use PHPUnit\Framework\TestCase;

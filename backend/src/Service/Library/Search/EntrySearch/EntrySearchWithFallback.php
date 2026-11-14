@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search\EntrySearch;
+namespace App\Service\Library\Search\EntrySearch;
 
 use App\Repository\EntrySearchQuery;
-use App\Service\Search\Exception\SearchEngineUnavailableException;
-use App\Service\Search\Model\EntrySearchResultModel;
-use App\Service\Search\SearchEngineCapability;
+use App\Service\Library\Search\Exception\SearchEngineUnavailableException;
+use App\Service\Library\Search\Model\EntrySearchResultModel;
+use App\Service\Library\Search\SearchEngineCapability;
 use Psr\Log\LoggerInterface;
 
 /**

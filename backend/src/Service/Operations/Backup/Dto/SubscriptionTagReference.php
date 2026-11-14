@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Dto;
+namespace App\Service\Operations\Backup\Dto;
 
 use App\Entity\SubscriptionTag;
-use App\Service\Backup\Support\LineField;
+use App\Service\Operations\Backup\Support\LineField;
 
 /**
  * A tag attached to a subscription, referenced by name rather than id — the

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Settings;
+namespace App\Tests\Service\Operations\Settings;
 
 use App\Entity\InstanceSettingsUpdate;
-use App\Service\Settings\InstanceSettings;
-use App\Service\Settings\PublicBaseUrl\ConfiguredPublicBaseUrl;
+use App\Service\Operations\Settings\InstanceSettings;
+use App\Service\Operations\Settings\PublicBaseUrl\ConfiguredPublicBaseUrl;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FinishesWorkerMessages;
 

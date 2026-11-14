@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\OAuth\Oidc\Pass;
+namespace App\Service\Identity\OAuth\Oidc\Pass;
 
-use App\Service\OAuth\Exception\OAuthFailedException;
-use App\Service\OAuth\Oidc\Model\IdTokenModel;
+use App\Service\Identity\OAuth\Exception\OAuthFailedException;
+use App\Service\Identity\OAuth\Oidc\Model\IdTokenModel;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 

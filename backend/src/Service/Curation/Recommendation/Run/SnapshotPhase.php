@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run;
+namespace App\Service\Curation\Recommendation\Run;
 
-use App\Service\Recommendation\Engine\RecommendationEngineResolver;
-use App\Service\Recommendation\Pool\Model\ArticleLineModel;
-use App\Service\Recommendation\Pool\Model\CandidatePoolRequestModel;
-use App\Service\Recommendation\Pool\RecommendationCandidateLoader;
-use App\Service\Recommendation\Profile\Model\RunProfileState;
-use App\Service\Recommendation\Profile\ProfileForRun\ProfileForRunInterface;
-use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
-use App\Service\Recommendation\Run\Pass\TickContext;
+use App\Service\Curation\Recommendation\Engine\RecommendationEngineResolver;
+use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Curation\Recommendation\Pool\Model\CandidatePoolRequestModel;
+use App\Service\Curation\Recommendation\Pool\RecommendationCandidateLoader;
+use App\Service\Curation\Recommendation\Profile\Model\RunProfileState;
+use App\Service\Curation\Recommendation\Profile\ProfileForRun\ProfileForRunInterface;
+use App\Service\Curation\Recommendation\Run\Model\RecommendationRunReportModel;
+use App\Service\Curation\Recommendation\Run\Pass\TickContext;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 

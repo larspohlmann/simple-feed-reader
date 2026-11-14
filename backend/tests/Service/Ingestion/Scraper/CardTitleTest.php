@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Scraper;
+namespace App\Tests\Service\Ingestion\Scraper;
 
-use App\Service\Scraper\CardTitle;
+use App\Service\Ingestion\Scraper\CardTitle;
 use App\Tests\Support\ParsesHtml;
 use Dom\Element;
 use PHPUnit\Framework\TestCase;

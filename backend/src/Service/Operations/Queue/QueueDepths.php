@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Queue;
+namespace App\Service\Operations\Queue;
 
 use App\Enum\ShareEnrichmentKind;
 use App\Repository\DueFeedCriteria;
@@ -13,11 +13,11 @@ use App\Repository\PendingImageVerificationRepository;
 use App\Repository\ProfileRunRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Repository\ShareEnrichmentBacklogRepository;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Queue\Model\QueueBacklogModel;
-use App\Service\Queue\Model\QueueDepthModel;
-use App\Service\Queue\Model\QueueName;
-use App\Service\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Operations\Queue\Model\QueueBacklogModel;
+use App\Service\Operations\Queue\Model\QueueDepthModel;
+use App\Service\Operations\Queue\Model\QueueName;
+use App\Service\Ingestion\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
 
 final readonly class QueueDepths
 {

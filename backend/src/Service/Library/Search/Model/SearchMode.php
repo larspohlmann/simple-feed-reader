@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search\Model;
+namespace App\Service\Library\Search\Model;
 
 /**
  * How a query's terms match, decided once for the whole query: Substring by default, WholeWord after a trailing

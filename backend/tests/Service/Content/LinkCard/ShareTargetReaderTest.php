@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\LinkCard;
+namespace App\Tests\Service\Content\LinkCard;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\QuotedPostContent;
-use App\Service\LinkCard\ShareTargetReader;
+use App\Service\Content\LinkCard\ShareTargetReader;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\StubPageCardReader;
 use App\Tests\Support\StubQuotedPostSource;

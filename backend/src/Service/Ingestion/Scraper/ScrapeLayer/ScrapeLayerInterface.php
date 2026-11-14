@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Scraper\ScrapeLayer;
+namespace App\Service\Ingestion\Scraper\ScrapeLayer;
 
-use App\Service\Scraper\Model\ScrapedItemModel;
+use App\Service\Ingestion\Scraper\Model\ScrapedItemModel;
 use Dom\HTMLDocument;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 

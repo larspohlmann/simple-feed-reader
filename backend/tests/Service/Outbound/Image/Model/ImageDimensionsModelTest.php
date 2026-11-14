@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Image\Model;
+namespace App\Tests\Service\Outbound\Image\Model;
 
-use App\Service\Image\Model\ImageDimensionsModel;
+use App\Service\Outbound\Image\Model\ImageDimensionsModel;
 use App\Tests\Support\PngImageFactory;
 use PHPUnit\Framework\TestCase;
 

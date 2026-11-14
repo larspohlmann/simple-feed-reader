@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup;
+namespace App\Service\Operations\Backup;
 
 use App\Entity\User;
 use App\Repository\EntryRepository;
 use App\Repository\SubscribedEntryCountRepository;
 use App\Repository\FeedRepository;
-use App\Service\Backup\Dto\BackupHeader;
-use App\Service\Backup\Dto\EntryLine;
-use App\Service\Backup\Dto\EntryShareLine;
-use App\Service\Backup\Dto\EntryStateLine;
-use App\Service\Backup\Exception\BackupDoesNotFitException;
-use App\Service\Backup\Exception\InvalidBackupException;
+use App\Service\Operations\Backup\Dto\BackupHeader;
+use App\Service\Operations\Backup\Dto\EntryLine;
+use App\Service\Operations\Backup\Dto\EntryShareLine;
+use App\Service\Operations\Backup\Dto\EntryStateLine;
+use App\Service\Operations\Backup\Exception\BackupDoesNotFitException;
+use App\Service\Operations\Backup\Exception\InvalidBackupException;
 
 /**
  * Pass 1 of an entry-part restore, writing nothing: the part is an entry part,

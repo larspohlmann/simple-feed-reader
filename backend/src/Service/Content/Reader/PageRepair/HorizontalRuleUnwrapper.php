@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\PageRepair;
+namespace App\Service\Content\Reader\PageRepair;
 
 use Dom\Element;
 use Dom\HTMLDocument;

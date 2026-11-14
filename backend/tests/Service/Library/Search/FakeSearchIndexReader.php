@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Search;
+namespace App\Tests\Service\Library\Search;
 
-use App\Service\Search\Index\Model\IndexMatchesModel;
-use App\Service\Search\Index\Model\IndexSearchModel;
-use App\Service\Search\Index\SearchIndexReader\SearchIndexReaderInterface;
+use App\Service\Library\Search\Index\Model\IndexMatchesModel;
+use App\Service\Library\Search\Index\Model\IndexSearchModel;
+use App\Service\Library\Search\Index\SearchIndexReader\SearchIndexReaderInterface;
 
 /**
  * Answers find() with the matches it was built with, or throws $failure when given one, the same shape as

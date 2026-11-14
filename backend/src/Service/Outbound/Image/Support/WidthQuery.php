@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Image\Support;
+namespace App\Service\Outbound\Image\Support;
 
 /** On-demand resizers (WordPress VIP, Jetpack Photon, Sanity, imgix) read the target width from `w=`. */
 final class WidthQuery

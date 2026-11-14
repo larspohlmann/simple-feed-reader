@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Parser;
+namespace App\Tests\Service\Ingestion\Parser;
 
 use App\Entity\ImageRendition;
-use App\Service\Parser\ItemImageExtractor;
-use App\Service\Parser\Pass\CoreElement;
+use App\Service\Ingestion\Parser\ItemImageExtractor;
+use App\Service\Ingestion\Parser\Pass\CoreElement;
 use App\Tests\Support\FeedItemFixtures;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

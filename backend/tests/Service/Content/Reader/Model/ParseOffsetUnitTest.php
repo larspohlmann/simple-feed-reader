@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Model;
+namespace App\Tests\Service\Content\Reader\Model;
 
-use App\Service\Reader\Factory\StrictDateFormatterFactory;
-use App\Service\Reader\Model\ParseOffsetUnit;
+use App\Service\Content\Reader\Factory\StrictDateFormatterFactory;
+use App\Service\Content\Reader\Model\ParseOffsetUnit;
 use PHPUnit\Framework\TestCase;
 
 final class ParseOffsetUnitTest extends TestCase

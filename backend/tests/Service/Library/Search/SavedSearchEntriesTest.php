@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Search;
+namespace App\Tests\Service\Library\Search;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
@@ -11,7 +11,7 @@ use App\Entity\SavedSearchEntry;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\SavedSearchListQuery;
-use App\Service\Search\SavedSearchEntries;
+use App\Service\Library\Search\SavedSearchEntries;
 use App\Tests\DbTestCase;
 
 final class SavedSearchEntriesTest extends DbTestCase

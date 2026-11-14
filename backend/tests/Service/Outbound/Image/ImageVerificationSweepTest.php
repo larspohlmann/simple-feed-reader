@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Image;
+namespace App\Tests\Service\Outbound\Image;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\ImageRendition;
 use App\Repository\PendingImageVerificationRepository;
 use App\Repository\ProbedLadderRepository;
-use App\Service\Image\Exception\GuardedImageRejectedException;
-use App\Service\Image\Exception\GuardedImageUnavailableException;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Image\ImageVerificationSweep;
-use App\Service\Image\ImageVerifier;
-use App\Service\Image\Model\ImageVerificationBudgetModel;
+use App\Service\Outbound\Image\Exception\GuardedImageRejectedException;
+use App\Service\Outbound\Image\Exception\GuardedImageUnavailableException;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Outbound\Image\ImageVerificationSweep;
+use App\Service\Outbound\Image\ImageVerifier;
+use App\Service\Outbound\Image\Model\ImageVerificationBudgetModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RenditionProbes;
 use App\Tests\Support\PendingImageFixtures;

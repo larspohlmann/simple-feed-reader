@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reading;
+namespace App\Tests\Service\Library\Reading;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\User;
 use App\Repository\SharingSettingsRepository;
-use App\Service\Reading\EntryShareRecorder;
-use App\Service\Reading\EntryShares;
+use App\Service\Library\Reading\EntryShareRecorder;
+use App\Service\Library\Reading\EntryShares;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\FailingEntryShareStore;

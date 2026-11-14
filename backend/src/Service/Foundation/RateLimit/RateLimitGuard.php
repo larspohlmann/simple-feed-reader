@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\RateLimit;
+namespace App\Service\Foundation\RateLimit;
 
 use App\Entity\User;
-use App\Service\RateLimit\Exception\RateLimitedException;
+use App\Service\Foundation\RateLimit\Exception\RateLimitedException;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\RateLimiter\LimiterInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;

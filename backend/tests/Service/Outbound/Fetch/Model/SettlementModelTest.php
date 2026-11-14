@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch\Model;
+namespace App\Tests\Service\Outbound\Fetch\Model;
 
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Fetch\Model\SettlementModel;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Outbound\Fetch\Model\SettlementModel;
 use App\Tests\Support\FeedTickets;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

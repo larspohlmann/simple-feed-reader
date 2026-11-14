@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Model;
+namespace App\Service\Operations\Backup\Model;
 
 /**
  * Rows written, not lines read: a feed or entry the instance already holds is referenced, never re-created, so

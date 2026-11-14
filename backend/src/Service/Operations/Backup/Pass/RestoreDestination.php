@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Pass;
+namespace App\Service\Operations\Backup\Pass;
 
 use App\Entity\User;
 

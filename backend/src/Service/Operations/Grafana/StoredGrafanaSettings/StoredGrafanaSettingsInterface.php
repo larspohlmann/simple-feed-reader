@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Grafana\StoredGrafanaSettings;
+namespace App\Service\Operations\Grafana\StoredGrafanaSettings;
 
 use App\Entity\GrafanaSettings;
 

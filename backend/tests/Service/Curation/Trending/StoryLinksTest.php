@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Trending;
+namespace App\Tests\Service\Curation\Trending;
 
 use App\Enum\TrendingWindow;
-use App\Service\Trending\Model\StoryLinkModel;
+use App\Service\Curation\Trending\Model\StoryLinkModel;
 use App\Tests\Support\TrendingRuns;
 use App\Tests\Support\TrendingWiring;
 use PHPUnit\Framework\TestCase;

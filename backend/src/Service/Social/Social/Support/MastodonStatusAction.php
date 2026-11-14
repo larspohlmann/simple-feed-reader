@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
 /** The path of a status of the account's own instance, `/api/v1/statuses/<id>`, and of an action on it. */
 final class MastodonStatusAction

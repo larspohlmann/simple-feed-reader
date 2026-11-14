@@ -5,9 +5,9 @@ declare(strict_types=1);
 // Fixtures for ServiceRoleRuleTest, excluded from `composer stan` like everything in this directory.
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-namespace App\Service\Shop {
+namespace App\Service\Fixture\Shop {
     use App\DependencyInjection\ProcessLifetimeState;
-    use App\Service\Shop\Model\Price;
+    use App\Service\Fixture\Shop\Model\Price;
     use Psr\Clock\ClockInterface;
     use Symfony\Component\DependencyInjection\Attribute\Autowire;
     use Symfony\Contracts\Service\ResetInterface;
@@ -228,7 +228,7 @@ namespace App\Service\Shop {
     }
 }
 
-namespace App\Service\Shop\Rules {
+namespace App\Service\Fixture\Shop\Rules {
     interface DiscountRule
     {
         public function applies(): bool;
@@ -243,7 +243,7 @@ namespace App\Service\Shop\Rules {
     }
 }
 
-namespace App\Service\Shop\Basket {
+namespace App\Service\Fixture\Shop\Basket {
     interface BasketInterface
     {
         public function count(): int;
@@ -266,7 +266,7 @@ namespace App\Service\Shop\Basket {
     }
 }
 
-namespace App\Service\Shop\Exception {
+namespace App\Service\Fixture\Shop\Exception {
     interface ShopFailure extends \Throwable
     {
     }
@@ -276,7 +276,7 @@ namespace App\Service\Shop\Exception {
     }
 }
 
-namespace App\Service\Shop\Factory {
+namespace App\Service\Fixture\Shop\Factory {
     final readonly class InvoiceBuilder
     {
         public function invoice(): string
@@ -286,9 +286,9 @@ namespace App\Service\Shop\Factory {
     }
 }
 
-namespace App\Service\Shop\Model {
+namespace App\Service\Fixture\Shop\Model {
     use App\Entity\User;
-    use App\Service\Shop\Dto\OrderLine;
+    use App\Service\Fixture\Shop\Dto\OrderLine;
     use Psr\Clock\ClockInterface;
 
     final readonly class Price
@@ -332,7 +332,7 @@ namespace App\Service\Shop\Model {
     }
 }
 
-namespace App\Service\Shop\Dto {
+namespace App\Service\Fixture\Shop\Dto {
     final readonly class OrderLine
     {
         public function __construct(public string $sku)
@@ -368,7 +368,7 @@ namespace App\Service\Shop\Dto {
     }
 }
 
-namespace App\Service\Shop\Support {
+namespace App\Service\Fixture\Shop\Support {
     final readonly class Clerk
     {
         public function help(): string
@@ -378,7 +378,7 @@ namespace App\Service\Shop\Support {
     }
 }
 
-namespace App\Service\Shop\Message {
+namespace App\Service\Fixture\Shop\Message {
     final readonly class RestockShelves
     {
     }
@@ -388,9 +388,9 @@ namespace App\Service\Shop\Message {
     }
 }
 
-namespace App\Service\Shop\Handler {
-    use App\Service\Shop\Message\CountTills;
-    use App\Service\Shop\Message\RestockShelves;
+namespace App\Service\Fixture\Shop\Handler {
+    use App\Service\Fixture\Shop\Message\CountTills;
+    use App\Service\Fixture\Shop\Message\RestockShelves;
 
     final readonly class RestockHandler
     {
@@ -407,8 +407,8 @@ namespace App\Service\Shop\Handler {
     }
 }
 
-namespace App\Service\Till {
-    use App\Service\Shop\PriceSource;
+namespace App\Service\Fixture\Till {
+    use App\Service\Fixture\Shop\PriceSource;
 
     final readonly class TillPriceSource implements PriceSource
     {
@@ -419,7 +419,7 @@ namespace App\Service\Till {
     }
 }
 
-namespace App\Service\Crate\Factory {
+namespace App\Service\Fixture\Crate\Factory {
     interface CrateFactoryInterface
     {
         public function crate(): string;
@@ -434,7 +434,7 @@ namespace App\Service\Crate\Factory {
     }
 }
 
-namespace App\Service\Label\Factory {
+namespace App\Service\Fixture\Label\Factory {
     interface LabelFactoryInterface
     {
         public function label(): string;
@@ -457,7 +457,7 @@ namespace App\Service\Label\Factory {
     }
 }
 
-namespace App\Service\Badge\Model {
+namespace App\Service\Fixture\Badge\Model {
     interface ColourModelInterface
     {
         public function hex(): string;
@@ -505,21 +505,21 @@ namespace App\EventListener\Fixtures {
     }
 }
 
-namespace App\Service\Stamp\Factory {
+namespace App\Service\Fixture\Stamp\Factory {
     interface StampSource
     {
         public function stamp(): string;
     }
 }
 
-namespace App\Service\Stamp\Model {
+namespace App\Service\Fixture\Stamp\Model {
     interface InkInterface
     {
         public function ink(): string;
     }
 }
 
-namespace App\Service\Wrap {
+namespace App\Service\Fixture\Wrap {
     final readonly class Ribbon
     {
         public function tie(string $item): string
@@ -548,7 +548,7 @@ namespace App\Service\Wrap {
     }
 }
 
-namespace App\Service\Wrap\Dto {
+namespace App\Service\Fixture\Wrap\Dto {
     final readonly class WrapRequest
     {
         public function __construct(public string $paper)
@@ -557,8 +557,8 @@ namespace App\Service\Wrap\Dto {
     }
 }
 
-namespace App\Service\Wrap {
-    use App\Service\Wrap\Dto\WrapRequest;
+namespace App\Service\Fixture\Wrap {
+    use App\Service\Fixture\Wrap\Dto\WrapRequest;
 
     final readonly class PaperPicker
     {
@@ -573,7 +573,7 @@ namespace App\Service\Wrap {
     }
 }
 
-namespace App\Service\Knot {
+namespace App\Service\Fixture\Knot {
     final class Counter
     {
         private int $count = 0;
@@ -612,13 +612,13 @@ namespace App\Service\Knot {
     }
 }
 
-namespace App\Service\Knot\Pass {
+namespace App\Service\Fixture\Knot\Pass {
     final readonly class Ticket
     {
     }
 }
 
-namespace App\Service\Knot {
+namespace App\Service\Fixture\Knot {
     final readonly class Spool
     {
         public function __construct(private Pass\Ticket $ticket)
@@ -658,7 +658,7 @@ namespace App\Service\Knot {
     }
 }
 
-namespace App\Service\Till\Support {
+namespace App\Service\Fixture\Till\Support {
     final class Change
     {
         private function __construct()
@@ -706,7 +706,7 @@ namespace App\Service\Till\Support {
     }
 }
 
-namespace App\Service\Till\Pass {
+namespace App\Service\Fixture\Till\Pass {
     final class OpeningFloat
     {
         private function __construct()
@@ -720,7 +720,7 @@ namespace App\Service\Till\Pass {
     }
 }
 
-namespace App\Service\Till\Model {
+namespace App\Service\Fixture\Till\Model {
     final readonly class TaxRateModel
     {
         private function __construct()
@@ -778,7 +778,7 @@ namespace App\Security\Fixtures {
     }
 }
 
-namespace App\Service\Ledger\Dto {
+namespace App\Service\Fixture\Ledger\Dto {
     final readonly class EntryLine
     {
         public function __construct(public int $cents)
@@ -787,8 +787,8 @@ namespace App\Service\Ledger\Dto {
     }
 }
 
-namespace App\Service\Ledger\Model {
-    use App\Service\Ledger\Dto\EntryLine;
+namespace App\Service\Fixture\Ledger\Model {
+    use App\Service\Fixture\Ledger\Dto\EntryLine;
 
     final readonly class LedgerModel
     {
@@ -799,7 +799,7 @@ namespace App\Service\Ledger\Model {
     }
 }
 
-namespace App\Service\Probe {
+namespace App\Service\Fixture\Probe {
     interface Sensor
     {
     }

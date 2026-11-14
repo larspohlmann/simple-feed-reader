@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch\Model;
+namespace App\Tests\Service\Outbound\Fetch\Model;
 
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\Model\ApiResponseModel;
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Fetch\Model\FetchResponseModel;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\Model\ApiResponseModel;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Response;
 

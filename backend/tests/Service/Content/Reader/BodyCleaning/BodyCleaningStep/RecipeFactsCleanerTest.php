@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
+namespace App\Tests\Service\Content\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\RecipeFactsCleaner;
-use App\Service\Reader\RecipeFacts\RecipeFactsMarkup;
-use App\Service\Reader\RecipeFacts\RecipeFactsRecognizer;
-use App\Service\Sanitize\EntrySanitizer;
-use App\Service\Sanitize\TrailingBlankRemover;
+use App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\RecipeFactsCleaner;
+use App\Service\Content\Reader\RecipeFacts\RecipeFactsMarkup;
+use App\Service\Content\Reader\RecipeFacts\RecipeFactsRecognizer;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Foundation\Sanitize\TrailingBlankRemover;
 use App\Tests\Support\BodyCleaningPasses;
 use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;

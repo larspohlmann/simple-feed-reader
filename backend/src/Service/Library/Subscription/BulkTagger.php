@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Subscription;
+namespace App\Service\Library\Subscription;
 
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Repository\SubscriptionTagRepository;
 use App\Repository\TagRepository;
-use App\Service\Subscription\Model\BulkSubscribeItemModel;
-use App\Service\Subscription\Model\TagStyleModel;
-use App\Service\Subscription\Pass\BulkSubscribeBatch;
-use App\Service\Subscription\Pass\BulkSubscribePositions;
-use App\Service\Tag\Factory\TagFactory;
-use App\Service\Tag\Model\TagDetailsModel;
+use App\Service\Library\Subscription\Model\BulkSubscribeItemModel;
+use App\Service\Library\Subscription\Model\TagStyleModel;
+use App\Service\Library\Subscription\Pass\BulkSubscribeBatch;
+use App\Service\Library\Subscription\Pass\BulkSubscribePositions;
+use App\Service\Library\Tag\Factory\TagFactory;
+use App\Service\Library\Tag\Model\TagDetailsModel;
 use Doctrine\ORM\EntityManagerInterface;
 
 /** Tags a bulk subscription with its item's path; the placement rule decides silently, so an import never fails on it. */

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media;
+namespace App\Tests\Service\Content\Reader\Media;
 
 use App\Command\DumpEmbedFrameAllowlistCommand;
-use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Media\Model\EmbedKind;
-use App\Service\Reader\Media\Model\EmbedShape;
-use App\Tests\Service\Reader\Media\EmbedProvider\MatchesEmbedFrames;
+use App\Service\Content\Reader\Media\EmbedProviders;
+use App\Service\Content\Reader\Media\Model\EmbedKind;
+use App\Service\Content\Reader\Media\Model\EmbedShape;
+use App\Tests\Service\Content\Reader\Media\EmbedProvider\MatchesEmbedFrames;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Worker\Handler;
+namespace App\Service\Operations\Worker\Handler;
 
-use App\Service\Transcript\Model\TranscriptBudgetModel;
-use App\Service\Transcript\TranscriptSweep;
-use App\Service\Worker\Message\CompleteQueuedTranscripts;
+use App\Service\Content\Transcript\Model\TranscriptBudgetModel;
+use App\Service\Content\Transcript\TranscriptSweep;
+use App\Service\Operations\Worker\Message\CompleteQueuedTranscripts;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 

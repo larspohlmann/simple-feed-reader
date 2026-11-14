@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run\Model;
+namespace App\Service\Curation\Recommendation\Run\Model;
 
 /** A resolved batch wave: the winners in plan order, and whether a 429 was seen, which halves the run's concurrency. */
 final readonly class BatchWaveResultModel

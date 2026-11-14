@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch\Model;
+namespace App\Tests\Service\Outbound\Fetch\Model;
 
 use App\Enum\ProxyType;
-use App\Service\Fetch\Model\FetchAttemptModel;
-use App\Service\Fetch\Model\ProxyConfigModel;
+use App\Service\Outbound\Fetch\Model\FetchAttemptModel;
+use App\Service\Outbound\Fetch\Model\ProxyConfigModel;
 use App\Tests\Support\FeedTickets;
 use PHPUnit\Framework\TestCase;
 

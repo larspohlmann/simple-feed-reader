@@ -10,7 +10,7 @@ use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 use App\Entity\StoredList;
 use App\Entity\ThreadPost;
-use App\Service\Social\Model\ThreadPostModel;
+use App\Service\Social\Social\Model\ThreadPostModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 

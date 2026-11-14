@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Subscription\SubscribeRoute;
+namespace App\Service\Library\Subscription\SubscribeRoute;
 
-use App\Service\Subscription\Model\SubscribeOutcomeModel;
-use App\Service\Subscription\Model\SubscribeRequestModel;
+use App\Service\Library\Subscription\Model\SubscribeOutcomeModel;
+use App\Service\Library\Subscription\Model\SubscribeRequestModel;
 
 /** A source that subscribes some URLs its own way, asked before discovery. */
 interface SubscribeRouteInterface

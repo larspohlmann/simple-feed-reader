@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
-use App\Service\Social\Exception\SocialAccountUnresolvableException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Model\ImportCandidateModel;
-use App\Service\Social\Model\ProfileFeedSubscriptionModel;
-use App\Service\Social\Pass\FollowMatching;
+use App\Service\Social\Social\Exception\SocialAccountUnresolvableException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Model\ImportCandidateModel;
+use App\Service\Social\Social\Model\ProfileFeedSubscriptionModel;
+use App\Service\Social\Social\Pass\FollowMatching;
 
 final readonly class FollowMatcher
 {

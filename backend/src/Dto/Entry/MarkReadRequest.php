@@ -7,8 +7,8 @@ namespace App\Dto\Entry;
 use App\Enum\FeedGroup;
 use App\Exception\ValidationException;
 use App\Repository\NetworkScope;
-use App\Service\Reading\Model\ReadScopeKind;
-use App\Service\Reading\Model\ReadScopeModel;
+use App\Service\Library\Reading\Model\ReadScopeKind;
+use App\Service\Library\Reading\Model\ReadScopeModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class MarkReadRequest

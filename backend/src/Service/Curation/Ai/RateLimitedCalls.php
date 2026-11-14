@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai;
+namespace App\Service\Curation\Ai;
 
-use App\Service\Ai\Model\RateLimitedResultModel;
-use App\Service\Ai\Model\RetryPlanModel;
-use App\Service\Ai\RateLimitedOutcome\RateLimitedOutcomeInterface;
+use App\Service\Curation\Ai\Model\RateLimitedResultModel;
+use App\Service\Curation\Ai\Model\RetryPlanModel;
+use App\Service\Curation\Ai\RateLimitedOutcome\RateLimitedOutcomeInterface;
 use Symfony\Component\Clock\ClockInterface;
 
 /**

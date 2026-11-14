@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\SweepReportJson;
 
-use App\Service\Transcript\Model\TranscriptSweepReportModel;
+use App\Service\Content\Transcript\Model\TranscriptSweepReportModel;
 
 final readonly class TranscriptSweepJson implements SweepReportJsonInterface
 {

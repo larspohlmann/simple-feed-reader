@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Subscription;
+namespace App\Tests\Service\Library\Subscription;
 
 use App\Entity\Entry;
 use App\Entity\EntryState;
@@ -15,8 +15,8 @@ use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\SourceFormat;
 use App\Enum\TrendingWindow;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Subscription\SubscriptionTallyReader;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Library\Subscription\SubscriptionTallyReader;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 

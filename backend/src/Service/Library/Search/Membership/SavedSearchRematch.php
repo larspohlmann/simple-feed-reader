@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search\Membership;
+namespace App\Service\Library\Search\Membership;
 
 use App\Entity\Entry;
 use App\Repository\SavedSearchRepository;
-use App\Service\Search\Exception\SearchEngineUnavailableException;
-use App\Service\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
-use App\Service\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface;
-use App\Service\Search\Support\SavedSearchTerms;
+use App\Service\Library\Search\Exception\SearchEngineUnavailableException;
+use App\Service\Library\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
+use App\Service\Library\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface;
+use App\Service\Library\Search\Support\SavedSearchTerms;
 use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
 

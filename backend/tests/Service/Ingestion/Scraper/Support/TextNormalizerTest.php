@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Scraper\Support;
+namespace App\Tests\Service\Ingestion\Scraper\Support;
 
-use App\Service\Scraper\Support\TextNormalizer;
+use App\Service\Ingestion\Scraper\Support\TextNormalizer;
 use PHPUnit\Framework\TestCase;
 
 final class TextNormalizerTest extends TestCase

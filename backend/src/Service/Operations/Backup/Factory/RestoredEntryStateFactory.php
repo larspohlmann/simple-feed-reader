@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Factory;
+namespace App\Service\Operations\Backup\Factory;
 
 use App\Entity\BackedUpReadMark;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\User;
-use App\Service\Backup\Dto\EntryStateLine;
+use App\Service\Operations\Backup\Dto\EntryStateLine;
 use Psr\Clock\ClockInterface;
 
 final readonly class RestoredEntryStateFactory

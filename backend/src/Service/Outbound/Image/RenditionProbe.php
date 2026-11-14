@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Image;
+namespace App\Service\Outbound\Image;
 
 use App\Entity\ImageRendition;
-use App\Service\Image\Model\LeadImageModel;
-use App\Service\Image\Support\RenditionTargets;
+use App\Service\Outbound\Image\Model\LeadImageModel;
+use App\Service\Outbound\Image\Support\RenditionTargets;
 
 final readonly class RenditionProbe
 {

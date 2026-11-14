@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Bluesky\Support;
+namespace App\Service\Social\Bluesky\Support;
 
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Text\Support\HtmlAnchor;
-use App\Service\Text\Support\HtmlEscape;
-use App\Service\Text\Support\ParagraphedText;
-use App\Service\Url\Support\AbsoluteHttpUrl;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Text\Support\HtmlAnchor;
+use App\Service\Foundation\Text\Support\HtmlEscape;
+use App\Service\Foundation\Text\Support\ParagraphedText;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 
 /** A Bluesky post's text as HTML: its facets linked by their UTF-8 byte ranges, everything else escaped. */
 final class BlueskyRichText

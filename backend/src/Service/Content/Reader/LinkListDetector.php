@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Content\Reader;
 
-use App\Service\Reader\Support\BlockText;
+use App\Service\Content\Reader\Support\BlockText;
 use Dom\Element;
 
 final readonly class LinkListDetector

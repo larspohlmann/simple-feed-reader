@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup;
+namespace App\Service\Operations\Backup;
 
 use App\Entity\User;
 use App\Repository\EntryStateRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
-use App\Service\Backup\Model\RestorePreviewModel;
+use App\Service\Operations\Backup\Model\RestorePreviewModel;
 
 /**
  * Inspects the file, refuses it if it does not fit, then describes what the account holds now, for a before/after.

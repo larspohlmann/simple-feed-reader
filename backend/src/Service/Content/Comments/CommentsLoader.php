@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Comments;
+namespace App\Service\Content\Comments;
 
 use App\Entity\Entry;
 use App\Entity\User;
-use App\Service\Comments\CommentsSource\CommentsSourceInterface;
-use App\Service\Comments\Exception\CommentsThrottledException;
-use App\Service\Comments\Exception\CommentsUnavailableException;
-use App\Service\Comments\Exception\NoCommentsFeedException;
-use App\Service\Comments\Model\CachedCommentsModel;
-use App\Service\Comments\Model\CommentsResultModel;
-use App\Service\Comments\Pass\CommentsRequest;
+use App\Service\Content\Comments\CommentsSource\CommentsSourceInterface;
+use App\Service\Content\Comments\Exception\CommentsThrottledException;
+use App\Service\Content\Comments\Exception\CommentsUnavailableException;
+use App\Service\Content\Comments\Exception\NoCommentsFeedException;
+use App\Service\Content\Comments\Model\CachedCommentsModel;
+use App\Service\Content\Comments\Model\CommentsResultModel;
+use App\Service\Content\Comments\Pass\CommentsRequest;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 

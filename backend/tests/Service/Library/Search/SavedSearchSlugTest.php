@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Search;
+namespace App\Tests\Service\Library\Search;
 
-use App\Service\Search\SavedSearchSlug;
+use App\Service\Library\Search\SavedSearchSlug;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\String\Slugger\AsciiSlugger;
 

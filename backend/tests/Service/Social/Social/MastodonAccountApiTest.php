@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
-use App\Service\Fetch\Model\ApiRequestModel;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\Exception\SocialPostRefusedException;
-use App\Service\Social\Exception\SocialTokenScopeMissingException;
-use App\Service\Social\MastodonAccountApi;
+use App\Service\Outbound\Fetch\Model\ApiRequestModel;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
+use App\Service\Social\Social\MastodonAccountApi;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;

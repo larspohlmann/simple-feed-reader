@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader;
+namespace App\Tests\Service\Content\Reader;
 
-use App\Service\Reader\DateLineRecognizer;
-use App\Service\Reader\Factory\StrictDateFormatterFactory;
+use App\Service\Content\Reader\DateLineRecognizer;
+use App\Service\Content\Reader\Factory\StrictDateFormatterFactory;
 use App\Tests\Support\RecordingDateFormatterFactory;
 use PHPUnit\Framework\TestCase;
 

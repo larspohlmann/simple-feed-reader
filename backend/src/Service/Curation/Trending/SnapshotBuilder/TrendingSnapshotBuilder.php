@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Trending\SnapshotBuilder;
+namespace App\Service\Curation\Trending\SnapshotBuilder;
 
 use App\Enum\TrendingWindow;
 use App\Repository\TrendingSnapshotRepository;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Trending\Model\TrendingBuildReportModel;
-use App\Service\Trending\Pass\BuildStopwatch;
-use App\Service\Trending\TrendingGrouping;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Curation\Trending\Model\TrendingBuildReportModel;
+use App\Service\Curation\Trending\Pass\BuildStopwatch;
+use App\Service\Curation\Trending\TrendingGrouping;
 use Doctrine\ORM\EntityManagerInterface;
 
 /** Groups one window and replaces its snapshot in one transaction: readers see the old one until the commit. */

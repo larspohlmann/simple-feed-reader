@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Search\EntrySearch;
+namespace App\Tests\Service\Library\Search\EntrySearch;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
@@ -10,15 +10,15 @@ use App\Entity\User;
 use App\Repository\EntryListRepository;
 use App\Repository\EntrySearchQuery;
 use App\Repository\FeedRepository;
-use App\Service\Search\EntrySearch\EntrySearchWithFallback;
-use App\Service\Search\EntrySearch\IndexedEntrySearch;
-use App\Service\Search\EntrySearch\LikeEntrySearch;
-use App\Service\Search\Exception\SearchEngineUnavailableException;
-use App\Service\Search\Index\SearchIndexReader\SearchIndexReaderInterface;
-use App\Service\Search\Model\SearchTermsModel;
-use App\Service\Search\SearchEngineCapability;
+use App\Service\Library\Search\EntrySearch\EntrySearchWithFallback;
+use App\Service\Library\Search\EntrySearch\IndexedEntrySearch;
+use App\Service\Library\Search\EntrySearch\LikeEntrySearch;
+use App\Service\Library\Search\Exception\SearchEngineUnavailableException;
+use App\Service\Library\Search\Index\SearchIndexReader\SearchIndexReaderInterface;
+use App\Service\Library\Search\Model\SearchTermsModel;
+use App\Service\Library\Search\SearchEngineCapability;
 use App\Tests\DbTestCase;
-use App\Tests\Service\Search\FakeSearchIndexReader;
+use App\Tests\Service\Library\Search\FakeSearchIndexReader;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface;

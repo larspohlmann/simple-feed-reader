@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\PageRepair;
+namespace App\Tests\Service\Content\Reader\PageRepair;
 
-use App\Service\Reader\PageRepair\StylesheetHiddenElementRemover;
+use App\Service\Content\Reader\PageRepair\StylesheetHiddenElementRemover;
 use App\Tests\Support\RepairsPages;
 use PHPUnit\Framework\TestCase;
 

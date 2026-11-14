@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Ordering;
+namespace App\Tests\Service\Foundation\Ordering;
 
-use App\Service\Ordering\PositionReorderer;
+use App\Service\Foundation\Ordering\PositionReorderer;
 use App\Tests\Support\RecordingPositioned;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;

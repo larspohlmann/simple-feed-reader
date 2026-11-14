@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Image\ProbedLadder;
+namespace App\Service\Outbound\Image\ProbedLadder;
 
 use App\Entity\ImageRendition;
 

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Profile\Model;
+namespace App\Service\Curation\Recommendation\Profile\Model;
 
-use App\Service\Recommendation\Pool\Model\RecommendationHistoryModel;
+use App\Service\Curation\Recommendation\Pool\Model\RecommendationHistoryModel;
 
 final readonly class ProfileInputsModel
 {

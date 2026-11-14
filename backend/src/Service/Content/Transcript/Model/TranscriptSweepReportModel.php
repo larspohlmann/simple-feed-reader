@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Transcript\Model;
+namespace App\Service\Content\Transcript\Model;
 
 final readonly class TranscriptSweepReportModel
 {

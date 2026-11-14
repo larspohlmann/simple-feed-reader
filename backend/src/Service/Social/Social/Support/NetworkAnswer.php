@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\Model\ApiResponseModel;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\Model\ApiResponseModel;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 
 final class NetworkAnswer
 {

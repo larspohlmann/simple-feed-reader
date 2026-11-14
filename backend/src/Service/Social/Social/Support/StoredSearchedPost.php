@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Bluesky\Support\AtPostUri;
-use App\Service\Social\Model\SearchedPostModel;
-use App\Service\Social\Model\StoredPostModel;
-use App\Service\Text\Support\PlainText;
+use App\Service\Social\Bluesky\Support\AtPostUri;
+use App\Service\Social\Social\Model\SearchedPostModel;
+use App\Service\Social\Social\Model\StoredPostModel;
+use App\Service\Foundation\Text\Support\PlainText;
 
 /**
  * A stored search result as the reader judges it, its author named as the live search names them: the author page

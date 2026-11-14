@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Subscription;
+namespace App\Service\Library\Subscription;
 
 use App\Entity\User;
 use App\Enum\TrendingWindow;
@@ -11,9 +11,9 @@ use App\Repository\EntryStateRepository;
 use App\Repository\RecommendationItemRepository;
 use App\Repository\SubscriptionEntryCountRepository;
 use App\Repository\UnreadCountRepository;
-use App\Service\Subscription\Model\SubscriptionTalliesModel;
-use App\Service\Subscription\Model\UnreadTotalsModel;
-use App\Service\Trending\TrendingStories;
+use App\Service\Library\Subscription\Model\SubscriptionTalliesModel;
+use App\Service\Library\Subscription\Model\UnreadTotalsModel;
+use App\Service\Curation\Trending\TrendingStories;
 
 final readonly class SubscriptionTallyReader
 {

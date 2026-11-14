@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Settings\Model;
+namespace App\Service\Curation\Recommendation\Settings\Model;
 
 use App\Enum\RecommendationBatchSize;
 

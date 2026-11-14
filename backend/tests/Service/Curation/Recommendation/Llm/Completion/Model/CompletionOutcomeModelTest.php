@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Llm\Completion\Model;
+namespace App\Tests\Service\Curation\Recommendation\Llm\Completion\Model;
 
-use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\Exception\RetryableProviderException;
-use App\Service\Recommendation\Llm\Completion\Model\CompletionOutcomeModel;
+use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
+use App\Service\Curation\Ai\Exception\RetryableProviderException;
+use App\Service\Curation\Recommendation\Llm\Completion\Model\CompletionOutcomeModel;
 use PHPUnit\Framework\TestCase;
 
 final class CompletionOutcomeModelTest extends TestCase

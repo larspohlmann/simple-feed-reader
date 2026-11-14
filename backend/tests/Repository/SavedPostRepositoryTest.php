@@ -27,7 +27,7 @@ use App\Repository\SavedEntryOriginRepository;
 use App\Repository\SavedPostRepository;
 use App\Repository\SocialLikeRepository;
 use App\Repository\ThreadPostRepository;
-use App\Service\SavedPosts\Model\SavedCopyModel;
+use App\Service\Library\SavedPosts\Model\SavedCopyModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\EntryShareFixtures;
 use App\Tests\Support\SavedPostFixtures;

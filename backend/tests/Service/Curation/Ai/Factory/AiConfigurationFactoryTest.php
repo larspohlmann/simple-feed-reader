@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Ai\Factory;
+namespace App\Tests\Service\Curation\Ai\Factory;
 
-use App\Service\Ai\Factory\AiConfigurationFactory;
-use App\Service\Ai\Model\ProviderCredentialsModel;
+use App\Service\Curation\Ai\Factory\AiConfigurationFactory;
+use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
 

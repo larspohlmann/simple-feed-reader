@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Entity\User;
-use App\Service\Comments\CommentsLoader;
-use App\Service\Social\Exception\NoSocialAccountForNetworkException;
-use App\Service\Social\Exception\NotASocialPostException;
-use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostNotFoundException;
+use App\Service\Content\Comments\CommentsLoader;
+use App\Service\Social\Social\Exception\NoSocialAccountForNetworkException;
+use App\Service\Social\Social\Exception\NotASocialPostException;
+use App\Service\Social\Social\Exception\SocialAccountNeedsReconnectException;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 
 /** Likes a reply in an entry's thread; the network keeps the like, so nothing is stored here. */
 final readonly class SocialCommentLikes

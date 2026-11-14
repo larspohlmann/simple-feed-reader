@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Prompt;
+namespace App\Service\Curation\Recommendation\Llm\Prompt;
 
 /**
  * Decodes one reply into a JSON array, tolerating a code fence and, when the whole reply does not parse, the thinking

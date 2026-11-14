@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media;
+namespace App\Service\Content\Reader\Media;
 
 /**
  * Orders media candidates by the tokens their URL shares with the page slug. It reorders and never drops, so a

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Proxy;
+namespace App\Tests\Service\Outbound\Proxy;
 
 use App\Entity\ProxyServerSettings;
 use App\Http\Admin\ProxySettingsJson;
-use App\Service\Proxy\ProxySettings;
-use App\Service\Proxy\StoredProxySettings\StoredProxySettingsInterface;
+use App\Service\Outbound\Proxy\ProxySettings;
+use App\Service\Outbound\Proxy\StoredProxySettings\StoredProxySettingsInterface;
 use App\Tests\Support\ProxyPasswordCiphers;
 use App\Tests\Support\SettingsRequests;
 use Doctrine\ORM\EntityManagerInterface;

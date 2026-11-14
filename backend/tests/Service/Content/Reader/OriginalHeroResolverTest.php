@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader;
+namespace App\Tests\Service\Content\Reader;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Service\Reader\HeroImageSelector;
-use App\Service\Reader\OriginalHeroResolver;
+use App\Service\Content\Reader\HeroImageSelector;
+use App\Service\Content\Reader\OriginalHeroResolver;
 use PHPUnit\Framework\TestCase;
 
 final class OriginalHeroResolverTest extends TestCase

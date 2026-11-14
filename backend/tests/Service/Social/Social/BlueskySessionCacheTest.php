@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
-use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Social\BlueskySessionCache;
-use App\Service\Social\Crypto\BlueskySessionCipher;
-use App\Service\Social\Model\BlueskySessionModel;
+use App\Service\Foundation\Crypto\InstanceSecretCipher;
+use App\Service\Social\Social\BlueskySessionCache;
+use App\Service\Social\Social\Crypto\BlueskySessionCipher;
+use App\Service\Social\Social\Model\BlueskySessionModel;
 use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\TestCase;

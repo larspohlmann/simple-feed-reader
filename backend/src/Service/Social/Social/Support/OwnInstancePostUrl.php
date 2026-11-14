@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Social\Model\SocialPostAddressModel;
-use App\Service\Url\Support\UrlOrigin;
+use App\Service\Social\Social\Model\SocialPostAddressModel;
+use App\Service\Foundation\Url\Support\UrlOrigin;
 
 /** A Mastodon post on the reader's own instance, which resolves the post's address and redirects to its local copy. */
 final class OwnInstancePostUrl

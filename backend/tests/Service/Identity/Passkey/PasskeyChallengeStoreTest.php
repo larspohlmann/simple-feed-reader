@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Passkey;
+namespace App\Tests\Service\Identity\Passkey;
 
-use App\Service\Passkey\Exception\UnknownChallengeException;
-use App\Service\Passkey\PasskeyChallengeStore;
+use App\Service\Identity\Passkey\Exception\UnknownChallengeException;
+use App\Service\Identity\Passkey\PasskeyChallengeStore;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Cache\CacheItemInterface;

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Image\Model\DeclaredImageModel;
-use App\Service\Reader\Model\ExtractionResultModel;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
+use App\Service\Content\Reader\Model\ExtractionResultModel;
 
 final class ReaderJson
 {

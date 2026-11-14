@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
@@ -13,20 +13,20 @@ use App\Enum\SocialAccountStatus;
 use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
 use App\Repository\SocialLikeRepository;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Social\ActingAccountGuard;
-use App\Service\Social\Exception\NoSocialAccountForNetworkException;
-use App\Service\Social\Exception\NotASocialPostException;
-use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\Model\SocialCountsModel;
-use App\Service\Social\Model\SocialPostAddressModel;
-use App\Service\Social\PostLiking;
-use App\Service\Social\SocialCountsCache;
-use App\Service\Social\SocialLikes;
-use App\Service\Social\SocialPostFinder;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Social\Social\ActingAccountGuard;
+use App\Service\Social\Social\Exception\NoSocialAccountForNetworkException;
+use App\Service\Social\Social\Exception\NotASocialPostException;
+use App\Service\Social\Social\Exception\SocialAccountNeedsReconnectException;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Model\SocialCountsModel;
+use App\Service\Social\Social\Model\SocialPostAddressModel;
+use App\Service\Social\Social\PostLiking;
+use App\Service\Social\Social\SocialCountsCache;
+use App\Service\Social\Social\SocialLikes;
+use App\Service\Social\Social\SocialPostFinder;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AssertsRefusal;
 use App\Tests\Support\ConfirmedDeletions;

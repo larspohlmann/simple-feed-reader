@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh;
+namespace App\Service\Ingestion\Refresh;
 
 use App\Repository\SocialFeedRepository;
-use App\Service\Refresh\Pass\PassTickets;
-use App\Service\Refresh\Pass\PassOutcomeStore;
-use App\Service\Refresh\Pass\RefreshPass;
-use App\Service\Refresh\PassFetcher\PassFetcherInterface;
+use App\Service\Ingestion\Refresh\Pass\PassTickets;
+use App\Service\Ingestion\Refresh\Pass\PassOutcomeStore;
+use App\Service\Ingestion\Refresh\Pass\RefreshPass;
+use App\Service\Ingestion\Refresh\PassFetcher\PassFetcherInterface;
 
 /** Stores each of a pass's outcomes as it lands, whatever its feed's kind, one at a time on the one EntityManager. */
 final readonly class RefreshPassRecorder

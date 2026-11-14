@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\Model;
+namespace App\Service\Ingestion\Parser\Model;
 
 /**
  * One visual media item a feed declared: an image or a video, the dimensions the

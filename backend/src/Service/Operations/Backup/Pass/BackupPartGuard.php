@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Pass;
+namespace App\Service\Operations\Backup\Pass;
 
-use App\Service\Backup\BackupReader;
-use App\Service\Backup\Dto\BackupHeader;
-use App\Service\Backup\Exception\InvalidBackupException;
-use App\Service\Backup\Support\BackupSchema;
+use App\Service\Operations\Backup\BackupReader;
+use App\Service\Operations\Backup\Dto\BackupHeader;
+use App\Service\Operations\Backup\Exception\InvalidBackupException;
+use App\Service\Operations\Backup\Support\BackupSchema;
 
 /**
  * Enforces one part's kind grammar and its entry ceiling. A fresh instance

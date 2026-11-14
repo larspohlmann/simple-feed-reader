@@ -2,26 +2,26 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Discovery;
+namespace App\Tests\Service\Sourcing\Discovery;
 
-use App\Service\Discovery\BotChallengePage;
-use App\Service\Discovery\FeedDiscovery\FeedDiscovery;
-use App\Service\Discovery\FeedLinkScanner;
-use App\Service\Discovery\FeedOffer\MixcloudProfileFeed;
-use App\Service\Discovery\FeedOffer\SoundCloudProfileFeed;
-use App\Service\Discovery\FeedOffer\WordPressRestProbe;
-use App\Service\Discovery\FeedOffer\YouTubeVideoChannelFeed;
-use App\Service\Discovery\ShareLinkFeed\ApplePodcastShowFeed;
-use App\Service\Discovery\ShareLinkFeed\FediverseRemoteProfileFeed;
-use App\Service\Discovery\ShareLinkFeed\GitHubRepositoryFeed;
-use App\Service\Discovery\ShareLinkFeed\ShareLinkFeedInterface;
-use App\Service\Discovery\ShareLinkFeed\SubstackProfileFeed;
-use App\Service\Discovery\ShareLinkFeed\YouTubePlaylistFeed;
-use App\Service\Discovery\WellKnownFeedProbe;
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\Model\FetchResponseModel;
-use App\Service\Parser\FeedParser;
-use App\Service\Scraper\HtmlItemExtractor;
+use App\Service\Sourcing\Discovery\BotChallengePage;
+use App\Service\Sourcing\Discovery\FeedDiscovery\FeedDiscovery;
+use App\Service\Sourcing\Discovery\FeedLinkScanner;
+use App\Service\Sourcing\Discovery\FeedOffer\MixcloudProfileFeed;
+use App\Service\Sourcing\Discovery\FeedOffer\SoundCloudProfileFeed;
+use App\Service\Sourcing\Discovery\FeedOffer\WordPressRestProbe;
+use App\Service\Sourcing\Discovery\FeedOffer\YouTubeVideoChannelFeed;
+use App\Service\Sourcing\Discovery\ShareLinkFeed\ApplePodcastShowFeed;
+use App\Service\Sourcing\Discovery\ShareLinkFeed\FediverseRemoteProfileFeed;
+use App\Service\Sourcing\Discovery\ShareLinkFeed\GitHubRepositoryFeed;
+use App\Service\Sourcing\Discovery\ShareLinkFeed\ShareLinkFeedInterface;
+use App\Service\Sourcing\Discovery\ShareLinkFeed\SubstackProfileFeed;
+use App\Service\Sourcing\Discovery\ShareLinkFeed\YouTubePlaylistFeed;
+use App\Service\Sourcing\Discovery\WellKnownFeedProbe;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
+use App\Service\Ingestion\Parser\FeedParser;
+use App\Service\Ingestion\Scraper\HtmlItemExtractor;
 use App\Tests\Support\StubFeedFetcher;
 
 /** Wires a FeedDiscovery around a stub fetcher, so a test names the behaviour it exercises, not the constructor. */

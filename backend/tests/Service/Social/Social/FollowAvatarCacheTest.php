@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\SocialAccount;
-use App\Service\Social\FollowAvatarCache;
-use App\Service\Social\Model\FollowedAccountModel;
+use App\Service\Social\Social\FollowAvatarCache;
+use App\Service\Social\Social\Model\FollowedAccountModel;
 use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\TestCase;

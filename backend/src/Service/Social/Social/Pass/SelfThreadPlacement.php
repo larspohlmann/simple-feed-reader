@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Pass;
+namespace App\Service\Social\Social\Pass;
 
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Social\Model\PlacedSelfReplyModel;
-use App\Service\Social\Model\TimelineSelfReplyModel;
-use App\Service\Social\SelfReplyChain;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Social\Social\Model\PlacedSelfReplyModel;
+use App\Service\Social\Social\Model\TimelineSelfReplyModel;
+use App\Service\Social\Social\SelfReplyChain;
 
 /** Puts a root's self-replies on its chain: one per position, at most SelfReplyChain::MAX_REPLIES. */
 final class SelfThreadPlacement

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch\Support;
+namespace App\Tests\Service\Outbound\Fetch\Support;
 
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\Support\UrlResolver;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\Support\UrlResolver;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

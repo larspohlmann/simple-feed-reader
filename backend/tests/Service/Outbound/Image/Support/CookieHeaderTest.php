@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Image\Support;
+namespace App\Tests\Service\Outbound\Image\Support;
 
-use App\Service\Image\Support\CookieHeader;
+use App\Service\Outbound\Image\Support\CookieHeader;
 use PHPUnit\Framework\TestCase;
 
 final class CookieHeaderTest extends TestCase

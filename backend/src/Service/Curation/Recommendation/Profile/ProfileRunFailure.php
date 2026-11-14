@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Profile;
+namespace App\Service\Curation\Recommendation\Profile;
 
 use App\Entity\ProfileRun;
 use App\Repository\CallingRun;
-use App\Service\Ai\Exception\ProviderRejectedRequestException;
-use App\Service\Recommendation\Profile\Pass\ProfileTick;
-use App\Service\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive;
-use App\Service\Recommendation\Run\RejectedRequestRecovery;
-use App\Service\Recommendation\Run\Support\ProviderFailedMessage;
+use App\Service\Curation\Ai\Exception\ProviderRejectedRequestException;
+use App\Service\Curation\Recommendation\Profile\Pass\ProfileTick;
+use App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive;
+use App\Service\Curation\Recommendation\Run\RejectedRequestRecovery;
+use App\Service\Curation\Recommendation\Run\Support\ProviderFailedMessage;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 

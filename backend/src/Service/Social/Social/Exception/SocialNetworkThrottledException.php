@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Exception;
+namespace App\Service\Social\Social\Exception;
 
-use App\Service\Fetch\Model\ApiResponseModel;
-use App\Service\Fetch\Support\RetryAfterHeader;
+use App\Service\Outbound\Fetch\Model\ApiResponseModel;
+use App\Service\Outbound\Fetch\Support\RetryAfterHeader;
 use Symfony\Component\HttpFoundation\Response;
 
 /** A 429: still an unreachable network to a caller that cannot wait, a schedule to the refresh that can. */

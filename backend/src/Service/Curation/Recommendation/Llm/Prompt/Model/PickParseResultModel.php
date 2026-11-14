@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Prompt\Model;
+namespace App\Service\Curation\Recommendation\Llm\Prompt\Model;
 
 /**
  * The outcome of parsing one assistant reply. `usable` is what Tasks 10-11

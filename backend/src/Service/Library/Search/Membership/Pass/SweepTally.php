@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search\Membership\Pass;
+namespace App\Service\Library\Search\Membership\Pass;
 
-use App\Service\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
+use App\Service\Library\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
 
 /** The counters one sweep run accumulates; the report is their read-only end state. */
 final class SweepTally

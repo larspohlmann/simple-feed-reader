@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Scoring\SystemOneClient;
+namespace App\Tests\Service\Curation\Recommendation\Scoring\SystemOneClient;
 
-use App\Service\Ai\Exception\CredentialsRejectedException;
-use App\Service\Ai\Exception\ProviderRejectedRequestException;
-use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\Model\ProviderCredentialsModel;
-use App\Service\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface;
-use App\Service\Recommendation\Scoring\Model\ScoringOutcomeModel;
-use App\Service\Recommendation\Scoring\Model\SystemOneRequestModel;
-use App\Service\Recommendation\Scoring\ScoringHttpTransport;
-use App\Service\Recommendation\Scoring\SystemOneClient\HttpSystemOneClient;
+use App\Service\Curation\Ai\Exception\CredentialsRejectedException;
+use App\Service\Curation\Ai\Exception\ProviderRejectedRequestException;
+use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
+use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
+use App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringOutcomeModel;
+use App\Service\Curation\Recommendation\Scoring\Model\SystemOneRequestModel;
+use App\Service\Curation\Recommendation\Scoring\ScoringHttpTransport;
+use App\Service\Curation\Recommendation\Scoring\SystemOneClient\HttpSystemOneClient;
 use App\Tests\Support\CountingProviderCallHeartbeat;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

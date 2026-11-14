@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Admin;
 
 use App\Enum\MailKind;
-use App\Service\Mail\MailFailureRecorder\MailDeliveryHealth;
+use App\Service\Outbound\Mail\MailFailureRecorder\MailDeliveryHealth;
 use App\Tests\Support\ApiTestCase;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 

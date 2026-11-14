@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\ClientError;
+namespace App\Tests\Service\Operations\ClientError;
 
-use App\Service\ClientError\ClientErrorScrubber;
-use App\Service\ClientError\Model\ClientErrorModel;
+use App\Service\Operations\ClientError\ClientErrorScrubber;
+use App\Service\Operations\ClientError\Model\ClientErrorModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

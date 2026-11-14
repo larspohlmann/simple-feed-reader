@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Model;
+namespace App\Service\Operations\Backup\Model;
 
 use App\Enum\InclusionSurface;
 use App\Enum\SocialNetwork;

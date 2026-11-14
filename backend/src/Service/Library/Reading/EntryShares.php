@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reading;
+namespace App\Service\Library\Reading;
 
 use App\Entity\Entry;
 use App\Entity\User;
 use App\Repository\SharingSettingsRepository;
-use App\Service\Reading\EntryShareStore\EntryShareStoreInterface;
+use App\Service\Library\Reading\EntryShareStore\EntryShareStoreInterface;
 use Doctrine\DBAL\Exception as DbalException;
 use Psr\Clock\ClockInterface;
 

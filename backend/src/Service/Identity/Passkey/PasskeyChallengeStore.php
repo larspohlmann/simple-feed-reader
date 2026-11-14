@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Passkey;
+namespace App\Service\Identity\Passkey;
 
-use App\Service\Passkey\Exception\UnknownChallengeException;
-use App\Service\Passkey\Model\PasskeyChallengeModel;
+use App\Service\Identity\Passkey\Exception\UnknownChallengeException;
+use App\Service\Identity\Passkey\Model\PasskeyChallengeModel;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Cache\InvalidArgumentException;

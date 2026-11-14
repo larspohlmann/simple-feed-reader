@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reading\Model;
+namespace App\Tests\Service\Library\Reading\Model;
 
 use App\Enum\SocialNetwork;
 use App\Repository\NetworkScope;
-use App\Service\Reading\Model\ReadScopeKind;
-use App\Service\Reading\Model\ReadScopeModel;
+use App\Service\Library\Reading\Model\ReadScopeKind;
+use App\Service\Library\Reading\Model\ReadScopeModel;
 use PHPUnit\Framework\TestCase;
 
 final class ReadScopeModelTest extends TestCase

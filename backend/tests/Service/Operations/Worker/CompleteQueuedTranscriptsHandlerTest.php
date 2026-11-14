@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Worker;
+namespace App\Tests\Service\Operations\Worker;
 
-use App\Service\Transcript\TranscriptSweep;
-use App\Service\Worker\Handler\CompleteQueuedTranscriptsHandler;
-use App\Service\Worker\Message\CompleteQueuedTranscripts;
+use App\Service\Content\Transcript\TranscriptSweep;
+use App\Service\Operations\Worker\Handler\CompleteQueuedTranscriptsHandler;
+use App\Service\Operations\Worker\Message\CompleteQueuedTranscripts;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecordingLogger;
 

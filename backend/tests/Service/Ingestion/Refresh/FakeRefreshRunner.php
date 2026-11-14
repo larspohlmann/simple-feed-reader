@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Refresh;
+namespace App\Tests\Service\Ingestion\Refresh;
 
-use App\Service\Refresh\Model\RefreshReportModel;
-use App\Service\Refresh\Model\RefreshRequestModel;
-use App\Service\Refresh\RefreshRunner\RefreshRunnerInterface;
+use App\Service\Ingestion\Refresh\Model\RefreshReportModel;
+use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
+use App\Service\Ingestion\Refresh\RefreshRunner\RefreshRunnerInterface;
 
 /**
  * Hands out one prepared report per call. A double rather than a mock so the

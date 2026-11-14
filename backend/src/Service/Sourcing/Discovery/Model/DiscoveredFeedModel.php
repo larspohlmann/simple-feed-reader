@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Discovery\Model;
+namespace App\Service\Sourcing\Discovery\Model;
 
-use App\Service\Parser\Model\ParsedFeedModel;
+use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
 
 /**
  * A feed discovery has read, not merely located: its final URL and the document that proved it a feed. The subscribe

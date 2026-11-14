@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Run\RejectedRequestFallback;
+namespace App\Tests\Service\Curation\Recommendation\Run\RejectedRequestFallback;
 
 use App\Entity\AiProviderSettings;
 use App\Enum\RequestAdjustment;
 use App\Enum\TokenLimitParameter;
-use App\Service\Ai\Exception\ProviderRejectedRequestException;
-use App\Service\Ai\Model\ProviderErrorIdentifiersModel;
-use App\Service\Recommendation\Run\RejectedRequestFallback\RejectedRequestFallbackInterface;
+use App\Service\Curation\Ai\Exception\ProviderRejectedRequestException;
+use App\Service\Curation\Ai\Model\ProviderErrorIdentifiersModel;
+use App\Service\Curation\Recommendation\Run\RejectedRequestFallback\RejectedRequestFallbackInterface;
 use App\Tests\Support\AiProviderSettingsFactory;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\HttpFoundation\Response;

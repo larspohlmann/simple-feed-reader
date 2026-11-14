@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Subscription;
+namespace App\Service\Library\Subscription;
 
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Service\Ordering\PositionReorderer;
-use App\Service\Subscription\Model\FeedMoveModel;
-use App\Service\Subscription\Model\SubscriptionChangeModel;
+use App\Service\Foundation\Ordering\PositionReorderer;
+use App\Service\Library\Subscription\Model\FeedMoveModel;
+use App\Service\Library\Subscription\Model\SubscriptionChangeModel;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class SubscriptionEditor

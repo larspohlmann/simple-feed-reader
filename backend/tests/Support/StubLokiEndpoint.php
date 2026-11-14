@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Logging\Loki\LokiEndpoint\LokiEndpointInterface;
+use App\Service\Operations\Logging\Loki\LokiEndpoint\LokiEndpointInterface;
 
 final class StubLokiEndpoint implements LokiEndpointInterface
 {

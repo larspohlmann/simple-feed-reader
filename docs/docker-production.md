@@ -460,7 +460,7 @@ but it signs every user out.
 ## 9. Troubleshooting
 
 - **The worker** — the `worker` container consumes the `scheduler_worker`
-  transport, fed by `App\Service\Worker\WorkerSchedule`: it advances active
+  transport, fed by `App\Service\Operations\Worker\WorkerSchedule`: it advances active
   recommendation runs every 10 seconds, starts due scheduled recommendation
   runs every 5 minutes, sweeps due feeds every 5 minutes, sends due digest
   mails every hour, fills saved-search memberships every minute, rebuilds the

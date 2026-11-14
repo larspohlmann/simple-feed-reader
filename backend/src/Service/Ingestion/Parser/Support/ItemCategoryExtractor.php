@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\Support;
+namespace App\Service\Ingestion\Parser\Support;
 
-use App\Service\Parser\Model\FeedNamespace;
-use App\Service\Parser\Model\ParsedCategoryModel;
-use App\Service\Parser\Pass\CoreElement;
+use App\Service\Ingestion\Parser\Model\FeedNamespace;
+use App\Service\Ingestion\Parser\Model\ParsedCategoryModel;
+use App\Service\Ingestion\Parser\Pass\CoreElement;
 
 /**
  * Reads a feed item's declared categories into a flat list, across RSS 2.0

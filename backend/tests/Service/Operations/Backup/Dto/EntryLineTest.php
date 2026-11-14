@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Backup\Dto;
+namespace App\Tests\Service\Operations\Backup\Dto;
 
 use App\Entity\EntryChapters;
 use App\Entity\EntryMedium;
@@ -10,9 +10,9 @@ use App\Entity\EntryOrigin;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;
-use App\Service\Backup\Dto\EntryLine;
-use App\Service\Backup\Exception\InvalidBackupException;
-use App\Service\Backup\Model\EntryCompanionsModel;
+use App\Service\Operations\Backup\Dto\EntryLine;
+use App\Service\Operations\Backup\Exception\InvalidBackupException;
+use App\Service\Operations\Backup\Model\EntryCompanionsModel;
 use App\Tests\Support\BackupLineRecords;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

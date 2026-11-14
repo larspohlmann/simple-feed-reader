@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
-use App\Service\Share\PendingThread\PendingThreadInterface;
-use App\Service\Social\Support\MastodonStatusAddress;
-use App\Service\Social\Support\SocialPostAddress;
+use App\Service\Social\Share\PendingThread\PendingThreadInterface;
+use App\Service\Social\Social\Support\MastodonStatusAddress;
+use App\Service\Social\Social\Support\SocialPostAddress;
 
 final readonly class MastodonPendingThread implements PendingThreadInterface
 {

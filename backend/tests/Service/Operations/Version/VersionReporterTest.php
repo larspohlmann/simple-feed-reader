@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Version;
+namespace App\Tests\Service\Operations\Version;
 
-use App\Service\Version\LatestReleaseReader\LatestReleaseReaderInterface;
-use App\Service\Version\Model\LatestReleaseModel;
-use App\Service\Version\Model\ReleaseVersionModel;
-use App\Service\Version\ReleaseVersionReader\ReleaseVersionReaderInterface;
-use App\Service\Version\VersionReporter;
+use App\Service\Operations\Version\LatestReleaseReader\LatestReleaseReaderInterface;
+use App\Service\Operations\Version\Model\LatestReleaseModel;
+use App\Service\Operations\Version\Model\ReleaseVersionModel;
+use App\Service\Operations\Version\ReleaseVersionReader\ReleaseVersionReaderInterface;
+use App\Service\Operations\Version\VersionReporter;
 use App\Tests\Support\VersionReporters;
 use PHPUnit\Framework\TestCase;
 

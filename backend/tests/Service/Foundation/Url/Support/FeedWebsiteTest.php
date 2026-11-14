@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Url\Support;
+namespace App\Tests\Service\Foundation\Url\Support;
 
-use App\Service\Url\Support\FeedWebsite;
+use App\Service\Foundation\Url\Support\FeedWebsite;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

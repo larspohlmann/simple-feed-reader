@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\PostCountsSource;
+namespace App\Service\Social\Social\PostCountsSource;
 
 use App\Enum\SocialNetwork;
-use App\Service\Bluesky\AppViewClient;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\Model\SocialCountsModel;
-use App\Service\Social\Support\AppViewAnswer;
-use App\Service\Social\Support\PostCounts;
+use App\Service\Social\Bluesky\AppViewClient;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Model\SocialCountsModel;
+use App\Service\Social\Social\Support\AppViewAnswer;
+use App\Service\Social\Social\Support\PostCounts;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Bluesky->value)]

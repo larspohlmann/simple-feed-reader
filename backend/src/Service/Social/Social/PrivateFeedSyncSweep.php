@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\SocialAccount;
 use App\Enum\PrivateFeedSyncSkip;
 use App\Repository\SocialAccountSyncRepository;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Social\Model\PrivateFeedSyncBudgetModel;
-use App\Service\Social\Model\PrivateFeedSyncOutcomeModel;
-use App\Service\Social\Model\PrivateFeedSyncReportModel;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Social\Social\Model\PrivateFeedSyncBudgetModel;
+use App\Service\Social\Social\Model\PrivateFeedSyncOutcomeModel;
+use App\Service\Social\Social\Model\PrivateFeedSyncReportModel;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Psr\Log\LoggerInterface;

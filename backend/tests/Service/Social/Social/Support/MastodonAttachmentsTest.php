@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Support;
+namespace App\Tests\Service\Social\Social\Support;
 
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Parser\Model\ParsedMediumModel;
-use App\Service\Parser\Model\VisualMediaKind;
-use App\Service\Social\Support\MastodonAttachments;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Ingestion\Parser\Model\ParsedMediumModel;
+use App\Service\Ingestion\Parser\Model\VisualMediaKind;
+use App\Service\Social\Social\Support\MastodonAttachments;
 use PHPUnit\Framework\TestCase;
 
 final class MastodonAttachmentsTest extends TestCase

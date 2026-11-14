@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
-use App\Service\Comments\Model\EntryCommentModel;
-use App\Service\Social\Pass\ReplyNode;
-use App\Service\Social\Support\OldestFirstUndatedLast;
+use App\Service\Content\Comments\Model\EntryCommentModel;
+use App\Service\Social\Social\Pass\ReplyNode;
+use App\Service\Social\Social\Support\OldestFirstUndatedLast;
 
 final readonly class SelfReplyChain
 {

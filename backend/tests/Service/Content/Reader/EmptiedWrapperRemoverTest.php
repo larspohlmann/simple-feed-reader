@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader;
+namespace App\Tests\Service\Content\Reader;
 
-use App\Service\Reader\EmptiedWrapperRemover;
+use App\Service\Content\Reader\EmptiedWrapperRemover;
 use App\Tests\Support\ParsesHtml;
 use Dom\Element;
 use Dom\HTMLDocument;

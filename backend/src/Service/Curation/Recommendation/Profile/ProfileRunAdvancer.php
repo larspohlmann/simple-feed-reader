@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Profile;
+namespace App\Service\Curation\Recommendation\Profile;
 
 use App\Entity\ProfileRun;
-use App\Service\Recommendation\Run\Model\TickDriver;
-use App\Service\Recommendation\Run\TickLockTtl;
-use App\Service\Recommendation\Run\UserTickLock;
+use App\Service\Curation\Recommendation\Run\Model\TickDriver;
+use App\Service\Curation\Recommendation\Run\TickLockTtl;
+use App\Service\Curation\Recommendation\Run\UserTickLock;
 use Doctrine\ORM\EntityManagerInterface;
 
 /** The profile drivers' tick: one profile run, under the lock its account's recommendation runs take. */

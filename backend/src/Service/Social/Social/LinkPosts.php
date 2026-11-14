@@ -2,26 +2,26 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\User;
-use App\Service\Social\Exception\NoSocialAccountForNetworkException;
-use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
-use App\Service\Social\Exception\SocialAccountNotFoundException;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkThrottledException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostRefusedException;
-use App\Service\Social\Exception\SocialPostTooLongException;
-use App\Service\Social\Exception\SocialTokenScopeMissingException;
-use App\Service\Social\Model\ComposerContextModel;
-use App\Service\Social\Model\LinkShareModel;
-use App\Service\Social\Model\LinkTargetModel;
-use App\Service\Social\Model\PostDraftModel;
-use App\Service\Social\Model\PublishedPostModel;
-use App\Service\Social\Model\ResponseKind;
-use App\Service\Social\Model\SharedLinkModel;
-use App\Service\Url\UrlNormalizer;
+use App\Service\Social\Social\Exception\NoSocialAccountForNetworkException;
+use App\Service\Social\Social\Exception\SocialAccountNeedsReconnectException;
+use App\Service\Social\Social\Exception\SocialAccountNotFoundException;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Social\Exception\SocialPostTooLongException;
+use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
+use App\Service\Social\Social\Model\ComposerContextModel;
+use App\Service\Social\Social\Model\LinkShareModel;
+use App\Service\Social\Social\Model\LinkTargetModel;
+use App\Service\Social\Social\Model\PostDraftModel;
+use App\Service\Social\Social\Model\PublishedPostModel;
+use App\Service\Social\Social\Model\ResponseKind;
+use App\Service\Social\Social\Model\SharedLinkModel;
+use App\Service\Foundation\Url\UrlNormalizer;
 
 final readonly class LinkPosts
 {

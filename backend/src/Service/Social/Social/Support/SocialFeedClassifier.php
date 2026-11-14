@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
 use App\Entity\Feed;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
-use App\Service\SavedPosts\Support\SavedFeedUrl;
-use App\Service\Social\Model\SocialFeedAddressModel;
+use App\Service\Library\SavedPosts\Support\SavedFeedUrl;
+use App\Service\Social\Social\Model\SocialFeedAddressModel;
 
 /** Which network a feed belongs to: by its private format and address, else by its URL as a profile feed. */
 final class SocialFeedClassifier

@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Backup\Dto;
+namespace App\Tests\Service\Operations\Backup\Dto;
 
 use App\Enum\InclusionSurface;
 use App\Enum\Handedness;
 use App\Enum\MagazineStyle;
 use App\Enum\SocialNetwork;
-use App\Service\Backup\Dto\AccountLine;
-use App\Service\Backup\Exception\InvalidBackupException;
-use App\Service\Backup\Model\AccountNetworkSwitchesModel;
-use App\Service\FeedDirectory\Model\FeedDirectoryScopeModel;
+use App\Service\Operations\Backup\Dto\AccountLine;
+use App\Service\Operations\Backup\Exception\InvalidBackupException;
+use App\Service\Operations\Backup\Model\AccountNetworkSwitchesModel;
+use App\Service\Sourcing\FeedDirectory\Model\FeedDirectoryScopeModel;
 use App\Tests\Support\BackupLineRecords;
 use App\Tests\Support\UnsavedUserSettings;
 use PHPUnit\Framework\TestCase;

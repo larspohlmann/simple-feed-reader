@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Support;
+namespace App\Tests\Service\Social\Social\Support;
 
-use App\Service\Social\Exception\SearchQueryTooBroadException;
-use App\Service\Social\Support\MastodonSearchQueries;
+use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
+use App\Service\Social\Social\Support\MastodonSearchQueries;
 use PHPUnit\Framework\TestCase;
 
 final class MastodonSearchQueriesTest extends TestCase

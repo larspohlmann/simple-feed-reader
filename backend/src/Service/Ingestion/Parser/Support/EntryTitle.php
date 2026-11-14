@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\Support;
+namespace App\Service\Ingestion\Parser\Support;
 
 use App\Entity\Headline;
-use App\Service\Text\Support\DerivedTitle;
-use App\Service\Text\Support\PlainText;
+use App\Service\Foundation\Text\Support\DerivedTitle;
+use App\Service\Foundation\Text\Support\PlainText;
 
 final class EntryTitle
 {

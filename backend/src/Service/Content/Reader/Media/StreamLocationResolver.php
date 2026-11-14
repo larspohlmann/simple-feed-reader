@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media;
+namespace App\Service\Content\Reader\Media;
 
-use App\Service\Reader\Media\Model\ArticleMediaModel;
-use App\Service\Reader\Media\Model\MediaCandidateModel;
-use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Content\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Content\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Content\Reader\Media\Model\MediaKind;
 
 /**
  * Moves a stream to the URL that finally serves it: a script fetches it, and a cross-origin fetch dies on a redirect

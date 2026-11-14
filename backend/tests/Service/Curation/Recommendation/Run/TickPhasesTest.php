@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Run;
+namespace App\Tests\Service\Curation\Recommendation\Run;
 
 use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Ai\Exception\ProviderRateLimitedException;
-use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Recommendation\Pool\RecommendationCandidateLoader;
-use App\Service\Recommendation\Profile\ProfileForRun\ProfileForRunInterface;
-use App\Service\Recommendation\Run\RecommendationRunDeferral;
-use App\Service\Recommendation\Run\RecommendationRunFailure;
-use App\Service\Recommendation\Run\RecommendationTickCheckpoint;
-use App\Service\Recommendation\Run\RecommendationTransportFailureRecorder;
-use App\Service\Recommendation\Run\RejectedRequestRecovery;
-use App\Service\Recommendation\Run\SnapshotPhase;
-use App\Service\Recommendation\Run\TickPhases;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Ai\Exception\ProviderRateLimitedException;
+use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
+use App\Service\Curation\Recommendation\Pool\RecommendationCandidateLoader;
+use App\Service\Curation\Recommendation\Profile\ProfileForRun\ProfileForRunInterface;
+use App\Service\Curation\Recommendation\Run\RecommendationRunDeferral;
+use App\Service\Curation\Recommendation\Run\RecommendationRunFailure;
+use App\Service\Curation\Recommendation\Run\RecommendationTickCheckpoint;
+use App\Service\Curation\Recommendation\Run\RecommendationTransportFailureRecorder;
+use App\Service\Curation\Recommendation\Run\RejectedRequestRecovery;
+use App\Service\Curation\Recommendation\Run\SnapshotPhase;
+use App\Service\Curation\Recommendation\Run\TickPhases;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BuildsTickContexts;
 use App\Tests\Support\RecommendationRunFixtures;

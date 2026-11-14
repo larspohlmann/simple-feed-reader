@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\AccountMailer;
+namespace App\Tests\Service\Outbound\Mail\AccountMailer;
 
 use App\Entity\User;
-use App\Service\Mail\AccountMailer\AccountMailerInterface;
-use App\Service\Mail\AccountMailer\MailGatedAccountMailer;
-use App\Service\Mail\MailCapability;
-use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
+use App\Service\Outbound\Mail\AccountMailer\AccountMailerInterface;
+use App\Service\Outbound\Mail\AccountMailer\MailGatedAccountMailer;
+use App\Service\Outbound\Mail\MailCapability;
+use App\Service\Outbound\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;

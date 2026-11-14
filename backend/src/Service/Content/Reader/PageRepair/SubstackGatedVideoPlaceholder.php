@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\PageRepair;
+namespace App\Service\Content\Reader\PageRepair;
 
-use App\Service\Url\Support\AbsoluteHttpUrl;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use Dom\Element;
 use Dom\HTMLDocument;
 

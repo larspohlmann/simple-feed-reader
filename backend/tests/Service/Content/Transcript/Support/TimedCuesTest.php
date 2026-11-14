@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Transcript\Support;
+namespace App\Tests\Service\Content\Transcript\Support;
 
-use App\Service\Transcript\Model\TranscriptCueModel;
-use App\Service\Transcript\Support\TimedCues;
+use App\Service\Content\Transcript\Model\TranscriptCueModel;
+use App\Service\Content\Transcript\Support\TimedCues;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

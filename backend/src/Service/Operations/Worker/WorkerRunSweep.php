@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Worker;
+namespace App\Service\Operations\Worker;
 
 use App\Entity\RecommendationRun;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Ai\Exception\AiKeyUnreadableException;
-use App\Service\Ai\Exception\AiNotConfiguredException;
-use App\Service\Ai\Exception\CredentialsRejectedException;
-use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Recommendation\Profile\ProfileRunSweep;
-use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
-use App\Service\Recommendation\Run\Model\TickDriver;
-use App\Service\Recommendation\Run\ProviderCallHeartbeat\SweepStreamHeartbeat;
-use App\Service\Recommendation\Run\RecommendationRunAdvancer;
-use App\Service\Recommendation\Run\WorkerPresence;
+use App\Service\Curation\Ai\Exception\AiKeyUnreadableException;
+use App\Service\Curation\Ai\Exception\AiNotConfiguredException;
+use App\Service\Curation\Ai\Exception\CredentialsRejectedException;
+use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
+use App\Service\Curation\Recommendation\Profile\ProfileRunSweep;
+use App\Service\Curation\Recommendation\Run\Model\RecommendationDriverKind;
+use App\Service\Curation\Recommendation\Run\Model\TickDriver;
+use App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\SweepStreamHeartbeat;
+use App\Service\Curation\Recommendation\Run\RecommendationRunAdvancer;
+use App\Service\Curation\Recommendation\Run\WorkerPresence;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 

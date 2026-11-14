@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
 use App\Enum\SocialNetwork;
-use App\Service\Bluesky\Support\BlueskyActorKey;
-use App\Service\Bluesky\Support\BlueskyWeb;
+use App\Service\Social\Bluesky\Support\BlueskyActorKey;
+use App\Service\Social\Bluesky\Support\BlueskyWeb;
 
 final class ProfileFeedUrl
 {

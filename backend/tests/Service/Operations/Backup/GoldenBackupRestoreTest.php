@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Backup;
+namespace App\Tests\Service\Operations\Backup;
 
 use App\Entity\User;
-use App\Service\Backup\AccountRestorer;
-use App\Service\Backup\EntryPartRestorer;
-use App\Service\Backup\Exception\InvalidBackupException;
+use App\Service\Operations\Backup\AccountRestorer;
+use App\Service\Operations\Backup\EntryPartRestorer;
+use App\Service\Operations\Backup\Exception\InvalidBackupException;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\UserFactory;

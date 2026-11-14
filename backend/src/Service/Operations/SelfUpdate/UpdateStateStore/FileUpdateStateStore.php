@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\SelfUpdate\UpdateStateStore;
+namespace App\Service\Operations\SelfUpdate\UpdateStateStore;
 
-use App\Service\SelfUpdate\Exception\MalformedUpdateStateException;
-use App\Service\SelfUpdate\Exception\UpdateRequestNotSavedException;
-use App\Service\SelfUpdate\Model\UpdateRequestModel;
-use App\Service\SelfUpdate\Model\UpdateRunModel;
-use App\Service\SelfUpdate\Pass\StateFileFields;
+use App\Service\Operations\SelfUpdate\Exception\MalformedUpdateStateException;
+use App\Service\Operations\SelfUpdate\Exception\UpdateRequestNotSavedException;
+use App\Service\Operations\SelfUpdate\Model\UpdateRequestModel;
+use App\Service\Operations\SelfUpdate\Model\UpdateRunModel;
+use App\Service\Operations\SelfUpdate\Pass\StateFileFields;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 final readonly class FileUpdateStateStore implements UpdateStateStoreInterface

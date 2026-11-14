@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Url;
+namespace App\Service\Foundation\Url;
 
-use App\Service\Url\EntryIdentityUrl\EntryIdentityUrlInterface;
+use App\Service\Foundation\Url\EntryIdentityUrl\EntryIdentityUrlInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /** The url_hash of an entry: every writer of it calls here, or copies of one article stop collapsing. */

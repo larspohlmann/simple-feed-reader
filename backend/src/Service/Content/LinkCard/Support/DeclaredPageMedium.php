@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\LinkCard\Support;
+namespace App\Service\Content\LinkCard\Support;
 
 use App\Entity\EntryMedium;
-use App\Service\Parser\Support\VisualMedium;
+use App\Service\Ingestion\Parser\Support\VisualMedium;
 
 /** The picture or video file a page declares itself to be. A player page names an iframe, which is no file: none. */
 final class DeclaredPageMedium

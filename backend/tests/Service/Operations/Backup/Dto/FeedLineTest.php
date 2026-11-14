@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Backup\Dto;
+namespace App\Tests\Service\Operations\Backup\Dto;
 
 use App\Entity\Feed;
 use App\Enum\SourceFormat;
-use App\Service\Backup\Dto\FeedLine;
-use App\Service\Backup\Exception\InvalidBackupException;
-use App\Service\Social\Model\ExportedSubscriptionModel;
+use App\Service\Operations\Backup\Dto\FeedLine;
+use App\Service\Operations\Backup\Exception\InvalidBackupException;
+use App\Service\Social\Social\Model\ExportedSubscriptionModel;
 use App\Tests\Support\BackupLineRecords;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

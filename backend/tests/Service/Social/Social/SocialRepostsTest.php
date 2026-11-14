@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
@@ -12,20 +12,20 @@ use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Repository\SharingSettingsRepository;
 use App\Repository\SocialAccountRepository;
-use App\Service\Comments\CommentsCache;
-use App\Service\Comments\CommentsLoader;
-use App\Service\Reading\EntryShareRecorder;
-use App\Service\Reading\EntryShares;
-use App\Service\Social\ActingAccountGuard;
-use App\Service\Social\Exception\NotASocialPostException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostRefusedException;
-use App\Service\Social\Model\SocialCountsModel;
-use App\Service\Social\Model\SocialPostAddressModel;
-use App\Service\Social\PostReposting;
-use App\Service\Social\SocialCountsCache;
-use App\Service\Social\SocialPostFinder;
-use App\Service\Social\SocialReposts;
+use App\Service\Content\Comments\CommentsCache;
+use App\Service\Content\Comments\CommentsLoader;
+use App\Service\Library\Reading\EntryShareRecorder;
+use App\Service\Library\Reading\EntryShares;
+use App\Service\Social\Social\ActingAccountGuard;
+use App\Service\Social\Social\Exception\NotASocialPostException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Social\Model\SocialCountsModel;
+use App\Service\Social\Social\Model\SocialPostAddressModel;
+use App\Service\Social\Social\PostReposting;
+use App\Service\Social\Social\SocialCountsCache;
+use App\Service\Social\Social\SocialPostFinder;
+use App\Service\Social\Social\SocialReposts;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AssertsRefusal;
 use App\Tests\Support\FakeCommentsSource;

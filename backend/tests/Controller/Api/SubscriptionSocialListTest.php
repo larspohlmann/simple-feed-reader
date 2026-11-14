@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
-use App\Service\Social\Model\PrivateFeedModel;
-use App\Service\Social\PrivateFeeds;
+use App\Service\Social\Social\Model\PrivateFeedModel;
+use App\Service\Social\Social\PrivateFeeds;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\SocialAccounts;
 

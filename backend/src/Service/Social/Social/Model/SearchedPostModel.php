@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Model;
+namespace App\Service\Social\Social\Model;
 
 /** A search result as the reader judges it: every name its author goes by, and the texts that are its own. */
 final readonly class SearchedPostModel

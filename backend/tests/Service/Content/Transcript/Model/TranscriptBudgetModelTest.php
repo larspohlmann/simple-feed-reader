@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Transcript\Model;
+namespace App\Tests\Service\Content\Transcript\Model;
 
-use App\Service\Transcript\Model\TranscriptBudgetModel;
+use App\Service\Content\Transcript\Model\TranscriptBudgetModel;
 use PHPUnit\Framework\TestCase;
 
 final class TranscriptBudgetModelTest extends TestCase

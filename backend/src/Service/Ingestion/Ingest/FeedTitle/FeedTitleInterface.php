@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ingest\FeedTitle;
+namespace App\Service\Ingestion\Ingest\FeedTitle;
 
 interface FeedTitleInterface
 {

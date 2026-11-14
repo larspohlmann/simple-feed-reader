@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Llm\Prompt;
+namespace App\Tests\Service\Curation\Recommendation\Llm\Prompt;
 
 use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
 use App\Enum\RecommendationBatchSize;
-use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
-use App\Service\Recommendation\Llm\Prompt\Model\OutputLimitModel;
-use App\Service\Recommendation\Llm\Prompt\Pass\PromptContext;
-use App\Service\Recommendation\Llm\Prompt\RecommendationAnswerBudget;
-use App\Service\Recommendation\Llm\Prompt\RecommendationPromptBuilder;
-use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
-use App\Service\Recommendation\Pool\Model\ArticleLineModel;
-use App\Service\Recommendation\Pool\Model\CandidatePoolSummaryModel;
-use App\Service\Recommendation\Pool\Model\RecommendationHistoryModel;
-use App\Service\Recommendation\Profile\Model\ProfileInputsModel;
-use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
-use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
+use App\Service\Curation\Recommendation\Llm\Completion\Model\Reasoning;
+use App\Service\Curation\Recommendation\Llm\Prompt\Model\OutputLimitModel;
+use App\Service\Curation\Recommendation\Llm\Prompt\Pass\PromptContext;
+use App\Service\Curation\Recommendation\Llm\Prompt\RecommendationAnswerBudget;
+use App\Service\Curation\Recommendation\Llm\Prompt\RecommendationPromptBuilder;
+use App\Service\Curation\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
+use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Curation\Recommendation\Pool\Model\CandidatePoolSummaryModel;
+use App\Service\Curation\Recommendation\Pool\Model\RecommendationHistoryModel;
+use App\Service\Curation\Recommendation\Profile\Model\ProfileInputsModel;
+use App\Service\Curation\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
+use App\Service\Curation\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

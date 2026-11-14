@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh;
+namespace App\Service\Ingestion\Refresh;
 
-use App\Service\Refresh\Model\RefreshRequestModel;
-use App\Service\Refresh\Model\RefreshRunProgressModel;
+use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
+use App\Service\Ingestion\Refresh\Model\RefreshRunProgressModel;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Cache\InvalidArgumentException;
 

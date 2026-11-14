@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\HiddenProfiles;
+namespace App\Service\Social\Social\HiddenProfiles;
 
-use App\Service\Bluesky\AppViewClient;
-use App\Service\Bluesky\Exception\AppViewAnswerException;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Support\BlueskyProfileLabels;
+use App\Service\Social\Bluesky\AppViewClient;
+use App\Service\Social\Bluesky\Exception\AppViewAnswerException;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Support\BlueskyProfileLabels;
 
 final readonly class AppViewHiddenProfiles implements HiddenProfilesInterface
 {

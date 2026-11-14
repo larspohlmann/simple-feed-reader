@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media\Model;
+namespace App\Tests\Service\Content\Reader\Media\Model;
 
-use App\Service\Reader\Media\Model\MediaCandidateModel;
-use App\Service\Reader\Media\Model\MediaInsertionPlanModel;
-use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Content\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Content\Reader\Media\Model\MediaInsertionPlanModel;
+use App\Service\Content\Reader\Media\Model\MediaKind;
 use PHPUnit\Framework\TestCase;
 
 final class MediaInsertionPlanModelTest extends TestCase

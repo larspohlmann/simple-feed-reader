@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Parser\Model;
+namespace App\Tests\Service\Ingestion\Parser\Model;
 
-use App\Service\Image\Model\DeclaredImageModel;
-use App\Service\Parser\Model\FeedMediaKind;
-use App\Service\Parser\Model\ParsedAttachmentModel;
-use App\Service\Parser\Model\ParsedEntryMediaModel;
-use App\Service\Parser\Model\ParsedMediaBundleModel;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
+use App\Service\Ingestion\Parser\Model\FeedMediaKind;
+use App\Service\Ingestion\Parser\Model\ParsedAttachmentModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryMediaModel;
+use App\Service\Ingestion\Parser\Model\ParsedMediaBundleModel;
 use PHPUnit\Framework\TestCase;
 
 final class ParsedEntryMediaModelTest extends TestCase

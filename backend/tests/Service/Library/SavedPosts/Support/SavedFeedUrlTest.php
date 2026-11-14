@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\SavedPosts\Support;
+namespace App\Tests\Service\Library\SavedPosts\Support;
 
 use App\Enum\SocialNetwork;
-use App\Service\SavedPosts\Support\SavedFeedUrl;
+use App\Service\Library\SavedPosts\Support\SavedFeedUrl;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

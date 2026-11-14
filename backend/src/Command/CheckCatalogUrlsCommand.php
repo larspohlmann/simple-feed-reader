@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Command;
 
-use App\Service\Catalog\CatalogUrlChecker;
-use App\Service\Catalog\Model\BrokenCatalogUrlModel;
+use App\Service\Sourcing\Catalog\CatalogUrlChecker;
+use App\Service\Sourcing\Catalog\Model\BrokenCatalogUrlModel;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;

@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\ThreadPost;
 use App\Enum\SourceFormat;
 use App\Repository\ThreadPostRepository;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Social\Model\ThreadPostModel;
-use App\Service\Social\Model\TimelineThreadsModel;
-use App\Service\Social\Support\MastodonTimelinePage;
-use App\Service\Social\TimelineSelfThreads;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Social\Social\Model\ThreadPostModel;
+use App\Service\Social\Social\Model\TimelineThreadsModel;
+use App\Service\Social\Social\Support\MastodonTimelinePage;
+use App\Service\Social\Social\TimelineSelfThreads;
 use App\Tests\DbTestCase;
 
 final class TimelineSelfThreadsTest extends DbTestCase

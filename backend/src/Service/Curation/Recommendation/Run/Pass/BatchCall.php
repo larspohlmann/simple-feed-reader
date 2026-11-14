@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run\Pass;
+namespace App\Service\Curation\Recommendation\Run\Pass;
 
 /**
  * One batch's request in a wave, paired with the run-log row it settles.

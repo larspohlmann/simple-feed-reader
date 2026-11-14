@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\SubscriptionHistory;
+namespace App\Tests\Service\Library\SubscriptionHistory;
 
 use App\Entity\EntryState;
 use App\Entity\Feed;
@@ -11,9 +11,9 @@ use App\Entity\Subscription;
 use App\Entity\SubscriptionDay;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
-use App\Service\SubscriptionHistory\Model\ActivityDayModel;
-use App\Service\SubscriptionHistory\Model\FeedArrivalRateModel;
-use App\Service\SubscriptionHistory\Support\UtcDay;
+use App\Service\Library\SubscriptionHistory\Model\ActivityDayModel;
+use App\Service\Library\SubscriptionHistory\Model\FeedArrivalRateModel;
+use App\Service\Library\SubscriptionHistory\Support\UtcDay;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SubscriptionHistoryFixtures;
 

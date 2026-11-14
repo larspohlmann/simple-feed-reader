@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Backup\Support;
+namespace App\Tests\Service\Operations\Backup\Support;
 
 use App\Entity\ActionToken;
 use App\Entity\AiProviderSettings;
@@ -54,8 +54,8 @@ use App\Entity\User;
 use App\Entity\UserIdentity;
 use App\Entity\UserPasskey;
 use App\Entity\WorkerHeartbeat;
-use App\Service\Backup\AccountBackupExporter;
-use App\Service\Backup\Support\BackupSchema;
+use App\Service\Operations\Backup\AccountBackupExporter;
+use App\Service\Operations\Backup\Support\BackupSchema;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BackupFieldDeclarations;
 use App\Tests\Support\FullyPopulatedAccount;

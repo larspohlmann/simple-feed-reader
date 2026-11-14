@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\Support;
+namespace App\Service\Ingestion\Parser\Support;
 
 /**
  * A media duration in whole seconds, from plain seconds (MRSS) or an iTunes `HH:MM:SS`/`MM:SS` clock. Zero, empty or

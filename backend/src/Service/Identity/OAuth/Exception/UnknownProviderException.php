@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\OAuth\Exception;
+namespace App\Service\Identity\OAuth\Exception;
 
 /**
  * The URL named a provider this deployment does not offer: a typo, a probe, or one without credentials. All three

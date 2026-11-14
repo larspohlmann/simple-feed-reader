@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Search;
+namespace App\Tests\Service\Library\Search;
 
-use App\Service\Search\SearchEngineCapability;
+use App\Service\Library\Search\SearchEngineCapability;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

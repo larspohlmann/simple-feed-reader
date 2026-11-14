@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\SocialAccount;
 use App\Enum\PrivateFeedSyncSkip;
-use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Model\NetworkCollectionsModel;
-use App\Service\Social\Model\PrivateFeedSyncOutcomeModel;
-use App\Service\Social\SocialCandidates\SocialCandidatesInterface;
+use App\Service\Social\Social\Exception\SocialAccountNeedsReconnectException;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Model\NetworkCollectionsModel;
+use App\Service\Social\Social\Model\PrivateFeedSyncOutcomeModel;
+use App\Service\Social\Social\SocialCandidates\SocialCandidatesInterface;
 
 /** Makes one account's lists, custom feeds and followed tags follow the network (#1666); any doubt skips the account. */
 final readonly class PrivateFeedSync

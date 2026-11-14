@@ -15,7 +15,7 @@ use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use App\Repository\UserIdentityRepository;
 use App\Repository\UserRepository;
-use App\Service\Admin\UserStatistics;
+use App\Service\Operations\Admin\UserStatistics;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;

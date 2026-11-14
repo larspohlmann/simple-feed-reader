@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Refresh\RefreshRunner;
+namespace App\Tests\Service\Ingestion\Refresh\RefreshRunner;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
@@ -10,16 +10,16 @@ use App\Entity\Subscription;
 use App\Entity\SubscriptionDay;
 use App\Entity\User;
 use App\Enum\FeedStatus;
-use App\Service\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
-use App\Service\Fetch\Exception\FeedGoneException;
-use App\Service\Fetch\Exception\FeedThrottledException;
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\Model\FetchResponseModel;
-use App\Service\Refresh\Model\RefreshRequestModel;
-use App\Service\Refresh\RefreshRunner\RefreshRunner;
+use App\Service\Ingestion\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
+use App\Service\Outbound\Fetch\Exception\FeedGoneException;
+use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
+use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
+use App\Service\Ingestion\Refresh\RefreshRunner\RefreshRunner;
 use App\Tests\DbTestCase;
-use App\Tests\Service\Scraper\ScrapedFixtures;
-use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Service\Ingestion\Scraper\ScrapedFixtures;
+use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\DuplicateKeyViolation;
 use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\RecordingContentChangeMarker;

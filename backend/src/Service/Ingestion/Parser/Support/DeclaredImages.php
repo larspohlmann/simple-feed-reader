@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\Support;
+namespace App\Service\Ingestion\Parser\Support;
 
-use App\Service\Image\Model\DeclaredImageModel;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
 
 final class DeclaredImages
 {

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\Model;
+namespace App\Service\Ingestion\Parser\Model;
 
 use App\Entity\Discussion;
 use App\Entity\Headline;
-use App\Service\Image\Model\DeclaredImageModel;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
 
 /** @SuppressWarnings("PHPMD.ExcessiveParameterList") a pure data carrier: one parameter per parsed field. */
 final readonly class ParsedEntryModel

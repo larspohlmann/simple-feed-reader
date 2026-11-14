@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Logging\Loki;
+namespace App\Tests\Service\Operations\Logging\Loki;
 
-use App\Service\Logging\Loki\LokiPushHandler;
+use App\Service\Operations\Logging\Loki\LokiPushHandler;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Catalog;
+namespace App\Tests\Service\Sourcing\Catalog;
 
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
@@ -10,7 +10,7 @@ use App\Entity\Feed;
 use App\Entity\Tag;
 use App\Enum\SourceFormat;
 use App\Repository\FeedRepository;
-use App\Service\Catalog\CatalogSubscriber;
+use App\Service\Sourcing\Catalog\CatalogSubscriber;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
 

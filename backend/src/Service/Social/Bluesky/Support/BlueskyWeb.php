@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Bluesky\Support;
+namespace App\Service\Social\Bluesky\Support;
 
 final class BlueskyWeb
 {

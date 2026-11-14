@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Clock\Model;
+namespace App\Service\Foundation\Clock\Model;
 
 /**
  * The IANA zone a client wants its day and month buckets cut in; cut in any other zone, a late-evening row files

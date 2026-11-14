@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Transcript\Support;
+namespace App\Tests\Service\Content\Transcript\Support;
 
 use App\Entity\TranscriptParagraph;
-use App\Service\Transcript\Model\TranscriptCueModel;
-use App\Service\Transcript\Support\TranscriptParagraphs;
+use App\Service\Content\Transcript\Model\TranscriptCueModel;
+use App\Service\Content\Transcript\Support\TranscriptParagraphs;
 use PHPUnit\Framework\TestCase;
 
 final class TranscriptParagraphsTest extends TestCase

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Run\ProviderPhase;
+namespace App\Service\Curation\Recommendation\Llm\Run\ProviderPhase;
 
-use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
-use App\Service\Recommendation\Run\Pass\TickContext;
+use App\Service\Curation\Recommendation\Run\Model\RecommendationRunReportModel;
+use App\Service\Curation\Recommendation\Run\Pass\TickContext;
 
 interface ProviderPhaseInterface
 {

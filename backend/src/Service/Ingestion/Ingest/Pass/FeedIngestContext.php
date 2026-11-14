@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ingest\Pass;
+namespace App\Service\Ingestion\Ingest\Pass;
 
 /**
  * One ingest pass's run instant and this feed's previous SUCCESSFUL fetch. A null previousFetchAt (never fetched,

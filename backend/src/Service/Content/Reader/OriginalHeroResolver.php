@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Content\Reader;
 
 use App\Entity\Entry;
-use App\Service\Image\Model\DeclaredImageModel;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
 
 /**
  * The Original (feed-body) view's lead picture: the feed's item image, shown only when the feed body carries no image

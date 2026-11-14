@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Http\SweepReportJson\SweepReportJsonInterface;
-use App\Service\Logging\Loki\Model\LokiSpoolReportModel;
-use App\Service\Maintenance\Model\MaintenanceSweepsModel;
-use App\Service\Maintenance\Model\MaintenanceTickReportModel;
+use App\Service\Operations\Logging\Loki\Model\LokiSpoolReportModel;
+use App\Service\Operations\Maintenance\Model\MaintenanceSweepsModel;
+use App\Service\Operations\Maintenance\Model\MaintenanceTickReportModel;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /** The /maintenance/tick response: every half under a stable key; a skipped sweep says why. */

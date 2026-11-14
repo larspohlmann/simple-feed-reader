@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Feed;
+namespace App\Tests\Service\Curation\Recommendation\Feed;
 
 use App\Entity\Category;
 use App\Entity\Entry;
@@ -18,10 +18,10 @@ use App\Enum\RecommendationEngineKind;
 use App\Repository\EntryListRowEnricher;
 use App\Repository\ForYouFeedQuery;
 use App\Repository\RecommendationItemRepository;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Recommendation\Feed\ForYouFeed;
-use App\Service\Recommendation\Feed\RecommendationFeedPager;
-use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Recommendation\Feed\ForYouFeed;
+use App\Service\Curation\Recommendation\Feed\RecommendationFeedPager;
+use App\Service\Curation\Recommendation\Settings\RecommendationSettingsResolver;
 use App\Tests\DbTestCase;
 use App\Tests\Support\JsonMappers;
 use App\Tests\Support\RecommendationRunFixtures;

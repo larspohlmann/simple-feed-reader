@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Passkey;
+namespace App\Service\Identity\Passkey;
 
 use App\Entity\User;
 use App\Repository\UserPasskeyRepository;
-use App\Service\Passkey\Exception\LastSignInMethodException;
-use App\Service\Passkey\Exception\PasskeyNotFoundException;
+use App\Service\Identity\Passkey\Exception\LastSignInMethodException;
+use App\Service\Identity\Passkey\Exception\PasskeyNotFoundException;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**

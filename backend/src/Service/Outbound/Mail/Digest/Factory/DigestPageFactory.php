@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Digest\Factory;
+namespace App\Service\Outbound\Mail\Digest\Factory;
 
-use App\Service\Mail\Digest\Model\DigestModel;
-use App\Service\Mail\Digest\Model\DigestPageGroupModel;
-use App\Service\Mail\Digest\Model\DigestPageModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestPageGroupModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestPageModel;
 
 /**
  * Projects a DigestModel to the capped page an HTML mail renders: it places

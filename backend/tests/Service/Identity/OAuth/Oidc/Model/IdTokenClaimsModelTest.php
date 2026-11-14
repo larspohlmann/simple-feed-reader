@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\OAuth\Oidc\Model;
+namespace App\Tests\Service\Identity\OAuth\Oidc\Model;
 
-use App\Service\OAuth\Exception\OAuthFailedException;
-use App\Service\OAuth\Oidc\Model\IdTokenClaimsModel;
-use App\Service\OAuth\Oidc\Model\IdTokenModel;
+use App\Service\Identity\OAuth\Exception\OAuthFailedException;
+use App\Service\Identity\OAuth\Oidc\Model\IdTokenClaimsModel;
+use App\Service\Identity\OAuth\Oidc\Model\IdTokenModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\User;
-use App\Service\Backup\AccountBackupExporter;
+use App\Service\Operations\Backup\AccountBackupExporter;
 use Psr\Container\ContainerInterface;
 
 /** The foundation part of a real export: the only part AccountRestorer::start() reads. */

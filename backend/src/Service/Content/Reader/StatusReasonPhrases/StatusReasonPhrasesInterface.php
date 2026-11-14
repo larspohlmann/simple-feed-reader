@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\StatusReasonPhrases;
+namespace App\Service\Content\Reader\StatusReasonPhrases;
 
 interface StatusReasonPhrasesInterface
 {

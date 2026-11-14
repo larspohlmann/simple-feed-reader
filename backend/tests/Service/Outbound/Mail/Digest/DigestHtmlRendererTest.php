@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\Digest;
+namespace App\Tests\Service\Outbound\Mail\Digest;
 
-use App\Service\Mail\Digest\DigestHtmlRenderer;
-use App\Service\Mail\Digest\DigestLinkBuilder;
-use App\Service\Mail\Digest\Model\DigestEntryModel;
-use App\Service\Mail\Digest\Model\DigestImageSetModel;
-use App\Service\Mail\Digest\Model\DigestPageGroupModel;
-use App\Service\Mail\Digest\Model\DigestPageModel;
+use App\Service\Outbound\Mail\Digest\DigestHtmlRenderer;
+use App\Service\Outbound\Mail\Digest\DigestLinkBuilder;
+use App\Service\Outbound\Mail\Digest\Model\DigestEntryModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestImageSetModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestPageGroupModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestPageModel;
 use App\Tests\Support\DigestTwigEnvironment;
 use App\Tests\Support\FixedPublicBaseUrl;
 use PHPUnit\Framework\TestCase;

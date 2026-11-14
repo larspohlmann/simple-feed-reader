@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Transcript\Support;
+namespace App\Tests\Service\Content\Transcript\Support;
 
-use App\Service\Transcript\Exception\TranscriptUnusableException;
-use App\Service\Transcript\Model\TranscriptCueModel;
-use App\Service\Transcript\Support\JsonCues;
+use App\Service\Content\Transcript\Exception\TranscriptUnusableException;
+use App\Service\Content\Transcript\Model\TranscriptCueModel;
+use App\Service\Content\Transcript\Support\JsonCues;
 use PHPUnit\Framework\TestCase;
 
 final class JsonCuesTest extends TestCase

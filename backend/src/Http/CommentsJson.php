@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\EntryMedia;
-use App\Service\Comments\Model\CommentPostModel;
-use App\Service\Comments\Model\CommentsResultModel;
-use App\Service\Comments\Model\CommentsStatus;
-use App\Service\Comments\Model\EntryCommentModel;
+use App\Service\Content\Comments\Model\CommentPostModel;
+use App\Service\Content\Comments\Model\CommentsResultModel;
+use App\Service\Content\Comments\Model\CommentsStatus;
+use App\Service\Content\Comments\Model\EntryCommentModel;
 
 final readonly class CommentsJson
 {

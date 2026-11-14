@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Ingest\PlatformEntryRule;
+namespace App\Tests\Service\Ingestion\Ingest\PlatformEntryRule;
 
 use App\Entity\Headline;
-use App\Service\Ingest\PlatformEntryRule\VideoPageEntryRule;
-use App\Service\Parser\Model\FeedMediaKind;
-use App\Service\Parser\Model\ParsedAttachmentModel;
-use App\Service\Parser\Model\ParsedEntryMediaModel;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Parser\Model\ParsedMediaBundleModel;
-use App\Service\Reader\Media\EmbedProvider\VimeoEmbedProvider;
-use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
-use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Media\MediaMarkup;
+use App\Service\Ingestion\Ingest\PlatformEntryRule\VideoPageEntryRule;
+use App\Service\Ingestion\Parser\Model\FeedMediaKind;
+use App\Service\Ingestion\Parser\Model\ParsedAttachmentModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryMediaModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Model\ParsedMediaBundleModel;
+use App\Service\Content\Reader\Media\EmbedProvider\VimeoEmbedProvider;
+use App\Service\Content\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
+use App\Service\Content\Reader\Media\EmbedProviders;
+use App\Service\Content\Reader\Media\MediaMarkup;
 use PHPUnit\Framework\TestCase;
 
 final class VideoPageEntryRuleTest extends TestCase

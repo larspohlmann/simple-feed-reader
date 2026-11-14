@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Parser;
+namespace App\Tests\Service\Ingestion\Parser;
 
 use App\Tests\Support\FeedFormatParsers;
 use PHPUnit\Framework\TestCase;

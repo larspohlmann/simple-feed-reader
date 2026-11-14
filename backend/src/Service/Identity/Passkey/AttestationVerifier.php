@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Passkey;
+namespace App\Service\Identity\Passkey;
 
 use App\Entity\User;
 use App\Entity\UserPasskey;
-use App\Service\Passkey\Exception\AttestationRejectedException;
-use App\Service\Passkey\Exception\DuplicatePasskeyException;
-use App\Service\Passkey\Exception\PasskeyChallengeOwnershipException;
-use App\Service\Passkey\Factory\RegistrationOptionsFactory;
-use App\Service\Passkey\Factory\UserPasskeyFactory;
-use App\Service\Passkey\Model\PasskeyAttestationModel;
-use App\Service\Passkey\Model\PasskeyChallengeModel;
+use App\Service\Identity\Passkey\Exception\AttestationRejectedException;
+use App\Service\Identity\Passkey\Exception\DuplicatePasskeyException;
+use App\Service\Identity\Passkey\Exception\PasskeyChallengeOwnershipException;
+use App\Service\Identity\Passkey\Factory\RegistrationOptionsFactory;
+use App\Service\Identity\Passkey\Factory\UserPasskeyFactory;
+use App\Service\Identity\Passkey\Model\PasskeyAttestationModel;
+use App\Service\Identity\Passkey\Model\PasskeyChallengeModel;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Cache\InvalidArgumentException;

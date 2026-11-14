@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch\Support;
+namespace App\Tests\Service\Outbound\Fetch\Support;
 
 use App\Enum\ProxyType;
-use App\Service\Fetch\Model\GuardedUrlModel;
-use App\Service\Fetch\Model\ProxyConfigModel;
-use App\Service\Fetch\Support\EgressOptions;
+use App\Service\Outbound\Fetch\Model\GuardedUrlModel;
+use App\Service\Outbound\Fetch\Model\ProxyConfigModel;
+use App\Service\Outbound\Fetch\Support\EgressOptions;
 use PHPUnit\Framework\TestCase;
 
 final class EgressOptionsTest extends TestCase

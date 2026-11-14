@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Search\Membership;
+namespace App\Tests\Service\Library\Search\Membership;
 
 use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Repository\SavedSearchEntryMembershipRepository;
 use App\Repository\SavedSearchRepository;
-use App\Service\Search\Exception\SearchEngineUnavailableException;
-use App\Service\Search\Membership\SavedSearchRematch;
+use App\Service\Library\Search\Exception\SearchEngineUnavailableException;
+use App\Service\Library\Search\Membership\SavedSearchRematch;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\RecordingSavedSearchMatcher;

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Scoring;
+namespace App\Service\Curation\Recommendation\Scoring;
 
-use App\Service\Recommendation\Scoring\Model\ScoreParseResultModel;
-use App\Service\Recommendation\Scoring\Model\ScoringReplyModel;
-use App\Service\Recommendation\Scoring\Support\ScaledScore;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoreParseResultModel;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringReplyModel;
+use App\Service\Curation\Recommendation\Scoring\Support\ScaledScore;
 
 /** A batch's scores as winners without reasons; one candidate without a value in [0, 1] spoils the whole reply. */
 final readonly class ScoreParser

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Image\Model;
+namespace App\Tests\Service\Outbound\Image\Model;
 
 use App\Entity\ImageRendition;
-use App\Service\Image\Model\DeclaredImageModel;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
 use PHPUnit\Framework\TestCase;
 
 final class DeclaredImageModelTest extends TestCase

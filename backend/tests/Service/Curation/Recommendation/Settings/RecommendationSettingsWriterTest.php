@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Settings;
+namespace App\Tests\Service\Curation\Recommendation\Settings;
 
 use App\Entity\ProfileSettingsValues;
 use App\Entity\RecommendationPoolLimits;
@@ -12,7 +12,7 @@ use App\Entity\StoredProfile;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
 use App\Repository\RecommendationSettingsRepository;
-use App\Service\Recommendation\Settings\RecommendationSettingsWriter;
+use App\Service\Curation\Recommendation\Settings\RecommendationSettingsWriter;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;

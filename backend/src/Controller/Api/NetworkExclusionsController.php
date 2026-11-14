@@ -8,7 +8,7 @@ use App\Entity\User;
 use App\Enum\InclusionSurface;
 use App\Enum\SocialNetwork;
 use App\Repository\NetworkExclusionRepository;
-use App\Service\Reading\NetworkExclusions;
+use App\Service\Library\Reading\NetworkExclusions;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\Support;
+namespace App\Service\Ingestion\Parser\Support;
 
-use App\Service\Parser\Model\FeedNamespace;
+use App\Service\Ingestion\Parser\Model\FeedNamespace;
 
 final class MediaRssSlot
 {

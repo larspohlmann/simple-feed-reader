@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\SocialFeed;
-use App\Service\Fetch\Support\CapacityGuard;
-use App\Service\Social\Model\TimelineSlotsModel;
-use App\Service\Social\Pass\TimelineRound;
+use App\Service\Outbound\Fetch\Support\CapacityGuard;
+use App\Service\Social\Social\Model\TimelineSlotsModel;
+use App\Service\Social\Social\Pass\TimelineRound;
 
 /** Starts one refresh's private-feed round, its reads capped per account and per Mastodon instance or Bluesky PDS. */
 final readonly class TimelineRounds

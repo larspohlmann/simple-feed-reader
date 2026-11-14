@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Worker;
+namespace App\Tests\Service\Operations\Worker;
 
 use App\Entity\ProfileRun;
 use App\Entity\ProfileSettingsValues;
 use App\Enum\ProfileRunTrigger;
 use App\Enum\RunStatus;
 use App\Repository\ProfileRunRepository;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Recommendation\Settings\RecommendationSettingsWriter;
-use App\Service\Worker\Handler\StartDueProfileRunsHandler;
-use App\Service\Worker\Message\StartDueProfileRuns;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Recommendation\Settings\RecommendationSettingsWriter;
+use App\Service\Operations\Worker\Handler\StartDueProfileRunsHandler;
+use App\Service\Operations\Worker\Message\StartDueProfileRuns;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\SeedsUsers;

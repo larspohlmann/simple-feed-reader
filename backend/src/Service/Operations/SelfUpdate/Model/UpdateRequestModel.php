@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\SelfUpdate\Model;
+namespace App\Service\Operations\SelfUpdate\Model;
 
 final readonly class UpdateRequestModel
 {

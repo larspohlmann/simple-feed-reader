@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Worker;
+namespace App\Tests\Service\Operations\Worker;
 
-use App\Service\Worker\Handler\PurgeFailedMessagesHandler;
-use App\Service\Worker\Message\PurgeFailedMessages;
+use App\Service\Operations\Worker\Handler\PurgeFailedMessagesHandler;
+use App\Service\Operations\Worker\Message\PurgeFailedMessages;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TemporaryMessengerMessagesTable;
 use Doctrine\DBAL\Connection;

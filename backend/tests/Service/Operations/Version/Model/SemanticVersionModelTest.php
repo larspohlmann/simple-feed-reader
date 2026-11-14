@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Version\Model;
+namespace App\Tests\Service\Operations\Version\Model;
 
-use App\Service\Version\Model\SemanticVersionModel;
+use App\Service\Operations\Version\Model\SemanticVersionModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

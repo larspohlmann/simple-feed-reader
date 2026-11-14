@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\OAuth;
+namespace App\Tests\Service\Identity\OAuth;
 
 use App\Entity\User;
 use App\Entity\UserIdentity;
 use App\Enum\RegistrationMethod;
 use App\Enum\UserStatus;
-use App\Service\Auth\RegistrationPolicy;
-use App\Service\OAuth\Factory\OAuthUserFactory;
-use App\Service\OAuth\Model\OAuthIdentityModel;
-use App\Service\OAuth\OAuthAccountLinker;
+use App\Service\Identity\Auth\RegistrationPolicy;
+use App\Service\Identity\OAuth\Factory\OAuthUserFactory;
+use App\Service\Identity\OAuth\Model\OAuthIdentityModel;
+use App\Service\Identity\OAuth\OAuthAccountLinker;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AwaitingApprovalRecorder;
 use App\Tests\Support\NewUserStatus;

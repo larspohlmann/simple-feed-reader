@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\SelfUpdate;
+namespace App\Tests\Service\Operations\SelfUpdate;
 
-use App\Service\SelfUpdate\Exception\NoUpdateAvailableException;
-use App\Service\SelfUpdate\Exception\UpdateInProgressException;
-use App\Service\SelfUpdate\Exception\UpdaterUnavailableException;
-use App\Service\SelfUpdate\Model\SelfUpdatePhase;
-use App\Service\SelfUpdate\Model\UpdateRunModel;
-use App\Service\SelfUpdate\SelfUpdater;
-use App\Service\Version\Model\LatestReleaseModel;
-use App\Service\Version\Model\ReleaseVersionModel;
+use App\Service\Operations\SelfUpdate\Exception\NoUpdateAvailableException;
+use App\Service\Operations\SelfUpdate\Exception\UpdateInProgressException;
+use App\Service\Operations\SelfUpdate\Exception\UpdaterUnavailableException;
+use App\Service\Operations\SelfUpdate\Model\SelfUpdatePhase;
+use App\Service\Operations\SelfUpdate\Model\UpdateRunModel;
+use App\Service\Operations\SelfUpdate\SelfUpdater;
+use App\Service\Operations\Version\Model\LatestReleaseModel;
+use App\Service\Operations\Version\Model\ReleaseVersionModel;
 use App\Tests\Support\InMemoryUpdateStateStore;
 use App\Tests\Support\VersionReporters;
 use PHPUnit\Framework\Attributes\DataProvider;

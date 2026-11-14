@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Entity\User;
-use App\Service\Comments\CommentsLoader;
-use App\Service\Reading\EntryShareRecorder;
-use App\Service\Social\Exception\NoSocialAccountForNetworkException;
-use App\Service\Social\Exception\NotASocialPostException;
-use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkThrottledException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\Exception\SocialPostRefusedException;
-use App\Service\Social\Exception\SocialTokenScopeMissingException;
-use App\Service\Social\Model\SocialPostModel;
+use App\Service\Content\Comments\CommentsLoader;
+use App\Service\Library\Reading\EntryShareRecorder;
+use App\Service\Social\Social\Exception\NoSocialAccountForNetworkException;
+use App\Service\Social\Social\Exception\NotASocialPostException;
+use App\Service\Social\Social\Exception\SocialAccountNeedsReconnectException;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
+use App\Service\Social\Social\Model\SocialPostModel;
 
 /** Reposts an entry's post or a reply in its thread; the network keeps the repost, and a repost of the entry's post shares it. */
 final readonly class SocialReposts

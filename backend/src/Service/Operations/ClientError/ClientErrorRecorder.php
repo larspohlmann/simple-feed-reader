@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\ClientError;
+namespace App\Service\Operations\ClientError;
 
 use App\Entity\User;
-use App\Service\ClientError\Model\ClientErrorModel;
-use App\Service\Logging\Loki\LokiPushHandler;
+use App\Service\Operations\ClientError\Model\ClientErrorModel;
+use App\Service\Operations\Logging\Loki\LokiPushHandler;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 

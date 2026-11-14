@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Service\LinkCard;
+namespace App\Service\Content\LinkCard;
 
 use App\Entity\Entry;
 use App\Entity\LinkCardContent;
 use App\Entity\ShareEnrichment;
 use App\Repository\LinkCardRepository;
 use App\Repository\ShareEnrichmentRepository;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\LinkCard\Model\EntryCardsModel;
-use App\Service\LinkCard\Model\LinkCardBudgetModel;
-use App\Service\Search\EntryIndexer;
-use App\Service\Share\Support\ShareTargets;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Content\LinkCard\Model\EntryCardsModel;
+use App\Service\Content\LinkCard\Model\LinkCardBudgetModel;
+use App\Service\Library\Search\EntryIndexer;
+use App\Service\Social\Share\Support\ShareTargets;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**

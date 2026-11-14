@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\HomeServerCheck;
+namespace App\Tests\Service\Social\Social\HomeServerCheck;
 
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\HomeServerCheck\MastodonHomeServerCheck;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\HomeServerCheck\MastodonHomeServerCheck;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\Attributes\DataProvider;

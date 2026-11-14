@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\SelfUpdate\Pass;
+namespace App\Service\Operations\SelfUpdate\Pass;
 
-use App\Service\SelfUpdate\Exception\MalformedUpdateStateException;
-use App\Service\SelfUpdate\Model\SelfUpdatePhase;
+use App\Service\Operations\SelfUpdate\Exception\MalformedUpdateStateException;
+use App\Service\Operations\SelfUpdate\Model\SelfUpdatePhase;
 
 final readonly class StateFileFields
 {

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Llm\Run\Model;
+namespace App\Tests\Service\Curation\Recommendation\Llm\Run\Model;
 
-use App\Service\Recommendation\Llm\Run\Model\ConsolidationOutcomeModel;
+use App\Service\Curation\Recommendation\Llm\Run\Model\ConsolidationOutcomeModel;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 

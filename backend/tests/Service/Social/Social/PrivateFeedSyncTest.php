@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Entity\EntryState;
@@ -20,17 +20,17 @@ use App\Enum\SocialAccountStatus;
 use App\Enum\SocialFeedKind;
 use App\Repository\EntryStateRepository;
 use App\Repository\KnownSocialCollectionRepository;
-use App\Service\Backup\AccountRestorer;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Model\NetworkCandidatesModel;
-use App\Service\Social\Model\NetworkCollectionsModel;
-use App\Service\Social\Model\PrivateFeedModel;
-use App\Service\Social\Model\PrivateFeedSyncOutcomeModel;
-use App\Service\Social\Model\SocialCollectionModel;
-use App\Service\Social\PrivateFeeds;
-use App\Service\Social\PrivateFeedSync;
-use App\Service\Subscription\SubscriptionService;
+use App\Service\Operations\Backup\AccountRestorer;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Model\NetworkCandidatesModel;
+use App\Service\Social\Social\Model\NetworkCollectionsModel;
+use App\Service\Social\Social\Model\PrivateFeedModel;
+use App\Service\Social\Social\Model\PrivateFeedSyncOutcomeModel;
+use App\Service\Social\Social\Model\SocialCollectionModel;
+use App\Service\Social\Social\PrivateFeeds;
+use App\Service\Social\Social\PrivateFeedSync;
+use App\Service\Library\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ExportedFoundation;
 use App\Tests\Support\FlushFailingEntityManager;

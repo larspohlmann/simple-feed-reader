@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Trending\Model\TrendingUnopenedModel;
+use App\Service\Curation\Trending\Model\TrendingUnopenedModel;
 
 final class TrendingUnopenedJson
 {

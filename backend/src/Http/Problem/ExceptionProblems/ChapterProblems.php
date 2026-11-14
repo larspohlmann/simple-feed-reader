@@ -6,7 +6,7 @@ namespace App\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
-use App\Service\Chapter\Exception\EmbedDescriptionUnreachableException;
+use App\Service\Content\Chapter\Exception\EmbedDescriptionUnreachableException;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class ChapterProblems implements ExceptionProblemsInterface

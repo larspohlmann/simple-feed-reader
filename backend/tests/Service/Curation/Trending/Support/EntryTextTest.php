@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Trending\Support;
+namespace App\Tests\Service\Curation\Trending\Support;
 
-use App\Service\Trending\Support\EntryText;
+use App\Service\Curation\Trending\Support\EntryText;
 use PHPUnit\Framework\TestCase;
 
 final class EntryTextTest extends TestCase

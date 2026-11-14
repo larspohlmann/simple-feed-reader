@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Scoring;
+namespace App\Tests\Service\Curation\Recommendation\Scoring;
 
 use App\Enum\ScoringProtocol;
-use App\Service\Recommendation\Scoring\ScoringProtocol\RerankProtocol;
-use App\Service\Recommendation\Scoring\ScoringProtocol\SystemOneProtocol;
-use App\Service\Recommendation\Scoring\ScoringProtocolResolver;
+use App\Service\Curation\Recommendation\Scoring\ScoringProtocol\RerankProtocol;
+use App\Service\Curation\Recommendation\Scoring\ScoringProtocol\SystemOneProtocol;
+use App\Service\Curation\Recommendation\Scoring\ScoringProtocolResolver;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /** The resolver's unit tests hand-build the locator; only the compiled container proves the tag and the index. */

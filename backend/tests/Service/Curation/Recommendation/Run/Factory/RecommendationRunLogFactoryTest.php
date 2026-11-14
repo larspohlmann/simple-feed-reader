@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Run\Factory;
+namespace App\Tests\Service\Curation\Recommendation\Run\Factory;
 
 use App\Entity\RecommendationRun;
 use App\Repository\RecommendationRunLogRepository;
-use App\Service\Recommendation\Run\Factory\RecommendationRunLogFactory;
-use App\Service\Recommendation\Run\Model\CallSlotModel;
+use App\Service\Curation\Recommendation\Run\Factory\RecommendationRunLogFactory;
+use App\Service\Curation\Recommendation\Run\Model\CallSlotModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
 use Symfony\Component\Clock\MockClock;

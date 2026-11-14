@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser;
+namespace App\Service\Ingestion\Parser;
 
-use App\Service\Parser\Factory\FeedParserFactory;
-use App\Service\Parser\Model\ParsedFeedModel;
-use App\Service\Parser\Pass\StreamedFeedDocument;
-use App\Service\Parser\Support\UndeclaredPrefixes;
+use App\Service\Ingestion\Parser\Factory\FeedParserFactory;
+use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
+use App\Service\Ingestion\Parser\Pass\StreamedFeedDocument;
+use App\Service\Ingestion\Parser\Support\UndeclaredPrefixes;
 
 final readonly class FeedParser
 {

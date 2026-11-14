@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Run\Support;
+namespace App\Service\Curation\Recommendation\Llm\Run\Support;
 
-use App\Service\Recommendation\Llm\Completion\Model\CompletionRequestModel;
-use App\Service\Recommendation\Support\PrettyJson;
+use App\Service\Curation\Recommendation\Llm\Completion\Model\CompletionRequestModel;
+use App\Service\Curation\Recommendation\Support\PrettyJson;
 
 final class RenderedCompletionRequest
 {

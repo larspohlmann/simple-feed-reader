@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Comments\Pass;
+namespace App\Tests\Service\Content\Comments\Pass;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\User;
-use App\Service\Comments\CommentsSource\CommentsSourceInterface;
-use App\Service\Comments\Model\CommentsAnswerModel;
-use App\Service\Comments\Model\CommentsAudienceModel;
-use App\Service\Comments\Model\CommentsPageModel;
-use App\Service\Comments\Pass\CommentsRequest;
+use App\Service\Content\Comments\CommentsSource\CommentsSourceInterface;
+use App\Service\Content\Comments\Model\CommentsAnswerModel;
+use App\Service\Content\Comments\Model\CommentsAudienceModel;
+use App\Service\Content\Comments\Model\CommentsPageModel;
+use App\Service\Content\Comments\Pass\CommentsRequest;
 use App\Tests\Support\FakeCommentsSource;
 use PHPUnit\Framework\TestCase;
 

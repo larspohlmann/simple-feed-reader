@@ -5,8 +5,8 @@ declare(strict_types=1);
 // Fixtures for ServiceModuleCycleRuleTest, excluded from `composer stan` like everything in this directory.
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-namespace App\Service\Schedule {
-    use App\Service\Recommendation\Llm as LlmModule;
+namespace App\Service\Fixture\Schedule {
+    use App\Service\Curation\Recommendation\Llm as LlmModule;
 
     final class FixtureNightlyRun
     {
@@ -17,8 +17,8 @@ namespace App\Service\Schedule {
     }
 }
 
-namespace App\Service\Recommendation\Llm {
-    use App\Service\Schedule\FixtureNightlyRun;
+namespace App\Service\Curation\Recommendation\Llm {
+    use App\Service\Fixture\Schedule\FixtureNightlyRun;
 
     final class FixtureLlmEngine
     {

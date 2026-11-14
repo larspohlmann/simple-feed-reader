@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
-use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\UrlGuard;
-use App\Service\Social\BlueskyApiClient;
-use App\Service\Social\BlueskyIdentityResolver;
-use App\Service\Social\Exception\SocialAccountUnresolvableException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Outbound\Fetch\IpValidator;
+use App\Service\Outbound\Fetch\UrlGuard;
+use App\Service\Social\Social\BlueskyApiClient;
+use App\Service\Social\Social\BlueskyIdentityResolver;
+use App\Service\Social\Social\Exception\SocialAccountUnresolvableException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\StaticDnsResolver;

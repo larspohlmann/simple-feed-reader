@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\SavedPosts\Pass;
+namespace App\Service\Library\SavedPosts\Pass;
 
 use App\Entity\EntryGuid;
 

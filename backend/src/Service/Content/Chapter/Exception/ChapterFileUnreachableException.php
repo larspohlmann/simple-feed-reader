@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Chapter\Exception;
+namespace App\Service\Content\Chapter\Exception;
 
-use App\Service\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\Exception\FetchException;
 
 /** The chapters file did not answer; the next open of the episode tries again. */
 final class ChapterFileUnreachableException extends \RuntimeException

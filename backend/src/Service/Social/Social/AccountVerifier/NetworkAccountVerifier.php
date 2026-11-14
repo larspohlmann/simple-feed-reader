@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\AccountVerifier;
+namespace App\Service\Social\Social\AccountVerifier;
 
-use App\Service\Social\Model\SocialCredentialsModel;
-use App\Service\Social\Model\VerifiedAccountModel;
-use App\Service\Social\NetworkVerifier\NetworkVerifierInterface;
+use App\Service\Social\Social\Model\SocialCredentialsModel;
+use App\Service\Social\Social\Model\VerifiedAccountModel;
+use App\Service\Social\Social\NetworkVerifier\NetworkVerifierInterface;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 

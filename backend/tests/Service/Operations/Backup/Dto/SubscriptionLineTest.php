@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Backup\Dto;
+namespace App\Tests\Service\Operations\Backup\Dto;
 
 use App\Entity\Feed;
 use App\Entity\InclusionChange;
 use App\Entity\Tag;
 use App\Enum\SourceFormat;
-use App\Service\Backup\Dto\SubscriptionLine;
-use App\Service\Social\Model\ExportedSubscriptionModel;
+use App\Service\Operations\Backup\Dto\SubscriptionLine;
+use App\Service\Social\Social\Model\ExportedSubscriptionModel;
 use App\Tests\Support\BackupLineRecords;
 use PHPUnit\Framework\TestCase;
 

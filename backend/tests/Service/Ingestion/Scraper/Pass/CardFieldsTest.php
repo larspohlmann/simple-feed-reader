@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Scraper\Pass;
+namespace App\Tests\Service\Ingestion\Scraper\Pass;
 
-use App\Service\Fetch\Pass\PageUrls;
-use App\Service\Scraper\CardTitle;
-use App\Service\Scraper\Pass\CardFields;
+use App\Service\Outbound\Fetch\Pass\PageUrls;
+use App\Service\Ingestion\Scraper\CardTitle;
+use App\Service\Ingestion\Scraper\Pass\CardFields;
 use App\Tests\Support\ParsesHtml;
 use Dom\Element;
 use PHPUnit\Framework\TestCase;

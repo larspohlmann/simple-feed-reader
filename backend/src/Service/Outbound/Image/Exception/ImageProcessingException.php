@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Image\Exception;
+namespace App\Service\Outbound\Image\Exception;
 
 final class ImageProcessingException extends \RuntimeException
 {

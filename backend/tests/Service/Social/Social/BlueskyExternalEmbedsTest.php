@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\LinkCardContent;
-use App\Service\Image\Exception\GuardedImageRejectedException;
-use App\Service\Image\Exception\GuardedImageUnavailableException;
-use App\Service\Image\Exception\ImageProcessingException;
-use App\Service\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
-use App\Service\Image\ImageResizer\ImageResizerInterface;
-use App\Service\LinkCard\Model\PageCardModel;
-use App\Service\LinkCard\PageCardReader\PageCardReaderInterface;
-use App\Service\Social\BlueskyExternalEmbeds;
-use App\Service\Social\SharedPageCards;
+use App\Service\Outbound\Image\Exception\GuardedImageRejectedException;
+use App\Service\Outbound\Image\Exception\GuardedImageUnavailableException;
+use App\Service\Outbound\Image\Exception\ImageProcessingException;
+use App\Service\Outbound\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
+use App\Service\Outbound\Image\ImageResizer\ImageResizerInterface;
+use App\Service\Content\LinkCard\Model\PageCardModel;
+use App\Service\Content\LinkCard\PageCardReader\PageCardReaderInterface;
+use App\Service\Social\Social\BlueskyExternalEmbeds;
+use App\Service\Social\Social\SharedPageCards;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;

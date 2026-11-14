@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Version\ReleaseVersionReader;
+namespace App\Tests\Service\Operations\Version\ReleaseVersionReader;
 
-use App\Service\Version\Exception\MalformedVersionFileException;
-use App\Service\Version\ReleaseVersionReader\FileReleaseVersionReader;
+use App\Service\Operations\Version\Exception\MalformedVersionFileException;
+use App\Service\Operations\Version\ReleaseVersionReader\FileReleaseVersionReader;
 use PHPUnit\Framework\TestCase;
 
 final class FileReleaseVersionReaderTest extends TestCase

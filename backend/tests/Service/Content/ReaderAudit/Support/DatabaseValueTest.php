@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\ReaderAudit\Support;
+namespace App\Tests\Service\Content\ReaderAudit\Support;
 
-use App\Service\ReaderAudit\Exception\UnexpectedDatabaseValueException;
-use App\Service\ReaderAudit\Support\DatabaseValue;
+use App\Service\Content\ReaderAudit\Exception\UnexpectedDatabaseValueException;
+use App\Service\Content\ReaderAudit\Support\DatabaseValue;
 use PHPUnit\Framework\TestCase;
 
 final class DatabaseValueTest extends TestCase

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\Transport\Exception;
+namespace App\Tests\Service\Outbound\Mail\Transport\Exception;
 
-use App\Service\Mail\Transport\Exception\ProxiedSmtpSendException;
+use App\Service\Outbound\Mail\Transport\Exception\ProxiedSmtpSendException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 

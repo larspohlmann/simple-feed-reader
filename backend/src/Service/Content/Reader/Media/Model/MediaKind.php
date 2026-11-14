@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\Model;
+namespace App\Service\Content\Reader\Media\Model;
 
 enum MediaKind: string
 {

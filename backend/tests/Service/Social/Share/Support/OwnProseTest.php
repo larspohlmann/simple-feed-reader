@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Share\Support;
+namespace App\Tests\Service\Social\Share\Support;
 
-use App\Service\Html\Support\HtmlDocumentParser;
-use App\Service\Share\Support\OwnProse;
+use App\Service\Foundation\Html\Support\HtmlDocumentParser;
+use App\Service\Social\Share\Support\OwnProse;
 use PHPUnit\Framework\TestCase;
 
 final class OwnProseTest extends TestCase

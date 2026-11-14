@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\SubscriptionHistory;
+namespace App\Tests\Service\Library\SubscriptionHistory;
 
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\User;
 use App\Repository\SubscriptionActivityRepository;
-use App\Service\SubscriptionHistory\LiveDayCounter;
-use App\Service\SubscriptionHistory\Model\TrackedSubscriptionModel;
+use App\Service\Library\SubscriptionHistory\LiveDayCounter;
+use App\Service\Library\SubscriptionHistory\Model\TrackedSubscriptionModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SubscriptionHistoryFixtures;
 

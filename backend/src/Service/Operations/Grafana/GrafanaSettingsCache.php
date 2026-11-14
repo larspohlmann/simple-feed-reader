@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Grafana;
+namespace App\Service\Operations\Grafana;
 
-use App\Service\Grafana\Model\GrafanaSettingsSnapshotModel;
+use App\Service\Operations\Grafana\Model\GrafanaSettingsSnapshotModel;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Cache\InvalidArgumentException;
 

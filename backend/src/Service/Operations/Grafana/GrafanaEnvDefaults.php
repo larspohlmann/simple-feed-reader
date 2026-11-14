@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Grafana;
+namespace App\Service\Operations\Grafana;
 
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 

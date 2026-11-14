@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\Model;
+namespace App\Service\Content\Reader\Media\Model;
 
-use App\Service\Reader\Model\LeadingBlockModel;
-use App\Service\Reader\Support\LeadingEngagementBlocks;
+use App\Service\Content\Reader\Model\LeadingBlockModel;
+use App\Service\Content\Reader\Support\LeadingEngagementBlocks;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Dom\Node;

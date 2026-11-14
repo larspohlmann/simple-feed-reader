@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Process;
+namespace App\Service\Foundation\Process;
 
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 

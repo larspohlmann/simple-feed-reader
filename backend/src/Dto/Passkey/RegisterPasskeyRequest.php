@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Passkey;
 
-use App\Service\Passkey\Model\PasskeyAttestationModel;
+use App\Service\Identity\Passkey\Model\PasskeyAttestationModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**

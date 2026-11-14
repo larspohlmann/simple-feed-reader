@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Chapter\Support;
+namespace App\Tests\Service\Content\Chapter\Support;
 
 use App\Entity\EntryChapter;
-use App\Service\Chapter\Support\JsonChapters;
+use App\Service\Content\Chapter\Support\JsonChapters;
 use PHPUnit\Framework\TestCase;
 
 final class JsonChaptersTest extends TestCase

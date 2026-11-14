@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh\Model;
+namespace App\Service\Ingestion\Refresh\Model;
 
 enum FeedOutcome
 {

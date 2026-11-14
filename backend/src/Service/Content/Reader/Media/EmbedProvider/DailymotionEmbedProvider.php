@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\EmbedProvider;
+namespace App\Service\Content\Reader\Media\EmbedProvider;
 
-use App\Service\Reader\Media\Model\EmbedFrameModel;
-use App\Service\Reader\Media\Model\EmbedKind;
-use App\Service\Reader\Media\Model\EmbedShape;
-use App\Service\Reader\Media\Model\EmbedTargetModel;
+use App\Service\Content\Reader\Media\Model\EmbedFrameModel;
+use App\Service\Content\Reader\Media\Model\EmbedKind;
+use App\Service\Content\Reader\Media\Model\EmbedShape;
+use App\Service\Content\Reader\Media\Model\EmbedTargetModel;
 
 /**
  * Dailymotion's player embed. The video id is the whole payload (a page URL adds a `_title-slug`, the query holds

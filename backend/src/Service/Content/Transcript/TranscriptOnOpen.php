@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Transcript;
+namespace App\Service\Content\Transcript;
 
 use App\Entity\Entry;
 use App\Entity\EntryTranscript;
 use App\Repository\EntryTranscriptRepository;
-use App\Service\Clock\NaiveUtcClock;
+use App\Service\Foundation\Clock\NaiveUtcClock;
 
 /** The transcript an opened entry shows. Opening fetches a due one the sweep has not reached yet, within a short budget. */
 final readonly class TranscriptOnOpen

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\BodyCleaning\BodyCleaningStep;
+namespace App\Service\Content\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
-use App\Service\Reader\Media\PageMediaInserter;
-use App\Service\Reader\ReaderLeadImage;
+use App\Service\Content\Reader\BodyCleaning\Pass\BodyCleaningPass;
+use App\Service\Content\Reader\Media\PageMediaInserter;
+use App\Service\Content\Reader\ReaderLeadImage;
 
 /**
  * Restores the lead image between planning and applying the page's media: plan() only classifies, so the restore

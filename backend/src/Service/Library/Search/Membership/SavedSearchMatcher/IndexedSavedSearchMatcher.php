@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search\Membership\SavedSearchMatcher;
+namespace App\Service\Library\Search\Membership\SavedSearchMatcher;
 
-use App\Service\Search\Index\Model\IndexSearchModel;
-use App\Service\Search\Index\SearchIndexReader\SearchIndexReaderInterface;
-use App\Service\Search\Model\SavedSearchTermModel;
+use App\Service\Library\Search\Index\Model\IndexSearchModel;
+use App\Service\Library\Search\Index\SearchIndexReader\SearchIndexReaderInterface;
+use App\Service\Library\Search\Model\SavedSearchTermModel;
 
 /**
  * The engine matcher: one multi-search per chunk, one query per search, each

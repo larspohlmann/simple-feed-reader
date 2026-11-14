@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Exception;
+namespace App\Tests\Service\Content\Reader\Exception;
 
-use App\Service\Reader\Exception\ArticleNotExtractedException;
-use App\Service\Reader\Model\ExtractionFailure;
+use App\Service\Content\Reader\Exception\ArticleNotExtractedException;
+use App\Service\Content\Reader\Model\ExtractionFailure;
 use PHPUnit\Framework\TestCase;
 
 final class ArticleNotExtractedExceptionTest extends TestCase

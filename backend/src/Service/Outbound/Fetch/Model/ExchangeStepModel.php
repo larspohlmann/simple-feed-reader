@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\Model;
+namespace App\Service\Outbound\Fetch\Model;
 
 /** What an exchange concluded from one chunk: wait for more, the request's outcome, or the attempt to send next. */
 final readonly class ExchangeStepModel

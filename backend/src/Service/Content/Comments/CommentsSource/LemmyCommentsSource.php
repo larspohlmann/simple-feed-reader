@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Comments\CommentsSource;
+namespace App\Service\Content\Comments\CommentsSource;
 
 use App\Entity\Entry;
 use App\Entity\User;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Comments\CommentsEndpointFetcher;
-use App\Service\Comments\Exception\CommentsUnavailableException;
-use App\Service\Comments\Model\CommentsAnswerModel;
-use App\Service\Comments\Model\CommentsAudienceModel;
-use App\Service\Comments\Model\CommentsEndpointModel;
-use App\Service\Comments\Model\CommentsPageModel;
-use App\Service\Comments\Model\LemmyPostModel;
-use App\Service\Comments\Pass\CommentsRequest;
-use App\Service\Comments\Pass\LemmyThread;
-use App\Service\Comments\Support\LemmyPostAddress;
-use App\Service\Sanitize\EntrySanitizer;
-use App\Service\Text\MarkdownHtml;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Content\Comments\CommentsEndpointFetcher;
+use App\Service\Content\Comments\Exception\CommentsUnavailableException;
+use App\Service\Content\Comments\Model\CommentsAnswerModel;
+use App\Service\Content\Comments\Model\CommentsAudienceModel;
+use App\Service\Content\Comments\Model\CommentsEndpointModel;
+use App\Service\Content\Comments\Model\CommentsPageModel;
+use App\Service\Content\Comments\Model\LemmyPostModel;
+use App\Service\Content\Comments\Pass\CommentsRequest;
+use App\Service\Content\Comments\Pass\LemmyThread;
+use App\Service\Content\Comments\Support\LemmyPostAddress;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Foundation\Text\MarkdownHtml;
 
 final readonly class LemmyCommentsSource implements CommentsSourceInterface
 {

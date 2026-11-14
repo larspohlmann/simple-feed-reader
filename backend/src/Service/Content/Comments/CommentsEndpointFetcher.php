@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Comments;
+namespace App\Service\Content\Comments;
 
 use App\Entity\User;
-use App\Service\Comments\Exception\CommentsThrottledException;
-use App\Service\Comments\Exception\CommentsUnavailableException;
-use App\Service\Comments\Model\CommentsEndpointModel;
-use App\Service\Fetch\Exception\FeedThrottledException;
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
-use App\Service\Fetch\HostThrottle;
-use App\Service\RateLimit\RateLimitGuard;
+use App\Service\Content\Comments\Exception\CommentsThrottledException;
+use App\Service\Content\Comments\Exception\CommentsUnavailableException;
+use App\Service\Content\Comments\Model\CommentsEndpointModel;
+use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\FeedFetcher\FeedFetcherInterface;
+use App\Service\Outbound\Fetch\HostThrottle;
+use App\Service\Foundation\RateLimit\RateLimitGuard;
 use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 

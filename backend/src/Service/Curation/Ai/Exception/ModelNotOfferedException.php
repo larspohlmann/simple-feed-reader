@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai\Exception;
+namespace App\Service\Curation\Ai\Exception;
 
 /**
  * The chosen model is not in the list the provider offers. Raised on the model

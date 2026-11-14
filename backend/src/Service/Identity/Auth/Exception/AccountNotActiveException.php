@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Auth\Exception;
+namespace App\Service\Identity\Auth\Exception;
 
 /** The credentials were correct but the account may not sign in yet; the client words its message by status. */
 final class AccountNotActiveException extends \RuntimeException

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Dto;
+namespace App\Service\Operations\Backup\Dto;
 
 use App\Entity\Entry;
 use App\Entity\EntryAuthor;
@@ -16,14 +16,14 @@ use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;
 use App\Entity\SavedEntryOrigin;
 use App\Enum\ShareKind;
-use App\Service\Backup\Model\EntryCompanionsModel;
-use App\Service\Backup\Support\BackupLineFormat;
-use App\Service\Backup\Support\BackupSchema;
-use App\Service\Backup\Support\LineField;
-use App\Service\Backup\Support\LineFieldWithDefault;
-use App\Service\LinkCard\Support\StorableLinkCard;
-use App\Service\LinkCard\Support\StorableQuotedPost;
-use App\Service\Url\Support\AbsoluteHttpUrl;
+use App\Service\Operations\Backup\Model\EntryCompanionsModel;
+use App\Service\Operations\Backup\Support\BackupLineFormat;
+use App\Service\Operations\Backup\Support\BackupSchema;
+use App\Service\Operations\Backup\Support\LineField;
+use App\Service\Operations\Backup\Support\LineFieldWithDefault;
+use App\Service\Content\LinkCard\Support\StorableLinkCard;
+use App\Service\Content\LinkCard\Support\StorableQuotedPost;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 
 /**
  * One entry belonging to a feed the account subscribes to.

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Auth;
+namespace App\Tests\Service\Identity\Auth;
 
 use App\Entity\ActionToken;
 use App\Entity\User;
 use App\Enum\TokenPurpose;
 use App\Repository\ActionTokenRepository;
-use App\Service\Auth\ActionTokenService;
-use App\Service\Auth\Exception\InvalidTokenException;
+use App\Service\Identity\Auth\ActionTokenService;
+use App\Service\Identity\Auth\Exception\InvalidTokenException;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AssertsRefusal;
 use Symfony\Component\Clock\MockClock;

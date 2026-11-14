@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Scoring\ScoringProtocol;
+namespace App\Service\Curation\Recommendation\Scoring\ScoringProtocol;
 
 use App\Enum\ScoringProtocol;
-use App\Service\Ai\Model\ProviderCredentialsModel;
-use App\Service\Recommendation\Pool\Model\ArticleLineModel;
-use App\Service\Recommendation\Scoring\Factory\SystemOneRequestFactory;
-use App\Service\Recommendation\Scoring\Model\ScoringBudgetModel;
-use App\Service\Recommendation\Scoring\Model\ScoringRequestModel;
-use App\Service\Recommendation\Scoring\Model\SystemOneRequestModel;
-use App\Service\Recommendation\Scoring\ScoringBatchPacker;
-use App\Service\Recommendation\Scoring\SystemOneClient\SystemOneClientInterface;
-use App\Service\Recommendation\Support\CompactJson;
-use App\Service\Recommendation\Support\PrettyJson;
-use App\Service\Recommendation\Support\TokenEstimate;
+use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
+use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Curation\Recommendation\Scoring\Factory\SystemOneRequestFactory;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringBudgetModel;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringRequestModel;
+use App\Service\Curation\Recommendation\Scoring\Model\SystemOneRequestModel;
+use App\Service\Curation\Recommendation\Scoring\ScoringBatchPacker;
+use App\Service\Curation\Recommendation\Scoring\SystemOneClient\SystemOneClientInterface;
+use App\Service\Curation\Recommendation\Support\CompactJson;
+use App\Service\Curation\Recommendation\Support\PrettyJson;
+use App\Service\Curation\Recommendation\Support\TokenEstimate;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**

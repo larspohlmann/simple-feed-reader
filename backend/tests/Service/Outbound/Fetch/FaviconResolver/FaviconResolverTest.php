@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch\FaviconResolver;
+namespace App\Tests\Service\Outbound\Fetch\FaviconResolver;
 
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\FaviconResolver\FaviconResolver;
-use App\Service\Fetch\Model\FetchResponseModel;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\FaviconResolver\FaviconResolver;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\StubFeedFetcher;
 use PHPUnit\Framework\Attributes\DataProvider;

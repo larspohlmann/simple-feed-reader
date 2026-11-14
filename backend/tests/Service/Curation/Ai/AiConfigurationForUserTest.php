@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Ai;
+namespace App\Tests\Service\Curation\Ai;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
-use App\Service\Ai\AiConfigurationForUser;
-use App\Service\Ai\Exception\ConfigurationNotFoundException;
+use App\Service\Curation\Ai\AiConfigurationForUser;
+use App\Service\Curation\Ai\Exception\ConfigurationNotFoundException;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AiProviderSettingsFactory;
 use App\Tests\Support\SeedsUsers;

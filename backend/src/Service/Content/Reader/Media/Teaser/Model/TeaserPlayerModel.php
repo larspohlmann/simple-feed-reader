@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\Teaser\Model;
+namespace App\Service\Content\Reader\Media\Teaser\Model;
 
-use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Content\Reader\Media\Model\MediaKind;
 
 /**
  * An inline media teaser the extraction reduced to a bare thumbnail: a player with its own still, a headline and a

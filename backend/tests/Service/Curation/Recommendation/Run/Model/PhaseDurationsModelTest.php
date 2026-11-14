@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Run\Model;
+namespace App\Tests\Service\Curation\Recommendation\Run\Model;
 
 use App\Enum\CallPhase;
 use App\Enum\RecommendationEngineKind;
-use App\Service\Recommendation\Run\Model\PhaseDurationsModel;
+use App\Service\Curation\Recommendation\Run\Model\PhaseDurationsModel;
 use PHPUnit\Framework\TestCase;
 
 final class PhaseDurationsModelTest extends TestCase

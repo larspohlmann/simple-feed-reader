@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Trending;
+namespace App\Tests\Service\Curation\Trending;
 
 use App\Entity\Entry;
 use App\Entity\EntryState;
@@ -19,12 +19,12 @@ use App\Repository\EntryListRowEnricher;
 use App\Repository\ReadingSettingsRepository;
 use App\Repository\TrendingEntryRepository;
 use App\Repository\TrendingStoryRepository;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Trending\Model\RankedStoryModel;
-use App\Service\Trending\Model\ReaderWindowModel;
-use App\Service\Trending\Model\TrendingStoryCardModel;
-use App\Service\Trending\ReaderWindows;
-use App\Service\Trending\TrendingStories;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Curation\Trending\Model\RankedStoryModel;
+use App\Service\Curation\Trending\Model\ReaderWindowModel;
+use App\Service\Curation\Trending\Model\TrendingStoryCardModel;
+use App\Service\Curation\Trending\ReaderWindows;
+use App\Service\Curation\Trending\TrendingStories;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
 use App\Tests\Support\TrendingWiring;

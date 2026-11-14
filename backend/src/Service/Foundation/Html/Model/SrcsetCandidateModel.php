@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Html\Model;
+namespace App\Service\Foundation\Html\Model;
 
 /**
  * One srcset entry. A width descriptor states the file's pixel width; a density only ranks the candidates of its own

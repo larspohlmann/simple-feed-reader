@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Dto;
+namespace App\Service\Operations\Backup\Dto;
 
-use App\Service\Backup\Exception\InvalidBackupException;
-use App\Service\Backup\Support\LineField;
+use App\Service\Operations\Backup\Exception\InvalidBackupException;
+use App\Service\Operations\Backup\Support\LineField;
 
 /**
  * The foundation header's declared entry and entry-state counts across every

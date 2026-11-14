@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Prompt\Model;
+namespace App\Service\Curation\Recommendation\Llm\Prompt\Model;
 
-use App\Service\Recommendation\Llm\Completion\Model\JsonSchemaModel;
+use App\Service\Curation\Recommendation\Llm\Completion\Model\JsonSchemaModel;
 
 /**
  * Each provider phase's structured-output schema, the machine form of RecommendationPromptText's contract. No score

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Image;
+namespace App\Service\Outbound\Image;
 
 use App\Entity\ImageRendition;
-use App\Service\Image\Exception\GuardedImageUnavailableException;
-use App\Service\Image\GuardedImageProbe\GuardedImageProbeInterface;
-use App\Service\Image\Model\LeadImageModel;
-use App\Service\Image\Support\RenditionTargets;
-use App\Service\Image\Support\WidthQuery;
+use App\Service\Outbound\Image\Exception\GuardedImageUnavailableException;
+use App\Service\Outbound\Image\GuardedImageProbe\GuardedImageProbeInterface;
+use App\Service\Outbound\Image\Model\LeadImageModel;
+use App\Service\Outbound\Image\Support\RenditionTargets;
+use App\Service\Outbound\Image\Support\WidthQuery;
 
 /** A host that answers `w=` with that width renders every target on demand; one check proves it. */
 final readonly class ResizerRungs

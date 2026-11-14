@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\Model;
+namespace App\Service\Outbound\Fetch\Model;
 
 /** Which exchange reads a ticket's answer; the engine keys its exchange locator by the value. */
 enum ResponseExchangeKind: string

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Transport\Exception;
+namespace App\Service\Outbound\Mail\Transport\Exception;
 
-use App\Service\Fetch\Support\ProxyHandshakeFailure;
+use App\Service\Outbound\Fetch\Support\ProxyHandshakeFailure;
 use Symfony\Component\Mailer\Exception\TransportException;
 
 /**

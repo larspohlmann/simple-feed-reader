@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\SubscriptionHistory;
+namespace App\Tests\Service\Library\SubscriptionHistory;
 
 use App\Entity\EntryState;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionDay;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
-use App\Service\SubscriptionHistory\Support\UtcDay;
-use App\Service\SubscriptionHistory\SubscriptionHistoryRecorder;
+use App\Service\Library\SubscriptionHistory\Support\UtcDay;
+use App\Service\Library\SubscriptionHistory\SubscriptionHistoryRecorder;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SubscriptionHistoryFixtures;
 

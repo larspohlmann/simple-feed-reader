@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\LinkCard\Support;
+namespace App\Tests\Service\Content\LinkCard\Support;
 
 use App\Entity\EntryMedium;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;
-use App\Service\LinkCard\Support\StorableQuotedPost;
+use App\Service\Content\LinkCard\Support\StorableQuotedPost;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

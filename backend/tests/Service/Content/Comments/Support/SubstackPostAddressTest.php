@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Comments\Support;
+namespace App\Tests\Service\Content\Comments\Support;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Enum\FeedPlatform;
-use App\Service\Comments\Support\SubstackPostAddress;
+use App\Service\Content\Comments\Support\SubstackPostAddress;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

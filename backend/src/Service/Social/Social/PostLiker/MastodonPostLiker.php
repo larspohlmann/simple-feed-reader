@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\PostLiker;
+namespace App\Service\Social\Social\PostLiker;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\MastodonAccountApi;
-use App\Service\Social\Model\SocialLikeResultModel;
-use App\Service\Social\Model\SocialPostModel;
-use App\Service\Social\Support\MastodonStatusAction;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\MastodonAccountApi;
+use App\Service\Social\Social\Model\SocialLikeResultModel;
+use App\Service\Social\Social\Model\SocialPostModel;
+use App\Service\Social\Social\Support\MastodonStatusAction;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Mastodon->value)]

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Sanitize;
+namespace App\Service\Foundation\Sanitize;
 
 /**
  * Strips an article's blank tail: whitespace, non-breaking spaces (U+00A0 survives trim()), a final <br> and empty

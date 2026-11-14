@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Settings;
+namespace App\Service\Operations\Settings;
 
 /**
  * Whether an id could work at all, never whether it matches this host: the browser enforces the origin match, and a

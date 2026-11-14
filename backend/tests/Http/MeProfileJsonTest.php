@@ -12,9 +12,9 @@ use App\Http\MeJson;
 use App\Http\MeProfileJson;
 use App\Http\RecommendationCapabilitiesJson;
 use App\Repository\CatalogFeedRepository;
-use App\Service\Account\AccountSettings;
-use App\Service\Mail\MailCapability;
-use App\Service\Recommendation\Engine\RecommendationEngineResolver;
+use App\Service\Identity\Account\AccountSettings;
+use App\Service\Outbound\Mail\MailCapability;
+use App\Service\Curation\Recommendation\Engine\RecommendationEngineResolver;
 use App\Tests\DbTestCase;
 use App\Tests\Support\EnablesMailInTests;
 

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media;
+namespace App\Service\Content\Reader\Media;
 
-use App\Service\Parser\Support\MediaDuration;
+use App\Service\Ingestion\Parser\Support\MediaDuration;
 use Dom\Element;
 
 /**

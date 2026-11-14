@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\Digest;
+namespace App\Tests\Service\Outbound\Mail\Digest;
 
 use App\Enum\DigestCadence;
 use App\Enum\DigestFormat;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Mail\Digest\DigestEnablement;
-use App\Service\Mail\Digest\Model\DigestConfigurationModel;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Outbound\Mail\Digest\DigestEnablement;
+use App\Service\Outbound\Mail\Digest\Model\DigestConfigurationModel;
 use App\Tests\Support\UnsavedUserSettings;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;

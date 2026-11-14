@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser;
+namespace App\Service\Ingestion\Parser;
 
-use App\Service\Parser\Model\FeedMediaKind;
-use App\Service\Parser\Model\FeedNamespace;
-use App\Service\Parser\Model\ParsedMediaBundleModel;
-use App\Service\Parser\Pass\CoreElement;
-use App\Service\Parser\Pass\FeedMediaNode;
-use App\Service\Parser\Support\DeclaredChapters;
-use App\Service\Parser\Support\DeclaredTranscripts;
-use App\Service\Parser\Support\MediaDuration;
-use App\Service\Parser\Support\MediaRssSlot;
-use App\Service\Parser\Support\XmlHelper;
+use App\Service\Ingestion\Parser\Model\FeedMediaKind;
+use App\Service\Ingestion\Parser\Model\FeedNamespace;
+use App\Service\Ingestion\Parser\Model\ParsedMediaBundleModel;
+use App\Service\Ingestion\Parser\Pass\CoreElement;
+use App\Service\Ingestion\Parser\Pass\FeedMediaNode;
+use App\Service\Ingestion\Parser\Support\DeclaredChapters;
+use App\Service\Ingestion\Parser\Support\DeclaredTranscripts;
+use App\Service\Ingestion\Parser\Support\MediaDuration;
+use App\Service\Ingestion\Parser\Support\MediaRssSlot;
+use App\Service\Ingestion\Parser\Support\XmlHelper;
 
 /**
  * Splits a feed item's declared media into visual media and enclosures, from parsed attributes only. A `<media:group>`

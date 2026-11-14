@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
-use App\Service\Social\Model\SearchedPostModel;
-use App\Service\Social\Pass\SearchQueryParser;
+use App\Service\Social\Social\Model\SearchedPostModel;
+use App\Service\Social\Social\Pass\SearchQueryParser;
 
 /** The reader's own reading of a search: networks also match link cards, alt text and quotes the reader never shows. */
 final class SocialSearchMatch

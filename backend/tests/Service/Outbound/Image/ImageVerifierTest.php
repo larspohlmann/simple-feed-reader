@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Image;
+namespace App\Tests\Service\Outbound\Image;
 
 use App\Entity\Entry;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
 use App\Entity\ImageRendition;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Image\Exception\GuardedImageRejectedException;
-use App\Service\Image\Exception\GuardedImageUnavailableException;
-use App\Service\Image\ImageVerifier;
-use App\Service\Image\Model\ImageVerifyOutcome;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Outbound\Image\Exception\GuardedImageRejectedException;
+use App\Service\Outbound\Image\Exception\GuardedImageUnavailableException;
+use App\Service\Outbound\Image\ImageVerifier;
+use App\Service\Outbound\Image\Model\ImageVerifyOutcome;
 use App\Tests\Support\PngImageFactory;
 use App\Tests\Support\RenditionProbes;
 use App\Tests\Support\StubGuardedImageDownloader;

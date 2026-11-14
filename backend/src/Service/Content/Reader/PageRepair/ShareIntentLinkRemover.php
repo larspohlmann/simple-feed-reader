@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\PageRepair;
+namespace App\Service\Content\Reader\PageRepair;
 
-use App\Service\Reader\Pass\ShareLinkMatcher;
-use App\Service\Text\Support\Whitespace;
+use App\Service\Content\Reader\Pass\ShareLinkMatcher;
+use App\Service\Foundation\Text\Support\Whitespace;
 use Dom\Element;
 use Dom\HTMLDocument;
 

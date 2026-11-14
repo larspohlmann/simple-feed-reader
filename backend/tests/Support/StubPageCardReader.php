@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\LinkCardContent;
-use App\Service\LinkCard\Model\PageCardModel;
-use App\Service\LinkCard\PageCardReader\PageCardReaderInterface;
-use App\Service\Reader\Exception\PageFetchException;
+use App\Service\Content\LinkCard\Model\PageCardModel;
+use App\Service\Content\LinkCard\PageCardReader\PageCardReaderInterface;
+use App\Service\Content\Reader\Exception\PageFetchException;
 
 /** Cards every page "Card for <url>"; a URL containing /missing fails to fetch. */
 final class StubPageCardReader implements PageCardReaderInterface

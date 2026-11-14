@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Prompt;
+namespace App\Service\Curation\Recommendation\Llm\Prompt;
 
-use App\Service\Recommendation\Llm\Prompt\Model\RecommendationPickModel;
+use App\Service\Curation\Recommendation\Llm\Prompt\Model\RecommendationPickModel;
 
 /**
  * Salvages the valid picks of a decoded `recommendations` list for the batch and consolidation parsers. A pick needs an

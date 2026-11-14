@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\ReaderAudit;
+namespace App\Service\Content\ReaderAudit;
 
-use App\Service\Reader\LeadingEngagementRules;
-use App\Service\ReaderAudit\Model\BodyBlockModel;
-use App\Service\ReaderAudit\Model\CleanupMarkerModel;
-use App\Service\ReaderAudit\Model\ExtractedBodyModel;
+use App\Service\Content\Reader\LeadingEngagementRules;
+use App\Service\Content\ReaderAudit\Model\BodyBlockModel;
+use App\Service\Content\ReaderAudit\Model\CleanupMarkerModel;
+use App\Service\Content\ReaderAudit\Model\ExtractedBodyModel;
 
 final readonly class LeadingEngagementMarkers
 {

@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Refresh\PassFetcher;
+namespace App\Tests\Service\Ingestion\Refresh\PassFetcher;
 
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Enum\SocialNetwork;
-use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
-use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
-use App\Service\Fetch\ConcurrentRequestEngine;
-use App\Service\Fetch\DnsResolver\NativeDnsResolver;
-use App\Service\Refresh\Model\PassOutcome\TimelinePassOutcomeModel;
-use App\Service\Refresh\Pass\RefreshPass;
-use App\Service\Refresh\PassFetcher\ConcurrentPassFetcher;
-use App\Service\Refresh\PassFetcher\PassFetcherInterface;
-use App\Service\Social\Crypto\SocialCredentialCipher;
-use App\Service\Social\Model\TimelineOutcome\FetchedTimelineModel;
+use App\Service\Foundation\Crypto\InstanceSecretCipher;
+use App\Service\Outbound\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
+use App\Service\Outbound\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
+use App\Service\Outbound\Fetch\ConcurrentRequestEngine;
+use App\Service\Outbound\Fetch\DnsResolver\NativeDnsResolver;
+use App\Service\Ingestion\Refresh\Model\PassOutcome\TimelinePassOutcomeModel;
+use App\Service\Ingestion\Refresh\Pass\RefreshPass;
+use App\Service\Ingestion\Refresh\PassFetcher\ConcurrentPassFetcher;
+use App\Service\Ingestion\Refresh\PassFetcher\PassFetcherInterface;
+use App\Service\Social\Social\Crypto\SocialCredentialCipher;
+use App\Service\Social\Social\Model\TimelineOutcome\FetchedTimelineModel;
 use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\PrivateFeeds;
 use App\Tests\Support\RoutedHttpClient;

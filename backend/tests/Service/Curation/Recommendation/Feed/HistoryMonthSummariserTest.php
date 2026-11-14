@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Feed;
+namespace App\Tests\Service\Curation\Recommendation\Feed;
 
-use App\Service\Clock\Model\ViewerTimeZoneModel;
-use App\Service\Recommendation\Feed\HistoryMonthSummariser;
+use App\Service\Foundation\Clock\Model\ViewerTimeZoneModel;
+use App\Service\Curation\Recommendation\Feed\HistoryMonthSummariser;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 

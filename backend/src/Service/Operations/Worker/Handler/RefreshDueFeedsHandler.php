@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Worker\Handler;
+namespace App\Service\Operations\Worker\Handler;
 
-use App\Service\Refresh\Model\RefreshRequestModel;
-use App\Service\Refresh\RefreshRunner\RefreshRunner;
-use App\Service\Worker\Message\RefreshDueFeeds;
-use App\Service\Worker\RefreshWarmUp;
+use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
+use App\Service\Ingestion\Refresh\RefreshRunner\RefreshRunner;
+use App\Service\Operations\Worker\Message\RefreshDueFeeds;
+use App\Service\Operations\Worker\RefreshWarmUp;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 

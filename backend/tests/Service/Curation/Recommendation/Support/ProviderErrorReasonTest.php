@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Support;
+namespace App\Tests\Service\Curation\Recommendation\Support;
 
-use App\Service\Ai\Model\ProviderCredentialsModel;
-use App\Service\Ai\Model\ProviderErrorIdentifiersModel;
-use App\Service\Recommendation\Support\ProviderErrorReason;
+use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
+use App\Service\Curation\Ai\Model\ProviderErrorIdentifiersModel;
+use App\Service\Curation\Recommendation\Support\ProviderErrorReason;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

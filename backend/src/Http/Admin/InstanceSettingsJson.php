@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Admin;
 
-use App\Service\Auth\RegistrationPolicy;
-use App\Service\Settings\InstanceSettings;
-use App\Service\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
+use App\Service\Identity\Auth\RegistrationPolicy;
+use App\Service\Operations\Settings\InstanceSettings;
+use App\Service\Operations\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**

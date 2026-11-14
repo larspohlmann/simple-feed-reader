@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup;
+namespace App\Service\Operations\Backup;
 
 use App\Entity\User;
-use App\Service\Backup\Exception\BackupDoesNotFitException;
-use App\Service\Backup\Model\BackupInventoryModel;
-use App\Service\Subscription\SubscriptionLimitResolver;
+use App\Service\Operations\Backup\Exception\BackupDoesNotFitException;
+use App\Service\Operations\Backup\Model\BackupInventoryModel;
+use App\Service\Library\Subscription\SubscriptionLimitResolver;
 
 /**
  * Whether a counted backup fits this account, checked before the wipe. Every line kind is bounded: the load keeps

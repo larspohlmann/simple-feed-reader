@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Maintenance\MaintenanceSweep;
+namespace App\Service\Operations\Maintenance\MaintenanceSweep;
 
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 

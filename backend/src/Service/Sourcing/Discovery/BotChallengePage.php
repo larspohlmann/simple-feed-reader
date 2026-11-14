@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Discovery;
+namespace App\Service\Sourcing\Discovery;
 
 /**
  * Recognises a bot gate's challenge page, which arrives with a success status (SiteGround answers 202). Kept narrow:

@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Bluesky\Support\AtPostUri;
-use App\Service\Comments\Model\CommentCountsModel;
-use App\Service\Comments\Model\CommentPostModel;
-use App\Service\Comments\Model\CommentViewerModel;
-use App\Service\Social\Model\SocialCountsModel;
-use App\Service\Url\Support\AbsoluteHttpUrl;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Bluesky\Support\AtPostUri;
+use App\Service\Content\Comments\Model\CommentCountsModel;
+use App\Service\Content\Comments\Model\CommentPostModel;
+use App\Service\Content\Comments\Model\CommentViewerModel;
+use App\Service\Social\Social\Model\SocialCountsModel;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 
 /** The post a reply in a thread answer is; null when the answer names no address or no counts for it. */
 final class CommentPost

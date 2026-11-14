@@ -16,7 +16,7 @@ use App\Enum\TranscriptFormat;
 use App\Pagination\EntryCursor;
 use App\Repository\EntryListRepository;
 use App\Repository\EntrySearchQuery;
-use App\Service\Search\Model\SearchTermsModel;
+use App\Service\Library\Search\Model\SearchTermsModel;
 use App\Tests\DbTestCase;
 
 /** The database search over title, summary and transcript text, ignoring case and accents on either engine. */

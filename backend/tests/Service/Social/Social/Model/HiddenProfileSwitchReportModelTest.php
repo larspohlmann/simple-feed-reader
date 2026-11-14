@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Model;
+namespace App\Tests\Service\Social\Social\Model;
 
-use App\Service\Social\Model\HiddenProfileMoveOutcome;
-use App\Service\Social\Model\HiddenProfileSwitchReportModel;
+use App\Service\Social\Social\Model\HiddenProfileMoveOutcome;
+use App\Service\Social\Social\Model\HiddenProfileSwitchReportModel;
 use PHPUnit\Framework\TestCase;
 
 final class HiddenProfileSwitchReportModelTest extends TestCase

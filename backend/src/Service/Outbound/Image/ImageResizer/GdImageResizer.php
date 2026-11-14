@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Image\ImageResizer;
+namespace App\Service\Outbound\Image\ImageResizer;
 
-use App\Service\Image\Exception\ImageProcessingException;
+use App\Service\Outbound\Image\Exception\ImageProcessingException;
 
 /**
  * Rasterises a fetched image to a fixed size, as a cover-crop JPEG or a

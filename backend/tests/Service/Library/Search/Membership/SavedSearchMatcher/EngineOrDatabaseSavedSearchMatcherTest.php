@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Search\Membership\SavedSearchMatcher;
+namespace App\Tests\Service\Library\Search\Membership\SavedSearchMatcher;
 
 use App\Repository\DatabaseSavedSearchMatcher;
 use App\Repository\IndexSearchPredicates;
 use App\Repository\LikeSearchPredicates;
 use App\Repository\SearchTermsPredicateBuilder;
-use App\Service\Search\Exception\SearchEngineUnavailableException;
-use App\Service\Search\Membership\SavedSearchMatcher\EngineOrDatabaseSavedSearchMatcher;
-use App\Service\Search\Membership\SavedSearchMatcher\IndexedSavedSearchMatcher;
-use App\Service\Search\Model\SavedSearchTermModel;
-use App\Service\Search\Model\SearchTermsModel;
-use App\Service\Search\SearchEngineCapability;
-use App\Tests\Service\Search\FakeMultiSearchReader;
+use App\Service\Library\Search\Exception\SearchEngineUnavailableException;
+use App\Service\Library\Search\Membership\SavedSearchMatcher\EngineOrDatabaseSavedSearchMatcher;
+use App\Service\Library\Search\Membership\SavedSearchMatcher\IndexedSavedSearchMatcher;
+use App\Service\Library\Search\Model\SavedSearchTermModel;
+use App\Service\Library\Search\Model\SearchTermsModel;
+use App\Service\Library\Search\SearchEngineCapability;
+use App\Tests\Service\Library\Search\FakeMultiSearchReader;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Image\GuardedImageDownloader;
+namespace App\Service\Outbound\Image\GuardedImageDownloader;
 
-use App\Service\Image\Exception\GuardedImageRejectedException;
-use App\Service\Image\Exception\GuardedImageUnavailableException;
-use App\Service\Image\Model\DownloadedImageModel;
+use App\Service\Outbound\Image\Exception\GuardedImageRejectedException;
+use App\Service\Outbound\Image\Exception\GuardedImageUnavailableException;
+use App\Service\Outbound\Image\Model\DownloadedImageModel;
 
 interface GuardedImageDownloaderInterface
 {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Profile;
+namespace App\Tests\Service\Curation\Recommendation\Profile;
 
 use App\Entity\ProfileRun;
 use App\Entity\ProfileSettingsValues;
@@ -11,10 +11,10 @@ use App\Enum\ProfileRunOutcome;
 use App\Enum\ProfileRunTrigger;
 use App\Repository\ProfileRunRepository;
 use App\Repository\RecommendationSettingsRepository;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Recommendation\Profile\DueProfileRunFinder;
-use App\Service\Recommendation\Profile\ProfileConnections;
-use App\Service\Recommendation\Settings\RecommendationSettingsWriter;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Recommendation\Profile\DueProfileRunFinder;
+use App\Service\Curation\Recommendation\Profile\ProfileConnections;
+use App\Service\Curation\Recommendation\Settings\RecommendationSettingsWriter;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\SeedsUsers;

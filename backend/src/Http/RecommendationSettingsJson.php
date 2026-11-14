@@ -6,10 +6,10 @@ namespace App\Http;
 
 use App\Entity\RecommendationSettings;
 use App\Enum\RecommendationBatchSize;
-use App\Service\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
-use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
-use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
-use App\Service\Recommendation\Settings\Support\RecommendationSettingsBounds;
+use App\Service\Curation\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
+use App\Service\Curation\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
+use App\Service\Curation\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
+use App\Service\Curation\Recommendation\Settings\Support\RecommendationSettingsBounds;
 
 /**
  * The effective recommendation settings and, for an engine that sends a prompt, the prompt

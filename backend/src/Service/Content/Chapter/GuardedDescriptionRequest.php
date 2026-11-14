@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Chapter;
+namespace App\Service\Content\Chapter;
 
-use App\Service\Chapter\Exception\EmbedDescriptionUnreachableException;
-use App\Service\Chapter\Model\EmbedAddressModel;
-use App\Service\Fetch\Exception\DirectRouteUnavailableException;
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\Exception\ResponseTooLargeException;
-use App\Service\Fetch\Exception\SsrfBlockedException;
-use App\Service\Fetch\GuardedApiClient;
-use App\Service\Fetch\Model\ApiBudgetModel;
-use App\Service\Fetch\Model\ApiRequestModel;
-use App\Service\Fetch\Model\ApiResponseModel;
-use App\Service\Fetch\Model\ResponseSizeLimit;
+use App\Service\Content\Chapter\Exception\EmbedDescriptionUnreachableException;
+use App\Service\Content\Chapter\Model\EmbedAddressModel;
+use App\Service\Outbound\Fetch\Exception\DirectRouteUnavailableException;
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Outbound\Fetch\Exception\SsrfBlockedException;
+use App\Service\Outbound\Fetch\GuardedApiClient;
+use App\Service\Outbound\Fetch\Model\ApiBudgetModel;
+use App\Service\Outbound\Fetch\Model\ApiRequestModel;
+use App\Service\Outbound\Fetch\Model\ApiResponseModel;
+use App\Service\Outbound\Fetch\Model\ResponseSizeLimit;
 
 /** One budgeted, size-capped request to a description provider (#1824). */
 final readonly class GuardedDescriptionRequest

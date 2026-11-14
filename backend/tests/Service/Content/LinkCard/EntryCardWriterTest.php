@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\LinkCard;
+namespace App\Tests\Service\Content\LinkCard;
 
 use App\Entity\Entry;
 use App\Entity\EntryMedium;
@@ -11,10 +11,10 @@ use App\Entity\Headline;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
 use App\Enum\ShareKind;
-use App\Service\LinkCard\EntryCardWriter;
-use App\Service\LinkCard\Model\EntryCardsModel;
-use App\Service\LinkCard\Model\PageCardModel;
-use App\Service\LinkCard\Model\QuotedTargetModel;
+use App\Service\Content\LinkCard\EntryCardWriter;
+use App\Service\Content\LinkCard\Model\EntryCardsModel;
+use App\Service\Content\LinkCard\Model\PageCardModel;
+use App\Service\Content\LinkCard\Model\QuotedTargetModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\ShareLinkCardsWiring;

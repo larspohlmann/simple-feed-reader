@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\SocialAccount;
 use App\Entity\User;
 use App\Repository\SocialAccountRepository;
-use App\Service\Social\AccountVerifier\AccountVerifierInterface;
-use App\Service\Social\Crypto\SocialCredentialCipher;
-use App\Service\Social\Exception\SocialAccountAlreadyConnectedException;
-use App\Service\Social\Exception\SocialAccountMismatchException;
-use App\Service\Social\Exception\TooManySocialAccountsException;
-use App\Service\Social\Factory\SocialAccountFactory;
-use App\Service\Social\Model\PrivateFeedModel;
-use App\Service\Social\Model\SocialCredentialsModel;
-use App\Service\Social\Model\VerifiedAccountModel;
-use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
+use App\Service\Social\Social\AccountVerifier\AccountVerifierInterface;
+use App\Service\Social\Social\Crypto\SocialCredentialCipher;
+use App\Service\Social\Social\Exception\SocialAccountAlreadyConnectedException;
+use App\Service\Social\Social\Exception\SocialAccountMismatchException;
+use App\Service\Social\Social\Exception\TooManySocialAccountsException;
+use App\Service\Social\Social\Factory\SocialAccountFactory;
+use App\Service\Social\Social\Model\PrivateFeedModel;
+use App\Service\Social\Social\Model\SocialCredentialsModel;
+use App\Service\Social\Social\Model\VerifiedAccountModel;
+use App\Service\Library\Subscription\Exception\SubscriptionLimitReachedException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;

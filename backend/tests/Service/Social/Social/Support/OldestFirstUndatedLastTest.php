@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Support;
+namespace App\Tests\Service\Social\Social\Support;
 
-use App\Service\Social\Support\OldestFirstUndatedLast;
+use App\Service\Social\Social\Support\OldestFirstUndatedLast;
 use PHPUnit\Framework\TestCase;
 
 final class OldestFirstUndatedLastTest extends TestCase

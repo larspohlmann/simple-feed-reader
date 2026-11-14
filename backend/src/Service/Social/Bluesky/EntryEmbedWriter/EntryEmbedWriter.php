@@ -2,28 +2,28 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Bluesky\EntryEmbedWriter;
+namespace App\Service\Social\Bluesky\EntryEmbedWriter;
 
 use App\Entity\Entry;
 use App\Entity\EntryMedium;
 use App\Entity\LinkCardContent;
 use App\Enum\ShareKind;
 use App\Repository\LinkCardRepository;
-use App\Service\Bluesky\Model\FillOutcome;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Bluesky\Model\RenderedEmbedModel;
-use App\Service\Bluesky\PostEmbedRenderer;
-use App\Service\Bluesky\Support\AtPostUri;
-use App\Service\Bluesky\Support\BlueskyRichText;
-use App\Service\LinkCard\Support\TrailingUrl;
-use App\Service\Image\Model\DeclaredImageModel;
-use App\Service\Ingest\EntryImageWriter;
-use App\Service\Ingest\Support\EntryMediaAssembler;
-use App\Service\Ingest\Support\EntrySnippet;
-use App\Service\Share\Model\SharedLinksModel;
-use App\Service\Share\Support\SharedLinks;
-use App\Service\Sanitize\EntrySanitizer;
-use App\Service\Text\Support\HtmlEscape;
+use App\Service\Social\Bluesky\Model\FillOutcome;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Bluesky\Model\RenderedEmbedModel;
+use App\Service\Social\Bluesky\PostEmbedRenderer;
+use App\Service\Social\Bluesky\Support\AtPostUri;
+use App\Service\Social\Bluesky\Support\BlueskyRichText;
+use App\Service\Content\LinkCard\Support\TrailingUrl;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
+use App\Service\Ingestion\Ingest\EntryImageWriter;
+use App\Service\Ingestion\Ingest\Support\EntryMediaAssembler;
+use App\Service\Ingestion\Ingest\Support\EntrySnippet;
+use App\Service\Social\Share\Model\SharedLinksModel;
+use App\Service\Social\Share\Support\SharedLinks;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Foundation\Text\Support\HtmlEscape;
 
 final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
 {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Model;
+namespace App\Service\Social\Social\Model;
 
 /** A post's public counts as its network reports them now; Mastodon has no quotes. */
 final readonly class SocialCountsModel

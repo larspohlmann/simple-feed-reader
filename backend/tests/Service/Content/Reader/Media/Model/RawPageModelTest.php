@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media\Model;
+namespace App\Tests\Service\Content\Reader\Media\Model;
 
-use App\Service\Reader\Media\Model\RawPageModel;
+use App\Service\Content\Reader\Media\Model\RawPageModel;
 use PHPUnit\Framework\TestCase;
 
 final class RawPageModelTest extends TestCase

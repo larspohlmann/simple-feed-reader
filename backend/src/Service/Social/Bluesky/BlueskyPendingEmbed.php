@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Bluesky;
+namespace App\Service\Social\Bluesky;
 
 use App\Entity\Entry;
 use App\Enum\SourceFormat;
-use App\Service\Bluesky\Support\AtPostUri;
-use App\Service\Share\PendingEmbed\PendingEmbedInterface;
+use App\Service\Social\Bluesky\Support\AtPostUri;
+use App\Service\Social\Share\PendingEmbed\PendingEmbedInterface;
 
 final readonly class BlueskyPendingEmbed implements PendingEmbedInterface
 {

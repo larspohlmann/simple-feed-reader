@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Parser;
+namespace App\Tests\Service\Ingestion\Parser;
 
-use App\Service\Parser\ItemMediaExtractor;
-use App\Service\Parser\Model\FeedMediaKind;
-use App\Service\Parser\Model\VisualMediaKind;
+use App\Service\Ingestion\Parser\ItemMediaExtractor;
+use App\Service\Ingestion\Parser\Model\FeedMediaKind;
+use App\Service\Ingestion\Parser\Model\VisualMediaKind;
 use App\Tests\Support\FeedItemFixtures;
 use PHPUnit\Framework\TestCase;
 

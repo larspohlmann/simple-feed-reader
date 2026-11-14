@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser;
+namespace App\Service\Ingestion\Parser;
 
-use App\Service\Image\Model\DeclaredImageModel;
-use App\Service\Parser\Pass\CoreElement;
-use App\Service\Parser\Support\PodcastArtwork;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
+use App\Service\Ingestion\Parser\Pass\CoreElement;
+use App\Service\Ingestion\Parser\Support\PodcastArtwork;
 
 /**
  * Each format's image order; the body image stands in for a missing declared one, or lends it its renditions.

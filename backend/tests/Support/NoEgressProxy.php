@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
+use App\Service\Outbound\Fetch\EgressProxySource\EgressProxySourceInterface;
 
 trait NoEgressProxy
 {

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Search\Support;
+namespace App\Tests\Service\Library\Search\Support;
 
 use App\Entity\SavedSearch;
 use App\Entity\User;
-use App\Service\Search\Support\SavedSearchTerms;
+use App\Service\Library\Search\Support\SavedSearchTerms;
 use App\Tests\Support\AssignsEntityIds;
 use PHPUnit\Framework\TestCase;
 

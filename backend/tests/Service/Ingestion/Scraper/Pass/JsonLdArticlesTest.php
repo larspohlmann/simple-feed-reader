@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Scraper\Pass;
+namespace App\Tests\Service\Ingestion\Scraper\Pass;
 
-use App\Service\Fetch\Pass\PageUrls;
-use App\Service\Scraper\Model\ScrapedItemModel;
-use App\Service\Scraper\Pass\CardFields;
-use App\Service\Scraper\Pass\JsonLdArticles;
+use App\Service\Outbound\Fetch\Pass\PageUrls;
+use App\Service\Ingestion\Scraper\Model\ScrapedItemModel;
+use App\Service\Ingestion\Scraper\Pass\CardFields;
+use App\Service\Ingestion\Scraper\Pass\JsonLdArticles;
 use PHPUnit\Framework\TestCase;
 
 /**

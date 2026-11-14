@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Image\Support;
+namespace App\Tests\Service\Outbound\Image\Support;
 
-use App\Service\Image\Support\SizedImageUrl;
+use App\Service\Outbound\Image\Support\SizedImageUrl;
 use PHPUnit\Framework\TestCase;
 
 final class SizedImageUrlTest extends TestCase

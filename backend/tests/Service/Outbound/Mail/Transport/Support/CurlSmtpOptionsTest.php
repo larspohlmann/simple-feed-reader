@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\Transport\Support;
+namespace App\Tests\Service\Outbound\Mail\Transport\Support;
 
 use App\Enum\MailEncryption;
 use App\Enum\ProxyType;
-use App\Service\Fetch\Model\ProxyConfigModel;
-use App\Service\Mail\Settings\Model\ResolvedMailTransportModel;
-use App\Service\Mail\Transport\Support\CurlSmtpOptions;
+use App\Service\Outbound\Fetch\Model\ProxyConfigModel;
+use App\Service\Outbound\Mail\Settings\Model\ResolvedMailTransportModel;
+use App\Service\Outbound\Mail\Transport\Support\CurlSmtpOptions;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Mailer\Envelope;
 use Symfony\Component\Mime\Address;

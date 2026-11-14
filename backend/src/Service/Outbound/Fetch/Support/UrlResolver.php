@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\Support;
+namespace App\Service\Outbound\Fetch\Support;
 
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Url\Support\AbsoluteHttpUrl;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use Uri\WhatWg\Url;
 
 /**

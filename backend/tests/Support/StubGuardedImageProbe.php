@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Image\Exception\GuardedImageUnavailableException;
-use App\Service\Image\GuardedImageProbe\GuardedImageProbeInterface;
-use App\Service\Image\Model\ImageDimensionsModel;
+use App\Service\Outbound\Image\Exception\GuardedImageUnavailableException;
+use App\Service\Outbound\Image\GuardedImageProbe\GuardedImageProbeInterface;
+use App\Service\Outbound\Image\Model\ImageDimensionsModel;
 
 final class StubGuardedImageProbe implements GuardedImageProbeInterface
 {

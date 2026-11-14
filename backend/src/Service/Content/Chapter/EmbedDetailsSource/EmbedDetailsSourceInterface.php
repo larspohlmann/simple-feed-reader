@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Chapter\EmbedDetailsSource;
+namespace App\Service\Content\Chapter\EmbedDetailsSource;
 
-use App\Service\Chapter\Exception\EmbedDescriptionUnreachableException;
-use App\Service\Chapter\Model\EmbedAddressModel;
-use App\Service\Chapter\Model\EmbedDescriptionModel;
+use App\Service\Content\Chapter\Exception\EmbedDescriptionUnreachableException;
+use App\Service\Content\Chapter\Model\EmbedAddressModel;
+use App\Service\Content\Chapter\Model\EmbedDescriptionModel;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /** One provider's account-free way to an embed's title, length and description, keyed by its ChapteredEmbed value. */

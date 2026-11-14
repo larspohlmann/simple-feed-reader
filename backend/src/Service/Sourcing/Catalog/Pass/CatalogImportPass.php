@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Catalog\Pass;
+namespace App\Service\Sourcing\Catalog\Pass;
 
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
-use App\Service\Catalog\Model\CatalogDocumentCategoryModel;
-use App\Service\Catalog\Model\CatalogDocumentFeedModel;
-use App\Service\Catalog\Model\CatalogImportResultModel;
-use App\Service\Catalog\Model\ParsedCatalogModel;
+use App\Service\Sourcing\Catalog\Model\CatalogDocumentCategoryModel;
+use App\Service\Sourcing\Catalog\Model\CatalogDocumentFeedModel;
+use App\Service\Sourcing\Catalog\Model\CatalogImportResultModel;
+use App\Service\Sourcing\Catalog\Model\ParsedCatalogModel;
 use Doctrine\ORM\EntityManagerInterface;
 
 /** One import's working state: the rows found by natural key, what the document mentioned, and the counts so far. */

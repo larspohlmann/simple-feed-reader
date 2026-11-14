@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\AccountMailer;
+namespace App\Service\Outbound\Mail\AccountMailer;
 
 use App\Entity\User;
-use App\Service\Mail\Model\PendingApprovalNoticeModel;
+use App\Service\Outbound\Mail\Model\PendingApprovalNoticeModel;
 
 interface AccountMailerInterface
 {

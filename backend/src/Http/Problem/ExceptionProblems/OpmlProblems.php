@@ -6,7 +6,7 @@ namespace App\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
-use App\Service\Opml\Exception\InvalidOpmlException;
+use App\Service\Library\Opml\Exception\InvalidOpmlException;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class OpmlProblems implements ExceptionProblemsInterface

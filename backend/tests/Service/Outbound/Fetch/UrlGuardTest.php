@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch;
+namespace App\Tests\Service\Outbound\Fetch;
 
-use App\Service\Fetch\DnsResolver\DnsResolverInterface;
-use App\Service\Fetch\Exception\SsrfBlockedException;
-use App\Service\Fetch\Exception\UnresolvableHostException;
-use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\UrlGuard;
+use App\Service\Outbound\Fetch\DnsResolver\DnsResolverInterface;
+use App\Service\Outbound\Fetch\Exception\SsrfBlockedException;
+use App\Service\Outbound\Fetch\Exception\UnresolvableHostException;
+use App\Service\Outbound\Fetch\IpValidator;
+use App\Service\Outbound\Fetch\UrlGuard;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

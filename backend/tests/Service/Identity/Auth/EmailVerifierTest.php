@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Auth;
+namespace App\Tests\Service\Identity\Auth;
 
 use App\Entity\User;
 use App\Enum\RegistrationMethod;
 use App\Enum\TokenPurpose;
 use App\Enum\UserStatus;
 use App\Repository\UserRepository;
-use App\Service\Auth\ActionTokenService;
-use App\Service\Auth\EmailVerifier;
-use App\Service\Auth\Exception\InvalidTokenException;
-use App\Service\Auth\RegistrationPolicy;
+use App\Service\Identity\Auth\ActionTokenService;
+use App\Service\Identity\Auth\EmailVerifier;
+use App\Service\Identity\Auth\Exception\InvalidTokenException;
+use App\Service\Identity\Auth\RegistrationPolicy;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AwaitingApprovalRecorder;
 use App\Tests\Support\RegistrationPolicies;

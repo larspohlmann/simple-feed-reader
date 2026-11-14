@@ -6,9 +6,9 @@ namespace App\Http;
 
 use App\Entity\AiProviderSettings;
 use App\Enum\RecommendationEngineKind;
-use App\Service\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
-use App\Service\Recommendation\Engine\Model\RecommendationTuningField;
-use App\Service\Recommendation\Engine\RecommendationEngineResolver;
+use App\Service\Curation\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
+use App\Service\Curation\Recommendation\Engine\Model\RecommendationTuningField;
+use App\Service\Curation\Recommendation\Engine\RecommendationEngineResolver;
 
 /** What a connection's engine can do, so a client offers only the settings that apply and never names the engine. */
 final readonly class RecommendationCapabilitiesJson

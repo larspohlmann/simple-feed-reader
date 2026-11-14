@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Search\Index\Model;
+namespace App\Tests\Service\Library\Search\Index\Model;
 
-use App\Service\Search\Index\Model\IndexSearchModel;
-use App\Service\Search\Model\SearchTermsModel;
+use App\Service\Library\Search\Index\Model\IndexSearchModel;
+use App\Service\Library\Search\Model\SearchTermsModel;
 use PHPUnit\Framework\TestCase;
 
 final class IndexSearchModelTest extends TestCase

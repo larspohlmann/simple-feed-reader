@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch;
+namespace App\Tests\Service\Outbound\Fetch;
 
 use App\Enum\ProxyType;
-use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Fetch\AnswerSettler\PassThroughSettler;
-use App\Service\Fetch\ConcurrentRequestEngine;
-use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\Exception\ResponseTooLargeException;
-use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\Model\ApiRequestModel;
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Fetch\Model\ProxyConfigModel;
-use App\Service\Fetch\Model\RequestTicketModel;
-use App\Service\Fetch\Model\ResponseSizeLimit;
-use App\Service\Fetch\ResponseExchange\FeedResponseExchange;
-use App\Service\Fetch\UrlGuard;
+use App\Service\Foundation\Crypto\Exception\SecretUnreadableException;
+use App\Service\Outbound\Fetch\AnswerSettler\PassThroughSettler;
+use App\Service\Outbound\Fetch\ConcurrentRequestEngine;
+use App\Service\Outbound\Fetch\EgressProxySource\EgressProxySourceInterface;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Outbound\Fetch\IpValidator;
+use App\Service\Outbound\Fetch\Model\ApiRequestModel;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Outbound\Fetch\Model\ProxyConfigModel;
+use App\Service\Outbound\Fetch\Model\RequestTicketModel;
+use App\Service\Outbound\Fetch\Model\ResponseSizeLimit;
+use App\Service\Outbound\Fetch\ResponseExchange\FeedResponseExchange;
+use App\Service\Outbound\Fetch\UrlGuard;
 use App\Tests\Support\FeedTickets;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\FixedKeySlot;

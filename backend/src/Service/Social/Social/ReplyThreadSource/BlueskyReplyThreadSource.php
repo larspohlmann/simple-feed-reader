@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\ReplyThreadSource;
+namespace App\Service\Social\Social\ReplyThreadSource;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Bluesky\AppViewClient;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Comments\Model\CommentsAnswerModel;
-use App\Service\Comments\Model\EntryCommentModel;
-use App\Service\Fetch\Model\ApiResponseModel;
-use App\Service\Social\BlueskySessions;
-use App\Service\Social\BlueskyThreadReplies;
-use App\Service\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\Support\AppViewAnswer;
+use App\Service\Social\Bluesky\AppViewClient;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Content\Comments\Model\CommentsAnswerModel;
+use App\Service\Content\Comments\Model\EntryCommentModel;
+use App\Service\Outbound\Fetch\Model\ApiResponseModel;
+use App\Service\Social\Social\BlueskySessions;
+use App\Service\Social\Social\BlueskyThreadReplies;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Support\AppViewAnswer;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\Response;

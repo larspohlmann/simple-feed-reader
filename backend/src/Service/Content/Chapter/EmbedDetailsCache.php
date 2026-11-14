@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Chapter;
+namespace App\Service\Content\Chapter;
 
-use App\Service\Chapter\Model\EmbedAddressModel;
-use App\Service\Chapter\Model\EmbedDetailsModel;
+use App\Service\Content\Chapter\Model\EmbedAddressModel;
+use App\Service\Content\Chapter\Model\EmbedDetailsModel;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 

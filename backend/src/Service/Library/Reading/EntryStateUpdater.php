@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reading;
+namespace App\Service\Library\Reading;
 
 use App\Entity\EntryState;
 use App\Entity\User;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
-use App\Service\Reading\Model\EntryStateChangeModel;
-use App\Service\Reading\Model\UpdatedEntryStateModel;
+use App\Service\Library\Reading\Model\EntryStateChangeModel;
+use App\Service\Library\Reading\Model\UpdatedEntryStateModel;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 

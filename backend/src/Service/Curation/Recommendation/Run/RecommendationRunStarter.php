@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run;
+namespace App\Service\Curation\Recommendation\Run;
 
 use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Ai\Exception\AiNotConfiguredException;
-use App\Service\Ai\Support\AiReadiness;
-use App\Service\Ai\Support\ProviderHost;
-use App\Service\Recommendation\Exception\NoResumableRecommendationRunException;
-use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
-use App\Service\Recommendation\Run\Support\RunLogRetention;
+use App\Service\Curation\Ai\Exception\AiNotConfiguredException;
+use App\Service\Curation\Ai\Support\AiReadiness;
+use App\Service\Curation\Ai\Support\ProviderHost;
+use App\Service\Curation\Recommendation\Exception\NoResumableRecommendationRunException;
+use App\Service\Curation\Recommendation\Run\Model\RecommendationRunReportModel;
+use App\Service\Curation\Recommendation\Run\Support\RunLogRetention;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Feed\Model;
+namespace App\Service\Curation\Recommendation\Feed\Model;
 
 use App\Repository\RecommendationRunHistoryRepository;
 

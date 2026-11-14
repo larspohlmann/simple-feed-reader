@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Bluesky\Support;
+namespace App\Service\Social\Bluesky\Support;
 
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Parser\Model\ParsedMediumModel;
-use App\Service\Parser\Model\VisualMediaKind;
-use App\Service\Parser\Support\DeclaredImages;
-use App\Service\Url\Support\HttpsImageUrl;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Ingestion\Parser\Model\ParsedMediumModel;
+use App\Service\Ingestion\Parser\Model\VisualMediaKind;
+use App\Service\Ingestion\Parser\Support\DeclaredImages;
+use App\Service\Foundation\Url\Support\HttpsImageUrl;
 
 final class BlueskyEmbedMedia
 {

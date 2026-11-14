@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Profile\Model;
+namespace App\Service\Curation\Recommendation\Profile\Model;
 
 /** What the profile section asks to store; the connection is still an id the editor resolves for the account. */
 final readonly class ProfileSettingsChangeModel

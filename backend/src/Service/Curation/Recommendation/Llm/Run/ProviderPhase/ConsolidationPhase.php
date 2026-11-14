@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Run\ProviderPhase;
+namespace App\Service\Curation\Recommendation\Llm\Run\ProviderPhase;
 
 use App\Entity\RecommendationRun;
-use App\Service\Recommendation\Llm\Run\Model\ConsolidationOutcomeModel;
-use App\Service\Recommendation\Llm\Run\RecommendationConsolidationResolver;
-use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
-use App\Service\Recommendation\Run\Pass\TickContext;
-use App\Service\Recommendation\Run\RecommendationRunFinalizer;
+use App\Service\Curation\Recommendation\Llm\Run\Model\ConsolidationOutcomeModel;
+use App\Service\Curation\Recommendation\Llm\Run\RecommendationConsolidationResolver;
+use App\Service\Curation\Recommendation\Run\Model\RecommendationRunReportModel;
+use App\Service\Curation\Recommendation\Run\Pass\TickContext;
+use App\Service\Curation\Recommendation\Run\RecommendationRunFinalizer;
 use Doctrine\ORM\EntityManagerInterface;
 
 /** Finalizes the consolidated list; an unusable reply is retried, then the run completes with its fallback ranking. */

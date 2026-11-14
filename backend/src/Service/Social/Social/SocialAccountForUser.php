@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\SocialAccount;
 use App\Entity\User;
 use App\Enum\SocialAccountStatus;
 use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
-use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
-use App\Service\Social\Exception\SocialAccountNotFoundException;
+use App\Service\Social\Social\Exception\SocialAccountNeedsReconnectException;
+use App\Service\Social\Social\Exception\SocialAccountNotFoundException;
 
 /** Another account's row reads as missing (404, not 403), so a caller never learns an id exists. */
 final readonly class SocialAccountForUser

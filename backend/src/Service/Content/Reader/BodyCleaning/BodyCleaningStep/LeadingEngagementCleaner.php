@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\BodyCleaning\BodyCleaningStep;
+namespace App\Service\Content\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
-use App\Service\Reader\DateLineRecognizer;
-use App\Service\Reader\LeadingBlockJudge;
-use App\Service\Reader\LeadingEngagementRules;
-use App\Service\Reader\Model\LeadingBlockModel;
-use App\Service\Reader\Pass\LeadingFurniture;
-use App\Service\Reader\Support\LeadingEngagementBlocks;
-use App\Service\Text\Support\Whitespace;
+use App\Service\Content\Reader\BodyCleaning\Pass\BodyCleaningPass;
+use App\Service\Content\Reader\DateLineRecognizer;
+use App\Service\Content\Reader\LeadingBlockJudge;
+use App\Service\Content\Reader\LeadingEngagementRules;
+use App\Service\Content\Reader\Model\LeadingBlockModel;
+use App\Service\Content\Reader\Pass\LeadingFurniture;
+use App\Service\Content\Reader\Support\LeadingEngagementBlocks;
+use App\Service\Foundation\Text\Support\Whitespace;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Dom\Node;

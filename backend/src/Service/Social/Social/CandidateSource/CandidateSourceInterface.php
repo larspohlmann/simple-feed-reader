@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\CandidateSource;
+namespace App\Service\Social\Social\CandidateSource;
 
 use App\Entity\SocialAccount;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Model\NetworkCandidatesModel;
-use App\Service\Social\Model\NetworkCollectionsModel;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Model\NetworkCandidatesModel;
+use App\Service\Social\Social\Model\NetworkCollectionsModel;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /** One network's follows, lists and custom feeds, keyed by its SocialNetwork value in NetworkSocialCandidates' locator. */

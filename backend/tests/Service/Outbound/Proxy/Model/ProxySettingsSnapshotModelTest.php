@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Proxy\Model;
+namespace App\Tests\Service\Outbound\Proxy\Model;
 
 use App\Entity\ProxyConnection;
 use App\Entity\ProxyServerSettings;
 use App\Entity\SealedSecret;
 use App\Enum\ProxyType;
-use App\Service\Proxy\Model\ProxySettingsSnapshotModel;
+use App\Service\Outbound\Proxy\Model\ProxySettingsSnapshotModel;
 use PHPUnit\Framework\TestCase;
 
 final class ProxySettingsSnapshotModelTest extends TestCase

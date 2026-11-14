@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run;
+namespace App\Service\Curation\Recommendation\Run;
 
 use App\Entity\RecommendationSettings;
 use App\Entity\User;
 use App\Repository\RecommendationRunRepository;
 use App\Repository\RecommendationSettingsRepository;
-use App\Service\Ai\Support\AiReadiness;
-use App\Service\Recommendation\Run\Support\IntervalElapsed;
+use App\Service\Curation\Ai\Support\AiReadiness;
+use App\Service\Curation\Recommendation\Run\Support\IntervalElapsed;
 use Symfony\Component\Clock\ClockInterface;
 
 /**

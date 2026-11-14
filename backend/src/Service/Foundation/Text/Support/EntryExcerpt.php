@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Text\Support;
+namespace App\Service\Foundation\Text\Support;
 
 /**
  * A plain-text preview for an entry list row: the summary's text, or the

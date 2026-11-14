@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Html\Model;
+namespace App\Service\Foundation\Html\Model;
 
 /**
  * One selectable rendition of an image: its URL and, when a width is declared,

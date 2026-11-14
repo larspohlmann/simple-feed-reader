@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Support;
+namespace App\Tests\Service\Social\Social\Support;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
-use App\Service\Social\Exception\NotASocialPostException;
-use App\Service\Social\Model\SocialPostAddressModel;
-use App\Service\Social\Support\SocialPostAddress;
+use App\Service\Social\Social\Exception\NotASocialPostException;
+use App\Service\Social\Social\Model\SocialPostAddressModel;
+use App\Service\Social\Social\Support\SocialPostAddress;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Trending;
+namespace App\Tests\Service\Curation\Trending;
 
 use App\Enum\TrendingWindow;
-use App\Service\Trending\Model\TrendingStoryModel;
-use App\Service\Trending\StoryLinkSource\HeadlineLinks;
-use App\Service\Trending\TrendingExplainer;
+use App\Service\Curation\Trending\Model\TrendingStoryModel;
+use App\Service\Curation\Trending\StoryLinkSource\HeadlineLinks;
+use App\Service\Curation\Trending\TrendingExplainer;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
 use App\Tests\Support\TrendingWiring;

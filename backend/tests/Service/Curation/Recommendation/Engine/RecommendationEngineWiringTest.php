@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Engine;
+namespace App\Tests\Service\Curation\Recommendation\Engine;
 
 use App\Entity\ModelDescriptor;
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\ScoringProtocol;
-use App\Service\Recommendation\Engine\RecommendationEngineResolver;
-use App\Service\Recommendation\Llm\LlmRecommendationEngine;
-use App\Service\Recommendation\Scoring\ScoringRecommendationEngine;
+use App\Service\Curation\Recommendation\Engine\RecommendationEngineResolver;
+use App\Service\Curation\Recommendation\Llm\LlmRecommendationEngine;
+use App\Service\Curation\Recommendation\Scoring\ScoringRecommendationEngine;
 use App\Tests\Support\AiProviderSettingsFactory;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 

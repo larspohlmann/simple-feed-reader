@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch\ResponseExchange;
+namespace App\Tests\Service\Outbound\Fetch\ResponseExchange;
 
-use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
-use App\Service\Fetch\ConcurrentRequestEngine;
-use App\Service\Fetch\Model\ResponseExchangeKind;
-use App\Service\Fetch\ResponseExchange\ApiResponseExchange;
-use App\Service\Fetch\ResponseExchange\ResponseExchangeInterface;
+use App\Service\Outbound\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
+use App\Service\Outbound\Fetch\ConcurrentRequestEngine;
+use App\Service\Outbound\Fetch\Model\ResponseExchangeKind;
+use App\Service\Outbound\Fetch\ResponseExchange\ApiResponseExchange;
+use App\Service\Outbound\Fetch\ResponseExchange\ResponseExchangeInterface;
 use App\Tests\Support\TaggedItemOf;
 use Psr\Container\ContainerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;

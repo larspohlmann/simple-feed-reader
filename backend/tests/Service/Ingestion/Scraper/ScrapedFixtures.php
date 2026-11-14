@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Scraper;
+namespace App\Tests\Service\Ingestion\Scraper;
 
 trait ScrapedFixtures
 {

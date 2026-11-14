@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Backup;
+namespace App\Tests\Service\Operations\Backup;
 
 use App\Entity\Entry;
 use App\Entity\EntryShare;
@@ -18,11 +18,11 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
 use App\Enum\SourceFormat;
-use App\Service\Backup\AccountBackupExporter;
-use App\Service\Backup\BackupReader;
-use App\Service\Backup\Dto\FeedLine;
-use App\Service\Backup\Model\BackupPartModel;
-use App\Service\Social\Model\PrivateFeedModel;
+use App\Service\Operations\Backup\AccountBackupExporter;
+use App\Service\Operations\Backup\BackupReader;
+use App\Service\Operations\Backup\Dto\FeedLine;
+use App\Service\Operations\Backup\Model\BackupPartModel;
+use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BlueskyProfiles;
 use App\Tests\Support\FullyPopulatedAccount;

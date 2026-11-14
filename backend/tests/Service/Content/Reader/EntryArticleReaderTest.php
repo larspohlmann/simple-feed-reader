@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader;
+namespace App\Tests\Service\Content\Reader;
 
 use App\Entity\Entry;
 use App\Entity\EntryAuthor;
 use App\Entity\Feed;
 use App\Entity\Headline;
-use App\Service\Reader\EntryArticleReader;
-use App\Service\Reader\ExtractionCoverageGate;
-use App\Service\Reader\Model\ExtractionFailure;
-use App\Service\Reader\Model\ExtractionResultModel;
+use App\Service\Content\Reader\EntryArticleReader;
+use App\Service\Content\Reader\ExtractionCoverageGate;
+use App\Service\Content\Reader\Model\ExtractionFailure;
+use App\Service\Content\Reader\Model\ExtractionResultModel;
 use App\Tests\Support\FakeArticleExtractor;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

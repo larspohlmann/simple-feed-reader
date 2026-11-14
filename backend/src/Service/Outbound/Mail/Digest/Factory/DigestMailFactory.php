@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Digest\Factory;
+namespace App\Service\Outbound\Mail\Digest\Factory;
 
 use App\Entity\DigestSettings;
 use App\Enum\DigestFormat;
-use App\Service\Mail\Digest\DigestBrandLogo;
-use App\Service\Mail\Digest\DigestHtmlRenderer;
-use App\Service\Mail\Digest\DigestImageEmbedder\DigestImageEmbedderInterface;
-use App\Service\Mail\Digest\DigestLinkBuilder;
-use App\Service\Mail\Digest\DigestTextRenderer;
-use App\Service\Mail\Digest\Model\DigestModel;
-use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
+use App\Service\Outbound\Mail\Digest\DigestBrandLogo;
+use App\Service\Outbound\Mail\Digest\DigestHtmlRenderer;
+use App\Service\Outbound\Mail\Digest\DigestImageEmbedder\DigestImageEmbedderInterface;
+use App\Service\Outbound\Mail\Digest\DigestLinkBuilder;
+use App\Service\Outbound\Mail\Digest\DigestTextRenderer;
+use App\Service\Outbound\Mail\Digest\Model\DigestModel;
+use App\Service\Outbound\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
 

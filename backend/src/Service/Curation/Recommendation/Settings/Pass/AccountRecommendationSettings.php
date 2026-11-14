@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Settings\Pass;
+namespace App\Service\Curation\Recommendation\Settings\Pass;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\ProfileSettingsValues;
@@ -11,8 +11,8 @@ use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Enum\RecommendationBatchSize;
-use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
-use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
+use App\Service\Curation\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
+use App\Service\Curation\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 
 /**
  * The account's row over the defaults, resolved against any of its connections: the context window from the row, else

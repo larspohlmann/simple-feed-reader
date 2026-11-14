@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Model;
+namespace App\Service\Social\Social\Model;
 
 use App\Entity\SocialAccount;
-use App\Service\Fetch\Model\ApiRequestModel;
-use App\Service\Fetch\Model\RequestTicketModel;
+use App\Service\Outbound\Fetch\Model\ApiRequestModel;
+use App\Service\Outbound\Fetch\Model\RequestTicketModel;
 
 /** A timeline read holds its account's slot and its server's. */
 final readonly class TimelineSlotsModel

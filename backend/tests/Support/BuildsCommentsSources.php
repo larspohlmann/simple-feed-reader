@@ -6,9 +6,9 @@ namespace App\Tests\Support;
 
 use App\Entity\Entry;
 use App\Entity\User;
-use App\Service\Comments\Pass\CommentsRequest;
-use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
-use App\Service\Fetch\HostThrottle;
+use App\Service\Content\Comments\Pass\CommentsRequest;
+use App\Service\Outbound\Fetch\FeedFetcher\FeedFetcherInterface;
+use App\Service\Outbound\Fetch\HostThrottle;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;

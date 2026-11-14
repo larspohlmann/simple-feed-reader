@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Proxy\Crypto\ProxyPasswordCipher;
+use App\Service\Foundation\Crypto\InstanceSecretCipher;
+use App\Service\Outbound\Proxy\Crypto\ProxyPasswordCipher;
 
 final class ProxyPasswordCiphers
 {

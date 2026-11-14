@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\HiddenProfiles;
+namespace App\Service\Social\Social\HiddenProfiles;
 
-use App\Service\Bluesky\AppViewClient;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Model\HiddenProfileModel;
-use App\Service\Social\ProfileVisibilityCache;
+use App\Service\Social\Bluesky\AppViewClient;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Model\HiddenProfileModel;
+use App\Service\Social\Social\ProfileVisibilityCache;
 use Symfony\Component\DependencyInjection\Attribute\AsDecorator;
 
 #[AsDecorator(decorates: AppViewHiddenProfiles::class)]

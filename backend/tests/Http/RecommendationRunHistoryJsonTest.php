@@ -7,9 +7,9 @@ namespace App\Tests\Http;
 use App\Enum\RunStatus;
 use App\Http\RecommendationRunHistoryJson;
 use App\Repository\RecommendationRunHistoryRepository;
-use App\Service\Recommendation\Feed\Model\HistoryMonthModel;
-use App\Service\Recommendation\Feed\Model\RunHistoryMonthPageModel;
-use App\Service\Recommendation\Feed\Model\RunHistoryOverviewModel;
+use App\Service\Curation\Recommendation\Feed\Model\HistoryMonthModel;
+use App\Service\Curation\Recommendation\Feed\Model\RunHistoryMonthPageModel;
+use App\Service\Curation\Recommendation\Feed\Model\RunHistoryOverviewModel;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 

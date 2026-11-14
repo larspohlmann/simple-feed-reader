@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\SubscriptionHistory\Pass;
+namespace App\Service\Library\SubscriptionHistory\Pass;
 
-use App\Service\SubscriptionHistory\Model\ActivityDayModel;
-use App\Service\SubscriptionHistory\Model\DayCountModel;
-use App\Service\SubscriptionHistory\Model\DayCountsModel;
-use App\Service\SubscriptionHistory\Model\TrackedSubscriptionModel;
+use App\Service\Library\SubscriptionHistory\Model\ActivityDayModel;
+use App\Service\Library\SubscriptionHistory\Model\DayCountModel;
+use App\Service\Library\SubscriptionHistory\Model\DayCountsModel;
+use App\Service\Library\SubscriptionHistory\Model\TrackedSubscriptionModel;
 
 /** One account's subscriptions with where each day comes from and the live counts loaded for them. */
 final readonly class AccountDayCounts

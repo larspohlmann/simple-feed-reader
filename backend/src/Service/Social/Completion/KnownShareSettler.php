@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Completion;
+namespace App\Service\Social\Completion;
 
 use App\Entity\Entry;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
 use App\Enum\ShareEnrichmentKind;
-use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriterInterface;
-use App\Service\Bluesky\Model\FillOutcome;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\LinkCard\EntryCardWriter;
-use App\Service\LinkCard\Model\EntryCardsModel;
-use App\Service\LinkCard\Model\PageCardModel;
-use App\Service\LinkCard\Model\QuotedTargetModel;
-use App\Service\LinkCard\Support\QuoteLine;
-use App\Service\Share\Support\ShareTargets;
+use App\Service\Social\Bluesky\EntryEmbedWriter\EntryEmbedWriterInterface;
+use App\Service\Social\Bluesky\Model\FillOutcome;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Content\LinkCard\EntryCardWriter;
+use App\Service\Content\LinkCard\Model\EntryCardsModel;
+use App\Service\Content\LinkCard\Model\PageCardModel;
+use App\Service\Content\LinkCard\Model\QuotedTargetModel;
+use App\Service\Content\LinkCard\Support\QuoteLine;
+use App\Service\Social\Share\Support\ShareTargets;
 use Psr\Log\LoggerInterface;
 
 /** Settles a new entry whose network already answered its embed or its card, as the later passes would have. */

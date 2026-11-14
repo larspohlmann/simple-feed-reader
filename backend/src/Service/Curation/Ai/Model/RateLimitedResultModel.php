@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai\Model;
+namespace App\Service\Curation\Ai\Model;
 
-use App\Service\Ai\RateLimitedOutcome\RateLimitedOutcomeInterface;
+use App\Service\Curation\Ai\RateLimitedOutcome\RateLimitedOutcomeInterface;
 
 /**
  * One rate-limit-aware round: completed outcomes (and whether a 429 was seen) or a deferral with its wait. A call

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Bluesky;
+namespace App\Tests\Service\Social\Bluesky;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Enum\SourceFormat;
-use App\Service\Bluesky\BlueskyPendingEmbed;
+use App\Service\Social\Bluesky\BlueskyPendingEmbed;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

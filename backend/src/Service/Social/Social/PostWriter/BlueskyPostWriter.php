@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\PostWriter;
+namespace App\Service\Social\Social\PostWriter;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Bluesky\Support\AtPostUri;
-use App\Service\Social\BlueskyFacets;
-use App\Service\Social\BlueskyExternalEmbeds;
-use App\Service\Social\BlueskyRecords;
-use App\Service\Social\Exception\SocialPostTooLongException;
-use App\Service\Social\Model\PostDeletion;
-use App\Service\Social\Model\PostDraftModel;
-use App\Service\Social\Model\PublishedPostModel;
-use App\Service\Social\Model\SocialPostModel;
-use App\Service\Social\Support\BlueskyRecordUri;
-use App\Service\Social\Support\BlueskyStrongRef;
+use App\Service\Social\Bluesky\Support\AtPostUri;
+use App\Service\Social\Social\BlueskyFacets;
+use App\Service\Social\Social\BlueskyExternalEmbeds;
+use App\Service\Social\Social\BlueskyRecords;
+use App\Service\Social\Social\Exception\SocialPostTooLongException;
+use App\Service\Social\Social\Model\PostDeletion;
+use App\Service\Social\Social\Model\PostDraftModel;
+use App\Service\Social\Social\Model\PublishedPostModel;
+use App\Service\Social\Social\Model\SocialPostModel;
+use App\Service\Social\Social\Support\BlueskyRecordUri;
+use App\Service\Social\Social\Support\BlueskyStrongRef;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Bluesky->value)]

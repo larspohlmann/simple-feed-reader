@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Profile;
+namespace App\Tests\Service\Curation\Recommendation\Profile;
 
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Recommendation\Profile\ProfileSettingsProvider;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Recommendation\Profile\ProfileSettingsProvider;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\SeedsUsers;

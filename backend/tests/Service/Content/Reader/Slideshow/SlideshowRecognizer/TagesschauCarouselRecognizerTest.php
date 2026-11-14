@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Slideshow\SlideshowRecognizer;
+namespace App\Tests\Service\Content\Reader\Slideshow\SlideshowRecognizer;
 
-use App\Service\Reader\Media\Model\PageTextBlocksModel;
-use App\Service\Reader\Slideshow\SlideshowRecognizer\TagesschauCarouselRecognizer;
+use App\Service\Content\Reader\Media\Model\PageTextBlocksModel;
+use App\Service\Content\Reader\Slideshow\SlideshowRecognizer\TagesschauCarouselRecognizer;
 use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

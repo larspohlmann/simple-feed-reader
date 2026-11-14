@@ -2,25 +2,25 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\SocialSearch;
+namespace App\Service\Social\Social\SocialSearch;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Fetch\AnswerSettler\AnswerSettlerInterface;
-use App\Service\Fetch\ConcurrentRequestEngine;
-use App\Service\Fetch\Model\ApiResponseModel;
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Fetch\Model\RequestTicketModel;
-use App\Service\Social\ActingAccountGuard;
-use App\Service\Social\BlueskySessions;
-use App\Service\Social\MastodonAccountApi;
-use App\Service\Social\MastodonApiClient;
-use App\Service\Social\Model\TimelinePageModel;
-use App\Service\Social\Support\BlueskySearchPage;
-use App\Service\Social\Support\MastodonSearchPage;
-use App\Service\Social\Support\MastodonSearchQueries;
-use App\Service\Social\Support\SocialSearchPaths;
-use App\Service\Social\TimelineRounds;
+use App\Service\Outbound\Fetch\AnswerSettler\AnswerSettlerInterface;
+use App\Service\Outbound\Fetch\ConcurrentRequestEngine;
+use App\Service\Outbound\Fetch\Model\ApiResponseModel;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Outbound\Fetch\Model\RequestTicketModel;
+use App\Service\Social\Social\ActingAccountGuard;
+use App\Service\Social\Social\BlueskySessions;
+use App\Service\Social\Social\MastodonAccountApi;
+use App\Service\Social\Social\MastodonApiClient;
+use App\Service\Social\Social\Model\TimelinePageModel;
+use App\Service\Social\Social\Support\BlueskySearchPage;
+use App\Service\Social\Social\Support\MastodonSearchPage;
+use App\Service\Social\Social\Support\MastodonSearchQueries;
+use App\Service\Social\Social\Support\SocialSearchPaths;
+use App\Service\Social\Social\TimelineRounds;
 
 final readonly class NetworkSocialSearch implements SocialSearchInterface
 {

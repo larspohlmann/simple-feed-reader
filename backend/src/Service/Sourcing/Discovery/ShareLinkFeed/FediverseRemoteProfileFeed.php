@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Discovery\ShareLinkFeed;
+namespace App\Service\Sourcing\Discovery\ShareLinkFeed;
 
 /**
  * Maps a profile seen through another instance to the account's feed on its home instance; the viewing instance

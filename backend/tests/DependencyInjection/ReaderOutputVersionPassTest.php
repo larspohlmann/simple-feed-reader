@@ -30,16 +30,16 @@ final class ReaderOutputVersionPassTest extends TestCase
     {
         $directories = ReaderOutputSources::under(self::PROJECT_DIR)->moduleDirectories;
 
-        self::assertContains(self::PROJECT_DIR . '/src/Service/Reader', $directories);
-        self::assertContains(self::PROJECT_DIR . '/src/Service/Html', $directories);
-        self::assertContains(self::PROJECT_DIR . '/src/Service/Fetch', $directories);
+        self::assertContains(self::PROJECT_DIR . '/src/Service/Content/Reader', $directories);
+        self::assertContains(self::PROJECT_DIR . '/src/Service/Foundation/Html', $directories);
+        self::assertContains(self::PROJECT_DIR . '/src/Service/Outbound/Fetch', $directories);
     }
 
     public function testTheContainerRebuildsWhenASourceChanges(): void
     {
         $resources = array_map($this->described(...), $this->processed()->getResources());
 
-        $readerModule = realpath(self::PROJECT_DIR . '/src/Service/Reader');
+        $readerModule = realpath(self::PROJECT_DIR . '/src/Service/Content/Reader');
         self::assertContains('directory ' . $readerModule . ' /\.php$/', $resources);
         self::assertContains('file ' . realpath(self::PROJECT_DIR . '/config/services.yaml'), $resources);
     }

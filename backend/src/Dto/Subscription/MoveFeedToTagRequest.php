@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Subscription;
 
-use App\Service\Subscription\Model\FeedMoveModel;
+use App\Service\Library\Subscription\Model\FeedMoveModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**

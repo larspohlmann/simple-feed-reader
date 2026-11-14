@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Backup\Pass;
+namespace App\Tests\Service\Operations\Backup\Pass;
 
 use App\Entity\Feed;
 use App\Entity\User;
-use App\Service\Backup\Dto\FeedLine;
-use App\Service\Backup\Dto\SubscriptionLine;
-use App\Service\Backup\Dto\TagLine;
-use App\Service\Backup\Exception\BackupLoadFailedException;
-use App\Service\Backup\Factory\RestoredFoundationFactory;
-use App\Service\Backup\Pass\RestoreLoadPass;
-use App\Service\Backup\RestoreFeeds\RestoreFeedsInterface;
-use App\Service\Feed\Factory\FeedFactory;
-use App\Service\Search\SavedSearchSlug;
-use App\Service\Tag\Factory\TagFactory;
+use App\Service\Operations\Backup\Dto\FeedLine;
+use App\Service\Operations\Backup\Dto\SubscriptionLine;
+use App\Service\Operations\Backup\Dto\TagLine;
+use App\Service\Operations\Backup\Exception\BackupLoadFailedException;
+use App\Service\Operations\Backup\Factory\RestoredFoundationFactory;
+use App\Service\Operations\Backup\Pass\RestoreLoadPass;
+use App\Service\Operations\Backup\RestoreFeeds\RestoreFeedsInterface;
+use App\Service\Ingestion\Feed\Factory\FeedFactory;
+use App\Service\Library\Search\SavedSearchSlug;
+use App\Service\Library\Tag\Factory\TagFactory;
 use App\Tests\Support\UnsavedUserSettings;
 use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\ORM\EntityManagerInterface;

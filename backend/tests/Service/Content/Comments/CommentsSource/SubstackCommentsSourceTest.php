@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Comments\CommentsSource;
+namespace App\Tests\Service\Content\Comments\CommentsSource;
 
 use App\Entity\Entry;
 use App\Entity\EntryAuthor;
 use App\Entity\Feed;
 use App\Entity\User;
 use App\Enum\FeedPlatform;
-use App\Service\Comments\CommentsSource\SubstackCommentsSource;
-use App\Service\Comments\Exception\CommentsThrottledException;
-use App\Service\Comments\Exception\CommentsUnavailableException;
-use App\Service\Comments\Model\CommentsAnswerModel;
-use App\Service\Comments\Model\EntryCommentModel;
-use App\Service\Comments\Pass\CommentsRequest;
-use App\Service\Fetch\Exception\FeedThrottledException;
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
-use App\Service\Fetch\HostThrottle;
-use App\Service\RateLimit\Exception\RateLimitedException;
+use App\Service\Content\Comments\CommentsSource\SubstackCommentsSource;
+use App\Service\Content\Comments\Exception\CommentsThrottledException;
+use App\Service\Content\Comments\Exception\CommentsUnavailableException;
+use App\Service\Content\Comments\Model\CommentsAnswerModel;
+use App\Service\Content\Comments\Model\EntryCommentModel;
+use App\Service\Content\Comments\Pass\CommentsRequest;
+use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\FeedFetcher\FeedFetcherInterface;
+use App\Service\Outbound\Fetch\HostThrottle;
+use App\Service\Foundation\RateLimit\Exception\RateLimitedException;
 use App\Tests\Support\BuildsCommentsSources;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Cache\CacheItemPoolInterface;

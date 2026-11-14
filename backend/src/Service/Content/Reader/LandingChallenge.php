@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Content\Reader;
 
 /**
  * Recognises a bot- or consent-gate interstitial served with a 2xx status. Markers are vendor/machine strings, never

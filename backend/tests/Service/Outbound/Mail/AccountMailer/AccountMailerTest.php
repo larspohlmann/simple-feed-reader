@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\AccountMailer;
+namespace App\Tests\Service\Outbound\Mail\AccountMailer;
 
 use App\Entity\User;
 use App\Enum\RegistrationMethod;
 use App\Enum\SupportedLocale;
-use App\Service\Mail\AccountMailer\AccountMailer;
-use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
-use App\Service\Mail\Model\PendingApprovalNoticeModel;
-use App\Service\Mail\Settings\Model\MailIdentityModel;
-use App\Service\Settings\PublicBaseUrl\PublicBaseUrlInterface;
+use App\Service\Outbound\Mail\AccountMailer\AccountMailer;
+use App\Service\Outbound\Mail\MailSendingSettings\MailSendingSettingsInterface;
+use App\Service\Outbound\Mail\Model\PendingApprovalNoticeModel;
+use App\Service\Outbound\Mail\Settings\Model\MailIdentityModel;
+use App\Service\Operations\Settings\PublicBaseUrl\PublicBaseUrlInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Mailer\MailerInterface;

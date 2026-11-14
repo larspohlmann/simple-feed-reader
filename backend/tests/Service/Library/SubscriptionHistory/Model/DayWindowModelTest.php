@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\SubscriptionHistory\Model;
+namespace App\Tests\Service\Library\SubscriptionHistory\Model;
 
-use App\Service\SubscriptionHistory\Model\DayWindowModel;
+use App\Service\Library\SubscriptionHistory\Model\DayWindowModel;
 use PHPUnit\Framework\TestCase;
 
 final class DayWindowModelTest extends TestCase

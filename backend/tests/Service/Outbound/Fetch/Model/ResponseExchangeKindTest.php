@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch\Model;
+namespace App\Tests\Service\Outbound\Fetch\Model;
 
-use App\Service\Fetch\Model\ResponseExchangeKind;
-use App\Service\Fetch\Model\ResponseSizeLimit;
+use App\Service\Outbound\Fetch\Model\ResponseExchangeKind;
+use App\Service\Outbound\Fetch\Model\ResponseSizeLimit;
 use PHPUnit\Framework\TestCase;
 
 final class ResponseExchangeKindTest extends TestCase

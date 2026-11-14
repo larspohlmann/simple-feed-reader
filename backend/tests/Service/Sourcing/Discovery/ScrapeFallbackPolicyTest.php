@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Discovery;
+namespace App\Tests\Service\Sourcing\Discovery;
 
 use App\Entity\ReadingSettings;
 use App\Entity\User;
 use App\Repository\ReadingSettingsRepository;
-use App\Service\Discovery\Exception\ScrapingDisabledException;
-use App\Service\Discovery\Model\ScrapeFallback;
-use App\Service\Discovery\ScrapeFallbackPolicy;
+use App\Service\Sourcing\Discovery\Exception\ScrapingDisabledException;
+use App\Service\Sourcing\Discovery\Model\ScrapeFallback;
+use App\Service\Sourcing\Discovery\ScrapeFallbackPolicy;
 use App\Tests\DbTestCase;
 use App\Tests\Support\StoredUserSettings;
 

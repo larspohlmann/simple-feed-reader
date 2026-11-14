@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai\Support;
+namespace App\Service\Curation\Ai\Support;
 
-use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
 
 final class ResponseByteCap
 {

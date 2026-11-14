@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media;
+namespace App\Tests\Service\Content\Reader\Media;
 
-use App\Service\Reader\Media\Model\ArticleMediaModel;
-use App\Service\Reader\Media\Model\RawPageModel;
-use App\Service\Reader\Media\PageMediaScanner;
+use App\Service\Content\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Content\Reader\Media\Model\RawPageModel;
+use App\Service\Content\Reader\Media\PageMediaScanner;
 
 trait ScansWithTheWiredSources
 {

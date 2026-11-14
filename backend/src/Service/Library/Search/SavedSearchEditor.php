@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search;
+namespace App\Service\Library\Search;
 
 use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Repository\SavedSearchRepository;
-use App\Service\Search\Membership\Model\SweepBudgetModel;
-use App\Service\Search\Membership\SavedSearchMembershipSweep;
-use App\Service\Search\Model\SavedSearchDefinitionModel;
-use App\Service\Search\Model\SavedSearchOutcomeModel;
+use App\Service\Library\Search\Membership\Model\SweepBudgetModel;
+use App\Service\Library\Search\Membership\SavedSearchMembershipSweep;
+use App\Service\Library\Search\Model\SavedSearchDefinitionModel;
+use App\Service\Library\Search\Model\SavedSearchOutcomeModel;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class SavedSearchEditor

@@ -6,7 +6,7 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\User;
 use App\Enum\UserStatus;
-use App\Service\Auth\AltchaService;
+use App\Service\Identity\Auth\AltchaService;
 use App\Tests\Support\AltchaSolver;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\EnablesMailInTests;

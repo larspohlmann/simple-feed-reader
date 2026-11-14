@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\AccountMailer;
+namespace App\Tests\Service\Outbound\Mail\AccountMailer;
 
-use App\Service\Mail\AccountMailer\AccountMailerInterface;
-use App\Service\Mail\AccountMailer\MailGatedAccountMailer;
+use App\Service\Outbound\Mail\AccountMailer\AccountMailerInterface;
+use App\Service\Outbound\Mail\AccountMailer\MailGatedAccountMailer;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**

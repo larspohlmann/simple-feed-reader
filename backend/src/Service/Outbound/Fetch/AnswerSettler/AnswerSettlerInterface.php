@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\AnswerSettler;
+namespace App\Service\Outbound\Fetch\AnswerSettler;
 
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Fetch\Model\SettlementModel;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Outbound\Fetch\Model\SettlementModel;
 
 /**
  * The pass's side of an engine run: whether a request may go on the wire, and what each raw outcome comes to.

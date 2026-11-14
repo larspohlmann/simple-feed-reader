@@ -2,28 +2,28 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialFeedKind;
 use App\Repository\SocialFeedRepository;
 use App\Repository\SubscriptionDisplayTitle;
 use App\Repository\SubscriptionRepository;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Model\CollectionCandidateModel;
-use App\Service\Social\Model\ImportCandidateModel;
-use App\Service\Social\Model\ImportCandidateState;
-use App\Service\Social\Model\ImportCandidatesModel;
-use App\Service\Social\Model\NetworkCandidatesModel;
-use App\Service\Social\Model\PrivateFeedModel;
-use App\Service\Social\Model\ProfileFeedSubscriptionModel;
-use App\Service\Social\Model\SocialCollectionModel;
-use App\Service\Social\Pass\FollowMatching;
-use App\Service\Social\SocialCandidates\SocialCandidatesInterface;
-use App\Service\Social\Support\CandidateOrder;
-use App\Service\Social\Support\PrivateFeedRules;
-use App\Service\Social\Support\ProfileIdentity;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Model\CollectionCandidateModel;
+use App\Service\Social\Social\Model\ImportCandidateModel;
+use App\Service\Social\Social\Model\ImportCandidateState;
+use App\Service\Social\Social\Model\ImportCandidatesModel;
+use App\Service\Social\Social\Model\NetworkCandidatesModel;
+use App\Service\Social\Social\Model\PrivateFeedModel;
+use App\Service\Social\Social\Model\ProfileFeedSubscriptionModel;
+use App\Service\Social\Social\Model\SocialCollectionModel;
+use App\Service\Social\Social\Pass\FollowMatching;
+use App\Service\Social\Social\SocialCandidates\SocialCandidatesInterface;
+use App\Service\Social\Social\Support\CandidateOrder;
+use App\Service\Social\Social\Support\PrivateFeedRules;
+use App\Service\Social\Social\Support\ProfileIdentity;
 
 final readonly class ImportCandidates
 {

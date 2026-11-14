@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\Settings;
+namespace App\Tests\Service\Outbound\Mail\Settings;
 
 use App\Enum\MailEncryption;
-use App\Service\Mail\Settings\MailFallback;
+use App\Service\Outbound\Mail\Settings\MailFallback;
 use PHPUnit\Framework\TestCase;
 
 final class MailFallbackTest extends TestCase

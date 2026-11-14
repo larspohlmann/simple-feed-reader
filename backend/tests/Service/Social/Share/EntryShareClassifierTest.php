@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Share;
+namespace App\Tests\Service\Social\Share;
 
 use App\Entity\Discussion;
 use App\Entity\Entry;
@@ -11,10 +11,10 @@ use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Enum\CommentsLoad;
 use App\Enum\ShareKind;
-use App\Service\Bluesky\BlueskyPendingEmbed;
-use App\Service\Sanitize\EntrySanitizer;
-use App\Service\Sanitize\TrailingBlankRemover;
-use App\Service\Share\EntryShareClassifier;
+use App\Service\Social\Bluesky\BlueskyPendingEmbed;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Foundation\Sanitize\TrailingBlankRemover;
+use App\Service\Social\Share\EntryShareClassifier;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

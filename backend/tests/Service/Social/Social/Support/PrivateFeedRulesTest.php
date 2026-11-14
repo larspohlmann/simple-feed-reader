@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Support;
+namespace App\Tests\Service\Social\Social\Support;
 
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
-use App\Service\Social\Model\PrivateFeedModel;
-use App\Service\Social\Support\PrivateFeedRules;
+use App\Service\Social\Social\Model\PrivateFeedModel;
+use App\Service\Social\Social\Support\PrivateFeedRules;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

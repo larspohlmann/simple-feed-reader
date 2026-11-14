@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Llm\Prompt;
+namespace App\Tests\Service\Curation\Recommendation\Llm\Prompt;
 
-use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
-use App\Service\Recommendation\Llm\Prompt\Model\OutputLimitModel;
-use App\Service\Recommendation\Llm\Prompt\Model\RecommendationResponseSchema;
-use App\Service\Recommendation\Llm\Prompt\RecommendationAnswerBudget;
+use App\Service\Curation\Recommendation\Llm\Completion\Model\Reasoning;
+use App\Service\Curation\Recommendation\Llm\Prompt\Model\OutputLimitModel;
+use App\Service\Curation\Recommendation\Llm\Prompt\Model\RecommendationResponseSchema;
+use App\Service\Curation\Recommendation\Llm\Prompt\RecommendationAnswerBudget;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationAnswerBudgetTest extends TestCase

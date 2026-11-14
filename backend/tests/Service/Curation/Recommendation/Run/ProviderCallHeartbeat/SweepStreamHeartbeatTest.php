@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Run\ProviderCallHeartbeat;
+namespace App\Tests\Service\Curation\Recommendation\Run\ProviderCallHeartbeat;
 
-use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
-use App\Service\Recommendation\Run\ProviderCallHeartbeat\SweepStreamHeartbeat;
-use App\Service\Recommendation\Run\WorkerPresence;
+use App\Service\Curation\Recommendation\Run\Model\RecommendationDriverKind;
+use App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\SweepStreamHeartbeat;
+use App\Service\Curation\Recommendation\Run\WorkerPresence;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ProvidesWorkerHeartbeats;
 use Symfony\Component\Clock\MockClock;

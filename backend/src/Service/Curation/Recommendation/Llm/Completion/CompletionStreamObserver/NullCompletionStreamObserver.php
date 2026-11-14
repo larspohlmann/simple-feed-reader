@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Completion\CompletionStreamObserver;
+namespace App\Service\Curation\Recommendation\Llm\Completion\CompletionStreamObserver;
 
-use App\Service\Recommendation\Run\Model\CallProgressModel;
+use App\Service\Curation\Recommendation\Run\Model\CallProgressModel;
 
 /**
  * The observer for callers with nothing to observe — an explicit argument

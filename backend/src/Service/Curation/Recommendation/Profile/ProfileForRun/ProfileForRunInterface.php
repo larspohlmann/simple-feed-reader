@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Profile\ProfileForRun;
+namespace App\Service\Curation\Recommendation\Profile\ProfileForRun;
 
 use App\Entity\User;
-use App\Service\Recommendation\Profile\Model\RunProfileModel;
+use App\Service\Curation\Recommendation\Profile\Model\RunProfileModel;
 
 /** The profile module's one face to recommendation runs: the current profile, or a profile run on its way. */
 interface ProfileForRunInterface

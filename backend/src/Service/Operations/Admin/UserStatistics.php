@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Admin;
+namespace App\Service\Operations\Admin;
 
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Service\Admin\Model\UserFootprintModel;
-use App\Service\Subscription\SubscriptionLimitResolver;
+use App\Service\Operations\Admin\Model\UserFootprintModel;
+use App\Service\Library\Subscription\SubscriptionLimitResolver;
 use Psr\Clock\ClockInterface;
 
 final readonly class UserStatistics

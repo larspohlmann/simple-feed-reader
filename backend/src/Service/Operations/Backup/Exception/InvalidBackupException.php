@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Exception;
+namespace App\Service\Operations\Backup\Exception;
 
 /**
  * The uploaded bytes are not an acceptable backup. BackupInspector raises it in pass 1, before any deletion;

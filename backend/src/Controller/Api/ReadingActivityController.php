@@ -6,7 +6,7 @@ namespace App\Controller\Api;
 
 use App\Entity\User;
 use App\Http\ReadingActivityJson;
-use App\Service\Reading\ReadingActivityCounter;
+use App\Service\Library\Reading\ReadingActivityCounter;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;

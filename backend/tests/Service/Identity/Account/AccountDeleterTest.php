@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Account;
+namespace App\Tests\Service\Identity\Account;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\Feed;
@@ -11,11 +11,11 @@ use App\Entity\RecommendationSettings;
 use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Service\Account\Exception\LastAdminException;
+use App\Service\Identity\Account\Exception\LastAdminException;
 use App\Exception\ValidationException;
-use App\Service\Account\AccountDeleter;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Social\Model\PrivateFeedModel;
+use App\Service\Identity\Account\AccountDeleter;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PrivateFeedsWiring;
 use App\Tests\Support\RecommendationRunFixtures;

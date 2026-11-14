@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
-use App\Service\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
 
 /** Mastodon boosts only public and unlisted statuses; a status that names no visibility is taken as public. */
 final class MastodonVisibility

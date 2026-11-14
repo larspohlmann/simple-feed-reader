@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
-use App\Service\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
 
 /** Mastodon 4.5+ tells, per status, whether the asking user may quote it; an older instance tells nothing. */
 final class MastodonQuoting

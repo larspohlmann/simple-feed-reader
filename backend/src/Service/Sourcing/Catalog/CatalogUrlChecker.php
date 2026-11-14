@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Catalog;
+namespace App\Service\Sourcing\Catalog;
 
-use App\Service\Catalog\Exception\BrokenCatalogUrlException;
-use App\Service\Catalog\Model\BrokenCatalogUrlModel;
-use App\Service\Catalog\Model\CatalogDocumentFeedModel;
-use App\Service\Catalog\Model\CatalogUrlReportModel;
-use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
-use App\Service\Fetch\Model\ProxyConfigModel;
-use App\Service\Fetch\Support\EgressOptions;
+use App\Service\Sourcing\Catalog\Exception\BrokenCatalogUrlException;
+use App\Service\Sourcing\Catalog\Model\BrokenCatalogUrlModel;
+use App\Service\Sourcing\Catalog\Model\CatalogDocumentFeedModel;
+use App\Service\Sourcing\Catalog\Model\CatalogUrlReportModel;
+use App\Service\Outbound\Fetch\EgressProxySource\EgressProxySourceInterface;
+use App\Service\Outbound\Fetch\Model\ProxyConfigModel;
+use App\Service\Outbound\Fetch\Support\EgressOptions;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;

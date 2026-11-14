@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\ReaderAudit\Model;
+namespace App\Service\Content\ReaderAudit\Model;
 
 /** Every shard draws the same sample; each keeps every count-th entry, so parallel shards cover it once. */
 final readonly class AuditShardModel

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Bluesky\Model;
+namespace App\Tests\Service\Social\Bluesky\Model;
 
-use App\Service\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use PHPUnit\Framework\TestCase;
 
 final class JsonNodeModelTest extends TestCase

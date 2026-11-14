@@ -2,26 +2,26 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\CandidateSource;
+namespace App\Tests\Service\Social\Social\CandidateSource;
 
 use App\Entity\SocialAccount;
-use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\UrlGuard;
-use App\Service\Social\BlueskyApiClient;
-use App\Service\Social\BlueskySavedCollections;
-use App\Service\Social\BlueskySessionCache;
-use App\Service\Social\BlueskySessionOpener;
-use App\Service\Social\BlueskySessions;
-use App\Service\Social\CandidateSource\BlueskyCandidateSource;
-use App\Service\Social\Crypto\BlueskySessionCipher;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Model\BlueskySessionModel;
-use App\Service\Social\Model\CollectedItemsModel;
-use App\Service\Social\Model\FollowedAccountModel;
-use App\Service\Social\Model\SocialCollectionModel;
-use App\Service\Social\StoredCredential;
+use App\Service\Foundation\Crypto\InstanceSecretCipher;
+use App\Service\Outbound\Fetch\IpValidator;
+use App\Service\Outbound\Fetch\UrlGuard;
+use App\Service\Social\Social\BlueskyApiClient;
+use App\Service\Social\Social\BlueskySavedCollections;
+use App\Service\Social\Social\BlueskySessionCache;
+use App\Service\Social\Social\BlueskySessionOpener;
+use App\Service\Social\Social\BlueskySessions;
+use App\Service\Social\Social\CandidateSource\BlueskyCandidateSource;
+use App\Service\Social\Social\Crypto\BlueskySessionCipher;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Model\BlueskySessionModel;
+use App\Service\Social\Social\Model\CollectedItemsModel;
+use App\Service\Social\Social\Model\FollowedAccountModel;
+use App\Service\Social\Social\Model\SocialCollectionModel;
+use App\Service\Social\Social\StoredCredential;
 use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\RoutedHttpClient;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
 /** Orders posts oldest first, an undated one after every dated one. */
 final class OldestFirstUndatedLast

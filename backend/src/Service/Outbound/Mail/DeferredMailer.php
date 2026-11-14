@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail;
+namespace App\Service\Outbound\Mail;
 
 use App\DependencyInjection\ProcessLifetimeState;
 use Symfony\Component\Mailer\Envelope;

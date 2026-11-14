@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Settings;
+namespace App\Service\Operations\Settings;
 
 use App\Exception\ValidationException;
-use App\Service\Settings\EnrolledPasskeys\EnrolledPasskeysInterface;
-use App\Service\Settings\Exception\RelyingPartyChangeRequiresConfirmationException;
-use App\Service\Settings\Model\RelyingPartyIdChoiceModel;
-use App\Service\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
-use App\Service\Settings\ServingHost\ServingHostInterface;
+use App\Service\Operations\Settings\EnrolledPasskeys\EnrolledPasskeysInterface;
+use App\Service\Operations\Settings\Exception\RelyingPartyChangeRequiresConfirmationException;
+use App\Service\Operations\Settings\Model\RelyingPartyIdChoiceModel;
+use App\Service\Operations\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
+use App\Service\Operations\Settings\ServingHost\ServingHostInterface;
 
 /**
  * A change of the EFFECTIVE relying-party id orphans every enrolled passkey, so it needs confirmation and then deletes

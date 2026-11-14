@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search\Index\Model;
+namespace App\Service\Library\Search\Index\Model;
 
 /** One entry as the index sees it: EntryIndexer reduces the body to plain text, so no HTML reaches the engine. */
 final readonly class IndexedEntryModel

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Transport\Pass;
+namespace App\Service\Outbound\Mail\Transport\Pass;
 
-use App\Service\Fetch\Model\ProxyConfigModel;
-use App\Service\Mail\Settings\Model\ResolvedMailTransportModel;
-use App\Service\Mail\Transport\Exception\ProxiedSmtpSendException;
-use App\Service\Mail\Transport\Support\CurlSmtpOptions;
+use App\Service\Outbound\Fetch\Model\ProxyConfigModel;
+use App\Service\Outbound\Mail\Settings\Model\ResolvedMailTransportModel;
+use App\Service\Outbound\Mail\Transport\Exception\ProxiedSmtpSendException;
+use App\Service\Outbound\Mail\Transport\Support\CurlSmtpOptions;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\Exception\TransportException;

@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Enum\SocialNetwork;
-use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\UrlGuard;
-use App\Service\Social\BlueskyApiClient;
-use App\Service\Social\BlueskyIdentityResolver;
-use App\Service\Social\FollowMatcher;
-use App\Service\Social\Model\FollowedAccountModel;
-use App\Service\Social\Model\ImportCandidateModel;
-use App\Service\Social\Model\ProfileFeedSubscriptionModel;
-use App\Service\Social\Pass\FollowMatching;
-use App\Service\Social\Support\ProfileFeedUrl;
+use App\Service\Outbound\Fetch\IpValidator;
+use App\Service\Outbound\Fetch\UrlGuard;
+use App\Service\Social\Social\BlueskyApiClient;
+use App\Service\Social\Social\BlueskyIdentityResolver;
+use App\Service\Social\Social\FollowMatcher;
+use App\Service\Social\Social\Model\FollowedAccountModel;
+use App\Service\Social\Social\Model\ImportCandidateModel;
+use App\Service\Social\Social\Model\ProfileFeedSubscriptionModel;
+use App\Service\Social\Social\Pass\FollowMatching;
+use App\Service\Social\Social\Support\ProfileFeedUrl;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\StaticDnsResolver;

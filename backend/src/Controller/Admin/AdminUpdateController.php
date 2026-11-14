@@ -6,7 +6,7 @@ namespace App\Controller\Admin;
 
 use App\Entity\User;
 use App\Http\Admin\SelfUpdateStatusJson;
-use App\Service\SelfUpdate\SelfUpdater;
+use App\Service\Operations\SelfUpdate\SelfUpdater;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;

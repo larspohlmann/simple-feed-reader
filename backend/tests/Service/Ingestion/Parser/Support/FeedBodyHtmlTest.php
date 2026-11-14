@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Parser\Support;
+namespace App\Tests\Service\Ingestion\Parser\Support;
 
-use App\Service\Parser\Support\FeedBodyHtml;
+use App\Service\Ingestion\Parser\Support\FeedBodyHtml;
 use PHPUnit\Framework\TestCase;
 
 final class FeedBodyHtmlTest extends TestCase

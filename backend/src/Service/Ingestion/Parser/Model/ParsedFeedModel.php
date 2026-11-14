@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\Model;
+namespace App\Service\Ingestion\Parser\Model;
 
-use App\Service\Image\Model\DeclaredImageModel;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
 
 final readonly class ParsedFeedModel
 {

@@ -7,7 +7,7 @@ namespace App\Tests\Controller\Api;
 use App\Entity\InstanceSettingsUpdate;
 use App\EventListener\AddUserIdClaimOnTokenIssueListener;
 use App\Repository\UserRepository;
-use App\Service\Settings\InstanceSettings;
+use App\Service\Operations\Settings\InstanceSettings;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\EnablesMailInTests;
 use App\Tests\Support\TogglesPasskeySignIn;

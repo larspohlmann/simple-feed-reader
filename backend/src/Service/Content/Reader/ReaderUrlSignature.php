@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Content\Reader;
 
-use App\Service\Reader\Exception\ReaderUrlTokenMismatchException;
+use App\Service\Content\Reader\Exception\ReaderUrlTokenMismatchException;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 

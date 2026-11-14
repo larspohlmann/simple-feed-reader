@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Model\SearchExpression;
+namespace App\Service\Social\Social\Model\SearchExpression;
 
-use App\Service\Social\Model\SearchedPostModel;
+use App\Service\Social\Social\Model\SearchedPostModel;
 
 /** Words in order, the first starting a word of the text; the last may run on, so `reader` finds "readers". */
 final readonly class SearchTermModel implements SearchExpressionModelInterface

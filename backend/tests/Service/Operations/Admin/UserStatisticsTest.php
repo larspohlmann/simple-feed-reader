@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Admin;
+namespace App\Tests\Service\Operations\Admin;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Service\Admin\UserStatistics;
-use App\Service\Subscription\SubscriptionLimitResolver;
-use App\Service\Subscription\SubscriptionService;
+use App\Service\Operations\Admin\UserStatistics;
+use App\Service\Library\Subscription\SubscriptionLimitResolver;
+use App\Service\Library\Subscription\SubscriptionService;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 

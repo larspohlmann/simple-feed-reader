@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai\Model;
+namespace App\Service\Curation\Ai\Model;
 
-use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
 
 /**
  * An endpoint and its key. The base URL is the full root as entered, `/v1` included; callers append only the path.

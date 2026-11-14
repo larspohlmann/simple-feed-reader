@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Http\RefreshReportJson;
-use App\Service\Refresh\Model\RefreshReportModel;
+use App\Service\Ingestion\Refresh\Model\RefreshReportModel;
 use PHPUnit\Framework\TestCase;
 
 final class RefreshReportJsonTest extends TestCase

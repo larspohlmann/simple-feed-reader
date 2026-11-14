@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search\Model;
+namespace App\Service\Library\Search\Model;
 
 use App\Exception\ValidationException;
-use App\Service\Text\Support\Whitespace;
+use App\Service\Foundation\Text\Support\Whitespace;
 
 /**
  * The terms a search runs on, parsed from one raw query. Each term adds two unindexable LIKE predicates, hence the

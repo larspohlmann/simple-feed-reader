@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run\Support;
+namespace App\Service\Curation\Recommendation\Run\Support;
 
 /** The sentence a run or profile run carries when its AI provider failed it. */
 final readonly class ProviderFailedMessage

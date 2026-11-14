@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Prompt\Support;
+namespace App\Service\Curation\Recommendation\Llm\Prompt\Support;
 
 /**
  * The fixed prompt strings for the recommendation feature. Kept apart from

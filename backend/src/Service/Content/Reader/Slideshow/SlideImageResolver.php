@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Slideshow;
+namespace App\Service\Content\Reader\Slideshow;
 
 use Dom\Element;
 

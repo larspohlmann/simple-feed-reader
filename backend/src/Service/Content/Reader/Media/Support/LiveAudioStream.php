@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\Support;
+namespace App\Service\Content\Reader\Media\Support;
 
 final class LiveAudioStream
 {

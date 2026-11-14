@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\OAuth;
+namespace App\Tests\Service\Identity\OAuth;
 
-use App\Service\OAuth\OAuthProvider\AbstractOidcProvider;
+use App\Service\Identity\OAuth\OAuthProvider\AbstractOidcProvider;
 use Psr\Clock\ClockInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 

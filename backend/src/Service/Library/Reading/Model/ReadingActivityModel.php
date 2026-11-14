@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reading\Model;
+namespace App\Service\Library\Reading\Model;
 
-use App\Service\SubscriptionHistory\Model\SubscriptionActivityModel;
+use App\Service\Library\SubscriptionHistory\Model\SubscriptionActivityModel;
 
 final readonly class ReadingActivityModel
 {

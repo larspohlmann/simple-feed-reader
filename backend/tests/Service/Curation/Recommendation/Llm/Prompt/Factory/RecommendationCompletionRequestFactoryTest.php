@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Llm\Prompt\Factory;
+namespace App\Tests\Service\Curation\Recommendation\Llm\Prompt\Factory;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\ModelDescriptor;
 use App\Entity\SealedSecret;
 use App\Entity\User;
 use App\Enum\TokenLimitParameter;
-use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
-use App\Service\Recommendation\Llm\Prompt\Factory\RecommendationCompletionRequestFactory;
-use App\Service\Recommendation\Llm\Prompt\Model\CallPromptModel;
-use App\Service\Recommendation\Llm\Prompt\Model\OutputLimitModel;
-use App\Service\Recommendation\Llm\Prompt\Model\RecommendationResponseSchema;
-use App\Service\Recommendation\Llm\Prompt\RecommendationAnswerBudget;
+use App\Service\Curation\Recommendation\Llm\Completion\Model\Reasoning;
+use App\Service\Curation\Recommendation\Llm\Prompt\Factory\RecommendationCompletionRequestFactory;
+use App\Service\Curation\Recommendation\Llm\Prompt\Model\CallPromptModel;
+use App\Service\Curation\Recommendation\Llm\Prompt\Model\OutputLimitModel;
+use App\Service\Curation\Recommendation\Llm\Prompt\Model\RecommendationResponseSchema;
+use App\Service\Curation\Recommendation\Llm\Prompt\RecommendationAnswerBudget;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationCompletionRequestFactoryTest extends TestCase

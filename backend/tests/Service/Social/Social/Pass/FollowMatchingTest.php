@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Pass;
+namespace App\Tests\Service\Social\Social\Pass;
 
 use App\Enum\SocialNetwork;
-use App\Service\Social\Model\ProfileFeedSubscriptionModel;
-use App\Service\Social\Pass\FollowMatching;
+use App\Service\Social\Social\Model\ProfileFeedSubscriptionModel;
+use App\Service\Social\Social\Pass\FollowMatching;
 use PHPUnit\Framework\TestCase;
 
 final class FollowMatchingTest extends TestCase

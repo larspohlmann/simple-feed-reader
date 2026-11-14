@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reading\EntryShareStore;
+namespace App\Service\Library\Reading\EntryShareStore;
 
 use Doctrine\DBAL\Exception as DbalException;
 

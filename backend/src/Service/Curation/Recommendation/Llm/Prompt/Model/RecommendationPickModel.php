@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Prompt\Model;
+namespace App\Service\Curation\Recommendation\Llm\Prompt\Model;
 
 /**
  * One scored entry with the model's reason. Only a blank reason is rejected, as a bad one is not worth losing the

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\ReaderAudit;
+namespace App\Service\Content\ReaderAudit;
 
-use App\Service\Reader\Model\ExtractionResultModel;
-use App\Service\ReaderAudit\Model\CleanupMarkerModel;
-use App\Service\ReaderAudit\Model\ExtractedBodyModel;
-use App\Service\ReaderAudit\Model\SampledEntryModel;
+use App\Service\Content\Reader\Model\ExtractionResultModel;
+use App\Service\Content\ReaderAudit\Model\CleanupMarkerModel;
+use App\Service\Content\ReaderAudit\Model\ExtractedBodyModel;
+use App\Service\Content\ReaderAudit\Model\SampledEntryModel;
 
 /**
  * Every marker one extracted article earns. A failed extraction earns none: the reader falls back to the feed body

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\LinkCard\QuotedPostSource;
+namespace App\Service\Content\LinkCard\QuotedPostSource;
 
 use App\Entity\QuotedPostContent;
-use App\Service\LinkCard\Exception\QuotedPostUnavailableException;
+use App\Service\Content\LinkCard\Exception\QuotedPostUnavailableException;
 
 interface QuotedPostSourceInterface
 {

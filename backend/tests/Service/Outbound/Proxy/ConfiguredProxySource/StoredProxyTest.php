@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Proxy\ConfiguredProxySource;
+namespace App\Tests\Service\Outbound\Proxy\ConfiguredProxySource;
 
 use App\Entity\ProxyConnection;
 use App\Entity\ProxyServerSettings;
 use App\Enum\ProxyType;
-use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Proxy\ConfiguredProxySource\StoredProxy;
+use App\Service\Foundation\Crypto\Exception\SecretUnreadableException;
+use App\Service\Outbound\Proxy\ConfiguredProxySource\StoredProxy;
 use App\Tests\Support\ProxyPasswordCiphers;
 use App\Tests\Support\StoredProxies;
 use App\Tests\Support\UnreadableProxyPasswordRows;

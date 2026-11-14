@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\FeedFetcher;
+namespace App\Service\Outbound\Fetch\FeedFetcher;
 
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\Model\FetchResponseModel;
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
 
 interface FeedFetcherInterface
 {

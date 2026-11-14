@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run\ProviderCallHeartbeat;
+namespace App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat;
 
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Clock\ClockInterface;

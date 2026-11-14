@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Admin\Model;
+namespace App\Service\Operations\Admin\Model;
 
 final readonly class UserFootprintModel
 {

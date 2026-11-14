@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Admin;
+namespace App\Tests\Service\Operations\Admin;
 
 use App\Entity\User;
 use App\Exception\ValidationException;
-use App\Service\Admin\SelfActionGuard;
+use App\Service\Operations\Admin\SelfActionGuard;
 use App\Tests\Support\AssignsEntityIds;
 use PHPUnit\Framework\TestCase;
 

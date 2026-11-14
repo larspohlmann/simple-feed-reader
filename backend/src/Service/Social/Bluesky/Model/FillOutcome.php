@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Bluesky\Model;
+namespace App\Service\Social\Bluesky\Model;
 
 enum FillOutcome
 {

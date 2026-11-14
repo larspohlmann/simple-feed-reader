@@ -6,12 +6,12 @@ declare(strict_types=1);
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
 namespace App\Repository\Fixtures {
-    use App\Service\Search\Model\SearchTermsModel;
-    use App\Service\Search\Support\LikePattern;
-    use App\Service\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface;
-    use App\Service\Reader\Exception\ArticleNotExtractedException;
-    use App\Service\Url\UrlNormalizer;
-    use App\Service\Backup\Dto\EntryLine;
+    use App\Service\Library\Search\Model\SearchTermsModel;
+    use App\Service\Library\Search\Support\LikePattern;
+    use App\Service\Library\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface;
+    use App\Service\Content\Reader\Exception\ArticleNotExtractedException;
+    use App\Service\Foundation\Url\UrlNormalizer;
+    use App\Service\Operations\Backup\Dto\EntryLine;
 
     final class SpeaksServiceValues
     {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Proxy\Model;
+namespace App\Service\Outbound\Proxy\Model;
 
 enum ProxyTestFailure: string
 {

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reading;
+namespace App\Tests\Service\Library\Reading;
 
 use App\Entity\NetworkExclusion;
 use App\Entity\User;
 use App\Enum\InclusionSurface;
 use App\Enum\SocialNetwork;
 use App\Repository\NetworkExclusionRepository;
-use App\Service\Reading\NetworkExclusions;
+use App\Service\Library\Reading\NetworkExclusions;
 use App\Tests\DbTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 

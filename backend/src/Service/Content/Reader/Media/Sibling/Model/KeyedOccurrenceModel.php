@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\Sibling\Model;
+namespace App\Service\Content\Reader\Media\Sibling\Model;
 
 /** An id standing as a keyed value on the page, with the keys on either side — the context that tells one list from another. */
 final readonly class KeyedOccurrenceModel

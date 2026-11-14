@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\Feed;
 use App\Entity\SealedSecret;
@@ -12,16 +12,16 @@ use App\Enum\SocialAccountStatus;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
-use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Social\Crypto\SocialCredentialCipher;
-use App\Service\Social\Exception\SocialAccountAlreadyConnectedException;
-use App\Service\Social\Exception\SocialAccountMismatchException;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\TooManySocialAccountsException;
-use App\Service\Social\Factory\SocialAccountFactory;
-use App\Service\Social\Model\SocialCredentialsModel;
-use App\Service\Social\Model\VerifiedAccountModel;
-use App\Service\Social\SocialAccountConnector;
+use App\Service\Foundation\Crypto\InstanceSecretCipher;
+use App\Service\Social\Social\Crypto\SocialCredentialCipher;
+use App\Service\Social\Social\Exception\SocialAccountAlreadyConnectedException;
+use App\Service\Social\Social\Exception\SocialAccountMismatchException;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\TooManySocialAccountsException;
+use App\Service\Social\Social\Factory\SocialAccountFactory;
+use App\Service\Social\Social\Model\SocialCredentialsModel;
+use App\Service\Social\Social\Model\VerifiedAccountModel;
+use App\Service\Social\Social\SocialAccountConnector;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PrivateFeedsWiring;
 use App\Tests\Support\SocialFeeds;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Subscription;
+namespace App\Tests\Service\Library\Subscription;
 
 use App\Entity\Feed;
 use App\Entity\InclusionChange;
@@ -10,9 +10,9 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\InclusionSurface;
-use App\Service\Subscription\Model\FeedMoveModel;
-use App\Service\Subscription\Model\SubscriptionChangeModel;
-use App\Service\Subscription\SubscriptionEditor;
+use App\Service\Library\Subscription\Model\FeedMoveModel;
+use App\Service\Library\Subscription\Model\SubscriptionChangeModel;
+use App\Service\Library\Subscription\SubscriptionEditor;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\SeedsUsers;

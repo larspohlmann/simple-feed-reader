@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Run;
+namespace App\Tests\Service\Curation\Recommendation\Run;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
@@ -16,9 +16,9 @@ use App\Enum\RecommendationEngineKind;
 use App\Repository\RecommendationItemRepository;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Recommendation\Exception\RecommendationRunActiveException;
-use App\Service\Recommendation\Run\RecommendationRunPurger;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Recommendation\Exception\RecommendationRunActiveException;
+use App\Service\Curation\Recommendation\Run\RecommendationRunPurger;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 

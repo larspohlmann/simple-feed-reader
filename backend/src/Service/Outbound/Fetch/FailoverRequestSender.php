@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch;
+namespace App\Service\Outbound\Fetch;
 
-use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
-use App\Service\Fetch\Exception\DirectRouteUnavailableException;
-use App\Service\Fetch\Exception\ProxiedAttemptFailedException;
-use App\Service\Fetch\Model\GuardedUrlModel;
-use App\Service\Fetch\Model\ProxyConfigModel;
-use App\Service\Fetch\Support\EgressOptions;
+use App\Service\Foundation\Crypto\Exception\SecretUnreadableException;
+use App\Service\Outbound\Fetch\EgressProxySource\EgressProxySourceInterface;
+use App\Service\Outbound\Fetch\Exception\DirectRouteUnavailableException;
+use App\Service\Outbound\Fetch\Exception\ProxiedAttemptFailedException;
+use App\Service\Outbound\Fetch\Model\GuardedUrlModel;
+use App\Service\Outbound\Fetch\Model\ProxyConfigModel;
+use App\Service\Outbound\Fetch\Support\EgressOptions;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;

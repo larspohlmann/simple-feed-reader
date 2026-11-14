@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Bluesky\Support;
+namespace App\Service\Social\Bluesky\Support;
 
 use App\Entity\LinkCardContent;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Fetch\Support\HostKey;
-use App\Service\LinkCard\Support\StorableLinkCard;
-use App\Service\Url\Support\AbsoluteHttpUrl;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Outbound\Fetch\Support\HostKey;
+use App\Service\Content\LinkCard\Support\StorableLinkCard;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 
 /** The link card an external embed's view shows; none without a web page's URL and a title. */
 final class BlueskyExternalCard

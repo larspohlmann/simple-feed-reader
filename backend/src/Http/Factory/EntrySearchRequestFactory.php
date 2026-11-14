@@ -10,7 +10,7 @@ use App\Exception\ValidationException;
 use App\Pagination\EntryCursor;
 use App\Repository\EntryQuery;
 use App\Repository\EntrySearchQuery;
-use App\Service\Search\Model\SearchTermsModel;
+use App\Service\Library\Search\Model\SearchTermsModel;
 use Symfony\Component\HttpFoundation\Request;
 
 /**

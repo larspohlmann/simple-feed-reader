@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Search\Model;
+namespace App\Tests\Service\Library\Search\Model;
 
 use App\Exception\ValidationException;
-use App\Service\Search\Model\SearchMode;
-use App\Service\Search\Model\SearchTermsModel;
+use App\Service\Library\Search\Model\SearchMode;
+use App\Service\Library\Search\Model\SearchTermsModel;
 use PHPUnit\Framework\TestCase;
 
 final class SearchTermsModelTest extends TestCase

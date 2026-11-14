@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Run\ProviderCallHeartbeat;
+namespace App\Tests\Service\Curation\Recommendation\Run\ProviderCallHeartbeat;
 
-use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
-use App\Service\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface;
-use App\Service\Recommendation\Run\ProviderCallHeartbeat\SweepStreamHeartbeat;
-use App\Service\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive;
+use App\Service\Curation\Recommendation\Run\Model\RecommendationDriverKind;
+use App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface;
+use App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\SweepStreamHeartbeat;
+use App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ProvidesWorkerHeartbeats;
 use App\Tests\Support\RefreshCountingLock;

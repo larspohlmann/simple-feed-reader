@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\ComposerDefaults;
+namespace App\Service\Social\Social\ComposerDefaults;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\MastodonAccountApi;
-use App\Service\Social\MastodonApiClient;
-use App\Service\Social\Model\ComposerDefaultsModel;
-use App\Service\Social\Model\SocialPostModel;
-use App\Service\Social\Support\MastodonVisibility;
-use App\Service\Social\Support\SocialIdentity;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\MastodonAccountApi;
+use App\Service\Social\Social\MastodonApiClient;
+use App\Service\Social\Social\Model\ComposerDefaultsModel;
+use App\Service\Social\Social\Model\SocialPostModel;
+use App\Service\Social\Social\Support\MastodonVisibility;
+use App\Service\Social\Social\Support\SocialIdentity;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /** Mastodon's composer names the author and the thread's starter, never less private than the post it answers. */

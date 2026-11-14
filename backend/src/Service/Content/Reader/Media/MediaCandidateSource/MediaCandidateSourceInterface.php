@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\MediaCandidateSource;
+namespace App\Service\Content\Reader\Media\MediaCandidateSource;
 
-use App\Service\Reader\Media\Model\MediaCandidateModel;
-use App\Service\Reader\Media\Model\RawPageModel;
+use App\Service\Content\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Content\Reader\Media\Model\RawPageModel;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**

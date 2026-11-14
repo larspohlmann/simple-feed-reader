@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai\Model;
+namespace App\Service\Curation\Ai\Model;
 
 final readonly class ProviderCallReceiptModel
 {

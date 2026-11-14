@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reading;
+namespace App\Tests\Service\Library\Reading;
 
 use App\Entity\Entry;
 use App\Entity\EntryState;
@@ -14,7 +14,7 @@ use App\Repository\EntryListRow;
 use App\Repository\EntryListRowMarks;
 use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryStateRepository;
-use App\Service\Reading\EntryStateResolver;
+use App\Service\Library\Reading\EntryStateResolver;
 use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
 

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Logging\Loki\LokiSink;
+namespace App\Service\Operations\Logging\Loki\LokiSink;
 
-use App\Service\Logging\Loki\LokiClient;
+use App\Service\Operations\Logging\Loki\LokiClient;
 
 final readonly class DirectLokiSink implements LokiSinkInterface
 {

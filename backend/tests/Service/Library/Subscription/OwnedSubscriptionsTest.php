@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Subscription;
+namespace App\Tests\Service\Library\Subscription;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Service\Subscription\OwnedSubscriptions;
+use App\Service\Library\Subscription\OwnedSubscriptions;
 use App\Tests\Support\SeedsUsers;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;

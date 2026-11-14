@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ingest;
+namespace App\Service\Ingestion\Ingest;
 
 use App\Entity\Entry;
 use App\Entity\EntryGuid;
 use App\Entity\Feed;
 use App\Enum\FeedPlatform;
 use App\Repository\EntryRepository;
-use App\Service\Ingest\Factory\IngestedEntryFactory;
-use App\Service\Ingest\FeedTitle\FeedTitleInterface;
-use App\Service\Ingest\Model\IncomingEntryModel;
-use App\Service\Ingest\Pass\EntryDeduplicator;
-use App\Service\Ingest\Pass\FeedIngestContext;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Parser\Model\ParsedFeedModel;
-use App\Service\Url\EntryUrlHash;
+use App\Service\Ingestion\Ingest\Factory\IngestedEntryFactory;
+use App\Service\Ingestion\Ingest\FeedTitle\FeedTitleInterface;
+use App\Service\Ingestion\Ingest\Model\IncomingEntryModel;
+use App\Service\Ingestion\Ingest\Pass\EntryDeduplicator;
+use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
+use App\Service\Foundation\Url\EntryUrlHash;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**

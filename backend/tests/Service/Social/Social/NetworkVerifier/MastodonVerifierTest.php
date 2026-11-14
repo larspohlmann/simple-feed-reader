@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\NetworkVerifier;
+namespace App\Tests\Service\Social\Social\NetworkVerifier;
 
-use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\UrlGuard;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\MastodonApiClient;
-use App\Service\Social\Model\SocialCredentialsModel;
-use App\Service\Social\NetworkVerifier\MastodonVerifier;
+use App\Service\Outbound\Fetch\IpValidator;
+use App\Service\Outbound\Fetch\UrlGuard;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\MastodonApiClient;
+use App\Service\Social\Social\Model\SocialCredentialsModel;
+use App\Service\Social\Social\NetworkVerifier\MastodonVerifier;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\StaticDnsResolver;

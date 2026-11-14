@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media;
+namespace App\Tests\Service\Content\Reader\Media;
 
-use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Content\Reader\Media\Model\MediaKind;
 use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\ReadsCandidateUrls;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;

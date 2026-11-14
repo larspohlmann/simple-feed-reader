@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Support;
+namespace App\Tests\Service\Social\Social\Support;
 
-use App\Service\Social\Exception\SocialPostRefusedException;
-use App\Service\Social\Support\OwnReplyGuids;
+use App\Service\Social\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Social\Support\OwnReplyGuids;
 use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\TestCase;
 

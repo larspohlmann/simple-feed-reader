@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Html;
+namespace App\Service\Foundation\Html;
 
-use App\Service\Html\Model\ImageRenditionModel;
-use App\Service\Html\Support\ImageSourceUrl;
-use App\Service\Html\Support\Srcset;
+use App\Service\Foundation\Html\Model\ImageRenditionModel;
+use App\Service\Foundation\Html\Support\ImageSourceUrl;
+use App\Service\Foundation\Html\Support\Srcset;
 use Dom\Element;
 
 /**

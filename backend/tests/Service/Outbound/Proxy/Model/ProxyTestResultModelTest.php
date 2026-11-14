@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Proxy\Model;
+namespace App\Tests\Service\Outbound\Proxy\Model;
 
-use App\Service\Proxy\Model\ProxyTestFailure;
-use App\Service\Proxy\Model\ProxyTestResultModel;
+use App\Service\Outbound\Proxy\Model\ProxyTestFailure;
+use App\Service\Outbound\Proxy\Model\ProxyTestResultModel;
 use PHPUnit\Framework\TestCase;
 
 final class ProxyTestResultModelTest extends TestCase

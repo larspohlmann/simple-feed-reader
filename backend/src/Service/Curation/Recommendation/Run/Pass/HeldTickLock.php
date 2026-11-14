@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run\Pass;
+namespace App\Service\Curation\Recommendation\Run\Pass;
 
-use App\Service\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive;
+use App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive;
 use Symfony\Component\Lock\LockInterface;
 
 /** One tick's hold on the per-user lock. */

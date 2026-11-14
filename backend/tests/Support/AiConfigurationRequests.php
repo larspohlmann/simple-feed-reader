@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\ModelDescriptor;
-use App\Service\Ai\Model\ProviderCredentialsModel;
-use App\Service\Ai\ModelCatalog\ModelCatalogInterface;
+use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
+use App\Service\Curation\Ai\ModelCatalog\ModelCatalogInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 

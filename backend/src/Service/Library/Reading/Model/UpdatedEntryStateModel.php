@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reading\Model;
+namespace App\Service\Library\Reading\Model;
 
 use App\Entity\EntryState;
 

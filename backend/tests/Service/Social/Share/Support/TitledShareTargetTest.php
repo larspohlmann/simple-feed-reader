@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Share\Support;
+namespace App\Tests\Service\Social\Share\Support;
 
 use App\Entity\Discussion;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Enum\CommentsLoad;
-use App\Service\Share\Support\TitledShareTarget;
+use App\Service\Social\Share\Support\TitledShareTarget;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

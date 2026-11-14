@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Model;
+namespace App\Service\Social\Social\Model;
 
-use App\Service\Bluesky\Support\BlueskyActorKey;
+use App\Service\Social\Bluesky\Support\BlueskyActorKey;
 
 final readonly class ProfileFeedSubscriptionModel
 {

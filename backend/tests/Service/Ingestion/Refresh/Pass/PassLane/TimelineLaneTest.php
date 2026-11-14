@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Refresh\Pass\PassLane;
+namespace App\Tests\Service\Ingestion\Refresh\Pass\PassLane;
 
 use App\Entity\SocialFeed;
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Fetch\Model\ResponseExchangeKind;
-use App\Service\Refresh\Model\PassOutcome\TimelinePassOutcomeModel;
-use App\Service\Refresh\Pass\PassLane\TimelineLane;
-use App\Service\Social\Exception\PrivateFeedOrphanedException;
-use App\Service\Social\Model\SocialAccountSlotModel;
-use App\Service\Social\Model\SocialServerSlotModel;
-use App\Service\Social\Model\TimelineOutcome\AccountPausedTimelineModel;
-use App\Service\Social\Model\TimelineOutcome\FailedTimelineModel;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Outbound\Fetch\Model\ResponseExchangeKind;
+use App\Service\Ingestion\Refresh\Model\PassOutcome\TimelinePassOutcomeModel;
+use App\Service\Ingestion\Refresh\Pass\PassLane\TimelineLane;
+use App\Service\Social\Social\Exception\PrivateFeedOrphanedException;
+use App\Service\Social\Social\Model\SocialAccountSlotModel;
+use App\Service\Social\Social\Model\SocialServerSlotModel;
+use App\Service\Social\Social\Model\TimelineOutcome\AccountPausedTimelineModel;
+use App\Service\Social\Social\Model\TimelineOutcome\FailedTimelineModel;
 use App\Tests\Support\PrivateFeeds;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\TestCase;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Settings;
+namespace App\Service\Operations\Settings;
 
 /** Shared so "the id in effect now" and "the id after this request" cannot
  *  drift: a drift there orphans every enrolled passkey. */

@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Image\GuardedImageDownloader;
+namespace App\Service\Outbound\Image\GuardedImageDownloader;
 
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\Exception\ResponseTooLargeException;
-use App\Service\Fetch\Model\ResponseSizeLimit;
-use App\Service\Fetch\Pass\LandedResponse;
-use App\Service\Fetch\Pass\RedirectBudget;
-use App\Service\Fetch\RedirectFollower;
-use App\Service\Image\Exception\GuardedImageRejectedException;
-use App\Service\Image\Exception\GuardedImageUnavailableException;
-use App\Service\Image\Model\DownloadedImageModel;
-use App\Service\Image\Support\ImageType;
-use App\Service\Image\Support\MediaType;
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Outbound\Fetch\Model\ResponseSizeLimit;
+use App\Service\Outbound\Fetch\Pass\LandedResponse;
+use App\Service\Outbound\Fetch\Pass\RedirectBudget;
+use App\Service\Outbound\Fetch\RedirectFollower;
+use App\Service\Outbound\Image\Exception\GuardedImageRejectedException;
+use App\Service\Outbound\Image\Exception\GuardedImageUnavailableException;
+use App\Service\Outbound\Image\Model\DownloadedImageModel;
+use App\Service\Outbound\Image\Support\ImageType;
+use App\Service\Outbound\Image\Support\MediaType;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 

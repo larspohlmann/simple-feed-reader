@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Parser\FeedFormatParser;
+namespace App\Tests\Service\Ingestion\Parser\FeedFormatParser;
 
 use App\Tests\Support\FeedFormatParsers;
 use App\Tests\Support\ReadsFixtures;

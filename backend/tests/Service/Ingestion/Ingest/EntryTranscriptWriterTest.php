@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Ingest;
+namespace App\Tests\Service\Ingestion\Ingest;
 
 use App\Entity\EntryTranscript;
 use App\Entity\Feed;
 use App\Enum\TranscriptFormat;
-use App\Service\Ingest\EntryIngestor;
-use App\Service\Ingest\Pass\FeedIngestContext;
+use App\Service\Ingestion\Ingest\EntryIngestor;
+use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
 use App\Tests\DbTestCase;
 use App\Tests\Support\EntryIngestors;
 use App\Tests\Support\FeedFormatParsers;

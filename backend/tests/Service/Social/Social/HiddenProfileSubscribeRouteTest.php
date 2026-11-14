@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\User;
 use App\Repository\SocialAccountRepository;
-use App\Service\Social\Exception\BlueskyProfileHiddenException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\HiddenProfileSubscribeRoute;
-use App\Service\Social\TolerantHiddenProfiles;
-use App\Service\Social\Model\HiddenProfileModel;
-use App\Service\Subscription\Model\SubscribeRequestModel;
+use App\Service\Social\Social\Exception\BlueskyProfileHiddenException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\HiddenProfileSubscribeRoute;
+use App\Service\Social\Social\TolerantHiddenProfiles;
+use App\Service\Social\Social\Model\HiddenProfileModel;
+use App\Service\Library\Subscription\Model\SubscribeRequestModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BlueskyProfiles;
 use App\Tests\Support\ConnectsBlueskyAccounts;

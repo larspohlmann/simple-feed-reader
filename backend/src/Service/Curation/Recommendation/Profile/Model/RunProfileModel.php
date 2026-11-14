@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Profile\Model;
+namespace App\Service\Curation\Recommendation\Profile\Model;
 
 /** What a recommendation run may freeze: a profile (or none, when there is no history), not yet, or a failure. */
 final readonly class RunProfileModel

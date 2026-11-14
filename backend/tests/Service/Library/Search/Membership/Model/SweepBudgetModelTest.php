@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Search\Membership\Model;
+namespace App\Tests\Service\Library\Search\Membership\Model;
 
-use App\Service\Search\Membership\Model\SweepBudgetModel;
+use App\Service\Library\Search\Membership\Model\SweepBudgetModel;
 use PHPUnit\Framework\TestCase;
 
 final class SweepBudgetModelTest extends TestCase

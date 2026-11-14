@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Trending;
+namespace App\Service\Curation\Trending;
 
-use App\Service\Trending\Model\StoryLinkModel;
-use App\Service\Trending\Pass\TrendingRun;
-use App\Service\Trending\StoryLinkSource\StoryLinkSourceInterface;
+use App\Service\Curation\Trending\Model\StoryLinkModel;
+use App\Service\Curation\Trending\Pass\TrendingRun;
+use App\Service\Curation\Trending\StoryLinkSource\StoryLinkSourceInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 use Symfony\Contracts\Service\ServiceProviderInterface;
 

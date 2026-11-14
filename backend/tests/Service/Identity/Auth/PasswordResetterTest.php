@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Auth;
+namespace App\Tests\Service\Identity\Auth;
 
-use App\Service\Auth\PasswordResetter;
+use App\Service\Identity\Auth\PasswordResetter;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;

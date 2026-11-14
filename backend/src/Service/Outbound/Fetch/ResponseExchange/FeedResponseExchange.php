@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\ResponseExchange;
+namespace App\Service\Outbound\Fetch\ResponseExchange;
 
-use App\Service\Fetch\Exception\FeedGoneException;
-use App\Service\Fetch\Exception\FeedThrottledException;
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\Model\ExchangeStepModel;
-use App\Service\Fetch\Model\FetchAttemptModel;
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Fetch\Model\FetchResponseModel;
-use App\Service\Fetch\Model\ResponseExchangeKind;
-use App\Service\Fetch\Support\ResponseBody;
-use App\Service\Fetch\Support\ResponseHeader;
-use App\Service\Fetch\Support\RetryAfterHeader;
-use App\Service\Fetch\Support\UrlResolver;
+use App\Service\Outbound\Fetch\Exception\FeedGoneException;
+use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\Model\ExchangeStepModel;
+use App\Service\Outbound\Fetch\Model\FetchAttemptModel;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
+use App\Service\Outbound\Fetch\Model\ResponseExchangeKind;
+use App\Service\Outbound\Fetch\Support\ResponseBody;
+use App\Service\Outbound\Fetch\Support\ResponseHeader;
+use App\Service\Outbound\Fetch\Support\RetryAfterHeader;
+use App\Service\Outbound\Fetch\Support\UrlResolver;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 use Symfony\Component\HttpFoundation\Response;

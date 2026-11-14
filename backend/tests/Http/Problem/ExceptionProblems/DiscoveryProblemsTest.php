@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ExceptionProblems\DiscoveryProblems;
-use App\Service\Discovery\Exception\SiteThrottledException;
+use App\Service\Sourcing\Discovery\Exception\SiteThrottledException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Response;
 

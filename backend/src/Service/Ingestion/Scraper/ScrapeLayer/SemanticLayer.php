@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Scraper\ScrapeLayer;
+namespace App\Service\Ingestion\Scraper\ScrapeLayer;
 
-use App\Service\Fetch\Pass\PageUrls;
-use App\Service\Scraper\CardTitle;
-use App\Service\Scraper\Pass\CardFields;
+use App\Service\Outbound\Fetch\Pass\PageUrls;
+use App\Service\Ingestion\Scraper\CardTitle;
+use App\Service\Ingestion\Scraper\Pass\CardFields;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;

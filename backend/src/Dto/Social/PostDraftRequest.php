@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Dto\Social;
 
 use App\Entity\Entry;
-use App\Service\Social\Model\PostDraftModel;
-use App\Service\Social\Model\ResponseTargetModel;
-use App\Service\Social\Support\MastodonVisibility;
+use App\Service\Social\Social\Model\PostDraftModel;
+use App\Service\Social\Social\Model\ResponseTargetModel;
+use App\Service\Social\Social\Support\MastodonVisibility;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class PostDraftRequest

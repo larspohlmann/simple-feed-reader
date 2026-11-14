@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Discovery\FeedOffer;
+namespace App\Service\Sourcing\Discovery\FeedOffer;
 
 use App\Enum\SourceFormat;
-use App\Service\Discovery\Model\FeedCandidateModel;
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
-use App\Service\Fetch\Pass\PageUrls;
-use App\Service\Html\Support\HtmlDocumentParser;
-use App\Service\Scraper\Support\TextNormalizer;
+use App\Service\Sourcing\Discovery\Model\FeedCandidateModel;
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\FeedFetcher\FeedFetcherInterface;
+use App\Service\Outbound\Fetch\Pass\PageUrls;
+use App\Service\Foundation\Html\Support\HtmlDocumentParser;
+use App\Service\Ingestion\Scraper\Support\TextNormalizer;
 use Dom\HTMLDocument;
 
 /**

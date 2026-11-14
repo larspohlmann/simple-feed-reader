@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
@@ -11,15 +11,15 @@ use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Enum\ShareKind;
 use App\Enum\SocialNetwork;
-use App\Service\Comments\Exception\CommentsUnavailableException;
-use App\Service\Comments\Model\CommentAuthorModel;
-use App\Service\Comments\Model\CommentEmbedsModel;
-use App\Service\Comments\Model\EntryCommentModel;
-use App\Service\Social\Exception\SocialNetworkThrottledException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\Pass\ReplyNode;
-use App\Service\Social\SelfThreadEnricher;
+use App\Service\Content\Comments\Exception\CommentsUnavailableException;
+use App\Service\Content\Comments\Model\CommentAuthorModel;
+use App\Service\Content\Comments\Model\CommentEmbedsModel;
+use App\Service\Content\Comments\Model\EntryCommentModel;
+use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Pass\ReplyNode;
+use App\Service\Social\Social\SelfThreadEnricher;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FakeReplyThreadSource;
 use App\Tests\Support\PostEnrichers;

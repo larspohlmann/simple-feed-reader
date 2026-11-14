@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Prompt;
+namespace App\Service\Curation\Recommendation\Llm\Prompt;
 
-use App\Service\Recommendation\Llm\Prompt\Model\ConsolidationParseResultModel;
+use App\Service\Curation\Recommendation\Llm\Prompt\Model\ConsolidationParseResultModel;
 
 /**
  * Turns one consolidation reply into picks (RecommendationPickSalvager) and duplicate ids. An implausible duplicate

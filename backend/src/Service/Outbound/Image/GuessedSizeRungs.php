@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Image;
+namespace App\Service\Outbound\Image;
 
 use App\Entity\ImageRendition;
-use App\Service\Image\Exception\GuardedImageUnavailableException;
-use App\Service\Image\GuardedImageProbe\GuardedImageProbeInterface;
-use App\Service\Image\Model\LeadImageModel;
-use App\Service\Image\Pass\SizeWalk;
-use App\Service\Image\Support\RenditionTargets;
-use App\Service\Image\Support\SizedImageUrl;
+use App\Service\Outbound\Image\Exception\GuardedImageUnavailableException;
+use App\Service\Outbound\Image\GuardedImageProbe\GuardedImageProbeInterface;
+use App\Service\Outbound\Image\Model\LeadImageModel;
+use App\Service\Outbound\Image\Pass\SizeWalk;
+use App\Service\Outbound\Image\Support\RenditionTargets;
+use App\Service\Outbound\Image\Support\SizedImageUrl;
 
 /** Size variants a CMS stores beside an upload but no feed declares, found by naming them and asking. */
 final readonly class GuessedSizeRungs

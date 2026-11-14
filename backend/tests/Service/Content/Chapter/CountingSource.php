@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Chapter;
+namespace App\Tests\Service\Content\Chapter;
 
-use App\Service\Chapter\EmbedDetailsSource\EmbedDetailsSourceInterface;
-use App\Service\Chapter\Exception\EmbedDescriptionUnreachableException;
-use App\Service\Chapter\Model\EmbedAddressModel;
-use App\Service\Chapter\Model\EmbedDescriptionModel;
+use App\Service\Content\Chapter\EmbedDetailsSource\EmbedDetailsSourceInterface;
+use App\Service\Content\Chapter\Exception\EmbedDescriptionUnreachableException;
+use App\Service\Content\Chapter\Model\EmbedAddressModel;
+use App\Service\Content\Chapter\Model\EmbedDescriptionModel;
 
 final class CountingSource implements EmbedDetailsSourceInterface
 {

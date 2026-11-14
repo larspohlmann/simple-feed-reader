@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Transcript;
+namespace App\Tests\Service\Content\Transcript;
 
 use App\Entity\TranscriptParagraph;
 use App\Enum\TranscriptFormat;
-use App\Service\Sanitize\EntrySanitizer;
-use App\Service\Sanitize\TrailingBlankRemover;
-use App\Service\Transcript\Exception\TranscriptUnusableException;
-use App\Service\Transcript\TranscriptReader;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Foundation\Sanitize\TrailingBlankRemover;
+use App\Service\Content\Transcript\Exception\TranscriptUnusableException;
+use App\Service\Content\Transcript\TranscriptReader;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

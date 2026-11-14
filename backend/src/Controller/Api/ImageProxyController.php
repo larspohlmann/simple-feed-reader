@@ -6,8 +6,8 @@ namespace App\Controller\Api;
 
 use App\Entity\User;
 use App\Http\ProxiedImageResponse;
-use App\Service\Image\ImageProxy\ImageProxyInterface;
-use App\Service\RateLimit\RateLimitGuard;
+use App\Service\Outbound\Image\ImageProxy\ImageProxyInterface;
+use App\Service\Foundation\RateLimit\RateLimitGuard;
 use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;

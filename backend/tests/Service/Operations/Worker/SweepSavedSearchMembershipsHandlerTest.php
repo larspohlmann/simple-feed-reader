@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Worker;
+namespace App\Tests\Service\Operations\Worker;
 
-use App\Service\Worker\Handler\SweepSavedSearchMembershipsHandler;
-use App\Service\Worker\Message\SweepSavedSearchMemberships;
+use App\Service\Operations\Worker\Handler\SweepSavedSearchMembershipsHandler;
+use App\Service\Operations\Worker\Message\SweepSavedSearchMemberships;
 use App\Tests\DbTestCase;
 use App\Tests\Support\MembershipSweepFactory;
 use App\Tests\Support\RecordingLogger;

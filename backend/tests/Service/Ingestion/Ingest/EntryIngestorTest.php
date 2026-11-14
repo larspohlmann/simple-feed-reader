@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Ingest;
+namespace App\Tests\Service\Ingestion\Ingest;
 
 use App\Entity\Discussion;
 use App\Entity\Entry;
@@ -11,19 +11,19 @@ use App\Entity\Headline;
 use App\Entity\ImageRendition;
 use App\Enum\CommentsLoad;
 use App\Enum\FeedPlatform;
-use App\Service\Image\Model\DeclaredImageModel;
-use App\Service\Ingest\EntryIngestor;
-use App\Service\Ingest\Pass\FeedIngestContext;
-use App\Service\Ingest\PlatformEntryRule\RedditEntryRule;
-use App\Service\Ingest\PlatformEntryRules;
-use App\Service\Parser\Model\FeedMediaKind;
-use App\Service\Parser\Model\ParsedAttachmentModel;
-use App\Service\Parser\Model\ParsedEntryMediaModel;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Parser\Model\ParsedFeedModel;
-use App\Service\Parser\Model\ParsedMediaBundleModel;
-use App\Service\Parser\Model\ParsedMediumModel;
-use App\Service\Parser\Model\VisualMediaKind;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
+use App\Service\Ingestion\Ingest\EntryIngestor;
+use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
+use App\Service\Ingestion\Ingest\PlatformEntryRule\RedditEntryRule;
+use App\Service\Ingestion\Ingest\PlatformEntryRules;
+use App\Service\Ingestion\Parser\Model\FeedMediaKind;
+use App\Service\Ingestion\Parser\Model\ParsedAttachmentModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryMediaModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
+use App\Service\Ingestion\Parser\Model\ParsedMediaBundleModel;
+use App\Service\Ingestion\Parser\Model\ParsedMediumModel;
+use App\Service\Ingestion\Parser\Model\VisualMediaKind;
 use App\Tests\DbTestCase;
 use App\Tests\Support\EntryIngestors;
 use Symfony\Component\Clock\MockClock;

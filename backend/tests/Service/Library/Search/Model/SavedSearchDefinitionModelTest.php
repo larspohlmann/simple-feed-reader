@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Search\Model;
+namespace App\Tests\Service\Library\Search\Model;
 
-use App\Service\Search\Model\SavedSearchDefinitionModel;
+use App\Service\Library\Search\Model\SavedSearchDefinitionModel;
 use PHPUnit\Framework\TestCase;
 
 final class SavedSearchDefinitionModelTest extends TestCase

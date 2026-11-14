@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Ai;
+namespace App\Tests\Service\Curation\Ai;
 
-use App\Service\Ai\Model\RetryPlanModel;
-use App\Service\Ai\RateLimitedCalls;
+use App\Service\Curation\Ai\Model\RetryPlanModel;
+use App\Service\Curation\Ai\RateLimitedCalls;
 use App\Tests\Support\ScriptedRateLimitedOutcome;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;

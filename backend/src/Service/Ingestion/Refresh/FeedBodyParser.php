@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh;
+namespace App\Service\Ingestion\Refresh;
 
 use App\Entity\Feed;
 use App\Enum\SourceFormat;
-use App\Service\Parser\Exception\FeedParseException;
-use App\Service\Parser\Model\ParsedFeedModel;
-use App\Service\Refresh\FeedBodyParser\FeedBodyParserInterface;
+use App\Service\Ingestion\Parser\Exception\FeedParseException;
+use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
+use App\Service\Ingestion\Refresh\FeedBodyParser\FeedBodyParserInterface;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;

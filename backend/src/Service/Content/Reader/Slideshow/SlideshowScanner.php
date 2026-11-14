@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Slideshow;
+namespace App\Service\Content\Reader\Slideshow;
 
-use App\Service\Reader\Media\Model\PageTextBlocksModel;
-use App\Service\Reader\Slideshow\Model\SlideshowModel;
-use App\Service\Reader\Slideshow\SlideshowRecognizer\SlideshowRecognizerInterface;
+use App\Service\Content\Reader\Media\Model\PageTextBlocksModel;
+use App\Service\Content\Reader\Slideshow\Model\SlideshowModel;
+use App\Service\Content\Reader\Slideshow\SlideshowRecognizer\SlideshowRecognizerInterface;
 use Dom\HTMLDocument;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 

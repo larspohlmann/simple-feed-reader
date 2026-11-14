@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Subscription\Pass;
+namespace App\Service\Library\Subscription\Pass;
 
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Service\Subscription\Model\BulkSubscribeResultModel;
+use App\Service\Library\Subscription\Model\BulkSubscribeResultModel;
 
 final class BulkSubscribeBatch
 {

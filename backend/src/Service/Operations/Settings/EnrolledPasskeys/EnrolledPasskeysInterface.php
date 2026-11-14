@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Settings\EnrolledPasskeys;
+namespace App\Service\Operations\Settings\EnrolledPasskeys;
 
 interface EnrolledPasskeysInterface
 {

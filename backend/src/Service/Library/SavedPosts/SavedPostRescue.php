@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Service\SavedPosts;
+namespace App\Service\Library\SavedPosts;
 
 use App\Entity\EntryGuid;
 use App\Entity\Subscription;
 use App\Repository\EntryRepository;
 use App\Repository\SavedPostRepository;
-use App\Service\SavedPosts\Model\SavedCopiesModel;
-use App\Service\SavedPosts\Model\SavedCopyModel;
-use App\Service\SavedPosts\Pass\SavedCopyPlan;
-use App\Service\SavedPosts\Support\SavedOrigin;
-use App\Service\Search\EntryIndexer;
+use App\Service\Library\SavedPosts\Model\SavedCopiesModel;
+use App\Service\Library\SavedPosts\Model\SavedCopyModel;
+use App\Service\Library\SavedPosts\Pass\SavedCopyPlan;
+use App\Service\Library\SavedPosts\Support\SavedOrigin;
+use App\Service\Library\Search\EntryIndexer;
 
 /** Runs before a subscription goes (#1666): a favourite, kept or shared post moves to a kept feed, else a copy. */
 final readonly class SavedPostRescue

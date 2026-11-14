@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\Pass;
+namespace App\Service\Outbound\Fetch\Pass;
 
 /** The redirects one fetch may still follow and the seconds it may still spend, across every hop it takes. */
 final class RedirectBudget

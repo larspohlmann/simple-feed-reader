@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\ArticleExtractor;
+namespace App\Tests\Service\Content\Reader\ArticleExtractor;
 
-use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
-use App\Service\Reader\ArticleExtractor\PlayerPageExtractor;
-use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
-use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Model\EntryHintsModel;
-use App\Service\Reader\Model\ExtractionFailure;
-use App\Service\Reader\Model\ExtractionResultModel;
+use App\Service\Content\Reader\ArticleExtractor\ArticleExtractorInterface;
+use App\Service\Content\Reader\ArticleExtractor\PlayerPageExtractor;
+use App\Service\Content\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
+use App\Service\Content\Reader\Media\EmbedProviders;
+use App\Service\Content\Reader\Model\EntryHintsModel;
+use App\Service\Content\Reader\Model\ExtractionFailure;
+use App\Service\Content\Reader\Model\ExtractionResultModel;
 use PHPUnit\Framework\TestCase;
 
 final class PlayerPageExtractorTest extends TestCase

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Discovery\ShareLinkFeed;
+namespace App\Tests\Service\Sourcing\Discovery\ShareLinkFeed;
 
-use App\Service\Discovery\Model\ScrapeFallback;
-use App\Tests\Service\Discovery\BuildsFeedDiscovery;
+use App\Service\Sourcing\Discovery\Model\ScrapeFallback;
+use App\Tests\Service\Sourcing\Discovery\BuildsFeedDiscovery;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media\Model;
+namespace App\Tests\Service\Content\Reader\Media\Model;
 
-use App\Service\Reader\Media\Model\RawPageModel;
-use App\Service\Reader\Media\Model\ScannedPageModel;
+use App\Service\Content\Reader\Media\Model\RawPageModel;
+use App\Service\Content\Reader\Media\Model\ScannedPageModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\AccountVerifier;
+namespace App\Tests\Service\Social\Social\AccountVerifier;
 
-use App\Service\Social\AccountVerifier\NetworkAccountVerifier;
-use App\Service\Social\Model\SocialCredentialsModel;
-use App\Service\Social\Model\VerifiedAccountModel;
-use App\Service\Social\NetworkVerifier\NetworkVerifierInterface;
+use App\Service\Social\Social\AccountVerifier\NetworkAccountVerifier;
+use App\Service\Social\Social\Model\SocialCredentialsModel;
+use App\Service\Social\Social\Model\VerifiedAccountModel;
+use App\Service\Social\Social\NetworkVerifier\NetworkVerifierInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Parser;
+namespace App\Tests\Service\Ingestion\Parser;
 
-use App\Service\Parser\Exception\FeedParseException;
-use App\Service\Parser\MixcloudJsonParser;
-use App\Service\Parser\Model\ParsedCategoryModel;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Parser\Model\ParsedFeedModel;
+use App\Service\Ingestion\Parser\Exception\FeedParseException;
+use App\Service\Ingestion\Parser\MixcloudJsonParser;
+use App\Service\Ingestion\Parser\Model\ParsedCategoryModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
 use App\Tests\Support\ReadsFixtures;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

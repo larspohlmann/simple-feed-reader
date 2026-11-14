@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Html\Support\HtmlDocumentParser;
-use App\Service\Reader\PageRepair\PageRepairInterface;
+use App\Service\Foundation\Html\Support\HtmlDocumentParser;
+use App\Service\Content\Reader\PageRepair\PageRepairInterface;
 
 trait RepairsPages
 {

@@ -6,7 +6,7 @@ namespace App\Dto\Me;
 
 use App\Enum\DigestCadence;
 use App\Enum\DigestFormat;
-use App\Service\Mail\Digest\Model\DigestConfigurationModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestConfigurationModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**

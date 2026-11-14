@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Html\Support;
+namespace App\Service\Foundation\Html\Support;
 
-use App\Service\Html\Model\ImageRenditionModel;
-use App\Service\Html\Model\SrcsetCandidateModel;
+use App\Service\Foundation\Html\Model\ImageRenditionModel;
+use App\Service\Foundation\Html\Model\SrcsetCandidateModel;
 
 /**
  * Reads a `srcset` list. A comma is a legal URL character (Cloudinary transforms spell `w_1456,c_limit,f_auto`, #706),

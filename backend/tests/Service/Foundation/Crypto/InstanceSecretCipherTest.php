@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Crypto;
+namespace App\Tests\Service\Foundation\Crypto;
 
 use App\Entity\SealedSecret;
-use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Crypto\Model\SecretBindingModel;
+use App\Service\Foundation\Crypto\Exception\SecretUnreadableException;
+use App\Service\Foundation\Crypto\InstanceSecretCipher;
+use App\Service\Foundation\Crypto\Model\SecretBindingModel;
 use PHPUnit\Framework\TestCase;
 
 /**

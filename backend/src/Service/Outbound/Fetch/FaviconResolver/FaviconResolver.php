@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\FaviconResolver;
+namespace App\Service\Outbound\Fetch\FaviconResolver;
 
-use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Fetch\Model\FetchTicketModel;
-use App\Service\Fetch\Pass\PageUrls;
+use App\Service\Outbound\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Outbound\Fetch\Model\FetchTicketModel;
+use App\Service\Outbound\Fetch\Pass\PageUrls;
 use Psr\Log\LoggerInterface;
 
 /**

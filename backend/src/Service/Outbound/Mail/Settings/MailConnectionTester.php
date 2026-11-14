@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Settings;
+namespace App\Service\Outbound\Mail\Settings;
 
 use App\Entity\User;
 use App\Enum\MailKind;
-use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Mail\MailFailureRecorder\MailFailureRecorderInterface;
-use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
-use App\Service\Mail\Settings\Model\MailIdentityModel;
-use App\Service\Mail\Settings\Model\MailTestFailure;
-use App\Service\Mail\Settings\Model\MailTestResultModel;
-use App\Service\Mail\Settings\Model\ResolvedMailTransportModel;
-use App\Service\Mail\Transport\Factory\ActiveMailTransportFactory;
+use App\Service\Foundation\Crypto\Exception\SecretUnreadableException;
+use App\Service\Outbound\Mail\MailFailureRecorder\MailFailureRecorderInterface;
+use App\Service\Outbound\Mail\MailSendingSettings\MailSendingSettingsInterface;
+use App\Service\Outbound\Mail\Settings\Model\MailIdentityModel;
+use App\Service\Outbound\Mail\Settings\Model\MailTestFailure;
+use App\Service\Outbound\Mail\Settings\Model\MailTestResultModel;
+use App\Service\Outbound\Mail\Settings\Model\ResolvedMailTransportModel;
+use App\Service\Outbound\Mail\Transport\Factory\ActiveMailTransportFactory;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;

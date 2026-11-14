@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Comments\Model;
+namespace App\Service\Content\Comments\Model;
 
 /** The network post a comment is: where a like or repost goes, and what the reader sees counted on it. */
 final readonly class CommentPostModel

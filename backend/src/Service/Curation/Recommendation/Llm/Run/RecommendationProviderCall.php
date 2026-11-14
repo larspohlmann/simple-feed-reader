@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Run;
+namespace App\Service\Curation\Recommendation\Llm\Run;
 
-use App\Service\Ai\Factory\ProviderConnectionFactory;
-use App\Service\Recommendation\Llm\Completion\Model\CompletionRequestModel;
-use App\Service\Recommendation\Llm\Completion\RateLimitedCompletion;
-use App\Service\Recommendation\Llm\Run\Pass\RecordedCallObserver;
-use App\Service\Recommendation\Run\Model\ProviderCallRouteModel;
-use App\Service\Recommendation\Run\Pass\RecordedCall;
+use App\Service\Curation\Ai\Factory\ProviderConnectionFactory;
+use App\Service\Curation\Recommendation\Llm\Completion\Model\CompletionRequestModel;
+use App\Service\Curation\Recommendation\Llm\Completion\RateLimitedCompletion;
+use App\Service\Curation\Recommendation\Llm\Run\Pass\RecordedCallObserver;
+use App\Service\Curation\Recommendation\Run\Model\ProviderCallRouteModel;
+use App\Service\Curation\Recommendation\Run\Pass\RecordedCall;
 
 /**
  * One recorded provider call for the single-call phases. Any failure, an unreadable key included, settles the debug

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Category\Model;
+namespace App\Service\Ingestion\Category\Model;
 
 final readonly class NormalizedCategoryModel
 {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Model;
+namespace App\Service\Social\Social\Model;
 
 /** What the composer sends: a reply, a quote, or a post of a shared link. */
 enum ComposerKind: string

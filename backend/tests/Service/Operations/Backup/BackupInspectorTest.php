@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Backup;
+namespace App\Tests\Service\Operations\Backup;
 
-use App\Service\Backup\BackupInspector;
-use App\Service\Backup\BackupReader;
-use App\Service\Backup\Exception\InvalidBackupException;
+use App\Service\Operations\Backup\BackupInspector;
+use App\Service\Operations\Backup\BackupReader;
+use App\Service\Operations\Backup\Exception\InvalidBackupException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

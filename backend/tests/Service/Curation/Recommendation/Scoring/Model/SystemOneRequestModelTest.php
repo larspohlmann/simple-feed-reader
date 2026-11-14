@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Scoring\Model;
+namespace App\Tests\Service\Curation\Recommendation\Scoring\Model;
 
-use App\Service\Recommendation\Scoring\Model\SystemOneRequestModel;
-use App\Service\Recommendation\Support\CompactJson;
-use App\Service\Recommendation\Support\PrettyJson;
+use App\Service\Curation\Recommendation\Scoring\Model\SystemOneRequestModel;
+use App\Service\Curation\Recommendation\Support\CompactJson;
+use App\Service\Curation\Recommendation\Support\PrettyJson;
 use PHPUnit\Framework\TestCase;
 
 final class SystemOneRequestModelTest extends TestCase

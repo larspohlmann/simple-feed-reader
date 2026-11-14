@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Maintenance\MaintenanceSweep;
+namespace App\Tests\Service\Operations\Maintenance\MaintenanceSweep;
 
-use App\Service\LinkCard\Model\LinkCardSweepReportModel;
+use App\Service\Content\LinkCard\Model\LinkCardSweepReportModel;
 use App\Entity\Feed;
-use App\Service\Maintenance\MaintenanceSweep\LinkCardsTickSweep;
+use App\Service\Operations\Maintenance\MaintenanceSweep\LinkCardsTickSweep;
 use App\Tests\DbTestCase;
 use App\Tests\Support\LinkCardSweepWiring;
 use App\Tests\Support\QueuedLinkPosts;

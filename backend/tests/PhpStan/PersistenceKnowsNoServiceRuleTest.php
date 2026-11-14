@@ -14,9 +14,9 @@ final class PersistenceKnowsNoServiceRuleTest extends RuleTestCase
     private const string ENTITY = 'App\Entity\Fixtures';
     private const string DOCTRINE = 'App\Doctrine\Fixtures';
     private const string GAPS = 'App\Entity\Fixtures\Gaps';
-    private const string SEALED_SECRET = 'App\Service\Crypto\SealedSecret';
-    private const string WORD_BOUNDARIES = 'App\Service\Search\WordBoundaries';
-    private const string ACCOUNT_MAILER = 'App\Service\Mail\AccountMailer';
+    private const string SEALED_SECRET = 'App\Service\Foundation\Crypto\SealedSecret';
+    private const string WORD_BOUNDARIES = 'App\Service\Library\Search\WordBoundaries';
+    private const string ACCOUNT_MAILER = 'App\Service\Outbound\Mail\AccountMailer';
 
     protected function getRule(): Rule
     {
@@ -51,10 +51,10 @@ final class PersistenceKnowsNoServiceRuleTest extends RuleTestCase
                 __DIR__ . '/data/persistence-knows-no-service/EntryBatchInserter.php',
             ],
             [
-                [self::repositoryMessage('App\Service\Url\UrlNormalizer'), 13],
-                [self::repositoryMessage('App\Service\Backup\Dto\EntryLine'), 14],
-                [self::repositoryMessage('App\Service\Url\UrlNormalizer'), 18],
-                [self::repositoryMessage('App\Service\Backup\Dto\EntryLine'), 24],
+                [self::repositoryMessage('App\Service\Foundation\Url\UrlNormalizer'), 13],
+                [self::repositoryMessage('App\Service\Operations\Backup\Dto\EntryLine'), 14],
+                [self::repositoryMessage('App\Service\Foundation\Url\UrlNormalizer'), 18],
+                [self::repositoryMessage('App\Service\Operations\Backup\Dto\EntryLine'), 24],
             ],
         );
     }

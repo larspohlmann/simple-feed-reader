@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search\Membership;
+namespace App\Service\Library\Search\Membership;
 
 use App\Entity\SavedSearch;
 use App\Repository\EntryMembershipSweepRepository;
 use App\Repository\SavedSearchRepository;
-use App\Service\Search\Exception\SearchEngineUnavailableException;
-use App\Service\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
-use App\Service\Search\Membership\Model\SweepBudgetModel;
-use App\Service\Search\Membership\Pass\SweepTally;
-use App\Service\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
-use App\Service\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface;
-use App\Service\Search\Support\SavedSearchTerms;
+use App\Service\Library\Search\Exception\SearchEngineUnavailableException;
+use App\Service\Library\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
+use App\Service\Library\Search\Membership\Model\SweepBudgetModel;
+use App\Service\Library\Search\Membership\Pass\SweepTally;
+use App\Service\Library\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
+use App\Service\Library\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface;
+use App\Service\Library\Search\Support\SavedSearchTerms;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;

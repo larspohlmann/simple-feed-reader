@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Ai\Model;
+namespace App\Tests\Service\Curation\Ai\Model;
 
-use App\Service\Ai\Model\ProviderCallUsageModel;
+use App\Service\Curation\Ai\Model\ProviderCallUsageModel;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 

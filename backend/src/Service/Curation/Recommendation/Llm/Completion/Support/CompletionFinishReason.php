@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Completion\Support;
+namespace App\Service\Curation\Recommendation\Llm\Completion\Support;
 
 /**
  * Who ended an answer. OpenRouter reports an upstream that broke off mid-stream as `error`, OpenAI a filtered answer

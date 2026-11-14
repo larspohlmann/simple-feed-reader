@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Digest;
+namespace App\Service\Outbound\Mail\Digest;
 
 use App\Entity\User;
-use App\Service\Mail\Digest\Exception\TestDigestUnavailableException;
-use App\Service\Mail\MailCapability;
+use App\Service\Outbound\Mail\Digest\Exception\TestDigestUnavailableException;
+use App\Service\Outbound\Mail\MailCapability;
 
 /** A preview digest goes only where a real one could: mail on for this instance, and a verified address. */
 final readonly class TestDigestEligibility

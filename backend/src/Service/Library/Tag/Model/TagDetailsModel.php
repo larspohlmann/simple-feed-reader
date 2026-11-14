@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Tag\Model;
+namespace App\Service\Library\Tag\Model;
 
 final readonly class TagDetailsModel
 {

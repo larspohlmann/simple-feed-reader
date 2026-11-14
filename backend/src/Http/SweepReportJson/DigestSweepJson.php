@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\SweepReportJson;
 
-use App\Service\Mail\Digest\Model\DigestSweepReportModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestSweepReportModel;
 
 final readonly class DigestSweepJson implements SweepReportJsonInterface
 {

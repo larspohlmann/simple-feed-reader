@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Scraper\Pass;
+namespace App\Service\Ingestion\Scraper\Pass;
 
-use App\Service\Fetch\Pass\PageUrls;
-use App\Service\Html\Support\Srcset;
-use App\Service\Parser\Support\DateParser;
-use App\Service\Scraper\CardTitle;
-use App\Service\Scraper\Model\ScrapedItemModel;
-use App\Service\Scraper\Support\TextNormalizer;
+use App\Service\Outbound\Fetch\Pass\PageUrls;
+use App\Service\Foundation\Html\Support\Srcset;
+use App\Service\Ingestion\Parser\Support\DateParser;
+use App\Service\Ingestion\Scraper\CardTitle;
+use App\Service\Ingestion\Scraper\Model\ScrapedItemModel;
+use App\Service\Ingestion\Scraper\Support\TextNormalizer;
 use Dom\Element;
 
 /** A ScrapedItemModel's fields from one card's container and anchor, resolved against the page the card is on. */

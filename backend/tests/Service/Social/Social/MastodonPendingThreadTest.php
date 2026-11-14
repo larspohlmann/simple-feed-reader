@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
-use App\Service\Social\MastodonPendingThread;
+use App\Service\Social\Social\MastodonPendingThread;
 use PHPUnit\Framework\TestCase;
 
 final class MastodonPendingThreadTest extends TestCase

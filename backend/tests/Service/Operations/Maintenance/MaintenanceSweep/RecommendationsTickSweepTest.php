@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Maintenance\MaintenanceSweep;
+namespace App\Tests\Service\Operations\Maintenance\MaintenanceSweep;
 
-use App\Service\Recommendation\Run\Model\ForYouSweepReportModel;
+use App\Service\Curation\Recommendation\Run\Model\ForYouSweepReportModel;
 use App\Entity\ProfileSettingsValues;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Maintenance\MaintenanceSweep\RecommendationsTickSweep;
-use App\Service\Recommendation\Run\ForYouSweep;
-use App\Service\Recommendation\Settings\RecommendationSettingsWriter;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Operations\Maintenance\MaintenanceSweep\RecommendationsTickSweep;
+use App\Service\Curation\Recommendation\Run\ForYouSweep;
+use App\Service\Curation\Recommendation\Settings\RecommendationSettingsWriter;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\SeedsUsers;

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Slideshow;
+namespace App\Service\Content\Reader\Slideshow;
 
-use App\Service\Reader\Slideshow\Model\SlideCaptionModel;
-use App\Service\Reader\Slideshow\Model\SlideModel;
-use App\Service\Reader\Slideshow\Model\SlideshowModel;
+use App\Service\Content\Reader\Slideshow\Model\SlideCaptionModel;
+use App\Service\Content\Reader\Slideshow\Model\SlideModel;
+use App\Service\Content\Reader\Slideshow\Model\SlideshowModel;
 use Dom\Element;
 use Dom\HTMLDocument;
 

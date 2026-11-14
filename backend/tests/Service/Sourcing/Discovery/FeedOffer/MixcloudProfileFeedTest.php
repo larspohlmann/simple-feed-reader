@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Discovery\FeedOffer;
+namespace App\Tests\Service\Sourcing\Discovery\FeedOffer;
 
 use App\Enum\SourceFormat;
-use App\Service\Discovery\FeedOffer\MixcloudProfileFeed;
+use App\Service\Sourcing\Discovery\FeedOffer\MixcloudProfileFeed;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

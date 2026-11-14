@@ -11,11 +11,11 @@ use App\Entity\ImageRendition;
 use App\Enum\SourceFormat;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowDiscussion;
-use App\Service\Chapter\Model\ServedChaptersModel;
-use App\Service\Text\Support\EntryExcerpt;
-use App\Service\Url\Support\AbsoluteHttpUrl;
-use App\Service\Url\Support\FeedWebsite;
-use App\Service\Url\Support\YouTubeUrl;
+use App\Service\Content\Chapter\Model\ServedChaptersModel;
+use App\Service\Foundation\Text\Support\EntryExcerpt;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
+use App\Service\Foundation\Url\Support\FeedWebsite;
+use App\Service\Foundation\Url\Support\YouTubeUrl;
 
 /**
  * Three shapes off one row: listRow() drops contentHtml for a plain-text

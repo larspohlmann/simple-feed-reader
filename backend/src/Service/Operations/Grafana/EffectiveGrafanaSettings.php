@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Grafana;
+namespace App\Service\Operations\Grafana;
 
 use App\Entity\GrafanaSettings as GrafanaSettingsEntity;
-use App\Service\Grafana\Crypto\GrafanaApiKeyCipher;
-use App\Service\Grafana\Model\GrafanaSettingsSnapshotModel;
-use App\Service\Grafana\StoredGrafanaSettings\StoredGrafanaSettingsInterface;
+use App\Service\Operations\Grafana\Crypto\GrafanaApiKeyCipher;
+use App\Service\Operations\Grafana\Model\GrafanaSettingsSnapshotModel;
+use App\Service\Operations\Grafana\StoredGrafanaSettings\StoredGrafanaSettingsInterface;
 use Symfony\Contracts\Service\ResetInterface;
 
 final class EffectiveGrafanaSettings implements ResetInterface

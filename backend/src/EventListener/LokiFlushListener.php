@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventListener;
 
-use App\Service\Logging\Loki\LokiPushHandler;
+use App\Service\Operations\Logging\Loki\LokiPushHandler;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpKernel\Event\TerminateEvent;
 use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;

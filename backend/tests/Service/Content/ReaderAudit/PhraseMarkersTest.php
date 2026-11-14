@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\ReaderAudit;
+namespace App\Tests\Service\Content\ReaderAudit;
 
-use App\Service\ReaderAudit\Model\CleanupMarkerModel;
-use App\Service\ReaderAudit\Model\ExtractedBodyModel;
-use App\Service\ReaderAudit\Model\PhraseScope;
-use App\Service\ReaderAudit\PhraseMarkers;
-use App\Service\ReaderAudit\SuspiciousPhrases;
+use App\Service\Content\ReaderAudit\Model\CleanupMarkerModel;
+use App\Service\Content\ReaderAudit\Model\ExtractedBodyModel;
+use App\Service\Content\ReaderAudit\Model\PhraseScope;
+use App\Service\Content\ReaderAudit\PhraseMarkers;
+use App\Service\Content\ReaderAudit\SuspiciousPhrases;
 use App\Tests\Support\AuditMarkers;
 use PHPUnit\Framework\TestCase;
 

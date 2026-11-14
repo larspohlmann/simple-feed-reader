@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\FeedDirectory;
+namespace App\Service\Sourcing\FeedDirectory;
 
-use App\Service\FeedDirectory\Exception\InvalidFeedDirectoryScopeException;
-use App\Service\FeedDirectory\Exception\UnknownFeedDirectoryCountryException;
-use App\Service\FeedDirectory\Model\FeedDirectoryScopeModel;
+use App\Service\Sourcing\FeedDirectory\Exception\InvalidFeedDirectoryScopeException;
+use App\Service\Sourcing\FeedDirectory\Exception\UnknownFeedDirectoryCountryException;
+use App\Service\Sourcing\FeedDirectory\Model\FeedDirectoryScopeModel;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 final readonly class FeedDirectoryFiles

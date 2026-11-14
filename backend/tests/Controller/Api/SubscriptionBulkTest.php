@@ -9,7 +9,7 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\InclusionSurface;
-use App\Service\Subscription\SubscriptionService;
+use App\Service\Library\Subscription\SubscriptionService;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SeedsUsers;

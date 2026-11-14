@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Search;
+namespace App\Tests\Service\Library\Search;
 
 use App\Entity\SavedSearch;
-use App\Service\Search\Model\SavedSearchDefinitionModel;
-use App\Service\Search\SavedSearchEditor;
+use App\Service\Library\Search\Model\SavedSearchDefinitionModel;
+use App\Service\Library\Search\SavedSearchEditor;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\SeedsUsers;

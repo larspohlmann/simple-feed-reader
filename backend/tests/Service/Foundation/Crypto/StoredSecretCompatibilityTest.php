@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Crypto;
+namespace App\Tests\Service\Foundation\Crypto;
 
 use App\Entity\SealedSecret;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Mail\Settings\Crypto\MailPasswordCipher;
-use App\Service\Proxy\Crypto\ProxyPasswordCipher;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Foundation\Crypto\Exception\SecretUnreadableException;
+use App\Service\Foundation\Crypto\InstanceSecretCipher;
+use App\Service\Outbound\Mail\Settings\Crypto\MailPasswordCipher;
+use App\Service\Outbound\Proxy\Crypto\ProxyPasswordCipher;
 use PHPUnit\Framework\TestCase;
 
 /**

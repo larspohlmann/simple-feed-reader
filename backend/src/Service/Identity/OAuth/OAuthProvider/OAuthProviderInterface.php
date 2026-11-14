@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\OAuth\OAuthProvider;
+namespace App\Service\Identity\OAuth\OAuthProvider;
 
-use App\Service\OAuth\Exception\OAuthFailedException;
-use App\Service\OAuth\Model\OAuthIdentityModel;
+use App\Service\Identity\OAuth\Exception\OAuthFailedException;
+use App\Service\Identity\OAuth\Model\OAuthIdentityModel;
 
 /**
  * What the application needs from an identity provider, and nothing more: it authenticates people and never calls

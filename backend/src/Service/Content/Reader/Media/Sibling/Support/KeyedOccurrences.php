@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\Sibling\Support;
+namespace App\Service\Content\Reader\Media\Sibling\Support;
 
-use App\Service\Reader\Media\Sibling\Model\KeyedOccurrenceModel;
+use App\Service\Content\Reader\Media\Sibling\Model\KeyedOccurrenceModel;
 
 /**
  * Where a page names an id as a keyed value — `"key":"id"` in a script payload

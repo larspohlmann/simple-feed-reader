@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Run;
+namespace App\Service\Curation\Recommendation\Llm\Run;
 
 use App\Entity\ProfileRun;
 use App\Entity\RecommendationRun;
-use App\Service\Recommendation\Llm\Completion\Model\CompletionRequestModel;
-use App\Service\Recommendation\Llm\Run\Support\RenderedCompletionRequest;
-use App\Service\Recommendation\Run\Model\CallSlotModel;
-use App\Service\Recommendation\Run\Pass\RecordedCall;
-use App\Service\Recommendation\Run\RecommendationCallRecorder;
+use App\Service\Curation\Recommendation\Llm\Completion\Model\CompletionRequestModel;
+use App\Service\Curation\Recommendation\Llm\Run\Support\RenderedCompletionRequest;
+use App\Service\Curation\Recommendation\Run\Model\CallSlotModel;
+use App\Service\Curation\Recommendation\Run\Pass\RecordedCall;
+use App\Service\Curation\Recommendation\Run\RecommendationCallRecorder;
 
 final readonly class CompletionCallRecorder
 {

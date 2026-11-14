@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Backup\Dto;
+namespace App\Tests\Service\Operations\Backup\Dto;
 
-use App\Service\Backup\Dto\BackupHeader;
-use App\Service\Backup\Dto\BackupTotals;
-use App\Service\Backup\Exception\InvalidBackupException;
-use App\Service\Backup\Model\BackupProvenanceModel;
-use App\Service\Backup\Support\BackupSchema;
+use App\Service\Operations\Backup\Dto\BackupHeader;
+use App\Service\Operations\Backup\Dto\BackupTotals;
+use App\Service\Operations\Backup\Exception\InvalidBackupException;
+use App\Service\Operations\Backup\Model\BackupProvenanceModel;
+use App\Service\Operations\Backup\Support\BackupSchema;
 use PHPUnit\Framework\TestCase;
 
 final class BackupHeaderTest extends TestCase

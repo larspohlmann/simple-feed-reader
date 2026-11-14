@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Search;
+namespace App\Tests\Service\Library\Search;
 
-use App\Service\Search\Index\Model\IndexedEntryModel;
-use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
+use App\Service\Library\Search\Index\Model\IndexedEntryModel;
+use App\Service\Library\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
 
 /**
  * Records what was sent and, in $calls, the order (index() must configure() before it upsert()s); an optional

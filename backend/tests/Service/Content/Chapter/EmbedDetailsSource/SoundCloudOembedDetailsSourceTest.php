@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Chapter\EmbedDetailsSource;
+namespace App\Tests\Service\Content\Chapter\EmbedDetailsSource;
 
-use App\Service\Chapter\EmbedDetailsSource\SoundCloudOembedDetailsSource;
-use App\Service\Chapter\GuardedDescriptionRequest;
-use App\Service\Chapter\Model\ChapteredEmbed;
-use App\Service\Chapter\Model\EmbedAddressModel;
-use App\Service\Chapter\Model\EmbedDescriptionModel;
-use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\UrlGuard;
+use App\Service\Content\Chapter\EmbedDetailsSource\SoundCloudOembedDetailsSource;
+use App\Service\Content\Chapter\GuardedDescriptionRequest;
+use App\Service\Content\Chapter\Model\ChapteredEmbed;
+use App\Service\Content\Chapter\Model\EmbedAddressModel;
+use App\Service\Content\Chapter\Model\EmbedDescriptionModel;
+use App\Service\Outbound\Fetch\IpValidator;
+use App\Service\Outbound\Fetch\UrlGuard;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\StaticDnsResolver;
 use App\Tests\Support\TaggedItemOf;

@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Scoring;
+namespace App\Service\Curation\Recommendation\Scoring;
 
-use App\Service\Ai\Exception\CredentialsRejectedException;
-use App\Service\Ai\Exception\ProviderRejectedRequestException;
-use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\Exception\RetryableProviderException;
-use App\Service\Ai\Model\ProviderCredentialsModel;
-use App\Service\Ai\Support\RejectingStatus;
-use App\Service\Ai\Support\ResponseByteCap;
-use App\Service\Ai\Support\RetryAfter;
-use App\Service\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface;
-use App\Service\Recommendation\Scoring\Model\ScoringOutcomeModel;
-use App\Service\Recommendation\Scoring\Pass\ResponseWave;
-use App\Service\Recommendation\Scoring\Pass\ScoringEndpoint;
-use App\Service\Recommendation\Support\ProviderErrorReason;
-use App\Service\Recommendation\Support\RefusalMessage;
+use App\Service\Curation\Ai\Exception\CredentialsRejectedException;
+use App\Service\Curation\Ai\Exception\ProviderRejectedRequestException;
+use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
+use App\Service\Curation\Ai\Exception\RetryableProviderException;
+use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
+use App\Service\Curation\Ai\Support\RejectingStatus;
+use App\Service\Curation\Ai\Support\ResponseByteCap;
+use App\Service\Curation\Ai\Support\RetryAfter;
+use App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringOutcomeModel;
+use App\Service\Curation\Recommendation\Scoring\Pass\ResponseWave;
+use App\Service\Curation\Recommendation\Scoring\Pass\ScoringEndpoint;
+use App\Service\Curation\Recommendation\Support\ProviderErrorReason;
+use App\Service\Curation\Recommendation\Support\RefusalMessage;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\ChunkInterface;

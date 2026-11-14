@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\Support;
+namespace App\Service\Outbound\Fetch\Support;
 
-use App\Service\Fetch\Model\GuardedUrlModel;
-use App\Service\Fetch\Model\ProxyConfigModel;
+use App\Service\Outbound\Fetch\Model\GuardedUrlModel;
+use App\Service\Outbound\Fetch\Model\ProxyConfigModel;
 
 /**
  * The "how do we reach the host" request options, built once for both fetch paths. The caller has already run

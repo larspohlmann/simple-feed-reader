@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Social\AccountVerifier\AccountVerifierInterface;
-use App\Service\Social\Model\SocialCredentialsModel;
-use App\Service\Social\Model\VerifiedAccountModel;
+use App\Service\Social\Social\AccountVerifier\AccountVerifierInterface;
+use App\Service\Social\Social\Model\SocialCredentialsModel;
+use App\Service\Social\Social\Model\VerifiedAccountModel;
 
 final class StubAccountVerifier implements AccountVerifierInterface
 {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Support;
+namespace App\Service\Operations\Backup\Support;
 
 /**
  * The backup file's constants: the schema version this build writes and

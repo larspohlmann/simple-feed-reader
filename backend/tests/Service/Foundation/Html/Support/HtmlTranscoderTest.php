@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Html\Support;
+namespace App\Tests\Service\Foundation\Html\Support;
 
-use App\Service\Html\Support\HtmlDocumentParser;
-use App\Service\Html\Support\HtmlTranscoder;
+use App\Service\Foundation\Html\Support\HtmlDocumentParser;
+use App\Service\Foundation\Html\Support\HtmlTranscoder;
 use PHPUnit\Framework\TestCase;
 
 final class HtmlTranscoderTest extends TestCase

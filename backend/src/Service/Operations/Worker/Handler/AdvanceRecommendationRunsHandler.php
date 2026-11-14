@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Worker\Handler;
+namespace App\Service\Operations\Worker\Handler;
 
-use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
-use App\Service\Worker\Message\AdvanceRecommendationRuns;
-use App\Service\Worker\WorkerRunSweep;
+use App\Service\Curation\Recommendation\Run\Model\RecommendationDriverKind;
+use App\Service\Operations\Worker\Message\AdvanceRecommendationRuns;
+use App\Service\Operations\Worker\WorkerRunSweep;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 /**

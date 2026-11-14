@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Entity\SocialAccount;
 use App\Entity\SocialLike;
 use App\Entity\User;
 use App\Repository\SocialLikeRepository;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\Exception\SocialPostRemovedException;
-use App\Service\Social\Model\SocialPostModel;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Exception\SocialPostRemovedException;
+use App\Service\Social\Social\Model\SocialPostModel;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class SocialLikes

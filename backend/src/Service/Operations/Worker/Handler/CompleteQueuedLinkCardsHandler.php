@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Worker\Handler;
+namespace App\Service\Operations\Worker\Handler;
 
-use App\Service\LinkCard\LinkCardSweep;
-use App\Service\LinkCard\Model\LinkCardBudgetModel;
-use App\Service\Worker\Message\CompleteQueuedLinkCards;
+use App\Service\Content\LinkCard\LinkCardSweep;
+use App\Service\Content\LinkCard\Model\LinkCardBudgetModel;
+use App\Service\Operations\Worker\Message\CompleteQueuedLinkCards;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 

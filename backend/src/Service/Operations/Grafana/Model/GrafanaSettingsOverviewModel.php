@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Grafana\Model;
+namespace App\Service\Operations\Grafana\Model;
 
-use App\Service\Grafana\GrafanaEnvDefaults;
+use App\Service\Operations\Grafana\GrafanaEnvDefaults;
 
 final readonly class GrafanaSettingsOverviewModel
 {

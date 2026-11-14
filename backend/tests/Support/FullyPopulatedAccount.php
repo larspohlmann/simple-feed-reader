@@ -33,7 +33,7 @@ use App\Enum\Handedness;
 use App\Enum\MagazineStyle;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
-use App\Service\Url\UrlNormalizer;
+use App\Service\Foundation\Url\UrlNormalizer;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 

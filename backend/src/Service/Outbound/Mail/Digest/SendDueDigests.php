@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Digest;
+namespace App\Service\Outbound\Mail\Digest;
 
 use App\Entity\DigestSettings;
 use App\Enum\MailKind;
-use App\Service\Mail\Digest\DigestMailer\DigestMailerInterface;
-use App\Service\Mail\Digest\DigestRecipients\DigestRecipientsInterface;
-use App\Service\Mail\Digest\Model\DigestAttempt;
-use App\Service\Mail\Digest\Model\DigestModel;
-use App\Service\Mail\Digest\Model\DigestSweepReportModel;
-use App\Service\Mail\MailCapability;
-use App\Service\Mail\MailFailureRecorder\MailFailureRecorderInterface;
+use App\Service\Outbound\Mail\Digest\DigestMailer\DigestMailerInterface;
+use App\Service\Outbound\Mail\Digest\DigestRecipients\DigestRecipientsInterface;
+use App\Service\Outbound\Mail\Digest\Model\DigestAttempt;
+use App\Service\Outbound\Mail\Digest\Model\DigestModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestSweepReportModel;
+use App\Service\Outbound\Mail\MailCapability;
+use App\Service\Outbound\Mail\MailFailureRecorder\MailFailureRecorderInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;

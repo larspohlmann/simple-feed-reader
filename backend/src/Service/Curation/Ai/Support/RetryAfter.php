@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai\Support;
+namespace App\Service\Curation\Ai\Support;
 
-use App\Service\Fetch\Support\ResponseHeader;
-use App\Service\Fetch\Support\RetryAfterHeader;
+use App\Service\Outbound\Fetch\Support\ResponseHeader;
+use App\Service\Outbound\Fetch\Support\RetryAfterHeader;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 final class RetryAfter

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Prompt;
+namespace App\Service\Curation\Recommendation\Llm\Prompt;
 
-use App\Service\Recommendation\Llm\Prompt\Model\ProfileParseResultModel;
+use App\Service\Curation\Recommendation\Llm\Prompt\Model\ProfileParseResultModel;
 
 /**
  * Turns one distillation reply into a preference profile. Unusable when the JSON does not parse, the shape is wrong,

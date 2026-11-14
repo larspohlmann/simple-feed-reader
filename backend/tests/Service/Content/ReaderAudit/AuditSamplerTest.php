@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\ReaderAudit;
+namespace App\Tests\Service\Content\ReaderAudit;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
@@ -10,9 +10,9 @@ use App\Entity\Headline;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\ReaderAuditRepository;
-use App\Service\ReaderAudit\AuditSampler;
-use App\Service\ReaderAudit\Model\AuditSampleModel;
-use App\Service\ReaderAudit\Model\SampledEntryModel;
+use App\Service\Content\ReaderAudit\AuditSampler;
+use App\Service\Content\ReaderAudit\Model\AuditSampleModel;
+use App\Service\Content\ReaderAudit\Model\SampledEntryModel;
 use App\Tests\DbTestCase;
 use Doctrine\DBAL\Connection;
 

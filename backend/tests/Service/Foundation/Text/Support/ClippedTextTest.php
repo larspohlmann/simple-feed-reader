@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Text\Support;
+namespace App\Tests\Service\Foundation\Text\Support;
 
-use App\Service\Text\Support\ClippedText;
+use App\Service\Foundation\Text\Support\ClippedText;
 use PHPUnit\Framework\TestCase;
 
 final class ClippedTextTest extends TestCase

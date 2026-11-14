@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Entity\EntryState;
@@ -20,14 +20,14 @@ use App\Exception\InvalidSelectionException;
 use App\Repository\EntryStateRepository;
 use App\Repository\KnownSocialCollectionRepository;
 use App\Repository\SubscriptionRepository;
-use App\Service\Social\Exception\InvalidSocialImportFeedException;
-use App\Service\Social\FollowAvatarCache;
-use App\Service\Social\Model\FollowedAccountModel;
-use App\Service\Social\Model\HiddenProfileModel;
-use App\Service\Social\Model\PrivateFeedModel;
-use App\Service\Social\Model\SocialImportFeedModel;
-use App\Service\Social\Model\SocialImportModel;
-use App\Service\Social\SocialImporter;
+use App\Service\Social\Social\Exception\InvalidSocialImportFeedException;
+use App\Service\Social\Social\FollowAvatarCache;
+use App\Service\Social\Social\Model\FollowedAccountModel;
+use App\Service\Social\Social\Model\HiddenProfileModel;
+use App\Service\Social\Social\Model\PrivateFeedModel;
+use App\Service\Social\Social\Model\SocialImportFeedModel;
+use App\Service\Social\Social\Model\SocialImportModel;
+use App\Service\Social\Social\SocialImporter;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ProfileFeedSubscriptions;
 use App\Tests\Support\QueryRecorder;

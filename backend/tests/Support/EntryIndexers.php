@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Search\EntryIndexer;
-use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
+use App\Service\Library\Search\EntryIndexer;
+use App\Service\Library\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 

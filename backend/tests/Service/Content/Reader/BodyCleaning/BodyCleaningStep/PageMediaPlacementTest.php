@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
+namespace App\Tests\Service\Content\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\PageMediaPlacement;
-use App\Service\Reader\BodyCleaning\Model\BodyCleaningInputModel;
-use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
-use App\Service\Reader\Media\AudioPlayerMarkup;
-use App\Service\Reader\Media\MediaMarkup;
-use App\Service\Reader\Media\Model\ArticleMediaModel;
-use App\Service\Reader\Media\Model\MediaCandidateModel;
-use App\Service\Reader\Media\Model\MediaKind;
-use App\Service\Reader\Media\PageMediaInserter;
-use App\Service\Reader\Model\LeadImageCandidateModel;
-use App\Service\Reader\ReaderLeadImage;
+use App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\PageMediaPlacement;
+use App\Service\Content\Reader\BodyCleaning\Model\BodyCleaningInputModel;
+use App\Service\Content\Reader\BodyCleaning\Pass\BodyCleaningPass;
+use App\Service\Content\Reader\Media\AudioPlayerMarkup;
+use App\Service\Content\Reader\Media\MediaMarkup;
+use App\Service\Content\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Content\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Content\Reader\Media\Model\MediaKind;
+use App\Service\Content\Reader\Media\PageMediaInserter;
+use App\Service\Content\Reader\Model\LeadImageCandidateModel;
+use App\Service\Content\Reader\ReaderLeadImage;
 use App\Tests\Support\BodyCleaningInputs;
 use App\Tests\Support\ParsesHtml;
 use App\Tests\Support\ProseParagraphs;

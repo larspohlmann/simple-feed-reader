@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai\Exception;
+namespace App\Service\Curation\Ai\Exception;
 
 /**
  * A status the run may wait out and retry (429, 502, 503, 504), with the parsed `Retry-After` when sent. Apart from

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Enum\SocialNetwork;
-use App\Service\Ingest\FeedTitle\FeedTitleInterface;
-use App\Service\Social\Support\ProfileFeedUrl;
+use App\Service\Ingestion\Ingest\FeedTitle\FeedTitleInterface;
+use App\Service\Social\Social\Support\ProfileFeedUrl;
 
 /**
  * A Bluesky profile feed names its channel `@handle - Display Name`; the reader shows the person by their display

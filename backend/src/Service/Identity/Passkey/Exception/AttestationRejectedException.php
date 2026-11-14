@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Passkey\Exception;
+namespace App\Service\Identity\Passkey\Exception;
 
 /** Any failed check on a registration attestation, collapsed into one type for the same reason as an assertion. */
 final class AttestationRejectedException extends \RuntimeException

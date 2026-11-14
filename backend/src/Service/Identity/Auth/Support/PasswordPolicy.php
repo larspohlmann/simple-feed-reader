@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Auth\Support;
+namespace App\Service\Identity\Auth\Support;
 
 /** 12 characters and no composition rules: length beats character classes, and a memorable passphrase gets kept. */
 final class PasswordPolicy

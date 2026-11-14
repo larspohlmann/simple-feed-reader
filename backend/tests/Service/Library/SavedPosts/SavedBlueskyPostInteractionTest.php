@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\SavedPosts;
+namespace App\Tests\Service\Library\SavedPosts;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
@@ -16,15 +16,15 @@ use App\Repository\EntryListRowMarks;
 use App\Repository\EntryListRowSocial;
 use App\Repository\EntryListRowSubscription;
 use App\Repository\SocialAccountRepository;
-use App\Service\Social\ActingAccountGuard;
-use App\Service\Social\Model\SocialCountsModel;
-use App\Service\Social\Model\SocialPostModel;
-use App\Service\Social\PostCountsSource\PostCountsSourceInterface;
-use App\Service\Social\PostResolver\PostResolverInterface;
-use App\Service\Social\SocialCounts;
-use App\Service\Social\SocialCountsCache;
-use App\Service\Social\SocialPostFinder;
-use App\Service\Social\SocialRepliesSource;
+use App\Service\Social\Social\ActingAccountGuard;
+use App\Service\Social\Social\Model\SocialCountsModel;
+use App\Service\Social\Social\Model\SocialPostModel;
+use App\Service\Social\Social\PostCountsSource\PostCountsSourceInterface;
+use App\Service\Social\Social\PostResolver\PostResolverInterface;
+use App\Service\Social\Social\SocialCounts;
+use App\Service\Social\Social\SocialCountsCache;
+use App\Service\Social\Social\SocialPostFinder;
+use App\Service\Social\Social\SocialRepliesSource;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ConfirmedDeletions;
 use App\Tests\Support\FakeHomeServerCheck;

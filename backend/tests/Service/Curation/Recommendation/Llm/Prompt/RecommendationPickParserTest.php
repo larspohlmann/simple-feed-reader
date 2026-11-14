@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Llm\Prompt;
+namespace App\Tests\Service\Curation\Recommendation\Llm\Prompt;
 
-use App\Service\Recommendation\Llm\Prompt\ModelReplyJsonDecoder;
-use App\Service\Recommendation\Llm\Prompt\RecommendationPickParser;
-use App\Service\Recommendation\Llm\Prompt\RecommendationPickSalvager;
+use App\Service\Curation\Recommendation\Llm\Prompt\ModelReplyJsonDecoder;
+use App\Service\Curation\Recommendation\Llm\Prompt\RecommendationPickParser;
+use App\Service\Curation\Recommendation\Llm\Prompt\RecommendationPickSalvager;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationPickParserTest extends TestCase

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Llm\Completion\Support;
+namespace App\Tests\Service\Curation\Recommendation\Llm\Completion\Support;
 
-use App\Service\Recommendation\Llm\Completion\Support\CompletionFinishReason;
+use App\Service\Curation\Recommendation\Llm\Completion\Support\CompletionFinishReason;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

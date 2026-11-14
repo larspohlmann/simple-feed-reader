@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Scraper;
+namespace App\Service\Ingestion\Scraper;
 
 use App\Entity\Headline;
-use App\Service\Html\Support\MetaName;
-use App\Service\Html\Support\MetaProperty;
-use App\Service\Image\Model\DeclaredImageModel;
-use App\Service\Parser\Model\ParsedEntryMediaModel;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Parser\Model\ParsedFeedModel;
-use App\Service\Parser\Support\GuidFallback;
-use App\Service\Scraper\Exception\HtmlExtractionException;
-use App\Service\Scraper\Model\ScrapedItemModel;
-use App\Service\Scraper\ScrapeLayer\ScrapeLayerInterface;
-use App\Service\Scraper\Support\TextNormalizer;
-use App\Service\Text\Support\HtmlEscape;
+use App\Service\Foundation\Html\Support\MetaName;
+use App\Service\Foundation\Html\Support\MetaProperty;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryMediaModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
+use App\Service\Ingestion\Parser\Support\GuidFallback;
+use App\Service\Ingestion\Scraper\Exception\HtmlExtractionException;
+use App\Service\Ingestion\Scraper\Model\ScrapedItemModel;
+use App\Service\Ingestion\Scraper\ScrapeLayer\ScrapeLayerInterface;
+use App\Service\Ingestion\Scraper\Support\TextNormalizer;
+use App\Service\Foundation\Text\Support\HtmlEscape;
 use Dom\HTMLDocument;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
-use App\Service\Fetch\Model\FetchResponseModel;
-use App\Service\Refresh\PassFetcher\PassFetcherInterface;
+use App\Service\Outbound\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
+use App\Service\Ingestion\Refresh\PassFetcher\PassFetcherInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /** Puts both of a container refresh's fetches behind stubs: the pass's feeds, and the favicon pass's homepage. */

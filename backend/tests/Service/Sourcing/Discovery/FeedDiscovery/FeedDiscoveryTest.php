@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Discovery\FeedDiscovery;
+namespace App\Tests\Service\Sourcing\Discovery\FeedDiscovery;
 
-use App\Service\Discovery\Exception\SiteThrottledException;
-use App\Service\Discovery\Model\ScrapeFailureReason;
-use App\Service\Discovery\Model\ScrapeFallback;
-use App\Service\Fetch\Exception\FeedThrottledException;
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\Exception\ResponseTooLargeException;
-use App\Service\Fetch\Exception\SsrfBlockedException;
-use App\Service\Fetch\Model\FetchResponseModel;
-use App\Tests\Service\Discovery\BuildsFeedDiscovery;
-use App\Tests\Service\Scraper\ScrapedFixtures;
+use App\Service\Sourcing\Discovery\Exception\SiteThrottledException;
+use App\Service\Sourcing\Discovery\Model\ScrapeFailureReason;
+use App\Service\Sourcing\Discovery\Model\ScrapeFallback;
+use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Outbound\Fetch\Exception\SsrfBlockedException;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
+use App\Tests\Service\Sourcing\Discovery\BuildsFeedDiscovery;
+use App\Tests\Service\Ingestion\Scraper\ScrapedFixtures;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class FeedDiscoveryTest extends KernelTestCase

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Support;
+namespace App\Tests\Service\Social\Social\Support;
 
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\Model\ApiResponseModel;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Support\NetworkAnswer;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\Model\ApiResponseModel;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Support\NetworkAnswer;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Response;
 

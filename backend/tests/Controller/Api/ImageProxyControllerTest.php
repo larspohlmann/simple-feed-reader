@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
-use App\Service\Image\Exception\ImageRefusedException;
-use App\Service\Image\Exception\InvalidImageUrlException;
-use App\Service\Image\ImageProxy\ImageProxyInterface;
-use App\Service\Image\Model\ProxiedImageModel;
+use App\Service\Outbound\Image\Exception\ImageRefusedException;
+use App\Service\Outbound\Image\Exception\InvalidImageUrlException;
+use App\Service\Outbound\Image\ImageProxy\ImageProxyInterface;
+use App\Service\Outbound\Image\Model\ProxiedImageModel;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\StubImageProxy;
 use Psr\Cache\CacheItemPoolInterface;

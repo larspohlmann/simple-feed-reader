@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Scoring\Support;
+namespace App\Service\Curation\Recommendation\Scoring\Support;
 
-use App\Service\Recommendation\Pool\Model\ArticleLineModel;
-use App\Service\Text\Support\ClippedText;
+use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Foundation\Text\Support\ClippedText;
 
 final class ScoringArticle
 {

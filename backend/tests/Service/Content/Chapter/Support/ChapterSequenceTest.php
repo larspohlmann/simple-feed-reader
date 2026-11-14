@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Chapter\Support;
+namespace App\Tests\Service\Content\Chapter\Support;
 
 use App\Entity\EntryChapter;
-use App\Service\Chapter\Support\ChapterSequence;
+use App\Service\Content\Chapter\Support\ChapterSequence;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

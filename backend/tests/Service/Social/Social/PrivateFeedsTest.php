@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\Feed;
 use App\Entity\InclusionChange;
@@ -16,10 +16,10 @@ use App\Enum\InclusionSurface;
 use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
 use App\Repository\KnownSocialCollectionRepository;
-use App\Service\Social\Model\PrivateFeedModel;
-use App\Service\Social\Model\PrivateFeedOutcome;
-use App\Service\Social\PrivateFeeds;
-use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
+use App\Service\Social\Social\Model\PrivateFeedModel;
+use App\Service\Social\Social\Model\PrivateFeedOutcome;
+use App\Service\Social\Social\PrivateFeeds;
+use App\Service\Library\Subscription\Exception\SubscriptionLimitReachedException;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BlueskyProfiles;
 use App\Tests\Support\PrivateFeedsWiring;

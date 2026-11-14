@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Parser\Support;
+namespace App\Tests\Service\Ingestion\Parser\Support;
 
-use App\Service\Parser\Model\ParsedCategoryModel;
-use App\Service\Parser\Pass\CoreElement;
-use App\Service\Parser\Support\ItemCategoryExtractor;
+use App\Service\Ingestion\Parser\Model\ParsedCategoryModel;
+use App\Service\Ingestion\Parser\Pass\CoreElement;
+use App\Service\Ingestion\Parser\Support\ItemCategoryExtractor;
 use App\Tests\Support\FeedFormatParsers;
 use PHPUnit\Framework\TestCase;
 

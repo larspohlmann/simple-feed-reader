@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search;
+namespace App\Service\Library\Search;
 
 use App\Entity\SavedSearch;
 use App\Repository\SavedSearchEntryRepository;
-use App\Service\Search\Model\SavedSearchTallyModel;
+use App\Service\Library\Search\Model\SavedSearchTallyModel;
 
 /**
  * What each saved search's badge and heading count: the unread member ids,

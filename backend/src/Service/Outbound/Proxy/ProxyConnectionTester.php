@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Proxy;
+namespace App\Service\Outbound\Proxy;
 
-use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Fetch\Support\EgressOptions;
-use App\Service\Fetch\Support\ProxyHandshakeFailure;
-use App\Service\Proxy\ConfiguredProxySource\ConfiguredProxySourceInterface;
-use App\Service\Proxy\Model\ProxyTestFailure;
-use App\Service\Proxy\Model\ProxyTestResultModel;
+use App\Service\Foundation\Crypto\Exception\SecretUnreadableException;
+use App\Service\Outbound\Fetch\Support\EgressOptions;
+use App\Service\Outbound\Fetch\Support\ProxyHandshakeFailure;
+use App\Service\Outbound\Proxy\ConfiguredProxySource\ConfiguredProxySourceInterface;
+use App\Service\Outbound\Proxy\Model\ProxyTestFailure;
+use App\Service\Outbound\Proxy\Model\ProxyTestResultModel;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;

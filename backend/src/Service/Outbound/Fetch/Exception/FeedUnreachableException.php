@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\Exception;
+namespace App\Service\Outbound\Fetch\Exception;
 
 /**
  * Nothing usable arrived: no answer at all, or an answer that was not the feed

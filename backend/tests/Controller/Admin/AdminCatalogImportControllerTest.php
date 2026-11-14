@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Admin;
 
 use App\Entity\CatalogFeed;
-use App\Service\Catalog\BundledCatalog;
-use App\Service\Catalog\Model\ParsedCatalogModel;
+use App\Service\Sourcing\Catalog\BundledCatalog;
+use App\Service\Sourcing\Catalog\Model\ParsedCatalogModel;
 use App\Tests\Support\ApiTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 

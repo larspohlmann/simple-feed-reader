@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Version\Model\VersionReportModel;
+use App\Service\Operations\Version\Model\VersionReportModel;
 
 final class VersionJson
 {

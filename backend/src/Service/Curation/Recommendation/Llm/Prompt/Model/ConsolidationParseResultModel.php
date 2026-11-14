@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Prompt\Model;
+namespace App\Service\Curation\Recommendation\Llm\Prompt\Model;
 
 /**
  * One consolidation reply's picks and the ids among them that duplicate a better-scored one. `usable` follows the

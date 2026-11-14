@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Comments\Exception;
+namespace App\Tests\Service\Content\Comments\Exception;
 
-use App\Service\Comments\Exception\CommentsThrottledException;
+use App\Service\Content\Comments\Exception\CommentsThrottledException;
 use PHPUnit\Framework\TestCase;
 
 final class CommentsThrottledExceptionTest extends TestCase

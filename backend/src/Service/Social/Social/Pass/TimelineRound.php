@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Pass;
+namespace App\Service\Social\Social\Pass;
 
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Fetch\Model\RequestTicketModel;
-use App\Service\Fetch\Model\SettlementModel;
-use App\Service\Social\Exception\PrivateFeedOrphanedException;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialSessionStaleException;
-use App\Service\Social\Model\TimelineOutcome\FailedTimelineModel;
-use App\Service\Social\Model\TimelineOutcome\FetchedTimelineModel;
-use App\Service\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
-use App\Service\Social\Model\TimelineSlotsModel;
-use App\Service\Social\TimelineSources;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Outbound\Fetch\Model\RequestTicketModel;
+use App\Service\Outbound\Fetch\Model\SettlementModel;
+use App\Service\Social\Social\Exception\PrivateFeedOrphanedException;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialSessionStaleException;
+use App\Service\Social\Social\Model\TimelineOutcome\FailedTimelineModel;
+use App\Service\Social\Social\Model\TimelineOutcome\FetchedTimelineModel;
+use App\Service\Social\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
+use App\Service\Social\Social\Model\TimelineSlotsModel;
+use App\Service\Social\Social\TimelineSources;
 
 /**
  * One refresh's private-feed reads: a ticket per feed and a follow-up per further request, gated per held account,

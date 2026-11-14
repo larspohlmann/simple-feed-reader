@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Category\Model;
+namespace App\Tests\Service\Ingestion\Category\Model;
 
-use App\Service\Category\Model\NormalizedCategoryModel;
+use App\Service\Ingestion\Category\Model\NormalizedCategoryModel;
 use PHPUnit\Framework\TestCase;
 
 final class NormalizedCategoryModelTest extends TestCase

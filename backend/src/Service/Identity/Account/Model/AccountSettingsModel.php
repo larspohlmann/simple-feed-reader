@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Account\Model;
+namespace App\Service\Identity\Account\Model;
 
 use App\Entity\DigestSettings;
 use App\Entity\FeedDirectoryScope;

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\Sibling\Pass;
+namespace App\Service\Content\Reader\Media\Sibling\Pass;
 
-use App\Service\Reader\Media\Model\MediaCandidateModel;
-use App\Service\Reader\Media\Model\MediaKind;
-use App\Service\Reader\Media\Sibling\Model\KeyedOccurrenceModel;
-use App\Service\Reader\Media\Sibling\Model\SiblingModel;
-use App\Service\Reader\Media\Sibling\NearbyPoster;
-use App\Service\Reader\Media\Sibling\Support\KeyedOccurrences;
+use App\Service\Content\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Content\Reader\Media\Model\MediaKind;
+use App\Service\Content\Reader\Media\Sibling\Model\KeyedOccurrenceModel;
+use App\Service\Content\Reader\Media\Sibling\Model\SiblingModel;
+use App\Service\Content\Reader\Media\Sibling\NearbyPoster;
+use App\Service\Content\Reader\Media\Sibling\Support\KeyedOccurrences;
 
 /**
  * One page's sibling search: the raw HTML is per-pass state, bound once here

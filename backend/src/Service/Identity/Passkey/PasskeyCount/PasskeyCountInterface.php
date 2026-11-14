@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Passkey\PasskeyCount;
+namespace App\Service\Identity\Passkey\PasskeyCount;
 
 use App\Entity\User;
 

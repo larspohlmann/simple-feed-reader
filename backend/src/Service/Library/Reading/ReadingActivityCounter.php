@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reading;
+namespace App\Service\Library\Reading;
 
 use App\Entity\User;
 use App\Repository\EntryStateRepository;
-use App\Service\Reading\Model\ReadingActivityModel;
-use App\Service\Reading\Model\ReadingTotalsModel;
-use App\Service\SubscriptionHistory\SubscriptionActivityCounter;
+use App\Service\Library\Reading\Model\ReadingActivityModel;
+use App\Service\Library\Reading\Model\ReadingTotalsModel;
+use App\Service\Library\SubscriptionHistory\SubscriptionActivityCounter;
 
 final readonly class ReadingActivityCounter
 {

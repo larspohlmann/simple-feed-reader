@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Search\Membership\SavedSearchMatcher;
+namespace App\Tests\Service\Library\Search\Membership\SavedSearchMatcher;
 
-use App\Service\Search\Exception\SearchEngineUnavailableException;
-use App\Service\Search\Index\Model\IndexMatchesModel;
-use App\Service\Search\Index\Model\IndexSearchModel;
-use App\Service\Search\Membership\SavedSearchMatcher\IndexedSavedSearchMatcher;
-use App\Service\Search\Model\SavedSearchTermModel;
-use App\Service\Search\Model\SearchTermsModel;
-use App\Tests\Service\Search\FakeMultiSearchReader;
+use App\Service\Library\Search\Exception\SearchEngineUnavailableException;
+use App\Service\Library\Search\Index\Model\IndexMatchesModel;
+use App\Service\Library\Search\Index\Model\IndexSearchModel;
+use App\Service\Library\Search\Membership\SavedSearchMatcher\IndexedSavedSearchMatcher;
+use App\Service\Library\Search\Model\SavedSearchTermModel;
+use App\Service\Library\Search\Model\SearchTermsModel;
+use App\Tests\Service\Library\Search\FakeMultiSearchReader;
 use PHPUnit\Framework\TestCase;
 
 final class IndexedSavedSearchMatcherTest extends TestCase

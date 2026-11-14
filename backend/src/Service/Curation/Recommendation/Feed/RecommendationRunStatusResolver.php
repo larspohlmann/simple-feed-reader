@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Feed;
+namespace App\Service\Curation\Recommendation\Feed;
 
 use App\Entity\User;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Recommendation\Feed\Model\RecommendationRunStatusModel;
-use App\Service\Recommendation\Profile\ProfileForRun\ProfileForRunInterface;
-use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
-use App\Service\Recommendation\Run\RecommendationRunForecaster;
+use App\Service\Curation\Recommendation\Feed\Model\RecommendationRunStatusModel;
+use App\Service\Curation\Recommendation\Profile\ProfileForRun\ProfileForRunInterface;
+use App\Service\Curation\Recommendation\Run\Model\RecommendationRunReportModel;
+use App\Service\Curation\Recommendation\Run\RecommendationRunForecaster;
 use Symfony\Component\Clock\ClockInterface;
 
 /**

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Search;
+namespace App\Tests\Service\Library\Search;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Service\Search\EntryIndexer;
-use App\Service\Search\Exception\SearchEngineUnavailableException;
-use App\Service\Search\TranscriptText\TranscriptTextInterface;
+use App\Service\Library\Search\EntryIndexer;
+use App\Service\Library\Search\Exception\SearchEngineUnavailableException;
+use App\Service\Library\Search\TranscriptText\TranscriptTextInterface;
 use App\Tests\DbTestCase;
 use App\Tests\Support\EntryIndexers;
 use Monolog\Handler\TestHandler;

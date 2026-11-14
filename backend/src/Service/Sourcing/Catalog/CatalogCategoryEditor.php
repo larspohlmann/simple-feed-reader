@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Catalog;
+namespace App\Service\Sourcing\Catalog;
 
 use App\Entity\CatalogCategory;
 use App\Repository\CatalogCategoryRepository;
-use App\Service\Catalog\Factory\CatalogCategoryFactory;
-use App\Service\Catalog\Model\CatalogCategoryDetailsModel;
-use App\Service\Ordering\PositionReorderer;
+use App\Service\Sourcing\Catalog\Factory\CatalogCategoryFactory;
+use App\Service\Sourcing\Catalog\Model\CatalogCategoryDetailsModel;
+use App\Service\Foundation\Ordering\PositionReorderer;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class CatalogCategoryEditor

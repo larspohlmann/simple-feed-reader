@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai\Support;
+namespace App\Service\Curation\Ai\Support;
 
 final class ReportedCost
 {

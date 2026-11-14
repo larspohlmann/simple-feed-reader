@@ -8,7 +8,7 @@ use App\Dto\Admin\CatalogCategoryRequest;
 use App\Dto\Admin\ReorderRequest;
 use App\Http\AdminCatalogJson;
 use App\Repository\CatalogCategoryRepository;
-use App\Service\Catalog\CatalogCategoryEditor;
+use App\Service\Sourcing\Catalog\CatalogCategoryEditor;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;

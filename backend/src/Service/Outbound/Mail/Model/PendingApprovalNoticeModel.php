@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Model;
+namespace App\Service\Outbound\Mail\Model;
 
 use App\Enum\RegistrationMethod;
 

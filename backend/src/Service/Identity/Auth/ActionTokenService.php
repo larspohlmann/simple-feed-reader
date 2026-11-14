@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Auth;
+namespace App\Service\Identity\Auth;
 
 use App\Entity\ActionToken;
 use App\Entity\User;
 use App\Enum\TokenPurpose;
 use App\Repository\ActionTokenRepository;
-use App\Service\Auth\Exception\InvalidTokenException;
+use App\Service\Identity\Auth\Exception\InvalidTokenException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Random\RandomException;

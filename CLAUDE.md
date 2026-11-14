@@ -108,7 +108,7 @@ Non-negotiables:
   `ResetInterface` or carries `#[ProcessLifetimeState]`.
 - **Depend on interfaces, inject them.** No service locators in domain code, no
   `new` on a collaborator inside a method. Strategies get a tag + keyed locator
-  (see `Service/Refresh/FeedBodyParser.php` for the pattern).
+  (see `Service/Ingestion/Refresh/FeedBodyParser.php` for the pattern).
 - **Queries live in `src/Repository/`** — DQL, QueryBuilder, native SQL and
   DBAL alike; services orchestrate and own the unit of work
   ([docs/architecture.md](docs/architecture.md) §7, `QueriesLiveInRepositoriesRule`).
@@ -237,7 +237,7 @@ Enforced mechanically by `composer check` and `composer md`:
   decomposition, and counting it buries the real tunnels. Tramp data means the
   value has no home: the fix is a context object or a per-pass collaborator that
   holds it as a field, not a longer signature (see
-  `Service/Fetch/Pass/PageUrls.php` and `Service/Scraper/Pass/JsonLdArticles.php`).
+  `Service/Outbound/Fetch/Pass/PageUrls.php` and `Service/Ingestion/Scraper/Pass/JsonLdArticles.php`).
   A ratchet like `minMsi` — tighten it
   as the tree catches up, never loosen it to make a branch pass, and never add a
   `--baseline` to a clean tree.
@@ -312,7 +312,7 @@ no `text/html` fallback. Run the design-time checklist in
 [docs/architecture.md](docs/architecture.md) §6 against any new client-facing
 endpoint; flag browser-coupled patterns rather than baking them in.
 
-The OIDC boundary (`IdTokenModel` and friends in `Service/OAuth/Oidc/`) is a security
+The OIDC boundary (`IdTokenModel` and friends in `Service/Identity/OAuth/Oidc/`) is a security
 control, not ceremony — do not "simplify" it away, and do not delete
 `OidcBoundaryTest`.
 

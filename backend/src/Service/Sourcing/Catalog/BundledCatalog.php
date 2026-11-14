@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Catalog;
+namespace App\Service\Sourcing\Catalog;
 
-use App\Service\Catalog\Exception\InvalidCatalogDocumentException;
-use App\Service\Catalog\Model\BundledCatalogSummaryModel;
-use App\Service\Catalog\Model\ParsedCatalogModel;
+use App\Service\Sourcing\Catalog\Exception\InvalidCatalogDocumentException;
+use App\Service\Sourcing\Catalog\Model\BundledCatalogSummaryModel;
+use App\Service\Sourcing\Catalog\Model\ParsedCatalogModel;
 
 /**
  * The catalog document this release ships, shared by the admin's one-click import and the console command. Once

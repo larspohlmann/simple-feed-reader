@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Completion\Model;
+namespace App\Service\Curation\Recommendation\Llm\Completion\Model;
 
 /**
  * A named JSON Schema for a structured completion. The provider client wraps

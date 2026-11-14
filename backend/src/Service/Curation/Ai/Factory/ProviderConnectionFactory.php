@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai\Factory;
+namespace App\Service\Curation\Ai\Factory;
 
 use App\Entity\AiProviderSettings;
-use App\Service\Ai\AiProviderConfigurator;
-use App\Service\Ai\Exception\AiKeyUnreadableException;
-use App\Service\Ai\Model\ProviderConnectionModel;
-use App\Service\Ai\Model\ProviderTimeoutsModel;
+use App\Service\Curation\Ai\AiProviderConfigurator;
+use App\Service\Curation\Ai\Exception\AiKeyUnreadableException;
+use App\Service\Curation\Ai\Model\ProviderConnectionModel;
+use App\Service\Curation\Ai\Model\ProviderTimeoutsModel;
 
 /**
  * Reads a stored configuration back as the connection a completion call needs, opening the key through

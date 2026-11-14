@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\Model;
+namespace App\Service\Ingestion\Parser\Model;
 
 /**
  * The media a feed item declared, split into the two lists the entry stores:

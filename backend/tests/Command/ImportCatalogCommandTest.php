@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Command;
 
 use App\Entity\CatalogFeed;
-use App\Service\Catalog\BundledCatalog;
+use App\Service\Sourcing\Catalog\BundledCatalog;
 use App\Tests\DbTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Console\Application;

@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Image;
+namespace App\Service\Outbound\Image;
 
-use App\Service\Fetch\Exception\RedirectChainException;
-use App\Service\Fetch\Exception\ResponseTooLargeException;
-use App\Service\Fetch\Model\ResponseSizeLimit;
-use App\Service\Fetch\Pass\LandedResponse;
-use App\Service\Fetch\Pass\RedirectBudget;
-use App\Service\Fetch\RedirectFollower;
-use App\Service\Image\Exception\ImageRefusedException;
-use App\Service\Image\Exception\ImageUnavailableException;
-use App\Service\Image\Model\ImageRequestModel;
-use App\Service\Image\Model\ProxiedImageModel;
-use App\Service\Image\Support\ImageType;
-use App\Service\Image\Support\MediaType;
-use App\Service\Image\Support\OriginRoot;
+use App\Service\Outbound\Fetch\Exception\RedirectChainException;
+use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Outbound\Fetch\Model\ResponseSizeLimit;
+use App\Service\Outbound\Fetch\Pass\LandedResponse;
+use App\Service\Outbound\Fetch\Pass\RedirectBudget;
+use App\Service\Outbound\Fetch\RedirectFollower;
+use App\Service\Outbound\Image\Exception\ImageRefusedException;
+use App\Service\Outbound\Image\Exception\ImageUnavailableException;
+use App\Service\Outbound\Image\Model\ImageRequestModel;
+use App\Service\Outbound\Image\Model\ProxiedImageModel;
+use App\Service\Outbound\Image\Support\ImageType;
+use App\Service\Outbound\Image\Support\MediaType;
+use App\Service\Outbound\Image\Support\OriginRoot;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 

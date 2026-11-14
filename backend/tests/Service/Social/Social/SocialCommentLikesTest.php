@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\SocialAccount;
 use App\Entity\User;
 use App\Repository\SocialAccountRepository;
-use App\Service\Comments\CommentsCache;
-use App\Service\Comments\CommentsLoader;
-use App\Service\Social\ActingAccountGuard;
-use App\Service\Social\Exception\NotASocialPostException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\PostLiking;
-use App\Service\Social\SocialCommentLikes;
-use App\Service\Social\SocialPostFinder;
+use App\Service\Content\Comments\CommentsCache;
+use App\Service\Content\Comments\CommentsLoader;
+use App\Service\Social\Social\ActingAccountGuard;
+use App\Service\Social\Social\Exception\NotASocialPostException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\PostLiking;
+use App\Service\Social\Social\SocialCommentLikes;
+use App\Service\Social\Social\SocialPostFinder;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AssertsRefusal;
 use App\Tests\Support\FakeCommentsSource;

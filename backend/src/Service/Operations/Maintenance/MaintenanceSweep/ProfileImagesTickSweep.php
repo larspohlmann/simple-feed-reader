@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Maintenance\MaintenanceSweep;
+namespace App\Service\Operations\Maintenance\MaintenanceSweep;
 
-use App\Service\Social\Model\ProfileCallBudgetModel;
-use App\Service\Social\Model\ProfileImageSweepReportModel;
-use App\Service\Social\ProfileImageSweep;
+use App\Service\Social\Social\Model\ProfileCallBudgetModel;
+use App\Service\Social\Social\Model\ProfileImageSweepReportModel;
+use App\Service\Social\Social\ProfileImageSweep;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 

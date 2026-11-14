@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\Digest;
+namespace App\Tests\Service\Outbound\Mail\Digest;
 
 use App\Entity\Entry;
 use App\Entity\EntryState;
@@ -14,7 +14,7 @@ use App\Entity\User;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
 use App\Repository\SavedSearchEntryRepository;
-use App\Service\Mail\Digest\DigestEntryFinder;
+use App\Service\Outbound\Mail\Digest\DigestEntryFinder;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SavedSearchMatchFixture;
 

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Pool\Model;
+namespace App\Service\Curation\Recommendation\Pool\Model;
 
 use App\Repository\TitledEntry;
-use App\Service\Text\Support\PlainText;
+use App\Service\Foundation\Text\Support\PlainText;
 
 final readonly class ArticleLineModel
 {

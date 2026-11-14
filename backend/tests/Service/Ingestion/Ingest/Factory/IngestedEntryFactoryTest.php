@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Ingest\Factory;
+namespace App\Tests\Service\Ingestion\Ingest\Factory;
 
 use App\Entity\Entry;
 use App\Entity\EntryChapter;
 use App\Entity\Feed;
 use App\Entity\Headline;
-use App\Service\Ingest\EntryImageWriter;
-use App\Service\Ingest\Factory\IngestedEntryFactory;
-use App\Service\Ingest\Model\IncomingEntryModel;
-use App\Service\Ingest\Pass\FeedIngestContext;
-use App\Service\Parser\Model\ParsedChaptersModel;
-use App\Service\Parser\Model\ParsedEntryMediaModel;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Parser\Model\ParsedMediaBundleModel;
-use App\Service\Sanitize\EntrySanitizer;
-use App\Service\Sanitize\TrailingBlankRemover;
+use App\Service\Ingestion\Ingest\EntryImageWriter;
+use App\Service\Ingestion\Ingest\Factory\IngestedEntryFactory;
+use App\Service\Ingestion\Ingest\Model\IncomingEntryModel;
+use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
+use App\Service\Ingestion\Parser\Model\ParsedChaptersModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryMediaModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Model\ParsedMediaBundleModel;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Foundation\Sanitize\TrailingBlankRemover;
 use PHPUnit\Framework\TestCase;
 
 final class IngestedEntryFactoryTest extends TestCase

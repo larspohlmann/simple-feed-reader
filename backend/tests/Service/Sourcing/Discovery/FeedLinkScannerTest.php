@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Discovery;
+namespace App\Tests\Service\Sourcing\Discovery;
 
-use App\Service\Discovery\FeedLinkScanner;
+use App\Service\Sourcing\Discovery\FeedLinkScanner;
 use PHPUnit\Framework\TestCase;
 
 final class FeedLinkScannerTest extends TestCase

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run\Model;
+namespace App\Service\Curation\Recommendation\Run\Model;
 
 /**
  * The regimes that drive runs on the install's behalf, each under its own heartbeat name (WorkerPresence says why the

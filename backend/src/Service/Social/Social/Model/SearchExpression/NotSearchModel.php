@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Model\SearchExpression;
+namespace App\Service\Social\Social\Model\SearchExpression;
 
-use App\Service\Social\Model\SearchedPostModel;
+use App\Service\Social\Social\Model\SearchedPostModel;
 
 final readonly class NotSearchModel implements SearchExpressionModelInterface
 {

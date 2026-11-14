@@ -10,7 +10,7 @@ use App\Entity\Subscription;
 use App\Entity\SubscriptionDay;
 use App\Entity\User;
 use App\Repository\SubscriptionDayRepository;
-use App\Service\Retention\RetentionSettings;
+use App\Service\Ingestion\Retention\RetentionSettings;
 use Symfony\Component\Clock\MockClock;
 
 /** For a DbTestCase: subscriptions, arrivals and the history services, with now pinned to a UTC instant. */

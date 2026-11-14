@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Url;
+namespace App\Service\Foundation\Url;
 
-use App\Service\Url\Support\UrlOrigin;
+use App\Service\Foundation\Url\Support\UrlOrigin;
 
 /** Keeps the path and every non-tracking parameter verbatim: two articles differing by `?id=` must never collapse. */
 final readonly class UrlNormalizer

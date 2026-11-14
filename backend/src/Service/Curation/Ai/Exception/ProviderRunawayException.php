@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai\Exception;
+namespace App\Service\Curation\Ai\Exception;
 
 /**
  * The model answered and would not stop. Apart from ProviderUnreachableException because the endpoint is healthy:

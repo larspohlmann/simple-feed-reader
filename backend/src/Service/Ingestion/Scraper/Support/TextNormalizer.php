@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Scraper\Support;
+namespace App\Service\Ingestion\Scraper\Support;
 
-use App\Service\Text\Support\Whitespace;
+use App\Service\Foundation\Text\Support\Whitespace;
 
 final class TextNormalizer
 {

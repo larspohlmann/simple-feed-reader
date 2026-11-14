@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Maintenance\Model;
+namespace App\Service\Operations\Maintenance\Model;
 
 /** The tick's sweeps that flush through the default EntityManager, which an aborted refresh leaves closed. */
 final readonly class MaintenanceSweepsModel

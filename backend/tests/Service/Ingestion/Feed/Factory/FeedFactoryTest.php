@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Feed\Factory;
+namespace App\Tests\Service\Ingestion\Feed\Factory;
 
-use App\Service\Feed\Factory\FeedFactory;
+use App\Service\Ingestion\Feed\Factory\FeedFactory;
 use PHPUnit\Framework\TestCase;
 
 final class FeedFactoryTest extends TestCase

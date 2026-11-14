@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run\Factory;
+namespace App\Service\Curation\Recommendation\Run\Factory;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
-use App\Service\Ai\Exception\AiNotConfiguredException;
-use App\Service\Recommendation\Engine\RecommendationEngineResolver;
-use App\Service\Recommendation\Run\Model\TickDriver;
-use App\Service\Recommendation\Run\Pass\TickContext;
-use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
+use App\Service\Curation\Ai\Exception\AiNotConfiguredException;
+use App\Service\Curation\Recommendation\Engine\RecommendationEngineResolver;
+use App\Service\Curation\Recommendation\Run\Model\TickDriver;
+use App\Service\Curation\Recommendation\Run\Pass\TickContext;
+use App\Service\Curation\Recommendation\Settings\RecommendationSettingsResolver;
 
 /** What one tick reads about its account, its engine included, decided once before the tick does anything. */
 final readonly class TickContextFactory

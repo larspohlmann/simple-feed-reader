@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Factory;
+namespace App\Service\Operations\Backup\Factory;
 
 use App\Entity\User;
 use App\Repository\EntryBatchInserter;
@@ -10,10 +10,10 @@ use App\Repository\EntryRepository;
 use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\FeedRepository;
-use App\Service\Backup\Pass\RestoreDestination;
-use App\Service\Backup\Pass\RestoreEntryLoader;
-use App\Service\Backup\Pass\RestoreFeedTargets;
-use App\Service\Search\EntryIndexer;
+use App\Service\Operations\Backup\Pass\RestoreDestination;
+use App\Service\Operations\Backup\Pass\RestoreEntryLoader;
+use App\Service\Operations\Backup\Pass\RestoreFeedTargets;
+use App\Service\Library\Search\EntryIndexer;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**

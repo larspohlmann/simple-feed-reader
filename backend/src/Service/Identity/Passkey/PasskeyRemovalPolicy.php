@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Passkey;
+namespace App\Service\Identity\Passkey;
 
 use App\Entity\User;
 use App\Entity\UserPasskey;
-use App\Service\Passkey\Exception\LastSignInMethodException;
-use App\Service\Passkey\PasskeyCount\PasskeyCountInterface;
-use App\Service\Passkey\SignInIdentities\SignInIdentitiesInterface;
+use App\Service\Identity\Passkey\Exception\LastSignInMethodException;
+use App\Service\Identity\Passkey\PasskeyCount\PasskeyCountInterface;
+use App\Service\Identity\Passkey\SignInIdentities\SignInIdentitiesInterface;
 
 /**
  * Refuses to remove the last passkey of an account with neither a password hash nor a linked OAuth identity. Which

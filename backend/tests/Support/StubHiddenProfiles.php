@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Bluesky\Support\BlueskyActorKey;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\HiddenProfiles\HiddenProfilesInterface;
-use App\Service\Social\Model\HiddenProfileModel;
+use App\Service\Social\Bluesky\Support\BlueskyActorKey;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\HiddenProfiles\HiddenProfilesInterface;
+use App\Service\Social\Social\Model\HiddenProfileModel;
 
 /** Knows no hidden profile until a test hides one, so no test asks the public AppView. */
 final class StubHiddenProfiles implements HiddenProfilesInterface

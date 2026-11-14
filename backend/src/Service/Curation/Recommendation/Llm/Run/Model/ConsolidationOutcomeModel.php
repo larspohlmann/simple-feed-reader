@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Run\Model;
+namespace App\Service\Curation\Recommendation\Llm\Run\Model;
 
 /**
  * What a consolidation call settled to: the final list, or the unusable reply ConsolidationPhase retries and the

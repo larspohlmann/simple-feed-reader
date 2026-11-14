@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Profile;
+namespace App\Service\Curation\Recommendation\Profile;
 
 use App\Entity\ProfileRun;
 use App\Entity\User;
 use App\Enum\ProfileRunTrigger;
 use App\Repository\ProfileRunRepository;
-use App\Service\Recommendation\Run\Model\TickDriver;
+use App\Service\Curation\Recommendation\Run\Model\TickDriver;
 use Psr\Log\LoggerInterface;
 
 /** Scheduled profiles: start the due runs, and tick each active one, for the cron sweep, the worker and the drainer. */

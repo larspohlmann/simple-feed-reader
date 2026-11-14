@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Repository\RecommendationRunHistoryRepository;
-use App\Service\Recommendation\Feed\Model\HistoryMonthModel;
-use App\Service\Recommendation\Feed\Model\RunHistoryMonthPageModel;
-use App\Service\Recommendation\Feed\Model\RunHistoryOverviewModel;
+use App\Service\Curation\Recommendation\Feed\Model\HistoryMonthModel;
+use App\Service\Curation\Recommendation\Feed\Model\RunHistoryMonthPageModel;
+use App\Service\Curation\Recommendation\Feed\Model\RunHistoryOverviewModel;
 
 /**
  * The run history's overview card and month pages, fed with the repository's scalar rows, not runs, which carry the

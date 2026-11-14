@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Proxy;
+namespace App\Tests\Service\Outbound\Proxy;
 
 use App\Entity\ProxyConnection;
 use App\Entity\ProxyServerSettings;
 use App\Enum\ProxyType;
-use App\Service\Proxy\ConfiguredProxySource\StoredProxy;
-use App\Service\Proxy\Crypto\ProxyPasswordCipher;
-use App\Service\Proxy\Model\ProxyTestFailure;
-use App\Service\Proxy\ProxyConnectionTester;
+use App\Service\Outbound\Proxy\ConfiguredProxySource\StoredProxy;
+use App\Service\Outbound\Proxy\Crypto\ProxyPasswordCipher;
+use App\Service\Outbound\Proxy\Model\ProxyTestFailure;
+use App\Service\Outbound\Proxy\ProxyConnectionTester;
 use App\Tests\Support\ProxyPasswordCiphers;
 use App\Tests\Support\StoredProxies;
 use PHPUnit\Framework\TestCase;

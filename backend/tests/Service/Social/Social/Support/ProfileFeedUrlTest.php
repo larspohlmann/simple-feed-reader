@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Support;
+namespace App\Tests\Service\Social\Social\Support;
 
 use App\Enum\SocialNetwork;
-use App\Service\Social\Support\ProfileFeedUrl;
+use App\Service\Social\Social\Support\ProfileFeedUrl;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

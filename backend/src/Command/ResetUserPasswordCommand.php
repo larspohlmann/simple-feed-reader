@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Repository\UserRepository;
-use App\Service\Auth\PasswordResetter;
-use App\Service\Auth\Support\PasswordPolicy;
+use App\Service\Identity\Auth\PasswordResetter;
+use App\Service\Identity\Auth\Support\PasswordPolicy;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;

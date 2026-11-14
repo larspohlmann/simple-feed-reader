@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Share\PendingEmbed;
+namespace App\Service\Social\Share\PendingEmbed;
 
 use App\Entity\Entry;
 

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Support;
+namespace App\Tests\Service\Social\Social\Support;
 
 use App\Entity\Entry;
 use App\Entity\EntryAuthor;
 use App\Entity\Feed;
 use App\Enum\SocialNetwork;
-use App\Service\Social\Support\PostAuthor;
+use App\Service\Social\Social\Support\PostAuthor;
 use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

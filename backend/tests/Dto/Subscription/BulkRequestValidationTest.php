@@ -6,7 +6,7 @@ namespace App\Tests\Dto\Subscription;
 
 use App\Dto\Subscription\BulkUnsubscribeRequest;
 use App\Dto\Subscription\BulkUpdateSubscriptionsRequest;
-use App\Service\Subscription\SubscriptionService;
+use App\Service\Library\Subscription\SubscriptionService;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 

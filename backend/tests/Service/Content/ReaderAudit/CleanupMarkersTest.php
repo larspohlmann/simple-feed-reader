@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\ReaderAudit;
+namespace App\Tests\Service\Content\ReaderAudit;
 
-use App\Service\Reader\Model\ExtractionFailure;
-use App\Service\Reader\Model\ExtractionResultModel;
-use App\Service\ReaderAudit\CleanupMarkers;
-use App\Service\ReaderAudit\Model\ExtractedBodyModel;
-use App\Service\ReaderAudit\Model\SampledEntryModel;
+use App\Service\Content\Reader\Model\ExtractionFailure;
+use App\Service\Content\Reader\Model\ExtractionResultModel;
+use App\Service\Content\ReaderAudit\CleanupMarkers;
+use App\Service\Content\ReaderAudit\Model\ExtractedBodyModel;
+use App\Service\Content\ReaderAudit\Model\SampledEntryModel;
 use App\Tests\Support\AuditMarkers;
 use PHPUnit\Framework\TestCase;
 

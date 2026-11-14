@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\User;
-use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
+use App\Service\Content\Reader\ArticleExtractor\ArticleExtractorInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 

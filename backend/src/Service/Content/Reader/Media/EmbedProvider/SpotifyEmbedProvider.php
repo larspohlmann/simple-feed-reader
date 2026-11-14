@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\EmbedProvider;
+namespace App\Service\Content\Reader\Media\EmbedProvider;
 
-use App\Service\Reader\Media\Model\EmbedFrameModel;
-use App\Service\Reader\Media\Model\EmbedKind;
-use App\Service\Reader\Media\Model\EmbedShape;
-use App\Service\Reader\Media\Model\EmbedTargetModel;
+use App\Service\Content\Reader\Media\Model\EmbedFrameModel;
+use App\Service\Content\Reader\Media\Model\EmbedKind;
+use App\Service\Content\Reader\Media\Model\EmbedShape;
+use App\Service\Content\Reader\Media\Model\EmbedTargetModel;
 
 /**
  * The Spotify embed player. The content type and its base62 id are the whole payload, so the query (a `?si=` share

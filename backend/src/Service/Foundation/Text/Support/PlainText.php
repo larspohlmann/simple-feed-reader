@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Text\Support;
+namespace App\Service\Foundation\Text\Support;
 
 /**
  * Strips markup, decodes entities and collapses whitespace; null when nothing printable remains. The result is not

@@ -9,8 +9,8 @@ use App\Doctrine\SearchFoldFunction;
 use App\Doctrine\SearchFolding;
 use App\Doctrine\SearchIndexMatchFunction;
 use App\Doctrine\SearchIndexQuery;
-use App\Service\Search\Model\SearchTermsModel;
-use App\Service\Search\Support\LikePattern;
+use App\Service\Library\Search\Model\SearchTermsModel;
+use App\Service\Library\Search\Support\LikePattern;
 use Doctrine\ORM\QueryBuilder;
 
 /**

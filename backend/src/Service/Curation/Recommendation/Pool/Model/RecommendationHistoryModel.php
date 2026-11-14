@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Pool\Model;
+namespace App\Service\Curation\Recommendation\Pool\Model;
 
 /**
  * The weighted reading history in four sections. An entry appears in one only: favorites beat shared, shared

@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\OAuth;
+namespace App\Tests\Service\Identity\OAuth;
 
-use App\Service\OAuth\Exception\OAuthCallbackRefusedException;
-use App\Service\OAuth\Model\OAuthCallbackAttemptModel;
-use App\Service\OAuth\Model\OAuthCallbackFailure;
-use App\Service\OAuth\Model\OAuthIdentityModel;
-use App\Service\OAuth\Model\OAuthStartStateModel;
-use App\Service\OAuth\OAuthCallback;
-use App\Service\OAuth\OAuthProviderRegistry;
-use App\Service\OAuth\OAuthSignIn;
-use App\Service\OAuth\OAuthStateStore;
+use App\Service\Identity\OAuth\Exception\OAuthCallbackRefusedException;
+use App\Service\Identity\OAuth\Model\OAuthCallbackAttemptModel;
+use App\Service\Identity\OAuth\Model\OAuthCallbackFailure;
+use App\Service\Identity\OAuth\Model\OAuthIdentityModel;
+use App\Service\Identity\OAuth\Model\OAuthStartStateModel;
+use App\Service\Identity\OAuth\OAuthCallback;
+use App\Service\Identity\OAuth\OAuthProviderRegistry;
+use App\Service\Identity\OAuth\OAuthSignIn;
+use App\Service\Identity\OAuth\OAuthStateStore;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FakeOAuthProvider;
 use App\Tests\Support\RecordingLogger;

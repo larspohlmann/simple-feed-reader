@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Exception;
+namespace App\Service\Content\Reader\Exception;
 
-use App\Service\Reader\Model\ExtractionFailure;
+use App\Service\Content\Reader\Model\ExtractionFailure;
 
 final class ArticleNotExtractedException extends \RuntimeException
 {

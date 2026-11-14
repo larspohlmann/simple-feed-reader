@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Pass;
+namespace App\Service\Social\Social\Pass;
 
 use App\Entity\Subscription;
-use App\Service\Social\Model\RefusedFeedPositionModel;
-use App\Service\Social\Model\RefusedProfileSubscriptionModel;
+use App\Service\Social\Social\Model\RefusedFeedPositionModel;
+use App\Service\Social\Social\Model\RefusedProfileSubscriptionModel;
 
 /**
  * One switch run's pick of refused subscriptions, in keyset order from where the last run stopped: actors of unknown

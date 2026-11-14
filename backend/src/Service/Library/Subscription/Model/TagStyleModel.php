@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Subscription\Model;
+namespace App\Service\Library\Subscription\Model;
 
 /**
  * Colour and icon applied to a tag ONLY at the moment it is created. A tag the

@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh;
+namespace App\Service\Ingestion\Refresh;
 
 use App\Entity\Feed;
 use App\Repository\FeedRepository;
-use App\Service\Feed\FeedScheduler;
-use App\Service\Fetch\Exception\FeedGoneException;
-use App\Service\Fetch\Exception\FeedThrottledException;
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Fetch\Model\FetchResponseModel;
-use App\Service\Ingest\Pass\FeedIngestContext;
-use App\Service\Parser\Exception\FeedParseException;
-use App\Service\Refresh\Model\FeedOutcome;
-use App\Service\Refresh\Model\FeedRefreshResultModel;
-use App\Service\Refresh\Model\IncomingFeedModel;
-use App\Service\Social\Model\TimelinePageModel;
+use App\Service\Ingestion\Feed\FeedScheduler;
+use App\Service\Outbound\Fetch\Exception\FeedGoneException;
+use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
+use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
+use App\Service\Ingestion\Parser\Exception\FeedParseException;
+use App\Service\Ingestion\Refresh\Model\FeedOutcome;
+use App\Service\Ingestion\Refresh\Model\FeedRefreshResultModel;
+use App\Service\Ingestion\Refresh\Model\IncomingFeedModel;
+use App\Service\Social\Social\Model\TimelinePageModel;
 use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;

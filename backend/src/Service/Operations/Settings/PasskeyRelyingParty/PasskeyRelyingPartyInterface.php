@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Settings\PasskeyRelyingParty;
+namespace App\Service\Operations\Settings\PasskeyRelyingParty;
 
-use App\Service\Settings\RelyingPartyChangeGuard;
+use App\Service\Operations\Settings\RelyingPartyChangeGuard;
 
 /** id() is baked into each stored credential, so {@see RelyingPartyChangeGuard} guards a change; name() is cosmetic. */
 interface PasskeyRelyingPartyInterface

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Tag;
+namespace App\Service\Library\Tag;
 
 use App\Entity\InclusionChange;
 use App\Entity\Tag;
@@ -10,11 +10,11 @@ use App\Entity\User;
 use App\Repository\SubscriptionScopeRepository;
 use App\Repository\TagRepository;
 use App\Repository\TagTreeRepository;
-use App\Service\Tag\Exception\InvalidTagParentException;
-use App\Service\Tag\Exception\TagNameTakenException;
-use App\Service\Tag\Factory\TagFactory;
-use App\Service\Tag\Model\TagDetailsModel;
-use App\Service\Tag\Pass\TagTree;
+use App\Service\Library\Tag\Exception\InvalidTagParentException;
+use App\Service\Library\Tag\Exception\TagNameTakenException;
+use App\Service\Library\Tag\Factory\TagFactory;
+use App\Service\Library\Tag\Model\TagDetailsModel;
+use App\Service\Library\Tag\Pass\TagTree;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class TagEditor

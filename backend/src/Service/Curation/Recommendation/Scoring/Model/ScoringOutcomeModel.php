@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Scoring\Model;
+namespace App\Service\Curation\Recommendation\Scoring\Model;
 
-use App\Service\Ai\Exception\RetryableProviderException;
-use App\Service\Recommendation\Run\BatchCallOutcome\BatchCallOutcomeInterface;
+use App\Service\Curation\Ai\Exception\RetryableProviderException;
+use App\Service\Curation\Recommendation\Run\BatchCallOutcome\BatchCallOutcomeInterface;
 
 /** One request's result in a wave: the reply, or the failure it hit. Returned, not thrown, so siblings keep theirs. */
 final readonly class ScoringOutcomeModel implements BatchCallOutcomeInterface

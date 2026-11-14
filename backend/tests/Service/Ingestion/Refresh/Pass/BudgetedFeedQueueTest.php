@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Refresh\Pass;
+namespace App\Tests\Service\Ingestion\Refresh\Pass;
 
 use App\Entity\Feed;
 use App\Enum\SourceFormat;
-use App\Service\Refresh\Pass\BudgetedFeedQueue;
+use App\Service\Ingestion\Refresh\Pass\BudgetedFeedQueue;
 use App\Tests\Support\AssignsEntityIds;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Catalog\Factory;
+namespace App\Tests\Service\Sourcing\Catalog\Factory;
 
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
 use App\Repository\CatalogCategoryRepository;
 use App\Repository\CatalogFeedRepository;
-use App\Service\Catalog\Factory\CatalogFeedFactory;
-use App\Service\Catalog\Model\CatalogFeedDetailsModel;
+use App\Service\Sourcing\Catalog\Factory\CatalogFeedFactory;
+use App\Service\Sourcing\Catalog\Model\CatalogFeedDetailsModel;
 use App\Tests\DbTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 

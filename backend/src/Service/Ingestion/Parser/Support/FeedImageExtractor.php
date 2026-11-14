@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\Support;
+namespace App\Service\Ingestion\Parser\Support;
 
-use App\Service\Parser\Pass\CoreElement;
-use App\Service\Url\Support\HttpsImageUrl;
+use App\Service\Ingestion\Parser\Pass\CoreElement;
+use App\Service\Foundation\Url\Support\HttpsImageUrl;
 
 /**
  * The image a feed publishes for itself (its logo or banner), ready to persist and to put in an <img src>. Atom's

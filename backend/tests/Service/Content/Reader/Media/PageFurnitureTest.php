@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media;
+namespace App\Tests\Service\Content\Reader\Media;
 
-use App\Service\Reader\Media\PageFurniture;
+use App\Service\Content\Reader\Media\PageFurniture;
 use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 

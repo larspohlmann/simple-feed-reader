@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\Digest\DigestImageEmbedder;
+namespace App\Tests\Service\Outbound\Mail\Digest\DigestImageEmbedder;
 
-use App\Service\Image\Exception\GuardedImageUnavailableException;
-use App\Service\Image\Exception\ImageProcessingException;
-use App\Service\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
-use App\Service\Image\ImageResizer\ImageResizerInterface;
-use App\Service\Image\Model\DownloadedImageModel;
-use App\Service\Mail\Digest\DigestImageEmbedder\DigestImageEmbedder;
-use App\Service\Mail\Digest\Model\DigestEntryModel;
-use App\Service\Mail\Digest\Model\DigestImageSetModel;
-use App\Service\Mail\Digest\Model\DigestPageGroupModel;
-use App\Service\Mail\Digest\Model\DigestPageModel;
-use App\Service\Mail\Digest\Model\EmbeddedImageModel;
+use App\Service\Outbound\Image\Exception\GuardedImageUnavailableException;
+use App\Service\Outbound\Image\Exception\ImageProcessingException;
+use App\Service\Outbound\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
+use App\Service\Outbound\Image\ImageResizer\ImageResizerInterface;
+use App\Service\Outbound\Image\Model\DownloadedImageModel;
+use App\Service\Outbound\Mail\Digest\DigestImageEmbedder\DigestImageEmbedder;
+use App\Service\Outbound\Mail\Digest\Model\DigestEntryModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestImageSetModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestPageGroupModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestPageModel;
+use App\Service\Outbound\Mail\Digest\Model\EmbeddedImageModel;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;

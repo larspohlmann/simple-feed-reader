@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Maintenance\MaintenanceSweep;
+namespace App\Service\Operations\Maintenance\MaintenanceSweep;
 
-use App\Service\Social\Model\PrivateFeedSyncBudgetModel;
-use App\Service\Social\Model\PrivateFeedSyncReportModel;
-use App\Service\Social\PrivateFeedSyncSweep;
+use App\Service\Social\Social\Model\PrivateFeedSyncBudgetModel;
+use App\Service\Social\Social\Model\PrivateFeedSyncReportModel;
+use App\Service\Social\Social\PrivateFeedSyncSweep;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 

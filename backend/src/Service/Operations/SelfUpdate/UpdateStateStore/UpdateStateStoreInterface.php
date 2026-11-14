@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\SelfUpdate\UpdateStateStore;
+namespace App\Service\Operations\SelfUpdate\UpdateStateStore;
 
-use App\Service\SelfUpdate\Model\UpdateRequestModel;
-use App\Service\SelfUpdate\Model\UpdateRunModel;
+use App\Service\Operations\SelfUpdate\Model\UpdateRequestModel;
+use App\Service\Operations\SelfUpdate\Model\UpdateRunModel;
 
 interface UpdateStateStoreInterface
 {

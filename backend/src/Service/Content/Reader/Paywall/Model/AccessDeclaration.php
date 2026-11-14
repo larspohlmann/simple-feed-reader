@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Paywall\Model;
+namespace App\Service\Content\Reader\Paywall\Model;
 
 enum AccessDeclaration
 {

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Parser\Support;
+namespace App\Tests\Service\Ingestion\Parser\Support;
 
 use App\Entity\EntryChapter;
-use App\Service\Parser\Support\DeclaredChapters;
+use App\Service\Ingestion\Parser\Support\DeclaredChapters;
 use App\Tests\Support\FeedItemFixtures;
 use PHPUnit\Framework\TestCase;
 

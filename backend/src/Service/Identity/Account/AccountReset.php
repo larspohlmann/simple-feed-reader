@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Account;
+namespace App\Service\Identity\Account;
 
 use App\Entity\User;
 use App\Repository\AccountWipeRepository;

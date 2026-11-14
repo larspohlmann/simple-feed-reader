@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Comments\Model;
+namespace App\Service\Content\Comments\Model;
 
 /** A reply's public counts as its network reports them; Mastodon has no quotes. */
 final readonly class CommentCountsModel

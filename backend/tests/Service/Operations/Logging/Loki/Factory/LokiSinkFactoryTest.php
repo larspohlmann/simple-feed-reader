@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Logging\Loki\Factory;
+namespace App\Tests\Service\Operations\Logging\Loki\Factory;
 
-use App\Service\Logging\Loki\Factory\LokiSinkFactory;
-use App\Service\Logging\Loki\LokiClient;
-use App\Service\Logging\Loki\LokiSink\DirectLokiSink;
-use App\Service\Logging\Loki\LokiSink\SpoolLokiSink;
-use App\Service\Logging\Loki\Model\LokiDelivery;
+use App\Service\Operations\Logging\Loki\Factory\LokiSinkFactory;
+use App\Service\Operations\Logging\Loki\LokiClient;
+use App\Service\Operations\Logging\Loki\LokiSink\DirectLokiSink;
+use App\Service\Operations\Logging\Loki\LokiSink\SpoolLokiSink;
+use App\Service\Operations\Logging\Loki\Model\LokiDelivery;
 use App\Tests\Support\StubLokiEndpoint;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;

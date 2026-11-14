@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Model;
+namespace App\Tests\Service\Social\Social\Model;
 
 use App\Entity\SealedSecret;
 use App\Entity\SocialAccount;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
-use App\Service\Social\Exception\InvalidInstanceUrlException;
-use App\Service\Social\Exception\NotAnAppPasswordException;
-use App\Service\Social\Model\SocialCredentialsModel;
+use App\Service\Social\Social\Exception\InvalidInstanceUrlException;
+use App\Service\Social\Social\Exception\NotAnAppPasswordException;
+use App\Service\Social\Social\Model\SocialCredentialsModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

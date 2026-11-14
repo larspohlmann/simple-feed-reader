@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Enum\SourceFormat;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostRemovedException;
-use App\Service\Social\HomeServerCheck\HomeServerCheckInterface;
-use App\Service\Social\Model\SocialPostAddressModel;
-use App\Service\Social\Support\SocialPostAddress;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostRemovedException;
+use App\Service\Social\Social\HomeServerCheck\HomeServerCheckInterface;
+use App\Service\Social\Social\Model\SocialPostAddressModel;
+use App\Service\Social\Social\Support\SocialPostAddress;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 

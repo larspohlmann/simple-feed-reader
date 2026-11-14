@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Run;
+namespace App\Tests\Service\Curation\Recommendation\Run;
 
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationRun;
@@ -12,10 +12,10 @@ use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
 use App\Repository\RecommendationRunRepository;
 use App\Repository\RecommendationSettingsRepository;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Recommendation\Run\DueRecommendationRunFinder;
-use App\Service\Recommendation\Run\RecommendationRunStarter;
-use App\Service\Recommendation\Settings\RecommendationSettingsWriter;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Recommendation\Run\DueRecommendationRunFinder;
+use App\Service\Curation\Recommendation\Run\RecommendationRunStarter;
+use App\Service\Curation\Recommendation\Settings\RecommendationSettingsWriter;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\SeedsUsers;

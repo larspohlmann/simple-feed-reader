@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Http\OpmlJson;
-use App\Service\Opml\Model\OpmlImportResultModel;
+use App\Service\Library\Opml\Model\OpmlImportResultModel;
 use PHPUnit\Framework\TestCase;
 
 final class OpmlJsonTest extends TestCase

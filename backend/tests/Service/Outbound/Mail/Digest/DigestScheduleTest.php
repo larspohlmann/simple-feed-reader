@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\Digest;
+namespace App\Tests\Service\Outbound\Mail\Digest;
 
 use App\Entity\DigestSettings;
 use App\Enum\DigestCadence;
-use App\Service\Mail\Digest\DigestSchedule;
+use App\Service\Outbound\Mail\Digest\DigestSchedule;
 use App\Tests\Support\UnsavedUserSettings;
 use PHPUnit\Framework\TestCase;
 

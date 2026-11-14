@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Refresh;
+namespace App\Tests\Service\Ingestion\Refresh;
 
 use App\Entity\Entry;
 use App\Entity\ShareEnrichment;
@@ -12,12 +12,12 @@ use App\Enum\ShareEnrichmentKind;
 use App\Enum\ShareKind;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
-use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Fetch\DnsResolver\NativeDnsResolver;
-use App\Service\Refresh\Pass\RefreshPass;
-use App\Service\Refresh\RefreshPassRecorder;
-use App\Service\Social\Crypto\SocialCredentialCipher;
-use App\Service\Social\Model\PrivateFeedModel;
+use App\Service\Foundation\Crypto\InstanceSecretCipher;
+use App\Service\Outbound\Fetch\DnsResolver\NativeDnsResolver;
+use App\Service\Ingestion\Refresh\Pass\RefreshPass;
+use App\Service\Ingestion\Refresh\RefreshPassRecorder;
+use App\Service\Social\Social\Crypto\SocialCredentialCipher;
+use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\Bluesky;
 use App\Tests\Support\PostEnrichers;

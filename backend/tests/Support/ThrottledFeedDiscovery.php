@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Discovery\Exception\SiteThrottledException;
-use App\Service\Discovery\FeedDiscovery\FeedDiscoveryInterface;
-use App\Service\Discovery\Model\FeedDiscoveryResultModel;
-use App\Service\Discovery\Model\ScrapeFallback;
+use App\Service\Sourcing\Discovery\Exception\SiteThrottledException;
+use App\Service\Sourcing\Discovery\FeedDiscovery\FeedDiscoveryInterface;
+use App\Service\Sourcing\Discovery\Model\FeedDiscoveryResultModel;
+use App\Service\Sourcing\Discovery\Model\ScrapeFallback;
 
 final class ThrottledFeedDiscovery implements FeedDiscoveryInterface
 {

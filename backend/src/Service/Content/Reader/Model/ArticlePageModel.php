@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Model;
+namespace App\Service\Content\Reader\Model;
 
-use App\Service\Reader\Media\Model\ArticleMediaModel;
-use App\Service\Reader\Media\Teaser\Model\TeaserPlayerModel;
-use App\Service\Reader\Slideshow\Model\SlideshowModel;
+use App\Service\Content\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Content\Reader\Media\Teaser\Model\TeaserPlayerModel;
+use App\Service\Content\Reader\Slideshow\Model\SlideshowModel;
 use Dom\HTMLDocument;
 
 /** What the extractor reads off the fetched page before readability consumes the normalised document. */

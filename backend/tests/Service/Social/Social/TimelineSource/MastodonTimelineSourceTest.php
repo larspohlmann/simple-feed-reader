@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\TimelineSource;
+namespace App\Tests\Service\Social\Social\TimelineSource;
 
 use App\Entity\Feed;
 use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\Model\ApiResponseModel;
-use App\Service\Fetch\Model\ApiRequestModel;
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkThrottledException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Model\TimelinePageModel;
-use App\Service\Social\TimelineSource\MastodonTimelineSource;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\Model\ApiResponseModel;
+use App\Service\Outbound\Fetch\Model\ApiRequestModel;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Model\TimelinePageModel;
+use App\Service\Social\Social\TimelineSource\MastodonTimelineSource;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Subscription;
+namespace App\Tests\Service\Library\Subscription;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
@@ -10,13 +10,13 @@ use App\Entity\User;
 use App\Enum\SubscriptionSet;
 use App\Repository\FeedRepository;
 use App\Repository\SubscriptionRepository;
-use App\Service\Discovery\FeedDiscovery\FeedDiscoveryInterface;
-use App\Service\Discovery\ScrapeFallbackPolicy;
-use App\Service\Feed\OrphanedFeedReclaimer;
-use App\Service\SavedPosts\SavedPostRescue;
-use App\Service\Subscription\FirstFetchRecorder;
-use App\Service\Subscription\SubscriptionCreator;
-use App\Service\Subscription\SubscriptionService;
+use App\Service\Sourcing\Discovery\FeedDiscovery\FeedDiscoveryInterface;
+use App\Service\Sourcing\Discovery\ScrapeFallbackPolicy;
+use App\Service\Ingestion\Feed\OrphanedFeedReclaimer;
+use App\Service\Library\SavedPosts\SavedPostRescue;
+use App\Service\Library\Subscription\FirstFetchRecorder;
+use App\Service\Library\Subscription\SubscriptionCreator;
+use App\Service\Library\Subscription\SubscriptionService;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SeedsUsers;
 use Doctrine\ORM\EntityManagerInterface;

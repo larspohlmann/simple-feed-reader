@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Content\Reader;
 
-use App\Service\Html\Support\HtmlDocumentParser;
-use App\Service\Reader\Model\ExtractionFailure;
-use App\Service\Reader\Model\ExtractionResultModel;
-use App\Service\Text\Support\Whitespace;
+use App\Service\Foundation\Html\Support\HtmlDocumentParser;
+use App\Service\Content\Reader\Model\ExtractionFailure;
+use App\Service\Content\Reader\Model\ExtractionResultModel;
+use App\Service\Foundation\Text\Support\Whitespace;
 
 /**
  * Fails a confident-but-wrong extraction: when a substantial feed body and the extraction share almost no wording,

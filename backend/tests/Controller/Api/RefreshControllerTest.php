@@ -7,7 +7,7 @@ namespace App\Tests\Controller\Api;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
-use App\Service\Fetch\Model\FetchResponseModel;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\RefreshFetchers;

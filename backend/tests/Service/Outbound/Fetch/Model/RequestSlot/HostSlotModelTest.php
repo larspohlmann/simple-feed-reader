@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch\Model\RequestSlot;
+namespace App\Tests\Service\Outbound\Fetch\Model\RequestSlot;
 
-use App\Service\Fetch\Model\RequestSlot\HostSlotModel;
+use App\Service\Outbound\Fetch\Model\RequestSlot\HostSlotModel;
 use PHPUnit\Framework\TestCase;
 
 final class HostSlotModelTest extends TestCase

@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Transcript;
+namespace App\Tests\Service\Content\Transcript;
 
 use App\Entity\EntryTranscript;
-use App\Service\Transcript\Model\TranscriptBudgetModel;
-use App\Service\Transcript\Model\TranscriptSweepReportModel;
-use App\Service\Transcript\TranscriptSource\TranscriptSourceInterface;
-use App\Service\Transcript\TranscriptSweep;
+use App\Service\Content\Transcript\Model\TranscriptBudgetModel;
+use App\Service\Content\Transcript\Model\TranscriptSweepReportModel;
+use App\Service\Content\Transcript\TranscriptSource\TranscriptSourceInterface;
+use App\Service\Content\Transcript\TranscriptSweep;
 use App\Tests\DbTestCase;
-use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\ScriptedTranscriptSource;
 use App\Tests\Support\TranscriptFixtures;
 use App\Tests\Support\TranscriptSearchFixtures;

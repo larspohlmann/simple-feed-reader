@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\CandidateSource;
+namespace App\Service\Social\Social\CandidateSource;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Fetch\Model\ApiResponseModel;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\MastodonApiClient;
-use App\Service\Social\Model\CollectedItemsModel;
-use App\Service\Social\Model\FollowedAccountModel;
-use App\Service\Social\Model\MastodonSessionModel;
-use App\Service\Social\Model\NetworkCandidatesModel;
-use App\Service\Social\Model\NetworkCollectionsModel;
-use App\Service\Social\Model\SocialCollectionModel;
-use App\Service\Social\StoredCredential;
-use App\Service\Social\Support\LinkHeader;
-use App\Service\Social\Support\MastodonAccount;
-use App\Service\Social\Support\MastodonFollowedTag;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Outbound\Fetch\Model\ApiResponseModel;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\MastodonApiClient;
+use App\Service\Social\Social\Model\CollectedItemsModel;
+use App\Service\Social\Social\Model\FollowedAccountModel;
+use App\Service\Social\Social\Model\MastodonSessionModel;
+use App\Service\Social\Social\Model\NetworkCandidatesModel;
+use App\Service\Social\Social\Model\NetworkCollectionsModel;
+use App\Service\Social\Social\Model\SocialCollectionModel;
+use App\Service\Social\Social\StoredCredential;
+use App\Service\Social\Social\Support\LinkHeader;
+use App\Service\Social\Social\Support\MastodonAccount;
+use App\Service\Social\Social\Support\MastodonFollowedTag;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 use Symfony\Component\HttpFoundation\Response;
 

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh;
+namespace App\Service\Ingestion\Refresh;
 
 use App\Entity\Feed;
-use App\Service\Fetch\FaviconResolver\FaviconResolverInterface;
+use App\Service\Outbound\Fetch\FaviconResolver\FaviconResolverInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
 /** Looks up a favicon for each given feed that has none yet, fetching every homepage in one concurrent batch. */

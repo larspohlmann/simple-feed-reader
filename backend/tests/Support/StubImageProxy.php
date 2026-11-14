@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Image\ImageProxy\ImageProxyInterface;
-use App\Service\Image\Model\ProxiedImageModel;
+use App\Service\Outbound\Image\ImageProxy\ImageProxyInterface;
+use App\Service\Outbound\Image\Model\ProxiedImageModel;
 
 final class StubImageProxy implements ImageProxyInterface
 {

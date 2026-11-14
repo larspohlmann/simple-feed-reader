@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Factory;
+namespace App\Service\Operations\Backup\Factory;
 
 use App\Repository\EntryRepository;
 use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\LinkCardRepository;
 use App\Repository\SavedEntryOriginRepository;
-use App\Service\Backup\Model\BackupProvenanceModel;
-use App\Service\Backup\Pass\BackupPartWalk;
+use App\Service\Operations\Backup\Model\BackupProvenanceModel;
+use App\Service\Operations\Backup\Pass\BackupPartWalk;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class BackupPartWalkFactory

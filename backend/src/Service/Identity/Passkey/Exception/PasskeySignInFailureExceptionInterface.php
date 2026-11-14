@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Passkey\Exception;
+namespace App\Service\Identity\Passkey\Exception;
 
 /**
  * A reason AssertionVerifier::verify() refuses a login. PasskeyAuthenticator catches this marker and turns each

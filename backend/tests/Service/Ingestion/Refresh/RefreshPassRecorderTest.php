@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Refresh;
+namespace App\Tests\Service\Ingestion\Refresh;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
@@ -10,20 +10,20 @@ use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Fetch\Model\FetchResponseModel;
-use App\Service\Refresh\Pass\RefreshPass;
-use App\Service\Refresh\RefreshPassRecorder;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Model\PrivateFeedModel;
-use App\Service\Social\Model\TimelineOutcome\AccountPausedTimelineModel;
-use App\Service\Social\Model\TimelineOutcome\AccountThrottledTimelineModel;
-use App\Service\Social\Model\TimelineOutcome\FailedTimelineModel;
-use App\Service\Social\Model\TimelineOutcome\FetchedTimelineModel;
-use App\Service\Social\Model\TimelineOutcome\ThrottledTimelineModel;
-use App\Service\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
-use App\Service\Social\Model\TimelinePageModel;
-use App\Service\Social\Support\MastodonTimelinePage;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
+use App\Service\Ingestion\Refresh\Pass\RefreshPass;
+use App\Service\Ingestion\Refresh\RefreshPassRecorder;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Model\PrivateFeedModel;
+use App\Service\Social\Social\Model\TimelineOutcome\AccountPausedTimelineModel;
+use App\Service\Social\Social\Model\TimelineOutcome\AccountThrottledTimelineModel;
+use App\Service\Social\Social\Model\TimelineOutcome\FailedTimelineModel;
+use App\Service\Social\Social\Model\TimelineOutcome\FetchedTimelineModel;
+use App\Service\Social\Social\Model\TimelineOutcome\ThrottledTimelineModel;
+use App\Service\Social\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
+use App\Service\Social\Social\Model\TimelinePageModel;
+use App\Service\Social\Social\Support\MastodonTimelinePage;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FeedOutcomePersisters;
 use App\Tests\Support\PrivateFeedsWiring;

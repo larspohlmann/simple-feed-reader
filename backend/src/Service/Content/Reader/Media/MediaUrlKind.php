@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media;
+namespace App\Service\Content\Reader\Media;
 
-use App\Service\Reader\Media\Model\MediaKind;
-use App\Service\Reader\Media\Model\ResolvedMediaUrlModel;
+use App\Service\Content\Reader\Media\Model\MediaKind;
+use App\Service\Content\Reader\Media\Model\ResolvedMediaUrlModel;
 
 /**
  * What a URL is and the durable form to emit for it; every source asks this rather than judging media URLs itself.

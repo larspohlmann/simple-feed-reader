@@ -6,8 +6,8 @@ namespace App\Http;
 
 use App\Entity\LinkCardContent;
 use App\Entity\SocialAccount;
-use App\Service\Social\Model\ComposerContextModel;
-use App\Service\Social\Model\PostPreviewModel;
+use App\Service\Social\Social\Model\ComposerContextModel;
+use App\Service\Social\Social\Model\PostPreviewModel;
 
 /**
  * @phpstan-import-type LinkCardFields from LinkCardJson

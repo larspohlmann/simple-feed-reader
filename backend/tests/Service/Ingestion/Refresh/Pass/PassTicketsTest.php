@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Refresh\Pass;
+namespace App\Tests\Service\Ingestion\Refresh\Pass;
 
 use App\Entity\Feed;
 use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Refresh\Model\PassOutcome\FeedPassOutcomeModel;
-use App\Service\Refresh\Model\PassOutcome\TimelinePassOutcomeModel;
-use App\Service\Refresh\Pass\PassLane\FeedLane;
-use App\Service\Refresh\Pass\PassLane\TimelineLane;
-use App\Service\Refresh\Pass\PassTickets;
-use App\Service\Refresh\Pass\RefreshPass;
-use App\Service\Social\Exception\PrivateFeedOrphanedException;
-use App\Service\Social\Model\TimelineOutcome\AccountPausedTimelineModel;
-use App\Service\Social\Model\TimelineOutcome\FailedTimelineModel;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Ingestion\Refresh\Model\PassOutcome\FeedPassOutcomeModel;
+use App\Service\Ingestion\Refresh\Model\PassOutcome\TimelinePassOutcomeModel;
+use App\Service\Ingestion\Refresh\Pass\PassLane\FeedLane;
+use App\Service\Ingestion\Refresh\Pass\PassLane\TimelineLane;
+use App\Service\Ingestion\Refresh\Pass\PassTickets;
+use App\Service\Ingestion\Refresh\Pass\RefreshPass;
+use App\Service\Social\Social\Exception\PrivateFeedOrphanedException;
+use App\Service\Social\Social\Model\TimelineOutcome\AccountPausedTimelineModel;
+use App\Service\Social\Social\Model\TimelineOutcome\FailedTimelineModel;
 use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\PrivateFeeds;
 use App\Tests\Support\SocialApiWiring;

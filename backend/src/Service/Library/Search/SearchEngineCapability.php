@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search;
+namespace App\Service\Library\Search;
 
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 

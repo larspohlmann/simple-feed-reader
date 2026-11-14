@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Content\Reader;
 
 use App\Entity\Entry;
-use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
-use App\Service\Reader\Model\EntryHintsModel;
-use App\Service\Reader\Model\ExtractionFailure;
-use App\Service\Reader\Model\ExtractionResultModel;
-use App\Service\Reader\Model\FeedMediaModel;
+use App\Service\Content\Reader\ArticleExtractor\ArticleExtractorInterface;
+use App\Service\Content\Reader\Model\EntryHintsModel;
+use App\Service\Content\Reader\Model\ExtractionFailure;
+use App\Service\Content\Reader\Model\ExtractionResultModel;
+use App\Service\Content\Reader\Model\FeedMediaModel;
 
 final readonly class EntryArticleReader
 {

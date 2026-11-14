@@ -2,32 +2,32 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader;
+namespace App\Tests\Service\Content\Reader;
 
-use App\Service\Reader\ArticleExtractor\ArticleExtractor;
-use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
-use App\Service\Reader\ArticleExtractor\PlayerPageExtractor;
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\AudioPlayerNormalizer;
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\AuthorBioSeparator;
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\DuplicateBlockCollapser;
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\EdgeBoilerplateTrimmer;
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\FeedDimensionStamper;
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\InBodyEmbedRewriter;
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\LeadingEngagementCleaner;
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\LeadingTitleRemover;
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\LegalLinkListRemover;
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\MediaOnlyLede;
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\NavigationChromeTrimmer;
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\PageMediaPlacement;
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\PastedTextBreakRestorer;
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\PlayerChromeCleaner;
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\RecipeFactsCleaner;
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\SlideshowInserter;
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\SubstackPosterLink;
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\TeaserPlayerInserter;
-use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
-use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\ReaderBodyCleaner;
+use App\Service\Content\Reader\ArticleExtractor\ArticleExtractor;
+use App\Service\Content\Reader\ArticleExtractor\ArticleExtractorInterface;
+use App\Service\Content\Reader\ArticleExtractor\PlayerPageExtractor;
+use App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\AudioPlayerNormalizer;
+use App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\AuthorBioSeparator;
+use App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\DuplicateBlockCollapser;
+use App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\EdgeBoilerplateTrimmer;
+use App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\FeedDimensionStamper;
+use App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\InBodyEmbedRewriter;
+use App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\LeadingEngagementCleaner;
+use App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\LeadingTitleRemover;
+use App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\LegalLinkListRemover;
+use App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\MediaOnlyLede;
+use App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\NavigationChromeTrimmer;
+use App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\PageMediaPlacement;
+use App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\PastedTextBreakRestorer;
+use App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\PlayerChromeCleaner;
+use App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\RecipeFactsCleaner;
+use App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\SlideshowInserter;
+use App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\SubstackPosterLink;
+use App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\TeaserPlayerInserter;
+use App\Service\Content\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
+use App\Service\Content\Reader\Media\EmbedProviders;
+use App\Service\Content\Reader\ReaderBodyCleaner;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class ReaderBodyCleanerWiringTest extends KernelTestCase

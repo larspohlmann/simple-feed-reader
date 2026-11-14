@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Scoring\ScoringProtocol;
+namespace App\Service\Curation\Recommendation\Scoring\ScoringProtocol;
 
-use App\Service\Ai\Model\ProviderCredentialsModel;
-use App\Service\Recommendation\Pool\Model\ArticleLineModel;
-use App\Service\Recommendation\Scoring\Model\ScoringBudgetModel;
-use App\Service\Recommendation\Scoring\Model\ScoringOutcomeModel;
-use App\Service\Recommendation\Scoring\Model\ScoringRequestModel;
+use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
+use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringBudgetModel;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringOutcomeModel;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringRequestModel;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Run;
+namespace App\Tests\Service\Curation\Recommendation\Run;
 
 use App\Entity\Exception\UnpersistedEntityException;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
-use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
-use App\Service\Recommendation\Run\RecommendationTickCheckpoint;
+use App\Service\Curation\Recommendation\Exception\RecommendationRunCancelledException;
+use App\Service\Curation\Recommendation\Run\RecommendationTickCheckpoint;
 use App\Tests\DbTestCase;
 
 final class RecommendationTickCheckpointTest extends DbTestCase

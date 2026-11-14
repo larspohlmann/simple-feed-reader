@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\ReaderAudit\Pass;
+namespace App\Service\Content\ReaderAudit\Pass;
 
-use App\Service\ReaderAudit\Model\AuditFindingModel;
-use App\Service\ReaderAudit\Model\AuditFindingsModel;
-use App\Service\ReaderAudit\Model\CleanupMarkerModel;
-use App\Service\Text\Support\HtmlEscape;
+use App\Service\Content\ReaderAudit\Model\AuditFindingModel;
+use App\Service\Content\ReaderAudit\Model\AuditFindingsModel;
+use App\Service\Content\ReaderAudit\Model\CleanupMarkerModel;
+use App\Service\Foundation\Text\Support\HtmlEscape;
 
 /**
  * Renders the audit as one self-contained HTML page: the ranked candidates linked into the running SPA, the feeds

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Pass;
+namespace App\Tests\Service\Social\Social\Pass;
 
 use App\Entity\Headline;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Social\Model\PlacedSelfReplyModel;
-use App\Service\Social\Model\TimelineSelfReplyModel;
-use App\Service\Social\Pass\SelfThreadPlacement;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Social\Social\Model\PlacedSelfReplyModel;
+use App\Service\Social\Social\Model\TimelineSelfReplyModel;
+use App\Service\Social\Social\Pass\SelfThreadPlacement;
 use PHPUnit\Framework\TestCase;
 
 final class SelfThreadPlacementTest extends TestCase

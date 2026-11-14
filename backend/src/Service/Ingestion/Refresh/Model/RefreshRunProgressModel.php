@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh\Model;
+namespace App\Service\Ingestion\Refresh\Model;
 
 /**
  * How far a refresh run has got across its slices. After any slice, `handled + remaining` is the number of feeds due

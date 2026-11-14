@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Feed;
+namespace App\Service\Ingestion\Feed;
 
 use App\Repository\OrphanedFeedRepository;
 

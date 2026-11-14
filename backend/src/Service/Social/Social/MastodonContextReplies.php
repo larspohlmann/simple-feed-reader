@@ -2,26 +2,26 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Comments\Exception\CommentsUnavailableException;
-use App\Service\Comments\Model\CommentAuthorModel;
-use App\Service\Comments\Model\CommentEmbedsModel;
-use App\Service\Comments\Model\EntryCommentModel;
-use App\Service\Parser\Support\DateParser;
-use App\Service\Sanitize\EntrySanitizer;
-use App\Service\Social\Pass\MastodonReplyThread;
-use App\Service\Social\Pass\ReplyNode;
-use App\Service\Social\Support\CommentPost;
-use App\Service\Social\Support\MastodonAttachments;
-use App\Service\Social\Support\MastodonAuthor;
-use App\Service\Social\Support\MastodonCard;
-use App\Service\Social\Support\MastodonQuotedStatus;
-use App\Service\Social\Support\MastodonStatusAddress;
-use App\Service\Social\Support\MastodonStatusUrl;
-use App\Service\Social\Support\PostCounts;
-use App\Service\Text\Support\HtmlEscape;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Content\Comments\Exception\CommentsUnavailableException;
+use App\Service\Content\Comments\Model\CommentAuthorModel;
+use App\Service\Content\Comments\Model\CommentEmbedsModel;
+use App\Service\Content\Comments\Model\EntryCommentModel;
+use App\Service\Ingestion\Parser\Support\DateParser;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Social\Social\Pass\MastodonReplyThread;
+use App\Service\Social\Social\Pass\ReplyNode;
+use App\Service\Social\Social\Support\CommentPost;
+use App\Service\Social\Social\Support\MastodonAttachments;
+use App\Service\Social\Social\Support\MastodonAuthor;
+use App\Service\Social\Social\Support\MastodonCard;
+use App\Service\Social\Social\Support\MastodonQuotedStatus;
+use App\Service\Social\Social\Support\MastodonStatusAddress;
+use App\Service\Social\Social\Support\MastodonStatusUrl;
+use App\Service\Social\Social\Support\PostCounts;
+use App\Service\Foundation\Text\Support\HtmlEscape;
 
 final readonly class MastodonContextReplies
 {

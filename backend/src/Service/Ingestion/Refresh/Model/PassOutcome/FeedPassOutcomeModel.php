@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh\Model\PassOutcome;
+namespace App\Service\Ingestion\Refresh\Model\PassOutcome;
 
 use App\Entity\Feed;
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Refresh\Model\FeedRefreshResultModel;
-use App\Service\Refresh\Pass\PassOutcomeStore;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Ingestion\Refresh\Model\FeedRefreshResultModel;
+use App\Service\Ingestion\Refresh\Pass\PassOutcomeStore;
 
 /** An RSS or Atom feed's raw fetch outcome. */
 final readonly class FeedPassOutcomeModel implements PassOutcomeModelInterface

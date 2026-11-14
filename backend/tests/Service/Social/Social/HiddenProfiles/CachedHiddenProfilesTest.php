@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\HiddenProfiles;
+namespace App\Tests\Service\Social\Social\HiddenProfiles;
 
-use App\Service\Bluesky\AppViewClient;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\HiddenProfiles\CachedHiddenProfiles;
-use App\Service\Social\Model\HiddenProfileModel;
-use App\Service\Social\ProfileVisibilityCache;
+use App\Service\Social\Bluesky\AppViewClient;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\HiddenProfiles\CachedHiddenProfiles;
+use App\Service\Social\Social\Model\HiddenProfileModel;
+use App\Service\Social\Social\ProfileVisibilityCache;
 use App\Tests\Support\BlueskyProfiles;
 use App\Tests\Support\StubHiddenProfiles;
 use PHPUnit\Framework\TestCase;

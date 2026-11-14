@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Chapter\ChapterFileSource;
+namespace App\Service\Content\Chapter\ChapterFileSource;
 
-use App\Service\Chapter\Exception\ChapterFileUnreachableException;
-use App\Service\Chapter\Support\JsonChapters;
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\Exception\ResponseTooLargeException;
-use App\Service\Fetch\Exception\SsrfBlockedException;
-use App\Service\Fetch\GuardedApiClient;
-use App\Service\Fetch\Model\ApiBudgetModel;
-use App\Service\Fetch\Model\ApiRequestModel;
-use App\Service\Fetch\Model\ResponseSizeLimit;
+use App\Service\Content\Chapter\Exception\ChapterFileUnreachableException;
+use App\Service\Content\Chapter\Support\JsonChapters;
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Outbound\Fetch\Exception\SsrfBlockedException;
+use App\Service\Outbound\Fetch\GuardedApiClient;
+use App\Service\Outbound\Fetch\Model\ApiBudgetModel;
+use App\Service\Outbound\Fetch\Model\ApiRequestModel;
+use App\Service\Outbound\Fetch\Model\ResponseSizeLimit;
 
 /** Runs inside the entry request, so its budget is short. */
 final readonly class GuardedChapterFileSource implements ChapterFileSourceInterface

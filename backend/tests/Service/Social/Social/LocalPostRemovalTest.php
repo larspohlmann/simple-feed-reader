@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Entity\EntryGuid;
@@ -12,14 +12,14 @@ use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\PostRemovalRepository;
 use App\Repository\RowIds;
-use App\Service\SavedPosts\Support\SavedFeedUrl;
-use App\Service\Social\DeletedPostTombstones;
-use App\Service\Social\LocalPostRemoval;
-use App\Service\Social\Model\SocialCountsModel;
-use App\Service\Social\Model\SocialPostAddressModel;
-use App\Service\Social\SocialCountsCache;
+use App\Service\Library\SavedPosts\Support\SavedFeedUrl;
+use App\Service\Social\Social\DeletedPostTombstones;
+use App\Service\Social\Social\LocalPostRemoval;
+use App\Service\Social\Social\Model\SocialCountsModel;
+use App\Service\Social\Social\Model\SocialPostAddressModel;
+use App\Service\Social\Social\SocialCountsCache;
 use App\Tests\DbTestCase;
-use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\SeedsUsers;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;

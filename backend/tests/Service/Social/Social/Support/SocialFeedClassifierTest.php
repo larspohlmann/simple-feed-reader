@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Support;
+namespace App\Tests\Service\Social\Social\Support;
 
 use App\Entity\Feed;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
-use App\Service\Social\Support\SocialFeedClassifier;
+use App\Service\Social\Social\Support\SocialFeedClassifier;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

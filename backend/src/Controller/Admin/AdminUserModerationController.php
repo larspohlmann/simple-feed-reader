@@ -6,9 +6,9 @@ namespace App\Controller\Admin;
 
 use App\Entity\User;
 use App\Repository\UserRepository;
-use App\Service\Account\AccountDeleter;
-use App\Service\Admin\UserStatusChanger;
-use App\Service\Auth\PasswordResetter;
+use App\Service\Identity\Account\AccountDeleter;
+use App\Service\Operations\Admin\UserStatusChanger;
+use App\Service\Identity\Auth\PasswordResetter;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;

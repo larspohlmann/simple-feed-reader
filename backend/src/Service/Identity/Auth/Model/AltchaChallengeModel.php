@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Auth\Model;
+namespace App\Service\Identity\Auth\Model;
 
 final readonly class AltchaChallengeModel
 {

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\SubscriptionHistory\Pass;
+namespace App\Service\Library\SubscriptionHistory\Pass;
 
-use App\Service\SubscriptionHistory\Model\DayCountModel;
-use App\Service\SubscriptionHistory\Model\DayCountsModel;
+use App\Service\Library\SubscriptionHistory\Model\DayCountModel;
+use App\Service\Library\SubscriptionHistory\Model\DayCountsModel;
 
 final class DayTally
 {

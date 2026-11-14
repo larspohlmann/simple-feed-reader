@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\NetworkVerifier;
+namespace App\Service\Social\Social\NetworkVerifier;
 
 use App\Enum\SocialNetwork;
-use App\Service\Social\BlueskyIdentityResolver;
-use App\Service\Social\BlueskySessionOpener;
-use App\Service\Social\Model\SocialCredentialsModel;
-use App\Service\Social\Model\VerifiedAccountModel;
+use App\Service\Social\Social\BlueskyIdentityResolver;
+use App\Service\Social\Social\BlueskySessionOpener;
+use App\Service\Social\Social\Model\SocialCredentialsModel;
+use App\Service\Social\Social\Model\VerifiedAccountModel;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Bluesky->value)]

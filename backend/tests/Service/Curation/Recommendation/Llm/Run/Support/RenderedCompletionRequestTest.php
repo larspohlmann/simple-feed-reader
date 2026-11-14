@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Llm\Run\Support;
+namespace App\Tests\Service\Curation\Recommendation\Llm\Run\Support;
 
 use App\Enum\TokenLimitParameter;
-use App\Service\Recommendation\Llm\Completion\Model\CompletionRequestModel;
-use App\Service\Recommendation\Llm\Completion\Model\JsonSchemaModel;
-use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
-use App\Service\Recommendation\Llm\Run\Support\RenderedCompletionRequest;
+use App\Service\Curation\Recommendation\Llm\Completion\Model\CompletionRequestModel;
+use App\Service\Curation\Recommendation\Llm\Completion\Model\JsonSchemaModel;
+use App\Service\Curation\Recommendation\Llm\Completion\Model\Reasoning;
+use App\Service\Curation\Recommendation\Llm\Run\Support\RenderedCompletionRequest;
 use PHPUnit\Framework\TestCase;
 
 final class RenderedCompletionRequestTest extends TestCase

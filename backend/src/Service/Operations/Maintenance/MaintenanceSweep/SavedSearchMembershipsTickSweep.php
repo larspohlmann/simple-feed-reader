@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Maintenance\MaintenanceSweep;
+namespace App\Service\Operations\Maintenance\MaintenanceSweep;
 
-use App\Service\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
-use App\Service\Search\Membership\Model\SweepBudgetModel;
-use App\Service\Search\Membership\SavedSearchMembershipSweep;
+use App\Service\Library\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
+use App\Service\Library\Search\Membership\Model\SweepBudgetModel;
+use App\Service\Library\Search\Membership\SavedSearchMembershipSweep;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 

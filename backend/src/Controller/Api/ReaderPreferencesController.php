@@ -10,7 +10,7 @@ use App\Dto\Me\UpdateSharingRequest;
 use App\Entity\User;
 use App\Http\MeProfileJson;
 use App\Http\PartialPatchPayload;
-use App\Service\Account\AccountPreferencesWriter;
+use App\Service\Identity\Account\AccountPreferencesWriter;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search\Membership\SavedSearchMatcher;
+namespace App\Service\Library\Search\Membership\SavedSearchMatcher;
 
-use App\Service\Search\Exception\SearchEngineUnavailableException;
-use App\Service\Search\Model\SavedSearchTermModel;
+use App\Service\Library\Search\Exception\SearchEngineUnavailableException;
+use App\Service\Library\Search\Model\SavedSearchTermModel;
 
 /**
  * Which of a handful of candidate entries each saved search matches — the one

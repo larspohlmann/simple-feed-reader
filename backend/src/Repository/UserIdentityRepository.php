@@ -6,7 +6,7 @@ namespace App\Repository;
 
 use App\Entity\User;
 use App\Entity\UserIdentity;
-use App\Service\Passkey\SignInIdentities\SignInIdentitiesInterface;
+use App\Service\Identity\Passkey\SignInIdentities\SignInIdentitiesInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 

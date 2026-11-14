@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\ReaderAudit\Support;
+namespace App\Service\Content\ReaderAudit\Support;
 
-use App\Service\ReaderAudit\Exception\UnexpectedDatabaseValueException;
+use App\Service\Content\ReaderAudit\Exception\UnexpectedDatabaseValueException;
 
 /**
  * Reads one column of a DBAL row as the type the schema promises, so a renamed column fails on the first row

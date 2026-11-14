@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Catalog\Pass;
+namespace App\Tests\Service\Sourcing\Catalog\Pass;
 
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
-use App\Service\Catalog\Model\CatalogDocumentCategoryModel;
-use App\Service\Catalog\Model\CatalogDocumentFeedModel;
-use App\Service\Catalog\Model\ParsedCatalogModel;
-use App\Service\Catalog\Pass\CatalogImportPass;
+use App\Service\Sourcing\Catalog\Model\CatalogDocumentCategoryModel;
+use App\Service\Sourcing\Catalog\Model\CatalogDocumentFeedModel;
+use App\Service\Sourcing\Catalog\Model\ParsedCatalogModel;
+use App\Service\Sourcing\Catalog\Pass\CatalogImportPass;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 

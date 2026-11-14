@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Auth\Factory;
+namespace App\Service\Identity\Auth\Factory;
 
 use App\Entity\User;
 use App\Enum\SupportedLocale;
 use App\Enum\UserStatus;
-use App\Service\Auth\RegistrationPolicy;
+use App\Service\Identity\Auth\RegistrationPolicy;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 

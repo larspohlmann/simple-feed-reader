@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\Support;
+namespace App\Service\Outbound\Fetch\Support;
 
 /** The charset label a Content-Type header carries, or null when it names none. */
 final class ContentTypeCharset

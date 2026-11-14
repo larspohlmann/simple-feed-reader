@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Opml;
+namespace App\Tests\Service\Library\Opml;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SourceFormat;
-use App\Service\Opml\OpmlExporter;
-use App\Service\Social\Model\PrivateFeedModel;
+use App\Service\Library\Opml\OpmlExporter;
+use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BlueskyProfiles;
 use App\Tests\Support\SocialAccounts;

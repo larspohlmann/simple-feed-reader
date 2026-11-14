@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\SavedPosts;
+namespace App\Tests\Service\Library\SavedPosts;
 
 use App\Entity\BackedUpReadMark;
 use App\Entity\Entry;
@@ -21,13 +21,13 @@ use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\SavedPostRepository;
 use App\Repository\SavedEntryOriginRepository;
-use App\Service\SavedPosts\SavedFeeds;
-use App\Service\SavedPosts\SavedPostRescue;
-use App\Service\SavedPosts\SavedStateMover;
-use App\Service\SavedPosts\Support\SavedFeedUrl;
-use App\Service\Subscription\SubscriptionService;
+use App\Service\Library\SavedPosts\SavedFeeds;
+use App\Service\Library\SavedPosts\SavedPostRescue;
+use App\Service\Library\SavedPosts\SavedStateMover;
+use App\Service\Library\SavedPosts\Support\SavedFeedUrl;
+use App\Service\Library\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
-use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\EntryShareFixtures;
 use App\Tests\Support\SavedPostFixtures;

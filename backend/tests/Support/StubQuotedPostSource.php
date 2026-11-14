@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\QuotedPostContent;
-use App\Service\LinkCard\Exception\QuotedPostUnavailableException;
-use App\Service\LinkCard\QuotedPostSource\QuotedPostSourceInterface;
+use App\Service\Content\LinkCard\Exception\QuotedPostUnavailableException;
+use App\Service\Content\LinkCard\QuotedPostSource\QuotedPostSourceInterface;
 
 final class StubQuotedPostSource implements QuotedPostSourceInterface
 {

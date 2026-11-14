@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Worker\Handler;
+namespace App\Service\Operations\Worker\Handler;
 
-use App\Service\Social\Model\ProfileCallBudgetModel;
-use App\Service\Social\ProfileImageSweep;
-use App\Service\Worker\Message\RefreshProfileImages;
+use App\Service\Social\Social\Model\ProfileCallBudgetModel;
+use App\Service\Social\Social\ProfileImageSweep;
+use App\Service\Operations\Worker\Message\RefreshProfileImages;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 

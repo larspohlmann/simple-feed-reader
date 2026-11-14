@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Content\Reader;
 
-use App\Service\Html\Exception\UnparseableHtmlException;
-use App\Service\Html\Support\HtmlDocumentParser;
-use App\Service\Reader\PageRepair\PageRepairInterface;
+use App\Service\Foundation\Html\Exception\UnparseableHtmlException;
+use App\Service\Foundation\Html\Support\HtmlDocumentParser;
+use App\Service\Content\Reader\PageRepair\PageRepairInterface;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Dom\Text;

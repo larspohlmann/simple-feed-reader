@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\SubscriptionHistory\Pass;
+namespace App\Service\Library\SubscriptionHistory\Pass;
 
-use App\Service\SubscriptionHistory\Model\DayCountModel;
-use App\Service\SubscriptionHistory\Model\DayCountsModel;
-use App\Service\SubscriptionHistory\Model\RetentionHorizonModel;
-use App\Service\SubscriptionHistory\Model\TrackedSubscriptionModel;
+use App\Service\Library\SubscriptionHistory\Model\DayCountModel;
+use App\Service\Library\SubscriptionHistory\Model\DayCountsModel;
+use App\Service\Library\SubscriptionHistory\Model\RetentionHorizonModel;
+use App\Service\Library\SubscriptionHistory\Model\TrackedSubscriptionModel;
 
 /** Where a subscription's day comes from: its stored row, a live count while the entries last, or nowhere. */
 final readonly class DaySources

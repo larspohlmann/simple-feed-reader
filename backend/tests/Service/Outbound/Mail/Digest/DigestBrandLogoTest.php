@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\Digest;
+namespace App\Tests\Service\Outbound\Mail\Digest;
 
-use App\Service\Image\Exception\ImageProcessingException;
-use App\Service\Mail\Digest\DigestBrandLogo;
+use App\Service\Outbound\Image\Exception\ImageProcessingException;
+use App\Service\Outbound\Mail\Digest\DigestBrandLogo;
 use PHPUnit\Framework\TestCase;
 
 final class DigestBrandLogoTest extends TestCase

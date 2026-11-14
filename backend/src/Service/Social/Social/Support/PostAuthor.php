@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
 use App\Entity\Entry;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Bluesky\Support\AtPostUri;
+use App\Service\Social\Bluesky\Support\AtPostUri;
 
 /** Who wrote an entry's post, as an account identity: the DID of its AT URI, or user@host of its Mastodon author. */
 final class PostAuthor

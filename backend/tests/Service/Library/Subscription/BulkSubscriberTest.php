@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Subscription;
+namespace App\Tests\Service\Library\Subscription;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Service\Subscription\BulkSubscriber;
-use App\Service\Subscription\Model\BulkSubscribeItemModel;
-use App\Service\Subscription\Model\TagStyleModel;
+use App\Service\Library\Subscription\BulkSubscriber;
+use App\Service\Library\Subscription\Model\BulkSubscribeItemModel;
+use App\Service\Library\Subscription\Model\TagStyleModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SeedsUsers;

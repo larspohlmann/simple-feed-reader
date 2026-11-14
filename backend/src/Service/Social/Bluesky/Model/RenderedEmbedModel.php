@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Bluesky\Model;
+namespace App\Service\Social\Bluesky\Model;
 
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
-use App\Service\Image\Model\DeclaredImageModel;
-use App\Service\Parser\Model\ParsedMediumModel;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
+use App\Service\Ingestion\Parser\Model\ParsedMediumModel;
 
 final readonly class RenderedEmbedModel
 {

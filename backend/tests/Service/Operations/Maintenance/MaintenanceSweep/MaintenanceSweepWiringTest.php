@@ -2,25 +2,25 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Maintenance\MaintenanceSweep;
+namespace App\Tests\Service\Operations\Maintenance\MaintenanceSweep;
 
 use App\Http\MaintenanceTickJson;
-use App\Service\Logging\Loki\Model\LokiSpoolReportModel;
-use App\Service\Maintenance\MaintenanceSweep\DigestsTickSweep;
-use App\Service\Maintenance\MaintenanceSweep\HiddenProfilesTickSweep;
-use App\Service\Maintenance\MaintenanceSweep\ImageVerificationTickSweep;
-use App\Service\Maintenance\MaintenanceSweep\LinkCardsTickSweep;
-use App\Service\Maintenance\MaintenanceSweep\MaintenanceSweepInterface;
-use App\Service\Maintenance\MaintenanceSweep\PrivateFeedSyncTickSweep;
-use App\Service\Maintenance\MaintenanceSweep\ProfileImagesTickSweep;
-use App\Service\Maintenance\MaintenanceSweep\RecommendationsTickSweep;
-use App\Service\Maintenance\MaintenanceSweep\SavedSearchMembershipsTickSweep;
-use App\Service\Maintenance\MaintenanceSweep\TranscriptsTickSweep;
-use App\Service\Maintenance\MaintenanceSweep\TrendingTickSweep;
-use App\Service\Maintenance\MaintenanceTick;
-use App\Service\Maintenance\Model\MaintenanceSweepsModel;
-use App\Service\Maintenance\Model\MaintenanceTickReportModel;
-use App\Service\Refresh\Model\RefreshReportModel;
+use App\Service\Operations\Logging\Loki\Model\LokiSpoolReportModel;
+use App\Service\Operations\Maintenance\MaintenanceSweep\DigestsTickSweep;
+use App\Service\Operations\Maintenance\MaintenanceSweep\HiddenProfilesTickSweep;
+use App\Service\Operations\Maintenance\MaintenanceSweep\ImageVerificationTickSweep;
+use App\Service\Operations\Maintenance\MaintenanceSweep\LinkCardsTickSweep;
+use App\Service\Operations\Maintenance\MaintenanceSweep\MaintenanceSweepInterface;
+use App\Service\Operations\Maintenance\MaintenanceSweep\PrivateFeedSyncTickSweep;
+use App\Service\Operations\Maintenance\MaintenanceSweep\ProfileImagesTickSweep;
+use App\Service\Operations\Maintenance\MaintenanceSweep\RecommendationsTickSweep;
+use App\Service\Operations\Maintenance\MaintenanceSweep\SavedSearchMembershipsTickSweep;
+use App\Service\Operations\Maintenance\MaintenanceSweep\TranscriptsTickSweep;
+use App\Service\Operations\Maintenance\MaintenanceSweep\TrendingTickSweep;
+use App\Service\Operations\Maintenance\MaintenanceTick;
+use App\Service\Operations\Maintenance\Model\MaintenanceSweepsModel;
+use App\Service\Operations\Maintenance\Model\MaintenanceTickReportModel;
+use App\Service\Ingestion\Refresh\Model\RefreshReportModel;
 use App\Tests\Support\TaggedItemOf;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -124,9 +124,9 @@ final class MaintenanceSweepWiringTest extends KernelTestCase
     private static function declaredImplementations(): array
     {
         $implementations = [];
-        $folder = __DIR__ . '/../../../../src/Service/Maintenance/MaintenanceSweep';
+        $folder = __DIR__ . '/../../../../src/Service/Operations/Maintenance/MaintenanceSweep';
         foreach (glob($folder . '/*.php') ?: [] as $path) {
-            $class = 'App\\Service\\Maintenance\\MaintenanceSweep\\' . basename($path, '.php');
+            $class = 'App\\Service\\Operations\\Maintenance\\MaintenanceSweep\\' . basename($path, '.php');
             if (is_subclass_of($class, MaintenanceSweepInterface::class)) {
                 $implementations[] = $class;
             }

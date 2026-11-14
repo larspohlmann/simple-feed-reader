@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Preview\Factory;
+namespace App\Service\Sourcing\Preview\Factory;
 
-use App\Service\Image\Model\DeclaredImageModel;
-use App\Service\Ingest\Support\EntrySnippet;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Parser\Model\ParsedFeedModel;
-use App\Service\Preview\Model\FeedPreviewItemModel;
-use App\Service\Preview\Model\FeedPreviewModel;
-use App\Service\Text\Support\PlainText;
-use App\Service\Url\Support\HttpsImageUrl;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
+use App\Service\Ingestion\Ingest\Support\EntrySnippet;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
+use App\Service\Sourcing\Preview\Model\FeedPreviewItemModel;
+use App\Service\Sourcing\Preview\Model\FeedPreviewModel;
+use App\Service\Foundation\Text\Support\PlainText;
+use App\Service\Foundation\Url\Support\HttpsImageUrl;
 
 final readonly class FeedPreviewFactory
 {

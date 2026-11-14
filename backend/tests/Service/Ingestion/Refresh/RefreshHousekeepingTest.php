@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Refresh;
+namespace App\Tests\Service\Ingestion\Refresh;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Repository\OrphanedFeedRepository;
-use App\Service\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
+use App\Service\Ingestion\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
 use App\Repository\RetentionRepository;
 use App\Repository\RowIds;
-use App\Service\Feed\OrphanedFeedReclaimer;
-use App\Service\Refresh\Model\RefreshRequestModel;
-use App\Service\Refresh\RefreshHousekeeping;
-use App\Service\Retention\EntryPruner;
+use App\Service\Ingestion\Feed\OrphanedFeedReclaimer;
+use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
+use App\Service\Ingestion\Refresh\RefreshHousekeeping;
+use App\Service\Ingestion\Retention\EntryPruner;
 use App\Tests\DbTestCase;
-use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\SubscriptionHistoryFixtures;

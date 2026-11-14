@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Url\Support;
+namespace App\Tests\Service\Foundation\Url\Support;
 
-use App\Service\Url\Support\HttpsImageUrl;
+use App\Service\Foundation\Url\Support\HttpsImageUrl;
 use PHPUnit\Framework\TestCase;
 
 final class HttpsImageUrlTest extends TestCase

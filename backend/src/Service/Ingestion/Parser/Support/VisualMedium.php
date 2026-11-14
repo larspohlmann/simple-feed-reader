@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\Support;
+namespace App\Service\Ingestion\Parser\Support;
 
 use App\Entity\EntryMedium;
-use App\Service\Parser\Model\FeedMediaKind;
-use App\Service\Parser\Model\VisualMediaKind;
-use App\Service\Url\Support\HttpsImageUrl;
+use App\Service\Ingestion\Parser\Model\FeedMediaKind;
+use App\Service\Ingestion\Parser\Model\VisualMediaKind;
+use App\Service\Foundation\Url\Support\HttpsImageUrl;
 
 final class VisualMedium
 {

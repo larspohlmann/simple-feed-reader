@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Run;
+namespace App\Tests\Service\Curation\Recommendation\Run;
 
 use App\Entity\Entry;
 use App\Entity\ProfileRun;
@@ -14,12 +14,12 @@ use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
 use App\Enum\RunStatus;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Recommendation\Profile\ProfileForRun\ProfileForRunInterface;
-use App\Service\Recommendation\Profile\ProfileRunFailure;
-use App\Service\Recommendation\Profile\ProfileRunSweep;
-use App\Service\Recommendation\Run\Model\TickDriver;
-use App\Service\Recommendation\Run\SnapshotPhase;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Recommendation\Profile\ProfileForRun\ProfileForRunInterface;
+use App\Service\Curation\Recommendation\Profile\ProfileRunFailure;
+use App\Service\Curation\Recommendation\Profile\ProfileRunSweep;
+use App\Service\Curation\Recommendation\Run\Model\TickDriver;
+use App\Service\Curation\Recommendation\Run\SnapshotPhase;
 use App\Tests\DbTestCase;
 use App\Tests\Support\DrivesRecommendationRuns;
 use App\Tests\Support\RecommendationRunFixtures;

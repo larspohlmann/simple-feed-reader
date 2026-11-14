@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Scoring;
+namespace App\Tests\Service\Curation\Recommendation\Scoring;
 
 use App\Enum\ScoringProtocol;
-use App\Service\Recommendation\Scoring\Factory\ScoringStateFactory;
-use App\Service\Recommendation\Scoring\Factory\SystemOneRequestFactory;
-use App\Service\Recommendation\Scoring\ScoringBatchPacker;
-use App\Service\Recommendation\Scoring\ScoringProtocol\SystemOneProtocol;
-use App\Service\Recommendation\Scoring\ScoringProtocolResolver;
+use App\Service\Curation\Recommendation\Scoring\Factory\ScoringStateFactory;
+use App\Service\Curation\Recommendation\Scoring\Factory\SystemOneRequestFactory;
+use App\Service\Curation\Recommendation\Scoring\ScoringBatchPacker;
+use App\Service\Curation\Recommendation\Scoring\ScoringProtocol\SystemOneProtocol;
+use App\Service\Curation\Recommendation\Scoring\ScoringProtocolResolver;
 use App\Tests\Support\StubSystemOneClient;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\NotFoundExceptionInterface;

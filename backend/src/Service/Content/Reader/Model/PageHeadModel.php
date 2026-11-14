@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Model;
+namespace App\Service\Content\Reader\Model;
 
 /** The start of a page up to its head's end, or, for a file the response declares, only that file's type. */
 final readonly class PageHeadModel

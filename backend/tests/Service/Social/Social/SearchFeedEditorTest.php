@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Entity\EntryAuthor;
@@ -15,14 +15,14 @@ use App\Entity\User;
 use App\Repository\RetentionRepository;
 use App\Repository\RowIds;
 use App\Repository\SubscriptionDisplayTitle;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Social\Exception\NotASearchFeedException;
-use App\Service\Social\Exception\SearchQueryTooBroadException;
-use App\Service\Social\Model\PrivateFeedModel;
-use App\Service\Social\SearchFeedEditor;
-use App\Service\Subscription\Exception\AlreadySubscribedException;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Social\Social\Exception\NotASearchFeedException;
+use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
+use App\Service\Social\Social\Model\PrivateFeedModel;
+use App\Service\Social\Social\SearchFeedEditor;
+use App\Service\Library\Subscription\Exception\AlreadySubscribedException;
 use App\Tests\DbTestCase;
-use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\PrivateFeedsWiring;
 use App\Tests\Support\SocialAccounts;

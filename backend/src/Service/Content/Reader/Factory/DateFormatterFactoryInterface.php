@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Factory;
+namespace App\Service\Content\Reader\Factory;
 
 interface DateFormatterFactoryInterface
 {

@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media\Sibling;
+namespace App\Tests\Service\Content\Reader\Media\Sibling;
 
-use App\Service\Fetch\DnsResolver\DnsResolverInterface;
-use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\UrlGuard;
-use App\Service\Reader\Media\DurableMediaUrl;
-use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
-use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Media\MediaLanding;
-use App\Service\Reader\Media\MediaUrlKind;
-use App\Service\Reader\Media\Model\ArticleMediaModel;
-use App\Service\Reader\Media\Model\MediaCandidateModel;
-use App\Service\Reader\Media\Model\MediaKind;
-use App\Service\Reader\Media\Sibling\NearbyPoster;
-use App\Service\Reader\Media\Sibling\SiblingIdRule;
-use App\Service\Reader\Media\Sibling\SiblingMediaExtender;
+use App\Service\Outbound\Fetch\DnsResolver\DnsResolverInterface;
+use App\Service\Outbound\Fetch\IpValidator;
+use App\Service\Outbound\Fetch\UrlGuard;
+use App\Service\Content\Reader\Media\DurableMediaUrl;
+use App\Service\Content\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
+use App\Service\Content\Reader\Media\EmbedProviders;
+use App\Service\Content\Reader\Media\MediaLanding;
+use App\Service\Content\Reader\Media\MediaUrlKind;
+use App\Service\Content\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Content\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Content\Reader\Media\Model\MediaKind;
+use App\Service\Content\Reader\Media\Sibling\NearbyPoster;
+use App\Service\Content\Reader\Media\Sibling\SiblingIdRule;
+use App\Service\Content\Reader\Media\Sibling\SiblingMediaExtender;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;

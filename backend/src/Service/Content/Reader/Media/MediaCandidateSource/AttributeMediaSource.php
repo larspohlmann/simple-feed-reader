@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\MediaCandidateSource;
+namespace App\Service\Content\Reader\Media\MediaCandidateSource;
 
-use App\Service\Reader\Media\AudioClipFacts;
-use App\Service\Reader\Media\MediaRelevance;
-use App\Service\Reader\Media\MediaUrlKind;
-use App\Service\Reader\Media\Model\MediaCandidateModel;
-use App\Service\Reader\Media\Model\MediaKind;
-use App\Service\Reader\Media\Model\RawPageModel;
-use App\Service\Reader\Media\Model\ResolvedMediaUrlModel;
-use App\Service\Reader\Media\Model\ScannedPageModel;
-use App\Service\Reader\Media\NarrationSignals;
-use App\Service\Reader\Media\PageFurniture;
-use App\Service\Reader\Media\PlayerPoster;
+use App\Service\Content\Reader\Media\AudioClipFacts;
+use App\Service\Content\Reader\Media\MediaRelevance;
+use App\Service\Content\Reader\Media\MediaUrlKind;
+use App\Service\Content\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Content\Reader\Media\Model\MediaKind;
+use App\Service\Content\Reader\Media\Model\RawPageModel;
+use App\Service\Content\Reader\Media\Model\ResolvedMediaUrlModel;
+use App\Service\Content\Reader\Media\Model\ScannedPageModel;
+use App\Service\Content\Reader\Media\NarrationSignals;
+use App\Service\Content\Reader\Media\PageFurniture;
+use App\Service\Content\Reader\Media\PlayerPoster;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;

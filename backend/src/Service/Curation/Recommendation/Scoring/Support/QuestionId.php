@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Scoring\Support;
+namespace App\Service\Curation\Recommendation\Scoring\Support;
 
 /** The key a candidate's question travels under: a string, so `questions` encodes as a JSON object, never a list. */
 final class QuestionId

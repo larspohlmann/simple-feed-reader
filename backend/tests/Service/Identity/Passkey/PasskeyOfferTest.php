@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Passkey;
+namespace App\Tests\Service\Identity\Passkey;
 
 use App\Entity\User;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Passkey\PasskeyOffer;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Identity\Passkey\PasskeyOffer;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 

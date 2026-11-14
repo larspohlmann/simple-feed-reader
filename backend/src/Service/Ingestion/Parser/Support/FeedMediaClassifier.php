@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\Support;
+namespace App\Service\Ingestion\Parser\Support;
 
 use App\Entity\EntryAttachment;
-use App\Service\Parser\Model\FeedMediaKind;
+use App\Service\Ingestion\Parser\Model\FeedMediaKind;
 
 /**
  * What a feed media node carries. `<media:thumbnail>` is an image by definition; an explicit `medium` or `type` is

@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\QuotedPostSource;
+namespace App\Service\Social\Social\QuotedPostSource;
 
 use App\Entity\QuotedPostContent;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Fetch\Model\ApiRequestModel;
-use App\Service\LinkCard\Exception\QuotedPostUnavailableException;
-use App\Service\LinkCard\QuotedPostSource\QuotedPostSourceInterface;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\MastodonApiClient;
-use App\Service\Social\Support\MastodonQuotedStatus;
-use App\Service\Social\Support\MastodonStatusAddress;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Outbound\Fetch\Model\ApiRequestModel;
+use App\Service\Content\LinkCard\Exception\QuotedPostUnavailableException;
+use App\Service\Content\LinkCard\QuotedPostSource\QuotedPostSourceInterface;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\MastodonApiClient;
+use App\Service\Social\Social\Support\MastodonQuotedStatus;
+use App\Service\Social\Social\Support\MastodonStatusAddress;
 
 /** Reads a quoted status from its own instance, anonymously, as #1615 reads its counts. */
 final readonly class MastodonQuotedPostSource implements QuotedPostSourceInterface

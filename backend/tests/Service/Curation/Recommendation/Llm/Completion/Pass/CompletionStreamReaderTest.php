@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Llm\Completion\Pass;
+namespace App\Tests\Service\Curation\Recommendation\Llm\Completion\Pass;
 
-use App\Service\Recommendation\Llm\Completion\CompletionBodyDecoder;
-use App\Service\Recommendation\Llm\Completion\Pass\CompletionStreamReader;
+use App\Service\Curation\Recommendation\Llm\Completion\CompletionBodyDecoder;
+use App\Service\Curation\Recommendation\Llm\Completion\Pass\CompletionStreamReader;
 use PHPUnit\Framework\TestCase;
 
 final class CompletionStreamReaderTest extends TestCase

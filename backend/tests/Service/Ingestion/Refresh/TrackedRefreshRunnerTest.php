@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Refresh;
+namespace App\Tests\Service\Ingestion\Refresh;
 
-use App\Service\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
-use App\Service\Refresh\Model\RefreshReportModel;
-use App\Service\Refresh\Model\RefreshRequestModel;
-use App\Service\Refresh\RefreshRunStore;
-use App\Service\Refresh\TrackedRefreshRunner;
+use App\Service\Ingestion\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
+use App\Service\Ingestion\Refresh\Model\RefreshReportModel;
+use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
+use App\Service\Ingestion\Refresh\RefreshRunStore;
+use App\Service\Ingestion\Refresh\TrackedRefreshRunner;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 

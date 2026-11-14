@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Llm\Run;
+namespace App\Tests\Service\Curation\Recommendation\Llm\Run;
 
 use App\Entity\Entry;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Recommendation\Llm\Run\WaveContextLoader;
-use App\Service\Recommendation\Pool\RecommendationCandidateLoader;
-use App\Service\Recommendation\Pool\RecommendationHistoryLoader;
-use App\Service\Recommendation\Run\Model\WaveBatchModel;
-use App\Service\Recommendation\Run\WaveBatchLoader;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Recommendation\Llm\Run\WaveContextLoader;
+use App\Service\Curation\Recommendation\Pool\RecommendationCandidateLoader;
+use App\Service\Curation\Recommendation\Pool\RecommendationHistoryLoader;
+use App\Service\Curation\Recommendation\Run\Model\WaveBatchModel;
+use App\Service\Curation\Recommendation\Run\WaveBatchLoader;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BuildsTickContexts;
 use App\Tests\Support\RecommendationRunFixtures;

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Crypto;
+namespace App\Tests\Service\Social\Social\Crypto;
 
-use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Social\Crypto\SocialCredentialCipher;
+use App\Service\Foundation\Crypto\Exception\SecretUnreadableException;
+use App\Service\Foundation\Crypto\InstanceSecretCipher;
+use App\Service\Social\Social\Crypto\SocialCredentialCipher;
 use PHPUnit\Framework\TestCase;
 
 final class SocialCredentialCipherTest extends TestCase

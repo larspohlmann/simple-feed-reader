@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run\Support;
+namespace App\Service\Curation\Recommendation\Run\Support;
 
 /** Whether a schedule's interval has passed since its anchor; no anchor means nothing ran yet, so it has. */
 final readonly class IntervalElapsed

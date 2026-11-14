@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Http\ReaderJson;
-use App\Service\Reader\Model\ExtractionFailure;
-use App\Service\Reader\Model\ExtractionResultModel;
+use App\Service\Content\Reader\Model\ExtractionFailure;
+use App\Service\Content\Reader\Model\ExtractionResultModel;
 use PHPUnit\Framework\TestCase;
 
 final class ReaderJsonTest extends TestCase

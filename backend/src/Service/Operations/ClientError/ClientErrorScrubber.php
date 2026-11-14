@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\ClientError;
+namespace App\Service\Operations\ClientError;
 
-use App\Service\ClientError\Model\ClientErrorModel;
+use App\Service\Operations\ClientError\Model\ClientErrorModel;
 
 /**
  * Redacts secrets before a client error reaches Loki. The patterns are a

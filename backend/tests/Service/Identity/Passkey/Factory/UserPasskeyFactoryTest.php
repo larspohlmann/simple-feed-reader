@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Passkey\Factory;
+namespace App\Tests\Service\Identity\Passkey\Factory;
 
 use App\Entity\User;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Passkey\Exception\AttestationRejectedException;
-use App\Service\Passkey\Factory\UserPasskeyFactory;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Identity\Passkey\Exception\AttestationRejectedException;
+use App\Service\Identity\Passkey\Factory\UserPasskeyFactory;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Service\Search\Model\SearchTermsModel;
+use App\Service\Library\Search\Model\SearchTermsModel;
 use Doctrine\ORM\QueryBuilder;
 
 /** One search's terms compiled into a predicate, by SQLite's search index or MySQL's LIKEs. */

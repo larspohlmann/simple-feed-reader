@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh\FeedBodyParser;
+namespace App\Service\Ingestion\Refresh\FeedBodyParser;
 
-use App\Service\Parser\Exception\FeedParseException;
-use App\Service\Parser\Model\ParsedFeedModel;
+use App\Service\Ingestion\Parser\Exception\FeedParseException;
+use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**

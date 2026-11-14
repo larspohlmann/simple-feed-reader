@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Bluesky;
+namespace App\Service\Social\Bluesky;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Repository\ShareEnrichmentRepository;
-use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriterInterface;
-use App\Service\Bluesky\Exception\AppViewAnswerException;
-use App\Service\Bluesky\Model\FillOutcome;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Bluesky\Support\BlueskyPostView;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Search\EntryIndexer;
+use App\Service\Social\Bluesky\EntryEmbedWriter\EntryEmbedWriterInterface;
+use App\Service\Social\Bluesky\Exception\AppViewAnswerException;
+use App\Service\Social\Bluesky\Model\FillOutcome;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Bluesky\Support\BlueskyPostView;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Library\Search\EntryIndexer;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 

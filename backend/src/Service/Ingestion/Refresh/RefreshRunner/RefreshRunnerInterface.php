@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh\RefreshRunner;
+namespace App\Service\Ingestion\Refresh\RefreshRunner;
 
-use App\Service\Refresh\Model\RefreshReportModel;
-use App\Service\Refresh\Model\RefreshRequestModel;
+use App\Service\Ingestion\Refresh\Model\RefreshReportModel;
+use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
 
 /**
  * One budgeted slice of refresh work. The seam lets TrackedRefreshRunner be tested against prepared slices instead of

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader;
+namespace App\Tests\Service\Content\Reader;
 
-use App\Service\Reader\Exception\ReaderUrlTokenMismatchException;
-use App\Service\Reader\ReaderUrlSignature;
+use App\Service\Content\Reader\Exception\ReaderUrlTokenMismatchException;
+use App\Service\Content\Reader\ReaderUrlSignature;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 use PHPUnit\Framework\TestCase;
 

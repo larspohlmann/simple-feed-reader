@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\BodyCleaning\Pass;
+namespace App\Service\Content\Reader\BodyCleaning\Pass;
 
-use App\Service\Reader\BodyCleaning\Model\BodyCleaningInputModel;
-use App\Service\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Content\Reader\BodyCleaning\Model\BodyCleaningInputModel;
+use App\Service\Content\Reader\Media\Model\ArticleMediaModel;
 use Dom\HTMLDocument;
 
 /**

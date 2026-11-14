@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Run;
+namespace App\Service\Curation\Recommendation\Llm\Run;
 
-use App\Service\Recommendation\Llm\Prompt\Factory\RecommendationCompletionRequestFactory;
-use App\Service\Recommendation\Llm\Prompt\Model\CallPromptModel;
-use App\Service\Recommendation\Llm\Prompt\RecommendationProfileParser;
-use App\Service\Recommendation\Llm\Prompt\RecommendationPromptBuilder;
-use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
-use App\Service\Recommendation\Profile\Model\ProfileDistillationOutcomeModel;
-use App\Service\Recommendation\Profile\Pass\ProfileTick;
-use App\Service\Recommendation\Profile\ProfileRunDistiller\ProfileRunDistillerInterface;
+use App\Service\Curation\Recommendation\Llm\Prompt\Factory\RecommendationCompletionRequestFactory;
+use App\Service\Curation\Recommendation\Llm\Prompt\Model\CallPromptModel;
+use App\Service\Curation\Recommendation\Llm\Prompt\RecommendationProfileParser;
+use App\Service\Curation\Recommendation\Llm\Prompt\RecommendationPromptBuilder;
+use App\Service\Curation\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
+use App\Service\Curation\Recommendation\Profile\Model\ProfileDistillationOutcomeModel;
+use App\Service\Curation\Recommendation\Profile\Pass\ProfileTick;
+use App\Service\Curation\Recommendation\Profile\ProfileRunDistiller\ProfileRunDistillerInterface;
 
 final readonly class LlmProfileRunDistiller implements ProfileRunDistillerInterface
 {

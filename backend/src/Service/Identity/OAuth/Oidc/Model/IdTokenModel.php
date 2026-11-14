@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\OAuth\Oidc\Model;
+namespace App\Service\Identity\OAuth\Oidc\Model;
 
-use App\Service\OAuth\Oidc\Pass\IdTokenVerifier;
-use App\Service\OAuth\Oidc\Pass\TokenEndpoint;
+use App\Service\Identity\OAuth\Oidc\Pass\IdTokenVerifier;
+use App\Service\Identity\OAuth\Oidc\Pass\TokenEndpoint;
 
 /**
  * An ID token fetched by {@see TokenEndpoint::fetch()} over validated TLS, its only constructor (OidcBoundaryTest).

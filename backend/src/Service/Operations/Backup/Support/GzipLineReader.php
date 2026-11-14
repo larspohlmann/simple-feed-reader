@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Support;
+namespace App\Service\Operations\Backup\Support;
 
-use App\Service\Backup\Exception\BackupCompressionException;
-use App\Service\Backup\Exception\InvalidBackupException;
+use App\Service\Operations\Backup\Exception\BackupCompressionException;
+use App\Service\Operations\Backup\Exception\InvalidBackupException;
 
 /**
  * Streams the lines of an in-memory gzip, inflating lazily per pass: the restore reads its upload twice and

@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Opml;
+namespace App\Service\Library\Opml;
 
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SourceFormat;
 use App\Enum\SubscriptionSet;
 use App\Repository\SubscriptionRepository;
-use App\Service\Opml\Pass\OpmlTagTree;
-use App\Service\Social\Model\ExportedSubscriptionModel;
-use App\Service\Social\Support\ExportedFeed;
+use App\Service\Library\Opml\Pass\OpmlTagTree;
+use App\Service\Social\Social\Model\ExportedSubscriptionModel;
+use App\Service\Social\Social\Support\ExportedFeed;
 
 /**
  * Serialises a user's subscriptions to OPML 2.0, grouped by tag, each tag nested in its

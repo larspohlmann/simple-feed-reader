@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\SubscriptionHistory\Model;
+namespace App\Service\Library\SubscriptionHistory\Model;
 
-use App\Service\SubscriptionHistory\Support\UtcDay;
+use App\Service\Library\SubscriptionHistory\Support\UtcDay;
 
 final readonly class DayWindowModel
 {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Version\Model;
+namespace App\Service\Operations\Version\Model;
 
 /**
  * Which build is running: the tag it was cut from, the commit it was built at,

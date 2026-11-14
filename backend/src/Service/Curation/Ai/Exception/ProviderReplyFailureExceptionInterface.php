@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai\Exception;
+namespace App\Service\Curation\Ai\Exception;
 
 /**
  * The endpoint answered and the answer is the problem: unlike an endpoint failure, which aborts the wave and counts

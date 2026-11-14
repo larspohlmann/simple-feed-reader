@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Profile;
+namespace App\Service\Curation\Recommendation\Profile;
 
 use App\Entity\ProfileSettingsValues;
 use App\Entity\StoredProfile;
 use App\Entity\User;
 use App\Repository\RecommendationSettingsRepository;
-use App\Service\Recommendation\Profile\Model\ProfileSettingsModel;
+use App\Service\Curation\Recommendation\Profile\Model\ProfileSettingsModel;
 
 final readonly class ProfileSettingsProvider
 {

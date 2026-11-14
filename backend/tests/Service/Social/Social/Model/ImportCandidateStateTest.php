@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Model;
+namespace App\Tests\Service\Social\Social\Model;
 
-use App\Service\Social\Model\ImportCandidateState;
+use App\Service\Social\Social\Model\ImportCandidateState;
 use PHPUnit\Framework\TestCase;
 
 final class ImportCandidateStateTest extends TestCase

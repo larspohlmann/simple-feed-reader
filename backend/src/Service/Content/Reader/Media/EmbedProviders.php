@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media;
+namespace App\Service\Content\Reader\Media;
 
-use App\Service\Reader\Media\EmbedProvider\EmbedProviderInterface;
-use App\Service\Reader\Media\Model\EmbedFrameModel;
-use App\Service\Reader\Media\Model\EmbedTargetModel;
+use App\Service\Content\Reader\Media\EmbedProvider\EmbedProviderInterface;
+use App\Service\Content\Reader\Media\Model\EmbedFrameModel;
+use App\Service\Content\Reader\Media\Model\EmbedTargetModel;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /** The embed allow-list: a URL no provider claims resolves to null, and the sanitizer then drops its markup. */

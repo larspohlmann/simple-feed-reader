@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Image\Pass;
+namespace App\Service\Outbound\Image\Pass;
 
 use App\Entity\ImageRendition;
-use App\Service\Image\Model\ImageDimensionsModel;
-use App\Service\Image\Model\LeadImageModel;
-use App\Service\Image\Support\RenditionTargets;
-use App\Service\Image\Support\SizedImageUrl;
+use App\Service\Outbound\Image\Model\ImageDimensionsModel;
+use App\Service\Outbound\Image\Model\LeadImageModel;
+use App\Service\Outbound\Image\Support\RenditionTargets;
+use App\Service\Outbound\Image\Support\SizedImageUrl;
 
 /** One lead's walk through the guessed widths: the picture sizes are named after, and the bands found so far. */
 final class SizeWalk

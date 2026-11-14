@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Discovery\ShareLinkFeed;
+namespace App\Service\Sourcing\Discovery\ShareLinkFeed;
 
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\FeedFetcher\FeedFetcherInterface;
 
 /**
  * Maps a `substack.com/@handle` profile-share URL to its publication's feed. The handle is not the subdomain, so the

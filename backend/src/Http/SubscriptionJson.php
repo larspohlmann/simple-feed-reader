@@ -11,10 +11,10 @@ use App\Enum\InclusionSurface;
 use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
 use App\Repository\SubscriptionDisplayTitle;
-use App\Service\Social\Support\SocialFeedClassifier;
-use App\Service\Subscription\Model\SubscriptionTalliesModel;
-use App\Service\Text\Support\PlainText;
-use App\Service\Url\Support\FeedWebsite;
+use App\Service\Social\Social\Support\SocialFeedClassifier;
+use App\Service\Library\Subscription\Model\SubscriptionTalliesModel;
+use App\Service\Foundation\Text\Support\PlainText;
+use App\Service\Foundation\Url\Support\FeedWebsite;
 
 final class SubscriptionJson
 {

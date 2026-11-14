@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\OAuth;
+namespace App\Tests\Service\Identity\OAuth;
 
 use App\Entity\User;
 use App\Enum\UserStatus;
-use App\Service\Auth\Exception\AccountNotActiveException;
-use App\Service\Auth\Exception\InvalidTokenException;
-use App\Service\OAuth\Model\OAuthIdentityModel;
-use App\Service\OAuth\OAuthSignIn;
+use App\Service\Identity\Auth\Exception\AccountNotActiveException;
+use App\Service\Identity\Auth\Exception\InvalidTokenException;
+use App\Service\Identity\OAuth\Model\OAuthIdentityModel;
+use App\Service\Identity\OAuth\OAuthSignIn;
 use App\Tests\DbTestCase;
 use App\Tests\Support\NewUserStatus;
 use PHPUnit\Framework\Attributes\DataProvider;

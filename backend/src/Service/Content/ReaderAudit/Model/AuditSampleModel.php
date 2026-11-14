@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\ReaderAudit\Model;
+namespace App\Service\Content\ReaderAudit\Model;
 
 /**
  * What one sweep draws: whose subscriptions, how many articles in all and per feed, the seed, and the cutoff that

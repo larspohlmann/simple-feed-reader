@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Worker;
+namespace App\Tests\Service\Operations\Worker;
 
-use App\Service\Social\ProfileImageSweep;
-use App\Service\Worker\Handler\RefreshProfileImagesHandler;
-use App\Service\Worker\Message\RefreshProfileImages;
+use App\Service\Social\Social\ProfileImageSweep;
+use App\Service\Operations\Worker\Handler\RefreshProfileImagesHandler;
+use App\Service\Operations\Worker\Message\RefreshProfileImages;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecordingLogger;
 

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\Support;
+namespace App\Service\Outbound\Fetch\Support;
 
-use App\Service\Fetch\Model\SocksReplyCode;
+use App\Service\Outbound\Fetch\Model\SocksReplyCode;
 
 /**
  * Turns curl's SOCKS5 handshake failures, which it reports only as raw protocol bytes, into a reason an admin can act

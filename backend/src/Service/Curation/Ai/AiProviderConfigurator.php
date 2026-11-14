@@ -2,25 +2,25 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai;
+namespace App\Service\Curation\Ai;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\ModelDescriptor;
 use App\Entity\User;
 use App\Repository\AiProviderSettingsRepository;
 use App\Repository\RecommendationSettingsRepository;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Ai\Exception\AiKeyUnreadableException;
-use App\Service\Ai\Exception\CredentialsRejectedException;
-use App\Service\Ai\Exception\ModelNotOfferedException;
-use App\Service\Ai\Exception\ModelRequiredForActivationException;
-use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\Exception\TooManyConfigurationsException;
-use App\Service\Ai\Factory\AiConfigurationFactory;
-use App\Service\Ai\Model\AddedConfigurationModel;
-use App\Service\Ai\Model\ProviderCredentialsModel;
-use App\Service\Ai\ModelCatalog\ModelCatalogInterface;
-use App\Service\Crypto\Exception\SecretUnreadableException;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Ai\Exception\AiKeyUnreadableException;
+use App\Service\Curation\Ai\Exception\CredentialsRejectedException;
+use App\Service\Curation\Ai\Exception\ModelNotOfferedException;
+use App\Service\Curation\Ai\Exception\ModelRequiredForActivationException;
+use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
+use App\Service\Curation\Ai\Exception\TooManyConfigurationsException;
+use App\Service\Curation\Ai\Factory\AiConfigurationFactory;
+use App\Service\Curation\Ai\Model\AddedConfigurationModel;
+use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
+use App\Service\Curation\Ai\ModelCatalog\ModelCatalogInterface;
+use App\Service\Foundation\Crypto\Exception\SecretUnreadableException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 

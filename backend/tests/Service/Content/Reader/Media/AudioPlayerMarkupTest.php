@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media;
+namespace App\Tests\Service\Content\Reader\Media;
 
-use App\Service\Reader\Media\AudioPlayerMarkup;
-use App\Service\Reader\Media\Model\AudioClipModel;
+use App\Service\Content\Reader\Media\AudioPlayerMarkup;
+use App\Service\Content\Reader\Media\Model\AudioClipModel;
 use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 

@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Comments\Exception\CommentsUnavailableException;
-use App\Service\Comments\Model\CommentAuthorModel;
-use App\Service\Parser\Model\VisualMediaKind;
-use App\Service\Sanitize\EntrySanitizer;
-use App\Service\Sanitize\TrailingBlankRemover;
-use App\Service\Social\MastodonContextReplies;
-use App\Service\Social\Model\SocialCountsModel;
-use App\Service\Social\Pass\ReplyNode;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Content\Comments\Exception\CommentsUnavailableException;
+use App\Service\Content\Comments\Model\CommentAuthorModel;
+use App\Service\Ingestion\Parser\Model\VisualMediaKind;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Foundation\Sanitize\TrailingBlankRemover;
+use App\Service\Social\Social\MastodonContextReplies;
+use App\Service\Social\Social\Model\SocialCountsModel;
+use App\Service\Social\Social\Pass\ReplyNode;
 use PHPUnit\Framework\Assert;
 use PHPUnit\Framework\TestCase;
 

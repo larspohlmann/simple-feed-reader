@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Share\Support;
+namespace App\Service\Social\Share\Support;
 
-use App\Service\Text\Support\PlainText;
+use App\Service\Foundation\Text\Support\PlainText;
 use Dom\Element;
 
 /** An entry's own words: its text without the links that read as a URL and the `Label: number` metadata lines. */

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Ai;
+namespace App\Tests\Service\Curation\Ai;
 
 use App\Entity\AiProviderSettings;
-use App\Service\Ai\AiConfigurationEditor;
+use App\Service\Curation\Ai\AiConfigurationEditor;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AiProviderSettingsFactory;
 use App\Tests\Support\ReloadsEntities;

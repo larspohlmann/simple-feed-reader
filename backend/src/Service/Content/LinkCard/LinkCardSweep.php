@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\LinkCard;
+namespace App\Service\Content\LinkCard;
 
 use App\Repository\ShareEnrichmentRepository;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\LinkCard\Model\LinkCardBudgetModel;
-use App\Service\LinkCard\Model\LinkCardSweepReportModel;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Content\LinkCard\Model\LinkCardBudgetModel;
+use App\Service\Content\LinkCard\Model\LinkCardSweepReportModel;
 
 final readonly class LinkCardSweep
 {

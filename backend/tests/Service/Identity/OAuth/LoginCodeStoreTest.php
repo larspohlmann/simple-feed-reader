@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\OAuth;
+namespace App\Tests\Service\Identity\OAuth;
 
-use App\Service\Auth\Exception\InvalidTokenException;
-use App\Service\OAuth\LoginCodeStore;
+use App\Service\Identity\Auth\Exception\InvalidTokenException;
+use App\Service\Identity\OAuth\LoginCodeStore;
 use App\Tests\Support\AssertsRefusal;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;

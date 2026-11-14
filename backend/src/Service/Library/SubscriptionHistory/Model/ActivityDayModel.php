@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\SubscriptionHistory\Model;
+namespace App\Service\Library\SubscriptionHistory\Model;
 
 /** One day of an account's series; no counts when any subscription's day can no longer be known. */
 final readonly class ActivityDayModel

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch\Model;
+namespace App\Tests\Service\Outbound\Fetch\Model;
 
-use App\Service\Fetch\Model\GuardedUrlModel;
+use App\Service\Outbound\Fetch\Model\GuardedUrlModel;
 use PHPUnit\Framework\TestCase;
 
 final class GuardedUrlModelTest extends TestCase

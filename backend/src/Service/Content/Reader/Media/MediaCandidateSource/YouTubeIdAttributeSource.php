@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\MediaCandidateSource;
+namespace App\Service\Content\Reader\Media\MediaCandidateSource;
 
-use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Media\Model\EmbedTargetModel;
-use App\Service\Reader\Media\Model\MediaCandidateModel;
-use App\Service\Reader\Media\Model\MediaKind;
-use App\Service\Reader\Media\Model\RawPageModel;
-use App\Service\Reader\Media\PageFurniture;
-use App\Service\Url\Support\YouTubeUrl;
+use App\Service\Content\Reader\Media\EmbedProviders;
+use App\Service\Content\Reader\Media\Model\EmbedTargetModel;
+use App\Service\Content\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Content\Reader\Media\Model\MediaKind;
+use App\Service\Content\Reader\Media\Model\RawPageModel;
+use App\Service\Content\Reader\Media\PageFurniture;
+use App\Service\Foundation\Url\Support\YouTubeUrl;
 use Dom\Element;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 

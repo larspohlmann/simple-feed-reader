@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Subscription;
+namespace App\Service\Library\Subscription;
 
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SourceFormat;
-use App\Service\Discovery\FeedDiscovery\FeedDiscoveryInterface;
-use App\Service\Discovery\Model\ScrapeFallback;
-use App\Service\Discovery\ScrapeFallbackPolicy;
-use App\Service\Feed\OrphanedFeedReclaimer;
-use App\Service\SavedPosts\SavedPostRescue;
-use App\Service\Subscription\Exception\NotAFeedException;
-use App\Service\Subscription\Model\SubscribeOutcomeModel;
-use App\Service\Subscription\Model\SubscribeRequestModel;
-use App\Service\Subscription\SubscribeRoute\SubscribeRouteInterface;
+use App\Service\Sourcing\Discovery\FeedDiscovery\FeedDiscoveryInterface;
+use App\Service\Sourcing\Discovery\Model\ScrapeFallback;
+use App\Service\Sourcing\Discovery\ScrapeFallbackPolicy;
+use App\Service\Ingestion\Feed\OrphanedFeedReclaimer;
+use App\Service\Library\SavedPosts\SavedPostRescue;
+use App\Service\Library\Subscription\Exception\NotAFeedException;
+use App\Service\Library\Subscription\Model\SubscribeOutcomeModel;
+use App\Service\Library\Subscription\Model\SubscribeRequestModel;
+use App\Service\Library\Subscription\SubscribeRoute\SubscribeRouteInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 

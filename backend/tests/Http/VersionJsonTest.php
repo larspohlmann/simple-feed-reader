@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Http\VersionJson;
-use App\Service\Version\Model\LatestReleaseModel;
-use App\Service\Version\Model\ReleaseVersionModel;
-use App\Service\Version\Model\VersionReportModel;
+use App\Service\Operations\Version\Model\LatestReleaseModel;
+use App\Service\Operations\Version\Model\ReleaseVersionModel;
+use App\Service\Operations\Version\Model\VersionReportModel;
 use PHPUnit\Framework\TestCase;
 
 final class VersionJsonTest extends TestCase

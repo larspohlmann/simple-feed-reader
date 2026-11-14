@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\QuotedPostSource;
+namespace App\Tests\Service\Social\Social\QuotedPostSource;
 
-use App\Service\LinkCard\Exception\QuotedPostUnavailableException;
-use App\Service\Social\QuotedPostSource\MastodonQuotedPostSource;
+use App\Service\Content\LinkCard\Exception\QuotedPostUnavailableException;
+use App\Service\Social\Social\QuotedPostSource\MastodonQuotedPostSource;
 use App\Tests\Support\AssertsRefusal;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;

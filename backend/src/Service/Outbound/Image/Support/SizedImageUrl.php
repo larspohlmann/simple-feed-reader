@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Image\Support;
+namespace App\Service\Outbound\Image\Support;
 
 /** The `-640x360` filename suffix CMSes such as WordPress name their stored sizes with. */
 final class SizedImageUrl

@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Completion;
+namespace App\Service\Curation\Recommendation\Llm\Completion;
 
-use App\Service\Ai\Exception\ProviderRateLimitedException;
-use App\Service\Ai\Model\ProviderConnectionModel;
-use App\Service\Ai\Model\RateLimitedResultModel;
-use App\Service\Ai\Model\RetryPlanModel;
-use App\Service\Ai\RateLimitedCalls;
-use App\Service\Recommendation\Llm\Completion\ChatCompletionClient\ChatCompletionClientInterface;
-use App\Service\Recommendation\Llm\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
-use App\Service\Recommendation\Llm\Completion\Model\CompletionOutcomeModel;
-use App\Service\Recommendation\Llm\Completion\Model\CompletionRequestModel;
-use App\Service\Recommendation\Llm\Completion\Pass\ConcurrentCompletion;
+use App\Service\Curation\Ai\Exception\ProviderRateLimitedException;
+use App\Service\Curation\Ai\Model\ProviderConnectionModel;
+use App\Service\Curation\Ai\Model\RateLimitedResultModel;
+use App\Service\Curation\Ai\Model\RetryPlanModel;
+use App\Service\Curation\Ai\RateLimitedCalls;
+use App\Service\Curation\Recommendation\Llm\Completion\ChatCompletionClient\ChatCompletionClientInterface;
+use App\Service\Curation\Recommendation\Llm\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
+use App\Service\Curation\Recommendation\Llm\Completion\Model\CompletionOutcomeModel;
+use App\Service\Curation\Recommendation\Llm\Completion\Model\CompletionRequestModel;
+use App\Service\Curation\Recommendation\Llm\Completion\Pass\ConcurrentCompletion;
 
 /**
  * The chat client's calls through the shared rate-limit loop: complete() throws a deferral as

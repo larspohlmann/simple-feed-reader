@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Refresh\Pass;
+namespace App\Tests\Service\Ingestion\Refresh\Pass;
 
 use App\Entity\Feed;
-use App\Service\Refresh\Model\FeedOutcome;
-use App\Service\Refresh\Model\FeedRefreshResultModel;
-use App\Service\Refresh\Pass\RefreshTally;
+use App\Service\Ingestion\Refresh\Model\FeedOutcome;
+use App\Service\Ingestion\Refresh\Model\FeedRefreshResultModel;
+use App\Service\Ingestion\Refresh\Pass\RefreshTally;
 use PHPUnit\Framework\TestCase;
 
 final class RefreshTallyTest extends TestCase

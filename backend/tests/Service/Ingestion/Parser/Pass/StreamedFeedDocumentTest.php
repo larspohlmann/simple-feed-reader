@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Parser\Pass;
+namespace App\Tests\Service\Ingestion\Parser\Pass;
 
-use App\Service\Parser\Factory\FeedParserFactory;
-use App\Service\Parser\Pass\StreamedFeedDocument;
+use App\Service\Ingestion\Parser\Factory\FeedParserFactory;
+use App\Service\Ingestion\Parser\Pass\StreamedFeedDocument;
 use PHPUnit\Framework\TestCase;
 
 final class StreamedFeedDocumentTest extends TestCase

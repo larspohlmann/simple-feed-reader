@@ -14,7 +14,7 @@ final class ImportClosure
 {
     private const string IMPORT = '/^use App\\\\([\w\\\\]+)(?: as \w+)?;/m';
 
-    private const string SERVICE_MODULE = '/^Service\\\\(\w+)\\\\/';
+    private const string SERVICE_MODULE = '/^Service\\\\(\w+\\\\\w+)\\\\/';
 
     /** @var array<string, string> */
     private array $modules = [];
@@ -35,7 +35,7 @@ final class ImportClosure
             return;
         }
 
-        $this->modules[$module] = $this->sourceDirectory . '/Service/' . $module;
+        $this->modules[$module] = $this->sourceDirectory . '/Service/' . str_replace('\\', '/', $module);
         foreach (new Finder()->files()->in($this->modules[$module])->name('*.php') as $file) {
             $this->moduleFiles[] = $file->getPathname();
             $this->followFile($file->getPathname());

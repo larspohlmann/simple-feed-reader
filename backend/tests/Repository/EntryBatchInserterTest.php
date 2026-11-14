@@ -16,7 +16,7 @@ use App\Enum\ShareKind;
 use App\Repository\EntryBatchInserter;
 use App\Repository\LinkCardRepository;
 use App\Repository\PendingImageVerificationRepository;
-use App\Service\Backup\Dto\EntryLine;
+use App\Service\Operations\Backup\Dto\EntryLine;
 use App\Tests\DbTestCase;
 
 final class EntryBatchInserterTest extends DbTestCase

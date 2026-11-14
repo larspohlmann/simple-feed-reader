@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search\Exception;
+namespace App\Service\Library\Search\Exception;
 
 /**
  * The engine did not answer usably: a transport failure, a non-2xx status or an unreadable response. One type,

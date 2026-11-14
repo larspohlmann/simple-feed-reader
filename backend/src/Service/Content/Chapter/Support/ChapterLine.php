@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Chapter\Support;
+namespace App\Service\Content\Chapter\Support;
 
 use App\Entity\EntryChapter;
-use App\Service\Chapter\Model\StampPosition;
+use App\Service\Content\Chapter\Model\StampPosition;
 
 /** A line with one leading or trailing stamp, or a leading range; its title is the rest, minus the stamp's brackets. */
 final class ChapterLine

@@ -13,7 +13,7 @@ use Symfony\Component\String\Slugger\AsciiSlugger;
 /**
  * Give every saved search a stable URL slug ("<id>-<slug of term>"). Adds the
  * nullable column, backfills existing rows from their id and term, then adds
- * the per-user unique index. The backfill must match App\Service\Search\SavedSearchSlug.
+ * the per-user unique index. The backfill must match App\Service\Library\Search\SavedSearchSlug.
  */
 final class Version20260922173000 extends AbstractMigration
 {

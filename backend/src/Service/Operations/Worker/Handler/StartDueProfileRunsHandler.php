@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Worker\Handler;
+namespace App\Service\Operations\Worker\Handler;
 
-use App\Service\Recommendation\Profile\ProfileRunSweep;
-use App\Service\Worker\Message\StartDueProfileRuns;
+use App\Service\Curation\Recommendation\Profile\ProfileRunSweep;
+use App\Service\Operations\Worker\Message\StartDueProfileRuns;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 /** Only starts due profile runs; WorkerRunSweep ticks them. */

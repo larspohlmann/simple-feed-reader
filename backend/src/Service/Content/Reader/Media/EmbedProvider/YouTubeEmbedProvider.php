@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\EmbedProvider;
+namespace App\Service\Content\Reader\Media\EmbedProvider;
 
-use App\Service\Reader\Media\Model\EmbedFrameModel;
-use App\Service\Reader\Media\Model\EmbedKind;
-use App\Service\Reader\Media\Model\EmbedShape;
-use App\Service\Reader\Media\Model\EmbedTargetModel;
-use App\Service\Url\Model\YouTubeVideoModel;
-use App\Service\Url\Support\YouTubeUrl;
+use App\Service\Content\Reader\Media\Model\EmbedFrameModel;
+use App\Service\Content\Reader\Media\Model\EmbedKind;
+use App\Service\Content\Reader\Media\Model\EmbedShape;
+use App\Service\Content\Reader\Media\Model\EmbedTargetModel;
+use App\Service\Foundation\Url\Model\YouTubeVideoModel;
+use App\Service\Foundation\Url\Support\YouTubeUrl;
 
 /**
  * YouTube in every spelling a publisher uses, reduced to one nocookie embed.

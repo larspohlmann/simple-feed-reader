@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Worker;
+namespace App\Tests\Service\Operations\Worker;
 
 use App\Entity\ProfileRun;
 use App\Entity\RecommendationRun;
 use App\Enum\ProfileRunTrigger;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Recommendation\Profile\ProfileRunSweep;
-use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
-use App\Service\Recommendation\Run\ProviderCallHeartbeat\SweepStreamHeartbeat;
-use App\Service\Recommendation\Run\RecommendationRunAdvancer;
-use App\Service\Recommendation\Run\RecommendationRunStarter;
-use App\Service\Recommendation\Run\WorkerPresence;
-use App\Service\Worker\WorkerRunSweep;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Recommendation\Profile\ProfileRunSweep;
+use App\Service\Curation\Recommendation\Run\Model\RecommendationDriverKind;
+use App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\SweepStreamHeartbeat;
+use App\Service\Curation\Recommendation\Run\RecommendationRunAdvancer;
+use App\Service\Curation\Recommendation\Run\RecommendationRunStarter;
+use App\Service\Curation\Recommendation\Run\WorkerPresence;
+use App\Service\Operations\Worker\WorkerRunSweep;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ClearTrackingEntityManager;
 use App\Tests\Support\ProvidesWorkerHeartbeats;

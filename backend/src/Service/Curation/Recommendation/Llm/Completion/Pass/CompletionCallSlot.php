@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Completion\Pass;
+namespace App\Service\Curation\Recommendation\Llm\Completion\Pass;
 
-use App\Service\Ai\Model\ProviderConnectionModel;
-use App\Service\Recommendation\Llm\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
+use App\Service\Curation\Ai\Model\ProviderConnectionModel;
+use App\Service\Curation\Recommendation\Llm\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
 
 /** The per-call state a multiplexed read routes each chunk to: its place, its answer or error body, its bounds. */
 final readonly class CompletionCallSlot

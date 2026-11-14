@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Feed\Model;
+namespace App\Service\Curation\Recommendation\Feed\Model;
 
-use App\Service\Clock\Model\ViewerTimeZoneModel;
-use App\Service\Recommendation\Exception\UnknownHistoryMonthException;
+use App\Service\Foundation\Clock\Model\ViewerTimeZoneModel;
+use App\Service\Curation\Recommendation\Exception\UnknownHistoryMonthException;
 
 /**
  * One calendar month as a half-open UTC range (`>= startUtc AND < endUtc`): cut in the viewer's zone, then expressed in

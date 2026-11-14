@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Bluesky\Support;
+namespace App\Tests\Service\Social\Bluesky\Support;
 
-use App\Service\Bluesky\Support\BlueskyActorKey;
+use App\Service\Social\Bluesky\Support\BlueskyActorKey;
 use PHPUnit\Framework\TestCase;
 
 final class BlueskyActorKeyTest extends TestCase

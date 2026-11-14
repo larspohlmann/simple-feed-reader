@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\HiddenProfiles;
+namespace App\Service\Social\Social\HiddenProfiles;
 
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Model\HiddenProfileModel;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Model\HiddenProfileModel;
 
 interface HiddenProfilesInterface
 {

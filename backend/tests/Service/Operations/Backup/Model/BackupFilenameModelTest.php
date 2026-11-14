@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Backup\Model;
+namespace App\Tests\Service\Operations\Backup\Model;
 
-use App\Service\Backup\Model\BackupFilenameModel;
-use App\Service\Version\Model\ReleaseVersionModel;
+use App\Service\Operations\Backup\Model\BackupFilenameModel;
+use App\Service\Operations\Version\Model\ReleaseVersionModel;
 use PHPUnit\Framework\TestCase;
 
 final class BackupFilenameModelTest extends TestCase

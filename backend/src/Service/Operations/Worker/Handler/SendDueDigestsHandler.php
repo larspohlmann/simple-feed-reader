@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Worker\Handler;
+namespace App\Service\Operations\Worker\Handler;
 
-use App\Service\Mail\Digest\SendDueDigests as SendDueDigestsService;
-use App\Service\Worker\Message\SendDueDigests;
+use App\Service\Outbound\Mail\Digest\SendDueDigests as SendDueDigestsService;
+use App\Service\Operations\Worker\Message\SendDueDigests;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 

@@ -6,7 +6,7 @@ namespace App\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
-use App\Service\RateLimit\Exception\RateLimitedException;
+use App\Service\Foundation\RateLimit\Exception\RateLimitedException;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class RateLimitProblems implements ExceptionProblemsInterface

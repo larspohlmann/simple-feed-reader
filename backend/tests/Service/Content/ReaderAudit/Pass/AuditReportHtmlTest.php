@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\ReaderAudit\Pass;
+namespace App\Tests\Service\Content\ReaderAudit\Pass;
 
-use App\Service\ReaderAudit\Model\AuditFindingModel;
-use App\Service\ReaderAudit\Model\AuditFindingsModel;
-use App\Service\ReaderAudit\Model\CleanupMarkerModel;
-use App\Service\ReaderAudit\Pass\AuditReportHtml;
+use App\Service\Content\ReaderAudit\Model\AuditFindingModel;
+use App\Service\Content\ReaderAudit\Model\AuditFindingsModel;
+use App\Service\Content\ReaderAudit\Model\CleanupMarkerModel;
+use App\Service\Content\ReaderAudit\Pass\AuditReportHtml;
 use PHPUnit\Framework\TestCase;
 
 final class AuditReportHtmlTest extends TestCase

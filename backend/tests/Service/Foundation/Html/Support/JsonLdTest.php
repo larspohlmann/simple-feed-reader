@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Html\Support;
+namespace App\Tests\Service\Foundation\Html\Support;
 
-use App\Service\Html\Support\JsonLd;
+use App\Service\Foundation\Html\Support\JsonLd;
 use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 

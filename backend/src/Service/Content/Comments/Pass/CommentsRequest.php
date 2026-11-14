@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Comments\Pass;
+namespace App\Service\Content\Comments\Pass;
 
 use App\Entity\Entry;
 use App\Entity\User;
-use App\Service\Comments\CommentsSource\CommentsSourceInterface;
-use App\Service\Comments\Model\CommentsAudienceModel;
+use App\Service\Content\Comments\CommentsSource\CommentsSourceInterface;
+use App\Service\Content\Comments\Model\CommentsAudienceModel;
 
 final readonly class CommentsRequest
 {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Url\Model;
+namespace App\Service\Foundation\Url\Model;
 
 final readonly class YouTubeVideoModel
 {

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Subscription;
+namespace App\Service\Library\Subscription;
 
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Exception\InvalidSelectionException;
 use App\Repository\TagRepository;
-use App\Service\Subscription\Model\BulkSubscriptionChangeModel;
+use App\Service\Library\Subscription\Model\BulkSubscriptionChangeModel;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Auth\UserByEmail;
+namespace App\Service\Identity\Auth\UserByEmail;
 
 use App\Entity\User;
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Text\Support;
+namespace App\Service\Foundation\Text\Support;
 
 /**
  * A feed body with no markup and a line break is plain text: rendered as HTML its breaks would collapse, so blank

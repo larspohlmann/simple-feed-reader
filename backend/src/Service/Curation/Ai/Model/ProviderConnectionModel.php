@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai\Model;
+namespace App\Service\Curation\Ai\Model;
 
 /**
  * An endpoint's credentials and its timeouts, decided together from one stored configuration, so no call can use

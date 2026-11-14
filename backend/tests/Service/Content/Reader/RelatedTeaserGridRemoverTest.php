@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader;
+namespace App\Tests\Service\Content\Reader;
 
-use App\Service\Reader\RelatedTeaserGridRemover;
-use App\Service\Reader\Slideshow\Model\ContainerSignatureModel;
+use App\Service\Content\Reader\RelatedTeaserGridRemover;
+use App\Service\Content\Reader\Slideshow\Model\ContainerSignatureModel;
 use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 

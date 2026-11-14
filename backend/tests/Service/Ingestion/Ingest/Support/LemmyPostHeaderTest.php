@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Ingest\Support;
+namespace App\Tests\Service\Ingestion\Ingest\Support;
 
-use App\Service\Ingest\Support\LemmyPostHeader;
+use App\Service\Ingestion\Ingest\Support\LemmyPostHeader;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

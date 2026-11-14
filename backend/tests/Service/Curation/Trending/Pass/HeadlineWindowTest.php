@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Trending\Pass;
+namespace App\Tests\Service\Curation\Trending\Pass;
 
-use App\Service\Trending\HeadlineFiller;
-use App\Service\Trending\Pass\HeadlineWindow;
+use App\Service\Curation\Trending\HeadlineFiller;
+use App\Service\Curation\Trending\Pass\HeadlineWindow;
 use PHPUnit\Framework\TestCase;
 
 final class HeadlineWindowTest extends TestCase

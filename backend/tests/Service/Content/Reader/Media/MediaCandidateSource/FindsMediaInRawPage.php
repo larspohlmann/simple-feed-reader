@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media\MediaCandidateSource;
+namespace App\Tests\Service\Content\Reader\Media\MediaCandidateSource;
 
-use App\Service\Reader\Media\MediaCandidateSource\MediaCandidateSourceInterface;
-use App\Service\Reader\Media\Model\MediaCandidateModel;
-use App\Service\Reader\Media\Model\RawPageModel;
+use App\Service\Content\Reader\Media\MediaCandidateSource\MediaCandidateSourceInterface;
+use App\Service\Content\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Content\Reader\Media\Model\RawPageModel;
 
 trait FindsMediaInRawPage
 {

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\MediaCandidateSource;
+namespace App\Service\Content\Reader\Media\MediaCandidateSource;
 
-use App\Service\Reader\Media\MediaUrlKind;
-use App\Service\Reader\Media\Model\MediaCandidateModel;
-use App\Service\Reader\Media\Model\RawPageModel;
-use App\Service\Reader\Media\Model\ResolvedMediaUrlModel;
-use App\Service\Reader\Media\NarrationSignals;
-use App\Service\Reader\Media\PageFurniture;
+use App\Service\Content\Reader\Media\MediaUrlKind;
+use App\Service\Content\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Content\Reader\Media\Model\RawPageModel;
+use App\Service\Content\Reader\Media\Model\ResolvedMediaUrlModel;
+use App\Service\Content\Reader\Media\NarrationSignals;
+use App\Service\Content\Reader\Media\PageFurniture;
 use Dom\Element;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 

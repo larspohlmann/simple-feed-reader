@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\SavedPosts\Support;
+namespace App\Service\Library\SavedPosts\Support;
 
 use App\Enum\SocialNetwork;
 

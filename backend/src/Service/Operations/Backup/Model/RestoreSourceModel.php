@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Model;
+namespace App\Service\Operations\Backup\Model;
 
 /** The backup a restore reads: which export, how many parts, when and where it was taken. */
 final readonly class RestoreSourceModel

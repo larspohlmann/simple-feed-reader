@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Crypto\Model;
+namespace App\Service\Foundation\Crypto\Model;
 
 /**
  * What a secret is and whose it is. render()'s string is part of the stored format: changing it makes every existing

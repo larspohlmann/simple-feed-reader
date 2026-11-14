@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\ReaderAudit;
+namespace App\Tests\Service\Content\ReaderAudit;
 
-use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
-use App\Service\ReaderAudit\LeadingEngagementMarkers;
-use App\Service\ReaderAudit\Model\CleanupMarkerModel;
-use App\Service\ReaderAudit\Model\ExtractedBodyModel;
+use App\Service\Content\Reader\BodyCleaning\Pass\BodyCleaningPass;
+use App\Service\Content\ReaderAudit\LeadingEngagementMarkers;
+use App\Service\Content\ReaderAudit\Model\CleanupMarkerModel;
+use App\Service\Content\ReaderAudit\Model\ExtractedBodyModel;
 use App\Tests\Support\AuditMarkers;
 use App\Tests\Support\BodyCleaningInputs;
 use App\Tests\Support\LeadingEngagementCleaners;

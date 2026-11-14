@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Discovery;
+namespace App\Service\Sourcing\Discovery;
 
-use App\Service\Discovery\Model\FeedCandidateModel;
-use App\Service\Discovery\Pass\LinkLabels;
-use App\Service\Fetch\Pass\PageUrls;
-use App\Service\Html\Support\HtmlDocumentParser;
-use App\Service\Parser\Model\FeedSyntax;
+use App\Service\Sourcing\Discovery\Model\FeedCandidateModel;
+use App\Service\Sourcing\Discovery\Pass\LinkLabels;
+use App\Service\Outbound\Fetch\Pass\PageUrls;
+use App\Service\Foundation\Html\Support\HtmlDocumentParser;
+use App\Service\Ingestion\Parser\Model\FeedSyntax;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -27,7 +27,7 @@ final readonly class FeedLinkScanner
 
     /**
      * rel="alternate" types a feed may carry without naming its dialect. No
-     * JSON Feed type: nothing in Service/Parser reads one, so such a candidate
+     * JSON Feed type: nothing in Service/Ingestion/Parser reads one, so such a candidate
      * could only ever fail its preview.
      */
     private const array AMBIGUOUS_TYPES = ['text/xml', 'application/xml'];

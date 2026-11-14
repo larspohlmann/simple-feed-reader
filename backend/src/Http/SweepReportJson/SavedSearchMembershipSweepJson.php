@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\SweepReportJson;
 
-use App\Service\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
+use App\Service\Library\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
 
 final readonly class SavedSearchMembershipSweepJson implements SweepReportJsonInterface
 {

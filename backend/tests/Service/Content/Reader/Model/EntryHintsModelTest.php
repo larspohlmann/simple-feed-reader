@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Model;
+namespace App\Tests\Service\Content\Reader\Model;
 
-use App\Service\Reader\Model\EntryHintsModel;
-use App\Service\Reader\Model\FeedMediaModel;
+use App\Service\Content\Reader\Model\EntryHintsModel;
+use App\Service\Content\Reader\Model\FeedMediaModel;
 use PHPUnit\Framework\TestCase;
 
 final class EntryHintsModelTest extends TestCase

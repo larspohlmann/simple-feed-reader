@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh\Model\PassOutcome;
+namespace App\Service\Ingestion\Refresh\Model\PassOutcome;
 
 use App\Entity\Feed;
-use App\Service\Refresh\Model\FeedRefreshResultModel;
-use App\Service\Refresh\Pass\PassOutcomeStore;
+use App\Service\Ingestion\Refresh\Model\FeedRefreshResultModel;
+use App\Service\Ingestion\Refresh\Pass\PassOutcomeStore;
 
 /**
  * One started feed's outcome as its lane settled it; it knows which of the store's paths it takes.

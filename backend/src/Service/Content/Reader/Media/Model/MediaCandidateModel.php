@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\Model;
+namespace App\Service\Content\Reader\Media\Model;
 
 /**
  * One piece of media the page offers. `precedingText` is the prose block it followed, by which it finds its place in

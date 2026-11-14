@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Llm\Completion;
+namespace App\Tests\Service\Curation\Recommendation\Llm\Completion;
 
 use App\Enum\TokenLimitParameter;
-use App\Service\Ai\Exception\ProviderRateLimitedException;
-use App\Service\Ai\Exception\RetryableProviderException;
-use App\Service\Ai\Model\ProviderConnectionModel;
-use App\Service\Ai\Model\ProviderCredentialsModel;
-use App\Service\Ai\Model\ProviderTimeoutsModel;
-use App\Service\Ai\Model\RetryPlanModel;
-use App\Service\Ai\RateLimitedCalls;
-use App\Service\Recommendation\Llm\Completion\CompletionStreamObserver\NullCompletionStreamObserver;
-use App\Service\Recommendation\Llm\Completion\Model\CompletionRequestModel;
-use App\Service\Recommendation\Llm\Completion\Model\JsonSchemaModel;
-use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
-use App\Service\Recommendation\Llm\Completion\Pass\ConcurrentCompletion;
-use App\Service\Recommendation\Llm\Completion\RateLimitedCompletion;
+use App\Service\Curation\Ai\Exception\ProviderRateLimitedException;
+use App\Service\Curation\Ai\Exception\RetryableProviderException;
+use App\Service\Curation\Ai\Model\ProviderConnectionModel;
+use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
+use App\Service\Curation\Ai\Model\ProviderTimeoutsModel;
+use App\Service\Curation\Ai\Model\RetryPlanModel;
+use App\Service\Curation\Ai\RateLimitedCalls;
+use App\Service\Curation\Recommendation\Llm\Completion\CompletionStreamObserver\NullCompletionStreamObserver;
+use App\Service\Curation\Recommendation\Llm\Completion\Model\CompletionRequestModel;
+use App\Service\Curation\Recommendation\Llm\Completion\Model\JsonSchemaModel;
+use App\Service\Curation\Recommendation\Llm\Completion\Model\Reasoning;
+use App\Service\Curation\Recommendation\Llm\Completion\Pass\ConcurrentCompletion;
+use App\Service\Curation\Recommendation\Llm\Completion\RateLimitedCompletion;
 use App\Tests\Support\StubChatClient;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;

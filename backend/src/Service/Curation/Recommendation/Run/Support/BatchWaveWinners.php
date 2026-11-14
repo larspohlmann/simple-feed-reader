@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run\Support;
+namespace App\Service\Curation\Recommendation\Run\Support;
 
-use App\Service\Recommendation\Run\Model\WaveBatchModel;
+use App\Service\Curation\Recommendation\Run\Model\WaveBatchModel;
 
 final readonly class BatchWaveWinners
 {

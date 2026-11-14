@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
+use App\Service\Library\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
 use Psr\Clock\ClockInterface;
 
 /** Matches nothing and stamps the clock's reading under "memberships" at the first question, to show the order. */

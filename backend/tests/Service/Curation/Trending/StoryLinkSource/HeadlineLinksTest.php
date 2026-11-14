@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Trending\StoryLinkSource;
+namespace App\Tests\Service\Curation\Trending\StoryLinkSource;
 
 use App\Enum\TrendingWindow;
-use App\Service\Trending\Model\HeadlineOverlapModel;
-use App\Service\Trending\Model\NearMissModel;
-use App\Service\Trending\Pass\TrendingRun;
-use App\Service\Trending\StoryLinkSource\HeadlineLinks;
+use App\Service\Curation\Trending\Model\HeadlineOverlapModel;
+use App\Service\Curation\Trending\Model\NearMissModel;
+use App\Service\Curation\Trending\Pass\TrendingRun;
+use App\Service\Curation\Trending\StoryLinkSource\HeadlineLinks;
 use App\Tests\Support\TrendingRuns;
 use PHPUnit\Framework\TestCase;
 

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Logging;
+namespace App\Tests\Service\Operations\Logging;
 
-use App\Service\Logging\RequestIdProvider;
-use App\Service\Logging\RequestLogProcessor;
+use App\Service\Operations\Logging\RequestIdProvider;
+use App\Service\Operations\Logging\RequestLogProcessor;
 use Monolog\Formatter\JsonFormatter;
 use Monolog\Level;
 use Monolog\LogRecord;

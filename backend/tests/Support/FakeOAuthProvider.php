@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\OAuth\Exception\OAuthFailedException;
-use App\Service\OAuth\Model\OAuthIdentityModel;
-use App\Service\OAuth\OAuthProvider\OAuthProviderInterface;
+use App\Service\Identity\OAuth\Exception\OAuthFailedException;
+use App\Service\Identity\OAuth\Model\OAuthIdentityModel;
+use App\Service\Identity\OAuth\OAuthProvider\OAuthProviderInterface;
 
 /**
  * Stands in for Google at the network boundary so the flow tests run every part of ours without a network. Not

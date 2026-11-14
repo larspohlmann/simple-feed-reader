@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Run\Pass;
+namespace App\Tests\Service\Curation\Recommendation\Run\Pass;
 
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
@@ -11,11 +11,11 @@ use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Repository\CallingRun;
 use App\Repository\RecommendationCallRepository;
-use App\Service\Ai\Model\ProviderCallReceiptModel;
-use App\Service\Ai\Model\ProviderCallUsageModel;
-use App\Service\Recommendation\Llm\Completion\Support\CompletionFinishReason;
-use App\Service\Recommendation\Run\Model\CallProgressModel;
-use App\Service\Recommendation\Run\Pass\RecordedCall;
+use App\Service\Curation\Ai\Model\ProviderCallReceiptModel;
+use App\Service\Curation\Ai\Model\ProviderCallUsageModel;
+use App\Service\Curation\Recommendation\Llm\Completion\Support\CompletionFinishReason;
+use App\Service\Curation\Recommendation\Run\Model\CallProgressModel;
+use App\Service\Curation\Recommendation\Run\Pass\RecordedCall;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\UserFactory;

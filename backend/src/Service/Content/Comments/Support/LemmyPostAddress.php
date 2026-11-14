@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Comments\Support;
+namespace App\Service\Content\Comments\Support;
 
 use App\Entity\Entry;
 use App\Enum\CommentsLoad;
-use App\Service\Comments\Model\LemmyPostModel;
-use App\Service\Url\Support\LemmyPostUrl;
+use App\Service\Content\Comments\Model\LemmyPostModel;
+use App\Service\Foundation\Url\Support\LemmyPostUrl;
 
 final class LemmyPostAddress
 {

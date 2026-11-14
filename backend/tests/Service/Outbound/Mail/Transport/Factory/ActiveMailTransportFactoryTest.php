@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\Transport\Factory;
+namespace App\Tests\Service\Outbound\Mail\Transport\Factory;
 
 use App\Enum\MailEncryption;
 use App\Enum\ProxyType;
-use App\Service\Fetch\Model\ProxyConfigModel;
-use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
-use App\Service\Mail\Settings\Model\ResolvedMailTransportModel;
-use App\Service\Mail\Transport\Factory\ActiveMailTransportFactory;
-use App\Service\Mail\Transport\Factory\EsmtpTransportFactory;
-use App\Service\Mail\Transport\Pass\CurlSmtpTransport;
-use App\Service\Proxy\ConfiguredProxySource\ConfiguredProxySourceInterface;
+use App\Service\Outbound\Fetch\Model\ProxyConfigModel;
+use App\Service\Outbound\Mail\Settings\Exception\IncompleteMailConfigurationException;
+use App\Service\Outbound\Mail\Settings\Model\ResolvedMailTransportModel;
+use App\Service\Outbound\Mail\Transport\Factory\ActiveMailTransportFactory;
+use App\Service\Outbound\Mail\Transport\Factory\EsmtpTransportFactory;
+use App\Service\Outbound\Mail\Transport\Pass\CurlSmtpTransport;
+use App\Service\Outbound\Proxy\ConfiguredProxySource\ConfiguredProxySourceInterface;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\Mailer\Transport\NullTransport;

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
 use App\Entity\Subscription;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
-use App\Service\Social\Model\ExportedSubscriptionModel;
+use App\Service\Social\Social\Model\ExportedSubscriptionModel;
 
 /**
  * How an export names a feed. An author feed leaves as its profile's public RSS: restored, that answers 403, and the

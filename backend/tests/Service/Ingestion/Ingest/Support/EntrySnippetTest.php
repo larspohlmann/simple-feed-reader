@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Ingest\Support;
+namespace App\Tests\Service\Ingestion\Ingest\Support;
 
-use App\Service\Ingest\Support\EntrySnippet;
+use App\Service\Ingestion\Ingest\Support\EntrySnippet;
 use PHPUnit\Framework\TestCase;
 
 final class EntrySnippetTest extends TestCase

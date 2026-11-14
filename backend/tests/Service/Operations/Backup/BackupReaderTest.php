@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Backup;
+namespace App\Tests\Service\Operations\Backup;
 
 use App\Enum\MagazineStyle;
-use App\Service\Backup\BackupReader;
-use App\Service\Backup\Dto\AccountLine;
-use App\Service\Backup\Dto\BackupHeader;
-use App\Service\Backup\Dto\EntryLine;
-use App\Service\Backup\Dto\EntryStateLine;
-use App\Service\Backup\Dto\FeedLine;
-use App\Service\Backup\Dto\SubscriptionLine;
-use App\Service\Backup\Dto\TagLine;
-use App\Service\Backup\Exception\InvalidBackupException;
+use App\Service\Operations\Backup\BackupReader;
+use App\Service\Operations\Backup\Dto\AccountLine;
+use App\Service\Operations\Backup\Dto\BackupHeader;
+use App\Service\Operations\Backup\Dto\EntryLine;
+use App\Service\Operations\Backup\Dto\EntryStateLine;
+use App\Service\Operations\Backup\Dto\FeedLine;
+use App\Service\Operations\Backup\Dto\SubscriptionLine;
+use App\Service\Operations\Backup\Dto\TagLine;
+use App\Service\Operations\Backup\Exception\InvalidBackupException;
 use PHPUnit\Framework\TestCase;
 
 final class BackupReaderTest extends TestCase

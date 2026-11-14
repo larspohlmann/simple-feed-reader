@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Run;
+namespace App\Tests\Service\Curation\Recommendation\Run;
 
 use App\Entity\ProfileRun;
 use App\Entity\RecommendationRun;
@@ -14,15 +14,15 @@ use App\Enum\ProfileRunTrigger;
 use App\Enum\TokenLimitParameter;
 use App\Repository\RecommendationCallRepository;
 use App\Repository\RecommendationRunLogRepository;
-use App\Service\Ai\Model\ProviderCallUsageModel;
-use App\Service\Recommendation\Llm\Completion\Model\CompletionRequestModel;
-use App\Service\Recommendation\Llm\Completion\Model\JsonSchemaModel;
-use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
-use App\Service\Recommendation\Llm\Run\Support\RenderedCompletionRequest;
-use App\Service\Recommendation\Run\Factory\RecommendationRunLogFactory;
-use App\Service\Recommendation\Run\Model\CallProgressModel;
-use App\Service\Recommendation\Run\Model\CallSlotModel;
-use App\Service\Recommendation\Run\RecommendationCallRecorder;
+use App\Service\Curation\Ai\Model\ProviderCallUsageModel;
+use App\Service\Curation\Recommendation\Llm\Completion\Model\CompletionRequestModel;
+use App\Service\Curation\Recommendation\Llm\Completion\Model\JsonSchemaModel;
+use App\Service\Curation\Recommendation\Llm\Completion\Model\Reasoning;
+use App\Service\Curation\Recommendation\Llm\Run\Support\RenderedCompletionRequest;
+use App\Service\Curation\Recommendation\Run\Factory\RecommendationRunLogFactory;
+use App\Service\Curation\Recommendation\Run\Model\CallProgressModel;
+use App\Service\Curation\Recommendation\Run\Model\CallSlotModel;
+use App\Service\Curation\Recommendation\Run\RecommendationCallRecorder;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\Clock\MockClock;

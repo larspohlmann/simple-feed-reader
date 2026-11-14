@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Subscription;
+namespace App\Tests\Service\Library\Subscription;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Exception\InvalidSelectionException;
-use App\Service\Subscription\FeedTagMove;
-use App\Service\Subscription\Model\FeedMoveModel;
+use App\Service\Library\Subscription\FeedTagMove;
+use App\Service\Library\Subscription\Model\FeedMoveModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\TagJoins;

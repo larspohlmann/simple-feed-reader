@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\SavedPosts;
+namespace App\Service\Library\SavedPosts;
 
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Repository\FeedRepository;
 use App\Repository\SubscriptionRepository;
-use App\Service\SavedPosts\Factory\SavedFeedFactory;
-use App\Service\SavedPosts\Support\SavedFeedUrl;
+use App\Service\Library\SavedPosts\Factory\SavedFeedFactory;
+use App\Service\Library\SavedPosts\Support\SavedFeedUrl;
 use Doctrine\ORM\EntityManagerInterface;
 
 /** Bypasses SubscriptionCreator on purpose: the cap would refuse the feed an unsubscribe needs to rescue into. */

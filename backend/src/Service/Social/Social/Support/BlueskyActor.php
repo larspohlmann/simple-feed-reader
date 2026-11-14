@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
 /** The at-identifier syntax the AppView validates every actor against: a handle or a DID. */
 final class BlueskyActor

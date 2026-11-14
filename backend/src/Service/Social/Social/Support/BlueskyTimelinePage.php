@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Bluesky\Support\AtPostUri;
-use App\Service\Bluesky\Support\BlueskyRichText;
-use App\Service\Completion\Model\KnownSharesModel;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Parser\Support\DateParser;
-use App\Service\Parser\Support\EntryTitle;
-use App\Service\Social\Model\TimelinePageModel;
-use App\Service\Social\Model\TimelineSelfReplyModel;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Bluesky\Support\AtPostUri;
+use App\Service\Social\Bluesky\Support\BlueskyRichText;
+use App\Service\Social\Completion\Model\KnownSharesModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Support\DateParser;
+use App\Service\Ingestion\Parser\Support\EntryTitle;
+use App\Service\Social\Social\Model\TimelinePageModel;
+use App\Service\Social\Social\Model\TimelineSelfReplyModel;
 
 /** A timeline, list, feed or author-feed answer as entries and self-replies, post views kept for embeds. */
 final class BlueskyTimelinePage

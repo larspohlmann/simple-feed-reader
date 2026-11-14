@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch;
+namespace App\Tests\Service\Outbound\Fetch;
 
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 

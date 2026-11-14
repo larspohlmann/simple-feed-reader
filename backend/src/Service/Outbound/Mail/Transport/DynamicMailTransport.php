@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Transport;
+namespace App\Service\Outbound\Mail\Transport;
 
 use App\DependencyInjection\ProcessLifetimeState;
-use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
-use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
-use App\Service\Mail\Settings\Model\ResolvedMailTransportModel;
-use App\Service\Mail\Transport\Factory\ActiveMailTransportFactory;
+use App\Service\Foundation\Crypto\Exception\SecretUnreadableException;
+use App\Service\Outbound\Mail\MailSendingSettings\MailSendingSettingsInterface;
+use App\Service\Outbound\Mail\Settings\Exception\IncompleteMailConfigurationException;
+use App\Service\Outbound\Mail\Settings\Model\ResolvedMailTransportModel;
+use App\Service\Outbound\Mail\Transport\Factory\ActiveMailTransportFactory;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\Envelope;

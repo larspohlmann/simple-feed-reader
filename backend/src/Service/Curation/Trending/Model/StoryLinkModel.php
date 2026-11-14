@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Trending\Model;
+namespace App\Service\Curation\Trending\Model;
 
 final readonly class StoryLinkModel
 {

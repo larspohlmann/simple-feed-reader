@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\PageRepair;
+namespace App\Tests\Service\Content\Reader\PageRepair;
 
-use App\Service\Reader\PageRepair\ShareIntentLinkRemover;
+use App\Service\Content\Reader\PageRepair\ShareIntentLinkRemover;
 use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media;
+namespace App\Tests\Service\Content\Reader\Media;
 
-use App\Service\Reader\Media\MediaRelevance;
+use App\Service\Content\Reader\Media\MediaRelevance;
 use PHPUnit\Framework\TestCase;
 
 final class MediaRelevanceTest extends TestCase

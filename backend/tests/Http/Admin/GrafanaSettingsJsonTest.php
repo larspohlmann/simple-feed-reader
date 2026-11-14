@@ -8,9 +8,9 @@ use App\Entity\GrafanaConnection;
 use App\Entity\GrafanaSettings;
 use App\Entity\SealedSecret;
 use App\Http\Admin\GrafanaSettingsJson;
-use App\Service\Grafana\GrafanaEnvDefaults;
-use App\Service\Grafana\Model\GrafanaSettingsOverviewModel;
-use App\Service\Grafana\Model\GrafanaSettingsSnapshotModel;
+use App\Service\Operations\Grafana\GrafanaEnvDefaults;
+use App\Service\Operations\Grafana\Model\GrafanaSettingsOverviewModel;
+use App\Service\Operations\Grafana\Model\GrafanaSettingsSnapshotModel;
 use PHPUnit\Framework\TestCase;
 
 final class GrafanaSettingsJsonTest extends TestCase

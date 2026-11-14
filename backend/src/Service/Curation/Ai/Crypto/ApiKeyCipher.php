@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai\Crypto;
+namespace App\Service\Curation\Ai\Crypto;
 
 use App\Entity\SealedSecret;
-use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Crypto\Model\SecretBindingModel;
+use App\Service\Foundation\Crypto\InstanceSecretCipher;
+use App\Service\Foundation\Crypto\Model\SecretBindingModel;
 
 /** An account's AI provider API key, bound to the account so a row cannot be moved to another one. */
 final readonly class ApiKeyCipher

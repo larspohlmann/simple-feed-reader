@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Transcript\TranscriptSource;
+namespace App\Service\Content\Transcript\TranscriptSource;
 
-use App\Service\Transcript\Exception\TranscriptUnreachableException;
-use App\Service\Transcript\Exception\TranscriptUnusableException;
+use App\Service\Content\Transcript\Exception\TranscriptUnreachableException;
+use App\Service\Content\Transcript\Exception\TranscriptUnusableException;
 
 interface TranscriptSourceInterface
 {

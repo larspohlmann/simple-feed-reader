@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Scoring;
+namespace App\Tests\Service\Curation\Recommendation\Scoring;
 
 use App\Entity\RecommendationItem;
 use App\Entity\User;
@@ -10,12 +10,12 @@ use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Enum\RecommendationEngineKind;
 use App\Repository\ForYouFeedQuery;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Recommendation\Feed\ForYouFeed;
-use App\Service\Recommendation\Profile\ProfileConnections;
-use App\Service\Recommendation\Run\SnapshotPhase;
-use App\Service\Recommendation\Scoring\ScoringRecommendationEngine;
-use App\Service\Recommendation\Scoring\Support\QuestionId;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Recommendation\Feed\ForYouFeed;
+use App\Service\Curation\Recommendation\Profile\ProfileConnections;
+use App\Service\Curation\Recommendation\Run\SnapshotPhase;
+use App\Service\Curation\Recommendation\Scoring\ScoringRecommendationEngine;
+use App\Service\Curation\Recommendation\Scoring\Support\QuestionId;
 use App\Tests\DbTestCase;
 use App\Tests\Support\DrivesRecommendationRuns;
 use App\Tests\Support\JsonMappers;

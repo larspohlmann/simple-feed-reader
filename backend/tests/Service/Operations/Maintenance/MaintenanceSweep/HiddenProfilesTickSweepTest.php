@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Maintenance\MaintenanceSweep;
+namespace App\Tests\Service\Operations\Maintenance\MaintenanceSweep;
 
-use App\Service\Social\Model\HiddenProfileSwitchReportModel;
+use App\Service\Social\Social\Model\HiddenProfileSwitchReportModel;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Service\Maintenance\MaintenanceSweep\HiddenProfilesTickSweep;
-use App\Service\Social\HiddenProfileSwitchSweep;
-use App\Service\Social\Model\HiddenProfileModel;
+use App\Service\Operations\Maintenance\MaintenanceSweep\HiddenProfilesTickSweep;
+use App\Service\Social\Social\HiddenProfileSwitchSweep;
+use App\Service\Social\Social\Model\HiddenProfileModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StubHiddenProfiles;

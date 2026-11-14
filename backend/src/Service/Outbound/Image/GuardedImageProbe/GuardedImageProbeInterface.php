@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Image\GuardedImageProbe;
+namespace App\Service\Outbound\Image\GuardedImageProbe;
 
-use App\Service\Image\Exception\GuardedImageUnavailableException;
-use App\Service\Image\Model\ImageDimensionsModel;
+use App\Service\Outbound\Image\Exception\GuardedImageUnavailableException;
+use App\Service\Outbound\Image\Model\ImageDimensionsModel;
 
 interface GuardedImageProbeInterface
 {

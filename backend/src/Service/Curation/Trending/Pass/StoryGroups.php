@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Trending\Pass;
+namespace App\Service\Curation\Trending\Pass;
 
-use App\Service\Trending\Model\StoryLinkModel;
+use App\Service\Curation\Trending\Model\StoryLinkModel;
 
 /**
  * Groups built link by link, strongest first: an entry joins only when it links to half of the group's newest

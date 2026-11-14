@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Url\EntryIdentityUrl;
+namespace App\Service\Foundation\Url\EntryIdentityUrl;
 
 interface EntryIdentityUrlInterface
 {

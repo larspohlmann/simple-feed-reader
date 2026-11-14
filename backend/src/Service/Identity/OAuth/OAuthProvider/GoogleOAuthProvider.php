@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\OAuth\OAuthProvider;
+namespace App\Service\Identity\OAuth\OAuthProvider;
 
 use Psr\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;

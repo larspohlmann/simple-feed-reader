@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\Settings;
+namespace App\Tests\Service\Outbound\Mail\Settings;
 
 use App\Enum\MailKind;
-use App\Service\Mail\MailFailureRecorder\MailFailureRecorderInterface;
-use App\Service\Mail\MailSendingSettings\EffectiveMailSettings;
-use App\Service\Mail\Settings\MailConnectionTester;
-use App\Service\Mail\Settings\MailSettings;
-use App\Service\Mail\Settings\Model\MailTestFailure;
-use App\Service\Mail\Transport\Factory\ActiveMailTransportFactory;
-use App\Service\Proxy\ProxySettings;
+use App\Service\Outbound\Mail\MailFailureRecorder\MailFailureRecorderInterface;
+use App\Service\Outbound\Mail\MailSendingSettings\EffectiveMailSettings;
+use App\Service\Outbound\Mail\Settings\MailConnectionTester;
+use App\Service\Outbound\Mail\Settings\MailSettings;
+use App\Service\Outbound\Mail\Settings\Model\MailTestFailure;
+use App\Service\Outbound\Mail\Transport\Factory\ActiveMailTransportFactory;
+use App\Service\Outbound\Proxy\ProxySettings;
 use App\Tests\Support\InMemoryMailFailureRecorder;
 use App\Tests\Support\SettingsRequests;
 use App\Tests\Support\UnreadableProxyPasswordRows;

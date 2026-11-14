@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai\Model;
+namespace App\Service\Curation\Ai\Model;
 
 /**
  * What one call consumed, by the provider's own `usage` report; wire bytes are no cost proxy. Cost is integer

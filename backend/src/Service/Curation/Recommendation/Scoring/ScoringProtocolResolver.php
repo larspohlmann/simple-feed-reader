@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Scoring;
+namespace App\Service\Curation\Recommendation\Scoring;
 
 use App\Enum\ScoringProtocol;
-use App\Service\Recommendation\Scoring\ScoringProtocol\ScoringProtocolInterface;
+use App\Service\Curation\Recommendation\Scoring\ScoringProtocol\ScoringProtocolInterface;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;

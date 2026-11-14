@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Completion\SelfThreadPass;
+namespace App\Service\Social\Completion\SelfThreadPass;
 
 use App\Entity\ShareEnrichment;
 

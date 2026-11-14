@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Retention;
+namespace App\Service\Ingestion\Retention;
 
 use App\Repository\RetentionRepository;
-use App\Service\Search\EntryIndexer;
+use App\Service\Library\Search\EntryIndexer;
 use Symfony\Component\Clock\ClockInterface;
 
 /**

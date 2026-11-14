@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ingest;
+namespace App\Service\Ingestion\Ingest;
 
-use App\Service\Ingest\PlatformEntryRule\PlatformEntryRuleInterface;
-use App\Service\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Ingest\PlatformEntryRule\PlatformEntryRuleInterface;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 final readonly class PlatformEntryRules

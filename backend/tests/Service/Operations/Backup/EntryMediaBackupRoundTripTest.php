@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Backup;
+namespace App\Tests\Service\Operations\Backup;
 
 use App\Entity\Entry;
 use App\Entity\EntryAttachment;
@@ -13,8 +13,8 @@ use App\Entity\ImageRendition;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\EntryBatchInserter;
-use App\Service\Backup\AccountBackupExporter;
-use App\Service\Backup\Dto\EntryLine;
+use App\Service\Operations\Backup\AccountBackupExporter;
+use App\Service\Operations\Backup\Dto\EntryLine;
 use App\Tests\DbTestCase;
 use App\Tests\Support\EntryUrlHashes;
 use App\Tests\Support\UserFactory;

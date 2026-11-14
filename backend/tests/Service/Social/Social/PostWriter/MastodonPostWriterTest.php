@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\PostWriter;
+namespace App\Tests\Service\Social\Social\PostWriter;
 
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostRefusedException;
-use App\Service\Social\Exception\SocialTokenScopeMissingException;
-use App\Service\Social\Model\PostDeletion;
-use App\Service\Social\Model\PublishedPostModel;
-use App\Service\Social\Model\PostDraftModel;
-use App\Service\Social\Model\SocialPostModel;
-use App\Service\Social\PostWriter\MastodonPostWriter;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
+use App\Service\Social\Social\Model\PostDeletion;
+use App\Service\Social\Social\Model\PublishedPostModel;
+use App\Service\Social\Social\Model\PostDraftModel;
+use App\Service\Social\Social\Model\SocialPostModel;
+use App\Service\Social\Social\PostWriter\MastodonPostWriter;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;

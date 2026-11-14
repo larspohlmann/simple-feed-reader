@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Subscription\Model;
+namespace App\Service\Library\Subscription\Model;
 
-use App\Service\Trending\Model\TrendingUnopenedModel;
+use App\Service\Curation\Trending\Model\TrendingUnopenedModel;
 
 final readonly class SubscriptionTalliesModel
 {

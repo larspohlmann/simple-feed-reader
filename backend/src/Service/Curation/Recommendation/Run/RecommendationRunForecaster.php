@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run;
+namespace App\Service\Curation\Recommendation\Run;
 
 use App\Entity\User;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunTimingRepository;
-use App\Service\Recommendation\Run\Model\PhaseDurationsModel;
-use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
-use App\Service\Recommendation\Run\Model\RunForecastModel;
-use App\Service\Recommendation\Run\Support\RunLogRetention;
+use App\Service\Curation\Recommendation\Run\Model\PhaseDurationsModel;
+use App\Service\Curation\Recommendation\Run\Model\RecommendationRunReportModel;
+use App\Service\Curation\Recommendation\Run\Model\RunForecastModel;
+use App\Service\Curation\Recommendation\Run\Support\RunLogRetention;
 use Symfony\Component\Clock\ClockInterface;
 
 /**

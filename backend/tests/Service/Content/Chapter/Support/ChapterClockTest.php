@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Chapter\Support;
+namespace App\Tests\Service\Content\Chapter\Support;
 
-use App\Service\Chapter\Support\ChapterClock;
+use App\Service\Content\Chapter\Support\ChapterClock;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

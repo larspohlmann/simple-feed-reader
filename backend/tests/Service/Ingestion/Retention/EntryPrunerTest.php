@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Retention;
+namespace App\Tests\Service\Ingestion\Retention;
 
 use App\Entity\Entry;
 use App\Entity\EntryShare;
@@ -16,12 +16,12 @@ use App\Enum\RecommendationEngineKind;
 use App\Enum\SourceFormat;
 use App\Repository\RetentionRepository;
 use App\Repository\RowIds;
-use App\Service\Retention\EntryPruner;
-use App\Service\Retention\RetentionSettings;
-use App\Service\Search\EntryIndexer;
-use App\Service\Search\Exception\SearchEngineUnavailableException;
+use App\Service\Ingestion\Retention\EntryPruner;
+use App\Service\Ingestion\Retention\RetentionSettings;
+use App\Service\Library\Search\EntryIndexer;
+use App\Service\Library\Search\Exception\SearchEngineUnavailableException;
 use App\Tests\DbTestCase;
-use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\EntryIndexers;
 use Symfony\Component\Clock\MockClock;
 

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Settings\PasskeyRelyingParty;
+namespace App\Service\Operations\Settings\PasskeyRelyingParty;
 
-use App\Service\Settings\EffectivePasskeyRelyingPartyId;
-use App\Service\Settings\InstanceSettings;
-use App\Service\Settings\ServingHost\ServingHostInterface;
+use App\Service\Operations\Settings\EffectivePasskeyRelyingPartyId;
+use App\Service\Operations\Settings\InstanceSettings;
+use App\Service\Operations\Settings\ServingHost\ServingHostInterface;
 
 /** Independent of PublicBaseUrlInterface, which is an email-link address, not an origin.
  *  An instance reachable on two hosts derives two ids — set the Passkey domain

@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Http\Admin;
 
 use App\Http\Admin\ProxyTestResultJson;
-use App\Service\Proxy\Model\ProxyTestFailure;
-use App\Service\Proxy\Model\ProxyTestResultModel;
+use App\Service\Outbound\Proxy\Model\ProxyTestFailure;
+use App\Service\Outbound\Proxy\Model\ProxyTestResultModel;
 use PHPUnit\Framework\TestCase;
 
 final class ProxyTestResultJsonTest extends TestCase

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Model;
+namespace App\Service\Operations\Backup\Model;
 
 /**
  * The facts about an export that every one of its parts' headers repeats

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run;
+namespace App\Service\Curation\Recommendation\Run;
 
 use App\Repository\WorkerHeartbeatRepository;
-use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
+use App\Service\Curation\Recommendation\Run\Model\RecommendationDriverKind;
 use Symfony\Component\Clock\ClockInterface;
 
 /**

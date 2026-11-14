@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Chapter\Pass;
+namespace App\Service\Content\Chapter\Pass;
 
 use Dom\Element;
 use Dom\Node;

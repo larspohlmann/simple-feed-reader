@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Model;
+namespace App\Tests\Service\Social\Social\Model;
 
-use App\Service\Social\Model\PrivateFeedSyncBudgetModel;
+use App\Service\Social\Social\Model\PrivateFeedSyncBudgetModel;
 use PHPUnit\Framework\TestCase;
 
 final class PrivateFeedSyncBudgetModelTest extends TestCase

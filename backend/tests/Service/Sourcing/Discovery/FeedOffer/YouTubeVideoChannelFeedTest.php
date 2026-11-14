@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Discovery\FeedOffer;
+namespace App\Tests\Service\Sourcing\Discovery\FeedOffer;
 
-use App\Service\Discovery\FeedOffer\YouTubeVideoChannelFeed;
+use App\Service\Sourcing\Discovery\FeedOffer\YouTubeVideoChannelFeed;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

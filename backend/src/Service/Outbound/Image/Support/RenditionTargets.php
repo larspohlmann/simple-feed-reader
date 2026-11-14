@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Image\Support;
+namespace App\Service\Outbound\Image\Support;
 
 /** The widths the list views ask for: thumb 132 px at 2×, split 259 px, full column 680 px, each at 1× to 3×. */
 final class RenditionTargets

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Version\LatestReleaseReader;
+namespace App\Tests\Service\Operations\Version\LatestReleaseReader;
 
-use App\Service\Version\LatestReleaseReader\GitHubLatestReleaseReader;
-use App\Service\Version\Model\LatestReleaseModel;
+use App\Service\Operations\Version\LatestReleaseReader\GitHubLatestReleaseReader;
+use App\Service\Operations\Version\Model\LatestReleaseModel;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;

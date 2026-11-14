@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Profile;
+namespace App\Service\Curation\Recommendation\Profile;
 
 use App\Entity\SavedSearch;
 use App\Repository\SavedSearchRepository;
-use App\Service\Recommendation\Pool\RecommendationHistoryLoader;
-use App\Service\Recommendation\Profile\Model\ProfileInputsModel;
-use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
+use App\Service\Curation\Recommendation\Pool\RecommendationHistoryLoader;
+use App\Service\Curation\Recommendation\Profile\Model\ProfileInputsModel;
+use App\Service\Curation\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
 
 final readonly class ProfileInputsLoader
 {

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\BodyCleaning\Model;
+namespace App\Service\Content\Reader\BodyCleaning\Model;
 
-use App\Service\Reader\Media\Model\ArticleMediaModel;
-use App\Service\Reader\Media\Teaser\Model\TeaserPlayerModel;
-use App\Service\Reader\Model\FeedMediaModel;
-use App\Service\Reader\Model\LeadImageCandidateModel;
-use App\Service\Reader\Slideshow\Model\SlideshowModel;
+use App\Service\Content\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Content\Reader\Media\Teaser\Model\TeaserPlayerModel;
+use App\Service\Content\Reader\Model\FeedMediaModel;
+use App\Service\Content\Reader\Model\LeadImageCandidateModel;
+use App\Service\Content\Reader\Slideshow\Model\SlideshowModel;
 
 /** What the extraction knows about the article besides its body, for the body-cleaning steps to read. */
 final readonly class BodyCleaningInputModel

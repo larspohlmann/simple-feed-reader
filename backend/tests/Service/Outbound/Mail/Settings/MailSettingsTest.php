@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\Settings;
+namespace App\Tests\Service\Outbound\Mail\Settings;
 
 use App\Enum\MailEncryption;
 use App\Http\Admin\MailSettingsJson;
 use App\Repository\MailServerSettingsRepository;
-use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
-use App\Service\Mail\Settings\MailSettings;
+use App\Service\Outbound\Mail\Settings\Exception\IncompleteMailConfigurationException;
+use App\Service\Outbound\Mail\Settings\MailSettings;
 use App\Tests\Support\ConfiguresAProxy;
 use App\Tests\Support\SettingsRequests;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;

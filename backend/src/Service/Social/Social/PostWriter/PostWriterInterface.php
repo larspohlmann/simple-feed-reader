@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\PostWriter;
+namespace App\Service\Social\Social\PostWriter;
 
 use App\Entity\SocialAccount;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkThrottledException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\Exception\SocialPostRefusedException;
-use App\Service\Social\Exception\SocialPostTooLongException;
-use App\Service\Social\Exception\SocialTokenScopeMissingException;
-use App\Service\Social\Model\PostDeletion;
-use App\Service\Social\Model\PublishedPostModel;
-use App\Service\Social\Model\PostDraftModel;
-use App\Service\Social\Model\SocialPostModel;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Social\Exception\SocialPostTooLongException;
+use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
+use App\Service\Social\Social\Model\PostDeletion;
+use App\Service\Social\Social\Model\PublishedPostModel;
+use App\Service\Social\Social\Model\PostDraftModel;
+use App\Service\Social\Social\Model\SocialPostModel;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 #[AutoconfigureTag('app.social_post_writer')]

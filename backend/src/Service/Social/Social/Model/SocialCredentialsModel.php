@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Model;
+namespace App\Service\Social\Social\Model;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Bluesky\Support\BlueskyActorKey;
-use App\Service\Social\Exception\InvalidInstanceUrlException;
-use App\Service\Social\Exception\NotAnAppPasswordException;
-use App\Service\Url\Support\UrlOrigin;
+use App\Service\Social\Bluesky\Support\BlueskyActorKey;
+use App\Service\Social\Social\Exception\InvalidInstanceUrlException;
+use App\Service\Social\Social\Exception\NotAnAppPasswordException;
+use App\Service\Foundation\Url\Support\UrlOrigin;
 
 final readonly class SocialCredentialsModel
 {

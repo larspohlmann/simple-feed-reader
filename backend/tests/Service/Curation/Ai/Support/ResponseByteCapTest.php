@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Ai\Support;
+namespace App\Tests\Service\Curation\Ai\Support;
 
-use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\Support\ResponseByteCap;
+use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
+use App\Service\Curation\Ai\Support\ResponseByteCap;
 use PHPUnit\Framework\TestCase;
 
 final class ResponseByteCapTest extends TestCase

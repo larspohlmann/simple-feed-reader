@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Social\Model\SocialPostModel;
+use App\Service\Social\Social\Model\SocialPostModel;
 
 final class SocialViewerJson
 {

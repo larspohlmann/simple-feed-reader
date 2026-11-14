@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Subscription;
+namespace App\Service\Library\Subscription;
 
 use App\Entity\Feed;
-use App\Service\Completion\ShareEnrichmentQueue;
-use App\Service\Discovery\Model\DiscoveredFeedModel;
-use App\Service\Feed\FeedScheduler;
-use App\Service\Ingest\EntryIngestor;
-use App\Service\Ingest\Pass\FeedIngestContext;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Parser\Model\ParsedFeedModel;
-use App\Service\Search\EntryIndexer;
+use App\Service\Social\Completion\ShareEnrichmentQueue;
+use App\Service\Sourcing\Discovery\Model\DiscoveredFeedModel;
+use App\Service\Ingestion\Feed\FeedScheduler;
+use App\Service\Ingestion\Ingest\EntryIngestor;
+use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
+use App\Service\Library\Search\EntryIndexer;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 

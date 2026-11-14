@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Html;
+namespace App\Service\Foundation\Html;
 
 /**
  * Evaluates a <source media> query as a desktop window would: the reader shows one rendition in a desktop column.

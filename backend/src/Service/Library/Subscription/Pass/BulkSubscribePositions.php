@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Subscription\Pass;
+namespace App\Service\Library\Subscription\Pass;
 
 use App\Entity\Tag;
 

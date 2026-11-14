@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\SweepReportJson;
 
-use App\Service\LinkCard\Model\LinkCardSweepReportModel;
+use App\Service\Content\LinkCard\Model\LinkCardSweepReportModel;
 
 final readonly class LinkCardSweepJson implements SweepReportJsonInterface
 {

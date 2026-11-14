@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Image;
+namespace App\Tests\Service\Outbound\Image;
 
-use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\UrlGuard;
-use App\Service\Image\OriginCookies;
+use App\Service\Outbound\Fetch\IpValidator;
+use App\Service\Outbound\Fetch\UrlGuard;
+use App\Service\Outbound\Image\OriginCookies;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
 use App\Tests\Support\StaticDnsResolver;

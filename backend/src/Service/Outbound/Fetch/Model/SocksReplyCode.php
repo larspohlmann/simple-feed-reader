@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\Model;
+namespace App\Service\Outbound\Fetch\Model;
 
 /** The REP byte of a SOCKS5 CONNECT reply (RFC 1928 §6). curl surfaces only the number; this knows its meaning. */
 enum SocksReplyCode: int

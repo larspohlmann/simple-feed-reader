@@ -63,25 +63,25 @@ services:
     # A plain application interface gets no tag from autoconfigure, so an #[AutowireIterator] over it collects
     # nothing, silently. Each collected interface below is tagged here.
     _instanceof:
-        App\Service\OAuth\OAuthProvider\OAuthProviderInterface:
+        App\Service\Identity\OAuth\OAuthProvider\OAuthProviderInterface:
             tags: ['app.oauth_provider']
-        App\Service\Parser\FeedFormatParser\FeedFormatParserInterface:
+        App\Service\Ingestion\Parser\FeedFormatParser\FeedFormatParserInterface:
             tags: ['app.feed_parser']
-        App\Service\Reader\Media\EmbedProvider\EmbedProviderInterface:
+        App\Service\Content\Reader\Media\EmbedProvider\EmbedProviderInterface:
             tags: ['app.embed_provider']
-        App\Service\Reader\Slideshow\SlideshowRecognizer\SlideshowRecognizerInterface:
+        App\Service\Content\Reader\Slideshow\SlideshowRecognizer\SlideshowRecognizerInterface:
             tags: ['app.slideshow_recognizer']
-        App\Service\Ingest\PlatformEntryRule\PlatformEntryRuleInterface:
+        App\Service\Ingestion\Ingest\PlatformEntryRule\PlatformEntryRuleInterface:
             tags: ['app.platform_entry_rule']
-        App\Service\Url\EntryIdentityUrl\EntryIdentityUrlInterface:
+        App\Service\Foundation\Url\EntryIdentityUrl\EntryIdentityUrlInterface:
             tags: ['app.entry_identity_url']
-        App\Service\Discovery\ShareLinkFeed\ShareLinkFeedInterface:
+        App\Service\Sourcing\Discovery\ShareLinkFeed\ShareLinkFeedInterface:
             tags: ['app.share_link_feed']
-        App\Service\Discovery\FeedOffer\FeedOfferInterface:
+        App\Service\Sourcing\Discovery\FeedOffer\FeedOfferInterface:
             tags: ['app.feed_offer']
-        App\Service\Discovery\AccountOnlyFeed\AccountOnlyFeedInterface:
+        App\Service\Sourcing\Discovery\AccountOnlyFeed\AccountOnlyFeedInterface:
             tags: ['app.account_only_feed']
-        App\Service\Subscription\SubscribeRoute\SubscribeRouteInterface:
+        App\Service\Library\Subscription\SubscribeRoute\SubscribeRouteInterface:
             tags: ['app.subscribe_route']
         # Symfony's mailer auto-tags only the transport factories it ships; without this `dynamic://` has no factory
         # and MAILER_DSN=dynamic://default throws UnsupportedSchemeException.
@@ -98,159 +98,159 @@ services:
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
     App\Security\PasswordWorkEqualizerInterface: '@App\Security\PasswordWorkEqualizer'
-    App\Service\Fetch\DnsResolver\DnsResolverInterface: '@App\Service\Fetch\DnsResolver\NativeDnsResolver'
-    App\Service\Fetch\FeedFetcher\FeedFetcherInterface: '@App\Service\Fetch\FeedFetcher\HttpFeedFetcher'
-    App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface: '@App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher'
-    App\Service\Refresh\PassFetcher\PassFetcherInterface: '@App\Service\Refresh\PassFetcher\ConcurrentPassFetcher'
-    App\Service\Fetch\EgressProxySource\EgressProxySourceInterface: '@App\Service\Proxy\ConfiguredProxySource\StoredProxy'
-    App\Service\Proxy\ConfiguredProxySource\ConfiguredProxySourceInterface: '@App\Service\Proxy\ConfiguredProxySource\StoredProxy'
-    App\Service\Refresh\RefreshRunner\RefreshRunnerInterface: '@App\Service\Refresh\RefreshRunner\RefreshRunner'
-    App\Service\Discovery\FeedDiscovery\FeedDiscoveryInterface: '@App\Service\Discovery\FeedDiscovery\FeedDiscovery'
-    App\Service\Reader\ArticleExtractor\ArticleExtractorInterface: '@App\Service\Reader\ArticleExtractor\ArticleExtractor'
-    App\Service\Settings\ServingHost\ServingHostInterface: '@App\Http\RequestServingHost'
-    App\Service\Social\HiddenProfiles\HiddenProfilesInterface: '@App\Service\Social\HiddenProfiles\AppViewHiddenProfiles'
-    App\Service\Reader\StatusReasonPhrases\StatusReasonPhrasesInterface: '@App\Http\SymfonyStatusReasonPhrases'
-    App\Service\Ingest\FeedTitle\FeedTitleInterface: '@App\Service\Social\ProfileFeedTitle'
+    App\Service\Outbound\Fetch\DnsResolver\DnsResolverInterface: '@App\Service\Outbound\Fetch\DnsResolver\NativeDnsResolver'
+    App\Service\Outbound\Fetch\FeedFetcher\FeedFetcherInterface: '@App\Service\Outbound\Fetch\FeedFetcher\HttpFeedFetcher'
+    App\Service\Outbound\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface: '@App\Service\Outbound\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher'
+    App\Service\Ingestion\Refresh\PassFetcher\PassFetcherInterface: '@App\Service\Ingestion\Refresh\PassFetcher\ConcurrentPassFetcher'
+    App\Service\Outbound\Fetch\EgressProxySource\EgressProxySourceInterface: '@App\Service\Outbound\Proxy\ConfiguredProxySource\StoredProxy'
+    App\Service\Outbound\Proxy\ConfiguredProxySource\ConfiguredProxySourceInterface: '@App\Service\Outbound\Proxy\ConfiguredProxySource\StoredProxy'
+    App\Service\Ingestion\Refresh\RefreshRunner\RefreshRunnerInterface: '@App\Service\Ingestion\Refresh\RefreshRunner\RefreshRunner'
+    App\Service\Sourcing\Discovery\FeedDiscovery\FeedDiscoveryInterface: '@App\Service\Sourcing\Discovery\FeedDiscovery\FeedDiscovery'
+    App\Service\Content\Reader\ArticleExtractor\ArticleExtractorInterface: '@App\Service\Content\Reader\ArticleExtractor\ArticleExtractor'
+    App\Service\Operations\Settings\ServingHost\ServingHostInterface: '@App\Http\RequestServingHost'
+    App\Service\Social\Social\HiddenProfiles\HiddenProfilesInterface: '@App\Service\Social\Social\HiddenProfiles\AppViewHiddenProfiles'
+    App\Service\Content\Reader\StatusReasonPhrases\StatusReasonPhrasesInterface: '@App\Http\SymfonyStatusReasonPhrases'
+    App\Service\Ingestion\Ingest\FeedTitle\FeedTitleInterface: '@App\Service\Social\Social\ProfileFeedTitle'
 
     # Page repairs, in this order, before readability scores the page: the class-reading repairs precede
     # ImageWrapperClassRemover and HeadingClassRemover, which strip the classes they key on.
-    App\Service\Reader\FetchedPageNormalizer:
+    App\Service\Content\Reader\FetchedPageNormalizer:
         arguments:
             $repairs:
-                - '@App\Service\Reader\PageRepair\StylesheetHiddenElementRemover'
-                - '@App\Service\Reader\PageRepair\CustomElementUnwrapper'
-                - '@App\Service\Reader\PageRepair\NoscriptImageUnwrapper'
-                - '@App\Service\Reader\PageRepair\LazyImageSources'
-                - '@App\Service\Reader\PageRepair\ImageButtonUnwrapper'
-                - '@App\Service\Reader\PageRepair\ShareWidgetRemover'
-                - '@App\Service\Reader\PageRepair\ShareIntentLinkRemover'
-                - '@App\Service\Reader\PageRepair\CommentThreadRemover'
-                - '@App\Service\Reader\PageRepair\SubstackGatedVideoPlaceholder'
-                - '@App\Service\Reader\PageRepair\ScreenReaderOnlyElementRemover'
-                - '@App\Service\Reader\PageRepair\HiddenClassElementRemover'
-                - '@App\Service\Reader\PageRepair\OrphanIconGlyphRemover'
-                - '@App\Service\Reader\PageRepair\ImageWrapperClassRemover'
-                - '@App\Service\Reader\PageRepair\HeadingClassRemover'
-                - '@App\Service\Reader\PageRepair\HorizontalRuleUnwrapper'
+                - '@App\Service\Content\Reader\PageRepair\StylesheetHiddenElementRemover'
+                - '@App\Service\Content\Reader\PageRepair\CustomElementUnwrapper'
+                - '@App\Service\Content\Reader\PageRepair\NoscriptImageUnwrapper'
+                - '@App\Service\Content\Reader\PageRepair\LazyImageSources'
+                - '@App\Service\Content\Reader\PageRepair\ImageButtonUnwrapper'
+                - '@App\Service\Content\Reader\PageRepair\ShareWidgetRemover'
+                - '@App\Service\Content\Reader\PageRepair\ShareIntentLinkRemover'
+                - '@App\Service\Content\Reader\PageRepair\CommentThreadRemover'
+                - '@App\Service\Content\Reader\PageRepair\SubstackGatedVideoPlaceholder'
+                - '@App\Service\Content\Reader\PageRepair\ScreenReaderOnlyElementRemover'
+                - '@App\Service\Content\Reader\PageRepair\HiddenClassElementRemover'
+                - '@App\Service\Content\Reader\PageRepair\OrphanIconGlyphRemover'
+                - '@App\Service\Content\Reader\PageRepair\ImageWrapperClassRemover'
+                - '@App\Service\Content\Reader\PageRepair\HeadingClassRemover'
+                - '@App\Service\Content\Reader\PageRepair\HorizontalRuleUnwrapper'
 
     # The reader body's cleaning steps, run in this order over one shared document. The order is
     # behaviour (ReaderBodyCleanerWiringTest pins it): a new step joins at its place in this list.
-    App\Service\Reader\ReaderBodyCleaner:
+    App\Service\Content\Reader\ReaderBodyCleaner:
         arguments:
             $steps:
                 # Media first: no trimmer may drop a block that now holds a recovered player.
-                - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\InBodyEmbedRewriter'
-                - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\SubstackPosterLink'
-                - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\PlayerChromeCleaner'
-                - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\NavigationChromeTrimmer'
+                - '@App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\InBodyEmbedRewriter'
+                - '@App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\SubstackPosterLink'
+                - '@App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\PlayerChromeCleaner'
+                - '@App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\NavigationChromeTrimmer'
                 # Engagement before the title: its kickers hide the title from the remover.
-                - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\LeadingEngagementCleaner'
-                - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\LeadingTitleRemover'
-                - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\EdgeBoilerplateTrimmer'
-                - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\LegalLinkListRemover'
+                - '@App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\LeadingEngagementCleaner'
+                - '@App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\LeadingTitleRemover'
+                - '@App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\EdgeBoilerplateTrimmer'
+                - '@App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\LegalLinkListRemover'
                 # After the trimmers, which could drop its anchor; before media placement, which must see it.
-                - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\SlideshowInserter'
-                - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\RecipeFactsCleaner'
-                - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\DuplicateBlockCollapser'
-                - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\PageMediaPlacement'
+                - '@App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\SlideshowInserter'
+                - '@App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\RecipeFactsCleaner'
+                - '@App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\DuplicateBlockCollapser'
+                - '@App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\PageMediaPlacement'
                 # After placement, so a teaser is never rebuilt over placed lead media (#948).
-                - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\TeaserPlayerInserter'
+                - '@App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\TeaserPlayerInserter'
                 # After every step that builds a player, so each body <audio> leaves in the one shape.
-                - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\AudioPlayerNormalizer'
+                - '@App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\AudioPlayerNormalizer'
                 # These judge the settled body; the feed's pixel sizes go on last.
-                - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\MediaOnlyLede'
-                - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\AuthorBioSeparator'
-                - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\FeedDimensionStamper'
-                - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\PastedTextBreakRestorer'
-    App\Service\Search\EntrySearch\EntrySearchInterface: '@App\Service\Search\EntrySearch\EntrySearchWithFallback'
+                - '@App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\MediaOnlyLede'
+                - '@App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\AuthorBioSeparator'
+                - '@App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\FeedDimensionStamper'
+                - '@App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\PastedTextBreakRestorer'
+    App\Service\Library\Search\EntrySearch\EntrySearchInterface: '@App\Service\Library\Search\EntrySearch\EntrySearchWithFallback'
     # Both interfaces resolve to the one adapter that knows Meilisearch's wire
     # format (#432, see MeilisearchIndex).
-    App\Service\Search\Index\SearchIndexReader\SearchIndexReaderInterface: '@App\Service\Search\Index\SearchIndexReader\MeilisearchIndex'
-    App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface: '@App\Service\Search\Index\SearchIndexReader\MeilisearchIndex'
-    App\Service\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface: '@App\Service\Search\Membership\SavedSearchMatcher\EngineOrDatabaseSavedSearchMatcher'
-    App\Service\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface: '@App\Repository\SavedSearchEntryMembershipRepository'
-    App\Service\Passkey\PasskeyCount\PasskeyCountInterface: '@App\Repository\UserPasskeyRepository'
-    App\Service\Passkey\SignInIdentities\SignInIdentitiesInterface: '@App\Repository\UserIdentityRepository'
-    App\Service\Settings\EnrolledPasskeys\EnrolledPasskeysInterface: '@App\Repository\UserPasskeyRepository'
-    App\Service\Auth\UserByEmail\UserByEmailInterface: '@App\Repository\UserRepository'
-    App\Service\Mail\Digest\DigestRecipients\DigestRecipientsInterface: '@App\Repository\DigestSettingsRepository'
-    App\Service\Mail\Digest\DigestSavedSearches\DigestSavedSearchesInterface: '@App\Repository\SavedSearchRepository'
-    App\Service\Grafana\StoredGrafanaSettings\StoredGrafanaSettingsInterface: '@App\Repository\GrafanaSettingsRepository'
-    App\Service\Image\ProbedLadder\ProbedLadderInterface: '@App\Repository\ProbedLadderRepository'
-    App\Service\Proxy\StoredProxySettings\StoredProxySettingsInterface: '@App\Repository\ProxyServerSettingsRepository'
-    App\Service\Backup\RestoreFeeds\RestoreFeedsInterface: '@App\Repository\FeedRepository'
-    App\Service\Backup\RestoreEntries\RestoreEntriesInterface: '@App\Repository\EntryRepository'
-    App\Service\Backup\RestoreEntryStates\RestoreEntryStatesInterface: '@App\Repository\EntryStateRepository'
-    App\Service\Version\ReleaseVersionReader\ReleaseVersionReaderInterface: '@App\Service\Version\ReleaseVersionReader\FileReleaseVersionReader'
-    App\Service\Version\LatestReleaseReader\LatestReleaseReaderInterface: '@App\Service\Version\LatestReleaseReader\GitHubLatestReleaseReader'
-    App\Service\Version\LatestReleaseReader\GitHubLatestReleaseReader:
+    App\Service\Library\Search\Index\SearchIndexReader\SearchIndexReaderInterface: '@App\Service\Library\Search\Index\SearchIndexReader\MeilisearchIndex'
+    App\Service\Library\Search\Index\SearchIndexWriter\SearchIndexWriterInterface: '@App\Service\Library\Search\Index\SearchIndexReader\MeilisearchIndex'
+    App\Service\Library\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface: '@App\Service\Library\Search\Membership\SavedSearchMatcher\EngineOrDatabaseSavedSearchMatcher'
+    App\Service\Library\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface: '@App\Repository\SavedSearchEntryMembershipRepository'
+    App\Service\Identity\Passkey\PasskeyCount\PasskeyCountInterface: '@App\Repository\UserPasskeyRepository'
+    App\Service\Identity\Passkey\SignInIdentities\SignInIdentitiesInterface: '@App\Repository\UserIdentityRepository'
+    App\Service\Operations\Settings\EnrolledPasskeys\EnrolledPasskeysInterface: '@App\Repository\UserPasskeyRepository'
+    App\Service\Identity\Auth\UserByEmail\UserByEmailInterface: '@App\Repository\UserRepository'
+    App\Service\Outbound\Mail\Digest\DigestRecipients\DigestRecipientsInterface: '@App\Repository\DigestSettingsRepository'
+    App\Service\Outbound\Mail\Digest\DigestSavedSearches\DigestSavedSearchesInterface: '@App\Repository\SavedSearchRepository'
+    App\Service\Operations\Grafana\StoredGrafanaSettings\StoredGrafanaSettingsInterface: '@App\Repository\GrafanaSettingsRepository'
+    App\Service\Outbound\Image\ProbedLadder\ProbedLadderInterface: '@App\Repository\ProbedLadderRepository'
+    App\Service\Outbound\Proxy\StoredProxySettings\StoredProxySettingsInterface: '@App\Repository\ProxyServerSettingsRepository'
+    App\Service\Operations\Backup\RestoreFeeds\RestoreFeedsInterface: '@App\Repository\FeedRepository'
+    App\Service\Operations\Backup\RestoreEntries\RestoreEntriesInterface: '@App\Repository\EntryRepository'
+    App\Service\Operations\Backup\RestoreEntryStates\RestoreEntryStatesInterface: '@App\Repository\EntryStateRepository'
+    App\Service\Operations\Version\ReleaseVersionReader\ReleaseVersionReaderInterface: '@App\Service\Operations\Version\ReleaseVersionReader\FileReleaseVersionReader'
+    App\Service\Operations\Version\LatestReleaseReader\LatestReleaseReaderInterface: '@App\Service\Operations\Version\LatestReleaseReader\GitHubLatestReleaseReader'
+    App\Service\Operations\Version\LatestReleaseReader\GitHubLatestReleaseReader:
         arguments:
             $gitHubRepository: '%github_release_repository%'
-    App\Service\SelfUpdate\UpdateStateStore\UpdateStateStoreInterface: '@App\Service\SelfUpdate\UpdateStateStore\FileUpdateStateStore'
-    App\Service\Ai\ModelCatalog\ModelCatalogInterface: '@App\Service\Ai\ModelCatalog\CompositeModelCatalog'
-    App\Service\Recommendation\Llm\Completion\ChatCompletionClient\ChatCompletionClientInterface: '@App\Service\Recommendation\Llm\Completion\ChatCompletionClient\OpenAiCompatibleChatClient'
-    App\Service\Recommendation\Scoring\SystemOneClient\SystemOneClientInterface: '@App\Service\Recommendation\Scoring\SystemOneClient\HttpSystemOneClient'
-    App\Service\Recommendation\Scoring\RerankClient\RerankClientInterface: '@App\Service\Recommendation\Scoring\RerankClient\HttpRerankClient'
+    App\Service\Operations\SelfUpdate\UpdateStateStore\UpdateStateStoreInterface: '@App\Service\Operations\SelfUpdate\UpdateStateStore\FileUpdateStateStore'
+    App\Service\Curation\Ai\ModelCatalog\ModelCatalogInterface: '@App\Service\Curation\Ai\ModelCatalog\CompositeModelCatalog'
+    App\Service\Curation\Recommendation\Llm\Completion\ChatCompletionClient\ChatCompletionClientInterface: '@App\Service\Curation\Recommendation\Llm\Completion\ChatCompletionClient\OpenAiCompatibleChatClient'
+    App\Service\Curation\Recommendation\Scoring\SystemOneClient\SystemOneClientInterface: '@App\Service\Curation\Recommendation\Scoring\SystemOneClient\HttpSystemOneClient'
+    App\Service\Curation\Recommendation\Scoring\RerankClient\RerankClientInterface: '@App\Service\Curation\Recommendation\Scoring\RerankClient\HttpRerankClient'
     # A provider call pings one heartbeat while it runs and must not know who listens: a composite of the run-lock
     # keepalive and the sweep's liveness beat. Both stay injectable by class, as the advancer and the sweep arm them
     # by name. Which beats first is CompositeProviderCallHeartbeat::beat()'s rule.
-    App\Service\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface: '@App\Service\Recommendation\Run\ProviderCallHeartbeat\CompositeProviderCallHeartbeat'
-    App\Service\Recommendation\Run\ProviderCallHeartbeat\CompositeProviderCallHeartbeat:
+    App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface: '@App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\CompositeProviderCallHeartbeat'
+    App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\CompositeProviderCallHeartbeat:
         arguments:
-            $lockKeepalive: '@App\Service\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive'
-            $workerLiveness: '@App\Service\Recommendation\Run\ProviderCallHeartbeat\SweepStreamHeartbeat'
-    App\Service\Recommendation\Run\RejectedRequestFallback\RejectedRequestFallbackInterface: '@App\Service\Recommendation\Run\RejectedRequestFallback\CompositeRejectedRequestFallback'
-    App\Service\Recommendation\Run\RejectedRequestFallback\CompositeRejectedRequestFallback:
+            $lockKeepalive: '@App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive'
+            $workerLiveness: '@App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\SweepStreamHeartbeat'
+    App\Service\Curation\Recommendation\Run\RejectedRequestFallback\RejectedRequestFallbackInterface: '@App\Service\Curation\Recommendation\Run\RejectedRequestFallback\CompositeRejectedRequestFallback'
+    App\Service\Curation\Recommendation\Run\RejectedRequestFallback\CompositeRejectedRequestFallback:
         arguments:
-            $tokenParameter: '@App\Service\Recommendation\Llm\Run\MaxTokensRefusedFallback'
-            $outputCap: '@App\Service\Recommendation\Llm\Run\OutputCapFallback'
-            $suppressedReasoning: '@App\Service\Recommendation\Llm\Run\SuppressedReasoningFallback'
-    App\Service\Process\ShellCommandRunner\ShellCommandRunnerInterface: '@App\Service\Process\ShellCommandRunner\ExecShellCommandRunner'
-    App\Service\Process\DetachedProcessLauncher\DetachedProcessLauncherInterface: '@App\Service\Process\DetachedProcessLauncher\DetachedProcessLauncher'
+            $tokenParameter: '@App\Service\Curation\Recommendation\Llm\Run\MaxTokensRefusedFallback'
+            $outputCap: '@App\Service\Curation\Recommendation\Llm\Run\OutputCapFallback'
+            $suppressedReasoning: '@App\Service\Curation\Recommendation\Llm\Run\SuppressedReasoningFallback'
+    App\Service\Foundation\Process\ShellCommandRunner\ShellCommandRunnerInterface: '@App\Service\Foundation\Process\ShellCommandRunner\ExecShellCommandRunner'
+    App\Service\Foundation\Process\DetachedProcessLauncher\DetachedProcessLauncherInterface: '@App\Service\Foundation\Process\DetachedProcessLauncher\DetachedProcessLauncher'
 
     # Two classes implement AccountMailerInterface, so it gets no automatic alias. This one names AccountMailer's id,
     # which #[AsDecorator] turns into MailGatedAccountMailer, so every consumer gets the mail gate.
     # MailGatedAccountMailerWiringTest pins it.
-    App\Service\Mail\AccountMailer\AccountMailerInterface: '@App\Service\Mail\AccountMailer\AccountMailer'
+    App\Service\Outbound\Mail\AccountMailer\AccountMailerInterface: '@App\Service\Outbound\Mail\AccountMailer\AccountMailer'
 
     # The same alias-then-decorate wiring for DigestMailer and MailGatedDigestMailer.
-    App\Service\Mail\Digest\DigestMailer\DigestMailerInterface: '@App\Service\Mail\Digest\DigestMailer\DigestMailer'
+    App\Service\Outbound\Mail\Digest\DigestMailer\DigestMailerInterface: '@App\Service\Outbound\Mail\Digest\DigestMailer\DigestMailer'
 
-    App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface: '@App\Service\Mail\MailSendingSettings\EffectiveMailSettings'
+    App\Service\Outbound\Mail\MailSendingSettings\MailSendingSettingsInterface: '@App\Service\Outbound\Mail\MailSendingSettings\EffectiveMailSettings'
 
     # Wired on these services, not bound globally: a bind matches by parameter name, and `int $concurrency` would feed
     # any service that names a parameter that way.
-    App\Service\Fetch\ConcurrentRequestEngine:
+    App\Service\Outbound\Fetch\ConcurrentRequestEngine:
         arguments:
             $concurrency: '%fetch_concurrency%'
 
-    App\Service\Maintenance\MaintenanceTick:
+    App\Service\Operations\Maintenance\MaintenanceTick:
         arguments:
             $tickWindowSeconds: '%maintenance_tick_seconds%'
 
-    App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher:
+    App\Service\Outbound\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher:
         arguments:
             $hostConcurrency: '%fetch_host_concurrency%'
-            $settler: '@App\Service\Fetch\AnswerSettler\PassThroughSettler'
+            $settler: '@App\Service\Outbound\Fetch\AnswerSettler\PassThroughSettler'
 
-    App\Service\Refresh\PassFetcher\ConcurrentPassFetcher:
+    App\Service\Ingestion\Refresh\PassFetcher\ConcurrentPassFetcher:
         arguments:
             $hostConcurrency: '%fetch_host_concurrency%'
 
-    App\Service\Social\SocialSearch\NetworkSocialSearch:
+    App\Service\Social\Social\SocialSearch\NetworkSocialSearch:
         arguments:
-            $settler: '@App\Service\Fetch\AnswerSettler\PassThroughSettler'
+            $settler: '@App\Service\Outbound\Fetch\AnswerSettler\PassThroughSettler'
 
-    App\Service\Social\TimelineRounds:
+    App\Service\Social\Social\TimelineRounds:
         arguments:
             $accountConcurrency: '%social_account_concurrency%'
             $hostConcurrency: '%social_host_concurrency%'
 
     # Account mail leaves on kernel.terminate, after the response (DeferredMailer says why). Bound here, not by
     # decorating `mailer.mailer`, so only AccountMailer takes the detour.
-    App\Service\Mail\AccountMailer\AccountMailer:
+    App\Service\Outbound\Mail\AccountMailer\AccountMailer:
         arguments:
-            $mailer: '@App\Service\Mail\DeferredMailer'
+            $mailer: '@App\Service\Outbound\Mail\DeferredMailer'
 
     # Keys the login throttle on the normalised address (docs/security.md#login-throttle-key). Decorated, not named
     # as `limiter:` in security.yaml, which would drop Symfony's global and local limiter pair. The decorated id
@@ -260,24 +260,24 @@ services:
         arguments:
             $inner: '@.inner'
 
-    App\Service\Catalog\BundledCatalog:
+    App\Service\Sourcing\Catalog\BundledCatalog:
         arguments:
             $projectDir: '%kernel.project_dir%'
 
-    App\Service\Refresh\ContentChangeMarker\ContentChangeMarker:
+    App\Service\Ingestion\Refresh\ContentChangeMarker\ContentChangeMarker:
         arguments:
             $projectDir: '%kernel.project_dir%'
-    App\Service\Refresh\ContentChangeMarker\ContentChangeMarkerInterface: '@App\Service\Refresh\ContentChangeMarker\ContentChangeMarker'
+    App\Service\Ingestion\Refresh\ContentChangeMarker\ContentChangeMarkerInterface: '@App\Service\Ingestion\Refresh\ContentChangeMarker\ContentChangeMarker'
 
     # Its own id, so a test can swap in a MockHttpClient for the catalog URL checker without touching the app-wide client.
     catalog.rot_check.http_client:
         parent: 'http_client'
 
-    App\Service\Catalog\CatalogUrlChecker:
+    App\Service\Sourcing\Catalog\CatalogUrlChecker:
         arguments:
             $httpClient: '@catalog.rot_check.http_client'
 
-    App\Service\Logging\RequestLogProcessor:
+    App\Service\Operations\Logging\RequestLogProcessor:
         tags:
             - { name: monolog.processor }
 
@@ -289,17 +289,17 @@ services:
             $ignoreEmptyContextAndExtra: false
             $includeStacktraces: true
 
-    App\Service\Logging\Loki\LokiEndpoint\LokiEndpointInterface: '@App\Service\Grafana\SettingsLokiEndpoint'
+    App\Service\Operations\Logging\Loki\LokiEndpoint\LokiEndpointInterface: '@App\Service\Operations\Grafana\SettingsLokiEndpoint'
 
-    App\Service\Logging\Loki\LokiSink\SpoolLokiSink:
+    App\Service\Operations\Logging\Loki\LokiSink\SpoolLokiSink:
         arguments:
             $spoolDirectory: '%app.loki_spool_directory%'
 
-    App\Service\Logging\Loki\LokiSpoolShipper:
+    App\Service\Operations\Logging\Loki\LokiSpoolShipper:
         arguments:
             $spoolDirectory: '%app.loki_spool_directory%'
 
-    App\Service\Logging\Factory\HostLogFileHandlerFactory:
+    App\Service\Operations\Logging\Factory\HostLogFileHandlerFactory:
         arguments:
             $logsDirectory: '%kernel.logs_dir%'
             $environment: '%kernel.environment%'
@@ -307,10 +307,10 @@ services:
 
     app.host_log_file_handler:
         class: Monolog\Handler\RotatingFileHandler
-        factory: ['@App\Service\Logging\Factory\HostLogFileHandlerFactory', 'create']
+        factory: ['@App\Service\Operations\Logging\Factory\HostLogFileHandlerFactory', 'create']
 
-    App\Service\Logging\Loki\LokiSink\LokiSinkInterface:
-        factory: ['@App\Service\Logging\Loki\Factory\LokiSinkFactory', 'create']
+    App\Service\Operations\Logging\Loki\LokiSink\LokiSinkInterface:
+        factory: ['@App\Service\Operations\Logging\Loki\Factory\LokiSinkFactory', 'create']
 
     app.untrusted_markdown_converter:
         class: League\CommonMark\CommonMarkConverter
@@ -320,7 +320,7 @@ services:
               max_nesting_level: 20
               max_delimiters_per_line: 1000
 
-    App\Service\Logging\Loki\LokiPushHandler:
+    App\Service\Operations\Logging\Loki\LokiPushHandler:
         arguments:
             $appLabel: 'simple-feed-reader'
             $envLabel: '%kernel.environment%'

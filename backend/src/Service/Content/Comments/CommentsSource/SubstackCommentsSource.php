@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Comments\CommentsSource;
+namespace App\Service\Content\Comments\CommentsSource;
 
 use App\Entity\Entry;
 use App\Entity\User;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Comments\CommentsEndpointFetcher;
-use App\Service\Comments\Exception\CommentsUnavailableException;
-use App\Service\Comments\Model\CommentsAnswerModel;
-use App\Service\Comments\Model\CommentsAudienceModel;
-use App\Service\Comments\Model\CommentsEndpointModel;
-use App\Service\Comments\Model\CommentsPageModel;
-use App\Service\Comments\Model\SubstackPostModel;
-use App\Service\Comments\Pass\CommentsRequest;
-use App\Service\Comments\Pass\SubstackThread;
-use App\Service\Comments\Support\SubstackPostAddress;
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Content\Comments\CommentsEndpointFetcher;
+use App\Service\Content\Comments\Exception\CommentsUnavailableException;
+use App\Service\Content\Comments\Model\CommentsAnswerModel;
+use App\Service\Content\Comments\Model\CommentsAudienceModel;
+use App\Service\Content\Comments\Model\CommentsEndpointModel;
+use App\Service\Content\Comments\Model\CommentsPageModel;
+use App\Service\Content\Comments\Model\SubstackPostModel;
+use App\Service\Content\Comments\Pass\CommentsRequest;
+use App\Service\Content\Comments\Pass\SubstackThread;
+use App\Service\Content\Comments\Support\SubstackPostAddress;
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\FeedFetcher\FeedFetcherInterface;
 
 final readonly class SubstackCommentsSource implements CommentsSourceInterface
 {

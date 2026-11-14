@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run;
+namespace App\Service\Curation\Recommendation\Run;
 
 use App\Entity\RecommendationRun;
-use App\Service\Ai\Exception\ProviderRateLimitedException;
-use App\Service\Ai\Exception\ProviderRejectedRequestException;
-use App\Service\Ai\Model\RateLimitedResultModel;
-use App\Service\Recommendation\Run\BatchCallOutcome\BatchCallOutcomeInterface;
-use App\Service\Recommendation\Run\BatchWave\BatchWaveInterface;
-use App\Service\Recommendation\Run\BatchWaveEngine\BatchWaveEngineInterface;
-use App\Service\Recommendation\Run\Model\BatchWaveResultModel;
-use App\Service\Recommendation\Run\Pass\BatchCall;
-use App\Service\Recommendation\Run\Support\BatchWaveWinners;
+use App\Service\Curation\Ai\Exception\ProviderRateLimitedException;
+use App\Service\Curation\Ai\Exception\ProviderRejectedRequestException;
+use App\Service\Curation\Ai\Model\RateLimitedResultModel;
+use App\Service\Curation\Recommendation\Run\BatchCallOutcome\BatchCallOutcomeInterface;
+use App\Service\Curation\Recommendation\Run\BatchWave\BatchWaveInterface;
+use App\Service\Curation\Recommendation\Run\BatchWaveEngine\BatchWaveEngineInterface;
+use App\Service\Curation\Recommendation\Run\Model\BatchWaveResultModel;
+use App\Service\Curation\Recommendation\Run\Pass\BatchCall;
+use App\Service\Curation\Recommendation\Run\Support\BatchWaveWinners;
 
 /**
  * A batch wave's rounds, whatever the engine: an unusable batch retries alone up to MAX_ATTEMPTS rounds, then yields
@@ -36,10 +36,10 @@ final readonly class BatchWaveRounds
      * @param BatchWaveEngineInterface<TWave, TRequest, TOutcome> $engine
      * @param TWave                                               $wave
      *
-     * @throws \App\Service\Ai\Exception\ProviderRejectedRequestException
-     * @throws \App\Service\Ai\Exception\ProviderUnreachableException
-     * @throws \App\Service\Ai\Exception\CredentialsRejectedException
-     * @throws \App\Service\Ai\Exception\RetryableProviderException
+     * @throws \App\Service\Curation\Ai\Exception\ProviderRejectedRequestException
+     * @throws \App\Service\Curation\Ai\Exception\ProviderUnreachableException
+     * @throws \App\Service\Curation\Ai\Exception\CredentialsRejectedException
+     * @throws \App\Service\Curation\Ai\Exception\RetryableProviderException
      * @throws ProviderRateLimitedException
      */
     public function resolve(BatchWaveEngineInterface $engine, BatchWaveInterface $wave): BatchWaveResultModel

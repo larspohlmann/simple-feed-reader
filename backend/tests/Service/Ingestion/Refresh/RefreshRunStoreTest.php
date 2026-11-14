@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Refresh;
+namespace App\Tests\Service\Ingestion\Refresh;
 
 use App\Enum\FeedGroup;
 use App\Enum\SocialNetwork;
 use App\Repository\NetworkScope;
-use App\Service\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
-use App\Service\Refresh\Model\RefreshTarget\FeedGroupTargetModel;
-use App\Service\Refresh\Model\RefreshTarget\FeedTargetModel;
-use App\Service\Refresh\Model\RefreshTarget\NetworkTargetModel;
-use App\Service\Refresh\Model\RefreshTarget\NeverFetchedTargetModel;
-use App\Service\Refresh\Model\RefreshTarget\TagTargetModel;
-use App\Service\Refresh\Model\RefreshRequestModel;
-use App\Service\Refresh\Model\RefreshRunProgressModel;
-use App\Service\Refresh\RefreshRunStore;
+use App\Service\Ingestion\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
+use App\Service\Ingestion\Refresh\Model\RefreshTarget\FeedGroupTargetModel;
+use App\Service\Ingestion\Refresh\Model\RefreshTarget\FeedTargetModel;
+use App\Service\Ingestion\Refresh\Model\RefreshTarget\NetworkTargetModel;
+use App\Service\Ingestion\Refresh\Model\RefreshTarget\NeverFetchedTargetModel;
+use App\Service\Ingestion\Refresh\Model\RefreshTarget\TagTargetModel;
+use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
+use App\Service\Ingestion\Refresh\Model\RefreshRunProgressModel;
+use App\Service\Ingestion\Refresh\RefreshRunStore;
 use PHPUnit\Framework\TestCase;
 use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;

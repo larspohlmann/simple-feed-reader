@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search\EntrySearch;
+namespace App\Service\Library\Search\EntrySearch;
 
 use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
 use App\Repository\EntrySearchQuery;
 use App\Repository\FeedRepository;
-use App\Service\Search\Index\Model\IndexSearchModel;
-use App\Service\Search\Index\SearchIndexReader\SearchIndexReaderInterface;
-use App\Service\Search\Model\EntrySearchResultModel;
+use App\Service\Library\Search\Index\Model\IndexSearchModel;
+use App\Service\Library\Search\Index\SearchIndexReader\SearchIndexReaderInterface;
+use App\Service\Library\Search\Model\EntrySearchResultModel;
 
 /**
  * Asks the engine for ids within the caller's subscribed feeds, then hydrates them through

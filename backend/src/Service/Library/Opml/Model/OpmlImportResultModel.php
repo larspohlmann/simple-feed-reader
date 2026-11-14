@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Opml\Model;
+namespace App\Service\Library\Opml\Model;
 
 final readonly class OpmlImportResultModel
 {

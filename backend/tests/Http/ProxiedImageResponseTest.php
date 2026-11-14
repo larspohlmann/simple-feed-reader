@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Http\ProxiedImageResponse;
-use App\Service\Image\Model\ProxiedImageModel;
+use App\Service\Outbound\Image\Model\ProxiedImageModel;
 use PHPUnit\Framework\TestCase;
 
 final class ProxiedImageResponseTest extends TestCase

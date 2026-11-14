@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\BodyCleaning\BodyCleaningStep;
+namespace App\Service\Content\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
-use App\Service\Reader\EmptiedWrapperRemover;
-use App\Service\Reader\Media\NarrationSignals;
-use App\Service\Reader\Support\LeadingEngagementBlocks;
+use App\Service\Content\Reader\BodyCleaning\Pass\BodyCleaningPass;
+use App\Service\Content\Reader\EmptiedWrapperRemover;
+use App\Service\Content\Reader\Media\NarrationSignals;
+use App\Service\Content\Reader\Support\LeadingEngagementBlocks;
 use Dom\Element;
 use Dom\HTMLDocument;
 

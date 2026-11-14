@@ -14,7 +14,7 @@ use App\Enum\EntryView;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryQuery;
 use App\Repository\EntrySearchQuery;
-use App\Service\Search\Model\SearchTermsModel;
+use App\Service\Library\Search\Model\SearchTermsModel;
 use App\Tests\DbTestCase;
 
 final class DuplicateCollapseTest extends DbTestCase

@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media;
+namespace App\Tests\Service\Content\Reader\Media;
 
 use App\Entity\Entry;
 use App\Entity\EntryAttachment;
 use App\Entity\Feed;
-use App\Service\Reader\Media\MediaCandidateSource\MediaCandidateSourceInterface;
-use App\Service\Reader\Media\Model\ArticleMediaModel;
-use App\Service\Reader\Media\Model\MediaCandidateModel;
-use App\Service\Reader\Media\Model\MediaKind;
-use App\Service\Reader\Media\Model\RawPageModel;
-use App\Service\Reader\Media\PageMediaScanner;
-use App\Service\Reader\Model\FeedMediaModel;
+use App\Service\Content\Reader\Media\MediaCandidateSource\MediaCandidateSourceInterface;
+use App\Service\Content\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Content\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Content\Reader\Media\Model\MediaKind;
+use App\Service\Content\Reader\Media\Model\RawPageModel;
+use App\Service\Content\Reader\Media\PageMediaScanner;
+use App\Service\Content\Reader\Model\FeedMediaModel;
 use PHPUnit\Framework\TestCase;
 
 final class PageMediaScannerTest extends TestCase

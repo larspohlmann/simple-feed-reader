@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Trending;
+namespace App\Tests\Service\Curation\Trending;
 
 use App\Enum\TrendingWindow;
-use App\Service\Trending\Model\StoryLinkModel;
-use App\Service\Trending\Pass\TrendingRun;
-use App\Service\Trending\StoryGrouping;
+use App\Service\Curation\Trending\Model\StoryLinkModel;
+use App\Service\Curation\Trending\Pass\TrendingRun;
+use App\Service\Curation\Trending\StoryGrouping;
 use App\Tests\Support\TrendingRuns;
 use PHPUnit\Framework\TestCase;
 

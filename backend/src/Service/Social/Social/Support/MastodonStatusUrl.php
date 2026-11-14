@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Url\Support\AbsoluteHttpUrl;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 
 /** Where a Mastodon status is read on the web: its `url`, else its `uri` when that is a web address. */
 final class MastodonStatusUrl

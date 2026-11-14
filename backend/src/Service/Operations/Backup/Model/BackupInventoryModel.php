@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Model;
+namespace App\Service\Operations\Backup\Model;
 
 /** What a backup file holds, without holding the file: its source and a count for every repeatable line kind. */
 final readonly class BackupInventoryModel

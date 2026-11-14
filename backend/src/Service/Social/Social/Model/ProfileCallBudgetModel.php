@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Model;
+namespace App\Service\Social\Social\Model;
 
 /** How many AppView profile calls one pass may spend, each asking for up to a page of actors. */
 final readonly class ProfileCallBudgetModel

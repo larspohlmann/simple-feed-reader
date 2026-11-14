@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\SavedPosts;
+namespace App\Tests\Service\Library\SavedPosts;
 
 use App\Entity\BackedUpReadMark;
 use App\Entity\Entry;
@@ -13,7 +13,7 @@ use App\Entity\SocialLike;
 use App\Entity\User;
 use App\Repository\EntryShareRepository;
 use App\Repository\SocialLikeRepository;
-use App\Service\SavedPosts\SavedStateMover;
+use App\Service\Library\SavedPosts\SavedStateMover;
 use App\Tests\DbTestCase;
 use App\Tests\Support\EntryShareFixtures;
 use App\Tests\Support\SavedPostFixtures;

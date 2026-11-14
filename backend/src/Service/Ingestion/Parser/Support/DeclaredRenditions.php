@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\Support;
+namespace App\Service\Ingestion\Parser\Support;
 
 use App\Entity\ImageRendition;
-use App\Service\Html\Support\Srcset;
+use App\Service\Foundation\Html\Support\Srcset;
 
 final class DeclaredRenditions
 {

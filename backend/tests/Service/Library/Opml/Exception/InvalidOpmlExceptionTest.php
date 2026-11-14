@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Opml\Exception;
+namespace App\Tests\Service\Library\Opml\Exception;
 
-use App\Service\Opml\Exception\InvalidOpmlException;
+use App\Service\Library\Opml\Exception\InvalidOpmlException;
 use PHPUnit\Framework\TestCase;
 
 final class InvalidOpmlExceptionTest extends TestCase

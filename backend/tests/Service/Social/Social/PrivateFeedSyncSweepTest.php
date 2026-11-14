@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\SocialAccount;
 use App\Entity\User;
 use App\Enum\PrivateFeedSyncSkip;
 use App\Enum\SocialAccountStatus;
 use App\Enum\UserStatus;
-use App\Service\Social\Model\NetworkCandidatesModel;
-use App\Service\Social\Model\NetworkCollectionsModel;
-use App\Service\Social\Model\PrivateFeedSyncBudgetModel;
-use App\Service\Social\PrivateFeedSyncSweep;
-use App\Service\Social\SocialCandidates\SocialCandidatesInterface;
+use App\Service\Social\Social\Model\NetworkCandidatesModel;
+use App\Service\Social\Social\Model\NetworkCollectionsModel;
+use App\Service\Social\Social\Model\PrivateFeedSyncBudgetModel;
+use App\Service\Social\Social\PrivateFeedSyncSweep;
+use App\Service\Social\Social\SocialCandidates\SocialCandidatesInterface;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ClosedEntityManager;
 use App\Tests\Support\FlushFailingEntityManager;

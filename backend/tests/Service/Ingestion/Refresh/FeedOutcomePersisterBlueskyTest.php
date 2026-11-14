@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Refresh;
+namespace App\Tests\Service\Ingestion\Refresh;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\ShareEnrichment;
-use App\Service\Bluesky\AppViewClient;
-use App\Service\Bluesky\PostEnricher;
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\HostThrottle;
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Fetch\Model\FetchResponseModel;
-use App\Service\Refresh\FeedOutcomePersister;
-use App\Service\Refresh\Model\FeedOutcome;
-use App\Service\Refresh\Model\FeedRefreshResultModel;
-use App\Service\Refresh\RefreshRunner\RefreshRunner;
-use App\Service\Search\Index\Model\IndexedEntryModel;
+use App\Service\Social\Bluesky\AppViewClient;
+use App\Service\Social\Bluesky\PostEnricher;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\HostThrottle;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
+use App\Service\Ingestion\Refresh\FeedOutcomePersister;
+use App\Service\Ingestion\Refresh\Model\FeedOutcome;
+use App\Service\Ingestion\Refresh\Model\FeedRefreshResultModel;
+use App\Service\Ingestion\Refresh\RefreshRunner\RefreshRunner;
+use App\Service\Library\Search\Index\Model\IndexedEntryModel;
 use App\Tests\DbTestCase;
-use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\FakeAppView;
 use App\Tests\Support\FeedOutcomePersisters;
 use App\Tests\Support\PostEnrichers;

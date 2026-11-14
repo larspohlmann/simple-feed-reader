@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Transcript;
+namespace App\Tests\Service\Content\Transcript;
 
 use App\Entity\Entry;
 use App\Entity\EntryTranscript;
 use App\Entity\Feed;
 use App\Enum\TranscriptFormat;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Sanitize\EntrySanitizer;
-use App\Service\Sanitize\TrailingBlankRemover;
-use App\Service\Transcript\Exception\TranscriptUnreachableException;
-use App\Service\Transcript\Exception\TranscriptUnusableException;
-use App\Service\Transcript\TranscriptFiller;
-use App\Service\Transcript\TranscriptReader;
-use App\Service\Transcript\TranscriptSource\TranscriptSourceInterface;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Foundation\Sanitize\TrailingBlankRemover;
+use App\Service\Content\Transcript\Exception\TranscriptUnreachableException;
+use App\Service\Content\Transcript\Exception\TranscriptUnusableException;
+use App\Service\Content\Transcript\TranscriptFiller;
+use App\Service\Content\Transcript\TranscriptReader;
+use App\Service\Content\Transcript\TranscriptSource\TranscriptSourceInterface;
 use App\Tests\Support\TranscriptFixtures;
 use Monolog\Handler\TestHandler;
 use Monolog\Level;

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media;
+namespace App\Service\Content\Reader\Media;
 
-use App\Service\Reader\Media\Model\AudioClipModel;
-use App\Service\Reader\Media\Support\ClipDuration;
+use App\Service\Content\Reader\Media\Model\AudioClipModel;
+use App\Service\Content\Reader\Media\Support\ClipDuration;
 use Dom\Element;
 use Dom\HTMLDocument;
 

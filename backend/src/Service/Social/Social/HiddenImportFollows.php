@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Bluesky\Support\BlueskyActorKey;
-use App\Service\Social\Model\HiddenProfileModel;
-use App\Service\Social\Model\SocialImportFeedModel;
-use App\Service\Social\Support\BlueskyActor;
+use App\Service\Social\Bluesky\Support\BlueskyActorKey;
+use App\Service\Social\Social\Model\HiddenProfileModel;
+use App\Service\Social\Social\Model\SocialImportFeedModel;
+use App\Service\Social\Social\Support\BlueskyActor;
 
 final readonly class HiddenImportFollows
 {

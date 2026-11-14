@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Slideshow;
+namespace App\Tests\Service\Content\Reader\Slideshow;
 
-use App\Service\Reader\Slideshow\SlideImageResolver;
+use App\Service\Content\Reader\Slideshow\SlideImageResolver;
 use App\Tests\Support\ParsesHtml;
 use Dom\Element;
 use PHPUnit\Framework\TestCase;

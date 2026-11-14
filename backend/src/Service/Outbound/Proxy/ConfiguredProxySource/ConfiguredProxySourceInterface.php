@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Proxy\ConfiguredProxySource;
+namespace App\Service\Outbound\Proxy\ConfiguredProxySource;
 
-use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Fetch\Model\ProxyConfigModel;
+use App\Service\Foundation\Crypto\Exception\SecretUnreadableException;
+use App\Service\Outbound\Fetch\Model\ProxyConfigModel;
 
 interface ConfiguredProxySourceInterface
 {

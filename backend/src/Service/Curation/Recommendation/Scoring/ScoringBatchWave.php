@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Scoring;
+namespace App\Service\Curation\Recommendation\Scoring;
 
-use App\Service\Ai\AiProviderConfigurator;
-use App\Service\Ai\Model\RateLimitedResultModel;
-use App\Service\Ai\RateLimitedCalls;
-use App\Service\Recommendation\Pool\Model\ArticleLineModel;
-use App\Service\Recommendation\Run\BatchCallOutcome\BatchCallOutcomeInterface;
-use App\Service\Recommendation\Run\BatchWave\BatchWaveInterface;
-use App\Service\Recommendation\Run\BatchWaveEngine\BatchWaveEngineInterface;
-use App\Service\Recommendation\Run\Model\BatchReplyVerdictModel;
-use App\Service\Recommendation\Run\Model\CallSlotModel;
-use App\Service\Recommendation\Run\Model\WaveBatchModel;
-use App\Service\Recommendation\Run\Pass\BatchCall;
-use App\Service\Recommendation\Run\RecommendationCallRecorder;
-use App\Service\Recommendation\Scoring\Model\ScoringOutcomeModel;
-use App\Service\Recommendation\Scoring\Model\ScoringRequestModel;
-use App\Service\Recommendation\Scoring\Pass\ScoringWave;
+use App\Service\Curation\Ai\AiProviderConfigurator;
+use App\Service\Curation\Ai\Model\RateLimitedResultModel;
+use App\Service\Curation\Ai\RateLimitedCalls;
+use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Curation\Recommendation\Run\BatchCallOutcome\BatchCallOutcomeInterface;
+use App\Service\Curation\Recommendation\Run\BatchWave\BatchWaveInterface;
+use App\Service\Curation\Recommendation\Run\BatchWaveEngine\BatchWaveEngineInterface;
+use App\Service\Curation\Recommendation\Run\Model\BatchReplyVerdictModel;
+use App\Service\Curation\Recommendation\Run\Model\CallSlotModel;
+use App\Service\Curation\Recommendation\Run\Model\WaveBatchModel;
+use App\Service\Curation\Recommendation\Run\Pass\BatchCall;
+use App\Service\Curation\Recommendation\Run\RecommendationCallRecorder;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringOutcomeModel;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringRequestModel;
+use App\Service\Curation\Recommendation\Scoring\Pass\ScoringWave;
 
 /**
  * One scoring request per batch, each a run-log row.

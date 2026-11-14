@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Service\SelfUpdate;
+namespace App\Service\Operations\SelfUpdate;
 
-use App\Service\SelfUpdate\Exception\NoUpdateAvailableException;
-use App\Service\SelfUpdate\Exception\UpdateInProgressException;
-use App\Service\SelfUpdate\Exception\UpdaterUnavailableException;
-use App\Service\SelfUpdate\Model\SelfUpdatePhase;
-use App\Service\SelfUpdate\Model\SelfUpdateStatusModel;
-use App\Service\SelfUpdate\Model\UpdateRequestModel;
-use App\Service\SelfUpdate\Model\UpdateRunModel;
-use App\Service\SelfUpdate\UpdateStateStore\UpdateStateStoreInterface;
-use App\Service\Version\VersionReporter;
+use App\Service\Operations\SelfUpdate\Exception\NoUpdateAvailableException;
+use App\Service\Operations\SelfUpdate\Exception\UpdateInProgressException;
+use App\Service\Operations\SelfUpdate\Exception\UpdaterUnavailableException;
+use App\Service\Operations\SelfUpdate\Model\SelfUpdatePhase;
+use App\Service\Operations\SelfUpdate\Model\SelfUpdateStatusModel;
+use App\Service\Operations\SelfUpdate\Model\UpdateRequestModel;
+use App\Service\Operations\SelfUpdate\Model\UpdateRunModel;
+use App\Service\Operations\SelfUpdate\UpdateStateStore\UpdateStateStoreInterface;
+use App\Service\Operations\Version\VersionReporter;
 use Psr\Clock\ClockInterface;
 
 final readonly class SelfUpdater

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Image\Support;
+namespace App\Service\Outbound\Image\Support;
 
 /** Names a raster image's type from the signature its body starts with, for a server that does not declare it. */
 final class ImageMagicBytes

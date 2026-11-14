@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Grafana\Model;
+namespace App\Service\Operations\Grafana\Model;
 
 use App\Entity\GrafanaConnection;
 use App\Entity\GrafanaSettings as GrafanaSettingsEntity;

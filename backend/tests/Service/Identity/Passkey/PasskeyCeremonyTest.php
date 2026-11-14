@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Passkey;
+namespace App\Tests\Service\Identity\Passkey;
 
-use App\Service\Passkey\PasskeyCeremony;
-use App\Service\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
+use App\Service\Identity\Passkey\PasskeyCeremony;
+use App\Service\Operations\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Serializer\SerializerInterface;
 use Webauthn\CeremonyStep\CeremonyStepManager;

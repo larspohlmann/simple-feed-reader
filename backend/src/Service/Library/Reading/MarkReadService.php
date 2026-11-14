@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reading;
+namespace App\Service\Library\Reading;
 
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\SubscriptionRepository;
 use App\Repository\SubscriptionScopeRepository;
 use App\Repository\TagRepository;
-use App\Service\Reading\Model\ReadScopeKind;
-use App\Service\Reading\Model\ReadScopeModel;
+use App\Service\Library\Reading\Model\ReadScopeKind;
+use App\Service\Library\Reading\Model\ReadScopeModel;
 
 /** "Mark all read until T" for a scope: every subscription the scope covers is marked by watermark. */
 final readonly class MarkReadService

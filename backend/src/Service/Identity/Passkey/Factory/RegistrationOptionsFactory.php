@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Passkey\Factory;
+namespace App\Service\Identity\Passkey\Factory;
 
 use App\Entity\User;
-use App\Service\Passkey\PasskeyCeremony;
-use App\Service\Passkey\PasskeyChallengeStore;
-use App\Service\Passkey\PasskeyCredentials;
-use App\Service\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
+use App\Service\Identity\Passkey\PasskeyCeremony;
+use App\Service\Identity\Passkey\PasskeyChallengeStore;
+use App\Service\Identity\Passkey\PasskeyCredentials;
+use App\Service\Operations\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
 use Cose\Algorithm\Signature\ECDSA\ES256;
 use Cose\Algorithm\Signature\RSA\RS256;
 use ParagonIE\ConstantTime\Base64UrlSafe;

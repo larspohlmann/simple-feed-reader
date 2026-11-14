@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Html\Support;
+namespace App\Service\Foundation\Html\Support;
 
-use App\Service\Html\Exception\UnparseableHtmlException;
+use App\Service\Foundation\Html\Exception\UnparseableHtmlException;
 use Dom\HTMLDocument;
 
 /**

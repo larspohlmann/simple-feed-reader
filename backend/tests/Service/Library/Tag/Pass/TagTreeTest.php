@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Tag\Pass;
+namespace App\Tests\Service\Library\Tag\Pass;
 
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Service\Tag\Pass\TagTree;
+use App\Service\Library\Tag\Pass\TagTree;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
 use PHPUnit\Framework\Attributes\DataProvider;

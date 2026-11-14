@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Bluesky;
+namespace App\Tests\Service\Social\Bluesky;
 
-use App\Service\Bluesky\AppViewClient;
-use App\Service\Bluesky\Exception\AppViewAnswerException;
-use App\Service\Fetch\Exception\FeedGoneException;
-use App\Service\Fetch\Exception\FeedThrottledException;
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\Exception\SsrfBlockedException;
-use App\Service\Fetch\HostThrottle;
+use App\Service\Social\Bluesky\AppViewClient;
+use App\Service\Social\Bluesky\Exception\AppViewAnswerException;
+use App\Service\Outbound\Fetch\Exception\FeedGoneException;
+use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\Exception\SsrfBlockedException;
+use App\Service\Outbound\Fetch\HostThrottle;
 use App\Tests\Support\Bluesky;
 use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\StubFeedFetcher;

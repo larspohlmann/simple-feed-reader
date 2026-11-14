@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Subscription;
+namespace App\Tests\Service\Library\Subscription;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Service\Subscription\SubscriptionTagSync;
+use App\Service\Library\Subscription\SubscriptionTagSync;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\TagJoins;

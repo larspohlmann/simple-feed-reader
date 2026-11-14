@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Comments;
+namespace App\Tests\Service\Content\Comments;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\User;
-use App\Service\Comments\CommentsCache;
-use App\Service\Comments\CommentsLoader;
-use App\Service\Comments\Exception\CommentsThrottledException;
-use App\Service\Comments\Exception\CommentsUnavailableException;
-use App\Service\Comments\Exception\NoCommentsFeedException;
-use App\Service\Comments\Model\CommentsResultModel;
-use App\Service\Comments\Model\CommentsStatus;
+use App\Service\Content\Comments\CommentsCache;
+use App\Service\Content\Comments\CommentsLoader;
+use App\Service\Content\Comments\Exception\CommentsThrottledException;
+use App\Service\Content\Comments\Exception\CommentsUnavailableException;
+use App\Service\Content\Comments\Exception\NoCommentsFeedException;
+use App\Service\Content\Comments\Model\CommentsResultModel;
+use App\Service\Content\Comments\Model\CommentsStatus;
 use App\Tests\Support\FakeCommentsSource;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;

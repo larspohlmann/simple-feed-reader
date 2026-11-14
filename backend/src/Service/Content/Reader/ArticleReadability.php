@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Content\Reader;
 
-use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Model\PageResponseModel;
-use App\Service\Reader\Slideshow\Model\ContainerSignatureModel;
+use App\Service\Content\Reader\Media\EmbedProviders;
+use App\Service\Content\Reader\Model\PageResponseModel;
+use App\Service\Content\Reader\Slideshow\Model\ContainerSignatureModel;
 use Dom\HTMLDocument;
 use fivefilters\Readability\Article;
 use fivefilters\Readability\Configuration;

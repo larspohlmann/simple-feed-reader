@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Admin;
+namespace App\Service\Operations\Admin;
 
 use App\Entity\User;
 use App\Exception\ValidationException;

@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Feed;
+namespace App\Service\Curation\Recommendation\Feed;
 
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowEnricher;
 use App\Repository\ForYouFeedQuery;
 use App\Repository\RecommendationFeedRow;
-use App\Service\Recommendation\Feed\Model\FeedAnnotationVisibilityModel;
-use App\Service\Recommendation\Feed\Model\ForYouFeedPageModel;
-use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
+use App\Service\Curation\Recommendation\Feed\Model\FeedAnnotationVisibilityModel;
+use App\Service\Curation\Recommendation\Feed\Model\ForYouFeedPageModel;
+use App\Service\Curation\Recommendation\Settings\RecommendationSettingsResolver;
 
 /**
  * A page of the user's for-you feed, enriched like every entry list, annotated as the reader's "show score and

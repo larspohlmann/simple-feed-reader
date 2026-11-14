@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Passkey;
+namespace App\Tests\Service\Identity\Passkey;
 
 use App\Entity\User;
 use App\Entity\UserPasskey;
 use App\Repository\UserPasskeyRepository;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Passkey\AssertionVerifier;
-use App\Service\Passkey\AttestationVerifier;
-use App\Service\Passkey\Exception\AssertionRejectedException;
-use App\Service\Passkey\Exception\UnknownPasskeyCredentialException;
-use App\Service\Passkey\Factory\AssertionOptionsFactory;
-use App\Service\Passkey\Model\PasskeyAttestationModel;
-use App\Service\Passkey\PasskeyCeremony;
-use App\Service\Passkey\PasskeyChallengeStore;
-use App\Service\Passkey\PasskeySignInAvailability;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Identity\Passkey\AssertionVerifier;
+use App\Service\Identity\Passkey\AttestationVerifier;
+use App\Service\Identity\Passkey\Exception\AssertionRejectedException;
+use App\Service\Identity\Passkey\Exception\UnknownPasskeyCredentialException;
+use App\Service\Identity\Passkey\Factory\AssertionOptionsFactory;
+use App\Service\Identity\Passkey\Model\PasskeyAttestationModel;
+use App\Service\Identity\Passkey\PasskeyCeremony;
+use App\Service\Identity\Passkey\PasskeyChallengeStore;
+use App\Service\Identity\Passkey\PasskeySignInAvailability;
 use App\Tests\Support\PasskeyAttestationFixture;
 use App\Tests\Support\PasskeyFixtures;
 use App\Tests\Support\PinsPasskeyRelyingParty;

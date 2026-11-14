@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Refresh\Model;
+namespace App\Tests\Service\Ingestion\Refresh\Model;
 
-use App\Service\Refresh\Model\RefreshReportModel;
+use App\Service\Ingestion\Refresh\Model\RefreshReportModel;
 use PHPUnit\Framework\TestCase;
 
 final class RefreshReportModelTest extends TestCase

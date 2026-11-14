@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Sanitize;
+namespace App\Service\Foundation\Sanitize;
 
 use Symfony\Component\HtmlSanitizer\HtmlSanitizer;
 use Symfony\Component\HtmlSanitizer\HtmlSanitizerConfig;

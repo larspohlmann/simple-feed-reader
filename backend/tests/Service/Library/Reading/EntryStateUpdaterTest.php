@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reading;
+namespace App\Tests\Service\Library\Reading;
 
 use App\Entity\Entry;
 use App\Entity\EntryShare;
@@ -11,8 +11,8 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\EntryListRepository;
-use App\Service\Reading\EntryStateUpdater;
-use App\Service\Reading\Model\EntryStateChangeModel;
+use App\Service\Library\Reading\EntryStateUpdater;
+use App\Service\Library\Reading\Model\EntryStateChangeModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\StoredUserSettings;
 

@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
-use App\Service\Bluesky\AppViewClient;
-use App\Service\Bluesky\Support\BlueskyActorKey;
-use App\Service\Fetch\Model\ApiRequestModel;
-use App\Service\Social\Exception\SocialAccountUnresolvableException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Model\BlueskyIdentityModel;
-use App\Service\Url\Support\UrlOrigin;
+use App\Service\Social\Bluesky\AppViewClient;
+use App\Service\Social\Bluesky\Support\BlueskyActorKey;
+use App\Service\Outbound\Fetch\Model\ApiRequestModel;
+use App\Service\Social\Social\Exception\SocialAccountUnresolvableException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Model\BlueskyIdentityModel;
+use App\Service\Foundation\Url\Support\UrlOrigin;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class BlueskyIdentityResolver

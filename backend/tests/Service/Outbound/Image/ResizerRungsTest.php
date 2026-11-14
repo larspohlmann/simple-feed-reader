@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Image;
+namespace App\Tests\Service\Outbound\Image;
 
 use App\Entity\ImageRendition;
-use App\Service\Image\Model\ImageDimensionsModel;
-use App\Service\Image\Model\LeadImageModel;
-use App\Service\Image\ResizerRungs;
+use App\Service\Outbound\Image\Model\ImageDimensionsModel;
+use App\Service\Outbound\Image\Model\LeadImageModel;
+use App\Service\Outbound\Image\ResizerRungs;
 use App\Tests\Support\StubGuardedImageProbe;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

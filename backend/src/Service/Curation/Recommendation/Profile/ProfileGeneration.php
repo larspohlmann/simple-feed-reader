@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Profile;
+namespace App\Service\Curation\Recommendation\Profile;
 
 use App\Entity\ProfileRun;
 use App\Entity\StoredProfile;
 use App\Enum\ProfileRunOutcome;
-use App\Service\Recommendation\Exception\RecommendationTickLockLostException;
-use App\Service\Recommendation\Profile\Pass\ProfileTick;
-use App\Service\Recommendation\Profile\ProfileRunDistiller\ProfileRunDistillerInterface;
-use App\Service\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive;
-use App\Service\Recommendation\Settings\RecommendationSettingsWriter;
+use App\Service\Curation\Recommendation\Exception\RecommendationTickLockLostException;
+use App\Service\Curation\Recommendation\Profile\Pass\ProfileTick;
+use App\Service\Curation\Recommendation\Profile\ProfileRunDistiller\ProfileRunDistillerInterface;
+use App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive;
+use App\Service\Curation\Recommendation\Settings\RecommendationSettingsWriter;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 

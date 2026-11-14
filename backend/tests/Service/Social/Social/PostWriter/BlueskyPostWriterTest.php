@@ -2,25 +2,25 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\PostWriter;
+namespace App\Tests\Service\Social\Social\PostWriter;
 
 use App\Entity\LinkCardContent;
-use App\Service\Image\ImageResizer\ImageResizerInterface;
-use App\Service\LinkCard\Model\PageCardModel;
-use App\Service\LinkCard\PageCardReader\PageCardReaderInterface;
-use App\Service\Social\BlueskyFacets;
-use App\Service\Social\BlueskyExternalEmbeds;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostRefusedException;
-use App\Service\Social\Exception\SocialPostTooLongException;
-use App\Service\Social\Model\PostDeletion;
-use App\Service\Social\Model\PostReferenceModel;
-use App\Service\Social\Model\PublishedPostModel;
-use App\Service\Social\Model\ResponseContextModel;
-use App\Service\Social\Model\PostDraftModel;
-use App\Service\Social\Model\SocialPostModel;
-use App\Service\Social\PostWriter\BlueskyPostWriter;
-use App\Service\Social\SharedPageCards;
+use App\Service\Outbound\Image\ImageResizer\ImageResizerInterface;
+use App\Service\Content\LinkCard\Model\PageCardModel;
+use App\Service\Content\LinkCard\PageCardReader\PageCardReaderInterface;
+use App\Service\Social\Social\BlueskyFacets;
+use App\Service\Social\Social\BlueskyExternalEmbeds;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Social\Exception\SocialPostTooLongException;
+use App\Service\Social\Social\Model\PostDeletion;
+use App\Service\Social\Social\Model\PostReferenceModel;
+use App\Service\Social\Social\Model\PublishedPostModel;
+use App\Service\Social\Social\Model\ResponseContextModel;
+use App\Service\Social\Social\Model\PostDraftModel;
+use App\Service\Social\Social\Model\SocialPostModel;
+use App\Service\Social\Social\PostWriter\BlueskyPostWriter;
+use App\Service\Social\Social\SharedPageCards;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
 use App\Tests\Support\StubGuardedImageDownloader;

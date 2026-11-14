@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\Settings\Model;
+namespace App\Tests\Service\Outbound\Mail\Settings\Model;
 
 use App\Enum\MailEncryption;
-use App\Service\Mail\Settings\Model\ResolvedMailTransportModel;
+use App\Service\Outbound\Mail\Settings\Model\ResolvedMailTransportModel;
 use PHPUnit\Framework\TestCase;
 
 final class ResolvedMailTransportModelTest extends TestCase

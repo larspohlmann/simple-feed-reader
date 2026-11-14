@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
@@ -11,11 +11,11 @@ use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
 use App\Repository\SocialFeedRepository;
-use App\Service\Social\Exception\NoSocialAccountForNetworkException;
-use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
-use App\Service\Social\Exception\SocialAccountNotFoundException;
-use App\Service\Social\Model\ResponseTargetModel;
-use App\Service\Social\Support\SocialFeedClassifier;
+use App\Service\Social\Social\Exception\NoSocialAccountForNetworkException;
+use App\Service\Social\Social\Exception\SocialAccountNeedsReconnectException;
+use App\Service\Social\Social\Exception\SocialAccountNotFoundException;
+use App\Service\Social\Social\Model\ResponseTargetModel;
+use App\Service\Social\Social\Support\SocialFeedClassifier;
 
 /** Which of the user's accounts acts: the one chosen, else a private feed's own account or the network's default. */
 final readonly class ActingAccountChooser

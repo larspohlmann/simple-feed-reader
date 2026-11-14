@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Run;
+namespace App\Tests\Service\Curation\Recommendation\Run;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\ModelDescriptor;
@@ -14,10 +14,10 @@ use App\Enum\RecommendationEngineKind;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Ai\Exception\AiNotConfiguredException;
-use App\Service\Recommendation\Exception\NoResumableRecommendationRunException;
-use App\Service\Recommendation\Run\RecommendationRunStarter;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Ai\Exception\AiNotConfiguredException;
+use App\Service\Curation\Recommendation\Exception\NoResumableRecommendationRunException;
+use App\Service\Curation\Recommendation\Run\RecommendationRunStarter;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;

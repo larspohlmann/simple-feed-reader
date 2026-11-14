@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Dto;
+namespace App\Service\Operations\Backup\Dto;
 
-use App\Service\Backup\Exception\InvalidBackupException;
-use App\Service\Backup\Support\BackupLineFormat;
-use App\Service\Backup\Support\BackupSchema;
-use App\Service\Backup\Support\LineField;
-use App\Service\Backup\Support\PrivateFeedRefusal;
-use App\Service\Backup\Support\SavedFeedRefusal;
-use App\Service\Social\Model\ExportedSubscriptionModel;
+use App\Service\Operations\Backup\Exception\InvalidBackupException;
+use App\Service\Operations\Backup\Support\BackupLineFormat;
+use App\Service\Operations\Backup\Support\BackupSchema;
+use App\Service\Operations\Backup\Support\LineField;
+use App\Service\Operations\Backup\Support\PrivateFeedRefusal;
+use App\Service\Operations\Backup\Support\SavedFeedRefusal;
+use App\Service\Social\Social\Model\ExportedSubscriptionModel;
 
 /**
  * One feed the account (or another account sharing it) subscribes to.

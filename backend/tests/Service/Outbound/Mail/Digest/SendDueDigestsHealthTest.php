@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\Digest;
+namespace App\Tests\Service\Outbound\Mail\Digest;
 
 use App\Entity\DigestSettings;
 use App\Entity\User;
@@ -11,17 +11,17 @@ use App\Enum\MailKind;
 use App\Repository\EntryListRepository;
 use App\Repository\MailSendFailureRepository;
 use App\Repository\SavedSearchEntryRepository;
-use App\Service\Mail\Digest\DigestComposer;
-use App\Service\Mail\Digest\DigestEntryFinder;
-use App\Service\Mail\Digest\DigestLinkBuilder;
-use App\Service\Mail\Digest\DigestMailer\DigestMailerInterface;
-use App\Service\Mail\Digest\DigestRecipients\DigestRecipientsInterface;
-use App\Service\Mail\Digest\DigestSavedSearches\DigestSavedSearchesInterface;
-use App\Service\Mail\Digest\DigestSchedule;
-use App\Service\Mail\Digest\SendDueDigests;
-use App\Service\Mail\MailCapability;
-use App\Service\Mail\MailFailureRecorder\MailDeliveryHealth;
-use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
+use App\Service\Outbound\Mail\Digest\DigestComposer;
+use App\Service\Outbound\Mail\Digest\DigestEntryFinder;
+use App\Service\Outbound\Mail\Digest\DigestLinkBuilder;
+use App\Service\Outbound\Mail\Digest\DigestMailer\DigestMailerInterface;
+use App\Service\Outbound\Mail\Digest\DigestRecipients\DigestRecipientsInterface;
+use App\Service\Outbound\Mail\Digest\DigestSavedSearches\DigestSavedSearchesInterface;
+use App\Service\Outbound\Mail\Digest\DigestSchedule;
+use App\Service\Outbound\Mail\Digest\SendDueDigests;
+use App\Service\Outbound\Mail\MailCapability;
+use App\Service\Outbound\Mail\MailFailureRecorder\MailDeliveryHealth;
+use App\Service\Outbound\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FixedPublicBaseUrl;
 use App\Tests\Support\SavedSearchMatchFixture;

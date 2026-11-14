@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Dto;
+namespace App\Service\Operations\Backup\Dto;
 
-use App\Service\Backup\Exception\InvalidBackupException;
-use App\Service\Backup\Model\BackupProvenanceModel;
-use App\Service\Backup\Model\RestoreSourceModel;
-use App\Service\Backup\Support\BackupLineFormat;
-use App\Service\Backup\Support\BackupSchema;
-use App\Service\Backup\Support\LineField;
+use App\Service\Operations\Backup\Exception\InvalidBackupException;
+use App\Service\Operations\Backup\Model\BackupProvenanceModel;
+use App\Service\Operations\Backup\Model\RestoreSourceModel;
+use App\Service\Operations\Backup\Support\BackupLineFormat;
+use App\Service\Operations\Backup\Support\BackupSchema;
+use App\Service\Operations\Backup\Support\LineField;
 
 /**
  * A backup part's first line: format version, provenance, and where this

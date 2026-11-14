@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Preview;
+namespace App\Service\Sourcing\Preview;
 
 use App\Entity\User;
-use App\Service\Discovery\AccountOnlyFeed\AccountOnlyFeedInterface;
-use App\Service\Discovery\Exception\SiteThrottledException;
-use App\Service\Discovery\FeedDiscovery\FeedDiscoveryInterface;
-use App\Service\Discovery\Model\DiscoveredFeedModel;
-use App\Service\Discovery\Model\FeedCandidateModel;
-use App\Service\Discovery\Model\FeedDiscoveryResultModel;
-use App\Service\Discovery\Model\ScrapeFailureReason;
-use App\Service\Discovery\ScrapeFallbackPolicy;
-use App\Service\Preview\Factory\FeedPreviewFactory;
-use App\Service\Preview\Model\PreviewedCandidateModel;
-use App\Service\Preview\Model\PreviewedDiscoveryModel;
+use App\Service\Sourcing\Discovery\AccountOnlyFeed\AccountOnlyFeedInterface;
+use App\Service\Sourcing\Discovery\Exception\SiteThrottledException;
+use App\Service\Sourcing\Discovery\FeedDiscovery\FeedDiscoveryInterface;
+use App\Service\Sourcing\Discovery\Model\DiscoveredFeedModel;
+use App\Service\Sourcing\Discovery\Model\FeedCandidateModel;
+use App\Service\Sourcing\Discovery\Model\FeedDiscoveryResultModel;
+use App\Service\Sourcing\Discovery\Model\ScrapeFailureReason;
+use App\Service\Sourcing\Discovery\ScrapeFallbackPolicy;
+use App\Service\Sourcing\Preview\Factory\FeedPreviewFactory;
+use App\Service\Sourcing\Preview\Model\PreviewedCandidateModel;
+use App\Service\Sourcing\Preview\Model\PreviewedDiscoveryModel;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 final readonly class PreviewedDiscovery

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Subscription;
 
-use App\Service\Url\Support\EnteredUrl;
+use App\Service\Foundation\Url\Support\EnteredUrl;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class SubscribeRequest

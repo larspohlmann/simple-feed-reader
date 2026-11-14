@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Image\Model;
+namespace App\Service\Outbound\Image\Model;
 
 /** How long one image-verification pass may work before it leaves the rest to the next pass. */
 final readonly class ImageVerificationBudgetModel

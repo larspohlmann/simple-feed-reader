@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Html\Support;
+namespace App\Tests\Service\Foundation\Html\Support;
 
-use App\Service\Html\Exception\UnparseableHtmlException;
-use App\Service\Html\Support\HtmlDocumentParser;
+use App\Service\Foundation\Html\Exception\UnparseableHtmlException;
+use App\Service\Foundation\Html\Support\HtmlDocumentParser;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

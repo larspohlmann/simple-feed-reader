@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Entity\EntryGuid;
@@ -15,17 +15,17 @@ use App\Repository\PostRemovalRepository;
 use App\Repository\RowIds;
 use App\Repository\SocialAccountRepository;
 use App\Repository\ThreadPostRepository;
-use App\Service\Social\ActingAccountGuard;
-use App\Service\Social\DeletedPostTombstones;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostRefusedException;
-use App\Service\Social\LocalPostRemoval;
-use App\Service\Social\Model\PostDeletion;
-use App\Service\Social\OwnPostDeletion;
-use App\Service\Social\PostWriting;
-use App\Service\Social\SocialCountsCache;
+use App\Service\Social\Social\ActingAccountGuard;
+use App\Service\Social\Social\DeletedPostTombstones;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Social\LocalPostRemoval;
+use App\Service\Social\Social\Model\PostDeletion;
+use App\Service\Social\Social\OwnPostDeletion;
+use App\Service\Social\Social\PostWriting;
+use App\Service\Social\Social\SocialCountsCache;
 use App\Tests\DbTestCase;
-use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\AssertsRefusal;
 use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\FakeMastodonNetwork;

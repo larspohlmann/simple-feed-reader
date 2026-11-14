@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Ai\Support;
+namespace App\Tests\Service\Curation\Ai\Support;
 
-use App\Service\Ai\Support\RetryAfter;
+use App\Service\Curation\Ai\Support\RetryAfter;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;

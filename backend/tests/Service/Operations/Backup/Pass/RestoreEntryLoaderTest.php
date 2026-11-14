@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Backup\Pass;
+namespace App\Tests\Service\Operations\Backup\Pass;
 
 use App\Entity\User;
 use App\Repository\EntryBatchInserter;
-use App\Service\Backup\Dto\EntryLine;
-use App\Service\Backup\Dto\EntryStateLine;
-use App\Service\Backup\Exception\InvalidBackupException;
-use App\Service\Backup\Factory\RestoredEntryStateFactory;
-use App\Service\Backup\Pass\RestoreDestination;
-use App\Service\Backup\Pass\RestoreEntryLoader;
-use App\Service\Backup\Pass\RestoreFeedTargets;
-use App\Service\Backup\RestoreEntries\RestoreEntriesInterface;
-use App\Service\Backup\RestoreEntryShares\RestoreEntrySharesInterface;
-use App\Service\Backup\RestoreEntryStates\RestoreEntryStatesInterface;
-use App\Service\Backup\RestoreFeeds\RestoreFeedsInterface;
-use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Service\Operations\Backup\Dto\EntryLine;
+use App\Service\Operations\Backup\Dto\EntryStateLine;
+use App\Service\Operations\Backup\Exception\InvalidBackupException;
+use App\Service\Operations\Backup\Factory\RestoredEntryStateFactory;
+use App\Service\Operations\Backup\Pass\RestoreDestination;
+use App\Service\Operations\Backup\Pass\RestoreEntryLoader;
+use App\Service\Operations\Backup\Pass\RestoreFeedTargets;
+use App\Service\Operations\Backup\RestoreEntries\RestoreEntriesInterface;
+use App\Service\Operations\Backup\RestoreEntryShares\RestoreEntrySharesInterface;
+use App\Service\Operations\Backup\RestoreEntryStates\RestoreEntryStatesInterface;
+use App\Service\Operations\Backup\RestoreFeeds\RestoreFeedsInterface;
+use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\EntryUrlHashes;
 use Doctrine\DBAL\Connection;

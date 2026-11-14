@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Html\Support;
+namespace App\Tests\Service\Foundation\Html\Support;
 
-use App\Service\Html\Support\ClassTokenMatcher;
+use App\Service\Foundation\Html\Support\ClassTokenMatcher;
 use App\Tests\Support\ParsesHtml;
 use Dom\Element;
 use PHPUnit\Framework\TestCase;

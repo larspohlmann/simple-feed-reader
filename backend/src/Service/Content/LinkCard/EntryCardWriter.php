@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Service\LinkCard;
+namespace App\Service\Content\LinkCard;
 
 use App\Entity\Entry;
 use App\Enum\ShareKind;
 use App\Repository\LinkCardRepository;
-use App\Service\Ingest\Support\EntrySnippet;
-use App\Service\LinkCard\Model\EntryCardsModel;
-use App\Service\LinkCard\Model\PageCardModel;
-use App\Service\LinkCard\Support\QuoteLine;
-use App\Service\Sanitize\EntrySanitizer;
-use App\Service\Share\Support\TitledShareTarget;
+use App\Service\Ingestion\Ingest\Support\EntrySnippet;
+use App\Service\Content\LinkCard\Model\EntryCardsModel;
+use App\Service\Content\LinkCard\Model\PageCardModel;
+use App\Service\Content\LinkCard\Support\QuoteLine;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Social\Share\Support\TitledShareTarget;
 
 /** Puts freshly read page cards on their entry: a carded or quoted target's RE: line leaves the body. */
 final readonly class EntryCardWriter

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Refresh;
+namespace App\Tests\Service\Ingestion\Refresh;
 
 use App\Entity\Entry;
 use App\Entity\EntryGuid;
@@ -12,20 +12,20 @@ use App\Entity\ThreadPost;
 use App\Enum\ShareKind;
 use App\Enum\SourceFormat;
 use App\Repository\ThreadPostRepository;
-use App\Service\Bluesky\AppViewClient;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Bluesky\Support\AtPostUri;
-use App\Service\Completion\Model\KnownSharesModel;
-use App\Service\Fetch\HostThrottle;
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Fetch\Model\FetchResponseModel;
-use App\Service\Parser\Model\ParsedFeedModel;
-use App\Service\Refresh\FeedBodyParser;
-use App\Service\Refresh\FeedOutcomePersister;
-use App\Service\Refresh\Model\FeedOutcome;
-use App\Service\Social\Model\ThreadPostModel;
-use App\Service\Social\Model\TimelinePageModel;
-use App\Service\Social\Support\BlueskyTimelinePage;
+use App\Service\Social\Bluesky\AppViewClient;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Bluesky\Support\AtPostUri;
+use App\Service\Social\Completion\Model\KnownSharesModel;
+use App\Service\Outbound\Fetch\HostThrottle;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
+use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
+use App\Service\Ingestion\Refresh\FeedBodyParser;
+use App\Service\Ingestion\Refresh\FeedOutcomePersister;
+use App\Service\Ingestion\Refresh\Model\FeedOutcome;
+use App\Service\Social\Social\Model\ThreadPostModel;
+use App\Service\Social\Social\Model\TimelinePageModel;
+use App\Service\Social\Social\Support\BlueskyTimelinePage;
 use App\Tests\DbTestCase;
 use App\Tests\Support\Bluesky;
 use App\Tests\Support\FakeAppView;

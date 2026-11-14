@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\OAuth;
+namespace App\Tests\Service\Identity\OAuth;
 
 use App\Http\Problem\ExceptionProblems\OAuthProblems;
-use App\Service\OAuth\Exception\UnknownProviderException;
-use App\Service\OAuth\Model\OAuthIdentityModel;
-use App\Service\OAuth\OAuthProvider\OAuthProviderInterface;
-use App\Service\OAuth\OAuthProviderRegistry;
+use App\Service\Identity\OAuth\Exception\UnknownProviderException;
+use App\Service\Identity\OAuth\Model\OAuthIdentityModel;
+use App\Service\Identity\OAuth\OAuthProvider\OAuthProviderInterface;
+use App\Service\Identity\OAuth\OAuthProviderRegistry;
 use PHPUnit\Framework\TestCase;
 
 final class OAuthProviderRegistryTest extends TestCase

@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\SocialAccount;
 use App\Repository\SocialAccountRepository;
-use App\Service\Social\ComposerDefaults\ComposerDefaultsInterface;
-use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\Model\ComposerContextModel;
-use App\Service\Social\Model\ComposerDefaultsModel;
-use App\Service\Social\Model\ComposerKind;
-use App\Service\Social\Model\ResponseKind;
-use App\Service\Social\Model\ResponseTargetModel;
-use App\Service\Social\Model\SharedLinkModel;
-use App\Service\Social\Model\SocialPostModel;
-use App\Service\Social\Support\ComposerStartingText;
-use App\Service\Social\Support\SocialPostAddress;
+use App\Service\Social\Social\ComposerDefaults\ComposerDefaultsInterface;
+use App\Service\Social\Social\Exception\SocialAccountNeedsReconnectException;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Model\ComposerContextModel;
+use App\Service\Social\Social\Model\ComposerDefaultsModel;
+use App\Service\Social\Social\Model\ComposerKind;
+use App\Service\Social\Social\Model\ResponseKind;
+use App\Service\Social\Social\Model\ResponseTargetModel;
+use App\Service\Social\Social\Model\SharedLinkModel;
+use App\Service\Social\Social\Model\SocialPostModel;
+use App\Service\Social\Social\Support\ComposerStartingText;
+use App\Service\Social\Social\Support\SocialPostAddress;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 

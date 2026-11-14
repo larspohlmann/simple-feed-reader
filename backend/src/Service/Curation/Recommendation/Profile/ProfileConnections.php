@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Profile;
+namespace App\Service\Curation\Recommendation\Profile;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationSettings;
 use App\Entity\User;
 use App\Enum\RecommendationProfileSource;
 use App\Repository\RecommendationSettingsRepository;
-use App\Service\Ai\AiConfigurationForUser;
-use App\Service\Ai\Support\AiReadiness;
-use App\Service\Recommendation\Engine\RecommendationEngineResolver;
+use App\Service\Curation\Ai\AiConfigurationForUser;
+use App\Service\Curation\Ai\Support\AiReadiness;
+use App\Service\Curation\Recommendation\Engine\RecommendationEngineResolver;
 
 /** Which saved connection builds the account's profile. */
 final readonly class ProfileConnections

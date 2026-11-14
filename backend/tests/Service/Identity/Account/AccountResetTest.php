@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Account;
+namespace App\Tests\Service\Identity\Account;
 
 use App\Entity\Entry;
 use App\Entity\EntryState;
@@ -28,7 +28,7 @@ use App\Enum\PrivateFeedSyncReason;
 use App\Enum\ProfileRunTrigger;
 use App\Enum\RecommendationBatchSize;
 use App\Enum\SocialFeedKind;
-use App\Service\Account\AccountReset;
+use App\Service\Identity\Account\AccountReset;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;

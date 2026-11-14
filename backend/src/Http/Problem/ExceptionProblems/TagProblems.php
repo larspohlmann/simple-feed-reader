@@ -6,8 +6,8 @@ namespace App\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
-use App\Service\Tag\Exception\InvalidTagParentException;
-use App\Service\Tag\Exception\TagNameTakenException;
+use App\Service\Library\Tag\Exception\InvalidTagParentException;
+use App\Service\Library\Tag\Exception\TagNameTakenException;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class TagProblems implements ExceptionProblemsInterface

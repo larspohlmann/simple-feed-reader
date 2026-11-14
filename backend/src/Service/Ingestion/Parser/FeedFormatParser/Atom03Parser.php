@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\FeedFormatParser;
+namespace App\Service\Ingestion\Parser\FeedFormatParser;
 
-use App\Service\Parser\Model\FeedNamespace;
+use App\Service\Ingestion\Parser\Model\FeedNamespace;
 
 /**
  * Atom 0.3: the pre-standard dialect.

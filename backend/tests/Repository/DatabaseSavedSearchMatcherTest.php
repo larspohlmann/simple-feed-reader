@@ -13,9 +13,9 @@ use App\Repository\DatabaseSavedSearchMatcher;
 use App\Repository\IndexSearchPredicates;
 use App\Repository\LikeSearchPredicates;
 use App\Repository\SearchTermsPredicateBuilder;
-use App\Service\Search\Model\SavedSearchTermModel;
-use App\Service\Search\Model\SearchMode;
-use App\Service\Search\Model\SearchTermsModel;
+use App\Service\Library\Search\Model\SavedSearchTermModel;
+use App\Service\Library\Search\Model\SearchMode;
+use App\Service\Library\Search\Model\SearchTermsModel;
 use App\Tests\DbTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 

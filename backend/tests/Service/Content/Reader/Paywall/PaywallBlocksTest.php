@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Paywall;
+namespace App\Tests\Service\Content\Reader\Paywall;
 
-use App\Service\Reader\Media\PageFurniture;
-use App\Service\Reader\Paywall\OutsideFurniture;
-use App\Service\Reader\Paywall\PaywallBlocks;
+use App\Service\Content\Reader\Media\PageFurniture;
+use App\Service\Content\Reader\Paywall\OutsideFurniture;
+use App\Service\Content\Reader\Paywall\PaywallBlocks;
 use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 

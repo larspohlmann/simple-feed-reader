@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run;
+namespace App\Service\Curation\Recommendation\Run;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
-use App\Service\Recommendation\Run\Support\ProviderFailedMessage;
+use App\Service\Curation\Recommendation\Run\Support\ProviderFailedMessage;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 

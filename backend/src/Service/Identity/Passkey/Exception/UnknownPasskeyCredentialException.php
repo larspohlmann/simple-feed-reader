@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Passkey\Exception;
+namespace App\Service\Identity\Passkey\Exception;
 
 /**
  * The assertion named a credential id no account holds. Its own type so the client can prune the dead browser

@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Run;
+namespace App\Service\Curation\Recommendation\Llm\Run;
 
 use App\Entity\RecommendationRun;
-use App\Service\Recommendation\Llm\Prompt\Pass\PromptContext;
-use App\Service\Recommendation\Llm\Run\Pass\WaveContext;
-use App\Service\Recommendation\Pool\RecommendationCandidateLoader;
-use App\Service\Recommendation\Pool\RecommendationHistoryLoader;
-use App\Service\Recommendation\Run\Model\WaveBatchModel;
-use App\Service\Recommendation\Run\Pass\TickContext;
+use App\Service\Curation\Recommendation\Llm\Prompt\Pass\PromptContext;
+use App\Service\Curation\Recommendation\Llm\Run\Pass\WaveContext;
+use App\Service\Curation\Recommendation\Pool\RecommendationCandidateLoader;
+use App\Service\Curation\Recommendation\Pool\RecommendationHistoryLoader;
+use App\Service\Curation\Recommendation\Run\Model\WaveBatchModel;
+use App\Service\Curation\Recommendation\Run\Pass\TickContext;
 
 final readonly class WaveContextLoader
 {

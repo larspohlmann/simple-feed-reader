@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\PostResolver;
+namespace App\Service\Social\Social\PostResolver;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\MastodonAccountApi;
-use App\Service\Social\Model\PostPreviewModel;
-use App\Service\Social\Model\ResponseContextModel;
-use App\Service\Social\Model\SocialPostModel;
-use App\Service\Social\Support\MastodonAuthor;
-use App\Service\Social\Support\MastodonCard;
-use App\Service\Social\Support\MastodonQuoting;
-use App\Service\Social\Support\MastodonVisibility;
-use App\Service\Social\Support\PostCounts;
-use App\Service\Text\Support\PlainText;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\MastodonAccountApi;
+use App\Service\Social\Social\Model\PostPreviewModel;
+use App\Service\Social\Social\Model\ResponseContextModel;
+use App\Service\Social\Social\Model\SocialPostModel;
+use App\Service\Social\Social\Support\MastodonAuthor;
+use App\Service\Social\Social\Support\MastodonCard;
+use App\Service\Social\Social\Support\MastodonQuoting;
+use App\Service\Social\Social\Support\MastodonVisibility;
+use App\Service\Social\Social\Support\PostCounts;
+use App\Service\Foundation\Text\Support\PlainText;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /** Asks the account's own instance for the post, so a post from any server gets the id that instance acts on. */

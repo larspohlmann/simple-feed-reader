@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Search;
+namespace App\Tests\Service\Library\Search;
 
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Repository\SavedSearchNetworkInclusionRepository;
-use App\Service\Search\SavedSearchNetworks;
+use App\Service\Library\Search\SavedSearchNetworks;
 use App\Tests\DbTestCase;
 
 final class SavedSearchNetworksTest extends DbTestCase

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\Model;
+namespace App\Service\Content\Reader\Media\Model;
 
 /**
  * The media a source page offers for one article, in source order. MAX_ITEMS is a runaway guard, not an editorial

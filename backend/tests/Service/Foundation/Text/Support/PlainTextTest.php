@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Text\Support;
+namespace App\Tests\Service\Foundation\Text\Support;
 
-use App\Service\Text\Support\PlainText;
+use App\Service\Foundation\Text\Support\PlainText;
 use PHPUnit\Framework\TestCase;
 
 final class PlainTextTest extends TestCase

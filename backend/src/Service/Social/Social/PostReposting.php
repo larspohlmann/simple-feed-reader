@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\SocialAccount;
-use App\Service\Social\Model\SocialPostModel;
-use App\Service\Social\PostReposter\PostReposterInterface;
+use App\Service\Social\Social\Model\SocialPostModel;
+use App\Service\Social\Social\PostReposter\PostReposterInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 

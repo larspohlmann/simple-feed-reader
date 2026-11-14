@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Content\Reader;
 
-use App\Service\Html\Support\HtmlDocumentParser;
-use App\Service\Image\Model\DeclaredImageModel;
-use App\Service\Url\Support\AbsoluteHttpUrl;
+use App\Service\Foundation\Html\Support\HtmlDocumentParser;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use Dom\Element;
 
 /**

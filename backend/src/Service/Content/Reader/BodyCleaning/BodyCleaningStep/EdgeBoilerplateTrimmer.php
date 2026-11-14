@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\BodyCleaning\BodyCleaningStep;
+namespace App\Service\Content\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
-use App\Service\Reader\BoilerplateVerdict;
-use App\Service\Reader\SubstantialProseDetector;
+use App\Service\Content\Reader\BodyCleaning\Pass\BodyCleaningPass;
+use App\Service\Content\Reader\BoilerplateVerdict;
+use App\Service\Content\Reader\SubstantialProseDetector;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Dom\Text;

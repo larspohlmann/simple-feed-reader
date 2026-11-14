@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run;
+namespace App\Service\Curation\Recommendation\Run;
 
-use App\Service\Process\DetachedProcessLauncher\DetachedProcessLauncherInterface;
+use App\Service\Foundation\Process\DetachedProcessLauncher\DetachedProcessLauncherInterface;
 
 /**
  * The one spawn policy for the on-demand drainer: fork only while nobody drives the runs. Its only caller,

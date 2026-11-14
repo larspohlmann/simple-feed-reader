@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Text;
+namespace App\Tests\Service\Foundation\Text;
 
-use App\Service\Text\MarkdownHtml;
+use App\Service\Foundation\Text\MarkdownHtml;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class MarkdownHtmlTest extends KernelTestCase

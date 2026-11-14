@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run\Model;
+namespace App\Service\Curation\Recommendation\Run\Model;
 
-use App\Service\Ai\Model\ProviderCallUsageModel;
+use App\Service\Curation\Ai\Model\ProviderCallUsageModel;
 
 /**
  * One progress report of a provider call. `wireBytes` is kept beside `answerSoFar` because a reasoning model sends

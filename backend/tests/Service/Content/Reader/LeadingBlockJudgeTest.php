@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader;
+namespace App\Tests\Service\Content\Reader;
 
-use App\Service\Reader\LeadingBlockJudge;
-use App\Service\Reader\LeadingEngagementRules;
-use App\Service\Reader\Model\LeadingBlockModel;
+use App\Service\Content\Reader\LeadingBlockJudge;
+use App\Service\Content\Reader\LeadingEngagementRules;
+use App\Service\Content\Reader\Model\LeadingBlockModel;
 use App\Tests\Support\ParsesHtml;
 use Dom\Element;
 use PHPUnit\Framework\TestCase;

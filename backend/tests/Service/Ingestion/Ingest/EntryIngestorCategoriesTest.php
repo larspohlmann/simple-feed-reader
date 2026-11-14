@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Ingest;
+namespace App\Tests\Service\Ingestion\Ingest;
 
 use App\Entity\Feed;
 use App\Entity\Headline;
-use App\Service\Ingest\EntryIngestor;
-use App\Service\Ingest\Pass\FeedIngestContext;
-use App\Service\Parser\Model\ParsedCategoryModel;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Parser\Model\ParsedFeedModel;
+use App\Service\Ingestion\Ingest\EntryIngestor;
+use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
+use App\Service\Ingestion\Parser\Model\ParsedCategoryModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\EntryIngestors;
 use Symfony\Component\Clock\MockClock;

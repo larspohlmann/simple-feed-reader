@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\HomeServerCheck;
+namespace App\Service\Social\Social\HomeServerCheck;
 
 use App\Enum\SocialNetwork;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Bluesky\Support\AtPostUri;
-use App\Service\Fetch\Model\ApiRequestModel;
-use App\Service\Social\BlueskyApiClient;
-use App\Service\Social\BlueskyIdentityResolver;
-use App\Service\Social\Exception\SocialAccountUnresolvableException;
-use App\Service\Social\Model\BlueskyIdentityModel;
-use App\Service\Social\Support\BlueskyRecordUri;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Bluesky\Support\AtPostUri;
+use App\Service\Outbound\Fetch\Model\ApiRequestModel;
+use App\Service\Social\Social\BlueskyApiClient;
+use App\Service\Social\Social\BlueskyIdentityResolver;
+use App\Service\Social\Social\Exception\SocialAccountUnresolvableException;
+use App\Service\Social\Social\Model\BlueskyIdentityModel;
+use App\Service\Social\Social\Support\BlueskyRecordUri;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 use Symfony\Component\HttpFoundation\Response;
 

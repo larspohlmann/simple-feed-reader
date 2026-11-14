@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Image\Model;
+namespace App\Tests\Service\Outbound\Image\Model;
 
-use App\Service\Image\Model\ImageIdentityModel;
+use App\Service\Outbound\Image\Model\ImageIdentityModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

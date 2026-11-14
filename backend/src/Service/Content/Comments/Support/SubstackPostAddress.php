@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Comments\Support;
+namespace App\Service\Content\Comments\Support;
 
 use App\Entity\Entry;
 use App\Enum\FeedPlatform;
-use App\Service\Comments\Model\SubstackPostModel;
+use App\Service\Content\Comments\Model\SubstackPostModel;
 
 final class SubstackPostAddress
 {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\Model;
+namespace App\Service\Ingestion\Parser\Model;
 
 /**
  * What a feed media node points at. `Other` is a downloadable file, neither image nor playable; `Unknown` has no

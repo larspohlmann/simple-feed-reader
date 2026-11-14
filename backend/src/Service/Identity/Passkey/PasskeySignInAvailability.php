@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Passkey;
+namespace App\Service\Identity\Passkey;
 
-use App\Service\Passkey\Exception\PasskeySignInDisabledException;
-use App\Service\Settings\InstanceSettings;
-use App\Service\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
-use App\Service\Settings\RelyingPartyIdRule;
+use App\Service\Identity\Passkey\Exception\PasskeySignInDisabledException;
+use App\Service\Operations\Settings\InstanceSettings;
+use App\Service\Operations\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
+use App\Service\Operations\Settings\RelyingPartyIdRule;
 
 /**
  * Whether passkey sign-in may be offered: the admin toggle is on and the relying-party id could work at all (never

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Crypto;
+namespace App\Service\Foundation\Crypto;
 
 use App\Entity\SealedSecret;
-use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Crypto\Model\SecretBindingModel;
+use App\Service\Foundation\Crypto\Exception\SecretUnreadableException;
+use App\Service\Foundation\Crypto\Model\SecretBindingModel;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**

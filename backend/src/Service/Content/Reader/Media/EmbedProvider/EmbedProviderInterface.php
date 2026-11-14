@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\EmbedProvider;
+namespace App\Service\Content\Reader\Media\EmbedProvider;
 
-use App\Service\Reader\Media\Model\EmbedFrameModel;
-use App\Service\Reader\Media\Model\EmbedTargetModel;
+use App\Service\Content\Reader\Media\Model\EmbedFrameModel;
+use App\Service\Content\Reader\Media\Model\EmbedTargetModel;
 
 /**
  * Recognises one embed host and reduces any of its URL spellings to one durable embed URL that keeps only what

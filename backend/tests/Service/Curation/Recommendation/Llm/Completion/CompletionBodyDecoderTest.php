@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Llm\Completion;
+namespace App\Tests\Service\Curation\Recommendation\Llm\Completion;
 
-use App\Service\Recommendation\Llm\Completion\CompletionBodyDecoder;
+use App\Service\Curation\Recommendation\Llm\Completion\CompletionBodyDecoder;
 use PHPUnit\Framework\TestCase;
 
 final class CompletionBodyDecoderTest extends TestCase

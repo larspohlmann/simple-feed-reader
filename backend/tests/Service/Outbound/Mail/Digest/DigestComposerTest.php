@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\Digest;
+namespace App\Tests\Service\Outbound\Mail\Digest;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
@@ -15,10 +15,10 @@ use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Repository\EntryListRepository;
 use App\Repository\SavedSearchEntryRepository;
-use App\Service\Mail\Digest\DigestComposer;
-use App\Service\Mail\Digest\DigestEntryFinder;
-use App\Service\Mail\Digest\DigestLinkBuilder;
-use App\Service\Mail\Digest\DigestSavedSearches\DigestSavedSearchesInterface;
+use App\Service\Outbound\Mail\Digest\DigestComposer;
+use App\Service\Outbound\Mail\Digest\DigestEntryFinder;
+use App\Service\Outbound\Mail\Digest\DigestLinkBuilder;
+use App\Service\Outbound\Mail\Digest\DigestSavedSearches\DigestSavedSearchesInterface;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FixedPublicBaseUrl;
 use PHPUnit\Framework\MockObject\Stub;

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\SweepReportJson;
 
-use App\Service\Image\Model\ImageVerificationReportModel;
+use App\Service\Outbound\Image\Model\ImageVerificationReportModel;
 
 final readonly class ImageVerificationJson implements SweepReportJsonInterface
 {

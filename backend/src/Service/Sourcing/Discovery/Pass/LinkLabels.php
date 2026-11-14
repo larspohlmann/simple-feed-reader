@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Discovery\Pass;
+namespace App\Service\Sourcing\Discovery\Pass;
 
-use App\Service\Html\Support\MetaProperty;
-use App\Service\Scraper\Support\TextNormalizer;
+use App\Service\Foundation\Html\Support\MetaProperty;
+use App\Service\Ingestion\Scraper\Support\TextNormalizer;
 use Dom\Element;
 use Dom\HTMLDocument;
 

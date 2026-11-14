@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Chapter;
+namespace App\Tests\Service\Content\Chapter;
 
 use App\Entity\Entry;
 use App\Entity\EntryChapter;
 use App\Entity\Feed;
-use App\Service\Chapter\ChapterFileSource\ChapterFileSourceInterface;
-use App\Service\Chapter\ChapterFiller;
-use App\Service\Chapter\Exception\ChapterFileUnreachableException;
-use App\Service\Fetch\Exception\FeedUnreachableException;
+use App\Service\Content\Chapter\ChapterFileSource\ChapterFileSourceInterface;
+use App\Service\Content\Chapter\ChapterFiller;
+use App\Service\Content\Chapter\Exception\ChapterFileUnreachableException;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;

@@ -11,7 +11,7 @@ use App\Entity\ThreadPost;
 use App\Entity\ThreadPostContent;
 use App\Repository\LinkCardRepository;
 use App\Repository\ThreadPostRepository;
-use App\Service\Social\Model\ThreadPostModel;
+use App\Service\Social\Social\Model\ThreadPostModel;
 use App\Tests\DbTestCase;
 
 final class ThreadPostRepositoryTest extends DbTestCase

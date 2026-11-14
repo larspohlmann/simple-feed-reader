@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\RecipeFacts;
+namespace App\Service\Content\Reader\RecipeFacts;
 
-use App\Service\Reader\RecipeFacts\Model\RecipeFactModel;
+use App\Service\Content\Reader\RecipeFacts\Model\RecipeFactModel;
 use Dom\Element;
 use Dom\HTMLDocument;
 

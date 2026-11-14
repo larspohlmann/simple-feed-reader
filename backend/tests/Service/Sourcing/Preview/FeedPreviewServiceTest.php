@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Preview;
+namespace App\Tests\Service\Sourcing\Preview;
 
 use App\Entity\ReadingSettings;
 use App\Entity\User;
 use App\Enum\SourceFormat;
 use App\Repository\ReadingSettingsRepository;
-use App\Service\Discovery\Exception\ScrapingDisabledException;
-use App\Service\Discovery\ScrapeFallbackPolicy;
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\Exception\ResponseTooLargeException;
-use App\Service\Fetch\Model\FetchResponseModel;
-use App\Service\Preview\Exception\FeedPreviewException;
-use App\Service\Preview\Factory\FeedPreviewFactory;
-use App\Service\Preview\FeedPreviewService;
-use App\Service\Refresh\FeedBodyParser;
+use App\Service\Sourcing\Discovery\Exception\ScrapingDisabledException;
+use App\Service\Sourcing\Discovery\ScrapeFallbackPolicy;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
+use App\Service\Sourcing\Preview\Exception\FeedPreviewException;
+use App\Service\Sourcing\Preview\Factory\FeedPreviewFactory;
+use App\Service\Sourcing\Preview\FeedPreviewService;
+use App\Service\Ingestion\Refresh\FeedBodyParser;
 use App\Tests\DbTestCase;
-use App\Tests\Service\Scraper\ScrapedFixtures;
+use App\Tests\Service\Ingestion\Scraper\ScrapedFixtures;
 use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\StoredUserSettings;
 use App\Tests\Support\StubFeedFetcher;

@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Http\Factory;
 
 use App\Http\Factory\BackupDownloadResponseFactory;
-use App\Service\Backup\Model\BackupPartModel;
-use App\Service\Version\Model\ReleaseVersionModel;
-use App\Service\Version\ReleaseVersionReader\ReleaseVersionReaderInterface;
+use App\Service\Operations\Backup\Model\BackupPartModel;
+use App\Service\Operations\Version\Model\ReleaseVersionModel;
+use App\Service\Operations\Version\ReleaseVersionReader\ReleaseVersionReaderInterface;
 use App\Tests\Support\TickingClock;
 use PHPUnit\Framework\TestCase;
 

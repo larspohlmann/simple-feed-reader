@@ -6,7 +6,7 @@ namespace App\EventListener;
 
 use App\Repository\ProfileRunRepository;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Recommendation\Run\RecommendationDrainSpawner;
+use App\Service\Curation\Recommendation\Run\RecommendationDrainSpawner;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;

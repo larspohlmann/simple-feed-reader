@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Model;
+namespace App\Service\Social\Social\Model;
 
 /** What the composer starts from on a network: its length limit, visibility and the mentions it prefills. */
 final readonly class ComposerDefaultsModel

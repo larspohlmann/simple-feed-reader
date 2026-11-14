@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ingest\PlatformEntryRule;
+namespace App\Service\Ingestion\Ingest\PlatformEntryRule;
 
-use App\Service\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 
 interface PlatformEntryRuleInterface
 {

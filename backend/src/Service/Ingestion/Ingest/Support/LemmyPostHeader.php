@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ingest\Support;
+namespace App\Service\Ingestion\Ingest\Support;
 
-use App\Service\Html\Support\HtmlDocumentParser;
-use App\Service\Ingest\Model\LemmyFeedPostModel;
+use App\Service\Foundation\Html\Support\HtmlDocumentParser;
+use App\Service\Ingestion\Ingest\Model\LemmyFeedPostModel;
 use Dom\Element;
 use Dom\Node;
 use Dom\Text;

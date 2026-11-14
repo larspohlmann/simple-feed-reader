@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Auth;
+namespace App\Service\Identity\Auth;
 
 use App\Entity\User;
 use App\Enum\RegistrationMethod;
@@ -10,9 +10,9 @@ use App\Enum\TokenPurpose;
 use App\Enum\UserStatus;
 use App\Event\UserAwaitingApproval;
 use App\Security\PasswordWorkEqualizerInterface;
-use App\Service\Auth\Factory\SignupUserFactory;
-use App\Service\Auth\UserByEmail\UserByEmailInterface;
-use App\Service\Mail\AccountMailer\AccountMailerInterface;
+use App\Service\Identity\Auth\Factory\SignupUserFactory;
+use App\Service\Identity\Auth\UserByEmail\UserByEmailInterface;
+use App\Service\Outbound\Mail\AccountMailer\AccountMailerInterface;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Random\RandomException;

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Parser;
+namespace App\Tests\Service\Ingestion\Parser;
 
-use App\Service\Parser\Exception\FeedParseException;
-use App\Service\Parser\Model\FeedSyntax;
+use App\Service\Ingestion\Parser\Exception\FeedParseException;
+use App\Service\Ingestion\Parser\Model\FeedSyntax;
 use App\Tests\Support\FeedFormatParsers;
 use App\Tests\Support\ReadsFixtures;
 use PHPUnit\Framework\Attributes\DataProvider;

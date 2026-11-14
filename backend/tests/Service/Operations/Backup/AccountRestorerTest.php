@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Backup;
+namespace App\Tests\Service\Operations\Backup;
 
 use App\Entity\Entry;
 use App\Entity\EntryAuthor;
@@ -28,12 +28,12 @@ use App\Repository\NetworkExclusionRepository;
 use App\Repository\LinkCardRepository;
 use App\Repository\SavedSearchNetworkInclusionRepository;
 use App\Repository\SubscriptionRepository;
-use App\Service\Backup\AccountBackupExporter;
-use App\Service\Backup\AccountRestorer;
-use App\Service\Backup\EntryPartRestorer;
-use App\Service\Backup\Exception\BackupDoesNotFitException;
-use App\Service\Backup\Exception\InvalidBackupException;
-use App\Service\Search\SavedSearchSlug;
+use App\Service\Operations\Backup\AccountBackupExporter;
+use App\Service\Operations\Backup\AccountRestorer;
+use App\Service\Operations\Backup\EntryPartRestorer;
+use App\Service\Operations\Backup\Exception\BackupDoesNotFitException;
+use App\Service\Operations\Backup\Exception\InvalidBackupException;
+use App\Service\Library\Search\SavedSearchSlug;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BackupFieldDeclarations;
 use App\Tests\Support\ExportedFoundation;

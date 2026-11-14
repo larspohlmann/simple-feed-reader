@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Url\Support;
+namespace App\Service\Foundation\Url\Support;
 
-use App\Service\Url\Model\LemmyPostPageModel;
+use App\Service\Foundation\Url\Model\LemmyPostPageModel;
 
 final class LemmyPostUrl
 {

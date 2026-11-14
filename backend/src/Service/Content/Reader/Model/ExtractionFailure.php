@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Model;
+namespace App\Service\Content\Reader\Model;
 
 /** Why an extraction failed. The values are wire vocabulary the reader client switches on. */
 enum ExtractionFailure: string

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\RateLimit\Exception;
+namespace App\Service\Foundation\RateLimit\Exception;
 
 final class RateLimitedException extends \RuntimeException
 {

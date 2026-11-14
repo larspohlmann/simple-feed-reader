@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Worker\Handler;
+namespace App\Service\Operations\Worker\Handler;
 
-use App\Service\Social\Model\PrivateFeedSyncBudgetModel;
-use App\Service\Social\PrivateFeedSyncSweep;
-use App\Service\Worker\Message\SyncPrivateFeeds;
+use App\Service\Social\Social\Model\PrivateFeedSyncBudgetModel;
+use App\Service\Social\Social\PrivateFeedSyncSweep;
+use App\Service\Operations\Worker\Message\SyncPrivateFeeds;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 

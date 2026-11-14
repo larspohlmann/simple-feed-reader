@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reading;
+namespace App\Tests\Service\Library\Reading;
 
 use App\Entity\Entry;
 use App\Entity\EntryState;
@@ -17,8 +17,8 @@ use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\NetworkScope;
-use App\Service\Reading\MarkReadService;
-use App\Service\Reading\Model\ReadScopeModel;
+use App\Service\Library\Reading\MarkReadService;
+use App\Service\Library\Reading\Model\ReadScopeModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
 

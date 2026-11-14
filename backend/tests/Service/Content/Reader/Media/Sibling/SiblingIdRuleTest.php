@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media\Sibling;
+namespace App\Tests\Service\Content\Reader\Media\Sibling;
 
-use App\Service\Reader\Media\Model\ArticleMediaModel;
-use App\Service\Reader\Media\Model\MediaCandidateModel;
-use App\Service\Reader\Media\Model\MediaKind;
-use App\Service\Reader\Media\Sibling\NearbyPoster;
-use App\Service\Reader\Media\Sibling\SiblingIdRule;
+use App\Service\Content\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Content\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Content\Reader\Media\Model\MediaKind;
+use App\Service\Content\Reader\Media\Sibling\NearbyPoster;
+use App\Service\Content\Reader\Media\Sibling\SiblingIdRule;
 use PHPUnit\Framework\TestCase;
 
 final class SiblingIdRuleTest extends TestCase

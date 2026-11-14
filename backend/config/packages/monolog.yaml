@@ -17,7 +17,7 @@ when@dev:
                 formatter: monolog.formatter.json
             loki:
                 type: service
-                id: App\Service\Logging\Loki\LokiPushHandler
+                id: App\Service\Operations\Logging\Loki\LokiPushHandler
                 level: info
                 channels: ["!event"]
             console:
@@ -46,7 +46,7 @@ when@test:
             # every channel's noise (doctrine's connect log) landing in the shared buffer.
             loki:
                 type: service
-                id: App\Service\Logging\Loki\LokiPushHandler
+                id: App\Service\Operations\Logging\Loki\LokiPushHandler
                 level: info
                 channels: ["client_errors"]
 
@@ -59,6 +59,6 @@ when@prod:
                 id: app.host_log_file_handler
             loki:
                 type: service
-                id: App\Service\Logging\Loki\LokiPushHandler
+                id: App\Service\Operations\Logging\Loki\LokiPushHandler
                 level: info
                 channels: ["!event"]

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Model;
+namespace App\Service\Social\Social\Model;
 
-use App\Service\Fetch\Model\ApiRequestModel;
+use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 
 final readonly class MastodonSessionModel
 {

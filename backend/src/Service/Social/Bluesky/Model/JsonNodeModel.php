@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Bluesky\Model;
+namespace App\Service\Social\Bluesky\Model;
 
 /** One object of an AppView answer, read field by field: a field of the wrong type reads as absent. */
 final readonly class JsonNodeModel

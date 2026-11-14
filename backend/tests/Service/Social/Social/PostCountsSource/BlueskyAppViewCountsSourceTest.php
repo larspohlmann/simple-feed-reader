@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\PostCountsSource;
+namespace App\Tests\Service\Social\Social\PostCountsSource;
 
-use App\Service\Bluesky\AppViewClient;
-use App\Service\Fetch\Exception\FeedThrottledException;
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\HostThrottle;
-use App\Service\Social\Exception\SocialNetworkThrottledException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\Model\SocialCountsModel;
-use App\Service\Social\PostCountsSource\BlueskyAppViewCountsSource;
+use App\Service\Social\Bluesky\AppViewClient;
+use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\HostThrottle;
+use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Model\SocialCountsModel;
+use App\Service\Social\Social\PostCountsSource\BlueskyAppViewCountsSource;
 use App\Tests\Support\AssertsRefusal;
 use App\Tests\Support\FakeAppView;
 use PHPUnit\Framework\TestCase;

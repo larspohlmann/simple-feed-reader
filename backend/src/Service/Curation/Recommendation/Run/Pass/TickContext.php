@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run\Pass;
+namespace App\Service\Curation\Recommendation\Run\Pass;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\ScoringProtocol;
-use App\Service\Ai\Model\RetryPlanModel;
-use App\Service\Recommendation\Run\Model\ProviderCallRouteModel;
-use App\Service\Recommendation\Run\Model\TickDriver;
-use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
+use App\Service\Curation\Ai\Model\RetryPlanModel;
+use App\Service\Curation\Recommendation\Run\Model\ProviderCallRouteModel;
+use App\Service\Curation\Recommendation\Run\Model\TickDriver;
+use App\Service\Curation\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
 
 final readonly class TickContext
 {

@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
-use App\Service\Social\Exception\BlueskyProfileHiddenException;
-use App\Service\Subscription\Exception\AlreadySubscribedException;
-use App\Service\Subscription\Model\SubscribeOutcomeModel;
-use App\Service\Subscription\Model\SubscribeRequestModel;
-use App\Service\Subscription\SubscribeRoute\SubscribeRouteInterface;
+use App\Service\Social\Social\Exception\BlueskyProfileHiddenException;
+use App\Service\Library\Subscription\Exception\AlreadySubscribedException;
+use App\Service\Library\Subscription\Model\SubscribeOutcomeModel;
+use App\Service\Library\Subscription\Model\SubscribeRequestModel;
+use App\Service\Library\Subscription\SubscribeRoute\SubscribeRouteInterface;
 
 final readonly class HiddenProfileSubscribeRoute implements SubscribeRouteInterface
 {

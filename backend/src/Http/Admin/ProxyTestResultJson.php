@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Admin;
 
-use App\Service\Proxy\Model\ProxyTestResultModel;
+use App\Service\Outbound\Proxy\Model\ProxyTestResultModel;
 
 final class ProxyTestResultJson
 {

@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\LinkCard\LinkCardSweep;
-use App\Service\Refresh\RefreshRunner\RefreshRunner;
-use App\Service\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
-use App\Service\Social\SocialCandidates\SocialCandidatesInterface;
+use App\Service\Content\LinkCard\LinkCardSweep;
+use App\Service\Ingestion\Refresh\RefreshRunner\RefreshRunner;
+use App\Service\Library\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
+use App\Service\Social\Social\SocialCandidates\SocialCandidatesInterface;
 use Psr\Clock\ClockInterface;
 
 /** What a MaintenanceTickTest case swaps into a tick wired by hand; whatever it leaves null stays the default. */

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Http\AltchaChallengeJson;
-use App\Service\Auth\Model\AltchaChallengeModel;
+use App\Service\Identity\Auth\Model\AltchaChallengeModel;
 use PHPUnit\Framework\TestCase;
 
 final class AltchaChallengeJsonTest extends TestCase

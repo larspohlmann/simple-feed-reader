@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Passkey\SignInIdentities;
+namespace App\Service\Identity\Passkey\SignInIdentities;
 
 use App\Entity\User;
 

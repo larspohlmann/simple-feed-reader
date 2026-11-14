@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai\ModelCatalog;
+namespace App\Service\Curation\Ai\ModelCatalog;
 
 use App\Enum\ScoringProtocol;
-use App\Service\Ai\Model\ProviderCredentialsModel;
-use App\Service\Ai\Pass\ModelListing;
+use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
+use App\Service\Curation\Ai\Pass\ModelListing;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 

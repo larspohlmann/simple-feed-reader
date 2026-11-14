@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Model;
+namespace App\Tests\Service\Social\Social\Model;
 
-use App\Service\Social\Model\ResponseContextModel;
-use App\Service\Social\Model\SocialCountsModel;
-use App\Service\Social\Model\SocialPostModel;
+use App\Service\Social\Social\Model\ResponseContextModel;
+use App\Service\Social\Social\Model\SocialCountsModel;
+use App\Service\Social\Social\Model\SocialPostModel;
 use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\TestCase;
 

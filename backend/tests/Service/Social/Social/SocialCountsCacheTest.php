@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Enum\SocialNetwork;
-use App\Service\Social\Model\SocialCountsModel;
-use App\Service\Social\Model\SocialPostAddressModel;
-use App\Service\Social\SocialCountsCache;
+use App\Service\Social\Social\Model\SocialCountsModel;
+use App\Service\Social\Social\Model\SocialPostAddressModel;
+use App\Service\Social\Social\SocialCountsCache;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 

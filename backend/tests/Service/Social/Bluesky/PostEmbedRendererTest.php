@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Bluesky;
+namespace App\Tests\Service\Social\Bluesky;
 
 use App\Entity\LinkCardContent;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Bluesky\Model\RenderedEmbedModel;
-use App\Service\Bluesky\PostEmbedRenderer;
-use App\Service\Parser\Model\ParsedMediumModel;
-use App\Service\Parser\Model\VisualMediaKind;
-use App\Service\Sanitize\EntrySanitizer;
-use App\Service\Sanitize\TrailingBlankRemover;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Bluesky\Model\RenderedEmbedModel;
+use App\Service\Social\Bluesky\PostEmbedRenderer;
+use App\Service\Ingestion\Parser\Model\ParsedMediumModel;
+use App\Service\Ingestion\Parser\Model\VisualMediaKind;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Foundation\Sanitize\TrailingBlankRemover;
 use App\Tests\Support\Bluesky;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

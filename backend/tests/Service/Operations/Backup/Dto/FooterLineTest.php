@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Backup\Dto;
+namespace App\Tests\Service\Operations\Backup\Dto;
 
-use App\Service\Backup\Dto\FooterLine;
-use App\Service\Backup\Support\BackupSchema;
+use App\Service\Operations\Backup\Dto\FooterLine;
+use App\Service\Operations\Backup\Support\BackupSchema;
 use PHPUnit\Framework\TestCase;
 
 final class FooterLineTest extends TestCase

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Pass;
+namespace App\Service\Operations\Backup\Pass;
 
 use App\Entity\Entry;
 use App\Repository\EntryRepository;
@@ -10,16 +10,16 @@ use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\LinkCardRepository;
 use App\Repository\SavedEntryOriginRepository;
-use App\Service\Backup\Dto\BackupHeader;
-use App\Service\Backup\Dto\BackupTotals;
-use App\Service\Backup\Dto\EntryLine;
-use App\Service\Backup\Dto\EntryShareLine;
-use App\Service\Backup\Dto\EntryStateLine;
-use App\Service\Backup\Dto\FooterLine;
-use App\Service\Backup\Model\BackupPartModel;
-use App\Service\Backup\Model\BackupProvenanceModel;
-use App\Service\Backup\Model\EntryCompanionsModel;
-use App\Service\Backup\Support\BackupSchema;
+use App\Service\Operations\Backup\Dto\BackupHeader;
+use App\Service\Operations\Backup\Dto\BackupTotals;
+use App\Service\Operations\Backup\Dto\EntryLine;
+use App\Service\Operations\Backup\Dto\EntryShareLine;
+use App\Service\Operations\Backup\Dto\EntryStateLine;
+use App\Service\Operations\Backup\Dto\FooterLine;
+use App\Service\Operations\Backup\Model\BackupPartModel;
+use App\Service\Operations\Backup\Model\BackupProvenanceModel;
+use App\Service\Operations\Backup\Model\EntryCompanionsModel;
+use App\Service\Operations\Backup\Support\BackupSchema;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**

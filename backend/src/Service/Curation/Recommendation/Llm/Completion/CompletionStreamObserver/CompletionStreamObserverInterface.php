@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Completion\CompletionStreamObserver;
+namespace App\Service\Curation\Recommendation\Llm\Completion\CompletionStreamObserver;
 
-use App\Service\Recommendation\Run\Model\CallProgressModel;
+use App\Service\Curation\Recommendation\Run\Model\CallProgressModel;
 
 /**
  * Streaming hook for one /chat/completions call: the client reports

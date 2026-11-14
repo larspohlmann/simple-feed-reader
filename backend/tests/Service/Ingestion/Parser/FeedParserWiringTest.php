@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Parser;
+namespace App\Tests\Service\Ingestion\Parser;
 
-use App\Service\Parser\Exception\FeedParseException;
-use App\Service\Parser\FeedParser;
+use App\Service\Ingestion\Parser\Exception\FeedParseException;
+use App\Service\Ingestion\Parser\FeedParser;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**

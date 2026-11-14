@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Text\Support;
+namespace App\Service\Foundation\Text\Support;
 
 /** Text known to carry no markup, as HTML: escaped, paragraphed, its bare URLs linked. */
 final class LinkedPlainText

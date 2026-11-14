@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\RateLimit;
+namespace App\Tests\Service\Foundation\RateLimit;
 
 use App\Entity\User;
-use App\Service\RateLimit\Exception\RateLimitedException;
-use App\Service\RateLimit\RateLimitGuard;
+use App\Service\Foundation\RateLimit\Exception\RateLimitedException;
+use App\Service\Foundation\RateLimit\RateLimitGuard;
 use App\Tests\Support\AssignsEntityIds;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Scraper;
+namespace App\Tests\Service\Ingestion\Scraper;
 
-use App\Service\Scraper\CardTitle;
-use App\Service\Scraper\Exception\HtmlExtractionException;
-use App\Service\Scraper\HtmlItemExtractor;
-use App\Service\Scraper\ScrapeLayer\ClusterLayer;
-use App\Service\Scraper\ScrapeLayer\JsonLdLayer;
-use App\Service\Scraper\ScrapeLayer\SemanticLayer;
+use App\Service\Ingestion\Scraper\CardTitle;
+use App\Service\Ingestion\Scraper\Exception\HtmlExtractionException;
+use App\Service\Ingestion\Scraper\HtmlItemExtractor;
+use App\Service\Ingestion\Scraper\ScrapeLayer\ClusterLayer;
+use App\Service\Ingestion\Scraper\ScrapeLayer\JsonLdLayer;
+use App\Service\Ingestion\Scraper\ScrapeLayer\SemanticLayer;
 use PHPUnit\Framework\TestCase;
 
 final class HtmlItemExtractorTest extends TestCase

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Model;
+namespace App\Service\Operations\Backup\Model;
 
 /**
  * The backup download's filename: app slug, release version, account and export date, joined by "-". It must survive

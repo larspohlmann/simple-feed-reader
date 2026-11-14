@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Tag\Factory;
+namespace App\Service\Library\Tag\Factory;
 
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Service\Tag\Model\TagDetailsModel;
+use App\Service\Library\Tag\Model\TagDetailsModel;
 
 final readonly class TagFactory
 {

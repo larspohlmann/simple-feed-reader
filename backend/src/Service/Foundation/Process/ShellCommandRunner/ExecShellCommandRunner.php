@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Process\ShellCommandRunner;
+namespace App\Service\Foundation\Process\ShellCommandRunner;
 
 final readonly class ExecShellCommandRunner implements ShellCommandRunnerInterface
 {

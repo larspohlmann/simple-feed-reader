@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\FeedDirectory\Model;
+namespace App\Tests\Service\Sourcing\FeedDirectory\Model;
 
-use App\Service\FeedDirectory\Exception\InvalidFeedDirectoryScopeException;
-use App\Service\FeedDirectory\Model\FeedDirectoryScopeModel;
+use App\Service\Sourcing\FeedDirectory\Exception\InvalidFeedDirectoryScopeException;
+use App\Service\Sourcing\FeedDirectory\Model\FeedDirectoryScopeModel;
 use PHPUnit\Framework\TestCase;
 
 final class FeedDirectoryScopeModelTest extends TestCase

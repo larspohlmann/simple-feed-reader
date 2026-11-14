@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Share\Support;
+namespace App\Service\Social\Share\Support;
 
-use App\Service\Fetch\Support\HostKey;
-use App\Service\Text\Support\Whitespace;
-use App\Service\Url\Support\AbsoluteHttpUrl;
+use App\Service\Outbound\Fetch\Support\HostKey;
+use App\Service\Foundation\Text\Support\Whitespace;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use Dom\Element;
 
 /** Whether a link's text reads as a URL rather than as words, and whether that URL is the link's own page. */

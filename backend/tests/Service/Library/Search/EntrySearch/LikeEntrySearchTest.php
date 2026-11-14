@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Search\EntrySearch;
+namespace App\Tests\Service\Library\Search\EntrySearch;
 
 use App\Entity\Entry;
 use App\Entity\EntryState;
@@ -11,8 +11,8 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\EntryListRepository;
 use App\Repository\EntrySearchQuery;
-use App\Service\Search\EntrySearch\LikeEntrySearch;
-use App\Service\Search\Model\SearchTermsModel;
+use App\Service\Library\Search\EntrySearch\LikeEntrySearch;
+use App\Service\Library\Search\Model\SearchTermsModel;
 use App\Tests\DbTestCase;
 
 final class LikeEntrySearchTest extends DbTestCase

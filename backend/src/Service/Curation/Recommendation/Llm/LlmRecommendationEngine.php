@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm;
+namespace App\Service\Curation\Recommendation\Llm;
 
 use App\Entity\RecommendationRun;
 use App\Enum\RecommendationEngineKind;
-use App\Service\Recommendation\Engine\RecommendationEngine\RecommendationEngineInterface;
-use App\Service\Recommendation\Llm\Prompt\RecommendationPromptBuilder;
-use App\Service\Recommendation\Llm\Run\ProviderPhase\BatchPhase;
-use App\Service\Recommendation\Llm\Run\ProviderPhase\ConsolidationPhase;
-use App\Service\Recommendation\Llm\Run\ProviderPhase\ProviderPhaseInterface;
-use App\Service\Recommendation\Pool\RecommendationHistoryLoader;
-use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
-use App\Service\Recommendation\Run\Pass\TickContext;
+use App\Service\Curation\Recommendation\Engine\RecommendationEngine\RecommendationEngineInterface;
+use App\Service\Curation\Recommendation\Llm\Prompt\RecommendationPromptBuilder;
+use App\Service\Curation\Recommendation\Llm\Run\ProviderPhase\BatchPhase;
+use App\Service\Curation\Recommendation\Llm\Run\ProviderPhase\ConsolidationPhase;
+use App\Service\Curation\Recommendation\Llm\Run\ProviderPhase\ProviderPhaseInterface;
+use App\Service\Curation\Recommendation\Pool\RecommendationHistoryLoader;
+use App\Service\Curation\Recommendation\Run\Model\RecommendationRunReportModel;
+use App\Service\Curation\Recommendation\Run\Pass\TickContext;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**

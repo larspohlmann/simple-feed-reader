@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Slideshow\SlideshowRecognizer;
+namespace App\Tests\Service\Content\Reader\Slideshow\SlideshowRecognizer;
 
-use App\Service\Reader\Media\Model\PageTextBlocksModel;
-use App\Service\Reader\Slideshow\Model\SlideshowModel;
-use App\Service\Reader\Slideshow\SlideCaptionResolver;
-use App\Service\Reader\Slideshow\SlideImageResolver;
-use App\Service\Reader\Slideshow\SlideshowRecognizer\MarkupCarouselRecognizer;
+use App\Service\Content\Reader\Media\Model\PageTextBlocksModel;
+use App\Service\Content\Reader\Slideshow\Model\SlideshowModel;
+use App\Service\Content\Reader\Slideshow\SlideCaptionResolver;
+use App\Service\Content\Reader\Slideshow\SlideImageResolver;
+use App\Service\Content\Reader\Slideshow\SlideshowRecognizer\MarkupCarouselRecognizer;
 use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 

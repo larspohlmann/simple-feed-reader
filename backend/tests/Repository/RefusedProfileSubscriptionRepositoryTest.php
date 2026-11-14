@@ -9,7 +9,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SourceFormat;
 use App\Repository\RefusedProfileSubscriptionRepository;
-use App\Service\Social\Model\RefusedFeedPositionModel;
+use App\Service\Social\Social\Model\RefusedFeedPositionModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ConnectsBlueskyAccounts;
 use App\Tests\Support\SeedsUsers;

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media\Sibling\Support;
+namespace App\Tests\Service\Content\Reader\Media\Sibling\Support;
 
-use App\Service\Reader\Media\Sibling\Support\KeyedOccurrences;
+use App\Service\Content\Reader\Media\Sibling\Support\KeyedOccurrences;
 use PHPUnit\Framework\TestCase;
 
 final class KeyedOccurrencesTest extends TestCase

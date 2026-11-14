@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Passkey;
+namespace App\Service\Identity\Passkey;
 
 use App\DependencyInjection\ProcessLifetimeState;
-use App\Service\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
+use App\Service\Operations\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 use Webauthn\AttestationStatement\AttestationStatementSupportManager;
 use Webauthn\CeremonyStep\CeremonyStepManager;

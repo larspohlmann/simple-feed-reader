@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Settings;
+namespace App\Service\Curation\Recommendation\Settings;
 
 use App\Entity\User;
 use App\Repository\RecommendationSettingsRepository;
-use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
-use App\Service\Recommendation\Settings\Pass\AccountRecommendationSettings;
+use App\Service\Curation\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
+use App\Service\Curation\Recommendation\Settings\Pass\AccountRecommendationSettings;
 
 /** The settings every recommendation service reads, against the account's active AI provider unless told another. */
 final readonly class RecommendationSettingsResolver

@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Run\ProviderPhase;
+namespace App\Service\Curation\Recommendation\Llm\Run\ProviderPhase;
 
-use App\Service\Recommendation\Llm\Run\RecommendationBatchWave;
-use App\Service\Recommendation\Llm\Run\WaveContextLoader;
-use App\Service\Recommendation\Run\BatchWavePhase;
-use App\Service\Recommendation\Run\BatchWaveRounds;
-use App\Service\Recommendation\Run\Model\BatchWaveResultModel;
-use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
-use App\Service\Recommendation\Run\Pass\TickContext;
+use App\Service\Curation\Recommendation\Llm\Run\RecommendationBatchWave;
+use App\Service\Curation\Recommendation\Llm\Run\WaveContextLoader;
+use App\Service\Curation\Recommendation\Run\BatchWavePhase;
+use App\Service\Curation\Recommendation\Run\BatchWaveRounds;
+use App\Service\Curation\Recommendation\Run\Model\BatchWaveResultModel;
+use App\Service\Curation\Recommendation\Run\Model\RecommendationRunReportModel;
+use App\Service\Curation\Recommendation\Run\Pass\TickContext;
 
 final readonly class BatchPhase implements ProviderPhaseInterface
 {

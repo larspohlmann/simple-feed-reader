@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Parser\FeedFormatParser;
+namespace App\Tests\Service\Ingestion\Parser\FeedFormatParser;
 
 use App\Enum\CommentsLoad;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Parser\Model\ParsedFeedModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
 use App\Tests\Support\FeedFormatParsers;
 use PHPUnit\Framework\TestCase;
 

@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Profile;
+namespace App\Service\Curation\Recommendation\Profile;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\ProfileSettingsValues;
 use App\Entity\User;
 use App\Repository\RecommendationSettingsRepository;
-use App\Service\Ai\AiConfigurationForUser;
-use App\Service\Ai\Exception\ConfigurationNotFoundException;
-use App\Service\Recommendation\Exception\ProfileConnectionRejectedException;
-use App\Service\Recommendation\Profile\Model\ProfileSettingsChangeModel;
-use App\Service\Recommendation\Settings\RecommendationSettingsWriter;
+use App\Service\Curation\Ai\AiConfigurationForUser;
+use App\Service\Curation\Ai\Exception\ConfigurationNotFoundException;
+use App\Service\Curation\Recommendation\Exception\ProfileConnectionRejectedException;
+use App\Service\Curation\Recommendation\Profile\Model\ProfileSettingsChangeModel;
+use App\Service\Curation\Recommendation\Settings\RecommendationSettingsWriter;
 
 final readonly class ProfileSettingsEditor
 {

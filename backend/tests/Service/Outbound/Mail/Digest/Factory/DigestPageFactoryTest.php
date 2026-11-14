@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\Digest\Factory;
+namespace App\Tests\Service\Outbound\Mail\Digest\Factory;
 
-use App\Service\Mail\Digest\Factory\DigestPageFactory;
-use App\Service\Mail\Digest\Model\DigestEntryModel;
-use App\Service\Mail\Digest\Model\DigestGroupModel;
-use App\Service\Mail\Digest\Model\DigestModel;
+use App\Service\Outbound\Mail\Digest\Factory\DigestPageFactory;
+use App\Service\Outbound\Mail\Digest\Model\DigestEntryModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestGroupModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestModel;
 use PHPUnit\Framework\TestCase;
 
 final class DigestPageFactoryTest extends TestCase

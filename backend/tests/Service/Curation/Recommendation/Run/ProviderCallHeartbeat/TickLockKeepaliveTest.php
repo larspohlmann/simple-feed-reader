@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Run\ProviderCallHeartbeat;
+namespace App\Tests\Service\Curation\Recommendation\Run\ProviderCallHeartbeat;
 
-use App\Service\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive;
+use App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive;
 use App\Tests\Support\RefreshCountingLock;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;

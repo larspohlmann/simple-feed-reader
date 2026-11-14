@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Chapter;
+namespace App\Service\Content\Chapter;
 
 use App\Entity\EntryChapter;
-use App\Service\Chapter\EmbedDetailsSource\EmbedDetailsSourceInterface;
-use App\Service\Chapter\Exception\EmbedDescriptionUnreachableException;
-use App\Service\Chapter\Model\ChapteredEmbed;
-use App\Service\Chapter\Model\EmbedAddressModel;
-use App\Service\Chapter\Model\EmbedDescriptionModel;
-use App\Service\Chapter\Model\EmbedDetailsModel;
-use App\Service\Chapter\Support\ChapterSequence;
-use App\Service\Chapter\Support\DescriptionChapters;
-use App\Service\Text\Support\LinkedPlainText;
+use App\Service\Content\Chapter\EmbedDetailsSource\EmbedDetailsSourceInterface;
+use App\Service\Content\Chapter\Exception\EmbedDescriptionUnreachableException;
+use App\Service\Content\Chapter\Model\ChapteredEmbed;
+use App\Service\Content\Chapter\Model\EmbedAddressModel;
+use App\Service\Content\Chapter\Model\EmbedDescriptionModel;
+use App\Service\Content\Chapter\Model\EmbedDetailsModel;
+use App\Service\Content\Chapter\Support\ChapterSequence;
+use App\Service\Content\Chapter\Support\DescriptionChapters;
+use App\Service\Foundation\Text\Support\LinkedPlainText;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 

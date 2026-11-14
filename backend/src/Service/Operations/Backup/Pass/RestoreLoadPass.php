@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Pass;
+namespace App\Service\Operations\Backup\Pass;
 
 use App\Entity\Feed;
 use App\Entity\NetworkExclusion;
@@ -11,18 +11,18 @@ use App\Entity\SavedSearchNetworkInclusion;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\InclusionSurface;
-use App\Service\Account\Model\AccountSettingsModel;
-use App\Service\Backup\Dto\AccountLine;
-use App\Service\Backup\Dto\FeedLine;
-use App\Service\Backup\Dto\SavedSearchLine;
-use App\Service\Backup\Dto\SubscriptionLine;
-use App\Service\Backup\Dto\TagLine;
-use App\Service\Backup\Exception\BackupLoadFailedException;
-use App\Service\Backup\Factory\RestoredFoundationFactory;
-use App\Service\Backup\Model\AccountNetworkSwitchesModel;
-use App\Service\Backup\Model\RestoreResultModel;
-use App\Service\Backup\RestoreFeeds\RestoreFeedsInterface;
-use App\Service\Search\SavedSearchSlug;
+use App\Service\Identity\Account\Model\AccountSettingsModel;
+use App\Service\Operations\Backup\Dto\AccountLine;
+use App\Service\Operations\Backup\Dto\FeedLine;
+use App\Service\Operations\Backup\Dto\SavedSearchLine;
+use App\Service\Operations\Backup\Dto\SubscriptionLine;
+use App\Service\Operations\Backup\Dto\TagLine;
+use App\Service\Operations\Backup\Exception\BackupLoadFailedException;
+use App\Service\Operations\Backup\Factory\RestoredFoundationFactory;
+use App\Service\Operations\Backup\Model\AccountNetworkSwitchesModel;
+use App\Service\Operations\Backup\Model\RestoreResultModel;
+use App\Service\Operations\Backup\RestoreFeeds\RestoreFeedsInterface;
+use App\Service\Library\Search\SavedSearchSlug;
 use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\ORM\EntityManagerInterface;
 

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\SubscriptionHistory;
+namespace App\Service\Library\SubscriptionHistory;
 
 use App\Repository\SubscriptionActivityRepository;
-use App\Service\SubscriptionHistory\Model\DayCountModel;
-use App\Service\SubscriptionHistory\Model\DayCountsModel;
-use App\Service\SubscriptionHistory\Model\TrackedSubscriptionModel;
-use App\Service\SubscriptionHistory\Pass\DayTally;
-use App\Service\SubscriptionHistory\Support\UtcDay;
+use App\Service\Library\SubscriptionHistory\Model\DayCountModel;
+use App\Service\Library\SubscriptionHistory\Model\DayCountsModel;
+use App\Service\Library\SubscriptionHistory\Model\TrackedSubscriptionModel;
+use App\Service\Library\SubscriptionHistory\Pass\DayTally;
+use App\Service\Library\SubscriptionHistory\Support\UtcDay;
 
 /** Counts days straight from entries and entry states, which only works while retention still holds them. */
 final readonly class LiveDayCounter

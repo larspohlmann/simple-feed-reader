@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
+namespace App\Tests\Service\Content\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Reader\AuthorBio\AuthorProfileLink;
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\AuthorBioSeparator;
-use App\Service\Reader\LinkListDetector;
-use App\Service\Reader\SubstantialProseDetector;
+use App\Service\Content\Reader\AuthorBio\AuthorProfileLink;
+use App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\AuthorBioSeparator;
+use App\Service\Content\Reader\LinkListDetector;
+use App\Service\Content\Reader\SubstantialProseDetector;
 use App\Tests\Support\BodyCleaningPasses;
 use App\Tests\Support\ParsesHtml;
 use App\Tests\Support\ProseParagraphs;

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch;
+namespace App\Tests\Service\Outbound\Fetch;
 
 use App\Tests\Support\PinnedRequestOptions;
-use App\Service\Fetch\FailoverRequestSender;
-use App\Service\Fetch\Model\GuardedUrlModel;
+use App\Service\Outbound\Fetch\FailoverRequestSender;
+use App\Service\Outbound\Fetch\Model\GuardedUrlModel;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;

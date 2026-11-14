@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\Digest;
+namespace App\Tests\Service\Outbound\Mail\Digest;
 
-use App\Service\Mail\Digest\DigestTextRenderer;
-use App\Service\Mail\Digest\Model\DigestEntryModel;
-use App\Service\Mail\Digest\Model\DigestGroupModel;
-use App\Service\Mail\Digest\Model\DigestModel;
+use App\Service\Outbound\Mail\Digest\DigestTextRenderer;
+use App\Service\Outbound\Mail\Digest\Model\DigestEntryModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestGroupModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestModel;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Translation\Loader\YamlFileLoader;
 use Symfony\Component\Translation\Translator;

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Scoring\Model;
+namespace App\Service\Curation\Recommendation\Scoring\Model;
 
-use App\Service\Ai\Model\ProviderCallReceiptModel;
+use App\Service\Curation\Ai\Model\ProviderCallReceiptModel;
 
 final readonly class ScoringReplyModel
 {

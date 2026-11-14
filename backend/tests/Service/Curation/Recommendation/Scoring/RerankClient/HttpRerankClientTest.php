@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Scoring\RerankClient;
+namespace App\Tests\Service\Curation\Recommendation\Scoring\RerankClient;
 
-use App\Service\Ai\Exception\ProviderRejectedRequestException;
-use App\Service\Ai\Model\ProviderCredentialsModel;
-use App\Service\Recommendation\Scoring\Model\RerankRequestModel;
-use App\Service\Recommendation\Scoring\Model\ScoringOutcomeModel;
-use App\Service\Recommendation\Scoring\RerankClient\HttpRerankClient;
-use App\Service\Recommendation\Scoring\ScoringHttpTransport;
+use App\Service\Curation\Ai\Exception\ProviderRejectedRequestException;
+use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
+use App\Service\Curation\Recommendation\Scoring\Model\RerankRequestModel;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringOutcomeModel;
+use App\Service\Curation\Recommendation\Scoring\RerankClient\HttpRerankClient;
+use App\Service\Curation\Recommendation\Scoring\ScoringHttpTransport;
 use App\Tests\Support\CountingProviderCallHeartbeat;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;

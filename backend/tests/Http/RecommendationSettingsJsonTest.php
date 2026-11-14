@@ -9,10 +9,10 @@ use App\Entity\RecommendationPoolLimits;
 use App\Enum\RecommendationBatchSize;
 use App\Enum\RecommendationEngineKind;
 use App\Http\RecommendationSettingsJson;
-use App\Service\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
-use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
-use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
-use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
+use App\Service\Curation\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
+use App\Service\Curation\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
+use App\Service\Curation\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
+use App\Service\Curation\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationSettingsJsonTest extends TestCase

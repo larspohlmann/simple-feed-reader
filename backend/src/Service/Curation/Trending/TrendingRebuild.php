@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Trending;
+namespace App\Service\Curation\Trending;
 
 use App\Enum\TrendingWindow;
 use App\Repository\TrendingSnapshotRepository;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Trending\Model\TrendingLastBuildsModel;
-use App\Service\Trending\Model\TrendingRebuildReportModel;
-use App\Service\Trending\SnapshotBuilder\SnapshotBuilderInterface;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Curation\Trending\Model\TrendingLastBuildsModel;
+use App\Service\Curation\Trending\Model\TrendingRebuildReportModel;
+use App\Service\Curation\Trending\SnapshotBuilder\SnapshotBuilderInterface;
 
 /** Rebuilds every window whose snapshot is missing or as old as its interval; the worker and the tick call it. */
 final readonly class TrendingRebuild

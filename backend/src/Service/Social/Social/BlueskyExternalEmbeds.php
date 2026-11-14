@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\SocialAccount;
-use App\Service\Image\Exception\GuardedImageUnavailableException;
-use App\Service\Image\Exception\ImageProcessingException;
-use App\Service\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
-use App\Service\Image\ImageResizer\ImageResizerInterface;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\Exception\SocialPostRefusedException;
+use App\Service\Outbound\Image\Exception\GuardedImageUnavailableException;
+use App\Service\Outbound\Image\Exception\ImageProcessingException;
+use App\Service\Outbound\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
+use App\Service\Outbound\Image\ImageResizer\ImageResizerInterface;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use Psr\Log\LoggerInterface;
 
 /** The external embed a Bluesky link post carries, read from the page; a thumbnail that cannot be made is left out. */

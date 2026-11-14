@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader;
+namespace App\Tests\Service\Content\Reader;
 
 use App\Tests\Support\PinnedRequestOptions;
-use App\Service\Fetch\DnsResolver\DnsResolverInterface;
-use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\Model\ResponseSizeLimit;
-use App\Service\Fetch\UrlGuard;
-use App\Service\Reader\Exception\PageFetchException;
-use App\Service\Reader\HtmlPageFetcher;
-use App\Service\Reader\MetaRefreshTarget;
+use App\Service\Outbound\Fetch\DnsResolver\DnsResolverInterface;
+use App\Service\Outbound\Fetch\IpValidator;
+use App\Service\Outbound\Fetch\Model\ResponseSizeLimit;
+use App\Service\Outbound\Fetch\UrlGuard;
+use App\Service\Content\Reader\Exception\PageFetchException;
+use App\Service\Content\Reader\HtmlPageFetcher;
+use App\Service\Content\Reader\MetaRefreshTarget;
 use App\Tests\Support\CorruptGzip;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\GzipBomb;

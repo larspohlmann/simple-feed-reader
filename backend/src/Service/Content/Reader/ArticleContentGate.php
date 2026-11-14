@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Content\Reader;
 
-use App\Service\Reader\Exception\ArticleNotExtractedException;
-use App\Service\Reader\Media\Model\ArticleMediaModel;
-use App\Service\Reader\Model\ExtractionFailure;
+use App\Service\Content\Reader\Exception\ArticleNotExtractedException;
+use App\Service\Content\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Content\Reader\Model\ExtractionFailure;
 use fivefilters\Readability\Article;
 
 /**

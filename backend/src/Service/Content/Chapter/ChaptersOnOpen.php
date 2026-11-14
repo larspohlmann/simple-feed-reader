@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Chapter;
+namespace App\Service\Content\Chapter;
 
 use App\Entity\Entry;
 use App\Entity\EntryAttachment;
-use App\Service\Chapter\Model\ServedChaptersModel;
-use App\Service\Chapter\Support\ChapterSequence;
-use App\Service\Chapter\Support\DescriptionChapters;
-use App\Service\Url\Support\YouTubeUrl;
+use App\Service\Content\Chapter\Model\ServedChaptersModel;
+use App\Service\Content\Chapter\Support\ChapterSequence;
+use App\Service\Content\Chapter\Support\DescriptionChapters;
+use App\Service\Foundation\Url\Support\YouTubeUrl;
 
 final readonly class ChaptersOnOpen
 {

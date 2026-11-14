@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
 use App\Entity\EntryMedium;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Ingest\Support\EntryMediaAssembler;
-use App\Service\Parser\Model\ParsedMediumModel;
-use App\Service\Parser\Model\VisualMediaKind;
-use App\Service\Url\Support\HttpsImageUrl;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Ingestion\Ingest\Support\EntryMediaAssembler;
+use App\Service\Ingestion\Parser\Model\ParsedMediumModel;
+use App\Service\Ingestion\Parser\Model\VisualMediaKind;
+use App\Service\Foundation\Url\Support\HttpsImageUrl;
 
 /** A status's `media_attachments` as pictures and videos; audio and unknown files are left out. */
 final class MastodonAttachments

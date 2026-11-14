@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\FaviconResolver;
+namespace App\Service\Outbound\Fetch\FaviconResolver;
 
 interface FaviconResolverInterface
 {

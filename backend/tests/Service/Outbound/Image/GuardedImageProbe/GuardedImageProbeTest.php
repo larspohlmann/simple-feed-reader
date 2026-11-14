@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Image\GuardedImageProbe;
+namespace App\Tests\Service\Outbound\Image\GuardedImageProbe;
 
-use App\Service\Fetch\DnsResolver\DnsResolverInterface;
-use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\UrlGuard;
-use App\Service\Image\Exception\GuardedImageUnavailableException;
-use App\Service\Image\GuardedImageProbe\GuardedImageProbe;
+use App\Service\Outbound\Fetch\DnsResolver\DnsResolverInterface;
+use App\Service\Outbound\Fetch\IpValidator;
+use App\Service\Outbound\Fetch\UrlGuard;
+use App\Service\Outbound\Image\Exception\GuardedImageUnavailableException;
+use App\Service\Outbound\Image\GuardedImageProbe\GuardedImageProbe;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
 use App\Tests\Support\PngImageFactory;

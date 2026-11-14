@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace App\Service\LinkCard\PageCardReader;
+namespace App\Service\Content\LinkCard\PageCardReader;
 
 use App\Entity\LinkCardContent;
-use App\Service\Fetch\Pass\PageUrls;
-use App\Service\Fetch\Support\HostKey;
-use App\Service\Html\Support\HtmlDocumentParser;
-use App\Service\Html\Support\MetaTags;
-use App\Service\LinkCard\Model\PageCardModel;
-use App\Service\LinkCard\Support\DeclaredPageMedium;
-use App\Service\LinkCard\Support\StorableLinkCard;
-use App\Service\Parser\Support\VisualMedium;
-use App\Service\Reader\Exception\PageFetchException;
-use App\Service\Reader\PageHeadFetcher;
-use App\Service\Scraper\Support\TextNormalizer;
-use App\Service\Url\Support\HttpsImageUrl;
+use App\Service\Outbound\Fetch\Pass\PageUrls;
+use App\Service\Outbound\Fetch\Support\HostKey;
+use App\Service\Foundation\Html\Support\HtmlDocumentParser;
+use App\Service\Foundation\Html\Support\MetaTags;
+use App\Service\Content\LinkCard\Model\PageCardModel;
+use App\Service\Content\LinkCard\Support\DeclaredPageMedium;
+use App\Service\Content\LinkCard\Support\StorableLinkCard;
+use App\Service\Ingestion\Parser\Support\VisualMedium;
+use App\Service\Content\Reader\Exception\PageFetchException;
+use App\Service\Content\Reader\PageHeadFetcher;
+use App\Service\Ingestion\Scraper\Support\TextNormalizer;
+use App\Service\Foundation\Url\Support\HttpsImageUrl;
 
 /** Reads the card a page declares for itself, and the picture or video file it is or declares. */
 final readonly class PageCardReader implements PageCardReaderInterface

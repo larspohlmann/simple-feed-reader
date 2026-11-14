@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\SubscriptionHistory;
+namespace App\Tests\Service\Library\SubscriptionHistory;
 
 use App\Entity\RetentionSetting;
 use App\Entity\RetentionWindows;
-use App\Service\Retention\RetentionSettings;
-use App\Service\Retention\StoredRetentionSetting\StoredRetentionSettingInterface;
-use App\Service\SubscriptionHistory\Model\TrackedSubscriptionModel;
-use App\Service\SubscriptionHistory\RetentionHorizon;
+use App\Service\Ingestion\Retention\RetentionSettings;
+use App\Service\Ingestion\Retention\StoredRetentionSetting\StoredRetentionSettingInterface;
+use App\Service\Library\SubscriptionHistory\Model\TrackedSubscriptionModel;
+use App\Service\Library\SubscriptionHistory\RetentionHorizon;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 

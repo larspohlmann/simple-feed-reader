@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\BatchFeedFetcher;
+namespace App\Service\Outbound\Fetch\BatchFeedFetcher;
 
-use App\Service\Fetch\AnswerSettler\AnswerSettlerInterface;
-use App\Service\Fetch\ConcurrentRequestEngine;
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Fetch\Model\FetchTicketModel;
-use App\Service\Fetch\Model\RequestTicketModel;
-use App\Service\Fetch\Support\CapacityGuard;
+use App\Service\Outbound\Fetch\AnswerSettler\AnswerSettlerInterface;
+use App\Service\Outbound\Fetch\ConcurrentRequestEngine;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Outbound\Fetch\Model\FetchTicketModel;
+use App\Service\Outbound\Fetch\Model\RequestTicketModel;
+use App\Service\Outbound\Fetch\Support\CapacityGuard;
 
 /** Fetches many feeds at once on the shared request engine; the caller still processes results one at a time. */
 final readonly class ConcurrentFeedFetcher implements BatchFeedFetcherInterface

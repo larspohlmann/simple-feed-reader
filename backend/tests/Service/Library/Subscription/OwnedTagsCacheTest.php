@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Subscription;
+namespace App\Tests\Service\Library\Subscription;
 
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Service\Subscription\OwnedTagsCache;
+use App\Service\Library\Subscription\OwnedTagsCache;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SeedsUsers;
 use Doctrine\ORM\EntityManagerInterface;

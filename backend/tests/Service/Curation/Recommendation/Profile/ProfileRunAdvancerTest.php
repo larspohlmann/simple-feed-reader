@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Profile;
+namespace App\Tests\Service\Curation\Recommendation\Profile;
 
 use App\Entity\ProfileRun;
 use App\Entity\RecommendationSettings;
 use App\Entity\User;
 use App\Enum\ProfileRunTrigger;
 use App\Enum\RunStatus;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Recommendation\Profile\ProfileRunAdvancer;
-use App\Service\Recommendation\Run\Model\TickDriver;
-use App\Service\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface;
-use App\Service\Recommendation\Run\TickLockTtl;
-use App\Service\Recommendation\Run\UserTickLock;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
+use App\Service\Curation\Recommendation\Profile\ProfileRunAdvancer;
+use App\Service\Curation\Recommendation\Run\Model\TickDriver;
+use App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface;
+use App\Service\Curation\Recommendation\Run\TickLockTtl;
+use App\Service\Curation\Recommendation\Run\UserTickLock;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\SeedsUsers;

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Trending;
+namespace App\Tests\Service\Curation\Trending;
 
-use App\Service\Trending\HeadlineFiller;
+use App\Service\Curation\Trending\HeadlineFiller;
 use PHPUnit\Framework\TestCase;
 
 final class HeadlineFillerTest extends TestCase

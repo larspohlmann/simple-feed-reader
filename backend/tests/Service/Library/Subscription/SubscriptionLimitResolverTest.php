@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Subscription;
+namespace App\Tests\Service\Library\Subscription;
 
 use App\Entity\User;
-use App\Service\Subscription\SubscriptionLimitResolver;
-use App\Service\Subscription\SubscriptionService;
+use App\Service\Library\Subscription\SubscriptionLimitResolver;
+use App\Service\Library\Subscription\SubscriptionService;
 use PHPUnit\Framework\TestCase;
 
 final class SubscriptionLimitResolverTest extends TestCase

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Trending;
+namespace App\Service\Curation\Trending;
 
-use App\Service\Trending\Model\StoryLinkModel;
-use App\Service\Trending\Pass\StoryGroups;
-use App\Service\Trending\Pass\TrendingRun;
+use App\Service\Curation\Trending\Model\StoryLinkModel;
+use App\Service\Curation\Trending\Pass\StoryGroups;
+use App\Service\Curation\Trending\Pass\TrendingRun;
 
 final readonly class StoryGrouping
 {

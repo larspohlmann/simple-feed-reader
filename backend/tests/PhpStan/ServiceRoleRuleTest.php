@@ -14,15 +14,16 @@ final class ServiceRoleRuleTest extends RuleTestCase
 {
     private const string FIXTURES = __DIR__ . '/data/service-role-fixtures.php';
     private const string INSTANCE_PROPERTY_FIXTURE = __DIR__ . '/data/service-role-instance-property-fixture.php';
-    private const string SHOP = 'App\Service\Shop\\';
-    private const string TILL = 'App\Service\Till\Support\\';
+    private const string SHOP = 'App\Service\Fixture\Shop\\';
+    private const string TILL = 'App\Service\Fixture\Till\Support\\';
     private const string SUB_MODULE_FIXTURE = __DIR__ . '/data/service-role-sub-module-fixture.php';
-    private const string PROBE = 'App\Service\Probe\\';
+    private const string PROBE = 'App\Service\Fixture\Probe\\';
     private const string NEEDS_SUFFIX = 'is an interface, so its name ends in Interface';
     private const string OUTSIDE_ITS_FOLDER = 'sits outside the folder named after it';
     private const string NOT_READONLY = 'keeps no state, so it is readonly';
     private const string NOT_FINAL = 'is a service, so it is final';
-    private const string TAKES_A_MODEL = 'takes App\Service\Shop\Model\Price, which the container cannot supply';
+    private const string TAKES_A_MODEL
+        = 'takes App\Service\Fixture\Shop\Model\Price, which the container cannot supply';
     private const string DATA_NOT_READONLY = 'is data, so it is final readonly';
     private const string WRONG_FACTORY_FOLDER = 'sits in the wrong Factory/ folder';
     private const string WRONG_MODEL_FOLDER = 'sits in the wrong Model/ folder';
@@ -66,7 +67,7 @@ final class ServiceRoleRuleTest extends RuleTestCase
                 self::shop(
                     'interfaceFolder',
                     'ListPriceSource',
-                    'implements App\Service\Shop\PriceSource, so it sits in that interface\'s folder',
+                    'implements App\Service\Fixture\Shop\PriceSource, so it sits in that interface\'s folder',
                     'PriceSource\ListPriceSource',
                 ),
                 20,
@@ -121,7 +122,7 @@ final class ServiceRoleRuleTest extends RuleTestCase
                 self::shop(
                     'interfaceFolder',
                     'Rules\SummerDiscount',
-                    'implements App\Service\Shop\Rules\DiscountRule, so it sits in that interface\'s folder',
+                    'implements App\Service\Fixture\Shop\Rules\DiscountRule, so it sits in that interface\'s folder',
                     'DiscountRule\SummerDiscount',
                 ),
                 237,
@@ -130,7 +131,7 @@ final class ServiceRoleRuleTest extends RuleTestCase
                 self::shop(
                     'interfaceFolder',
                     'Basket\BasketTotals',
-                    'sits in the folder of App\Service\Shop\Basket\BasketInterface but does not implement it',
+                    'sits in the folder of App\Service\Fixture\Shop\Basket\BasketInterface but does not implement it',
                     'BasketTotals',
                 ),
                 260,
@@ -155,7 +156,7 @@ final class ServiceRoleRuleTest extends RuleTestCase
                 self::shop(
                     'modelShape',
                     'Model\OrderModel',
-                    'names the DTO App\Service\Shop\Dto\OrderLine; map it to a model at the boundary',
+                    'names the DTO App\Service\Fixture\Shop\Dto\OrderLine; map it to a model at the boundary',
                 ),
                 315,
             ],
@@ -176,7 +177,7 @@ final class ServiceRoleRuleTest extends RuleTestCase
                 self::shop(
                     'handlerName',
                     'Handler\RestockHandler',
-                    'handles App\Service\Shop\Message\RestockShelves, so its name is RestockShelvesHandler',
+                    'handles App\Service\Fixture\Shop\Message\RestockShelves, so its name is RestockShelvesHandler',
                     'Handler\RestockShelvesHandler',
                 ),
                 395,
@@ -184,36 +185,36 @@ final class ServiceRoleRuleTest extends RuleTestCase
             [
                 self::message(
                     'factoryFolder',
-                    'App\Service\Label\Factory\LabelFactoryInterface',
+                    'App\Service\Fixture\Label\Factory\LabelFactoryInterface',
                     self::WRONG_FACTORY_FOLDER,
-                    'App\Service\Label\Factory\Label\LabelFactoryInterface',
+                    'App\Service\Fixture\Label\Factory\Label\LabelFactoryInterface',
                 ),
                 438,
             ],
             [
                 self::message(
                     'factoryFolder',
-                    'App\Service\Label\Factory\PaperLabelFactory',
+                    'App\Service\Fixture\Label\Factory\PaperLabelFactory',
                     self::WRONG_FACTORY_FOLDER,
-                    'App\Service\Label\Factory\Label\PaperLabelFactory',
+                    'App\Service\Fixture\Label\Factory\Label\PaperLabelFactory',
                 ),
                 443,
             ],
             [
                 self::message(
                     'modelFolder',
-                    'App\Service\Badge\Model\ColourModelInterface',
+                    'App\Service\Fixture\Badge\Model\ColourModelInterface',
                     self::WRONG_MODEL_FOLDER,
-                    'App\Service\Badge\Model\Colour\ColourModelInterface',
+                    'App\Service\Fixture\Badge\Model\Colour\ColourModelInterface',
                 ),
                 461,
             ],
             [
                 self::message(
                     'modelFolder',
-                    'App\Service\Badge\Model\HexColourModel',
+                    'App\Service\Fixture\Badge\Model\HexColourModel',
                     self::WRONG_MODEL_FOLDER,
-                    'App\Service\Badge\Model\Colour\HexColourModel',
+                    'App\Service\Fixture\Badge\Model\Colour\HexColourModel',
                 ),
                 466,
             ],
@@ -230,27 +231,27 @@ final class ServiceRoleRuleTest extends RuleTestCase
             [
                 self::message(
                     'interfaceName',
-                    'App\Service\Stamp\Factory\StampSource',
+                    'App\Service\Fixture\Stamp\Factory\StampSource',
                     self::roleSuffix('Factory'),
-                    'App\Service\Stamp\Factory\StampSourceFactoryInterface',
+                    'App\Service\Fixture\Stamp\Factory\StampSourceFactoryInterface',
                 ),
                 509,
             ],
             [
                 self::message(
                     'interfaceName',
-                    'App\Service\Stamp\Model\InkInterface',
+                    'App\Service\Fixture\Stamp\Model\InkInterface',
                     self::roleSuffix('Model'),
-                    'App\Service\Stamp\Model\InkModelInterface',
+                    'App\Service\Fixture\Stamp\Model\InkModelInterface',
                 ),
                 516,
             ],
             [
                 self::message(
                     'modelHome',
-                    'App\Service\Wrap\Bow',
+                    'App\Service\Fixture\Wrap\Bow',
                     'is data built per call',
-                    'App\Service\Wrap\Model\BowModel',
+                    'App\Service\Fixture\Wrap\Model\BowModel',
                 ),
                 531,
             ],
@@ -258,45 +259,45 @@ final class ServiceRoleRuleTest extends RuleTestCase
             [
                 self::message(
                     'passHome',
-                    'App\Service\Knot\Counter',
+                    'App\Service\Fixture\Knot\Counter',
                     'is built per call',
-                    'App\Service\Knot\Pass\Counter',
+                    'App\Service\Fixture\Knot\Pass\Counter',
                 ),
                 577,
             ],
             [
                 self::message(
                     'passHome',
-                    'App\Service\Knot\Label',
+                    'App\Service\Fixture\Knot\Label',
                     'is built per call',
-                    'App\Service\Knot\Pass\Label',
+                    'App\Service\Fixture\Knot\Pass\Label',
                 ),
                 587,
             ],
             [
                 self::message(
                     'passHome',
-                    'App\Service\Knot\Spool',
+                    'App\Service\Fixture\Knot\Spool',
                     'is built per call',
-                    'App\Service\Knot\Pass\Spool',
+                    'App\Service\Fixture\Knot\Pass\Spool',
                 ),
                 622,
             ],
             [
                 self::message(
                     'modelHome',
-                    'App\Service\Knot\Warp',
+                    'App\Service\Fixture\Knot\Warp',
                     'is data built per call',
-                    'App\Service\Knot\Model\WarpModel',
+                    'App\Service\Fixture\Knot\Model\WarpModel',
                 ),
                 637,
             ],
             [
                 self::message(
                     'modelHome',
-                    'App\Service\Knot\Weft',
+                    'App\Service\Fixture\Knot\Weft',
                     'is data built per call',
-                    'App\Service\Knot\Model\WeftModel',
+                    'App\Service\Fixture\Knot\Model\WeftModel',
                 ),
                 644,
             ],
@@ -312,18 +313,18 @@ final class ServiceRoleRuleTest extends RuleTestCase
             [
                 self::message(
                     'supportHome',
-                    'App\Service\Till\Pass\OpeningFloat',
+                    'App\Service\Fixture\Till\Pass\OpeningFloat',
                     'is static-only',
-                    'App\Service\Till\Support\OpeningFloat',
+                    'App\Service\Fixture\Till\Support\OpeningFloat',
                 ),
                 710,
             ],
             [
                 self::message(
                     'supportHome',
-                    'App\Service\Till\Model\TaxRateModel',
+                    'App\Service\Fixture\Till\Model\TaxRateModel',
                     'is static-only',
-                    'App\Service\Till\Support\TaxRateModel',
+                    'App\Service\Fixture\Till\Support\TaxRateModel',
                 ),
                 724,
             ],
@@ -333,8 +334,8 @@ final class ServiceRoleRuleTest extends RuleTestCase
             [
                 self::message(
                     'modelShape',
-                    'App\Service\Ledger\Model\LedgerModel',
-                    'names the DTO App\Service\Ledger\Dto\EntryLine; map it to a model at the boundary',
+                    'App\Service\Fixture\Ledger\Model\LedgerModel',
+                    'names the DTO App\Service\Fixture\Ledger\Dto\EntryLine; map it to a model at the boundary',
                 ),
                 793,
             ],
@@ -344,7 +345,7 @@ final class ServiceRoleRuleTest extends RuleTestCase
                 self::probe(
                     'interfaceFolder',
                     'HeatSensor',
-                    'implements App\Service\Probe\Sensor, so it sits in that interface\'s folder',
+                    'implements App\Service\Fixture\Probe\Sensor, so it sits in that interface\'s folder',
                     'Sensor\HeatSensor',
                 ),
                 807,
@@ -373,21 +374,21 @@ final class ServiceRoleRuleTest extends RuleTestCase
         $map = ServiceRoleMap::fromCollectedData(
             self::getContainer()->getByType(ReflectionProvider::class),
             self::serviceModules(),
-            [self::FIXTURES => [['App\Service\Ghost\Phantom', 7, []]]],
+            [self::FIXTURES => [['App\Service\Fixture\Ghost\Phantom', 7, []]]],
             [],
         );
 
         $unresolved = $map->unresolvedClasses();
 
         self::assertSame(
-            [['App\Service\Ghost\Phantom', self::FIXTURES, 7]],
+            [['App\Service\Fixture\Ghost\Phantom', self::FIXTURES, 7]],
             array_map(
                 static fn (UnresolvedServiceRoleClass $class): array => [$class->name, $class->file, $class->line],
                 $unresolved,
             ),
         );
         self::assertSame(
-            'Service role: App\Service\Ghost\Phantom cannot be reflected, so no role check sees it.',
+            'Service role: App\Service\Fixture\Ghost\Phantom cannot be reflected, so no role check sees it.',
             $unresolved[0]->toError()->getMessage(),
         );
         self::assertSame('simpleFeedReader.serviceRole.unresolved', $unresolved[0]->toError()->getIdentifier());
@@ -402,8 +403,8 @@ final class ServiceRoleRuleTest extends RuleTestCase
     {
         return self::message(
             'rootService',
-            'App\Service\Wrap\PaperPicker',
-            'takes App\Service\Wrap\Dto\WrapRequest, which the container cannot supply',
+            'App\Service\Fixture\Wrap\PaperPicker',
+            'takes App\Service\Fixture\Wrap\Dto\WrapRequest, which the container cannot supply',
         );
     }
 
@@ -456,6 +457,6 @@ final class ServiceRoleRuleTest extends RuleTestCase
 
     private static function serviceModules(): ServiceModules
     {
-        return new ServiceModules(['Recommendation\\Llm', 'Atlas\\Maps']);
+        return new ServiceModules(['Curation\\Recommendation\\Llm', 'Fixture\\Atlas\\Maps']);
     }
 }

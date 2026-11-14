@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\BodyCleaning\BodyCleaningStep;
+namespace App\Service\Content\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
-use App\Service\Reader\RecipeFacts\RecipeFactsMarkup;
-use App\Service\Reader\RecipeFacts\RecipeFactsRecognizer;
+use App\Service\Content\Reader\BodyCleaning\Pass\BodyCleaningPass;
+use App\Service\Content\Reader\RecipeFacts\RecipeFactsMarkup;
+use App\Service\Content\Reader\RecipeFacts\RecipeFactsRecognizer;
 
 /**
  * Replaces each recognized recipe-fact block with the reader's own facts

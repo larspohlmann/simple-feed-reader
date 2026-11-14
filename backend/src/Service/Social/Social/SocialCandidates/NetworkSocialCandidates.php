@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\SocialCandidates;
+namespace App\Service\Social\Social\SocialCandidates;
 
 use App\Entity\SocialAccount;
-use App\Service\Social\CandidateSource\CandidateSourceInterface;
-use App\Service\Social\Model\NetworkCandidatesModel;
-use App\Service\Social\Model\NetworkCollectionsModel;
+use App\Service\Social\Social\CandidateSource\CandidateSourceInterface;
+use App\Service\Social\Social\Model\NetworkCandidatesModel;
+use App\Service\Social\Social\Model\NetworkCollectionsModel;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 

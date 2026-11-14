@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Feed;
+namespace App\Service\Curation\Recommendation\Feed;
 
 use App\Entity\User;
 use App\Repository\RecommendationRunHistoryRepository;
-use App\Service\Clock\Model\ViewerTimeZoneModel;
-use App\Service\Recommendation\Feed\Model\HistoryMonthModel;
-use App\Service\Recommendation\Feed\Model\MonthWindowModel;
-use App\Service\Recommendation\Feed\Model\RunHistoryMonthPageModel;
-use App\Service\Recommendation\Feed\Model\RunHistoryOverviewModel;
+use App\Service\Foundation\Clock\Model\ViewerTimeZoneModel;
+use App\Service\Curation\Recommendation\Feed\Model\HistoryMonthModel;
+use App\Service\Curation\Recommendation\Feed\Model\MonthWindowModel;
+use App\Service\Curation\Recommendation\Feed\Model\RunHistoryMonthPageModel;
+use App\Service\Curation\Recommendation\Feed\Model\RunHistoryOverviewModel;
 
 /**
  * The run history: the overview card and the month pages it expands into.

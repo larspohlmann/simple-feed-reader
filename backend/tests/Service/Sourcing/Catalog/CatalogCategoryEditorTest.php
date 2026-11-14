@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Catalog;
+namespace App\Tests\Service\Sourcing\Catalog;
 
 use App\Entity\CatalogCategory;
 use App\Repository\Exception\RecordNotFoundException;
-use App\Service\Catalog\CatalogCategoryEditor;
-use App\Service\Catalog\Model\CatalogCategoryDetailsModel;
+use App\Service\Sourcing\Catalog\CatalogCategoryEditor;
+use App\Service\Sourcing\Catalog\Model\CatalogCategoryDetailsModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ReloadsEntities;
 

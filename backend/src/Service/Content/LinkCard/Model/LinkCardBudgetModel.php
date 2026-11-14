@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\LinkCard\Model;
+namespace App\Service\Content\LinkCard\Model;
 
 use App\Entity\ShareEnrichment;
-use App\Service\Reader\PageHeadFetcher;
+use App\Service\Content\Reader\PageHeadFetcher;
 
 /** How many page fetches one pass may spend on link cards, and so how long it may take. */
 final readonly class LinkCardBudgetModel

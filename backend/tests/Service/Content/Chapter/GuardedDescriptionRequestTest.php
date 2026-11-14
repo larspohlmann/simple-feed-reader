@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Chapter;
+namespace App\Tests\Service\Content\Chapter;
 
 use App\Enum\ProxyType;
-use App\Service\Chapter\Exception\EmbedDescriptionUnreachableException;
-use App\Service\Chapter\GuardedDescriptionRequest;
-use App\Service\Chapter\Model\ChapteredEmbed;
-use App\Service\Chapter\Model\EmbedAddressModel;
-use App\Service\Fetch\Exception\DirectRouteUnavailableException;
-use App\Service\Fetch\GuardedApiClient;
-use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\Model\ApiRequestModel;
-use App\Service\Fetch\Model\ProxyConfigModel;
-use App\Service\Fetch\Model\ResponseSizeLimit;
-use App\Service\Fetch\UrlGuard;
+use App\Service\Content\Chapter\Exception\EmbedDescriptionUnreachableException;
+use App\Service\Content\Chapter\GuardedDescriptionRequest;
+use App\Service\Content\Chapter\Model\ChapteredEmbed;
+use App\Service\Content\Chapter\Model\EmbedAddressModel;
+use App\Service\Outbound\Fetch\Exception\DirectRouteUnavailableException;
+use App\Service\Outbound\Fetch\GuardedApiClient;
+use App\Service\Outbound\Fetch\IpValidator;
+use App\Service\Outbound\Fetch\Model\ApiRequestModel;
+use App\Service\Outbound\Fetch\Model\ProxyConfigModel;
+use App\Service\Outbound\Fetch\Model\ResponseSizeLimit;
+use App\Service\Outbound\Fetch\UrlGuard;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\StaticDnsResolver;
 use PHPUnit\Framework\Attributes\DataProvider;

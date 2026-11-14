@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Feed;
+namespace App\Tests\Service\Curation\Recommendation\Feed;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
@@ -14,7 +14,7 @@ use App\Enum\RecommendationEngineKind;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationItemRepository;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Recommendation\Feed\RecommendationForYouSummaryProvider;
+use App\Service\Curation\Recommendation\Feed\RecommendationForYouSummaryProvider;
 use App\Tests\DbTestCase;
 
 /**

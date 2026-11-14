@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Chapter\Support;
+namespace App\Service\Content\Chapter\Support;
 
 /** A chapter start as written in a description, a Podlove `start` or a clock: `S`, `M:SS`, `H:MM:SS`, any fraction floored. */
 final class ChapterClock

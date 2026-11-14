@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Llm\Prompt;
+namespace App\Tests\Service\Curation\Recommendation\Llm\Prompt;
 
-use App\Service\Recommendation\Llm\Prompt\ModelReplyJsonDecoder;
-use App\Service\Recommendation\Llm\Prompt\RecommendationProfileParser;
+use App\Service\Curation\Recommendation\Llm\Prompt\ModelReplyJsonDecoder;
+use App\Service\Curation\Recommendation\Llm\Prompt\RecommendationProfileParser;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationProfileParserTest extends TestCase

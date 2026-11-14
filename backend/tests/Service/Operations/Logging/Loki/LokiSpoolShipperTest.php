@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Logging\Loki;
+namespace App\Tests\Service\Operations\Logging\Loki;
 
-use App\Service\Logging\Loki\LokiClient;
-use App\Service\Logging\Loki\LokiSpoolShipper;
+use App\Service\Operations\Logging\Loki\LokiClient;
+use App\Service\Operations\Logging\Loki\LokiSpoolShipper;
 use App\Tests\Support\StubLokiEndpoint;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

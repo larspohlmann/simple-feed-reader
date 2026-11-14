@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Trending\StoryLinkSource;
+namespace App\Service\Curation\Trending\StoryLinkSource;
 
-use App\Service\Trending\Model\StoryLinkModel;
-use App\Service\Trending\Pass\TrendingRun;
+use App\Service\Curation\Trending\Model\StoryLinkModel;
+use App\Service\Curation\Trending\Pass\TrendingRun;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: 'shared_url')]

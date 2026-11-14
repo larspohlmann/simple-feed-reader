@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Pass;
+namespace App\Tests\Service\Social\Social\Pass;
 
 use App\Entity\SocialAccount;
-use App\Service\Social\Exception\SocialNetworkThrottledException;
-use App\Service\Social\Model\TimelineOutcome\AccountThrottledTimelineModel;
-use App\Service\Social\Pass\TimelineAccounts;
+use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Social\Social\Model\TimelineOutcome\AccountThrottledTimelineModel;
+use App\Service\Social\Social\Pass\TimelineAccounts;
 use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\TestCase;

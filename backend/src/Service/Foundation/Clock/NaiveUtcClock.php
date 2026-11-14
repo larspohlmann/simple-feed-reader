@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Clock;
+namespace App\Service\Foundation\Clock;
 
 use Psr\Clock\ClockInterface;
 

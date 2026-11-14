@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\FeedDirectory;
+namespace App\Tests\Service\Sourcing\FeedDirectory;
 
-use App\Service\FeedDirectory\Exception\InvalidFeedDirectoryScopeException;
-use App\Service\FeedDirectory\Exception\UnknownFeedDirectoryCountryException;
-use App\Service\FeedDirectory\FeedDirectoryFiles;
-use App\Service\FeedDirectory\Model\FeedDirectoryScopeModel;
+use App\Service\Sourcing\FeedDirectory\Exception\InvalidFeedDirectoryScopeException;
+use App\Service\Sourcing\FeedDirectory\Exception\UnknownFeedDirectoryCountryException;
+use App\Service\Sourcing\FeedDirectory\FeedDirectoryFiles;
+use App\Service\Sourcing\FeedDirectory\Model\FeedDirectoryScopeModel;
 use PHPUnit\Framework\TestCase;
 
 final class FeedDirectoryFilesTest extends TestCase

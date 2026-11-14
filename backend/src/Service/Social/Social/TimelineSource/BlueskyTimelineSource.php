@@ -2,25 +2,25 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\TimelineSource;
+namespace App\Service\Social\Social\TimelineSource;
 
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Fetch\Model\ApiResponseModel;
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Social\BlueskyApiClient;
-use App\Service\Social\BlueskySessions;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkThrottledException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialSessionStaleException;
-use App\Service\Social\Model\TimelinePageModel;
-use App\Service\Social\Support\BlueskySearchPage;
-use App\Service\Social\Support\BlueskyTimelinePage;
-use App\Service\Social\Support\SocialSearchPaths;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Outbound\Fetch\Model\ApiResponseModel;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Social\Social\BlueskyApiClient;
+use App\Service\Social\Social\BlueskySessions;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialSessionStaleException;
+use App\Service\Social\Social\Model\TimelinePageModel;
+use App\Service\Social\Social\Support\BlueskySearchPage;
+use App\Service\Social\Social\Support\BlueskyTimelinePage;
+use App\Service\Social\Social\Support\SocialSearchPaths;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Bluesky->value)]

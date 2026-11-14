@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\OAuth\OAuthProvider;
+namespace App\Tests\Service\Identity\OAuth\OAuthProvider;
 
-use App\Service\OAuth\Factory\AppleClientSecretFactory;
-use App\Service\OAuth\OAuthProvider\AbstractOidcProvider;
-use App\Service\OAuth\OAuthProvider\AppleOAuthProvider;
+use App\Service\Identity\OAuth\Factory\AppleClientSecretFactory;
+use App\Service\Identity\OAuth\OAuthProvider\AbstractOidcProvider;
+use App\Service\Identity\OAuth\OAuthProvider\AppleOAuthProvider;
 use App\Tests\Support\AppleTestKey;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;

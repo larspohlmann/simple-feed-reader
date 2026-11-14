@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search;
+namespace App\Service\Library\Search;
 
 use App\Repository\SavedSearchEntryRepository;
 use App\Repository\SavedSearchListQuery;
-use App\Service\Search\Model\SavedSearchEntriesResultModel;
+use App\Service\Library\Search\Model\SavedSearchEntriesResultModel;
 
 /**
  * The combined saved-search list over the membership table: the page of

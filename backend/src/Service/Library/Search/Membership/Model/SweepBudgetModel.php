@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search\Membership\Model;
+namespace App\Service\Library\Search\Membership\Model;
 
 /** How long one sweep run may work before it stops and leaves the rest to the next run. */
 final readonly class SweepBudgetModel

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Ai\Exception;
+namespace App\Tests\Service\Curation\Ai\Exception;
 
-use App\Service\Ai\Exception\RetryableProviderException;
+use App\Service\Curation\Ai\Exception\RetryableProviderException;
 use PHPUnit\Framework\TestCase;
 
 final class RetryableProviderExceptionTest extends TestCase

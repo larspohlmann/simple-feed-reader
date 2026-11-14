@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Exception;
+namespace App\Service\Social\Social\Exception;
 
 final class NotASearchFeedException extends \RuntimeException
 {

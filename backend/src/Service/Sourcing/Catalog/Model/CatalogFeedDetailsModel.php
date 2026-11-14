@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Catalog\Model;
+namespace App\Service\Sourcing\Catalog\Model;
 
 use App\Enum\SourceFormat;
 

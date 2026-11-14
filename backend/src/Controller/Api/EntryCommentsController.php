@@ -7,7 +7,7 @@ namespace App\Controller\Api;
 use App\Entity\User;
 use App\Http\CommentsJson;
 use App\Repository\EntryListRepository;
-use App\Service\Comments\CommentsLoader;
+use App\Service\Content\Comments\CommentsLoader;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Catalog;
+namespace App\Tests\Service\Sourcing\Catalog;
 
-use App\Service\Catalog\BundledCatalog;
-use App\Service\Catalog\CatalogUrlChecker;
+use App\Service\Sourcing\Catalog\BundledCatalog;
+use App\Service\Sourcing\Catalog\CatalogUrlChecker;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;

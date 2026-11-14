@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media;
+namespace App\Service\Content\Reader\Media;
 
-use App\Service\Reader\Media\Model\EmbedTargetModel;
+use App\Service\Content\Reader\Media\Model\EmbedTargetModel;
 use Dom\Element;
 use Dom\HTMLDocument;
 

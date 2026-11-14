@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Model;
+namespace App\Service\Operations\Backup\Model;
 
-use App\Service\Backup\Exception\InvalidBackupException;
-use App\Service\Backup\Support\BackupSchema;
+use App\Service\Operations\Backup\Exception\InvalidBackupException;
+use App\Service\Operations\Backup\Support\BackupSchema;
 
 /**
  * The file grammar: a header first, kind ranks never moving backwards, header/account/footer at most once.

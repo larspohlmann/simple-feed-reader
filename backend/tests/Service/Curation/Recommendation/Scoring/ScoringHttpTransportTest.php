@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Scoring;
+namespace App\Tests\Service\Curation\Recommendation\Scoring;
 
-use App\Service\Ai\Model\ProviderCallReceiptModel;
-use App\Service\Ai\Model\ProviderCredentialsModel;
-use App\Service\Fetch\Support\ResponseHeader;
-use App\Service\Recommendation\Scoring\Model\ScoringReplyModel;
-use App\Service\Recommendation\Scoring\Pass\ScoringEndpoint;
-use App\Service\Recommendation\Scoring\ScoringHttpTransport;
+use App\Service\Curation\Ai\Model\ProviderCallReceiptModel;
+use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
+use App\Service\Outbound\Fetch\Support\ResponseHeader;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringReplyModel;
+use App\Service\Curation\Recommendation\Scoring\Pass\ScoringEndpoint;
+use App\Service\Curation\Recommendation\Scoring\ScoringHttpTransport;
 use App\Tests\Support\CountingProviderCallHeartbeat;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;

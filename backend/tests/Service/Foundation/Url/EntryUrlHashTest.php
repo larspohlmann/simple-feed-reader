@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Url;
+namespace App\Tests\Service\Foundation\Url;
 
-use App\Service\Bluesky\BlueskyEntryIdentityUrl;
-use App\Service\Url\EntryUrlHash;
-use App\Service\Url\UrlNormalizer;
+use App\Service\Social\Bluesky\BlueskyEntryIdentityUrl;
+use App\Service\Foundation\Url\EntryUrlHash;
+use App\Service\Foundation\Url\UrlNormalizer;
 use App\Tests\Support\EntryUrlHashes;
 use PHPUnit\Framework\TestCase;
 

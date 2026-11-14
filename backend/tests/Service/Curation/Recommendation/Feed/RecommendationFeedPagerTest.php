@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Feed;
+namespace App\Tests\Service\Curation\Recommendation\Feed;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
@@ -13,7 +13,7 @@ use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
 use App\Repository\ForYouFeedQuery;
 use App\Repository\RecommendationItemRepository;
-use App\Service\Recommendation\Feed\RecommendationFeedPager;
+use App\Service\Curation\Recommendation\Feed\RecommendationFeedPager;
 use App\Tests\DbTestCase;
 
 final class RecommendationFeedPagerTest extends DbTestCase

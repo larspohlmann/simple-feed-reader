@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
-use App\Service\Bluesky\Support\BlueskyWeb;
-use App\Service\Social\Model\PrivateFeedModel;
+use App\Service\Social\Bluesky\Support\BlueskyWeb;
+use App\Service\Social\Social\Model\PrivateFeedModel;
 
 /** The web page a private feed stands for, so its favicon and "visit site" link never see `social:`. */
 final class PrivateFeedSite

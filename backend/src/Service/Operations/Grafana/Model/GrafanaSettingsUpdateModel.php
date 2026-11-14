@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Grafana\Model;
+namespace App\Service\Operations\Grafana\Model;
 
 use App\Entity\GrafanaConnection;
-use App\Service\Crypto\Model\SecretChangeModel;
+use App\Service\Foundation\Crypto\Model\SecretChangeModel;
 
 final readonly class GrafanaSettingsUpdateModel
 {

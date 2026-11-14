@@ -9,9 +9,9 @@ use App\Entity\SocialAccount;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
-use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\SavedPosts\Support\SavedFeedUrl;
-use App\Service\Social\Crypto\SocialCredentialCipher;
+use App\Service\Foundation\Crypto\InstanceSecretCipher;
+use App\Service\Library\SavedPosts\Support\SavedFeedUrl;
+use App\Service\Social\Social\Crypto\SocialCredentialCipher;
 
 /** For an ApiTestCase that answers the app's outbound social API calls itself. */
 trait RoutesSocialApis

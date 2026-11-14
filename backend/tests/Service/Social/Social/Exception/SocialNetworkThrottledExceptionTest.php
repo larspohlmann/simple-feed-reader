@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Exception;
+namespace App\Tests\Service\Social\Social\Exception;
 
-use App\Service\Fetch\Model\ApiResponseModel;
-use App\Service\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Outbound\Fetch\Model\ApiResponseModel;
+use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Response;
 

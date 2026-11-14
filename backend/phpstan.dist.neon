@@ -18,8 +18,8 @@ parameters:
         containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
     # Directories below a src/Service module that are modules of their own (docs/architecture.md §9).
     serviceSubModules:
-        - Recommendation\Llm
-        - Recommendation\Scoring
+        - Curation\Recommendation\Llm
+        - Curation\Recommendation\Scoring
 
 parametersSchema:
     serviceSubModules: listOf(string())

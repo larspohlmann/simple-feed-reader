@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\OAuth\Exception;
+namespace App\Service\Identity\OAuth\Exception;
 
 /**
  * The provider conversation produced no usable identity. One type for every cause on purpose: telling them apart

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Parser;
+namespace App\Tests\Service\Ingestion\Parser;
 
-use App\Service\Parser\Exception\FeedParseException;
-use App\Service\Parser\ItemImageExtractor;
-use App\Service\Parser\WordPressJsonParser;
+use App\Service\Ingestion\Parser\Exception\FeedParseException;
+use App\Service\Ingestion\Parser\ItemImageExtractor;
+use App\Service\Ingestion\Parser\WordPressJsonParser;
 use PHPUnit\Framework\TestCase;
 
 final class WordPressJsonParserTest extends TestCase
@@ -26,7 +26,7 @@ final class WordPressJsonParserTest extends TestCase
         ]
         JSON;
 
-    private function parse(string $body): \App\Service\Parser\Model\ParsedFeedModel
+    private function parse(string $body): \App\Service\Ingestion\Parser\Model\ParsedFeedModel
     {
         return (new WordPressJsonParser(new ItemImageExtractor()))->parse($body);
     }

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Completion;
+namespace App\Tests\Service\Social\Completion;
 
 use App\Entity\Discussion;
 use App\Entity\Entry;
@@ -16,9 +16,9 @@ use App\Enum\ShareEnrichmentKind;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Enum\ShareKind;
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Completion\Model\KnownSharesModel;
-use App\Service\Completion\ShareEnrichmentQueue;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Completion\Model\KnownSharesModel;
+use App\Service\Social\Completion\ShareEnrichmentQueue;
 use App\Tests\DbTestCase;
 use App\Tests\Support\Bluesky;
 use App\Tests\Support\PostEnrichers;

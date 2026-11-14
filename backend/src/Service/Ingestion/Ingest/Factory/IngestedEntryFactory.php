@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ingest\Factory;
+namespace App\Service\Ingestion\Ingest\Factory;
 
 use App\Entity\Entry;
 use App\Entity\EntryAuthor;
 use App\Entity\EntryChapters;
 use App\Entity\Feed;
-use App\Service\Ingest\EntryImageWriter;
-use App\Service\Ingest\Model\IncomingEntryModel;
-use App\Service\Ingest\Pass\FeedIngestContext;
-use App\Service\Ingest\Support\EntryEffectiveDate;
-use App\Service\Ingest\Support\EntryMediaAssembler;
-use App\Service\Ingest\Support\EntrySnippet;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Parser\Model\ParsedMediaBundleModel;
-use App\Service\Sanitize\EntrySanitizer;
-use App\Service\Url\Support\AbsoluteHttpUrl;
+use App\Service\Ingestion\Ingest\EntryImageWriter;
+use App\Service\Ingestion\Ingest\Model\IncomingEntryModel;
+use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
+use App\Service\Ingestion\Ingest\Support\EntryEffectiveDate;
+use App\Service\Ingestion\Ingest\Support\EntryMediaAssembler;
+use App\Service\Ingestion\Ingest\Support\EntrySnippet;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Model\ParsedMediaBundleModel;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 
 /** Builds the Entry row for an incoming item, cut to its column limits. It persists nothing. */
 final readonly class IngestedEntryFactory

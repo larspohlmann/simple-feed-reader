@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Trending;
+namespace App\Service\Curation\Trending;
 
 use App\Entity\User;
 use App\Enum\TrendingWindow;
@@ -12,11 +12,11 @@ use App\Repository\EntryListRowEnricher;
 use App\Repository\ReadingSettingsRepository;
 use App\Repository\TrendingSnapshotRepository;
 use App\Repository\TrendingStoryRepository;
-use App\Service\Trending\Model\RankedStoryModel;
-use App\Service\Trending\Model\TrendingUnopenedModel;
-use App\Service\Trending\Model\TrendingPageModel;
-use App\Service\Trending\Model\TrendingStoryCardModel;
-use App\Service\Trending\Pass\StoryCardSource;
+use App\Service\Curation\Trending\Model\RankedStoryModel;
+use App\Service\Curation\Trending\Model\TrendingUnopenedModel;
+use App\Service\Curation\Trending\Model\TrendingPageModel;
+use App\Service\Curation\Trending\Model\TrendingStoryCardModel;
+use App\Service\Curation\Trending\Pass\StoryCardSource;
 
 /** One reader's Trending: the shared snapshot cut to their subscriptions and their threshold (#2017). */
 final readonly class TrendingStories

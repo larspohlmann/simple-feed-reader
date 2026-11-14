@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Support;
+namespace App\Service\Curation\Recommendation\Support;
 
-use App\Service\Ai\Model\ProviderCredentialsModel;
-use App\Service\Ai\Model\ProviderErrorIdentifiersModel;
-use App\Service\Text\Support\ClippedText;
+use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
+use App\Service\Curation\Ai\Model\ProviderErrorIdentifiersModel;
+use App\Service\Foundation\Text\Support\ClippedText;
 
 /**
  * What a provider objected to: TypeSafe's `detail` or OpenAI's and OpenRouter's `error.message`. Never the raw body,

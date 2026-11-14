@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Opml;
+namespace App\Tests\Service\Library\Opml;
 
-use App\Service\Opml\Exception\InvalidOpmlException;
-use App\Service\Opml\OpmlBodyReader;
+use App\Service\Library\Opml\Exception\InvalidOpmlException;
+use App\Service\Library\Opml\OpmlBodyReader;
 use PHPUnit\Framework\TestCase;
 
 /**

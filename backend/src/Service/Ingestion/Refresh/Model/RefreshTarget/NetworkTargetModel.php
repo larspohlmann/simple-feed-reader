@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh\Model\RefreshTarget;
+namespace App\Service\Ingestion\Refresh\Model\RefreshTarget;
 
 use App\Repository\NetworkScope;
 

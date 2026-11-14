@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Pass;
+namespace App\Service\Social\Social\Pass;
 
 use App\Enum\SocialFeedKind;
-use App\Service\Social\Model\PrivateFeedModel;
-use App\Service\Social\Model\SubscribedCollectionModel;
+use App\Service\Social\Social\Model\PrivateFeedModel;
+use App\Service\Social\Social\Model\SubscribedCollectionModel;
 
 final readonly class CollectionSyncPlan
 {

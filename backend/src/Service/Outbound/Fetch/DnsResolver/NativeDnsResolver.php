@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\DnsResolver;
+namespace App\Service\Outbound\Fetch\DnsResolver;
 
 /**
  * SECURITY: stay on dns_get_record(), which does no inet_aton parsing, so 0177.0.0.1, 2130706433 or 127.1 resolve to

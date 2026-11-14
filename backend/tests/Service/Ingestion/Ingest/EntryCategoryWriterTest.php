@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Ingest;
+namespace App\Tests\Service\Ingestion\Ingest;
 
 use App\Entity\Category;
 use App\Entity\Entry;
@@ -10,10 +10,10 @@ use App\Entity\EntryCategory;
 use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Repository\CategoryRepository;
-use App\Service\Category\CategoryNormalizer;
-use App\Service\Ingest\EntryCategoryWriter;
-use App\Service\Parser\Model\ParsedCategoryModel;
-use App\Service\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Category\CategoryNormalizer;
+use App\Service\Ingestion\Ingest\EntryCategoryWriter;
+use App\Service\Ingestion\Parser\Model\ParsedCategoryModel;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
 

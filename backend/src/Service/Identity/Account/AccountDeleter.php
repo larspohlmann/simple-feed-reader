@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Account;
+namespace App\Service\Identity\Account;
 
 use App\Entity\User;
-use App\Service\Account\Exception\LastAdminException;
+use App\Service\Identity\Account\Exception\LastAdminException;
 use App\Repository\FeedRepository;
 use App\Repository\UserRepository;
-use App\Service\Admin\SelfActionGuard;
-use App\Service\Feed\OrphanedFeedReclaimer;
+use App\Service\Operations\Admin\SelfActionGuard;
+use App\Service\Ingestion\Feed\OrphanedFeedReclaimer;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**

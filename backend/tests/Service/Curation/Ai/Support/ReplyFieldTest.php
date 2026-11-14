@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Ai\Support;
+namespace App\Tests\Service\Curation\Ai\Support;
 
-use App\Service\Ai\Support\ReplyField;
+use App\Service\Curation\Ai\Support\ReplyField;
 use PHPUnit\Framework\TestCase;
 
 final class ReplyFieldTest extends TestCase

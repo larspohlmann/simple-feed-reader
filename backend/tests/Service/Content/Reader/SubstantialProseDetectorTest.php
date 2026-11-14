@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader;
+namespace App\Tests\Service\Content\Reader;
 
-use App\Service\Reader\LinkListDetector;
-use App\Service\Reader\SubstantialProseDetector;
+use App\Service\Content\Reader\LinkListDetector;
+use App\Service\Content\Reader\SubstantialProseDetector;
 use App\Tests\Support\ParsesHtml;
 use Dom\Element;
 use PHPUnit\Framework\TestCase;

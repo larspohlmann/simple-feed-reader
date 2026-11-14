@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Engine\Model;
+namespace App\Service\Curation\Recommendation\Engine\Model;
 
 use App\Enum\RecommendationEngineKind;
 use App\Enum\RecommendationProfileSource;

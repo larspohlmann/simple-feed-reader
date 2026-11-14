@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Digest\Model;
+namespace App\Service\Outbound\Mail\Digest\Model;
 
 /** The outcome of one SendDueDigests sweep, for the worker/tick log line. */
 final readonly class DigestSweepReportModel

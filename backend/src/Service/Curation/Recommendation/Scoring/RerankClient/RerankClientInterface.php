@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Scoring\RerankClient;
+namespace App\Service\Curation\Recommendation\Scoring\RerankClient;
 
-use App\Service\Ai\Model\ProviderCredentialsModel;
-use App\Service\Recommendation\Scoring\Model\RerankRequestModel;
-use App\Service\Recommendation\Scoring\Model\ScoringOutcomeModel;
+use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
+use App\Service\Curation\Recommendation\Scoring\Model\RerankRequestModel;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringOutcomeModel;
 
 interface RerankClientInterface
 {

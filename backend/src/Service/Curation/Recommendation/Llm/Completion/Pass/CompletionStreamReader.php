@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Completion\Pass;
+namespace App\Service\Curation\Recommendation\Llm\Completion\Pass;
 
-use App\Service\Ai\Model\ProviderCallUsageModel;
-use App\Service\Recommendation\Llm\Completion\CompletionBodyDecoder;
+use App\Service\Curation\Ai\Model\ProviderCallUsageModel;
+use App\Service\Curation\Recommendation\Llm\Completion\CompletionBodyDecoder;
 
 /**
  * Reads one /chat/completions response as it arrives and keeps only the answer: each event is dropped once decoded,

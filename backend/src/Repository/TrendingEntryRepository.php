@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Service\Trending\Model\WindowEntryModel;
+use App\Service\Curation\Trending\Model\WindowEntryModel;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManagerInterface;
 

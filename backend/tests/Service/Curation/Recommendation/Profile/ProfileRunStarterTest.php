@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Profile;
+namespace App\Tests\Service\Curation\Recommendation\Profile;
 
 use App\Entity\ProfileRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Enum\ProfileRunTrigger;
 use App\Repository\RecommendationRunLogRepository;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Recommendation\Profile\Exception\ProfileConnectionMissingException;
-use App\Service\Recommendation\Profile\ProfileRunStarter;
-use App\Service\Recommendation\Run\Support\RunLogRetention;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Recommendation\Profile\Exception\ProfileConnectionMissingException;
+use App\Service\Curation\Recommendation\Profile\ProfileRunStarter;
+use App\Service\Curation\Recommendation\Run\Support\RunLogRetention;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\SeedsUsers;

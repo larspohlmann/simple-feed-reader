@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\SocialAccount;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
-use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
-use App\Service\Social\Exception\SocialAccountNotFoundException;
-use App\Service\Social\SocialAccountForUser;
+use App\Service\Social\Social\Exception\SocialAccountNeedsReconnectException;
+use App\Service\Social\Social\Exception\SocialAccountNotFoundException;
+use App\Service\Social\Social\SocialAccountForUser;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;

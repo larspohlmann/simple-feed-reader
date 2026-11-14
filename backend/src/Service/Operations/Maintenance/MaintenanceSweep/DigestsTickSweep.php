@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Maintenance\MaintenanceSweep;
+namespace App\Service\Operations\Maintenance\MaintenanceSweep;
 
-use App\Service\Mail\Digest\Model\DigestSweepReportModel;
-use App\Service\Mail\Digest\SendDueDigests;
+use App\Service\Outbound\Mail\Digest\Model\DigestSweepReportModel;
+use App\Service\Outbound\Mail\Digest\SendDueDigests;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: 'digests', priority: 90)]

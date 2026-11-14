@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search\Support;
+namespace App\Service\Library\Search\Support;
 
 use App\Doctrine\WordBoundaries;
 

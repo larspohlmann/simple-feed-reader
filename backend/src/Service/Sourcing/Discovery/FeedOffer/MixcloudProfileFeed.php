@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Discovery\FeedOffer;
+namespace App\Service\Sourcing\Discovery\FeedOffer;
 
 use App\Enum\SourceFormat;
-use App\Service\Discovery\Model\FeedCandidateModel;
-use App\Service\Html\Support\HtmlDocumentParser;
-use App\Service\Scraper\Support\TextNormalizer;
-use App\Service\Url\Support\MixcloudUrl;
+use App\Service\Sourcing\Discovery\Model\FeedCandidateModel;
+use App\Service\Foundation\Html\Support\HtmlDocumentParser;
+use App\Service\Ingestion\Scraper\Support\TextNormalizer;
+use App\Service\Foundation\Url\Support\MixcloudUrl;
 use Dom\HTMLDocument;
 
 /** Offers the shows of the Mixcloud user a profile, show or API address names; Mixcloud publishes no RSS, only this API. */

@@ -6,7 +6,7 @@ namespace App\Repository;
 
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
-use App\Service\Queue\Model\QueueBacklogModel;
+use App\Service\Operations\Queue\Model\QueueBacklogModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 

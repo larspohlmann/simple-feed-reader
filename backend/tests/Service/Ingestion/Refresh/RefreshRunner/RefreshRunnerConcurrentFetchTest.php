@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Refresh\RefreshRunner;
+namespace App\Tests\Service\Ingestion\Refresh\RefreshRunner;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\FeedStatus;
-use App\Service\Fetch\DnsResolver\DnsResolverInterface;
-use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\Model\FetchResponseModel;
-use App\Service\Fetch\UrlGuard;
-use App\Service\Refresh\Model\RefreshRequestModel;
-use App\Service\Refresh\PassFetcher\ConcurrentPassFetcher;
-use App\Service\Refresh\RefreshRunner\RefreshRunner;
+use App\Service\Outbound\Fetch\DnsResolver\DnsResolverInterface;
+use App\Service\Outbound\Fetch\IpValidator;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
+use App\Service\Outbound\Fetch\UrlGuard;
+use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
+use App\Service\Ingestion\Refresh\PassFetcher\ConcurrentPassFetcher;
+use App\Service\Ingestion\Refresh\RefreshRunner\RefreshRunner;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;

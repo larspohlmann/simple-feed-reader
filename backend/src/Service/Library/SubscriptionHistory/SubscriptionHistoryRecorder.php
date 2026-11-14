@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Service\SubscriptionHistory;
+namespace App\Service\Library\SubscriptionHistory;
 
 use App\Entity\Subscription;
 use App\Entity\SubscriptionDay;
 use App\Repository\SubscriptionActivityRepository;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\SubscriptionHistory\Factory\DaySourcesFactory;
-use App\Service\SubscriptionHistory\Model\DayCountsModel;
-use App\Service\SubscriptionHistory\Model\DayWindowModel;
-use App\Service\SubscriptionHistory\Model\TrackedSubscriptionModel;
-use App\Service\SubscriptionHistory\Pass\DaySources;
-use App\Service\SubscriptionHistory\Support\UtcDay;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Library\SubscriptionHistory\Factory\DaySourcesFactory;
+use App\Service\Library\SubscriptionHistory\Model\DayCountsModel;
+use App\Service\Library\SubscriptionHistory\Model\DayWindowModel;
+use App\Service\Library\SubscriptionHistory\Model\TrackedSubscriptionModel;
+use App\Service\Library\SubscriptionHistory\Pass\DaySources;
+use App\Service\Library\SubscriptionHistory\Support\UtcDay;
 use Doctrine\ORM\EntityManagerInterface;
 
 /** Must run before the pruner in the same pass: a day is recorded while every entry it counts still exists. */

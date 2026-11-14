@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Support;
+namespace App\Tests\Service\Social\Social\Support;
 
-use App\Service\Social\Model\SearchedPostModel;
-use App\Service\Social\Support\SocialSearchMatch;
+use App\Service\Social\Social\Model\SearchedPostModel;
+use App\Service\Social\Social\Support\SocialSearchMatch;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run\ProviderCallHeartbeat;
+namespace App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat;
 
-use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
-use App\Service\Recommendation\Run\WorkerPresence;
+use App\Service\Curation\Recommendation\Run\Model\RecommendationDriverKind;
+use App\Service\Curation\Recommendation\Run\WorkerPresence;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Contracts\Service\ResetInterface;
 

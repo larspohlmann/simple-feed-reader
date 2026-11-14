@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run;
+namespace App\Service\Curation\Recommendation\Run;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
-use App\Service\Ai\Factory\ProviderConnectionFactory;
-use App\Service\Ai\Model\ProviderTimeoutsModel;
+use App\Service\Curation\Ai\Factory\ProviderConnectionFactory;
+use App\Service\Curation\Ai\Model\ProviderTimeoutsModel;
 
 /**
  * One first-byte wait of the connection the tick calls, plus the margin, not the whole tick: the keepalive

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh;
+namespace App\Service\Ingestion\Refresh;
 
-use App\Service\Refresh\Model\RefreshReportModel;
-use App\Service\Refresh\Model\RefreshRequestModel;
-use App\Service\Refresh\Model\RefreshRunProgressModel;
-use App\Service\Refresh\Model\TrackedRefreshReportModel;
-use App\Service\Refresh\RefreshRunner\RefreshRunnerInterface;
+use App\Service\Ingestion\Refresh\Model\RefreshReportModel;
+use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
+use App\Service\Ingestion\Refresh\Model\RefreshRunProgressModel;
+use App\Service\Ingestion\Refresh\Model\TrackedRefreshReportModel;
+use App\Service\Ingestion\Refresh\RefreshRunner\RefreshRunnerInterface;
 use Psr\Cache\InvalidArgumentException;
 
 /**

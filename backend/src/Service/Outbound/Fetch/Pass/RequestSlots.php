@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\Pass;
+namespace App\Service\Outbound\Fetch\Pass;
 
-use App\Service\Fetch\Model\FetchAttemptModel;
-use App\Service\Fetch\Model\RequestSlot\RequestSlotModelInterface;
+use App\Service\Outbound\Fetch\Model\FetchAttemptModel;
+use App\Service\Outbound\Fetch\Model\RequestSlot\RequestSlotModelInterface;
 
 /**
  * In-flight requests per slot, counted under the slot's class and its key, so two kinds of slot never share a cap. A

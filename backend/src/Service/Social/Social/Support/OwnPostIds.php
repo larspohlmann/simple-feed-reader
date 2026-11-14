@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Bluesky\Support\AtPostUri;
-use App\Service\Social\Exception\SocialPostRefusedException;
-use App\Service\Social\Model\SocialPostAddressModel;
+use App\Service\Social\Bluesky\Support\AtPostUri;
+use App\Service\Social\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Social\Model\SocialPostAddressModel;
 
 /** What a delete names one of the account's own posts by: a Bluesky AT URI, or the status id on its own server. */
 final class OwnPostIds

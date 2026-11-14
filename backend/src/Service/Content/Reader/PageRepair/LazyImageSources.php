@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\PageRepair;
+namespace App\Service\Content\Reader\PageRepair;
 
-use App\Service\Html\Model\ImageRenditionModel;
-use App\Service\Html\PictureSources;
-use App\Service\Html\Support\ImageSourceUrl;
-use App\Service\Html\Support\Srcset;
+use App\Service\Foundation\Html\Model\ImageRenditionModel;
+use App\Service\Foundation\Html\PictureSources;
+use App\Service\Foundation\Html\Support\ImageSourceUrl;
+use App\Service\Foundation\Html\Support\Srcset;
 use Dom\Element;
 use Dom\HTMLDocument;
 

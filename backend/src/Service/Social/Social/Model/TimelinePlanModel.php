@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Model;
+namespace App\Service\Social\Social\Model;
 
-use App\Service\Parser\Model\ParsedFeedModel;
+use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
 
 final readonly class TimelinePlanModel
 {

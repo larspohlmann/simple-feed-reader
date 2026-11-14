@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Crypto\Model;
+namespace App\Tests\Service\Foundation\Crypto\Model;
 
-use App\Service\Crypto\Model\SecretBindingModel;
+use App\Service\Foundation\Crypto\Model\SecretBindingModel;
 use PHPUnit\Framework\TestCase;
 
 /** The rendered binding is stored-data contract: these strings must never change. */

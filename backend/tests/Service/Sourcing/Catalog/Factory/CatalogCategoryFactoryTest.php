@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Catalog\Factory;
+namespace App\Tests\Service\Sourcing\Catalog\Factory;
 
 use App\Entity\CatalogCategory;
 use App\Repository\CatalogCategoryRepository;
-use App\Service\Catalog\Factory\CatalogCategoryFactory;
-use App\Service\Catalog\Model\CatalogCategoryDetailsModel;
+use App\Service\Sourcing\Catalog\Factory\CatalogCategoryFactory;
+use App\Service\Sourcing\Catalog\Model\CatalogCategoryDetailsModel;
 use App\Tests\DbTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 

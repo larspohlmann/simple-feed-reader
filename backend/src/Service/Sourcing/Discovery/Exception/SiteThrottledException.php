@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Discovery\Exception;
+namespace App\Service\Sourcing\Discovery\Exception;
 
 /** The site answered 429: the caller must not ask it again now, and must not read that as "no feed here". */
 final class SiteThrottledException extends \RuntimeException

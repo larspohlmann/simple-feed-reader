@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run\Model;
+namespace App\Service\Curation\Recommendation\Run\Model;
 
 /** A batch's reply judged: its winners, or a retry; either way the transcript its run-log row keeps. */
 final readonly class BatchReplyVerdictModel

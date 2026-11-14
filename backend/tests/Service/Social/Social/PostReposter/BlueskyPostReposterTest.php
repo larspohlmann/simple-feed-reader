@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\PostReposter;
+namespace App\Tests\Service\Social\Social\PostReposter;
 
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkThrottledException;
-use App\Service\Social\Exception\SocialPostRefusedException;
-use App\Service\Social\Model\SocialPostModel;
-use App\Service\Social\PostReposter\BlueskyPostReposter;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Social\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Social\Model\SocialPostModel;
+use App\Service\Social\Social\PostReposter\BlueskyPostReposter;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\TestCase;

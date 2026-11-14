@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch\Pass;
+namespace App\Tests\Service\Outbound\Fetch\Pass;
 
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\Pass\PageUrls;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\Pass\PageUrls;
 use PHPUnit\Framework\TestCase;
 
 final class PageUrlsTest extends TestCase

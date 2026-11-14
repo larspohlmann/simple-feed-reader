@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Proxy\ConfiguredProxySource;
+namespace App\Service\Outbound\Proxy\ConfiguredProxySource;
 
 use App\Entity\ProxyServerSettings;
-use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
-use App\Service\Fetch\Model\ProxyConfigModel;
-use App\Service\Proxy\Crypto\ProxyPasswordCipher;
-use App\Service\Proxy\StoredProxySettings\StoredProxySettingsInterface;
+use App\Service\Outbound\Fetch\EgressProxySource\EgressProxySourceInterface;
+use App\Service\Outbound\Fetch\Model\ProxyConfigModel;
+use App\Service\Outbound\Proxy\Crypto\ProxyPasswordCipher;
+use App\Service\Outbound\Proxy\StoredProxySettings\StoredProxySettingsInterface;
 
 final readonly class StoredProxy implements EgressProxySourceInterface, ConfiguredProxySourceInterface
 {

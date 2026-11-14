@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\Feed;
-use App\Service\Social\Support\SocialFeedClassifier;
+use App\Service\Social\Social\Support\SocialFeedClassifier;
 use Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener;
 use Doctrine\ORM\Events;
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\Support;
+namespace App\Service\Outbound\Fetch\Support;
 
 /**
  * The host two feed URLs share for pacing: case, a leading `www.` and a port fold away. A distinct subdomain stays a

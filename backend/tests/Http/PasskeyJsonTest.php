@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Http\PasskeyJson;
-use App\Service\Passkey\Model\AccountPasskeysModel;
+use App\Service\Identity\Passkey\Model\AccountPasskeysModel;
 use PHPUnit\Framework\TestCase;
 
 final class PasskeyJsonTest extends TestCase

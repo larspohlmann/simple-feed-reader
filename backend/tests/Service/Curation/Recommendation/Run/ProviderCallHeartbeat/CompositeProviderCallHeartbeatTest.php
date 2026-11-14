@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Run\ProviderCallHeartbeat;
+namespace App\Tests\Service\Curation\Recommendation\Run\ProviderCallHeartbeat;
 
-use App\Service\Recommendation\Run\ProviderCallHeartbeat\CompositeProviderCallHeartbeat;
-use App\Service\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface;
+use App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\CompositeProviderCallHeartbeat;
+use App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 

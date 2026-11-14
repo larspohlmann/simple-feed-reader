@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Completion\ChatCompletionClient;
+namespace App\Service\Curation\Recommendation\Llm\Completion\ChatCompletionClient;
 
-use App\Service\Ai\Exception\CredentialsRejectedException;
-use App\Service\Ai\Exception\ProviderRejectedRequestException;
-use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\Model\ProviderConnectionModel;
-use App\Service\Recommendation\Llm\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
-use App\Service\Recommendation\Llm\Completion\Model\CompletionOutcomeModel;
-use App\Service\Recommendation\Llm\Completion\Model\CompletionRequestModel;
-use App\Service\Recommendation\Llm\Completion\Pass\ConcurrentCompletion;
+use App\Service\Curation\Ai\Exception\CredentialsRejectedException;
+use App\Service\Curation\Ai\Exception\ProviderRejectedRequestException;
+use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
+use App\Service\Curation\Ai\Model\ProviderConnectionModel;
+use App\Service\Curation\Recommendation\Llm\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
+use App\Service\Curation\Recommendation\Llm\Completion\Model\CompletionOutcomeModel;
+use App\Service\Curation\Recommendation\Llm\Completion\Model\CompletionRequestModel;
+use App\Service\Curation\Recommendation\Llm\Completion\Pass\ConcurrentCompletion;
 
 interface ChatCompletionClientInterface
 {

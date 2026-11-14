@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Comments\CommentsSource;
+namespace App\Service\Content\Comments\CommentsSource;
 
 use App\Entity\Entry;
 use App\Entity\User;
-use App\Service\Comments\Exception\CommentsThrottledException;
-use App\Service\Comments\Exception\CommentsUnavailableException;
-use App\Service\Comments\Model\CommentsAnswerModel;
-use App\Service\Comments\Model\CommentsAudienceModel;
-use App\Service\Comments\Model\CommentsPageModel;
-use App\Service\Comments\Pass\CommentsRequest;
-use App\Service\RateLimit\Exception\RateLimitedException;
+use App\Service\Content\Comments\Exception\CommentsThrottledException;
+use App\Service\Content\Comments\Exception\CommentsUnavailableException;
+use App\Service\Content\Comments\Model\CommentsAnswerModel;
+use App\Service\Content\Comments\Model\CommentsAudienceModel;
+use App\Service\Content\Comments\Model\CommentsPageModel;
+use App\Service\Content\Comments\Pass\CommentsRequest;
+use App\Service\Foundation\RateLimit\Exception\RateLimitedException;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 #[AutoconfigureTag('app.comments_source')]

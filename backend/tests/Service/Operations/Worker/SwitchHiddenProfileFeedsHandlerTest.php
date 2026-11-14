@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Worker;
+namespace App\Tests\Service\Operations\Worker;
 
-use App\Service\Social\HiddenProfileSwitchSweep;
-use App\Service\Worker\Handler\SwitchHiddenProfileFeedsHandler;
-use App\Service\Worker\Message\SwitchHiddenProfileFeeds;
+use App\Service\Social\Social\HiddenProfileSwitchSweep;
+use App\Service\Operations\Worker\Handler\SwitchHiddenProfileFeedsHandler;
+use App\Service\Operations\Worker\Message\SwitchHiddenProfileFeeds;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecordingLogger;
 

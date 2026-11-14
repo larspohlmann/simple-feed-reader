@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\DnsResolver;
+namespace App\Service\Outbound\Fetch\DnsResolver;
 
 interface DnsResolverInterface
 {

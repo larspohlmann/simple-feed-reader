@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Queue\Model;
+namespace App\Service\Operations\Queue\Model;
 
 final readonly class QueueBacklogModel
 {

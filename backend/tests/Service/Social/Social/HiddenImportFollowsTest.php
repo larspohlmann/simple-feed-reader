@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\HiddenImportFollows;
-use App\Service\Social\Model\HiddenProfileModel;
-use App\Service\Social\Model\SocialImportFeedModel;
-use App\Service\Social\TolerantHiddenProfiles;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\HiddenImportFollows;
+use App\Service\Social\Social\Model\HiddenProfileModel;
+use App\Service\Social\Social\Model\SocialImportFeedModel;
+use App\Service\Social\Social\TolerantHiddenProfiles;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StubHiddenProfiles;

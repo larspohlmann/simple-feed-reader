@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search\EntrySearch;
+namespace App\Service\Library\Search\EntrySearch;
 
 use App\Repository\EntrySearchQuery;
-use App\Service\Search\Model\EntrySearchResultModel;
+use App\Service\Library\Search\Model\EntrySearchResultModel;
 
 /**
  * Finds entries for one caller. The single seam behind which the matching lives:

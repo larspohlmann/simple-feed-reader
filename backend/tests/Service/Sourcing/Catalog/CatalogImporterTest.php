@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Catalog;
+namespace App\Tests\Service\Sourcing\Catalog;
 
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
-use App\Service\Catalog\CatalogDocument;
-use App\Service\Catalog\CatalogImporter;
-use App\Service\Catalog\Model\CatalogImportMode;
-use App\Service\Catalog\Model\ParsedCatalogModel;
+use App\Service\Sourcing\Catalog\CatalogDocument;
+use App\Service\Sourcing\Catalog\CatalogImporter;
+use App\Service\Sourcing\Catalog\Model\CatalogImportMode;
+use App\Service\Sourcing\Catalog\Model\ParsedCatalogModel;
 use App\Tests\DbTestCase;
 
 final class CatalogImporterTest extends DbTestCase

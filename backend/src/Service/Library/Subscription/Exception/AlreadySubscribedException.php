@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Subscription\Exception;
+namespace App\Service\Library\Subscription\Exception;
 
 final class AlreadySubscribedException extends \RuntimeException
 {

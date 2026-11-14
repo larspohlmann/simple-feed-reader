@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Backup\Support;
+namespace App\Tests\Service\Operations\Backup\Support;
 
-use App\Service\Backup\Exception\InvalidBackupException;
-use App\Service\Backup\Support\GzipLineReader;
+use App\Service\Operations\Backup\Exception\InvalidBackupException;
+use App\Service\Operations\Backup\Support\GzipLineReader;
 use App\Tests\Support\CorruptGzip;
 use PHPUnit\Framework\TestCase;
 

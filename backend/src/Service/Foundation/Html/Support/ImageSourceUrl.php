@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Html\Support;
+namespace App\Service\Foundation\Html\Support;
 
 /**
  * Whether a URL can stand as a promoted <img> src: not blank, and http(s) or relative, since readability resolves a

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run;
+namespace App\Service\Curation\Recommendation\Run;
 
 use App\Entity\AiProviderSettings;
 use App\Repository\CallingRun;
 use App\Repository\RecommendationCallRepository;
-use App\Service\Ai\Exception\ProviderRejectedRequestException;
-use App\Service\Recommendation\Run\RejectedRequestFallback\RejectedRequestFallbackInterface;
+use App\Service\Curation\Ai\Exception\ProviderRejectedRequestException;
+use App\Service\Curation\Recommendation\Run\RejectedRequestFallback\RejectedRequestFallbackInterface;
 
 final readonly class RejectedRequestRecovery
 {

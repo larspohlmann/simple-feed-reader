@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run\BatchWaveEngine;
+namespace App\Service\Curation\Recommendation\Run\BatchWaveEngine;
 
-use App\Service\Ai\Model\RateLimitedResultModel;
-use App\Service\Recommendation\Run\BatchCallOutcome\BatchCallOutcomeInterface;
-use App\Service\Recommendation\Run\BatchWave\BatchWaveInterface;
-use App\Service\Recommendation\Run\Model\BatchReplyVerdictModel;
-use App\Service\Recommendation\Run\Pass\BatchCall;
+use App\Service\Curation\Ai\Model\RateLimitedResultModel;
+use App\Service\Curation\Recommendation\Run\BatchCallOutcome\BatchCallOutcomeInterface;
+use App\Service\Curation\Recommendation\Run\BatchWave\BatchWaveInterface;
+use App\Service\Curation\Recommendation\Run\Model\BatchReplyVerdictModel;
+use App\Service\Curation\Recommendation\Run\Pass\BatchCall;
 
 /**
  * An engine's part in a batch wave: it opens, sends and judges the calls; BatchWaveRounds runs the rounds around them.

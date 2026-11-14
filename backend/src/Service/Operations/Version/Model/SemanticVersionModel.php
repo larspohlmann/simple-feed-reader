@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Version\Model;
+namespace App\Service\Operations\Version\Model;
 
 /**
  * A prerelease ranks BELOW its own final release, so an instance on `v1.4.2-dev.3` is ahead of every earlier

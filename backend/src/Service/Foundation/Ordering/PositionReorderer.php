@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ordering;
+namespace App\Service\Foundation\Ordering;
 
 use App\Entity\PositionedInterface;
 use Doctrine\ORM\EntityManagerInterface;

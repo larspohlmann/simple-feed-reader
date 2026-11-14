@@ -21,15 +21,17 @@ use PHPStan\Rules\RuleErrorBuilder;
 final readonly class ServiceModuleBoundaryRule implements Rule
 {
     private const array REMEDIES = [
-        'App\\Service\\Reader\\' => [
-            'App\\Service\\Search\\' => 'Reading state, and the search it needs, lives in Service/Reading (#1163).',
+        'App\\Service\\Content\\Reader\\' => [
+            'App\\Service\\Library\\Search\\' => 'Reading state, and the search it needs, lives in '
+                . 'Service/Library/Reading (#1163).',
         ],
-        'App\\Service\\Recommendation\\' => [
-            'App\\Service\\Reader\\' => 'Mark-read goes through Service/Reading, not the article extractor (#1163).',
+        'App\\Service\\Curation\\Recommendation\\' => [
+            'App\\Service\\Content\\Reader\\' => 'Mark-read goes through Service/Library/Reading, '
+                . 'not the article extractor (#1163).',
         ],
-        'App\\Service\\Reading\\' => [
-            'App\\Service\\Recommendation\\' => 'Reading sits below recommendations; '
-                . 'the viewer time zone lives in Service/Clock (#1169).',
+        'App\\Service\\Library\\Reading\\' => [
+            'App\\Service\\Curation\\Recommendation\\' => 'Reading sits below recommendations; '
+                . 'the viewer time zone lives in Service/Foundation/Clock (#1169).',
         ],
     ];
 

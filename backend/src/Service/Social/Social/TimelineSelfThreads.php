@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Entity\EntryGuid;
 use App\Entity\Feed;
 use App\Repository\EntryRepository;
 use App\Repository\ThreadPostRepository;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Social\Model\PlacedSelfReplyModel;
-use App\Service\Social\Model\TimelinePageModel;
-use App\Service\Social\Model\TimelinePlanModel;
-use App\Service\Social\Model\TimelineSelfReplyModel;
-use App\Service\Social\Model\TimelineThreadsModel;
-use App\Service\Social\Pass\SelfThreadPlacement;
-use App\Service\Social\ReplyThreadSource\ReplyThreadSourceInterface;
-use App\Service\Social\Support\OldestFirstUndatedLast;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Social\Social\Model\PlacedSelfReplyModel;
+use App\Service\Social\Social\Model\TimelinePageModel;
+use App\Service\Social\Social\Model\TimelinePlanModel;
+use App\Service\Social\Social\Model\TimelineSelfReplyModel;
+use App\Service\Social\Social\Model\TimelineThreadsModel;
+use App\Service\Social\Social\Pass\SelfThreadPlacement;
+use App\Service\Social\Social\ReplyThreadSource\ReplyThreadSourceInterface;
+use App\Service\Social\Social\Support\OldestFirstUndatedLast;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 

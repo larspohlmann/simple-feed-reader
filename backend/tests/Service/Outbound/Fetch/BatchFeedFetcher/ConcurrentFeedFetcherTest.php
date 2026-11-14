@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch\BatchFeedFetcher;
+namespace App\Tests\Service\Outbound\Fetch\BatchFeedFetcher;
 
 use App\Tests\Support\PinnedRequestOptions;
-use App\Service\Fetch\AnswerSettler\PassThroughSettler;
-use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
-use App\Service\Fetch\DnsResolver\DnsResolverInterface;
-use App\Service\Fetch\Exception\FeedGoneException;
-use App\Service\Fetch\Exception\FeedThrottledException;
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\Exception\ResponseTooLargeException;
-use App\Service\Fetch\Exception\SsrfBlockedException;
-use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Fetch\Model\FetchTicketModel;
-use App\Service\Fetch\Model\ResponseSizeLimit;
-use App\Service\Fetch\UrlGuard;
+use App\Service\Outbound\Fetch\AnswerSettler\PassThroughSettler;
+use App\Service\Outbound\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
+use App\Service\Outbound\Fetch\DnsResolver\DnsResolverInterface;
+use App\Service\Outbound\Fetch\Exception\FeedGoneException;
+use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Outbound\Fetch\Exception\SsrfBlockedException;
+use App\Service\Outbound\Fetch\IpValidator;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Outbound\Fetch\Model\FetchTicketModel;
+use App\Service\Outbound\Fetch\Model\ResponseSizeLimit;
+use App\Service\Outbound\Fetch\UrlGuard;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
 use App\Tests\Support\ResponseCapturingHttpClient;

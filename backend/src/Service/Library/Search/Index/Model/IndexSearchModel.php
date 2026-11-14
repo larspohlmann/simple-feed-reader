@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search\Index\Model;
+namespace App\Service\Library\Search\Index\Model;
 
 use App\Enum\ListOrder;
 use App\Pagination\EntryCursor;
-use App\Service\Search\Model\SearchTermsModel;
+use App\Service\Library\Search\Model\SearchTermsModel;
 
 /**
  * One search read for whichever engine sits behind SearchIndexReaderInterface. It carries the whole SearchTermsModel,

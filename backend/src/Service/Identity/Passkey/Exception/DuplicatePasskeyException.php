@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Passkey\Exception;
+namespace App\Service\Identity\Passkey\Exception;
 
 /**
  * The attested credential id already exists; the unique constraint is global. Reporting it is an accepted, narrow

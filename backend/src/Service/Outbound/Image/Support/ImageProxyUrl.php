@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Image\Support;
+namespace App\Service\Outbound\Image\Support;
 
-use App\Service\Url\Support\AbsoluteHttpUrl;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 
 /**
  * Resolves the source URL an image proxy carries: a `?url=` query parameter, an imgproxy base64 path segment, or a

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Settings\Exception;
+namespace App\Service\Operations\Settings\Exception;
 
 /** A relying-party id change while passkeys exist; resending with invalidateExistingPasskeys confirms it. */
 final class RelyingPartyChangeRequiresConfirmationException extends \RuntimeException

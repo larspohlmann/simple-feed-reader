@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Completion;
+namespace App\Service\Social\Completion;
 
 use App\Entity\Entry;
 use App\Entity\LinkCardContent;
@@ -10,12 +10,12 @@ use App\Entity\QuotedPostContent;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Enum\ShareKind;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Completion\Model\KnownSharesModel;
-use App\Service\Completion\Support\PostedLinkCard;
-use App\Service\Share\EntryShareClassifier;
-use App\Service\Share\PendingEmbed\PendingEmbedInterface;
-use App\Service\Share\PendingThread\PendingThreadInterface;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Social\Completion\Model\KnownSharesModel;
+use App\Service\Social\Completion\Support\PostedLinkCard;
+use App\Service\Social\Share\EntryShareClassifier;
+use App\Service\Social\Share\PendingEmbed\PendingEmbedInterface;
+use App\Service\Social\Share\PendingThread\PendingThreadInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
 /** Classifies each new entry and queues the ones whose embed or link cards are still to come. */

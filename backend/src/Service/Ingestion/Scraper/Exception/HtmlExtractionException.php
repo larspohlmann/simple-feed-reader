@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Scraper\Exception;
+namespace App\Service\Ingestion\Scraper\Exception;
 
-use App\Service\Parser\Exception\FeedParseException;
+use App\Service\Ingestion\Parser\Exception\FeedParseException;
 
 /**
  * No article list could be extracted from the page. Extends FeedParseException

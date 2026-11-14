@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\ReaderAudit;
+namespace App\Service\Content\ReaderAudit;
 
-use App\Service\ReaderAudit\Model\PhraseFamilyModel;
-use App\Service\ReaderAudit\Model\PhraseScope;
+use App\Service\Content\ReaderAudit\Model\PhraseFamilyModel;
+use App\Service\Content\ReaderAudit\Model\PhraseScope;
 
 /**
  * The wording that betrays page furniture the reader kept, in German and English: a table apart from the rule that

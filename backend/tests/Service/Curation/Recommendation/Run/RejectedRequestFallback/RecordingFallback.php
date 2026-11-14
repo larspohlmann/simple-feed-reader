@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Run\RejectedRequestFallback;
+namespace App\Tests\Service\Curation\Recommendation\Run\RejectedRequestFallback;
 
 use App\Entity\AiProviderSettings;
-use App\Service\Ai\Exception\ProviderRejectedRequestException;
-use App\Service\Recommendation\Run\Model\RequestAdjustmentModel;
-use App\Service\Recommendation\Run\RejectedRequestFallback\RejectedRequestFallbackInterface;
+use App\Service\Curation\Ai\Exception\ProviderRejectedRequestException;
+use App\Service\Curation\Recommendation\Run\Model\RequestAdjustmentModel;
+use App\Service\Curation\Recommendation\Run\RejectedRequestFallback\RejectedRequestFallbackInterface;
 
 final readonly class RecordingFallback implements RejectedRequestFallbackInterface
 {

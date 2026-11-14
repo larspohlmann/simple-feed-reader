@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Pass;
+namespace App\Service\Social\Social\Pass;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialAccountStatus;
-use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkThrottledException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Model\TimelineOutcome\AccountPausedTimelineModel;
-use App\Service\Social\Model\TimelineOutcome\AccountThrottledTimelineModel;
-use App\Service\Social\Model\TimelineOutcome\FailedTimelineModel;
-use App\Service\Social\Model\TimelineOutcome\ThrottledTimelineModel;
-use App\Service\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Model\TimelineOutcome\AccountPausedTimelineModel;
+use App\Service\Social\Social\Model\TimelineOutcome\AccountThrottledTimelineModel;
+use App\Service\Social\Social\Model\TimelineOutcome\FailedTimelineModel;
+use App\Service\Social\Social\Model\TimelineOutcome\ThrottledTimelineModel;
+use App\Service\Social\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
 
 /** One refresh's verdict per account: throttled, paused, or renewed once already. */
 final class TimelineAccounts

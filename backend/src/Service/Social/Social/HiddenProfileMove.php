@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\Subscription;
 use App\Enum\SocialNetwork;
 use App\Repository\EntryTwinRepository;
 use App\Repository\SocialAccountRepository;
-use App\Service\SavedPosts\SavedStateMover;
-use App\Service\Social\Model\HiddenProfileModel;
-use App\Service\Social\Model\HiddenProfileMoveOutcome;
-use App\Service\Subscription\Exception\AlreadySubscribedException;
-use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
-use App\Service\Subscription\SubscriptionService;
+use App\Service\Library\SavedPosts\SavedStateMover;
+use App\Service\Social\Social\Model\HiddenProfileModel;
+use App\Service\Social\Social\Model\HiddenProfileMoveOutcome;
+use App\Service\Library\Subscription\Exception\AlreadySubscribedException;
+use App\Service\Library\Subscription\Exception\SubscriptionLimitReachedException;
+use App\Service\Library\Subscription\SubscriptionService;
 
 /**
  * Moves one subscriber of a hidden profile's refused RSS feed to an author feed of their own, over two sweeps: the

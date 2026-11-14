@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
@@ -10,18 +10,18 @@ use App\Entity\SocialAccount;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
-use App\Service\Social\ActingAccountGuard;
-use App\Service\Social\Exception\NotASocialPostException;
-use App\Service\Social\Exception\PostNotPubliclyCountableException;
-use App\Service\Social\Exception\SocialNetworkThrottledException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\Exception\SocialPostRemovedException;
-use App\Service\Social\Model\SocialCountsModel;
-use App\Service\Social\Model\SocialPostAddressModel;
-use App\Service\Social\SocialCounts;
-use App\Service\Social\SocialCountsCache;
-use App\Service\Social\SocialPostFinder;
+use App\Service\Social\Social\ActingAccountGuard;
+use App\Service\Social\Social\Exception\NotASocialPostException;
+use App\Service\Social\Social\Exception\PostNotPubliclyCountableException;
+use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Exception\SocialPostRemovedException;
+use App\Service\Social\Social\Model\SocialCountsModel;
+use App\Service\Social\Social\Model\SocialPostAddressModel;
+use App\Service\Social\Social\SocialCounts;
+use App\Service\Social\Social\SocialCountsCache;
+use App\Service\Social\Social\SocialPostFinder;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AssertsRefusal;
 use App\Tests\Support\ConfirmedDeletions;

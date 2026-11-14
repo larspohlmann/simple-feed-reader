@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Backup;
+namespace App\Tests\Service\Operations\Backup;
 
 use App\Entity\Entry;
 use App\Entity\EntryState;
@@ -11,13 +11,13 @@ use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Service\Backup\BackupFitCheck;
-use App\Service\Backup\Dto\BackupHeader;
-use App\Service\Backup\Dto\BackupTotals;
-use App\Service\Backup\Exception\BackupDoesNotFitException;
-use App\Service\Backup\Exception\InvalidBackupException;
-use App\Service\Backup\Model\BackupInventoryModel;
-use App\Service\Backup\RestorePreviewer;
+use App\Service\Operations\Backup\BackupFitCheck;
+use App\Service\Operations\Backup\Dto\BackupHeader;
+use App\Service\Operations\Backup\Dto\BackupTotals;
+use App\Service\Operations\Backup\Exception\BackupDoesNotFitException;
+use App\Service\Operations\Backup\Exception\InvalidBackupException;
+use App\Service\Operations\Backup\Model\BackupInventoryModel;
+use App\Service\Operations\Backup\RestorePreviewer;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
 use PHPUnit\Framework\Attributes\DataProvider;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Settings;
+namespace App\Service\Operations\Settings;
 
 use App\Entity\InstanceSetting;
 use App\Entity\InstanceSettingsUpdate;

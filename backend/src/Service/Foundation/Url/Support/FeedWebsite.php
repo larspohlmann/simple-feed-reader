@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Url\Support;
+namespace App\Service\Foundation\Url\Support;
 
 /**
  * The feed's <link> when a person could go there, else the feed's own origin (in a 111-feed survey, just under half

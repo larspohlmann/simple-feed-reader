@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Paywall\Support;
+namespace App\Service\Content\Reader\Paywall\Support;
 
-use App\Service\Html\Support\JsonLd;
-use App\Service\Reader\Paywall\Model\AccessDeclaration;
+use App\Service\Foundation\Html\Support\JsonLd;
+use App\Service\Content\Reader\Paywall\Model\AccessDeclaration;
 use Dom\HTMLDocument;
 
 /**

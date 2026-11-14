@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Scoring\Factory;
+namespace App\Service\Curation\Recommendation\Scoring\Factory;
 
-use App\Service\Recommendation\Scoring\Model\ScoringReaderModel;
-use App\Service\Recommendation\Scoring\Support\FittingPrefix;
-use App\Service\Recommendation\Support\TokenEstimate;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringReaderModel;
+use App\Service\Curation\Recommendation\Scoring\Support\FittingPrefix;
+use App\Service\Curation\Recommendation\Support\TokenEstimate;
 
 /** The reader as one rerank query within a token budget: the question, then the guidance, then the profile. */
 final readonly class RerankQueryFactory

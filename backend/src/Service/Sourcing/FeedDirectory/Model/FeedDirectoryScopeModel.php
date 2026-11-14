@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\FeedDirectory\Model;
+namespace App\Service\Sourcing\FeedDirectory\Model;
 
-use App\Service\FeedDirectory\Exception\InvalidFeedDirectoryScopeException;
+use App\Service\Sourcing\FeedDirectory\Exception\InvalidFeedDirectoryScopeException;
 
 final readonly class FeedDirectoryScopeModel
 {

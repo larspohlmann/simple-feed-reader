@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Passkey;
+namespace App\Service\Identity\Passkey;
 
 use App\Entity\User;
 use App\Repository\UserPasskeyRepository;
-use App\Service\Passkey\Model\AccountPasskeysModel;
-use App\Service\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
+use App\Service\Identity\Passkey\Model\AccountPasskeysModel;
+use App\Service\Operations\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
 
 /** One account's passkeys, with the relying party id and shared handle the WebAuthn Signal API needs. */
 final readonly class PasskeyListing

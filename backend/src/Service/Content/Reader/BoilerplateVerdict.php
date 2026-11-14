@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Content\Reader;
 
-use App\Service\Html\Support\ClassTokenMatcher;
+use App\Service\Foundation\Html\Support\ClassTokenMatcher;
 use Dom\Element;
 
 /**

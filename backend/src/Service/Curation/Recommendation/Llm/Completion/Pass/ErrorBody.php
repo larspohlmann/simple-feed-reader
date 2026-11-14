@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Completion\Pass;
+namespace App\Service\Curation\Recommendation\Llm\Completion\Pass;
 
-use App\Service\Ai\Exception\ProviderRejectedRequestException;
-use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\Support\RejectingStatus;
-use App\Service\Recommendation\Support\ProviderErrorReason;
-use App\Service\Recommendation\Support\RefusalMessage;
+use App\Service\Curation\Ai\Exception\ProviderRejectedRequestException;
+use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
+use App\Service\Curation\Ai\Support\RejectingStatus;
+use App\Service\Curation\Recommendation\Support\ProviderErrorReason;
+use App\Service\Curation\Recommendation\Support\RefusalMessage;
 
 /** One call's error status and as much of its body as a reason can sit in; a larger body ends the call at once. */
 final class ErrorBody

@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Subscription;
+namespace App\Service\Library\Subscription;
 
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SourceFormat;
-use App\Service\Feed\Factory\FeedFactory;
-use App\Service\Subscription\Exception\AlreadySubscribedException;
-use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
+use App\Service\Ingestion\Feed\Factory\FeedFactory;
+use App\Service\Library\Subscription\Exception\AlreadySubscribedException;
+use App\Service\Library\Subscription\Exception\SubscriptionLimitReachedException;
 use App\Repository\FeedRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\SubscriptionTagRepository;

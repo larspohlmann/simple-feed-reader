@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Pass;
+namespace App\Service\Operations\Backup\Pass;
 
-use App\Service\Backup\RestoreEntries\RestoreEntriesInterface;
-use App\Service\Backup\RestoreFeeds\RestoreFeedsInterface;
+use App\Service\Operations\Backup\RestoreEntries\RestoreEntriesInterface;
+use App\Service\Operations\Backup\RestoreFeeds\RestoreFeedsInterface;
 
 /**
  * One RestoreFeedTarget per feed url the entry part names, built on first use

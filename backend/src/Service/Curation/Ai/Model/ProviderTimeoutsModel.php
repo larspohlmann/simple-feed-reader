@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai\Model;
+namespace App\Service\Curation\Ai\Model;
 
 /**
  * How long one chat completion may take: a wall clock for the whole call and a first-byte bound on the silence

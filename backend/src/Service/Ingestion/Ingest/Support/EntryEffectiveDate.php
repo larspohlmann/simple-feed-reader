@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ingest\Support;
+namespace App\Service\Ingestion\Ingest\Support;
 
-use App\Service\Ingest\Pass\FeedIngestContext;
+use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
 
 /**
  * An entry's place in the list: its published date if that predates the feed's previous SUCCESSFUL fetch (a failed

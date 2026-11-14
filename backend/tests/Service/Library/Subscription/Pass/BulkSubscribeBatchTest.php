@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Subscription\Pass;
+namespace App\Tests\Service\Library\Subscription\Pass;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Service\Subscription\Pass\BulkSubscribeBatch;
-use App\Service\Subscription\Pass\BulkSubscribePositions;
-use App\Service\Subscription\Pass\BulkSubscribeTagTree;
+use App\Service\Library\Subscription\Pass\BulkSubscribeBatch;
+use App\Service\Library\Subscription\Pass\BulkSubscribePositions;
+use App\Service\Library\Subscription\Pass\BulkSubscribeTagTree;
 use PHPUnit\Framework\TestCase;
 
 final class BulkSubscribeBatchTest extends TestCase

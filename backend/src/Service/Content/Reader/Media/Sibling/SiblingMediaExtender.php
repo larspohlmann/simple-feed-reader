@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\Sibling;
+namespace App\Service\Content\Reader\Media\Sibling;
 
-use App\Service\Reader\Media\MediaLanding;
-use App\Service\Reader\Media\MediaUrlKind;
-use App\Service\Reader\Media\Model\ArticleMediaModel;
-use App\Service\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Content\Reader\Media\MediaLanding;
+use App\Service\Content\Reader\Media\MediaUrlKind;
+use App\Service\Content\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Content\Reader\Media\Model\MediaCandidateModel;
 
 /** Adds the media SiblingIdRule derives, once the network has confirmed each URL: it must land 2xx on a URL of the seed's kind. */
 final readonly class SiblingMediaExtender

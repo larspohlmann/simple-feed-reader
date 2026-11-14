@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Scoring\Support;
+namespace App\Tests\Service\Curation\Recommendation\Scoring\Support;
 
-use App\Service\Recommendation\Scoring\Support\QuestionId;
+use App\Service\Curation\Recommendation\Scoring\Support\QuestionId;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

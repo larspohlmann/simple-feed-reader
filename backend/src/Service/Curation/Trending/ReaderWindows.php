@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Trending;
+namespace App\Service\Curation\Trending;
 
 use App\Enum\TrendingWindow;
 use App\Repository\TrendingEntryRepository;
 use App\Repository\TrendingStoryRepository;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Trending\Model\RankedStoryModel;
-use App\Service\Trending\Model\ReaderWindowModel;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Curation\Trending\Model\RankedStoryModel;
+use App\Service\Curation\Trending\Model\ReaderWindowModel;
 
 /**
  * Cuts a window to one reader: the threshold from how many of their feeds posted within it, relaxed until five

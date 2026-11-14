@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run\Model;
+namespace App\Service\Curation\Recommendation\Run\Model;
 
 /**
  * One For You sweep: the runs it started, the active runs it advanced one tick, and the runs still active after, for

@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh\PassFetcher;
+namespace App\Service\Ingestion\Refresh\PassFetcher;
 
 use App\Entity\SocialFeed;
-use App\Service\Fetch\ConcurrentRequestEngine;
-use App\Service\Fetch\Support\CapacityGuard;
-use App\Service\Refresh\Model\PassOutcome\PassOutcomeModelInterface;
-use App\Service\Refresh\Pass\PassLane\FeedLane;
-use App\Service\Refresh\Pass\PassLane\TimelineLane;
-use App\Service\Refresh\Pass\PassTickets;
-use App\Service\Refresh\Pass\RefreshPass;
-use App\Service\Social\TimelineRounds;
+use App\Service\Outbound\Fetch\ConcurrentRequestEngine;
+use App\Service\Outbound\Fetch\Support\CapacityGuard;
+use App\Service\Ingestion\Refresh\Model\PassOutcome\PassOutcomeModelInterface;
+use App\Service\Ingestion\Refresh\Pass\PassLane\FeedLane;
+use App\Service\Ingestion\Refresh\Pass\PassLane\TimelineLane;
+use App\Service\Ingestion\Refresh\Pass\PassTickets;
+use App\Service\Ingestion\Refresh\Pass\RefreshPass;
+use App\Service\Social\Social\TimelineRounds;
 
 /** Reads a pass's due feeds on one engine run, in due order whatever their kind; a stale session renews inside it. */
 final readonly class ConcurrentPassFetcher implements PassFetcherInterface

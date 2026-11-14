@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai\Factory;
+namespace App\Service\Curation\Ai\Factory;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
-use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Ai\Model\ProviderCredentialsModel;
+use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
 use Psr\Clock\ClockInterface;
 
 final readonly class AiConfigurationFactory

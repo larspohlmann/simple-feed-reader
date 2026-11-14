@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Support;
+namespace App\Tests\Service\Curation\Recommendation\Support;
 
-use App\Service\Recommendation\Support\TokenEstimate;
+use App\Service\Curation\Recommendation\Support\TokenEstimate;
 use PHPUnit\Framework\TestCase;
 
 final class TokenEstimateTest extends TestCase

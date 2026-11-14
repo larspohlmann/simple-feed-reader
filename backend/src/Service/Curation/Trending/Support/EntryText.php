@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Trending\Support;
+namespace App\Service\Curation\Trending\Support;
 
-use App\Service\Text\Support\EntryPlainText;
-use App\Service\Text\Support\WordBoundary;
+use App\Service\Foundation\Text\Support\EntryPlainText;
+use App\Service\Foundation\Text\Support\WordBoundary;
 
 final class EntryText
 {

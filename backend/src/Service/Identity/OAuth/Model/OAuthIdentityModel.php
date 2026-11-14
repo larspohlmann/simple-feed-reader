@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\OAuth\Model;
+namespace App\Service\Identity\OAuth\Model;
 
 use App\Entity\User;
 

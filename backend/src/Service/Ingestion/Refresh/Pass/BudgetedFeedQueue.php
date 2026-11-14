@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh\Pass;
+namespace App\Service\Ingestion\Refresh\Pass;
 
 use App\Entity\Feed;
 use Symfony\Component\Clock\ClockInterface;

@@ -2,27 +2,27 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\ArticleExtractor;
+namespace App\Service\Content\Reader\ArticleExtractor;
 
-use App\Service\Html\Exception\UnparseableHtmlException;
-use App\Service\Reader\ArticleContentGate;
-use App\Service\Reader\ArticlePageReader;
-use App\Service\Reader\ArticleReadability;
-use App\Service\Reader\BodyCleaning\Model\BodyCleaningInputModel;
-use App\Service\Reader\Exception\ArticleNotExtractedException;
-use App\Service\Reader\Exception\PageFetchException;
-use App\Service\Reader\HtmlPageFetcher;
-use App\Service\Reader\Media\BodyMediaResolver;
-use App\Service\Reader\Model\ArticlePageModel;
-use App\Service\Reader\Model\EntryHintsModel;
-use App\Service\Reader\Model\ExtractionFailure;
-use App\Service\Reader\Model\ExtractionResultModel;
-use App\Service\Reader\Model\LeadImageCandidateModel;
-use App\Service\Reader\Model\PageResponseModel;
-use App\Service\Reader\ReaderBodyCleaner;
-use App\Service\Reader\Slideshow\Model\ContainerSignatureModel;
-use App\Service\Reader\Slideshow\Model\SlideshowModel;
-use App\Service\Sanitize\EntrySanitizer;
+use App\Service\Foundation\Html\Exception\UnparseableHtmlException;
+use App\Service\Content\Reader\ArticleContentGate;
+use App\Service\Content\Reader\ArticlePageReader;
+use App\Service\Content\Reader\ArticleReadability;
+use App\Service\Content\Reader\BodyCleaning\Model\BodyCleaningInputModel;
+use App\Service\Content\Reader\Exception\ArticleNotExtractedException;
+use App\Service\Content\Reader\Exception\PageFetchException;
+use App\Service\Content\Reader\HtmlPageFetcher;
+use App\Service\Content\Reader\Media\BodyMediaResolver;
+use App\Service\Content\Reader\Model\ArticlePageModel;
+use App\Service\Content\Reader\Model\EntryHintsModel;
+use App\Service\Content\Reader\Model\ExtractionFailure;
+use App\Service\Content\Reader\Model\ExtractionResultModel;
+use App\Service\Content\Reader\Model\LeadImageCandidateModel;
+use App\Service\Content\Reader\Model\PageResponseModel;
+use App\Service\Content\Reader\ReaderBodyCleaner;
+use App\Service\Content\Reader\Slideshow\Model\ContainerSignatureModel;
+use App\Service\Content\Reader\Slideshow\Model\SlideshowModel;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
 use fivefilters\Readability\Article;
 
 /**

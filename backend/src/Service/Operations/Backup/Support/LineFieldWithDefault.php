@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Support;
+namespace App\Service\Operations\Backup\Support;
 
 /**
  * Reads a field that a pre-existing backup may not carry. A file written

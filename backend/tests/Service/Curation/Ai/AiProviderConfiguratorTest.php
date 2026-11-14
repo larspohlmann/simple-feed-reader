@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Ai;
+namespace App\Tests\Service\Curation\Ai;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\ModelDescriptor;
@@ -12,18 +12,18 @@ use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\ScoringProtocol;
 use App\Repository\UserRepository;
-use App\Service\Ai\AiConfigurationForUser;
-use App\Service\Ai\AiProviderConfigurator;
-use App\Service\Ai\Exception\AiKeyUnreadableException;
-use App\Service\Ai\Exception\CredentialsRejectedException;
-use App\Service\Ai\Exception\ModelNotOfferedException;
-use App\Service\Ai\Exception\ModelRequiredForActivationException;
-use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\Exception\TooManyConfigurationsException;
-use App\Service\Ai\Factory\ProviderConnectionFactory;
-use App\Service\Ai\Model\ProviderCredentialsModel;
-use App\Service\Ai\Model\ProviderTimeoutsModel;
-use App\Service\Ai\ModelCatalog\ModelCatalogInterface;
+use App\Service\Curation\Ai\AiConfigurationForUser;
+use App\Service\Curation\Ai\AiProviderConfigurator;
+use App\Service\Curation\Ai\Exception\AiKeyUnreadableException;
+use App\Service\Curation\Ai\Exception\CredentialsRejectedException;
+use App\Service\Curation\Ai\Exception\ModelNotOfferedException;
+use App\Service\Curation\Ai\Exception\ModelRequiredForActivationException;
+use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
+use App\Service\Curation\Ai\Exception\TooManyConfigurationsException;
+use App\Service\Curation\Ai\Factory\ProviderConnectionFactory;
+use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
+use App\Service\Curation\Ai\Model\ProviderTimeoutsModel;
+use App\Service\Curation\Ai\ModelCatalog\ModelCatalogInterface;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AiSettingsRowMover;
 use App\Tests\Support\SeedsUsers;

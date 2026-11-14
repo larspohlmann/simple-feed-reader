@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\Settings;
+namespace App\Service\Outbound\Mail\Settings;
 
 use App\Entity\MailConnection;
 use App\Entity\MailServerSettings;
 use App\Repository\MailServerSettingsRepository;
-use App\Service\Mail\Settings\Crypto\MailPasswordCipher;
-use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
-use App\Service\Mail\Settings\Model\MailSettingsOverviewModel;
-use App\Service\Mail\Settings\Model\MailSettingsSnapshotModel;
-use App\Service\Mail\Settings\Model\MailSettingsUpdateModel;
-use App\Service\Proxy\ProxySettings;
+use App\Service\Outbound\Mail\Settings\Crypto\MailPasswordCipher;
+use App\Service\Outbound\Mail\Settings\Exception\IncompleteMailConfigurationException;
+use App\Service\Outbound\Mail\Settings\Model\MailSettingsOverviewModel;
+use App\Service\Outbound\Mail\Settings\Model\MailSettingsSnapshotModel;
+use App\Service\Outbound\Mail\Settings\Model\MailSettingsUpdateModel;
+use App\Service\Outbound\Proxy\ProxySettings;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class MailSettings

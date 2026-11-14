@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh;
+namespace App\Service\Ingestion\Refresh;
 
 use App\Entity\Entry;
 use App\Entity\EntryGuid;
 use App\Entity\Feed;
-use App\Service\Completion\ShareEnrichmentQueue;
-use App\Service\Feed\FeedScheduler;
-use App\Service\Ingest\EntryIngestor;
-use App\Service\Ingest\Pass\FeedIngestContext;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Refresh\Model\FeedRefreshResultModel;
-use App\Service\Refresh\Model\IncomingFeedModel;
-use App\Service\Search\EntryIndexer;
-use App\Service\Social\DeletedPostTombstones;
-use App\Service\Social\Model\TimelinePageModel;
-use App\Service\Social\TimelineSelfThreads;
+use App\Service\Social\Completion\ShareEnrichmentQueue;
+use App\Service\Ingestion\Feed\FeedScheduler;
+use App\Service\Ingestion\Ingest\EntryIngestor;
+use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Refresh\Model\FeedRefreshResultModel;
+use App\Service\Ingestion\Refresh\Model\IncomingFeedModel;
+use App\Service\Library\Search\EntryIndexer;
+use App\Service\Social\Social\DeletedPostTombstones;
+use App\Service\Social\Social\Model\TimelinePageModel;
+use App\Service\Social\Social\TimelineSelfThreads;
 use Doctrine\ORM\EntityManagerInterface;
 
 /** Stores a page of a feed's entries, whether a fetched body or a social timeline brought it. */

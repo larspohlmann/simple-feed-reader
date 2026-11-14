@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Llm\Prompt\Model;
+namespace App\Tests\Service\Curation\Recommendation\Llm\Prompt\Model;
 
-use App\Service\Recommendation\Llm\Prompt\Model\RecommendationResponseSchema;
+use App\Service\Curation\Recommendation\Llm\Prompt\Model\RecommendationResponseSchema;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationResponseSchemaTest extends TestCase

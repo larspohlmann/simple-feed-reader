@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\SavedPosts;
+namespace App\Service\Library\SavedPosts;
 
 use App\Entity\BackedUpReadMark;
 use App\Entity\Entry;

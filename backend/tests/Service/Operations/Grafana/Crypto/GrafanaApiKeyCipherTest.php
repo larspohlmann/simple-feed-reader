@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Grafana\Crypto;
+namespace App\Tests\Service\Operations\Grafana\Crypto;
 
-use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Grafana\Crypto\GrafanaApiKeyCipher;
+use App\Service\Foundation\Crypto\InstanceSecretCipher;
+use App\Service\Operations\Grafana\Crypto\GrafanaApiKeyCipher;
 use PHPUnit\Framework\TestCase;
 
 final class GrafanaApiKeyCipherTest extends TestCase

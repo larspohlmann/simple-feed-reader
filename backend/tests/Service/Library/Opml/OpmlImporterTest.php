@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Opml;
+namespace App\Tests\Service\Library\Opml;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SourceFormat;
-use App\Service\Opml\Exception\InvalidOpmlException;
-use App\Service\Opml\OpmlImporter;
-use App\Service\Subscription\SubscriptionService;
+use App\Service\Library\Opml\Exception\InvalidOpmlException;
+use App\Service\Library\Opml\OpmlImporter;
+use App\Service\Library\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SeedsUsers;

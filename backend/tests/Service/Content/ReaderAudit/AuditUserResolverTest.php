@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\ReaderAudit;
+namespace App\Tests\Service\Content\ReaderAudit;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\ReaderAuditRepository;
-use App\Service\ReaderAudit\AuditUserResolver;
-use App\Service\ReaderAudit\Exception\NoAuditUserException;
+use App\Service\Content\ReaderAudit\AuditUserResolver;
+use App\Service\Content\ReaderAudit\Exception\NoAuditUserException;
 use App\Tests\DbTestCase;
 use Doctrine\DBAL\Connection;
 

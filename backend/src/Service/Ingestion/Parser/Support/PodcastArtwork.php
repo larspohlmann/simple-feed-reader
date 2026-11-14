@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\Support;
+namespace App\Service\Ingestion\Parser\Support;
 
-use App\Service\Html\Support\Srcset;
-use App\Service\Image\Model\DeclaredImageModel;
-use App\Service\Parser\Model\FeedMediaKind;
-use App\Service\Parser\Model\FeedNamespace;
-use App\Service\Parser\Pass\CoreElement;
-use App\Service\Url\Support\HttpsImageUrl;
+use App\Service\Foundation\Html\Support\Srcset;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
+use App\Service\Ingestion\Parser\Model\FeedMediaKind;
+use App\Service\Ingestion\Parser\Model\FeedNamespace;
+use App\Service\Ingestion\Parser\Pass\CoreElement;
+use App\Service\Foundation\Url\Support\HttpsImageUrl;
 
 final class PodcastArtwork
 {

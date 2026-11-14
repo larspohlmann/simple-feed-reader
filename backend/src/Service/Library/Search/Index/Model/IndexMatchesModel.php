@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search\Index\Model;
+namespace App\Service\Library\Search\Index\Model;
 
 /**
  * What one search read answers with: the matching entry ids, in the engine's

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\ReaderAudit;
+namespace App\Service\Content\ReaderAudit;
 
-use App\Service\Reader\LeadingEngagementRules;
-use App\Service\ReaderAudit\Model\BodyBlockModel;
-use App\Service\ReaderAudit\Model\ExtractedBodyModel;
+use App\Service\Content\Reader\LeadingEngagementRules;
+use App\Service\Content\ReaderAudit\Model\BodyBlockModel;
+use App\Service\Content\ReaderAudit\Model\ExtractedBodyModel;
 
 /**
  * Everything above the article's first real paragraph, judged by the reader's own prose rule. A body that never

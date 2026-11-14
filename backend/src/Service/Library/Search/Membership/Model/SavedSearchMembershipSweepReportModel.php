@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search\Membership\Model;
+namespace App\Service\Library\Search\Membership\Model;
 
 final readonly class SavedSearchMembershipSweepReportModel
 {

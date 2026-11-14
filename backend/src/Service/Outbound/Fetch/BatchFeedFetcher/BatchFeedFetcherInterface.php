@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Fetch\BatchFeedFetcher;
+namespace App\Service\Outbound\Fetch\BatchFeedFetcher;
 
-use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Fetch\Model\FetchTicketModel;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Outbound\Fetch\Model\FetchTicketModel;
 
 interface BatchFeedFetcherInterface
 {

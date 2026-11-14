@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Social\Social\Support;
 
-use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Fetch\Model\ApiResponseModel;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Model\SearchedPostModel;
-use App\Service\Social\Model\TimelinePageModel;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Outbound\Fetch\Model\ApiResponseModel;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Model\SearchedPostModel;
+use App\Service\Social\Social\Model\TimelinePageModel;
 
 /**
  * A search answer as entries: every post but a reply whose author and own text, or the post it quotes, match the query;

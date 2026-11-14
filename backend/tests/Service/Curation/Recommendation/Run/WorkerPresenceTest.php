@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Run;
+namespace App\Tests\Service\Curation\Recommendation\Run;
 
-use App\Service\Ai\Model\ProviderTimeoutsModel;
-use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
-use App\Service\Recommendation\Run\WorkerPresence;
+use App\Service\Curation\Ai\Model\ProviderTimeoutsModel;
+use App\Service\Curation\Recommendation\Run\Model\RecommendationDriverKind;
+use App\Service\Curation\Recommendation\Run\WorkerPresence;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ProvidesWorkerHeartbeats;
 use Symfony\Component\Clock\MockClock;

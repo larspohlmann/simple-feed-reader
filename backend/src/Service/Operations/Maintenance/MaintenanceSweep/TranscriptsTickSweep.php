@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Maintenance\MaintenanceSweep;
+namespace App\Service\Operations\Maintenance\MaintenanceSweep;
 
-use App\Service\Transcript\Model\TranscriptBudgetModel;
-use App\Service\Transcript\Model\TranscriptSweepReportModel;
-use App\Service\Transcript\TranscriptSweep;
+use App\Service\Content\Transcript\Model\TranscriptBudgetModel;
+use App\Service\Content\Transcript\Model\TranscriptSweepReportModel;
+use App\Service\Content\Transcript\TranscriptSweep;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 

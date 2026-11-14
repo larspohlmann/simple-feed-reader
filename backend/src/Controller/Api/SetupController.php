@@ -6,10 +6,10 @@ namespace App\Controller\Api;
 
 use App\Dto\Setup\SetupAdminRequest;
 use App\Repository\UserRepository;
-use App\Service\Auth\RegistrationPolicy;
-use App\Service\Auth\WebAdminSetup;
-use App\Service\Passkey\PasskeySignInAvailability;
-use App\Service\RateLimit\RateLimitGuard;
+use App\Service\Identity\Auth\RegistrationPolicy;
+use App\Service\Identity\Auth\WebAdminSetup;
+use App\Service\Identity\Passkey\PasskeySignInAvailability;
+use App\Service\Foundation\RateLimit\RateLimitGuard;
 use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;

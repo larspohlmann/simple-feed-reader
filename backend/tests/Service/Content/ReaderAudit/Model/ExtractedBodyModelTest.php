@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\ReaderAudit\Model;
+namespace App\Tests\Service\Content\ReaderAudit\Model;
 
-use App\Service\ReaderAudit\Model\BodyBlockModel;
-use App\Service\ReaderAudit\Model\ExtractedBodyModel;
+use App\Service\Content\ReaderAudit\Model\BodyBlockModel;
+use App\Service\Content\ReaderAudit\Model\ExtractedBodyModel;
 use PHPUnit\Framework\TestCase;
 
 final class ExtractedBodyModelTest extends TestCase

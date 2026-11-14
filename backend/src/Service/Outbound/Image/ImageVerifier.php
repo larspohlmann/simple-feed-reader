@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Image;
+namespace App\Service\Outbound\Image;
 
 use App\Entity\Entry;
 use App\Entity\EntryImage;
 use App\Entity\ImageRendition;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Image\Exception\GuardedImageRejectedException;
-use App\Service\Image\Exception\GuardedImageUnavailableException;
-use App\Service\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
-use App\Service\Image\Model\ImageDimensionsModel;
-use App\Service\Image\Model\ImageVerifyOutcome;
-use App\Service\Image\Model\LeadImageModel;
-use App\Service\Image\ProbedLadder\ProbedLadderInterface;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Outbound\Image\Exception\GuardedImageRejectedException;
+use App\Service\Outbound\Image\Exception\GuardedImageUnavailableException;
+use App\Service\Outbound\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
+use App\Service\Outbound\Image\Model\ImageDimensionsModel;
+use App\Service\Outbound\Image\Model\ImageVerifyOutcome;
+use App\Service\Outbound\Image\Model\LeadImageModel;
+use App\Service\Outbound\Image\ProbedLadder\ProbedLadderInterface;
 
 /**
  * Verifies one pending image via the SSRF-guarded downloader, retrying a bounded number of times before dropping it,

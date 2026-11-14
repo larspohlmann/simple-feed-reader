@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Transcript\Pass;
+namespace App\Service\Content\Transcript\Pass;
 
 use App\Entity\TranscriptParagraph;
-use App\Service\Transcript\Model\TranscriptCueModel;
+use App\Service\Content\Transcript\Model\TranscriptCueModel;
 
 final class ParagraphRun
 {

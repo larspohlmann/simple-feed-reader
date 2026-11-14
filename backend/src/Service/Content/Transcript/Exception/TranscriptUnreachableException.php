@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Transcript\Exception;
+namespace App\Service\Content\Transcript\Exception;
 
 /** The transcript host failed for now; the row is retried after a backoff. */
 final class TranscriptUnreachableException extends \RuntimeException

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\User;
-use App\Service\Account\Model\AccountSettingsModel;
+use App\Service\Identity\Account\Model\AccountSettingsModel;
 
 /**
  * The client's view of its own account. Deliberately hand-built rather than

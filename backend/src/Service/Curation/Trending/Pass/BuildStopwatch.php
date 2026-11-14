@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Trending\Pass;
+namespace App\Service\Curation\Trending\Pass;
 
 final readonly class BuildStopwatch
 {

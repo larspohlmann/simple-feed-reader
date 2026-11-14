@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Admin;
 
-use App\Service\SelfUpdate\Model\SelfUpdateStatusModel;
+use App\Service\Operations\SelfUpdate\Model\SelfUpdateStatusModel;
 
 final readonly class SelfUpdateStatusJson
 {

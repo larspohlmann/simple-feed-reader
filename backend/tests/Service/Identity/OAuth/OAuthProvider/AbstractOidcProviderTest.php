@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\OAuth\OAuthProvider;
+namespace App\Tests\Service\Identity\OAuth\OAuthProvider;
 
 use App\Http\Problem\ExceptionProblems\OAuthProblems;
-use App\Service\OAuth\Exception\OAuthFailedException;
-use App\Service\OAuth\OAuthProvider\AbstractOidcProvider;
-use App\Tests\Service\OAuth\StubOidcProvider;
+use App\Service\Identity\OAuth\Exception\OAuthFailedException;
+use App\Service\Identity\OAuth\OAuthProvider\AbstractOidcProvider;
+use App\Tests\Service\Identity\OAuth\StubOidcProvider;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;

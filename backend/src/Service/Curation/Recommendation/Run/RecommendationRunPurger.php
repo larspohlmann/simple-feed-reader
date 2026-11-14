@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run;
+namespace App\Service\Curation\Recommendation\Run;
 
 use App\Entity\User;
 use App\Repository\RecommendationItemRepository;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Recommendation\Exception\RecommendationRunActiveException;
+use App\Service\Curation\Recommendation\Exception\RecommendationRunActiveException;
 
 /**
  * Clears an account's whole "For you" list so a fresh run can rebuild it: logs, then items, then runs, in code rather

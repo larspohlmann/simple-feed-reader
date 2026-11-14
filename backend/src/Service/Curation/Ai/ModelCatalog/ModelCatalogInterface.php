@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ai\ModelCatalog;
+namespace App\Service\Curation\Ai\ModelCatalog;
 
 use App\Entity\ModelDescriptor;
-use App\Service\Ai\Exception\CredentialsRejectedException;
-use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\Model\ProviderCredentialsModel;
+use App\Service\Curation\Ai\Exception\CredentialsRejectedException;
+use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
+use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
 
 interface ModelCatalogInterface
 {

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Reading\Model\UpdatedEntryStateModel;
+use App\Service\Library\Reading\Model\UpdatedEntryStateModel;
 
 final class EntryStateJson
 {

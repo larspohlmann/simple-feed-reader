@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\Sibling;
+namespace App\Service\Content\Reader\Media\Sibling;
 
-use App\Service\Reader\Media\Model\ArticleMediaModel;
-use App\Service\Reader\Media\Model\MediaCandidateModel;
-use App\Service\Reader\Media\Sibling\Pass\SiblingSearch;
+use App\Service\Content\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Content\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Content\Reader\Media\Sibling\Pass\SiblingSearch;
 
 /**
  * The page's other media, named beside a found one by a bare id: the found URL

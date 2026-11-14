@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Discovery\Model;
+namespace App\Tests\Service\Sourcing\Discovery\Model;
 
-use App\Service\Discovery\Model\ScrapeFailureReason;
+use App\Service\Sourcing\Discovery\Model\ScrapeFailureReason;
 use PHPUnit\Framework\TestCase;
 
 final class ScrapeFailureReasonTest extends TestCase

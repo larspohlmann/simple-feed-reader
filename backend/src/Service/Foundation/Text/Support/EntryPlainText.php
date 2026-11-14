@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Text\Support;
+namespace App\Service\Foundation\Text\Support;
 
 /**
  * Reduces HTML to plain text, rejecting a body that is only a junk token. <img>

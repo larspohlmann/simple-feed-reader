@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Refresh\Model\RefreshReportModel;
+use App\Service\Ingestion\Refresh\Model\RefreshReportModel;
 
 /** A whole refresh run, `total` included, as the maintenance endpoints report it. */
 final class RefreshReportJson

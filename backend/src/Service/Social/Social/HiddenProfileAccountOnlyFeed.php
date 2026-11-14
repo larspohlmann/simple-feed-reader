@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social;
+namespace App\Service\Social\Social;
 
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\SocialAccountRepository;
-use App\Service\Discovery\AccountOnlyFeed\AccountOnlyFeedInterface;
-use App\Service\Discovery\Model\FeedCandidateModel;
-use App\Service\Discovery\Model\NoPreviewReason;
+use App\Service\Sourcing\Discovery\AccountOnlyFeed\AccountOnlyFeedInterface;
+use App\Service\Sourcing\Discovery\Model\FeedCandidateModel;
+use App\Service\Sourcing\Discovery\Model\NoPreviewReason;
 
 final readonly class HiddenProfileAccountOnlyFeed implements AccountOnlyFeedInterface
 {

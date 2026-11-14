@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup\Model;
+namespace App\Service\Operations\Backup\Model;
 
-use App\Service\Backup\Support\BackupSchema;
+use App\Service\Operations\Backup\Support\BackupSchema;
 
 /**
  * The foundation's record lines, encoded before the entry-part walk so they name the feeds the parts were built from,

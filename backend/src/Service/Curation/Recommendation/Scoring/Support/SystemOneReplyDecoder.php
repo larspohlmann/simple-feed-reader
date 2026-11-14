@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Scoring\Support;
+namespace App\Service\Curation\Recommendation\Scoring\Support;
 
-use App\Service\Ai\Model\ProviderCallReceiptModel;
-use App\Service\Ai\Model\ProviderCallUsageModel;
-use App\Service\Ai\Support\ReplyField;
-use App\Service\Ai\Support\ReportedCost;
-use App\Service\Recommendation\Scoring\Model\ScoringReplyModel;
+use App\Service\Curation\Ai\Model\ProviderCallReceiptModel;
+use App\Service\Curation\Ai\Model\ProviderCallUsageModel;
+use App\Service\Curation\Ai\Support\ReplyField;
+use App\Service\Curation\Ai\Support\ReportedCost;
+use App\Service\Curation\Recommendation\Scoring\Model\ScoringReplyModel;
 
 /**
  * Never throws: a body that is not the documented shape decodes to no scores, which the parser rejects as unusable.

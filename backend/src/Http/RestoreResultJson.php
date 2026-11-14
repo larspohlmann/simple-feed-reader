@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Backup\Model\RestoreResultModel;
+use App\Service\Operations\Backup\Model\RestoreResultModel;
 
 /**
  * What a restore actually loaded, counted as rows written.

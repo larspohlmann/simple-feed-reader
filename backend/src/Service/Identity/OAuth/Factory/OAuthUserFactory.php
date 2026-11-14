@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\OAuth\Factory;
+namespace App\Service\Identity\OAuth\Factory;
 
 use App\Entity\User;
-use App\Service\Auth\RegistrationPolicy;
-use App\Service\OAuth\Model\OAuthIdentityModel;
+use App\Service\Identity\Auth\RegistrationPolicy;
+use App\Service\Identity\OAuth\Model\OAuthIdentityModel;
 use Psr\Clock\ClockInterface;
 
 final readonly class OAuthUserFactory

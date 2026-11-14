@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Mail\AccountMailer;
+namespace App\Service\Outbound\Mail\AccountMailer;
 
 use App\Entity\User;
-use App\Service\Mail\MailCapability;
-use App\Service\Mail\Model\PendingApprovalNoticeModel;
+use App\Service\Outbound\Mail\MailCapability;
+use App\Service\Outbound\Mail\Model\PendingApprovalNoticeModel;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsDecorator;
 

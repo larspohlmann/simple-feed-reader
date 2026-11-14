@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run\Model;
+namespace App\Service\Curation\Recommendation\Run\Model;
 
-use App\Service\Ai\Model\RetryPlanModel;
+use App\Service\Curation\Ai\Model\RetryPlanModel;
 
 /**
  * Which driver ticks the run. Only the worker owns its process; poll and sweep (the maintenance cron's HTTP call) run

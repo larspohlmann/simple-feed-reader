@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ExceptionProblems\FeedDirectoryProblems;
-use App\Service\FeedDirectory\Exception\InvalidFeedDirectoryScopeException;
-use App\Service\FeedDirectory\Exception\UnknownFeedDirectoryCountryException;
+use App\Service\Sourcing\FeedDirectory\Exception\InvalidFeedDirectoryScopeException;
+use App\Service\Sourcing\FeedDirectory\Exception\UnknownFeedDirectoryCountryException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Response;
 

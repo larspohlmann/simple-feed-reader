@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Feed\Model;
+namespace App\Service\Curation\Recommendation\Feed\Model;
 
 /**
  * One calendar month of the run history, bucketed in the viewer's zone. `costNanoCredits` is null when no run in it

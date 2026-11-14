@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Run;
+namespace App\Service\Curation\Recommendation\Run;
 
 use App\Entity\User;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Recommendation\Exception\NoActiveRecommendationRunException;
+use App\Service\Curation\Recommendation\Exception\NoActiveRecommendationRunException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 

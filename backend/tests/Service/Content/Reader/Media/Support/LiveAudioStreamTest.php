@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media\Support;
+namespace App\Tests\Service\Content\Reader\Media\Support;
 
-use App\Service\Reader\Media\Support\LiveAudioStream;
+use App\Service\Content\Reader\Media\Support\LiveAudioStream;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

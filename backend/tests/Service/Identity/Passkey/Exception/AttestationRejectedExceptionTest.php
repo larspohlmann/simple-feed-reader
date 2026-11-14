@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Passkey\Exception;
+namespace App\Tests\Service\Identity\Passkey\Exception;
 
-use App\Service\Passkey\Exception\AttestationRejectedException;
+use App\Service\Identity\Passkey\Exception\AttestationRejectedException;
 use PHPUnit\Framework\TestCase;
 
 final class AttestationRejectedExceptionTest extends TestCase

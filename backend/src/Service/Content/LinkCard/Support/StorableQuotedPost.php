@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\LinkCard\Support;
+namespace App\Service\Content\LinkCard\Support;
 
 use App\Entity\EntryMedium;
 use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;
-use App\Service\Text\Support\WordBoundary;
-use App\Service\Url\Support\AbsoluteHttpUrl;
-use App\Service\Url\Support\HttpsImageUrl;
+use App\Service\Foundation\Text\Support\WordBoundary;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
+use App\Service\Foundation\Url\Support\HttpsImageUrl;
 
 /**
  * A quoted post as an entry may hold it, whichever network or file it came from: none without a web address that

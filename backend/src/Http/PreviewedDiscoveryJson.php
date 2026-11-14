@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Enum\SourceFormat;
-use App\Service\Parser\Model\FeedSyntax;
-use App\Service\Preview\Model\PreviewedCandidateModel;
-use App\Service\Preview\Model\PreviewedDiscoveryModel;
+use App\Service\Ingestion\Parser\Model\FeedSyntax;
+use App\Service\Sourcing\Preview\Model\PreviewedCandidateModel;
+use App\Service\Sourcing\Preview\Model\PreviewedDiscoveryModel;
 
 final class PreviewedDiscoveryJson
 {

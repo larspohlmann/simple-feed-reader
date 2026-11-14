@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Discovery\ShareLinkFeed;
+namespace App\Service\Sourcing\Discovery\ShareLinkFeed;
 
-use App\Service\Url\Support\YouTubeUrl;
+use App\Service\Foundation\Url\Support\YouTubeUrl;
 
 /**
  * A playlist page advertises no feed, although YouTube serves one under the playlist's id. A video watched inside a

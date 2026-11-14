@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Admin;
 
-use App\Service\Mail\Settings\Model\MailTestResultModel;
+use App\Service\Outbound\Mail\Settings\Model\MailTestResultModel;
 
 final class MailTestResultJson
 {

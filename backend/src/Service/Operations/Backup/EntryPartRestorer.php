@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup;
+namespace App\Service\Operations\Backup;
 
 use App\Entity\User;
-use App\Service\Backup\Dto\EntryLine;
-use App\Service\Backup\Dto\EntryShareLine;
-use App\Service\Backup\Dto\EntryStateLine;
-use App\Service\Backup\Factory\RestoreEntryLoaderFactory;
-use App\Service\Backup\Model\RestoreResultModel;
+use App\Service\Operations\Backup\Dto\EntryLine;
+use App\Service\Operations\Backup\Dto\EntryShareLine;
+use App\Service\Operations\Backup\Dto\EntryStateLine;
+use App\Service\Operations\Backup\Factory\RestoreEntryLoaderFactory;
+use App\Service\Operations\Backup\Model\RestoreResultModel;
 
 /**
  * The entries endpoint's restore: additive and idempotent, with no confirmation phrase and no wipe. EntryPartInspector

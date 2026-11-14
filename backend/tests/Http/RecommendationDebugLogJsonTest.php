@@ -12,7 +12,7 @@ use App\Enum\CallVerdict;
 use App\Enum\RequestAdjustment;
 use App\Http\RecommendationDebugLogJson;
 use App\Repository\RecommendationRunLogRepository;
-use App\Service\Recommendation\Feed\Model\RecommendationDebugLogModel;
+use App\Service\Curation\Recommendation\Feed\Model\RecommendationDebugLogModel;
 use PHPUnit\Framework\TestCase;
 
 /**

@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Image\GuardedImageProbe;
+namespace App\Service\Outbound\Image\GuardedImageProbe;
 
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\Exception\ResponseTooLargeException;
-use App\Service\Fetch\Pass\LandedResponse;
-use App\Service\Fetch\Pass\RedirectBudget;
-use App\Service\Fetch\RedirectFollower;
-use App\Service\Image\Exception\GuardedImageUnavailableException;
-use App\Service\Image\Model\ImageDimensionsModel;
-use App\Service\Image\Support\MediaType;
+use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Outbound\Fetch\Pass\LandedResponse;
+use App\Service\Outbound\Fetch\Pass\RedirectBudget;
+use App\Service\Outbound\Fetch\RedirectFollower;
+use App\Service\Outbound\Image\Exception\GuardedImageUnavailableException;
+use App\Service\Outbound\Image\Model\ImageDimensionsModel;
+use App\Service\Outbound\Image\Support\MediaType;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 

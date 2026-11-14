@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Logging\Loki\LokiSink;
+namespace App\Service\Operations\Logging\Loki\LokiSink;
 
 interface LokiSinkInterface
 {

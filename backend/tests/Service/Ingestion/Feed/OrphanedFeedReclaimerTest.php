@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Feed;
+namespace App\Tests\Service\Ingestion\Feed;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\OrphanedFeedRepository;
-use App\Service\Feed\OrphanedFeedReclaimer;
+use App\Service\Ingestion\Feed\OrphanedFeedReclaimer;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
 

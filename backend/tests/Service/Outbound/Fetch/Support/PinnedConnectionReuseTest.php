@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch\Support;
+namespace App\Tests\Service\Outbound\Fetch\Support;
 
-use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\Model\GuardedUrlModel;
-use App\Service\Fetch\Support\EgressOptions;
-use App\Service\Fetch\Support\PersistentConnection;
-use App\Service\Fetch\UrlGuard;
+use App\Service\Outbound\Fetch\IpValidator;
+use App\Service\Outbound\Fetch\Model\GuardedUrlModel;
+use App\Service\Outbound\Fetch\Support\EgressOptions;
+use App\Service\Outbound\Fetch\Support\PersistentConnection;
+use App\Service\Outbound\Fetch\UrlGuard;
 use App\Tests\Support\KeepAliveServer;
 use App\Tests\Support\KeepAliveServerUnavailableException;
 use App\Tests\Support\StaticDnsResolver;

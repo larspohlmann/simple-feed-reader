@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Support;
+namespace App\Tests\Service\Social\Social\Support;
 
 use App\Enum\PrivateFeedSyncReason;
-use App\Service\Social\Model\NetworkCollectionsModel;
-use App\Service\Social\Model\PrivateFeedModel;
-use App\Service\Social\Support\PrivateFeedSyncReasons;
+use App\Service\Social\Social\Model\NetworkCollectionsModel;
+use App\Service\Social\Social\Model\PrivateFeedModel;
+use App\Service\Social\Social\Support\PrivateFeedSyncReasons;
 use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\TestCase;
 

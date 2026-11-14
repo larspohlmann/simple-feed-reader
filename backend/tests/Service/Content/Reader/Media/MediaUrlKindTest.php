@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media;
+namespace App\Tests\Service\Content\Reader\Media;
 
-use App\Service\Reader\Media\DurableMediaUrl;
-use App\Service\Reader\Media\EmbedProvider\SoundCloudEmbedProvider;
-use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
-use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Media\MediaUrlKind;
-use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Content\Reader\Media\DurableMediaUrl;
+use App\Service\Content\Reader\Media\EmbedProvider\SoundCloudEmbedProvider;
+use App\Service\Content\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
+use App\Service\Content\Reader\Media\EmbedProviders;
+use App\Service\Content\Reader\Media\MediaUrlKind;
+use App\Service\Content\Reader\Media\Model\MediaKind;
 use PHPUnit\Framework\TestCase;
 
 final class MediaUrlKindTest extends TestCase

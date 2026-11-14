@@ -6,7 +6,7 @@ namespace App\Tests\Repository;
 
 use App\Entity\Category;
 use App\Repository\CategoryRepository;
-use App\Service\Category\Model\NormalizedCategoryModel;
+use App\Service\Ingestion\Category\Model\NormalizedCategoryModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
 

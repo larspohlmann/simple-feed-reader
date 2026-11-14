@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Backup\Dto;
+namespace App\Tests\Service\Operations\Backup\Dto;
 
 use App\Entity\SavedSearch;
-use App\Service\Backup\Dto\SavedSearchLine;
+use App\Service\Operations\Backup\Dto\SavedSearchLine;
 use App\Tests\Support\BackupLineRecords;
 use PHPUnit\Framework\TestCase;
 

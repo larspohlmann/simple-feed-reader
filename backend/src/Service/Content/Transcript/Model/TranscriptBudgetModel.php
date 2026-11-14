@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Transcript\Model;
+namespace App\Service\Content\Transcript\Model;
 
 /** How many transcript fetches one pass may spend, each allowed FETCH_SECONDS. */
 final readonly class TranscriptBudgetModel

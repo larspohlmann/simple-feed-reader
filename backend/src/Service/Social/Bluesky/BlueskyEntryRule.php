@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Bluesky;
+namespace App\Service\Social\Bluesky;
 
-use App\Service\Bluesky\Support\AtPostUri;
-use App\Service\Ingest\PlatformEntryRule\PlatformEntryRuleInterface;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Parser\Support\EntryTitle;
+use App\Service\Social\Bluesky\Support\AtPostUri;
+use App\Service\Ingestion\Ingest\PlatformEntryRule\PlatformEntryRuleInterface;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Ingestion\Parser\Support\EntryTitle;
 
 /** Bluesky's RSS puts a placeholder line where a post embeds something; neither the body nor the title keeps it. */
 final readonly class BlueskyEntryRule implements PlatformEntryRuleInterface

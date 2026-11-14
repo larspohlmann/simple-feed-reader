@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\PostCountsSource;
+namespace App\Service\Social\Social\PostCountsSource;
 
-use App\Service\Social\Exception\PostNotPubliclyCountableException;
-use App\Service\Social\Exception\SocialNetworkThrottledException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\Model\SocialCountsModel;
+use App\Service\Social\Social\Exception\PostNotPubliclyCountableException;
+use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Model\SocialCountsModel;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /** One network's public, account-free way to a post's counts, keyed by its SocialNetwork value. */

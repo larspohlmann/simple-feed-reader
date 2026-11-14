@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Prompt\Model;
+namespace App\Service\Curation\Recommendation\Llm\Prompt\Model;
 
 use App\Entity\AiProviderSettings;
-use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
+use App\Service\Curation\Recommendation\Llm\Completion\Model\Reasoning;
 
 /** What bounds a connection's output: the reasoning headroom it keeps and the model's cap, null where none is known. */
 final readonly class OutputLimitModel

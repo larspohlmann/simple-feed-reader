@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Trending;
+namespace App\Tests\Service\Curation\Trending;
 
 use App\Entity\Entry;
 use App\Entity\TrendingHiddenEntry;
@@ -12,10 +12,10 @@ use App\Enum\TrendingWindow;
 use App\Repository\TrendingEntryRepository;
 use App\Repository\TrendingHiddenEntryRepository;
 use App\Repository\TrendingStoryRepository;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Trending\Exception\TrendingStoryNotFoundException;
-use App\Service\Trending\ReaderWindows;
-use App\Service\Trending\TrendingStoryHiding;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Curation\Trending\Exception\TrendingStoryNotFoundException;
+use App\Service\Curation\Trending\ReaderWindows;
+use App\Service\Curation\Trending\TrendingStoryHiding;
 use App\Tests\DbTestCase;
 use App\Tests\Support\InterruptingClock;
 use App\Tests\Support\TrendingFixtures;
