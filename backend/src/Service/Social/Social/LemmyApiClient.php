@@ -22,6 +22,7 @@ final readonly class LemmyApiClient
     private const string REFUSED_SESSION = 'The Lemmy instance refused this session.';
     private const string NOT_FOUND = 'The Lemmy instance cannot find this post.';
     private const string BANNED = 'You are banned from this community.';
+    private const string THROTTLED = 'The Lemmy instance asked for fewer requests.';
     private const string LOCKED = 'The post is locked.';
     private const string WRONG_PASSWORD = 'The Lemmy instance refused this username or password.';
     private const string NEEDS_TOTP = 'This Lemmy account needs its two-factor code.';
@@ -47,7 +48,7 @@ final readonly class LemmyApiClient
         if ($answer->isSuccessful()) {
             return $answer;
         }
-        SocialNetworkThrottledException::throwIfThrottled($answer, 'The Lemmy instance asked for fewer requests.');
+        SocialNetworkThrottledException::throwIfThrottled($answer, self::THROTTLED);
         $code = JsonNodeModel::of($answer->json())->string('error');
         throw self::failure($answer->status, $code);
     }
@@ -82,7 +83,7 @@ final readonly class LemmyApiClient
             'banned_from_community', 'person_is_banned_from_community', 'person_is_banned_from_site'
                 => new SocialPostRefusedException(self::BANNED),
             'couldnt_find_object', 'couldnt_find_post', 'deleted' => new SocialPostNotFoundException(self::NOT_FOUND),
-            'rate_limit_error' => new SocialNetworkThrottledException('The Lemmy instance asked for fewer requests.'),
+            'rate_limit_error' => new SocialNetworkThrottledException(self::THROTTLED),
             default => null,
         };
     }

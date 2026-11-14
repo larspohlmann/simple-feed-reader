@@ -4,17 +4,17 @@
       "comment": {
         "id": 26860003,
         "path": "0.26860003",
-        "ap_id": "https://piefed.ca/comment/7077799",
+        "ap_id": "https://origin.example/comment/26860003",
         "published": "2026-11-14T08:18:08.294711Z",
         "deleted": false,
         "removed": false,
-        "content": "Don't worry folks, The Real World: Boston's Sean Duffy promises he's going to fix what he broke and it's only going to cost us $50 billion. JFC."
+        "content": "Comment number 1"
       },
       "creator": {
-        "name": "ZeroCool",
-        "display_name": "ZeroCool",
-        "actor_id": "https://piefed.ca/u/ZeroCool",
-        "avatar": "https://media.piefed.ca/users/1N/ki/1Nkix9Rh7H5O55T.jpg"
+        "name": "ada",
+        "display_name": "Ada",
+        "actor_id": "https://origin.example/u/ada",
+        "avatar": "https://origin.example/pictrs/image/ada.png"
       },
       "counts": {
         "score": 3,
@@ -29,16 +29,16 @@
       "comment": {
         "id": 26858771,
         "path": "0.26858771",
-        "ap_id": "https://lemmy.world/comment/26858771",
+        "ap_id": "https://feddit.example/comment/26858771",
         "published": "2026-11-14T05:49:37.239284Z",
         "deleted": false,
         "removed": true,
-        "content": ">The officials said they have seen no evidence that the failure was caused by a cyberattack or system failures linked to artificial intelligence, but added that they are still investigating the precise cause of the outage.\r\n\r\nIf they don't know the cause of the outage, how can they say $50 billion will fix it?"
+        "content": "Comment number 2"
       },
       "creator": {
-        "name": "N0t_5ure",
+        "name": "bob",
         "display_name": null,
-        "actor_id": "https://lemmy.world/u/N0t_5ure",
+        "actor_id": "https://feddit.example/u/bob",
         "avatar": null
       },
       "counts": {
@@ -54,17 +54,17 @@
       "comment": {
         "id": 26858564,
         "path": "0.26858564",
-        "ap_id": "https://thelemmy.club/comment/30356546",
+        "ap_id": "https://lemmy.example/comment/26858564",
         "published": "2026-11-14T05:19:44.176034Z",
         "deleted": false,
         "removed": false,
-        "content": "My primary concern is that this money is likely to be given out to no-bid contractors with personal ties to the administration officials handing them out. \n\nThe upgrades are actually necessary. "
+        "content": "Comment number 3"
       },
       "creator": {
-        "name": "blarth",
-        "display_name": null,
-        "actor_id": "https://thelemmy.club/u/blarth",
-        "avatar": null
+        "name": "cleo",
+        "display_name": "Cleo",
+        "actor_id": "https://lemmy.example/u/cleo",
+        "avatar": "https://lemmy.example/pictrs/image/cleo.png"
       },
       "counts": {
         "score": 30,
@@ -78,16 +78,16 @@
       "comment": {
         "id": 26858462,
         "path": "0.26858462",
-        "ap_id": "https://lemmy.world/comment/26858462",
+        "ap_id": "https://origin.example/comment/26858462",
         "published": "2026-11-14T05:05:19.164898Z",
         "deleted": false,
         "removed": false,
-        "content": "Bitch, what party controlled both houses, the presidency, and the Supreme Court the past two years?\n\nSeems that they admitted they royaly screwed up a AI rollout."
+        "content": "Comment number 4"
       },
       "creator": {
-        "name": "inclementimmigrant",
-        "display_name": null,
-        "actor_id": "https://lemmy.world/u/inclementimmigrant",
+        "name": "ada",
+        "display_name": "Ada",
+        "actor_id": "https://origin.example/u/ada",
         "avatar": null
       },
       "counts": {
@@ -102,17 +102,17 @@
       "comment": {
         "id": 26860053,
         "path": "0.26858462.26860053",
-        "ap_id": "https://lemmy.ml/comment/29014742",
+        "ap_id": "https://feddit.example/comment/26860053",
         "published": "2026-11-14T08:25:02.417542Z",
         "deleted": false,
         "removed": false,
-        "content": "It's embarrassing how obvious it was. It felt like I was back in high school listening to someone read a book report on a book they never read. The \"it's not the new stuff. It's the old stuff\" from the white house press briefing.\n\nDude. They essentially plugged in 100 hair dryers, turned them on at full heat, and then complained that the wiring in the house was old when the circuit breaker tripped. \"It's not the hair dryers fault!\"\n\n\"All the SI smart system does is send information\"\n\n\"The outage was caused by the servers being flooded with too much data\"\n\n\"They aren't connected in anyway\"\n\nThey fucking ddosed themselves dude. You can't make this shit up. "
+        "content": "Comment number 5"
       },
       "creator": {
-        "name": "wheezy",
+        "name": "bob",
         "display_name": null,
-        "actor_id": "https://lemmy.ml/u/wheezy",
-        "avatar": "https://lemmy.ml/pictrs/image/685bdfc0-9def-42fb-9842-987f71bb9e08.jpeg"
+        "actor_id": "https://feddit.example/u/bob",
+        "avatar": "https://feddit.example/pictrs/image/bob.png"
       },
       "counts": {
         "score": 1,
@@ -126,17 +126,17 @@
       "comment": {
         "id": 26858813,
         "path": "0.26858564.26858813",
-        "ap_id": "https://sh.itjust.works/comment/28577929",
+        "ap_id": "https://lemmy.example/comment/26858813",
         "published": "2026-11-14T05:56:50.238746Z",
         "deleted": false,
         "removed": false,
-        "content": "hard agree it needs to be done, also hard agree that the current administration isn't competent enough to be able to"
+        "content": "Comment number 6"
       },
       "creator": {
-        "name": "Pika",
-        "display_name": "Pika",
-        "actor_id": "https://sh.itjust.works/u/Pika",
-        "avatar": "https://sh.itjust.works/pictrs/image/04c18132-8086-4bbb-8409-5f05b72d881d.jpeg"
+        "name": "cleo",
+        "display_name": "Cleo",
+        "actor_id": "https://lemmy.example/u/cleo",
+        "avatar": null
       },
       "counts": {
         "score": 10,
@@ -150,17 +150,17 @@
       "comment": {
         "id": 26859426,
         "path": "0.26858771.26859426",
-        "ap_id": "https://lemmy.world/comment/26859426",
+        "ap_id": "https://origin.example/comment/26859426",
         "published": "2026-11-14T07:12:58.279045Z",
         "deleted": false,
         "removed": false,
-        "content": "Guess how much they were defunded by dump"
+        "content": "Comment number 7"
       },
       "creator": {
-        "name": "lemonbun",
-        "display_name": null,
-        "actor_id": "https://lemmy.world/u/lemonbun",
-        "avatar": null
+        "name": "ada",
+        "display_name": "Ada",
+        "actor_id": "https://origin.example/u/ada",
+        "avatar": "https://origin.example/pictrs/image/ada.png"
       },
       "counts": {
         "score": 4,
@@ -174,16 +174,16 @@
       "comment": {
         "id": 26859960,
         "path": "0.26858771.26859426.26859960",
-        "ap_id": "https://sh.itjust.works/comment/28579580",
+        "ap_id": "https://feddit.example/comment/26859960",
         "published": "2026-11-14T08:11:43.535268Z",
         "deleted": false,
         "removed": false,
-        "content": "Civil aviation infrastructure has been tragically underfunded for decades. Maybe it kicked off when Reagan fired striking air traffic controllers, but a recent article was talking about how a lot of control towers still run off floppy disks.\n\nBut maybe that's also partially explained by \"if it ain't broke, don't fix it\" and tried-and-true is worth more than the latest technology. I mean, jeez, imagine if two planes collided because Windows 11 insisted on installing an update...\n\nSure, Trump's probably been the worst of the lot since he's a Russian plant out to destroy the country by all means possible, but he's only the head of the pack. \n"
+        "content": "Comment number 8"
       },
       "creator": {
-        "name": "schipelblorp",
+        "name": "bob",
         "display_name": null,
-        "actor_id": "https://sh.itjust.works/u/schipelblorp",
+        "actor_id": "https://feddit.example/u/bob",
         "avatar": null
       },
       "counts": {
