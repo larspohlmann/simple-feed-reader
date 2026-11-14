@@ -1,3 +1,4 @@
+import { VotePillComponent } from '../../vote-pill/vote-pill.component';
 import {
   Component,
   ElementRef,
@@ -56,6 +57,7 @@ import { EntryArticlePage } from './entry-article-page';
     FlagToggleDirective,
     EntrySourceComponent,
     EntryPillsComponent,
+    VotePillComponent,
     EntryActionsComponent,
     TranslocoPipe,
     ErrorBannerComponent,
