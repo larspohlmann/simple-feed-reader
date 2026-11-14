@@ -10,7 +10,7 @@ use App\Service\Comments\Model\LemmyPostModel;
 
 final class LemmyPostAddress
 {
-    private const string POST_PAGE = '#^https://([^/]+)/post/(\d+)/?$#i';
+    private const string POST_PAGE = '#^https://([a-z0-9.-]+)/post/(\d+)/?$#i';
 
     public static function of(Entry $entry): ?LemmyPostModel
     {

@@ -28,15 +28,35 @@ final readonly class LemmyThread
      */
     public function comments(array $nodes): array
     {
-        $known = [];
+        $unique = self::threadable($nodes);
         $repliesByParent = [];
-        foreach ($nodes as $node) {
-            $known[self::idOf($node)] = true;
+        foreach ($unique as $node) {
             $repliesByParent[self::parentOf($node)][] = $node;
         }
-        $roots = array_filter($nodes, static fn (JsonNodeModel $node): bool => !isset($known[self::parentOf($node)]));
+        $roots = array_filter(
+            $unique,
+            static fn (JsonNodeModel $node): bool => !isset($unique[self::parentOf($node)]),
+        );
 
         return $this->flattened(array_values($roots), $repliesByParent, 0);
+    }
+
+    /**
+     * @param list<JsonNodeModel> $nodes
+     *
+     * @return array<string, JsonNodeModel> the first comment of each id, none its own parent
+     */
+    private static function threadable(array $nodes): array
+    {
+        $unique = [];
+        foreach ($nodes as $node) {
+            $id = self::idOf($node);
+            if ('' !== $id && !isset($unique[$id]) && self::parentOf($node) !== $id) {
+                $unique[$id] = $node;
+            }
+        }
+
+        return $unique;
     }
 
     /**

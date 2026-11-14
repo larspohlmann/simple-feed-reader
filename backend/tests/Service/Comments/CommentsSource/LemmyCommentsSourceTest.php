@@ -22,6 +22,7 @@ use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Fetch\HostThrottle;
 use App\Service\RateLimit\Exception\RateLimitedException;
 use App\Tests\Support\StubFeedFetcher;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -115,6 +116,21 @@ final class LemmyCommentsSourceTest extends KernelTestCase
         self::assertFalse($this->source->serves(self::entry(discussion: $other)));
     }
 
+    /** @return iterable<string, array{string}> */
+    public static function addressesThatAreNoCleanHost(): iterable
+    {
+        yield 'userinfo' => ['https://u@h.example/post/1'];
+        yield 'port' => ['https://h.example:8080/post/1'];
+        yield 'query on the host' => ['https://h.example?x/post/1'];
+        yield 'fragment on the host' => ['https://h.example#x/post/1'];
+    }
+
+    #[DataProvider('addressesThatAreNoCleanHost')]
+    public function testServesNoPostWhoseHostIsNoCleanHost(string $address): void
+    {
+        self::assertFalse($this->source->serves(self::entry(discussion: Discussion::platformThread($address))));
+    }
+
     public function testEveryReaderOfAPostSharesItsAnswer(): void
     {
         $other = new User('other@example.com', $this->clock->now());
@@ -148,6 +164,21 @@ final class LemmyCommentsSourceTest extends KernelTestCase
                 static fn (EntryCommentModel $comment): array => [$comment->url, $comment->depth],
                 $this->comments(),
             ),
+        );
+    }
+
+    public function testACraftedAnswerWithRepeatedAndSelfParentedIdsEmitsEachCommentOnce(): void
+    {
+        $answer = (string) json_encode(['comments' => [
+            self::node(5, '0.5'),
+            self::node(5, '0.5.5'),
+            self::node(6, '0.6.6'),
+            self::node(7, '0.5.7'),
+        ]]);
+
+        self::assertSame(
+            [['https://lemmy.world/comment/5', 0], ['https://lemmy.world/comment/7', 1]],
+            self::urlsAndDepths($this->read($answer)),
         );
     }
 
@@ -251,6 +282,29 @@ final class LemmyCommentsSourceTest extends KernelTestCase
         $this->expectException(CommentsUnavailableException::class);
 
         $this->fetch(self::entry('https://example.org/article'));
+    }
+
+    /** @return array<string, mixed> */
+    private static function node(int $id, string $path): array
+    {
+        return [
+            'comment' => ['id' => $id, 'path' => $path, 'ap_id' => 'https://lemmy.world/comment/' . $id,
+                'content' => 'Text ' . $id],
+            'creator' => ['name' => 'a', 'actor_id' => 'https://lemmy.world/u/a'],
+        ];
+    }
+
+    /**
+     * @param list<EntryCommentModel> $comments
+     *
+     * @return list<array{string|null, int}>
+     */
+    private static function urlsAndDepths(array $comments): array
+    {
+        return array_map(
+            static fn (EntryCommentModel $comment): array => [$comment->url, $comment->depth],
+            $comments,
+        );
     }
 
     private function requestFor(Entry $entry): CommentsRequest
