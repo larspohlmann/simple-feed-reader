@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
+use App\Entity\Discussion;
 use App\Entity\Entry;
 use App\Entity\SocialAccount;
 use App\Entity\User;
+use App\Enum\CommentsLoad;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Service\Foundation\Crypto\InstanceSecretCipher;
@@ -68,9 +70,39 @@ trait RoutesSocialApis
         return $account;
     }
 
+    private function lemmyPostFor(User $user, string $page = 'https://lemmy.example/post/42'): int
+    {
+        $post = (new NetworkFeedSubscriptions($this->entityManager()));
+        $subscription = $post->subscribe($user, 'https://lemmy.example/feeds/' . md5($page) . '.xml');
+        $entry = new Entry(
+            $subscription->getFeed(),
+            $page,
+            null,
+            'A post title',
+            new \DateTimeImmutable('2026-10-12T10:00:00Z'),
+            new \DateTimeImmutable('2026-10-12T10:00:00Z'),
+        );
+        $entry->setDiscussion(Discussion::of($page, null, CommentsLoad::Auto));
+        $this->entityManager()->persist($entry);
+        $this->entityManager()->flush();
+
+        return $entry->requireId();
+    }
+
     private function lemmyAccountOf(User $user, string $host = 'lemmy.example'): SocialAccount
     {
-        $account = SocialAccounts::lemmyOf($user, $host);
+        /** @var InstanceSecretCipher $instanceCipher */
+        $instanceCipher = self::getContainer()->get(InstanceSecretCipher::class);
+        $account = new SocialAccount(
+            $user,
+            SocialNetwork::Lemmy,
+            'lars@' . $host,
+            '@lars@' . $host,
+            'https://' . $host,
+            (new SocialCredentialCipher($instanceCipher))->seal($user->requireId(), SocialAccounts::LEMMY_JWT),
+            '',
+            new \DateTimeImmutable('2026-10-12 10:00:00'),
+        );
         $this->entityManager()->persist($account);
         $this->entityManager()->flush();
 
