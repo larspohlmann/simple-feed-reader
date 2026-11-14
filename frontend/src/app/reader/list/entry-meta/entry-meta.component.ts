@@ -11,9 +11,10 @@ import { showsShortPill } from '../preview-image';
 
 /**
  * The line a magazine card or a list row ends on: the entry's pills, led by a Lemmy
- * post's score and comment count, with its actions right-aligned against them. One component, not a row assembled per
- * host, so the wrap geometry has one definition everywhere. A grouped compact
- * entry has no pills, so its actions live on the kicker line.
+ * post's score and comment count, with its actions right-aligned against them. One
+ * component, not a row assembled per host, so the wrap geometry has one definition
+ * everywhere. A grouped compact entry has no pills, so its actions live on the
+ * kicker line.
  */
 @Component({
   selector: 'app-entry-meta',
@@ -33,12 +34,16 @@ export class EntryMetaComponent {
   readonly imageShown = input(false);
   readonly size = input<Extract<IconSize, 'sm' | 'md'>>('sm');
   private readonly compactCount = inject(CompactCount);
-  protected readonly compactCommentCount = computed(() => {
+  protected readonly comments = computed(() => {
     const count = this.entry().commentCount;
-    return count === null ? null : this.compactCount.format(count);
+    if (count === null) {
+      return null;
+    }
+    return {
+      text: this.compactCount.format(count),
+      count,
+      labelKey: pluralKey('reader.discussionCounts.comments', count),
+    };
   });
-  protected readonly commentsKey = computed(() =>
-    pluralKey('reader.discussionCounts.comments', this.entry().commentCount ?? 0),
-  );
   readonly shortPill = computed(() => showsShortPill(this.entry(), this.imageShown()));
 }
