@@ -6,6 +6,8 @@ import {
   installMockResizeObserver,
   MockResizeObserver,
 } from '../../../../testing/resize-observer-testing';
+import { TranslocoService } from '@jsverse/transloco';
+import { FeedLanguage } from '../../feed-language';
 import { FeedIntroComponent } from './feed-intro.component';
 
 describe('FeedIntroComponent', () => {
@@ -27,12 +29,14 @@ describe('FeedIntroComponent', () => {
     imageUrl?: string;
     faviconUrl?: string;
     siteUrl?: string;
+    language?: FeedLanguage;
   }): HTMLElement {
     fixture.componentRef.setInput('title', values.title ?? null);
     fixture.componentRef.setInput('description', values.description ?? null);
     fixture.componentRef.setInput('imageUrl', values.imageUrl ?? null);
     fixture.componentRef.setInput('faviconUrl', values.faviconUrl ?? null);
     fixture.componentRef.setInput('siteUrl', values.siteUrl ?? null);
+    fixture.componentRef.setInput('language', values.language ?? null);
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
   }
@@ -86,6 +90,21 @@ describe('FeedIntroComponent', () => {
     const host = render({ description: 'Only text.' });
     expect(host.querySelector('img')).toBeNull();
     expect(host.querySelector('a')).toBeNull();
+  });
+
+  it("names the feed's language beside its title, in the UI language", () => {
+    const host = render({ title: 'Tagesschau', language: 'de' });
+    expect(host.querySelector('.title .language')?.textContent?.trim()).toBe('German');
+  });
+
+  it('translates the language name with the UI', () => {
+    TestBed.inject(TranslocoService).setActiveLang('de');
+    const host = render({ title: 'Le Monde', language: 'fr' });
+    expect(host.querySelector('.language')?.textContent?.trim()).toBe('Französisch');
+  });
+
+  it('shows no language for a feed without one', () => {
+    expect(render({ title: 'Somewhere' }).querySelector('.language')).toBeNull();
   });
 
   it('omits the description when it is null', () => {

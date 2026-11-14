@@ -16,6 +16,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { observeResize } from '../../../shared/observe-resize';
+import { FeedLanguage, feedLanguageNameKey } from '../../feed-language';
 
 const CLAMPED_LINES = 2;
 
@@ -49,6 +50,11 @@ export class FeedIntroComponent {
    *  the block would sit next to empty space for nearly all of them. */
   readonly faviconUrl = input<string | null>(null);
   readonly siteUrl = input<string | null>(null);
+  readonly language = input<FeedLanguage | null>(null);
+  protected readonly languageNameKey = computed(() => {
+    const language = this.language();
+    return language ? feedLanguageNameKey(language) : null;
+  });
 
   /** A dead logo URL must leave no broken-image box, so the <img> is dropped
    *  rather than left to render its own failure. Mirrors app-favicon. */

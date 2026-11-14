@@ -78,7 +78,8 @@ export class ListHeading {
     const hasIntro =
       subscription.description !== null ||
       subscription.imageUrl !== null ||
-      subscription.siteUrl !== null;
+      subscription.siteUrl !== null ||
+      Boolean(subscription.language);
     return hasIntro ? subscription : null;
   });
 

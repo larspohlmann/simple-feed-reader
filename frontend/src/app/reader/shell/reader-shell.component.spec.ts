@@ -3645,6 +3645,7 @@ describe('ReaderShellComponent', () => {
         siteUrl: string | null;
         title?: string;
         social?: { network: string; accountId: number; kind: string };
+        language?: string;
       },
       layout: ReadingLayout = 'magazine',
     ): HTMLElement {
@@ -3699,6 +3700,17 @@ describe('ReaderShellComponent', () => {
       });
 
       expect(host.querySelector('app-feed-intro .title')?.textContent?.trim()).toBe('Home@bsky');
+    });
+
+    it("names the feed's language in the intro", () => {
+      const host = mountWithSubscriptionSelected({
+        description: null,
+        imageUrl: null,
+        siteUrl: null,
+        language: 'es',
+      });
+
+      expect(host.querySelector('app-feed-intro .language')?.textContent?.trim()).toBe('Spanish');
     });
 
     it('shows no feed intro in the list layout', () => {

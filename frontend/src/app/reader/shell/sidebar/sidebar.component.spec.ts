@@ -118,6 +118,7 @@ const sub = (id: number, unread = 0): SubscriptionDto => ({
   includeInForYou: true,
   includeInSavedSearches: true,
   includeInTrending: true,
+  language: null,
   social: null,
 });
 

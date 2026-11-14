@@ -9,6 +9,7 @@ import { NetworkFeedKind, SocialNetworkName } from '../core/social-network';
 import { EntrySocialDto } from './entry-social';
 import { ChapterDto, TranscriptDto } from './episode-detail';
 import { TrendingStory, TrendingUnopened, TrendingWindow } from './trending/trending.models';
+import { FeedLanguage, FeedLanguageChoice } from './feed-language';
 
 export type {
   DiscoverResult,
@@ -147,6 +148,8 @@ export interface SubscriptionDto {
   includeInSavedSearches: boolean;
   /** False keeps this feed's shares out of Trending. */
   includeInTrending: boolean;
+  /** Shared by every subscriber; null until a refresh guesses it, and always for a social timeline. */
+  language: FeedLanguage | null;
   /** Set for a private timeline, list or custom feed of a connected account (#1599); null for any other feed. */
   social: SocialFeedRefDto | null;
 }
@@ -428,6 +431,8 @@ export interface SubscriptionUpdate {
   includeInForYou?: boolean;
   includeInSavedSearches?: boolean;
   includeInTrending?: boolean;
+  /** Absent leaves the feed's language as it is. */
+  language?: FeedLanguageChoice;
 }
 
 /** A drag of one feed between the sidebar's lists: out of `fromTagId` and into

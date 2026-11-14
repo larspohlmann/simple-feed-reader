@@ -1052,7 +1052,10 @@
       "showInSavedSearches": "Mostrar en búsquedas guardadas",
       "showInTrending": "Mostrar en Tendencias",
       "saving": "Guardando…",
-      "save": "Guardar"
+      "save": "Guardar",
+      "language": "Idioma",
+      "languageAutomatic": "Automático",
+      "languageHint": "Se aplica a todos los que siguen este feed. «Automático» lo vuelve a detectar en la próxima actualización."
     }
   },
   "problem": {
@@ -1452,6 +1455,12 @@
     "includeInForYou": "Mostrar en Para ti",
     "includeInSavedSearches": "Mostrar en búsquedas guardadas",
     "includeInTrending": "Mostrar en Tendencias",
+    "feedLanguage": {
+      "de": "alemán",
+      "en": "inglés",
+      "fr": "francés",
+      "es": "español"
+    },
     "excludedFrom": "No se muestra en {{surfaces}}",
     "dropToRemoveTags": "Suelta aquí para quitar etiquetas",
     "unread": "solo no leídas",
