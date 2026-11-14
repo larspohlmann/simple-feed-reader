@@ -62,9 +62,11 @@ final readonly class EntryListRowEnricher
         $linkCards = $this->linkCards->contentsByEntryIds($entryIds);
         $threads = $this->threadPosts->byEntryIds($entryIds);
         $pendingIds = array_flip($this->shareEnrichments->pendingEntryIdsAmong(self::topLevelEntryIdsOf($rows)));
-        $accountsByNetwork = $this->accountsByNetworkOf($entries, $userId);
-        $socialStates = $this->socialStatesOf($entries, $accountsByNetwork, $userId);
-        $votes = $this->votesOf($entries, $accountsByNetwork, $userId);
+        $postAddresses = self::postAddressesOf($entries);
+        $lemmyPostIds = self::lemmyPostIdsOf($entries);
+        $accountsByNetwork = $this->accountsByNetworkOf($postAddresses, $lemmyPostIds, $userId);
+        $socialStates = $this->socialStatesOf($entries, $postAddresses, $accountsByNetwork, $userId);
+        $votes = $this->votesOf($lemmyPostIds, $accountsByNetwork, $userId);
         $origins = $this->savedOrigins->originsByEntryIds(self::savedEntryIdsOf($entries));
 
         $enrichments = [];
@@ -86,13 +88,14 @@ final readonly class EntryListRowEnricher
     }
 
     /**
-     * @param array<int, Entry> $entries
+     * @param array<int, SocialPostAddressModel> $postAddresses
+     * @param list<int> $lemmyPostIds
      *
      * @return array<string, non-empty-list<SocialAccount>> by network value; read only when a post can use them
      */
-    private function accountsByNetworkOf(array $entries, int $userId): array
+    private function accountsByNetworkOf(array $postAddresses, array $lemmyPostIds, int $userId): array
     {
-        if ([] === self::postAddressesOf($entries) && [] === self::lemmyPostIdsOf($entries)) {
+        if ([] === $postAddresses && [] === $lemmyPostIds) {
             return [];
         }
 
@@ -100,18 +103,18 @@ final readonly class EntryListRowEnricher
     }
 
     /**
-     * @param array<int, Entry> $entries
+     * @param list<int> $lemmyPostIds
      * @param array<string, non-empty-list<SocialAccount>> $accountsByNetwork
      *
      * @return array<int, VoteScore> by entry id, for every Lemmy post of a reader with a Lemmy account in any status
      */
-    private function votesOf(array $entries, array $accountsByNetwork, int $userId): array
+    private function votesOf(array $lemmyPostIds, array $accountsByNetwork, int $userId): array
     {
         if (!isset($accountsByNetwork[SocialNetwork::Lemmy->value])) {
             return [];
         }
-        $lemmyPostIds = self::lemmyPostIdsOf($entries);
-        $stored = [] === $lemmyPostIds ? [] : $this->discussionVotes->scoresAmong($userId, $lemmyPostIds);
+
+        $stored = $this->discussionVotes->scoresAmong($userId, $lemmyPostIds);
 
         return $stored + array_fill_keys($lemmyPostIds, VoteScore::None);
     }
@@ -131,13 +134,13 @@ final readonly class EntryListRowEnricher
 
     /**
      * @param array<int, Entry> $entries
+     * @param array<int, SocialPostAddressModel> $posts
      * @param array<string, non-empty-list<SocialAccount>> $accountsByNetwork
      *
      * @return array<int, EntryListRowSocial> by entry id, for every post
      */
-    private function socialStatesOf(array $entries, array $accountsByNetwork, int $userId): array
+    private function socialStatesOf(array $entries, array $posts, array $accountsByNetwork, int $userId): array
     {
-        $posts = self::postAddressesOf($entries);
         if ([] === $posts) {
             return [];
         }
