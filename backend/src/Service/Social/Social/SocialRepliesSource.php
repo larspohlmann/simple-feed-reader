@@ -173,6 +173,6 @@ final readonly class SocialRepliesSource implements CommentsSourceInterface
     private static function postOf(Entry $entry): SocialPostAddressModel
     {
         return SocialPostAddress::of($entry)
-            ?? throw new CommentsUnavailableException('The entry is not a Bluesky or Mastodon post.');
+            ?? throw new CommentsUnavailableException('The entry is not a post this reader can act on.');
     }
 }

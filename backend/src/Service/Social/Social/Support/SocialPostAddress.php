@@ -28,7 +28,7 @@ final class SocialPostAddress
     /** @throws NotASocialPostException */
     public static function ofOrRefuse(Entry $entry): SocialPostAddressModel
     {
-        return self::of($entry) ?? throw new NotASocialPostException('This entry is not a Bluesky or Mastodon post.');
+        return self::of($entry) ?? throw new NotASocialPostException('This entry is not a post this reader can act on.');
     }
 
     /**

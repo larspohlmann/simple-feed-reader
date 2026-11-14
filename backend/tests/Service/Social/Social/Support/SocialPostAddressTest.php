@@ -116,7 +116,7 @@ final class SocialPostAddressTest extends TestCase
 
     public function testAnEntryThatIsNoPostIsRefused(): void
     {
-        $this->expectExceptionObject(new NotASocialPostException('This entry is not a Bluesky or Mastodon post.'));
+        $this->expectExceptionObject(new NotASocialPostException('This entry is not a post this reader can act on.'));
 
         SocialPostAddress::ofOrRefuse(self::entry(new Feed('https://example.com/feed.xml'), self::POST_URI, null));
     }
