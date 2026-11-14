@@ -25,7 +25,7 @@ final readonly class FeedLanguageResolver
             return $feed->getLanguage();
         }
 
-        return FeedLanguage::fromTag(trim($parsed->declaredLanguage ?? ''))
+        return FeedLanguage::fromTag($parsed->declaredLanguage ?? '')
             ?? $this->guess->bestFor(self::guessText($parsed));
     }
 
