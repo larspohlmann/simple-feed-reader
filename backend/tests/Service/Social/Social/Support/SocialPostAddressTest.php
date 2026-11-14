@@ -127,10 +127,6 @@ final class SocialPostAddressTest extends TestCase
         self::assertNull(SocialPostAddress::of($entry));
         self::assertEquals(
             new SocialPostAddressModel(SocialNetwork::Lemmy, 'https://lemmy.example/post/42'),
-            SocialPostAddress::respondableOf($entry),
-        );
-        self::assertEquals(
-            new SocialPostAddressModel(SocialNetwork::Lemmy, 'https://lemmy.example/post/42'),
             SocialPostAddress::respondableOrRefuse($entry),
         );
     }
@@ -139,7 +135,6 @@ final class SocialPostAddressTest extends TestCase
     {
         $entry = self::entry(new Feed('https://example.com/feed.xml'), self::POST_URI, null);
 
-        self::assertNull(SocialPostAddress::respondableOf($entry));
         $this->expectException(NotASocialPostException::class);
 
         SocialPostAddress::respondableOrRefuse($entry);

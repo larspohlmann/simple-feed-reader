@@ -47,20 +47,21 @@ final class SocialPostAddress
         return $reply ?? throw new NotASocialPostException('The reply is no post on the entry\'s network.');
     }
 
-    /** The post an entry can be answered at: any `of()` post, else the Lemmy post its discussion is. */
-    public static function respondableOf(Entry $entry): ?SocialPostAddressModel
-    {
-        $lemmyPost = LemmyPostAddress::of($entry);
-
-        return self::of($entry)
-            ?? (null === $lemmyPost ? null : new SocialPostAddressModel(SocialNetwork::Lemmy, $lemmyPost->pageUrl()));
-    }
-
-    /** @throws NotASocialPostException */
+    /**
+     * The post an entry can be answered at: any `of()` post, else the Lemmy post its discussion is.
+     *
+     * @throws NotASocialPostException
+     */
     public static function respondableOrRefuse(Entry $entry): SocialPostAddressModel
     {
-        return self::respondableOf($entry)
+        $post = self::of($entry);
+        if (null !== $post) {
+            return $post;
+        }
+        $lemmyPost = LemmyPostAddress::of($entry)
             ?? throw new NotASocialPostException('This entry is not a Bluesky, Mastodon or Lemmy post.');
+
+        return new SocialPostAddressModel(SocialNetwork::Lemmy, $lemmyPost->pageUrl());
     }
 
     /**

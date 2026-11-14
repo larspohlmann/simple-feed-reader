@@ -129,6 +129,9 @@ final readonly class DiscussionVotes
 
             return;
         }
+        if ($stored->getScore() === $myVote && $stored->getSocialAccount() === $account) {
+            return;
+        }
         $stored->recast($account, $myVote, $this->clock->now());
         $this->entityManager->flush();
     }
