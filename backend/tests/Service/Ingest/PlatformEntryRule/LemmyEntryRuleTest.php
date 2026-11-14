@@ -84,6 +84,13 @@ final class LemmyEntryRuleTest extends TestCase
         self::assertSame(self::LINK_POST, $result->guid);
     }
 
+    public function testLeavesAnEntryWhoseHeaderIsNotTheLemmyOneUnchanged(): void
+    {
+        $entry = self::entry(self::LINK_POST, self::LINK_POST, 'submitted by someone, not a Lemmy header');
+
+        self::assertSame($entry, (new LemmyEntryRule())->apply($entry));
+    }
+
     public function testAPostUrlIsTheDiscussionAddressBeforeTheGuid(): void
     {
         $entry = self::entry('tag:lemmy.world,2026:post-1', self::LINK_POST, self::HEADER);
