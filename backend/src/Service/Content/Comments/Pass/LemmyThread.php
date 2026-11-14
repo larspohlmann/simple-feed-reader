@@ -21,14 +21,8 @@ final readonly class LemmyThread
         private ?string $entryAuthorUrl,
         private MarkdownHtml $markdown,
         private EntrySanitizer $sanitizer,
-        private bool $carriesVotes = false,
+        private bool $carriesVotes,
     ) {
-    }
-
-    #[\NoDiscard]
-    public function forVoter(): self
-    {
-        return clone($this, ['carriesVotes' => true]);
     }
 
     /**
