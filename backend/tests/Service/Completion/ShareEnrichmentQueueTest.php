@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Completion;
 
+use App\Entity\Discussion;
 use App\Entity\Entry;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
@@ -121,6 +122,21 @@ final class ShareEnrichmentQueueTest extends DbTestCase
 
         self::assertSame([$guid => ShareEnrichmentKind::LinkCards], $this->queuedKinds());
         self::assertSame(ShareKind::Link, $this->reload($share)->getShareKind());
+    }
+
+    public function testADiscussionThreadIsQueuedForTheCardsOfTheLinksItsBodyShows(): void
+    {
+        $thread = $this->entry(
+            'https://lemmy.world/post/1',
+            '<a href="https://news.example/a">https://news.example/a</a>',
+        );
+        $thread->setDiscussion(Discussion::platformThread('https://lemmy.world/post/1'));
+
+        $this->queue->queue([$thread]);
+        $this->entityManager->flush();
+
+        self::assertSame(['https://lemmy.world/post/1' => ShareEnrichmentKind::LinkCards], $this->queuedKinds());
+        self::assertSame(ShareKind::Link, $this->reload($thread)->getShareKind());
     }
 
     public function testABlueskyPostHoldsTheLinkPlaceholderUntilItsEmbedArrives(): void
