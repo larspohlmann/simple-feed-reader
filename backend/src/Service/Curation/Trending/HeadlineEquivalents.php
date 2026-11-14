@@ -63,7 +63,7 @@ final readonly class HeadlineEquivalents
     /** Keyed by the language's Snowball stem without diacritics: a key merges every word of the language stemming to it. */
     private const array STEMS_BY_LANGUAGE = [
         'de' => [
-            'selenskyj' => 'selens', 'zelensky' => 'selens',
+            'selenskyj' => 'selens',
             'russland' => 'russia',
             'chinas' => 'china',
             'frankreich' => 'france',
