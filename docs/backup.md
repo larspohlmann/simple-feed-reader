@@ -313,6 +313,8 @@ article mark, each included social network and each social network kept out of F
 | `image.urlHash` | A value the application calculates from the image address, which the file already carries. The restore calculates it again for each article, so it is never old. |
 | `image.checkedAt` | The time at which this instance judged the image. A restored image was not judged here, so the field stays empty. An empty field does not put the image into the check queue. |
 | `image.verifyAttempts` | The queue marker and failure count of this instance's check. A restored image is not put into the queue. The instance shows it as the old instance did. |
+| `discussion.score` | A Lemmy post's score, rewritten on every fetch of its feed; a restored one would be stale before the reader saw it. |
+| `discussion.commentCount` | A Lemmy post's comment count, rewritten on every fetch of its feed; a restored one would be stale before the reader saw it. |
 
 **On a link card.**
 
