@@ -104,6 +104,9 @@ final readonly class SearchFeedEditor
     private function nonMatchingIds(SocialFeed $socialFeed, PrivateFeedModel $search): array
     {
         $account = $socialFeed->getSocialAccount();
+        if (!$account->getNetwork()->checksSearchResults()) {
+            return [];
+        }
         $matches = SocialSearchMatch::matcher($search->remoteId);
         $nonMatchingIds = [];
         $lastEntryId = 0;

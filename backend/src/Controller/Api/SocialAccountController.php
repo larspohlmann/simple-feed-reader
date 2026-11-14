@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Dto\Social\ConnectBlueskyRequest;
+use App\Dto\Social\ConnectLemmyRequest;
 use App\Dto\Social\ConnectMastodonRequest;
 use App\Dto\Social\ReplaceCredentialRequest;
 use App\Entity\User;
@@ -61,6 +62,18 @@ final readonly class SocialAccountController
     public function connectMastodon(
         #[CurrentUser] User $user,
         #[MapRequestPayload] ConnectMastodonRequest $request,
+    ): JsonResponse {
+        $credentials = $request->toCredentials();
+        $this->rateLimitGuard->enforceForUser($this->socialAccountLimiter, $user);
+        $account = $this->connector->connect($user, $credentials);
+
+        return new JsonResponse($this->accountJson->account($account, []), Response::HTTP_CREATED);
+    }
+
+    #[Route('/lemmy', name: 'api_me_social_accounts_connect_lemmy', methods: ['POST'])]
+    public function connectLemmy(
+        #[CurrentUser] User $user,
+        #[MapRequestPayload] ConnectLemmyRequest $request,
     ): JsonResponse {
         $credentials = $request->toCredentials();
         $this->rateLimitGuard->enforceForUser($this->socialAccountLimiter, $user);

@@ -279,6 +279,16 @@ describe('SocialImportDialogComponent', () => {
     expect(close).toHaveBeenCalledWith(result);
   });
 
+  it("labels a Lemmy account's tabs Communities, Timelines and Search", () => {
+    const fixture = loaded(candidates(), 'lemmy');
+
+    expect(tabLabels(fixture).map((label) => label.replace(/\s*\d+$/, ''))).toEqual([
+      'Communities',
+      'Timelines',
+      'Search',
+    ]);
+  });
+
   it("names the trending row in the user's language", () => {
     const trending = collection({ kind: 'trending', id: null, name: 'Trending' });
     const fixture = loaded(candidates({ lists: [HOME, trending] }), 'mastodon');

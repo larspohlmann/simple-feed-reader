@@ -148,12 +148,13 @@ final readonly class PrivateFeeds
         }
     }
 
-    /** @return 'bluesky-api'|'mastodon-api' */
+    /** @return 'bluesky-api'|'mastodon-api'|'lemmy-api' */
     private static function sourceFormatOf(SocialAccount $account): string
     {
         return match ($account->getNetwork()) {
             SocialNetwork::Bluesky => SourceFormat::BLUESKY_API,
             SocialNetwork::Mastodon => SourceFormat::MASTODON_API,
+            SocialNetwork::Lemmy => SourceFormat::LEMMY_API,
         };
     }
 }

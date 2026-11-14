@@ -8,11 +8,13 @@ use App\Entity\EntryMedia;
 use App\Entity\EntryMedium;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
+use App\Enum\VoteScore;
 use App\Service\Content\Comments\Model\CommentAuthorModel;
 use App\Service\Content\Comments\Model\CommentCountsModel;
 use App\Service\Content\Comments\Model\CommentEmbedsModel;
 use App\Service\Content\Comments\Model\CommentPostModel;
 use App\Service\Content\Comments\Model\CommentViewerModel;
+use App\Service\Content\Comments\Model\CommentVoteModel;
 use App\Service\Content\Comments\Model\CommentsPageModel;
 use App\Service\Content\Comments\Model\CommentsResultModel;
 use App\Service\Content\Comments\Model\EntryCommentModel;
@@ -80,6 +82,7 @@ final class CommentsJsonTest extends TestCase
             ],
             'quote' => JsonMappers::quotedPostJson()->ofOrNull($quote),
             'score' => -4,
+            'vote' => null,
             'post' => [
                 'address' => 'at://did:plc:ann/app.bsky.feed.post/2',
                 'counts' => ['likes' => 5, 'reposts' => 1, 'replies' => 2, 'quotes' => 0],
@@ -104,6 +107,34 @@ final class CommentsJsonTest extends TestCase
 
         self::assertNull($json['post']);
         self::assertNull($json['score']);
+    }
+
+    public function testACommentCarriesTheReadersVote(): void
+    {
+        $comment = new EntryCommentModel(new CommentAuthorModel(null), null, null, '', false)
+            ->withVote(new CommentVoteModel('https://origin.example/comment/5', VoteScore::Down, false));
+
+        $json = self::firstComment(JsonMappers::commentsJson()->one(CommentsResultModel::ok(
+            new CommentsPageModel([$comment]),
+            new \DateTimeImmutable('2026-10-16T11:00:00+00:00'),
+        )));
+
+        self::assertSame(
+            ['address' => 'https://origin.example/comment/5', 'myVote' => -1, 'canReply' => false],
+            $json['vote'],
+        );
+    }
+
+    public function testACommentWithoutAVoteHasNone(): void
+    {
+        $comment = new EntryCommentModel(new CommentAuthorModel(null), null, null, '', false);
+
+        $json = self::firstComment(JsonMappers::commentsJson()->one(CommentsResultModel::ok(
+            new CommentsPageModel([$comment]),
+            new \DateTimeImmutable('2026-10-16T11:00:00+00:00'),
+        )));
+
+        self::assertNull($json['vote']);
     }
 
     public function testACommentWithoutEmbedsHasNoCardNoQuoteAndNoMedia(): void

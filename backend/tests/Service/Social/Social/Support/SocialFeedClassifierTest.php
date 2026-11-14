@@ -25,6 +25,11 @@ final class SocialFeedClassifierTest extends TestCase
         yield 'a Mastodon private feed' => ['social:mastodon:7:list:12', SourceFormat::MASTODON_API, $mastodon];
         yield 'a Bluesky profile feed' => [self::BLUESKY_PROFILE, SourceFormat::XML, $bluesky];
         yield 'a Mastodon profile feed' => ['https://mastodon.social/@Gargron.rss', SourceFormat::XML, $mastodon];
+        yield 'a community RSS feed' => [
+            'https://feddit.example/feeds/c/rss.xml',
+            SourceFormat::XML,
+            SocialNetwork::Lemmy,
+        ];
         yield 'a synthetic URL under a plain format' => ['social:bluesky:4:home', SourceFormat::XML, null];
         yield 'a malformed synthetic URL' => ['social:bluesky:x:home', SourceFormat::BLUESKY_API, null];
         yield 'an ordinary feed' => ['https://example.com/feed.xml', SourceFormat::XML, null];

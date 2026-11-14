@@ -130,7 +130,7 @@ final class EntryNetworkScopeTest extends ApiTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
         $body = $this->payload($this->client);
         self::assertSame('validation_error', $body['type']);
-        self::assertSame(['network' => ['Unknown network. Use one of: bluesky, mastodon.']], $body['errors']);
+        self::assertSame(['network' => ['Unknown network. Use one of: bluesky, mastodon, lemmy.']], $body['errors']);
     }
 
     public function testMarkingANetworkReadLeavesItsUnreadListEmptyAndOtherFeedsUnread(): void

@@ -2,11 +2,10 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslocoService } from '@jsverse/transloco';
 import {
-  homeLabel,
-  isUnrenamedHome,
   isUnrenamedSavedFeed,
   isUnrenamedSearch,
   savedFeedLabel,
+  timelineLabel,
 } from '../feeds/display-title';
 import { SubscriptionDto } from '../models';
 import { networkOf } from './social-sections';
@@ -26,7 +25,7 @@ export class SubscriptionRows {
   readonly stored = signal<SubscriptionDto[]>([]);
 
   /**
-   * The rows every surface shows: an unrenamed Home or saved feed is titled in the active language, an unrenamed
+   * The rows every surface shows: an unrenamed timeline or saved feed is titled in the active language, an unrenamed
    * search by its current query.
    */
   readonly all = computed(() => {
@@ -44,14 +43,12 @@ export class SubscriptionRows {
   }
 
   private withDisplayTitle(subscription: SubscriptionDto): SubscriptionDto {
-    const social = subscription.social;
     if (isUnrenamedSearch(subscription))
       return { ...subscription, title: subscription.social.query };
     if (isUnrenamedSavedFeed(subscription)) {
       return { ...subscription, title: savedFeedLabel(this.i18n, networkOf(subscription)) };
     }
-    return social && isUnrenamedHome(subscription)
-      ? { ...subscription, title: homeLabel(this.i18n, social.network) }
-      : subscription;
+    const timelineTitle = timelineLabel(this.i18n, subscription);
+    return timelineTitle === null ? subscription : { ...subscription, title: timelineTitle };
   }
 }

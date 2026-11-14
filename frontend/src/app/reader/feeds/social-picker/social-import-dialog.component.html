@@ -8,7 +8,7 @@
       class="tabs"
       data-testid="social-import-tabs"
       ariaLabelKey="settings.social.importTabs"
-      labelPrefix="settings.social.importTab."
+      [labelPrefix]="list.tabLabelPrefix"
       [options]="list.tabs"
       [selected]="list.tab()"
       [counts]="list.tabCounts()"

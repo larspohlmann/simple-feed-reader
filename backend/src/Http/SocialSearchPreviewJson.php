@@ -27,11 +27,21 @@ final readonly class SocialSearchPreviewJson
     private static function post(ParsedEntryModel $entry): array
     {
         return [
-            'url' => $entry->url,
+            'url' => $entry->url ?? $entry->discussion->url,
             'author' => $entry->author,
             'authorAvatarUrl' => $entry->authorAvatarUrl,
-            'text' => PlainText::fromHtmlBlocks($entry->contentHtml) ?? $entry->headline->text,
+            'text' => self::text($entry),
             'publishedAt' => $entry->publishedAt?->format(\DateTimeInterface::ATOM),
         ];
+    }
+
+    private static function text(ParsedEntryModel $entry): string
+    {
+        $body = PlainText::fromHtmlBlocks($entry->contentHtml);
+        if ($body === null) {
+            return $entry->headline->text;
+        }
+
+        return $entry->headline->derived ? $body : $entry->headline->text . ' — ' . $body;
     }
 }

@@ -15,6 +15,12 @@ import {
   SocialViewerDto,
 } from './entry-social';
 import { refreshParams } from './refresh-params';
+import { VoteValue } from './vote-pill/vote';
+
+export interface VoteAnswer {
+  myVote: VoteValue;
+  score: number;
+}
 
 const RESPONSE_PATHS: Record<ResponseKind, string> = { reply: 'replies', quote: 'quotes' };
 
@@ -72,6 +78,22 @@ export class SocialPostApi {
     return this.http.delete<EntryRepostDto>(this.entryPath(entryId, 'comments/repost'), {
       params: { address },
     });
+  }
+
+  vote(entryId: number, score: VoteValue): Observable<VoteAnswer> {
+    return this.http.put<VoteAnswer>(this.entryPath(entryId, 'vote'), { score });
+  }
+
+  myVote(entryId: number): Observable<{ myVote: VoteValue }> {
+    return this.http.get<{ myVote: VoteValue }>(this.entryPath(entryId, 'vote'));
+  }
+
+  voteComment(entryId: number, address: string, score: VoteValue): Observable<VoteAnswer> {
+    return this.http.put<VoteAnswer>(
+      this.entryPath(entryId, 'comments/vote'),
+      { score },
+      { params: { address } },
+    );
   }
 
   composer(target: PostTargetDto, accountId?: number): Observable<ComposerContextDto> {

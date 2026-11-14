@@ -12,11 +12,13 @@ final readonly class SocialPostModel
     /**
      * @noinspection AutowireWrongClass Built with new, never autowired
      *
-     * @param string      $postId           the Bluesky AT URI, or the status id on the account's own instance
+     * @param string      $postId           the Bluesky AT URI, or the status or post id on the account's own instance
      * @param string|null $contentId        the Bluesky record's CID, which a like or repost must name; null on Mastodon
      * @param string|null $existingLikeId   what unlikes the acting account's existing like: its Bluesky AT URI, or the
      *                                      status id on Mastodon
      * @param string|null $existingRepostId what undoes the acting account's repost, in the same form as a like
+     * @param string|null $commentId        the Lemmy comment answered, on the account's instance; null for a post and
+     *                                      on other networks
      */
     private function __construct(
         public SocialAccount $account,
@@ -27,6 +29,7 @@ final readonly class SocialPostModel
         public bool $canRepost,
         public ?SocialCountsModel $counts,
         public ResponseContextModel $responseContext,
+        public ?string $commentId = null,
     ) {
     }
 
@@ -38,6 +41,11 @@ final readonly class SocialPostModel
     public static function onMastodon(SocialAccount $account, string $statusId): self
     {
         return self::fresh($account, $statusId, null);
+    }
+
+    public static function onLemmy(SocialAccount $account, string $postId, ?string $commentId): self
+    {
+        return clone(self::fresh($account, $postId, null), ['commentId' => $commentId]);
     }
 
     #[\NoDiscard]

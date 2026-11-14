@@ -228,6 +228,13 @@ describe('ReaderViewComponent', () => {
   });
 
   describe('the vote pill in the head line (#2217)', () => {
+    it('givesTheHeadPillTheVote', () => {
+      const fixture = mount(entryWithBody('<p>x</p>', { score: 5, myVote: 1 }));
+
+      const up = fixture.nativeElement.querySelector('.head-line button[aria-label="Upvote"]');
+      expect(up?.getAttribute('aria-pressed')).toBe('true');
+    });
+
     it('sits before the tag pills when the entry has a score', () => {
       const fixture = mount(entryWithBody('<p>x</p>', { score: 463 }));
       const line = fixture.nativeElement.querySelector('.head-line') as HTMLElement;
@@ -244,6 +251,49 @@ describe('ReaderViewComponent', () => {
     it('is absent without a score', () => {
       const fixture = mount(entryWithBody('<p>x</p>', { score: null }));
       expect(fixture.nativeElement.querySelector('app-vote-pill')).toBeNull();
+    });
+
+    describe('the reply button after the pill (#2218)', () => {
+      const lemmyAccount = (status: 'connected' | 'needs_reconnect') =>
+        TestBed.overrideProvider(SubscriptionsStore, {
+          useValue: {
+            socialAccounts: signal([
+              { id: 1, network: 'lemmy', handle: '@ann@lemmy.example', status },
+            ]),
+          },
+        });
+      const replyButton = (fixture: ComponentFixture<ReaderViewComponent>) =>
+        fixture.nativeElement.querySelector(
+          '.head-line button.reply-action',
+        ) as HTMLButtonElement | null;
+
+      it('offersReplyToTheLemmyPost', () => {
+        lemmyAccount('connected');
+        const fixture = mount(entryWithBody('<p>x</p>', { id: 7, score: 5, myVote: 0 }));
+        const button = replyButton(fixture)!;
+        const pill = fixture.nativeElement.querySelector('.head-line app-vote-pill') as HTMLElement;
+
+        expect(button.getAttribute('aria-label')).toBe('Reply on Lemmy');
+        expect(
+          pill.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
+        button.click();
+        expect(TestBed.inject(PostActions).reply).toHaveBeenCalledWith(7, 'lemmy', null);
+      });
+
+      it('offersNoReplyWithoutAConnectedAccount', () => {
+        lemmyAccount('needs_reconnect');
+        const fixture = mount(entryWithBody('<p>x</p>', { score: 5, myVote: 0 }));
+
+        expect(replyButton(fixture)).toBeNull();
+      });
+
+      it('offersNoReplyOnAPostWithoutAVote', () => {
+        lemmyAccount('connected');
+        const fixture = mount(entryWithBody('<p>x</p>', { score: 5, myVote: null }));
+
+        expect(replyButton(fixture)).toBeNull();
+      });
     });
   });
 

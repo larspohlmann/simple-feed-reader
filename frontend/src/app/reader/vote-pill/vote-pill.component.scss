@@ -22,6 +22,46 @@
   opacity: 0.7;
 }
 
+button.arrow {
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  opacity: 1;
+
+  &:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: calc(-1 * var(--space-0));
+  }
+}
+
+@media (hover: hover) {
+  .pill:not(.up, .down) button.arrow:hover {
+    color: var(--text-primary);
+  }
+}
+
+.pill.up {
+  color: var(--accent);
+}
+
+.pill.down {
+  color: var(--danger);
+}
+
+:host(:not(.bare)) .pill.up {
+  --rim-base: var(--accent);
+
+  background: var(--accent-soft);
+}
+
+:host(:not(.bare)) .pill.down {
+  --rim-base: var(--danger);
+
+  background: var(--bg-danger);
+}
+
 .number {
   padding: 0 var(--space-0);
   font-variant-numeric: tabular-nums;

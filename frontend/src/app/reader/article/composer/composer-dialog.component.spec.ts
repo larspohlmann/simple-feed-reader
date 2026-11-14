@@ -320,6 +320,30 @@ describe('ComposerDialogComponent', () => {
     expect(sendButton(fixture).disabled).toBe(true);
   });
 
+  describe('replying on Lemmy', () => {
+    const lemmy = () => target({ network: 'lemmy', address: 'https://lemmy.example/comment/12' });
+
+    it('heads the reply for Lemmy and shows no visibility row', () => {
+      api.composer.mockReturnValue(
+        of(context({ accounts: [{ id: 9, handle: '@lars@lemmy.example' }], visibility: null })),
+      );
+      const fixture = mount(lemmy());
+
+      expect(element(fixture).querySelector('h1, h2')?.textContent).toContain('Reply on Lemmy');
+      expect(element(fixture).querySelector('#reply-visibility')).toBeNull();
+    });
+
+    it('says a locked post cannot be replied to', () => {
+      api.composer.mockReturnValue(of(context({ canSend: false, visibility: null })));
+      const fixture = mount(lemmy());
+
+      expect(element(fixture).querySelector('[role="alert"]')?.textContent).toContain(
+        'This post is locked',
+      );
+      expect(textArea(fixture).disabled).toBe(true);
+    });
+  });
+
   it('writes a quote under its own heading and sends it as a quote', () => {
     api.composer.mockReturnValue(of(context({ kind: 'quote', text: '' })));
     const fixture = mount(target({ kind: 'quote' }));

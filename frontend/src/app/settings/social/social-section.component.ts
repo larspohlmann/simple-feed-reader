@@ -17,6 +17,21 @@ import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast
 import { SocialNetworkName } from '../../core/social-network';
 import { SocialAccount, SocialAccountsService, SyncChange } from './social-accounts.service';
 
+interface ReconnectDraft {
+  readonly secret: string;
+  readonly totp: string;
+}
+
+interface LemmyDraft {
+  readonly instance: string;
+  readonly username: string;
+  readonly password: string;
+  readonly totp: string;
+}
+
+const EMPTY_LEMMY_DRAFT: LemmyDraft = { instance: '', username: '', password: '', totp: '' };
+const EMPTY_RECONNECT_DRAFT: ReconnectDraft = { secret: '', totp: '' };
+
 @Component({
   selector: 'app-social-section',
   imports: [
@@ -45,6 +60,7 @@ export class SocialSectionComponent {
 
   protected readonly blueskyAccounts = this.accountsOf('bluesky');
   protected readonly mastodonAccounts = this.accountsOf('mastodon');
+  protected readonly lemmyAccounts = this.accountsOf('lemmy');
 
   protected readonly blueskyFormOpen = signal(false);
   protected readonly mastodonFormOpen = signal(false);
@@ -53,11 +69,17 @@ export class SocialSectionComponent {
   protected readonly mastodonInstance = signal('');
   protected readonly mastodonToken = signal('');
   protected readonly mastodonHost = computed(() => hostOf(this.mastodonInstance()));
-  protected readonly reconnectSecrets = signal<Readonly<Record<number, string>>>({});
+  protected readonly lemmyFormOpen = signal(false);
+  protected readonly lemmyDraft = signal<LemmyDraft>(EMPTY_LEMMY_DRAFT);
+  protected readonly reconnectDrafts = signal<Readonly<Record<number, ReconnectDraft>>>({});
   protected readonly inputValue = inputValue;
 
   constructor() {
     this.svc.load();
+  }
+
+  protected reconnectTitleKey(account: SocialAccount): string {
+    return RECONNECT_TITLE_KEYS[account.network];
   }
 
   protected describeSince(account: SocialAccount): string {
@@ -86,18 +108,28 @@ export class SocialSectionComponent {
     });
   }
 
-  protected setReconnectSecret(id: number, secret: string): void {
-    this.reconnectSecrets.update((current) => ({ ...current, [id]: secret }));
+  protected reconnectDraft(id: number): ReconnectDraft {
+    return this.reconnectDrafts()[id] ?? EMPTY_RECONNECT_DRAFT;
   }
 
-  private forgetReconnectSecret(id: number): void {
-    this.reconnectSecrets.update((current) =>
+  protected setReconnectSecret(id: number, secret: string): void {
+    this.reconnectDrafts.update((current) => ({
+      ...current,
+      [id]: { ...this.reconnectDraft(id), secret },
+    }));
+  }
+
+  protected setReconnectTotp(id: number, totp: string): void {
+    this.reconnectDrafts.update((current) => ({
+      ...current,
+      [id]: { ...this.reconnectDraft(id), totp },
+    }));
+  }
+
+  private forgetReconnectDraft(id: number): void {
+    this.reconnectDrafts.update((current) =>
       Object.fromEntries(Object.entries(current).filter(([key]) => Number(key) !== id)),
     );
-  }
-
-  protected reconnectSecret(id: number): string {
-    return this.reconnectSecrets()[id] ?? '';
   }
 
   protected connectBluesky(): void {
@@ -120,6 +152,25 @@ export class SocialSectionComponent {
     });
   }
 
+  protected connectLemmy(): void {
+    const { instance, username, password, totp: rawTotp } = this.lemmyDraft();
+    const totp = rawTotp.trim();
+    this.svc
+      .connectLemmy({
+        instanceUrl: instance,
+        username,
+        password,
+        totpToken: totp === '' ? null : totp,
+      })
+      .subscribe({
+        next: () => {
+          this.resetLemmyForm();
+          this.announceConnected();
+        },
+        error: () => undefined,
+      });
+  }
+
   protected resetBlueskyForm(): void {
     this.blueskyHandle.set('');
     this.blueskyPassword.set('');
@@ -132,10 +183,20 @@ export class SocialSectionComponent {
     this.mastodonFormOpen.set(false);
   }
 
+  protected setLemmyField(field: keyof LemmyDraft, value: string): void {
+    this.lemmyDraft.update((draft) => ({ ...draft, [field]: value }));
+  }
+
+  protected resetLemmyForm(): void {
+    this.lemmyDraft.set(EMPTY_LEMMY_DRAFT);
+    this.lemmyFormOpen.set(false);
+  }
+
   protected reconnect(account: SocialAccount): void {
-    this.svc.reconnect(account.id, this.reconnectSecret(account.id)).subscribe({
+    const { secret, totp } = this.reconnectDraft(account.id);
+    this.svc.reconnect(account.id, secret, totp.trim() === '' ? null : totp.trim()).subscribe({
       next: () => {
-        this.setReconnectSecret(account.id, '');
+        this.forgetReconnectDraft(account.id);
         this.announceConnected();
       },
       error: () => undefined,
@@ -162,7 +223,7 @@ export class SocialSectionComponent {
       },
       () => {
         this.svc.disconnect(account.id);
-        this.forgetReconnectSecret(account.id);
+        this.forgetReconnectDraft(account.id);
       },
     );
   }
@@ -180,6 +241,12 @@ export class SocialSectionComponent {
     });
   }
 }
+
+const RECONNECT_TITLE_KEYS: Record<SocialNetworkName, string> = {
+  bluesky: 'settings.social.appPassword',
+  mastodon: 'settings.social.accessToken',
+  lemmy: 'settings.social.lemmyPassword',
+};
 
 function hostOf(instance: string): string | null {
   const typed = instance.trim();

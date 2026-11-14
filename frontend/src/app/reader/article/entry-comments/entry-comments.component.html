@@ -74,23 +74,13 @@
                     <span class="when">{{ when(publishedAt) }}</span>
                   }
                 }
-                <span class="byline-end">
-                  @if (c.score !== null) {
-                    <app-vote-pill class="score" variant="bare" [score]="c.score" />
-                  }
-                  @if (canDelete(c)) {
-                    <button
-                      appIconButton
-                      type="button"
-                      class="delete danger"
-                      [attr.aria-label]="'reader.deleteReply.action' | transloco"
-                      [title]="'reader.deleteReply.action' | transloco"
-                      (click)="deleteReply(c)"
-                    >
-                      <app-icon name="delete" size="sm" />
-                    </button>
-                  }
-                </span>
+                <app-comment-actions
+                  [comment]="c"
+                  [deletable]="canDelete(c)"
+                  (voted)="vote(c, $event)"
+                  (replyRequested)="replyOnLemmy($event)"
+                  (deleteRequested)="deleteReply(c)"
+                />
               </p>
               <div class="body" [innerHTML]="c.html"></div>
               @if (c.media.length) {

@@ -21,5 +21,22 @@ describe('sentComment', () => {
     expect(comment.publishedAt).toBe('2026-11-01T12:00:00.000Z');
     expect(comment.post).toMatchObject({ address: sent.address, isOwn: true, canReply: true });
     expect(comment.post?.counts).toEqual({ likes: 0, reposts: 0, replies: 0, quotes: null });
+    expect(comment.vote).toBeNull();
+    expect(comment.score).toBeNull();
+  });
+
+  it('shows a Lemmy reply with its author’s upvote and no like or repost controls', () => {
+    const comment = sentComment(
+      { ...sent, network: 'lemmy', address: 'https://origin.example/comment/9' },
+      new Date('2026-11-01T12:00:00Z'),
+    );
+
+    expect(comment.post).toBeNull();
+    expect(comment.score).toBe(1);
+    expect(comment.vote).toEqual({
+      address: 'https://origin.example/comment/9',
+      myVote: 1,
+      canReply: true,
+    });
   });
 });

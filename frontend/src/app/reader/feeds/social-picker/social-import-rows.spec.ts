@@ -99,7 +99,10 @@ describe('removals', () => {
       removals(
         candidates,
         new Set(['follow:u:a', 'follow:u:b', 'follow:u:c', 'home:', 'tag:caturday']),
-        (key) => (key === 'settings.social.importHome' ? 'Home timeline' : key),
+        {
+          translate: (key) => (key === 'settings.social.importHome' ? 'Home timeline' : key),
+          network: 'bluesky',
+        },
       ),
     ).toEqual([
       { name: 'Ann', subscriptionId: 1 },
@@ -122,11 +125,53 @@ describe('buildRows', () => {
         ],
         truncated: false,
       },
-      (key) => key,
+      { translate: (key) => key, network: 'mastodon' },
     );
 
     expect(rows.tags.map((row) => [row.key, row.name, row.icon])).toEqual([
       ['tag:caturday', '#Caturday', 'tag'],
     ]);
+  });
+
+  const english: Record<string, string> = {
+    'settings.social.importHome': 'Home timeline',
+    'settings.social.importLemmySubscribed': 'Subscribed',
+    'settings.social.importLemmyLocal': 'Local',
+    'settings.social.importLemmyAll': 'All',
+  };
+  const lemmyCandidates = (): Parameters<typeof buildRows>[0] => ({
+    follows: [],
+    lists: (['home', 'local', 'all'] as const).map((kind) => ({
+      kind,
+      id: null,
+      name: kind.toUpperCase(),
+      state: 'new' as const,
+      subscriptionId: null,
+    })),
+    customFeeds: [],
+    tags: [],
+    truncated: false,
+  });
+
+  it("names and draws Lemmy's Subscribed, Local and All rows", () => {
+    const rows = buildRows(lemmyCandidates(), {
+      translate: (key) => english[key] ?? key,
+      network: 'lemmy',
+    });
+
+    expect(rows.lists.map((row) => [row.name, row.icon])).toEqual([
+      ['Subscribed', 'home'],
+      ['Local', 'location_city'],
+      ['All', 'public'],
+    ]);
+  });
+
+  it("keeps Mastodon's Home as the home timeline", () => {
+    const rows = buildRows(lemmyCandidates(), {
+      translate: (key) => english[key] ?? key,
+      network: 'mastodon',
+    });
+
+    expect(rows.lists[0].name).toBe('Home timeline');
   });
 });

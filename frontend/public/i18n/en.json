@@ -384,6 +384,7 @@
       "title": "Social Media",
       "bluesky": "Bluesky",
       "mastodon": "Mastodon",
+      "lemmy": "Lemmy",
       "handle": "Handle",
       "appPassword": "App password",
       "appPasswordHint": "Create an app password in Bluesky under Settings → Privacy and security → App passwords. It looks like xxxx-xxxx-xxxx-xxxx; your account password is refused.",
@@ -407,13 +408,18 @@
       "connectedSince": "Connected since {{date}}",
       "connectAnother": "Connect another account",
       "importSectionTitle": "Manage feeds",
-      "importSectionCaption": "Choose which of your Bluesky and Mastodon follows, lists and feeds arrive here as feeds; follows land under the Feeds row of the Bluesky or Mastodon section. A tick means you are subscribed: untick a feed to unsubscribe, and come back any time for new follows. Lists, followed tags and feeds you save, follow or create on the network are added within the hour, and ones you remove or unfollow there go too; anything you remove here is not added back.",
+      "importSectionCaption": "Choose which of your Bluesky and Mastodon follows, lists and feeds, and your Lemmy communities and timelines, arrive here as feeds; follows land under the Feeds row of the Bluesky or Mastodon section, communities under Communities in the Lemmy section. A tick means you are subscribed: untick a feed to unsubscribe, and come back any time for new follows. Lists, followed tags and feeds you save, follow or create on the network are added within the hour, and ones you remove or unfollow there go too; anything you remove here is not added back.",
       "importChoose": "Manage feeds…",
       "importTitle": "Manage feeds of {{handle}}",
       "importLoading": "Loading the accounts you follow…",
       "importFilter": "Filter by name or handle",
       "importSelectAllNew": "Select all new ({{count}})",
       "importTabs": "Feed types",
+      "importTabLemmy": {
+        "accounts": "Communities",
+        "lists": "Timelines",
+        "search": "Search"
+      },
       "importTab": {
         "accounts": "Accounts",
         "lists": "Lists",
@@ -433,6 +439,7 @@
         "syntaxGroup": "groups terms",
         "syntaxCombined": "All of it combined:",
         "syntaxAllWords": "every word must appear",
+        "syntaxLemmyPlain": "plain words; matches post titles and bodies",
         "syntaxMastodonNote": "Needs full-text search on your instance; only posts from people who allow search are found.",
         "syntaxMastodonAlternatives": "Mastodon has no ||: each alternative is searched on its own, at most 8 per query.",
         "preview": "Preview",
@@ -452,6 +459,9 @@
       "importUnsubscribe": "Unsubscribe from {{handle}}",
       "importUnsubscribeHint": "Untick a feed to unsubscribe.",
       "importHome": "Home timeline",
+      "importLemmySubscribed": "Subscribed",
+      "importLemmyLocal": "Local",
+      "importLemmyAll": "All",
       "importTrending": "Trending posts",
       "importAddCollection": "Add {{name}}",
       "importRemoveCollection": "Remove {{name}}",
@@ -482,7 +492,12 @@
       "importApplyCountOne": "Save 1 change",
       "importApplyCountOther": "Save {{count}} changes",
       "importDone": "{{imported}} added, {{removed}} removed, {{alreadySubscribed}} already subscribed.",
-      "importOverLimit": "{{count}} not added: subscription limit reached."
+      "importOverLimit": "{{count}} not added: subscription limit reached.",
+      "lemmyUsername": "Username or email",
+      "lemmyPassword": "Password",
+      "lemmyPasswordHint": "Sent once to your instance to sign in. Only the session it returns is kept.",
+      "twoFactorCode": "Two-factor code",
+      "twoFactorHint": "Only if your account asks for one."
     },
     "profile": {
       "title": "Profile",
@@ -1387,18 +1402,23 @@
     "reconnectSocialAccount": "Reconnect {{handle}} in settings",
     "manageSocialSection": "{{network}} options",
     "socialFeeds": "Feeds",
+    "lemmyCommunities": "Communities",
     "socialSearches": "Searches",
     "socialHome": "Home@{{network}}",
+    "socialSubscribed": "Subscribed@{{network}}",
     "savedFrom": {
       "bluesky": "Saved from Bluesky",
       "mastodon": "Saved from Mastodon",
+      "lemmy": "Saved from Lemmy",
       "feeds": "Saved from feeds"
     },
     "toggleSocialFeeds": "Toggle {{network}} feeds",
+    "toggleLemmyCommunities": "Toggle {{network}} communities",
     "toggleSocialSearches": "Toggle {{network}} searches",
     "socialNetworkShort": {
       "bluesky": "bsky",
-      "mastodon": "mastodon"
+      "mastodon": "mastodon",
+      "lemmy": "lemmy"
     },
     "organise": "Organise",
     "organiseDone": "Done",
@@ -1543,6 +1563,10 @@
       "throttledNow": "The site is rate-limiting. Try again now.",
       "failed": "Comments could not be loaded."
     },
+    "vote": {
+      "up": "Upvote",
+      "down": "Downvote"
+    },
     "discussionCounts": {
       "pointsOne": "{{count}} point",
       "pointsOther": "{{count}} points",
@@ -1661,11 +1685,13 @@
     },
     "replyForbidden": {
       "bluesky": "The author limits who can reply",
-      "mastodon": "You can’t reply to this post"
+      "mastodon": "You can’t reply to this post",
+      "lemmy": "This post is locked"
     },
     "reply": {
       "bluesky": "Reply on Bluesky",
-      "mastodon": "Reply on Mastodon"
+      "mastodon": "Reply on Mastodon",
+      "lemmy": "Reply on Lemmy"
     },
     "composer": {
       "counter": "{{ used }} / {{ max }}",

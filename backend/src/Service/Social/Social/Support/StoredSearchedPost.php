@@ -31,6 +31,7 @@ final class StoredSearchedPost
         return match ($account->getNetwork()) {
             SocialNetwork::Bluesky => self::blueskyNamesOf($post),
             SocialNetwork::Mastodon => self::mastodonNamesOf($account, $post->authorUrl),
+            SocialNetwork::Lemmy => throw new \LogicException('A Lemmy search is never matched by the reader.'),
         };
     }
 

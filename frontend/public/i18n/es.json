@@ -384,6 +384,7 @@
       "title": "Redes sociales",
       "bluesky": "Bluesky",
       "mastodon": "Mastodon",
+      "lemmy": "Lemmy",
       "handle": "Usuario",
       "appPassword": "Contraseña de aplicación",
       "appPasswordHint": "Crea una contraseña de aplicación en Bluesky, en Ajustes → Privacidad y seguridad → Contraseñas de app. Tiene la forma xxxx-xxxx-xxxx-xxxx; la contraseña de tu cuenta no se acepta.",
@@ -407,13 +408,18 @@
       "connectedSince": "Conectada desde {{date}}",
       "connectAnother": "Conectar otra cuenta",
       "importSectionTitle": "Gestionar feeds",
-      "importSectionCaption": "Elige cuáles de tus cuentas seguidas, listas y feeds de Bluesky y Mastodon llegan aquí como feeds; las cuentas seguidas aparecen en la fila Feeds de la sección Bluesky o Mastodon. Una marca indica una suscripción activa: desmarca un feed para cancelar la suscripción, y vuelve cuando quieras para ver nuevas cuentas seguidas. Las listas, etiquetas seguidas y feeds que guardes, sigas o crees en la red se añaden en menos de una hora, y los que quites o dejes de seguir allí también desaparecen; lo que quites aquí no se vuelve a añadir.",
+      "importSectionCaption": "Elige cuáles de tus cuentas seguidas, listas y feeds de Bluesky y Mastodon, y de tus comunidades y cronologías de Lemmy, llegan aquí como feeds; las cuentas seguidas aparecen en la fila Feeds de la sección Bluesky o Mastodon, las comunidades en Comunidades dentro de la sección Lemmy. Una marca indica una suscripción activa: desmarca un feed para cancelar la suscripción, y vuelve cuando quieras para ver nuevas cuentas seguidas. Las listas, etiquetas seguidas y feeds que guardes, sigas o crees en la red se añaden en menos de una hora, y los que quites o dejes de seguir allí también desaparecen; lo que quites aquí no se vuelve a añadir.",
       "importChoose": "Gestionar feeds…",
       "importTitle": "Gestionar feeds de {{handle}}",
       "importLoading": "Cargando las cuentas que sigues…",
       "importFilter": "Filtrar por nombre o usuario",
       "importSelectAllNew": "Seleccionar todos los nuevos ({{count}})",
       "importTabs": "Tipos de feed",
+      "importTabLemmy": {
+        "accounts": "Comunidades",
+        "lists": "Cronologías",
+        "search": "Búsqueda"
+      },
       "importTab": {
         "accounts": "Cuentas",
         "lists": "Listas",
@@ -433,6 +439,7 @@
         "syntaxGroup": "agrupa términos",
         "syntaxCombined": "Todo combinado:",
         "syntaxAllWords": "deben aparecer todas las palabras",
+        "syntaxLemmyPlain": "palabras sueltas; coincide con títulos y textos de las publicaciones",
         "syntaxMastodonNote": "Requiere búsqueda de texto completo en tu instancia; solo se encuentran publicaciones de personas que permiten la búsqueda.",
         "syntaxMastodonAlternatives": "Mastodon no admite ||: cada alternativa se busca por separado, como máximo 8 por consulta.",
         "preview": "Vista previa",
@@ -452,6 +459,9 @@
       "importUnsubscribe": "Cancelar suscripción a {{handle}}",
       "importUnsubscribeHint": "Desmarca un feed para cancelar la suscripción.",
       "importHome": "Cronología de inicio",
+      "importLemmySubscribed": "Suscritas",
+      "importLemmyLocal": "Local",
+      "importLemmyAll": "Todo",
       "importTrending": "Publicaciones en tendencia",
       "importAddCollection": "Añadir {{name}}",
       "importRemoveCollection": "Quitar {{name}}",
@@ -482,7 +492,12 @@
       "importApplyCountOne": "Guardar 1 cambio",
       "importApplyCountOther": "Guardar {{count}} cambios",
       "importDone": "{{imported}} añadidos, {{removed}} quitados, {{alreadySubscribed}} ya suscritos.",
-      "importOverLimit": "{{count}} sin añadir: se alcanzó el límite de suscripciones."
+      "importOverLimit": "{{count}} sin añadir: se alcanzó el límite de suscripciones.",
+      "lemmyUsername": "Nombre de usuario o correo",
+      "lemmyPassword": "Contraseña",
+      "lemmyPasswordHint": "Se envía una sola vez a tu instancia para iniciar sesión. Solo se guarda la sesión que devuelve.",
+      "twoFactorCode": "Código de dos factores",
+      "twoFactorHint": "Solo si tu cuenta lo pide."
     },
     "profile": {
       "title": "Perfil",
@@ -1391,18 +1406,23 @@
     "reconnectSocialAccount": "Volver a conectar {{handle}} en la configuración",
     "manageSocialSection": "Opciones de {{network}}",
     "socialFeeds": "Feeds",
+    "lemmyCommunities": "Comunidades",
     "socialSearches": "Búsquedas",
     "socialHome": "Inicio@{{network}}",
+    "socialSubscribed": "Suscritas@{{network}}",
     "savedFrom": {
       "bluesky": "Guardado de Bluesky",
       "mastodon": "Guardado de Mastodon",
+      "lemmy": "Guardado de Lemmy",
       "feeds": "Guardado de feeds"
     },
     "toggleSocialFeeds": "Mostrar u ocultar feeds de {{network}}",
+    "toggleLemmyCommunities": "Mostrar u ocultar comunidades de {{network}}",
     "toggleSocialSearches": "Mostrar u ocultar búsquedas de {{network}}",
     "socialNetworkShort": {
       "bluesky": "bsky",
-      "mastodon": "mastodon"
+      "mastodon": "mastodon",
+      "lemmy": "lemmy"
     },
     "organise": "Organizar",
     "organiseDone": "Listo",
@@ -1547,6 +1567,10 @@
       "throttledNow": "El sitio está limitando las solicitudes. Vuelve a intentarlo ahora.",
       "failed": "No se pudieron cargar los comentarios."
     },
+    "vote": {
+      "up": "Votar a favor",
+      "down": "Votar en contra"
+    },
     "discussionCounts": {
       "pointsOne": "{{count}} punto",
       "pointsOther": "{{count}} puntos",
@@ -1665,11 +1689,13 @@
     },
     "replyForbidden": {
       "bluesky": "El autor limita quién puede responder",
-      "mastodon": "No puedes responder a esta publicación"
+      "mastodon": "No puedes responder a esta publicación",
+      "lemmy": "Esta publicación está bloqueada"
     },
     "reply": {
       "bluesky": "Responder en Bluesky",
-      "mastodon": "Responder en Mastodon"
+      "mastodon": "Responder en Mastodon",
+      "lemmy": "Responder en Lemmy"
     },
     "composer": {
       "counter": "{{ used }} / {{ max }}",

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Social\Support;
 
+use App\Enum\SocialFeedKind;
 use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Service\Social\Social\Support\PrivateFeedSite;
 use App\Tests\Support\SocialAccounts;
@@ -21,7 +22,7 @@ final class PrivateFeedSiteTest extends TestCase
     /** @return iterable<string, array{PrivateFeedModel, string}> */
     public static function blueskyFeeds(): iterable
     {
-        yield 'home' => [PrivateFeedModel::home(), 'https://bsky.app/profile/did:plc:alice'];
+        yield 'home' => [PrivateFeedModel::timeline(SocialFeedKind::Home), 'https://bsky.app/profile/did:plc:alice'];
         yield 'list' => [
             PrivateFeedModel::userList('at://did:plc:bob/app.bsky.graph.list/3l1', 'Writers'),
             'https://bsky.app/profile/did:plc:bob/lists/3l1',
@@ -40,15 +41,46 @@ final class PrivateFeedSiteTest extends TestCase
         ];
     }
 
+    #[DataProvider('lemmyTimelines')]
+    public function testALemmyFeedIsItsListingPageOrTheInstance(PrivateFeedModel $timeline, string $site): void
+    {
+        self::assertSame($site, PrivateFeedSite::of(SocialAccounts::lemmyOf(SocialAccounts::owner()), $timeline));
+    }
+
+    /** @return iterable<string, array{PrivateFeedModel, string}> */
+    public static function lemmyTimelines(): iterable
+    {
+        $listing = 'https://lemmy.example/?listingType=';
+        yield 'subscribed' => [PrivateFeedModel::timeline(SocialFeedKind::Home), $listing . 'Subscribed'];
+        yield 'local' => [PrivateFeedModel::timeline(SocialFeedKind::Local), $listing . 'Local'];
+        yield 'all' => [PrivateFeedModel::timeline(SocialFeedKind::All), $listing . 'All'];
+        yield 'list' => [PrivateFeedModel::of(SocialFeedKind::UserList, '1', 'Friends'), 'https://lemmy.example'];
+        yield 'custom feed' => [PrivateFeedModel::of(SocialFeedKind::CustomFeed, 'f', 'F'), 'https://lemmy.example'];
+        yield 'author' => [PrivateFeedModel::of(SocialFeedKind::Author, 'did:plc:a', 'A'), 'https://lemmy.example'];
+        yield 'tag' => [PrivateFeedModel::of(SocialFeedKind::Tag, 'caturday', '#caturday'), 'https://lemmy.example'];
+        yield 'trending' => [PrivateFeedModel::timeline(SocialFeedKind::Trending), 'https://lemmy.example'];
+    }
+
+    public function testALemmySearchIsItsSearchPage(): void
+    {
+        self::assertSame(
+            'https://lemmy.example/search?q=rss%20reader&type=Posts',
+            PrivateFeedSite::of(
+                SocialAccounts::lemmyOf(SocialAccounts::owner()),
+                PrivateFeedModel::search('rss reader'),
+            ),
+        );
+    }
+
     public function testAMastodonFeedLinksToItsInstance(): void
     {
         self::assertSame(
             'https://mastodon.example',
-            PrivateFeedSite::of(SocialAccounts::mastodon(), PrivateFeedModel::home()),
+            PrivateFeedSite::of(SocialAccounts::mastodon(), PrivateFeedModel::timeline(SocialFeedKind::Home)),
         );
         self::assertSame(
             'https://mastodon.example/explore',
-            PrivateFeedSite::of(SocialAccounts::mastodon(), PrivateFeedModel::trending()),
+            PrivateFeedSite::of(SocialAccounts::mastodon(), PrivateFeedModel::timeline(SocialFeedKind::Trending)),
         );
         self::assertSame(
             'https://mastodon.example/lists/42',

@@ -97,7 +97,7 @@ final class RefreshRunnerStalenessTest extends DbTestCase
     private function privateFeedDue(string $overdue): Feed
     {
         PrivateFeedsWiring::build(self::getContainer(), $this->entityManager, $this->clock)
-            ->create($this->account, PrivateFeedModel::home());
+            ->create($this->account, PrivateFeedModel::timeline(SocialFeedKind::Home));
         $socialFeed = SocialFeeds::repository($this->entityManager)
             ->findOneFor($this->account, SocialFeedKind::Home, '');
         self::assertNotNull($socialFeed);

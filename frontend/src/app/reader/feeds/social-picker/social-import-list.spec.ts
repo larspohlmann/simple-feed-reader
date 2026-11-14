@@ -72,6 +72,10 @@ describe('SocialImportList', () => {
     expect(listOf(null).tabs).toEqual(['accounts', 'lists', 'customFeeds', 'search']);
   });
 
+  it('offers communities and timelines on Lemmy, with no custom feeds or tags', () => {
+    expect(listOf(null, 'lemmy').tabs).toEqual(['accounts', 'lists', 'search']);
+  });
+
   it('counts each tab by the filter, on the Search tab too', () => {
     const list = listOf(candidates({ follows: [follow(), CAROL], lists: [collection()] }));
     list.filter.set('carol');

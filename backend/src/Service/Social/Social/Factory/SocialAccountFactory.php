@@ -30,7 +30,7 @@ final readonly class SocialAccountFactory
             $verified->identity,
             $verified->handle,
             $verified->serviceUrl,
-            $this->cipher->seal($user->requireId(), $credentials->secret),
+            $this->cipher->seal($user->requireId(), $verified->credential),
             $credentials->hint(),
             $this->clock->now()->setTimezone(new \DateTimeZone('UTC')),
         );

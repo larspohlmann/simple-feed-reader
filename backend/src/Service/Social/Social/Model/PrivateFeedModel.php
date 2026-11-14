@@ -9,25 +9,18 @@ use App\Service\Social\Social\Support\SocialSearchQuery;
 
 final readonly class PrivateFeedModel
 {
-    private const string HOME_NAME = 'Home';
-    private const string TRENDING_NAME = 'Trending';
-
     private function __construct(
         public SocialFeedKind $kind,
-        /** '' for Home and Trending */
+        /** '' for Home, Trending, Local and All */
         public string $remoteId,
         public string $name,
     ) {
     }
 
-    public static function home(): self
+    /** @throws \InvalidArgumentException for a kind that is no timeline of its own */
+    public static function timeline(SocialFeedKind $kind): self
     {
-        return new self(SocialFeedKind::Home, '', self::HOME_NAME);
-    }
-
-    public static function trending(): self
-    {
-        return new self(SocialFeedKind::Trending, '', self::TRENDING_NAME);
+        return new self($kind, '', self::timelineNameOf($kind));
     }
 
     public static function userList(string $listId, string $name): self
@@ -60,13 +53,15 @@ final readonly class PrivateFeedModel
     public static function of(SocialFeedKind $kind, string $remoteId, string $name): self
     {
         return match ($kind) {
-            SocialFeedKind::Home => self::home(),
             SocialFeedKind::UserList => self::userList($remoteId, $name),
             SocialFeedKind::CustomFeed => self::customFeed($remoteId, $name),
             SocialFeedKind::Author => self::author($remoteId, $name),
             SocialFeedKind::Tag => self::followedTag($remoteId, $name),
-            SocialFeedKind::Trending => self::trending(),
             SocialFeedKind::Search => self::search($remoteId),
+            SocialFeedKind::Home,
+            SocialFeedKind::Trending,
+            SocialFeedKind::Local,
+            SocialFeedKind::All => self::timeline($kind),
         };
     }
 
@@ -78,5 +73,22 @@ final readonly class PrivateFeedModel
     public function key(): string
     {
         return self::keyOf($this->kind, $this->remoteId);
+    }
+
+    private static function timelineNameOf(SocialFeedKind $kind): string
+    {
+        return match ($kind) {
+            SocialFeedKind::Home => 'Home',
+            SocialFeedKind::Trending => 'Trending',
+            SocialFeedKind::Local => 'Local',
+            SocialFeedKind::All => 'All',
+            SocialFeedKind::UserList,
+            SocialFeedKind::CustomFeed,
+            SocialFeedKind::Author,
+            SocialFeedKind::Tag,
+            SocialFeedKind::Search => throw new \InvalidArgumentException(
+                sprintf('A %s feed is named by its remote id.', $kind->value),
+            ),
+        };
     }
 }

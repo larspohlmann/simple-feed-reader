@@ -12,6 +12,7 @@ import {
   ImportRow,
   ImportTab,
   Removal,
+  RowNaming,
   StateFilter,
   buildRows,
   collectionKey,
@@ -36,6 +37,18 @@ export interface SocialImportDialogData {
 
 const ROWS_PER_PAGE = 100;
 
+const IMPORT_TABS: Readonly<Record<SocialNetworkName, readonly ImportTab[]>> = {
+  bluesky: ['accounts', 'lists', 'customFeeds'],
+  mastodon: ['accounts', 'lists', 'tags'],
+  lemmy: ['accounts', 'lists'],
+};
+
+const TAB_LABEL_PREFIXES: Readonly<Record<SocialNetworkName, string>> = {
+  bluesky: 'settings.social.importTab.',
+  mastodon: 'settings.social.importTab.',
+  lemmy: 'settings.social.importTabLemmy.',
+};
+
 /**
  * The import dialog's follows list: the open tab, the filter, the ticks and what Apply sends. Provided by the
  * dialog, so all of it outlives a trip to the Search tab.
@@ -50,11 +63,13 @@ export class SocialImportList {
     initialValue: this.i18n.getActiveLang(),
   });
 
-  private readonly listTabs: readonly ImportTab[] =
-    this.data.network === 'bluesky'
-      ? ['accounts', 'lists', 'customFeeds']
-      : ['accounts', 'lists', 'tags'];
+  private readonly naming: RowNaming = {
+    translate: (key, params) => this.i18n.translate(key, params),
+    network: this.data.network,
+  };
+  private readonly listTabs = IMPORT_TABS[this.data.network];
   readonly tabs: readonly DialogTab[] = [...this.listTabs, 'search'];
+  readonly tabLabelPrefix = TAB_LABEL_PREFIXES[this.data.network];
   readonly tab = signal<DialogTab>('accounts');
   /** The list tab on show; null on Search. */
   readonly listTab = computed(() => {
@@ -69,7 +84,7 @@ export class SocialImportList {
 
   private readonly rows = computed(() => {
     this.activeLang();
-    return buildRows(this.importer.candidates(), (key, params) => this.i18n.translate(key, params));
+    return buildRows(this.importer.candidates(), this.naming);
   });
   private readonly needle = computed(() => this.filter().trim().toLowerCase());
   private readonly tally = computed(() =>
@@ -124,9 +139,7 @@ export class SocialImportList {
 
   /** Hands the ticked changes to `send`, after asking first when any of them unsubscribes. */
   apply(send: (selection: SocialImportSelection) => void): void {
-    const unticked = removals(this.importer.candidates(), this.chosen(), (key, params) =>
-      this.i18n.translate(key, params),
-    );
+    const unticked = removals(this.importer.candidates(), this.chosen(), this.naming);
     const sendSelection = () => send(this.selection(unticked));
     if (unticked.length === 0) {
       sendSelection();

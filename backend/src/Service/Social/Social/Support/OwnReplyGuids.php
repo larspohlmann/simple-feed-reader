@@ -21,6 +21,7 @@ final class OwnReplyGuids
         return match ($account->getNetwork()) {
             SocialNetwork::Bluesky => [OwnPostIds::ofReplyUrl($url, $account)],
             SocialNetwork::Mastodon => [self::mastodonUri($url), $url],
+            SocialNetwork::Lemmy => throw new SocialPostRefusedException(OwnPostIds::LEMMY_NOT_DELETED),
         };
     }
 

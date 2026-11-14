@@ -18,6 +18,7 @@ final class SocialAccounts
     public const int OWNER_ID = 7;
     public const string APP_PASSWORD = 'abcd-efgh-ijkl-mnop';
     public const string ACCESS_TOKEN = 'token-1234567890';
+    public const string LEMMY_JWT = 'test-jwt-not-a-real-token';
 
     public static function cipher(): SocialCredentialCipher
     {
@@ -96,6 +97,20 @@ final class SocialAccounts
             $instanceUrl,
             self::cipher()->seal($owner->requireId(), self::ACCESS_TOKEN),
             '7890',
+            new \DateTimeImmutable('2026-10-12 10:00:00'),
+        );
+    }
+
+    public static function lemmyOf(User $owner, string $host = 'lemmy.example'): SocialAccount
+    {
+        return new SocialAccount(
+            $owner,
+            SocialNetwork::Lemmy,
+            'lars@' . $host,
+            '@lars@' . $host,
+            'https://' . $host,
+            self::cipher()->seal($owner->requireId(), self::LEMMY_JWT),
+            '',
             new \DateTimeImmutable('2026-10-12 10:00:00'),
         );
     }

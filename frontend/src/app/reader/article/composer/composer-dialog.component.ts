@@ -43,7 +43,7 @@ type ContextState =
   | { status: 'failed'; message: string };
 
 /**
- * Writes a reply to, or a quote of, a Bluesky or Mastodon post, or a post of a shared URL.
+ * Writes a reply to a Lemmy post or comment, a reply to or a quote of a Bluesky or Mastodon post, or a post of a shared URL.
  * Closing never asks: typed text is discarded.
  * It stays open while a post is on the wire, so the reader always learns what was published.
  * A failed send keeps the text and says why; a resend carries the key minted on open, so Mastodon

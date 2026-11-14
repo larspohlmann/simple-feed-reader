@@ -1,0 +1,21 @@
+{
+  "post_view": {
+    "post": {
+      "id": 3,
+      "name": "Lemmy.world",
+      "ap_id": "https://origin.example/post/3",
+      "locked": false,
+      "deleted": false,
+      "removed": false
+    },
+    "creator": {
+      "name": "ada",
+      "display_name": "Ada",
+      "actor_id": "https://origin.example/u/ada"
+    },
+    "counts": {
+      "score": 12,
+      "comments": 12
+    }
+  }
+}

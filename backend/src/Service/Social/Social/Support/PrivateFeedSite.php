@@ -8,6 +8,7 @@ use App\Entity\SocialAccount;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Bluesky\Support\BlueskyWeb;
+use App\Service\Social\Social\Model\LemmyListing;
 use App\Service\Social\Social\Model\PrivateFeedModel;
 
 /** The web page a private feed stands for, so its favicon and "visit site" link never see `social:`. */
@@ -18,6 +19,7 @@ final class PrivateFeedSite
         return match ($account->getNetwork()) {
             SocialNetwork::Bluesky => self::bluesky($account, $privateFeed),
             SocialNetwork::Mastodon => self::mastodon($account, $privateFeed),
+            SocialNetwork::Lemmy => self::lemmy($account, $privateFeed),
         };
     }
 
@@ -40,8 +42,25 @@ final class PrivateFeedSite
             SocialFeedKind::Tag => $instance . '/tags/' . rawurlencode($privateFeed->remoteId),
             SocialFeedKind::Trending => $instance . '/explore',
             SocialFeedKind::Search => $instance . '/search?q=' . rawurlencode($privateFeed->remoteId),
-            SocialFeedKind::Home, SocialFeedKind::Author, SocialFeedKind::CustomFeed => $instance,
+            SocialFeedKind::Home,
+            SocialFeedKind::Author,
+            SocialFeedKind::CustomFeed,
+            SocialFeedKind::Local,
+            SocialFeedKind::All => $instance,
         };
+    }
+
+    private static function lemmy(SocialAccount $account, PrivateFeedModel $privateFeed): string
+    {
+        $instance = rtrim($account->getServiceUrl(), '/');
+        $listing = LemmyListing::ofFeedKind($privateFeed->kind);
+        if (null !== $listing) {
+            return $instance . '/?listingType=' . $listing->value;
+        }
+
+        return SocialFeedKind::Search === $privateFeed->kind
+            ? $instance . '/search?q=' . rawurlencode($privateFeed->remoteId) . '&type=Posts'
+            : $instance;
     }
 
     private function __construct()

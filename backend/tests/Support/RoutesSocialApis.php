@@ -68,6 +68,37 @@ trait RoutesSocialApis
         return $account;
     }
 
+    private function lemmyPostFor(User $user, string $page = 'https://lemmy.example/post/42'): int
+    {
+        $fixtures = new NetworkFeedSubscriptions($this->entityManager());
+        $subscription = $fixtures->subscribe($user, 'https://lemmy.example/feeds/' . md5($page) . '.xml');
+        $entry = LemmyPostEntries::on($subscription->getFeed(), $page);
+        $this->entityManager()->persist($entry);
+        $this->entityManager()->flush();
+
+        return $entry->requireId();
+    }
+
+    private function lemmyAccountOf(User $user, string $host = 'lemmy.example'): SocialAccount
+    {
+        /** @var InstanceSecretCipher $instanceCipher */
+        $instanceCipher = self::getContainer()->get(InstanceSecretCipher::class);
+        $account = new SocialAccount(
+            $user,
+            SocialNetwork::Lemmy,
+            'lars@' . $host,
+            '@lars@' . $host,
+            'https://' . $host,
+            (new SocialCredentialCipher($instanceCipher))->seal($user->requireId(), SocialAccounts::LEMMY_JWT),
+            '',
+            new \DateTimeImmutable('2026-10-12 10:00:00'),
+        );
+        $this->entityManager()->persist($account);
+        $this->entityManager()->flush();
+
+        return $account;
+    }
+
     /** @return list<string> */
     private function routesAsked(): array
     {
