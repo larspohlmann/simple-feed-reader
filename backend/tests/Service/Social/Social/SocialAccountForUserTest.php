@@ -38,6 +38,15 @@ final class SocialAccountForUserTest extends DbTestCase
         self::assertSame($account, $found);
     }
 
+    public function testAFeedAccountRequirementReadsALemmyAccountAsMissing(): void
+    {
+        $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::lemmyOf($this->owner));
+
+        $this->expectException(SocialAccountNotFoundException::class);
+
+        $this->accountForUser()->requireFeedAccount($this->owner, $account->requireId());
+    }
+
     public function testAnAccountOnAnotherNetworkReadsAsMissing(): void
     {
         $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($this->owner));

@@ -16,6 +16,19 @@ final class SocialNetworkTest extends TestCase
         self::assertSame('Mastodon', SocialNetwork::Mastodon->displayName());
     }
 
+    public function testLemmyIsAnAccountOnlyNetwork(): void
+    {
+        self::assertSame([SocialNetwork::Bluesky, SocialNetwork::Mastodon], SocialNetwork::feedNetworks());
+        self::assertFalse(SocialNetwork::Lemmy->carriesFeeds());
+        self::assertTrue(SocialNetwork::Bluesky->carriesFeeds());
+        self::assertTrue(SocialNetwork::Mastodon->carriesFeeds());
+        self::assertSame('Lemmy', SocialNetwork::Lemmy->displayName());
+        self::assertSame(
+            implode('|', SocialNetwork::valuesOf(SocialNetwork::feedNetworks())),
+            SocialNetwork::FEED_NETWORK_REQUIREMENT,
+        );
+    }
+
     public function testNetworksListTheirWireValues(): void
     {
         $networks = [SocialNetwork::Mastodon, SocialNetwork::Bluesky];

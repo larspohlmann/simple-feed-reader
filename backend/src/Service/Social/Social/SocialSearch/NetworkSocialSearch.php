@@ -6,6 +6,7 @@ namespace App\Service\Social\Social\SocialSearch;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
+use App\Service\Social\Social\Exception\NetworkWithoutFeedsException;
 use App\Service\Outbound\Fetch\AnswerSettler\AnswerSettlerInterface;
 use App\Service\Outbound\Fetch\ConcurrentRequestEngine;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
@@ -49,6 +50,7 @@ final readonly class NetworkSocialSearch implements SocialSearchInterface
                 $query,
             ),
             SocialNetwork::Mastodon => MastodonSearchPage::of($this->mastodonAnswers($account, $query), $query),
+            SocialNetwork::Lemmy => throw NetworkWithoutFeedsException::for(SocialNetwork::Lemmy),
         };
     }
 

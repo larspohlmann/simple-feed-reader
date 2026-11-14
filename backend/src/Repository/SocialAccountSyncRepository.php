@@ -6,6 +6,7 @@ namespace App\Repository;
 
 use App\Entity\SocialAccount;
 use App\Enum\PrivateFeedSyncSkip;
+use App\Enum\SocialNetwork;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\Persistence\ManagerRegistry;
@@ -27,7 +28,9 @@ final class SocialAccountSyncRepository extends ServiceEntityRepository
             ->select('sa.id')
             ->addSelect('COALESCE(sa.syncStamp.checkedAt, :epoch) AS HIDDEN checkOrder')
             ->join('sa.user', 'owner')
+            ->andWhere('sa.network IN (:feedNetworks)')
             ->andWhere('sa.syncStamp.checkedAt IS NULL OR sa.syncStamp.checkedAt < :checkedBefore')
+            ->setParameter('feedNetworks', SocialNetwork::valuesOf(SocialNetwork::feedNetworks()))
             ->setParameter('checkedBefore', $now->modify(self::DUE_AFTER))
             ->setParameter('epoch', new \DateTimeImmutable('@0'))
             ->orderBy('checkOrder', 'ASC')

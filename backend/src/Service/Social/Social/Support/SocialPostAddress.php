@@ -19,6 +19,7 @@ final class SocialPostAddress
         return match ($entry->getFeed()->getNetwork()) {
             SocialNetwork::Bluesky => self::blueskyPost($entry->getGuid()),
             SocialNetwork::Mastodon => self::mastodonPost($entry),
+            SocialNetwork::Lemmy => null,
             null => null,
         };
     }
@@ -39,6 +40,7 @@ final class SocialPostAddress
         $reply = match (self::ofOrRefuse($entry)->network) {
             SocialNetwork::Bluesky => self::blueskyPost($address),
             SocialNetwork::Mastodon => self::mastodonStatus(AbsoluteHttpUrl::orNull($address)),
+            SocialNetwork::Lemmy => null,
         };
 
         return $reply ?? throw new NotASocialPostException('The reply is no post on the entry\'s network.');

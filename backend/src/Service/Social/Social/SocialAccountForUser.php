@@ -43,6 +43,22 @@ final readonly class SocialAccountForUser
     }
 
     /**
+     * @throws SocialAccountNotFoundException when the account is not the user's, or on a network without feeds
+     * @throws SocialAccountNeedsReconnectException
+     */
+    public function requireFeedAccount(User $user, int $accountId): SocialAccount
+    {
+        $account = $this->requireConnected($user, $accountId);
+        if (!$account->getNetwork()->carriesFeeds()) {
+            throw new SocialAccountNotFoundException(
+                sprintf('No feed account %d for this account.', $accountId),
+            );
+        }
+
+        return $account;
+    }
+
+    /**
      * @throws SocialAccountNotFoundException when the account is not the user's, or on another network
      * @throws SocialAccountNeedsReconnectException
      */

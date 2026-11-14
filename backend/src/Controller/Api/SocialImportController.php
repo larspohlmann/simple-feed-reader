@@ -40,7 +40,7 @@ final readonly class SocialImportController
     )]
     public function candidates(#[CurrentUser] User $user, int $id): JsonResponse
     {
-        $account = $this->socialAccount->requireConnected($user, $id);
+        $account = $this->socialAccount->requireFeedAccount($user, $id);
         $this->rateLimitGuard->enforceForUser($this->socialImportLimiter, $user);
 
         return new JsonResponse($this->importJson->candidates($this->importCandidates->forAccount($account)));
@@ -52,7 +52,7 @@ final readonly class SocialImportController
         int $id,
         #[MapRequestPayload] SocialImportRequest $request,
     ): JsonResponse {
-        $account = $this->socialAccount->require($user, $id);
+        $account = $this->socialAccount->requireFeedAccount($user, $id);
 
         return new JsonResponse($this->importJson->result($this->importer->import($account, $request->toImport())));
     }

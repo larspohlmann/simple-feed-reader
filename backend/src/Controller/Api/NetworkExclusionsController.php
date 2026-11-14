@@ -41,7 +41,12 @@ final readonly class NetworkExclusionsController
         ]);
     }
 
-    #[Route('/{network}', name: 'api_exclude_network', methods: ['PUT'])]
+    #[Route(
+        '/{network}',
+        name: 'api_exclude_network',
+        requirements: ['network' => SocialNetwork::FEED_NETWORK_REQUIREMENT],
+        methods: ['PUT'],
+    )]
     public function excludeNetwork(
         InclusionSurface $surface,
         SocialNetwork $network,
@@ -52,7 +57,12 @@ final readonly class NetworkExclusionsController
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 
-    #[Route('/{network}', name: 'api_include_network', methods: ['DELETE'])]
+    #[Route(
+        '/{network}',
+        name: 'api_include_network',
+        requirements: ['network' => SocialNetwork::FEED_NETWORK_REQUIREMENT],
+        methods: ['DELETE'],
+    )]
     public function includeNetwork(
         InclusionSurface $surface,
         SocialNetwork $network,

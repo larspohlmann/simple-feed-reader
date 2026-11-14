@@ -18,6 +18,7 @@ use App\Service\Social\Social\SocialCandidates\SocialCandidatesInterface;
 use App\Service\Social\Social\SocialSearch\SocialSearchInterface;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\StubSocialCandidates;
 use App\Tests\Support\StubSocialSearch;
 use Psr\Cache\CacheItemPoolInterface;
@@ -53,6 +54,18 @@ final class SocialSearchControllerTest extends ApiTestCase
         $owner = $this->signIn($client, 'search-owner@example.test');
         $account = $this->blueskyAccountOf($owner);
         $this->signIn($client, 'search-intruder@example.test');
+
+        $this->requestSearchPreview($client, $account, 'rss');
+
+        $this->assertRejected($client, Response::HTTP_NOT_FOUND);
+        self::assertSame('social_account_not_found', $this->payload($client)['type']);
+    }
+
+    public function testTheSearchPreviewOfALemmyAccountAnswers404(): void
+    {
+        $client = $this->searchClientWith(new StubSocialSearch(self::pageOf(0)));
+        $owner = $this->signIn($client, 'search-lemmy@example.test');
+        $account = SocialFeeds::persistedAccount($this->entityManager(), SocialAccounts::lemmyOf($owner));
 
         $this->requestSearchPreview($client, $account, 'rss');
 

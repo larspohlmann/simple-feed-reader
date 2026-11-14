@@ -155,6 +155,32 @@ final class SocialImportControllerTest extends ApiTestCase
         self::assertSame('social_account_not_found', $this->payload($client)['type']);
     }
 
+    public function testALemmyAccountHasNoImportCandidates(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $owner = $this->signIn($client, 'import-lemmy-candidates@example.test');
+        $account = $this->stored(SocialAccounts::lemmyOf($owner));
+
+        $this->requestCandidates($client, $account);
+
+        $this->assertRejected($client, Response::HTTP_NOT_FOUND);
+        self::assertSame('social_account_not_found', $this->payload($client)['type']);
+    }
+
+    public function testALemmyAccountTakesNoImport(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $owner = $this->signIn($client, 'import-lemmy-post@example.test');
+        $account = $this->stored(SocialAccounts::lemmyOf($owner));
+
+        $this->postImport($client, $account, [
+            'subscribe' => [['identity' => 'bob@lemmy.example', 'title' => 'Bob']],
+        ]);
+
+        $this->assertRejected($client, Response::HTTP_NOT_FOUND);
+        self::assertSame('social_account_not_found', $this->payload($client)['type']);
+    }
+
     public function testAnAccountThatNeedsReconnectingIsRefusedBeforeTheBudgetAndTheNetwork(): void
     {
         $stub = $this->nothingFollowed();

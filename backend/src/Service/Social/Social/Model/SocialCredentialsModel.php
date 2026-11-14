@@ -8,6 +8,7 @@ use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Bluesky\Support\BlueskyActorKey;
 use App\Service\Social\Social\Exception\InvalidInstanceUrlException;
+use App\Service\Social\Social\Exception\NetworkWithoutFeedsException;
 use App\Service\Social\Social\Exception\NotAnAppPasswordException;
 use App\Service\Foundation\Url\Support\UrlOrigin;
 
@@ -47,6 +48,7 @@ final readonly class SocialCredentialsModel
                 self::appPassword($secret),
             ),
             SocialNetwork::Mastodon => new self(SocialNetwork::Mastodon, $account->getServiceUrl(), trim($secret)),
+            SocialNetwork::Lemmy => throw NetworkWithoutFeedsException::for(SocialNetwork::Lemmy),
         };
     }
 

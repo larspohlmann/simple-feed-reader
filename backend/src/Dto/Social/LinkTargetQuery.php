@@ -26,6 +26,12 @@ final readonly class LinkTargetQuery
     ) {
     }
 
+    #[Assert\IsTrue(message: 'This network takes no link posts.')]
+    public function isFeedNetwork(): bool
+    {
+        return $this->network->carriesFeeds();
+    }
+
     public function toLinkTarget(?int $accountId): LinkTargetModel
     {
         return new LinkTargetModel(

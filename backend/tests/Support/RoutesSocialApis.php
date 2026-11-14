@@ -68,6 +68,15 @@ trait RoutesSocialApis
         return $account;
     }
 
+    private function lemmyAccountOf(User $user, string $host = 'lemmy.example'): SocialAccount
+    {
+        $account = SocialAccounts::lemmyOf($user, $host);
+        $this->entityManager()->persist($account);
+        $this->entityManager()->flush();
+
+        return $account;
+    }
+
     /** @return list<string> */
     private function routesAsked(): array
     {

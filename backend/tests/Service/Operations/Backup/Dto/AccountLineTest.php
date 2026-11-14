@@ -188,6 +188,17 @@ final class AccountLineTest extends TestCase
         );
     }
 
+    public function testARestoreDropsNetworksWithoutFeeds(): void
+    {
+        $line = AccountLine::fromLine([
+            'locale' => 'de',
+            'scrapeFallbackEnabled' => true,
+            'savedSearchIncludedNetworks' => ['bluesky', 'lemmy'],
+        ]);
+
+        self::assertSame([SocialNetwork::Bluesky], $line->networks->savedSearchIncludedNetworks);
+    }
+
     public function testAForYouExcludedNetworkListedTwiceIsExcludedOnce(): void
     {
         $line = AccountLine::fromLine([

@@ -29,6 +29,7 @@ final class ProfileFeedUrl
         $url = match ($network) {
             SocialNetwork::Bluesky => self::bluesky($identity),
             SocialNetwork::Mastodon => self::mastodonOf($identity),
+            SocialNetwork::Lemmy => null,
         };
         $builtIdentity = null === $url ? null : self::identityOf($network, $url);
 
@@ -50,7 +51,7 @@ final class ProfileFeedUrl
         if (null === $parts) {
             return null;
         }
-        foreach (SocialNetwork::cases() as $network) {
+        foreach (SocialNetwork::feedNetworks() as $network) {
             if (null !== self::identityIn($network, $parts['host'], $parts['path'])) {
                 return $network;
             }
@@ -91,6 +92,7 @@ final class ProfileFeedUrl
         return match ($network) {
             SocialNetwork::Bluesky => self::blueskyIdentity($host, $path),
             SocialNetwork::Mastodon => self::mastodonIdentity($host, $path),
+            SocialNetwork::Lemmy => null,
         };
     }
 

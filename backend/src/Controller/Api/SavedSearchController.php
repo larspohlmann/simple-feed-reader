@@ -67,7 +67,12 @@ final readonly class SavedSearchController
         );
     }
 
-    #[Route('/included-networks/{network}', name: 'api_saved_searches_include_network', methods: ['PUT'])]
+    #[Route(
+        '/included-networks/{network}',
+        name: 'api_saved_searches_include_network',
+        requirements: ['network' => SocialNetwork::FEED_NETWORK_REQUIREMENT],
+        methods: ['PUT'],
+    )]
     public function includeNetwork(SocialNetwork $network, #[CurrentUser] User $user): JsonResponse
     {
         $this->networks->include($user, $network);
@@ -75,7 +80,12 @@ final readonly class SavedSearchController
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 
-    #[Route('/included-networks/{network}', name: 'api_saved_searches_exclude_network', methods: ['DELETE'])]
+    #[Route(
+        '/included-networks/{network}',
+        name: 'api_saved_searches_exclude_network',
+        requirements: ['network' => SocialNetwork::FEED_NETWORK_REQUIREMENT],
+        methods: ['DELETE'],
+    )]
     public function excludeNetwork(SocialNetwork $network, #[CurrentUser] User $user): JsonResponse
     {
         $this->networks->exclude($user, $network);

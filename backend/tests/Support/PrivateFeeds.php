@@ -9,6 +9,7 @@ use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
+use App\Service\Social\Social\Exception\NetworkWithoutFeedsException;
 use App\Enum\SourceFormat;
 
 /** In-memory private Mastodon and Bluesky feeds of one account, for unit tests that never reach a network. */
@@ -32,6 +33,7 @@ final class PrivateFeeds
         return match ($account->getNetwork()) {
             SocialNetwork::Mastodon => self::mastodon($account, $feedId, $kind, $remoteId),
             SocialNetwork::Bluesky => self::bluesky($account, $feedId, $kind, $remoteId),
+            SocialNetwork::Lemmy => throw NetworkWithoutFeedsException::for(SocialNetwork::Lemmy),
         };
     }
 

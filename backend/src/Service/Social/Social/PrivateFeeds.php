@@ -11,6 +11,7 @@ use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Enum\SocialNetwork;
+use App\Service\Social\Social\Exception\NetworkWithoutFeedsException;
 use App\Enum\SourceFormat;
 use App\Repository\KnownSocialCollectionRepository;
 use App\Repository\SocialFeedRepository;
@@ -154,6 +155,7 @@ final readonly class PrivateFeeds
         return match ($account->getNetwork()) {
             SocialNetwork::Bluesky => SourceFormat::BLUESKY_API,
             SocialNetwork::Mastodon => SourceFormat::MASTODON_API,
+            SocialNetwork::Lemmy => throw NetworkWithoutFeedsException::for(SocialNetwork::Lemmy),
         };
     }
 }

@@ -6,6 +6,7 @@ namespace App\Service\Social\Social\Support;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
+use App\Service\Social\Social\Exception\NetworkWithoutFeedsException;
 use App\Service\Social\Bluesky\Support\AtPostUri;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Model\SocialPostAddressModel;
@@ -19,6 +20,7 @@ final class OwnPostIds
         return match ($post->network) {
             SocialNetwork::Bluesky => $post->address,
             SocialNetwork::Mastodon => self::mastodonStatusId($post->address, $account),
+            SocialNetwork::Lemmy => throw NetworkWithoutFeedsException::for(SocialNetwork::Lemmy),
         };
     }
 
@@ -28,6 +30,7 @@ final class OwnPostIds
         return match ($account->getNetwork()) {
             SocialNetwork::Bluesky => self::blueskyPost($url, $account),
             SocialNetwork::Mastodon => self::mastodonStatusId($url, $account),
+            SocialNetwork::Lemmy => throw NetworkWithoutFeedsException::for(SocialNetwork::Lemmy),
         };
     }
 
