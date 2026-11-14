@@ -84,14 +84,11 @@ export class CommentsService {
     const state = this.stateFor(entryId);
     const show = (shown: VoteAnswer) =>
       state.update((current) => withVote(current, address, shown));
-    this.toggles.run(entryId, {
+    this.toggles.change(entryId, {
       key: `vote ${address}`,
       send: () => this.socialPosts.voteComment(entryId, address, to).pipe(tap(show)),
-      to: true,
-      show: (applied) =>
-        applied
-          ? show({ myVote: to, score: steppedScore(score, from, to) })
-          : show({ myVote: from, score }),
+      apply: () => show({ myVote: to, score: steppedScore(score, from, to) }),
+      revert: () => show({ myVote: from, score }),
     });
   }
 
