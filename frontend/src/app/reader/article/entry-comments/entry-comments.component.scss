@@ -82,16 +82,15 @@
   text-decoration: none;
 }
 
-.score {
+.byline-end {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   margin-inline-start: auto;
-}
 
-.score + .delete {
-  margin-inline-start: 0;
-}
-
-.delete {
-  margin-inline-start: auto;
+  &:empty {
+    display: none;
+  }
 }
 
 a.author:hover,

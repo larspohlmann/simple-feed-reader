@@ -126,8 +126,11 @@ export class EntryCommentsComponent {
     this.responses.quote(this.entryId(), network, post.address);
   }
 
-  deleteReply(network: SocialNetworkName, comment: EntryCommentDto): void {
-    this.responses.delete(this.entryId(), network, comment);
+  deleteReply(comment: EntryCommentDto): void {
+    const social = likeableSocial(this.entry());
+    if (social !== null) {
+      this.responses.delete(this.entryId(), social.network, comment);
+    }
   }
 
   when(iso: string): string {
@@ -136,6 +139,10 @@ export class EntryCommentsComponent {
 
   indentOf(comment: EntryCommentDto): number {
     return Math.min(comment.depth, DEEPEST_INDENT);
+  }
+
+  canDelete(comment: EntryCommentDto): boolean {
+    return this.likeable() && comment.post?.isOwn === true;
   }
 
   ratioOf(comment: EntryCommentDto): number {
