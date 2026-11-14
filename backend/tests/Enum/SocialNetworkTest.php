@@ -16,17 +16,37 @@ final class SocialNetworkTest extends TestCase
         self::assertSame('Mastodon', SocialNetwork::Mastodon->displayName());
     }
 
-    public function testLemmyIsAnAccountOnlyNetwork(): void
+    public function testLemmyHasItsDisplayName(): void
+    {
+        self::assertSame('Lemmy', SocialNetwork::Lemmy->displayName());
+    }
+
+    public function testOnlyBlueskyAndMastodonCarryFeeds(): void
     {
         self::assertSame([SocialNetwork::Bluesky, SocialNetwork::Mastodon], SocialNetwork::feedNetworks());
-        self::assertFalse(SocialNetwork::Lemmy->carriesFeeds());
         self::assertTrue(SocialNetwork::Bluesky->carriesFeeds());
         self::assertTrue(SocialNetwork::Mastodon->carriesFeeds());
-        self::assertSame('Lemmy', SocialNetwork::Lemmy->displayName());
+        self::assertFalse(SocialNetwork::Lemmy->carriesFeeds());
+    }
+
+    public function testTheFeedNetworkRequirementListsTheFeedNetworks(): void
+    {
         self::assertSame(
             implode('|', SocialNetwork::valuesOf(SocialNetwork::feedNetworks())),
             SocialNetwork::FEED_NETWORK_REQUIREMENT,
         );
+    }
+
+    public function testAFeedNetworkValueNamesItsNetwork(): void
+    {
+        self::assertSame(SocialNetwork::Bluesky, SocialNetwork::tryFromFeed('bluesky'));
+    }
+
+    public function testAnAccountOnlyOrUnknownOrAbsentValueNamesNoFeedNetwork(): void
+    {
+        self::assertNull(SocialNetwork::tryFromFeed('lemmy'));
+        self::assertNull(SocialNetwork::tryFromFeed('myspace'));
+        self::assertNull(SocialNetwork::tryFromFeed(null));
     }
 
     public function testNetworksListTheirWireValues(): void

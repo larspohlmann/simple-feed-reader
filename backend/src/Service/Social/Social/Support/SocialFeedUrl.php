@@ -47,10 +47,10 @@ final class SocialFeedUrl
             return null;
         }
         $parts = explode(':', $url, 5);
-        $network = SocialNetwork::tryFrom($parts[1] ?? '');
+        $network = SocialNetwork::tryFromFeed($parts[1] ?? '');
         $kind = self::kindOf($parts[3] ?? '');
         $accountId = $parts[2] ?? '';
-        if (true !== $network?->carriesFeeds() || null === $kind || 1 !== preg_match(self::ACCOUNT_ID, $accountId)) {
+        if (null === $network || null === $kind || 1 !== preg_match(self::ACCOUNT_ID, $accountId)) {
             return null;
         }
 

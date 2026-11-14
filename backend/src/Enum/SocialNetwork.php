@@ -23,14 +23,21 @@ enum SocialNetwork: string
             return null;
         }
 
-        $network = self::tryFrom($value);
-        if (null === $network || !$network->carriesFeeds()) {
+        $network = self::tryFromFeed($value);
+        if (null === $network) {
             $known = implode(', ', self::valuesOf(self::feedNetworks()));
 
             throw new ValidationException(['network' => [sprintf('Unknown network. Use one of: %s.', $known)]]);
         }
 
         return $network;
+    }
+
+    public static function tryFromFeed(?string $value): ?self
+    {
+        $network = null === $value ? null : self::tryFrom($value);
+
+        return true === $network?->carriesFeeds() ? $network : null;
     }
 
     /**
