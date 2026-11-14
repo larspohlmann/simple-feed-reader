@@ -5,15 +5,15 @@ declare(strict_types=1);
 namespace App\Tests\Service\Text;
 
 use App\Service\Text\MarkdownHtml;
-use PHPUnit\Framework\TestCase;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
-final class MarkdownHtmlTest extends TestCase
+final class MarkdownHtmlTest extends KernelTestCase
 {
     private MarkdownHtml $markdown;
 
     protected function setUp(): void
     {
-        $this->markdown = new MarkdownHtml();
+        $this->markdown = self::getContainer()->get(MarkdownHtml::class);
     }
 
     public function testParagraphsEmphasisAndQuotes(): void
