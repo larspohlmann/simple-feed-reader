@@ -60,12 +60,12 @@ final class LemmyPostHeader
     private static function counts(array $nodes): DiscussionCounts
     {
         return DiscussionCounts::of(
-            self::firstNumber(self::SCORE, (string) $nodes[5]->textContent),
-            self::firstNumber(self::COMMENT_COUNT, (string) $nodes[6]->textContent),
+            self::capturedNumber(self::SCORE, (string) $nodes[5]->textContent),
+            self::capturedNumber(self::COMMENT_COUNT, (string) $nodes[6]->textContent),
         );
     }
 
-    private static function firstNumber(string $pattern, string $text): ?int
+    private static function capturedNumber(string $pattern, string $text): ?int
     {
         return preg_match($pattern, $text, $matches) === 1 ? (int) $matches[1] : null;
     }
