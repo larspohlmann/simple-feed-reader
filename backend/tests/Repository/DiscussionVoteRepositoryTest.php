@@ -114,6 +114,43 @@ final class DiscussionVoteRepositoryTest extends DbTestCase
         $this->vote($this->owner, $this->account, $entry, VoteScore::Down);
     }
 
+    public function testStoringAFirstVoteInsertsIt(): void
+    {
+        $entry = $this->entry('stored');
+        $voteAt = new \DateTimeImmutable('2026-11-14 11:00:00');
+
+        $this->repository()->store(new DiscussionVote($this->owner, $entry, $this->account, VoteScore::Down, $voteAt));
+        $this->entityManager->clear();
+
+        $stored = $this->repository()->findOneFor($this->owner, $entry);
+        self::assertNotNull($stored);
+        self::assertSame(VoteScore::Down, $stored->getScore());
+        self::assertEquals($voteAt, $stored->getVotedAt());
+    }
+
+    public function testStoringOverAVoteACompetingRequestInsertedRecastsIt(): void
+    {
+        $entry = $this->entry('raced');
+        $this->vote($this->owner, $this->account, $entry, VoteScore::Up);
+        $this->entityManager->clear();
+        $owner = $this->entityManager->find(User::class, $this->owner->requireId());
+        $account = $this->entityManager->find(SocialAccount::class, $this->account->requireId());
+        $reloadedEntry = $this->entityManager->find(Entry::class, $entry->requireId());
+        self::assertNotNull($owner);
+        self::assertNotNull($account);
+        self::assertNotNull($reloadedEntry);
+        $this->entityManager->clear();
+
+        $this->repository()->store(
+            new DiscussionVote($owner, $reloadedEntry, $account, VoteScore::Down, new \DateTimeImmutable('2026-11-14 12:00:00')),
+        );
+        $this->entityManager->clear();
+
+        self::assertSame(1, $this->repository()->count([]));
+        $stored = $this->repository()->findOneFor($owner, $reloadedEntry);
+        self::assertSame(VoteScore::Down, $stored?->getScore());
+    }
+
     public function testDeletingTheAccountDropsItsVotes(): void
     {
         $this->vote($this->owner, $this->account, $this->entry('by-account'), VoteScore::Up);

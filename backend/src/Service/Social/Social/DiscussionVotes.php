@@ -125,10 +125,11 @@ final readonly class DiscussionVotes
             return;
         }
         if (null === $stored) {
-            $this->entityManager->persist(new DiscussionVote($user, $entry, $account, $myVote, $this->clock->now()));
-        } else {
-            $stored->recast($account, $myVote, $this->clock->now());
+            $this->votes->store(new DiscussionVote($user, $entry, $account, $myVote, $this->clock->now()));
+
+            return;
         }
+        $stored->recast($account, $myVote, $this->clock->now());
         $this->entityManager->flush();
     }
 
