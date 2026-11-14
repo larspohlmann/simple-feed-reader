@@ -76,6 +76,25 @@ final readonly class ParsedEntryModel
     }
 
     #[\NoDiscard]
+    public function withAuthor(string $author, string $authorUrl): self
+    {
+        return new self(
+            guid: $this->guid,
+            url: $this->url,
+            headline: $this->headline,
+            author: $author,
+            summary: $this->summary,
+            contentHtml: $this->contentHtml,
+            publishedAt: $this->publishedAt,
+            media: $this->media,
+            categories: $this->categories,
+            discussion: $this->discussion,
+            authorUrl: $authorUrl,
+            authorAvatarUrl: $this->authorAvatarUrl,
+        );
+    }
+
+    #[\NoDiscard]
     public function withContentHtml(?string $contentHtml): self
     {
         return $this->withPostText($this->headline, $this->summary, $contentHtml);
