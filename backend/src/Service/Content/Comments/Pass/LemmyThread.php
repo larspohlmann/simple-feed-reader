@@ -94,16 +94,14 @@ final readonly class LemmyThread
         $creator = $node->node('creator');
         $profileUrl = $creator->string('actor_id');
 
-        $model = new EntryCommentModel(
+        return new EntryCommentModel(
             self::author($creator, $profileUrl),
             $comment->string('ap_id'),
             DateParser::parse($comment->string('published')),
             $html,
             null !== $profileUrl && $profileUrl === $this->entryAuthorUrl,
+            score: $node->node('counts')->int('score'),
         )->atDepth($depth);
-        $score = $node->node('counts')->int('score');
-
-        return null === $score ? $model : $model->withScore($score);
     }
 
     private static function author(JsonNodeModel $creator, ?string $profileUrl): CommentAuthorModel

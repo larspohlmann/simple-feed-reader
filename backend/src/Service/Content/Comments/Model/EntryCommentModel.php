@@ -26,12 +26,6 @@ final readonly class EntryCommentModel
     }
 
     #[\NoDiscard]
-    public function withScore(int $score): self
-    {
-        return clone($this, ['score' => $score]);
-    }
-
-    #[\NoDiscard]
     public function atDepth(int $depth): self
     {
         return clone($this, ['depth' => $depth]);
