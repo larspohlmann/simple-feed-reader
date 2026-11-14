@@ -77,7 +77,7 @@ final readonly class SocialAccountConnector
 
         $account->replaceCredential(
             $verified->handle,
-            $this->cipher->seal($account->getUser()->requireId(), $credentials->secret),
+            $this->cipher->seal($account->getUser()->requireId(), $verified->credential),
             $credentials->hint(),
             $this->clock->now()->setTimezone(new \DateTimeZone('UTC')),
         );
@@ -90,6 +90,9 @@ final readonly class SocialAccountConnector
 
     private function createHome(SocialAccount $account): void
     {
+        if (!$account->getNetwork()->carriesFeeds()) {
+            return;
+        }
         try {
             $this->privateFeeds->create($account, PrivateFeedModel::home());
         } catch (SubscriptionLimitReachedException) {

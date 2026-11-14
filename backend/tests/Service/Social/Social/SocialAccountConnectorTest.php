@@ -7,6 +7,7 @@ namespace App\Tests\Service\Social\Social;
 use App\Entity\Feed;
 use App\Entity\SealedSecret;
 use App\Entity\SocialAccount;
+use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SocialAccountStatus;
 use App\Enum\SocialFeedKind;
@@ -24,6 +25,7 @@ use App\Service\Social\Social\Model\VerifiedAccountModel;
 use App\Service\Social\Social\SocialAccountConnector;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PrivateFeedsWiring;
+use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\StubAccountVerifier;
 use App\Tests\Support\UserFactory;
@@ -75,6 +77,7 @@ final class SocialAccountConnectorTest extends DbTestCase
             'alice@mastodon.example',
             '@alice@mastodon.example',
             'https://mastodon.example',
+            'token-1234',
         );
         $mastodon = $this->connector(new StubAccountVerifier($verified))->connect(
             $this->user,
@@ -151,7 +154,12 @@ final class SocialAccountConnectorTest extends DbTestCase
         $account->markNeedsReconnect();
         $this->entityManager->persist($account);
         $this->entityManager->flush();
-        $verified = new VerifiedAccountModel('did:plc:alice', '@alice.renamed.social', 'https://bsky.social');
+        $verified = new VerifiedAccountModel(
+            'did:plc:alice',
+            '@alice.renamed.social',
+            'https://bsky.social',
+            'wxyz-wxyz-wxyz-9999',
+        );
 
         $accountId = $account->requireId();
 
@@ -201,7 +209,12 @@ final class SocialAccountConnectorTest extends DbTestCase
         $this->entityManager->persist($account);
         $this->entityManager->flush();
         $accountId = $account->requireId();
-        $verified = new VerifiedAccountModel('did:plc:alice', '@did:plc:alice', 'https://pds.moved.example.test');
+        $verified = new VerifiedAccountModel(
+            'did:plc:alice',
+            '@did:plc:alice',
+            'https://pds.moved.example.test',
+            self::APP_PASSWORD,
+        );
 
         $this->reconnect(new StubAccountVerifier($verified), $account);
         $this->entityManager->clear();
@@ -255,6 +268,27 @@ final class SocialAccountConnectorTest extends DbTestCase
         self::assertNull($socialFeeds->findOneFor($account, SocialFeedKind::Home, ''));
     }
 
+    public function testConnectingLemmyCreatesNoFeed(): void
+    {
+        $account = $this->connector($this->lemmy())->connect($this->user, $this->lemmyCredentials());
+
+        self::assertSame(SocialNetwork::Lemmy, $account->getNetwork());
+        $socialFeeds = SocialFeeds::repository($this->entityManager);
+        self::assertNull($socialFeeds->findOneFor($account, SocialFeedKind::Home, ''));
+        self::assertSame(0, $this->entityManager->getRepository(Subscription::class)->count([]));
+    }
+
+    public function testALemmyConnectSealsTheTokenNotThePassword(): void
+    {
+        $account = $this->connector($this->lemmy())->connect($this->user, $this->lemmyCredentials());
+
+        self::assertSame(
+            SocialAccounts::LEMMY_JWT,
+            $this->cipher->open($this->user->requireId(), $account->getSealedCredential()),
+        );
+        self::assertSame('', $account->getCredentialHint());
+    }
+
     public function testReconnectingMakesTheAccountsPrivateFeedsDueAgain(): void
     {
         $account = $this->connector($this->bluesky('did:plc:alice'))->connect($this->user, $this->blueskyCredentials());
@@ -288,7 +322,24 @@ final class SocialAccountConnectorTest extends DbTestCase
 
     private function bluesky(string $did): StubAccountVerifier
     {
-        return new StubAccountVerifier(new VerifiedAccountModel($did, '@' . $did, 'https://bsky.social'));
+        return new StubAccountVerifier(
+            new VerifiedAccountModel($did, '@' . $did, 'https://bsky.social', self::APP_PASSWORD),
+        );
+    }
+
+    private function lemmy(): StubAccountVerifier
+    {
+        return new StubAccountVerifier(new VerifiedAccountModel(
+            'lars@lemmy.example',
+            '@lars@lemmy.example',
+            'https://lemmy.example',
+            SocialAccounts::LEMMY_JWT,
+        ));
+    }
+
+    private function lemmyCredentials(): SocialCredentialsModel
+    {
+        return SocialCredentialsModel::lemmy('lemmy.example', 'lars', 'a password', null);
     }
 
     private function blueskyCredentials(): SocialCredentialsModel

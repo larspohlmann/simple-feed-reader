@@ -8,7 +8,6 @@ use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Bluesky\Support\BlueskyActorKey;
 use App\Service\Social\Social\Exception\InvalidInstanceUrlException;
-use App\Service\Social\Social\Exception\NetworkWithoutFeedsException;
 use App\Service\Social\Social\Exception\NotAnAppPasswordException;
 use App\Service\Foundation\Url\Support\UrlOrigin;
 
@@ -20,7 +19,9 @@ final readonly class SocialCredentialsModel
     private function __construct(
         public SocialNetwork $network,
         public string $address,
-        public string $secret,
+        #[\SensitiveParameter] public string $secret,
+        public string $login = '',
+        public ?string $secondFactor = null,
     ) {
     }
 
@@ -38,9 +39,28 @@ final readonly class SocialCredentialsModel
         return new self(SocialNetwork::Mastodon, self::instanceOrigin($instanceUrl), trim($accessToken));
     }
 
+    /** @throws InvalidInstanceUrlException */
+    public static function lemmy(
+        string $instanceUrl,
+        string $usernameOrEmail,
+        #[\SensitiveParameter] string $password,
+        ?string $secondFactor,
+    ): self {
+        return new self(
+            SocialNetwork::Lemmy,
+            self::instanceOrigin($instanceUrl),
+            $password,
+            trim($usernameOrEmail),
+            $secondFactor,
+        );
+    }
+
     /** @throws NotAnAppPasswordException */
-    public static function forReconnect(SocialAccount $account, string $secret): self
-    {
+    public static function forReconnect(
+        SocialAccount $account,
+        #[\SensitiveParameter] string $secret,
+        ?string $secondFactor = null,
+    ): self {
         return match ($account->getNetwork()) {
             SocialNetwork::Bluesky => new self(
                 SocialNetwork::Bluesky,
@@ -48,13 +68,19 @@ final readonly class SocialCredentialsModel
                 self::appPassword($secret),
             ),
             SocialNetwork::Mastodon => new self(SocialNetwork::Mastodon, $account->getServiceUrl(), trim($secret)),
-            SocialNetwork::Lemmy => throw NetworkWithoutFeedsException::for(SocialNetwork::Lemmy),
+            SocialNetwork::Lemmy => new self(
+                SocialNetwork::Lemmy,
+                $account->getServiceUrl(),
+                $secret,
+                strstr($account->getIdentity(), '@', true) ?: $account->getIdentity(),
+                $secondFactor,
+            ),
         };
     }
 
     public function hint(): string
     {
-        return substr($this->secret, -self::HINT_LENGTH);
+        return SocialNetwork::Lemmy === $this->network ? '' : substr($this->secret, -self::HINT_LENGTH);
     }
 
     /** @throws NotAnAppPasswordException */

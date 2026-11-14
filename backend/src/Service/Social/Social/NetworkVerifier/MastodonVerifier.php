@@ -29,6 +29,11 @@ final readonly class MastodonVerifier implements NetworkVerifierInterface
             ?? throw new SocialNetworkUnreachableException('The Mastodon instance gave no account for this token.');
         $host = $session->host();
 
-        return new VerifiedAccountModel($username . '@' . $host, '@' . $username . '@' . $host, $credentials->address);
+        return new VerifiedAccountModel(
+            $username . '@' . $host,
+            '@' . $username . '@' . $host,
+            $credentials->address,
+            $credentials->secret,
+        );
     }
 }
