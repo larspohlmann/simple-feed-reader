@@ -48,7 +48,9 @@ final readonly class LemmyCommentsSource implements CommentsSourceInterface
             'The Lemmy instance could not be reached.',
         );
 
-        return CommentsAnswerModel::settled($this->endpointFetcher->body($post->commentsApiUrl(), $endpoint, $request->user));
+        $body = $this->endpointFetcher->body($post->commentsApiUrl(), $endpoint, $request->user);
+
+        return CommentsAnswerModel::settled($body);
     }
 
     public function read(CommentsRequest $request, string $answer): CommentsPageModel
