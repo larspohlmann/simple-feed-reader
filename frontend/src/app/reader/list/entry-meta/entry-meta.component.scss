@@ -26,3 +26,18 @@ app-entry-pills:empty {
 app-entry-actions {
   margin-inline-start: auto;
 }
+
+.discussion {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.comments {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-variant-numeric: tabular-nums;
+}

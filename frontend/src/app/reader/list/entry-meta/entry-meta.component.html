@@ -1,3 +1,17 @@
+@let score = entry().score;
+@if (score !== null) {
+  <span class="discussion">
+    <app-vote-pill [score]="score" />
+    @if (compactCommentCount(); as commentCount) {
+      <span
+        class="comments"
+        [attr.aria-label]="commentsKey() | transloco: { count: entry().commentCount }"
+      >
+        <app-icon name="chat_bubble" size="sm" aria-hidden="true" />{{ commentCount }}
+      </span>
+    }
+  </span>
+}
 <app-entry-pills
   [tags]="tags()"
   [subscriptionId]="entry().subscriptionId"
