@@ -173,17 +173,12 @@ final readonly class EntryJson
     {
         $social = $row->enrichment->social;
 
-        $network = match ($social?->network) {
-            SocialNetwork::Bluesky => 'bluesky',
-            SocialNetwork::Mastodon => 'mastodon',
-            SocialNetwork::Lemmy, null => null,
-        };
-        if (null === $social || null === $network) {
+        if (null === $social || SocialNetwork::Lemmy === $social->network) {
             return null;
         }
 
         return [
-            'network' => $network,
+            'network' => $social->network->value,
             'isLiked' => $social->isLiked,
             'canLike' => $social->canLike,
             'isOwn' => $social->isOwn,
