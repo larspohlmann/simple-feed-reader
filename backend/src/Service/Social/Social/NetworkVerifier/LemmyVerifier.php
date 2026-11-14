@@ -19,6 +19,8 @@ final readonly class LemmyVerifier implements NetworkVerifierInterface
 {
     private const string NO_SESSION = 'The Lemmy instance gave no session; confirm the account first.';
 
+    private const string OTHER_INSTANCE = 'The Lemmy instance answered for an account on another instance.';
+
     public function __construct(private LemmyApiClient $lemmy)
     {
     }
@@ -34,6 +36,9 @@ final readonly class LemmyVerifier implements NetworkVerifierInterface
         $host = self::hostOf($person->string('actor_id'));
         if (null === $name || null === $host) {
             throw new SocialCredentialsRejectedException(self::NO_SESSION);
+        }
+        if (strtolower($host) !== strtolower((string) self::hostOf($credentials->address))) {
+            throw new SocialCredentialsRejectedException(self::OTHER_INSTANCE);
         }
         $identity = strtolower($name . '@' . $host);
 

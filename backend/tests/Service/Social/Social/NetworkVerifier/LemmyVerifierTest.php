@@ -70,7 +70,7 @@ final class LemmyVerifierTest extends TestCase
         $this->verifier($http)->verify($this->credentials());
     }
 
-    public function testAnActorOnAnotherHostNamesThatHost(): void
+    public function testAnActorOnAnotherInstanceIsRefused(): void
     {
         $site = str_replace(
             'https://lemmy.example/u/lars',
@@ -79,10 +79,23 @@ final class LemmyVerifierTest extends TestCase
         );
         $http = $this->http(self::fixture('login.json'), $site);
 
-        $account = $this->verifier($http)->verify($this->credentials());
+        $this->expectException(SocialCredentialsRejectedException::class);
+        $this->expectExceptionMessage('The Lemmy instance answered for an account on another instance.');
 
-        self::assertSame('lars@other.example', $account->identity);
-        self::assertSame('@lars@other.example', $account->handle);
+        $this->verifier($http)->verify($this->credentials());
+    }
+
+    public function testTheActorHostIsComparedWithoutRegardToCase(): void
+    {
+        $site = str_replace(
+            'https://lemmy.example/u/lars',
+            'https://LEMMY.Example/u/lars',
+            self::fixture('site-logged-in.json'),
+        );
+
+        $account = $this->verifier($this->http(self::fixture('login.json'), $site))->verify($this->credentials());
+
+        self::assertSame('lars@lemmy.example', $account->identity);
     }
 
     public function testTheNetworkKeyIsLemmy(): void
