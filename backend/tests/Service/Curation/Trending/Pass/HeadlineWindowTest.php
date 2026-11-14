@@ -50,8 +50,8 @@ final class HeadlineWindowTest extends TestCase
 
     public function testEquivalentSpellingsShareWeight(): void
     {
-        $this->window->add(1, 10, 'Germany wins', '');
-        $this->window->add(2, 20, 'Deutschland gewinnt', '');
+        $this->window->add(1, 10, 'Zelensky warns', '');
+        $this->window->add(2, 20, 'Selenskyj mahnt', '');
 
         $shared = $this->window->sharedWeightsWithEarlier(2);
 
@@ -61,8 +61,8 @@ final class HeadlineWindowTest extends TestCase
 
     public function testAnEquivalentInTheBodyCountsAtBodyWeight(): void
     {
-        $this->window->add(1, 10, 'Zelensky meets Macron', '');
-        $this->window->add(2, 20, 'Macron empfängt Gast', 'Selenskyj reist nach Paris');
+        $this->window->add(1, 10, 'Vereinte Nationen tagen in Genf', '');
+        $this->window->add(2, 20, 'Genf empfängt Gäste', 'Die UN beraten');
 
         self::assertEqualsWithDelta(1.5 * self::TWICE, $this->window->sharedWeightsWithEarlier(2)[1], 0.0001);
     }

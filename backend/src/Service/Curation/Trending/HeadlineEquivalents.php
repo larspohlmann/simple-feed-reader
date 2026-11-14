@@ -11,27 +11,50 @@ final readonly class HeadlineEquivalents
 {
     /** Case-sensitive whole words: abbreviations, and long forms whose six-letter stem would catch unrelated words. */
     private const array EXACT_WORDS = [
-        'US' => 'usa', 'USA' => 'usa', 'EEUU' => 'usa',
-        'EU' => 'europa', 'UE' => 'europa',
+        'EU' => 'eunion', 'UE' => 'eunion',
         'UN' => 'onu', 'UNO' => 'onu', 'ONU' => 'onu',
+        'UK' => 'britai', 'Großbritannien' => 'britai', 'Großbritanniens' => 'britai',
         'WM' => 'weltme',
         'U-Haft' => 'uhaft', 'Untersuchungshaft' => 'uhaft',
+        'Schweiz' => 'switze', 'Schweizer' => 'switze',
+        'Austria' => 'osterr', 'Austrian' => 'osterr',
+        'Niederlande' => 'nether', 'Niederlanden' => 'nether',
+        'Francia' => 'france',
     ];
 
     /** Folded words joined by one space. */
     private const array PHRASES = [
-        'united states' => 'usa', 'vereinigte staaten' => 'usa', 'etats unis' => 'usa',
-        'estados unidos' => 'usa', 'ee uu' => 'usa',
         'united nations' => 'onu', 'vereinte nationen' => 'onu', 'nations unies' => 'onu',
         'naciones unidas' => 'onu',
-        'europaische union' => 'europa', 'european union' => 'europa', 'union europeenne' => 'europa',
-        'union europea' => 'europa',
+        'europaische union' => 'eunion', 'european union' => 'eunion', 'union europeenne' => 'eunion',
+        'union europea' => 'eunion',
+        'united kingdom' => 'britai', 'royaume uni' => 'britai', 'reino unido' => 'britai',
+        'pays bas' => 'nether', 'paises bajos' => 'nether',
     ];
 
+    /** Cut stems; checked against the dev windows for unrelated words sharing the six letters. */
     private const array STEMS = [
-        'europe' => 'europa',
-        'german' => 'deutsc', 'allema' => 'deutsc', 'aleman' => 'deutsc',
         'zelens' => 'selens',
+        'russla' => 'russia', 'russie' => 'russia', 'rusia' => 'russia',
+        'ucrani' => 'ukrain',
+        'chine' => 'china',
+        'frankr' => 'france',
+        'spanie' => 'spain', 'espagn' => 'spain', 'espana' => 'spain',
+        'italie' => 'italia', 'italy' => 'italia',
+        'turkei' => 'turkey', 'turqui' => 'turkey',
+        'japon' => 'japan',
+        'polen' => 'poland', 'pologn' => 'poland', 'poloni' => 'poland',
+        'suisse' => 'switze', 'suiza' => 'switze',
+        'autric' => 'osterr',
+        'brasil' => 'brazil', 'bresil' => 'brazil',
+        'mexiko' => 'mexico', 'mexiqu' => 'mexico',
+        'indien' => 'india', 'inde' => 'india',
+        'otan' => 'nato',
+        'syrien' => 'syria', 'syrie' => 'syria', 'siria' => 'syria',
+        'moskau' => 'moscow', 'moscou' => 'moscow', 'moscu' => 'moscow',
+        'peking' => 'beijin', 'pekin' => 'beijin',
+        'kreml' => 'kremli',
+        'brusel' => 'brusse', 'bruxel' => 'brusse',
     ];
 
     private string $exactWordPattern;
@@ -66,7 +89,7 @@ final readonly class HeadlineEquivalents
         preg_match_all($this->exactWordPattern, $text, $matches, \PREG_OFFSET_CAPTURE | \PREG_SET_ORDER);
         $replaced = $text;
         foreach (array_reverse($matches) as [[$word, $offset]]) {
-            if (!self::isBetweenAllCapsWords($text, $offset, \strlen($word))) {
+            if (!self::isInAllCapsRun($text, $offset, \strlen($word))) {
                 $replaced = substr_replace($replaced, ' ' . self::EXACT_WORDS[$word] . ' ', $offset, \strlen($word));
             }
         }
@@ -74,12 +97,18 @@ final readonly class HeadlineEquivalents
         return $replaced;
     }
 
-    private static function isBetweenAllCapsWords(string $text, int $offset, int $length): bool
+    /** Every word next to it is all-caps: the abbreviation stands in a shouted run, not in a sentence. */
+    private static function isInAllCapsRun(string $text, int $offset, int $length): bool
     {
-        $before = preg_match('/([\p{L}\p{N}]+)[^\p{L}\p{N}]*$/u', substr($text, 0, $offset), $previous) === 1;
-        $after = preg_match('/^[^\p{L}\p{N}]*([\p{L}\p{N}]+)/u', substr($text, $offset + $length), $next) === 1;
+        $neighbours = [];
+        if (preg_match('/([\p{L}\p{N}]+)[^\p{L}\p{N}]*$/u', substr($text, 0, $offset), $previous) === 1) {
+            $neighbours[] = $previous[1];
+        }
+        if (preg_match('/^[^\p{L}\p{N}]*([\p{L}\p{N}]+)/u', substr($text, $offset + $length), $next) === 1) {
+            $neighbours[] = $next[1];
+        }
 
-        return ($before && self::isAllCaps($previous[1])) || ($after && self::isAllCaps($next[1]));
+        return $neighbours !== [] && array_filter($neighbours, self::isAllCaps(...)) === $neighbours;
     }
 
     private static function isAllCaps(string $word): bool
@@ -127,7 +156,7 @@ final readonly class HeadlineEquivalents
         usort($words, static fn (string $left, string $right): int => \strlen($right) <=> \strlen($left));
         $alternatives = implode('|', array_map(static fn (string $word): string => preg_quote($word, '/'), $words));
 
-        return '/(?<![\p{L}\p{N}-])(?:' . $alternatives . ')(?![\p{L}\p{N}-])/u';
+        return '/(?<![\p{L}\p{N}])(?:' . $alternatives . ')(?![\p{L}\p{N}])/u';
     }
 
     /** @return array<string, list<array{list<string>, string}>> */
