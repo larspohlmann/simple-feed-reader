@@ -666,15 +666,12 @@ describe('SocialSectionComponent', () => {
       post.flush(lemmy());
     });
 
-    it('aLemmyAccountShowsNoImportNoSyncAndNoHint', () => {
+    it('offers a Lemmy account Manage feeds', () => {
       const fixture = mount([lemmy()]);
 
-      expect(root(fixture).textContent).toContain('lars@lemmy.example');
-      expect(byTestId(fixture, 'social-import-7')).toBeNull();
-      expect(byTestId(fixture, 'social-import-section')).toBeNull();
-      expect(byTestId(fixture, 'social-sync-changes-7')).toBeNull();
-      expect(root(fixture).textContent).not.toContain('Manage feeds');
-      expect(root(fixture).textContent).not.toContain('…');
+      const button = byTestId(fixture, 'social-import-7')?.querySelector('button');
+      expect(button?.textContent).toContain('Manage feeds…');
+      expect(button?.closest('app-settings-row')?.textContent).toContain('Lemmy');
     });
 
     it('reconnectingLemmyAsksForThePasswordAndCode', () => {

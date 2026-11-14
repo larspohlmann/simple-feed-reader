@@ -3,11 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoService } from '@jsverse/transloco';
 import { EMPTY, Observable, catchError, filter, map, switchMap, tap } from 'rxjs';
-import {
-  AccountNetworkName,
-  SOCIAL_NETWORK_NAMES,
-  SocialNetworkName,
-} from '../../../core/social-network';
+import { SOCIAL_NETWORK_NAMES, SocialNetworkName } from '../../../core/social-network';
 import { parseProblem } from '../../../core/problem';
 import { ConfirmData } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
@@ -41,7 +37,7 @@ export class PostActions {
   private readonly transloco = inject(TranslocoService);
 
   /** Replies to the entry's own post, or to the reply in its thread named by `address`. */
-  reply(entryId: number, network: AccountNetworkName, address: string | null): void {
+  reply(entryId: number, network: SocialNetworkName, address: string | null): void {
     this.respond({ kind: 'reply', entryId, network, address }).subscribe((sent) => {
       this.comments.insertReply(entryId, address, sentComment(sent, new Date()));
       if (address === null) this.counts.stepReplies(entryId, true);

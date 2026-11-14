@@ -3,7 +3,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Observable, finalize, tap } from 'rxjs';
 import { API_BASE_URL } from '../../core/api';
 import { parseProblem, problemMessage } from '../../core/problem';
-import { AccountNetworkName } from '../../core/social-network';
+import { SocialNetworkName } from '../../core/social-network';
 import { SocialAccountStatus } from '../../reader/social-feed';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 
@@ -25,7 +25,7 @@ export interface SocialAccountSync {
 
 export interface SocialAccount {
   readonly id: number;
-  readonly network: AccountNetworkName;
+  readonly network: SocialNetworkName;
   readonly handle: string;
   readonly serviceUrl: string;
   readonly status: SocialAccountStatus;

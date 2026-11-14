@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Dialog } from '@angular/cdk/dialog';
 import { Observable } from 'rxjs';
-import { FeedAccountRefDto } from '../../social-feed';
+import { SocialAccountRefDto } from '../../social-feed';
 import { SocialImportDialogComponent } from './social-import-dialog.component';
 import { SocialImportDialogData } from './social-import-list';
 import { SocialImportResult } from './social-import.service';
@@ -11,7 +11,7 @@ export class SocialFeedsPicker {
   private readonly dialog = inject(Dialog);
 
   open(
-    account: Pick<FeedAccountRefDto, 'id' | 'network' | 'handle'>,
+    account: Pick<SocialAccountRefDto, 'id' | 'network' | 'handle'>,
   ): Observable<SocialImportResult | undefined> {
     const data: SocialImportDialogData = {
       accountId: account.id,

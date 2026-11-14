@@ -1402,13 +1402,15 @@
     "savedFrom": {
       "bluesky": "Guardado de Bluesky",
       "mastodon": "Guardado de Mastodon",
+      "lemmy": "Guardado de Lemmy",
       "feeds": "Guardado de feeds"
     },
     "toggleSocialFeeds": "Mostrar u ocultar feeds de {{network}}",
     "toggleSocialSearches": "Mostrar u ocultar búsquedas de {{network}}",
     "socialNetworkShort": {
       "bluesky": "bsky",
-      "mastodon": "mastodon"
+      "mastodon": "mastodon",
+      "lemmy": "lemmy"
     },
     "organise": "Organizar",
     "organiseDone": "Listo",

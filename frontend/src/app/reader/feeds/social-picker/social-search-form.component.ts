@@ -62,6 +62,7 @@ const SEARCH_SYNTAX: Readonly<Record<SocialNetworkName, readonly SyntaxRule[]>> 
     EXCLUDE_AUTHOR,
     GROUP,
   ],
+  lemmy: [],
 };
 
 /** A search query with its syntax help and a preview of what it finds; the host projects its own action beside Preview. */

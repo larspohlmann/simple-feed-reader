@@ -1402,13 +1402,15 @@
     "savedFrom": {
       "bluesky": "Enregistrés depuis Bluesky",
       "mastodon": "Enregistrés depuis Mastodon",
+      "lemmy": "Enregistrés depuis Lemmy",
       "feeds": "Enregistrés depuis les flux"
     },
     "toggleSocialFeeds": "Afficher/masquer les flux {{network}}",
     "toggleSocialSearches": "Afficher/masquer les recherches {{network}}",
     "socialNetworkShort": {
       "bluesky": "bsky",
-      "mastodon": "mastodon"
+      "mastodon": "mastodon",
+      "lemmy": "lemmy"
     },
     "organise": "Organiser",
     "organiseDone": "Terminé",

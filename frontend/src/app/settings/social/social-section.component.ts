@@ -14,14 +14,8 @@ import { SettingsGroupComponent } from '../../shared/settings/settings-group/set
 import { SettingsRowComponent } from '../../shared/settings/settings-row/settings-row.component';
 import { SettingsStackComponent } from '../../shared/settings/stack/settings-stack.component';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
-import {
-  AccountNetworkName,
-  SocialNetworkName,
-  isSocialNetworkName,
-} from '../../core/social-network';
+import { SocialNetworkName } from '../../core/social-network';
 import { SocialAccount, SocialAccountsService, SyncChange } from './social-accounts.service';
-
-type FeedAccount = SocialAccount & { network: SocialNetworkName };
 
 interface ReconnectDraft {
   readonly secret: string;
@@ -59,11 +53,7 @@ export class SocialSectionComponent {
   protected readonly blueskyAccounts = this.accountsOf('bluesky');
   protected readonly mastodonAccounts = this.accountsOf('mastodon');
   protected readonly lemmyAccounts = this.accountsOf('lemmy');
-  protected readonly importableAccounts = computed(() =>
-    (this.svc.accounts() ?? []).filter((account): account is FeedAccount =>
-      isSocialNetworkName(account.network),
-    ),
-  );
+  protected readonly importableAccounts = computed(() => this.svc.accounts() ?? []);
 
   protected readonly blueskyFormOpen = signal(false);
   protected readonly mastodonFormOpen = signal(false);
@@ -207,7 +197,7 @@ export class SocialSectionComponent {
     });
   }
 
-  protected openImport(account: FeedAccount): void {
+  protected openImport(account: SocialAccount): void {
     this.picker.open(account).subscribe(() => this.svc.load());
   }
 
@@ -232,7 +222,7 @@ export class SocialSectionComponent {
     );
   }
 
-  private accountsOf(network: AccountNetworkName) {
+  private accountsOf(network: SocialNetworkName) {
     return computed(() =>
       (this.svc.accounts() ?? []).filter((account) => account.network === network),
     );
@@ -246,7 +236,7 @@ export class SocialSectionComponent {
   }
 }
 
-const RECONNECT_TITLE_KEYS: Record<AccountNetworkName, string> = {
+const RECONNECT_TITLE_KEYS: Record<SocialNetworkName, string> = {
   bluesky: 'settings.social.appPassword',
   mastodon: 'settings.social.accessToken',
   lemmy: 'settings.social.lemmyPassword',

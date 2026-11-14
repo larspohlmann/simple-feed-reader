@@ -1398,13 +1398,15 @@
     "savedFrom": {
       "bluesky": "Saved from Bluesky",
       "mastodon": "Saved from Mastodon",
+      "lemmy": "Saved from Lemmy",
       "feeds": "Saved from feeds"
     },
     "toggleSocialFeeds": "Toggle {{network}} feeds",
     "toggleSocialSearches": "Toggle {{network}} searches",
     "socialNetworkShort": {
       "bluesky": "bsky",
-      "mastodon": "mastodon"
+      "mastodon": "mastodon",
+      "lemmy": "lemmy"
     },
     "organise": "Organise",
     "organiseDone": "Done",

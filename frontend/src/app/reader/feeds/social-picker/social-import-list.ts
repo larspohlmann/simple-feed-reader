@@ -36,6 +36,12 @@ export interface SocialImportDialogData {
 
 const ROWS_PER_PAGE = 100;
 
+const IMPORT_TABS: Readonly<Record<SocialNetworkName, readonly ImportTab[]>> = {
+  bluesky: ['accounts', 'lists', 'customFeeds'],
+  mastodon: ['accounts', 'lists', 'tags'],
+  lemmy: ['accounts', 'lists'],
+};
+
 /**
  * The import dialog's follows list: the open tab, the filter, the ticks and what Apply sends. Provided by the
  * dialog, so all of it outlives a trip to the Search tab.
@@ -50,10 +56,7 @@ export class SocialImportList {
     initialValue: this.i18n.getActiveLang(),
   });
 
-  private readonly listTabs: readonly ImportTab[] =
-    this.data.network === 'bluesky'
-      ? ['accounts', 'lists', 'customFeeds']
-      : ['accounts', 'lists', 'tags'];
+  private readonly listTabs = IMPORT_TABS[this.data.network];
   readonly tabs: readonly DialogTab[] = [...this.listTabs, 'search'];
   readonly tab = signal<DialogTab>('accounts');
   /** The list tab on show; null on Search. */

@@ -22,4 +22,12 @@ describe('NetworkLogoComponent', () => {
       mastodon.querySelector('path')?.getAttribute('d'),
     );
   });
+
+  it('draws Lemmy its own mark', () => {
+    const lemmy = render('lemmy').querySelector('svg')!;
+
+    expect(lemmy.classList).toContain('lemmy');
+    expect(lemmy.getAttribute('viewBox')).toBe('0 0 24 24');
+    expect(lemmy.querySelectorAll('path')).toHaveLength(1);
+  });
 });

@@ -49,6 +49,8 @@ export const FILTER_KEYS: Readonly<Record<StateFilter, string>> = {
 
 const COLLECTION_ICONS: Readonly<Record<CollectionKind, string>> = {
   home: 'home',
+  local: 'location_city',
+  all: 'public',
   trending: 'trending_up',
   list: 'list',
   custom_feed: 'dynamic_feed',
