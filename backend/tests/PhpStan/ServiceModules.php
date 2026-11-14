@@ -15,11 +15,22 @@ final readonly class ServiceModules
     /** @var list<string> */
     private array $subModules;
 
-    /** @param list<string> $subModules relative to App\Service, such as `Group\Parent\Directory` */
-    public function __construct(array $subModules)
+    /**
+     * @param list<string> $groups the navigation groups directly below App\Service
+     * @param list<string> $subModules relative to App\Service, such as `Group\Parent\Directory`
+     */
+    public function __construct(public array $groups, array $subModules)
     {
         usort($subModules, static fn (string $left, string $right): int => \strlen($right) <=> \strlen($left));
         $this->subModules = $subModules;
+    }
+
+    /** Whether a service class sits in `App\Service\<Group>\<Module>\…` below a declared group. */
+    public function isInAModule(string $className): bool
+    {
+        $segments = explode('\\', substr($className, \strlen(self::SERVICE_NAMESPACE)));
+
+        return \count($segments) > 2 && \in_array($segments[0], $this->groups, true);
     }
 
     /** The longest declared sub-module the class sits in, else its first two segments (fewer for a loose class). */

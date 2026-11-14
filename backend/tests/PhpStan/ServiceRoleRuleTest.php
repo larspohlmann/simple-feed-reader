@@ -44,7 +44,6 @@ final class ServiceRoleRuleTest extends RuleTestCase
         return new ServiceRoleRule(
             self::getContainer()->getByType(ReflectionProvider::class),
             self::serviceModules(),
-            self::GROUPS,
         );
     }
 
@@ -475,12 +474,12 @@ final class ServiceRoleRuleTest extends RuleTestCase
             'moduleHome',
             $class,
             'sits outside a module folder',
-            'App\Service\<Group>\<Module>, with <Group> one of Fixture, Curation',
+            'App\Service\<Group>\<Module>, with <Group> one of ' . implode(', ', self::GROUPS),
         );
     }
 
     private static function serviceModules(): ServiceModules
     {
-        return new ServiceModules(['Curation\\Recommendation\\Llm', 'Fixture\\Atlas\\Maps']);
+        return new ServiceModules(self::GROUPS, ['Curation\\Recommendation\\Llm', 'Fixture\\Atlas\\Maps']);
     }
 }

@@ -41,6 +41,7 @@ services:
     -
         class: App\Tests\PhpStan\ServiceModules
         arguments:
+            groups: %serviceGroups%
             subModules: %serviceSubModules%
     -
         class: App\Tests\PhpStan\ChainedNullCoalescingRule
@@ -108,8 +109,6 @@ services:
             - phpstan.collector
     -
         class: App\Tests\PhpStan\ServiceRoleRule
-        arguments:
-            groups: %serviceGroups%
         tags:
             - phpstan.rules.rule
     -

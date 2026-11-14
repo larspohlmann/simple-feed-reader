@@ -19,12 +19,12 @@ final class ServiceModuleCycleRuleTest extends RuleTestCase
 
     protected function getRule(): Rule
     {
-        return new ServiceModuleCycleRule(new ServiceModules(self::SUB_MODULES));
+        return new ServiceModuleCycleRule(new ServiceModules([], self::SUB_MODULES));
     }
 
     protected function getCollectors(): array
     {
-        return [new ServiceModuleDependencyCollector(new NodeFinder(), new ServiceModules(self::SUB_MODULES))];
+        return [new ServiceModuleDependencyCollector(new NodeFinder(), new ServiceModules([], self::SUB_MODULES))];
     }
 
     public function testATwoModuleCycleIsReportedOnceWhereItCloses(): void
