@@ -8,6 +8,8 @@ use App\Exception\ValidationException;
 
 enum SocialNetwork: string
 {
+    use RequestValueParsing;
+
     case Bluesky = 'bluesky';
     case Mastodon = 'mastodon';
     case Lemmy = 'lemmy';
@@ -23,14 +25,7 @@ enum SocialNetwork: string
             return null;
         }
 
-        $network = self::tryFromFeed($value);
-        if (null === $network) {
-            $known = implode(', ', self::valuesOf(self::feedNetworks()));
-
-            throw new ValidationException(['network' => [sprintf('Unknown network. Use one of: %s.', $known)]]);
-        }
-
-        return $network;
+        return self::caseOrRefusal($value, 'network');
     }
 
     public static function tryFromFeed(?string $value): ?self
@@ -54,6 +49,12 @@ enum SocialNetwork: string
     public static function feedNetworks(): array
     {
         return array_values(array_filter(self::cases(), static fn (self $network): bool => $network->carriesFeeds()));
+    }
+
+    /** @return list<self> */
+    private static function requestCases(): array
+    {
+        return self::feedNetworks();
     }
 
     public function carriesFeeds(): bool
