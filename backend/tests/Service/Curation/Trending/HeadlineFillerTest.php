@@ -68,7 +68,7 @@ final class HeadlineFillerTest extends TestCase
     /** @return iterable<string, array{string}> */
     public static function frenchAndSpanishFunctionWords(): iterable
     {
-        $french = 'les pour que dans une sur avec est pas qui aux par';
+        $french = 'les pour que dans une sur avec est pas qui aux par fois';
         $spanish = 'del los las para una por mas sus entre';
         foreach (explode(' ', $french . ' ' . $spanish) as $word) {
             yield $word => [$word];

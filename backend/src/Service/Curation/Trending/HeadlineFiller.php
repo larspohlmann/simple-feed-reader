@@ -43,6 +43,7 @@ final readonly class HeadlineFiller
         'apres' => true, 'avant' => true, 'entre' => true, 'chez' => true, 'vers' => true, 'selon' => true,
         'depuis' => true, 'lors' => true, 'tres' => true, 'aussi' => true, 'deja' => true,
         'encore' => true, 'comme' => true, 'tout' => true, 'tous' => true, 'toute' => true, 'fait' => true,
+        'fois' => true,
         'los' => true, 'las' => true, 'una' => true, 'unos' => true, 'unas' => true, 'del' => true, 'por' => true,
         'para' => true, 'mas' => true, 'sus' => true, 'pero' => true,
         'sobre' => true, 'hasta' => true, 'desde' => true, 'tras' => true, 'ante' => true, 'este' => true,
