@@ -24,6 +24,7 @@ use App\Service\Social\Share\Model\SharedLinksModel;
 use App\Service\Social\Share\Support\SharedLinks;
 use App\Service\Foundation\Sanitize\EntrySanitizer;
 use App\Service\Foundation\Text\Support\HtmlEscape;
+use App\Service\Foundation\Url\Support\TrackingFreeUrl;
 
 final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
 {
@@ -54,7 +55,10 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
         $assembled = EntryMediaAssembler::assemble(self::storedImage($entry), $embed->media, []);
         $entry->setMedia($assembled->media, $entry->getAttachments());
 
-        $cardedUrls = array_map(static fn (LinkCardContent $card): string => $card->url, $embed->linkCards);
+        $cardedUrls = array_map(
+            static fn (LinkCardContent $card): string => TrackingFreeUrl::of($card->url),
+            $embed->linkCards,
+        );
 
         $outcome = $body->uncardedBy($cardedUrls) === [] ? FillOutcome::Filled : FillOutcome::AwaitingLinkCards;
         if ($embed->quote === null) {
@@ -111,13 +115,17 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
         }
         $shared = SharedLinks::of($html);
         $uncarded = $embed->uncardedLink;
-        if ($uncarded === null || \in_array($uncarded, $shared->urls, true)) {
+        if ($uncarded === null) {
+            return $shared;
+        }
+        $cleaned = TrackingFreeUrl::of($uncarded);
+        if (\in_array($cleaned, $shared->urls, true)) {
             return $shared;
         }
         $escaped = HtmlEscape::text($uncarded);
 
         return new SharedLinksModel(
-            [...$shared->urls, $uncarded],
+            [...$shared->urls, $cleaned],
             $shared->linkedHtml . sprintf('<p><a href="%s">%s</a></p>', $escaped, $escaped),
             $shared->ownProse,
         );

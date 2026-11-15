@@ -4,23 +4,16 @@ declare(strict_types=1);
 
 namespace App\Service\Foundation\Url;
 
+use App\Service\Foundation\Url\Support\TrackingFreeUrl;
 use App\Service\Foundation\Url\Support\UrlOrigin;
 
 /** Keeps the path and every non-tracking parameter verbatim: two articles differing by `?id=` must never collapse. */
 final readonly class UrlNormalizer
 {
-    /** Query keys, or key prefixes, that never identify the article itself. */
-    private const array TRACKING_PREFIXES = ['utm_', 'at_', 'wt_'];
-    private const array TRACKING_KEYS = ['fbclid', 'gclid'];
-
     public function normalize(?string $url): ?string
     {
-        if ($url === null || $url === '') {
-            return null;
-        }
-
-        $parts = parse_url($url);
-        if ($parts === false || !isset($parts['scheme'], $parts['host'])) {
+        $parts = $url === null ? null : self::absoluteParts($url);
+        if ($parts === null) {
             return null;
         }
 
@@ -28,18 +21,15 @@ final readonly class UrlNormalizer
         $canonical = $scheme . '://' . strtolower($parts['host'])
             . $this->port($scheme, $parts['port'] ?? null)
             . ($parts['path'] ?? '')
-            . $this->query($parts['query'] ?? null);
+            . $this->query($parts['query'] ?? null, $parts['host']);
 
         return $canonical;
     }
 
-    /** The address as a reader shares it: tracking parameters drop, the fragment stays. */
+    /** The address as a reader shares it: tracking parameters drop, a navigation fragment stays. */
     public function withoutTracking(?string $url): ?string
     {
-        $normalized = $this->normalize($url);
-        $fragment = parse_url((string) $url, \PHP_URL_FRAGMENT);
-
-        return null === $normalized || !is_string($fragment) ? $normalized : $normalized . '#' . $fragment;
+        return $url === null || self::absoluteParts($url) === null ? null : TrackingFreeUrl::of($url);
     }
 
     /** Every writer of an article's identity hashes here: a divergence of one byte silently stops dedupe. */
@@ -48,6 +38,17 @@ final readonly class UrlNormalizer
         $normalized = $this->normalize($url);
 
         return $normalized === null ? null : hash('sha256', $normalized);
+    }
+
+    /** @return ?array{scheme: string, host: string, port?: int, path?: string, query?: string} */
+    private static function absoluteParts(string $url): ?array
+    {
+        $parts = parse_url($url);
+        if ($parts === false || !isset($parts['scheme'], $parts['host'])) {
+            return null;
+        }
+
+        return $parts;
     }
 
     private function port(string $scheme, ?int $port): string
@@ -59,34 +60,14 @@ final readonly class UrlNormalizer
         return ':' . $port;
     }
 
-    private function query(?string $query): string
+    private function query(?string $query, string $host): string
     {
         if ($query === null || $query === '') {
             return '';
         }
 
-        $kept = array_filter(
-            explode('&', $query),
-            fn (string $pair): bool => !$this->isTracking($pair),
-        );
+        $kept = TrackingFreeUrl::query($query, $host);
 
-        return $kept === [] ? '' : '?' . implode('&', $kept);
-    }
-
-    private function isTracking(string $pair): bool
-    {
-        $key = strtolower(explode('=', $pair, 2)[0]);
-
-        if (in_array($key, self::TRACKING_KEYS, true)) {
-            return true;
-        }
-
-        foreach (self::TRACKING_PREFIXES as $prefix) {
-            if (str_starts_with($key, $prefix)) {
-                return true;
-            }
-        }
-
-        return false;
+        return $kept === '' ? '' : '?' . $kept;
     }
 }

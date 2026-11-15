@@ -1,5 +1,5 @@
 import { FeedDirectoryFeed } from './feed-directory-rows';
-import { hostOf, parseUrl } from './feed-directory-url';
+import { hostOf, parseUrl } from '../../shared/url-host';
 
 export interface FeedDirectoryFeedGroup {
   readonly category: string;

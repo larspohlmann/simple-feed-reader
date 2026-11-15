@@ -44,6 +44,11 @@ final class TrailingUrlTest extends TestCase
             self::URL,
             '<p>Read this.</p>',
         ];
+        yield 'with the trackers its card url no longer carries' => [
+            '<p>Read this.<br />' . self::TRACKED . '</p>',
+            'https://www.motherjones.com/politics/2026/10/youre-funding-trumps-new-ads/',
+            '<p>Read this.</p>',
+        ];
         yield 'before a trailing comment' => [
             '<p>Read this. ' . self::URL . '</p><!-- dlvr.it -->',
             self::URL,
@@ -63,6 +68,7 @@ final class TrailingUrlTest extends TestCase
         yield 'the URL mid-text' => ['<p>See ' . self::URL . ' for more.</p>'];
         yield 'another URL at the end' => ['<p>See https://example.com/other</p>'];
         yield 'no text' => ['<p></p>'];
+        yield 'the same page with another content key' => ['<p>See ' . self::URL . '?id=2</p>'];
     }
 
     #[DataProvider('untouched')]

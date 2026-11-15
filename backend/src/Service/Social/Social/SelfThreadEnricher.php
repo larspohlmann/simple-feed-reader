@@ -208,7 +208,7 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
         $entry = $row->getEntry();
         if (
             ShareTargets::isCardableShare($entry)
-            && ShareTargets::uncardedOf($entry, $this->rootCardUrlsOf($entry)) !== []
+            && ShareTargets::planOf($entry, $this->rootCardUrlsOf($entry))->urls !== []
         ) {
             $row->awaitLinkCards();
 

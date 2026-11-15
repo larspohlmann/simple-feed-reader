@@ -50,6 +50,13 @@ final class QuoteLineTest extends TestCase
         self::assertSame($expected, QuoteLine::removedFrom($html, self::QUOTED));
     }
 
+    public function testATrackedQuoteLineGoesUnderItsTrackingFreeUrl(): void
+    {
+        $html = '<p>RE: <a href="https://q.test/a?utm_source=m">https://q.test/a?utm_source=m</a></p><p>Yes.</p>';
+
+        self::assertSame('<p>Yes.</p>', QuoteLine::removedFrom($html, 'https://q.test/a'));
+    }
+
     /** @return iterable<string, array{string}> */
     public static function untouched(): iterable
     {

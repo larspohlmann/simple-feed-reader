@@ -6,10 +6,12 @@ namespace App\Tests\Support;
 
 use App\Entity\LinkCardContent;
 use App\Service\Content\LinkCard\Model\PageCardModel;
+use App\Service\Content\LinkCard\Model\PageIdentityModel;
 use App\Service\Content\LinkCard\PageCardReader\PageCardReaderInterface;
 use App\Service\Content\Reader\Exception\PageFetchException;
+use App\Service\Foundation\Url\Support\TrackingFreeUrl;
 
-/** Cards every page "Card for <url>"; a URL containing /missing fails to fetch. */
+/** Cards every page "Card for <url>", one page whatever its trackers; a URL containing /missing fails to fetch. */
 final class StubPageCardReader implements PageCardReaderInterface
 {
     private int $reads = 0;
@@ -36,6 +38,7 @@ final class StubPageCardReader implements PageCardReaderInterface
         return new PageCardModel(
             new LinkCardContent($sharedUrl, 'Card for ' . $sharedUrl, null, null, 'example.com'),
             null,
+            new PageIdentityModel($sharedUrl, null, 'Card for ' . TrackingFreeUrl::of($sharedUrl)),
         );
     }
 

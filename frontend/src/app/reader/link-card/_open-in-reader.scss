@@ -1,0 +1,11 @@
+@use '../../theme/breakpoints' as bp;
+
+// The width an `app-open-in-reader` button takes, for the text line under it to make room.
+@mixin room {
+  --open-in-reader-width: var(--tap-target);
+
+  @media (width >= bp.$bp-lg) {
+    // The longest label, "Im Reader öffnen", is 11.5em of --fs-xs.
+    --open-in-reader-width: calc(12 * var(--fs-xs));
+  }
+}

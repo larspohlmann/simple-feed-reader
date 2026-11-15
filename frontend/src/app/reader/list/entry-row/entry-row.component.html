@@ -77,7 +77,7 @@
   </div>
   <app-entry-meta [entry]="entry()" [tags]="tags()" [imageShown]="showImage()" size="md" />
   @if (entry().story) {
-    <app-story-shares [entry]="entry()" />
+    <app-story-sharers [entry]="entry()" />
   }
   <app-entry-duplicates [entry]="entry()" />
 </article>

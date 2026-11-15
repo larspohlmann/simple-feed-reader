@@ -27,7 +27,7 @@ describe('NetworkLogoComponent', () => {
     const lemmy = render('lemmy').querySelector('svg')!;
 
     expect(lemmy.classList).toContain('lemmy');
-    expect(lemmy.getAttribute('viewBox')).toBe('0 0 24 24');
+    expect(lemmy.getAttribute('viewBox')).toBe('2.5 3.75 19 19');
     expect(lemmy.querySelectorAll('path')).toHaveLength(1);
   });
 });

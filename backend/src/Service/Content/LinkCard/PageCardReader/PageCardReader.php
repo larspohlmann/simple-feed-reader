@@ -7,9 +7,11 @@ namespace App\Service\Content\LinkCard\PageCardReader;
 use App\Entity\LinkCardContent;
 use App\Service\Outbound\Fetch\Pass\PageUrls;
 use App\Service\Outbound\Fetch\Support\HostKey;
+use App\Service\Foundation\Html\Support\DeclaredPageAddress;
 use App\Service\Foundation\Html\Support\HtmlDocumentParser;
 use App\Service\Foundation\Html\Support\MetaTags;
 use App\Service\Content\LinkCard\Model\PageCardModel;
+use App\Service\Content\LinkCard\Model\PageIdentityModel;
 use App\Service\Content\LinkCard\Support\DeclaredPageMedium;
 use App\Service\Content\LinkCard\Support\StorableLinkCard;
 use App\Service\Ingestion\Parser\Support\VisualMedium;
@@ -34,16 +36,22 @@ final readonly class PageCardReader implements PageCardReaderInterface
         }
         $document = HtmlDocumentParser::parseOrEmpty($page->head);
         $meta = MetaTags::contentByKey($document);
+        $title = self::declared($meta, 'og:title', 'twitter:title') ?: TextNormalizer::normalize($document->title);
 
         return new PageCardModel(
             StorableLinkCard::of(new LinkCardContent(
                 $sharedUrl,
-                self::declared($meta, 'og:title', 'twitter:title') ?: TextNormalizer::normalize($document->title),
+                $title,
                 self::declared($meta, 'og:description', 'twitter:description', 'description') ?: null,
                 self::image($meta, $page->finalUrl),
                 self::declared($meta, 'og:site_name') ?: HostKey::forUrl($sharedUrl),
             )),
             DeclaredPageMedium::of($meta),
+            new PageIdentityModel(
+                $page->finalUrl,
+                new PageUrls($page->finalUrl)->httpUrl(DeclaredPageAddress::in($document)),
+                $title,
+            ),
         );
     }
 

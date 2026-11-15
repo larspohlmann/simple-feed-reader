@@ -43,6 +43,18 @@ final class EntryLineTest extends TestCase
         self::assertSame([['url' => 'https://cdn/ep.mp3', 'mimeType' => 'audio/mpeg']], $line->attachments);
     }
 
+    public function testARestoredUrlLosesItsTrackers(): void
+    {
+        $line = EntryLine::fromLine(['url' => 'https://f/one?id=2&utm_source=rss#xtor=RSS-1'] + $this->baseLine());
+
+        self::assertSame('https://f/one?id=2', $line->url);
+    }
+
+    public function testARestoredEntryWithoutUrlKeepsNone(): void
+    {
+        self::assertNull(EntryLine::fromLine(['url' => null] + $this->baseLine())->url);
+    }
+
     public function testDefaultsToEmptyWhenAnOlderFileOmitsTheKeys(): void
     {
         $line = EntryLine::fromLine($this->baseLine());

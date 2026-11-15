@@ -7,6 +7,7 @@ import {
   linkedSignal,
   signal,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { EntryDto } from '../../models';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
@@ -20,8 +21,9 @@ import { sourceNameOf } from '../../entry/entry-source/source-name';
 import { EntryDuplicatesComponent } from './entry-duplicates.component';
 import { RenditionsDirective } from '../renditions.directive';
 import { MINI_CARD_THUMB_SIZES } from '../rendition-sizes';
-import { StorySharesComponent } from '../../trending/story-shares/story-shares.component';
-import { articleFaceOf } from '../../trending/shared-article-card';
+import { StorySharersComponent } from '../../trending/story-sharers/story-sharers.component';
+import { ArticleFace, articleFaceOf } from '../../trending/shared-article-card';
+import { OpenInReaderComponent } from '../../link-card/open-in-reader.component';
 
 let nextId = 0;
 
@@ -29,12 +31,14 @@ let nextId = 0;
   selector: 'app-more-sources',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    NgTemplateOutlet,
     TranslocoPipe,
     FaviconComponent,
     IconComponent,
     EntryDuplicatesComponent,
     RenditionsDirective,
-    StorySharesComponent,
+    StorySharersComponent,
+    OpenInReaderComponent,
   ],
   templateUrl: './more-sources.component.html',
   styleUrl: './more-sources.component.scss',
@@ -56,14 +60,16 @@ export class MoreSourcesComponent {
     computation: () => new Set(),
   });
   protected readonly sources = computed(() =>
-    this.copies().map((copy) => ({
-      copy,
-      feed: sourceNameOf(copy, this.rows),
-      avatarUrl: feedAvatarUrl(this.rows.find(copy.subscriptionId)),
-      ...this.faceOf(copy),
-      when: entryRelativeTime(copy, this.language.lang()),
-      shareCount: copy.shares?.length ?? 0,
-    })),
+    this.copies().map((copy) => {
+      const face = this.faceOf(copy);
+      return {
+        copy,
+        ...face,
+        feed: face.site ?? sourceNameOf(copy, this.rows),
+        avatarUrl: feedAvatarUrl(this.rows.find(copy.subscriptionId)),
+        when: entryRelativeTime(copy, this.language.lang()),
+      };
+    }),
   );
   protected readonly expanded = signal(false);
   protected readonly panelId = `more-sources-${nextId++}`;
@@ -73,7 +79,7 @@ export class MoreSourcesComponent {
     this.expanded.update((open) => !open);
   }
 
-  private faceOf(copy: EntryDto): { title: string; dek: string; picture: string | null } {
+  private faceOf(copy: EntryDto): ArticleFace {
     const face = articleFaceOf(copy);
     return { ...face, picture: this.brokenThumbs().has(copy.id) ? null : face.picture };
   }
@@ -82,8 +88,7 @@ export class MoreSourcesComponent {
     this.brokenThumbs.update((broken) => new Set(broken).add(copyId));
   }
 
-  open(copy: EntryDto, event: Event): void {
-    event.stopPropagation();
+  open(copy: EntryDto): void {
     this.actions.open(copy);
   }
 }

@@ -1,3 +1,5 @@
+import { hostOf, parseUrl } from '../../shared/url-host';
+
 /** How the directory matches a subscription to its feeds; feed-directory-url-cases.json holds the cases. */
 export function feedDirectoryUrl(url: string): string {
   const parsed = parseUrl(url);
@@ -10,16 +12,4 @@ export function feedDirectoryUrl(url: string): string {
 export function feedDirectoryHost(url: string): string {
   const parsed = parseUrl(url);
   return parsed ? hostOf(parsed) : '';
-}
-
-export function parseUrl(url: string): URL | null {
-  try {
-    return new URL(url.trim());
-  } catch {
-    return null;
-  }
-}
-
-export function hostOf(url: URL): string {
-  return url.hostname.replace(/^www\./, '');
 }

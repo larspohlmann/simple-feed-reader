@@ -1,0 +1,46 @@
+@use '../../theme/breakpoints' as bp;
+
+:host {
+  display: contents;
+}
+
+// Always visible, not hover-only: touch is a first-class target (#1664).
+.open-in-reader {
+  position: absolute;
+  inset-block-start: var(--space-2);
+  inset-inline-end: var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border: none;
+  border-radius: var(--radius);
+  background: var(--media-scrim);
+  color: var(--on-media-scrim);
+  cursor: pointer;
+}
+
+.open-in-reader-label {
+  display: none;
+}
+
+@media (width >= bp.$bp-lg) {
+  .open-in-reader {
+    padding-inline: var(--space-2);
+    font: inherit;
+    font-size: var(--fs-xs);
+  }
+
+  .open-in-reader-label {
+    display: inline;
+    white-space: nowrap;
+  }
+}
+
+@media (pointer: coarse) {
+  .open-in-reader {
+    min-width: var(--tap-target);
+    min-height: var(--tap-target);
+  }
+}

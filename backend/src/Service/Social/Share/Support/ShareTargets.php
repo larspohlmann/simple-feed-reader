@@ -6,23 +6,31 @@ namespace App\Service\Social\Share\Support;
 
 use App\Entity\Entry;
 use App\Enum\ShareKind;
+use App\Service\Social\Share\Model\ShareFetchPlanModel;
+use App\Service\Foundation\Url\Support\TrackingFreeUrl;
 
 /** The pages an entry's cards come from: a titled share's one target, or the links a post's text shares. */
 final class ShareTargets
 {
     /**
-     * @param list<string> $cardedUrls
+     * The entry's targets without a card, in its order, and the posted form of each to check.
      *
-     * @return list<string> in the entry's order, without those already carded
+     * @param list<string> $cardedUrls
      */
-    public static function uncardedOf(Entry $entry, array $cardedUrls): array
+    public static function planOf(Entry $entry, array $cardedUrls): ShareFetchPlanModel
     {
+        $cleanedCards = array_map(TrackingFreeUrl::of(...), $cardedUrls);
         $target = TitledShareTarget::of($entry);
         if ($target !== null) {
-            return \in_array($target, $cardedUrls, true) ? [] : [$target];
+            $carded = \in_array(TrackingFreeUrl::of($target), $cleanedCards, true);
+
+            return new ShareFetchPlanModel($carded ? [] : [$target]);
         }
 
-        return SharedLinks::of((string) $entry->getText()->getContentHtml())->uncardedBy($cardedUrls);
+        $shared = SharedLinks::of((string) $entry->getText()->getContentHtml());
+        $urls = $shared->uncardedBy($cleanedCards);
+
+        return new ShareFetchPlanModel($urls, array_intersect_key($shared->postedForms, array_flip($urls)));
     }
 
     public static function isCardableShare(Entry $entry): bool

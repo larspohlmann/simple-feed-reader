@@ -6,16 +6,20 @@ namespace App\Service\Social\Share\Model;
 
 final readonly class SharedLinksModel
 {
-    /** @param list<string> $urls in post order, each once */
+    /**
+     * @param list<string>          $urls        in post order, each once
+     * @param array<string, string> $postedForms the posted href of each link that lost an undocumented key
+     */
     public function __construct(
         public array $urls,
         public string $linkedHtml,
         public string $ownProse,
+        public array $postedForms = [],
     ) {
     }
 
     /**
-     * @param list<string> $cardedUrls
+     * @param list<string> $cardedUrls tracking-free
      *
      * @return list<string> the shared links without a card, in post order
      */

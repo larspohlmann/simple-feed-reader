@@ -10,11 +10,15 @@ use App\Service\Foundation\Html\Support\TextNodes;
 use App\Service\Social\Share\Model\SharedLinksModel;
 use App\Service\Foundation\Text\Support\LinkedPlainText;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
+use App\Service\Foundation\Url\Support\TrackingFreeUrl;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Dom\Text;
 
-/** The links a post shares, a quoted post's included, as opposed to the hashtags, mentions and words that merely link. */
+/**
+ * The links a post shares, a quoted post's included, as opposed to the hashtags, mentions and words that merely link.
+ * Each is tracking-free, the form its card is stored under.
+ */
 final class SharedLinks
 {
     public const int MAX = 5;
@@ -26,20 +30,37 @@ final class SharedLinks
         $document = HtmlDocumentParser::parseFragment($bodyHtml);
         $linkedHtml = self::linkBareUrls($document) === 0 ? $bodyHtml : ($document->body->innerHTML ?? $bodyHtml);
 
-        return new SharedLinksModel(self::sharedUrlsIn($document), $linkedHtml, OwnProse::of($document->body));
+        $hrefsToCheck = self::hrefsToCheckIn($document);
+        $urls = \array_slice(array_keys($hrefsToCheck), 0, self::MAX);
+
+        return new SharedLinksModel(
+            $urls,
+            $linkedHtml,
+            OwnProse::of($document->body),
+            array_filter(array_intersect_key($hrefsToCheck, array_flip($urls))),
+        );
     }
 
-    /** @return list<string> */
-    private static function sharedUrlsIn(HTMLDocument $document): array
+    /**
+     * @return array<string, ?string> each shared link's first posted href, when it lost an undocumented key, by its
+     *                                tracking-free URL, in post order
+     */
+    private static function hrefsToCheckIn(HTMLDocument $document): array
     {
-        $urls = [];
+        $hrefsToCheck = [];
         foreach ($document->querySelectorAll('a[href]') as $anchor) {
-            if (self::isShare($anchor)) {
-                $urls[] = (string) $anchor->getAttribute('href');
+            if (!self::isShare($anchor)) {
+                continue;
+            }
+            $href = (string) $anchor->getAttribute('href');
+            $read = TrackingFreeUrl::read($href);
+            $url = $read->cleaned();
+            if (!\array_key_exists($url, $hrefsToCheck)) {
+                $hrefsToCheck[$url] = $read->strippedAnUndocumentedKey() ? $href : null;
             }
         }
 
-        return \array_slice(array_values(array_unique($urls)), 0, self::MAX);
+        return $hrefsToCheck;
     }
 
     private static function linkBareUrls(HTMLDocument $document): int

@@ -10,10 +10,12 @@ use App\Service\Content\LinkCard\Exception\QuotedPostUnavailableException;
 use App\Service\Content\LinkCard\Model\EntryCardsModel;
 use App\Service\Content\LinkCard\Model\PageCardModel;
 use App\Service\Content\LinkCard\Model\QuotedTargetModel;
+use App\Service\Social\Share\Model\ShareFetchPlanModel;
 use App\Service\Content\LinkCard\PageCardReader\PageCardReaderInterface;
 use App\Service\Content\LinkCard\QuotedPostSource\QuotedPostSourceInterface;
 use App\Service\Content\LinkCard\Support\QuoteLine;
 use App\Service\Content\Reader\Exception\PageFetchException;
+use App\Service\Foundation\Url\Support\TrackingFreeUrl;
 use Psr\Log\LoggerInterface;
 
 /** Reads what a share's uncarded targets show: the post its "RE:" line quotes, and a page card for every other link. */
@@ -22,28 +24,26 @@ final readonly class ShareTargetReader
     public function __construct(
         private PageCardReaderInterface $pageCards,
         private QuotedPostSourceInterface $quotedPosts,
+        private PostedUrlCheck $postedUrls,
         private LoggerInterface $logger,
     ) {
     }
 
-    /**
-     * @param list<LinkCardContent> $stored
-     * @param list<string>          $uncardedUrls
-     */
-    public function cardsFor(Entry $entry, array $stored, array $uncardedUrls): EntryCardsModel
+    /** @param list<LinkCardContent> $stored */
+    public function cardsFor(Entry $entry, array $stored, ShareFetchPlanModel $plan): EntryCardsModel
     {
-        $quoted = $this->quotedTargetAmong((string) $entry->getText()->getContentHtml(), $uncardedUrls);
+        $quoted = $this->quotedTargetAmong((string) $entry->getText()->getContentHtml(), $plan->urls);
         $pageUrls = $quoted === null
-            ? $uncardedUrls
-            : array_values(array_filter($uncardedUrls, static fn (string $url): bool => $url !== $quoted->address));
+            ? $plan->urls
+            : array_values(array_filter($plan->urls, static fn (string $url): bool => $url !== $quoted->address));
 
-        return new EntryCardsModel($stored, $this->pageCardsFor($pageUrls), $quoted);
+        return new EntryCardsModel($stored, $this->pageCardsFor($pageUrls, $plan->postedForms), $quoted);
     }
 
     /** @param list<string> $uncardedUrls */
     private function quotedTargetAmong(string $html, array $uncardedUrls): ?QuotedTargetModel
     {
-        $target = QuoteLine::targetIn($html);
+        $target = TrackingFreeUrl::orNull(QuoteLine::targetIn($html));
         if ($target === null || !\in_array($target, $uncardedUrls, true)) {
             return null;
         }
@@ -57,16 +57,19 @@ final readonly class ShareTargetReader
     }
 
     /**
-     * @param list<string> $uncardedUrls
+     * @param list<string>          $uncardedUrls
+     * @param array<string, string> $postedForms
      *
      * @return list<PageCardModel>
      */
-    private function pageCardsFor(array $uncardedUrls): array
+    private function pageCardsFor(array $uncardedUrls, array $postedForms): array
     {
         $pageCards = [];
         foreach ($uncardedUrls as $uncardedUrl) {
             try {
-                $pageCards[] = $this->pageCards->read($uncardedUrl);
+                $pageCards[] = isset($postedForms[$uncardedUrl])
+                    ? $this->postedUrls->cardAt($uncardedUrl, $postedForms[$uncardedUrl])
+                    : $this->pageCards->read($uncardedUrl);
             } catch (PageFetchException $exception) {
                 $this->logger->warning(
                     'No link card for {url}',

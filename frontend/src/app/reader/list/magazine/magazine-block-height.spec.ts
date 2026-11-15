@@ -1,6 +1,6 @@
 import { BLOCK_HEIGHT } from './magazine-block';
 import {
-  STORY_SHARES_LINE,
+  STORY_SHARERS_ROW,
   blockHeight,
   quotingHeight,
   threadHeight,
@@ -9,6 +9,7 @@ import { aLinkCard, aQuotedPost, anEntry } from '../../../../testing/entry-testi
 import { aThreadPost } from '../../../../testing/thread-testing';
 import { EntryMediumDto } from '../../entry-medium';
 import { QuotedPostDto } from '../../quoted-post/quoted-post';
+import { EntryDto } from '../../models';
 
 const post = (title: string, quote: QuotedPostDto | null = aQuotedPost()) =>
   anEntry({ share: 'quote', titleDerived: true, title, quote });
@@ -27,19 +28,33 @@ describe('blockHeight', () => {
     expect(blockHeight('compact', anEntry())).toBe(BLOCK_HEIGHT.compact);
   });
 
-  it('adds the shared-by line to a Trending article posts share', () => {
+  it('adds the row of sharer pills to a Trending article posts share', () => {
     const shared = anEntry({
       story: { outletCount: 2, viewed: false, shareCount: 0 },
       shares: [anEntry({ id: 9 })],
     });
 
-    expect(blockHeight('link', shared)).toBe(BLOCK_HEIGHT.link + STORY_SHARES_LINE);
+    expect(blockHeight('link', shared)).toBe(BLOCK_HEIGHT.link + STORY_SHARERS_ROW.height);
     expect(
       blockHeight(
         'link',
         anEntry({ story: { outletCount: 2, viewed: false, shareCount: 0 }, shares: [] }),
       ),
     ).toBe(BLOCK_HEIGHT.link);
+  });
+
+  it('adds a second row once three sharers and a "+N" pill wrap at phone width', () => {
+    const story = { outletCount: 2, viewed: false, shareCount: 0 };
+    const sharedBy = (count: number): EntryDto =>
+      anEntry({
+        story,
+        shares: Array.from({ length: count }, (_, id) => anEntry({ id: 10 + id })),
+      });
+
+    expect(blockHeight('link', sharedBy(2))).toBe(BLOCK_HEIGHT.link + STORY_SHARERS_ROW.height);
+    expect(blockHeight('link', sharedBy(3))).toBe(
+      BLOCK_HEIGHT.link + 2 * STORY_SHARERS_ROW.height + STORY_SHARERS_ROW.gap,
+    );
   });
 
   it('reads the entry for a quoting block', () => {

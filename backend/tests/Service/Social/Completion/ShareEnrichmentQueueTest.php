@@ -303,7 +303,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
     public function testACardUnderACanonicalUrlIsFiledUnderThePostedLink(): void
     {
         $guid = 'https://mastodon.example/@someone/6';
-        $posted = 'https://example.com/story?utm_source=mastodon';
+        $posted = 'https://example.com/story?id=7&utm_source=mastodon';
         $post = $this->post($guid, '<p>So true.</p><p>RE: <a href="' . $posted . '">' . $posted . '</a></p>');
         $card = new LinkCardContent('https://example.com/story', 'The story', 'What happened.', null, 'Example');
 
@@ -315,7 +315,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         self::assertSame('<p>So true.</p>', $stored->getText()->getContentHtml());
         self::assertSame(ShareKind::Link, $stored->getShareKind());
         self::assertEquals(
-            [new LinkCardContent($posted, 'The story', 'What happened.', null, 'Example')],
+            [new LinkCardContent('https://example.com/story?id=7', 'The story', 'What happened.', null, 'Example')],
             $this->storedCards($stored),
         );
     }

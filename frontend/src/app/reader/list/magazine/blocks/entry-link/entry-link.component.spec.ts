@@ -226,9 +226,12 @@ describe('EntryLinkComponent', () => {
     expect(element.querySelector('app-link-card strong')!.textContent).toContain('A shared story');
     expect(element.querySelector('app-story-source-count')!.textContent).toContain('2 sources');
     expect(element.querySelector('app-story-source-count')!.textContent).toContain('3 shares');
-    expect(element.querySelector('app-story-shares')!.textContent).toContain(
-      'Shared by Ann, Eve and 1 other',
-    );
+    const sharers = element.querySelectorAll('app-story-sharers .sharer .name');
+    expect(Array.from(sharers).map((sharer) => sharer.textContent!.trim())).toEqual([
+      'Ann',
+      'Eve',
+      'Fay',
+    ]);
   });
 
   it('names no shares on a story no post shares', () => {
@@ -236,10 +239,10 @@ describe('EntryLinkComponent', () => {
       .nativeElement as HTMLElement;
 
     expect(element.querySelector('app-story-source-count')!.textContent).not.toContain('share');
-    expect(element.querySelector('app-story-shares .shares')).toBeNull();
+    expect(element.querySelector('app-story-sharers .sharers')).toBeNull();
   });
 
-  it('counts the shares of the other articles on their mini cards', () => {
+  it('shows the sharers of the other articles on their mini cards', () => {
     const fixture = mount(
       entry({
         story: { outletCount: 3, viewed: false, shareCount: 2 },
@@ -248,7 +251,10 @@ describe('EntryLinkComponent', () => {
             id: 2,
             titleDerived: false,
             title: 'Other article',
-            shares: [entry({ id: 7 }), entry({ id: 8 })],
+            shares: [
+              entry({ id: 7, poster: { name: 'Gus', url: null, imageUrl: null } }),
+              entry({ id: 8, poster: { name: 'Hal', url: null, imageUrl: null } }),
+            ],
           }),
         ],
       }),
@@ -257,8 +263,9 @@ describe('EntryLinkComponent', () => {
     element.querySelector<HTMLButtonElement>('app-more-sources .toggle')!.click();
     fixture.detectChanges();
 
-    expect(element.querySelector('app-more-sources .mini .shares-count')!.textContent).toContain(
-      '2 shares',
+    const sharers = element.querySelectorAll(
+      'app-more-sources .mini app-story-sharers .sharer .name',
     );
+    expect(Array.from(sharers).map((sharer) => sharer.textContent!.trim())).toEqual(['Gus', 'Hal']);
   });
 });

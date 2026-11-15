@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Content\LinkCard\Support;
 
 use App\Service\Foundation\Html\Support\HtmlDocumentParser;
+use App\Service\Foundation\Url\Support\TrackingFreeUrl;
 use Dom\Element;
 use Dom\Node;
 use Dom\Text;
@@ -22,16 +23,28 @@ final class TrailingUrl
             return $html;
         }
         $kept = rtrim($last->data);
-        if (!str_ends_with($kept, $url)) {
+        $trailing = self::trailingForm($kept, $url);
+        if ($trailing === null) {
             return $html;
         }
 
-        $last->data = rtrim(substr($kept, 0, -\strlen($url)));
+        $last->data = rtrim(substr($kept, 0, -\strlen($trailing)));
         if ($last->data === '') {
             self::removeEmptied($last);
         }
 
         return $body->innerHTML;
+    }
+
+    /** The text's ending that spells the URL, verbatim or with tracking parameters a card URL no longer carries. */
+    private static function trailingForm(string $text, string $url): ?string
+    {
+        if (str_ends_with($text, $url)) {
+            return $url;
+        }
+        $lastWord = preg_match('/\S+\z/u', $text, $match) === 1 ? $match[0] : '';
+
+        return $lastWord !== '' && TrackingFreeUrl::of($lastWord) === TrackingFreeUrl::of($url) ? $lastWord : null;
     }
 
     private static function lastText(Node $node): ?Text

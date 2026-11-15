@@ -135,9 +135,11 @@ describe('EntryRowComponent', () => {
       ).nativeElement as HTMLElement;
 
       expect(element.querySelector('.meta')!.textContent).toContain('2 shares');
-      expect(element.querySelector('app-story-shares')!.textContent).toContain(
-        'Shared by Ann and Ben',
-      );
+      const sharers = element.querySelectorAll('app-story-sharers .sharer .name');
+      expect(Array.from(sharers).map((sharer) => sharer.textContent!.trim())).toEqual([
+        'Ann',
+        'Ben',
+      ]);
     });
 
     it('drops the unread dot once another outlet was opened', () => {

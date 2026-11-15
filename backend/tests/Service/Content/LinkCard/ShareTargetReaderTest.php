@@ -7,6 +7,8 @@ namespace App\Tests\Service\Content\LinkCard;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\QuotedPostContent;
+use App\Service\Social\Share\Model\ShareFetchPlanModel;
+use App\Service\Content\LinkCard\PostedUrlCheck;
 use App\Service\Content\LinkCard\ShareTargetReader;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\StubPageCardReader;
@@ -32,11 +34,37 @@ final class ShareTargetReaderTest extends TestCase
         $cards = $this->reader($source)->cardsFor(
             self::entry(self::bodyQuoting(self::QUOTED)),
             [],
-            [self::QUOTED, self::PAGE],
+            new ShareFetchPlanModel([self::QUOTED, self::PAGE]),
         );
 
         self::assertSame(self::QUOTED, $cards->quoted?->address);
         self::assertSame([self::PAGE], $this->pages->readUrls());
+    }
+
+    public function testATrackedQuoteLineStillQuotesItsTrackingFreeTarget(): void
+    {
+        $source = new StubQuotedPostSource([self::QUOTED => self::quote()]);
+
+        $cards = $this->reader($source)->cardsFor(
+            self::entry(self::bodyQuoting(self::QUOTED . '?utm_source=mastodon')),
+            [],
+            new ShareFetchPlanModel([self::QUOTED, self::PAGE]),
+        );
+
+        self::assertSame(self::QUOTED, $cards->quoted?->address);
+        self::assertSame([self::PAGE], $this->pages->readUrls());
+    }
+
+    public function testAPostedFormIsReadBesideItsTrackingFreeUrl(): void
+    {
+        $cards = $this->reader(new StubQuotedPostSource())->cardsFor(
+            self::entry('<p><a href="' . self::PAGE . '">a</a></p>'),
+            [],
+            new ShareFetchPlanModel([self::PAGE], [self::PAGE => self::PAGE . '?ref=rss']),
+        );
+
+        self::assertSame([self::PAGE, self::PAGE . '?ref=rss'], $this->pages->readUrls());
+        self::assertSame(self::PAGE, $cards->pageCards[0]->card?->url);
     }
 
     public function testAQuoteTheSourceCannotReadFallsBackToALinkCard(): void
@@ -46,7 +74,7 @@ final class ShareTargetReaderTest extends TestCase
         $cards = $this->reader($source)->cardsFor(
             self::entry(self::bodyQuoting(self::QUOTED)),
             [],
-            [self::QUOTED, self::PAGE],
+            new ShareFetchPlanModel([self::QUOTED, self::PAGE]),
         );
 
         self::assertNull($cards->quoted);
@@ -56,9 +84,14 @@ final class ShareTargetReaderTest extends TestCase
     public function testAQuoteTheSourceCannotReadIsLoggedWithItsAddress(): void
     {
         $logger = new RecordingLogger();
-        $reader = new ShareTargetReader($this->pages, new StubQuotedPostSource(), $logger);
+        $reader = new ShareTargetReader(
+            $this->pages,
+            new StubQuotedPostSource(),
+            new PostedUrlCheck($this->pages, $logger),
+            $logger,
+        );
 
-        $reader->cardsFor(self::entry(self::bodyQuoting(self::QUOTED)), [], [self::QUOTED]);
+        $reader->cardsFor(self::entry(self::bodyQuoting(self::QUOTED)), [], new ShareFetchPlanModel([self::QUOTED]));
 
         self::assertCount(1, $logger->records);
         self::assertSame(self::QUOTED, $logger->records[0]['context']['url']);
@@ -68,7 +101,11 @@ final class ShareTargetReaderTest extends TestCase
     {
         $source = new StubQuotedPostSource([self::QUOTED => self::quote()]);
 
-        $cards = $this->reader($source)->cardsFor(self::entry(self::bodyQuoting(self::QUOTED)), [], [self::PAGE]);
+        $cards = $this->reader($source)->cardsFor(
+            self::entry(self::bodyQuoting(self::QUOTED)),
+            [],
+            new ShareFetchPlanModel([self::PAGE]),
+        );
 
         self::assertNull($cards->quoted);
         self::assertSame([], $source->asked);
@@ -81,7 +118,7 @@ final class ShareTargetReaderTest extends TestCase
         $cards = $this->reader($source)->cardsFor(
             self::entry('<p>Wow <a href="' . self::QUOTED . '">there</a></p>'),
             [],
-            [self::QUOTED],
+            new ShareFetchPlanModel([self::QUOTED]),
         );
 
         self::assertNull($cards->quoted);
@@ -90,7 +127,12 @@ final class ShareTargetReaderTest extends TestCase
 
     private function reader(StubQuotedPostSource $source): ShareTargetReader
     {
-        return new ShareTargetReader($this->pages, $source, new RecordingLogger());
+        return new ShareTargetReader(
+            $this->pages,
+            $source,
+            new PostedUrlCheck($this->pages, new RecordingLogger()),
+            new RecordingLogger(),
+        );
     }
 
     private static function bodyQuoting(string $target): string

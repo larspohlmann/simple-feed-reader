@@ -79,6 +79,30 @@ final class IngestedEntryFactoryTest extends TestCase
         self::assertSame('2026-09-21 12:00:00', $entry->getEffectiveDate()->format('Y-m-d H:i:s'));
     }
 
+    public function testStoresTheUrlWithoutTrackingParameters(): void
+    {
+        self::assertSame(
+            'https://example.com/a?id=1',
+            $this->entryAt('https://example.com/a?id=1&utm_source=rss#xtor=RSS-3')->getUrl(),
+        );
+    }
+
+    public function testAUrlWithoutTrackersIsStoredAsGiven(): void
+    {
+        self::assertSame('HTTPS://Example.com/A?', $this->entryAt('HTTPS://Example.com/A?')->getUrl());
+    }
+
+    private function entryAt(string $url): Entry
+    {
+        $parsed = new ParsedEntryModel('g-3', $url, Headline::fromFeed('Title'), null, null, '<p>Body</p>', null);
+
+        return $this->factory()->create(
+            new Feed('https://example.com/feed'),
+            new IncomingEntryModel($parsed, hash('sha256', 'g-3'), null),
+            self::context(),
+        );
+    }
+
     public function testAnItemWhoseTitleWasDerivedMarksTheEntry(): void
     {
         $parsed = new ParsedEntryModel(
