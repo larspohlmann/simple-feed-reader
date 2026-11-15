@@ -39,25 +39,27 @@ final readonly class TrendingStoryCardModel
     /**
      * @param non-empty-list<ShownRowModel> $rows
      *
-     * @return non-empty-array<string, array{list<EntryListRow>, list<EntryListRow>}> article => outlet rows, posts
+     * @return non-empty-array<string, non-empty-list<EntryListRow>> article key => the rows about it
      */
     private static function byArticle(array $rows): array
     {
         $byArticle = [];
         foreach ($rows as $shown) {
-            $byArticle[$shown->articleKey] ??= [[], []];
-            $byArticle[$shown->articleKey][$shown->row->isFromAnOutlet() ? 0 : 1][] = $shown->row;
+            $byArticle[$shown->articleKey][] = $shown->row;
         }
 
         return $byArticle;
     }
 
-    /** @param array{list<EntryListRow>, list<EntryListRow>} $outletRowsAndPosts */
-    private static function articleOf(array $outletRowsAndPosts): StoryArticleModel
+    /** @param non-empty-list<EntryListRow> $rows one article's outlet rows and the posts sharing it */
+    private static function articleOf(array $rows): StoryArticleModel
     {
-        [$outletRows, $posts] = $outletRowsAndPosts;
-        $shares = self::oncePerPost(self::newestRowsFirst($posts));
-        $outletRows = self::newestRowsFirst($outletRows);
+        $rows = self::newestRowsFirst($rows);
+        $outletRows = array_values(array_filter($rows, static fn (EntryListRow $row): bool => $row->isFromAnOutlet()));
+        $shares = self::oncePerPost(array_values(array_filter(
+            $rows,
+            static fn (EntryListRow $row): bool => !$row->isFromAnOutlet(),
+        )));
 
         return new StoryArticleModel(
             $outletRows === [] ? self::representativeOf($shares) : self::picturedOrNewest($outletRows),
@@ -65,9 +67,7 @@ final readonly class TrendingStoryCardModel
         );
     }
 
-    /**
-     * @param non-empty-list<StoryArticleModel> $articles newest first
-     */
+    /** @param non-empty-list<StoryArticleModel> $articles newest first */
     private static function leadOf(array $articles): StoryArticleModel
     {
         $fromOutlets = array_values(array_filter(
@@ -77,13 +77,9 @@ final readonly class TrendingStoryCardModel
         if ($fromOutlets === []) {
             return self::mostShared($articles);
         }
-        foreach ($fromOutlets as $article) {
-            if ($article->row->entry->getImageUrl() !== null) {
-                return $article;
-            }
-        }
 
-        return $fromOutlets[0];
+        return array_find($fromOutlets, static fn (StoryArticleModel $article): bool => self::isPictured($article->row))
+            ?? $fromOutlets[0];
     }
 
     /** @param non-empty-list<StoryArticleModel> $articles newest first */
@@ -102,13 +98,12 @@ final readonly class TrendingStoryCardModel
     /** @param non-empty-list<EntryListRow> $rows newest first */
     private static function picturedOrNewest(array $rows): EntryListRow
     {
-        foreach ($rows as $row) {
-            if ($row->entry->getImageUrl() !== null) {
-                return $row;
-            }
-        }
+        return array_find($rows, self::isPictured(...)) ?? $rows[0];
+    }
 
-        return $rows[0];
+    private static function isPictured(EntryListRow $row): bool
+    {
+        return $row->entry->getImageUrl() !== null;
     }
 
     /**
@@ -122,13 +117,11 @@ final readonly class TrendingStoryCardModel
             $posts,
             static fn (EntryListRow $post): bool => $post->entry->getShareKind() === ShareKind::Link,
         ));
-        foreach ($linkShares as $linkShare) {
-            if (($linkShare->enrichment->linkCards[0]->imageUrl ?? null) !== null) {
-                return $linkShare;
-            }
-        }
 
-        return $linkShares[0] ?? $posts[0];
+        return array_find(
+            $linkShares,
+            static fn (EntryListRow $share): bool => ($share->enrichment->linkCards[0]->imageUrl ?? null) !== null,
+        ) ?? $linkShares[0] ?? $posts[0];
     }
 
     /**
