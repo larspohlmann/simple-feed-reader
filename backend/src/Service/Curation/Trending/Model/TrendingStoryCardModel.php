@@ -46,7 +46,7 @@ final readonly class TrendingStoryCardModel
         $byArticle = [];
         foreach ($rows as $shown) {
             $byArticle[$shown->articleKey] ??= [[], []];
-            $byArticle[$shown->articleKey][$shown->isFromAnOutlet() ? 0 : 1][] = $shown->row;
+            $byArticle[$shown->articleKey][$shown->row->isFromAnOutlet() ? 0 : 1][] = $shown->row;
         }
 
         return $byArticle;
@@ -72,7 +72,7 @@ final readonly class TrendingStoryCardModel
     {
         $fromOutlets = array_values(array_filter(
             $articles,
-            static fn (StoryArticleModel $article): bool => $article->isFromAnOutlet(),
+            static fn (StoryArticleModel $article): bool => $article->row->isFromAnOutlet(),
         ));
         if ($fromOutlets === []) {
             return self::mostShared($articles);

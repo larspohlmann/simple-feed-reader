@@ -12,9 +12,4 @@ final readonly class ShownRowModel
     public function __construct(public EntryListRow $row, public string $articleKey)
     {
     }
-
-    public function isFromAnOutlet(): bool
-    {
-        return $this->row->entry->getFeed()->getNetwork() === null;
-    }
 }

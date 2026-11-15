@@ -24,6 +24,12 @@ final readonly class EntryListRow
     ) {
     }
 
+    /** Whether the row's feed publishes articles, rather than a social network's posts. */
+    public function isFromAnOutlet(): bool
+    {
+        return $this->entry->getFeed()->getNetwork() === null;
+    }
+
     /**
      * @param list<self> $duplicates the in-scope copies this row collapsed
      */

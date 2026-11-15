@@ -13,14 +13,4 @@ final readonly class StoryArticleModel
     public function __construct(public EntryListRow $row, public array $shares)
     {
     }
-
-    public function isFromAnOutlet(): bool
-    {
-        return $this->row->entry->getFeed()->getNetwork() === null;
-    }
-
-    public function newestShareTime(): ?\DateTimeImmutable
-    {
-        return ($this->shares[0] ?? null)?->entry->getEffectiveDate();
-    }
 }
