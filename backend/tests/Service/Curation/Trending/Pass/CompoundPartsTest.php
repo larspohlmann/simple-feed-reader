@@ -25,12 +25,12 @@ final class CompoundPartsTest extends TestCase
         $this->compoundParts->addCompound(self::FIRE_OPERATION, [self::FIRE_BRIGADE, self::OPERATION]);
     }
 
-    public function testAStemNoCompoundHoldsLinksEveryHolder(): void
+    public function testAStemNoEntryHoldsAsAPartOnlyChangesNoLink(): void
     {
         $this->addPoliceOperation(10);
         $this->addPoliceOperation(20);
 
-        self::assertSame([10 => 1.0], $this->holdersOf(self::STATION, 20));
+        self::assertSame([], $this->linksOf(self::STATION, 20));
     }
 
     public function testAPartOfACompoundBothEntriesHoldLinksNothing(): void
@@ -38,19 +38,19 @@ final class CompoundPartsTest extends TestCase
         $this->addPoliceOperation(10);
         $this->addPoliceOperation(20);
 
-        self::assertSame([], $this->holdersOf(self::POLICE, 20));
+        self::assertSame([10 => []], $this->linksOf(self::POLICE, 20));
     }
 
     public function testAPartOfTheEarlierEntrysSharedCompoundLinksNothingEither(): void
     {
         $this->addPoliceOperation(10);
-        $this->compoundParts->addEntry(
+        $this->addEntry(
             20,
             [self::POLICE_OPERATION, self::POLICE, self::OPERATION],
             [self::POLICE_OPERATION, self::POLICE],
         );
 
-        self::assertSame([], $this->holdersOf(self::POLICE, 20));
+        self::assertSame([10 => []], $this->linksOf(self::POLICE, 20));
     }
 
     public function testAPartOfASharedCompoundLinksNothingWhileAnotherCompoundHoldsItElsewhere(): void
@@ -58,61 +58,69 @@ final class CompoundPartsTest extends TestCase
         $this->addPoliceOperation(10);
         $this->addPoliceOperation(20);
 
-        self::assertSame([], $this->holdersOf(self::OPERATION, 20), 'fire operation holds the part too');
+        self::assertSame([10 => []], $this->linksOf(self::OPERATION, 20), 'fire operation holds the part too');
     }
 
-    public function testAWordBothEntriesHoldStillLinksThoughTheirCompoundHoldsItAsAPart(): void
+    public function testAWordBothEntriesHoldLinksAsAWordThoughAnotherEntryHoldsItAsAPart(): void
     {
         $this->addPoliceOperation(5);
         $policeAndPoliceOperation = [self::POLICE_OPERATION, self::POLICE, self::OPERATION];
-        $this->compoundParts->addEntry(10, $policeAndPoliceOperation, [self::POLICE_OPERATION, self::POLICE]);
-        $this->compoundParts->addEntry(20, $policeAndPoliceOperation, [self::POLICE_OPERATION, self::POLICE]);
+        $this->addEntry(10, $policeAndPoliceOperation, [self::POLICE_OPERATION, self::POLICE]);
+        $this->addEntry(20, $policeAndPoliceOperation, [self::POLICE_OPERATION, self::POLICE]);
 
-        self::assertSame([10 => 1.0], $this->holdersOf(self::POLICE, 20));
+        self::assertSame([], $this->linksOf(self::POLICE, 20), 'the link is a plain word link');
     }
 
     public function testEveryHolderAPartLinksStays(): void
     {
-        $this->compoundParts->addEntry(5, [self::POLICE], [self::POLICE]);
-        $this->compoundParts->addEntry(10, [self::POLICE], [self::POLICE]);
+        $this->addEntry(5, [self::POLICE], [self::POLICE]);
+        $this->addEntry(10, [self::POLICE], [self::POLICE]);
         $this->addPoliceOperation(20);
 
         self::assertSame(
-            [5 => 1.0, 10 => 0.5],
-            $this->compoundParts->holdersLinkedBeyondASharedCompound([5 => 1.0, 10 => 0.5], self::POLICE, 20),
+            [5 => [self::POLICE_OPERATION => 1.0], 10 => [self::POLICE_OPERATION => 1.0]],
+            $this->compoundParts->partLinksOf(self::POLICE, 20, [5 => 1.0, 10 => 0.5]),
         );
     }
 
-    public function testAPartLinksTheBareWord(): void
+    public function testAPartLinksTheBareWordThroughTheEarlierEntrysCompound(): void
     {
         $this->addPoliceOperation(10);
-        $this->compoundParts->addEntry(20, [self::POLICE], [self::POLICE]);
+        $this->addEntry(20, [self::POLICE], [self::POLICE]);
 
-        self::assertSame([10 => 1.0], $this->holdersOf(self::POLICE, 20));
+        self::assertSame([10 => [self::POLICE_OPERATION => 1.0]], $this->linksOf(self::POLICE, 20));
     }
 
-    public function testAPartLinksTwoDifferentCompounds(): void
+    public function testAPartLinksTwoDifferentCompoundsThroughBoth(): void
     {
         $this->addPoliceOperation(10);
-        $this->compoundParts->addEntry(
-            20,
-            [self::FIRE_OPERATION, self::FIRE_BRIGADE, self::OPERATION],
-            [self::FIRE_OPERATION],
-        );
+        $this->addEntry(20, [self::FIRE_OPERATION, self::FIRE_BRIGADE, self::OPERATION], [self::FIRE_OPERATION]);
 
-        self::assertSame([10 => 1.0], $this->holdersOf(self::OPERATION, 20));
+        self::assertSame(
+            [10 => [self::FIRE_OPERATION => 1.0, self::POLICE_OPERATION => 1.0]],
+            $this->linksOf(self::OPERATION, 20),
+        );
+    }
+
+    public function testAPartComesThroughACompoundAtTheCompoundsPlaceWeight(): void
+    {
+        $this->compoundParts->addEntry(10, [self::POLICE_OPERATION, self::POLICE], [self::POLICE_OPERATION]);
+        $this->compoundParts->holdCompoundsAmong(10, [self::POLICE_OPERATION, self::POLICE], 0.5);
+        $this->addEntry(20, [self::POLICE], [self::POLICE]);
+
+        self::assertSame([10 => [self::POLICE_OPERATION => 0.5]], $this->linksOf(self::POLICE, 20));
     }
 
     public function testAPartLinksNothingWhenOneEntryHoldsItOnlyThroughASharedCompound(): void
     {
-        $this->compoundParts->addEntry(
+        $this->addEntry(
             10,
             [self::POLICE_OPERATION, self::FIRE_OPERATION, self::POLICE, self::OPERATION, self::FIRE_BRIGADE],
             [self::POLICE_OPERATION, self::FIRE_OPERATION],
         );
         $this->addPoliceOperation(20);
 
-        self::assertSame([], $this->holdersOf(self::OPERATION, 20));
+        self::assertSame([10 => []], $this->linksOf(self::OPERATION, 20));
     }
 
     public function testAnEntryHoldsOnlyTheStemsNoneOfItsWordsHoldsAsParts(): void
@@ -132,12 +140,22 @@ final class CompoundPartsTest extends TestCase
     {
         $this->compoundParts = new CompoundParts();
         $policeOperationAndPolice = [self::POLICE_OPERATION, self::POLICE];
-        $this->compoundParts->addEntry(10, $policeOperationAndPolice, $policeOperationAndPolice);
+        $this->addEntry(10, $policeOperationAndPolice, $policeOperationAndPolice);
         $this->compoundParts->addCompound(self::POLICE_OPERATION, [self::POLICE, self::OPERATION]);
-        $this->compoundParts->holdCompoundIn(self::POLICE_OPERATION, [10]);
+        $this->compoundParts->holdCompoundIn(self::POLICE_OPERATION, [10], 1.0);
         $this->addPoliceOperation(20);
 
-        self::assertSame([], $this->holdersOf(self::POLICE, 20));
+        self::assertSame([10 => []], $this->linksOf(self::POLICE, 20));
+    }
+
+    public function testAnEntryHoldsNoCompoundItHoldsOnlyAsAPart(): void
+    {
+        $this->compoundParts->addCompound(self::STATION, [self::POLICE_OPERATION]);
+        $this->addEntry(10, [self::STATION, self::POLICE_OPERATION], [self::STATION]);
+        $this->compoundParts->holdCompoundIn(self::POLICE_OPERATION, [10], 1.0);
+        $this->addPoliceOperation(20);
+
+        self::assertSame([10 => [self::POLICE_OPERATION => 1.0]], $this->linksOf(self::POLICE, 20));
     }
 
     public function testAStemIsACompoundOnceAWordGivesItParts(): void
@@ -148,18 +166,24 @@ final class CompoundPartsTest extends TestCase
         self::assertFalse($this->compoundParts->isCompound(self::STATION));
     }
 
-    private function addPoliceOperation(int $entryId): void
+    /**
+     * @param list<int> $stemIds
+     * @param list<int> $wordStemIds
+     */
+    private function addEntry(int $entryId, array $stemIds, array $wordStemIds): void
     {
-        $this->compoundParts->addEntry(
-            $entryId,
-            [self::POLICE_OPERATION, self::POLICE, self::OPERATION],
-            [self::POLICE_OPERATION],
-        );
+        $this->compoundParts->addEntry($entryId, $stemIds, $wordStemIds);
+        $this->compoundParts->holdCompoundsAmong($entryId, $stemIds, 1.0);
     }
 
-    /** @return array<int, float> */
-    private function holdersOf(int $stemId, int $entryId): array
+    private function addPoliceOperation(int $entryId): void
     {
-        return $this->compoundParts->holdersLinkedBeyondASharedCompound([10 => 1.0], $stemId, $entryId);
+        $this->addEntry($entryId, [self::POLICE_OPERATION, self::POLICE, self::OPERATION], [self::POLICE_OPERATION]);
+    }
+
+    /** @return array<int, array<int, float>> */
+    private function linksOf(int $stemId, int $entryId): array
+    {
+        return $this->compoundParts->partLinksOf($stemId, $entryId, [10 => 1.0]);
     }
 }

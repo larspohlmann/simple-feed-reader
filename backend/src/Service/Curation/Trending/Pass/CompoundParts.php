@@ -13,7 +13,7 @@ final class CompoundParts
     /** @var array<int, array<int, true>> a part's stem id => the stem ids of the compounds holding it */
     private array $compoundsWithPart = [];
 
-    /** @var array<int, array<int, true>> entry id => the stem ids of its compounds, for an entry holding any */
+    /** @var array<int, array<int, float>> entry id => the stem ids of its compounds => their place weight there */
     private array $compoundsOf = [];
 
     /** @var array<int, array<int, true>> stem id => the entries holding it only as a part of their compounds */
@@ -38,12 +38,10 @@ final class CompoundParts
      *
      * @param list<int> $entryIds
      */
-    public function holdCompoundIn(int $compoundStemId, array $entryIds): void
+    public function holdCompoundIn(int $compoundStemId, array $entryIds, float $placeWeight): void
     {
         foreach ($entryIds as $entryId) {
-            if (!$this->isOnlyAPartIn($entryId, $compoundStemId)) {
-                $this->compoundsOf[$entryId][$compoundStemId] = true;
-            }
+            $this->hold($entryId, $compoundStemId, $placeWeight);
         }
     }
 
@@ -53,12 +51,22 @@ final class CompoundParts
      */
     public function addEntry(int $entryId, array $stemIds, array $wordStemIds): void
     {
-        $compoundStemIds = array_keys(array_intersect_key(array_fill_keys($wordStemIds, true), $this->compoundStems));
-        foreach ($compoundStemIds as $compoundStemId) {
-            $this->compoundsOf[$entryId][$compoundStemId] = true;
-        }
         foreach (array_diff($stemIds, $wordStemIds) as $partStemId) {
             $this->partOnlyHoldersOf[$partStemId][$entryId] = true;
+        }
+    }
+
+    /**
+     * After addEntry, once for each place.
+     *
+     * @param list<int> $stemIds
+     */
+    public function holdCompoundsAmong(int $entryId, array $stemIds, float $placeWeight): void
+    {
+        foreach ($stemIds as $stemId) {
+            if ($this->isCompound($stemId)) {
+                $this->hold($entryId, $stemId, $placeWeight);
+            }
         }
     }
 
@@ -68,31 +76,39 @@ final class CompoundParts
     }
 
     /**
-     * @param array<int, float> $holders earlier entry id => the part's place weight there
+     * @param array<int, float> $holders earlier entry id => the stem's place weight there
      *
-     * @return array<int, float> the holders with which the part links more than a compound they share
+     * @return array<int, array<int, float>> each holder either entry holds the stem in as a part only => the compounds
+     *     of either entry it comes through, with their place weight; none where it repeats a compound both hold
      */
-    public function holdersLinkedBeyondASharedCompound(array $holders, int $partStemId, int $entryId): array
+    public function partLinksOf(int $stemId, int $entryId, array $holders): array
     {
-        if (!isset($this->partOnlyHoldersOf[$partStemId])) {
-            return $holders;
+        if (!isset($this->partOnlyHoldersOf[$stemId])) {
+            return [];
         }
-        $compoundStemIds = $this->compoundsGiving($partStemId, $entryId);
-        $linked = $compoundStemIds === [] ? $holders : array_filter(
-            $holders,
-            fn (int $holderId): bool => !$this->holdsAll($holderId, $compoundStemIds),
-            \ARRAY_FILTER_USE_KEY,
-        );
-        foreach (array_keys(array_intersect_key($linked, $this->partOnlyHoldersOf[$partStemId])) as $holderId) {
-            if ($this->holdsAll($entryId, $this->compoundsGiving($partStemId, $holderId))) {
-                unset($linked[$holderId]);
-            }
+        $givenHere = $this->compoundsGiving($stemId, $entryId);
+        $partOnlyHolders = $this->partOnlyHoldersOf[$stemId];
+        $links = [];
+        $partHolders = $givenHere === [] ? array_intersect_key($holders, $partOnlyHolders) : $holders;
+        foreach (array_keys($partHolders) as $holderId) {
+            $throughHere = $this->unsharedOf($givenHere, $holderId);
+            $throughThere = isset($partOnlyHolders[$holderId])
+                ? $this->unsharedOf($this->compoundsGiving($stemId, $holderId), $entryId)
+                : [];
+            $links[$holderId] = null === $throughHere || null === $throughThere ? [] : $throughHere + $throughThere;
         }
 
-        return $linked;
+        return $links;
     }
 
-    /** @return array<int, true> the entry's compounds holding the part; none when the entry holds it as a word too */
+    private function hold(int $entryId, int $compoundStemId, float $placeWeight): void
+    {
+        if (!$this->isOnlyAPartIn($entryId, $compoundStemId)) {
+            $this->compoundsOf[$entryId][$compoundStemId] = $placeWeight;
+        }
+    }
+
+    /** @return array<int, float> the entry's compounds holding the part; none when the entry holds it as a word too */
     private function compoundsGiving(int $partStemId, int $entryId): array
     {
         if (!$this->isOnlyAPartIn($entryId, $partStemId)) {
@@ -102,9 +118,18 @@ final class CompoundParts
         return array_intersect_key($this->compoundsOf[$entryId] ?? [], $this->compoundsWithPart[$partStemId]);
     }
 
-    /** @param array<int, true> $compoundStemIds */
-    private function holdsAll(int $entryId, array $compoundStemIds): bool
+    /**
+     * @param array<int, float> $compounds
+     *
+     * @return ?array<int, float> the compounds the other entry does not hold; null when it holds every one
+     */
+    private function unsharedOf(array $compounds, int $otherEntryId): ?array
     {
-        return $compoundStemIds !== [] && array_diff_key($compoundStemIds, $this->compoundsOf[$entryId] ?? []) === [];
+        if ($compounds === [] || !isset($this->compoundsOf[$otherEntryId])) {
+            return $compounds;
+        }
+        $unshared = array_diff_key($compounds, $this->compoundsOf[$otherEntryId]);
+
+        return $unshared === [] ? null : $unshared;
     }
 }

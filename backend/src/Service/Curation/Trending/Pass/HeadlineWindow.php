@@ -9,6 +9,7 @@ use App\Service\Curation\Trending\HeadlineEquivalents;
 use App\Service\Curation\Trending\HeadlineFiller;
 use App\Service\Curation\Trending\Model\LanguageCoverageModel;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
+use App\Service\Curation\Trending\Support\PartWeightCaps;
 
 /** Lookups cache per feed and entry: add every entry before asking for a weight. */
 final class HeadlineWindow
@@ -80,6 +81,8 @@ final class HeadlineWindow
             [...$headlineIds, ...$bodyIds],
             [...$headlineWordIds, ...$bodyWordIds],
         );
+        $this->compoundParts->holdCompoundsAmong($entry->id, $headlineIds, self::HEADLINE_WEIGHT);
+        $this->compoundParts->holdCompoundsAmong($entry->id, $bodyIds, self::BODY_WEIGHT);
         $this->feedOfEntry[$entry->id] = $entry->feedId;
         $this->entriesOfFeed[$entry->feedId][] = $entry->id;
         $this->post($entry->id, $headlineIds, $bodyIds);
@@ -109,23 +112,30 @@ final class HeadlineWindow
     {
         $shared = [];
         $sharingAHeadline = [];
+        $parts = [];
         foreach ($this->placedStemsOf($entryId) as $stemId => $placeWeight) {
-            $holders = $this->compoundParts->holdersLinkedBeyondASharedCompound(
-                $this->earlierHoldersOf($stemId, $entryId),
-                $stemId,
-                $entryId,
-            );
+            $holders = $this->earlierHoldersOf($stemId, $entryId);
+            $partLinks = $this->compoundParts->partLinksOf($stemId, $entryId, $holders);
             $rarity = $this->rarity($stemId);
-            foreach ($holders as $earlierEntryId => $earlierPlaceWeight) {
+            $wordHolders = $partLinks === [] ? $holders : array_diff_key($holders, $partLinks);
+            foreach ($wordHolders as $earlierEntryId => $earlierPlaceWeight) {
                 $commonPlaceWeight = min($placeWeight, $earlierPlaceWeight);
                 $shared[$earlierEntryId] = ($shared[$earlierEntryId] ?? 0.0) + $commonPlaceWeight * $rarity;
                 if ($commonPlaceWeight === self::HEADLINE_WEIGHT) {
                     $sharingAHeadline[$earlierEntryId] = true;
                 }
             }
+            foreach (array_filter($partLinks) as $earlierEntryId => $compounds) {
+                $commonPlaceWeight = min($placeWeight, $holders[$earlierEntryId]);
+                $shared[$earlierEntryId] ??= 0.0;
+                $parts[$earlierEntryId][] = [$commonPlaceWeight * $rarity, $compounds];
+                if ($commonPlaceWeight === self::HEADLINE_WEIGHT) {
+                    $sharingAHeadline[$earlierEntryId] = true;
+                }
+            }
         }
 
-        return array_intersect_key($shared, $sharingAHeadline);
+        return array_intersect_key(PartWeightCaps::addedTo($shared, $parts, $this->rarity(...)), $sharingAHeadline);
     }
 
     private function countLanguageOf(WindowEntryModel $entry): void
@@ -182,8 +192,10 @@ final class HeadlineWindow
     private function addCompound(int $compoundStemId, array $partStemIds): void
     {
         if ($partStemIds !== [] && !$this->compoundParts->isCompound($compoundStemId)) {
-            $this->compoundParts->holdCompoundIn($compoundStemId, $this->headlinePostings[$compoundStemId] ?? []);
-            $this->compoundParts->holdCompoundIn($compoundStemId, $this->bodyPostings[$compoundStemId] ?? []);
+            $headlineHolders = $this->headlinePostings[$compoundStemId] ?? [];
+            $bodyHolders = $this->bodyPostings[$compoundStemId] ?? [];
+            $this->compoundParts->holdCompoundIn($compoundStemId, $headlineHolders, self::HEADLINE_WEIGHT);
+            $this->compoundParts->holdCompoundIn($compoundStemId, $bodyHolders, self::BODY_WEIGHT);
         }
         $this->compoundParts->addCompound($compoundStemId, $partStemIds);
     }

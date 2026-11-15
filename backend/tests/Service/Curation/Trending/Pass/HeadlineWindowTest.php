@@ -238,6 +238,43 @@ final class HeadlineWindowTest extends TestCase
         );
     }
 
+    public function testTheWordsACompoundGivesShareNoMoreThanTheCompoundWeighs(): void
+    {
+        $this->addIn(FeedLanguage::German, 1, 10, 'Polizeieinsatz');
+        $this->addIn(FeedLanguage::German, 2, 20, 'Einsatz der Polizei');
+
+        self::assertEqualsWithDelta(self::ONCE, $this->window->sharedWeightsWithEarlier(2)[1], 0.0001, 'the compound');
+    }
+
+    public function testTheCapHoldsForTheLaterEntrysCompoundToo(): void
+    {
+        $this->addIn(FeedLanguage::German, 1, 10, 'Einsatz der Polizei');
+        $this->addIn(FeedLanguage::German, 2, 20, 'Polizeieinsatz');
+
+        self::assertEqualsWithDelta(self::ONCE, $this->window->sharedWeightsWithEarlier(2)[1], 0.0001, 'the compound');
+    }
+
+    public function testPartsBothEntriesHoldOnlyAsPartsShareNoMoreThanEitherCompoundWeighs(): void
+    {
+        $this->addIn(FeedLanguage::German, 1, 10, 'Kinderarzt');
+        $this->addIn(FeedLanguage::German, 2, 20, 'Kinderarztpraxis');
+
+        self::assertEqualsWithDelta(self::ONCE, $this->window->sharedWeightsWithEarlier(2)[1], 0.0001, 'either one');
+    }
+
+    public function testACompoundInTheBodyCapsItsPartsAtItsBodyWeight(): void
+    {
+        $this->window->add(self::entry(1, 10, FeedLanguage::German, 'Bahnhof'), 'Polizeieinsatz');
+        $this->addIn(FeedLanguage::German, 2, 20, 'Bahnhof: Einsatz der Polizei');
+
+        self::assertEqualsWithDelta(
+            self::TWICE + self::ONCE / 2,
+            $this->window->sharedWeightsWithEarlier(2)[1],
+            0.0001,
+            'bahnhof, then polizei and einsatz through the body compound, which weighs half',
+        );
+    }
+
     public function testAnEntryWeighsAPartThatIsAlsoOneOfItsWordsOnce(): void
     {
         $this->addIn(FeedLanguage::German, 1, 10, 'Polizei: Polizeieinsatz');
