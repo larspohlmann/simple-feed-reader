@@ -10,6 +10,7 @@ use App\Service\Operations\Maintenance\MaintenanceSweep\DigestsTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\HiddenProfilesTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\ImageVerificationTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\LinkCardsTickSweep;
+use App\Service\Operations\Maintenance\MaintenanceSweep\LinkResolutionsTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\MaintenanceSweepInterface;
 use App\Service\Operations\Maintenance\MaintenanceSweep\PrivateFeedSyncTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\ProfileImagesTickSweep;
@@ -34,6 +35,7 @@ final class MaintenanceSweepWiringTest extends KernelTestCase
             'digests' => DigestsTickSweep::class,
             'imageVerification' => ImageVerificationTickSweep::class,
             'linkCards' => LinkCardsTickSweep::class,
+            'linkResolutions' => LinkResolutionsTickSweep::class,
             'transcripts' => TranscriptsTickSweep::class,
             'profileImages' => ProfileImagesTickSweep::class,
             'hiddenProfiles' => HiddenProfilesTickSweep::class,

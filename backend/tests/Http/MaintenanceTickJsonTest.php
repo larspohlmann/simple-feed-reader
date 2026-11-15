@@ -8,6 +8,7 @@ use App\Enum\TrendingWindow;
 use App\Http\MaintenanceTickJson;
 use App\Service\Outbound\Image\Model\ImageVerificationReportModel;
 use App\Service\Content\LinkCard\Model\LinkCardSweepReportModel;
+use App\Service\Content\LinkResolution\Model\LinkResolutionReportModel;
 use App\Service\Operations\Logging\Loki\Model\LokiSpoolReportModel;
 use App\Service\Outbound\Mail\Digest\Model\DigestSweepReportModel;
 use App\Service\Operations\Maintenance\Model\MaintenanceSweepsModel;
@@ -34,6 +35,7 @@ final class MaintenanceTickJsonTest extends KernelTestCase
                 'digests' => new DigestSweepReportModel(4, 5, 6),
                 'imageVerification' => new ImageVerificationReportModel(7, 8, 9, 10),
                 'linkCards' => new LinkCardSweepReportModel(16, 17),
+                'linkResolutions' => new LinkResolutionReportModel(31, 32, 33, 34, 35, 1.5),
                 'transcripts' => new TranscriptSweepReportModel(26, 27),
                 'profileImages' => new ProfileImageSweepReportModel(18, 19),
                 'hiddenProfiles' => new HiddenProfileSwitchReportModel(24, 25),
@@ -85,6 +87,13 @@ final class MaintenanceTickJsonTest extends KernelTestCase
                 'digests' => ['considered' => 4, 'sent' => 5, 'skippedEmpty' => 6],
                 'imageVerification' => ['measured' => 7, 'kept' => 8, 'dropped' => 9, 'retried' => 10],
                 'linkCards' => ['considered' => 16, 'completed' => 17],
+                'linkResolutions' => [
+                    'considered' => 31,
+                    'resolved' => 32,
+                    'unchanged' => 33,
+                    'unresolved' => 34,
+                    'deferred' => 35,
+                ],
                 'transcripts' => ['claimed' => 26, 'filled' => 27],
                 'profileImages' => ['checked' => 18, 'changed' => 19],
                 'hiddenProfiles' => ['started' => 24, 'finished' => 25],
@@ -108,6 +117,7 @@ final class MaintenanceTickJsonTest extends KernelTestCase
             RefreshReportModel::aborted(5, 1, 1, 1, 0, 2),
             MaintenanceSweepsModel::skippedAfterAbortedRefresh([
                 'linkCards' => LinkCardSweepReportModel::none(),
+                'linkResolutions' => LinkResolutionReportModel::none(),
                 'savedSearchMemberships' => SavedSearchMembershipSweepReportModel::none(),
             ]),
             new LokiSpoolReportModel(0, 0),
@@ -128,6 +138,14 @@ final class MaintenanceTickJsonTest extends KernelTestCase
                     'pruned' => 0,
                 ],
                 'linkCards' => ['considered' => 0, 'completed' => 0, 'skipped' => $reason],
+                'linkResolutions' => [
+                    'considered' => 0,
+                    'resolved' => 0,
+                    'unchanged' => 0,
+                    'unresolved' => 0,
+                    'deferred' => 0,
+                    'skipped' => $reason,
+                ],
                 'savedSearchMemberships' => [
                     'searchesSwept' => 0,
                     'entriesScanned' => 0,

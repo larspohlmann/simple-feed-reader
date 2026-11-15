@@ -261,6 +261,7 @@ final class MaintenanceControllerTest extends WebTestCase
                 'digests',
                 'imageVerification',
                 'linkCards',
+                'linkResolutions',
                 'transcripts',
                 'profileImages',
                 'hiddenProfiles',

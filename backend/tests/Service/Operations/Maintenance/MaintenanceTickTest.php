@@ -20,6 +20,7 @@ use App\Service\Operations\Maintenance\MaintenanceSweep\DigestsTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\HiddenProfilesTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\ImageVerificationTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\LinkCardsTickSweep;
+use App\Service\Operations\Maintenance\MaintenanceSweep\LinkResolutionsTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\MaintenanceSweepInterface;
 use App\Service\Operations\Maintenance\MaintenanceSweep\PrivateFeedSyncTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\ProfileImagesTickSweep;
@@ -38,6 +39,8 @@ use App\Tests\Support\ClockStampingMatcher;
 use App\Tests\Support\DuplicateKeyViolation;
 use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\LinkCardSweepWiring;
+use App\Tests\Support\LinkLandingWiring;
+use App\Tests\Support\LinkResolutionSweepWiring;
 use App\Tests\Support\MaintenanceTickOverrides;
 use App\Tests\Support\MembershipSweepFactory;
 use App\Tests\Support\QueuedLinkPosts;
@@ -445,6 +448,10 @@ final class MaintenanceTickTest extends DbTestCase
                 new LinkCardsTickSweep(
                     $overrides->linkCardSweep
                         ?? LinkCardSweepWiring::build($this->entityManager, new MockHttpClient(), $clock),
+                    $clock,
+                ),
+                new LinkResolutionsTickSweep(
+                    LinkResolutionSweepWiring::build(self::getContainer(), new LinkLandingWiring(), $clock),
                     $clock,
                 ),
                 new ImageVerificationTickSweep($imageVerificationSweep, $clock),
