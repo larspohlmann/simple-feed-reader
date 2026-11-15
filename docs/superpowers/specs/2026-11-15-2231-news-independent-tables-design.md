@@ -15,8 +15,8 @@ proper-noun guard, a transliteration fold) are not built.
 
 ## Goals
 
-- The seeds are the Snowball project's stopword lists for de/en/fr/es, committed as generated data with their source
-  pin and licence, and stemmed at construction as today's words are.
+- The seeds are the Snowball project's stopword lists for de/en/fr/es, with a closed-class supplement for fr/es (D10),
+  committed as generated data with their source pins and licences, and stemmed at construction as today's words are.
 - The equivalence tables hold only what does not follow the news. Every person, event and country entry goes.
 - Each proposal of the issue is decided by a measurement on the dev window, and the measurement is written down.
 
@@ -195,10 +195,13 @@ code.
 ## Approaches considered
 
 Seeds:
-1. **Snowball lists only.** Chosen.
+1. **Snowball lists only.** Chosen for German and English.
 2. Snowball ∪ today's words. Rejected: the extra words are hand-picked and worth 13 week pairs.
 3. `stopwords-iso` (MIT). Rejected: its lists run to several hundred words per language and include content words; a
    seed is dropped outright, so a content word in the list is a silent loss.
+4. **Snowball ∪ a closed-class supplement for French and Spanish**, derived by a part-of-speech rule from Google Books
+   Ngram v3 (CC BY 3.0). Chosen in the fix wave (D10). Jacques Savoy's French and Spanish lists (unine.ch) were also
+   considered; their page states no licence, so they are not used.
 
 Territories:
 1. **None; delete the hand-made entries.** Chosen (R2).
@@ -218,33 +221,38 @@ Proper nouns:
 
 ### Stopword data
 
-`backend/resources/snowball-stopwords/`:
+`backend/resources/stopwords/` (named `snowball-stopwords/` until the fix wave added a second source):
 
 - `generate.php` fetches the four `stop.txt` files from
   `https://raw.githubusercontent.com/snowballstem/snowball-website/<commit>/algorithms/<name>/stop.txt` at the commit
   pinned in a constant, and aborts unless each body's SHA-256 matches the one pinned beside it. Per line it drops the
   `|` comment and whitespace, keeps the first token, casefolds it (`MB_CASE_FOLD`, then NFKC, diacritics kept), and
-  keeps it only if it matches `^\p{L}+$` (this drops the English contractions, which the tokenizer splits anyway). It
-  removes duplicates, sorts each list byte-wise, and writes `stopwords.php`.
+  keeps it only if it matches `^\p{L}+$`. This drops the 50 English contractions. The tokenizer would split *doesn't*
+  into `doesn` and `t`, and keep the head as a content word, so dropping them is a choice and not a no-op: keeping the
+  heads would make *won* and *don* seeds. It removes duplicates, sorts each list byte-wise, and writes `stopwords.php`.
+- For French and Spanish, `generate.php` also reads the Google Books Ngram v3 1-gram shards (D10) from a directory
+  given as its argument, checks each shard's pinned SHA-256, and adds every form that is among the 1,000 most
+  frequent by tagged count over 1950–2019 and holds at least half its tagged count in ADP, ADV, CONJ, DET, PRON or PRT.
+  Each language's list is the sorted, distinct union of both sources.
 - `stopwords.php` is generated, never edited by hand:
   `return ['de' => list<string>, 'en' => list<string>, 'fr' => list<string>, 'es' => list<string>];`
   It is a few kilobytes; it is marked `linguist-generated=true -diff` in `.gitattributes`.
 - `SOURCE` pins the repository, the commit and its date, the four URLs with their SHA-256, the fetch date, the parse
   rule, the word counts, and the end-to-end reproduction (generated twice, `cmp` identical).
-- `LICENSE.txt` is the 3-clause BSD text as snowballstem.org states it (© 2001 Dr Martin Porter, © 2002 Richard
-  Boulton). `NOTICE.txt` names the source, the licence, the changes ("comments removed, casefolded, contractions
-  dropped, sorted") and the line "stopwords.php is under the BSD 3-clause licence; the repository's code stays MIT".
+- `LICENSE-BSD-3-Clause.txt` is the 3-clause BSD text as snowballstem.org states it (© 2001 Dr Martin Porter, © 2002
+  Richard Boulton); `LICENSE-CC-BY-3.0.txt` is the CC BY 3.0 legal code. `NOTICE.txt` names both sources, their
+  licences and the changes, and states that the Snowball words are BSD, the Ngram-derived words CC BY 3.0, and the
+  repository's code MIT.
 
 ### Runtime
 
 In `Service/Curation/Trending`:
 
 - **`StopWords/StopWordsInterface`** — `wordsOf(FeedLanguage $language): list<string>`.
-- **`StopWords/BundledStopWords`** — `final readonly`, constructed with
-  `#[Autowire('%kernel.project_dir%/resources/snowball-stopwords/stopwords.php')] string $path`. `wordsOf` requires the
-  file and returns that language's list; a file that is not the expected shape throws `\UnexpectedValueException`.
-  It holds no state, so it needs no `ResetInterface`. The only caller reads it once per process, when
-  `HeadlineFiller` is built.
+- **`StopWords/BundledStopWords`** — `final`, constructed with
+  `#[Autowire('%kernel.project_dir%/resources/stopwords/stopwords.php')] string $path`. `wordsOf` requires the file on
+  first use, keeps it until `reset()` (`ResetInterface`), and returns that language's list; a file that is not the
+  expected shape throws `\UnexpectedValueException`.
 - **`HeadlineFiller`** takes `HeadlineStemmer` and `StopWordsInterface`. Its constructor builds, per language, the set
   of `stem(word, language)` over that language's stopwords (as today), and the set for a word without a language: the
   union over the four languages of `HeadlineStems::cut(word)` for each kept word. `SEED_WORDS` and `SEED_STEMS` are
@@ -267,13 +275,18 @@ Lars delegated every decision. Each is "what — why — cost if wrong".
 
 - **D1. Seeds are the Snowball lists alone** — they are the standard news-independent source for exactly these four
   languages, BSD-licensed, and measured +504 week / +29 day; the words only today's list has are worth 13 week pairs.
-  — If wrong: frequent words such as en *will, can, also, just* and fr *après, depuis, contre* link entries in a small
-  window until the 3 % window-filler share catches them; about 13 week pairs on this data.
+  — If wrong: frequent words such as en *will, can, also, just* link entries in a small window until the 3 %
+  window-filler share catches them; about 13 week pairs on this data. French and Spanish get a supplement (D10).
 - **D2. A word without a language seeds on the union of the four lists, cut to six letters** — it is the rule today's
   `SEED_STEMS` followed (all four languages' words, cut), derived from the same data; language-less entries are 1.3 %
   of the week window (383 of 28,548), and the ones sampled had an empty or emoji-only title. — If wrong: a language-less post loses words that are
   function words in one language and content words in another (*war, son, con, sin, fin*), which #2225 had
-  excluded by hand; the tests that pinned those exclusions change.
+  excluded by hand; the tests that pinned those exclusions change. Worse, a seed of six letters or more also swallows
+  every token whose six-letter cut it equals: `manche` (*manches*) takes *Manchester*, `diesel` (*dieselben*) *Diesel*,
+  `sonder` (*sondern*) *Sondervermögen*, `contra` *contract*, `estado` *estadounidense*, `themse` (*themselves*)
+  *Themse*, `durant` *Durant*, `wahren` (*während*) *wahren*; the D10 supplement adds `direct` (*directement*),
+  `genera` (*généralement*), `partic` (*particulièrement*), `simple` (*simplement*), `precis` (*precisamente*) and
+  `concer` (*concernant*). Only language-less entries are cut, 1.3 % of the week, so this is accepted.
 - **D3. No territory data; the country and capital entries are deleted** — they measured −53 week pairs net (T1), and
   a generated table would only add more of the same. — If wrong: cross-language country links (*Polen / Poland*)
   are lost; on this data that is a gain, and the measurement task re-checks it.
@@ -295,6 +308,16 @@ Lars delegated every decision. Each is "what — why — cost if wrong".
   run) would bring *WM* back, but it is optional scope: a few lines, a new collision class (*AI, KI, US*), and at most
   about 10 week pairs. — If wrong: two-letter acronyms other than EU and UN stay below the three-letter minimum, as they
   are today.
+- **D10. French and Spanish seeds add a closed-class supplement from Google Books Ngram (fix wave)** — Snowball's
+  French list holds pronouns, articles and the forms of *être* and *avoir*, but no prepositions or adverbs (*après,
+  contre, depuis, entre, selon, très, plus*); Spanish lacks *tras, según*. These are closed-class and
+  news-independent. A window of French or Spanish entries alone, as on an instance whose readers mostly read those
+  languages, shows they are not harmless as content words: *après* reached 104 % of the filler share and *plus* 93 %
+  in the French week, *tras* 129 % in the Spanish week, and the French-only week lost 6 pairs and gained 3 against
+  develop. The rule is general and comes from a news-independent corpus: a form among the 1,000 most frequent book
+  forms whose part-of-speech tags are at least half closed-class. It adds 123 French and 108 Spanish words. CC BY 3.0,
+  as the German lexicon (#2230). — If wrong: a few homographs of content words become seeds (fr *mal, ensemble,
+  dessus, son*; es *mal, frente, tarde, bajo, propio*), and the generator needs 5.3 GB of shards to reproduce.
 - **D9. The stopwords ship as a generated PHP array behind an interface** — PHP needs no parse step for a few KB, and
   the interface follows the `GermanLexicon/` precedent; the test wiring passes the real file because it is small. —
   If wrong: one extra file and one extra class; nothing at runtime.
@@ -303,7 +326,9 @@ Lars delegated every decision. Each is "what — why — cost if wrong".
 
 | Source | Licence | Use |
 |---|---|---|
-| Snowball stopword lists, `snowballstem/snowball-website` @ `dc14fb46` | BSD 3-clause (snowballstem.org/license.html) | **Shipped**, as `backend/resources/snowball-stopwords/stopwords.php` with `LICENSE.txt` and `NOTICE.txt` |
+| Snowball stopword lists, `snowballstem/snowball-website` @ `dc14fb46` | BSD 3-clause (snowballstem.org/license.html) | **Shipped**, in `backend/resources/stopwords/stopwords.php` with `LICENSE-BSD-3-Clause.txt` and `NOTICE.txt` |
+| Google Books Ngram v3 French and Spanish 1-grams | CC BY 3.0 | **Shipped** as derived words (D10), in the same file, with `LICENSE-CC-BY-3.0.txt` and `NOTICE.txt` |
+| Jacques Savoy's French and Spanish stopword lists (unine.ch) | none stated | Not used (D10) |
 | ICU / CLDR region names (PHP intl, ICU 79.1) | Unicode License v3 | Researched, not shipped (D3) |
 | Wikidata (P1549, P36) | CC0 | Researched, not shipped (D3) |
 | macOS `/usr/share/dict/words` (Webster's 1934) | public domain | Researched, not shipped (D5) |
@@ -317,7 +342,7 @@ No CC BY-SA or GPL source is used.
 The #2227 method, as in #2230:
 
 - A = develop at 75048da7e, B = this branch's HEAD; each variant's whole `src/Service/Curation/Trending` and
-  `resources/snowball-stopwords` swapped in, the container warmed before each timed run.
+  `resources/stopwords` swapped in, the container warmed before each timed run.
 - "Now" pinned to 2026-11-15 00:00:00 UTC (`simp-explain-at.php`), day and week, dev MySQL read-only.
 - A and B back to back. Their header lines must show the same entry count; if the worker added back-dated entries in
   between, run A again and compare the pair with equal counts.
@@ -328,12 +353,19 @@ The #2227 method, as in #2230:
 
 ## Limitations
 
-- **Snowball German seeds a few nouns' stems:** *Weg* shares `weg` with the adverb *weg*, *Sein* with *sein*, so both
-  nouns drop out as seeds. Accepted as Snowball's call.
+- **Snowball seeds a few nouns' and names' stems**, none of which the old hand list seeded. Accepted as Snowball's
+  call; a table row is not the fix:
+  - de: *Weg* (`weg`), *Sein* (`sein`), *Manchester* (`manch`, through *manche*), *Waren* (goods, `war`), *Wille /
+    Willen* (`will`), *Weite* (`weit`, through *weiter*), *Anden* (`and`, through *anders*);
+  - en: *Downing* (`down`), *Doe* (`doe`, through *does*);
+  - fr: *été* (summer, `ete`, through *êtes*), *Mons* (`mon`);
+  - es: *Estado / Estados* (`estad`), *era*, *sobre* (envelope), *fuera* (the verb and preposition forms).
+  So two Downing Street posts lose *Downing*, two posts on Manchester United link only through *united*, and a Spanish
+  *Estados Unidos* group links only through `unid`.
 - **Two-letter acronyms** other than EU and UN, such as *WM, EM, KI, AI*, are below the three-letter minimum (D8).
 - **Names across stemmers** stay split (D5): *Hammer* is `hamm` in German and `hammer` in English.
-- **The French list is small:** prepositions and adverbs such as *après, depuis, contre* are not seeds; the window
-  filler share is the only guard against them (D1).
+- **The closed-class supplement seeds homographs** (D10): fr *mal, ensemble, dessus, son, bien*; es *mal, frente,
+  tarde, bajo, propio, bien*, and the number words of both languages.
 
 ## Outcome
 
@@ -413,6 +445,83 @@ Spanish, every changed group of both windows:
   list does with *Weg* and *Sein*: the BSW *Magdeburger Weg* commentary leaves its BSW group (7 → 6). Accepted as
   Snowball's call (Limitations); the cost on this data is three Spanish pairs and one German.
 
-No French or Spanish group was joined through a word only the old hand list had, so no closed-class supplement
-(such as `stopwords-iso`) was added. The result matches the spec: the week does not lose real stories net, in any
-language.
+No French or Spanish group in the shared window was joined through a word only the old hand list had. The fix wave
+below measured each language on its own window, and there the gap shows; D10 closes it.
+
+### Fix wave: French and Spanish on their own (D10)
+
+The final review asked whether French and Spanish are measured at all: in the shared window they are 1.7 % and 2.9 %
+of the entries, so no French or Spanish word ever reaches the 3 % filler share there. This run restricts the window's
+query to one language (`COALESCE(entry.language, feed.language)`), as on an instance whose readers mostly read French
+or Spanish, and measures three variants on the same entries, back to back, pin unchanged:
+- **A** is develop (75048da7e);
+- **B1** is the branch with Snowball's lists only (the state measured above);
+- **B** is the branch with the closed-class supplement (D10).
+
+How often the old hand-list words that Snowball lacks occur in that language's week window, against the filler share
+(3 % of the 1,500-entry floor, 45 entries). Document frequency counts entries whose headline or body holds the stem:
+
+| Word | French week (500 entries) | Share of the filler share |
+|---|---|---|
+| *est* (Snowball omits it as a homonym of *east*) | 85 | 189 % |
+| *après* | 47 | 104 % |
+| *plus* | 42 | 93 % |
+| *contre* | 31 | 69 % |
+| *depuis* | 26 | 58 % |
+| *fait*, *tout*, *entre*, *fois*, *selon*, *encore* | 16–19 each | 36–42 % |
+| *être*, *avant*, *comme*, *très*, *lors* | 10–13 each | 22–29 % |
+
+| Word | Spanish week (857 entries) | Share of the filler share |
+|---|---|---|
+| *tras* | 58 | 129 % |
+| *según* | 18 | 40 % |
+| *unas* | 8 | 18 % |
+
+Under B1 these weigh as content words until they cross the share. On a busier French or Spanish window the share
+rises with the entry count, but so do their frequencies, so they stay just under it. The supplement makes them seeds,
+except *est, être, fait, fois* (verbs and nouns by their tags) and *lors, tous* (tagged noun and adjective by Google's
+tagger).
+
+| Grouped pairs, new / lost / **net** | A → B1 | B1 → B | A → B |
+|---|---|---|---|
+| French only, day (409 entries) | 3 / 6 / **−3** | 12 / 4 / **+8** | 6 / 1 / **+5** |
+| French only, week (500) | 3 / 6 / **−3** | 16 / 3 / **+13** | 11 / 1 / **+10** |
+| Spanish only, day (555) | 4 / 3 / **+1** | 3 / 3 / **0** | 2 / 1 / **+1** |
+| Spanish only, week (857) | 3 / 7 / **−4** | 5 / 1 / **+4** | 7 / 7 / **0** |
+| All, day (5,731) | 84 / 49 / **+35** | 10 / 4 / **+6** | 88 / 47 / **+41** |
+| All, week (29,618) | 913 / 380 / **+533** | 11 / 10 / **+1** | 920 / 386 / **+534** |
+
+Per language, all languages in one window, A → B: day de–de +1, en–en +35, fr–fr +8, es–es −1, mixed or none −2; week
+de–de +262, en–en +280, fr–fr +5, es–es −4, mixed or none −9. The supplement changes no German or English pair (B1 → B
+de–de 0, en–en +1 week).
+
+| | Day A | Day B | Week A | Week B |
+|---|---|---|---|---|
+| Groups | 698 | 693 | 3,778 | 3,794 |
+| Wall time | 5.0 s | 4.8 s | 68.5 s | 65.0 s |
+| Peak RSS | 100.4 MB | 100.4 MB | 260.1 MB | 247.7 MB |
+| Peak PHP memory | 59.6 MB | 59.5 MB | 179.5 MB | 177.7 MB |
+
+**The supplement turns the French-only week from −3 into +10 against develop and the Spanish-only week from −4 into
+0.** Without it, French and Spanish lose pairs on a window of their own; with it, neither does.
+
+Eye check, every French and Spanish group that B1 → B changed:
+- French, all real stories:
+  - joined again: the *Bilibili* final (*plus*);
+  - one member each back in its group: the Ukraine concessions group (*contre*), the Zidane interview group;
+  - grown: the GTA 6 leave requests, the Mbappé press conference.
+  - The one split moves a Zidane preview between two groups of the same match.
+- Spanish:
+  - real stories joined: *Voyager 1* and Rosalía at the Latin Grammys.
+  - Lost: *Gabito Ballesteros* (2 → 0) and the *Alcaraz / Ferrero* pair, which linked through *tras* and *después*.
+    Both are seeds again, as *tras* was in develop.
+  - The US flight-stop group splits into an *Estados Unidos* pair and an *EEUU* pair. It joined through *después* and
+    *tras*; *estados* is already a Snowball seed (Limitations).
+  - These are links that a function word carried, which is what a seed is for. The all-window es–es −4 week is that
+    effect plus *estados*.
+- No wrong merge in either language.
+- The mixed or no-language −9 week is one language-less *Yellow Vest* post. Under develop it met the English posts
+  through the deleted `france` canonical; its cut `france` against English `franc` is the D3 cost.
+
+The generator was rerun twice: `stopwords.php` came out byte-identical (20,856 bytes; de 231, en 124, fr 277, es
+416), and a directory without the shards aborts with "Missing shard or SHA-256 mismatch".
