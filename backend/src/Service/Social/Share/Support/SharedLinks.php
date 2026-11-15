@@ -30,32 +30,37 @@ final class SharedLinks
         $document = HtmlDocumentParser::parseFragment($bodyHtml);
         $linkedHtml = self::linkBareUrls($document) === 0 ? $bodyHtml : ($document->body->innerHTML ?? $bodyHtml);
 
-        $postedForms = self::postedFormsIn($document);
-        $urls = \array_slice(array_values(array_unique(array_keys($postedForms))), 0, self::MAX);
+        $hrefsToCheck = self::hrefsToCheckIn($document);
+        $urls = \array_slice(array_keys($hrefsToCheck), 0, self::MAX);
 
         return new SharedLinksModel(
             $urls,
             $linkedHtml,
             OwnProse::of($document->body),
-            array_filter(
-                array_intersect_key($postedForms, array_flip($urls)),
-                TrackingFreeUrl::stripsAnUndocumentedKey(...),
-            ),
+            array_filter(array_intersect_key($hrefsToCheck, array_flip($urls))),
         );
     }
 
-    /** @return array<string, string> each shared link's first posted href, by its tracking-free URL, in post order */
-    private static function postedFormsIn(HTMLDocument $document): array
+    /**
+     * @return array<string, ?string> each shared link's first posted href, when it lost an undocumented key, by its
+     *                                tracking-free URL, in post order
+     */
+    private static function hrefsToCheckIn(HTMLDocument $document): array
     {
-        $postedForms = [];
+        $hrefsToCheck = [];
         foreach ($document->querySelectorAll('a[href]') as $anchor) {
-            if (self::isShare($anchor)) {
-                $href = (string) $anchor->getAttribute('href');
-                $postedForms[TrackingFreeUrl::of($href)] ??= $href;
+            if (!self::isShare($anchor)) {
+                continue;
+            }
+            $href = (string) $anchor->getAttribute('href');
+            $read = TrackingFreeUrl::read($href);
+            $url = $read->cleaned();
+            if (!\array_key_exists($url, $hrefsToCheck)) {
+                $hrefsToCheck[$url] = $read->strippedAnUndocumentedKey() ? $href : null;
             }
         }
 
-        return $postedForms;
+        return $hrefsToCheck;
     }
 
     private static function linkBareUrls(HTMLDocument $document): int

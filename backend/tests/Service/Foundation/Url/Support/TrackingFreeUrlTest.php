@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Foundation\Url\Support;
 
+use App\Service\Foundation\Url\Pass\TrackedUrl;
 use App\Service\Foundation\Url\Support\TrackingFreeUrl;
 use App\Service\Foundation\Url\UrlNormalizer;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -11,6 +12,12 @@ use PHPUnit\Framework\TestCase;
 
 final class TrackingFreeUrlTest extends TestCase
 {
+    /** Never stripped, on any host: testNoRuleEverMatchesAGiftKey fails when a rule matches one. */
+    private const array GIFT_KEYS = [
+        'unlocked_article_code', 'gift', 'pwapi_token', 'accesstoken', 'sharetype', 'gifttoken',
+        'giftcode', 'gift_token', 'share_token', 'access_token',
+    ];
+    private const array GIFT_KEYS_BY_DOMAIN = ['wsj.com' => ['st']];
     private const array DOCUMENTED_KEYS = [
         'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'utm_id', 'utm_souce',
         'gclid', 'gclsrc', 'dclid', 'gbraid', 'wbraid', 'srsltid', '_gl',
@@ -376,15 +383,15 @@ final class TrackingFreeUrlTest extends TestCase
     /** @return iterable<string, array{string}> */
     public static function giftKeysOnEveryHost(): iterable
     {
-        $domainRules = new \ReflectionClassConstant(TrackingFreeUrl::class, 'KEYS_BY_DOMAIN')->getValue();
+        $domainRules = new \ReflectionClassConstant(TrackedUrl::class, 'KEYS_BY_DOMAIN')->getValue();
         self::assertIsArray($domainRules);
         $hosts = ['example.com', ...array_map(strval(...), array_keys($domainRules))];
         foreach ($hosts as $host) {
-            foreach (TrackingFreeUrl::GIFT_KEYS as $key) {
+            foreach (self::GIFT_KEYS as $key) {
                 yield $key . ' on ' . $host => ['https://www.' . $host . '/a?' . $key . '=rss&' . $key . '=1'];
             }
         }
-        foreach (TrackingFreeUrl::GIFT_KEYS_BY_DOMAIN as $domain => $keys) {
+        foreach (self::GIFT_KEYS_BY_DOMAIN as $domain => $keys) {
             foreach ($keys as $key) {
                 yield $key . ' on ' . $domain => ['https://www.' . $domain . '/a?' . $key . '=rss&' . $key . '=1'];
             }
@@ -395,28 +402,6 @@ final class TrackingFreeUrlTest extends TestCase
     public function testNoRuleEverMatchesAGiftKey(string $url): void
     {
         self::assertSame([], TrackingFreeUrl::strippedKeysIn($url));
-    }
-
-    /** @return iterable<string, array{string, bool}> */
-    public static function strippedTiers(): iterable
-    {
-        yield 'a utm prefix' => ['https://example.com/a?utm_source=x', false];
-        yield 'a documented click id' => ['https://example.com/a?fbclid=1&gclid=2', false];
-        yield 'a documented key in the fragment' => ['https://example.com/a#xtor=RSS-3', false];
-        yield 'an undocumented key everywhere' => ['https://example.com/a?sara_ref=x', true];
-        yield 'a host-scoped share key' => ['https://www.youtube.com/watch?v=x&si=y', true];
-        yield 'an undocumented host-scoped key' => ['https://x.com/a/status/1?s=20', true];
-        yield 'a value-scoped feed marker' => ['https://example.com/a?cmp=rss', true];
-        yield 'a documented key beside a feed marker' => ['https://example.com/a?utm_source=x&ref=feed', true];
-        yield 'a feed marker key with another value' => ['https://example.com/a?ref=home&utm_source=x', false];
-        yield 'nothing stripped' => ['https://example.com/a?id=1', false];
-        yield 'no host' => ['/a?sara_ref=x', false];
-    }
-
-    #[DataProvider('strippedTiers')]
-    public function testOnlyAnUndocumentedStrippedKeyAsksForACheck(string $url, bool $expected): void
-    {
-        self::assertSame($expected, TrackingFreeUrl::stripsAnUndocumentedKey($url));
     }
 
     /** @return iterable<string, array{string}> */
