@@ -25,6 +25,9 @@ final class TrendingRun
     /** @var array<int, string> */
     private array $articleSites = [];
 
+    /** @var array<string, string> one string per site, however many entries share it */
+    private array $sites = [];
+
     public function __construct(public readonly TrendingWindow $window, public readonly HeadlineWindow $headlines)
     {
     }
@@ -39,7 +42,7 @@ final class TrendingRun
         }
         $articleSite = $entry->links->articleSite();
         if ($articleSite !== null) {
-            $this->articleSites[$entry->id] = $articleSite;
+            $this->articleSites[$entry->id] = $this->sites[$articleSite] ??= $articleSite;
         }
         $this->headlines->add(
             $entry,
