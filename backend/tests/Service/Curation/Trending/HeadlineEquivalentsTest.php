@@ -23,19 +23,19 @@ final class HeadlineEquivalentsTest extends TestCase
     public function testCrossLanguageNamesShareOneStem(): void
     {
         foreach (['Zelensky', 'Zelenskyy', 'Selenskyj', 'Zelenski'] as $name) {
-            self::assertSame(['selens'], $this->equivalents->stemsOf($name, null), $name);
+            self::assertSame(['selens'], $this->stemsOf($name, null), $name);
         }
     }
 
     public function testAPhraseIsConsumedIntoOneStem(): void
     {
-        self::assertEqualsCanonicalizing(['onu', 'warn'], $this->equivalents->stemsOf('United Nations warn', null));
+        self::assertEqualsCanonicalizing(['onu', 'warn'], $this->stemsOf('United Nations warn', null));
     }
 
     public function testPhrasesMatchAcrossPunctuationAndCase(): void
     {
         foreach (['Nations-Unies', 'NATIONS UNIES et Chine', 'Union européenne'] as $text) {
-            $stems = $this->equivalents->stemsOf($text, null);
+            $stems = $this->stemsOf($text, null);
             self::assertNotSame([], array_intersect(['onu', 'eunion'], $stems), $text);
             self::assertSame([], array_intersect(['nation', 'unies', 'union', 'europe'], $stems), $text);
         }
@@ -45,24 +45,24 @@ final class HeadlineEquivalentsTest extends TestCase
     {
         self::assertEqualsCanonicalizing(
             ['onu', 'und'],
-            $this->equivalents->stemsOf('Vereinte Nationen und Vereinte Nationen', null),
+            $this->stemsOf('Vereinte Nationen und Vereinte Nationen', null),
         );
     }
 
     public function testAShortAbbreviationIsKeptAndMapped(): void
     {
-        self::assertEqualsCanonicalizing(['eunion', 'ban'], $this->equivalents->stemsOf('EU to ban AI', null));
+        self::assertEqualsCanonicalizing(['eunion', 'ban'], $this->stemsOf('EU to ban AI', null));
     }
 
     public function testALowerCaseWordIsNotAnAbbreviation(): void
     {
-        self::assertNotContains('onu', $this->equivalents->stemsOf('Un plan de paix pour Gaza', null));
+        self::assertNotContains('onu', $this->stemsOf('Un plan de paix pour Gaza', null));
     }
 
     #[DataProvider('shoutedTexts')]
     public function testAnAbbreviationThatIsAnOrdinaryWordDoesNotFireInAShoutedRun(string $text): void
     {
-        self::assertNotContains('onu', $this->equivalents->stemsOf($text, null));
+        self::assertNotContains('onu', $this->stemsOf($text, null));
     }
 
     /** @return iterable<string, array{string}> */
@@ -77,7 +77,7 @@ final class HeadlineEquivalentsTest extends TestCase
     #[DataProvider('abbreviationsNextToCapitals')]
     public function testAnUnambiguousAbbreviationFiresNextToCapitals(string $text, string $canonical): void
     {
-        self::assertContains($canonical, $this->equivalents->stemsOf($text, null));
+        self::assertContains($canonical, $this->stemsOf($text, null));
     }
 
     /** @return iterable<string, array{string, string}> */
@@ -90,105 +90,105 @@ final class HeadlineEquivalentsTest extends TestCase
 
     public function testALongFormNextToAnAbbreviationStillMaps(): void
     {
-        self::assertContains('britai', $this->equivalents->stemsOf('Großbritanniens EU-Austritt', null));
-        self::assertContains('osterr', $this->equivalents->stemsOf('ÖVP Austria', null));
+        self::assertContains('britai', $this->stemsOf('Großbritanniens EU-Austritt', null));
+        self::assertContains('osterr', $this->stemsOf('ÖVP Austria', null));
     }
 
     public function testGermanInflectedPhrasesMatch(): void
     {
-        $union = $this->equivalents->stemsOf('Gipfel der Europäischen Union in Brüssel', null);
+        $union = $this->stemsOf('Gipfel der Europäischen Union in Brüssel', null);
         self::assertContains('eunion', $union);
         self::assertNotContains('union', $union);
-        $nations = $this->equivalents->stemsOf('Rede bei den Vereinten Nationen', null);
+        $nations = $this->stemsOf('Rede bei den Vereinten Nationen', null);
         self::assertContains('onu', $nations);
         self::assertNotContains('nation', $nations);
     }
 
     public function testGermanGenitivesMatch(): void
     {
-        self::assertContains('poland', $this->equivalents->stemsOf('Polens Regierung', null));
-        self::assertContains('china', $this->equivalents->stemsOf('Chinas Exporte', null));
-        self::assertContains('japan', $this->equivalents->stemsOf('Japans Premier', null));
-        self::assertContains('kremli', $this->equivalents->stemsOf('Sprecher des Kremls', null));
+        self::assertContains('poland', $this->stemsOf('Polens Regierung', null));
+        self::assertContains('china', $this->stemsOf('Chinas Exporte', null));
+        self::assertContains('japan', $this->stemsOf('Japans Premier', null));
+        self::assertContains('kremli', $this->stemsOf('Sprecher des Kremls', null));
     }
 
     public function testAnAbbreviationStandingAloneFires(): void
     {
-        self::assertSame(['eunion'], $this->equivalents->stemsOf('EU', null));
+        self::assertSame(['eunion'], $this->stemsOf('EU', null));
     }
 
     public function testNeighboursWithLowerCaseLettersDoNotSilenceAnAbbreviation(): void
     {
-        self::assertContains('onu', $this->equivalents->stemsOf('Talks between OpenAI UN AstraZeneca', null));
+        self::assertContains('onu', $this->stemsOf('Talks between OpenAI UN AstraZeneca', null));
     }
 
     public function testSeveralAbbreviationsInOneTextAreAllMapped(): void
     {
-        self::assertSame(['eunion', 'and', 'onu', 'agree'], $this->equivalents->stemsOf('EU and UN agree', null));
+        self::assertSame(['eunion', 'and', 'onu', 'agree'], $this->stemsOf('EU and UN agree', null));
     }
 
     public function testTwoSpellingsOfOneNameCountOnce(): void
     {
-        self::assertSame(['russia', 'und'], $this->equivalents->stemsOf('Russland Russia und', null));
+        self::assertSame(['russia', 'und'], $this->stemsOf('Russland Russia und', null));
     }
 
     public function testAnAbbreviationAtTheEdgesOfMixedTextFires(): void
     {
-        self::assertContains('eunion', $this->equivalents->stemsOf('EU imposes tariffs', null));
-        self::assertContains('onu', $this->equivalents->stemsOf('Tariffs condemned by the UN', null));
+        self::assertContains('eunion', $this->stemsOf('EU imposes tariffs', null));
+        self::assertContains('onu', $this->stemsOf('Tariffs condemned by the UN', null));
     }
 
     public function testAnAbbreviationInAHyphenatedCompoundFires(): void
     {
-        self::assertContains('weltme', $this->equivalents->stemsOf('Eishockey-WM: DEB-Frauen scheitern', null));
-        self::assertContains('eunion', $this->equivalents->stemsOf('Die EU-Kommission legt nach', null));
-        self::assertContains('onu', $this->equivalents->stemsOf('Rede von UN-Generalsekretär Guterres', null));
+        self::assertContains('weltme', $this->stemsOf('Eishockey-WM: DEB-Frauen scheitern', null));
+        self::assertContains('eunion', $this->stemsOf('Die EU-Kommission legt nach', null));
+        self::assertContains('onu', $this->stemsOf('Rede von UN-Generalsekretär Guterres', null));
     }
 
     public function testAnAbbreviationInsideALongerWordDoesNotFire(): void
     {
-        self::assertNotContains('eunion', $this->equivalents->stemsOf('Preise in EUR steigen', null));
-        self::assertNotContains('onu', $this->equivalents->stemsOf('Der UNHCR warnt', null));
+        self::assertNotContains('eunion', $this->stemsOf('Preise in EUR steigen', null));
+        self::assertNotContains('onu', $this->stemsOf('Der UNHCR warnt', null));
     }
 
     public function testOneAllCapsNeighbourDoesNotSilenceAnAbbreviation(): void
     {
-        self::assertContains('weltme', $this->equivalents->stemsOf('Traum von WM DEB platzt', null));
+        self::assertContains('weltme', $this->stemsOf('Traum von WM DEB platzt', null));
     }
 
     public function testALongFormWhoseStemCollidesIsAnExactWord(): void
     {
-        self::assertContains('britai', $this->equivalents->stemsOf('Großbritannien verschärft Regeln', null));
-        self::assertSame(['grossb', 'hambur'], $this->equivalents->stemsOf('Großbrand Hamburg', null));
+        self::assertContains('britai', $this->stemsOf('Großbritannien verschärft Regeln', null));
+        self::assertSame(['grossb', 'hambur'], $this->stemsOf('Großbrand Hamburg', null));
     }
 
     public function testAProceduralTermThatNamesNoStoryIsNotMapped(): void
     {
-        $custody = $this->equivalents->stemsOf('Der Verdächtige sitzt in Untersuchungshaft', null);
+        $custody = $this->stemsOf('Der Verdächtige sitzt in Untersuchungshaft', null);
         self::assertNotContains('uhaft', $custody);
-        self::assertNotContains('uhaft', $this->equivalents->stemsOf('Richter verhängt U-Haft', null));
+        self::assertNotContains('uhaft', $this->stemsOf('Richter verhängt U-Haft', null));
     }
 
     public function testUnlistedWordsAreStemmedAsBefore(): void
     {
-        self::assertSame(['ukrain', 'talks'], $this->equivalents->stemsOf('Ukraine Ukrainian talks', null));
+        self::assertSame(['ukrain', 'talks'], $this->stemsOf('Ukraine Ukrainian talks', null));
     }
 
     public function testAHangulHeadlineWithoutALanguageKeepsItsWords(): void
     {
-        self::assertCount(3, $this->equivalents->stemsOf('한국 경제 뉴스', null));
-        self::assertCount(3, $this->equivalents->stemsOf('서울 대통령 선거', null));
+        self::assertCount(3, $this->stemsOf('한국 경제 뉴스', null));
+        self::assertCount(3, $this->stemsOf('서울 대통령 선거', null));
     }
 
     public function testAnUncomposableMarkDoesNotLengthenAWord(): void
     {
-        self::assertSame([], $this->equivalents->stemsOf("ab\u{0303}", null));
+        self::assertSame([], $this->stemsOf("ab\u{0303}", null));
     }
 
     public function testASpacingMarkStaysInsideItsWord(): void
     {
         self::assertSame(['नमस्ते'], HeadlineStems::words('नमस्ते'));
-        self::assertCount(1, $this->equivalents->stemsOf('नमस्ते', null));
+        self::assertCount(1, $this->stemsOf('नमस्ते', null));
     }
 
     public function testEveryCanonicalIsAnOpaqueIdNoMapKeysAndNoLanguageSeeds(): void
@@ -232,7 +232,7 @@ final class HeadlineEquivalentsTest extends TestCase
         string $text,
         string $canonical,
     ): void {
-        self::assertContains($canonical, $this->equivalents->stemsOf($text, $language));
+        self::assertContains($canonical, $this->stemsOf($text, $language));
     }
 
     /** @return iterable<string, array{FeedLanguage, string, string}> */
@@ -261,7 +261,7 @@ final class HeadlineEquivalentsTest extends TestCase
     #[DataProvider('europeanUnions')]
     public function testTheEuropeanUnionIsOneStemInEveryLanguage(FeedLanguage $language, string $text): void
     {
-        self::assertContains('eunion', $this->equivalents->stemsOf($text, $language));
+        self::assertContains('eunion', $this->stemsOf($text, $language));
     }
 
     /** @return iterable<string, array{FeedLanguage, string}> */
@@ -283,7 +283,7 @@ final class HeadlineEquivalentsTest extends TestCase
                 static fn (string $word): string => $stemmer->stem($word, FeedLanguage::German),
                 ['Bundesregierung', 'beschließt', 'Haushalt'],
             ),
-            $this->equivalents->stemsOf('Bundesregierung beschließt Haushalt', FeedLanguage::German),
+            $this->stemsOf('Bundesregierung beschließt Haushalt', FeedLanguage::German),
         );
     }
 
@@ -296,28 +296,28 @@ final class HeadlineEquivalentsTest extends TestCase
                 static fn (string $word): string => $stemmer->stem($word, FeedLanguage::German),
                 ['polizeieinsatz', 'polizei', 'einsatz'],
             ),
-            $this->equivalents->stemsOf('Polizeieinsatz', FeedLanguage::German),
+            $this->stemsOf('Polizeieinsatz', FeedLanguage::German),
         );
     }
 
     public function testACompoundInAnotherLanguageIsNotSplit(): void
     {
-        self::assertCount(1, $this->equivalents->stemsOf('Polizeieinsatz', FeedLanguage::English));
+        self::assertCount(1, $this->stemsOf('Polizeieinsatz', FeedLanguage::English));
     }
 
     public function testACompoundWithoutALanguageKeepsItsCut(): void
     {
-        self::assertSame(['polize'], $this->equivalents->stemsOf('Polizeieinsatz', null));
+        self::assertSame(['polize'], $this->stemsOf('Polizeieinsatz', null));
     }
 
     public function testAPartGoesThroughTheGermanEquivalences(): void
     {
-        self::assertContains('russia', $this->equivalents->stemsOf('Russlandreise', FeedLanguage::German));
+        self::assertContains('russia', $this->stemsOf('Russlandreise', FeedLanguage::German));
     }
 
     public function testAKnownWordMoreFrequentThanItsPartsStaysOneStem(): void
     {
-        self::assertCount(1, $this->equivalents->stemsOf('Aktion', FeedLanguage::German));
+        self::assertCount(1, $this->stemsOf('Aktion', FeedLanguage::German));
     }
 
     public function testACanonicalIsNeverSplit(): void
@@ -350,7 +350,7 @@ final class HeadlineEquivalentsTest extends TestCase
 
     public function testALanguageStemThatIsACanonicalNeedsNoEntry(): void
     {
-        self::assertSame(['ukrain'], $this->equivalents->stemsOf('Ukraine', FeedLanguage::German));
+        self::assertSame(['ukrain'], $this->stemsOf('Ukraine', FeedLanguage::German));
     }
 
     public function testEveryExactWordIsLettersAndDigitsOnly(): void
@@ -390,6 +390,17 @@ final class HeadlineEquivalentsTest extends TestCase
         foreach (array_keys(self::table('CUT_STEMS')) as $stem) {
             self::assertSame($stem, HeadlineStems::cut($stem), $stem);
         }
+    }
+
+    /** @return list<string> distinct stems, as `HeadlineWindow` takes them word by word */
+    private function stemsOf(string $text, ?FeedLanguage $language): array
+    {
+        $stems = [];
+        foreach ($this->equivalents->wordsOf($text) as [$word, $bare]) {
+            $stems = [...$stems, ...$this->equivalents->wordStemsOf($word, $bare, $language)];
+        }
+
+        return array_values(array_unique($stems));
     }
 
     /** @return array<string, string> table and key => canonical */

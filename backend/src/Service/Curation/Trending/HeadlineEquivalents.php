@@ -147,17 +147,6 @@ final readonly class HeadlineEquivalents
         $this->canonicals = self::canonicals();
     }
 
-    /** @return list<string> distinct stems */
-    public function stemsOf(string $text, ?FeedLanguage $language): array
-    {
-        $stems = [];
-        foreach ($this->wordsOf($text) as [$word, $bare]) {
-            $stems = [...$stems, ...$this->wordStemsOf($word, $bare, $language)];
-        }
-
-        return array_values(array_unique($stems));
-    }
-
     /** @return list<array{string, string}> each kept word or phrase canonical, with its bare form */
     public function wordsOf(string $text): array
     {
