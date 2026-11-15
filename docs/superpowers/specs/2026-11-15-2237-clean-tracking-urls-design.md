@@ -372,3 +372,25 @@ cleaned URL.
   (de–de +1, en–en 0, fr–fr 0, es–es 0, mixed +48). The one change is R3's: the German post on the Van Hollen
   interview joins the 49-member group through its cleaned card URL, making it 50. Run time and memory unchanged
   (day 7.7 s / 162 MB, week 77.8 s / 299 MB).
+
+**Re-measured with the D3/D4 ruling (three tiers, gift keys kept).**
+- On `feedreader` the rerun cleaned 4,613 more entries, changed 4,613 more hashes and cleaned 374 more cards (53 s,
+  187 MB RSS); a second run reported 0/0/0.
+- Frozen B (a scratch copy of `feedreader_2237_uncleaned`, cleaned from scratch, then dropped): 14,172 entries, 6,293
+  hashes, 1,491 cards; then 0/0/0. It matched the cleaned `feedreader` row for row. Duplicate hash groups:
+  6,316 / 12,970 entries before, 6,329 / 13,000 after.
+- The newly cleaned rows are English and German only: Al Jazeera `traffic_source=rss`, CBC `cmp=rss`, Slate `via=rss`
+  and `mrfcid`, Der Standard `ref=rss`, Spiegel `sara_ref`, Substack `r`, X `s`, Instagram `exln`/`srtk`/`rpxt`. No
+  French or Spanish row carries one of the new keys. 20 drawn by eye keep their article path; 5 fetched live answer 200.
+- Trending, A = develop on the uncleaned copy, B = HEAD on the cleaned copy:
+
+| Window | de–de | en–en | fr–fr | es–es | mixed | net |
+|---|---|---|---|---|---|---|
+| day, all | 0 | 0 | 0 | 0 | 0 | 0 |
+| week, all | +1 | 0 (2 new, 2 lost) | 0 | 0 | +48 | +49 (51 new, 2 lost) |
+| French-only day / week | | | 0 / 0 | | | 0 / 0 |
+| Spanish-only day / week | | | | 0 / 0 | | 0 / 0 |
+
+  The week's +49 is the Van Hollen join (D2). The 2 new and 2 lost en–en pairs are one 3-member FAA-outage group
+  that swaps its Techmeme post for a second CBC story on the same outage: CBC's `cmp=rss` hashes changed, and the
+  grouping order with them. Run time and memory unchanged (day 7.9 s / 161 MB, week 89 s / 283 MB).
