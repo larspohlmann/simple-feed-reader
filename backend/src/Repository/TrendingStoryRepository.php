@@ -12,6 +12,7 @@ use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use App\Service\Curation\Trending\Model\ShownEntriesModel;
 
 /**
  * The per-reader reads of the Trending snapshot (#2017).
@@ -96,13 +97,12 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     /**
      * @param list<int> $storyIds
      *
-     * @return array<int, array<int, ?string>> story id => its articles and story-card posts of the feeds the reader
-     *                                         follows, each entry id => the url_hash of its shared link
+     * @return ShownEntriesModel each story's articles and story-card posts of the feeds the reader follows
      */
-    public function shownEntryIdsByStory(int $userId, array $storyIds): array
+    public function shownEntriesByStory(int $userId, array $storyIds): ShownEntriesModel
     {
         if ($storyIds === []) {
-            return [];
+            return new ShownEntriesModel([]);
         }
 
         /** @var list<array{story_id: int|string, entry_id: int|string, url_hash: string|null}> $rows */
@@ -123,7 +123,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             $linkHashes[(int) $row['story_id']][(int) $row['entry_id']] = $row['url_hash'];
         }
 
-        return $linkHashes;
+        return new ShownEntriesModel($linkHashes);
     }
 
     /**

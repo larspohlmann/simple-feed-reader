@@ -13,6 +13,7 @@ use App\Repository\ReadingSettingsRepository;
 use App\Repository\TrendingSnapshotRepository;
 use App\Repository\TrendingStoryRepository;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
+use App\Service\Curation\Trending\Model\ShownEntriesModel;
 use App\Service\Curation\Trending\Model\ShownRowModel;
 use App\Service\Curation\Trending\Model\TrendingUnopenedModel;
 use App\Service\Curation\Trending\Model\TrendingPageModel;
@@ -70,11 +71,11 @@ final readonly class TrendingStories
     private function sourceFor(int $userId, array $ranked): StoryCardSource
     {
         $storyIds = RankedStoryModel::storyIdsOf($ranked);
-        $linkHashesByStory = $this->stories->shownEntryIdsByStory($userId, $storyIds);
+        $shown = $this->stories->shownEntriesByStory($userId, $storyIds);
 
         return new StoryCardSource(
-            array_map(array_keys(...), $linkHashesByStory),
-            $this->rowsByEntryId($userId, array_replace([], ...array_values($linkHashesByStory))),
+            $shown->entryIdsByStory(),
+            $this->rowsByEntryId($userId, $shown),
             array_flip($this->stories->viewedStoryIds($userId, $storyIds)),
         );
     }
@@ -82,24 +83,20 @@ final readonly class TrendingStories
     /**
      * Every row is indexed, a copy the list folded into another row's duplicates too, with the article it is about.
      *
-     * @param array<int, ?string> $linkHashesByEntryId the url_hash of each shown entry's shared link
-     *
      * @return array<int, ShownRowModel>
      */
-    private function rowsByEntryId(int $userId, array $linkHashesByEntryId): array
+    private function rowsByEntryId(int $userId, ShownEntriesModel $shownEntries): array
     {
-        $rows = $this->entryList->rowsByIdsForUser($userId, array_keys($linkHashesByEntryId));
+        $rows = $this->entryList->rowsByIdsForUser($userId, $shownEntries->entryIds());
         $rowsByEntryId = [];
         foreach ($this->enricher->enrich($rows, $userId) as $row) {
-            $rowLinkHash = $linkHashesByEntryId[$row->entry->requireId()];
             foreach ([$row, ...$row->duplicates] as $shown) {
-                $shownId = $shown->entry->requireId();
-                $linkHash = \array_key_exists($shownId, $linkHashesByEntryId)
-                    ? $linkHashesByEntryId[$shownId]
-                    : $rowLinkHash;
-                $rowsByEntryId[$shownId] = new ShownRowModel(
+                $rowsByEntryId[$shown->entry->requireId()] = new ShownRowModel(
                     $shown->withDuplicates([]),
-                    self::articleKeyOf($shown, $linkHash),
+                    self::articleKeyOf(
+                        $shown,
+                        $shownEntries->linkHashOf($shown->entry->requireId(), $row->entry->requireId()),
+                    ),
                 );
             }
         }

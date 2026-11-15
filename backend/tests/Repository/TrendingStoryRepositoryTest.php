@@ -105,10 +105,10 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         ]);
 
         self::assertSame(
-            [$story->requireId() => [$article->requireId() => null, $carded->requireId() => null]],
-            $this->stories()->shownEntryIdsByStory($this->reader->requireId(), [$story->requireId()]),
+            [$story->requireId() => [$article->requireId(), $carded->requireId()]],
+            $this->stories()->shownEntriesByStory($this->reader->requireId(), [$story->requireId()])->entryIdsByStory(),
         );
-        self::assertSame([], $this->stories()->shownEntryIdsByStory($this->reader->requireId(), []));
+        self::assertSame([], $this->stories()->shownEntriesByStory($this->reader->requireId(), [])->entryIdsByStory());
     }
 
     public function testShownEntriesCarryTheirLinksHash(): void
@@ -124,12 +124,12 @@ final class TrendingStoryRepositoryTest extends DbTestCase
             [$carded, 'outlet.example'],
         ]);
 
+        $shown = $this->stories()->shownEntriesByStory($this->reader->requireId(), [$story->requireId()]);
+
+        self::assertNull($shown->linkHashOf($article->requireId(), $article->requireId()));
         self::assertSame(
-            [$story->requireId() => [
-                $article->requireId() => null,
-                $carded->requireId() => (new UrlNormalizer())->hash('https://outlet.example/storm'),
-            ]],
-            $this->stories()->shownEntryIdsByStory($this->reader->requireId(), [$story->requireId()]),
+            (new UrlNormalizer())->hash('https://outlet.example/storm'),
+            $shown->linkHashOf($carded->requireId(), $carded->requireId()),
         );
     }
 

@@ -210,13 +210,13 @@ final class TrendingStoriesTest extends DbTestCase
         $userId = $this->reader->requireId();
 
         self::assertSame(
-            [$story->requireId() => [$article->requireId() => null]],
-            $this->storyRepository()->shownEntryIdsByStory($userId, [$story->requireId()]),
+            [$story->requireId() => [$article->requireId()]],
+            $this->storyRepository()->shownEntriesByStory($userId, [$story->requireId()])->entryIdsByStory(),
         );
         self::assertSame([$otherStory->requireId()], array_keys(
-            $this->storyRepository()->shownEntryIdsByStory($userId, [$otherStory->requireId()]),
+            $this->storyRepository()->shownEntriesByStory($userId, [$otherStory->requireId()])->entryIdsByStory(),
         ));
-        self::assertSame([], $this->storyRepository()->shownEntryIdsByStory($userId, []));
+        self::assertSame([], $this->storyRepository()->shownEntriesByStory($userId, [])->entryIdsByStory());
     }
 
     public function testViewedStoriesAreLimitedToTheAskedStories(): void
