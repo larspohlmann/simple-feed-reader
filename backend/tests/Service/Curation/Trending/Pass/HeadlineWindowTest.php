@@ -60,6 +60,17 @@ final class HeadlineWindowTest extends TestCase
         self::assertEqualsWithDelta(self::TWICE, $shared[1], 0.0001);
     }
 
+    public function testAFrenchAndASpanishSpellingOfOneInstitutionShareWeight(): void
+    {
+        $this->addIn(FeedLanguage::French, 1, 10, "L'OTAN avertit");
+        $this->addIn(FeedLanguage::Spanish, 2, 20, 'La OTAN advierte');
+        $this->addIn(FeedLanguage::French, 3, 30, 'Les Nations unies votent');
+        $this->addIn(FeedLanguage::Spanish, 4, 40, 'Las Naciones Unidas votan');
+
+        self::assertEqualsWithDelta(self::TWICE, $this->window->sharedWeightsWithEarlier(2)[1], 0.0001);
+        self::assertSame([3], array_keys($this->window->sharedWeightsWithEarlier(4)));
+    }
+
     public function testAnEquivalentInTheBodyCountsAtBodyWeight(): void
     {
         $this->add(1, 10, 'Vereinte Nationen tagen in Genf', '');

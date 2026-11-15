@@ -222,6 +222,12 @@ final class HeadlineEquivalentsTest extends TestCase
         yield 'fr Nations unies' => [FeedLanguage::French, 'Nations unies', 'onu'];
         yield 'es OTAN' => [FeedLanguage::Spanish, 'OTAN', 'nato'];
         yield 'es Naciones Unidas' => [FeedLanguage::Spanish, 'Naciones Unidas', 'onu'];
+        yield 'fr ONU' => [FeedLanguage::French, "L'ONU condamne", 'onu'];
+        yield 'fr UE' => [FeedLanguage::French, "L'UE sanctionne", 'eunion'];
+        yield 'fr Union européenne' => [FeedLanguage::French, "L'Union européenne vote", 'eunion'];
+        yield 'es ONU' => [FeedLanguage::Spanish, 'La ONU condena', 'onu'];
+        yield 'es UE' => [FeedLanguage::Spanish, 'La UE sanciona', 'eunion'];
+        yield 'es Unión Europea' => [FeedLanguage::Spanish, 'La Unión Europea vota', 'eunion'];
     }
 
     #[DataProvider('europeanUnions')]
