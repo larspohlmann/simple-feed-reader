@@ -111,6 +111,21 @@ it('names a duplicate by its feed, not by the poster', () => {
   expect(chip.textContent).not.toContain('Bob');
 });
 
+it("names a Trending story's post by its poster, not by the timeline holding it", () => {
+  const dup = entry({
+    id: 2,
+    source: 'Home@bsky',
+    poster: { name: 'Bob', url: null, imageUrl: null },
+  });
+  const element = mount(
+    entry({ duplicates: [dup], story: { outletCount: 2, viewed: false, shareCount: 0 } }),
+  ).nativeElement as HTMLElement;
+  const chip = element.querySelector('.also-entry')!;
+
+  expect(chip.textContent).toContain('Bob');
+  expect(chip.textContent).not.toContain('Home@bsky');
+});
+
 it('opens a popover with the copy card and re-emits open for that copy', () => {
   const dup = entry({ id: 2, title: 'NDR wording', source: 'NDR SH' });
   const fixture = mount(entry({ duplicates: [dup] }));
@@ -302,7 +317,10 @@ it("heads a row's duplicates as the places it also ran in", () => {
 });
 
 it("heads a Trending story's other outlets as the feeds that also covered it", () => {
-  const lead = entry({ duplicates: [entry({ id: 2 })], story: { outletCount: 3, viewed: false } });
+  const lead = entry({
+    duplicates: [entry({ id: 2 })],
+    story: { outletCount: 3, viewed: false, shareCount: 0 },
+  });
   const element = mount(lead).nativeElement as HTMLElement;
 
   expect(element.querySelector('.lead')!.textContent!.trim()).toBe('Also covered by');

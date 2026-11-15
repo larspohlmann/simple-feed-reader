@@ -8,8 +8,10 @@ export interface TrendingUnopened {
 
 /** What a Trending row stands for beyond its lead (#2017). */
 export interface TrendingStory {
-  /** Distinct subscribed feeds in the story, social ones included. */
+  /** The reader's sources: the article feeds they follow and the accounts whose posts share a card (#2229). */
   outletCount: number;
   /** The server's verdict: some entry of the story, a social one included, was opened. */
   viewed: boolean;
+  /** Posts sharing the story's articles, each post once. */
+  shareCount: number;
 }

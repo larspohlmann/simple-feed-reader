@@ -210,7 +210,9 @@ describe('EntryHeroComponent', () => {
 
   it("opens a story's other outlet from its mini card, and not the hero", () => {
     const dup = entry({ id: 9, source: 'NDR SH' });
-    const fixture = mount(entry({ duplicates: [dup], story: { outletCount: 2, viewed: false } }));
+    const fixture = mount(
+      entry({ duplicates: [dup], story: { outletCount: 2, viewed: false, shareCount: 0 } }),
+    );
     const element = fixture.nativeElement as HTMLElement;
     element.querySelector<HTMLButtonElement>('app-more-sources .toggle')!.click();
     fixture.detectChanges();

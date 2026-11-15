@@ -6,6 +6,7 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\LinkCardContent;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
@@ -40,6 +41,29 @@ final class TrendingHiddenControllerTest extends ApiTestCase
         $this->client->request('GET', '/api/subscriptions/counts');
         self::assertSame(['window' => 'day', 'unopened' => 1], $this->payload($this->client)['trending']);
         self::assertSame(self::idsOf($hidden), $this->hiddenEntryIdsOf($reader));
+    }
+
+    public function testHidingTheLeadPostOfAStoryNoArticleFeedCarriesHidesEveryPostSharingIt(): void
+    {
+        $reader = $this->signIn($this->client, 'trending-hide-card-led@example.com');
+        $ann = $this->fixtures->feed('ann', SocialNetwork::Mastodon);
+        $ben = $this->fixtures->feed('ben', SocialNetwork::Bluesky);
+        $this->fixtures->subscribe($reader, $ann, $ben);
+        $posts = [
+            $this->fixtures->linkShare($ann, '2031-05-14 10:00:00', self::card('https://outlet.example/lighthouse')),
+            $this->fixtures->linkShare($ben, '2031-05-14 09:00:00', self::card('https://other.example/keepers')),
+        ];
+        $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
+            [$posts[0], 'outlet.example'],
+            [$posts[1], 'other.example'],
+        ]);
+        self::assertSame([$posts[0]->requireId()], $this->leadIdsOfTheDay());
+
+        $this->hide('day', $posts[0]);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
+        self::assertSame([], $this->leadIdsOfTheDay());
+        self::assertSame(self::idsOf($posts), $this->hiddenEntryIdsOf($reader));
     }
 
     public function testHidingAgainAnswersTheSameAndLeavesOtherReadersAlone(): void
@@ -182,6 +206,11 @@ final class TrendingHiddenControllerTest extends ApiTestCase
         $this->fixtures->story(TrendingWindow::Day, '2031-05-14 10:00:00', ...$members);
 
         return $members;
+    }
+
+    private static function card(string $url): LinkCardContent
+    {
+        return new LinkCardContent($url, 'Lighthouse keepers strike', null, null, 'Outlet');
     }
 
     private function hide(string $window, Entry $entry): void

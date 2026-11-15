@@ -12,6 +12,7 @@ import { SubscriptionRows } from '../../state/subscription-rows';
 import { MENU_VIEWPORT_MARGIN } from '../../../shared/menu-keys';
 import { ENTRY_ROW_ACTION } from '../../entry/entry-actions/entry-row-action';
 import { alsoFootOf } from './also-foot';
+import { sourceNameOf } from '../../entry/entry-source/source-name';
 
 let nextId = 0;
 
@@ -52,7 +53,9 @@ export class EntryDuplicatesComponent implements EntryActionHandler {
   private readonly named = computed(() =>
     this.copies().map((copy) => ({
       copy,
-      feed: this.rows.find(copy.subscriptionId)?.title ?? copy.source,
+      feed: this.entry().story
+        ? sourceNameOf(copy, this.rows)
+        : (this.rows.find(copy.subscriptionId)?.title ?? copy.source),
       when: entryRelativeTime(copy, this.language.lang()),
     })),
   );

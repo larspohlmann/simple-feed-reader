@@ -1,0 +1,31 @@
+@if (hasShares()) {
+  <div class="shares">
+    <button
+      type="button"
+      class="toggle reads-as-text"
+      [attr.aria-expanded]="expanded()"
+      [attr.aria-controls]="expanded() ? panelId : null"
+      (click)="toggle($event)"
+      (keydown.enter)="$event.stopPropagation()"
+      (keydown.space)="$event.stopPropagation()"
+    >
+      {{ lineKey() | transloco: line() }}
+    </button>
+    @if (expanded()) {
+      <div class="list" [id]="panelId">
+        @for (shared of shares(); track shared.share.id) {
+          <button
+            type="button"
+            class="share reads-as-text"
+            (click)="open(shared.share, $event)"
+            (keydown.enter)="$event.stopPropagation()"
+            (keydown.space)="$event.stopPropagation()"
+          >
+            <span class="poster">{{ shared.poster }}</span>
+            <span class="text">{{ shared.text }}</span>
+          </button>
+        }
+      </div>
+    }
+  </div>
+}

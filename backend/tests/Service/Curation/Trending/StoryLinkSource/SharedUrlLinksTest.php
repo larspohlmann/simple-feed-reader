@@ -15,9 +15,9 @@ final class SharedUrlLinksTest extends TestCase
     public function testEntriesOfDifferentFeedsSharingAUrlHashLinkAboveEveryHeadlineLink(): void
     {
         $run = TrendingRuns::of(TrendingWindow::Day);
-        $run->add(TrendingRuns::entry(1, 10, 'Original article', '2031-05-14 08:00:00'), ['hash-a']);
-        $run->add(TrendingRuns::entry(2, 20, 'Reposted', '2031-05-14 09:00:00'), ['hash-b', 'hash-a']);
-        $run->add(TrendingRuns::entry(3, 30, 'Unrelated', '2031-05-14 09:30:00'), ['hash-c']);
+        $run->add(TrendingRuns::entry(1, 10, 'Original article', '2031-05-14 08:00:00'), ['hash-a'], null);
+        $run->add(TrendingRuns::entry(2, 20, 'Reposted', '2031-05-14 09:00:00'), ['hash-b', 'hash-a'], null);
+        $run->add(TrendingRuns::entry(3, 30, 'Unrelated', '2031-05-14 09:30:00'), ['hash-c'], null);
 
         $links = (new SharedUrlLinks())->links($run);
 
@@ -29,9 +29,9 @@ final class SharedUrlLinksTest extends TestCase
     public function testEveryPairOfAUrlsEntriesLinksOnce(): void
     {
         $run = TrendingRuns::of(TrendingWindow::Day);
-        $run->add(TrendingRuns::entry(1, 10, 'One', '2031-05-14 08:00:00'), ['hash-a', 'hash-b']);
-        $run->add(TrendingRuns::entry(2, 20, 'Two', '2031-05-14 08:10:00'), ['hash-a', 'hash-b']);
-        $run->add(TrendingRuns::entry(3, 30, 'Three', '2031-05-14 08:20:00'), ['hash-a']);
+        $run->add(TrendingRuns::entry(1, 10, 'One', '2031-05-14 08:00:00'), ['hash-a', 'hash-b'], null);
+        $run->add(TrendingRuns::entry(2, 20, 'Two', '2031-05-14 08:10:00'), ['hash-a', 'hash-b'], null);
+        $run->add(TrendingRuns::entry(3, 30, 'Three', '2031-05-14 08:20:00'), ['hash-a'], null);
 
         $keys = array_map(
             static fn (StoryLinkModel $link): string => $link->pairKey(),
@@ -45,8 +45,8 @@ final class SharedUrlLinksTest extends TestCase
     public function testOneFeedNeverLinksToItself(): void
     {
         $run = TrendingRuns::of(TrendingWindow::Day);
-        $run->add(TrendingRuns::entry(1, 10, 'One', '2031-05-14 08:00:00'), ['hash-a']);
-        $run->add(TrendingRuns::entry(2, 10, 'Two', '2031-05-14 08:10:00'), ['hash-a']);
+        $run->add(TrendingRuns::entry(1, 10, 'One', '2031-05-14 08:00:00'), ['hash-a'], null);
+        $run->add(TrendingRuns::entry(2, 10, 'Two', '2031-05-14 08:10:00'), ['hash-a'], null);
 
         self::assertSame([], (new SharedUrlLinks())->links($run));
     }
@@ -54,8 +54,8 @@ final class SharedUrlLinksTest extends TestCase
     public function testEntriesFurtherApartThanTheGapDoNotLink(): void
     {
         $run = TrendingRuns::of(TrendingWindow::Day);
-        $run->add(TrendingRuns::entry(1, 10, 'One', '2031-05-13 00:00:00'), ['hash-a']);
-        $run->add(TrendingRuns::entry(2, 20, 'Two', '2031-05-14 12:00:01'), ['hash-a']);
+        $run->add(TrendingRuns::entry(1, 10, 'One', '2031-05-13 00:00:00'), ['hash-a'], null);
+        $run->add(TrendingRuns::entry(2, 20, 'Two', '2031-05-14 12:00:01'), ['hash-a'], null);
 
         self::assertSame([], (new SharedUrlLinks())->links($run));
     }

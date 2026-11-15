@@ -4,7 +4,7 @@ import { isStoryViewed, showsUnreadMark } from './story';
 import { TrendingStory } from './trending.models';
 
 const lead = (story: Partial<TrendingStory> = {}, over: Partial<EntryDto> = {}): EntryDto =>
-  anEntry({ story: { outletCount: 5, viewed: false, ...story }, ...over });
+  anEntry({ story: { outletCount: 5, viewed: false, shareCount: 0, ...story }, ...over });
 
 describe('isStoryViewed', () => {
   it('is false for a story nobody opened', () => {

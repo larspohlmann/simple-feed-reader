@@ -79,7 +79,7 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
         }
         $fixtures->flush();
         $members = array_map(
-            static fn (Entry $entry): StoryMemberModel => new StoryMemberModel($entry->requireId(), 101),
+            static fn (Entry $entry): StoryMemberModel => new StoryMemberModel($entry->requireId(), 101, null),
             $entries,
         );
 
@@ -91,11 +91,11 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
         self::assertSame(301, $this->memberCount());
     }
 
-    public function testAStoryRowCarriesItsDistinctFeedCountAndBounds(): void
+    public function testAStoryRowCarriesItsBounds(): void
     {
         [$one, $two] = $this->twoEntries();
         $story = new TrendingStoryModel(
-            [new StoryMemberModel($one, 101), new StoryMemberModel($two, 101)],
+            [new StoryMemberModel($one, 101, null), new StoryMemberModel($two, 101, null)],
             self::utc('2031-05-14 08:00:00'),
             self::utc('2031-05-14 09:00:00'),
         );
@@ -103,11 +103,47 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
         $this->replace(self::report(TrendingWindow::Day, 1), [$story]);
 
         $row = $this->entityManager->getConnection()
-            ->fetchAssociative('SELECT outlet_count, first_seen, last_seen FROM trending_story');
+            ->fetchAssociative('SELECT first_seen, last_seen FROM trending_story');
         self::assertIsArray($row);
-        self::assertEquals(1, $row['outlet_count']);
         self::assertSame('2031-05-14 08:00:00', $row['first_seen']);
         self::assertSame('2031-05-14 09:00:00', $row['last_seen']);
+    }
+
+    public function testEachMemberKeepsItsArticleSite(): void
+    {
+        [$one, $two] = $this->twoEntries();
+        $three = $this->thirdEntry();
+        $story = new TrendingStoryModel(
+            [
+                new StoryMemberModel($one, 101, 'outlet.example'),
+                new StoryMemberModel($two, 202, 'shared.example'),
+                new StoryMemberModel($three, 303, null),
+            ],
+            self::utc('2031-05-14 08:00:00'),
+            self::utc('2031-05-14 09:00:00'),
+        );
+
+        $this->replace(self::report(TrendingWindow::Day, 1), [$story]);
+
+        self::assertSame(
+            [[$one, 'outlet.example'], [$two, 'shared.example'], [$three, null]],
+            $this->storedSites(),
+        );
+    }
+
+    public function testASiteLongerThanTheColumnIsCut(): void
+    {
+        [$one, $two] = $this->twoEntries();
+        $longSite = str_repeat('a', 250) . '.example';
+        $story = new TrendingStoryModel(
+            [new StoryMemberModel($one, 101, $longSite), new StoryMemberModel($two, 202, null)],
+            self::utc('2031-05-14 08:00:00'),
+            self::utc('2031-05-14 09:00:00'),
+        );
+
+        $this->replace(self::report(TrendingWindow::Day, 1), [$story]);
+
+        self::assertSame(mb_substr($longSite, 0, 255), $this->storedSites()[0][1]);
     }
 
     public function testDurationsAreReadBackPerWindow(): void
@@ -143,10 +179,33 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
         return [$one->requireId(), $two->requireId()];
     }
 
+    private function thirdEntry(): int
+    {
+        $fixtures = new TrendingFixtures($this->entityManager);
+        $three = $fixtures->entry($fixtures->feed('three'), 'Three', '2031-05-14 09:30:00');
+        $fixtures->flush();
+
+        return $three->requireId();
+    }
+
+    /** @return list<array{int, ?string}> */
+    private function storedSites(): array
+    {
+        /** @var list<array{entry_id: int|string, article_site: string|null}> $rows */
+        $rows = $this->entityManager->getConnection()->fetchAllAssociative(
+            'SELECT entry_id, article_site FROM trending_story_entry ORDER BY entry_id',
+        );
+
+        return array_map(
+            static fn (array $row): array => [(int) $row['entry_id'], $row['article_site']],
+            $rows,
+        );
+    }
+
     private static function story(int $one, int $two): TrendingStoryModel
     {
         return new TrendingStoryModel(
-            [new StoryMemberModel($one, 101), new StoryMemberModel($two, 202)],
+            [new StoryMemberModel($one, 101, null), new StoryMemberModel($two, 202, null)],
             new \DateTimeImmutable('2031-05-14 08:00:00', new \DateTimeZone('UTC')),
             new \DateTimeImmutable('2031-05-14 09:00:00', new \DateTimeZone('UTC')),
         );

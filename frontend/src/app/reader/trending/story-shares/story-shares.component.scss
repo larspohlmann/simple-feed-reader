@@ -1,0 +1,71 @@
+// No box without shares, or the card's gap reserves dead space.
+:host {
+  display: contents;
+}
+
+.shares {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  min-width: 0;
+  font-size: var(--fs-xs);
+}
+
+.toggle {
+  align-self: flex-start;
+  max-width: 100%;
+  padding: var(--space-1) 0;
+  overflow: hidden;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.share {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0);
+  min-width: 0;
+  padding: var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.poster {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.text {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+@media (hover: hover) {
+  .toggle:hover {
+    color: var(--accent);
+  }
+
+  .share:hover {
+    background: var(--border);
+  }
+}

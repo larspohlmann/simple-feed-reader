@@ -20,21 +20,18 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 final class TrendingStoryRepository extends ServiceEntityRepository
 {
-    /** A story is shown to a reader only when at least this many article feeds they follow cover it. */
-    private const int MINIMUM_ARTICLE_FEEDS = 2;
+    /** A story is shown only when this many article feeds the reader follows, or this many article sites, carry it. */
+    private const int MINIMUM_ARTICLE_SOURCES = 2;
+
+    private const string ARTICLE_FEEDS
+        = 'COUNT(DISTINCT CASE WHEN member_feed.network IS NULL THEN story_member.feed_id END)';
 
     private const array VISIBILITY_TYPES = [
         'user' => ParameterType::INTEGER,
         'minimum' => ParameterType::INTEGER,
-        'minimumArticleFeeds' => ParameterType::INTEGER,
+        'minimumArticleSources' => ParameterType::INTEGER,
         'shorterWindowStoryIds' => ArrayParameterType::INTEGER,
     ];
-
-    /** At least the reader's threshold of their feeds took part (social ones count), two of them article feeds. */
-    private const string VISIBLE_COVERAGE = ' GROUP BY story.id, story.last_seen'
-        . ' HAVING COUNT(DISTINCT story_member.feed_id) >= :minimum'
-        . ' AND COUNT(DISTINCT CASE WHEN member_feed.network IS NULL THEN story_member.feed_id END)'
-        . ' >= :minimumArticleFeeds';
 
     public function __construct(ManagerRegistry $registry)
     {
@@ -55,7 +52,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             . ' JOIN trending_hidden_entry hidden'
             . ' ON hidden.entry_id = hidden_member.entry_id AND hidden.user_id = :user'
             . ' WHERE hidden_member.story_id = story.id)'
-            . self::VISIBLE_COVERAGE
+            . self::visibleCoverage()
             . \sprintf(' ORDER BY outlet_count DESC, story.last_seen DESC, story.id DESC LIMIT %d', $limit),
             self::visibilityParameters($reader),
             self::VISIBILITY_TYPES,
@@ -83,7 +80,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             . ' JOIN subscription asker ON asker.feed_id = asked.feed_id AND asker.user_id = :user'
             . ' AND ' . TrendingInclusionSql::includes('asker')
             . ' WHERE asked.story_id = story.id AND asked.entry_id = :entry)'
-            . self::VISIBLE_COVERAGE,
+            . self::visibleCoverage(),
             [...self::visibilityParameters($reader), 'entry' => $entryId],
             [...self::VISIBILITY_TYPES, 'entry' => ParameterType::INTEGER],
         );
@@ -99,9 +96,9 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     /**
      * @param list<int> $storyIds
      *
-     * @return array<int, list<int>> story id => its entries of the non-social feeds the reader follows
+     * @return array<int, list<int>> story id => its articles and story-card posts of the feeds the reader follows
      */
-    public function articleEntryIdsByStory(int $userId, array $storyIds): array
+    public function shownEntryIdsByStory(int $userId, array $storyIds): array
     {
         if ($storyIds === []) {
             return [];
@@ -110,10 +107,11 @@ final class TrendingStoryRepository extends ServiceEntityRepository
         /** @var list<array{story_id: int|string, entry_id: int|string}> $rows */
         $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
             'SELECT shown.story_id, shown.entry_id FROM trending_story_entry shown'
-            . ' JOIN feed article_feed ON article_feed.id = shown.feed_id AND article_feed.network IS NULL'
+            . ' JOIN feed shown_feed ON shown_feed.id = shown.feed_id'
             . ' JOIN subscription reader ON reader.feed_id = shown.feed_id AND reader.user_id = :user'
             . ' AND ' . TrendingInclusionSql::includes('reader')
-            . ' WHERE shown.story_id IN (:storyIds)',
+            . ' WHERE shown.story_id IN (:storyIds)'
+            . ' AND (shown_feed.network IS NULL OR shown.article_site IS NOT NULL)',
             ['user' => $userId, 'storyIds' => $storyIds],
             ['user' => ParameterType::INTEGER, 'storyIds' => ArrayParameterType::INTEGER],
         );
@@ -151,14 +149,14 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     }
 
     /**
-     * The window's stories, counting only feeds the reader follows in Trending and an article URL once, leaving out
-     * any sharing an entry with a story the reader is shown in a shorter window; an `AND` on `story`, then
-     * VISIBLE_COVERAGE. An empty id list expands to `IN (NULL)`, which leaves nothing out.
+     * The window's stories, counting only feeds the reader follows in Trending, an article once and a post by its
+     * account, leaving out any sharing an entry with a story the reader is shown in a shorter window; an `AND` on
+     * `story`, then visibleCoverage(). An empty id list expands to `IN (NULL)`, which leaves nothing out.
      */
     private static function visibleStories(): string
     {
         return 'SELECT story.id AS story_id, story.last_seen,'
-            . ' COUNT(DISTINCT story_member.feed_id) AS outlet_count'
+            . ' ' . self::sources() . ' AS outlet_count'
             . ' FROM trending_story story'
             . ' JOIN trending_story_entry story_member ON story_member.story_id = story.id'
             . ' JOIN feed member_feed ON member_feed.id = story_member.feed_id'
@@ -173,9 +171,33 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             . ' WHERE overlap_member.story_id = story.id AND shorter_member.story_id IN (:shorterWindowStoryIds))';
     }
 
+    /** At least the reader's threshold of sources (the select's `outlet_count`), and two article feeds or two sites. */
+    private static function visibleCoverage(): string
+    {
+        return ' GROUP BY story.id, story.last_seen'
+            . ' HAVING outlet_count >= :minimum'
+            . ' AND (' . self::ARTICLE_FEEDS . ' >= :minimumArticleSources'
+            . ' OR COUNT(DISTINCT story_member.article_site) >= :minimumArticleSources)';
+    }
+
+    /**
+     * A story's sources for the reader (#2229, #2056): each article feed they follow, and each social account whose
+     * post shares a story card. An account is the post's author, else its feed when it names none, so a post's copies
+     * in several timelines and two posts of one account count once.
+     */
+    private static function sources(): string
+    {
+        $sharesACard = 'member_feed.network IS NOT NULL AND story_member.article_site IS NOT NULL';
+
+        return '(' . self::ARTICLE_FEEDS
+            . ' + COUNT(DISTINCT CASE WHEN ' . $sharesACard . ' THEN member_entry.author_url END)'
+            . ' + COUNT(DISTINCT CASE WHEN ' . $sharesACard . ' AND member_entry.author_url IS NULL'
+            . ' THEN story_member.feed_id END))';
+    }
+
     /**
      * As in DuplicateCollapseDql, only the lowest-id copy of an article the reader can see in the story counts;
-     * the earlier copy must be one of theirs, or the article would count for no feed. Social posts always count.
+     * the earlier copy must be one of theirs, or the article would count for no feed. A post counts by its account.
      */
     private static function noEarlierCopy(): string
     {
@@ -195,7 +217,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
      *     user: int,
      *     window: string,
      *     minimum: int,
-     *     minimumArticleFeeds: int,
+     *     minimumArticleSources: int,
      *     shorterWindowStoryIds: list<int>,
      * }
      */
@@ -205,7 +227,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             'user' => $reader->userId,
             'window' => $reader->window->value,
             'minimum' => $reader->minimumOutlets,
-            'minimumArticleFeeds' => self::MINIMUM_ARTICLE_FEEDS,
+            'minimumArticleSources' => self::MINIMUM_ARTICLE_SOURCES,
             'shorterWindowStoryIds' => $reader->shorterWindowStoryIds,
         ];
     }

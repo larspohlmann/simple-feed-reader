@@ -28,6 +28,7 @@ import { ThreadCountComponent } from '../../../shared/thread-line/thread-count.c
 import { threadTotal } from '../../thread-post';
 import { showsUnreadMark } from '../../trending/story';
 import { StorySourceCountComponent } from '../../trending/story-source-count/story-source-count.component';
+import { StorySharesComponent } from '../../trending/story-shares/story-shares.component';
 
 @Component({
   selector: 'app-entry-row',
@@ -49,6 +50,7 @@ import { StorySourceCountComponent } from '../../trending/story-source-count/sto
     ThreadLinePostComponent,
     ThreadCountComponent,
     StorySourceCountComponent,
+    StorySharesComponent,
   ],
   templateUrl: './entry-row.component.html',
   styleUrl: './entry-row.component.scss',

@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Enum\FeedLanguage;
+use App\Service\Curation\Trending\Model\EntryLinksModel;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
+use App\Service\Curation\Trending\Model\WindowLinkCardModel;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -14,8 +16,11 @@ final readonly class TrendingEntryRepository
 {
     private const int CHUNK_ROWS = 1_000;
 
-    /** A summary is cut to 300 characters after its markup is stripped; this bounds what a chunk holds before that. */
-    private const int SUMMARY_CHARACTERS = 2_000;
+    /** A body is cut to 300 characters after its markup is stripped; this bounds what a chunk holds before that. */
+    private const int BODY_SOURCE_CHARACTERS = 2_000;
+
+    /** A card's description is plain text far more often than markup, so less headroom over 300 is kept. */
+    private const int CARD_DESCRIPTION_CHARACTERS = 600;
 
     public function __construct(private EntityManagerInterface $entityManager)
     {
@@ -57,7 +62,8 @@ final readonly class TrendingEntryRepository
     /**
      * @return list<array{
      *   id: int|string, feed_id: int|string, language: string|null, title: string, title_derived: bool|int|string,
-     *   summary: string|null, effective_date: string, url_hash: string|null, link_card_url: string|null
+     *   summary: string|null, effective_date: string, url_hash: string|null, article_url: string|null,
+     *   card_url: string|null, card_title: string|null, card_description: string|null, card_site_name: string|null
      * }>
      */
     private function chunkAfter(\DateTimeImmutable $since, int $afterId): array
@@ -65,19 +71,25 @@ final readonly class TrendingEntryRepository
         /**
          * @var list<array{
          *   id: int|string, feed_id: int|string, language: string|null, title: string, title_derived: bool|int|string,
-         *   summary: string|null, effective_date: string, url_hash: string|null, link_card_url: string|null
+         *   summary: string|null, effective_date: string, url_hash: string|null, article_url: string|null,
+         *   card_url: string|null, card_title: string|null, card_description: string|null,
+         *   card_site_name: string|null
          * }> $rows
          */
         $rows = $this->entityManager->getConnection()->fetchAllAssociative(
             \sprintf(
                 'SELECT e.id, e.feed_id, COALESCE(e.language, f.language) AS language, e.title, e.title_derived,'
                 . ' SUBSTR(e.summary, 1, %d) AS summary,'
-                . ' e.effective_date, e.url_hash,'
-                . ' (SELECT card.url FROM link_card card WHERE card.entry_id = e.id AND card.thread_post_id IS NULL'
-                . ' ORDER BY card.position LIMIT 1) AS link_card_url'
+                . ' e.effective_date, e.url_hash, CASE WHEN f.network IS NULL THEN e.url END AS article_url,'
+                . ' card.url AS card_url, card.title AS card_title, card.site_name AS card_site_name,'
+                . ' SUBSTR(card.description, 1, %d) AS card_description'
                 . ' FROM entry e JOIN feed f ON f.id = e.feed_id'
+                . ' LEFT JOIN link_card card ON card.entry_id = e.id AND card.thread_post_id IS NULL'
+                . ' AND card.position = (SELECT MIN(first_card.position) FROM link_card first_card'
+                . ' WHERE first_card.entry_id = e.id AND first_card.thread_post_id IS NULL)'
                 . ' WHERE e.effective_date >= :since AND e.id > :afterId ORDER BY e.id LIMIT %d',
-                self::SUMMARY_CHARACTERS,
+                self::BODY_SOURCE_CHARACTERS,
+                self::CARD_DESCRIPTION_CHARACTERS,
                 self::CHUNK_ROWS,
             ),
             ['since' => $since->format('Y-m-d H:i:s'), 'afterId' => $afterId],
@@ -89,7 +101,8 @@ final readonly class TrendingEntryRepository
     /**
      * @param array{
      *   id: int|string, feed_id: int|string, language: string|null, title: string, title_derived: bool|int|string,
-     *   summary: string|null, effective_date: string, url_hash: string|null, link_card_url: string|null
+     *   summary: string|null, effective_date: string, url_hash: string|null, article_url: string|null,
+     *   card_url: string|null, card_title: string|null, card_description: string|null, card_site_name: string|null
      * } $row
      */
     private static function modelOf(array $row): WindowEntryModel
@@ -102,8 +115,26 @@ final readonly class TrendingEntryRepository
             (bool) (int) $row['title_derived'],
             $row['summary'],
             new \DateTimeImmutable($row['effective_date'], new \DateTimeZone('UTC')),
-            $row['url_hash'],
-            $row['link_card_url'],
+            new EntryLinksModel($row['url_hash'], $row['article_url'], self::cardOf($row)),
+        );
+    }
+
+    /**
+     * @param array{
+     *   card_url: string|null, card_title: string|null, card_description: string|null, card_site_name: string|null
+     * } $row
+     */
+    private static function cardOf(array $row): ?WindowLinkCardModel
+    {
+        if ($row['card_url'] === null || $row['card_title'] === null || $row['card_site_name'] === null) {
+            return null;
+        }
+
+        return new WindowLinkCardModel(
+            $row['card_url'],
+            $row['card_title'],
+            $row['card_description'],
+            $row['card_site_name'],
         );
     }
 }

@@ -24,6 +24,18 @@ final readonly class EntryListRow
     ) {
     }
 
+    /** Whether the row's feed publishes articles, rather than a social network's posts. */
+    public function isFromAnOutlet(): bool
+    {
+        return $this->entry->getFeed()->getNetwork() === null;
+    }
+
+    /** The given hash as the row's key, else one no other row shares. */
+    public function keyBy(?string $hash): string
+    {
+        return $hash ?? 'entry ' . $this->entry->requireId();
+    }
+
     /**
      * @param list<self> $duplicates the in-scope copies this row collapsed
      */

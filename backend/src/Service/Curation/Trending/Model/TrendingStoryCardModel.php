@@ -4,91 +4,177 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Trending\Model;
 
+use App\Enum\ShareKind;
 use App\Repository\EntryListRow;
 
-/** One Trending card: the lead article, newest with a picture, whose duplicates are the other outlets (#2017). */
+/**
+ * One Trending card, one row per article (#2229): an outlet's row for an article the reader's feeds carry, else the
+ * newest sharing post with a pictured card. Posts are shares of the article their card links, never rows of their own.
+ */
 final readonly class TrendingStoryCardModel
 {
     public function __construct(
-        public EntryListRow $lead,
+        public StoryArticlesModel $articles,
         public RankedStoryModel $story,
         public bool $viewed,
     ) {
     }
 
-    /** @param non-empty-list<EntryListRow> $rows the story's article rows the reader can see */
+    /** @param non-empty-list<ShownRowModel> $rows the story's outlet and story-card post rows the reader can see */
     public static function fromRows(array $rows, RankedStoryModel $story, bool $viewed): self
     {
-        $onePerFeed = self::newestPerFeed($rows);
-        $lead = self::leadOf($onePerFeed);
+        $articles = self::newestFirst(array_map(self::articleOf(...), self::byArticle($rows)));
+        $lead = self::leadOf($articles);
 
         return new self(
-            $lead->withDuplicates(self::otherFeedsThan($lead, $onePerFeed)),
+            new StoryArticlesModel($lead, array_values(array_filter(
+                $articles,
+                static fn (StoryArticleModel $article): bool => $article !== $lead,
+            ))),
             $story,
             $viewed,
         );
     }
 
     /**
-     * The lead's own copies elsewhere join its outlets, one per feed, the lead's feed never; a copy is no new source.
+     * @param non-empty-list<ShownRowModel> $rows
      *
-     * @param list<EntryListRow> $copies
+     * @return non-empty-array<string, non-empty-list<EntryListRow>> article key => the rows about it
      */
-    #[\NoDiscard]
-    public function withCopies(array $copies): self
+    private static function byArticle(array $rows): array
     {
-        return clone($this, [
-            'lead' => $this->lead->withDuplicates(self::otherFeedsThan(
-                $this->lead,
-                self::newestPerFeed([...$this->lead->duplicates, ...$copies]),
-            )),
-        ]);
+        $byArticle = [];
+        foreach ($rows as $shown) {
+            $byArticle[$shown->articleKey][] = $shown->row;
+        }
+
+        return $byArticle;
+    }
+
+    /** @param non-empty-list<EntryListRow> $rows one article's outlet rows and the posts sharing it */
+    private static function articleOf(array $rows): StoryArticleModel
+    {
+        $rows = self::newestRowsFirst($rows);
+        $outletRows = array_values(array_filter($rows, static fn (EntryListRow $row): bool => $row->isFromAnOutlet()));
+        $shares = self::oncePerPost(array_values(array_filter(
+            $rows,
+            static fn (EntryListRow $row): bool => !$row->isFromAnOutlet(),
+        )));
+
+        return new StoryArticleModel(
+            $outletRows === [] ? self::representativeOf($shares) : self::picturedOrNewest($outletRows),
+            $shares,
+        );
+    }
+
+    /** @param non-empty-list<StoryArticleModel> $articles newest first */
+    private static function leadOf(array $articles): StoryArticleModel
+    {
+        $fromOutlets = array_values(array_filter(
+            $articles,
+            static fn (StoryArticleModel $article): bool => $article->row->isFromAnOutlet(),
+        ));
+        if ($fromOutlets === []) {
+            return self::mostShared($articles);
+        }
+
+        return array_find($fromOutlets, static fn (StoryArticleModel $article): bool => self::isPictured($article->row))
+            ?? $fromOutlets[0];
+    }
+
+    /** @param non-empty-list<StoryArticleModel> $articles newest first */
+    private static function mostShared(array $articles): StoryArticleModel
+    {
+        $mostShared = $articles[0];
+        foreach ($articles as $article) {
+            if (\count($article->shares) > \count($mostShared->shares)) {
+                $mostShared = $article;
+            }
+        }
+
+        return $mostShared;
+    }
+
+    /** @param non-empty-list<EntryListRow> $rows newest first */
+    private static function picturedOrNewest(array $rows): EntryListRow
+    {
+        return array_find($rows, self::isPictured(...)) ?? $rows[0];
+    }
+
+    private static function isPictured(EntryListRow $row): bool
+    {
+        return $row->entry->getImageUrl() !== null;
+    }
+
+    /**
+     * The newest link share whose card has a picture, else the newest link share, else the newest post.
+     *
+     * @param list<EntryListRow> $posts newest first
+     */
+    private static function representativeOf(array $posts): EntryListRow
+    {
+        $linkShares = array_values(array_filter(
+            $posts,
+            static fn (EntryListRow $post): bool => $post->entry->getShareKind() === ShareKind::Link,
+        ));
+
+        return array_find(
+            $linkShares,
+            static fn (EntryListRow $share): bool => ($share->enrichment->linkCards[0]->imageUrl ?? null) !== null,
+        ) ?? $linkShares[0] ?? $posts[0];
+    }
+
+    /**
+     * A post copied into several timelines is one share: its copies carry one URL hash.
+     *
+     * @param list<EntryListRow> $posts newest first
+     *
+     * @return list<EntryListRow>
+     */
+    private static function oncePerPost(array $posts): array
+    {
+        $byPost = [];
+        foreach ($posts as $post) {
+            $byPost[$post->keyBy($post->entry->getUrlHash())] ??= $post;
+        }
+
+        return array_values($byPost);
     }
 
     /**
      * @param list<EntryListRow> $rows
      *
-     * @return ($rows is non-empty-list ? non-empty-list<EntryListRow> : list<EntryListRow>) newest first
+     * @return list<EntryListRow>
      */
-    private static function newestPerFeed(array $rows): array
+    private static function newestRowsFirst(array $rows): array
     {
-        usort($rows, static fn (EntryListRow $left, EntryListRow $right): int => [
-            $right->entry->getEffectiveDate(),
-            $right->entry->requireId(),
-        ] <=> [$left->entry->getEffectiveDate(), $left->entry->requireId()]);
+        usort(
+            $rows,
+            static fn (EntryListRow $left, EntryListRow $right): int => self::newness($right) <=> self::newness($left),
+        );
 
-        $byFeed = [];
-        foreach ($rows as $row) {
-            $byFeed[$row->entry->getFeed()->requireId()] ??= $row;
-        }
-
-        return array_values($byFeed);
+        return $rows;
     }
 
     /**
-     * @param list<EntryListRow> $onePerFeed
+     * @param non-empty-array<StoryArticleModel> $articles
      *
-     * @return list<EntryListRow>
+     * @return non-empty-list<StoryArticleModel>
      */
-    private static function otherFeedsThan(EntryListRow $lead, array $onePerFeed): array
+    private static function newestFirst(array $articles): array
     {
-        $leadFeedId = $lead->entry->getFeed()->requireId();
+        usort(
+            $articles,
+            static fn (StoryArticleModel $left, StoryArticleModel $right): int
+                => self::newness($right->row) <=> self::newness($left->row),
+        );
 
-        return array_values(array_filter(
-            $onePerFeed,
-            static fn (EntryListRow $row): bool => $row->entry->getFeed()->requireId() !== $leadFeedId,
-        ));
+        return $articles;
     }
 
-    /** @param non-empty-list<EntryListRow> $rows */
-    private static function leadOf(array $rows): EntryListRow
+    /** @return array{\DateTimeImmutable, int} */
+    private static function newness(EntryListRow $row): array
     {
-        foreach ($rows as $row) {
-            if ($row->entry->getImageUrl() !== null) {
-                return $row;
-            }
-        }
-
-        return $rows[0];
+        return [$row->entry->getEffectiveDate(), $row->entry->requireId()];
     }
 }

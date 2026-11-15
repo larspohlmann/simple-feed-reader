@@ -7,10 +7,10 @@ namespace App\Service\Curation\Trending;
 use App\Enum\TrendingWindow;
 use App\Repository\TrendingEntryRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
-use App\Service\Curation\Trending\Model\StoryMemberModel;
 use App\Service\Curation\Trending\Model\TrendingStoryModel;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Service\Curation\Trending\Pass\HeadlineWindow;
+use App\Service\Curation\Trending\Pass\SharedArticles;
 use App\Service\Curation\Trending\Pass\TrendingRun;
 use App\Service\Foundation\Url\UrlNormalizer;
 
@@ -25,6 +25,7 @@ final readonly class TrendingGrouping
         private StoryLinks $storyLinks,
         private StoryGrouping $storyGrouping,
         private NaiveUtcClock $clock,
+        private CardLanguage $cardLanguage,
     ) {
     }
 
@@ -32,8 +33,9 @@ final readonly class TrendingGrouping
     {
         $run = new TrendingRun($window, new HeadlineWindow($this->filler, $this->equivalents));
         $since = $window->startBefore($this->clock->now());
+        $sharedArticles = new SharedArticles($this->cardLanguage);
         foreach ($this->windowEntries->windowEntries($since) as $entry) {
-            $run->add($entry, $this->urlHashesOf($entry));
+            $run->add($entry, $this->urlHashesOf($entry), $sharedArticles->of($entry));
         }
 
         return $run;
@@ -61,7 +63,7 @@ final readonly class TrendingGrouping
     private function urlHashesOf(WindowEntryModel $entry): array
     {
         return array_values(array_unique(array_filter(
-            [$entry->urlHash, $this->urlNormalizer->hash($entry->linkCardUrl)],
+            [$entry->links->urlHash, $this->urlNormalizer->hash($entry->links->card?->url)],
             static fn (?string $urlHash): bool => $urlHash !== null,
         )));
     }
@@ -69,10 +71,7 @@ final readonly class TrendingGrouping
     /** @param non-empty-list<int> $entryIds */
     private static function storyOf(TrendingRun $run, array $entryIds): TrendingStoryModel
     {
-        $members = array_map(
-            static fn (int $entryId): StoryMemberModel => new StoryMemberModel($entryId, $run->feedOf($entryId)),
-            $entryIds,
-        );
+        $members = array_map($run->memberOf(...), $entryIds);
         $times = array_map($run->effectiveTimeOf(...), $entryIds);
 
         return new TrendingStoryModel($members, self::instant(min($times)), self::instant(max($times)));

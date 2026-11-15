@@ -9,9 +9,9 @@ const response = (): TrendingResponseDto => ({
       id: 1,
       title: 'Lead one',
       duplicates: [anEntry({ id: 2 }), anEntry({ id: 3 })],
-      story: { outletCount: 7, viewed: false },
+      story: { outletCount: 7, viewed: false, shareCount: 0 },
     }),
-    anEntry({ id: 4, title: 'Lead two', story: { outletCount: 3, viewed: true } }),
+    anEntry({ id: 4, title: 'Lead two', story: { outletCount: 3, viewed: true, shareCount: 0 } }),
   ],
 });
 

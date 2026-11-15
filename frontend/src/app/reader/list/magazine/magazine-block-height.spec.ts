@@ -1,5 +1,10 @@
 import { BLOCK_HEIGHT } from './magazine-block';
-import { blockHeight, quotingHeight, threadHeight } from './magazine-block-height';
+import {
+  STORY_SHARES_LINE,
+  blockHeight,
+  quotingHeight,
+  threadHeight,
+} from './magazine-block-height';
 import { aLinkCard, aQuotedPost, anEntry } from '../../../../testing/entry-testing';
 import { aThreadPost } from '../../../../testing/thread-testing';
 import { EntryMediumDto } from '../../entry-medium';
@@ -20,6 +25,21 @@ describe('blockHeight', () => {
   it('reads the fixed table for every other kind', () => {
     expect(blockHeight('link', anEntry())).toBe(BLOCK_HEIGHT.link);
     expect(blockHeight('compact', anEntry())).toBe(BLOCK_HEIGHT.compact);
+  });
+
+  it('adds the shared-by line to a Trending article posts share', () => {
+    const shared = anEntry({
+      story: { outletCount: 2, viewed: false, shareCount: 0 },
+      shares: [anEntry({ id: 9 })],
+    });
+
+    expect(blockHeight('link', shared)).toBe(BLOCK_HEIGHT.link + STORY_SHARES_LINE);
+    expect(
+      blockHeight(
+        'link',
+        anEntry({ story: { outletCount: 2, viewed: false, shareCount: 0 }, shares: [] }),
+      ),
+    ).toBe(BLOCK_HEIGHT.link);
   });
 
   it('reads the entry for a quoting block', () => {

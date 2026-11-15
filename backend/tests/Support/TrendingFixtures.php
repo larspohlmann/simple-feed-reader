@@ -12,6 +12,7 @@ use App\Entity\Subscription;
 use App\Entity\TrendingStory;
 use App\Entity\TrendingStoryEntry;
 use App\Entity\User;
+use App\Enum\ShareKind;
 use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
 use App\Service\Foundation\Url\UrlNormalizer;
@@ -76,6 +77,17 @@ final readonly class TrendingFixtures
         return $post;
     }
 
+    /** A post sharing a link, with its card; flushes first, a card copies its entry's id. */
+    public function linkShare(Feed $feed, string $effectiveDate, LinkCardContent $card): Entry
+    {
+        $post = $this->entry($feed, 'Worth a read', $effectiveDate);
+        $post->setShareKind(ShareKind::Link);
+        $this->entityManager->flush();
+        $this->entityManager->persist(new LinkCard($post, 0, $card));
+
+        return $post;
+    }
+
     public function entry(Feed $feed, string $title, string $effectiveDate): Entry
     {
         return $this->persisted(new Entry(
@@ -104,16 +116,29 @@ final readonly class TrendingFixtures
     /** Flushes first: a story entry copies its feed's id. */
     public function story(TrendingWindow $window, string $lastSeen, Entry ...$members): TrendingStory
     {
+        return $this->storyOfSites(
+            $window,
+            $lastSeen,
+            array_map(static fn (Entry $member): array => [$member, null], array_values($members)),
+        );
+    }
+
+    /**
+     * Flushes first: a story entry copies its feed's id.
+     *
+     * @param list<array{Entry, ?string}> $members each entry with its article site
+     */
+    public function storyOfSites(TrendingWindow $window, string $lastSeen, array $members): TrendingStory
+    {
         $this->entityManager->flush();
         $story = new TrendingStory(
             $window,
             new \DateTimeImmutable('2031-05-14 00:00:00'),
             new \DateTimeImmutable($lastSeen),
-            \count($members),
         );
         $this->entityManager->persist($story);
-        foreach ($members as $member) {
-            $this->entityManager->persist(new TrendingStoryEntry($story, $member));
+        foreach ($members as [$member, $articleSite]) {
+            $this->entityManager->persist(new TrendingStoryEntry($story, $member, $articleSite));
         }
         $this->entityManager->flush();
 

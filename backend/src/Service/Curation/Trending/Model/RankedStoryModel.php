@@ -6,7 +6,7 @@ namespace App\Service\Curation\Trending\Model;
 
 final readonly class RankedStoryModel
 {
-    /** @param int $outletCount distinct feeds of this reader in the story, an article URL once, social posts all */
+    /** @param int $outletCount the reader's sources: their article feeds and the accounts whose posts share a card */
     public function __construct(public int $storyId, public int $outletCount, public \DateTimeImmutable $lastSeen)
     {
     }

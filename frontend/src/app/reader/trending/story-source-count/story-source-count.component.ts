@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { EntryDto } from '../../models';
 
-/** "7 sources ·" on a Trending row's attribution line; nothing on any other row (#2017). */
+/** "7 sources · 3 shares ·" on a Trending row's attribution line; nothing on any other row (#2017, #2229). */
 @Component({
   selector: 'app-story-source-count',
   changeDetection: ChangeDetectionStrategy.OnPush,

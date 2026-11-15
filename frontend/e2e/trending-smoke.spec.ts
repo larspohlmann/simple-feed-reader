@@ -18,7 +18,13 @@ const story = (
   duplicates: EntryDto[],
   outletCount: number,
   viewed: boolean,
-) => entryWire({ ...lead, source: 'Fixture lead', duplicates, story: { outletCount, viewed } });
+) =>
+  entryWire({
+    ...lead,
+    source: 'Fixture lead',
+    duplicates,
+    story: { outletCount, viewed, shareCount: 0 },
+  });
 
 const DAY: TrendingResponseDto = {
   window: 'day',

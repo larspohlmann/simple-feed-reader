@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Curation\Trending\Pass;
 
 use App\Enum\FeedLanguage;
+use App\Service\Curation\Trending\Model\EntryLinksModel;
+use App\Service\Curation\Trending\Model\SharedArticleModel;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Service\Curation\Trending\Pass\HeadlineWindow;
 use App\Tests\Support\TrendingWiring;
@@ -15,6 +17,9 @@ final class HeadlineWindowTest extends TestCase
     private const float ONCE = 6.6214;
     private const float TWICE = 6.2159;
     private const float THRICE = 5.9282;
+    private const string CARD_HEADLINE = 'Lighthouse keepers strike again';
+    private const string SPANISH_HEADLINE = 'Los fareros vuelven a la huelga';
+    private const string FRENCH_HEADLINE = 'Les gardiens de phare reprennent la grève';
 
     private HeadlineWindow $window;
 
@@ -303,7 +308,7 @@ final class HeadlineWindowTest extends TestCase
     public function testPartsBothEntriesHoldOnlyAsPartsAreCappedByBothCompoundsWhenTheEarlierIsLighter(): void
     {
         $this->addIn(FeedLanguage::German, 1, 10, 'Kinderarzt Bett');
-        $this->window->add(self::entry(2, 20, FeedLanguage::German, 'Bett'), 'Kinderarztpraxis Russland Schule');
+        $this->window->add(self::entry(2, 20, FeedLanguage::German, 'Bett'), 'Kinderarztpraxis Russland Schule', null);
 
         self::assertEqualsWithDelta(
             self::TWICE + self::ONCE / 2,
@@ -316,7 +321,7 @@ final class HeadlineWindowTest extends TestCase
     public function testPartsBothEntriesHoldOnlyAsPartsAreCappedByBothCompoundsWhenTheLaterIsLighter(): void
     {
         $this->addIn(FeedLanguage::German, 1, 10, 'Kinderarzt Bett Schule');
-        $this->window->add(self::entry(2, 20, FeedLanguage::German, 'Bett'), 'Kinderarztpraxis Russland');
+        $this->window->add(self::entry(2, 20, FeedLanguage::German, 'Bett'), 'Kinderarztpraxis Russland', null);
 
         self::assertEqualsWithDelta(
             self::TWICE + self::ONCE / 2,
@@ -330,7 +335,7 @@ final class HeadlineWindowTest extends TestCase
     {
         $this->addIn(FeedLanguage::German, 1, 10, 'Kinder Arzt Bett');
         $body = 'Kinderarztpraxis Russland Schule Polizei';
-        $this->window->add(self::entry(2, 20, FeedLanguage::German, 'Bett'), $body);
+        $this->window->add(self::entry(2, 20, FeedLanguage::German, 'Bett'), $body, null);
 
         self::assertGreaterThan($this->window->totalWeight(1), $this->window->totalWeight(2));
         self::assertEqualsWithDelta(
@@ -343,8 +348,8 @@ final class HeadlineWindowTest extends TestCase
 
     public function testPartsOfEntriesOfEqualWeightAreCappedByBothEntriesCompounds(): void
     {
-        $this->window->add(self::entry(1, 10, FeedLanguage::German, 'Bett'), 'Kinder Arzt Polizeieinsatz');
-        $this->window->add(self::entry(2, 20, FeedLanguage::German, 'Bett'), 'Kinderarztpraxis Polizei Einsatz');
+        $this->window->add(self::entry(1, 10, FeedLanguage::German, 'Bett'), 'Kinder Arzt Polizeieinsatz', null);
+        $this->window->add(self::entry(2, 20, FeedLanguage::German, 'Bett'), 'Kinderarztpraxis Polizei Einsatz', null);
 
         self::assertSame($this->window->totalWeight(1), $this->window->totalWeight(2));
         self::assertEqualsWithDelta(
@@ -357,7 +362,7 @@ final class HeadlineWindowTest extends TestCase
 
     public function testACompoundInTheBodyCapsItsPartsAtItsBodyWeight(): void
     {
-        $this->window->add(self::entry(1, 10, FeedLanguage::German, 'Bahnhof'), 'Polizeieinsatz');
+        $this->window->add(self::entry(1, 10, FeedLanguage::German, 'Bahnhof'), 'Polizeieinsatz', null);
         $this->addIn(FeedLanguage::German, 2, 20, 'Bahnhof: Einsatz der Polizei');
 
         self::assertEqualsWithDelta(
@@ -421,14 +426,120 @@ final class HeadlineWindowTest extends TestCase
         self::assertEqualsWithDelta(self::ONCE, $this->window->totalWeight(1), 0.0001, 'con is a Spanish seed');
     }
 
+    public function testAPostSharesItsCardsHeadlineWithAnArticleInTheCardsLanguage(): void
+    {
+        $this->addIn(FeedLanguage::English, 1, 10, self::CARD_HEADLINE);
+        $this->addSharing(
+            self::post(2, FeedLanguage::German, 'Schaut euch das an'),
+            new SharedArticleModel(self::CARD_HEADLINE, '', FeedLanguage::English),
+        );
+
+        $shared = $this->window->sharedWeightsWithEarlier(2);
+
+        self::assertSame([1], array_keys($shared));
+        self::assertEqualsWithDelta(3 * self::TWICE, $shared[1], 0.001);
+    }
+
+    public function testAPostWithoutItsCardSharesNothingWithTheArticle(): void
+    {
+        $this->addIn(FeedLanguage::English, 1, 10, self::CARD_HEADLINE);
+        $this->addIn(FeedLanguage::German, 2, 20, 'Schaut euch das an');
+
+        self::assertSame([], $this->window->sharedWeightsWithEarlier(2));
+    }
+
+    public function testACardsTitleIsStemmedInTheCardsLanguageNotThePosts(): void
+    {
+        $this->addIn(FeedLanguage::English, 1, 10, 'Striking keepers reopening');
+        $this->addSharing(self::post(2, FeedLanguage::German, 'Lesenswert'), new SharedArticleModel(
+            'Striking keepers reopening',
+            '',
+            FeedLanguage::German,
+        ));
+
+        self::assertSame([], $this->window->sharedWeightsWithEarlier(2), 'German keeps striking and reopening whole');
+    }
+
+    public function testACardsDescriptionCountsAsBody(): void
+    {
+        $this->add(1, 10, 'Storm Hamburg', '');
+        $this->addSharing(
+            self::post(2, null, 'Hamburg harbour'),
+            new SharedArticleModel('Hamburg harbour', 'Storm surge', null),
+        );
+
+        self::assertEqualsWithDelta(1.5 * self::TWICE, $this->window->sharedWeightsWithEarlier(2)[1], 0.0001);
+    }
+
+    public function testACardDescriptionStemTheHeadlineHoldsCountsAsHeadline(): void
+    {
+        $this->add(1, 10, 'Storm Hamburg', '');
+        $this->addSharing(self::post(2, null, 'Storm Hamburg'), new SharedArticleModel('Ferry', 'Storm Hamburg', null));
+
+        self::assertEqualsWithDelta(2 * self::TWICE, $this->window->sharedWeightsWithEarlier(2)[1], 0.0001);
+    }
+
+    public function testACardTitledLikeItsPostAddsNoWeightTwice(): void
+    {
+        $this->add(1, 10, 'Storm Hamburg', '');
+        $this->addSharing(self::post(2, null, 'Storm Hamburg'), new SharedArticleModel('Storm Hamburg', '', null));
+
+        self::assertEqualsWithDelta(2 * self::TWICE, $this->window->totalWeight(2), 0.0001);
+    }
+
+    public function testACompoundsPartsInACardStayPartsAsInTheEntrysOwnHeadline(): void
+    {
+        $this->addIn(FeedLanguage::German, 1, 10, 'Polizeieinsatz');
+        $this->addSharing(
+            self::post(2, FeedLanguage::German, ''),
+            new SharedArticleModel('Polizeieinsatz', '', FeedLanguage::German),
+        );
+
+        self::assertEqualsWithDelta($this->window->totalWeight(1), $this->window->totalWeight(2), 0.0001);
+    }
+
+    public function testAFrenchPostSharesASpanishCardsHeadlineWithASpanishArticle(): void
+    {
+        $this->addIn(FeedLanguage::Spanish, 1, 10, self::SPANISH_HEADLINE);
+        $this->addSharing(self::post(2, FeedLanguage::French, 'À lire'), new SharedArticleModel(
+            self::SPANISH_HEADLINE,
+            '',
+            FeedLanguage::Spanish,
+        ));
+
+        self::assertSame([1], array_keys($this->window->sharedWeightsWithEarlier(2)));
+    }
+
+    public function testASpanishPostSharesAFrenchCardsHeadlineWithAFrenchArticle(): void
+    {
+        $this->addIn(FeedLanguage::French, 1, 10, self::FRENCH_HEADLINE);
+        $this->addSharing(self::post(2, FeedLanguage::Spanish, 'Para leer'), new SharedArticleModel(
+            self::FRENCH_HEADLINE,
+            '',
+            FeedLanguage::French,
+        ));
+
+        self::assertSame([1], array_keys($this->window->sharedWeightsWithEarlier(2)));
+    }
+
     private function add(int $entryId, int $feedId, string $headline, string $body): void
     {
-        $this->window->add(self::entry($entryId, $feedId, null, $headline), $body);
+        $this->window->add(self::entry($entryId, $feedId, null, $headline), $body, null);
+    }
+
+    private function addSharing(WindowEntryModel $post, SharedArticleModel $article): void
+    {
+        $this->window->add($post, '', $article);
+    }
+
+    private static function post(int $entryId, ?FeedLanguage $language, string $headline): WindowEntryModel
+    {
+        return self::entry($entryId, $entryId * 10, $language, $headline);
     }
 
     private function addIn(FeedLanguage $language, int $entryId, int $feedId, string $headline): void
     {
-        $this->window->add(self::entry($entryId, $feedId, $language, $headline), '');
+        $this->window->add(self::entry($entryId, $feedId, $language, $headline), '', null);
     }
 
     private static function entry(
@@ -438,8 +549,9 @@ final class HeadlineWindowTest extends TestCase
         string $headline,
     ): WindowEntryModel {
         $effectiveDate = new \DateTimeImmutable('2031-05-14 09:00:00', new \DateTimeZone('UTC'));
+        $links = new EntryLinksModel(null, null, null);
 
-        return new WindowEntryModel($entryId, $feedId, $language, $headline, false, null, $effectiveDate, null, null);
+        return new WindowEntryModel($entryId, $feedId, $language, $headline, false, null, $effectiveDate, $links);
     }
 
     private function addCommonHeadlines(int $holders): void

@@ -3,4 +3,11 @@
     'reader.trendingSources' | transloco: { count: story.outletCount }
   }}</span
   >&ngsp;<span class="separator" aria-hidden="true">·</span>
+  @if (story.shareCount) {
+    &ngsp;<span class="sources">{{
+      (story.shareCount === 1 ? 'reader.trendingSharesOne' : 'reader.trendingShares')
+        | transloco: { count: story.shareCount }
+    }}</span
+    >&ngsp;<span class="separator" aria-hidden="true">·</span>
+  }
 }

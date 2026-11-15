@@ -12,7 +12,6 @@ import { EntryDto } from '../../models';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { entryRelativeTime } from '../../format';
-import { entryDek, entryDisplayTitle, entryHeadline } from '../../entry/entry-text';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { SubscriptionRows } from '../../state/subscription-rows';
@@ -21,6 +20,8 @@ import { sourceNameOf } from '../../entry/entry-source/source-name';
 import { EntryDuplicatesComponent } from './entry-duplicates.component';
 import { RenditionsDirective } from '../renditions.directive';
 import { MINI_CARD_THUMB_SIZES } from '../rendition-sizes';
+import { StorySharesComponent } from '../../trending/story-shares/story-shares.component';
+import { articleFaceOf } from '../../trending/shared-article-card';
 
 let nextId = 0;
 
@@ -33,6 +34,7 @@ let nextId = 0;
     IconComponent,
     EntryDuplicatesComponent,
     RenditionsDirective,
+    StorySharesComponent,
   ],
   templateUrl: './more-sources.component.html',
   styleUrl: './more-sources.component.scss',
@@ -46,7 +48,7 @@ export class MoreSourcesComponent {
 
   protected readonly copies = computed(() => this.entry().duplicates ?? []);
   protected readonly countKey = computed(() =>
-    this.copies().length === 1 ? 'reader.moreSourcesOne' : 'reader.moreSources',
+    this.copies().length === 1 ? 'reader.moreArticlesOne' : 'reader.moreArticles',
   );
   protected readonly thumbSizes = MINI_CARD_THUMB_SIZES;
   private readonly brokenThumbs = linkedSignal<readonly EntryDto[], ReadonlySet<number>>({
@@ -58,10 +60,9 @@ export class MoreSourcesComponent {
       copy,
       feed: sourceNameOf(copy, this.rows),
       avatarUrl: feedAvatarUrl(this.rows.find(copy.subscriptionId)),
-      title: entryHeadline(copy) || entryDisplayTitle(copy),
-      dek: entryDek(copy),
-      picture: this.brokenThumbs().has(copy.id) ? null : copy.imageUrl,
+      ...this.faceOf(copy),
       when: entryRelativeTime(copy, this.language.lang()),
+      shareCount: copy.shares?.length ?? 0,
     })),
   );
   protected readonly expanded = signal(false);
@@ -70,6 +71,11 @@ export class MoreSourcesComponent {
   toggle(event: Event): void {
     event.stopPropagation();
     this.expanded.update((open) => !open);
+  }
+
+  private faceOf(copy: EntryDto): { title: string; dek: string; picture: string | null } {
+    const face = articleFaceOf(copy);
+    return { ...face, picture: this.brokenThumbs().has(copy.id) ? null : face.picture };
   }
 
   protected markBroken(copyId: number): void {

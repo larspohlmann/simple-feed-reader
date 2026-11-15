@@ -47,7 +47,14 @@ const LINK_CARD = {
 
 const GRID_RATIO = 16 / 9;
 
+/** The "Shared by …" line under a Trending article posts share (#2229): `--fs-xs` text and its `--space-1` padding. */
+export const STORY_SHARES_LINE = 24;
+
 export function blockHeight(kind: EntryKind, entry: EntryDto): number {
+  return ownHeight(kind, entry) + (entry.story && entry.shares?.length ? STORY_SHARES_LINE : 0);
+}
+
+function ownHeight(kind: EntryKind, entry: EntryDto): number {
   if (kind === 'quoting') return quotingHeight(entry);
   if (kind === 'thread') return threadHeight(entry);
   return BLOCK_HEIGHT[kind];

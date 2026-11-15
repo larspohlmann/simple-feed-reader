@@ -13,10 +13,11 @@ use App\Repository\ReadingSettingsRepository;
 use App\Repository\TrendingSnapshotRepository;
 use App\Repository\TrendingStoryRepository;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
+use App\Service\Curation\Trending\Model\ShownRowModel;
 use App\Service\Curation\Trending\Model\TrendingUnopenedModel;
 use App\Service\Curation\Trending\Model\TrendingPageModel;
-use App\Service\Curation\Trending\Model\TrendingStoryCardModel;
 use App\Service\Curation\Trending\Pass\StoryCardSource;
+use App\Service\Foundation\Url\UrlNormalizer;
 
 /** One reader's Trending: the shared snapshot cut to their subscriptions and their threshold (#2017). */
 final readonly class TrendingStories
@@ -30,6 +31,7 @@ final readonly class TrendingStories
         private EntryListRepository $entryList,
         private EntryListRowEnricher $enricher,
         private ReadingSettingsRepository $readingSettings,
+        private UrlNormalizer $urlNormalizer,
     ) {
     }
 
@@ -40,7 +42,7 @@ final readonly class TrendingStories
         return new TrendingPageModel(
             $window,
             $this->snapshots->lastBuilds()->builtAt($window),
-            $this->withLeadCopies($userId, $this->sourceFor($userId, $ranked)->cardsOf($ranked)),
+            $this->sourceFor($userId, $ranked)->cardsOf($ranked),
         );
     }
 
@@ -70,7 +72,7 @@ final readonly class TrendingStories
     private function sourceFor(int $userId, array $ranked): StoryCardSource
     {
         $storyIds = RankedStoryModel::storyIdsOf($ranked);
-        $entryIdsByStory = $this->stories->articleEntryIdsByStory($userId, $storyIds);
+        $entryIdsByStory = $this->stories->shownEntryIdsByStory($userId, $storyIds);
 
         return new StoryCardSource(
             $entryIdsByStory,
@@ -80,49 +82,32 @@ final readonly class TrendingStories
     }
 
     /**
-     * Every outlet is a row of its own: a copy the list folded into another row's duplicates is indexed too.
+     * Every row is indexed, a copy the list folded into another row's duplicates too, with the article it is about.
      *
      * @param list<int> $entryIds
      *
-     * @return array<int, EntryListRow>
+     * @return array<int, ShownRowModel>
      */
     private function rowsByEntryId(int $userId, array $entryIds): array
     {
         $rowsByEntryId = [];
         foreach ($this->enricher->enrich($this->entryList->rowsByIdsForUser($userId, $entryIds), $userId) as $row) {
-            foreach ([$row, ...$row->duplicates] as $outlet) {
-                $rowsByEntryId[$outlet->entry->requireId()] = $outlet->withDuplicates([]);
+            foreach ([$row, ...$row->duplicates] as $shown) {
+                $rowsByEntryId[$shown->entry->requireId()] = new ShownRowModel(
+                    $shown->withDuplicates([]),
+                    $this->articleKeyOf($shown),
+                );
             }
         }
 
         return $rowsByEntryId;
     }
 
-    /**
-     * Every other subscribed copy of a lead's article is shown among its outlets, inside the story or not.
-     *
-     * @param list<TrendingStoryCardModel> $cards
-     *
-     * @return list<TrendingStoryCardModel>
-     */
-    private function withLeadCopies(int $userId, array $cards): array
+    /** An outlet's row is about its own article, a post's about the article its first card links. */
+    private function articleKeyOf(EntryListRow $row): string
     {
-        $urlHashes = array_values(array_unique(array_filter(array_map(
-            static fn (TrendingStoryCardModel $card): ?string => $card->lead->entry->getUrlHash(),
-            $cards,
-        ))));
-
-        $copiesByUrlHash = [];
-        $copies = $this->entryList->rowsByUrlHashesForUser($userId, $urlHashes);
-        foreach ($this->enricher->enrich($copies, $userId) as $copy) {
-            $copiesByUrlHash[(string) $copy->entry->getUrlHash()][] = $copy;
-        }
-
-        return array_map(
-            static fn (TrendingStoryCardModel $card): TrendingStoryCardModel => $card->withCopies(
-                $copiesByUrlHash[$card->lead->entry->getUrlHash() ?? ''] ?? [],
-            ),
-            $cards,
-        );
+        return $row->keyBy($row->isFromAnOutlet()
+            ? $row->entry->getUrlHash()
+            : $this->urlNormalizer->hash($row->enrichment->linkCards[0]->url ?? null));
     }
 }

@@ -302,8 +302,10 @@ export interface EntryDto {
   /** Other copies of this article the reader also subscribes to, in this
    *  list's scope. Set by the API's collapse; empty for a non-duplicated row. */
   duplicates?: EntryDto[];
-  /** Only on a Trending row (#2017); its `duplicates` are then the story's other outlets. */
+  /** Only on a Trending row (#2017); its `duplicates` are then the story's other articles. */
   story?: TrendingStory;
+  /** Only on a Trending article: the posts sharing it, newest first, each post once (#2229). */
+  shares?: EntryDto[];
 }
 
 /** The `/api/entries/{id}` detail shape: every list field plus the full body,

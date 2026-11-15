@@ -182,4 +182,83 @@ describe('EntryLinkComponent', () => {
     expect(navigation.openAlone).toHaveBeenCalledWith(testEntry.linkCards[0]);
     expect(entryActions.open).not.toHaveBeenCalled();
   });
+
+  it('leads a Trending story with the post, its card, the sources line and the posters of the rest', () => {
+    const other = (id: number, name: string): EntryDto =>
+      entry({ id, source: 'Home@bsky', poster: { name, url: null, imageUrl: null } });
+    const fixture = mount(
+      entry({
+        poster: { name: 'Ann', url: null, imageUrl: null },
+        linkCards: [card()],
+        duplicates: [other(2, 'Ben'), other(3, 'Cat'), other(4, 'Dan')],
+        story: { outletCount: 4, viewed: false, shareCount: 0 },
+      }),
+    );
+    const element = fixture.nativeElement as HTMLElement;
+
+    expect(element.querySelector('.title')!.textContent).toContain('Worth a read, this one.');
+    expect(element.querySelector('app-link-card strong')!.textContent).toContain('A shared story');
+    expect(element.querySelector('app-link-card small')!.textContent).toContain('news.test');
+    expect(element.querySelector('app-story-source-count')!.textContent).toContain('4 sources');
+    element.querySelector<HTMLButtonElement>('app-more-sources .toggle')!.click();
+    fixture.detectChanges();
+    const feeds = [...element.querySelectorAll('app-more-sources .mini .feed')].map((feed) =>
+      feed.textContent!.trim(),
+    );
+    expect(feeds).toEqual(['Ben', 'Cat', 'Dan']);
+  });
+
+  it('leads a story no followed outlet carries with the shared card, its sharers and the shares count', () => {
+    const sharer = (id: number, name: string): EntryDto =>
+      entry({ id, excerpt: `${name} says read this`, poster: { name, url: null, imageUrl: null } });
+    const fixture = mount(
+      entry({
+        poster: { name: 'Ann', url: null, imageUrl: null },
+        linkCards: [card()],
+        shares: [sharer(1, 'Ann'), sharer(5, 'Eve'), sharer(6, 'Fay')],
+        duplicates: [],
+        story: { outletCount: 2, viewed: false, shareCount: 3 },
+      }),
+    );
+    const element = fixture.nativeElement as HTMLElement;
+
+    expect(element.querySelector('.title')).toBeNull();
+    expect(element.querySelector('app-link-card strong')!.textContent).toContain('A shared story');
+    expect(element.querySelector('app-story-source-count')!.textContent).toContain('2 sources');
+    expect(element.querySelector('app-story-source-count')!.textContent).toContain('3 shares');
+    expect(element.querySelector('app-story-shares')!.textContent).toContain(
+      'Shared by Ann, Eve and 1 other',
+    );
+  });
+
+  it('names no shares on a story no post shares', () => {
+    const element = mount(entry({ story: { outletCount: 2, viewed: false, shareCount: 0 } }))
+      .nativeElement as HTMLElement;
+
+    expect(element.querySelector('app-story-source-count')!.textContent).not.toContain('share');
+    expect(element.querySelector('app-story-shares .shares')).toBeNull();
+  });
+
+  it('counts the shares of the other articles on their mini cards', () => {
+    const fixture = mount(
+      entry({
+        story: { outletCount: 3, viewed: false, shareCount: 2 },
+        duplicates: [
+          entry({
+            id: 2,
+            titleDerived: false,
+            title: 'Other article',
+            shares: [entry({ id: 7 }), entry({ id: 8 })],
+          }),
+        ],
+      }),
+    );
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelector<HTMLButtonElement>('app-more-sources .toggle')!.click();
+    fixture.detectChanges();
+
+    expect(element.querySelector('app-more-sources .mini .shares-count')!.textContent).toContain(
+      '2 shares',
+    );
+  });
 });

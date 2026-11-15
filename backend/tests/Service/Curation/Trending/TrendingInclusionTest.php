@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Curation\Trending;
 
+use App\Service\Curation\Trending\Model\StoryArticleModel;
 use App\Entity\Feed;
 use App\Entity\InclusionChange;
 use App\Entity\NetworkExclusion;
@@ -26,6 +27,7 @@ use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\TrendingStoryCardModel;
 use App\Service\Curation\Trending\ReaderWindows;
 use App\Service\Curation\Trending\TrendingStories;
+use App\Service\Foundation\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
 use App\Tests\Support\TrendingWiring;
@@ -70,7 +72,7 @@ final class TrendingInclusionTest extends DbTestCase
         $this->fixtures->flush();
 
         self::assertSame([3], self::outletCountsOf($this->rankedDay()));
-        self::assertCount(3, $this->storyRepository()->articleEntryIdsByStory(
+        self::assertCount(3, $this->storyRepository()->shownEntryIdsByStory(
             $this->reader->requireId(),
             [$story->requireId()],
         )[$story->requireId()]);
@@ -163,7 +165,7 @@ final class TrendingInclusionTest extends DbTestCase
         [$alpha, $beta] = $this->articleFeeds('alpha', 'beta');
         $social = $this->fixtures->feed('ann', SocialNetwork::Bluesky);
         $this->fixtures->subscribe($this->reader, $alpha, $beta, $social);
-        $this->storyOf([$alpha, $beta, $social]);
+        $this->storySharedBy([$alpha, $beta], $social);
         self::assertSame([3], self::outletCountsOf($this->rankedDay()));
 
         $this->entityManager->persist(
@@ -179,7 +181,7 @@ final class TrendingInclusionTest extends DbTestCase
         [$alpha, $beta] = $this->articleFeeds('alpha', 'beta');
         $social = $this->fixtures->feed('ann', SocialNetwork::Bluesky);
         $this->fixtures->subscribe($this->reader, $alpha, $beta, $social);
-        $this->storyOf([$alpha, $beta, $social]);
+        $this->storySharedBy([$alpha, $beta], $social);
         $this->entityManager->persist(
             new NetworkExclusion($this->reader, SocialNetwork::Bluesky, InclusionSurface::AllItems),
         );
@@ -229,7 +231,7 @@ final class TrendingInclusionTest extends DbTestCase
 
         self::assertSame(
             [$betaEntry->requireId(), $gammaEntry->requireId()],
-            array_map(static fn (EntryListRow $row): int => $row->entry->requireId(), $stories[0]->lead->duplicates),
+            array_map(static fn (EntryListRow $row): int => $row->entry->requireId(), self::otherRowsOf($stories[0])),
         );
     }
 
@@ -307,6 +309,7 @@ final class TrendingInclusionTest extends DbTestCase
             $entryList,
             $enricher,
             $readingSettings,
+            new UrlNormalizer(),
         );
     }
 
@@ -344,9 +347,37 @@ final class TrendingInclusionTest extends DbTestCase
         return $this->fixtures->story(TrendingWindow::Day, $lastSeen, ...$members);
     }
 
+    /**
+     * One article per feed and a post of the social feed sharing a story card of another site.
+     *
+     * @param list<Feed> $articleFeeds
+     */
+    private function storySharedBy(array $articleFeeds, Feed $social): void
+    {
+        $members = array_map(
+            fn (Feed $feed): array => [$this->fixtures->entry($feed, 'Story entry', '2031-05-14 09:00:00'), null],
+            $articleFeeds,
+        );
+        $post = $this->fixtures->entry($social, 'Story post', '2031-05-14 10:00:00');
+        $this->fixtures->storyOfSites(
+            TrendingWindow::Day,
+            '2031-05-14 10:00:00',
+            [...$members, [$post, 'shared.example']],
+        );
+    }
+
     /** @return list<Feed> */
     private function articleFeeds(string ...$names): array
     {
         return array_values(array_map(fn (string $name): Feed => $this->fixtures->feed($name), $names));
+    }
+
+    /** @return list<EntryListRow> the rows of the card's other articles, as the API lists them */
+    private static function otherRowsOf(TrendingStoryCardModel $card): array
+    {
+        return array_map(
+            static fn (StoryArticleModel $article): EntryListRow => $article->row,
+            $card->articles->others,
+        );
     }
 }

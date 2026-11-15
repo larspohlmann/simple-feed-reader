@@ -149,7 +149,7 @@ final class SocialEntryLanguageTest extends TestCase
 
     private static function limit(): int
     {
-        $limit = new \ReflectionClassConstant(SocialEntryLanguage::class, 'LONG_TEXT_LENGTH')->getValue();
+        $limit = new \ReflectionClassConstant(LanguageGuess::class, 'LONG_TEXT_LENGTH')->getValue();
         self::assertIsInt($limit);
 
         return $limit;

@@ -9,6 +9,7 @@ use App\Service\Curation\Trending\HeadlineEquivalents;
 use App\Service\Curation\Trending\HeadlineFiller;
 use App\Service\Curation\Trending\Model\EntryStemIdsModel;
 use App\Service\Curation\Trending\Model\LanguageCoverageModel;
+use App\Service\Curation\Trending\Model\SharedArticleModel;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Service\Curation\Trending\Support\PartWeightCaps;
 
@@ -70,11 +71,14 @@ final class HeadlineWindow
     }
 
     /** Entries must arrive in ascending id order: the postings stay sorted. */
-    public function add(WindowEntryModel $entry, string $body): void
+    public function add(WindowEntryModel $entry, string $body, ?SharedArticleModel $article): void
     {
         $stems = EntryStemIdsModel::of(
-            $this->stemIdsOf($entry->title, $entry->language),
-            $this->stemIdsOf($body, $entry->language),
+            [
+                $this->stemIdsOf($entry->title, $entry->language),
+                $this->stemIdsOf($article->title ?? '', $article?->language),
+            ],
+            [$this->stemIdsOf($body, $entry->language), $this->stemIdsOf($article->body ?? '', $article?->language)],
         );
         $this->headlineStems[$entry->id] = $stems->headlineIds;
         $this->bodyStems[$entry->id] = $stems->bodyIds;

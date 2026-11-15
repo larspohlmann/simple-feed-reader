@@ -15,9 +15,13 @@ final class StoryLinksTest extends TestCase
     public function testAPairBothSourcesLinkIsKeptOnceAtTheUrlStrength(): void
     {
         $run = TrendingRuns::of(TrendingWindow::Day);
-        $run->add(TrendingRuns::entry(1, 10, TrendingRuns::VOLCANO_HEADLINE, '2031-05-14 08:00:00'), ['hash-a']);
-        $run->add(TrendingRuns::entry(2, 20, TrendingRuns::VOLCANO_REPLY_HEADLINE, '2031-05-14 09:00:00'), ['hash-a']);
-        $run->add(TrendingRuns::entry(3, 30, 'Island Vulkan Ausbruch live', '2031-05-14 09:30:00'), []);
+        $run->add(TrendingRuns::entry(1, 10, TrendingRuns::VOLCANO_HEADLINE, '2031-05-14 08:00:00'), ['hash-a'], null);
+        $run->add(
+            TrendingRuns::entry(2, 20, TrendingRuns::VOLCANO_REPLY_HEADLINE, '2031-05-14 09:00:00'),
+            ['hash-a'],
+            null,
+        );
+        $run->add(TrendingRuns::entry(3, 30, 'Island Vulkan Ausbruch live', '2031-05-14 09:30:00'), [], null);
 
         $links = TrendingWiring::storyLinks()->between($run);
         $strengthByPair = [];

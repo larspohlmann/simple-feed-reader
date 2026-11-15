@@ -8,7 +8,6 @@ use App\Doctrine\EntryPlanHint;
 use App\Doctrine\EntryPlanHintWalker;
 use App\Entity\Entry;
 use App\Entity\Subscription;
-use App\Enum\InclusionSurface;
 use App\Repository\Exception\RecordNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
@@ -224,33 +223,6 @@ final class EntryListRepository extends ServiceEntityRepository
             ->setParameter('self', $excludeEntryId)
             ->getQuery()
             ->getResult();
-
-        return array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
-    }
-
-    /**
-     * Every copy of the given articles this caller subscribes to in Trending, hidden or shown — the outlets beyond a
-     * Trending story that ran the same article.
-     *
-     * @param list<string> $urlHashes
-     *
-     * @return list<EntryListRow>
-     */
-    public function rowsByUrlHashesForUser(int $userId, array $urlHashes): array
-    {
-        if ($urlHashes === []) {
-            return [];
-        }
-
-        $qb = $this->projection->rowQueryBuilder($userId)
-            ->andWhere('e.location.urlHash IN (:urlHashes)')
-            ->setParameter('urlHashes', $urlHashes);
-        InclusionScopeDql::restrict($qb, EntryAliases::primary()->subscription, InclusionSurface::Trending);
-        $query = $qb->getQuery();
-        EntryPlanHintWalker::apply($query, EntryPlanHint::DuplicateLookup);
-
-        /** @var list<array<array-key, mixed>> $rows */
-        $rows = $query->getResult();
 
         return array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
     }

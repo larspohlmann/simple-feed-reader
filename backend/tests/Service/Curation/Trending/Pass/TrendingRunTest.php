@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Curation\Trending\Pass;
 
 use App\Enum\TrendingWindow;
+use App\Service\Curation\Trending\Model\EntryLinksModel;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Tests\Support\TrendingRuns;
 use PHPUnit\Framework\TestCase;
@@ -18,22 +19,40 @@ final class TrendingRunTest extends TestCase
     public function testADerivedTitleRepeatedAtTheStartOfTheBodyAddsNothingFromTheRepeat(): void
     {
         self::assertEqualsWithDelta(1.5 * self::TWICE, $this->weightSharedWith(
-            new WindowEntryModel(2, 20, null, self::CLIPPED_TITLE, true, self::SUMMARY, self::later(), null, null),
+            new WindowEntryModel(
+                2,
+                20,
+                null,
+                self::CLIPPED_TITLE,
+                true,
+                self::SUMMARY,
+                self::later(),
+                new EntryLinksModel(null, null, null),
+            ),
         ), 0.0001);
     }
 
     public function testAnArticleWhoseSummaryStartsWithItsTitleKeepsThoseBodyStems(): void
     {
         self::assertEqualsWithDelta(2.0 * self::TWICE, $this->weightSharedWith(
-            new WindowEntryModel(2, 20, null, self::CLIPPED_TITLE, false, self::SUMMARY, self::later(), null, null),
+            new WindowEntryModel(
+                2,
+                20,
+                null,
+                self::CLIPPED_TITLE,
+                false,
+                self::SUMMARY,
+                self::later(),
+                new EntryLinksModel(null, null, null),
+            ),
         ), 0.0001);
     }
 
     private function weightSharedWith(WindowEntryModel $later): float
     {
         $run = TrendingRuns::of(TrendingWindow::Day);
-        $run->add(TrendingRuns::entry(1, 10, 'Storm Hamburg harbour', '2031-05-14 09:00:00'), []);
-        $run->add($later, []);
+        $run->add(TrendingRuns::entry(1, 10, 'Storm Hamburg harbour', '2031-05-14 09:00:00'), [], null);
+        $run->add($later, [], null);
 
         return $run->headlines->sharedWeightsWithEarlier($later->id)[1];
     }
