@@ -106,6 +106,7 @@ final class BackupFieldDeclarations
             'author.name' => 'author', 'author.profileUrl' => 'authorUrl', 'author.avatarUrl' => 'authorAvatarUrl',
             'text.summary' => 'summary',
             'text.contentHtml' => 'contentHtml',
+            'text.language' => 'language',
             'image.url' => 'imageUrl', 'image.width' => 'imageWidth',
             'image.height' => 'imageHeight', 'image.renditions' => 'imageRenditions',
             'mediaSet.media' => 'media', 'mediaSet.attachments' => 'attachments',

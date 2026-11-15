@@ -667,7 +667,7 @@ final class AccountRestorerTest extends DbTestCase
                 'share.quotedPost.url', 'share.quotedPost.authorName', 'share.quotedPost.authorHandle',
                 'share.quotedPost.authorAvatarUrl', 'share.quotedPost.postedAt', 'share.quotedPost.text',
                 'share.quotedPost.media', 'share.quotedPost.nestedUrl', 'share.quotedPost.nestedHandle',
-                'share.quotedPost.linkCard', 'text.summary', 'text.contentHtml',
+                'share.quotedPost.linkCard', 'text.summary', 'text.contentHtml', 'text.language',
             ],
         );
         self::assertEquals($sourceRows['entry']->getText(), $targetRows['entry']->getText());

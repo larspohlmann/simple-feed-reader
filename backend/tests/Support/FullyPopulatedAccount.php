@@ -186,6 +186,7 @@ final readonly class FullyPopulatedAccount
         ));
         $entry->recordText($entry->getText()->withSummary('A summary of the article.'));
         $entry->recordText($entry->getText()->withContentHtml('<p>The body of the article.</p>'));
+        $entry->recordText($entry->getText()->withLanguage(FeedLanguage::English));
         $entry->getImage()->storePending('https://populated.example/lead.jpg', 1200, 630);
         $entry->getImage()->storeRenditions([
             new ImageRendition('https://populated.example/lead-600.jpg', 600),
