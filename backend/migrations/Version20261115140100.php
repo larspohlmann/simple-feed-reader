@@ -220,10 +220,22 @@ final class Version20261115140100 extends AbstractMigration
         foreach (array_chunk($this->newRows, self::ROWS_PER_STATEMENT) as $chunk) {
             $this->addSql(
                 'INSERT INTO shared_link (id, url, url_hash, title, description, image_url, site_name, created_at)'
-                . ' VALUES ' . implode(', ', array_fill(0, \count($chunk), '(?, ?, ?, ?, ?, ?, ?, ?)')),
-                array_merge(...$chunk),
+                . ' VALUES ' . implode(', ', array_map($this->valuesOf(...), $chunk)),
             );
         }
+    }
+
+    /** @param list<int|string|null> $row */
+    private function valuesOf(array $row): string
+    {
+        return '(' . implode(', ', array_map(
+            fn (int|string|null $value): string => match (true) {
+                $value === null => 'NULL',
+                \is_int($value) => (string) $value,
+                default => $this->connection->quote($value),
+            },
+            $row,
+        )) . ')';
     }
 
     private function queueCardPointers(): void

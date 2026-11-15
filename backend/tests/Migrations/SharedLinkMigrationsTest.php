@@ -47,6 +47,18 @@ final class SharedLinkMigrationsTest extends TestCase
         );
     }
 
+    public function testAPreviewIsCopiedVerbatim(): void
+    {
+        $this->card($this->entry('2026-11-01 10:00:00'), self::URL, "O'Brien says \"no\" \\ ; DROP", 'Über – “quoted”');
+
+        $this->migrateUp();
+
+        self::assertSame(
+            ["O'Brien says \"no\" \\ ; DROP", 'Über – “quoted”'],
+            array_values((array) $this->connection->fetchAssociative('SELECT title, description FROM shared_link')),
+        );
+    }
+
     public function testEveryCardAndQuoteIsLinked(): void
     {
         $this->card($this->entry('2026-11-01 10:00:00'), self::URL, 'One');
@@ -152,10 +164,7 @@ final class SharedLinkMigrationsTest extends TestCase
         self::assertEquals(
             ['url' => 'https://quoted.example/b', 'title' => 'Quoted', 'description' => null, 'imageUrl' => null,
                 'siteName' => 'quoted.example'],
-            json_decode((string) $this->connection->fetchOne(
-                'SELECT quoted_link_card FROM entry WHERE id = ?',
-                [$newer],
-            ), true, flags: \JSON_THROW_ON_ERROR),
+            json_decode($this->quotedCardOf($newer), true, flags: \JSON_THROW_ON_ERROR),
         );
         self::assertSame(0, $this->rowCount('SELECT COUNT(*) FROM shared_link'));
         self::assertSame(0, $this->rowCount('SELECT COUNT(*) FROM link_card WHERE shared_link_id IS NOT NULL'));
@@ -185,7 +194,7 @@ final class SharedLinkMigrationsTest extends TestCase
         $schema = $this->connection->createSchemaManager()->introspectSchema();
         'up' === $direction ? $migration->up($schema) : $migration->down($schema);
         foreach ($migration->getSql() as $query) {
-            $this->connection->executeStatement($query->getStatement(), $query->getParameters(), $query->getTypes());
+            $this->connection->executeStatement($query->getStatement());
         }
     }
 
@@ -217,6 +226,14 @@ final class SharedLinkMigrationsTest extends TestCase
             'imageUrl' => null,
             'siteName' => (string) parse_url($url, \PHP_URL_HOST),
         ], \JSON_THROW_ON_ERROR)], ['id' => $entryId]);
+    }
+
+    private function quotedCardOf(int $entryId): string
+    {
+        $stored = $this->connection->fetchOne('SELECT quoted_link_card FROM entry WHERE id = ?', [$entryId]);
+        self::assertIsString($stored);
+
+        return $stored;
     }
 
     private function rowCount(string $sql): int
