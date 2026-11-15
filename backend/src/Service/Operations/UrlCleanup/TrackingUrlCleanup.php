@@ -77,17 +77,15 @@ final readonly class TrackingUrlCleanup
         if ($storedUrl === null) {
             return new TrackingUrlCleanupReportModel();
         }
+        $storedHash = $entry->getUrlHash();
         $url = TrackingFreeUrl::of($storedUrl);
         $hash = $this->urlHash->of($entry->getGuid(), $url);
-        $report = new TrackingUrlCleanupReportModel(
-            (int) ($url !== $storedUrl),
-            (int) ($hash !== $entry->getUrlHash()),
-        );
-        if ($report->entriesCleaned + $report->hashesChanged > 0) {
-            $relocateEntry($entry, $url, $hash);
+        if ($url === $storedUrl && $hash === $storedHash) {
+            return new TrackingUrlCleanupReportModel();
         }
+        $relocateEntry($entry, $url, $hash);
 
-        return $report;
+        return new TrackingUrlCleanupReportModel((int) ($url !== $storedUrl), (int) ($hash !== $storedHash));
     }
 
     private function walkCards(\Closure $moveCard): TrackingUrlCleanupReportModel

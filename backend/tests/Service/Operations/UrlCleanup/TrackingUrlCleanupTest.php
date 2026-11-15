@@ -6,7 +6,6 @@ namespace App\Tests\Service\Operations\UrlCleanup;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Entity\LinkCardContent;
 use App\Repository\EntryRepository;
 use App\Repository\LinkCardRepository;
 use App\Service\Foundation\Url\EntryUrlHash;
@@ -126,7 +125,7 @@ final class TrackingUrlCleanupTest extends DbTestCase
     private function storeCards(Entry $entry): void
     {
         $connection = $this->entityManager->getConnection();
-        $urls = ['tracked' => 'https://youtu.be/abc?utm_source=x', 'clean' => 'https://example.com/card'];
+        $urls = ['clean' => 'https://example.com/card', 'tracked' => 'https://youtu.be/abc?utm_source=x'];
         foreach ($urls as $name => $url) {
             $connection->insert('link_card', [
                 'entry_id' => $entry->requireId(),

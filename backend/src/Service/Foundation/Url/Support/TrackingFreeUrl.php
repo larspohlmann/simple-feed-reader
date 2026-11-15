@@ -98,7 +98,7 @@ final class TrackingFreeUrl
 
     private static function keyOf(string $pair): string
     {
-        $key = strtolower(rawurldecode(explode('=', $pair, 2)[0]));
+        $key = strtolower(rawurldecode(explode('=', $pair)[0]));
 
         return str_starts_with($key, self::DOUBLE_ESCAPED_SEPARATOR)
             ? substr($key, strlen(self::DOUBLE_ESCAPED_SEPARATOR))

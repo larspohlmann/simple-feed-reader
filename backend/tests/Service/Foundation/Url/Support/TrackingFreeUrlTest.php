@@ -69,6 +69,10 @@ final class TrackingFreeUrlTest extends TestCase
             'https://example.com/a?b=2&a=%20&c',
             TrackingFreeUrl::of('https://example.com/a?b=2&utm_source=x&a=%20&c'),
         );
+        self::assertSame(
+            'https://example.com/a?id=1#top',
+            TrackingFreeUrl::of('https://example.com/a?id=1&utm_source=x#top'),
+        );
     }
 
     /** @return iterable<string, array{string}> */
