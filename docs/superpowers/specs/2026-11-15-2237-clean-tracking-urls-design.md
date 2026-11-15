@@ -25,9 +25,9 @@ cleaning should happen during ingest of rss feeds".
 
 ## Non-goals
 
-- **No value rule.** Dropping any pair whose value is `rss`, `feed` or `atom` (`cmp=rss` at CBC, `traffic_source=rss`
+- **No value rule** (superseded by the D3/D4 ruling). Dropping any pair whose value is `rss`, `feed` or `atom` (`cmp=rss` at CBC, `traffic_source=rss`
   at Al Jazeera, `via=rss` at Slate, `ref=rss` at Der Standard) was measured as variant B2 and rejected (D4).
-- **No publisher-internal keys.** `mrfcid` (Slate, 331 cards), `cmp` (CBC, Guardian), `traffic_source`, `via`,
+- **No publisher-internal keys** (superseded by the D3/D4 ruling). `mrfcid` (Slate, 331 cards), `cmp` (CBC, Guardian), `traffic_source`, `via`,
   `sara_ref` (Spiegel), `reduced` (SZ), Substack's `r`, `triedRedirect` and `showWelcomeOnShare`, Instagram's `exln`,
   `srtk`, `rpxt`, and X's `s`/`t` have no vendor documentation. Adding them would be curation from the data (D3).
 - **No other URL columns.** Enclosures and media, chapter files, author and avatar URLs, `discussion_url`,
@@ -108,6 +108,22 @@ generic elsewhere. No vendor documents them; each is a single observed fact, not
 | `youtube.com` (incl. `www.`, `m.`, `music.`), `youtu.be` | `si`, `feature` | `si`: "YouTube-Videolinks neuerdings mit Tracking-Zusatz" (ifun.de/youtube-videolinks-neuerdings-mit-tracking-zusatz-223731/); `feature`: observed on the site's own share button | The share sheet's share-session id and the share-surface label. The video is `v` or the path, the time is `t`, a playlist is `list`, and those stay. |
 | `spotify.com` (`open.spotify.com`) | `si` | observed on the site's own share button | The share-session id. The item is the path. |
 | `nytimes.com` and subdomains | `smid`, `smtyp` | observed on the site's own share button | The share-medium tags. The article is the path. `unlocked_article_code` (a gift link) stays. |
+
+**Undocumented trackers (D3 ruling).** No vendor documents these; each is a key whose name never carries content.
+
+| Tier | Keys | Where |
+|---|---|---|
+| Everywhere | `mrfcid` (Slate), `traffic_source` (Al Jazeera), `sara_ref` (Spiegel), `igshid`, `igsh` (Instagram), `_bhlid` (beehiiv), `sfmc_id` (Salesforce Marketing Cloud), `rb_clickid`, `triedRedirect`, `showWelcomeOnShare` (Substack) | every host |
+| Host-scoped | `r` | `substack.com` and subdomains |
+| | `s`, `t` | `x.com`, `twitter.com` and subdomains |
+| | `exln`, `srtk`, `rpxt` | `instagram.com` and subdomains |
+| Value-scoped (D4 ruling) | `cmp`, `via`, `ref` | any host, only when the value is `rss`, `feed` or `atom` (case-insensitive) |
+
+YouTube's `t` (a time) is content and stays everywhere.
+
+**Gift keys are never stripped.** Checked before every rule above, on every host: `unlocked_article_code` (NYT),
+`gift` (The Atlantic), `pwapi_token` (Washington Post), `accessToken` (Bloomberg, FT), `sharetype` (FT),
+`giftToken` (Spiegel), and the generic `giftcode`, `gift_token`, `share_token`, `access_token`; `st` on `wsj.com`.
 
 The prefixes `utm_`, `at_`, `wt_` and `mtm_` stay prefixes, as `utm_` and its siblings already are today. Every other
 entry matches the whole key. `pk_` is listed key by key, because a `pk_` key elsewhere can be a primary key.
@@ -190,10 +206,15 @@ Nothing else writes an article URL into an entry. `E2eSeedAdminSubscriptionComma
   `r`, Instagram `exln`/`srtk`, X `s`/`t`, `igshid`, `rb_clickid`, `_bhlid`, `sfmc_id`). Why: no vendor documents
   them. A list built from what the dev DB happens to hold is curation from the data, which Lars has ruled out. Cost if
   wrong: Slate's per-share `mrfcid` keeps 331 cards from sharing a hash. #2236/#2239 can still fold them by title.
+  Ruling (2026-11-15, Lars, overrules D3 and D4): "strip them. only exception I see: parameters which allow
+  paywalled articles to be read (e.g. gifted articles on nyt or 'the atlantic')". The undocumented keys are stripped
+  in three tiers (everywhere, host-scoped, value-scoped), and gift keys are never stripped (tables above). Cost if
+  wrong: a page that names its content with one of these keys on its host loses it; none is known.
 - **D4. No value rule** (`=rss`/`=feed`/`=atom`). Why: it changes 4,866 stored hashes for 2 merges, and its week run
   moved 177 pairs in and 95 out (−29 de–de). The churn comes from grouping order, not from better matches. Cost if
   wrong: CBC, Al Jazeera and Slate outlet URLs keep `cmp=rss`/`traffic_source=rss`/`via=rss`. That is cosmetic, since
   they are constant per feed.
+  Ruling: see D3 (Lars overrules D4: `cmp`, `via`, `ref` go when their value is `rss`, `feed` or `atom`).
 - **D5. Byte identity when nothing tracks, and no other normalisation of the stored URL.** Why: the command then
   rewrites only rows that carry a tracker, and a reader sees the publisher's own URL. Cost if wrong: none for dedupe,
   which normalises separately.

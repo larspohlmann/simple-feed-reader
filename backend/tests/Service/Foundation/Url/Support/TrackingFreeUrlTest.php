@@ -89,6 +89,133 @@ final class TrackingFreeUrlTest extends TestCase
         self::assertSame($expected, TrackingFreeUrl::of($url));
     }
 
+    /** @return iterable<string, array{string}> */
+    public static function undocumentedTrackers(): iterable
+    {
+        $keys = ['mrfcid', 'traffic_source', 'sara_ref', 'igshid', 'igsh', '_bhlid', 'sfmc_id', 'rb_clickid'];
+        foreach ($keys as $key) {
+            yield $key => [$key];
+        }
+        yield 'substack redirect flag' => ['triedRedirect'];
+        yield 'substack welcome flag' => ['showWelcomeOnShare'];
+    }
+
+    #[DataProvider('undocumentedTrackers')]
+    public function testAKeyThatNeverCarriesContentGoesEverywhere(string $key): void
+    {
+        self::assertSame(
+            'https://example.com/a?id=1',
+            TrackingFreeUrl::of('https://example.com/a?id=1&' . $key . '=x'),
+        );
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function hostScopedTrackers(): iterable
+    {
+        yield 'substack r' => ['https://www.example.substack.com/p/a?r=2abc', 'https://www.example.substack.com/p/a'];
+        yield 'x s and t' => ['https://x.com/a/status/1?s=20&t=abc', 'https://x.com/a/status/1'];
+        yield 'twitter s and t' => ['https://twitter.com/a/status/1?s=46&t=abc', 'https://twitter.com/a/status/1'];
+        yield 'instagram share keys' => [
+            'https://www.instagram.com/p/abc/?exln=1&srtk=2&rpxt=3',
+            'https://www.instagram.com/p/abc/',
+        ];
+    }
+
+    #[DataProvider('hostScopedTrackers')]
+    public function testAShortKeyGoesOnlyOnItsHost(string $url, string $expected): void
+    {
+        self::assertSame($expected, TrackingFreeUrl::of($url));
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function shortKeysOffTheirHost(): iterable
+    {
+        yield 'r elsewhere' => ['https://example.com/a?r=2'];
+        yield 's elsewhere' => ['https://example.com/a?s=20'];
+        yield 'a youtube time' => ['https://www.youtube.com/watch?v=x&t=90'];
+        yield 'exln elsewhere' => ['https://example.com/a?exln=1'];
+    }
+
+    #[DataProvider('shortKeysOffTheirHost')]
+    public function testAShortKeyStaysOffItsHost(string $url): void
+    {
+        self::assertSame($url, TrackingFreeUrl::of($url));
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function feedMarkers(): iterable
+    {
+        yield 'cbc cmp' => ['https://www.cbc.ca/news/a-1.2?cmp=rss', 'https://www.cbc.ca/news/a-1.2'];
+        yield 'slate via' => ['https://slate.com/a.html?via=rss', 'https://slate.com/a.html'];
+        yield 'standard ref, upper case' => [
+            'https://www.derstandard.at/story/1?ref=RSS',
+            'https://www.derstandard.at/story/1',
+        ];
+        yield 'feed' => ['https://example.com/a?id=1&cmp=Feed', 'https://example.com/a?id=1'];
+        yield 'atom' => ['https://example.com/a?via=atom', 'https://example.com/a'];
+    }
+
+    #[DataProvider('feedMarkers')]
+    public function testAFeedMarkerGoes(string $url, string $expected): void
+    {
+        self::assertSame($expected, TrackingFreeUrl::of($url));
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function keysWithAnotherValue(): iterable
+    {
+        yield 'a campaign code' => ['https://example.com/a?cmp=spring'];
+        yield 'a referrer' => ['https://example.com/a?ref=home'];
+        yield 'a via value that only starts with rss' => ['https://example.com/a?via=rssfeed'];
+        yield 'a key without value' => ['https://example.com/a?ref'];
+    }
+
+    #[DataProvider('keysWithAnotherValue')]
+    public function testAKeyWithAnotherValueStays(string $url): void
+    {
+        self::assertSame($url, TrackingFreeUrl::of($url));
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function giftLinks(): iterable
+    {
+        yield 'nyt' => [
+            'https://www.nytimes.com/2026/a.html?unlocked_article_code=k&smid=url-share',
+            'https://www.nytimes.com/2026/a.html?unlocked_article_code=k',
+        ];
+        yield 'the atlantic' => [
+            'https://www.theatlantic.com/a/1/?gift=g&utm_source=copy-link&utm_medium=social',
+            'https://www.theatlantic.com/a/1/?gift=g',
+        ];
+        yield 'washington post' => [
+            'https://www.washingtonpost.com/a/?pwapi_token=t&utm_campaign=x',
+            'https://www.washingtonpost.com/a/?pwapi_token=t',
+        ];
+        yield 'bloomberg' => [
+            'https://www.bloomberg.com/news/a?accessToken=t&leadSource=uverify',
+            'https://www.bloomberg.com/news/a?accessToken=t&leadSource=uverify',
+        ];
+        yield 'ft' => [
+            'https://www.ft.com/content/1?accessToken=t&sharetype=gift&utm_source=x',
+            'https://www.ft.com/content/1?accessToken=t&sharetype=gift',
+        ];
+        yield 'wsj' => ['https://www.wsj.com/a?st=abc&mod=share', 'https://www.wsj.com/a?st=abc&mod=share'];
+        yield 'spiegel' => [
+            'https://www.spiegel.de/a?giftToken=g&sara_ref=re-so',
+            'https://www.spiegel.de/a?giftToken=g',
+        ];
+        yield 'generic' => [
+            'https://example.com/a?giftcode=1&gift_token=2&share_token=3&access_token=4&fbclid=5',
+            'https://example.com/a?giftcode=1&gift_token=2&share_token=3&access_token=4',
+        ];
+    }
+
+    #[DataProvider('giftLinks')]
+    public function testAGiftKeyIsNeverStripped(string $url, string $expected): void
+    {
+        self::assertSame($expected, TrackingFreeUrl::of($url));
+    }
+
     public function testKeptPairsKeepTheirOrderAndBytes(): void
     {
         self::assertSame(
@@ -243,6 +370,9 @@ final class TrackingFreeUrlTest extends TestCase
             self::fullyTrackedQueries(),
             self::misEscapedUrls(),
             self::sharedOnTheirHost(),
+            self::hostScopedTrackers(),
+            self::feedMarkers(),
+            self::giftLinks(),
         ];
         foreach ($providers as $examples) {
             foreach ($examples as [$url]) {
