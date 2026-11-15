@@ -16,9 +16,6 @@ final class CompoundParts
     /** @var array<int, array<int, true>> entry id => the stem ids of its compounds, for an entry holding any */
     private array $compoundsOf = [];
 
-    /** @var array<int, array<int, true>> a compound's stem id => the entries holding it */
-    private array $holdersOfCompound = [];
-
     /** @var array<int, array<int, true>> stem id => the entries holding it only as a part of their compounds */
     private array $partOnlyHoldersOf = [];
 
@@ -40,7 +37,6 @@ final class CompoundParts
         $compoundStemIds = array_keys(array_intersect_key(array_fill_keys($wordStemIds, true), $this->compoundStems));
         foreach ($compoundStemIds as $compoundStemId) {
             $this->compoundsOf[$entryId][$compoundStemId] = true;
-            $this->holdersOfCompound[$compoundStemId][$entryId] = true;
         }
         foreach (array_diff($stemIds, $wordStemIds) as $partStemId) {
             $this->partOnlyHoldersOf[$partStemId][$entryId] = true;
@@ -62,7 +58,12 @@ final class CompoundParts
         if (!isset($this->partOnlyHoldersOf[$partStemId])) {
             return $holders;
         }
-        $linked = array_diff_key($holders, $this->holdersOfAll($this->compoundsGiving($partStemId, $entryId)));
+        $compoundStemIds = $this->compoundsGiving($partStemId, $entryId);
+        $linked = $compoundStemIds === [] ? $holders : array_filter(
+            $holders,
+            fn (int $holderId): bool => !$this->holdsAll($holderId, $compoundStemIds),
+            \ARRAY_FILTER_USE_KEY,
+        );
         foreach (array_keys(array_intersect_key($linked, $this->partOnlyHoldersOf[$partStemId])) as $holderId) {
             if ($this->holdsAll($entryId, $this->compoundsGiving($partStemId, $holderId))) {
                 unset($linked[$holderId]);
@@ -80,21 +81,6 @@ final class CompoundParts
         }
 
         return array_intersect_key($this->compoundsOf[$entryId] ?? [], $this->compoundsWithPart[$partStemId]);
-    }
-
-    /**
-     * @param array<int, true> $compoundStemIds
-     *
-     * @return array<int, true> the entries holding every one of them
-     */
-    private function holdersOfAll(array $compoundStemIds): array
-    {
-        $holders = array_map(
-            fn (int $compoundStemId): array => $this->holdersOfCompound[$compoundStemId],
-            array_keys($compoundStemIds),
-        );
-
-        return $holders === [] ? [] : array_intersect_key(...$holders);
     }
 
     /** @param array<int, true> $compoundStemIds */

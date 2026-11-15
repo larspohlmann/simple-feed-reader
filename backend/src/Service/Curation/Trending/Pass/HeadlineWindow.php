@@ -52,8 +52,11 @@ final class HeadlineWindow
     /** @var array<string, int> language value => entries stemmed in it */
     private array $entriesByLanguage = [];
 
-    /** @var array<string, list<int>> language value and word => its stem id, then its parts' stem ids; none for a seed */
-    private array $stemIdsByWord = [];
+    /** @var array<string, ?int> language value and word => its stem id; null for a seed */
+    private array $stemIdByWord = [];
+
+    /** @var array<string, list<int>> language value and word => its parts' stem ids, for a compound */
+    private array $partStemIdsByWord = [];
 
     private readonly CompoundParts $compoundParts;
 
@@ -112,10 +115,10 @@ final class HeadlineWindow
                 $stemId,
                 $entryId,
             );
+            $rarity = $this->rarity($stemId);
             foreach ($holders as $earlierEntryId => $earlierPlaceWeight) {
                 $commonPlaceWeight = min($placeWeight, $earlierPlaceWeight);
-                $shared[$earlierEntryId] = ($shared[$earlierEntryId] ?? 0.0)
-                    + $commonPlaceWeight * $this->rarity($stemId);
+                $shared[$earlierEntryId] = ($shared[$earlierEntryId] ?? 0.0) + $commonPlaceWeight * $rarity;
                 if ($commonPlaceWeight === self::HEADLINE_WEIGHT) {
                     $sharingAHeadline[$earlierEntryId] = true;
                 }
@@ -140,40 +143,39 @@ final class HeadlineWindow
         $ids = [];
         $wordIds = [];
         foreach ($this->equivalents->wordsOf($text) as [$word, $bare]) {
-            $stemIds = $this->stemIdsOfWord($word, $bare, $language);
-            $wordIds += array_fill_keys(\array_slice($stemIds, 0, 1), true);
-            $ids += array_fill_keys($stemIds, true);
+            $key = $language?->value . ' ' . $word;
+            if (!\array_key_exists($key, $this->stemIdByWord)) {
+                $this->assignStemIds($key, $this->equivalents->wordStemsOf($word, $bare, $language), $language);
+            }
+            $stemId = $this->stemIdByWord[$key];
+            if (null !== $stemId) {
+                $wordIds[$stemId] = true;
+                $ids[$stemId] = true;
+                $ids += array_fill_keys($this->partStemIdsByWord[$key] ?? [], true);
+            }
         }
 
         return [array_keys($ids), array_keys($wordIds)];
     }
 
-    /** @return list<int> */
-    private function stemIdsOfWord(string $word, string $bare, ?FeedLanguage $language): array
-    {
-        return $this->stemIdsByWord[$language?->value . ' ' . $word] ??= $this->assignStemIds(
-            $this->equivalents->wordStemsOf($word, $bare, $language),
-            $language,
-        );
-    }
-
-    /**
-     * @param list<string> $stems the word's own stem, then its parts' stems
-     *
-     * @return list<int>
-     */
-    private function assignStemIds(array $stems, ?FeedLanguage $language): array
+    /** @param list<string> $stems the word's own stem, then its parts' stems */
+    private function assignStemIds(string $key, array $stems, ?FeedLanguage $language): void
     {
         if ($this->filler->isSeed($stems[0], $language)) {
-            return [];
+            $this->stemIdByWord[$key] = null;
+
+            return;
         }
         $ids = array_map(
             fn (string $stem): int => $this->stemIds[$stem] ??= \count($this->stemIds),
             array_values(array_filter($stems, fn (string $stem): bool => !$this->filler->isSeed($stem, $language))),
         );
-        $this->compoundParts->addCompound($ids[0], \array_slice($ids, 1));
-
-        return $ids;
+        $partIds = \array_slice($ids, 1);
+        $this->stemIdByWord[$key] = $ids[0];
+        if ($partIds !== []) {
+            $this->partStemIdsByWord[$key] = $partIds;
+        }
+        $this->compoundParts->addCompound($ids[0], $partIds);
     }
 
     /**
@@ -222,7 +224,11 @@ final class HeadlineWindow
         return $placed;
     }
 
-    /** @return array<int, float> earlier entry id => the stem's place weight there, filler for its feed left out */
+    /**
+     * Only for a stem placed in the later entry, so never one that is window filler.
+     *
+     * @return array<int, float> earlier entry id => the stem's place weight there, filler for its feed left out
+     */
     private function earlierHoldersOf(int $stemId, int $entryId): array
     {
         $holders = [];
@@ -230,7 +236,7 @@ final class HeadlineWindow
             if ($holderId >= $entryId) {
                 break;
             }
-            if (!$this->isFillerFor($holderId, $stemId)) {
+            if (!$this->isFeedFillerFor($holderId, $stemId)) {
                 $holders[$holderId] = self::BODY_WEIGHT;
             }
         }
@@ -238,7 +244,7 @@ final class HeadlineWindow
             if ($holderId >= $entryId) {
                 break;
             }
-            if (!$this->isFillerFor($holderId, $stemId)) {
+            if (!$this->isFeedFillerFor($holderId, $stemId)) {
                 $holders[$holderId] = self::HEADLINE_WEIGHT;
             }
         }
@@ -249,7 +255,12 @@ final class HeadlineWindow
     private function isFillerFor(int $entryId, int $stemId): bool
     {
         return $this->filler->isWindowFiller($this->documentFrequencies[$stemId], $this->entryCount())
-            || isset($this->feedFillerOf($this->feedOfEntry[$entryId])[$stemId]);
+            || $this->isFeedFillerFor($entryId, $stemId);
+    }
+
+    private function isFeedFillerFor(int $entryId, int $stemId): bool
+    {
+        return isset($this->feedFillerOf($this->feedOfEntry[$entryId])[$stemId]);
     }
 
     /** @return array<int, true> */
