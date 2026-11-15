@@ -21,6 +21,7 @@ import { sourceNameOf } from '../../entry/entry-source/source-name';
 import { EntryDuplicatesComponent } from './entry-duplicates.component';
 import { RenditionsDirective } from '../renditions.directive';
 import { MINI_CARD_THUMB_SIZES } from '../rendition-sizes';
+import { StorySharesComponent } from '../../trending/story-shares/story-shares.component';
 
 let nextId = 0;
 
@@ -33,6 +34,7 @@ let nextId = 0;
     IconComponent,
     EntryDuplicatesComponent,
     RenditionsDirective,
+    StorySharesComponent,
   ],
   templateUrl: './more-sources.component.html',
   styleUrl: './more-sources.component.scss',
@@ -62,6 +64,7 @@ export class MoreSourcesComponent {
       dek: entryDek(copy),
       picture: this.brokenThumbs().has(copy.id) ? null : copy.imageUrl,
       when: entryRelativeTime(copy, this.language.lang()),
+      shareCount: copy.shares?.length ?? 0,
     })),
   );
   protected readonly expanded = signal(false);

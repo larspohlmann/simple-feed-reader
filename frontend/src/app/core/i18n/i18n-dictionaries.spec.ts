@@ -75,8 +75,13 @@ describe('i18n dictionaries', () => {
       'reader.moreSources',
       'reader.moreSourcesOne',
       'reader.hideStory',
+      'reader.trendingShares',
+      'reader.trendingSharesOne',
+      'reader.sharedBy',
+      'reader.sharedByAndOne',
+      'reader.sharedByAndOthers',
     ].filter((key) => String(values.get(key) ?? '').trim() !== '');
 
-    expect(labels).toHaveLength(5);
+    expect(labels).toHaveLength(10);
   });
 });

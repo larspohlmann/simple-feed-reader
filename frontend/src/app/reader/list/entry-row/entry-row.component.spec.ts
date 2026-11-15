@@ -123,6 +123,23 @@ describe('EntryRowComponent', () => {
       expect(element.querySelector('.meta .sources')?.textContent?.trim()).toBe('7 sources');
     });
 
+    it('names who shared the lead article and how often the story was shared', () => {
+      const element = mount(
+        entry({
+          story: { outletCount: 7, viewed: false, shareCount: 2 },
+          shares: [
+            anEntry({ id: 8, poster: { name: 'Ann', url: null, imageUrl: null } }),
+            anEntry({ id: 9, poster: { name: 'Ben', url: null, imageUrl: null } }),
+          ],
+        }),
+      ).nativeElement as HTMLElement;
+
+      expect(element.querySelector('.meta')!.textContent).toContain('2 shares');
+      expect(element.querySelector('app-story-shares')!.textContent).toContain(
+        'Shared by Ann and Ben',
+      );
+    });
+
     it('drops the unread dot once another outlet was opened', () => {
       const opened = anEntry({ id: 5, isViewed: true });
       const element = mount(lead([opened])).nativeElement as HTMLElement;

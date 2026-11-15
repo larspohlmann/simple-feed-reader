@@ -1,3 +1,6 @@
+@if (entry().story) {
+  <app-story-shares [entry]="entry()" />
+}
 @if (copies().length && !entry().story) {
   <app-entry-duplicates [entry]="entry()" />
 } @else if (copies().length) {
@@ -56,6 +59,17 @@
                 />
                 <span class="feed">{{ source.feed }}</span>
                 <span class="when">· {{ source.when }}</span>
+                @if (source.shareCount) {
+                  <span class="shares-count"
+                    >·
+                    {{
+                      (source.shareCount === 1
+                        ? 'reader.trendingSharesOne'
+                        : 'reader.trendingShares'
+                      ) | transloco: { count: source.shareCount }
+                    }}</span
+                  >
+                }
               </span>
               <span class="title">{{ source.title }}</span>
               @if (source.dek) {

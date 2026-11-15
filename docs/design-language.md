@@ -1567,6 +1567,15 @@ Any other entry with duplicates — the same post in several feeds — renders
 
 **Not for:** the list view, whose `entry-row` renders `<app-entry-duplicates>` directly.
 
+### `<app-story-shares>`
+
+A Trending article's sharers (#2229): one `--fs-xs` line in `--text-secondary`, "Shared by Ann, Ben and 3 others" —
+the two newest posters by name, the rest counted, two alone joined in the reader's language (`Intl.ListFormat`). It
+opens in place into one `--surface-sunken` button per sharing post, poster above two clamped lines of its text, which
+opens the post. Posts are never rows of a story; the attribution line counts them as "· N shares" beside the sources,
+and a mini card of another article names its share count in its byline. A story no followed outlet carries is headed
+by the shared card itself: `app-entry-link` drops the post's text above it.
+
 ---
 
 ### `<app-thread-line>`, `<app-thread-line-post>`, `<app-thread-count>`

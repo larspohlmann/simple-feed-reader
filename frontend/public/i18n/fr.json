@@ -1307,6 +1307,11 @@
     "trending": "Tendances",
     "alsoCoveredBy": "Aussi couvert par",
     "trendingSources": "{{count}} sources",
+    "trendingShares": "{{count}} partages",
+    "trendingSharesOne": "1 partage",
+    "sharedBy": "Partagé par {{names}}",
+    "sharedByAndOne": "Partagé par {{names}} et une autre personne",
+    "sharedByAndOthers": "Partagé par {{names}} et {{count}} autres personnes",
     "trendingWindow": {
       "label": "Période",
       "day": "24 h",

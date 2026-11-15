@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed } from '@angular/core';
 import { EntryKickerLineComponent } from '../../entry-kicker-line.component';
 import { EntryMetaComponent } from '../../../entry-meta/entry-meta.component';
 import { MoreSourcesComponent } from '../../more-sources.component';
@@ -21,4 +21,9 @@ import { OpensEntryDirective } from '../../../opens-entry.directive';
   templateUrl: './entry-link.component.html',
   styleUrl: './entry-link.component.scss',
 })
-export class EntryLinkComponent extends EntryBlockBase {}
+export class EntryLinkComponent extends EntryBlockBase {
+  /** A Trending row no followed outlet carries is the article its posts share: the card heads it (#2229). */
+  protected readonly ledByItsCard = computed(
+    () => !!this.entry().story && this.isPost() && (this.entry().shares?.length ?? 0) > 0,
+  );
+}
