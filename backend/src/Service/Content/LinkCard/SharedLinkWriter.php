@@ -51,10 +51,11 @@ final readonly class SharedLinkWriter
         $ids = $this->sharedLinks->idsByUrlHash(array_keys($cardsByHash));
         $missing = array_diff_key($cardsByHash, $ids);
         if ($missing !== []) {
-            $this->sharedLinks->insertMissing(array_values(array_map(
-                fn (LinkCardContent $card): NewSharedLinkModel => $this->newLink($this->hashOf($card->url), $card, null),
-                $missing,
-            )));
+            $newLinks = [];
+            foreach ($missing as $urlHash => $card) {
+                $newLinks[] = $this->newLink($urlHash, $card, null);
+            }
+            $this->sharedLinks->insertMissing($newLinks);
             $ids += $this->sharedLinks->idsByUrlHash(array_keys($missing));
         }
 
