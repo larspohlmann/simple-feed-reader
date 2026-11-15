@@ -7,12 +7,11 @@ namespace App\Service\Curation\Trending;
 use App\Enum\TrendingWindow;
 use App\Repository\TrendingEntryRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
-use App\Service\Curation\Trending\Model\SharedArticleModel;
 use App\Service\Curation\Trending\Model\TrendingStoryModel;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Service\Curation\Trending\Pass\HeadlineWindow;
+use App\Service\Curation\Trending\Pass\SharedArticles;
 use App\Service\Curation\Trending\Pass\TrendingRun;
-use App\Service\Curation\Trending\Support\EntryText;
 use App\Service\Foundation\Url\UrlNormalizer;
 
 /** Reads one window's entries and groups them into stories, in memory; writing them is the builder's (#2017). */
@@ -34,8 +33,9 @@ final readonly class TrendingGrouping
     {
         $run = new TrendingRun($window, new HeadlineWindow($this->filler, $this->equivalents));
         $since = $window->startBefore($this->clock->now());
+        $sharedArticles = new SharedArticles($this->cardLanguage);
         foreach ($this->windowEntries->windowEntries($since) as $entry) {
-            $run->add($entry, $this->urlHashesOf($entry), $this->sharedArticleOf($entry));
+            $run->add($entry, $this->urlHashesOf($entry), $sharedArticles->of($entry));
         }
 
         return $run;
@@ -66,21 +66,6 @@ final readonly class TrendingGrouping
             [$entry->links->urlHash, $this->urlNormalizer->hash($entry->links->card?->url)],
             static fn (?string $urlHash): bool => $urlHash !== null,
         )));
-    }
-
-    private function sharedArticleOf(WindowEntryModel $entry): ?SharedArticleModel
-    {
-        $card = $entry->links->storyCard();
-        if ($card === null) {
-            return null;
-        }
-        $body = EntryText::body($card->description);
-
-        return new SharedArticleModel(
-            $card->title,
-            $body,
-            $this->cardLanguage->of($card->title . "\n" . $body, $entry->language),
-        );
     }
 
     /** @param non-empty-list<int> $entryIds */
