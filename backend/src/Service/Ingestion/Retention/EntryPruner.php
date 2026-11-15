@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Service\Ingestion\Retention;
 
 use App\Repository\RetentionRepository;
+use App\Repository\SharedLinkRepository;
 use App\Service\Library\Search\EntryIndexer;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * Four passes: entries fetched before their retention window (a social network's feeds have their own), a feed's
- * entries beyond its cap, a saved feed's entries nobody flags any more, then completed runs left empty.
+ * Five passes: entries fetched before their retention window (a social network's feeds have their own), a feed's
+ * entries beyond its cap, a saved feed's entries nobody flags any more, then the shared links no card or quote uses
+ * any more, and completed runs left empty.
  * Age counts from the fetch (`createdAt`), never `effectiveDate`: a backfilled article was re-added forever (#384).
  */
 final readonly class EntryPruner
@@ -20,11 +22,14 @@ final readonly class EntryPruner
     /** A floor, not a skip: both passes keep a feed's newest 20, however old. */
     private const int MIN_ENTRIES_PER_FEED = 20;
 
+    private const int LINK_GRACE_DAYS = 1;
+
     public function __construct(
         private RetentionRepository $retention,
         private RetentionSettings $settings,
         private ClockInterface $clock,
         private EntryIndexer $indexer,
+        private SharedLinkRepository $sharedLinks,
         private int $maxEntriesPerFeed = self::DEFAULT_MAX_ENTRIES_PER_FEED,
     ) {
     }
@@ -37,6 +42,7 @@ final readonly class EntryPruner
     public function prune(): int
     {
         $deletedEntries = $this->pruneByAge() + $this->pruneByFeedCap() + $this->pruneUnsaved();
+        $this->sharedLinks->deleteUnreferencedCreatedBefore($this->daysAgo(self::LINK_GRACE_DAYS));
         $this->retention->deleteEmptyCompletedRuns();
 
         return $deletedEntries;

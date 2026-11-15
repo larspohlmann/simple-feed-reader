@@ -9,6 +9,7 @@ use App\Entity\Feed;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 use App\Entity\LinkLanguage;
+use App\Entity\QuotedPostContent;
 use App\Entity\SharedLink;
 use App\Enum\FeedLanguage;
 use App\Repository\SharedLinkRepository;
@@ -101,6 +102,39 @@ final class SharedLinkRepositoryTest extends DbTestCase
         );
     }
 
+    public function testUnreferencedRowsPastTheGraceAreDeleted(): void
+    {
+        $links = $this->repository();
+        $links->insertMissing([
+            self::linkCreated('carded', '2026-11-13 10:00:00'),
+            self::linkCreated('quoted', '2026-11-13 10:00:00'),
+            self::linkCreated('stale', '2026-11-13 10:00:00'),
+            self::linkCreated('fresh', '2026-11-15 09:00:00'),
+        ]);
+        $stored = $links->byUrlHashes(['carded', 'quoted']);
+        $entry = $this->entry('referencing');
+        $entry->shareQuotedPost(
+            new QuotedPostContent('https://q.example/1', 'Q', 'q.example', null, null, '', [], null),
+            $stored['quoted'],
+        );
+        $this->entityManager->persist(new LinkCard($entry, 0, $stored['carded']));
+        $this->entityManager->flush();
+
+        $deleted = $links->deleteUnreferencedCreatedBefore(new \DateTimeImmutable('2026-11-14 10:00:00'));
+
+        self::assertSame(1, $deleted);
+        self::assertSame(['carded', 'fresh', 'quoted'], $this->storedHashes());
+    }
+
+    public function testTheGraceBoundaryIsExclusive(): void
+    {
+        $this->repository()->insertMissing([self::linkCreated('edge', '2026-11-14 10:00:00')]);
+
+        $deleted = $this->repository()->deleteUnreferencedCreatedBefore(new \DateTimeImmutable('2026-11-14 10:00:00'));
+
+        self::assertSame(0, $deleted);
+    }
+
     private static function newLink(string $hash, string $title): NewSharedLinkModel
     {
         return new NewSharedLinkModel(
@@ -109,6 +143,40 @@ final class SharedLinkRepositoryTest extends DbTestCase
             null,
             new \DateTimeImmutable('2026-11-15 10:00:00'),
         );
+    }
+
+    private static function linkCreated(string $hash, string $createdAt): NewSharedLinkModel
+    {
+        return new NewSharedLinkModel(
+            $hash,
+            new LinkCardContent('https://example.com/' . $hash, $hash, null, null, 'example.com'),
+            null,
+            new \DateTimeImmutable($createdAt),
+        );
+    }
+
+    private function entry(string $guid): Entry
+    {
+        $feed = new Feed('https://example.com/' . $guid . '.rss');
+        $entry = new Entry(
+            $feed,
+            $guid,
+            null,
+            'Post',
+            new \DateTimeImmutable('2026-11-15 10:00:00'),
+            new \DateTimeImmutable('2026-11-15 10:00:00'),
+        );
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist($entry);
+
+        return $entry;
+    }
+
+    /** @return list<mixed> */
+    private function storedHashes(): array
+    {
+        return $this->entityManager->getConnection()
+            ->fetchFirstColumn('SELECT url_hash FROM shared_link ORDER BY url_hash');
     }
 
     private function storedRows(): int

@@ -20,6 +20,7 @@ use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\SubscriptionHistoryFixtures;
 use Symfony\Component\Clock\MockClock;
+use App\Tests\Support\PostEnrichers;
 
 /** Pruning itself, and recording before it, are pinned by RefreshRunnerTest against a whole run. */
 final class RefreshHousekeepingTest extends DbTestCase
@@ -124,6 +125,7 @@ final class RefreshHousekeepingTest extends DbTestCase
                 $this->retentionSettings(),
                 new MockClock(self::NOW, 'UTC'),
                 EntryIndexers::with(new RecordingSearchIndexWriter()),
+                PostEnrichers::sharedLinks($this->entityManager),
             ),
             $this->historyWiring(self::NOW)->recorder(),
             $this->logger,

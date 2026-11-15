@@ -208,10 +208,23 @@ final readonly class RefreshRunners
     {
         $retention = new RetentionRepository($this->entityManager, new RowIds($this->entityManager));
         if ($this->maxEntriesPerFeed === null) {
-            return new EntryPruner($retention, $settings, $this->clock, $indexer);
+            return new EntryPruner(
+                $retention,
+                $settings,
+                $this->clock,
+                $indexer,
+                PostEnrichers::sharedLinks($this->entityManager),
+            );
         }
 
-        return new EntryPruner($retention, $settings, $this->clock, $indexer, $this->maxEntriesPerFeed);
+        return new EntryPruner(
+            $retention,
+            $settings,
+            $this->clock,
+            $indexer,
+            PostEnrichers::sharedLinks($this->entityManager),
+            $this->maxEntriesPerFeed,
+        );
     }
 
     /** The keys the container's tagged locator carries; FeedBodyParserWiringTest proves the container routes alike. */

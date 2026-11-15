@@ -90,6 +90,17 @@ final class SharedLinkRepository extends ServiceEntityRepository
         )->rows($connection, array_map(self::rowOf(...), $links));
     }
 
+    /** A row no card and no quote references any more, and created before $before, the grace a writer's flush needs. */
+    public function deleteUnreferencedCreatedBefore(\DateTimeImmutable $before): int
+    {
+        return (int) $this->getEntityManager()->getConnection()->executeStatement(
+            'DELETE FROM shared_link WHERE created_at < ?'
+            . ' AND NOT EXISTS (SELECT 1 FROM link_card card WHERE card.shared_link_id = shared_link.id)'
+            . ' AND NOT EXISTS (SELECT 1 FROM entry quoting WHERE quoting.quoted_shared_link_id = shared_link.id)',
+            [$before->format('Y-m-d H:i:s')],
+        );
+    }
+
     /** @return array<int, string> by shared link id */
     public function urlsAfterId(int $afterId, int $limit): array
     {
