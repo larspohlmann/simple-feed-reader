@@ -11,6 +11,8 @@ use App\Enum\FeedLanguage;
 use App\Enum\SourceFormat;
 use App\Service\Ingestion\Ingest\EntryIngestor;
 use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
+use App\Service\Ingestion\Language\Factory\LanguageDetectionFactory;
+use App\Service\Ingestion\Language\LanguageGuess;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
 use App\Tests\DbTestCase;
@@ -19,6 +21,8 @@ final class SocialEntryLanguageWiringTest extends DbTestCase
 {
     public function testTheContainersIngestorStoresAShortEnglishPostTheDetectorReadsAsInterlinguaAsEnglish(): void
     {
+        $detector = new LanguageGuess(new LanguageDetectionFactory()->create());
+        self::assertNull($detector->bestFor("…\nPalantir exec nominated to lead CISA"));
         $ingestor = self::getContainer()->get(EntryIngestor::class);
         self::assertInstanceOf(EntryIngestor::class, $ingestor);
         $feed = new Feed('https://bsky.app/profile/news.example');

@@ -62,6 +62,12 @@ final class StopWordVoteTest extends TestCase
         self::assertSame(FeedLanguage::English, self::vote('share AI generated memes with the team'));
     }
 
+    public function testAWordInAccentedCapitalsDoesNotVote(): void
+    {
+        self::assertSame(FeedLanguage::English, self::vote('ÜBER the house'));
+        self::assertSame(FeedLanguage::English, self::vote("U\u{0308}BER the house"));
+    }
+
     public function testAShoutedTextHasNoVote(): void
     {
         self::assertNull(self::vote('AUS DEM ARCHIV'));

@@ -6,7 +6,7 @@ namespace App\Service\Foundation\Text\Support;
 
 final class CasefoldedWords
 {
-    /** @return list<string> casefolded, diacritics kept: the Snowball stemmers read them */
+    /** @return list<string> casefolded, diacritics kept */
     public static function of(string $text): array
     {
         $folded = mb_convert_case($text, \MB_CASE_FOLD, 'UTF-8');
