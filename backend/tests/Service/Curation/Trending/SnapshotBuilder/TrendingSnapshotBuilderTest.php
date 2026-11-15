@@ -86,6 +86,11 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
 
         self::assertSame(1, $report->storyCount);
         self::assertSame(4, $this->memberCount());
+        self::assertSame(
+            ['news.example.com'],
+            $this->entityManager->getConnection()
+                ->fetchFirstColumn('SELECT DISTINCT article_site FROM trending_story_entry'),
+        );
     }
 
     public function testRebuildingTheDayLeavesTheWeekAlone(): void

@@ -25,11 +25,16 @@ final class TrendingStoryEntry
     #[ORM\Column(name: 'feed_id')]
     public readonly int $feedId;
 
+    /** The host of the article the entry is or shares; null for a post whose card names no story. */
+    #[ORM\Column(name: 'article_site', length: 255, nullable: true)]
+    public readonly ?string $articleSite;
+
     /** @noinspection AutowireWrongClass Built with new, never autowired */
-    public function __construct(TrendingStory $story, Entry $entry)
+    public function __construct(TrendingStory $story, Entry $entry, ?string $articleSite)
     {
         $this->story = $story;
         $this->entry = $entry;
         $this->feedId = $entry->getFeed()->requireId();
+        $this->articleSite = $articleSite;
     }
 }

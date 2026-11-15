@@ -110,6 +110,43 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
         self::assertSame('2031-05-14 09:00:00', $row['last_seen']);
     }
 
+    public function testEachMemberKeepsItsArticleSite(): void
+    {
+        [$one, $two] = $this->twoEntries();
+        $three = $this->thirdEntry();
+        $story = new TrendingStoryModel(
+            [
+                new StoryMemberModel($one, 101, 'outlet.example'),
+                new StoryMemberModel($two, 202, 'shared.example'),
+                new StoryMemberModel($three, 303, null),
+            ],
+            self::utc('2031-05-14 08:00:00'),
+            self::utc('2031-05-14 09:00:00'),
+        );
+
+        $this->replace(self::report(TrendingWindow::Day, 1), [$story]);
+
+        self::assertSame(
+            [[$one, 'outlet.example'], [$two, 'shared.example'], [$three, null]],
+            $this->storedSites(),
+        );
+    }
+
+    public function testASiteLongerThanTheColumnIsCut(): void
+    {
+        [$one, $two] = $this->twoEntries();
+        $longSite = str_repeat('a', 250) . '.example';
+        $story = new TrendingStoryModel(
+            [new StoryMemberModel($one, 101, $longSite), new StoryMemberModel($two, 202, null)],
+            self::utc('2031-05-14 08:00:00'),
+            self::utc('2031-05-14 09:00:00'),
+        );
+
+        $this->replace(self::report(TrendingWindow::Day, 1), [$story]);
+
+        self::assertSame(mb_substr($longSite, 0, 255), $this->storedSites()[0][1]);
+    }
+
     public function testDurationsAreReadBackPerWindow(): void
     {
         $this->replace(self::report(TrendingWindow::Week, 0), []);
@@ -141,6 +178,29 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
         $fixtures->flush();
 
         return [$one->requireId(), $two->requireId()];
+    }
+
+    private function thirdEntry(): int
+    {
+        $fixtures = new TrendingFixtures($this->entityManager);
+        $three = $fixtures->entry($fixtures->feed('three'), 'Three', '2031-05-14 09:30:00');
+        $fixtures->flush();
+
+        return $three->requireId();
+    }
+
+    /** @return list<array{int, ?string}> */
+    private function storedSites(): array
+    {
+        /** @var list<array{entry_id: int|string, article_site: string|null}> $rows */
+        $rows = $this->entityManager->getConnection()->fetchAllAssociative(
+            'SELECT entry_id, article_site FROM trending_story_entry ORDER BY entry_id',
+        );
+
+        return array_map(
+            static fn (array $row): array => [(int) $row['entry_id'], $row['article_site']],
+            $rows,
+        );
     }
 
     private static function story(int $one, int $two): TrendingStoryModel

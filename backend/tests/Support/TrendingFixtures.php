@@ -113,7 +113,7 @@ final readonly class TrendingFixtures
         );
         $this->entityManager->persist($story);
         foreach ($members as $member) {
-            $this->entityManager->persist(new TrendingStoryEntry($story, $member));
+            $this->entityManager->persist(new TrendingStoryEntry($story, $member, null));
         }
         $this->entityManager->flush();
 

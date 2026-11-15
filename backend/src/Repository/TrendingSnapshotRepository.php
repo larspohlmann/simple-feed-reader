@@ -22,8 +22,10 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 final class TrendingSnapshotRepository extends ServiceEntityRepository
 {
-    /** Rows per INSERT: 3 placeholders each, kept under SQLite's historical 999. */
-    private const int INSERT_ROWS = 300;
+    /** Rows per INSERT: 4 placeholders each, kept under SQLite's historical 999. */
+    private const int INSERT_ROWS = 240;
+
+    private const int SITE_LENGTH = 255;
 
     public function __construct(ManagerRegistry $registry)
     {
@@ -84,10 +86,18 @@ final class TrendingSnapshotRepository extends ServiceEntityRepository
             'outlet_count' => $story->outletCount(),
         ]);
         $storyId = (int) $connection->lastInsertId();
-        BulkInsert::into('INSERT INTO trending_story_entry (story_id, entry_id, feed_id)', self::INSERT_ROWS)->rows(
+        BulkInsert::into(
+            'INSERT INTO trending_story_entry (story_id, entry_id, feed_id, article_site)',
+            self::INSERT_ROWS,
+        )->rows(
             $connection,
             array_map(
-                static fn (StoryMemberModel $member): array => [$storyId, $member->entryId, $member->feedId],
+                static fn (StoryMemberModel $member): array => [
+                    $storyId,
+                    $member->entryId,
+                    $member->feedId,
+                    $member->articleSite === null ? null : mb_substr($member->articleSite, 0, self::SITE_LENGTH),
+                ],
                 $story->members,
             ),
         );
