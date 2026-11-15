@@ -10,7 +10,7 @@ final readonly class SharedLinksModel
 {
     /**
      * @param list<string>          $urls        in post order, each once
-     * @param array<string, string> $postedForms each tracked URL's href as posted, by its tracking-free URL
+     * @param array<string, string> $postedForms the posted href of each link that lost an undocumented key
      */
     public function __construct(
         public array $urls,

@@ -233,28 +233,37 @@ final class ShareLinkCardsTest extends DbTestCase
 
     public function testATrackedLinkIsAlsoReadAsPostedAndTheBudgetCountsIt(): void
     {
-        $tracked = $this->queuedPost(1, '<p>https://example.com/1/1?utm_source=x</p>');
+        $tracked = $this->queuedPost(1, '<p>https://example.com/1/1?ref=rss</p>');
         $next = $this->queuedPost(2, self::sharing(2, 4));
 
         $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
 
-        self::assertSame(['https://example.com/1/1', 'https://example.com/1/1?utm_source=x'], $this->pages->readUrls());
+        self::assertSame(['https://example.com/1/1', 'https://example.com/1/1?ref=rss'], $this->pages->readUrls());
         self::assertSame(['Card for https://example.com/1/1'], $this->cardTitles($tracked));
         self::assertSame([], $this->cardTitles($next));
     }
 
+    public function testALinkThatLostOnlyDocumentedTrackersIsReadOnce(): void
+    {
+        $this->queuedPost(1, '<p>https://example.com/1/1?utm_source=x&amp;gclid=2</p>');
+
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
+
+        self::assertSame(['https://example.com/1/1'], $this->pages->readUrls());
+    }
+
     public function testABudgetWithRoomForExactlyTheSecondReadSpendsIt(): void
     {
-        $this->queuedPost(1, '<p>https://example.com/1/1?utm_source=x</p>');
+        $this->queuedPost(1, '<p>https://example.com/1/1?ref=rss</p>');
 
         $this->shareLinkCards->complete($this->claimable(), LinkCardBudgetModel::fetches(2));
 
-        self::assertSame(['https://example.com/1/1', 'https://example.com/1/1?utm_source=x'], $this->pages->readUrls());
+        self::assertSame(['https://example.com/1/1', 'https://example.com/1/1?ref=rss'], $this->pages->readUrls());
     }
 
     public function testWithoutRoomForTheSecondReadTheCleanedUrlIsTrusted(): void
     {
-        $this->queuedPost(1, '<p>https://example.com/1/1?utm_source=x</p>');
+        $this->queuedPost(1, '<p>https://example.com/1/1?ref=rss</p>');
 
         $this->shareLinkCards->complete($this->claimable(), LinkCardBudgetModel::fetches(1));
 

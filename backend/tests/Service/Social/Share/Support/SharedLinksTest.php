@@ -118,15 +118,24 @@ final class SharedLinksTest extends TestCase
         self::assertSame(['https://example.com/a'], SharedLinks::of($body)->urls);
     }
 
-    public function testATrackedLinkRemembersHowItWasPosted(): void
+    public function testALinkThatLostAnUndocumentedKeyRemembersHowItWasPosted(): void
     {
-        $body = '<p><a href="https://example.com/a?utm_source=x">https://example.com/a?utm_source=x</a>'
+        $body = '<p><a href="https://example.com/a?ref=rss">https://example.com/a?ref=rss</a>'
             . ' https://example.com/b</p>';
 
         self::assertSame(
-            ['https://example.com/a' => 'https://example.com/a?utm_source=x'],
+            ['https://example.com/a' => 'https://example.com/a?ref=rss'],
             SharedLinks::of($body)->postedForms,
         );
+    }
+
+    public function testALinkThatLostOnlyDocumentedTrackersNeedsNoCheck(): void
+    {
+        $posted = 'https://example.com/a?utm_source=x&amp;fbclid=1';
+        $body = '<p><a href="' . $posted . '">' . $posted . '</a></p>';
+
+        self::assertSame(['https://example.com/a'], SharedLinks::of($body)->urls);
+        self::assertSame([], SharedLinks::of($body)->postedForms);
     }
 
     public function testLinksABareUrlAndKeepsPunctuationOutside(): void

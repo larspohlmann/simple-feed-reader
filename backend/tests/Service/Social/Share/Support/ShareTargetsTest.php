@@ -58,7 +58,7 @@ final class ShareTargetsTest extends TestCase
         $entry = self::trackedPost();
 
         self::assertSame(
-            ['https://a.example/1' => 'https://a.example/1?utm_source=x'],
+            ['https://a.example/1' => 'https://a.example/1?ref=rss'],
             ShareTargets::postedFormsOf($entry, ['https://a.example/1', 'https://b.example/2']),
         );
         self::assertSame([], ShareTargets::postedFormsOf($entry, ['https://b.example/2']));
@@ -68,7 +68,7 @@ final class ShareTargetsTest extends TestCase
     {
         self::assertSame(
             ['https://b.example/2'],
-            ShareTargets::uncardedOf(self::trackedPost(), ['https://a.example/1?utm_source=x']),
+            ShareTargets::uncardedOf(self::trackedPost(), ['https://a.example/1?ref=rss']),
         );
     }
 
@@ -82,7 +82,7 @@ final class ShareTargetsTest extends TestCase
         $entry = self::titledShare();
         $entry->setHeadline(Headline::derived('A real headline'));
         $entry->recordText($entry->getText()->withContentHtml(
-            '<p><a href="https://a.example/1?utm_source=x">https://a.example/1?utm_source=x</a> '
+            '<p><a href="https://a.example/1?ref=rss">https://a.example/1?ref=rss</a> '
             . '<a href="https://b.example/2">https://b.example/2</a></p>',
         ));
 

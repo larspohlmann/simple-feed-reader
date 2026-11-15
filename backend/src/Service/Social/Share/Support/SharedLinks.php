@@ -39,8 +39,7 @@ final class SharedLinks
             OwnProse::of($document->body),
             array_filter(
                 array_intersect_key($postedForms, array_flip($urls)),
-                static fn (string $posted, string $url): bool => $posted !== $url,
-                \ARRAY_FILTER_USE_BOTH,
+                TrackingFreeUrl::stripsAnUndocumentedKey(...),
             ),
         );
     }

@@ -158,27 +158,39 @@ Nothing else writes an article URL into an entry. `E2eSeedAdminSubscriptionComma
 Lars (verbatim): "to be safe you could compare the response of the link with parameters to the response with
 stripped parameters during link-card creation".
 
+Lars (verbatim, on checking only undocumented keys): "yes, skip the comparison for documented trackers".
+
 - Ruling: only the share link-card sweep checks (`ShareLinkCards` → `ShareTargetReader` → `PostedUrlCheck`), and
-  only for a link whose posted href lost something to the cleaner (`SharedLinksModel::$postedForms`). Cards that
-  come in a network payload, titled shares (their entry URL was cleaned at ingest) and RSS ingest fetch nothing
-  extra and stay trust-based. Cost if wrong: a wrongly stripped key there goes unnoticed.
+  only for a link whose posted href lost a key no vendor documents: one of the undocumented everywhere-tier keys, a
+  host-scoped key (YouTube, Spotify, NYT, Substack, X, Instagram) or a value-scoped feed marker
+  (`TrackingFreeUrl::stripsAnUndocumentedKey()`, which `SharedLinksModel::$postedForms` filters by). A link that
+  lost only documented vendor keys (`utm_*` and the other prefixes, the click ids, the cited table) is stored
+  cleaned with no second read. Cards that come in a network payload, titled shares (their entry URL was cleaned at
+  ingest) and RSS ingest fetch nothing extra and stay trust-based. Cost if wrong: a wrongly stripped key there, or
+  a documented key that names a page after all, goes unnoticed.
 - Ruling: the cleaned URL is read first, the posted href second, both through `PageCardReader` (the same outbound
   client, SSRF boundary and timeouts). Two pages are the same when their titles (`og:title`, `twitter:title`, else
   `<title>`) match and either their tracking-free final URLs or their canonical URLs (`<link rel="canonical">`,
   else `og:url`) match. Bodies are not compared. Cost if wrong: a site that varies its title per visit keeps its
   posted URL.
 - Ruling: same page → the cleaned URL is stored. Another page, or the cleaned URL fails while the posted one is
-  read → the posted href is stored as is, with the posted page's card, and one info line logs the host and the
-  stripped keys. The posted URL failing, or a file (no page identity), trusts the cleaner. Nothing is learned or
+  read → the posted href is stored as is, with the posted page's card, and one info line logs the host, the
+  stripped keys and which of the two it was ("showed another page" or "the cleaned URL failed"). The posted URL failing, or a file (no page identity), trusts the cleaner. Nothing is learned or
   stored besides the card. Cost if wrong: none to data; the log is the only trace.
 - Ruling: each check is one more fetch against `LinkCardBudgetModel`; a row's check is dropped when the budget has
   no room left for it, and the row is carded on its cleaned URLs. A stored posted-form card still cards its link,
   because `ShareTargets::uncardedOf()` compares carded URLs tracking-free.
 - Ruling: `app:urls:clean-tracking` cleans every card URL, a kept posted form included; it is a one-off run after
   the deploy, so only cards kept before it are affected. Cost if wrong: such a card loses its posted key again.
+- Ruling: a kept posted URL still hashes as its cleaned form, because `UrlNormalizer::hash()` strips the same key
+  again, so Trending groups it with the cleaned page's entries. Accepted: the check protects the link the reader
+  clicks, not grouping; no such case is known, and folding it into the hash would need a learned per-host exception.
+  Cost if wrong: one card grouped with a page the check called different.
 - Measured (dev copy `feedreader_2237_uncleaned`, read-only): the 1,708 link-card rows queued in the week before
-  2026-11-15 12:00 hold 1,931 page fetches; 108 of them (5.6 %) carry a stripped key and would be checked, mostly
-  heise (`wt_mc`, 60), Substack (15), mathrubhumi (6), Instagram (4), NYT, Ars Technica (3 each).
+  2026-11-15 12:00 hold 1,931 page fetches. 108 of them (5.6 %) carry a stripped key, mostly heise (`wt_mc`, 60),
+  Substack (15), mathrubhumi (6), Instagram (4), NYT, Ars Technica (3 each). Only 13 (0.7 %) lost an undocumented
+  key and are checked: NYT `smid` (3), YouTube `si` (3), Instagram `rpxt`/`exln`/`srtk` (4), X `s`, Substack `r`,
+  beehiiv `_bhlid` (1 each).
 
 ### Existing data: `app:urls:clean-tracking`
 
