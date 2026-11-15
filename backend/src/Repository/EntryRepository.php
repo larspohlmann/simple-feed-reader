@@ -126,8 +126,7 @@ final class EntryRepository extends ServiceEntityRepository implements RestoreEn
     public function forFeedAfterId(int $feedId, int $afterId, int $limit): array
     {
         /** @var list<Entry> $entries */
-        $entries = $this->createQueryBuilder('e')
-            ->leftJoin('e.quotedLink', 'quotedLink')->addSelect('quotedLink')
+        $entries = QuotedLinkJoin::onto($this->createQueryBuilder('e'), 'e')
             ->andWhere('e.feed = :feed')
             ->andWhere('e.id > :afterId')
             ->setParameter('feed', $feedId)
