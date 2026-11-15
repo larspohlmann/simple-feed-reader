@@ -26,14 +26,14 @@ final readonly class LinkResolutionReportModel
     #[\NoDiscard]
     public function counted(LinkLandingModel $landing, float $seconds): self
     {
-        return new self(
-            $this->considered + 1,
-            $this->resolved + (int) ($landing->resolution === LinkResolution::Resolved),
-            $this->unchanged + (int) ($landing->resolution === LinkResolution::Unchanged),
-            $this->unresolved + (int) ($landing->resolution === LinkResolution::Unresolved),
-            $this->deferred + (int) $landing->isRetryable(),
-            $this->seconds + $seconds,
-        );
+        return $this->plus(new self(
+            1,
+            (int) ($landing->resolution === LinkResolution::Resolved),
+            (int) ($landing->resolution === LinkResolution::Unchanged),
+            (int) ($landing->resolution === LinkResolution::Unresolved),
+            (int) $landing->isRetryable(),
+            $seconds,
+        ));
     }
 
     #[\NoDiscard]
