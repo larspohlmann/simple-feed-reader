@@ -30,15 +30,6 @@ final class TrendingStoryRepository extends ServiceEntityRepository
         'shorterWindowStoryIds' => ArrayParameterType::INTEGER,
     ];
 
-    /**
-     * At least the reader's threshold of their feeds took part (social ones count), and two article feeds or two
-     * distinct article sites, a post's counting through the story card it shares.
-     */
-    private const string VISIBLE_COVERAGE = ' GROUP BY story.id, story.last_seen'
-        . ' HAVING COUNT(DISTINCT story_member.feed_id) >= :minimum'
-        . ' AND (COUNT(DISTINCT CASE WHEN member_feed.network IS NULL THEN story_member.feed_id END)'
-        . ' >= :minimumArticleSources'
-        . ' OR COUNT(DISTINCT story_member.article_site) >= :minimumArticleSources)';
 
     public function __construct(ManagerRegistry $registry)
     {
@@ -59,7 +50,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             . ' JOIN trending_hidden_entry hidden'
             . ' ON hidden.entry_id = hidden_member.entry_id AND hidden.user_id = :user'
             . ' WHERE hidden_member.story_id = story.id)'
-            . self::VISIBLE_COVERAGE
+            . self::visibleCoverage()
             . \sprintf(' ORDER BY outlet_count DESC, story.last_seen DESC, story.id DESC LIMIT %d', $limit),
             self::visibilityParameters($reader),
             self::VISIBILITY_TYPES,
@@ -87,7 +78,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             . ' JOIN subscription asker ON asker.feed_id = asked.feed_id AND asker.user_id = :user'
             . ' AND ' . TrendingInclusionSql::includes('asker')
             . ' WHERE asked.story_id = story.id AND asked.entry_id = :entry)'
-            . self::VISIBLE_COVERAGE,
+            . self::visibleCoverage(),
             [...self::visibilityParameters($reader), 'entry' => $entryId],
             [...self::VISIBILITY_TYPES, 'entry' => ParameterType::INTEGER],
         );
@@ -158,12 +149,12 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     /**
      * The window's stories, counting only feeds the reader follows in Trending and an article or a post once,
      * leaving out any sharing an entry with a story the reader is shown in a shorter window; an `AND` on `story`, then
-     * VISIBLE_COVERAGE. An empty id list expands to `IN (NULL)`, which leaves nothing out.
+     * visibleCoverage(). An empty id list expands to `IN (NULL)`, which leaves nothing out.
      */
     private static function visibleStories(): string
     {
         return 'SELECT story.id AS story_id, story.last_seen,'
-            . ' COUNT(DISTINCT story_member.feed_id) AS outlet_count'
+            . ' ' . self::sources() . ' AS outlet_count'
             . ' FROM trending_story story'
             . ' JOIN trending_story_entry story_member ON story_member.story_id = story.id'
             . ' JOIN feed member_feed ON member_feed.id = story_member.feed_id'
@@ -176,6 +167,33 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             . ' AND NOT EXISTS (SELECT 1 FROM trending_story_entry overlap_member'
             . ' JOIN trending_story_entry shorter_member ON shorter_member.entry_id = overlap_member.entry_id'
             . ' WHERE overlap_member.story_id = story.id AND shorter_member.story_id IN (:shorterWindowStoryIds))';
+    }
+
+    /** At least the reader's threshold of sources, and two article feeds or two distinct article sites. */
+    private static function visibleCoverage(): string
+    {
+        return ' GROUP BY story.id, story.last_seen'
+            . ' HAVING ' . self::sources() . ' >= :minimum'
+            . ' AND (COUNT(DISTINCT CASE WHEN member_feed.network IS NULL THEN story_member.feed_id END)'
+            . ' >= :minimumArticleSources'
+            . ' OR COUNT(DISTINCT story_member.article_site) >= :minimumArticleSources)';
+    }
+
+    /**
+     * A story's sources for the reader (#2229): each article feed, and each site a post's story card shares that no
+     * article feed of theirs in the story carries. A post, or a timeline holding one, is no source of its own.
+     */
+    private static function sources(): string
+    {
+        return '(COUNT(DISTINCT CASE WHEN member_feed.network IS NULL THEN story_member.feed_id END)'
+            . ' + COUNT(DISTINCT CASE WHEN member_feed.network IS NOT NULL AND NOT EXISTS ('
+            . 'SELECT 1 FROM trending_story_entry outlet_member'
+            . ' JOIN feed outlet_feed ON outlet_feed.id = outlet_member.feed_id AND outlet_feed.network IS NULL'
+            . ' JOIN subscription outlet_reader'
+            . ' ON outlet_reader.feed_id = outlet_member.feed_id AND outlet_reader.user_id = :user'
+            . ' AND ' . TrendingInclusionSql::includes('outlet_reader')
+            . ' WHERE outlet_member.story_id = story.id AND outlet_member.article_site = story_member.article_site)'
+            . ' THEN story_member.article_site END))';
     }
 
     /**

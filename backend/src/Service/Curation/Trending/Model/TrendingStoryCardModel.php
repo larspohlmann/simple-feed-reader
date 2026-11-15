@@ -33,15 +33,6 @@ final readonly class TrendingStoryCardModel
         );
     }
 
-    /** The outlets the card shows: the lead and its other rows, the copies of one article or one post once. */
-    public function sourceCount(): int
-    {
-        return \count(array_unique(array_map(
-            static fn (EntryListRow $row): string => $row->entry->getUrlHash() ?? 'entry ' . $row->entry->requireId(),
-            [$this->lead, ...$this->lead->duplicates],
-        )));
-    }
-
     /**
      * The lead's own copies elsewhere join its outlets, one per feed, the lead's feed never; a copy is no new source.
      *

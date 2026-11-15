@@ -163,7 +163,7 @@ final class TrendingInclusionTest extends DbTestCase
         [$alpha, $beta] = $this->articleFeeds('alpha', 'beta');
         $social = $this->fixtures->feed('ann', SocialNetwork::Bluesky);
         $this->fixtures->subscribe($this->reader, $alpha, $beta, $social);
-        $this->storyOf([$alpha, $beta, $social]);
+        $this->storySharedBy([$alpha, $beta], $social);
         self::assertSame([3], self::outletCountsOf($this->rankedDay()));
 
         $this->entityManager->persist(
@@ -179,7 +179,7 @@ final class TrendingInclusionTest extends DbTestCase
         [$alpha, $beta] = $this->articleFeeds('alpha', 'beta');
         $social = $this->fixtures->feed('ann', SocialNetwork::Bluesky);
         $this->fixtures->subscribe($this->reader, $alpha, $beta, $social);
-        $this->storyOf([$alpha, $beta, $social]);
+        $this->storySharedBy([$alpha, $beta], $social);
         $this->entityManager->persist(
             new NetworkExclusion($this->reader, SocialNetwork::Bluesky, InclusionSurface::AllItems),
         );
@@ -342,6 +342,25 @@ final class TrendingInclusionTest extends DbTestCase
         }
 
         return $this->fixtures->story(TrendingWindow::Day, $lastSeen, ...$members);
+    }
+
+    /**
+     * One article per feed and a post of the social feed sharing a story card of another site.
+     *
+     * @param list<Feed> $articleFeeds
+     */
+    private function storySharedBy(array $articleFeeds, Feed $social): void
+    {
+        $members = array_map(
+            fn (Feed $feed): array => [$this->fixtures->entry($feed, 'Story entry', '2031-05-14 09:00:00'), null],
+            $articleFeeds,
+        );
+        $post = $this->fixtures->entry($social, 'Story post', '2031-05-14 10:00:00');
+        $this->fixtures->storyOfSites(
+            TrendingWindow::Day,
+            '2031-05-14 10:00:00',
+            [...$members, [$post, 'shared.example']],
+        );
     }
 
     /** @return list<Feed> */

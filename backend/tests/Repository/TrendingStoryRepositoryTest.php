@@ -116,13 +116,13 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         self::assertSame([[$story->requireId(), 3]], $this->shownStoriesAndSources());
     }
 
-    public function testTwoDifferentPostsStillCountAsTwoSources(): void
+    public function testTwoPostsSharingTwoSitesCountAsTwoSources(): void
     {
         $story = $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
             [$this->member($this->articleFeed('alpha')), 'alpha.example'],
             [$this->member($this->articleFeed('beta')), 'beta.example'],
             ...$this->copiesOf(self::POST, 'shared.example', 'home'),
-            ...$this->copiesOf(self::OTHER_POST, 'shared.example', 'discover'),
+            ...$this->copiesOf(self::OTHER_POST, 'other.example', 'discover'),
         ]);
 
         self::assertSame([[$story->requireId(), 4]], $this->shownStoriesAndSources());
@@ -178,6 +178,31 @@ final class TrendingStoryRepositoryTest extends DbTestCase
             [$widerForTheReader->requireId(), $widerElsewhere->requireId()],
             \array_slice($this->shownStoryIds(), 0, 2),
         );
+    }
+
+    public function testPostsWithoutAStoryCardAreNoSources(): void
+    {
+        $story = $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
+            [$this->member($this->articleFeed('alpha')), 'alpha.example'],
+            [$this->member($this->articleFeed('beta')), 'beta.example'],
+            [$this->member($this->socialFeed('home')), null],
+            [$this->member($this->socialFeed('discover')), null],
+        ]);
+
+        self::assertSame([[$story->requireId(), 2]], $this->shownStoriesAndSources());
+    }
+
+    public function testAPostSharingAFollowedOutletsSiteAddsNoSourceAndAnotherSiteAddsOne(): void
+    {
+        $story = $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
+            [$this->member($this->articleFeed('alpha')), 'alpha.example'],
+            [$this->member($this->articleFeed('beta')), 'beta.example'],
+            [$this->member($this->socialFeed('ann')), 'alpha.example'],
+            [$this->member($this->socialFeed('ben')), 'other.example'],
+            [$this->member($this->socialFeed('cat')), 'other.example'],
+        ]);
+
+        self::assertSame([[$story->requireId(), 3]], $this->shownStoriesAndSources());
     }
 
     /** @param list<array{Feed, ?string}> $feedsAndSites */

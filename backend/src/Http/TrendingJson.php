@@ -30,7 +30,7 @@ final readonly class TrendingJson
     {
         return [
             ...$this->entryJson->listRow($card->lead),
-            'story' => ['outletCount' => $card->sourceCount(), 'viewed' => $card->viewed],
+            'story' => ['outletCount' => $card->story->outletCount, 'viewed' => $card->viewed],
         ];
     }
 }

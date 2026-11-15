@@ -75,9 +75,9 @@ final class TrendingStoriesTest extends DbTestCase
             self::idsOf($stories[0]->lead->duplicates),
         );
         self::assertSame(
-            4,
+            3,
             $stories[0]->story->outletCount,
-            'the social account counts, the unsubscribed feed does not',
+            'a post without a story card is no source, nor is the unsubscribed feed',
         );
         self::assertFalse($stories[0]->viewed);
     }
@@ -99,8 +99,7 @@ final class TrendingStoriesTest extends DbTestCase
 
     public function testTheDayNeedsThreeOfTheReadersFeedsAndRanksWidestThenNewest(): void
     {
-        [$alpha, $beta, $gamma] = $this->articleFeeds('alpha', 'beta', 'gamma');
-        $social = $this->fixtures->feed('social', SocialNetwork::Bluesky);
+        [$alpha, $beta, $gamma, $social] = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta');
         $stranger = $this->fixtures->feed('stranger');
         $this->fixtures->subscribe($this->reader, $alpha, $beta, $gamma, $social);
         $four = $this->storyOf('2031-05-14 09:00:00', [$alpha, $beta, $gamma, $social]);
@@ -145,7 +144,7 @@ final class TrendingStoriesTest extends DbTestCase
         self::assertSame([], $this->storiesFor(TrendingWindow::Day));
     }
 
-    public function testAStoryNeedsTwoArticleFeedsTheReaderFollowsAndSocialOnesOnlyWidenIt(): void
+    public function testAStoryNeedsTwoArticleFeedsTheReaderFollowsAndPostsWithoutAStoryCardAddNothing(): void
     {
         [$alpha, $beta] = $this->articleFeeds('alpha', 'beta');
         $socials = [
@@ -162,7 +161,7 @@ final class TrendingStoriesTest extends DbTestCase
 
         $ranked = $this->rankedDay();
         self::assertSame([$covered->requireId()], RankedStoryModel::storyIdsOf($ranked));
-        self::assertSame([4], self::outletCountsOf($ranked));
+        self::assertSame([2], self::outletCountsOf($ranked));
     }
 
     public function testTheRankingIsCutAtTheLimit(): void
@@ -303,7 +302,7 @@ final class TrendingStoriesTest extends DbTestCase
         self::assertSame([], $this->rankedDayStoryIdsOf($this->reader));
     }
 
-    public function testOnePostCarriedByTwoSocialFeedsCountsOnce(): void
+    public function testAPostWithoutAStoryCardIsNoSourceHoweverManySocialFeedsCarryIt(): void
     {
         [$alpha, $beta] = $this->articleFeeds('alpha', 'beta');
         $socials = [
@@ -323,7 +322,7 @@ final class TrendingStoriesTest extends DbTestCase
 
         $ranked = $this->rankedDay();
 
-        self::assertSame([3], self::outletCountsOf($ranked));
+        self::assertSame([2], self::outletCountsOf($ranked));
     }
 
     public function testAnEarlierCopyInAFeedTheReaderDoesNotFollowLeavesTheirCopyCounted(): void
