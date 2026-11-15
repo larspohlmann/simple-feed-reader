@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Content\LinkCard\Support;
 
 use App\Entity\Entry;
-use App\Service\Foundation\Url\Support\TrackingFreeUrl;
 use App\Service\Social\Share\Model\ShareFetchPlanModel;
 use App\Service\Social\Share\Support\TitledShareTarget;
 
@@ -21,7 +20,7 @@ final class ReusableShareUrls
         if (TitledShareTarget::of($entry) !== null) {
             return [];
         }
-        $quoted = TrackingFreeUrl::orNull(QuoteLine::targetIn((string) $entry->getText()->getContentHtml()));
+        $quoted = QuoteLine::trackingFreeTargetIn((string) $entry->getText()->getContentHtml());
 
         return array_values(array_filter($plan->urls, static fn (string $url): bool => $url !== $quoted));
     }

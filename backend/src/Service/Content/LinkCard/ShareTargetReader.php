@@ -15,7 +15,6 @@ use App\Service\Content\LinkCard\PageCardReader\PageCardReaderInterface;
 use App\Service\Content\LinkCard\QuotedPostSource\QuotedPostSourceInterface;
 use App\Service\Content\LinkCard\Support\QuoteLine;
 use App\Service\Content\Reader\Exception\PageFetchException;
-use App\Service\Foundation\Url\Support\TrackingFreeUrl;
 use Psr\Log\LoggerInterface;
 
 /** Reads what a share's uncarded targets show: the post its "RE:" line quotes, and a page card for every other link. */
@@ -43,7 +42,7 @@ final readonly class ShareTargetReader
     /** @param list<string> $uncardedUrls */
     private function quotedTargetAmong(string $html, array $uncardedUrls): ?QuotedTargetModel
     {
-        $target = TrackingFreeUrl::orNull(QuoteLine::targetIn($html));
+        $target = QuoteLine::trackingFreeTargetIn($html);
         if ($target === null || !\in_array($target, $uncardedUrls, true)) {
             return null;
         }

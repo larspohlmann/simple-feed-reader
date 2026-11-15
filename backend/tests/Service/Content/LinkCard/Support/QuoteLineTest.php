@@ -85,4 +85,13 @@ final class QuoteLineTest extends TestCase
     {
         self::assertNull(QuoteLine::targetIn('<p>RE is not here: <a href="https://m.example/@b/9">x</a></p>'));
     }
+
+    public function testTheTrackingFreeTargetDropsTrackers(): void
+    {
+        self::assertSame(
+            'https://q.example/@a/1',
+            QuoteLine::trackingFreeTargetIn('<p>RE: <a href="https://q.example/@a/1?utm_source=x">q</a></p>'),
+        );
+        self::assertNull(QuoteLine::trackingFreeTargetIn('<p>No quote</p>'));
+    }
 }

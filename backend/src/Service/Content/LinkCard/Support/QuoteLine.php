@@ -36,6 +36,12 @@ final class QuoteLine
         return $html;
     }
 
+    /** The quoted link without its tracking parameters, as the share plans compare it. */
+    public static function trackingFreeTargetIn(string $html): ?string
+    {
+        return TrackingFreeUrl::orNull(self::targetIn($html));
+    }
+
     /** The link the body's first "RE:" paragraph quotes; null when it quotes nothing. */
     public static function targetIn(string $html): ?string
     {
