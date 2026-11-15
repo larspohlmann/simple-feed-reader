@@ -10,9 +10,17 @@ use LanguageDetection\Language;
 /** The detector's top language with no confidence floor: a wrong guess costs little where it is used (#2227). */
 final readonly class LanguageGuess
 {
+    /** A stated language stands below this length: a short text is where the guesses go wrong (#2227). */
+    private const int LONG_TEXT_LENGTH = 150;
+
     public function __construct(
         private Language $detection,
     ) {
+    }
+
+    public function overrulesAStatedLanguage(string $text): bool
+    {
+        return mb_strlen($text) >= self::LONG_TEXT_LENGTH;
     }
 
     public function bestFor(string $text): ?FeedLanguage

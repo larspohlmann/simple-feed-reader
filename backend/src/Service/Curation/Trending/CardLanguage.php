@@ -10,8 +10,6 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 final readonly class CardLanguage
 {
-    private const int LONG_TEXT_LENGTH = 150;
-
     public function __construct(
         #[Autowire(service: 'app.trending.card_language_guess')]
         private LanguageGuess $languageGuess,
@@ -20,7 +18,7 @@ final readonly class CardLanguage
 
     public function of(string $text, ?FeedLanguage $postLanguage): ?FeedLanguage
     {
-        if ($postLanguage !== null && mb_strlen($text) < self::LONG_TEXT_LENGTH) {
+        if ($postLanguage !== null && !$this->languageGuess->overrulesAStatedLanguage($text)) {
             return $postLanguage;
         }
 

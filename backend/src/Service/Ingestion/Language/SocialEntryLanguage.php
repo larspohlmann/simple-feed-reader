@@ -11,8 +11,6 @@ use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 /** A social post's language: what its author stated, unless a long text plainly reads as another (#2227). */
 final readonly class SocialEntryLanguage
 {
-    private const int LONG_TEXT_LENGTH = 150;
-
     public function __construct(
         private LanguageGuess $languageGuess,
     ) {
@@ -26,7 +24,7 @@ final readonly class SocialEntryLanguage
         }
 
         $stated = FeedLanguage::fromTag($entry->statedLanguage);
-        if (null === $stated || mb_strlen($body) < self::LONG_TEXT_LENGTH) {
+        if (null === $stated || !$this->languageGuess->overrulesAStatedLanguage($body)) {
             return $stated;
         }
 
