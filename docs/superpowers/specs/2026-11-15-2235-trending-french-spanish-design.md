@@ -238,4 +238,4 @@ Lars delegated every decision. Each is "what — why — cost if wrong".
 
 ## Outcome
 
-No code changed: the audit's result is D1 (no rule change), so the plan's confirming A/B run is A = B by construction and was not run (ruling in the ledger). The numbers above (M1–M4) are the outcome; the #2227 spec's Outcome carries a summary under *French and Spanish (#2235)*. The English finding D6 is followed up in its own issue.
+No code changed: the audit's result is D1 (no rule change), so the plan's confirming A/B run is A = B by construction and was not run (ruling in the ledger). The numbers above (M1–M4) are the outcome; the #2227 spec's Outcome carries a summary under *French and Spanish (#2235)*. The English finding D6 is followed up in #2243.

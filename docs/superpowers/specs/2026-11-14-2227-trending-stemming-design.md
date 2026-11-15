@@ -347,5 +347,4 @@ tables in `2026-11-15-2235-trending-french-spanish-design.md`.
   sit on link to nothing. No guess below 150 characters (G1) loses 102 day pairs, nearly all en–en; a short guess the
   bundled stopwords must confirm (G2) ties (+1 day, −6 week). No rule change (#2235 D1, D2).
 - **English side effect:** today's detector gives about 359 short English posts no language (it ranks Interlingua or
-  Occitan first) where the fill had `en`: −255 week pairs against the fill tags, −1 day. Recorded in #2235 D6, followed
-  up separately.
+  Occitan first) where the fill had `en`: −255 week pairs against the fill tags, −1 day. Recorded in #2235 D6, followed up in #2243.
