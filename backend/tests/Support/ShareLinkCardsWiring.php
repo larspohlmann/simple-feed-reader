@@ -14,6 +14,7 @@ use App\Service\Content\LinkCard\EntryCardWriter;
 use App\Service\Content\LinkCard\PageCardReader\PageCardReader;
 use App\Service\Content\LinkCard\PageCardReader\PageCardReaderInterface;
 use App\Service\Content\LinkCard\QuotedPostSource\QuotedPostSourceInterface;
+use App\Service\Content\LinkCard\PostedUrlCheck;
 use App\Service\Content\LinkCard\ShareLinkCards;
 use App\Service\Content\LinkCard\ShareTargetReader;
 use App\Service\Content\Reader\PageHeadFetcher;
@@ -59,7 +60,7 @@ final class ShareLinkCardsWiring
         QuotedPostSourceInterface $quotedPosts = new StubQuotedPostSource(),
     ): ShareLinkCards {
         return new ShareLinkCards(
-            new ShareTargetReader($reader, $quotedPosts, $logger),
+            new ShareTargetReader($reader, $quotedPosts, new PostedUrlCheck($reader, $logger), $logger),
             self::cardWriter($entityManager),
             PostEnrichers::enrichments($entityManager),
             PostEnrichers::linkCards($entityManager),

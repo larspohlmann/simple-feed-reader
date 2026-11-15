@@ -53,6 +53,42 @@ final class ShareTargetsTest extends TestCase
         self::assertSame(['https://b.example/2'], ShareTargets::uncardedOf($entry, ['https://a.example/1']));
     }
 
+    public function testAPostsTrackedLinkNamesItsPostedForm(): void
+    {
+        $entry = self::trackedPost();
+
+        self::assertSame(
+            ['https://a.example/1' => 'https://a.example/1?utm_source=x'],
+            ShareTargets::postedFormsOf($entry, ['https://a.example/1', 'https://b.example/2']),
+        );
+        self::assertSame([], ShareTargets::postedFormsOf($entry, ['https://b.example/2']));
+    }
+
+    public function testACardKeptUnderItsPostedFormCardsItsLink(): void
+    {
+        self::assertSame(
+            ['https://b.example/2'],
+            ShareTargets::uncardedOf(self::trackedPost(), ['https://a.example/1?utm_source=x']),
+        );
+    }
+
+    public function testATitledShareNamesNoPostedForm(): void
+    {
+        self::assertSame([], ShareTargets::postedFormsOf(self::titledShare(), [self::TARGET]));
+    }
+
+    private static function trackedPost(): Entry
+    {
+        $entry = self::titledShare();
+        $entry->setHeadline(Headline::derived('A real headline'));
+        $entry->recordText($entry->getText()->withContentHtml(
+            '<p><a href="https://a.example/1?utm_source=x">https://a.example/1?utm_source=x</a> '
+            . '<a href="https://b.example/2">https://b.example/2</a></p>',
+        ));
+
+        return $entry;
+    }
+
     public function testATitledBlueskyPostAwaitingItsEmbedTakesItsBodyLinksNotItsOwnUrl(): void
     {
         $entry = self::entry(

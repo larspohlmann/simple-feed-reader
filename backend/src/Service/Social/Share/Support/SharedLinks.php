@@ -30,20 +30,33 @@ final class SharedLinks
         $document = HtmlDocumentParser::parseFragment($bodyHtml);
         $linkedHtml = self::linkBareUrls($document) === 0 ? $bodyHtml : ($document->body->innerHTML ?? $bodyHtml);
 
-        return new SharedLinksModel(self::sharedUrlsIn($document), $linkedHtml, OwnProse::of($document->body));
+        $postedForms = self::postedFormsIn($document);
+        $urls = \array_slice(array_values(array_unique(array_keys($postedForms))), 0, self::MAX);
+
+        return new SharedLinksModel(
+            $urls,
+            $linkedHtml,
+            OwnProse::of($document->body),
+            array_filter(
+                array_intersect_key($postedForms, array_flip($urls)),
+                static fn (string $posted, string $url): bool => $posted !== $url,
+                \ARRAY_FILTER_USE_BOTH,
+            ),
+        );
     }
 
-    /** @return list<string> */
-    private static function sharedUrlsIn(HTMLDocument $document): array
+    /** @return array<string, string> each shared link's first posted href, by its tracking-free URL, in post order */
+    private static function postedFormsIn(HTMLDocument $document): array
     {
-        $urls = [];
+        $postedForms = [];
         foreach ($document->querySelectorAll('a[href]') as $anchor) {
             if (self::isShare($anchor)) {
-                $urls[] = TrackingFreeUrl::of((string) $anchor->getAttribute('href'));
+                $href = (string) $anchor->getAttribute('href');
+                $postedForms[TrackingFreeUrl::of($href)] ??= $href;
             }
         }
 
-        return \array_slice(array_values(array_unique($urls)), 0, self::MAX);
+        return $postedForms;
     }
 
     private static function linkBareUrls(HTMLDocument $document): int

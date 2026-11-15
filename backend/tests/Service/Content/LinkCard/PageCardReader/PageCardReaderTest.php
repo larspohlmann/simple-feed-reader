@@ -7,6 +7,7 @@ namespace App\Tests\Service\Content\LinkCard\PageCardReader;
 use App\Service\Outbound\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Outbound\Fetch\IpValidator;
 use App\Service\Outbound\Fetch\UrlGuard;
+use App\Service\Content\LinkCard\Model\PageIdentityModel;
 use App\Service\Content\LinkCard\PageCardReader\PageCardReader;
 use App\Service\Content\Reader\Exception\PageFetchException;
 use App\Service\Content\Reader\PageHeadFetcher;
@@ -175,6 +176,42 @@ final class PageCardReaderTest extends TestCase
         self::assertNotNull($card);
         self::assertSame('https://example.com/short', $card->url);
         self::assertSame('https://example.com/pic.jpg', $card->imageUrl);
+    }
+
+    public function testAPageNamesItselfByItsLandingItsCanonicalAndItsTitle(): void
+    {
+        $identity = $this->reader(
+            new MockResponse('', [
+                'http_code' => 301,
+                'response_headers' => ['Location' => 'https://example.com/final'],
+            ]),
+            $this->page('<title>Fallback</title><meta property="og:title" content="Headline">'
+                . '<link rel="canonical" href="/canonical">'),
+        )->read('https://example.com/short')->identity;
+
+        self::assertEquals(
+            new PageIdentityModel('https://example.com/final', 'https://example.com/canonical', 'Headline'),
+            $identity,
+        );
+    }
+
+    public function testAPageWithoutCanonicalNamesItselfByItsOpenGraphUrl(): void
+    {
+        $identity = $this->reader($this->page(
+            '<title>Fallback</title><meta property="og:url" content="https://example.com/og">',
+        ))->read(self::SHARED)->identity;
+
+        self::assertEquals(new PageIdentityModel(self::SHARED, 'https://example.com/og', 'Fallback'), $identity);
+    }
+
+    public function testAFileHasNoPageIdentity(): void
+    {
+        $read = $this->reader(new MockResponse("\x89PNG\r\n", [
+            'http_code' => 200,
+            'response_headers' => ['content-type' => 'image/png'],
+        ]))->read('https://i.example.com/chart');
+
+        self::assertNull($read->identity);
     }
 
     public function testAnArticleDeclaresNoMedium(): void

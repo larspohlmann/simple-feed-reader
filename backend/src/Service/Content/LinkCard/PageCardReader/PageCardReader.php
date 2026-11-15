@@ -10,6 +10,7 @@ use App\Service\Outbound\Fetch\Support\HostKey;
 use App\Service\Foundation\Html\Support\HtmlDocumentParser;
 use App\Service\Foundation\Html\Support\MetaTags;
 use App\Service\Content\LinkCard\Model\PageCardModel;
+use App\Service\Content\LinkCard\Model\PageIdentityModel;
 use App\Service\Content\LinkCard\Support\DeclaredPageMedium;
 use App\Service\Content\LinkCard\Support\StorableLinkCard;
 use App\Service\Ingestion\Parser\Support\VisualMedium;
@@ -17,6 +18,7 @@ use App\Service\Content\Reader\Exception\PageFetchException;
 use App\Service\Content\Reader\PageHeadFetcher;
 use App\Service\Ingestion\Scraper\Support\TextNormalizer;
 use App\Service\Foundation\Url\Support\HttpsImageUrl;
+use Dom\HTMLDocument;
 
 /** Reads the card a page declares for itself, and the picture or video file it is or declares. */
 final readonly class PageCardReader implements PageCardReaderInterface
@@ -34,17 +36,28 @@ final readonly class PageCardReader implements PageCardReaderInterface
         }
         $document = HtmlDocumentParser::parseOrEmpty($page->head);
         $meta = MetaTags::contentByKey($document);
+        $title = self::declared($meta, 'og:title', 'twitter:title') ?: TextNormalizer::normalize($document->title);
 
         return new PageCardModel(
             StorableLinkCard::of(new LinkCardContent(
                 $sharedUrl,
-                self::declared($meta, 'og:title', 'twitter:title') ?: TextNormalizer::normalize($document->title),
+                $title,
                 self::declared($meta, 'og:description', 'twitter:description', 'description') ?: null,
                 self::image($meta, $page->finalUrl),
                 self::declared($meta, 'og:site_name') ?: HostKey::forUrl($sharedUrl),
             )),
             DeclaredPageMedium::of($meta),
+            new PageIdentityModel($page->finalUrl, self::canonical($document, $meta, $page->finalUrl), $title),
         );
+    }
+
+    /** @param array<string, string> $meta */
+    private static function canonical(HTMLDocument $document, array $meta, string $finalUrl): ?string
+    {
+        $canonicalLink = $document->querySelector('link[rel="canonical"]');
+        $declared = $canonicalLink?->getAttribute('href') ?? ($meta['og:url'] ?? null);
+
+        return new PageUrls($finalUrl)->httpUrl($declared);
     }
 
     /** @param array<string, string> $meta */

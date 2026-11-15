@@ -12,6 +12,7 @@ use App\Repository\ShareEnrichmentRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Content\LinkCard\Model\EntryCardsModel;
 use App\Service\Content\LinkCard\Model\LinkCardBudgetModel;
+use App\Service\Content\LinkCard\Model\ShareFetchPlanModel;
 use App\Service\Library\Search\EntryIndexer;
 use App\Service\Social\Share\Support\ShareTargets;
 use Doctrine\ORM\EntityManagerInterface;
@@ -39,27 +40,27 @@ final readonly class ShareLinkCards
     public function complete(array $queued, LinkCardBudgetModel $budget): int
     {
         $storedCards = $this->storedCards($queued);
-        $uncardedUrlsByRowId = self::withinBudget($queued, $storedCards, $budget);
+        $plansByRowId = self::withinBudget($queued, $storedCards, $budget);
         $claimedAt = $this->clock->now();
         $claimed = $this->enrichments->claim(
             array_values(array_filter(
                 $queued,
-                static fn (ShareEnrichment $row): bool => isset($uncardedUrlsByRowId[$row->requireId()]),
+                static fn (ShareEnrichment $row): bool => isset($plansByRowId[$row->requireId()]),
             )),
             $claimedAt,
         );
 
         $cardsByRowId = [];
         foreach ($claimed as $index => $row) {
-            $uncardedUrls = $uncardedUrlsByRowId[$row->requireId()];
-            if ($index > 0 && !$budget->fitsAfter($this->secondsSince($claimedAt), \count($uncardedUrls))) {
+            $plan = $plansByRowId[$row->requireId()];
+            if ($index > 0 && !$budget->fitsAfter($this->secondsSince($claimedAt), $plan->fetches())) {
                 $this->enrichments->release(\array_slice($claimed, $index), $claimedAt);
                 break;
             }
             $cardsByRowId[$row->requireId()] = $this->targets->cardsFor(
                 $row->getEntry(),
                 $storedCards[$row->getEntry()->requireId()] ?? [],
-                $uncardedUrls,
+                $plan,
             );
         }
         return $this->store($claimed, $cardsByRowId, $claimedAt);
@@ -109,31 +110,38 @@ final readonly class ShareLinkCards
 
     /**
      * The oldest rows whose uncarded links fit the budget, by row id. The first row always runs, so no entry is left
-     * half-carded.
+     * half-carded; a posted form is read too only while the budget has room for it.
      *
      * @param list<ShareEnrichment>             $queued
      * @param array<int, list<LinkCardContent>> $storedCards by entry id
      *
-     * @return array<int, list<string>>
+     * @return array<int, ShareFetchPlanModel>
      */
     private static function withinBudget(array $queued, array $storedCards, LinkCardBudgetModel $budget): array
     {
         $remaining = $budget->fetches;
-        $uncardedUrlsByRowId = [];
+        $plansByRowId = [];
         foreach ($queued as $row) {
-            $entry = $row->getEntry();
-            $cardedUrls = array_map(
-                static fn (LinkCardContent $card): string => $card->url,
-                $storedCards[$entry->requireId()] ?? [],
-            );
-            $uncardedUrls = ShareTargets::uncardedOf($entry, $cardedUrls);
-            if ($uncardedUrlsByRowId !== [] && \count($uncardedUrls) > $remaining) {
+            $plan = self::planOf($row->getEntry(), $storedCards[$row->getEntry()->requireId()] ?? []);
+            if ($plansByRowId !== [] && \count($plan->urls) > $remaining) {
                 break;
             }
-            $uncardedUrlsByRowId[$row->requireId()] = $uncardedUrls;
-            $remaining -= \count($uncardedUrls);
+            $plan = $plan->fetches() > $remaining ? $plan->withoutChecks() : $plan;
+            $plansByRowId[$row->requireId()] = $plan;
+            $remaining -= $plan->fetches();
         }
 
-        return $uncardedUrlsByRowId;
+        return $plansByRowId;
+    }
+
+    /** @param list<LinkCardContent> $storedCards */
+    private static function planOf(Entry $entry, array $storedCards): ShareFetchPlanModel
+    {
+        $uncardedUrls = ShareTargets::uncardedOf(
+            $entry,
+            array_map(static fn (LinkCardContent $card): string => $card->url, $storedCards),
+        );
+
+        return new ShareFetchPlanModel($uncardedUrls, ShareTargets::postedFormsOf($entry, $uncardedUrls));
     }
 }

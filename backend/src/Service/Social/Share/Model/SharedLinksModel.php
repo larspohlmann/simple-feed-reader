@@ -4,13 +4,19 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Share\Model;
 
+use App\Service\Foundation\Url\Support\TrackingFreeUrl;
+
 final readonly class SharedLinksModel
 {
-    /** @param list<string> $urls in post order, each once */
+    /**
+     * @param list<string>          $urls        in post order, each once
+     * @param array<string, string> $postedForms each tracked URL's href as posted, by its tracking-free URL
+     */
     public function __construct(
         public array $urls,
         public string $linkedHtml,
         public string $ownProse,
+        public array $postedForms = [],
     ) {
     }
 
@@ -21,6 +27,6 @@ final readonly class SharedLinksModel
      */
     public function uncardedBy(array $cardedUrls): array
     {
-        return array_values(array_diff($this->urls, $cardedUrls));
+        return array_values(array_diff($this->urls, array_map(TrackingFreeUrl::of(...), $cardedUrls)));
     }
 }

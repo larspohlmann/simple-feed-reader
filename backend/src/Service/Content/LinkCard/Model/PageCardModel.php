@@ -12,6 +12,7 @@ final readonly class PageCardModel
     public function __construct(
         public ?LinkCardContent $card,
         public ?EntryMedium $medium,
+        public ?PageIdentityModel $identity = null,
     ) {
     }
 }

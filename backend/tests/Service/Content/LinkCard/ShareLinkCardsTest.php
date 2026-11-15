@@ -231,6 +231,27 @@ final class ShareLinkCardsTest extends DbTestCase
         self::assertCount(4, $this->cardTitles($next));
     }
 
+    public function testATrackedLinkIsAlsoReadAsPostedAndTheBudgetCountsIt(): void
+    {
+        $tracked = $this->queuedPost(1, '<p>https://example.com/1/1?utm_source=x</p>');
+        $next = $this->queuedPost(2, self::sharing(2, 4));
+
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
+
+        self::assertSame(['https://example.com/1/1', 'https://example.com/1/1?utm_source=x'], $this->pages->readUrls());
+        self::assertSame(['Card for https://example.com/1/1'], $this->cardTitles($tracked));
+        self::assertSame([], $this->cardTitles($next));
+    }
+
+    public function testWithoutRoomForTheSecondReadTheCleanedUrlIsTrusted(): void
+    {
+        $this->queuedPost(1, '<p>https://example.com/1/1?utm_source=x</p>');
+
+        $this->shareLinkCards->complete($this->claimable(), LinkCardBudgetModel::fetches(1));
+
+        self::assertSame(['https://example.com/1/1'], $this->pages->readUrls());
+    }
+
     public function testAMissingPageGivesNoCardAndTheRowIsStillDone(): void
     {
         $post = $this->queuedPost(1, '<p>https://example.com/missing https://example.com/found</p>');
