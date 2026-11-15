@@ -94,7 +94,7 @@ A pair is **tracking** when its key, after `rawurldecode`, lower-casing and remo
 | Adobe Experience Cloud | `adobe_mc` | "Share identity across domains" (experienceleague.adobe.com/en/docs/experience-platform/web-sdk/identity/id-sharing) |
 | Vero | `vero_id`, `vero_conv` | "Why is vero_id appended to links?" (help.getvero.com/vero-1/customers/what-is-vero_id) and "Conversion goals" (help.getvero.com/vero-2/campaigns/conversion-tracking) |
 | Omeda | `oly_enc_id` | "Web Behavioral Tracking - Olytics Overview" (knowledgebase.omeda.com/omedaclientkb/cdp-olytics-overview) |
-| Matomo | prefix `mtm_*`; `pk_campaign`, `pk_kwd`, `pk_keyword`, `pk_source`, `pk_medium`, `pk_content`, `pk_cid`, `piwik_campaign`, `piwik_kwd`, `matomo_campaign`, `matomo_kwd` | Matomo FAQ, "What URL parameters are supported for campaign tracking?" (matomo.org/faq/…/faq_120) |
+| Matomo | prefix `mtm_*`; `pk_campaign`, `pk_kwd`, `pk_keyword`, `pk_source`, `pk_medium`, `pk_content`, `pk_cid`, `piwik_campaign`, `piwik_kwd`, `matomo_campaign`, `matomo_kwd` | Matomo FAQ, "What URL parameters are supported for campaign tracking?" (matomo.org/faq/faq_120/) |
 | Piano Analytics (AT Internet) | prefix `at_*`; `xtor` | "How does the tracking of marketing campaigns work" (docs.piano.io/en/analytics/how-does-the-tracking-of-marketing-campaigns-work) |
 | Mapp Intelligence (Webtrekk) | prefix `wt_*` | "Campaigns" (docs.mapp.com/docs/tracking-configuration-campaign), which names `wt_mc`, `wt_cc1` and `wt_ga` |
 | Echobox | `echobox` | Echobox Help, "Query parameters" (help.echobox.com/query-parameters). Echobox adds it as a fragment, or as a query pair when the URL already has a fragment |
@@ -144,6 +144,9 @@ Nothing else writes an article URL into an entry. `E2eSeedAdminSubscriptionComma
 - **Service:** `App\Service\Operations\UrlCleanup\TrackingUrlCleanup`. It owns the walk and the unit of work.
 - **Model:** `UrlCleanup/Model/StoredEntryUrlModel` (`id`, `guid`, `url`, `urlHash`) and
   `UrlCleanup/Model/TrackingUrlCleanupReportModel` (entries cleaned, hashes changed, cards cleaned).
+- **Implemented differently:** the entry walk reuses `EntryRepository::entriesAfterId()` with a new
+  `Entry::relocate()`, and there is no `StoredEntryUrlModel` (ledger ruling: PHPMD TooManyPublicMethods). The card
+  side is as below.
 - **Repositories:**
   - `EntryRepository::storedUrlsAfterId(int $afterId, int $limit): list<StoredEntryUrlModel>`, scalar, keyset by id;
   - `EntryRepository::relocate(int $entryId, ?string $url, ?string $urlHash): void`, a DQL `UPDATE`;

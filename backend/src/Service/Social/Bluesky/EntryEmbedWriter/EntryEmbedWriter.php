@@ -118,7 +118,7 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
         $escaped = HtmlEscape::text($uncarded);
 
         return new SharedLinksModel(
-            [...$shared->urls, $uncarded],
+            [...$shared->urls, TrackingFreeUrl::of($uncarded)],
             $shared->linkedHtml . sprintf('<p><a href="%s">%s</a></p>', $escaped, $escaped),
             $shared->ownProse,
         );
