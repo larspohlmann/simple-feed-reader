@@ -1563,8 +1563,10 @@ centred on `--surface-1` in the same box, #2058), a byline of favicon, feed and 
 time, the full title, and one line of dek; a dek that is only a URL is left out. An outlet's mini card opens its
 copy; it carries no actions. An article no followed outlet carries is led by its card: the mini card links the real
 article in a new tab, carries the link card's "Open in reader" overlay (`<app-open-in-reader>`, top end, the byline
-making room), and its byline names the card's site (its host when the card names none) without a favicon. Any mini
-card posts share holds `<app-story-sharers>` under its link, inside the same sunken box.
+making room), and its byline names the card's site (its host, without `www.`, when the card names none) without a
+favicon. Without a picture (or when it fails) it has no thumb box, never the sharer's avatar: the text takes the
+width. Any mini card posts share holds `<app-story-sharers>` under its link, inside the same sunken box; nothing in a
+mini card (its link, its padding, Enter or Space) reaches the story card around it.
 
 Any other entry with duplicates — the same post in several feeds — renders
 `<app-entry-duplicates>` instead: the "Also in" pills that open the copy's row in a popover (#2053).
@@ -1574,10 +1576,11 @@ Any other entry with duplicates — the same post in several feeds — renders
 ### `<app-story-sharers>`
 
 A Trending article's sharers (#2229), on the lead row and on every mini card posts share: one pill per sharing account
-(an account that shared it in two feeds is one pill, opening its newest post; one name on two networks is two) in the
+(keyed by the poster's profile, else the posting feed, else the name: an account that shared it in two feeds is one
+pill, opening its newest post; one name on two networks, or two profiles, is two) in the
 "Also in" pill's shape (`--surface-2`, `--radius-pill`, `--fs-xs`): the network's mark (`<app-network-logo>`, when the
 network is known), the sharer's avatar (else its feed's favicon) and name, opening that post in the app. The first
-three show; a "+N more" accent pill reveals the rest. Posts are never rows of a story; the attribution line counts
+three show; a "+N more" accent pill reveals the rest. On a coarse pointer each pill is at least `--tap-target` tall. Posts are never rows of a story; the attribution line counts
 them as "· N shares" beside the sources. A mini card names no share count of its own: its pills already count them. A
 story no followed outlet carries is headed by the shared card itself: `app-entry-link` drops the post's text above it.
 

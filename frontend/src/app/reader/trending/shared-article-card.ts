@@ -1,13 +1,15 @@
 import { EntryDto } from '../models';
 import { LinkCardDto } from '../link-card/link-card';
 import { entryDek, entryDisplayTitle, entryHeadline } from '../entry/entry-text';
+import { hostOf, parseUrl } from '../../shared/url-host';
 
-/** What a mini card shows of a row; `site` names the shared article's site, null for an outlet's own row. */
+/** What a mini card shows of a row; `card` and its `site` are null for an outlet's own row. */
 export interface ArticleFace {
   title: string;
   dek: string;
   picture: string | null;
   site: string | null;
+  card: LinkCardDto | null;
 }
 
 const BARE_URL = /^https?:\/\/\S+$/;
@@ -28,7 +30,8 @@ export function articleFaceOf(entry: EntryDto): ArticleFace {
       title: card.title,
       dek: withoutBareUrl(card.description ?? ''),
       picture: card.imageUrl,
-      site: card.siteName || hostOf(card.url),
+      site: card.siteName || siteOf(card.url),
+      card,
     };
   }
   return {
@@ -36,6 +39,7 @@ export function articleFaceOf(entry: EntryDto): ArticleFace {
     dek: withoutBareUrl(entryDek(entry)),
     picture: entry.imageUrl,
     site: null,
+    card: null,
   };
 }
 
@@ -43,6 +47,7 @@ function withoutBareUrl(dek: string): string {
   return BARE_URL.test(dek.trim()) ? '' : dek;
 }
 
-function hostOf(url: string): string {
-  return URL.parse(url)?.hostname ?? url;
+function siteOf(url: string): string {
+  const parsed = parseUrl(url);
+  return parsed ? hostOf(parsed) : url;
 }

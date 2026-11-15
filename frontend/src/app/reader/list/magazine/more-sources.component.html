@@ -21,27 +21,21 @@
     @if (expanded()) {
       <div class="minis" [id]="panelId">
         @for (source of sources(); track source.copy.id) {
-          <div class="mini" [class.openable]="source.card">
+          <!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus -->
+          <div
+            class="mini"
+            [class.openable]="source.openable"
+            (click)="$event.stopPropagation()"
+            (keydown.enter)="$event.stopPropagation()"
+            (keydown.space)="$event.stopPropagation()"
+          >
             @if (source.card; as card) {
-              <a
-                class="face"
-                [href]="card.url"
-                target="_blank"
-                rel="noopener noreferrer"
-                (click)="$event.stopPropagation()"
-                (keydown.enter)="$event.stopPropagation()"
-              >
+              <a class="face" [href]="card.url" target="_blank" rel="noopener noreferrer">
                 <ng-container *ngTemplateOutlet="face; context: { $implicit: source }" />
               </a>
               <app-open-in-reader [card]="card" opening="alone" />
             } @else {
-              <button
-                type="button"
-                class="face reads-as-text"
-                (click)="open(source.copy, $event)"
-                (keydown.enter)="$event.stopPropagation()"
-                (keydown.space)="$event.stopPropagation()"
-              >
+              <button type="button" class="face reads-as-text" (click)="open(source.copy)">
                 <ng-container *ngTemplateOutlet="face; context: { $implicit: source }" />
               </button>
             }
@@ -67,7 +61,7 @@
       referrerpolicy="no-referrer"
       (error)="renditions.fallBackToSrc() || markBroken(source.copy.id)"
     />
-  } @else {
+  } @else if (!source.card) {
     <span class="thumb tile">
       <app-favicon [url]="source.copy.faviconUrl" [avatarUrl]="source.avatarUrl" [size]="20" />
     </span>

@@ -18,13 +18,16 @@ beforeEach(() => {
   navigation.openAlone.mockReset();
 });
 
-function mount(entry: EntryDto): HTMLElement {
+function mount(
+  entry: EntryDto,
+  reader: Partial<LinkReaderNavigation> | null = navigation,
+): HTMLElement {
   TestBed.configureTestingModule({
     imports: [MoreSourcesComponent, provideTranslocoTesting()],
     providers: [
       provideAccountIdentity(),
       { provide: EntryActionHandler, useValue: { open } },
-      { provide: LinkReaderNavigation, useValue: navigation },
+      ...(reader ? [{ provide: LinkReaderNavigation, useValue: reader }] : []),
       provideRouter([]),
     ],
   });
@@ -353,6 +356,69 @@ it('leaves out the sharer pills on a mini card no post shares', () => {
 
 const cardUrl = 'https://edition.cnn.com/2026/11/14/politics/judge';
 
+it.each([
+  ['.mini a.face', 'Enter'],
+  ['.mini a.face', ' '],
+  ['.mini', 'Enter'],
+  ['.mini', ' '],
+])('keeps a share-led "%s" key "%s" from reaching the card', (selector, key) => {
+  const { element, reached } = mountOnCardWith(
+    'keydown',
+    storyOf([shareLed({ url: cardUrl }, [poster(10, 'Ann')])]),
+  );
+  expand(element);
+
+  element
+    .querySelector(selector)!
+    .dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+
+  expect(reached).not.toHaveBeenCalled();
+});
+
+it.each([
+  ['a share-led', storyOf([shareLed({ url: cardUrl }, [poster(10, 'Ann')])])],
+  ['an outlet', storyOf(copies)],
+])("keeps a click on %s mini card's padding from opening the card it sits on", (_, story) => {
+  const { element, reached } = mountOnCardWith('click', story);
+  expand(element);
+  reached.mockReset();
+
+  element.querySelector<HTMLElement>('.mini')!.click();
+
+  expect(open).not.toHaveBeenCalled();
+  expect(reached).not.toHaveBeenCalled();
+});
+
+it('makes room for the reader overlay only where the reader can open', () => {
+  const story = storyOf([shareLed({ url: cardUrl }, [poster(10, 'Ann')])]);
+  const withReader = mount(story);
+  expand(withReader);
+  expect(withReader.querySelector('.mini')!.classList).toContain('openable');
+
+  TestBed.resetTestingModule();
+  const withoutReader = mount(story, null);
+  expand(withoutReader);
+  expect(withoutReader.querySelector('.mini')!.classList).not.toContain('openable');
+});
+
+it("shows no thumb box on a share-led mini card without a picture, never the sharer's icon", () => {
+  const element = mount(storyOf([shareLed({ url: cardUrl, imageUrl: null }, [poster(10, 'Ann')])]));
+  expand(element);
+
+  expect(element.querySelector('.mini .thumb')).toBeNull();
+});
+
+it('drops a broken picture on a share-led mini card without a thumb box', () => {
+  const element = mount(
+    storyOf([shareLed({ url: cardUrl, imageUrl: 'https://img/card.jpg' }, [poster(10, 'Ann')])]),
+  );
+  expand(element);
+
+  breakThumb(element, 0);
+
+  expect(element.querySelector('.mini .thumb')).toBeNull();
+});
+
 it('links a share-led mini card to the real article, in a new tab', () => {
   const element = mount(storyOf([shareLed({ url: cardUrl }, [poster(10, 'Ann')])]));
   expand(element);
@@ -427,6 +493,15 @@ it('names a share-led mini card by its host when the card has no site name', () 
   expand(element);
 
   expect(element.querySelector('.mini .feed')!.textContent!.trim()).toBe('edition.cnn.com');
+});
+
+it("names a share-led mini card by its host without the host's www.", () => {
+  const element = mount(
+    storyOf([shareLed({ siteName: '', url: 'https://www.cnn.com/a' }, [poster(10, 'Ann')])]),
+  );
+  expand(element);
+
+  expect(element.querySelector('.mini .feed')!.textContent!.trim()).toBe('cnn.com');
 });
 
 it.each([
