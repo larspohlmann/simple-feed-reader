@@ -1,0 +1,24 @@
+Stopword lists (stopwords.php)
+
+stopwords.php merges two sources per language.
+
+1. Snowball stopword lists for German, English, French and Spanish.
+  https://github.com/snowballstem/snowball-website, commit dc14fb462784e5bdf90f3210022b0f91d3881ffd,
+  algorithms/<language>/stop.txt (served unchanged on https://snowballstem.org).
+  © 2001 Dr Martin Porter, © 2002 Richard Boulton.
+  Licence: the 3-clause BSD licence, as stated on https://snowballstem.org/license.html; the text is in
+  LICENSE-BSD-3-Clause.txt.
+  Changes: comments removed, casefolded (MB_CASE_FOLD, then NFKC, diacritics kept), contractions and other non-letter
+  entries dropped, duplicates removed, sorted.
+
+2. French and Spanish closed-class words derived from the Google Books Ngram Viewer dataset, version 20200217,
+  French and Spanish 1-grams, © Google. https://storage.googleapis.com/books/ngrams/books/datasetsv3.html
+  Licence: Creative Commons Attribution 3.0 Unported (CC BY 3.0), https://creativecommons.org/licenses/by/3.0/; the
+  legal code is in LICENSE-CC-BY-3.0.txt.
+  Changes: part-of-speech counts aggregated per casefolded form over 1950–2019; the 1,000 most frequent forms kept
+  when at least half their tagged count is a closed-class tag; written as word lists.
+
+generate.php makes these changes; SOURCE pins every input file.
+
+The Snowball words in stopwords.php are under the BSD 3-clause licence, the words derived from Google Books Ngram
+under CC BY 3.0; the repository's code stays MIT.

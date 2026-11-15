@@ -69,7 +69,7 @@ final class TrendingWiring
 
     public static function stopWords(): BundledStopWords
     {
-        return new BundledStopWords(dirname(__DIR__, 2) . '/resources/snowball-stopwords/stopwords.php');
+        return new BundledStopWords(dirname(__DIR__, 2) . '/resources/stopwords/stopwords.php');
     }
 
     public static function equivalents(): HeadlineEquivalents

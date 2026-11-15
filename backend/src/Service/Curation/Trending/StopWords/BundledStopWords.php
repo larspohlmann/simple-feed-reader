@@ -10,7 +10,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 final readonly class BundledStopWords implements StopWordsInterface
 {
     public function __construct(
-        #[Autowire('%kernel.project_dir%/resources/snowball-stopwords/stopwords.php')]
+        #[Autowire('%kernel.project_dir%/resources/stopwords/stopwords.php')]
         private string $path,
     ) {
     }

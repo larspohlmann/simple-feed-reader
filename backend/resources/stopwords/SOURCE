@@ -1,0 +1,45 @@
+Two sources, merged per language into stopwords.php by generate.php.
+
+1. Snowball stopword lists (all four languages)
+repository: https://github.com/snowballstem/snowball-website
+commit: dc14fb462784e5bdf90f3210022b0f91d3881ffd
+committed: 2026-10-17T07:30:28Z
+licence: BSD 3-clause, https://snowballstem.org/license.html (LICENSE-BSD-3-Clause.txt)
+fetched: 2026-11-15
+files (url, sha256):
+  https://raw.githubusercontent.com/snowballstem/snowball-website/dc14fb462784e5bdf90f3210022b0f91d3881ffd/algorithms/german/stop.txt 22a7785b53860256280fba74b93d8f09a0f3a8f52edaa3cdc3750e8c13a3874c
+  https://raw.githubusercontent.com/snowballstem/snowball-website/dc14fb462784e5bdf90f3210022b0f91d3881ffd/algorithms/english/stop.txt 06b8b14bbe6f6e0b64c0830813819416d96a71bec1655668d83b3e602a651db6
+  https://raw.githubusercontent.com/snowballstem/snowball-website/dc14fb462784e5bdf90f3210022b0f91d3881ffd/algorithms/french/stop.txt e235f5e633bf831c601ce6f1dc87d8608c038209a7aab64e69a9e70f52f83d4c
+  https://raw.githubusercontent.com/snowballstem/snowball-website/dc14fb462784e5bdf90f3210022b0f91d3881ffd/algorithms/spanish/stop.txt 042669c6c97605f5e57278b67474c65d58d628a59a004e618a0ac06bc2d38222
+parse rule: per line, cut at the first |, trim, keep the first whitespace-separated token, casefold (MB_CASE_FOLD,
+  then NFKC, diacritics kept), keep it only if it matches ^\p{L}+$ (this drops the English contractions)
+words: de 231, en 124, fr 154, es 308
+
+2. Closed-class supplement (French and Spanish only)
+dataset: Google Books Ngram Viewer, version 20200217 (v3), French (fre) and Spanish (spa) 1-grams
+pages: https://storage.googleapis.com/books/ngrams/books/20200217/fre/fre-1-ngrams_exports.html
+  https://storage.googleapis.com/books/ngrams/books/20200217/spa/spa-1-ngrams_exports.html
+licence: CC BY 3.0 Unported, https://creativecommons.org/licenses/by/3.0/ (stated on
+  https://storage.googleapis.com/books/ngrams/books/datasetsv3.html; LICENSE-CC-BY-3.0.txt)
+fetched: 2026-11-15
+shards (url, bytes, sha256; each md5 matched the server's x-goog-hash; generate.php checks the sha256):
+  https://storage.googleapis.com/books/ngrams/books/20200217/fre/1-00000-of-00006.gz 535827893 c09240100c1d51c479faaf7ecd87163d2460f7f6d8c0244112b2727d96cae8e1
+  https://storage.googleapis.com/books/ngrams/books/20200217/fre/1-00001-of-00006.gz 865432045 9dcda2040ee9e63333fc515db51dad958725afb9a71b70a707105564ed64eb3b
+  https://storage.googleapis.com/books/ngrams/books/20200217/fre/1-00002-of-00006.gz 844074632 389f4b15e40a73e1ad57ae807eaec7f0a56725e8897dde533ed77f1dc30140ea
+  https://storage.googleapis.com/books/ngrams/books/20200217/fre/1-00003-of-00006.gz 878235945 c6a38bbcfb00bdc4ac8cc8e22936d0835bfbb07f798e36dcf21a024dbddf3acd
+  https://storage.googleapis.com/books/ngrams/books/20200217/fre/1-00004-of-00006.gz 965153546 978359563dceae0dbbe06457c07079eb0209471bef50f64fde2aa3b95534124c
+  https://storage.googleapis.com/books/ngrams/books/20200217/fre/1-00005-of-00006.gz 1175184377 2ccc18b4e6f0bebe62fa2d251265b663e09990eef3827620f445d32cceded64e
+  https://storage.googleapis.com/books/ngrams/books/20200217/spa/1-00000-of-00003.gz 631106868 c28dfa7f433317baf75429a57b1dab1d6ec016ad325feef0f30ab4f79d63f386
+  https://storage.googleapis.com/books/ngrams/books/20200217/spa/1-00001-of-00003.gz 1114116917 b6396078773aa299ea010d6cfdef437a97055532df7d65c0a90914141e7ef0f6
+  https://storage.googleapis.com/books/ngrams/books/20200217/spa/1-00002-of-00003.gz 1477564322 720b00fde16df0854dd8ccf1a37dcc021d37a568a9c71f063cd995124d001e3e
+rule: the part-of-speech-tagged lines (form_TAG) only, match_count summed over 1950-2019, per casefolded form (MB_CASE_FOLD,
+  then NFKC); the 1,000 most frequent forms by tagged count (ties by byte order); kept when ADP, ADV, CONJ, DET, PRON
+  and PRT together hold at least half the form's tagged count, and it matches ^\p{L}+$
+closed-class words: fr 186 (123 not in Snowball's list), es 203 (108 not in Snowball's list)
+
+stopwords.php
+words: de 231, en 124, fr 277, es 416 (each list the distinct union of both sources, sorted byte-wise, SORT_STRING)
+size: 20,856 bytes
+generator: php resources/stopwords/generate.php <directory holding fre/ and spa/ with the nine shards> (from backend/);
+  about 150 s and 1.2 GB peak RSS; fetches the Snowball lists over HTTPS; aborts on any SHA-256 mismatch
+reproduced: 2026-11-15, generated twice, cmp identical

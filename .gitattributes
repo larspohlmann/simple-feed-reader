@@ -1,2 +1,2 @@
 backend/resources/german-lexicon/lexicon.tsv linguist-generated=true -diff
-backend/resources/snowball-stopwords/stopwords.php linguist-generated=true -diff
+backend/resources/stopwords/stopwords.php linguist-generated=true -diff

@@ -47,8 +47,18 @@ final class BundledStopWordsDataTest extends TestCase
         $this->assertContains('los', self::bundled()->wordsOf(FeedLanguage::Spanish));
     }
 
+    public function testTheFrenchAndSpanishListsHoldTheirClosedClassWords(): void
+    {
+        foreach (['après', 'contre', 'depuis', 'très'] as $word) {
+            $this->assertContains($word, self::bundled()->wordsOf(FeedLanguage::French));
+        }
+        foreach (['tras', 'según'] as $word) {
+            $this->assertContains($word, self::bundled()->wordsOf(FeedLanguage::Spanish));
+        }
+    }
+
     private static function bundled(): BundledStopWords
     {
-        return new BundledStopWords(dirname(__DIR__, 5) . '/resources/snowball-stopwords/stopwords.php');
+        return new BundledStopWords(dirname(__DIR__, 5) . '/resources/stopwords/stopwords.php');
     }
 }
