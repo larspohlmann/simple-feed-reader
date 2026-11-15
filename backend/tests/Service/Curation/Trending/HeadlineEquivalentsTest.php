@@ -338,6 +338,16 @@ final class HeadlineEquivalentsTest extends TestCase
         );
     }
 
+    public function testARepeatedPartCountsOnce(): void
+    {
+        $stemmer = TrendingWiring::stemmer();
+
+        self::assertSame(
+            [$stemmer->stem('tagtagbus', FeedLanguage::German), 'tag', 'bus'],
+            $this->equivalents->wordStemsOf('tagtagbus', 'tagtagbus', FeedLanguage::German),
+        );
+    }
+
     public function testALanguageStemThatIsACanonicalNeedsNoEntry(): void
     {
         self::assertSame(['ukrain'], $this->equivalents->stemsOf('Ukraine', FeedLanguage::German));

@@ -232,6 +232,14 @@ final class HeadlineWindowTest extends TestCase
         self::assertSame([1], array_keys($this->window->sharedWeightsWithEarlier(3)));
     }
 
+    public function testAWordWithoutALanguageIsNotTakenForALanguageCodeAndAWord(): void
+    {
+        $this->addIn(FeedLanguage::German, 1, 10, 'Wahlen');
+        $this->add(2, 20, 'Dewahlen', '');
+
+        self::assertSame([], $this->window->sharedWeightsWithEarlier(2));
+    }
+
     public function testSeedsAreCheckedInTheEntrysLanguage(): void
     {
         $this->addIn(FeedLanguage::Spanish, 1, 10, 'Con Lula');
