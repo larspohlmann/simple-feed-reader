@@ -25,6 +25,11 @@ final class FeedLanguageTest extends TestCase
         yield 'three-letter code' => ['deu', null];
     }
 
+    public function testValuesListsEveryLanguageCodeInCaseOrder(): void
+    {
+        self::assertSame(['de', 'en', 'fr', 'es'], FeedLanguage::values());
+    }
+
     #[DataProvider('tags')]
     public function testATagNamesItsPrimaryLanguageWhenSupported(?string $tag, ?string $expected): void
     {

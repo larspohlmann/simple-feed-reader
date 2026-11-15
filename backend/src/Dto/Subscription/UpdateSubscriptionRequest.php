@@ -32,10 +32,7 @@ final readonly class UpdateSubscriptionRequest
     /** @return list<string> */
     public static function languageChoices(): array
     {
-        return [
-            ...array_map(static fn (FeedLanguage $language): string => $language->value, FeedLanguage::cases()),
-            self::AUTOMATIC_LANGUAGE,
-        ];
+        return [...FeedLanguage::values(), self::AUTOMATIC_LANGUAGE];
     }
 
     public function toChange(): SubscriptionChangeModel

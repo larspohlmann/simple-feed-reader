@@ -11,6 +11,6 @@ final readonly class LanguageDetectionFactory
 {
     public function create(): Language
     {
-        return new Language(array_column(FeedLanguage::cases(), 'value'));
+        return new Language(FeedLanguage::values());
     }
 }

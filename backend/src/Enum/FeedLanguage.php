@@ -11,6 +11,12 @@ enum FeedLanguage: string
     case French = 'fr';
     case Spanish = 'es';
 
+    /** @return list<string> */
+    public static function values(): array
+    {
+        return array_map(static fn (self $language): string => $language->value, self::cases());
+    }
+
     public static function fromTag(?string $tag): ?self
     {
         if (null === $tag) {
