@@ -17,15 +17,15 @@ led by the shared article when the reader follows no outlet that carries it.
 - The card text is stemmed in its own language when a long text plainly reads as another than the post's.
 - Cards that name no story are left out by a structural rule, measured on the window, never by a list.
 - A story is shown when two article feeds **or two distinct article sites** the reader follows carry it.
-- Posts that share a story's article are listed among its sources; when the reader follows no article feed in the
-  story, a post sharing it leads, and the existing link block shows its card.
+- Posts that share a story's article are shown as its shares ("Shared by …"), one row per article; when the reader
+  follows no outlet carrying it, the shared card leads (D6, as approved).
 - French and Spanish are measured on their own as well as in the shared window.
 
 ## Non-goals
 
 - Storing a card's language (D3), resolving shorteners (`trib.al`, `n.pr`, `bit.ly`), or counting two article feeds of
   one site as one source (D4).
-- A new Trending card design, a card-title headline for a card-led story (D9), or any new API field.
+- A new Trending card design beyond D6's shares line; any API change that is not additive.
 - Any change to the weights, filler shares, link thresholds, the stemmer, the German splitter or the equivalence tables.
 - Posts without a story card: they keep counting towards the score only, and are never shown.
 
@@ -293,55 +293,66 @@ anywhere counting as held by a word. Every entry with a story card takes part: a
 writes it. No backfill: day and week rebuild every 10 minutes and every hour, and a null site falls back to today's
 rule.
 
-### Who is shown (D4)
+### Who is shown (D4) and how a story counts (D11)
 
-`TrendingStoryRepository::VISIBLE_COVERAGE` becomes:
+A story's **sources** for a reader are the distinct outlets among the feeds they follow and have switched in for
+Trending (`TrendingInclusionSql::includes`): each article feed (the copies of one article URL once, as #2056 ruled),
+plus each site a post's story card shares that none of those article feeds in the story carries. A post, or a timeline
+holding one, is never a source of its own; a post without a story card adds nothing (D11). `sources()` in
+`TrendingStoryRepository` is that count; it ranks the stories, meets the reader's minimum, and is the label:
 
 ```sql
-HAVING COUNT(DISTINCT story_member.feed_id) >= :minimum
+HAVING <sources> >= :minimum
 AND (COUNT(DISTINCT CASE WHEN member_feed.network IS NULL THEN story_member.feed_id END) >= :minimumArticleSources
      OR COUNT(DISTINCT story_member.article_site) >= :minimumArticleSources)
 ```
 
-`MINIMUM_ARTICLE_FEEDS` is renamed `MINIMUM_ARTICLE_SOURCES` (still 2). `noEarlierCopy()` is unchanged: it already
-lets every social post count.
+`MINIMUM_ARTICLE_FEEDS` is renamed `MINIMUM_ARTICLE_SOURCES` (still 2). `noEarlierCopy()` collapses a post's copies in
+several timelines by their URL hash, as it collapses an article's, never an article into a post. The instance-wide
+`trending_story.outlet_count` had no reader-facing use left and is dropped (`Version20261115130000`); the grouping
+keeps its in-memory feed count only for the explain command and the build's minimum.
 
-### What a story shows (D6)
+### What a story shows (D6, as approved)
 
 `articleEntryIdsByStory` becomes `shownEntryIdsByStory`: a story's entries of the feeds the reader follows in Trending
-that are from an article feed **or** carry an `article_site` (a post sharing a story card). `TrendingStoryCardModel`
-picks the lead:
+that are from an article feed **or** carry an `article_site` (a post sharing a story card). `TrendingStories` keys
+each row by its article (`ShownRowModel`): an outlet's row by its own URL hash, a post's by
+`UrlNormalizer::hash()` of its first top-level card. `TrendingStoryCardModel` then shows **one row per article**
+(`StoryArticleModel`):
 
-- among the article rows, as today (newest with a picture) — the reader's own outlets lead first;
-- when there are none, among the posts: the newest link share whose card has an image, else the newest link share,
-  else the newest post.
+- an article a followed outlet carries is that outlet's row (newest with a picture, else newest, as today); the same
+  article in a second followed feed is no second row;
+- an article no followed outlet carries is the newest post sharing it whose card has a picture, else the newest link
+  share, else the newest post, shown as the shared card;
+- posts attach to the article their card links as **shares**, newest first, a post's timeline copies once; they are
+  never rows of their own, and a post sharing a followed outlet's article folds onto that row;
+- the lead is an outlet's article whenever there is one (the reader's own outlets first); otherwise the most-shared
+  article, ties to the newest.
 
-Every other row stays a source, one per feed, as today; a post's copy in another timeline feed of the reader joins
-through `withLeadCopies` as an article's copy does. A post whose card names no story, or with no card, is not shown.
+The lead's own copies from feeds outside the story (`withLeadCopies`) no longer join the card: one row per article.
 
-**Sketch, magazine layout, a card-led story** (the existing `link` block, `app-entry-link`, unchanged):
+**Sketch, magazine layout, a story no followed outlet carries:**
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│ (avatar) Aaron Rupar · 4 sources · 2 h               •   │  kicker: poster, sources line, unread dot
-│ Fetterman suggests he will leave the Democratic Party…   │  the post's own text
+│ (avatar) Aaron Rupar · 2 sources · 3 shares · 2 h    •   │  kicker: sources, shares, unread dot
 │ ┌──────────────────────────────────────────────────────┐ │
-│ │ [image]  John Fetterman Signals Breaking Point With  │ │  app-link-card: the shared article —
-│ │          Democrats Over Van Hollen                   │ │  title, image, site, link
+│ │ [image]  John Fetterman Signals Breaking Point With  │ │  app-link-card: the shared article heads the row
+│ │          Democrats Over Van Hollen                   │ │  (the post's own text is not shown)
 │ │          newsweek.com                                │ │
 │ └──────────────────────────────────────────────────────┘ │
-│ ☆ ⧉ … Hide                                               │  actions, Hide last (TrendingHideAction)
-│ ≡ 3 more sources ⌄                                       │  app-more-sources: posters' names, post text
+│ Shared by Aaron Rupar, Politico and 1 other ⌄            │  app-story-shares: opens into each post
+│ ☆ ⧉ … Hide                                               │  actions, Hide last
+│ ≡ 1 more source ⌄                                        │  app-more-sources: the other articles, "· N shares"
 └──────────────────────────────────────────────────────────┘
 ```
 
-**List layout** (`entry-row`): the post row with its card, "4 sources ·" on the attribution line, and the
-"Also covered by" footer (`app-entry-duplicates`) naming each source.
+**List layout** (`entry-row`): the article row, "N sources · M shares ·" on the attribution line, the "Shared by"
+line under the meta row, and the "Also covered by" footer naming the other articles' outlets.
 
-**One component change (D7):** `EntryDuplicatesComponent` names a copy with `sourceNameOf(copy, rows)` when its entry is
-a Trending story (`entry.story`), as `MoreSourcesComponent` already does, so a post reads as its poster
-(*Aaron Rupar*), not as its timeline feed (*Home*, *Discover*). Footers outside Trending keep naming the feed ("Also
-in Home") because there the timeline is the point.
+**D7:** `EntryDuplicatesComponent` names a copy with `sourceNameOf(copy, rows)` when its entry is a Trending story
+(`entry.story`), as `MoreSourcesComponent` already does, so a share-led row reads as its poster, not as its timeline
+(*Home*, *Discover*). Footers outside Trending keep naming the feed ("Also in Home").
 
 ### The rest of a story's life
 
@@ -354,15 +365,18 @@ in Home") because there the timeline is the point.
 
 ### API
 
-`GET /api/trending` keeps its shape: `stories` is a list of `EntryDto`, each with `story` and `duplicates`. A lead may
-now be a social post, and `duplicates` may hold posts, both already valid `EntryDto`s with `social`, `poster`,
-`linkCards` and `share`. `POST /api/trending/hidden` is unchanged. No new field, no browser-only input (architecture
-§6): a native client renders a social lead as it renders a post in any list.
+Additive only. `GET /api/trending` keeps its shape: `stories` is a list of `EntryDto`, each with `story` and
+`duplicates` (the story's other articles). Each article `EntryDto` of a Trending story gains `shares`: the posts sharing
+it, as ordinary post `EntryDto`s (a native client renders and opens them as it renders a post in any list), and
+`story` gains `shareCount`. `outletCount` keeps its name and now means the reader's sources (D11). `POST
+/api/trending/hidden` is unchanged. No browser-only input (architecture §6).
 
 ### UI text
 
-None new. The sources line (`reader.trendingSources`), "Also covered by" (`reader.alsoCoveredBy`), "x more sources"
-(`reader.moreSources`, `reader.moreSourcesOne`) and Hide (`reader.hideStory`) exist in de, en, fr and es.
+New keys in de, en, fr and es (`vous`/`tú` per the #2205 glossary): `reader.trendingShares`,
+`reader.trendingSharesOne`, `reader.sharedBy`, `reader.sharedByAndOne`, `reader.sharedByAndOthers`. Two names alone are
+joined by `Intl.ListFormat` in the reader's language. The existing sources line, "Also covered by", "x more sources" and
+Hide are unchanged.
 
 ## Decisions
 
@@ -388,23 +402,30 @@ Lars delegated every decision. Each is "what — why — cost if wrong".
 - **D5. The article site is stored on `trending_story_entry` at build, with no backfill.** — Host extraction in SQL
   differs between MySQL and SQLite; the snapshot is rebuilt within the hour anyway. — If wrong: for up to an hour after
   deploy the week shows today's stories.
-- **D6. Posts sharing a story card are sources in every story; an article row leads whenever there is one; otherwise
-  the newest link share with a card image.** — The sources line already counts social feeds, so listing them makes the
-  count and the list agree; the issue keeps the reader's own outlets first. Week: 272 carded posts in 109 stories
-  become visible sources. — If wrong: busy stories list many posts under "more sources"; the footer's four-name cap and
-  the collapsed magazine list keep the card's height.
+- **D6. One row per article; posts are its shares.** Lars approved the redesign on 2026-11-15, replacing "posts are
+  sources, one row per feed". — A post is the article it shares, so listing it as an outlet repeated the article and
+  inflated busy stories; grouping by article shows each story once per piece of journalism, names who shared it, and
+  keeps the reader's own outlets first. — If wrong: a reader who wants to see a post's own text opens the "Shared by"
+  line first; two outlets with one article show one row.
 - **D7. In a Trending footer a post is named by its poster.** — "Also covered by Home, Discover" names timelines, not
-  sources; the magazine list already uses `sourceNameOf`. — If wrong: a reader who follows one account in two timelines
-  sees its name once per timeline.
-- **D8. No new UI text and no new API field.** — Every label the design needs exists in all four languages; the endpoint
-  already serves social entries' shape. — If wrong: nothing tells a reader why a post leads; a later issue can add a
-  label, translated four ways.
-- **D9. A card-led story keeps the post's text as its headline; the card below names the article.** — The `link` block
-  is the design language's one rendering of a post with a card; a Trending-only variant is optional scope. — If wrong:
-  a terse post (*LFG*) heads the story; the card title is one line below.
+  sources; the magazine list already uses `sourceNameOf`. — If wrong: a share-led row whose poster is unknown reads as
+  its timeline.
+- **D8. Additive API (`shares`, `shareCount`) and five new labels in four languages.** — Superseded by D6's redesign;
+  the shares are ordinary post `EntryDto`s, the smallest shape that both the web client and a native client can open.
+  — If wrong: a busy story carries every sharing post in the payload.
+- **D9. A story no followed outlet carries is headed by the shared card; the post's text is not shown.** — Superseded
+  by D6: the row is the article; its sharers are named under it. — If wrong: the representative poster still shows in
+  the kicker line.
 - **D10. `urlHash`, `linkCardUrl` and the new article URL move into `EntryLinksModel`.** — They describe one thing and
   are read together; `WindowEntryModel` would otherwise reach PHPMD's ten-parameter limit. Recorded so review can judge
   it is not a count-driven split (#2025): `articleSite()` and `storyCard()` live on it and have no other home.
+
+- **D11. A story's sources are the reader's own outlets: article feeds they follow and have switched in, and card sites
+  their posts add; never posts or timelines.** Lars, 2026-11-15: "feeds i don't follow shouldn't be counted at all."
+  — One count ranks, meets the minimum and labels the card, so "11 sources" never sits over three rows (week story
+  358028: 8 of its 11 were followed social timelines whose posts carried no story card). — If wrong: a story only
+  social timelines carry, without cards, no longer shows; a reader who follows an outlet only through its social
+  account counts it through the site its card shares.
 
 **Optional scope, costed and not built:** storing the card language (D3: a column, five paths, a backfill command);
 resolving shorteners for site counting (an outbound fetch per card, against the SSRF boundary); a card-title headline
@@ -566,3 +587,38 @@ collect and links once (the explain command runs links twice, hence its +16 %): 
 
 No cheap part: the guess is D3's rule, and the stems are the change. On Strato's ~25 s week rebuild this is about
 +3 s.
+
+### Revisions after review: copies, the count, one row per article
+
+Three changes followed the first report (commits 07b7d9f7c, 1881e3ab1, 3f960f810, 2f68af4a3, cab2678ef, b671c5631):
+a post's timeline copies count once; a story's sources are the reader's own outlets, never posts or timelines (D11,
+Lars: "feeds i don't follow shouldn't be counted at all"); and the card shows one row per article with its shares (D6,
+approved by Lars). Lars's week story 358028 showed "11 sources" over three rows: the stored count was not the cause
+(the reader's count already applied the inclusion switches), 8 of the 11 were followed social timelines whose posts
+had no story card in a snapshot built before the migration. Develop has the same defect since #2017: it counts every
+followed social feed in the label and never shows a post.
+
+**The grouping is unchanged** by these commits: none touches the window read, the stems, the links or the grouper, so
+the pair tables above stand.
+
+**Who is shown, again** (the same pinned window and script, now with the reader's switches as Lars had them at 11:40
+UTC: 121 active feeds on the day, 208 on the week, against 109 and 196 earlier, so A differs from the run above). A =
+develop's counting; B2 = D4 with a post's copies once; B3 = the branch (D4 and D11).
+
+| Top 15 | A | B2 | B3 |
+|---|---|---|---|
+| Day | de 3, en 10, fr 2 | de 2, en 10, fr 3 | de 3, en 6, fr 6 |
+| Week | de 1, en 14 | de 1, en 14 | en 15 |
+
+- **Day, A → B3: returns** Le Parisien (*Guerre en Ukraine : Emmanuel Macron…*), Le Figaro (*Le gouvernement interdit
+  la vente…*, *Benyamin Netanyahou promet…*), Le Monde (*EN DIRECT, guerre en Ukraine*) and tagesschau (*Astrid Halder
+  zum Trauerakt*); **leave** the English stories social timelines lifted (Italy fines Meta: 11 → 3 + its card sites,
+  Hungary's buried cash, the FAA equipment blame, an Al Jazeera strike) and tagesschau's *Grüne und SPD*. No Spanish
+  story reaches the day's top 15 under any rule.
+- **Week, A → B3:** stories with more distinct outlets replace those social timelines inflated: in come the ocean liner
+  reef, the Kennedys and Trump's arch, Gadi Eisenkot, the Hegseth tomb scolding, the Nvidia investigation; out go Italy
+  and Meta, the Alaska count, ZDF's *Mercedes stoppt alle neuen Investitionen* (9 → 6 sources: its social copies no
+  longer count), the US soldier spying arrest, Hungary's cash, the Donbas offer. Every week top-15 story is English
+  under B3: the reader's switched-in outlets are mostly English, and outlets now decide.
+- Concern 1 of the first report is resolved: card-led stories no longer outrank article stories by timeline copies.
+
