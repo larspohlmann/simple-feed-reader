@@ -585,18 +585,6 @@ final class TrendingStoriesTest extends DbTestCase
         ));
     }
 
-    public function testASocialTimelineIsNoActiveFeedSinceItIsNoSource(): void
-    {
-        [$outlet] = $this->articleFeeds('outlet');
-        $timeline = $this->fixtures->feed('home', SocialNetwork::Mastodon);
-        $this->fixtures->subscribe($this->reader, $outlet, $timeline);
-        $this->fixtures->entry($outlet, 'Article', '2031-05-14 08:00:00');
-        $this->fixtures->entry($timeline, 'Post', '2031-05-14 09:00:00');
-        $this->fixtures->flush();
-
-        self::assertSame(1, $this->activeFeedCountOf($this->reader));
-    }
-
     public function testAFeedWhoseOnlyWindowEntryTheReaderHidIsNotActive(): void
     {
         [$hidden, $visible] = $this->articleFeeds('hidden', 'visible');

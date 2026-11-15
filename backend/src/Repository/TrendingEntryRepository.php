@@ -37,16 +37,11 @@ final readonly class TrendingEntryRepository
         } while (\count($rows) === self::CHUNK_ROWS);
     }
 
-    /**
-     * How many of the user's Trending article feeds have an entry at or after $since that the user has not hidden;
-     * a social timeline is no source of a story (#2229), so it sets no part of the reader's minimum.
-     */
+    /** How many of the user's Trending feeds have an entry at or after $since that the user has not hidden. */
     public function activeFeedCount(int $userId, \DateTimeImmutable $since): int
     {
         $activeFeeds = $this->entityManager->getConnection()->fetchOne(
-            'SELECT COUNT(*) FROM subscription followed'
-            . ' JOIN feed followed_feed ON followed_feed.id = followed.feed_id AND followed_feed.network IS NULL'
-            . ' WHERE followed.user_id = :user'
+            'SELECT COUNT(*) FROM subscription followed WHERE followed.user_id = :user'
             . ' AND ' . TrendingInclusionSql::includes('followed')
             . ' AND EXISTS (SELECT 1 FROM entry recent'
             . ' WHERE recent.feed_id = followed.feed_id AND recent.effective_date >= :since'
