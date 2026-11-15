@@ -19,28 +19,6 @@ final class SharedLinkResolutionRepository extends ServiceEntityRepository
         parent::__construct($registry, SharedLinkResolution::class);
     }
 
-    /**
-     * Queues the stored links of these hashes; a link already queued or settled keeps its state.
-     *
-     * @param list<string> $urlHashes
-     */
-    public function queueByUrlHashes(array $urlHashes): void
-    {
-        if ($urlHashes === []) {
-            return;
-        }
-        $connection = $this->getEntityManager()->getConnection();
-        $connection->executeStatement(
-            sprintf(
-                "INSERT %s INTO shared_link_resolution (shared_link_id, status, attempts)"
-                . " SELECT id, 'pending', 0 FROM shared_link WHERE url_hash IN (?)",
-                DatabasePlatform::insertIgnoreClause($connection),
-            ),
-            [$urlHashes],
-            [ArrayParameterType::STRING],
-        );
-    }
-
     /** @return list<PendingLinkModel> the queued links due at $now, oldest first */
     public function pendingAt(\DateTimeImmutable $now, int $limit): array
     {
@@ -103,7 +81,11 @@ final class SharedLinkResolutionRepository extends ServiceEntityRepository
         return $urls;
     }
 
-    /** @param list<int> $linkIds */
+    /**
+     * A link already queued or settled keeps its state.
+     *
+     * @param list<int> $linkIds
+     */
     public function queue(array $linkIds): void
     {
         if ($linkIds === []) {

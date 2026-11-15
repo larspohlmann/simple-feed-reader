@@ -55,8 +55,8 @@ final readonly class SharedLinkWriter
         }
         if ($missing !== []) {
             $this->sharedLinks->insertMissing(array_values($missing));
-            $this->linkResolutions->queueByUrlHashes(self::shortLinkHashes($missing));
             $links += $this->sharedLinks->byUrlHashes(array_keys($missing));
+            $this->linkResolutions->queue(self::shortLinkIds($missing, $links));
         }
 
         $linksByUrl = [];
@@ -113,16 +113,21 @@ final readonly class SharedLinkWriter
     }
 
     /**
-     * @param array<string, NewSharedLinkModel> $links by url hash
+     * @param array<string, NewSharedLinkModel> $missing by url hash
+     * @param array<string, SharedLink>         $links   by url hash
      *
-     * @return list<string>
+     * @return list<int>
      */
-    private static function shortLinkHashes(array $links): array
+    private static function shortLinkIds(array $missing, array $links): array
     {
-        return array_keys(array_filter(
-            $links,
-            static fn (NewSharedLinkModel $link): bool => ShortLinkShape::fits($link->preview->url),
-        ));
+        $ids = [];
+        foreach ($missing as $urlHash => $link) {
+            if (isset($links[$urlHash]) && ShortLinkShape::fits($link->preview->url)) {
+                $ids[] = $links[$urlHash]->requireId();
+            }
+        }
+
+        return $ids;
     }
 
     /**
