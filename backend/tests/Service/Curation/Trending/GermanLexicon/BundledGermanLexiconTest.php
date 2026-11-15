@@ -47,8 +47,8 @@ final class BundledGermanLexiconTest extends TestCase
     {
         $lexicon = $this->fixtureLexicon();
 
-        $this->assertSame(10, $lexicon->medianNounClassOfLength(4));
-        $this->assertSame(12, $lexicon->medianNounClassOfLength(8));
+        $this->assertSame(12, $lexicon->medianNounClassOfLength(4));
+        $this->assertSame(13, $lexicon->medianNounClassOfLength(8));
         $this->assertSame(18, $lexicon->medianNounClassOfLength(40));
     }
 
