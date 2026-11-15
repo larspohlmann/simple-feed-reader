@@ -216,6 +216,7 @@ writes none of them.
 | `TrendingStory` | A Trending story of the latest grouping. The next rebuild groups the restored entries again. |
 | `TrendingStoryEntry` | Which entries belong to a Trending story. The next rebuild groups the restored entries again. |
 | `SharedLink` | A linked article, stored once for every post that shares it. Each card in an entry line carries the article's preview, and a restore finds the stored article or creates it from that preview. |
+| `SharedLinkResolution` | Where a short link lands. A restore queues every short link it creates, and the worker follows it again. |
 
 ### 6.2 Account data that the file drops in full
 

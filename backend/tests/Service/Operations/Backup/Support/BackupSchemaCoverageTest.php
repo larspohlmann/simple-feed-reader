@@ -40,6 +40,7 @@ use App\Entity\SavedSearchEntry;
 use App\Entity\SharingSettings;
 use App\Entity\ShareEnrichment;
 use App\Entity\SharedLink;
+use App\Entity\SharedLinkResolution;
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Entity\SocialLike;
@@ -160,6 +161,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . 'entries on the next rebuild.',
         SharedLink::class => 'A linked article, stored once for every post that shares it (#2239); a card\'s line '
             . 'carries its preview, and a restore finds or creates the row from it.',
+        SharedLinkResolution::class => 'Where a short link lands (#2236); a restore re-queues every short link it '
+            . 'creates, and the worker follows it again.',
     ];
 
     /**
