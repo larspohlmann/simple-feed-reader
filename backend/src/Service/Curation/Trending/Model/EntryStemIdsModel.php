@@ -16,20 +16,36 @@ final readonly class EntryStemIdsModel
     }
 
     /**
-     * @param array<int, bool> $headline stem id => whether a word holds it, rather than only a compound's part
-     * @param array<int, bool> $body the same for the body
+     * @param list<array<int, bool>> $headlines each headline text's stems: stem id => whether a word holds it, rather
+     *                                          than only a compound's part
+     * @param list<array<int, bool>> $bodies the same for each body text
      */
-    public static function of(array $headline, array $body): self
+    public static function of(array $headlines, array $bodies): self
     {
-        $heldByAWord = $headline;
-        foreach ($body as $stemId => $isAWord) {
-            $heldByAWord[$stemId] = ($heldByAWord[$stemId] ?? false) || $isAWord;
-        }
+        $headline = self::unionOf($headlines);
+        $body = self::unionOf($bodies);
 
         return new self(
             array_keys($headline),
             array_keys(array_diff_key($body, $headline)),
-            array_keys($heldByAWord, false, true),
+            array_keys(self::unionOf([$headline, $body]), false, true),
         );
+    }
+
+    /**
+     * @param list<array<int, bool>> $texts
+     *
+     * @return array<int, bool>
+     */
+    private static function unionOf(array $texts): array
+    {
+        $heldByAWord = [];
+        foreach ($texts as $stems) {
+            foreach ($stems as $stemId => $isAWord) {
+                $heldByAWord[$stemId] = ($heldByAWord[$stemId] ?? false) || $isAWord;
+            }
+        }
+
+        return $heldByAWord;
     }
 }
