@@ -70,12 +70,12 @@ final class Version20261115220000Test extends TestCase
         self::assertSame(0, $this->rowCount('SELECT COUNT(*) FROM shared_link_resolution'));
     }
 
-    public function testTheStatusIsIndexed(): void
+    public function testThePendingReadIsIndexed(): void
     {
         $this->migrate('up');
 
-        self::assertSame(['status'], array_column(
-            $this->connection->fetchAllAssociative("PRAGMA index_info('idx_shared_link_resolution_status')"),
+        self::assertSame(['status', 'retry_at', 'shared_link_id'], array_column(
+            $this->connection->fetchAllAssociative("PRAGMA index_info('idx_shared_link_resolution_due')"),
             'name',
         ));
     }

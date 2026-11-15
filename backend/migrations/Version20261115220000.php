@@ -60,7 +60,7 @@ final class Version20261115220000 extends AbstractMigration
                 resolved_url_hash VARCHAR(64) DEFAULT NULL,
                 attempts SMALLINT DEFAULT 0 NOT NULL,
                 retry_at DATETIME DEFAULT NULL,
-                INDEX idx_shared_link_resolution_status (status),
+                INDEX idx_shared_link_resolution_due (status, retry_at, shared_link_id),
                 PRIMARY KEY (shared_link_id)
             ) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB
             SQL);
@@ -85,6 +85,8 @@ final class Version20261115220000 extends AbstractMigration
                 CONSTRAINT FK_425050968C730EC6 FOREIGN KEY (shared_link_id) REFERENCES shared_link (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE
             )
             SQL);
-        $this->addSql('CREATE INDEX idx_shared_link_resolution_status ON shared_link_resolution (status)');
+        $this->addSql(
+            'CREATE INDEX idx_shared_link_resolution_due ON shared_link_resolution (status, retry_at, shared_link_id)',
+        );
     }
 }
