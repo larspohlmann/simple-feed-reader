@@ -23,6 +23,9 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     /** A story is shown only when this many article feeds the reader follows, or this many article sites, carry it. */
     private const int MINIMUM_ARTICLE_SOURCES = 2;
 
+    private const string ARTICLE_FEEDS
+        = 'COUNT(DISTINCT CASE WHEN member_feed.network IS NULL THEN story_member.feed_id END)';
+
     private const array VISIBILITY_TYPES = [
         'user' => ParameterType::INTEGER,
         'minimum' => ParameterType::INTEGER,
@@ -168,13 +171,12 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             . ' WHERE overlap_member.story_id = story.id AND shorter_member.story_id IN (:shorterWindowStoryIds))';
     }
 
-    /** At least the reader's threshold of sources, and two article feeds or two distinct article sites. */
+    /** At least the reader's threshold of sources (the select's `outlet_count`), and two article feeds or two sites. */
     private static function visibleCoverage(): string
     {
         return ' GROUP BY story.id, story.last_seen'
-            . ' HAVING ' . self::sources() . ' >= :minimum'
-            . ' AND (COUNT(DISTINCT CASE WHEN member_feed.network IS NULL THEN story_member.feed_id END)'
-            . ' >= :minimumArticleSources'
+            . ' HAVING outlet_count >= :minimum'
+            . ' AND (' . self::ARTICLE_FEEDS . ' >= :minimumArticleSources'
             . ' OR COUNT(DISTINCT story_member.article_site) >= :minimumArticleSources)';
     }
 
@@ -187,7 +189,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     {
         $sharesACard = 'member_feed.network IS NOT NULL AND story_member.article_site IS NOT NULL';
 
-        return '(COUNT(DISTINCT CASE WHEN member_feed.network IS NULL THEN story_member.feed_id END)'
+        return '(' . self::ARTICLE_FEEDS
             . ' + COUNT(DISTINCT CASE WHEN ' . $sharesACard . ' THEN member_entry.author_url END)'
             . ' + COUNT(DISTINCT CASE WHEN ' . $sharesACard . ' AND member_entry.author_url IS NULL'
             . ' THEN story_member.feed_id END))';
