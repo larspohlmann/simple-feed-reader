@@ -1,0 +1,13 @@
+German lexicon (lexicon.php)
+
+Source: Google Books Ngram Viewer dataset, version 20200217, German 1-grams, © Google.
+  https://storage.googleapis.com/books/ngrams/books/datasetsv3.html
+
+Licence: Creative Commons Attribution 3.0 Unported (CC BY 3.0).
+  https://creativecommons.org/licenses/by/3.0/
+  The legal code is in LICENSE.txt.
+
+Changes: aggregated per casefolded form over 1950–2019, filtered to the 290,000 most frequent forms, reduced to
+frequency classes, verb stems derived. generate.php makes these changes; SOURCE pins the input files.
+
+lexicon.php is licensed CC BY 3.0; the repository's code stays MIT.
