@@ -330,3 +330,21 @@ fill therefore fell back to `LanguageGuess` for every social entry, whereas live
 (`SocialEntryLanguage`). Some guesses were wrong; English Bluesky posts tagged `fr` show up in the Eurovision group,
 for example. Posts were not fetched again. New social entries ingested by the running develop app during the runs
 carry no language, so the numbers drift by a few pairs from run to run.
+
+### French and Spanish (#2235)
+
+Measured on 2026-11-15 (pin 12:00 UTC, dev MySQL read-only), A = a0f702721 (six-character cut), B = develop 3cca6677f;
+tables in `2026-11-15-2235-trending-french-spanish-design.md`.
+
+- **French-only window:** day −6 net (13 new, 19 lost), week +3 (22 / 19). **Spanish-only:** day +4 (5 / 1), week 0
+  (8 / 8). Every changed group is a reshuffle of real stories; one wrong French merge is undone; the Spanish losses
+  are the Snowball seeds #2231 records (*habrá*, *estados*).
+- **The dev tags above are the fill's.** The *Limitation* was measured on social tags the fill wrote with the
+  four-language detector: 30 % of `fr` and 24 % of `es` tags are right by eye. They are not today's rule.
+- **Today's guess:** below 150 characters fr 8 of 28 and es 3 of 24 right (de and en 40 of 40 sampled); at 150 and
+  above fr 23 of 24, es 21 of 24. No French or Spanish text was found tagged en or de; all 8 fr/es feeds are right.
+- **Cost:** the wrong fr/es tags move no fr–fr or es–es pair (0 / 0 on both single-language windows); the posts they
+  sit on link to nothing. No guess below 150 characters (G1) loses 102 day pairs, nearly all en–en; a short guess the
+  bundled stopwords must confirm (G2) ties (+1 day, −6 week). No rule change (#2235 D1, D2).
+- **English side effect:** today's detector gives about 359 short English posts no language (it ranks Interlingua or
+  Occitan first) where the fill had `en`: −255 week pairs against the fill tags, −1 day. Recorded in #2235 D6, followed up in #2243.
