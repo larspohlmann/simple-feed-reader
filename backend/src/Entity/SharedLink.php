@@ -32,10 +32,10 @@ final class SharedLink
     private string $title;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
-    private ?string $description;
+    private ?string $description = null;
 
     #[ORM\Column(name: 'image_url', length: LinkCardContent::URL_MAX, nullable: true)]
-    private ?string $imageUrl;
+    private ?string $imageUrl = null;
 
     #[ORM\Column(name: 'site_name', length: LinkCardContent::SITE_NAME_MAX)]
     private string $siteName;
@@ -94,11 +94,12 @@ final class SharedLink
         return $this->createdAt;
     }
 
+    /** Keeps the URL, and an image or description the new preview does not declare: a refresh never blanks a card. */
     public function refresh(LinkCardContent $preview): void
     {
         $this->title = $preview->title;
-        $this->description = $preview->description;
-        $this->imageUrl = $preview->imageUrl;
+        $this->description = $preview->description ?? $this->description;
+        $this->imageUrl = $preview->imageUrl ?? $this->imageUrl;
         $this->siteName = $preview->siteName;
     }
 

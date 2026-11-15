@@ -49,6 +49,24 @@ final class LinkArticleReaderTest extends DbTestCase
         );
     }
 
+    public function testAPageWithoutAnImageKeepsTheStoredOne(): void
+    {
+        $this->sharedLinks()->insertMissing([new NewSharedLinkModel(
+            (string) (new UrlNormalizer())->hash(self::URL),
+            new LinkCardContent(self::URL, 'First', 'Said first', 'https://cdn.example/thumb.jpg', 'example.com'),
+            null,
+            new \DateTimeImmutable('2026-11-15 10:00:00'),
+        )]);
+        $this->extractor->willReturn(self::ok(new PagePreviewModel(self::URL, 'Fresh', null, null, 'Example', null)));
+
+        $this->reader()->extract(self::URL);
+
+        self::assertEquals(
+            new LinkCardContent(self::URL, 'Fresh', 'Said first', 'https://cdn.example/thumb.jpg', 'Example'),
+            $this->storedRow()->preview(),
+        );
+    }
+
     public function testATrackedAddressRefreshesItsRow(): void
     {
         $this->storeRow(null);
