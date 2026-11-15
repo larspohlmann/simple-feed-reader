@@ -36,14 +36,17 @@ final class GermanVerbStemsRealLexiconTest extends TestCase
     public static function forms(): iterable
     {
         yield 'verhandelt joins' => ['verhandelt', 'verhandeln', true];
-        yield 'kündigt stays apart: kundigt is itself a verb stem' => ['kündigt', 'kündigen', false];
+        yield 'kündigt joins: kündigen is more frequent than the past-form entry' => ['kündigt', 'kündigen', true];
         yield 'arbeitet stays apart: arbeit is no verb stem' => ['arbeitet', 'arbeiten', false];
         yield 'nominiert joins nominieren, both at nomini' => ['nominiert', 'nominieren', true];
         yield 'nominiert stays apart from Nominierung: nominier' => ['nominiert', 'Nominierung', false];
-        yield 'macht stays apart: machen is not joined' => ['macht', 'machen', false];
+        yield 'macht joins machen: macht is no noun in the data' => ['macht', 'machen', true];
         yield 'bett stays apart from beten' => ['bett', 'beten', false];
-        yield 'wählt stays apart: wahlt is itself a verb stem' => ['wählt', 'wählen', false];
-        yield 'fordert stays apart: fordert is itself a verb stem' => ['fordert', 'fordern', false];
-        yield 'warnt stays apart: warnt is itself a verb stem' => ['warnt', 'warnen', false];
+        yield 'wählt joins wählen' => ['wählt', 'wählen', true];
+        yield 'fordert joins fordern' => ['fordert', 'fordern', true];
+        yield 'warnt joins warnen' => ['warnt', 'warnen', true];
+        yield 'rettet joins retten' => ['rettet', 'retten', true];
+        yield 'wartet joins warten' => ['wartet', 'warten', true];
+        yield 'fast stays fast, as fasten does' => ['fast', 'fasten', true];
     }
 }

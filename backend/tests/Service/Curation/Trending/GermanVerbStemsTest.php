@@ -29,6 +29,8 @@ final class GermanVerbStemsTest extends TestCase
         yield 'a noun is guarded although its stem is a verb stem' => ['bett', 'bett', 'bett'];
         yield 'a noun ending in -t is guarded' => ['macht', 'macht', 'macht'];
         yield 'a stem that is no verb stem stays' => ['rot', 'rot', 'rot'];
-        yield 'a verb stem itself is mapped' => ['nominier', 'nominieren', 'nominier'];
+        yield 'the more frequent infinitive beats its past-form entry' => ['kundigt', 'kündigt', 'kundig'];
+        yield 'the more frequent entry of the stem itself stays' => ['fast', 'fast', 'fast'];
+        yield 'a word not ending in t is left alone' => ['wart', 'warten', 'wart'];
     }
 }

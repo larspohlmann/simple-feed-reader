@@ -19,4 +19,7 @@ interface GermanLexiconInterface
 
     /** @throws UnknownVerbStemException */
     public function infinitiveStemOf(string $presentStem): string;
+
+    /** The class of the infinitive behind a verb stem. @throws UnknownVerbStemException */
+    public function infinitiveFrequencyClassOf(string $presentStem): int;
 }
