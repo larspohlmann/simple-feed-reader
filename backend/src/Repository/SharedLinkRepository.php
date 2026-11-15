@@ -101,6 +101,22 @@ final class SharedLinkRepository extends ServiceEntityRepository
         );
     }
 
+    /** @return list<SharedLink> rows without a language, in id order */
+    public function unsetLanguageAfterId(int $afterId, int $limit): array
+    {
+        /** @var list<SharedLink> $links */
+        $links = $this->createQueryBuilder('link')
+            ->andWhere('link.language IS NULL')
+            ->andWhere('link.id > :afterId')
+            ->setParameter('afterId', $afterId)
+            ->orderBy('link.id', 'ASC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+
+        return $links;
+    }
+
     /** @return array<int, string> by shared link id */
     public function urlsAfterId(int $afterId, int $limit): array
     {
