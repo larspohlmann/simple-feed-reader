@@ -253,14 +253,15 @@ final class HeadlineWindow
     private function placedStemsOf(int $entryId): array
     {
         $placed = [];
-        foreach ($this->bodyStems[$entryId] as $stemId) {
-            if (!$this->isFillerFor($entryId, $stemId)) {
-                $placed[$stemId] = self::BODY_WEIGHT;
-            }
-        }
-        foreach ($this->headlineStems[$entryId] as $stemId) {
-            if (!$this->isFillerFor($entryId, $stemId)) {
-                $placed[$stemId] = self::HEADLINE_WEIGHT;
+        $places = [
+            [$this->bodyStems[$entryId], self::BODY_WEIGHT],
+            [$this->headlineStems[$entryId], self::HEADLINE_WEIGHT],
+        ];
+        foreach ($places as [$stemIds, $placeWeight]) {
+            foreach ($stemIds as $stemId) {
+                if (!$this->isFillerFor($entryId, $stemId)) {
+                    $placed[$stemId] = $placeWeight;
+                }
             }
         }
 
@@ -271,20 +272,18 @@ final class HeadlineWindow
     private function earlierHoldersOf(int $stemId, int $entryId): array
     {
         $holders = [];
-        foreach ($this->bodyPostings[$stemId] ?? [] as $holderId) {
-            if ($holderId >= $entryId) {
-                break;
-            }
-            if (!$this->isFeedFillerFor($holderId, $stemId)) {
-                $holders[$holderId] = self::BODY_WEIGHT;
-            }
-        }
-        foreach ($this->headlinePostings[$stemId] ?? [] as $holderId) {
-            if ($holderId >= $entryId) {
-                break;
-            }
-            if (!$this->isFeedFillerFor($holderId, $stemId)) {
-                $holders[$holderId] = self::HEADLINE_WEIGHT;
+        $places = [
+            [$this->bodyPostings[$stemId] ?? [], self::BODY_WEIGHT],
+            [$this->headlinePostings[$stemId] ?? [], self::HEADLINE_WEIGHT],
+        ];
+        foreach ($places as [$holderIds, $placeWeight]) {
+            foreach ($holderIds as $holderId) {
+                if ($holderId >= $entryId) {
+                    break;
+                }
+                if (!$this->isFeedFillerFor($holderId, $stemId)) {
+                    $holders[$holderId] = $placeWeight;
+                }
             }
         }
 
