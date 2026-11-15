@@ -11,7 +11,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 final readonly class CardLanguage
 {
     public function __construct(
-        #[Autowire(service: 'app.trending.card_language_guess')]
+        #[Autowire(service: 'app.card_language_guess')]
         private LanguageGuess $languageGuess,
     ) {
     }
