@@ -1,0 +1,54 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Curation\Trending\StopWords;
+
+use App\Enum\FeedLanguage;
+use App\Service\Curation\Trending\StopWords\BundledStopWords;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
+
+final class BundledStopWordsDataTest extends TestCase
+{
+    /** @return iterable<string, array{FeedLanguage}> */
+    public static function languages(): iterable
+    {
+        foreach (FeedLanguage::cases() as $language) {
+            yield $language->value => [$language];
+        }
+    }
+
+    #[DataProvider('languages')]
+    public function testEveryLanguageHasWords(FeedLanguage $language): void
+    {
+        $this->assertNotEmpty(self::bundled()->wordsOf($language));
+    }
+
+    #[DataProvider('languages')]
+    public function testEveryWordIsCasefoldedLettersAndSorted(FeedLanguage $language): void
+    {
+        $words = self::bundled()->wordsOf($language);
+        $sorted = array_values(array_unique($words));
+        sort($sorted, \SORT_STRING);
+
+        foreach ($words as $word) {
+            $this->assertMatchesRegularExpression('/^\p{L}+$/u', $word);
+            $this->assertSame(mb_convert_case($word, \MB_CASE_FOLD, 'UTF-8'), $word);
+        }
+        $this->assertSame($sorted, $words);
+    }
+
+    public function testTheListsHoldTheirLanguagesFunctionWords(): void
+    {
+        $this->assertContains('und', self::bundled()->wordsOf(FeedLanguage::German));
+        $this->assertContains('the', self::bundled()->wordsOf(FeedLanguage::English));
+        $this->assertContains('les', self::bundled()->wordsOf(FeedLanguage::French));
+        $this->assertContains('los', self::bundled()->wordsOf(FeedLanguage::Spanish));
+    }
+
+    private static function bundled(): BundledStopWords
+    {
+        return new BundledStopWords(dirname(__DIR__, 5) . '/resources/snowball-stopwords/stopwords.php');
+    }
+}
