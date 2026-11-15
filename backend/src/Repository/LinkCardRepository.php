@@ -75,7 +75,7 @@ final class LinkCardRepository extends ServiceEntityRepository
         return $grouped;
     }
 
-    /** @return array<int, string> every card's URL by card id, in ascending id after the given one */
+    /** @return array<int, string> by card id */
     public function urlsAfterId(int $afterId, int $limit): array
     {
         /** @var list<array{id: int|string, url: string}> $rows */

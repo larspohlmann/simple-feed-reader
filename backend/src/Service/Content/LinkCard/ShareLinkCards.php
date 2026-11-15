@@ -122,7 +122,10 @@ final readonly class ShareLinkCards
         $remaining = $budget->fetches;
         $plansByRowId = [];
         foreach ($queued as $row) {
-            $plan = self::planOf($row->getEntry(), $storedCards[$row->getEntry()->requireId()] ?? []);
+            $plan = ShareTargets::planOf($row->getEntry(), array_map(
+                static fn (LinkCardContent $card): string => $card->url,
+                $storedCards[$row->getEntry()->requireId()] ?? [],
+            ));
             if ($plansByRowId !== [] && \count($plan->urls) > $remaining) {
                 break;
             }
@@ -132,14 +135,5 @@ final readonly class ShareLinkCards
         }
 
         return $plansByRowId;
-    }
-
-    /** @param list<LinkCardContent> $storedCards */
-    private static function planOf(Entry $entry, array $storedCards): ShareFetchPlanModel
-    {
-        return ShareTargets::planOf(
-            $entry,
-            array_map(static fn (LinkCardContent $card): string => $card->url, $storedCards),
-        );
     }
 }

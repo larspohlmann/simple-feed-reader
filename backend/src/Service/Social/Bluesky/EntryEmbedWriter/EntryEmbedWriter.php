@@ -55,7 +55,10 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
         $assembled = EntryMediaAssembler::assemble(self::storedImage($entry), $embed->media, []);
         $entry->setMedia($assembled->media, $entry->getAttachments());
 
-        $cardedUrls = array_map(static fn (LinkCardContent $card): string => $card->url, $embed->linkCards);
+        $cardedUrls = array_map(
+            static fn (LinkCardContent $card): string => TrackingFreeUrl::of($card->url),
+            $embed->linkCards,
+        );
 
         $outcome = $body->uncardedBy($cardedUrls) === [] ? FillOutcome::Filled : FillOutcome::AwaitingLinkCards;
         if ($embed->quote === null) {

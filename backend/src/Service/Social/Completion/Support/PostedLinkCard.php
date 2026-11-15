@@ -17,7 +17,7 @@ final class PostedLinkCard
 {
     public static function of(Entry $entry, LinkCardContent $card): ?LinkCardContent
     {
-        $targets = ShareTargets::uncardedOf($entry, []);
+        $targets = ShareTargets::planOf($entry, [])->urls;
         if (\in_array($card->url, $targets, true)) {
             return $card;
         }
