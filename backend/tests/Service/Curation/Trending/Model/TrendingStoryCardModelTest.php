@@ -29,7 +29,7 @@ final class TrendingStoryCardModelTest extends DbTestCase
 
     public function testAnArticleLeadsOverANewerPostWithAPicturedCard(): void
     {
-        $article = $this->article('2031-05-14 08:00:00');
+        $article = $this->article();
         $post = $this->linkShare('ann', '2031-05-14 10:00:00', 'https://img.example/card.jpg');
 
         $card = self::cardOf([$post, $article]);
@@ -53,7 +53,7 @@ final class TrendingStoryCardModelTest extends DbTestCase
     public function testWithoutAPicturedCardTheNewestLinkShareLeads(): void
     {
         $older = $this->linkShare('ann', '2031-05-14 08:00:00', null);
-        $newer = $this->linkShare('ben', '2031-05-14 09:00:00', null);
+        $newer = $this->cardlessLinkShare('ben', '2031-05-14 09:00:00');
         $quote = $this->post('cat', '2031-05-14 10:00:00', ShareKind::Quote, null);
 
         self::assertSame($newer->entry, self::cardOf([$older, $quote, $newer])->lead->entry);
@@ -77,9 +77,9 @@ final class TrendingStoryCardModelTest extends DbTestCase
         );
     }
 
-    private function article(string $effectiveDate): EntryListRow
+    private function article(): EntryListRow
     {
-        $entry = $this->fixtures->entry($this->fixtures->feed('outlet'), 'Article', $effectiveDate);
+        $entry = $this->fixtures->entry($this->fixtures->feed('outlet'), 'Article', '2031-05-14 08:00:00');
 
         return $this->rowOf($entry, []);
     }
@@ -97,6 +97,15 @@ final class TrendingStoryCardModelTest extends DbTestCase
         $card = new LinkCardContent('https://shared.example/story', 'Story', null, $cardImageUrl, 'Shared');
 
         return $this->rowOf($entry, [$card]);
+    }
+
+    private function cardlessLinkShare(string $poster, string $effectiveDate): EntryListRow
+    {
+        $feed = $this->fixtures->feed($poster, SocialNetwork::Mastodon);
+        $entry = $this->fixtures->entry($feed, 'Post', $effectiveDate);
+        $entry->setShareKind(ShareKind::Link);
+
+        return $this->rowOf($entry, []);
     }
 
     /** @param list<LinkCardContent> $linkCards */

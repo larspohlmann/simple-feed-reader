@@ -111,7 +111,7 @@ final readonly class TrendingStoryCardModel
             static fn (EntryListRow $post): bool => $post->entry->getShareKind() === ShareKind::Link,
         ));
         foreach ($linkShares as $linkShare) {
-            if (($linkShare->enrichment->linkCards[0] ?? null)?->imageUrl !== null) {
+            if (($linkShare->enrichment->linkCards[0]->imageUrl ?? null) !== null) {
                 return $linkShare;
             }
         }

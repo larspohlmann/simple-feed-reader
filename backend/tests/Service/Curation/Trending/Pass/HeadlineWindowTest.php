@@ -431,7 +431,7 @@ final class HeadlineWindowTest extends TestCase
         $this->addIn(FeedLanguage::English, 1, 10, self::CARD_HEADLINE);
         $this->addSharing(
             self::post(2, FeedLanguage::German, 'Schaut euch das an'),
-            self::articleIn(FeedLanguage::English),
+            new SharedArticleModel(self::CARD_HEADLINE, '', FeedLanguage::English),
         );
 
         $shared = $this->window->sharedWeightsWithEarlier(2);
@@ -487,6 +487,17 @@ final class HeadlineWindowTest extends TestCase
         self::assertEqualsWithDelta(2 * self::TWICE, $this->window->totalWeight(2), 0.0001);
     }
 
+    public function testACompoundsPartsInACardStayPartsAsInTheEntrysOwnHeadline(): void
+    {
+        $this->addIn(FeedLanguage::German, 1, 10, 'Polizeieinsatz');
+        $this->addSharing(
+            self::post(2, FeedLanguage::German, ''),
+            new SharedArticleModel('Polizeieinsatz', '', FeedLanguage::German),
+        );
+
+        self::assertEqualsWithDelta($this->window->totalWeight(1), $this->window->totalWeight(2), 0.0001);
+    }
+
     public function testAFrenchPostSharesASpanishCardsHeadlineWithASpanishArticle(): void
     {
         $this->addIn(FeedLanguage::Spanish, 1, 10, self::SPANISH_HEADLINE);
@@ -524,11 +535,6 @@ final class HeadlineWindowTest extends TestCase
     private static function post(int $entryId, ?FeedLanguage $language, string $headline): WindowEntryModel
     {
         return self::entry($entryId, $entryId * 10, $language, $headline);
-    }
-
-    private static function articleIn(FeedLanguage $language): SharedArticleModel
-    {
-        return new SharedArticleModel(self::CARD_HEADLINE, '', $language);
     }
 
     private function addIn(FeedLanguage $language, int $entryId, int $feedId, string $headline): void

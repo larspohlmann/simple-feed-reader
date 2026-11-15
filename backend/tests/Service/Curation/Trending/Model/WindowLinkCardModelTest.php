@@ -21,6 +21,7 @@ final class WindowLinkCardModelTest extends TestCase
         yield 'a handle starting with an underscore' => ['https://social.example/p/1', 'Post by @_jo', 'Social'];
         yield 'the site name' => ['https://example.org/news/1', 'Example News', 'example news'];
         yield 'the host' => ['https://example.org/news/1', 'example.org', 'Some Site'];
+        yield 'the site name in capitals beyond ASCII' => ['https://ecole.example/news/1', 'ÉCOLE', 'école'];
         yield 'the first label' => ['https://www.example.com/watch?v=1', '- Example', 'Elsewhere'];
     }
 
