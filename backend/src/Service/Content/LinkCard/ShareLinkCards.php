@@ -12,7 +12,7 @@ use App\Repository\ShareEnrichmentRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Content\LinkCard\Model\EntryCardsModel;
 use App\Service\Content\LinkCard\Model\LinkCardBudgetModel;
-use App\Service\Content\LinkCard\Model\ShareFetchPlanModel;
+use App\Service\Social\Share\Model\ShareFetchPlanModel;
 use App\Service\Library\Search\EntryIndexer;
 use App\Service\Social\Share\Support\ShareTargets;
 use Doctrine\ORM\EntityManagerInterface;
@@ -137,11 +137,9 @@ final readonly class ShareLinkCards
     /** @param list<LinkCardContent> $storedCards */
     private static function planOf(Entry $entry, array $storedCards): ShareFetchPlanModel
     {
-        $uncardedUrls = ShareTargets::uncardedOf(
+        return ShareTargets::planOf(
             $entry,
             array_map(static fn (LinkCardContent $card): string => $card->url, $storedCards),
         );
-
-        return new ShareFetchPlanModel($uncardedUrls, ShareTargets::postedFormsOf($entry, $uncardedUrls));
     }
 }

@@ -6,6 +6,7 @@ namespace App\Service\Social\Share\Support;
 
 use App\Entity\Entry;
 use App\Enum\ShareKind;
+use App\Service\Social\Share\Model\ShareFetchPlanModel;
 use App\Service\Foundation\Url\Support\TrackingFreeUrl;
 
 /** The pages an entry's cards come from: a titled share's one target, or the links a post's text shares. */
@@ -18,29 +19,23 @@ final class ShareTargets
      */
     public static function uncardedOf(Entry $entry, array $cardedUrls): array
     {
-        $target = TitledShareTarget::of($entry);
-        if ($target !== null) {
-            return \in_array($target, array_map(TrackingFreeUrl::of(...), $cardedUrls), true) ? [] : [$target];
-        }
-
-        return SharedLinks::of((string) $entry->getText()->getContentHtml())->uncardedBy($cardedUrls);
+        return self::planOf($entry, $cardedUrls)->urls;
     }
 
-    /**
-     * @param list<string> $urls tracking-free targets
-     *
-     * @return array<string, string> the href each was posted as, for those posted with tracking keys
-     */
-    public static function postedFormsOf(Entry $entry, array $urls): array
+    /** @param list<string> $cardedUrls */
+    public static function planOf(Entry $entry, array $cardedUrls): ShareFetchPlanModel
     {
-        if (TitledShareTarget::of($entry) !== null) {
-            return [];
+        $target = TitledShareTarget::of($entry);
+        if ($target !== null) {
+            $carded = \in_array(TrackingFreeUrl::of($target), array_map(TrackingFreeUrl::of(...), $cardedUrls), true);
+
+            return new ShareFetchPlanModel($carded ? [] : [$target]);
         }
 
-        return array_intersect_key(
-            SharedLinks::of((string) $entry->getText()->getContentHtml())->postedForms,
-            array_flip($urls),
-        );
+        $shared = SharedLinks::of((string) $entry->getText()->getContentHtml());
+        $urls = $shared->uncardedBy($cardedUrls);
+
+        return new ShareFetchPlanModel($urls, array_intersect_key($shared->postedForms, array_flip($urls)));
     }
 
     public static function isCardableShare(Entry $entry): bool

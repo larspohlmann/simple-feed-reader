@@ -10,7 +10,7 @@ use App\Service\Content\LinkCard\Exception\QuotedPostUnavailableException;
 use App\Service\Content\LinkCard\Model\EntryCardsModel;
 use App\Service\Content\LinkCard\Model\PageCardModel;
 use App\Service\Content\LinkCard\Model\QuotedTargetModel;
-use App\Service\Content\LinkCard\Model\ShareFetchPlanModel;
+use App\Service\Social\Share\Model\ShareFetchPlanModel;
 use App\Service\Content\LinkCard\PageCardReader\PageCardReaderInterface;
 use App\Service\Content\LinkCard\QuotedPostSource\QuotedPostSourceInterface;
 use App\Service\Content\LinkCard\Support\QuoteLine;

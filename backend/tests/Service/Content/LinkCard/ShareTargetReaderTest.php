@@ -7,7 +7,7 @@ namespace App\Tests\Service\Content\LinkCard;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\QuotedPostContent;
-use App\Service\Content\LinkCard\Model\ShareFetchPlanModel;
+use App\Service\Social\Share\Model\ShareFetchPlanModel;
 use App\Service\Content\LinkCard\PostedUrlCheck;
 use App\Service\Content\LinkCard\ShareTargetReader;
 use App\Tests\Support\RecordingLogger;
