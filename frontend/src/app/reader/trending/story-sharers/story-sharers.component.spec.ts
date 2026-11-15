@@ -82,6 +82,42 @@ it('keeps one name on two networks as two sharers', () => {
   expect(names(element)).toEqual(['NPR', 'NPR']);
 });
 
+const profiled = (id: number, name: string, url: string): EntryDto =>
+  anEntry({ id, titleDerived: true, poster: { name, url, imageUrl: null } });
+
+it('keeps two accounts of one name apart by their profiles', () => {
+  const element = mount(
+    sharedBy(
+      profiled(2, 'Ann', 'https://m.example/@ann'),
+      profiled(3, 'Ann', 'https://m.example/@ann2'),
+    ),
+  );
+
+  expect(names(element)).toEqual(['Ann', 'Ann']);
+});
+
+it('shows one profile under two names on one pill, its newest', () => {
+  const element = mount(
+    sharedBy(
+      profiled(2, 'Ann B.', 'https://m.example/@ann'),
+      profiled(3, 'Ann', 'https://m.example/@ann'),
+    ),
+  );
+
+  expect(names(element)).toEqual(['Ann B.']);
+});
+
+it('keeps two feeds of one name apart', () => {
+  const element = mount(
+    sharedBy(
+      anEntry({ id: 2, source: 'NPR', subscriptionId: 20 }),
+      anEntry({ id: 3, source: 'NPR', subscriptionId: 21 }),
+    ),
+  );
+
+  expect(names(element)).toEqual(['NPR', 'NPR']);
+});
+
 it("puts the sharer's avatar on its pill", () => {
   const element = mount(sharedBy(share(2, 'Ann', 'https://img/ann.jpg')));
 

@@ -19,6 +19,12 @@ interface Sharer {
   avatarUrl: string | null;
 }
 
+/** The poster's profile, else the feed that posted it, else the name a poster without a profile goes by. */
+function accountOf(share: EntryDto, name: string): string {
+  if (share.poster) return share.poster.url ?? `name:${name}`;
+  return `feed:${share.subscriptionId}`;
+}
+
 /** A Trending article's sharers as pills, each opening the post that shared it (#2229). */
 @Component({
   selector: 'app-story-sharers',
@@ -38,7 +44,7 @@ export class StorySharersComponent {
     const byAccount = new Map<string, Sharer>();
     for (const share of this.entry().shares ?? []) {
       const sharer = this.sharerOf(share);
-      const account = `${sharer.network ?? ''} ${sharer.name}`;
+      const account = `${sharer.network ?? ''} ${accountOf(share, sharer.name)}`;
       if (!byAccount.has(account)) byAccount.set(account, sharer);
     }
     return [...byAccount.values()];
