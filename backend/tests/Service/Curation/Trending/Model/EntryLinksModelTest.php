@@ -52,11 +52,19 @@ final class EntryLinksModelTest extends TestCase
 
     private static function storyCard(): WindowLinkCardModel
     {
-        return new WindowLinkCardModel('https://shared.example/2031/storm', 'Storm floods the harbour', null, 'Shared');
+        return new WindowLinkCardModel(
+            1,
+            'hash',
+            'https://shared.example/2031/storm',
+            'Storm floods the harbour',
+            null,
+            'Shared',
+            null,
+        );
     }
 
     private static function siteCard(): WindowLinkCardModel
     {
-        return new WindowLinkCardModel('https://shared.example/', 'Shared', null, 'Shared');
+        return new WindowLinkCardModel(2, 'hash', 'https://shared.example/', 'Shared', null, 'Shared', null);
     }
 }

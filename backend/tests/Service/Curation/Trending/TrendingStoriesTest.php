@@ -26,11 +26,11 @@ use App\Service\Curation\Trending\Model\ReaderWindowModel;
 use App\Service\Curation\Trending\Model\TrendingStoryCardModel;
 use App\Service\Curation\Trending\ReaderWindows;
 use App\Service\Curation\Trending\TrendingStories;
-use App\Service\Foundation\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
 use App\Tests\Support\TrendingWiring;
 use Symfony\Component\Clock\MockClock;
+use App\Entity\LinkCardContent;
 
 final class TrendingStoriesTest extends DbTestCase
 {
@@ -208,7 +208,7 @@ final class TrendingStoriesTest extends DbTestCase
         $userId = $this->reader->requireId();
 
         self::assertSame(
-            [$story->requireId() => [$article->requireId()]],
+            [$story->requireId() => [$article->requireId() => null]],
             $this->storyRepository()->shownEntryIdsByStory($userId, [$story->requireId()]),
         );
         self::assertSame([$otherStory->requireId()], array_keys(
@@ -255,6 +255,33 @@ final class TrendingStoriesTest extends DbTestCase
         );
         self::assertSame([], self::otherRowsOf($stories[0])[0]->duplicates);
         self::assertNotContains($first->requireId(), self::idsOf(self::otherRowsOf($stories[0])));
+    }
+
+    public function testAPostFoldsOntoTheOutletOfItsLinksHash(): void
+    {
+        [$alpha, $beta] = $this->articleFeeds('alpha', 'beta');
+        $ann = $this->fixtures->feed('ann', SocialNetwork::Mastodon);
+        $this->fixtures->subscribe($this->reader, $alpha, $beta, $ann);
+        $lead = $this->fixtures->article($alpha, 'Lead', '2031-05-14 09:00:00', 'https://alpha.example.com/lead');
+        $second = $this->fixtures->entry($beta, 'Second', '2031-05-14 08:00:00');
+        $post = $this->fixtures->linkShare($ann, '2031-05-14 10:00:00', new LinkCardContent(
+            'https://alpha.example.com/lead?utm_source=social',
+            'Lead',
+            null,
+            null,
+            'Alpha',
+        ));
+        $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
+            [$lead, 'alpha.example.com'],
+            [$second, 'beta.example.com'],
+            [$post, 'alpha.example.com'],
+        ]);
+
+        $stories = $this->storiesFor(TrendingWindow::Day);
+
+        self::assertCount(1, $stories);
+        self::assertSame($lead->requireId(), $stories[0]->articles->lead->row->entry->requireId());
+        self::assertSame([$post->requireId()], self::idsOf($stories[0]->articles->lead->shares));
     }
 
     public function testFeedsCarryingTheSameArticleCountAsOneSource(): void
@@ -833,7 +860,6 @@ final class TrendingStoriesTest extends DbTestCase
             $entryList,
             $enricher,
             $readingSettings,
-            new UrlNormalizer(),
         );
     }
 

@@ -96,7 +96,8 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     /**
      * @param list<int> $storyIds
      *
-     * @return array<int, list<int>> story id => its articles and story-card posts of the feeds the reader follows
+     * @return array<int, array<int, ?string>> story id => its articles and story-card posts of the feeds the reader
+     *                                         follows, each entry id => the url_hash of its shared link
      */
     public function shownEntryIdsByStory(int $userId, array $storyIds): array
     {
@@ -104,10 +105,11 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             return [];
         }
 
-        /** @var list<array{story_id: int|string, entry_id: int|string}> $rows */
+        /** @var list<array{story_id: int|string, entry_id: int|string, url_hash: string|null}> $rows */
         $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
-            'SELECT shown.story_id, shown.entry_id FROM trending_story_entry shown'
+            'SELECT shown.story_id, shown.entry_id, link.url_hash FROM trending_story_entry shown'
             . ' JOIN feed shown_feed ON shown_feed.id = shown.feed_id'
+            . ' LEFT JOIN shared_link link ON link.id = shown.shared_link_id'
             . ' JOIN subscription reader ON reader.feed_id = shown.feed_id AND reader.user_id = :user'
             . ' AND ' . TrendingInclusionSql::includes('reader')
             . ' WHERE shown.story_id IN (:storyIds)'
@@ -116,12 +118,12 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             ['user' => ParameterType::INTEGER, 'storyIds' => ArrayParameterType::INTEGER],
         );
 
-        $entryIds = [];
+        $linkHashes = [];
         foreach ($rows as $row) {
-            $entryIds[(int) $row['story_id']][] = (int) $row['entry_id'];
+            $linkHashes[(int) $row['story_id']][(int) $row['entry_id']] = $row['url_hash'];
         }
 
-        return $entryIds;
+        return $linkHashes;
     }
 
     /**

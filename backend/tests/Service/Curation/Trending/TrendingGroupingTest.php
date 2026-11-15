@@ -10,6 +10,7 @@ use App\Entity\LinkCardContent;
 use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
 use App\Service\Curation\Trending\Pass\TrendingRun;
+use App\Service\Foundation\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
 use App\Tests\Support\TrendingWiring;
@@ -65,6 +66,31 @@ final class TrendingGroupingTest extends DbTestCase
         self::assertSame(
             [[$article->requireId(), $post->requireId()]],
             $this->collect()->entriesSharingAUrl(),
+        );
+    }
+
+    public function testCardsLinkByTheStoredHash(): void
+    {
+        $article = $this->article();
+        $post = $this->postCarding('https://elsewhere.example/copy', 'Unrelated words entirely');
+        $this->entityManager->getConnection()->executeStatement(
+            'UPDATE shared_link SET url_hash = ? WHERE url = ?',
+            [(new UrlNormalizer())->hash('https://outlet.example/lighthouse'), 'https://elsewhere.example/copy'],
+        );
+
+        self::assertSame([[$article->requireId(), $post->requireId()]], $this->collect()->entriesSharingAUrl());
+    }
+
+    public function testAMemberCarriesItsCardsLink(): void
+    {
+        $this->article();
+        $post = $this->postCarding('https://outlet.example/lighthouse', self::HEADLINE);
+
+        $run = $this->collect();
+
+        self::assertSame(
+            $this->entityManager->getConnection()->fetchOne('SELECT shared_link_id FROM link_card'),
+            $run->memberOf($post->requireId())->sharedLinkId,
         );
     }
 

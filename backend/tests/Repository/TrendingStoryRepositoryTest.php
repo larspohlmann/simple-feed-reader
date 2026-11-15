@@ -20,6 +20,10 @@ use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
 use Symfony\Component\Clock\MockClock;
+use App\Entity\LinkCard;
+use App\Entity\LinkCardContent;
+use App\Service\Foundation\Url\UrlNormalizer;
+use App\Tests\Support\SharedLinks;
 
 final class TrendingStoryRepositoryTest extends DbTestCase
 {
@@ -101,10 +105,32 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         ]);
 
         self::assertSame(
-            [$story->requireId() => [$article->requireId(), $carded->requireId()]],
+            [$story->requireId() => [$article->requireId() => null, $carded->requireId() => null]],
             $this->stories()->shownEntryIdsByStory($this->reader->requireId(), [$story->requireId()]),
         );
         self::assertSame([], $this->stories()->shownEntryIdsByStory($this->reader->requireId(), []));
+    }
+
+    public function testShownEntriesCarryTheirLinksHash(): void
+    {
+        $article = $this->member($this->articleFeed('outlet'));
+        $carded = $this->member($this->socialFeed('ann'));
+        $this->entityManager->persist(new LinkCard($carded, 0, SharedLinks::of(
+            $this->entityManager,
+            new LinkCardContent('https://outlet.example/storm', 'Storm', null, null, 'Outlet'),
+        )));
+        $story = $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
+            [$article, 'outlet.example'],
+            [$carded, 'outlet.example'],
+        ]);
+
+        self::assertSame(
+            [$story->requireId() => [
+                $article->requireId() => null,
+                $carded->requireId() => (new UrlNormalizer())->hash('https://outlet.example/storm'),
+            ]],
+            $this->stories()->shownEntryIdsByStory($this->reader->requireId(), [$story->requireId()]),
+        );
     }
 
     public function testThreeTimelineCopiesOfOnePostCountAsOneSource(): void

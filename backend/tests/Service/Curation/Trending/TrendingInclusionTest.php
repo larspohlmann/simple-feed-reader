@@ -27,7 +27,6 @@ use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\TrendingStoryCardModel;
 use App\Service\Curation\Trending\ReaderWindows;
 use App\Service\Curation\Trending\TrendingStories;
-use App\Service\Foundation\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
 use App\Tests\Support\TrendingWiring;
@@ -309,7 +308,6 @@ final class TrendingInclusionTest extends DbTestCase
             $entryList,
             $enricher,
             $readingSettings,
-            new UrlNormalizer(),
         );
     }
 

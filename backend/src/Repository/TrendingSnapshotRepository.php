@@ -86,7 +86,7 @@ final class TrendingSnapshotRepository extends ServiceEntityRepository
         ]);
         $storyId = (int) $connection->lastInsertId();
         BulkInsert::into(
-            'INSERT INTO trending_story_entry (story_id, entry_id, feed_id, article_site)',
+            'INSERT INTO trending_story_entry (story_id, entry_id, feed_id, article_site, shared_link_id)',
             self::INSERT_ROWS,
         )->rows(
             $connection,
@@ -96,6 +96,7 @@ final class TrendingSnapshotRepository extends ServiceEntityRepository
                     $member->entryId,
                     $member->feedId,
                     $member->articleSite === null ? null : mb_substr($member->articleSite, 0, self::SITE_LENGTH),
+                    $member->sharedLinkId,
                 ],
                 $story->members,
             ),

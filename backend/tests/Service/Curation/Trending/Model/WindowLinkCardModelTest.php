@@ -28,7 +28,7 @@ final class WindowLinkCardModelTest extends TestCase
     #[DataProvider('cardsNamingNoStory')]
     public function testACardShapedAsASitePersonOrSiteNameNamesNoStory(string $url, string $title, string $site): void
     {
-        self::assertFalse((new WindowLinkCardModel($url, $title, null, $site))->namesAStory());
+        self::assertFalse((new WindowLinkCardModel(1, 'hash', $url, $title, null, $site, null))->namesAStory());
     }
 
     /** @return iterable<string, array{string, string, string}> */
@@ -44,14 +44,14 @@ final class WindowLinkCardModelTest extends TestCase
     #[DataProvider('cardsNamingAStory')]
     public function testAnArticleCardNamesAStory(string $url, string $title, string $site): void
     {
-        self::assertTrue((new WindowLinkCardModel($url, $title, null, $site))->namesAStory());
+        self::assertTrue((new WindowLinkCardModel(1, 'hash', $url, $title, null, $site, null))->namesAStory());
     }
 
     public function testTheSiteIsTheCardUrlsHost(): void
     {
         self::assertSame(
             'example.org',
-            (new WindowLinkCardModel('https://www.example.org/storm', 'Storm', null, 'Example'))->site,
+            (new WindowLinkCardModel(1, 'hash', 'https://www.example.org/storm', 'Storm', null, 'Example', null))->site,
         );
     }
 }

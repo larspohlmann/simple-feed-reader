@@ -29,12 +29,18 @@ final class TrendingStoryEntry
     #[ORM\Column(name: 'article_site', length: 255, nullable: true)]
     public readonly ?string $articleSite;
 
+    /** The shared link of the entry's first top-level card when the story was grouped: a post's article key. */
+    #[ORM\ManyToOne(targetEntity: SharedLink::class)]
+    #[ORM\JoinColumn(name: 'shared_link_id', nullable: true, onDelete: 'SET NULL')]
+    public readonly ?SharedLink $link;
+
     /** @noinspection AutowireWrongClass Built with new, never autowired */
-    public function __construct(TrendingStory $story, Entry $entry, ?string $articleSite)
+    public function __construct(TrendingStory $story, Entry $entry, ?string $articleSite, ?SharedLink $link)
     {
         $this->story = $story;
         $this->entry = $entry;
         $this->feedId = $entry->getFeed()->requireId();
         $this->articleSite = $articleSite;
+        $this->link = $link;
     }
 }

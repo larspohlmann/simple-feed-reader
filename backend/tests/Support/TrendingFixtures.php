@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
+use App\Entity\SharedLink;
 use App\Entity\Subscription;
 use App\Entity\TrendingStory;
 use App\Entity\TrendingStoryEntry;
@@ -141,11 +142,21 @@ final readonly class TrendingFixtures
         );
         $this->entityManager->persist($story);
         foreach ($members as [$member, $articleSite]) {
-            $this->entityManager->persist(new TrendingStoryEntry($story, $member, $articleSite));
+            $this->entityManager->persist(
+                new TrendingStoryEntry($story, $member, $articleSite, $this->firstLinkOf($member)),
+            );
         }
         $this->entityManager->flush();
 
         return $story;
+    }
+
+    private function firstLinkOf(Entry $entry): ?SharedLink
+    {
+        $card = $this->entityManager->getRepository(LinkCard::class)
+            ->findOneBy(['entry' => $entry, 'threadPost' => null], ['position' => 'ASC']);
+
+        return $card?->getLink();
     }
 
     public function flush(): void

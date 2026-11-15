@@ -13,9 +13,54 @@ use App\Service\Curation\Trending\Model\TrendingBuildReportModel;
 use App\Service\Curation\Trending\Model\TrendingStoryModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
+use App\Entity\LinkCardContent;
+use App\Tests\Support\SharedLinks;
 
 final class TrendingSnapshotRepositoryTest extends DbTestCase
 {
+    public function testAMemberRecordsItsLink(): void
+    {
+        [$one, $two] = $this->twoEntries();
+        $link = SharedLinks::of(
+            $this->entityManager,
+            new LinkCardContent('https://outlet.example/storm', 'Storm', null, null, 'Outlet'),
+        );
+        $story = new TrendingStoryModel(
+            [
+                new StoryMemberModel($one, 101, 'outlet.example', $link->requireId()),
+                new StoryMemberModel($two, 101, null),
+            ],
+            self::utc('2031-05-14 08:00:00'),
+            self::utc('2031-05-14 09:00:00'),
+        );
+
+        $this->replace(self::report(TrendingWindow::Day, 1), [$story]);
+
+        self::assertEquals(
+            [$one => $link->requireId(), $two => null],
+            $this->linksByEntry(),
+        );
+    }
+
+    public function testDeletingALinkLeavesItsMemberWithoutOne(): void
+    {
+        [$one, $two] = $this->twoEntries();
+        $link = SharedLinks::of(
+            $this->entityManager,
+            new LinkCardContent('https://outlet.example/storm', 'Storm', null, null, 'Outlet'),
+        );
+        $this->replace(self::report(TrendingWindow::Day, 1), [new TrendingStoryModel(
+            [new StoryMemberModel($one, 101, null, $link->requireId()), new StoryMemberModel($two, 101, null)],
+            self::utc('2031-05-14 08:00:00'),
+            self::utc('2031-05-14 09:00:00'),
+        )]);
+
+        $this->entityManager->getConnection()
+            ->executeStatement('DELETE FROM shared_link WHERE id = ?', [$link->requireId()]);
+
+        self::assertEquals([$one => null, $two => null], $this->linksByEntry());
+    }
+
     public function testReplacingAWindowWritesItsStoriesMembersAndSnapshot(): void
     {
         [$one, $two] = $this->twoEntries();
@@ -221,6 +266,16 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
             311,
             4_096_000,
         );
+    }
+
+    /** @return array<int, mixed> */
+    private function linksByEntry(): array
+    {
+        $rows = $this->entityManager->getConnection()->fetchAllKeyValue(
+            'SELECT entry_id, shared_link_id FROM trending_story_entry ORDER BY entry_id',
+        );
+
+        return array_combine(array_map(intval(...), array_keys($rows)), array_values($rows));
     }
 
     private function snapshots(): TrendingSnapshotRepository
