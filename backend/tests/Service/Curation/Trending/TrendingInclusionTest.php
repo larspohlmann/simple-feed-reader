@@ -27,7 +27,6 @@ use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\TrendingStoryCardModel;
 use App\Service\Curation\Trending\ReaderWindows;
 use App\Service\Curation\Trending\TrendingStories;
-use App\Service\Foundation\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
 use App\Tests\Support\TrendingWiring;
@@ -72,10 +71,10 @@ final class TrendingInclusionTest extends DbTestCase
         $this->fixtures->flush();
 
         self::assertSame([3], self::outletCountsOf($this->rankedDay()));
-        self::assertCount(3, $this->storyRepository()->shownEntryIdsByStory(
+        self::assertCount(3, $this->storyRepository()->shownEntriesByStory(
             $this->reader->requireId(),
             [$story->requireId()],
-        )[$story->requireId()]);
+        )->entryIdsByStory()[$story->requireId()]);
     }
 
     public function testASwitchedOutFeedNoLongerHelpsAStoryReachTwoSources(): void
@@ -309,7 +308,6 @@ final class TrendingInclusionTest extends DbTestCase
             $entryList,
             $enricher,
             $readingSettings,
-            new UrlNormalizer(),
         );
     }
 

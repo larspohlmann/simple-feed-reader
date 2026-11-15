@@ -64,6 +64,7 @@ final class ShareLinkCardsWiring
             self::cardWriter($entityManager),
             PostEnrichers::enrichments($entityManager),
             PostEnrichers::linkCards($entityManager),
+            PostEnrichers::sharedLinkWriter($entityManager),
             $entityManager,
             EntryIndexers::with($indexWriter),
             new NaiveUtcClock($clock),
@@ -73,7 +74,7 @@ final class ShareLinkCardsWiring
     public static function cardWriter(EntityManagerInterface $entityManager): EntryCardWriter
     {
         return new EntryCardWriter(
-            PostEnrichers::linkCards($entityManager),
+            PostEnrichers::entryLinks($entityManager),
             new EntrySanitizer(new TrailingBlankRemover()),
         );
     }

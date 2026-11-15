@@ -28,7 +28,7 @@ final readonly class EntryBatchInserter
     private const array QUOTE_COLUMNS = [
         'quoted_url', 'quoted_author_name', 'quoted_author_handle', 'quoted_author_avatar_url', 'quoted_posted_at',
         'quoted_text', 'quoted_media', 'quoted_nested_url', 'quoted_nested_handle',
-        'quoted_link_card',
+        'quoted_shared_link_id',
     ];
 
     private const array COLUMNS = [
@@ -48,11 +48,20 @@ final readonly class EntryBatchInserter
     ) {
     }
 
-    /** @param list<EntryLine> $lines */
-    public function insert(int $feedId, array $lines): void
+    /**
+     * @param list<EntryLine>    $lines
+     * @param array<string, int> $linkIdsByUrl the shared link of every quoted card URL of the lines
+     */
+    public function insert(int $feedId, array $lines, array $linkIdsByUrl): void
     {
         BulkInsert::into(\sprintf('INSERT INTO entry (%s)', implode(', ', self::COLUMNS)), self::ROWS_PER_STATEMENT)
-            ->rows($this->connection, array_map(fn (EntryLine $line): array => $this->row($feedId, $line), $lines));
+            ->rows($this->connection, array_map(
+                fn (EntryLine $line): array => [
+                    ...$this->row($feedId, $line),
+                    ...self::quoteColumns($line->quote, $linkIdsByUrl),
+                ],
+                $lines,
+            ));
     }
 
     /**
@@ -60,19 +69,17 @@ final readonly class EntryBatchInserter
      *
      * @param array<string, int> $entryIdsByGuidHash
      * @param list<EntryLine>    $lines
+     * @param array<string, int> $linkIdsByUrl       the shared link of every card URL of the lines
      */
-    public function insertLinkCards(array $entryIdsByGuidHash, array $lines): void
+    public function insertLinkCards(array $entryIdsByGuidHash, array $lines, array $linkIdsByUrl): void
     {
         $rows = [];
         foreach ($lines as $line) {
             foreach ($line->linkCards as $position => $card) {
-                $rows[] = [
-                    $entryIdsByGuidHash[$line->guidHash], $position,
-                    $card->url, $card->title, $card->description, $card->imageUrl, $card->siteName,
-                ];
+                $rows[] = [$entryIdsByGuidHash[$line->guidHash], $position, $linkIdsByUrl[$card->url]];
             }
         }
-        $this->insertRows('link_card (entry_id, position, url, title, description, image_url, site_name)', $rows);
+        $this->insertRows('link_card (entry_id, position, shared_link_id)', $rows);
     }
 
     /**
@@ -121,12 +128,15 @@ final readonly class EntryBatchInserter
             (int) $line->titleDerived,
             ShareKind::tryFrom((string) $line->shareKind)?->value,
             $line->authorUrl, $line->authorAvatarUrl,
-            ...self::quoteColumns($line->quote),
         ];
     }
 
-    /** @return list<int|string|null> */
-    private static function quoteColumns(?QuotedPostContent $quote): array
+    /**
+     * @param array<string, int> $linkIdsByUrl
+     *
+     * @return list<int|string|null>
+     */
+    private static function quoteColumns(?QuotedPostContent $quote, array $linkIdsByUrl): array
     {
         if ($quote === null) {
             return array_pad([], \count(self::QUOTE_COLUMNS), null);
@@ -137,7 +147,7 @@ final readonly class EntryBatchInserter
             self::storageDate($quote->postedAt), $quote->text,
             self::encodeList(EntryMedia::toJsonList($quote->media)),
             $quote->nestedQuote?->url, $quote->nestedQuote?->handle,
-            $quote->linkCard === null ? null : json_encode($quote->linkCard->toStored(), \JSON_THROW_ON_ERROR),
+            $quote->linkCard === null ? null : $linkIdsByUrl[$quote->linkCard->url],
         ];
     }
 

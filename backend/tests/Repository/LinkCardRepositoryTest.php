@@ -8,10 +8,12 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
+use App\Entity\SharedLink;
 use App\Entity\ThreadPost;
 use App\Entity\ThreadPostContent;
 use App\Repository\LinkCardRepository;
 use App\Tests\DbTestCase;
+use App\Tests\Support\SharedLinks;
 
 final class LinkCardRepositoryTest extends DbTestCase
 {
@@ -20,7 +22,7 @@ final class LinkCardRepositoryTest extends DbTestCase
         $entry = $this->entry('one');
         $cards = $this->repository();
 
-        $cards->append($entry, [$this->content('b'), $this->content('a'), $this->content('c')]);
+        $cards->append($entry, [$this->link('b'), $this->link('a'), $this->link('c')]);
         $this->entityManager->flush();
 
         $stored = $cards->contentsByEntryIds([$entry->requireId()]);
@@ -34,17 +36,36 @@ final class LinkCardRepositoryTest extends DbTestCase
         $full = new LinkCardContent('https://example.com/a', 'Title', 'About', 'https://example.com/a.jpg', 'Example');
         $bare = new LinkCardContent('https://example.com/b', 'Bare', null, null, 'example.com');
 
-        $cards->append($entry, [$full, $bare]);
+        $cards->append($entry, [$this->linkOf($full), $this->linkOf($bare)]);
         $this->entityManager->flush();
         $this->entityManager->clear();
 
         self::assertEquals([$full, $bare], $cards->contentsByEntryIds([$entry->requireId()])[$entry->requireId()]);
     }
 
+    public function testTwoEntriesSharingAUrlReadTheFirstPreview(): void
+    {
+        $first = $this->entry('first');
+        $second = $this->entry('second');
+        $cards = $this->repository();
+        $preview = new LinkCardContent('https://example.com/a', 'First', 'About', null, 'Example');
+        $cards->append($first, [$this->linkOf($preview)]);
+        $cards->append($second, [
+            $this->linkOf(new LinkCardContent('https://example.com/a?utm_source=x', 'Second', null, null, 'Other')),
+        ]);
+        $this->entityManager->flush();
+        $this->entityManager->clear();
+
+        $stored = $cards->contentsByEntryIds([$first->requireId(), $second->requireId()]);
+
+        self::assertEquals([$preview], $stored[$first->requireId()]);
+        self::assertEquals([$preview], $stored[$second->requireId()]);
+    }
+
     public function testCardsGoWithTheirEntry(): void
     {
         $entry = $this->entry('gone');
-        $this->repository()->append($entry, [$this->content('a')]);
+        $this->repository()->append($entry, [$this->link('a')]);
         $this->entityManager->flush();
 
         $connection = $this->entityManager->getConnection();
@@ -59,8 +80,8 @@ final class LinkCardRepositoryTest extends DbTestCase
         $second = $this->entry('second');
         $empty = $this->entry('empty');
         $cards = $this->repository();
-        $cards->append($second, [$this->content('s1')]);
-        $cards->append($first, [$this->content('f1'), $this->content('f2')]);
+        $cards->append($second, [$this->link('s1')]);
+        $cards->append($first, [$this->link('f1'), $this->link('f2')]);
         $this->entityManager->flush();
         $this->entityManager->clear();
 
@@ -80,10 +101,10 @@ final class LinkCardRepositoryTest extends DbTestCase
     {
         $entry = $this->entry('one');
         $cards = $this->repository();
-        $cards->append($entry, [$this->content('a')]);
+        $cards->append($entry, [$this->link('a')]);
         $this->entityManager->flush();
 
-        $cards->append($entry, [$this->content('b'), $this->content('c')]);
+        $cards->append($entry, [$this->link('b'), $this->link('c')]);
         $this->entityManager->flush();
         $this->entityManager->clear();
 
@@ -95,14 +116,14 @@ final class LinkCardRepositoryTest extends DbTestCase
     {
         $cards = $this->repository();
         $entry = $this->entry('one');
-        $cards->append($entry, [$this->content('root')]);
+        $cards->append($entry, [$this->link('root')]);
         $post = new ThreadPost(
             $entry,
             1,
             new ThreadPostContent('https://bsky.app/profile/a/post/r1', null, '<p>r</p>', []),
         );
         $this->entityManager->persist($post);
-        $cards->appendToThreadPost($post, $this->content('reply'));
+        $cards->appendToThreadPost($post, $this->link('reply'));
         $this->entityManager->flush();
 
         self::assertSame(['https://example.com/root'], array_map(
@@ -120,10 +141,10 @@ final class LinkCardRepositoryTest extends DbTestCase
         $entry = $this->entry('one');
         $post = new ThreadPost($entry, 1, new ThreadPostContent(null, null, '<p>r</p>', []));
         $this->entityManager->persist($post);
-        $cards->appendToThreadPost($post, $this->content('reply'));
+        $cards->appendToThreadPost($post, $this->link('reply'));
         $this->entityManager->flush();
 
-        $cards->append($entry, [$this->content('a'), $this->content('b')]);
+        $cards->append($entry, [$this->link('a'), $this->link('b')]);
         $this->entityManager->flush();
 
         self::assertSame([1, 2], $this->rootPositionsOf($entry));
@@ -133,8 +154,8 @@ final class LinkCardRepositoryTest extends DbTestCase
     {
         $cards = $this->repository();
         $entry = $this->entry('one');
-        $cards->append($entry, [$this->content('a')]);
-        $cards->append($entry, [$this->content('b')]);
+        $cards->append($entry, [$this->link('a')]);
+        $cards->append($entry, [$this->link('b')]);
         $this->entityManager->flush();
 
         self::assertSame([0, 1], $this->rootPositionsOf($entry));
@@ -159,9 +180,14 @@ final class LinkCardRepositoryTest extends DbTestCase
         return array_column($cards, 'title');
     }
 
-    private function content(string $title): LinkCardContent
+    private function link(string $title): SharedLink
     {
-        return new LinkCardContent('https://example.com/' . $title, $title, null, null, 'example.com');
+        return $this->linkOf(new LinkCardContent('https://example.com/' . $title, $title, null, null, 'example.com'));
+    }
+
+    private function linkOf(LinkCardContent $preview): SharedLink
+    {
+        return SharedLinks::of($this->entityManager, $preview);
     }
 
     private function entry(string $guid): Entry

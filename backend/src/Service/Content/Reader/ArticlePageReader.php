@@ -8,6 +8,7 @@ use App\Service\Content\Reader\Media\Model\RawPageModel;
 use App\Service\Content\Reader\Media\PageMediaScanner;
 use App\Service\Content\Reader\Media\Teaser\TeaserPlayerScanner;
 use App\Service\Content\Reader\Model\ArticlePageModel;
+use App\Service\Content\Reader\Support\DeclaredPreview;
 use App\Service\Content\Reader\Model\FeedMediaModel;
 use App\Service\Content\Reader\Model\LeadFigureCaptionsModel;
 use App\Service\Content\Reader\Model\PageImageInventoryModel;
@@ -43,6 +44,7 @@ final readonly class ArticlePageReader
             media: $this->mediaScanner->scan($rawPage, $feedMedia),
             slideshows: $this->slideshowScanner->scan($normalized),
             teasers: $this->teaserScanner->scan($normalized, $page->finalUrl),
+            preview: DeclaredPreview::of($rawPage->document, $page->finalUrl, $page->finalUrl),
         );
     }
 }

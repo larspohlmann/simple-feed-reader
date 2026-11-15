@@ -25,6 +25,9 @@ final class TrendingRun
     /** @var array<int, string> */
     private array $articleSites = [];
 
+    /** @var array<int, int> entry id => the shared link of its first top-level card */
+    private array $sharedLinkIds = [];
+
     /** @var array<string, string> one string per site, however many entries share it */
     private array $sites = [];
 
@@ -39,6 +42,9 @@ final class TrendingRun
         $this->effectiveTimes[$entry->id] = $entry->effectiveDate->getTimestamp();
         foreach ($urlHashes as $urlHash) {
             $this->entriesByUrlHash[$urlHash][] = $entry->id;
+        }
+        if ($entry->links->card !== null) {
+            $this->sharedLinkIds[$entry->id] = $entry->links->card->sharedLinkId;
         }
         $articleSite = $entry->links->articleSite();
         if ($articleSite !== null) {
@@ -66,7 +72,12 @@ final class TrendingRun
 
     public function memberOf(int $entryId): StoryMemberModel
     {
-        return new StoryMemberModel($entryId, $this->feedOfEntry[$entryId], $this->articleSites[$entryId] ?? null);
+        return new StoryMemberModel(
+            $entryId,
+            $this->feedOfEntry[$entryId],
+            $this->articleSites[$entryId] ?? null,
+            $this->sharedLinkIds[$entryId] ?? null,
+        );
     }
 
     public function effectiveTimeOf(int $entryId): int

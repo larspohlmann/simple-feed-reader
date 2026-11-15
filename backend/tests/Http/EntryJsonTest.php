@@ -188,7 +188,7 @@ final class EntryJsonTest extends TestCase
             'text',
             [],
             null,
-        ));
+        ), null);
 
         self::assertSame('quote', JsonMappers::entryJson()->completed($this->row($quoting))['share']);
         $quote = JsonMappers::entryJson()->listRow($this->row($quoting))['quote'];

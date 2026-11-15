@@ -7,7 +7,7 @@ namespace App\Tests\Service\Operations\UrlCleanup;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Repository\EntryRepository;
-use App\Repository\LinkCardRepository;
+use App\Repository\SharedLinkRepository;
 use App\Service\Foundation\Url\EntryUrlHash;
 use App\Service\Foundation\Url\UrlNormalizer;
 use App\Service\Operations\UrlCleanup\Model\TrackingUrlCleanupReportModel;
@@ -23,8 +23,8 @@ final class TrackingUrlCleanupTest extends DbTestCase
     /** @var array<string, int> entry id by name */
     private array $entryIds = [];
 
-    /** @var array<string, int> card id by name */
-    private array $cardIds = [];
+    /** @var array<string, int> shared link id by name */
+    private array $linkIds = [];
 
     protected function setUp(): void
     {
@@ -78,22 +78,25 @@ final class TrackingUrlCleanupTest extends DbTestCase
         self::assertEquals(new TrackingUrlCleanupReportModel(0, 0, 0), $this->cleanup(3)->clean());
     }
 
-    public function testCardsAreCleaned(): void
+    public function testSharedLinkUrlsAreCleaned(): void
     {
         $this->cleanup()->clean();
 
-        self::assertSame('https://youtu.be/abc', $this->cardUrl('tracked'));
-        self::assertSame('https://example.com/card', $this->cardUrl('clean'));
+        self::assertSame(
+            ['url' => 'https://youtu.be/abc', 'url_hash' => self::hashOf('https://youtu.be/abc?si=y')],
+            $this->linkRow('tracked'),
+        );
+        self::assertSame('https://example.com/card', $this->linkRow('clean')['url']);
     }
 
     private function cleanup(int $batchSize = 2): TrackingUrlCleanup
     {
         $entries = self::getContainer()->get(EntryRepository::class);
-        $cards = self::getContainer()->get(LinkCardRepository::class);
+        $sharedLinks = self::getContainer()->get(SharedLinkRepository::class);
         self::assertInstanceOf(EntryRepository::class, $entries);
-        self::assertInstanceOf(LinkCardRepository::class, $cards);
+        self::assertInstanceOf(SharedLinkRepository::class, $sharedLinks);
 
-        return new TrackingUrlCleanup($entries, $cards, $this->urlHash, $this->entityManager, $batchSize);
+        return new TrackingUrlCleanup($entries, $sharedLinks, $this->urlHash, $this->entityManager, $batchSize);
     }
 
     private function store(): void
@@ -115,26 +118,26 @@ final class TrackingUrlCleanupTest extends DbTestCase
             'misEscaped' => $this->entry($feed, 'g-amp', $misEscaped, hash('sha256', $misEscaped)),
         ];
         $this->entityManager->flush();
-        $this->storeCards($entries['clean']);
+        $this->storeLinks();
         foreach ($entries as $name => $entry) {
             $this->entryIds[$name] = $entry->requireId();
         }
         $this->entityManager->clear();
     }
 
-    private function storeCards(Entry $entry): void
+    private function storeLinks(): void
     {
         $connection = $this->entityManager->getConnection();
-        $urls = ['clean' => 'https://example.com/card', 'tracked' => 'https://youtu.be/abc?utm_source=x'];
+        $urls = ['clean' => 'https://example.com/card', 'tracked' => 'https://youtu.be/abc?si=y'];
         foreach ($urls as $name => $url) {
-            $connection->insert('link_card', [
-                'entry_id' => $entry->requireId(),
-                'position' => \count($this->cardIds),
+            $connection->insert('shared_link', [
                 'url' => $url,
+                'url_hash' => self::hashOf($url),
                 'title' => 'Card',
                 'site_name' => 'example.com',
+                'created_at' => '2026-11-15 12:00:00',
             ]);
-            $this->cardIds[$name] = (int) $connection->lastInsertId();
+            $this->linkIds[$name] = (int) $connection->lastInsertId();
         }
     }
 
@@ -166,16 +169,20 @@ final class TrackingUrlCleanupTest extends DbTestCase
 
         return [
             ...$connection->fetchAllAssociative('SELECT id, url, url_hash FROM entry ORDER BY id'),
-            ...$connection->fetchAllAssociative('SELECT id, url FROM link_card ORDER BY id'),
+            ...$connection->fetchAllAssociative('SELECT id, url, url_hash FROM shared_link ORDER BY id'),
         ];
     }
 
-    private function cardUrl(string $name): mixed
+    /** @return array{url: mixed, url_hash: mixed} */
+    private function linkRow(string $name): array
     {
-        return $this->entityManager->getConnection()->fetchOne(
-            'SELECT url FROM link_card WHERE id = ?',
-            [$this->cardIds[$name]],
+        $row = $this->entityManager->getConnection()->fetchAssociative(
+            'SELECT url, url_hash FROM shared_link WHERE id = ?',
+            [$this->linkIds[$name]],
         );
+        self::assertIsArray($row);
+
+        return ['url' => $row['url'], 'url_hash' => $row['url_hash']];
     }
 
     private function blueskyHash(): string

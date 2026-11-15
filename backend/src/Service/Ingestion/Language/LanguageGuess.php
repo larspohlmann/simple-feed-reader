@@ -23,6 +23,12 @@ final readonly class LanguageGuess
         return mb_strlen($text) >= self::LONG_TEXT_LENGTH;
     }
 
+    /** The guess where it may overrule a stated language, on a long text; null on a short one. */
+    public function confidentFor(string $text): ?FeedLanguage
+    {
+        return $this->overrulesAStatedLanguage($text) ? $this->bestFor($text) : null;
+    }
+
     public function bestFor(string $text): ?FeedLanguage
     {
         if (preg_match('/\p{L}/u', $text) !== 1) {

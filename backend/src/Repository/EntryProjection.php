@@ -60,7 +60,7 @@ final readonly class EntryProjection
      */
     public function rowQueryBuilder(int $userId): QueryBuilder
     {
-        return $this->entries()
+        return QuotedLinkJoin::onto($this->entries(), 'e')
             ->leftJoin('e.feed', 'f')->addSelect('f')
             // Unrelated-entity joins: the caller's subscription to this entry's
             // feed, and the caller's optional per-entry state row.

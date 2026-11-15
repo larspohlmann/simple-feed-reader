@@ -102,7 +102,7 @@ final class BackupFieldDeclarations
             'share.quotedPost.media' => 'quote.media',
             'share.quotedPost.nestedUrl' => 'quote.nestedQuote',
             'share.quotedPost.nestedHandle' => 'quote.nestedQuote',
-            'share.quotedPost.linkCard' => 'quote.linkCard',
+            'quotedLink' => 'quote.linkCard',
             'author.name' => 'author', 'author.profileUrl' => 'authorUrl', 'author.avatarUrl' => 'authorAvatarUrl',
             'text.summary' => 'summary',
             'text.contentHtml' => 'contentHtml',
@@ -120,8 +120,10 @@ final class BackupFieldDeclarations
         LinkCard::class => [
             // A card rides in its entry's line, in post order, so neither the entry nor the position is a key.
             'entry' => 'linkCards', 'position' => 'linkCards',
-            'url' => 'linkCards.url', 'title' => 'linkCards.title', 'description' => 'linkCards.description',
-            'imageUrl' => 'linkCards.imageUrl', 'siteName' => 'linkCards.siteName',
+            'link' => [
+                'linkCards.url', 'linkCards.title', 'linkCards.description', 'linkCards.imageUrl',
+                'linkCards.siteName',
+            ],
         ],
         SavedEntryOrigin::class => [
             'entry' => 'origin', 'title' => 'origin.title', 'faviconUrl' => 'origin.faviconUrl',

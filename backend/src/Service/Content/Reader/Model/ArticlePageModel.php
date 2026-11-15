@@ -25,6 +25,7 @@ final readonly class ArticlePageModel
         public ArticleMediaModel $media,
         public array $slideshows,
         public array $teasers,
+        public PagePreviewModel $preview,
     ) {
     }
 }

@@ -24,6 +24,14 @@ use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
+use Doctrine\Persistence\ManagerRegistry;
+use App\Service\Ingestion\Language\PreviewLanguage;
+use App\Service\Ingestion\Language\LanguageGuess;
+use App\Service\Ingestion\Language\Factory\LanguageDetectionFactory;
+use App\Service\Foundation\Url\UrlNormalizer;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Content\LinkCard\SharedLinkWriter;
+use App\Repository\SharedLinkRepository;
 
 /**
  * Pins the read-back directly: after a batch insert the loader asks for the ids of exactly the hashes it wrote, never
@@ -106,6 +114,12 @@ final class RestoreEntryLoaderTest extends TestCase
             new EntryBatchInserter(
                 $this->createStub(Connection::class),
                 EntryUrlHashes::production(),
+            ),
+            new SharedLinkWriter(
+                new SharedLinkRepository($this->createStub(ManagerRegistry::class)),
+                new UrlNormalizer(),
+                new PreviewLanguage(new LanguageGuess(new LanguageDetectionFactory()->createForFeedLanguages())),
+                new NaiveUtcClock(new MockClock('2026-08-01 00:00:00', 'UTC')),
             ),
             EntryIndexers::with(new RecordingSearchIndexWriter()),
             new RestoredEntryStateFactory(new MockClock('2026-08-01 00:00:00', 'UTC')),

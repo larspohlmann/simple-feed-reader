@@ -16,6 +16,11 @@ use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Service\Curation\Trending\Model\WindowLinkCardModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
+use App\Tests\Support\SharedLinks;
+use App\Entity\SharedLink;
+use App\Service\Foundation\Url\UrlNormalizer;
+use App\Service\Content\LinkCard\SharedLinkWriter;
+use App\Tests\Support\PostEnrichers;
 
 final class TrendingEntryRepositoryTest extends DbTestCase
 {
@@ -28,8 +33,8 @@ final class TrendingEntryRepositoryTest extends DbTestCase
         $second = $fixtures->entry($feed, 'Second', '2031-05-14 09:00:00');
         $second->recordText($second->getText()->withSummary('<p>Body</p>'));
         $fixtures->flush();
-        $this->entityManager->persist(new LinkCard($second, 1, self::card('https://later.example.com/b')));
-        $this->entityManager->persist(new LinkCard($second, 0, self::card('https://shared.example.com/a')));
+        $this->entityManager->persist(new LinkCard($second, 1, $this->link('https://later.example.com/b')));
+        $this->entityManager->persist(new LinkCard($second, 0, $this->link('https://shared.example.com/a')));
         $this->entityManager->flush();
 
         $rows = iterator_to_array(
@@ -138,15 +143,19 @@ final class TrendingEntryRepositoryTest extends DbTestCase
         $fixtures->flush();
         $thread = new ThreadPost($post, 0, new ThreadPostContent(null, null, '<p>Thread reply</p>', []));
         $this->entityManager->persist($thread);
-        $this->entityManager->persist(new LinkCard($post, 0, self::card('https://thread.example/reply'), $thread));
-        $this->entityManager->persist(new LinkCard($post, 2, self::card('https://later.example/second')));
-        $this->entityManager->persist(new LinkCard($post, 1, new LinkCardContent(
-            'https://shared.example/storm',
-            'Storm floods the harbour',
-            str_repeat('d', 2_100),
-            null,
-            'Shared',
-        )));
+        $this->entityManager->persist(new LinkCard($post, 0, $this->link('https://thread.example/reply'), $thread));
+        $this->entityManager->persist(new LinkCard($post, 2, $this->link('https://later.example/second')));
+        $storm = $this->sharedLinks()->linkFor(
+            new LinkCardContent(
+                'https://shared.example/storm',
+                'Storm floods the harbour',
+                str_repeat('d', 2_100),
+                null,
+                'Shared',
+            ),
+            FeedLanguage::French,
+        );
+        $this->entityManager->persist(new LinkCard($post, 1, $storm));
         $this->entityManager->flush();
 
         $rows = iterator_to_array(
@@ -160,15 +169,28 @@ final class TrendingEntryRepositoryTest extends DbTestCase
         self::assertNull($rows[1]->links->articleUrl);
         self::assertEquals(
             new WindowLinkCardModel(
+                $storm->requireId(),
+                (string) (new UrlNormalizer())->hash('https://shared.example/storm'),
                 'https://shared.example/storm',
                 'Storm floods the harbour',
                 str_repeat('d', 600),
                 'Shared',
+                FeedLanguage::French,
             ),
             $rows[1]->links->card,
         );
         self::assertNull($rows[2]->links->card);
         self::assertSame($bare->requireId(), $rows[2]->id);
+    }
+
+    private function sharedLinks(): SharedLinkWriter
+    {
+        return PostEnrichers::sharedLinkWriter($this->entityManager);
+    }
+
+    private function link(string $url): SharedLink
+    {
+        return SharedLinks::of($this->entityManager, self::card($url));
     }
 
     private static function card(string $url): LinkCardContent

@@ -9,12 +9,15 @@ use App\Service\Curation\Trending\CardLanguage;
 use App\Service\Curation\Trending\Model\SharedArticleModel;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Service\Curation\Trending\Model\WindowLinkCardModel;
-use App\Service\Curation\Trending\Support\EntryText;
+use App\Service\Ingestion\Language\Support\PreviewText;
 
-/** One pass's shared articles: a card shared by several posts of one language is read and guessed once. */
+/**
+ * One pass's shared articles: a shared link is read once, and guessed once per post language only when it stores no
+ * language of its own.
+ */
 final class SharedArticles
 {
-    /** @var array<string, SharedArticleModel> card URL and post language => the article */
+    /** @var array<string, SharedArticleModel> shared link id, and the post language for an unlanguaged link */
     private array $byCard = [];
 
     public function __construct(private readonly CardLanguage $cardLanguage)
@@ -28,17 +31,19 @@ final class SharedArticles
             return null;
         }
 
-        return $this->byCard[$entry->language?->value . ' ' . $card->url] ??= $this->read($card, $entry->language);
+        $key = $card->sharedLinkId . ' ' . ($card->language === null ? $entry->language?->value : 'stored');
+
+        return $this->byCard[$key] ??= $this->read($card, $entry->language);
     }
 
     private function read(WindowLinkCardModel $card, ?FeedLanguage $postLanguage): SharedArticleModel
     {
-        $body = EntryText::body($card->description);
+        $body = PreviewText::descriptionOf($card->description);
 
         return new SharedArticleModel(
             $card->title,
             $body,
-            $this->cardLanguage->of($card->title . "\n" . $body, $postLanguage),
+            $card->language ?? $this->cardLanguage->of(PreviewText::joined($card->title, $body), $postLanguage),
         );
     }
 }

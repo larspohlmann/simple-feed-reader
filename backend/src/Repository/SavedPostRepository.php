@@ -257,10 +257,8 @@ final readonly class SavedPostRepository
                 $pair,
             );
             $connection->executeStatement(
-                'INSERT INTO link_card'
-                . ' (entry_id, thread_post_id, position, url, title, description, image_url, site_name)'
-                . ' SELECT :copy, copied.id, card.position, card.url, card.title, card.description,'
-                . ' card.image_url, card.site_name FROM link_card card'
+                'INSERT INTO link_card (entry_id, thread_post_id, position, shared_link_id)'
+                . ' SELECT :copy, copied.id, card.position, card.shared_link_id FROM link_card card'
                 . ' LEFT JOIN thread_post reply ON reply.id = card.thread_post_id'
                 . ' LEFT JOIN thread_post copied ON copied.entry_id = :copy AND copied.position = reply.position'
                 . ' WHERE card.entry_id = :original',
@@ -316,7 +314,8 @@ final readonly class SavedPostRepository
 
     /**
      * Every entry column but its id is copied; an override replaces a column's value by an SQL expression. The guard
-     * compares the guid hash the copy will carry, overridden or not. feed_id is a join column, not in the column list.
+     * compares the guid hash the copy will carry, overridden or not. Join columns are missing from the column
+     * list: feed_id is the saved feed's, and the quoted link's is added.
      *
      * @param array<string, string> $overrides
      */
@@ -325,7 +324,10 @@ final readonly class SavedPostRepository
         $metadata = $this->entityManager->getClassMetadata(Entry::class);
         $guidHash = $metadata->getColumnName('guid.hash');
         $skipped = [$metadata->getColumnName('id'), ...array_keys($overrides)];
-        $copied = array_values(array_diff($metadata->getColumnNames(), $skipped));
+        $copied = array_values(array_diff(
+            [...$metadata->getColumnNames(), $metadata->getSingleAssociationJoinColumnName('quotedLink')],
+            $skipped,
+        ));
         $sources = [
             ...array_map(static fn (string $column): string => 'e.' . $column, $copied),
             ...array_values($overrides),

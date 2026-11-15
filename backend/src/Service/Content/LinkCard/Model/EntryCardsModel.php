@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Content\LinkCard\Model;
 
 use App\Entity\LinkCardContent;
+use App\Enum\FeedLanguage;
 
 /** An entry's stored cards and the page cards just read for its uncarded links. */
 final readonly class EntryCardsModel
@@ -32,6 +33,19 @@ final readonly class EntryCardsModel
             ...array_map(static fn (LinkCardContent $card): string => $card->url, $this->newCards()),
             ...($this->quoted === null ? [] : [$this->quoted->address]),
         ];
+    }
+
+    /** @return array<string, FeedLanguage> the language each new card's page states, by card URL */
+    public function statedLanguagesByUrl(): array
+    {
+        $languages = [];
+        foreach ($this->pageCards as $pageCard) {
+            if ($pageCard->card !== null && $pageCard->statedLanguage !== null) {
+                $languages[$pageCard->card->url] = $pageCard->statedLanguage;
+            }
+        }
+
+        return $languages;
     }
 
     /** @return list<LinkCardContent> */

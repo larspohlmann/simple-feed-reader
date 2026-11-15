@@ -20,6 +20,7 @@ use App\Service\Foundation\Sanitize\EntrySanitizer;
 use App\Service\Foundation\Sanitize\TrailingBlankRemover;
 use App\Tests\DbTestCase;
 use App\Tests\Support\Bluesky;
+use App\Tests\Support\PostEnrichers;
 
 final class EntryEmbedWriterTest extends DbTestCase
 {
@@ -522,7 +523,7 @@ final class EntryEmbedWriterTest extends DbTestCase
             new PostEmbedRenderer(),
             new EntrySanitizer(new TrailingBlankRemover()),
             new EntryImageWriter(),
-            $this->linkCards(),
+            PostEnrichers::entryLinks($this->entityManager),
         );
     }
 }

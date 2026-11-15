@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\Entry;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
+use App\Entity\SharedLink;
 use App\Entity\ThreadPost;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -19,19 +20,19 @@ final class LinkCardRepository extends ServiceEntityRepository
         parent::__construct($registry, LinkCard::class);
     }
 
-    /** @param list<LinkCardContent> $cards in post order */
-    public function append(Entry $entry, array $cards): void
+    /** @param list<SharedLink> $links in post order */
+    public function append(Entry $entry, array $links): void
     {
         $next = $this->nextPositionFor($entry);
-        foreach ($cards as $index => $content) {
-            $this->getEntityManager()->persist(new LinkCard($entry, $next + $index, $content));
+        foreach ($links as $index => $link) {
+            $this->getEntityManager()->persist(new LinkCard($entry, $next + $index, $link));
         }
     }
 
-    public function appendToThreadPost(ThreadPost $post, LinkCardContent $card): void
+    public function appendToThreadPost(ThreadPost $post, SharedLink $link): void
     {
         $entry = $post->getEntry();
-        $this->getEntityManager()->persist(new LinkCard($entry, $this->nextPositionFor($entry), $card, $post));
+        $this->getEntityManager()->persist(new LinkCard($entry, $this->nextPositionFor($entry), $link, $post));
     }
 
     /**
@@ -54,12 +55,13 @@ final class LinkCardRepository extends ServiceEntityRepository
         $rows = $this->createQueryBuilder('card')
             ->select(
                 'IDENTITY(card.entry) AS entryId',
-                'card.url',
-                'card.title',
-                'card.description',
-                'card.imageUrl',
-                'card.siteName',
+                'link.url',
+                'link.title',
+                'link.description',
+                'link.imageUrl',
+                'link.siteName',
             )
+            ->join('card.link', 'link')
             ->andWhere('card.entry IN (:entryIds)')
             ->andWhere('card.threadPost IS NULL')
             ->setParameter('entryIds', $entryIds)
@@ -73,39 +75,6 @@ final class LinkCardRepository extends ServiceEntityRepository
         }
 
         return $grouped;
-    }
-
-    /** @return array<int, string> by card id */
-    public function urlsAfterId(int $afterId, int $limit): array
-    {
-        /** @var list<array{id: int|string, url: string}> $rows */
-        $rows = $this->createQueryBuilder('card')
-            ->select('card.id', 'card.url')
-            ->andWhere('card.id > :afterId')
-            ->setParameter('afterId', $afterId)
-            ->orderBy('card.id', 'ASC')
-            ->setMaxResults($limit)
-            ->getQuery()
-            ->getArrayResult();
-
-        $urls = [];
-        foreach ($rows as $row) {
-            $urls[(int) $row['id']] = $row['url'];
-        }
-
-        return $urls;
-    }
-
-    public function moveTo(int $cardId, string $url): void
-    {
-        $this->createQueryBuilder('card')
-            ->update()
-            ->set('card.url', ':url')
-            ->andWhere('card.id = :id')
-            ->setParameter('url', $url)
-            ->setParameter('id', $cardId)
-            ->getQuery()
-            ->execute();
     }
 
     /** An entry's root and reply cards share one numbering, cards still waiting for the flush included. */

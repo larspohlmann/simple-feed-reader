@@ -118,15 +118,14 @@ final class EntryRepository extends ServiceEntityRepository implements RestoreEn
 
     /**
      * One feed's entries in ascending-id slices — the backup export's keyset
-     * walk. No feed join: the caller already knows the feed and only needs
-     * its own scalar fields on each entry.
+     * walk. No feed join: the caller already knows the feed.
      *
      * @return list<Entry>
      */
     public function forFeedAfterId(int $feedId, int $afterId, int $limit): array
     {
         /** @var list<Entry> $entries */
-        $entries = $this->createQueryBuilder('e')
+        $entries = QuotedLinkJoin::onto($this->createQueryBuilder('e'), 'e')
             ->andWhere('e.feed = :feed')
             ->andWhere('e.id > :afterId')
             ->setParameter('feed', $feedId)

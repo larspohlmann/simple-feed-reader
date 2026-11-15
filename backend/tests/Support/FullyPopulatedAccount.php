@@ -89,13 +89,13 @@ final readonly class FullyPopulatedAccount
         $this->entityManager->persist($entry);
         $this->entityManager->persist($this->stateFor($user, $entry));
         $this->entityManager->persist(new EntryShare($user, $entry, new \DateTimeImmutable('2026-08-06T10:00:00Z')));
-        $this->entityManager->persist(new LinkCard($entry, 0, new LinkCardContent(
+        $this->entityManager->persist(new LinkCard($entry, 0, SharedLinks::of($this->entityManager, new LinkCardContent(
             'https://shared.example/story',
             'The shared story',
             'What the shared page says about itself.',
             'https://shared.example/story.jpg',
             'Shared Example',
-        )));
+        ))));
         $this->entityManager->persist(
             new SavedEntryOrigin($entry, new EntryOrigin('Populated origin', 'https://populated.example/favicon.ico')),
         );
@@ -222,14 +222,13 @@ final readonly class FullyPopulatedAccount
             'The quoted words.',
             [new EntryMedium('https://populated.example/quoted-1.jpg', 'image', 800, 600)],
             new QuotedPostReference('https://populated.example/@deeper/100', 'deeper@populated.example'),
-            new LinkCardContent(
-                'https://populated.example/story',
-                'A quoted story',
-                'Its description.',
-                'https://populated.example/story.jpg',
-                'populated.example',
-            ),
-        ));
+        ), SharedLinks::of($this->entityManager, new LinkCardContent(
+            'https://populated.example/story',
+            'A quoted story',
+            'Its description.',
+            'https://populated.example/story.jpg',
+            'populated.example',
+        )));
 
         return $entry;
     }

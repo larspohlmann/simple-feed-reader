@@ -7,7 +7,7 @@ namespace App\Controller\Api;
 use App\Entity\User;
 use App\Http\ReaderJson;
 use App\Service\Foundation\RateLimit\RateLimitGuard;
-use App\Service\Content\Reader\ArticleExtractor\ArticleExtractorInterface;
+use App\Service\Content\LinkCard\LinkArticleReader;
 use App\Service\Content\Reader\ReaderUrlSignature;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Attribute\Target;
@@ -23,7 +23,7 @@ final readonly class SignedUrlReaderController
     public function __construct(
         private ReaderUrlSignature $signature,
         private ClockInterface $clock,
-        private ArticleExtractorInterface $extractor,
+        private LinkArticleReader $linkArticles,
         private RateLimitGuard $rateLimitGuard,
         #[Target]
         private RateLimiterFactoryInterface $readerLimiter,
@@ -39,6 +39,6 @@ final readonly class SignedUrlReaderController
         $this->signature->verify($url, $token);
         $this->rateLimitGuard->enforceForUser($this->readerLimiter, $user);
 
-        return new JsonResponse(ReaderJson::one($this->extractor->extract($url), null, $this->clock->now()));
+        return new JsonResponse(ReaderJson::one($this->linkArticles->extract($url), null, $this->clock->now()));
     }
 }

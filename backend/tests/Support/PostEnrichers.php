@@ -6,8 +6,16 @@ namespace App\Tests\Support;
 
 use App\Entity\LinkCard;
 use App\Entity\ShareEnrichment;
+use App\Entity\SharedLink;
 use App\Repository\LinkCardRepository;
 use App\Repository\ShareEnrichmentRepository;
+use App\Repository\SharedLinkRepository;
+use App\Service\Content\LinkCard\EntryLinks;
+use App\Service\Content\LinkCard\SharedLinkWriter;
+use App\Service\Foundation\Url\UrlNormalizer;
+use App\Service\Ingestion\Language\Factory\LanguageDetectionFactory;
+use App\Service\Ingestion\Language\LanguageGuess;
+use App\Service\Ingestion\Language\PreviewLanguage;
 use App\Service\Social\Bluesky\AppViewClient;
 use App\Service\Social\Bluesky\BlueskyPendingEmbed;
 use App\Service\Social\Social\MastodonPendingThread;
@@ -29,9 +37,12 @@ use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Clock\NativeClock;
 
 final class PostEnrichers
 {
+    private static ?PreviewLanguage $previewLanguage = null;
+
     private function __construct()
     {
     }
@@ -86,8 +97,35 @@ final class PostEnrichers
             new PostEmbedRenderer(),
             new EntrySanitizer(new TrailingBlankRemover()),
             new EntryImageWriter(),
-            self::linkCards($entityManager),
+            self::entryLinks($entityManager),
         );
+    }
+
+    public static function entryLinks(EntityManagerInterface $entityManager): EntryLinks
+    {
+        return new EntryLinks(self::sharedLinkWriter($entityManager), self::linkCards($entityManager));
+    }
+
+    public static function sharedLinkWriter(
+        EntityManagerInterface $entityManager,
+        ClockInterface $clock = new NativeClock(),
+    ): SharedLinkWriter {
+        return new SharedLinkWriter(
+            self::sharedLinks($entityManager),
+            new UrlNormalizer(),
+            self::$previewLanguage ??= new PreviewLanguage(
+                new LanguageGuess(new LanguageDetectionFactory()->createForFeedLanguages()),
+            ),
+            new NaiveUtcClock($clock),
+        );
+    }
+
+    public static function sharedLinks(EntityManagerInterface $entityManager): SharedLinkRepository
+    {
+        /** @var SharedLinkRepository $sharedLinks */
+        $sharedLinks = $entityManager->getRepository(SharedLink::class);
+
+        return $sharedLinks;
     }
 
     public static function enrichments(EntityManagerInterface $entityManager): ShareEnrichmentRepository

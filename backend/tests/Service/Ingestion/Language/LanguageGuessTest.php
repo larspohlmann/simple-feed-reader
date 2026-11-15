@@ -75,4 +75,12 @@ final class LanguageGuessTest extends TestCase
             'Russian' => ['Президент заявил в понедельник в Москве, что правительство готовит новые меры поддержки.'],
         ];
     }
+
+    public function testAConfidentGuessNeedsALongText(): void
+    {
+        $guess = new LanguageGuess(StubbedDetector::saying('fr'));
+
+        self::assertNull($guess->confidentFor(str_repeat('a', 149)));
+        self::assertSame(FeedLanguage::French, $guess->confidentFor(str_repeat('a', 150)));
+    }
 }

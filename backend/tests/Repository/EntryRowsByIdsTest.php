@@ -6,11 +6,14 @@ namespace App\Tests\Repository;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\LinkCardContent;
+use App\Entity\QuotedPostContent;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\EntryListRepository;
 use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
+use App\Tests\Support\SharedLinks;
 
 /**
  * rowsByIdsForUser(), which turns a search index's ids back into list rows through the entry list's own projection
@@ -73,6 +76,33 @@ final class EntryRowsByIdsTest extends DbTestCase
         $rows = $this->repository()->rowsByIdsForUser($this->user->requireId(), $ids);
 
         return array_map(static fn ($row) => $row->entry->getGuid(), $rows);
+    }
+
+    public function testAQuotedLinkLoadsWithTheRowsAndNotOnePerRow(): void
+    {
+        $ids = [];
+        foreach (['one', 'two'] as $guid) {
+            $entry = $this->entry($guid, '2026-07-10T00:00:00Z');
+            $entry->shareQuotedPost(
+                new QuotedPostContent('https://q.example/' . $guid, 'Q', 'q.example', null, null, '', [], null),
+                SharedLinks::of(
+                    $this->entityManager,
+                    new LinkCardContent('https://n.example/' . $guid, 'Story ' . $guid, null, null, 'n.example'),
+                ),
+            );
+            $ids[] = $entry->requireId();
+        }
+        $this->entityManager->flush();
+        $this->entityManager->clear();
+        /** @var QueryRecorder $recorder */
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        $recorder->reset();
+
+        $rows = $this->repository()->rowsByIdsForUser($this->user->requireId(), $ids);
+        $titles = array_map(static fn ($row): ?string => $row->entry->getQuotedPost()?->linkCard?->title, $rows);
+
+        self::assertEqualsCanonicalizing(['Story one', 'Story two'], $titles);
+        self::assertCount(1, $recorder->queries(), implode("\n", $recorder->queries()));
     }
 
     public function testReturnsTheRowsForTheGivenIds(): void

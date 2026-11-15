@@ -18,6 +18,7 @@ use App\Repository\LinkCardRepository;
 use App\Repository\PendingImageVerificationRepository;
 use App\Service\Operations\Backup\Dto\EntryLine;
 use App\Tests\DbTestCase;
+use App\Tests\Support\PostEnrichers;
 
 final class EntryBatchInserterTest extends DbTestCase
 {
@@ -96,7 +97,7 @@ final class EntryBatchInserterTest extends DbTestCase
             $lines[] = $this->entryLine('guid-' . $index, 'Entry ' . $index);
         }
 
-        $this->inserter()->insert($feedId, $lines);
+        $this->inserter()->insert($feedId, $lines, []);
 
         $this->entityManager->clear();
         $rows = $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $feedId]);
@@ -107,7 +108,7 @@ final class EntryBatchInserterTest extends DbTestCase
     {
         $feedId = $this->createFeed('https://batch.example/feed.xml');
 
-        $this->inserter()->insert($feedId, [$this->entryLine('one-guid', 'One')]);
+        $this->inserter()->insert($feedId, [$this->entryLine('one-guid', 'One')], []);
 
         $this->entityManager->clear();
         $entry = $this->entityManager
@@ -135,7 +136,7 @@ final class EntryBatchInserterTest extends DbTestCase
         $this->inserter()->insert($feedId, [
             $this->entryLine('media-guid', shareKind: 'media'),
             $this->entryLine('plain-guid'),
-        ]);
+        ], []);
 
         $this->entityManager->clear();
         $repository = $this->entityManager->getRepository(Entry::class);
@@ -150,6 +151,7 @@ final class EntryBatchInserterTest extends DbTestCase
     public function testARestoredRowKeepsItsQuotedPost(): void
     {
         $feedId = $this->createFeed('https://batch.example/feed.xml');
+        $card = new LinkCardContent('https://news.example/s', 'Story', 'D', 'https://news.example/s.jpg', 'news');
         $quote = new QuotedPostContent(
             'https://bsky.app/profile/q.bsky.social/post/3k',
             'Quoted Person',
@@ -159,13 +161,13 @@ final class EntryBatchInserterTest extends DbTestCase
             "quoted\ntext",
             [new EntryMedium('https://cdn.example/1.jpg', 'image', 1200, 675)],
             new QuotedPostReference('https://bsky.app/profile/n/post/9', 'n.bsky.social'),
-            new LinkCardContent('https://news.example/s', 'Story', 'D', 'https://news.example/s.jpg', 'news.example'),
+            $card,
         );
 
         $this->inserter()->insert($feedId, [
             $this->entryLine('quote-guid', shareKind: 'quote', quote: $quote),
             $this->entryLine('plain-guid'),
-        ]);
+        ], PostEnrichers::sharedLinkWriter($this->entityManager)->idsFor([$card]));
 
         $this->entityManager->clear();
         $repository = $this->entityManager->getRepository(Entry::class);
@@ -183,7 +185,7 @@ final class EntryBatchInserterTest extends DbTestCase
         $feedId = $this->createFeed('https://batch.example/feed.xml');
         $quote = new QuotedPostContent('https://bsky.app/profile/q/post/3k', 'Q', 'q', null, null, 'hi', [], null);
 
-        $this->inserter()->insert($feedId, [$this->entryLine('quote-guid', shareKind: 'quote', quote: $quote)]);
+        $this->inserter()->insert($feedId, [$this->entryLine('quote-guid', shareKind: 'quote', quote: $quote)], []);
 
         $this->entityManager->clear();
         $quoting = $this->entityManager->getRepository(Entry::class)
@@ -200,7 +202,7 @@ final class EntryBatchInserterTest extends DbTestCase
         $this->inserter()->insert($feedId, [
             $this->entryLine('derived-guid', titleDerived: true),
             $this->entryLine('given-guid'),
-        ]);
+        ], []);
 
         $this->entityManager->clear();
         $repository = $this->entityManager->getRepository(Entry::class);
@@ -214,7 +216,7 @@ final class EntryBatchInserterTest extends DbTestCase
 
     public function testAnEmptyListDoesNothing(): void
     {
-        $this->inserter()->insert(999, []);
+        $this->inserter()->insert(999, [], []);
 
         $this->addToAssertionCount(1);
     }
@@ -225,7 +227,7 @@ final class EntryBatchInserterTest extends DbTestCase
 
         $this->inserter()->insert($feedId, [
             $this->entryLine('with-image', imageUrl: 'https://batch.example/image.jpg'),
-        ]);
+        ], []);
 
         self::assertSame([], $this->pendingImageVerificationRepository()->findPendingImageVerification(10));
     }
@@ -236,7 +238,7 @@ final class EntryBatchInserterTest extends DbTestCase
         $this->inserter()->insert($feedId, [
             $this->entryLine(guid: 'a', url: 'https://hash.example/one?utm_source=rss'),
             $this->entryLine(guid: 'b', url: null),
-        ]);
+        ], []);
 
         $rows = $this->entityManager->getConnection()->fetchAllAssociative(
             'SELECT guid, url_hash FROM entry WHERE feed_id = ? ORDER BY guid',
@@ -257,7 +259,7 @@ final class EntryBatchInserterTest extends DbTestCase
         $this->inserter()->insert($feedId, [
             $this->entryLine(guid: 'a', imageUrl: 'https://hash.example/image.jpg'),
             $this->entryLine(guid: 'b'),
-        ]);
+        ], []);
 
         $rows = $this->entityManager->getConnection()->fetchAllAssociative(
             'SELECT guid, image_url_hash FROM entry WHERE feed_id = ? ORDER BY guid',
@@ -276,10 +278,12 @@ final class EntryBatchInserterTest extends DbTestCase
             new LinkCardContent('https://example.com/b', 'B', null, null, 'example.com'),
         ]);
         $without = $this->entryLine('without-cards');
-        $this->inserter()->insert($feedId, [$withCards, $without]);
+        $this->inserter()->insert($feedId, [$withCards, $without], []);
         $entryIdsByGuidHash = $this->entryIdsByGuidHash($feedId);
 
-        $this->inserter()->insertLinkCards($entryIdsByGuidHash, [$withCards, $without]);
+        $linkIds = PostEnrichers::sharedLinkWriter($this->entityManager)->idsFor($withCards->linkCards);
+
+        $this->inserter()->insertLinkCards($entryIdsByGuidHash, [$withCards, $without], $linkIds);
 
         $linkCards = self::getContainer()->get(LinkCardRepository::class);
         self::assertInstanceOf(LinkCardRepository::class, $linkCards);
@@ -292,7 +296,7 @@ final class EntryBatchInserterTest extends DbTestCase
     {
         $feedId = $this->createFeed('https://batch.example/feed.xml');
         $line = $this->entryLine('saved-copy', origin: new EntryOrigin('Source', 'https://source.example/favicon.ico'));
-        $this->inserter()->insert($feedId, [$line]);
+        $this->inserter()->insert($feedId, [$line], []);
 
         $this->inserter()->insertOrigins($this->entryIdsByGuidHash($feedId), [$line], 'saved:1');
 
@@ -303,7 +307,7 @@ final class EntryBatchInserterTest extends DbTestCase
     {
         $feedId = $this->createFeed('https://batch.example/feed.xml');
         $line = $this->entryLine('crafted', origin: new EntryOrigin('Source', 'https://evil.example/favicon.ico'));
-        $this->inserter()->insert($feedId, [$line]);
+        $this->inserter()->insert($feedId, [$line], []);
 
         $this->inserter()->insertOrigins($this->entryIdsByGuidHash($feedId), [$line], 'https://batch.example/feed.xml');
 

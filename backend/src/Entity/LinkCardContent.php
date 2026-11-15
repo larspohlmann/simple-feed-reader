@@ -8,6 +8,7 @@ final readonly class LinkCardContent
 {
     public const int URL_MAX = 2048;
     public const int TITLE_MAX = 500;
+    public const int DESCRIPTION_MAX = 300;
     public const int SITE_NAME_MAX = 255;
 
     public function __construct(

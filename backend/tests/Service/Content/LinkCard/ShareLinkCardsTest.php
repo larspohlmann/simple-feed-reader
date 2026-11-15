@@ -27,6 +27,7 @@ use App\Tests\Support\StubQuotedPostSource;
 use Doctrine\ORM\Decorator\EntityManagerDecorator;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Clock\MockClock;
+use App\Tests\Support\SharedLinks;
 
 final class ShareLinkCardsTest extends DbTestCase
 {
@@ -187,6 +188,107 @@ final class ShareLinkCardsTest extends DbTestCase
         self::assertSame(0, $completed);
         self::assertSame([], $this->cardTitles($post));
         self::assertSame([$post->requireId()], $this->enrichments()->pendingEntryIdsAmong([$post->requireId()]));
+    }
+
+    public function testAKnownPostLinkIsNotRead(): void
+    {
+        $this->knownLink('https://example.com/known');
+        $post = $this->queuedPost(1, '<p>https://example.com/known</p>');
+
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
+
+        self::assertSame(0, $this->pages->reads());
+        self::assertSame(['Stored https://example.com/known'], $this->cardTitles($post));
+        self::assertSame([], $this->enrichments()->pendingEntryIdsAmong([$post->requireId()]));
+    }
+
+    public function testAKnownLinkIsKeptAliveBeforeItIsAttached(): void
+    {
+        $this->knownLink('https://example.com/known');
+        $this->entityManager->getConnection()->executeStatement(
+            "UPDATE shared_link SET unreferenced_since = '2026-10-01 10:00:00'",
+        );
+        $this->queuedPost(1, '<p>https://example.com/known</p>');
+
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
+
+        self::assertNull(
+            $this->entityManager->getConnection()->fetchOne('SELECT unreferenced_since FROM shared_link'),
+        );
+    }
+
+    public function testAKnownLinkCostsNoBudget(): void
+    {
+        $this->knownLink('https://example.com/1/1');
+        $this->knownLink('https://example.com/2/1');
+        $first = $this->queuedPost(1, self::sharing(1, 2));
+        $second = $this->queuedPost(2, self::sharing(2, 2));
+
+        $this->shareLinkCards->complete($this->claimable(), LinkCardBudgetModel::fetches(2));
+
+        self::assertSame(['https://example.com/1/2', 'https://example.com/2/2'], $this->pages->readUrls());
+        self::assertCount(2, $this->cardTitles($first));
+        self::assertCount(2, $this->cardTitles($second));
+    }
+
+    public function testAKnownLinkGetsNoPostedFormCheck(): void
+    {
+        $this->knownLink('https://example.com/1/1');
+        $post = $this->queuedPost(1, '<p>https://example.com/1/1?ref=rss</p>');
+
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
+
+        self::assertSame([], $this->pages->readUrls());
+        self::assertSame(['Stored https://example.com/1/1'], $this->cardTitles($post));
+    }
+
+    public function testATitledShareTargetIsReadEvenWhenKnown(): void
+    {
+        $this->knownLink('https://example.com/story');
+        $story = $this->queuedTitledShare(1, 'https://example.com/story');
+
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
+
+        self::assertSame(['https://example.com/story'], $this->pages->readUrls());
+        self::assertSame(['Stored https://example.com/story'], $this->cardTitles($story));
+    }
+
+    public function testATitledShareIsReadWhenAPostOfTheSamePassReusesItsTarget(): void
+    {
+        $this->knownLink('https://example.com/story');
+        $post = $this->queuedPost(1, '<p>https://example.com/story</p>');
+        $story = $this->queuedTitledShare(2, 'https://example.com/story');
+
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
+
+        self::assertSame(['https://example.com/story'], $this->pages->readUrls());
+        self::assertSame(['Stored https://example.com/story'], $this->cardTitles($post));
+        self::assertSame(['Stored https://example.com/story'], $this->cardTitles($story));
+    }
+
+    public function testTheQuoteLineTargetIsNotReused(): void
+    {
+        $address = 'https://q.example/@a/1';
+        $this->knownLink($address);
+        $post = $this->queuedPost(1, '<p>Wow</p><p>RE: <a href="' . $address . '">' . $address . '</a></p>');
+
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
+
+        self::assertSame([$address], $this->pages->readUrls());
+        self::assertSame(['Stored ' . $address], $this->cardTitles($post));
+    }
+
+    public function testCardsKeepPostOrderAcrossKnownAndRead(): void
+    {
+        $this->knownLink('https://example.com/1/2');
+        $post = $this->queuedPost(1, self::sharing(1, 3));
+
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
+
+        self::assertSame(
+            ['Card for https://example.com/1/1', 'Stored https://example.com/1/2', 'Card for https://example.com/1/3'],
+            $this->cardTitles($post),
+        );
     }
 
     public function testAPostWhoseLinksAreAllCardedIsDoneWithoutAFetch(): void
@@ -439,9 +541,21 @@ final class ShareLinkCardsTest extends DbTestCase
     private function storedCard(Entry $entry, int $position, string $url): void
     {
         $this->entityManager->persist(
-            new LinkCard($entry, $position, new LinkCardContent($url, 'Stored before', null, null, 'example.com')),
+            new LinkCard(
+                $entry,
+                $position,
+                SharedLinks::of(
+                    $this->entityManager,
+                    new LinkCardContent($url, 'Stored before', null, null, 'example.com'),
+                ),
+            ),
         );
         $this->entityManager->flush();
+    }
+
+    private function knownLink(string $url): void
+    {
+        SharedLinks::of($this->entityManager, new LinkCardContent($url, 'Stored ' . $url, null, null, 'example.com'));
     }
 
     /** @return list<ShareEnrichment> */

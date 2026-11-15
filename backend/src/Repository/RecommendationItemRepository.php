@@ -59,7 +59,9 @@ final class RecommendationItemRepository extends ServiceEntityRepository
      */
     private function rowQueryBuilder(int $userId): QueryBuilder
     {
-        return $this->applyForYouCriteria($this->createQueryBuilder('i')->addSelect('e'), $userId)
+        $forYou = $this->applyForYouCriteria($this->createQueryBuilder('i')->addSelect('e'), $userId);
+
+        return QuotedLinkJoin::onto($forYou, 'e')
             ->leftJoin('e.feed', 'f')->addSelect('f')
             ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
             ->leftJoin(EntryShare::class, 'esh', 'ON', 'esh.entry = e AND esh.user = :user')

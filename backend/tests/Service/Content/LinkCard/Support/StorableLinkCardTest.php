@@ -6,6 +6,7 @@ namespace App\Tests\Service\Content\LinkCard\Support;
 
 use App\Entity\LinkCardContent;
 use App\Service\Content\LinkCard\Support\StorableLinkCard;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class StorableLinkCardTest extends TestCase
@@ -40,6 +41,27 @@ final class StorableLinkCardTest extends TestCase
         $longest = 'https://example.com/' . str_repeat('ü', 2028);
 
         self::assertSame($longest, StorableLinkCard::of($this->card(url: $longest, imageUrl: $longest))?->imageUrl);
+    }
+
+    #[DataProvider('bareUrlDescriptions')]
+    public function testABareUrlDescriptionIsDropped(string $description): void
+    {
+        self::assertNull(StorableLinkCard::of($this->card(description: $description))?->description);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function bareUrlDescriptions(): iterable
+    {
+        yield 'the card\'s own URL' => ['https://example.com/a'];
+        yield 'another URL' => ['http://other.example/b?c=d'];
+        yield 'padded with spaces' => ["  https://other.example/b \n"];
+    }
+
+    public function testADescriptionHoldingAUrlAmongWordsStays(): void
+    {
+        $description = 'Read more at https://example.com/a today';
+
+        self::assertSame($description, StorableLinkCard::of($this->card(description: $description))?->description);
     }
 
     public function testABlankTitleGivesNoCard(): void

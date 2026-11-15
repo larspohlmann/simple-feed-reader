@@ -215,6 +215,7 @@ writes none of them.
 | `TrendingSnapshot` | When a Trending window was last grouped and what the grouping cost. The next rebuild writes it again. |
 | `TrendingStory` | A Trending story of the latest grouping. The next rebuild groups the restored entries again. |
 | `TrendingStoryEntry` | Which entries belong to a Trending story. The next rebuild groups the restored entries again. |
+| `SharedLink` | A linked article, stored once for every post that shares it. Each card in an entry line carries the article's preview, and a restore finds the stored article or creates it from that preview. |
 
 ### 6.2 Account data that the file drops in full
 

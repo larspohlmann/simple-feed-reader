@@ -23,7 +23,6 @@ use App\Service\Curation\Trending\StoryLinkSource\HeadlineLinks;
 use App\Service\Curation\Trending\StoryLinkSource\SharedUrlLinks;
 use App\Service\Curation\Trending\TrendingGrouping;
 use App\Service\Curation\Trending\TrendingRebuild;
-use App\Service\Foundation\Url\UrlNormalizer;
 use App\Service\Ingestion\Language\Factory\LanguageDetectionFactory;
 use App\Service\Ingestion\Language\LanguageGuess;
 use Doctrine\ORM\EntityManagerInterface;
@@ -51,7 +50,6 @@ final class TrendingWiring
     {
         return new TrendingGrouping(
             new TrendingEntryRepository($entityManager),
-            new UrlNormalizer(),
             self::filler(),
             self::equivalents(),
             self::storyLinks(),

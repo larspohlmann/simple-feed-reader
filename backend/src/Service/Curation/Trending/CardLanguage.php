@@ -11,17 +11,17 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 final readonly class CardLanguage
 {
     public function __construct(
-        #[Autowire(service: 'app.trending.card_language_guess')]
+        #[Autowire(service: 'app.card_language_guess')]
         private LanguageGuess $languageGuess,
     ) {
     }
 
     public function of(string $text, ?FeedLanguage $postLanguage): ?FeedLanguage
     {
-        if ($postLanguage !== null && !$this->languageGuess->overrulesAStatedLanguage($text)) {
-            return $postLanguage;
+        if ($postLanguage === null) {
+            return $this->languageGuess->bestFor($text);
         }
 
-        return $this->languageGuess->bestFor($text) ?? $postLanguage;
+        return $this->languageGuess->confidentFor($text) ?? $postLanguage;
     }
 }

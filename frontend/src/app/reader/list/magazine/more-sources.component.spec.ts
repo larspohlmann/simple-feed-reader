@@ -505,22 +505,6 @@ it("names a share-led mini card by its host without the host's www.", () => {
   expect(element.querySelector('.mini .feed')!.textContent!.trim()).toBe('cnn.com');
 });
 
-it.each([
-  ['the card URL', 'https://edition.cnn.com/2026/11/14/politics/judge'],
-  ['another URL', '  https://cnn.it/abc  '],
-])('leaves out a dek that is only %s', (_case, description) => {
-  const element = mount(
-    storyOf([
-      shareLed({ url: 'https://edition.cnn.com/2026/11/14/politics/judge', description }, [
-        poster(10, 'Ann'),
-      ]),
-    ]),
-  );
-  expand(element);
-
-  expect(element.querySelector('.mini .dek')).toBeNull();
-});
-
 it('keeps a dek that merely mentions a URL', () => {
   const element = mount(
     storyOf([shareLed({ description: 'Read more at https://cnn.com today' }, [poster(10, 'Ann')])]),
@@ -537,7 +521,7 @@ it('leads a link post with a title of its own by the card it shares, as a Lemmy 
     title: 'Judge halts plan',
     excerpt: cardUrl,
     poster: { name: 'CharlesDarwin', url: null, imageUrl: null },
-    linkCards: [aLinkCard({ url: cardUrl, siteName: 'CNN', description: cardUrl })],
+    linkCards: [aLinkCard({ url: cardUrl, siteName: 'CNN', description: null })],
     shares: [poster(10, 'CharlesDarwin')],
   });
   const element = mount(storyOf([linkPost]));

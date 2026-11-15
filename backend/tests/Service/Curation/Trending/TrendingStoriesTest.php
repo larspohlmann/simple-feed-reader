@@ -26,11 +26,13 @@ use App\Service\Curation\Trending\Model\ReaderWindowModel;
 use App\Service\Curation\Trending\Model\TrendingStoryCardModel;
 use App\Service\Curation\Trending\ReaderWindows;
 use App\Service\Curation\Trending\TrendingStories;
-use App\Service\Foundation\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
 use App\Tests\Support\TrendingWiring;
 use Symfony\Component\Clock\MockClock;
+use App\Entity\LinkCardContent;
+use App\Entity\LinkCard;
+use App\Tests\Support\SharedLinks;
 
 final class TrendingStoriesTest extends DbTestCase
 {
@@ -209,12 +211,12 @@ final class TrendingStoriesTest extends DbTestCase
 
         self::assertSame(
             [$story->requireId() => [$article->requireId()]],
-            $this->storyRepository()->shownEntryIdsByStory($userId, [$story->requireId()]),
+            $this->storyRepository()->shownEntriesByStory($userId, [$story->requireId()])->entryIdsByStory(),
         );
         self::assertSame([$otherStory->requireId()], array_keys(
-            $this->storyRepository()->shownEntryIdsByStory($userId, [$otherStory->requireId()]),
+            $this->storyRepository()->shownEntriesByStory($userId, [$otherStory->requireId()])->entryIdsByStory(),
         ));
-        self::assertSame([], $this->storyRepository()->shownEntryIdsByStory($userId, []));
+        self::assertSame([], $this->storyRepository()->shownEntriesByStory($userId, [])->entryIdsByStory());
     }
 
     public function testViewedStoriesAreLimitedToTheAskedStories(): void
@@ -255,6 +257,61 @@ final class TrendingStoriesTest extends DbTestCase
         );
         self::assertSame([], self::otherRowsOf($stories[0])[0]->duplicates);
         self::assertNotContains($first->requireId(), self::idsOf(self::otherRowsOf($stories[0])));
+    }
+
+    public function testAPostFoldsOntoTheOutletOfItsLinksHash(): void
+    {
+        [$alpha, $beta] = $this->articleFeeds('alpha', 'beta');
+        $ann = $this->fixtures->feed('ann', SocialNetwork::Mastodon);
+        $this->fixtures->subscribe($this->reader, $alpha, $beta, $ann);
+        $lead = $this->fixtures->article($alpha, 'Lead', '2031-05-14 09:00:00', 'https://alpha.example.com/lead');
+        $second = $this->fixtures->entry($beta, 'Second', '2031-05-14 08:00:00');
+        $post = $this->fixtures->linkShare($ann, '2031-05-14 10:00:00', new LinkCardContent(
+            'https://alpha.example.com/lead?utm_source=social',
+            'Lead',
+            null,
+            null,
+            'Alpha',
+        ));
+        $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
+            [$lead, 'alpha.example.com'],
+            [$second, 'beta.example.com'],
+            [$post, 'alpha.example.com'],
+        ]);
+
+        $stories = $this->storiesFor(TrendingWindow::Day);
+
+        self::assertCount(1, $stories);
+        self::assertSame($lead->requireId(), $stories[0]->articles->lead->row->entry->requireId());
+        self::assertSame([$post->requireId()], self::idsOf($stories[0]->articles->lead->shares));
+    }
+
+    public function testAListedCopyWithoutALinkKeepsItsOwnKey(): void
+    {
+        [$alpha, $beta] = $this->articleFeeds('alpha', 'beta');
+        $ann = $this->fixtures->feed('ann', SocialNetwork::Mastodon);
+        $ben = $this->fixtures->feed('ben', SocialNetwork::Mastodon);
+        $this->fixtures->subscribe($this->reader, $alpha, $beta, $ann, $ben);
+        $lead = $this->fixtures->article($alpha, 'Lead', '2031-05-14 09:00:00', 'https://alpha.example.com/lead');
+        $second = $this->fixtures->entry($beta, 'Second', '2031-05-14 08:00:00');
+        $carded = $this->fixtures->article($ann, 'Look', '2031-05-14 10:00:00', 'https://social.example/@a/1');
+        $copy = $this->fixtures->article($ben, 'Look', '2031-05-14 07:00:00', 'https://social.example/@a/1');
+        $this->fixtures->flush();
+        $this->entityManager->persist(new LinkCard($carded, 0, SharedLinks::of(
+            $this->entityManager,
+            new LinkCardContent('https://alpha.example.com/lead', 'Lead', null, null, 'Alpha'),
+        )));
+        $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
+            [$lead, 'alpha.example.com'],
+            [$second, 'beta.example.com'],
+            [$carded, 'alpha.example.com'],
+            [$copy, 'alpha.example.com'],
+        ]);
+
+        $stories = $this->storiesFor(TrendingWindow::Day);
+
+        self::assertCount(1, $stories);
+        self::assertContains($copy->requireId(), self::idsOf(self::otherRowsOf($stories[0])));
     }
 
     public function testFeedsCarryingTheSameArticleCountAsOneSource(): void
@@ -833,7 +890,6 @@ final class TrendingStoriesTest extends DbTestCase
             $entryList,
             $enricher,
             $readingSettings,
-            new UrlNormalizer(),
         );
     }
 

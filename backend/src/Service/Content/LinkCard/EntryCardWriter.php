@@ -6,7 +6,6 @@ namespace App\Service\Content\LinkCard;
 
 use App\Entity\Entry;
 use App\Enum\ShareKind;
-use App\Repository\LinkCardRepository;
 use App\Service\Ingestion\Ingest\Support\EntrySnippet;
 use App\Service\Content\LinkCard\Model\EntryCardsModel;
 use App\Service\Content\LinkCard\Model\PageCardModel;
@@ -18,18 +17,18 @@ use App\Service\Social\Share\Support\TitledShareTarget;
 final readonly class EntryCardWriter
 {
     public function __construct(
-        private LinkCardRepository $linkCards,
+        private EntryLinks $entryLinks,
         private EntrySanitizer $sanitizer,
     ) {
     }
 
     public function write(Entry $entry, EntryCardsModel $cards): void
     {
-        $this->linkCards->append($entry, $cards->newCards());
+        $this->entryLinks->attach($entry, $cards->newCards(), $cards->statedLanguagesByUrl());
         $this->dropQuoteLines($entry, $cards->quoteLineUrls());
         self::settleMediaTarget($entry, $cards->pageCards);
         if ($cards->quoted !== null) {
-            $entry->shareQuotedPost($cards->quoted->post);
+            $this->entryLinks->quote($entry, $cards->quoted->post);
         }
     }
 

@@ -12,14 +12,12 @@ use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Service\Curation\Trending\Pass\HeadlineWindow;
 use App\Service\Curation\Trending\Pass\SharedArticles;
 use App\Service\Curation\Trending\Pass\TrendingRun;
-use App\Service\Foundation\Url\UrlNormalizer;
 
 /** Reads one window's entries and groups them into stories, in memory; writing them is the builder's (#2017). */
 final readonly class TrendingGrouping
 {
     public function __construct(
         private TrendingEntryRepository $windowEntries,
-        private UrlNormalizer $urlNormalizer,
         private HeadlineFiller $filler,
         private HeadlineEquivalents $equivalents,
         private StoryLinks $storyLinks,
@@ -35,7 +33,7 @@ final readonly class TrendingGrouping
         $since = $window->startBefore($this->clock->now());
         $sharedArticles = new SharedArticles($this->cardLanguage);
         foreach ($this->windowEntries->windowEntries($since) as $entry) {
-            $run->add($entry, $this->urlHashesOf($entry), $sharedArticles->of($entry));
+            $run->add($entry, self::urlHashesOf($entry), $sharedArticles->of($entry));
         }
 
         return $run;
@@ -60,10 +58,10 @@ final readonly class TrendingGrouping
     }
 
     /** @return list<string> */
-    private function urlHashesOf(WindowEntryModel $entry): array
+    private static function urlHashesOf(WindowEntryModel $entry): array
     {
         return array_values(array_unique(array_filter(
-            [$entry->links->urlHash, $this->urlNormalizer->hash($entry->links->card?->url)],
+            [$entry->links->urlHash, $entry->links->card?->urlHash],
             static fn (?string $urlHash): bool => $urlHash !== null,
         )));
     }

@@ -29,30 +29,16 @@ final class LinkCard
     #[ORM\Column(type: Types::SMALLINT)]
     private int $position;
 
-    #[ORM\Column(length: 2048)]
-    private string $url;
+    #[ORM\ManyToOne(targetEntity: SharedLink::class)]
+    #[ORM\JoinColumn(name: 'shared_link_id', nullable: false)]
+    private SharedLink $link;
 
-    #[ORM\Column(length: 500)]
-    private string $title;
-
-    #[ORM\Column(type: Types::TEXT, nullable: true)]
-    private ?string $description;
-
-    #[ORM\Column(name: 'image_url', length: 2048, nullable: true)]
-    private ?string $imageUrl;
-
-    #[ORM\Column(name: 'site_name', length: 255)]
-    private string $siteName;
-
-    public function __construct(Entry $entry, int $position, LinkCardContent $content, ?ThreadPost $threadPost = null)
+    /** @noinspection AutowireWrongClass Built with new, never autowired */
+    public function __construct(Entry $entry, int $position, SharedLink $link, ?ThreadPost $threadPost = null)
     {
         $this->entry = $entry;
         $this->position = $position;
-        $this->url = $content->url;
-        $this->title = $content->title;
-        $this->description = $content->description;
-        $this->imageUrl = $content->imageUrl;
-        $this->siteName = $content->siteName;
+        $this->link = $link;
         $this->threadPost = $threadPost;
     }
 
@@ -64,5 +50,10 @@ final class LinkCard
     public function getPosition(): int
     {
         return $this->position;
+    }
+
+    public function getLink(): SharedLink
+    {
+        return $this->link;
     }
 }

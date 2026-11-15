@@ -63,7 +63,8 @@ final readonly class TrendingEntryRepository
      * @return list<array{
      *   id: int|string, feed_id: int|string, language: string|null, title: string, title_derived: bool|int|string,
      *   summary: string|null, effective_date: string, url_hash: string|null, article_url: string|null,
-     *   card_url: string|null, card_title: string|null, card_description: string|null, card_site_name: string|null
+     *   card_link_id: int|string|null, card_url_hash: string|null, card_url: string|null, card_title: string|null,
+     *   card_description: string|null, card_site_name: string|null, card_language: string|null
      * }>
      */
     private function chunkAfter(\DateTimeImmutable $since, int $afterId): array
@@ -72,8 +73,8 @@ final readonly class TrendingEntryRepository
          * @var list<array{
          *   id: int|string, feed_id: int|string, language: string|null, title: string, title_derived: bool|int|string,
          *   summary: string|null, effective_date: string, url_hash: string|null, article_url: string|null,
-         *   card_url: string|null, card_title: string|null, card_description: string|null,
-         *   card_site_name: string|null
+         *   card_link_id: int|string|null, card_url_hash: string|null, card_url: string|null, card_title: string|null,
+         *   card_description: string|null, card_site_name: string|null, card_language: string|null
          * }> $rows
          */
         $rows = $this->entityManager->getConnection()->fetchAllAssociative(
@@ -81,12 +82,14 @@ final readonly class TrendingEntryRepository
                 'SELECT e.id, e.feed_id, COALESCE(e.language, f.language) AS language, e.title, e.title_derived,'
                 . ' SUBSTR(e.summary, 1, %d) AS summary,'
                 . ' e.effective_date, e.url_hash, CASE WHEN f.network IS NULL THEN e.url END AS article_url,'
-                . ' card.url AS card_url, card.title AS card_title, card.site_name AS card_site_name,'
-                . ' SUBSTR(card.description, 1, %d) AS card_description'
+                . ' link.id AS card_link_id, link.url_hash AS card_url_hash, link.url AS card_url,'
+                . ' link.title AS card_title, link.site_name AS card_site_name, link.language AS card_language,'
+                . ' SUBSTR(link.description, 1, %d) AS card_description'
                 . ' FROM entry e JOIN feed f ON f.id = e.feed_id'
                 . ' LEFT JOIN link_card card ON card.entry_id = e.id AND card.thread_post_id IS NULL'
                 . ' AND card.position = (SELECT MIN(first_card.position) FROM link_card first_card'
                 . ' WHERE first_card.entry_id = e.id AND first_card.thread_post_id IS NULL)'
+                . ' LEFT JOIN shared_link link ON link.id = card.shared_link_id'
                 . ' WHERE e.effective_date >= :since AND e.id > :afterId ORDER BY e.id LIMIT %d',
                 self::BODY_SOURCE_CHARACTERS,
                 self::CARD_DESCRIPTION_CHARACTERS,
@@ -102,7 +105,8 @@ final readonly class TrendingEntryRepository
      * @param array{
      *   id: int|string, feed_id: int|string, language: string|null, title: string, title_derived: bool|int|string,
      *   summary: string|null, effective_date: string, url_hash: string|null, article_url: string|null,
-     *   card_url: string|null, card_title: string|null, card_description: string|null, card_site_name: string|null
+     *   card_link_id: int|string|null, card_url_hash: string|null, card_url: string|null, card_title: string|null,
+     *   card_description: string|null, card_site_name: string|null, card_language: string|null
      * } $row
      */
     private static function modelOf(array $row): WindowEntryModel
@@ -121,20 +125,27 @@ final readonly class TrendingEntryRepository
 
     /**
      * @param array{
-     *   card_url: string|null, card_title: string|null, card_description: string|null, card_site_name: string|null
+     *   card_link_id: int|string|null, card_url_hash: string|null, card_url: string|null, card_title: string|null,
+     *   card_description: string|null, card_site_name: string|null, card_language: string|null
      * } $row
      */
     private static function cardOf(array $row): ?WindowLinkCardModel
     {
-        if ($row['card_url'] === null || $row['card_title'] === null || $row['card_site_name'] === null) {
+        if (
+            $row['card_link_id'] === null || $row['card_url_hash'] === null || $row['card_url'] === null
+            || $row['card_title'] === null || $row['card_site_name'] === null
+        ) {
             return null;
         }
 
         return new WindowLinkCardModel(
+            (int) $row['card_link_id'],
+            $row['card_url_hash'],
             $row['card_url'],
             $row['card_title'],
             $row['card_description'],
             $row['card_site_name'],
+            FeedLanguage::tryFrom((string) $row['card_language']),
         );
     }
 }

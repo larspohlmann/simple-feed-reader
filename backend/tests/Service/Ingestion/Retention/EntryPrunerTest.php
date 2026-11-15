@@ -24,6 +24,11 @@ use App\Tests\DbTestCase;
 use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\EntryIndexers;
 use Symfony\Component\Clock\MockClock;
+use App\Entity\LinkCard;
+use App\Entity\LinkCardContent;
+use App\Entity\QuotedPostContent;
+use App\Entity\SharedLink;
+use App\Tests\Support\PostEnrichers;
 
 final class EntryPrunerTest extends DbTestCase
 {
@@ -42,7 +47,13 @@ final class EntryPrunerTest extends DbTestCase
         parent::setUp();
         $this->clock = new MockClock('2026-07-21 12:00:00', 'UTC');
         $this->indexWriter = new RecordingSearchIndexWriter();
-        $this->pruner = new EntryPruner($this->retention(), $this->settings(), $this->clock, $this->indexer());
+        $this->pruner = new EntryPruner(
+            $this->retention(),
+            $this->settings(),
+            $this->clock,
+            $this->indexer(),
+            PostEnrichers::sharedLinks($this->entityManager),
+        );
     }
 
     private function indexer(): EntryIndexer
@@ -52,7 +63,14 @@ final class EntryPrunerTest extends DbTestCase
 
     private function prunerWithCap(int $cap): EntryPruner
     {
-        return new EntryPruner($this->retention(), $this->settings(), $this->clock, $this->indexer(), $cap);
+        return new EntryPruner(
+            $this->retention(),
+            $this->settings(),
+            $this->clock,
+            $this->indexer(),
+            PostEnrichers::sharedLinks($this->entityManager),
+            $cap,
+        );
     }
 
     private function settings(): RetentionSettings
@@ -280,6 +298,7 @@ final class EntryPrunerTest extends DbTestCase
             $this->settings(),
             $this->clock,
             EntryIndexers::with($failingWriter),
+            PostEnrichers::sharedLinks($this->entityManager),
         );
 
         self::assertSame(10, $pruner->prune());
@@ -462,6 +481,96 @@ final class EntryPrunerTest extends DbTestCase
         $this->entityManager->flush();
 
         self::assertSame(0, $this->pruner->prune());
+    }
+
+    public function testAPurgedEntrysLinkGoesAfterTheGrace(): void
+    {
+        $feed = $this->feedWithEntries(self::FLOOR);
+        $stale = $this->seedEntry($feed, 'stale', $this->daysAgo(100));
+        $this->entityManager->persist(new LinkCard($stale, 0, $this->linkCreated('https://gone.example/a', 2)));
+        $this->entityManager->flush();
+
+        self::assertSame(1, $this->pruner->prune());
+        self::assertSame(['https://gone.example/a'], $this->linkUrls(), 'the prune that orphans a link only marks it');
+        $this->clock->modify('+1 day +1 minute');
+        $this->pruner->prune();
+
+        self::assertSame([], $this->linkUrls());
+    }
+
+    public function testALinkAWriterReusesBetweenTwoPrunesStays(): void
+    {
+        $feed = $this->feedWithEntries(self::FLOOR);
+        $stale = $this->seedEntry($feed, 'stale', $this->daysAgo(100));
+        $this->entityManager->persist(new LinkCard($stale, 0, $this->linkCreated('https://reused.example/a', 2)));
+        $this->entityManager->flush();
+        $this->pruner->prune();
+        $this->clock->modify('+1 day +1 minute');
+
+        $this->linkCreated('https://reused.example/a', 0);
+        $this->pruner->prune();
+
+        self::assertSame(['https://reused.example/a'], $this->linkUrls());
+    }
+
+    public function testALinkAnotherCardUsesStays(): void
+    {
+        $feed = $this->feedWithEntries(self::FLOOR);
+        $stale = $this->seedEntry($feed, 'stale', $this->daysAgo(100));
+        $kept = $this->seedEntry($feed, 'kept', $this->clock->now());
+        $link = $this->linkCreated('https://shared.example/a', 2);
+        $this->entityManager->persist(new LinkCard($stale, 0, $link));
+        $this->entityManager->persist(new LinkCard($kept, 0, $link));
+        $this->entityManager->flush();
+
+        $this->pruner->prune();
+
+        self::assertSame(['https://shared.example/a'], $this->linkUrls());
+    }
+
+    public function testALinkAQuoteUsesStays(): void
+    {
+        $feed = $this->feedWithEntries(self::FLOOR);
+        $stale = $this->seedEntry($feed, 'stale', $this->daysAgo(100));
+        $quoting = $this->seedEntry($feed, 'quoting', $this->clock->now());
+        $link = $this->linkCreated('https://quoted.example/a', 2);
+        $this->entityManager->persist(new LinkCard($stale, 0, $link));
+        $quoting->shareQuotedPost(
+            new QuotedPostContent('https://q.example/1', 'Q', 'q.example', null, null, '', [], null),
+            $link,
+        );
+        $this->entityManager->flush();
+
+        $this->pruner->prune();
+
+        self::assertSame(['https://quoted.example/a'], $this->linkUrls());
+    }
+
+    public function testAFreshUnreferencedLinkStays(): void
+    {
+        $this->linkCreated('https://fresh.example/a', 0);
+
+        $this->pruner->prune();
+        $this->clock->modify('+23 hours');
+        $this->pruner->prune();
+
+        self::assertSame(['https://fresh.example/a'], $this->linkUrls());
+    }
+
+    private function linkCreated(string $url, int $daysAgo): SharedLink
+    {
+        $link = PostEnrichers::sharedLinkWriter(
+            $this->entityManager,
+            new MockClock($this->daysAgo($daysAgo)),
+        )->linkFor(new LinkCardContent($url, 'Card', null, null, 'example'), null);
+
+        return $link;
+    }
+
+    /** @return list<mixed> */
+    private function linkUrls(): array
+    {
+        return $this->entityManager->getConnection()->fetchFirstColumn('SELECT url FROM shared_link ORDER BY url');
     }
 
     public function testNothingToPruneReturnsZero(): void

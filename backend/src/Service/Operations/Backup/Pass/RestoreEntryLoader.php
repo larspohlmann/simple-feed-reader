@@ -6,8 +6,10 @@ namespace App\Service\Operations\Backup\Pass;
 
 use App\Entity\Entry;
 use App\Entity\EntryState;
+use App\Entity\LinkCardContent;
 use App\Entity\User;
 use App\Repository\EntryBatchInserter;
+use App\Service\Content\LinkCard\SharedLinkWriter;
 use App\Service\Operations\Backup\Dto\EntryLine;
 use App\Service\Operations\Backup\Dto\EntryShareLine;
 use App\Service\Operations\Backup\Dto\EntryStateLine;
@@ -58,6 +60,7 @@ final class RestoreEntryLoader
         private readonly RestoreEntryStatesInterface $entryStates,
         private readonly RestoreEntrySharesInterface $entryShares,
         private readonly EntryBatchInserter $inserter,
+        private readonly SharedLinkWriter $linkWriter,
         private readonly EntryIndexer $indexer,
         private readonly RestoredEntryStateFactory $stateFactory,
         RestoreDestination $destination,
@@ -176,15 +179,32 @@ final class RestoreEntryLoader
         }
 
         try {
-            $this->inserter->insert($target->feedId, $fresh);
+            $linkIdsByUrl = $this->linkWriter->idsFor(self::cardsOf($fresh));
+            $this->inserter->insert($target->feedId, $fresh, $linkIdsByUrl);
             $createdIds = $this->recordCreatedIds($target, $fresh);
-            $this->inserter->insertLinkCards($createdIds, $fresh);
+            $this->inserter->insertLinkCards($createdIds, $fresh, $linkIdsByUrl);
             $this->inserter->insertOrigins($createdIds, $fresh, $this->bufferedFeedUrl);
         } catch (DbalException $exception) {
             throw BackupLoadFailedException::duringEntries($exception);
         }
 
         $this->entriesCreated += \count($fresh);
+    }
+
+    /**
+     * @param list<EntryLine> $lines
+     *
+     * @return list<LinkCardContent> every root card and quoted card of the lines
+     */
+    private static function cardsOf(array $lines): array
+    {
+        return array_merge(...array_map(
+            static fn (EntryLine $line): array => [
+                ...$line->linkCards,
+                ...($line->quote?->linkCard === null ? [] : [$line->quote->linkCard]),
+            ],
+            $lines,
+        ));
     }
 
     /**

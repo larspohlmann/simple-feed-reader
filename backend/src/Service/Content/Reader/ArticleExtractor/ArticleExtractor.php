@@ -74,6 +74,7 @@ final readonly class ArticleExtractor implements ArticleExtractorInterface
             contentHtml: $clean,
             excerpt: $article->excerpt,
             paywalled: $articlePage->paywalled,
+            preview: $articlePage->preview,
         );
     }
 

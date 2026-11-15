@@ -6,6 +6,8 @@ namespace App\Service\Content\LinkCard\Model;
 
 use App\Entity\EntryMedium;
 use App\Entity\LinkCardContent;
+use App\Entity\SharedLink;
+use App\Enum\FeedLanguage;
 
 final readonly class PageCardModel
 {
@@ -13,6 +15,13 @@ final readonly class PageCardModel
         public ?LinkCardContent $card,
         public ?EntryMedium $medium,
         public ?PageIdentityModel $identity = null,
+        public ?FeedLanguage $statedLanguage = null,
     ) {
+    }
+
+    /** A link already stored, attached as it is: its row is found again by the card's URL, and never rewritten. */
+    public static function known(SharedLink $link): self
+    {
+        return new self($link->preview(), null);
     }
 }

@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\LinkCardContent;
+use App\Enum\FeedLanguage;
 use App\Service\Content\Reader\Model\ExtractionFailure;
 use App\Service\Content\Reader\Model\ExtractionResultModel;
+use App\Service\Content\Reader\Model\PagePreviewModel;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\ReaderEndpointFixtures;
+use App\Tests\Support\SharedLinks;
 use App\Tests\Support\SignsReaderUrls;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Response;
 
 final class SignedUrlReaderControllerTest extends ApiTestCase
@@ -45,6 +50,60 @@ final class SignedUrlReaderControllerTest extends ApiTestCase
         self::assertSame('<p>Body</p>', $body['contentHtml']);
         self::assertNull($body['originalHero']);
         self::assertSame([self::URL], $fake->calls);
+    }
+
+    public function testTheResponseShapeIsUnchanged(): void
+    {
+        $client = self::createClient();
+        $headers = $this->bearerFor($this->factory()->create('card-reader-shape@example.com'));
+        $this->installFake()->willReturn(ExtractionResultModel::ok(
+            url: self::URL,
+            title: 'Extracted',
+            byline: null,
+            siteName: 'Example',
+            contentHtml: '<p>Body</p>',
+            excerpt: null,
+            preview: new PagePreviewModel(self::URL, 'Declared', null, null, 'Example', FeedLanguage::French),
+        ));
+
+        $client->request('GET', self::readerPath(self::URL, $this->readerTokenFor(self::URL)), server: $headers);
+
+        self::assertSame(
+            [
+                'status', 'url', 'title', 'byline', 'siteName', 'contentHtml', 'excerpt', 'paywalled', 'originalHero',
+                'extractedAt',
+            ],
+            array_keys($this->payload($client)),
+        );
+    }
+
+    public function testAnOkReadRefreshesTheSharedLinkOfItsUrl(): void
+    {
+        $client = self::createClient();
+        $headers = $this->bearerFor($this->factory()->create('card-reader-refresh@example.com'));
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $link = SharedLinks::of($entityManager, new LinkCardContent(self::URL, 'First', null, null, 'example.com'));
+        $this->installFake()->willReturn(ExtractionResultModel::ok(
+            url: self::URL,
+            title: 'Extracted',
+            byline: null,
+            siteName: 'Example',
+            contentHtml: '<p>Body</p>',
+            excerpt: null,
+            preview: new PagePreviewModel(self::URL, 'Declared', null, null, 'Example', FeedLanguage::French),
+        ));
+
+        $client->request('GET', self::readerPath(self::URL, $this->readerTokenFor(self::URL)), server: $headers);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(
+            ['title' => 'Declared', 'language' => 'fr'],
+            $entityManager->getConnection()->fetchAssociative(
+                'SELECT title, language FROM shared_link WHERE id = ?',
+                [$link->requireId()],
+            ),
+        );
     }
 
     public function testAFailedExtractionIsAnsweredWithoutALead(): void

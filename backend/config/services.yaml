@@ -316,15 +316,15 @@ services:
         factory: ['@App\Service\Ingestion\Language\Factory\LanguageDetectionFactory', 'create']
         lazy: true
 
-    app.trending.card_language_detection:
+    app.card_language_detection:
         class: LanguageDetection\Language
         factory: ['@App\Service\Ingestion\Language\Factory\LanguageDetectionFactory', 'createForFeedLanguages']
         lazy: true
 
-    app.trending.card_language_guess:
+    app.card_language_guess:
         class: App\Service\Ingestion\Language\LanguageGuess
         arguments:
-            $detection: '@app.trending.card_language_detection'
+            $detection: '@app.card_language_detection'
 
     app.untrusted_markdown_converter:
         class: League\CommonMark\CommonMarkConverter

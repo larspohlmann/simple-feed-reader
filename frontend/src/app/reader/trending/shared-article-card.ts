@@ -28,7 +28,7 @@ export function articleFaceOf(entry: EntryDto): ArticleFace {
   if (card) {
     return {
       title: card.title,
-      dek: withoutBareUrl(card.description ?? ''),
+      dek: card.description ?? '',
       picture: card.imageUrl,
       site: card.siteName || siteOf(card.url),
       card,

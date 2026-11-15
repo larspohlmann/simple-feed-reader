@@ -7,12 +7,14 @@ namespace App\Tests\Repository;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\LinkCardContent;
+use App\Entity\SharedLink;
 use App\Entity\ThreadPost;
 use App\Entity\ThreadPostContent;
 use App\Repository\LinkCardRepository;
 use App\Repository\ThreadPostRepository;
 use App\Service\Social\Social\Model\ThreadPostModel;
 use App\Tests\DbTestCase;
+use App\Tests\Support\SharedLinks;
 
 final class ThreadPostRepositoryTest extends DbTestCase
 {
@@ -29,7 +31,10 @@ final class ThreadPostRepositoryTest extends DbTestCase
         $this->entityManager->persist($first);
         $this->linkCards()->appendToThreadPost(
             $second,
-            new LinkCardContent('https://macrumors.example/a', 'New rules', null, null, 'macrumors.example'),
+            SharedLinks::of(
+                $this->entityManager,
+                new LinkCardContent('https://macrumors.example/a', 'New rules', null, null, 'macrumors.example'),
+            ),
         );
         $this->entityManager->flush();
 
@@ -80,9 +85,15 @@ final class ThreadPostRepositoryTest extends DbTestCase
         $second = new ThreadPost($entry, 2, new ThreadPostContent('https://x/2', null, '', []));
         $this->entityManager->persist($first);
         $this->entityManager->persist($second);
-        $this->linkCards()->appendToThreadPost($first, new LinkCardContent('https://a.example/', 'A', null, null, 'a'));
+        $this->linkCards()->appendToThreadPost(
+            $first,
+            $this->link(new LinkCardContent('https://a.example/', 'A', null, null, 'a')),
+        );
         $this->entityManager->flush();
-        $this->linkCards()->appendToThreadPost($second, new LinkCardContent('https://b.ex/', 'B', null, null, 'b'));
+        $this->linkCards()->appendToThreadPost(
+            $second,
+            $this->link(new LinkCardContent('https://b.ex/', 'B', null, null, 'b')),
+        );
         $this->entityManager->flush();
 
         $posts = $this->threadPosts()->byEntryIds([$entry->requireId()])[$entry->requireId()];
@@ -116,6 +127,11 @@ final class ThreadPostRepositoryTest extends DbTestCase
         $this->entityManager->flush();
 
         return $entry;
+    }
+
+    private function link(LinkCardContent $preview): SharedLink
+    {
+        return SharedLinks::of($this->entityManager, $preview);
     }
 
     private function linkCards(): LinkCardRepository
