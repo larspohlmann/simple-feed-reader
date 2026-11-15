@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Content\LinkResolution;
 
+use App\Entity\LinkCardContent;
 use App\Service\Content\LinkResolution\Model\LinkLandingModel;
 use App\Service\Foundation\Url\UrlNormalizer;
 use App\Service\Outbound\Fetch\Exception\RedirectChainException;
@@ -42,13 +43,13 @@ final readonly class LinkLanding
         return $this->outcomeOf($url, $landed->url);
     }
 
-    /** @throws RedirectChainException when the GET fails too */
+    /** @throws RedirectChainException when HEAD timed out or lost its connection, which a GET would only repeat */
     private function landingOf(string $url): LandedResponse
     {
         try {
             $head = $this->settled($this->redirects->followHead($url, $this->options(), self::budget()));
-        } catch (RedirectChainException) {
-            return $this->landingByGet($url);
+        } catch (RedirectChainException $exception) {
+            return self::isTransient($exception) ? throw $exception : $this->landingByGet($url);
         }
 
         return $head->url !== $url || $head->isSuccess() ? $head : $this->landingByGet($url);
@@ -73,6 +74,9 @@ final readonly class LinkLanding
     private function outcomeOf(string $url, string $landingUrl): LinkLandingModel
     {
         $cleaned = (string) $this->urlNormalizer->withoutTracking($landingUrl);
+        if (\strlen($cleaned) > LinkCardContent::URL_MAX) {
+            return LinkLandingModel::unresolved();
+        }
         $hash = $this->urlNormalizer->hash($cleaned);
         if ($hash === null || $hash === $this->urlNormalizer->hash($url)) {
             return LinkLandingModel::unchanged();

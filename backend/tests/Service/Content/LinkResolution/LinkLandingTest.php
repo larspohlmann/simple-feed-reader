@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Content\LinkResolution;
 
+use App\Entity\LinkCardContent;
 use App\Enum\LinkResolution;
 use App\Service\Content\LinkResolution\LinkLanding;
 use App\Service\Content\LinkResolution\Model\LinkLandingModel;
@@ -120,10 +121,10 @@ final class LinkLandingTest extends TestCase
         self::assertSame(['HEAD ' . self::SHORT, 'GET ' . self::SHORT, 'GET ' . self::ARTICLE], $this->requests());
     }
 
-    public function testAFailedHeadFallsBackToGet(): void
+    public function testAHeadRedirectWithoutLocationFallsBackToGet(): void
     {
         $landing = $this->landingOf(self::SHORT, [
-            LinkLandingWiring::failure(),
+            LinkLandingWiring::answer(Response::HTTP_MOVED_PERMANENTLY),
             LinkLandingWiring::redirect(self::ARTICLE),
             LinkLandingWiring::answer(Response::HTTP_OK),
         ]);
@@ -136,16 +137,47 @@ final class LinkLandingTest extends TestCase
         $landing = $this->landingOf(self::SHORT, [
             LinkLandingWiring::redirect(self::ARTICLE . '?utm_source=bsky.app'),
             LinkLandingWiring::failure(),
-            LinkLandingWiring::redirect(self::ARTICLE . '?utm_source=bsky.app'),
-            LinkLandingWiring::failure(),
         ]);
 
         self::assertEquals(LinkLandingModel::resolved(self::ARTICLE, self::hashOf(self::ARTICLE)), $landing);
+        self::assertSame(['HEAD ' . self::SHORT, 'HEAD ' . self::ARTICLE . '?utm_source=bsky.app'], $this->requests());
+    }
+
+    public function testATimedOutHeadIsNotRepeatedAsGet(): void
+    {
+        $landing = $this->landingOf(self::SHORT, [LinkLandingWiring::failure(), LinkLandingWiring::redirect(self::ARTICLE)]);
+
+        self::assertEquals(LinkLandingModel::retryable(), $landing);
+        self::assertSame(['HEAD ' . self::SHORT], $this->requests());
+    }
+
+    public function testALandingLongerThanTheColumnIsUnresolved(): void
+    {
+        $tooLong = self::ARTICLE . '?continue=' . str_repeat('a', 2_048);
+
+        $landing = $this->landingOf(self::SHORT, [
+            LinkLandingWiring::redirect($tooLong),
+            LinkLandingWiring::answer(Response::HTTP_OK),
+        ]);
+
+        self::assertEquals(LinkLandingModel::unresolved(), $landing);
+    }
+
+    public function testALandingThatFillsTheColumnResolves(): void
+    {
+        $fits = self::ARTICLE . '?continue=' . str_repeat('a', LinkCardContent::URL_MAX - \strlen(self::ARTICLE) - 10);
+
+        $landing = $this->landingOf(self::SHORT, [
+            LinkLandingWiring::redirect($fits),
+            LinkLandingWiring::answer(Response::HTTP_OK),
+        ]);
+
+        self::assertSame($fits, $landing->url);
     }
 
     public function testAConnectionFailureIsRetryable(): void
     {
-        $landing = $this->landingOf(self::SHORT, [LinkLandingWiring::failure(), LinkLandingWiring::failure()]);
+        $landing = $this->landingOf(self::SHORT, [LinkLandingWiring::failure()]);
 
         self::assertEquals(LinkLandingModel::retryable(), $landing);
     }
