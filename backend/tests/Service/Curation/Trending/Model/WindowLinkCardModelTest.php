@@ -51,7 +51,7 @@ final class WindowLinkCardModelTest extends TestCase
     {
         self::assertSame(
             'example.org',
-            (new WindowLinkCardModel('https://www.example.org/storm', 'Storm', null, 'Example'))->site(),
+            (new WindowLinkCardModel('https://www.example.org/storm', 'Storm', null, 'Example'))->site,
         );
     }
 }

@@ -12,12 +12,15 @@ final readonly class WindowLinkCardModel
     private const string ACCOUNT_HANDLE = '/@[\p{L}\p{N}_]/u';
     private const string NOT_A_LETTER_OR_DIGIT = '/[^\p{L}\p{N}]+/u';
 
+    public ?string $site;
+
     public function __construct(
         public string $url,
         public string $title,
         public ?string $description,
         public string $siteName,
     ) {
+        $this->site = ArticleSite::of($url);
     }
 
     public function namesAStory(): bool
@@ -25,11 +28,6 @@ final readonly class WindowLinkCardModel
         return !$this->isAFrontPage()
             && preg_match(self::ACCOUNT_HANDLE, $this->title) !== 1
             && !$this->isTitledWithItsSiteName();
-    }
-
-    public function site(): ?string
-    {
-        return ArticleSite::of($this->url);
     }
 
     private function isAFrontPage(): bool
@@ -45,7 +43,7 @@ final readonly class WindowLinkCardModel
         if ($title === '') {
             return false;
         }
-        $site = $this->site() ?? '';
+        $site = $this->site ?? '';
         $siteNames = [$this->siteName, $site, explode('.', $site)[0]];
 
         return \in_array($title, array_map(self::reduced(...), $siteNames), true);

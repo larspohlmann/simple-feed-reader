@@ -9,21 +9,26 @@ use App\Service\Curation\Trending\Support\ArticleSite;
 /** What a window entry links to: its own article, and the article its first card shares. */
 final readonly class EntryLinksModel
 {
+    private ?WindowLinkCardModel $storyCard;
+    private ?string $articleSite;
+
     /** @param ?string $articleUrl the entry's own URL when its feed publishes articles; null for a social post */
     public function __construct(
         public ?string $urlHash,
         public ?string $articleUrl,
         public ?WindowLinkCardModel $card,
     ) {
+        $this->storyCard = $card?->namesAStory() === true ? $card : null;
+        $this->articleSite = $articleUrl === null ? $this->storyCard?->site : ArticleSite::of($articleUrl);
     }
 
     public function storyCard(): ?WindowLinkCardModel
     {
-        return $this->card?->namesAStory() === true ? $this->card : null;
+        return $this->storyCard;
     }
 
     public function articleSite(): ?string
     {
-        return $this->articleUrl === null ? $this->storyCard()?->site() : ArticleSite::of($this->articleUrl);
+        return $this->articleSite;
     }
 }
