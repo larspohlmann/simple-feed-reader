@@ -8,59 +8,108 @@ use PHPUnit\Framework\TestCase;
 
 final class BundledLexiconDataTest extends TestCase
 {
-    private const string PATH = __DIR__ . '/../../../../../resources/german-lexicon/lexicon.php';
+    private const string DIRECTORY = __DIR__ . '/../../../../../resources/german-lexicon';
 
-    private static mixed $lexicon;
+    /** @var list<list<string>> */
+    private static array $formRows;
+
+    /** @var list<list<string>> */
+    private static array $verbRows;
 
     public static function setUpBeforeClass(): void
     {
-        self::$lexicon = require self::PATH;
+        self::$formRows = self::rowsOf('lexicon.tsv');
+        self::$verbRows = self::rowsOf('verbs.tsv');
     }
 
-    /** @return array<array-key, mixed> */
-    private static function section(string $name): array
+    public function testFilesStayUnderSixMebibytesTogether(): void
     {
-        $lexicon = self::$lexicon;
-        self::assertIsArray($lexicon);
-        $section = $lexicon[$name];
-        self::assertIsArray($section);
+        $bytes = array_sum(array_map(
+            static fn (string $name): int => (int) filesize(self::DIRECTORY . '/' . $name),
+            ['lexicon.tsv', 'verbs.tsv', 'lexicon-meta.php'],
+        ));
 
-        return $section;
+        $this->assertLessThanOrEqual(6_291_456, $bytes);
     }
 
-    public function testFileStaysUnderSixMebibytes(): void
+    public function testEveryLineIsATerminatedKeyedRow(): void
     {
-        $this->assertLessThanOrEqual(6_291_456, filesize(self::PATH));
+        $this->assertStringEndsWith("\n", (string) file_get_contents(self::DIRECTORY . '/lexicon.tsv'));
+        $this->assertStringEndsWith("\n", (string) file_get_contents(self::DIRECTORY . '/verbs.tsv'));
+        $this->assertSame([], array_filter(self::$formRows, static fn (array $row): bool => 3 !== count($row)));
+        $this->assertSame([], array_filter(self::$verbRows, static fn (array $row): bool => 2 !== count($row)));
     }
 
     public function testEveryFormIsAtLeastThreeCharactersLong(): void
     {
-        $forms = array_keys(self::section('nouns') + self::section('others') + self::section('verbs'));
-        $tooShort = array_filter($forms, static fn (int|string $form): bool => mb_strlen((string) $form) < 3);
+        $keys = array_column([...self::$formRows, ...self::$verbRows], 0);
 
-        $this->assertSame([], $tooShort);
+        $this->assertSame([], array_filter($keys, static fn (string $key): bool => mb_strlen($key) < 3));
+    }
+
+    public function testKeysAreByteSortedWithoutDuplicates(): void
+    {
+        foreach ([self::$formRows, self::$verbRows] as $rows) {
+            $keys = array_column($rows, 0);
+            $sorted = $keys;
+            sort($sorted, SORT_STRING);
+
+            $this->assertSame($sorted, $keys);
+            $this->assertSame($keys, array_values(array_unique($keys)));
+        }
+    }
+
+    public function testEveryKindIsNounOrOther(): void
+    {
+        $invalid = array_filter(self::$formRows, static fn (array $row): bool => !in_array($row[1], ['n', 'o'], true));
+
+        $this->assertSame([], $invalid);
     }
 
     public function testEveryClassIsANonNegativeInteger(): void
     {
-        $classes = self::section('nouns') + self::section('others');
-        $invalid = array_filter($classes, static fn (mixed $class): bool => !is_int($class) || $class < 0);
+        $invalid = array_filter(
+            self::$formRows,
+            static fn (array $row): bool => 1 !== preg_match('/^(0|[1-9]\d*)$/', $row[2]),
+        );
 
         $this->assertSame([], $invalid);
-    }
-
-    public function testNounsAndOthersDoNotOverlap(): void
-    {
-        $this->assertSame([], array_intersect_key(self::section('nouns'), self::section('others')));
     }
 
     public function testEveryVerbMapsToANonEmptyInfinitiveStem(): void
     {
-        $invalid = array_filter(
-            self::section('verbs'),
-            static fn (mixed $stem): bool => !is_string($stem) || '' === $stem,
-        );
+        $this->assertSame([], array_filter(self::$verbRows, static fn (array $row): bool => '' === $row[1]));
+    }
 
-        $this->assertSame([], $invalid);
+    public function testMetaDescribesTheNouns(): void
+    {
+        $meta = require self::DIRECTORY . '/lexicon-meta.php';
+        $this->assertIsArray($meta);
+        $classesByLength = [];
+        foreach (self::$formRows as [$form, $kind, $class]) {
+            if ('n' === $kind) {
+                $classesByLength[mb_strlen($form)][] = (int) $class;
+            }
+        }
+        ksort($classesByLength);
+        $medians = array_map(static function (array $classes): int {
+            sort($classes);
+
+            return $classes[intdiv(count($classes), 2)];
+        }, $classesByLength);
+
+        $classes = array_map(intval(...), array_column(self::$formRows, 2));
+
+        $this->assertSame($medians, $meta['medianNounClassByLength']);
+        $this->assertSame(max($classes ?: [0]), $meta['rarest']);
+    }
+
+    /** @return list<list<string>> */
+    private static function rowsOf(string $name): array
+    {
+        return array_map(
+            static fn (string $line): array => explode("\t", $line),
+            explode("\n", rtrim((string) file_get_contents(self::DIRECTORY . '/' . $name), "\n")),
+        );
     }
 }

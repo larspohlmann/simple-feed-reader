@@ -10,18 +10,18 @@ use PHPUnit\Framework\TestCase;
 
 final class BundledGermanLexiconTest extends TestCase
 {
-    private string $temporaryPath;
+    private string $temporaryDirectory;
 
     protected function setUp(): void
     {
-        $this->temporaryPath = sys_get_temp_dir() . '/german-lexicon-' . bin2hex(random_bytes(6)) . '.php';
+        $this->temporaryDirectory = sys_get_temp_dir() . '/german-lexicon-' . bin2hex(random_bytes(6));
+        mkdir($this->temporaryDirectory);
     }
 
     protected function tearDown(): void
     {
-        if (is_file($this->temporaryPath)) {
-            unlink($this->temporaryPath);
-        }
+        array_map(unlink(...), glob($this->temporaryDirectory . '/*') ?: []);
+        rmdir($this->temporaryDirectory);
     }
 
     public function testRecognisesNounsAndOtherKnownForms(): void
@@ -71,7 +71,7 @@ final class BundledGermanLexiconTest extends TestCase
     public function testLoadsOnFirstUseAndAgainAfterReset(): void
     {
         $this->writeLexicon('eins');
-        $lexicon = new BundledGermanLexicon($this->temporaryPath);
+        $lexicon = new BundledGermanLexicon($this->temporaryDirectory);
         $this->assertTrue($lexicon->isNoun('eins'));
 
         $this->writeLexicon('zwei');
@@ -81,46 +81,58 @@ final class BundledGermanLexiconTest extends TestCase
         $this->assertTrue($lexicon->isNoun('zwei'));
     }
 
-    public function testRejectsAFileOfTheWrongShape(): void
+    public function testRejectsAMetaFileOfTheWrongShape(): void
     {
-        file_put_contents($this->temporaryPath, "<?php return ['nouns' => 'x'];");
+        $this->writeLexicon('eins');
+        file_put_contents($this->temporaryDirectory . '/lexicon-meta.php', "<?php return ['rarest' => 'x'];");
 
         $this->expectException(\UnexpectedValueException::class);
 
-        (new BundledGermanLexicon($this->temporaryPath))->isNoun('eins');
+        (new BundledGermanLexicon($this->temporaryDirectory))->isNoun('eins');
     }
 
-    public function testRejectsAFileWhoseValuesHaveTheWrongType(): void
+    public function testRejectsAMetaFileWithoutTheMedians(): void
     {
-        file_put_contents(
-            $this->temporaryPath,
-            "<?php return ['nouns' => ['eins' => 'x'], 'others' => [], 'verbs' => []];",
-        );
+        $this->writeLexicon('eins');
+        file_put_contents($this->temporaryDirectory . '/lexicon-meta.php', "<?php return ['rarest' => 1];");
 
         $this->expectException(\UnexpectedValueException::class);
 
-        (new BundledGermanLexicon($this->temporaryPath))->isNoun('eins');
+        (new BundledGermanLexicon($this->temporaryDirectory))->isNoun('eins');
     }
 
-    public function testRejectsAFileThatReturnsNoArray(): void
+    public function testRejectsAMetaFileThatReturnsNoArray(): void
     {
-        file_put_contents($this->temporaryPath, '<?php return 1;');
+        $this->writeLexicon('eins');
+        file_put_contents($this->temporaryDirectory . '/lexicon-meta.php', '<?php return 1;');
 
         $this->expectException(\UnexpectedValueException::class);
 
-        (new BundledGermanLexicon($this->temporaryPath))->isNoun('eins');
+        (new BundledGermanLexicon($this->temporaryDirectory))->isNoun('eins');
+    }
+
+    public function testRejectsAMissingTextFile(): void
+    {
+        $this->writeLexicon('eins');
+        unlink($this->temporaryDirectory . '/verbs.tsv');
+
+        $this->expectException(\UnexpectedValueException::class);
+
+        @(new BundledGermanLexicon($this->temporaryDirectory))->isNoun('eins');
     }
 
     private function fixtureLexicon(): BundledGermanLexicon
     {
-        return new BundledGermanLexicon(dirname(__DIR__, 4) . '/Fixtures/german-lexicon/lexicon.php');
+        return new BundledGermanLexicon(dirname(__DIR__, 4) . '/Fixtures/german-lexicon');
     }
 
     private function writeLexicon(string $noun): void
     {
+        file_put_contents($this->temporaryDirectory . '/lexicon.tsv', $noun . "\tn\t1\n");
+        file_put_contents($this->temporaryDirectory . '/verbs.tsv', '');
         file_put_contents(
-            $this->temporaryPath,
-            sprintf("<?php return ['nouns' => ['%s' => 1], 'others' => [], 'verbs' => []];", $noun),
+            $this->temporaryDirectory . '/lexicon-meta.php',
+            "<?php return ['rarest' => 1, 'medianNounClassByLength' => []];",
         );
     }
 }

@@ -13,8 +13,8 @@ final class BundledGermanLexicon implements GermanLexiconInterface, ResetInterfa
     private ?GermanLexiconModel $model = null;
 
     public function __construct(
-        #[Autowire('%kernel.project_dir%/resources/german-lexicon/lexicon.php')]
-        private readonly string $path,
+        #[Autowire('%kernel.project_dir%/resources/german-lexicon')]
+        private readonly string $directory,
     ) {
     }
 
@@ -55,6 +55,6 @@ final class BundledGermanLexicon implements GermanLexiconInterface, ResetInterfa
 
     private function model(): GermanLexiconModel
     {
-        return $this->model ??= GermanLexiconModel::fromFile(require $this->path);
+        return $this->model ??= GermanLexiconModel::fromDirectory($this->directory);
     }
 }

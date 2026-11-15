@@ -8,51 +8,61 @@ use App\Service\Curation\Trending\Exception\UnknownVerbStemException;
 
 final readonly class GermanLexiconModel
 {
-    private int $rarestClass;
+    private const string NOUN_KIND = 'n';
 
-    /** @var array<int, int> */
-    private array $medianNounClassByLength;
+    private SortedLinesModel $forms;
 
-    /**
-     * @param array<string, int> $nouns
-     * @param array<string, int> $others
-     * @param array<string, string> $verbs
-     */
+    private SortedLinesModel $verbs;
+
+    /** @param array<int, int> $medianNounClassByLength */
     public function __construct(
-        private array $nouns,
-        private array $others,
-        private array $verbs,
+        string $formLines,
+        string $verbLines,
+        private int $rarestClass,
+        private array $medianNounClassByLength,
     ) {
-        $this->rarestClass = self::rarestClassOf($nouns + $others);
-        $this->medianNounClassByLength = self::medianClassByLength($nouns);
+        $this->forms = new SortedLinesModel($formLines);
+        $this->verbs = new SortedLinesModel($verbLines);
     }
 
-    public static function fromFile(mixed $loaded): self
+    public static function fromDirectory(string $directory): self
     {
-        if (!is_array($loaded)) {
-            throw new \UnexpectedValueException('The German lexicon file must return an array.');
+        $meta = require $directory . '/lexicon-meta.php';
+        if (
+            !is_array($meta)
+            || !is_int($meta['rarest'] ?? null)
+            || !is_array($meta['medianNounClassByLength'] ?? null)
+        ) {
+            throw new \UnexpectedValueException('The German lexicon meta file has the wrong shape.');
+        }
+        $medians = array_filter($meta['medianNounClassByLength'], is_int(...));
+        if (count($medians) !== count($meta['medianNounClassByLength'])) {
+            throw new \UnexpectedValueException('The German lexicon meta file has a median that is not an integer.');
         }
 
         return new self(
-            self::classes(self::section($loaded, 'nouns')),
-            self::classes(self::section($loaded, 'others')),
-            self::infinitiveStems(self::section($loaded, 'verbs')),
+            self::contentsOf($directory . '/lexicon.tsv'),
+            self::contentsOf($directory . '/verbs.tsv'),
+            $meta['rarest'],
+            array_combine(array_map(intval(...), array_keys($medians)), $medians),
         );
     }
 
     public function isNoun(string $form): bool
     {
-        return isset($this->nouns[$form]);
+        return str_starts_with($this->forms->valueOf($form) ?? '', self::NOUN_KIND);
     }
 
     public function isKnown(string $form): bool
     {
-        return isset($this->nouns[$form]) || isset($this->others[$form]);
+        return null !== $this->forms->valueOf($form);
     }
 
     public function frequencyClassOf(string $form): int
     {
-        return $this->nouns[$form] ?? $this->others[$form] ?? $this->rarestClass + 1;
+        $line = $this->forms->valueOf($form);
+
+        return null === $line ? $this->rarestClass + 1 : (int) substr($line, 2);
     }
 
     public function medianNounClassOfLength(int $length): int
@@ -62,93 +72,21 @@ final readonly class GermanLexiconModel
 
     public function isVerbStem(string $presentStem): bool
     {
-        return isset($this->verbs[$presentStem]);
+        return null !== $this->verbs->valueOf($presentStem);
     }
 
     public function infinitiveStemOf(string $presentStem): string
     {
-        return $this->verbs[$presentStem] ?? throw UnknownVerbStemException::forStem($presentStem);
+        return $this->verbs->valueOf($presentStem) ?? throw UnknownVerbStemException::forStem($presentStem);
     }
 
-    /**
-     * @param array<string, int> $nouns
-     * @return array<int, int>
-     */
-    private static function medianClassByLength(array $nouns): array
+    private static function contentsOf(string $path): string
     {
-        $classesByLength = [];
-        foreach ($nouns as $noun => $class) {
-            $classesByLength[mb_strlen((string) $noun)][] = $class;
+        $contents = file_get_contents($path);
+        if (false === $contents) {
+            throw new \UnexpectedValueException(sprintf('The German lexicon file "%s" cannot be read.', $path));
         }
 
-        return array_map(self::median(...), $classesByLength);
-    }
-
-    /** @param non-empty-list<int> $classes */
-    private static function median(array $classes): int
-    {
-        sort($classes);
-
-        return $classes[intdiv(count($classes), 2)];
-    }
-
-    /**
-     * @param array<string, int> $classes
-     */
-    private static function rarestClassOf(array $classes): int
-    {
-        if ([] === $classes) {
-            return 0;
-        }
-
-        return max($classes);
-    }
-
-    /**
-     * @param array<mixed> $loaded
-     * @return array<mixed>
-     */
-    private static function section(array $loaded, string $name): array
-    {
-        $section = $loaded[$name] ?? null;
-        if (!is_array($section)) {
-            throw new \UnexpectedValueException(sprintf('The German lexicon file has no "%s" section.', $name));
-        }
-
-        return $section;
-    }
-
-    /**
-     * @param array<mixed> $section
-     * @return array<string, int>
-     */
-    private static function classes(array $section): array
-    {
-        $classes = [];
-        foreach ($section as $form => $class) {
-            if (!is_int($class)) {
-                throw new \UnexpectedValueException(sprintf('The class of "%s" is not an integer.', $form));
-            }
-            $classes[(string) $form] = $class;
-        }
-
-        return $classes;
-    }
-
-    /**
-     * @param array<mixed> $section
-     * @return array<string, string>
-     */
-    private static function infinitiveStems(array $section): array
-    {
-        $stems = [];
-        foreach ($section as $presentStem => $infinitiveStem) {
-            if (!is_string($infinitiveStem)) {
-                throw new \UnexpectedValueException(sprintf('The stem of "%s" is not a string.', $presentStem));
-            }
-            $stems[(string) $presentStem] = $infinitiveStem;
-        }
-
-        return $stems;
+        return $contents;
     }
 }
