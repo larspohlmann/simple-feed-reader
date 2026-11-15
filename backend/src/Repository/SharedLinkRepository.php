@@ -15,9 +15,9 @@ use Doctrine\Persistence\ManagerRegistry;
 final class SharedLinkRepository extends ServiceEntityRepository
 {
     private const int ROWS_PER_INSERT = 100;
-    private const string REFERENCED
-        = '(EXISTS (SELECT 1 FROM link_card card WHERE card.shared_link_id = shared_link.id)'
-        . ' OR EXISTS (SELECT 1 FROM entry quoting WHERE quoting.quoted_shared_link_id = shared_link.id))';
+    private const string UNREFERENCED
+        = 'NOT EXISTS (SELECT 1 FROM link_card card WHERE card.shared_link_id = shared_link.id)'
+        . ' AND NOT EXISTS (SELECT 1 FROM entry quoting WHERE quoting.quoted_shared_link_id = shared_link.id)';
 
     public function __construct(ManagerRegistry $registry)
     {
@@ -100,17 +100,17 @@ final class SharedLinkRepository extends ServiceEntityRepository
     {
         $connection = $this->getEntityManager()->getConnection();
         $connection->executeStatement(
-            'UPDATE shared_link SET unreferenced_since = NULL WHERE unreferenced_since IS NOT NULL AND '
-            . self::REFERENCED,
+            'UPDATE shared_link SET unreferenced_since = NULL WHERE unreferenced_since IS NOT NULL AND NOT ('
+            . self::UNREFERENCED . ')',
         );
         $connection->executeStatement(
-            'UPDATE shared_link SET unreferenced_since = ? WHERE unreferenced_since IS NULL AND NOT '
-            . self::REFERENCED,
+            'UPDATE shared_link SET unreferenced_since = ? WHERE unreferenced_since IS NULL AND '
+            . self::UNREFERENCED,
             [$now->format('Y-m-d H:i:s')],
         );
 
         return (int) $connection->executeStatement(
-            'DELETE FROM shared_link WHERE unreferenced_since < ? AND NOT ' . self::REFERENCED,
+            'DELETE FROM shared_link WHERE unreferenced_since < ? AND ' . self::UNREFERENCED,
             [$markedBefore->format('Y-m-d H:i:s')],
         );
     }
