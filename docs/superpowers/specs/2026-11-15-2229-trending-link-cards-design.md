@@ -1,0 +1,449 @@
+# Trending: social posts' link cards (#2229)
+
+## Intent
+
+A social post ties into a Trending story today only through its link card's **URL**, which must hash the same as an
+article in the window. The card's title and description go unused, though the title is usually the linked article's
+own headline. And social posts never show in Trending: they count towards a story's score, but a story needs two
+*article* feeds the reader follows, and its card lists only entries from article feeds.
+
+A link card is the article a post shares. This change reads the card's text into the grouping, in the card's own
+language, lets a shared article count as an article source, and shows the posts that share it as the story's sources,
+led by the shared article when the reader follows no outlet that carries it.
+
+## Goals
+
+- A story card's title joins the post's headline stems and its description the body stems, with today's weights.
+- The card text is stemmed in its own language when a long text plainly reads as another than the post's.
+- Cards that name no story are left out by a structural rule, measured on the window, never by a list.
+- A story is shown when two article feeds **or two distinct article sites** the reader follows carry it.
+- Posts that share a story's article are listed among its sources; when the reader follows no article feed in the
+  story, a post sharing it leads, and the existing link block shows its card.
+- French and Spanish are measured on their own as well as in the shared window.
+
+## Non-goals
+
+- Storing a card's language (D3), resolving shorteners (`trib.al`, `n.pr`, `bit.ly`), or counting two article feeds of
+  one site as one source (D4).
+- A new Trending card design, a card-title headline for a card-led story (D9), or any new API field.
+- Any change to the weights, filler shares, link thresholds, the stemmer, the German splitter or the equivalence tables.
+- Posts without a story card: they keep counting towards the score only, and are never shown.
+
+## Anti-goals
+
+- **Curation from the window.** No word list, site list, profile pattern or tuned value comes from the current news.
+  The window shows the shapes; the rules are structural and general.
+- **Wrong merges** from generic card titles (*Instagram*, *- YouTube*, *Startseite*). The rule in D2 exists for them,
+  and the eye check looks for them first.
+- **A week regression:** as in #2227, #2230 and #2231, the week must not lose real stories net.
+- **A browser-only API.** The endpoint keeps its JSON shape; a native iOS client sees a social lead as the same
+  `EntryDto` it already renders in every other list.
+
+## Constraints
+
+- PHP 8.5, Symfony 8.1, shared host (Strato): the week rebuild runs in the worker, about 25 s there today.
+- House rules (CLAUDE.md): `final readonly`, one role per folder, at most three parameters, every touched `src` file
+  PHPMD-clean with no count-driven split, queries in `src/Repository`, no comment unless a reader would get the code
+  wrong.
+- Lands on `develop` after #2230 and #2231 (merged, f5e4b51af).
+
+## Research
+
+All measurements: dev MySQL, read-only (`START TRANSACTION READ ONLY`), on 2026-11-15. The grouping runs use the #2227
+kit (`simp-explain-at.php`, `compare.py`) with "now" pinned to **2026-11-15 09:00:00 UTC**; a prototype's files were
+swapped into the checkout for its runs and restored from saved copies. The scripts, the prototype and every output
+are in the session scratchpad under `2229/`. Language is `COALESCE(entry.language, feed.language)` throughout.
+
+### R1. What the cards hold
+
+Social posts of the week window (since 2026-11-08 09:00), their first top-level card (`thread_post_id IS NULL`, lowest
+position):
+
+| Post language | Posts | With a card | Card share | With a title | With a description |
+|---|---|---|---|---|---|
+| de | 3,133 | 1,664 | 53 % | 100 % | 91 % |
+| en | 7,336 | 3,644 | 50 % | 100 % | 88 % |
+| fr | 107 | 44 | 41 % | 100 % | 80 % |
+| es | 125 | 49 | 39 % | 100 % | 92 % |
+| none | 380 | 55 | 14 % | 100 % | 89 % |
+| **all** | 11,081 | 5,456 | 49 % | 100 % | 89 % |
+
+Every card has a title (the column is `NOT NULL` and no stored title is blank). 5,424 of the carded posts are link
+shares, 37 quote posts. 92 % of cards carry an image. 239 English article-feed entries carry a card too (link
+aggregators); no German, French or Spanish article entry does.
+
+**Shapes**, by structure (5,460 week cards):
+
+| Shape | Cards | What it is | Examples (by eye) |
+|---|---|---|---|
+| URL with no path (query or not) | 61 | a site, not an article | *taz.de*, *Startseite* (netzpolitik.org), *Home \| Cartoon Movement*, *Discuss Online – a general purpose instance* |
+| Title names an account (`@` and a letter, digit or `_`) | 50 | a post or profile, not an article | *Anonymous Germany (@Anonymous00708) on X*, *Paul Cantrell (@inthehands@hachyderm.io)*, *Sascha Kersken (@sascha-kersken.de)* |
+| Title, letters and digits only, is the site name or the host's first label | 41 | the site's name | *Reddit* (9), *- YouTube* (3), *Instagram*, *Facebook*, *Google Maps*, *pubmed.ncbi.nlm.nih.gov* |
+| Card title equals the post's own title | 503 | the post *is* the share (bridges, outlet accounts) | adds no new stem; stems are a set |
+| Path of one segment | 1,567 | mostly shorteners and short article ids | `trib.al/…`, `n.pr/…`, `taz.de/!6228451` — real articles |
+
+The three rules together leave out **124 cards (2.3 %)**; 14 cards match two. A one-segment path is not a profile
+signal: 1,567 cards have one, nearly all articles behind shorteners.
+
+### R2. The card's language
+
+Guessing every card's language at read time with `LanguageGuess` as configured (every profile the detector ships, so
+Italian does not rank as Spanish) costs **1.82 ms per card**: 9.9 s for the week's 5,460 cards, 14 % of a 70 s run.
+The issue's 0.16 ms is the detector loaded with only the four app languages: **0.185 ms per card**, 1.0 s for the week.
+Where the full detector names one of the four, the four-language detector agrees on all 5,175 cards.
+
+Guessing every card (four languages, no length rule) against the post's language:
+
+| Post → card | Cards | By eye |
+|---|---|---|
+| de → en | 60 | about 7 in 10 right (*Putin may not want peace…*); the rest generic (*Instagram*, *Why No AI?*) |
+| en → de | 46 | mostly wrong: short or generic titles (*SocialSpecing & HyperTexting*, *Reddit*, *- YouTube*) |
+| en → es / fr | 40 / 29 | mostly wrong: short English `politi.co` titles read as Spanish or French |
+| fr → en, es → en | 15, 12 | mostly right (*Watch: Inside Ukraine power plant…*, *National Weather Service reports…*) |
+| de → es / fr | 6 / 2 | wrong (*Kora OS: Ex-Cyanogen-CEO kündigt…*) |
+
+With #2227's rule for social posts — the stated language stands unless the text is at least 150 characters, and then
+the guess wins — 95 cards change language: de → en 20, en → de 24, fr → en 12, es → en 6, en → fr 8, en → es 12,
+fr → de 3, es → de 2, none → a language 36. The French and Spanish posts linking English articles are mostly right;
+the remaining wrong guesses are about 20 long English `politi.co` cards read as French or Spanish.
+
+Storing the language at write time instead would need a `link_card.language` column, both `LinkCardRepository` write
+paths, the backup format (`EntryLine`) and a backfill command, because the week window holds cards written before the
+column. Read time costs 1.0 s on a 70 s week run (1.4 %).
+
+### R3. Card text in the grouping (prototype)
+
+Prototype: the card title's stems joined the headline stems and the description's (cut to 300 characters, as a body)
+the body stems; the R1 rules applied; the card stemmed in its own language under the R2 length rule. Same entries for
+A (cards off) and B, back to back:
+
+| | Day A | Day B | Week A | Week B |
+|---|---|---|---|---|
+| Entries | 4,675 | 4,675 | 29,361 | 29,361 |
+| Groups | 549 | 553 | 3,761 | 3,752 |
+| Grouped pairs | — | +195 net | — | +2,375 net |
+| Explain time | 4.3 s | 4.8 s | 68.7 s | 82.5 s |
+| Peak PHP | 54.9 MB | 58.0 MB | 177.0 MB | 189.5 MB |
+| Peak RSS | 94.5 MB | 94.7 MB | 246.1 MB | 250.6 MB |
+
+| new / lost / **net** | Day | Week |
+|---|---|---|
+| de–de | 68 / 33 / **+35** | 1,003 / 443 / **+560** |
+| en–en | 210 / 58 / **+152** | 3,609 / 1,948 / **+1,661** |
+| fr–fr | 0 / 0 / **0** | 4 / 0 / **+4** |
+| es–es | 0 / 0 / **0** | 2 / 0 / **+2** |
+| mixed or none | 12 / 4 / **+8** | 181 / 33 / **+148** |
+
+French-only and Spanish-only windows (the window query restricted to one language, as #2231 did), A → B:
+
+| | Entries | Grouped pairs |
+|---|---|---|
+| French day | 405 | 153 → 153 (0) |
+| French week | 511 | 178 → 182 (+4 new, 0 lost) |
+| Spanish day | 408 | 20 → 20 (0) |
+| Spanish week | 859 | 50 → 52 (+2 new, 0 lost) |
+
+French and Spanish move little because only 44 and 49 of their posts carry a card in the week.
+
+Stemming the card in the post's language instead (same prototype, guess off) gave 194 fewer week pairs, 93 of them
+mixed-language pairs, which is the cross-language link the issue asks for.
+
+**Eye check (week).** The largest grown groups reunite fragments of one event: the Microsoft outage (7 + 5 + 4 + …
+→ 29), the Van Hollen challenge (30 → 50), the FAA ground stop (37 → 47), Europe at the Abu Dhabi talks (3 + 3 + 3 →
+12), the Alaska count, the Nvidia/Huang resignation, the Colom and Holscher wins, and heise's *Chatbots in Brüssel*
+story with the heise digest posts that share it. Lost pairs are the same events cut differently by the greedy grouper
+(the 46-entry ground-stop group becomes 37 + 5 as *ground stop lifted* joins its own group), not stories lost.
+
+**Wrong merges found.** Of the cards with a generic short title shared by two or more cards, nine posts gained pairs.
+One was wrong: two unrelated posts both carrying a **"- YouTube"** card (YouTube's consent page title and boilerplate
+description) linked. The site-name rule in R1 (title is the host's first label) is what removes it; it was added after
+this run. *Israel's Secret Broker* joined *Jared Kushner's Secret Deals* (one channel, one subject): acceptable.
+*COP to it* and *Long nights ahead* (newsletter names) joined the Burnham-at-COP31 group their posts are about.
+
+The 20 % slower week run comes from the extra stems, not the language guess (the post-language variant ran as slow).
+
+### R4. The two exclusions
+
+Measured on the worker's current snapshot for the dev account (user 2: 262 feeds, 215 article feeds), counting only
+feeds it follows (inclusion switches and the duplicate-copy rule are left out of this approximation). An article site
+is the host of an article-feed entry's URL, or of a social post's card when the card names a story (R1); `www.` is
+dropped.
+
+**Threshold** (`minimumArticleFeeds`), stories reaching two followed feeds:
+
+| | Day | Week |
+|---|---|---|
+| Stories in the snapshot | 192 | 221 |
+| Shown under today's rule (two article feeds) | 54 | 159 |
+| Two article feeds **plus** card sites counted separately | 108 | 210 |
+| Two distinct article sites | 74 | 174 |
+| Two article feeds **or** two distinct article sites (chosen, D4) | 78 ¹ | 176 |
+| …of which no article feed at all (card-led) | 4 | 2 |
+| Enter the top 15 under the chosen rule | 3 ¹ | 1 |
+
+¹ Measured after the worker rebuilt the day snapshot (193 → 192 stories), where today's rule shows 58, not 54; the
+week snapshot was the same for every row.
+
+Counting article feeds and card sites separately counts an outlet twice when the reader follows both its feed and its
+social account: *Tesla opens Cybercab pre-orders* and *AI Chatbots won't stop recommending scam websites* reach two
+"sources" from one site each. Distinct sites alone hides 1 day and 3 week stories shown today, each carried by two feeds
+of one site (heise's *Auslegungssache 172*, *Home Assistant mit KI*; *Mehr Wettbewerb im Fernverkehr*).
+
+Stories entering the top 15, by eye: *'We can't let them down' — Democrats turn to charity* (6 feeds, 1 article feed,
+2 sites), *Fetterman signals breaking point over Van Hollen* (5 feeds, card-led: Lemmy posts sharing Independent and
+Newsweek articles), *Judge rejects Trump's bid to close East Potomac golf course*, and on the week *Peltola extends
+lead in Alaska*. All real. Card-led stories in the pool also include the FAA ground stop (Politico and Gizmodo cards)
+and *Alaska voters keep ranked-choice voting*. None is French or Spanish: the dev account follows few French or Spanish
+social feeds, so this measures nothing for them.
+
+**Display** (`articleEntryIdsByStory`), in the stories shown today:
+
+| | Day | Week |
+|---|---|---|
+| Shown stories holding a social post | 11 | 109 |
+| Social posts never shown | 33 | 357 |
+| …of which carry a card | 30 | 272 |
+
+## Approaches considered
+
+1. **Card text as a separate link source** (a third `StoryLinkSourceInterface` comparing cards to headlines). Rejected:
+   the headline index already weighs, caps and filters stems; a second scorer would duplicate it.
+2. **Store the card language** (R2). Rejected for now: five write and restore paths plus a backfill, against 1.0 s on
+   the week.
+3. **Threshold by distinct sites alone.** Rejected: hides stories readers see today (R4).
+4. **Threshold by article feeds plus card sites.** Rejected: double-counts outlets the reader follows twice (R4).
+5. **A new Trending card for card-led stories** (the card's title as headline, the posts as a byline). Rejected as
+   optional scope: the existing link block already shows a post with its card, the sources line and the source list.
+
+## Design
+
+### Reading the card
+
+`TrendingEntryRepository::chunkAfter` also selects, from the same first top-level card, its `title`, `site_name` and
+`SUBSTR(description, 1, 2000)`, and `CASE WHEN f.network IS NULL THEN e.url END AS article_url`.
+
+`WindowEntryModel` keeps its first seven fields and replaces `urlHash` and `linkCardUrl` with one
+`EntryLinksModel $links`, what the entry links to:
+
+```php
+final readonly class EntryLinksModel            // Model/
+{
+    public function __construct(
+        public ?string $urlHash,                // the entry's own article, as today
+        public ?string $articleUrl,             // the entry's URL when its feed publishes articles; null for a post
+        public ?WindowLinkCardModel $card,      // its first top-level card, any share kind, as today
+    ) {}
+    public function storyCard(): ?WindowLinkCardModel;   // the card when it names a story
+    public function articleSite(): ?string;              // its own site for an article entry, else its story card's
+}
+
+final readonly class WindowLinkCardModel        // Model/
+{
+    public function __construct(
+        public string $url,
+        public string $title,
+        public ?string $description,
+        public string $siteName,
+    ) {}
+    public function namesAStory(): bool;   // D2
+    public function site(): ?string;       // ArticleSite::of($this->url)
+}
+```
+
+`Support/ArticleSite::of(?string $url): ?string` is the URL's host, lower-cased, with a leading `www.` dropped; null
+when the URL has no host. The three URL values move together because they are one thing — the entry's links — and
+`TrendingGrouping::urlHashesOf` already reads two of them side by side; the model also keeps `WindowEntryModel` at
+eight parameters.
+
+### The story card rule (D2)
+
+A card names a story unless any of:
+1. its URL's path is empty or `/` (with or without a query);
+2. its title holds an account handle: `@` followed by a letter, digit or underscore;
+3. its title, reduced to lower-case letters and digits, equals its `site_name`, its host, or its host's first label,
+   each reduced the same way (`www.` dropped first). The site name is needed: a *- YouTube* card on `youtu.be` matches
+   only through it.
+
+### Grouping
+
+`Service/Curation/Trending/CardLanguage` (root service):
+
+```php
+public function of(string $text, ?FeedLanguage $postLanguage): ?FeedLanguage
+```
+
+It returns the post's language unless `$text` is at least 150 characters (#2227's `SocialEntryLanguage` threshold) or
+the post has no language; then the guess, falling back to the post's language. Its `LanguageGuess` is a second
+instance whose detector loads only the `FeedLanguage` values: `LanguageDetectionFactory::createForFeedLanguages()`,
+wired in `services.yaml` as `app.trending.card_language_guess` and injected with `#[Autowire(service: …)]`.
+
+`Model/SharedArticleModel(string $title, string $body, ?FeedLanguage $language)` is a story card's text ready to stem:
+the body is `EntryText::body($card->description)`.
+
+`TrendingGrouping::collect` builds it for an entry with a story card, `$run->add($entry, $urlHashes, $sharedArticle)`;
+`TrendingRun::add` records `articleSiteOf()` from `$entry->links->articleSite()` and passes the article on;
+`HeadlineWindow::add(WindowEntryModel $entry, string $body, ?SharedArticleModel $article)` unions the article title's
+stems (in the article's language) into the headline stems and its body's into the body stems, a stem held by a word
+anywhere counting as held by a word. Every entry with a story card takes part: a post, and the 239 aggregator entries.
+
+### The snapshot
+
+`trending_story_entry` gains `article_site VARCHAR(255) NULL` (migration on MySQL and SQLite, as
+`Version20261114180000`). `StoryMemberModel` gains `?string $articleSite`; `TrendingSnapshotRepository::insertStory`
+writes it. No backfill: day and week rebuild every 10 minutes and every hour, and a null site falls back to today's
+rule.
+
+### Who is shown (D4)
+
+`TrendingStoryRepository::VISIBLE_COVERAGE` becomes:
+
+```sql
+HAVING COUNT(DISTINCT story_member.feed_id) >= :minimum
+AND (COUNT(DISTINCT CASE WHEN member_feed.network IS NULL THEN story_member.feed_id END) >= :minimumArticleSources
+     OR COUNT(DISTINCT story_member.article_site) >= :minimumArticleSources)
+```
+
+`MINIMUM_ARTICLE_FEEDS` is renamed `MINIMUM_ARTICLE_SOURCES` (still 2). `noEarlierCopy()` is unchanged: it already
+lets every social post count.
+
+### What a story shows (D6)
+
+`articleEntryIdsByStory` becomes `shownEntryIdsByStory`: a story's entries of the feeds the reader follows in Trending
+that are from an article feed **or** carry an `article_site` (a post sharing a story card). `TrendingStoryCardModel`
+picks the lead:
+
+- among the article rows, as today (newest with a picture) — the reader's own outlets lead first;
+- when there are none, among the posts: the newest link share whose card has an image, else the newest link share,
+  else the newest post.
+
+Every other row stays a source, one per feed, as today; a post's copy in another timeline feed of the reader joins
+through `withLeadCopies` as an article's copy does. A post whose card names no story, or with no card, is not shown.
+
+**Sketch, magazine layout, a card-led story** (the existing `link` block, `app-entry-link`, unchanged):
+
+```
+┌──────────────────────────────────────────────────────────┐
+│ (avatar) Aaron Rupar · 4 sources · 2 h               •   │  kicker: poster, sources line, unread dot
+│ Fetterman suggests he will leave the Democratic Party…   │  the post's own text
+│ ┌──────────────────────────────────────────────────────┐ │
+│ │ [image]  John Fetterman Signals Breaking Point With  │ │  app-link-card: the shared article —
+│ │          Democrats Over Van Hollen                   │ │  title, image, site, link
+│ │          newsweek.com                                │ │
+│ └──────────────────────────────────────────────────────┘ │
+│ ☆ ⧉ … Hide                                               │  actions, Hide last (TrendingHideAction)
+│ ≡ 3 more sources ⌄                                       │  app-more-sources: posters' names, post text
+└──────────────────────────────────────────────────────────┘
+```
+
+**List layout** (`entry-row`): the post row with its card, "4 sources ·" on the attribution line, and the
+"Also covered by" footer (`app-entry-duplicates`) naming each source.
+
+**One component change (D7):** `EntryDuplicatesComponent` names a copy with `sourceNameOf(copy, rows)` when its entry is
+a Trending story (`entry.story`), as `MoreSourcesComponent` already does, so a post reads as its poster
+(*Aaron Rupar*), not as its timeline feed (*Home*, *Discover*). Footers outside Trending keep naming the feed ("Also
+in Home") because there the timeline is the point.
+
+### The rest of a story's life
+
+- **Opening.** The lead post opens like any post (`appOpensEntry`); opening marks it viewed, and `viewedStoryIds`
+  already counts social entries. The card itself opens the article in the link reader, as in every other list.
+- **Hiding.** `storyIdContaining` finds the story through any entry of a feed the reader follows, social ones included,
+  and `hideStory` hides every member. No change; a functional test pins it for a card-led story.
+- **Unopened counts.** `unopenedFor` ranks the same stories the page shows; card-led stories count like any other.
+- **The reader's own feeds first.** The lead comes from article rows whenever there is one (above).
+
+### API
+
+`GET /api/trending` keeps its shape: `stories` is a list of `EntryDto`, each with `story` and `duplicates`. A lead may
+now be a social post, and `duplicates` may hold posts, both already valid `EntryDto`s with `social`, `poster`,
+`linkCards` and `share`. `POST /api/trending/hidden` is unchanged. No new field, no browser-only input (architecture
+§6): a native client renders a social lead as it renders a post in any list.
+
+### UI text
+
+None new. The sources line (`reader.trendingSources`), "Also covered by" (`reader.alsoCoveredBy`), "x more sources"
+(`reader.moreSources`, `reader.moreSourcesOne`) and Hide (`reader.hideStory`) exist in de, en, fr and es.
+
+## Decisions
+
+Lars delegated every decision. Each is "what — why — cost if wrong".
+
+- **D1. Card title to headline, description to body, today's weights, every entry's first top-level card.** — The card
+  title is the article's headline, the description its lead: exactly the two places the grouping already weighs; the
+  first card is the one the URL link already uses. Measured +2,375 week and +195 day pairs net (R3). — If wrong: posts
+  whose card is a teaser (*COP to it*) carry the newsletter's name; their own text still has to agree.
+- **D2. A card names no story when its URL has no path, its title holds an account handle, or its title is its site's
+  name.** — Three structural shapes from R1, none a name list: a site, a person, a site name. 124 cards (2.3 %). The
+  third removes the one wrong merge R3 found (*- YouTube*). — If wrong: a story whose real headline is the site's name
+  (a site launch) loses its card text; a quoted post's description, which may name the story, is lost with its card.
+- **D3. The card's language is guessed at read time, by a four-language detector, only for a text of 150 characters or
+  more, else the post's.** — 0.185 ms per card, 1.0 s on the week; the full detector costs 9.9 s, and storing needs a
+  column, two write paths, the backup format and a backfill (R2). The length rule is #2227's, and short titles are where
+  the guesses go wrong. — If wrong: about 20 long English cards a week stem as French or Spanish and lose their links;
+  a German card on a short English title stems as English.
+- **D4. Shown when two article feeds or two distinct article sites carry the story.** — The OR keeps every story shown
+  today (distinct sites alone hides four), and distinct sites stop an outlet's feed and its social account counting
+  twice (R4). Day pool 58 → 78, week 159 → 176. — If wrong: two feeds of one site still count as two, as today; a
+  shortener host (`trib.al`) counts as one site for several outlets, so some stories stay hidden.
+- **D5. The article site is stored on `trending_story_entry` at build, with no backfill.** — Host extraction in SQL
+  differs between MySQL and SQLite; the snapshot is rebuilt within the hour anyway. — If wrong: for up to an hour after
+  deploy the week shows today's stories.
+- **D6. Posts sharing a story card are sources in every story; an article row leads whenever there is one; otherwise
+  the newest link share with a card image.** — The sources line already counts social feeds, so listing them makes the
+  count and the list agree; the issue keeps the reader's own outlets first. Week: 272 carded posts in 109 stories
+  become visible sources. — If wrong: busy stories list many posts under "more sources"; the footer's four-name cap and
+  the collapsed magazine list keep the card's height.
+- **D7. In a Trending footer a post is named by its poster.** — "Also covered by Home, Discover" names timelines, not
+  sources; the magazine list already uses `sourceNameOf`. — If wrong: a reader who follows one account in two timelines
+  sees its name once per timeline.
+- **D8. No new UI text and no new API field.** — Every label the design needs exists in all four languages; the endpoint
+  already serves social entries' shape. — If wrong: nothing tells a reader why a post leads; a later issue can add a
+  label, translated four ways.
+- **D9. A card-led story keeps the post's text as its headline; the card below names the article.** — The `link` block
+  is the design language's one rendering of a post with a card; a Trending-only variant is optional scope. — If wrong:
+  a terse post (*LFG*) heads the story; the card title is one line below.
+- **D10. `urlHash`, `linkCardUrl` and the new article URL move into `EntryLinksModel`.** — They describe one thing and
+  are read together; `WindowEntryModel` would otherwise reach PHPMD's ten-parameter limit. Recorded so review can judge
+  it is not a count-driven split (#2025): `articleSite()` and `storyCard()` live on it and have no other home.
+
+**Optional scope, costed and not built:** storing the card language (D3: a column, five paths, a backfill command);
+resolving shorteners for site counting (an outbound fetch per card, against the SSRF boundary); a card-title headline
+variant of the link block for Trending (a block variant, its height model in `magazine-block-height.ts`, and specs);
+counting two feeds of one site as one (D4: hides stories shown today).
+
+## Measurement plan
+
+The #2227 method, as in #2231:
+
+- **A** = develop at f5e4b51af, **B** = this branch's HEAD. A is made by swapping in, with `git archive f5e4b51af`,
+  `backend/src/Service/Curation/Trending`, `backend/src/Repository/TrendingEntryRepository.php`,
+  `TrendingStoryRepository.php` and `TrendingSnapshotRepository.php`, and restoring them after each run; the container
+  is cleared and warmed before each timed run.
+- "Now" pinned with `simp-explain-at.php` to one time in the past hours of the run day, the same for A and B; day and
+  week, back to back. The header lines must show equal entry counts; otherwise run A again.
+- Report, per window: groups, grouped pairs new / lost / **net**, explain time, peak PHP memory and peak RSS
+  (`/usr/bin/time -l`).
+- **Per language pair:** de–de, en–en, fr–fr, es–es, mixed or none, each pair's languages looked up by its printed line
+  (ambiguous lines count as mixed).
+- **French-only and Spanish-only windows,** day and week: the window query restricted to one
+  `COALESCE(entry.language, feed.language)` in a throwaway copy of `TrendingEntryRepository`, A and B the same way.
+- **Card facts for fr and es separately:** card share, title and description share (R1), and the card-language guess
+  for French and Spanish (a German or English post linking a French or Spanish article, and the other way round),
+  checked by eye.
+- **Eye check:** the largest new, grown and split groups, the members of cards with a generic short title, and every
+  wrong merge, French and Spanish groups named separately.
+- **Stories that appear only because of this change:** a throwaway script groups the pinned window with B, then for
+  the dev account cuts it as `rankedForUser` does (followed feeds, the OR rule, the top 15) under A's rule and B's, and
+  lists every story that appears only under B — card-led or not, French and Spanish ones named — each checked by eye.
+- Expected from R3 and R4: week about +2,375 net, day about +195, fr and es week a few new and none lost, week explain
+  time about +20 %. A week loss, or a wrong merge through a card title, is a finding to report, not a value to tune.
+
+## Limitations
+
+- Shorteners count as their own site (`trib.al` stands for several outlets, `n.pr` for NPR).
+- A generic card title not shaped like the site's name (*Client Challenge*, *DPG Media Privacy Gate*, *Join –
+  UsedMuse*) still adds its stems; its rarity and the 0.4 share of the lighter entry are what hold it back.
+- The four-language detector reads every text as one of de, en, fr, es; the length rule limits where that matters.
+- French and Spanish carry few cards on the dev stack (44 and 49 a week); their gain is measured, but small.
+
+## Outcome
