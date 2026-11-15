@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Foundation\Url\UrlNormalizer;
 use App\Service\Outbound\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Outbound\Fetch\EgressProxySource\EgressProxySourceInterface;
 use App\Service\Outbound\Fetch\IpValidator;
@@ -64,6 +65,8 @@ final class ShareLinkCardsWiring
             self::cardWriter($entityManager),
             PostEnrichers::enrichments($entityManager),
             PostEnrichers::linkCards($entityManager),
+            PostEnrichers::sharedLinks($entityManager),
+            new UrlNormalizer(),
             $entityManager,
             EntryIndexers::with($indexWriter),
             new NaiveUtcClock($clock),

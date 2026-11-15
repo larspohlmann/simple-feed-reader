@@ -37,7 +37,7 @@ final readonly class ShareTargetReader
             ? $plan->urls
             : array_values(array_filter($plan->urls, static fn (string $url): bool => $url !== $quoted->address));
 
-        return new EntryCardsModel($stored, $this->pageCardsFor($pageUrls, $plan->postedForms), $quoted);
+        return new EntryCardsModel($stored, $this->pageCardsFor($pageUrls, $plan), $quoted);
     }
 
     /** @param list<string> $uncardedUrls */
@@ -57,19 +57,16 @@ final readonly class ShareTargetReader
     }
 
     /**
-     * @param list<string>          $uncardedUrls
-     * @param array<string, string> $postedForms
+     * @param list<string> $uncardedUrls
      *
      * @return list<PageCardModel>
      */
-    private function pageCardsFor(array $uncardedUrls, array $postedForms): array
+    private function pageCardsFor(array $uncardedUrls, ShareFetchPlanModel $plan): array
     {
         $pageCards = [];
         foreach ($uncardedUrls as $uncardedUrl) {
             try {
-                $pageCards[] = isset($postedForms[$uncardedUrl])
-                    ? $this->postedUrls->cardAt($uncardedUrl, $postedForms[$uncardedUrl])
-                    : $this->pageCards->read($uncardedUrl);
+                $pageCards[] = $this->pageCardAt($uncardedUrl, $plan);
             } catch (PageFetchException $exception) {
                 $this->logger->warning(
                     'No link card for {url}',
@@ -79,5 +76,17 @@ final readonly class ShareTargetReader
         }
 
         return $pageCards;
+    }
+
+    /** @throws PageFetchException */
+    private function pageCardAt(string $url, ShareFetchPlanModel $plan): PageCardModel
+    {
+        if (isset($plan->known[$url])) {
+            return PageCardModel::known($plan->known[$url]);
+        }
+
+        return isset($plan->postedForms[$url])
+            ? $this->postedUrls->cardAt($url, $plan->postedForms[$url])
+            : $this->pageCards->read($url);
     }
 }

@@ -7,11 +7,15 @@ namespace App\Service\Content\LinkCard;
 use App\Entity\Entry;
 use App\Entity\LinkCardContent;
 use App\Entity\ShareEnrichment;
+use App\Entity\SharedLink;
 use App\Repository\LinkCardRepository;
 use App\Repository\ShareEnrichmentRepository;
+use App\Repository\SharedLinkRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Content\LinkCard\Model\EntryCardsModel;
 use App\Service\Content\LinkCard\Model\LinkCardBudgetModel;
+use App\Service\Content\LinkCard\Support\ReusableShareUrls;
+use App\Service\Foundation\Url\UrlNormalizer;
 use App\Service\Social\Share\Model\ShareFetchPlanModel;
 use App\Service\Library\Search\EntryIndexer;
 use App\Service\Social\Share\Support\ShareTargets;
@@ -28,6 +32,8 @@ final readonly class ShareLinkCards
         private EntryCardWriter $cardWriter,
         private ShareEnrichmentRepository $enrichments,
         private LinkCardRepository $linkCards,
+        private SharedLinkRepository $sharedLinks,
+        private UrlNormalizer $urlNormalizer,
         private EntityManagerInterface $entityManager,
         private EntryIndexer $indexer,
         private NaiveUtcClock $clock,
@@ -40,7 +46,7 @@ final readonly class ShareLinkCards
     public function complete(array $queued, LinkCardBudgetModel $budget): int
     {
         $storedCards = $this->storedCards($queued);
-        $plansByRowId = self::withinBudget($queued, $storedCards, $budget);
+        $plansByRowId = self::withinBudget($queued, $this->plansOf($queued, $storedCards), $budget);
         $claimedAt = $this->clock->now();
         $claimed = $this->enrichments->claim(
             array_values(array_filter(
@@ -109,24 +115,73 @@ final readonly class ShareLinkCards
     }
 
     /**
-     * The oldest rows whose uncarded links fit the budget, by row id. The first row always runs, so no entry is left
-     * half-carded; a posted form is read too only while the budget has room for it.
+     * Every row's plan, by row id, with the stored shared links its reusable links need no read for: one lookup for
+     * all the rows.
      *
      * @param list<ShareEnrichment>             $queued
      * @param array<int, list<LinkCardContent>> $storedCards by entry id
      *
      * @return array<int, ShareFetchPlanModel>
      */
-    private static function withinBudget(array $queued, array $storedCards, LinkCardBudgetModel $budget): array
+    private function plansOf(array $queued, array $storedCards): array
+    {
+        $plans = [];
+        $reusableUrls = [];
+        foreach ($queued as $row) {
+            $entry = $row->getEntry();
+            $plan = ShareTargets::planOf($entry, array_map(
+                static fn (LinkCardContent $card): string => $card->url,
+                $storedCards[$entry->requireId()] ?? [],
+            ));
+            $plans[$row->requireId()] = $plan;
+            $reusableUrls[$row->requireId()] = ReusableShareUrls::of($entry, $plan);
+        }
+        $known = $this->storedLinksByUrl(array_merge(...array_values($reusableUrls)));
+        foreach ($plans as $rowId => $plan) {
+            $plans[$rowId] = $plan->withKnown(array_intersect_key($known, array_flip($reusableUrls[$rowId])));
+        }
+
+        return $plans;
+    }
+
+    /**
+     * @param list<string> $urls
+     *
+     * @return array<string, SharedLink> by URL
+     */
+    private function storedLinksByUrl(array $urls): array
+    {
+        $hashesByUrl = [];
+        foreach ($urls as $url) {
+            $hashesByUrl[$url] = $this->urlNormalizer->hash($url);
+        }
+        $links = $this->sharedLinks->byUrlHashes(array_values(array_filter($hashesByUrl)));
+        $linksByUrl = [];
+        foreach ($hashesByUrl as $url => $hash) {
+            if (isset($links[(string) $hash])) {
+                $linksByUrl[$url] = $links[(string) $hash];
+            }
+        }
+
+        return $linksByUrl;
+    }
+
+    /**
+     * The oldest rows whose unknown links fit the budget, by row id. The first row always runs, so no entry is left
+     * half-carded; a posted form is read too only while the budget has room for it.
+     *
+     * @param list<ShareEnrichment>           $queued
+     * @param array<int, ShareFetchPlanModel> $plans  by row id
+     *
+     * @return array<int, ShareFetchPlanModel>
+     */
+    private static function withinBudget(array $queued, array $plans, LinkCardBudgetModel $budget): array
     {
         $remaining = $budget->fetches;
         $plansByRowId = [];
         foreach ($queued as $row) {
-            $plan = ShareTargets::planOf($row->getEntry(), array_map(
-                static fn (LinkCardContent $card): string => $card->url,
-                $storedCards[$row->getEntry()->requireId()] ?? [],
-            ));
-            if ($plansByRowId !== [] && \count($plan->urls) > $remaining) {
+            $plan = $plans[$row->requireId()];
+            if ($plansByRowId !== [] && $plan->withoutChecks()->fetches() > $remaining) {
                 break;
             }
             $plan = $plan->fetches() > $remaining ? $plan->withoutChecks() : $plan;

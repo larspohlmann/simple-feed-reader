@@ -105,17 +105,22 @@ final class PostEnrichers
         EntityManagerInterface $entityManager,
         ClockInterface $clock = new NativeClock(),
     ): SharedLinkWriter {
-        /** @var SharedLinkRepository $sharedLinks */
-        $sharedLinks = $entityManager->getRepository(SharedLink::class);
-
         return new SharedLinkWriter(
-            $sharedLinks,
+            self::sharedLinks($entityManager),
             new UrlNormalizer(),
             self::$previewLanguage ??= new PreviewLanguage(
                 new LanguageGuess(new LanguageDetectionFactory()->createForFeedLanguages()),
             ),
             new NaiveUtcClock($clock),
         );
+    }
+
+    public static function sharedLinks(EntityManagerInterface $entityManager): SharedLinkRepository
+    {
+        /** @var SharedLinkRepository $sharedLinks */
+        $sharedLinks = $entityManager->getRepository(SharedLink::class);
+
+        return $sharedLinks;
     }
 
     public static function enrichments(EntityManagerInterface $entityManager): ShareEnrichmentRepository

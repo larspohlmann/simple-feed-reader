@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Content\LinkCard\PageCardReader;
 
+use App\Enum\FeedLanguage;
 use App\Service\Outbound\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Outbound\Fetch\IpValidator;
 use App\Service\Outbound\Fetch\UrlGuard;
@@ -52,6 +53,21 @@ final class PageCardReaderTest extends TestCase
             ->read(self::SHARED)->card;
 
         self::assertSame('Strawberry cake', $card?->title);
+    }
+
+    public function testItCarriesTheStatedLanguage(): void
+    {
+        $page = new MockResponse(
+            '<html lang="fr-FR"><head><title>Un titre</title></head><body>x</body></html>',
+            ['http_code' => 200],
+        );
+
+        self::assertSame(FeedLanguage::French, $this->reader($page)->read(self::SHARED)->statedLanguage);
+    }
+
+    public function testAPageStatingNoLanguageCarriesNone(): void
+    {
+        self::assertNull($this->reader($this->page('<title>A title</title>'))->read(self::SHARED)->statedLanguage);
     }
 
     public function testReadsTheOpenGraphCard(): void
