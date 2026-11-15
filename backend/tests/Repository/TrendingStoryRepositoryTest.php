@@ -133,6 +133,28 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         );
     }
 
+    public function testAShownPostIsKeyedByItsResolvedHash(): void
+    {
+        $carded = $this->member($this->socialFeed('ann'));
+        $short = SharedLinks::of(
+            $this->entityManager,
+            new LinkCardContent('https://n.pr/x', 'Storm', null, null, 'n.pr'),
+        );
+        $this->entityManager->persist(new LinkCard($carded, 0, $short));
+        $this->entityManager->getConnection()->executeStatement(
+            "UPDATE shared_link_resolution SET status = 'resolved', resolved_url = ?, resolved_url_hash = ?"
+            . ' WHERE shared_link_id = ?',
+            ['https://www.npr.org/storm', 'resolved-hash', $short->requireId()],
+        );
+        $story = $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
+            [$carded, 'npr.org'],
+        ]);
+
+        $shown = $this->stories()->shownEntriesByStory($this->reader->requireId(), [$story->requireId()]);
+
+        self::assertSame('resolved-hash', $shown->linkHashOf($carded->requireId(), $carded->requireId()));
+    }
+
     public function testThreeTimelineCopiesOfOnePostCountAsOneSource(): void
     {
         $story = $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
