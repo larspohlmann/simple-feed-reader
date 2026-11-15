@@ -146,9 +146,9 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     }
 
     /**
-     * The window's stories, counting only feeds the reader follows in Trending and an article or a post once,
-     * leaving out any sharing an entry with a story the reader is shown in a shorter window; an `AND` on `story`, then
-     * visibleCoverage(). An empty id list expands to `IN (NULL)`, which leaves nothing out.
+     * The window's stories, counting only feeds the reader follows in Trending, an article once and a post by its
+     * account, leaving out any sharing an entry with a story the reader is shown in a shorter window; an `AND` on
+     * `story`, then visibleCoverage(). An empty id list expands to `IN (NULL)`, which leaves nothing out.
      */
     private static function visibleStories(): string
     {
@@ -179,38 +179,35 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     }
 
     /**
-     * A story's sources for the reader (#2229): each article feed, and each site a post's story card shares that no
-     * article feed of theirs in the story carries. A post, or a timeline holding one, is no source of its own.
+     * A story's sources for the reader (#2229, #2056): each article feed they follow, and each social account whose
+     * post shares a story card. An account is the post's author, else its feed when it names none, so a post's copies
+     * in several timelines and two posts of one account count once.
      */
     private static function sources(): string
     {
+        $sharesACard = 'member_feed.network IS NOT NULL AND story_member.article_site IS NOT NULL';
+
         return '(COUNT(DISTINCT CASE WHEN member_feed.network IS NULL THEN story_member.feed_id END)'
-            . ' + COUNT(DISTINCT CASE WHEN member_feed.network IS NOT NULL AND NOT EXISTS ('
-            . 'SELECT 1 FROM trending_story_entry outlet_member'
-            . ' JOIN feed outlet_feed ON outlet_feed.id = outlet_member.feed_id AND outlet_feed.network IS NULL'
-            . ' JOIN subscription outlet_reader'
-            . ' ON outlet_reader.feed_id = outlet_member.feed_id AND outlet_reader.user_id = :user'
-            . ' AND ' . TrendingInclusionSql::includes('outlet_reader')
-            . ' WHERE outlet_member.story_id = story.id AND outlet_member.article_site = story_member.article_site)'
-            . ' THEN story_member.article_site END))';
+            . ' + COUNT(DISTINCT CASE WHEN ' . $sharesACard . ' THEN member_entry.author_url END)'
+            . ' + COUNT(DISTINCT CASE WHEN ' . $sharesACard . ' AND member_entry.author_url IS NULL'
+            . ' THEN story_member.feed_id END))';
     }
 
     /**
-     * As in DuplicateCollapseDql, only the lowest-id copy of an article, or of a post in several timelines, that the
-     * reader can see in the story counts; the earlier copy must be one of theirs, or it would count for no feed. An
-     * article and a post never collapse into each other, so a reader's article feed always counts as itself.
+     * As in DuplicateCollapseDql, only the lowest-id copy of an article the reader can see in the story counts;
+     * the earlier copy must be one of theirs, or the article would count for no feed. A post counts by its account.
      */
     private static function noEarlierCopy(): string
     {
-        return ' AND NOT EXISTS (SELECT 1 FROM trending_story_entry earlier_member'
+        return ' AND (member_feed.network IS NOT NULL'
+            . ' OR NOT EXISTS (SELECT 1 FROM trending_story_entry earlier_member'
             . ' JOIN entry earlier_entry ON earlier_entry.id = earlier_member.entry_id'
-            . ' JOIN feed earlier_feed ON earlier_feed.id = earlier_member.feed_id'
-            . ' AND (earlier_feed.network IS NULL) = (member_feed.network IS NULL)'
+            . ' JOIN feed earlier_feed ON earlier_feed.id = earlier_member.feed_id AND earlier_feed.network IS NULL'
             . ' JOIN subscription earlier_reader'
             . ' ON earlier_reader.feed_id = earlier_member.feed_id AND earlier_reader.user_id = :user'
             . ' AND ' . TrendingInclusionSql::includes('earlier_reader')
             . ' WHERE earlier_member.story_id = story.id AND earlier_member.entry_id < story_member.entry_id'
-            . ' AND earlier_entry.url_hash = member_entry.url_hash)';
+            . ' AND earlier_entry.url_hash = member_entry.url_hash))';
     }
 
     /**

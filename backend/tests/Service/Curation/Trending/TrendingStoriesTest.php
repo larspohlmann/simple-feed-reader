@@ -305,7 +305,7 @@ final class TrendingStoriesTest extends DbTestCase
         self::assertSame([], $this->rankedDayStoryIdsOf($this->reader));
     }
 
-    public function testAPostWithoutAStoryCardIsNoSourceHoweverManySocialFeedsCarryIt(): void
+    public function testEverySocialPostCountsEvenWhereTwoAccountsCarryTheSameOne(): void
     {
         [$alpha, $beta] = $this->articleFeeds('alpha', 'beta');
         $socials = [
@@ -314,18 +314,16 @@ final class TrendingStoriesTest extends DbTestCase
         ];
         $this->fixtures->subscribe($this->reader, $alpha, $beta, ...$socials);
         $post = 'https://bsky.app/profile/someone/post/one';
-        $this->fixtures->story(
-            TrendingWindow::Day,
-            '2031-05-14 10:00:00',
-            $this->fixtures->entry($alpha, 'Alpha', '2031-05-14 07:00:00'),
-            $this->fixtures->entry($beta, 'Beta', '2031-05-14 08:00:00'),
-            $this->fixtures->article($socials[0], 'Post', '2031-05-14 09:00:00', $post),
-            $this->fixtures->article($socials[1], 'Post', '2031-05-14 10:00:00', $post),
-        );
+        $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
+            [$this->fixtures->entry($alpha, 'Alpha', '2031-05-14 07:00:00'), null],
+            [$this->fixtures->entry($beta, 'Beta', '2031-05-14 08:00:00'), null],
+            [$this->fixtures->article($socials[0], 'Post', '2031-05-14 09:00:00', $post), 'shared.example'],
+            [$this->fixtures->article($socials[1], 'Post', '2031-05-14 10:00:00', $post), 'shared.example'],
+        ]);
 
         $ranked = $this->rankedDay();
 
-        self::assertSame([2], self::outletCountsOf($ranked));
+        self::assertSame([4], self::outletCountsOf($ranked));
     }
 
     public function testAnEarlierCopyInAFeedTheReaderDoesNotFollowLeavesTheirCopyCounted(): void

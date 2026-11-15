@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Repository;
 
 use App\Entity\Entry;
+use App\Entity\EntryAuthor;
 use App\Entity\Feed;
 use App\Entity\TrendingStory;
 use App\Entity\User;
@@ -23,7 +24,8 @@ use Symfony\Component\Clock\MockClock;
 final class TrendingStoryRepositoryTest extends DbTestCase
 {
     private const string POST = 'https://social.example/@poster/1';
-    private const string OTHER_POST = 'https://social.example/@poster/2';
+    private const string OTHER_POST = 'https://social.example/@other/1';
+    private const string SAME_POSTERS_OTHER_POST = 'https://social.example/@poster/2';
 
     private TrendingFixtures $fixtures;
     private User $reader;
@@ -116,7 +118,7 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         self::assertSame([[$story->requireId(), 3]], $this->shownStoriesAndSources());
     }
 
-    public function testTwoPostsSharingTwoSitesCountAsTwoSources(): void
+    public function testTwoAccountsSharingTheStoryAreTwoSources(): void
     {
         $story = $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
             [$this->member($this->articleFeed('alpha')), 'alpha.example'],
@@ -192,7 +194,7 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         self::assertSame([[$story->requireId(), 2]], $this->shownStoriesAndSources());
     }
 
-    public function testAPostSharingAFollowedOutletsSiteAddsNoSourceAndAnotherSiteAddsOne(): void
+    public function testEveryAccountSharingAStoryCardIsASourceWhateverSiteItShares(): void
     {
         $story = $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
             [$this->member($this->articleFeed('alpha')), 'alpha.example'],
@@ -200,6 +202,18 @@ final class TrendingStoryRepositoryTest extends DbTestCase
             [$this->member($this->socialFeed('ann')), 'alpha.example'],
             [$this->member($this->socialFeed('ben')), 'other.example'],
             [$this->member($this->socialFeed('cat')), 'other.example'],
+        ]);
+
+        self::assertSame([[$story->requireId(), 5]], $this->shownStoriesAndSources());
+    }
+
+    public function testTwoPostsOfOneAccountAreOneSource(): void
+    {
+        $story = $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
+            [$this->member($this->articleFeed('alpha')), 'alpha.example'],
+            [$this->member($this->articleFeed('beta')), 'beta.example'],
+            ...$this->copiesOf(self::POST, 'shared.example', 'home'),
+            ...$this->copiesOf(self::SAME_POSTERS_OTHER_POST, 'other.example', 'discover'),
         ]);
 
         self::assertSame([[$story->requireId(), 3]], $this->shownStoriesAndSources());
@@ -214,14 +228,20 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         ));
     }
 
-    /** @return list<array{Entry, string}> one copy of the post in each named timeline the reader follows */
+    /**
+     * One copy of the post in each named timeline the reader follows, by the account its URL names.
+     *
+     * @return list<array{Entry, string}>
+     */
     private function copiesOf(string $postUrl, string $site, string ...$timelines): array
     {
         return array_values(array_map(
-            fn (string $timeline): array => [
-                $this->fixtures->article($this->socialFeed($timeline), 'Post', '2031-05-14 09:00:00', $postUrl),
-                $site,
-            ],
+            function (string $timeline) use ($postUrl, $site): array {
+                $copy = $this->fixtures->article($this->socialFeed($timeline), 'Post', '2031-05-14 09:00:00', $postUrl);
+                $copy->setAuthor(new EntryAuthor('Poster', \dirname($postUrl)));
+
+                return [$copy, $site];
+            },
             $timelines,
         ));
     }

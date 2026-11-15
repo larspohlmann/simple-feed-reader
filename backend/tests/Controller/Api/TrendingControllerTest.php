@@ -106,7 +106,7 @@ final class TrendingControllerTest extends ApiTestCase
         self::assertIsArray($story['duplicates']);
         self::assertIsArray($story['duplicates'][0]);
         self::assertSame([$other->requireId()], self::idsOf($story['duplicates'][0]['shares']));
-        self::assertSame(['outletCount' => 2, 'viewed' => false, 'shareCount' => 3], $story['story']);
+        self::assertSame(['outletCount' => 3, 'viewed' => false, 'shareCount' => 3], $story['story']);
     }
 
     public function testAPostSharingAFollowedOutletsArticleIsAShareOfItsRowNotASourceOrARow(): void
@@ -139,7 +139,7 @@ final class TrendingControllerTest extends ApiTestCase
         self::assertSame($lead->requireId(), $story['id']);
         self::assertSame([$post->requireId()], self::idsOf($story['shares']));
         self::assertSame([$second->requireId()], self::idsOf($story['duplicates']));
-        self::assertSame(['outletCount' => 2, 'viewed' => false, 'shareCount' => 1], $story['story']);
+        self::assertSame(['outletCount' => 3, 'viewed' => false, 'shareCount' => 1], $story['story']);
     }
 
     public function testAStorysSourceCountIsTheOutletsItsCardShowsTheReader(): void
