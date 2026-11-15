@@ -182,15 +182,25 @@ which stems each entry holds only as parts. Two rules govern what the parts add 
   stem, the entries already holding that stem are marked as holding the compound, so the result does not depend on the
   order the entries arrive in.
 - **R8. Within one pair, a compound adds through its parts at most its own weight** (its place weight times its
-  rarity). The parts' weights are scaled down together until they fit; a part coming through several compounds is
-  held to the tightest of their caps (`Support/PartWeightCaps`). So *Polizeieinsatz* ↔ *Einsatz der Polizei* shares at
-  most r(*polizeieinsatz*), and "share of the lighter entry" stays a share.
+  rarity), measured in the lighter entry's own accounting, the way its total is (R8', F in the Outcome). The parts'
+  weights are scaled down together until they fit, and a part coming through several compounds is held to the
+  tightest of their caps (`Support/PartWeightCaps`). Which compounds cap a part (`HeadlineWindow::compoundsCapping`):
+  - a part the lighter entry holds as a word weighs whole: that word is in its total. *Spionageverdacht* ↔
+    *Spionage-Verdacht* shares r(*spionag*) + r(*verdacht*) when the hyphenated headline is the lighter one;
+  - a part the lighter entry holds only through a compound is capped by that compound: *Polizeieinsatz* ↔ *Einsatz der
+    Polizei* shares at most r(*polizeieinsatz*) when the compound's entry is the lighter one;
+  - a part both entries hold only through compounds is capped by the compounds of both: two compounds linked by their
+    parts alone share no more than either weighs;
+  - entries of equal weight are both the lighter, so a part is capped by the compounds of both.
 
-### Cost, as built (E, Outcome below)
+  So the gate's share stays a share (at most 1.0) for the entry it is measured on, and the shared weight the gate and
+  the link use is the one the lighter entry sees.
 
-Against develop (A) at the same pin, the week run takes 66.2 s against 65.3 s (+1.4 %) and peaks at 176.3 MB of PHP
-memory against 147.3 MB (+29 MB; RSS 246.5 MB against 239.6 MB). The day run takes 4.5 s against 3.6 s and peaks at
-54.3 MB against 46.3 MB. The lexicon is 4.6 MB of the difference; the rest is the part postings, the `CompoundParts`
+### Cost, as built (F, Outcome below)
+
+Against develop (A) at the same pin, the week run takes 68.2 s against 65.4 s (+4 %) and peaks at 177.0 MB of PHP
+memory against 147.8 MB (+29 MB; RSS 247.0 MB against 229.3 MB). The day run takes 4.9 s against 3.8 s and peaks at
+56.9 MB against 48.1 MB. The lexicon is 4.6 MB of the difference; the rest is the part postings, the `CompoundParts`
 bookkeeping and the explain command's extra near misses.
 
 ### The stem cache stays per run (ruling)
@@ -233,9 +243,12 @@ Known and accepted; none of them is fixed by a list.
 - **German parts reach cross-language canonicals.** A part goes through the equivalence map like any word, so
   *Natogipfel* gives `nato` and can link an English *NATO* or a French *OTAN* headline. This is the equivalence table
   doing its job on a part, and it is accepted; the non-German changes it causes are small.
-- **A compound and its hyphenated spelling share at most the compound's weight** (R8). *Spionageverdacht* ↔
-  *Spionage-Verdacht* or *Ökodiktatur* ↔ *Öko-Diktatur* share r(compound), not r(part) + r(part), so two short
-  headlines that share nothing else may no longer reach the weight of 14 together. Measured in E as part of R8's cost.
+- **The heavier entry's share is not bounded.** R8 measures the share on the lighter entry, so the heavier one can
+  give a part whole (it holds it as a word) where its own accounting would cap it. The gate never reads the heavier
+  share, so this changes no link, but its share can exceed 1.0 if anything else ever reads it.
+- **Junk parts still link a compound to plain words.** A word-to-part link counts whole on the word's side, so junk
+  parts of a known word (*bedarf* → *bed* + *arf*) can add more than their compound to a lighter entry that holds them
+  as words. Two compounds linked by such parts alone stay capped (*Beratungsbedarf* / *Klärungsbedarf*, gone in F).
 - **Genre merges through two common parts.** Accident reports (*fahr*, *unfall* with *verletzt*, *schwer*, *zwei*)
   and air-travel stories (*flug*, *verkehr*) still group by kind rather than by story when nothing else separates them.
 - ***Macht* joins *machen*.** The lexicon's majority vote tags the casefolded *macht* as a verb form, and Snowball
@@ -543,3 +556,52 @@ The "other" rows of A → E (+76 week) are English pairs inside mixed groups tha
 - **Task 7b's genre merges stay:** the *Selbstunfall* / *Motorradfahrer* / *Verkehrsunfall* group, the *Unfall mit zwei
   Verletzten* group and *Flugscham* with the US *Startverbot* stories are unchanged in E. No group is joined by a part
   alone.
+
+### F: R8 measured on the lighter entry (R8')
+
+R8 as built in E capped a part on both sides of a pair. On the side that holds the stems as words, that cut the
+issue's own motivating case: *Mutmassliche Affäre mit chinesischer Agentin: Nvidia-CEO Huang im Spionageverdacht* ↔
+*Affäre von Nvidia-Chef Huang: Darum geht es beim Spionage-Verdacht* (dumped week window, pin 03:00). The hyphenated
+entry is the lighter at 72.25; it holds *spionag* (6.04) and *verdacht* (5.60) as words, and its total counts both. The
+pair shares 20.27 through words. D adds both stems whole, 31.91, a share of 0.442; E caps them at r(*spionageverdacht*)
+7.63, 27.90, a share of 0.386, and the pair fails the 40 % gate. F measures the share on the lighter entry, as its total
+is counted (Design, R8): 31.91 again, 0.442.
+
+A first cut capped a part only by the lighter entry's compounds, also where both entries hold it only as a part. It
+brought back the *Beratungsbedarf* ↔ *Klärungsbedarf bei finalen Haushaltsberatungen* pair: the lighter entry gave
+*bed* + *arf* through *Klärungsbedarf* and *berat* through *Haushaltsberatungen*, two caps where the other entry had one
+compound. Holding a part-to-part link to both entries' compounds removed it again; that is the rule as kept.
+
+Measured like E: pin 2026-11-15 03:00 UTC, dev MySQL read-only, each variant's Trending module swapped in, the
+container warmed before each timed run, A (develop, 52259184a), E (801632aef) and F (d45c0c981) run back to back on the
+same 4,897 day and 29,289 week entries. The window has grown since E's measurement, so the numbers differ from that
+table.
+
+| | Day A | Day E | Day F | Week A | Week E | Week F |
+|---|---|---|---|---|---|---|
+| Groups | 589 | 597 | 598 | 3,692 | 3,758 | 3,764 |
+| Grouped pairs | 1,859 | 1,944 | 1,945 | 16,554 | 17,402 | 17,436 |
+| Near misses | 3,720 | 4,194 | 4,195 | 65,164 | 69,584 | 69,716 |
+| Wall time | 3.8 s | 4.9 s | 4.9 s | 65.4 s | 66.1 s | **68.2 s** |
+| Peak RSS | 89.4 MB | 94.6 MB | 84.8 MB | 229.3 MB | 257.9 MB | 247.0 MB |
+| Peak PHP memory | 48.1 MB | 56.8 MB | 56.9 MB | 147.8 MB | 176.6 MB | **177.0 MB** |
+
+| Grouped pairs, new / lost / **net** | Day A → F | Day E → F | Week A → F | Week E → F |
+|---|---|---|---|---|
+| All | 97 / 11 / **+86** | 1 / 0 / **+1** | 1,267 / 385 / **+882** | 93 / 59 / **+34** |
+| de–de | 95 / 7 / **+88** | 1 / 0 / **+1** | 1,137 / 292 / **+845** | 93 / 57 / **+36** |
+| de–other | 0 / 0 / 0 | 0 / 0 / 0 | 2 / 11 / **−9** | 0 / 2 / **−2** |
+
+- **Cost.** The week run is +4 % against A and +3 % against E; peak PHP memory is 177.0 MB. Between runs on one
+  machine the week varies by about 1.5 s.
+- **What F regains.** Real members back in their story: both Nvidia *Spionageverdacht* / *Spionage-Verdacht* pairs and
+  the *Spionin* trio, the Hegseth *Amtsenthebung* group (12 members, with the *taz* teaser), the *Haushaltsausschuss* /
+  *Bundeshaushalt* group, *GTA 6* / *GTA VI*, the *Geheimdienstreform*, the Siemens Energy *Rekordgewinn*, the RND
+  *Starshield-Dilemma* in the Starlink group, the Dana White *Pressesprecher* group and the Day's *Solarförderung* pair.
+- **What R8 removed stays removed.** No *Bundesbank* / *Bundesfinanzhof* merge, no *Beratungsbedarf* / *Klärungsbedarf*
+  / *Asylberatung* pair. The two *Hier ein paar zuletzt häufig geteilte #News* posts in the Starlink group are in A, E
+  and F alike: they join it through shared URLs, not parts.
+- **Loose joins F adds**, of the genre kind the Limitations name: *Unfälle: Auto kracht gegen Hauswand* joins the two
+  *schwer verletzt* accident reports (it left the *Bauarbeiter* pair, which stays as a pair), and *Bayern erwartet Regen,
+  Glätte und Schnee* pairs with the *A7 Glätteunfälle* report.
+
