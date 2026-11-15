@@ -53,18 +53,6 @@ final class BundledGermanLexiconTest extends TestCase
         $this->assertSame('verhandeln', $lexicon->infinitiveStemOf('verhandel'));
     }
 
-    public function testGivesTheClassOfTheInfinitiveBehindAVerbStem(): void
-    {
-        $this->assertSame(10, $this->fixtureLexicon()->infinitiveFrequencyClassOf('verhandel'));
-    }
-
-    public function testRejectsAnInfinitiveClassRequestForANonVerbStem(): void
-    {
-        $this->expectException(UnknownVerbStemException::class);
-
-        $this->fixtureLexicon()->infinitiveFrequencyClassOf('laufen');
-    }
-
     public function testRejectsAnInfinitiveStemRequestForANonVerbStem(): void
     {
         $this->expectException(UnknownVerbStemException::class);

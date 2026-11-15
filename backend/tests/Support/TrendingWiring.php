@@ -11,7 +11,6 @@ use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Curation\Trending\Factory\SnowballStemmerFactory;
 use App\Service\Curation\Trending\GermanCompoundSplitter;
 use App\Service\Curation\Trending\GermanLexicon\BundledGermanLexicon;
-use App\Service\Curation\Trending\GermanVerbStems;
 use App\Service\Curation\Trending\HeadlineEquivalents;
 use App\Service\Curation\Trending\HeadlineFiller;
 use App\Service\Curation\Trending\HeadlineStemmer;
@@ -59,7 +58,7 @@ final class TrendingWiring
 
     public static function stemmer(): HeadlineStemmer
     {
-        return new HeadlineStemmer(new SnowballStemmerFactory(), new GermanVerbStems(self::germanLexicon()));
+        return new HeadlineStemmer(new SnowballStemmerFactory());
     }
 
     public static function filler(): HeadlineFiller

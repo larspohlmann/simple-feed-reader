@@ -58,21 +58,7 @@ final readonly class GermanLexiconModel
 
     public function infinitiveStemOf(string $presentStem): string
     {
-        return $this->verbRowOf($presentStem)[0];
-    }
-
-    public function infinitiveFrequencyClassOf(string $presentStem): int
-    {
-        return (int) $this->verbRowOf($presentStem)[1];
-    }
-
-    /** @return array{string, string} infinitive stem, infinitive class */
-    private function verbRowOf(string $presentStem): array
-    {
-        $row = $this->verbs->valueOf($presentStem) ?? throw UnknownVerbStemException::forStem($presentStem);
-        [$infinitiveStem, $class] = explode("\t", $row, 2);
-
-        return [$infinitiveStem, $class];
+        return $this->verbs->valueOf($presentStem) ?? throw UnknownVerbStemException::forStem($presentStem);
     }
 
     private static function contentsOf(string $path): string

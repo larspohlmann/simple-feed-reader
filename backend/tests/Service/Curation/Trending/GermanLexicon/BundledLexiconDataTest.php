@@ -38,7 +38,7 @@ final class BundledLexiconDataTest extends TestCase
         $this->assertStringEndsWith("\n", (string) file_get_contents(self::DIRECTORY . '/lexicon.tsv'));
         $this->assertStringEndsWith("\n", (string) file_get_contents(self::DIRECTORY . '/verbs.tsv'));
         $this->assertSame([], array_filter(self::$formRows, static fn (array $row): bool => 3 !== count($row)));
-        $this->assertSame([], array_filter(self::$verbRows, static fn (array $row): bool => 3 !== count($row)));
+        $this->assertSame([], array_filter(self::$verbRows, static fn (array $row): bool => 2 !== count($row)));
     }
 
     public function testEveryFormIsAtLeastThreeCharactersLong(): void
@@ -80,16 +80,6 @@ final class BundledLexiconDataTest extends TestCase
     public function testEveryVerbMapsToANonEmptyInfinitiveStem(): void
     {
         $this->assertSame([], array_filter(self::$verbRows, static fn (array $row): bool => '' === $row[1]));
-    }
-
-    public function testEveryVerbHasANonNegativeInfinitiveClass(): void
-    {
-        $invalid = array_filter(
-            [...self::$verbRows, ...self::rowsOf(self::FIXTURE_DIRECTORY, 'verbs.tsv')],
-            static fn (array $row): bool => 1 !== preg_match('/^(0|[1-9]\d*)$/', $row[2]),
-        );
-
-        $this->assertSame([], $invalid);
     }
 
     public function testMetaHoldsTheRarestClass(): void

@@ -15,7 +15,7 @@ final readonly class HeadlineStemmer
     /** @var array<string, Stemmer> language => its stemmer */
     private array $stemmers;
 
-    public function __construct(SnowballStemmerFactory $stemmerFactory, private GermanVerbStems $verbStems)
+    public function __construct(SnowballStemmerFactory $stemmerFactory)
     {
         $stemmers = [];
         foreach (FeedLanguage::cases() as $language) {
@@ -30,8 +30,6 @@ final readonly class HeadlineStemmer
             return HeadlineStems::cut($word);
         }
 
-        $stem = HeadlineStems::bare($this->stemmers[$language->value]->stem($word));
-
-        return $language === FeedLanguage::German ? $this->verbStems->stemOf($stem, $word) : $stem;
+        return HeadlineStems::bare($this->stemmers[$language->value]->stem($word));
     }
 }

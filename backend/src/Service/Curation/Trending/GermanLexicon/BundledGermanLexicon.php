@@ -43,11 +43,6 @@ final class BundledGermanLexicon implements GermanLexiconInterface, ResetInterfa
         return $this->model()->infinitiveStemOf($presentStem);
     }
 
-    public function infinitiveFrequencyClassOf(string $presentStem): int
-    {
-        return $this->model()->infinitiveFrequencyClassOf($presentStem);
-    }
-
     public function reset(): void
     {
         $this->model = null;

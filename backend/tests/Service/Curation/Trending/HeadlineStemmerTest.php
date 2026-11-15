@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\Curation\Trending;
 
 use App\Enum\FeedLanguage;
+use App\Service\Curation\Trending\Factory\SnowballStemmerFactory;
 use App\Service\Curation\Trending\HeadlineStemmer;
 use App\Service\Curation\Trending\Support\HeadlineStems;
-use App\Tests\Support\TrendingWiring;
 use PHPUnit\Framework\TestCase;
 
 final class HeadlineStemmerTest extends TestCase
@@ -16,7 +16,7 @@ final class HeadlineStemmerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->stemmer = TrendingWiring::stemmer();
+        $this->stemmer = new HeadlineStemmer(new SnowballStemmerFactory());
     }
 
     public function testGermanCompoundsKeepTheirOwnStems(): void
@@ -59,36 +59,5 @@ final class HeadlineStemmerTest extends TestCase
     public function testAWordWithoutALanguageIsCutToSixCharacters(): void
     {
         self::assertSame('bundes', $this->stemmer->stem('Bundesregierung', null));
-    }
-
-    public function testAGermanVerbFormEndingInTStemsLikeItsInfinitive(): void
-    {
-        self::assertSame(
-            $this->stemmer->stem('verhandeln', FeedLanguage::German),
-            $this->stemmer->stem('verhandelt', FeedLanguage::German),
-        );
-    }
-
-    public function testAGermanVerbFormStemsLikeItsNounDerivation(): void
-    {
-        self::assertSame(
-            $this->stemmer->stem('Nominierung', FeedLanguage::German),
-            $this->stemmer->stem('nominiert', FeedLanguage::German),
-        );
-    }
-
-    public function testAnUppercaseNounIsNotTakenForAVerbForm(): void
-    {
-        self::assertSame('macht', $this->stemmer->stem('Macht', FeedLanguage::German));
-    }
-
-    public function testTheVerbRuleLeavesEnglishAlone(): void
-    {
-        self::assertSame('vote', $this->stemmer->stem('voted', FeedLanguage::English));
-    }
-
-    public function testAWordWithoutALanguageGetsNoVerbRule(): void
-    {
-        self::assertSame('verhan', $this->stemmer->stem('verhandelt', null));
     }
 }

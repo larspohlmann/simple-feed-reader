@@ -210,7 +210,7 @@ function writeLexicon(array $forms): int
             $others[$form->form] = $form->class;
         }
         if ($form->verbStem !== null) {
-            $verbs[$form->verbStem] = $form->infinitiveStem . "\t" . $form->class;
+            $verbs[$form->verbStem] = (string) $form->infinitiveStem;
         }
     }
 
