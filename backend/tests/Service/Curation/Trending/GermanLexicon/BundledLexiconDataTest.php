@@ -9,7 +9,6 @@ use PHPUnit\Framework\TestCase;
 final class BundledLexiconDataTest extends TestCase
 {
     private const string DIRECTORY = __DIR__ . '/../../../../../resources/german-lexicon';
-    private const string FIXTURE_DIRECTORY = __DIR__ . '/../../../../Fixtures/german-lexicon';
 
     /** @var list<list<string>> */
     private static array $formRows;
@@ -19,14 +18,9 @@ final class BundledLexiconDataTest extends TestCase
         self::$formRows = self::rowsOf(self::DIRECTORY, 'lexicon.tsv');
     }
 
-    public function testFilesStayUnderSixMebibytesTogether(): void
+    public function testTheFileStaysUnderSixMebibytes(): void
     {
-        $bytes = array_sum(array_map(
-            static fn (string $name): int => (int) filesize(self::DIRECTORY . '/' . $name),
-            ['lexicon.tsv', 'lexicon-meta.php'],
-        ));
-
-        $this->assertLessThanOrEqual(6_291_456, $bytes);
+        $this->assertLessThanOrEqual(6_291_456, (int) filesize(self::DIRECTORY . '/lexicon.tsv'));
     }
 
     public function testEveryLineIsATerminatedKeyedRow(): void
@@ -67,29 +61,6 @@ final class BundledLexiconDataTest extends TestCase
         );
 
         $this->assertSame([], $invalid);
-    }
-
-    public function testMetaHoldsTheRarestClass(): void
-    {
-        $this->assertMetaHoldsTheRarestClass(self::DIRECTORY, self::$formRows);
-    }
-
-    public function testFixtureMetaHoldsTheRarestClass(): void
-    {
-        $fixtureRows = self::rowsOf(self::FIXTURE_DIRECTORY, 'lexicon.tsv');
-
-        $this->assertMetaHoldsTheRarestClass(self::FIXTURE_DIRECTORY, $fixtureRows);
-    }
-
-    /** @param list<list<string>> $formRows */
-    private function assertMetaHoldsTheRarestClass(string $directory, array $formRows): void
-    {
-        $meta = require $directory . '/lexicon-meta.php';
-        $this->assertIsArray($meta);
-        $classes = array_map(intval(...), array_column($formRows, 2));
-        $rarest = max($classes ?: [0]);
-
-        $this->assertSame(['rarest' => $rarest], $meta);
     }
 
     /** @return list<list<string>> */

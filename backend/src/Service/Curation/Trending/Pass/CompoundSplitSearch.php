@@ -103,8 +103,8 @@ final class CompoundSplitSearch
             return null;
         }
 
-        return $this->lexicon->isNoun($form)
-            ? CompoundSplitModel::single($form, $this->lexicon->frequencyClassOf($form))
-            : null;
+        $entry = $this->lexicon->entryOf($form);
+
+        return true === $entry?->isNoun() ? CompoundSplitModel::single($form, $entry->frequencyClass) : null;
     }
 }

@@ -24,56 +24,35 @@ final class BundledGermanLexiconTest extends TestCase
         rmdir($this->temporaryDirectory);
     }
 
-    public function testRecognisesNounsAndOtherKnownForms(): void
+    public function testGivesTheKindAndFrequencyClassOfAKnownForm(): void
     {
-        $lexicon = $this->fixtureLexicon();
+        $police = $this->fixtureLexicon()->entryOf('polizei');
+        $large = $this->fixtureLexicon()->entryOf('groß');
 
-        $this->assertTrue($lexicon->isNoun('polizei'));
-        $this->assertFalse($lexicon->isNoun('groß'));
-        $this->assertTrue($lexicon->isKnown('groß'));
-        $this->assertFalse($lexicon->isKnown('nirgendwo'));
+        $this->assertNotNull($police);
+        $this->assertTrue($police->isNoun());
+        $this->assertSame(9, $police->frequencyClass);
+        $this->assertNotNull($large);
+        $this->assertFalse($large->isNoun());
+        $this->assertSame(4, $large->frequencyClass);
     }
 
-    public function testFrequencyClassOfAnUnknownFormIsOneBeyondTheRarest(): void
+    public function testGivesNoEntryForAnUnknownForm(): void
     {
-        $lexicon = $this->fixtureLexicon();
-
-        $this->assertSame(14, $lexicon->frequencyClassOf('akt'));
-        $this->assertSame(4, $lexicon->frequencyClassOf('groß'));
-        $this->assertSame(18, $lexicon->frequencyClassOf('nirgendwo'));
+        $this->assertNull($this->fixtureLexicon()->entryOf('nirgendwo'));
     }
 
     public function testLoadsOnFirstUseAndAgainAfterReset(): void
     {
         $this->writeLexicon('eins');
         $lexicon = new BundledGermanLexicon($this->temporaryDirectory);
-        $this->assertTrue($lexicon->isNoun('eins'));
+        $this->assertNotNull($lexicon->entryOf('eins'));
 
         $this->writeLexicon('zwei');
-        $this->assertFalse($lexicon->isNoun('zwei'));
+        $this->assertNull($lexicon->entryOf('zwei'));
 
         $lexicon->reset();
-        $this->assertTrue($lexicon->isNoun('zwei'));
-    }
-
-    public function testRejectsAMetaFileOfTheWrongShape(): void
-    {
-        $this->writeLexicon('eins');
-        file_put_contents($this->temporaryDirectory . '/lexicon-meta.php', "<?php return ['rarest' => 'x'];");
-
-        $this->expectException(\UnexpectedValueException::class);
-
-        (new BundledGermanLexicon($this->temporaryDirectory))->isNoun('eins');
-    }
-
-    public function testRejectsAMetaFileThatReturnsNoArray(): void
-    {
-        $this->writeLexicon('eins');
-        file_put_contents($this->temporaryDirectory . '/lexicon-meta.php', '<?php return 1;');
-
-        $this->expectException(\UnexpectedValueException::class);
-
-        (new BundledGermanLexicon($this->temporaryDirectory))->isNoun('eins');
+        $this->assertNotNull($lexicon->entryOf('zwei'));
     }
 
     public function testRejectsAMissingTextFile(): void
@@ -83,7 +62,7 @@ final class BundledGermanLexiconTest extends TestCase
 
         $this->expectException(\UnexpectedValueException::class);
 
-        @(new BundledGermanLexicon($this->temporaryDirectory))->isNoun('eins');
+        @(new BundledGermanLexicon($this->temporaryDirectory))->entryOf('eins');
     }
 
     private function fixtureLexicon(): BundledGermanLexicon
@@ -94,9 +73,5 @@ final class BundledGermanLexiconTest extends TestCase
     private function writeLexicon(string $noun): void
     {
         file_put_contents($this->temporaryDirectory . '/lexicon.tsv', $noun . "\tn\t1\n");
-        file_put_contents(
-            $this->temporaryDirectory . '/lexicon-meta.php',
-            "<?php return ['rarest' => 1];",
-        );
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Trending\GermanLexicon;
 
+use App\Service\Curation\Trending\Model\GermanLexiconEntryModel;
 use App\Service\Curation\Trending\Model\GermanLexiconModel;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\Service\ResetInterface;
@@ -18,19 +19,9 @@ final class BundledGermanLexicon implements GermanLexiconInterface, ResetInterfa
     ) {
     }
 
-    public function isNoun(string $form): bool
+    public function entryOf(string $form): ?GermanLexiconEntryModel
     {
-        return $this->model()->isNoun($form);
-    }
-
-    public function isKnown(string $form): bool
-    {
-        return $this->model()->isKnown($form);
-    }
-
-    public function frequencyClassOf(string $form): int
-    {
-        return $this->model()->frequencyClassOf($form);
+        return $this->model()->entryOf($form);
     }
 
     public function reset(): void

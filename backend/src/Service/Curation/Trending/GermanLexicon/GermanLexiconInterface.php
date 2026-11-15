@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Trending\GermanLexicon;
 
+use App\Service\Curation\Trending\Model\GermanLexiconEntryModel;
+
 interface GermanLexiconInterface
 {
-    public function isNoun(string $form): bool;
-
-    public function isKnown(string $form): bool;
-
-    /** An unknown form gets the rarest class plus one. */
-    public function frequencyClassOf(string $form): int;
+    /** None for a form the lexicon does not hold. */
+    public function entryOf(string $form): ?GermanLexiconEntryModel;
 }

@@ -6,6 +6,7 @@ namespace App\Service\Curation\Trending;
 
 use App\Service\Curation\Trending\GermanLexicon\GermanLexiconInterface;
 use App\Service\Curation\Trending\Model\CompoundSplitModel;
+use App\Service\Curation\Trending\Model\GermanLexiconEntryModel;
 use App\Service\Curation\Trending\Pass\CompoundSplitSearch;
 
 final readonly class GermanCompoundSplitter
@@ -26,11 +27,12 @@ final readonly class GermanCompoundSplitter
         if (mb_strlen($word) < 2 * self::MIN_PART_LENGTH) {
             return [];
         }
-        if (!$this->lexicon->isKnown($word)) {
+        $whole = $this->lexicon->entryOf($word);
+        if (null === $whole) {
             return $this->bestSplitOf($word, self::MAX_PARTS_OF_AN_UNKNOWN_WORD)?->parts() ?? [];
         }
         $split = $this->bestSplitOf($word, self::MAX_PARTS);
-        if (null === $split || $this->staysWhole($word, $split)) {
+        if (null === $split || $this->staysWhole($whole, $split)) {
             return [];
         }
 
@@ -42,9 +44,9 @@ final readonly class GermanCompoundSplitter
         return (new CompoundSplitSearch($this->lexicon, $word, $maxParts))->bestSplit();
     }
 
-    private function staysWhole(string $word, CompoundSplitModel $split): bool
+    private function staysWhole(GermanLexiconEntryModel $whole, CompoundSplitModel $split): bool
     {
-        $wholeClass = $this->lexicon->frequencyClassOf($word);
+        $wholeClass = $whole->frequencyClass;
 
         return $split->hasMeanClassOfAtLeast($wholeClass) || $split->hasPartRarerThan($wholeClass);
     }
