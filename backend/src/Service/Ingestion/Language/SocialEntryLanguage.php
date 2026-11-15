@@ -8,11 +8,15 @@ use App\Enum\FeedLanguage;
 use App\Service\Foundation\Text\Support\EntryPlainText;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 
-/** A social post's language: what its author stated, unless a long text plainly reads as another (#2227). */
+/**
+ * A social post's language: what its author stated, unless a long text plainly reads as another (#2227);
+ * a short post stating none that the detector reads as none of the four takes its stopwords' language (#2243).
+ */
 final readonly class SocialEntryLanguage
 {
     public function __construct(
         private LanguageGuess $languageGuess,
+        private StopWordVote $stopWordVote,
     ) {
     }
 
@@ -33,6 +37,12 @@ final readonly class SocialEntryLanguage
 
     private function guess(ParsedEntryModel $entry, string $body): ?FeedLanguage
     {
-        return $this->languageGuess->bestFor($entry->headline->text . "\n" . $body);
+        $text = $entry->headline->text . "\n" . $body;
+        $guess = $this->languageGuess->bestFor($text);
+        if (null !== $guess || $this->languageGuess->overrulesAStatedLanguage($body)) {
+            return $guess;
+        }
+
+        return $this->stopWordVote->languageOf($text);
     }
 }

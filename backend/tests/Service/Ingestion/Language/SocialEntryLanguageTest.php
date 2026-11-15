@@ -9,8 +9,11 @@ use App\Enum\FeedLanguage;
 use App\Service\Ingestion\Language\Factory\LanguageDetectionFactory;
 use App\Service\Ingestion\Language\LanguageGuess;
 use App\Service\Ingestion\Language\SocialEntryLanguage;
+use App\Service\Ingestion\Language\StopWordVote;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Tests\Support\LanguageWiring;
 use App\Tests\Support\StubbedDetector;
+use LanguageDetection\Language;
 use PHPUnit\Framework\TestCase;
 
 final class SocialEntryLanguageTest extends TestCase
@@ -86,6 +89,40 @@ final class SocialEntryLanguageTest extends TestCase
         self::assertNull(self::languageOf(self::textOfLength(5), null, 'it'));
     }
 
+    public function testAShortPostStatingNothingAndGuessedOutsideTheFourGetsTheStopwordVote(): void
+    {
+        self::assertSame(FeedLanguage::German, self::languageOf('Aus dem Archiv!', null, 'la'));
+    }
+
+    public function testTheDetectorsGuessInTheFourWinsOverTheVote(): void
+    {
+        self::assertSame(FeedLanguage::French, self::languageOf('Aus dem Archiv!', null, 'fr'));
+    }
+
+    public function testALongPostGuessedOutsideTheFourGetsNoVote(): void
+    {
+        self::assertNull(self::languageOf(str_pad('Aus dem Archiv!', self::limit(), ' der'), null, 'it'));
+    }
+
+    public function testAShortPostStatedOutsideTheFourGetsNoVote(): void
+    {
+        self::assertNull(self::languageOf('Aus dem Archiv!', 'it', 'it'));
+    }
+
+    public function testTheVoteReadsTheHeadlineToo(): void
+    {
+        $language = self::reading(StubbedDetector::saying('la'));
+
+        self::assertSame(FeedLanguage::German, $language->of(self::entry('Aus dem Archiv', 'xx', null)));
+    }
+
+    public function testARealShortEnglishPostTheDetectorReadsAsInterlinguaIsEnglish(): void
+    {
+        $entry = self::entry('…', 'Palantir exec nominated to lead CISA', null);
+
+        self::assertSame(FeedLanguage::English, LanguageWiring::socialEntryLanguage()->of($entry));
+    }
+
     public function testARegionTagIsReadAsItsLanguage(): void
     {
         self::assertSame(FeedLanguage::English, self::languageOf(self::textOfLength(5), 'en-US', 'de'));
@@ -95,7 +132,7 @@ final class SocialEntryLanguageTest extends TestCase
     {
         $detector = StubbedDetector::saying('de');
 
-        new SocialEntryLanguage(new LanguageGuess($detector))->of(self::entry('A headline', 'A body', null));
+        self::reading($detector)->of(self::entry('A headline', 'A body', null));
 
         self::assertSame(["A headline\nA body"], $detector->seenTexts());
     }
@@ -104,7 +141,7 @@ final class SocialEntryLanguageTest extends TestCase
     {
         $detector = StubbedDetector::saying('de');
 
-        new SocialEntryLanguage(new LanguageGuess($detector))
+        self::reading($detector)
             ->of(self::entry('…', 'The summary', null, '<p>The content</p>'));
 
         self::assertSame(["…\nThe summary"], $detector->seenTexts());
@@ -114,7 +151,7 @@ final class SocialEntryLanguageTest extends TestCase
     {
         $detector = StubbedDetector::saying('de');
 
-        new SocialEntryLanguage(new LanguageGuess($detector))->of(self::entry('A headline', 'A body', 'en'));
+        self::reading($detector)->of(self::entry('A headline', 'A body', 'en'));
 
         self::assertSame([], $detector->seenTexts());
     }
@@ -123,7 +160,7 @@ final class SocialEntryLanguageTest extends TestCase
     {
         $detector = StubbedDetector::saying('de');
 
-        new SocialEntryLanguage(new LanguageGuess($detector))
+        self::reading($detector)
             ->of(self::entry('A headline', self::textOfLength(self::limit()), 'it'));
 
         self::assertSame([], $detector->seenTexts());
@@ -132,7 +169,7 @@ final class SocialEntryLanguageTest extends TestCase
     public function testTheLengthIsTheBodysNotTheHeadlines(): void
     {
         $entry = self::entry(self::textOfLength(self::limit()), 'short', 'en');
-        $language = new SocialEntryLanguage(new LanguageGuess(StubbedDetector::saying('de')));
+        $language = self::reading(StubbedDetector::saying('de'));
 
         self::assertSame(FeedLanguage::English, $language->of($entry));
     }
@@ -141,7 +178,7 @@ final class SocialEntryLanguageTest extends TestCase
     {
         $german = 'Der Bundeskanzler sagte am Montag in Berlin, dass die Regierung weitere Hilfen für die Menschen '
             . 'in den vom Hochwasser betroffenen Regionen vorbereitet und dafür zusätzliche Mittel bereitstellt.';
-        $language = new SocialEntryLanguage(new LanguageGuess(new LanguageDetectionFactory()->create()));
+        $language = self::reading(new LanguageDetectionFactory()->create());
 
         self::assertGreaterThanOrEqual(self::limit(), mb_strlen($german));
         self::assertSame(FeedLanguage::German, $language->of(self::entry('…', $german, 'en')));
@@ -155,6 +192,11 @@ final class SocialEntryLanguageTest extends TestCase
         return $limit;
     }
 
+    private static function reading(Language $detector): SocialEntryLanguage
+    {
+        return new SocialEntryLanguage(new LanguageGuess($detector), new StopWordVote(LanguageWiring::stopWords()));
+    }
+
     private static function textOfLength(int $length): string
     {
         return str_repeat('x', $length);
@@ -162,7 +204,7 @@ final class SocialEntryLanguageTest extends TestCase
 
     private static function languageOf(string $body, ?string $statedLanguage, string $detectorSays): ?FeedLanguage
     {
-        $language = new SocialEntryLanguage(new LanguageGuess(StubbedDetector::saying($detectorSays)));
+        $language = self::reading(StubbedDetector::saying($detectorSays));
 
         return $language->of(self::entry('…', $body, $statedLanguage));
     }

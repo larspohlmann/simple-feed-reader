@@ -15,15 +15,13 @@ use App\Service\Ingestion\Ingest\EntryImageWriter;
 use App\Service\Ingestion\Ingest\Factory\IngestedEntryFactory;
 use App\Service\Ingestion\Ingest\Model\IncomingEntryModel;
 use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
-use App\Service\Ingestion\Language\Factory\LanguageDetectionFactory;
-use App\Service\Ingestion\Language\LanguageGuess;
-use App\Service\Ingestion\Language\SocialEntryLanguage;
 use App\Service\Ingestion\Parser\Model\ParsedChaptersModel;
 use App\Service\Ingestion\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Parser\Model\ParsedMediaBundleModel;
 use App\Service\Foundation\Sanitize\EntrySanitizer;
 use App\Service\Foundation\Sanitize\TrailingBlankRemover;
+use App\Tests\Support\LanguageWiring;
 use PHPUnit\Framework\TestCase;
 
 final class IngestedEntryFactoryTest extends TestCase
@@ -350,7 +348,7 @@ final class IngestedEntryFactoryTest extends TestCase
         return new IngestedEntryFactory(
             new EntrySanitizer(new TrailingBlankRemover()),
             new EntryImageWriter(),
-            new SocialEntryLanguage(new LanguageGuess(new LanguageDetectionFactory()->create())),
+            LanguageWiring::socialEntryLanguage(),
         );
     }
 
