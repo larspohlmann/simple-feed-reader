@@ -6,7 +6,7 @@ namespace App\Service\Curation\Trending\Model;
 
 final readonly class StoryMemberModel
 {
-    public function __construct(public int $entryId, public int $feedId)
+    public function __construct(public int $entryId, public int $feedId, public ?string $articleSite)
     {
     }
 }

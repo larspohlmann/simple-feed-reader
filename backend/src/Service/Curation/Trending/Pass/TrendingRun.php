@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Curation\Trending\Pass;
 
 use App\Enum\TrendingWindow;
+use App\Service\Curation\Trending\Model\SharedArticleModel;
+use App\Service\Curation\Trending\Model\StoryMemberModel;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Service\Curation\Trending\Support\EntryText;
 
@@ -20,25 +22,34 @@ final class TrendingRun
     /** @var array<string, list<int>> */
     private array $entriesByUrlHash = [];
 
+    /** @var array<int, string> */
+    private array $articleSites = [];
+
     public function __construct(public readonly TrendingWindow $window, public readonly HeadlineWindow $headlines)
     {
     }
 
     /** @param list<string> $urlHashes the entry's own and its shared article's, distinct */
-    public function add(WindowEntryModel $entry, array $urlHashes): void
+    public function add(WindowEntryModel $entry, array $urlHashes, ?SharedArticleModel $article): void
     {
         $this->feedOfEntry[$entry->id] = $entry->feedId;
         $this->effectiveTimes[$entry->id] = $entry->effectiveDate->getTimestamp();
         foreach ($urlHashes as $urlHash) {
             $this->entriesByUrlHash[$urlHash][] = $entry->id;
         }
+        $articleSite = $entry->links->articleSite();
+        if ($articleSite !== null) {
+            $this->articleSites[$entry->id] = $articleSite;
+        }
         $this->headlines->add(
             $entry,
             $entry->titleDerived
                 ? EntryText::bodyAfterTitle($entry->title, $entry->summary)
                 : EntryText::body($entry->summary),
+            $article,
         );
     }
+
 
     /** @return list<int> */
     public function entryIds(): array
@@ -51,9 +62,9 @@ final class TrendingRun
         return \count($this->feedOfEntry);
     }
 
-    public function feedOf(int $entryId): int
+    public function memberOf(int $entryId): StoryMemberModel
     {
-        return $this->feedOfEntry[$entryId];
+        return new StoryMemberModel($entryId, $this->feedOfEntry[$entryId], $this->articleSites[$entryId] ?? null);
     }
 
     public function effectiveTimeOf(int $entryId): int

@@ -44,8 +44,8 @@ final class HeadlineLinksTest extends TestCase
     public function testTwoSharedStemsWeighTooLittle(): void
     {
         $run = TrendingRuns::of(TrendingWindow::Day);
-        $run->add(TrendingRuns::entry(1, 10, 'Vulkan Island', '2031-05-14 08:00:00'), []);
-        $run->add(TrendingRuns::entry(2, 20, 'Island Vulkan', '2031-05-14 09:00:00'), []);
+        $run->add(TrendingRuns::entry(1, 10, 'Vulkan Island', '2031-05-14 08:00:00'), [], null);
+        $run->add(TrendingRuns::entry(2, 20, 'Island Vulkan', '2031-05-14 09:00:00'), [], null);
 
         self::assertSame([], (new HeadlineLinks())->links($run));
     }
@@ -61,6 +61,7 @@ final class HeadlineLinksTest extends TestCase
                 '2031-05-14 08:00:00',
             ),
             [],
+            null,
         );
         $run->add(
             TrendingRuns::entry(
@@ -70,6 +71,7 @@ final class HeadlineLinksTest extends TestCase
                 '2031-05-14 09:00:00',
             ),
             [],
+            null,
         );
 
         self::assertSame([], (new HeadlineLinks())->links($run));
@@ -78,8 +80,12 @@ final class HeadlineLinksTest extends TestCase
     public function testACompoundLinksItsSplitSpelling(): void
     {
         $run = TrendingRuns::of(TrendingWindow::Day);
-        $run->add(TrendingRuns::germanEntry(1, 10, 'Huang: Spionageverdacht im Senat', '2031-05-14 08:00:00'), []);
-        $run->add(TrendingRuns::germanEntry(2, 20, 'Huang: Spionage-Verdacht', '2031-05-14 09:00:00'), []);
+        $run->add(
+            TrendingRuns::germanEntry(1, 10, 'Huang: Spionageverdacht im Senat', '2031-05-14 08:00:00'),
+            [],
+            null,
+        );
+        $run->add(TrendingRuns::germanEntry(2, 20, 'Huang: Spionage-Verdacht', '2031-05-14 09:00:00'), [], null);
 
         self::assertSame(['1:2'], array_map(
             static fn (StoryLinkModel $link): string => $link->pairKey(),
@@ -111,8 +117,8 @@ final class HeadlineLinksTest extends TestCase
     public function testAPairFailingOnlyTheWeightIsANearMissWithItsNumbers(): void
     {
         $run = TrendingRuns::of(TrendingWindow::Day);
-        $run->add(TrendingRuns::entry(1, 10, 'Vulkan Island', '2031-05-14 08:00:00'), []);
-        $run->add(TrendingRuns::entry(2, 20, 'Island Vulkan', '2031-05-14 09:00:00'), []);
+        $run->add(TrendingRuns::entry(1, 10, 'Vulkan Island', '2031-05-14 08:00:00'), [], null);
+        $run->add(TrendingRuns::entry(2, 20, 'Island Vulkan', '2031-05-14 09:00:00'), [], null);
 
         self::assertSame(['shared weight 12.4 < 14'], self::rulesOf((new HeadlineLinks())->nearMisses($run)));
     }
@@ -135,6 +141,7 @@ final class HeadlineLinksTest extends TestCase
                 '2031-05-14 08:00:00',
             ),
             [],
+            null,
         );
         $run->add(
             TrendingRuns::entry(
@@ -144,6 +151,7 @@ final class HeadlineLinksTest extends TestCase
                 '2031-05-14 09:00:00',
             ),
             [],
+            null,
         );
 
         self::assertSame(
@@ -156,8 +164,8 @@ final class HeadlineLinksTest extends TestCase
     {
         $links = new HeadlineLinks();
         $twoRules = TrendingRuns::of(TrendingWindow::Day);
-        $twoRules->add(TrendingRuns::entry(1, 10, 'Vulkan Island', '2031-05-12 00:00:00'), []);
-        $twoRules->add(TrendingRuns::entry(2, 20, 'Island Vulkan', '2031-05-14 00:00:00'), []);
+        $twoRules->add(TrendingRuns::entry(1, 10, 'Vulkan Island', '2031-05-12 00:00:00'), [], null);
+        $twoRules->add(TrendingRuns::entry(2, 20, 'Island Vulkan', '2031-05-14 00:00:00'), [], null);
 
         self::assertSame([], $links->nearMisses($twoRules));
         self::assertSame([], $links->nearMisses(self::dayPair(10, 20, '2031-05-14 08:00:00')));
@@ -166,8 +174,8 @@ final class HeadlineLinksTest extends TestCase
     public function testAPairOfOneFeedFailingOnlyTheWeightIsNoNearMiss(): void
     {
         $run = TrendingRuns::of(TrendingWindow::Day);
-        $run->add(TrendingRuns::entry(1, 10, 'Vulkan Island', '2031-05-14 08:00:00'), []);
-        $run->add(TrendingRuns::entry(2, 10, 'Island Vulkan', '2031-05-14 09:00:00'), []);
+        $run->add(TrendingRuns::entry(1, 10, 'Vulkan Island', '2031-05-14 08:00:00'), [], null);
+        $run->add(TrendingRuns::entry(2, 10, 'Island Vulkan', '2031-05-14 09:00:00'), [], null);
 
         self::assertSame([], (new HeadlineLinks())->nearMisses($run));
     }
@@ -185,8 +193,12 @@ final class HeadlineLinksTest extends TestCase
     private static function dayPair(int $firstFeedId, int $secondFeedId, string $secondDate): TrendingRun
     {
         $run = TrendingRuns::of(TrendingWindow::Day);
-        $run->add(TrendingRuns::entry(1, $firstFeedId, TrendingRuns::VOLCANO_HEADLINE, '2031-05-13 00:00:00'), []);
-        $run->add(TrendingRuns::entry(2, $secondFeedId, TrendingRuns::VOLCANO_REPLY_HEADLINE, $secondDate), []);
+        $run->add(
+            TrendingRuns::entry(1, $firstFeedId, TrendingRuns::VOLCANO_HEADLINE, '2031-05-13 00:00:00'),
+            [],
+            null,
+        );
+        $run->add(TrendingRuns::entry(2, $secondFeedId, TrendingRuns::VOLCANO_REPLY_HEADLINE, $secondDate), [], null);
 
         return $run;
     }
@@ -194,8 +206,8 @@ final class HeadlineLinksTest extends TestCase
     private static function weekPair(string $secondDate): TrendingRun
     {
         $run = TrendingRuns::of(TrendingWindow::Week);
-        $run->add(TrendingRuns::entry(1, 10, TrendingRuns::VOLCANO_HEADLINE, '2031-05-12 00:00:00'), []);
-        $run->add(TrendingRuns::entry(2, 20, TrendingRuns::VOLCANO_REPLY_HEADLINE, $secondDate), []);
+        $run->add(TrendingRuns::entry(1, 10, TrendingRuns::VOLCANO_HEADLINE, '2031-05-12 00:00:00'), [], null);
+        $run->add(TrendingRuns::entry(2, 20, TrendingRuns::VOLCANO_REPLY_HEADLINE, $secondDate), [], null);
 
         return $run;
     }

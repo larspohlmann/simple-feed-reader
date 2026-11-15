@@ -9,6 +9,7 @@ use App\Service\Curation\Trending\HeadlineEquivalents;
 use App\Service\Curation\Trending\HeadlineFiller;
 use App\Service\Curation\Trending\Model\EntryStemIdsModel;
 use App\Service\Curation\Trending\Model\LanguageCoverageModel;
+use App\Service\Curation\Trending\Model\SharedArticleModel;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Service\Curation\Trending\Support\PartWeightCaps;
 
@@ -70,12 +71,15 @@ final class HeadlineWindow
     }
 
     /** Entries must arrive in ascending id order: the postings stay sorted. */
-    public function add(WindowEntryModel $entry, string $body): void
+    public function add(WindowEntryModel $entry, string $body, ?SharedArticleModel $article): void
     {
-        $stems = EntryStemIdsModel::of(
-            $this->stemIdsOf($entry->title, $entry->language),
-            $this->stemIdsOf($body, $entry->language),
-        );
+        $headline = $this->stemIdsOf($entry->title, $entry->language);
+        $bodyStems = $this->stemIdsOf($body, $entry->language);
+        if ($article !== null) {
+            $headline = self::unionOf($headline, $this->stemIdsOf($article->title, $article->language));
+            $bodyStems = self::unionOf($bodyStems, $this->stemIdsOf($article->body, $article->language));
+        }
+        $stems = EntryStemIdsModel::of($headline, $bodyStems);
         $this->headlineStems[$entry->id] = $stems->headlineIds;
         $this->bodyStems[$entry->id] = $stems->bodyIds;
         $this->compoundParts->addEntry($entry->id, $stems->partOnlyIds);
@@ -85,6 +89,21 @@ final class HeadlineWindow
         $this->entriesOfFeed[$entry->feedId][] = $entry->id;
         $this->post($entry->id, $stems->headlineIds, $stems->bodyIds);
         $this->countLanguageOf($entry);
+    }
+
+    /**
+     * @param array<int, bool> $stems stem id => whether a word holds it, rather than only a compound's part
+     * @param array<int, bool> $added
+     *
+     * @return array<int, bool>
+     */
+    private static function unionOf(array $stems, array $added): array
+    {
+        foreach ($added as $stemId => $isAWord) {
+            $stems[$stemId] = ($stems[$stemId] ?? false) || $isAWord;
+        }
+
+        return $stems;
     }
 
     public function languageCoverage(): LanguageCoverageModel

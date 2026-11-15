@@ -51,8 +51,8 @@ final class TrendingRunTest extends TestCase
     private function weightSharedWith(WindowEntryModel $later): float
     {
         $run = TrendingRuns::of(TrendingWindow::Day);
-        $run->add(TrendingRuns::entry(1, 10, 'Storm Hamburg harbour', '2031-05-14 09:00:00'), []);
-        $run->add($later, []);
+        $run->add(TrendingRuns::entry(1, 10, 'Storm Hamburg harbour', '2031-05-14 09:00:00'), [], null);
+        $run->add($later, [], null);
 
         return $run->headlines->sharedWeightsWithEarlier($later->id)[1];
     }

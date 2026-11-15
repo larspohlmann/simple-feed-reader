@@ -79,7 +79,7 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
         }
         $fixtures->flush();
         $members = array_map(
-            static fn (Entry $entry): StoryMemberModel => new StoryMemberModel($entry->requireId(), 101),
+            static fn (Entry $entry): StoryMemberModel => new StoryMemberModel($entry->requireId(), 101, null),
             $entries,
         );
 
@@ -95,7 +95,7 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
     {
         [$one, $two] = $this->twoEntries();
         $story = new TrendingStoryModel(
-            [new StoryMemberModel($one, 101), new StoryMemberModel($two, 101)],
+            [new StoryMemberModel($one, 101, null), new StoryMemberModel($two, 101, null)],
             self::utc('2031-05-14 08:00:00'),
             self::utc('2031-05-14 09:00:00'),
         );
@@ -146,7 +146,7 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
     private static function story(int $one, int $two): TrendingStoryModel
     {
         return new TrendingStoryModel(
-            [new StoryMemberModel($one, 101), new StoryMemberModel($two, 202)],
+            [new StoryMemberModel($one, 101, null), new StoryMemberModel($two, 202, null)],
             new \DateTimeImmutable('2031-05-14 08:00:00', new \DateTimeZone('UTC')),
             new \DateTimeImmutable('2031-05-14 09:00:00', new \DateTimeZone('UTC')),
         );
