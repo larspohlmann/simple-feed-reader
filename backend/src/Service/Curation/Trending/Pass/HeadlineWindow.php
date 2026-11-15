@@ -140,7 +140,8 @@ final class HeadlineWindow
     }
 
     /**
-     * A share is measured in the lighter entry's own accounting: where the entries weigh the same, it holds for both.
+     * A share is measured in the lighter entry's own accounting, where a part it holds as a word weighs whole. A part
+     * both entries hold only through compounds, or a pair of equal weight, is held to both entries' compounds.
      *
      * @param array{array<int, float>, array<int, float>} $compoundsThrough in this entry, then in the earlier one
      *
@@ -148,10 +149,15 @@ final class HeadlineWindow
      */
     private function compoundsCapping(int $entryId, int $earlierEntryId, array $compoundsThrough): array
     {
+        [$throughThis, $throughEarlier] = $compoundsThrough;
+        if ($throughThis !== [] && $throughEarlier !== []) {
+            return $throughThis + $throughEarlier;
+        }
+
         return match ($this->totalWeight($entryId) <=> $this->totalWeight($earlierEntryId)) {
-            -1 => $compoundsThrough[0],
-            1 => $compoundsThrough[1],
-            default => $compoundsThrough[0] + $compoundsThrough[1],
+            -1 => $throughThis,
+            1 => $throughEarlier,
+            default => $throughThis + $throughEarlier,
         };
     }
 
