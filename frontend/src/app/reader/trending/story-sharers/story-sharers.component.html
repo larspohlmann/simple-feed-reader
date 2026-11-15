@@ -1,0 +1,31 @@
+@if (shown().length) {
+  <div class="sharers">
+    @for (sharer of shown(); track sharer.share.id) {
+      <button
+        type="button"
+        class="sharer reads-as-text"
+        [attr.title]="sharer.name"
+        (click)="open(sharer.share, $event)"
+        (keydown.enter)="$event.stopPropagation()"
+        (keydown.space)="$event.stopPropagation()"
+      >
+        @if (sharer.network; as network) {
+          <app-network-logo [network]="network" />
+        }
+        <app-favicon [url]="sharer.share.faviconUrl" [avatarUrl]="sharer.avatarUrl" [size]="14" />
+        <span class="name">{{ sharer.name }}</span>
+      </button>
+    }
+    @if (hiddenCount() > 0) {
+      <button
+        type="button"
+        class="sharers-more reads-as-text"
+        (click)="showAll($event)"
+        (keydown.enter)="$event.stopPropagation()"
+        (keydown.space)="$event.stopPropagation()"
+      >
+        {{ 'reader.alsoMore' | transloco: { count: hiddenCount() } }}
+      </button>
+    }
+  </div>
+}

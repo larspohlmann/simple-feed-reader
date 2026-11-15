@@ -1,6 +1,6 @@
 import { BLOCK_HEIGHT } from './magazine-block';
 import {
-  STORY_SHARES_LINE,
+  STORY_SHARERS_ROW,
   blockHeight,
   quotingHeight,
   threadHeight,
@@ -27,13 +27,13 @@ describe('blockHeight', () => {
     expect(blockHeight('compact', anEntry())).toBe(BLOCK_HEIGHT.compact);
   });
 
-  it('adds the shared-by line to a Trending article posts share', () => {
+  it('adds the row of sharer pills to a Trending article posts share', () => {
     const shared = anEntry({
       story: { outletCount: 2, viewed: false, shareCount: 0 },
       shares: [anEntry({ id: 9 })],
     });
 
-    expect(blockHeight('link', shared)).toBe(BLOCK_HEIGHT.link + STORY_SHARES_LINE);
+    expect(blockHeight('link', shared)).toBe(BLOCK_HEIGHT.link + STORY_SHARERS_ROW);
     expect(
       blockHeight(
         'link',

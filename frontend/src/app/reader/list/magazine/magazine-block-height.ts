@@ -47,11 +47,11 @@ const LINK_CARD = {
 
 const GRID_RATIO = 16 / 9;
 
-/** The "Shared by …" line under a Trending article posts share (#2229): `--fs-xs` text and its `--space-1` padding. */
-export const STORY_SHARES_LINE = 24;
+/** The sharer pills under a Trending article posts share (#2229): one row of `--fs-xs` pills; the mini cards' stay folded. */
+export const STORY_SHARERS_ROW = 24;
 
 export function blockHeight(kind: EntryKind, entry: EntryDto): number {
-  return ownHeight(kind, entry) + (entry.story && entry.shares?.length ? STORY_SHARES_LINE : 0);
+  return ownHeight(kind, entry) + (entry.story && entry.shares?.length ? STORY_SHARERS_ROW : 0);
 }
 
 function ownHeight(kind: EntryKind, entry: EntryDto): number {

@@ -2,12 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { aLinkCard } from '../../../testing/entry-testing';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { LinkReaderNavigation } from '../shell/link-reader-navigation.service';
-import {
-  LinkCardComponent,
-  LinkCardLayout,
-  LinkCardReaderOpening,
-  LinkCardSiteLine,
-} from './link-card.component';
+import { LinkCardComponent, LinkCardLayout, LinkCardSiteLine } from './link-card.component';
+import { LinkCardReaderOpening } from './open-in-reader.component';
 
 const card = aLinkCard({
   description: 'What it is about.',

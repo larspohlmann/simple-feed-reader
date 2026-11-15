@@ -6,7 +6,8 @@ import { AvatarComponent } from '../../shared/avatar/avatar.component';
 import { formatLongDateTime, relativeTimeNarrow } from '../format';
 import { mediumRatio } from '../entry-medium';
 import { PostMediaComponent } from '../media/post-media/post-media.component';
-import { LinkCardComponent, LinkCardReaderOpening } from '../link-card/link-card.component';
+import { LinkCardComponent } from '../link-card/link-card.component';
+import { LinkCardReaderOpening } from '../link-card/open-in-reader.component';
 
 /** `block` sits in the magazine's quote share, clamped; `article` under a post in the reader, whole (#1612). */
 export type QuotedPostLayout = 'block' | 'article';

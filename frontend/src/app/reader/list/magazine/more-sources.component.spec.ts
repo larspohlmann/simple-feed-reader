@@ -6,11 +6,17 @@ import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { aLinkCard, anEntry } from '../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
+import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service';
 
 const open = jest.fn();
+const navigation = { layer: jest.fn(), openAlone: jest.fn() };
 let fixture: ComponentFixture<MoreSourcesComponent>;
 
-beforeEach(() => open.mockReset());
+beforeEach(() => {
+  open.mockReset();
+  navigation.layer.mockReset();
+  navigation.openAlone.mockReset();
+});
 
 function mount(entry: EntryDto): HTMLElement {
   TestBed.configureTestingModule({
@@ -18,6 +24,7 @@ function mount(entry: EntryDto): HTMLElement {
     providers: [
       provideAccountIdentity(),
       { provide: EntryActionHandler, useValue: { open } },
+      { provide: LinkReaderNavigation, useValue: navigation },
       provideRouter([]),
     ],
   });
@@ -206,10 +213,17 @@ it('collapses again on a second click', () => {
 
 /** Mounts the footer inside a card that records whether an event of `type` reached it. */
 function mountOnCard(type: 'click' | 'keydown'): { element: HTMLElement; reached: jest.Mock } {
+  return mountOnCardWith(type, storyOf(copies));
+}
+
+function mountOnCardWith(
+  type: 'click' | 'keydown',
+  entry: EntryDto,
+): { element: HTMLElement; reached: jest.Mock } {
   const card = document.createElement('div');
   const reached = jest.fn();
   card.addEventListener(type, reached);
-  const element = mount(storyOf(copies));
+  const element = mount(entry);
   card.appendChild(element);
   return { element, reached };
 }
@@ -219,7 +233,7 @@ it('opens the source a mini card shows, and not the card it sits on', () => {
   expand(element);
   reached.mockReset();
 
-  element.querySelectorAll<HTMLButtonElement>('.mini')[1].click();
+  element.querySelectorAll<HTMLButtonElement>('.mini .face')[1].click();
 
   expect(open).toHaveBeenCalledWith(copies[1]);
   expect(reached).not.toHaveBeenCalled();
@@ -236,8 +250,8 @@ it("keeps the toggle's click from opening the card it sits on", () => {
 it.each([
   ['.toggle', 'Enter'],
   ['.toggle', ' '],
-  ['.mini', 'Enter'],
-  ['.mini', ' '],
+  ['.mini .face', 'Enter'],
+  ['.mini .face', ' '],
 ])('keeps a "%s" key "%s" from reaching the card', (selector, key) => {
   const { element, reached } = mountOnCard('keydown');
   expand(element);
@@ -275,4 +289,185 @@ it("puts the source's favicon in its byline", () => {
   expand(element);
 
   expect(element.querySelector('.mini .byline app-favicon')).not.toBeNull();
+});
+
+const poster = (id: number, name: string): EntryDto =>
+  anEntry({
+    id,
+    titleDerived: true,
+    excerpt: `${name} on the ruling`,
+    poster: { name, url: null, imageUrl: null },
+  });
+
+const shareLed = (card: Parameters<typeof aLinkCard>[0], shares: EntryDto[]): EntryDto =>
+  anEntry({
+    id: 8,
+    titleDerived: true,
+    excerpt: 'look at this',
+    poster: { name: 'CharlesDarwin', url: null, imageUrl: null },
+    linkCards: [aLinkCard(card)],
+    shares,
+  });
+
+it("shows a pill for each account that shared a mini card's article, apart from its link", () => {
+  const element = mount(
+    storyOf([shareLed({}, [poster(10, 'CharlesDarwin'), poster(11, 'Rosalind')])]),
+  );
+  expand(element);
+
+  const mini = element.querySelector('.mini')!;
+  expect(mini.querySelector('.face app-story-sharers')).toBeNull();
+  const pills = Array.from(mini.querySelectorAll('app-story-sharers .sharer .name'));
+  expect(pills.map((pill) => pill.textContent!.trim())).toEqual(['CharlesDarwin', 'Rosalind']);
+});
+
+it('opens the post a sharer pill stands for, and not the card it sits on', () => {
+  const second = poster(11, 'Rosalind');
+  const { element, reached } = mountOnCardWith(
+    'click',
+    storyOf([shareLed({}, [poster(10, 'CharlesDarwin'), second])]),
+  );
+  expand(element);
+  reached.mockReset();
+
+  element.querySelectorAll<HTMLButtonElement>('.mini app-story-sharers .sharer')[1].click();
+
+  expect(open).toHaveBeenCalledWith(second);
+  expect(reached).not.toHaveBeenCalled();
+});
+
+it('shows sharer pills on an outlet mini card posts share too', () => {
+  const shared = anEntry({ id: 12, source: 'NDR', shares: [poster(10, 'Ann')] });
+  const element = mount(storyOf([shared]));
+  expand(element);
+
+  expect(element.querySelector('.mini app-story-sharers .sharer')!.textContent).toContain('Ann');
+});
+
+it('leaves out the sharer pills on a mini card no post shares', () => {
+  const element = mount(storyOf(copies));
+  expand(element);
+
+  expect(element.querySelector('.mini app-story-sharers .sharers')).toBeNull();
+});
+
+const cardUrl = 'https://edition.cnn.com/2026/11/14/politics/judge';
+
+it('links a share-led mini card to the real article, in a new tab', () => {
+  const element = mount(storyOf([shareLed({ url: cardUrl }, [poster(10, 'Ann')])]));
+  expand(element);
+
+  const face = element.querySelector<HTMLAnchorElement>('.mini a.face')!;
+  expect(face.getAttribute('href')).toBe(cardUrl);
+  expect(face.getAttribute('target')).toBe('_blank');
+  expect(face.getAttribute('rel')).toBe('noopener noreferrer');
+});
+
+it("keeps a click on a share-led mini card's link from opening the card it sits on", () => {
+  const { element, reached } = mountOnCardWith(
+    'click',
+    storyOf([shareLed({ url: cardUrl }, [poster(10, 'Ann')])]),
+  );
+  expand(element);
+  reached.mockReset();
+  const face = element.querySelector<HTMLAnchorElement>('.mini a.face')!;
+  face.addEventListener('click', (event) => event.preventDefault());
+
+  face.click();
+
+  expect(open).not.toHaveBeenCalled();
+  expect(reached).not.toHaveBeenCalled();
+});
+
+it("opens a share-led mini card's article in the reader from its overlay", () => {
+  const { element, reached } = mountOnCardWith(
+    'click',
+    storyOf([shareLed({ url: cardUrl }, [poster(10, 'Ann')])]),
+  );
+  expand(element);
+  reached.mockReset();
+
+  element.querySelector<HTMLButtonElement>('.mini button.open-in-reader')!.click();
+
+  expect(navigation.openAlone).toHaveBeenCalledWith(expect.objectContaining({ url: cardUrl }));
+  expect(element.querySelector('.mini .face button.open-in-reader')).toBeNull();
+  expect(reached).not.toHaveBeenCalled();
+});
+
+it('keeps an outlet mini card opening its entry, with no reader overlay', () => {
+  const element = mount(storyOf(copies));
+  expand(element);
+
+  expect(element.querySelector('.mini button.face')).not.toBeNull();
+  expect(element.querySelector('.mini button.open-in-reader')).toBeNull();
+});
+
+it('counts no shares in the byline, which the sharers line already does', () => {
+  const element = mount(storyOf([shareLed({}, [poster(10, 'Ann'), poster(11, 'Ben')])]));
+  expand(element);
+
+  expect(element.querySelector('.mini .byline')!.textContent).not.toContain('share');
+});
+
+it("names a share-led mini card by its article's site, not the post that shared it", () => {
+  const element = mount(storyOf([shareLed({ siteName: 'CNN' }, [poster(10, 'CharlesDarwin')])]));
+  expand(element);
+
+  expect(element.querySelector('.mini .feed')!.textContent!.trim()).toBe('CNN');
+});
+
+it('names a share-led mini card by its host when the card has no site name', () => {
+  const element = mount(
+    storyOf([
+      shareLed({ siteName: '', url: 'https://edition.cnn.com/2026/11/14/politics/judge' }, [
+        poster(10, 'CharlesDarwin'),
+      ]),
+    ]),
+  );
+  expand(element);
+
+  expect(element.querySelector('.mini .feed')!.textContent!.trim()).toBe('edition.cnn.com');
+});
+
+it.each([
+  ['the card URL', 'https://edition.cnn.com/2026/11/14/politics/judge'],
+  ['another URL', '  https://cnn.it/abc  '],
+])('leaves out a dek that is only %s', (_case, description) => {
+  const element = mount(
+    storyOf([
+      shareLed({ url: 'https://edition.cnn.com/2026/11/14/politics/judge', description }, [
+        poster(10, 'Ann'),
+      ]),
+    ]),
+  );
+  expand(element);
+
+  expect(element.querySelector('.mini .dek')).toBeNull();
+});
+
+it('keeps a dek that merely mentions a URL', () => {
+  const element = mount(
+    storyOf([shareLed({ description: 'Read more at https://cnn.com today' }, [poster(10, 'Ann')])]),
+  );
+  expand(element);
+
+  expect(element.querySelector('.mini .dek')!.textContent).toContain('Read more at');
+});
+
+it('leads a link post with a title of its own by the card it shares, as a Lemmy link post', () => {
+  const linkPost = anEntry({
+    id: 13,
+    titleDerived: false,
+    title: 'Judge halts plan',
+    excerpt: cardUrl,
+    poster: { name: 'CharlesDarwin', url: null, imageUrl: null },
+    linkCards: [aLinkCard({ url: cardUrl, siteName: 'CNN', description: cardUrl })],
+    shares: [poster(10, 'CharlesDarwin')],
+  });
+  const element = mount(storyOf([linkPost]));
+  expand(element);
+
+  expect(element.querySelector('.mini a.face')!.getAttribute('href')).toBe(cardUrl);
+  expect(element.querySelector('.mini .feed')!.textContent!.trim()).toBe('CNN');
+  expect(element.querySelector('.mini .dek')).toBeNull();
 });

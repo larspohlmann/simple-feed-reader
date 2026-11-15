@@ -6,11 +6,10 @@ import {
   input,
   linkedSignal,
 } from '@angular/core';
-import { TranslocoPipe } from '@jsverse/transloco';
-import { IconComponent } from '../../shared/icon/icon.component';
 import { ProxiedImageDirective } from '../../shared/proxied-image/proxied-image.directive';
 import { LinkReaderNavigation } from '../shell/link-reader-navigation.service';
 import { LinkCardDto } from './link-card';
+import { LinkCardReaderOpening, OpenInReaderComponent } from './open-in-reader.component';
 
 /**
  * `article` reads like #1499's card in a post's body, site line last; `block` is the magazine's,
@@ -26,13 +25,10 @@ const SITE_LINE_OF_LAYOUT: Record<LinkCardLayout, LinkCardSiteLine> = {
   block: 'first',
 };
 
-/** `layer` opens the card's page over the open post; `alone` opens it in place of the list's post. */
-export type LinkCardReaderOpening = 'layer' | 'alone';
-
 @Component({
   selector: 'app-link-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ProxiedImageDirective, IconComponent, TranslocoPipe],
+  imports: [ProxiedImageDirective, OpenInReaderComponent],
   templateUrl: './link-card.component.html',
   styleUrl: './link-card.component.scss',
   host: {
@@ -55,11 +51,5 @@ export class LinkCardComponent {
 
   protected openable(): boolean {
     return this.opensInReader() !== null && this.navigation !== null;
-  }
-
-  protected onOpenInReader(event: Event): void {
-    event.stopPropagation();
-    if (this.opensInReader() === 'layer') this.navigation?.layer(this.card());
-    else this.navigation?.openAlone(this.card());
   }
 }

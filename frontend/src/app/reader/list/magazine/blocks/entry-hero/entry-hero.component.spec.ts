@@ -217,7 +217,7 @@ describe('EntryHeroComponent', () => {
     element.querySelector<HTMLButtonElement>('app-more-sources .toggle')!.click();
     fixture.detectChanges();
 
-    element.querySelector<HTMLButtonElement>('app-more-sources .mini')!.click();
+    element.querySelector<HTMLButtonElement>('app-more-sources .mini .face')!.click();
 
     expect(entryActions.open).toHaveBeenCalledWith(dup);
     expect(entryActions.open).toHaveBeenCalledTimes(1);

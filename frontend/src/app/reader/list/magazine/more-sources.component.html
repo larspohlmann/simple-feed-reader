@@ -1,5 +1,5 @@
 @if (entry().story) {
-  <app-story-shares [entry]="entry()" />
+  <app-story-sharers [entry]="entry()" />
 }
 @if (copies().length && !entry().story) {
   <app-entry-duplicates [entry]="entry()" />
@@ -21,64 +21,68 @@
     @if (expanded()) {
       <div class="minis" [id]="panelId">
         @for (source of sources(); track source.copy.id) {
-          <button
-            type="button"
-            class="mini reads-as-text"
-            (click)="open(source.copy, $event)"
-            (keydown.enter)="$event.stopPropagation()"
-            (keydown.space)="$event.stopPropagation()"
-          >
-            @if (source.picture) {
-              <img
-                class="thumb"
-                [src]="source.picture"
-                #renditions="appRenditions"
-                [appRenditions]="source.copy.imageRenditions"
-                [renditionSizes]="thumbSizes"
-                alt=""
-                loading="lazy"
-                decoding="async"
-                referrerpolicy="no-referrer"
-                (error)="renditions.fallBackToSrc() || markBroken(source.copy.id)"
-              />
+          <div class="mini" [class.openable]="source.card">
+            @if (source.card; as card) {
+              <a
+                class="face"
+                [href]="card.url"
+                target="_blank"
+                rel="noopener noreferrer"
+                (click)="$event.stopPropagation()"
+                (keydown.enter)="$event.stopPropagation()"
+              >
+                <ng-container *ngTemplateOutlet="face; context: { $implicit: source }" />
+              </a>
+              <app-open-in-reader [card]="card" opening="alone" />
             } @else {
-              <span class="thumb tile">
-                <app-favicon
-                  [url]="source.copy.faviconUrl"
-                  [avatarUrl]="source.avatarUrl"
-                  [size]="20"
-                />
-              </span>
+              <button
+                type="button"
+                class="face reads-as-text"
+                (click)="open(source.copy, $event)"
+                (keydown.enter)="$event.stopPropagation()"
+                (keydown.space)="$event.stopPropagation()"
+              >
+                <ng-container *ngTemplateOutlet="face; context: { $implicit: source }" />
+              </button>
             }
-            <span class="text">
-              <span class="byline">
-                <app-favicon
-                  [url]="source.copy.faviconUrl"
-                  [avatarUrl]="source.avatarUrl"
-                  [size]="14"
-                />
-                <span class="feed">{{ source.feed }}</span>
-                <span class="when">· {{ source.when }}</span>
-                @if (source.shareCount) {
-                  <span class="shares-count"
-                    >·
-                    {{
-                      (source.shareCount === 1
-                        ? 'reader.trendingSharesOne'
-                        : 'reader.trendingShares'
-                      ) | transloco: { count: source.shareCount }
-                    }}</span
-                  >
-                }
-              </span>
-              <span class="title">{{ source.title }}</span>
-              @if (source.dek) {
-                <span class="dek">{{ source.dek }}</span>
-              }
-            </span>
-          </button>
+            <app-story-sharers [entry]="source.copy" />
+          </div>
         }
       </div>
     }
   </div>
 }
+
+<ng-template #face let-source>
+  @if (source.picture) {
+    <img
+      class="thumb"
+      [src]="source.picture"
+      #renditions="appRenditions"
+      [appRenditions]="source.copy.imageRenditions"
+      [renditionSizes]="thumbSizes"
+      alt=""
+      loading="lazy"
+      decoding="async"
+      referrerpolicy="no-referrer"
+      (error)="renditions.fallBackToSrc() || markBroken(source.copy.id)"
+    />
+  } @else {
+    <span class="thumb tile">
+      <app-favicon [url]="source.copy.faviconUrl" [avatarUrl]="source.avatarUrl" [size]="20" />
+    </span>
+  }
+  <span class="text">
+    <span class="byline">
+      @if (!source.site) {
+        <app-favicon [url]="source.copy.faviconUrl" [avatarUrl]="source.avatarUrl" [size]="14" />
+      }
+      <span class="feed">{{ source.feed }}</span>
+      <span class="when">· {{ source.when }}</span>
+    </span>
+    <span class="title">{{ source.title }}</span>
+    @if (source.dek) {
+      <span class="dek">{{ source.dek }}</span>
+    }
+  </span>
+</ng-template>
