@@ -162,7 +162,7 @@ final class TrendingEntryRepositoryTest extends DbTestCase
             new WindowLinkCardModel(
                 'https://shared.example/storm',
                 'Storm floods the harbour',
-                str_repeat('d', 2_000),
+                str_repeat('d', 600),
                 'Shared',
             ),
             $rows[1]->links->card,

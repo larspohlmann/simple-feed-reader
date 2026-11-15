@@ -19,6 +19,9 @@ final readonly class TrendingEntryRepository
     /** A body is cut to 300 characters after its markup is stripped; this bounds what a chunk holds before that. */
     private const int BODY_SOURCE_CHARACTERS = 2_000;
 
+    /** A card's description is plain text far more often than markup, so less headroom over 300 is kept. */
+    private const int CARD_DESCRIPTION_CHARACTERS = 600;
+
     public function __construct(private EntityManagerInterface $entityManager)
     {
     }
@@ -86,7 +89,7 @@ final readonly class TrendingEntryRepository
                 . ' WHERE first_card.entry_id = e.id AND first_card.thread_post_id IS NULL)'
                 . ' WHERE e.effective_date >= :since AND e.id > :afterId ORDER BY e.id LIMIT %d',
                 self::BODY_SOURCE_CHARACTERS,
-                self::BODY_SOURCE_CHARACTERS,
+                self::CARD_DESCRIPTION_CHARACTERS,
                 self::CHUNK_ROWS,
             ),
             ['since' => $since->format('Y-m-d H:i:s'), 'afterId' => $afterId],
