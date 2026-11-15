@@ -12,6 +12,7 @@ final readonly class GermanCompoundSplitter
 {
     public const int MIN_PART_LENGTH = 3;
     public const int MAX_PARTS = 4;
+    public const int MAX_PARTS_OF_AN_UNKNOWN_WORD = 2;
     public const array LINKING_SUFFIXES = ['s', 'es', 'n', 'en', 'er', 'e', 'ens'];
     public const string RESTORED_ENDING = 'e';
 
@@ -25,7 +26,10 @@ final readonly class GermanCompoundSplitter
         if (mb_strlen($word) < 2 * self::MIN_PART_LENGTH) {
             return [];
         }
-        $split = (new CompoundSplitSearch($this->lexicon, $word))->bestSplit();
+        if (!$this->lexicon->isKnown($word)) {
+            return $this->bestSplitOf($word, self::MAX_PARTS_OF_AN_UNKNOWN_WORD)?->parts() ?? [];
+        }
+        $split = $this->bestSplitOf($word, self::MAX_PARTS);
         if (null === $split || $this->staysWhole($word, $split)) {
             return [];
         }
@@ -33,11 +37,13 @@ final readonly class GermanCompoundSplitter
         return $split->parts();
     }
 
+    private function bestSplitOf(string $word, int $maxParts): ?CompoundSplitModel
+    {
+        return (new CompoundSplitSearch($this->lexicon, $word, $maxParts))->bestSplit();
+    }
+
     private function staysWhole(string $word, CompoundSplitModel $split): bool
     {
-        if (!$this->lexicon->isKnown($word)) {
-            return false;
-        }
         $wholeClass = $this->lexicon->frequencyClassOf($word);
 
         return $split->hasMeanClassOfAtLeast($wholeClass) || $split->hasPartRarerThan($wholeClass);

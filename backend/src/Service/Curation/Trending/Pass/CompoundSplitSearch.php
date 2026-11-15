@@ -18,8 +18,11 @@ final class CompoundSplitSearch
     /** @var array<int, ?CompoundSplitModel> the best split of each suffix, by its offset */
     private array $bestByOffset = [];
 
-    public function __construct(private readonly GermanLexiconInterface $lexicon, string $word)
-    {
+    public function __construct(
+        private readonly GermanLexiconInterface $lexicon,
+        string $word,
+        private readonly int $maxParts,
+    ) {
         $this->letters = mb_str_split($word);
     }
 
@@ -55,7 +58,7 @@ final class CompoundSplitSearch
     private function compoundSplitAt(int $offset, int $end): ?CompoundSplitModel
     {
         $tail = $this->bestFrom($end);
-        if (null === $tail || $tail->partCount() >= GermanCompoundSplitter::MAX_PARTS) {
+        if (null === $tail || $tail->partCount() >= $this->maxParts) {
             return null;
         }
         $modifier = $this->modifierBetween($offset, $end);

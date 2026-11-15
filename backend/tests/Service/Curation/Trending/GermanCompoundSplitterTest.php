@@ -32,7 +32,9 @@ final class GermanCompoundSplitterTest extends TestCase
         yield 'the -es- link' => ['bundesrat', ['bund', 'rat']];
         yield 'the -s- link' => ['arbeitsamt', ['arbeit', 'amt']];
         yield 'the restored -e' => ['schulbus', ['schule', 'bus']];
-        yield 'three parts' => ['kinderarztpraxis', ['kinder', 'arzt', 'praxis']];
+        yield 'a known word in three parts' => ['kinderarztpraxis', ['kinder', 'arzt', 'praxis']];
+        yield 'an unknown word in two parts' => ['kinderarzt', ['kinder', 'arzt']];
+        yield 'an unknown word in no more than two parts' => ['kinderarztbus', []];
         yield 'fewer parts before a lower mean' => ['bundesrathaus', ['bund', 'rathaus']];
         yield 'an equal mean goes to the longer head' => ['staubecken', ['stau', 'becken']];
         yield 'a known whole rarer than its parts' => ['rathaus', ['rat', 'haus']];
@@ -40,7 +42,7 @@ final class GermanCompoundSplitterTest extends TestCase
         yield 'a rare head' => ['kinderinstinkt', ['kinder', 'instinkt']];
         yield 'a modifier variant tie goes to the shorter form' => ['tierarzt', ['tier', 'arzt']];
         yield 'a known compound rarer than both parts' => ['rathaus', ['rat', 'haus']];
-        yield 'exactly the most parts' => ['tagtagtagtag', ['tag', 'tag', 'tag', 'tag']];
+        yield 'a known word in exactly the most parts' => ['tagtagtagtag', ['tag', 'tag', 'tag', 'tag']];
         yield 'a known whole as frequent as its parts' => ['bundesamt', []];
         yield 'a known whole with a part rarer than itself' => ['busion', []];
         yield 'a modifier that is no noun' => ['einsatz', []];
@@ -50,7 +52,7 @@ final class GermanCompoundSplitterTest extends TestCase
         yield 'a modifier without a vowel' => ['pkwhaus', []];
         yield 'shorter than two parts' => ['tagra', []];
         yield 'no split into known parts' => ['polizei', []];
-        yield 'one part more than the most parts' => ['tagtagtagtagtag', []];
+        yield 'a known word in one part more than the most parts' => ['tagtagtagtagtag', []];
     }
 
     /** @param list<string> $expectedParts */
