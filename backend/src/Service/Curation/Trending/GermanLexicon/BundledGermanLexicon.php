@@ -33,16 +33,6 @@ final class BundledGermanLexicon implements GermanLexiconInterface, ResetInterfa
         return $this->model()->frequencyClassOf($form);
     }
 
-    public function isVerbStem(string $presentStem): bool
-    {
-        return $this->model()->isVerbStem($presentStem);
-    }
-
-    public function infinitiveStemOf(string $presentStem): string
-    {
-        return $this->model()->infinitiveStemOf($presentStem);
-    }
-
     public function reset(): void
     {
         $this->model = null;

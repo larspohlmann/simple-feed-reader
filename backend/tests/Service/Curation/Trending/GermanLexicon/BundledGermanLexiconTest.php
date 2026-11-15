@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Curation\Trending\GermanLexicon;
 
-use App\Service\Curation\Trending\Exception\UnknownVerbStemException;
 use App\Service\Curation\Trending\GermanLexicon\BundledGermanLexicon;
 use App\Tests\Support\TrendingWiring;
 use PHPUnit\Framework\TestCase;
@@ -44,22 +43,6 @@ final class BundledGermanLexiconTest extends TestCase
         $this->assertSame(18, $lexicon->frequencyClassOf('nirgendwo'));
     }
 
-    public function testResolvesVerbStems(): void
-    {
-        $lexicon = $this->fixtureLexicon();
-
-        $this->assertTrue($lexicon->isVerbStem('verhandel'));
-        $this->assertFalse($lexicon->isVerbStem('laufen'));
-        $this->assertSame('verhandeln', $lexicon->infinitiveStemOf('verhandel'));
-    }
-
-    public function testRejectsAnInfinitiveStemRequestForANonVerbStem(): void
-    {
-        $this->expectException(UnknownVerbStemException::class);
-
-        $this->fixtureLexicon()->infinitiveStemOf('laufen');
-    }
-
     public function testLoadsOnFirstUseAndAgainAfterReset(): void
     {
         $this->writeLexicon('eins');
@@ -96,7 +79,7 @@ final class BundledGermanLexiconTest extends TestCase
     public function testRejectsAMissingTextFile(): void
     {
         $this->writeLexicon('eins');
-        unlink($this->temporaryDirectory . '/verbs.tsv');
+        unlink($this->temporaryDirectory . '/lexicon.tsv');
 
         $this->expectException(\UnexpectedValueException::class);
 
@@ -111,7 +94,6 @@ final class BundledGermanLexiconTest extends TestCase
     private function writeLexicon(string $noun): void
     {
         file_put_contents($this->temporaryDirectory . '/lexicon.tsv', $noun . "\tn\t1\n");
-        file_put_contents($this->temporaryDirectory . '/verbs.tsv', '');
         file_put_contents(
             $this->temporaryDirectory . '/lexicon-meta.php',
             "<?php return ['rarest' => 1];",

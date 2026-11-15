@@ -14,20 +14,16 @@ final class BundledLexiconDataTest extends TestCase
     /** @var list<list<string>> */
     private static array $formRows;
 
-    /** @var list<list<string>> */
-    private static array $verbRows;
-
     public static function setUpBeforeClass(): void
     {
         self::$formRows = self::rowsOf(self::DIRECTORY, 'lexicon.tsv');
-        self::$verbRows = self::rowsOf(self::DIRECTORY, 'verbs.tsv');
     }
 
     public function testFilesStayUnderSixMebibytesTogether(): void
     {
         $bytes = array_sum(array_map(
             static fn (string $name): int => (int) filesize(self::DIRECTORY . '/' . $name),
-            ['lexicon.tsv', 'verbs.tsv', 'lexicon-meta.php'],
+            ['lexicon.tsv', 'lexicon-meta.php'],
         ));
 
         $this->assertLessThanOrEqual(6_291_456, $bytes);
@@ -36,28 +32,24 @@ final class BundledLexiconDataTest extends TestCase
     public function testEveryLineIsATerminatedKeyedRow(): void
     {
         $this->assertStringEndsWith("\n", (string) file_get_contents(self::DIRECTORY . '/lexicon.tsv'));
-        $this->assertStringEndsWith("\n", (string) file_get_contents(self::DIRECTORY . '/verbs.tsv'));
         $this->assertSame([], array_filter(self::$formRows, static fn (array $row): bool => 3 !== count($row)));
-        $this->assertSame([], array_filter(self::$verbRows, static fn (array $row): bool => 2 !== count($row)));
     }
 
     public function testEveryFormIsAtLeastThreeCharactersLong(): void
     {
-        $keys = array_column([...self::$formRows, ...self::$verbRows], 0);
+        $keys = array_column(self::$formRows, 0);
 
         $this->assertSame([], array_filter($keys, static fn (string $key): bool => mb_strlen($key) < 3));
     }
 
     public function testKeysAreByteSortedWithoutDuplicates(): void
     {
-        foreach ([self::$formRows, self::$verbRows] as $rows) {
-            $keys = array_column($rows, 0);
-            $sorted = $keys;
-            sort($sorted, SORT_STRING);
+        $keys = array_column(self::$formRows, 0);
+        $sorted = $keys;
+        sort($sorted, SORT_STRING);
 
-            $this->assertSame($sorted, $keys);
-            $this->assertSame($keys, array_values(array_unique($keys)));
-        }
+        $this->assertSame($sorted, $keys);
+        $this->assertSame($keys, array_values(array_unique($keys)));
     }
 
     public function testEveryKindIsNounOrOther(): void
@@ -75,11 +67,6 @@ final class BundledLexiconDataTest extends TestCase
         );
 
         $this->assertSame([], $invalid);
-    }
-
-    public function testEveryVerbMapsToANonEmptyInfinitiveStem(): void
-    {
-        $this->assertSame([], array_filter(self::$verbRows, static fn (array $row): bool => '' === $row[1]));
     }
 
     public function testMetaHoldsTheRarestClass(): void

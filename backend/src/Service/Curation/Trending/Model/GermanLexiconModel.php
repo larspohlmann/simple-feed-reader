@@ -4,20 +4,15 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Trending\Model;
 
-use App\Service\Curation\Trending\Exception\UnknownVerbStemException;
-
 final readonly class GermanLexiconModel
 {
     private const string NOUN_KIND = 'n';
 
     private SortedLinesModel $forms;
 
-    private SortedLinesModel $verbs;
-
-    public function __construct(string $formLines, string $verbLines, private int $rarestClass)
+    public function __construct(string $formLines, private int $rarestClass)
     {
         $this->forms = new SortedLinesModel($formLines);
-        $this->verbs = new SortedLinesModel($verbLines);
     }
 
     public static function fromDirectory(string $directory): self
@@ -27,11 +22,7 @@ final readonly class GermanLexiconModel
             throw new \UnexpectedValueException('The German lexicon meta file has the wrong shape.');
         }
 
-        return new self(
-            self::contentsOf($directory . '/lexicon.tsv'),
-            self::contentsOf($directory . '/verbs.tsv'),
-            $meta['rarest'],
-        );
+        return new self(self::contentsOf($directory . '/lexicon.tsv'), $meta['rarest']);
     }
 
     public function isNoun(string $form): bool
@@ -49,16 +40,6 @@ final readonly class GermanLexiconModel
         $line = $this->forms->valueOf($form);
 
         return null === $line ? $this->rarestClass + 1 : (int) substr($line, 2);
-    }
-
-    public function isVerbStem(string $presentStem): bool
-    {
-        return null !== $this->verbs->valueOf($presentStem);
-    }
-
-    public function infinitiveStemOf(string $presentStem): string
-    {
-        return $this->verbs->valueOf($presentStem) ?? throw UnknownVerbStemException::forStem($presentStem);
     }
 
     private static function contentsOf(string $path): string

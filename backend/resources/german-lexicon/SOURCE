@@ -15,20 +15,18 @@ line format: ngram TAB year,match_count,volume_count TAB year,match_count,volume
   the datasets page documents only the version 2 layout of one year per line)
 part-of-speech tags: present, as separate lines whose ngram is form_TAG (NOUN, VERB, ADJ, ADV, PRON, DET, ADP, NUM,
   CONJ, PRT, X, .), beside the untagged line of each spelling; the untagged lines give the counts, the tagged ones
-  the noun and verb shares
+  the noun share
 years: 1950-2019 (match_count summed)
 forms: ^\p{L}+$ tokens, casefolded (MB_CASE_FOLD, so ß becomes ss) and NFKC, diacritics kept, at least 3 letters;
   14,343,914 distinct forms before the cut
 N: 290000 (the most frequent forms)
-size: 5,016,257 bytes in lexicon.tsv, verbs.tsv and lexicon-meta.php (budget 6,291,456); nouns 189,565, others 100,435, verbs 11,680
+size: 4,799,299 bytes in lexicon.tsv and lexicon-meta.php (budget 6,291,456); nouns 189,565, others 100,435
 noun rule: _NOUN count at least half the form's tagged count; the 4 kept forms without any tag use the capitalised
   spelling's share of the untagged count instead
-verb rule: _VERB count at least half the tagged count, not a noun, ending in -en, -eln or -ern with at least 3 letters
-  before the dropped -en or -n; a present stem shared by two infinitives goes to the more frequent one
-load (PHP 8.5.12 CLI, opcache off): 1.3 ms, +4.8 MB held (the two text files as strings), no parse transient;
+load (PHP 8.5.12 CLI, opcache off): 1.3 ms, +4.6 MB held (the text file as a string), no parse transient;
   a lookup is a binary search over the string, about 10 microseconds
 generator: php resources/german-lexicon/generate.php <directory of the 8 shards>, about 3.5 minutes and 4 GB; writes
-  lexicon.tsv (form TAB n|o TAB class), verbs.tsv (present stem TAB infinitive stem), lexicon-meta.php, byte-sorted;
+  lexicon.tsv (form TAB n|o TAB class, byte-sorted) and lexicon-meta.php;
   the committed files were converted from the first lexicon.php, which the same 290,000-form selection produced.
-meta: the rarest class; lexicon-meta.php was re-rendered from the committed tsv files with render.php, which
-  reproduced both tsv files byte for byte
+meta: the rarest class; lexicon-meta.php was re-rendered from the committed tsv file with render.php, which
+  reproduced lexicon.tsv byte for byte

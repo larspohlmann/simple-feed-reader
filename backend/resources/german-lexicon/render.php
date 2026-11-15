@@ -5,14 +5,12 @@ declare(strict_types=1);
 /**
  * @param array<string, int> $nouns
  * @param array<string, int> $others
- * @param array<string, string> $verbs
  * @return int the bytes written
  */
-function writeLexiconFiles(string $directory, array $nouns, array $others, array $verbs): int
+function writeLexiconFiles(string $directory, array $nouns, array $others): int
 {
     $files = [
         'lexicon.tsv' => lexiconLines($nouns, $others),
-        'verbs.tsv' => verbLines($verbs),
         'lexicon-meta.php' => metaSource($nouns, $others),
     ];
     $bytes = 0;
@@ -39,12 +37,6 @@ function lexiconLines(array $nouns, array $others): string
     }
 
     return sortedLines($entries);
-}
-
-/** @param array<string, string> $verbs */
-function verbLines(array $verbs): string
-{
-    return sortedLines($verbs);
 }
 
 /** @param array<string, string> $entries */
