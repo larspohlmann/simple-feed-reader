@@ -151,17 +151,24 @@ final readonly class HeadlineEquivalents
     public function stemsOf(string $text, ?FeedLanguage $language): array
     {
         $stems = [];
-        foreach ($this->collapsePhrases(HeadlineStems::words($this->replaceExactWords($text))) as [$word, $bare]) {
-            if (HeadlineStems::isKept($bare)) {
-                $stems[] = $this->stemOf($word, $bare, $language);
-            }
+        foreach ($this->wordsOf($text) as [$word, $bare]) {
+            $stems[] = $this->stemOf($word, $bare, $language);
         }
 
         return array_values(array_unique($stems));
     }
 
+    /** @return list<array{string, string}> each kept word or phrase canonical, with its bare form */
+    public function wordsOf(string $text): array
+    {
+        return array_values(array_filter(
+            $this->collapsePhrases(HeadlineStems::words($this->replaceExactWords($text))),
+            static fn (array $word): bool => HeadlineStems::isKept($word[1]),
+        ));
+    }
+
     /** A canonical is a stem already: stemming it in a language would split it from the others. */
-    private function stemOf(string $word, string $bare, ?FeedLanguage $language): string
+    public function stemOf(string $word, string $bare, ?FeedLanguage $language): string
     {
         if (isset($this->canonicals[$bare])) {
             return $bare;

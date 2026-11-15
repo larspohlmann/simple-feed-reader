@@ -52,6 +52,9 @@ final class HeadlineWindow
     /** @var array<string, int> language value => entries stemmed in it */
     private array $entriesByLanguage = [];
 
+    /** @var array<string, string> language value and word => its stem */
+    private array $stemsByWord = [];
+
     public function __construct(
         private readonly HeadlineFiller $filler,
         private readonly HeadlineEquivalents $equivalents,
@@ -121,13 +124,20 @@ final class HeadlineWindow
     private function idsOf(string $text, ?FeedLanguage $language): array
     {
         $ids = [];
-        foreach ($this->equivalents->stemsOf($text, $language) as $stem) {
+        foreach ($this->equivalents->wordsOf($text) as [$word, $bare]) {
+            $stem = $this->stemOf($word, $bare, $language);
             if (!$this->filler->isSeed($stem, $language)) {
-                $ids[] = $this->stemIds[$stem] ??= \count($this->stemIds);
+                $ids[$this->stemIds[$stem] ??= \count($this->stemIds)] = true;
             }
         }
 
-        return $ids;
+        return array_keys($ids);
+    }
+
+    private function stemOf(string $word, string $bare, ?FeedLanguage $language): string
+    {
+        return $this->stemsByWord[$language?->value . ' ' . $word]
+            ??= $this->equivalents->stemOf($word, $bare, $language);
     }
 
     /**
