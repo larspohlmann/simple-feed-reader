@@ -1,0 +1,14 @@
+Snowball stopword lists (stopwords.php)
+
+Source: the Snowball project's stopword lists for German, English, French and Spanish,
+  https://github.com/snowballstem/snowball-website, commit dc14fb462784e5bdf90f3210022b0f91d3881ffd,
+  algorithms/<language>/stop.txt (served unchanged on https://snowballstem.org).
+  © 2001 Dr Martin Porter, © 2002 Richard Boulton.
+
+Licence: the 3-clause BSD licence, as stated on https://snowballstem.org/license.html.
+  The licence text is in LICENSE.txt.
+
+Changes: comments removed, casefolded (MB_CASE_FOLD, then NFKC, diacritics kept), contractions and other non-letter
+entries dropped, duplicates removed, sorted. generate.php makes these changes; SOURCE pins the input files.
+
+stopwords.php is under the BSD 3-clause licence; the repository's code stays MIT.

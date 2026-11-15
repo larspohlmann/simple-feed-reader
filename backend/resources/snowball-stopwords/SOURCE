@@ -1,0 +1,18 @@
+repository: https://github.com/snowballstem/snowball-website
+commit: dc14fb462784e5bdf90f3210022b0f91d3881ffd
+committed: 2026-10-17T07:30:28Z
+licence: BSD 3-clause, https://snowballstem.org/license.html (LICENSE.txt)
+fetched: 2026-11-15
+files (url, sha256):
+  https://raw.githubusercontent.com/snowballstem/snowball-website/dc14fb462784e5bdf90f3210022b0f91d3881ffd/algorithms/german/stop.txt 22a7785b53860256280fba74b93d8f09a0f3a8f52edaa3cdc3750e8c13a3874c
+  https://raw.githubusercontent.com/snowballstem/snowball-website/dc14fb462784e5bdf90f3210022b0f91d3881ffd/algorithms/english/stop.txt 06b8b14bbe6f6e0b64c0830813819416d96a71bec1655668d83b3e602a651db6
+  https://raw.githubusercontent.com/snowballstem/snowball-website/dc14fb462784e5bdf90f3210022b0f91d3881ffd/algorithms/french/stop.txt e235f5e633bf831c601ce6f1dc87d8608c038209a7aab64e69a9e70f52f83d4c
+  https://raw.githubusercontent.com/snowballstem/snowball-website/dc14fb462784e5bdf90f3210022b0f91d3881ffd/algorithms/spanish/stop.txt 042669c6c97605f5e57278b67474c65d58d628a59a004e618a0ac06bc2d38222
+parse rule: per line, cut at the first |, trim, keep the first whitespace-separated token, casefold (MB_CASE_FOLD,
+  then NFKC, diacritics kept), keep it only if it matches ^\p{L}+$ (drops the English contractions); distinct,
+  sorted byte-wise (SORT_STRING)
+words: de 231, en 124, fr 154, es 308
+size: 16,036 bytes in stopwords.php
+generator: php resources/snowball-stopwords/generate.php (from backend/); aborts on a SHA-256 mismatch; writes
+  stopwords.php as return ['de' => list, 'en' => list, 'fr' => list, 'es' => list]
+reproduced: 2026-11-15, generated twice, cmp identical
