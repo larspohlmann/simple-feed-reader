@@ -102,7 +102,7 @@ final class BackupFieldDeclarations
             'share.quotedPost.media' => 'quote.media',
             'share.quotedPost.nestedUrl' => 'quote.nestedQuote',
             'share.quotedPost.nestedHandle' => 'quote.nestedQuote',
-            'share.quotedPost.linkCard' => 'quote.linkCard',
+            'quotedLink' => 'quote.linkCard',
             'author.name' => 'author', 'author.profileUrl' => 'authorUrl', 'author.avatarUrl' => 'authorAvatarUrl',
             'text.summary' => 'summary',
             'text.contentHtml' => 'contentHtml',

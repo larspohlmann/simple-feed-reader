@@ -314,7 +314,8 @@ final readonly class SavedPostRepository
 
     /**
      * Every entry column but its id is copied; an override replaces a column's value by an SQL expression. The guard
-     * compares the guid hash the copy will carry, overridden or not. feed_id is a join column, not in the column list.
+     * compares the guid hash the copy will carry, overridden or not. Join columns are not in the column list: feed_id
+     * is the saved feed's, and the quoted card's link is copied as it is.
      *
      * @param array<string, string> $overrides
      */
@@ -323,7 +324,10 @@ final readonly class SavedPostRepository
         $metadata = $this->entityManager->getClassMetadata(Entry::class);
         $guidHash = $metadata->getColumnName('guid.hash');
         $skipped = [$metadata->getColumnName('id'), ...array_keys($overrides)];
-        $copied = array_values(array_diff($metadata->getColumnNames(), $skipped));
+        $copied = array_values(array_diff(
+            [...$metadata->getColumnNames(), $metadata->getSingleAssociationJoinColumnName('quotedLink')],
+            $skipped,
+        ));
         $sources = [
             ...array_map(static fn (string $column): string => 'e.' . $column, $copied),
             ...array_values($overrides),

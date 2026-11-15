@@ -70,7 +70,11 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
         if ($embed->quote === null) {
             $entry->setShareKind(self::shareKindOf($embed, $outcome, $assembled->media));
         } else {
-            $entry->shareQuotedPost($embed->quote);
+            $quotedCard = $embed->quote->linkCard;
+            $entry->shareQuotedPost(
+                $embed->quote,
+                $quotedCard === null ? null : $this->linkWriter->linkFor($quotedCard, null),
+            );
         }
 
         return $outcome;

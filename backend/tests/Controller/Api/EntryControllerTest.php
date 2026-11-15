@@ -11,6 +11,7 @@ use App\Entity\Headline;
 use App\Entity\ImageRendition;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
+use App\Entity\QuotedPostContent;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\SavedSearch;
@@ -242,6 +243,31 @@ final class EntryControllerTest extends ApiTestCase
         self::assertIsArray($oldest);
         self::assertSame([$this->expectedLinkCards()[0]], $newest['linkCards']);
         self::assertSame($this->expectedLinkCards(), $oldest['linkCards']);
+    }
+
+    public function testAQuotedCardKeepsItsJsonShape(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->bearerAndUser('e-quoted-link-card@example.com');
+        $entry = $this->entryWithGuid($this->seedFeedWithEntries($user, 1), 'g1');
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entry->shareQuotedPost(
+            new QuotedPostContent('https://q.test/1', 'Q', 'q.test', null, null, 'quoted', [], null),
+            SharedLinks::of(
+                $entityManager,
+                new LinkCardContent('https://a.test/1', 'First', 'About it', 'https://a.test/i.jpg', 'A'),
+            ),
+        );
+        $entityManager->flush();
+
+        $client->request('GET', "/api/entries/{$entry->getId()}", server: $headers);
+
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['entry']);
+        self::assertIsArray($body['entry']['quote']);
+        self::assertSame($this->expectedLinkCards()[0], $body['entry']['quote']['linkCard']);
     }
 
     public function testGetCarriesLinkCardsAndEmptyWhenThereAreNone(): void

@@ -30,11 +30,12 @@ final class EntryQuotedPostTest extends TestCase
             "First line\nsecond line",
             [new EntryMedium('https://video.bsky.app/p.m3u8', 'video', 1080, 1920, 'https://video.bsky.app/t.jpg')],
             new QuotedPostReference('https://bsky.app/profile/did:plc:n/post/9z', 'nested.bsky.social'),
-            new LinkCardContent('https://n.example/s', 'Story', 'D', 'https://n.example/s.jpg', 'n.example'),
         );
         $stored = new EntryQuotedPost();
 
-        $stored->store($quote);
+        $stored->store($quote->withLinkCard(
+            new LinkCardContent('https://n.example/s', 'Story', 'D', 'https://n.example/s.jpg', 'n.example'),
+        ));
 
         self::assertEquals($quote, $stored->read());
     }

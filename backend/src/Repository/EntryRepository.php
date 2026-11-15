@@ -118,8 +118,8 @@ final class EntryRepository extends ServiceEntityRepository implements RestoreEn
 
     /**
      * One feed's entries in ascending-id slices — the backup export's keyset
-     * walk. No feed join: the caller already knows the feed and only needs
-     * its own scalar fields on each entry.
+     * walk. No feed join: the caller already knows the feed; the quoted card's
+     * link is joined, since every quote post reads it.
      *
      * @return list<Entry>
      */
@@ -127,6 +127,7 @@ final class EntryRepository extends ServiceEntityRepository implements RestoreEn
     {
         /** @var list<Entry> $entries */
         $entries = $this->createQueryBuilder('e')
+            ->leftJoin('e.quotedLink', 'quotedLink')->addSelect('quotedLink')
             ->andWhere('e.feed = :feed')
             ->andWhere('e.id > :afterId')
             ->setParameter('feed', $feedId)

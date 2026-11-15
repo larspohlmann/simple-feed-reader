@@ -63,7 +63,7 @@ final class EntryMediaBackupRoundTripTest extends DbTestCase
         $targetId = $target->getId();
         self::assertNotNull($targetId);
 
-        $this->inserter()->insert($targetId, [EntryLine::fromLine($entryLine)]);
+        $this->inserter()->insert($targetId, [EntryLine::fromLine($entryLine)], []);
 
         $this->entityManager->clear();
         $restoredFeed = $this->entityManager
@@ -116,7 +116,7 @@ final class EntryMediaBackupRoundTripTest extends DbTestCase
         $this->entityManager->flush();
         $targetId = $target->requireId();
 
-        $this->inserter()->insert($targetId, [EntryLine::fromLine($entryLine)]);
+        $this->inserter()->insert($targetId, [EntryLine::fromLine($entryLine)], []);
 
         $this->entityManager->clear();
         $restored = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $targetId]);
@@ -169,7 +169,7 @@ final class EntryMediaBackupRoundTripTest extends DbTestCase
         $this->entityManager->flush();
         $targetId = $target->requireId();
 
-        $this->inserter()->insert($targetId, array_map(EntryLine::fromLine(...), array_values($lines)));
+        $this->inserter()->insert($targetId, array_map(EntryLine::fromLine(...), array_values($lines)), []);
 
         $this->entityManager->clear();
         $restoredByGuid = [];

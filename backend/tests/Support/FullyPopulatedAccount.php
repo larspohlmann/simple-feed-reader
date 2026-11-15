@@ -222,14 +222,13 @@ final readonly class FullyPopulatedAccount
             'The quoted words.',
             [new EntryMedium('https://populated.example/quoted-1.jpg', 'image', 800, 600)],
             new QuotedPostReference('https://populated.example/@deeper/100', 'deeper@populated.example'),
-            new LinkCardContent(
-                'https://populated.example/story',
-                'A quoted story',
-                'Its description.',
-                'https://populated.example/story.jpg',
-                'populated.example',
-            ),
-        ));
+        ), SharedLinks::of($this->entityManager, new LinkCardContent(
+            'https://populated.example/story',
+            'A quoted story',
+            'Its description.',
+            'https://populated.example/story.jpg',
+            'populated.example',
+        )));
 
         return $entry;
     }

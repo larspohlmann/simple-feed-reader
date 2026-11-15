@@ -599,6 +599,7 @@ final class AccountRestorerTest extends DbTestCase
         $entryParts = $this->entryPartsOf($source);
         $sourceRows = $this->fixtureRowsOf($source);
         $sourceCards = $this->linkCardsOf($sourceRows['entry']);
+        $sourceQuote = $sourceRows['entry']->getQuotedPost();
 
         $target = $this->userFactory->create('drift-target@example.com');
         $this->deleteEveryFeed();
@@ -667,7 +668,7 @@ final class AccountRestorerTest extends DbTestCase
                 'share.quotedPost.url', 'share.quotedPost.authorName', 'share.quotedPost.authorHandle',
                 'share.quotedPost.authorAvatarUrl', 'share.quotedPost.postedAt', 'share.quotedPost.text',
                 'share.quotedPost.media', 'share.quotedPost.nestedUrl', 'share.quotedPost.nestedHandle',
-                'share.quotedPost.linkCard', 'text.summary', 'text.contentHtml', 'text.language',
+                'quotedLink', 'text.summary', 'text.contentHtml', 'text.language',
             ],
         );
         self::assertEquals($sourceRows['entry']->getText(), $targetRows['entry']->getText());
@@ -692,8 +693,8 @@ final class AccountRestorerTest extends DbTestCase
         self::assertTrue($targetRows['entry']->isTitleDerived());
         self::assertEquals($sourceRows['entry']->getDiscussion(), $targetRows['entry']->getDiscussion());
         self::assertEquals($sourceRows['entry']->getShareKind(), $targetRows['entry']->getShareKind());
-        self::assertNotNull($sourceRows['entry']->getQuotedPost());
-        self::assertEquals($sourceRows['entry']->getQuotedPost(), $targetRows['entry']->getQuotedPost());
+        self::assertNotNull($sourceQuote?->linkCard);
+        self::assertEquals($sourceQuote, $targetRows['entry']->getQuotedPost());
         self::assertNotSame([], $sourceCards);
         self::assertEquals($sourceCards, $this->linkCardsOf($targetRows['entry']));
 

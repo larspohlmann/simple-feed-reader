@@ -58,6 +58,10 @@ final class Entry
     #[ORM\Embedded(class: EntrySharedContent::class, columnPrefix: false)]
     private EntrySharedContent $share;
 
+    #[ORM\ManyToOne(targetEntity: SharedLink::class)]
+    #[ORM\JoinColumn(name: 'quoted_shared_link_id', nullable: true)]
+    private ?SharedLink $quotedLink = null;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $publishedAt = null;
 
@@ -302,16 +306,25 @@ final class Entry
     public function setShareKind(?ShareKind $shareKind): void
     {
         $this->share->classify($shareKind);
+        if ($shareKind !== ShareKind::Quote) {
+            $this->quotedLink = null;
+        }
     }
 
     public function getQuotedPost(): ?QuotedPostContent
     {
-        return $this->share->quotedPost();
+        return $this->share->quotedPost()?->withLinkCard($this->quotedLink?->preview());
     }
 
-    public function shareQuotedPost(QuotedPostContent $quote): void
+    public function getQuotedLink(): ?SharedLink
+    {
+        return $this->quotedLink;
+    }
+
+    public function shareQuotedPost(QuotedPostContent $quote, ?SharedLink $link): void
     {
         $this->share->quote($quote);
+        $this->quotedLink = $link;
     }
 
     public function bodyStandsInForSummary(): bool

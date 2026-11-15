@@ -24,4 +24,10 @@ final readonly class QuotedPostContent
         public ?LinkCardContent $linkCard = null,
     ) {
     }
+
+    #[\NoDiscard]
+    public function withLinkCard(?LinkCardContent $linkCard): self
+    {
+        return clone($this, ['linkCard' => $linkCard]);
+    }
 }

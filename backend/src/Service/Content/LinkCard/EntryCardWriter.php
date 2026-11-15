@@ -31,7 +31,11 @@ final readonly class EntryCardWriter
         $this->dropQuoteLines($entry, $cards->quoteLineUrls());
         self::settleMediaTarget($entry, $cards->pageCards);
         if ($cards->quoted !== null) {
-            $entry->shareQuotedPost($cards->quoted->post);
+            $quotedCard = $cards->quoted->post->linkCard;
+            $entry->shareQuotedPost(
+                $cards->quoted->post,
+                $quotedCard === null ? null : $this->linkWriter->linkFor($quotedCard, null),
+            );
         }
     }
 

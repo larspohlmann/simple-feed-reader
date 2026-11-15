@@ -444,7 +444,7 @@ final class EntryLineTest extends TestCase
             'hi',
             [],
             new QuotedPostReference('https://bsky.app/profile/n/post/1', 'n'),
-        ));
+        ), null);
 
         self::assertStringContainsString(
             '"shareKind":"quote","quote":{"url":"https://bsky.app/profile/q/post/3k","authorName":"Q",'
@@ -459,6 +459,7 @@ final class EntryLineTest extends TestCase
         $entry = BackupLineRecords::entry();
         $entry->shareQuotedPost(
             new QuotedPostContent('https://bsky.app/profile/q/post/3k', 'Q', 'q', null, null, 'hi', [], null),
+            null,
         );
 
         $line = json_decode(

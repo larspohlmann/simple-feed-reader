@@ -14,6 +14,7 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
+use App\Entity\QuotedPostContent;
 use App\Entity\SavedEntryOrigin;
 use App\Entity\SocialLike;
 use App\Entity\Subscription;
@@ -271,6 +272,29 @@ final class SavedPostRepositoryTest extends DbTestCase
             ),
         );
         self::assertEquals(1, $this->entityManager->getConnection()->fetchOne('SELECT COUNT(*) FROM shared_link'));
+    }
+
+    public function testACopiedQuoteKeepsItsLink(): void
+    {
+        $source = $this->subscribedFeed('https://quote-link.example/feed.xml');
+        $saved = $this->savedFeed();
+        $entry = $this->entry($source, 'quoting', 'https://quote-link.example/1');
+        $link = $this->link('https://quoted-card.example/a');
+        $entry->shareQuotedPost(
+            new QuotedPostContent('https://q.example/1', 'Q', 'q.example', null, null, 'text', [], null),
+            $link,
+        );
+        $this->entityManager->flush();
+
+        $copies = $this->repository()->copyInto(new SavedCopyModel($saved->requireId(), null), [$entry->requireId()]);
+
+        self::assertEquals(
+            $link->requireId(),
+            $this->entityManager->getConnection()->fetchOne(
+                'SELECT quoted_shared_link_id FROM entry WHERE id = ?',
+                [$copies[$entry->requireId()]],
+            ),
+        );
     }
 
     public function testACopyCarriesItsSelfReplyThreadWithEachReplysCard(): void

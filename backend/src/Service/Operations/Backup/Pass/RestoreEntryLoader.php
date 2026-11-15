@@ -180,7 +180,7 @@ final class RestoreEntryLoader
 
         try {
             $linkIdsByUrl = $this->linkWriter->idsFor(self::cardsOf($fresh));
-            $this->inserter->insert($target->feedId, $fresh);
+            $this->inserter->insert($target->feedId, $fresh, $linkIdsByUrl);
             $createdIds = $this->recordCreatedIds($target, $fresh);
             $this->inserter->insertLinkCards($createdIds, $fresh, $linkIdsByUrl);
             $this->inserter->insertOrigins($createdIds, $fresh, $this->bufferedFeedUrl);
@@ -194,11 +194,17 @@ final class RestoreEntryLoader
     /**
      * @param list<EntryLine> $lines
      *
-     * @return list<LinkCardContent>
+     * @return list<LinkCardContent> every root card and quoted card of the lines
      */
     private static function cardsOf(array $lines): array
     {
-        return array_merge(...array_map(static fn (EntryLine $line): array => $line->linkCards, $lines));
+        return array_merge(...array_map(
+            static fn (EntryLine $line): array => [
+                ...$line->linkCards,
+                ...($line->quote?->linkCard === null ? [] : [$line->quote->linkCard]),
+            ],
+            $lines,
+        ));
     }
 
     /**

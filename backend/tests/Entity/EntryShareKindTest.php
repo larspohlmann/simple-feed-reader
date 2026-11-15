@@ -7,7 +7,9 @@ namespace App\Tests\Entity;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Headline;
+use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
+use App\Entity\SharedLink;
 use App\Enum\ShareKind;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -60,7 +62,7 @@ final class EntryShareKindTest extends TestCase
     public function testReclassifyingAQuoteAsAnythingElseDropsTheQuotedPost(?ShareKind $kind): void
     {
         $entry = self::entry();
-        $entry->shareQuotedPost(self::quote());
+        $entry->shareQuotedPost(self::quote(), null);
 
         $entry->setShareKind($kind);
 
@@ -71,11 +73,71 @@ final class EntryShareKindTest extends TestCase
     public function testClassifyingAsQuoteKeepsTheQuotedPost(): void
     {
         $entry = self::entry();
-        $entry->shareQuotedPost(self::quote());
+        $entry->shareQuotedPost(self::quote(), null);
 
         $entry->setShareKind(ShareKind::Quote);
 
         self::assertNotNull($entry->getQuotedPost());
+    }
+
+    public function testAQuotePostShowsItsLinksPreview(): void
+    {
+        $entry = self::entry();
+        $preview = new LinkCardContent('https://n.example/s', 'Story', 'D', 'https://n.example/s.jpg', 'n.example');
+
+        $entry->shareQuotedPost(self::quote(), self::link($preview));
+
+        self::assertEquals($preview, $entry->getQuotedPost()?->linkCard);
+        self::assertSame('https://a.example/1', $entry->getQuotedPost()?->url);
+    }
+
+    public function testAQuoteWithoutALinkShowsNoCard(): void
+    {
+        $entry = self::entry();
+
+        $entry->shareQuotedPost(self::quote(), null);
+
+        self::assertNotNull($entry->getQuotedPost());
+        self::assertNull($entry->getQuotedPost()->linkCard);
+    }
+
+    public function testAQuotesOwnCardIsNotStored(): void
+    {
+        $entry = self::entry();
+        $card = new LinkCardContent('https://own.example/', 'Own', null, null, 'own.example');
+
+        $entry->shareQuotedPost(self::quote()->withLinkCard($card), null);
+
+        self::assertNull($entry->getQuotedPost()?->linkCard);
+    }
+
+    #[DataProvider('kindsOtherThanQuote')]
+    public function testReclassifyingAQuoteDropsItsLink(?ShareKind $kind): void
+    {
+        $entry = self::entry();
+        $link = self::link(new LinkCardContent('https://n.example/s', 'S', null, null, 'n'));
+        $entry->shareQuotedPost(self::quote(), $link);
+
+        $entry->setShareKind($kind);
+        $entry->setShareKind(ShareKind::Quote);
+
+        self::assertNull($entry->getQuotedLink());
+    }
+
+    public function testClassifyingAsQuoteKeepsItsLink(): void
+    {
+        $entry = self::entry();
+        $link = self::link(new LinkCardContent('https://n.example/s', 'S', null, null, 'n'));
+        $entry->shareQuotedPost(self::quote(), $link);
+
+        $entry->setShareKind(ShareKind::Quote);
+
+        self::assertSame($link, $entry->getQuotedLink());
+    }
+
+    private static function link(LinkCardContent $preview): SharedLink
+    {
+        return new SharedLink('hash', $preview, null, new \DateTimeImmutable('2026-11-15 10:00:00'));
     }
 
     private static function quote(): QuotedPostContent
