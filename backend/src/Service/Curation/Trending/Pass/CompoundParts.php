@@ -19,11 +19,11 @@ final class CompoundParts
     /** @var array<int, array<int, true>> stem id => the entries holding it only as a part of their compounds */
     private array $partOnlyHoldersOf = [];
 
-    /** @param list<int> $partStemIds */
+    /** @param non-empty-list<int> $partStemIds */
     public function addCompound(int $compoundStemId, array $partStemIds): void
     {
+        $this->compoundStems[$compoundStemId] = true;
         foreach ($partStemIds as $partStemId) {
-            $this->compoundStems[$compoundStemId] = true;
             $this->compoundsWithPart[$partStemId][$compoundStemId] = true;
         }
     }

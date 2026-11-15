@@ -156,8 +156,6 @@ final class CompoundPartsTest extends TestCase
 
     public function testAStemIsACompoundOnceAWordGivesItParts(): void
     {
-        $this->compoundParts->addCompound(self::STATION, []);
-
         self::assertTrue($this->compoundParts->isCompound(self::POLICE_OPERATION));
         self::assertFalse($this->compoundParts->isCompound(self::STATION));
     }

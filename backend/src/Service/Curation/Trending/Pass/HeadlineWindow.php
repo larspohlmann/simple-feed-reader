@@ -180,14 +180,14 @@ final class HeadlineWindow
         $this->stemIdByWord[$key] = $ids[0];
         if ($partIds !== []) {
             $this->partStemIdsByWord[$key] = $partIds;
+            $this->addCompound($ids[0], $partIds);
         }
-        $this->addCompound($ids[0], $partIds);
     }
 
-    /** @param list<int> $partStemIds */
+    /** @param non-empty-list<int> $partStemIds */
     private function addCompound(int $compoundStemId, array $partStemIds): void
     {
-        if ($partStemIds !== [] && !$this->compoundParts->isCompound($compoundStemId)) {
+        if (!$this->compoundParts->isCompound($compoundStemId)) {
             $headlineHolders = $this->headlinePostings[$compoundStemId] ?? [];
             $bodyHolders = $this->bodyPostings[$compoundStemId] ?? [];
             $this->compoundParts->holdCompoundIn($compoundStemId, $headlineHolders, self::HEADLINE_WEIGHT);
