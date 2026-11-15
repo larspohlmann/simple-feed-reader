@@ -19,7 +19,10 @@ final class EntryStemIdsModelTest extends TestCase
 
     public function testAStemIsAPartOnlyWhereNoWordOfEitherTextHoldsIt(): void
     {
-        $stems = EntryStemIdsModel::of([1 => true, 2 => false, 3 => false], [2 => true, 4 => false, 3 => false]);
+        $headline = [1 => true, 2 => false, 3 => false];
+        $body = [1 => false, 2 => true, 4 => false, 3 => false];
+
+        $stems = EntryStemIdsModel::of($headline, $body);
 
         self::assertSame([3, 4], $stems->partOnlyIds);
     }
