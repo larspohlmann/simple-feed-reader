@@ -1556,7 +1556,7 @@ boxes tile edge to edge — a tap on the star must never land on keep.
 ### `<app-more-sources>`
 
 A magazine card's footer slot. A Trending story's other outlets (#2036) get one accent line,
-"x more sources", that opens in place into a stack of full-width mini cards (#2055) — a smaller
+"x more articles" (#2229), that opens in place into a stack of full-width mini cards (#2055) — a smaller
 compact card on `--surface-sunken`: the copy's picture at `--mini-card-thumb-w`, 104 / 68, from
 the smallest rendition covering 104px (else, or when the picture fails to load, its favicon
 centred on `--surface-1` in the same box, #2058), a byline of favicon, feed and relative

@@ -72,8 +72,8 @@ describe('i18n dictionaries', () => {
     const labels = [
       'reader.trendingSources',
       'reader.alsoCoveredBy',
-      'reader.moreSources',
-      'reader.moreSourcesOne',
+      'reader.moreArticles',
+      'reader.moreArticlesOne',
       'reader.hideStory',
       'reader.trendingShares',
       'reader.trendingSharesOne',

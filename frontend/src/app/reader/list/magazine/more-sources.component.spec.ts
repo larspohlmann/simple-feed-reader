@@ -68,6 +68,14 @@ it('counts the other sources on one collapsed line', () => {
   expect(element.querySelector('.mini')).toBeNull();
 });
 
+it("counts a story's other articles, not its sources, on the toggle", () => {
+  expect(mount(storyOf(copies)).querySelector('.toggle')!.textContent).toContain('2 more articles');
+});
+
+it('counts a single other article in the singular', () => {
+  expect(mount(storyOf([copies[0]])).querySelector('.toggle')!.textContent).toContain('1 more article');
+});
+
 it('expands to one mini card per source, naming its feed and title', () => {
   const element = mount(storyOf(copies));
   expand(element);

@@ -48,7 +48,7 @@ export class MoreSourcesComponent {
 
   protected readonly copies = computed(() => this.entry().duplicates ?? []);
   protected readonly countKey = computed(() =>
-    this.copies().length === 1 ? 'reader.moreSourcesOne' : 'reader.moreSources',
+    this.copies().length === 1 ? 'reader.moreArticlesOne' : 'reader.moreArticles',
   );
   protected readonly thumbSizes = MINI_CARD_THUMB_SIZES;
   private readonly brokenThumbs = linkedSignal<readonly EntryDto[], ReadonlySet<number>>({
