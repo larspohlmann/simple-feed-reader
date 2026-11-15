@@ -42,6 +42,23 @@ final class SharedLinkTest extends TestCase
         );
     }
 
+    public function testARefreshReplacesAnImageAndDescriptionThePageDeclares(): void
+    {
+        $link = new SharedLink(
+            'hash',
+            new LinkCardContent('https://example.com/a', 'First', 'Said first', 'https://cdn.example/t.jpg', 'Ex'),
+            null,
+            new \DateTimeImmutable('2026-11-15 10:00:00'),
+        );
+
+        $link->refresh(
+            new LinkCardContent('https://example.com/a', 'Fresh', 'Said now', 'https://cdn.example/n.jpg', 'Ex'),
+        );
+
+        self::assertSame('Said now', $link->preview()->description);
+        self::assertSame('https://cdn.example/n.jpg', $link->preview()->imageUrl);
+    }
+
     public function testAStatedLanguageReplacesAGuessedOne(): void
     {
         $link = self::link(LinkLanguage::guessed(FeedLanguage::German));
