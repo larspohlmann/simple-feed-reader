@@ -376,7 +376,11 @@ describe('ReaderShellComponent', () => {
       navigate.mock.calls
         .filter(([, extras]) => extras?.replaceUrl === true)
         .map(([, extras]) => extras.queryParams);
-    const story = () => ({ ...entry, id: 77, story: { outletCount: 3, viewed: false, shareCount: 0 } });
+    const story = () => ({
+      ...entry,
+      id: 77,
+      story: { outletCount: 3, viewed: false, shareCount: 0 },
+    });
     const hideButtons = (fixture: { nativeElement: HTMLElement }) =>
       fixture.nativeElement.querySelectorAll('button[aria-label="Hide story"]');
 

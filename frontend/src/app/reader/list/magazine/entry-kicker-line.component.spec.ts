@@ -123,7 +123,8 @@ describe('EntryKickerLineComponent', () => {
   });
 
   describe('on a Trending lead (#2017)', () => {
-    const lead = (viewed = false) => entry({ isHidden: false, story: { outletCount: 7, viewed, shareCount: 0 } });
+    const lead = (viewed = false) =>
+      entry({ isHidden: false, story: { outletCount: 7, viewed, shareCount: 0 } });
 
     it('names how many feeds covered the story', () => {
       expect(mount(lead()).querySelector('.sources')?.textContent?.trim()).toBe('7 sources');
