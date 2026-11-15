@@ -66,4 +66,17 @@ describe('i18n dictionaries', () => {
   it('cover every language the app offers', () => {
     expect(Object.keys(dictionaries)).toEqual([...LANGS]);
   });
+
+  it.each(['de', 'en', 'fr', 'es'])('label a Trending story and its sources in %s', (lang) => {
+    const values = new Map(flatten(dictionaries[lang]));
+    const labels = [
+      'reader.trendingSources',
+      'reader.alsoCoveredBy',
+      'reader.moreSources',
+      'reader.moreSourcesOne',
+      'reader.hideStory',
+    ].filter((key) => String(values.get(key) ?? '').trim() !== '');
+
+    expect(labels).toHaveLength(5);
+  });
 });

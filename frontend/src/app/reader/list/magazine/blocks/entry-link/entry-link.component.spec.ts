@@ -182,4 +182,29 @@ describe('EntryLinkComponent', () => {
     expect(navigation.openAlone).toHaveBeenCalledWith(testEntry.linkCards[0]);
     expect(entryActions.open).not.toHaveBeenCalled();
   });
+
+  it('leads a Trending story with the post, its card, the sources line and the posters of the rest', () => {
+    const other = (id: number, name: string): EntryDto =>
+      entry({ id, source: 'Home@bsky', poster: { name, url: null, imageUrl: null } });
+    const fixture = mount(
+      entry({
+        poster: { name: 'Ann', url: null, imageUrl: null },
+        linkCards: [card()],
+        duplicates: [other(2, 'Ben'), other(3, 'Cat'), other(4, 'Dan')],
+        story: { outletCount: 4, viewed: false },
+      }),
+    );
+    const element = fixture.nativeElement as HTMLElement;
+
+    expect(element.querySelector('.title')!.textContent).toContain('Worth a read, this one.');
+    expect(element.querySelector('app-link-card strong')!.textContent).toContain('A shared story');
+    expect(element.querySelector('app-link-card small')!.textContent).toContain('news.test');
+    expect(element.querySelector('app-story-source-count')!.textContent).toContain('4 sources');
+    element.querySelector<HTMLButtonElement>('app-more-sources .toggle')!.click();
+    fixture.detectChanges();
+    const feeds = [...element.querySelectorAll('app-more-sources .mini .feed')].map((feed) =>
+      feed.textContent!.trim(),
+    );
+    expect(feeds).toEqual(['Ben', 'Cat', 'Dan']);
+  });
 });

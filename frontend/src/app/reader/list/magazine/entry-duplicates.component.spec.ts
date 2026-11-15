@@ -111,6 +111,20 @@ it('names a duplicate by its feed, not by the poster', () => {
   expect(chip.textContent).not.toContain('Bob');
 });
 
+it("names a Trending story's post by its poster, not by the timeline holding it", () => {
+  const dup = entry({
+    id: 2,
+    source: 'Home@bsky',
+    poster: { name: 'Bob', url: null, imageUrl: null },
+  });
+  const element = mount(entry({ duplicates: [dup], story: { outletCount: 2, viewed: false } }))
+    .nativeElement as HTMLElement;
+  const chip = element.querySelector('.also-entry')!;
+
+  expect(chip.textContent).toContain('Bob');
+  expect(chip.textContent).not.toContain('Home@bsky');
+});
+
 it('opens a popover with the copy card and re-emits open for that copy', () => {
   const dup = entry({ id: 2, title: 'NDR wording', source: 'NDR SH' });
   const fixture = mount(entry({ duplicates: [dup] }));
