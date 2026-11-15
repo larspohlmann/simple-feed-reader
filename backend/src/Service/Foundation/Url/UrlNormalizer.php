@@ -4,15 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Foundation\Url;
 
+use App\Service\Foundation\Url\Support\TrackingFreeUrl;
 use App\Service\Foundation\Url\Support\UrlOrigin;
 
 /** Keeps the path and every non-tracking parameter verbatim: two articles differing by `?id=` must never collapse. */
 final readonly class UrlNormalizer
 {
-    /** Query keys, or key prefixes, that never identify the article itself. */
-    private const array TRACKING_PREFIXES = ['utm_', 'at_', 'wt_'];
-    private const array TRACKING_KEYS = ['fbclid', 'gclid'];
-
     public function normalize(?string $url): ?string
     {
         if ($url === null || $url === '') {
@@ -33,13 +30,14 @@ final readonly class UrlNormalizer
         return $canonical;
     }
 
-    /** The address as a reader shares it: tracking parameters drop, the fragment stays. */
+    /** The address as a reader shares it: tracking parameters drop, a navigation fragment stays. */
     public function withoutTracking(?string $url): ?string
     {
-        $normalized = $this->normalize($url);
-        $fragment = parse_url((string) $url, \PHP_URL_FRAGMENT);
+        if ($url === null || $this->normalize($url) === null) {
+            return null;
+        }
 
-        return null === $normalized || !is_string($fragment) ? $normalized : $normalized . '#' . $fragment;
+        return TrackingFreeUrl::of($url);
     }
 
     /** Every writer of an article's identity hashes here: a divergence of one byte silently stops dedupe. */
@@ -65,28 +63,8 @@ final readonly class UrlNormalizer
             return '';
         }
 
-        $kept = array_filter(
-            explode('&', $query),
-            fn (string $pair): bool => !$this->isTracking($pair),
-        );
+        $kept = TrackingFreeUrl::query($query);
 
-        return $kept === [] ? '' : '?' . implode('&', $kept);
-    }
-
-    private function isTracking(string $pair): bool
-    {
-        $key = strtolower(explode('=', $pair, 2)[0]);
-
-        if (in_array($key, self::TRACKING_KEYS, true)) {
-            return true;
-        }
-
-        foreach (self::TRACKING_PREFIXES as $prefix) {
-            if (str_starts_with($key, $prefix)) {
-                return true;
-            }
-        }
-
-        return false;
+        return $kept === '' ? '' : '?' . $kept;
     }
 }
