@@ -135,7 +135,6 @@ final readonly class TrendingFixtures
             $window,
             new \DateTimeImmutable('2031-05-14 00:00:00'),
             new \DateTimeImmutable($lastSeen),
-            \count($members),
         );
         $this->entityManager->persist($story);
         foreach ($members as [$member, $articleSite]) {

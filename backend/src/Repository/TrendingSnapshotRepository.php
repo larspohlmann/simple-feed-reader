@@ -83,7 +83,6 @@ final class TrendingSnapshotRepository extends ServiceEntityRepository
             'time_window' => $window->value,
             'first_seen' => $story->firstSeen->format('Y-m-d H:i:s'),
             'last_seen' => $story->lastSeen->format('Y-m-d H:i:s'),
-            'outlet_count' => $story->outletCount(),
         ]);
         $storyId = (int) $connection->lastInsertId();
         BulkInsert::into(

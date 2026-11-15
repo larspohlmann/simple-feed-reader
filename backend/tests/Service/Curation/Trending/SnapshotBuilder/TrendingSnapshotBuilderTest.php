@@ -44,7 +44,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         self::assertSame(4, $report->entryCount, 'the entry a second before the window is not read');
         self::assertSame(1, $report->storyCount);
         self::assertSame(
-            [['outlet_count' => 3, 'first_seen' => '2031-05-14 08:00:00', 'last_seen' => '2031-05-14 10:00:00']],
+            [['first_seen' => '2031-05-14 08:00:00', 'last_seen' => '2031-05-14 10:00:00']],
             $this->storedStories(TrendingWindow::Day),
         );
         self::assertSame(3, $this->memberCount());
@@ -172,15 +172,9 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
     /** @return list<array<string, mixed>> */
     private function storedStories(TrendingWindow $window): array
     {
-        /** @var list<array{outlet_count: int|string, first_seen: string, last_seen: string}> $rows */
-        $rows = $this->entityManager->getConnection()->fetchAllAssociative(
-            'SELECT outlet_count, first_seen, last_seen FROM trending_story WHERE time_window = ?',
+        return $this->entityManager->getConnection()->fetchAllAssociative(
+            'SELECT first_seen, last_seen FROM trending_story WHERE time_window = ?',
             [$window->value],
-        );
-
-        return array_map(
-            static fn (array $row): array => ['outlet_count' => (int) $row['outlet_count']] + $row,
-            $rows,
         );
     }
 

@@ -91,7 +91,7 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
         self::assertSame(301, $this->memberCount());
     }
 
-    public function testAStoryRowCarriesItsDistinctFeedCountAndBounds(): void
+    public function testAStoryRowCarriesItsBounds(): void
     {
         [$one, $two] = $this->twoEntries();
         $story = new TrendingStoryModel(
@@ -103,9 +103,8 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
         $this->replace(self::report(TrendingWindow::Day, 1), [$story]);
 
         $row = $this->entityManager->getConnection()
-            ->fetchAssociative('SELECT outlet_count, first_seen, last_seen FROM trending_story');
+            ->fetchAssociative('SELECT first_seen, last_seen FROM trending_story');
         self::assertIsArray($row);
-        self::assertEquals(1, $row['outlet_count']);
         self::assertSame('2031-05-14 08:00:00', $row['first_seen']);
         self::assertSame('2031-05-14 09:00:00', $row['last_seen']);
     }
