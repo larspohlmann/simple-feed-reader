@@ -12,12 +12,8 @@ final readonly class UrlNormalizer
 {
     public function normalize(?string $url): ?string
     {
-        if ($url === null || $url === '') {
-            return null;
-        }
-
-        $parts = parse_url($url);
-        if ($parts === false || !isset($parts['scheme'], $parts['host'])) {
+        $parts = $url === null ? null : self::absoluteParts($url);
+        if ($parts === null) {
             return null;
         }
 
@@ -33,11 +29,7 @@ final readonly class UrlNormalizer
     /** The address as a reader shares it: tracking parameters drop, a navigation fragment stays. */
     public function withoutTracking(?string $url): ?string
     {
-        if ($url === null || $this->normalize($url) === null) {
-            return null;
-        }
-
-        return TrackingFreeUrl::of($url);
+        return $url === null || self::absoluteParts($url) === null ? null : TrackingFreeUrl::of($url);
     }
 
     /** Every writer of an article's identity hashes here: a divergence of one byte silently stops dedupe. */
@@ -46,6 +38,17 @@ final readonly class UrlNormalizer
         $normalized = $this->normalize($url);
 
         return $normalized === null ? null : hash('sha256', $normalized);
+    }
+
+    /** @return ?array{scheme: string, host: string, port?: int, path?: string, query?: string} */
+    private static function absoluteParts(string $url): ?array
+    {
+        $parts = parse_url($url);
+        if ($parts === false || !isset($parts['scheme'], $parts['host'])) {
+            return null;
+        }
+
+        return $parts;
     }
 
     private function port(string $scheme, ?int $port): string

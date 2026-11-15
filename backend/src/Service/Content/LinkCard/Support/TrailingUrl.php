@@ -42,7 +42,7 @@ final class TrailingUrl
         if (str_ends_with($text, $url)) {
             return $url;
         }
-        $lastWord = (string) preg_replace('/^.*\s/su', '', $text);
+        $lastWord = preg_match('/\S+\z/u', $text, $match) === 1 ? $match[0] : '';
 
         return $lastWord !== '' && TrackingFreeUrl::of($lastWord) === TrackingFreeUrl::of($url) ? $lastWord : null;
     }
