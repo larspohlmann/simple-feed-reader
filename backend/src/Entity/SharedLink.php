@@ -102,9 +102,12 @@ final class SharedLink
         $this->siteName = $preview->siteName;
     }
 
+    /** A stated language is never replaced, and a guess replaces nothing set; a statement replaces a guess. */
     public function settleLanguage(LinkLanguage $language): void
     {
-        if ($this->language !== null) {
+        $replacesAGuess = $this->languageSource === LanguageSource::Guessed
+            && $language->source === LanguageSource::Stated;
+        if ($this->language !== null && !$replacesAGuess) {
             return;
         }
         $this->language = $language->language;

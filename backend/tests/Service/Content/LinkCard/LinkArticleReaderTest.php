@@ -70,16 +70,37 @@ final class LinkArticleReaderTest extends DbTestCase
         self::assertSame(LanguageSource::Stated, $this->storedRow()->getLanguageSource());
     }
 
-    public function testASetLanguageIsKept(): void
+    public function testAStatedTagReplacesAGuessedLanguage(): void
     {
-        $this->storeRow(LinkLanguage::guessed(FeedLanguage::German));
+        $this->storeRow(LinkLanguage::guessed(FeedLanguage::French));
+        $this->extractor->willReturn(self::ok(self::preview('Fresh', FeedLanguage::English)));
+
+        $this->reader()->extract(self::URL);
+
+        self::assertSame(FeedLanguage::English, $this->storedRow()->getLanguage());
+        self::assertSame(LanguageSource::Stated, $this->storedRow()->getLanguageSource());
+        self::assertSame('Fresh', $this->storedRow()->preview()->title);
+    }
+
+    public function testAStatedLanguageIsKept(): void
+    {
+        $this->storeRow(LinkLanguage::stated(FeedLanguage::German));
         $this->extractor->willReturn(self::ok(self::preview('Fresh', FeedLanguage::English)));
 
         $this->reader()->extract(self::URL);
 
         self::assertSame(FeedLanguage::German, $this->storedRow()->getLanguage());
+    }
+
+    public function testAGuessedLanguageIsKeptWhenThePageStatesNone(): void
+    {
+        $this->storeRow(LinkLanguage::guessed(FeedLanguage::German));
+        $this->extractor->willReturn(self::ok(self::preview('Fresh', null)));
+
+        $this->reader()->extract(self::URL);
+
+        self::assertSame(FeedLanguage::German, $this->storedRow()->getLanguage());
         self::assertSame(LanguageSource::Guessed, $this->storedRow()->getLanguageSource());
-        self::assertSame('Fresh', $this->storedRow()->preview()->title);
     }
 
     public function testAFailedExtractionChangesNothing(): void

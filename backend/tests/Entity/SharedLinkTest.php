@@ -25,14 +25,34 @@ final class SharedLinkTest extends TestCase
         );
     }
 
-    public function testALanguageIsSettledOnce(): void
+    public function testAStatedLanguageReplacesAGuessedOne(): void
     {
         $link = self::link(LinkLanguage::guessed(FeedLanguage::German));
 
         $link->settleLanguage(LinkLanguage::stated(FeedLanguage::English));
 
+        self::assertSame(FeedLanguage::English, $link->getLanguage());
+        self::assertSame(LanguageSource::Stated, $link->getLanguageSource());
+    }
+
+    public function testAStatedLanguageIsNeverReplaced(): void
+    {
+        $link = self::link(LinkLanguage::stated(FeedLanguage::French));
+
+        $link->settleLanguage(LinkLanguage::stated(FeedLanguage::Spanish));
+        $link->settleLanguage(LinkLanguage::guessed(FeedLanguage::German));
+
+        self::assertSame(FeedLanguage::French, $link->getLanguage());
+        self::assertSame(LanguageSource::Stated, $link->getLanguageSource());
+    }
+
+    public function testAGuessNeverReplacesAGuess(): void
+    {
+        $link = self::link(LinkLanguage::guessed(FeedLanguage::German));
+
+        $link->settleLanguage(LinkLanguage::guessed(FeedLanguage::English));
+
         self::assertSame(FeedLanguage::German, $link->getLanguage());
-        self::assertSame(LanguageSource::Guessed, $link->getLanguageSource());
     }
 
     public function testAnUnsetLanguageIsSettled(): void

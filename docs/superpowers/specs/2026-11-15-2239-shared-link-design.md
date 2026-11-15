@@ -23,8 +23,8 @@ we don't need that extra check when i open a link".
 - G2. Every path that writes a card goes through one service, `SharedLinkWriter`. It finds the row or creates it with
   that card's preview, and it never rewrites an existing row's preview.
 - G3. The share sweep reads no page for a post link that already has a row.
-- G4. The signed link reader refreshes the row's preview, and an unset language, from the page it fetched.
-- G5. Language is set once per URL: a language the page states, else the #2229 guess for a text of 150 characters
+- G4. The signed link reader refreshes the row's preview, and an unset or guessed language, from the page it fetched.
+- G5. Language per URL: a language the page states (never replaced; it replaces a guess), else the #2229 guess for a text of 150 characters
   or more, else `null`. Trending reads the stored value and guesses only for a row that has none.
 - G6. Trending's snapshot records each member's `shared_link`, so `TrendingStories` stops hashing card URLs per
   request.
@@ -38,7 +38,8 @@ we don't need that extra check when i open a link".
 - **A new backup line type.** The card stays embedded in its entry line (D10).
 - **Stored declared media.** A titled share's page is still read, because its declared video or photo is not stored
   (D3).
-- **Rewriting a stored language.** A set language is never changed: not by a later card, not by the refresh.
+- **Rewriting a stated language.** A stated language is never changed, and a guess never replaces a set language. A
+  stated tag replaces a guessed one (D5, ruling of the final review).
 - **Any client change**, apart from deleting the card branch of `withoutBareUrl` (D13).
 - **Reusing rows when the reader composes a share** (`SharedPageCards`), and the Mastodon card's own `language` field.
   Both are costed under *Optional scope*.
@@ -388,12 +389,16 @@ Lars delegated every decision. Each is "what — why — cost if wrong".
   embeddable cannot map an association. A quoted card as a `link_card` row would need a role column and a filter in
   five readers. — If wrong: a list page lazy-loads one `SharedLink` per quote post with a card (199 of 751 quotes on
   dev). That is one query each.
-- **D5. Language: the page's stated tag, else the four-language guess on 150 characters or more, else null; set once;
-  `language_source` stored.** — This follows the issue's rule. #2235 M3 found short fr/es guesses 71–88 % wrong and
+- **D5. Language: the page's stated tag, else the four-language guess on 150 characters or more, else null; a statement
+  replaces a guess, nothing replaces a statement; `language_source` stored.** — This follows the issue's rule. #2235 M3 found short fr/es guesses 71–88 % wrong and
   long ones 88–96 % right. `<html lang>` is the cheap stated source on every page we read. The source column lets a
   later re-guess leave stated rows alone and lets the measurement split accuracy by source. — If wrong: a template
   default `lang="en"` on a German site sets English for good; the eye check samples stated rows that differ from the
   guess.
+- **D5 ruling (final review, 2026-11-15).** The issue says "a language the source states wins". So a stated
+  language replaces a guessed one, a stated one is never replaced, and a guess never replaces anything set
+  (`SharedLink::settleLanguage`). The link reader's stated `<html lang>` therefore fixes a wrong guess when the
+  article is opened; the measured French and Spanish misses (Outcome) are exactly where it differed, 4 of 4 right.
 - **D6. Trending reads the stored language, with `CardLanguage` unchanged as the fallback.** — Identical output for
   every guessed row (Design, Readers). The only movers are the merge and stated rows, so the A/B isolates them. — If
   wrong: none for guessed rows.
@@ -542,7 +547,7 @@ as develop's per-rebuild guess (#2229, #2235 M3), now stored once.
 the known cluster): 3 fetches failed. de 9/9 agree; en 8 agree, 1 none (YouTube); es 6 agree, 3 none (Catalan,
 Indonesian, a `.md` homepage); fr 4 agree, **4 differ, and in all 4 the stated tag is right** (en ×2, de ×2: TechCrunch,
 Washington Examiner, heise ×2). A stated tag fixes exactly the rows the four-language guess gets wrong — but only for a
-row read after the deploy: the fill sets every long existing row, and a set language is never changed (D5).
+row read after the deploy, or a guessed row whose article is opened in the link reader (D5 ruling).
 
 **Merge eye check**, 20 posts whose preview changed by title or description (all 5 French and Spanish ones, 15 drawn at
 random): 18 acceptable, 2 not.
