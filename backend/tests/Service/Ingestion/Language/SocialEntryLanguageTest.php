@@ -204,9 +204,7 @@ final class SocialEntryLanguageTest extends TestCase
 
     private static function languageOf(string $body, ?string $statedLanguage, string $detectorSays): ?FeedLanguage
     {
-        $language = self::reading(StubbedDetector::saying($detectorSays));
-
-        return $language->of(self::entry('…', $body, $statedLanguage));
+        return self::reading(StubbedDetector::saying($detectorSays))->of(self::entry('…', $body, $statedLanguage));
     }
 
     private static function entry(
