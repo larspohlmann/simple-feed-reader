@@ -303,7 +303,7 @@ final class TrendingStoriesTest extends DbTestCase
         self::assertSame([], $this->rankedDayStoryIdsOf($this->reader));
     }
 
-    public function testEverySocialPostCountsEvenWhereTwoAccountsCarryTheSameOne(): void
+    public function testOnePostCarriedByTwoSocialFeedsCountsOnce(): void
     {
         [$alpha, $beta] = $this->articleFeeds('alpha', 'beta');
         $socials = [
@@ -323,7 +323,7 @@ final class TrendingStoriesTest extends DbTestCase
 
         $ranked = $this->rankedDay();
 
-        self::assertSame([4], self::outletCountsOf($ranked));
+        self::assertSame([3], self::outletCountsOf($ranked));
     }
 
     public function testAnEarlierCopyInAFeedTheReaderDoesNotFollowLeavesTheirCopyCounted(): void

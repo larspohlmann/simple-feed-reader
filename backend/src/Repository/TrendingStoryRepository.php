@@ -156,8 +156,8 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     }
 
     /**
-     * The window's stories, counting only feeds the reader follows in Trending and an article URL once, leaving out
-     * any sharing an entry with a story the reader is shown in a shorter window; an `AND` on `story`, then
+     * The window's stories, counting only feeds the reader follows in Trending and an article or a post once,
+     * leaving out any sharing an entry with a story the reader is shown in a shorter window; an `AND` on `story`, then
      * VISIBLE_COVERAGE. An empty id list expands to `IN (NULL)`, which leaves nothing out.
      */
     private static function visibleStories(): string
@@ -179,20 +179,21 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     }
 
     /**
-     * As in DuplicateCollapseDql, only the lowest-id copy of an article the reader can see in the story counts;
-     * the earlier copy must be one of theirs, or the article would count for no feed. Social posts always count.
+     * As in DuplicateCollapseDql, only the lowest-id copy of an article, or of a post in several timelines, that the
+     * reader can see in the story counts; the earlier copy must be one of theirs, or it would count for no feed. An
+     * article and a post never collapse into each other, so a reader's article feed always counts as itself.
      */
     private static function noEarlierCopy(): string
     {
-        return ' AND (member_feed.network IS NOT NULL'
-            . ' OR NOT EXISTS (SELECT 1 FROM trending_story_entry earlier_member'
+        return ' AND NOT EXISTS (SELECT 1 FROM trending_story_entry earlier_member'
             . ' JOIN entry earlier_entry ON earlier_entry.id = earlier_member.entry_id'
-            . ' JOIN feed earlier_feed ON earlier_feed.id = earlier_member.feed_id AND earlier_feed.network IS NULL'
+            . ' JOIN feed earlier_feed ON earlier_feed.id = earlier_member.feed_id'
+            . ' AND (earlier_feed.network IS NULL) = (member_feed.network IS NULL)'
             . ' JOIN subscription earlier_reader'
             . ' ON earlier_reader.feed_id = earlier_member.feed_id AND earlier_reader.user_id = :user'
             . ' AND ' . TrendingInclusionSql::includes('earlier_reader')
             . ' WHERE earlier_member.story_id = story.id AND earlier_member.entry_id < story_member.entry_id'
-            . ' AND earlier_entry.url_hash = member_entry.url_hash))';
+            . ' AND earlier_entry.url_hash = member_entry.url_hash)';
     }
 
     /**

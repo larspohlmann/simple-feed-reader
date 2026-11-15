@@ -22,6 +22,9 @@ use Symfony\Component\Clock\MockClock;
 
 final class TrendingStoryRepositoryTest extends DbTestCase
 {
+    private const string POST = 'https://social.example/@poster/1';
+    private const string OTHER_POST = 'https://social.example/@poster/2';
+
     private TrendingFixtures $fixtures;
     private User $reader;
 
@@ -102,6 +105,54 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         self::assertSame([], $this->stories()->shownEntryIdsByStory($this->reader->requireId(), []));
     }
 
+    public function testThreeTimelineCopiesOfOnePostCountAsOneSource(): void
+    {
+        $story = $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
+            [$this->member($this->articleFeed('alpha')), 'alpha.example'],
+            [$this->member($this->articleFeed('beta')), 'beta.example'],
+            ...$this->copiesOf(self::POST, 'shared.example', 'home', 'discover', 'local'),
+        ]);
+
+        self::assertSame([[$story->requireId(), 3]], $this->shownStoriesAndSources());
+    }
+
+    public function testTwoDifferentPostsStillCountAsTwoSources(): void
+    {
+        $story = $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
+            [$this->member($this->articleFeed('alpha')), 'alpha.example'],
+            [$this->member($this->articleFeed('beta')), 'beta.example'],
+            ...$this->copiesOf(self::POST, 'shared.example', 'home'),
+            ...$this->copiesOf(self::OTHER_POST, 'shared.example', 'discover'),
+        ]);
+
+        self::assertSame([[$story->requireId(), 4]], $this->shownStoriesAndSources());
+    }
+
+    public function testACopyInAFeedTheReaderDoesNotFollowLeavesTheirCopyCounted(): void
+    {
+        $stranger = $this->fixtures->feed('stranger', SocialNetwork::Mastodon);
+        $strangersCopy = $this->fixtures->article($stranger, 'Post', '2031-05-14 08:00:00', self::POST);
+        $story = $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
+            [$strangersCopy, 'shared.example'],
+            [$this->member($this->articleFeed('alpha')), 'alpha.example'],
+            [$this->member($this->articleFeed('beta')), 'beta.example'],
+            ...$this->copiesOf(self::POST, 'shared.example', 'home'),
+        ]);
+
+        self::assertSame([[$story->requireId(), 3]], $this->shownStoriesAndSources());
+    }
+
+    public function testCopiesOfOnePostDoNotLiftAStoryOverTheMinimum(): void
+    {
+        $this->fiveStoriesOfThreeArticleFeeds();
+        $copied = $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 11:00:00', [
+            ...$this->copiesOf(self::POST, 'outlet.example', 'home', 'discover'),
+            ...$this->copiesOf(self::OTHER_POST, 'other.example', 'local'),
+        ]);
+
+        self::assertNotContains($copied->requireId(), $this->shownStoryIds());
+    }
+
     /** @param list<array{Feed, ?string}> $feedsAndSites */
     private function storyOf(array $feedsAndSites): TrendingStory
     {
@@ -109,6 +160,38 @@ final class TrendingStoryRepositoryTest extends DbTestCase
             fn (array $feedAndSite): array => [$this->member($feedAndSite[0]), $feedAndSite[1]],
             $feedsAndSites,
         ));
+    }
+
+    /** @return list<array{Entry, string}> one copy of the post in each named timeline the reader follows */
+    private function copiesOf(string $postUrl, string $site, string ...$timelines): array
+    {
+        return array_values(array_map(
+            fn (string $timeline): array => [
+                $this->fixtures->article($this->socialFeed($timeline), 'Post', '2031-05-14 09:00:00', $postUrl),
+                $site,
+            ],
+            $timelines,
+        ));
+    }
+
+    private function fiveStoriesOfThreeArticleFeeds(): void
+    {
+        $feeds = [$this->articleFeed('alpha'), $this->articleFeed('beta'), $this->articleFeed('gamma')];
+        for ($story = 0; $story < 5; ++$story) {
+            $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', array_map(
+                fn (Feed $feed): array => [$this->member($feed), null],
+                $feeds,
+            ));
+        }
+    }
+
+    /** @return list<array{int, int}> each shown story with its source count */
+    private function shownStoriesAndSources(): array
+    {
+        return array_map(
+            static fn (RankedStoryModel $story): array => [$story->storyId, $story->outletCount],
+            $this->ranked(),
+        );
     }
 
     private function member(Feed $feed): Entry
@@ -135,16 +218,22 @@ final class TrendingStoryRepositoryTest extends DbTestCase
     /** @return list<int> */
     private function shownStoryIds(): array
     {
+        return RankedStoryModel::storyIdsOf($this->ranked());
+    }
+
+    /** @return list<RankedStoryModel> */
+    private function ranked(): array
+    {
         $readerWindows = new ReaderWindows(
             new TrendingEntryRepository($this->entityManager),
             $this->stories(),
             new NaiveUtcClock(new MockClock('2031-05-14 12:00:00', 'UTC')),
         );
 
-        return RankedStoryModel::storyIdsOf($this->stories()->rankedForUser(
+        return $this->stories()->rankedForUser(
             $readerWindows->of($this->reader->requireId(), TrendingWindow::Day),
             TrendingStories::MAX_STORIES,
-        ));
+        );
     }
 
     private function stories(): TrendingStoryRepository
