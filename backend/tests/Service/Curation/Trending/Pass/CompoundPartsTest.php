@@ -128,6 +128,26 @@ final class CompoundPartsTest extends TestCase
         self::assertFalse($this->compoundParts->isOnlyAPartIn(10, self::POLICE_OPERATION));
     }
 
+    public function testAnEntryAddedBeforeItsWordWasFoundACompoundHoldsItOnceTold(): void
+    {
+        $this->compoundParts = new CompoundParts();
+        $policeOperationAndPolice = [self::POLICE_OPERATION, self::POLICE];
+        $this->compoundParts->addEntry(10, $policeOperationAndPolice, $policeOperationAndPolice);
+        $this->compoundParts->addCompound(self::POLICE_OPERATION, [self::POLICE, self::OPERATION]);
+        $this->compoundParts->holdCompoundIn(self::POLICE_OPERATION, [10]);
+        $this->addPoliceOperation(20);
+
+        self::assertSame([], $this->holdersOf(self::POLICE, 20));
+    }
+
+    public function testAStemIsACompoundOnceAWordGivesItParts(): void
+    {
+        $this->compoundParts->addCompound(self::STATION, []);
+
+        self::assertTrue($this->compoundParts->isCompound(self::POLICE_OPERATION));
+        self::assertFalse($this->compoundParts->isCompound(self::STATION));
+    }
+
     private function addPoliceOperation(int $entryId): void
     {
         $this->compoundParts->addEntry(

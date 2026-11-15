@@ -28,6 +28,25 @@ final class CompoundParts
         }
     }
 
+    public function isCompound(int $stemId): bool
+    {
+        return isset($this->compoundStems[$stemId]);
+    }
+
+    /**
+     * For a stem first found a compound after some entries holding it were added.
+     *
+     * @param list<int> $entryIds
+     */
+    public function holdCompoundIn(int $compoundStemId, array $entryIds): void
+    {
+        foreach ($entryIds as $entryId) {
+            if (!$this->isOnlyAPartIn($entryId, $compoundStemId)) {
+                $this->compoundsOf[$entryId][$compoundStemId] = true;
+            }
+        }
+    }
+
     /**
      * @param list<int> $stemIds
      * @param list<int> $wordStemIds the stems of its words themselves, not of their parts

@@ -209,6 +209,22 @@ final class HeadlineWindowTest extends TestCase
         self::assertEqualsWithDelta(self::TWICE, $this->window->sharedWeightsWithEarlier(2)[1], 0.0001);
     }
 
+    public function testAPartRepeatsACompoundTheEarlierEntryHoldsUnsplit(): void
+    {
+        $this->addIn(FeedLanguage::German, 1, 10, 'Rathäuser, Haus');
+        $this->addIn(FeedLanguage::German, 2, 20, 'Rathaus');
+
+        self::assertEqualsWithDelta(self::TWICE, $this->window->sharedWeightsWithEarlier(2)[1], 0.0001, 'rathaus');
+    }
+
+    public function testAPartRepeatsACompoundTheLaterEntryHoldsUnsplit(): void
+    {
+        $this->addIn(FeedLanguage::German, 1, 10, 'Rathaus');
+        $this->addIn(FeedLanguage::German, 2, 20, 'Rathäuser, Haus');
+
+        self::assertEqualsWithDelta(self::TWICE, $this->window->sharedWeightsWithEarlier(2)[1], 0.0001, 'rathaus');
+    }
+
     public function testAPartCountsWhenOneOfItsCompoundsIsNotShared(): void
     {
         $this->addIn(FeedLanguage::German, 1, 10, 'Polizeieinsatz und Feuerwehreinsatz');

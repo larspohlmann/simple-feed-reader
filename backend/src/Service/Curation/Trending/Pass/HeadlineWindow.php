@@ -175,7 +175,17 @@ final class HeadlineWindow
         if ($partIds !== []) {
             $this->partStemIdsByWord[$key] = $partIds;
         }
-        $this->compoundParts->addCompound($ids[0], $partIds);
+        $this->addCompound($ids[0], $partIds);
+    }
+
+    /** @param list<int> $partStemIds */
+    private function addCompound(int $compoundStemId, array $partStemIds): void
+    {
+        if ($partStemIds !== [] && !$this->compoundParts->isCompound($compoundStemId)) {
+            $this->compoundParts->holdCompoundIn($compoundStemId, $this->headlinePostings[$compoundStemId] ?? []);
+            $this->compoundParts->holdCompoundIn($compoundStemId, $this->bodyPostings[$compoundStemId] ?? []);
+        }
+        $this->compoundParts->addCompound($compoundStemId, $partStemIds);
     }
 
     /**
