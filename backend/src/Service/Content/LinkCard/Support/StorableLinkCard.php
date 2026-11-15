@@ -8,10 +8,11 @@ use App\Entity\LinkCardContent;
 use App\Service\Foundation\Text\Support\WordBoundary;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use App\Service\Foundation\Url\Support\HttpsImageUrl;
+use App\Service\Foundation\Url\Support\TrackingFreeUrl;
 
 /**
  * A card as link_card may hold it, whoever made it: none for a blank title or a URL that is no web page or too long
- * to store, and no image unless its URL is https and fits.
+ * to store, its URL without tracking parameters, and no image unless its URL is https and fits.
  */
 final class StorableLinkCard
 {
@@ -24,7 +25,7 @@ final class StorableLinkCard
         }
 
         return new LinkCardContent(
-            $card->url,
+            TrackingFreeUrl::of($card->url),
             mb_substr($card->title, 0, LinkCardContent::TITLE_MAX),
             $card->description === null ? null : WordBoundary::clipped($card->description, self::DESCRIPTION_MAX),
             self::fits((string) $card->imageUrl) ? HttpsImageUrl::orNull($card->imageUrl) : null,

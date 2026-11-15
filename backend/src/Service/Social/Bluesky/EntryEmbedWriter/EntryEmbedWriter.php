@@ -24,6 +24,7 @@ use App\Service\Social\Share\Model\SharedLinksModel;
 use App\Service\Social\Share\Support\SharedLinks;
 use App\Service\Foundation\Sanitize\EntrySanitizer;
 use App\Service\Foundation\Text\Support\HtmlEscape;
+use App\Service\Foundation\Url\Support\TrackingFreeUrl;
 
 final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
 {
@@ -111,7 +112,7 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
         }
         $shared = SharedLinks::of($html);
         $uncarded = $embed->uncardedLink;
-        if ($uncarded === null || \in_array($uncarded, $shared->urls, true)) {
+        if ($uncarded === null || \in_array(TrackingFreeUrl::of($uncarded), $shared->urls, true)) {
             return $shared;
         }
         $escaped = HtmlEscape::text($uncarded);

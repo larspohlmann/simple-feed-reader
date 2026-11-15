@@ -32,6 +32,11 @@ final class TrackingFreeUrl
         return $address . self::queryPart($query) . self::fragmentPart($fragment);
     }
 
+    public static function orNull(?string $url): ?string
+    {
+        return $url === null ? null : self::of($url);
+    }
+
     public static function query(string $query): string
     {
         return implode('&', array_filter(

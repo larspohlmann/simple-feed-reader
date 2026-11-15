@@ -7,6 +7,7 @@ namespace App\Service\Content\LinkCard\Support;
 use App\Service\Foundation\Html\Support\HtmlDocumentParser;
 use App\Service\Foundation\Html\Support\TextNodes;
 use App\Service\Foundation\Text\Support\Whitespace;
+use App\Service\Foundation\Url\Support\TrackingFreeUrl;
 use Dom\Element;
 use Dom\Text;
 
@@ -18,9 +19,10 @@ final class QuoteLine
     public static function removedFrom(string $html, string $url): string
     {
         $document = HtmlDocumentParser::parseFragment($html);
+        $target = TrackingFreeUrl::of($url);
         foreach ($document->querySelectorAll('a[href]') as $anchor) {
             $paragraph = $anchor->closest('p');
-            if ($paragraph === null || $anchor->getAttribute('href') !== $url) {
+            if ($paragraph === null || TrackingFreeUrl::of((string) $anchor->getAttribute('href')) !== $target) {
                 continue;
             }
             $marker = self::markerBefore($anchor, $paragraph);

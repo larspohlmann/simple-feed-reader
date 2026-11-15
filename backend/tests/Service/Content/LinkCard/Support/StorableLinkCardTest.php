@@ -72,6 +72,13 @@ final class StorableLinkCardTest extends TestCase
         self::assertSame(str_repeat('word ', 58) . 'word…', $card?->description);
     }
 
+    public function testTheCardUrlLosesItsTrackers(): void
+    {
+        $card = $this->card(url: 'https://www.heise.de/news/x.html?wt_mc=sm.red&utm_source=mastodon#Echobox=1');
+
+        self::assertSame('https://www.heise.de/news/x.html', StorableLinkCard::of($card)?->url);
+    }
+
     private function card(
         string $url = 'https://example.com/a',
         string $title = 'Title',

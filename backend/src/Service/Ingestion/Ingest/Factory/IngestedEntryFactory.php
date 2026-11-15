@@ -21,6 +21,7 @@ use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Parser\Model\ParsedMediaBundleModel;
 use App\Service\Foundation\Sanitize\EntrySanitizer;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
+use App\Service\Foundation\Url\Support\TrackingFreeUrl;
 
 /** Builds the Entry row for an incoming item, cut to its column limits. It persists nothing. */
 final readonly class IngestedEntryFactory
@@ -41,7 +42,7 @@ final readonly class IngestedEntryFactory
         $entry = new Entry(
             $feed,
             $parsed->guid,
-            self::cut($parsed->url, self::URL_MAX),
+            self::cut(TrackingFreeUrl::orNull($parsed->url), self::URL_MAX),
             $parsed->headline->text,
             $context->fetchedAt,
             EntryEffectiveDate::for($parsed->publishedAt, $context),

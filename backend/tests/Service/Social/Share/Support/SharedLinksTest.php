@@ -110,6 +110,14 @@ final class SharedLinksTest extends TestCase
         self::assertSame($expected, SharedLinks::of($body)->urls);
     }
 
+    public function testASharedUrlIsTrackingFreeAndCountsOnce(): void
+    {
+        $body = '<p><a href="https://example.com/a?utm_source=x">https://example.com/a?utm_source=x</a>'
+            . ' and https://example.com/a</p>';
+
+        self::assertSame(['https://example.com/a'], SharedLinks::of($body)->urls);
+    }
+
     public function testLinksABareUrlAndKeepsPunctuationOutside(): void
     {
         self::assertSame(

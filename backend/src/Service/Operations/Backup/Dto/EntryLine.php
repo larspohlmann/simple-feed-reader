@@ -25,6 +25,7 @@ use App\Service\Operations\Backup\Support\LineFieldWithDefault;
 use App\Service\Content\LinkCard\Support\StorableLinkCard;
 use App\Service\Content\LinkCard\Support\StorableQuotedPost;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
+use App\Service\Foundation\Url\Support\TrackingFreeUrl;
 
 /**
  * One entry belonging to a feed the account subscribes to.
@@ -86,7 +87,7 @@ final readonly class EntryLine
             feedUrl: LineField::string($line, 'feedUrl'),
             guid: LineField::string($line, 'guid'),
             guidHash: LineField::string($line, 'guidHash'),
-            url: LineField::stringOrNull($line, 'url'),
+            url: TrackingFreeUrl::orNull(LineField::stringOrNull($line, 'url')),
             title: LineField::string($line, 'title'),
             author: LineField::stringOrNull($line, 'author'),
             summary: LineField::stringOrNull($line, 'summary'),

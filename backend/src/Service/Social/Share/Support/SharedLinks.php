@@ -10,11 +10,15 @@ use App\Service\Foundation\Html\Support\TextNodes;
 use App\Service\Social\Share\Model\SharedLinksModel;
 use App\Service\Foundation\Text\Support\LinkedPlainText;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
+use App\Service\Foundation\Url\Support\TrackingFreeUrl;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Dom\Text;
 
-/** The links a post shares, a quoted post's included, as opposed to the hashtags, mentions and words that merely link. */
+/**
+ * The links a post shares, a quoted post's included, as opposed to the hashtags, mentions and words that merely link.
+ * Each is tracking-free, the form its card is stored under.
+ */
 final class SharedLinks
 {
     public const int MAX = 5;
@@ -35,7 +39,7 @@ final class SharedLinks
         $urls = [];
         foreach ($document->querySelectorAll('a[href]') as $anchor) {
             if (self::isShare($anchor)) {
-                $urls[] = (string) $anchor->getAttribute('href');
+                $urls[] = TrackingFreeUrl::of((string) $anchor->getAttribute('href'));
             }
         }
 

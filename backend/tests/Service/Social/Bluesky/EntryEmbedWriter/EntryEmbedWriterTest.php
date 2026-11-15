@@ -197,6 +197,41 @@ final class EntryEmbedWriterTest extends DbTestCase
         );
     }
 
+    public function testATrackedLinkCardReplacesItsTrackedTrailingUrl(): void
+    {
+        $tracked = 'https://example.com/story?utm_source=bsky';
+        $entry = $this->entry('<p>Read this.<br />' . $tracked . '</p>');
+
+        $outcome = $this->writer()->fill($entry, JsonNodeModel::of([
+            'uri' => 'at://did:plc:a/app.bsky.feed.post/b',
+            'embed' => [
+                '$type' => 'app.bsky.embed.external#view',
+                'external' => ['uri' => $tracked, 'title' => 'Story'],
+            ],
+        ]));
+        $this->entityManager->flush();
+
+        self::assertSame(FillOutcome::Filled, $outcome);
+        self::assertSame('<p>Read this.</p>', $entry->getText()->getContentHtml());
+        self::assertEquals(
+            [new LinkCardContent('https://example.com/story', 'Story', null, null, 'example.com')],
+            $this->storedCards($entry),
+        );
+    }
+
+    public function testATrackedUntitledLinkAlreadyInTheTextIsNotAppendedAgain(): void
+    {
+        $tracked = 'https://example.com/story?utm_source=bsky';
+        $entry = $this->entry('<p>Read this.<br />' . $tracked . '</p>');
+
+        $this->writer()->fill($entry, JsonNodeModel::of([
+            'uri' => 'at://did:plc:a/app.bsky.feed.post/b',
+            'embed' => ['$type' => 'app.bsky.embed.external#view', 'external' => ['uri' => $tracked]],
+        ]));
+
+        self::assertSame(1, substr_count((string) $entry->getText()->getContentHtml(), '<a '));
+    }
+
     public function testAnUntitledLinkIsLinkedInTheTextAndAwaitsItsCard(): void
     {
         $entry = $this->entry('<p>Read this.<br />https://example.com/story</p>');
