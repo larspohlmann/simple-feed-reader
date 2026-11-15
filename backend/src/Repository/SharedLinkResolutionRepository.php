@@ -36,7 +36,7 @@ final class SharedLinkResolutionRepository extends ServiceEntityRepository
                 . " SELECT id, 'pending', 0 FROM shared_link WHERE url_hash IN (?)",
                 DatabasePlatform::insertIgnoreClause($connection),
             ),
-            [array_values(array_unique($urlHashes))],
+            [$urlHashes],
             [ArrayParameterType::STRING],
         );
     }
@@ -49,7 +49,7 @@ final class SharedLinkResolutionRepository extends ServiceEntityRepository
             'SELECT resolution.shared_link_id, link.url, resolution.attempts FROM shared_link_resolution resolution'
             . ' JOIN shared_link link ON link.id = resolution.shared_link_id'
             . " WHERE resolution.status = 'pending' AND (resolution.retry_at IS NULL OR resolution.retry_at <= ?)"
-            . ' ORDER BY resolution.shared_link_id LIMIT ' . max(0, $limit),
+            . ' ORDER BY resolution.shared_link_id LIMIT ' . $limit,
             [$now->format('Y-m-d H:i:s')],
         );
 
@@ -91,7 +91,7 @@ final class SharedLinkResolutionRepository extends ServiceEntityRepository
         $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
             'SELECT link.id, link.url FROM shared_link link'
             . ' LEFT JOIN shared_link_resolution resolution ON resolution.shared_link_id = link.id'
-            . ' WHERE resolution.shared_link_id IS NULL AND link.id > ? ORDER BY link.id LIMIT ' . max(0, $limit),
+            . ' WHERE resolution.shared_link_id IS NULL AND link.id > ? ORDER BY link.id LIMIT ' . $limit,
             [$afterId],
         );
 

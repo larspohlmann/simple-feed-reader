@@ -53,7 +53,7 @@ final class ResolveSharedLinksCommand extends Command
             $resolutions->unresolved,
             $resolutions->deferred,
             $resolutions->seconds,
-            $resolutions->seconds / max(1, $resolutions->considered),
+            $resolutions->secondsPerLink(),
         );
     }
 }

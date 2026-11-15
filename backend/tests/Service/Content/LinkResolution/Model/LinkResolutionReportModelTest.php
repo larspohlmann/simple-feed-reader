@@ -26,6 +26,23 @@ final class LinkResolutionReportModelTest extends TestCase
         );
     }
 
+    public function testTheLogRoundsSecondsToTheMillisecond(): void
+    {
+        $report = LinkResolutionReportModel::none()->counted(LinkLandingModel::unchanged(), 1.23456);
+
+        self::assertSame(1.235, $report->toLogContext()['seconds']);
+    }
+
+    public function testSecondsPerLinkAveragesTheConsideredLinks(): void
+    {
+        $report = LinkResolutionReportModel::none()
+            ->counted(LinkLandingModel::unchanged(), 1.0)
+            ->counted(LinkLandingModel::unresolved(), 2.0);
+
+        self::assertSame(1.5, $report->secondsPerLink());
+        self::assertSame(0.0, LinkResolutionReportModel::none()->secondsPerLink());
+    }
+
     public function testReportsAddUp(): void
     {
         $first = LinkResolutionReportModel::none()->counted(LinkLandingModel::unchanged(), 1.5);

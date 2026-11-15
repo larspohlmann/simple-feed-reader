@@ -49,6 +49,11 @@ final readonly class LinkResolutionReportModel
         );
     }
 
+    public function secondsPerLink(): float
+    {
+        return $this->considered === 0 ? 0.0 : $this->seconds / $this->considered;
+    }
+
     /**
      * @return array{considered: int, resolved: int, unchanged: int, unresolved: int, deferred: int, seconds: float}
      */
