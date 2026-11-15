@@ -50,7 +50,6 @@ final class TrendingRun
         );
     }
 
-
     /** @return list<int> */
     public function entryIds(): array
     {

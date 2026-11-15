@@ -38,7 +38,7 @@ final class StoryCardSourceTest extends DbTestCase
         $cards = $source->cardsOf([new RankedStoryModel(5, 3, $lastSeen), $wider]);
 
         self::assertCount(1, $cards);
-        self::assertSame($entry, $cards[0]->lead()->entry);
+        self::assertSame($entry, $cards[0]->articles->lead->row->entry);
         self::assertSame($wider, $cards[0]->story);
         self::assertTrue($cards[0]->viewed);
     }

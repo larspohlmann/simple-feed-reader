@@ -30,7 +30,6 @@ final class TrendingStoryRepository extends ServiceEntityRepository
         'shorterWindowStoryIds' => ArrayParameterType::INTEGER,
     ];
 
-
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, TrendingStory::class);

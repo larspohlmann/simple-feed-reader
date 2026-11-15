@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Curation\Trending;
 
+use App\Service\Curation\Trending\Model\StoryArticleModel;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
@@ -70,10 +71,10 @@ final class TrendingStoriesTest extends DbTestCase
         $stories = $this->storiesFor(TrendingWindow::Day);
 
         self::assertCount(1, $stories);
-        self::assertSame($betaPictured->requireId(), $stories[0]->lead()->entry->requireId());
+        self::assertSame($betaPictured->requireId(), $stories[0]->articles->lead->row->entry->requireId());
         self::assertSame(
             [$gammaNewest->requireId(), $alphaNew->requireId(), $alphaOld->requireId()],
-            self::idsOf($stories[0]->lead()->duplicates),
+            self::idsOf(self::otherRowsOf($stories[0])),
         );
         self::assertSame(
             3,
@@ -94,8 +95,8 @@ final class TrendingStoriesTest extends DbTestCase
 
         $stories = $this->storiesFor(TrendingWindow::Day);
 
-        self::assertSame($newest->requireId(), $stories[0]->lead()->entry->requireId());
-        self::assertSame([$middle->requireId(), $older->requireId()], self::idsOf($stories[0]->lead()->duplicates));
+        self::assertSame($newest->requireId(), $stories[0]->articles->lead->row->entry->requireId());
+        self::assertSame([$middle->requireId(), $older->requireId()], self::idsOf(self::otherRowsOf($stories[0])));
     }
 
     public function testTheDayNeedsThreeOfTheReadersFeedsAndRanksWidestThenNewest(): void
@@ -247,13 +248,13 @@ final class TrendingStoriesTest extends DbTestCase
         $stories = $this->storiesFor(TrendingWindow::Day);
 
         self::assertCount(1, $stories);
-        self::assertSame($second->requireId(), $stories[0]->lead()->entry->requireId());
+        self::assertSame($second->requireId(), $stories[0]->articles->lead->row->entry->requireId());
         self::assertSame(
             [$other->requireId(), $third->requireId()],
-            self::idsOf($stories[0]->lead()->duplicates),
+            self::idsOf(self::otherRowsOf($stories[0])),
         );
-        self::assertSame([], $stories[0]->lead()->duplicates[0]->duplicates);
-        self::assertNotContains($first->requireId(), self::idsOf($stories[0]->lead()->duplicates));
+        self::assertSame([], self::otherRowsOf($stories[0])[0]->duplicates);
+        self::assertNotContains($first->requireId(), self::idsOf(self::otherRowsOf($stories[0])));
     }
 
     public function testFeedsCarryingTheSameArticleCountAsOneSource(): void
@@ -360,10 +361,10 @@ final class TrendingStoriesTest extends DbTestCase
 
         $stories = $this->storiesFor(TrendingWindow::Day);
 
-        self::assertSame($lead->requireId(), $stories[0]->lead()->entry->requireId());
+        self::assertSame($lead->requireId(), $stories[0]->articles->lead->row->entry->requireId());
         self::assertSame(
             [$betaEntry->requireId(), $gammaEntry->requireId()],
-            self::idsOf($stories[0]->lead()->duplicates),
+            self::idsOf(self::otherRowsOf($stories[0])),
         );
         self::assertSame(3, $stories[0]->story->outletCount);
     }
@@ -906,7 +907,7 @@ final class TrendingStoriesTest extends DbTestCase
     {
         $storyId = $this->entityManager->getConnection()->fetchOne(
             'SELECT story_id FROM trending_story_entry WHERE entry_id = ?',
-            [$card->lead()->entry->requireId()],
+            [$card->articles->lead->row->entry->requireId()],
         );
 
         self::assertIsNumeric($storyId);
@@ -939,5 +940,14 @@ final class TrendingStoriesTest extends DbTestCase
     private static function idsOf(array $rows): array
     {
         return array_map(static fn (EntryListRow $row): int => $row->entry->requireId(), $rows);
+    }
+
+    /** @return list<EntryListRow> the rows of the card's other articles, as the API lists them */
+    private static function otherRowsOf(TrendingStoryCardModel $card): array
+    {
+        return array_map(
+            static fn (StoryArticleModel $article): EntryListRow => $article->row,
+            $card->articles->others,
+        );
     }
 }

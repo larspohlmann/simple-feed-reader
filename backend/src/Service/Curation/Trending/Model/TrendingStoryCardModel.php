@@ -36,11 +36,6 @@ final readonly class TrendingStoryCardModel
         );
     }
 
-    public function lead(): EntryListRow
-    {
-        return $this->articles->leadRow();
-    }
-
     /**
      * @param non-empty-list<ShownRowModel> $rows
      *

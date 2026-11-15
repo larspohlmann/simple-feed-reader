@@ -74,7 +74,8 @@ final readonly class TrendingEntryRepository
          * @var list<array{
          *   id: int|string, feed_id: int|string, language: string|null, title: string, title_derived: bool|int|string,
          *   summary: string|null, effective_date: string, url_hash: string|null, article_url: string|null,
-     *   card_url: string|null, card_title: string|null, card_description: string|null, card_site_name: string|null
+         *   card_url: string|null, card_title: string|null, card_description: string|null,
+         *   card_site_name: string|null
          * }> $rows
          */
         $rows = $this->entityManager->getConnection()->fetchAllAssociative(

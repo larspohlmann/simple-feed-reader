@@ -39,8 +39,8 @@ final class TrendingStoryCardModelTest extends DbTestCase
 
         $card = self::cardOf([$post, $article]);
 
-        self::assertSame($article->row->entry, $card->lead()->entry);
-        self::assertSame([$post->row->entry], self::entriesOf($card->lead()->duplicates));
+        self::assertSame($article->row->entry, $card->articles->lead->row->entry);
+        self::assertSame([$post->row->entry], self::entriesOf(self::otherRowsOf($card)));
     }
 
     public function testAPostSharingAFollowedArticleFoldsOntoItsRowAsAShare(): void
@@ -50,8 +50,8 @@ final class TrendingStoryCardModelTest extends DbTestCase
 
         $card = self::cardOf([$post, $article]);
 
-        self::assertSame($article->row->entry, $card->lead()->entry);
-        self::assertSame([], $card->lead()->duplicates);
+        self::assertSame($article->row->entry, $card->articles->lead->row->entry);
+        self::assertSame([], self::otherRowsOf($card));
         self::assertSame([$post->row->entry], self::sharesOf($card->articles->lead));
         self::assertSame(1, $card->articles->shareCount());
     }
@@ -63,8 +63,8 @@ final class TrendingStoryCardModelTest extends DbTestCase
 
         $card = self::cardOf([$older, $newer]);
 
-        self::assertSame($newer->row->entry, $card->lead()->entry);
-        self::assertSame([], $card->lead()->duplicates);
+        self::assertSame($newer->row->entry, $card->articles->lead->row->entry);
+        self::assertSame([], self::otherRowsOf($card));
     }
 
     public function testWithoutAFollowedArticleTheMostSharedArticleLeadsAsItsNewestPicturedShare(): void
@@ -75,9 +75,9 @@ final class TrendingStoryCardModelTest extends DbTestCase
 
         $card = self::cardOf([$newerOther, $plain, $pictured]);
 
-        self::assertSame($pictured->row->entry, $card->lead()->entry);
+        self::assertSame($pictured->row->entry, $card->articles->lead->row->entry);
         self::assertSame([$plain->row->entry, $pictured->row->entry], self::sharesOf($card->articles->lead));
-        self::assertSame([$newerOther->row->entry], self::entriesOf($card->lead()->duplicates));
+        self::assertSame([$newerOther->row->entry], self::entriesOf(self::otherRowsOf($card)));
         self::assertSame(3, $card->articles->shareCount());
     }
 
@@ -86,7 +86,7 @@ final class TrendingStoryCardModelTest extends DbTestCase
         $older = $this->linkShare('ann', '2031-05-14 08:00:00', null, self::ARTICLE);
         $newer = $this->linkShare('ben', '2031-05-14 09:00:00', null, self::OTHER_ARTICLE);
 
-        self::assertSame($newer->row->entry, self::cardOf([$older, $newer])->lead()->entry);
+        self::assertSame($newer->row->entry, self::cardOf([$older, $newer])->articles->lead->row->entry);
     }
 
     public function testWithoutAPicturedCardTheNewestLinkShareRepresentsItsArticle(): void
@@ -95,7 +95,7 @@ final class TrendingStoryCardModelTest extends DbTestCase
         $newer = $this->cardlessLinkShare('ben', '2031-05-14 09:00:00');
         $quote = $this->post('cat', '2031-05-14 10:00:00', ShareKind::Quote, null);
 
-        self::assertSame($newer->row->entry, self::cardOf([$older, $quote, $newer])->lead()->entry);
+        self::assertSame($newer->row->entry, self::cardOf([$older, $quote, $newer])->articles->lead->row->entry);
     }
 
     public function testWithoutALinkShareTheNewestPostRepresentsItsArticle(): void
@@ -103,7 +103,7 @@ final class TrendingStoryCardModelTest extends DbTestCase
         $older = $this->post('ann', '2031-05-14 08:00:00', ShareKind::Quote, null);
         $newer = $this->post('ben', '2031-05-14 09:00:00', null, null);
 
-        self::assertSame($newer->row->entry, self::cardOf([$older, $newer])->lead()->entry);
+        self::assertSame($newer->row->entry, self::cardOf([$older, $newer])->articles->lead->row->entry);
     }
 
     public function testAPostsCopiesInSeveralTimelinesAreOneShare(): void
@@ -204,5 +204,14 @@ final class TrendingStoryCardModelTest extends DbTestCase
     private static function entriesOf(array $rows): array
     {
         return array_map(static fn (EntryListRow $row): Entry => $row->entry, $rows);
+    }
+
+    /** @return list<EntryListRow> the rows of the card's other articles, as the API lists them */
+    private static function otherRowsOf(TrendingStoryCardModel $card): array
+    {
+        return array_map(
+            static fn (StoryArticleModel $article): EntryListRow => $article->row,
+            $card->articles->others,
+        );
     }
 }

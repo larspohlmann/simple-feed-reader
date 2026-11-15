@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Curation\Trending;
 
+use App\Service\Curation\Trending\Model\StoryArticleModel;
 use App\Entity\Feed;
 use App\Entity\InclusionChange;
 use App\Entity\NetworkExclusion;
@@ -230,7 +231,7 @@ final class TrendingInclusionTest extends DbTestCase
 
         self::assertSame(
             [$betaEntry->requireId(), $gammaEntry->requireId()],
-            array_map(static fn (EntryListRow $row): int => $row->entry->requireId(), $stories[0]->lead()->duplicates),
+            array_map(static fn (EntryListRow $row): int => $row->entry->requireId(), self::otherRowsOf($stories[0])),
         );
     }
 
@@ -369,5 +370,14 @@ final class TrendingInclusionTest extends DbTestCase
     private function articleFeeds(string ...$names): array
     {
         return array_values(array_map(fn (string $name): Feed => $this->fixtures->feed($name), $names));
+    }
+
+    /** @return list<EntryListRow> the rows of the card's other articles, as the API lists them */
+    private static function otherRowsOf(TrendingStoryCardModel $card): array
+    {
+        return array_map(
+            static fn (StoryArticleModel $article): EntryListRow => $article->row,
+            $card->articles->others,
+        );
     }
 }
