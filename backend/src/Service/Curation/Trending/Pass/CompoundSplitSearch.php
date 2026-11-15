@@ -99,8 +99,7 @@ final class CompoundSplitSearch
 
     private function nounPartOf(string $form): ?CompoundSplitModel
     {
-        $length = mb_strlen($form);
-        if ($length < GermanCompoundSplitter::MIN_PART_LENGTH || 1 !== preg_match(self::VOWEL, $form)) {
+        if (mb_strlen($form) < GermanCompoundSplitter::MIN_PART_LENGTH || 1 !== preg_match(self::VOWEL, $form)) {
             return null;
         }
 
