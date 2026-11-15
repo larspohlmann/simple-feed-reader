@@ -90,13 +90,12 @@ final readonly class TrendingStories
         $rows = $this->entryList->rowsByIdsForUser($userId, $shownEntries->entryIds());
         $rowsByEntryId = [];
         foreach ($this->enricher->enrich($rows, $userId) as $row) {
+            $rowId = $row->entry->requireId();
             foreach ([$row, ...$row->duplicates] as $shown) {
-                $rowsByEntryId[$shown->entry->requireId()] = new ShownRowModel(
+                $shownId = $shown->entry->requireId();
+                $rowsByEntryId[$shownId] = new ShownRowModel(
                     $shown->withDuplicates([]),
-                    self::articleKeyOf(
-                        $shown,
-                        $shownEntries->linkHashOf($shown->entry->requireId(), $row->entry->requireId()),
-                    ),
+                    self::articleKeyOf($shown, $shownEntries->linkHashOf($shownId, $rowId)),
                 );
             }
         }
