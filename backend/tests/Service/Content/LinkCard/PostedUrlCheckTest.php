@@ -59,6 +59,7 @@ final class PostedUrlCheckTest extends TestCase
         self::assertSame('Story', $card->card->title);
         self::assertCount(1, $this->logger->records);
         self::assertSame(LogLevel::INFO, $this->logger->records[0]['level']);
+        self::assertStringContainsString('showed another page', $this->logger->records[0]['message']);
         self::assertSame(
             ['host' => 'news.example', 'strippedKeys' => ['ref']],
             $this->logger->records[0]['context'],
@@ -83,6 +84,12 @@ final class PostedUrlCheckTest extends TestCase
 
         self::assertSame(self::POSTED, $card->card?->url);
         self::assertCount(1, $this->logger->records);
+        self::assertStringContainsString('cleaned URL failed', $this->logger->records[0]['message']);
+        self::assertStringNotContainsString('another page', $this->logger->records[0]['message']);
+        self::assertSame(
+            ['host' => 'news.example', 'strippedKeys' => ['ref']],
+            $this->logger->records[0]['context'],
+        );
     }
 
     public function testAPostedUrlThatFailsTrustsTheCleanedOne(): void

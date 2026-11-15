@@ -8,6 +8,7 @@ use App\Entity\LinkCardContent;
 use App\Service\Content\LinkCard\Model\PageCardModel;
 use App\Service\Content\LinkCard\PageCardReader\PageCardReaderInterface;
 use App\Service\Content\Reader\Exception\PageFetchException;
+use App\Service\Foundation\Url\Support\TrackingFreeUrl;
 use App\Service\Outbound\Fetch\Support\HostKey;
 use Psr\Log\LoggerInterface;
 
@@ -17,6 +18,9 @@ use Psr\Log\LoggerInterface;
  */
 final readonly class PostedUrlCheck
 {
+    private const string ANOTHER_PAGE = 'A link card keeps its posted URL: its cleaned form showed another page';
+    private const string CLEANED_FAILED = 'A link card keeps its posted URL: the cleaned URL failed';
+
     public function __construct(
         private PageCardReaderInterface $pageCards,
         private LoggerInterface $logger,
@@ -29,64 +33,37 @@ final readonly class PostedUrlCheck
         try {
             $cleaned = $this->pageCards->read($url);
         } catch (PageFetchException $exception) {
-            return $this->kept($url, $postedUrl, $this->postedOr($postedUrl, $exception));
+            return $this->kept($postedUrl, $this->tryRead($postedUrl) ?? throw $exception, self::CLEANED_FAILED);
         }
         if ($cleaned->identity === null) {
             return $cleaned;
         }
-        try {
-            $posted = $this->pageCards->read($postedUrl);
-        } catch (PageFetchException) {
+        $posted = $this->tryRead($postedUrl);
+        if ($posted?->identity === null || $cleaned->identity->isSamePageAs($posted->identity)) {
             return $cleaned;
         }
 
-        return $posted->identity === null || $cleaned->identity->isSamePageAs($posted->identity)
-            ? $cleaned
-            : $this->kept($url, $postedUrl, $posted);
+        return $this->kept($postedUrl, $posted, self::ANOTHER_PAGE);
     }
 
-    /** @throws PageFetchException */
-    private function postedOr(string $postedUrl, PageFetchException $cleanedFailure): PageCardModel
+    private function tryRead(string $url): ?PageCardModel
     {
         try {
-            return $this->pageCards->read($postedUrl);
+            return $this->pageCards->read($url);
         } catch (PageFetchException) {
-            throw $cleanedFailure;
+            return null;
         }
     }
 
-    private function kept(string $url, string $postedUrl, PageCardModel $posted): PageCardModel
+    private function kept(string $postedUrl, PageCardModel $posted, string $reason): PageCardModel
     {
         $this->logger->info(
-            'A link card keeps its posted URL: stripping its tracking keys showed another page',
-            ['host' => HostKey::forUrl($postedUrl), 'strippedKeys' => self::strippedKeys($postedUrl, $url)],
+            $reason,
+            ['host' => HostKey::forUrl($postedUrl), 'strippedKeys' => TrackingFreeUrl::strippedKeysIn($postedUrl)],
         );
-        $card = $posted->card;
-        if ($card === null) {
-            return $posted;
-        }
 
-        return new PageCardModel(
-            new LinkCardContent($postedUrl, $card->title, $card->description, $card->imageUrl, $card->siteName),
-            $posted->medium,
-            $posted->identity,
-        );
-    }
-
-    /** @return list<string> */
-    private static function strippedKeys(string $postedUrl, string $url): array
-    {
-        return array_values(array_diff(self::keysIn($postedUrl), self::keysIn($url)));
-    }
-
-    /** @return list<string> */
-    private static function keysIn(string $url): array
-    {
-        $pairs = (string) parse_url($url, \PHP_URL_QUERY) . '&' . (string) parse_url($url, \PHP_URL_FRAGMENT);
-
-        return array_values(array_map(
-            static fn (string $pair): string => explode('=', $pair)[0],
-            array_filter(explode('&', $pairs), static fn (string $pair): bool => $pair !== ''),
-        ));
+        return $posted->card === null
+            ? $posted
+            : new PageCardModel($posted->card->withUrl($postedUrl), $posted->medium, $posted->identity);
     }
 }

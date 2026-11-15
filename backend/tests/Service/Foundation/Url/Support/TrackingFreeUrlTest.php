@@ -353,6 +353,26 @@ final class TrackingFreeUrlTest extends TestCase
         self::assertSame($expected, TrackingFreeUrl::query($query, $host));
     }
 
+    /** @return iterable<string, array{string, list<string>}> */
+    public static function strippedKeys(): iterable
+    {
+        yield 'query and fragment' => [
+            'https://example.com/a?id=1&UTM_Source=x&ref=rss#xtor=RSS-3',
+            ['utm_source', 'ref', 'xtor'],
+        ];
+        yield 'a navigation fragment' => ['https://example.com/a?fbclid=1#utm_source=x&section=2', ['fbclid']];
+        yield 'a gift key' => ['https://www.theatlantic.com/a?gift=g&id=1', []];
+        yield 'nothing to strip' => ['https://example.com/a', []];
+        yield 'no host' => ['/a?utm_source=x', []];
+    }
+
+    /** @param list<string> $expected */
+    #[DataProvider('strippedKeys')]
+    public function testTheStrippedKeysAreNamedAsTheCleanerReadsThem(string $url, array $expected): void
+    {
+        self::assertSame($expected, TrackingFreeUrl::strippedKeysIn($url));
+    }
+
     /** @return iterable<string, array{string}> */
     public static function everyExample(): iterable
     {

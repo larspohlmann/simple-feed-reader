@@ -19,6 +19,12 @@ final readonly class LinkCardContent
     ) {
     }
 
+    #[\NoDiscard]
+    public function withUrl(string $url): self
+    {
+        return clone($this, ['url' => $url]);
+    }
+
     /** @param array{url: string, title: string, description: ?string, imageUrl: ?string, siteName: string} $row */
     public static function fromRow(array $row): self
     {

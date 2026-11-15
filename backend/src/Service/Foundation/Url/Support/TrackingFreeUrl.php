@@ -58,6 +58,26 @@ final class TrackingFreeUrl
         return $url === null ? null : self::of($url);
     }
 
+    /** @return list<string> the keys the cleaner strips from the URL, as it reads them */
+    public static function strippedKeysIn(string $url): array
+    {
+        $host = parse_url($url, \PHP_URL_HOST);
+        if (!\is_string($host)) {
+            return [];
+        }
+        $host = strtolower($host);
+        $fragment = (string) parse_url($url, \PHP_URL_FRAGMENT);
+        $pairs = explode('&', (string) parse_url($url, \PHP_URL_QUERY));
+        if (self::isTrackingFragment($fragment, $host)) {
+            $pairs = [...$pairs, ...explode('&', $fragment)];
+        }
+
+        return array_values(array_map(
+            self::keyOf(...),
+            array_filter($pairs, static fn (string $pair): bool => self::isTracking($pair, $host)),
+        ));
+    }
+
     public static function query(string $query, string $host): string
     {
         return self::keptPairs($query, strtolower($host));
