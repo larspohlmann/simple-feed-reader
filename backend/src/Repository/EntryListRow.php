@@ -30,6 +30,12 @@ final readonly class EntryListRow
         return $this->entry->getFeed()->getNetwork() === null;
     }
 
+    /** The given hash as the row's key, else one no other row shares. */
+    public function keyBy(?string $hash): string
+    {
+        return $hash ?? 'entry ' . $this->entry->requireId();
+    }
+
     /**
      * @param list<self> $duplicates the in-scope copies this row collapsed
      */

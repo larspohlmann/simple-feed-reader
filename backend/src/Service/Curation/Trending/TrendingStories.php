@@ -106,10 +106,8 @@ final readonly class TrendingStories
     /** An outlet's row is about its own article, a post's about the article its first card links. */
     private function articleKeyOf(EntryListRow $row): string
     {
-        $articleHash = $row->isFromAnOutlet()
+        return $row->keyBy($row->isFromAnOutlet()
             ? $row->entry->getUrlHash()
-            : $this->urlNormalizer->hash($row->enrichment->linkCards[0]->url ?? null);
-
-        return $articleHash ?? 'entry ' . $row->entry->requireId();
+            : $this->urlNormalizer->hash($row->enrichment->linkCards[0]->url ?? null));
     }
 }

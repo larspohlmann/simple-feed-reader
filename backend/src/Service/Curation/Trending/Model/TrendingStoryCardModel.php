@@ -142,7 +142,7 @@ final readonly class TrendingStoryCardModel
     {
         $byPost = [];
         foreach ($posts as $post) {
-            $byPost[$post->entry->getUrlHash() ?? 'entry ' . $post->entry->requireId()] ??= $post;
+            $byPost[$post->keyBy($post->entry->getUrlHash())] ??= $post;
         }
 
         return array_values($byPost);
