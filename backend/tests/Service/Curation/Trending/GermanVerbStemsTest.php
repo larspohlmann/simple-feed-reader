@@ -31,6 +31,7 @@ final class GermanVerbStemsTest extends TestCase
         yield 'a stem that is no verb stem stays' => ['rot', 'rot', 'rot'];
         yield 'the more frequent infinitive beats its past-form entry' => ['kundigt', 'kündigt', 'kundig'];
         yield 'the more frequent entry of the stem itself stays' => ['fast', 'fast', 'fast'];
+        yield 'an equally frequent entry of the stem itself stays' => ['mast', 'mast', 'mast'];
         yield 'a word not ending in t is left alone' => ['wart', 'warten', 'wart'];
     }
 }
