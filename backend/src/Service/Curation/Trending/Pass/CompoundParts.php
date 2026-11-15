@@ -70,8 +70,9 @@ final class CompoundParts
     /**
      * @param array<int, float> $holders earlier entry id => the stem's place weight there
      *
-     * @return array<int, array<int, float>> each holder either entry holds the stem in as a part only => the compounds
-     *     of either entry it comes through, with their place weight; none where it repeats a compound both hold
+     * @return array<int, array{}|array{array<int, float>, array<int, float>}> each holder either entry holds the stem
+     *     in as a part only => the compounds it comes through in this entry, then in the holder, with their place
+     *     weight; none where it repeats a compound both hold
      */
     public function partLinksOf(int $stemId, int $entryId, array $holders): array
     {
@@ -87,7 +88,7 @@ final class CompoundParts
             $throughThere = isset($partOnlyHolders[$holderId])
                 ? $this->unsharedOf($this->compoundsGiving($stemId, $holderId), $entryId)
                 : [];
-            $links[$holderId] = null === $throughHere || null === $throughThere ? [] : $throughHere + $throughThere;
+            $links[$holderId] = null === $throughHere || null === $throughThere ? [] : [$throughHere, $throughThere];
         }
 
         return $links;

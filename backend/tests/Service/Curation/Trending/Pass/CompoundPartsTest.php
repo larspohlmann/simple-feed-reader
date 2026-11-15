@@ -78,7 +78,7 @@ final class CompoundPartsTest extends TestCase
         $this->addPoliceOperation(20);
 
         self::assertSame(
-            [5 => [self::POLICE_OPERATION => 1.0], 10 => [self::POLICE_OPERATION => 1.0]],
+            [5 => [[self::POLICE_OPERATION => 1.0], []], 10 => [[self::POLICE_OPERATION => 1.0], []]],
             $this->compoundParts->partLinksOf(self::POLICE, 20, [5 => 1.0, 10 => 0.5]),
         );
     }
@@ -88,7 +88,7 @@ final class CompoundPartsTest extends TestCase
         $this->addPoliceOperation(10);
         $this->addEntry(20, [self::POLICE], [self::POLICE]);
 
-        self::assertSame([10 => [self::POLICE_OPERATION => 1.0]], $this->linksOf(self::POLICE, 20));
+        self::assertSame([10 => [[], [self::POLICE_OPERATION => 1.0]]], $this->linksOf(self::POLICE, 20));
     }
 
     public function testAPartLinksTwoDifferentCompoundsThroughBoth(): void
@@ -97,7 +97,7 @@ final class CompoundPartsTest extends TestCase
         $this->addEntry(20, [self::FIRE_OPERATION, self::FIRE_BRIGADE, self::OPERATION], [self::FIRE_OPERATION]);
 
         self::assertSame(
-            [10 => [self::FIRE_OPERATION => 1.0, self::POLICE_OPERATION => 1.0]],
+            [10 => [[self::FIRE_OPERATION => 1.0], [self::POLICE_OPERATION => 1.0]]],
             $this->linksOf(self::OPERATION, 20),
         );
     }
@@ -108,7 +108,7 @@ final class CompoundPartsTest extends TestCase
         $this->compoundParts->holdCompoundsAmong(10, [self::POLICE_OPERATION, self::POLICE], 0.5);
         $this->addEntry(20, [self::POLICE], [self::POLICE]);
 
-        self::assertSame([10 => [self::POLICE_OPERATION => 0.5]], $this->linksOf(self::POLICE, 20));
+        self::assertSame([10 => [[], [self::POLICE_OPERATION => 0.5]]], $this->linksOf(self::POLICE, 20));
     }
 
     public function testAPartLinksNothingWhenOneEntryHoldsItOnlyThroughASharedCompound(): void
@@ -151,7 +151,7 @@ final class CompoundPartsTest extends TestCase
         $this->compoundParts->holdCompoundIn(self::POLICE_OPERATION, [10], 1.0);
         $this->addPoliceOperation(20);
 
-        self::assertSame([10 => [self::POLICE_OPERATION => 1.0]], $this->linksOf(self::POLICE, 20));
+        self::assertSame([10 => [[self::POLICE_OPERATION => 1.0], []]], $this->linksOf(self::POLICE, 20));
     }
 
     public function testAStemIsACompoundOnceAWordGivesItParts(): void
@@ -175,7 +175,7 @@ final class CompoundPartsTest extends TestCase
         $this->addEntry($entryId, [self::POLICE_OPERATION, self::POLICE, self::OPERATION], [self::POLICE_OPERATION]);
     }
 
-    /** @return array<int, array<int, float>> */
+    /** @return array<int, array{}|array{array<int, float>, array<int, float>}> */
     private function linksOf(int $stemId, int $entryId): array
     {
         return $this->compoundParts->partLinksOf($stemId, $entryId, [10 => 1.0]);

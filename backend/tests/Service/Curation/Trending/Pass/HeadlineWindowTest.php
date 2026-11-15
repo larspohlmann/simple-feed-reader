@@ -262,6 +262,73 @@ final class HeadlineWindowTest extends TestCase
         self::assertEqualsWithDelta(self::ONCE, $this->window->sharedWeightsWithEarlier(2)[1], 0.0001, 'either one');
     }
 
+    public function testACompoundSharesItsWholePartsWithItsSplitSpellingWhenThatEntryIsTheLighter(): void
+    {
+        $this->addIn(FeedLanguage::German, 1, 10, 'Huang: Spionageverdacht im Senat');
+        $this->addIn(FeedLanguage::German, 2, 20, 'Huang: Spionage-Verdacht');
+
+        self::assertEqualsWithDelta(3 * self::TWICE, $this->window->totalWeight(2), 0.001);
+        self::assertEqualsWithDelta(
+            3 * self::TWICE,
+            $this->window->sharedWeightsWithEarlier(2)[1],
+            0.001,
+            'huang, spionage and verdacht, each a word of the lighter entry',
+        );
+    }
+
+    public function testACompoundsShareOfItsOwnEntryStaysWholeAgainstItsSplitSpelling(): void
+    {
+        $this->addIn(FeedLanguage::German, 1, 10, 'Spionage-Verdacht im Senat');
+        $this->addIn(FeedLanguage::German, 2, 20, 'Spionageverdacht');
+
+        self::assertEqualsWithDelta(
+            $this->window->totalWeight(2),
+            $this->window->sharedWeightsWithEarlier(2)[1],
+            0.0001,
+            'the compound, which is all its entry weighs',
+        );
+    }
+
+    public function testPartsBothEntriesHoldOnlyAsPartsAreCappedByTheLighterEntrysCompound(): void
+    {
+        $this->addIn(FeedLanguage::German, 1, 10, 'Kinderarzt Bett');
+        $this->window->add(self::entry(2, 20, FeedLanguage::German, 'Bett'), 'Kinderarztpraxis Russland Schule');
+
+        self::assertEqualsWithDelta(
+            2 * self::TWICE,
+            $this->window->sharedWeightsWithEarlier(2)[1],
+            0.0001,
+            'bett, then kinder and arzt at body weight within kinderarzt',
+        );
+    }
+
+    public function testPartsBothEntriesHoldOnlyAsPartsAreCappedByTheLaterLighterEntrysCompound(): void
+    {
+        $this->addIn(FeedLanguage::German, 1, 10, 'Kinderarzt Bett Schule');
+        $this->window->add(self::entry(2, 20, FeedLanguage::German, 'Bett'), 'Kinderarztpraxis Russland');
+
+        self::assertEqualsWithDelta(
+            self::TWICE + self::ONCE / 2,
+            $this->window->sharedWeightsWithEarlier(2)[1],
+            0.0001,
+            'bett, then kinder and arzt within kinderarztpraxis at body weight',
+        );
+    }
+
+    public function testPartsOfEntriesOfEqualWeightAreCappedByBothEntriesCompounds(): void
+    {
+        $this->addIn(FeedLanguage::German, 1, 10, 'Kinderarzt Bett');
+        $this->window->add(self::entry(2, 20, FeedLanguage::German, 'Bett'), 'Kinderarztpraxis Russland');
+
+        self::assertSame($this->window->totalWeight(1), $this->window->totalWeight(2));
+        self::assertEqualsWithDelta(
+            self::TWICE + self::ONCE / 2,
+            $this->window->sharedWeightsWithEarlier(2)[1],
+            0.0001,
+            'neither entry is the lighter, so the share holds for both',
+        );
+    }
+
     public function testACompoundInTheBodyCapsItsPartsAtItsBodyWeight(): void
     {
         $this->window->add(self::entry(1, 10, FeedLanguage::German, 'Bahnhof'), 'Polizeieinsatz');

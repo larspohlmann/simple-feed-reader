@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
+use App\Enum\FeedLanguage;
 use App\Enum\TrendingWindow;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Service\Curation\Trending\Pass\HeadlineWindow;
@@ -21,10 +22,25 @@ final class TrendingRuns
 
     public static function entry(int $id, int $feedId, string $title, string $effectiveDate): WindowEntryModel
     {
+        return self::entryIn(null, $id, $feedId, $title, $effectiveDate);
+    }
+
+    public static function germanEntry(int $id, int $feedId, string $title, string $effectiveDate): WindowEntryModel
+    {
+        return self::entryIn(FeedLanguage::German, $id, $feedId, $title, $effectiveDate);
+    }
+
+    private static function entryIn(
+        ?FeedLanguage $language,
+        int $id,
+        int $feedId,
+        string $title,
+        string $effectiveDate,
+    ): WindowEntryModel {
         return new WindowEntryModel(
             $id,
             $feedId,
-            null,
+            $language,
             $title,
             false,
             null,

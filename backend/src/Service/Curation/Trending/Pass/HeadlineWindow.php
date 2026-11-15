@@ -123,10 +123,13 @@ final class HeadlineWindow
                     $sharingAHeadline[$earlierEntryId] = true;
                 }
             }
-            foreach (array_filter($partLinks) as $earlierEntryId => $compounds) {
+            foreach (array_filter($partLinks) as $earlierEntryId => $compoundsThrough) {
                 $commonPlaceWeight = min($placeWeight, $holders[$earlierEntryId]);
                 $shared[$earlierEntryId] ??= 0.0;
-                $parts[$earlierEntryId][] = [$commonPlaceWeight * $rarity, $compounds];
+                $parts[$earlierEntryId][] = [
+                    $commonPlaceWeight * $rarity,
+                    $this->compoundsCapping($entryId, $earlierEntryId, $compoundsThrough),
+                ];
                 if ($commonPlaceWeight === self::HEADLINE_WEIGHT) {
                     $sharingAHeadline[$earlierEntryId] = true;
                 }
@@ -134,6 +137,22 @@ final class HeadlineWindow
         }
 
         return array_intersect_key(PartWeightCaps::addedTo($shared, $parts, $this->rarity(...)), $sharingAHeadline);
+    }
+
+    /**
+     * A share is measured in the lighter entry's own accounting: where the entries weigh the same, it holds for both.
+     *
+     * @param array{array<int, float>, array<int, float>} $compoundsThrough in this entry, then in the earlier one
+     *
+     * @return array<int, float>
+     */
+    private function compoundsCapping(int $entryId, int $earlierEntryId, array $compoundsThrough): array
+    {
+        return match ($this->totalWeight($entryId) <=> $this->totalWeight($earlierEntryId)) {
+            -1 => $compoundsThrough[0],
+            1 => $compoundsThrough[1],
+            default => $compoundsThrough[0] + $compoundsThrough[1],
+        };
     }
 
     private function countLanguageOf(WindowEntryModel $entry): void
