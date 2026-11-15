@@ -24,12 +24,12 @@ final class LinkResolutionBudgetModelTest extends TestCase
     {
         $now = new \DateTimeImmutable('2026-11-15 12:00:00');
 
-        self::assertSame(2, LinkResolutionBudgetModel::fittingBefore($now->modify('+13 seconds'), $now, 5)->links);
-        self::assertSame(2, LinkResolutionBudgetModel::fittingBefore($now->modify('+12 seconds'), $now, 5)->links);
-        self::assertSame(2, LinkResolutionBudgetModel::fittingBefore($now->modify('+17 seconds'), $now, 5)->links);
-        self::assertSame(5, LinkResolutionBudgetModel::fittingBefore($now->modify('+1 hour'), $now, 5)->links);
-        self::assertTrue(LinkResolutionBudgetModel::fittingBefore($now->modify('+1 second'), $now, 5)->isEmpty());
-        self::assertTrue(LinkResolutionBudgetModel::fittingBefore($now->modify('-1 minute'), $now, 5)->isEmpty());
+        self::assertSame(2, LinkResolutionBudgetModel::fittingBefore($now->modify('+13 seconds'), $now)->links);
+        self::assertSame(2, LinkResolutionBudgetModel::fittingBefore($now->modify('+12 seconds'), $now)->links);
+        self::assertSame(2, LinkResolutionBudgetModel::fittingBefore($now->modify('+17 seconds'), $now)->links);
+        self::assertSame(5, LinkResolutionBudgetModel::fittingBefore($now->modify('+1 hour'), $now)->links);
+        self::assertTrue(LinkResolutionBudgetModel::fittingBefore($now->modify('+1 second'), $now)->isEmpty());
+        self::assertTrue(LinkResolutionBudgetModel::fittingBefore($now->modify('-1 minute'), $now)->isEmpty());
     }
 
     public function testAPassFollowsFiveLinks(): void

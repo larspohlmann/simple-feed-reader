@@ -22,7 +22,7 @@ final readonly class LinkResolutionsTickSweep implements MaintenanceSweepInterfa
     public function run(\DateTimeImmutable $deadline): LinkResolutionReportModel
     {
         return $this->linkResolutionSweep->resolvePending(
-            LinkResolutionBudgetModel::fittingBefore($deadline, $this->clock->now(), LinkResolutionBudgetModel::PER_PASS),
+            LinkResolutionBudgetModel::fittingBefore($deadline, $this->clock->now()),
         );
     }
 

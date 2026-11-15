@@ -29,12 +29,12 @@ final readonly class LinkResolutionBudgetModel
         return new self(self::PER_PASS);
     }
 
-    /** The whole links that end before $deadline, at most $maxLinks: none once less than one fits. */
-    public static function fittingBefore(\DateTimeImmutable $deadline, \DateTimeImmutable $now, int $maxLinks): self
+    /** The whole links that end before $deadline, at most a pass: none once less than one fits. */
+    public static function fittingBefore(\DateTimeImmutable $deadline, \DateTimeImmutable $now): self
     {
         $remaining = $deadline->getTimestamp() - $now->getTimestamp();
 
-        return self::links(min($maxLinks, (int) floor(max(0, $remaining) / self::MAX_SECONDS)));
+        return self::links(min(self::PER_PASS, (int) floor(max(0, $remaining) / self::MAX_SECONDS)));
     }
 
     /** Whether one more worst-case link still fits after $elapsedSeconds. */
