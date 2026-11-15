@@ -427,4 +427,45 @@ restored from one `mysqldump` of `feedreader`, so the worker cannot move the win
 
 ## Outcome
 
-*(empty: filled by the measurement task)*
+Measured 2026-11-15 on copies of dev `feedreader` (A = develop 17edfbfeb on `feedreader_2236_a`, B = the branch on
+`feedreader_2236_b`, one dump, Trending pinned at 2026-11-15 12:00:00 UTC). Scripts and raw output are in the session
+scratchpad under `2236/final/`.
+
+- **Migration:** 0.45 s wall on B (one `CREATE TABLE`); `doctrine:schema:validate` in sync. From empty: SQLite
+  (6 FTS5 triggers present) and MySQL both migrate and validate; MySQL `down` then `up` again validates.
+- **Backfill:** dry run 1,128 (spec expected about 1,130). Run: queued 1,128; resolved 892, unchanged 228,
+  unresolved 0, deferred 8; 553.8 s wall, mean 0.49 s, median 0.39 s, p95 1.01 s, p99 1.92 s, max 12.1 s a link;
+  peak RSS 84 MB. A second run queued 0 and considered 0. No shortener answered `429` (174 `trib.al`, 130
+  `slate.trib.al`, 140 `n.pr`, 102 `bit.ly`: all landed). The 8 deferred: 4 chains whose target timed out on our
+  agent (`reut.rs` ×2, `wapo.st`, a `bit.ly` to fresnobee.com), 2 grimme-online-award.de, 1 fulcrumsec.vg (dead),
+  1 wiki.cateat.fish (DNS). The first four led to the hop-landing rule (D6 ruling in the ledger): replayed with it, 6
+  of the 8 resolved, 2 stay deferred (the dead host and the DNS failure).
+- **Three links took over `MAX_SECONDS` (6 s):** 11.6 to 18 s, both attempts timing out across the fetcher's
+  failover routes. The pass measures real time, so a worker pass can overrun its nominal 30 s.
+- **Value:** 870 week rows resolved; 340 of them (39 %) now hash like an article feed's entry (de 157, en 183, fr 0,
+  es 0). 484 week posts share a URL hash with an outlet entry in the window (de 214, en 270). 726 landings are on
+  another host, 172 on the same (taz.de's long form).
+- **Short of D12:** the #2237 cleaner keeps True Anthem's `link_source` and `taid`, so 101 landings (95 The Atlantic
+  via `bit.ly`) keep them. Without those two keys 88 more would match The Atlantic's feed entries. Not changed here
+  (the key tiers are #2237's rulings).
+- **Trending A/B:** day 878 → 878 groups, 3,366 pairs, no change (the shares were already grouped by their card
+  headline). Week 3,949 → 3,945 groups, 20,208 → 20,136 pairs: new 235, lost 307 (en–en +230/−284, de–de +2/−18,
+  mixed +3/−5, fr–fr and es–es 0). French-only and Spanish-only day and week: identical. Equal entry counts on every
+  pair of runs; run time and peak RSS equal (week 81.8 / 81.4 s, 256 MB). Of 52 changed week groups, 40 hold a
+  resolved card and 9 more share members with one that does; 3 are second-order regroupings with no resolved member
+  (a Slate pair, the Sean Duffy group, a Guardian pair).
+- **Live blogs merge posts:** 9 `vist.ly` links land on one POLITICO Europe live blog with a different `#id_…`
+  fragment each; the hash drops the fragment, so unrelated posts (Merz, Stocker, Vannacci) now share a URL. 11
+  fragment landings in all, 2 distinct pages.
+- **Site count:** shortener sites in snapshots 22 → 0 (day), 50 → 0 (week). Stories with two or more sites: day 180
+  → 169, week 230 → 227. 14 stories fall below two sites, each an outlet counted twice through its own shortener
+  (`n.pr` + npr.org ×8, `slate.trib.al` + slate.com ×2, `bit.ly` + theatlantic.com ×2, `trib.al` + futurism.com ×2,
+  `youtu.be` + youtube.com); one rises (`nbcnews.to` → nbcnews.com beside theguardian.com).
+- **Duplicate rows (user 2):** 4 day and 7 week top-15 stories show fewer article rows on B. Each was a Bluesky post
+  row (an `n.pr` or `taz.de` share) that now folds onto the outlet's row; checked by eye.
+- **Who is shown:** user 2's day and week top 15 are the same stories in the same order. Only the site lists and
+  row counts change.
+- **Eye check:** 30 resolved rows (10 same-site, 20 other-site): all right. French and Spanish rows (7): right,
+  apart from one YouTube handle that gained `?cbrd=1&ucbcb=1` (consent-redirect keys; same page). 3 landings are
+  front pages (two `buff.ly` campaigns, one tool site), which correctly stop naming a story.
+- **Dev run** (`feedreader`, after copying it to `feedreader_2236_before`): see the ledger.
