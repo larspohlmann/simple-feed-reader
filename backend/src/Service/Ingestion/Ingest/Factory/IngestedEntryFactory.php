@@ -7,6 +7,7 @@ namespace App\Service\Ingestion\Ingest\Factory;
 use App\Entity\Entry;
 use App\Entity\EntryAuthor;
 use App\Entity\EntryChapters;
+use App\Entity\EntryText;
 use App\Entity\Feed;
 use App\Enum\SourceFormat;
 use App\Service\Ingestion\Ingest\EntryImageWriter;
@@ -52,28 +53,27 @@ final readonly class IngestedEntryFactory
             AbsoluteHttpUrl::orNullWithin($parsed->authorUrl, EntryAuthor::URL_MAX_LENGTH),
             AbsoluteHttpUrl::orNullWithin($parsed->authorAvatarUrl, EntryAuthor::URL_MAX_LENGTH),
         ));
-        $entry->recordText(
-            $entry->getText()->withSummary(EntrySnippet::from($parsed->summary ?? $parsed->contentHtml)),
-        );
-        $entry->recordText($entry->getText()->withContentHtml($this->sanitizer->sanitize($parsed->contentHtml)));
+        $entry->recordText($this->textOf($entry->getText(), $feed, $parsed));
         $entry->setPublishedAt($parsed->publishedAt);
         $entry->setDiscussion($parsed->discussion);
         $entry->recordDiscussionCounts($parsed->discussionCounts);
         $this->imageWriter->writeOrMarkNone($entry, $parsed->media->image);
         self::attachMedia($entry, $parsed);
         self::declareChapters($entry, $parsed);
-        $this->declareLanguage($entry, $feed, $parsed);
 
         return $entry;
     }
 
-    private function declareLanguage(Entry $entry, Feed $feed, ParsedEntryModel $parsed): void
+    private function textOf(EntryText $text, Feed $feed, ParsedEntryModel $parsed): EntryText
     {
+        $written = $text
+            ->withSummary(EntrySnippet::from($parsed->summary ?? $parsed->contentHtml))
+            ->withContentHtml($this->sanitizer->sanitize($parsed->contentHtml));
         if (!SourceFormat::isSocial($feed->getSourceFormat())) {
-            return;
+            return $written;
         }
 
-        $entry->recordText($entry->getText()->withLanguage($this->socialLanguage->of($parsed)));
+        return $written->withLanguage($this->socialLanguage->of($parsed));
     }
 
     private static function cut(?string $value, int $maxLength): ?string
