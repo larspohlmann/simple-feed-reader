@@ -34,6 +34,8 @@ use App\Tests\Support\UserFactory;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use App\Tests\Support\PostEnrichers;
+use App\Entity\LinkCardContent;
+use App\Tests\Support\SharedLinks;
 
 final class EntryPartRestorerTest extends DbTestCase
 {
@@ -478,6 +480,100 @@ final class EntryPartRestorerTest extends DbTestCase
 
         self::assertSame(1, $result->entryStates);
         $this->assertNoneManaged(EntryState::class);
+    }
+
+    public function testARestoredCardMergesIntoAnExistingLink(): void
+    {
+        $user = $this->subscribedUser(self::FEED_URL);
+        $stored = SharedLinks::of(
+            $this->entityManager,
+            new LinkCardContent('https://shared.example/a', 'Stored', 'As stored', null, 'shared.example'),
+        );
+        $gzip = $this->entryPart([$this->entryLine('carded') + [
+            'linkCards' => [self::card('https://shared.example/a?utm_source=file', 'From the file')],
+            'shareKind' => 'quote',
+            'quote' => self::quote(self::card('https://quoted.example/b', 'Quoted card')),
+        ]]);
+
+        $this->restorer()->load($user, $gzip);
+
+        $this->entityManager->clear();
+        $entry = $this->findEntry('carded');
+        self::assertNotNull($entry);
+        $cards = PostEnrichers::linkCards($this->entityManager)->contentsByEntryIds([$entry->requireId()]);
+        self::assertEquals(
+            [new LinkCardContent('https://shared.example/a', 'Stored', 'As stored', null, 'shared.example')],
+            $cards[$entry->requireId()],
+        );
+        self::assertSame(
+            $stored->requireId(),
+            $this->scalarInt('SELECT shared_link_id FROM link_card WHERE entry_id = ?', [$entry->requireId()]),
+        );
+        self::assertSame('Quoted card', $entry->getQuotedPost()?->linkCard?->title);
+        self::assertSame(2, $this->scalarInt('SELECT COUNT(*) FROM shared_link'));
+    }
+
+    public function testAnOlderBackupLineStillImports(): void
+    {
+        $user = $this->subscribedUser(self::FEED_URL);
+        $decoded = json_decode(sprintf(
+            '{"kind":"entry","feedUrl":"%s","guid":"%s","guidHash":"%s",'
+            . '"url":"https://one.example/a","discussionUrl":null,"commentsFeedUrl":null,"commentsLoad":null,'
+            . '"title":"Article","titleDerived":false,"shareKind":"quote",'
+            . '"quote":{"url":"https://bsky.app/profile/q/post/3k",'
+            . '"authorName":"Q","authorHandle":"q","authorAvatarUrl":null,"postedAt":null,"text":"hi","media":[],'
+            . '"nestedQuote":null,"linkCard":{"url":"https://n.example/s","title":"Story","description":"D",'
+            . '"imageUrl":"https://n.example/s.jpg","siteName":"n.example"}},"author":null,'
+            . '"authorUrl":null,"authorAvatarUrl":null,"summary":null,"contentHtml":null,"language":null,'
+            . '"imageUrl":null,"imageWidth":null,"imageHeight":null,"imageRenditions":[],"media":[],"attachments":[],'
+            . '"chapters":[],"chaptersUrl":null,"linkCards":[{"url":"https://card.example/x","title":"Card",'
+            . '"description":null,"imageUrl":null,"siteName":"card.example"}],"origin":null,'
+            . '"publishedAt":null,"createdAt":"2026-08-02T00:00:00+00:00","effectiveDate":"2026-08-03T00:00:00+00:00"}',
+            self::FEED_URL,
+            $this->guid('older'),
+            $this->guidHash('older'),
+        ), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($decoded);
+        $line = [];
+        foreach ($decoded as $key => $value) {
+            $line[(string) $key] = $value;
+        }
+
+        $this->restorer()->load($user, $this->entryPart([$line]));
+
+        $this->entityManager->clear();
+        $entry = $this->findEntry('older');
+        self::assertNotNull($entry);
+        $cards = PostEnrichers::linkCards($this->entityManager)->contentsByEntryIds([$entry->requireId()]);
+        self::assertEquals(
+            [new LinkCardContent('https://card.example/x', 'Card', null, null, 'card.example')],
+            $cards[$entry->requireId()],
+        );
+        self::assertEquals(
+            new LinkCardContent('https://n.example/s', 'Story', 'D', 'https://n.example/s.jpg', 'n.example'),
+            $entry->getQuotedPost()?->linkCard,
+        );
+        self::assertSame(0, $this->scalarInt('SELECT COUNT(*) FROM shared_link WHERE language IS NOT NULL'));
+    }
+
+    /** @return array<string, string|null> */
+    private static function card(string $url, string $title): array
+    {
+        return ['url' => $url, 'title' => $title, 'description' => null, 'imageUrl' => null, 'siteName' => 'example'];
+    }
+
+    /**
+     * @param array<string, string|null> $card
+     *
+     * @return array<string, mixed>
+     */
+    private static function quote(array $card): array
+    {
+        return [
+            'url' => 'https://bsky.app/profile/q/post/3k', 'authorName' => 'Q', 'authorHandle' => 'q',
+            'authorAvatarUrl' => null, 'postedAt' => null, 'text' => 'hi', 'media' => [], 'nestedQuote' => null,
+            'linkCard' => $card,
+        ];
     }
 
     private function restorer(int $accountEntryCeiling = BackupFitCheck::MAX_ENTRIES): EntryPartRestorer

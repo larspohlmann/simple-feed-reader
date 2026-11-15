@@ -17,6 +17,8 @@ use App\Service\Operations\Backup\Model\EntryCompanionsModel;
 use App\Tests\Support\BackupLineRecords;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use App\Entity\SharedLink;
+use App\Entity\LinkLanguage;
 
 final class EntryLineTest extends TestCase
 {
@@ -472,5 +474,35 @@ final class EntryLineTest extends TestCase
         self::assertIsArray($line['quote']);
         self::assertArrayHasKey('linkCard', $line['quote']);
         self::assertNull($line['quote']['linkCard']);
+    }
+
+    public function testTheExportedLineOfACardedQuotePostIsUnchanged(): void
+    {
+        $entry = BackupLineRecords::entry();
+        $entry->shareQuotedPost(
+            new QuotedPostContent('https://bsky.app/profile/q/post/3k', 'Q', 'q', null, null, 'hi', [], null),
+            new SharedLink(
+                'hash',
+                new LinkCardContent('https://n.example/s', 'Story', 'D', 'https://n.example/s.jpg', 'n.example'),
+                LinkLanguage::stated(FeedLanguage::French),
+                new \DateTimeImmutable('2026-11-15 10:00:00'),
+            ),
+        );
+        $companions = new EntryCompanionsModel(
+            [new LinkCardContent('https://card.example/x', 'Card', null, null, 'card.example')],
+        );
+
+        self::assertStringContainsString(
+            '"shareKind":"quote","quote":{"url":"https://bsky.app/profile/q/post/3k","authorName":"Q",'
+            . '"authorHandle":"q","authorAvatarUrl":null,"postedAt":null,"text":"hi","media":[],"nestedQuote":null,'
+            . '"linkCard":{"url":"https://n.example/s","title":"Story","description":"D",'
+            . '"imageUrl":"https://n.example/s.jpg","siteName":"n.example"}},',
+            EntryLine::of($entry, 'https://one.example/rss', $companions)->toBackupLine(),
+        );
+        self::assertStringContainsString(
+            '"linkCards":[{"url":"https://card.example/x","title":"Card","description":null,"imageUrl":null,'
+            . '"siteName":"card.example"}],',
+            EntryLine::of($entry, 'https://one.example/rss', $companions)->toBackupLine(),
+        );
     }
 }
