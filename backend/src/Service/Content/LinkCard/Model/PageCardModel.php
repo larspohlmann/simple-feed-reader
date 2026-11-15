@@ -16,12 +16,12 @@ final readonly class PageCardModel
         public ?EntryMedium $medium,
         public ?PageIdentityModel $identity = null,
         public ?FeedLanguage $statedLanguage = null,
-        public ?SharedLink $link = null,
     ) {
     }
 
+    /** A link already stored, attached as it is: its row is found again by the card's URL, and never rewritten. */
     public static function known(SharedLink $link): self
     {
-        return new self($link->preview(), null, link: $link);
+        return new self($link->preview(), null);
     }
 }

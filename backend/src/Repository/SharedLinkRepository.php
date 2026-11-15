@@ -48,29 +48,25 @@ final class SharedLinkRepository extends ServiceEntityRepository
     }
 
     /**
+     * The rows a writer is about to reference, their GC mark cleared before they are read: a sweep between the read
+     * and the writer's flush can then only mark them again, and deletion needs a further grace.
+     *
      * @param list<string> $urlHashes
      *
-     * @return array<string, int> by url hash
+     * @return array<string, SharedLink> by url hash
      */
-    public function idsByUrlHash(array $urlHashes): array
+    public function claimByUrlHashes(array $urlHashes): array
     {
         if ($urlHashes === []) {
             return [];
         }
-        /** @var list<array{id: int|string, urlHash: string}> $rows */
-        $rows = $this->createQueryBuilder('link')
-            ->select('link.id', 'link.urlHash')
-            ->andWhere('link.urlHash IN (:urlHashes)')
-            ->setParameter('urlHashes', array_values(array_unique($urlHashes)))
-            ->getQuery()
-            ->getArrayResult();
+        $this->getEntityManager()->getConnection()->executeStatement(
+            'UPDATE shared_link SET unreferenced_since = NULL WHERE unreferenced_since IS NOT NULL AND url_hash IN (?)',
+            [array_values(array_unique($urlHashes))],
+            [ArrayParameterType::STRING],
+        );
 
-        $ids = [];
-        foreach ($rows as $row) {
-            $ids[$row['urlHash']] = (int) $row['id'];
-        }
-
-        return $ids;
+        return $this->byUrlHashes($urlHashes);
     }
 
     /**
@@ -96,7 +92,7 @@ final class SharedLinkRepository extends ServiceEntityRepository
 
     /**
      * Mark, then delete: a row is deleted only once it has stayed unreferenced for the grace, counted from the sweep
-     * that first saw it unreferenced; a writer's keepAlive() clears the mark before it looks the row up.
+     * that first saw it unreferenced; a writer's claimByUrlHashes() clears the mark before it reads the row.
      *
      * @return int the rows deleted
      */
@@ -116,19 +112,6 @@ final class SharedLinkRepository extends ServiceEntityRepository
         return (int) $connection->executeStatement(
             'DELETE FROM shared_link WHERE unreferenced_since < ? AND NOT ' . self::REFERENCED,
             [$markedBefore->format('Y-m-d H:i:s')],
-        );
-    }
-
-    /** @param list<string> $urlHashes the rows a writer is about to reference */
-    public function keepAlive(array $urlHashes): void
-    {
-        if ($urlHashes === []) {
-            return;
-        }
-        $this->getEntityManager()->getConnection()->executeStatement(
-            'UPDATE shared_link SET unreferenced_since = NULL WHERE unreferenced_since IS NOT NULL AND url_hash IN (?)',
-            [array_values(array_unique($urlHashes))],
-            [ArrayParameterType::STRING],
         );
     }
 

@@ -28,16 +28,39 @@ final readonly class SharedLinkWriter
 
     public function linkFor(LinkCardContent $card, ?FeedLanguage $statedLanguage): SharedLink
     {
-        $urlHash = $this->hashOf($card->url);
-        $this->sharedLinks->keepAlive([$urlHash]);
-        $stored = $this->sharedLinks->findOneByUrlHash($urlHash);
-        if ($stored !== null) {
-            return $stored;
-        }
-        $this->sharedLinks->insertMissing([$this->newLink($urlHash, $card, $statedLanguage)]);
+        return $this->linksFor([$card], $statedLanguage === null ? [] : [$card->url => $statedLanguage])[$card->url];
+    }
 
-        return $this->sharedLinks->findOneByUrlHash($urlHash)
-            ?? throw SharedLinkNotReadBackException::forUrl($card->url);
+    /**
+     * One claim for the batch, one insert of the URLs it lacks, and one read of those.
+     *
+     * @param list<LinkCardContent>     $cards
+     * @param array<string, FeedLanguage> $statedByUrl the language a card's page states, by card URL
+     *
+     * @return array<string, SharedLink> by card URL
+     */
+    public function linksFor(array $cards, array $statedByUrl = []): array
+    {
+        $hashesByUrl = $this->hashesByUrl(array_map(static fn (LinkCardContent $card): string => $card->url, $cards));
+        $links = $this->sharedLinks->claimByUrlHashes(array_values($hashesByUrl));
+        $missing = [];
+        foreach ($cards as $card) {
+            $urlHash = $hashesByUrl[$card->url] ?? throw UnhashableLinkException::forUrl($card->url);
+            if (!isset($links[$urlHash])) {
+                $missing[$urlHash] ??= $this->newLink($urlHash, $card, $statedByUrl[$card->url] ?? null);
+            }
+        }
+        if ($missing !== []) {
+            $this->sharedLinks->insertMissing(array_values($missing));
+            $links += $this->sharedLinks->byUrlHashes(array_keys($missing));
+        }
+
+        $linksByUrl = [];
+        foreach ($hashesByUrl as $url => $urlHash) {
+            $linksByUrl[$url] = $links[$urlHash] ?? throw SharedLinkNotReadBackException::forUrl($url);
+        }
+
+        return $linksByUrl;
     }
 
     /**
@@ -47,28 +70,32 @@ final readonly class SharedLinkWriter
      */
     public function idsFor(array $cards): array
     {
-        $cardsByHash = [];
-        foreach ($cards as $card) {
-            $cardsByHash[$this->hashOf($card->url)] ??= $card;
-        }
-        $this->sharedLinks->keepAlive(array_keys($cardsByHash));
-        $ids = $this->sharedLinks->idsByUrlHash(array_keys($cardsByHash));
-        $missing = array_diff_key($cardsByHash, $ids);
-        if ($missing !== []) {
-            $newLinks = [];
-            foreach ($missing as $urlHash => $card) {
-                $newLinks[] = $this->newLink($urlHash, $card, null);
-            }
-            $this->sharedLinks->insertMissing($newLinks);
-            $ids += $this->sharedLinks->idsByUrlHash(array_keys($missing));
-        }
+        return array_map(static fn (SharedLink $link): int => $link->requireId(), $this->linksFor($cards));
+    }
 
-        $idsByUrl = [];
-        foreach ($cards as $card) {
-            $idsByUrl[$card->url] = $ids[$this->hashOf($card->url)];
-        }
+    /**
+     * The stored links of these URLs, claimed for a reference about to be written; a URL without one is left out.
+     *
+     * @param list<string> $urls
+     *
+     * @return array<string, SharedLink> by URL
+     */
+    public function knownFor(array $urls): array
+    {
+        $hashesByUrl = $this->hashesByUrl($urls);
+        $links = $this->sharedLinks->claimByUrlHashes(array_values($hashesByUrl));
 
-        return $idsByUrl;
+        return array_filter(array_map(
+            static fn (string $urlHash): ?SharedLink => $links[$urlHash] ?? null,
+            $hashesByUrl,
+        ));
+    }
+
+    public function existing(string $url): ?SharedLink
+    {
+        $urlHash = $this->hashesByUrl([$url])[$url] ?? null;
+
+        return $urlHash === null ? null : $this->sharedLinks->findOneByUrlHash($urlHash);
     }
 
     private function newLink(string $urlHash, LinkCardContent $card, ?FeedLanguage $statedLanguage): NewSharedLinkModel
@@ -81,8 +108,23 @@ final readonly class SharedLinkWriter
         );
     }
 
-    private function hashOf(string $url): string
+    /**
+     * Each URL hashed once; a URL that is no absolute web address is left out.
+     *
+     * @param list<string> $urls
+     *
+     * @return array<string, string> by URL
+     */
+    private function hashesByUrl(array $urls): array
     {
-        return $this->urlNormalizer->hash($url) ?? throw UnhashableLinkException::forUrl($url);
+        $hashesByUrl = [];
+        foreach ($urls as $url) {
+            $urlHash = $hashesByUrl[$url] ?? $this->urlNormalizer->hash($url);
+            if ($urlHash !== null) {
+                $hashesByUrl[$url] = $urlHash;
+            }
+        }
+
+        return $hashesByUrl;
     }
 }

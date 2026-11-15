@@ -10,6 +10,7 @@ use App\Entity\SharedLink;
 use App\Repository\LinkCardRepository;
 use App\Repository\ShareEnrichmentRepository;
 use App\Repository\SharedLinkRepository;
+use App\Service\Content\LinkCard\EntryLinks;
 use App\Service\Content\LinkCard\SharedLinkWriter;
 use App\Service\Foundation\Url\UrlNormalizer;
 use App\Service\Ingestion\Language\Factory\LanguageDetectionFactory;
@@ -96,9 +97,13 @@ final class PostEnrichers
             new PostEmbedRenderer(),
             new EntrySanitizer(new TrailingBlankRemover()),
             new EntryImageWriter(),
-            self::linkCards($entityManager),
-            self::sharedLinkWriter($entityManager),
+            self::entryLinks($entityManager),
         );
+    }
+
+    public static function entryLinks(EntityManagerInterface $entityManager): EntryLinks
+    {
+        return new EntryLinks(self::sharedLinkWriter($entityManager), self::linkCards($entityManager));
     }
 
     public static function sharedLinkWriter(

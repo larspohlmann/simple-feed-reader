@@ -50,7 +50,7 @@ final class SharedLink
     #[ORM\Column(name: 'created_at', type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
-    /** Written by SharedLinkRepository::sweepUnreferenced() and keepAlive() alone, in SQL. */
+    /** Written by SharedLinkRepository::sweepUnreferenced() and claimByUrlHashes() alone, in SQL. */
     #[ORM\Column(name: 'unreferenced_since', type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $unreferencedSince = null;
 

@@ -68,6 +68,53 @@ final class SharedLinkWriterTest extends DbTestCase
         );
     }
 
+    public function testABatchKeepsOneRowPerUrlAndItsStatedLanguages(): void
+    {
+        $links = $this->writer()->linksFor(
+            [
+                self::card('https://example.com/a', 'A'),
+                self::card('https://example.com/a?utm_source=x', 'A again'),
+                self::card('https://example.com/b', 'B'),
+            ],
+            ['https://example.com/b' => FeedLanguage::Spanish],
+        );
+
+        self::assertSame(
+            ['https://example.com/a', 'https://example.com/a?utm_source=x', 'https://example.com/b'],
+            array_keys($links),
+        );
+        self::assertSame($links['https://example.com/a'], $links['https://example.com/a?utm_source=x']);
+        self::assertSame('A', $links['https://example.com/a?utm_source=x']->preview()->title);
+        self::assertSame(FeedLanguage::Spanish, $links['https://example.com/b']->getLanguage());
+        self::assertSame(2, $this->storedRows());
+    }
+
+    public function testKnownLinksAreFoundByUrlAndClaimed(): void
+    {
+        $writer = $this->writer();
+        $writer->linkFor(self::card('https://example.com/known', 'Known'), null);
+        $this->entityManager->getConnection()->executeStatement(
+            "UPDATE shared_link SET unreferenced_since = '2026-11-01 10:00:00'",
+        );
+
+        $known = $writer->knownFor(['https://example.com/known?utm_source=x', 'https://example.com/new', '/relative']);
+
+        self::assertSame(['https://example.com/known?utm_source=x'], array_keys($known));
+        self::assertSame(1, $this->storedRows());
+        self::assertNull($this->entityManager->getConnection()->fetchOne('SELECT unreferenced_since FROM shared_link'));
+    }
+
+    public function testAnExistingLinkIsReadWithoutCreatingOne(): void
+    {
+        $writer = $this->writer();
+        $writer->linkFor(self::card('https://example.com/known', 'Known'), null);
+
+        self::assertSame('Known', $writer->existing('https://example.com/known?utm_source=x')?->preview()->title);
+        self::assertNull($writer->existing('https://example.com/new'));
+        self::assertNull($writer->existing('/relative'));
+        self::assertSame(1, $this->storedRows());
+    }
+
     public function testAUrlThatDoesNotHashHasNoLink(): void
     {
         $this->expectException(UnhashableLinkException::class);

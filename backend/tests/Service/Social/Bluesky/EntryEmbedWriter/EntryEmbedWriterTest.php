@@ -523,8 +523,7 @@ final class EntryEmbedWriterTest extends DbTestCase
             new PostEmbedRenderer(),
             new EntrySanitizer(new TrailingBlankRemover()),
             new EntryImageWriter(),
-            $this->linkCards(),
-            PostEnrichers::sharedLinkWriter($this->entityManager),
+            PostEnrichers::entryLinks($this->entityManager),
         );
     }
 }

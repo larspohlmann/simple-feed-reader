@@ -7,15 +7,12 @@ namespace App\Service\Content\LinkCard;
 use App\Entity\Entry;
 use App\Entity\LinkCardContent;
 use App\Entity\ShareEnrichment;
-use App\Entity\SharedLink;
 use App\Repository\LinkCardRepository;
 use App\Repository\ShareEnrichmentRepository;
-use App\Repository\SharedLinkRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Content\LinkCard\Model\EntryCardsModel;
 use App\Service\Content\LinkCard\Model\LinkCardBudgetModel;
 use App\Service\Content\LinkCard\Support\ReusableShareUrls;
-use App\Service\Foundation\Url\UrlNormalizer;
 use App\Service\Social\Share\Model\ShareFetchPlanModel;
 use App\Service\Library\Search\EntryIndexer;
 use App\Service\Social\Share\Support\ShareTargets;
@@ -32,8 +29,7 @@ final readonly class ShareLinkCards
         private EntryCardWriter $cardWriter,
         private ShareEnrichmentRepository $enrichments,
         private LinkCardRepository $linkCards,
-        private SharedLinkRepository $sharedLinks,
-        private UrlNormalizer $urlNormalizer,
+        private SharedLinkWriter $linkWriter,
         private EntityManagerInterface $entityManager,
         private EntryIndexer $indexer,
         private NaiveUtcClock $clock,
@@ -136,36 +132,12 @@ final readonly class ShareLinkCards
             $plans[$row->requireId()] = $plan;
             $reusableUrls[$row->requireId()] = ReusableShareUrls::of($entry, $plan);
         }
-        $known = $this->storedLinksByUrl(array_merge(...array_values($reusableUrls)));
+        $known = $this->linkWriter->knownFor(array_merge(...array_values($reusableUrls)));
         foreach ($plans as $rowId => $plan) {
             $plans[$rowId] = $plan->withKnown(array_intersect_key($known, array_flip($reusableUrls[$rowId])));
         }
 
         return $plans;
-    }
-
-    /**
-     * @param list<string> $urls
-     *
-     * @return array<string, SharedLink> by URL
-     */
-    private function storedLinksByUrl(array $urls): array
-    {
-        $hashesByUrl = [];
-        foreach ($urls as $url) {
-            $hashesByUrl[$url] = $this->urlNormalizer->hash($url);
-        }
-        $urlHashes = array_values(array_filter($hashesByUrl));
-        $this->sharedLinks->keepAlive($urlHashes);
-        $links = $this->sharedLinks->byUrlHashes($urlHashes);
-        $linksByUrl = [];
-        foreach ($hashesByUrl as $url => $hash) {
-            if (isset($links[(string) $hash])) {
-                $linksByUrl[$url] = $links[(string) $hash];
-            }
-        }
-
-        return $linksByUrl;
     }
 
     /**

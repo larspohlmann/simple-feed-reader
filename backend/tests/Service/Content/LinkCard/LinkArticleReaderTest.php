@@ -227,8 +227,7 @@ final class LinkArticleReaderTest extends DbTestCase
     {
         return new LinkArticleReader(
             $this->extractor,
-            $this->sharedLinks(),
-            new UrlNormalizer(),
+            PostEnrichers::sharedLinkWriter($this->entityManager),
             new PreviewLanguage(new LanguageGuess(new LanguageDetectionFactory()->createForFeedLanguages())),
             $this->entityManager,
         );

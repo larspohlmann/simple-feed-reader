@@ -7,16 +7,14 @@ namespace App\Service\Social\Bluesky\EntryEmbedWriter;
 use App\Entity\Entry;
 use App\Entity\EntryMedium;
 use App\Entity\LinkCardContent;
-use App\Entity\SharedLink;
 use App\Enum\ShareKind;
-use App\Repository\LinkCardRepository;
 use App\Service\Social\Bluesky\Model\FillOutcome;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Bluesky\Model\RenderedEmbedModel;
 use App\Service\Social\Bluesky\PostEmbedRenderer;
 use App\Service\Social\Bluesky\Support\AtPostUri;
 use App\Service\Social\Bluesky\Support\BlueskyRichText;
-use App\Service\Content\LinkCard\SharedLinkWriter;
+use App\Service\Content\LinkCard\EntryLinks;
 use App\Service\Content\LinkCard\Support\TrailingUrl;
 use App\Service\Outbound\Image\Model\DeclaredImageModel;
 use App\Service\Ingestion\Ingest\EntryImageWriter;
@@ -34,8 +32,7 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
         private PostEmbedRenderer $renderer,
         private EntrySanitizer $sanitizer,
         private EntryImageWriter $imageWriter,
-        private LinkCardRepository $linkCards,
-        private SharedLinkWriter $linkWriter,
+        private EntryLinks $entryLinks,
     ) {
     }
 
@@ -47,10 +44,7 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
         }
 
         $body = self::sharedBody($entry->getText()->getContentHtml() ?? '', $embed);
-        $this->linkCards->append($entry, array_map(
-            fn (LinkCardContent $card): SharedLink => $this->linkWriter->linkFor($card, null),
-            $embed->linkCards,
-        ));
+        $this->entryLinks->attach($entry, $embed->linkCards);
         $entry->recordText(
             $entry->getText()->withContentHtml($this->sanitizer->sanitize($body->linkedHtml . $embed->html)),
         );
@@ -70,11 +64,7 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
         if ($embed->quote === null) {
             $entry->setShareKind(self::shareKindOf($embed, $outcome, $assembled->media));
         } else {
-            $quotedCard = $embed->quote->linkCard;
-            $entry->shareQuotedPost(
-                $embed->quote,
-                $quotedCard === null ? null : $this->linkWriter->linkFor($quotedCard, null),
-            );
+            $this->entryLinks->quote($entry, $embed->quote);
         }
 
         return $outcome;

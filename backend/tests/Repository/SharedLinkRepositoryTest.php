@@ -46,12 +46,12 @@ final class SharedLinkRepositoryTest extends DbTestCase
             self::newLink('h2', 'Two'),
         ]);
 
-        $ids = $links->idsByUrlHash(['h1', 'h2', 'missing']);
+        $rows = $links->byUrlHashes(['h1', 'h2', 'missing']);
         $found = $links->findOneByUrlHash('h1');
 
-        self::assertSame(['h1', 'h2'], array_keys($ids));
+        self::assertEqualsCanonicalizing(['h1', 'h2'], array_keys($rows));
         self::assertInstanceOf(SharedLink::class, $found);
-        self::assertSame($ids['h1'], $found->requireId());
+        self::assertSame($rows['h1'], $found);
         self::assertSame('h1', $found->getUrlHash());
         self::assertSame(FeedLanguage::Spanish, $found->getLanguage());
         self::assertEquals(
@@ -64,7 +64,6 @@ final class SharedLinkRepositoryTest extends DbTestCase
     public function testFindingNoHashesIsEmpty(): void
     {
         self::assertSame([], $this->repository()->byUrlHashes([]));
-        self::assertSame([], $this->repository()->idsByUrlHash([]));
     }
 
     public function testInsertingNothingWritesNothing(): void
@@ -141,18 +140,16 @@ final class SharedLinkRepositoryTest extends DbTestCase
         $links->insertMissing([self::linkCreated('reused', '2026-11-01 10:00:00')]);
         $links->sweepUnreferenced(self::at('2026-11-13 10:00:00'), self::at('2026-11-12 10:00:00'));
 
-        $links->keepAlive(['reused']);
+        self::assertArrayHasKey('reused', $links->claimByUrlHashes(['reused', 'unknown']));
         $deleted = $links->sweepUnreferenced(self::at('2026-11-15 10:00:00'), self::at('2026-11-14 10:00:00'));
 
         self::assertSame(0, $deleted);
         self::assertSame(['reused'], $this->storedHashes());
     }
 
-    public function testKeepingNothingAliveWritesNothing(): void
+    public function testClaimingNothingFindsNothing(): void
     {
-        $this->repository()->keepAlive([]);
-
-        self::assertSame([], $this->storedHashes());
+        self::assertSame([], $this->repository()->claimByUrlHashes([]));
     }
 
     private static function newLink(string $hash, string $title): NewSharedLinkModel

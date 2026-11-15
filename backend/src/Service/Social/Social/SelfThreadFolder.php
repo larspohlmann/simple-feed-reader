@@ -6,9 +6,8 @@ namespace App\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Enum\ShareKind;
-use App\Repository\LinkCardRepository;
 use App\Service\Content\Comments\Model\EntryCommentModel;
-use App\Service\Content\LinkCard\SharedLinkWriter;
+use App\Service\Content\LinkCard\EntryLinks;
 use App\Service\Social\Social\Factory\ThreadPostFactory;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -17,8 +16,7 @@ final readonly class SelfThreadFolder
     public function __construct(
         private EntityManagerInterface $entityManager,
         private ThreadPostFactory $threadPostFactory,
-        private LinkCardRepository $linkCards,
-        private SharedLinkWriter $linkWriter,
+        private EntryLinks $entryLinks,
     ) {
     }
 
@@ -38,7 +36,7 @@ final readonly class SelfThreadFolder
         if ($card === null) {
             return;
         }
-        $this->linkCards->appendToThreadPost($post, $this->linkWriter->linkFor($card, null));
+        $this->entryLinks->attachToThreadPost($post, $card);
         if ($entry->getShareKind() === null) {
             $entry->setShareKind(ShareKind::Link);
         }

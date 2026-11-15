@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Content\LinkCard;
 
 use App\Entity\Entry;
-use App\Entity\SharedLink;
 use App\Enum\ShareKind;
-use App\Repository\LinkCardRepository;
 use App\Service\Ingestion\Ingest\Support\EntrySnippet;
 use App\Service\Content\LinkCard\Model\EntryCardsModel;
 use App\Service\Content\LinkCard\Model\PageCardModel;
@@ -19,33 +17,19 @@ use App\Service\Social\Share\Support\TitledShareTarget;
 final readonly class EntryCardWriter
 {
     public function __construct(
-        private LinkCardRepository $linkCards,
+        private EntryLinks $entryLinks,
         private EntrySanitizer $sanitizer,
-        private SharedLinkWriter $linkWriter,
     ) {
     }
 
     public function write(Entry $entry, EntryCardsModel $cards): void
     {
-        $this->linkCards->append($entry, array_values(array_filter(array_map($this->linkOf(...), $cards->pageCards))));
+        $this->entryLinks->attach($entry, $cards->newCards(), $cards->statedLanguagesByUrl());
         $this->dropQuoteLines($entry, $cards->quoteLineUrls());
         self::settleMediaTarget($entry, $cards->pageCards);
         if ($cards->quoted !== null) {
-            $quotedCard = $cards->quoted->post->linkCard;
-            $entry->shareQuotedPost(
-                $cards->quoted->post,
-                $quotedCard === null ? null : $this->linkWriter->linkFor($quotedCard, null),
-            );
+            $this->entryLinks->quote($entry, $cards->quoted->post);
         }
-    }
-
-    private function linkOf(PageCardModel $pageCard): ?SharedLink
-    {
-        if ($pageCard->link !== null || $pageCard->card === null) {
-            return $pageCard->link;
-        }
-
-        return $this->linkWriter->linkFor($pageCard->card, $pageCard->statedLanguage);
     }
 
     /**

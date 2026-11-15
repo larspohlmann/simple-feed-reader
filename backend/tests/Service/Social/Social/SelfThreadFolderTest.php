@@ -10,7 +10,6 @@ use App\Entity\Feed;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 use App\Enum\ShareKind;
-use App\Repository\LinkCardRepository;
 use App\Repository\ThreadPostRepository;
 use App\Service\Content\Comments\Model\CommentAuthorModel;
 use App\Service\Content\Comments\Model\CommentEmbedsModel;
@@ -178,14 +177,10 @@ final class SelfThreadFolderTest extends DbTestCase
 
     private function folder(): SelfThreadFolder
     {
-        $linkCards = self::getContainer()->get(LinkCardRepository::class);
-        self::assertInstanceOf(LinkCardRepository::class, $linkCards);
-
         return new SelfThreadFolder(
             $this->entityManager,
             new ThreadPostFactory(),
-            $linkCards,
-            PostEnrichers::sharedLinkWriter($this->entityManager),
+            PostEnrichers::entryLinks($this->entityManager),
         );
     }
 

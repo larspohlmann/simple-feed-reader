@@ -45,8 +45,7 @@ final class SelfThreadEnrichers
             new SelfThreadFolder(
                 $entityManager,
                 new ThreadPostFactory(),
-                PostEnrichers::linkCards($entityManager),
-                PostEnrichers::sharedLinkWriter($entityManager),
+                PostEnrichers::entryLinks($entityManager),
             ),
             self::threadPosts($entityManager),
             PostEnrichers::linkCards($entityManager),

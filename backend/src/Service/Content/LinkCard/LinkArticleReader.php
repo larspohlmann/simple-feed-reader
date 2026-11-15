@@ -5,12 +5,10 @@ declare(strict_types=1);
 namespace App\Service\Content\LinkCard;
 
 use App\Entity\SharedLink;
-use App\Repository\SharedLinkRepository;
 use App\Service\Content\LinkCard\Support\StorableLinkCard;
 use App\Service\Content\Reader\ArticleExtractor\ArticleExtractorInterface;
 use App\Service\Content\Reader\Model\ExtractionResultModel;
 use App\Service\Content\Reader\Model\PagePreviewModel;
-use App\Service\Foundation\Url\UrlNormalizer;
 use App\Service\Ingestion\Language\PreviewLanguage;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -22,8 +20,7 @@ final readonly class LinkArticleReader
 {
     public function __construct(
         private ArticleExtractorInterface $extractor,
-        private SharedLinkRepository $sharedLinks,
-        private UrlNormalizer $urlNormalizer,
+        private SharedLinkWriter $linkWriter,
         private PreviewLanguage $previewLanguage,
         private EntityManagerInterface $entityManager,
     ) {
@@ -35,19 +32,12 @@ final readonly class LinkArticleReader
         if (!$result->ok || $result->preview === null) {
             return $result;
         }
-        $link = $this->storedLinkOf($url);
+        $link = $this->linkWriter->existing($url);
         if ($link !== null) {
             $this->refresh($link, $result->preview);
         }
 
         return $result;
-    }
-
-    private function storedLinkOf(string $url): ?SharedLink
-    {
-        $urlHash = $this->urlNormalizer->hash($url);
-
-        return $urlHash === null ? null : $this->sharedLinks->findOneByUrlHash($urlHash);
     }
 
     private function refresh(SharedLink $link, PagePreviewModel $preview): void
