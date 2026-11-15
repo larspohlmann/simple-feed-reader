@@ -5,6 +5,7 @@ import { QuotedPostDto } from '../../quoted-post/quoted-post';
 import { BLOCK_HEIGHT, EntryKind } from './magazine-block';
 import { sharedMedia, sharesQuotedPost, threadRootMedia } from './magazine-slot-fit';
 import { LinkCardDto } from '../../link-card/link-card';
+import { SHOWN_SHARERS } from '../../trending/story-sharers/story-sharers.component';
 
 /** Measured at 390px viewport width, like BLOCK_HEIGHT; a quote share's parts, in the same units. */
 const QUOTING = {
@@ -47,11 +48,20 @@ const LINK_CARD = {
 
 const GRID_RATIO = 16 / 9;
 
-/** The sharer pills under a Trending article posts share (#2229): one row of `--fs-xs` pills; the mini cards' stay folded. */
-export const STORY_SHARERS_ROW = 24;
+/**
+ * The sharer pills under a Trending article posts share (#2229), `--tap-target` tall on a phone: two pills fit a
+ * row, a third wraps. The mini cards' pills stay folded.
+ */
+export const STORY_SHARERS_ROW = { height: 44, gap: 4, pillsPerRow: 2 } as const;
 
 export function blockHeight(kind: EntryKind, entry: EntryDto): number {
-  return ownHeight(kind, entry) + (entry.story && entry.shares?.length ? STORY_SHARERS_ROW : 0);
+  return ownHeight(kind, entry) + storySharersHeight(entry);
+}
+
+function storySharersHeight(entry: EntryDto): number {
+  const sharers = entry.story ? Math.min(entry.shares?.length ?? 0, SHOWN_SHARERS) : 0;
+  const rows = Math.ceil(sharers / STORY_SHARERS_ROW.pillsPerRow);
+  return rows === 0 ? 0 : rows * STORY_SHARERS_ROW.height + (rows - 1) * STORY_SHARERS_ROW.gap;
 }
 
 function ownHeight(kind: EntryKind, entry: EntryDto): number {

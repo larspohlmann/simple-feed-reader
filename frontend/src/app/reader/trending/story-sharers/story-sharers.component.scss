@@ -47,6 +47,13 @@
   cursor: pointer;
 }
 
+@media (pointer: coarse) {
+  .sharer,
+  .sharers-more {
+    min-height: var(--tap-target);
+  }
+}
+
 @media (hover: hover) {
   .sharer:hover,
   .sharers-more:hover {
