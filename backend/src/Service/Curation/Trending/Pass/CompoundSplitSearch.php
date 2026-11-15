@@ -23,7 +23,6 @@ final class CompoundSplitSearch
         $this->letters = mb_str_split($word);
     }
 
-    /** The best split of the word into two parts or more, if it has one. */
     public function bestSplit(): ?CompoundSplitModel
     {
         return $this->bestCompoundFrom(0);
@@ -98,14 +97,9 @@ final class CompoundSplitSearch
         if ($length < GermanCompoundSplitter::MIN_PART_LENGTH || 1 !== preg_match(self::VOWEL, $form)) {
             return null;
         }
-        $frequencyClass = $this->lexicon->frequencyClassOf($form);
-        if (
-            $frequencyClass > $this->lexicon->nounClassFloorOfLength($length)
-            || !$this->lexicon->isNoun($form)
-        ) {
-            return null;
-        }
 
-        return CompoundSplitModel::single($form, $frequencyClass);
+        return $this->lexicon->isNoun($form)
+            ? CompoundSplitModel::single($form, $this->lexicon->frequencyClassOf($form))
+            : null;
     }
 }

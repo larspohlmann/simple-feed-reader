@@ -43,15 +43,6 @@ final class BundledGermanLexiconTest extends TestCase
         $this->assertSame(18, $lexicon->frequencyClassOf('nirgendwo'));
     }
 
-    public function testNounClassFloorOfALength(): void
-    {
-        $lexicon = $this->fixtureLexicon();
-
-        $this->assertSame(10, $lexicon->nounClassFloorOfLength(4));
-        $this->assertSame(13, $lexicon->nounClassFloorOfLength(8));
-        $this->assertSame(18, $lexicon->nounClassFloorOfLength(40));
-    }
-
     public function testResolvesVerbStems(): void
     {
         $lexicon = $this->fixtureLexicon();
@@ -91,16 +82,6 @@ final class BundledGermanLexiconTest extends TestCase
         (new BundledGermanLexicon($this->temporaryDirectory))->isNoun('eins');
     }
 
-    public function testRejectsAMetaFileWithoutTheFloors(): void
-    {
-        $this->writeLexicon('eins');
-        file_put_contents($this->temporaryDirectory . '/lexicon-meta.php', "<?php return ['rarest' => 1];");
-
-        $this->expectException(\UnexpectedValueException::class);
-
-        (new BundledGermanLexicon($this->temporaryDirectory))->isNoun('eins');
-    }
-
     public function testRejectsAMetaFileThatReturnsNoArray(): void
     {
         $this->writeLexicon('eins');
@@ -132,7 +113,7 @@ final class BundledGermanLexiconTest extends TestCase
         file_put_contents($this->temporaryDirectory . '/verbs.tsv', '');
         file_put_contents(
             $this->temporaryDirectory . '/lexicon-meta.php',
-            "<?php return ['rarest' => 1, 'nounClassFloorByLength' => []];",
+            "<?php return ['rarest' => 1];",
         );
     }
 }

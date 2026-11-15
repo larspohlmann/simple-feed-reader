@@ -82,60 +82,27 @@ final class BundledLexiconDataTest extends TestCase
         $this->assertSame([], array_filter(self::$verbRows, static fn (array $row): bool => '' === $row[1]));
     }
 
-    public function testMetaDescribesTheNouns(): void
+    public function testMetaHoldsTheRarestClass(): void
     {
-        $this->assertMetaDescribesTheNouns(self::DIRECTORY, self::$formRows);
+        $this->assertMetaHoldsTheRarestClass(self::DIRECTORY, self::$formRows);
     }
 
-    public function testFixtureMetaFollowsTheSameDefinition(): void
+    public function testFixtureMetaHoldsTheRarestClass(): void
     {
         $fixtureRows = self::rowsOf(self::FIXTURE_DIRECTORY, 'lexicon.tsv');
 
-        $this->assertMetaDescribesTheNouns(self::FIXTURE_DIRECTORY, $fixtureRows);
+        $this->assertMetaHoldsTheRarestClass(self::FIXTURE_DIRECTORY, $fixtureRows);
     }
 
     /** @param list<list<string>> $formRows */
-    private function assertMetaDescribesTheNouns(string $directory, array $formRows): void
+    private function assertMetaHoldsTheRarestClass(string $directory, array $formRows): void
     {
         $meta = require $directory . '/lexicon-meta.php';
         $this->assertIsArray($meta);
         $classes = array_map(intval(...), array_column($formRows, 2));
         $rarest = max($classes ?: [0]);
 
-        $this->assertSame(self::classFloorsOf($formRows, $rarest), $meta['nounClassFloorByLength']);
-        $this->assertSame($rarest, $meta['rarest']);
-    }
-
-    /**
-     * The class at which the nouns of a length, each weighing 2^-class, reach 99 % of their total weight.
-     *
-     * @param list<list<string>> $formRows
-     * @return array<int, int>
-     */
-    private static function classFloorsOf(array $formRows, int $rarest): array
-    {
-        $weightsByLength = [];
-        foreach ($formRows as [$form, $kind, $class]) {
-            if ('n' === $kind) {
-                $weightsByLength[mb_strlen($form)][(int) $class] ??= 0;
-                $weightsByLength[mb_strlen($form)][(int) $class] += 1 << ($rarest - (int) $class);
-            }
-        }
-        ksort($weightsByLength);
-
-        return array_map(static function (array $weightByClass): int {
-            ksort($weightByClass);
-            $total = array_sum($weightByClass);
-            $cumulative = 0;
-            foreach ($weightByClass as $class => $weight) {
-                $cumulative += $weight;
-                if (100 * $cumulative >= 99 * $total) {
-                    return $class;
-                }
-            }
-
-            return array_key_last($weightByClass);
-        }, $weightsByLength);
+        $this->assertSame(['rarest' => $rarest], $meta);
     }
 
     /** @return list<list<string>> */

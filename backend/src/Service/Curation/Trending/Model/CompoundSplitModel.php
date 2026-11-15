@@ -36,11 +36,6 @@ final readonly class CompoundSplitModel
         return count($this->parts);
     }
 
-    public function isCompound(): bool
-    {
-        return $this->partCount() > 1;
-    }
-
     /** Fewer parts win, then the lower mean frequency class, then the longer head. */
     public function beats(self $other): bool
     {

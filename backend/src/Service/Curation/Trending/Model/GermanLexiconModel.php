@@ -14,13 +14,8 @@ final readonly class GermanLexiconModel
 
     private SortedLinesModel $verbs;
 
-    /** @param array<int, int> $nounClassFloorByLength */
-    public function __construct(
-        string $formLines,
-        string $verbLines,
-        private int $rarestClass,
-        private array $nounClassFloorByLength,
-    ) {
+    public function __construct(string $formLines, string $verbLines, private int $rarestClass)
+    {
         $this->forms = new SortedLinesModel($formLines);
         $this->verbs = new SortedLinesModel($verbLines);
     }
@@ -28,23 +23,14 @@ final readonly class GermanLexiconModel
     public static function fromDirectory(string $directory): self
     {
         $meta = require $directory . '/lexicon-meta.php';
-        if (
-            !is_array($meta)
-            || !is_int($meta['rarest'] ?? null)
-            || !is_array($meta['nounClassFloorByLength'] ?? null)
-        ) {
+        if (!is_array($meta) || !is_int($meta['rarest'] ?? null)) {
             throw new \UnexpectedValueException('The German lexicon meta file has the wrong shape.');
-        }
-        $floors = array_filter($meta['nounClassFloorByLength'], is_int(...));
-        if (count($floors) !== count($meta['nounClassFloorByLength'])) {
-            throw new \UnexpectedValueException('The German lexicon meta file has a non-integer class floor.');
         }
 
         return new self(
             self::contentsOf($directory . '/lexicon.tsv'),
             self::contentsOf($directory . '/verbs.tsv'),
             $meta['rarest'],
-            array_combine(array_map(intval(...), array_keys($floors)), $floors),
         );
     }
 
@@ -63,11 +49,6 @@ final readonly class GermanLexiconModel
         $line = $this->forms->valueOf($form);
 
         return null === $line ? $this->rarestClass + 1 : (int) substr($line, 2);
-    }
-
-    public function nounClassFloorOfLength(int $length): int
-    {
-        return $this->nounClassFloorByLength[$length] ?? $this->rarestClass + 1;
     }
 
     public function isVerbStem(string $presentStem): bool

@@ -20,7 +20,7 @@ years: 1950-2019 (match_count summed)
 forms: ^\p{L}+$ tokens, casefolded (MB_CASE_FOLD, so ß becomes ss) and NFKC, diacritics kept, at least 3 letters;
   14,343,914 distinct forms before the cut
 N: 290000 (the most frequent forms)
-size: 5,016,903 bytes in lexicon.tsv, verbs.tsv and lexicon-meta.php (budget 6,291,456); nouns 189,565, others 100,435, verbs 11,680
+size: 5,016,257 bytes in lexicon.tsv, verbs.tsv and lexicon-meta.php (budget 6,291,456); nouns 189,565, others 100,435, verbs 11,680
 noun rule: _NOUN count at least half the form's tagged count; the 4 kept forms without any tag use the capitalised
   spelling's share of the untagged count instead
 verb rule: _VERB count at least half the tagged count, not a noun, ending in -en, -eln or -ern with at least 3 letters
@@ -30,6 +30,5 @@ load (PHP 8.5.12 CLI, opcache off): 1.3 ms, +4.8 MB held (the two text files as 
 generator: php resources/german-lexicon/generate.php <directory of the 8 shards>, about 3.5 minutes and 4 GB; writes
   lexicon.tsv (form TAB n|o TAB class), verbs.tsv (present stem TAB infinitive stem), lexicon-meta.php, byte-sorted;
   the committed files were converted from the first lexicon.php, which the same 290,000-form selection produced.
-meta: rarest class, and per noun length the class floor (each noun weighs 2^-class; the smallest class at which
-  the weight summed from class 0 upward reaches 99 % of the total); lexicon-meta.php was re-rendered from the
-  committed tsv files with render.php, which reproduced both tsv files byte for byte
+meta: the rarest class; lexicon-meta.php was re-rendered from the committed tsv files with render.php, which
+  reproduced both tsv files byte for byte
