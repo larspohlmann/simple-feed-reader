@@ -78,6 +78,12 @@ final class StopWordVoteTest extends TestCase
         self::assertNull(self::vote('今日のニュース https://www.example.com/news/the-day-of-the-vote'));
     }
 
+    public function testALinkWithoutSchemeDoesNotVote(): void
+    {
+        self::assertSame(FeedLanguage::English, self::vote('Recover from failures laravel-news.com/laravel-ai-sdk'));
+        self::assertSame(FeedLanguage::English, self::vote('A brain teaser from Slate. slate.trib.al/Vond4Dm'));
+    }
+
     public function testLinksMentionsAndHashtagsDoNotVote(): void
     {
         self::assertNull(self::vote('Lesenswert https://example.com/the-best-of-the-year'));
