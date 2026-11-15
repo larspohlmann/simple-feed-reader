@@ -6,19 +6,19 @@ namespace App\Tests\Service\Curation\Trending;
 
 use App\Service\Curation\Trending\GermanCompoundSplitter;
 use App\Service\Curation\Trending\GermanLexicon\BundledGermanLexicon;
+use App\Tests\Support\TrendingWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class GermanCompoundSplitterTest extends TestCase
 {
-    private const string FIXTURE_LEXICON = __DIR__ . '/../../../Fixtures/german-lexicon';
     private const string BUNDLED_LEXICON = __DIR__ . '/../../../../resources/german-lexicon';
 
     /** @param list<string> $expectedParts */
     #[DataProvider('fixtureCompounds')]
     public function testSplitsAWordIntoItsLexiconParts(string $word, array $expectedParts): void
     {
-        $splitter = new GermanCompoundSplitter(new BundledGermanLexicon(self::FIXTURE_LEXICON));
+        $splitter = new GermanCompoundSplitter(TrendingWiring::germanLexicon());
 
         $this->assertSame($expectedParts, $splitter->partsOf($word));
     }

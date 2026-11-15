@@ -287,6 +287,57 @@ final class HeadlineEquivalentsTest extends TestCase
         );
     }
 
+    public function testAGermanCompoundAddsTheStemsOfItsParts(): void
+    {
+        $stemmer = TrendingWiring::stemmer();
+
+        self::assertEqualsCanonicalizing(
+            array_map(
+                static fn (string $word): string => $stemmer->stem($word, FeedLanguage::German),
+                ['polizeieinsatz', 'polizei', 'einsatz'],
+            ),
+            $this->equivalents->stemsOf('Polizeieinsatz', FeedLanguage::German),
+        );
+    }
+
+    public function testACompoundInAnotherLanguageIsNotSplit(): void
+    {
+        self::assertCount(1, $this->equivalents->stemsOf('Polizeieinsatz', FeedLanguage::English));
+    }
+
+    public function testACompoundWithoutALanguageKeepsItsCut(): void
+    {
+        self::assertSame(['polize'], $this->equivalents->stemsOf('Polizeieinsatz', null));
+    }
+
+    public function testAPartGoesThroughTheGermanEquivalences(): void
+    {
+        self::assertContains('russia', $this->equivalents->stemsOf('Russlandreise', FeedLanguage::German));
+    }
+
+    public function testAKnownWordMoreFrequentThanItsPartsStaysOneStem(): void
+    {
+        self::assertCount(1, $this->equivalents->stemsOf('Aktion', FeedLanguage::German));
+    }
+
+    public function testACanonicalIsNeverSplit(): void
+    {
+        self::assertSame(['russia'], $this->equivalents->wordStemsOf('russia', 'russia', FeedLanguage::German));
+    }
+
+    public function testTheWholeStemComesBeforeThePartStems(): void
+    {
+        $stemmer = TrendingWiring::stemmer();
+
+        self::assertSame(
+            array_map(
+                static fn (string $word): string => $stemmer->stem($word, FeedLanguage::German),
+                ['polizeieinsatz', 'polizei', 'einsatz'],
+            ),
+            $this->equivalents->wordStemsOf('polizeieinsatz', 'polizeieinsatz', FeedLanguage::German),
+        );
+    }
+
     public function testALanguageStemThatIsACanonicalNeedsNoEntry(): void
     {
         self::assertSame(['ukrain'], $this->equivalents->stemsOf('Ukraine', FeedLanguage::German));

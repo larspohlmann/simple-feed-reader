@@ -173,6 +173,48 @@ final class HeadlineWindowTest extends TestCase
         self::assertSame([], $this->window->sharedWeightsWithEarlier(2));
     }
 
+    public function testACompoundSharesItsPartWithTheBareWord(): void
+    {
+        $this->addIn(FeedLanguage::German, 1, 10, 'Polizei räumt Camp');
+        $this->addIn(FeedLanguage::German, 2, 20, 'Großer Polizeieinsatz am Bahnhof');
+
+        self::assertSame([1], array_keys($this->window->sharedWeightsWithEarlier(2)));
+    }
+
+    public function testTheSameCompoundSharesMoreThanOneOfItsParts(): void
+    {
+        $this->addIn(FeedLanguage::German, 1, 10, 'Polizei räumt Camp');
+        $this->addIn(FeedLanguage::German, 2, 20, 'Großer Polizeieinsatz am Bahnhof');
+        $this->addIn(FeedLanguage::German, 3, 30, 'Polizeieinsatz am Bahnhof');
+        $this->addIn(FeedLanguage::German, 4, 40, 'Polizeieinsatz am Bahnhof');
+
+        self::assertGreaterThan(
+            $this->window->sharedWeightsWithEarlier(2)[1],
+            $this->window->sharedWeightsWithEarlier(4)[3],
+        );
+    }
+
+    public function testAPartThatIsAlsoAWordOfTheHeadlineCountsOnce(): void
+    {
+        $this->addIn(FeedLanguage::German, 1, 10, 'Polizei: Polizeieinsatz');
+
+        self::assertEqualsWithDelta(3 * self::ONCE, $this->window->totalWeight(1), 0.0001);
+    }
+
+    public function testAPartStemInThreePercentOfTheFlooredWindowIsFiller(): void
+    {
+        $this->addTagCompoundHeadlines(45);
+
+        self::assertArrayNotHasKey(1, $this->window->sharedWeightsWithEarlier(2), 'they share only the part tag');
+    }
+
+    public function testAPartStemInFewerThanThreePercentLinksTwoCompounds(): void
+    {
+        $this->addTagCompoundHeadlines(44);
+
+        self::assertArrayHasKey(1, $this->window->sharedWeightsWithEarlier(2), 'they share the part tag');
+    }
+
     public function testANameLinksAnEntryWithoutALanguageToAGermanOne(): void
     {
         $this->add(1, 10, 'Macron besucht Merz', '');
@@ -224,6 +266,14 @@ final class HeadlineWindowTest extends TestCase
             $this->add($index, $index, 'Gemeinsam ' . self::uniqueWord($index), '');
         }
         $this->add($holders + 1, $holders + 1, self::uniqueWord($holders + 1), '');
+    }
+
+    private function addTagCompoundHeadlines(int $holders): void
+    {
+        for ($index = 1; $index <= $holders; $index++) {
+            $compound = $index % 2 === 1 ? 'Bundestag' : 'Arbeitstag';
+            $this->addIn(FeedLanguage::German, $index, $index, $compound . ' ' . self::uniqueWord($index));
+        }
     }
 
     private static function uniqueWord(int $index): string

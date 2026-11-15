@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Curation\Trending;
 
+use App\Enum\FeedLanguage;
+use App\Service\Curation\Trending\GermanLexicon\BundledGermanLexicon;
+use App\Service\Curation\Trending\GermanLexicon\GermanLexiconInterface;
+use App\Service\Curation\Trending\HeadlineEquivalents;
 use App\Service\Curation\Trending\TrendingRebuild;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
@@ -33,5 +37,18 @@ final class TrendingContainerWiringTest extends DbTestCase
         $report = $rebuild->rebuildDue();
 
         self::assertSame(2, $report->builds[0]->storyCount);
+    }
+
+    public function testTheContainersGermanLexiconIsTheBundledOne(): void
+    {
+        self::assertInstanceOf(BundledGermanLexicon::class, self::getContainer()->get(GermanLexiconInterface::class));
+    }
+
+    public function testTheContainersEquivalentsSplitAGermanCompound(): void
+    {
+        $equivalents = self::getContainer()->get(HeadlineEquivalents::class);
+        self::assertInstanceOf(HeadlineEquivalents::class, $equivalents);
+
+        self::assertContains('polizei', $equivalents->stemsOf('Polizeieinsatz', FeedLanguage::German));
     }
 }

@@ -6,6 +6,7 @@ namespace App\Tests\Service\Curation\Trending\GermanLexicon;
 
 use App\Service\Curation\Trending\Exception\UnknownVerbStemException;
 use App\Service\Curation\Trending\GermanLexicon\BundledGermanLexicon;
+use App\Tests\Support\TrendingWiring;
 use PHPUnit\Framework\TestCase;
 
 final class BundledGermanLexiconTest extends TestCase
@@ -104,7 +105,7 @@ final class BundledGermanLexiconTest extends TestCase
 
     private function fixtureLexicon(): BundledGermanLexicon
     {
-        return new BundledGermanLexicon(dirname(__DIR__, 4) . '/Fixtures/german-lexicon');
+        return TrendingWiring::germanLexicon();
     }
 
     private function writeLexicon(string $noun): void

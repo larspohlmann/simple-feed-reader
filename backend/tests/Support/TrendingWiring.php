@@ -9,6 +9,8 @@ use App\Repository\TrendingEntryRepository;
 use App\Repository\TrendingSnapshotRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Curation\Trending\Factory\SnowballStemmerFactory;
+use App\Service\Curation\Trending\GermanCompoundSplitter;
+use App\Service\Curation\Trending\GermanLexicon\BundledGermanLexicon;
 use App\Service\Curation\Trending\HeadlineEquivalents;
 use App\Service\Curation\Trending\HeadlineFiller;
 use App\Service\Curation\Trending\HeadlineStemmer;
@@ -66,7 +68,12 @@ final class TrendingWiring
 
     public static function equivalents(): HeadlineEquivalents
     {
-        return new HeadlineEquivalents(self::stemmer());
+        return new HeadlineEquivalents(self::stemmer(), new GermanCompoundSplitter(self::germanLexicon()));
+    }
+
+    public static function germanLexicon(): BundledGermanLexicon
+    {
+        return new BundledGermanLexicon(dirname(__DIR__) . '/Fixtures/german-lexicon');
     }
 
     public static function storyLinks(): StoryLinks
