@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Content\Reader\Pass;
 
+use App\Service\Foundation\Html\Support\DeclaredPageAddress;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -71,8 +72,7 @@ final readonly class ShareLinkMatcher
 
     private static function declaredAddress(HTMLDocument $document): ?string
     {
-        $declared = $document->querySelector('link[rel="canonical"]')?->getAttribute('href')
-            ?? $document->querySelector('meta[property="og:url"]')?->getAttribute('content');
+        $declared = DeclaredPageAddress::in($document);
 
         return $declared === null || trim($declared) === '' ? null : self::address($declared);
     }
