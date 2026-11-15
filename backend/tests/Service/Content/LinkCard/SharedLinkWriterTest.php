@@ -50,6 +50,24 @@ final class SharedLinkWriterTest extends DbTestCase
         self::assertEquals(new \DateTimeImmutable('2026-11-15 10:00:00'), $stored->getCreatedAt());
     }
 
+    public function testAReuseClearsTheUnreferencedMark(): void
+    {
+        $writer = $this->writer();
+        $writer->linkFor(self::card('https://example.com/marked', 'Marked'), null);
+        $writer->idsFor([self::card('https://example.com/batch', 'Batch')]);
+        $this->entityManager->getConnection()->executeStatement(
+            "UPDATE shared_link SET unreferenced_since = '2026-11-01 10:00:00'",
+        );
+
+        $writer->linkFor(self::card('https://example.com/marked', 'Again'), null);
+        $writer->idsFor([self::card('https://example.com/batch', 'Again')]);
+
+        self::assertSame(
+            [null, null],
+            $this->entityManager->getConnection()->fetchFirstColumn('SELECT unreferenced_since FROM shared_link'),
+        );
+    }
+
     public function testAUrlThatDoesNotHashHasNoLink(): void
     {
         $this->expectException(UnhashableLinkException::class);

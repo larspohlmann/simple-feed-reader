@@ -184,12 +184,12 @@ final class SharedLinkMigrationsTest extends TestCase
         $this->execute(new Version20261115140200($this->connection, new NullLogger()), 'up');
 
         self::assertSame(0, $this->rowCount('SELECT COUNT(*) FROM link_card WHERE shared_link_id IS NULL'));
-        self::assertSame(
-            [[1, self::URL, 'Merged first'], [2, 'https://late.example/a', 'Late oldest']],
-            array_map(
-                static fn (array $row): array => [(int) $row['id'], $row['url'], $row['title']],
-                $this->connection->fetchAllAssociative('SELECT id, url, title FROM shared_link ORDER BY id'),
-            ),
+        self::assertEquals(
+            [
+                ['id' => 1, 'url' => self::URL, 'title' => 'Merged first'],
+                ['id' => 2, 'url' => 'https://late.example/a', 'title' => 'Late oldest'],
+            ],
+            $this->connection->fetchAllAssociative('SELECT id, url, title FROM shared_link ORDER BY id'),
         );
         self::assertSame(2, $this->rowCount(
             'SELECT quoted_shared_link_id FROM entry WHERE id = ' . $quoting,

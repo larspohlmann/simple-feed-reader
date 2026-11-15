@@ -13,6 +13,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: SharedLinkRepository::class)]
 #[ORM\Table(name: 'shared_link')]
 #[ORM\UniqueConstraint(name: 'uniq_shared_link_url_hash', columns: ['url_hash'])]
+#[ORM\Index(name: 'idx_shared_link_unreferenced_since', columns: ['unreferenced_since'])]
 final class SharedLink
 {
     use PersistedId;
@@ -48,6 +49,10 @@ final class SharedLink
 
     #[ORM\Column(name: 'created_at', type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
+
+    /** Written by SharedLinkRepository::sweepUnreferenced() and keepAlive() alone, in SQL. */
+    #[ORM\Column(name: 'unreferenced_since', type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $unreferencedSince = null;
 
     public function __construct(
         string $urlHash,

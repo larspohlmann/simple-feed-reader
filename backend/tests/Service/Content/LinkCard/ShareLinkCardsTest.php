@@ -202,6 +202,21 @@ final class ShareLinkCardsTest extends DbTestCase
         self::assertSame([], $this->enrichments()->pendingEntryIdsAmong([$post->requireId()]));
     }
 
+    public function testAKnownLinkIsKeptAliveBeforeItIsAttached(): void
+    {
+        $this->knownLink('https://example.com/known');
+        $this->entityManager->getConnection()->executeStatement(
+            "UPDATE shared_link SET unreferenced_since = '2026-10-01 10:00:00'",
+        );
+        $this->queuedPost(1, '<p>https://example.com/known</p>');
+
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
+
+        self::assertNull(
+            $this->entityManager->getConnection()->fetchOne('SELECT unreferenced_since FROM shared_link'),
+        );
+    }
+
     public function testAKnownLinkCostsNoBudget(): void
     {
         $this->knownLink('https://example.com/1/1');

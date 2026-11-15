@@ -102,37 +102,57 @@ final class SharedLinkRepositoryTest extends DbTestCase
         );
     }
 
-    public function testUnreferencedRowsPastTheGraceAreDeleted(): void
+    public function testAnUnreferencedRowIsMarkedFirstAndDeletedAfterTheGrace(): void
     {
         $links = $this->repository();
         $links->insertMissing([
-            self::linkCreated('carded', '2026-11-13 10:00:00'),
-            self::linkCreated('quoted', '2026-11-13 10:00:00'),
-            self::linkCreated('stale', '2026-11-13 10:00:00'),
-            self::linkCreated('fresh', '2026-11-15 09:00:00'),
+            self::linkCreated('carded', '2026-11-01 10:00:00'),
+            self::linkCreated('quoted', '2026-11-01 10:00:00'),
+            self::linkCreated('stale', '2026-11-01 10:00:00'),
         ]);
-        $stored = $links->byUrlHashes(['carded', 'quoted']);
-        $entry = $this->entry('referencing');
-        $entry->shareQuotedPost(
-            new QuotedPostContent('https://q.example/1', 'Q', 'q.example', null, null, '', [], null),
-            $stored['quoted'],
-        );
-        $this->entityManager->persist(new LinkCard($entry, 0, $stored['carded']));
-        $this->entityManager->flush();
+        $this->reference($links->byUrlHashes(['carded', 'quoted']));
 
-        $deleted = $links->deleteUnreferencedCreatedBefore(new \DateTimeImmutable('2026-11-14 10:00:00'));
+        $first = $links->sweepUnreferenced(self::at('2026-11-14 10:00:00'), self::at('2026-11-13 10:00:00'));
+        $tooSoon = $links->sweepUnreferenced(self::at('2026-11-15 09:00:00'), self::at('2026-11-14 09:00:00'));
+        $afterTheGrace = $links->sweepUnreferenced(self::at('2026-11-15 11:00:00'), self::at('2026-11-14 11:00:00'));
 
-        self::assertSame(1, $deleted);
-        self::assertSame(['carded', 'fresh', 'quoted'], $this->storedHashes());
+        self::assertSame([0, 0, 1], [$first, $tooSoon, $afterTheGrace]);
+        self::assertSame(['carded', 'quoted'], $this->storedHashes());
     }
 
-    public function testTheGraceBoundaryIsExclusive(): void
+    public function testARowReferencedAgainLosesItsMark(): void
     {
-        $this->repository()->insertMissing([self::linkCreated('edge', '2026-11-14 10:00:00')]);
+        $links = $this->repository();
+        $links->insertMissing([self::linkCreated('back', '2026-11-01 10:00:00')]);
+        $links->sweepUnreferenced(self::at('2026-11-13 10:00:00'), self::at('2026-11-12 10:00:00'));
+        $this->reference(['carded' => $links->byUrlHashes(['back'])['back']]);
 
-        $deleted = $this->repository()->deleteUnreferencedCreatedBefore(new \DateTimeImmutable('2026-11-14 10:00:00'));
+        $links->sweepUnreferenced(self::at('2026-11-14 10:00:00'), self::at('2026-11-13 10:00:00'));
+        $this->entityManager->getConnection()->executeStatement('DELETE FROM link_card');
+        $deleted = $links->sweepUnreferenced(self::at('2026-11-15 10:00:00'), self::at('2026-11-14 10:00:00'));
 
         self::assertSame(0, $deleted);
+        self::assertSame(['back'], $this->storedHashes());
+    }
+
+    public function testAKeptAliveRowSurvivesTheSweepAfterItsGrace(): void
+    {
+        $links = $this->repository();
+        $links->insertMissing([self::linkCreated('reused', '2026-11-01 10:00:00')]);
+        $links->sweepUnreferenced(self::at('2026-11-13 10:00:00'), self::at('2026-11-12 10:00:00'));
+
+        $links->keepAlive(['reused']);
+        $deleted = $links->sweepUnreferenced(self::at('2026-11-15 10:00:00'), self::at('2026-11-14 10:00:00'));
+
+        self::assertSame(0, $deleted);
+        self::assertSame(['reused'], $this->storedHashes());
+    }
+
+    public function testKeepingNothingAliveWritesNothing(): void
+    {
+        $this->repository()->keepAlive([]);
+
+        self::assertSame([], $this->storedHashes());
     }
 
     private static function newLink(string $hash, string $title): NewSharedLinkModel
@@ -153,6 +173,27 @@ final class SharedLinkRepositoryTest extends DbTestCase
             null,
             new \DateTimeImmutable($createdAt),
         );
+    }
+
+    /** @param array<string, SharedLink> $links 'carded' gets a card, 'quoted' a quote */
+    private function reference(array $links): void
+    {
+        $entry = $this->entry('referencing-' . uniqid());
+        if (isset($links['quoted'])) {
+            $entry->shareQuotedPost(
+                new QuotedPostContent('https://q.example/1', 'Q', 'q.example', null, null, '', [], null),
+                $links['quoted'],
+            );
+        }
+        if (isset($links['carded'])) {
+            $this->entityManager->persist(new LinkCard($entry, 0, $links['carded']));
+        }
+        $this->entityManager->flush();
+    }
+
+    private static function at(string $moment): \DateTimeImmutable
+    {
+        return new \DateTimeImmutable($moment);
     }
 
     private function entry(string $guid): Entry

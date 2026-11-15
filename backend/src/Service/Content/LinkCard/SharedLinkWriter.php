@@ -29,6 +29,7 @@ final readonly class SharedLinkWriter
     public function linkFor(LinkCardContent $card, ?FeedLanguage $statedLanguage): SharedLink
     {
         $urlHash = $this->hashOf($card->url);
+        $this->sharedLinks->keepAlive([$urlHash]);
         $stored = $this->sharedLinks->findOneByUrlHash($urlHash);
         if ($stored !== null) {
             return $stored;
@@ -50,6 +51,7 @@ final readonly class SharedLinkWriter
         foreach ($cards as $card) {
             $cardsByHash[$this->hashOf($card->url)] ??= $card;
         }
+        $this->sharedLinks->keepAlive(array_keys($cardsByHash));
         $ids = $this->sharedLinks->idsByUrlHash(array_keys($cardsByHash));
         $missing = array_diff_key($cardsByHash, $ids);
         if ($missing !== []) {

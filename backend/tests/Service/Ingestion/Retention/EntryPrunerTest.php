@@ -491,8 +491,26 @@ final class EntryPrunerTest extends DbTestCase
         $this->entityManager->flush();
 
         self::assertSame(1, $this->pruner->prune());
+        self::assertSame(['https://gone.example/a'], $this->linkUrls(), 'the prune that orphans a link only marks it');
+        $this->clock->modify('+1 day +1 minute');
+        $this->pruner->prune();
 
         self::assertSame([], $this->linkUrls());
+    }
+
+    public function testALinkAWriterReusesBetweenTwoPrunesStays(): void
+    {
+        $feed = $this->feedWithEntries(self::FLOOR);
+        $stale = $this->seedEntry($feed, 'stale', $this->daysAgo(100));
+        $this->entityManager->persist(new LinkCard($stale, 0, $this->linkCreated('https://reused.example/a', 2)));
+        $this->entityManager->flush();
+        $this->pruner->prune();
+        $this->clock->modify('+1 day +1 minute');
+
+        $this->linkCreated('https://reused.example/a', 0);
+        $this->pruner->prune();
+
+        self::assertSame(['https://reused.example/a'], $this->linkUrls());
     }
 
     public function testALinkAnotherCardUsesStays(): void
@@ -532,6 +550,8 @@ final class EntryPrunerTest extends DbTestCase
     {
         $this->linkCreated('https://fresh.example/a', 0);
 
+        $this->pruner->prune();
+        $this->clock->modify('+23 hours');
         $this->pruner->prune();
 
         self::assertSame(['https://fresh.example/a'], $this->linkUrls());

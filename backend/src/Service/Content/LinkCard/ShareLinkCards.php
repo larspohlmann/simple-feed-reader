@@ -155,7 +155,9 @@ final readonly class ShareLinkCards
         foreach ($urls as $url) {
             $hashesByUrl[$url] = $this->urlNormalizer->hash($url);
         }
-        $links = $this->sharedLinks->byUrlHashes(array_values(array_filter($hashesByUrl)));
+        $urlHashes = array_values(array_filter($hashesByUrl));
+        $this->sharedLinks->keepAlive($urlHashes);
+        $links = $this->sharedLinks->byUrlHashes($urlHashes);
         $linksByUrl = [];
         foreach ($hashesByUrl as $url => $hash) {
             if (isset($links[(string) $hash])) {

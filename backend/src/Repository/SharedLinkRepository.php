@@ -8,12 +8,16 @@ use App\Doctrine\BulkInsert;
 use App\Entity\SharedLink;
 use App\Service\Content\LinkCard\Model\NewSharedLinkModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\Persistence\ManagerRegistry;
 
 /** @extends ServiceEntityRepository<SharedLink> */
 final class SharedLinkRepository extends ServiceEntityRepository
 {
     private const int ROWS_PER_INSERT = 100;
+    private const string REFERENCED
+        = '(EXISTS (SELECT 1 FROM link_card card WHERE card.shared_link_id = shared_link.id)'
+        . ' OR EXISTS (SELECT 1 FROM entry quoting WHERE quoting.quoted_shared_link_id = shared_link.id))';
 
     public function __construct(ManagerRegistry $registry)
     {
@@ -90,14 +94,41 @@ final class SharedLinkRepository extends ServiceEntityRepository
         )->rows($connection, array_map(self::rowOf(...), $links));
     }
 
-    /** A row no card and no quote references any more, and created before $before, the grace a writer's flush needs. */
-    public function deleteUnreferencedCreatedBefore(\DateTimeImmutable $before): int
+    /**
+     * Mark, then delete: a row is deleted only once it has stayed unreferenced for the grace, counted from the sweep
+     * that first saw it unreferenced; a writer's keepAlive() clears the mark before it looks the row up.
+     *
+     * @return int the rows deleted
+     */
+    public function sweepUnreferenced(\DateTimeImmutable $now, \DateTimeImmutable $markedBefore): int
     {
-        return (int) $this->getEntityManager()->getConnection()->executeStatement(
-            'DELETE FROM shared_link WHERE created_at < ?'
-            . ' AND NOT EXISTS (SELECT 1 FROM link_card card WHERE card.shared_link_id = shared_link.id)'
-            . ' AND NOT EXISTS (SELECT 1 FROM entry quoting WHERE quoting.quoted_shared_link_id = shared_link.id)',
-            [$before->format('Y-m-d H:i:s')],
+        $connection = $this->getEntityManager()->getConnection();
+        $connection->executeStatement(
+            'UPDATE shared_link SET unreferenced_since = NULL WHERE unreferenced_since IS NOT NULL AND '
+            . self::REFERENCED,
+        );
+        $connection->executeStatement(
+            'UPDATE shared_link SET unreferenced_since = ? WHERE unreferenced_since IS NULL AND NOT '
+            . self::REFERENCED,
+            [$now->format('Y-m-d H:i:s')],
+        );
+
+        return (int) $connection->executeStatement(
+            'DELETE FROM shared_link WHERE unreferenced_since < ? AND NOT ' . self::REFERENCED,
+            [$markedBefore->format('Y-m-d H:i:s')],
+        );
+    }
+
+    /** @param list<string> $urlHashes the rows a writer is about to reference */
+    public function keepAlive(array $urlHashes): void
+    {
+        if ($urlHashes === []) {
+            return;
+        }
+        $this->getEntityManager()->getConnection()->executeStatement(
+            'UPDATE shared_link SET unreferenced_since = NULL WHERE unreferenced_since IS NOT NULL AND url_hash IN (?)',
+            [array_values(array_unique($urlHashes))],
+            [ArrayParameterType::STRING],
         );
     }
 

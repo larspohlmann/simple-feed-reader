@@ -155,7 +155,8 @@ step alone (13.9 s in total), so the plan specifies the batched form.
 | `site_name` | VARCHAR(255), not null | |
 | `language` | VARCHAR(2), null, `enumType: FeedLanguage` | D5 |
 | `language_source` | VARCHAR(8), null, `enumType: App\Enum\LanguageSource` (`stated`, `guessed`) | null exactly when `language` is null |
-| `created_at` | DATETIME, not null | naive UTC; the garbage collector's grace (D11) |
+| `created_at` | DATETIME, not null | naive UTC; when the first card stored the row |
+| `unreferenced_since` | DATETIME, null, indexed | naive UTC; set by the prune that finds the row unreferenced, cleared by a writer's reuse (D11) |
 
 **`link_card`** becomes `id`, `entry_id` (FK cascade, as today), `thread_post_id` (FK cascade, as today), `position`,
 and `shared_link_id` INT NOT NULL (FK to `shared_link`, no `ON DELETE`: restrict). The unique `(entry_id, position)`
@@ -169,7 +170,7 @@ on `EntryQuotedPost` (D4).
 link, null when it has none (D7).
 
 **Delete behaviour.** An entry purge cascades to its `link_card` rows, never to a `shared_link`. A `shared_link` with
-no card and no quote left is deleted by the pruner one day after its creation (D11). Both references are restrict, so
+no card and no quote left is deleted by the pruner a day after a prune first marks it (D11). Both references are restrict, so
 nothing can delete a row a card or quote still uses. A snapshot reference is set null.
 
 ### Values and services
@@ -364,9 +365,15 @@ rebuild. It runs on dev and Strato after the deploy, and a follow-up commit dele
 
 ### Garbage collection (D11)
 
-`EntryPruner::prune()` calls `SharedLinkRepository::deleteUnreferencedCreatedBefore(now − 1 day)` after the entry
-passes and before the empty-run pass. That is one `DELETE … WHERE created_at < :before AND NOT EXISTS (link_card) AND
-NOT EXISTS (entry.quoted_shared_link_id)`. The report's entry count is unchanged.
+`EntryPruner::prune()` calls `SharedLinkRepository::sweepUnreferenced(now, now − 1 day)` after the entry passes and
+before the empty-run pass. Mark, then delete (final review I2):
+1. a row that is referenced again loses its `unreferenced_since` mark;
+2. a row no card and no quote references, and not yet marked, is marked with now;
+3. a row marked before now − 1 day, and still unreferenced, is deleted.
+
+Every writer calls `keepAlive()` (clears the mark) before it looks a row up, so a row a writer is about to reference is
+never older-marked than its lookup: a sweep between the lookup and the flush can only mark it again, and deletion needs
+a further day. `idx_shared_link_unreferenced_since` serves the sweep. The report's entry count is unchanged.
 
 ## Decisions
 
@@ -420,7 +427,8 @@ Lars delegated every decision. Each is "what — why — cost if wrong".
   cross-part reference. Both cost more than embedding a 300-character preview per card. Old backups import as they
   are. The language is not carried: restore guesses it again, and a stated language is lost. — If wrong: a backup
   repeats a shared article's preview per card, which is what it does today.
-- **D11. Unreferenced rows are deleted by the pruner one day after creation.** — Retention bounds `entry` and
+- **D11. Unreferenced rows are deleted by the pruner a day after a prune first finds them unreferenced (mark, then
+  delete; final review I2).** — Retention bounds `entry` and
   `link_card`. Without collection `shared_link` would grow forever (R2: 4,189 new rows a week), and a URL re-shared
   after its window would keep a stale preview. The one-day grace covers a row created by one process and referenced
   at another's flush. — If wrong: a URL re-shared more than a day after its last card was purged is read again.

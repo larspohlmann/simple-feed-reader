@@ -42,7 +42,7 @@ final readonly class EntryPruner
     public function prune(): int
     {
         $deletedEntries = $this->pruneByAge() + $this->pruneByFeedCap() + $this->pruneUnsaved();
-        $this->sharedLinks->deleteUnreferencedCreatedBefore($this->daysAgo(self::LINK_GRACE_DAYS));
+        $this->sharedLinks->sweepUnreferenced($this->clock->now(), $this->daysAgo(self::LINK_GRACE_DAYS));
         $this->retention->deleteEmptyCompletedRuns();
 
         return $deletedEntries;
