@@ -39,6 +39,20 @@ final class ShareTargetReaderTest extends TestCase
         self::assertSame([self::PAGE], $this->pages->readUrls());
     }
 
+    public function testATrackedQuoteLineStillQuotesItsTrackingFreeTarget(): void
+    {
+        $source = new StubQuotedPostSource([self::QUOTED => self::quote()]);
+
+        $cards = $this->reader($source)->cardsFor(
+            self::entry(self::bodyQuoting(self::QUOTED . '?utm_source=mastodon')),
+            [],
+            [self::QUOTED, self::PAGE],
+        );
+
+        self::assertSame(self::QUOTED, $cards->quoted?->address);
+        self::assertSame([self::PAGE], $this->pages->readUrls());
+    }
+
     public function testAQuoteTheSourceCannotReadFallsBackToALinkCard(): void
     {
         $source = new StubQuotedPostSource();
