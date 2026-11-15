@@ -368,6 +368,10 @@ final class TrackingFreeUrlTest extends TestCase
             ['utm_source', 'ref', 'xtor'],
         ];
         yield 'a navigation fragment' => ['https://example.com/a?fbclid=1#utm_source=x&section=2', ['fbclid']];
+        yield 'a fragment of two trackers' => [
+            'https://example.com/a#utm_source=x&at_medium=y',
+            ['utm_source', 'at_medium'],
+        ];
         yield 'a gift key' => ['https://www.theatlantic.com/a?gift=g&id=1', []];
         yield 'nothing to strip' => ['https://example.com/a', []];
         yield 'no host' => ['/a?utm_source=x', []];

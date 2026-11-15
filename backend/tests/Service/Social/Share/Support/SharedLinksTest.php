@@ -129,6 +129,17 @@ final class SharedLinksTest extends TestCase
         );
     }
 
+    public function testALinkPastTheLimitIsNotChecked(): void
+    {
+        $links = array_map(
+            static fn (int $index): string => 'https://example.com/' . $index,
+            range(1, SharedLinks::MAX),
+        );
+        $body = '<p>' . implode(' ', $links) . ' https://example.com/late?ref=rss</p>';
+
+        self::assertSame([], SharedLinks::of($body)->postedForms);
+    }
+
     public function testALinkThatLostOnlyDocumentedTrackersNeedsNoCheck(): void
     {
         $posted = 'https://example.com/a?utm_source=x&amp;fbclid=1';
