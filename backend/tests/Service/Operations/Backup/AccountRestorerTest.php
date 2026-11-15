@@ -628,7 +628,9 @@ final class AccountRestorerTest extends DbTestCase
         $this->assertFieldsRoundTripped(Tag::class, $sourceRows['tag'], $targetRows['tag'], ['parent']);
         self::assertSame('Reading', $targetRows['tag']->getParent()?->getName());
         $this->assertFieldsRoundTripped(SavedSearch::class, $sourceRows['savedSearch'], $targetRows['savedSearch']);
-        $this->assertFieldsRoundTripped(Feed::class, $sourceRows['feed'], $targetRows['feed']);
+        $this->assertFieldsRoundTripped(Feed::class, $sourceRows['feed'], $targetRows['feed'], ['traits.language']);
+        self::assertNotNull($sourceRows['feed']->getLanguage());
+        self::assertSame($sourceRows['feed']->getLanguage(), $targetRows['feed']->getLanguage());
 
         $this->assertFieldsRoundTripped(
             Subscription::class,

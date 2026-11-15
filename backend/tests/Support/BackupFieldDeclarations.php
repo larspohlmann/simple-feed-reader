@@ -69,6 +69,7 @@ final class BackupFieldDeclarations
             'description' => 'description', 'faviconUrl' => 'faviconUrl',
             'imageUrl' => 'imageUrl',
             'sourceFormat' => 'sourceFormat',
+            'traits.language' => 'language',
         ],
         Subscription::class => [
             'feed' => 'feedUrl',

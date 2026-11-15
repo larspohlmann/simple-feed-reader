@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Operations\Backup\Dto;
 
+use App\Enum\FeedLanguage;
+use App\Enum\SourceFormat;
 use App\Service\Operations\Backup\Exception\InvalidBackupException;
 use App\Service\Operations\Backup\Support\BackupLineFormat;
 use App\Service\Operations\Backup\Support\BackupSchema;
@@ -25,6 +27,7 @@ final readonly class FeedLine
         public ?string $faviconUrl,
         public ?string $imageUrl,
         public string $sourceFormat,
+        public ?FeedLanguage $language = null,
     ) {
     }
 
@@ -43,6 +46,7 @@ final readonly class FeedLine
             faviconUrl: LineField::stringOrNull($line, 'faviconUrl'),
             imageUrl: LineField::stringOrNull($line, 'imageUrl'),
             sourceFormat: LineField::string($line, 'sourceFormat'),
+            language: self::languageOf($line),
         );
         PrivateFeedRefusal::ofFeed($feedLine->url, $feedLine->sourceFormat);
         SavedFeedRefusal::ofFeed($feedLine->url, $feedLine->sourceFormat);
@@ -62,6 +66,7 @@ final readonly class FeedLine
             faviconUrl: $feed->getFaviconUrl(),
             imageUrl: $feed->getImageUrl(),
             sourceFormat: $exported->feedSourceFormat,
+            language: $feed->getLanguage(),
         );
     }
 
@@ -76,6 +81,17 @@ final readonly class FeedLine
             'faviconUrl' => $this->faviconUrl,
             'imageUrl' => $this->imageUrl,
             'sourceFormat' => $this->sourceFormat,
+            'language' => $this->language?->value,
         ]);
+    }
+
+    /** @param array<string, mixed> $line */
+    private static function languageOf(array $line): ?FeedLanguage
+    {
+        if (!SourceFormat::carriesFeedLanguage(LineField::string($line, 'sourceFormat'))) {
+            return null;
+        }
+
+        return FeedLanguage::tryFrom((string) LineField::stringOrNull($line, 'language'));
     }
 }

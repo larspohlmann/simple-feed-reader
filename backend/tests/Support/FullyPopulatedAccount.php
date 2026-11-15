@@ -28,6 +28,7 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\CommentsLoad;
+use App\Enum\FeedLanguage;
 use App\Enum\InclusionSurface;
 use App\Enum\Handedness;
 use App\Enum\MagazineStyle;
@@ -146,6 +147,7 @@ final readonly class FullyPopulatedAccount
         $feed->setFaviconUrl('https://populated.example/favicon.ico');
         $feed->setImageUrl('https://populated.example/logo.png');
         $feed->setSourceFormat(SourceFormat::SCRAPED);
+        $feed->recordTraits($feed->getTraits()->withLanguage(FeedLanguage::French));
 
         return $feed;
     }

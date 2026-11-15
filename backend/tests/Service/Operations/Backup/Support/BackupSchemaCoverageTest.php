@@ -264,8 +264,6 @@ final class BackupSchemaCoverageTest extends DbTestCase
                 . 'recomputes it through FeedNetworkListener.',
             'traits.platform' => 'Read from the feed\'s <generator> on every fetch; '
                 . 'a restored feed learns it on its first refresh.',
-            'traits.language' => 'Read from the feed\'s declared language on every fetch; '
-                . 'a restored feed learns it on its first refresh.',
             'etag' => 'The HTTP validator for the last body this instance fetched. A restore has '
                 . 'no such body, and a carried-over validator would make the first refresh take a '
                 . '304 over an empty feed.',
