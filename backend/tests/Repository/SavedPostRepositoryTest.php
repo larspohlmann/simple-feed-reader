@@ -259,6 +259,8 @@ final class SavedPostRepositoryTest extends DbTestCase
         $entry = $this->entry($source, 'with-link', 'https://same-link.example/1');
         $link = $this->link('https://shared.example/b');
         $this->entityManager->persist(new LinkCard($entry, 0, $link));
+        $other = $this->entry($source, 'not-copied', 'https://same-link.example/2');
+        $this->entityManager->persist(new LinkCard($other, 0, $this->link('https://other.example/c')));
         $this->entityManager->flush();
         $copies = $this->repository()->copyInto(new SavedCopyModel($saved->requireId(), null), [$entry->requireId()]);
 
@@ -271,7 +273,7 @@ final class SavedPostRepositoryTest extends DbTestCase
                 [$copies[$entry->requireId()]],
             ),
         );
-        self::assertEquals(1, $this->entityManager->getConnection()->fetchOne('SELECT COUNT(*) FROM shared_link'));
+        self::assertEquals(2, $this->entityManager->getConnection()->fetchOne('SELECT COUNT(*) FROM shared_link'));
     }
 
     public function testACopiedQuoteKeepsItsLink(): void

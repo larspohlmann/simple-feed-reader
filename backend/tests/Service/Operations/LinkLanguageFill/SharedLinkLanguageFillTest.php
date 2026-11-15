@@ -28,7 +28,7 @@ final class SharedLinkLanguageFillTest extends DbTestCase
 
     public function testLongRowsAreFilledShortRowsStayNull(): void
     {
-        $this->store(['de' => self::GERMAN, 'fr' => self::FRENCH, 'es' => self::SPANISH, 'short' => 'Kurz']);
+        $this->store(['short' => 'Kurz', 'de' => self::GERMAN, 'fr' => self::FRENCH, 'es' => self::SPANISH]);
 
         $report = $this->fill()->fill();
 

@@ -238,6 +238,19 @@ final class ShareLinkCardsTest extends DbTestCase
         self::assertSame(['Stored https://example.com/story'], $this->cardTitles($story));
     }
 
+    public function testATitledShareIsReadWhenAPostOfTheSamePassReusesItsTarget(): void
+    {
+        $this->knownLink('https://example.com/story');
+        $post = $this->queuedPost(1, '<p>https://example.com/story</p>');
+        $story = $this->queuedTitledShare(2, 'https://example.com/story');
+
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
+
+        self::assertSame(['https://example.com/story'], $this->pages->readUrls());
+        self::assertSame(['Stored https://example.com/story'], $this->cardTitles($post));
+        self::assertSame(['Stored https://example.com/story'], $this->cardTitles($story));
+    }
+
     public function testTheQuoteLineTargetIsNotReused(): void
     {
         $address = 'https://q.example/@a/1';

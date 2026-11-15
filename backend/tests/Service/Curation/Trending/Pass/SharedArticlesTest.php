@@ -47,6 +47,21 @@ final class SharedArticlesTest extends TestCase
         self::assertNotSame($first, $articles->of(self::postSharing(3, FeedLanguage::Spanish, $url)));
     }
 
+    public function testTwoLinksInOnePostLanguageAreTwoArticles(): void
+    {
+        $articles = new SharedArticles(TrendingWiring::cardLanguage());
+
+        $first = $articles->of(self::postSharing(1, FeedLanguage::German, 'https://outlet.example/library'));
+
+        self::assertNotSame(
+            $first,
+            $articles->of(self::postSharing(2, FeedLanguage::German, 'https://outlet.example/museum')),
+        );
+        $storedA = self::postSharing(3, FeedLanguage::German, 'https://outlet.example/a', FeedLanguage::French);
+        $storedB = self::postSharing(4, FeedLanguage::German, 'https://outlet.example/b', FeedLanguage::French);
+        self::assertNotSame($articles->of($storedA), $articles->of($storedB));
+    }
+
     public function testAPostWithoutAStoryCardSharesNoArticle(): void
     {
         self::assertNull((new SharedArticles(TrendingWiring::cardLanguage()))->of(

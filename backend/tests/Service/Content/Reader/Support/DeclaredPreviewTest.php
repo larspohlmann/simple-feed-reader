@@ -38,6 +38,15 @@ final class DeclaredPreviewTest extends TestCase
         self::assertSame(FeedLanguage::French, $preview->language);
     }
 
+    public function testABlankHtmlLangFallsBackToOgLocale(): void
+    {
+        $preview = self::preview(
+            '<html lang="  "><head><meta property="og:locale" content="es_ES"><title>T</title></head>',
+        );
+
+        self::assertSame(FeedLanguage::Spanish, $preview->language);
+    }
+
     public function testHtmlLangOutranksOgLocale(): void
     {
         $preview = self::preview(

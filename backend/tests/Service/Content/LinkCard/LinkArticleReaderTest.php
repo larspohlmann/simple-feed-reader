@@ -104,6 +104,17 @@ final class LinkArticleReaderTest extends DbTestCase
         self::assertNull($this->storedRow()->getLanguage());
     }
 
+    public function testAnOkExtractionWithoutAPreviewChangesNothing(): void
+    {
+        $this->storeRow(null);
+        $this->extractor->willReturn(
+            ExtractionResultModel::ok(self::URL, 'Extracted', null, 'Example', '<p>B</p>', null),
+        );
+
+        self::assertTrue($this->reader()->extract(self::URL)->ok);
+        self::assertSame('First', $this->storedRow()->preview()->title);
+    }
+
     public function testAUrlWithoutARowCreatesNone(): void
     {
         $this->extractor->willReturn(self::ok(self::preview('Fresh', FeedLanguage::French)));
