@@ -55,17 +55,19 @@ final class GermanCompoundSplitterTest extends TestCase
         yield 'a known word in one part more than the most parts' => ['tagtagtagtagtag', []];
     }
 
-    /** @param list<string> $expectedParts */
-    #[DataProvider('issueCompounds')]
-    public function testSplitsTheIssueExamplesWithTheBundledLexicon(string $word, array $expectedParts): void
+    /**
+     * A record of what the bundled lexicon gives, so a data or rule change shows up here as an intended change.
+     *
+     * @param list<string> $expectedParts
+     */
+    #[DataProvider('bundledLexiconSplits')]
+    public function testRecordsHowTheBundledLexiconSplitsTheIssueExamples(string $word, array $expectedParts): void
     {
-        $splitter = new GermanCompoundSplitter(new BundledGermanLexicon(self::BUNDLED_LEXICON));
-
-        $this->assertSame($expectedParts, $splitter->partsOf($word));
+        $this->assertSame($expectedParts, self::bundledSplitter()->partsOf($word));
     }
 
     /** @return iterable<string, array{string, list<string>}> */
-    public static function issueCompounds(): iterable
+    public static function bundledLexiconSplits(): iterable
     {
         yield 'Spionageverdacht' => ['spionageverdacht', ['spionage', 'verdacht']];
         yield 'Polizeieinsatz' => ['polizeieinsatz', ['polizei', 'einsatz']];
@@ -78,11 +80,32 @@ final class GermanCompoundSplitterTest extends TestCase
         yield 'Ministerpräsident' => ['ministerpräsident', ['minister', 'präsident']];
         yield 'Bundesrat' => ['bundesrat', ['bund', 'rat']];
         yield 'Sonntagvormittag' => ['sonntagvormittag', ['sonntag', 'vormittag']];
-        yield 'Salami' => ['salami', ['sale', 'ami']];
         yield 'Tierarzt' => ['tierarzt', ['tier', 'arzt']];
         yield 'Sternhimmel' => ['sternhimmel', ['stern', 'himmel']];
         yield 'Fischmarkt' => ['fischmarkt', ['fisch', 'markt']];
         yield 'Weihnachtsbaum' => ['weihnachtsbaum', []];
-        yield 'Aktenbestand' => ['aktenbestand', ['akt', 'bes', 'tand']];
+    }
+
+    /**
+     * Splits the bundled lexicon gets wrong today; a fix makes this test fail on purpose, and its row moves up.
+     *
+     * @param list<string> $wrongParts
+     */
+    #[DataProvider('knownWrongBundledLexiconSplits')]
+    public function testRecordsTheBundledLexiconsKnownWrongSplits(string $word, array $wrongParts): void
+    {
+        $this->assertSame($wrongParts, self::bundledSplitter()->partsOf($word));
+    }
+
+    /** @return iterable<string, array{string, list<string>}> */
+    public static function knownWrongBundledLexiconSplits(): iterable
+    {
+        yield 'Salami, a simple word cut into junk parts' => ['salami', ['sale', 'ami']];
+        yield 'Aktenbestand, whose head the lexicon tags no noun' => ['aktenbestand', ['akt', 'bes', 'tand']];
+    }
+
+    private static function bundledSplitter(): GermanCompoundSplitter
+    {
+        return new GermanCompoundSplitter(new BundledGermanLexicon(self::BUNDLED_LEXICON));
     }
 }
