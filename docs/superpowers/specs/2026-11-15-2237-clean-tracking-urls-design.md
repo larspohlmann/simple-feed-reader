@@ -163,7 +163,7 @@ Lars (verbatim, on checking only undocumented keys): "yes, skip the comparison f
 - Ruling: only the share link-card sweep checks (`ShareLinkCards` → `ShareTargetReader` → `PostedUrlCheck`), and
   only for a link whose posted href lost a key no vendor documents: one of the undocumented everywhere-tier keys, a
   host-scoped key (YouTube, Spotify, NYT, Substack, X, Instagram) or a value-scoped feed marker
-  (`TrackingFreeUrl::stripsAnUndocumentedKey()`, which `SharedLinksModel::$postedForms` filters by). A link that
+  (`TrackedUrl::strippedAnUndocumentedKey()`, read once per href in `SharedLinks`). A link that
   lost only documented vendor keys (`utm_*` and the other prefixes, the click ids, the cited table) is stored
   cleaned with no second read. Cards that come in a network payload, titled shares (their entry URL was cleaned at
   ingest) and RSS ingest fetch nothing extra and stay trust-based. Cost if wrong: a wrongly stripped key there, or
@@ -179,7 +179,7 @@ Lars (verbatim, on checking only undocumented keys): "yes, skip the comparison f
   stored besides the card. Cost if wrong: none to data; the log is the only trace.
 - Ruling: each check is one more fetch against `LinkCardBudgetModel`; a row's check is dropped when the budget has
   no room left for it, and the row is carded on its cleaned URLs. A stored posted-form card still cards its link,
-  because `ShareTargets::uncardedOf()` compares carded URLs tracking-free.
+  because `ShareTargets::planOf()` compares carded URLs tracking-free.
 - Ruling: `app:urls:clean-tracking` cleans every card URL, a kept posted form included; it is a one-off run after
   the deploy, so only cards kept before it are affected. Cost if wrong: such a card loses its posted key again.
 - Ruling: a kept posted URL still hashes as its cleaned form, because `UrlNormalizer::hash()` strips the same key
