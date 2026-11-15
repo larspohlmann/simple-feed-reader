@@ -33,7 +33,7 @@ final readonly class LinkLanding
         try {
             $landed = $this->landingOf($url);
         } catch (RedirectChainException $exception) {
-            return self::isTransient($exception) ? LinkLandingModel::retryable() : LinkLandingModel::unresolved();
+            return $this->outcomeOfFailure($url, $exception);
         }
         if ($landed->url === $url && self::isShortenerTrouble($landed->status)) {
             return LinkLandingModel::retryable();
@@ -58,6 +58,16 @@ final readonly class LinkLanding
     private function landingByGet(string $url): LandedResponse
     {
         return $this->settled($this->redirects->follow($url, $this->options(), self::budget()));
+    }
+
+    /** A chain that reached a redirect target before it timed out points there, as a landing behind a 403 does. */
+    private function outcomeOfFailure(string $url, RedirectChainException $exception): LinkLandingModel
+    {
+        if (!self::isTransient($exception)) {
+            return LinkLandingModel::unresolved();
+        }
+
+        return $exception->hopUrl === null ? LinkLandingModel::retryable() : $this->outcomeOf($url, $exception->hopUrl);
     }
 
     private function outcomeOf(string $url, string $landingUrl): LinkLandingModel

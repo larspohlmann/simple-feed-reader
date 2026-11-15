@@ -131,6 +131,18 @@ final class LinkLandingTest extends TestCase
         self::assertSame(self::ARTICLE, $landing->url);
     }
 
+    public function testATargetThatTimesOutStillLands(): void
+    {
+        $landing = $this->landingOf(self::SHORT, [
+            LinkLandingWiring::redirect(self::ARTICLE . '?utm_source=bsky.app'),
+            LinkLandingWiring::failure(),
+            LinkLandingWiring::redirect(self::ARTICLE . '?utm_source=bsky.app'),
+            LinkLandingWiring::failure(),
+        ]);
+
+        self::assertEquals(LinkLandingModel::resolved(self::ARTICLE, self::hashOf(self::ARTICLE)), $landing);
+    }
+
     public function testAConnectionFailureIsRetryable(): void
     {
         $landing = $this->landingOf(self::SHORT, [LinkLandingWiring::failure(), LinkLandingWiring::failure()]);

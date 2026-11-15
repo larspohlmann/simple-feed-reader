@@ -64,8 +64,12 @@ final readonly class RedirectFollower
         $currentUrl = $url;
         while (true) {
             self::assertTimeLeft($url, $budget);
-            $response = $this->send($method, $currentUrl, self::withinBudget($options, $budget));
-            $status = $this->statusCode($response, $currentUrl);
+            try {
+                $response = $this->send($method, $currentUrl, self::withinBudget($options, $budget));
+                $status = $this->statusCode($response, $currentUrl);
+            } catch (RedirectChainException $failure) {
+                throw $currentUrl === $url ? $failure : RedirectChainException::afterRedirect($failure, $currentUrl);
+            }
             $budget->spendSeconds(self::secondsTaken($response));
             if (!\in_array($status, self::REDIRECT_STATUSES, true)) {
                 return new LandedResponse($currentUrl, $status, $response);
