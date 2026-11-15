@@ -42,7 +42,14 @@ final class ResolvePendingLinksHandlerTest extends DbTestCase
         self::assertSame('info', $logger->records[0]['level']);
         self::assertSame('Worker link resolution finished.', $logger->records[0]['message']);
         self::assertSame(
-            ['considered' => 1, 'resolved' => 1, 'unchanged' => 0, 'unresolved' => 0, 'deferred' => 0, 'seconds' => 0.0],
+            [
+                'considered' => 1,
+                'resolved' => 1,
+                'unchanged' => 0,
+                'unresolved' => 0,
+                'deferred' => 0,
+                'seconds' => 0.0,
+            ],
             $logger->records[0]['context']['report'],
         );
         $this->entityManager->clear();
