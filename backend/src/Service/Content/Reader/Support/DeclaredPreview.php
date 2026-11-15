@@ -11,17 +11,18 @@ use App\Service\Foundation\Url\Support\HttpsImageUrl;
 use App\Service\Ingestion\Scraper\Support\TextNormalizer;
 use App\Service\Outbound\Fetch\Pass\PageUrls;
 use App\Service\Outbound\Fetch\Support\HostKey;
+use Dom\HTMLDocument;
 
 /** What a page's head says it is: its title, description, image and site, and the language it states. */
 final class DeclaredPreview
 {
-    public static function of(\Dom\HTMLDocument $document, string $addressUrl, string $finalUrl): PagePreviewModel
+    public static function of(HTMLDocument $document, string $addressUrl, string $finalUrl): PagePreviewModel
     {
         $meta = MetaTags::contentByKey($document);
 
         return new PagePreviewModel(
             $addressUrl,
-            self::declared($meta, 'og:title', 'twitter:title') ?: TextNormalizer::normalize((string) $document->title),
+            self::declared($meta, 'og:title', 'twitter:title') ?: TextNormalizer::normalize($document->title),
             self::declared($meta, 'og:description', 'twitter:description', 'description') ?: null,
             self::image($meta, $finalUrl),
             self::declared($meta, 'og:site_name') ?: HostKey::forUrl($addressUrl),
@@ -30,7 +31,7 @@ final class DeclaredPreview
     }
 
     /** @param array<string, string> $meta */
-    private static function statedLanguage(\Dom\HTMLDocument $document, array $meta): ?FeedLanguage
+    private static function statedLanguage(HTMLDocument $document, array $meta): ?FeedLanguage
     {
         $htmlLang = trim((string) $document->documentElement?->getAttribute('lang'));
 

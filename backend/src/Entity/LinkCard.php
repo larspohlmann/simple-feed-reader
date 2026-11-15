@@ -33,6 +33,7 @@ final class LinkCard
     #[ORM\JoinColumn(name: 'shared_link_id', nullable: false)]
     private SharedLink $link;
 
+    /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(Entry $entry, int $position, SharedLink $link, ?ThreadPost $threadPost = null)
     {
         $this->entry = $entry;
