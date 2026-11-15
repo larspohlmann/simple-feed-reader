@@ -13,7 +13,6 @@ use App\Service\Outbound\Fetch\Pass\LandedResponse;
 use App\Service\Outbound\Fetch\Pass\RedirectBudget;
 use App\Service\Outbound\Fetch\RedirectFollower;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 
 final readonly class LinkLanding
 {
@@ -46,7 +45,7 @@ final readonly class LinkLanding
         try {
             $head = $this->settled($this->redirects->followHead($url, $this->options(), self::budget()));
         } catch (RedirectChainException $exception) {
-            return self::isTransient($exception) ? throw $exception : $this->landingByGet($url);
+            return $exception->causedByTransportFailure() ? throw $exception : $this->landingByGet($url);
         }
 
         return $head->url !== $url || $head->isSuccess() ? $head : $this->landingByGet($url);
@@ -60,7 +59,7 @@ final readonly class LinkLanding
 
     private function outcomeOfFailure(string $url, RedirectChainException $exception): LinkLandingModel
     {
-        if (!self::isTransient($exception)) {
+        if (!$exception->causedByTransportFailure()) {
             return LinkLandingModel::unresolved();
         }
 
@@ -91,17 +90,6 @@ final readonly class LinkLanding
     private static function isShortenerTrouble(int $status): bool
     {
         return $status === Response::HTTP_TOO_MANY_REQUESTS || $status >= Response::HTTP_INTERNAL_SERVER_ERROR;
-    }
-
-    private static function isTransient(RedirectChainException $exception): bool
-    {
-        for ($cause = $exception->getPrevious(); $cause !== null; $cause = $cause->getPrevious()) {
-            if ($cause instanceof TransportExceptionInterface) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /** @return array<string, mixed> */
