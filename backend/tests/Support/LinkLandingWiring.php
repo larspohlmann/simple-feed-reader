@@ -19,6 +19,9 @@ final class LinkLandingWiring
     /** @var list<string> method and URL of each request sent */
     public array $requests = [];
 
+    /** Runs as each request is sent, so a test can let the clock run. */
+    public ?\Closure $onRequest = null;
+
     /** @var list<array{timeout: mixed, max_duration: mixed, headers: list<string>}> */
     public array $requestOptions = [];
 
@@ -27,6 +30,9 @@ final class LinkLandingWiring
     {
         $client = new MockHttpClient(function (string $method, string $url, array $options) use (&$responses) {
             $this->requests[] = $method . ' ' . $url;
+            if ($this->onRequest !== null) {
+                ($this->onRequest)();
+            }
             /** @var list<string> $headers */
             $headers = $options['headers'];
             $this->requestOptions[] = [
