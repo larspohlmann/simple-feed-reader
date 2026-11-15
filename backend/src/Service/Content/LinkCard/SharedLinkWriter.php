@@ -8,10 +8,12 @@ use App\Entity\LinkCardContent;
 use App\Entity\SharedLink;
 use App\Enum\FeedLanguage;
 use App\Repository\SharedLinkRepository;
+use App\Repository\SharedLinkResolutionRepository;
 use App\Service\Content\LinkCard\Exception\SharedLinkNotReadBackException;
 use App\Service\Content\LinkCard\Exception\UnhashableLinkException;
 use App\Service\Content\LinkCard\Model\NewSharedLinkModel;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Foundation\Url\Support\ShortLinkShape;
 use App\Service\Foundation\Url\UrlNormalizer;
 use App\Service\Ingestion\Language\PreviewLanguage;
 
@@ -20,6 +22,7 @@ final readonly class SharedLinkWriter
 {
     public function __construct(
         private SharedLinkRepository $sharedLinks,
+        private SharedLinkResolutionRepository $linkResolutions,
         private UrlNormalizer $urlNormalizer,
         private PreviewLanguage $previewLanguage,
         private NaiveUtcClock $clock,
@@ -52,6 +55,7 @@ final readonly class SharedLinkWriter
         }
         if ($missing !== []) {
             $this->sharedLinks->insertMissing(array_values($missing));
+            $this->linkResolutions->queueByUrlHashes(self::shortLinkHashes($missing));
             $links += $this->sharedLinks->byUrlHashes(array_keys($missing));
         }
 
@@ -106,6 +110,19 @@ final readonly class SharedLinkWriter
             $this->previewLanguage->of($card, $statedLanguage),
             $this->clock->now(),
         );
+    }
+
+    /**
+     * @param array<string, NewSharedLinkModel> $links by url hash
+     *
+     * @return list<string>
+     */
+    private static function shortLinkHashes(array $links): array
+    {
+        return array_keys(array_filter(
+            $links,
+            static fn (NewSharedLinkModel $link): bool => ShortLinkShape::fits($link->preview->url),
+        ));
     }
 
     /**

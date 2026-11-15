@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Service\Content\LinkCard;
 
 use App\Entity\LinkCardContent;
+use App\Entity\SharedLinkResolution;
 use App\Enum\FeedLanguage;
 use App\Enum\LanguageSource;
+use App\Enum\LinkResolution;
 use App\Repository\SharedLinkRepository;
+use App\Repository\SharedLinkResolutionRepository;
 use App\Service\Content\LinkCard\Exception\SharedLinkNotReadBackException;
 use App\Service\Content\LinkCard\Exception\UnhashableLinkException;
 use App\Service\Content\LinkCard\SharedLinkWriter;
@@ -36,6 +39,33 @@ final class SharedLinkWriterTest extends DbTestCase
         self::assertSame('First', $stored->preview()->title);
         self::assertSame('https://example.com/a', $stored->preview()->url);
         self::assertNull($stored->getLanguage());
+    }
+
+    public function testAShortLinkIsQueued(): void
+    {
+        $link = $this->writer()->linkFor(self::card('https://n.pr/4kcyxuV', 'Short'), null);
+
+        self::assertSame(LinkResolution::Pending, $this->resolutionOf($link->requireId()));
+    }
+
+    public function testAnArticleUrlIsNotQueued(): void
+    {
+        $link = $this->writer()->linkFor(self::card('https://example.com/2026/11/some-story', 'Story'), null);
+
+        self::assertNull($this->resolutionOf($link->requireId()));
+    }
+
+    public function testAKnownRowKeepsItsResolution(): void
+    {
+        $link = $this->writer()->linkFor(self::card('https://n.pr/4kcyxuV', 'Short'), null);
+        $this->entityManager->getConnection()->executeStatement(
+            "UPDATE shared_link_resolution SET status = 'unchanged'",
+        );
+
+        $this->writer()->linksFor([self::card('https://n.pr/4kcyxuV', 'Again'), self::card('https://n.pr/new', 'New')]);
+
+        self::assertSame(LinkResolution::Unchanged, $this->resolutionOf($link->requireId()));
+        self::assertSame(2, $this->rowsOf('shared_link_resolution'));
     }
 
     public function testANewUrlIsStoredWithItsLanguage(): void
@@ -199,9 +229,21 @@ final class SharedLinkWriterTest extends DbTestCase
         return new LinkCardContent($url, $title, null, null, 'example.com');
     }
 
+    private function resolutionOf(int $linkId): ?LinkResolution
+    {
+        $this->entityManager->clear();
+
+        return $this->entityManager->find(SharedLinkResolution::class, $linkId)?->getStatus();
+    }
+
     private function storedRows(): int
     {
-        $count = $this->entityManager->getConnection()->fetchOne('SELECT COUNT(*) FROM shared_link');
+        return $this->rowsOf('shared_link');
+    }
+
+    private function rowsOf(string $table): int
+    {
+        $count = $this->entityManager->getConnection()->fetchOne('SELECT COUNT(*) FROM ' . $table);
         self::assertIsNumeric($count);
 
         return (int) $count;
@@ -212,8 +254,12 @@ final class SharedLinkWriterTest extends DbTestCase
         $sharedLinks = self::getContainer()->get(SharedLinkRepository::class);
         self::assertInstanceOf(SharedLinkRepository::class, $sharedLinks);
 
+        $linkResolutions = self::getContainer()->get(SharedLinkResolutionRepository::class);
+        self::assertInstanceOf(SharedLinkResolutionRepository::class, $linkResolutions);
+
         return new SharedLinkWriter(
             $sharedLinks,
+            $linkResolutions,
             new UrlNormalizer(),
             new PreviewLanguage(new LanguageGuess(new LanguageDetectionFactory()->createForFeedLanguages())),
             new NaiveUtcClock(new MockClock('2026-11-15 10:00:00')),

@@ -32,6 +32,7 @@ use App\Service\Foundation\Url\UrlNormalizer;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Content\LinkCard\SharedLinkWriter;
 use App\Repository\SharedLinkRepository;
+use App\Repository\SharedLinkResolutionRepository;
 
 /**
  * Pins the read-back directly: after a batch insert the loader asks for the ids of exactly the hashes it wrote, never
@@ -117,6 +118,7 @@ final class RestoreEntryLoaderTest extends TestCase
             ),
             new SharedLinkWriter(
                 new SharedLinkRepository($this->createStub(ManagerRegistry::class)),
+                new SharedLinkResolutionRepository($this->createStub(ManagerRegistry::class)),
                 new UrlNormalizer(),
                 new PreviewLanguage(new LanguageGuess(new LanguageDetectionFactory()->createForFeedLanguages())),
                 new NaiveUtcClock(new MockClock('2026-08-01 00:00:00', 'UTC')),
