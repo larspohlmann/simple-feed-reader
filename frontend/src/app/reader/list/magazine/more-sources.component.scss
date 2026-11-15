@@ -67,7 +67,7 @@
 }
 
 // The byline would sit under the reader button, so it makes room.
-.mini.openable .byline {
+.mini:has(> app-open-in-reader.available) .byline {
   padding-inline-end: calc(var(--open-in-reader-width) + var(--space-2));
 }
 

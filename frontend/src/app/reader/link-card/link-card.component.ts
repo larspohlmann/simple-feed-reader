@@ -1,13 +1,5 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  input,
-  linkedSignal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, linkedSignal } from '@angular/core';
 import { ProxiedImageDirective } from '../../shared/proxied-image/proxied-image.directive';
-import { LinkReaderNavigation } from '../shell/link-reader-navigation.service';
 import { LinkCardDto } from './link-card';
 import { LinkCardReaderOpening, OpenInReaderComponent } from './open-in-reader.component';
 
@@ -35,7 +27,6 @@ const SITE_LINE_OF_LAYOUT: Record<LinkCardLayout, LinkCardSiteLine> = {
     class: 'link-card',
     '[class.article]': "layout() === 'article'",
     '[class.block]': "layout() === 'block'",
-    '[class.openable]': 'openable()',
   },
 })
 export class LinkCardComponent {
@@ -43,13 +34,8 @@ export class LinkCardComponent {
   readonly layout = input.required<LinkCardLayout>();
   readonly siteLine = input<LinkCardSiteLine | null>(null);
   readonly opensInReader = input<LinkCardReaderOpening | null>(null);
-  private readonly navigation = inject(LinkReaderNavigation, { optional: true });
   protected readonly imageFailed = linkedSignal({ source: this.card, computation: () => false });
   protected readonly siteLineFirst = computed(
     () => (this.siteLine() ?? SITE_LINE_OF_LAYOUT[this.layout()]) === 'first',
   );
-
-  protected openable(): boolean {
-    return this.opensInReader() !== null && this.navigation !== null;
-  }
 }

@@ -24,7 +24,6 @@ import { MINI_CARD_THUMB_SIZES } from '../rendition-sizes';
 import { StorySharersComponent } from '../../trending/story-sharers/story-sharers.component';
 import { ArticleFace, articleFaceOf } from '../../trending/shared-article-card';
 import { OpenInReaderComponent } from '../../link-card/open-in-reader.component';
-import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service';
 
 let nextId = 0;
 
@@ -50,7 +49,6 @@ export class MoreSourcesComponent {
   private readonly actions = inject(EntryActionHandler);
   private readonly language = inject(LanguageService);
   private readonly rows = inject(SubscriptionRows);
-  private readonly navigation = inject(LinkReaderNavigation, { optional: true });
 
   protected readonly copies = computed(() => this.entry().duplicates ?? []);
   protected readonly countKey = computed(() =>
@@ -67,7 +65,6 @@ export class MoreSourcesComponent {
       return {
         copy,
         ...face,
-        openable: face.card !== null && this.navigation !== null,
         feed: face.site ?? sourceNameOf(copy, this.rows),
         avatarUrl: feedAvatarUrl(this.rows.find(copy.subscriptionId)),
         when: entryRelativeTime(copy, this.language.lang()),

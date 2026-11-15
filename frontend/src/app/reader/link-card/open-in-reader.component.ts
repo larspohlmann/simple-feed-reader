@@ -9,7 +9,7 @@ export type LinkCardReaderOpening = 'layer' | 'alone';
 
 /**
  * The scrim button over a link that opens its page in the app's reader (#1664), at the top end of the nearest
- * positioned ancestor; the ancestor makes room with the `open-in-reader` partial's `room` mixin.
+ * positioned ancestor; the ancestor makes room, while the host is `.available`, with the partial's `room` mixin.
  */
 @Component({
   selector: 'app-open-in-reader',
@@ -17,6 +17,7 @@ export type LinkCardReaderOpening = 'layer' | 'alone';
   imports: [IconComponent, TranslocoPipe],
   templateUrl: './open-in-reader.component.html',
   styleUrl: './open-in-reader.component.scss',
+  host: { '[class.available]': 'available' },
 })
 export class OpenInReaderComponent {
   readonly card = input.required<LinkCardDto>();

@@ -389,16 +389,17 @@ it.each([
   expect(reached).not.toHaveBeenCalled();
 });
 
-it('makes room for the reader overlay only where the reader can open', () => {
+it('marks the reader overlay available only where the reader can open', () => {
   const story = storyOf([shareLed({ url: cardUrl }, [poster(10, 'Ann')])]);
   const withReader = mount(story);
   expand(withReader);
-  expect(withReader.querySelector('.mini')!.classList).toContain('openable');
+  expect(withReader.querySelector('.mini > app-open-in-reader.available')).not.toBeNull();
 
   TestBed.resetTestingModule();
   const withoutReader = mount(story, null);
   expand(withoutReader);
-  expect(withoutReader.querySelector('.mini')!.classList).not.toContain('openable');
+  expect(withoutReader.querySelector('.mini > app-open-in-reader.available')).toBeNull();
+  expect(withoutReader.querySelector('.mini button.open-in-reader')).toBeNull();
 });
 
 it("shows no thumb box on a share-led mini card without a picture, never the sharer's icon", () => {

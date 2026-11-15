@@ -21,6 +21,6 @@
 }
 
 // A leading text line would sit under the button, so it makes room.
-:host(.openable) a > :first-child:not(img) {
+:host(:has(> app-open-in-reader.available)) a > :first-child:not(img) {
   padding-inline-end: calc(var(--open-in-reader-width) + var(--space-2));
 }
