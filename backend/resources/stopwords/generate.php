@@ -73,68 +73,65 @@ function snowballWords(string $body): array
     return $words;
 }
 
-/** Tagged counts per casefolded form over 1950–2019: all tags, and the closed-class tags alone. */
-final class TagCounts
+/**
+ * Adds one shard's tagged counts over 1950–2019 per casefolded form: all tags, and the closed-class tags alone.
+ *
+ * @param array<string, int> $tagged
+ * @param array<string, int> $closedClass
+ */
+function addShard(string $path, array &$tagged, array &$closedClass): void
 {
-    /** @var array<string, int> */
-    public array $tagged = [];
-    /** @var array<string, int> */
-    public array $closedClass = [];
-
-    public function addShard(string $path): void
-    {
-        $shard = gzopen($path, 'rb') ?: throw new RuntimeException('Cannot open ' . $path);
-        while (($line = gzgets($shard)) !== false) {
-            $this->addLine($line);
-        }
-        gzclose($shard);
-    }
-
-    private function addLine(string $line): void
-    {
+    $shard = gzopen($path, 'rb') ?: throw new RuntimeException('Cannot open ' . $path);
+    while (($line = gzgets($shard)) !== false) {
         $token = substr($line, 0, (int) strpos($line, "\t"));
         if (!str_contains($token, '_') || preg_match(TAGGED, $token, $match) !== 1) {
-            return;
+            continue;
         }
         preg_match_all(KEPT_YEARS, $line, $years);
         $count = (int) array_sum($years[1]);
         if ($count === 0) {
-            return;
+            continue;
         }
         $form = casefolded($match[1]);
-        $this->tagged[$form] = ($this->tagged[$form] ?? 0) + $count;
+        $tagged[$form] = ($tagged[$form] ?? 0) + $count;
         if (isset(CLOSED_CLASS_TAGS[$match[2]])) {
-            $this->closedClass[$form] = ($this->closedClass[$form] ?? 0) + $count;
+            $closedClass[$form] = ($closedClass[$form] ?? 0) + $count;
         }
     }
+    gzclose($shard);
+}
 
-    /** @return list<string> the RANKED_FORMS most frequent forms whose tags are at least half closed-class */
-    public function closedClassForms(): array
-    {
-        $forms = array_map(strval(...), array_keys($this->tagged));
-        $counts = array_values($this->tagged);
-        array_multisort($counts, SORT_DESC, SORT_NUMERIC, $forms, SORT_ASC, SORT_STRING);
+/**
+ * @param array<string, int> $tagged
+ * @param array<string, int> $closedClass
+ * @return list<string> the RANKED_FORMS most frequent forms whose tags are at least half closed-class
+ */
+function closedClassForms(array $tagged, array $closedClass): array
+{
+    $forms = array_map(strval(...), array_keys($tagged));
+    $counts = array_values($tagged);
+    array_multisort($counts, SORT_DESC, SORT_NUMERIC, $forms, SORT_ASC, SORT_STRING);
 
-        return array_values(array_filter(
-            array_slice($forms, 0, RANKED_FORMS),
-            fn (string $form): bool => 2 * ($this->closedClass[$form] ?? 0) >= $this->tagged[$form],
-        ));
-    }
+    return array_values(array_filter(
+        array_slice($forms, 0, RANKED_FORMS),
+        static fn (string $form): bool => 2 * ($closedClass[$form] ?? 0) >= $tagged[$form],
+    ));
 }
 
 /** @return list<string> */
 function closedClassWords(string $shardDirectory, string $language): array
 {
-    $counts = new TagCounts();
+    $tagged = [];
+    $closedClass = [];
     foreach (SHARDS[$language] ?? [] as $shard => $sha256) {
         $path = $shardDirectory . '/' . $shard;
         if (!is_file($path) || hash_file('sha256', $path) !== $sha256) {
             throw new RuntimeException('Missing shard or SHA-256 mismatch: ' . $path);
         }
-        $counts->addShard($path);
+        addShard($path, $tagged, $closedClass);
     }
 
-    return array_values(array_filter($counts->closedClassForms(), static fn (string $form): bool => preg_match(WORD, $form) === 1));
+    return array_values(array_filter(closedClassForms($tagged, $closedClass), static fn (string $form): bool => preg_match(WORD, $form) === 1));
 }
 
 /**
