@@ -52,9 +52,8 @@ final readonly class LinkResolutionSweep
                 'url' => $link->url,
                 'exception' => $exception,
             ]);
-            $this->linkResolutions->settle($link, LinkLandingModel::unresolved());
 
-            return LinkLandingModel::unresolved();
+            return $this->giveUp($link);
         }
     }
 
@@ -70,9 +69,16 @@ final readonly class LinkResolutionSweep
 
             return $landing;
         }
-        $this->linkResolutions->settle($link, LinkLandingModel::unresolved());
 
-        return LinkLandingModel::unresolved();
+        return $this->giveUp($link);
+    }
+
+    private function giveUp(PendingLinkModel $link): LinkLandingModel
+    {
+        $unresolved = LinkLandingModel::unresolved();
+        $this->linkResolutions->settle($link, $unresolved);
+
+        return $unresolved;
     }
 
     private static function secondsSince(\DateTimeImmutable $start, \DateTimeImmutable $end): float
