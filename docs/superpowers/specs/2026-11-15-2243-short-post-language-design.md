@@ -215,6 +215,10 @@ Ingestion owns the rule; the stopword data moves to the module that now reads it
 - **D7. No more stopword lists and no capital or hashtag rule.** — 3 and 4 posts a week, 0 pairs (approaches 7, 8). —
   If wrong: an instance with many short Italian, Portuguese or Catalan posts sees them stemmed in Spanish or French; a
   later change adds competitor lists.
+- **D8. A word written in capitals does not vote** (controller ruling, overrides D7's "no capital rule" for capitals
+  only). — An acronym is no function word: English *AI* voted French *ai* in 4 of V2's 5 wrong French tags. A
+  structural rule, no word list. — If wrong: a shouted short post (*AUS DEM ARCHIV*) loses its vote and keeps no
+  language, as today.
 
 ## Measurement plan
 
