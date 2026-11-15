@@ -115,7 +115,7 @@ describe('EntryRowComponent', () => {
 
   describe('a Trending lead (#2017)', () => {
     const lead = (duplicates: EntryDto[] = []) =>
-      entry({ duplicates, story: { outletCount: 7, viewed: false } });
+      entry({ duplicates, story: { outletCount: 7, viewed: false, shareCount: 0 } });
 
     it('names how many feeds covered the story in its meta line', () => {
       const element = mount(lead()).nativeElement as HTMLElement;

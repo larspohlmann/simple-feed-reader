@@ -376,7 +376,7 @@ describe('ReaderShellComponent', () => {
       navigate.mock.calls
         .filter(([, extras]) => extras?.replaceUrl === true)
         .map(([, extras]) => extras.queryParams);
-    const story = () => ({ ...entry, id: 77, story: { outletCount: 3, viewed: false } });
+    const story = () => ({ ...entry, id: 77, story: { outletCount: 3, viewed: false, shareCount: 0 } });
     const hideButtons = (fixture: { nativeElement: HTMLElement }) =>
       fixture.nativeElement.querySelectorAll('button[aria-label="Hide story"]');
 
@@ -418,7 +418,7 @@ describe('ReaderShellComponent', () => {
   });
 
   it('offers no Hide on a list that is not Trending (#2017, D40)', () => {
-    const fixture = boot({ story: { outletCount: 3, viewed: false } });
+    const fixture = boot({ story: { outletCount: 3, viewed: false, shareCount: 0 } });
 
     expect(fixture.nativeElement.querySelectorAll('.row, app-entry-row').length).toBeGreaterThan(0);
     expect(fixture.nativeElement.querySelectorAll('button[aria-label="Hide story"]')).toHaveLength(

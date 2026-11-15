@@ -33,7 +33,7 @@ function expand(element: HTMLElement): void {
 }
 
 const storyOf = (duplicates: EntryDto[]): EntryDto =>
-  anEntry({ duplicates, story: { outletCount: duplicates.length + 1, viewed: false } });
+  anEntry({ duplicates, story: { outletCount: duplicates.length + 1, viewed: false, shareCount: 0 } });
 
 const copies = [
   anEntry({ id: 2, source: 'NDR', title: 'Storm hits the coast', imageUrl: 'https://img/2.jpg' }),

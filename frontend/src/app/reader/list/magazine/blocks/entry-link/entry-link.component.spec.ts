@@ -191,7 +191,7 @@ describe('EntryLinkComponent', () => {
         poster: { name: 'Ann', url: null, imageUrl: null },
         linkCards: [card()],
         duplicates: [other(2, 'Ben'), other(3, 'Cat'), other(4, 'Dan')],
-        story: { outletCount: 4, viewed: false },
+        story: { outletCount: 4, viewed: false, shareCount: 0 },
       }),
     );
     const element = fixture.nativeElement as HTMLElement;

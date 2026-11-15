@@ -2864,7 +2864,7 @@ describe('EntryListComponent', () => {
         layout: 'magazine',
         entries: MIXED_SOURCE_RUN.map((each) => ({
           ...each,
-          story: { outletCount: 3, viewed: false },
+          story: { outletCount: 3, viewed: false, shareCount: 0 },
         })),
       });
 

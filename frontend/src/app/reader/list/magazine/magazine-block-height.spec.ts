@@ -29,13 +29,13 @@ describe('blockHeight', () => {
 
   it('adds the shared-by line to a Trending article posts share', () => {
     const shared = anEntry({
-      story: { outletCount: 2, viewed: false },
+      story: { outletCount: 2, viewed: false, shareCount: 0 },
       shares: [anEntry({ id: 9 })],
     });
 
     expect(blockHeight('link', shared)).toBe(BLOCK_HEIGHT.link + STORY_SHARES_LINE);
     expect(
-      blockHeight('link', anEntry({ story: { outletCount: 2, viewed: false }, shares: [] })),
+      blockHeight('link', anEntry({ story: { outletCount: 2, viewed: false, shareCount: 0 }, shares: [] })),
     ).toBe(BLOCK_HEIGHT.link);
   });
 
