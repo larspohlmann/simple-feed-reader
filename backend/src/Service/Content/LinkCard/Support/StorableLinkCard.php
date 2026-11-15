@@ -11,12 +11,14 @@ use App\Service\Foundation\Url\Support\HttpsImageUrl;
 use App\Service\Foundation\Url\Support\TrackingFreeUrl;
 
 /**
- * A card as link_card may hold it, whoever made it: none for a blank title or a URL that is no web page or too long
- * to store, its URL without tracking parameters, and no image unless its URL is https and fits.
+ * A card as shared_link may hold it, whoever made it: none for a blank title or a URL that is no web page or too long
+ * to store, its URL without tracking parameters, no description that is a bare URL, and no image unless its URL is
+ * https and fits.
  */
 final class StorableLinkCard
 {
     private const int DESCRIPTION_MAX = 300;
+    private const string BARE_URL = '~^https?://\S+$~';
 
     public static function of(LinkCardContent $card): ?LinkCardContent
     {
@@ -27,10 +29,19 @@ final class StorableLinkCard
         return new LinkCardContent(
             TrackingFreeUrl::of($card->url),
             mb_substr($card->title, 0, LinkCardContent::TITLE_MAX),
-            $card->description === null ? null : WordBoundary::clipped($card->description, self::DESCRIPTION_MAX),
+            self::description($card->description),
             self::fits((string) $card->imageUrl) ? HttpsImageUrl::orNull($card->imageUrl) : null,
             mb_substr($card->siteName, 0, LinkCardContent::SITE_NAME_MAX),
         );
+    }
+
+    private static function description(?string $description): ?string
+    {
+        if ($description === null || preg_match(self::BARE_URL, trim($description)) === 1) {
+            return null;
+        }
+
+        return WordBoundary::clipped($description, self::DESCRIPTION_MAX);
     }
 
     private static function fits(string $url): bool
