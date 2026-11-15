@@ -45,86 +45,59 @@ final class HeadlineFillerTest extends TestCase
         self::assertFalse($this->filler->isFeedFiller(3, 3));
     }
 
-    public function testTheSeedListHoldsEnglishAndGermanFunctionWordsAsStems(): void
-    {
-        self::assertTrue($this->filler->isSeed('the', null));
-        self::assertTrue($this->filler->isSeed('fur', null));
-        self::assertTrue($this->filler->isSeed('uber', null));
-        self::assertTrue($this->filler->isSeed('becaus', null));
-        self::assertFalse($this->filler->isSeed('war', null));
-        self::assertFalse($this->filler->isSeed('storm', null));
-    }
-
     public function testRarityFollowsTheLogOfTheFlooredCountOverTheDocumentFrequency(): void
     {
         self::assertEqualsWithDelta(6.6214, $this->filler->rarityWeight(1, 1_000), 0.0001);
         self::assertEqualsWithDelta(5.7044, $this->filler->rarityWeight(9, 3_000), 0.0001);
     }
 
-    #[DataProvider('frenchAndSpanishFunctionWords')]
-    public function testFrenchAndSpanishFunctionWordsAreSeeds(string $stem): void
+    /** @return iterable<string, array{FeedLanguage}> */
+    public static function languages(): iterable
     {
-        self::assertTrue($this->filler->isSeed($stem, null));
-    }
-
-    /** @return iterable<string, array{string}> */
-    public static function frenchAndSpanishFunctionWords(): iterable
-    {
-        $french = 'les pour que dans une sur avec est pas qui aux par fois';
-        $spanish = 'del los las para una por mas sus entre';
-        foreach (explode(' ', $french . ' ' . $spanish) as $word) {
-            yield $word => [$word];
+        foreach (FeedLanguage::cases() as $language) {
+            yield $language->value => [$language];
         }
     }
 
-    public function testAWordThatCarriesMeaningInAnotherLanguageIsNotASeed(): void
+    #[DataProvider('languages')]
+    public function testEveryStopWordIsASeedThroughItsLanguagesStemmer(FeedLanguage $language): void
     {
-        $meaningful = ['son', 'sin', 'fin', 'plus', 'con', 'han', 'sans'];
-        $names = ['contra', 'contre', 'durant', 'esa', 'ces', 'como'];
-        foreach ([...$meaningful, ...$names] as $word) {
+        $stemmer = TrendingWiring::stemmer();
+        $words = TrendingWiring::stopWords()->wordsOf($language);
+
+        self::assertNotEmpty($words);
+        foreach ($words as $word) {
+            self::assertTrue($this->filler->isSeed($stemmer->stem($word, $language), $language), $word);
+        }
+    }
+
+    #[DataProvider('languages')]
+    public function testEveryKeptStopWordsCutIsASeedWithoutALanguage(FeedLanguage $language): void
+    {
+        $keptWords = array_filter(
+            TrendingWiring::stopWords()->wordsOf($language),
+            static fn (string $word): bool => HeadlineStems::isKept(HeadlineStems::bare($word)),
+        );
+
+        self::assertNotEmpty($keptWords);
+        foreach ($keptWords as $word) {
+            self::assertTrue($this->filler->isSeed(HeadlineStems::cut($word), null), $word);
+        }
+    }
+
+    public function testAWordInNoListIsNoSeedWithoutALanguage(): void
+    {
+        foreach (['storm', 'guerre', 'sturm'] as $word) {
             self::assertFalse($this->filler->isSeed($word, null), $word);
         }
     }
 
-    public function testEverySeedWithoutALanguageIsInCutForm(): void
-    {
-        $seeds = new \ReflectionClassConstant(HeadlineFiller::class, 'SEED_STEMS')->getValue();
-        self::assertIsArray($seeds);
-        foreach (array_keys($seeds) as $seed) {
-            self::assertSame((string) $seed, HeadlineStems::cut((string) $seed));
-            self::assertTrue(HeadlineStems::isKept((string) $seed), (string) $seed);
-        }
-    }
-
-    public function testAWordThatCarriesMeaningElsewhereIsASeedInItsOwnLanguageOnly(): void
+    public function testASeedOfOneLanguageIsNoSeedInAnotherUnlessItsListHasIt(): void
     {
         $stemmer = TrendingWiring::stemmer();
 
         self::assertTrue($this->filler->isSeed($stemmer->stem('con', FeedLanguage::Spanish), FeedLanguage::Spanish));
         self::assertFalse($this->filler->isSeed($stemmer->stem('con', FeedLanguage::English), FeedLanguage::English));
-        self::assertFalse($this->filler->isSeed('con', null));
-    }
-
-    #[DataProvider('seedWordsByLanguage')]
-    public function testEachLanguagesFunctionWordsAreSeedsThroughItsStemmer(FeedLanguage $language, string $word): void
-    {
-        self::assertTrue($this->filler->isSeed(TrendingWiring::stemmer()->stem($word, $language), $language));
-    }
-
-    /** @return iterable<string, array{FeedLanguage, string}> */
-    public static function seedWordsByLanguage(): iterable
-    {
-        $words = [
-            'de' => 'für über werden diese einen',
-            'en' => 'because against between the during',
-            'fr' => 'être après déjà plus sans contre durant ces',
-            'es' => 'también según más con sin son como esa contra',
-        ];
-        foreach ($words as $language => $list) {
-            foreach (explode(' ', $list) as $word) {
-                yield $language . ' ' . $word => [FeedLanguage::from($language), $word];
-            }
-        }
     }
 
     #[DataProvider('contentWordsByLanguage')]

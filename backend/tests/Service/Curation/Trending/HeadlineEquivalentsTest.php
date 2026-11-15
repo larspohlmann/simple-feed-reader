@@ -20,11 +20,10 @@ final class HeadlineEquivalentsTest extends TestCase
         $this->equivalents = TrendingWiring::equivalents();
     }
 
-    public function testCrossLanguageNamesShareOneStem(): void
+    public function testNatoAndOtanShareOneStem(): void
     {
-        foreach (['Zelensky', 'Zelenskyy', 'Selenskyj', 'Zelenski'] as $name) {
-            self::assertSame(['selens'], $this->stemsOf($name, null), $name);
-        }
+        self::assertSame(['nato'], $this->stemsOf('NATO', null));
+        self::assertSame(['nato'], $this->stemsOf('OTAN', null));
     }
 
     public function testAPhraseIsConsumedIntoOneStem(): void
@@ -84,14 +83,7 @@ final class HeadlineEquivalentsTest extends TestCase
     public static function abbreviationsNextToCapitals(): iterable
     {
         yield 'EU before an acronym' => ['EU AI Act tritt in Kraft', 'eunion'];
-        yield 'WM after an acronym' => ['Tickets für die FIFA WM', 'weltme'];
         yield 'whole text in capitals' => ['THE EU AND THE UN', 'eunion'];
-    }
-
-    public function testALongFormNextToAnAbbreviationStillMaps(): void
-    {
-        self::assertContains('britai', $this->stemsOf('Großbritanniens EU-Austritt', null));
-        self::assertContains('osterr', $this->stemsOf('ÖVP Austria', null));
     }
 
     public function testGermanInflectedPhrasesMatch(): void
@@ -102,14 +94,6 @@ final class HeadlineEquivalentsTest extends TestCase
         $nations = $this->stemsOf('Rede bei den Vereinten Nationen', null);
         self::assertContains('onu', $nations);
         self::assertNotContains('nation', $nations);
-    }
-
-    public function testGermanGenitivesMatch(): void
-    {
-        self::assertContains('poland', $this->stemsOf('Polens Regierung', null));
-        self::assertContains('china', $this->stemsOf('Chinas Exporte', null));
-        self::assertContains('japan', $this->stemsOf('Japans Premier', null));
-        self::assertContains('kremli', $this->stemsOf('Sprecher des Kremls', null));
     }
 
     public function testAnAbbreviationStandingAloneFires(): void
@@ -129,7 +113,7 @@ final class HeadlineEquivalentsTest extends TestCase
 
     public function testTwoSpellingsOfOneNameCountOnce(): void
     {
-        self::assertSame(['russia', 'und'], $this->stemsOf('Russland Russia und', null));
+        self::assertSame(['nato', 'und'], $this->stemsOf('NATO OTAN und', null));
     }
 
     public function testAnAbbreviationAtTheEdgesOfMixedTextFires(): void
@@ -140,7 +124,6 @@ final class HeadlineEquivalentsTest extends TestCase
 
     public function testAnAbbreviationInAHyphenatedCompoundFires(): void
     {
-        self::assertContains('weltme', $this->stemsOf('Eishockey-WM: DEB-Frauen scheitern', null));
         self::assertContains('eunion', $this->stemsOf('Die EU-Kommission legt nach', null));
         self::assertContains('onu', $this->stemsOf('Rede von UN-Generalsekretär Guterres', null));
     }
@@ -153,13 +136,7 @@ final class HeadlineEquivalentsTest extends TestCase
 
     public function testOneAllCapsNeighbourDoesNotSilenceAnAbbreviation(): void
     {
-        self::assertContains('weltme', $this->stemsOf('Traum von WM DEB platzt', null));
-    }
-
-    public function testALongFormWhoseStemCollidesIsAnExactWord(): void
-    {
-        self::assertContains('britai', $this->stemsOf('Großbritannien verschärft Regeln', null));
-        self::assertSame(['grossb', 'hambur'], $this->stemsOf('Großbrand Hamburg', null));
+        self::assertContains('onu', $this->stemsOf('Die UN WHO warnt', null));
     }
 
     public function testAProceduralTermThatNamesNoStoryIsNotMapped(): void
@@ -227,7 +204,7 @@ final class HeadlineEquivalentsTest extends TestCase
     }
 
     #[DataProvider('spellingsByLanguage')]
-    public function testEachLanguagesSpellingOfAPlaceSharesItsCanonical(
+    public function testEachLanguagesSpellingOfAnInstitutionSharesItsCanonical(
         FeedLanguage $language,
         string $text,
         string $canonical,
@@ -238,24 +215,19 @@ final class HeadlineEquivalentsTest extends TestCase
     /** @return iterable<string, array{FeedLanguage, string, string}> */
     public static function spellingsByLanguage(): iterable
     {
-        yield 'de Selenskyj' => [FeedLanguage::German, 'Selenskyj', 'selens'];
-        yield 'de Russlands' => [FeedLanguage::German, 'Russlands', 'russia'];
-        yield 'de Polen' => [FeedLanguage::German, 'Polen', 'poland'];
-        yield 'de Österreich' => [FeedLanguage::German, 'Österreich', 'osterr'];
-        yield 'de Brüssel' => [FeedLanguage::German, 'Brüssel', 'brusse'];
-        yield 'en Zelensky' => [FeedLanguage::English, 'Zelensky', 'selens'];
-        yield 'en Kremlin' => [FeedLanguage::English, 'Kremlin', 'kremli'];
-        yield 'en France' => [FeedLanguage::English, 'France', 'france'];
-        yield 'en Beijing' => [FeedLanguage::English, 'Beijing', 'beijin'];
-        yield 'fr Russie' => [FeedLanguage::French, 'Russie', 'russia'];
-        yield 'fr Chine' => [FeedLanguage::French, 'Chine', 'china'];
-        yield 'fr Pékin' => [FeedLanguage::French, 'Pékin', 'beijin'];
-        yield 'fr Bruxelles' => [FeedLanguage::French, 'Bruxelles', 'brusse'];
-        yield 'es Rusia' => [FeedLanguage::Spanish, 'Rusia', 'russia'];
-        yield 'es Ucrania' => [FeedLanguage::Spanish, 'Ucrania', 'ukrain'];
-        yield 'es España' => [FeedLanguage::Spanish, 'España', 'spain'];
-        yield 'es México' => [FeedLanguage::Spanish, 'México', 'mexico'];
-        yield 'es Francia' => [FeedLanguage::Spanish, 'Francia', 'france'];
+        yield 'de Vereinten Nationen' => [FeedLanguage::German, 'Vereinten Nationen', 'onu'];
+        yield 'de Europäischen Union' => [FeedLanguage::German, 'Europäischen Union', 'eunion'];
+        yield 'en United Nations' => [FeedLanguage::English, 'United Nations', 'onu'];
+        yield 'fr OTAN' => [FeedLanguage::French, 'OTAN', 'nato'];
+        yield 'fr Nations unies' => [FeedLanguage::French, 'Nations unies', 'onu'];
+        yield 'es OTAN' => [FeedLanguage::Spanish, 'OTAN', 'nato'];
+        yield 'es Naciones Unidas' => [FeedLanguage::Spanish, 'Naciones Unidas', 'onu'];
+        yield 'fr ONU' => [FeedLanguage::French, "L'ONU condamne", 'onu'];
+        yield 'fr UE' => [FeedLanguage::French, "L'UE sanctionne", 'eunion'];
+        yield 'fr Union européenne' => [FeedLanguage::French, "L'Union européenne vote", 'eunion'];
+        yield 'es ONU' => [FeedLanguage::Spanish, 'La ONU condena', 'onu'];
+        yield 'es UE' => [FeedLanguage::Spanish, 'La UE sanciona', 'eunion'];
+        yield 'es Unión Europea' => [FeedLanguage::Spanish, 'La Unión Europea vota', 'eunion'];
     }
 
     #[DataProvider('europeanUnions')]
@@ -310,9 +282,9 @@ final class HeadlineEquivalentsTest extends TestCase
         self::assertSame(['polize'], $this->stemsOf('Polizeieinsatz', null));
     }
 
-    public function testAPartGoesThroughTheGermanEquivalences(): void
+    public function testAPartThatIsACanonicalKeepsIt(): void
     {
-        self::assertContains('russia', $this->stemsOf('Russlandreise', FeedLanguage::German));
+        self::assertContains('nato', $this->stemsOf('Natogipfel', FeedLanguage::German));
     }
 
     public function testAKnownWordMoreFrequentThanItsPartsStaysOneStem(): void
@@ -322,7 +294,7 @@ final class HeadlineEquivalentsTest extends TestCase
 
     public function testACanonicalIsNeverSplit(): void
     {
-        self::assertSame(['russia'], $this->equivalents->wordStemsOf('russia', 'russia', FeedLanguage::German));
+        self::assertSame(['eunion'], $this->equivalents->wordStemsOf('eunion', 'eunion', FeedLanguage::German));
     }
 
     public function testTheWholeStemComesBeforeThePartStems(): void
@@ -348,9 +320,12 @@ final class HeadlineEquivalentsTest extends TestCase
         );
     }
 
-    public function testALanguageStemThatIsACanonicalNeedsNoEntry(): void
+    public function testNoTableHoldsAPersonAnEventOrACountry(): void
     {
-        self::assertSame(['ukrain'], $this->stemsOf('Ukraine', FeedLanguage::German));
+        $canonicals = array_values(array_unique(self::canonicalsByTable()));
+        sort($canonicals);
+
+        self::assertSame(['eunion', 'nato', 'onu'], $canonicals);
     }
 
     public function testEveryExactWordIsLettersAndDigitsOnly(): void

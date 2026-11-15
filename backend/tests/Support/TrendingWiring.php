@@ -15,6 +15,7 @@ use App\Service\Curation\Trending\HeadlineEquivalents;
 use App\Service\Curation\Trending\HeadlineFiller;
 use App\Service\Curation\Trending\HeadlineStemmer;
 use App\Service\Curation\Trending\SnapshotBuilder\TrendingSnapshotBuilder;
+use App\Service\Curation\Trending\StopWords\BundledStopWords;
 use App\Service\Curation\Trending\StoryGrouping;
 use App\Service\Curation\Trending\StoryLinks;
 use App\Service\Curation\Trending\StoryLinkSource\HeadlineLinks;
@@ -63,7 +64,12 @@ final class TrendingWiring
 
     public static function filler(): HeadlineFiller
     {
-        return new HeadlineFiller(self::stemmer());
+        return new HeadlineFiller(self::stemmer(), self::stopWords());
+    }
+
+    public static function stopWords(): BundledStopWords
+    {
+        return new BundledStopWords(dirname(__DIR__, 2) . '/resources/stopwords/stopwords.php');
     }
 
     public static function equivalents(): HeadlineEquivalents

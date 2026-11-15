@@ -7,19 +7,13 @@ namespace App\Service\Curation\Trending;
 use App\Enum\FeedLanguage;
 use App\Service\Curation\Trending\Support\HeadlineStems;
 
-/** Spellings of one thing, across the four app languages, share one stem (#2225). */
+/** Spellings of one institution share one stem in all four languages; never a person, event or country (#2231). */
 final readonly class HeadlineEquivalents
 {
-    /** Case-sensitive whole words: abbreviations, and long forms whose six-letter cut would catch unrelated words. */
+    /** Case-sensitive whole words: abbreviations. */
     private const array EXACT_WORDS = [
         'EU' => 'eunion', 'UE' => 'eunion',
         'UN' => 'onu', 'UNO' => 'onu', 'ONU' => 'onu',
-        'UK' => 'britai', 'Großbritannien' => 'britai', 'Großbritanniens' => 'britai',
-        'WM' => 'weltme',
-        'Schweiz' => 'switze', 'Schweizer' => 'switze',
-        'Austria' => 'osterr', 'Austrian' => 'osterr',
-        'Niederlande' => 'nether', 'Niederlanden' => 'nether',
-        'Francia' => 'france',
     ];
 
     /** Exact words that are also ordinary words in a shouted headline: French "UN PLAN", Spanish "UNO MÁS". */
@@ -31,104 +25,22 @@ final readonly class HeadlineEquivalents
         'naciones unidas' => 'onu', 'vereinten nationen' => 'onu',
         'europaische union' => 'eunion', 'european union' => 'eunion', 'union europeenne' => 'eunion',
         'union europea' => 'eunion', 'europaischen union' => 'eunion',
-        'united kingdom' => 'britai', 'royaume uni' => 'britai', 'reino unido' => 'britai',
-        'pays bas' => 'nether', 'paises bajos' => 'nether',
     ];
 
-    /** A key also merges every unrelated word sharing its six letters: check the window's words before adding one. */
+    /** A key also merges every unrelated word sharing its six letters. */
     private const array CUT_STEMS = [
-        'zelens' => 'selens',
-        'russla' => 'russia', 'russie' => 'russia', 'rusia' => 'russia',
-        'ucrani' => 'ukrain',
-        'chine' => 'china', 'chinas' => 'china',
-        'frankr' => 'france',
-        'spanie' => 'spain', 'espagn' => 'spain', 'espana' => 'spain',
-        'italie' => 'italia', 'italy' => 'italia',
-        'turkei' => 'turkey', 'turqui' => 'turkey',
-        'japon' => 'japan', 'japans' => 'japan',
-        'polen' => 'poland', 'polens' => 'poland', 'pologn' => 'poland', 'poloni' => 'poland',
-        'suisse' => 'switze', 'suiza' => 'switze',
-        'autric' => 'osterr',
-        'brasil' => 'brazil', 'bresil' => 'brazil',
-        'mexiko' => 'mexico', 'mexiqu' => 'mexico',
-        'indien' => 'india', 'inde' => 'india',
         'otan' => 'nato',
-        'syrien' => 'syria', 'syrie' => 'syria', 'siria' => 'syria',
-        'moskau' => 'moscow', 'moscou' => 'moscow', 'moscu' => 'moscow',
-        'peking' => 'beijin', 'pekin' => 'beijin',
-        'kreml' => 'kremli', 'kremls' => 'kremli',
-        'brusel' => 'brusse', 'bruxel' => 'brusse',
     ];
 
     /** Keyed by the language's Snowball stem without diacritics: a key merges every word of the language stemming to it. */
     private const array STEMS_BY_LANGUAGE = [
-        'de' => [
-            'selenskyj' => 'selens',
-            'russland' => 'russia',
-            'chinas' => 'china',
-            'frankreich' => 'france',
-            'spani' => 'spain',
-            'itali' => 'italia',
-            'turkei' => 'turkey',
-            'pol' => 'poland',
-            'osterreich' => 'osterr',
-            'brasili' => 'brazil',
-            'mexiko' => 'mexico',
-            'indi' => 'india',
-            'syri' => 'syria',
-            'moskau' => 'moscow',
-            'peking' => 'beijin',
-            'kreml' => 'kremli',
-            'brussel' => 'brusse',
-            'weltmeisterschaft' => 'weltme',
-        ],
-        'en' => [
-            'zelenski' => 'selens', 'zelenskyy' => 'selens',
-            'itali' => 'italia',
-            'switzerland' => 'switze',
-            'britain' => 'britai',
-            'netherland' => 'nether',
-            'beij' => 'beijin',
-            'kremlin' => 'kremli',
-            'brussel' => 'brusse',
-        ],
+        'de' => [],
+        'en' => [],
         'fr' => [
-            'zelensky' => 'selens',
-            'russ' => 'russia',
-            'chin' => 'china',
-            'espagn' => 'spain',
-            'ital' => 'italia',
-            'turqu' => 'turkey',
-            'japon' => 'japan',
-            'pologn' => 'poland',
-            'suiss' => 'switze',
-            'autrich' => 'osterr',
-            'bresil' => 'brazil',
-            'mexiqu' => 'mexico',
-            'inde' => 'india',
             'otan' => 'nato',
-            'syr' => 'syria',
-            'moscou' => 'moscow',
-            'pekin' => 'beijin',
-            'kremlin' => 'kremli',
-            'bruxel' => 'brusse',
         ],
         'es' => [
-            'zelenski' => 'selens', 'zelensky' => 'selens',
-            'rusi' => 'russia',
-            'ucrani' => 'ukrain',
-            'espan' => 'spain',
-            'turqu' => 'turkey',
-            'japon' => 'japan',
-            'poloni' => 'poland',
-            'suiz' => 'switze',
-            'brasil' => 'brazil',
             'otan' => 'nato',
-            'siri' => 'syria',
-            'moscu' => 'moscow',
-            'pekin' => 'beijin',
-            'kremlin' => 'kremli',
-            'brusel' => 'brusse',
         ],
     ];
 
