@@ -67,7 +67,8 @@ its own table) change these tasks; the spec is the authority.
   - every touched `src` file is PHPMD-clean: `rm -rf ~/.pdepend`, then
     `HOME=$(mktemp -d) vendor/bin/phpmd analyze <files> --no-progress`. If the commit hook denies new classes, report
     BLOCKED with its message;
-  - `SharedLink` reaches 14 fields. Add nothing else to it.
+  - ~~`SharedLink` reaches 14 fields. Add nothing else to it.~~ *(Superseded by D16: `SharedLink` keeps 11 fields; the
+    resolution is its own table.)*
 - **French and Spanish first-class** in every measurement.
 - Commit format `type(#2236): lower-case imperative summary`, with no Claude attribution. Work on the main checkout,
   branch `feature/2236-resolve-shorteners`. Never push. Commands run in the foreground. No background jobs, no polling,
@@ -127,10 +128,12 @@ its own table) change these tasks; the spec is the authority.
 - Produces:
   - `enum LinkResolution: string { case Pending = 'pending'; case Resolved = 'resolved'; case Unchanged = 'unchanged';
     case Unresolved = 'unresolved'; }`;
-  - `SharedLink`: columns `resolution` (length 10, nullable, `enumType`), `resolved_url` (`LinkCardContent::URL_MAX`,
+  - ~~`SharedLink`: columns `resolution` (length 10, nullable, `enumType`), `resolved_url` (`LinkCardContent::URL_MAX`,
     nullable), `resolved_url_hash` (64, nullable); `#[ORM\Index(name: 'idx_shared_link_resolution', columns:
-    ['resolution'])]`; `getResolution(): ?LinkResolution`; no setter;
-  - `NewSharedLinkModel` gains a fifth promoted property, `public ?LinkResolution $resolution`.
+    ['resolution'])]`; `getResolution(): ?LinkResolution`; no setter;~~ *(Superseded by D16: entity
+    `SharedLinkResolution` on table `shared_link_resolution`.)*
+  - ~~`NewSharedLinkModel` gains a fifth promoted property, `public ?LinkResolution $resolution`.~~ *(Superseded: the
+    writer queues through `SharedLinkResolutionRepository::queueByUrlHashes()`.)*
 
 - [ ] **Step 1: Failing tests** in `SharedLinkWriterTest` (the kernel test that already exists):
   - `testAShortLinkIsQueued`: `linkFor()` of a card at `https://n.pr/4kcyxuV` yields a row whose `getResolution()` is
@@ -139,17 +142,19 @@ its own table) change these tasks; the spec is the authority.
   - `testAKnownRowKeepsItsResolution`: insert a short-link row, then set it to `unchanged` with a DBAL update. A second
     `linkFor()` of the same URL returns the row still `Unchanged`.
 - [ ] **Step 2: Failing migration test.** `Version20261115220000Test`, following `SharedLinkMigrationsTest`'s setup:
-  on SQLite, after the migration the three columns and the index exist, the `entry_search` triggers are still there,
-  and an existing row reads null in all three columns.
+  on SQLite, after the migration ~~the three columns and the index exist~~ the table and its index exist, the
+  `entry_search` triggers are still there, and ~~an existing row reads null in all three columns~~ no existing link
+  is queued *(superseded by D16)*.
 - [ ] **Step 3:** Run both tests. Expected: FAIL.
 - [ ] **Step 4:** Implement.
   - The entity and the enum.
   - The migration per spec *Schema*, platform-aware like `Version20261115140000`, with `isTransactional(): false`.
-    MySQL: one `ALTER TABLE shared_link ADD resolution VARCHAR(10) DEFAULT NULL, ADD resolved_url VARCHAR(2048)
-    DEFAULT NULL, ADD resolved_url_hash VARCHAR(64) DEFAULT NULL, ADD INDEX idx_shared_link_resolution (resolution)`.
-    SQLite: three `ADD COLUMN` and a `CREATE INDEX`. `down()` reverses both.
-  - `newLink()` passes `ShortLinkShape::fits($card->url) ? LinkResolution::Pending : null`.
-  - `rowOf()` appends `$link->resolution?->value`, and the insert lists `resolution`.
+    ~~MySQL: one `ALTER TABLE shared_link ADD resolution …, ADD INDEX idx_shared_link_resolution (resolution)`.
+    SQLite: three `ADD COLUMN` and a `CREATE INDEX`.~~ *(Superseded by D16: one `CREATE TABLE shared_link_resolution`;
+    `down()` drops it.)*
+  - ~~`newLink()` passes `ShortLinkShape::fits($card->url) ? LinkResolution::Pending : null`.~~
+  - ~~`rowOf()` appends `$link->resolution?->value`, and the insert lists `resolution`.~~ *(Superseded: `linksFor()`
+    queues the missing short links through `queueByUrlHashes()`.)*
 - [ ] **Step 5:** Run them again. Then, with `DATABASE_URL=sqlite:///%kernel.project_dir%/var/mig-2236.db`, run
   `bin/console doctrine:migrations:migrate -n` and then `bin/console doctrine:schema:validate`. Expected: PASS, and the
   schema in sync. Delete `var/mig-2236.db`.

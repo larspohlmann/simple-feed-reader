@@ -202,8 +202,9 @@ another writer won the insert race for may be queued by both; the second insert 
 1. `followHead($url, options, new RedirectBudget(5, 3.0))`. Options: `timeout` 3.0 s, `buffer` false, headers
    `User-Agent` and `Accept: text/html,*/*;q=0.8`. The response is cancelled at once, so no body is read.
 2. GET fallback, with a fresh budget and the same options, cancelled at once, only when HEAD threw
-   `RedirectChainException`, or when HEAD landed on the URL it started from with a status outside 2xx (`405`, `429`,
-   `403` on HEAD alone).
+   `RedirectChainException` for a reason other than a transport error, or when HEAD landed on the URL it started from
+   with a status outside 2xx (`405`, `429`, `403` on HEAD alone). A HEAD that timed out or lost its connection gets no
+   GET: it would repeat the same wait (review I1).
 3. The outcome:
    - the last attempt threw on a transport error (timeout, lost connection: a `TransportExceptionInterface` in the
      cause chain), or landed unredirected on the posted URL with `429` or `5xx` → `LinkLandingModel::retryable()`
@@ -211,7 +212,14 @@ another writer won the insert race for may be queued by both; the second insert 
    - the last attempt threw otherwise (a blocked hop or DNS failure in `UrlGuard`, a loop, a missing `Location`, a
      spent chain budget) → `LinkLandingModel::unresolved()`;
    - the landing, cleaned, hashes like the URL → `LinkLandingModel::unchanged()`;
+   - the cleaned landing is longer than `LinkCardContent::URL_MAX` (the `resolved_url` column) →
+     `LinkLandingModel::unresolved()`: strict MySQL would refuse the row, and it would head the queue on every pass
+     (review C1);
    - otherwise → `LinkLandingModel::resolved($cleanedLanding, $hash)`, whatever the landing's status (D3).
+
+`LinkResolutionSweep` settles a row `unresolved` when its attempt throws anything else, logs
+`Link resolution failed unexpectedly.` with the link id, URL and exception, and goes on with the next row, so no row
+can wedge the head of the queue or, on Strato, the maintenance sweeps after it.
 
 `LinkLandingModel` (`Model/`, `final readonly`): `LinkResolution $resolution`, `?string $url`, `?string $urlHash`, with
 the four named constructors. `RedirectFollower` already runs `UrlGuard` on every hop, forces `max_redirects` to 0,
@@ -235,8 +243,8 @@ private address and a loop end as `unresolved`, and a timeout as `retryable`.
 read, writes nothing (D14).
 
 `LinkResolutionBudgetModel` (`Model/`) mirrors `LinkCardBudgetModel`:
-- `links(int $count)`: a count of resolutions, each costing at most `LinkLanding::MAX_SECONDS` = 6.0 (two attempts of
-  3 s);
+- `links(int $count)`: a count of resolutions, each budgeted at `LinkLanding::MAX_SECONDS` = 6.0 (two attempts of
+  3 s). This is the nominal cost, not a bound: see D4;
 - `fittingBefore(\DateTimeImmutable $deadline, \DateTimeImmutable $now, int $maxLinks)`;
 - `fitsAfter(float $elapsedSeconds): bool`, true while one more worst-case resolution fits;
 - `isEmpty()`.
@@ -257,8 +265,8 @@ Both deployments get it, as the link-card sweep does:
 - `App\Http\SweepReportJson\LinkResolutionSweepJson` maps the report for `/maintenance/tick`: `considered`,
   `resolved`, `unchanged`, `unresolved`, `deferred`. The tick JSON is an admin surface, so clients are unaffected.
 
-Five per minute is about 300 an hour, against about 6 candidates an hour arriving (R4). The worst case is 30 s a
-pass; the measured mean is 2.5 s.
+Five per minute is about 300 an hour, against about 6 candidates an hour arriving (R4). The nominal budget is 30 s a
+pass and the measured mean is 2.5 s; a pass of timing-out links can run longer (D4).
 
 ### Trending reads the landing (G4, D8)
 
@@ -318,10 +326,18 @@ Lars delegated every decision. Each is "what — why — cost if wrong".
 - **D3. The landing counts whatever its status.** — The chain's last `Location` is where the link points. All 20
   sampled `bit.ly` links land on a `403` from The Atlantic at the article's URL, which matches its feed. — If wrong: a
   link to a removed article stores the removed URL. It matches nothing and harms nothing.
-- **D4. HEAD, then GET only if HEAD failed or landed unredirected on a non-2xx status; no body read; 3 s idle
-  timeout, 5 hops, 3 s per chain.** — R2: GET was needed for 2 of 174 rows, and the HEAD/GET landings differed on 4
-  of 502, none a match. The p95 is 1.13 s, so the measured max of 3.16 s fits a 3 s chain plus a 3 s fallback.
-  `PageLanding::MAX_REDIRECTS` is also 5. — If wrong: a shortener slower than 3 s per chain stays unresolved.
+- **D4. HEAD, then GET only if HEAD failed for a reason other than a transport error, or landed unredirected on a
+  non-2xx status; no body read; 3 s idle timeout, 5 hops, a 3 s `max_duration` budget per chain.** — R2: GET was
+  needed for 2 of 174 rows (a `429` and a `405`, never a timeout), and the HEAD/GET landings differed on 4 of 502, none
+  a match. `PageLanding::MAX_REDIRECTS` is also 5. **The 6 s of `MAX_SECONDS` is a budget, not a bound.**
+  `max_duration` applies per request, and `FailoverRequestSender` re-sends a hop that fails on the transport over each
+  route (the egress proxy, then each pinned address family), each with the chain's whole remaining time. A link that
+  times out therefore costs up to about 3 s per route on its HEAD, plus a GET chain of the same shape when HEAD failed
+  otherwise: the backfill measured 11.6–18 s for 3 of 1,128 links before the transport-error GET was dropped. The
+  budget checks the real elapsed time before each link, so a pass overruns its deadline by at most one such link. A
+  wall-clock bound per attempt would need the follower to stop a hop mid-failover, which its API does not offer; it is
+  left out. — If wrong: a shortener slower than 3 s per chain stays unresolved, and on Strato's dead IPv4 family a tick
+  can run one slow link past its window (watch `/maintenance/tick` during the Strato backfill).
 - **D5. A pending state drained by a separate budgeted pass (worker every minute, and the maintenance tick), 5 links
   a pass.** — No write path makes a request (anti-goal), and 84 % of candidates are Bluesky payload cards with no
   fetch to piggyback (R3). A separate sweep gets its own budget against the tick deadline, as `imageVerification` and
@@ -355,9 +371,11 @@ Lars delegated every decision. Each is "what — why — cost if wrong".
   `UrlGuard`. The landing is never fetched again and never reaches a client. — If wrong: none known. The SSRF tests
   pin a private-address hop as `unresolved`.
 - **D12. The stored landing is `UrlNormalizer::withoutTracking()`, and its hash is `UrlNormalizer::hash()`.** — These
-  are the same functions as `entry.url_hash` and `shared_link.url` (#2237), so a match is byte-exact. R2:
-  `utm_*`, `link_source`, `taid` and `feature` drop, and NPR's and The Atlantic's landings then equal their feed
-  entries. — If wrong: none beyond #2237's own cleaner.
+  are the same functions as `entry.url_hash` and `shared_link.url` (#2237), so a match is byte-exact. `utm_*` (and
+  YouTube's `feature`/`si`) drop. **True Anthem's `link_source` and `taid` do not**: the #2237 cleaner keeps them, so
+  101 measured landings keep them (95 The Atlantic via `bit.ly`) and 88 matches with The Atlantic's feed are missed.
+  R2's claim that they drop was wrong. *(Controller ruling, 2026-11-15:)* the cleaner's tiers stay unchanged in this
+  branch; a follow-up issue for the two keys goes to Lars. — If wrong: none beyond #2237's own cleaner.
 - **D13. The share sweep's page read is not reused as a resolution.** — It covers at most about 134 candidates a week
   (R3) and needs `PageCardModel` plumbing. — If wrong: about 134 HEAD requests a week that could have been free.
 - **D14. No claim lease; a conditional `UPDATE … WHERE status = 'pending' AND attempts = <read>` settles or defers a
@@ -414,6 +432,12 @@ restored from one `mysqldump` of `feedreader`, so the worker cannot move the win
   pass, seconds a pass, failures.
 
 ## Risks
+
+- **Live blogs merge unrelated posts.** The hash drops the fragment (#2237), so short links to one live blog's
+  entries (`…/live-updates/#id_1330182`) share one URL, and unrelated posts link through it: 9 `vist.ly` links to one
+  POLITICO Europe live blog in the measurement. Two direct links to one live blog already merge today; a
+  fragment-identity rule belongs in its own issue.
+- **`MAX_SECONDS` is a budget, not a bound** (D4). A pass can overrun its deadline by one timing-out link.
 
 - **Rate limiting during the backfill** (D9). About 300 `trib.al`/`slate.trib.al` links run back to back. A `429`
   defers a row, retried twice an hour apart (D6). The report shows deferred rows, and the outcome lists them per host.
