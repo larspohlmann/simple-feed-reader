@@ -94,9 +94,12 @@ final readonly class TrendingStories
             $rowLinkHash = $linkHashesByEntryId[$row->entry->requireId()];
             foreach ([$row, ...$row->duplicates] as $shown) {
                 $shownId = $shown->entry->requireId();
+                $linkHash = \array_key_exists($shownId, $linkHashesByEntryId)
+                    ? $linkHashesByEntryId[$shownId]
+                    : $rowLinkHash;
                 $rowsByEntryId[$shownId] = new ShownRowModel(
                     $shown->withDuplicates([]),
-                    self::articleKeyOf($shown, $linkHashesByEntryId[$shownId] ?? $rowLinkHash),
+                    self::articleKeyOf($shown, $linkHash),
                 );
             }
         }
