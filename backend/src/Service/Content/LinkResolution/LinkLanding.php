@@ -6,6 +6,7 @@ namespace App\Service\Content\LinkResolution;
 
 use App\Entity\LinkCardContent;
 use App\Service\Content\LinkResolution\Model\LinkLandingModel;
+use App\Service\Content\LinkResolution\Model\LinkResolutionBudgetModel;
 use App\Service\Foundation\Url\UrlNormalizer;
 use App\Service\Outbound\Fetch\Exception\RedirectChainException;
 use App\Service\Outbound\Fetch\Pass\LandedResponse;
@@ -17,9 +18,6 @@ use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 /** Follows a short link once, by HEAD and then GET, through the SSRF-guarded chain, reading no body. */
 final readonly class LinkLanding
 {
-    public const float MAX_SECONDS = 2 * self::ATTEMPT_SECONDS;
-
-    private const float ATTEMPT_SECONDS = 3.0;
     private const int MAX_REDIRECTS = 5;
 
     public function __construct(
@@ -112,7 +110,7 @@ final readonly class LinkLanding
     private function options(): array
     {
         return [
-            'timeout' => self::ATTEMPT_SECONDS,
+            'timeout' => LinkResolutionBudgetModel::ATTEMPT_SECONDS,
             'buffer' => false,
             'headers' => ['User-Agent' => $this->userAgent, 'Accept' => 'text/html,*/*;q=0.8'],
         ];
@@ -120,6 +118,6 @@ final readonly class LinkLanding
 
     private static function budget(): RedirectBudget
     {
-        return new RedirectBudget(self::MAX_REDIRECTS, self::ATTEMPT_SECONDS);
+        return new RedirectBudget(self::MAX_REDIRECTS, LinkResolutionBudgetModel::ATTEMPT_SECONDS);
     }
 }

@@ -13,8 +13,6 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 #[AsMessageHandler]
 final readonly class ResolvePendingLinksHandler
 {
-    private const int LINKS = 5;
-
     public function __construct(
         private LinkResolutionSweep $linkResolutionSweep,
         private LoggerInterface $logger,
@@ -23,7 +21,7 @@ final readonly class ResolvePendingLinksHandler
 
     public function __invoke(ResolvePendingLinks $message): void
     {
-        $report = $this->linkResolutionSweep->resolvePending(LinkResolutionBudgetModel::links(self::LINKS));
+        $report = $this->linkResolutionSweep->resolvePending(LinkResolutionBudgetModel::perPass());
         $this->logger->info('Worker link resolution finished.', ['report' => $report->toLogContext()]);
     }
 }

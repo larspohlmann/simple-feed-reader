@@ -6,8 +6,8 @@ namespace App\Tests\Service\Content\LinkResolution;
 
 use App\Entity\LinkCardContent;
 use App\Enum\LinkResolution;
-use App\Service\Content\LinkResolution\LinkLanding;
 use App\Service\Content\LinkResolution\Model\LinkLandingModel;
+use App\Service\Content\LinkResolution\Model\LinkResolutionBudgetModel;
 use App\Service\Foundation\Url\UrlNormalizer;
 use App\Tests\Support\LinkLandingWiring;
 use PHPUnit\Framework\TestCase;
@@ -257,7 +257,7 @@ final class LinkLandingTest extends TestCase
 
     public function testTheWorstCaseIsTwoAttempts(): void
     {
-        self::assertSame(6.0, LinkLanding::MAX_SECONDS);
+        self::assertSame(6.0, LinkResolutionBudgetModel::MAX_SECONDS);
     }
 
     /** @param list<MockResponse> $responses */

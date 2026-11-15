@@ -13,8 +13,6 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 #[AsTaggedItem(index: 'linkResolutions', priority: 65)]
 final readonly class LinkResolutionsTickSweep implements MaintenanceSweepInterface
 {
-    private const int MAX_LINKS = 5;
-
     public function __construct(
         private LinkResolutionSweep $linkResolutionSweep,
         private ClockInterface $clock,
@@ -24,7 +22,7 @@ final readonly class LinkResolutionsTickSweep implements MaintenanceSweepInterfa
     public function run(\DateTimeImmutable $deadline): LinkResolutionReportModel
     {
         return $this->linkResolutionSweep->resolvePending(
-            LinkResolutionBudgetModel::fittingBefore($deadline, $this->clock->now(), self::MAX_LINKS),
+            LinkResolutionBudgetModel::fittingBefore($deadline, $this->clock->now(), LinkResolutionBudgetModel::PER_PASS),
         );
     }
 

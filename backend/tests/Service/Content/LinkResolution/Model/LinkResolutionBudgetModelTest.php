@@ -32,6 +32,11 @@ final class LinkResolutionBudgetModelTest extends TestCase
         self::assertTrue(LinkResolutionBudgetModel::fittingBefore($now->modify('-1 minute'), $now, 5)->isEmpty());
     }
 
+    public function testAPassFollowsFiveLinks(): void
+    {
+        self::assertSame(5, LinkResolutionBudgetModel::perPass()->links);
+    }
+
     public function testABudgetIsEmptyOnlyAtZero(): void
     {
         self::assertTrue(LinkResolutionBudgetModel::links(0)->isEmpty());
