@@ -9,7 +9,6 @@ use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
-/** Where a short link lands (#2236); existing links stay unqueued until app:shared-links:resolve. */
 final class Version20261115220000 extends AbstractMigration
 {
     private const string TABLE = 'shared_link_resolution';

@@ -9,7 +9,6 @@ use App\Repository\SharedLinkResolutionRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
-/** Where a short link lands, written by SharedLinkResolutionRepository alone, in SQL; a link without one is no candidate. */
 #[ORM\Entity(repositoryClass: SharedLinkResolutionRepository::class)]
 #[ORM\Table(name: 'shared_link_resolution')]
 #[ORM\Index(name: 'idx_shared_link_resolution_due', columns: ['status', 'retry_at', 'shared_link_id'])]

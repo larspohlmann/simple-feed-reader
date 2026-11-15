@@ -15,7 +15,6 @@ use App\Service\Outbound\Fetch\RedirectFollower;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 
-/** Follows a short link once, by HEAD and then GET, through the SSRF-guarded chain, reading no body. */
 final readonly class LinkLanding
 {
     private const int MAX_REDIRECTS = 5;
@@ -59,7 +58,6 @@ final readonly class LinkLanding
         return $this->settled($this->redirects->follow($url, $this->options(), self::budget()));
     }
 
-    /** A chain that reached a redirect target before it timed out points there, as a landing behind a 403 does. */
     private function outcomeOfFailure(string $url, RedirectChainException $exception): LinkLandingModel
     {
         if (!self::isTransient($exception)) {
