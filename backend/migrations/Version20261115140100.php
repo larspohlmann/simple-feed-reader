@@ -14,7 +14,7 @@ use Doctrine\Migrations\AbstractMigration;
  * Merges every link card and quoted card into one shared_link per UrlNormalizer::hash() of its URL (#2239): the
  * oldest card wins (its entry's created_at, a card before a quote, then id), and no language is guessed here.
  * The hash is PHP, as the feed classification of Version20261114160000 is; ids are assigned here, so the table
- * must be empty.
+ * must be empty. Version20261115140200 links the cards the old release wrote meanwhile through linkUnlinked().
  */
 final class Version20261115140100 extends AbstractMigration
 {
@@ -40,6 +40,10 @@ final class Version20261115140100 extends AbstractMigration
 
     private int $unhashedQuotes = 0;
 
+    private int $malformedQuotes = 0;
+
+    private int $firstNewId = 1;
+
     public function getDescription(): string
     {
         return 'Merge link cards and quoted cards into one shared_link per URL, the oldest card first (#2239)';
@@ -53,6 +57,20 @@ final class Version20261115140100 extends AbstractMigration
             'shared_link must be empty: this migration assigns its ids.',
         );
 
+        $this->linkUnlinked();
+    }
+
+    /**
+     * Links every card and quoted card that has no shared link yet, against the rows already stored (which are older,
+     * so they win): the merge itself, and the slim migration's catch-up of cards written while the merge ran.
+     */
+    public function linkUnlinked(): void
+    {
+        $this->abortIfUnsupportedPlatform();
+        foreach ($this->connection->fetchAllKeyValue('SELECT url_hash, id FROM shared_link') as $urlHash => $id) {
+            $this->linkIds[(string) $urlHash] = (int) $id;
+            $this->firstNewId = max($this->firstNewId, (int) $id + 1);
+        }
         $normalizer = new UrlNormalizer();
         foreach ($this->oldestFirst() as $card) {
             $this->place($card, $normalizer->hash($card['url']));
@@ -64,15 +82,25 @@ final class Version20261115140100 extends AbstractMigration
         if ($this->unhashedCards !== []) {
             $this->addSql(sprintf('DELETE FROM link_card WHERE id IN (%s)', implode(', ', $this->unhashedCards)));
         }
+        $this->report();
+    }
+
+    private function report(): void
+    {
         $this->write(sprintf(
             '%d shared links from %d cards and %d quoted cards; %d cards deleted and %d quoted cards dropped,'
-            . ' their URL has no hash.',
+            . ' their URL has no hash; %d quoted cards dropped, their stored JSON is no card.',
             \count($this->newRows),
             \count($this->cardLinks),
             array_sum(array_map(\count(...), $this->quoteLinks)),
             \count($this->unhashedCards),
             $this->unhashedQuotes,
+            $this->malformedQuotes,
         ));
+        $this->warnIf(
+            $this->unhashedCards !== [] || $this->unhashedQuotes + $this->malformedQuotes > 0,
+            'Cards or quoted cards were dropped (counts above); name them in the deploy note.',
+        );
     }
 
     public function down(Schema $schema): void
@@ -120,7 +148,7 @@ final class Version20261115140100 extends AbstractMigration
          */
         $rows = $this->connection->fetchAllAssociative(
             'SELECT card.id, entry.created_at, card.url, card.title, card.description, card.image_url, card.site_name'
-            . ' FROM link_card card JOIN entry ON entry.id = card.entry_id',
+            . ' FROM link_card card JOIN entry ON entry.id = card.entry_id WHERE card.shared_link_id IS NULL',
         );
 
         return array_map(static fn (array $row): array => [
@@ -145,13 +173,14 @@ final class Version20261115140100 extends AbstractMigration
     {
         /** @var list<array{id: int|string, created_at: string, quoted_link_card: string}> $rows */
         $rows = $this->connection->fetchAllAssociative(
-            'SELECT id, created_at, quoted_link_card FROM entry WHERE quoted_link_card IS NOT NULL',
+            'SELECT id, created_at, quoted_link_card FROM entry'
+            . ' WHERE quoted_link_card IS NOT NULL AND quoted_shared_link_id IS NULL',
         );
         $cards = [];
         foreach ($rows as $row) {
             $stored = json_decode($row['quoted_link_card'], true);
             if (!\is_array($stored) || !self::isACard($stored)) {
-                ++$this->unhashedQuotes;
+                ++$this->malformedQuotes;
                 continue;
             }
             $cards[] = [
@@ -190,7 +219,7 @@ final class Version20261115140100 extends AbstractMigration
             return;
         }
         if (!isset($this->linkIds[$urlHash])) {
-            $this->linkIds[$urlHash] = \count($this->newRows) + 1;
+            $this->linkIds[$urlHash] = $this->firstNewId + \count($this->newRows);
             $this->newRows[] = [
                 $this->linkIds[$urlHash],
                 $card['url'],

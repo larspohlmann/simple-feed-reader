@@ -8,10 +8,14 @@ use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
+use Psr\Log\AbstractLogger;
+use Psr\Log\LoggerInterface;
+use Psr\Log\LogLevel;
 
 /**
- * Drops the card copies Version20261115140100 merged into shared_link (#2239). SQLite rebuilds link_card, which has no
- * trigger, and drops entry.quoted_link_card in place, so entry keeps its FTS5 triggers.
+ * Drops the card copies Version20261115140100 merged into shared_link (#2239), after linking the cards and quotes the
+ * old release wrote while the merge ran: a deploy migrates before it flips, so the old code still ingests. SQLite
+ * rebuilds link_card, which has no trigger, and drops entry.quoted_link_card in place, so entry keeps its FTS5 triggers.
  */
 final class Version20261115140200 extends AbstractMigration
 {
@@ -24,6 +28,7 @@ final class Version20261115140200 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
+        $this->linkStragglers();
         $platform = $this->connection->getDatabasePlatform();
         if ($platform instanceof AbstractMySQLPlatform) {
             $this->addSql(
@@ -58,6 +63,31 @@ final class Version20261115140200 extends AbstractMigration
         }
 
         throw new \RuntimeException('Unsupported database platform for the shared_link slim migration.');
+    }
+
+    private function linkStragglers(): void
+    {
+        require_once __DIR__ . '/Version20261115140100.php';
+        $merge = new Version20261115140100($this->connection, $this->forwardingLogger());
+        $merge->linkUnlinked();
+        foreach ($merge->getSql() as $query) {
+            $this->addSql($query->getStatement());
+        }
+    }
+
+    /** The merge's notices and warnings, written as this migration's own. */
+    private function forwardingLogger(): LoggerInterface
+    {
+        return new class ($this->write(...), $this->warnIf(...)) extends AbstractLogger {
+            public function __construct(private readonly \Closure $write, private readonly \Closure $warn)
+            {
+            }
+
+            public function log($level, string|\Stringable $message, array $context = []): void
+            {
+                $level === LogLevel::WARNING ? ($this->warn)(true, (string) $message) : ($this->write)((string) $message);
+            }
+        };
     }
 
     public function isTransactional(): bool

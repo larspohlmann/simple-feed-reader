@@ -170,6 +170,32 @@ final class SharedLinkMigrationsTest extends TestCase
         self::assertSame(0, $this->rowCount('SELECT COUNT(*) FROM link_card WHERE shared_link_id IS NOT NULL'));
     }
 
+    public function testTheSlimMigrationLinksCardsWrittenAfterTheMerge(): void
+    {
+        $this->card($this->entry('2026-11-01 10:00:00'), self::URL, 'Merged first');
+        $this->execute(new Version20261115140000($this->connection, new NullLogger()), 'up');
+        $this->execute(new Version20261115140100($this->connection, new NullLogger()), 'up');
+        $this->card($this->entry('2026-11-03 10:00:00'), self::URL . '?utm_source=late', 'Written late');
+        $this->card($this->entry('2026-11-03 11:00:00'), 'https://late.example/a', 'Late newest');
+        $this->card($this->entry('2026-11-03 10:30:00'), 'https://late.example/a', 'Late oldest');
+        $quoting = $this->entry('2026-11-03 12:00:00');
+        $this->quote($quoting, 'https://late.example/a', 'Late quote');
+
+        $this->execute(new Version20261115140200($this->connection, new NullLogger()), 'up');
+
+        self::assertSame(0, $this->rowCount('SELECT COUNT(*) FROM link_card WHERE shared_link_id IS NULL'));
+        self::assertSame(
+            [[1, self::URL, 'Merged first'], [2, 'https://late.example/a', 'Late oldest']],
+            array_map(
+                static fn (array $row): array => [(int) $row['id'], $row['url'], $row['title']],
+                $this->connection->fetchAllAssociative('SELECT id, url, title FROM shared_link ORDER BY id'),
+            ),
+        );
+        self::assertSame(2, $this->rowCount(
+            'SELECT quoted_shared_link_id FROM entry WHERE id = ' . $quoting,
+        ));
+    }
+
     public function testAFilledTableAbortsTheMerge(): void
     {
         $this->execute(new Version20261115140000($this->connection, new NullLogger()), 'up');
