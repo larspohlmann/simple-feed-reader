@@ -446,3 +446,30 @@ after C on the same entries.
   R7 alone, which builds the R6 bookkeeping but keeps every part, peaks at 197.8 MB, so the bookkeeping costs roughly
   10–15 MB and the filter itself saves some by making fewer links. This is not separated further.
 
+
+### Task 7c: one optimisation pass, same output
+
+Four changes, none of them to behaviour:
+- the lexicon search compares a line in place (`substr_compare` against the key and its tab) instead of cutting the
+  key out, about 1.4× faster per lookup;
+- a word's stem id is cached as an int, and only a compound keeps a list of its part ids (the list per word cost about
+  15 MB);
+- `CompoundParts` drops its compound → holders index and finds the holders through each entry's compounds (−4.6 MB);
+- the pair loop reads a stem's rarity once per stem, not once per holder, and checks only feed filler for the earlier
+  holders, since a stem placed in the later entry is never window filler.
+
+Measured on the same pin and dev stack. A and D ran within minutes of each other; C ran right before D.
+
+| | Day A | Day C | Day D | Week A | Week C | Week D |
+|---|---|---|---|---|---|---|
+| Wall time | 4.9 s | 5.0 s | 4.2 s | 64.4 s | 82.0 s | **59.3 s** |
+| Peak RSS | 153.6 MB | 99.9 MB | 92.2 MB | 227.2 MB | 264.9 MB | 238.3 MB |
+| Peak PHP memory | 95.4 MB | 59.3 MB | 52.9 MB | 146.3 MB | 192.8 MB | **172.8 MB** |
+
+The week run is now **8 % faster than A** (it was +28 %), so the 15 % budget holds. Peak PHP memory is 172.8 MB,
++26.5 MB over A. Day A's peak and RSS include a container rebuild after the file swap, so read the day A row as noisy.
+
+**The output is identical.** C and D ran back to back at a second pin (2026-11-14 18:00 UTC), so both read the same
+6,313 day and 29,407 week entries. Everything after the header line is byte-identical, near misses included, and
+`compare.py` reports new 0 / lost 0 for both windows. A replay of one dumped week window through both versions also
+gave the same links, groups and near misses, with the same md5.
