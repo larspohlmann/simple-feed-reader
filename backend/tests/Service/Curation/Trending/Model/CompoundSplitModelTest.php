@@ -45,6 +45,25 @@ final class CompoundSplitModelTest extends TestCase
         $this->assertFalse($split->hasMeanClassOfAtLeast(9));
     }
 
+    public function testIsMoreFrequentOnlyWithALowerClassSum(): void
+    {
+        $frequent = CompoundSplitModel::single('tier', 8);
+
+        $this->assertTrue($frequent->isMoreFrequentThan(CompoundSplitModel::single('tiere', 9)));
+        $this->assertFalse($frequent->isMoreFrequentThan(CompoundSplitModel::single('tiere', 8)));
+        $this->assertFalse($frequent->isMoreFrequentThan(CompoundSplitModel::single('tiere', 7)));
+    }
+
+    public function testFindsAPartRarerThanAClassAcrossAllParts(): void
+    {
+        $split = CompoundSplitModel::single('ion', 14)->prependedBy(CompoundSplitModel::single('bus', 8));
+        $reversed = CompoundSplitModel::single('bus', 8)->prependedBy(CompoundSplitModel::single('ion', 14));
+
+        $this->assertTrue($split->hasPartRarerThan(13));
+        $this->assertTrue($reversed->hasPartRarerThan(13));
+        $this->assertFalse($split->hasPartRarerThan(14));
+    }
+
     /** @param non-empty-list<string> $parts */
     private function split(array $parts, int $frequencyClass): CompoundSplitModel
     {

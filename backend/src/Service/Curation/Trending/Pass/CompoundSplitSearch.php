@@ -69,7 +69,7 @@ final class CompoundSplitSearch
         $best = null;
         foreach ($this->linkingVariantsOf($segment) as $variant) {
             $part = $this->nounPartOf($variant);
-            if (null !== $part && (null === $best || $part->beats($best))) {
+            if (null !== $part && (null === $best || $part->isMoreFrequentThan($best))) {
                 $best = $part;
             }
         }
@@ -88,7 +88,10 @@ final class CompoundSplitSearch
             ),
         );
 
-        return [$segment, ...array_values($unlinked), $segment . GermanCompoundSplitter::RESTORED_ENDING];
+        $variants = [$segment, ...array_values($unlinked), $segment . GermanCompoundSplitter::RESTORED_ENDING];
+        usort($variants, static fn (string $left, string $right): int => strlen($left) <=> strlen($right));
+
+        return $variants;
     }
 
     private function nounPartOf(string $form): ?CompoundSplitModel

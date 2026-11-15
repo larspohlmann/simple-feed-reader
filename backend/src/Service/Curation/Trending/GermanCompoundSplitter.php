@@ -35,6 +35,11 @@ final readonly class GermanCompoundSplitter
 
     private function staysWhole(string $word, CompoundSplitModel $split): bool
     {
-        return $this->lexicon->isKnown($word) && $split->hasMeanClassOfAtLeast($this->lexicon->frequencyClassOf($word));
+        if (!$this->lexicon->isKnown($word)) {
+            return false;
+        }
+        $wholeClass = $this->lexicon->frequencyClassOf($word);
+
+        return $split->hasMeanClassOfAtLeast($wholeClass) || $split->hasPartRarerThan($wholeClass);
     }
 }

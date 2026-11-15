@@ -38,8 +38,11 @@ final class GermanCompoundSplitterTest extends TestCase
         yield 'a known whole rarer than its parts' => ['rathaus', ['rat', 'haus']];
         yield 'a rare long part' => ['spionageverdacht', ['spionage', 'verdacht']];
         yield 'a rare head' => ['kinderinstinkt', ['kinder', 'instinkt']];
+        yield 'a modifier variant tie goes to the shorter form' => ['tierarzt', ['tier', 'arzt']];
+        yield 'a known compound rarer than both parts' => ['rathaus', ['rat', 'haus']];
         yield 'exactly the most parts' => ['tagtagtagtag', ['tag', 'tag', 'tag', 'tag']];
         yield 'a known whole as frequent as its parts' => ['bundesamt', []];
+        yield 'a known whole with a part rarer than itself' => ['busion', []];
         yield 'a modifier that is no noun' => ['einsatz', []];
         yield 'a known whole more frequent than its parts' => ['aktion', []];
         yield 'a head that is no noun' => ['hausgroß', []];
@@ -69,9 +72,15 @@ final class GermanCompoundSplitterTest extends TestCase
         yield 'Sonntagmittag' => ['sonntagmittag', ['sonntag', 'mittag']];
         yield 'Bundestag' => ['bundestag', ['bund', 'tag']];
         yield 'Einsatz' => ['einsatz', []];
-        yield 'Kinderarztpraxis' => ['kinderarztpraxis', ['kinder', 'arztpraxis']];
+        yield 'Kinderarztpraxis' => ['kinderarztpraxis', ['kind', 'arztpraxis']];
         yield 'Ministerpräsident' => ['ministerpräsident', ['minister', 'präsident']];
         yield 'Bundesrat' => ['bundesrat', ['bund', 'rat']];
         yield 'Sonntagvormittag' => ['sonntagvormittag', ['sonntag', 'vormittag']];
+        yield 'Salami' => ['salami', ['sale', 'ami']];
+        yield 'Tierarzt' => ['tierarzt', ['tier', 'arzt']];
+        yield 'Sternhimmel' => ['sternhimmel', ['stern', 'himmel']];
+        yield 'Fischmarkt' => ['fischmarkt', ['fisch', 'markt']];
+        yield 'Weihnachtsbaum' => ['weihnachtsbaum', []];
+        yield 'Aktenbestand' => ['aktenbestand', ['akt', 'bes', 'tand']];
     }
 }

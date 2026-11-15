@@ -7,13 +7,17 @@ namespace App\Service\Curation\Trending\Model;
 final readonly class CompoundSplitModel
 {
     /** @param list<string> $parts */
-    private function __construct(private array $parts, private int $classSum, private int $headLength)
-    {
+    private function __construct(
+        private array $parts,
+        private int $classSum,
+        private int $rarestClass,
+        private int $headLength,
+    ) {
     }
 
     public static function single(string $form, int $frequencyClass): self
     {
-        return new self([$form], $frequencyClass, mb_strlen($form));
+        return new self([$form], $frequencyClass, $frequencyClass, mb_strlen($form));
     }
 
     #[\NoDiscard]
@@ -22,6 +26,7 @@ final readonly class CompoundSplitModel
         return clone($this, [
             'parts' => [...$modifier->parts, ...$this->parts],
             'classSum' => $modifier->classSum + $this->classSum,
+            'rarestClass' => max($modifier->rarestClass, $this->rarestClass),
         ]);
     }
 
@@ -47,6 +52,16 @@ final readonly class CompoundSplitModel
         }
 
         return $this->headLength > $other->headLength;
+    }
+
+    public function isMoreFrequentThan(self $other): bool
+    {
+        return $this->classSum < $other->classSum;
+    }
+
+    public function hasPartRarerThan(int $frequencyClass): bool
+    {
+        return $this->rarestClass > $frequencyClass;
     }
 
     public function hasMeanClassOfAtLeast(int $frequencyClass): bool
