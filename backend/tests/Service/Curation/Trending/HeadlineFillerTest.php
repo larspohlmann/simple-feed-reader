@@ -7,6 +7,7 @@ namespace App\Tests\Service\Curation\Trending;
 use App\Enum\FeedLanguage;
 use App\Service\Curation\Trending\HeadlineFiller;
 use App\Service\Curation\Trending\Support\HeadlineStems;
+use App\Tests\Support\LanguageWiring;
 use App\Tests\Support\TrendingWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -63,7 +64,7 @@ final class HeadlineFillerTest extends TestCase
     public function testEveryStopWordIsASeedThroughItsLanguagesStemmer(FeedLanguage $language): void
     {
         $stemmer = TrendingWiring::stemmer();
-        $words = TrendingWiring::stopWords()->wordsOf($language);
+        $words = LanguageWiring::stopWords()->wordsOf($language);
 
         self::assertNotEmpty($words);
         foreach ($words as $word) {
@@ -75,7 +76,7 @@ final class HeadlineFillerTest extends TestCase
     public function testEveryKeptStopWordsCutIsASeedWithoutALanguage(FeedLanguage $language): void
     {
         $keptWords = array_filter(
-            TrendingWiring::stopWords()->wordsOf($language),
+            LanguageWiring::stopWords()->wordsOf($language),
             static fn (string $word): bool => HeadlineStems::isKept(HeadlineStems::bare($word)),
         );
 

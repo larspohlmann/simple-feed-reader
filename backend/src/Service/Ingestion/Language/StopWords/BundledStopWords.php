@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Curation\Trending\StopWords;
+namespace App\Service\Ingestion\Language\StopWords;
 
 use App\Enum\FeedLanguage;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;

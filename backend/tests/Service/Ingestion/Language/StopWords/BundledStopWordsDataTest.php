@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Curation\Trending\StopWords;
+namespace App\Tests\Service\Ingestion\Language\StopWords;
 
 use App\Enum\FeedLanguage;
-use App\Service\Curation\Trending\StopWords\BundledStopWords;
+use App\Service\Ingestion\Language\StopWords\BundledStopWords;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
