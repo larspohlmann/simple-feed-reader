@@ -146,6 +146,33 @@ final class RedirectFollowerTest extends TestCase
         $follower->follow('https://example.com/start', [], new RedirectBudget(5));
     }
 
+    public function testATransportFailureNamesTheHopItFailedOn(): void
+    {
+        $follower = $this->follower([
+            self::redirect('https://news.example.com/article'),
+            new MockResponse('', ['error' => 'Idle timeout reached']),
+        ]);
+
+        try {
+            $follower->followHead('https://short.example/x', [], new RedirectBudget(5));
+            self::fail('The chain should have failed.');
+        } catch (RedirectChainException $exception) {
+            self::assertSame('https://news.example.com/article', $exception->hopUrl);
+        }
+    }
+
+    public function testAFailedFirstRequestNamesNoHop(): void
+    {
+        $follower = $this->follower([new MockResponse('', ['error' => 'Connection refused'])]);
+
+        try {
+            $follower->follow('https://example.com/start', [], new RedirectBudget(5));
+            self::fail('The chain should have failed.');
+        } catch (RedirectChainException $exception) {
+            self::assertNull($exception->hopUrl);
+        }
+    }
+
     public function testTheClientNeverFollowsOnItsOwnWhateverTheCallerPasses(): void
     {
         $seen = null;

@@ -7,9 +7,11 @@ namespace App\Tests\Support;
 use App\Entity\LinkCard;
 use App\Entity\ShareEnrichment;
 use App\Entity\SharedLink;
+use App\Entity\SharedLinkResolution;
 use App\Repository\LinkCardRepository;
 use App\Repository\ShareEnrichmentRepository;
 use App\Repository\SharedLinkRepository;
+use App\Repository\SharedLinkResolutionRepository;
 use App\Service\Content\LinkCard\EntryLinks;
 use App\Service\Content\LinkCard\SharedLinkWriter;
 use App\Service\Foundation\Url\UrlNormalizer;
@@ -112,12 +114,21 @@ final class PostEnrichers
     ): SharedLinkWriter {
         return new SharedLinkWriter(
             self::sharedLinks($entityManager),
+            self::linkResolutions($entityManager),
             new UrlNormalizer(),
             self::$previewLanguage ??= new PreviewLanguage(
                 new LanguageGuess(new LanguageDetectionFactory()->createForFeedLanguages()),
             ),
             new NaiveUtcClock($clock),
         );
+    }
+
+    public static function linkResolutions(EntityManagerInterface $entityManager): SharedLinkResolutionRepository
+    {
+        /** @var SharedLinkResolutionRepository $linkResolutions */
+        $linkResolutions = $entityManager->getRepository(SharedLinkResolution::class);
+
+        return $linkResolutions;
     }
 
     public static function sharedLinks(EntityManagerInterface $entityManager): SharedLinkRepository

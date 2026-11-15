@@ -107,9 +107,11 @@ final class TrendingStoryRepository extends ServiceEntityRepository
 
         /** @var list<array{story_id: int|string, entry_id: int|string, url_hash: string|null}> $rows */
         $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
-            'SELECT shown.story_id, shown.entry_id, link.url_hash FROM trending_story_entry shown'
+            'SELECT shown.story_id, shown.entry_id, ' . LinkLandingSql::URL_HASH . ' AS url_hash'
+            . ' FROM trending_story_entry shown'
             . ' JOIN feed shown_feed ON shown_feed.id = shown.feed_id'
             . ' LEFT JOIN shared_link link ON link.id = shown.shared_link_id'
+            . LinkLandingSql::JOIN
             . ' JOIN subscription reader ON reader.feed_id = shown.feed_id AND reader.user_id = :user'
             . ' AND ' . TrendingInclusionSql::includes('reader')
             . ' WHERE shown.story_id IN (:storyIds)'

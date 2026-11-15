@@ -81,6 +81,21 @@ final class TrendingGroupingTest extends DbTestCase
         self::assertSame([[$article->requireId(), $post->requireId()]], $this->collect()->entriesSharingAUrl());
     }
 
+    public function testAResolvedShortLinkSharesTheOutletsUrl(): void
+    {
+        $article = $this->article();
+        $post = $this->postCarding('https://n.pr/x', 'Unrelated words entirely');
+        $this->entityManager->getConnection()->executeStatement(
+            "UPDATE shared_link_resolution SET status = 'resolved', resolved_url = ?, resolved_url_hash = ?",
+            ['https://outlet.example/lighthouse', (new UrlNormalizer())->hash('https://outlet.example/lighthouse')],
+        );
+
+        $run = $this->collect();
+
+        self::assertSame([[$article->requireId(), $post->requireId()]], $run->entriesSharingAUrl());
+        self::assertSame('outlet.example', $run->memberOf($post->requireId())->articleSite);
+    }
+
     public function testAMemberCarriesItsCardsLink(): void
     {
         $this->article();

@@ -183,6 +183,65 @@ final class TrendingEntryRepositoryTest extends DbTestCase
         self::assertSame($bare->requireId(), $rows[2]->id);
     }
 
+    public function testACardReadsItsResolvedUrl(): void
+    {
+        $short = $this->cardedPost('https://n.pr/x');
+        $this->settle($short, "'resolved'", 'https://www.npr.org/2026/11/09/a');
+
+        $card = $this->onlyCard();
+
+        self::assertSame('https://www.npr.org/2026/11/09/a', $card->url);
+        self::assertSame((new UrlNormalizer())->hash('https://www.npr.org/2026/11/09/a'), $card->urlHash);
+        self::assertSame('npr.org', $card->site);
+        self::assertSame($short->requireId(), $card->sharedLinkId);
+    }
+
+    public function testAnUnresolvedCardReadsItsPostedUrl(): void
+    {
+        $short = $this->cardedPost('https://n.pr/x');
+        $this->settle($short, "'unresolved'", null);
+
+        $card = $this->onlyCard();
+
+        self::assertSame('https://n.pr/x', $card->url);
+        self::assertSame($short->getUrlHash(), $card->urlHash);
+    }
+
+    private function cardedPost(string $cardUrl): SharedLink
+    {
+        $fixtures = new TrendingFixtures($this->entityManager);
+        $post = $fixtures->entry($fixtures->feed('poster', SocialNetwork::Bluesky), 'Look', '2031-05-14 09:00:00');
+        $fixtures->flush();
+        $link = $this->link($cardUrl);
+        $this->entityManager->persist(new LinkCard($post, 0, $link));
+        $this->entityManager->flush();
+
+        return $link;
+    }
+
+    private function settle(SharedLink $link, string $status, ?string $resolvedUrl): void
+    {
+        $this->entityManager->getConnection()->executeStatement(
+            'UPDATE shared_link_resolution SET status = ' . $status . ', resolved_url = ?, resolved_url_hash = ?'
+            . ' WHERE shared_link_id = ?',
+            [$resolvedUrl, (new UrlNormalizer())->hash($resolvedUrl), $link->requireId()],
+        );
+    }
+
+    private function onlyCard(): WindowLinkCardModel
+    {
+        $rows = iterator_to_array(
+            (new TrendingEntryRepository($this->entityManager))->windowEntries(
+                new \DateTimeImmutable('2031-05-13 12:00:00', new \DateTimeZone('UTC')),
+            ),
+            false,
+        );
+        self::assertCount(1, $rows);
+        self::assertNotNull($rows[0]->links->card);
+
+        return $rows[0]->links->card;
+    }
+
     private function sharedLinks(): SharedLinkWriter
     {
         return PostEnrichers::sharedLinkWriter($this->entityManager);

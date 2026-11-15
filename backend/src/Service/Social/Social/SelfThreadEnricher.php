@@ -13,6 +13,7 @@ use App\Repository\LinkCardRepository;
 use App\Repository\ShareEnrichmentRepository;
 use App\Repository\ThreadPostRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Foundation\Clock\Support\ElapsedSeconds;
 use App\Service\Content\Comments\Exception\CommentsUnavailableException;
 use App\Service\Content\Comments\Model\EntryCommentModel;
 use App\Service\Social\Completion\SelfThreadPass\SelfThreadPassInterface;
@@ -227,7 +228,7 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
 
     private function secondsSince(\DateTimeImmutable $claimedAt): float
     {
-        return (float) $this->clock->now()->format('U.u') - (float) $claimedAt->format('U.u');
+        return ElapsedSeconds::between($claimedAt, $this->clock->now());
     }
 
     /**
