@@ -178,27 +178,55 @@ final class HeadlineWindowTest extends TestCase
         $this->addIn(FeedLanguage::German, 1, 10, 'Polizei räumt Camp');
         $this->addIn(FeedLanguage::German, 2, 20, 'Großer Polizeieinsatz am Bahnhof');
 
-        self::assertSame([1], array_keys($this->window->sharedWeightsWithEarlier(2)));
+        $shared = $this->window->sharedWeightsWithEarlier(2);
+
+        self::assertSame([1], array_keys($shared));
+        self::assertEqualsWithDelta(self::TWICE, $shared[1], 0.0001, 'polizei alone');
     }
 
-    public function testTheSameCompoundSharesMoreThanOneOfItsParts(): void
+    public function testTwoCompoundsShareTheirCommonPart(): void
     {
-        $this->addIn(FeedLanguage::German, 1, 10, 'Polizei räumt Camp');
-        $this->addIn(FeedLanguage::German, 2, 20, 'Großer Polizeieinsatz am Bahnhof');
-        $this->addIn(FeedLanguage::German, 3, 30, 'Polizeieinsatz am Bahnhof');
-        $this->addIn(FeedLanguage::German, 4, 40, 'Polizeieinsatz am Bahnhof');
+        $this->addIn(FeedLanguage::German, 1, 10, 'Polizeieinsatz am Bahnhof');
+        $this->addIn(FeedLanguage::German, 2, 20, 'Feuerwehreinsatz in Köln');
 
-        self::assertGreaterThan(
+        self::assertEqualsWithDelta(self::TWICE, $this->window->sharedWeightsWithEarlier(2)[1], 0.0001, 'einsatz');
+    }
+
+    public function testASharedCompoundWeighsAsOneWordAndNotAgainThroughItsParts(): void
+    {
+        $this->addIn(FeedLanguage::German, 1, 10, 'Polizeieinsatz');
+        $this->addIn(FeedLanguage::German, 2, 20, 'Polizeieinsatz');
+
+        self::assertEqualsWithDelta(self::TWICE, $this->window->sharedWeightsWithEarlier(2)[1], 0.0001);
+        self::assertEqualsWithDelta(self::TWICE, $this->window->totalWeight(1), 0.0001, 'the share is whole');
+    }
+
+    public function testAPartRepeatingASharedCompoundOfEitherEntryIsNotCountedAgain(): void
+    {
+        $this->addIn(FeedLanguage::German, 1, 10, 'Polizeieinsatz');
+        $this->addIn(FeedLanguage::German, 2, 20, 'Polizeieinsatz der Polizei');
+
+        self::assertEqualsWithDelta(self::TWICE, $this->window->sharedWeightsWithEarlier(2)[1], 0.0001);
+    }
+
+    public function testAPartCountsWhenOneOfItsCompoundsIsNotShared(): void
+    {
+        $this->addIn(FeedLanguage::German, 1, 10, 'Polizeieinsatz und Feuerwehreinsatz');
+        $this->addIn(FeedLanguage::German, 2, 20, 'Polizeieinsatz und Kindereinsatz');
+
+        self::assertEqualsWithDelta(
+            2 * self::TWICE,
             $this->window->sharedWeightsWithEarlier(2)[1],
-            $this->window->sharedWeightsWithEarlier(4)[3],
+            0.0001,
+            'polizeieinsatz, and einsatz through feuerwehreinsatz and kindereinsatz; polizei only repeats the compound',
         );
     }
 
-    public function testAPartThatIsAlsoAWordOfTheHeadlineCountsOnce(): void
+    public function testAnEntryWeighsAPartThatIsAlsoOneOfItsWordsOnce(): void
     {
         $this->addIn(FeedLanguage::German, 1, 10, 'Polizei: Polizeieinsatz');
 
-        self::assertEqualsWithDelta(3 * self::ONCE, $this->window->totalWeight(1), 0.0001);
+        self::assertEqualsWithDelta(2 * self::ONCE, $this->window->totalWeight(1), 0.0001, 'einsatz is only a part');
     }
 
     public function testAPartStemInThreePercentOfTheFlooredWindowIsFiller(): void

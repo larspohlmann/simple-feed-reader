@@ -52,22 +52,31 @@ final class HeadlineWindow
     /** @var array<string, int> language value => entries stemmed in it */
     private array $entriesByLanguage = [];
 
-    /** @var array<string, list<string>> language value and word => its stems that are no seed */
-    private array $stemsByWord = [];
+    /** @var array<string, list<int>> language value and word => its stem id, then its parts' stem ids; none for a seed */
+    private array $stemIdsByWord = [];
+
+    private readonly CompoundParts $compoundParts;
 
     public function __construct(
         private readonly HeadlineFiller $filler,
         private readonly HeadlineEquivalents $equivalents,
     ) {
+        $this->compoundParts = new CompoundParts();
     }
 
     /** Entries must arrive in ascending id order: the postings stay sorted. */
     public function add(WindowEntryModel $entry, string $body): void
     {
-        $headlineIds = $this->idsOf($entry->title, $entry->language);
-        $bodyIds = array_values(array_diff($this->idsOf($body, $entry->language), $headlineIds));
+        [$headlineIds, $headlineWordIds] = $this->idsOf($entry->title, $entry->language);
+        [$allBodyIds, $bodyWordIds] = $this->idsOf($body, $entry->language);
+        $bodyIds = array_values(array_diff($allBodyIds, $headlineIds));
         $this->headlineStems[$entry->id] = $headlineIds;
         $this->bodyStems[$entry->id] = $bodyIds;
+        $this->compoundParts->addEntry(
+            $entry->id,
+            [...$headlineIds, ...$bodyIds],
+            [...$headlineWordIds, ...$bodyWordIds],
+        );
         $this->feedOfEntry[$entry->id] = $entry->feedId;
         $this->entriesOfFeed[$entry->feedId][] = $entry->id;
         $this->post($entry->id, $headlineIds, $bodyIds);
@@ -98,7 +107,12 @@ final class HeadlineWindow
         $shared = [];
         $sharingAHeadline = [];
         foreach ($this->placedStemsOf($entryId) as $stemId => $placeWeight) {
-            foreach ($this->earlierHoldersOf($stemId, $entryId) as $earlierEntryId => $earlierPlaceWeight) {
+            $holders = $this->compoundParts->holdersLinkedBeyondASharedCompound(
+                $this->earlierHoldersOf($stemId, $entryId),
+                $stemId,
+                $entryId,
+            );
+            foreach ($holders as $earlierEntryId => $earlierPlaceWeight) {
                 $commonPlaceWeight = min($placeWeight, $earlierPlaceWeight);
                 $shared[$earlierEntryId] = ($shared[$earlierEntryId] ?? 0.0)
                     + $commonPlaceWeight * $this->rarity($stemId);
@@ -120,26 +134,46 @@ final class HeadlineWindow
         $this->entriesByLanguage[$language] = ($this->entriesByLanguage[$language] ?? 0) + 1;
     }
 
-    /** @return list<int> */
+    /** @return array{list<int>, list<int>} the ids of every stem, and of the words' own stems */
     private function idsOf(string $text, ?FeedLanguage $language): array
     {
         $ids = [];
+        $wordIds = [];
         foreach ($this->equivalents->wordsOf($text) as [$word, $bare]) {
-            foreach ($this->keptStemsOf($word, $bare, $language) as $stem) {
-                $ids[$this->stemIds[$stem] ??= \count($this->stemIds)] = true;
-            }
+            $stemIds = $this->stemIdsOfWord($word, $bare, $language);
+            $wordIds += array_fill_keys(\array_slice($stemIds, 0, 1), true);
+            $ids += array_fill_keys($stemIds, true);
         }
 
-        return array_keys($ids);
+        return [array_keys($ids), array_keys($wordIds)];
     }
 
-    /** @return list<string> */
-    private function keptStemsOf(string $word, string $bare, ?FeedLanguage $language): array
+    /** @return list<int> */
+    private function stemIdsOfWord(string $word, string $bare, ?FeedLanguage $language): array
     {
-        return $this->stemsByWord[$language?->value . ' ' . $word] ??= array_values(array_filter(
+        return $this->stemIdsByWord[$language?->value . ' ' . $word] ??= $this->assignStemIds(
             $this->equivalents->wordStemsOf($word, $bare, $language),
-            fn (string $stem): bool => !$this->filler->isSeed($stem, $language),
-        ));
+            $language,
+        );
+    }
+
+    /**
+     * @param list<string> $stems the word's own stem, then its parts' stems
+     *
+     * @return list<int>
+     */
+    private function assignStemIds(array $stems, ?FeedLanguage $language): array
+    {
+        if ($this->filler->isSeed($stems[0], $language)) {
+            return [];
+        }
+        $ids = array_map(
+            fn (string $stem): int => $this->stemIds[$stem] ??= \count($this->stemIds),
+            array_values(array_filter($stems, fn (string $stem): bool => !$this->filler->isSeed($stem, $language))),
+        );
+        $this->compoundParts->addCompound($ids[0], \array_slice($ids, 1));
+
+        return $ids;
     }
 
     /**
@@ -162,7 +196,9 @@ final class HeadlineWindow
     {
         $total = 0.0;
         foreach ($this->placedStemsOf($entryId) as $stemId => $placeWeight) {
-            $total += $placeWeight * $this->rarity($stemId);
+            if (!$this->compoundParts->isOnlyAPartIn($entryId, $stemId)) {
+                $total += $placeWeight * $this->rarity($stemId);
+            }
         }
 
         return $total;
