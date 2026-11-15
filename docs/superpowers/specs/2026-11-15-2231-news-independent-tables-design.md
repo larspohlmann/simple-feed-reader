@@ -336,3 +336,82 @@ The #2227 method, as in #2230:
   filler share is the only guard against them (D1).
 
 ## Outcome
+
+Measured 2026-11-15 on the dev stack, read-only, with "now" pinned to 2026-11-15 00:00 UTC. **A** is develop at
+75048da7e, its whole `src/Service/Curation/Trending` swapped in with `git archive` and restored after each run; **B** is
+the branch as committed (`bbb847201`). `debug:container` confirmed `HeadlineFiller` takes the stemmer only in A and the
+stemmer and `BundledStopWords` in B. The worker changed the week from 29,521 to 29,520 entries between the first A and
+B, so A was run again; every pair below reads the same entries. **No word, row or value came from the measurement.**
+
+### Pairs and cost
+
+| | Day A | Day B | Week A | Week B |
+|---|---|---|---|---|
+| Entries | 5,515 | 5,515 | 29,520 | 29,520 |
+| Groups | 671 | 668 | 3,774 | 3,785 |
+| Grouped pairs | 2,247 | 2,278 | 17,483 | 18,053 |
+| Wall time | 4.8 s | 4.7 s | 68.1 s | 64.7 s |
+| Peak RSS | 98.6 MB | 98.6 MB | 247.7 MB | 247.3 MB |
+| Peak PHP memory | 58.8 MB | 58.7 MB | 179.2 MB | 177.5 MB |
+
+Grouped pairs by the languages of the two entries (each entry's `COALESCE(entry.language, feed.language)`, looked up
+by its printed line; 4 day and 30 week lines were ambiguous and count as mixed):
+
+| new / lost / **net** | Day | Week |
+|---|---|---|
+| All | 83 / 52 / **+31** | 926 / 356 / **+570** |
+| de–de | 31 / 36 / **−5** | 462 / 187 / **+275** |
+| en–en | 43 / 7 / **+36** | 453 / 160 / **+293** |
+| fr–fr | 5 / 2 / **+3** | 5 / 4 / **+1** |
+| es–es | 4 / 5 / **−1** | 3 / 2 / **+1** |
+| mixed or no language | 0 / 2 / **−2** | 3 / 3 / **0** |
+
+**The week gains 570 pairs net, the day 31, and no language loses on the week.** This matches the combined check
+(week +540, day +31). The week run is 5 % faster (fewer stems pass the seed filter) and peak PHP memory falls 1.7 MB.
+French and Spanish move little because they are small in this window (fr 473, es 848 of 29,520 week entries; within one
+language 152 and 52 grouped pairs).
+
+### Eye check
+
+Week, largest new and grown groups, all real stories: the Abu Dhabi Ukraine talks in German (8 → 16), the Kansas
+governor race (3 → 8), Eisenkot forming a government (9 → 13), GTA 6 holiday requests (3 → 7), the Aigner nomination
+(3 → 7), Mercedes halting investment (5 → 8), the Microsoft outage, the Reichelt arson, the Humble Bundle breach, the
+European flight stop. The one weak new group is three German posts on *Merz* and the climate, which share the topic but
+not one event. No wrong merge was found. The largest splits move one member each: the Russell Brand trial 19 → 18, the
+Jensen Huang affair 15 → 14 (the member joined the grown *AI poster boy* group), the Aigner nomination 11 → 9 (its
+members re-form in the grown 3 → 7 group), the German Abu Dhabi pieces (merged into the 16-member group).
+
+Day: the largest changes are member swaps in real stories (Tesla Cybercab 9 → 11, the Alaska governor 4 → 6, the COP31
+protests in Türkiye 3 → 5, the US flight stop). The one whole group lost is three German posts on Glühwein prices at
+Christmas markets, which shared *viel*, now a seed (*So viel kostet Glühwein*); the three are one topic, not one story.
+
+French, every changed group of both windows:
+- New: two France–Turkey match previews with Zidane (week), joined on *France-Turquie*, *Zidane*, *Bordeaux*. Real.
+- Grown: the Dreux mayor's death (2 → 3, day and week), the Ciryl Gane UFC fight (members swapped between two groups of
+  the same fight). Real.
+- Split: the *Bilibili* League of Legends final (2 → 0, week), a real story. Its pair shared *chinois, bilibili, league,
+  legends*; *plus*, a seed of the old hand list and not of Snowball's French list, now weighs in the lighter entry and
+  pushes its share below 0.4. *Arabie saoudite* (2 → 0): an execution report and a regional analysis, which shared only
+  *Arabie saoudite* and *deux*; the split is right. *Van Hollen* (one member left; the lost post is an English all-caps
+  post under a feed marked French).
+- No group joined through a word the old French list had and Snowball lacks (*après, depuis, contre, selon, avant,
+  entre, vers, très, aussi, encore, comme, tout, plus*). Those words now cost the share of the lighter entry instead,
+  as in *Bilibili*.
+
+Spanish, every changed group of both windows:
+- New: the Microsoft outage (day and week) and the arrest of the singer Gabito Ballesteros (day). Both share *tras*,
+  an old hand-list seed Snowball lacks, beside the words that carry the story (*microsoft, restablece, caída, afectó*;
+  *cantante, Gabito, Ballesteros*). Real stories; *tras* is not what joins unrelated entries.
+- Grown: Eurovision Asia (2 → 3), the US flight stop (a member swap). Real.
+- Split: *Dinamarca golea a Portugal … era post Cristiano* (2 → 0) loses *era*, which Snowball's Spanish list holds as a
+  form of *ser*; *Feijóo … habrá corrupción* (2 → 0) loses *habrá* (a form of *haber*); *Russell Brand* (2 → 0, a news
+  piece and a documentary review); *Voyager 1* (2 → 0, they share only *voyager*, *día luz*, *Tierra* and *está*). The
+  *Estados Unidos* flight-stop group (day) loses one member, as *estados* is a form of *estar* in Snowball's list (the
+  spec's *estado* limitation).
+- Snowball's Spanish list makes verb forms that double as nouns into seeds (*era, estado(s), habrá*), as its German
+  list does with *Weg* and *Sein*: the BSW *Magdeburger Weg* commentary leaves its BSW group (7 → 6). Accepted as
+  Snowball's call (Limitations); the cost on this data is three Spanish pairs and one German.
+
+No French or Spanish group was joined through a word only the old hand list had, so no closed-class supplement
+(such as `stopwords-iso`) was added. The result matches the spec: the week does not lose real stories net, in any
+language.
