@@ -1456,10 +1456,10 @@
     "includeInSavedSearches": "Afficher dans les recherches enregistrées",
     "includeInTrending": "Afficher dans Tendances",
     "feedLanguage": {
-      "de": "allemand",
-      "en": "anglais",
-      "fr": "français",
-      "es": "espagnol"
+      "de": "Allemand",
+      "en": "Anglais",
+      "fr": "Français",
+      "es": "Espagnol"
     },
     "excludedFrom": "Masqué dans {{surfaces}}",
     "dropToRemoveTags": "Déposer ici pour retirer les étiquettes",
