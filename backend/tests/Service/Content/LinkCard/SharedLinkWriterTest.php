@@ -8,6 +8,7 @@ use App\Entity\LinkCardContent;
 use App\Enum\FeedLanguage;
 use App\Enum\LanguageSource;
 use App\Repository\SharedLinkRepository;
+use App\Service\Content\LinkCard\Exception\SharedLinkNotReadBackException;
 use App\Service\Content\LinkCard\Exception\UnhashableLinkException;
 use App\Service\Content\LinkCard\SharedLinkWriter;
 use App\Service\Foundation\Clock\NaiveUtcClock;
@@ -54,6 +55,20 @@ final class SharedLinkWriterTest extends DbTestCase
         $this->expectException(UnhashableLinkException::class);
 
         $this->writer()->linkFor(self::card('/relative', 'Relative'), null);
+    }
+
+    public function testARowThatCannotBeReadBackNamesThatCause(): void
+    {
+        $this->skipUnlessSqlite();
+        $this->entityManager->getConnection()->executeStatement(
+            'CREATE TEMP TRIGGER vanishing_link AFTER INSERT ON shared_link'
+            . ' BEGIN DELETE FROM shared_link WHERE id = new.id; END',
+        );
+
+        $this->expectException(SharedLinkNotReadBackException::class);
+        $this->expectExceptionMessage('https://example.com/gone');
+
+        $this->writer()->linkFor(self::card('https://example.com/gone', 'Gone'), null);
     }
 
     public function testABatchWithAUrlThatDoesNotHashIsRefused(): void

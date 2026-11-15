@@ -8,6 +8,7 @@ use App\Entity\LinkCardContent;
 use App\Entity\SharedLink;
 use App\Enum\FeedLanguage;
 use App\Repository\SharedLinkRepository;
+use App\Service\Content\LinkCard\Exception\SharedLinkNotReadBackException;
 use App\Service\Content\LinkCard\Exception\UnhashableLinkException;
 use App\Service\Content\LinkCard\Model\NewSharedLinkModel;
 use App\Service\Foundation\Clock\NaiveUtcClock;
@@ -34,7 +35,8 @@ final readonly class SharedLinkWriter
         }
         $this->sharedLinks->insertMissing([$this->newLink($urlHash, $card, $statedLanguage)]);
 
-        return $this->sharedLinks->findOneByUrlHash($urlHash) ?? throw UnhashableLinkException::forUrl($card->url);
+        return $this->sharedLinks->findOneByUrlHash($urlHash)
+            ?? throw SharedLinkNotReadBackException::forUrl($card->url);
     }
 
     /**
