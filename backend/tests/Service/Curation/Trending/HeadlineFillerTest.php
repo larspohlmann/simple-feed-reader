@@ -63,7 +63,10 @@ final class HeadlineFillerTest extends TestCase
     public function testEveryStopWordIsASeedThroughItsLanguagesStemmer(FeedLanguage $language): void
     {
         $stemmer = TrendingWiring::stemmer();
-        foreach (TrendingWiring::stopWords()->wordsOf($language) as $word) {
+        $words = TrendingWiring::stopWords()->wordsOf($language);
+
+        self::assertNotEmpty($words);
+        foreach ($words as $word) {
             self::assertTrue($this->filler->isSeed($stemmer->stem($word, $language), $language), $word);
         }
     }
