@@ -297,8 +297,10 @@ rule.
 
 A story's **sources** for a reader are the distinct outlets among the feeds they follow and have switched in for
 Trending (`TrendingInclusionSql::includes`): each article feed (the copies of one article URL once, as #2056 ruled),
-plus each site a post's story card shares that none of those article feeds in the story carries. A post, or a timeline
-holding one, is never a source of its own; a post without a story card adds nothing (D11). `sources()` in
+plus each social account whose post in the story shares a story card (#2056: per account). An account is the post's
+author (`entry.author_url`), else its feed when the post names none, so a post's copies in several of the reader's
+timelines and two posts of one account count once, and two accounts carrying one post count twice. A post without a
+story card adds nothing; a feed the reader does not follow, or has switched out, never counts (D11). `sources()` in
 `TrendingStoryRepository` is that count; it ranks the stories, meets the reader's minimum, and is the label:
 
 ```sql
@@ -307,8 +309,9 @@ AND (COUNT(DISTINCT CASE WHEN member_feed.network IS NULL THEN story_member.feed
      OR COUNT(DISTINCT story_member.article_site) >= :minimumArticleSources)
 ```
 
-`MINIMUM_ARTICLE_FEEDS` is renamed `MINIMUM_ARTICLE_SOURCES` (still 2). `noEarlierCopy()` collapses a post's copies in
-several timelines by their URL hash, as it collapses an article's, never an article into a post. The instance-wide
+`MINIMUM_ARTICLE_FEEDS` is renamed `MINIMUM_ARTICLE_SOURCES` (still 2). `noEarlierCopy()` collapses an article's
+copies by URL hash, as on develop; a post counts by its account instead. The reader's preferred minimum still scales
+with all their active, switched-in feeds, social ones included, since social accounts are sources. The instance-wide
 `trending_story.outlet_count` had no reader-facing use left and is dropped (`Version20261115130000`); the grouping
 keeps its in-memory feed count only for the explain command and the build's minimum.
 
@@ -375,8 +378,10 @@ it, as ordinary post `EntryDto`s (a native client renders and opens them as it r
 
 New keys in de, en, fr and es (`vous`/`tú` per the #2205 glossary): `reader.trendingShares`,
 `reader.trendingSharesOne`, `reader.sharedBy`, `reader.sharedByAndOne`, `reader.sharedByAndOthers`. Two names alone are
-joined by `Intl.ListFormat` in the reader's language. The existing sources line, "Also covered by", "x more sources" and
-Hide are unchanged.
+joined by `Intl.ListFormat` in the reader's language; the rest are counted as accounts, not people ("und 2 weiteren",
+"et 2 autres", "y 2 más"). A story's expand button counts its other articles (`reader.moreArticles`,
+`reader.moreArticlesOne`, replacing `reader.moreSources*`, which nothing else read). The sources line, "Also covered by"
+and Hide are unchanged.
 
 ## Decisions
 
@@ -420,12 +425,14 @@ Lars delegated every decision. Each is "what — why — cost if wrong".
   are read together; `WindowEntryModel` would otherwise reach PHPMD's ten-parameter limit. Recorded so review can judge
   it is not a count-driven split (#2025): `articleSite()` and `storyCard()` live on it and have no other home.
 
-- **D11. A story's sources are the reader's own outlets: article feeds they follow and have switched in, and card sites
-  their posts add; never posts or timelines.** Lars, 2026-11-15: "feeds i don't follow shouldn't be counted at all."
-  — One count ranks, meets the minimum and labels the card, so "11 sources" never sits over three rows (week story
-  358028: 8 of its 11 were followed social timelines whose posts carried no story card). — If wrong: a story only
-  social timelines carry, without cards, no longer shows; a reader who follows an outlet only through its social
-  account counts it through the site its card shares.
+- **D11. A story's sources are the reader's own followed, Trending-included outlets: their article feeds, and each social
+  account whose post shares a story card.** Lars, 2026-11-15, first: "feeds i don't follow shouldn't be counted at
+  all"; then, correcting it: "Social posts should count as sources. my remark 'feeds i don't follow shouldn't be
+  counted at all' relates to feeds which are in the system but followed by another user". — One count ranks, meets
+  the minimum and labels the card; no other user's feed reaches it. Week story 358028's "11 sources" over three rows
+  came from 8 followed timelines whose posts had no story card (the snapshot predated the migration); they no longer
+  count without a card. — If wrong: an account that posts without a card, or whose author the post does not name,
+  counts by its feed; one account followed both as a profile feed and through its posts' author counts twice.
 
 **Optional scope, costed and not built:** storing the card language (D3: a column, five paths, a backfill command);
 resolving shorteners for site counting (an outbound fetch per card, against the SSRF boundary); a card-title headline
@@ -591,9 +598,9 @@ No cheap part: the guess is D3's rule, and the stems are the change. On Strato's
 ### Revisions after review: copies, the count, one row per article
 
 Three changes followed the first report (commits 07b7d9f7c, 1881e3ab1, 3f960f810, 2f68af4a3, cab2678ef, b671c5631):
-a post's timeline copies count once; a story's sources are the reader's own outlets, never posts or timelines (D11,
-Lars: "feeds i don't follow shouldn't be counted at all"); and the card shows one row per article with its shares (D6,
-approved by Lars). Lars's week story 358028 showed "11 sources" over three rows: the stored count was not the cause
+a post's timeline copies count once; a story's sources are the reader's own outlets (D11); and the card shows one row
+per article with its shares (D6, approved by Lars). Lars's correction then restored social accounts as sources
+(66d4c9385); the tables below that one supersede these. Lars's week story 358028 showed "11 sources" over three rows: the stored count was not the cause
 (the reader's count already applied the inclusion switches), 8 of the 11 were followed social timelines whose posts
 had no story card in a snapshot built before the migration. Develop has the same defect since #2017: it counts every
 followed social feed in the label and never shows a post.
@@ -621,4 +628,22 @@ develop's counting; B2 = D4 with a post's copies once; B3 = the branch (D4 and D
   longer count), the US soldier spying arrest, Hungary's cash, the Donbas offer. Every week top-15 story is English
   under B3: the reader's switched-in outlets are mostly English, and outlets now decide.
 - Concern 1 of the first report is resolved: card-led stories no longer outrank article stories by timeline copies.
+
+### Who is shown, final (social accounts as sources)
+
+The same pinned window and script, the reader's switches as at 12:30 UTC (121 active feeds on the day, 208 on the
+week; the preferred minimum is 4 and 6). A = develop; B = the branch (D4, D11 with social accounts, one row per
+article).
+
+| | A pool / top 15 | B pool / top 15 |
+|---|---|---|
+| Day | 27 stories; de 3, en 11, fr 1 | 30 stories; de 2, en 11, fr 2 |
+| Week | 66 stories; de 1, en 14 | 56 stories; de 1, en 14 |
+
+- **Day:** in come franceinfo's *Il y aura bien une hausse des points…* and NPR's Alaska ranked-choice vote; out go
+  tagesschau's *Grüne und SPD stimmen Koalitionsvertrag zu* and the Guardian's New Orleans tanker lawsuit. No Spanish
+  story in either.
+- **Week:** in come the Guardian's New Orleans boat crash and the ocean-liner reef; out go BBC's Alaska vote count
+  (its 10 sources were mostly timelines whose posts had no card) and Al Jazeera's Hungary cash. The week pool shrinks
+  (66 → 56) because posts without a story card no longer count.
 
