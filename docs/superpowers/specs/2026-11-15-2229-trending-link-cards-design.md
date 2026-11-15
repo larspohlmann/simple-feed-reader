@@ -447,3 +447,122 @@ The #2227 method, as in #2231:
 - French and Spanish carry few cards on the dev stack (44 and 49 a week); their gain is measured, but small.
 
 ## Outcome
+
+Measured on 2026-11-15 by the method above: dev MySQL read-only, "now" pinned to **2026-11-15 10:00:00 UTC**, A =
+f5e4b51af's file set swapped in with `git archive`, B = this branch (868e2eb49 for the grouping, 8cedebc59 for the
+rest), container cleared and warmed before each run, A and B back to back. Entry counts matched in every pair. Scripts
+and outputs are in the session scratchpad under `2229/final/`.
+
+### Grouping
+
+| | Day A | Day B | Week A | Week B |
+|---|---|---|---|---|
+| Entries | 4,726 | 4,726 | 29,419 | 29,419 |
+| Groups | 557 | 559 | 3,764 | 3,761 |
+| Grouped pairs | 1,875 | 2,056 (+181 net) | 17,817 | 20,114 (+2,297 net) |
+| Explain time | 4.3 s | 5.1 s | 71.3 s | 83.0 s |
+| Peak PHP | 55.0 MB | 58.7 MB | 177.5 MB | 192.3 MB |
+| Peak RSS | 94.6 MB | 96.7 MB | 239.4 MB | 253.5 MB |
+
+| new / lost / **net** | Day | Week |
+|---|---|---|
+| de–de | 73 / 33 / **+40** | 991 / 415 / **+576** |
+| en–en | 183 / 54 / **+129** | 3,504 / 1,907 / **+1,597** |
+| fr–fr | 0 / 0 / **0** | 6 / 2 / **+4** |
+| es–es | 0 / 0 / **0** | 2 / 0 / **+2** |
+| mixed or none | 14 / 2 / **+12** | 195 / 77 / **+118** |
+| **all** | 270 / 89 / **+181** | 4,698 / 2,401 / **+2,297** |
+
+French-only and Spanish-only windows, A → B:
+
+| | Entries | Groups | Grouped pairs |
+|---|---|---|---|
+| French day | 429 | 52 → 52 | 161 → 161 (0) |
+| French week | 541 | 65 → 64 | 188 → 192 (+4 new, 0 lost) |
+| Spanish day | 395 | 14 → 14 | 19 → 19 (0) |
+| Spanish week | 859 | 34 → 35 | 53 → 54 (+1 new, 0 lost) |
+
+No week loss, as R3 predicted (+2,375 / +195 there, on a window an hour earlier).
+
+### Card facts, per language (week, social posts)
+
+| Post language | Posts | With a card | Card share | With a description | Cards naming no story (D2) |
+|---|---|---|---|---|---|
+| de | 3,130 | 1,664 | 53 % | 1,512 (91 %) | 24 |
+| en | 7,364 | 3,664 | 50 % | 3,228 (88 %) | 96 |
+| fr | 107 | 44 | 41 % | 35 (80 %) | 0 |
+| es | 122 | 49 | 40 % | 45 (92 %) | 3 |
+| none | 380 | 56 | 15 % | 50 (89 %) | 4 |
+
+Every card has a title. `CardLanguage` on the 5,350 story cards, post → card language where they differ: de → en 20,
+en → de 20, en → es 14, en → fr 9, fr → en 11, fr → de 3, es → en 5, es → de 1, de → fr 2, none → de 12, none → en 38,
+none → es 2. By eye, every French and Spanish case:
+- **Right:** fr → en 11 (BBC, Laravel News, `trib.al` cards: English articles), fr → de 3 (a German RSS-reader review on
+  `stadt-bremerhaven.de`, a ZDF COP31 card), es → en 5 (Politico, TechCrunch, Yahoo, news9), es → de 1 (heise), en → es
+  4 (EFF's Spanish articles, an infobae card), none → es 1 (EFF).
+- **Wrong:** en → fr 9 and en → es 7 are long English `politi.co` cards (and one TechCrunch, one Washington Examiner
+  card), the misguess #2235 owns; en → es 3 are Turkish and Indonesian cards the four-language detector must name as one
+  of four (harmless: they link to nothing either way); de → fr 2 is one heise card twice; none → es 1 is a COVID
+  dashboard.
+
+### Eye check (week)
+
+- **Grown groups** reunite fragments of one event, as in R3: the Microsoft outage (7 + 5 + 4 + 3 + … → 29), Van Hollen's
+  challenge (30 → 49), the FAA ground stop (37 → 47), Europe at the Abu Dhabi talks (3 + 3 + 3 + 2 → 12), the Alaska
+  count (9 + 4 + 2 + 2 → 17), the Holscher win, *ground stop lifted*, the Outlook outage, the Nvidia/Huang affair and
+  resignation.
+- **Split groups** are the greedy grouper cutting one event differently (the Nvidia story into 10 + 5 + 2, the
+  Starship catch into 8 + 7, the ground stop into 37 + 5, the Nasser hospital strike into 5 + 5), not stories lost.
+- **Generic short card titles** shared by two or more cards whose posts gained pairs: *SpaceX* (named no story under
+  D2; its posts gained through other cards), *Zelda's Midlife Crisis* (one Atlantic review, right), *COP to it* and
+  *Long nights ahead* (Politico newsletter names, joined the Burnham-at-COP31 posts they are about, as in R3),
+  *ATCSCC Advisory* (an FAA page, joined the ground stop: right), and *Israel's Secret Broker* joining a post whose
+  YouTube card is *Jared Kushner's Secret Deals*: one channel, linked by *Secret* and the channel's boilerplate
+  description; borderline, as in R3. No *- YouTube* merge: D2's site-name test removes it.
+- **French:** the Larcher presidential group is cut differently (it gains a Le Parisien piece and loses a franceinfo
+  piece). **One wrong French merge:** two posts of one account (`atlasflux.saynete.com`, a press-feed directory),
+  each in two timelines, whose cards share the site's template title (*Atlas des flux – … – annuaire des RSS de la
+  presse*) and template description, join one group (*Irak ajouté aux territoires* with *Mise en place du groupe dédié
+  aux flux vides et bloqués*). It is never shown: one site, no article feed. A finding, not tuned (anti-goal: no list).
+- **Spanish:** the one new pair is right (*Más de 10.000 retrasos…* with *Persiste el caos en los vuelos en EE.UU.*,
+  through its card *EE.UU. suspende todos los vuelos…*); the full window adds the Feijóo pair.
+
+### Who is shown (dev account, user 2)
+
+A throwaway script grouped the pinned window with B and cut it for user 2 as `rankedForUser` does (followed feeds with
+the inclusion switches, the relaxing minimum, top 15 by outlets then newest), under A's rule and B's. It leaves out
+`noEarlierCopy()` and the week's exclusion of stories shown in the day, so it approximates.
+
+| | Day | Week |
+|---|---|---|
+| Stories in B's grouping | 215 | 240 |
+| Preferred minimum (active feeds) | 4 (109) | 5 (196) |
+| Pool under A's rule / B's | 13 / 24 | 33 / 50 |
+| …card-led in B's pool | 8 | 8 |
+| Enter the top 15 only under B | 8 (7 card-led) | 5 (2 card-led) |
+| Leave the top 15 under B | 6 | 5 |
+
+Every story entering is real, by eye: day — Alaska keeps ranked-choice voting, Hungary's buried cash, Italy fines Meta,
+Fetterman over Van Hollen, *'We can't let them down'*, the DC golf course ruling, Duffy blames an FAA contractor (all
+card-led), the Tesla solar fraud ruling; week — Van Hollen, Colom's Mississippi win, Peltola in Alaska (card-led),
+ranked-choice voting (card-led), the Cybercab orders. None is French or Spanish: the dev account follows few French or
+Spanish social feeds.
+
+**Finding.** The stories pushed out are article-led and include the reader's French, Spanish and German outlets: day —
+Le Figaro (Netanyahou), Le Monde (Ukraine live, the 2027 presidential race), Le Parisien (Wales – New Zealand), El País
+(*La bola negra*), tagesschau; week — four DIE ZEIT/RND/Hamburg stories. Card-led stories rank high because the
+ranking counts feeds, and one post copied into several timelines (Home, Discover, Local) counts once per timeline.
+R4 measured 3 and 1 entering on the worker's snapshot; the pinned window is busier with US election stories. The
+design does not tune this (D4/D6 are the spec's rulings); a follow-up could rank by distinct sources or count a post's
+timeline copies once.
+
+### Rebuild time
+
+Profiled in phases on the week (collect / links / groups, `hrtime`): A 9.8 / 29.7 s, B 12.5 / 32.3 s. A rebuild runs
+collect and links once (the explain command runs links twice, hence its +16 %): **39.5 → 44.8 s, +13 %**.
+- collect +2.7 s: the card language guess 0.87 s (3,971 of 5,551 story cards are long enough to guess), the card body
+  0.02 s, stemming card text 0.6 s, the rest the per-entry links model; the chunk query is unchanged (1.0 s both).
+- links +2.6 s: the added stems give 2,121 more candidate links (21,695 → 23,816) to weigh.
+
+No cheap part: the guess is D3's rule, and the stems are the change. On Strato's ~25 s week rebuild this is about
++3 s.
