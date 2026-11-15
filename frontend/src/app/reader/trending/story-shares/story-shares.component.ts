@@ -12,6 +12,17 @@ const NAMED_SHARERS = 2;
 
 let nextId = 0;
 
+const listFormats = new Map<string, Intl.ListFormat>();
+
+function listFormatFor(lang: string): Intl.ListFormat {
+  let format = listFormats.get(lang);
+  if (!format) {
+    format = new Intl.ListFormat(lang, { type: 'conjunction' });
+    listFormats.set(lang, format);
+  }
+  return format;
+}
+
 /** "Shared by Ann, Ben and 3 others" under a Trending article, opening into each sharing post (#2229). */
 @Component({
   selector: 'app-story-shares',
@@ -27,27 +38,33 @@ export class StorySharesComponent {
   private readonly language = inject(LanguageService);
   private readonly rows = inject(SubscriptionRows);
 
-  protected readonly shares = computed(() =>
-    (this.entry().shares ?? []).map((share) => ({
-      share,
-      poster: sourceNameOf(share, this.rows),
-      text: entryHeadline(share) || entryDisplayTitle(share),
-    })),
-  );
-  private readonly others = computed(() => Math.max(0, this.shares().length - NAMED_SHARERS));
+  private readonly all = computed(() => this.entry().shares ?? []);
+  protected readonly hasShares = computed(() => this.all().length > 0);
+  private readonly others = computed(() => Math.max(0, this.all().length - NAMED_SHARERS));
   protected readonly lineKey = computed(() => {
     if (this.others() === 0) return 'reader.sharedBy';
     return this.others() === 1 ? 'reader.sharedByAndOne' : 'reader.sharedByAndOthers';
   });
   protected readonly line = computed(() => {
-    const names = this.shares()
+    const names = this.all()
       .slice(0, NAMED_SHARERS)
-      .map((share) => share.poster);
+      .map((share) => sourceNameOf(share, this.rows));
     return {
-      names: this.others() === 0 ? this.listOf(names) : names.join(', '),
+      names:
+        this.others() === 0 ? listFormatFor(this.language.lang()).format(names) : names.join(', '),
       count: this.others(),
     };
   });
+  /** Each sharing post, mapped only while the list is open. */
+  protected readonly shares = computed(() =>
+    this.expanded()
+      ? this.all().map((share) => ({
+          share,
+          poster: sourceNameOf(share, this.rows),
+          text: entryHeadline(share) || entryDisplayTitle(share),
+        }))
+      : [],
+  );
   protected readonly expanded = signal(false);
   protected readonly panelId = `story-shares-${nextId++}`;
 
@@ -59,9 +76,5 @@ export class StorySharesComponent {
   open(share: EntryDto, event: Event): void {
     event.stopPropagation();
     this.actions.open(share);
-  }
-
-  private listOf(names: string[]): string {
-    return new Intl.ListFormat(this.language.lang(), { type: 'conjunction' }).format(names);
   }
 }
