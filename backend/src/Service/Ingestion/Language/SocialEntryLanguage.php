@@ -21,14 +21,20 @@ final readonly class SocialEntryLanguage
     public function of(ParsedEntryModel $entry): ?FeedLanguage
     {
         $body = EntryPlainText::of($entry->summary ?? $entry->contentHtml) ?? '';
-        $guess = $this->languageGuess->bestFor($entry->headline->text . "\n" . $body);
         if (null === $entry->statedLanguage) {
-            return $guess;
+            return $this->guess($entry, $body);
         }
 
         $stated = FeedLanguage::fromTag($entry->statedLanguage);
-        $guessOverrides = null !== $guess && mb_strlen($body) >= self::LONG_TEXT_LENGTH;
+        if (null === $stated || mb_strlen($body) < self::LONG_TEXT_LENGTH) {
+            return $stated;
+        }
 
-        return null !== $stated && $guessOverrides ? $guess : $stated;
+        return $this->guess($entry, $body) ?? $stated;
+    }
+
+    private function guess(ParsedEntryModel $entry, string $body): ?FeedLanguage
+    {
+        return $this->languageGuess->bestFor($entry->headline->text . "\n" . $body);
     }
 }

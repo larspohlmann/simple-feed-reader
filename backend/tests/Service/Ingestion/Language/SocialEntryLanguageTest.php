@@ -105,9 +105,28 @@ final class SocialEntryLanguageTest extends TestCase
         $detector = StubbedDetector::saying('de');
 
         new SocialEntryLanguage(new LanguageGuess($detector))
-            ->of(self::entry('…', 'The summary', 'en', '<p>The content</p>'));
+            ->of(self::entry('…', 'The summary', null, '<p>The content</p>'));
 
         self::assertSame(["…\nThe summary"], $detector->seenTexts());
+    }
+
+    public function testAShortPostStatingItsLanguageIsNotGuessed(): void
+    {
+        $detector = StubbedDetector::saying('de');
+
+        new SocialEntryLanguage(new LanguageGuess($detector))->of(self::entry('A headline', 'A body', 'en'));
+
+        self::assertSame([], $detector->seenTexts());
+    }
+
+    public function testAPostStatedOutsideTheFourIsNotGuessed(): void
+    {
+        $detector = StubbedDetector::saying('de');
+
+        new SocialEntryLanguage(new LanguageGuess($detector))
+            ->of(self::entry('A headline', self::textOfLength(self::limit()), 'it'));
+
+        self::assertSame([], $detector->seenTexts());
     }
 
     public function testTheLengthIsTheBodysNotTheHeadlines(): void
