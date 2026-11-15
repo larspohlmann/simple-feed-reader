@@ -165,7 +165,7 @@ final class HeadlineWindowTest extends TestCase
         self::assertSame(2, $this->window->entryCount());
     }
 
-    public function testGermanCompoundsSharingAPrefixShareNoWeight(): void
+    public function testACompoundWhoseRemainderTheLexiconLacksStaysWhole(): void
     {
         $this->addIn(FeedLanguage::German, 1, 10, 'Bundesregierung beschließt Haushalt');
         $this->addIn(FeedLanguage::German, 2, 20, 'Bundesliga: Bayern gewinnt');
