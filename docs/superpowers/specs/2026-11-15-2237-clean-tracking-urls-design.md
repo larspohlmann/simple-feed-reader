@@ -67,40 +67,41 @@ cleaning should happen during ingest of rss feeds".
   - The scheme, host, port, path, kept pairs and any other fragment are copied verbatim. Splitting happens on the raw
     string at the first `?` and the first `#`; `parse_url` is used only to read the host and to reject URLs that are
     not absolute.
-- `public static function query(string $query, string $host): string`. This is the filtered query, without a leading
+- `public static function query(string $query): string`. This is the filtered query, without a leading
   `?`, for `UrlNormalizer::normalize()`.
 
 A pair is **tracking** when its key, after `rawurldecode`, lower-casing and removing one leading `amp;`, is one of:
 
-| Family | Keys | Vendor source |
+| Family | Keys | Vendor source (page title, URL; confirmed 2026-11-15) |
 |---|---|---|
-| Google Analytics campaign (prefix) | `utm_*` | Google Analytics Help, "[GA4] URL builders: Collect campaign data with custom URLs" (support.google.com/analytics/answer/10917952) |
-| Google Ads, Campaign Manager, Merchant Center, cross-domain linker | `gclid`, `gclsrc`, `dclid`, `gbraid`, `wbraid`, `srsltid`, `_gl` | Google Ads Help "About auto-tagging" (support.google.com/google-ads/answer/3095550) and the iOS/`gbraid`/`wbraid` page (answer/10417364); Campaign Manager 360 "dclid" (support.google.com/campaignmanager/answer/9182069); Merchant Center "About auto-tagging" (support.google.com/merchants/answer/15191080, checked 2026-11-15); GA4 "Set up cross-domain measurement" (support.google.com/analytics/answer/10071811) |
-| Meta | `fbclid` | Meta for Developers, Conversions API "fbp and fbc parameters" (developers.facebook.com/docs/marketing-api/conversions-api/parameters/fbp-and-fbc) |
-| Microsoft Advertising | `msclkid` | Microsoft Advertising Help, "What is Microsoft Click ID auto-tagging?" (help.ads.microsoft.com) |
-| TikTok | `ttclid` | TikTok Business Help Center, "About the TikTok Click ID" (ads.tiktok.com/help) |
-| X (Twitter) | `twclid` | X Business, "Conversion tracking for websites" (business.x.com/en/help/campaign-measurement-and-analytics) |
-| LinkedIn | `li_fat_id` | LinkedIn Marketing Solutions Help, Insight Tag and enhanced conversion tracking (linkedin.com/help/lms) |
-| Yandex | `yclid` | Yandex Direct Help, "yclid" (yandex.com/support/direct/statistics/yclid.html) |
-| Mailchimp | `mc_cid`, `mc_eid`, `mc_tc` | Mailchimp Developer, "Getting started with e-commerce" (mailchimp.com/developer/guides/getting-started-with-ecommerce/, checked 2026-11-15) |
-| HubSpot | `_hsenc`, `_hsmi`, `__hstc`, `__hssc`, `__hsfp` | HubSpot Knowledge Base, "Cookies set in a visitor's browser" and "tracking URLs" (knowledge.hubspot.com) |
-| Marketo (Adobe) | `mkt_tok` | Adobe Experience League, Marketo Engage "Email link tracking / mkt_tok" (experienceleague.adobe.com) |
-| Adobe Experience Cloud | `adobe_mc`, `s_cid` | Adobe Experience League, ID Service `appendVisitorIDsTo` (`adobe_mc`) and Analytics campaign tracking codes (`s_cid`) |
-| Vero | `vero_id`, `vero_conv` | Vero docs, link tracking (docs.getvero.com) |
-| Omeda | `oly_anon_id`, `oly_enc_id` | Omeda Knowledge Base, Olytics URL parameters (knowledgebase.omeda.com) |
-| Matomo | prefix `mtm_*`; `pk_campaign`, `pk_kwd`, `pk_keyword`, `pk_source`, `pk_medium`, `pk_content`, `pk_cid`, `piwik_campaign`, `piwik_kwd`, `matomo_campaign`, `matomo_kwd` | Matomo FAQ, "What URL parameters are supported for campaign tracking?" (matomo.org/faq/…/faq_120, checked 2026-11-15) |
-| Piano Analytics (AT Internet) | prefix `at_*`; `xtor` | Piano Analytics docs, "How does the tracking of marketing campaigns work" (docs.piano.io/en/analytics/how-does-the-tracking-of-marketing-campaigns-work, checked 2026-11-15) |
-| Mapp Intelligence (Webtrekk) | prefix `wt_*` | Mapp docs, campaign configuration (`wt_mc`, `wt_cc`) (docs.mapp.com) |
-| Echobox | `echobox` | Echobox Help, "Query parameters" (help.echobox.com/query-parameters, checked 2026-11-15). Echobox adds it as a fragment, or as a query pair when the URL already has a fragment |
+| Google Analytics campaign (prefix) | `utm_*` | "URL builders: Collect campaign data with custom URLs" (support.google.com/analytics/answer/10917952) |
+| Google Ads | `gclid` | "About auto-tagging" (support.google.com/google-ads/answer/3095550) |
+| Google Ads iOS measurement | `gbraid`, `wbraid` | "Updates to iOS 14 campaign measurement" (support.google.com/google-ads/answer/10417364) |
+| Search Ads 360 | `gclsrc` | "About click IDs" (support.google.com/sa360/answer/7342044) |
+| Campaign Manager 360 | `dclid` | "Enhanced attribution" (support.google.com/campaignmanager/answer/9182069) |
+| Merchant Center | `srsltid` | "About auto-tagging" (support.google.com/merchants/answer/15191080) |
+| GA4 cross-domain linker | `_gl` | "Set up cross-domain measurement" (support.google.com/analytics/answer/10071811) |
+| Meta | `fbclid` | "ClickID and the fbp and fbc Parameters" (developers.facebook.com/docs/marketing-api/conversions-api/parameters/fbp-and-fbc) |
+| Microsoft Advertising | `msclkid` | "Conversions API (CAPI) - Microsoft Advertising API" (learn.microsoft.com/en-us/advertising/guides/uet-conversion-api-integration) |
+| TikTok | `ttclid` | "About TikTok Click ID" (ads.tiktok.com/help/article/tiktok-click-id) |
+| X (Twitter) | `twclid` | "Conversion API for Web" (docs.x.com/x-ads-api/measurement/web-conversions) |
+| LinkedIn | `li_fat_id` | "Enabling Click IDs - LinkedIn" (learn.microsoft.com/en-us/linkedin/marketing/conversions/enabling-first-party-cookies) |
+| Yandex | `yclid` | "URL parameters" (yandex.com/support/direct/en/statistics/url-tags) |
+| Mailchimp | `mc_cid`, `mc_eid`, `mc_tc` | "Getting started with e-commerce" (mailchimp.com/developer/guides/getting-started-with-ecommerce/) |
+| HubSpot email | `_hsenc`, `_hsmi` | "Links in emails or legacy CTAs lead to an error page" (knowledge.hubspot.com/marketing-email/links-in-emails-or-ctas-lead-to-an-error-page); the page's list prints `_hsenc` without its underscore |
+| HubSpot cross-domain | `__hstc`, `__hssc`, `__hsfp` | "Set up site tracking in HubSpot" (knowledge.hubspot.com/reports/set-up-sources-tracking) |
+| Marketo (Adobe) | `mkt_tok` | "Lead Tracking" (experienceleague.adobe.com/en/docs/marketo-developer/marketo/javascriptapi/leadtracking/lead-tracking) and "Disable Tracking for an Email Link" (experienceleague.adobe.com/en/docs/marketo/using/product-docs/email-marketing/general/functions-in-the-editor/disable-tracking-for-an-email-link) |
+| Adobe Experience Cloud | `adobe_mc` | "Share identity across domains" (experienceleague.adobe.com/en/docs/experience-platform/web-sdk/identity/id-sharing) |
+| Vero | `vero_id`, `vero_conv` | "Why is vero_id appended to links?" (help.getvero.com/vero-1/customers/what-is-vero_id) and "Conversion goals" (help.getvero.com/vero-2/campaigns/conversion-tracking) |
+| Omeda | `oly_enc_id` | "Web Behavioral Tracking - Olytics Overview" (knowledgebase.omeda.com/omedaclientkb/cdp-olytics-overview) |
+| Matomo | prefix `mtm_*`; `pk_campaign`, `pk_kwd`, `pk_keyword`, `pk_source`, `pk_medium`, `pk_content`, `pk_cid`, `piwik_campaign`, `piwik_kwd`, `matomo_campaign`, `matomo_kwd` | Matomo FAQ, "What URL parameters are supported for campaign tracking?" (matomo.org/faq/…/faq_120) |
+| Piano Analytics (AT Internet) | prefix `at_*`; `xtor` | "How does the tracking of marketing campaigns work" (docs.piano.io/en/analytics/how-does-the-tracking-of-marketing-campaigns-work) |
+| Mapp Intelligence (Webtrekk) | prefix `wt_*` | "Campaigns" (docs.mapp.com/docs/tracking-configuration-campaign), which names `wt_mc`, `wt_cc1` and `wt_ga` |
+| Echobox | `echobox` | Echobox Help, "Query parameters" (help.echobox.com/query-parameters). Echobox adds it as a fragment, or as a query pair when the URL already has a fragment |
 
-**Per-host keys.** These are applied only on the named domain and its subdomains (`host === domain` or it ends in
-`.domain`), because the key is generic elsewhere:
-
-| Domain | Keys | Why it never names the page |
-|---|---|---|
-| `youtube.com`, `youtu.be` | `si`, `feature` | The share sheet's share-session id and the share-surface label. The video is `v` or the path, the time is `t`, a playlist is `list`, and those stay. |
-| `spotify.com` | `si` | The share-session id. The item is the path. |
-| `nytimes.com` | `smid`, `smtyp` | The share-medium tags. The article is the path. `unlocked_article_code` (a gift link) stays. |
+**Per-host keys: none.** The draft scoped `si`/`feature` to YouTube, `si` to Spotify and `smid`/`smtyp` to the NYT.
+None of the three vendors documents its key (Outcome), so they go the way of X's `s`/`t` (D3), and the cleaner
+needs no host.
 
 The prefixes `utm_`, `at_`, `wt_` and `mtm_` stay prefixes, as `utm_` and its siblings already are today. Every other
 entry matches the whole key. `pk_` is listed key by key, because a `pk_` key elsewhere can be a primary key.
@@ -277,4 +278,15 @@ with outlet entry hashes recomputed at read time, because the DB still holds the
 
 ## Outcome
 
-*(empty: filled after implementation)*
+**Citations (Task 1, 2026-11-15).** Every source in the vendor table was opened on the vendor's own domain; the
+table records the page that names each key.
+
+- dropped `s_cid`: Adobe does not document it; its campaign page reads `cid` (experienceleague.adobe.com/en/docs/analytics/implementation/vars/page-vars/campaign)
+- dropped `oly_anon_id`: Omeda documents it as a cookie only, never a link parameter (knowledgebase.omeda.com/omedaclientkb/cdp-olytics-overview)
+- dropped `si`, `feature` (YouTube): YouTube does not document them (developers.google.com/youtube/player_parameters; no YouTube Help page names them)
+- dropped `si` (Spotify): Spotify does not document it (no support.spotify.com or developer.spotify.com page names it)
+- dropped `smid`, `smtyp` (NYT): The New York Times does not document them (thenewyorktimeshelpcenter.helpjuice.com names neither)
+- moved: `gclsrc` is not on the Google Ads auto-tagging page; Search Ads 360 "About click IDs" names it, so it stays
+  with that citation. `msclkid` is cited from Microsoft Learn, the Microsoft Advertising developer docs, because the
+  help.ads.microsoft.com article did not load.
+
