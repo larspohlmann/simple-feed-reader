@@ -150,6 +150,8 @@ export interface SubscriptionDto {
   includeInTrending: boolean;
   /** Shared by every subscriber; null until a refresh guesses it, and always for a social timeline. */
   language: FeedLanguage | null;
+  /** False for a social timeline or a saved feed, which mix languages and have none of their own. */
+  languageEditable: boolean;
   /** Set for a private timeline, list or custom feed of a connected account (#1599); null for any other feed. */
   social: SocialFeedRefDto | null;
 }

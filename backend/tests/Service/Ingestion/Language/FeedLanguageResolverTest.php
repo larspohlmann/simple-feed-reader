@@ -119,6 +119,14 @@ final class FeedLanguageResolverTest extends TestCase
         self::assertNull(self::resolverSaying('de')->languageFor($feed, self::feed('de', [['Headline', null]])));
     }
 
+    public function testASavedFeedIsNotJudged(): void
+    {
+        $feed = new Feed(self::URL);
+        $feed->setSourceFormat(SourceFormat::SAVED);
+
+        self::assertNull(self::resolverSaying('de')->languageFor($feed, self::feed('de', [['Headline', null]])));
+    }
+
     public function testARealDetectorGuessesAnUnambiguousFeed(): void
     {
         $fixture = (string) file_get_contents(__DIR__ . '/../../../Fixtures/language/german.txt');

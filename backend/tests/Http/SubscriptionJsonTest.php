@@ -168,6 +168,21 @@ final class SubscriptionJsonTest extends TestCase
         self::assertNull($json['language']);
     }
 
+    public function testAnOrdinaryFeedsLanguageIsEditable(): void
+    {
+        $json = SubscriptionJson::one($this->subscriptionTo(new Feed('https://example.com/feed.xml')));
+
+        self::assertTrue($json['languageEditable']);
+    }
+
+    public function testAnAuthorFeedsLanguageIsNotEditable(): void
+    {
+        $feed = new Feed('social:bluesky:12:author:did:plc:rusty');
+        $feed->setSourceFormat(SourceFormat::BLUESKY_API);
+
+        self::assertFalse(SubscriptionJson::one($this->subscriptionTo($feed))['languageEditable']);
+    }
+
     public function testSendsTheFeedImage(): void
     {
         $feed = new Feed('https://example.com/feed.xml');

@@ -139,6 +139,7 @@ describe('ReaderShellComponent', () => {
         includeInSavedSearches: true,
         includeInTrending: true,
         language: null,
+        languageEditable: true,
       },
     ],
     socialAccounts: [],
@@ -459,6 +460,7 @@ describe('ReaderShellComponent', () => {
     tags: [],
     unreadCount: 0,
     language: null,
+    languageEditable: true,
   };
 
   // Boot the shell against a CUSTOM subscriptions list, draining the three

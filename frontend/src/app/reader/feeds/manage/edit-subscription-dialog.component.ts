@@ -16,7 +16,7 @@ import { ReaderApi } from '../../reader-api';
 import { TagsStore } from '../../state/tags.store';
 import { SubscriptionDto } from '../../models';
 import { titleFollowsSource } from '../display-title';
-import { isPrivateFeed, isSavedFeed, isSearchFeed } from '../../state/social-sections';
+import { isSearchFeed } from '../../state/social-sections';
 import {
   AUTOMATIC_LANGUAGE,
   FEED_LANGUAGES,
@@ -67,8 +67,7 @@ export class EditSubscriptionDialogComponent implements OnInit {
   readonly includeInForYou = signal<boolean>(this.data.includeInForYou);
   readonly includeInSavedSearches = signal<boolean>(this.data.includeInSavedSearches);
   readonly includeInTrending = signal<boolean>(this.data.includeInTrending);
-  /** A social timeline or a saved feed mixes languages, so it has none of its own. */
-  readonly languageEditable = !isPrivateFeed(this.data) && !isSavedFeed(this.data);
+  readonly languageEditable = this.data.languageEditable;
   private readonly storedLanguage: FeedLanguageChoice = this.data.language ?? AUTOMATIC_LANGUAGE;
   readonly language = signal<FeedLanguageChoice>(this.storedLanguage);
   readonly automaticLanguage = AUTOMATIC_LANGUAGE;

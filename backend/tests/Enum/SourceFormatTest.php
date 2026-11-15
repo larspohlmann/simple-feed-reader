@@ -44,4 +44,24 @@ final class SourceFormatTest extends TestCase
         yield 'a discovery syntax' => ['rss', false];
         yield 'none' => [null, false];
     }
+
+    #[DataProvider('feedLanguageFormats')]
+    public function testOnlyAFeedOfOneSourceCarriesALanguage(?string $sourceFormat, bool $carries): void
+    {
+        self::assertSame($carries, SourceFormat::carriesFeedLanguage($sourceFormat));
+    }
+
+    /** @return iterable<string, array{?string, bool}> */
+    public static function feedLanguageFormats(): iterable
+    {
+        yield 'xml' => [SourceFormat::XML, true];
+        yield 'scraped' => [SourceFormat::SCRAPED, true];
+        yield 'wp-json' => [SourceFormat::WP_JSON, true];
+        yield 'mixcloud' => [SourceFormat::MIXCLOUD_API, true];
+        yield 'none' => [null, true];
+        yield 'bluesky' => [SourceFormat::BLUESKY_API, false];
+        yield 'mastodon' => [SourceFormat::MASTODON_API, false];
+        yield 'lemmy' => [SourceFormat::LEMMY_API, false];
+        yield 'saved' => [SourceFormat::SAVED, false];
+    }
 }

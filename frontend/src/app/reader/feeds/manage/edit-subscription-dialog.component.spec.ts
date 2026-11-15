@@ -51,6 +51,7 @@ const sub: SubscriptionDto = {
   includeInSavedSearches: true,
   includeInTrending: true,
   language: null,
+  languageEditable: true,
   social: null,
 };
 
@@ -520,29 +521,12 @@ describe('EditSubscriptionDialogComponent', () => {
       testRequest.flush({ subscription: sub });
     });
 
-    it('is not offered for a social timeline, which guesses per post', () => {
-      const fixture = mount({
-        ...sub,
-        social: { network: 'mastodon', accountId: 3, kind: 'home' },
-      });
-      expect(languageSelect(fixture)).toBeNull();
+    it('is not offered for a feed the server marks as mixing languages', () => {
+      expect(languageSelect(mount({ ...sub, languageEditable: false }))).toBeNull();
     });
 
-    it('is not offered for a saved feed, which is never refreshed and mixes languages', () => {
-      const fixture = mount({
-        ...sub,
-        sourceFormat: 'saved',
-        social: { network: 'mastodon', accountId: null, kind: 'saved' },
-      });
-      expect(languageSelect(fixture)).toBeNull();
-    });
-
-    it('is offered for a profile feed, which is an ordinary feed', () => {
-      const fixture = mount({
-        ...sub,
-        social: { network: 'mastodon', accountId: null, kind: 'profile' },
-      });
-      expect(languageSelect(fixture)).not.toBeNull();
+    it('is offered for a feed of its own language', () => {
+      expect(languageSelect(mount({ ...sub, languageEditable: true }))).not.toBeNull();
     });
   });
 });

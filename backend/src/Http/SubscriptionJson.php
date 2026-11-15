@@ -61,7 +61,7 @@ final class SubscriptionJson
      * @return array{
      *   id: int|null, feedId: int|null, title: string, customTitle: string|null, feedUrl: string,
      *   siteUrl: string|null, faviconUrl: string|null, description: string|null, imageUrl: string|null,
-     *   status: string, sourceFormat: string, language: string|null,
+     *   status: string, sourceFormat: string, language: string|null, languageEditable: bool,
      *   createdAt: string, lastFetchedAt: string|null,
      *   lastSuccessfulFetchAt: string|null, lastNewContentAt: string|null,
      *   nextFetchAt: string|null,
@@ -100,6 +100,7 @@ final class SubscriptionJson
             // A SourceFormat value: lets the UI mark synthesized feeds and private social feeds.
             'sourceFormat' => $feed->getSourceFormat(),
             'language' => $feed->getLanguage()?->value,
+            'languageEditable' => SourceFormat::carriesFeedLanguage($feed->getSourceFormat()),
             'createdAt' => $subscription->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'lastFetchedAt' => $feed->getLastFetchedAt()?->format(\DateTimeInterface::ATOM),
             'lastSuccessfulFetchAt' => $feed->getLastSuccessfulFetchAt()?->format(\DateTimeInterface::ATOM),

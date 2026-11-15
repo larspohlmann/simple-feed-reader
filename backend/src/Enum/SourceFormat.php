@@ -56,6 +56,12 @@ final class SourceFormat
         return self::SAVED === $sourceFormat;
     }
 
+    /** A social timeline or a saved feed mixes languages, so it has none of its own. */
+    public static function carriesFeedLanguage(?string $sourceFormat): bool
+    {
+        return !\in_array($sourceFormat, [...self::SOCIAL, self::SAVED], true);
+    }
+
     /** @phpstan-assert-if-true value-of<self::VERBATIM> $sourceFormat */
     public static function isVerbatim(?string $sourceFormat): bool
     {

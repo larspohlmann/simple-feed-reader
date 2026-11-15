@@ -21,7 +21,7 @@ final readonly class FeedLanguageResolver
 
     public function languageFor(Feed $feed, ParsedFeedModel $parsed): ?FeedLanguage
     {
-        if (null !== $feed->getLanguage() || SourceFormat::isSocial($feed->getSourceFormat())) {
+        if (null !== $feed->getLanguage() || !SourceFormat::carriesFeedLanguage($feed->getSourceFormat())) {
             return $feed->getLanguage();
         }
 

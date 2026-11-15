@@ -54,17 +54,12 @@ final readonly class SubscriptionEditor
 
     private function changeLanguage(Feed $feed, FeedLanguageChangeModel $change): void
     {
-        if (null !== $change->language && self::hasNoFeedLanguage($feed)) {
+        if (null !== $change->language && !SourceFormat::carriesFeedLanguage($feed->getSourceFormat())) {
             throw new FeedLanguageNotSettableException(
                 'A social timeline or a saved feed mixes languages, so it has none of its own.',
             );
         }
 
         $feed->recordTraits($feed->getTraits()->withLanguage($change->language));
-    }
-
-    private static function hasNoFeedLanguage(Feed $feed): bool
-    {
-        return SourceFormat::isSocial($feed->getSourceFormat()) || SourceFormat::isSaved($feed->getSourceFormat());
     }
 }

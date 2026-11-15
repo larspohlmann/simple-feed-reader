@@ -33,6 +33,7 @@ export function makeSubscription(partial: Partial<SubscriptionDto> = {}): Subscr
     includeInSavedSearches: true,
     includeInTrending: true,
     language: null,
+    languageEditable: true,
     social: null,
     ...partial,
   };

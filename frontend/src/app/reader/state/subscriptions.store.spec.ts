@@ -68,6 +68,7 @@ const sub = (id: number, unread: number, tags = [] as SubscriptionTagDto[]): Sub
   includeInSavedSearches: true,
   includeInTrending: true,
   language: null,
+  languageEditable: true,
   social: null,
 });
 
