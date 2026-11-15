@@ -1,0 +1,53 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Curation\Trending;
+
+use App\Service\Curation\Trending\GermanLexicon\GermanLexiconInterface;
+use App\Service\Curation\Trending\Model\CompoundSplitModel;
+use App\Service\Curation\Trending\Model\GermanLexiconEntryModel;
+use App\Service\Curation\Trending\Pass\CompoundSplitSearch;
+
+final readonly class GermanCompoundSplitter
+{
+    public const int MIN_PART_LENGTH = 3;
+    public const int MAX_PARTS = 4;
+    public const int MAX_PARTS_OF_AN_UNKNOWN_WORD = 2;
+    public const array LINKING_SUFFIXES = ['s', 'es', 'n', 'en', 'er', 'e', 'ens'];
+    public const string RESTORED_ENDING = 'e';
+
+    public function __construct(private GermanLexiconInterface $lexicon)
+    {
+    }
+
+    /** @return list<string> the lexicon forms of the word's parts, or none when the word is no compound */
+    public function partsOf(string $word): array
+    {
+        if (mb_strlen($word) < 2 * self::MIN_PART_LENGTH) {
+            return [];
+        }
+        $whole = $this->lexicon->entryOf($word);
+        if (null === $whole) {
+            return $this->bestSplitOf($word, self::MAX_PARTS_OF_AN_UNKNOWN_WORD)?->parts() ?? [];
+        }
+        $split = $this->bestSplitOf($word, self::MAX_PARTS);
+        if (null === $split || $this->staysWhole($whole, $split)) {
+            return [];
+        }
+
+        return $split->parts();
+    }
+
+    private function bestSplitOf(string $word, int $maxParts): ?CompoundSplitModel
+    {
+        return (new CompoundSplitSearch($this->lexicon, $word, $maxParts))->bestSplit();
+    }
+
+    private function staysWhole(GermanLexiconEntryModel $whole, CompoundSplitModel $split): bool
+    {
+        $wholeClass = $whole->frequencyClass;
+
+        return $split->hasMeanClassOfAtLeast($wholeClass) || $split->hasPartRarerThan($wholeClass);
+    }
+}

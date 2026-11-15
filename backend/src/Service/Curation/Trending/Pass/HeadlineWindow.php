@@ -7,8 +7,10 @@ namespace App\Service\Curation\Trending\Pass;
 use App\Enum\FeedLanguage;
 use App\Service\Curation\Trending\HeadlineEquivalents;
 use App\Service\Curation\Trending\HeadlineFiller;
+use App\Service\Curation\Trending\Model\EntryStemIdsModel;
 use App\Service\Curation\Trending\Model\LanguageCoverageModel;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
+use App\Service\Curation\Trending\Support\PartWeightCaps;
 
 /** Lookups cache per feed and entry: add every entry before asking for a weight. */
 final class HeadlineWindow
@@ -52,25 +54,36 @@ final class HeadlineWindow
     /** @var array<string, int> language value => entries stemmed in it */
     private array $entriesByLanguage = [];
 
-    /** @var array<string, string> language value and word => its stem */
-    private array $stemsByWord = [];
+    /** @var array<string, ?int> language value and word => its stem id; null for a seed */
+    private array $stemIdByWord = [];
+
+    /** @var array<string, list<int>> language value and word => its parts' stem ids, for a compound */
+    private array $partStemIdsByWord = [];
+
+    private readonly CompoundParts $compoundParts;
 
     public function __construct(
         private readonly HeadlineFiller $filler,
         private readonly HeadlineEquivalents $equivalents,
     ) {
+        $this->compoundParts = new CompoundParts();
     }
 
     /** Entries must arrive in ascending id order: the postings stay sorted. */
     public function add(WindowEntryModel $entry, string $body): void
     {
-        $headlineIds = $this->idsOf($entry->title, $entry->language);
-        $bodyIds = array_values(array_diff($this->idsOf($body, $entry->language), $headlineIds));
-        $this->headlineStems[$entry->id] = $headlineIds;
-        $this->bodyStems[$entry->id] = $bodyIds;
+        $stems = EntryStemIdsModel::of(
+            $this->stemIdsOf($entry->title, $entry->language),
+            $this->stemIdsOf($body, $entry->language),
+        );
+        $this->headlineStems[$entry->id] = $stems->headlineIds;
+        $this->bodyStems[$entry->id] = $stems->bodyIds;
+        $this->compoundParts->addEntry($entry->id, $stems->partOnlyIds);
+        $this->compoundParts->holdCompoundsAmong($entry->id, $stems->headlineIds, self::HEADLINE_WEIGHT);
+        $this->compoundParts->holdCompoundsAmong($entry->id, $stems->bodyIds, self::BODY_WEIGHT);
         $this->feedOfEntry[$entry->id] = $entry->feedId;
         $this->entriesOfFeed[$entry->feedId][] = $entry->id;
-        $this->post($entry->id, $headlineIds, $bodyIds);
+        $this->post($entry->id, $stems->headlineIds, $stems->bodyIds);
         $this->countLanguageOf($entry);
     }
 
@@ -97,18 +110,55 @@ final class HeadlineWindow
     {
         $shared = [];
         $sharingAHeadline = [];
+        $parts = [];
         foreach ($this->placedStemsOf($entryId) as $stemId => $placeWeight) {
-            foreach ($this->earlierHoldersOf($stemId, $entryId) as $earlierEntryId => $earlierPlaceWeight) {
+            $holders = $this->earlierHoldersOf($stemId, $entryId);
+            $partLinks = $this->compoundParts->partLinksOf($stemId, $entryId, $holders);
+            $rarity = $this->rarity($stemId);
+            $wordHolders = $partLinks === [] ? $holders : array_diff_key($holders, $partLinks);
+            foreach ($wordHolders as $earlierEntryId => $earlierPlaceWeight) {
                 $commonPlaceWeight = min($placeWeight, $earlierPlaceWeight);
-                $shared[$earlierEntryId] = ($shared[$earlierEntryId] ?? 0.0)
-                    + $commonPlaceWeight * $this->rarity($stemId);
+                $shared[$earlierEntryId] = ($shared[$earlierEntryId] ?? 0.0) + $commonPlaceWeight * $rarity;
+                if ($commonPlaceWeight === self::HEADLINE_WEIGHT) {
+                    $sharingAHeadline[$earlierEntryId] = true;
+                }
+            }
+            foreach (array_filter($partLinks) as $earlierEntryId => $compoundsThrough) {
+                $commonPlaceWeight = min($placeWeight, $holders[$earlierEntryId]);
+                $shared[$earlierEntryId] ??= 0.0;
+                $parts[$earlierEntryId][] = [
+                    $commonPlaceWeight * $rarity,
+                    $this->compoundsCapping($entryId, $earlierEntryId, $compoundsThrough),
+                ];
                 if ($commonPlaceWeight === self::HEADLINE_WEIGHT) {
                     $sharingAHeadline[$earlierEntryId] = true;
                 }
             }
         }
 
-        return array_intersect_key($shared, $sharingAHeadline);
+        return array_intersect_key(PartWeightCaps::addedTo($shared, $parts, $this->rarity(...)), $sharingAHeadline);
+    }
+
+    /**
+     * A share is measured in the lighter entry's own accounting, where a part it holds as a word weighs whole. A part
+     * both entries hold only through compounds, or a pair of equal weight, is held to both entries' compounds.
+     *
+     * @param array{array<int, float>, array<int, float>} $compoundsThrough in this entry, then in the earlier one
+     *
+     * @return array<int, float>
+     */
+    private function compoundsCapping(int $entryId, int $earlierEntryId, array $compoundsThrough): array
+    {
+        [$throughThis, $throughEarlier] = $compoundsThrough;
+        if ($throughThis !== [] && $throughEarlier !== []) {
+            return $throughThis + $throughEarlier;
+        }
+
+        return match ($this->totalWeight($entryId) <=> $this->totalWeight($earlierEntryId)) {
+            -1 => $throughThis,
+            1 => $throughEarlier,
+            default => $throughThis + $throughEarlier,
+        };
     }
 
     private function countLanguageOf(WindowEntryModel $entry): void
@@ -120,24 +170,55 @@ final class HeadlineWindow
         $this->entriesByLanguage[$language] = ($this->entriesByLanguage[$language] ?? 0) + 1;
     }
 
-    /** @return list<int> */
-    private function idsOf(string $text, ?FeedLanguage $language): array
+    /** @return array<int, bool> stem id => whether a word of the text holds it, rather than only a compound's part */
+    private function stemIdsOf(string $text, ?FeedLanguage $language): array
     {
         $ids = [];
         foreach ($this->equivalents->wordsOf($text) as [$word, $bare]) {
-            $stem = $this->stemOf($word, $bare, $language);
-            if (!$this->filler->isSeed($stem, $language)) {
-                $ids[$this->stemIds[$stem] ??= \count($this->stemIds)] = true;
+            $key = $language?->value . ' ' . $word;
+            if (!\array_key_exists($key, $this->stemIdByWord)) {
+                $this->assignStemIds($key, $this->equivalents->wordStemsOf($word, $bare, $language), $language);
+            }
+            $stemId = $this->stemIdByWord[$key];
+            if (null !== $stemId) {
+                $ids[$stemId] = true;
+                $ids += array_fill_keys($this->partStemIdsByWord[$key] ?? [], false);
             }
         }
 
-        return array_keys($ids);
+        return $ids;
     }
 
-    private function stemOf(string $word, string $bare, ?FeedLanguage $language): string
+    /** @param list<string> $stems the word's own stem, then its parts' stems */
+    private function assignStemIds(string $key, array $stems, ?FeedLanguage $language): void
     {
-        return $this->stemsByWord[$language?->value . ' ' . $word]
-            ??= $this->equivalents->stemOf($word, $bare, $language);
+        if ($this->filler->isSeed($stems[0], $language)) {
+            $this->stemIdByWord[$key] = null;
+
+            return;
+        }
+        $ids = array_map(
+            fn (string $stem): int => $this->stemIds[$stem] ??= \count($this->stemIds),
+            array_values(array_filter($stems, fn (string $stem): bool => !$this->filler->isSeed($stem, $language))),
+        );
+        $partIds = \array_slice($ids, 1);
+        $this->stemIdByWord[$key] = $ids[0];
+        if ($partIds !== []) {
+            $this->partStemIdsByWord[$key] = $partIds;
+            $this->addCompound($ids[0], $partIds);
+        }
+    }
+
+    /** @param non-empty-list<int> $partStemIds */
+    private function addCompound(int $compoundStemId, array $partStemIds): void
+    {
+        if (!$this->compoundParts->isCompound($compoundStemId)) {
+            $headlineHolders = $this->headlinePostings[$compoundStemId] ?? [];
+            $bodyHolders = $this->bodyPostings[$compoundStemId] ?? [];
+            $this->compoundParts->holdCompoundIn($compoundStemId, $headlineHolders, self::HEADLINE_WEIGHT);
+            $this->compoundParts->holdCompoundIn($compoundStemId, $bodyHolders, self::BODY_WEIGHT);
+        }
+        $this->compoundParts->addCompound($compoundStemId, $partStemIds);
     }
 
     /**
@@ -160,7 +241,9 @@ final class HeadlineWindow
     {
         $total = 0.0;
         foreach ($this->placedStemsOf($entryId) as $stemId => $placeWeight) {
-            $total += $placeWeight * $this->rarity($stemId);
+            if (!$this->compoundParts->isOnlyAPartIn($entryId, $stemId)) {
+                $total += $placeWeight * $this->rarity($stemId);
+            }
         }
 
         return $total;
@@ -170,14 +253,15 @@ final class HeadlineWindow
     private function placedStemsOf(int $entryId): array
     {
         $placed = [];
-        foreach ($this->bodyStems[$entryId] as $stemId) {
-            if (!$this->isFillerFor($entryId, $stemId)) {
-                $placed[$stemId] = self::BODY_WEIGHT;
-            }
-        }
-        foreach ($this->headlineStems[$entryId] as $stemId) {
-            if (!$this->isFillerFor($entryId, $stemId)) {
-                $placed[$stemId] = self::HEADLINE_WEIGHT;
+        $places = [
+            [$this->bodyStems[$entryId], self::BODY_WEIGHT],
+            [$this->headlineStems[$entryId], self::HEADLINE_WEIGHT],
+        ];
+        foreach ($places as [$stemIds, $placeWeight]) {
+            foreach ($stemIds as $stemId) {
+                if (!$this->isFillerFor($entryId, $stemId)) {
+                    $placed[$stemId] = $placeWeight;
+                }
             }
         }
 
@@ -188,20 +272,18 @@ final class HeadlineWindow
     private function earlierHoldersOf(int $stemId, int $entryId): array
     {
         $holders = [];
-        foreach ($this->bodyPostings[$stemId] ?? [] as $holderId) {
-            if ($holderId >= $entryId) {
-                break;
-            }
-            if (!$this->isFillerFor($holderId, $stemId)) {
-                $holders[$holderId] = self::BODY_WEIGHT;
-            }
-        }
-        foreach ($this->headlinePostings[$stemId] ?? [] as $holderId) {
-            if ($holderId >= $entryId) {
-                break;
-            }
-            if (!$this->isFillerFor($holderId, $stemId)) {
-                $holders[$holderId] = self::HEADLINE_WEIGHT;
+        $places = [
+            [$this->bodyPostings[$stemId] ?? [], self::BODY_WEIGHT],
+            [$this->headlinePostings[$stemId] ?? [], self::HEADLINE_WEIGHT],
+        ];
+        foreach ($places as [$holderIds, $placeWeight]) {
+            foreach ($holderIds as $holderId) {
+                if ($holderId >= $entryId) {
+                    break;
+                }
+                if (!$this->isFeedFillerFor($holderId, $stemId)) {
+                    $holders[$holderId] = $placeWeight;
+                }
             }
         }
 
@@ -211,7 +293,12 @@ final class HeadlineWindow
     private function isFillerFor(int $entryId, int $stemId): bool
     {
         return $this->filler->isWindowFiller($this->documentFrequencies[$stemId], $this->entryCount())
-            || isset($this->feedFillerOf($this->feedOfEntry[$entryId])[$stemId]);
+            || $this->isFeedFillerFor($entryId, $stemId);
+    }
+
+    private function isFeedFillerFor(int $entryId, int $stemId): bool
+    {
+        return isset($this->feedFillerOf($this->feedOfEntry[$entryId])[$stemId]);
     }
 
     /** @return array<int, true> */

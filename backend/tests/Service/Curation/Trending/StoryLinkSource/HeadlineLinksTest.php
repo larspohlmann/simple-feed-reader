@@ -7,6 +7,7 @@ namespace App\Tests\Service\Curation\Trending\StoryLinkSource;
 use App\Enum\TrendingWindow;
 use App\Service\Curation\Trending\Model\HeadlineOverlapModel;
 use App\Service\Curation\Trending\Model\NearMissModel;
+use App\Service\Curation\Trending\Model\StoryLinkModel;
 use App\Service\Curation\Trending\Pass\TrendingRun;
 use App\Service\Curation\Trending\StoryLinkSource\HeadlineLinks;
 use App\Tests\Support\TrendingRuns;
@@ -72,6 +73,18 @@ final class HeadlineLinksTest extends TestCase
         );
 
         self::assertSame([], (new HeadlineLinks())->links($run));
+    }
+
+    public function testACompoundLinksItsSplitSpelling(): void
+    {
+        $run = TrendingRuns::of(TrendingWindow::Day);
+        $run->add(TrendingRuns::germanEntry(1, 10, 'Huang: Spionageverdacht im Senat', '2031-05-14 08:00:00'), []);
+        $run->add(TrendingRuns::germanEntry(2, 20, 'Huang: Spionage-Verdacht', '2031-05-14 09:00:00'), []);
+
+        self::assertSame(['1:2'], array_map(
+            static fn (StoryLinkModel $link): string => $link->pairKey(),
+            (new HeadlineLinks())->links($run),
+        ));
     }
 
     public function testOneFeedNeverLinksToItself(): void
