@@ -52,15 +52,41 @@ final class TrackingFreeUrlTest extends TestCase
         yield 'a gift link' => ['https://www.nytimes.com/2026/a.html?unlocked_article_code=x'];
         yield 'a gift token' => ['https://example.com/a?gift=y'];
         yield 'a key that only starts like a vendor key' => ['https://example.com/a?utmost=1&atom=2&pk_id=3'];
-        yield 'an undocumented share key on youtube' => ['https://www.youtube.com/watch?v=x&si=y&feature=share'];
-        yield 'an undocumented share key on spotify' => ['https://open.spotify.com/track/1?si=z'];
-        yield 'an undocumented share key at the times' => ['https://www.nytimes.com/2026/a.html?smid=url-share'];
+        yield 'a share key off its host' => ['https://example.com/?si=1&feature=x&smid=y&smtyp=z'];
+        yield 'a share key on a host that only ends like its own' => ['https://notyoutube.com/?si=1'];
+        yield 'a share key on a host that only contains its own' => ['https://youtube.com.example.org/?si=1'];
     }
 
     #[DataProvider('contentUrls')]
     public function testKeysThatNameThePageStay(string $url): void
     {
         self::assertSame($url, TrackingFreeUrl::of($url));
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function sharedOnTheirHost(): iterable
+    {
+        yield 'youtube' => [
+            'https://www.youtube.com/watch?v=x&si=y&feature=share',
+            'https://www.youtube.com/watch?v=x',
+        ];
+        yield 'youtube without www' => ['https://youtube.com/watch?v=x&si=y', 'https://youtube.com/watch?v=x'];
+        yield 'mobile youtube' => ['https://m.youtube.com/watch?v=x&feature=share', 'https://m.youtube.com/watch?v=x'];
+        yield 'youtube music' => ['https://music.youtube.com/watch?v=x&si=y', 'https://music.youtube.com/watch?v=x'];
+        yield 'a short youtube link keeps its time' => ['https://youtu.be/x?si=y&t=30', 'https://youtu.be/x?t=30'];
+        yield 'spotify' => ['https://open.spotify.com/track/1?si=z', 'https://open.spotify.com/track/1'];
+        yield 'an upper-case host' => ['https://OPEN.Spotify.com/track/1?si=z', 'https://OPEN.Spotify.com/track/1'];
+        yield 'the times keeps its gift link' => [
+            'https://www.nytimes.com/2026/a.html?smid=url-share&smtyp=cur&unlocked_article_code=k',
+            'https://www.nytimes.com/2026/a.html?unlocked_article_code=k',
+        ];
+        yield 'a share fragment on its host' => ['https://youtu.be/x#si=y', 'https://youtu.be/x'];
+    }
+
+    #[DataProvider('sharedOnTheirHost')]
+    public function testShareKeysGoOnlyOnTheirHost(string $url, string $expected): void
+    {
+        self::assertSame($expected, TrackingFreeUrl::of($url));
     }
 
     public function testKeptPairsKeepTheirOrderAndBytes(): void
@@ -183,18 +209,20 @@ final class TrackingFreeUrlTest extends TestCase
         self::assertSame('https://example.com/a', TrackingFreeUrl::orNull('https://example.com/a?gclid=1'));
     }
 
-    /** @return iterable<string, array{string, string}> */
+    /** @return iterable<string, array{string, string, string}> */
     public static function queries(): iterable
     {
-        yield 'a tracker between content keys' => ['b=2&utm_source=x&a=1', 'b=2&a=1'];
-        yield 'only trackers' => ['utm_source=x&gclid=y', ''];
-        yield 'no tracker' => ['id=1', 'id=1'];
+        yield 'a tracker between content keys' => ['b=2&utm_source=x&a=1', 'example.com', 'b=2&a=1'];
+        yield 'only trackers' => ['utm_source=x&gclid=y', 'example.com', ''];
+        yield 'no tracker' => ['id=1', 'example.com', 'id=1'];
+        yield 'a share key on its host' => ['v=x&si=y', 'www.youtube.com', 'v=x'];
+        yield 'a share key off its host' => ['v=x&si=y', 'example.com', 'v=x&si=y'];
     }
 
     #[DataProvider('queries')]
-    public function testTheQueryKeepsItsContentPairs(string $query, string $expected): void
+    public function testTheQueryKeepsItsContentPairs(string $query, string $host, string $expected): void
     {
-        self::assertSame($expected, TrackingFreeUrl::query($query));
+        self::assertSame($expected, TrackingFreeUrl::query($query, $host));
     }
 
     /** @return iterable<string, array{string}> */
@@ -214,6 +242,7 @@ final class TrackingFreeUrlTest extends TestCase
             self::nonAbsoluteUrls(),
             self::fullyTrackedQueries(),
             self::misEscapedUrls(),
+            self::sharedOnTheirHost(),
         ];
         foreach ($providers as $examples) {
             foreach ($examples as [$url]) {

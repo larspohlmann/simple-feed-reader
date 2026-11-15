@@ -67,7 +67,7 @@ cleaning should happen during ingest of rss feeds".
   - The scheme, host, port, path, kept pairs and any other fragment are copied verbatim. Splitting happens on the raw
     string at the first `?` and the first `#`; `parse_url` is used only to read the host and to reject URLs that are
     not absolute.
-- `public static function query(string $query): string`. This is the filtered query, without a leading
+- `public static function query(string $query, string $host): string`. This is the filtered query, without a leading
   `?`, for `UrlNormalizer::normalize()`.
 
 A pair is **tracking** when its key, after `rawurldecode`, lower-casing and removing one leading `amp;`, is one of:
@@ -99,9 +99,15 @@ A pair is **tracking** when its key, after `rawurldecode`, lower-casing and remo
 | Mapp Intelligence (Webtrekk) | prefix `wt_*` | "Campaigns" (docs.mapp.com/docs/tracking-configuration-campaign), which names `wt_mc`, `wt_cc1` and `wt_ga` |
 | Echobox | `echobox` | Echobox Help, "Query parameters" (help.echobox.com/query-parameters). Echobox adds it as a fragment, or as a query pair when the URL already has a fragment |
 
-**Per-host keys: none.** The draft scoped `si`/`feature` to YouTube, `si` to Spotify and `smid`/`smtyp` to the NYT.
-None of the three vendors documents its key (Outcome), so they go the way of X's `s`/`t` (D3), and the cleaner
-needs no host.
+**Per-host keys.** These are the share-attribution parameters each site appends to its own share links. They are
+applied only on the named domain and its subdomains (`host === domain` or it ends in `.domain`), because the key is
+generic elsewhere. No vendor documents them; each is a single observed fact, not a copied list.
+
+| Domain | Keys | Source | Why it never names the page |
+|---|---|---|---|
+| `youtube.com` (incl. `www.`, `m.`, `music.`), `youtu.be` | `si`, `feature` | `si`: "YouTube-Videolinks neuerdings mit Tracking-Zusatz" (ifun.de/youtube-videolinks-neuerdings-mit-tracking-zusatz-223731/); `feature`: observed on the site's own share button | The share sheet's share-session id and the share-surface label. The video is `v` or the path, the time is `t`, a playlist is `list`, and those stay. |
+| `spotify.com` (`open.spotify.com`) | `si` | observed on the site's own share button | The share-session id. The item is the path. |
+| `nytimes.com` and subdomains | `smid`, `smtyp` | observed on the site's own share button | The share-medium tags. The article is the path. `unlocked_article_code` (a gift link) stays. |
 
 The prefixes `utm_`, `at_`, `wt_` and `mtm_` stay prefixes, as `utm_` and its siblings already are today. Every other
 entry matches the whole key. `pk_` is listed key by key, because a `pk_` key elsewhere can be a primary key.
@@ -173,6 +179,10 @@ Nothing else writes an article URL into an entry. `E2eSeedAdminSubscriptionComma
   Spotify, NYT).** Why: every key is a fact from its vendor's own page, so it is licence-free; the per-host keys are
   generic elsewhere (`si`, `feature`, `smid`). Cost if wrong: a documented tracker the list lacks stays in a URL. That
   is the status quo, and adding it later is one line.
+  Ruling (2026-11-15, coordinator for Lars): the three per-host rules stay. Task 1 had dropped them as undocumented;
+  they are restored because Lars asked for cleaning "similar to 'copy clean link' in brave", which strips exactly
+  these share keys, and the licence rule forbids copying a list, not stating a single observed fact. Cost if wrong:
+  a page that uses `si` or `smid` for content on one of these hosts loses it; none is known.
 - **D3. No publisher-internal or undocumented keys** (`mrfcid`, `cmp`, `via`, `traffic_source`, `sara_ref`, Substack
   `r`, Instagram `exln`/`srtk`, X `s`/`t`, `igshid`, `rb_clickid`, `_bhlid`, `sfmc_id`). Why: no vendor documents
   them. A list built from what the dev DB happens to hold is curation from the data, which Lars has ruled out. Cost if
@@ -283,9 +293,8 @@ table records the page that names each key.
 
 - dropped `s_cid`: Adobe does not document it; its campaign page reads `cid` (experienceleague.adobe.com/en/docs/analytics/implementation/vars/page-vars/campaign)
 - dropped `oly_anon_id`: Omeda documents it as a cookie only, never a link parameter (knowledgebase.omeda.com/omedaclientkb/cdp-olytics-overview)
-- dropped `si`, `feature` (YouTube): YouTube does not document them (developers.google.com/youtube/player_parameters; no YouTube Help page names them)
-- dropped `si` (Spotify): Spotify does not document it (no support.spotify.com or developer.spotify.com page names it)
-- dropped `smid`, `smtyp` (NYT): The New York Times does not document them (thenewyorktimeshelpcenter.helpjuice.com names neither)
+- `si`, `feature` (YouTube), `si` (Spotify), `smid`, `smtyp` (NYT) were dropped as undocumented, then restored by
+  the D2 ruling as host-scoped share keys; the per-host table gives each one's source.
 - moved: `gclsrc` is not on the Google Ads auto-tagging page; Search Ads 360 "About click IDs" names it, so it stays
   with that citation. `msclkid` is cited from Microsoft Learn, the Microsoft Advertising developer docs, because the
   help.ads.microsoft.com article did not load.

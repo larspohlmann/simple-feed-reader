@@ -25,7 +25,7 @@ final readonly class UrlNormalizer
         $canonical = $scheme . '://' . strtolower($parts['host'])
             . $this->port($scheme, $parts['port'] ?? null)
             . ($parts['path'] ?? '')
-            . $this->query($parts['query'] ?? null);
+            . $this->query($parts['query'] ?? null, $parts['host']);
 
         return $canonical;
     }
@@ -57,13 +57,13 @@ final readonly class UrlNormalizer
         return ':' . $port;
     }
 
-    private function query(?string $query): string
+    private function query(?string $query, string $host): string
     {
         if ($query === null || $query === '') {
             return '';
         }
 
-        $kept = TrackingFreeUrl::query($query);
+        $kept = TrackingFreeUrl::query($query, $host);
 
         return $kept === '' ? '' : '?' . $kept;
     }

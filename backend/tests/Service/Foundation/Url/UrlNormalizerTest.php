@@ -101,6 +101,11 @@ final class UrlNormalizerTest extends TestCase
 
         self::assertSame($plain, $this->normalizer->hash('https://example.com/a?mc_cid=a&mc_eid=b'));
         self::assertSame($plain, $this->normalizer->hash('https://example.com/a?amp;utm_medium=rss'));
+        self::assertSame(
+            $this->normalizer->hash('https://youtu.be/x'),
+            $this->normalizer->hash('https://youtu.be/x?si=y'),
+        );
+        self::assertNotSame($plain, $this->normalizer->hash('https://example.com/a?si=y'));
     }
 
     public function testTheSharedAddressLosesATrackingFragment(): void
