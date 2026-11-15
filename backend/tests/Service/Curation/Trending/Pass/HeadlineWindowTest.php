@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Curation\Trending\Pass;
 
 use App\Enum\FeedLanguage;
+use App\Service\Curation\Trending\Model\EntryLinksModel;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Service\Curation\Trending\Pass\HeadlineWindow;
 use App\Tests\Support\TrendingWiring;
@@ -438,8 +439,9 @@ final class HeadlineWindowTest extends TestCase
         string $headline,
     ): WindowEntryModel {
         $effectiveDate = new \DateTimeImmutable('2031-05-14 09:00:00', new \DateTimeZone('UTC'));
+        $links = new EntryLinksModel(null, null, null);
 
-        return new WindowEntryModel($entryId, $feedId, $language, $headline, false, null, $effectiveDate, null, null);
+        return new WindowEntryModel($entryId, $feedId, $language, $headline, false, null, $effectiveDate, $links);
     }
 
     private function addCommonHeadlines(int $holders): void

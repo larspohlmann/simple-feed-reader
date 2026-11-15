@@ -16,8 +16,7 @@ final readonly class WindowEntryModel
         public bool $titleDerived,
         public ?string $summary,
         public \DateTimeImmutable $effectiveDate,
-        public ?string $urlHash,
-        public ?string $linkCardUrl,
+        public EntryLinksModel $links,
     ) {
     }
 }

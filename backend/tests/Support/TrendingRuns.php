@@ -6,6 +6,7 @@ namespace App\Tests\Support;
 
 use App\Enum\FeedLanguage;
 use App\Enum\TrendingWindow;
+use App\Service\Curation\Trending\Model\EntryLinksModel;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Service\Curation\Trending\Pass\HeadlineWindow;
 use App\Service\Curation\Trending\Pass\TrendingRun;
@@ -45,8 +46,7 @@ final class TrendingRuns
             false,
             null,
             new \DateTimeImmutable($effectiveDate, new \DateTimeZone('UTC')),
-            null,
-            null,
+            new EntryLinksModel(null, null, null),
         );
     }
 

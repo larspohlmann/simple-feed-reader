@@ -7,9 +7,13 @@ namespace App\Tests\Repository;
 use App\Entity\Entry;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
+use App\Entity\ThreadPost;
+use App\Entity\ThreadPostContent;
 use App\Enum\FeedLanguage;
+use App\Enum\SocialNetwork;
 use App\Repository\TrendingEntryRepository;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
+use App\Service\Curation\Trending\Model\WindowLinkCardModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
 
@@ -45,9 +49,9 @@ final class TrendingEntryRepositoryTest extends DbTestCase
         );
         self::assertSame($feed->requireId(), $rows[0]->feedId);
         self::assertNull($rows[0]->language);
-        self::assertSame($first->getUrlHash(), $rows[0]->urlHash);
-        self::assertNull($rows[0]->linkCardUrl);
-        self::assertSame('https://shared.example.com/a', $rows[1]->linkCardUrl);
+        self::assertSame($first->getUrlHash(), $rows[0]->links->urlHash);
+        self::assertNull($rows[0]->links->card);
+        self::assertSame('https://shared.example.com/a', $rows[1]->links->card?->url);
         self::assertSame('<p>Body</p>', $rows[1]->summary);
         self::assertSame('2031-05-14 09:00:00', $rows[1]->effectiveDate->format('Y-m-d H:i:s'));
         self::assertSame('UTC', $rows[1]->effectiveDate->getTimezone()->getName());
@@ -121,6 +125,50 @@ final class TrendingEntryRepositoryTest extends DbTestCase
             [FeedLanguage::German, FeedLanguage::French],
             array_map(static fn (WindowEntryModel $row): ?FeedLanguage => $row->language, $rows),
         );
+    }
+
+    public function testAnArticleEntryCarriesItsUrlAndAPostItsFirstTopLevelCardsText(): void
+    {
+        $fixtures = new TrendingFixtures($this->entityManager);
+        $outlet = $fixtures->feed('outlet');
+        $timeline = $fixtures->feed('poster', SocialNetwork::Mastodon);
+        $fixtures->article($outlet, 'Storm floods the harbour', '2031-05-14 08:00:00', 'https://outlet.example/storm');
+        $post = $fixtures->entry($timeline, 'Look at this', '2031-05-14 09:00:00');
+        $bare = $fixtures->entry($timeline, 'No card here', '2031-05-14 10:00:00');
+        $fixtures->flush();
+        $thread = new ThreadPost($post, 0, new ThreadPostContent(null, null, '<p>Thread reply</p>', []));
+        $this->entityManager->persist($thread);
+        $this->entityManager->persist(new LinkCard($post, 0, self::card('https://thread.example/reply'), $thread));
+        $this->entityManager->persist(new LinkCard($post, 2, self::card('https://later.example/second')));
+        $this->entityManager->persist(new LinkCard($post, 1, new LinkCardContent(
+            'https://shared.example/storm',
+            'Storm floods the harbour',
+            str_repeat('d', 2_100),
+            null,
+            'Shared',
+        )));
+        $this->entityManager->flush();
+
+        $rows = iterator_to_array(
+            (new TrendingEntryRepository($this->entityManager))->windowEntries(
+                new \DateTimeImmutable('2031-05-13 12:00:00', new \DateTimeZone('UTC')),
+            ),
+            false,
+        );
+
+        self::assertSame('https://outlet.example/storm', $rows[0]->links->articleUrl);
+        self::assertNull($rows[1]->links->articleUrl);
+        self::assertEquals(
+            new WindowLinkCardModel(
+                'https://shared.example/storm',
+                'Storm floods the harbour',
+                str_repeat('d', 2_000),
+                'Shared',
+            ),
+            $rows[1]->links->card,
+        );
+        self::assertNull($rows[2]->links->card);
+        self::assertSame($bare->requireId(), $rows[2]->id);
     }
 
     private static function card(string $url): LinkCardContent

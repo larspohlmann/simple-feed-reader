@@ -61,7 +61,7 @@ final readonly class TrendingGrouping
     private function urlHashesOf(WindowEntryModel $entry): array
     {
         return array_values(array_unique(array_filter(
-            [$entry->urlHash, $this->urlNormalizer->hash($entry->linkCardUrl)],
+            [$entry->links->urlHash, $this->urlNormalizer->hash($entry->links->card?->url)],
             static fn (?string $urlHash): bool => $urlHash !== null,
         )));
     }
