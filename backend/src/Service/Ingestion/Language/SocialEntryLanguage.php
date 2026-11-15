@@ -43,6 +43,7 @@ final readonly class SocialEntryLanguage
             return $guess;
         }
 
-        return $this->stopWordVote->languageOf($text);
+        // A derived headline repeats the body's first sentence: counted twice, it would break the vote's ties.
+        return $this->stopWordVote->languageOf($entry->headline->derived ? $body : $text);
     }
 }

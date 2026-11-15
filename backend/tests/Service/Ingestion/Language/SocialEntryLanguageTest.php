@@ -109,11 +109,19 @@ final class SocialEntryLanguageTest extends TestCase
         self::assertNull(self::languageOf('Aus dem Archiv!', 'it', 'it'));
     }
 
-    public function testTheVoteReadsTheHeadlineToo(): void
+    public function testTheVoteReadsAFeedsTitleToo(): void
     {
         $language = self::reading(StubbedDetector::saying('la'));
 
-        self::assertSame(FeedLanguage::German, $language->of(self::entry('Aus dem Archiv', 'xx', null)));
+        self::assertSame(FeedLanguage::German, $language->of(self::titled('Aus dem Archiv', 'xx')));
+    }
+
+    public function testTheVoteCountsAHeadlineDerivedFromTheBodyOnce(): void
+    {
+        $body = 'Ottimo articolo, da leggere. La legge di bilancio';
+        $language = self::reading(StubbedDetector::saying('it'));
+
+        self::assertNull($language->of(self::entry('Ottimo articolo, da leggere.', $body, null)));
     }
 
     public function testARealShortEnglishPostTheDetectorReadsAsInterlinguaIsEnglish(): void
@@ -205,6 +213,11 @@ final class SocialEntryLanguageTest extends TestCase
     private static function languageOf(string $body, ?string $statedLanguage, string $detectorSays): ?FeedLanguage
     {
         return self::reading(StubbedDetector::saying($detectorSays))->of(self::entry('…', $body, $statedLanguage));
+    }
+
+    private static function titled(string $title, string $summary): ParsedEntryModel
+    {
+        return new ParsedEntryModel('guid', null, Headline::fromFeed($title), null, $summary, '<p>content</p>', null);
     }
 
     private static function entry(
