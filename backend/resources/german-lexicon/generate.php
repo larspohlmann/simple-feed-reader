@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 require __DIR__ . '/../../vendor/autoload.php';
 
-require __DIR__ . '/render.php';
-
 const SHARD_PATTERN = '/^1-\d{5}-of-\d{5}\.gz$/';
 const TOKEN = '/^(\p{L}+)(?:_(NOUN|VERB|ADJ|ADV|PRON|DET|ADP|NUM|CONJ|PRT|X))?$/u';
 const KEPT_YEARS = '/\t(?:19[5-9]\d|20[01]\d),(\d+),/';
@@ -148,20 +146,24 @@ function keptForms(FormCounts $counts): array
     );
 }
 
-/** @param list<RankedForm> $forms */
+/**
+ * @param list<RankedForm> $forms
+ * @return int the bytes written
+ */
 function writeLexicon(array $forms): int
 {
-    $nouns = [];
-    $others = [];
+    $rows = [];
     foreach ($forms as $form) {
-        if ($form->isNoun) {
-            $nouns[$form->form] = $form->class;
-        } else {
-            $others[$form->form] = $form->class;
-        }
+        $rows[$form->form] = ($form->isNoun ? 'n' : 'o') . "\t" . $form->class;
     }
+    ksort($rows, SORT_STRING);
+    $lines = '';
+    foreach ($rows as $key => $row) {
+        $lines .= $key . "\t" . $row . "\n";
+    }
+    file_put_contents(__DIR__ . '/lexicon.tsv', $lines);
 
-    return writeLexiconFiles(__DIR__, $nouns, $others);
+    return strlen($lines);
 }
 
 $shardDirectory = $argv[1] ?? throw new RuntimeException('Usage: generate.php <shard directory>');
