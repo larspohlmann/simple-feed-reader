@@ -24,7 +24,5 @@ import { sharedArticleCard } from '../../../../trending/shared-article-card';
 })
 export class EntryLinkComponent extends EntryBlockBase {
   /** A Trending row no followed outlet carries is the article its posts share: the card heads it (#2229). */
-  protected readonly ledByItsCard = computed(
-    () => !!this.entry().story && sharedArticleCard(this.entry()) !== null,
-  );
+  protected readonly ledByItsCard = computed(() => sharedArticleCard(this.entry()) !== null);
 }
