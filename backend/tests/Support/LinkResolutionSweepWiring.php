@@ -24,8 +24,8 @@ final class LinkResolutionSweepWiring
         ClockInterface $clock,
         array $responses = [],
     ): LinkResolutionSweep {
+        /** @var SharedLinkResolutionRepository $linkResolutions */
         $linkResolutions = $container->get(SharedLinkResolutionRepository::class);
-        \assert($linkResolutions instanceof SharedLinkResolutionRepository);
 
         return new LinkResolutionSweep($linkResolutions, $wiring->landing($responses), new NaiveUtcClock($clock));
     }

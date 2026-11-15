@@ -83,4 +83,41 @@ final class SharedLinkResolutionRepository extends ServiceEntityRepository
             [$retryAt->format('Y-m-d H:i:s'), $link->linkId, $link->attempts],
         );
     }
+
+    /** @return array<int, string> the URLs of links never queued, by shared link id, in id order */
+    public function unqueuedUrlsAfterId(int $afterId, int $limit): array
+    {
+        /** @var list<array{id: int|string, url: string}> $rows */
+        $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
+            'SELECT link.id, link.url FROM shared_link link'
+            . ' LEFT JOIN shared_link_resolution resolution ON resolution.shared_link_id = link.id'
+            . ' WHERE resolution.shared_link_id IS NULL AND link.id > ? ORDER BY link.id LIMIT ' . max(0, $limit),
+            [$afterId],
+        );
+
+        $urls = [];
+        foreach ($rows as $row) {
+            $urls[(int) $row['id']] = $row['url'];
+        }
+
+        return $urls;
+    }
+
+    /** @param list<int> $linkIds */
+    public function queue(array $linkIds): void
+    {
+        if ($linkIds === []) {
+            return;
+        }
+        $connection = $this->getEntityManager()->getConnection();
+        $connection->executeStatement(
+            sprintf(
+                "INSERT %s INTO shared_link_resolution (shared_link_id, status, attempts)"
+                . " SELECT id, 'pending', 0 FROM shared_link WHERE id IN (?)",
+                DatabasePlatform::insertIgnoreClause($connection),
+            ),
+            [$linkIds],
+            [ArrayParameterType::INTEGER],
+        );
+    }
 }
