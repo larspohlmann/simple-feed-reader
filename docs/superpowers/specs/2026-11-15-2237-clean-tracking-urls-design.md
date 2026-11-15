@@ -290,3 +290,41 @@ table records the page that names each key.
   with that citation. `msclkid` is cited from Microsoft Learn, the Microsoft Advertising developer docs, because the
   help.ads.microsoft.com article did not load.
 
+
+**Measured outcome (Task 5, dev MySQL, 2026-11-15).** Lars ruled the measurement the other way round: `feedreader`
+was copied to `feedreader_2237_uncleaned` (kept, uncleaned), and the command ran on `feedreader` itself. The worker
+was stopped from the copy to the last B run, so both sides hold the same 124,484 entries and 8,134 cards (row counts
+and a CRC over id, url and url_hash matched before the run).
+
+| Step | Entries cleaned | Hashes changed | Cards cleaned | Wall time | Peak RSS |
+|---|---|---|---|---|---|
+| `--dry-run` | 9,556 | 1,710 | 1,417 | 27 s | – |
+| run | 9,556 | 1,710 | 1,417 | 31 s | 209 MB |
+| second run | 0 | 0 | 0 | 27 s | – |
+
+- The 1,710 hash changes are the 1,458 legacy `NULL` fills plus 252 from the wider list, as R1 predicted. No entry
+  with a URL is left without a hash.
+- Cards: 1,417, not R1's 1,476; the 59 are the YouTube/Spotify/NYT share keys this list no longer drops.
+- Entries in duplicate hash groups: 6,316 groups / 12,970 entries before, 6,327 / 12,996 after (+11 groups, +26 entries),
+  from the `NULL` fills and the `amp;utm_*` rows.
+- One stored URL still holds `utm_`: a freitag.de path segment (`…-utm_source-kl2sjq1-1`), which is no query pair.
+
+**Trending** (pin `2026-11-15 12:00:00`; A = develop on the uncleaned copy, B = HEAD on the cleaned `feedreader`):
+
+| Window | A groups / pairs | B groups / pairs | new | lost | net |
+|---|---|---|---|---|---|
+| day, all | 619 / 2,253 | 619 / 2,253 | 0 | 0 | 0 |
+| week, all | 3,820 / 20,155 | 3,820 / 20,155 | 0 | 0 | 0 |
+| French-only day / week | 57 / 188, 70 / 225 | same | 0 | 0 | 0 |
+| Spanish-only day / week | 20 / 30, 42 / 71 | same | 0 | 0 | 0 |
+
+Every language pair (de–de, en–en, fr–fr, es–es, mixed) is therefore unchanged. Run time and memory are unchanged
+(day 7.7 s / 161 MB, week 77.5 s / 296–302 MB RSS). R3's week +49 came from one card joining the Van Hollen group
+through its cleaned `youtu.be/…?si=` URL (and a NYT `?smid=` card beside it); with the per-host keys dropped, that
+join does not happen. The week window holds 14 entry hash changes, none of which moves a group.
+
+**Eye check.** 20 cleaned URLs drawn at random: 5 French (franceinfo `#xtor=RSS-3-[lestitres]`), 5 German (heise
+`wt_mc`, Riffreporter `utm_*&amp;utm_*`), 5 English (Politico Europe, Rest of World, BBC `at_*`), and 8 French- and
+Spanish-tagged cards (BBC, heise, comicsands, TechCrunch); no Spanish entry carries a tracker. Each keeps its article
+path. Five were fetched live (franceinfo, heise, Riffreporter, Rest of World, comicsands): all answer 200 at the
+cleaned URL.
