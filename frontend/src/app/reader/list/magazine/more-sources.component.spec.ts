@@ -4,7 +4,7 @@ import { EntryDto } from '../../models';
 import { MoreSourcesComponent } from './more-sources.component';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
-import { anEntry } from '../../../../testing/entry-testing';
+import { aLinkCard, anEntry } from '../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 
 const open = jest.fn();
@@ -73,7 +73,33 @@ it("counts a story's other articles, not its sources, on the toggle", () => {
 });
 
 it('counts a single other article in the singular', () => {
-  expect(mount(storyOf([copies[0]])).querySelector('.toggle')!.textContent).toContain('1 more article');
+  expect(mount(storyOf([copies[0]])).querySelector('.toggle')!.textContent).toContain(
+    '1 more article',
+  );
+});
+
+it('shows an article no followed outlet carries as the card its posts share', () => {
+  const sharedArticle = anEntry({
+    id: 4,
+    titleDerived: true,
+    excerpt: 'wow, look at this',
+    imageUrl: null,
+    linkCards: [
+      aLinkCard({
+        title: 'Keepers strike at dawn',
+        description: 'The lighthouse keepers walked out.',
+        imageUrl: 'https://img/card.jpg',
+      }),
+    ],
+    shares: [anEntry({ id: 9 })],
+  });
+  const element = mount(storyOf([sharedArticle]));
+  expand(element);
+
+  const mini = element.querySelector('.mini')!;
+  expect(mini.querySelector('.title')!.textContent).toContain('Keepers strike at dawn');
+  expect(mini.querySelector('.dek')!.textContent).toContain('The lighthouse keepers walked out.');
+  expect(mini.querySelector('img.thumb')!.getAttribute('src')).toBe('https://img/card.jpg');
 });
 
 it('expands to one mini card per source, naming its feed and title', () => {

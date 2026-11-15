@@ -6,6 +6,7 @@ import { EntryBlockBase } from '../../entry-block-base';
 import { LinkCardComponent } from '../../../../link-card/link-card.component';
 import { LinkCardPlaceholderComponent } from '../../../../link-card/link-card-placeholder.component';
 import { OpensEntryDirective } from '../../../opens-entry.directive';
+import { sharedArticleCard } from '../../../../trending/shared-article-card';
 
 @Component({
   selector: 'app-entry-link',
@@ -24,6 +25,6 @@ import { OpensEntryDirective } from '../../../opens-entry.directive';
 export class EntryLinkComponent extends EntryBlockBase {
   /** A Trending row no followed outlet carries is the article its posts share: the card heads it (#2229). */
   protected readonly ledByItsCard = computed(
-    () => !!this.entry().story && this.isPost() && (this.entry().shares?.length ?? 0) > 0,
+    () => !!this.entry().story && sharedArticleCard(this.entry()) !== null,
   );
 }
