@@ -337,3 +337,14 @@ join does not happen. The week window holds 14 entry hash changes, none of which
 Spanish-tagged cards (BBC, heise, comicsands, TechCrunch); no Spanish entry carries a tracker. Each keeps its article
 path. Five were fetched live (franceinfo, heise, Riffreporter, Rest of World, comicsands): all answer 200 at the
 cleaned URL.
+
+**Re-measured with the per-host keys restored (D2 ruling).**
+- On `feedreader` the command, rerun, cleaned 1 more entry, changed 1 more hash and cleaned 52 more cards
+  (27 s, 89 MB RSS); a third run reported 0/0/0.
+- For a frozen B, a scratch copy of `feedreader_2237_uncleaned` was cleaned by HEAD from scratch (9,557 entries,
+  1,711 hashes, 1,471 cards; then 0/0/0), measured, and dropped. It matched the cleaned `feedreader` row for row.
+- Trending, A = develop on `feedreader_2237_uncleaned`, B = HEAD on that cleaned copy: day all, French-only and
+  Spanish-only day and week are unchanged (new 0, lost 0). Week all: 20,155 → 20,204 pairs, new 49, lost 0, net +49
+  (de–de +1, en–en 0, fr–fr 0, es–es 0, mixed +48). The one change is R3's: the German post on the Van Hollen
+  interview joins the 49-member group through its cleaned card URL, making it 50. Run time and memory unchanged
+  (day 7.7 s / 162 MB, week 77.8 s / 299 MB).
