@@ -145,7 +145,10 @@ final class LinkLandingTest extends TestCase
 
     public function testATimedOutHeadIsNotRepeatedAsGet(): void
     {
-        $landing = $this->landingOf(self::SHORT, [LinkLandingWiring::failure(), LinkLandingWiring::redirect(self::ARTICLE)]);
+        $landing = $this->landingOf(self::SHORT, [
+            LinkLandingWiring::failure(),
+            LinkLandingWiring::redirect(self::ARTICLE),
+        ]);
 
         self::assertEquals(LinkLandingModel::retryable(), $landing);
         self::assertSame(['HEAD ' . self::SHORT], $this->requests());

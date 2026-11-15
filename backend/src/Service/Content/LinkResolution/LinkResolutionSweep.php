@@ -10,6 +10,7 @@ use App\Service\Content\LinkResolution\Model\LinkResolutionBudgetModel;
 use App\Service\Content\LinkResolution\Model\LinkResolutionReportModel;
 use App\Service\Content\LinkResolution\Model\PendingLinkModel;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use Psr\Log\LoggerInterface;
 
 /** Follows the queued short links, oldest first, within a budget; each is settled as soon as it lands. */
 final readonly class LinkResolutionSweep
@@ -21,6 +22,7 @@ final readonly class LinkResolutionSweep
         private SharedLinkResolutionRepository $linkResolutions,
         private LinkLanding $landing,
         private NaiveUtcClock $clock,
+        private LoggerInterface $logger,
     ) {
     }
 
@@ -32,11 +34,28 @@ final readonly class LinkResolutionSweep
                 break;
             }
             $startedAt = $this->clock->now();
-            $landing = $this->settle($link, $this->landing->of($link->url));
+            $landing = $this->attempt($link);
             $report = $report->counted($landing, self::secondsSince($startedAt, $this->clock->now()));
         }
 
         return $report;
+    }
+
+    /** A row that fails in a way nothing foresaw is settled unresolved, so it cannot stay first in the queue. */
+    private function attempt(PendingLinkModel $link): LinkLandingModel
+    {
+        try {
+            return $this->settle($link, $this->landing->of($link->url));
+        } catch (\Throwable $exception) {
+            $this->logger->error('Link resolution failed unexpectedly.', [
+                'linkId' => $link->linkId,
+                'url' => $link->url,
+                'exception' => $exception,
+            ]);
+            $this->linkResolutions->settle($link, LinkLandingModel::unresolved());
+
+            return LinkLandingModel::unresolved();
+        }
     }
 
     private function settle(PendingLinkModel $link, LinkLandingModel $landing): LinkLandingModel

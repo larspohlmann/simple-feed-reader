@@ -9,6 +9,7 @@ use App\Service\Content\LinkResolution\LinkResolutionSweep;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use Psr\Clock\ClockInterface;
 use Psr\Container\ContainerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class LinkResolutionSweepWiring
@@ -27,6 +28,11 @@ final class LinkResolutionSweepWiring
         /** @var SharedLinkResolutionRepository $linkResolutions */
         $linkResolutions = $container->get(SharedLinkResolutionRepository::class);
 
-        return new LinkResolutionSweep($linkResolutions, $wiring->landing($responses), new NaiveUtcClock($clock));
+        return new LinkResolutionSweep(
+            $linkResolutions,
+            $wiring->landing($responses),
+            new NaiveUtcClock($clock),
+            new NullLogger(),
+        );
     }
 }

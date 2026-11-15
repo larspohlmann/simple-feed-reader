@@ -14,6 +14,7 @@ use App\Service\Content\LinkResolution\Model\LinkResolutionReportModel;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Tests\DbTestCase;
 use App\Tests\Support\LinkLandingWiring;
+use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\SharedLinks;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -23,12 +24,14 @@ final class LinkResolutionSweepTest extends DbTestCase
 {
     private LinkLandingWiring $wiring;
     private MockClock $clock;
+    private RecordingLogger $logger;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->wiring = new LinkLandingWiring();
         $this->clock = new MockClock('2026-11-15 12:00:00');
+        $this->logger = new RecordingLogger();
     }
 
     public function testPendingRowsAreSettled(): void
@@ -65,7 +68,7 @@ final class LinkResolutionSweepTest extends DbTestCase
         $this->linkOf('https://n.pr/a');
         $second = $this->linkOf('https://n.pr/b');
 
-        $this->wiring->onRequest = fn () => $this->clock->sleep(6.5);
+        $this->wiring->onRequest = fn (string $url) => $this->clock->sleep(6.5);
 
         $report = $this->sweep([LinkLandingWiring::answer(Response::HTTP_OK)])
             ->resolvePending(LinkResolutionBudgetModel::links(2));
@@ -157,6 +160,28 @@ final class LinkResolutionSweepTest extends DbTestCase
         self::assertSame(LinkResolution::Unresolved, $this->stored($linkId)->getStatus());
     }
 
+    public function testABrokenRowIsSettledAndThePassGoesOn(): void
+    {
+        $broken = $this->linkOf('https://n.pr/a');
+        $next = $this->linkOf('https://n.pr/b');
+        $this->wiring->onRequest = static function (string $url): void {
+            if ($url === 'https://n.pr/a') {
+                throw new \LogicException('unexpected');
+            }
+        };
+
+        $report = $this->sweep([LinkLandingWiring::answer(Response::HTTP_OK)])
+            ->resolvePending(LinkResolutionBudgetModel::links(5));
+
+        self::assertSame(LinkResolution::Unresolved, $this->stored($broken)->getStatus());
+        self::assertSame(LinkResolution::Unchanged, $this->stored($next)->getStatus());
+        self::assertSame(2, $report->considered);
+        self::assertSame(1, $report->unresolved);
+        self::assertSame('error', $this->logger->records[0]['level']);
+        self::assertSame('Link resolution failed unexpectedly.', $this->logger->records[0]['message']);
+        self::assertSame($broken, $this->logger->records[0]['context']['linkId']);
+    }
+
     /** @return list<MockResponse> */
     private static function throttled(): array
     {
@@ -176,6 +201,7 @@ final class LinkResolutionSweepTest extends DbTestCase
             $linkResolutions,
             $this->wiring->landing($responses),
             new NaiveUtcClock($this->clock),
+            $this->logger,
         );
     }
 
