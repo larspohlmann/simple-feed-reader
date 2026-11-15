@@ -20,6 +20,7 @@ final readonly class PageIdentityModel
     {
         return $this->title === $other->title
             && (TrackingFreeUrl::of($this->finalUrl) === TrackingFreeUrl::of($other->finalUrl)
-                || ($this->canonicalUrl !== null && $this->canonicalUrl === $other->canonicalUrl));
+                || ($this->canonicalUrl !== null
+                    && TrackingFreeUrl::of($this->canonicalUrl) === TrackingFreeUrl::orNull($other->canonicalUrl)));
     }
 }

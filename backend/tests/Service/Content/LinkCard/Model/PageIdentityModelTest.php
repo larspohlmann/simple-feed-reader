@@ -25,6 +25,10 @@ final class PageIdentityModelTest extends TestCase
             new PageIdentityModel('https://news.example/b', self::CANONICAL, 'Story'),
             true,
         ];
+        yield 'another landing, a canonical that echoes a tracker' => [
+            new PageIdentityModel('https://news.example/b', self::CANONICAL . '?utm_source=x', 'Story'),
+            true,
+        ];
         yield 'another landing, another canonical' => [
             new PageIdentityModel('https://news.example/b', 'https://news.example/other', 'Story'),
             false,
