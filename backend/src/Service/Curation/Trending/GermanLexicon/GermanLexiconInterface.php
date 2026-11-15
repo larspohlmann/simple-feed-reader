@@ -15,8 +15,8 @@ interface GermanLexiconInterface
     /** An unknown form gets the rarest class plus one. */
     public function frequencyClassOf(string $form): int;
 
-    /** The class at which the nouns of a length, each weighing 2^-class, reach half their total weight. */
-    public function weightedMedianNounClassOfLength(int $length): int;
+    /** The class at which the nouns of a length, each weighing 2^-class, reach 99 % of their total weight. */
+    public function nounClassFloorOfLength(int $length): int;
 
     public function isVerbStem(string $presentStem): bool;
 

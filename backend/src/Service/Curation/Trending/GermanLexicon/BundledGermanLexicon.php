@@ -33,9 +33,9 @@ final class BundledGermanLexicon implements GermanLexiconInterface, ResetInterfa
         return $this->model()->frequencyClassOf($form);
     }
 
-    public function weightedMedianNounClassOfLength(int $length): int
+    public function nounClassFloorOfLength(int $length): int
     {
-        return $this->model()->weightedMedianNounClassOfLength($length);
+        return $this->model()->nounClassFloorOfLength($length);
     }
 
     public function isVerbStem(string $presentStem): bool

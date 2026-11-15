@@ -102,17 +102,17 @@ final class BundledLexiconDataTest extends TestCase
         $classes = array_map(intval(...), array_column($formRows, 2));
         $rarest = max($classes ?: [0]);
 
-        $this->assertSame(self::weightedMediansOf($formRows, $rarest), $meta['weightedMedianNounClassByLength']);
+        $this->assertSame(self::classFloorsOf($formRows, $rarest), $meta['nounClassFloorByLength']);
         $this->assertSame($rarest, $meta['rarest']);
     }
 
     /**
-     * The class at which the nouns of a length, each weighing 2^-class, reach half their total weight.
+     * The class at which the nouns of a length, each weighing 2^-class, reach 99 % of their total weight.
      *
      * @param list<list<string>> $formRows
      * @return array<int, int>
      */
-    private static function weightedMediansOf(array $formRows, int $rarest): array
+    private static function classFloorsOf(array $formRows, int $rarest): array
     {
         $weightsByLength = [];
         foreach ($formRows as [$form, $kind, $class]) {
@@ -129,7 +129,7 @@ final class BundledLexiconDataTest extends TestCase
             $cumulative = 0;
             foreach ($weightByClass as $class => $weight) {
                 $cumulative += $weight;
-                if (2 * $cumulative >= $total) {
+                if (100 * $cumulative >= 99 * $total) {
                     return $class;
                 }
             }

@@ -6,13 +6,13 @@ declare(strict_types=1);
 
 return [
     'rarest' => 17,
-    'weightedMedianNounClassByLength' => [
+    'nounClassFloorByLength' => [
         3 => 8,
-        4 => 8,
-        5 => 8,
-        6 => 8,
+        4 => 10,
+        5 => 9,
+        6 => 11,
         7 => 9,
-        8 => 11,
+        8 => 13,
         9 => 8,
         11 => 12,
     ],

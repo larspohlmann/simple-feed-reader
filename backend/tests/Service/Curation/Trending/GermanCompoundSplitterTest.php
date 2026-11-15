@@ -36,18 +36,17 @@ final class GermanCompoundSplitterTest extends TestCase
         yield 'fewer parts before a lower mean' => ['bundesrathaus', ['bund', 'rathaus']];
         yield 'an equal mean goes to the longer head' => ['staubecken', ['stau', 'becken']];
         yield 'a known whole rarer than its parts' => ['rathaus', ['rat', 'haus']];
-        yield 'a rare long part within the weighted median of its length' => [
-            'spionageverdacht',
-            ['spionage', 'verdacht'],
-        ];
+        yield 'a rare long part' => ['spionageverdacht', ['spionage', 'verdacht']];
+        yield 'a part at the class floor of its length' => ['kinderinstinkt', ['kinder', 'instinkt']];
         yield 'exactly the most parts' => ['tagtagtagtag', ['tag', 'tag', 'tag', 'tag']];
         yield 'a known whole as frequent as its parts' => ['bundesamt', []];
         yield 'a modifier that is no noun' => ['einsatz', []];
-        yield 'parts rarer than the weighted median of their length' => ['aktion', []];
+        yield 'parts rarer than the class floor of their length' => ['aktion', []];
+        yield 'a head above the class floor of its length' => ['hauskehricht', []];
         yield 'a modifier under three letters and a head that is no noun' => ['urinstinkt', []];
         yield 'a head that is no noun' => ['hausgroß', []];
         yield 'an unknown modifier' => ['xyzhaus', []];
-        yield 'a modifier rarer than the weighted median of its length' => ['aabhaus', []];
+        yield 'a modifier above the class floor of its length' => ['aabhaus', []];
         yield 'a modifier without a vowel' => ['pkwhaus', []];
         yield 'shorter than two parts' => ['tagra', []];
         yield 'no split into known parts' => ['polizei', []];
@@ -66,14 +65,16 @@ final class GermanCompoundSplitterTest extends TestCase
     /** @return iterable<string, array{string, list<string>}> */
     public static function issueCompounds(): iterable
     {
-        yield 'Spionageverdacht' => ['spionageverdacht', []];
+        yield 'Spionageverdacht' => ['spionageverdacht', ['spionage', 'verdacht']];
         yield 'Polizeieinsatz' => ['polizeieinsatz', ['polizei', 'einsatz']];
-        yield 'Cyberangriff' => ['cyberangriff', []];
+        yield 'Cyberangriff' => ['cyberangriff', ['cyber', 'angriff']];
         yield 'Dreiergipfel' => ['dreiergipfel', []];
-        yield 'Sonntagmittag' => ['sonntagmittag', []];
-        yield 'Bundestag' => ['bundestag', ['bundes', 'tag']];
+        yield 'Sonntagmittag' => ['sonntagmittag', ['sonntag', 'mittag']];
+        yield 'Bundestag' => ['bundestag', ['bund', 'tag']];
         yield 'Einsatz' => ['einsatz', []];
-        yield 'Kinderarztpraxis' => ['kinderarztpraxis', []];
+        yield 'Kinderarztpraxis' => ['kinderarztpraxis', ['kinder', 'arztpraxis']];
         yield 'Ministerpräsident' => ['ministerpräsident', ['minister', 'präsident']];
+        yield 'Bundesrat' => ['bundesrat', ['bund', 'rat']];
+        yield 'Sonntagvormittag' => ['sonntagvormittag', ['sonntag', 'vormittag']];
     }
 }

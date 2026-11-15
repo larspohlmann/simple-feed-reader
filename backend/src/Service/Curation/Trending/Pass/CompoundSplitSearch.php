@@ -100,7 +100,7 @@ final class CompoundSplitSearch
         }
         $frequencyClass = $this->lexicon->frequencyClassOf($form);
         if (
-            $frequencyClass > $this->lexicon->weightedMedianNounClassOfLength($length)
+            $frequencyClass > $this->lexicon->nounClassFloorOfLength($length)
             || !$this->lexicon->isNoun($form)
         ) {
             return null;
