@@ -405,7 +405,8 @@ Spanish, every changed group of both windows:
 - Grown: Eurovision Asia (2 → 3), the US flight stop (a member swap). Real.
 - Split: *Dinamarca golea a Portugal … era post Cristiano* (2 → 0) loses *era*, which Snowball's Spanish list holds as a
   form of *ser*; *Feijóo … habrá corrupción* (2 → 0) loses *habrá* (a form of *haber*); *Russell Brand* (2 → 0, a news
-  piece and a documentary review); *Voyager 1* (2 → 0, they share only *voyager*, *día luz*, *Tierra* and *está*). The
+  piece and a documentary review); *Voyager 1* (2 → 0: the headlines share *voyager, día, luz, Tierra* under both seed sets, so the change is in the
+  bodies, not inspected). The
   *Estados Unidos* flight-stop group (day) loses one member, as *estados* is a form of *estar* in Snowball's list (the
   spec's *estado* limitation).
 - Snowball's Spanish list makes verb forms that double as nouns into seeds (*era, estado(s), habrá*), as its German
