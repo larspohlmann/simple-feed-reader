@@ -7,7 +7,9 @@ namespace App\Tests\Controller\Api;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\LinkCardContent;
 use App\Entity\User;
+use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\StoredUserSettings;
@@ -64,6 +66,30 @@ final class SubscriptionTrendingCountsTest extends ApiTestCase
         self::assertSame(['window' => 'week', 'unopened' => 0], $this->payload($client)['trending']);
     }
 
+    public function testAStoryOnlyPostsCarryCountsUntilItsLeadIsOpened(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->bearerAndUser('trending-counts-card-led@example.com');
+        $fixtures = new TrendingFixtures($this->entityManager());
+        $ann = $fixtures->feed('ann', SocialNetwork::Mastodon);
+        $ben = $fixtures->feed('ben', SocialNetwork::Bluesky);
+        $fixtures->subscribe($user, $ann, $ben);
+        $lead = $fixtures->linkShare($ann, '2031-05-14 10:00:00', self::card('https://outlet.example/lighthouse'));
+        $other = $fixtures->linkShare($ben, '2031-05-14 09:00:00', self::card('https://other.example/keepers'));
+        $fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
+            [$lead, 'outlet.example'],
+            [$other, 'other.example'],
+        ]);
+
+        $client->request('GET', '/api/subscriptions/counts', server: $headers);
+        self::assertSame(['window' => 'day', 'unopened' => 1], $this->payload($client)['trending']);
+
+        $this->markViewed($user, $lead);
+        $client->request('GET', '/api/subscriptions/counts', server: $headers);
+
+        self::assertSame(['window' => 'day', 'unopened' => 0], $this->payload($client)['trending']);
+    }
+
     #[DataProvider('sidebarEndpoints')]
     public function testAnUnknownWindowIsAValidationProblem(string $endpoint): void
     {
@@ -115,6 +141,11 @@ final class SubscriptionTrendingCountsTest extends ApiTestCase
         $fixtures->story($window, '2031-05-14 10:00:00', ...$members);
 
         return $members[0];
+    }
+
+    private static function card(string $url): LinkCardContent
+    {
+        return new LinkCardContent($url, 'Lighthouse keepers strike', null, null, 'Outlet');
     }
 
     private function markViewed(User $user, Entry $entry): void

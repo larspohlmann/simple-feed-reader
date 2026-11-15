@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\LinkCardContent;
 use App\Entity\TrendingSnapshot;
+use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\TrendingFixtures;
@@ -56,6 +58,75 @@ final class TrendingControllerTest extends ApiTestCase
         self::assertSame(['outletCount' => 3, 'viewed' => false], $story['story']);
     }
 
+    public function testAStoryTwoPostsCarryThroughTwoSitesIsLedByThePostWithAPicturedCard(): void
+    {
+        [$headers, $user] = $this->bearerAndUser('trending-card-led@example.com');
+        $fixtures = new TrendingFixtures($this->entityManager());
+        $ann = $fixtures->feed('ann', SocialNetwork::Mastodon);
+        $ben = $fixtures->feed('ben', SocialNetwork::Bluesky);
+        $fixtures->subscribe($user, $ann, $ben);
+        $pictured = $fixtures->linkShare($ann, '2031-05-14 09:00:00', new LinkCardContent(
+            'https://outlet.example/lighthouse',
+            'Lighthouse keepers strike',
+            'The keepers walked out at dawn.',
+            'https://outlet.example/lighthouse.jpg',
+            'Outlet',
+        ));
+        $plain = $fixtures->linkShare($ben, '2031-05-14 10:00:00', new LinkCardContent(
+            'https://other.example/keepers',
+            'Keepers on strike',
+            null,
+            null,
+            'Other',
+        ));
+        $fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
+            [$pictured, 'outlet.example'],
+            [$plain, 'other.example'],
+        ]);
+
+        $this->client->request('GET', '/api/trending?window=day', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $story = self::onlyStoryOf($this->payload($this->client));
+        self::assertSame($pictured->requireId(), $story['id']);
+        self::assertIsArray($story['linkCards']);
+        self::assertIsArray($story['linkCards'][0]);
+        self::assertSame('Lighthouse keepers strike', $story['linkCards'][0]['title']);
+        self::assertSame([$plain->requireId()], self::idsOf($story['duplicates']));
+        self::assertSame(['outletCount' => 2, 'viewed' => false], $story['story']);
+    }
+
+    public function testAnArticleLeadsItsStoryAndAPostSharingItIsASource(): void
+    {
+        [$headers, $user] = $this->bearerAndUser('trending-article-led@example.com');
+        $fixtures = new TrendingFixtures($this->entityManager());
+        $alpha = $fixtures->feed('alpha');
+        $beta = $fixtures->feed('beta');
+        $ann = $fixtures->feed('ann', SocialNetwork::Mastodon);
+        $fixtures->subscribe($user, $alpha, $beta, $ann);
+        $lead = $fixtures->entry($alpha, 'Lead', '2031-05-14 09:00:00');
+        $second = $fixtures->entry($beta, 'Second', '2031-05-14 08:00:00');
+        $post = $fixtures->linkShare($ann, '2031-05-14 10:00:00', new LinkCardContent(
+            'https://alpha.example.com/lead',
+            'Lead',
+            null,
+            'https://alpha.example.com/lead.jpg',
+            'Alpha',
+        ));
+        $fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
+            [$lead, 'alpha.example.com'],
+            [$second, 'beta.example.com'],
+            [$post, 'alpha.example.com'],
+        ]);
+
+        $this->client->request('GET', '/api/trending?window=day', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $story = self::onlyStoryOf($this->payload($this->client));
+        self::assertSame($lead->requireId(), $story['id']);
+        self::assertSame([$post->requireId(), $second->requireId()], self::idsOf($story['duplicates']));
+    }
+
     public function testBuiltAtIsSerialisedAsAtomInUtc(): void
     {
         [$headers] = $this->bearerAndUser('trending-built@example.com');
@@ -102,5 +173,27 @@ final class TrendingControllerTest extends ApiTestCase
         $this->client->request('GET', '/api/trending?window=day');
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
+    }
+
+    /**
+     * @param array<mixed> $payload
+     *
+     * @return array<mixed>
+     */
+    private static function onlyStoryOf(array $payload): array
+    {
+        self::assertIsArray($payload['stories']);
+        self::assertCount(1, $payload['stories']);
+        self::assertIsArray($payload['stories'][0]);
+
+        return $payload['stories'][0];
+    }
+
+    /** @return list<mixed> */
+    private static function idsOf(mixed $rows): array
+    {
+        self::assertIsArray($rows);
+
+        return array_values(array_map(static fn (mixed $row): mixed => \is_array($row) ? $row['id'] : null, $rows));
     }
 }

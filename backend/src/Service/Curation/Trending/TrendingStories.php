@@ -70,7 +70,7 @@ final readonly class TrendingStories
     private function sourceFor(int $userId, array $ranked): StoryCardSource
     {
         $storyIds = RankedStoryModel::storyIdsOf($ranked);
-        $entryIdsByStory = $this->stories->articleEntryIdsByStory($userId, $storyIds);
+        $entryIdsByStory = $this->stories->shownEntryIdsByStory($userId, $storyIds);
 
         return new StoryCardSource(
             $entryIdsByStory,

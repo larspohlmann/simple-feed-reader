@@ -70,7 +70,7 @@ final class TrendingInclusionTest extends DbTestCase
         $this->fixtures->flush();
 
         self::assertSame([3], self::outletCountsOf($this->rankedDay()));
-        self::assertCount(3, $this->storyRepository()->articleEntryIdsByStory(
+        self::assertCount(3, $this->storyRepository()->shownEntryIdsByStory(
             $this->reader->requireId(),
             [$story->requireId()],
         )[$story->requireId()]);

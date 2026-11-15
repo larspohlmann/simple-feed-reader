@@ -20,21 +20,25 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 final class TrendingStoryRepository extends ServiceEntityRepository
 {
-    /** A story is shown to a reader only when at least this many article feeds they follow cover it. */
-    private const int MINIMUM_ARTICLE_FEEDS = 2;
+    /** A story is shown only when this many article feeds the reader follows, or this many article sites, carry it. */
+    private const int MINIMUM_ARTICLE_SOURCES = 2;
 
     private const array VISIBILITY_TYPES = [
         'user' => ParameterType::INTEGER,
         'minimum' => ParameterType::INTEGER,
-        'minimumArticleFeeds' => ParameterType::INTEGER,
+        'minimumArticleSources' => ParameterType::INTEGER,
         'shorterWindowStoryIds' => ArrayParameterType::INTEGER,
     ];
 
-    /** At least the reader's threshold of their feeds took part (social ones count), two of them article feeds. */
+    /**
+     * At least the reader's threshold of their feeds took part (social ones count), and two article feeds or two
+     * distinct article sites, a post's counting through the story card it shares.
+     */
     private const string VISIBLE_COVERAGE = ' GROUP BY story.id, story.last_seen'
         . ' HAVING COUNT(DISTINCT story_member.feed_id) >= :minimum'
-        . ' AND COUNT(DISTINCT CASE WHEN member_feed.network IS NULL THEN story_member.feed_id END)'
-        . ' >= :minimumArticleFeeds';
+        . ' AND (COUNT(DISTINCT CASE WHEN member_feed.network IS NULL THEN story_member.feed_id END)'
+        . ' >= :minimumArticleSources'
+        . ' OR COUNT(DISTINCT story_member.article_site) >= :minimumArticleSources)';
 
     public function __construct(ManagerRegistry $registry)
     {
@@ -99,9 +103,9 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     /**
      * @param list<int> $storyIds
      *
-     * @return array<int, list<int>> story id => its entries of the non-social feeds the reader follows
+     * @return array<int, list<int>> story id => its articles and story-card posts of the feeds the reader follows
      */
-    public function articleEntryIdsByStory(int $userId, array $storyIds): array
+    public function shownEntryIdsByStory(int $userId, array $storyIds): array
     {
         if ($storyIds === []) {
             return [];
@@ -110,10 +114,11 @@ final class TrendingStoryRepository extends ServiceEntityRepository
         /** @var list<array{story_id: int|string, entry_id: int|string}> $rows */
         $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
             'SELECT shown.story_id, shown.entry_id FROM trending_story_entry shown'
-            . ' JOIN feed article_feed ON article_feed.id = shown.feed_id AND article_feed.network IS NULL'
+            . ' JOIN feed shown_feed ON shown_feed.id = shown.feed_id'
             . ' JOIN subscription reader ON reader.feed_id = shown.feed_id AND reader.user_id = :user'
             . ' AND ' . TrendingInclusionSql::includes('reader')
-            . ' WHERE shown.story_id IN (:storyIds)',
+            . ' WHERE shown.story_id IN (:storyIds)'
+            . ' AND (shown_feed.network IS NULL OR shown.article_site IS NOT NULL)',
             ['user' => $userId, 'storyIds' => $storyIds],
             ['user' => ParameterType::INTEGER, 'storyIds' => ArrayParameterType::INTEGER],
         );
@@ -195,7 +200,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
      *     user: int,
      *     window: string,
      *     minimum: int,
-     *     minimumArticleFeeds: int,
+     *     minimumArticleSources: int,
      *     shorterWindowStoryIds: list<int>,
      * }
      */
@@ -205,7 +210,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             'user' => $reader->userId,
             'window' => $reader->window->value,
             'minimum' => $reader->minimumOutlets,
-            'minimumArticleFeeds' => self::MINIMUM_ARTICLE_FEEDS,
+            'minimumArticleSources' => self::MINIMUM_ARTICLE_SOURCES,
             'shorterWindowStoryIds' => $reader->shorterWindowStoryIds,
         ];
     }

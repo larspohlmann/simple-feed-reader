@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Trending\Model;
 
+use App\Enum\ShareKind;
 use App\Repository\EntryListRow;
 
-/** One Trending card: the lead article, newest with a picture, whose duplicates are the other outlets (#2017). */
+/**
+ * One Trending card: the lead article, newest with a picture, whose duplicates are the other outlets (#2017); a post
+ * sharing the story leads only when the reader follows no article feed in it (#2229).
+ */
 final readonly class TrendingStoryCardModel
 {
     public function __construct(
@@ -16,7 +20,7 @@ final readonly class TrendingStoryCardModel
     ) {
     }
 
-    /** @param non-empty-list<EntryListRow> $rows the story's article rows the reader can see */
+    /** @param non-empty-list<EntryListRow> $rows the story's article and story-card post rows the reader can see */
     public static function fromRows(array $rows, RankedStoryModel $story, bool $viewed): self
     {
         $onePerFeed = self::newestPerFeed($rows);
@@ -80,15 +84,38 @@ final readonly class TrendingStoryCardModel
         ));
     }
 
-    /** @param non-empty-list<EntryListRow> $rows */
+    /** @param non-empty-list<EntryListRow> $rows newest first */
     private static function leadOf(array $rows): EntryListRow
     {
-        foreach ($rows as $row) {
-            if ($row->entry->getImageUrl() !== null) {
-                return $row;
+        $articles = array_values(array_filter(
+            $rows,
+            static fn (EntryListRow $row): bool => $row->entry->getFeed()->getNetwork() === null,
+        ));
+        if ($articles === []) {
+            return self::postLeadOf($rows);
+        }
+        foreach ($articles as $article) {
+            if ($article->entry->getImageUrl() !== null) {
+                return $article;
             }
         }
 
-        return $rows[0];
+        return $articles[0];
+    }
+
+    /** @param non-empty-list<EntryListRow> $posts newest first */
+    private static function postLeadOf(array $posts): EntryListRow
+    {
+        $linkShares = array_values(array_filter(
+            $posts,
+            static fn (EntryListRow $post): bool => $post->entry->getShareKind() === ShareKind::Link,
+        ));
+        foreach ($linkShares as $linkShare) {
+            if (($linkShare->enrichment->linkCards[0] ?? null)?->imageUrl !== null) {
+                return $linkShare;
+            }
+        }
+
+        return $linkShares[0] ?? $posts[0];
     }
 }
