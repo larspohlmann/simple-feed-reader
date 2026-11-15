@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Trending\Support;
 
+use App\Service\Outbound\Fetch\Support\HostKey;
+
 final class ArticleSite
 {
-    private const string LEADING_WWW = 'www.';
-
+    /** The URL's host as HostKey keys it, or null when the URL has none. */
     public static function of(?string $url): ?string
     {
-        $host = $url === null ? null : parse_url($url, PHP_URL_HOST);
-        if (!\is_string($host) || $host === '') {
+        if ($url === null) {
             return null;
         }
-        $host = mb_strtolower($host);
+        $host = parse_url($url, PHP_URL_HOST);
 
-        return str_starts_with($host, self::LEADING_WWW) ? substr($host, \strlen(self::LEADING_WWW)) : $host;
+        return \is_string($host) && $host !== '' ? HostKey::forUrl($url) : null;
     }
 
     private function __construct()
