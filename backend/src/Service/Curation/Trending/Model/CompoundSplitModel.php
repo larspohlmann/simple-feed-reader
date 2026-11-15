@@ -41,17 +41,21 @@ final readonly class CompoundSplitModel
         return $this->partCount() > 1;
     }
 
-    /** A lower mean frequency class wins, then fewer parts, then the longer head. */
+    /** Fewer parts win, then the lower mean frequency class, then the longer head. */
     public function beats(self $other): bool
     {
-        $meanOrder = $this->classSum * $other->partCount() <=> $other->classSum * $this->partCount();
-        if (0 !== $meanOrder) {
-            return $meanOrder < 0;
-        }
         if ($this->partCount() !== $other->partCount()) {
             return $this->partCount() < $other->partCount();
         }
+        if ($this->classSum !== $other->classSum) {
+            return $this->classSum < $other->classSum;
+        }
 
         return $this->headLength > $other->headLength;
+    }
+
+    public function hasMeanClassOfAtLeast(int $frequencyClass): bool
+    {
+        return $this->classSum >= $frequencyClass * $this->partCount();
     }
 }

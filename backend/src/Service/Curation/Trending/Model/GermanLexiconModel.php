@@ -14,12 +14,12 @@ final readonly class GermanLexiconModel
 
     private SortedLinesModel $verbs;
 
-    /** @param array<int, int> $medianNounClassByLength */
+    /** @param array<int, int> $weightedMedianNounClassByLength */
     public function __construct(
         string $formLines,
         string $verbLines,
         private int $rarestClass,
-        private array $medianNounClassByLength,
+        private array $weightedMedianNounClassByLength,
     ) {
         $this->forms = new SortedLinesModel($formLines);
         $this->verbs = new SortedLinesModel($verbLines);
@@ -31,12 +31,12 @@ final readonly class GermanLexiconModel
         if (
             !is_array($meta)
             || !is_int($meta['rarest'] ?? null)
-            || !is_array($meta['medianNounClassByLength'] ?? null)
+            || !is_array($meta['weightedMedianNounClassByLength'] ?? null)
         ) {
             throw new \UnexpectedValueException('The German lexicon meta file has the wrong shape.');
         }
-        $medians = array_filter($meta['medianNounClassByLength'], is_int(...));
-        if (count($medians) !== count($meta['medianNounClassByLength'])) {
+        $medians = array_filter($meta['weightedMedianNounClassByLength'], is_int(...));
+        if (count($medians) !== count($meta['weightedMedianNounClassByLength'])) {
             throw new \UnexpectedValueException('The German lexicon meta file has a median that is not an integer.');
         }
 
@@ -65,9 +65,9 @@ final readonly class GermanLexiconModel
         return null === $line ? $this->rarestClass + 1 : (int) substr($line, 2);
     }
 
-    public function medianNounClassOfLength(int $length): int
+    public function weightedMedianNounClassOfLength(int $length): int
     {
-        return $this->medianNounClassByLength[$length] ?? $this->rarestClass + 1;
+        return $this->weightedMedianNounClassByLength[$length] ?? $this->rarestClass + 1;
     }
 
     public function isVerbStem(string $presentStem): bool

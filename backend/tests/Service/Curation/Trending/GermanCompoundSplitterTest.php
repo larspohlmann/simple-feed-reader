@@ -33,18 +33,21 @@ final class GermanCompoundSplitterTest extends TestCase
         yield 'the -s- link' => ['arbeitsamt', ['arbeit', 'amt']];
         yield 'the restored -e' => ['schulbus', ['schule', 'bus']];
         yield 'three parts' => ['kinderarztpraxis', ['kinder', 'arzt', 'praxis']];
+        yield 'fewer parts before a lower mean' => ['bundesrathaus', ['bund', 'rathaus']];
         yield 'an equal mean goes to the longer head' => ['staubecken', ['stau', 'becken']];
-        yield 'a rare long part no rarer than the median noun of its length' => [
+        yield 'a known whole rarer than its parts' => ['rathaus', ['rat', 'haus']];
+        yield 'a rare long part within the weighted median of its length' => [
             'spionageverdacht',
             ['spionage', 'verdacht'],
         ];
         yield 'exactly the most parts' => ['tagtagtagtag', ['tag', 'tag', 'tag', 'tag']];
-        yield 'rarer parts than the unsplit word' => ['aktion', []];
-        yield 'an unsplit word as frequent as its parts' => ['amtsarzt', []];
+        yield 'a known whole as frequent as its parts' => ['bundesamt', []];
+        yield 'a modifier that is no noun' => ['einsatz', []];
+        yield 'parts rarer than the weighted median of their length' => ['aktion', []];
         yield 'a modifier under three letters and a head that is no noun' => ['urinstinkt', []];
         yield 'a head that is no noun' => ['hausgroß', []];
         yield 'an unknown modifier' => ['xyzhaus', []];
-        yield 'a modifier rarer than the median noun of its length' => ['aabhaus', []];
+        yield 'a modifier rarer than the weighted median of its length' => ['aabhaus', []];
         yield 'a modifier without a vowel' => ['pkwhaus', []];
         yield 'shorter than two parts' => ['tagra', []];
         yield 'no split into known parts' => ['polizei', []];
@@ -63,10 +66,14 @@ final class GermanCompoundSplitterTest extends TestCase
     /** @return iterable<string, array{string, list<string>}> */
     public static function issueCompounds(): iterable
     {
-        yield 'Spionageverdacht' => ['spionageverdacht', ['spion', 'age', 'verdacht']];
-        yield 'Polizeieinsatz' => ['polizeieinsatz', ['polizei', 'eine', 'satz']];
-        yield 'Cyberangriff' => ['cyberangriff', ['cyber', 'angriff']];
-        yield 'Dreiergipfel' => ['dreiergipfel', ['drei', 'gipfel']];
-        yield 'Sonntagmittag' => ['sonntagmittag', ['sonne', 'tage', 'mit', 'tag']];
+        yield 'Spionageverdacht' => ['spionageverdacht', []];
+        yield 'Polizeieinsatz' => ['polizeieinsatz', ['polizei', 'einsatz']];
+        yield 'Cyberangriff' => ['cyberangriff', []];
+        yield 'Dreiergipfel' => ['dreiergipfel', []];
+        yield 'Sonntagmittag' => ['sonntagmittag', []];
+        yield 'Bundestag' => ['bundestag', ['bundes', 'tag']];
+        yield 'Einsatz' => ['einsatz', []];
+        yield 'Kinderarztpraxis' => ['kinderarztpraxis', []];
+        yield 'Ministerpräsident' => ['ministerpräsident', ['minister', 'präsident']];
     }
 }

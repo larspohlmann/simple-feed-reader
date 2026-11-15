@@ -9,6 +9,7 @@ use PHPUnit\Framework\TestCase;
 final class BundledLexiconDataTest extends TestCase
 {
     private const string DIRECTORY = __DIR__ . '/../../../../../resources/german-lexicon';
+    private const string FIXTURE_DIRECTORY = __DIR__ . '/../../../../Fixtures/german-lexicon';
 
     /** @var list<list<string>> */
     private static array $formRows;
@@ -18,8 +19,8 @@ final class BundledLexiconDataTest extends TestCase
 
     public static function setUpBeforeClass(): void
     {
-        self::$formRows = self::rowsOf('lexicon.tsv');
-        self::$verbRows = self::rowsOf('verbs.tsv');
+        self::$formRows = self::rowsOf(self::DIRECTORY, 'lexicon.tsv');
+        self::$verbRows = self::rowsOf(self::DIRECTORY, 'verbs.tsv');
     }
 
     public function testFilesStayUnderSixMebibytesTogether(): void
@@ -83,33 +84,66 @@ final class BundledLexiconDataTest extends TestCase
 
     public function testMetaDescribesTheNouns(): void
     {
-        $meta = require self::DIRECTORY . '/lexicon-meta.php';
+        $this->assertMetaDescribesTheNouns(self::DIRECTORY, self::$formRows);
+    }
+
+    public function testFixtureMetaFollowsTheSameDefinition(): void
+    {
+        $fixtureRows = self::rowsOf(self::FIXTURE_DIRECTORY, 'lexicon.tsv');
+
+        $this->assertMetaDescribesTheNouns(self::FIXTURE_DIRECTORY, $fixtureRows);
+    }
+
+    /** @param list<list<string>> $formRows */
+    private function assertMetaDescribesTheNouns(string $directory, array $formRows): void
+    {
+        $meta = require $directory . '/lexicon-meta.php';
         $this->assertIsArray($meta);
-        $classesByLength = [];
-        foreach (self::$formRows as [$form, $kind, $class]) {
+        $classes = array_map(intval(...), array_column($formRows, 2));
+        $rarest = max($classes ?: [0]);
+
+        $this->assertSame(self::weightedMediansOf($formRows, $rarest), $meta['weightedMedianNounClassByLength']);
+        $this->assertSame($rarest, $meta['rarest']);
+    }
+
+    /**
+     * The class at which the nouns of a length, each weighing 2^-class, reach half their total weight.
+     *
+     * @param list<list<string>> $formRows
+     * @return array<int, int>
+     */
+    private static function weightedMediansOf(array $formRows, int $rarest): array
+    {
+        $weightsByLength = [];
+        foreach ($formRows as [$form, $kind, $class]) {
             if ('n' === $kind) {
-                $classesByLength[mb_strlen($form)][] = (int) $class;
+                $weightsByLength[mb_strlen($form)][(int) $class] ??= 0;
+                $weightsByLength[mb_strlen($form)][(int) $class] += 1 << ($rarest - (int) $class);
             }
         }
-        ksort($classesByLength);
-        $medians = array_map(static function (array $classes): int {
-            sort($classes);
+        ksort($weightsByLength);
 
-            return $classes[intdiv(count($classes), 2)];
-        }, $classesByLength);
+        return array_map(static function (array $weightByClass): int {
+            ksort($weightByClass);
+            $total = array_sum($weightByClass);
+            $cumulative = 0;
+            foreach ($weightByClass as $class => $weight) {
+                $cumulative += $weight;
+                if (2 * $cumulative >= $total) {
+                    return $class;
+                }
+            }
 
-        $classes = array_map(intval(...), array_column(self::$formRows, 2));
-
-        $this->assertSame($medians, $meta['medianNounClassByLength']);
-        $this->assertSame(max($classes ?: [0]), $meta['rarest']);
+            return array_key_last($weightByClass);
+        }, $weightsByLength);
     }
 
     /** @return list<list<string>> */
-    private static function rowsOf(string $name): array
+    private static function rowsOf(string $directory, string $name): array
     {
         return array_map(
             static fn (string $line): array => explode("\t", $line),
-            explode("\n", rtrim((string) file_get_contents(self::DIRECTORY . '/' . $name), "\n")),
+            explode("\n", rtrim((string) file_get_contents($directory . '/' . $name), "\n")),
         );
     }
 }

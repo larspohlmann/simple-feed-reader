@@ -43,13 +43,13 @@ final class BundledGermanLexiconTest extends TestCase
         $this->assertSame(18, $lexicon->frequencyClassOf('nirgendwo'));
     }
 
-    public function testMedianNounClassOfALength(): void
+    public function testWeightedMedianNounClassOfALength(): void
     {
         $lexicon = $this->fixtureLexicon();
 
-        $this->assertSame(12, $lexicon->medianNounClassOfLength(4));
-        $this->assertSame(13, $lexicon->medianNounClassOfLength(8));
-        $this->assertSame(18, $lexicon->medianNounClassOfLength(40));
+        $this->assertSame(8, $lexicon->weightedMedianNounClassOfLength(4));
+        $this->assertSame(11, $lexicon->weightedMedianNounClassOfLength(8));
+        $this->assertSame(18, $lexicon->weightedMedianNounClassOfLength(40));
     }
 
     public function testResolvesVerbStems(): void
@@ -132,7 +132,7 @@ final class BundledGermanLexiconTest extends TestCase
         file_put_contents($this->temporaryDirectory . '/verbs.tsv', '');
         file_put_contents(
             $this->temporaryDirectory . '/lexicon-meta.php',
-            "<?php return ['rarest' => 1, 'medianNounClassByLength' => []];",
+            "<?php return ['rarest' => 1, 'weightedMedianNounClassByLength' => []];",
         );
     }
 }

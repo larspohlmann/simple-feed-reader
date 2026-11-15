@@ -25,13 +25,16 @@ final readonly class GermanCompoundSplitter
         if (mb_strlen($word) < 2 * self::MIN_PART_LENGTH) {
             return [];
         }
-        $best = CompoundSplitModel::single($word, $this->lexicon->frequencyClassOf($word));
-        foreach ((new CompoundSplitSearch($this->lexicon, $word))->splits() as $split) {
-            if ($split->beats($best)) {
-                $best = $split;
-            }
+        $split = (new CompoundSplitSearch($this->lexicon, $word))->bestSplit();
+        if (null === $split || $this->staysWhole($word, $split)) {
+            return [];
         }
 
-        return $best->isCompound() ? $best->parts() : [];
+        return $split->parts();
+    }
+
+    private function staysWhole(string $word, CompoundSplitModel $split): bool
+    {
+        return $this->lexicon->isKnown($word) && $split->hasMeanClassOfAtLeast($this->lexicon->frequencyClassOf($word));
     }
 }
