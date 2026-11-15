@@ -6,7 +6,7 @@ namespace App\Service\Operations\UrlCleanup;
 
 use App\Entity\Entry;
 use App\Repository\EntryRepository;
-use App\Repository\LinkCardRepository;
+use App\Repository\SharedLinkRepository;
 use App\Service\Foundation\Url\EntryUrlHash;
 use App\Service\Foundation\Url\Support\TrackingFreeUrl;
 use App\Service\Operations\UrlCleanup\Model\TrackingUrlCleanupReportModel;
@@ -17,7 +17,7 @@ final readonly class TrackingUrlCleanup
 {
     public function __construct(
         private EntryRepository $entries,
-        private LinkCardRepository $cards,
+        private SharedLinkRepository $sharedLinks,
         private EntryUrlHash $urlHash,
         private EntityManagerInterface $entityManager,
         private int $batchSize = 500,
@@ -36,7 +36,7 @@ final readonly class TrackingUrlCleanup
     {
         return $this->walk(
             static fn (Entry $entry, string $url, ?string $urlHash) => $entry->relocate($url, $urlHash),
-            $this->cards->moveTo(...),
+            $this->sharedLinks->moveTo(...),
         );
     }
 
@@ -93,7 +93,7 @@ final readonly class TrackingUrlCleanup
         $report = new TrackingUrlCleanupReportModel();
         $afterId = 0;
         do {
-            $batch = $this->cards->urlsAfterId($afterId, $this->batchSize);
+            $batch = $this->sharedLinks->urlsAfterId($afterId, $this->batchSize);
             $report = $report->plus($this->inOwnTransaction(
                 static fn (): TrackingUrlCleanupReportModel => self::cardBatch($batch, $moveCard),
             ));
@@ -103,14 +103,14 @@ final readonly class TrackingUrlCleanup
         return $report;
     }
 
-    /** @param array<int, string> $batch card URLs by card id */
+    /** @param array<int, string> $batch shared link URLs by link id */
     private static function cardBatch(array $batch, \Closure $moveCard): TrackingUrlCleanupReportModel
     {
         $cleaned = 0;
-        foreach ($batch as $cardId => $url) {
+        foreach ($batch as $linkId => $url) {
             $trackingFree = TrackingFreeUrl::of($url);
             if ($trackingFree !== $url) {
-                $moveCard($cardId, $trackingFree);
+                $moveCard($linkId, $trackingFree);
                 ++$cleaned;
             }
         }

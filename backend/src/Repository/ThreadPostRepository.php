@@ -139,13 +139,14 @@ final class ThreadPostRepository extends ServiceEntityRepository
         $rows = $this->getEntityManager()->createQueryBuilder()
             ->select(
                 'IDENTITY(card.threadPost) AS postId',
-                'card.url',
-                'card.title',
-                'card.description',
-                'card.imageUrl',
-                'card.siteName',
+                'link.url',
+                'link.title',
+                'link.description',
+                'link.imageUrl',
+                'link.siteName',
             )
             ->from(LinkCard::class, 'card')
+            ->join('card.link', 'link')
             ->andWhere('card.threadPost IN (:postIds)')
             ->setParameter('postIds', $postIds)
             ->orderBy('card.position', 'ASC')

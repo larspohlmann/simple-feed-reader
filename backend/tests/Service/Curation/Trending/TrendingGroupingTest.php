@@ -14,6 +14,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
 use App\Tests\Support\TrendingWiring;
 use Symfony\Component\Clock\MockClock;
+use App\Tests\Support\SharedLinks;
 
 final class TrendingGroupingTest extends DbTestCase
 {
@@ -89,7 +90,11 @@ final class TrendingGroupingTest extends DbTestCase
         );
         $this->fixtures->flush();
         $this->entityManager->persist(
-            new LinkCard($post, 0, new LinkCardContent($cardUrl, $cardTitle, null, null, 'Shared')),
+            new LinkCard(
+                $post,
+                0,
+                SharedLinks::of($this->entityManager, new LinkCardContent($cardUrl, $cardTitle, null, null, 'Shared')),
+            ),
         );
         $this->entityManager->flush();
 

@@ -35,6 +35,8 @@ use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use App\Tests\Support\SharedLinks;
+use App\Entity\SharedLink;
 
 final class SavedPostRepositoryTest extends DbTestCase
 {
@@ -222,13 +224,13 @@ final class SavedPostRepositoryTest extends DbTestCase
         $source = $this->subscribedFeed('https://companions.example/feed.xml');
         $saved = $this->savedFeed();
         $entry = $this->entry($source, 'with-card', 'https://companions.example/1');
-        $this->entityManager->persist(new LinkCard($entry, 0, new LinkCardContent(
+        $this->entityManager->persist(new LinkCard($entry, 0, SharedLinks::of($this->entityManager, new LinkCardContent(
             'https://shared.example/a',
             'Shared',
             null,
             null,
             'shared.example',
-        )));
+        ))));
         $this->entityManager->flush();
         $copies = $this->repository()->copyInto(new SavedCopyModel($saved->requireId(), null), [$entry->requireId()]);
 
@@ -249,19 +251,41 @@ final class SavedPostRepositoryTest extends DbTestCase
         );
     }
 
+    public function testACopyReferencesTheSameLink(): void
+    {
+        $source = $this->subscribedFeed('https://same-link.example/feed.xml');
+        $saved = $this->savedFeed();
+        $entry = $this->entry($source, 'with-link', 'https://same-link.example/1');
+        $link = $this->link('https://shared.example/b');
+        $this->entityManager->persist(new LinkCard($entry, 0, $link));
+        $this->entityManager->flush();
+        $copies = $this->repository()->copyInto(new SavedCopyModel($saved->requireId(), null), [$entry->requireId()]);
+
+        $this->repository()->copyCompanions($copies, null);
+
+        self::assertEquals(
+            [$link->requireId()],
+            $this->entityManager->getConnection()->fetchFirstColumn(
+                'SELECT shared_link_id FROM link_card WHERE entry_id = ?',
+                [$copies[$entry->requireId()]],
+            ),
+        );
+        self::assertEquals(1, $this->entityManager->getConnection()->fetchOne('SELECT COUNT(*) FROM shared_link'));
+    }
+
     public function testACopyCarriesItsSelfReplyThreadWithEachReplysCard(): void
     {
         $source = $this->subscribedFeed('https://thread.example/feed.xml');
         $saved = $this->savedFeed();
         $entry = $this->entry($source, 'with-thread', 'https://thread.example/1');
-        $this->entityManager->persist(new LinkCard($entry, 0, self::card('https://root.example/')));
+        $this->entityManager->persist(new LinkCard($entry, 0, $this->link('https://root.example/')));
         $reply = new ThreadPost(
             $entry,
             1,
             new ThreadPostContent('https://thread.example/1/reply', null, '<p>more</p>', []),
         );
         $this->entityManager->persist($reply);
-        $this->entityManager->persist(new LinkCard($entry, 1, self::card('https://reply.example/'), $reply));
+        $this->entityManager->persist(new LinkCard($entry, 1, $this->link('https://reply.example/'), $reply));
         $this->entityManager->flush();
         $copies = $this->repository()->copyInto(new SavedCopyModel($saved->requireId(), null), [$entry->requireId()]);
 
@@ -434,6 +458,11 @@ final class SavedPostRepositoryTest extends DbTestCase
     }
 
     /** Nothing injects it yet, so the test container has removed it. */
+    private function link(string $url): SharedLink
+    {
+        return SharedLinks::of($this->entityManager, self::card($url));
+    }
+
     private static function card(string $url): LinkCardContent
     {
         return new LinkCardContent($url, 'Shared', null, null, 'shared.example');

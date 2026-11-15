@@ -28,6 +28,7 @@ use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\SelfThreadEnrichers;
 use Symfony\Component\Clock\MockClock;
+use App\Tests\Support\SharedLinks;
 
 final class SelfThreadEnricherTest extends DbTestCase
 {
@@ -153,7 +154,10 @@ final class SelfThreadEnricherTest extends DbTestCase
         $entry->setShareKind(ShareKind::Link);
         $entry->recordText($entry->getText()->withContentHtml(self::LINKED_TEXT));
         PostEnrichers::linkCards($this->entityManager)->append($entry, [
-            new LinkCardContent(self::LINKED_PAGE, 'Story', null, null, 'example.com'),
+            SharedLinks::of(
+                $this->entityManager,
+                new LinkCardContent(self::LINKED_PAGE, 'Story', null, null, 'example.com'),
+            ),
         ]);
         $this->entityManager->flush();
         $this->thread->readsReplies([self::ownReply('<p>one</p>', '2026-10-17 10:00:00')]);

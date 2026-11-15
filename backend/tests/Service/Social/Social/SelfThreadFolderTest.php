@@ -19,6 +19,9 @@ use App\Service\Social\Social\Factory\ThreadPostFactory;
 use App\Service\Social\Social\Model\ThreadPostModel;
 use App\Service\Social\Social\SelfThreadFolder;
 use App\Tests\DbTestCase;
+use App\Tests\Support\PostEnrichers;
+use App\Tests\Support\SharedLinks;
+use App\Entity\SharedLink;
 
 final class SelfThreadFolderTest extends DbTestCase
 {
@@ -95,7 +98,7 @@ final class SelfThreadFolderTest extends DbTestCase
     public function testReplyCardsNumberAfterTheRootCardsAndBelongToTheirReply(): void
     {
         $entry = $this->entry();
-        $this->entityManager->persist(new LinkCard($entry, 0, self::card('https://root.example/')));
+        $this->entityManager->persist(new LinkCard($entry, 0, $this->link('https://root.example/')));
         $this->entityManager->flush();
 
         $this->folder()->fold($entry, [
@@ -105,7 +108,8 @@ final class SelfThreadFolderTest extends DbTestCase
         $this->entityManager->flush();
 
         $rows = $this->entityManager->getConnection()->fetchAllAssociative(
-            'SELECT c.position, c.url, p.position AS reply_position FROM link_card c '
+            'SELECT c.position, l.url, p.position AS reply_position FROM link_card c '
+            . 'JOIN shared_link l ON l.id = c.shared_link_id '
             . 'LEFT JOIN thread_post p ON p.id = c.thread_post_id WHERE c.entry_id = ? ORDER BY c.position',
             [$entry->requireId()],
         );
@@ -147,6 +151,11 @@ final class SelfThreadFolderTest extends DbTestCase
         );
     }
 
+    private function link(string $url): SharedLink
+    {
+        return SharedLinks::of($this->entityManager, self::card($url));
+    }
+
     private static function card(string $url): LinkCardContent
     {
         return new LinkCardContent($url, 'Title', null, null, 'site.example');
@@ -172,7 +181,12 @@ final class SelfThreadFolderTest extends DbTestCase
         $linkCards = self::getContainer()->get(LinkCardRepository::class);
         self::assertInstanceOf(LinkCardRepository::class, $linkCards);
 
-        return new SelfThreadFolder($this->entityManager, new ThreadPostFactory(), $linkCards);
+        return new SelfThreadFolder(
+            $this->entityManager,
+            new ThreadPostFactory(),
+            $linkCards,
+            PostEnrichers::sharedLinkWriter($this->entityManager),
+        );
     }
 
     private function threadPosts(): ThreadPostRepository

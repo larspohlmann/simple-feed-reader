@@ -60,19 +60,17 @@ final readonly class EntryBatchInserter
      *
      * @param array<string, int> $entryIdsByGuidHash
      * @param list<EntryLine>    $lines
+     * @param array<string, int> $linkIdsByUrl       the shared link of every card URL of the lines
      */
-    public function insertLinkCards(array $entryIdsByGuidHash, array $lines): void
+    public function insertLinkCards(array $entryIdsByGuidHash, array $lines, array $linkIdsByUrl): void
     {
         $rows = [];
         foreach ($lines as $line) {
             foreach ($line->linkCards as $position => $card) {
-                $rows[] = [
-                    $entryIdsByGuidHash[$line->guidHash], $position,
-                    $card->url, $card->title, $card->description, $card->imageUrl, $card->siteName,
-                ];
+                $rows[] = [$entryIdsByGuidHash[$line->guidHash], $position, $linkIdsByUrl[$card->url]];
             }
         }
-        $this->insertRows('link_card (entry_id, position, url, title, description, image_url, site_name)', $rows);
+        $this->insertRows('link_card (entry_id, position, shared_link_id)', $rows);
     }
 
     /**

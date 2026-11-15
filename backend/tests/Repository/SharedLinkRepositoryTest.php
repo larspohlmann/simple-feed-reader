@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
+use App\Entity\Entry;
+use App\Entity\Feed;
+use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 use App\Entity\LinkLanguage;
 use App\Entity\SharedLink;
@@ -11,6 +14,8 @@ use App\Enum\FeedLanguage;
 use App\Repository\SharedLinkRepository;
 use App\Service\Content\LinkCard\Model\NewSharedLinkModel;
 use App\Tests\DbTestCase;
+use App\Tests\Support\SharedLinks;
+use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
 
 final class SharedLinkRepositoryTest extends DbTestCase
 {
@@ -66,6 +71,34 @@ final class SharedLinkRepositoryTest extends DbTestCase
         $this->repository()->insertMissing([]);
 
         self::assertSame(0, $this->storedRows());
+    }
+
+    public function testDeletingAStillReferencedRowIsRefused(): void
+    {
+        $feed = new Feed('https://example.com/rss');
+        $entry = new Entry(
+            $feed,
+            'carded',
+            null,
+            'Post',
+            new \DateTimeImmutable('2026-11-15 10:00:00'),
+            new \DateTimeImmutable('2026-11-15 10:00:00'),
+        );
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist($entry);
+        $link = SharedLinks::of(
+            $this->entityManager,
+            new LinkCardContent('https://example.com/a', 'A', null, null, 'example.com'),
+        );
+        $this->entityManager->persist(new LinkCard($entry, 0, $link));
+        $this->entityManager->flush();
+
+        $this->expectException(ForeignKeyConstraintViolationException::class);
+
+        $this->entityManager->getConnection()->executeStatement(
+            'DELETE FROM shared_link WHERE id = ?',
+            [$link->requireId()],
+        );
     }
 
     private static function newLink(string $hash, string $title): NewSharedLinkModel

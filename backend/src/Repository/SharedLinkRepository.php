@@ -90,6 +90,39 @@ final class SharedLinkRepository extends ServiceEntityRepository
         )->rows($connection, array_map(self::rowOf(...), $links));
     }
 
+    /** @return array<int, string> by shared link id */
+    public function urlsAfterId(int $afterId, int $limit): array
+    {
+        /** @var list<array{id: int|string, url: string}> $rows */
+        $rows = $this->createQueryBuilder('link')
+            ->select('link.id', 'link.url')
+            ->andWhere('link.id > :afterId')
+            ->setParameter('afterId', $afterId)
+            ->orderBy('link.id', 'ASC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getArrayResult();
+
+        $urls = [];
+        foreach ($rows as $row) {
+            $urls[(int) $row['id']] = $row['url'];
+        }
+
+        return $urls;
+    }
+
+    public function moveTo(int $linkId, string $url): void
+    {
+        $this->createQueryBuilder('link')
+            ->update()
+            ->set('link.url', ':url')
+            ->andWhere('link.id = :id')
+            ->setParameter('url', $url)
+            ->setParameter('id', $linkId)
+            ->getQuery()
+            ->execute();
+    }
+
     /** @return list<int|string|null> */
     private static function rowOf(NewSharedLinkModel $link): array
     {

@@ -44,6 +44,7 @@ use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
+use App\Tests\Support\SharedLinks;
 
 final class EntryListRowEnricherTest extends DbTestCase
 {
@@ -95,7 +96,7 @@ final class EntryListRowEnricherTest extends DbTestCase
         $this->entityManager->persist($reply);
         $this->linkCards()->appendToThreadPost(
             $reply,
-            new LinkCardContent('https://reply.test/', 'R', null, null, 'S'),
+            SharedLinks::of($this->entityManager, new LinkCardContent('https://reply.test/', 'R', null, null, 'S')),
         );
         $this->entityManager->flush();
 
@@ -661,7 +662,8 @@ final class EntryListRowEnricherTest extends DbTestCase
 
     private function card(Entry $entry, int $position, string $url): void
     {
-        $this->entityManager->persist(new LinkCard($entry, $position, new LinkCardContent($url, 'T', null, null, 'S')));
+        $link = SharedLinks::of($this->entityManager, new LinkCardContent($url, 'T', null, null, 'S'));
+        $this->entityManager->persist(new LinkCard($entry, $position, $link));
         $this->entityManager->flush();
     }
 

@@ -744,6 +744,7 @@ final class PostEnricherTest extends DbTestCase
             new EntrySanitizer(new TrailingBlankRemover()),
             new EntryImageWriter(),
             PostEnrichers::linkCards($this->entityManager),
+            PostEnrichers::sharedLinkWriter($this->entityManager),
         );
     }
 

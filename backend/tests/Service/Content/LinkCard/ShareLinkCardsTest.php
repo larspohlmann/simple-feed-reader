@@ -27,6 +27,7 @@ use App\Tests\Support\StubQuotedPostSource;
 use Doctrine\ORM\Decorator\EntityManagerDecorator;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Clock\MockClock;
+use App\Tests\Support\SharedLinks;
 
 final class ShareLinkCardsTest extends DbTestCase
 {
@@ -439,7 +440,14 @@ final class ShareLinkCardsTest extends DbTestCase
     private function storedCard(Entry $entry, int $position, string $url): void
     {
         $this->entityManager->persist(
-            new LinkCard($entry, $position, new LinkCardContent($url, 'Stored before', null, null, 'example.com')),
+            new LinkCard(
+                $entry,
+                $position,
+                SharedLinks::of(
+                    $this->entityManager,
+                    new LinkCardContent($url, 'Stored before', null, null, 'example.com'),
+                ),
+            ),
         );
         $this->entityManager->flush();
     }

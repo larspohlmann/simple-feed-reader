@@ -18,6 +18,7 @@ use App\Repository\LinkCardRepository;
 use App\Repository\PendingImageVerificationRepository;
 use App\Service\Operations\Backup\Dto\EntryLine;
 use App\Tests\DbTestCase;
+use App\Tests\Support\PostEnrichers;
 
 final class EntryBatchInserterTest extends DbTestCase
 {
@@ -279,7 +280,9 @@ final class EntryBatchInserterTest extends DbTestCase
         $this->inserter()->insert($feedId, [$withCards, $without]);
         $entryIdsByGuidHash = $this->entryIdsByGuidHash($feedId);
 
-        $this->inserter()->insertLinkCards($entryIdsByGuidHash, [$withCards, $without]);
+        $linkIds = PostEnrichers::sharedLinkWriter($this->entityManager)->idsFor($withCards->linkCards);
+
+        $this->inserter()->insertLinkCards($entryIdsByGuidHash, [$withCards, $without], $linkIds);
 
         $linkCards = self::getContainer()->get(LinkCardRepository::class);
         self::assertInstanceOf(LinkCardRepository::class, $linkCards);

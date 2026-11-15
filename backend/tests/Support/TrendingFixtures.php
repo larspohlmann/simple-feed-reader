@@ -71,7 +71,10 @@ final readonly class TrendingFixtures
         $this->entityManager->persist(new LinkCard(
             $post,
             0,
-            new LinkCardContent($cardUrl, 'Card', null, null, (string) parse_url($cardUrl, PHP_URL_HOST)),
+            SharedLinks::of(
+                $this->entityManager,
+                new LinkCardContent($cardUrl, 'Card', null, null, (string) parse_url($cardUrl, PHP_URL_HOST)),
+            ),
         ));
 
         return $post;
@@ -83,7 +86,7 @@ final readonly class TrendingFixtures
         $post = $this->entry($feed, 'Worth a read', $effectiveDate);
         $post->setShareKind(ShareKind::Link);
         $this->entityManager->flush();
-        $this->entityManager->persist(new LinkCard($post, 0, $card));
+        $this->entityManager->persist(new LinkCard($post, 0, SharedLinks::of($this->entityManager, $card)));
 
         return $post;
     }

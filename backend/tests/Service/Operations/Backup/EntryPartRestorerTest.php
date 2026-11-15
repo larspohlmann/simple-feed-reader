@@ -33,6 +33,7 @@ use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use App\Tests\Support\PostEnrichers;
 
 final class EntryPartRestorerTest extends DbTestCase
 {
@@ -503,6 +504,7 @@ final class EntryPartRestorerTest extends DbTestCase
             $entryStates,
             $entryShares,
             $inserter,
+            PostEnrichers::sharedLinkWriter($this->entityManager),
             EntryIndexers::with($this->indexWriter),
             new RestoredEntryStateFactory(new MockClock('2026-08-20 00:00:00', 'UTC')),
             $feeds,

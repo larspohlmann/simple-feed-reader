@@ -27,6 +27,7 @@ use App\Tests\Support\SignsReaderUrls;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
+use App\Tests\Support\SharedLinks;
 
 final class EntryControllerTest extends ApiTestCase
 {
@@ -154,14 +155,10 @@ final class EntryControllerTest extends ApiTestCase
     {
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $entityManager->persist(
-            new LinkCard($entry, 1, new LinkCardContent('https://b.test/2', 'Second', null, null, 'B')),
-        );
-        $entityManager->persist(new LinkCard(
-            $entry,
-            0,
-            new LinkCardContent('https://a.test/1', 'First', 'About it', 'https://a.test/i.jpg', 'A'),
-        ));
+        $second = new LinkCardContent('https://b.test/2', 'Second', null, null, 'B');
+        $first = new LinkCardContent('https://a.test/1', 'First', 'About it', 'https://a.test/i.jpg', 'A');
+        $entityManager->persist(new LinkCard($entry, 1, SharedLinks::of($entityManager, $second)));
+        $entityManager->persist(new LinkCard($entry, 0, SharedLinks::of($entityManager, $first)));
         $entityManager->flush();
     }
 
@@ -217,6 +214,34 @@ final class EntryControllerTest extends ApiTestCase
         self::assertIsArray($oldest);
         self::assertSame($this->expectedLinkCards(), $newest['linkCards']);
         self::assertSame([], $oldest['linkCards']);
+    }
+
+    public function testTwoPostsSharingAUrlShowOneCard(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->bearerAndUser('e-shared-link-cards@example.com');
+        $subscription = $this->seedFeedWithEntries($user, 2);
+        $this->seedLinkCards($this->entryWithGuid($subscription, 'g1'));
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entityManager->persist(new LinkCard(
+            $this->entryWithGuid($subscription, 'g2'),
+            0,
+            SharedLinks::of($entityManager, new LinkCardContent('https://a.test/1', 'Later', 'Other', null, 'Z')),
+        ));
+        $entityManager->flush();
+
+        $client->request('GET', '/api/entries', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['entries']);
+        [$newest, $oldest] = $body['entries'];
+        self::assertIsArray($newest);
+        self::assertIsArray($oldest);
+        self::assertSame([$this->expectedLinkCards()[0]], $newest['linkCards']);
+        self::assertSame($this->expectedLinkCards(), $oldest['linkCards']);
     }
 
     public function testGetCarriesLinkCardsAndEmptyWhenThereAreNone(): void

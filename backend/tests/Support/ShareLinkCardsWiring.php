@@ -75,6 +75,7 @@ final class ShareLinkCardsWiring
         return new EntryCardWriter(
             PostEnrichers::linkCards($entityManager),
             new EntrySanitizer(new TrailingBlankRemover()),
+            PostEnrichers::sharedLinkWriter($entityManager),
         );
     }
 

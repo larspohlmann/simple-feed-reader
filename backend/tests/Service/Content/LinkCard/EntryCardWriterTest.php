@@ -10,6 +10,7 @@ use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
+use App\Enum\FeedLanguage;
 use App\Enum\ShareKind;
 use App\Service\Content\LinkCard\EntryCardWriter;
 use App\Service\Content\LinkCard\Model\EntryCardsModel;
@@ -18,6 +19,7 @@ use App\Service\Content\LinkCard\Model\QuotedTargetModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\ShareLinkCardsWiring;
+use App\Tests\Support\SharedLinks;
 
 final class EntryCardWriterTest extends DbTestCase
 {
@@ -54,6 +56,47 @@ final class EntryCardWriterTest extends DbTestCase
             $this->cardUrls($post),
         );
         self::assertSame([0, 1, 2], $this->positions($post));
+    }
+
+    public function testAKnownPageCardIsAttachedWithoutAWrite(): void
+    {
+        $post = $this->post('<p>https://example.com/known https://example.com/read</p>');
+        $known = SharedLinks::of(
+            $this->entityManager,
+            new LinkCardContent('https://example.com/known', 'Stored', null, null, 'example.com'),
+        );
+
+        $this->writeFlushed($post, new EntryCardsModel(
+            [],
+            [PageCardModel::known($known), self::pageCard('https://example.com/read')],
+        ));
+
+        self::assertSame(['https://example.com/known', 'https://example.com/read'], $this->cardUrls($post));
+        self::assertSame(2, $this->storedLinks());
+        self::assertEquals(
+            $known->requireId(),
+            $this->entityManager->getConnection()->fetchOne(
+                'SELECT shared_link_id FROM link_card WHERE entry_id = ? AND position = 0',
+                [$post->requireId()],
+            ),
+        );
+    }
+
+    public function testAReadPageCardCarriesItsStatedLanguage(): void
+    {
+        $post = $this->post('<p>https://example.com/fr</p>');
+
+        $this->writeFlushed($post, new EntryCardsModel([], [
+            new PageCardModel(self::card('https://example.com/fr'), null, statedLanguage: FeedLanguage::French),
+        ]));
+
+        self::assertSame(
+            ['fr', 'stated'],
+            array_values((array) $this->entityManager->getConnection()->fetchAssociative(
+                'SELECT language, language_source FROM shared_link WHERE url = ?',
+                ['https://example.com/fr'],
+            )),
+        );
     }
 
     public function testAPageWithoutACardLeavesNoGapInTheOrder(): void
@@ -213,6 +256,14 @@ final class EntryCardWriterTest extends DbTestCase
             static fn (LinkCardContent $card): string => $card->url,
             $cardsByEntryId[$entry->requireId()] ?? [],
         );
+    }
+
+    private function storedLinks(): int
+    {
+        $count = $this->entityManager->getConnection()->fetchOne('SELECT COUNT(*) FROM shared_link');
+        self::assertIsNumeric($count);
+
+        return (int) $count;
     }
 
     /** @return list<mixed> */

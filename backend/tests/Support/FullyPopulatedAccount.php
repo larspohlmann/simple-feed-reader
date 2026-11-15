@@ -89,13 +89,13 @@ final readonly class FullyPopulatedAccount
         $this->entityManager->persist($entry);
         $this->entityManager->persist($this->stateFor($user, $entry));
         $this->entityManager->persist(new EntryShare($user, $entry, new \DateTimeImmutable('2026-08-06T10:00:00Z')));
-        $this->entityManager->persist(new LinkCard($entry, 0, new LinkCardContent(
+        $this->entityManager->persist(new LinkCard($entry, 0, SharedLinks::of($this->entityManager, new LinkCardContent(
             'https://shared.example/story',
             'The shared story',
             'What the shared page says about itself.',
             'https://shared.example/story.jpg',
             'Shared Example',
-        )));
+        ))));
         $this->entityManager->persist(
             new SavedEntryOrigin($entry, new EntryOrigin('Populated origin', 'https://populated.example/favicon.ico')),
         );

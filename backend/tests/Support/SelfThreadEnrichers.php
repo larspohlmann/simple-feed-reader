@@ -42,7 +42,12 @@ final class SelfThreadEnrichers
             PostEnrichers::enrichments($entityManager),
             new ServiceLocator(['bluesky' => static fn () => $source, 'mastodon' => static fn () => $source]),
             new SelfReplyChain(),
-            new SelfThreadFolder($entityManager, new ThreadPostFactory(), PostEnrichers::linkCards($entityManager)),
+            new SelfThreadFolder(
+                $entityManager,
+                new ThreadPostFactory(),
+                PostEnrichers::linkCards($entityManager),
+                PostEnrichers::sharedLinkWriter($entityManager),
+            ),
             self::threadPosts($entityManager),
             PostEnrichers::linkCards($entityManager),
             new NaiveUtcClock($clock),

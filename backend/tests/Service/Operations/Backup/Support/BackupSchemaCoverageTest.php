@@ -39,6 +39,7 @@ use App\Entity\SavedSearchNetworkInclusion;
 use App\Entity\SavedSearchEntry;
 use App\Entity\SharingSettings;
 use App\Entity\ShareEnrichment;
+use App\Entity\SharedLink;
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Entity\SocialLike;
@@ -157,6 +158,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . 'entries on the next rebuild.',
         TrendingStoryEntry::class => 'An entry\'s membership of a Trending story (#2017); regrouped from the '
             . 'entries on the next rebuild.',
+        SharedLink::class => 'A linked article, stored once for every post that shares it (#2239); a card\'s line '
+            . 'carries its preview, and a restore finds or creates the row from it.',
     ];
 
     /**

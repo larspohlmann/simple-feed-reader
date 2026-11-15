@@ -6,8 +6,15 @@ namespace App\Tests\Support;
 
 use App\Entity\LinkCard;
 use App\Entity\ShareEnrichment;
+use App\Entity\SharedLink;
 use App\Repository\LinkCardRepository;
 use App\Repository\ShareEnrichmentRepository;
+use App\Repository\SharedLinkRepository;
+use App\Service\Content\LinkCard\SharedLinkWriter;
+use App\Service\Foundation\Url\UrlNormalizer;
+use App\Service\Ingestion\Language\Factory\LanguageDetectionFactory;
+use App\Service\Ingestion\Language\LanguageGuess;
+use App\Service\Ingestion\Language\PreviewLanguage;
 use App\Service\Social\Bluesky\AppViewClient;
 use App\Service\Social\Bluesky\BlueskyPendingEmbed;
 use App\Service\Social\Social\MastodonPendingThread;
@@ -29,9 +36,12 @@ use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Clock\NativeClock;
 
 final class PostEnrichers
 {
+    private static ?PreviewLanguage $previewLanguage = null;
+
     private function __construct()
     {
     }
@@ -87,6 +97,24 @@ final class PostEnrichers
             new EntrySanitizer(new TrailingBlankRemover()),
             new EntryImageWriter(),
             self::linkCards($entityManager),
+            self::sharedLinkWriter($entityManager),
+        );
+    }
+
+    public static function sharedLinkWriter(
+        EntityManagerInterface $entityManager,
+        ClockInterface $clock = new NativeClock(),
+    ): SharedLinkWriter {
+        /** @var SharedLinkRepository $sharedLinks */
+        $sharedLinks = $entityManager->getRepository(SharedLink::class);
+
+        return new SharedLinkWriter(
+            $sharedLinks,
+            new UrlNormalizer(),
+            self::$previewLanguage ??= new PreviewLanguage(
+                new LanguageGuess(new LanguageDetectionFactory()->createForFeedLanguages()),
+            ),
+            new NaiveUtcClock($clock),
         );
     }
 
