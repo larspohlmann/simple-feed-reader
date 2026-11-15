@@ -260,4 +260,130 @@ Lars was away, so each is my call:
 
 ## Outcome
 
-(Written by the final plan task: the measurement.)
+Measured 2026-11-15 on the dev stack, read-only, with "now" pinned to 2026-11-15 03:00 UTC for every run. Three
+variants, swapped file by file and confirmed through `debug:container`:
+- **A** is develop (52259184a): Snowball stems, no splitting.
+- **B1** is splitting only: the branch's `HeadlineEquivalents` and `HeadlineWindow`, develop's `HeadlineStemmer`.
+- **B2** is the branch with the *-t* verb rule (Task 5).
+
+The worker kept ingesting during the runs. A was rerun right before B1 and B2, so all three read the same 28,894 week
+and 4,293 day entries. The measurement validates the mechanism only: **no word, part or value came from it.**
+
+### Coverage, pairs, cost
+
+| | Day A | Day B1 | Day B2 | Week A | Week B1 | Week B2 |
+|---|---|---|---|---|---|---|
+| Entries | 4,293 | 4,293 | 4,293 | 28,894 | 28,894 | 28,894 |
+| Coverage | 96.7 % | 96.7 % | 96.7 % | 98.6 % | 98.6 % | 98.6 % |
+| Groups | 544 | 555 | 555 | 3,679 | 3,785 | 3,800 |
+| Grouped pairs | 1,690 | 1,790 | 1,787 | 16,404 | 18,085 | 18,195 |
+| Wall time | 2.7 s | 4.0 s | 4.0 s | 63.1 s | 76.9 s | 78.0 s |
+| Peak RSS | 85.9 MB | 98.6 MB | 98.3 MB | 238.8 MB | 264.2 MB | 277.6 MB |
+| Peak PHP memory | 44.8 MB | 56.4 MB | 56.4 MB | 145.9 MB | 180.4 MB | 180.5 MB |
+
+| Grouped pairs, new / lost / **net** | A → B1 | B1 → B2 | A → B2 |
+|---|---|---|---|
+| Day, all | 122 / 22 / **+100** | 7 / 10 / **−3** | 119 / 22 / **+97** |
+| Day, de–de | 120 / 18 / **+102** | 7 / 10 / **−3** | 117 / 18 / **+99** |
+| Day, de–other | 0 / 0 / 0 | 0 / 0 / 0 | 0 / 0 / 0 |
+| Week, all | 2,172 / 491 / **+1,681** | 441 / 331 / **+110** | 2,304 / 513 / **+1,791** |
+| Week, de–de | 1,988 / 449 / **+1,539** | 426 / 331 / **+95** | 2,109 / 475 / **+1,634** |
+| Week, de–other | 5 / 15 / **−10** (all de–en) | 9 / 0 / **+9** | 14 / 15 / **−1** (de–en 5 / 15) |
+
+**German within German turns from #2227's net loss (−200 week) into a large gain: +1,539 week and +102 day from
+splitting alone.** The week does not lose real stories net.
+
+The *#2227* lost pairs are a second check. Of the 2,163 week pairs #2227 lost, 2,102 are still in the window, 825 of
+them German–German. A groups 8 of those 825, B1 267 and B2 289. Splitting wins back 259 German week pairs, which
+matches the heuristic's 255 compound pairs. The *-t* rule wins back 22, out of the 306 pairs of the inflection class.
+Over the day, of 81 German pairs, A groups 2, B1 20 and B2 21 (heuristic: 35).
+
+**Cost.** The week run grows from 63.1 s to 76.9 s, **+22 %, over the 15 % budget.** About 6.6 s of that is the
+splitting itself: 37,369 distinct German words, of which 11,663 split, at 2.1 parts each. The rest comes from the extra
+stems: more postings and more overlapping pairs (near misses 63,594 → 78,663). Peak PHP memory grows by 34.5 MB to
+180 MB. The lexicon accounts for only 4.8 MB of that (Task 2: 5.0 MB on disk, 1.3 ms load with opcache off, about
+10 µs per lookup). The rest is the extra postings. No remedy is registered for time, so none was applied. A week run at
+180 MB is close to Strato's ~200 MB web-worker cap, though Trending runs in the CLI worker.
+
+### Remedies
+
+- **The *-t* verb rule fired its registered drop, and it is reverted** (`fix(#2230): drop the -t verb rule…`). Its own
+  A/B is net positive on the week (+110), but the eye check found wrong merges carried by the verb alone. Each pair
+  below shares nothing else that weighs:
+  - *Fischereien erwarten stabile Preise* / *Interhyp erwartet kurzfristig stabile Zinsen*;
+  - *Deutsche erwarten sinkenden Lebensstandard* / *Wirtschaft entwickelt sich besser als erwartet*;
+  - *Welche Rolle der Baum des Jahres spielt* / *Welche Rollen haben die Spieler inne?*;
+  - *Explosion zerstört Wohnhaus – vier Menschen im Krankenhaus* / *Ärzte ohne Grenzen kritisieren Zerstörung von
+    Krankenhaus in Gaza*.
+  The verb data (`verbs.tsv`, `isVerbStem`, `infinitiveStemOf`) from Tasks 1–2 is now unused. Removing it is left to
+  the simplify pass.
+- **The dilution remedy fired, was measured once, and lost.** De–en went net negative on the week (−10), and the
+  near misses failing "share of the lighter entry" rose by far more than the pairs gained. Week totals went from
+  41,159 to 54,714, de–en from 2,015 to 2,272, de–de from 8,563 to 22,164. Variant **B3** is B1 with every stem a word
+  holds only as a part at half its place weight. It came out worse everywhere:
+  - week B1 → B3: net −779, de–de −774, de–other −5;
+  - day B1 → B3: net −57;
+  - A → B3: de–en −15, against −10 for B1.
+  B1 is the better variant, so parts keep the word's place weight. The lost de–en pairs are of one kind: a German
+  headline grows heavy with compound parts against a short English one (*Thunberg auf dem Klimagipfel* / *Greta
+  Thunberg tells Cop31*, *Guterres*, *GTA 6*, *AMD Zen 6*).
+- **The common-part floor did not fire.** The anti-goal never showed. *Bund* came out as window filler (weight 0), and
+  *land* and *tag* weighed about 2–4. Of the 1,643 new week pairs that link directly, 3 link with less than 5 of
+  whole-word weight and no junk part or verb rule involved. All three are fair: *Ökodiktatur* / *Öko-Diktatur*, and two winter-weather reports.
+
+### Eye check
+
+For each group, the check looked at every member's strongest direct link with and without the part stems
+(`stems.php`, `eye.py` in the task scratchpad).
+
+**Real stories, joined more completely:**
+- Week, new groups: the Stromsteuer in the 2027 budget (7), *Unterhaltsvorschuss/Einkommensgrenze* (5), the US
+  *Startverbot/Luftverkehr* (5), Gaza's *Winterkrise* (4), the *Pogromnacht* remembrance (4), the Hamburg *Grillabend*
+  poisoning (4), the *HafenCity/Tötungsdelikt* shooting (4).
+- Week, grown groups: Hegseth's *Amtsenthebung* (6 → 25), Aigner as *Bundespräsidentin* (10 → 20), the
+  *Autoritarismus-Studie* (5 → 15), the *Bereinigungssitzung/Haushaltsausschuss* (4 → 11), the Elbphilharmonie
+  shooting (10 → 14), *Starship-Testflug* (5 → 9), *Schuldneratlas/Überschuldung* (4 → 8).
+- Day: *Kassenärzte/Selbstzahler/Facharzt* (3 → 6), *Frauen-Bundesliga* Wolfsburg (3 → 5), the ESC in Asia,
+  *Klimagipfel/COP31*, the Aiwanger *Staatsakt/Trauerakt*.
+
+**Wrong merges.** None is joined by a part alone. All share one word, and the word's parts count it again:
+- *tagesschau in 100 Sekunden* / *„Inside tagesschau": Populistische Medienkritik* (day): *tagesschau* + *tag* +
+  *schau*.
+- *Bach befürwortet Russlands Teilnahme an Eishockey-WM* / *Deutschland Cup kommt nach Dresden* (day): *eishockey* +
+  *eis* + *hockey*.
+- Two different *Landtagswahl* CDU stories, Schleswig-Holstein and Sachsen-Anhalt (day), and two *Regionalliga*
+  matches, 1860 against Haching and Lübeck against Norderstedt (day; *regionalliga* splits into *regi+onal+liga*).
+- Two unrelated Steinmeier speeches joined the Steinmeier-succession group (week, new 2): *steinmeier* + *stein* +
+  *meier*.
+- Junk splits of words the lexicon lacks, which then multiply the word:
+  - *abschiebungen* → *abs+chi+bun+gen* joins US and Baden-Württemberg deportation stories;
+  - *geldsorgen* → *geld+sor+gen* joins the Überschuldung study with a world champion's debts;
+  - *seniorin* → *seni+orin* joins two different fraud cases;
+  - *markle* → *mar+kle* joins Meghan Markle's memoir with her father's arrest.
+
+**Splits** are mostly real stories losing one member through dilution: *Erfolg für SpaceX: „Starship"-Rakete kehrt
+zur Startrampe zurück*, *Trauerstaatsakt und Gottesdienst für Aiwanger*, *BSW und AfD: Auf dem Magdeburger Weg*.
+Measured A → B2, 238 week groups lose 803 pairs this way and 13 day groups lose 56.
+
+**Short junk parts.** The week window produced 1,118 distinct parts of 3–4 letters at class 15 or worse. Examples:
+*heg* in Hegseth, *ris* in autoritarismus, *chet* in Laschet, *ams* in Walliams, *onal* in regional-, *sor*, *bun*,
+*gen*. Of the 1,643 new direct week links, 122 depend on one of them (day: 3 of 95). Most of those join one story
+twice, through a shared name: Hegseth 52, Autoritarismus 24, Walliams, Laschet. The rest are the wrong merges above.
+Because such a part is short, it can also share a stem with another language's word (*nowaja* → *now*). The R1–R4
+findings carried into this check stand:
+- names and foreign words shred into junk;
+- *regional-*, an adjective, cannot be a modifier (R1), so the split falls to junk nouns;
+- *salami*, *aktenbestand* and *Macht/machen* did not show up in any changed group.
+
+### The structural loss, and the general rule it suggests
+
+Every wrong merge found has the same mechanism. A word both entries share counts once as the whole and again for each
+part, two to four times over in all. That doubles or triples one piece of evidence, so one shared name or compound
+clears the weight of 14 by itself. Rarity cannot stop this, because the whole and its parts are all rare. Junk parts
+make it worse, but they are not its cause: with clean parts, *Steinmeier* and *Eishockey* triple-count as well.
+
+Proposed general rule, not implemented because no remedy registered it: **a part counts toward a pair only where the
+pair does not share the whole word.** The parts of *Polizeieinsatz* still link it to *Polizei*. A shared
+*Steinmeier*, *tagesschau* or *Abschiebungen* counts once. The rule needs no value and no list. As a side effect, a
+junk part could then only match across different words, which is rarer still. This needs a ruling before the PR. The
+anti-goal as written (no group joined by a part alone) is met, but the wrong merges above are real.
