@@ -153,6 +153,33 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         self::assertNotContains($copied->requireId(), $this->shownStoryIds());
     }
 
+    public function testStoriesRankByTheReadersFeedsNotByFeedsTheyDoNotFollow(): void
+    {
+        $unfollowed = array_map(
+            fn (string $name): array => [$this->member($this->fixtures->feed($name)), $name . '.example'],
+            ['one', 'two', 'three', 'four', 'five', 'six'],
+        );
+        $widerElsewhere = $this->storyOf([
+            [$this->articleFeed('alpha'), 'alpha.example'],
+            [$this->articleFeed('beta'), 'beta.example'],
+        ]);
+        $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 09:00:00', [
+            ...$unfollowed,
+            [$this->member($this->articleFeed('alpha-again')), 'alpha.example'],
+            [$this->member($this->articleFeed('beta-again')), 'beta.example'],
+        ]);
+        $widerForTheReader = $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 08:00:00', [
+            [$this->member($this->articleFeed('gamma')), 'gamma.example'],
+            [$this->member($this->articleFeed('delta')), 'delta.example'],
+            [$this->member($this->articleFeed('epsilon')), 'epsilon.example'],
+        ]);
+
+        self::assertSame(
+            [$widerForTheReader->requireId(), $widerElsewhere->requireId()],
+            \array_slice($this->shownStoryIds(), 0, 2),
+        );
+    }
+
     /** @param list<array{Feed, ?string}> $feedsAndSites */
     private function storyOf(array $feedsAndSites): TrendingStory
     {

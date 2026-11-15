@@ -67,6 +67,21 @@ final class TrendingStoryCardModelTest extends DbTestCase
         self::assertSame($newer->entry, self::cardOf([$older, $newer])->lead->entry);
     }
 
+    public function testTheSourceCountIsTheCardsOutletsWithCopiesOfOnePostOrArticleOnce(): void
+    {
+        $article = $this->article();
+        $copies = [
+            $this->timelineCopy('home', '2031-05-14 09:00:00'),
+            $this->timelineCopy('discover', '2031-05-14 09:30:00'),
+        ];
+        $other = $this->cardlessLinkShare('cat', '2031-05-14 10:00:00');
+
+        $card = self::cardOf([$article, ...$copies, $other]);
+
+        self::assertCount(3, $card->lead->duplicates);
+        self::assertSame(3, $card->sourceCount(), 'the article, one post twice, another post');
+    }
+
     /** @param non-empty-list<EntryListRow> $rows */
     private static function cardOf(array $rows): TrendingStoryCardModel
     {
@@ -97,6 +112,14 @@ final class TrendingStoryCardModelTest extends DbTestCase
         $card = new LinkCardContent('https://shared.example/story', 'Story', null, $cardImageUrl, 'Shared');
 
         return $this->rowOf($entry, [$card]);
+    }
+
+    private function timelineCopy(string $timeline, string $effectiveDate): EntryListRow
+    {
+        $feed = $this->fixtures->feed($timeline, SocialNetwork::Mastodon);
+        $entry = $this->fixtures->article($feed, 'Post', $effectiveDate, 'https://social.example/@poster/1');
+
+        return $this->rowOf($entry, []);
     }
 
     private function cardlessLinkShare(string $poster, string $effectiveDate): EntryListRow

@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\Feed;
+use App\Entity\InclusionChange;
 use App\Entity\LinkCardContent;
+use App\Entity\Subscription;
 use App\Entity\TrendingSnapshot;
+use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
 use App\Tests\Support\ApiTestCase;
@@ -127,6 +131,35 @@ final class TrendingControllerTest extends ApiTestCase
         self::assertSame([$post->requireId(), $second->requireId()], self::idsOf($story['duplicates']));
     }
 
+    public function testAStorysSourceCountIsTheOutletsItsCardShowsTheReader(): void
+    {
+        [$headers, $user] = $this->bearerAndUser('trending-shown-count@example.com');
+        $fixtures = new TrendingFixtures($this->entityManager());
+        $alpha = $fixtures->feed('alpha');
+        $beta = $fixtures->feed('beta');
+        $switchedOut = $fixtures->feed('gamma');
+        $unfollowed = $fixtures->feed('delta');
+        $ann = $fixtures->feed('ann', SocialNetwork::Mastodon);
+        $fixtures->subscribe($user, $alpha, $beta, $switchedOut, $ann);
+        $lead = $fixtures->entry($alpha, 'Lead', '2031-05-14 10:00:00');
+        $fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
+            [$lead, 'alpha.example.com'],
+            [$fixtures->entry($beta, 'Second', '2031-05-14 09:00:00'), 'beta.example.com'],
+            [$fixtures->entry($switchedOut, 'Switched out', '2031-05-14 08:00:00'), 'gamma.example.com'],
+            [$fixtures->entry($unfollowed, 'Unfollowed', '2031-05-14 07:00:00'), 'delta.example.com'],
+            [$fixtures->entry($ann, 'A post without a story card', '2031-05-14 06:00:00'), null],
+        ]);
+        $this->switchOutOfTrending($user, $switchedOut);
+
+        $this->client->request('GET', '/api/trending?window=day', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $story = self::onlyStoryOf($this->payload($this->client));
+        self::assertSame($lead->requireId(), $story['id']);
+        self::assertCount(1, self::idsOf($story['duplicates']));
+        self::assertSame(['outletCount' => 2, 'viewed' => false], $story['story']);
+    }
+
     public function testBuiltAtIsSerialisedAsAtomInUtc(): void
     {
         [$headers] = $this->bearerAndUser('trending-built@example.com');
@@ -173,6 +206,15 @@ final class TrendingControllerTest extends ApiTestCase
         $this->client->request('GET', '/api/trending?window=day');
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
+    }
+
+    private function switchOutOfTrending(User $user, Feed $feed): void
+    {
+        $subscription = $this->entityManager()->getRepository(Subscription::class)
+            ->findOneBy(['user' => $user, 'feed' => $feed]);
+        self::assertInstanceOf(Subscription::class, $subscription);
+        $subscription->changeInclusions(new InclusionChange(trending: false));
+        $this->entityManager()->flush();
     }
 
     /**
