@@ -51,8 +51,8 @@ final class HeadlineWindowTest extends TestCase
 
     public function testEquivalentSpellingsShareWeight(): void
     {
-        $this->add(1, 10, 'Zelensky warns', '');
-        $this->add(2, 20, 'Selenskyj mahnt', '');
+        $this->add(1, 10, 'NATO warns', '');
+        $this->add(2, 20, 'OTAN avertit', '');
 
         $shared = $this->window->sharedWeightsWithEarlier(2);
 
