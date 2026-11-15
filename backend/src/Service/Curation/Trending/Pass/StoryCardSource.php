@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Trending\Pass;
 
-use App\Repository\EntryListRow;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
+use App\Service\Curation\Trending\Model\ShownRowModel;
 use App\Service\Curation\Trending\Model\TrendingStoryCardModel;
 
 /** The three lookups one reader's cards are cut from. */
@@ -13,7 +13,7 @@ final readonly class StoryCardSource
 {
     /**
      * @param array<int, list<int>> $entryIdsByStory
-     * @param array<int, EntryListRow> $rowsByEntryId
+     * @param array<int, ShownRowModel> $rowsByEntryId
      * @param array<int, int> $viewedStories
      */
     public function __construct(

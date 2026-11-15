@@ -25,6 +25,7 @@ use App\Service\Curation\Trending\Model\ReaderWindowModel;
 use App\Service\Curation\Trending\Model\TrendingStoryCardModel;
 use App\Service\Curation\Trending\ReaderWindows;
 use App\Service\Curation\Trending\TrendingStories;
+use App\Service\Foundation\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
 use App\Tests\Support\TrendingWiring;
@@ -42,7 +43,7 @@ final class TrendingStoriesTest extends DbTestCase
         $this->reader = $this->user('trending-reader@example.com');
     }
 
-    public function testAStoryShowsOneArticlePerFeedLedByTheNewestWithAPicture(): void
+    public function testAStoryShowsEachOfItsArticlesOnceLedByTheNewestWithAPicture(): void
     {
         [$alpha, $beta, $gamma] = $this->articleFeeds('alpha', 'beta', 'gamma');
         $social = $this->fixtures->feed('social', SocialNetwork::Bluesky);
@@ -69,10 +70,10 @@ final class TrendingStoriesTest extends DbTestCase
         $stories = $this->storiesFor(TrendingWindow::Day);
 
         self::assertCount(1, $stories);
-        self::assertSame($betaPictured->requireId(), $stories[0]->lead->entry->requireId());
+        self::assertSame($betaPictured->requireId(), $stories[0]->lead()->entry->requireId());
         self::assertSame(
-            [$gammaNewest->requireId(), $alphaNew->requireId()],
-            self::idsOf($stories[0]->lead->duplicates),
+            [$gammaNewest->requireId(), $alphaNew->requireId(), $alphaOld->requireId()],
+            self::idsOf($stories[0]->lead()->duplicates),
         );
         self::assertSame(
             3,
@@ -93,8 +94,8 @@ final class TrendingStoriesTest extends DbTestCase
 
         $stories = $this->storiesFor(TrendingWindow::Day);
 
-        self::assertSame($newest->requireId(), $stories[0]->lead->entry->requireId());
-        self::assertSame([$middle->requireId(), $older->requireId()], self::idsOf($stories[0]->lead->duplicates));
+        self::assertSame($newest->requireId(), $stories[0]->lead()->entry->requireId());
+        self::assertSame([$middle->requireId(), $older->requireId()], self::idsOf($stories[0]->lead()->duplicates));
     }
 
     public function testTheDayNeedsThreeOfTheReadersFeedsAndRanksWidestThenNewest(): void
@@ -232,7 +233,7 @@ final class TrendingStoriesTest extends DbTestCase
         );
     }
 
-    public function testEveryOutletSharingOneArticleSurfacesOnTheCardNewestFirst(): void
+    public function testOutletsSharingOneArticleAreOneRowOfTheCard(): void
     {
         [$alpha, $beta, $gamma, $delta] = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta');
         $this->fixtures->subscribe($this->reader, $alpha, $beta, $gamma, $delta);
@@ -246,12 +247,13 @@ final class TrendingStoriesTest extends DbTestCase
         $stories = $this->storiesFor(TrendingWindow::Day);
 
         self::assertCount(1, $stories);
-        self::assertSame($second->requireId(), $stories[0]->lead->entry->requireId());
+        self::assertSame($second->requireId(), $stories[0]->lead()->entry->requireId());
         self::assertSame(
-            [$first->requireId(), $other->requireId(), $third->requireId()],
-            self::idsOf($stories[0]->lead->duplicates),
+            [$other->requireId(), $third->requireId()],
+            self::idsOf($stories[0]->lead()->duplicates),
         );
-        self::assertSame([], $stories[0]->lead->duplicates[0]->duplicates);
+        self::assertSame([], $stories[0]->lead()->duplicates[0]->duplicates);
+        self::assertNotContains($first->requireId(), self::idsOf($stories[0]->lead()->duplicates));
     }
 
     public function testFeedsCarryingTheSameArticleCountAsOneSource(): void
@@ -345,7 +347,7 @@ final class TrendingStoriesTest extends DbTestCase
         self::assertSame([3], self::outletCountsOf($ranked));
     }
 
-    public function testACopyOfTheLeadFromAFeedOutsideTheStoryShowsOnTheCardButIsNoSource(): void
+    public function testACopyOfTheLeadFromAFeedOutsideTheStoryIsNoRowOfItsOwn(): void
     {
         [$alpha, $beta, $gamma, $delta] = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta');
         $this->fixtures->subscribe($this->reader, $alpha, $beta, $gamma, $delta);
@@ -353,37 +355,15 @@ final class TrendingStoriesTest extends DbTestCase
         $lead = $this->fixtures->article($alpha, 'Lead', '2031-05-14 10:00:00', $url);
         $betaEntry = $this->fixtures->entry($beta, 'Beta', '2031-05-14 09:00:00');
         $gammaEntry = $this->fixtures->entry($gamma, 'Gamma', '2031-05-14 07:00:00');
-        $copy = $this->fixtures->article($delta, 'Lead elsewhere', '2031-05-14 08:00:00', $url);
+        $this->fixtures->article($delta, 'Lead elsewhere', '2031-05-14 08:00:00', $url);
         $this->fixtures->story(TrendingWindow::Day, '2031-05-14 10:00:00', $lead, $betaEntry, $gammaEntry);
 
         $stories = $this->storiesFor(TrendingWindow::Day);
 
-        self::assertSame($lead->requireId(), $stories[0]->lead->entry->requireId());
+        self::assertSame($lead->requireId(), $stories[0]->lead()->entry->requireId());
         self::assertSame(
-            [$betaEntry->requireId(), $copy->requireId(), $gammaEntry->requireId()],
-            self::idsOf($stories[0]->lead->duplicates),
-        );
-        self::assertSame(3, $stories[0]->story->outletCount);
-    }
-
-    public function testACopyOfTheLeadFromAFeedAlreadyInTheStoryOrFromTheLeadsOwnFeedDoesNotRepeat(): void
-    {
-        [$alpha, $beta, $gamma] = $this->articleFeeds('alpha', 'beta', 'gamma');
-        $this->fixtures->subscribe($this->reader, $alpha, $beta, $gamma);
-        $url = 'https://news.example.com/lead-article';
-        $lead = $this->fixtures->article($alpha, 'Lead', '2031-05-14 10:00:00', $url);
-        $betaInStory = $this->fixtures->entry($beta, 'Beta', '2031-05-14 08:00:00');
-        $gammaInStory = $this->fixtures->entry($gamma, 'Gamma', '2031-05-14 07:00:00');
-        $betaCopy = $this->fixtures->article($beta, 'Lead at beta', '2031-05-14 09:00:00', $url);
-        $this->fixtures->article($alpha, 'Lead again', '2031-05-14 06:00:00', $url . '?utm_source=feed');
-        $this->fixtures->story(TrendingWindow::Day, '2031-05-14 10:00:00', $lead, $betaInStory, $gammaInStory);
-
-        $stories = $this->storiesFor(TrendingWindow::Day);
-
-        self::assertSame($lead->requireId(), $stories[0]->lead->entry->requireId());
-        self::assertSame(
-            [$betaCopy->requireId(), $gammaInStory->requireId()],
-            self::idsOf($stories[0]->lead->duplicates),
+            [$betaEntry->requireId(), $gammaEntry->requireId()],
+            self::idsOf($stories[0]->lead()->duplicates),
         );
         self::assertSame(3, $stories[0]->story->outletCount);
     }
@@ -854,6 +834,7 @@ final class TrendingStoriesTest extends DbTestCase
             $entryList,
             $enricher,
             $readingSettings,
+            new UrlNormalizer(),
         );
     }
 
@@ -913,7 +894,7 @@ final class TrendingStoriesTest extends DbTestCase
     {
         $storyId = $this->entityManager->getConnection()->fetchOne(
             'SELECT story_id FROM trending_story_entry WHERE entry_id = ?',
-            [$card->lead->entry->requireId()],
+            [$card->lead()->entry->requireId()],
         );
 
         self::assertIsNumeric($storyId);

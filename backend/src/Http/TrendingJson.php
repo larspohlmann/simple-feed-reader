@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
+use App\Service\Curation\Trending\Model\StoryArticleModel;
 use App\Service\Curation\Trending\Model\TrendingPageModel;
 use App\Service\Curation\Trending\Model\TrendingStoryCardModel;
 
@@ -25,12 +26,28 @@ final readonly class TrendingJson
         ];
     }
 
-    /** @return array<string, mixed> the lead's list row; its duplicates are the story's other outlets */
+    /** @return array<string, mixed> the lead article's list row; its duplicates are the story's other articles */
     private function story(TrendingStoryCardModel $card): array
     {
+        $articles = $card->articles;
+
         return [
-            ...$this->entryJson->listRow($card->lead),
-            'story' => ['outletCount' => $card->story->outletCount, 'viewed' => $card->viewed],
+            ...$this->article($articles->lead),
+            'duplicates' => array_map($this->article(...), $articles->others),
+            'story' => [
+                'outletCount' => $card->story->outletCount,
+                'viewed' => $card->viewed,
+                'shareCount' => $articles->shareCount(),
+            ],
+        ];
+    }
+
+    /** @return array<string, mixed> the article's row and the posts sharing it */
+    private function article(StoryArticleModel $article): array
+    {
+        return [
+            ...$this->entryJson->listRow($article->row),
+            'shares' => array_map($this->entryJson->listRow(...), $article->shares),
         ];
     }
 }

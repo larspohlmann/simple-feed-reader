@@ -59,24 +59,28 @@ final class TrendingControllerTest extends ApiTestCase
                 $story['duplicates'],
             ),
         );
-        self::assertSame(['outletCount' => 3, 'viewed' => false], $story['story']);
+        self::assertSame(['outletCount' => 3, 'viewed' => false, 'shareCount' => 0], $story['story']);
+        self::assertSame([], $story['shares']);
     }
 
-    public function testAStoryTwoPostsCarryThroughTwoSitesIsLedByThePostWithAPicturedCard(): void
+    public function testAStoryNoFollowedOutletCarriesIsLedByItsMostSharedArticleWithItsSharesUnderIt(): void
     {
         [$headers, $user] = $this->bearerAndUser('trending-card-led@example.com');
         $fixtures = new TrendingFixtures($this->entityManager());
         $ann = $fixtures->feed('ann', SocialNetwork::Mastodon);
         $ben = $fixtures->feed('ben', SocialNetwork::Bluesky);
-        $fixtures->subscribe($user, $ann, $ben);
-        $pictured = $fixtures->linkShare($ann, '2031-05-14 09:00:00', new LinkCardContent(
+        $cat = $fixtures->feed('cat', SocialNetwork::Bluesky);
+        $fixtures->subscribe($user, $ann, $ben, $cat);
+        $lighthouse = new LinkCardContent(
             'https://outlet.example/lighthouse',
             'Lighthouse keepers strike',
             'The keepers walked out at dawn.',
             'https://outlet.example/lighthouse.jpg',
             'Outlet',
-        ));
-        $plain = $fixtures->linkShare($ben, '2031-05-14 10:00:00', new LinkCardContent(
+        );
+        $pictured = $fixtures->linkShare($ann, '2031-05-14 08:00:00', $lighthouse);
+        $alsoSharing = $fixtures->linkShare($cat, '2031-05-14 09:00:00', $lighthouse);
+        $other = $fixtures->linkShare($ben, '2031-05-14 10:00:00', new LinkCardContent(
             'https://other.example/keepers',
             'Keepers on strike',
             null,
@@ -85,22 +89,27 @@ final class TrendingControllerTest extends ApiTestCase
         ));
         $fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
             [$pictured, 'outlet.example'],
-            [$plain, 'other.example'],
+            [$alsoSharing, 'outlet.example'],
+            [$other, 'other.example'],
         ]);
 
         $this->client->request('GET', '/api/trending?window=day', server: $headers);
 
         self::assertResponseIsSuccessful();
         $story = self::onlyStoryOf($this->payload($this->client));
-        self::assertSame($pictured->requireId(), $story['id']);
+        self::assertSame($alsoSharing->requireId(), $story['id'], 'the newest share with a pictured card');
         self::assertIsArray($story['linkCards']);
         self::assertIsArray($story['linkCards'][0]);
         self::assertSame('Lighthouse keepers strike', $story['linkCards'][0]['title']);
-        self::assertSame([$plain->requireId()], self::idsOf($story['duplicates']));
-        self::assertSame(['outletCount' => 2, 'viewed' => false], $story['story']);
+        self::assertSame([$alsoSharing->requireId(), $pictured->requireId()], self::idsOf($story['shares']));
+        self::assertSame([$other->requireId()], self::idsOf($story['duplicates']));
+        self::assertIsArray($story['duplicates']);
+        self::assertIsArray($story['duplicates'][0]);
+        self::assertSame([$other->requireId()], self::idsOf($story['duplicates'][0]['shares']));
+        self::assertSame(['outletCount' => 2, 'viewed' => false, 'shareCount' => 3], $story['story']);
     }
 
-    public function testAnArticleLeadsItsStoryAndAPostSharingItIsASource(): void
+    public function testAPostSharingAFollowedOutletsArticleIsAShareOfItsRowNotASourceOrARow(): void
     {
         [$headers, $user] = $this->bearerAndUser('trending-article-led@example.com');
         $fixtures = new TrendingFixtures($this->entityManager());
@@ -108,10 +117,10 @@ final class TrendingControllerTest extends ApiTestCase
         $beta = $fixtures->feed('beta');
         $ann = $fixtures->feed('ann', SocialNetwork::Mastodon);
         $fixtures->subscribe($user, $alpha, $beta, $ann);
-        $lead = $fixtures->entry($alpha, 'Lead', '2031-05-14 09:00:00');
+        $lead = $fixtures->article($alpha, 'Lead', '2031-05-14 09:00:00', 'https://alpha.example.com/lead');
         $second = $fixtures->entry($beta, 'Second', '2031-05-14 08:00:00');
         $post = $fixtures->linkShare($ann, '2031-05-14 10:00:00', new LinkCardContent(
-            'https://alpha.example.com/lead',
+            'https://alpha.example.com/lead?utm_source=social',
             'Lead',
             null,
             'https://alpha.example.com/lead.jpg',
@@ -128,7 +137,9 @@ final class TrendingControllerTest extends ApiTestCase
         self::assertResponseIsSuccessful();
         $story = self::onlyStoryOf($this->payload($this->client));
         self::assertSame($lead->requireId(), $story['id']);
-        self::assertSame([$post->requireId(), $second->requireId()], self::idsOf($story['duplicates']));
+        self::assertSame([$post->requireId()], self::idsOf($story['shares']));
+        self::assertSame([$second->requireId()], self::idsOf($story['duplicates']));
+        self::assertSame(['outletCount' => 2, 'viewed' => false, 'shareCount' => 1], $story['story']);
     }
 
     public function testAStorysSourceCountIsTheOutletsItsCardShowsTheReader(): void
@@ -157,7 +168,7 @@ final class TrendingControllerTest extends ApiTestCase
         $story = self::onlyStoryOf($this->payload($this->client));
         self::assertSame($lead->requireId(), $story['id']);
         self::assertCount(1, self::idsOf($story['duplicates']));
-        self::assertSame(['outletCount' => 2, 'viewed' => false], $story['story']);
+        self::assertSame(['outletCount' => 2, 'viewed' => false, 'shareCount' => 0], $story['story']);
     }
 
     public function testBuiltAtIsSerialisedAsAtomInUtc(): void

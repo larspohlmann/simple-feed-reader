@@ -26,6 +26,7 @@ use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\TrendingStoryCardModel;
 use App\Service\Curation\Trending\ReaderWindows;
 use App\Service\Curation\Trending\TrendingStories;
+use App\Service\Foundation\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
 use App\Tests\Support\TrendingWiring;
@@ -229,7 +230,7 @@ final class TrendingInclusionTest extends DbTestCase
 
         self::assertSame(
             [$betaEntry->requireId(), $gammaEntry->requireId()],
-            array_map(static fn (EntryListRow $row): int => $row->entry->requireId(), $stories[0]->lead->duplicates),
+            array_map(static fn (EntryListRow $row): int => $row->entry->requireId(), $stories[0]->lead()->duplicates),
         );
     }
 
@@ -307,6 +308,7 @@ final class TrendingInclusionTest extends DbTestCase
             $entryList,
             $enricher,
             $readingSettings,
+            new UrlNormalizer(),
         );
     }
 

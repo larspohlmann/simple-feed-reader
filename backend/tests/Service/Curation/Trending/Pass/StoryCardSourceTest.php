@@ -8,6 +8,7 @@ use App\Repository\EntryListRow;
 use App\Repository\EntryListRowMarks;
 use App\Repository\EntryListRowSubscription;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
+use App\Service\Curation\Trending\Model\ShownRowModel;
 use App\Service\Curation\Trending\Pass\StoryCardSource;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
@@ -27,7 +28,7 @@ final class StoryCardSourceTest extends DbTestCase
         );
         $source = new StoryCardSource(
             [5 => [101, 102], 6 => [$entry->requireId()]],
-            [$entry->requireId() => $row],
+            [$entry->requireId() => new ShownRowModel($row, 'article')],
             [6 => 0],
         );
 
@@ -37,7 +38,7 @@ final class StoryCardSourceTest extends DbTestCase
         $cards = $source->cardsOf([new RankedStoryModel(5, 3, $lastSeen), $wider]);
 
         self::assertCount(1, $cards);
-        self::assertSame($entry, $cards[0]->lead->entry);
+        self::assertSame($entry, $cards[0]->lead()->entry);
         self::assertSame($wider, $cards[0]->story);
         self::assertTrue($cards[0]->viewed);
     }
