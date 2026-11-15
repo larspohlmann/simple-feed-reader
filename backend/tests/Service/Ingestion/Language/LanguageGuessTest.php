@@ -8,6 +8,7 @@ use App\Enum\FeedLanguage;
 use App\Service\Ingestion\Language\Factory\LanguageDetectionFactory;
 use App\Service\Ingestion\Language\LanguageGuess;
 use App\Tests\Support\StubbedDetector;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class LanguageGuessTest extends TestCase
@@ -49,5 +50,29 @@ final class LanguageGuessTest extends TestCase
         $german = 'Der Bundeskanzler sagte am Montag in Berlin, dass die Regierung weitere Hilfen vorbereitet.';
 
         self::assertSame(FeedLanguage::German, $guess->bestFor($german));
+    }
+
+    public function testTheRealDetectorGuessesAnEnglishText(): void
+    {
+        $guess = new LanguageGuess(new LanguageDetectionFactory()->create());
+        $english = 'The prime minister said on Monday in London that the government is preparing further support.';
+
+        self::assertSame(FeedLanguage::English, $guess->bestFor($english));
+    }
+
+    #[DataProvider('textsOutsideTheFour')]
+    public function testTheRealDetectorGivesNoGuessForATextOutsideTheFour(string $text): void
+    {
+        self::assertNull(new LanguageGuess(new LanguageDetectionFactory()->create())->bestFor($text));
+    }
+
+    /** @return array<string, array{string}> */
+    public static function textsOutsideTheFour(): array
+    {
+        return [
+            'Italian' => ['Il presidente del Consiglio ha detto lunedì a Roma che il governo prepara nuove misure.'],
+            'Dutch' => ['De premier zei maandag in Den Haag dat de regering nieuwe maatregelen voorbereidt.'],
+            'Russian' => ['Президент заявил в понедельник в Москве, что правительство готовит новые меры поддержки.'],
+        ];
     }
 }
