@@ -45,13 +45,10 @@ final class CompoundParts
         }
     }
 
-    /**
-     * @param list<int> $stemIds
-     * @param list<int> $wordStemIds the stems of its words themselves, not of their parts
-     */
-    public function addEntry(int $entryId, array $stemIds, array $wordStemIds): void
+    /** @param list<int> $partOnlyStemIds the stems no word of the entry holds, only a compound's parts */
+    public function addEntry(int $entryId, array $partOnlyStemIds): void
     {
-        foreach (array_diff($stemIds, $wordStemIds) as $partStemId) {
+        foreach ($partOnlyStemIds as $partStemId) {
             $this->partOnlyHoldersOf[$partStemId][$entryId] = true;
         }
     }

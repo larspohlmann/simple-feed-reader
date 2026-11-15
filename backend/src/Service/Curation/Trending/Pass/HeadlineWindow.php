@@ -7,6 +7,7 @@ namespace App\Service\Curation\Trending\Pass;
 use App\Enum\FeedLanguage;
 use App\Service\Curation\Trending\HeadlineEquivalents;
 use App\Service\Curation\Trending\HeadlineFiller;
+use App\Service\Curation\Trending\Model\EntryStemIdsModel;
 use App\Service\Curation\Trending\Model\LanguageCoverageModel;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Service\Curation\Trending\Support\PartWeightCaps;
@@ -71,21 +72,18 @@ final class HeadlineWindow
     /** Entries must arrive in ascending id order: the postings stay sorted. */
     public function add(WindowEntryModel $entry, string $body): void
     {
-        [$headlineIds, $headlineWordIds] = $this->idsOf($entry->title, $entry->language);
-        [$allBodyIds, $bodyWordIds] = $this->idsOf($body, $entry->language);
-        $bodyIds = array_values(array_diff($allBodyIds, $headlineIds));
-        $this->headlineStems[$entry->id] = $headlineIds;
-        $this->bodyStems[$entry->id] = $bodyIds;
-        $this->compoundParts->addEntry(
-            $entry->id,
-            [...$headlineIds, ...$bodyIds],
-            [...$headlineWordIds, ...$bodyWordIds],
+        $stems = EntryStemIdsModel::of(
+            $this->stemIdsOf($entry->title, $entry->language),
+            $this->stemIdsOf($body, $entry->language),
         );
-        $this->compoundParts->holdCompoundsAmong($entry->id, $headlineIds, self::HEADLINE_WEIGHT);
-        $this->compoundParts->holdCompoundsAmong($entry->id, $bodyIds, self::BODY_WEIGHT);
+        $this->headlineStems[$entry->id] = $stems->headlineIds;
+        $this->bodyStems[$entry->id] = $stems->bodyIds;
+        $this->compoundParts->addEntry($entry->id, $stems->partOnlyIds);
+        $this->compoundParts->holdCompoundsAmong($entry->id, $stems->headlineIds, self::HEADLINE_WEIGHT);
+        $this->compoundParts->holdCompoundsAmong($entry->id, $stems->bodyIds, self::BODY_WEIGHT);
         $this->feedOfEntry[$entry->id] = $entry->feedId;
         $this->entriesOfFeed[$entry->feedId][] = $entry->id;
-        $this->post($entry->id, $headlineIds, $bodyIds);
+        $this->post($entry->id, $stems->headlineIds, $stems->bodyIds);
         $this->countLanguageOf($entry);
     }
 
@@ -147,11 +145,10 @@ final class HeadlineWindow
         $this->entriesByLanguage[$language] = ($this->entriesByLanguage[$language] ?? 0) + 1;
     }
 
-    /** @return array{list<int>, list<int>} the ids of every stem, and of the words' own stems */
-    private function idsOf(string $text, ?FeedLanguage $language): array
+    /** @return array<int, bool> stem id => whether a word of the text holds it, rather than only a compound's part */
+    private function stemIdsOf(string $text, ?FeedLanguage $language): array
     {
         $ids = [];
-        $wordIds = [];
         foreach ($this->equivalents->wordsOf($text) as [$word, $bare]) {
             $key = $language?->value . ' ' . $word;
             if (!\array_key_exists($key, $this->stemIdByWord)) {
@@ -159,13 +156,12 @@ final class HeadlineWindow
             }
             $stemId = $this->stemIdByWord[$key];
             if (null !== $stemId) {
-                $wordIds[$stemId] = true;
                 $ids[$stemId] = true;
-                $ids += array_fill_keys($this->partStemIdsByWord[$key] ?? [], true);
+                $ids += array_fill_keys($this->partStemIdsByWord[$key] ?? [], false);
             }
         }
 
-        return [array_keys($ids), array_keys($wordIds)];
+        return $ids;
     }
 
     /** @param list<string> $stems the word's own stem, then its parts' stems */

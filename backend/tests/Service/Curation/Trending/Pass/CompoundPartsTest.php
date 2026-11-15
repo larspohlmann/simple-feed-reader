@@ -104,7 +104,7 @@ final class CompoundPartsTest extends TestCase
 
     public function testAPartComesThroughACompoundAtTheCompoundsPlaceWeight(): void
     {
-        $this->compoundParts->addEntry(10, [self::POLICE_OPERATION, self::POLICE], [self::POLICE_OPERATION]);
+        $this->compoundParts->addEntry(10, [self::POLICE]);
         $this->compoundParts->holdCompoundsAmong(10, [self::POLICE_OPERATION, self::POLICE], 0.5);
         $this->addEntry(20, [self::POLICE], [self::POLICE]);
 
@@ -123,13 +123,9 @@ final class CompoundPartsTest extends TestCase
         self::assertSame([10 => []], $this->linksOf(self::OPERATION, 20));
     }
 
-    public function testAnEntryHoldsOnlyTheStemsNoneOfItsWordsHoldsAsParts(): void
+    public function testAnEntryHoldsAsAPartOnlyTheStemsItIsGivenAsParts(): void
     {
-        $this->compoundParts->addEntry(
-            10,
-            [self::POLICE_OPERATION, self::POLICE, self::OPERATION],
-            [self::POLICE_OPERATION, self::POLICE],
-        );
+        $this->compoundParts->addEntry(10, [self::OPERATION]);
 
         self::assertTrue($this->compoundParts->isOnlyAPartIn(10, self::OPERATION));
         self::assertFalse($this->compoundParts->isOnlyAPartIn(10, self::POLICE));
@@ -172,7 +168,7 @@ final class CompoundPartsTest extends TestCase
      */
     private function addEntry(int $entryId, array $stemIds, array $wordStemIds): void
     {
-        $this->compoundParts->addEntry($entryId, $stemIds, $wordStemIds);
+        $this->compoundParts->addEntry($entryId, array_values(array_diff($stemIds, $wordStemIds)));
         $this->compoundParts->holdCompoundsAmong($entryId, $stemIds, 1.0);
     }
 
