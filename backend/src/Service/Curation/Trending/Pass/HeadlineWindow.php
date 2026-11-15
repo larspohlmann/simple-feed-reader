@@ -242,11 +242,7 @@ final class HeadlineWindow
         return $placed;
     }
 
-    /**
-     * Only for a stem placed in the later entry, so never one that is window filler.
-     *
-     * @return array<int, float> earlier entry id => the stem's place weight there, filler for its feed left out
-     */
+    /** @return array<int, float> earlier entry id => the stem's place weight there, filler for its feed left out */
     private function earlierHoldersOf(int $stemId, int $entryId): array
     {
         $holders = [];

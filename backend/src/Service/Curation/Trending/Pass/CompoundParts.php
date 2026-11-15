@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Trending\Pass;
 
-/** A compound's parts link it to other words, never again to the compound itself (#2230). */
 final class CompoundParts
 {
     /** @var array<int, true> */
@@ -33,11 +32,7 @@ final class CompoundParts
         return isset($this->compoundStems[$stemId]);
     }
 
-    /**
-     * For a stem first found a compound after some entries holding it were added.
-     *
-     * @param list<int> $entryIds
-     */
+    /** @param list<int> $entryIds */
     public function holdCompoundIn(int $compoundStemId, array $entryIds, float $placeWeight): void
     {
         foreach ($entryIds as $entryId) {
