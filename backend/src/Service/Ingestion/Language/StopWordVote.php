@@ -34,26 +34,23 @@ final readonly class StopWordVote
         $counts = $this->stopWordCounts($this->votingWords($text));
         arsort($counts);
         [$highest, $runnerUp] = array_values($counts);
-        if ($highest === 0 || $highest === $runnerUp) {
+        if ($highest === $runnerUp) {
             return null;
         }
 
         return FeedLanguage::from((string) array_key_first($counts));
     }
 
-    /** @return list<string> */
+    /** @return array<int, string> */
     private function votingWords(string $text): array
     {
         $words = CasefoldedWords::of(preg_replace(self::WORD_IN_CAPITALS, ' ', $text) ?? $text);
 
-        return array_values(array_filter(
-            $words,
-            static fn (string $word): bool => mb_strlen($word) >= self::MIN_WORD_LENGTH,
-        ));
+        return array_filter($words, static fn (string $word): bool => mb_strlen($word) >= self::MIN_WORD_LENGTH);
     }
 
     /**
-     * @param list<string> $words
+     * @param array<int, string> $words
      *
      * @return array<string, int>
      */

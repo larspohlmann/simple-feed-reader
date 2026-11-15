@@ -21,6 +21,14 @@ final class HeadlineEquivalentsTest extends TestCase
         $this->equivalents = TrendingWiring::equivalents();
     }
 
+    public function testADroppedShortWordLeavesNoGap(): void
+    {
+        self::assertSame(
+            [['streik', 'streik'], ['hamburg', 'hamburg']],
+            $this->equivalents->wordsOf('Streik in Hamburg'),
+        );
+    }
+
     public function testNatoAndOtanShareOneStem(): void
     {
         self::assertSame(['nato'], $this->stemsOf('NATO', null));

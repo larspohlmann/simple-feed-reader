@@ -33,6 +33,7 @@ final class StopWordVoteTest extends TestCase
     public function testAOneLetterWordDoesNotVote(): void
     {
         self::assertNull(self::vote("Silicon Valley plots Jensen Huang's comeback"));
+        self::assertNull(self::vote('Rendez à Berlin'));
     }
 
     public function testARepeatedStopwordCountsEachTime(): void
