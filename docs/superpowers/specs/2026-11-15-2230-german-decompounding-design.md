@@ -315,8 +315,8 @@ stems: more postings and more overlapping pairs (near misses 63,594 → 78,663).
   - *Welche Rolle der Baum des Jahres spielt* / *Welche Rollen haben die Spieler inne?*;
   - *Explosion zerstört Wohnhaus – vier Menschen im Krankenhaus* / *Ärzte ohne Grenzen kritisieren Zerstörung von
     Krankenhaus in Gaza*.
-  The verb data (`verbs.tsv`, `isVerbStem`, `infinitiveStemOf`) from Tasks 1–2 is now unused. Removing it is left to
-  the simplify pass.
+  The verb data (`verbs.tsv`, `isVerbStem`, `infinitiveStemOf`) from Tasks 1–2 was then unused, and Task 7b removed
+  it; re-rendering `lexicon.tsv` and `lexicon-meta.php` from the committed file reproduced both byte for byte.
 - **The dilution remedy fired, was measured once, and lost.** De–en went net negative on the week (−10), and the
   near misses failing "share of the lighter entry" rose by far more than the pairs gained. Week totals went from
   41,159 to 54,714, de–en from 2,015 to 2,272, de–de from 8,563 to 22,164. Variant **B3** is B1 with every stem a word
@@ -382,8 +382,67 @@ part, two to four times over in all. That doubles or triples one piece of eviden
 clears the weight of 14 by itself. Rarity cannot stop this, because the whole and its parts are all rare. Junk parts
 make it worse, but they are not its cause: with clean parts, *Steinmeier* and *Eishockey* triple-count as well.
 
-Proposed general rule, not implemented because no remedy registered it: **a part counts toward a pair only where the
+Proposed general rule, adopted as ruling R6 and measured in Task 7b below: **a part counts toward a pair only where the
 pair does not share the whole word.** The parts of *Polizeieinsatz* still link it to *Polizei*. A shared
 *Steinmeier*, *tagesschau* or *Abschiebungen* counts once. The rule needs no value and no list. As a side effect, a
 junk part could then only match across different words, which is rarer still. This needs a ruling before the PR. The
 anti-goal as written (no group joined by a part alone) is met, but the wrong merges above are real.
+
+### Task 7b: parts that do not double-count (R6), two parts for an unknown word (R7)
+
+Two general rules, no word and no value from the window:
+
+- **R6.** A stem that an entry holds only as a part of its compounds is dropped from a pair when, in either entry, every
+  compound it comes from is held by the other entry too. The parts still link *different* words (*Polizeieinsatz* ↔
+  *Polizei*, *Polizeieinsatz* ↔ *Feuerwehreinsatz*), but a shared compound weighs once. "Share of the lighter entry"
+  stays consistent: an entry's total weight leaves out the stems it holds only as parts, so an entry paired with a copy of
+  itself still shares 1.0. The parts no longer dilute an entry, which also answers the dilution that B3 was meant to fix.
+  A word whose own stem is a seed now contributes no part stems either. The bookkeeping is `Pass/CompoundParts`.
+- **R7.** A word the lexicon does not know splits into at most 2 parts; a known word keeps the limit of 4. The junk
+  shreds Task 7 found (*abs+chi+bun+gen*, *regi+onal+liga*, *geld+sor+gen*) all needed 3 or more parts.
+
+Measured like Task 7: pinned to 2026-11-15 03:00 UTC, dev MySQL read-only, A = develop's three Trending files swapped in,
+C = the branch with R6 and R7. A and C ran back to back; the worker still added 8 day and 7 week entries between them,
+which moves a few English groups (the "other" rows). **R7 alone** is C with R6 switched off in a scratch copy, run right
+after C on the same entries.
+
+| | Day A | Day C | Week A | Week C | Week R7 alone |
+|---|---|---|---|---|---|
+| Entries | 4,368 | 4,376 | 28,926 | 28,933 | 28,933 |
+| Groups | 553 | 561 | 3,676 | 3,757 | 3,783 |
+| Grouped pairs | 1,700 | 1,788 | 16,381 | 17,360 | 18,118 |
+| Near misses | 3,079 | 3,558 | 64,393 | 69,269 | 80,035 |
+| Wall time | 2.8 s | 5.0 s | 64.0 s | 81.9 s | 77.3 s |
+| Peak RSS | 82.5 MB | 95.3 MB | 227.3 MB | 252.6 MB | 270.6 MB |
+| Peak PHP memory | 45.0 MB | 58.9 MB | 146.4 MB | 192.5 MB | 197.8 MB |
+
+| Grouped pairs, new / lost / **net** | Day A → C | Week A → C | Week A → R7 alone | Week R7 alone → C |
+|---|---|---|---|---|
+| All | 106 / 18 / **+88** | 1,343 / 364 / **+979** | 2,244 / 507 / **+1,737** | 945 / 1,703 / **−758** |
+| de–de | 103 / 11 / **+92** | 1,208 / 322 / **+886** | 2,107 / 461 / **+1,646** | 939 / 1,699 / **−760** |
+| de–other | 0 / 0 / 0 | 3 / 11 / **−8** | 5 / 15 / **−10** | 6 / 4 / **+2** |
+
+- **Every wrong merge Task 7 listed is gone in C:** *tagesschau*, *Eishockey-WM / Deutschland Cup*, the two CDU
+  *Landtagswahl* stories, the two *Regionalliga* matches, the Steinmeier speeches in the succession group,
+  *Abschiebungen* (US / Baden-Württemberg), *Geldsorgen*, *Seniorin* and *Markle*. R7 alone already beats B1 on the
+  week (+1,646 de–de against +1,539).
+- **R6 costs 760 German week pairs against R7 alone.** Most are real stories that only a word counted two or three times
+  had joined: the Aigner commentary pieces (the 26-member group is 11 in C), the *Autoritarismus-Studie* (15 → 5, as in
+  A), Hegseth's *Amtsenthebung* follow-ups, *GTA 6 / Urlaubsanträge*, *Starship*. R6 also removes wrong merges R7 alone
+  keeps, such as *Ministerpräsidentinnenwahl in MV* in the Israeli *Regierungsbildung* group. What C keeps over A is
+  real: the Aiwanger *Staatsakt* (+8), Hegseth (+8), the Elbphilharmonie shooting (+5), the Aigner nomination (+5),
+  *Abu Dhabi* talks, the Kiel coach, the Emde exclusion, the *Haushaltsausschuss*.
+- **New wrong merges in C, all through a part that links two different compounds**, which R6 keeps by design:
+  - *Bundesbank warnt vor erhöhten Risiken* / *Bundesfinanzhof: hessische Grundsteuer*: *bund* and the junk parts
+    *fin* + *anz* of the known words *Finanzsystem* and *Bundesfinanzhof* (R7 does not cover known words);
+  - *Lufthansa-Chef: „Flugscham existiert kaum noch"* joins the US *Startverbot* stories through *flug* and
+    *Verkehr* / *Luftverkehr*;
+  - accident reports grouped by genre: *Velofahrer … Selbstunfall in Biel* with two Hamburg *Motorradfahrer* stories
+    (*fahr* + *verletzt* + *schwer*), and *Unfall mit zwei Verletzten* with *Verkehrsunfall* stories (*unfall* +
+    *zwei* + *verletzt*; R7 alone has the same kind of group).
+  No group is joined by a part alone, so the registered common-part floor did not fire.
+- **Cost.** Against A the week is **+28 %** (64.0 → 81.9 s), over the 15 % budget; R6's check is about 4.6 s of that.
+  Peak PHP memory is **192.5 MB** (+46 MB), close to Strato's ~200 MB web-worker cap. Task 7's B1 peaked at 180.4 MB;
+  R7 alone, which builds the R6 bookkeeping but keeps every part, peaks at 197.8 MB, so the bookkeeping costs roughly
+  10–15 MB and the filter itself saves some by making fewer links. This is not separated further.
+
