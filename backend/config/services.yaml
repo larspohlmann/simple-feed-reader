@@ -314,6 +314,7 @@ services:
 
     LanguageDetection\Language:
         factory: ['@App\Service\Ingestion\Language\Factory\LanguageDetectionFactory', 'create']
+        lazy: true
 
     app.untrusted_markdown_converter:
         class: League\CommonMark\CommonMarkConverter
