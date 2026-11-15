@@ -75,6 +75,39 @@ final class LinkCardRepository extends ServiceEntityRepository
         return $grouped;
     }
 
+    /** @return array<int, string> every card's URL by card id, in ascending id after the given one */
+    public function urlsAfterId(int $afterId, int $limit): array
+    {
+        /** @var list<array{id: int|string, url: string}> $rows */
+        $rows = $this->createQueryBuilder('card')
+            ->select('card.id', 'card.url')
+            ->andWhere('card.id > :afterId')
+            ->setParameter('afterId', $afterId)
+            ->orderBy('card.id', 'ASC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getArrayResult();
+
+        $urls = [];
+        foreach ($rows as $row) {
+            $urls[(int) $row['id']] = $row['url'];
+        }
+
+        return $urls;
+    }
+
+    public function moveTo(int $cardId, string $url): void
+    {
+        $this->createQueryBuilder('card')
+            ->update()
+            ->set('card.url', ':url')
+            ->andWhere('card.id = :id')
+            ->setParameter('url', $url)
+            ->setParameter('id', $cardId)
+            ->getQuery()
+            ->execute();
+    }
+
     /** An entry's root and reply cards share one numbering, cards still waiting for the flush included. */
     private function nextPositionFor(Entry $entry): int
     {

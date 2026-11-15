@@ -126,6 +126,11 @@ final class Entry
         return $this->location->getUrl();
     }
 
+    public function relocate(string $url, ?string $urlHash): void
+    {
+        $this->location->store($url, $urlHash);
+    }
+
     public function getTitle(): string
     {
         return $this->headline->read()->text;
