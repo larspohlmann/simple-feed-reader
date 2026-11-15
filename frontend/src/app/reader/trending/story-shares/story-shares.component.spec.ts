@@ -77,7 +77,21 @@ it('reads in German', () => {
     'de',
   );
 
-  expect(element.textContent).toContain('Geteilt von Ann, Ben und einer weiteren Person');
+  expect(element.textContent).toContain('Geteilt von Ann, Ben und 1 weiteren');
+});
+
+it('counts the rest in German without calling them people', () => {
+  const element = mount(
+    sharedBy(
+      share(2, 'Ann', 'a'),
+      share(3, 'Ben', 'b'),
+      share(4, 'Cat', 'c'),
+      share(5, 'Dan', 'd'),
+    ),
+    'de',
+  );
+
+  expect(element.textContent).toContain('Geteilt von Ann, Ben und 2 weiteren');
 });
 
 it('expands into each sharing post, poster and text, and opens the one picked', () => {

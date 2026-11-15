@@ -84,4 +84,17 @@ describe('i18n dictionaries', () => {
 
     expect(labels).toHaveLength(10);
   });
+
+  it.each(['de', 'fr', 'es'])(
+    'name the rest of a story’s sharers as accounts, not people, in %s',
+    (lang) => {
+      const values = new Map(flatten(dictionaries[lang]));
+      const wording = [
+        String(values.get('reader.sharedByAndOne')),
+        String(values.get('reader.sharedByAndOthers')),
+      ];
+
+      expect(wording.filter((value) => /person/i.test(value))).toEqual([]);
+    },
+  );
 });

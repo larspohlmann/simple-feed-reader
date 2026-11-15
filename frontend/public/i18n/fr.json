@@ -1310,8 +1310,8 @@
     "trendingShares": "{{count}} partages",
     "trendingSharesOne": "1 partage",
     "sharedBy": "Partagé par {{names}}",
-    "sharedByAndOne": "Partagé par {{names}} et une autre personne",
-    "sharedByAndOthers": "Partagé par {{names}} et {{count}} autres personnes",
+    "sharedByAndOne": "Partagé par {{names}} et 1 autre",
+    "sharedByAndOthers": "Partagé par {{names}} et {{count}} autres",
     "trendingWindow": {
       "label": "Période",
       "day": "24 h",
