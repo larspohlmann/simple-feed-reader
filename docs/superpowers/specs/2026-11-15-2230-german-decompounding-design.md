@@ -496,3 +496,50 @@ The week run is now **8 % faster than A** (it was +28 %), so the 15 % budget hol
 6,313 day and 29,407 week entries. Everything after the header line is byte-identical, near misses included, and
 `compare.py` reports new 0 / lost 0 for both windows. A replay of one dumped week window through both versions also
 gave the same links, groups and near misses, with the same md5.
+
+### E: the final fix wave (R6 in any order, R8)
+
+Two behaviour fixes from the final review, then clean-ups that the replay proved output-identical:
+- **R6 no longer depends on the order entries arrive in.** A stem became a compound only when a word first split it,
+  and an entry added before that never counted as holding the compound. Now the entries already holding the stem are
+  marked when it first splits (*Rathäuser, Haus* then *Rathaus* shares what the reverse order shares).
+- **R8 caps what a compound adds through its parts at the compound's own weight**, per pair.
+- The clean-ups: one lexicon lookup per candidate (`entryOf`), which made the `rarest` class and `lexicon-meta.php`
+  dead, so both went; an entry's stem ids as a model; `stemsOf` and `render.php` gone. Replaying one dumped week
+  window gave the same links, groups and near misses (same md5) before and after them. The generator, re-run end to
+  end from freshly fetched shards, reproduced `lexicon.tsv` byte for byte.
+
+Measured like Task 7c: pinned to 2026-11-15 03:00 UTC, dev MySQL read-only, each variant's whole Trending module
+swapped in, the container warmed before each timed run. A (develop, 52259184a), D (Task 7c, b8ef8df67) and E (this
+wave) all read the same 4,724 day and 29,173 week entries.
+
+| | Day A | Day D | Day E | Week A | Week D | Week E |
+|---|---|---|---|---|---|---|
+| Groups | 576 | 584 | 584 | 3,684 | 3,763 | 3,752 |
+| Grouped pairs | 1,806 | 1,904 | 1,893 | 16,435 | 17,407 | 17,314 |
+| Near misses | 3,527 | 4,006 | 3,994 | 64,939 | 69,823 | 69,392 |
+| Wall time | 3.6 s | 4.4 s | 4.5 s | 65.3 s | 60.1 s | **66.2 s** |
+| Peak RSS | 87.5 MB | 94.5 MB | 94.4 MB | 239.6 MB | 256.2 MB | 246.5 MB |
+| Peak PHP memory | 46.3 MB | 53.9 MB | 54.3 MB | 147.3 MB | 173.8 MB | **176.3 MB** |
+
+| Grouped pairs, new / lost / **net** | Day A → E | Day D → E | Week A → E | Week D → E |
+|---|---|---|---|---|
+| All | 100 / 13 / **+87** | 1 / 12 / **−11** | 1,239 / 360 / **+879** | 97 / 190 / **−93** |
+| de–de | 96 / 9 / **+87** | 1 / 12 / **−11** | 1,095 / 285 / **+810** | 95 / 189 / **−94** |
+| de–other | 0 / 0 / 0 | 0 / 0 / 0 | 2 / 9 / **−7** | 2 / 1 / **+1** |
+
+The "other" rows of A → E (+76 week) are English pairs inside mixed groups that German links join; D → E moves none.
+
+- **Cost.** The week run is **+1.4 % against A** (D was −8 %): R8's per-pair bookkeeping costs about 6 s over D, most
+  of it the 7.4 million part links of the two pair passes. Peak PHP memory is 176.3 MB, +29 MB over A.
+- **What R8 removed.** The *Bundesbank warnt vor erhöhten Risiken* / *Bundesfinanzhof* merge (the junk parts *fin* +
+  *anz*) is gone, and so are the *Beratungsbedarf* / *Klärungsbedarf* / *Asylberatung* trio and the *Hier ein paar
+  zuletzt häufig geteilte #News* posts in the Starlink group.
+- **What R8 cost.** The 189 lost German week pairs are almost all real members leaving a real story whose link ran
+  through parts: the Hegseth *Amtsenthebung* group (13 → 12, with *des Amtes entheben*), the *Haushaltsausschuss /
+  Bundeshaushalt* pieces, *Ökodiktatur* / *Öko-Diktatur*, the Nvidia *Spionageverdacht* / *Spionage-Verdacht* pair,
+  *GTA 6*, the Aiwanger *Abschied* (day). The 95 gained are regroupings of real stories (Hegseth, the Sachsen-Anhalt
+  vote, the Italian *Bombendrohungen*, *Starship*, *Geheimdienstreform*).
+- **Task 7b's genre merges stay:** the *Selbstunfall* / *Motorradfahrer* / *Verkehrsunfall* group, the *Unfall mit zwei
+  Verletzten* group and *Flugscham* with the US *Startverbot* stories are unchanged in E. No group is joined by a part
+  alone.
