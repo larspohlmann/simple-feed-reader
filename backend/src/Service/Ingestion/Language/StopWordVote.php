@@ -14,6 +14,9 @@ final readonly class StopWordVote
     /** A single letter is a contraction's tail or an initial, and the French list holds nine. */
     private const int MIN_WORD_LENGTH = 2;
 
+    /** A link, a mention or a hashtag is no running text in the post's language. */
+    private const string LINK_MENTION_OR_HASHTAG = '~\bhttps?://\S+|[@#]\S+~u';
+
     /** An acronym is no function word: English "AI" is not French "ai". */
     private const string WORD_IN_CAPITALS = '/(?<![\p{L}\p{M}\p{N}])\p{Lu}[\p{Lu}\p{M}]+(?![\p{L}\p{M}\p{N}])/u';
 
@@ -44,7 +47,8 @@ final readonly class StopWordVote
     /** @return array<int, string> */
     private function votingWords(string $text): array
     {
-        $words = CasefoldedWords::of(preg_replace(self::WORD_IN_CAPITALS, ' ', $text) ?? $text);
+        $runningText = preg_replace([self::LINK_MENTION_OR_HASHTAG, self::WORD_IN_CAPITALS], ' ', $text) ?? $text;
+        $words = CasefoldedWords::of($runningText);
 
         return array_filter($words, static fn (string $word): bool => mb_strlen($word) >= self::MIN_WORD_LENGTH);
     }

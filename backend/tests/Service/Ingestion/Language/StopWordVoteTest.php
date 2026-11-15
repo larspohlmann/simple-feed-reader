@@ -67,6 +67,19 @@ final class StopWordVoteTest extends TestCase
         self::assertNull(self::vote('AUS DEM ARCHIV'));
     }
 
+    public function testAnEnglishLinkSlugDoesNotGiveAJapanesePostAVote(): void
+    {
+        self::assertNull(self::vote('今日のニュース https://www.example.com/news/the-day-of-the-vote'));
+    }
+
+    public function testLinksMentionsAndHashtagsDoNotVote(): void
+    {
+        self::assertNull(self::vote('Lesenswert https://example.com/the-best-of-the-year'));
+        self::assertNull(self::vote('Danke @the_best_of_the'));
+        self::assertNull(self::vote('Damn. #ai #genAI #aiSucks'));
+        self::assertSame(FeedLanguage::German, self::vote('Aus dem Archiv https://example.com/the'));
+    }
+
     public function testTheVoteReadsTheInjectedLists(): void
     {
         $stopWords = new class implements StopWordsInterface {

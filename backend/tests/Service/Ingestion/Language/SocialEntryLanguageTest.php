@@ -131,6 +131,13 @@ final class SocialEntryLanguageTest extends TestCase
         self::assertSame(FeedLanguage::English, LanguageWiring::socialEntryLanguage()->of($entry));
     }
 
+    public function testAnEnglishLookingMentionDoesNotGiveARussianPostALanguage(): void
+    {
+        $body = 'Новости дня @in_the_news';
+
+        self::assertNull(LanguageWiring::socialEntryLanguage()->of(self::entry($body, $body, null)));
+    }
+
     public function testARegionTagIsReadAsItsLanguage(): void
     {
         self::assertSame(FeedLanguage::English, self::languageOf(self::textOfLength(5), 'en-US', 'de'));
