@@ -486,4 +486,69 @@ move the window between them.
 
 ## Outcome
 
-*(Filled by the measurement task.)*
+Measured 2026-11-15 on one `mysqldump` of dev `feedreader` (124,873 entries, 8,280 cards, 196 quoted cards) restored
+into `feedreader_2239_a` (develop 4266db727, unmigrated) and `feedreader_2239_b` (HEAD, migrated and filled). Both
+copies were dropped after. Scripts are in the session scratchpad under `2239/final/`.
+
+**Migration (B).** 3 migrations, 8.37 s wall, 68 MB peak RSS for the whole `bin/console` process. 6,083 shared links
+from 8,280 cards and 196 quoted cards; 0 cards deleted, 0 quotes dropped, 0 cards unlinked, 196 quotes linked.
+`doctrine:schema:validate` in sync. From empty: SQLite 3.54 and MySQL 8.4 in sync, the six FTS5 triggers present on
+SQLite; MySQL down ×3 then up again in sync.
+
+**Merge check.** Every one of the 8,476 cards and quoted cards reads, on B, its URL's oldest card on A (0 differ, 0
+missing). 719 now differ from their own old preview (R3: 721): image only 359, title or description 269 (en 190, de
+70, fr 4, es 1, none 4), URL spelling 20.
+
+**Fill.** `--dry-run` 1.73 s; the run 3.26 s, 100 MB: 4,110 rows filled (de 1,010, en 3,033, fr 16, es 51), 1,973
+left short; a second run filled 0.
+
+**Storage.** Preview bytes 3.20 MB as cards → 2.29 MB as rows (−29 %). InnoDB `data + index`: A `link_card` 4.7 +
+0.5 MB; B `link_card` 0.3 + 0.5 MB and `shared_link` 3.7 + 1.6 MB, about the same in all (R1). References per row:
+1 → 4,687, 2 → 931, 3 → 257, 4 → 106, 5+ → 102.
+
+**Ingest, the week 2026-11-08 12:00 – 11-15 12:00.** 6,350 cards over 4,155 links: 4,148 new rows, 2,202 reuses
+(35 %). The sweep queued 1,663 rows holding 1,495 cards; 254 are post links on a known row (Bluesky 156, Mastodon
+98), the page reads G3 saves (17 % of the sweep's cards). 92 titled targets on a known row keep their read (Lemmy 86,
+outlet 6).
+
+**Trending A/B**, pinned at 2026-11-15 12:00:00, equal entry counts on both sides.
+
+| Window | Entries | Groups A → B | Pairs A → B | New / lost / net | A run | B run |
+|---|---|---|---|---|---|---|
+| day | 6,525 | 801 → 801 | 3,002 → 3,002 | 0 / 0 / 0 | 7.7 s, 99 MB | 7.7 s, 105 MB |
+| week | 30,533 | 3,900 → 3,900 | 20,351 → 20,383 | 45 / 13 / +32 | 92.6 s, 262 MB | 87.2 s, 266 MB |
+| fr day | 608 | 72 → 72 | 236 → 236 | 0 / 0 / 0 | 1.5 s, 68 MB | 1.2 s, 68 MB |
+| fr week | 722 | 87 → 87 | 273 → 273 | 0 / 0 / 0 | 1.3 s, 69 MB | 1.3 s, 69 MB |
+| es day | 495 | 27 → 27 | 42 → 42 | 0 / 0 / 0 | 1.2 s, 64 MB | 1.2 s, 64 MB |
+| es week | 958 | 46 → 46 | 85 → 85 | 0 / 0 / 0 | 1.5 s, 71 MB | 1.5 s, 71 MB |
+
+By language pair the week's change is en–en +23 (35 new, 12 lost) and mixed/none +9 (10 / 1); de–de, fr–fr and es–es
+0. All of it is one member: Ars Technica's "FAA orders third nationwide ground stop" moves from the 16-entry Politico
+group into the 46-entry ground-stop group. Traced to the merge (R3): 12 posts sharing one Politico live-updates URL
+carried four different per-post headlines and now all show its oldest, "FAA orders nationwide grounding of passenger
+planes". Checked by eye: the move joins the article to the story it is about. No change without a cause.
+
+**Rebuild.** The week's collect phase (3 runs, median): A 7,107 ms → B 6,401 ms (−10 %), peak equal. Of the 5,426
+week entries with a first card, 3,861 were language-guessed per rebuild on A; on B at most 18 are (no stored language
+and no post language).
+
+**Language by eye.** de 20/20 and en 20/20 guessed rows right. **French on its own: 4 of 16 right (25 %)**; the 12
+wrong are English (Politico ×5, TechCrunch, GitHub ×2, Washington Examiner), German (heise ×2) and Russian. **Spanish
+on its own: 33 of 51 right (65 %)**; the 18 wrong are English (Politico ×6, EFE English), Galician ×3, Catalan,
+Portuguese, Polish, Turkish, Indonesian ×2, Chinese and Russian. These are the same detector's guesses on the same text
+as develop's per-rebuild guess (#2229, #2235 M3), now stored once.
+
+**Live stated tags.** `PageCardReader::read()` from HEAD on 40 week URLs (10 per language; Politico left out, it is
+the known cluster): 3 fetches failed. de 9/9 agree; en 8 agree, 1 none (YouTube); es 6 agree, 3 none (Catalan,
+Indonesian, a `.md` homepage); fr 4 agree, **4 differ, and in all 4 the stated tag is right** (en ×2, de ×2: TechCrunch,
+Washington Examiner, heise ×2). A stated tag fixes exactly the rows the four-language guess gets wrong — but only for a
+row read after the deploy: the fill sets every long existing row, and a set language is never changed (D5).
+
+**Merge eye check**, 20 posts whose preview changed by title or description (all 5 French and Spanish ones, 15 drawn at
+random): 18 acceptable, 2 not.
+- Acceptable: 7 headline revisions (Politico's per-post headlines ×5, a Politico Europe and a heise retitle), 4
+  typography or whitespace drifts, 1 Instagram like count, 1 Lemmy description, 1 TechCrunch suffix dropped, 1 Tagesspiegel teaser
+  revision; 3 are better than the post's own (a heise teaser and a description gained, and a Cloudflare *Just a
+  moment...* title replaced by the article's).
+- Not acceptable: a Mother Jones title keeps the typo "aho" its outlet corrected later, and a Hackernoon card loses
+  the description a later card had. Both are what the refresh exists for; an open in the link reader fixes them.
