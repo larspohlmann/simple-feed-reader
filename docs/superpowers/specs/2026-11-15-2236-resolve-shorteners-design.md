@@ -24,8 +24,8 @@ download, a hop limit, a short timeout and a fixed budget per tick; fail safe.
   whichever writer writes it.
 - G2. A budgeted background pass follows each queued URL once through `RedirectFollower`, with HEAD first, and stores
   where it lands, cleaned, with its `UrlNormalizer::hash()` (D2–D4).
-- G3. A row is settled once: resolved, unchanged, or unresolved. No row is ever resolved twice, and a failure leaves
-  Trending exactly as today for that row (D6).
+- G3. A row is settled once: resolved, unchanged, or unresolved. No row is ever resolved twice; a transient failure is
+  retried at most twice, an hour apart; and a failure leaves Trending exactly as today for that row (D6).
 - G4. Trending's window read and its shown-entries read take the resolved URL and hash when there is one, else the
   posted URL and hash (D8). That covers the article key (`TrendingStories`), the URL links between entries
   (`TrendingGrouping::urlHashesOf`), the story-card rule (`WindowLinkCardModel::namesAStory`) and `article_site`.
@@ -37,7 +37,8 @@ download, a hop limit, a short timeout and a fixed budget per tick; fail safe.
 
 - **Showing or linking the resolved URL.** The card shows and links the URL as posted (ruling).
 - **A shortener host list**, or any table entry taken from the current news window.
-- **Retrying an unresolved row.** One attempt; costed under *Optional scope*.
+- **Retrying a final failure.** A refusal, a loop or a hop overrun is final at once; only a transient failure is
+  retried (D6).
 - **Reusing the share sweep's page read** as a free resolution. Costed under *Optional scope*.
 - **Resolving links of two or more path segments** (`threads.com/share/…`). Measured, they bring no outlet match
   (R2); costed under *Optional scope*.
@@ -148,27 +149,30 @@ them takes about 75 s of the worker's day. The backfill holds 1,126 rows, about 
 
 ### Schema
 
-`shared_link` gains three nullable columns and one index:
+*(Revised in implementation; D16.)* The resolution is a 1:1 table, `shared_link_resolution`, mapped by the entity
+`App\Entity\SharedLinkResolution`. A row exists only for a candidate: no row is the "not of the short-link shape, or
+written before the backfill" case.
 
 | Column | Type | Notes |
 |---|---|---|
-| `resolution` | VARCHAR(10), null, `enumType: App\Enum\LinkResolution` | null: not of the short-link shape, or written before the backfill; else `pending`, `resolved`, `unchanged`, `unresolved` |
-| `resolved_url` | VARCHAR(2048), null | the cleaned landing (`UrlNormalizer::withoutTracking`); set exactly when `resolution` is `resolved` |
-| `resolved_url_hash` | VARCHAR(64), null | `UrlNormalizer::hash(resolved_url)`; set exactly when `resolution` is `resolved` |
-| index `idx_shared_link_resolution` (`resolution`) | | serves the pending read |
+| `shared_link_id` | INT, PK, FK `shared_link (id)` ON DELETE CASCADE | the link; its GC takes the row with it |
+| `status` | VARCHAR(10), `enumType: App\Enum\LinkResolution` | `pending`, `resolved`, `unchanged`, `unresolved` |
+| `resolved_url` | VARCHAR(2048), null | the cleaned landing (`UrlNormalizer::withoutTracking`); set exactly when `resolved` |
+| `resolved_url_hash` | VARCHAR(64), null | `UrlNormalizer::hash(resolved_url)`; set exactly when `resolved` |
+| `attempts` | SMALLINT, default 0 | attempts made (D6) |
+| `retry_at` | DATETIME, null | when a deferred row is due again (D6) |
+| index `idx_shared_link_resolution_status` (`status`) | | serves the pending read |
 
-One migration, `Version20261115220000`, platform-aware like `Version20261115140000`:
-- MySQL: one `ALTER TABLE shared_link ADD …, ADD INDEX …`.
-- SQLite: three `ALTER TABLE … ADD COLUMN` and a `CREATE INDEX`. `shared_link` has no trigger and is not rebuilt, so
-  the `entry_search` triggers are untouched.
-- `down()` drops the index and the columns (MySQL; on SQLite `DROP COLUMN` after dropping the index).
-- No data step. Existing rows stay null until the backfill.
+One migration, `Version20261115220000`, platform-aware like `Version20261115140000`: a `CREATE TABLE` (plus the FK on
+MySQL). On SQLite the key column is declared `INT`, not `INTEGER`, or the rowid alias makes `doctrine:schema:validate`
+diff the table. No existing table is touched, so the `entry_search` triggers are untouched. `down()` drops the table.
+No data step.
 
 `App\Enum\LinkResolution: string { Pending = 'pending'; Resolved = 'resolved'; Unchanged = 'unchanged'; Unresolved =
 'unresolved'; }`. It lives in `App\Enum` because the entity maps it (CLAUDE.md, *Shared values have one home*).
 
-`SharedLink` maps the three columns and exposes `getResolution(): ?LinkResolution`. No setter: the pass settles rows
-in SQL (below). The field count goes from 11 to 14.
+`SharedLink` is unchanged (11 fields). `SharedLinkResolution` has getters only: `SharedLinkResolutionRepository`
+writes it in SQL.
 
 ### The short-link shape (D1)
 
@@ -179,13 +183,16 @@ both use it without a module cycle.
 
 ### Queuing (G1)
 
-- `NewSharedLinkModel` gains `public ?LinkResolution $resolution`.
-- `SharedLinkWriter::newLink()` sets it to `Pending` when `ShortLinkShape::fits($card->url)`, else null.
-- `SharedLinkRepository::rowOf()` writes it; the insert lists `resolution`.
+- `SharedLinkWriter::linksFor()`, after `insertMissing()`, calls
+  `SharedLinkResolutionRepository::queueByUrlHashes()` with the hashes of the missing rows whose URL
+  `ShortLinkShape::fits()`: one `INSERT IGNORE INTO shared_link_resolution … SELECT id, 'pending', 0 FROM shared_link
+  WHERE url_hash IN (…)`.
+- `NewSharedLinkModel` is unchanged.
 
 Every writer creates rows through `linksFor()` → `insertMissing()`: Bluesky embeds, Mastodon and Lemmy payload cards,
 the share sweep, quoted cards, thread posts and backup restore. So every new row is covered by this one change. A
-known row is reused untouched, so a later share never queues or resolves it again (#2239's store-once rule).
+known row is reused untouched, so a later share never queues or resolves it again (#2239's store-once rule). A row
+another writer won the insert race for may be queued by both; the second insert is ignored.
 
 ### Resolving one URL (G2) — `Service/Content/LinkResolution/LinkLanding`
 
@@ -198,27 +205,34 @@ known row is reused untouched, so a later share never queues or resolves it agai
    `RedirectChainException`, or when HEAD landed on the URL it started from with a status outside 2xx (`405`, `429`,
    `403` on HEAD alone).
 3. The outcome:
-   - every attempt threw → `LinkLandingModel::unresolved()`;
+   - the last attempt threw on a transport error (timeout, lost connection: a `TransportExceptionInterface` in the
+     cause chain), or landed unredirected on the posted URL with `429` or `5xx` → `LinkLandingModel::retryable()`
+     (resolution `Pending`; D6);
+   - the last attempt threw otherwise (a blocked hop or DNS failure in `UrlGuard`, a loop, a missing `Location`, a
+     spent chain budget) → `LinkLandingModel::unresolved()`;
    - the landing, cleaned, hashes like the URL → `LinkLandingModel::unchanged()`;
    - otherwise → `LinkLandingModel::resolved($cleanedLanding, $hash)`, whatever the landing's status (D3).
 
 `LinkLandingModel` (`Model/`, `final readonly`): `LinkResolution $resolution`, `?string $url`, `?string $urlHash`, with
-the three named constructors. `RedirectFollower` already runs `UrlGuard` on every hop, forces `max_redirects` to 0,
+the four named constructors. `RedirectFollower` already runs `UrlGuard` on every hop, forces `max_redirects` to 0,
 and turns a blocked hop, a loop past five hops, a missing `Location` or a timeout into `RedirectChainException`. So a
-private address, a loop and a slow chain all end as `unresolved`.
+private address and a loop end as `unresolved`, and a timeout as `retryable`.
 
 ### The pass (G2, G3) — `LinkResolutionSweep`
 
 `LinkResolutionSweep::resolvePending(LinkResolutionBudgetModel $budget): LinkResolutionReportModel`:
-- reads `SharedLinkRepository::pendingResolutions($budget->links)`, which returns `array<int, string>`: URL by id, the
-  lowest ids first, `resolution = 'pending'` only;
-- for each row, while `$budget->fitsAfter(elapsed)`, resolves it with `LinkLanding::of()` and calls
-  `SharedLinkRepository::settleResolution($id, $landing)`;
-- reports considered, resolved, unchanged, unresolved and the seconds spent.
+- reads `SharedLinkResolutionRepository::pendingAt($now, $budget->links)`, which returns `list<PendingLinkModel>`
+  (link id, URL, attempts): `status = 'pending'` and `retry_at` null or due, the lowest ids first;
+- for each row, while `$budget->fitsAfter(elapsed)`, resolves it with `LinkLanding::of()` and settles it at once:
+  - a settled landing → `settle($link, $landing)`;
+  - a retryable landing with fewer than 3 attempts → `defer($link, now + 1 h)`, which adds an attempt and sets
+    `retry_at`;
+  - the third retryable attempt → `settle($link, unresolved)`;
+- reports considered, resolved, unchanged, unresolved, deferred and the seconds spent.
 
-`settleResolution(int $linkId, LinkLandingModel $landing): void` is one
-`UPDATE shared_link SET resolution = ?, resolved_url = ?, resolved_url_hash = ? WHERE id = ? AND resolution =
-'pending'`. A second pass that resolved the same row concurrently writes nothing (D14).
+`settle()` and `defer()` are each one `UPDATE shared_link_resolution … WHERE shared_link_id = ? AND status =
+'pending' AND attempts = ?` (the attempts read). A second pass that resolved the same row concurrently, or a stale
+read, writes nothing (D14).
 
 `LinkResolutionBudgetModel` (`Model/`) mirrors `LinkCardBudgetModel`:
 - `links(int $count)`: a count of resolutions, each costing at most `LinkLanding::MAX_SECONDS` = 6.0 (two attempts of
@@ -227,8 +241,8 @@ private address, a loop and a slow chain all end as `unresolved`.
 - `fitsAfter(float $elapsedSeconds): bool`, true while one more worst-case resolution fits;
 - `isEmpty()`.
 
-`LinkResolutionReportModel` (`Model/`): `considered`, `resolved`, `unchanged`, `unresolved`, `seconds`, with `none()`,
-`plus()` for the backfill's sum, and `toLogContext()`.
+`LinkResolutionReportModel` (`Model/`): `considered`, `resolved`, `unchanged`, `unresolved`, `deferred`, `seconds`,
+with `none()`, `counted()`, `plus()` for the backfill's sum, and `toLogContext()`.
 
 ### Running the pass (D5)
 
@@ -241,17 +255,18 @@ Both deployments get it, as the link-card sweep does:
   65)]`, so it runs after `linkCards` (70) and the rows the sweep just wrote can resolve in the same tick. Its budget
   is `fittingBefore($deadline, now, 5)`. `idleReport()` is `none()`.
 - `App\Http\SweepReportJson\LinkResolutionSweepJson` maps the report for `/maintenance/tick`: `considered`,
-  `resolved`, `unchanged`, `unresolved`. The tick JSON is an admin surface, so clients are unaffected.
+  `resolved`, `unchanged`, `unresolved`, `deferred`. The tick JSON is an admin surface, so clients are unaffected.
 
 Five per minute is about 300 an hour, against about 6 candidates an hour arriving (R4). The worst case is 30 s a
 pass; the measured mean is 2.5 s.
 
 ### Trending reads the landing (G4, D8)
 
-Two SQL expressions change, and nothing else in Trending:
-- `TrendingEntryRepository::chunkAfter`: `COALESCE(link.resolved_url_hash, link.url_hash) AS card_url_hash` and
-  `COALESCE(link.resolved_url, link.url) AS card_url`.
-- `TrendingStoryRepository::shownEntriesByStory`: `COALESCE(link.resolved_url_hash, link.url_hash) AS url_hash`.
+Two SQL reads change, and nothing else in Trending. Each adds `LEFT JOIN shared_link_resolution landing ON
+landing.shared_link_id = link.id` (a primary-key lookup):
+- `TrendingEntryRepository::chunkAfter`: `COALESCE(landing.resolved_url_hash, link.url_hash) AS card_url_hash` and
+  `COALESCE(landing.resolved_url, link.url) AS card_url`.
+- `TrendingStoryRepository::shownEntriesByStory`: `COALESCE(landing.resolved_url_hash, link.url_hash) AS url_hash`.
 
 `WindowLinkCardModel` is unchanged, and now sees the landing:
 - `urlHash` feeds `TrendingGrouping::urlHashesOf`, so an `n.pr` post and NPR's own entry share a URL and link
@@ -268,13 +283,14 @@ outlet's article folds onto that outlet's row, which removes the #2229 duplicate
 
 - `app:shared-links:resolve` (`ResolveSharedLinksCommand`) → `Service/Operations/LinkResolutionBackfill/
   SharedLinkResolutionBackfill`.
-- `count()` (`--dry-run`) walks every row with `resolution IS NULL` by id, in batches of 500
-  (`SharedLinkRepository::unqueuedUrlsAfterId`), and counts those that `ShortLinkShape::fits()`.
-- `run()` marks them pending (`SharedLinkRepository::queueResolutions(list<int>)`, one `UPDATE … WHERE id IN (…) AND
-  resolution IS NULL` per batch). It then drains through `LinkResolutionSweep::resolvePending(LinkResolutionBudgetModel
-  ::links(50))` until a pass considers nothing, and sums the reports.
-- Output: queued, resolved, unchanged, unresolved, seconds, mean seconds per link.
-- Re-running is safe: queued and settled rows are not null, and a pending row left behind by an interrupted run is
+- `count()` (`--dry-run`) walks every link without a resolution row by id, in batches of 500
+  (`SharedLinkResolutionRepository::unqueuedUrlsAfterId`), and counts those that `ShortLinkShape::fits()`.
+- `run()` queues them (`SharedLinkResolutionRepository::queue(list<int>)`, one `INSERT IGNORE … SELECT … WHERE id IN
+  (…)` per batch). It then drains through `LinkResolutionSweep::resolvePending(LinkResolutionBudgetModel::links(50))`
+  until a pass considers nothing due, and sums the reports. Rows deferred by a transient failure are left to the
+  worker or the tick, which retry them an hour later (D6).
+- Output: `Queued %d; resolved %d, unchanged %d, unresolved %d, deferred %d in %.1f s (%.2f s a link)`.
+- Re-running is safe: queued and settled rows have a row, and a pending row left behind by an interrupted run is
   drained.
 - Runs once on dev Docker and once on Strato after the deploy. The follow-up commit deletes the command, the service,
   its report model (if one is added) and the two repository methods used only by it.
@@ -311,10 +327,15 @@ Lars delegated every decision. Each is "what — why — cost if wrong".
   fetch to piggyback (R3). A separate sweep gets its own budget against the tick deadline, as `imageVerification` and
   `linkCards` do. — If wrong: a card resolves up to a minute after it is written, which the hourly Trending rebuild
   absorbs. A spike above about 300 candidates an hour queues up and drains later.
-- **D6. One attempt per row; `unresolved` is final; `null` means not a candidate.** — The ruling: store once, fail
-  safe. The four states make the measurement countable (failures per tick). — If wrong: a transient `429` or timeout
-  keeps a row unresolved for good, and Trending treats that link as today. A retry is costed below.
-- **D7. The writer queues at insert, in `SharedLinkWriter::newLink()`; restore re-queues.** — One place covers every
+- **D6. Up to three attempts for a transient failure, one for any other; `unresolved` is final; no row means not a
+  candidate.** *(Controller ruling, 2026-11-15.)* A transient failure (a timeout or lost connection, or the posted URL
+  itself answering `429` or `5xx`) leaves the row pending with `attempts + 1` and `retry_at` an hour on, at most twice;
+  the third such attempt settles `unresolved`. A refusal (`UrlGuard`, DNS failure included), a loop, a missing
+  `Location` or a hop overrun settles `unresolved` at once. A redirect elsewhere counts whatever its status (D3). — The
+  backfill fires about 300 `trib.al` requests back to back; a `429` there would otherwise lose real matches for good.
+  The four states keep the measurement countable. — If wrong: a shortener throttling for three hours running loses
+  its rows (today's behaviour), and a host whose DNS fails once is never retried.
+- **D7. The writer queues at insert, in `SharedLinkWriter::linksFor()`; restore re-queues.** — One place covers every
   writer (#2239's single writer). A backup does not carry the resolution, like the language (#2239 D10). — If wrong:
   a restored instance re-resolves its short links: about 1,100 requests, drained at 5 a minute.
 - **D8. Trending reads `COALESCE(resolved, posted)` in its two SQL reads; no PHP in Trending changes.** — The window
@@ -325,9 +346,9 @@ Lars delegated every decision. Each is "what — why — cost if wrong".
   This is Lars's ruling. All rows, because new posts reuse old rows (#2239 R2: 35 %); the week holds 1,026 of the
   1,126 rows anyway. The drain reuses the pass, so the backfill follows the same code the worker runs. — If wrong:
   the run takes about 9 minutes on dev, and a rate-limiting shortener answers `429` to some of 300 back-to-back
-  requests. Those rows stay unresolved (D6), and the run's report counts them.
+  requests. Those rows are deferred and retried (D6), and the run's report counts them.
 - **D10. Placement: `Foundation/Url/Support/ShortLinkShape`; a new module `Content/LinkResolution` (`LinkLanding`,
-  `LinkResolutionSweep`, three models); `App\Enum\LinkResolution`; the backfill in `Operations/LinkResolutionBackfill`.**
+  `LinkResolutionSweep`, four models); `App\Enum\LinkResolution`; `App\Entity\SharedLinkResolution` and its repository; the backfill in `Operations/LinkResolutionBackfill`.**
   — `LinkCard` (the writer) needs only the shape, and `LinkResolution` needs only the repository and `Outbound/Fetch`,
   so no module cycle forms. — If wrong: a later move of the module.
 - **D11. Not an open proxy.** — No route accepts a URL, the pass reads only stored card URLs, and every hop passes
@@ -339,16 +360,23 @@ Lars delegated every decision. Each is "what — why — cost if wrong".
   entries. — If wrong: none beyond #2237's own cleaner.
 - **D13. The share sweep's page read is not reused as a resolution.** — It covers at most about 134 candidates a week
   (R3) and needs `PageCardModel` plumbing. — If wrong: about 134 HEAD requests a week that could have been free.
-- **D14. No claim lease; a conditional `UPDATE … AND resolution = 'pending'` settles a row once.** — Only the worker
-  or the tick runs on one deployment. The backfill can overlap the worker on dev, which costs a duplicate request,
-  never a second write. — If wrong: a few duplicate HEAD requests while the backfill runs.
-- **D15. No `resolved_at` column.** — Nothing reads it, and the report and log give the per-pass figures. — If wrong:
-  a later retry policy adds one column.
+- **D14. No claim lease; a conditional `UPDATE … WHERE status = 'pending' AND attempts = <read>` settles or defers a
+  row once.** — Only the worker or the tick runs on one deployment. The backfill can overlap the worker on dev, which
+  costs a duplicate request, never a second write. — If wrong: a few duplicate HEAD requests while the backfill runs.
+- **D15. No `resolved_at` column; `retry_at` is set only while a row waits for a retry.** — Nothing reads a settle
+  time, and the report and log give the per-pass figures. — If wrong: a later policy adds one column.
+- **D16. The resolution is its own 1:1 table, `shared_link_resolution`, not three columns on `shared_link`.**
+  *(Implementation ruling.)* D6 needs two more values (attempts, next attempt), which takes `SharedLink` to 16 fields
+  against PHPMD's 15. An embeddable fold fails PHPStan (phpstan-doctrine reads no embeddable metadata, so SQL-only
+  fields read as never written), and splitting the language off `SharedLink` would be a count-driven split (#2025).
+  The table holds a row only for a candidate (about a fifth of the links), cascades with the link's GC, and leaves
+  `SharedLink` with room for its next column. — If wrong: one primary-key join per card in the two Trending reads, and
+  a second insert per writer batch that has a short link.
 
 ## Optional scope, costed and not built
 
-- **Retry `unresolved` rows** with a backoff: a `resolution_attempts` or `resolved_at` column, and the pending read
-  extended. It helps transient `429`s and timeouts. Build it if the backfill's unresolved count is material.
+- **Retry final failures** (a DNS failure, a refusal) later: drop the distinction in `LinkLanding::isTransient()`.
+  Build it if the unresolved hosts show transient DNS failures.
 - **The sweep's free landing** (D13): pass `PageIdentityModel::finalUrl` through `PageCardModel` into the writer, and
   store `resolved` or `unchanged` at insert. This saves about 134 requests a week.
 - **Two-segment candidates:** widen `ShortLinkShape`. R2 found 0 outlet matches in 244 rows, and it would cost about
@@ -388,13 +416,14 @@ restored from one `mysqldump` of `feedreader`, so the worker cannot move the win
 ## Risks
 
 - **Rate limiting during the backfill** (D9). About 300 `trib.al`/`slate.trib.al` links run back to back. A `429`
-  makes a row unresolved for good unless the retry option is built. The report shows it per host.
+  defers a row, retried twice an hour apart (D6). The report shows deferred rows, and the outcome lists them per host.
 - **Strato's egress.** Strato has a known dead IPv4 family for some hosts (memory: "Dead-family fetch"). The failover
   sender covers it as it does for feeds. Unmeasured there until the Strato backfill.
 - **Bot blocking of the user agent** by a shortener itself (none in the sample: `bit.ly` redirects, and its *target*
   blocks).
 - **A shortener that changes its target later** keeps the first landing. That is the store-once ruling.
-- **`SharedLink` reaches 14 of PHPMD's 15 fields.** The next column on `shared_link` needs a design.
+- **`SharedLinkResolution` is written in SQL only.** Its getters serve tests; a reader that needs it in PHP finds it
+  by the link's id.
 
 ## Outcome
 

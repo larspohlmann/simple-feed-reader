@@ -20,6 +20,21 @@ PHPUnit 12, Infection.
 **Spec:** `docs/superpowers/specs/2026-11-15-2236-resolve-shorteners-design.md`, the binding authority. Read its
 Design, Decisions D1–D15 and Research R1–R4 before Task 1.
 
+## Revisions in implementation
+
+The spec's D6 (controller ruling: a transient failure gets two more attempts, an hour apart) and D16 (the resolution is
+its own table) change these tasks; the spec is the authority.
+- **Task 2:** `shared_link_resolution` (entity `SharedLinkResolution`, repository `SharedLinkResolutionRepository`)
+  instead of three `shared_link` columns; `SharedLinkWriter::linksFor()` queues through `queueByUrlHashes()`;
+  `NewSharedLinkModel` and `SharedLink` are unchanged.
+- **Task 3:** `LinkLandingModel::retryable()` (resolution `Pending`) for a transport failure or a `429`/`5xx` at the
+  posted URL; `testBothFailingIsUnresolved` became `testAConnectionFailureIsRetryable`.
+- **Task 4:** `pendingAt($now, $limit)` returns `PendingLinkModel`s; `settle()` and `defer()` are conditional on the
+  attempts read; the report gains `deferred`.
+- **Tasks 5 and 7:** the tick JSON, the worker log and the backfill line carry `deferred`; the backfill's repository
+  methods are `SharedLinkResolutionRepository::unqueuedUrlsAfterId()` and `queue()`.
+- **Task 6:** both Trending reads `LEFT JOIN shared_link_resolution landing`.
+
 ## Global Constraints
 
 - **Binding rulings:**

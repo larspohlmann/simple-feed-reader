@@ -113,7 +113,7 @@ final class LinkResolutionSweepTest extends DbTestCase
     public function testTheThirdTransientFailureIsFinal(): void
     {
         $linkId = $this->linkOf('https://n.pr/a');
-        $sweep = $this->sweep([...self::throttled(), ...self::throttled(), ...self::throttled()]);
+        $sweep = $this->sweep(array_merge(self::throttled(), self::throttled(), self::throttled()));
 
         $sweep->resolvePending(LinkResolutionBudgetModel::links(5));
         $this->clock->modify('+1 hour');
