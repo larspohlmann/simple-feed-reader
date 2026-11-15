@@ -236,3 +236,36 @@ above. Plus the vote's cost per post at ingest.
 
 ## Outcome
 
+
+Measured on `feedreader_2243_copy` with the pinned week (7,412 social posts), A = develop 7eeb43652's
+`SocialEntryLanguage`, B = this branch's, both run over every post as if it stated no language.
+
+- **Tags.** B changes 253 posts from no language: en 194, de 54, es 3, fr 2. B differs from the V2 simulation on 11
+  posts, all from D8 (capitals): 5 gain en because *AI* no longer ties or beats French *ai* (two *Laravel AI SDK…*
+  posts among them, which V2 tagged fr), 6 shouted or capitalised posts lose their vote (*PRONOUNS HAVE STRUCK AGAIN*,
+  *WE MEANT BLACK PEOPLE*, *Secret Panel HERE* ×2, *oh OH OH NO…*, *Please don’t share AI generated memes*, the last
+  V2's fr). Wrong fr tags: 1 of 2 (*Damn. #ai #genAI…*; the right one is *Des zadistes radicalisés…*), down from V2's
+  4 of 5. Wrong es: 3 of 3 (Catalan ×2, Turkish), as predicted.
+- **Pairs, A → B** (new / lost / **net**), the same as V2's to the pair:
+
+| | Week | Day |
+|---|---|---|
+| de–de | 25 / 9 / **+16** | 0 / 0 / **0** |
+| en–en | 153 / 28 / **+125** | 7 / 0 / **+7** |
+| fr–fr | 0 / 0 / **0** | 0 / 0 / **0** |
+| es–es | 0 / 0 / **0** | 0 / 0 / **0** |
+| mixed or none | 9 / 2 / **+7** | 0 / 0 / **0** |
+| **all** | 20,053 → 20,201, **+148** | 3,553 → 3,560, **+7** |
+
+- **French-only and Spanish-only windows** (`union-fr.ids` 805 entries, `union-es.ids` 976, which hold every post B
+  tags fr or es): French day 283 → 283, week 326 → 326; Spanish day 54 → 54, week 96 → 96. **0 new and 0 lost in
+  all four.**
+- **By eye.** en 30 of 30 sampled right; de 18 of 20 right (wrong: *doodle cause im injured…*, *Jensen Huang will
+  return in Avengers: Doomsday*); the 20 new or changed week groups are V2's (Alaska Senate count 20, Tim Cook as
+  Huang's successor 9, Boebert 9, Aigner 13, the Hamas commander 7, the Huang and Lutnick testimony 8, the Microsoft
+  outage 4): all real stories, no wrong merge.
+- **Cost.** The vote takes 21 µs a text (7,412 texts in 154 ms; building it 0.6 ms) and runs only on the ~500 short
+  posts a week the detector names no language for; the whole-week language pass takes 12.3–12.6 s under A and B
+  alike. Trending is unchanged: week 81 s, peak 197 MB under both.
+- **Deviation from the prediction:** none in pairs; 11 tags, all from D8, which removes 3 wrong fr tags and costs no
+  pair.
