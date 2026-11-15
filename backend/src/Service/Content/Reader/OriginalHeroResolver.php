@@ -32,6 +32,6 @@ final readonly class OriginalHeroResolver
     /** The body the original view renders. */
     private function feedBody(Entry $entry): string
     {
-        return $entry->getContentHtml() ?? $entry->getSummary() ?? '';
+        return $entry->getText()->getContentHtml() ?? $entry->getText()->getSummary() ?? '';
     }
 }

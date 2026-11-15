@@ -33,7 +33,8 @@ final readonly class EntryBatchInserter
 
     private const array COLUMNS = [
         'feed_id', 'guid', 'guid_hash', 'url', 'url_hash', 'title', 'author',
-        'summary', 'content_html', 'image_url', 'image_url_hash', 'image_width', 'image_height', 'image_renditions',
+        'summary', 'content_html', 'language',
+        'image_url', 'image_url_hash', 'image_width', 'image_height', 'image_renditions',
         'media', 'attachments', 'chapters', 'chapters_url',
         'published_at', 'created_at', 'effective_date',
         'discussion_url', 'comments_feed_url', 'comments_load',
@@ -107,7 +108,7 @@ final readonly class EntryBatchInserter
         return [
             $feedId, $line->guid, $line->guidHash, $line->url,
             $this->urlHash->of($line->guid, $line->url), $line->title,
-            $line->author, $line->summary, $line->contentHtml, $line->imageUrl,
+            $line->author, $line->summary, $line->contentHtml, $line->language?->value, $line->imageUrl,
             $line->imageUrl === null ? null : EntryImage::hashOf($line->imageUrl),
             $line->imageWidth, $line->imageHeight, self::encodeList($line->imageRenditions),
             self::encodeList($line->media), self::encodeList($line->attachments),

@@ -7,13 +7,16 @@ namespace App\Service\Ingestion\Ingest\Factory;
 use App\Entity\Entry;
 use App\Entity\EntryAuthor;
 use App\Entity\EntryChapters;
+use App\Entity\EntryText;
 use App\Entity\Feed;
+use App\Enum\SourceFormat;
 use App\Service\Ingestion\Ingest\EntryImageWriter;
 use App\Service\Ingestion\Ingest\Model\IncomingEntryModel;
 use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
 use App\Service\Ingestion\Ingest\Support\EntryEffectiveDate;
 use App\Service\Ingestion\Ingest\Support\EntryMediaAssembler;
 use App\Service\Ingestion\Ingest\Support\EntrySnippet;
+use App\Service\Ingestion\Language\SocialEntryLanguage;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Parser\Model\ParsedMediaBundleModel;
 use App\Service\Foundation\Sanitize\EntrySanitizer;
@@ -28,6 +31,7 @@ final readonly class IngestedEntryFactory
     public function __construct(
         private EntrySanitizer $sanitizer,
         private EntryImageWriter $imageWriter,
+        private SocialEntryLanguage $socialLanguage,
     ) {
     }
 
@@ -49,8 +53,7 @@ final readonly class IngestedEntryFactory
             AbsoluteHttpUrl::orNullWithin($parsed->authorUrl, EntryAuthor::URL_MAX_LENGTH),
             AbsoluteHttpUrl::orNullWithin($parsed->authorAvatarUrl, EntryAuthor::URL_MAX_LENGTH),
         ));
-        $entry->setSummary(EntrySnippet::from($parsed->summary ?? $parsed->contentHtml));
-        $entry->setContentHtml($this->sanitizer->sanitize($parsed->contentHtml));
+        $entry->recordText($this->textOf($entry->getText(), $feed, $parsed));
         $entry->setPublishedAt($parsed->publishedAt);
         $entry->setDiscussion($parsed->discussion);
         $entry->recordDiscussionCounts($parsed->discussionCounts);
@@ -59,6 +62,18 @@ final readonly class IngestedEntryFactory
         self::declareChapters($entry, $parsed);
 
         return $entry;
+    }
+
+    private function textOf(EntryText $text, Feed $feed, ParsedEntryModel $parsed): EntryText
+    {
+        $written = $text
+            ->withSummary(EntrySnippet::from($parsed->summary ?? $parsed->contentHtml))
+            ->withContentHtml($this->sanitizer->sanitize($parsed->contentHtml));
+        if (!SourceFormat::isSocial($feed->getSourceFormat())) {
+            return $written;
+        }
+
+        return $written->withLanguage($this->socialLanguage->of($parsed));
     }
 
     private static function cut(?string $value, int $maxLength): ?string

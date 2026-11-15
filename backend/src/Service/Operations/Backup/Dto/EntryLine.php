@@ -15,6 +15,7 @@ use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;
 use App\Entity\SavedEntryOrigin;
+use App\Enum\FeedLanguage;
 use App\Enum\ShareKind;
 use App\Service\Operations\Backup\Model\EntryCompanionsModel;
 use App\Service\Operations\Backup\Support\BackupLineFormat;
@@ -68,6 +69,7 @@ final readonly class EntryLine
         /** @var list<array<string, mixed>> */
         public array $chapters = [],
         public ?string $chaptersUrl = null,
+        public ?FeedLanguage $language = null,
     ) {
     }
 
@@ -110,6 +112,7 @@ final readonly class EntryLine
             origin: self::originOf($line),
             chapters: $chapters,
             chaptersUrl: $chapters === [] ? self::chaptersUrlOf($line) : null,
+            language: FeedLanguage::tryFrom((string) LineField::stringOrNull($line, 'language')),
         );
     }
 
@@ -124,8 +127,8 @@ final readonly class EntryLine
             url: $entry->getUrl(),
             title: $entry->getTitle(),
             author: $entry->getAuthor(),
-            summary: $entry->getSummary(),
-            contentHtml: $entry->getContentHtml(),
+            summary: $entry->getText()->getSummary(),
+            contentHtml: $entry->getText()->getContentHtml(),
             imageUrl: $entry->getImageUrl(),
             imageWidth: $entry->getImageWidth(),
             imageHeight: $entry->getImageHeight(),
@@ -147,6 +150,7 @@ final readonly class EntryLine
             origin: $companions->origin,
             chapters: EntryMedia::toJsonList($entry->getChapters()),
             chaptersUrl: $entry->getChaptersUrl(),
+            language: $entry->getText()->getLanguage(),
         );
     }
 
@@ -170,6 +174,7 @@ final readonly class EntryLine
             'authorAvatarUrl' => $this->authorAvatarUrl,
             'summary' => $this->summary,
             'contentHtml' => $this->contentHtml,
+            'language' => $this->language?->value,
             'imageUrl' => $this->imageUrl,
             'imageWidth' => $this->imageWidth,
             'imageHeight' => $this->imageHeight,

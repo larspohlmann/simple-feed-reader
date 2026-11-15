@@ -278,7 +278,7 @@ final class EntryControllerTest extends ApiTestCase
         $entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         $july1 = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $entry = new Entry($feed, 'excerpt-1', 'https://example.com/1', 'Post', $july1, $july1);
-        $entry->setContentHtml('<p>The full body of the article.</p>');
+        $entry->recordText($entry->getText()->withContentHtml('<p>The full body of the article.</p>'));
         $entityManager->persist($entry);
         $entityManager->flush();
 
@@ -586,7 +586,7 @@ final class EntryControllerTest extends ApiTestCase
             ->getRepository(Entry::class)
             ->findOneBy(['feed' => $subscription->getFeed(), 'guid.value' => 'g1']);
         self::assertInstanceOf(Entry::class, $entry);
-        $entry->setContentHtml('<p>For-you body text.</p>');
+        $entry->recordText($entry->getText()->withContentHtml('<p>For-you body text.</p>'));
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
         $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
@@ -1220,7 +1220,7 @@ final class EntryControllerTest extends ApiTestCase
         $entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         $july1 = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $entry = new Entry($feed, 'detail-1', 'https://example.com/1', 'Post', $july1, $july1);
-        $entry->setContentHtml('<p>The full body of the article.</p>');
+        $entry->recordText($entry->getText()->withContentHtml('<p>The full body of the article.</p>'));
         $entityManager->persist($entry);
         $entityManager->flush();
         $entryId = $entry->getId();
@@ -1330,7 +1330,7 @@ final class EntryControllerTest extends ApiTestCase
         $entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         $july1 = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $post = new Entry($feed, 'https://mastodon.example/@someone/1', null, 'Post', $july1, $july1);
-        $post->setContentHtml('<p>Worth a read: https://example.com/story</p>');
+        $post->recordText($post->getText()->withContentHtml('<p>Worth a read: https://example.com/story</p>'));
         $post->setHeadline(Headline::derived('Post'));
         $entityManager->persist($post);
         $entityManager->flush();

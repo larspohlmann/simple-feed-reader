@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Enum\FeedLanguage;
 use App\Enum\FeedPlatform;
 use App\Enum\FeedStatus;
 use App\Enum\SocialNetwork;
@@ -64,8 +65,8 @@ final class Feed
     #[ORM\Column(length: 16, nullable: true, enumType: SocialNetwork::class)]
     private ?SocialNetwork $network = null;
 
-    #[ORM\Column(length: 16, nullable: true, enumType: FeedPlatform::class)]
-    private ?FeedPlatform $platform = null;
+    #[ORM\Embedded(class: FeedTraits::class, columnPrefix: false)]
+    private FeedTraits $traits;
 
     #[ORM\Embedded(class: FetchSchedule::class, columnPrefix: false)]
     private FetchSchedule $fetchSchedule;
@@ -80,6 +81,7 @@ final class Feed
     {
         $this->url = $url;
         $this->fetchSchedule = new FetchSchedule();
+        $this->traits = new FeedTraits();
     }
 
     public function getId(): ?int
@@ -185,12 +187,22 @@ final class Feed
 
     public function getPlatform(): ?FeedPlatform
     {
-        return $this->platform;
+        return $this->traits->getPlatform();
     }
 
-    public function recordPlatform(?FeedPlatform $platform): void
+    public function getTraits(): FeedTraits
     {
-        $this->platform = $platform;
+        return $this->traits;
+    }
+
+    public function recordTraits(FeedTraits $traits): void
+    {
+        $this->traits = $traits;
+    }
+
+    public function getLanguage(): ?FeedLanguage
+    {
+        return $this->traits->getLanguage();
     }
 
     public function getLastFetchedAt(): ?\DateTimeImmutable

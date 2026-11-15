@@ -1052,7 +1052,10 @@
       "showInSavedSearches": "Show in saved searches",
       "showInTrending": "Show in Trending",
       "saving": "Saving…",
-      "save": "Save"
+      "save": "Save",
+      "language": "Language",
+      "languageAutomatic": "Automatic",
+      "languageHint": "Applies to everyone who follows this feed. Automatic guesses it again on the next refresh."
     }
   },
   "problem": {
@@ -1448,6 +1451,12 @@
     "includeInForYou": "Show in For You",
     "includeInSavedSearches": "Show in saved searches",
     "includeInTrending": "Show in Trending",
+    "feedLanguage": {
+      "de": "German",
+      "en": "English",
+      "fr": "French",
+      "es": "Spanish"
+    },
     "excludedFrom": "Hidden from {{surfaces}}",
     "dropToRemoveTags": "Drop here to remove tags",
     "unread": "only unread",

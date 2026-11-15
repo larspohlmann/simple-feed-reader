@@ -57,7 +57,7 @@ final class EntrySearchTest extends DbTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable($effectiveDate),
         );
-        $entry->setSummary($summary);
+        $entry->recordText($entry->getText()->withSummary($summary));
         $this->entityManager->persist($entry);
         $this->entityManager->flush();
 

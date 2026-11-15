@@ -143,7 +143,7 @@ final class EntryTranscriptControllerTest extends ApiTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
-        $entry->setContentHtml('<p>Notes</p>');
+        $entry->recordText($entry->getText()->withContentHtml('<p>Notes</p>'));
         $entityManager->persist($entry);
         $entityManager->flush();
 

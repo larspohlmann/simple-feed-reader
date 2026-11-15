@@ -14,6 +14,7 @@ use App\Service\Ingestion\Ingest\FeedTitle\FeedTitleInterface;
 use App\Service\Ingestion\Ingest\Model\IncomingEntryModel;
 use App\Service\Ingestion\Ingest\Pass\EntryDeduplicator;
 use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
+use App\Service\Ingestion\Language\FeedLanguageResolver;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
 use App\Service\Foundation\Url\EntryUrlHash;
@@ -44,6 +45,7 @@ final readonly class EntryIngestor
         private EntryImageWriter $imageWriter,
         private FeedTitleInterface $feedTitle,
         private EntryTranscriptWriter $transcriptWriter,
+        private FeedLanguageResolver $languageResolver,
     ) {
     }
 
@@ -115,7 +117,7 @@ final readonly class EntryIngestor
 
     private function updateFeedMetadata(Feed $feed, ParsedFeedModel $parsed): void
     {
-        $feed->recordPlatform(FeedPlatform::fromGenerator($parsed->generator));
+        $this->recordTraits($feed, $parsed);
         if ($parsed->title !== null) {
             $title = $this->feedTitle->of($feed->getUrl(), $parsed->title);
             $feed->setTitle(mb_substr($title, 0, self::FEED_TITLE_MAX));
@@ -130,6 +132,14 @@ final readonly class EntryIngestor
         if ($parsed->imageUrl !== null) {
             $feed->setImageUrl($parsed->imageUrl);
         }
+    }
+
+    private function recordTraits(Feed $feed, ParsedFeedModel $parsed): void
+    {
+        $traits = $feed->getTraits()
+            ->withPlatform(FeedPlatform::fromGenerator($parsed->generator))
+            ->withLanguage($this->languageResolver->languageFor($feed, $parsed));
+        $feed->recordTraits($traits);
     }
 
     private function incoming(ParsedEntryModel $entry): IncomingEntryModel

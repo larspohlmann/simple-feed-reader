@@ -31,7 +31,7 @@ final readonly class EntryShareClassifier
 
     public function classify(Entry $entry): void
     {
-        $body = SharedLinks::of($entry->getContentHtml() ?? $entry->getSummary() ?? '');
+        $body = SharedLinks::of($entry->getText()->getContentHtml() ?? $entry->getText()->getSummary() ?? '');
         $shareKind = $this->orProvisionalLink($entry, $this->shareKindOf($entry, $body));
         $entry->setShareKind($shareKind);
         if ($shareKind === null) {
@@ -92,17 +92,19 @@ final readonly class EntryShareClassifier
 
     private function linkBareUrls(Entry $entry, SharedLinksModel $body): void
     {
-        $contentHtml = $entry->getContentHtml();
+        $contentHtml = $entry->getText()->getContentHtml();
         if ($contentHtml === null || $body->linkedHtml === $contentHtml || $this->pendingEmbed->awaitsEmbed($entry)) {
             return;
         }
 
-        $entry->setContentHtml($this->sanitizer->sanitize($body->linkedHtml));
+        $entry->recordText($entry->getText()->withContentHtml($this->sanitizer->sanitize($body->linkedHtml)));
     }
 
     private function describeTitledShare(Entry $entry, ShareKind $shareKind, string $ownProse): void
     {
-        $entry->setSummary($ownProse === '' ? null : mb_substr($ownProse, 0, self::OWN_PROSE_MAX));
+        $entry->recordText(
+            $entry->getText()->withSummary($ownProse === '' ? null : mb_substr($ownProse, 0, self::OWN_PROSE_MAX)),
+        );
         $target = $shareKind === ShareKind::Media ? TitledShareTarget::of($entry) : null;
         $medium = $target === null ? null : VisualMedium::at($target);
         if ($medium !== null) {

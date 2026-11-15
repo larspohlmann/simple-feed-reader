@@ -3,6 +3,7 @@ import { Component, NgZone, Provider, TemplateRef, ViewChild, signal } from '@an
 import { By } from '@angular/platform-browser';
 import { of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
+import { TranslocoService } from '@jsverse/transloco';
 import { provideRouter } from '@angular/router';
 import { EntryListComponent } from './entry-list.component';
 import { Selection } from '../../query/query';
@@ -1440,6 +1441,59 @@ describe('EntryListComponent', () => {
           .nativeElement as HTMLElement
       ).querySelector('.last-refreshed'),
     ).toBeNull();
+  });
+
+  describe("a single feed's language", () => {
+    const feedLanguage = (over: Record<string, unknown>) =>
+      (mount(over).nativeElement as HTMLElement).querySelector('app-list-header .feed-language');
+
+    for (const layout of ['list', 'magazine'] as const) {
+      it(`is named in the header in the ${layout} layout`, () => {
+        const shown = feedLanguage({
+          layout,
+          selection: { kind: 'subscription', id: 7, unread: true },
+          lastRefreshed: '2026-07-25T08:00:00Z',
+          titleLanguage: 'de',
+        });
+        expect(shown?.textContent?.trim()).toBe('German');
+      });
+    }
+
+    it('is named even before the first fetch', () => {
+      const shown = feedLanguage({
+        selection: { kind: 'subscription', id: 7, unread: true },
+        lastRefreshed: null,
+        titleLanguage: 'fr',
+      });
+      expect(shown?.textContent?.trim()).toBe('French');
+    });
+
+    it('is translated with the UI', () => {
+      const fixture = mount({
+        selection: { kind: 'subscription', id: 7, unread: true },
+        titleLanguage: 'es',
+      });
+      TestBed.inject(TranslocoService).setActiveLang('de');
+      fixture.detectChanges();
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelector('.feed-language')?.textContent?.trim(),
+      ).toBe('Spanisch');
+    });
+
+    it('is hidden for a feed without one', () => {
+      expect(
+        feedLanguage({
+          selection: { kind: 'subscription', id: 7, unread: true },
+          titleLanguage: null,
+        }),
+      ).toBeNull();
+    });
+
+    it('is hidden outside a single-feed selection', () => {
+      expect(
+        feedLanguage({ selection: { kind: 'all', unread: true }, titleLanguage: 'de' }),
+      ).toBeNull();
+    });
   });
 
   it('shows a next-refresh hint beside the last-refreshed one for a single feed', () => {

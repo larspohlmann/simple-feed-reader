@@ -150,7 +150,7 @@ final class SocialFeedRepository extends ServiceEntityRepository
     {
         $qb = $this->getEntityManager()->createQueryBuilder()
             ->select('e.id AS id', 'e.guid.value AS guid')
-            ->addSelect('e.contentHtml AS contentHtml', 'e.author.profileUrl AS authorUrl')
+            ->addSelect('e.text.contentHtml AS contentHtml', 'e.author.profileUrl AS authorUrl')
             ->from(Entry::class, 'e')
             ->where('e.feed = :feed')
             ->andWhere('e.id > :lastEntryId')

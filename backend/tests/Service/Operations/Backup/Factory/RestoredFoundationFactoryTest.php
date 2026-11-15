@@ -6,6 +6,7 @@ namespace App\Tests\Service\Operations\Backup\Factory;
 
 use App\Entity\Feed;
 use App\Entity\User;
+use App\Enum\FeedLanguage;
 use App\Enum\InclusionSurface;
 use App\Service\Operations\Backup\Dto\FeedLine;
 use App\Service\Operations\Backup\Dto\SubscriptionLine;
@@ -70,6 +71,7 @@ final class RestoredFoundationFactoryTest extends TestCase
             faviconUrl: 'https://restored.example/favicon.ico',
             imageUrl: 'https://restored.example/logo.png',
             sourceFormat: 'scraped',
+            language: FeedLanguage::Spanish,
         ));
 
         self::assertSame('https://restored.example/feed.xml', $feed->getUrl());
@@ -79,6 +81,7 @@ final class RestoredFoundationFactoryTest extends TestCase
         self::assertSame('https://restored.example/favicon.ico', $feed->getFaviconUrl());
         self::assertSame('https://restored.example/logo.png', $feed->getImageUrl());
         self::assertSame('scraped', $feed->getSourceFormat());
+        self::assertSame(FeedLanguage::Spanish, $feed->getLanguage());
     }
 
     public function testASubscriptionIsRestoredWithItsSettings(): void

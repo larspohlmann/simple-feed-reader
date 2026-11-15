@@ -22,7 +22,7 @@ final readonly class SearchedColumns
         return \sprintf(
             '(%s OR %s OR EXISTS (SELECT %s.id FROM %s %s WHERE %s.entry = %s AND %s))',
             $columnMatch($entryAlias . '.headline.title'),
-            $columnMatch($entryAlias . '.summary'),
+            $columnMatch($entryAlias . '.text.summary'),
             $transcript,
             EntryTranscript::class,
             $transcript,

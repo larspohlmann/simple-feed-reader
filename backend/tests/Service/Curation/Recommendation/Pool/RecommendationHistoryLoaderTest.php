@@ -235,8 +235,8 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
     public function testDescriptionPrefersTheSummaryOverTheContentHtml(): void
     {
         $entry = $this->entry('A', '2026-07-10T00:00:00Z');
-        $entry->setSummary('Summary text');
-        $entry->setContentHtml('<p>Content text</p>');
+        $entry->recordText($entry->getText()->withSummary('Summary text'));
+        $entry->recordText($entry->getText()->withContentHtml('<p>Content text</p>'));
         $state = new EntryState($this->user, $entry);
         $state->markFavorite();
         $this->entityManager->persist($state);

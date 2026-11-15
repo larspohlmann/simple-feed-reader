@@ -50,6 +50,8 @@ const sub: SubscriptionDto = {
   includeInForYou: true,
   includeInSavedSearches: true,
   includeInTrending: true,
+  language: null,
+  languageEditable: true,
   social: null,
 };
 
@@ -462,6 +464,69 @@ describe('EditSubscriptionDialogComponent', () => {
 
       ctrl.expectNone(SEARCH_QUERY);
       ctrl.expectNone(UPDATE);
+    });
+  });
+
+  describe('the language', () => {
+    const languageSelect = (fixture: ComponentFixture<EditSubscriptionDialogComponent>) =>
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLSelectElement>(
+        '#edit-feed-language',
+      );
+
+    function choose(fixture: ComponentFixture<EditSubscriptionDialogComponent>, value: string) {
+      const select = languageSelect(fixture)!;
+      select.value = value;
+      select.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+    }
+
+    it('offers Automatic and the four languages, with the stored one chosen', () => {
+      const select = languageSelect(mount({ ...sub, language: 'fr' }))!;
+      expect([...select.options].map((option) => option.textContent!.trim())).toEqual([
+        'Automatic',
+        'German',
+        'English',
+        'French',
+        'Spanish',
+      ]);
+      expect(select.value).toBe('fr');
+    });
+
+    it('chooses Automatic for a feed without a language', () => {
+      expect(languageSelect(mount())!.value).toBe('automatic');
+    });
+
+    it('sends a newly chosen language', () => {
+      const fixture = mount();
+      choose(fixture, 'es');
+      fixture.componentInstance.submit();
+      const testRequest = ctrl.expectOne('https://api.test/api/subscriptions/5');
+      expect(testRequest.request.body.language).toBe('es');
+      testRequest.flush({ subscription: { ...sub, language: 'es' } });
+    });
+
+    it('sends Automatic to clear a stored language', () => {
+      const fixture = mount({ ...sub, language: 'de' });
+      choose(fixture, 'automatic');
+      fixture.componentInstance.submit();
+      const testRequest = ctrl.expectOne('https://api.test/api/subscriptions/5');
+      expect(testRequest.request.body.language).toBe('automatic');
+      testRequest.flush({ subscription: sub });
+    });
+
+    it('sends no language when it was left as it was', () => {
+      mount({ ...sub, language: 'de' }).componentInstance.submit();
+      const testRequest = ctrl.expectOne('https://api.test/api/subscriptions/5');
+      expect('language' in testRequest.request.body).toBe(false);
+      testRequest.flush({ subscription: sub });
+    });
+
+    it('is not offered for a feed the server marks as mixing languages', () => {
+      expect(languageSelect(mount({ ...sub, languageEditable: false }))).toBeNull();
+    });
+
+    it('is offered for a feed of its own language', () => {
+      expect(languageSelect(mount({ ...sub, languageEditable: true }))).not.toBeNull();
     });
   });
 });

@@ -42,7 +42,7 @@ final class EntryShareClassifierTest extends TestCase
         $feed->setSiteUrl($siteUrl);
         $now = new \DateTimeImmutable('2026-10-11 09:00:00');
         $entry = new Entry($feed, $guid, $url, 'A real headline', $now, $now);
-        $entry->setContentHtml($body);
+        $entry->recordText($entry->getText()->withContentHtml($body));
 
         return $entry;
     }
@@ -118,7 +118,7 @@ final class EntryShareClassifierTest extends TestCase
         $entry = $this->classified(self::hackerNews('https://ghuntley.com/unikernels/'));
 
         self::assertSame(ShareKind::Link, $entry->getShareKind());
-        self::assertNull($entry->getSummary());
+        self::assertNull($entry->getText()->getSummary());
     }
 
     public function testATitledShareOfAnImageFileIsMediaWithTheFileFirst(): void
@@ -162,7 +162,10 @@ final class EntryShareClassifierTest extends TestCase
         ));
 
         self::assertSame(ShareKind::Link, $entry->getShareKind());
-        self::assertSame("Benjamin Mayo, commenting:\nThere needs to be a name for this.", $entry->getSummary());
+        self::assertSame(
+            "Benjamin Mayo, commenting:\nThere needs to be a name for this.",
+            $entry->getText()->getSummary(),
+        );
     }
 
     /** @return iterable<string, array{string}> */
@@ -177,9 +180,9 @@ final class EntryShareClassifierTest extends TestCase
     public function testLinkTextThatReadsAsAUrlIsNoOwnProse(string $urlText): void
     {
         $entry = self::hackerNews('https://ghuntley.com/unikernels/');
-        $entry->setContentHtml('<p>Worth reading ' . $urlText . ' today.</p>');
+        $entry->recordText($entry->getText()->withContentHtml('<p>Worth reading ' . $urlText . ' today.</p>'));
 
-        self::assertSame('Worth reading today.', $this->classified($entry)->getSummary());
+        self::assertSame('Worth reading today.', $this->classified($entry)->getText()->getSummary());
     }
 
     public function testABareUrlDoesNotCountTowardsAPostsOwnProse(): void
@@ -208,22 +211,22 @@ final class EntryShareClassifierTest extends TestCase
     public function testASummaryOnlyShareIsMeasuredByItsSummaryWhichNeverExceedsTheLimit(): void
     {
         $entry = self::hackerNews('https://ghuntley.com/unikernels/');
-        $entry->setContentHtml(null);
-        $entry->setSummary(str_repeat('a', EntryShareClassifier::OWN_PROSE_MAX));
+        $entry->recordText($entry->getText()->withContentHtml(null));
+        $entry->recordText($entry->getText()->withSummary(str_repeat('a', EntryShareClassifier::OWN_PROSE_MAX)));
 
         $this->classified($entry);
 
         self::assertSame(ShareKind::Link, $entry->getShareKind());
-        self::assertSame(str_repeat('a', EntryShareClassifier::OWN_PROSE_MAX), $entry->getSummary());
+        self::assertSame(str_repeat('a', EntryShareClassifier::OWN_PROSE_MAX), $entry->getText()->getSummary());
     }
 
     public function testAShareWithABodyIsMeasuredByItsBodyNotItsSummary(): void
     {
         $entry = self::hackerNews('https://ghuntley.com/unikernels/');
-        $entry->setContentHtml('<p>Commentary.</p>');
-        $entry->setSummary('A feed snippet.');
+        $entry->recordText($entry->getText()->withContentHtml('<p>Commentary.</p>'));
+        $entry->recordText($entry->getText()->withSummary('A feed snippet.'));
 
-        self::assertSame('Commentary.', $this->classified($entry)->getSummary());
+        self::assertSame('Commentary.', $this->classified($entry)->getText()->getSummary());
     }
 
     public function testALinkBlogEssayIsAnArticle(): void
@@ -236,7 +239,7 @@ final class EntryShareClassifierTest extends TestCase
         ));
 
         self::assertNull($entry->getShareKind());
-        self::assertNull($entry->getSummary());
+        self::assertNull($entry->getText()->getSummary());
     }
 
     public function testASisterBrandTeaserIsAnArticle(): void
@@ -342,22 +345,25 @@ final class EntryShareClassifierTest extends TestCase
     {
         $entry = $this->classified(self::post('<p>See https://example.com/a</p>'));
 
-        self::assertStringContainsString('See <a href="https://example.com/a"', (string) $entry->getContentHtml());
+        self::assertStringContainsString(
+            'See <a href="https://example.com/a"',
+            (string) $entry->getText()->getContentHtml(),
+        );
     }
 
     public function testABlueskyPostAwaitingItsEmbedKeepsItsBareUrls(): void
     {
         $entry = $this->classified(self::blueskyPost('<p>See https://example.com/a</p>'));
 
-        self::assertSame('<p>See https://example.com/a</p>', $entry->getContentHtml());
+        self::assertSame('<p>See https://example.com/a</p>', $entry->getText()->getContentHtml());
     }
 
     public function testAPostLeavesItsSummaryAlone(): void
     {
         $entry = self::post('<p>Look: <a href="https://example.com/a">https://example.com/a</a></p>');
-        $entry->setSummary('Look: https://example.com/a');
+        $entry->recordText($entry->getText()->withSummary('Look: https://example.com/a'));
 
-        self::assertSame('Look: https://example.com/a', $this->classified($entry)->getSummary());
+        self::assertSame('Look: https://example.com/a', $this->classified($entry)->getText()->getSummary());
     }
 
     public function testAYouTubeShortIsMediaWhateverItsDescription(): void
@@ -381,7 +387,7 @@ final class EntryShareClassifierTest extends TestCase
             '<p>a' . str_repeat('ü', 600) . '</p>',
         ));
 
-        $summary = (string) $entry->getSummary();
+        $summary = (string) $entry->getText()->getSummary();
         self::assertTrue(mb_check_encoding($summary, 'UTF-8'));
         self::assertSame(EntryShareClassifier::OWN_PROSE_MAX, mb_strlen($summary));
     }

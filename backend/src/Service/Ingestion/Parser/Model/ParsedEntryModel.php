@@ -29,6 +29,7 @@ final readonly class ParsedEntryModel
         ?Discussion $discussion = null,
         public ?string $authorUrl = null,
         public ?string $authorAvatarUrl = null,
+        public ?string $statedLanguage = null,
     ) {
         $this->discussion = $discussion ?? Discussion::none();
         $this->discussionCounts = DiscussionCounts::unknown();

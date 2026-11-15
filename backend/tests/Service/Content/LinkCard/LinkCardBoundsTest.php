@@ -95,7 +95,7 @@ final class LinkCardBoundsTest extends DbTestCase
     {
         $now = $this->clock->now();
         $entry = new Entry($this->feed, $guid, null, 'Post', $now, $now);
-        $entry->setContentHtml($contentHtml);
+        $entry->recordText($entry->getText()->withContentHtml($contentHtml));
         $entry->setHeadline(Headline::derived('Post'));
         $entry->getImage()->storePending(null, null, null);
         $this->entityManager->persist($entry);

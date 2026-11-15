@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Trending\Pass;
 
+use App\Enum\FeedLanguage;
 use App\Service\Curation\Trending\HeadlineEquivalents;
 use App\Service\Curation\Trending\HeadlineFiller;
+use App\Service\Curation\Trending\Model\LanguageCoverageModel;
+use App\Service\Curation\Trending\Model\WindowEntryModel;
 
 /** Lookups cache per feed and entry: add every entry before asking for a weight. */
 final class HeadlineWindow
@@ -46,6 +49,12 @@ final class HeadlineWindow
     /** @var array<int, float> */
     private array $totalWeights = [];
 
+    /** @var array<string, int> language value => entries stemmed in it */
+    private array $entriesByLanguage = [];
+
+    /** @var array<string, string> language value and word => its stem */
+    private array $stemsByWord = [];
+
     public function __construct(
         private readonly HeadlineFiller $filler,
         private readonly HeadlineEquivalents $equivalents,
@@ -53,15 +62,24 @@ final class HeadlineWindow
     }
 
     /** Entries must arrive in ascending id order: the postings stay sorted. */
-    public function add(int $entryId, int $feedId, string $headline, string $body): void
+    public function add(WindowEntryModel $entry, string $body): void
     {
-        $headlineIds = $this->idsOf($this->equivalents->stemsOf($headline));
-        $bodyIds = array_values(array_diff($this->idsOf($this->equivalents->stemsOf($body)), $headlineIds));
-        $this->headlineStems[$entryId] = $headlineIds;
-        $this->bodyStems[$entryId] = $bodyIds;
-        $this->feedOfEntry[$entryId] = $feedId;
-        $this->entriesOfFeed[$feedId][] = $entryId;
-        $this->post($entryId, $headlineIds, $bodyIds);
+        $headlineIds = $this->idsOf($entry->title, $entry->language);
+        $bodyIds = array_values(array_diff($this->idsOf($body, $entry->language), $headlineIds));
+        $this->headlineStems[$entry->id] = $headlineIds;
+        $this->bodyStems[$entry->id] = $bodyIds;
+        $this->feedOfEntry[$entry->id] = $entry->feedId;
+        $this->entriesOfFeed[$entry->feedId][] = $entry->id;
+        $this->post($entry->id, $headlineIds, $bodyIds);
+        $this->countLanguageOf($entry);
+    }
+
+    public function languageCoverage(): LanguageCoverageModel
+    {
+        return new LanguageCoverageModel(
+            $this->entriesByLanguage,
+            $this->entryCount() - array_sum($this->entriesByLanguage),
+        );
     }
 
     public function entryCount(): int
@@ -93,21 +111,33 @@ final class HeadlineWindow
         return array_intersect_key($shared, $sharingAHeadline);
     }
 
-    /**
-     * @param list<string> $stems
-     *
-     * @return list<int>
-     */
-    private function idsOf(array $stems): array
+    private function countLanguageOf(WindowEntryModel $entry): void
+    {
+        if (null === $entry->language) {
+            return;
+        }
+        $language = $entry->language->value;
+        $this->entriesByLanguage[$language] = ($this->entriesByLanguage[$language] ?? 0) + 1;
+    }
+
+    /** @return list<int> */
+    private function idsOf(string $text, ?FeedLanguage $language): array
     {
         $ids = [];
-        foreach ($stems as $stem) {
-            if (!$this->filler->isSeed($stem)) {
-                $ids[] = $this->stemIds[$stem] ??= \count($this->stemIds);
+        foreach ($this->equivalents->wordsOf($text) as [$word, $bare]) {
+            $stem = $this->stemOf($word, $bare, $language);
+            if (!$this->filler->isSeed($stem, $language)) {
+                $ids[$this->stemIds[$stem] ??= \count($this->stemIds)] = true;
             }
         }
 
-        return $ids;
+        return array_keys($ids);
+    }
+
+    private function stemOf(string $word, string $bare, ?FeedLanguage $language): string
+    {
+        return $this->stemsByWord[$language?->value . ' ' . $word]
+            ??= $this->equivalents->stemOf($word, $bare, $language);
     }
 
     /**

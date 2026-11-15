@@ -76,7 +76,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
 
         self::assertStringContainsString(
             'Read <a href="https://example.com/a"',
-            (string) $this->reload($post)->getContentHtml(),
+            (string) $this->reload($post)->getText()->getContentHtml(),
         );
     }
 
@@ -88,7 +88,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         $this->queue->queue([$post]);
         $this->entityManager->flush();
 
-        self::assertSame($body, $this->reload($post)->getContentHtml());
+        self::assertSame($body, $this->reload($post)->getText()->getContentHtml());
         self::assertCount(1, $this->queuedKinds());
     }
 
@@ -105,7 +105,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         $this->entityManager->flush();
 
         self::assertSame([], $this->queuedKinds());
-        self::assertSame('<p>See https://example.com/a</p>', $this->reload($article)->getContentHtml());
+        self::assertSame('<p>See https://example.com/a</p>', $this->reload($article)->getText()->getContentHtml());
     }
 
     public function testATitledShareIsQueuedForItsCard(): void
@@ -113,7 +113,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         $now = new \DateTimeImmutable('2026-10-11 09:00:00');
         $guid = 'https://mastodon.example/@someone/9';
         $share = new Entry($this->feed, $guid, 'https://example.com/story', 'Headline', $now, $now);
-        $share->setContentHtml('<p>Short.</p>');
+        $share->recordText($share->getText()->withContentHtml('<p>Short.</p>'));
         $share->getImage()->storePending(null, null, null);
         $this->entityManager->persist($share);
 
@@ -275,8 +275,8 @@ final class ShareEnrichmentQueueTest extends DbTestCase
 
         self::assertSame([], $this->queuedKinds());
         $stored = $this->reload($post);
-        self::assertSame('<p>So true.</p>', $stored->getContentHtml());
-        self::assertSame('So true.', $stored->getSummary());
+        self::assertSame('<p>So true.</p>', $stored->getText()->getContentHtml());
+        self::assertSame('So true.', $stored->getText()->getSummary());
         self::assertSame(ShareKind::Link, $stored->getShareKind());
         self::assertEquals([$card], $this->storedCards($stored));
     }
@@ -312,7 +312,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
 
         self::assertSame([], $this->queuedKinds());
         $stored = $this->reload($post);
-        self::assertSame('<p>So true.</p>', $stored->getContentHtml());
+        self::assertSame('<p>So true.</p>', $stored->getText()->getContentHtml());
         self::assertSame(ShareKind::Link, $stored->getShareKind());
         self::assertEquals(
             [new LinkCardContent($posted, 'The story', 'What happened.', null, 'Example')],
@@ -388,7 +388,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         self::assertSame([], $this->queuedKinds());
         $stored = $this->reload($post);
         self::assertSame(ShareKind::Quote, $stored->getShareKind());
-        self::assertSame('<p>Wow</p>', $stored->getContentHtml());
+        self::assertSame('<p>Wow</p>', $stored->getText()->getContentHtml());
         self::assertEquals($quote, $stored->getQuotedPost());
     }
 
@@ -520,7 +520,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         $now = new \DateTimeImmutable('2026-10-11 09:00:00');
         $entry = new Entry($feed, $guid, null, 'Post', $now, $now);
         $entry->setHeadline(Headline::derived('Post'));
-        $entry->setContentHtml('<p>See https://example.com/a</p>');
+        $entry->recordText($entry->getText()->withContentHtml('<p>See https://example.com/a</p>'));
         $entry->getImage()->storePending(null, null, null);
         $this->entityManager->persist($entry);
 
@@ -553,7 +553,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
     {
         $now = new \DateTimeImmutable('2026-10-11 09:00:00');
         $entry = new Entry($this->feed, $guid, null, 'Post', $now, $now);
-        $entry->setContentHtml($contentHtml);
+        $entry->recordText($entry->getText()->withContentHtml($contentHtml));
         $entry->getImage()->storePending(null, null, null);
         $this->entityManager->persist($entry);
 

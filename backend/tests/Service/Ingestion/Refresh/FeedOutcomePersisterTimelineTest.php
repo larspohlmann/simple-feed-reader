@@ -423,8 +423,8 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
         $cards = PostEnrichers::linkCards($this->entityManager)->contentsByEntryIds([$entry->requireId()]);
 
         return [
-            'content' => $entry->getContentHtml(),
-            'summary' => $entry->getSummary(),
+            'content' => $entry->getText()->getContentHtml(),
+            'summary' => $entry->getText()->getSummary(),
             'shareKind' => $entry->getShareKind()?->value,
             'imageUrl' => $entry->getImageUrl(),
             'media' => serialize($entry->getMedia()),

@@ -1025,10 +1025,10 @@ final class RefreshRunnerTest extends DbTestCase
         }
         $teasered = array_values(array_filter(
             $entries,
-            static fn (Entry $entry): bool => $entry->getContentHtml() !== null,
+            static fn (Entry $entry): bool => $entry->getText()->getContentHtml() !== null,
         ));
         self::assertNotSame([], $teasered, 'the tagesschau snapshot carries card teasers');
-        self::assertStringStartsWith('<p>', (string) $teasered[0]->getContentHtml());
+        self::assertStringStartsWith('<p>', (string) $teasered[0]->getText()->getContentHtml());
     }
 
     public function testSecondScrapedRefreshOfTheSameBodyCreatesNoDuplicates(): void

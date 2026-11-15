@@ -26,7 +26,7 @@ final readonly class ChaptersOnOpen
 
     private function chaptersOf(Entry $entry): ServedChaptersModel
     {
-        $body = $entry->getContentHtml();
+        $body = $entry->getText()->getContentHtml();
         if ($body !== null && self::isYouTubeVideo($entry->getUrl())) {
             return DescriptionChapters::in($body);
         }

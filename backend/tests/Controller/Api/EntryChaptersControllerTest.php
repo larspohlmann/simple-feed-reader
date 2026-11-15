@@ -99,7 +99,7 @@ final class EntryChaptersControllerTest extends ApiTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
-        $entry->setContentHtml($body);
+        $entry->recordText($entry->getText()->withContentHtml($body));
         $entry->declareChapters([], $chaptersUrl);
         $entityManager->persist($entry);
         $entityManager->flush();

@@ -334,8 +334,8 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     public function testDescriptionPrefersTheSummaryOverTheContentHtml(): void
     {
         $entry = $this->entry('described', '2026-07-10T00:00:00Z');
-        $entry->setSummary('Summary text');
-        $entry->setContentHtml('<p>Content text</p>');
+        $entry->recordText($entry->getText()->withSummary('Summary text'));
+        $entry->recordText($entry->getText()->withContentHtml('<p>Content text</p>'));
         $this->entityManager->flush();
 
         $lines = $this->loader()->load($this->userId(), $this->poolRequest());

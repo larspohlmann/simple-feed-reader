@@ -18,14 +18,14 @@ final class TrendingRunTest extends TestCase
     public function testADerivedTitleRepeatedAtTheStartOfTheBodyAddsNothingFromTheRepeat(): void
     {
         self::assertEqualsWithDelta(1.5 * self::TWICE, $this->weightSharedWith(
-            new WindowEntryModel(2, 20, self::CLIPPED_TITLE, true, self::SUMMARY, self::later(), null, null),
+            new WindowEntryModel(2, 20, null, self::CLIPPED_TITLE, true, self::SUMMARY, self::later(), null, null),
         ), 0.0001);
     }
 
     public function testAnArticleWhoseSummaryStartsWithItsTitleKeepsThoseBodyStems(): void
     {
         self::assertEqualsWithDelta(2.0 * self::TWICE, $this->weightSharedWith(
-            new WindowEntryModel(2, 20, self::CLIPPED_TITLE, false, self::SUMMARY, self::later(), null, null),
+            new WindowEntryModel(2, 20, null, self::CLIPPED_TITLE, false, self::SUMMARY, self::later(), null, null),
         ), 0.0001);
     }
 

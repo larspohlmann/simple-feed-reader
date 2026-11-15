@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Enum\FeedLanguage;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManagerInterface;
@@ -55,25 +56,27 @@ final readonly class TrendingEntryRepository
 
     /**
      * @return list<array{
-     *   id: int|string, feed_id: int|string, title: string, title_derived: bool|int|string, summary: string|null,
-     *   effective_date: string, url_hash: string|null, link_card_url: string|null
+     *   id: int|string, feed_id: int|string, language: string|null, title: string, title_derived: bool|int|string,
+     *   summary: string|null, effective_date: string, url_hash: string|null, link_card_url: string|null
      * }>
      */
     private function chunkAfter(\DateTimeImmutable $since, int $afterId): array
     {
         /**
          * @var list<array{
-         *   id: int|string, feed_id: int|string, title: string, title_derived: bool|int|string,
+         *   id: int|string, feed_id: int|string, language: string|null, title: string, title_derived: bool|int|string,
          *   summary: string|null, effective_date: string, url_hash: string|null, link_card_url: string|null
          * }> $rows
          */
         $rows = $this->entityManager->getConnection()->fetchAllAssociative(
             \sprintf(
-                'SELECT e.id, e.feed_id, e.title, e.title_derived, SUBSTR(e.summary, 1, %d) AS summary,'
+                'SELECT e.id, e.feed_id, COALESCE(e.language, f.language) AS language, e.title, e.title_derived,'
+                . ' SUBSTR(e.summary, 1, %d) AS summary,'
                 . ' e.effective_date, e.url_hash,'
                 . ' (SELECT card.url FROM link_card card WHERE card.entry_id = e.id AND card.thread_post_id IS NULL'
                 . ' ORDER BY card.position LIMIT 1) AS link_card_url'
-                . ' FROM entry e WHERE e.effective_date >= :since AND e.id > :afterId ORDER BY e.id LIMIT %d',
+                . ' FROM entry e JOIN feed f ON f.id = e.feed_id'
+                . ' WHERE e.effective_date >= :since AND e.id > :afterId ORDER BY e.id LIMIT %d',
                 self::SUMMARY_CHARACTERS,
                 self::CHUNK_ROWS,
             ),
@@ -85,8 +88,8 @@ final readonly class TrendingEntryRepository
 
     /**
      * @param array{
-     *   id: int|string, feed_id: int|string, title: string, title_derived: bool|int|string, summary: string|null,
-     *   effective_date: string, url_hash: string|null, link_card_url: string|null
+     *   id: int|string, feed_id: int|string, language: string|null, title: string, title_derived: bool|int|string,
+     *   summary: string|null, effective_date: string, url_hash: string|null, link_card_url: string|null
      * } $row
      */
     private static function modelOf(array $row): WindowEntryModel
@@ -94,6 +97,7 @@ final readonly class TrendingEntryRepository
         return new WindowEntryModel(
             (int) $row['id'],
             (int) $row['feed_id'],
+            $row['language'] === null ? null : FeedLanguage::from($row['language']),
             $row['title'],
             (bool) (int) $row['title_derived'],
             $row['summary'],

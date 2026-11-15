@@ -8,6 +8,7 @@ use App\Command\TrendingExplainCommand;
 use App\Entity\Entry;
 use App\Entity\TrendingSnapshot;
 use App\Entity\TrendingStory;
+use App\Enum\FeedLanguage;
 use App\Repository\EntryRepository;
 use App\Service\Curation\Trending\StoryLinkSource\HeadlineLinks;
 use App\Service\Curation\Trending\TrendingExplainer;
@@ -41,6 +42,25 @@ final class TrendingExplainCommandTest extends DbTestCase
         self::assertStringContainsString('Island Vulkan', $display);
         self::assertSame(0, $this->entityManager->getRepository(TrendingStory::class)->count([]));
         self::assertSame(0, $this->entityManager->getRepository(TrendingSnapshot::class)->count([]));
+    }
+
+    public function testPrintsHowManyWindowEntriesComeFromFeedsOfEachLanguage(): void
+    {
+        $fixtures = new TrendingFixtures($this->entityManager);
+        $german = $fixtures->feed('alpha');
+        $german->recordTraits($german->getTraits()->withLanguage(FeedLanguage::German));
+        $french = $fixtures->feed('beta');
+        $french->recordTraits($french->getTraits()->withLanguage(FeedLanguage::French));
+        $fixtures->hafenstreik($german, 0, '2031-05-14 08:00:00');
+        $fixtures->hafenstreik($german, 1, '2031-05-14 09:00:00');
+        $fixtures->hafenstreik($french, 2, '2031-05-14 10:00:00');
+        $fixtures->entry($fixtures->feed('gamma'), 'Vulkan Island', '2031-05-14 08:30:00');
+        $fixtures->flush();
+        $tester = new CommandTester($this->command());
+
+        $tester->execute(['--window' => 'day']);
+
+        self::assertStringContainsString('Languages: de 2, en 0, fr 1, es 0, none 1', $tester->getDisplay());
     }
 
     public function testAnUnknownWindowFailsNamingTheChoices(): void

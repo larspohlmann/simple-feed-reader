@@ -10,7 +10,10 @@ use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Entity\ImageRendition;
 use App\Enum\CommentsLoad;
+use App\Enum\FeedLanguage;
 use App\Enum\FeedPlatform;
+use App\Enum\SocialNetwork;
+use App\Enum\SourceFormat;
 use App\Service\Outbound\Image\Model\DeclaredImageModel;
 use App\Service\Ingestion\Ingest\EntryIngestor;
 use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
@@ -314,6 +317,85 @@ final class EntryIngestorTest extends DbTestCase
         self::assertSame(CommentsLoad::Auto, $entry->getDiscussion()->commentsLoad);
     }
 
+    public function testAGermanPageRecordsGerman(): void
+    {
+        $feed = $this->feed();
+
+        $this->ingestLanguagePage($feed, self::languagePage('german'));
+
+        self::assertSame(FeedLanguage::German, $feed->getLanguage());
+    }
+
+    public function testARecordedLanguageIsKeptOnLaterRefreshes(): void
+    {
+        $feed = $this->feed();
+        $this->ingestLanguagePage($feed, self::languagePage('german'));
+
+        $this->ingestLanguagePage($feed, self::languagePage('french', declared: 'fr'));
+
+        self::assertSame(FeedLanguage::German, $feed->getLanguage());
+        self::assertNull($feed->getPlatform());
+    }
+
+    public function testADeclaredLanguageOutsideTheFourGivesWayToTheGuess(): void
+    {
+        $feed = $this->feed();
+
+        $this->ingestLanguagePage($feed, self::languagePage('french', declared: 'it'));
+
+        self::assertSame(FeedLanguage::French, $feed->getLanguage());
+    }
+
+    public function testASocialApiFeedRecordsNoLanguage(): void
+    {
+        $feed = $this->feed();
+        $feed->setSourceFormat(SourceFormat::MASTODON_API);
+
+        $this->ingestLanguagePage($feed, self::languagePage('german'));
+
+        self::assertNull($feed->getLanguage());
+    }
+
+    public function testAMastodonProfileRssFeedRecordsItsLanguage(): void
+    {
+        $feed = $this->feed();
+        $feed->classifyAs(SocialNetwork::Mastodon);
+
+        $this->ingestLanguagePage($feed, self::languagePage('german'));
+
+        self::assertSame(FeedLanguage::German, $feed->getLanguage());
+    }
+
+    private function ingestLanguagePage(Feed $feed, ParsedFeedModel $parsed): void
+    {
+        $this->ingestor->ingest($feed, $parsed, self::context());
+        $this->entityManager->flush();
+    }
+
+    private static function languagePage(
+        string $language,
+        ?int $entries = null,
+        ?string $declared = null,
+    ): ParsedFeedModel {
+        $fixture = (string) file_get_contents(__DIR__ . '/../../../Fixtures/language/' . $language . '.txt');
+        $blocks = \array_slice(explode("\n\n", trim($fixture)), 0, $entries);
+        $parsed = [];
+        foreach ($blocks as $index => $block) {
+            $lines = explode("\n", $block, 2);
+            $parsed[] = new ParsedEntryModel(
+                $language . '-' . $index . '-' . ($entries ?? 'all'),
+                'https://news.test/' . $language . '/' . $index . '/' . ($entries ?? 'all'),
+                Headline::fromFeed($lines[0]),
+                null,
+                $lines[1] ?? null,
+                '<p>body</p>',
+                null,
+            );
+        }
+
+        return new ParsedFeedModel('A feed', null, null, null, $parsed, declaredLanguage: $declared);
+    }
+
     private function ingestOne(ParsedEntryModel $parsedEntry): Entry
     {
         $feed = $this->feed();
@@ -449,9 +531,9 @@ final class EntryIngestorTest extends DbTestCase
         self::assertCount(2, $entries);
 
         $first = $entries[0];
-        self::assertStringContainsString('<p>Body</p>', (string) $first->getContentHtml());
-        self::assertStringNotContainsString('script', (string) $first->getContentHtml());
-        self::assertSame('A & B summary', $first->getSummary());
+        self::assertStringContainsString('<p>Body</p>', (string) $first->getText()->getContentHtml());
+        self::assertStringNotContainsString('script', (string) $first->getText()->getContentHtml());
+        self::assertSame('A & B summary', $first->getText()->getSummary());
         self::assertSame('Feed Title', $feed->getTitle());
         self::assertSame('https://example.com/', $feed->getSiteUrl());
     }
@@ -520,7 +602,7 @@ final class EntryIngestorTest extends DbTestCase
         self::assertSame(1024, mb_strlen($entry->getTitle()));
         self::assertSame(255, mb_strlen((string) $entry->getAuthor()));
         self::assertSame(2048, mb_strlen((string) $entry->getUrl()));
-        self::assertLessThanOrEqual(500, mb_strlen((string) $entry->getSummary()));
+        self::assertLessThanOrEqual(500, mb_strlen((string) $entry->getText()->getSummary()));
         self::assertSame(512, mb_strlen((string) $feed->getTitle()));
     }
 
@@ -792,7 +874,7 @@ final class EntryIngestorTest extends DbTestCase
 
         $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'fallback-summary']);
         self::assertNotNull($entry);
-        self::assertSame('Body text here.', $entry->getSummary());
+        self::assertSame('Body text here.', $entry->getText()->getSummary());
     }
 
     public function testJunkContentHtmlYieldsNullSummaryNotTheJunkToken(): void
@@ -815,7 +897,7 @@ final class EntryIngestorTest extends DbTestCase
 
         $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'junk-summary']);
         self::assertNotNull($entry);
-        self::assertNull($entry->getSummary());
+        self::assertNull($entry->getText()->getSummary());
     }
 
     public function testEmptyParsedFeedStillUpdatesMetadata(): void
@@ -875,7 +957,7 @@ final class EntryIngestorTest extends DbTestCase
     public function testAFeedThatStopsNamingSubstackIsNoLongerOne(): void
     {
         $feed = $this->feed();
-        $feed->recordPlatform(FeedPlatform::Substack);
+        $feed->recordTraits($feed->getTraits()->withPlatform(FeedPlatform::Substack));
 
         $this->ingestor->ingest($feed, new ParsedFeedModel('Example', null, null, null, []), self::context());
 

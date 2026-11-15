@@ -121,8 +121,8 @@ final class EntryIndexerTest extends DbTestCase
 
         $feed = $this->feed('The Daily Example');
         $entry = $this->entry($feed);
-        $entry->setSummary('A plain summary');
-        $entry->setContentHtml('<p>Body <strong>text</strong> &amp; more.</p>');
+        $entry->recordText($entry->getText()->withSummary('A plain summary'));
+        $entry->recordText($entry->getText()->withContentHtml('<p>Body <strong>text</strong> &amp; more.</p>'));
         $this->entityManager->flush();
 
         $indexer->index([$entry]);
@@ -150,7 +150,9 @@ final class EntryIndexerTest extends DbTestCase
         $indexer = EntryIndexers::with($writer);
 
         $entry = $this->entry($this->feed());
-        $entry->setContentHtml('<p>Deployed to the cloud</p><p>Computing costs fell</p>');
+        $entry->recordText(
+            $entry->getText()->withContentHtml('<p>Deployed to the cloud</p><p>Computing costs fell</p>'),
+        );
         $this->entityManager->flush();
 
         $indexer->index([$entry]);

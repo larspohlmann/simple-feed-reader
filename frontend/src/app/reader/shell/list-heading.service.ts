@@ -82,6 +82,8 @@ export class ListHeading {
     return hasIntro ? subscription : null;
   });
 
+  readonly feedLanguage = computed(() => this.selectedSubscription()?.language ?? null);
+
   readonly feedIntroTitle = computed(() => {
     const subscription = this.feedIntroSubscription();
     return subscription?.title ?? null;

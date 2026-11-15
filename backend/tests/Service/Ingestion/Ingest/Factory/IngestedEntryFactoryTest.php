@@ -9,10 +9,15 @@ use App\Entity\Entry;
 use App\Entity\EntryChapter;
 use App\Entity\Feed;
 use App\Entity\Headline;
+use App\Enum\FeedLanguage;
+use App\Enum\SourceFormat;
 use App\Service\Ingestion\Ingest\EntryImageWriter;
 use App\Service\Ingestion\Ingest\Factory\IngestedEntryFactory;
 use App\Service\Ingestion\Ingest\Model\IncomingEntryModel;
 use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
+use App\Service\Ingestion\Language\Factory\LanguageDetectionFactory;
+use App\Service\Ingestion\Language\LanguageGuess;
+use App\Service\Ingestion\Language\SocialEntryLanguage;
 use App\Service\Ingestion\Parser\Model\ParsedChaptersModel;
 use App\Service\Ingestion\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
@@ -48,9 +53,9 @@ final class IngestedEntryFactoryTest extends TestCase
         self::assertSame('url-hash', $entry->getUrlHash());
         self::assertSame('T' . str_repeat('t', 1023), $entry->getTitle());
         self::assertSame('A' . str_repeat('a', 254), $entry->getAuthor());
-        self::assertSame('A & B summary', $entry->getSummary());
-        self::assertStringContainsString('<p>Body</p>', (string) $entry->getContentHtml());
-        self::assertStringNotContainsString('script', (string) $entry->getContentHtml());
+        self::assertSame('A & B summary', $entry->getText()->getSummary());
+        self::assertStringContainsString('<p>Body</p>', (string) $entry->getText()->getContentHtml());
+        self::assertStringNotContainsString('script', (string) $entry->getText()->getContentHtml());
         self::assertSame('2026-09-20 08:00:00', $entry->getPublishedAt()?->format('Y-m-d H:i:s'));
         self::assertSame('2026-09-21 12:00:00', $entry->getCreatedAt()->format('Y-m-d H:i:s'));
         self::assertSame('2026-09-20 08:00:00', $entry->getEffectiveDate()->format('Y-m-d H:i:s'));
@@ -70,7 +75,7 @@ final class IngestedEntryFactoryTest extends TestCase
         self::assertNull($entry->getUrl());
         self::assertNull($entry->getUrlHash());
         self::assertNull($entry->getAuthor());
-        self::assertSame('Only a body', $entry->getSummary());
+        self::assertSame('Only a body', $entry->getText()->getSummary());
         self::assertSame('2026-09-21 12:00:00', $entry->getEffectiveDate()->format('Y-m-d H:i:s'));
     }
 
@@ -261,11 +266,67 @@ final class IngestedEntryFactoryTest extends TestCase
         self::assertEquals(DiscussionCounts::of(7, 2), $entry->getDiscussionCounts());
     }
 
+    public function testASocialTimelineEntryStoresItsGuessedLanguage(): void
+    {
+        $feed = new Feed('bluesky://timeline');
+        $feed->setSourceFormat(SourceFormat::BLUESKY_API);
+
+        $entry = $this->factory()->create($feed, self::incomingGerman(), self::context());
+
+        self::assertSame(FeedLanguage::German, $entry->getText()->getLanguage());
+    }
+
+    public function testASocialEntryPrefersTheLanguageItsAuthorStated(): void
+    {
+        $feed = new Feed('mastodon://timeline');
+        $feed->setSourceFormat(SourceFormat::MASTODON_API);
+        $parsed = new ParsedEntryModel(
+            'g-stated',
+            null,
+            Headline::derived('…'),
+            null,
+            null,
+            '<p>Der Kanzler</p>',
+            null,
+            statedLanguage: 'fr',
+        );
+        $incoming = new IncomingEntryModel($parsed, hash('sha256', 'g'), null);
+
+        $entry = $this->factory()->create($feed, $incoming, self::context());
+
+        self::assertSame(FeedLanguage::French, $entry->getText()->getLanguage());
+    }
+
+    public function testAnEntryOfAnOrdinaryFeedStoresNoLanguage(): void
+    {
+        $feed = new Feed('https://example.com/feed');
+
+        $entry = $this->factory()->create($feed, self::incomingGerman(), self::context());
+
+        self::assertNull($entry->getText()->getLanguage());
+    }
+
+    private static function incomingGerman(): IncomingEntryModel
+    {
+        $parsed = new ParsedEntryModel(
+            'g-de',
+            null,
+            Headline::derived('…'),
+            null,
+            null,
+            '<p>Der Kanzler sagte am Montag, dass die Regierung weitere Hilfen für die Menschen vorbereitet.</p>',
+            null,
+        );
+
+        return new IncomingEntryModel($parsed, hash('sha256', 'g-de'), null);
+    }
+
     private function factory(): IngestedEntryFactory
     {
         return new IngestedEntryFactory(
             new EntrySanitizer(new TrailingBlankRemover()),
             new EntryImageWriter(),
+            new SocialEntryLanguage(new LanguageGuess(new LanguageDetectionFactory()->create())),
         );
     }
 

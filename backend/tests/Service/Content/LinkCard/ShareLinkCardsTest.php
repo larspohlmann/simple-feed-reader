@@ -102,7 +102,7 @@ final class ShareLinkCardsTest extends DbTestCase
         $quoting->complete($this->claimable(), self::fiveFetches());
 
         self::assertSame(ShareKind::Quote, $post->getShareKind());
-        self::assertSame('<p>Wow</p>', $post->getContentHtml());
+        self::assertSame('<p>Wow</p>', $post->getText()->getContentHtml());
         self::assertEquals($quote, $post->getQuotedPost());
         self::assertSame([], $this->cardTitles($post));
         self::assertSame(0, $this->pages->reads());
@@ -390,7 +390,7 @@ final class ShareLinkCardsTest extends DbTestCase
     {
         $now = $this->clock->now();
         $entry = new Entry($this->feed, 'https://mastodon.example/@someone/' . $number, $url, 'Post', $now, $now);
-        $entry->setContentHtml($contentHtml);
+        $entry->recordText($entry->getText()->withContentHtml($contentHtml));
         $entry->setHeadline(Headline::derived('Post'));
         $entry->getImage()->storePending(null, null, null);
 

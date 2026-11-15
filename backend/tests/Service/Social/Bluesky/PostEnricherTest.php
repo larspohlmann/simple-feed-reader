@@ -95,9 +95,9 @@ final class PostEnricherTest extends DbTestCase
         self::assertSame([$post->requireId()], $this->indexedIds());
         self::assertSame(0, $this->pendingCount());
         $stored = $this->reload($post);
-        self::assertSame('<p>Read this.</p>', $stored->getContentHtml());
+        self::assertSame('<p>Read this.</p>', $stored->getText()->getContentHtml());
         self::assertCount(1, $this->cardsOf($stored));
-        self::assertSame('Read this.', $stored->getSummary());
+        self::assertSame('Read this.', $stored->getText()->getSummary());
     }
 
     public function testAPostWithRepliesWaitsForItsThread(): void
@@ -233,7 +233,7 @@ final class PostEnricherTest extends DbTestCase
         $this->enricher()->enrich($this->feed);
 
         self::assertSame([], $this->indexWriter->upserts);
-        self::assertSame('<p>Deleted since.</p>', $this->reload($post)->getContentHtml());
+        self::assertSame('<p>Deleted since.</p>', $this->reload($post)->getText()->getContentHtml());
         self::assertSame(0, $this->pendingCount());
     }
 
@@ -457,7 +457,7 @@ final class PostEnricherTest extends DbTestCase
 
         self::assertSame([$apples->requireId()], $this->indexedIds());
         self::assertSame(0, $this->pendingCount());
-        self::assertSame('<p>Apples.</p>', $this->reload($apples)->getContentHtml());
+        self::assertSame('<p>Apples.</p>', $this->reload($apples)->getText()->getContentHtml());
         self::assertSame(
             'https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:z72i7hdynmk6r22z27h6tvur/'
                 . 'bafkreih3mb3cwnbc5kv5b2qyy24q6banms25i5ut3cbty4ej2x7vjvd6y4',
@@ -601,7 +601,10 @@ final class PostEnricherTest extends DbTestCase
             static fn (ShareEnrichment $row): ShareEnrichmentKind => $row->getKind(),
             $rows,
         ));
-        self::assertStringNotContainsString('View embedded content', (string) $this->reload($first)->getContentHtml());
+        self::assertStringNotContainsString(
+            'View embedded content',
+            (string) $this->reload($first)->getText()->getContentHtml(),
+        );
     }
 
     public function testTheLinkCardPassCardsAPostTheAppViewHandedOver(): void
@@ -772,7 +775,7 @@ final class PostEnricherTest extends DbTestCase
     private function entry(Feed $feed, string $guid, string $contentHtml): Entry
     {
         $entry = new Entry($feed, $guid, null, 'Post', $this->clock->now(), $this->clock->now());
-        $entry->setContentHtml($contentHtml);
+        $entry->recordText($entry->getText()->withContentHtml($contentHtml));
         $entry->getImage()->storePending(null, null, null);
         $this->entityManager->persist($entry);
 

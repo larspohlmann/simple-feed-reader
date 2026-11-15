@@ -32,6 +32,7 @@ final readonly class TrendingExplainer
         return new TrendingExplanationModel(
             $window,
             \count($run->entryIds()),
+            $run->headlines->languageCoverage(),
             $groups,
             $nearMisses,
             $stopwatch->elapsedMilliseconds(),

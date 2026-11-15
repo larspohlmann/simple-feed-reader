@@ -37,6 +37,24 @@
         </p>
       }
 
+      @if (languageEditable) {
+        <app-field
+          [label]="'dialog.editFeed.language' | transloco"
+          [hint]="'dialog.editFeed.languageHint' | transloco"
+        >
+          <select id="edit-feed-language" (change)="onLanguageChange($event)">
+            <option [value]="automaticLanguage" [selected]="language() === automaticLanguage">
+              {{ 'dialog.editFeed.languageAutomatic' | transloco }}
+            </option>
+            @for (option of languageOptions; track option.value) {
+              <option [value]="option.value" [selected]="language() === option.value">
+                {{ option.labelKey | transloco }}
+              </option>
+            }
+          </select>
+        </app-field>
+      }
+
       <p class="lbl">{{ 'dialog.editFeed.tags' | transloco }}</p>
       <app-tag-picker
         [tags]="tagsStore.tags()"

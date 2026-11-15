@@ -10,6 +10,7 @@ use App\Entity\EntryOrigin;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;
+use App\Enum\FeedLanguage;
 use App\Service\Operations\Backup\Dto\EntryLine;
 use App\Service\Operations\Backup\Exception\InvalidBackupException;
 use App\Service\Operations\Backup\Model\EntryCompanionsModel;
@@ -203,6 +204,19 @@ final class EntryLineTest extends TestCase
         self::assertFalse($line->titleDerived);
     }
 
+    public function testReadsTheLanguageTheTextIsIn(): void
+    {
+        $line = EntryLine::fromLine($this->baseLine() + ['language' => 'es']);
+
+        self::assertSame(FeedLanguage::Spanish, $line->language);
+    }
+
+    public function testALanguageOutsideTheFourOrMissingReadsAsNone(): void
+    {
+        self::assertNull(EntryLine::fromLine($this->baseLine() + ['language' => 'it'])->language);
+        self::assertNull(EntryLine::fromLine($this->baseLine())->language);
+    }
+
     public function testReadsTheImageRenditions(): void
     {
         $line = EntryLine::fromLine($this->baseLine() + [
@@ -392,7 +406,8 @@ final class EntryLineTest extends TestCase
                 '{"kind":"entry","feedUrl":"https://one.example/rss","guid":"guid-1","guidHash":"%s",'
                 . '"url":"https://one.example/a","discussionUrl":null,"commentsFeedUrl":null,"commentsLoad":null,'
                 . '"title":"Article","titleDerived":false,"shareKind":null,"quote":null,"author":null,'
-                . '"authorUrl":null,"authorAvatarUrl":null,"summary":null,"contentHtml":null,"imageUrl":null,'
+                . '"authorUrl":null,"authorAvatarUrl":null,"summary":null,"contentHtml":null,"language":null,'
+                . '"imageUrl":null,'
                 . '"imageWidth":null,"imageHeight":null,"imageRenditions":[],"media":[],"attachments":[],'
                 . '"chapters":[],"chaptersUrl":null,"linkCards":[{"url":"https://card.example/x","title":"Card",'
                 . '"description":null,"imageUrl":null,"siteName":"card.example"}],'

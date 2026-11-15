@@ -33,7 +33,7 @@ final readonly class EntryArticleReader
 
         return $this->coverageGate->verify(
             $this->extractor->extract($url, $this->hints($entry)),
-            $entry->getContentHtml(),
+            $entry->getText()->getContentHtml(),
         );
     }
 

@@ -32,7 +32,7 @@ final readonly class ShareTargetReader
      */
     public function cardsFor(Entry $entry, array $stored, array $uncardedUrls): EntryCardsModel
     {
-        $quoted = $this->quotedTargetAmong((string) $entry->getContentHtml(), $uncardedUrls);
+        $quoted = $this->quotedTargetAmong((string) $entry->getText()->getContentHtml(), $uncardedUrls);
         $pageUrls = $quoted === null
             ? $uncardedUrls
             : array_values(array_filter($uncardedUrls, static fn (string $url): bool => $url !== $quoted->address));

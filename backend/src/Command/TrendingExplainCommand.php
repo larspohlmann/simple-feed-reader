@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Entity\Entry;
+use App\Enum\FeedLanguage;
 use App\Enum\TrendingWindow;
 use App\Exception\ValidationException;
 use App\Repository\EntryRepository;
+use App\Service\Curation\Trending\Model\LanguageCoverageModel;
 use App\Service\Curation\Trending\Model\StoryMemberModel;
 use App\Service\Curation\Trending\Model\TrendingExplanationModel;
 use App\Service\Curation\Trending\TrendingExplainer;
@@ -53,6 +55,7 @@ final class TrendingExplainCommand extends Command
         $explanation = $this->explainer->explain($window);
         $headlines = $this->headlinesOf($explanation);
         $io->title(self::summaryOf($explanation));
+        $io->writeln(self::languagesOf($explanation->languageCoverage));
         $this->printGroups($io, $explanation, $headlines);
         $this->printNearMisses($io, $explanation, $headlines);
 
@@ -120,6 +123,17 @@ final class TrendingExplainCommand extends Command
     private static function headlineOf(Entry $entry): string
     {
         return \sprintf('[%s] %s', $entry->getFeed()->getTitle() ?? $entry->getFeed()->getUrl(), $entry->getTitle());
+    }
+
+    private static function languagesOf(LanguageCoverageModel $coverage): string
+    {
+        $counts = array_map(
+            static fn (FeedLanguage $language): string
+                => \sprintf('%s %d', $language->value, $coverage->entriesIn($language)),
+            FeedLanguage::cases(),
+        );
+
+        return \sprintf('Languages: %s, none %d', implode(', ', $counts), $coverage->entriesWithoutLanguage);
     }
 
     private static function summaryOf(TrendingExplanationModel $explanation): string

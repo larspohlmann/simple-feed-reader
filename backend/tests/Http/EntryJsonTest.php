@@ -282,8 +282,8 @@ final class EntryJsonTest extends TestCase
     public function testAShareWithoutOwnTextHasNoExcerptFromItsBody(): void
     {
         $shared = $this->entryTitled('Shared');
-        $shared->setSummary(null);
-        $shared->setContentHtml('<p>Article URL: https://example.com/story</p>');
+        $shared->recordText($shared->getText()->withSummary(null));
+        $shared->recordText($shared->getText()->withContentHtml('<p>Article URL: https://example.com/story</p>'));
         $shared->setShareKind(ShareKind::Link);
 
         self::assertSame('', JsonMappers::entryJson()->listRow($this->row($shared))['excerpt']);
@@ -299,8 +299,8 @@ final class EntryJsonTest extends TestCase
             new \DateTimeImmutable('2026-09-07T00:00:00Z'),
             new \DateTimeImmutable('2026-09-07T00:00:00Z'),
         );
-        $entry->setContentHtml('<p>Full body.</p>');
-        $entry->setSummary('A short summary.');
+        $entry->recordText($entry->getText()->withContentHtml('<p>Full body.</p>'));
+        $entry->recordText($entry->getText()->withSummary('A short summary.'));
 
         $json = JsonMappers::entryJson()->listRow($this->row($entry));
 
@@ -320,7 +320,7 @@ final class EntryJsonTest extends TestCase
         );
         $entry->setPublishedAt(new \DateTimeImmutable('2026-09-06T10:00:00Z'));
         $entry->setAuthor(new EntryAuthor('A. Writer'));
-        $entry->setSummary('A short summary.');
+        $entry->recordText($entry->getText()->withSummary('A short summary.'));
 
         $json = JsonMappers::entryJson()->listRow($this->row($entry));
 
@@ -523,7 +523,7 @@ final class EntryJsonTest extends TestCase
             new \DateTimeImmutable('2026-09-07T00:00:00Z'),
             new \DateTimeImmutable('2026-09-07T00:00:00Z'),
         );
-        $sibling->setContentHtml('<p>Sibling body.</p>');
+        $sibling->recordText($sibling->getText()->withContentHtml('<p>Sibling body.</p>'));
         $entry = new Entry(
             new Feed('https://example.com/feed'),
             'guid',
@@ -532,10 +532,10 @@ final class EntryJsonTest extends TestCase
             new \DateTimeImmutable('2026-09-07T00:00:00Z'),
             new \DateTimeImmutable('2026-09-07T00:00:00Z'),
         );
-        $entry->setContentHtml('<p>Full body.</p>');
+        $entry->recordText($entry->getText()->withContentHtml('<p>Full body.</p>'));
         $row = $this->row($entry)->withDuplicates([$this->row($sibling)]);
 
-        $served = new ServedChaptersModel([], $row->entry->getContentHtml());
+        $served = new ServedChaptersModel([], $row->entry->getText()->getContentHtml());
         $json = JsonMappers::entryJson()->detail($row, $served, null);
 
         self::assertSame('<p>Full body.</p>', $json['contentHtml'] ?? null);
@@ -599,10 +599,10 @@ final class EntryJsonTest extends TestCase
     {
         $entry = $this->entryTitled('');
         $entry->setHeadline(Headline::untitledPost());
-        $entry->setContentHtml(
+        $entry->recordText($entry->getText()->withContentHtml(
             '<figure class="post-images"><img src="https://v.test/p.jpg" alt=""></figure>'
             . '<p><a href="https://bsky.app/profile/a/post/1">View embedded content on Bluesky</a></p>',
-        );
+        ));
         $entry->setMedia([new EntryMedium('https://v.test/p.m3u8', 'video', 1080, 1920)], []);
 
         $json = JsonMappers::entryJson()->listRow($this->row($entry));
@@ -615,10 +615,10 @@ final class EntryJsonTest extends TestCase
     {
         $entry = $this->entryTitled('');
         $entry->setHeadline(Headline::untitledPost());
-        $entry->setSummary('Words that live only in the summary.');
-        $entry->setContentHtml(
+        $entry->recordText($entry->getText()->withSummary('Words that live only in the summary.'));
+        $entry->recordText($entry->getText()->withContentHtml(
             '<p><a href="https://bsky.app/profile/a/post/1">View embedded content on Bluesky</a></p>',
-        );
+        ));
 
         self::assertSame(
             'Words that live only in the summary.',
@@ -629,7 +629,7 @@ final class EntryJsonTest extends TestCase
     public function testAnUntitledArticleKeepsItsExcerpt(): void
     {
         $entry = $this->entryTitled('');
-        $entry->setContentHtml('<p>Some body text.</p>');
+        $entry->recordText($entry->getText()->withContentHtml('<p>Some body text.</p>'));
 
         self::assertSame('Some body text.', JsonMappers::entryJson()->listRow($this->row($entry))['excerpt']);
     }

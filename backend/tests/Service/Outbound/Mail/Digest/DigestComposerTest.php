@@ -83,7 +83,7 @@ final class DigestComposerTest extends DbTestCase
         $rust = $this->search('rust');
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$rust]);
         $entry = $this->member($rust, 'Title', 'Feed A', new \DateTimeImmutable('2026-08-15T00:00:00Z'));
-        $entry->setSummary('<p>' . str_repeat('word ', 60) . '</p>');
+        $entry->recordText($entry->getText()->withSummary('<p>' . str_repeat('word ', 60) . '</p>'));
         $this->entityManager->flush();
 
         $model = $this->composer()->compose($this->user, $this->since);

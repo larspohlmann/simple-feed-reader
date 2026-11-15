@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Dto\Subscription;
 
 use App\Dto\Subscription\UpdateSubscriptionRequest;
+use App\Enum\FeedLanguage;
 use PHPUnit\Framework\TestCase;
 
 final class UpdateSubscriptionRequestTest extends TestCase
@@ -24,5 +25,25 @@ final class UpdateSubscriptionRequestTest extends TestCase
             ],
             get_object_vars($change->inclusions),
         );
+    }
+
+    public function testANamedLanguageBecomesThatLanguage(): void
+    {
+        $change = (new UpdateSubscriptionRequest(language: 'es'))->toChange();
+
+        self::assertSame(FeedLanguage::Spanish, $change->language?->language);
+    }
+
+    public function testAutomaticBecomesAChangeToNoLanguage(): void
+    {
+        $change = (new UpdateSubscriptionRequest(language: 'automatic'))->toChange();
+
+        self::assertNotNull($change->language);
+        self::assertNull($change->language->language);
+    }
+
+    public function testNoLanguageMeansNoLanguageChange(): void
+    {
+        self::assertNull((new UpdateSubscriptionRequest())->toChange()->language);
     }
 }

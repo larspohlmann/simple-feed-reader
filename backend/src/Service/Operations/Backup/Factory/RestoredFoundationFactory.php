@@ -45,6 +45,7 @@ final readonly class RestoredFoundationFactory
         $feed->setDescription($line->description);
         $feed->setFaviconUrl($line->faviconUrl);
         $feed->setImageUrl($line->imageUrl);
+        $feed->recordTraits($feed->getTraits()->withLanguage($line->language));
 
         return $feed;
     }

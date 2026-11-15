@@ -312,6 +312,10 @@ services:
     App\Service\Operations\Logging\Loki\LokiSink\LokiSinkInterface:
         factory: ['@App\Service\Operations\Logging\Loki\Factory\LokiSinkFactory', 'create']
 
+    LanguageDetection\Language:
+        factory: ['@App\Service\Ingestion\Language\Factory\LanguageDetectionFactory', 'create']
+        lazy: true
+
     app.untrusted_markdown_converter:
         class: League\CommonMark\CommonMarkConverter
         arguments:

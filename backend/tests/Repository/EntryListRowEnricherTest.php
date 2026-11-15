@@ -284,7 +284,7 @@ final class EntryListRowEnricherTest extends DbTestCase
     public function testASubstackPostsCommentsAreItsDiscussion(): void
     {
         $feed = new Feed('https://joe.substack.com/feed');
-        $feed->recordPlatform(FeedPlatform::Substack);
+        $feed->recordTraits($feed->getTraits()->withPlatform(FeedPlatform::Substack));
         $this->entityManager->persist($feed);
         $post = $this->postOn($feed, 'https://joe.substack.com/p/one-post');
         $page = $this->postOn($feed, 'https://joe.substack.com/podcast');

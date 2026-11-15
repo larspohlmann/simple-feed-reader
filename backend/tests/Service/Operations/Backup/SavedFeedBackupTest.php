@@ -11,6 +11,7 @@ use App\Entity\Feed;
 use App\Entity\SavedEntryOrigin;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\FeedLanguage;
 use App\Enum\SourceFormat;
 use App\Repository\SavedEntryOriginRepository;
 use App\Service\Operations\Backup\AccountBackupExporter;
@@ -60,6 +61,7 @@ final class SavedFeedBackupTest extends DbTestCase
             ->findOneBy(['user' => $restorer->requireId(), 'entry' => $copy]);
         self::assertNotNull($state);
         self::assertTrue($state->isFavorite());
+        self::assertSame(FeedLanguage::German, $copy->getText()->getLanguage());
     }
 
     public function testAFileNamingAnotherUsersSavedFeedLoadsIntoTheRestoringUsersOwn(): void
@@ -151,6 +153,7 @@ final class SavedFeedBackupTest extends DbTestCase
     {
         $feed = $this->savedFeedOf($user);
         $entry = SavedPostFixtures::entry($this->entityManager, $feed, 'saved-post', 'https://heise.example/post');
+        $entry->recordText($entry->getText()->withLanguage(FeedLanguage::German));
         $origin = new EntryOrigin('Heise', 'https://heise.example/favicon.ico');
         $this->entityManager->persist(new SavedEntryOrigin($entry, $origin));
         $state = SavedPostFixtures::state($this->entityManager, $user, $entry);

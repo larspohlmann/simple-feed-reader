@@ -66,8 +66,8 @@ final class OriginalHeroResolverTest extends TestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
-        $entry->setContentHtml($contentHtml);
-        $entry->setSummary($summary);
+        $entry->recordText($entry->getText()->withContentHtml($contentHtml));
+        $entry->recordText($entry->getText()->withSummary($summary));
 
         return $entry;
     }

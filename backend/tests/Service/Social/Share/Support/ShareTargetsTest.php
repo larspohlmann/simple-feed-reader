@@ -22,7 +22,7 @@ final class ShareTargetsTest extends TestCase
         $feed->setSiteUrl($siteUrl);
         $now = new \DateTimeImmutable();
         $entry = new Entry($feed, $guid, $url, 'A real headline', $now, $now);
-        $entry->setContentHtml('<p>' . self::BODY_LINK . '</p>');
+        $entry->recordText($entry->getText()->withContentHtml('<p>' . self::BODY_LINK . '</p>'));
         $entry->setShareKind(ShareKind::Link);
 
         return $entry;
@@ -45,8 +45,10 @@ final class ShareTargetsTest extends TestCase
     {
         $entry = self::titledShare();
         $entry->setHeadline(Headline::derived('A real headline'));
-        $entry->setContentHtml('<p><a href="https://a.example/1">https://a.example/1</a> '
-            . '<a href="https://b.example/2">https://b.example/2</a></p>');
+        $entry->recordText($entry->getText()->withContentHtml(
+            '<p><a href="https://a.example/1">https://a.example/1</a> '
+            . '<a href="https://b.example/2">https://b.example/2</a></p>',
+        ));
 
         self::assertSame(['https://b.example/2'], ShareTargets::uncardedOf($entry, ['https://a.example/1']));
     }

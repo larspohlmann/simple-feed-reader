@@ -28,6 +28,7 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\CommentsLoad;
+use App\Enum\FeedLanguage;
 use App\Enum\InclusionSurface;
 use App\Enum\Handedness;
 use App\Enum\MagazineStyle;
@@ -146,6 +147,7 @@ final readonly class FullyPopulatedAccount
         $feed->setFaviconUrl('https://populated.example/favicon.ico');
         $feed->setImageUrl('https://populated.example/logo.png');
         $feed->setSourceFormat(SourceFormat::SCRAPED);
+        $feed->recordTraits($feed->getTraits()->withLanguage(FeedLanguage::French));
 
         return $feed;
     }
@@ -182,8 +184,9 @@ final readonly class FullyPopulatedAccount
             'https://populated.example/authors/a',
             'https://populated.example/authors/a.jpg',
         ));
-        $entry->setSummary('A summary of the article.');
-        $entry->setContentHtml('<p>The body of the article.</p>');
+        $entry->recordText($entry->getText()->withSummary('A summary of the article.'));
+        $entry->recordText($entry->getText()->withContentHtml('<p>The body of the article.</p>'));
+        $entry->recordText($entry->getText()->withLanguage(FeedLanguage::English));
         $entry->getImage()->storePending('https://populated.example/lead.jpg', 1200, 630);
         $entry->getImage()->storeRenditions([
             new ImageRendition('https://populated.example/lead-600.jpg', 600),

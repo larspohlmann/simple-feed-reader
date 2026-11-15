@@ -20,6 +20,7 @@ use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Completion\Model\KnownSharesModel;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Model\TimelinePageModel;
+use App\Service\Social\Social\Support\LemmyLanguageTag;
 
 final readonly class LemmyPostEntries
 {
@@ -76,6 +77,7 @@ final readonly class LemmyPostEntries
             media: self::mediaOf($post),
             authorUrl: $creator->string('actor_id'),
             authorAvatarUrl: $creator->string('avatar'),
+            statedLanguage: LemmyLanguageTag::of($post->int('language_id')),
         );
     }
 

@@ -17,6 +17,12 @@ import { TagsStore } from '../../state/tags.store';
 import { SubscriptionDto } from '../../models';
 import { titleFollowsSource } from '../display-title';
 import { isSearchFeed } from '../../state/social-sections';
+import {
+  AUTOMATIC_LANGUAGE,
+  FEED_LANGUAGES,
+  FeedLanguageChoice,
+  feedLanguageNameKey,
+} from '../../feed-language';
 import { SocialSearchFormComponent } from '../social-picker/social-search-form.component';
 import { SocialSearchService } from '../social-picker/social-search.service';
 import { ButtonComponent } from '../../../shared/button/button.component';
@@ -61,6 +67,14 @@ export class EditSubscriptionDialogComponent implements OnInit {
   readonly includeInForYou = signal<boolean>(this.data.includeInForYou);
   readonly includeInSavedSearches = signal<boolean>(this.data.includeInSavedSearches);
   readonly includeInTrending = signal<boolean>(this.data.includeInTrending);
+  readonly languageEditable = this.data.languageEditable;
+  private readonly storedLanguage: FeedLanguageChoice = this.data.language ?? AUTOMATIC_LANGUAGE;
+  readonly language = signal<FeedLanguageChoice>(this.storedLanguage);
+  readonly automaticLanguage = AUTOMATIC_LANGUAGE;
+  readonly languageOptions = FEED_LANGUAGES.map((language) => ({
+    value: language,
+    labelKey: feedLanguageNameKey(language),
+  }));
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly search = isSearchFeed(this.data) ? this.data.social : null;
@@ -89,6 +103,16 @@ export class EditSubscriptionDialogComponent implements OnInit {
     this.ref.close(UNSUBSCRIBE_REQUESTED);
   }
 
+  onLanguageChange(event: Event): void {
+    this.language.set((event.target as HTMLSelectElement).value as FeedLanguageChoice);
+  }
+
+  /** Sent only when changed: an absent language leaves the feed's alone. */
+  private languageChange(): { language?: FeedLanguageChoice } {
+    const language = this.language();
+    return language === this.storedLanguage ? {} : { language };
+  }
+
   toggle(id: number): void {
     this.checked.update((set) => toggled(set, id));
   }
@@ -102,6 +126,7 @@ export class EditSubscriptionDialogComponent implements OnInit {
       includeInForYou: this.includeInForYou(),
       includeInSavedSearches: this.includeInSavedSearches(),
       includeInTrending: this.includeInTrending(),
+      ...this.languageChange(),
     };
     this.loading.set(true);
     this.error.set(null);

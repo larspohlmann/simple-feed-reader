@@ -232,8 +232,8 @@ final class AccountRestorerTest extends DbTestCase
             new \DateTimeImmutable($day . ' 05:00:00'),
         );
         $entry->setAuthor(new EntryAuthor('An Author'));
-        $entry->setSummary('Summary of ' . $title);
-        $entry->setContentHtml('<p>Body of ' . $title . '</p>');
+        $entry->recordText($entry->getText()->withSummary('Summary of ' . $title));
+        $entry->recordText($entry->getText()->withContentHtml('<p>Body of ' . $title . '</p>'));
         $entry->getImage()->storePending('https://example.test/' . $guid . '.png', 640, 480);
         $entry->setPublishedAt(new \DateTimeImmutable($day . ' 04:00:00'));
         $this->entityManager->persist($entry);
@@ -628,7 +628,9 @@ final class AccountRestorerTest extends DbTestCase
         $this->assertFieldsRoundTripped(Tag::class, $sourceRows['tag'], $targetRows['tag'], ['parent']);
         self::assertSame('Reading', $targetRows['tag']->getParent()?->getName());
         $this->assertFieldsRoundTripped(SavedSearch::class, $sourceRows['savedSearch'], $targetRows['savedSearch']);
-        $this->assertFieldsRoundTripped(Feed::class, $sourceRows['feed'], $targetRows['feed']);
+        $this->assertFieldsRoundTripped(Feed::class, $sourceRows['feed'], $targetRows['feed'], ['traits.language']);
+        self::assertNotNull($sourceRows['feed']->getLanguage());
+        self::assertSame($sourceRows['feed']->getLanguage(), $targetRows['feed']->getLanguage());
 
         $this->assertFieldsRoundTripped(
             Subscription::class,
@@ -665,9 +667,10 @@ final class AccountRestorerTest extends DbTestCase
                 'share.quotedPost.url', 'share.quotedPost.authorName', 'share.quotedPost.authorHandle',
                 'share.quotedPost.authorAvatarUrl', 'share.quotedPost.postedAt', 'share.quotedPost.text',
                 'share.quotedPost.media', 'share.quotedPost.nestedUrl', 'share.quotedPost.nestedHandle',
-                'share.quotedPost.linkCard',
+                'share.quotedPost.linkCard', 'text.summary', 'text.contentHtml', 'text.language',
             ],
         );
+        self::assertEquals($sourceRows['entry']->getText(), $targetRows['entry']->getText());
         self::assertSame($sourceRows['feed']->getUrl(), $targetRows['entry']->getFeed()->getUrl());
         self::assertEquals($sourceRows['entry']->getMedia(), $targetRows['entry']->getMedia());
         self::assertEquals($sourceRows['entry']->getAttachments(), $targetRows['entry']->getAttachments());

@@ -79,7 +79,10 @@ final class FeedOutcomePersisterTest extends DbTestCase
         $queued = $this->entityManager->getRepository(ShareEnrichment::class)->findBy(['entry' => $post]);
         self::assertCount(1, $queued);
         self::assertSame(ShareEnrichmentKind::LinkCards, $queued[0]->getKind());
-        self::assertStringContainsString('<a href="https://example.com/story"', (string) $post->getContentHtml());
+        self::assertStringContainsString(
+            '<a href="https://example.com/story"',
+            (string) $post->getText()->getContentHtml(),
+        );
         self::assertSame([], $this->entityManager->getRepository(LinkCard::class)->findBy(['entry' => $post]));
     }
 

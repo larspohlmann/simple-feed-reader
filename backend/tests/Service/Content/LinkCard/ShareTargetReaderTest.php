@@ -102,7 +102,7 @@ final class ShareTargetReaderTest extends TestCase
     {
         $now = new \DateTimeImmutable('2026-10-11 12:00:00');
         $entry = new Entry(new Feed('https://m.example/@b.rss'), 'guid-1', null, 'Post', $now, $now);
-        $entry->setContentHtml($contentHtml);
+        $entry->recordText($entry->getText()->withContentHtml($contentHtml));
 
         return $entry;
     }

@@ -30,6 +30,8 @@ export function aSubscription(overrides: Partial<SubscriptionDto> = {}): Subscri
     includeInForYou: true,
     includeInTrending: true,
     includeInSavedSearches: true,
+    language: null,
+    languageEditable: true,
     social: null,
     ...overrides,
   };

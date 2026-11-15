@@ -675,4 +675,20 @@ final class Rss2ParserTest extends TestCase
         self::assertSame('a masterclass in alt text', $entry->headline->text);
         self::assertTrue($entry->headline->derived);
     }
+
+    public function testTheChannelLanguageIsCarriedRaw(): void
+    {
+        $feed = FeedFormatParsers::feed(
+            '<rss version="2.0"><channel><title>F</title><language>de-DE</language></channel></rss>',
+        );
+
+        self::assertSame('de-DE', $feed->declaredLanguage);
+    }
+
+    public function testAChannelWithoutALanguageDeclaresNone(): void
+    {
+        $feed = FeedFormatParsers::feed('<rss version="2.0"><channel><title>F</title></channel></rss>');
+
+        self::assertNull($feed->declaredLanguage);
+    }
 }

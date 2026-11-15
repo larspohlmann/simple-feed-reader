@@ -43,11 +43,8 @@ final class Entry
     #[ORM\Embedded(class: EntryAuthor::class, columnPrefix: false)]
     private EntryAuthor $author;
 
-    #[ORM\Column(type: Types::TEXT, nullable: true)]
-    private ?string $summary = null;
-
-    #[ORM\Column(type: Types::TEXT, nullable: true)]
-    private ?string $contentHtml = null;
+    #[ORM\Embedded(class: EntryText::class, columnPrefix: false)]
+    private EntryText $text;
 
     #[ORM\Embedded(class: EntryImage::class, columnPrefix: false)]
     private EntryImage $image;
@@ -87,6 +84,7 @@ final class Entry
         $this->guid = new EntryGuid($guid);
         $this->location = new EntryLocation();
         $this->location->store($url, $urlHash);
+        $this->text = new EntryText();
         $this->headline = new EntryHeadline();
         $this->headline->store(Headline::fromFeed($title));
         $this->createdAt = $createdAt;
@@ -163,24 +161,14 @@ final class Entry
         return $this->author->getAvatarUrl();
     }
 
-    public function getSummary(): ?string
+    public function getText(): EntryText
     {
-        return $this->summary;
+        return $this->text;
     }
 
-    public function setSummary(?string $summary): void
+    public function recordText(EntryText $text): void
     {
-        $this->summary = $summary;
-    }
-
-    public function getContentHtml(): ?string
-    {
-        return $this->contentHtml;
-    }
-
-    public function setContentHtml(?string $contentHtml): void
-    {
-        $this->contentHtml = $contentHtml;
+        $this->text = $text;
     }
 
     public function getImageUrl(): ?string

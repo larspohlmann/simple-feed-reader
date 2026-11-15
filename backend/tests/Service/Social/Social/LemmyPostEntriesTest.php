@@ -95,6 +95,20 @@ final class LemmyPostEntriesTest extends TestCase
         self::assertSame(self::MBIN_POST, $mbinPost->guid);
     }
 
+    public function testAPostStatesItsLanguageByTheInstancesLanguageId(): void
+    {
+        $entries = self::entriesWithLanguageIds([32, 130, 37, 0, 47]);
+
+        self::assertSame('de', $entries[self::LINK_POST]->statedLanguage);
+        self::assertSame('x-lemmy-130', $entries[self::TEXT_POST]->statedLanguage);
+        self::assertNull($entries[self::MBIN_POST]->statedLanguage);
+    }
+
+    public function testAPostWithoutALanguageIdStatesNone(): void
+    {
+        self::assertNull(self::entries()[self::LINK_POST]->statedLanguage);
+    }
+
     public function testTheNewestIdIsTheHighestPostId(): void
     {
         self::assertSame('105', self::page((string) file_get_contents(self::POST_LIST))->newestId);
@@ -114,6 +128,29 @@ final class LemmyPostEntriesTest extends TestCase
     {
         $entries = [];
         foreach (self::page((string) file_get_contents(self::POST_LIST))->parsed->entries as $entry) {
+            $entries[$entry->guid] = $entry;
+        }
+
+        return $entries;
+    }
+
+    /**
+     * @param list<int> $languageIds the language id of each post of the fixture, in its order
+     *
+     * @return array<string, ParsedEntryModel> keyed by guid
+     */
+    private static function entriesWithLanguageIds(array $languageIds): array
+    {
+        $body = preg_replace_callback(
+            '/"language_id": 0/',
+            static function () use (&$languageIds): string {
+                return '"language_id": ' . (array_shift($languageIds) ?? 0);
+            },
+            (string) file_get_contents(self::POST_LIST),
+        );
+
+        $entries = [];
+        foreach (self::page((string) $body)->parsed->entries as $entry) {
             $entries[$entry->guid] = $entry;
         }
 

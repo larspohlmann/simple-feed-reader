@@ -69,7 +69,7 @@ final class EntryCommentsControllerTest extends ApiTestCase
     {
         $url = 'https://joe.substack.com/p/one-post';
         $feed = new Feed('https://joe.substack.com/feed');
-        $feed->recordPlatform(FeedPlatform::Substack);
+        $feed->recordTraits($feed->getTraits()->withPlatform(FeedPlatform::Substack));
         $entry = new Entry(
             $feed,
             $url,

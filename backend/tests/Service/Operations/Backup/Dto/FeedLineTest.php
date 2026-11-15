@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Operations\Backup\Dto;
 
 use App\Entity\Feed;
+use App\Enum\FeedLanguage;
 use App\Enum\SourceFormat;
 use App\Service\Operations\Backup\Dto\FeedLine;
 use App\Service\Operations\Backup\Exception\InvalidBackupException;
@@ -62,6 +63,32 @@ final class FeedLineTest extends TestCase
         FeedLine::fromLine(self::line('saved:4', SourceFormat::XML));
     }
 
+    public function testAFeedIsReadInTheLanguageItsLineNames(): void
+    {
+        $line = FeedLine::fromLine(['language' => 'fr'] + self::line('https://example.com/rss', SourceFormat::XML));
+
+        self::assertSame(FeedLanguage::French, $line->language);
+    }
+
+    public function testALineWithoutALanguageReadsNone(): void
+    {
+        self::assertNull(FeedLine::fromLine(self::line('https://example.com/feed.xml', SourceFormat::XML))->language);
+    }
+
+    public function testALanguageOutsideTheFourReadsNone(): void
+    {
+        $line = FeedLine::fromLine(['language' => 'it'] + self::line('https://example.com/rss', SourceFormat::XML));
+
+        self::assertNull($line->language);
+    }
+
+    public function testAFeedWhoseFormatCarriesNoLanguageReadsNoneWhateverItsLineNames(): void
+    {
+        $line = FeedLine::fromLine(['language' => 'fr'] + self::line('saved:4', SourceFormat::SAVED));
+
+        self::assertNull($line->language);
+    }
+
     /** @return array<string, mixed> */
     private static function line(string $url, string $sourceFormat): array
     {
@@ -82,6 +109,7 @@ final class FeedLineTest extends TestCase
         $feed->setSiteUrl('https://one.example');
         $feed->setTitle('One');
         $feed->setFaviconUrl('https://one.example/favicon.ico');
+        $feed->recordTraits($feed->getTraits()->withLanguage(FeedLanguage::German));
         $exported = new ExportedSubscriptionModel(
             BackupLineRecords::subscription($feed),
             'https://one.example/rss',
@@ -91,7 +119,7 @@ final class FeedLineTest extends TestCase
         self::assertSame(
             '{"kind":"feed","url":"https://one.example/rss","siteUrl":"https://one.example","title":"One",'
             . '"description":null,"faviconUrl":"https://one.example/favicon.ico","imageUrl":null,'
-            . '"sourceFormat":"xml"}',
+            . '"sourceFormat":"xml","language":"de"}',
             FeedLine::of($exported)->toBackupLine(),
         );
     }

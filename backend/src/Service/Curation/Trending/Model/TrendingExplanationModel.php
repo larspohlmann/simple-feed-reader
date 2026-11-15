@@ -15,6 +15,7 @@ final readonly class TrendingExplanationModel
     public function __construct(
         public TrendingWindow $window,
         public int $entryCount,
+        public LanguageCoverageModel $languageCoverage,
         public array $groups,
         public array $nearMisses,
         public int $durationMilliseconds,

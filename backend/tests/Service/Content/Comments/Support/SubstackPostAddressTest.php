@@ -16,7 +16,7 @@ final class SubstackPostAddressTest extends TestCase
     private static function entry(?string $url, ?FeedPlatform $platform = FeedPlatform::Substack): Entry
     {
         $feed = new Feed('https://www.astralcodexten.com/feed');
-        $feed->recordPlatform($platform);
+        $feed->recordTraits($feed->getTraits()->withPlatform($platform));
 
         return new Entry($feed, 'guid', $url, 'Title', new \DateTimeImmutable(), new \DateTimeImmutable());
     }
