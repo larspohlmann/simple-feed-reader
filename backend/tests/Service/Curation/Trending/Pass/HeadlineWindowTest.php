@@ -318,7 +318,8 @@ final class HeadlineWindowTest extends TestCase
     public function testPartsTheLighterEntryHoldsAsWordsCountWholeThoughTheOtherHoldsThemInABodyCompound(): void
     {
         $this->addIn(FeedLanguage::German, 1, 10, 'Kinder Arzt Bett');
-        $this->window->add(self::entry(2, 20, FeedLanguage::German, 'Bett'), 'Kinderarztpraxis Russland Schule Polizei');
+        $body = 'Kinderarztpraxis Russland Schule Polizei';
+        $this->window->add(self::entry(2, 20, FeedLanguage::German, 'Bett'), $body);
 
         self::assertGreaterThan($this->window->totalWeight(1), $this->window->totalWeight(2));
         self::assertEqualsWithDelta(
