@@ -10,6 +10,7 @@ use App\Entity\ShareEnrichment;
 use App\Repository\LinkCardRepository;
 use App\Repository\ShareEnrichmentRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Foundation\Clock\Support\ElapsedSeconds;
 use App\Service\Content\LinkCard\Model\EntryCardsModel;
 use App\Service\Content\LinkCard\Model\LinkCardBudgetModel;
 use App\Service\Content\LinkCard\Support\ReusableShareUrls;
@@ -94,7 +95,7 @@ final readonly class ShareLinkCards
 
     private function secondsSince(\DateTimeImmutable $claimedAt): float
     {
-        return (float) $this->clock->now()->format('U.u') - (float) $claimedAt->format('U.u');
+        return ElapsedSeconds::between($claimedAt, $this->clock->now());
     }
 
     /**

@@ -10,6 +10,7 @@ use App\Service\Content\LinkResolution\Model\LinkResolutionBudgetModel;
 use App\Service\Content\LinkResolution\Model\LinkResolutionReportModel;
 use App\Service\Content\LinkResolution\Model\PendingLinkModel;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Foundation\Clock\Support\ElapsedSeconds;
 use Psr\Log\LoggerInterface;
 
 /** Follows the queued short links, oldest first, within a budget; each is settled as soon as it lands. */
@@ -35,7 +36,7 @@ final readonly class LinkResolutionSweep
             }
             $startedAt = $this->clock->now();
             $landing = $this->attempt($link);
-            $report = $report->counted($landing, self::secondsSince($startedAt, $this->clock->now()));
+            $report = $report->counted($landing, ElapsedSeconds::between($startedAt, $this->clock->now()));
         }
 
         return $report;
@@ -79,10 +80,5 @@ final readonly class LinkResolutionSweep
         $this->linkResolutions->settle($link, $unresolved);
 
         return $unresolved;
-    }
-
-    private static function secondsSince(\DateTimeImmutable $start, \DateTimeImmutable $end): float
-    {
-        return (float) $end->format('U.u') - (float) $start->format('U.u');
     }
 }
