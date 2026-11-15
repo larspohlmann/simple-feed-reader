@@ -29,6 +29,12 @@ final class EntryPlainText
         return $text;
     }
 
+    /** The plain text cut at a word boundary to at most $maxLength characters; '' when there is none. */
+    public static function cut(?string $html, int $maxLength): string
+    {
+        return WordBoundary::cut(self::of($html) ?? '', $maxLength);
+    }
+
     private function __construct()
     {
     }

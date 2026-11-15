@@ -9,7 +9,6 @@ use App\Service\Curation\Trending\CardLanguage;
 use App\Service\Curation\Trending\Model\SharedArticleModel;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Service\Curation\Trending\Model\WindowLinkCardModel;
-use App\Service\Curation\Trending\Support\EntryText;
 use App\Service\Ingestion\Language\Support\PreviewText;
 
 /**
@@ -39,11 +38,12 @@ final class SharedArticles
 
     private function read(WindowLinkCardModel $card, ?FeedLanguage $postLanguage): SharedArticleModel
     {
+        $body = PreviewText::descriptionOf($card->description);
+
         return new SharedArticleModel(
             $card->title,
-            EntryText::body($card->description),
-            $card->language
-                ?? $this->cardLanguage->of(PreviewText::of($card->title, $card->description), $postLanguage),
+            $body,
+            $card->language ?? $this->cardLanguage->of(PreviewText::joined($card->title, $body), $postLanguage),
         );
     }
 }

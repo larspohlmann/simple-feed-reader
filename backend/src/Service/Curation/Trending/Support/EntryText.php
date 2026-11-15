@@ -14,7 +14,7 @@ final class EntryText
 
     public static function body(?string $summary): string
     {
-        return self::cut(EntryPlainText::of($summary) ?? '');
+        return EntryPlainText::cut($summary, self::BODY_LENGTH);
     }
 
     public static function bodyAfterTitle(string $title, ?string $summary): string

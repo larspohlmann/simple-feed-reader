@@ -4,16 +4,25 @@ declare(strict_types=1);
 
 namespace App\Service\Ingestion\Language\Support;
 
+use App\Entity\LinkCardContent;
 use App\Service\Foundation\Text\Support\EntryPlainText;
-use App\Service\Foundation\Text\Support\WordBoundary;
 
+/** The text a card's language is decided on: its title, then its description as plain text, cut as stored. */
 final class PreviewText
 {
-    private const int DESCRIPTION_LENGTH = 300;
-
     public static function of(string $title, ?string $description): string
     {
-        return $title . "\n" . WordBoundary::cut(EntryPlainText::of($description) ?? '', self::DESCRIPTION_LENGTH);
+        return self::joined($title, self::descriptionOf($description));
+    }
+
+    public static function descriptionOf(?string $description): string
+    {
+        return EntryPlainText::cut($description, LinkCardContent::DESCRIPTION_MAX);
+    }
+
+    public static function joined(string $title, string $descriptionText): string
+    {
+        return $title . "\n" . $descriptionText;
     }
 
     private function __construct()

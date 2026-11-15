@@ -25,6 +25,17 @@ final class PreviewTextTest extends TestCase
         yield 'long' => ['Long', str_repeat('A sentence of several words keeps going. ', 17)];
     }
 
+    public function testTheTextIsTheTitleJoinedToTheDescriptionText(): void
+    {
+        $description = '<p>Some <i>marked</i> words</p>';
+
+        self::assertSame(
+            PreviewText::of('T', $description),
+            PreviewText::joined('T', PreviewText::descriptionOf($description)),
+        );
+        self::assertSame('Some marked words', PreviewText::descriptionOf($description));
+    }
+
     public function testANullDescriptionLeavesTheTitleAndANewline(): void
     {
         self::assertSame("Only a title\n", PreviewText::of('Only a title', null));

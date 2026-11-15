@@ -17,7 +17,6 @@ use App\Service\Foundation\Url\Support\TrackingFreeUrl;
  */
 final class StorableLinkCard
 {
-    private const int DESCRIPTION_MAX = 300;
     private const string BARE_URL = '~^https?://\S+$~';
 
     public static function of(LinkCardContent $card): ?LinkCardContent
@@ -41,7 +40,7 @@ final class StorableLinkCard
             return null;
         }
 
-        return WordBoundary::clipped($description, self::DESCRIPTION_MAX);
+        return WordBoundary::clipped($description, LinkCardContent::DESCRIPTION_MAX);
     }
 
     private static function fits(string $url): bool
