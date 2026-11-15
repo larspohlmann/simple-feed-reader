@@ -110,96 +110,88 @@ English entries they used to match (de–en lost 128 pairs net in #2227). The me
 
 ## Design
 
+This section describes what was built. The approaches above, the pre-registered remedies below and the Outcome keep
+the history of how it got here.
+
 ### Lexicon data
 
 `backend/resources/german-lexicon/`:
 
-- `generate.php` is the generator, written in the style of `feed-directory/snapshot.php`. It streams the pinned German
-  1-gram shards of Ngram v3 (`gzopen`, line by line) and keeps:
+- `generate.php` streams the 8 pinned German 1-gram shards of Ngram v3 (`gzopen`, line by line) and keeps:
   - the years 1950 to 2019;
   - alphabetic tokens (`^\p{L}+$`) of at least 3 letters, casefolded (`MB_CASE_FOLD`, NFKC), diacritics kept.
-  It sums the counts per casefolded form, overall and per part-of-speech tag.
-  - **Nouns:** forms whose `_NOUN`-tagged count is at least half the form's tagged count. German capitalises nouns,
-    and the tagger follows that. If the shards carry no tags, the fallback is that the capitalised spelling makes up
-    at least half the occurrences. The builder records which rule was used.
-  - **Other forms:** every kept form that is not a noun. They can be modifiers (*über-*, *groß-*, *gegen-*) and they
-    compete as unsplit words.
-  - **Frequency class:** `floor(log2(maxCount / count))`, where `maxCount` is the count of the most frequent kept
-    form. This is the Leipzig convention: class 0 is the most frequent, and each class is half as frequent as the one
-    before. Integers keep the file small.
-  - **Size cap:** the kept forms are the most frequent N, with N the largest round number (10,000 steps) that keeps
-    the file inside the 6 MB budget. N is set by the size budget, never by the window.
-  - **Verb stems:** for each `_VERB`-tagged form ending in *-en* (*-eln* and *-ern* included) that is not a noun, and
-    with at least 3 letters before the ending, the generator computes:
-    - the present stem `p`: drop *-en*, or drop *-n* after *-el* and *-er*, then strip diacritics;
-    - the canonical stem `c`, which is what the runtime gives the infinitive: `HeadlineStems::bare()` of the Snowball
-      German stem.
-    It maps `p → c`. Examples: *kündigen* gives `kundig → kundig`, *verhandeln* gives `verhandel → verhandeln`, and
-    *arbeiten* gives `arbeit → arbeit`.
-- `lexicon.php` is the generated data. It holds `return ['nouns' => [form => class], 'others' => [form => class],
-  'verbs' => [presentStem => canonicalStem]];` behind a one-line header naming the generator. The file is never
-  edited by hand.
-- `SOURCE` holds the shard URLs, each shard's SHA-256, the fetch date, the year range and N.
-- `NOTICE.txt` is the attribution that CC BY 3.0 requires. It names the source ("Google Books Ngram Viewer dataset,
-  version 20200217, German 1-grams, © Google"), the licence with a link, and the changes made ("aggregated per
-  casefolded form over 1950–2019, filtered to the most frequent N forms, reduced to frequency classes and derived
-  verb stems"). It also says the data file is licensed CC BY 3.0, while the repo's code stays MIT.
-- `LICENSE.txt` holds the CC BY 3.0 Unported legal code, as `feed-directory/LICENSE.txt` holds the ODbL.
+  It sums the counts per casefolded form, overall and per part-of-speech tag, and writes one row per kept form.
+  - **Kind:** `n` (noun) when the form's `_NOUN`-tagged count is at least half its tagged count, otherwise `o`
+    (other). The 4 kept forms without any tag fall back to the capitalised spelling's share of the untagged count.
+  - **Frequency class:** `floor(log2(maxCount / count))`, with `maxCount` the count of the most frequent kept form
+    (the Leipzig convention: class 0 is the most frequent, each class half as frequent as the one before).
+  - **Size cap:** the 290,000 most frequent forms, the largest round number that fits the 6 MB budget.
+- `lexicon.tsv` is the generated data: `form TAB n|o TAB class`, one line per form, byte-sorted, 4,799,138 bytes
+  (189,565 nouns, 100,435 others). It is never edited by hand. There is no verb data and no side file.
+- `SOURCE` pins the shard URLs, sizes and SHA-256s, the fetch date, the year range, N and the end-to-end
+  reproduction. `NOTICE.txt` is the CC BY 3.0 attribution, `LICENSE.txt` its legal code; the repository's code stays
+  MIT.
 
 ### Runtime
 
 All of it lives in `Service/Curation/Trending`:
 
-- **`GermanLexicon/GermanLexiconInterface`**
-  - `isNoun(string $form): bool`
-  - `isKnown(string $form): bool`
-  - `frequencyClassOf(string $form): int`: a form outside the lexicon ranks one class past the rarest.
-  - `isVerbStem(string $presentStem): bool`
-  - `infinitiveStemOf(string $presentStem): string`: throws `UnknownVerbStemException` (in the module's
-    `Exception/`) for a stem that is not a verb stem.
-- **`GermanLexicon/BundledGermanLexicon`** implements the interface. It requires the file, autowired as
-  `%kernel.project_dir%/resources/german-lexicon/lexicon.php`, on the first lookup and holds the result in a
-  `Model/GermanLexiconModel`. It implements `ResetInterface`, and `reset()` drops the model. The worker resets services
-  between messages (`WorkerRunsWithResetTest`), so the about 20–40 MB is freed after each rebuild instead of staying
-  resident in a shared-host worker. Reloading costs well under a second against a week run of about 75 s.
-- **`GermanCompoundSplitter`** (stateless, `final readonly`): `partsOf(string $word): list<string>` returns the
-  lexicon forms of the chosen split. A word that is no compound returns `[]`. The word is casefolded and keeps its
-  diacritics, as `HeadlineStems::words` gives it. The rules:
-  - **Length:** split only a word of at least `2 × MIN_PART_LENGTH` letters. `MIN_PART_LENGTH = 3`, because *Rat*,
-    *Amt* and *Tag* are real heads (*Bundesrat*, *Bürgeramt*, *Bundestag*). `MAX_PARTS = 4` bounds the search.
-  - **Head:** the last part must be a noun form, inflected forms included (*-einsätze* is a noun form in its own
-    right).
-  - **Modifier:** each earlier part `m` resolves to the most frequent known form (noun or other) among `m`, `m−s`,
-    `m−es`, `m−n`, `m−en`, `m−er`, `m−e`, `m−ens` and `m+e`. The last one covers the dropped *-e*: *Schul-bus* resolves
-    to *schule*.
-  - **Choice:** among all splits, and the unsplit word ranked by `frequencyClassOf($word)`, take the lowest mean
-    frequency class. This is the arithmetic mean of log classes, so the highest geometric-mean frequency. A tie goes to
-    fewer parts, then to the longer head. If the unsplit word wins, the result is `[]`.
-  - **Search:** a `Pass/CompoundSplitSearch` per call memoises the best split of each suffix. The search is linear in
-    split points times linking variants, with no exponential blow-up.
-- **`GermanVerbStems`** (stateless): `stemOf(string $stem, string $word): string`. The rule, for a German stem `s`
-  (bare Snowball output) of a word that is **not** a noun form:
-  - if `s` itself is a verb stem, use it;
-  - else if `s` ends in *-et* and `s−et` is a verb stem, use that;
-  - else if `s` ends in *-t* and `s−t` is a verb stem, use that.
-  The match maps to `infinitiveStemOf()`, and otherwise `s` stays. The noun guard keeps *Bett* apart from *beten*, and
-  *Macht* apart from *machen*.
-  - Examples: *verhandelt* and *verhandelte* give `verhandeln`, *kündigt* gives `kundig`, *arbeitet* gives `arbeit`,
-    which matches the noun *Arbeit*, and *nominiert* gives `nominier`, which matches *Nominierung* through Snowball's
-    *-ung*.
-- **`HeadlineStemmer`**: for German, it applies `GermanVerbStems` after Snowball and `bare`. The signature
-  `stem(string $word, ?FeedLanguage $language): string` does not change. `HeadlineFiller` stems its seed words through
-  the same method, so seeds and window words stay consistent.
-- **`HeadlineEquivalents`**: `stemOf()` becomes `wordStemsOf(string $word, string $bare, ?FeedLanguage $language):
-  list<string>`, which gives the whole stem first and then one stem per part:
-  - a canonical bare word returns only itself, as today;
-  - for German, each part from `partsOf($word)` is stemmed through `HeadlineStemmer` and then through the German
-    equivalence map, so *Russlandreise* yields `russia`;
-  - duplicates are removed.
-  `stemsOf($text, $language)` flattens the result.
-- **`Pass/HeadlineWindow`**: `idsOf` takes every stem of a word, and the seed filter applies to each one. So a part
-  that is a seed drops out, as any seed does, and a part that is also a word of the same text counts once. The per-run
-  cache `$stemsByWord` now holds `list<string>` per language and word.
+- **`GermanLexicon/GermanLexiconInterface`** has one method, `entryOf(string $form): ?GermanLexiconEntryModel`: the
+  form's kind (`isNoun()`) and frequency class, or null for a form the lexicon lacks. One lookup gives both.
+- **`GermanLexicon/BundledGermanLexicon`** reads `lexicon.tsv` into one string on the first lookup
+  (`Model/GermanLexiconModel`) and finds a form by binary search over the string's byte offsets
+  (`Model/SortedLinesModel`, comparing a line in place with `substr_compare`). Loading costs 1.3 ms and holds 4.6 MB,
+  with no parse transient, opcache or not; a lookup costs about 10 µs. It implements `ResetInterface`, so the worker
+  frees the string between messages.
+- **`GermanCompoundSplitter::partsOf(string $word): list<string>`** returns the lexicon forms of the chosen split, or
+  `[]`. A word needs at least `2 × MIN_PART_LENGTH` letters (`MIN_PART_LENGTH = 3`). `Pass/CompoundSplitSearch`
+  memoises the best split of each suffix, so the search is linear in split points times linking variants. The rules:
+  - **R1. Every part is a noun form**, the head and each modifier alike, inflected forms included (*-einsätze*). A part
+    needs a vowel. Function words, adjectives and verb stems are never modifiers, so *Groß-stadt* and *Fahr-zeug* do
+    not split.
+  - **Linking elements by rule.** A modifier segment `m` resolves to the most frequent noun among `m`, `m−s`, `m−es`,
+    `m−n`, `m−en`, `m−er`, `m−e`, `m−ens` and `m+e` (the dropped *-e* of *Schul-bus*). A tie goes to the shorter form,
+    the bare segment.
+  - **R2. Fewest parts win;** a tie goes to the lower mean frequency class, then to the longer head. A word the lexicon
+    knows stays whole when its own class is at or below the best split's mean class (Koehn & Knight's comparison).
+  - **R4. A known word splits only into parts at least as frequent as itself**: a compound is never more common than
+    its parts.
+  - **R7. A word the lexicon lacks splits into at most 2 parts**; a known word into at most `MAX_PARTS = 4`.
+  - **No class floor for parts.** The per-length floors (median, weighted median, 99th percentile) were measured inert
+    or wrong and removed; only the vowel rule is left.
+- **`HeadlineEquivalents::wordStemsOf()`** gives the whole word's stem first, then one stem per part, each part
+  stemmed through Snowball and then the German equivalence map (*Russlandreise* yields `russia`). A word that is a
+  canonical of the equivalence tables is never split. Duplicates are removed.
+- **`HeadlineStemmer`** is unchanged: there is no verb rule (Task 7 dropped it; see the Outcome).
+- **`Pass/HeadlineWindow`** caches each word's stem id and, for a compound, its part ids, per language and word.
+  An entry's stems are its words' stems plus their parts' stems; a part that is a seed drops out, and a part that is
+  also a word of the entry counts as that word. `Model/EntryStemIdsModel` holds an entry's headline stems, the body
+  stems the headline lacks, and the stems it holds only as a compound's parts.
+
+### How the parts enter a pair
+
+A part weighs like any stem: its place weight (headline 1.0, body 0.5) times its rarity in the window, and it is
+filler when any stem would be. An entry's total weight leaves out the stems it holds only as parts, so a compound
+counts once in the total. `Pass/CompoundParts` keeps which compounds each entry holds (with their place weight) and
+which stems each entry holds only as parts. Two rules govern what the parts add to a pair:
+
+- **R6. A part counts toward a pair only where the pair does not share the whole compound.** In each entry that holds
+  the stem only as a part, the stem is dropped from the pair when the other entry holds every compound it comes from.
+  The parts link *different* words (*Polizeieinsatz* ↔ *Polizei*, *Polizeieinsatz* ↔ *Feuerwehreinsatz*); a shared
+  compound weighs once. Which stems are compounds is settled for the whole window: when a later word first splits a
+  stem, the entries already holding that stem are marked as holding the compound, so the result does not depend on the
+  order the entries arrive in.
+- **R8. Within one pair, a compound adds through its parts at most its own weight** (its place weight times its
+  rarity). The parts' weights are scaled down together until they fit; a part coming through several compounds is
+  held to the tightest of their caps (`Support/PartWeightCaps`). So *Polizeieinsatz* ↔ *Einsatz der Polizei* shares at
+  most r(*polizeieinsatz*), and "share of the lighter entry" stays a share.
+
+### Cost, as built (E, Outcome below)
+
+Against develop (A) at the same pin, the week run takes 66.2 s against 65.3 s (+1.4 %) and peaks at 176.3 MB of PHP
+memory against 147.3 MB (+29 MB; RSS 246.5 MB against 239.6 MB). The day run takes 4.5 s against 3.6 s and peaks at
+54.3 MB against 46.3 MB. The lexicon is 4.6 MB of the difference; the rest is the part postings, the `CompoundParts`
+bookkeeping and the explain command's extra near misses.
 
 ### The stem cache stays per run (ruling)
 
@@ -209,6 +201,9 @@ vocabulary and is dropped with the `HeadlineWindow`. The expensive part that doe
 cached separately and lazily by `BundledGermanLexicon`.
 
 ### Remedies, fixed before the measurement
+
+Registered before any measurement and kept as registered; the Outcome reports how each one fired.
+
 
 Each remedy is written down now so that the measurement cannot tune one:
 
@@ -223,6 +218,29 @@ Each remedy is written down now so that the measurement cannot tune one:
   once, and the better of the two is reported.
 - **The verb rule.** It ships only if its own A/B (B2 against B1) is not net negative on the week and the eye check
   finds no wrong merge through it. Otherwise it is dropped, not tuned.
+
+## Limitations
+
+Known and accepted; none of them is fixed by a list.
+
+- **Junk modifiers of known words.** R7 limits only words the lexicon lacks, so a known word can still split into
+  short rare nouns: *Bundesfinanzhof* gives *bund + fin + anz + hof*. R8 limits what such parts add to a pair (the
+  Task 7b *Bundesbank* / *Bundesfinanzhof* merge is gone in E), but the parts still exist and can link.
+- **An inflection can split where its base form does not.** *Weihnachtsbaum* is frequent enough to stay whole (R2),
+  while *Weihnachtsbäume* splits into *weihnacht + bäume*. Both stem to `weihnachtsbaum`, so the stem counts as a
+  compound in every entry that holds it, and R6 treats the two spellings alike whatever order they arrive in. But only
+  the plural gives the parts, so only it links to *Weihnachten* or *Baum*.
+- **German parts reach cross-language canonicals.** A part goes through the equivalence map like any word, so
+  *Natogipfel* gives `nato` and can link an English *NATO* or a French *OTAN* headline. This is the equivalence table
+  doing its job on a part, and it is accepted; the non-German changes it causes are small.
+- **A compound and its hyphenated spelling share at most the compound's weight** (R8). *Spionageverdacht* ↔
+  *Spionage-Verdacht* or *Ökodiktatur* ↔ *Öko-Diktatur* share r(compound), not r(part) + r(part), so two short
+  headlines that share nothing else may no longer reach the weight of 14 together. Measured in E as part of R8's cost.
+- **Genre merges through two common parts.** Accident reports (*fahr*, *unfall* with *verletzt*, *schwer*, *zwei*)
+  and air-travel stories (*flug*, *verkehr*) still group by kind rather than by story when nothing else separates them.
+- ***Macht* joins *machen*.** The lexicon's majority vote tags the casefolded *macht* as a verb form, and Snowball
+  gives both the same stem. The general fix is case-aware stemming, which #2231's proper-noun guard needs anyway; it
+  moves there.
 
 ## Rulings
 
@@ -246,6 +264,11 @@ Lars was away, so each is my call:
    existing Trending tests do not depend on the 6 MB file. One integration test reads the real file for its shape and
    for the issue's example compounds. If such an example does not split, that is a finding, never a reason to edit the
    data.
+
+Later rulings superseded two of these: the verb rule (4) was measured and dropped (Outcome, Remedies), and the lexicon
+(6) became the sorted text file `lexicon.tsv`, read by binary search, after Task 2's review found the PHP array's parse
+cost too high without opcache; the fixture (9) followed as `tests/Fixtures/german-lexicon/lexicon.tsv`. The splitting
+and pairing rules R1–R8 in the Design came out of the builds and measurements.
 
 ## Left to the builder
 
