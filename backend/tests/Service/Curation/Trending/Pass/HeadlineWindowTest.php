@@ -315,16 +315,17 @@ final class HeadlineWindowTest extends TestCase
         );
     }
 
-    public function testAPartTheLighterEntryHoldsAsAWordCountsWholeThoughTheOtherHoldsItInABodyCompound(): void
+    public function testPartsTheLighterEntryHoldsAsWordsCountWholeThoughTheOtherHoldsThemInABodyCompound(): void
     {
-        $this->addIn(FeedLanguage::German, 1, 10, 'Kinder Bett');
-        $this->window->add(self::entry(2, 20, FeedLanguage::German, 'Bett'), 'Kinderarztpraxis Russland Schule');
+        $this->addIn(FeedLanguage::German, 1, 10, 'Kinder Arzt Bett');
+        $this->window->add(self::entry(2, 20, FeedLanguage::German, 'Bett'), 'Kinderarztpraxis Russland Schule Polizei');
 
+        self::assertGreaterThan($this->window->totalWeight(1), $this->window->totalWeight(2));
         self::assertEqualsWithDelta(
-            self::TWICE + self::TWICE / 2,
+            2 * self::TWICE,
             $this->window->sharedWeightsWithEarlier(2)[1],
             0.0001,
-            'bett, then kinder at body weight, though the body compound weighs only half',
+            'bett, then kinder and arzt at body weight, more than the body compound weighs',
         );
     }
 
