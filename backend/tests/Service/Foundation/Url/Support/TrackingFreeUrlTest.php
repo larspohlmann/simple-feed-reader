@@ -168,6 +168,7 @@ final class TrackingFreeUrlTest extends TestCase
         yield 'a referrer' => ['https://example.com/a?ref=home'];
         yield 'a via value that only starts with rss' => ['https://example.com/a?via=rssfeed'];
         yield 'a key without value' => ['https://example.com/a?ref'];
+        yield 'a value holding an equals sign' => ['https://example.com/a?cmp=rss=spring'];
     }
 
     #[DataProvider('keysWithAnotherValue')]

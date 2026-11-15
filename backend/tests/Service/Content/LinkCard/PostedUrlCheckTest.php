@@ -65,6 +65,18 @@ final class PostedUrlCheckTest extends TestCase
         );
     }
 
+    public function testAStrippedFragmentIsLoggedByItsKey(): void
+    {
+        $posted = self::CLEANED . '#xtor=RSS-3';
+
+        $this->check([
+            self::CLEANED => self::page(self::CLEANED, 'Front page'),
+            $posted => self::page($posted, 'Story'),
+        ])->cardAt(self::CLEANED, $posted);
+
+        self::assertSame(['xtor'], $this->logger->records[0]['context']['strippedKeys'] ?? null);
+    }
+
     public function testACleanedUrlThatFailsKeepsAPostedUrlThatWorks(): void
     {
         $card = $this->check([self::POSTED => self::page(self::POSTED, 'Story')])->cardAt(self::CLEANED, self::POSTED);

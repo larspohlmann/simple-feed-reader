@@ -243,6 +243,15 @@ final class ShareLinkCardsTest extends DbTestCase
         self::assertSame([], $this->cardTitles($next));
     }
 
+    public function testABudgetWithRoomForExactlyTheSecondReadSpendsIt(): void
+    {
+        $this->queuedPost(1, '<p>https://example.com/1/1?utm_source=x</p>');
+
+        $this->shareLinkCards->complete($this->claimable(), LinkCardBudgetModel::fetches(2));
+
+        self::assertSame(['https://example.com/1/1', 'https://example.com/1/1?utm_source=x'], $this->pages->readUrls());
+    }
+
     public function testWithoutRoomForTheSecondReadTheCleanedUrlIsTrusted(): void
     {
         $this->queuedPost(1, '<p>https://example.com/1/1?utm_source=x</p>');

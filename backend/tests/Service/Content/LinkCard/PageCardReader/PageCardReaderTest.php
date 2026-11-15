@@ -204,6 +204,16 @@ final class PageCardReaderTest extends TestCase
         self::assertEquals(new PageIdentityModel(self::SHARED, 'https://example.com/og', 'Fallback'), $identity);
     }
 
+    public function testTheCanonicalLinkOutranksTheOpenGraphUrl(): void
+    {
+        $identity = $this->reader($this->page(
+            '<title>T</title><meta property="og:url" content="https://example.com/og">'
+            . '<link rel="canonical" href="https://example.com/canonical">',
+        ))->read(self::SHARED)->identity;
+
+        self::assertSame('https://example.com/canonical', $identity?->canonicalUrl);
+    }
+
     public function testAFileHasNoPageIdentity(): void
     {
         $read = $this->reader(new MockResponse("\x89PNG\r\n", [
