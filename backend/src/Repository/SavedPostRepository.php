@@ -314,8 +314,8 @@ final readonly class SavedPostRepository
 
     /**
      * Every entry column but its id is copied; an override replaces a column's value by an SQL expression. The guard
-     * compares the guid hash the copy will carry, overridden or not. Join columns are not in the column list: feed_id
-     * is the saved feed's, and the quoted card's link is copied as it is.
+     * compares the guid hash the copy will carry, overridden or not. Join columns are missing from the column
+     * list: feed_id is the saved feed's, and the quoted link's is added.
      *
      * @param array<string, string> $overrides
      */

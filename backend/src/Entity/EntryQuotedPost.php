@@ -8,8 +8,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * The post an entry quotes, stamped and read together; no url is the "quotes nothing" case. Its card is
- * Entry::$quotedLink, since an embeddable cannot hold an association.
+ * The post an entry quotes, stamped and read together; no url is the "quotes nothing" case.
  * Urls are TEXT: the entry table has no MySQL row width left for more VARCHAR(2048); StorableQuotedPost bounds them.
  */
 #[ORM\Embeddable]

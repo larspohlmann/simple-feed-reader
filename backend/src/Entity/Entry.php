@@ -316,11 +316,6 @@ final class Entry
         return $this->share->quotedPost()?->withLinkCard($this->quotedLink?->preview());
     }
 
-    public function getQuotedLink(): ?SharedLink
-    {
-        return $this->quotedLink;
-    }
-
     public function shareQuotedPost(QuotedPostContent $quote, ?SharedLink $link): void
     {
         $this->share->quote($quote);

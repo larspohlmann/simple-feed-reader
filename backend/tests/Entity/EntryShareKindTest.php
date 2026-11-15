@@ -111,19 +111,6 @@ final class EntryShareKindTest extends TestCase
         self::assertNull($entry->getQuotedPost()?->linkCard);
     }
 
-    #[DataProvider('kindsOtherThanQuote')]
-    public function testReclassifyingAQuoteDropsItsLink(?ShareKind $kind): void
-    {
-        $entry = self::entry();
-        $link = self::link(new LinkCardContent('https://n.example/s', 'S', null, null, 'n'));
-        $entry->shareQuotedPost(self::quote(), $link);
-
-        $entry->setShareKind($kind);
-        $entry->setShareKind(ShareKind::Quote);
-
-        self::assertNull($entry->getQuotedLink());
-    }
-
     public function testClassifyingAsQuoteKeepsItsLink(): void
     {
         $entry = self::entry();
@@ -132,7 +119,7 @@ final class EntryShareKindTest extends TestCase
 
         $entry->setShareKind(ShareKind::Quote);
 
-        self::assertSame($link, $entry->getQuotedLink());
+        self::assertEquals($link->preview(), $entry->getQuotedPost()?->linkCard);
     }
 
     private static function link(LinkCardContent $preview): SharedLink

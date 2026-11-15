@@ -118,8 +118,7 @@ final class EntryRepository extends ServiceEntityRepository implements RestoreEn
 
     /**
      * One feed's entries in ascending-id slices — the backup export's keyset
-     * walk. No feed join: the caller already knows the feed; the quoted card's
-     * link is joined, since every quote post reads it.
+     * walk. No feed join: the caller already knows the feed.
      *
      * @return list<Entry>
      */
