@@ -12,21 +12,34 @@ final readonly class SortedLinesModel
 
     public function valueOf(string $key): ?string
     {
+        $field = $key . "\t";
+        $fieldLength = strlen($field);
         $low = 0;
         $high = strlen($this->text);
         while ($low < $high) {
-            $middle = intdiv($low + $high, 2);
-            $start = max($low, $this->lineStartBefore($middle));
-            $end = (int) strpos($this->text, "\n", $middle);
-            $separator = (int) strpos($this->text, "\t", $start);
-            $order = strcmp(substr($this->text, $start, $separator - $start), $key);
+            $start = max($low, $this->lineStartBefore(intdiv($low + $high, 2)));
+            $order = substr_compare($this->text, $field, $start, $fieldLength);
             if (0 === $order) {
-                return substr($this->text, $separator + 1, $end - $separator - 1);
+                return $this->valueFrom($start + $fieldLength);
             }
-            [$low, $high] = $order < 0 ? [$end + 1, $high] : [$low, $start];
+            if ($order < 0) {
+                $low = $this->lineEndAfter($start) + 1;
+            } else {
+                $high = $start;
+            }
         }
 
         return null;
+    }
+
+    private function valueFrom(int $offset): string
+    {
+        return substr($this->text, $offset, $this->lineEndAfter($offset) - $offset);
+    }
+
+    private function lineEndAfter(int $offset): int
+    {
+        return (int) strpos($this->text, "\n", $offset);
     }
 
     private function lineStartBefore(int $offset): int
