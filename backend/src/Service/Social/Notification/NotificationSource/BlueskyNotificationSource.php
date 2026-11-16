@@ -148,7 +148,7 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
     ): NotificationSubject {
         return match ($kind) {
             SocialNotificationKind::Like, SocialNotificationKind::Repost => self::likedSubject(
-                $entry->string('reasonSubject') ?? '',
+                self::likedPost($entry) ?? '',
                 $account,
                 $postTexts,
             ),
@@ -176,7 +176,7 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
         $kind = self::kindOf($entry);
 
         return $kind === SocialNotificationKind::Like || $kind === SocialNotificationKind::Repost
-            ? $entry->string('reasonSubject')
+            ? $entry->node('record')->node('subject')->string('uri')
             : null;
     }
 

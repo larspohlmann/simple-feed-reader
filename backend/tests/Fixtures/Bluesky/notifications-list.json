@@ -10,7 +10,14 @@
         "avatar": "https://cdn.test/bob.jpg"
       },
       "reason": "like",
-      "record": {},
+      "record": {
+        "$type": "app.bsky.feed.like",
+        "subject": {
+          "uri": "at://did:plc:alice/app.bsky.feed.post/3lpost1",
+          "cid": "bafypost"
+        },
+        "createdAt": "2026-11-16T09:00:00.000Z"
+      },
       "isRead": false,
       "indexedAt": "2026-11-16T09:00:00.000Z",
       "reasonSubject": "at://did:plc:alice/app.bsky.feed.post/3lpost1"
@@ -23,10 +30,17 @@
         "handle": "carol.test"
       },
       "reason": "like-via-repost",
-      "record": {},
+      "record": {
+        "$type": "app.bsky.feed.like",
+        "subject": {
+          "uri": "at://did:plc:alice/app.bsky.feed.post/3lpost1",
+          "cid": "bafypost"
+        },
+        "createdAt": "2026-11-16T08:50:00.000Z"
+      },
       "isRead": false,
       "indexedAt": "2026-11-16T08:50:00.000Z",
-      "reasonSubject": "at://did:plc:alice/app.bsky.feed.post/3lpost1"
+      "reasonSubject": "at://did:plc:alice/app.bsky.feed.repost/3lrepost"
     },
     {
       "uri": "at://did:plc:dave/app.bsky.feed.post/3l03",
@@ -36,7 +50,14 @@
         "handle": "dave.test"
       },
       "reason": "repost",
-      "record": {},
+      "record": {
+        "$type": "app.bsky.feed.repost",
+        "subject": {
+          "uri": "at://did:plc:alice/app.bsky.feed.post/3lpost2",
+          "cid": "bafypost"
+        },
+        "createdAt": "2026-11-16T08:40:00.000Z"
+      },
       "isRead": false,
       "indexedAt": "2026-11-16T08:40:00.000Z",
       "reasonSubject": "at://did:plc:alice/app.bsky.feed.post/3lpost2"
@@ -49,10 +70,17 @@
         "handle": "erin.test"
       },
       "reason": "repost-via-repost",
-      "record": {},
+      "record": {
+        "$type": "app.bsky.feed.repost",
+        "subject": {
+          "uri": "at://did:plc:alice/app.bsky.feed.post/3lpost2",
+          "cid": "bafypost"
+        },
+        "createdAt": "2026-11-16T08:30:00.000Z"
+      },
       "isRead": true,
       "indexedAt": "2026-11-16T08:30:00.000Z",
-      "reasonSubject": "at://did:plc:alice/app.bsky.feed.post/3lpost2"
+      "reasonSubject": "at://did:plc:alice/app.bsky.feed.repost/3lrepost"
     },
     {
       "uri": "at://did:plc:frank/app.bsky.feed.post/3l05",
