@@ -33,6 +33,7 @@ import { atTop } from '../../reader-gestures';
 import { SidebarFootComponent } from './sidebar-foot.component';
 import { SidebarFeedRowComponent } from './sidebar-feed-row.component';
 import { SidebarGroupRowComponent } from './sidebar-group-row.component';
+import { SidebarFollowedStoriesComponent } from './sidebar-followed-stories.component';
 import { SidebarSavedSearchesComponent } from './sidebar-saved-searches.component';
 import { SidebarSocialSectionComponent } from './sidebar-social-section.component';
 import { SidebarSubtagPillComponent } from './sidebar-subtag-pill.component';
@@ -52,7 +53,7 @@ import {
 } from '../../query/query';
 import { FeedGroupName } from '../../../core/feed-group';
 import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../models';
-import { TrendingUnopened } from '../../trending/trending.models';
+import { FollowedStoryDto, TrendingUnopened } from '../../trending/trending.models';
 import { NO_TRENDING_UNOPENED } from '../../trending/trending-window';
 import { isSubscriptionDrag } from '../../drag-payload';
 import { RefreshService } from '../../state/refresh.service';
@@ -102,6 +103,7 @@ const FEEDS_COLLAPSED_KEY = 'sfr.feeds.collapsed';
     SidebarFootComponent,
     SidebarFeedRowComponent,
     SidebarGroupRowComponent,
+    SidebarFollowedStoriesComponent,
     SidebarSavedSearchesComponent,
     SidebarSocialSectionComponent,
     SidebarSubtagPillComponent,
@@ -141,6 +143,8 @@ export class SidebarComponent {
   readonly forYouUnread = input(0);
   readonly trendingUnopened = input<TrendingUnopened>(NO_TRENDING_UNOPENED);
   readonly groupUnread = input<Readonly<Record<FeedGroupName, number>>>({ tags: 0, feeds: 0 });
+  readonly activeFollowedStoryId = input<number | null>(null);
+  readonly followedStories = input<FollowedStoryDto[]>([]);
   readonly savedSearches = input<SavedSearchDto[]>([]);
   /** The saved search the list is currently showing, by id, or null. The shell
    *  decides it — re-encoding the term to string-compare made a subtly

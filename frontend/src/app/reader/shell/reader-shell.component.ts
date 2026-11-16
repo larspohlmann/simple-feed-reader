@@ -5,7 +5,6 @@ import {
   NgZone,
   OnDestroy,
   OnInit,
-  afterRenderEffect,
   computed,
   effect,
   inject,
@@ -18,10 +17,13 @@ import { LinkReaderNavigation } from './link-reader-navigation.service';
 import { ReaderRouteState } from './reader-route-state.service';
 import { ListHeading } from './list-heading.service';
 import { EntryStateActions } from './entry-state-actions.service';
+import { TrendingFollowAction } from '../trending/trending-follow-action';
+import { TrendingHideAction } from '../trending/trending-hide-action';
 import { MarkReadActions } from './mark-read-actions.service';
 import { ReaderOnboarding } from './reader-onboarding.service';
 import { PasskeyFirstBootOffer } from './passkey-first-boot-offer.service';
 import { SavedSearchToggle } from './saved-search-toggle.service';
+import { FollowedStoryUnfollow } from './followed-story-unfollow.service';
 import { RefreshActions } from './refresh-actions.service';
 import { ListReload } from './list-reload.service';
 import { ReaderTabTitle } from './reader-tab-title.service';
@@ -36,6 +38,7 @@ import { EntriesStore } from '../state/entries.store';
 import { RefreshService } from '../state/refresh.service';
 import { RecommendationsService } from '../state/recommendations.service';
 import { NetworkSurfaceSwitches } from '../state/network-surface-switches.service';
+import { FollowedStoriesStore } from '../state/followed-stories.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { AiAvailabilityService } from '../../core/ai-availability.service';
 import { DigestService } from '../../core/preferences/digest.service';
@@ -64,6 +67,7 @@ import { SidebarCountsPoll } from './sidebar-counts-poll.service';
 import { CompletedEntriesMerge } from './completed-entries-merge';
 import { PendingEntriesPoll } from './pending-entries-poll.service';
 import { holdReaderPage } from './reader-page';
+import { focusShowSidebarButtonOnCollapse } from './show-sidebar-focus';
 import { PageChromeGeometry } from './page-chrome-geometry';
 import { PageScrollOwner } from './page-scroll-owner';
 import { PageLayerDirective } from './page-layer.directive';
@@ -75,7 +79,6 @@ import { IconButtonDirective } from '../../shared/icon-button/icon-button.direct
 import { ListActionDirective } from '../../shared/list-action/list-action.directive';
 import { FeedIntroComponent } from './feed-intro/feed-intro.component';
 import { TrendingWindowSwitchComponent } from '../trending/trending-window-switch/trending-window-switch.component';
-import { TrendingListDirective } from '../trending/trending-list.directive';
 import { UrlDropZoneComponent } from './url-drop/url-drop-zone.component';
 import { TranslocoPipe } from '@jsverse/transloco';
 
@@ -98,7 +101,6 @@ import { TranslocoPipe } from '@jsverse/transloco';
     ListActionDirective,
     FeedIntroComponent,
     TrendingWindowSwitchComponent,
-    TrendingListDirective,
     RouterLink,
     TranslocoPipe,
   ],
@@ -116,10 +118,13 @@ import { TranslocoPipe } from '@jsverse/transloco';
     LinkReaderNavigation,
     ListHeading,
     EntryStateActions,
+    TrendingFollowAction,
+    TrendingHideAction,
     MarkReadActions,
     ReaderOnboarding,
     PasskeyFirstBootOffer,
     SavedSearchToggle,
+    FollowedStoryUnfollow,
     RefreshActions,
     ListReload,
     LinkArticleSource,
@@ -141,6 +146,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly refreshSvc = inject(RefreshService);
   readonly recs = inject(RecommendationsService);
   readonly savedSearchesStore = inject(SavedSearchesStore);
+  readonly followedStoriesStore = inject(FollowedStoriesStore);
   private readonly networkSwitches = inject(NetworkSurfaceSwitches);
   readonly ai = inject(AiAvailabilityService);
   readonly digest = inject(DigestService);
@@ -177,6 +183,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly entryActions = inject(EntryStateActions);
   readonly markRead = inject(MarkReadActions);
   readonly savedSearch = inject(SavedSearchToggle);
+  readonly followedStory = inject(FollowedStoryUnfollow);
   readonly refresh = inject(RefreshActions);
 
   /** Feed tags keyed by subscription id — feeds the tag pills on entries and the
@@ -268,26 +275,14 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     main: () => this.mainColumn()?.nativeElement,
     audioBar: () => this.audioBar()?.nativeElement as HTMLElement | undefined,
   });
-  /** Armed while the sidebar is visible, so the very first render does not pull
-   *  focus onto the (absent) show button. */
-  private sidebarWasVisible = false;
-
-  /** When the sidebar collapses, focus the "Show sidebar" button so a keyboard
-   *  user who clicked "Hide sidebar" is not dropped to `<body>`. The sidebar's
-   *  own collapse button focuses itself the same way when the sidebar returns.
-   *  `afterRenderEffect` because the button must be in the DOM already. */
-  private readonly focusShowSidebarButton = afterRenderEffect(() => {
-    if (!this.sidebarCollapsed()) {
-      this.sidebarWasVisible = true;
-      return;
-    }
-    if (!this.sidebarWasVisible) return;
-    this.sidebarWasVisible = false;
-    this.showSidebarButton()?.nativeElement.focus({ preventScroll: true });
-  });
+  private readonly _focusShowButton = focusShowSidebarButtonOnCollapse(
+    this.sidebarCollapsed,
+    this.showSidebarButton,
+  );
 
   ngOnInit(): void {
     this.savedSearchesStore.load();
+    this.followedStoriesStore.load();
     this.networkSwitches.loadExclusions();
     this.tags.load(); // the sidebar tag tree (order, empty tags) reads TagsStore
     // Reopening the app resumes a for-you run left in flight by an earlier session.

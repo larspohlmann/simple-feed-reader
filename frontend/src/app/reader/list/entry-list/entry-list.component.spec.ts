@@ -34,7 +34,7 @@ import {
   trackPageScrollTop,
 } from '../../../../testing/scroll-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
-import { anEntry } from '../../../../testing/entry-testing';
+import { anEntry, aStory } from '../../../../testing/entry-testing';
 import {
   MockIntersectionObserver,
   installMockIntersectionObserver,
@@ -277,6 +277,64 @@ describe('EntryListComponent', () => {
         selection: { kind: 'all', unread: true },
       }).nativeElement as HTMLElement;
       expect(element.querySelector('.reason')).toBeNull();
+    });
+  });
+
+  describe('the "Since your last visit" divider (#2128)', () => {
+    const story: Selection = { kind: 'followed-story', id: 42 };
+    const divider = (element: HTMLElement) => element.querySelectorAll('.since-last-visit');
+
+    /** How many rows the divider follows, or null when there is none. */
+    function rowsAboveDivider(element: HTMLElement): number | null {
+      let rows = 0;
+      for (const child of Array.from(element.querySelector('.rows')!.children)) {
+        if (child.classList.contains('since-last-visit')) return rows;
+        if (child.classList.contains('row-slot')) rows++;
+      }
+      return null;
+    }
+
+    const mountStory = (ids: number[], newIds: number[], over: Record<string, unknown> = {}) =>
+      mount({
+        entries: ids.map((id) => entry(id)),
+        newSinceVisitIds: new Set(newIds),
+        selection: story,
+        layout: 'list',
+        ...over,
+      }).nativeElement as HTMLElement;
+
+    it('sits above the first row that is not new', () => {
+      const element = mountStory([1, 2, 3], [1, 2]);
+
+      expect(divider(element).length).toBe(1);
+      expect(rowsAboveDivider(element)).toBe(2);
+      expect(divider(element)[0].textContent).toContain('Since your last visit');
+    });
+
+    it('is not drawn when the first row is not new', () => {
+      expect(divider(mountStory([1, 2, 3], [2, 3])).length).toBe(0);
+    });
+
+    it('is not drawn when every row is new', () => {
+      expect(divider(mountStory([1, 2], [1, 2])).length).toBe(0);
+    });
+
+    it('is not drawn when nothing is new', () => {
+      expect(divider(mountStory([1, 2], [])).length).toBe(0);
+    });
+
+    it('is not drawn oldest first, where the new rows sit at the end', () => {
+      const oldestFirst: Selection = { kind: 'followed-story', id: 42, order: 'oldest' };
+
+      expect(divider(mountStory([3, 1, 2], [3], { selection: oldestFirst })).length).toBe(0);
+      expect(divider(mountStory([1, 2, 3], [1, 2], { selection: oldestFirst })).length).toBe(0);
+    });
+
+    it('sits between the new and the earlier rows in the magazine layout', () => {
+      const element = mountStory([1, 2, 3], [1, 2], { layout: 'magazine' });
+
+      expect(divider(element).length).toBe(1);
+      expect(rowsAboveDivider(element)).toBe(2);
     });
   });
 
@@ -2524,12 +2582,7 @@ describe('EntryListComponent', () => {
       const after = fixture.componentInstance.content.visibleBlocks();
 
       expect(after.length).toBe(before.length - 1);
-      expect(
-        after.some(
-          (block) =>
-            block.kind !== 'group' && block.kind !== 'run-header' && block.entry.id === targetId,
-        ),
-      ).toBe(false);
+      expect(after.some((block) => 'entry' in block && block.entry.id === targetId)).toBe(false);
     });
 
     it('shrinks a group block to its remaining entries instead of dropping it', () => {
@@ -2864,7 +2917,7 @@ describe('EntryListComponent', () => {
         layout: 'magazine',
         entries: MIXED_SOURCE_RUN.map((each) => ({
           ...each,
-          story: { outletCount: 3, viewed: false, shareCount: 0 },
+          story: aStory({ outletCount: 3, viewed: false, shareCount: 0 }),
         })),
       });
 

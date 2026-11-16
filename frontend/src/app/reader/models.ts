@@ -328,6 +328,12 @@ export interface EntriesPage {
   matchedWords?: string[];
 }
 
+/** A followed Trending story's page (#2128): `newEntryIds` are this page's rows that joined since `lastOpenedAt`. */
+export interface FollowedStoryPageDto extends EntriesPage {
+  lastOpenedAt: string;
+  newEntryIds: number[];
+}
+
 export interface EntryStateDto {
   entryId: number;
   isHidden: boolean;
@@ -398,6 +404,8 @@ export interface EntryQuery {
   q?: string;
   /** Set only for a single saved search: fetch its members from the membership table. */
   savedSearchId?: number;
+  /** Set only for a followed Trending story: fetch the story's entries. */
+  followedStoryId?: number;
   /** Absent means newest first, the API's own default. */
   order?: ListOrder;
   /** Only the Trending list carries one. */

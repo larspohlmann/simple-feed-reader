@@ -14,6 +14,12 @@ final readonly class TrendingStoryModel
     ) {
     }
 
+    /** @return non-empty-list<int> */
+    public function entryIds(): array
+    {
+        return array_map(static fn (StoryMemberModel $member): int => $member->entryId, $this->members);
+    }
+
     public function outletCount(): int
     {
         return \count(array_unique(array_map(

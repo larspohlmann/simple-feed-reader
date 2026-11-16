@@ -19,8 +19,11 @@ function opened(url: string, context: ViewContext): Opened | null {
   const tree = new DefaultUrlSerializer().parse(url);
   const match = readerMatcher(tree.root.children[PRIMARY_OUTLET]?.segments ?? []);
   if (match === null) return null;
-  const savedSearch = match.posParams?.['savedSearch']?.path;
-  const pathParams = convertToParamMap(savedSearch === undefined ? {} : { savedSearch });
+  const pathParams = convertToParamMap(
+    Object.fromEntries(
+      Object.entries(match.posParams ?? {}).map(([name, segment]) => [name, segment.path]),
+    ),
+  );
   const parsed = selectionFromRoute(pathParams, convertToParamMap(tree.queryParams), context);
   return {
     kind: parsed.selection.kind,
@@ -131,6 +134,17 @@ describe('the reader URLs (#2107 pin)', () => {
       '/searches/saved/42-climate?unread=1',
       list('saved-search', { view: 'all', savedSearchId: 42 }),
     ],
+    ['/trending/followed/42', list('followed-story', { view: 'all', followedStoryId: 42 })],
+    [
+      '/trending/followed/42?entry=7',
+      list('followed-story', { view: 'all', followedStoryId: 42 }, 7),
+    ],
+    [
+      '/trending/followed/42?q=angular&tag=3',
+      list('followed-story', { view: 'all', followedStoryId: 42 }),
+    ],
+    ['/trending/followed/x', list('trending', { view: 'trending', window: 'day' })],
+    ['/trending/followed/0', list('trending', { view: 'trending', window: 'day' })],
   ])('opens %s', (url, expected) => {
     expect(opened(url, ON)).toEqual(expected);
   });
@@ -148,10 +162,15 @@ describe('the reader URLs (#2107 pin)', () => {
     expect(opened(url, OFF)).toEqual(expected);
   });
 
-  it.each(['/settings', '/searches/saved', '/searches/saved/1/extra', '/searches/42'])(
-    'leaves %s to another route',
-    (url) => {
-      expect(opened(url, ON)).toBeNull();
-    },
-  );
+  it.each([
+    '/settings',
+    '/searches/saved',
+    '/searches/saved/1/extra',
+    '/searches/42',
+    '/trending/followed',
+    '/trending/followed/1/extra',
+    '/trending/42',
+  ])('leaves %s to another route', (url) => {
+    expect(opened(url, ON)).toBeNull();
+  });
 });

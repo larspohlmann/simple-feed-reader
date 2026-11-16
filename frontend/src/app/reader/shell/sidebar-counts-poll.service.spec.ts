@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { API_BASE_URL } from '../../core/api';
+import { FollowedStoriesStore } from '../state/followed-stories.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import {
   SIDEBAR_POLL_IDLE_LIMIT_MS,
@@ -13,6 +14,7 @@ describe('SidebarCountsPoll', () => {
   let reloadCounts: jest.Mock;
   let reloadFull: jest.Mock;
   let reloadBadges: jest.Mock;
+  let reloadFollowed: jest.Mock;
   let fetchMock: jest.Mock;
 
   /** The marker the mocked web server serves. `null` means the file is missing
@@ -68,6 +70,7 @@ describe('SidebarCountsPoll', () => {
     reloadCounts = jest.fn();
     reloadFull = jest.fn();
     reloadBadges = jest.fn();
+    reloadFollowed = jest.fn();
     TestBed.configureTestingModule({
       providers: [
         SidebarCountsPoll,
@@ -77,6 +80,7 @@ describe('SidebarCountsPoll', () => {
           useValue: { reloadCountsIfStale: reloadCounts, reloadQuietlyIfStale: reloadFull },
         },
         { provide: SavedSearchesStore, useValue: { reloadIfStale: reloadBadges } },
+        { provide: FollowedStoriesStore, useValue: { reloadIfStale: reloadFollowed } },
       ],
     });
   });
@@ -151,6 +155,18 @@ describe('SidebarCountsPoll', () => {
 
     await elapse(SIDEBAR_RELOAD_INTERVAL_MS * 3);
     expect(refreshes()).toBe(4);
+  });
+
+  it('reloads the followed stories on a counts tick and on a full reload (#2128)', async () => {
+    await start(null);
+
+    await elapse(SIDEBAR_RELOAD_INTERVAL_MS);
+    expect(reloadFollowed).toHaveBeenCalledTimes(1);
+
+    setVisibility('hidden');
+    setVisibility('visible');
+    expect(reloadFull).toHaveBeenCalledTimes(1);
+    expect(reloadFollowed).toHaveBeenCalledTimes(2);
   });
 
   it('does not refresh before the first interval has elapsed', async () => {

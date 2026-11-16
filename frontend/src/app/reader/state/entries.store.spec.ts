@@ -13,7 +13,7 @@ import { EntryDto } from '../models';
 import { VoteValue } from '../vote-pill/vote';
 import { CompletedEntryDto } from './completed-entry';
 import { markTerms } from '../../shared/marked-text/search-marks';
-import { aLinkCard, anEntry } from '../../../testing/entry-testing';
+import { aLinkCard, anEntry, aStory } from '../../../testing/entry-testing';
 import { aThreadPost } from '../../../testing/thread-testing';
 
 const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
@@ -1342,64 +1342,308 @@ describe('EntriesStore', () => {
     });
   });
 
-  describe('hiding a Trending story (#2017)', () => {
+  describe('a Trending story (#2017, #2128)', () => {
+    const card = (id: number, followed = false) =>
+      entry(id, { story: aStory({ id: id * 10, followed }) });
     const listed = () => store.entries().map((row) => row.id);
+    const followedOnScreen = (id: number) =>
+      store.entries().find((row) => row.id === id)?.story?.followed;
     const hideRequest = () => ctrl.expectOne('https://api.test/api/trending/hidden');
+    const followRequest = (storyId: number) =>
+      ctrl.expectOne(`https://api.test/api/trending/stories/${storyId}/follow`);
+    const failed = { status: 500, statusText: 'err' };
+    const problem = { type: 'x', title: 't', status: 500 };
+    const noContent = { status: 204, statusText: 'No Content' };
     const loadThree = (window: 'day' | 'week' = 'day') => {
       store.load({ view: 'trending', window });
       ctrl
         .expectOne((request) => request.url === 'https://api.test/api/trending')
-        .flush({ window, builtAt: null, stories: [entry(1), entry(2), entry(3)] });
+        .flush({ window, builtAt: null, stories: [card(1), card(2, true), card(3)] });
     };
 
-    it('keeps the card in the list for its caller to let leave, and hides its story in the window on screen', () => {
-      loadThree('week');
-      const onStarted = jest.fn();
-      const onSaved = jest.fn();
+    describe('hiding it', () => {
+      it('keeps the card in the list for its caller to let leave, and hides its story by id', () => {
+        loadThree('week');
+        const onStarted = jest.fn();
+        const onSaved = jest.fn();
 
-      store.hideTrendingStory(2, { onStarted, onSaved });
+        store.hideTrendingStory(2, { onStarted, onSaved });
 
-      expect(onStarted).toHaveBeenCalledTimes(1);
-      const request = hideRequest();
-      expect(request.request.method).toBe('POST');
-      expect(request.request.body).toEqual({ window: 'week', entryId: 2 });
-      expect(onSaved).not.toHaveBeenCalled();
-      request.flush(null, { status: 204, statusText: 'No Content' });
-      expect(onSaved).toHaveBeenCalledTimes(1);
-      expect(listed()).toEqual([1, 2, 3]);
+        expect(onStarted).toHaveBeenCalledTimes(1);
+        const request = hideRequest();
+        expect(request.request.method).toBe('POST');
+        expect(request.request.body).toEqual({ storyId: 20 });
+        expect(onSaved).not.toHaveBeenCalled();
+        request.flush(null, noContent);
+        expect(onSaved).toHaveBeenCalledTimes(1);
+        expect(listed()).toEqual([1, 2, 3]);
+      });
+
+      it('hides nothing for a row that carries no story', () => {
+        store.load({ view: 'all' });
+        ctrl
+          .expectOne((request) => request.url === 'https://api.test/api/entries')
+          .flush({ entries: [entry(1), entry(2)], nextCursor: null });
+        const onStarted = jest.fn();
+
+        store.hideTrendingStory(2, { onStarted });
+
+        expect(onStarted).not.toHaveBeenCalled();
+        ctrl.expectNone('https://api.test/api/trending/hidden');
+      });
+
+      it('reports a failed hide with the error banner, and starts again on retry', () => {
+        loadThree();
+        const onStarted = jest.fn();
+        const onFailed = jest.fn();
+
+        store.hideTrendingStory(2, { onStarted, onFailed });
+        hideRequest().flush(problem, failed);
+
+        expect(onFailed).toHaveBeenCalledTimes(1);
+        expect(store.error()).not.toBeNull();
+
+        store.retry();
+        expect(onStarted).toHaveBeenCalledTimes(2);
+        hideRequest().flush(null, noContent);
+        expect(store.error()).toBeNull();
+      });
     });
 
-    it('hides nothing outside a Trending list', () => {
+    describe('following it', () => {
+      it('shows the story followed at once and reports once the server took it', () => {
+        loadThree();
+        const onStarted = jest.fn();
+        const onSaved = jest.fn();
+
+        store.setStoryFollowed(1, true, { onStarted, onSaved });
+
+        expect(onStarted).toHaveBeenCalledTimes(1);
+        expect(followedOnScreen(1)).toBe(true);
+        const request = followRequest(10);
+        expect(request.request.method).toBe('PUT');
+        expect(onSaved).not.toHaveBeenCalled();
+        request.flush(null, noContent);
+        expect(onSaved).toHaveBeenCalledTimes(1);
+        expect(followedOnScreen(1)).toBe(true);
+      });
+
+      it('unfollows with a DELETE', () => {
+        loadThree();
+
+        store.setStoryFollowed(2, false, {});
+
+        expect(followedOnScreen(2)).toBe(false);
+        const request = followRequest(20);
+        expect(request.request.method).toBe('DELETE');
+        request.flush(null, noContent);
+      });
+
+      it('puts the story back, shows the banner and follows again on retry when the request fails', () => {
+        loadThree();
+        const onStarted = jest.fn();
+        const onFailed = jest.fn();
+
+        store.setStoryFollowed(1, true, { onStarted, onFailed });
+        followRequest(10).flush(problem, failed);
+
+        expect(followedOnScreen(1)).toBe(false);
+        expect(onFailed).toHaveBeenCalledTimes(1);
+        expect(store.error()).not.toBeNull();
+
+        store.retry();
+        expect(onStarted).toHaveBeenCalledTimes(2);
+        expect(followedOnScreen(1)).toBe(true);
+        followRequest(10).flush(null, noContent);
+        expect(store.error()).toBeNull();
+      });
+
+      it('leaves the other cards alone', () => {
+        loadThree();
+
+        store.setStoryFollowed(1, true, {});
+        followRequest(10).flush(null, noContent);
+
+        expect([followedOnScreen(2), followedOnScreen(3)]).toEqual([true, false]);
+      });
+
+      it('sends nothing for a row that carries no story', () => {
+        store.load({ view: 'all' });
+        ctrl
+          .expectOne((request) => request.url === 'https://api.test/api/entries')
+          .flush({ entries: [entry(1)], nextCursor: null });
+        const onStarted = jest.fn();
+
+        store.setStoryFollowed(1, true, { onStarted });
+
+        expect(onStarted).not.toHaveBeenCalled();
+        ctrl.expectNone('https://api.test/api/trending/stories/10/follow');
+      });
+
+      it('shows a story unfollowed elsewhere as unfollowed on its cards, with no request', () => {
+        loadThree();
+
+        store.markStoryUnfollowedLocally(20);
+
+        expect([followedOnScreen(1), followedOnScreen(2), followedOnScreen(3)]).toEqual([
+          false,
+          false,
+          false,
+        ]);
+        ctrl.expectNone(() => true);
+      });
+
+      it('sends nothing while the same story is still on the wire', () => {
+        loadThree();
+
+        store.setStoryFollowed(1, true, {});
+        store.setStoryFollowed(1, false, {});
+
+        followRequest(10).flush(null, noContent);
+        expect(followedOnScreen(1)).toBe(true);
+      });
+    });
+  });
+  describe('a followed Trending story (#2128)', () => {
+    const storyUrl = 'https://api.test/api/entries/trending-stories/42';
+    const openedUrl = 'https://api.test/api/trending/stories/42/opened';
+    const noContent = { status: 204, statusText: 'No Content' };
+    const storyPage = (ids: number[], newEntryIds: number[], nextCursor: string | null = null) => ({
+      entries: ids.map((id) => entry(id)),
+      nextCursor,
+      lastOpenedAt: '2026-11-16T08:00:00+00:00',
+      newEntryIds,
+    });
+    const storyRequest = () => ctrl.expectOne((request) => request.url === storyUrl);
+    const openStory = () => {
+      store.load({ view: 'all', followedStoryId: 42 });
+      storyRequest().flush(storyPage([1, 2, 3], [1, 2], 'C1'));
+    };
+    const newIds = () => [...store.newSinceVisitIds()].sort();
+
+    it('marks what joined since the last visit and records the visit once', () => {
+      openStory();
+
+      expect(newIds()).toEqual([1, 2]);
+      const opened = ctrl.match(openedUrl);
+      expect(opened.map((request) => request.request.method)).toEqual(['POST']);
+      opened[0].flush(null, noContent);
+    });
+
+    it('records nothing before the first page has landed', () => {
+      store.load({ view: 'all', followedStoryId: 42 });
+
+      ctrl.expectNone(openedUrl);
+      storyRequest().flush(storyPage([1], []));
+      ctrl.expectOne(openedUrl).flush(null, noContent);
+    });
+
+    it('leaves the marks alone and records nothing on the next page', () => {
+      openStory();
+      ctrl.expectOne(openedUrl).flush(null, noContent);
+
+      store.loadMore();
+      storyRequest().flush(storyPage([4], [4]));
+
+      expect(newIds()).toEqual([1, 2]);
+      ctrl.expectNone(openedUrl);
+    });
+
+    it('keeps its marks and records no second visit when the same story loads again', () => {
+      openStory();
+      ctrl.expectOne(openedUrl).flush(null, noContent);
+
+      store.reload();
+      storyRequest().flush(storyPage([9, 1, 2, 3], [9]));
+
+      expect(newIds()).toEqual([1, 2, 9]);
+      ctrl.expectNone(openedUrl);
+    });
+
+    it('clears the marks on another list, and records a new visit on coming back', () => {
+      openStory();
+      ctrl.expectOne(openedUrl).flush(null, noContent);
+
       store.load({ view: 'all' });
       ctrl
         .expectOne((request) => request.url === 'https://api.test/api/entries')
-        .flush({ entries: [entry(1), entry(2)], nextCursor: null });
-      const onStarted = jest.fn();
+        .flush({ entries: [entry(1)], nextCursor: null });
+      expect(newIds()).toEqual([]);
 
-      store.hideTrendingStory(2, { onStarted });
-
-      expect(onStarted).not.toHaveBeenCalled();
-      ctrl.expectNone('https://api.test/api/trending/hidden');
+      openStory();
+      ctrl.expectOne(openedUrl).flush(null, noContent);
     });
 
-    it('reports a failed hide with the error banner, and starts again on retry', () => {
-      loadThree();
-      const onStarted = jest.fn();
-      const onFailed = jest.fn();
+    describe('when the first page holds only new rows and more follow', () => {
+      const openLongStory = () => {
+        store.load({ view: 'all', followedStoryId: 42 });
+        storyRequest().flush(storyPage([1, 2, 3], [1, 2, 3], 'C1'));
+        ctrl.expectOne(openedUrl).flush(null, noContent);
+      };
 
-      store.hideTrendingStory(2, { onStarted, onFailed });
-      hideRequest().flush(
-        { type: 'x', title: 't', status: 500 },
-        { status: 500, statusText: 'err' },
-      );
+      it('marks nothing, since where the new rows end is unknown', () => {
+        openLongStory();
 
-      expect(onFailed).toHaveBeenCalledTimes(1);
-      expect(store.error()).not.toBeNull();
+        expect(newIds()).toEqual([]);
+      });
 
-      store.retry();
-      expect(onStarted).toHaveBeenCalledTimes(2);
-      hideRequest().flush(null, { status: 204, statusText: 'No Content' });
-      expect(store.error()).toBeNull();
+      it('marks nothing once the next page brings earlier rows', () => {
+        openLongStory();
+
+        store.loadMore();
+        storyRequest().flush(storyPage([4, 5], []));
+
+        expect(newIds()).toEqual([]);
+      });
+
+      it('marks nothing when the story reloads with rows that joined since', () => {
+        openLongStory();
+
+        store.reload();
+        storyRequest().flush(storyPage([9, 1, 2, 3], [9], 'C1'));
+
+        expect(newIds()).toEqual([]);
+      });
+
+      it('marks again on the next visit', () => {
+        openLongStory();
+        store.load({ view: 'all' });
+        ctrl
+          .expectOne((request) => request.url === 'https://api.test/api/entries')
+          .flush({ entries: [entry(1)], nextCursor: null });
+
+        openStory();
+
+        expect(newIds()).toEqual([1, 2]);
+      });
+    });
+
+    it('marks the new rows of a first page that ends among earlier ones, more pages or not', () => {
+      openStory();
+
+      expect(store.nextCursor()).toBe('C1');
+      expect(newIds()).toEqual([1, 2]);
+    });
+
+    it('marks nothing and records no visit for a story no longer followed', () => {
+      openStory();
+      ctrl.expectOne(openedUrl).flush(null, noContent);
+
+      store.load({ view: 'all', followedStoryId: 43 });
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries/trending-stories/43')
+        .flush(
+          {
+            type: 'trending_story_not_followed',
+            title: 'Trending story not followed',
+            status: 404,
+          },
+          { status: 404, statusText: 'Not Found' },
+        );
+
+      expect(newIds()).toEqual([]);
+      ctrl.expectNone('https://api.test/api/trending/stories/43/opened');
+      expect(store.error()?.type).toBe('trending_story_not_followed');
     });
   });
 });

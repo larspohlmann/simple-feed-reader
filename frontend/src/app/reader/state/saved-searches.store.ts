@@ -1,8 +1,8 @@
 import { Injectable, Signal, computed, inject, signal } from '@angular/core';
-import { Observable, Subscription, catchError, finalize, of } from 'rxjs';
+import { Observable, catchError, finalize, of } from 'rxjs';
 import { ReaderApi } from '../reader-api';
 import { SavedSearchDraft } from '../saved-search-api-shapes';
-import { countsAreStale } from './sidebar-freshness';
+import { StaleGatedLoad } from './stale-gated-load';
 import { SavedSearchDto, SavedSearchWire } from '../models';
 import { SOCIAL_NETWORKS, SocialNetworkName } from '../../core/social-network';
 import { sameMembers } from './same-members';
@@ -34,10 +34,7 @@ export class SavedSearchesStore {
     { equal: sameMembers },
   );
 
-  /** When the badges were last asked for, and the request still out for them —
-   *  the two things the counts poll needs to know before it spends a tick. */
-  private lastLoadedAt = 0;
-  private inFlight: Subscription | null = null;
+  private readonly loads = new StaleGatedLoad();
 
   /** Whether a create request is out. The server sweeps every entry for matches
    *  before it answers, so the list shows its wait overlay meanwhile (#1718). */
@@ -61,36 +58,24 @@ export class SavedSearchesStore {
   });
 
   load(): void {
-    this.lastLoadedAt = Date.now();
-    this.inFlight?.unsubscribe();
     const readsWhenSent = this.readSinceLoad();
-    const request = this.api.savedSearches().subscribe({
-      next: (response) => {
-        this.inFlight = null;
-        this.loaded.set(response.savedSearches);
-        this.storedIncludedNetworks.set(new Set(response.includedNetworks));
-        // The server re-counted, so reads it already saw are spent. Ones that
-        // arrived while this request was in flight are NOT in its tally, and
-        // dropping them would put a knocked-down badge right back up (#708).
-        this.readSinceLoad.update(
-          (read) => new Set([...read].filter((id) => !readsWhenSent.has(id))),
-        );
-      },
-      // The badges keep their last counts; the next tick past the window asks again.
-      error: () => (this.inFlight = null),
+    this.loads.run(this.api.savedSearches(), (response) => {
+      this.loaded.set(response.savedSearches);
+      this.storedIncludedNetworks.set(new Set(response.includedNetworks));
+      // The server re-counted, so reads it already saw are spent. Ones that
+      // arrived while this request was in flight are NOT in its tally, and
+      // dropping them would put a knocked-down badge right back up (#708).
+      this.readSinceLoad.update(
+        (read) => new Set([...read].filter((id) => !readsWhenSent.has(id))),
+      );
     });
-    // A response that came back synchronously has already left; parking its
-    // closed subscription here would jam the in-flight guard for good.
-    this.inFlight = request.closed ? null : request;
   }
 
   /** The counts poll's reload (#708). `load()` is already silent, so the poll
    *  needs no separate quiet path — only the freshness-window and no-stacking
-   *  rules below. The "already knocked down" rule lives in `load()`'s response. */
+   *  rules `StaleGatedLoad` keeps. The "already knocked down" rule lives in `load()`'s response. */
   reloadIfStale(): void {
-    if (this.inFlight) return;
-    if (!countsAreStale(this.lastLoadedAt)) return;
-    this.load();
+    if (this.loads.isStale()) this.load();
   }
 
   /** Drop an entry from every saved-search unread tally, the moment it's read.

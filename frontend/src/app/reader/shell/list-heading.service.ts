@@ -5,6 +5,7 @@ import { SubscriptionsStore } from '../state/subscriptions.store';
 import { EntriesStore } from '../state/entries.store';
 import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
+import { FollowedStoriesStore } from '../state/followed-stories.store';
 import { VisibilitySwitchesStore } from '../state/visibility-switches.store';
 import { sumEntries } from '../state/subscription-derivations';
 import { ReadingLayoutService } from '../reading-layout.service';
@@ -22,6 +23,8 @@ import { isUnrenamedTimeline } from '../feeds/display-title';
 import { SubscriptionDto } from '../models';
 import { FeedGroupName } from '../../core/feed-group';
 import { SocialNetworkName } from '../../core/social-network';
+import { TrendingBuiltAt } from '../trending/trending-built-at';
+import { TrendingWindowService } from '../trending/trending-window.service';
 import { ReaderRouteState } from './reader-route-state.service';
 import { networkFeedKindLabels, SocialSection, feedAvatarUrl } from '../state/social-sections';
 
@@ -32,10 +35,13 @@ export class ListHeading {
   private readonly entries = inject(EntriesStore);
   private readonly recommendations = inject(RecommendationsService);
   private readonly savedSearches = inject(SavedSearchesStore);
+  private readonly followedStories = inject(FollowedStoriesStore);
   private readonly layout = inject(ReadingLayoutService);
   private readonly language = inject(LanguageService);
   private readonly i18n = inject(TranslocoService);
   private readonly visibilitySwitches = inject(VisibilitySwitchesStore);
+  private readonly trendingWindow = inject(TrendingWindowService);
+  private readonly trendingBuiltAt = inject(TrendingBuiltAt);
 
   private readonly allItemsEntries = computed(() =>
     sumEntries(this.subscriptions.subscriptions(), this.visibilitySwitches.switches()),
@@ -96,10 +102,29 @@ export class ListHeading {
     () => this.routeState.selection().kind === 'search' && this.entries.loading(),
   );
 
-  readonly lastRefreshed = computed(() => {
-    if (this.routeState.selection().kind === 'for-you') return this.recommendations.generatedAt();
-    return this.selectedSubscription()?.lastFetchedAt ?? null;
-  });
+  private readonly feedFetchedAt = () => this.selectedSubscription()?.lastFetchedAt ?? null;
+
+  private readonly lastRefreshedByKind: BySelectionKind<string | null> = {
+    'for-you': () => this.recommendations.generatedAt(),
+    trending: () => this.trendingBuiltAt.at(this.trendingWindow.window()),
+    favorites: this.feedFetchedAt,
+    kept: this.feedFetchedAt,
+    shared: this.feedFetchedAt,
+    viewed: this.feedFetchedAt,
+    'saved-searches': this.feedFetchedAt,
+    'saved-search': this.feedFetchedAt,
+    'followed-story': this.feedFetchedAt,
+    all: this.feedFetchedAt,
+    tag: this.feedFetchedAt,
+    network: this.feedFetchedAt,
+    group: this.feedFetchedAt,
+    search: this.feedFetchedAt,
+    subscription: this.feedFetchedAt,
+  };
+
+  readonly lastRefreshed = computed(() =>
+    bySelectionKind(this.lastRefreshedByKind, this.routeState.selection()),
+  );
 
   readonly nextRefresh = computed(() => this.selectedSubscription()?.nextFetchAt ?? null);
 
@@ -118,6 +143,9 @@ export class ListHeading {
     'saved-searches': () => this.i18n.translate('reader.savedSearches'),
     'saved-search': () =>
       this.activeSavedSearch()?.term ?? this.i18n.translate('reader.savedSearches'),
+    'followed-story': (selection) =>
+      this.followedStories.byId(selection.id)?.headline ??
+      this.i18n.translate('reader.followedStoryFallback'),
     all: () => this.i18n.translate('reader.allItems'),
     tag: () => this.selectedTag()?.name ?? this.i18n.translate('reader.tagFallback'),
     network: (selection) => this.networkTitle(selection),
@@ -198,6 +226,7 @@ export class ListHeading {
       const saved = this.activeSavedSearch();
       return bySwitch(selection, saved?.unreadCount ?? 0, saved?.memberCount ?? 0);
     },
+    'followed-story': () => items(this.entries.entries().length),
     search: () => items(0),
   };
 

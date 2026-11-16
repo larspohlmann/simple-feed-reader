@@ -1,14 +1,15 @@
 import { EntryDto, EntryStatePatch } from '../models';
 import { withPatchedRow } from './entry-rows';
 
-export type RowPatch = EntryStatePatch & Pick<Partial<EntryDto>, 'social' | 'myVote' | 'score'>;
+export type RowPatch = EntryStatePatch &
+  Pick<Partial<EntryDto>, 'social' | 'myVote' | 'score' | 'story'>;
 
 interface InFlightPatch {
   entryId: number;
   patch: RowPatch;
 }
 
-/** Row changes still on the wire — a state PATCH, a like, a vote — kept so a list reload that lands meanwhile
+/** Row changes still on the wire — a state PATCH, a like, a vote, a story follow — kept so a list reload that lands meanwhile
  *  can lay the row's optimistic state back over the server's stale copy. */
 export class InFlightPatches {
   private readonly patches = new Set<InFlightPatch>();

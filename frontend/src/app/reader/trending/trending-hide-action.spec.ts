@@ -48,14 +48,4 @@ describe('TrendingHideAction (#2017)', () => {
     outcome?.onFailed?.();
     expect(stayInList).toHaveBeenCalledWith(7);
   });
-
-  it('names itself through the translated Hide story label and hint', () => {
-    const hide = action();
-
-    expect([hide.icon, hide.label, hide.hint]).toEqual([
-      'visibility_off',
-      'reader.hideStory',
-      'reader.actionHint.hideStory',
-    ]);
-  });
 });

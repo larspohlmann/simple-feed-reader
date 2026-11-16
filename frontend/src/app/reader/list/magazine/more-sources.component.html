@@ -3,21 +3,30 @@
 }
 @if (copies().length && !entry().story) {
   <app-entry-duplicates [entry]="entry()" />
-} @else if (copies().length) {
+} @else if (entry().story) {
   <div class="more-sources">
-    <button
-      type="button"
-      class="toggle reads-as-text"
-      [attr.aria-expanded]="expanded()"
-      [attr.aria-controls]="expanded() ? panelId : null"
-      (click)="toggle($event)"
-      (keydown.enter)="$event.stopPropagation()"
-      (keydown.space)="$event.stopPropagation()"
-    >
-      <app-icon name="layers" size="sm" aria-hidden="true" />
-      {{ countKey() | transloco: { count: copies().length } }}
-      <app-icon [name]="expanded() ? 'expand_less' : 'expand_more'" size="sm" aria-hidden="true" />
-    </button>
+    <div class="story-line">
+      <app-story-actions [entry]="entry()" />
+      @if (copies().length) {
+        <button
+          type="button"
+          class="toggle reads-as-text"
+          [attr.aria-expanded]="expanded()"
+          [attr.aria-controls]="expanded() ? panelId : null"
+          (click)="toggle($event)"
+          (keydown.enter)="$event.stopPropagation()"
+          (keydown.space)="$event.stopPropagation()"
+        >
+          <app-icon [name]="storyIcon" size="sm" aria-hidden="true" />
+          {{ countKey() | transloco: { count: copies().length } }}
+          <app-icon
+            [name]="expanded() ? 'expand_less' : 'expand_more'"
+            size="sm"
+            aria-hidden="true"
+          />
+        </button>
+      }
+    </div>
     @if (expanded()) {
       <div class="minis" [id]="panelId">
         @for (source of sources(); track source.copy.id) {

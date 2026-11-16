@@ -12,10 +12,16 @@ import { groupByRun, RunGroup } from '../for-you-runs';
 import { planMagazine } from '../magazine/magazine-planner';
 import { REVEAL_STEP, isAppendedPage } from '../paging';
 import { EntryDto } from '../../models';
-import { Selection, isSingleStreamView } from '../../query/query';
+import { Selection, isSingleStreamView, listOrderOf } from '../../query/query';
 import { isPrivateFeed, isSavedFeed } from '../../state/social-sections';
 import { SubscriptionRows } from '../../state/subscription-rows';
-import { blocksWithout, groupMembersWithout, ListBlock, runGroupsWithout } from './hidden-overlay';
+import {
+  blocksWithout,
+  groupMembersWithout,
+  ListBlock,
+  runGroupsWithout,
+  SINCE_VISIT_BLOCK,
+} from './hidden-overlay';
 
 export interface ListContentOptions {
   readonly entries: Signal<EntryDto[]>;
@@ -23,6 +29,7 @@ export interface ListContentOptions {
   readonly selection: Signal<Selection>;
   readonly newestRunId: Signal<number | null>;
   readonly leavingIds: Signal<ReadonlySet<number>>;
+  readonly newSinceVisitIds: Signal<ReadonlySet<number>>;
 }
 
 /** What the list renders: the entries revealed so far, planned into blocks and
@@ -78,11 +85,20 @@ export class ListContent {
       uncollapsibleSources: this.uncollapsibleSources(),
     };
     const complete = !this.options.hasMore() && this.fullyRevealed();
+    const rendered = this.rendered();
+    const visitEnd = this.visitEnd(rendered);
+    if (visitEnd !== null) {
+      return [
+        ...planMagazine({ ...collapse, entries: rendered.slice(0, visitEnd), complete: true }),
+        SINCE_VISIT_BLOCK,
+        ...planMagazine({ ...collapse, entries: rendered.slice(visitEnd), complete }),
+      ];
+    }
 
     // Fast path: no dividers (every non-for-you view, and a for-you list showing
     // only the newest run). Plan the whole list at once — identical to before.
     if (!groups.some((group) => this.showRunHeader(group))) {
-      return planMagazine({ ...collapse, entries: this.rendered(), complete });
+      return planMagazine({ ...collapse, entries: rendered, complete });
     }
 
     const out: ListBlock[] = [];
@@ -120,6 +136,13 @@ export class ListContent {
     runGroupsWithout(this.runGroups(), this.hiddenAboveIds()),
   );
 
+  /** The list layout's first visible row that is not new, which the visit's divider sits above. */
+  readonly visitEndId = computed(() => {
+    const visible = this.visibleRunGroups().flatMap((group) => group.entries);
+    const end = this.visitEnd(visible);
+    return end === null ? null : visible[end].id;
+  });
+
   /** Rows the user can still see — loaded set minus the collapsed and the
    *  mark-above-hidden ones. The empty state keys on this, not `entries().length`,
    *  so removing the last row shows "nothing here" immediately. */
@@ -150,6 +173,16 @@ export class ListContent {
 
   clearHidden(): void {
     this.hiddenAboveIds.set(new Set());
+  }
+
+  /** Where the rows that joined since the last visit end, when the list opens with one of them and holds an
+   *  earlier one too. Oldest first, the new rows trail the list, so it marks nothing. */
+  private visitEnd(entries: EntryDto[]): number | null {
+    const newIds = this.options.newSinceVisitIds();
+    if (newIds.size === 0 || listOrderOf(this.options.selection()) !== 'newest') return null;
+    if (entries.length === 0 || !newIds.has(entries[0].id)) return null;
+    const end = entries.findIndex((entry) => !newIds.has(entry.id));
+    return end === -1 ? null : end;
   }
 
   private countVisible(entries: EntryDto[]): number {

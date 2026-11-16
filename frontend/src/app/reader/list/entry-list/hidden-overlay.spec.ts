@@ -1,4 +1,10 @@
-import { blocksWithout, groupMembersWithout, ListBlock, runGroupsWithout } from './hidden-overlay';
+import {
+  blocksWithout,
+  groupMembersWithout,
+  ListBlock,
+  runGroupsWithout,
+  SINCE_VISIT_BLOCK,
+} from './hidden-overlay';
 import { RunGroup } from '../for-you-runs';
 import { EntryDto } from '../../models';
 
@@ -33,6 +39,26 @@ describe('blocksWithout', () => {
     const blocks = [header('t1'), compact(1), header('t2'), compact(2)];
     expect(blocksWithout(blocks, new Set([1]))).toEqual([header('t2'), compact(2)]);
     expect(blocksWithout(blocks, new Set([2]))).toEqual([header('t1'), compact(1)]);
+  });
+});
+
+describe('blocksWithout and the "Since your last visit" divider (#2128)', () => {
+  const blocks = [compact(1), compact(2), SINCE_VISIT_BLOCK, compact(3)];
+
+  it('keeps the divider while new and earlier blocks remain on both sides', () => {
+    expect(blocksWithout(blocks, new Set([1]))).toEqual([
+      compact(2),
+      SINCE_VISIT_BLOCK,
+      compact(3),
+    ]);
+  });
+
+  it('drops the divider once nothing new is left above it', () => {
+    expect(blocksWithout(blocks, new Set([1, 2]))).toEqual([compact(3)]);
+  });
+
+  it('drops the divider once nothing is left below it', () => {
+    expect(blocksWithout(blocks, new Set([3]))).toEqual([compact(1), compact(2)]);
   });
 });
 

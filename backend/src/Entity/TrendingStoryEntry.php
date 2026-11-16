@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
-/** One entry of a story; feed_id is copied so a reader's outlet count needs no join through entry. */
+/** One entry of a story, kept once it leaves the windows; feed_id is copied so an outlet count needs no join. */
 #[ORM\Entity]
 #[ORM\Table(name: 'trending_story_entry')]
 #[ORM\Index(name: 'idx_trending_story_entry_feed', columns: ['feed_id'])]
@@ -34,13 +35,28 @@ final class TrendingStoryEntry
     #[ORM\JoinColumn(name: 'shared_link_id', nullable: true, onDelete: 'SET NULL')]
     public readonly ?SharedLink $link;
 
+    #[ORM\Column(name: 'joined_at', type: Types::DATETIME_IMMUTABLE)]
+    public readonly \DateTimeImmutable $joinedAt;
+
+    #[ORM\Column(name: 'in_day', options: ['default' => false])]
+    private bool $inDay = false;
+
+    #[ORM\Column(name: 'in_week', options: ['default' => false])]
+    private bool $inWeek = false;
+
     /** @noinspection AutowireWrongClass Built with new, never autowired */
-    public function __construct(TrendingStory $story, Entry $entry, ?string $articleSite, ?SharedLink $link)
-    {
+    public function __construct(
+        TrendingStory $story,
+        Entry $entry,
+        ?string $articleSite,
+        ?SharedLink $link,
+        \DateTimeImmutable $joinedAt,
+    ) {
         $this->story = $story;
         $this->entry = $entry;
         $this->feedId = $entry->getFeed()->requireId();
         $this->articleSite = $articleSite;
         $this->link = $link;
+        $this->joinedAt = $joinedAt;
     }
 }

@@ -10,9 +10,10 @@ import { EntryRowComponent } from '../entry-row/entry-row.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { SubscriptionRows } from '../../state/subscription-rows';
 import { MENU_VIEWPORT_MARGIN } from '../../../shared/menu-keys';
-import { ENTRY_ROW_ACTION } from '../../entry/entry-actions/entry-row-action';
 import { alsoFootOf } from './also-foot';
 import { sourceNameOf } from '../../entry/entry-source/source-name';
+import { StoryActionsComponent } from '../../trending/story-actions/story-actions.component';
+import { STORY_ICON } from '../../trending/story';
 
 let nextId = 0;
 
@@ -31,12 +32,17 @@ export const ALSO_FOOT_NAMES = 4;
   // forwardRef: entry-row renders entry-duplicates for its own footer, so a
   // plain reference here would resolve EntryRowComponent mid-import-cycle and
   // read as undefined, depending on which of the two loads first.
-  imports: [TranslocoPipe, IconComponent, CdkConnectedOverlay, forwardRef(() => EntryRowComponent)],
+  imports: [
+    TranslocoPipe,
+    IconComponent,
+    CdkConnectedOverlay,
+    StoryActionsComponent,
+    forwardRef(() => EntryRowComponent),
+  ],
   templateUrl: './entry-duplicates.component.html',
   styleUrl: './entry-duplicates.component.scss',
   providers: [
     { provide: EntryActionHandler, useExisting: forwardRef(() => EntryDuplicatesComponent) },
-    { provide: ENTRY_ROW_ACTION, useValue: signal(null) },
   ],
 })
 export class EntryDuplicatesComponent implements EntryActionHandler {
@@ -46,6 +52,7 @@ export class EntryDuplicatesComponent implements EntryActionHandler {
   protected readonly viewportMargin = MENU_VIEWPORT_MARGIN;
   protected readonly copies = computed(() => this.foot().copies);
   protected readonly label = computed(() => this.foot().label);
+  protected readonly icon = computed(() => (this.entry().story ? STORY_ICON : 'layers'));
   private readonly shellActions = inject(EntryActionHandler, { skipSelf: true });
 
   private readonly language = inject(LanguageService);

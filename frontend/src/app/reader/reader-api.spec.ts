@@ -7,7 +7,7 @@ import { ReaderApi } from './reader-api';
 import { PAGE_SIZE } from './list/paging';
 import { ReaderContent } from './models';
 import { Observable } from 'rxjs';
-import { A_READER_TOKEN, anEntry } from '../../testing/entry-testing';
+import { A_READER_TOKEN, anEntry, aStory } from '../../testing/entry-testing';
 import { refreshReport } from '../../testing/refresh-report';
 
 describe('ReaderApi', () => {
@@ -333,6 +333,29 @@ describe('ReaderApi', () => {
     testRequest.flush({ entries: [], nextCursor: null });
   });
 
+  it('fetches a followed Trending story by id, with the cursor, limit and order (#2128)', () => {
+    let page: unknown = null;
+    api
+      .entries({ view: 'all', followedStoryId: 42, order: 'oldest' }, 'C2')
+      .subscribe((answer) => (page = answer));
+    const testRequest = ctrl.expectOne((request) =>
+      request.url.endsWith('/api/entries/trending-stories/42'),
+    );
+    expect(testRequest.request.method).toBe('GET');
+    expect(testRequest.request.params.get('order')).toBe('asc');
+    expect(testRequest.request.params.get('cursor')).toBe('C2');
+    expect(testRequest.request.params.get('limit')).not.toBeNull();
+    expect(testRequest.request.params.get('view')).toBeNull();
+    const answer = {
+      entries: [],
+      nextCursor: null,
+      lastOpenedAt: '2026-11-16T08:00:00+00:00',
+      newEntryIds: [5],
+    };
+    testRequest.flush(answer);
+    expect(page).toEqual(answer);
+  });
+
   it('answers the Trending list query with the stories as their leads (#2017)', () => {
     let ids: number[] = [];
     api.entries({ view: 'trending', window: 'day' }).subscribe((page) => {
@@ -346,7 +369,9 @@ describe('ReaderApi', () => {
     testRequest.flush({
       window: 'day',
       builtAt: null,
-      stories: [anEntry({ id: 9, story: { outletCount: 3, viewed: false, shareCount: 0 } })],
+      stories: [
+        anEntry({ id: 9, story: aStory({ outletCount: 3, viewed: false, shareCount: 0 }) }),
+      ],
     });
     expect(ids).toEqual([9]);
   });

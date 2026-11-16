@@ -7,20 +7,82 @@ namespace App\Tests\Service\Curation\Trending;
 use App\Entity\TrendingSnapshot;
 use App\Enum\TrendingWindow;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Curation\Trending\Exception\TrendingBuildBusyException;
+use App\Service\Curation\Trending\Model\StoryMatchModel;
 use App\Service\Curation\Trending\Model\TrendingBuildReportModel;
 use App\Service\Curation\Trending\Model\TrendingRebuildReportModel;
 use App\Service\Curation\Trending\SnapshotBuilder\SnapshotBuilderInterface;
+use App\Service\Curation\Trending\SnapshotBuilder\TrendingSnapshotBuilder;
 use App\Service\Curation\Trending\TrendingRebuild;
 use App\Tests\DbTestCase;
+use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\TrendingWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Psr\Log\LogLevel;
+use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
+use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\Store\InMemoryStore;
 
 final class TrendingRebuildTest extends DbTestCase
 {
     public function testBuildsEveryWindowNeverBuilt(): void
     {
         self::assertSame([TrendingWindow::Day, TrendingWindow::Week], self::windowsOf($this->rebuildDue()));
+    }
+
+    public function testABuildRunningElsewhereLeavesEveryWindowDueAndThrowsNothing(): void
+    {
+        $locks = new LockFactory(new InMemoryStore());
+        $running = $locks->createLock(TrendingSnapshotBuilder::LOCK_NAME);
+        $running->acquire();
+        $clock = new MockClock('2031-05-14 12:00:00', 'UTC');
+        $rebuild = TrendingWiring::rebuild($this->entityManager, $clock, $locks);
+
+        self::assertSame([], self::windowsOf($rebuild->rebuildDue()));
+        self::assertSame([], self::windowsOf($rebuild->rebuildDueBefore($clock->now()->modify('+1 hour'))));
+
+        $running->release();
+
+        self::assertSame([TrendingWindow::Day, TrendingWindow::Week], self::windowsOf($rebuild->rebuildDue()));
+    }
+
+    public function testAWindowFoundBusyIsSkippedAndTheNextOneStillBuilds(): void
+    {
+        $builder = new class implements SnapshotBuilderInterface {
+            public function build(TrendingWindow $window): TrendingBuildReportModel
+            {
+                if ($window === TrendingWindow::Day) {
+                    throw new TrendingBuildBusyException();
+                }
+
+                return new TrendingBuildReportModel(
+                    $window,
+                    new \DateTimeImmutable('2031-05-14 12:00:00'),
+                    0,
+                    0,
+                    0,
+                    0,
+                    new StoryMatchModel([], [], 0),
+                    0,
+                );
+            }
+        };
+        $clock = new NaiveUtcClock(new MockClock('2031-05-14 12:00:00', 'UTC'));
+        $logger = new RecordingLogger();
+        $rebuild = new TrendingRebuild($builder, TrendingWiring::snapshots($this->entityManager), $clock, $logger);
+
+        self::assertSame([TrendingWindow::Week], self::windowsOf($rebuild->rebuildDue()));
+        self::assertSame(
+            [
+                [
+                    'level' => LogLevel::DEBUG,
+                    'message' => 'Trending build skipped: another build is running.',
+                    'context' => ['window' => 'day'],
+                ],
+            ],
+            $logger->records,
+        );
     }
 
     public function testRebuildsAWindowOnceItsSnapshotIsAsOldAsItsInterval(): void
@@ -125,11 +187,25 @@ final class TrendingRebuildTest extends DbTestCase
             {
                 $this->clock->sleep($this->secondsPerBuild);
 
-                return new TrendingBuildReportModel($window, $this->naiveClock->now(), 0, 0, 0, 0);
+                return new TrendingBuildReportModel(
+                    $window,
+                    $this->naiveClock->now(),
+                    0,
+                    0,
+                    0,
+                    0,
+                    new StoryMatchModel([], [], 0),
+                    0,
+                );
             }
         };
 
-        return new TrendingRebuild($builder, TrendingWiring::snapshots($this->entityManager), $naiveClock);
+        return new TrendingRebuild(
+            $builder,
+            TrendingWiring::snapshots($this->entityManager),
+            $naiveClock,
+            new NullLogger(),
+        );
     }
 
     private function snapshotBuiltAt(TrendingWindow $window, string $builtAt, int $durationMilliseconds = 0): void

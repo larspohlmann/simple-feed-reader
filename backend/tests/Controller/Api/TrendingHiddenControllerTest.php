@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
-use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Entity\LinkCardContent;
+use App\Entity\TrendingStory;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
@@ -27,43 +26,20 @@ final class TrendingHiddenControllerTest extends ApiTestCase
         $this->fixtures = new TrendingFixtures($this->entityManager());
     }
 
-    public function testHidingALeadTakesItsWholeStoryOffTheListAndTheBadge(): void
+    public function testHidingAStoryTakesItOffTheListAndTheBadge(): void
     {
         $reader = $this->signIn($this->client, 'trending-hide@example.com');
         $feeds = $this->followedFeeds($reader);
         $hidden = $this->story($feeds);
         $kept = $this->story(\array_slice($feeds, 0, 3));
 
-        $this->hide('day', $hidden[0]);
+        $this->hide($hidden->requireId());
 
         self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
-        self::assertSame([$kept[0]->requireId()], $this->leadIdsOfTheDay());
+        self::assertSame([$kept->requireId()], $this->storyIdsOfTheDay());
         $this->client->request('GET', '/api/subscriptions/counts');
         self::assertSame(['window' => 'day', 'unopened' => 1], $this->payload($this->client)['trending']);
-        self::assertSame(self::idsOf($hidden), $this->hiddenEntryIdsOf($reader));
-    }
-
-    public function testHidingTheLeadPostOfAStoryNoArticleFeedCarriesHidesEveryPostSharingIt(): void
-    {
-        $reader = $this->signIn($this->client, 'trending-hide-card-led@example.com');
-        $ann = $this->fixtures->feed('ann', SocialNetwork::Mastodon);
-        $ben = $this->fixtures->feed('ben', SocialNetwork::Bluesky);
-        $this->fixtures->subscribe($reader, $ann, $ben);
-        $posts = [
-            $this->fixtures->linkShare($ann, '2031-05-14 10:00:00', self::card('https://outlet.example/lighthouse')),
-            $this->fixtures->linkShare($ben, '2031-05-14 09:00:00', self::card('https://other.example/keepers')),
-        ];
-        $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
-            [$posts[0], 'outlet.example'],
-            [$posts[1], 'other.example'],
-        ]);
-        self::assertSame([$posts[0]->requireId()], $this->leadIdsOfTheDay());
-
-        $this->hide('day', $posts[0]);
-
-        self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
-        self::assertSame([], $this->leadIdsOfTheDay());
-        self::assertSame(self::idsOf($posts), $this->hiddenEntryIdsOf($reader));
+        self::assertSame([$hidden->requireId()], $this->hiddenStoryIdsOf($reader));
     }
 
     public function testHidingAgainAnswersTheSameAndLeavesOtherReadersAlone(): void
@@ -74,75 +50,25 @@ final class TrendingHiddenControllerTest extends ApiTestCase
         $this->fixtures->subscribe($other, ...$feeds);
         $hidden = $this->story($feeds);
 
-        $this->hide('day', $hidden[0]);
-        $this->hide('day', $hidden[0]);
+        $this->hide($hidden->requireId());
+        $this->hide($hidden->requireId());
 
         self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
+        self::assertSame([$hidden->requireId()], $this->hiddenStoryIdsOf($reader));
         $this->authenticate($this->client, $other);
-        self::assertSame([$hidden[0]->requireId()], $this->leadIdsOfTheDay());
+        self::assertSame([$hidden->requireId()], $this->storyIdsOfTheDay());
     }
 
-    public function testAnEntryInNoStoryOfTheWindowTheReaderSeesIsNotFound(): void
+    public function testAnUnknownStoryIsNotFound(): void
     {
         $reader = $this->signIn($this->client, 'trending-hide-missing@example.com');
-        $story = $this->story([...$this->followedFeeds($reader), $this->fixtures->feed('stranger')]);
+        $story = $this->story($this->followedFeeds($reader));
 
-        $this->hide('week', $story[0]);
+        $this->hide($story->requireId() + 1);
 
         $this->assertRejected($this->client, Response::HTTP_NOT_FOUND);
         self::assertSame('trending_story_not_found', $this->payload($this->client)['type']);
-
-        $this->hide('day', $story[4]);
-
-        $this->assertRejected($this->client, Response::HTTP_NOT_FOUND);
-        self::assertSame([], $this->hiddenEntryIdsOf($reader));
-    }
-
-    public function testAWeekStorySharingAnEntryWithAShownDayStoryIsNotFoundThroughTheWeek(): void
-    {
-        $reader = $this->signIn($this->client, 'trending-hide-overlap@example.com');
-        $feeds = $this->followedFeeds($reader);
-        $moreFeeds = [$this->fixtures->feed('delta'), $this->fixtures->feed('omega')];
-        $this->fixtures->subscribe($reader, ...$moreFeeds);
-        $dayMembers = $this->story($feeds);
-        $this->fixtures->story(
-            TrendingWindow::Week,
-            '2031-05-14 10:00:00',
-            $dayMembers[0],
-            ...array_map(
-                fn (Feed $feed): Entry => $this->fixtures->entry($feed, 'Story', '2031-05-14 08:00:00'),
-                [$feeds[1], $feeds[2], ...$moreFeeds],
-            ),
-        );
-
-        $this->hide('week', $dayMembers[0]);
-
-        $this->assertRejected($this->client, Response::HTTP_NOT_FOUND);
-        self::assertSame([], $this->hiddenEntryIdsOf($reader));
-    }
-
-    public function testAStoryTooFewOfTheReadersFeedsCoverIsNotFoundAndHidesNothing(): void
-    {
-        $reader = $this->signIn($this->client, 'trending-hide-narrow@example.com');
-        $story = $this->story(\array_slice($this->followedFeeds($reader), 0, 1));
-
-        $this->hide('day', $story[0]);
-
-        $this->assertRejected($this->client, Response::HTTP_NOT_FOUND);
-        self::assertSame([], $this->hiddenEntryIdsOf($reader));
-    }
-
-    public function testAnUnknownWindowIsRefused(): void
-    {
-        $reader = $this->signIn($this->client, 'trending-hide-window@example.com');
-        $story = $this->story($this->followedFeeds($reader));
-
-        $this->hide('month', $story[0]);
-
-        $this->assertRejected($this->client, Response::HTTP_UNPROCESSABLE_ENTITY);
-        $errors = $this->payload($this->client)['errors'] ?? null;
-        self::assertIsArray($errors);
-        self::assertArrayHasKey('window', $errors);
+        self::assertSame([], $this->hiddenStoryIdsOf($reader));
     }
 
     /** @param array<string, mixed> $body */
@@ -160,7 +86,7 @@ final class TrendingHiddenControllerTest extends ApiTestCase
         );
 
         $this->assertRejected($this->client, Response::HTTP_UNPROCESSABLE_ENTITY);
-        self::assertSame([], $this->hiddenEntryIdsOf($reader));
+        self::assertSame([], $this->hiddenStoryIdsOf($reader));
         $errors = $this->payload($this->client)['errors'] ?? null;
         self::assertIsArray($errors);
         self::assertArrayHasKey($field, $errors);
@@ -169,11 +95,9 @@ final class TrendingHiddenControllerTest extends ApiTestCase
     /** @return iterable<string, array{array<string, mixed>, string}> */
     public static function malformedBodies(): iterable
     {
-        yield 'no entryId' => [['window' => 'day'], 'entryId'];
-        yield 'a text entryId' => [['window' => 'day', 'entryId' => 'seven'], 'entryId'];
-        yield 'entryId 0' => [['window' => 'day', 'entryId' => 0], 'entryId'];
-        yield 'no window' => [['entryId' => 1], 'window'];
-        yield 'a blank window' => [['window' => '', 'entryId' => 1], 'window'];
+        yield 'no storyId' => [[], 'storyId'];
+        yield 'a text storyId' => [['storyId' => 'x'], 'storyId'];
+        yield 'storyId 0' => [['storyId' => 0], 'storyId'];
     }
 
     /** @return list<Feed> three article feeds and a social account, all followed by the reader */
@@ -191,78 +115,58 @@ final class TrendingHiddenControllerTest extends ApiTestCase
     }
 
     /**
-     * One entry per feed, newest first, so the first article leads.
+     * One entry per feed, newest first.
      *
      * @param list<Feed> $feeds
-     *
-     * @return list<Entry>
      */
-    private function story(array $feeds): array
+    private function story(array $feeds): TrendingStory
     {
         $members = [];
         foreach ($feeds as $position => $feed) {
             $members[] = $this->fixtures->entry($feed, 'Story', \sprintf('2031-05-14 %02d:00:00', 10 - $position));
         }
-        $this->fixtures->story(TrendingWindow::Day, '2031-05-14 10:00:00', ...$members);
 
-        return $members;
+        return $this->fixtures->story(TrendingWindow::Day, '2031-05-14 10:00:00', ...$members);
     }
 
-    private static function card(string $url): LinkCardContent
-    {
-        return new LinkCardContent($url, 'Lighthouse keepers strike', null, null, 'Outlet');
-    }
-
-    private function hide(string $window, Entry $entry): void
+    private function hide(int $storyId): void
     {
         $this->client->request(
             'POST',
             '/api/trending/hidden',
             server: ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode(['window' => $window, 'entryId' => $entry->requireId()], \JSON_THROW_ON_ERROR),
+            content: json_encode(['storyId' => $storyId], \JSON_THROW_ON_ERROR),
         );
     }
 
     /** @return list<int> */
-    private function leadIdsOfTheDay(): array
+    private function storyIdsOfTheDay(): array
     {
         $this->client->request('GET', '/api/trending?window=day');
         self::assertResponseIsSuccessful();
         $stories = $this->payload($this->client)['stories'];
         self::assertIsArray($stories);
 
-        $leadIds = [];
+        $storyIds = [];
         foreach ($stories as $story) {
             self::assertIsArray($story);
-            self::assertIsInt($story['id']);
-            $leadIds[] = $story['id'];
+            self::assertIsArray($story['story']);
+            self::assertIsInt($story['story']['id']);
+            $storyIds[] = $story['story']['id'];
         }
 
-        return $leadIds;
+        return $storyIds;
     }
 
     /** @return list<int> */
-    private function hiddenEntryIdsOf(User $reader): array
+    private function hiddenStoryIdsOf(User $reader): array
     {
-        /** @var list<int|string> $entryIds */
-        $entryIds = $this->entityManager()->getConnection()->fetchFirstColumn(
-            'SELECT entry_id FROM trending_hidden_entry WHERE user_id = ? ORDER BY entry_id',
+        /** @var list<int|string> $storyIds */
+        $storyIds = $this->entityManager()->getConnection()->fetchFirstColumn(
+            'SELECT story_id FROM trending_story_hide WHERE user_id = ? ORDER BY story_id',
             [$reader->requireId()],
         );
 
-        return array_map(static fn (int|string $entryId): int => (int) $entryId, $entryIds);
-    }
-
-    /**
-     * @param list<Entry> $entries
-     *
-     * @return list<int> ascending
-     */
-    private static function idsOf(array $entries): array
-    {
-        $entryIds = array_map(static fn (Entry $entry): int => $entry->requireId(), $entries);
-        sort($entryIds);
-
-        return $entryIds;
+        return array_map(static fn (int|string $storyId): int => (int) $storyId, $storyIds);
     }
 }

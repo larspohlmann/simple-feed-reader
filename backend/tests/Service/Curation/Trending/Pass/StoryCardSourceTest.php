@@ -30,6 +30,7 @@ final class StoryCardSourceTest extends DbTestCase
             [5 => [101, 102], 6 => [$entry->requireId()]],
             [$entry->requireId() => new ShownRowModel($row, 'article')],
             [6 => 0],
+            [6 => 0],
         );
 
         $lastSeen = new \DateTimeImmutable('2031-05-14 10:00:00');
@@ -41,11 +42,12 @@ final class StoryCardSourceTest extends DbTestCase
         self::assertSame($entry, $cards[0]->articles->lead->row->entry);
         self::assertSame($wider, $cards[0]->story);
         self::assertTrue($cards[0]->viewed);
+        self::assertTrue($cards[0]->followed);
     }
 
     public function testAStoryWithoutAnyEntryIdsGetsNoCard(): void
     {
-        self::assertSame([], (new StoryCardSource([], [], []))->cardsOf([
+        self::assertSame([], (new StoryCardSource([], [], [], []))->cardsOf([
             new RankedStoryModel(7, 3, new \DateTimeImmutable('2031-05-14 10:00:00')),
         ]));
     }

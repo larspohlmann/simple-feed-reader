@@ -9,10 +9,8 @@ use Symfony\Component\Validator\Constraints as Assert;
 final readonly class HideTrendingStoryRequest
 {
     public function __construct(
-        #[Assert\NotBlank]
-        public string $window,
         #[Assert\Positive]
-        public int $entryId,
+        public int $storyId,
     ) {
     }
 }

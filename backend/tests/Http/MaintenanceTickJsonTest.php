@@ -20,6 +20,7 @@ use App\Service\Social\Social\Model\HiddenProfileSwitchReportModel;
 use App\Service\Social\Social\Model\PrivateFeedSyncReportModel;
 use App\Service\Social\Social\Model\ProfileImageSweepReportModel;
 use App\Service\Content\Transcript\Model\TranscriptSweepReportModel;
+use App\Service\Curation\Trending\Model\StoryMatchModel;
 use App\Service\Curation\Trending\Model\TrendingBuildReportModel;
 use App\Service\Curation\Trending\Model\TrendingRebuildReportModel;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -49,6 +50,8 @@ final class MaintenanceTickJsonTest extends KernelTestCase
                         28,
                         400,
                         5_000,
+                        new StoryMatchModel([], [], 0),
+                        0,
                     ),
                     new TrendingBuildReportModel(
                         TrendingWindow::Week,
@@ -57,6 +60,8 @@ final class MaintenanceTickJsonTest extends KernelTestCase
                         29,
                         800,
                         9_000,
+                        new StoryMatchModel([], [], 0),
+                        0,
                     ),
                 ]),
             ]),

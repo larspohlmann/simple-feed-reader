@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Repository;
 
 use App\Entity\Entry;
+use App\Entity\EntryState;
 use App\Entity\EntryAuthor;
 use App\Entity\Feed;
 use App\Entity\TrendingStory;
@@ -13,7 +14,9 @@ use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
 use App\Repository\TrendingEntryRepository;
 use App\Repository\TrendingStoryRepository;
+use App\Service\Curation\Trending\Exception\TrendingStoryNotFoundException;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
+use App\Service\Curation\Trending\Model\ReaderWindowModel;
 use App\Service\Curation\Trending\ReaderWindows;
 use App\Service\Curation\Trending\TrendingStories;
 use App\Service\Foundation\Clock\NaiveUtcClock;
@@ -33,6 +36,7 @@ final class TrendingStoryRepositoryTest extends DbTestCase
 
     private TrendingFixtures $fixtures;
     private User $reader;
+    private int $weekStories = 0;
 
     protected function setUp(): void
     {
@@ -106,9 +110,16 @@ final class TrendingStoryRepositoryTest extends DbTestCase
 
         self::assertSame(
             [$story->requireId() => [$article->requireId(), $carded->requireId()]],
-            $this->stories()->shownEntriesByStory($this->reader->requireId(), [$story->requireId()])->entryIdsByStory(),
+            $this->stories()
+                ->shownEntriesByStory($this->reader->requireId(), TrendingWindow::Day, [$story->requireId()])
+                ->entryIdsByStory(),
         );
-        self::assertSame([], $this->stories()->shownEntriesByStory($this->reader->requireId(), [])->entryIdsByStory());
+        self::assertSame(
+            [],
+            $this->stories()
+                ->shownEntriesByStory($this->reader->requireId(), TrendingWindow::Day, [])
+                ->entryIdsByStory(),
+        );
     }
 
     public function testShownEntriesCarryTheirLinksHash(): void
@@ -124,7 +135,8 @@ final class TrendingStoryRepositoryTest extends DbTestCase
             [$carded, 'outlet.example'],
         ]);
 
-        $shown = $this->stories()->shownEntriesByStory($this->reader->requireId(), [$story->requireId()]);
+        $shown = $this->stories()
+            ->shownEntriesByStory($this->reader->requireId(), TrendingWindow::Day, [$story->requireId()]);
 
         self::assertNull($shown->linkHashOf($article->requireId(), $article->requireId()));
         self::assertSame(
@@ -150,7 +162,8 @@ final class TrendingStoryRepositoryTest extends DbTestCase
             [$carded, 'npr.org'],
         ]);
 
-        $shown = $this->stories()->shownEntriesByStory($this->reader->requireId(), [$story->requireId()]);
+        $shown = $this->stories()
+            ->shownEntriesByStory($this->reader->requireId(), TrendingWindow::Day, [$story->requireId()]);
 
         self::assertSame('resolved-hash', $shown->linkHashOf($carded->requireId(), $carded->requireId()));
     }
@@ -265,6 +278,177 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         ]);
 
         self::assertSame([[$story->requireId(), 3]], $this->shownStoriesAndSources());
+    }
+
+    public function testAStoryPlacedInBothWindowsRanksInEachWithOnlyThatWindowsMembers(): void
+    {
+        $inBoth = [$this->member($this->articleFeed('alpha')), $this->member($this->articleFeed('beta'))];
+        $members = [...$inBoth, $this->member($this->articleFeed('gamma'))];
+        $story = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', ...$members);
+        $this->fixtures->place(TrendingWindow::Day, $story, ...$inBoth);
+
+        self::assertSame([[$story->requireId(), 2]], $this->rankedIn(TrendingWindow::Day, []));
+        self::assertSame([[$story->requireId(), 3]], $this->rankedIn(TrendingWindow::Week, []));
+    }
+
+    public function testAMemberPlacedInNeitherWindowCountsInNeither(): void
+    {
+        $story = $this->fixtures->story(
+            TrendingWindow::Week,
+            '2031-05-14 10:00:00',
+            $this->member($this->articleFeed('alpha')),
+            $this->member($this->articleFeed('beta')),
+        );
+        $this->fixtures->join($story, '2031-05-14 11:00:00', $this->member($this->articleFeed('gamma')));
+
+        self::assertSame([], $this->rankedIn(TrendingWindow::Day, []));
+        self::assertSame([[$story->requireId(), 2]], $this->rankedIn(TrendingWindow::Week, []));
+    }
+
+    public function testAnEarlierCopyInAnotherStoryLeavesThisStorysCopyCounted(): void
+    {
+        $url = 'https://news.example.com/storm';
+        $this->fixtures->story(
+            TrendingWindow::Week,
+            '2031-05-14 08:00:00',
+            $this->fixtures->article($this->articleFeed('alpha'), 'Storm', '2031-05-14 08:00:00', $url),
+        );
+        $story = $this->fixtures->story(
+            TrendingWindow::Week,
+            '2031-05-14 10:00:00',
+            $this->fixtures->article($this->articleFeed('beta'), 'Storm', '2031-05-14 09:00:00', $url),
+            $this->member($this->articleFeed('gamma')),
+        );
+
+        self::assertSame([[$story->requireId(), 2]], $this->rankedIn(TrendingWindow::Week, []));
+    }
+
+    public function testAnEarlierCopyPlacedOnlyInTheWeekLeavesTheDaysCopyCounted(): void
+    {
+        $url = 'https://news.example.com/storm';
+        $weekOnly = $this->fixtures->article($this->articleFeed('alpha'), 'Storm', '2031-05-14 08:00:00', $url);
+        $inBoth = [
+            $this->fixtures->article($this->articleFeed('beta'), 'Storm', '2031-05-14 09:00:00', $url),
+            $this->member($this->articleFeed('gamma')),
+        ];
+        $story = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $weekOnly, ...$inBoth);
+        $this->fixtures->place(TrendingWindow::Day, $story, ...$inBoth);
+
+        self::assertSame([[$story->requireId(), 2]], $this->rankedIn(TrendingWindow::Day, []));
+    }
+
+    public function testAnEarlierCopyFromASocialFeedLeavesAnArticleFeedsCopyCounted(): void
+    {
+        $url = 'https://news.example.com/storm';
+        $post = $this->fixtures->article($this->socialFeed('ann'), 'Storm', '2031-05-14 08:00:00', $url);
+        $story = $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
+            [$post, 'news.example.com'],
+            [$this->fixtures->article($this->articleFeed('alpha'), 'Storm', '2031-05-14 09:00:00', $url), null],
+            [$this->member($this->articleFeed('beta')), null],
+        ]);
+
+        self::assertSame([[$story->requireId(), 3]], $this->rankedIn(TrendingWindow::Day, []));
+    }
+
+    public function testTheWeekLeavesOutAStoryIdShownInTheDay(): void
+    {
+        $story = $this->twoFeedWeekStory();
+        $other = $this->twoFeedWeekStory();
+
+        self::assertSame([[$other->requireId(), 2]], $this->rankedIn(TrendingWindow::Week, [$story->requireId()]));
+    }
+
+    public function testAnEmptyDayLeavesNothingOutOfTheWeek(): void
+    {
+        $story = $this->twoFeedWeekStory();
+
+        self::assertSame([[$story->requireId(), 2]], $this->rankedIn(TrendingWindow::Week, []));
+    }
+
+    public function testAHiddenStoryIsLeftOutForThatReaderOnly(): void
+    {
+        $story = $this->twoFeedWeekStory();
+        $kept = $this->twoFeedWeekStory();
+        $other = $this->fixtures->reader('sites-other@example.com');
+        $this->fixtures->subscribe($other, ...$this->entityManager->getRepository(Feed::class)->findAll());
+        $this->fixtures->hide($this->reader, $story);
+
+        self::assertSame([[$kept->requireId(), 2]], $this->rankedIn(TrendingWindow::Week, []));
+        self::assertSame(
+            [[$story->requireId(), 2], [$kept->requireId(), 2]],
+            $this->rankedIn(TrendingWindow::Week, [], $other),
+        );
+    }
+
+    public function testShownEntriesAndViewedReadOnlyTheWindowsMembers(): void
+    {
+        $inBoth = $this->member($this->articleFeed('alpha'));
+        $weekOnly = $this->member($this->articleFeed('beta'));
+        $story = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $inBoth, $weekOnly);
+        $this->fixtures->place(TrendingWindow::Day, $story, $inBoth);
+        $state = new EntryState($this->reader, $weekOnly);
+        $state->markViewed(new \DateTimeImmutable('2031-05-14 11:00:00'));
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
+        $userId = $this->reader->requireId();
+        $storyIds = [$story->requireId()];
+
+        self::assertSame(
+            [$story->requireId() => [$inBoth->requireId()]],
+            $this->stories()->shownEntriesByStory($userId, TrendingWindow::Day, $storyIds)->entryIdsByStory(),
+        );
+        self::assertSame(
+            [$story->requireId() => [$inBoth->requireId(), $weekOnly->requireId()]],
+            $this->stories()->shownEntriesByStory($userId, TrendingWindow::Week, $storyIds)->entryIdsByStory(),
+        );
+        self::assertSame([], $this->stories()->viewedStoryIds($userId, TrendingWindow::Day, $storyIds));
+        self::assertSame($storyIds, $this->stories()->viewedStoryIds($userId, TrendingWindow::Week, $storyIds));
+        self::assertSame([], $this->stories()->viewedStoryIds($userId, TrendingWindow::Week, []));
+    }
+
+    public function testRequireExistsRefusesAStoryThatIsGone(): void
+    {
+        $story = $this->twoFeedWeekStory();
+        $this->stories()->requireExists($story->requireId());
+
+        $this->expectException(TrendingStoryNotFoundException::class);
+
+        $this->stories()->requireExists($story->requireId() + 1);
+    }
+
+    private function twoFeedWeekStory(): TrendingStory
+    {
+        ++$this->weekStories;
+
+        return $this->fixtures->story(
+            TrendingWindow::Week,
+            \sprintf('2031-05-14 %02d:00:00', 11 - $this->weekStories),
+            $this->member($this->articleFeed('first-' . $this->weekStories)),
+            $this->member($this->articleFeed('second-' . $this->weekStories)),
+        );
+    }
+
+    /**
+     * @param list<int> $shorterWindowStoryIds
+     *
+     * @return list<array{int, int}> each ranked story with its source count
+     */
+    private function rankedIn(TrendingWindow $window, array $shorterWindowStoryIds, ?User $reader = null): array
+    {
+        $ranked = $this->stories()->rankedForUser(
+            new ReaderWindowModel(
+                ($reader ?? $this->reader)->requireId(),
+                $window,
+                TrendingWindow::MULTIPLE_SOURCES,
+                $shorterWindowStoryIds,
+            ),
+            TrendingStories::MAX_STORIES,
+        );
+
+        return array_map(
+            static fn (RankedStoryModel $story): array => [$story->storyId, $story->outletCount],
+            $ranked,
+        );
     }
 
     /** @param list<array{Feed, ?string}> $feedsAndSites */

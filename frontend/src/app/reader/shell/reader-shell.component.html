@@ -78,8 +78,10 @@
       [sharedCount]="subs.sharedCount()"
       [viewedCount]="subs.viewedCount()"
       [trendingUnopened]="subs.trendingUnopened()"
+      [followedStories]="followedStoriesStore.stories()"
       [savedSearches]="savedSearchesStore.savedSearches()"
       [activeSavedSearchId]="heading.activeSavedSearchId()"
+      [activeFollowedStoryId]="followedStory.activeId()"
       [mailEnabled]="auth.user()?.mail?.enabled ?? false"
       [digestEnabled]="digest.enabled()"
       [selection]="selection()"
@@ -157,7 +159,6 @@
   <ng-template #entryListPane>
     <section class="list" #listColumn appPageLayer>
       <app-entry-list
-        appTrendingList
         [layout]="layout.mode()"
         [title]="heading.title()"
         [titleTag]="heading.selectedTag()"
@@ -181,6 +182,7 @@
         [selection]="selection()"
         [openEntryId]="entryId()"
         [leavingIds]="entryActions.leavingIds()"
+        [newSinceVisitIds]="entries.newSinceVisitIds()"
         [feedTags]="feedTags()"
         [refreshing]="refreshSvc.running()"
         [lastRefreshed]="heading.lastRefreshed()"
@@ -335,6 +337,19 @@
     >
       <app-icon [name]="savedSearch.current() ? 'bookmark_remove' : 'bookmark_add'" size="sm" />
       <span class="txt">{{ savedSearch.actionLabel() | transloco }}</span>
+    </button>
+  }
+  @if (followedStory.viewing()) {
+    <button
+      appListAction
+      class="unfollow-story"
+      type="button"
+      [attr.aria-label]="'reader.unfollowStory' | transloco"
+      [attr.title]="'reader.unfollowStory' | transloco"
+      (click)="followedStory.unfollowOpen()"
+    >
+      <app-icon name="notifications_off" size="sm" />
+      <span class="txt">{{ 'reader.unfollowStory' | transloco }}</span>
     </button>
   }
   @if (selection().kind === 'for-you' && ai.ready()) {

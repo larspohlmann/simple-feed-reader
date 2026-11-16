@@ -17,11 +17,12 @@ final readonly class TrendingStoryCardModel
         public StoryArticlesModel $articles,
         public RankedStoryModel $story,
         public bool $viewed,
+        public bool $followed,
     ) {
     }
 
     /** @param non-empty-list<ShownRowModel> $rows the story's outlet and story-card post rows the reader can see */
-    public static function fromRows(array $rows, RankedStoryModel $story, bool $viewed): self
+    public static function fromRows(array $rows, RankedStoryModel $story, bool $viewed, bool $followed): self
     {
         $articles = self::newestFirst(array_map(self::articleOf(...), self::byArticle($rows)));
         $lead = self::leadOf($articles);
@@ -33,6 +34,7 @@ final readonly class TrendingStoryCardModel
             ))),
             $story,
             $viewed,
+            $followed,
         );
     }
 

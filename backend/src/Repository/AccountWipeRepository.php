@@ -19,7 +19,8 @@ use App\Entity\SavedSearchNetworkInclusion;
 use App\Entity\SocialAccount;
 use App\Entity\Subscription;
 use App\Entity\Tag;
-use App\Entity\TrendingHiddenEntry;
+use App\Entity\TrendingStoryFollow;
+use App\Entity\TrendingStoryHide;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -49,7 +50,8 @@ final readonly class AccountWipeRepository
     {
         $this->deleteByUser(EntryState::class, $user);
         $this->deleteByUser(EntryShare::class, $user);
-        $this->deleteByUser(TrendingHiddenEntry::class, $user);
+        $this->deleteByUser(TrendingStoryFollow::class, $user);
+        $this->deleteByUser(TrendingStoryHide::class, $user);
         // subscription_tag rows die with their subscription and tag through both join columns' ON DELETE CASCADE.
         $this->deleteByUser(Subscription::class, $user);
         $this->deleteByUser(Tag::class, $user);

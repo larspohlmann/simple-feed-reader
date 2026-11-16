@@ -29,6 +29,11 @@ final class TrendingGroupingTest extends DbTestCase
         $this->fixtures = new TrendingFixtures($this->entityManager);
     }
 
+    public function testTheRunCarriesTheWindowStartItReadFrom(): void
+    {
+        self::assertSame('2031-05-13 12:00:00', $this->collect()->since->format('Y-m-d H:i:s'));
+    }
+
     public function testAPostSharingAStoryCardTakesTheCardsHeadlineAndSite(): void
     {
         $article = $this->article();

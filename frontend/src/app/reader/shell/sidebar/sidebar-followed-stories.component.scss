@@ -1,0 +1,48 @@
+@use 'sidebar-row' as row;
+@include row.card;
+@include row.row-parts;
+@include row.section-head;
+@include row.chevron('.chevzone');
+
+:host {
+  display: contents;
+}
+
+.followed-toggle {
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.followed-list {
+  --row-h: var(--sidebar-sub-row-h);
+  --row-fs: var(--fs-dense);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0);
+}
+
+.followed-row {
+  @include row.row-geometry;
+}
+
+@include row.row-link('.nav');
+@include row.row-states('.followed-row', '.followed-row.active');
+
+.followed-row:not(.active) .nav > app-icon {
+  color: var(--text-muted);
+}
+
+.followed-row.active .nav {
+  color: var(--accent);
+}
+
+.quiet-badge {
+  flex: none;
+  padding: 0 var(--space-1);
+  color: var(--text-muted);
+  font-size: var(--fs-2xs);
+}

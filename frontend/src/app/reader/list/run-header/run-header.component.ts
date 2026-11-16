@@ -2,16 +2,15 @@ import { ChangeDetectionStrategy, Component, computed, inject, input } from '@an
 import { TranslocoPipe } from '@jsverse/transloco';
 import { relativeTime } from '../../format';
 import { LanguageService } from '../../../core/i18n/language.service';
+import { ListDividerComponent } from '../list-divider/list-divider.component';
 
-/** The run-boundary divider inside the for-you list: a quiet, non-sticky rule
- *  reading "Generated {relative}". One per older run (#348); the newest run's
- *  block shows none, because the list header's "Last refreshed" already does. */
+/** The run-boundary divider inside the for-you list, reading "Generated {relative}". One per older run
+ *  (#348); the newest run's block shows none, because the list header's "Last refreshed" already does. */
 @Component({
   selector: 'app-run-header',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslocoPipe],
+  imports: [TranslocoPipe, ListDividerComponent],
   templateUrl: './run-header.component.html',
-  styleUrl: './run-header.component.scss',
 })
 export class RunHeaderComponent {
   readonly generatedAt = input.required<string>();

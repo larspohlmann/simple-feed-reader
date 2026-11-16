@@ -5,6 +5,8 @@ import { API_BASE_URL } from '../../core/api';
 import { anEntry } from '../../../testing/entry-testing';
 import { EntriesPage } from '../models';
 import { TrendingApi } from './trending-api';
+import { FollowedStoriesResponseDto } from './trending.models';
+import { TrendingBuiltAt } from './trending-built-at';
 
 describe('TrendingApi (#2017)', () => {
   let api: TrendingApi;
@@ -34,12 +36,62 @@ describe('TrendingApi (#2017)', () => {
     expect(page).toEqual({ entries: [anEntry({ id: 9 })], nextCursor: null });
   });
 
-  it('hides a story of a window by its lead', () => {
-    api.hideStory('day', 4).subscribe();
-    const request = ctrl.expectOne('https://api.test/api/trending/hidden');
+  it("records when the window's stories were built (#2264)", () => {
+    api.page('week').subscribe();
+    ctrl
+      .expectOne((each) => each.url === 'https://api.test/api/trending')
+      .flush({ window: 'week', builtAt: '2026-11-16T07:00:00+00:00', stories: [] });
 
-    expect(request.request.method).toBe('POST');
-    expect(request.request.body).toEqual({ window: 'day', entryId: 4 });
+    expect(TestBed.inject(TrendingBuiltAt).at('week')).toBe('2026-11-16T07:00:00+00:00');
+  });
+
+  const answered = (method: string, url: string, body: unknown = null) => {
+    const request = ctrl.expectOne(`https://api.test${url}`);
+    expect([request.request.method, request.request.body]).toEqual([method, body]);
     request.flush(null, { status: 204, statusText: 'No Content' });
+  };
+
+  it('hides a story by its id (#2128)', () => {
+    api.hideStory(12).subscribe();
+
+    answered('POST', '/api/trending/hidden', { storyId: 12 });
+  });
+
+  it('follows a story by its id (#2128)', () => {
+    api.follow(12).subscribe();
+
+    answered('PUT', '/api/trending/stories/12/follow');
+  });
+
+  it('unfollows a story by its id (#2128)', () => {
+    api.unfollow(12).subscribe();
+
+    answered('DELETE', '/api/trending/stories/12/follow');
+  });
+
+  it('records that a followed story was opened (#2128)', () => {
+    api.opened(12).subscribe();
+
+    answered('POST', '/api/trending/stories/12/opened');
+  });
+
+  it("reads the reader's followed stories (#2128)", () => {
+    const followed = {
+      stories: [
+        {
+          id: 3,
+          headline: 'Storm',
+          newCount: 2,
+          quiet: false,
+          lastJoinedAt: '2026-11-16T07:00:00+00:00',
+        },
+      ],
+    };
+    let answer: FollowedStoriesResponseDto | undefined;
+    api.followed().subscribe((stories) => (answer = stories));
+    const request = ctrl.expectOne('https://api.test/api/trending/followed');
+    request.flush(followed);
+
+    expect([request.request.method, answer]).toEqual(['GET', followed]);
   });
 });

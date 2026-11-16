@@ -23,7 +23,7 @@ const story = (
     ...lead,
     source: 'Fixture lead',
     duplicates,
-    story: { outletCount, viewed, shareCount: 0 },
+    story: { id: lead.id, followed: false, outletCount, viewed, shareCount: 0 },
   });
 
 const DAY: TrendingResponseDto = {

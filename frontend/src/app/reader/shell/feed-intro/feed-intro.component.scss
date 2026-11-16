@@ -94,7 +94,7 @@
 }
 
 /* The for-you run divider, reproduced: a short uppercase label, then a 1px
-   accent rule filling the width. Zero horizontal padding, unlike `.run-header`,
+   accent rule filling the width. Zero horizontal padding, unlike `.list-divider`,
    because this block has to hold the posts' left edge. */
 .rule {
   display: flex;

@@ -24,6 +24,8 @@ import { MINI_CARD_THUMB_SIZES } from '../rendition-sizes';
 import { StorySharersComponent } from '../../trending/story-sharers/story-sharers.component';
 import { ArticleFace, articleFaceOf } from '../../trending/shared-article-card';
 import { OpenInReaderComponent } from '../../link-card/open-in-reader.component';
+import { StoryActionsComponent } from '../../trending/story-actions/story-actions.component';
+import { STORY_ICON } from '../../trending/story';
 
 let nextId = 0;
 
@@ -39,6 +41,7 @@ let nextId = 0;
     RenditionsDirective,
     StorySharersComponent,
     OpenInReaderComponent,
+    StoryActionsComponent,
   ],
   templateUrl: './more-sources.component.html',
   styleUrl: './more-sources.component.scss',
@@ -55,6 +58,7 @@ export class MoreSourcesComponent {
     this.copies().length === 1 ? 'reader.moreArticlesOne' : 'reader.moreArticles',
   );
   protected readonly thumbSizes = MINI_CARD_THUMB_SIZES;
+  protected readonly storyIcon = STORY_ICON;
   private readonly brokenThumbs = linkedSignal<readonly EntryDto[], ReadonlySet<number>>({
     source: this.copies,
     computation: () => new Set(),

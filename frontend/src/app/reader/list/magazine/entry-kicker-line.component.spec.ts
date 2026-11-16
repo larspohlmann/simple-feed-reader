@@ -3,7 +3,7 @@ import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryKickerLineComponent } from './entry-kicker-line.component';
 import { EntryDto } from '../../models';
-import { anEntry } from '../../../../testing/entry-testing';
+import { anEntry, aStory } from '../../../../testing/entry-testing';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 
@@ -125,10 +125,29 @@ describe('EntryKickerLineComponent', () => {
 
   describe('on a Trending lead (#2017)', () => {
     const lead = (viewed = false) =>
-      entry({ isHidden: false, story: { outletCount: 7, viewed, shareCount: 0 } });
+      entry({ isHidden: false, story: aStory({ outletCount: 7, viewed, shareCount: 0 }) });
 
     it('names how many feeds covered the story', () => {
       expect(mount(lead()).querySelector('.sources')?.textContent?.trim()).toBe('7 sources');
+    });
+
+    // #2271: the container query swaps the words for these in a narrow column,
+    // so the line fits beside the image in every language.
+    it('carries a compact icon-and-number form of each count, its words as the tooltip', () => {
+      const element = mount(
+        entry({ isHidden: false, story: aStory({ outletCount: 7, viewed: false, shareCount: 2 }) }),
+      );
+      const compact = [...element.querySelectorAll('.compact')].map((glyph) => ({
+        icon: glyph.querySelector('app-icon')!.textContent!.trim(),
+        count: glyph.textContent!.replace(glyph.querySelector('app-icon')!.textContent!, '').trim(),
+        title: glyph.getAttribute('title'),
+        hidden: glyph.getAttribute('aria-hidden'),
+      }));
+
+      expect(compact).toEqual([
+        { icon: 'trending_up', count: '7', title: '7 sources', hidden: 'true' },
+        { icon: 'share', count: '2', title: '2 shares', hidden: 'true' },
+      ]);
     });
 
     it('keeps the unread dot while nobody opened the story', () => {

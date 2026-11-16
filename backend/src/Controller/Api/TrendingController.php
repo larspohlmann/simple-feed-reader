@@ -40,11 +40,7 @@ final readonly class TrendingController
         #[CurrentUser] User $user,
         #[MapRequestPayload] HideTrendingStoryRequest $request,
     ): JsonResponse {
-        $this->storyHiding->hide(
-            $user->requireId(),
-            TrendingWindow::fromRequestValue($request->window),
-            $request->entryId,
-        );
+        $this->storyHiding->hide($user->requireId(), $request->storyId);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }

@@ -49,7 +49,8 @@ use App\Entity\SubscriptionDay;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
 use App\Entity\ThreadPost;
-use App\Entity\TrendingHiddenEntry;
+use App\Entity\TrendingStoryFollow;
+use App\Entity\TrendingStoryHide;
 use App\Entity\TrendingSnapshot;
 use App\Entity\TrendingStory;
 use App\Entity\TrendingStoryEntry;
@@ -205,8 +206,10 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . 'so a restore carries none.',
         DigestSettings::class => 'The email digest settings (#636): ' . self::DIGEST_BACKUP_NOT_YET_WIRED
             . ' The last-sent watermark is system-written; a restored one would only delay the next send.',
-        TrendingHiddenEntry::class => 'The Trending stories the reader hid (#2017). A hide matters only while its '
-            . 'story can trend, at most a week, and a restore regroups Trending from the restored entries.',
+        TrendingStoryFollow::class => 'The Trending stories the reader follows (#2128): story ids do not survive '
+            . 'a restore, which regroups Trending from the restored entries.',
+        TrendingStoryHide::class => 'The Trending stories the reader hid (#2128): story ids do not survive '
+            . 'a restore, which regroups Trending from the restored entries.',
     ];
 
     /**

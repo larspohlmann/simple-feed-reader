@@ -1,7 +1,10 @@
-@if (copies().length) {
+@if (copies().length || entry().story) {
   <div class="also-foot">
-    <app-icon class="layers" name="layers" size="sm" aria-hidden="true" />
-    <span class="lead">{{ label() | transloco }}</span>
+    <app-story-actions [entry]="entry()" />
+    @if (copies().length) {
+      <app-icon class="layers" [name]="icon()" size="sm" aria-hidden="true" />
+      <span class="lead">{{ label() | transloco }}</span>
+    }
     @for (item of shown(); track item.copy.id) {
       <button
         type="button"

@@ -67,7 +67,7 @@ import {
   installMockResizeObserver,
 } from '../../../testing/resize-observer-testing';
 import { LinkReaderComponent } from '../article/link-reader/link-reader.component';
-import { A_READER_TOKEN, aLinkCard, anEntry } from '../../../testing/entry-testing';
+import { A_READER_TOKEN, aLinkCard, anEntry, aStory } from '../../../testing/entry-testing';
 import { INCLUDED_EVERYWHERE } from '../tag-inclusion';
 
 describe('ReaderShellComponent', () => {
@@ -250,6 +250,7 @@ describe('ReaderShellComponent', () => {
     );
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
     ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
+    ctrl.expectOne('https://api.test/api/trending/followed').flush({ stories: [] });
     ctrl
       .expectOne('https://api.test/api/for-you/excluded-networks')
       .flush({ excludedNetworks: [] });
@@ -379,7 +380,7 @@ describe('ReaderShellComponent', () => {
     const story = () => ({
       ...entry,
       id: 77,
-      story: { outletCount: 3, viewed: false, shareCount: 0 },
+      story: aStory({ outletCount: 3, viewed: false, shareCount: 0 }),
     });
     const hideButtons = (fixture: { nativeElement: HTMLElement }) =>
       fixture.nativeElement.querySelectorAll('button[aria-label="Hide story"]');
@@ -422,7 +423,7 @@ describe('ReaderShellComponent', () => {
   });
 
   it('offers no Hide on a list that is not Trending (#2017, D40)', () => {
-    const fixture = boot({ story: { outletCount: 3, viewed: false, shareCount: 0 } });
+    const fixture = boot({ story: aStory({ outletCount: 3, viewed: false, shareCount: 0 }) });
 
     expect(fixture.nativeElement.querySelectorAll('.row, app-entry-row').length).toBeGreaterThan(0);
     expect(fixture.nativeElement.querySelectorAll('button[aria-label="Hide story"]')).toHaveLength(
@@ -483,6 +484,7 @@ describe('ReaderShellComponent', () => {
     });
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
     ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
+    ctrl.expectOne('https://api.test/api/trending/followed').flush({ stories: [] });
     ctrl
       .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [], nextCursor: null });
@@ -2918,6 +2920,7 @@ describe('ReaderShellComponent', () => {
       const currentSubscriptions = ctrl.expectOne('https://api.test/api/subscriptions');
       ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
+      ctrl.expectOne('https://api.test/api/trending/followed').flush({ stories: [] });
       ctrl
         .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [], nextCursor: null });
@@ -2990,6 +2993,7 @@ describe('ReaderShellComponent', () => {
         .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
       ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
+      ctrl.expectOne('https://api.test/api/trending/followed').flush({ stories: [] });
       ctrl
         .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [], nextCursor: null });
@@ -3274,6 +3278,7 @@ describe('ReaderShellComponent', () => {
       fixture.detectChanges();
       ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
+      ctrl.expectOne('https://api.test/api/trending/followed').flush({ stories: [] });
       ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
         status: 'none',
         batchesTotal: null,
@@ -3339,6 +3344,7 @@ describe('ReaderShellComponent', () => {
             tags: [],
             entries: [],
             savedSearches: [],
+            stories: [],
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
             trending: { window: 'day', unopened: 0 },
@@ -3391,6 +3397,7 @@ describe('ReaderShellComponent', () => {
             tags: [],
             entries: [],
             savedSearches: [],
+            stories: [],
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
             trending: { window: 'day', unopened: 0 },
@@ -3495,6 +3502,7 @@ describe('ReaderShellComponent', () => {
             tags: [],
             entries: [],
             savedSearches: [],
+            stories: [],
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
             trending: { window: 'day', unopened: 0 },
@@ -3740,12 +3748,13 @@ describe('ReaderShellComponent', () => {
       expect(host.querySelector('app-feed-intro')).toBeNull();
     });
 
-    it('shows no feed intro for the aggregated and saved views', () => {
-      for (const view of ['all', 'tag', 'search', 'favorites', 'kept', 'viewed', 'for-you']) {
+    it.each(['all', 'tag', 'search', 'favorites', 'kept', 'viewed', 'for-you'])(
+      'shows no feed intro for the %s view',
+      (view) => {
         const host = mountWithSelectionKind(view);
         expect(host.querySelector('app-feed-intro')).toBeNull();
-      }
-    });
+      },
+    );
 
     it('shows no feed intro for a feed that has none of the three values', () => {
       const host = mountWithSubscriptionSelected({

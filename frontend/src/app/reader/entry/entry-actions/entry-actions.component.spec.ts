@@ -1,4 +1,4 @@
-import { Component, forwardRef, signal } from '@angular/core';
+import { Component, forwardRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { TranslocoService } from '@jsverse/transloco';
@@ -7,11 +7,10 @@ import { EntryActionsComponent } from './entry-actions.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { EntryDto } from '../../models';
 import { EntryActionHandler } from './entry-action-handler';
-import { ENTRY_ROW_ACTION, EntryRowAction } from './entry-row-action';
 import { AudioPlayerService } from '../../audio-player.service';
 import { StubAudioPlayer } from '../../../../testing/stub-audio-player';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
-import { anEntry } from '../../../../testing/entry-testing';
+import { anEntry, aStory } from '../../../../testing/entry-testing';
 import { OpensEntryDirective } from '../../list/opens-entry.directive';
 
 /** Stand-in for the card, wired like the real ones: proves an action never reaches it. */
@@ -485,62 +484,12 @@ describe('EntryActionsComponent', () => {
     expect(fixture.componentInstance.cardOpened).toBe(false);
   });
 
-  describe("a list's own row action (#2017)", () => {
-    const ran: EntryDto[] = [];
-    const rowAction: EntryRowAction = {
-      icon: 'visibility_off',
-      label: 'reader.hideStory',
-      hint: 'reader.actionHint.hideStory',
-      run: (entry) => ran.push(entry),
-    };
-    const listAction = signal<EntryRowAction | null>(rowAction);
-    const withRowAction = (entry: EntryDto) => {
-      TestBed.configureTestingModule({
-        providers: [{ provide: ENTRY_ROW_ACTION, useValue: listAction }],
-      });
-      return mount(entry);
-    };
-    const labels = (fixture: ReturnType<typeof mount>) =>
-      buttons(fixture).map((button) => button.getAttribute('aria-label'));
+  it("offers a Trending card's story actions nowhere in the post's row (#2128)", () => {
+    const labels = buttons(mount(anEntry({ id: 7, story: aStory() }))).map((button) =>
+      button.getAttribute('aria-label'),
+    );
 
-    beforeEach(() => {
-      ran.length = 0;
-      listAction.set(rowAction);
-    });
-
-    it('is offered last', () => {
-      expect(labels(withRowAction(anEntry({ id: 7 }))).at(-1)).toBe('Hide story');
-    });
-
-    it('leaves once the list on screen has none', () => {
-      const fixture = withRowAction(anEntry({ id: 7 }));
-
-      listAction.set(null);
-      fixture.detectChanges();
-
-      expect(labels(fixture)).not.toContain('Hide story');
-    });
-
-    it('stays out where no list provides one', () => {
-      expect(labels(mount(anEntry({ id: 7 })))).not.toContain('Hide story');
-    });
-
-    it('runs without opening the card', () => {
-      const entry = anEntry({ id: 7 });
-      const fixture = withRowAction(entry);
-
-      buttons(fixture).at(-1)!.click();
-
-      expect(ran).toEqual([entry]);
-      expect(fixture.componentInstance.cardOpened).toBe(false);
-    });
-
-    it('says what it does', () => {
-      expect(
-        buttons(withRowAction(anEntry({ id: 7 })))
-          .at(-1)!
-          .getAttribute('title'),
-      ).toBe('Hide this story from Trending — it stays hidden as it grows');
-    });
+    expect(labels).not.toContain('Follow story');
+    expect(labels).not.toContain('Hide story');
   });
 });

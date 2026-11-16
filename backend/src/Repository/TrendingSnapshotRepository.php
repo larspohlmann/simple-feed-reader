@@ -4,29 +4,19 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Doctrine\BulkInsert;
 use App\Entity\TrendingSnapshot;
-use App\Enum\TrendingWindow;
-use App\Service\Curation\Trending\Model\StoryMemberModel;
 use App\Service\Curation\Trending\Model\TrendingBuildReportModel;
 use App\Service\Curation\Trending\Model\TrendingLastBuildsModel;
-use App\Service\Curation\Trending\Model\TrendingStoryModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
-use Doctrine\DBAL\Connection;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * The one writer of the Trending tables: a rebuild replaces one window's stories and its snapshot row together.
+ * The one writer of Trending's snapshot rows: each build replaces its window's.
  *
  * @extends ServiceEntityRepository<TrendingSnapshot>
  */
 final class TrendingSnapshotRepository extends ServiceEntityRepository
 {
-    /** Rows per INSERT: 4 placeholders each, kept under SQLite's historical 999. */
-    private const int INSERT_ROWS = 240;
-
-    private const int SITE_LENGTH = 255;
-
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, TrendingSnapshot::class);
@@ -41,28 +31,14 @@ final class TrendingSnapshotRepository extends ServiceEntityRepository
         $builtAt = [];
         $durations = [];
         foreach ($rows as $row) {
-            $builtAt[$row['time_window']] = new \DateTimeImmutable($row['built_at'], new \DateTimeZone('UTC'));
+            $builtAt[$row['time_window']] = NaiveUtc::parse($row['built_at']);
             $durations[$row['time_window']] = (int) $row['duration_ms'];
         }
 
         return new TrendingLastBuildsModel($builtAt, $durations);
     }
 
-    /**
-     * Deleting the window's stories cascades to their members. The caller wraps this and recordSnapshot() in one
-     * transaction, so readers keep the old snapshot until the commit (#2017).
-     *
-     * @param list<TrendingStoryModel> $stories
-     */
-    public function replaceStories(TrendingWindow $window, array $stories): void
-    {
-        $connection = $this->getEntityManager()->getConnection();
-        $connection->executeStatement('DELETE FROM trending_story WHERE time_window = ?', [$window->value]);
-        foreach ($stories as $story) {
-            $this->insertStory($connection, $window, $story);
-        }
-    }
-
+    /** The caller writes the stories and this row in one transaction, so readers keep the old ones until the commit. */
     public function recordSnapshot(TrendingBuildReportModel $report): void
     {
         $connection = $this->getEntityManager()->getConnection();
@@ -75,31 +51,5 @@ final class TrendingSnapshotRepository extends ServiceEntityRepository
             'duration_ms' => $report->durationMilliseconds,
             'peak_memory_bytes' => $report->peakMemoryBytes,
         ]);
-    }
-
-    private function insertStory(Connection $connection, TrendingWindow $window, TrendingStoryModel $story): void
-    {
-        $connection->insert('trending_story', [
-            'time_window' => $window->value,
-            'first_seen' => $story->firstSeen->format('Y-m-d H:i:s'),
-            'last_seen' => $story->lastSeen->format('Y-m-d H:i:s'),
-        ]);
-        $storyId = (int) $connection->lastInsertId();
-        BulkInsert::into(
-            'INSERT INTO trending_story_entry (story_id, entry_id, feed_id, article_site, shared_link_id)',
-            self::INSERT_ROWS,
-        )->rows(
-            $connection,
-            array_map(
-                static fn (StoryMemberModel $member): array => [
-                    $storyId,
-                    $member->entryId,
-                    $member->feedId,
-                    $member->articleSite === null ? null : mb_substr($member->articleSite, 0, self::SITE_LENGTH),
-                    $member->sharedLinkId,
-                ],
-                $story->members,
-            ),
-        );
     }
 }

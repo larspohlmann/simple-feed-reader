@@ -16,6 +16,7 @@ import { CommentsResponse } from './entry-comment';
 import {
   DiscoverResult,
   EntriesPage,
+  FollowedStoryPageDto,
   EntryQuery,
   EntryStatePatch,
   FeedPreview,
@@ -89,37 +90,18 @@ export class ReaderApi {
     return this.http.get<EntryDetailResponse>(`${this.base}/api/entries/${id}`);
   }
 
-  entries(query: EntryQuery, cursor?: string | null): Observable<EntriesPage> {
+  entries(
+    query: EntryQuery,
+    cursor?: string | null,
+  ): Observable<EntriesPage | FollowedStoryPageDto> {
     if (query.view === 'trending') {
       return this.trendingApi.page(query.window);
     }
-    const params = this.pageParams(query, cursor);
-    const context = retryingTransientGatewayErrors();
-    if (query.savedSearchId != null) {
-      return this.http.get<EntriesPage>(
-        `${this.base}/api/entries/saved-searches/${query.savedSearchId}`,
-        { params, context },
-      );
-    }
-    if (query.q) {
-      return this.http.get<EntriesPage>(`${this.base}/api/entries/search`, {
-        params: params.set('q', query.q),
-        context,
-      });
-    }
-    if (query.view === 'saved-searches') {
-      return this.http.get<EntriesPage>(`${this.base}/api/entries/saved-searches`, {
-        params,
-        context,
-      });
-    }
-    let listParams = params.set('view', query.view);
-    if (query.subscription != null) listParams = listParams.set('subscription', query.subscription);
-    if (query.tag != null) listParams = listParams.set('tag', query.tag);
-    if (query.network != null) listParams = listParams.set('network', query.network);
-    if (query.feedKind != null) listParams = listParams.set('feedKind', query.feedKind);
-    if (query.group != null) listParams = listParams.set('group', query.group);
-    return this.http.get<EntriesPage>(`${this.base}/api/entries`, { params: listParams, context });
+    const { path, params } = listRequest(query, this.pageParams(query, cursor));
+    return this.http.get<EntriesPage | FollowedStoryPageDto>(`${this.base}/api/entries${path}`, {
+      params,
+      context: retryingTransientGatewayErrors(),
+    });
   }
 
   private pageParams(query: EntryQuery, cursor?: string | null): HttpParams {
@@ -367,4 +349,28 @@ function trendingWindowParams(trendingWindow: TrendingWindow): HttpParams {
   return trendingWindow === DEFAULT_TRENDING_WINDOW
     ? params
     : params.set('trendingWindow', trendingWindow);
+}
+
+/** Which entries endpoint a list query reads, and what it adds to the page params. */
+function listRequest(query: EntryQuery, page: HttpParams): { path: string; params: HttpParams } {
+  if (query.followedStoryId != null) {
+    return { path: `/trending-stories/${query.followedStoryId}`, params: page };
+  }
+  if (query.savedSearchId != null) {
+    return { path: `/saved-searches/${query.savedSearchId}`, params: page };
+  }
+  if (query.q) return { path: '/search', params: page.set('q', query.q) };
+  if (query.view === 'saved-searches') return { path: '/saved-searches', params: page };
+  return { path: '', params: mainListParams(query, page) };
+}
+
+/** The main list's view and the feeds it is narrowed to, beside the page params. */
+function mainListParams(query: EntryQuery, params: HttpParams): HttpParams {
+  let listParams = params.set('view', query.view);
+  if (query.subscription != null) listParams = listParams.set('subscription', query.subscription);
+  if (query.tag != null) listParams = listParams.set('tag', query.tag);
+  if (query.network != null) listParams = listParams.set('network', query.network);
+  if (query.feedKind != null) listParams = listParams.set('feedKind', query.feedKind);
+  if (query.group != null) listParams = listParams.set('group', query.group);
+  return listParams;
 }

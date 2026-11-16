@@ -20,12 +20,14 @@
   gap: var(--space-1);
   min-width: 0;
   max-width: 100%;
-  padding: var(--space-1) var(--space-2);
+  position: relative;
+  padding: var(--space-0) var(--space-2);
   border: none;
   border-radius: var(--radius-pill);
   background: var(--surface-2);
   color: var(--text-secondary);
   font: inherit;
+  line-height: 1.5;
   white-space: nowrap;
   cursor: pointer;
 }
@@ -38,19 +40,29 @@
 }
 
 .sharers-more {
-  padding: var(--space-1) var(--space-2);
+  position: relative;
+  padding: var(--space-0) var(--space-2);
   border: none;
   border-radius: var(--radius-pill);
   background: none;
   color: var(--accent);
   font: inherit;
+  line-height: 1.5;
   cursor: pointer;
 }
 
+/* The pill is drawn at the source pills' size (#2271); on touch its hit area
+   reaches into the row gap, never past it, so stacked pills don't steal taps. */
 @media (pointer: coarse) {
-  .sharer,
-  .sharers-more {
-    min-height: var(--tap-target);
+  .sharers {
+    row-gap: var(--space-3);
+  }
+
+  .sharer::after,
+  .sharers-more::after {
+    content: '';
+    position: absolute;
+    inset: calc(var(--space-3) / -2) 0;
   }
 }
 
