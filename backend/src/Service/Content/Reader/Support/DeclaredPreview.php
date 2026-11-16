@@ -10,7 +10,7 @@ use App\Service\Foundation\Html\Support\MetaTags;
 use App\Service\Foundation\Url\Support\HttpsImageUrl;
 use App\Service\Ingestion\Scraper\Support\TextNormalizer;
 use App\Service\Outbound\Fetch\Pass\PageUrls;
-use App\Service\Outbound\Fetch\Support\HostKey;
+use App\Service\Outbound\Fetch\Support\LandingSite;
 use Dom\HTMLDocument;
 
 /** What a page's head says it is: its title, description, image and site, and the language it states. */
@@ -25,7 +25,7 @@ final class DeclaredPreview
             self::declared($meta, 'og:title', 'twitter:title') ?: TextNormalizer::normalize($document->title),
             self::declared($meta, 'og:description', 'twitter:description', 'description') ?: null,
             self::image($meta, $finalUrl),
-            self::declared($meta, 'og:site_name') ?: HostKey::forUrl($addressUrl),
+            self::declared($meta, 'og:site_name') ?: LandingSite::hostOf($addressUrl, $finalUrl),
             self::statedLanguage($document, $meta),
         );
     }

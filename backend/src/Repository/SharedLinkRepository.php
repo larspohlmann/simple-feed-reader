@@ -84,6 +84,14 @@ final class SharedLinkRepository extends ServiceEntityRepository
         )->rows($connection, array_map(self::rowOf(...), $links));
     }
 
+    public function renameSite(int $linkId, string $from, string $to): void
+    {
+        $this->getEntityManager()->getConnection()->executeStatement(
+            'UPDATE shared_link SET site_name = ? WHERE id = ? AND site_name = ?',
+            [$to, $linkId, $from],
+        );
+    }
+
     /**
      * Mark, then delete: a row is deleted only once it has stayed unreferenced for the grace, counted from the sweep
      * that first saw it unreferenced; a writer's claimByUrlHashes() clears the mark before it reads the row.

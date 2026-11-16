@@ -7,6 +7,7 @@ namespace App\Tests\Service\Content\LinkResolution;
 use App\Entity\LinkCardContent;
 use App\Entity\SharedLinkResolution;
 use App\Enum\LinkResolution;
+use App\Repository\SharedLinkRepository;
 use App\Repository\SharedLinkResolutionRepository;
 use App\Service\Content\LinkResolution\LinkResolutionSweep;
 use App\Service\Content\LinkResolution\Model\LinkResolutionBudgetModel;
@@ -49,6 +50,48 @@ final class LinkResolutionSweepTest extends DbTestCase
         self::assertSame(LinkResolution::Resolved, $this->stored($redirected)->getStatus());
         self::assertSame('https://www.npr.org/a', $this->stored($redirected)->getResolvedUrl());
         self::assertSame(LinkResolution::Unchanged, $this->stored($unchanged)->getStatus());
+    }
+
+    public function testAResolvedShortLinkIsNamedAfterItsLanding(): void
+    {
+        $linkId = $this->linkNamed('https://n.pr/a', 'n.pr');
+
+        $this->sweep(self::landingOnNpr())->resolvePending(LinkResolutionBudgetModel::links(5));
+
+        self::assertSame('npr.org', $this->siteNameOf($linkId));
+    }
+
+    public function testASiteNameTheNetworkSuppliedIsKept(): void
+    {
+        $linkId = $this->linkNamed('https://n.pr/a', 'NPR');
+
+        $this->sweep(self::landingOnNpr())->resolvePending(LinkResolutionBudgetModel::links(5));
+
+        self::assertSame('NPR', $this->siteNameOf($linkId));
+    }
+
+    public function testALinkThatLandsOnASubdomainOfItsOwnSiteKeepsItsName(): void
+    {
+        $linkId = $this->linkNamed('https://fsfe.org/donate', 'fsfe.org');
+
+        $this->sweep([
+            LinkLandingWiring::redirect('https://my.fsfe.org/donate'),
+            LinkLandingWiring::answer(Response::HTTP_OK),
+        ])->resolvePending(LinkResolutionBudgetModel::links(5));
+
+        self::assertSame(LinkResolution::Resolved, $this->stored($linkId)->getStatus());
+        self::assertSame('fsfe.org', $this->siteNameOf($linkId));
+    }
+
+    public function testALinkThatLandsOnItselfKeepsItsName(): void
+    {
+        $linkId = $this->linkNamed('https://n.pr/b', 'n.pr');
+
+        $this->sweep([LinkLandingWiring::answer(Response::HTTP_OK)])
+            ->resolvePending(LinkResolutionBudgetModel::links(5));
+
+        self::assertSame(LinkResolution::Unchanged, $this->stored($linkId)->getStatus());
+        self::assertSame('n.pr', $this->siteNameOf($linkId));
     }
 
     public function testTheBudgetCapsThePass(): void
@@ -183,6 +226,12 @@ final class LinkResolutionSweepTest extends DbTestCase
     }
 
     /** @return list<MockResponse> */
+    private static function landingOnNpr(): array
+    {
+        return [LinkLandingWiring::redirect('https://www.npr.org/a'), LinkLandingWiring::answer(Response::HTTP_OK)];
+    }
+
+    /** @return list<MockResponse> */
     private static function throttled(): array
     {
         return [
@@ -197,8 +246,12 @@ final class LinkResolutionSweepTest extends DbTestCase
         $linkResolutions = self::getContainer()->get(SharedLinkResolutionRepository::class);
         self::assertInstanceOf(SharedLinkResolutionRepository::class, $linkResolutions);
 
+        $sharedLinks = self::getContainer()->get(SharedLinkRepository::class);
+        self::assertInstanceOf(SharedLinkRepository::class, $sharedLinks);
+
         return new LinkResolutionSweep(
             $linkResolutions,
+            $sharedLinks,
             $this->wiring->landing($responses),
             new NaiveUtcClock($this->clock),
             $this->logger,
@@ -207,10 +260,17 @@ final class LinkResolutionSweepTest extends DbTestCase
 
     private function linkOf(string $url): int
     {
-        return SharedLinks::of(
-            $this->entityManager,
-            new LinkCardContent($url, 'Title', null, null, 'example.com'),
-        )->requireId();
+        return $this->linkNamed($url, 'example.com');
+    }
+
+    private function linkNamed(string $url, string $siteName): int
+    {
+        return SharedLinks::named($this->entityManager, $url, $siteName);
+    }
+
+    private function siteNameOf(int $linkId): mixed
+    {
+        return SharedLinks::siteNameOf($this->entityManager, $linkId);
     }
 
     private function stored(int $linkId): SharedLinkResolution

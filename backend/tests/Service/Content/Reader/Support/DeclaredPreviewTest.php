@@ -87,6 +87,13 @@ final class DeclaredPreviewTest extends TestCase
         );
     }
 
+    public function testAPageWithoutASiteNameIsNamedAfterTheHostItLandedOn(): void
+    {
+        $preview = self::preview('<html><head><title>T</title></head>', 'https://www.example.org/landing');
+
+        self::assertSame('example.org', $preview->card()->siteName);
+    }
+
     private static function preview(string $head, string $finalUrl = self::SHARED): PagePreviewModel
     {
         return DeclaredPreview::of(HtmlDocumentParser::parseOrEmpty($head), self::SHARED, $finalUrl);
