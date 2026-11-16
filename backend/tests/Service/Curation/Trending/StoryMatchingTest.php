@@ -201,6 +201,54 @@ final class StoryMatchingTest extends TestCase
         self::assertSame(1, $match->split);
     }
 
+    public function testAWeekGroupLeftWithoutItsBestStoryTakesTheNextItReaches(): void
+    {
+        $match = $this->matching()->match(
+            [self::group(1, 2, 3), self::group(4, 5)],
+            [new StoredStoryModel(7, [1, 2, 3, 4, 5]), new StoredStoryModel(9, [5, 6])],
+            TrendingWindow::Week,
+        );
+
+        self::assertSame([7, 9], self::storyIds($match));
+        self::assertSame(0, $match->split);
+    }
+
+    public function testAWeekGroupOverThreeStoriesMergesBothOthersIntoTheLargest(): void
+    {
+        $match = $this->matching()->match(
+            [self::group(1, 2, 3, 4, 5, 6)],
+            [new StoredStoryModel(11, [6]), new StoredStoryModel(9, [4, 5]), new StoredStoryModel(7, [1, 2, 3])],
+            TrendingWindow::Week,
+        );
+
+        self::assertSame([7], self::storyIds($match));
+        self::assertEquals([new StoryMergeModel(7, 9), new StoryMergeModel(7, 11)], $match->merges);
+    }
+
+    public function testASplitIsCountedOncePerGroupHoweverManyStoriesItReaches(): void
+    {
+        $match = $this->matching()->match(
+            [self::group(1, 2, 3, 4), self::group(5, 6)],
+            [new StoredStoryModel(7, [1, 2, 3, 4, 5, 6]), new StoredStoryModel(9, [3, 4])],
+            TrendingWindow::Week,
+        );
+
+        self::assertSame([7, null], self::storyIds($match));
+        self::assertEquals([new StoryMergeModel(7, 9)], $match->merges);
+        self::assertSame(1, $match->split);
+    }
+
+    public function testAGroupGoesToTheStoryItOverlapsMostBeforeTheOneItSharesMostWith(): void
+    {
+        $match = $this->matching()->match(
+            [self::group(1, 2, 3, 4, 5, 6)],
+            [new StoredStoryModel(9, [3, 4, 5, 8, 9, 10, 11, 12]), new StoredStoryModel(7, [1, 2])],
+            TrendingWindow::Day,
+        );
+
+        self::assertSame([7], self::storyIds($match));
+    }
+
     public function testDayGroupsSharingTheirBestStoryAllAttachToItAndNothingSplits(): void
     {
         $match = $this->matching()->match(
