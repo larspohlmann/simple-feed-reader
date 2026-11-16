@@ -9,16 +9,11 @@ use App\Entity\SocialNotification;
 use App\Entity\SocialNotificationPoll;
 use App\Entity\User;
 use App\Enum\SocialNotificationKind;
-use App\Repository\SocialAccountRepository;
-use App\Repository\SocialNotificationRepository;
-use App\Service\Social\Notification\NotificationSeenMarker;
 use App\Service\Social\Notification\NotificationSource\NotificationSourceInterface;
-use App\Service\Social\Social\ActingAccountGuard;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Tests\Support\ApiTestCase;
+use App\Service\Social\Notification\NotificationSource\LemmyNotificationSource;
 use App\Tests\Support\MarkingNotificationSource;
-use App\Tests\Support\NotificationPollWiring;
-use Symfony\Component\DependencyInjection\ServiceLocator;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialNotificationRows;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -178,21 +173,7 @@ final class SocialNotificationControllerTest extends ApiTestCase
 
     private function useSource(NotificationSourceInterface $source): void
     {
-        $container = self::getContainer();
-        $accounts = $container->get(SocialAccountRepository::class);
-        $notifications = $container->get(SocialNotificationRepository::class);
-        self::assertInstanceOf(SocialAccountRepository::class, $accounts);
-        self::assertInstanceOf(SocialNotificationRepository::class, $notifications);
-        $container->set(NotificationSeenMarker::class, new NotificationSeenMarker(
-            new ServiceLocator(array_map(
-                static fn (NotificationSourceInterface $source): \Closure => static fn () => $source,
-                NotificationPollWiring::allNetworks($source),
-            )),
-            new ActingAccountGuard($this->entityManager()),
-            $accounts,
-            $notifications,
-            $this->entityManager(),
-        ));
+        self::getContainer()->set(LemmyNotificationSource::class, $source);
     }
 
     /** @param array<string, mixed> $body */

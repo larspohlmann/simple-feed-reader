@@ -81,3 +81,9 @@ services:
         autowire: true
         arguments:
             $directory: '%kernel.project_dir%/tests/Fixtures/feed-directory'
+
+    # The seen-route tests swap the Lemmy source for a recording double through the container.
+    App\Service\Social\Notification\NotificationSource\LemmyNotificationSource:
+        autowire: true
+        autoconfigure: true
+        public: true
