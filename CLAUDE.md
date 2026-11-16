@@ -62,12 +62,10 @@ app logs.
 | `frontend/src/app/reader`, `settings`, `admin`, `core`, `theme` | SPA feature areas |
 | `docs/superpowers/plans/` | The implementation plans this project is built from |
 
-## PHP code style — Clean Code is mandatory
+## PHP code style — Clean Code
 
-**All PHP must follow Clean Code principles.** This is not advisory: a change that
-passes the linters but leaves unclear, oversized, or duplicated code is not done.
-
-Non-negotiables:
+All PHP follows Clean Code principles: a change that passes the linters but leaves
+unclear, oversized, or duplicated code is not done.
 
 - **Names reveal intent.** No abbreviations, no `$data`/`$info`/`$tmp`, no
   encodings — except the sanctioned role suffixes that always go with their
@@ -246,7 +244,7 @@ Enforced mechanically by `composer check` and `composer md`:
   — this repository doubles as that tool's proving ground, so a pin would report
   against stale code exactly while phptramp is being worked on. The cost is real:
   a red build here can be caused by a phptramp change with no commit in this repo
-  to explain it. Check `composer show larspohlmann/phptramp` (CI prints it above
+  to explain it. Check `composer show phptramp/phptramp` (CI prints it above
   the gate) before hunting for the cause in application code.
 - PhpStorm inspections (`mcp__phpstorm__lint_files`) on changed PHP: block on
   ERROR and WARNING; weak warnings are advisory.
@@ -259,8 +257,7 @@ Enforced mechanically by `composer check` and `composer md`:
   both fix it and make future development simpler, propose that rework to the
   user alongside the narrow patch: what it deletes, what it risks, what the
   patch would leave behind. Let the user choose; don't silently default to the
-  band-aid. (Case in point: #128 — three successive patches to the shared
-  header state lost to one layer-isolation redesign.)
+  band-aid.
 - **Hex colours are forbidden in `.scss` outside `src/app/theme/`, `src/styles/`
   and `src/styles.scss`** (Stylelint `color-no-hex`), and so are ad-hoc `px`
   spacing values and media-query literals — both fail `npm run check`.
@@ -360,7 +357,7 @@ control, not ceremony — do not "simplify" it away, and do not delete
   code under test. `tests/Support/WorkerIsolation.php` gives each token its own database
   and cache directory; `doctrine.yaml` covers the MySQL dbname. Note that a
   mutation run reads any failing test as a killed mutant, so broken isolation
-  inflates the score rather than breaking the build (it read 97% instead of 74%).
+  inflates the score rather than breaking the build.
   Prove isolation with `infection --noop`: noop mutants leave the code unchanged,
   so **every** one of them must survive. Any reported kill is a false one.
 - Frontend unit: `docker compose exec -T frontend npm test` (Jest, jsdom). Always
