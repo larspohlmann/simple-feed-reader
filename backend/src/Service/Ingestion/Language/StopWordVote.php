@@ -6,6 +6,7 @@ namespace App\Service\Ingestion\Language;
 
 use App\Enum\FeedLanguage;
 use App\Service\Foundation\Text\Support\CasefoldedWords;
+use App\Service\Foundation\Text\Support\LinkFreeText;
 use App\Service\Ingestion\Language\StopWords\StopWordsInterface;
 
 /** The language whose bundled stopwords a short text holds most, outright (#2243). */
@@ -14,8 +15,8 @@ final readonly class StopWordVote
     /** A single letter is a contraction's tail or an initial, and the French list holds nine. */
     private const int MIN_WORD_LENGTH = 2;
 
-    /** A link, a mention or a hashtag is no running text in the post's language. */
-    private const string LINK_MENTION_OR_HASHTAG = '~\bhttps?://\S+|(?<![^\s/])[^\s/]+\.\p{L}{2,}/\S*|[@#]\S+~u';
+    /** A link without its scheme, a mention or a hashtag is no running text in the post's language. */
+    private const string BARE_LINK_MENTION_OR_HASHTAG = '~(?<![^\s/])[^\s/]+\.\p{L}{2,}/\S*|[@#]\S+~u';
 
     /** An acronym is no function word: English "AI" is not French "ai". */
     private const string WORD_IN_CAPITALS = '/(?<![\p{L}\p{M}\p{N}])\p{Lu}[\p{Lu}\p{M}]+(?![\p{L}\p{M}\p{N}])/u';
@@ -47,7 +48,8 @@ final readonly class StopWordVote
     /** @return array<int, string> */
     private function votingWords(string $text): array
     {
-        $runningText = preg_replace([self::LINK_MENTION_OR_HASHTAG, self::WORD_IN_CAPITALS], ' ', $text) ?? $text;
+        $notRunningText = [self::BARE_LINK_MENTION_OR_HASHTAG, self::WORD_IN_CAPITALS];
+        $runningText = preg_replace($notRunningText, ' ', LinkFreeText::of($text)) ?? $text;
         $words = CasefoldedWords::of($runningText);
 
         return array_filter($words, static fn (string $word): bool => mb_strlen($word) >= self::MIN_WORD_LENGTH);
