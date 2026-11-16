@@ -100,7 +100,7 @@ test.describe('Sidebar on a phone', () => {
     await expect(sheet.getByRole('menuitem', { name: 'Move down' })).toBeDisabled();
 
     // Backdrop dismisses the sheet; toggling Organise off restores navigation.
-    await page.locator('.cdk-overlay-backdrop').click();
+    await page.locator('.cdk-overlay-backdrop').click({ position: { x: 10, y: 10 } });
     await expect(sheet).toBeHidden();
     await sidebar.getByRole('switch', { name: 'Organise' }).click();
     await expect(sidebar.getByRole('link', { name: /All items/ })).toBeVisible();
