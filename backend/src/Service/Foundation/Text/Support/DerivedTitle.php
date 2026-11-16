@@ -11,7 +11,6 @@ namespace App\Service\Foundation\Text\Support;
 final class DerivedTitle
 {
     private const int MAX_LENGTH = 80;
-    private const string LINK_PATTERN = '#\bhttps?://\S+#u';
     /** Punctuation, symbols and at most a short label such as Mastodon's quote-post "RE:". */
     private const string WORDLESS_PATTERN = '/^[\p{P}\p{S}\s]*+(?:\p{L}{1,3}:)?[\p{P}\p{S}\s]*+$/u';
     private const string FIRST_SENTENCE_PATTERN = '/^.+?[.!?…](?=\s|$)/u';
@@ -30,9 +29,7 @@ final class DerivedTitle
 
     private static function holdsWords(string $line): bool
     {
-        $withoutLinks = preg_replace(self::LINK_PATTERN, '', $line) ?? $line;
-
-        return preg_match(self::WORDLESS_PATTERN, $withoutLinks) !== 1;
+        return preg_match(self::WORDLESS_PATTERN, LinkFreeText::of($line)) !== 1;
     }
 
     private static function firstSentence(string $line): string

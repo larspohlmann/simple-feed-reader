@@ -9,35 +9,6 @@ use PHPUnit\Framework\TestCase;
 
 final class HeadlineStemsTest extends TestCase
 {
-    public function testWordsAreCaseFoldedAndKeepTheirDiacritics(): void
-    {
-        self::assertSame(['äpfel', 'élu'], HeadlineStems::words('Äpfel élu'));
-        self::assertSame(['über', 'die', 'strasse'], HeadlineStems::words('Über die Straße'));
-    }
-
-    public function testADecomposedDiacriticStaysInsideItsWord(): void
-    {
-        self::assertSame(['café'], HeadlineStems::words("Cafe\u{0301}"));
-    }
-
-    public function testCompatibilityCharactersBecomePlainLetters(): void
-    {
-        self::assertSame(['financial'], HeadlineStems::words('ＦＩＮＡＮＣＩＡＬ'));
-    }
-
-    public function testWordsAreSplitButNotCut(): void
-    {
-        self::assertSame(
-            ['vereinigte', 'staaten', 'états', 'unis'],
-            HeadlineStems::words('Vereinigte Staaten, États-Unis'),
-        );
-    }
-
-    public function testTextWithoutWordsHasNoWords(): void
-    {
-        self::assertSame([], HeadlineStems::words(' — !! '));
-    }
-
     public function testBareStripsDiacriticsAndFoldsCase(): void
     {
         self::assertSame('elu', HeadlineStems::bare('élu'));

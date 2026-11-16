@@ -6,6 +6,7 @@ namespace App\Service\Curation\Trending;
 
 use App\Enum\FeedLanguage;
 use App\Service\Curation\Trending\Support\HeadlineStems;
+use App\Service\Foundation\Text\Support\CasefoldedWords;
 
 /** Spellings of one institution share one stem in all four languages; never a person, event or country (#2231). */
 final readonly class HeadlineEquivalents
@@ -63,7 +64,7 @@ final readonly class HeadlineEquivalents
     public function wordsOf(string $text): array
     {
         return array_values(array_filter(
-            $this->collapsePhrases(HeadlineStems::words($this->replaceExactWords($text))),
+            $this->collapsePhrases(CasefoldedWords::of($this->replaceExactWords($text))),
             static fn (array $word): bool => HeadlineStems::isKept($word[1]),
         ));
     }

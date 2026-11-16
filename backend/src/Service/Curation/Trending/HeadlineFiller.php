@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Curation\Trending;
 
 use App\Enum\FeedLanguage;
-use App\Service\Curation\Trending\StopWords\StopWordsInterface;
 use App\Service\Curation\Trending\Support\HeadlineStems;
+use App\Service\Foundation\Text\StopWords\StopWordsInterface;
 
 final readonly class HeadlineFiller
 {

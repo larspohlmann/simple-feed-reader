@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Curation\Trending\StopWords;
+namespace App\Service\Foundation\Text\StopWords;
 
 use App\Enum\FeedLanguage;
 
