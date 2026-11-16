@@ -186,3 +186,52 @@ Every language pair (de–de, en–en, fr–fr, es–es, mixed) is therefore unc
 - Al Jazeera, BBC custom-key and derstandard URLs keep their keys from now on, so a reader sees the tracker in the
   URL; cosmetic.
 - The posted-form check now fires for fewer links (no `traffic_source`, no `ref=rss`), which only removes fetches.
+
+## Outcome (measured at a3136d921, 2026-11-16)
+
+`feedreader_2248_b` was rebuilt from `feedreader_2237_uncleaned` and migrated and cleaned by the branch's own code;
+`feedreader_2248_a` (develop 290990c6f) and its runs are the spec's. Trending is pinned at `2026-11-15 12:00:00`.
+
+**Cleanup on B**
+
+| Run | Report | Wall time | Peak RSS |
+|---|---|---|---|
+| first | 12,171 entries cleaned, 4,309 hashes changed, 896 cards cleaned, 0 card hashes changed | 30 s | 227 MB |
+| second | 0 entries cleaned, 0 hashes changed, 0 cards cleaned, 0 card hashes changed | 24 s | 85 MB |
+
+The first run is as predicted: the #2239 migration hashed the links with the narrowed lists, so no card hash moves.
+The wall time is far below the spec's prototype run (363 s); the report is identical.
+
+**Stored data, A against B** (as in Measurements)
+
+- Entries whose URL and `url_hash` differ: 2,018 (`traffic_source` 2,001, BBC custom `at_*` 17), all `en`. No French
+  or Spanish entry keeps a now-kept key (0 rows).
+- `shared_link`: 5,944 rows on each side. 2 B links carry a hash A lacks (zdfheute `?at_specific=ZDFheute`, derstandard
+  `?ref=rss`); a third keeps its `#ref=rss` fragment (Spiegel) at an unchanged hash.
+- A DB-match rule could fold 1 link (zdfheute: an entry holds its key-free hash) and 7 entries.
+- D4's "5 stored URLs keep `?ref=rss`" is 2 on this data: no entry carries `ref=rss`, and two links do (one query, one
+  fragment).
+
+**Trending**
+
+| Window | A groups / pairs | B groups / pairs | new | lost | net | B time / peak RSS |
+|---|---|---|---|---|---|---|
+| day, all | 619 / 2,253 | 619 / 2,253 | 0 | 0 | 0 | 6.9 s / 89 MB |
+| week, all | 3,820 / 20,236 | 3,820 / 20,236 | 0 | 0 | 0 | 76 s / 249 MB |
+| French-only day | 57 / 188 | 57 / 188 | 0 | 0 | 0 | 0.6 s / 65 MB |
+| French-only week | 70 / 225 | 70 / 225 | 0 | 0 | 0 | 1.3 s / 65 MB |
+| Spanish-only day | 20 / 30 | 20 / 30 | 0 | 0 | 0 | 0.6 s / 60 MB |
+| Spanish-only week | 42 / 71 | 42 / 71 | 0 | 0 | 0 | 1.5 s / 67 MB |
+
+The explain output of A and B is identical line for line in every window, so every language pair (de–de, en–en,
+fr–fr, es–es, mixed/none) is unchanged and there is no changed group to check. D8 stands: the DB-match rule stays out.
+
+**Dev dry run** (`feedreader`, read-only): `Would clean: 0 entries cleaned, 0 hashes changed, 15 cards cleaned, 0 card
+hashes changed`. Develop's code reports the same 15 cards on the same database, so they do not come from this change:
+they are link rows that still carry keys both lists strip (`utm_*`, NYT `smid`, YouTube `si`, `pk_campaign`,
+`sara_ref`, Substack `r`, `wt_mc`), stored with the hash of their clean form. The next run on dev cleans them.
+
+**Eye check** (20 URLs on B): 10 Al Jazeera entries keep their posted form, `?traffic_source=rss` and nothing else; 7
+BBC iPlayer entries lose only Piano's exact keys (`at_campaign`, `at_medium`, and `at_creation` where present) and
+keep their path, `seriesId` and the 11 custom `at_*` keys; the zdfheute, derstandard and Spiegel links keep their path and the kept key. No French or
+Spanish URL is among them, because none carries a now-kept key.
