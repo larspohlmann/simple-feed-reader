@@ -1370,6 +1370,9 @@
     "followedStories": "Gefolgte Stories",
     "toggleFollowedStories": "Gefolgte Stories ein- oder ausklappen",
     "followedStoryFallback": "Gefolgte Story",
+    "notifications": {
+      "title": "Benachrichtigungen"
+    },
     "sinceLastVisit": "Seit deinem letzten Besuch",
     "followedStoryQuiet": "ruhig",
     "followedStoryQuietHint": "Seit zwei Tagen nichts Neues",

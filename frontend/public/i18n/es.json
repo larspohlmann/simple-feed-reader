@@ -1374,6 +1374,9 @@
     "followedStories": "Noticias seguidas",
     "toggleFollowedStories": "Mostrar u ocultar las noticias seguidas",
     "followedStoryFallback": "Noticia seguida",
+    "notifications": {
+      "title": "Notificaciones"
+    },
     "sinceLastVisit": "Desde tu última visita",
     "followedStoryQuiet": "en calma",
     "followedStoryQuietHint": "Nada nuevo desde hace dos días",

@@ -7,12 +7,14 @@ import {
   listOrderOf,
 } from './query';
 
-export function queryFromSelection(selection: Selection): EntryQuery {
+/** The entry list a selection loads, or null where the pane shows no entries. */
+export function queryFromSelection(selection: Selection): EntryQuery | null {
   const query = bySelectionKind(VIEW_QUERY, selection);
+  if (query === null) return null;
   return listOrderOf(selection) === 'oldest' ? { ...query, order: 'oldest' } : query;
 }
 
-const VIEW_QUERY: BySelectionKind<EntryQuery> = {
+const VIEW_QUERY: BySelectionKind<EntryQuery | null> = {
   favorites: () => ({ view: 'favorites' }),
   kept: () => ({ view: 'kept' }),
   shared: () => ({ view: 'shared' }),
@@ -21,6 +23,7 @@ const VIEW_QUERY: BySelectionKind<EntryQuery> = {
   // feed IS the view, so the filter travels beside it (#710).
   'for-you': (selection) => unreadAsFlag({ view: 'for-you' }, selection),
   trending: (selection) => ({ view: 'trending', window: selection.window }),
+  notifications: () => null,
   tag: (selection) => ({ view: unreadAsView(selection), tag: selection.id }),
   network: (selection) => ({
     view: unreadAsView(selection),

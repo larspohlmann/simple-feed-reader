@@ -19,12 +19,13 @@ import { ListOrder, TagDto } from '../../models';
 import {
   Selection,
   SelectionKind,
-  canScopedRefresh,
   hasListOrder,
   hasUnreadFilter,
   isSingleStreamView,
   isUnreadOnly,
   listOrderOf,
+  notificationsNetworkOf,
+  offersRefresh,
 } from '../../query/query';
 import { isPhraseTerm, isWholeWordTerm } from '../../query/search-term';
 import { relativeTime, relativeTimeUntil } from '../../format';
@@ -44,6 +45,7 @@ const LIST_ICON: Record<SelectionKind, string | null> = {
   viewed: 'history',
   'for-you': 'auto_awesome',
   trending: 'trending_up',
+  notifications: null,
   'saved-searches': 'saved_search',
   'saved-search': null,
   'followed-story': 'notifications_active',
@@ -107,7 +109,7 @@ export class ListHeaderComponent {
   private readonly titleElement = viewChild<ElementRef<HTMLElement>>('listTitle');
 
   /** The refresh button is hidden in the cross-feed saved views. */
-  protected readonly canRefresh = computed(() => canScopedRefresh(this.selection()));
+  protected readonly canRefresh = computed(() => offersRefresh(this.selection()));
 
   /** Whether this list offers the All posts / only unread switch. The rule is
    *  the selection vocabulary's, not this header's — the shell asks the same
@@ -118,7 +120,7 @@ export class ListHeaderComponent {
 
   protected readonly titleNetwork = computed(() => {
     const selection = this.selection();
-    return selection.kind === 'network' ? selection.network : null;
+    return selection.kind === 'network' ? selection.network : notificationsNetworkOf(selection);
   });
 
   protected readonly hasListOrder = computed(() => hasListOrder(this.selection()));

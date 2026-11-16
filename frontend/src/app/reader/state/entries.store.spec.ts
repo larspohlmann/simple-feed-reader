@@ -84,6 +84,19 @@ describe('EntriesStore', () => {
     expect(store.entries().map((listedEntry) => listedEntry.id)).toEqual([2]);
   });
 
+  it('drops a load in flight when the selection has no entry list', () => {
+    store.load({ view: 'all' });
+    const first = ctrl.expectOne((request) => request.url === 'https://api.test/api/entries');
+
+    store.load(null);
+
+    expect(first.cancelled).toBe(true);
+    expect(store.loading()).toBe(false);
+    expect(store.nextCursor()).toBeNull();
+    store.reload();
+    ctrl.expectNone((request) => request.url === 'https://api.test/api/entries');
+  });
+
   it('reloads nothing before any list was loaded', () => {
     store.reload();
 

@@ -9,7 +9,9 @@ import {
   identityKey,
   isUnreadOnly,
   isSingleStreamView,
+  notificationsNetworkOf,
   offersMarkAboveRead,
+  offersRefresh,
   sameSelection,
   selectionFromParams,
   searchTermOf,
@@ -898,6 +900,39 @@ describe('the selection readers (#2107)', () => {
     expect(selectedSavedSearchIdOf({ kind: 'saved-search', id: 42, unread: false })).toBe(42);
     expect(selectedSavedSearchIdOf({ kind: 'saved-searches', unread: false })).toBeNull();
     expect(selectedSavedSearchIdOf({ kind: 'tag', id: 42, unread: false })).toBeNull();
+  });
+});
+
+describe('the notifications list (#2240)', () => {
+  const bluesky: Selection = { kind: 'notifications', network: 'bluesky' };
+
+  it("reads a network's notifications", () => {
+    expect(
+      selectionFromParams(pm({ view: 'notifications', network: 'bluesky' }), ON).selection,
+    ).toEqual(bluesky);
+  });
+
+  it('reads notifications without a known network as all items', () => {
+    expect(selectionFromParams(pm({ view: 'notifications' }), ON).selection.kind).toBe('all');
+    expect(
+      selectionFromParams(pm({ view: 'notifications', network: 'myspace' }), ON).selection.kind,
+    ).toBe('all');
+  });
+
+  it("tells two networks' notifications apart", () => {
+    const mastodon: Selection = { kind: 'notifications', network: 'mastodon' };
+
+    expect(identityKey(bluesky)).toBe('bluesky');
+    expect(sameSelection(bluesky, mastodon)).toBe(false);
+    expect(hasUnreadFilter(bluesky)).toBe(false);
+    expect(hasListOrder(bluesky)).toBe(false);
+    expect(canScopedRefresh(bluesky)).toBe(false);
+    expect(offersMarkAboveRead(bluesky)).toBe(false);
+    expect(isSingleStreamView(bluesky)).toBe(false);
+    expect(offersRefresh(bluesky)).toBe(true);
+    expect(listOrderKey(bluesky)).toBeNull();
+    expect(notificationsNetworkOf(bluesky)).toBe('bluesky');
+    expect(notificationsNetworkOf({ kind: 'all', unread: false })).toBeNull();
   });
 });
 

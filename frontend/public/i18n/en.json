@@ -1370,6 +1370,9 @@
     "followedStories": "Followed stories",
     "toggleFollowedStories": "Show or hide followed stories",
     "followedStoryFallback": "Followed story",
+    "notifications": {
+      "title": "Notifications"
+    },
     "sinceLastVisit": "Since your last visit",
     "followedStoryQuiet": "quiet",
     "followedStoryQuietHint": "Nothing new for two days",
