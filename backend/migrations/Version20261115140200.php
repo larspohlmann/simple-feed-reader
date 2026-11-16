@@ -20,6 +20,7 @@ use Psr\Log\LogLevel;
 final class Version20261115140200 extends AbstractMigration
 {
     private const string CARD_COLUMNS = 'url, title, description, image_url, site_name';
+    private const string SHARED_LINK_KEY = 'FK_A7530A7A8C730EC6';
 
     public function getDescription(): string
     {
@@ -28,18 +29,14 @@ final class Version20261115140200 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        $this->linkStragglers();
         $platform = $this->connection->getDatabasePlatform();
         if ($platform instanceof AbstractMySQLPlatform) {
-            $this->addSql(
-                'ALTER TABLE link_card DROP url, DROP title, DROP description, DROP image_url, DROP site_name,'
-                . ' MODIFY shared_link_id INT NOT NULL',
-            );
-            $this->addSql('ALTER TABLE entry DROP quoted_link_card');
+            $this->upMySql($schema);
 
             return;
         }
         if ($platform instanceof SQLitePlatform) {
+            $this->linkStragglers();
             $this->upSqlite();
 
             return;
@@ -93,6 +90,32 @@ final class Version20261115140200 extends AbstractMigration
     public function isTransactional(): bool
     {
         return false;
+    }
+
+    /**
+     * MySQL 8.0's copy algorithm rejects a nullability change on a foreign key column (1832, #2254), so the key is
+     * dropped in the same atomic ALTER and restored after it; a retry resumes from whichever statement did not run.
+     */
+    private function upMySql(Schema $schema): void
+    {
+        $cards = $schema->getTable('link_card');
+        $slimmed = !$cards->hasColumn('url');
+        if (!$slimmed) {
+            $this->linkStragglers();
+            $this->addSql(
+                'ALTER TABLE link_card DROP FOREIGN KEY ' . self::SHARED_LINK_KEY . ', DROP url, DROP title,'
+                . ' DROP description, DROP image_url, DROP site_name, MODIFY shared_link_id INT NOT NULL',
+            );
+        }
+        if (!$slimmed || !$cards->hasForeignKey(self::SHARED_LINK_KEY)) {
+            $this->addSql(
+                'ALTER TABLE link_card ADD CONSTRAINT ' . self::SHARED_LINK_KEY
+                . ' FOREIGN KEY (shared_link_id) REFERENCES shared_link (id)',
+            );
+        }
+        if ($schema->getTable('entry')->hasColumn('quoted_link_card')) {
+            $this->addSql('ALTER TABLE entry DROP quoted_link_card');
+        }
     }
 
     private function upSqlite(): void
