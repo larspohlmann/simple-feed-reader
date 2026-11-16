@@ -59,6 +59,12 @@ enum TrendingWindow: string
         };
     }
 
+    /** A week story that two stored stories both overlap absorbs the smaller one; a day story only attaches. */
+    public function mergesStories(): bool
+    {
+        return $this === self::Week;
+    }
+
     public function rebuildIntervalSeconds(): int
     {
         return match ($this) {
