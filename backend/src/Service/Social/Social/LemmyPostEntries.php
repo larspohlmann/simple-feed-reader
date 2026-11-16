@@ -21,6 +21,8 @@ use App\Service\Social\Completion\Model\KnownSharesModel;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Model\TimelinePageModel;
 use App\Service\Social\Social\Support\LemmyLanguageTag;
+use App\Service\Social\Social\Support\LemmySearchedPost;
+use App\Service\Social\Social\Support\SocialSearchMatch;
 
 final readonly class LemmyPostEntries
 {
@@ -31,8 +33,70 @@ final readonly class LemmyPostEntries
     /** @throws SocialNetworkUnreachableException */
     public function page(SocialAccount $account, ApiResponseModel $answer): TimelinePageModel
     {
-        $postViews = JsonNodeModel::of($answer->json())->listAt('posts')
+        $postViews = self::postViewsOf($answer);
+
+        $entries = $this->entriesOf($postViews, $account);
+
+        return TimelinePageModel::of($entries, KnownSharesModel::none(), self::newestIdOf($postViews));
+    }
+
+    /**
+     * @param list<ApiResponseModel> $answers one per asked term
+     *
+     * @throws SocialNetworkUnreachableException
+     */
+    public function searchPage(SocialAccount $account, array $answers, string $query): TimelinePageModel
+    {
+        $postViews = self::distinctPostViewsOf($answers);
+        $matches = SocialSearchMatch::matcher($query);
+        $entries = array_values(array_filter(
+            $this->entriesOf($postViews, $account),
+            static fn (ParsedEntryModel $entry): bool => $matches(
+                LemmySearchedPost::of($entry->headline->text, $entry->contentHtml, $entry->authorUrl),
+            ),
+        ));
+
+        return TimelinePageModel::of($entries, KnownSharesModel::none(), self::newestIdOf($postViews));
+    }
+
+    /**
+     * @return list<JsonNodeModel>
+     *
+     * @throws SocialNetworkUnreachableException
+     */
+    private static function postViewsOf(ApiResponseModel $answer): array
+    {
+        return JsonNodeModel::of($answer->json())->listAt('posts')
             ?? throw new SocialNetworkUnreachableException('The Lemmy instance answered without posts.');
+    }
+
+    /**
+     * @param list<ApiResponseModel> $answers
+     *
+     * @return list<JsonNodeModel> each post once, however many terms found it, newest first
+     *
+     * @throws SocialNetworkUnreachableException
+     */
+    private static function distinctPostViewsOf(array $answers): array
+    {
+        $postViewsById = [];
+        foreach ($answers as $answer) {
+            foreach (self::postViewsOf($answer) as $postView) {
+                $postViewsById[$postView->node('post')->int('id') ?? 0] ??= $postView;
+            }
+        }
+        krsort($postViewsById);
+
+        return array_values($postViewsById);
+    }
+
+    /**
+     * @param list<JsonNodeModel> $postViews
+     *
+     * @return list<ParsedEntryModel>
+     */
+    private function entriesOf(array $postViews, SocialAccount $account): array
+    {
         $homeInstance = rtrim($account->getServiceUrl(), '/');
         $entries = [];
         foreach ($postViews as $postView) {
@@ -42,7 +106,7 @@ final readonly class LemmyPostEntries
             }
         }
 
-        return TimelinePageModel::of($entries, KnownSharesModel::none(), self::newestIdOf($postViews));
+        return $entries;
     }
 
     private function entryOf(JsonNodeModel $postView, string $homeInstance): ?ParsedEntryModel

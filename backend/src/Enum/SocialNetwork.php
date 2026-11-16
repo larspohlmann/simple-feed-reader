@@ -46,14 +46,6 @@ enum SocialNetwork: string
         };
     }
 
-    public function checksSearchResults(): bool
-    {
-        return match ($this) {
-            self::Bluesky, self::Mastodon => true,
-            self::Lemmy => false,
-        };
-    }
-
     public function displayName(): string
     {
         return match ($this) {

@@ -18,7 +18,7 @@ use App\Service\Social\Social\MastodonAccountApi;
 use App\Service\Social\Social\MastodonApiClient;
 use App\Service\Social\Social\Model\TimelinePageModel;
 use App\Service\Social\Social\Support\MastodonSearchPage;
-use App\Service\Social\Social\Support\MastodonSearchQueries;
+use App\Service\Social\Social\Support\NetworkSearchQueries;
 use App\Service\Social\Social\Support\MastodonTimelinePage;
 use App\Service\Social\Social\Support\PrivateFeedRules;
 use App\Service\Social\Social\Support\SocialSearchPaths;
@@ -75,7 +75,7 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
     private static function searchPathsOf(SocialFeed $socialFeed): array
     {
         try {
-            $queries = MastodonSearchQueries::of($socialFeed->getRemoteId());
+            $queries = NetworkSearchQueries::of(SocialNetwork::Mastodon, $socialFeed->getRemoteId());
         } catch (SearchQueryTooBroadException $tooBroad) {
             throw new SocialNetworkUnreachableException($tooBroad->getMessage(), previous: $tooBroad);
         }

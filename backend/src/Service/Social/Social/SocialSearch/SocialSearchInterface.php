@@ -15,7 +15,7 @@ use App\Service\Social\Social\Model\TimelinePageModel;
 interface SocialSearchInterface
 {
     /**
-     * @throws SearchQueryTooBroadException when Mastodon cannot run the query
+     * @throws SearchQueryTooBroadException when the network cannot run the query
      * @throws SocialAccountNeedsReconnectException
      * @throws SocialCredentialsRejectedException once the account is marked as needing a reconnect
      * @throws SocialNetworkThrottledException

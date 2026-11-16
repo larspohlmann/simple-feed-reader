@@ -344,19 +344,39 @@ describe('SocialSearchFormComponent', () => {
     expect(bluesky).not.toContain('at most 8');
   });
 
-  it('shows Lemmy one plain rule, no combined example and no Mastodon notes', () => {
-    const fixture = mount('lemmy');
-    const syntax = byTestId(fixture, 'social-search-syntax');
+  it.each(['rss reader', '"rss reader"', 'rss || atom', '-gazette', '-from:handle', '( … )'])(
+    'lists the operator %s on Lemmy',
+    (operator) => {
+      const rules = byTestId(mount('lemmy'), 'social-search-syntax')?.querySelector('.rules');
 
-    expect(syntax?.querySelectorAll('.rules dt')).toHaveLength(1);
-    expect(syntax?.querySelector('.rules')?.textContent).toContain('rss reader');
-    expect(syntax?.querySelector('.rules')?.textContent).toContain(
-      'plain words; matches post titles and bodies',
+      expect(rules?.textContent).toContain(operator);
+    },
+  );
+
+  it('shows Lemmy the combined and operator examples', () => {
+    const fixture = mount('lemmy');
+    const combined = byTestId(fixture, 'social-search-combined');
+
+    expect(combined?.querySelector('code')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      '("rss reader" || "feed reader" || rssreader) -gazette',
     );
-    expect(byTestId(fixture, 'social-search-combined')).toBeNull();
-    expect(syntax?.querySelector('.note')).toBeNull();
     expect((fixture.nativeElement as HTMLElement).querySelector('.example code')?.textContent).toBe(
-      'rss reader',
+      '"rss reader" -gazette',
     );
+  });
+
+  it('tells a Lemmy search about its alternatives and its matching, without the Mastodon note', () => {
+    const syntax = byTestId(mount('lemmy'), 'social-search-syntax')?.textContent ?? '';
+
+    expect(syntax).toContain('Lemmy has no ||');
+    expect(syntax).toContain('Every alternative needs at least one word');
+    expect(syntax).not.toContain('full-text search');
+  });
+
+  it('names Mastodon in its alternatives note and leaves out the Lemmy note', () => {
+    const syntax = byTestId(mount('mastodon'), 'social-search-syntax')?.textContent ?? '';
+
+    expect(syntax).toContain('Mastodon has no ||');
+    expect(syntax).not.toContain('Every alternative needs at least one word');
   });
 });

@@ -64,7 +64,7 @@ final readonly class SocialProblems implements ExceptionProblemsInterface
             )),
             $exception instanceof SearchQueryTooBroadException => new ResolvedProblem(new ApiProblem(
                 'social_search_too_broad',
-                'Search too broad for Mastodon',
+                'Search too broad',
                 Response::HTTP_UNPROCESSABLE_ENTITY,
                 $exception->getMessage(),
             )),

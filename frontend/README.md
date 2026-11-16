@@ -48,10 +48,11 @@ node_modules-volume refresh and the npm-11 pin.
 ## The gate
 
 ```bash
-npm run check
+docker compose exec -T frontend npm run check   # from the repo root
 ```
 
-Runs the full quality gate, the same one CI runs:
+Runs the full quality gate, the same one CI runs, inside the Docker frontend
+container — run it, and `npm test`, there rather than natively:
 
 - **ESLint** (`npm run lint`) — TypeScript + Angular template rules.
 - **Prettier** (`npm run format:check`) — formatting. `npm run format` rewrites.
