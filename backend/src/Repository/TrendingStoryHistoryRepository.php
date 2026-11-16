@@ -25,8 +25,8 @@ use Doctrine\ORM\EntityManagerInterface;
  *     article_site: string|null,
  *     shared_link_id: int|string|null,
  *     joined_at: string,
- *     in_day: bool|int|string,
- *     in_week: bool|int|string,
+ *     in_day: int|string,
+ *     in_week: int|string,
  * }
  * @phpstan-type FollowRow array{followed_at: string, last_opened_at: string}
  */
@@ -62,7 +62,7 @@ final readonly class TrendingStoryHistoryRepository
         return array_map(
             static fn (int $storyId, array $entryIds): StoredStoryModel => new StoredStoryModel($storyId, $entryIds),
             array_keys($entryIdsByStory),
-            array_values($entryIdsByStory),
+            $entryIdsByStory,
         );
     }
 
@@ -118,12 +118,12 @@ final readonly class TrendingStoryHistoryRepository
                 $moving[] = [
                     $merge->survivorId,
                     $entryId,
-                    (int) $member['feed_id'],
+                    $member['feed_id'],
                     $member['article_site'],
-                    $member['shared_link_id'] === null ? null : (int) $member['shared_link_id'],
+                    $member['shared_link_id'],
                     $member['joined_at'],
-                    (int) $member['in_day'],
-                    (int) $member['in_week'],
+                    $member['in_day'],
+                    $member['in_week'],
                 ];
                 continue;
             }
@@ -194,7 +194,7 @@ final readonly class TrendingStoryHistoryRepository
         )->rows(
             $connection,
             array_map(
-                static fn (array $hide): array => [(int) $hide['user_id'], $merge->survivorId, $hide['hidden_at']],
+                static fn (array $hide): array => [$hide['user_id'], $merge->survivorId, $hide['hidden_at']],
                 $hides,
             ),
         );
@@ -245,16 +245,15 @@ final readonly class TrendingStoryHistoryRepository
             'UPDATE trending_story SET'
             . ' first_seen = CASE WHEN first_seen < :firstSeen THEN first_seen ELSE :firstSeen END,'
             . ' last_seen = CASE WHEN last_seen > :lastSeen THEN last_seen ELSE :lastSeen END,'
-            . ' last_joined_at = CASE WHEN :joins = 1 THEN :builtAt ELSE last_joined_at END'
+            . ' last_joined_at = COALESCE(:lastJoinedAt, last_joined_at)'
             . ' WHERE id = :story',
             [
                 'firstSeen' => self::stored($assignment->group->firstSeen),
                 'lastSeen' => self::stored($assignment->group->lastSeen),
-                'joins' => $assignment->joining() === [] ? 0 : 1,
-                'builtAt' => self::stored($builtAt),
+                'lastJoinedAt' => $assignment->joining() === [] ? null : self::stored($builtAt),
                 'story' => $storyId,
             ],
-            ['joins' => ParameterType::INTEGER, 'story' => ParameterType::INTEGER],
+            ['story' => ParameterType::INTEGER],
         );
     }
 

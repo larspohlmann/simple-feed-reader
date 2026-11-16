@@ -104,6 +104,7 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
         $this->fixtures->follow($other, $merged, '2031-05-14 05:00:00');
         $this->fixtures->hide($hider, $survivor);
         $this->fixtures->hide($hider, $merged);
+        $this->fixtures->follow($hider, $merged, '2031-05-14 04:00:00');
 
         $this->history()->merge(new StoryMergeModel($survivor->requireId(), $merged->requireId()));
 
@@ -111,6 +112,7 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
             [
                 [$reader->requireId(), $survivor->requireId(), '2031-05-13 06:00:00', '2031-05-14 08:00:00'],
                 [$other->requireId(), $survivor->requireId(), '2031-05-14 05:00:00', '2031-05-14 05:00:00'],
+                [$hider->requireId(), $survivor->requireId(), '2031-05-14 04:00:00', '2031-05-14 04:00:00'],
             ],
             $this->follows(),
         );
@@ -157,6 +159,23 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
         );
     }
 
+    public function testStoredInWindowOrdersStoriesAndTheirMembersByIdWhateverOrderTheyJoinedIn(): void
+    {
+        [$one, $two, $three] = $this->entries(3);
+        $earlier = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $three);
+        $later = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $two);
+        $this->fixtures->join($later, '2031-05-14 11:00:00', $one);
+        $this->fixtures->join($earlier, '2031-05-14 11:00:00', $one);
+
+        self::assertEquals(
+            [
+                new StoredStoryModel($earlier->requireId(), [$one->requireId(), $three->requireId()]),
+                new StoredStoryModel($later->requireId(), [$one->requireId(), $two->requireId()]),
+            ],
+            $this->history()->storedInWindow(self::utc('2031-05-14 00:00:00')),
+        );
+    }
+
     public function testANewStoryJoinsItsMembersAtTheBuildAndPlacesThemInItsWindowOnly(): void
     {
         [$one, $two] = $this->entryIds(2);
@@ -200,6 +219,8 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
             [[$one, 'kept.example'], [$two, null]],
         );
         $this->clearFlags();
+        $bystander = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $three);
+        $this->clearFlags();
 
         $this->history()->save(
             new StoryAssignmentModel(
@@ -215,13 +236,18 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
                 [$story->requireId(), $one->requireId(), '2031-05-14 10:00:00', 1, 0],
                 [$story->requireId(), $two->requireId(), '2031-05-14 10:00:00', 1, 0],
                 [$story->requireId(), $three->requireId(), self::BUILT_AT, 1, 0],
+                [$bystander->requireId(), $three->requireId(), '2031-05-14 10:00:00', 0, 0],
             ],
             $this->members(),
         );
-        self::assertSame(['kept.example', null, 'rewritten.example'], $this->sites());
+        self::assertSame(['kept.example', null, 'rewritten.example', null], $this->sites());
         self::assertSame(
             ['first_joined_at' => '2031-05-14 10:00:00', 'last_joined_at' => self::BUILT_AT],
             $this->joinTimes($story),
+        );
+        self::assertSame(
+            ['first_joined_at' => '2031-05-14 10:00:00', 'last_joined_at' => '2031-05-14 10:00:00'],
+            $this->joinTimes($bystander),
         );
     }
 
@@ -408,7 +434,7 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
     public function testEachMemberKeepsItsArticleSiteCutToTheColumn(): void
     {
         [$one, $two, $three] = $this->entryIds(3);
-        $longSite = str_repeat('a', 250) . '.example';
+        $longSite = str_repeat('ä', 250) . '.example';
 
         $this->saveNew(TrendingWindow::Day, new TrendingStoryModel(
             [
@@ -608,7 +634,7 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
     {
         /** @var list<string|null> $sites */
         $sites = $this->entityManager->getConnection()
-            ->fetchFirstColumn('SELECT article_site FROM trending_story_entry ORDER BY entry_id');
+            ->fetchFirstColumn('SELECT article_site FROM trending_story_entry ORDER BY story_id, entry_id');
 
         return $sites;
     }
