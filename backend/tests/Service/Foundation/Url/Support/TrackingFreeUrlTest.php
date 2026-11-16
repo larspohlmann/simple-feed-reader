@@ -12,7 +12,7 @@ use PHPUnit\Framework\TestCase;
 
 final class TrackingFreeUrlTest extends TestCase
 {
-    /** Never stripped, on any host: gift and gift-like keys, and the keys #2248 ruled out. */
+    /** Never stripped, on any host: gift and gift-like keys. */
     private const array NEVER_STRIPPED_KEYS = [
         'unlocked_article_code', 'gift', 'pwapi_token', 'accesstoken', 'sharetype', 'gifttoken',
         'giftcode', 'gift_token', 'share_token', 'access_token',
@@ -73,7 +73,7 @@ final class TrackingFreeUrlTest extends TestCase
         yield 'a share key on a host that only ends like its own' => ['https://notyoutube.com/?si=1'];
         yield 'a share key on a host that only contains its own' => ['https://youtube.com.example.org/?si=1'];
         yield 'a key that only starts like a piano, mapp or matomo key' => [
-            'https://example.com/a?at_bbc_team=x&wt_zmc=y&mtm_foo=z',
+            'https://example.com/a?at_foo=x&wt_zmc=y&mtm_foo=z',
         ];
         yield 'a marketo token' => ['https://example.com/unsubscribe?mkt_tok=abc'];
     }
@@ -195,19 +195,12 @@ final class TrackingFreeUrlTest extends TestCase
         self::assertSame($url, TrackingFreeUrl::of($url));
     }
 
-    /** @return iterable<string, array{string, string}> */
-    public static function vendorKeysBesideCustomKeys(): iterable
+    public function testOnlyTheVendorsExactKeyGoes(): void
     {
-        yield 'a piano key beside a custom key' => [
-            'https://www.bbc.com/news/a?at_medium=RSS&at_bbc_team=x',
+        self::assertSame(
             'https://www.bbc.com/news/a?at_bbc_team=x',
-        ];
-    }
-
-    #[DataProvider('vendorKeysBesideCustomKeys')]
-    public function testOnlyTheVendorsExactKeyGoes(string $url, string $expected): void
-    {
-        self::assertSame($expected, TrackingFreeUrl::of($url));
+            TrackingFreeUrl::of('https://www.bbc.com/news/a?at_medium=RSS&at_bbc_team=x'),
+        );
     }
 
     /** @return iterable<string, array{string, string}> */
@@ -339,7 +332,7 @@ final class TrackingFreeUrlTest extends TestCase
         yield 'a pair that does not track' => ['a=b'];
         yield 'a tracking key without a value' => ['utm_source'];
         yield 'an empty fragment' => [''];
-        yield 'a custom piano key' => ['at_bbc_team=x'];
+        yield 'a custom piano key' => ['at_foo=x'];
     }
 
     #[DataProvider('navigationFragments')]
@@ -445,6 +438,7 @@ final class TrackingFreeUrlTest extends TestCase
             'https://example.com/a?id=5&amp;utm_medium=rss',
             'https://example.com/a?utm_source=x&',
             'HTTPS://Example.COM:443/A?utm_source=x#top',
+            'https://www.bbc.com/news/a?at_medium=RSS&at_bbc_team=x',
         ];
         $providers = [
             self::contentUrls(),
@@ -456,7 +450,6 @@ final class TrackingFreeUrlTest extends TestCase
             self::hostScopedTrackers(),
             self::feedMarkers(),
             self::giftLinks(),
-            self::vendorKeysBesideCustomKeys(),
             self::keysWithAnotherValue(),
         ];
         foreach ($providers as $examples) {
