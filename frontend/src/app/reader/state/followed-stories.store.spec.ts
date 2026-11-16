@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { Subject, of, throwError } from 'rxjs';
-import { FollowedStoryDto } from '../trending/trending.models';
+import { FollowedStoriesResponseDto, FollowedStoryDto } from '../trending/trending.models';
 import { TrendingApi } from '../trending/trending-api';
 import { FollowedStoriesStore } from './followed-stories.store';
 import { SIDEBAR_RELOAD_INTERVAL_MS } from './sidebar-freshness';
@@ -14,6 +14,10 @@ describe('FollowedStoriesStore (#2128)', () => {
     lastJoinedAt: '2026-11-16T10:00:00+00:00',
   });
   const rows = [story(3, 2), story(5, 0)];
+  const reply = (stories: FollowedStoryDto[]): FollowedStoriesResponseDto => ({
+    stories,
+    nextBuildDueAt: null,
+  });
 
   function setup(api: Partial<TrendingApi>): FollowedStoriesStore {
     TestBed.configureTestingModule({
@@ -22,7 +26,7 @@ describe('FollowedStoriesStore (#2128)', () => {
     return TestBed.inject(FollowedStoriesStore);
   }
 
-  const answering = (stories: FollowedStoryDto[] = rows) => jest.fn(() => of({ stories }));
+  const answering = (stories: FollowedStoryDto[] = rows) => jest.fn(() => of(reply(stories)));
 
   beforeEach(() => jest.useFakeTimers({ now: new Date('2026-11-16T12:00:00Z') }));
   afterEach(() => jest.useRealTimers());
@@ -75,7 +79,7 @@ describe('FollowedStoriesStore (#2128)', () => {
     });
 
     it('does not stack a request on one that is still out', () => {
-      const response = new Subject<{ stories: FollowedStoryDto[] }>();
+      const response = new Subject<FollowedStoriesResponseDto>();
       const followed = jest.fn(() => response);
       const store = setup({ followed });
       store.load();
@@ -90,7 +94,7 @@ describe('FollowedStoriesStore (#2128)', () => {
       const followed = jest
         .fn()
         .mockReturnValueOnce(throwError(() => new Error('down')))
-        .mockReturnValue(of({ stories: rows }));
+        .mockReturnValue(of(reply(rows)));
       const store = setup({ followed });
       store.load();
 
@@ -102,10 +106,57 @@ describe('FollowedStoriesStore (#2128)', () => {
     });
   });
 
+  describe('the next build', () => {
+    const FIVE_MINUTES_MS = 5 * 60 * 1000;
+    const dueIn = (milliseconds: number) =>
+      new Date(Date.now() + milliseconds).toISOString().replace('Z', '+00:00');
+
+    it('skips a stale tick until the next build is due', () => {
+      const followed = jest.fn(() =>
+        of({ ...reply(rows), nextBuildDueAt: dueIn(FIVE_MINUTES_MS) }),
+      );
+      const store = setup({ followed });
+      store.load();
+
+      jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
+      store.reloadIfStale();
+      expect(followed).toHaveBeenCalledTimes(1);
+
+      jest.advanceTimersByTime(FIVE_MINUTES_MS - SIDEBAR_RELOAD_INTERVAL_MS);
+      store.reloadIfStale();
+      expect(followed).toHaveBeenCalledTimes(2);
+    });
+
+    it('polls every stale tick while no build time is known', () => {
+      const followed = answering();
+      const store = setup({ followed });
+      store.load();
+
+      jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
+      store.reloadIfStale();
+      jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
+      store.reloadIfStale();
+
+      expect(followed).toHaveBeenCalledTimes(3);
+    });
+
+    it('still loads on demand before the next build is due', () => {
+      const followed = jest.fn(() =>
+        of({ ...reply(rows), nextBuildDueAt: dueIn(FIVE_MINUTES_MS) }),
+      );
+      const store = setup({ followed });
+      store.load();
+
+      store.load();
+
+      expect(followed).toHaveBeenCalledTimes(2);
+    });
+  });
+
   it('keeps the last stories when a load fails', () => {
     const followed = jest
       .fn()
-      .mockReturnValueOnce(of({ stories: rows }))
+      .mockReturnValueOnce(of(reply(rows)))
       .mockReturnValue(throwError(() => new Error('down')));
     const store = setup({ followed });
     store.load();
@@ -154,17 +205,17 @@ describe('FollowedStoriesStore (#2128)', () => {
     });
 
     it('posts for a story opened before the stories have loaded, and asks again once that load answers', () => {
-      const pending = new Subject<{ stories: FollowedStoryDto[] }>();
+      const pending = new Subject<FollowedStoriesResponseDto>();
       const followed = jest
         .fn()
         .mockReturnValueOnce(pending)
-        .mockReturnValue(of({ stories: [story(3, 0), rows[1]] }));
+        .mockReturnValue(of(reply([story(3, 0), rows[1]])));
       const opened = jest.fn(() => of(undefined));
       const store = setup({ followed, opened });
       store.load();
 
       store.markOpened(3);
-      pending.next({ stories: rows });
+      pending.next(reply(rows));
 
       expect(opened).toHaveBeenCalledWith(3);
       expect(followed).toHaveBeenCalledTimes(2);
@@ -174,12 +225,12 @@ describe('FollowedStoriesStore (#2128)', () => {
 
   describe('a load already out when the reader acts', () => {
     function loadStillOut(afterwards: FollowedStoryDto[], api: Partial<TrendingApi>) {
-      const stale = new Subject<{ stories: FollowedStoryDto[] }>();
+      const stale = new Subject<FollowedStoriesResponseDto>();
       const followed = jest
         .fn()
-        .mockReturnValueOnce(of({ stories: rows }))
+        .mockReturnValueOnce(of(reply(rows)))
         .mockReturnValueOnce(stale)
-        .mockReturnValue(of({ stories: afterwards }));
+        .mockReturnValue(of(reply(afterwards)));
       const store = setup({ followed, ...api });
       store.load();
       jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
@@ -193,18 +244,18 @@ describe('FollowedStoriesStore (#2128)', () => {
       });
 
       store.markOpened(3);
-      stale.next({ stories: rows });
+      stale.next(reply(rows));
 
       expect(store.byId(3)?.newCount).toBe(0);
     });
 
     it('drops an answer sent after the open but before its POST answered', () => {
-      const sentMeanwhile = new Subject<{ stories: FollowedStoryDto[] }>();
+      const sentMeanwhile = new Subject<FollowedStoriesResponseDto>();
       const followed = jest
         .fn()
-        .mockReturnValueOnce(of({ stories: rows }))
+        .mockReturnValueOnce(of(reply(rows)))
         .mockReturnValueOnce(sentMeanwhile)
-        .mockReturnValue(of({ stories: [story(3, 0), rows[1]] }));
+        .mockReturnValue(of(reply([story(3, 0), rows[1]])));
       const posted = new Subject<void>();
       const store = setup({ followed, opened: () => posted });
       store.load();
@@ -212,7 +263,7 @@ describe('FollowedStoriesStore (#2128)', () => {
       store.load();
 
       posted.next();
-      sentMeanwhile.next({ stories: rows });
+      sentMeanwhile.next(reply(rows));
 
       expect(followed).toHaveBeenCalledTimes(3);
       expect(store.byId(3)?.newCount).toBe(0);
@@ -222,14 +273,14 @@ describe('FollowedStoriesStore (#2128)', () => {
       const { store, stale } = loadStillOut([rows[1]], { unfollow: () => of(undefined) });
 
       store.unfollow(3);
-      stale.next({ stories: rows });
+      stale.next(reply(rows));
 
       expect(store.stories().map((story) => story.id)).toEqual([5]);
     });
 
     it('takes the server count again once a later load has answered', () => {
       const answers = [rows, rows, [story(3, 6), rows[1]]];
-      const followed = jest.fn(() => of({ stories: answers.shift() ?? [] }));
+      const followed = jest.fn(() => of(reply(answers.shift() ?? [])));
       const store = setup({ followed, opened: () => of(undefined) });
       store.load();
       store.markOpened(3);
@@ -252,7 +303,7 @@ describe('FollowedStoriesStore (#2128)', () => {
 
   it('keeps the same list when a load answers what it already holds', () => {
     const store = setup({
-      followed: jest.fn(() => of({ stories: rows.map((row) => ({ ...row })) })),
+      followed: jest.fn(() => of(reply(rows.map((row) => ({ ...row }))))),
     });
     store.load();
     const held = store.stories();

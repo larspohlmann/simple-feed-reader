@@ -7,12 +7,14 @@ import { SubscriptionReload } from './subscription-reload.service';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { EntriesStore } from '../../state/entries.store';
+import { FollowedStoriesStore } from '../../state/followed-stories.store';
 
 describe('SubscriptionReload', () => {
   let reload: SubscriptionReload;
   let reloadSubscriptions: jest.SpyInstance;
   let reloadSavedSearches: jest.SpyInstance;
   let reloadIfShowing: jest.SpyInstance;
+  let loadFollowedStories: jest.SpyInstance;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -32,6 +34,9 @@ describe('SubscriptionReload', () => {
       .mockImplementation(() => undefined);
     reloadIfShowing = jest
       .spyOn(TestBed.inject(EntriesStore), 'reloadIfShowing')
+      .mockImplementation(() => undefined);
+    loadFollowedStories = jest
+      .spyOn(TestBed.inject(FollowedStoriesStore), 'load')
       .mockImplementation(() => undefined);
   });
 
@@ -58,5 +63,17 @@ describe('SubscriptionReload', () => {
     expect(reloadIfShowing).toHaveBeenCalledTimes(1);
     expect(reloadIfShowing).toHaveBeenCalledWith('trending');
     expect(reloadSavedSearches).not.toHaveBeenCalled();
+  });
+
+  it("reloads the followed stories after a feed's Trending switch", () => {
+    reload.afterWrite(['trending']);
+
+    expect(loadFollowedStories).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves the followed stories alone when the write left Trending alone', () => {
+    reload.afterWrite(['allItems', 'forYou', 'savedSearches']);
+
+    expect(loadFollowedStories).not.toHaveBeenCalled();
   });
 });

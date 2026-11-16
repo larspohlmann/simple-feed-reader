@@ -31,4 +31,5 @@ export interface FollowedStoryDto {
 
 export interface FollowedStoriesResponseDto {
   stories: FollowedStoryDto[];
+  nextBuildDueAt: string | null;
 }

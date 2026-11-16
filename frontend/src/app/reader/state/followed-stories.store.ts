@@ -18,9 +18,13 @@ export class FollowedStoriesStore {
   private readonly loads = new StaleGatedLoad();
   /** Bumped by every change made here: a load sent before one predates it, so its answer is dropped. */
   private localChanges = 0;
+  private nextBuildDueAt: number | null = null;
 
   constructor() {
-    onIdentityChange(() => this.loads.forget());
+    onIdentityChange(() => {
+      this.loads.forget();
+      this.nextBuildDueAt = null;
+    });
   }
 
   byId(id: number): FollowedStoryDto | null {
@@ -36,11 +40,18 @@ export class FollowedStoriesStore {
         return;
       }
       this.followed.set(response.stories);
+      this.nextBuildDueAt =
+        response.nextBuildDueAt === null ? null : Date.parse(response.nextBuildDueAt);
     });
   }
 
+  /** Stories only change when Trending rebuilds, so a stale tick waits for the next build the server named. */
   reloadIfStale(): void {
-    if (this.loads.isStale()) this.load();
+    if (this.loads.isStale() && this.buildIsDue()) this.load();
+  }
+
+  private buildIsDue(): boolean {
+    return this.nextBuildDueAt === null || Date.now() >= this.nextBuildDueAt;
   }
 
   unfollow(id: number, onSuccess?: () => void): void {
