@@ -1,15 +1,20 @@
 import { signal } from '@angular/core';
+import { of } from 'rxjs';
 import { TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { anEntry, aStory } from '../../../../testing/entry-testing';
 import { EntryDto } from '../../models';
+import { FollowedStoriesStore } from '../../state/followed-stories.store';
+import { TrendingApi } from '../trending-api';
+import { TrendingStory } from '../trending.models';
 import { STORY_ACTIONS, StoryActions } from './story-actions';
 import { StoryActionsComponent } from './story-actions.component';
 
 describe('StoryActionsComponent (#2128)', () => {
   const follow = jest.fn();
   const hide = jest.fn();
-  const provided = signal<StoryActions | null>({ follow, hide });
+  const isFollowed = (story: TrendingStory) => story.followed;
+  const provided = signal<StoryActions | null>({ follow, hide, isFollowed });
 
   const mount = (entry: EntryDto) => {
     TestBed.configureTestingModule({
@@ -30,7 +35,7 @@ describe('StoryActionsComponent (#2128)', () => {
   beforeEach(() => {
     follow.mockReset();
     hide.mockReset();
-    provided.set({ follow, hide });
+    provided.set({ follow, hide, isFollowed });
   });
 
   it('groups Follow before Hide under the story', () => {
@@ -59,6 +64,30 @@ describe('StoryActionsComponent (#2128)', () => {
     expect(toggle.getAttribute('title')).toBe('Stop following this story');
     expect(glyph(toggle).textContent!.trim()).toBe('notifications_active');
     expect(glyph(toggle).classList.contains('filled')).toBe(true);
+  });
+
+  it('unfollowing from the sidebar unfollows the card', () => {
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: TrendingApi,
+          useValue: {
+            followed: () => of({ stories: [], nextBuildDueAt: null }),
+            unfollow: () => of(undefined),
+          },
+        },
+      ],
+    });
+    const followedStories = () => TestBed.inject(FollowedStoriesStore);
+    provided.set({ follow, hide, isFollowed: (story) => followedStories().isFollowed(story) });
+    const element = mount(card(true));
+
+    followedStories().unfollow(12);
+    TestBed.tick();
+
+    const [toggle] = buttons(element);
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    expect(glyph(toggle).textContent!.trim()).toBe('notification_add');
   });
 
   it('leaves Hide unmarked, since it is no toggle', () => {

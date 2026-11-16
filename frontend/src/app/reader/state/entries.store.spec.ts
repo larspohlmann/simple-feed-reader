@@ -1347,11 +1347,7 @@ describe('EntriesStore', () => {
     const card = (id: number, followed = false) =>
       entry(id, { story: aStory({ id: id * 10, followed }) });
     const listed = () => store.entries().map((row) => row.id);
-    const followedOnScreen = (id: number) =>
-      store.entries().find((row) => row.id === id)?.story?.followed;
     const hideRequest = () => ctrl.expectOne('https://api.test/api/trending/hidden');
-    const followRequest = (storyId: number) =>
-      ctrl.expectOne(`https://api.test/api/trending/stories/${storyId}/follow`);
     const failed = { status: 500, statusText: 'err' };
     const problem = { type: 'x', title: 't', status: 500 };
     const noContent = { status: 204, statusText: 'No Content' };
@@ -1408,100 +1404,6 @@ describe('EntriesStore', () => {
         expect(onStarted).toHaveBeenCalledTimes(2);
         hideRequest().flush(null, noContent);
         expect(store.error()).toBeNull();
-      });
-    });
-
-    describe('following it', () => {
-      it('shows the story followed at once and reports once the server took it', () => {
-        loadThree();
-        const onStarted = jest.fn();
-        const onSaved = jest.fn();
-
-        store.setStoryFollowed(1, true, { onStarted, onSaved });
-
-        expect(onStarted).toHaveBeenCalledTimes(1);
-        expect(followedOnScreen(1)).toBe(true);
-        const request = followRequest(10);
-        expect(request.request.method).toBe('PUT');
-        expect(onSaved).not.toHaveBeenCalled();
-        request.flush(null, noContent);
-        expect(onSaved).toHaveBeenCalledTimes(1);
-        expect(followedOnScreen(1)).toBe(true);
-      });
-
-      it('unfollows with a DELETE', () => {
-        loadThree();
-
-        store.setStoryFollowed(2, false, {});
-
-        expect(followedOnScreen(2)).toBe(false);
-        const request = followRequest(20);
-        expect(request.request.method).toBe('DELETE');
-        request.flush(null, noContent);
-      });
-
-      it('puts the story back, shows the banner and follows again on retry when the request fails', () => {
-        loadThree();
-        const onStarted = jest.fn();
-        const onFailed = jest.fn();
-
-        store.setStoryFollowed(1, true, { onStarted, onFailed });
-        followRequest(10).flush(problem, failed);
-
-        expect(followedOnScreen(1)).toBe(false);
-        expect(onFailed).toHaveBeenCalledTimes(1);
-        expect(store.error()).not.toBeNull();
-
-        store.retry();
-        expect(onStarted).toHaveBeenCalledTimes(2);
-        expect(followedOnScreen(1)).toBe(true);
-        followRequest(10).flush(null, noContent);
-        expect(store.error()).toBeNull();
-      });
-
-      it('leaves the other cards alone', () => {
-        loadThree();
-
-        store.setStoryFollowed(1, true, {});
-        followRequest(10).flush(null, noContent);
-
-        expect([followedOnScreen(2), followedOnScreen(3)]).toEqual([true, false]);
-      });
-
-      it('sends nothing for a row that carries no story', () => {
-        store.load({ view: 'all' });
-        ctrl
-          .expectOne((request) => request.url === 'https://api.test/api/entries')
-          .flush({ entries: [entry(1)], nextCursor: null });
-        const onStarted = jest.fn();
-
-        store.setStoryFollowed(1, true, { onStarted });
-
-        expect(onStarted).not.toHaveBeenCalled();
-        ctrl.expectNone('https://api.test/api/trending/stories/10/follow');
-      });
-
-      it('shows a story unfollowed elsewhere as unfollowed on its cards, with no request', () => {
-        loadThree();
-
-        store.markStoryUnfollowedLocally(20);
-
-        expect([followedOnScreen(1), followedOnScreen(2), followedOnScreen(3)]).toEqual([
-          false,
-          false,
-          false,
-        ]);
-        ctrl.expectNone(() => true);
-      });
-
-      it('sends nothing while the same story is still on the wire', () => {
-        loadThree();
-
-        store.setStoryFollowed(1, true, {});
-        store.setStoryFollowed(1, false, {});
-
-        followRequest(10).flush(null, noContent);
-        expect(followedOnScreen(1)).toBe(true);
       });
     });
   });

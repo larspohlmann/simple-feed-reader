@@ -23,6 +23,6 @@ export class StoryActionsComponent {
     const story = this.entry().story;
     const actions = this.provided?.();
     if (!story || !actions) return null;
-    return { story, actions };
+    return { followed: actions.isFollowed(story), actions };
   });
 }

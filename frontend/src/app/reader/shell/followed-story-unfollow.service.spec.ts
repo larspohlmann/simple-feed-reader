@@ -13,7 +13,6 @@ describe('FollowedStoryUnfollow (#2128)', () => {
   let navigate: jest.Mock;
   let unfollow: jest.Mock;
   let load: jest.Mock;
-  let markStoryUnfollowedLocally: jest.Mock;
   let dismissError: jest.Mock;
   let error: ReturnType<typeof signal<Problem | null>>;
   let selection: ReturnType<typeof signal<Selection>>;
@@ -24,7 +23,6 @@ describe('FollowedStoryUnfollow (#2128)', () => {
       if (succeeds) onSuccess?.();
     });
     load = jest.fn();
-    markStoryUnfollowedLocally = jest.fn();
     dismissError = jest.fn();
     error = signal<Problem | null>(null);
     selection = signal<Selection>(onScreen);
@@ -34,7 +32,7 @@ describe('FollowedStoryUnfollow (#2128)', () => {
         { provide: Router, useValue: { navigate } },
         { provide: ReaderRouteState, useValue: { selection } },
         { provide: FollowedStoriesStore, useValue: { unfollow, load } },
-        { provide: EntriesStore, useValue: { error, markStoryUnfollowedLocally, dismissError } },
+        { provide: EntriesStore, useValue: { error, dismissError } },
       ],
     });
     return TestBed.inject(FollowedStoryUnfollow);
@@ -66,7 +64,6 @@ describe('FollowedStoryUnfollow (#2128)', () => {
       setup({ kind: 'followed-story', id: 42 }, false).unfollowOpen();
 
       expect(navigate).not.toHaveBeenCalled();
-      expect(markStoryUnfollowedLocally).not.toHaveBeenCalled();
     });
 
     it('does nothing off a followed story', () => {
@@ -77,10 +74,10 @@ describe('FollowedStoryUnfollow (#2128)', () => {
   });
 
   describe('unfollowing from anywhere', () => {
-    it('shows the story unfollowed on the cards on screen', () => {
+    it('stays on Trending', () => {
       setup({ kind: 'trending', window: 'day' }).unfollow(7);
 
-      expect(markStoryUnfollowedLocally).toHaveBeenCalledWith(7);
+      expect(unfollow).toHaveBeenCalledWith(7, expect.any(Function));
       expect(navigate).not.toHaveBeenCalled();
     });
 

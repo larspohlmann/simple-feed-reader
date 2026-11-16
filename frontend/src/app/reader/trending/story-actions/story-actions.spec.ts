@@ -1,7 +1,8 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { anEntry } from '../../../../testing/entry-testing';
+import { anEntry, aStory } from '../../../../testing/entry-testing';
 import { SelectionKind } from '../../query/query';
+import { FollowedStoriesStore } from '../../state/followed-stories.store';
 import { ReaderRouteState } from '../../shell/reader-route-state.service';
 import { TrendingFollowAction } from '../trending-follow-action';
 import { TrendingHideAction } from '../trending-hide-action';
@@ -10,6 +11,7 @@ import { STORY_ACTIONS, provideTrendingStoryActions } from './story-actions';
 describe('provideTrendingStoryActions (#2272)', () => {
   const follow = { run: jest.fn() };
   const hide = { run: jest.fn() };
+  const followedStories = { isFollowed: jest.fn(() => true) };
   const selection = signal<{ kind: SelectionKind }>({ kind: 'trending' });
 
   beforeEach(() => {
@@ -22,6 +24,7 @@ describe('provideTrendingStoryActions (#2272)', () => {
         provideTrendingStoryActions(),
         { provide: TrendingFollowAction, useValue: follow },
         { provide: TrendingHideAction, useValue: hide },
+        { provide: FollowedStoriesStore, useValue: followedStories },
       ],
     });
   });
@@ -43,5 +46,12 @@ describe('provideTrendingStoryActions (#2272)', () => {
 
     expect(follow.run).toHaveBeenCalledWith(entry);
     expect(hide.run).toHaveBeenCalledWith(entry);
+  });
+
+  it('asks the followed stories whether a story is followed', () => {
+    const story = aStory({ id: 12, followed: false });
+
+    expect(TestBed.inject(STORY_ACTIONS)()!.isFollowed(story)).toBe(true);
+    expect(followedStories.isFollowed).toHaveBeenCalledWith(story);
   });
 });

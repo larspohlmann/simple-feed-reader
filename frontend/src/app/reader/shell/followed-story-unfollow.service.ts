@@ -35,7 +35,6 @@ export class FollowedStoryUnfollow {
 
   unfollow(id: number): void {
     this.followedStories.unfollow(id, () => {
-      this.entries.markStoryUnfollowedLocally(id);
       if (this.activeId() === id) void this.router.navigate(['/'], TRENDING);
     });
   }

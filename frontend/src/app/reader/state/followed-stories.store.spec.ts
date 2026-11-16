@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { Subject, of, throwError } from 'rxjs';
 import { FollowedStoriesResponseDto, FollowedStoryDto } from '../trending/trending.models';
 import { TrendingApi } from '../trending/trending-api';
+import { aStory } from '../../../testing/entry-testing';
 import { FollowedStoriesStore } from './followed-stories.store';
 import { SIDEBAR_RELOAD_INTERVAL_MS } from './sidebar-freshness';
 
@@ -313,16 +314,119 @@ describe('FollowedStoriesStore (#2128)', () => {
     expect(store.stories()).toBe(held);
   });
 
-  describe('removeUnfollowed()', () => {
-    it('drops the row without asking the server', () => {
-      const followed = answering();
-      const store = setup({ followed });
+  describe('isFollowed() and setFollowing() (#2272)', () => {
+    const card = (id: number, followed = false) => aStory({ id, followed });
+
+    it("shows the card's own flag until the followed list has answered", () => {
+      const pending = new Subject<FollowedStoriesResponseDto>();
+      const store = setup({ followed: () => pending });
       store.load();
 
-      store.removeUnfollowed(3);
+      expect([store.isFollowed(card(3, false)), store.isFollowed(card(7, true))]).toEqual([
+        false,
+        true,
+      ]);
+      pending.next(reply(rows));
+      expect([store.isFollowed(card(3, false)), store.isFollowed(card(7, true))]).toEqual([
+        true,
+        false,
+      ]);
+    });
 
-      expect(store.stories()).toEqual([rows[1]]);
-      expect(followed).toHaveBeenCalledTimes(1);
+    it('shows a follow at once and keeps it until the reload lists the story', () => {
+      const put = new Subject<void>();
+      const reload = new Subject<FollowedStoriesResponseDto>();
+      const followed = jest
+        .fn()
+        .mockReturnValueOnce(of(reply(rows)))
+        .mockReturnValueOnce(reload)
+        .mockReturnValue(of(reply(rows)));
+      const store = setup({ followed, follow: jest.fn(() => put) });
+      store.load();
+
+      store.setFollowing(7, true).subscribe();
+      expect(store.isFollowed(card(7))).toBe(true);
+      put.next();
+      put.complete();
+      expect(followed).toHaveBeenCalledTimes(2);
+      expect(store.isFollowed(card(7))).toBe(true);
+
+      reload.next(reply([...rows, story(7)]));
+      expect(store.isFollowed(card(7))).toBe(true);
+      store.load();
+      expect(store.isFollowed(card(7))).toBe(false);
+    });
+
+    it('drops an answer sent while the follow was on the wire', () => {
+      const put = new Subject<void>();
+      const sentMeanwhile = new Subject<FollowedStoriesResponseDto>();
+      const followed = jest
+        .fn()
+        .mockReturnValueOnce(of(reply(rows)))
+        .mockReturnValueOnce(sentMeanwhile)
+        .mockReturnValue(of(reply([...rows, story(7)])));
+      const store = setup({ followed, follow: () => put });
+      store.load();
+      store.setFollowing(7, true).subscribe();
+      store.load();
+
+      put.next();
+      sentMeanwhile.next(reply(rows));
+
+      expect(store.isFollowed(card(7))).toBe(true);
+      expect(store.byId(7)).not.toBeNull();
+    });
+
+    it('puts a failed follow back', () => {
+      const store = setup({
+        followed: answering(),
+        follow: () => throwError(() => new Error('down')),
+      });
+      store.load();
+      const failed = jest.fn();
+
+      store.setFollowing(7, true).subscribe({ error: failed });
+
+      expect(failed).toHaveBeenCalledTimes(1);
+      expect(store.isFollowed(card(7))).toBe(false);
+    });
+
+    it('unfollows at once and drops the row once the server took it', () => {
+      const removed = new Subject<void>();
+      const store = setup({ followed: answering(), unfollow: jest.fn(() => removed) });
+      store.load();
+
+      store.setFollowing(3, false).subscribe();
+      expect(store.isFollowed(card(3, true))).toBe(false);
+      expect(store.byId(3)).not.toBeNull();
+      removed.next();
+
+      expect(store.byId(3)).toBeNull();
+      expect(store.isFollowed(card(3, true))).toBe(false);
+    });
+
+    it('ignores a second click while the first follow is on the wire', () => {
+      const follow = jest.fn(() => new Subject<void>());
+      const unfollow = jest.fn(() => of(undefined));
+      const store = setup({ followed: answering(), follow, unfollow });
+      store.load();
+
+      store.setFollowing(7, true).subscribe();
+      store.setFollowing(7, false).subscribe();
+      store.unfollow(7);
+
+      expect(follow).toHaveBeenCalledTimes(1);
+      expect(unfollow).not.toHaveBeenCalled();
+      expect(store.isFollowed(card(7))).toBe(true);
+    });
+
+    it('sends nothing until it is subscribed to', () => {
+      const follow = jest.fn(() => of(undefined));
+      const store = setup({ followed: answering(), follow });
+
+      void store.setFollowing(7, true);
+
+      expect(follow).not.toHaveBeenCalled();
     });
   });
 

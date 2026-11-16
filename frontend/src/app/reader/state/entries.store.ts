@@ -287,47 +287,18 @@ export class EntriesStore {
     this.patchEntries([id], (entry) => (entry.isShared ? entry : { ...entry, isShared: true }));
   }
 
-  /** Reflects an unfollow made away from the cards, as from the sidebar (#2128); no request. */
-  markStoryUnfollowedLocally(storyId: number): void {
-    const cards = this.rawEntries().filter((row) => row.story?.id === storyId);
-    this.patchEntries(
-      cards.map((card) => card.id),
-      (entry) => (entry.story ? { ...entry, story: { ...entry.story, followed: false } } : entry),
-    );
-  }
-
   /** Hides a card's story (#2017, #2128); the card stays in the list, so the caller can let it leave in
    *  place (#2066). A failure shows the banner and its retry. */
   hideTrendingStory(entryId: number, outcome: StateSaveOutcome = {}): void {
     const story = this.entry(entryId)?.story;
     if (!story) return;
-    this.reportedMutation(this.trendingApi.hideStory(story.id), outcome, () =>
+    this.runReported(this.trendingApi.hideStory(story.id), outcome, () =>
       this.hideTrendingStory(entryId, outcome),
     );
   }
 
-  /** Optimistic follow of a card's story (#2128); dropped while one is on the wire, put back with the
-   *  banner and its retry when it fails. */
-  setStoryFollowed(entryId: number, followed: boolean, outcome: StateSaveOutcome = {}): void {
-    const row = this.entry(entryId);
-    const story = row?.story;
-    if (!row || !story || this.inFlight.onTheWire(entryId, 'story')) return;
-    const request$ = followed
-      ? this.trendingApi.follow(story.id)
-      : this.trendingApi.unfollow(story.id);
-    this.reportedMutation(
-      this.optimistic(row, { story: { ...story, followed } }, request$),
-      outcome,
-      () => this.setStoryFollowed(entryId, followed, outcome),
-    );
-  }
-
   /** Clears the banner and runs `request$`; a failure shows the banner with `retry` behind it. */
-  private reportedMutation<T>(
-    request$: Observable<T>,
-    outcome: StateSaveOutcome,
-    retry: () => void,
-  ): void {
+  runReported<T>(request$: Observable<T>, outcome: StateSaveOutcome, retry: () => void): void {
     this.failure.clear();
     outcome.onStarted?.();
     request$.subscribe({

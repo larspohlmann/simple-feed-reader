@@ -1,26 +1,23 @@
 @if (actions(); as shown) {
-  @let story = shown.story;
+  @let followed = shown.followed;
   <span class="story-actions" role="group" [attr.aria-label]="'reader.storyActions' | transloco">
     <button
       type="button"
       appIconButton
       class="boxed round"
-      [appFlagToggle]="story.followed"
-      [attr.aria-label]="
-        (story.followed ? 'reader.unfollowStory' : 'reader.followStory') | transloco
-      "
+      [appFlagToggle]="followed"
+      [attr.aria-label]="(followed ? 'reader.unfollowStory' : 'reader.followStory') | transloco"
       [attr.title]="
-        (story.followed ? 'reader.actionHint.unfollowStory' : 'reader.actionHint.followStory')
-          | transloco
+        (followed ? 'reader.actionHint.unfollowStory' : 'reader.actionHint.followStory') | transloco
       "
       (click)="$event.stopPropagation(); shown.actions.follow(entry())"
       (keydown.enter)="$event.stopPropagation()"
       (keydown.space)="$event.stopPropagation()"
     >
       <app-icon
-        [name]="story.followed ? 'notifications_active' : 'notification_add'"
+        [name]="followed ? 'notifications_active' : 'notification_add'"
         size="sm"
-        [fill]="story.followed"
+        [fill]="followed"
       />
     </button>
     <button
