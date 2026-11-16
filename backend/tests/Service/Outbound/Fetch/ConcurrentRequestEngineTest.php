@@ -26,6 +26,7 @@ use App\Tests\Support\GzipBomb;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\ScriptedSettler;
 use App\Tests\Support\StaticDnsResolver;
+use App\Tests\Support\StreamTimeoutRecordingClient;
 use App\Tests\Support\TaggedItemOf;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
@@ -88,6 +89,67 @@ final class ConcurrentRequestEngineTest extends TestCase
     private static function outcomeOf(ConcurrentRequestEngine $engine, RequestTicketModel $ticket): FetchOutcomeModel
     {
         return iterator_to_array($engine->sendAll([1 => $ticket], new PassThroughSettler()))[1];
+    }
+
+    public function testARequestGoesOutWithTheStandardTimeouts(): void
+    {
+        $seenOptions = [];
+        $client = new MockHttpClient(static function (string $method, string $url, array $options) use (&$seenOptions) {
+            $seenOptions = $options;
+
+            return new MockResponse('{}');
+        });
+
+        $this->onlyAnswer($client);
+
+        self::assertSame(10.0, $seenOptions['timeout']);
+        self::assertSame(20.0, $seenOptions['max_duration']);
+    }
+
+    public function testAPatientRequestGoesOutWithItsOwnTimeouts(): void
+    {
+        $seenOptions = [];
+        $client = new MockHttpClient(static function (string $method, string $url, array $options) use (&$seenOptions) {
+            $seenOptions = $options;
+
+            return new MockResponse('{}');
+        });
+        $patient = RequestTicketModel::api(
+            ApiRequestModel::get(self::API)->waitingUpTo(25.0),
+            [new FixedKeySlot('account-1', 3)],
+        );
+
+        self::outcomeOf($this->engine($client), $patient);
+
+        self::assertSame(25.0, $seenOptions['timeout']);
+        self::assertSame(50.0, $seenOptions['max_duration']);
+    }
+
+    public function testTheStreamWaitsAsLongAsItsMostPatientRequest(): void
+    {
+        $client = new StreamTimeoutRecordingClient(new MockHttpClient(
+            static fn (): MockResponse => new MockResponse('{}'),
+        ));
+        $patient = RequestTicketModel::api(
+            ApiRequestModel::get(self::OTHER)->waitingUpTo(25.0),
+            [new FixedKeySlot('account-2', 3)],
+        );
+
+        $tickets = [1 => self::ticket(), 2 => $patient];
+        iterator_to_array($this->engine($client)->sendAll($tickets, new PassThroughSettler()));
+
+        self::assertSame([25.0, 25.0], $client->streamTimeouts);
+    }
+
+    public function testTheStreamWaitsTheStandardTimeForStandardRequests(): void
+    {
+        $client = new StreamTimeoutRecordingClient(new MockHttpClient(
+            static fn (): MockResponse => new MockResponse('{}'),
+        ));
+
+        $this->onlyAnswer($client);
+
+        self::assertSame([10.0], $client->streamTimeouts);
     }
 
     public function testAnErrorStatusIsAnAnswerWithItsBodyAndHeaders(): void

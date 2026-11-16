@@ -18,6 +18,7 @@ use App\Tests\Support\SocialApiWiring;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -222,6 +223,21 @@ final class NetworkSocialSearchTest extends TestCase
         );
         self::assertSame([self::LEMMY_WORD_SEARCH], $http->requestLines());
         self::assertContains('Authorization: Bearer ' . SocialAccounts::LEMMY_JWT, $http->requests[0]['headers']);
+    }
+
+    public function testALemmySearchPreviewWaitsLongerForItsAnswer(): void
+    {
+        $seenOptions = [];
+        $http = new MockHttpClient(static function (string $method, string $url, array $options) use (&$seenOptions) {
+            $seenOptions = $options;
+
+            return self::lemmyAnswer([]);
+        });
+
+        $this->search($http)->newest(SocialApiWiring::lemmyAccount(), 'post');
+
+        self::assertSame(25.0, $seenOptions['timeout']);
+        self::assertSame(50.0, $seenOptions['max_duration']);
     }
 
     public function testALemmySearchPreviewAsksEachAlternative(): void

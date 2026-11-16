@@ -87,10 +87,7 @@ final readonly class NetworkSocialSearch implements SocialSearchInterface
         return $this->answers(
             $account,
             array_map(
-                fn (string $term): ApiRequestModel => $this->lemmy->authorizedGet(
-                    $account,
-                    SocialSearchPaths::lemmy($term),
-                ),
+                fn (string $term): ApiRequestModel => $this->lemmy->searchGet($account, $term),
                 NetworkSearchQueries::of(SocialNetwork::Lemmy, $query),
             ),
             static fn (FetchOutcomeModel $outcome): ApiResponseModel => LemmyApiClient::accepted(

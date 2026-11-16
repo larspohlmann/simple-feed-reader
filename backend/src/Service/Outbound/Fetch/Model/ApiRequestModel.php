@@ -17,6 +17,7 @@ final readonly class ApiRequestModel
         public array $headers,
         public ?array $json,
         public ?string $body,
+        public float $timeoutSeconds = ApiBudgetModel::STANDARD_TIMEOUT_SECONDS,
     ) {
     }
 
@@ -57,5 +58,11 @@ final readonly class ApiRequestModel
     public function withHeaders(array $headers): self
     {
         return clone($this, ['headers' => [...$this->headers, ...$headers]]);
+    }
+
+    #[\NoDiscard]
+    public function waitingUpTo(float $timeoutSeconds): self
+    {
+        return clone($this, ['timeoutSeconds' => $timeoutSeconds]);
     }
 }
