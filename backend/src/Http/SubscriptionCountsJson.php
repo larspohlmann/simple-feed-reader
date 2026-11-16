@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
+use App\Enum\SocialNetwork;
 use App\Service\Library\Subscription\Model\SubscriptionTalliesModel;
 
 /**
@@ -17,6 +18,7 @@ final class SubscriptionCountsJson
      *   subscriptions: list<array{id: int, unreadCount: int, entryCount: int}>,
      *   favoritesCount: int, keptCount: int, sharedCount: int, viewedCount: int,
      *   trending: array{window: string, unopened: int},
+     *   notifications: list<array{network: string, unseenCount: int}>,
      *   unreadTotals: array{
      *     allItems: int,
      *     forYou: int,
@@ -43,6 +45,7 @@ final class SubscriptionCountsJson
      * @return array{
      *   favoritesCount: int, keptCount: int, sharedCount: int, viewedCount: int,
      *   trending: array{window: string, unopened: int},
+     *   notifications: list<array{network: string, unseenCount: int}>,
      *   unreadTotals: array{
      *     allItems: int,
      *     forYou: int,
@@ -60,6 +63,23 @@ final class SubscriptionCountsJson
             'viewedCount' => $tallies->flagCounts['viewed'],
             'trending' => TrendingUnopenedJson::from($tallies->trending),
             'unreadTotals' => UnreadTotalsJson::from($tallies->unreadTotals),
+            'notifications' => self::notificationCounts($tallies->notificationsUnseen),
         ];
+    }
+
+    /**
+     * @param array<string, int> $unseenByNetwork
+     * @return list<array{network: string, unseenCount: int}>
+     */
+    private static function notificationCounts(array $unseenByNetwork): array
+    {
+        $counts = [];
+        foreach (SocialNetwork::cases() as $network) {
+            if (isset($unseenByNetwork[$network->value])) {
+                $counts[] = ['network' => $network->value, 'unseenCount' => $unseenByNetwork[$network->value]];
+            }
+        }
+
+        return $counts;
     }
 }

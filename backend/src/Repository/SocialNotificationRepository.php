@@ -6,11 +6,19 @@ namespace App\Repository;
 
 use App\Entity\SocialAccount;
 use App\Entity\SocialNotification;
+use App\Entity\User;
+use App\Enum\SocialNetwork;
+use App\Enum\SocialNotificationKind;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
+ * @phpstan-type GroupRow array{
+ *     accountId: int|string, kind: SocialNotificationKind, groupKey: string,
+ *     seen: bool|int|string, latestId: int|string, rowCount: int|string
+ * }
  * @extends ServiceEntityRepository<SocialNotification>
  */
 final class SocialNotificationRepository extends ServiceEntityRepository
@@ -72,5 +80,144 @@ final class SocialNotificationRepository extends ServiceEntityRepository
             ->execute();
 
         return $deleted;
+    }
+
+    /**
+     * @param list<int> $accountIds
+     * @return list<array{accountId: int, kind: string, groupKey: string, seen: bool, latestId: int, count: int}>
+     *         newest group first, one more than $limit when a further page exists
+     */
+    public function pageOfGroups(array $accountIds, ?int $before, int $limit): array
+    {
+        if ($accountIds === []) {
+            return [];
+        }
+
+        $qb = $this->groupedQuery()
+            ->andWhere('notification.socialAccount IN (:accountIds)')
+            ->setParameter('accountIds', $accountIds)
+            ->orderBy('latestId', 'DESC')
+            ->setMaxResults($limit + 1);
+        if ($before !== null) {
+            $qb->having('MAX(notification.id) < :before')->setParameter('before', $before);
+        }
+
+        /** @var list<GroupRow> $rows */
+        $rows = $qb->getQuery()->getResult();
+
+        return array_map(self::groupRow(...), $rows);
+    }
+
+    /**
+     * @param list<array{accountId: int, kind: string, groupKey: string, seen: bool, latestId: int, count: int}> $groups
+     * @return array<int, list<SocialNotification>> latestId => the group's newest rows, newest first
+     */
+    public function newestOfGroups(array $groups, int $perGroup): array
+    {
+        $newest = [];
+        foreach ($groups as $group) {
+            $newest[$group['latestId']] = $this->newestOfGroup($group, $perGroup);
+        }
+
+        return $newest;
+    }
+
+    /** @return array<string, int> network value => unseen groups; networks without any are absent */
+    public function countUnseenGroups(User $user): array
+    {
+        /** @var list<array{network: SocialNetwork}> $rows */
+        $rows = $this->groupedQuery()
+            ->addSelect('account.network AS network')
+            ->join('notification.socialAccount', 'account')
+            ->andWhere('account.user = :user')
+            ->andWhere('notification.seen = false')
+            ->addGroupBy('account.network')
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->getResult();
+
+        $counts = [];
+        foreach ($rows as $row) {
+            $network = $row['network']->value;
+            $counts[$network] = ($counts[$network] ?? 0) + 1;
+        }
+
+        return $counts;
+    }
+
+    private function groupedQuery(): QueryBuilder
+    {
+        return $this->createQueryBuilder('notification')
+            ->select('IDENTITY(notification.socialAccount) AS accountId')
+            ->addSelect('notification.kind AS kind')
+            ->addSelect('notification.seen AS seen')
+            ->addSelect(
+                'CASE WHEN notification.kind IN (:groupingKinds) THEN notification.subject.groupKey'
+                . ' ELSE notification.remoteId END AS groupKey',
+            )
+            ->addSelect('MAX(notification.id) AS latestId')
+            ->addSelect('COUNT(notification.id) AS rowCount')
+            ->groupBy('accountId')
+            ->addGroupBy('kind')
+            ->addGroupBy('seen')
+            ->addGroupBy('groupKey')
+            ->setParameter('groupingKinds', self::groupingKinds());
+    }
+
+    /** @return list<string> */
+    private static function groupingKinds(): array
+    {
+        return array_values(array_map(
+            static fn (SocialNotificationKind $kind): string => $kind->value,
+            array_filter(
+                SocialNotificationKind::cases(),
+                static fn (SocialNotificationKind $kind): bool => $kind->groups(),
+            ),
+        ));
+    }
+
+    /**
+     * @param GroupRow $row
+     * @return array{accountId: int, kind: string, groupKey: string, seen: bool, latestId: int, count: int}
+     */
+    private static function groupRow(array $row): array
+    {
+        return [
+            'accountId' => (int) $row['accountId'],
+            'kind' => $row['kind']->value,
+            'groupKey' => $row['groupKey'],
+            'seen' => (bool) $row['seen'],
+            'latestId' => (int) $row['latestId'],
+            'count' => (int) $row['rowCount'],
+        ];
+    }
+
+    /**
+     * @param array{accountId: int, kind: string, groupKey: string, seen: bool, latestId: int, count: int} $group
+     * @return list<SocialNotification>
+     */
+    private function newestOfGroup(array $group, int $perGroup): array
+    {
+        $kind = SocialNotificationKind::from($group['kind']);
+        $qb = $this->createQueryBuilder('notification')
+            ->andWhere('notification.socialAccount = :account')
+            ->andWhere('notification.kind = :kind')
+            ->andWhere('notification.seen = :seen')
+            ->andWhere('notification.id <= :latestId')
+            ->setParameter('account', $group['accountId'])
+            ->setParameter('kind', $kind)
+            ->setParameter('seen', $group['seen'])
+            ->setParameter('latestId', $group['latestId'])
+            ->setParameter('groupKey', $group['groupKey'])
+            ->orderBy('notification.id', 'DESC')
+            ->setMaxResults($perGroup);
+        $qb->andWhere(
+            $kind->groups() ? 'notification.subject.groupKey = :groupKey' : 'notification.remoteId = :groupKey',
+        );
+
+        /** @var list<SocialNotification> $rows */
+        $rows = $qb->getQuery()->getResult();
+
+        return $rows;
     }
 }

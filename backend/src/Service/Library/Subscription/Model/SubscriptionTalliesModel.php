@@ -12,6 +12,7 @@ final readonly class SubscriptionTalliesModel
      * @param array<int, int>                                            $unreadCounts subscription id => unread
      * @param array<int, int>                                            $entryCounts  subscription id => entries
      * @param array{favorites: int, kept: int, shared: int, viewed: int} $flagCounts
+     * @param array<string, int>                                         $notificationsUnseen network => unseen groups
      */
     public function __construct(
         public array $unreadCounts,
@@ -19,6 +20,7 @@ final readonly class SubscriptionTalliesModel
         public array $flagCounts,
         public UnreadTotalsModel $unreadTotals,
         public TrendingUnopenedModel $trending,
+        public array $notificationsUnseen,
     ) {
     }
 }
