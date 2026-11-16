@@ -92,16 +92,21 @@ still carries a now-kept key (Strato: link cards written before #2237, merged in
 migration under the old lists) holds the old hash, and the next card for the same URL would hash differently and
 get a second row. So the card walk learns the hash (D10):
 
-- `SharedLinkRepository::urlsAfterId()` returns `array<int, StoredLinkAddressModel>` (`url`, `urlHash`) instead of
-  `array<int, string>`; the model is `Service/Operations/UrlCleanup/Model/StoredLinkAddressModel`.
+- `SharedLinkRepository::urlsAfterId()` becomes `addressesAfterId()` and returns `list<StoredLinkAddressModel>`
+  (`id`, `url`, `urlHash`) instead of `array<int, string>`; the model is
+  `Service/Operations/UrlCleanup/Model/StoredLinkAddressModel`.
 - `SharedLinkRepository::moveTo(int $linkId, string $url)` becomes `relocate(int $linkId, string $url, string
   $urlHash)`.
 - Per link: `$url = TrackingFreeUrl::of($stored->url)`, `$hash = UrlNormalizer::hash($url)`; written only when either
-  differs. The report gains `cardHashesChanged`; the command prints
-  `%d entries cleaned, %d hashes changed, %d cards cleaned, %d card hashes changed`.
-- A recomputed hash cannot collide with another row's: every stored hash came from a list that strips a superset of
-  the new one, so two rows with distinct stored hashes keep distinct new hashes, and a new hash that keeps a
-  now-kept key never equals a hash of a URL without it.
+  differs. The report gains `cardHashesChanged` and `cardsMerged`; the command prints
+  `%d entries cleaned, %d hashes changed, %d cards cleaned, %d card hashes changed, %d cards merged`.
+- A recomputed hash can be held by another row. Two rows hashed under the old lists cannot meet (the old lists strip
+  a superset of the new, so distinct old hashes stay distinct), but from deploy on `SharedLinkWriter` hashes with the
+  narrowed lists: a card posted before the run for a URL that still has a stale row gets a second row under the new
+  hash. The cleanup then merges the stale row into that holder (`SharedLinkRepository::mergeInto()`): `link_card`,
+  `entry.quoted_shared_link_id` and `trending_story_entry` point at the holder, the holder keeps its own
+  `shared_link_resolution` or takes the stale row's, and the stale row is deleted. The dry run reports the merge
+  from the same lookup and writes nothing.
 
 ## Decisions
 
@@ -115,8 +120,8 @@ get a second row. So the card walk learns the hash (D10):
 - **D3. `mkt_tok` and `oly_enc_id` are kept, without Brave's unsubscribe condition.** Why: a plain stop is simpler and
   0 stored rows carry either. Cost if wrong: a Marketo or Omeda tracking link stays apart from its plain twin.
 - **D4. NYT `smtyp` and the `ref` feed marker are kept.** Why: no evidence for `smtyp` (0 rows); `ref` is a known
-  content key. `cmp` and `via` stay feed markers (CBC, Slate; no content use found). Cost if wrong: 5 stored URLs keep
-  `?ref=rss`.
+  content key. `cmp` and `via` stay feed markers (CBC, Slate; no content use found). Cost if wrong: 2 stored links keep
+  `ref=rss` (derstandard `?ref=rss`, Spiegel `#ref=rss`; no entry carries it).
 - **D5. `traffic_source` is kept on every host; no `aljazeera.com` host rule.** Why: the 2,001 Al Jazeera entries hold
   a constant per-feed value, so keeping it is cosmetic, and a host rule for one site is curation from the data. Cost
   if wrong: Al Jazeera's RSS entries stop matching a share of the plain URL by hash (7 such entries in all stored
@@ -181,8 +186,10 @@ Every language pair (de–de, en–en, fr–fr, es–es, mixed) is therefore unc
 ## Risks
 
 - A later list change can reintroduce a removed key; the never-stripped test names it.
-- The cleanup's card rehash is new: a collision is impossible by the superset argument above, but a stored hash from a
-  list that strips *less* than the new one (no such list ever shipped with `shared_link`) would break it.
+- The cleanup's card rehash is new. A row a writer stored between deploy and the run under the new hash would
+  collide with the stale row's recomputed hash; the cleanup merges the stale row into it instead of writing the
+  hash, so the run cannot hit `uniq_shared_link_url_hash`. Running the dry run and the run back to back right after
+  deploy keeps the merges few.
 - Al Jazeera, BBC custom-key and derstandard URLs keep their keys from now on, so a reader sees the tracker in the
   URL; cosmetic.
 - The posted-form check now fires for fewer links (no `traffic_source`, no `ref=rss`), which only removes fetches.
@@ -209,8 +216,7 @@ The wall time is far below the spec's prototype run (363 s); the report is ident
 - `shared_link`: 5,944 rows on each side. 2 B links carry a hash A lacks (zdfheute `?at_specific=ZDFheute`, derstandard
   `?ref=rss`); a third keeps its `#ref=rss` fragment (Spiegel) at an unchanged hash.
 - A DB-match rule could fold 1 link (zdfheute: an entry holds its key-free hash) and 7 entries.
-- D4's "5 stored URLs keep `?ref=rss`" is 2 on this data: no entry carries `ref=rss`, and two links do (one query, one
-  fragment).
+- D4's count is corrected to the measured 2: no entry carries `ref=rss`, and two links do (one query, one fragment).
 
 **Trending**
 
