@@ -56,14 +56,17 @@ final class TimelineSelfThreadsTest extends DbTestCase
         $plan = $this->selfThreads()->plan($this->feed(), $page);
 
         self::assertCount(1, $plan->threads->placed);
+        self::assertSame([self::uri('100') => 1], $plan->threads->replyCounts);
         self::assertSame(1, $plan->threads->placed[0]->position);
         self::assertSame('101', $plan->threads->placed[0]->post->string('id'));
     }
 
-    public function testAChainDeeperThanThreeRepliesDropsTheFourth(): void
+    public function testAChainDeeperThanFourRepliesDropsTheRestAndCountsThem(): void
     {
         $feed = $this->feed();
         $page = MastodonTimelinePage::of([
+            self::timelineStatus('106', '105'),
+            self::timelineStatus('105', '104'),
             self::timelineStatus('104', '103'),
             self::timelineStatus('103', '102'),
             self::timelineStatus('102', '101'),
@@ -76,10 +79,40 @@ final class TimelineSelfThreadsTest extends DbTestCase
 
         self::assertSame([self::uri('100')], self::guidsOf($plan->parsed->entries));
         self::assertSame(
-            ['<p>Status 101</p>', '<p>Status 102</p>', '<p>Status 103</p>'],
+            ['<p>Status 101</p>', '<p>Status 102</p>', '<p>Status 103</p>', '<p>Status 104</p>'],
             $this->threadHtmlOf(self::uri('100')),
         );
-        self::assertSame(3, $this->entityManager->getRepository(ThreadPost::class)->count());
+        self::assertSame(4, $this->entityManager->getRepository(ThreadPost::class)->count());
+        self::assertSame(6, $this->rootOf(self::uri('100'))->getSelfReplyCount());
+    }
+
+    public function testAStoredRootKeepsTheLongerCountItAlreadyHas(): void
+    {
+        $feed = $this->feed();
+        $now = new \DateTimeImmutable('2026-10-10 17:00:00');
+        $root = new Entry($feed, self::uri('100'), 'https://mastodon.example/@bob/100', 'Status 100', $now, $now);
+        $root->countSelfReplies(6);
+        $this->entityManager->persist($root);
+        $this->entityManager->flush();
+
+        $plan = $this->selfThreads()->plan(
+            $feed,
+            MastodonTimelinePage::of([self::timelineStatus('101', '100'), self::timelineStatus('100')]),
+        );
+        $this->selfThreads()->fold($feed, $plan->threads, []);
+
+        self::assertSame([self::uri('100') => 1], $plan->threads->replyCounts);
+        self::assertSame(6, $root->getSelfReplyCount());
+    }
+
+    public function testAPageWhoseRepliesJoinNoChainCountsNothing(): void
+    {
+        $plan = $this->selfThreads()->plan(
+            $this->feed(),
+            MastodonTimelinePage::of([self::timelineStatus('102', '101'), self::timelineStatus('100')]),
+        );
+
+        self::assertSame([], $plan->threads->replyCounts);
     }
 
     /** @param list<ParsedEntryModel> $entries the plan's: only the root */
@@ -97,8 +130,7 @@ final class TimelineSelfThreadsTest extends DbTestCase
     /** @return list<string> */
     private function threadHtmlOf(string $rootGuid): array
     {
-        $root = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => $rootGuid]);
-        self::assertInstanceOf(Entry::class, $root);
+        $root = $this->rootOf($rootGuid);
         $threadPosts = self::getContainer()->get(ThreadPostRepository::class);
         self::assertInstanceOf(ThreadPostRepository::class, $threadPosts);
 
@@ -106,6 +138,14 @@ final class TimelineSelfThreadsTest extends DbTestCase
             static fn (ThreadPostModel $post): string => $post->html,
             $threadPosts->byEntryIds([$root->requireId()])[$root->requireId()] ?? [],
         );
+    }
+
+    private function rootOf(string $rootGuid): Entry
+    {
+        $root = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => $rootGuid]);
+        self::assertInstanceOf(Entry::class, $root);
+
+        return $root;
     }
 
     private function selfThreads(): TimelineSelfThreads

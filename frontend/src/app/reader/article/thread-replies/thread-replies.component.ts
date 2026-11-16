@@ -7,7 +7,6 @@ import { PostMediaComponent } from '../../media/post-media/post-media.component'
 import { ThreadLineComponent } from '../../../shared/thread-line/thread-line.component';
 import { ThreadLinePostComponent } from '../../../shared/thread-line/thread-line-post.component';
 import { ThreadCountComponent } from '../../../shared/thread-line/thread-count.component';
-import { threadTotal } from '../../thread-post';
 
 @Component({
   selector: 'app-thread-replies',
@@ -26,7 +25,7 @@ import { threadTotal } from '../../thread-post';
 export class ThreadRepliesComponent {
   readonly entry = input.required<EntryDto>();
 
-  protected readonly total = computed(() => threadTotal(this.entry()));
+  protected readonly total = computed(() => this.entry().threadLength);
 
   protected ratioOf(media: EntryDto['thread'][number]['media']): number {
     return mediumRatio(media[0]);

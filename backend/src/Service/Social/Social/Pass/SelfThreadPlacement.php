@@ -9,11 +9,14 @@ use App\Service\Social\Social\Model\PlacedSelfReplyModel;
 use App\Service\Social\Social\Model\TimelineSelfReplyModel;
 use App\Service\Social\Social\SelfReplyChain;
 
-/** Puts a root's self-replies on its chain: one per position, at most SelfReplyChain::MAX_REPLIES. */
+/** Puts a root's self-replies on its chain: one per position, the first SelfReplyChain::MAX_REPLIES placed. */
 final class SelfThreadPlacement
 {
     /** @var array<int, true> */
     private array $taken = [];
+
+    /** @var array<string, true> by url: a second branch, whose replies leave the chain with it */
+    private array $branches = [];
 
     /** @var list<PlacedSelfReplyModel> */
     private array $placed = [];
@@ -60,23 +63,30 @@ final class SelfThreadPlacement
         return $this->placed;
     }
 
+    public function replyCount(): int
+    {
+        return $this->taken === [] ? 0 : max(array_keys($this->taken));
+    }
+
     /** @return list<ParsedEntryModel> the replies whose parent never joined the chain: they stay entries */
     public function unplaced(): array
     {
         return $this->unplaced;
     }
 
-    /** A dropped reply holds the last position, so its own replies are dropped with it. */
     private function join(TimelineSelfReplyModel $reply): void
     {
+        $url = (string) $reply->entry->url;
         $position = $this->positions[$reply->parentUrl] + 1;
-        if ($position > SelfReplyChain::MAX_REPLIES || isset($this->taken[$position])) {
-            $this->positions[(string) $reply->entry->url] = SelfReplyChain::MAX_REPLIES;
+        $this->positions[$url] = $position;
+        if (isset($this->branches[$reply->parentUrl]) || isset($this->taken[$position])) {
+            $this->branches[$url] = true;
 
             return;
         }
-        $this->positions[(string) $reply->entry->url] = $position;
         $this->taken[$position] = true;
-        $this->placed[] = new PlacedSelfReplyModel($this->rootGuid, $position, $reply->post);
+        if ($position <= SelfReplyChain::MAX_REPLIES) {
+            $this->placed[] = new PlacedSelfReplyModel($this->rootGuid, $position, $reply->post);
+        }
     }
 }

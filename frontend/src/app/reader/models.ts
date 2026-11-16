@@ -265,8 +265,10 @@ export interface EntryDto {
   share: EntryShare | null;
   /** Preview cards for the links a post shares, in the order the post names them (#1502). */
   linkCards: LinkCardDto[];
-  /** The author's own replies continuing the post, at most three, oldest first (#1668). */
+  /** The author's own replies continuing the post, at most four, oldest first (#1668). */
   thread: ThreadPostDto[];
+  /** The posts in the whole thread, the root and replies not in `thread` included (#2269). */
+  threadLength: number;
   /** The quoted post of a `quote` share; null otherwise (#1612). */
   quote: QuotedPostDto | null;
   /** The post's cards or embed are still being filled in; `POST /api/entries/complete` finishes it (#1502). */

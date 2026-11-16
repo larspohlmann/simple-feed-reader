@@ -15,11 +15,11 @@ use App\Repository\ThreadPostRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Foundation\Clock\Support\ElapsedSeconds;
 use App\Service\Content\Comments\Exception\CommentsUnavailableException;
-use App\Service\Content\Comments\Model\EntryCommentModel;
 use App\Service\Social\Completion\SelfThreadPass\SelfThreadPassInterface;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Model\SelfReplyChainModel;
 use App\Service\Social\Social\Model\SelfThreadBudgetModel;
 use App\Service\Social\Social\Model\SocialPostAddressModel;
 use App\Service\Social\Share\Support\ShareTargets;
@@ -234,11 +234,9 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
     /**
      * A thread that is gone or cannot be read folds as an empty chain: the entry keeps its text.
      *
-     * @return list<EntryCommentModel>
-     *
      * @throws SocialNetworkThrottledException
      */
-    private function chainOf(ReplyThreadSourceInterface $thread, SocialPostAddressModel $address): array
+    private function chainOf(ReplyThreadSourceInterface $thread, SocialPostAddressModel $address): SelfReplyChainModel
     {
         try {
             $answer = $thread->inPublic($address->address);
@@ -256,7 +254,7 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
                 ['address' => $address->address, 'exception' => $exception],
             );
 
-            return [];
+            return SelfReplyChainModel::none();
         }
     }
 
