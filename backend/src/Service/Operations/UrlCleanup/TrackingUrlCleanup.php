@@ -32,7 +32,7 @@ final readonly class TrackingUrlCleanup
         $writeNothing = static function (): void {
         };
 
-        return $this->walk($writeNothing, $writeNothing);
+        return $this->walk($writeNothing, $writeNothing, $writeNothing);
     }
 
     public function clean(): TrackingUrlCleanupReportModel
@@ -40,12 +40,16 @@ final readonly class TrackingUrlCleanup
         return $this->walk(
             static fn (Entry $entry, string $url, ?string $urlHash) => $entry->relocate($url, $urlHash),
             $this->sharedLinks->relocate(...),
+            $this->sharedLinks->mergeInto(...),
         );
     }
 
-    private function walk(\Closure $relocateEntry, \Closure $relocateCard): TrackingUrlCleanupReportModel
-    {
-        return $this->walkEntries($relocateEntry)->plus($this->walkCards($relocateCard));
+    private function walk(
+        \Closure $relocateEntry,
+        \Closure $relocateCard,
+        \Closure $mergeCard,
+    ): TrackingUrlCleanupReportModel {
+        return $this->walkEntries($relocateEntry)->plus($this->walkCards($relocateCard, $mergeCard));
     }
 
     private function walkEntries(\Closure $relocateEntry): TrackingUrlCleanupReportModel
@@ -91,43 +95,49 @@ final readonly class TrackingUrlCleanup
         return new TrackingUrlCleanupReportModel((int) ($url !== $storedUrl), (int) ($hash !== $storedHash));
     }
 
-    private function walkCards(\Closure $relocateCard): TrackingUrlCleanupReportModel
+    private function walkCards(\Closure $relocateCard, \Closure $mergeCard): TrackingUrlCleanupReportModel
     {
         $report = new TrackingUrlCleanupReportModel();
         $afterId = 0;
         do {
-            $batch = $this->sharedLinks->urlsAfterId($afterId, $this->batchSize);
+            $batch = $this->sharedLinks->addressesAfterId($afterId, $this->batchSize);
             $report = $report->plus($this->inOwnTransaction(
-                fn (): TrackingUrlCleanupReportModel => $this->cardBatch($batch, $relocateCard),
+                fn (): TrackingUrlCleanupReportModel => $this->cardBatch($batch, $relocateCard, $mergeCard),
             ));
-            $afterId = array_key_last($batch) ?? $afterId;
+            $afterId = $batch === [] ? $afterId : $batch[array_key_last($batch)]->id;
         } while (\count($batch) === $this->batchSize);
 
         return $report;
     }
 
-    /** @param array<int, StoredLinkAddressModel> $batch by shared link id */
-    private function cardBatch(array $batch, \Closure $relocateCard): TrackingUrlCleanupReportModel
+    /** @param list<StoredLinkAddressModel> $batch */
+    private function cardBatch(array $batch, \Closure $relocateCard, \Closure $mergeCard): TrackingUrlCleanupReportModel
     {
         $report = new TrackingUrlCleanupReportModel();
-        foreach ($batch as $linkId => $stored) {
-            $report = $report->plus($this->cardChange($linkId, $stored, $relocateCard));
+        foreach ($batch as $stored) {
+            $report = $report->plus($this->cardChange($stored, $relocateCard, $mergeCard));
         }
 
         return $report;
     }
 
     private function cardChange(
-        int $linkId,
         StoredLinkAddressModel $stored,
         \Closure $relocateCard,
+        \Closure $mergeCard,
     ): TrackingUrlCleanupReportModel {
         $url = TrackingFreeUrl::of($stored->url);
         $urlHash = $this->urlNormalizer->hash($url);
         if ($urlHash === null || ($url === $stored->url && $urlHash === $stored->urlHash)) {
             return new TrackingUrlCleanupReportModel();
         }
-        $relocateCard($linkId, $url, $urlHash);
+        $holder = $urlHash === $stored->urlHash ? null : $this->sharedLinks->findOneByUrlHash($urlHash);
+        if ($holder !== null) {
+            $mergeCard($stored->id, $holder->requireId());
+
+            return new TrackingUrlCleanupReportModel(cardsMerged: 1);
+        }
+        $relocateCard($stored->id, $url, $urlHash);
 
         return new TrackingUrlCleanupReportModel(
             cardsCleaned: (int) ($url !== $stored->url),

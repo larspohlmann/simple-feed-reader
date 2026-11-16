@@ -46,11 +46,12 @@ final class CleanTrackingUrlsCommand extends Command
     private static function summary(TrackingUrlCleanupReportModel $report): string
     {
         return \sprintf(
-            '%d entries cleaned, %d hashes changed, %d cards cleaned, %d card hashes changed',
+            '%d entries cleaned, %d hashes changed, %d cards cleaned, %d card hashes changed, %d cards merged',
             $report->entriesCleaned,
             $report->hashesChanged,
             $report->cardsCleaned,
             $report->cardHashesChanged,
+            $report->cardsMerged,
         );
     }
 }

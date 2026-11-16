@@ -33,7 +33,7 @@ final class CleanTrackingUrlsCommandTest extends DbTestCase
         $tester->execute(['--dry-run' => true]);
 
         self::assertStringContainsString(
-            'Would clean: 1 entries cleaned, 1 hashes changed, 0 cards cleaned, 0 card hashes changed',
+            'Would clean: 1 entries cleaned, 1 hashes changed, 0 cards cleaned, 0 card hashes changed, 0 cards merged',
             self::unwrapped($tester),
         );
         self::assertSame('https://example.com/a?utm_source=rss', $this->storedUrl());
@@ -45,7 +45,7 @@ final class CleanTrackingUrlsCommandTest extends DbTestCase
 
         self::assertSame(Command::SUCCESS, $tester->execute([]));
         self::assertStringContainsString(
-            '1 entries cleaned, 1 hashes changed, 0 cards cleaned, 0 card hashes changed',
+            '1 entries cleaned, 1 hashes changed, 0 cards cleaned, 0 card hashes changed, 0 cards merged',
             self::unwrapped($tester),
         );
         self::assertStringNotContainsString('Would clean', $tester->getDisplay());

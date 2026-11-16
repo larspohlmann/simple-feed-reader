@@ -17,6 +17,8 @@ use App\Tests\DbTestCase;
 final class TrackingUrlCleanupTest extends DbTestCase
 {
     private const string BLUESKY_GUID = 'at://did:plc:abc/app.bsky.feed.post/3k1';
+    private const string HELD_URL = 'https://www.zdfheute.de/politik/a-100.html?at_specific=ZDFheute';
+    private const string HELD_LANDING = 'https://www.zdfheute.de/politik/a-100.html';
 
     private EntryUrlHash $urlHash;
 
@@ -119,6 +121,155 @@ final class TrackingUrlCleanupTest extends DbTestCase
         self::assertSame(
             ['url' => '/news/3?utm_source=x', 'url_hash' => self::hashOf('https://example.com/news/3')],
             $this->linkRow('relative'),
+        );
+    }
+
+    public function testAStaleLinkWhoseNewHashIsHeldIsMergedIntoTheHolder(): void
+    {
+        $held = $this->storeHeldPair();
+        $this->storeResolution($held['stale'], 'https://landing.example/stale');
+
+        $report = $this->cleanup()->clean();
+
+        self::assertEquals(new TrackingUrlCleanupReportModel(3, 2, 2, 2, 1), $report);
+        self::assertSame(
+            [['id' => $held['holder'], 'url_hash' => self::hashOf(self::HELD_URL)]],
+            $this->linksOn(self::HELD_URL),
+        );
+        self::assertSame(
+            ['card' => $held['holder'], 'quote' => $held['holder'], 'trending' => $held['holder']],
+            $this->referencesFrom($held['entry']),
+        );
+        self::assertSame([[$held['holder'], 'https://landing.example/stale']], $this->resolutions());
+        self::assertEquals(new TrackingUrlCleanupReportModel(0, 0, 0, 0, 0), $this->cleanup()->clean());
+    }
+
+    public function testTheHoldersResolutionWinsOverTheMergedOne(): void
+    {
+        $held = $this->storeHeldPair();
+        $this->storeResolution($held['stale'], 'https://landing.example/stale');
+        $this->storeResolution($held['holder'], 'https://landing.example/holder');
+
+        $this->cleanup()->clean();
+
+        self::assertSame([[$held['holder'], 'https://landing.example/holder']], $this->resolutions());
+    }
+
+    public function testTheDryRunReportsTheMergeAndWritesNothing(): void
+    {
+        $held = $this->storeHeldPair();
+        $this->storeResolution($held['stale'], 'https://landing.example/stale');
+        $before = [$this->rows(), $this->referencesFrom($held['entry']), $this->resolutions()];
+
+        $report = $this->cleanup()->count();
+
+        self::assertEquals(new TrackingUrlCleanupReportModel(3, 2, 2, 2, 1), $report);
+        self::assertSame($before, [$this->rows(), $this->referencesFrom($held['entry']), $this->resolutions()]);
+    }
+
+    /**
+     * A link stored under the old lists' hash beside one a writer stored after deploy under the new hash, and an
+     * entry whose card, quote and trending row point at the stale one.
+     *
+     * @return array{stale: int, holder: int, entry: int}
+     */
+    private function storeHeldPair(): array
+    {
+        $connection = $this->entityManager->getConnection();
+        $stale = $this->storeLink(self::HELD_URL, self::hashOf(self::HELD_LANDING));
+        $holder = $this->storeLink(self::HELD_URL, self::hashOf(self::HELD_URL));
+        $feed = new Feed('https://example.com/quotes');
+        $this->entityManager->persist($feed);
+        $entry = $this->entry($feed, 'g-quote', 'https://example.com/q', self::hashOf('https://example.com/q'));
+        $this->entityManager->flush();
+        $entryId = $entry->requireId();
+        $this->entityManager->clear();
+        $connection->insert('link_card', ['entry_id' => $entryId, 'position' => 0, 'shared_link_id' => $stale]);
+        $connection->update('entry', ['quoted_shared_link_id' => $stale], ['id' => $entryId]);
+        $connection->insert('trending_story', [
+            'time_window' => 'day',
+            'first_seen' => '2026-11-15 12:00:00',
+            'last_seen' => '2026-11-15 12:00:00',
+        ]);
+        $connection->insert('trending_story_entry', [
+            'story_id' => (int) $connection->lastInsertId(),
+            'entry_id' => $entryId,
+            'feed_id' => $feed->requireId(),
+            'shared_link_id' => $stale,
+        ]);
+
+        return ['stale' => $stale, 'holder' => $holder, 'entry' => $entryId];
+    }
+
+    private function storeLink(string $url, string $urlHash): int
+    {
+        $connection = $this->entityManager->getConnection();
+        $connection->insert('shared_link', [
+            'url' => $url,
+            'url_hash' => $urlHash,
+            'title' => 'Card',
+            'site_name' => 'example.com',
+            'created_at' => '2026-11-15 12:00:00',
+        ]);
+
+        return (int) $connection->lastInsertId();
+    }
+
+    private function storeResolution(int $linkId, string $resolvedUrl): void
+    {
+        $this->entityManager->getConnection()->insert('shared_link_resolution', [
+            'shared_link_id' => $linkId,
+            'status' => 'resolved',
+            'resolved_url' => $resolvedUrl,
+            'resolved_url_hash' => self::hashOf($resolvedUrl),
+            'attempts' => 1,
+        ]);
+    }
+
+    /** @return list<array{id: int, url_hash: string}> */
+    private function linksOn(string $url): array
+    {
+        $rows = $this->entityManager->getConnection()->fetchAllAssociative(
+            'SELECT id, url_hash FROM shared_link WHERE url = ? ORDER BY id',
+            [$url],
+        );
+
+        return array_map(
+            static fn (array $row): array => [
+                'id' => self::idOf($row['id']),
+                'url_hash' => self::textOf($row['url_hash']),
+            ],
+            $rows,
+        );
+    }
+
+    /** @return array{card: int, quote: int, trending: int} */
+    private function referencesFrom(int $entryId): array
+    {
+        $connection = $this->entityManager->getConnection();
+
+        return [
+            'card' => self::idOf(
+                $connection->fetchOne('SELECT shared_link_id FROM link_card WHERE entry_id = ?', [$entryId]),
+            ),
+            'quote' => self::idOf(
+                $connection->fetchOne('SELECT quoted_shared_link_id FROM entry WHERE id = ?', [$entryId]),
+            ),
+            'trending' => self::idOf($connection->fetchOne(
+                'SELECT shared_link_id FROM trending_story_entry WHERE entry_id = ?',
+                [$entryId],
+            )),
+        ];
+    }
+
+    /** @return list<array{int, string}> shared link id and resolved URL */
+    private function resolutions(): array
+    {
+        return array_map(
+            static fn (array $row): array => [self::idOf($row['shared_link_id']), self::textOf($row['resolved_url'])],
+            $this->entityManager->getConnection()->fetchAllAssociative(
+                'SELECT shared_link_id, resolved_url FROM shared_link_resolution ORDER BY shared_link_id',
+            ),
         );
     }
 
@@ -244,6 +395,20 @@ final class TrackingUrlCleanupTest extends DbTestCase
         self::assertNotSame(self::hashOf('https://bsky.app/x'), $hash);
 
         return $hash;
+    }
+
+    private static function idOf(mixed $value): int
+    {
+        self::assertIsNumeric($value);
+
+        return (int) $value;
+    }
+
+    private static function textOf(mixed $value): string
+    {
+        self::assertIsString($value);
+
+        return $value;
     }
 
     private static function hashOf(string $url): string

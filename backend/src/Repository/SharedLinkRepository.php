@@ -16,6 +16,11 @@ use Doctrine\Persistence\ManagerRegistry;
 final class SharedLinkRepository extends ServiceEntityRepository
 {
     private const int ROWS_PER_INSERT = 100;
+    private const array REFERENCES = [
+        'link_card' => 'shared_link_id',
+        'entry' => 'quoted_shared_link_id',
+        'trending_story_entry' => 'shared_link_id',
+    ];
     private const string UNREFERENCED
         = 'NOT EXISTS (SELECT 1 FROM link_card card WHERE card.shared_link_id = shared_link.id)'
         . ' AND NOT EXISTS (SELECT 1 FROM entry quoting WHERE quoting.quoted_shared_link_id = shared_link.id)';
@@ -132,8 +137,8 @@ final class SharedLinkRepository extends ServiceEntityRepository
         return $links;
     }
 
-    /** @return array<int, StoredLinkAddressModel> by shared link id */
-    public function urlsAfterId(int $afterId, int $limit): array
+    /** @return list<StoredLinkAddressModel> in id order */
+    public function addressesAfterId(int $afterId, int $limit): array
     {
         /** @var list<array{id: int|string, url: string, urlHash: string}> $rows */
         $rows = $this->createQueryBuilder('link')
@@ -145,12 +150,29 @@ final class SharedLinkRepository extends ServiceEntityRepository
             ->getQuery()
             ->getArrayResult();
 
-        $urls = [];
-        foreach ($rows as $row) {
-            $urls[(int) $row['id']] = new StoredLinkAddressModel($row['url'], $row['urlHash']);
-        }
+        return array_map(
+            static fn (array $row): StoredLinkAddressModel
+                => new StoredLinkAddressModel((int) $row['id'], $row['url'], $row['urlHash']),
+            $rows,
+        );
+    }
 
-        return $urls;
+    /** Moves every reference of one link onto another that holds the same URL, then deletes the first. */
+    public function mergeInto(int $mergedLinkId, int $holderLinkId): void
+    {
+        $connection = $this->getEntityManager()->getConnection();
+        foreach (self::REFERENCES as $table => $column) {
+            $connection->executeStatement(
+                sprintf('UPDATE %s SET %s = ? WHERE %s = ?', $table, $column, $column),
+                [$holderLinkId, $mergedLinkId],
+            );
+        }
+        $this->moveResolution($mergedLinkId, $holderLinkId);
+        $connection->executeStatement(
+            'UPDATE shared_link SET unreferenced_since = NULL WHERE id = ?',
+            [$holderLinkId],
+        );
+        $connection->executeStatement('DELETE FROM shared_link WHERE id = ?', [$mergedLinkId]);
     }
 
     public function relocate(int $linkId, string $url, string $urlHash): void
@@ -165,6 +187,27 @@ final class SharedLinkRepository extends ServiceEntityRepository
             ->setParameter('id', $linkId)
             ->getQuery()
             ->execute();
+    }
+
+    private function moveResolution(int $mergedLinkId, int $holderLinkId): void
+    {
+        $connection = $this->getEntityManager()->getConnection();
+        $holderHasOne = $connection->fetchOne(
+            'SELECT 1 FROM shared_link_resolution WHERE shared_link_id = ?',
+            [$holderLinkId],
+        ) !== false;
+        if ($holderHasOne) {
+            $connection->executeStatement(
+                'DELETE FROM shared_link_resolution WHERE shared_link_id = ?',
+                [$mergedLinkId],
+            );
+
+            return;
+        }
+        $connection->executeStatement(
+            'UPDATE shared_link_resolution SET shared_link_id = ? WHERE shared_link_id = ?',
+            [$holderLinkId, $mergedLinkId],
+        );
     }
 
     /** @return list<int|string|null> */
