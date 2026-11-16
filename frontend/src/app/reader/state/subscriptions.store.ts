@@ -219,7 +219,6 @@ export class SubscriptionsStore {
     // first real load would stamp the freshness clock, silence that load, and
     // leave `resolved` false — so the onboarding redirect could never decide.
     if (!this.resolved()) return;
-    // Not stale while a tick is on the wire: it is about to answer this question.
     if (!this.loads.isStale()) return;
 
     this.quietFetch(fetch, apply, () => undefined);

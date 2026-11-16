@@ -69,7 +69,6 @@ export class ListContent {
   /** The rendered entries cut at every run header and the visit's divider, for both layouts. */
   readonly segments = computed<ListSegment[]>(() =>
     segmentList(this.rendered(), {
-      // The run the header already names ("Last refreshed") gets none; a non-for-you view never does.
       showsRunHeader: (group) => group.runId != null && group.runId !== this.options.newestRunId(),
       newSinceVisitIds: this.options.newSinceVisitIds(),
       newestFirst: listOrderOf(this.options.selection()) === 'newest',
