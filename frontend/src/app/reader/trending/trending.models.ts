@@ -39,5 +39,6 @@ export interface FollowedStoriesResponseDto {
 /** A followed Trending story's page (#2128): `newEntryIds` are its rows whose `joinedAt` is after `lastOpenedAt`. */
 export interface FollowedStoryPageDto extends EntriesPage {
   lastOpenedAt: string;
+  /** Kept for other clients such as iOS; the web client derives its marks from `lastOpenedAt`. */
   newEntryIds: number[];
 }
