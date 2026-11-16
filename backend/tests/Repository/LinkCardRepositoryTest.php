@@ -12,6 +12,7 @@ use App\Entity\SharedLink;
 use App\Entity\ThreadPost;
 use App\Entity\ThreadPostContent;
 use App\Repository\LinkCardRepository;
+use App\Service\Foundation\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SharedLinks;
 
@@ -159,6 +160,70 @@ final class LinkCardRepositoryTest extends DbTestCase
         $this->entityManager->flush();
 
         self::assertSame([0, 1], $this->rootPositionsOf($entry));
+    }
+
+    public function testStoryLinksReadTheFirstRootCard(): void
+    {
+        $entry = $this->entry('one');
+        $this->repository()->append($entry, [$this->storyLink('first'), $this->storyLink('second')]);
+        $this->entityManager->flush();
+
+        $stories = $this->repository()->storyLinksByEntryIds([$entry->requireId()]);
+
+        self::assertSame('first', $stories[$entry->requireId()]->title);
+        self::assertSame('Example', $stories[$entry->requireId()]->siteName);
+        self::assertSame('About first', $stories[$entry->requireId()]->description);
+    }
+
+    public function testStoryLinksSkipThreadCards(): void
+    {
+        $entry = $this->entry('one');
+        $post = new ThreadPost($entry, 1, new ThreadPostContent(null, null, '<p>r</p>', []));
+        $this->entityManager->persist($post);
+        $this->repository()->appendToThreadPost($post, $this->storyLink('reply'));
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->repository()->storyLinksByEntryIds([$entry->requireId()]));
+    }
+
+    public function testStoryLinksLeaveOutCardsThatNameNoStory(): void
+    {
+        $entry = $this->entry('one');
+        $frontPage = new LinkCardContent('https://example.com/', 'Home', null, null, 'Example');
+        $this->repository()->append($entry, [$this->linkOf($frontPage)]);
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->repository()->storyLinksByEntryIds([$entry->requireId()]));
+    }
+
+    public function testAResolvedShortLinkKeysOnItsLanding(): void
+    {
+        $entry = $this->entry('one');
+        $short = $this->linkOf(new LinkCardContent('https://n.pr/x', 'Short', null, null, 'Example'));
+        $this->repository()->append($entry, [$short]);
+        $this->entityManager->flush();
+        $landing = 'https://www.npr.org/2026/11/09/a';
+        $this->entityManager->getConnection()->executeStatement(
+            "UPDATE shared_link_resolution SET status = 'resolved', resolved_url = ?, resolved_url_hash = ?"
+            . ' WHERE shared_link_id = ?',
+            [$landing, (new UrlNormalizer())->hash($landing), $short->requireId()],
+        );
+
+        $stories = $this->repository()->storyLinksByEntryIds([$entry->requireId()]);
+
+        self::assertSame((new UrlNormalizer())->hash($landing), $stories[$entry->requireId()]->urlHash);
+    }
+
+    public function testStoryLinksForNoEntriesIsEmpty(): void
+    {
+        self::assertSame([], $this->repository()->storyLinksByEntryIds([]));
+    }
+
+    private function storyLink(string $title): SharedLink
+    {
+        return $this->linkOf(
+            new LinkCardContent('https://example.com/' . $title, $title, 'About ' . $title, null, 'Example'),
+        );
     }
 
     /** @return list<int> */

@@ -9,7 +9,10 @@ use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 use App\Entity\SharedLink;
 use App\Entity\ThreadPost;
+use App\Service\Content\LinkCard\Model\StoryLinkModel;
+use App\Service\Content\LinkCard\Support\StoryLinkRule;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\Persistence\ManagerRegistry;
 
 /** @extends ServiceEntityRepository<LinkCard> */
@@ -75,6 +78,50 @@ final class LinkCardRepository extends ServiceEntityRepository
         }
 
         return $grouped;
+    }
+
+    /**
+     * @param list<int> $entryIds
+     *
+     * @return array<int, StoryLinkModel> each entry's first root card that names a story, by entry id
+     */
+    public function storyLinksByEntryIds(array $entryIds): array
+    {
+        if ($entryIds === []) {
+            return [];
+        }
+
+        /**
+         * @var list<array{
+         *   entry_id: int|string, url: string, url_hash: string, title: string,
+         *   description: string|null, site_name: string
+         * }> $rows
+         */
+        $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
+            'SELECT card.entry_id, ' . LinkLandingSql::URL . ' AS url, ' . LinkLandingSql::URL_HASH . ' AS url_hash,'
+            . ' link.title, link.description, link.site_name'
+            . ' FROM link_card card JOIN shared_link link ON link.id = card.shared_link_id'
+            . LinkLandingSql::JOIN
+            . ' WHERE card.entry_id IN (:entryIds) AND card.thread_post_id IS NULL'
+            . ' AND card.position = (SELECT MIN(first_card.position) FROM link_card first_card'
+            . ' WHERE first_card.entry_id = card.entry_id AND first_card.thread_post_id IS NULL)',
+            ['entryIds' => $entryIds],
+            ['entryIds' => ArrayParameterType::INTEGER],
+        );
+
+        $stories = [];
+        foreach ($rows as $row) {
+            if (StoryLinkRule::namesAStory($row['url'], $row['title'], $row['site_name'])) {
+                $stories[(int) $row['entry_id']] = new StoryLinkModel(
+                    $row['url_hash'],
+                    $row['title'],
+                    $row['description'],
+                    $row['site_name'],
+                );
+            }
+        }
+
+        return $stories;
     }
 
     /** An entry's root and reply cards share one numbering, cards still waiting for the flush included. */
