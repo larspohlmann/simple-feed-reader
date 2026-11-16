@@ -45,7 +45,6 @@ export class FollowedStoriesStore {
     });
   }
 
-  /** Stories only change when Trending rebuilds, so a stale tick waits for the next build the server named. */
   reloadIfStale(): void {
     if (this.loads.isStale() && this.buildIsDue()) this.load();
   }

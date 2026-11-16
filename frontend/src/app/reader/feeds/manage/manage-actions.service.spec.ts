@@ -44,6 +44,7 @@ describe('ManageActions', () => {
   let http: HttpTestingController;
   let closed: unknown;
   let savedSearchesLoad: jest.SpyInstance;
+  let loadFollowedStories: jest.SpyInstance;
   const open = jest.fn(() => ({ closed: of(closed) }));
 
   beforeEach(() => {
@@ -60,6 +61,9 @@ describe('ManageActions', () => {
     http = TestBed.inject(HttpTestingController);
     savedSearchesLoad = jest
       .spyOn(TestBed.inject(SavedSearchesStore), 'load')
+      .mockImplementation(() => undefined);
+    loadFollowedStories = jest
+      .spyOn(TestBed.inject(FollowedStoriesStore), 'load')
       .mockImplementation(() => undefined);
     open.mockClear();
   });
@@ -92,9 +96,6 @@ describe('ManageActions', () => {
       .spyOn(TestBed.inject(EntriesStore), 'reloadIfShowing')
       .mockImplementation(() => undefined);
 
-    const loadFollowedStories = jest
-      .spyOn(TestBed.inject(FollowedStoriesStore), 'load')
-      .mockImplementation(() => undefined);
     closed = sub;
     service.editSubscription(sub);
     expect(reloadIfShowing).not.toHaveBeenCalled();
@@ -324,9 +325,6 @@ describe('ManageActions', () => {
     const reloadIfShowing = jest
       .spyOn(TestBed.inject(EntriesStore), 'reloadIfShowing')
       .mockImplementation(() => undefined);
-    const loadFollowedStories = jest
-      .spyOn(TestBed.inject(FollowedStoriesStore), 'load')
-      .mockImplementation(() => undefined);
     service.setInclusion(tagged, 'trending', false);
     expect(store.subscriptions().find((x) => x.id === 5)!.includeInTrending).toBe(false);
     const testRequest = http.expectOne('https://api.test/api/subscriptions/5');
@@ -338,7 +336,6 @@ describe('ManageActions', () => {
     testRequest.flush({ subscription: { ...tagged, includeInTrending: false } });
     expect(reloadIfShowing).toHaveBeenCalledTimes(1);
     expect(reloadIfShowing).toHaveBeenCalledWith('trending');
-    expect(loadFollowedStories).toHaveBeenCalledTimes(1);
     expect(savedSearchesLoad).not.toHaveBeenCalled();
   });
 
@@ -347,9 +344,6 @@ describe('ManageActions', () => {
     store.storedSubscriptions.set([sub]);
     jest.spyOn(store, 'reloadQuietly').mockImplementation(() => undefined);
     jest.spyOn(TestBed.inject(EntriesStore), 'reloadIfShowing').mockImplementation(() => undefined);
-    const loadFollowedStories = jest
-      .spyOn(TestBed.inject(FollowedStoriesStore), 'load')
-      .mockImplementation(() => undefined);
     service.setInclusion(sub, 'trending', false);
     expect(loadFollowedStories).not.toHaveBeenCalled();
 

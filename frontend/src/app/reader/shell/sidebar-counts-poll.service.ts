@@ -161,7 +161,7 @@ export class SidebarCountsPoll {
     this.zone.run(() => {
       this.subscriptions.reloadQuietlyIfStale();
       this.savedSearches.reloadIfStale();
-      this.followedStories.reloadIfStale();
+      this.followedStories.load();
     });
     void this.refreshMarkerBaseline();
   }

@@ -22,7 +22,6 @@ final readonly class TrendingLastBuildsModel
         return $this->builtAtByWindow[$window->value] ?? null;
     }
 
-    /** The earliest moment a window is due for a rebuild, or null while any window was never built. */
     public function nextBuildDueAt(): ?\DateTimeImmutable
     {
         $dueTimes = [];
