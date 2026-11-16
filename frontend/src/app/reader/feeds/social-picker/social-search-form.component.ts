@@ -42,18 +42,6 @@ interface SyntaxRule {
 const OPERATOR_EXAMPLE = '"rss reader" -gazette';
 const COMBINED_EXAMPLE = '("rss reader" || "feed reader" || rssreader) -gazette';
 
-const COMBINED_EXAMPLES: Readonly<Record<SocialNetworkName, string | null>> = {
-  bluesky: COMBINED_EXAMPLE,
-  mastodon: COMBINED_EXAMPLE,
-  lemmy: COMBINED_EXAMPLE,
-};
-
-const EXAMPLE_QUERIES: Readonly<Record<SocialNetworkName, string>> = {
-  bluesky: OPERATOR_EXAMPLE,
-  mastodon: OPERATOR_EXAMPLE,
-  lemmy: OPERATOR_EXAMPLE,
-};
-
 const PHRASE: SyntaxRule = { operator: '"rss reader"', key: 'settings.social.search.syntaxPhrase' };
 const EITHER: SyntaxRule = { operator: 'rss || atom', key: 'settings.social.search.syntaxEither' };
 const EXCLUDE: SyntaxRule = { operator: '-gazette', key: 'settings.social.search.syntaxExclude' };
@@ -111,8 +99,8 @@ export class SocialSearchFormComponent {
   protected readonly outcome = signal<PreviewOutcome | null>(null);
 
   readonly normalizedQuery = computed(() => this.query().trim().replace(/\s+/g, ' '));
-  protected readonly exampleQuery = computed(() => EXAMPLE_QUERIES[this.network()]);
-  protected readonly combinedExample = computed(() => COMBINED_EXAMPLES[this.network()]);
+  protected readonly exampleQuery = OPERATOR_EXAMPLE;
+  protected readonly combinedExample = COMBINED_EXAMPLE;
   protected readonly networkName = computed(() => SOCIAL_NETWORK_NAMES[this.network()]);
   protected readonly syntaxRules = computed(() => SEARCH_SYNTAX[this.network()]);
   protected readonly canPreview = computed(
