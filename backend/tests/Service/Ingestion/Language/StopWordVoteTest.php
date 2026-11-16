@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Ingestion\Language;
 
 use App\Enum\FeedLanguage;
-use App\Service\Ingestion\Language\StopWords\StopWordsInterface;
+use App\Service\Foundation\Text\StopWords\StopWordsInterface;
 use App\Service\Ingestion\Language\StopWordVote;
 use App\Tests\Support\LanguageWiring;
 use PHPUnit\Framework\TestCase;

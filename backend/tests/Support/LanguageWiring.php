@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
+use App\Service\Foundation\Text\StopWords\BundledStopWords;
 use App\Service\Ingestion\Language\Factory\LanguageDetectionFactory;
 use App\Service\Ingestion\Language\LanguageGuess;
 use App\Service\Ingestion\Language\SocialEntryLanguage;
-use App\Service\Ingestion\Language\StopWords\BundledStopWords;
 use App\Service\Ingestion\Language\StopWordVote;
 
 /** Language services built by hand: the test container hands out none of the ones used once. */

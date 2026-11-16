@@ -205,7 +205,9 @@ Ingestion owns the rule; the stopword data moves to the module that now reads it
 - **D4. A short guess the vote contradicts stands (no G2).** — Measured again (V1G2, on V1's vote): −58 week and −16
   day against V2, through 299 mostly right en/de guesses nulled. — If wrong: up to about 15 wrong short fr and 16 wrong short es guesses a week
   stay, linking to nothing (#2235 D1).
-- **D5. Stopword data moves to `Ingestion/Language/StopWords`, and word splitting to `Foundation/Text/Support`.** — The
+- **D5. Stopword data moves to `Ingestion/Language/StopWords`, and word splitting to `Foundation/Text/Support`.** (The
+  /simplify pass moved the stopword data on to `Foundation/Text/StopWords`, so `Curation/Trending` reads it without
+  depending on `Ingestion`.) — The
   vote needs both, and `Ingestion` may not depend on `Curation/Trending`; one tokenizer keeps the vote, the lists and
   Trending's stems in step. — If wrong: a later Trending-only list change touches the Ingestion module; a move back.
 - **D6. No one-off fill.** — `entry.language` is written at ingest only, and Trending reads a week: the nulls on

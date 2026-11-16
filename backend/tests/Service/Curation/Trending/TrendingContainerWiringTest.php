@@ -9,8 +9,8 @@ use App\Service\Curation\Trending\GermanLexicon\BundledGermanLexicon;
 use App\Service\Curation\Trending\GermanLexicon\GermanLexiconInterface;
 use App\Service\Curation\Trending\HeadlineEquivalents;
 use App\Service\Curation\Trending\TrendingRebuild;
-use App\Service\Ingestion\Language\StopWords\BundledStopWords;
-use App\Service\Ingestion\Language\StopWords\StopWordsInterface;
+use App\Service\Foundation\Text\StopWords\BundledStopWords;
+use App\Service\Foundation\Text\StopWords\StopWordsInterface;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
 

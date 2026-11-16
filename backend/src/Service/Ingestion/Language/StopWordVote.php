@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Ingestion\Language;
 
 use App\Enum\FeedLanguage;
+use App\Service\Foundation\Text\StopWords\StopWordsInterface;
 use App\Service\Foundation\Text\Support\CasefoldedWords;
 use App\Service\Foundation\Text\Support\LinkFreeText;
-use App\Service\Ingestion\Language\StopWords\StopWordsInterface;
 
 /** The language whose bundled stopwords a short text holds most, outright (#2243). */
 final readonly class StopWordVote
