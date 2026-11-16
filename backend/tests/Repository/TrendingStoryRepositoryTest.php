@@ -337,6 +337,19 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         self::assertSame([[$story->requireId(), 2]], $this->rankedIn(TrendingWindow::Day, []));
     }
 
+    public function testAnEarlierCopyFromASocialFeedLeavesAnArticleFeedsCopyCounted(): void
+    {
+        $url = 'https://news.example.com/storm';
+        $post = $this->fixtures->article($this->socialFeed('ann'), 'Storm', '2031-05-14 08:00:00', $url);
+        $story = $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
+            [$post, 'news.example.com'],
+            [$this->fixtures->article($this->articleFeed('alpha'), 'Storm', '2031-05-14 09:00:00', $url), null],
+            [$this->member($this->articleFeed('beta')), null],
+        ]);
+
+        self::assertSame([[$story->requireId(), 3]], $this->rankedIn(TrendingWindow::Day, []));
+    }
+
     public function testTheWeekLeavesOutAStoryIdShownInTheDay(): void
     {
         $story = $this->twoFeedWeekStory();

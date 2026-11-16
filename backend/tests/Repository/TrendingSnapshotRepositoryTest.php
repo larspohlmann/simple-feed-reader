@@ -114,6 +114,26 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
         );
     }
 
+    public function testEachWindowsStoriesCarryOnlyItsOwnFlag(): void
+    {
+        [$one, $two] = $this->twoEntries();
+
+        $this->replace(self::report(TrendingWindow::Week, 1), [self::story($one, $two)]);
+        $this->replace(self::report(TrendingWindow::Day, 1), [self::story($one, $two)]);
+
+        self::assertEquals(
+            [
+                ['in_day' => 0, 'in_week' => 1],
+                ['in_day' => 0, 'in_week' => 1],
+                ['in_day' => 1, 'in_week' => 0],
+                ['in_day' => 1, 'in_week' => 0],
+            ],
+            $this->entityManager->getConnection()->fetchAllAssociative(
+                'SELECT in_day, in_week FROM trending_story_entry ORDER BY story_id, entry_id',
+            ),
+        );
+    }
+
     public function testPurgingAnEntryRemovesItsStoryLink(): void
     {
         [$one, $two] = $this->twoEntries();
