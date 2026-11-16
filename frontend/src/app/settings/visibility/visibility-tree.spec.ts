@@ -1,6 +1,7 @@
 import { SubscriptionDto } from '../../reader/models';
 import { buildSocialSections } from '../../reader/state/social-sections';
 import { buildTagTree } from '../../reader/state/subscription-derivations';
+import { NO_NOTIFICATION_COUNTS } from '../../reader/state/notification-counts';
 import { NO_UNREAD_TOTALS } from '../../reader/state/unread-totals';
 import { makeSubscription } from '../../reader/testing/subscription.factory';
 import { makeTag } from '../../reader/testing/tag.factory';
@@ -49,7 +50,10 @@ function keys(feedFilter: ((subscription: SubscriptionDto) => boolean) | null = 
   return visibilityLines(
     {
       tagTree: buildTagTree(SUBSCRIPTIONS, [NEWS, TECH]),
-      socialSections: buildSocialSections(SUBSCRIPTIONS, [], NO_UNREAD_TOTALS),
+      socialSections: buildSocialSections(SUBSCRIPTIONS, [], {
+        unread: NO_UNREAD_TOTALS,
+        notifications: NO_NOTIFICATION_COUNTS,
+      }),
       subscriptions: SUBSCRIPTIONS,
     },
     feedFilter,

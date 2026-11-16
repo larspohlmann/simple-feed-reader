@@ -6,7 +6,7 @@ import { IconComponent } from '../../../shared/icon/icon.component';
 import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
 import { NetworkFeedKind, SocialNetworkName } from '../../../core/social-network';
 import { PersistedToggle, persistedToggle } from '../../../core/preferences/persisted-toggle';
-import { Selection, selectionQueryParams } from '../../query/query';
+import { Selection, notificationsNetworkOf, selectionQueryParams } from '../../query/query';
 import { LayoutService } from '../../layout.service';
 import { ExclusionSurface } from '../../feed-exclusions';
 import {
@@ -17,6 +17,7 @@ import {
 } from '../../state/social-sections';
 import { ActiveDictionary } from '../../../core/i18n/active-dictionary';
 import { SidebarRowActions } from './sidebar-row-actions.service';
+import { SidebarNotificationsRowComponent } from './sidebar-notifications-row.component';
 import { SidebarFeedRowComponent } from './sidebar-feed-row.component';
 import { SidebarGroupRowComponent } from './sidebar-group-row.component';
 import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
@@ -38,6 +39,7 @@ const groupCollapsedKey = (network: SocialNetworkName, kind: NetworkFeedKind): s
     NetworkLogoComponent,
     SidebarRowMenuComponent,
     SidebarFeedRowComponent,
+    SidebarNotificationsRowComponent,
     SidebarGroupRowComponent,
     MenuCheckboxComponent,
     FeedExclusionMarkerComponent,
@@ -78,6 +80,9 @@ export class SidebarSocialSectionComponent {
     const onThisNetwork = this.selectionOnThisNetwork();
     return onThisNetwork !== null && !onThisNetwork.feedKind;
   });
+  protected readonly notificationsActive = computed(
+    () => notificationsNetworkOf(this.selection()) === this.section().network,
+  );
   protected readonly activeFeedKind = computed(() => this.selectionOnThisNetwork()?.feedKind);
   protected readonly selectionQueryParams = selectionQueryParams;
 

@@ -16,6 +16,7 @@ import { VisibilitySwitches } from '../state/visibility';
 import { makeTag } from '../testing/tag.factory';
 import { INCLUDED_EVERYWHERE } from '../tag-inclusion';
 import { SocialSection, buildSocialSections, socialFeedGroup } from '../state/social-sections';
+import { NO_NOTIFICATION_COUNTS } from '../state/notification-counts';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SubscriptionRows } from '../state/subscription-rows';
 import { TagNode, countDescendants, tagNodesById } from '../state/subscription-derivations';
@@ -75,6 +76,7 @@ const accountsOf = (...handles: string[]): SocialSection => ({
   entryCount: 0,
   saved: null,
   showsHandles: handles.length > 1,
+  notificationsUnseen: 0,
   accounts: handles.map((handle, index) => ({
     accountId: index + 1,
     handle,
@@ -170,7 +172,12 @@ describe("ListHeading for a network's combined view", () => {
     };
     return headingWith(selection, {
       subscriptions: signal(subscriptions),
-      socialSections: signal(buildSocialSections(subscriptions, [], NETWORK_TOTALS)),
+      socialSections: signal(
+        buildSocialSections(subscriptions, [], {
+          unread: NETWORK_TOTALS,
+          notifications: NO_NOTIFICATION_COUNTS,
+        }),
+      ),
     });
   }
 

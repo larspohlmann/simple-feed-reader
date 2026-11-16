@@ -9,6 +9,7 @@ import { SubscriptionDto, TagDto } from '../../reader/models';
 import { NETWORK_EXCLUSION_STORES } from '../../reader/state/network-exclusions.store';
 import { SavedSearchesStore } from '../../reader/state/saved-searches.store';
 import { buildSocialSections } from '../../reader/state/social-sections';
+import { NO_NOTIFICATION_COUNTS } from '../../reader/state/notification-counts';
 import { NO_UNREAD_TOTALS } from '../../reader/state/unread-totals';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { TagsStore } from '../../reader/state/tags.store';
@@ -94,7 +95,10 @@ describe('VisibilitySectionComponent', () => {
             loading: signal(false),
             loadIfStale: jest.fn(),
             socialSections: computed(() =>
-              buildSocialSections(subscriptions(), [], NO_UNREAD_TOTALS),
+              buildSocialSections(subscriptions(), [], {
+                unread: NO_UNREAD_TOTALS,
+                notifications: NO_NOTIFICATION_COUNTS,
+              }),
             ),
           },
         },

@@ -1,0 +1,18 @@
+@use 'sidebar-row' as row;
+@include row.row-parts;
+@include row.row-link('.nav');
+@include row.row-states(':host', ':host(.current)');
+
+:host {
+  @include row.row-geometry;
+}
+
+.favicon-slot {
+  margin-inline: var(--space-0);
+}
+
+app-count-pill {
+  flex: none;
+  margin-left: auto;
+  margin-right: calc(var(--space-2) * -1);
+}

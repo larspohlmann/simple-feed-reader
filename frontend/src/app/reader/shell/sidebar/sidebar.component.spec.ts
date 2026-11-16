@@ -2870,6 +2870,7 @@ describe('organise mode', () => {
       entryCount: 0,
       saved: null,
       showsHandles: false,
+      notificationsUnseen: 0,
       accounts: [
         {
           accountId: 3,

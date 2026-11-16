@@ -74,6 +74,15 @@
   </div>
   @if (expanded() || organising()) {
     <div class="rows">
+      @if (!organising() && current.networkAccounts.length > 0) {
+        <div class="feedrow">
+          <app-sidebar-notifications-row
+            [network]="current.network"
+            [count]="current.notificationsUnseen"
+            [active]="notificationsActive()"
+          />
+        </div>
+      }
       @for (group of current.accounts; track group.accountId) {
         @if (current.showsHandles && group.handle) {
           <p class="account-handle">{{ group.handle }}</p>

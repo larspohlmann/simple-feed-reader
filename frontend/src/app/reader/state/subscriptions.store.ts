@@ -119,7 +119,10 @@ export class SubscriptionsStore {
     };
   });
   readonly socialSections = computed(() =>
-    buildSocialSections(this.subscriptions(), this.socialAccounts(), this.unreadTotals()),
+    buildSocialSections(this.subscriptions(), this.socialAccounts(), {
+      unread: this.unreadTotals(),
+      notifications: this.notificationCounts(),
+    }),
   );
   readonly totalUnread = computed(() => this.unreadTotals().allItems);
   readonly forYouUnread = computed(() => this.unreadTotals().forYou);

@@ -853,6 +853,7 @@ describe('SubscriptionsStore', () => {
           entryCount: 120,
           saved: null,
           showsHandles: false,
+          notificationsUnseen: 0,
         },
         {
           network: 'mastodon',
@@ -866,6 +867,7 @@ describe('SubscriptionsStore', () => {
           entryCount: 160,
           saved: null,
           showsHandles: false,
+          notificationsUnseen: 0,
         },
       ]);
     });
