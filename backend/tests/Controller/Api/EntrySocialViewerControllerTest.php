@@ -88,8 +88,6 @@ final class EntrySocialViewerControllerTest extends ApiTestCase
                 'isLiked' => true,
                 'canLike' => true,
                 'isOwn' => false,
-                'openUrl' => 'https://mastodon.example/authorize_interaction'
-                    . '?uri=https%3A%2F%2Fmastodon.social%2F%40Gargron%2F110',
             ],
             $this->socialOf($client, $entryId),
         );
@@ -308,7 +306,7 @@ final class EntrySocialViewerControllerTest extends ApiTestCase
         return new MockResponse('{"statuses":[]}');
     }
 
-    /** @return array{network: string, isLiked: bool, canLike: bool, isOwn: bool, openUrl: string|null}|null */
+    /** @return array{network: string, isLiked: bool, canLike: bool, isOwn: bool}|null */
     private function socialOf(KernelBrowser $client, int $entryId): ?array
     {
         $client->request('GET', sprintf('/api/entries/%d', $entryId));
@@ -318,7 +316,7 @@ final class EntrySocialViewerControllerTest extends ApiTestCase
         $social = $entry['social'];
         self::assertTrue(null === $social || is_array($social));
 
-        /** @var array{network: string, isLiked: bool, canLike: bool, isOwn: bool, openUrl: string|null}|null $social */
+        /** @var array{network: string, isLiked: bool, canLike: bool, isOwn: bool}|null $social */
         return $social;
     }
 
