@@ -40,7 +40,7 @@ final readonly class TrendingStoryFollowing
     public function markOpened(int $userId, int $storyId): void
     {
         if ($this->follows->markOpened($userId, $storyId, $this->clock->now()) === 0) {
-            $this->follows->lastOpenedAt($userId, $storyId);
+            $this->follows->requireFollowed($userId, $storyId);
         }
     }
 

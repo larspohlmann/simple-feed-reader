@@ -102,6 +102,21 @@ final class TrendingStoryFollowRepositoryTest extends DbTestCase
         $this->follows->lastOpenedAt($this->reader->requireId(), $story->requireId());
     }
 
+    public function testRequiringAFollowedStoryPassesForItsFollowerAlone(): void
+    {
+        $story = $this->story();
+        $otherReader = $this->fixtures->reader('follow-repository-require@example.com');
+        $this->follows->follow($this->reader->requireId(), $story->requireId(), self::at('2031-05-14 10:00:00'));
+
+        $this->follows->requireFollowed($this->reader->requireId(), $story->requireId());
+
+        $this->expectException(TrendingStoryNotFollowedException::class);
+        $this->expectExceptionMessage(
+            \sprintf('User %d does not follow Trending story %d.', $otherReader->requireId(), $story->requireId()),
+        );
+        $this->follows->requireFollowed($otherReader->requireId(), $story->requireId());
+    }
+
     public function testFollowedStoryIdsAreTheReadersAmongTheAsked(): void
     {
         $followed = $this->story();

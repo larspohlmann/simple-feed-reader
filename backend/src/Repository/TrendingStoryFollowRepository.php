@@ -64,12 +64,22 @@ final class TrendingStoryFollowRepository extends ServiceEntityRepository
             [$userId, $storyId],
         );
         if (!\is_string($lastOpenedAt)) {
-            throw new TrendingStoryNotFollowedException(
-                \sprintf('User %d does not follow Trending story %d.', $userId, $storyId),
-            );
+            throw self::notFollowed($userId, $storyId);
         }
 
         return self::storedTime($lastOpenedAt);
+    }
+
+    /** @throws TrendingStoryNotFollowedException */
+    public function requireFollowed(int $userId, int $storyId): void
+    {
+        $found = $this->getEntityManager()->getConnection()->fetchOne(
+            'SELECT 1 FROM trending_story_follow WHERE user_id = ? AND story_id = ?',
+            [$userId, $storyId],
+        );
+        if ($found === false) {
+            throw self::notFollowed($userId, $storyId);
+        }
     }
 
     /**
@@ -96,7 +106,10 @@ final class TrendingStoryFollowRepository extends ServiceEntityRepository
     /** @return list<FollowedStoryRowModel> newest joined first */
     public function followedBy(int $userId): array
     {
-        /** @var list<array{story_id: int|string, headline: ?string, new_count: int|string, last_joined_at: string}> */
+        /**
+         * @var list<array{story_id: int|string, headline: ?string, new_count: int|string, last_joined_at: string}>
+         *      $rows
+         */
         $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
             'SELECT follow.story_id, story.last_joined_at,'
             . ' ' . self::headline() . ' AS headline,'
@@ -160,6 +173,13 @@ final class TrendingStoryFollowRepository extends ServiceEntityRepository
             $member,
             $subscription,
             TrendingInclusionSql::includes($subscription),
+        );
+    }
+
+    private static function notFollowed(int $userId, int $storyId): TrendingStoryNotFollowedException
+    {
+        return new TrendingStoryNotFollowedException(
+            \sprintf('User %d does not follow Trending story %d.', $userId, $storyId),
         );
     }
 
