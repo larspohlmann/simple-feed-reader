@@ -31,12 +31,17 @@ use App\Service\Ingestion\Language\LanguageGuess;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\ServiceLocator;
+use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\Store\InMemoryStore;
 
 /** Trending services built by hand: the test container hands out none of the ones used once. */
 final class TrendingWiring
 {
-    public static function rebuild(EntityManagerInterface $entityManager, ClockInterface $clock): TrendingRebuild
-    {
+    public static function rebuild(
+        EntityManagerInterface $entityManager,
+        ClockInterface $clock,
+        LockFactory $locks = new LockFactory(new InMemoryStore()),
+    ): TrendingRebuild {
         $naiveClock = new NaiveUtcClock($clock);
         $snapshots = self::snapshots($entityManager);
         $builder = new TrendingSnapshotBuilder(
@@ -46,6 +51,7 @@ final class TrendingWiring
             $snapshots,
             $entityManager,
             $naiveClock,
+            $locks,
         );
 
         return new TrendingRebuild($builder, $snapshots, $naiveClock);

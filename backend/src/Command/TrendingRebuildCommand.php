@@ -6,6 +6,7 @@ namespace App\Command;
 
 use App\Enum\TrendingWindow;
 use App\Exception\ValidationException;
+use App\Service\Curation\Trending\Exception\TrendingBuildBusyException;
 use App\Service\Curation\Trending\SnapshotBuilder\SnapshotBuilderInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -41,7 +42,13 @@ final class TrendingRebuildCommand extends Command
 
             return Command::INVALID;
         }
-        $report = $this->builder->build($window)->toLogContext();
+        try {
+            $report = $this->builder->build($window)->toLogContext();
+        } catch (TrendingBuildBusyException) {
+            $io->warning('Skipped: another Trending build is running.');
+
+            return Command::SUCCESS;
+        }
         $io->table(
             ['figure', 'value'],
             array_map(null, array_keys($report), array_values($report)),

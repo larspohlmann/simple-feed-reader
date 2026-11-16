@@ -6,12 +6,16 @@ namespace App\Service\Curation\Trending;
 
 use App\Enum\TrendingWindow;
 use App\Repository\TrendingSnapshotRepository;
+use App\Service\Curation\Trending\Exception\TrendingBuildBusyException;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Curation\Trending\Model\TrendingLastBuildsModel;
 use App\Service\Curation\Trending\Model\TrendingRebuildReportModel;
 use App\Service\Curation\Trending\SnapshotBuilder\SnapshotBuilderInterface;
 
-/** Rebuilds every window whose snapshot is missing or as old as its interval; the worker and the tick call it. */
+/**
+ * Rebuilds every window whose snapshot is missing or as old as its interval; the worker and the tick call it.
+ * A window whose build finds another running is skipped quietly and stays due for the next sweep.
+ */
 final readonly class TrendingRebuild
 {
     public function __construct(
@@ -48,8 +52,12 @@ final readonly class TrendingRebuild
     ): TrendingRebuildReportModel {
         $builds = [];
         foreach (TrendingWindow::cases() as $window) {
-            if ($this->isDue($window, $lastBuilds->builtAt($window)) && $mayStart($window)) {
+            if (!$this->isDue($window, $lastBuilds->builtAt($window)) || !$mayStart($window)) {
+                continue;
+            }
+            try {
                 $builds[] = $this->builder->build($window);
+            } catch (TrendingBuildBusyException) {
             }
         }
 

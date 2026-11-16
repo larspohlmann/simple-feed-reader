@@ -25,7 +25,10 @@ use App\Tests\Support\TrendingFixtures;
 use App\Tests\Support\TrendingWiring;
 use Doctrine\ORM\Decorator\EntityManagerDecorator;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Service\Curation\Trending\Exception\TrendingBuildBusyException;
 use Symfony\Component\Clock\MockClock;
+use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\Store\InMemoryStore;
 
 final class TrendingSnapshotBuilderTest extends DbTestCase
 {
@@ -35,11 +38,46 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
 
     private MockClock $clock;
 
+    private LockFactory $locks;
+
     protected function setUp(): void
     {
         parent::setUp();
         $this->fixtures = new TrendingFixtures($this->entityManager);
         $this->clock = new MockClock(self::NOW, 'UTC');
+        $this->locks = new LockFactory(new InMemoryStore());
+    }
+
+    public function testABuildWhileAnotherHoldsTheLockWritesNothing(): void
+    {
+        $this->weekSizedHafenstreik();
+        $running = $this->locks->createLock(TrendingSnapshotBuilder::LOCK_NAME);
+        $running->acquire();
+
+        try {
+            $this->builder()->build(TrendingWindow::Day);
+            self::fail('a build overlapping another must not run');
+        } catch (TrendingBuildBusyException) {
+        }
+
+        self::assertSame([], $this->storyIds());
+        self::assertSame(
+            [],
+            $this->entityManager->getConnection()->fetchFirstColumn('SELECT time_window FROM trending_snapshot'),
+        );
+    }
+
+    public function testEveryBuildReleasesTheLock(): void
+    {
+        $this->weekSizedHafenstreik();
+        $this->builder()->build(TrendingWindow::Day);
+        $this->builder()->build(TrendingWindow::Week);
+        try {
+            $this->builderWith($this->failingAfterTheTransactionBody())->build(TrendingWindow::Day);
+        } catch (SimulatedFailure) {
+        }
+
+        self::assertTrue($this->locks->createLock(TrendingSnapshotBuilder::LOCK_NAME)->acquire());
     }
 
     public function testGroupsTheDaysHeadlinesIntoAStoryAndRecordsTheSnapshot(): void
@@ -448,6 +486,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
             TrendingWiring::snapshots($this->entityManager),
             $entityManager,
             new NaiveUtcClock($this->clock),
+            $this->locks,
         );
     }
 

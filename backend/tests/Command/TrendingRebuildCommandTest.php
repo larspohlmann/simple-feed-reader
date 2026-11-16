@@ -6,6 +6,7 @@ namespace App\Tests\Command;
 
 use App\Command\TrendingRebuildCommand;
 use App\Enum\TrendingWindow;
+use App\Service\Curation\Trending\Exception\TrendingBuildBusyException;
 use App\Service\Curation\Trending\Model\StoryAssignmentModel;
 use App\Service\Curation\Trending\Model\StoryMatchModel;
 use App\Service\Curation\Trending\Model\StoryMemberModel;
@@ -46,6 +47,18 @@ final class TrendingRebuildCommandTest extends TestCase
         self::assertMatchesRegularExpression('/\bmerged\s+1\b/', $display);
         self::assertMatchesRegularExpression('/\bsplit\s+3\b/', $display);
         self::assertMatchesRegularExpression('/\bpruned\s+4\b/', $display);
+    }
+
+    public function testItSaysItSkippedWhileAnotherBuildRuns(): void
+    {
+        $builder = $this->createStub(SnapshotBuilderInterface::class);
+        $builder->method('build')->willThrowException(new TrendingBuildBusyException());
+        $tester = new CommandTester(new TrendingRebuildCommand($builder));
+
+        $tester->execute(['window' => 'day']);
+
+        self::assertSame(Command::SUCCESS, $tester->getStatusCode());
+        self::assertStringContainsString('Skipped: another Trending build is running.', $tester->getDisplay());
     }
 
     public function testAnUnknownWindowFails(): void
