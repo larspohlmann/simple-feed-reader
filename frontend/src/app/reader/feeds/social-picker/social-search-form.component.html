@@ -43,7 +43,14 @@
   }
   @if (network() === 'mastodon') {
     <p class="note">{{ 'settings.social.search.syntaxMastodonNote' | transloco }}</p>
-    <p class="note">{{ 'settings.social.search.syntaxMastodonAlternatives' | transloco }}</p>
+  }
+  @if (network() === 'mastodon' || network() === 'lemmy') {
+    <p class="note">
+      {{ 'settings.social.search.syntaxAlternativesApart' | transloco: { network: networkName() } }}
+    </p>
+  }
+  @if (network() === 'lemmy') {
+    <p class="note">{{ 'settings.social.search.syntaxLemmyNote' | transloco }}</p>
   }
 </app-disclosure>
 

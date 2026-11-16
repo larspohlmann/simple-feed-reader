@@ -16,7 +16,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { pluralKey } from '../../../core/i18n/plural-key';
 import { parseProblem, problemMessage } from '../../../core/problem';
-import { SocialNetworkName } from '../../../core/social-network';
+import { SOCIAL_NETWORK_NAMES, SocialNetworkName } from '../../../core/social-network';
 import { AvatarComponent } from '../../../shared/avatar/avatar.component';
 import { ButtonComponent } from '../../../shared/button/button.component';
 import { DisclosureComponent } from '../../../shared/disclosure/disclosure.component';
@@ -45,13 +45,13 @@ const COMBINED_EXAMPLE = '("rss reader" || "feed reader" || rssreader) -gazette'
 const COMBINED_EXAMPLES: Readonly<Record<SocialNetworkName, string | null>> = {
   bluesky: COMBINED_EXAMPLE,
   mastodon: COMBINED_EXAMPLE,
-  lemmy: null,
+  lemmy: COMBINED_EXAMPLE,
 };
 
 const EXAMPLE_QUERIES: Readonly<Record<SocialNetworkName, string>> = {
   bluesky: OPERATOR_EXAMPLE,
   mastodon: OPERATOR_EXAMPLE,
-  lemmy: 'rss reader',
+  lemmy: OPERATOR_EXAMPLE,
 };
 
 const PHRASE: SyntaxRule = { operator: '"rss reader"', key: 'settings.social.search.syntaxPhrase' };
@@ -63,17 +63,19 @@ const EXCLUDE_AUTHOR: SyntaxRule = {
 };
 const GROUP: SyntaxRule = { operator: '( … )', key: 'settings.social.search.syntaxGroup' };
 
+const ALL_WORDS_SYNTAX: readonly SyntaxRule[] = [
+  { operator: 'rss reader', key: 'settings.social.search.syntaxAllWords' },
+  PHRASE,
+  EITHER,
+  EXCLUDE,
+  EXCLUDE_AUTHOR,
+  GROUP,
+];
+
 const SEARCH_SYNTAX: Readonly<Record<SocialNetworkName, readonly SyntaxRule[]>> = {
   bluesky: [PHRASE, EITHER, EXCLUDE, EXCLUDE_AUTHOR, GROUP],
-  mastodon: [
-    { operator: 'rss reader', key: 'settings.social.search.syntaxAllWords' },
-    PHRASE,
-    EITHER,
-    EXCLUDE,
-    EXCLUDE_AUTHOR,
-    GROUP,
-  ],
-  lemmy: [{ operator: 'rss reader', key: 'settings.social.search.syntaxLemmyPlain' }],
+  mastodon: ALL_WORDS_SYNTAX,
+  lemmy: ALL_WORDS_SYNTAX,
 };
 
 /** A search query with its syntax help and a preview of what it finds; the host projects its own action beside Preview. */
@@ -111,6 +113,7 @@ export class SocialSearchFormComponent {
   readonly normalizedQuery = computed(() => this.query().trim().replace(/\s+/g, ' '));
   protected readonly exampleQuery = computed(() => EXAMPLE_QUERIES[this.network()]);
   protected readonly combinedExample = computed(() => COMBINED_EXAMPLES[this.network()]);
+  protected readonly networkName = computed(() => SOCIAL_NETWORK_NAMES[this.network()]);
   protected readonly syntaxRules = computed(() => SEARCH_SYNTAX[this.network()]);
   protected readonly canPreview = computed(
     () => this.normalizedQuery() !== '' && !this.previewing(),
