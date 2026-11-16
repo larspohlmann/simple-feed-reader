@@ -49,10 +49,10 @@ const LINK_CARD = {
 const GRID_RATIO = 16 / 9;
 
 /**
- * The sharer pills under a Trending article posts share (#2229), `--tap-target` tall on a phone: two pills fit a
- * row, a third wraps. The mini cards' pills stay folded.
+ * The sharer pills under a Trending article posts share (#2229), source-pill sized with the phone's wider row gap
+ * (#2271): two pills fit a row, a third wraps. The mini cards' pills stay folded.
  */
-export const STORY_SHARERS_ROW = { height: 44, gap: 4, pillsPerRow: 2 } as const;
+export const STORY_SHARERS_ROW = { height: 19, gap: 12, pillsPerRow: 2 } as const;
 
 export function blockHeight(kind: EntryKind, entry: EntryDto): number {
   return ownHeight(kind, entry) + storySharersHeight(entry);
