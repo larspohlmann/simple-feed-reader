@@ -30,19 +30,16 @@ final class Version20261116220000 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        $this->skipIf(
-            $schema->hasTable('trending_story_placement')
-            && !$schema->getTable('trending_story_entry')->hasColumn('in_day'),
-            'Trending placement is already kept as rows.',
-        );
+        $flagByWindow = $this->remainingFlagByWindow($schema);
+        $this->skipIf([] === $flagByWindow, 'Trending placement is already kept as rows.');
 
         if (!$schema->hasTable('trending_story_placement')) {
             $this->createPlacements();
         }
-        foreach (self::FLAG_BY_WINDOW as $window => $flag) {
+        foreach ($flagByWindow as $window => $flag) {
             $this->addSql(\sprintf(self::PLACEMENTS_FROM_FLAGS, $window, $flag));
         }
-        $this->dropFlags();
+        $this->dropFlags(array_values($flagByWindow));
     }
 
     public function down(Schema $schema): void
@@ -60,6 +57,14 @@ final class Version20261116220000 extends AbstractMigration
     public function isTransactional(): bool
     {
         return false;
+    }
+
+    /** @return array<string, string> */
+    private function remainingFlagByWindow(Schema $schema): array
+    {
+        $members = $schema->getTable('trending_story_entry');
+
+        return array_filter(self::FLAG_BY_WINDOW, $members->hasColumn(...));
     }
 
     private function createPlacements(): void
@@ -91,17 +96,20 @@ final class Version20261116220000 extends AbstractMigration
     }
 
     /** Neither flag carries an index or a key, so SQLite drops them in place and the entry search triggers stay. */
-    private function dropFlags(): void
+    /** @param list<string> $flags */
+    private function dropFlags(array $flags): void
     {
         $platform = $this->connection->getDatabasePlatform();
         if ($platform instanceof AbstractMySQLPlatform) {
-            $this->addSql('ALTER TABLE trending_story_entry DROP in_day, DROP in_week');
+            $drops = array_map(static fn (string $flag): string => 'DROP ' . $flag, $flags);
+            $this->addSql('ALTER TABLE trending_story_entry ' . implode(', ', $drops));
 
             return;
         }
         $this->requireSqlite($platform);
-        $this->addSql('ALTER TABLE trending_story_entry DROP COLUMN in_day');
-        $this->addSql('ALTER TABLE trending_story_entry DROP COLUMN in_week');
+        foreach ($flags as $flag) {
+            $this->addSql('ALTER TABLE trending_story_entry DROP COLUMN ' . $flag);
+        }
     }
 
     private function addFlags(): void

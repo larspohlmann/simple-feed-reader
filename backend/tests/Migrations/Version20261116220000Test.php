@@ -69,6 +69,27 @@ final class Version20261116220000Test extends TestCase
         ));
     }
 
+    public function testARunThatStoppedAfterDroppingTheDayFlagFinishesTheWeek(): void
+    {
+        $this->migrateUpStoppingBeforeTheLastStatement();
+
+        $this->migrate('up');
+
+        self::assertSame(
+            [
+                ['time_window' => 'day', 'entry_id' => 1, 'story_id' => 11],
+                ['time_window' => 'day', 'entry_id' => 2, 'story_id' => 11],
+                ['time_window' => 'week', 'entry_id' => 1, 'story_id' => 12],
+                ['time_window' => 'week', 'entry_id' => 3, 'story_id' => 12],
+            ],
+            $this->placements(),
+        );
+        self::assertSame(
+            ['feed_id', 'story_id', 'entry_id', 'article_site', 'shared_link_id', 'joined_at'],
+            $this->columnsOf('trending_story_entry'),
+        );
+    }
+
     public function testDownPutsTheFlagsBack(): void
     {
         $flags = $this->flags();
@@ -165,6 +186,19 @@ final class Version20261116220000Test extends TestCase
         self::assertIsNumeric($count);
 
         return (int) $count;
+    }
+
+    private function migrateUpStoppingBeforeTheLastStatement(): void
+    {
+        $migration = new Version20261116220000($this->connection, new NullLogger());
+        $migration->up($this->connection->createSchemaManager()->introspectSchema());
+        foreach (\array_slice($migration->getSql(), 0, -1) as $query) {
+            $this->connection->executeStatement($query->getStatement());
+        }
+        self::assertSame(
+            ['feed_id', 'story_id', 'entry_id', 'article_site', 'shared_link_id', 'joined_at', 'in_week'],
+            $this->columnsOf('trending_story_entry'),
+        );
     }
 
     private function migrate(string $direction): void
