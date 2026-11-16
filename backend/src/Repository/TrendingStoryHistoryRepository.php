@@ -37,6 +37,9 @@ final readonly class TrendingStoryHistoryRepository
     private const string EARLIEST_SOURCE_JOIN = '(SELECT MIN(source.joined_at) FROM (SELECT entry_id, joined_at'
         . ' FROM trending_story_entry WHERE %s) source WHERE source.entry_id = trending_story_entry.entry_id)';
 
+    private const string AMONG_SOURCE_ENTRIES = 'entry_id IN (SELECT entry_id FROM (SELECT entry_id'
+        . ' FROM trending_story_entry WHERE %s) source)';
+
     public function __construct(private EntityManagerInterface $entityManager)
     {
     }
@@ -171,7 +174,8 @@ final readonly class TrendingStoryHistoryRepository
         $earliestSourceJoin = \sprintf(self::EARLIEST_SOURCE_JOIN, $sourceRows);
         $connection->executeStatement(
             'UPDATE trending_story_entry SET joined_at = ' . $earliestSourceJoin
-            . ' WHERE story_id = ? AND joined_at > ' . $earliestSourceJoin,
+            . ' WHERE story_id = ? AND ' . \sprintf(self::AMONG_SOURCE_ENTRIES, $sourceRows)
+            . ' AND joined_at > ' . $earliestSourceJoin,
             [$targetId],
         );
         $connection->executeStatement(
