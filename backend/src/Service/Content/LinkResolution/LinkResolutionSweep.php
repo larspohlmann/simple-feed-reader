@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Content\LinkResolution;
 
+use App\Repository\SharedLinkRepository;
 use App\Repository\SharedLinkResolutionRepository;
 use App\Service\Content\LinkResolution\Model\LinkLandingModel;
 use App\Service\Content\LinkResolution\Model\LinkResolutionBudgetModel;
@@ -11,6 +12,8 @@ use App\Service\Content\LinkResolution\Model\LinkResolutionReportModel;
 use App\Service\Content\LinkResolution\Model\PendingLinkModel;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Foundation\Clock\Support\ElapsedSeconds;
+use App\Service\Outbound\Fetch\Support\HostKey;
+use App\Service\Outbound\Fetch\Support\LandingSite;
 use Psr\Log\LoggerInterface;
 
 /** Follows the queued short links, oldest first, within a budget; each is settled as soon as it lands. */
@@ -21,6 +24,7 @@ final readonly class LinkResolutionSweep
 
     public function __construct(
         private SharedLinkResolutionRepository $linkResolutions,
+        private SharedLinkRepository $sharedLinks,
         private LinkLanding $landing,
         private NaiveUtcClock $clock,
         private LoggerInterface $logger,
@@ -62,6 +66,7 @@ final readonly class LinkResolutionSweep
     {
         if (!$landing->isRetryable()) {
             $this->linkResolutions->settle($link, $landing);
+            $this->nameAfterLanding($link, $landing);
 
             return $landing;
         }
@@ -72,6 +77,18 @@ final readonly class LinkResolutionSweep
         }
 
         return $this->giveUp($link);
+    }
+
+    private function nameAfterLanding(PendingLinkModel $link, LinkLandingModel $landing): void
+    {
+        if ($landing->url === null) {
+            return;
+        }
+        $postedHost = HostKey::forUrl($link->url);
+        $landingSite = LandingSite::hostOf($link->url, $landing->url);
+        if ($landingSite !== $postedHost) {
+            $this->sharedLinks->renameSite($link->linkId, $postedHost, $landingSite);
+        }
     }
 
     private function giveUp(PendingLinkModel $link): LinkLandingModel
