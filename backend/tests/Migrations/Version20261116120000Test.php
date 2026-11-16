@@ -133,14 +133,24 @@ final class Version20261116120000Test extends TestCase
     public function testDownRestoresTheWindowColumnAndTheHiddenEntries(): void
     {
         $this->migrate('up');
+        $this->connection->executeStatement(
+            "UPDATE trending_story_hide SET hidden_at = '2026-11-15 06:00:00' WHERE user_id = 6 AND story_id = 11",
+        );
         $this->migrate('down');
 
         self::assertSame(
             [['id' => 11, 'time_window' => 'day'], ['id' => 12, 'time_window' => 'week']],
             $this->connection->fetchAllAssociative('SELECT id, time_window FROM trending_story ORDER BY id'),
         );
-        self::assertSame('2026-11-15 08:00:00', $this->connection->fetchOne(
-            'SELECT hidden_at FROM trending_hidden_entry WHERE user_id = 5 AND entry_id = 3',
+        self::assertSame([
+            ['user_id' => 5, 'entry_id' => 1, 'hidden_at' => '2026-11-15 08:00:00'],
+            ['user_id' => 5, 'entry_id' => 2, 'hidden_at' => '2026-11-15 08:00:00'],
+            ['user_id' => 5, 'entry_id' => 3, 'hidden_at' => '2026-11-15 08:00:00'],
+            ['user_id' => 6, 'entry_id' => 1, 'hidden_at' => '2026-11-15 06:00:00'],
+            ['user_id' => 6, 'entry_id' => 2, 'hidden_at' => '2026-11-15 06:00:00'],
+            ['user_id' => 6, 'entry_id' => 3, 'hidden_at' => '2026-11-15 07:00:00'],
+        ], $this->connection->fetchAllAssociative(
+            'SELECT user_id, entry_id, hidden_at FROM trending_hidden_entry ORDER BY user_id, entry_id',
         ));
         self::assertSame(5, $this->rowCount('SELECT COUNT(*) FROM trending_story_entry'));
         self::assertNotContains('in_day', $this->columnsOf('trending_story_entry'));

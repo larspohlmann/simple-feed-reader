@@ -9,10 +9,7 @@ use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
-/**
- * Today's per-window stories become the seed stories of #2128, ids kept: their members join at the window's last build
- * and sit in that window, and a hidden entry hides every story holding it. Follows are lost on down.
- */
+/** Down loses every follow: the per-window schema has nowhere to keep them. */
 final class Version20261116120000 extends AbstractMigration
 {
     private const string MYSQL_TABLE_OPTIONS = 'DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci`'
@@ -21,9 +18,11 @@ final class Version20261116120000 extends AbstractMigration
     private const string HIDE_COLUMNS = 'hidden_at DATETIME NOT NULL';
     private const string JOIN_TIME = 'COALESCE((SELECT snapshot.built_at FROM trending_snapshot snapshot'
         . ' WHERE snapshot.time_window = story.time_window), story.last_seen)';
-    private const string HIDES_FROM_HIDDEN_ENTRIES = 'INSERT INTO trending_story_hide (user_id, story_id, hidden_at)'
-        . ' SELECT hidden.user_id, member.story_id, MIN(hidden.hidden_at) FROM trending_hidden_entry hidden'
-        . ' JOIN trending_story_entry member ON member.entry_id = hidden.entry_id'
+    private const string HIDES_FROM_HIDDEN_ENTRIES_OF_MEMBERS = 'INSERT INTO trending_story_hide'
+        . ' (user_id, story_id, hidden_at) SELECT hidden.user_id, member.story_id, MIN(hidden.hidden_at)'
+        . ' FROM trending_hidden_entry hidden JOIN %s member ON member.entry_id = hidden.entry_id'
+        . ' WHERE NOT EXISTS (SELECT 1 FROM trending_story_hide existing'
+        . ' WHERE existing.user_id = hidden.user_id AND existing.story_id = member.story_id)'
         . ' GROUP BY hidden.user_id, member.story_id';
     private const string HIDDEN_ENTRIES_FROM_HIDES = 'INSERT INTO trending_hidden_entry (hidden_at, user_id, entry_id)'
         . ' SELECT MIN(hide.hidden_at), hide.user_id, member.entry_id FROM trending_story_hide hide'
@@ -97,7 +96,7 @@ final class Version20261116120000 extends AbstractMigration
             $this->seedMySqlJoinTimes($schema);
         }
         if ($schema->hasTable('trending_hidden_entry')) {
-            $this->addSql(str_replace('INSERT INTO', 'INSERT IGNORE INTO', self::HIDES_FROM_HIDDEN_ENTRIES));
+            $this->addSql(\sprintf(self::HIDES_FROM_HIDDEN_ENTRIES_OF_MEMBERS, 'trending_story_entry'));
             $this->addSql('DROP TABLE trending_hidden_entry');
         }
         if ($schema->getTable('trending_story')->hasColumn('time_window')) {
@@ -140,23 +139,14 @@ final class Version20261116120000 extends AbstractMigration
         $this->addSql(\sprintf(
             'CREATE TABLE %1$s (%2$s, user_id INT NOT NULL, story_id INT NOT NULL,'
             . ' INDEX IDX_%3$sA76ED395 (user_id), INDEX IDX_%3$sAA5D4036 (story_id),'
-            . ' PRIMARY KEY (user_id, story_id)) %4$s',
+            . ' PRIMARY KEY (user_id, story_id),'
+            . ' CONSTRAINT FK_%3$sA76ED395 FOREIGN KEY (user_id) REFERENCES app_user (id) ON DELETE CASCADE,'
+            . ' CONSTRAINT FK_%3$sAA5D4036 FOREIGN KEY (story_id) REFERENCES trending_story (id) ON DELETE CASCADE'
+            . ') %4$s',
             $table,
             $columns,
             $keySuffix,
             self::MYSQL_TABLE_OPTIONS,
-        ));
-        $this->addSql(\sprintf(
-            'ALTER TABLE %1$s ADD CONSTRAINT FK_%2$sA76ED395 FOREIGN KEY (user_id) REFERENCES app_user (id)'
-            . ' ON DELETE CASCADE',
-            $table,
-            $keySuffix,
-        ));
-        $this->addSql(\sprintf(
-            'ALTER TABLE %1$s ADD CONSTRAINT FK_%2$sAA5D4036 FOREIGN KEY (story_id) REFERENCES trending_story (id)'
-            . ' ON DELETE CASCADE',
-            $table,
-            $keySuffix,
         ));
     }
 
@@ -195,7 +185,7 @@ final class Version20261116120000 extends AbstractMigration
         );
         $this->createSqliteStoryUserTable('trending_story_follow', self::FOLLOW_COLUMNS, '54E0250');
         $this->createSqliteStoryUserTable('trending_story_hide', self::HIDE_COLUMNS, '6174BFCF');
-        $this->addSql(str_replace('trending_story_entry', 'trending_story_entry_new', self::HIDES_FROM_HIDDEN_ENTRIES));
+        $this->addSql(\sprintf(self::HIDES_FROM_HIDDEN_ENTRIES_OF_MEMBERS, 'trending_story_entry_new'));
         $this->addSql('DROP TABLE trending_hidden_entry');
         $this->addSql('DROP TABLE trending_story_entry');
         $this->addSql('DROP TABLE trending_story');
