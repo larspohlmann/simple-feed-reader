@@ -123,6 +123,107 @@ final class LemmyPostEntriesTest extends TestCase
         self::page('{"error":"odd"}');
     }
 
+    public function testOnlyPostsTheQueryMatchesBecomeEntries(): void
+    {
+        $page = self::searchPage(
+            'rust compiler',
+            [[1 => 'Rust compiler news', 2 => 'Trusted compilers', 3 => 'Compilers written in Rust']],
+        );
+
+        self::assertSame(['https://lemmy.example/post/3', 'https://lemmy.example/post/1'], self::guidsOf($page));
+    }
+
+    public function testAPhraseIsCheckedByTheReader(): void
+    {
+        $page = self::searchPage('"rss reader"', [[1 => 'A reader for RSS', 2 => 'My RSS reader']]);
+
+        self::assertSame(['https://lemmy.example/post/2'], self::guidsOf($page));
+    }
+
+    public function testAnExcludedWordDropsThePost(): void
+    {
+        $page = self::searchPage('rss -gazette', [[1 => 'RSS gazette', 2 => 'RSS news']]);
+
+        self::assertSame(['https://lemmy.example/post/2'], self::guidsOf($page));
+    }
+
+    public function testAPostFoundByTwoAlternativesAppearsOnce(): void
+    {
+        $page = self::searchPage('rss || atom', [[1 => 'rss', 2 => 'rss atom'], [2 => 'rss atom']]);
+
+        self::assertSame(['https://lemmy.example/post/2', 'https://lemmy.example/post/1'], self::guidsOf($page));
+    }
+
+    public function testThePageIsNewestFirstAcrossAnswers(): void
+    {
+        $page = self::searchPage('news || story', [[1 => 'news', 3 => 'news'], [2 => 'story', 4 => 'story']]);
+
+        self::assertSame(
+            [
+                'https://lemmy.example/post/4',
+                'https://lemmy.example/post/3',
+                'https://lemmy.example/post/2',
+                'https://lemmy.example/post/1',
+            ],
+            self::guidsOf($page),
+        );
+    }
+
+    public function testTheNewestSeenIdCoversEveryAnswer(): void
+    {
+        $page = self::searchPage('news || story', [[1 => 'news'], [4 => 'unrelated']]);
+
+        self::assertSame('4', $page->newestId);
+    }
+
+    public function testAnAnswerWithoutPostsIsUnreachableInASearch(): void
+    {
+        $this->expectException(SocialNetworkUnreachableException::class);
+        $this->expectExceptionMessage('The Lemmy instance answered without posts.');
+
+        SocialApiWiring::lemmyPostEntries()->searchPage(
+            SocialAccounts::lemmyOf(SocialAccounts::owner()),
+            [new ApiResponseModel(Response::HTTP_OK, '{"error":"odd"}', [])],
+            'news',
+        );
+    }
+
+    /** @param list<array<int, string>> $titlesByPostId one answer per element, each mapping post id to title */
+    private static function searchPage(string $query, array $titlesByPostId): TimelinePageModel
+    {
+        return SocialApiWiring::lemmyPostEntries()->searchPage(
+            SocialAccounts::lemmyOf(SocialAccounts::owner()),
+            array_map(
+                static fn (array $titles): ApiResponseModel => new ApiResponseModel(
+                    Response::HTTP_OK,
+                    json_encode(['posts' => array_map(
+                        static fn (int $postId, string $title): array => [
+                            'post' => [
+                                'id' => $postId,
+                                'name' => $title,
+                                'ap_id' => 'https://lemmy.example/post/' . $postId,
+                                'published' => '2026-11-14T05:05:09Z',
+                            ],
+                            'creator' => ['name' => 'ada'],
+                            'counts' => ['score' => 1, 'comments' => 0],
+                        ],
+                        array_keys($titles),
+                        $titles,
+                    )], JSON_THROW_ON_ERROR),
+                    [],
+                ),
+                $titlesByPostId,
+            ),
+            $query,
+        );
+    }
+
+    /** @return list<string> */
+    private static function guidsOf(TimelinePageModel $page): array
+    {
+        return array_map(static fn (ParsedEntryModel $entry): string => $entry->guid, $page->parsed->entries);
+    }
+
     /** @return array<string, ParsedEntryModel> keyed by guid */
     private static function entries(): array
     {
