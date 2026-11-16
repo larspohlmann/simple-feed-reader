@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Enum\CommentsLoad;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Embeddable]
@@ -24,6 +25,9 @@ final class EntryDiscussion
 
     #[ORM\Column(name: 'comment_count', nullable: true)]
     private ?int $commentCount = null;
+
+    #[ORM\Column(name: 'self_reply_count', type: Types::SMALLINT, options: ['default' => 0])]
+    private int $selfReplyCount = 0;
 
     public function store(Discussion $discussion): void
     {
@@ -51,6 +55,17 @@ final class EntryDiscussion
     public function readCounts(): DiscussionCounts
     {
         return DiscussionCounts::of($this->score, $this->commentCount);
+    }
+
+    /** A read sees only part of a thread, a timeline page most of all, so the count only ever grows. */
+    public function storeSelfReplyCount(int $selfReplyCount): void
+    {
+        $this->selfReplyCount = max($this->selfReplyCount, $selfReplyCount);
+    }
+
+    public function readSelfReplyCount(): int
+    {
+        return $this->selfReplyCount;
     }
 
     private static function bounded(?string $url): ?string

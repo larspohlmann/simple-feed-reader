@@ -15,6 +15,7 @@ use App\Service\Content\Comments\Model\CommentAuthorModel;
 use App\Service\Content\Comments\Model\CommentEmbedsModel;
 use App\Service\Content\Comments\Model\EntryCommentModel;
 use App\Service\Social\Social\Factory\ThreadPostFactory;
+use App\Service\Social\Social\Model\SelfReplyChainModel;
 use App\Service\Social\Social\Model\ThreadPostModel;
 use App\Service\Social\Social\SelfThreadFolder;
 use App\Tests\DbTestCase;
@@ -28,10 +29,10 @@ final class SelfThreadFolderTest extends DbTestCase
     {
         $entry = $this->entry();
         $cardUrl = 'https://www.macrumors.com/2026/10/16/app-store-rules-deepfakes/';
-        $this->folder()->fold($entry, [
+        $this->folder()->fold($entry, self::chain(
             self::reply('<p>The rule extends…</p>', null),
             self::reply('', new LinkCardContent($cardUrl, 'New App Store Rules', null, null, 'www.macrumors.com')),
-        ]);
+        ));
         $this->entityManager->flush();
 
         $posts = $this->threadPosts()->byEntryIds([$entry->requireId()])[$entry->requireId()];
@@ -43,10 +44,29 @@ final class SelfThreadFolderTest extends DbTestCase
         self::assertSame(ShareKind::Link, $entry->getShareKind());
     }
 
+    public function testTheChainsLengthIsStoredOnTheEntry(): void
+    {
+        $entry = $this->entry();
+
+        $this->folder()->fold($entry, new SelfReplyChainModel([self::reply('<p>one</p>', null)], 6));
+
+        self::assertSame(6, $entry->getSelfReplyCount());
+    }
+
+    public function testAShorterReadKeepsTheLongerCount(): void
+    {
+        $entry = $this->entry();
+        $entry->countSelfReplies(6);
+
+        $this->folder()->fold($entry, self::chain(self::reply('<p>one</p>', null)));
+
+        self::assertSame(6, $entry->getSelfReplyCount());
+    }
+
     public function testFoldAtAppendsAtTheGivenPosition(): void
     {
         $entry = $this->entry();
-        $this->folder()->fold($entry, [self::reply('<p>one</p>', null)]);
+        $this->folder()->fold($entry, self::chain(self::reply('<p>one</p>', null)));
         $card = self::card('https://two.example/');
 
         $this->folder()->foldAt($entry, 2, self::reply('<p>two</p>', $card));
@@ -68,7 +88,7 @@ final class SelfThreadFolderTest extends DbTestCase
         $entry->setShareKind(ShareKind::Media);
         $card = new LinkCardContent('https://a.example/', 'A', null, null, 'a.example');
 
-        $this->folder()->fold($entry, [self::reply('', $card)]);
+        $this->folder()->fold($entry, self::chain(self::reply('', $card)));
 
         self::assertSame(ShareKind::Media, $entry->getShareKind());
     }
@@ -77,7 +97,7 @@ final class SelfThreadFolderTest extends DbTestCase
     {
         $entry = $this->entry();
 
-        $this->folder()->fold($entry, [self::reply('<p>more</p>', null)]);
+        $this->folder()->fold($entry, self::chain(self::reply('<p>more</p>', null)));
 
         self::assertNull($entry->getShareKind());
     }
@@ -87,7 +107,7 @@ final class SelfThreadFolderTest extends DbTestCase
         $entry = $this->entry();
         $publishedAt = new \DateTimeImmutable('2026-10-17T10:15:31+02:00');
 
-        $this->folder()->fold($entry, [self::reply('<p>x</p>', null, $publishedAt)]);
+        $this->folder()->fold($entry, self::chain(self::reply('<p>x</p>', null, $publishedAt)));
         $this->entityManager->flush();
 
         $posts = $this->threadPosts()->byEntryIds([$entry->requireId()])[$entry->requireId()];
@@ -100,10 +120,10 @@ final class SelfThreadFolderTest extends DbTestCase
         $this->entityManager->persist(new LinkCard($entry, 0, $this->link('https://root.example/')));
         $this->entityManager->flush();
 
-        $this->folder()->fold($entry, [
+        $this->folder()->fold($entry, self::chain(
             self::reply('<p>one</p>', self::card('https://one.example/')),
             self::reply('<p>two</p>', self::card('https://two.example/')),
-        ]);
+        ));
         $this->entityManager->flush();
 
         $rows = $this->entityManager->getConnection()->fetchAllAssociative(
@@ -126,7 +146,7 @@ final class SelfThreadFolderTest extends DbTestCase
         $entry = $this->entry();
         $medium = new EntryMedium('https://cdn.example/a.jpg', 'image', 640, 480, null, 'A photo');
 
-        $this->folder()->fold($entry, [
+        $this->folder()->fold($entry, self::chain(
             new EntryCommentModel(
                 new CommentAuthorModel('A', null, null, null),
                 'https://bsky.app/profile/a/post/media',
@@ -135,7 +155,7 @@ final class SelfThreadFolderTest extends DbTestCase
                 true,
                 new CommentEmbedsModel([$medium]),
             ),
-        ]);
+        ));
         $this->entityManager->flush();
 
         $stored = $this->entityManager->getConnection()->fetchOne(
@@ -148,6 +168,11 @@ final class SelfThreadFolderTest extends DbTestCase
                 'alt' => 'A photo']],
             json_decode($stored, true),
         );
+    }
+
+    private static function chain(EntryCommentModel ...$replies): SelfReplyChainModel
+    {
+        return new SelfReplyChainModel(array_values($replies), \count($replies));
     }
 
     private function link(string $url): SharedLink

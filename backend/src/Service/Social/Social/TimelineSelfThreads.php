@@ -10,7 +10,6 @@ use App\Entity\Feed;
 use App\Repository\EntryRepository;
 use App\Repository\ThreadPostRepository;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
-use App\Service\Social\Social\Model\PlacedSelfReplyModel;
 use App\Service\Social\Social\Model\TimelinePageModel;
 use App\Service\Social\Social\Model\TimelinePlanModel;
 use App\Service\Social\Social\Model\TimelineSelfReplyModel;
@@ -46,10 +45,12 @@ final readonly class TimelineSelfThreads
         $placements = $this->placementsOf($page, $byRoot, $stored);
         $placed = [];
         $unplaced = [];
+        $replyCounts = [];
         foreach ($placements as $rootGuid => $placement) {
             $placement->place(self::oldestFirst($byRoot[$rootGuid]));
             array_push($placed, ...$placement->placed());
             array_push($unplaced, ...$placement->unplaced());
+            $replyCounts[$rootGuid] = $placement->replyCount();
         }
 
         return new TimelinePlanModel(
@@ -58,14 +59,14 @@ final readonly class TimelineSelfThreads
                 ...self::orphansOf($byRoot, $placements),
                 ...$unplaced,
             ]),
-            new TimelineThreadsModel($placed),
+            new TimelineThreadsModel($placed, array_filter($replyCounts)),
         );
     }
 
     /** @param list<Entry> $createdEntries persisted, not yet flushed */
     public function fold(Feed $feed, TimelineThreadsModel $threads, array $createdEntries): void
     {
-        if ($threads->placed === []) {
+        if ($threads->replyCounts === []) {
             return;
         }
         $roots = $this->rootsOf($feed, $threads, $createdEntries);
@@ -76,6 +77,18 @@ final readonly class TimelineSelfThreads
                 continue;
             }
             $this->folder->foldAt($root, $reply->position, $source->selfReplyOf($reply->post));
+        }
+        self::countReplies($roots, $threads->replyCounts);
+    }
+
+    /**
+     * @param array<string, Entry> $roots
+     * @param array<string, int>   $replyCounts
+     */
+    private static function countReplies(array $roots, array $replyCounts): void
+    {
+        foreach (array_intersect_key($roots, $replyCounts) as $rootGuid => $root) {
+            $root->countSelfReplies($replyCounts[$rootGuid]);
         }
     }
 
@@ -158,10 +171,7 @@ final readonly class TimelineSelfThreads
         foreach ($createdEntries as $entry) {
             $roots[$entry->getGuid()] = $entry;
         }
-        $storedGuids = array_diff(
-            array_map(static fn (PlacedSelfReplyModel $reply): string => $reply->rootGuid, $threads->placed),
-            array_keys($roots),
-        );
+        $storedGuids = array_diff(array_keys($threads->replyCounts), array_keys($roots));
         foreach ($this->entries->findByFeedIndexedByGuidHash($feed, self::hashesOf($storedGuids)) as $root) {
             $roots[$root->getGuid()] = $root;
         }

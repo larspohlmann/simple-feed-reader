@@ -116,7 +116,7 @@ export function entryDetailJson(
   chapters: ChapterDto[] | null = null,
 ): EntryDetailResponse {
   const { id, pending, summary, excerpt, imageUrl, imageWidth, imageHeight } = entry;
-  const { imageRenditions, media, linkCards, thread, share } = entry;
+  const { imageRenditions, media, linkCards, thread, threadLength, share } = entry;
   const completed = { id, pending, summary, excerpt, imageUrl, imageWidth, imageHeight };
   return {
     entry: { ...entry, contentHtml, chapters, transcript: null },
@@ -126,6 +126,7 @@ export function entryDetailJson(
       media,
       linkCards,
       thread,
+      threadLength,
       share,
       quote: entry.quote ?? null,
     },

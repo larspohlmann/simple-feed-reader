@@ -40,7 +40,7 @@ use App\Service\Foundation\Url\Support\YouTubeUrl;
  *   attachments: list<array<string, string|int|true>>,
  *   categories: list<string>,
  *   linkCards: list<LinkCardRow>,
- *   thread: list<ThreadPostRow>,
+ *   thread: list<ThreadPostRow>, threadLength: int,
  *   publishedAt: string|null,
  *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
  *   poster: array{name: string, url: string|null, imageUrl: string|null}|null,
@@ -61,7 +61,7 @@ use App\Service\Foundation\Url\Support\YouTubeUrl;
  *   imageRenditions: list<array{url: string, width: int}>,
  *   media: list<array<string, string|int|true>>,
  *   linkCards: list<LinkCardRow>,
- *   thread: list<ThreadPostRow>,
+ *   thread: list<ThreadPostRow>, threadLength: int,
  *   share: 'link'|'media'|'quote'|null,
  *   quote: QuoteRow|null,
  * }
@@ -136,6 +136,7 @@ final readonly class EntryJson
             'media' => EntryMedia::toJsonList($entry->getMedia()),
             'linkCards' => array_map($this->linkCardJson->of(...), $row->enrichment->linkCards),
             'thread' => array_map($this->threadPostJson->of(...), $row->enrichment->threadPosts),
+            'threadLength' => 1 + $entry->getSelfReplyCount(),
             'share' => $entry->getShareKind()?->value,
             'quote' => $this->quotedPostJson->ofOrNull($entry->getQuotedPost()),
         ];

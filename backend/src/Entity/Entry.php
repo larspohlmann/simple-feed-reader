@@ -317,6 +317,16 @@ final class Entry
         $this->quotedLink = $link;
     }
 
+    public function getSelfReplyCount(): int
+    {
+        return $this->discussion->readSelfReplyCount();
+    }
+
+    public function countSelfReplies(int $selfReplyCount): void
+    {
+        $this->discussion->storeSelfReplyCount($selfReplyCount);
+    }
+
     public function bodyStandsInForSummary(): bool
     {
         return !$this->headline->read()->isUntitledPost() && $this->share->kind() === null;

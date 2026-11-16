@@ -34,6 +34,7 @@ const completed = (id: number, over: Partial<CompletedEntryDto> = {}): Completed
   media: [],
   linkCards: [],
   thread: [],
+  threadLength: 1,
   share: null,
   quote: null,
   ...over,
