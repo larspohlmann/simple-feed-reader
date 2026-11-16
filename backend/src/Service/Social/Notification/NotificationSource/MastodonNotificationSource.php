@@ -157,7 +157,7 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
         string $actorProfileUrl,
     ): NotificationSubject {
         if ($kind === SocialNotificationKind::Follow) {
-            return new NotificationSubject('', null, $actorProfileUrl);
+            return NotificationSubject::follow($actorProfileUrl);
         }
 
         $status = $entry->node('status');

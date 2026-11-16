@@ -152,7 +152,7 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
                 $account,
                 $postTexts,
             ),
-            SocialNotificationKind::Follow => new NotificationSubject('', null, $actorProfileUrl),
+            SocialNotificationKind::Follow => NotificationSubject::follow($actorProfileUrl),
             default => new NotificationSubject(
                 $remoteId,
                 Excerpt::of($entry->node('record')->text('text')),

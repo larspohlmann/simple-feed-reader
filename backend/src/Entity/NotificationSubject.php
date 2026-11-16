@@ -18,4 +18,9 @@ final readonly class NotificationSubject
         public string $linkUrl,
     ) {
     }
+
+    public static function follow(string $profileUrl): self
+    {
+        return new self('', null, $profileUrl);
+    }
 }
