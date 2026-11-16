@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\Model;
 
+use App\Service\Foundation\Clock\Support\DeadlineFit;
+
 /** How many AppView profile calls one pass may spend, each asking for up to a page of actors. */
 final readonly class ProfileCallBudgetModel
 {
@@ -26,9 +28,7 @@ final readonly class ProfileCallBudgetModel
     /** The whole calls that end before $deadline, at most $maxCalls: none once less than one fits. */
     public static function fittingBefore(\DateTimeImmutable $deadline, \DateTimeImmutable $now, int $maxCalls): self
     {
-        $remaining = $deadline->getTimestamp() - $now->getTimestamp();
-
-        return self::calls(min($maxCalls, intdiv(max(0, $remaining), self::CALL_SECONDS)));
+        return self::calls(min($maxCalls, DeadlineFit::wholeUnits($deadline, $now, self::CALL_SECONDS)));
     }
 
     public function isEmpty(): bool

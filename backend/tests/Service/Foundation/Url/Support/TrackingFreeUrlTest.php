@@ -401,7 +401,7 @@ final class TrackingFreeUrlTest extends TestCase
     #[DataProvider('strippedKeys')]
     public function testTheStrippedKeysAreNamedAsTheCleanerReadsThem(string $url, array $expected): void
     {
-        self::assertSame($expected, TrackingFreeUrl::strippedKeysIn($url));
+        self::assertSame($expected, TrackingFreeUrl::read($url)->strippedKeys());
     }
 
     /** @return iterable<string, array{string}> */
@@ -425,7 +425,7 @@ final class TrackingFreeUrlTest extends TestCase
     #[DataProvider('neverStrippedKeysOnEveryHost')]
     public function testNoRuleEverMatchesAKeyThatMayNameContent(string $url): void
     {
-        self::assertSame([], TrackingFreeUrl::strippedKeysIn($url));
+        self::assertSame([], TrackingFreeUrl::read($url)->strippedKeys());
     }
 
     /** @return iterable<string, array{string}> */

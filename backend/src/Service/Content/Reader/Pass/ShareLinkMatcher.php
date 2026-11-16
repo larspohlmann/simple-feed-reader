@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Content\Reader\Pass;
 
 use App\Service\Foundation\Html\Support\DeclaredPageAddress;
+use App\Service\Outbound\Fetch\Support\HostKey;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -114,11 +115,7 @@ final readonly class ShareLinkMatcher
     /** Lowercased throughout — LinkedIn's own share link uses `/shareArticle`. */
     private static function hostAndPath(string $href): string
     {
-        $host = strtolower((string) parse_url($href, PHP_URL_HOST));
-        $host = preg_replace('/^www\./', '', $host) ?? $host;
-        $path = strtolower((string) parse_url($href, PHP_URL_PATH));
-
-        return $host . $path;
+        return (HostKey::forUrlOrNull($href) ?? '') . strtolower((string) parse_url($href, PHP_URL_PATH));
     }
 
     private function carriesTheSharedAddress(string $href): bool

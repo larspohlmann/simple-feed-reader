@@ -1,5 +1,6 @@
 import { FeedDirectoryCountryFile, FeedDirectoryDomainTuple } from './feed-directory.models';
 import { feedDirectoryHost, feedDirectoryUrl } from './feed-directory-url';
+import { stripWww } from '../../shared/url-host';
 
 export type FeedDirectoryMode = 'channels' | 'podcasts';
 export type FeedDirectoryLength = 'headlines' | 'summaries' | 'long';
@@ -86,7 +87,7 @@ export function withSubscriptions(
   lookup: SubscribedLookup,
 ): FeedDirectoryRow[] {
   return rows.map((row) => {
-    const following = lookup.domains.has(bareHost(row.host));
+    const following = lookup.domains.has(stripWww(row.host));
     const feeds = row.feeds.map((feed) => {
       const subscribed = lookup.urls.has(feedDirectoryUrl(feed.url));
       return subscribed === feed.subscribed ? feed : { ...feed, subscribed };
@@ -148,10 +149,6 @@ function enclosingDomains(hosts: readonly string[]): Set<string> {
     labels.forEach((_label, index) => domains.add(labels.slice(index).join('.')));
   }
   return domains;
-}
-
-function bareHost(host: string): string {
-  return host.startsWith('www.') ? host.slice('www.'.length) : host;
 }
 
 export function feedsIn(row: FeedDirectoryRow, mode: FeedDirectoryMode): FeedDirectoryFeed[] {

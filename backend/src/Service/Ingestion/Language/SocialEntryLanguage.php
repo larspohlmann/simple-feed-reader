@@ -6,6 +6,7 @@ namespace App\Service\Ingestion\Language;
 
 use App\Enum\FeedLanguage;
 use App\Service\Foundation\Text\Support\EntryPlainText;
+use App\Service\Ingestion\Language\Support\PreviewText;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 
 /**
@@ -37,7 +38,7 @@ final readonly class SocialEntryLanguage
 
     private function guess(ParsedEntryModel $entry, string $body): ?FeedLanguage
     {
-        $text = $entry->headline->text . "\n" . $body;
+        $text = PreviewText::joined($entry->headline->text, $body);
         $guess = $this->languageGuess->bestFor($text);
         if (null !== $guess) {
             return $guess;

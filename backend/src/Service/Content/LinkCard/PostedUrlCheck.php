@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Content\LinkCard;
 
-use App\Entity\LinkCardContent;
 use App\Service\Content\LinkCard\Model\PageCardModel;
 use App\Service\Content\LinkCard\PageCardReader\PageCardReaderInterface;
 use App\Service\Content\Reader\Exception\PageFetchException;
@@ -57,10 +56,10 @@ final readonly class PostedUrlCheck
 
     private function kept(string $postedUrl, PageCardModel $posted, string $reason): PageCardModel
     {
-        $this->logger->info(
-            $reason,
-            ['host' => HostKey::forUrl($postedUrl), 'strippedKeys' => TrackingFreeUrl::strippedKeysIn($postedUrl)],
-        );
+        $this->logger->info($reason, [
+            'host' => HostKey::forUrl($postedUrl),
+            'strippedKeys' => TrackingFreeUrl::read($postedUrl)->strippedKeys(),
+        ]);
 
         return $posted->card === null
             ? $posted

@@ -12,9 +12,15 @@ final class HostKey
 {
     public static function forUrl(string $url): string
     {
+        return self::forUrlOrNull($url) ?? $url;
+    }
+
+    /** The key, or null when the URL has no host. */
+    public static function forUrlOrNull(string $url): ?string
+    {
         $host = parse_url($url, \PHP_URL_HOST);
         if (!\is_string($host) || '' === $host) {
-            return $url;
+            return null;
         }
 
         $host = strtolower($host);

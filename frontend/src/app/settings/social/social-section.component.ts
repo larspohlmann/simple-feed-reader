@@ -68,7 +68,7 @@ export class SocialSectionComponent {
   protected readonly blueskyPassword = signal('');
   protected readonly mastodonInstance = signal('');
   protected readonly mastodonToken = signal('');
-  protected readonly mastodonHost = computed(() => hostOf(this.mastodonInstance()));
+  protected readonly mastodonHost = computed(() => typedInstanceHost(this.mastodonInstance()));
   protected readonly lemmyFormOpen = signal(false);
   protected readonly lemmyDraft = signal<LemmyDraft>(EMPTY_LEMMY_DRAFT);
   protected readonly reconnectDrafts = signal<Readonly<Record<number, ReconnectDraft>>>({});
@@ -248,7 +248,7 @@ const RECONNECT_TITLE_KEYS: Record<SocialNetworkName, string> = {
   lemmy: 'settings.social.lemmyPassword',
 };
 
-function hostOf(instance: string): string | null {
+function typedInstanceHost(instance: string): string | null {
   const typed = instance.trim();
   if (typed === '') return null;
   try {

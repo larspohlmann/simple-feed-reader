@@ -8,7 +8,6 @@ use App\Enum\TrendingWindow;
 use App\Repository\TrendingEntryRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Curation\Trending\Model\TrendingStoryModel;
-use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Service\Curation\Trending\Pass\HeadlineWindow;
 use App\Service\Curation\Trending\Pass\SharedArticles;
 use App\Service\Curation\Trending\Pass\TrendingRun;
@@ -33,7 +32,7 @@ final readonly class TrendingGrouping
         $since = $window->startBefore($this->clock->now());
         $sharedArticles = new SharedArticles($this->cardLanguage);
         foreach ($this->windowEntries->windowEntries($since) as $entry) {
-            $run->add($entry, self::urlHashesOf($entry), $sharedArticles->of($entry));
+            $run->add($entry, $entry->links->urlHashes(), $sharedArticles->of($entry));
         }
 
         return $run;
@@ -55,15 +54,6 @@ final readonly class TrendingGrouping
             $this->groups($run),
             static fn (TrendingStoryModel $story): bool => $story->outletCount() >= $run->window->minSubscribedFeeds(),
         ));
-    }
-
-    /** @return list<string> */
-    private static function urlHashesOf(WindowEntryModel $entry): array
-    {
-        return array_values(array_unique(array_filter(
-            [$entry->links->urlHash, $entry->links->card?->urlHash],
-            static fn (?string $urlHash): bool => $urlHash !== null,
-        )));
     }
 
     /** @param non-empty-list<int> $entryIds */

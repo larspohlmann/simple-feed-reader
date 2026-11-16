@@ -50,6 +50,19 @@ final class EntryLinksModelTest extends TestCase
         self::assertNull((new EntryLinksModel(null, null, null))->articleSite());
     }
 
+    public function testTheUrlHashesAreTheEntrysAndItsCardsOnce(): void
+    {
+        self::assertSame(['own', 'hash'], (new EntryLinksModel('own', null, self::storyCard()))->urlHashes());
+        self::assertSame(['hash'], (new EntryLinksModel('hash', null, self::storyCard()))->urlHashes());
+    }
+
+    public function testAMissingUrlHashIsLeftOut(): void
+    {
+        self::assertSame(['hash'], (new EntryLinksModel(null, null, self::storyCard()))->urlHashes());
+        self::assertSame(['own'], (new EntryLinksModel('own', null, null))->urlHashes());
+        self::assertSame([], (new EntryLinksModel(null, null, null))->urlHashes());
+    }
+
     private static function storyCard(): WindowLinkCardModel
     {
         return new WindowLinkCardModel(

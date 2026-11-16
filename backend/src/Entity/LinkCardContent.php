@@ -43,32 +43,4 @@ final readonly class LinkCardContent
             'siteName' => $this->siteName,
         ];
     }
-
-    /** @param array<string, mixed>|null $stored */
-    public static function fromStoredOrNull(?array $stored): ?self
-    {
-        $stored ??= [];
-        $url = $stored['url'] ?? null;
-        $title = $stored['title'] ?? null;
-        $siteName = $stored['siteName'] ?? null;
-        if (!\is_string($url) || !\is_string($title) || !\is_string($siteName)) {
-            return null;
-        }
-
-        return new self(
-            $url,
-            $title,
-            self::stringOrNull($stored, 'description'),
-            self::stringOrNull($stored, 'imageUrl'),
-            $siteName,
-        );
-    }
-
-    /** @param array<string, mixed> $stored */
-    private static function stringOrNull(array $stored, string $key): ?string
-    {
-        $value = $stored[$key] ?? null;
-
-        return \is_string($value) ? $value : null;
-    }
 }
