@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { EntryDto } from '../../models';
 import { selectionQueryParams } from '../../query/query';
+import { OwnInstanceLinks } from '../../own-instance/own-instance-links.service';
 import { isSavedFeed } from '../../state/social-sections';
 import { SubscriptionRows } from '../../state/subscription-rows';
 import { sourceNameOf } from './source-name';
@@ -28,6 +29,7 @@ export class EntrySourceComponent {
   readonly layout = input.required<EntrySourceLayout>();
   readonly size = input(16);
 
+  protected readonly links = inject(OwnInstanceLinks);
   private readonly rows = inject(SubscriptionRows);
   protected readonly name = computed(() => sourceNameOf(this.entry(), this.rows));
 

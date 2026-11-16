@@ -21,6 +21,7 @@ import { AvatarComponent } from '../../../shared/avatar/avatar.component';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { SOCIAL_NETWORK_NAMES, SocialNetworkName } from '../../../core/social-network';
 import { PostActions } from '../composer/post-actions.service';
+import { OwnInstanceLinks } from '../../own-instance/own-instance-links.service';
 import { CommentsService } from './comments.service';
 import { relativeTime } from '../../format';
 import { EntryDto } from '../../models';
@@ -63,6 +64,7 @@ export class EntryCommentsComponent {
   readonly entry = input.required<CommentsEntry>();
   readonly refreshed = output<void>();
 
+  protected readonly links = inject(OwnInstanceLinks);
   private readonly service = inject(CommentsService);
   private readonly responses = inject(PostActions);
   private readonly language = inject(LanguageService);
@@ -73,6 +75,7 @@ export class EntryCommentsComponent {
 
   readonly state = computed(() => this.service.state(this.entryId())());
   protected readonly likeable = computed(() => likeableSocial(this.entry()) !== null);
+  protected readonly socialNetwork = computed(() => this.entry().social?.network ?? null);
   readonly network = computed(() => {
     const social = this.entry().social;
     return social ? SOCIAL_NETWORK_NAMES[social.network] : null;

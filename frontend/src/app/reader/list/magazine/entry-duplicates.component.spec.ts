@@ -9,6 +9,7 @@ import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handl
 import { anEntry } from '../../../../testing/entry-testing';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
+import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 import { ENTRY_ROW_ACTION, EntryRowAction } from '../../entry/entry-actions/entry-row-action';
 
 const entryActions = {
@@ -37,6 +38,7 @@ function mount(testEntry: EntryDto, arrange?: () => void) {
   TestBed.configureTestingModule({
     imports: [EntryDuplicatesComponent, provideTranslocoTesting()],
     providers: [
+      provideSocialAccounts(),
       provideAccountIdentity(),
       { provide: EntryActionHandler, useValue: entryActions },
       provideRouter([]),
@@ -190,7 +192,6 @@ it("deletes the row's post from a copy and closes the popover (#1972)", () => {
     isLiked: false,
     canLike: true,
     isOwn: true,
-    openUrl: null,
   } as const;
   const dup = entry({ id: 2, title: 'Copy', social: own });
   const row = entry({ id: 1, social: own, duplicates: [dup] });
@@ -241,7 +242,7 @@ function openLikePopover() {
   const dup = entry({
     id: 2,
     title: 'Skeet',
-    social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false, openUrl: null },
+    social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
   });
   const fixture = mount(entry({ duplicates: [dup] }));
   (fixture.nativeElement.querySelector('.also-entry') as HTMLElement).click();
@@ -257,7 +258,7 @@ function openLikePopover() {
         duplicates: [
           {
             ...dup,
-            social: { network: 'bluesky', isLiked, canLike: true, isOwn: false, openUrl: null },
+            social: { network: 'bluesky', isLiked, canLike: true, isOwn: false },
           },
         ],
       }),

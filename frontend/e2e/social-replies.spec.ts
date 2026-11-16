@@ -13,7 +13,7 @@ import { plays, recordPlays } from './support/media';
 const POST = entryWire({
   id: 1,
   title: 'A post worth answering',
-  social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false, openUrl: null },
+  social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
   comments: 'auto',
   discussionUrl: 'https://bsky.invalid/post/1',
 });

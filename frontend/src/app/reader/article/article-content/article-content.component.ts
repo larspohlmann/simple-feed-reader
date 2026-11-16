@@ -2,6 +2,7 @@ import { Component, ElementRef, inject, input, output, signal } from '@angular/c
 import { ArticleBody } from './article-body.service';
 import { AudioTrack } from '../../audio-player.service';
 import { EmbedTrackOrigin } from '../../audio/embed-track';
+import { SocialNetworkName } from '../../../core/social-network';
 import { ChapterDto } from '../../models';
 
 /** The article body: its typography and every decoration `ArticleBody` gives it. */
@@ -15,6 +16,7 @@ import { ChapterDto } from '../../models';
 export class ArticleContentComponent {
   readonly html = input.required<string>();
   readonly pageUrl = input.required<string | null>();
+  readonly network = input<SocialNetworkName | null>(null);
   readonly enclosureUrl = input<string | null>(null);
   readonly chapters = input<ChapterDto[]>([]);
   readonly audioTrack = input<AudioTrack | null>(null);
@@ -28,6 +30,7 @@ export class ArticleContentComponent {
       content: signal(this.element),
       html: this.html,
       pageUrl: this.pageUrl,
+      network: this.network,
       enclosureUrl: this.enclosureUrl,
       chapters: this.chapters,
       audioTrack: this.audioTrack,

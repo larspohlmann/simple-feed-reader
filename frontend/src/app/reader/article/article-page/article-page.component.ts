@@ -38,7 +38,9 @@ import { ArticlePageSlotDirective, ArticlePageSlotName } from './article-page-sl
 
 function sameBody(left: ArticlePageBody | null, right: ArticlePageBody | null): boolean {
   if (left === null || right === null) return left === right;
-  return left.html === right.html && left.pageUrl === right.pageUrl;
+  return (
+    left.html === right.html && left.pageUrl === right.pageUrl && left.network === right.network
+  );
 }
 
 /** One article page — its layer, skeleton and reading aids — filled by a view through its source and slots. */

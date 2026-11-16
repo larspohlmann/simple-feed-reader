@@ -56,7 +56,7 @@ final readonly class SubscriptionController
         return new JsonResponse(SubscriptionJson::list(
             $this->subscriptions->findForUserWithTags($user->requireId(), SubscriptionSet::All),
             $this->tallies->forUser($user, $window),
-            $this->socialAccounts->findAllForUser($user),
+            $this->socialAccounts->findAllForUserIdInActingOrder($user->requireId()),
         ));
     }
 

@@ -59,7 +59,6 @@ describe('SocialCountsComponent', () => {
         isLiked: false,
         canLike: true,
         isOwn: false,
-        openUrl: null,
         ...social,
       },
     });
@@ -216,7 +215,7 @@ describe('SocialCountsComponent', () => {
     it('opens the composer for the post from the replies count', () => {
       const entry = anEntry({
         id: 1,
-        social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false, openUrl: null },
+        social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
       });
       show(entry);
       const button = replyButton(
@@ -271,7 +270,6 @@ describe('SocialCountsComponent', () => {
             isLiked: false,
             canLike: true,
             isOwn: false,
-            openUrl: null,
           },
         }),
       );
@@ -392,7 +390,6 @@ describe('SocialCountsComponent', () => {
             isLiked: false,
             canLike: true,
             isOwn: false,
-            openUrl: null,
           },
         }),
       );

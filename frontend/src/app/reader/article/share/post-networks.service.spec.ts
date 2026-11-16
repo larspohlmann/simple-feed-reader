@@ -16,9 +16,27 @@ function postNetworksOf(accounts: SocialAccountRefDto[]): PostNetworks {
 describe('PostNetworks', () => {
   it('offers each network with a connected account, Bluesky first, with its handles', () => {
     const networks = postNetworksOf([
-      { id: 2, network: 'mastodon', handle: '@bob@mastodon.example', status: 'connected' },
-      { id: 1, network: 'bluesky', handle: '@alice.bsky.social', status: 'connected' },
-      { id: 3, network: 'bluesky', handle: '@carol.bsky.social', status: 'needs_reconnect' },
+      {
+        id: 2,
+        network: 'mastodon',
+        handle: '@bob@mastodon.example',
+        status: 'connected',
+        serviceUrl: 'https://example.test',
+      },
+      {
+        id: 1,
+        network: 'bluesky',
+        handle: '@alice.bsky.social',
+        status: 'connected',
+        serviceUrl: 'https://example.test',
+      },
+      {
+        id: 3,
+        network: 'bluesky',
+        handle: '@carol.bsky.social',
+        status: 'needs_reconnect',
+        serviceUrl: 'https://example.test',
+      },
     ]);
 
     expect(networks.connected()).toEqual([
@@ -29,7 +47,13 @@ describe('PostNetworks', () => {
 
   it('adds no post network for a connected Lemmy account', () => {
     const networks = postNetworksOf([
-      { id: 7, network: 'lemmy', handle: 'lars@lemmy.example', status: 'connected' },
+      {
+        id: 7,
+        network: 'lemmy',
+        handle: 'lars@lemmy.example',
+        status: 'connected',
+        serviceUrl: 'https://example.test',
+      },
     ]);
 
     expect(networks.connected()).toEqual([]);

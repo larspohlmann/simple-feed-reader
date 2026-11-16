@@ -47,9 +47,27 @@ describe('buildSocialSections', () => {
     const sections = sectionsOf(
       [feed(1, ref('bluesky', 3, 'home'))],
       [
-        { id: 9, network: 'bluesky', handle: '@bob.bsky.social', status: 'needs_reconnect' },
-        { id: 3, network: 'bluesky', handle: '@alice.bsky.social', status: 'connected' },
-        { id: 5, network: 'mastodon', handle: '@carol@mastodon.example', status: 'connected' },
+        {
+          id: 9,
+          network: 'bluesky',
+          handle: '@bob.bsky.social',
+          status: 'needs_reconnect',
+          serviceUrl: 'https://example.test',
+        },
+        {
+          id: 3,
+          network: 'bluesky',
+          handle: '@alice.bsky.social',
+          status: 'connected',
+          serviceUrl: 'https://example.test',
+        },
+        {
+          id: 5,
+          network: 'mastodon',
+          handle: '@carol@mastodon.example',
+          status: 'connected',
+          serviceUrl: 'https://example.test',
+        },
       ],
     );
 
@@ -63,7 +81,15 @@ describe('buildSocialSections', () => {
   it('keeps a network with an account but no feeds, so its head can still manage feeds', () => {
     const sections = sectionsOf(
       [],
-      [{ id: 3, network: 'bluesky', handle: '@alice.bsky.social', status: 'connected' }],
+      [
+        {
+          id: 3,
+          network: 'bluesky',
+          handle: '@alice.bsky.social',
+          status: 'connected',
+          serviceUrl: 'https://example.test',
+        },
+      ],
     );
 
     expect(sections.map((section) => section.network)).toEqual(['bluesky']);
@@ -79,7 +105,15 @@ describe('buildSocialSections', () => {
         feed(4, ref('bluesky', 3, 'list'), 'Artists'),
         feed(5, ref('bluesky', 3, 'home')),
       ],
-      [{ id: 3, network: 'bluesky', handle: '@alice.bsky.social', status: 'connected' }],
+      [
+        {
+          id: 3,
+          network: 'bluesky',
+          handle: '@alice.bsky.social',
+          status: 'connected',
+          serviceUrl: 'https://example.test',
+        },
+      ],
     );
 
     expect(
@@ -101,6 +135,7 @@ describe('buildSocialSections', () => {
       network: 'lemmy',
       handle: 'lars@lemmy.example',
       status: 'connected',
+      serviceUrl: 'https://example.test',
     };
 
     const sections = sectionsOf([profile(1, 'lemmy', 'rss@feddit.example')], [lemmy]);
@@ -131,7 +166,15 @@ describe('buildSocialSections', () => {
         feed(2, ref('bluesky', 3, 'tag'), 'Tag'),
         feed(3, ref('bluesky', 9, 'search'), 'alpha'),
       ],
-      [{ id: 3, network: 'bluesky', handle: '@alice.bsky.social', status: 'connected' }],
+      [
+        {
+          id: 3,
+          network: 'bluesky',
+          handle: '@alice.bsky.social',
+          status: 'connected',
+          serviceUrl: 'https://example.test',
+        },
+      ],
     );
 
     expect(sections[0].accounts.map((group) => group.subscriptions.map(({ id }) => id))).toEqual([
@@ -199,7 +242,15 @@ describe('buildSocialSections', () => {
         profile(3, 'bluesky', 'amy'),
         profile(4, 'mastodon', 'Other network'),
       ],
-      [{ id: 3, network: 'bluesky', handle: '@alice.bsky.social', status: 'connected' }],
+      [
+        {
+          id: 3,
+          network: 'bluesky',
+          handle: '@alice.bsky.social',
+          status: 'connected',
+          serviceUrl: 'https://example.test',
+        },
+      ],
     );
 
     expect(sections[0].accounts.map((group) => group.accountId)).toEqual([3]);
@@ -231,7 +282,15 @@ describe('buildSocialSections', () => {
           social: { network: 'bluesky', accountId: null, kind: 'profile' },
         }),
       ],
-      [{ id: 3, network: 'bluesky', handle: '@a', status: 'connected' }],
+      [
+        {
+          id: 3,
+          network: 'bluesky',
+          handle: '@a',
+          status: 'connected',
+          serviceUrl: 'https://example.test',
+        },
+      ],
       {
         ...NO_UNREAD_TOTALS,
         networks: new Map([['bluesky', 6]]),

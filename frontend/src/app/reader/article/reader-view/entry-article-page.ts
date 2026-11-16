@@ -4,6 +4,7 @@ import { EntryAudio } from '../../audio/entry-audio';
 import { ListenLauncher } from '../../audio/listen-launcher';
 import { embedTrackOrigin } from '../../audio/embed-track';
 import { entryDisplayTitle, isPost } from '../../entry/entry-text';
+import { OwnInstanceLinks } from '../../own-instance/own-instance-links.service';
 import { ArticleSource } from '../content/article-source.service';
 import { ReaderModeService } from '../content/reader-mode.service';
 import { entryPageKey } from '../reading/article-page-key';
@@ -20,6 +21,7 @@ import {
 export class EntryArticlePage implements ArticlePageSource {
   private readonly article = inject(ArticleSource);
   private readonly readerMode = inject(ReaderModeService);
+  private readonly links = inject(OwnInstanceLinks);
   private readonly entry = this.article.entry;
 
   constructor() {
@@ -40,8 +42,8 @@ export class EntryArticlePage implements ArticlePageSource {
   readonly key = computed(() => entryPageKey(this.entry().id));
   readonly url = computed(() => this.entry().url);
   readonly openUrl = computed(() => {
-    const entry = this.entry();
-    return entry.social?.openUrl ?? entry.url ?? entry.discussionUrl;
+    const { url, social, discussionUrl } = this.entry();
+    return url === null ? discussionUrl : this.links.open(url, social?.network ?? null);
   });
   readonly title = computed(() => entryDisplayTitle(this.entry()));
   readonly shareTitle = computed(() => this.entry().title);
@@ -57,6 +59,7 @@ export class EntryArticlePage implements ArticlePageSource {
   readonly body = computed<ArticlePageBody>(() => ({
     html: this.article.displayHtml(),
     pageUrl: this.entry().url,
+    network: this.entry().social?.network ?? null,
   }));
   readonly bodyAudio = computed<ArticlePageBodyAudio>(() => ({
     enclosureUrl: this.audio.attachment()?.url ?? null,

@@ -7,7 +7,7 @@
 @if (current.poster?.url; as profileUrl) {
   <a
     class="source"
-    [href]="profileUrl"
+    [href]="links.open(profileUrl, current.social?.network ?? null)"
     target="_blank"
     rel="noopener noreferrer"
     (click)="keepFromCard($event)"

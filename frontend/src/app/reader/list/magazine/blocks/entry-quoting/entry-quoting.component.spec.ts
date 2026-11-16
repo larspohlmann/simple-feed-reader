@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../../../testing/transloco-testing';
@@ -6,6 +7,11 @@ import { EntryDto } from '../../../../models';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
 import { aQuotedPost, anEntry } from '../../../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
+import {
+  aMastodonAccount,
+  provideSocialAccounts,
+} from '../../../../../../testing/social-accounts-testing';
+import { SubscriptionsStore } from '../../../../state/subscriptions.store';
 
 const entryActions = { open: jest.fn() };
 
@@ -25,6 +31,7 @@ function mount(entry: EntryDto): HTMLElement {
   TestBed.configureTestingModule({
     imports: [EntryQuotingComponent, provideTranslocoTesting()],
     providers: [
+      provideSocialAccounts(),
       provideAccountIdentity(),
       { provide: EntryActionHandler, useValue: entryActions },
       provideRouter([]),
@@ -50,6 +57,22 @@ describe('EntryQuotingComponent', () => {
     const element = mount(quoting());
 
     expect(element.querySelector('app-quoted-post.block')?.textContent).toContain('What they said');
+  });
+
+  it("opens a Mastodon entry's quoted post on the reader's instance", () => {
+    TestBed.overrideProvider(SubscriptionsStore, {
+      useValue: { socialAccounts: signal([aMastodonAccount('https://home.test')]) },
+    });
+    const element = mount(
+      quoting({
+        social: { network: 'mastodon', isLiked: false, canLike: true, isOwn: false },
+        quote: aQuotedPost({ url: 'https://mastodon.social/@Gargron/9' }),
+      }),
+    );
+
+    expect(element.querySelector('app-quoted-post a.open')!.getAttribute('href')).toBe(
+      `https://home.test/authorize_interaction?uri=${encodeURIComponent('https://mastodon.social/@Gargron/9')}`,
+    );
   });
 
   it('renders no media for a post without any of its own', () => {

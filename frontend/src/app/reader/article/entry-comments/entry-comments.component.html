@@ -50,7 +50,7 @@
                 @if (c.authorUrl) {
                   <a
                     class="author"
-                    [href]="c.authorUrl"
+                    [href]="links.open(c.authorUrl, socialNetwork())"
                     target="_blank"
                     rel="noopener noreferrer"
                     >{{ c.author }}</a
@@ -67,9 +67,13 @@
                 @if (c.publishedAt; as publishedAt) {
                   <span class="separator" aria-hidden="true">·</span>
                   @if (c.url) {
-                    <a class="when" [href]="c.url" target="_blank" rel="noopener noreferrer">{{
-                      when(publishedAt)
-                    }}</a>
+                    <a
+                      class="when"
+                      [href]="links.open(c.url, socialNetwork())"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      >{{ when(publishedAt) }}</a
+                    >
                   } @else {
                     <span class="when">{{ when(publishedAt) }}</span>
                   }
@@ -91,7 +95,7 @@
                 />
               }
               @if (c.quote) {
-                <app-quoted-post [quote]="c.quote" layout="article" />
+                <app-quoted-post [quote]="c.quote" layout="article" [network]="socialNetwork()" />
               }
               @if (c.linkCard; as card) {
                 <app-link-card [card]="card" layout="article" opensInReader="layer" />

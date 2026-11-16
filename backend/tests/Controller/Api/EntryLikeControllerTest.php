@@ -68,8 +68,6 @@ final class EntryLikeControllerTest extends ApiTestCase
                 'isLiked' => true,
                 'canLike' => true,
                 'isOwn' => false,
-                'openUrl' => 'https://mastodon.example/authorize_interaction'
-                    . '?uri=https%3A%2F%2Fmastodon.social%2F%40Gargron%2F110',
             ],
             $this->socialOf($client, $entryId),
         );
@@ -116,8 +114,6 @@ final class EntryLikeControllerTest extends ApiTestCase
                 'isLiked' => false,
                 'canLike' => true,
                 'isOwn' => false,
-                'openUrl' => 'https://mastodon.example/authorize_interaction'
-                    . '?uri=https%3A%2F%2Fmastodon.social%2F%40Gargron%2F110',
             ],
             $this->socialOf($client, $entryId),
         );
@@ -165,7 +161,7 @@ final class EntryLikeControllerTest extends ApiTestCase
         $this->assertRejected($client, Response::HTTP_CONFLICT);
         self::assertSame('social_account_missing', $this->payload($client)['type']);
         self::assertSame(
-            ['network' => 'mastodon', 'isLiked' => false, 'canLike' => false, 'isOwn' => false, 'openUrl' => null],
+            ['network' => 'mastodon', 'isLiked' => false, 'canLike' => false, 'isOwn' => false],
             $this->socialOf($client, $entryId),
         );
     }
@@ -319,7 +315,7 @@ final class EntryLikeControllerTest extends ApiTestCase
         $social = $entry['social'];
         self::assertTrue(null === $social || is_array($social));
 
-        /** @var array{network: string, isLiked: bool, canLike: bool, isOwn: bool, openUrl: string|null}|null $social */
+        /** @var array{network: string, isLiked: bool, canLike: bool, isOwn: bool}|null $social */
         return $social;
     }
 

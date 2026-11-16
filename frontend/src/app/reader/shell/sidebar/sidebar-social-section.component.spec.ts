@@ -40,7 +40,13 @@ const feed = (
 const ONE_ACCOUNT: SocialSection = {
   network: 'bluesky',
   networkAccounts: [
-    { id: 3, network: 'bluesky', handle: '@alice.bsky.social', status: 'connected' },
+    {
+      id: 3,
+      network: 'bluesky',
+      handle: '@alice.bsky.social',
+      status: 'connected',
+      serviceUrl: 'https://example.test',
+    },
   ],
   groups: { search: socialFeedGroup([], 0), profile: socialFeedGroup([], 0) },
   unreadCount: 3,
@@ -644,6 +650,7 @@ describe('SidebarSocialSectionComponent', () => {
         network: 'bluesky' as const,
         handle: '@bob.bsky.social',
         status: 'needs_reconnect' as const,
+        serviceUrl: 'https://example.test',
       };
       socialActions = [
         { id: '3', label: 'Manage feeds of @alice.bsky.social', disabled: false },

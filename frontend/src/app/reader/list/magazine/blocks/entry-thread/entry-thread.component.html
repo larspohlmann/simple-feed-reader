@@ -20,7 +20,11 @@
         />
       }
       @if (rootQuote(); as quote) {
-        <app-quoted-post [quote]="quote" layout="block" />
+        <app-quoted-post
+          [quote]="quote"
+          layout="block"
+          [network]="entry().social?.network ?? null"
+        />
       }
       @if (entry().linkCards[0]; as card) {
         <ng-container

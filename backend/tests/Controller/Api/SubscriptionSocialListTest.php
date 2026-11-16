@@ -44,8 +44,28 @@ final class SubscriptionSocialListTest extends ApiTestCase
                 'network' => 'bluesky',
                 'handle' => '@alice.bsky.social',
                 'status' => 'connected',
+                'serviceUrl' => $account->getServiceUrl(),
             ]],
             $payload['socialAccounts'],
         );
+    }
+
+    public function testTheDefaultMastodonAccountComesFirst(): void
+    {
+        $client = static::createClient();
+        $user = $this->factory()->create('social-list-default@example.test');
+        $earlier = SocialAccounts::mastodonAs($user, 'alice@mastodon.example');
+        $later = SocialAccounts::mastodonAs($user, 'alice@other.example');
+        $later->becomeDefault();
+        $this->entityManager()->persist($earlier);
+        $this->entityManager()->persist($later);
+        $this->entityManager()->flush();
+
+        $client->request('GET', '/api/subscriptions', server: $this->bearerFor($user));
+
+        self::assertResponseIsSuccessful();
+        $accounts = $this->payload($client)['socialAccounts'];
+        self::assertIsArray($accounts);
+        self::assertSame([$later->requireId(), $earlier->requireId()], array_column($accounts, 'id'));
     }
 }
