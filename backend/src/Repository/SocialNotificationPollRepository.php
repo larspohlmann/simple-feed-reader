@@ -62,25 +62,24 @@ final class SocialNotificationPollRepository extends ServiceEntityRepository
 
     /**
      * @param list<int> $accountIds
-     * @return list<string> handles of those accounts whose token lacks the notifications scope
+     * @return list<int> ids of those accounts whose token lacks the notifications scope, ascending
      */
-    public function scopeMissingHandles(array $accountIds): array
+    public function scopeMissingAccountIds(array $accountIds): array
     {
         if ($accountIds === []) {
             return [];
         }
 
-        /** @var list<string> $handles */
-        $handles = $this->createQueryBuilder('poll')
-            ->select('account.handle')
-            ->join('poll.socialAccount', 'account')
-            ->andWhere('account.id IN (:accountIds)')
+        /** @var list<int|string> $ids */
+        $ids = $this->createQueryBuilder('poll')
+            ->select('IDENTITY(poll.socialAccount) AS accountId')
+            ->andWhere('poll.socialAccount IN (:accountIds)')
             ->andWhere('poll.scopeMissing = true')
-            ->orderBy('account.id', 'ASC')
+            ->orderBy('accountId', 'ASC')
             ->setParameter('accountIds', $accountIds)
             ->getQuery()
             ->getSingleColumnResult();
 
-        return $handles;
+        return array_map(intval(...), $ids);
     }
 }

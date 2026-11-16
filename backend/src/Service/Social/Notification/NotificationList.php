@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Notification;
 
-use App\Entity\SocialAccount;
+use App\Entity\NotificationActor;
 use App\Entity\SocialNotification;
 use App\Entity\User;
 use App\Enum\SocialAccountStatus;
@@ -35,11 +35,15 @@ final readonly class NotificationList
             return new NotificationListPageModel([], null, [], []);
         }
 
-        $accountIds = array_map(static fn (SocialAccount $account): int => $account->requireId(), $accounts);
-        $handles = array_combine($accountIds, array_map(
-            static fn (SocialAccount $account): string => $account->getHandle(),
-            $accounts,
-        ));
+        $handles = [];
+        $needingReconnect = [];
+        foreach ($accounts as $account) {
+            $handles[$account->requireId()] = $account->getHandle();
+            if ($account->getStatus() === SocialAccountStatus::NeedsReconnect) {
+                $needingReconnect[] = $account->getHandle();
+            }
+        }
+        $accountIds = array_keys($handles);
         $found = $this->notifications->pageOfGroups($accountIds, $cursor, self::PAGE_SIZE);
         $hasNextPage = count($found) > self::PAGE_SIZE;
         $shown = array_slice($found, 0, self::PAGE_SIZE);
@@ -51,12 +55,14 @@ final readonly class NotificationList
             if ($rows === []) {
                 continue;
             }
-            $groups[] = $this->groupOf(
+            $groups[] = new NotificationGroupModel(
                 $group['latestId'],
                 SocialNotificationKind::from($group['kind']),
                 $handles[$group['accountId']],
-                $rows,
+                array_map(static fn (SocialNotification $row): NotificationActor => $row->getActor(), $rows),
                 $group['count'],
+                $rows[0]->getSubject(),
+                $rows[0]->getCreatedAt(),
                 $group['seen'],
             );
         }
@@ -64,46 +70,11 @@ final readonly class NotificationList
         return new NotificationListPageModel(
             $groups,
             $hasNextPage ? $shown[array_key_last($shown)]['latestId'] : null,
-            $this->polls->scopeMissingHandles($accountIds),
-            self::needingReconnect($accounts),
-        );
-    }
-
-    /**
-     * @param list<SocialAccount> $accounts
-     *
-     * @return list<string>
-     */
-    private static function needingReconnect(array $accounts): array
-    {
-        return array_values(array_map(
-            static fn (SocialAccount $account): string => $account->getHandle(),
-            array_filter(
-                $accounts,
-                static fn (SocialAccount $account): bool
-                    => $account->getStatus() === SocialAccountStatus::NeedsReconnect,
+            array_map(
+                static fn (int $accountId): string => $handles[$accountId],
+                $this->polls->scopeMissingAccountIds($accountIds),
             ),
-        ));
-    }
-
-    /** @param non-empty-list<SocialNotification> $newest */
-    private function groupOf(
-        int $latestId,
-        SocialNotificationKind $kind,
-        string $accountHandle,
-        array $newest,
-        int $actorCount,
-        bool $seen,
-    ): NotificationGroupModel {
-        return new NotificationGroupModel(
-            $latestId,
-            $kind,
-            $accountHandle,
-            array_map(static fn (SocialNotification $row) => $row->getActor(), $newest),
-            $actorCount,
-            $newest[0]->getSubject(),
-            $newest[0]->getCreatedAt(),
-            $seen,
+            $needingReconnect,
         );
     }
 }

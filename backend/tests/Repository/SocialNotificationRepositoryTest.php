@@ -64,10 +64,10 @@ final class SocialNotificationRepositoryTest extends DbTestCase
         self::assertTrue($groups[1]['seen']);
     }
 
-    public function testRepliesNeverGroup(): void
+    public function testRepliesWithTheirOwnGroupKeysStayApart(): void
     {
         $this->rows->add($this->bluesky, SocialNotificationKind::Reply, 'at://x/1');
-        $this->rows->add($this->bluesky, SocialNotificationKind::Reply, 'at://x/1');
+        $this->rows->add($this->bluesky, SocialNotificationKind::Reply, 'at://x/2');
 
         $groups = $this->groupsOfPage();
 

@@ -19,6 +19,7 @@ use Doctrine\Persistence\ManagerRegistry;
  *     accountId: int|string, kind: SocialNotificationKind, groupKey: string,
  *     seen: bool|int|string, latestId: int|string, rowCount: int|string
  * }
+ * @phpstan-type Group array{accountId: int, kind: string, groupKey: string, seen: bool, latestId: int, count: int}
  * @extends ServiceEntityRepository<SocialNotification>
  */
 final class SocialNotificationRepository extends ServiceEntityRepository
@@ -101,8 +102,7 @@ final class SocialNotificationRepository extends ServiceEntityRepository
 
     /**
      * @param list<int> $accountIds
-     * @return list<array{accountId: int, kind: string, groupKey: string, seen: bool, latestId: int, count: int}>
-     *         newest group first, one more than $limit when a further page exists
+     * @return list<Group> newest group first, one more than $limit when a further page exists
      */
     public function pageOfGroups(array $accountIds, ?int $before, int $limit): array
     {
@@ -111,6 +111,7 @@ final class SocialNotificationRepository extends ServiceEntityRepository
         }
 
         $qb = $this->groupedQuery()
+            ->addGroupBy('seen')
             ->andWhere('notification.socialAccount IN (:accountIds)')
             ->setParameter('accountIds', $accountIds)
             ->orderBy('latestId', 'DESC')
@@ -126,7 +127,7 @@ final class SocialNotificationRepository extends ServiceEntityRepository
     }
 
     /**
-     * @param list<array{accountId: int, kind: string, groupKey: string, seen: bool, latestId: int, count: int}> $groups
+     * @param list<Group> $groups
      * @return array<int, list<SocialNotification>> latestId => the group's newest rows, newest first
      */
     public function newestOfGroups(array $groups, int $perGroup): array
@@ -168,34 +169,17 @@ final class SocialNotificationRepository extends ServiceEntityRepository
             ->select('IDENTITY(notification.socialAccount) AS accountId')
             ->addSelect('notification.kind AS kind')
             ->addSelect('notification.seen AS seen')
-            ->addSelect(
-                'CASE WHEN notification.kind IN (:groupingKinds) THEN notification.subject.groupKey'
-                . ' ELSE notification.remoteId END AS groupKey',
-            )
+            ->addSelect('notification.subject.groupKey AS groupKey')
             ->addSelect('MAX(notification.id) AS latestId')
             ->addSelect('COUNT(notification.id) AS rowCount')
             ->groupBy('accountId')
             ->addGroupBy('kind')
-            ->addGroupBy('seen')
-            ->addGroupBy('groupKey')
-            ->setParameter('groupingKinds', self::groupingKinds());
-    }
-
-    /** @return list<string> */
-    private static function groupingKinds(): array
-    {
-        return array_values(array_map(
-            static fn (SocialNotificationKind $kind): string => $kind->value,
-            array_filter(
-                SocialNotificationKind::cases(),
-                static fn (SocialNotificationKind $kind): bool => $kind->groups(),
-            ),
-        ));
+            ->addGroupBy('groupKey');
     }
 
     /**
      * @param GroupRow $row
-     * @return array{accountId: int, kind: string, groupKey: string, seen: bool, latestId: int, count: int}
+     * @return Group
      */
     private static function groupRow(array $row): array
     {
@@ -210,27 +194,24 @@ final class SocialNotificationRepository extends ServiceEntityRepository
     }
 
     /**
-     * @param array{accountId: int, kind: string, groupKey: string, seen: bool, latestId: int, count: int} $group
+     * @param Group $group
      * @return list<SocialNotification>
      */
     private function newestOfGroup(array $group, int $perGroup): array
     {
-        $kind = SocialNotificationKind::from($group['kind']);
         $qb = $this->createQueryBuilder('notification')
             ->andWhere('notification.socialAccount = :account')
             ->andWhere('notification.kind = :kind')
             ->andWhere('notification.seen = :seen')
+            ->andWhere('notification.subject.groupKey = :groupKey')
             ->andWhere('notification.id <= :latestId')
             ->setParameter('account', $group['accountId'])
-            ->setParameter('kind', $kind)
+            ->setParameter('kind', SocialNotificationKind::from($group['kind']))
             ->setParameter('seen', $group['seen'])
             ->setParameter('latestId', $group['latestId'])
             ->setParameter('groupKey', $group['groupKey'])
             ->orderBy('notification.id', 'DESC')
             ->setMaxResults($perGroup);
-        $qb->andWhere(
-            $kind->groups() ? 'notification.subject.groupKey = :groupKey' : 'notification.remoteId = :groupKey',
-        );
 
         /** @var list<SocialNotification> $rows */
         $rows = $qb->getQuery()->getResult();
