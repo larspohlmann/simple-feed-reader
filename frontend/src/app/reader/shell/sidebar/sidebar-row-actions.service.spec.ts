@@ -144,12 +144,14 @@ describe('SidebarRowActions', () => {
       network: 'bluesky' as const,
       handle: '@bob.bsky.social',
       status: 'connected' as const,
+      serviceUrl: 'https://example.test',
     };
     const reconnect = {
       id: 4,
       network: 'bluesky' as const,
       handle: '@old.bsky.social',
       status: 'needs_reconnect' as const,
+      serviceUrl: 'https://example.test',
     };
     const sectionOf = (networkAccounts: SocialSection['networkAccounts']): SocialSection => ({
       network: 'bluesky',

@@ -21,4 +21,5 @@ export interface SocialAccountRefDto {
   network: SocialNetworkName;
   handle: string;
   status: SocialAccountStatus;
+  serviceUrl: string;
 }

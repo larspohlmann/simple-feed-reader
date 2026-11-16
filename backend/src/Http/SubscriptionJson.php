@@ -31,7 +31,7 @@ final class SubscriptionJson
 
     /**
      * @param list<Subscription>  $subscriptions
-     * @param list<SocialAccount> $socialAccounts the handles and statuses the sidebar labels a network's accounts with
+     * @param list<SocialAccount> $socialAccounts in acting order, with the handle, status and instance each shows
      *
      * @return array<string, mixed>
      */
@@ -145,7 +145,7 @@ final class SubscriptionJson
         return SocialFeedKind::Search === $address->kind ? [...$social, 'query' => $address->remoteId] : $social;
     }
 
-    /** @return array{id: int, network: string, handle: string, status: string} */
+    /** @return array{id: int, network: string, handle: string, status: string, serviceUrl: string} */
     private static function socialAccount(SocialAccount $account): array
     {
         return [
@@ -153,6 +153,7 @@ final class SubscriptionJson
             'network' => $account->getNetwork()->value,
             'handle' => $account->getHandle(),
             'status' => $account->getStatus()->value,
+            'serviceUrl' => $account->getServiceUrl(),
         ];
     }
 
