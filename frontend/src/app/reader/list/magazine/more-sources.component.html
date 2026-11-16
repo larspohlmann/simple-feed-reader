@@ -17,7 +17,7 @@
           (keydown.enter)="$event.stopPropagation()"
           (keydown.space)="$event.stopPropagation()"
         >
-          <app-icon name="trending_up" size="sm" aria-hidden="true" />
+          <app-icon [name]="storyIcon" size="sm" aria-hidden="true" />
           {{ countKey() | transloco: { count: copies().length } }}
           <app-icon
             [name]="expanded() ? 'expand_less' : 'expand_more'"

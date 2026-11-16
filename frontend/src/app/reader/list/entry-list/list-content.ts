@@ -85,9 +85,9 @@ export class ListContent {
       uncollapsibleSources: this.uncollapsibleSources(),
     };
     const complete = !this.options.hasMore() && this.fullyRevealed();
-    const visitEnd = this.visitEnd(this.rendered());
+    const rendered = this.rendered();
+    const visitEnd = this.visitEnd(rendered);
     if (visitEnd !== null) {
-      const rendered = this.rendered();
       return [
         ...planMagazine({ ...collapse, entries: rendered.slice(0, visitEnd), complete: true }),
         SINCE_VISIT_BLOCK,
@@ -98,7 +98,7 @@ export class ListContent {
     // Fast path: no dividers (every non-for-you view, and a for-you list showing
     // only the newest run). Plan the whole list at once — identical to before.
     if (!groups.some((group) => this.showRunHeader(group))) {
-      return planMagazine({ ...collapse, entries: this.rendered(), complete });
+      return planMagazine({ ...collapse, entries: rendered, complete });
     }
 
     const out: ListBlock[] = [];

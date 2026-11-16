@@ -19,7 +19,6 @@ import { TrendingHideAction } from '../trending-hide-action';
 export class StoryActionsComponent {
   readonly entry = input.required<EntryDto>();
 
-  // Optional: the reader shell provides all three, and a card rendered outside it offers no story actions.
   private readonly routeState = inject(ReaderRouteState, { optional: true });
   private readonly follow = inject(TrendingFollowAction, { optional: true });
   private readonly hide = inject(TrendingHideAction, { optional: true });

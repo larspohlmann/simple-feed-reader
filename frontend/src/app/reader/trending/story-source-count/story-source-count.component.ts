@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { EntryDto } from '../../models';
+import { STORY_ICON } from '../story';
 
 /** "7 sources · 3 shares ·" on a Trending row's attribution line; nothing on any other row (#2017, #2229). */
 @Component({
@@ -13,4 +14,5 @@ import { EntryDto } from '../../models';
 })
 export class StorySourceCountComponent {
   readonly entry = input.required<EntryDto>();
+  protected readonly storyIcon = STORY_ICON;
 }

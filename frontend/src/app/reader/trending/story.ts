@@ -1,5 +1,8 @@
 import { EntryDto } from '../models';
 
+/** The glyph that marks a Trending story wherever a card names one. */
+export const STORY_ICON = 'trending_up';
+
 /** A Trending story is viewed once any of its entries was opened: by the server's word, which counts
  *  entries the card does not show, or because the lead or a listed outlet was opened here (#2017). */
 export function isStoryViewed(entry: EntryDto): boolean {

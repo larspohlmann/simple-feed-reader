@@ -102,12 +102,29 @@ export class ListHeading {
     () => this.routeState.selection().kind === 'search' && this.entries.loading(),
   );
 
-  readonly lastRefreshed = computed(() => {
-    const kind = this.routeState.selection().kind;
-    if (kind === 'for-you') return this.recommendations.generatedAt();
-    if (kind === 'trending') return this.trendingBuiltAt.at(this.trendingWindow.window());
-    return this.selectedSubscription()?.lastFetchedAt ?? null;
-  });
+  private readonly feedFetchedAt = () => this.selectedSubscription()?.lastFetchedAt ?? null;
+
+  private readonly lastRefreshedByKind: BySelectionKind<string | null> = {
+    'for-you': () => this.recommendations.generatedAt(),
+    trending: () => this.trendingBuiltAt.at(this.trendingWindow.window()),
+    favorites: this.feedFetchedAt,
+    kept: this.feedFetchedAt,
+    shared: this.feedFetchedAt,
+    viewed: this.feedFetchedAt,
+    'saved-searches': this.feedFetchedAt,
+    'saved-search': this.feedFetchedAt,
+    'followed-story': this.feedFetchedAt,
+    all: this.feedFetchedAt,
+    tag: this.feedFetchedAt,
+    network: this.feedFetchedAt,
+    group: this.feedFetchedAt,
+    search: this.feedFetchedAt,
+    subscription: this.feedFetchedAt,
+  };
+
+  readonly lastRefreshed = computed(() =>
+    bySelectionKind(this.lastRefreshedByKind, this.routeState.selection()),
+  );
 
   readonly nextRefresh = computed(() => this.selectedSubscription()?.nextFetchAt ?? null);
 

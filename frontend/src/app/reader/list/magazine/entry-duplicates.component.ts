@@ -13,6 +13,7 @@ import { MENU_VIEWPORT_MARGIN } from '../../../shared/menu-keys';
 import { alsoFootOf } from './also-foot';
 import { sourceNameOf } from '../../entry/entry-source/source-name';
 import { StoryActionsComponent } from '../../trending/story-actions/story-actions.component';
+import { STORY_ICON } from '../../trending/story';
 
 let nextId = 0;
 
@@ -51,7 +52,7 @@ export class EntryDuplicatesComponent implements EntryActionHandler {
   protected readonly viewportMargin = MENU_VIEWPORT_MARGIN;
   protected readonly copies = computed(() => this.foot().copies);
   protected readonly label = computed(() => this.foot().label);
-  protected readonly icon = computed(() => (this.entry().story ? 'trending_up' : 'layers'));
+  protected readonly icon = computed(() => (this.entry().story ? STORY_ICON : 'layers'));
   private readonly shellActions = inject(EntryActionHandler, { skipSelf: true });
 
   private readonly language = inject(LanguageService);
