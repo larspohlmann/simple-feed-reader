@@ -11,6 +11,7 @@ use App\Entity\SocialNotification;
 use App\Enum\SocialNotificationKind;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Notification\NotificationSource\MastodonNotificationSource;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
 use App\Tests\Support\RoutedHttpClient;
@@ -116,6 +117,66 @@ final class MastodonNotificationSourceTest extends TestCase
         self::assertNull($page->seenUntil);
     }
 
+    public function testMarkerItemOnThePageNeedsNoLookup(): void
+    {
+        $http = $this->http(markers: '{"notifications":{"last_read_id":"1060"}}');
+        $page = $this->source($http)->fetch(SocialApiWiring::mastodonAccount());
+
+        self::assertEquals(new \DateTimeImmutable('2026-11-16 08:10:00', new \DateTimeZone('UTC')), $page->seenUntil);
+        self::assertCount(3, $http->requests);
+    }
+
+    public function testMarkerItemRefusedIsUnreachable(): void
+    {
+        $http = $this->http(markerItemStatus: Response::HTTP_FORBIDDEN);
+
+        $this->expectException(SocialNetworkUnreachableException::class);
+
+        $this->source($http)->fetch(SocialApiWiring::mastodonAccount());
+    }
+
+    public function testListNotFoundIsUnreachable(): void
+    {
+        $http = $this->http(listStatus: Response::HTTP_NOT_FOUND);
+
+        try {
+            $this->source($http)->fetch(SocialApiWiring::mastodonAccount());
+            self::fail('A missing list must not pass.');
+        } catch (SocialNetworkUnreachableException $exception) {
+            self::assertNotNull($exception->getPrevious());
+        }
+    }
+
+    public function testListRefusedIsUnreachable(): void
+    {
+        $http = $this->http(listStatus: Response::HTTP_FORBIDDEN, listBody: '{"error":"Forbidden"}');
+
+        try {
+            $this->source($http)->fetch(SocialApiWiring::mastodonAccount());
+            self::fail('A refused list must not pass.');
+        } catch (SocialNetworkUnreachableException $exception) {
+            self::assertNotNull($exception->getPrevious());
+        }
+    }
+
+    public function testRejectedTokenSurfaces(): void
+    {
+        $http = $this->http(verifyStatus: Response::HTTP_UNAUTHORIZED);
+
+        $this->expectException(SocialCredentialsRejectedException::class);
+
+        $this->source($http)->fetch(SocialApiWiring::mastodonAccount());
+    }
+
+    public function testAnswerWithoutAccountIdIsUnreachable(): void
+    {
+        $http = $this->http(verifyBody: '{}');
+
+        $this->expectException(SocialNetworkUnreachableException::class);
+
+        $this->source($http)->fetch(SocialApiWiring::mastodonAccount());
+    }
+
     public function testScopeRefusalThrowsScopeMissing(): void
     {
         $http = $this->http(listStatus: Response::HTTP_FORBIDDEN);
@@ -187,13 +248,17 @@ final class MastodonNotificationSourceTest extends TestCase
         ?string $markers = null,
         int $listStatus = Response::HTTP_OK,
         int $markerItemStatus = Response::HTTP_OK,
+        int $verifyStatus = Response::HTTP_OK,
+        ?string $verifyBody = null,
+        ?string $listBody = null,
     ): RoutedHttpClient {
         $fixtures = __DIR__ . '/../../../../Fixtures/Mastodon/';
         $forbidden = '{"error":"This action is outside the authorized scopes"}';
 
         return new RoutedHttpClient([
             'GET ' . self::VERIFY => new MockResponse(
-                (string) file_get_contents($fixtures . 'verify-credentials-notifications.json'),
+                $verifyBody ?? (string) file_get_contents($fixtures . 'verify-credentials-notifications.json'),
+                ['http_code' => $verifyStatus],
             ),
             'GET ' . self::MARKERS => new MockResponse(
                 $markers ?? (string) file_get_contents($fixtures . 'notifications-markers.json'),
@@ -201,7 +266,7 @@ final class MastodonNotificationSourceTest extends TestCase
             'GET ' . self::LIST => new MockResponse(
                 $listStatus === Response::HTTP_OK
                     ? (string) file_get_contents($fixtures . 'notifications-list.json')
-                    : $forbidden,
+                    : $listBody ?? $forbidden,
                 ['http_code' => $listStatus],
             ),
             'GET ' . self::MARKER_ITEM => new MockResponse(

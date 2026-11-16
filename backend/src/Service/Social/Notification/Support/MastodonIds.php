@@ -24,7 +24,7 @@ final class MastodonIds
 
     private static function compare(string $left, string $right): int
     {
-        return [\strlen($left), $left] <=> [\strlen($right), $right];
+        return \strlen($left) <=> \strlen($right) ?: strcmp($left, $right);
     }
 
     private function __construct()

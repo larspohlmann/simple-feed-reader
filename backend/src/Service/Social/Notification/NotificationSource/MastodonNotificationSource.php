@@ -39,14 +39,15 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
 
     public function fetch(SocialAccount $account): NotificationPageModel
     {
-        $ownId = JsonNodeModel::of($this->ask($account, MastodonApiClient::VERIFY_CREDENTIALS)->json())->string('id');
+        $ownId = JsonNodeModel::of($this->ask($account, MastodonApiClient::VERIFY_CREDENTIALS)->json())->string('id')
+            ?? throw new SocialNetworkUnreachableException('The Mastodon instance named no account id.');
         $markers = $this->ask($account, self::MARKERS . '?timeline[]=notifications');
         $lastReadId = JsonNodeModel::of($markers->json())->node('notifications')->string('last_read_id');
         $entries = JsonNodeModel::listOf($this->ask($account, self::LIST)->json()) ?? [];
 
         $notifications = [];
         foreach ($entries as $entry) {
-            $notification = self::fetched($account, $entry, (string) $ownId, $lastReadId);
+            $notification = self::fetched($account, $entry, $ownId, $lastReadId);
             if ($notification instanceof FetchedNotificationModel) {
                 $notifications[] = $notification;
             }
@@ -68,7 +69,7 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
         try {
             $this->mastodon->writeAs($account, $request, MastodonAccountApi::STATUSES_SCOPE);
         } catch (SocialPostNotFoundException | SocialPostRefusedException $exception) {
-            throw new SocialNetworkUnreachableException($exception->getMessage(), 0, $exception);
+            throw self::unreachable($exception);
         }
 
         foreach ($unseen as $row) {
@@ -81,8 +82,13 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
         try {
             return $this->mastodon->askAboutPost($account, $path);
         } catch (SocialPostNotFoundException | SocialPostRefusedException $exception) {
-            throw new SocialNetworkUnreachableException($exception->getMessage(), 0, $exception);
+            throw self::unreachable($exception);
         }
+    }
+
+    private static function unreachable(\Throwable $exception): SocialNetworkUnreachableException
+    {
+        return new SocialNetworkUnreachableException($exception->getMessage(), 0, $exception);
     }
 
     /** @param list<JsonNodeModel> $entries */
@@ -102,7 +108,7 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
         } catch (SocialPostNotFoundException) {
             return null;
         } catch (SocialPostRefusedException $exception) {
-            throw new SocialNetworkUnreachableException($exception->getMessage(), 0, $exception);
+            throw self::unreachable($exception);
         }
 
         return self::utc(JsonNodeModel::of($item->json())->string('created_at'));
