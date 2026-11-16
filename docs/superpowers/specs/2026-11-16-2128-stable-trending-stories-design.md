@@ -80,6 +80,7 @@ could merge and split stories, a story could flip between builds. So:
   or a new story when none qualifies. A day group overlapping two stories attaches to the best one; it never merges
   them.
 - A story created by a day build is matched like any other by the next week build.
+- The day build may attach several groups to one story, so it never splits; only the week build is one-to-one.
 
 ### Matching
 
@@ -88,7 +89,7 @@ could merge and split stories, a story could flip between builds. So:
   G, so they must not dilute the score.)
 - **Threshold:** a match needs overlap ≥ 0.5 and at least one shared entry. Tune the number against real builds,
   but keep it a named constant with its reason.
-- **Assignment** is one-to-one per build, greedy by overlap, highest first. Ties go to the story with more in-window
+- **Assignment** is one-to-one per week build, greedy by overlap, highest first. Ties go to the story with more in-window
   members, then the older id. A group left without a story gets a new one.
 - **Merge (week build only):** when a group's best story is X and another stored story Y also reaches the threshold
   against the same group but was not assigned to any group, Y merges into X: Y's members join X's history, follows

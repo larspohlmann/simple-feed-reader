@@ -299,6 +299,32 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         );
     }
 
+    public function testTwoDayGroupsOverOneStoryBothAttachToIt(): void
+    {
+        [$strike] = $this->hafenstreikEntries();
+        $volcano = $this->volcanoEntries();
+        $story = $this->fixtures->story(
+            TrendingWindow::Week,
+            '2031-05-14 11:00:00',
+            ...\array_slice($strike, 0, 4),
+            ...\array_slice($volcano, 0, 5),
+        );
+
+        $report = $this->builder()->build(TrendingWindow::Day);
+
+        self::assertSame([$story->requireId()], $this->storyIds());
+        self::assertSame(
+            ['kept' => 2, 'created' => 0, 'merged' => 0, 'split' => 0],
+            $report->match->toLogContext(),
+        );
+        self::assertSame([[1, 1], [1, 0]], $this->flagsOfEveryMember());
+        $joinedAt = $this->joinedAtByEntry();
+        self::assertSame(self::NOW, $joinedAt[$strike[4]->requireId()]);
+        self::assertSame(self::NOW, $joinedAt[$volcano[5]->requireId()]);
+        unset($joinedAt[$strike[4]->requireId()], $joinedAt[$volcano[5]->requireId()]);
+        self::assertSame(array_fill_keys(array_keys($joinedAt), '2031-05-14 11:00:00'), $joinedAt);
+    }
+
     public function testSeedStoriesOfBothWindowsConvergeOnTheFirstWeekBuild(): void
     {
         [$entries] = $this->hafenstreikEntries();

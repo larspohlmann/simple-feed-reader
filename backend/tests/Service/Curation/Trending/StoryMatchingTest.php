@@ -189,16 +189,42 @@ final class StoryMatchingTest extends TestCase
         self::assertSame(9, $largerWins->assignments[0]->storyId);
     }
 
-    public function testAssignmentIsOneToOne(): void
+    public function testWeekAssignmentIsOneToOne(): void
     {
         $match = $this->matching()->match(
             [self::group(1, 2), self::group(3, 4)],
             [new StoredStoryModel(7, [1, 2, 3, 4])],
-            TrendingWindow::Day,
+            TrendingWindow::Week,
         );
 
         self::assertSame([7, null], self::storyIds($match));
         self::assertSame(1, $match->split);
+    }
+
+    public function testDayGroupsSharingTheirBestStoryAllAttachToItAndNothingSplits(): void
+    {
+        $match = $this->matching()->match(
+            [self::group(1, 2), self::group(3, 4, 5)],
+            [new StoredStoryModel(7, [1, 2, 3, 4]), new StoredStoryModel(9, [5, 6])],
+            TrendingWindow::Day,
+        );
+
+        self::assertSame([7, 7], self::storyIds($match));
+        self::assertSame([1, 2, 3, 4], $match->assignments[1]->storedEntryIds);
+        self::assertSame([5], self::entryIds($match->assignments[1]->joining()));
+        self::assertSame(['kept' => 2, 'created' => 0, 'merged' => 0, 'split' => 0], $match->toLogContext());
+    }
+
+    public function testADayGroupBelowTheThresholdOfEveryStoryStillGetsANewStory(): void
+    {
+        $match = $this->matching()->match(
+            [self::group(1, 2, 3), self::group(4, 8, 9)],
+            [new StoredStoryModel(7, [1, 2, 3, 4, 5, 6])],
+            TrendingWindow::Day,
+        );
+
+        self::assertSame([7, null], self::storyIds($match));
+        self::assertSame(['kept' => 1, 'created' => 1, 'merged' => 0, 'split' => 0], $match->toLogContext());
     }
 
     public function testTheOutcomeDoesNotDependOnInputOrder(): void

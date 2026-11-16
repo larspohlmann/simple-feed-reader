@@ -35,8 +35,11 @@ final readonly class StoryMatching
     public function match(array $groups, array $stored, TrendingWindow $window): StoryMatchModel
     {
         $candidates = $this->rankedCandidates($groups, $stored);
+        if (!$window->mergesStories()) {
+            return $this->attachedToTheirBest($groups, $stored, $candidates);
+        }
         $storyOfGroup = $this->oneToOne($candidates);
-        $merges = $window->mergesStories() ? $this->merges($candidates, $storyOfGroup) : [];
+        $merges = $this->merges($candidates, $storyOfGroup);
 
         return new StoryMatchModel(
             $this->assignments($groups, $stored, $storyOfGroup, $merges),
@@ -107,6 +110,23 @@ final readonly class StoryMatching
             'overlap' => $overlap,
             'lowestEntryId' => min($groupEntryIds),
         ];
+    }
+
+    /**
+     * A day group joins the story it overlaps best, even one another day group joined: only the week shapes identity.
+     *
+     * @param list<TrendingStoryModel> $groups
+     * @param list<StoredStoryModel>   $stored
+     * @param list<Candidate>          $candidates
+     */
+    private function attachedToTheirBest(array $groups, array $stored, array $candidates): StoryMatchModel
+    {
+        $storyOfGroup = [];
+        foreach ($candidates as $candidate) {
+            $storyOfGroup[$candidate['group']] ??= $candidate['story'];
+        }
+
+        return new StoryMatchModel($this->assignments($groups, $stored, $storyOfGroup, []), [], 0);
     }
 
     /**
