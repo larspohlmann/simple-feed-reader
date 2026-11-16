@@ -39,6 +39,7 @@ final readonly class TrendingJson
                 'outletCount' => $card->story->outletCount,
                 'viewed' => $card->viewed,
                 'shareCount' => $articles->shareCount(),
+                'followed' => $card->followed,
             ],
         ];
     }

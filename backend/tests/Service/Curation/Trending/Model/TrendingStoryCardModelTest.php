@@ -125,6 +125,7 @@ final class TrendingStoryCardModelTest extends DbTestCase
             $rows,
             new RankedStoryModel(1, \count($rows), new \DateTimeImmutable('2031-05-14 10:00:00')),
             false,
+            false,
         );
     }
 

@@ -8,18 +8,20 @@ use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\ShownRowModel;
 use App\Service\Curation\Trending\Model\TrendingStoryCardModel;
 
-/** The three lookups one reader's cards are cut from. */
+/** The four lookups one reader's cards are cut from. */
 final readonly class StoryCardSource
 {
     /**
      * @param array<int, list<int>> $entryIdsByStory
      * @param array<int, ShownRowModel> $rowsByEntryId
      * @param array<int, int> $viewedStories
+     * @param array<int, int> $followedStories
      */
     public function __construct(
         private array $entryIdsByStory,
         private array $rowsByEntryId,
         private array $viewedStories,
+        private array $followedStories,
     ) {
     }
 
@@ -43,6 +45,7 @@ final readonly class StoryCardSource
                 $rows,
                 $story,
                 isset($this->viewedStories[$story->storyId]),
+                isset($this->followedStories[$story->storyId]),
             );
         }
 

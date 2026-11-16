@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\TrendingSnapshot;
+use App\Entity\TrendingStoryFollow;
 use App\Repository\TrendingEntryRepository;
 use App\Repository\TrendingSnapshotRepository;
+use App\Repository\TrendingStoryFollowRepository;
 use App\Repository\TrendingStoryHistoryRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Curation\Trending\CardLanguage;
@@ -98,6 +100,11 @@ final class TrendingWiring
     public static function snapshots(EntityManagerInterface $entityManager): TrendingSnapshotRepository
     {
         return $entityManager->getRepository(TrendingSnapshot::class);
+    }
+
+    public static function follows(EntityManagerInterface $entityManager): TrendingStoryFollowRepository
+    {
+        return $entityManager->getRepository(TrendingStoryFollow::class);
     }
 
     private function __construct()

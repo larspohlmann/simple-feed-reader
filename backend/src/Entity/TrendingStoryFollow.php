@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Repository\TrendingStoryFollowRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /** A Trending story the reader follows (#2128); what joined after $lastOpenedAt is new to them. */
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: TrendingStoryFollowRepository::class)]
 #[ORM\Table(name: 'trending_story_follow')]
 final class TrendingStoryFollow
 {

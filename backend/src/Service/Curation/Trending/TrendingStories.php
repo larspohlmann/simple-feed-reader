@@ -11,6 +11,7 @@ use App\Repository\EntryListRow;
 use App\Repository\EntryListRowEnricher;
 use App\Repository\ReadingSettingsRepository;
 use App\Repository\TrendingSnapshotRepository;
+use App\Repository\TrendingStoryFollowRepository;
 use App\Repository\TrendingStoryRepository;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\ShownEntriesModel;
@@ -31,6 +32,7 @@ final readonly class TrendingStories
         private EntryListRepository $entryList,
         private EntryListRowEnricher $enricher,
         private ReadingSettingsRepository $readingSettings,
+        private TrendingStoryFollowRepository $follows,
     ) {
     }
 
@@ -77,6 +79,7 @@ final readonly class TrendingStories
             $shown->entryIdsByStory(),
             $this->rowsByEntryId($userId, $shown),
             array_flip($this->stories->viewedStoryIds($userId, $window, $storyIds)),
+            array_flip($this->follows->followedStoryIds($userId, $storyIds)),
         );
     }
 

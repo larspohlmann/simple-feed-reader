@@ -61,7 +61,13 @@ final class TrendingControllerTest extends ApiTestCase
             ),
         );
         self::assertSame(
-            ['id' => $stored->requireId(), 'outletCount' => 3, 'viewed' => false, 'shareCount' => 0],
+            [
+                'id' => $stored->requireId(),
+                'outletCount' => 3,
+                'viewed' => false,
+                'shareCount' => 0,
+                'followed' => false,
+            ],
             $story['story'],
         );
         self::assertSame([], $story['shares']);
@@ -136,7 +142,13 @@ final class TrendingControllerTest extends ApiTestCase
         self::assertIsArray($story['duplicates'][0]);
         self::assertSame([$other->requireId()], self::idsOf($story['duplicates'][0]['shares']));
         self::assertSame(
-            ['id' => $stored->requireId(), 'outletCount' => 3, 'viewed' => false, 'shareCount' => 3],
+            [
+                'id' => $stored->requireId(),
+                'outletCount' => 3,
+                'viewed' => false,
+                'shareCount' => 3,
+                'followed' => false,
+            ],
             $story['story'],
         );
     }
@@ -172,7 +184,13 @@ final class TrendingControllerTest extends ApiTestCase
         self::assertSame([$post->requireId()], self::idsOf($story['shares']));
         self::assertSame([$second->requireId()], self::idsOf($story['duplicates']));
         self::assertSame(
-            ['id' => $stored->requireId(), 'outletCount' => 3, 'viewed' => false, 'shareCount' => 1],
+            [
+                'id' => $stored->requireId(),
+                'outletCount' => 3,
+                'viewed' => false,
+                'shareCount' => 1,
+                'followed' => false,
+            ],
             $story['story'],
         );
     }
@@ -204,9 +222,35 @@ final class TrendingControllerTest extends ApiTestCase
         self::assertSame($lead->requireId(), $story['id']);
         self::assertCount(1, self::idsOf($story['duplicates']));
         self::assertSame(
-            ['id' => $stored->requireId(), 'outletCount' => 2, 'viewed' => false, 'shareCount' => 0],
+            [
+                'id' => $stored->requireId(),
+                'outletCount' => 2,
+                'viewed' => false,
+                'shareCount' => 0,
+                'followed' => false,
+            ],
             $story['story'],
         );
+    }
+
+    public function testAFollowedStoryCardSaysSo(): void
+    {
+        [$headers, $user] = $this->bearerAndUser('trending-followed-card@example.com');
+        [$otherHeaders, $other] = $this->bearerAndUser('trending-followed-card-other@example.com');
+        $fixtures = new TrendingFixtures($this->entityManager());
+        $feeds = [$fixtures->feed('alpha'), $fixtures->feed('beta'), $fixtures->feed('gamma')];
+        $fixtures->subscribe($user, ...$feeds);
+        $fixtures->subscribe($other, ...$feeds);
+        $members = static fn (string $title): array => array_map(
+            static fn (Feed $feed): Entry => $fixtures->entry($feed, $title, '2031-05-14 10:00:00'),
+            $feeds,
+        );
+        $followed = $fixtures->story(TrendingWindow::Day, '2031-05-14 10:00:00', ...$members('Followed'));
+        $fixtures->story(TrendingWindow::Day, '2031-05-14 09:00:00', ...$members('Not followed'));
+        $fixtures->follow($user, $followed, '2031-05-14 10:00:00');
+
+        self::assertSame([true, false], $this->followedFlagsOfTheDay($headers));
+        self::assertSame([false, false], $this->followedFlagsOfTheDay($otherHeaders));
     }
 
     public function testBuiltAtIsSerialisedAsAtomInUtc(): void
@@ -255,6 +299,26 @@ final class TrendingControllerTest extends ApiTestCase
         $this->client->request('GET', '/api/trending?window=day');
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
+    }
+
+    /**
+     * @param array<string, string> $headers
+     *
+     * @return list<mixed> each card's `story.followed`, in the list's order
+     */
+    private function followedFlagsOfTheDay(array $headers): array
+    {
+        $this->client->request('GET', '/api/trending?window=day', server: $headers);
+        self::assertResponseIsSuccessful();
+        $stories = $this->payload($this->client)['stories'];
+        self::assertIsArray($stories);
+
+        return array_values(array_map(static function (mixed $story): mixed {
+            self::assertIsArray($story);
+            self::assertIsArray($story['story']);
+
+            return $story['story']['followed'] ?? null;
+        }, $stories));
     }
 
     private function switchOutOfTrending(User $user, Feed $feed): void

@@ -284,6 +284,7 @@ final class TrendingInclusionTest extends DbTestCase
             $entryList,
             $enricher,
             $readingSettings,
+            TrendingWiring::follows($this->entityManager),
         );
     }
 

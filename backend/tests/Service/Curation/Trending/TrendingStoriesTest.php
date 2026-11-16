@@ -861,6 +861,7 @@ final class TrendingStoriesTest extends DbTestCase
             $entryList,
             $enricher,
             $readingSettings,
+            TrendingWiring::follows($this->entityManager),
         );
     }
 
