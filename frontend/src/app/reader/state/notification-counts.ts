@@ -3,11 +3,6 @@ import { NotificationCountDto } from '../models';
 
 export type NotificationCounts = ReadonlyMap<SocialNetworkName, number>;
 
-export interface UnseenNetwork {
-  readonly network: SocialNetworkName;
-  readonly unseenCount: number;
-}
-
 export const NO_NOTIFICATION_COUNTS: NotificationCounts = new Map();
 
 export function notificationCountsFrom(dtos: readonly NotificationCountDto[]): NotificationCounts {
@@ -24,7 +19,7 @@ export function sameNotificationCounts(
   );
 }
 
-export function unseenNetworks(counts: NotificationCounts): readonly UnseenNetwork[] {
+export function unseenNetworks(counts: NotificationCounts): readonly NotificationCountDto[] {
   return SOCIAL_NETWORKS.map((network) => ({
     network,
     unseenCount: counts.get(network) ?? 0,
