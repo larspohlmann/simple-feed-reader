@@ -1375,7 +1375,41 @@
     "toggleFollowedStories": "Afficher ou masquer les sujets suivis",
     "followedStoryFallback": "Sujet suivi",
     "notifications": {
-      "title": "Notifications"
+      "title": "Notifications",
+      "unseen": "Non vue",
+      "poll": "Un sondage auquel vous avez participé est terminé",
+      "who": {
+        "one": "{{first}}",
+        "two": "{{first}} et {{second}}",
+        "twoAndOne": "{{first}}, {{second}} et 1 autre personne",
+        "twoAndOthers": "{{first}}, {{second}} et {{count}} autres"
+      },
+      "action": {
+        "like": {
+          "one": "{{who}} a aimé votre publication",
+          "other": "{{who}} ont aimé votre publication"
+        },
+        "repost": {
+          "one": "{{who}} a republié votre publication",
+          "other": "{{who}} ont republié votre publication"
+        },
+        "reply": {
+          "one": "{{who}} a répondu à votre publication",
+          "other": "{{who}} ont répondu à votre publication"
+        },
+        "mention": {
+          "one": "{{who}} vous a mentionné",
+          "other": "{{who}} vous ont mentionné"
+        },
+        "quote": {
+          "one": "{{who}} a cité votre publication",
+          "other": "{{who}} ont cité votre publication"
+        },
+        "follow": {
+          "one": "{{who}} vous suit désormais",
+          "other": "{{who}} vous suivent désormais"
+        }
+      }
     },
     "sinceLastVisit": "Depuis votre dernière visite",
     "followedStoryQuiet": "calme",

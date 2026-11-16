@@ -1371,7 +1371,41 @@
     "toggleFollowedStories": "Gefolgte Stories ein- oder ausklappen",
     "followedStoryFallback": "Gefolgte Story",
     "notifications": {
-      "title": "Benachrichtigungen"
+      "title": "Benachrichtigungen",
+      "unseen": "Ungesehen",
+      "poll": "Eine Umfrage, an der du teilgenommen hast, ist beendet",
+      "who": {
+        "one": "{{first}}",
+        "two": "{{first}} und {{second}}",
+        "twoAndOne": "{{first}}, {{second}} und 1 weitere Person",
+        "twoAndOthers": "{{first}}, {{second}} und {{count}} weitere"
+      },
+      "action": {
+        "like": {
+          "one": "{{who}} hat deinen Beitrag geliked",
+          "other": "{{who}} haben deinen Beitrag geliked"
+        },
+        "repost": {
+          "one": "{{who}} hat deinen Beitrag repostet",
+          "other": "{{who}} haben deinen Beitrag repostet"
+        },
+        "reply": {
+          "one": "{{who}} hat auf deinen Beitrag geantwortet",
+          "other": "{{who}} haben auf deinen Beitrag geantwortet"
+        },
+        "mention": {
+          "one": "{{who}} hat dich erwähnt",
+          "other": "{{who}} haben dich erwähnt"
+        },
+        "quote": {
+          "one": "{{who}} hat deinen Beitrag zitiert",
+          "other": "{{who}} haben deinen Beitrag zitiert"
+        },
+        "follow": {
+          "one": "{{who}} folgt dir jetzt",
+          "other": "{{who}} folgen dir jetzt"
+        }
+      }
     },
     "sinceLastVisit": "Seit deinem letzten Besuch",
     "followedStoryQuiet": "ruhig",

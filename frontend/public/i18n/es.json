@@ -1375,7 +1375,41 @@
     "toggleFollowedStories": "Mostrar u ocultar las noticias seguidas",
     "followedStoryFallback": "Noticia seguida",
     "notifications": {
-      "title": "Notificaciones"
+      "title": "Notificaciones",
+      "unseen": "Sin ver",
+      "poll": "Ha terminado una encuesta en la que votaste",
+      "who": {
+        "one": "{{first}}",
+        "two": "{{first}} y {{second}}",
+        "twoAndOne": "{{first}}, {{second}} y 1 persona más",
+        "twoAndOthers": "{{first}}, {{second}} y {{count}} personas más"
+      },
+      "action": {
+        "like": {
+          "one": "A {{who}} le gustó tu publicación",
+          "other": "A {{who}} les gustó tu publicación"
+        },
+        "repost": {
+          "one": "{{who}} compartió tu publicación",
+          "other": "{{who}} compartieron tu publicación"
+        },
+        "reply": {
+          "one": "{{who}} respondió a tu publicación",
+          "other": "{{who}} respondieron a tu publicación"
+        },
+        "mention": {
+          "one": "{{who}} te mencionó",
+          "other": "{{who}} te mencionaron"
+        },
+        "quote": {
+          "one": "{{who}} citó tu publicación",
+          "other": "{{who}} citaron tu publicación"
+        },
+        "follow": {
+          "one": "{{who}} empezó a seguirte",
+          "other": "{{who}} empezaron a seguirte"
+        }
+      }
     },
     "sinceLastVisit": "Desde tu última visita",
     "followedStoryQuiet": "en calma",
