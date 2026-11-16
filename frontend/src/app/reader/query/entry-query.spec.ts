@@ -1,6 +1,10 @@
 import { queryFromSelection } from './entry-query';
 
 describe('queryFromSelection', () => {
+  it('loads no entry list for notifications', () => {
+    expect(queryFromSelection({ kind: 'notifications', network: 'lemmy' })).toBeNull();
+  });
+
   it('maps all/tag/subscription through the unread toggle', () => {
     expect(queryFromSelection({ kind: 'all', unread: true })).toEqual({ view: 'unread' });
     expect(queryFromSelection({ kind: 'all', unread: false })).toEqual({ view: 'all' });

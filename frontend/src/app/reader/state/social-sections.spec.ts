@@ -7,14 +7,21 @@ import {
   isPrivateFeed,
   isSocialFeed,
   networkFeedKindLabels,
+  SocialSectionCounts,
 } from './social-sections';
-import { NO_UNREAD_TOTALS, UnreadTotals } from './unread-totals';
+import { NO_NOTIFICATION_COUNTS } from './notification-counts';
+import { NO_UNREAD_TOTALS } from './unread-totals';
 
 const sectionsOf = (
   subscriptions: SubscriptionDto[],
   socialAccounts: SocialAccountRefDto[],
-  totals: UnreadTotals = NO_UNREAD_TOTALS,
-) => buildSocialSections(subscriptions, socialAccounts, totals);
+  counts: Partial<SocialSectionCounts> = {},
+) =>
+  buildSocialSections(subscriptions, socialAccounts, {
+    unread: NO_UNREAD_TOTALS,
+    notifications: NO_NOTIFICATION_COUNTS,
+    ...counts,
+  });
 
 const ref = (
   network: SocialNetworkName,
@@ -30,6 +37,22 @@ const feed = (id: number, social: SocialFeedRefDto, title = `Feed ${id}`): Subsc
   makeSubscription({ id, title, social });
 
 describe('buildSocialSections', () => {
+  it("carries each network's unseen notifications, apart from its unread count", () => {
+    const sections = sectionsOf(
+      [feed(1, ref('bluesky', 3, 'home')), feed(2, ref('mastodon', 8, 'home'))],
+      [],
+      {
+        unread: { ...NO_UNREAD_TOTALS, networks: new Map([['bluesky', 9]]) },
+        notifications: new Map([['bluesky', 4]]),
+      },
+    );
+
+    expect(sections.map((section) => [section.unreadCount, section.notificationsUnseen])).toEqual([
+      [9, 4],
+      [0, 0],
+    ]);
+  });
+
   it('builds one section per network holding a private feed, Bluesky first', () => {
     const sections = sectionsOf(
       [
@@ -207,7 +230,7 @@ describe('buildSocialSections', () => {
         }),
       ],
       [],
-      { ...NO_UNREAD_TOTALS, networks: new Map([['bluesky', 9]]) },
+      { unread: { ...NO_UNREAD_TOTALS, networks: new Map([['bluesky', 9]]) } },
     );
 
     expect([section.groups.search.unreadCount, section.groups.search.entryCount]).toEqual([5, 12]);
@@ -292,9 +315,11 @@ describe('buildSocialSections', () => {
         },
       ],
       {
-        ...NO_UNREAD_TOTALS,
-        networks: new Map([['bluesky', 6]]),
-        networkProfiles: new Map([['bluesky', 2]]),
+        unread: {
+          ...NO_UNREAD_TOTALS,
+          networks: new Map([['bluesky', 6]]),
+          networkProfiles: new Map([['bluesky', 2]]),
+        },
       },
     );
 

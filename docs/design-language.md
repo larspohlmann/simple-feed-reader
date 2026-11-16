@@ -1363,6 +1363,27 @@ quoted post and the social import dialog.
 
 ---
 
+### `<app-count-pill>`
+
+A soft accent count for a surface that counts unseen things, not unread posts.
+
+| Input | Type | Default |
+|---|---|---|
+| `count` | `number` (required) | — the number shown |
+
+```html
+@if (unseen() > 0) {
+  <app-count-pill [count]="unseen()" />
+}
+```
+
+Render it only for a count above 0; the pill shows whatever number it is given.
+Used by the sidebar Notifications row and the account menu. A row that aligns its
+digit with sibling counts pulls the pill right by its own horizontal padding
+(`margin-right: calc(var(--space-2) * -1)`).
+
+---
+
 ### `<app-search-field>`
 
 The entry-search input. It owns every timing rule the search has, so no caller
@@ -1718,11 +1739,31 @@ The sidebar is a column of cards on `--surface-0`: the search card (desktop) or 
 
 **The right edge is columns, per surface.** Every row and head ends count · ⋯ (28px) · chevron (28px) · 8px, except the smart views (All items, Favorites, Kept, Recently read, For you): they have no ⋯ or chevron, so their count sits at the card's right edge, behind only the row's 8px padding. A row without a ⋯ puts an empty `.slot` there, and `.slot` and the ⋯ host both carry `margin-right: calc(var(--space-3) * -1)`, so the count sits in the same place either way. A row without a chevron ends in an empty `.trail`. On a coarse pointer the desktop row ⋯ and `.slot` go and the chevron column is 44px. Two ⋯ stay: the network (Bluesky, Mastodon) head's, the only phone entry to account management, and organise mode's, whose rows all carry one.
 
+**The Notifications row** (#2240) leads each network card's rows, only while the network has a connected account and not while organising. It is a feed-row look: a bell lead, the name, and the unseen count as a `<app-count-pill>` instead of a plain count. It has no ⋯ and no chevron, so it ends in an empty `.slot` and `.trail` like any row without them; the pill is pulled right by `calc(var(--space-2) * -1)` so its digit lines up with the other rows' count digits. At 0 there is no pill, and the count is never added to the head's.
+
 **Heads** (`section-head`) are 13px/600 `--text-secondary`, sentence case, and their title still opens the combined list (#1735). When that list is showing, the whole head row is `.current`: the full-row `--accent-soft` fill with accent title and count. While organising the heads stay neutral.
 
 **Nesting** (two levels below the top, #1736, #1790). An open tag is a grey group (`.group.open`, `--surface-sunken`). Each child tag sits in its own `--surface-1` box, and a grandchild's box is a `.tag-child` inside that one, on the same background and marked only by the compounded margin; the parent's own feeds follow the boxes. Rows inside a box start at the box's edge again, so every chevron keeps the same gap to its own surface. The drop lists stay top-level siblings: the group and the box are plain divs, and the heads and feed lists are rendered through `#tagHead` / `#tagFeeds` templates.
 
 **Phone.** The drawer is a full-height sheet over the app bar, flush left, `--drawer-shadow` over `--drawer-scrim`. Organise mode swaps the header for "Organise" and **Done**, pinned above the body; once the body leaves the top the head takes `.collapsed` (base-size title, sub-row-height Done). It leaves Saved searches out, and lays every row out as handle (40px) · body · ⋯ · chevron, all 44px. Its tag sheet offers Edit tag, Move up, Move down, the four surface switches (All items, For You, saved searches, Trending) as checks, and Delete tag; the moves reorder within the sibling set the drag uses and disable at its ends.
+
+### Notifications list (#2240)
+
+A network's notifications (`reader/notifications/notification-list`) take the entry list's place in the list pane and borrow its chrome from `theme/_list-chrome.scss`: the floating list header (`floating-header`), the rows' `$header-clear` and `$corner-clear`, the error banner under the header. The list reads only what the server has stored; nothing on it fetches from the network.
+
+- **The header** carries the network's logo and "Notifications", then only Refresh and **Mark all seen** (`done_all`, disabled once nothing is unseen). No order, no unread switch, no mark-read discs.
+- **A row** is `icon-lg` kind glyph · body · side at comfortable density: the avatars, the sentence with the actors in bold, the excerpt, and the receiving account when the network has several. The side holds the narrow time and, while unseen, an 8px `--accent` dot under it. Unseen is the dot alone, never a row tint.
+- **A row is a link** that opens the post or profile on the network, in a new tab.
+- **Hints** sit above the rows as `app-warning-box`, one per problem (a missing scope, a lapsed connection), with a warning glyph in `--warning`, `--fs-sm` text and an accent "Reconnect …" link to Settings → Social.
+- **The foot** is a sentinel while more is stored, then the muted, centred 30-day end line; an empty list says so in the same style instead.
+
+### Account menu and avatar badge (#2240)
+
+The app bar's account button wears the unseen-notification total on its avatar; the menu under it lists where those notifications are.
+
+- **The badge** is a `--accent` disc on the avatar's top-right, `--icon-sm` tall with a `--surface-0` ring, the numeral in `font-size: 10px` (an escape hatch: `--fs-xs` overflows the disc at two digits). It is hidden at 0 and caps at `99+`. It is `aria-hidden`; the button's label carries the count ("Account, 6 unseen notifications").
+- **The menu** is 288px wide at `--radius-lg`, in `glass-rim.filled(var(--surface-2))`. Top to bottom: the signed-in head (avatar 32, the email, a muted "Signed in"), a separator, the **Notifications** group, a separator, Settings and Admin (admins only), a separator, Sign out. Every item is an `icon-md` glyph and a label at `--control-h` (`--tap-target` on coarse pointers); Sign out is `--text-secondary`.
+- **The Notifications group** appears only while a network has unseen notifications: a `--fs-sm` heading, then one row per such network, in network order, of its logo, its name and an `<app-count-pill>`. A row opens that network's notifications list and closes the menu.
 
 ### Hidden-feed favicon
 

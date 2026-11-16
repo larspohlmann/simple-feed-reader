@@ -107,6 +107,7 @@ export class ListHeading {
   private readonly lastRefreshedByKind: BySelectionKind<string | null> = {
     'for-you': () => this.recommendations.generatedAt(),
     trending: () => this.trendingBuiltAt.at(this.trendingWindow.window()),
+    notifications: () => null,
     favorites: this.feedFetchedAt,
     kept: this.feedFetchedAt,
     shared: this.feedFetchedAt,
@@ -140,6 +141,7 @@ export class ListHeading {
     viewed: () => this.i18n.translate('reader.viewed'),
     'for-you': () => this.i18n.translate('reader.forYou'),
     trending: () => this.i18n.translate('reader.trending'),
+    notifications: () => this.i18n.translate('reader.notifications.title'),
     'saved-searches': () => this.i18n.translate('reader.savedSearches'),
     'saved-search': () =>
       this.activeSavedSearch()?.term ?? this.i18n.translate('reader.savedSearches'),
@@ -220,6 +222,7 @@ export class ListHeading {
     'for-you': (selection) =>
       bySwitch(selection, this.subscriptions.forYouUnread(), this.recommendations.forYouTotal()),
     trending: () => items(this.entries.entries().length),
+    notifications: () => items(0),
     'saved-searches': (selection) =>
       bySwitch(selection, this.savedSearchesUnread(), this.savedSearchesTotal()),
     'saved-search': (selection) => {

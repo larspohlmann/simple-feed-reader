@@ -34,6 +34,7 @@ interface SelectionFields {
   viewed: OrderedList;
   'for-you': Pick<FilteredList, 'unread'>;
   trending: { window: TrendingWindow };
+  notifications: { network: SocialNetworkName };
   'saved-searches': FilteredList;
   'saved-search': FilteredList & { id: number };
   'followed-story': OrderedList & { id: number };
@@ -44,7 +45,7 @@ export type SelectionKind = keyof SelectionFields;
 export type SelectionOf<K extends SelectionKind> = { kind: K } & SelectionFields[K];
 export type Selection = { [K in SelectionKind]: SelectionOf<K> }[SelectionKind];
 export type FilteredSelection = Extract<Selection, { unread: boolean }>;
-type OrderedSelection = Exclude<Selection, { kind: 'for-you' | 'trending' }>;
+type OrderedSelection = Exclude<Selection, { kind: 'for-you' | 'trending' | 'notifications' }>;
 
 /** One arm per kind, each handed the selection already narrowed to that kind. */
 export type BySelectionKind<R> = { [K in SelectionKind]: (selection: SelectionOf<K>) => R };
@@ -100,6 +101,7 @@ const IDENTITY_KEY: BySelectionKind<string> = {
   viewed: () => '',
   'for-you': () => '',
   trending: (selection) => selection.window,
+  notifications: (selection) => selection.network,
   'saved-searches': () => '',
   'saved-search': (selection) => String(selection.id),
   'followed-story': (selection) => String(selection.id),
@@ -142,6 +144,10 @@ export function trendingWindowOf(selection: Selection): TrendingWindow | null {
   return selection.kind === 'trending' ? selection.window : null;
 }
 
+export function notificationsNetworkOf(selection: Selection): SocialNetworkName | null {
+  return selection.kind === 'notifications' ? selection.network : null;
+}
+
 export function selectedTagIdOf(selection: Selection): number | null {
   return selection.kind === 'tag' ? selection.id : null;
 }
@@ -163,7 +169,11 @@ export function selectedFollowedStoryIdOf(selection: Selection): number | null {
 /** Whether the list offers the newest/oldest-first toggle; the ranked for-you
  *  and Trending lists have no date order to reverse. */
 export function hasListOrder(selection: Selection): selection is OrderedSelection {
-  return selection.kind !== 'for-you' && selection.kind !== 'trending';
+  return (
+    selection.kind !== 'for-you' &&
+    selection.kind !== 'trending' &&
+    selection.kind !== 'notifications'
+  );
 }
 
 export function listOrderOf(selection: Selection): ListOrder {
@@ -177,7 +187,7 @@ export function withListOrder(selection: Selection, order: ListOrder): Selection
 
 /** Trending is a picture of the news, not an inbox: nothing in it is marked read in bulk (#2017). */
 export function offersMarkAboveRead(selection: Selection): boolean {
-  return selection.kind !== 'trending';
+  return selection.kind !== 'trending' && selection.kind !== 'notifications';
 }
 
 /** Where a list's order is remembered: per feed, tag, saved search and view, and
@@ -199,6 +209,11 @@ export function canScopedRefresh(selection: Selection): boolean {
     selection.kind === 'group' ||
     selection.kind === 'subscription'
   );
+}
+
+/** Whether the list header offers a refresh: the feed lists refresh their feeds, notifications reload themselves. */
+export function offersRefresh(selection: Selection): boolean {
+  return canScopedRefresh(selection) || selection.kind === 'notifications';
 }
 
 /** A view that shows one logical stream, not an aggregation of feeds: a single
@@ -316,12 +331,21 @@ function isViewIn<View extends string>(views: readonly View[], view: string | nu
 
 function viewFromParams(paramMap: ParamMap, context: ViewContext): ParsedView {
   const view = selectionParam(paramMap, 'view');
+  if (view === 'notifications') return notificationsFromParams(paramMap);
   if (view === 'trending') return trendingFromParams(paramMap, context);
   if (isViewIn(STATE_VIEWS, view)) return { selection: { kind: view }, urlCorrection: null };
   if (isViewIn(FILTERED_VIEWS, view)) {
     return { selection: { kind: view, unread: false }, urlCorrection: null };
   }
   return { selection: feedScopedSelection(paramMap), urlCorrection: null };
+}
+
+function notificationsFromParams(paramMap: ParamMap): ParsedView {
+  const network = selectionParam(paramMap, 'network');
+  if (!isSocialNetworkName(network)) {
+    return { selection: feedScopedSelection(paramMap), urlCorrection: null };
+  }
+  return { selection: { kind: 'notifications', network }, urlCorrection: null };
 }
 
 /** Switched off, Trending opens All items, as an unknown view does, and leaves the URL. A URL naming no window

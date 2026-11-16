@@ -1,0 +1,37 @@
+<a class="row" [href]="group().linkUrl" target="_blank" rel="noopener noreferrer">
+  <span class="kind" [class]="group().kind">
+    <app-icon [name]="glyph()" size="md" [fill]="true" />
+  </span>
+  <div class="body">
+    @if (avatars().length > 0) {
+      <div class="avatars">
+        @for (actor of avatars(); track $index) {
+          <app-avatar
+            size="md"
+            [url]="actor.avatarUrl"
+            [name]="actor.displayName ?? actor.handle"
+            [toneSeed]="actor.handle"
+          />
+        }
+      </div>
+    }
+    <p class="line">
+      @for (part of parts(); track $index) {
+        <span [class.strong]="part.strong">{{ part.text }}</span>
+      }
+    </p>
+    @if (group().excerpt; as excerpt) {
+      <p class="excerpt">{{ excerpt }}</p>
+    }
+    @if (showsAccount()) {
+      <p class="account">{{ group().account }}</p>
+    }
+  </div>
+  <div class="side">
+    <span class="time">{{ time() }}</span>
+    @if (!group().seen) {
+      <span class="dot" aria-hidden="true"></span>
+      <span class="sr-only">{{ 'reader.notifications.unseen' | transloco }}</span>
+    }
+  </div>
+</a>

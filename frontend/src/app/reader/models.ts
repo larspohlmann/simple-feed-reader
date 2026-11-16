@@ -156,33 +156,34 @@ export interface SubscriptionDto {
   social: SocialFeedRefDto | null;
 }
 
-/** The sidebar bootstrap payload: the feed list plus the user-wide favourite,
- *  kept, shared and viewed totals shown as badges on the Favorites/Kept/Shared/Recently-read
- *  nav items. */
-export interface SubscriptionsResponse {
-  subscriptions: SubscriptionDto[];
+export interface SidebarTotalsDto {
   favoritesCount: number;
   keptCount: number;
   sharedCount: number;
   viewedCount: number;
-  socialAccounts: SocialAccountRefDto[];
   unreadTotals: UnreadTotalsDto;
   /** Unopened Trending stories in the window the request asked for (#2017). */
   trending: TrendingUnopened;
+  notifications: NotificationCountDto[];
+}
+
+/** The sidebar bootstrap payload: the feed list plus the totals shown as badges on the
+ *  Favorites/Kept/Shared/Recently-read nav items. */
+export interface SubscriptionsResponse extends SidebarTotalsDto {
+  subscriptions: SubscriptionDto[];
+  socialAccounts: SocialAccountRefDto[];
 }
 
 /** The sidebar poll's cheap payload (#720): unread and entry counts per feed
- *  plus the three surface totals, without the feeds, tags or descriptions the
+ *  plus the totals, without the feeds, tags or descriptions the
  *  full list carries. A feed absent from `subscriptions` has no entries. */
-export interface SubscriptionCountsResponse {
+export interface SubscriptionCountsResponse extends SidebarTotalsDto {
   subscriptions: { id: number; unreadCount: number; entryCount: number }[];
-  favoritesCount: number;
-  keptCount: number;
-  sharedCount: number;
-  viewedCount: number;
-  unreadTotals: UnreadTotalsDto;
-  /** Unopened Trending stories in the window the request asked for (#2017). */
-  trending: TrendingUnopened;
+}
+
+export interface NotificationCountDto {
+  network: SocialNetworkName;
+  unseenCount: number;
 }
 
 /** Unread per scope, each article counted once within its scope (#1679). */

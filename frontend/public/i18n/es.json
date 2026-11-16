@@ -1374,6 +1374,50 @@
     "followedStories": "Noticias seguidas",
     "toggleFollowedStories": "Mostrar u ocultar las noticias seguidas",
     "followedStoryFallback": "Noticia seguida",
+    "notifications": {
+      "title": "Notificaciones",
+      "loading": "Cargando notificaciones…",
+      "markAllSeen": "Marcar todo como visto",
+      "end": "Eso es todo de los últimos 30 días.",
+      "empty": "No hay notificaciones de los últimos 30 días.",
+      "scopeMissing": "{{network}} necesita permiso para leer tus notificaciones.",
+      "needsReconnect": "Hay que volver a conectar {{network}} para que lleguen nuevas notificaciones.",
+      "reconnect": "Volver a conectar {{network}}",
+      "unseen": "Sin ver",
+      "poll": "Ha terminado una encuesta en la que votaste",
+      "who": {
+        "one": "{{first}}",
+        "two": "{{first}} y {{second}}",
+        "twoAndOne": "{{first}}, {{second}} y 1 persona más",
+        "twoAndOthers": "{{first}}, {{second}} y {{count}} personas más"
+      },
+      "action": {
+        "like": {
+          "one": "A {{who}} le gustó tu publicación",
+          "other": "A {{who}} les gustó tu publicación"
+        },
+        "repost": {
+          "one": "{{who}} compartió tu publicación",
+          "other": "{{who}} compartieron tu publicación"
+        },
+        "reply": {
+          "one": "{{who}} respondió a tu publicación",
+          "other": "{{who}} respondieron a tu publicación"
+        },
+        "mention": {
+          "one": "{{who}} te mencionó",
+          "other": "{{who}} te mencionaron"
+        },
+        "quote": {
+          "one": "{{who}} citó tu publicación",
+          "other": "{{who}} citaron tu publicación"
+        },
+        "follow": {
+          "one": "{{who}} empezó a seguirte",
+          "other": "{{who}} empezaron a seguirte"
+        }
+      }
+    },
     "sinceLastVisit": "Desde tu última visita",
     "followedStoryQuiet": "en calma",
     "followedStoryQuietHint": "Nada nuevo desde hace dos días",
@@ -1440,6 +1484,9 @@
     "organiseDone": "Listo",
     "organiseHint": "Arrastra un asa para reordenar dentro de su nivel, o toca ⋯ para ver las opciones de una fila. Suelta un feed sobre una etiqueta para etiquetarlo.",
     "account": "Cuenta",
+    "signedIn": "Sesión iniciada",
+    "accountWithNotificationsOne": "Cuenta, 1 notificación sin ver",
+    "accountWithNotificationsOther": "Cuenta, {{count}} notificaciones sin ver",
     "settings": "Configuración",
     "admin": "Administración",
     "signOut": "Cerrar sesión",

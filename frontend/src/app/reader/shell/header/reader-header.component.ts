@@ -3,6 +3,7 @@ import {
   Component,
   ElementRef,
   afterRenderEffect,
+  computed,
   effect,
   inject,
   input,
@@ -15,6 +16,8 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { TagGlyphComponent } from '../../../shared/tag-glyph/tag-glyph.component';
 import { SpinnerComponent } from '../../../shared/spinner/spinner.component';
+import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
+import { CountPillComponent } from '../../../shared/count-pill/count-pill.component';
 import { UserAvatarComponent } from '../../../shared/user-avatar/user-avatar.component';
 import { ProgressHairlineComponent } from '../../../shared/progress-hairline/progress-hairline.component';
 import { DismissOnOutsideDirective } from '../../../shared/dismiss-on-outside.directive';
@@ -22,6 +25,8 @@ import { SearchFieldComponent } from '../search-field/search-field.component';
 import { ForYouProgressComponent } from '../../list/for-you-progress/for-you-progress.component';
 import { AuthService } from '../../../core/auth/auth.service';
 import { RefreshService } from '../../state/refresh.service';
+import { SubscriptionsStore } from '../../state/subscriptions.store';
+import { pluralKey } from '../../../core/i18n/plural-key';
 import { LayoutService } from '../../layout.service';
 import { TagDto } from '../../models';
 import { selectionQueryParams } from '../../query/query';
@@ -39,6 +44,8 @@ import { selectionQueryParams } from '../../query/query';
     RouterLink,
     TranslocoPipe,
     UserAvatarComponent,
+    NetworkLogoComponent,
+    CountPillComponent,
     SpinnerComponent,
     DismissOnOutsideDirective,
     SearchFieldComponent,
@@ -90,6 +97,19 @@ export class ReaderHeaderComponent {
   readonly refreshSvc = inject(RefreshService);
   readonly screen = inject(LayoutService);
   private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly subscriptions = inject(SubscriptionsStore);
+  protected readonly unseenNotifications = this.subscriptions.unseenNotifications;
+  protected readonly unseenTotal = this.subscriptions.unseenNotificationsTotal;
+  protected readonly badgeText = computed(() => {
+    const total = this.unseenTotal();
+    return total > 99 ? '99+' : String(total);
+  });
+  protected readonly accountLabel = computed(() => {
+    const count = this.unseenTotal();
+    const key =
+      count === 0 ? 'reader.account' : pluralKey('reader.accountWithNotifications', count);
+    return { key, count };
+  });
   readonly menuOpen = signal(false);
   /** Whether the mobile bar covers the header. The shell reads this to force
    *  the header on-screen — the bar holds the live term and keyboard, so

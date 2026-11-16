@@ -162,6 +162,7 @@ describe('SidebarRowActions', () => {
       unreadCount: 0,
       entryCount: 0,
       showsHandles: false,
+      notificationsUnseen: 0,
     });
     const sheetOpen = jest.fn(() => of('9'));
     const pickerOpen = jest.fn(() => of(undefined));

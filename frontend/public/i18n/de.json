@@ -1370,6 +1370,50 @@
     "followedStories": "Gefolgte Stories",
     "toggleFollowedStories": "Gefolgte Stories ein- oder ausklappen",
     "followedStoryFallback": "Gefolgte Story",
+    "notifications": {
+      "title": "Benachrichtigungen",
+      "loading": "Benachrichtigungen werden geladen…",
+      "markAllSeen": "Alle als gesehen markieren",
+      "end": "Das ist alles aus den letzten 30 Tagen.",
+      "empty": "Keine Benachrichtigungen aus den letzten 30 Tagen.",
+      "scopeMissing": "{{network}} braucht die Berechtigung, deine Benachrichtigungen zu lesen.",
+      "needsReconnect": "{{network}} muss neu verbunden werden, damit neue Benachrichtigungen ankommen.",
+      "reconnect": "{{network}} neu verbinden",
+      "unseen": "Ungesehen",
+      "poll": "Eine Umfrage, an der du teilgenommen hast, ist beendet",
+      "who": {
+        "one": "{{first}}",
+        "two": "{{first}} und {{second}}",
+        "twoAndOne": "{{first}}, {{second}} und 1 weitere Person",
+        "twoAndOthers": "{{first}}, {{second}} und {{count}} weitere"
+      },
+      "action": {
+        "like": {
+          "one": "{{who}} hat deinen Beitrag geliked",
+          "other": "{{who}} haben deinen Beitrag geliked"
+        },
+        "repost": {
+          "one": "{{who}} hat deinen Beitrag repostet",
+          "other": "{{who}} haben deinen Beitrag repostet"
+        },
+        "reply": {
+          "one": "{{who}} hat auf deinen Beitrag geantwortet",
+          "other": "{{who}} haben auf deinen Beitrag geantwortet"
+        },
+        "mention": {
+          "one": "{{who}} hat dich erwähnt",
+          "other": "{{who}} haben dich erwähnt"
+        },
+        "quote": {
+          "one": "{{who}} hat deinen Beitrag zitiert",
+          "other": "{{who}} haben deinen Beitrag zitiert"
+        },
+        "follow": {
+          "one": "{{who}} folgt dir jetzt",
+          "other": "{{who}} folgen dir jetzt"
+        }
+      }
+    },
     "sinceLastVisit": "Seit deinem letzten Besuch",
     "followedStoryQuiet": "ruhig",
     "followedStoryQuietHint": "Seit zwei Tagen nichts Neues",
@@ -1436,6 +1480,9 @@
     "organiseDone": "Fertig",
     "organiseHint": "Zieh einen Griff, um innerhalb seiner Ebene umzusortieren, oder tippe auf ⋯ für die Optionen einer Zeile. Leg einen Feed auf einen Tag, um ihn zu taggen.",
     "account": "Konto",
+    "signedIn": "Angemeldet",
+    "accountWithNotificationsOne": "Konto, 1 ungesehene Benachrichtigung",
+    "accountWithNotificationsOther": "Konto, {{count}} ungesehene Benachrichtigungen",
     "settings": "Einstellungen",
     "admin": "Admin",
     "signOut": "Abmelden",

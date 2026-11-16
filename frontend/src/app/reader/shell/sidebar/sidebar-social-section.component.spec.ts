@@ -53,6 +53,7 @@ const ONE_ACCOUNT: SocialSection = {
   entryCount: 0,
   saved: null,
   showsHandles: false,
+  notificationsUnseen: 0,
   accounts: [
     {
       accountId: 3,
@@ -150,6 +151,67 @@ const element = (fixture: ComponentFixture<SidebarSocialSectionComponent>): HTML
   fixture.nativeElement as HTMLElement;
 
 describe('SidebarSocialSectionComponent', () => {
+  describe('Notifications row', () => {
+    const rowOf = (root: HTMLElement): HTMLElement | null =>
+      root.querySelector('app-sidebar-notifications-row');
+
+    it('leads the rows with Notifications', () => {
+      const root = element(mount(ONE_ACCOUNT));
+
+      const first = root.querySelector('.rows')?.firstElementChild as HTMLElement;
+      const row = first.querySelector('app-sidebar-notifications-row') as HTMLElement;
+      expect(row.textContent).toContain('Notifications');
+      expect(row.querySelector('app-icon')?.textContent).toContain('notifications');
+      expect(row.querySelector('a')?.getAttribute('href')).toBe(
+        '/?view=notifications&network=bluesky',
+      );
+      expect(row.querySelector('.slot')?.textContent).toBe('');
+      expect(row.querySelector('.trail')).not.toBeNull();
+      expect(row.querySelector('app-sidebar-row-menu, .section-chevron, .dots')).toBeNull();
+    });
+
+    it('shows the unseen count as a pill', () => {
+      const root = element(mount({ ...ONE_ACCOUNT, notificationsUnseen: 4 }));
+
+      expect(rowOf(root)?.querySelector('app-count-pill')?.textContent?.trim()).toBe('4');
+    });
+
+    it('keeps the row without a pill at zero', () => {
+      const root = element(mount(ONE_ACCOUNT));
+
+      expect(rowOf(root)).not.toBeNull();
+      expect(rowOf(root)?.querySelector('app-count-pill')).toBeNull();
+    });
+
+    it("leaves the head's count alone", () => {
+      const root = element(mount({ ...ONE_ACCOUNT, unreadCount: 3, notificationsUnseen: 4 }));
+
+      expect(root.querySelector('.section-count')?.textContent?.trim()).toBe('3');
+    });
+
+    it("marks the row current for this network's notifications", () => {
+      const on = (network: SocialNetworkName) =>
+        rowOf(element(mount(ONE_ACCOUNT, { kind: 'notifications', network })));
+
+      expect(on('bluesky')?.classList).toContain('current');
+      expect(on('mastodon')?.classList).not.toContain('current');
+    });
+
+    it('offers no Notifications row without a connected account', () => {
+      const root = element(mount({ ...ONE_ACCOUNT, networkAccounts: [] }));
+
+      expect(rowOf(root)).toBeNull();
+    });
+
+    it('hides the row while organising', () => {
+      const fixture = mount(ONE_ACCOUNT);
+      fixture.componentRef.setInput('organising', true);
+      fixture.detectChanges();
+
+      expect(rowOf(element(fixture))).toBeNull();
+    });
+  });
+
   beforeEach(() => {
     localStorage.clear();
     rowActions.menuFor.set(null);
@@ -180,6 +242,7 @@ describe('SidebarSocialSectionComponent', () => {
       entryCount: 0,
       saved: null,
       showsHandles: false,
+      notificationsUnseen: 0,
       networkAccounts: [],
       groups: { search: socialFeedGroup([], 0), profile: socialFeedGroup([], 0) },
       accounts: [
@@ -203,6 +266,7 @@ describe('SidebarSocialSectionComponent', () => {
       entryCount: 0,
       saved: null,
       showsHandles: true,
+      notificationsUnseen: 0,
       networkAccounts: [],
       groups: { search: socialFeedGroup([], 0), profile: socialFeedGroup([], 0) },
       accounts: [
@@ -257,6 +321,7 @@ describe('SidebarSocialSectionComponent', () => {
       entryCount: 0,
       saved: null,
       showsHandles: true,
+      notificationsUnseen: 0,
       networkAccounts: [],
       groups: { search: socialFeedGroup([], 0), profile: socialFeedGroup([], 0) },
       accounts: [
@@ -285,6 +350,7 @@ describe('SidebarSocialSectionComponent', () => {
       entryCount: 0,
       saved: null,
       showsHandles: false,
+      notificationsUnseen: 0,
       networkAccounts: [],
       groups: { search: socialFeedGroup([], 0), profile: socialFeedGroup([], 0) },
       accounts: [{ accountId: 3, handle: null, subscriptions: [excluded(1)] }],
@@ -473,6 +539,7 @@ describe('SidebarSocialSectionComponent', () => {
       entryCount: 0,
       saved: null,
       showsHandles: false,
+      notificationsUnseen: 0,
       networkAccounts: [],
       accounts: [],
       groups: { search: socialFeedGroup([], 0), profile: socialFeedGroup([person(7, 'Amy')], 0) },
@@ -496,6 +563,7 @@ describe('SidebarSocialSectionComponent', () => {
       entryCount: 0,
       saved: null,
       showsHandles: false,
+      notificationsUnseen: 0,
       networkAccounts: [],
     };
 
@@ -775,6 +843,7 @@ describe('SidebarSocialSectionComponent', () => {
         entryCount: 0,
         saved: null,
         showsHandles: false,
+        notificationsUnseen: 0,
         networkAccounts: [],
       };
       expandProfiles('bluesky');
@@ -814,6 +883,7 @@ describe('SidebarSocialSectionComponent', () => {
         entryCount: 0,
         saved: null,
         showsHandles: false,
+        notificationsUnseen: 0,
         networkAccounts: [],
       };
       expandProfiles('bluesky');

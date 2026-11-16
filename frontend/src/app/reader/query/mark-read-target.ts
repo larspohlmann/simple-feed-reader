@@ -48,5 +48,6 @@ const MARK_READ_TARGET: BySelectionKind<MarkReadTarget | null> = {
   shared: () => null,
   viewed: () => null,
   trending: () => null,
+  notifications: () => null,
   'followed-story': () => null,
 };

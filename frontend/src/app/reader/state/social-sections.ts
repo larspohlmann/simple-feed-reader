@@ -1,6 +1,7 @@
 import { SubscriptionDto } from '../models';
 import { PrivateFeedRefDto, SocialAccountRefDto, SocialFeedRefDto } from '../social-feed';
 import { NetworkFeedKind, SOCIAL_NETWORKS, SocialNetworkName } from '../../core/social-network';
+import type { NotificationCounts } from './notification-counts';
 import type { UnreadTotals } from './unread-totals';
 
 export interface SocialAccountGroup {
@@ -86,6 +87,8 @@ export interface SocialSection {
   /** Every feed of the network, one excluded from All items too, as a tag counts. */
   readonly unreadCount: number;
   readonly entryCount: number;
+  /** Notifications not yet seen on the network; they never add to `unreadCount`. */
+  readonly notificationsUnseen: number;
   /** Several accounts of the network: each is headed by its handle, and a Home says whose it is. */
   readonly showsHandles: boolean;
 }
@@ -154,11 +157,24 @@ export function feedAvatarUrl(subscription: SubscriptionDto | null): string | nu
   return subscription.imageUrl;
 }
 
+export function hasSeveralConnectedAccounts(
+  sections: readonly SocialSection[],
+  network: SocialNetworkName,
+): boolean {
+  const connected = sections.find((section) => section.network === network)?.networkAccounts;
+  return (connected?.length ?? 0) > 1;
+}
+
+export interface SocialSectionCounts {
+  readonly unread: UnreadTotals;
+  readonly notifications: NotificationCounts;
+}
+
 /** One section per network holding a social feed: private feeds per account by id, each Home first, then the searches and the profiles. */
 export function buildSocialSections(
   subscriptions: readonly SubscriptionDto[],
   socialAccounts: readonly SocialAccountRefDto[],
-  totals: UnreadTotals,
+  counts: SocialSectionCounts,
 ): SocialSection[] {
   const handles = new Map(socialAccounts.map((account) => [account.id, account.handle]));
   return SOCIAL_NETWORKS.map((network) => {
@@ -180,15 +196,16 @@ export function buildSocialSections(
           ofNetwork.filter(
             (subscription) => !isPrivateFeed(subscription) && !isSavedFeed(subscription),
           ),
-          totals.networkProfiles.get(network) ?? 0,
+          counts.unread.networkProfiles.get(network) ?? 0,
         ),
       },
       saved:
         ofNetwork.find(
           (subscription) => isSavedFeed(subscription) && !isEmptySavedFeed(subscription),
         ) ?? null,
-      unreadCount: totals.networks.get(network) ?? 0,
+      unreadCount: counts.unread.networks.get(network) ?? 0,
       entryCount: sum(ofNetwork, (subscription) => subscription.entryCount),
+      notificationsUnseen: counts.notifications.get(network) ?? 0,
       showsHandles: accounts.length > 1,
     };
   }).filter(

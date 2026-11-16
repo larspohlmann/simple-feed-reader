@@ -1,14 +1,13 @@
 import {
   Component,
   ElementRef,
-  OnDestroy,
+  NgZone,
   TemplateRef,
   computed,
   effect,
   inject,
   input,
   output,
-  signal,
   viewChild,
 } from '@angular/core';
 import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
@@ -33,7 +32,8 @@ import { Selection, canScopedRefresh, offersMarkAboveRead, searchTermOf } from '
 import { searchWords } from '../../query/search-term';
 import { Problem } from '../../../core/problem';
 import { LayoutService } from '../../layout.service';
-import { prefetchMargin } from '../paging';
+import { publishListBarHeight } from '../list-bar-height';
+import { observeSentinel } from '../paging';
 import { HandednessService } from '../../../core/preferences/handedness.service';
 import { MagazineStyleService } from '../../../core/preferences/magazine-style.service';
 import { withHiddenDuplicates } from './above-fold';
@@ -83,7 +83,7 @@ const WAIT_OVERLAY_DELAY_MS = 150;
   templateUrl: './entry-list.component.html',
   styleUrl: './entry-list.component.scss',
 })
-export class EntryListComponent implements OnDestroy {
+export class EntryListComponent {
   readonly title = input.required<string>();
   /** The search title's lead, quoted term, and count pill, kept as three pieces
    *  (#581 round 2) so the count renders as a pill instead of inline text. Only
@@ -205,6 +205,7 @@ export class EntryListComponent implements OnDestroy {
   private readonly reduceMotion = prefersReducedMotion();
   private readonly screen = inject(LayoutService);
   private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly zone = inject(NgZone);
   private readonly autoplay = inject(ListAutoplayCoordinator);
   private readonly magazineStyle = inject(MagazineStyleService);
   protected readonly leftHanded = inject(HandednessService).leftHanded;
@@ -255,22 +256,20 @@ export class EntryListComponent implements OnDestroy {
   );
 
   /**
-   * The header's EXPANDED height — the space the scroller reserves for it.
-   * Only measured while expanded: feeding back the collapsed height would
-   * shrink the reservation and reintroduce the jump this replaces (#87).
-   */
-  readonly headerHeight = signal(0);
-  private headerObs?: ResizeObserver;
-
-  /**
    * Published as `--list-bar-h` for the stylesheet to add to the app bar's own
-   * reservation — a custom property since four elements need the same sum, and
-   * the shell's half (`--app-bar-h`) already arrives this way.
+   * reservation. Only measured while expanded: feeding back the collapsed height
+   * would shrink the reservation and reintroduce the jump this replaces (#87).
    */
-  private readonly _publishBarHeight = effect(() => {
-    const headerHeight = this.headerHeight();
-    if (headerHeight > 0)
-      this.host.nativeElement.style.setProperty('--list-bar-h', `${headerHeight}px`);
+  private readonly _publishBarHeight = effect((onCleanup) => {
+    const header = this.listHdr()?.nativeElement;
+    if (header)
+      onCleanup(
+        publishListBarHeight(this.zone, {
+          host: this.host.nativeElement,
+          header,
+          isPublishing: () => !this.collapsed(),
+        }),
+      );
   });
 
   private readonly readingFocus = new ListReadingFocus({
@@ -279,19 +278,6 @@ export class EntryListComponent implements OnDestroy {
     entries: this.entries,
     selection: this.selection,
     reduceMotion: this.reduceMotion,
-  });
-
-  // Measures the bar (guarded by `collapsed()`) so the scroller reserves it.
-  private readonly _measureHeader = effect(() => {
-    const element = this.listHdr()?.nativeElement;
-    this.headerObs?.disconnect();
-    this.headerObs = undefined;
-    if (!element || typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(() => {
-      if (!this.collapsed()) this.headerHeight.set(element.offsetHeight);
-    });
-    observer.observe(element);
-    this.headerObs = observer;
   });
 
   readonly pull = new PullToRefresh({
@@ -309,26 +295,16 @@ export class EntryListComponent implements OnDestroy {
     this.host.nativeElement,
   );
 
-  private observer?: IntersectionObserver;
   // Re-observe whenever the sentinel appears/disappears (hasMore toggles it).
-  private readonly _wire = effect(() => {
+  private readonly _wire = effect((onCleanup) => {
     const node = this.sentinel()?.nativeElement;
     const scroller = this.scrollHost();
-    this.observer?.disconnect();
-    if (node && scroller && typeof IntersectionObserver !== 'undefined') {
-      this.observer = new IntersectionObserver(
-        (es) => {
-          if (
-            es.some((intersection) => intersection.isIntersecting) &&
-            this.hasMore() &&
-            !this.loadingMore()
-          )
-            this.loadMore.emit();
-        },
-        { root: scroller.intersectionRoot, rootMargin: prefetchMargin(scroller.clientHeight) },
-      );
-      this.observer.observe(node);
-    }
+    if (!node || !scroller) return;
+    onCleanup(
+      observeSentinel(scroller, node, () => {
+        if (this.hasMore() && !this.loadingMore()) this.loadMore.emit();
+      }),
+    );
   });
 
   private readonly aboveFold = new ListAboveFold({
@@ -427,10 +403,5 @@ export class EntryListComponent implements OnDestroy {
    *  block never leaves as a unit, so it is never marked leaving. */
   isBlockLeaving(block: MagazineBlock): boolean {
     return block.kind !== 'group' && this.leavingIds().has(block.entry.id);
-  }
-
-  ngOnDestroy(): void {
-    this.observer?.disconnect();
-    this.headerObs?.disconnect();
   }
 }

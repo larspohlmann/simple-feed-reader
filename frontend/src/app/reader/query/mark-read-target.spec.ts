@@ -8,6 +8,7 @@ describe('markReadTarget', () => {
       scope: 'feed',
       id: 7,
     });
+    expect(markReadTarget({ kind: 'notifications', network: 'bluesky' })).toBeNull();
     for (const kind of ['favorites', 'kept', 'shared', 'viewed'] as const) {
       expect(markReadTarget({ kind })).toBeNull();
     }

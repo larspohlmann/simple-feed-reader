@@ -62,7 +62,11 @@ export class EntriesStore {
     });
   }
 
-  load(query: EntryQuery): void {
+  load(query: EntryQuery | null): void {
+    if (query === null) {
+      this.dropList();
+      return;
+    }
     this.query.set(query);
     // The outgoing list stays rendered until the response lands (#254) — a
     // blank pane made every view switch feel like the full round trip. Only
@@ -92,6 +96,15 @@ export class EntriesStore {
         this.landedLists.next({ query, page: null });
       },
     });
+  }
+
+  private dropList(): void {
+    this.listRequest?.unsubscribe();
+    this.query.set(null);
+    this.nextCursor.set(null);
+    this.loading.set(false);
+    this.loadingMore.set(false);
+    this.failure.clear();
   }
 
   /** Loads the list last asked for again, for a caller that changed it without knowing the view. */

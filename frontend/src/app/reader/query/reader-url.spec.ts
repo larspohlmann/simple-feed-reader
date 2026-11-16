@@ -9,7 +9,7 @@ const OFF: ViewContext = { trending: false, trendingWindow: 'day' };
 
 interface Opened {
   kind: string;
-  query: EntryQuery;
+  query: EntryQuery | null;
   entryId: number | null;
   urlCorrection: Record<string, string | null> | null;
 }

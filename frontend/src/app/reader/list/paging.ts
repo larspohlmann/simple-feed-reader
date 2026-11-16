@@ -1,3 +1,5 @@
+import type { ScrollHost } from '../../shared/scroll-host/scroll-host';
+
 // How much of the entry list we fetch at a time, and how early we fetch the next
 // page. Both are tuned for a slow backend (#91): fewer, larger round trips, and
 // enough lead time that the request is already in flight before the user can
@@ -19,6 +21,23 @@ export const MIN_PREFETCH_MARGIN = 300;
  */
 export function prefetchMargin(rootHeight: number): string {
   return `${Math.max(MIN_PREFETCH_MARGIN, Math.round(rootHeight * PREFETCH_VIEWPORTS))}px`;
+}
+
+/** Calls back whenever `node` comes within the prefetch margin of the scroller; returns its removal. */
+export function observeSentinel(
+  scroller: Pick<ScrollHost, 'intersectionRoot' | 'clientHeight'>,
+  node: Element,
+  callback: () => void,
+): () => void {
+  if (typeof IntersectionObserver === 'undefined') return () => undefined;
+  const observer = new IntersectionObserver(
+    (sightings) => {
+      if (sightings.some((sighting) => sighting.isIntersecting)) callback();
+    },
+    { root: scroller.intersectionRoot, rootMargin: prefetchMargin(scroller.clientHeight) },
+  );
+  observer.observe(node);
+  return () => observer.disconnect();
 }
 
 /** Entries an appended page reveals per animation frame. Rendering a whole page

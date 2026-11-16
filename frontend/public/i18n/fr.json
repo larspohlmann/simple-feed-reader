@@ -1374,6 +1374,50 @@
     "followedStories": "Sujets suivis",
     "toggleFollowedStories": "Afficher ou masquer les sujets suivis",
     "followedStoryFallback": "Sujet suivi",
+    "notifications": {
+      "title": "Notifications",
+      "loading": "Chargement des notifications…",
+      "markAllSeen": "Tout marquer comme vu",
+      "end": "C'est tout pour les 30 derniers jours.",
+      "empty": "Aucune notification ces 30 derniers jours.",
+      "scopeMissing": "{{network}} a besoin d'une autorisation pour lire vos notifications.",
+      "needsReconnect": "{{network}} doit être reconnecté pour recevoir de nouvelles notifications.",
+      "reconnect": "Reconnecter {{network}}",
+      "unseen": "Non vue",
+      "poll": "Un sondage auquel vous avez participé est terminé",
+      "who": {
+        "one": "{{first}}",
+        "two": "{{first}} et {{second}}",
+        "twoAndOne": "{{first}}, {{second}} et 1 autre personne",
+        "twoAndOthers": "{{first}}, {{second}} et {{count}} autres"
+      },
+      "action": {
+        "like": {
+          "one": "{{who}} a aimé votre publication",
+          "other": "{{who}} ont aimé votre publication"
+        },
+        "repost": {
+          "one": "{{who}} a republié votre publication",
+          "other": "{{who}} ont republié votre publication"
+        },
+        "reply": {
+          "one": "{{who}} a répondu à votre publication",
+          "other": "{{who}} ont répondu à votre publication"
+        },
+        "mention": {
+          "one": "{{who}} vous a mentionné",
+          "other": "{{who}} vous ont mentionné"
+        },
+        "quote": {
+          "one": "{{who}} a cité votre publication",
+          "other": "{{who}} ont cité votre publication"
+        },
+        "follow": {
+          "one": "{{who}} vous suit désormais",
+          "other": "{{who}} vous suivent désormais"
+        }
+      }
+    },
     "sinceLastVisit": "Depuis votre dernière visite",
     "followedStoryQuiet": "calme",
     "followedStoryQuietHint": "Rien de nouveau depuis deux jours",
@@ -1440,6 +1484,9 @@
     "organiseDone": "Terminé",
     "organiseHint": "Faites glisser une poignée pour réordonner au sein d'un niveau, ou touchez ⋯ pour les options d'une ligne. Déposez un flux sur une étiquette pour l'étiqueter.",
     "account": "Compte",
+    "signedIn": "Connecté",
+    "accountWithNotificationsOne": "Compte, 1 notification non vue",
+    "accountWithNotificationsOther": "Compte, {{count}} notifications non vues",
     "settings": "Paramètres",
     "admin": "Administration",
     "signOut": "Se déconnecter",
