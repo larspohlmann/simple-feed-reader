@@ -1,4 +1,3 @@
-import { provideSocialAccounts } from '../../../../../../testing/social-accounts-testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { provideRouter } from '@angular/router';
@@ -10,6 +9,7 @@ import { ImageProxyService } from '../../../../../shared/proxied-image/image-pro
 import { neverRecoveringImageProxy } from '../../../../../../testing/image-proxy-testing';
 import { anEntry } from '../../../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
+import { provideSocialAccounts } from '../../../../../../testing/social-accounts-testing';
 
 const entryActions = {
   favorite: jest.fn(),

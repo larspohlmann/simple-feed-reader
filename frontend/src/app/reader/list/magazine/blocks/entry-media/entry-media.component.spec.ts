@@ -1,4 +1,3 @@
-import { provideSocialAccounts } from '../../../../../../testing/social-accounts-testing';
 import { Provider } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -19,6 +18,7 @@ import {
   stubIntersectionObserver,
 } from '../../../../../../testing/intersection-observer-testing';
 import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
+import { provideSocialAccounts } from '../../../../../../testing/social-accounts-testing';
 
 jest.mock(
   'hls.js',

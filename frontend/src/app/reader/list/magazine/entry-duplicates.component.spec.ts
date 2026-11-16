@@ -1,4 +1,3 @@
-import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -10,6 +9,7 @@ import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handl
 import { anEntry } from '../../../../testing/entry-testing';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
+import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 import { ENTRY_ROW_ACTION, EntryRowAction } from '../../entry/entry-actions/entry-row-action';
 
 const entryActions = {

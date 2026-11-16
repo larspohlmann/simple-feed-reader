@@ -1,4 +1,3 @@
-import { provideSocialAccounts } from '../../../../../../testing/social-accounts-testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../../../testing/transloco-testing';
@@ -12,6 +11,7 @@ import { neverRecoveringImageProxy } from '../../../../../../testing/image-proxy
 import { aLinkCard, aQuotedPost, anEntry } from '../../../../../../testing/entry-testing';
 import { aThreadPost } from '../../../../../../testing/thread-testing';
 import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
+import { provideSocialAccounts } from '../../../../../../testing/social-accounts-testing';
 
 const entryActions = {
   favorite: jest.fn(),

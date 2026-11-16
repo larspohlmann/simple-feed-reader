@@ -1,4 +1,3 @@
-import { provideSocialAccounts } from '../../../../../../testing/social-accounts-testing';
 import { TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../../../../testing/transloco-testing';
 import { provideRouter } from '@angular/router';
@@ -11,6 +10,7 @@ import {
 } from '../../../../../../testing/short-marking-testing';
 import { anEntry } from '../../../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
+import { provideSocialAccounts } from '../../../../../../testing/social-accounts-testing';
 import { INCLUDED_EVERYWHERE } from '../../../../tag-inclusion';
 
 const entryActions = {

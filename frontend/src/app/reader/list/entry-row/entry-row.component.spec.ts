@@ -1,4 +1,3 @@
-import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
@@ -17,6 +16,7 @@ import { aThreadPost } from '../../../../testing/thread-testing';
 import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
+import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 
 const entryActions = {
   favorite: jest.fn(),

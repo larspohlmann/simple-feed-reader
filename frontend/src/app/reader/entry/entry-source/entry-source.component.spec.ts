@@ -1,7 +1,3 @@
-import {
-  aMastodonAccount,
-  provideSocialAccounts,
-} from '../../../../testing/social-accounts-testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
@@ -9,6 +5,10 @@ import { anEntry } from '../../../../testing/entry-testing';
 import { EntryDto } from '../../models';
 import { SubscriptionRows } from '../../state/subscription-rows';
 import { makeSubscription } from '../../testing/subscription.factory';
+import {
+  aMastodonAccount,
+  provideSocialAccounts,
+} from '../../../../testing/social-accounts-testing';
 import { EntrySourceComponent } from './entry-source.component';
 
 const BOB = { name: 'Bob', url: 'https://bsky.app/profile/bob', imageUrl: null };

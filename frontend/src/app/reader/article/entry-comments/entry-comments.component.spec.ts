@@ -1,7 +1,3 @@
-import {
-  aMastodonAccount,
-  provideSocialAccounts,
-} from '../../../../testing/social-accounts-testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WritableSignal, signal } from '@angular/core';
 import { EntryCommentsComponent } from './entry-comments.component';
@@ -14,6 +10,10 @@ import { EntryCommentDto, EntryCommentPostDto } from '../../entry-comment';
 import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service';
 import { aLinkCard, anEntryComment, aQuotedPost } from '../../../../testing/entry-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
+import {
+  aMastodonAccount,
+  provideSocialAccounts,
+} from '../../../../testing/social-accounts-testing';
 
 const DISCUSSION = 'https://www.reddit.com/r/x/comments/1/t/';
 

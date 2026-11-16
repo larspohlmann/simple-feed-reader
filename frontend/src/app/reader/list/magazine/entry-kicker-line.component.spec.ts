@@ -1,4 +1,3 @@
-import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
@@ -6,6 +5,7 @@ import { EntryKickerLineComponent } from './entry-kicker-line.component';
 import { EntryDto } from '../../models';
 import { anEntry } from '../../../../testing/entry-testing';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
+import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto =>
   anEntry({

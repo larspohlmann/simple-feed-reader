@@ -1,4 +1,3 @@
-import { aMastodonAccount, provideSocialAccounts } from '../../../testing/social-accounts-testing';
 import { TestBed } from '@angular/core/testing';
 import { SocialNetworkName } from '../../core/social-network';
 import { QuotedPostComponent, QuotedPostLayout } from './quoted-post.component';
@@ -6,6 +5,7 @@ import { QuotedPostDto } from './quoted-post';
 import { ImageProxyService } from '../../shared/proxied-image/image-proxy.service';
 import { aLinkCard, aQuotedPost } from '../../../testing/entry-testing';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
+import { aMastodonAccount, provideSocialAccounts } from '../../../testing/social-accounts-testing';
 
 const failingProxy = { recover: () => Promise.resolve('failed' as const) };
 

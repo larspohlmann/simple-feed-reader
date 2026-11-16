@@ -48,6 +48,7 @@ import { PostMediaComponent } from '../../media/post-media/post-media.component'
 import { EntryCommentDto } from '../../entry-comment';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
+import { aMastodonAccount } from '../../../../testing/social-accounts-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -346,15 +347,7 @@ describe('ReaderViewComponent', () => {
   it('opens a Mastodon post on the reader’s own instance', () => {
     TestBed.overrideProvider(SubscriptionsStore, {
       useValue: {
-        socialAccounts: signal([
-          {
-            id: 1,
-            network: 'mastodon',
-            handle: '@me@home.test',
-            status: 'connected',
-            serviceUrl: 'https://home.test',
-          },
-        ]),
+        socialAccounts: signal([aMastodonAccount('https://home.test')]),
       },
     });
     const fixture = mount(
