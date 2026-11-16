@@ -21,18 +21,21 @@ use App\Entity\SocialAccount;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
-use App\Entity\TrendingHiddenEntry;
+use App\Entity\TrendingStoryFollow;
+use App\Entity\TrendingStoryHide;
 use App\Entity\User;
 use App\Enum\CallPhase;
 use App\Enum\PrivateFeedSyncReason;
 use App\Enum\ProfileRunTrigger;
 use App\Enum\RecommendationBatchSize;
 use App\Enum\SocialFeedKind;
+use App\Enum\TrendingWindow;
 use App\Service\Identity\Account\AccountReset;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StoredUserSettings;
+use App\Tests\Support\TrendingFixtures;
 
 final class AccountResetTest extends DbTestCase
 {
@@ -152,8 +155,13 @@ final class AccountResetTest extends DbTestCase
     {
         [$user, , $entry, $run, $profileRun] = $this->seedAccount('reset-wipes@example.com');
         $userId = $user->requireId();
+        $story = (new TrendingFixtures($this->entityManager))
+            ->story(TrendingWindow::Day, '2031-05-14 10:00:00', $entry);
         $this->entityManager->persist(
-            new TrendingHiddenEntry($user, $entry, new \DateTimeImmutable('2031-05-14 12:00:00')),
+            new TrendingStoryFollow($user, $story, new \DateTimeImmutable('2031-05-14 12:00:00')),
+        );
+        $this->entityManager->persist(
+            new TrendingStoryHide($user, $story, new \DateTimeImmutable('2031-05-14 12:00:00')),
         );
         $this->entityManager->flush();
         $runId = $run->requireId();
@@ -169,7 +177,11 @@ final class AccountResetTest extends DbTestCase
         self::assertSame([], $this->entityManager->getRepository(EntryState::class)->findBy(['user' => $userId]));
         self::assertSame(
             [],
-            $this->entityManager->getRepository(TrendingHiddenEntry::class)->findBy(['user' => $userId]),
+            $this->entityManager->getRepository(TrendingStoryFollow::class)->findBy(['user' => $userId]),
+        );
+        self::assertSame(
+            [],
+            $this->entityManager->getRepository(TrendingStoryHide::class)->findBy(['user' => $userId]),
         );
         self::assertSame(
             [],

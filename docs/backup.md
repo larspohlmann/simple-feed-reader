@@ -213,7 +213,7 @@ writes none of them.
 | `ThreadPost` | The replies in which a post's author continued it, read from the network when the post arrives. A restored article shows its root post alone. |
 | `EntryTranscript` | An episode's transcript, fetched from the URL its feed declares. A restored episode has no transcript, since a backup carries no transcript declaration. |
 | `TrendingSnapshot` | When a Trending window was last grouped and what the grouping cost. The next rebuild writes it again. |
-| `TrendingStory` | A Trending story of the latest grouping. The next rebuild groups the restored entries again. |
+| `TrendingStory` | A Trending story and when its members joined. The next rebuild groups the restored entries again. |
 | `TrendingStoryEntry` | Which entries belong to a Trending story. The next rebuild groups the restored entries again. |
 | `SharedLink` | A linked article, stored once for every post that shares it. Each card in an entry line carries the article's preview, and a restore finds the stored article or creates it from that preview. |
 | `SharedLinkResolution` | Where a short link lands. A restore queues every short link it creates, and the worker follows it again. |
@@ -242,7 +242,8 @@ These rows belong to your account. A backup drops each of them completely.
 | `RecommendationItem` | The picks of one run. They have no meaning without the run, and the run is not restored. |
 | `UserPasskey` | Your passkeys. A passkey is tied to one device and to this instance's identity. A credential restored onto another account, or onto another device, could never sign you in. Carrying credential ids and keys in the file would only make a stolen backup more dangerous. |
 | `SavedSearchEntry` | Which articles match one of your saved searches. A derived row: the sweep that matches searches against articles rebuilds it, so a restore leaves it to be rebuilt rather than carrying it. |
-| `TrendingHiddenEntry` | The Trending stories you hid. A hide only matters while its story can still trend, which is at most a week, and a restore groups Trending again from the restored articles. So the file leaves your hides out, and a story you hid may show again after a restore. |
+| `TrendingStoryFollow` | The Trending stories you follow. A story's id does not survive a restore, which groups Trending again from the restored articles, so the file leaves your follows out and you follow a story again after a restore. |
+| `TrendingStoryHide` | The Trending stories you hid. A story's id does not survive a restore, which groups Trending again from the restored articles, so the file leaves your hides out and a story you hid may show again after a restore. |
 
 Your "For you" **settings** and **results** are both dropped. A restore leaves
 the settings at their defaults; set them again once, and run the engine.

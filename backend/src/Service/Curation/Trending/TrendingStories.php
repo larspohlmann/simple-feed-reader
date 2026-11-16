@@ -41,7 +41,7 @@ final readonly class TrendingStories
         return new TrendingPageModel(
             $window,
             $this->snapshots->lastBuilds()->builtAt($window),
-            $this->sourceFor($userId, $ranked)->cardsOf($ranked),
+            $this->sourceFor($userId, $window, $ranked)->cardsOf($ranked),
         );
     }
 
@@ -57,7 +57,7 @@ final readonly class TrendingStories
 
         return new TrendingUnopenedModel(
             $window,
-            \count($storyIds) - \count($this->stories->viewedStoryIds($userId, $storyIds)),
+            \count($storyIds) - \count($this->stories->viewedStoryIds($userId, $window, $storyIds)),
         );
     }
 
@@ -68,15 +68,15 @@ final readonly class TrendingStories
     }
 
     /** @param list<RankedStoryModel> $ranked */
-    private function sourceFor(int $userId, array $ranked): StoryCardSource
+    private function sourceFor(int $userId, TrendingWindow $window, array $ranked): StoryCardSource
     {
         $storyIds = RankedStoryModel::storyIdsOf($ranked);
-        $shown = $this->stories->shownEntriesByStory($userId, $storyIds);
+        $shown = $this->stories->shownEntriesByStory($userId, $window, $storyIds);
 
         return new StoryCardSource(
             $shown->entryIdsByStory(),
             $this->rowsByEntryId($userId, $shown),
-            array_flip($this->stories->viewedStoryIds($userId, $storyIds)),
+            array_flip($this->stories->viewedStoryIds($userId, $window, $storyIds)),
         );
     }
 

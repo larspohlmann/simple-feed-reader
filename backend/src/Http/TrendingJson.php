@@ -35,6 +35,7 @@ final readonly class TrendingJson
             ...$this->article($articles->lead),
             'duplicates' => array_map($this->article(...), $articles->others),
             'story' => [
+                'id' => $card->story->storyId,
                 'outletCount' => $card->story->outletCount,
                 'viewed' => $card->viewed,
                 'shareCount' => $articles->shareCount(),

@@ -7,6 +7,7 @@ namespace App\Tests\Service\Curation\Trending\SnapshotBuilder;
 use App\Entity\TrendingSnapshot;
 use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
+use App\Repository\TrendingPlacementSql;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Curation\Trending\SnapshotBuilder\TrendingSnapshotBuilder;
 use App\Tests\DbTestCase;
@@ -48,6 +49,12 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
             $this->storedStories(TrendingWindow::Day),
         );
         self::assertSame(3, $this->memberCount());
+        self::assertSame(
+            [self::NOW],
+            $this->entityManager->getConnection()->fetchFirstColumn(
+                'SELECT DISTINCT joined_at FROM trending_story_entry UNION SELECT first_joined_at FROM trending_story',
+            ),
+        );
         $snapshot = $this->entityManager->find(TrendingSnapshot::class, 'day');
         self::assertInstanceOf(TrendingSnapshot::class, $snapshot);
         self::assertSame(self::NOW, $snapshot->getBuiltAt()->format('Y-m-d H:i:s'));
@@ -135,8 +142,8 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         self::assertSame(
             [['stories' => 1, 'built_at' => '2031-05-14 11:00:00']],
             $this->entityManager->getConnection()->fetchAllAssociative(
-                'SELECT (SELECT COUNT(*) FROM trending_story WHERE time_window = \'day\') AS stories,'
-                . ' built_at FROM trending_snapshot WHERE time_window = \'day\'',
+                'SELECT (SELECT COUNT(DISTINCT member.story_id) FROM trending_story_entry member'
+                . ' WHERE member.in_day = 1) AS stories, built_at FROM trending_snapshot WHERE time_window = \'day\'',
             ),
         );
     }
@@ -173,8 +180,9 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
     private function storedStories(TrendingWindow $window): array
     {
         return $this->entityManager->getConnection()->fetchAllAssociative(
-            'SELECT first_seen, last_seen FROM trending_story WHERE time_window = ?',
-            [$window->value],
+            'SELECT story.first_seen, story.last_seen FROM trending_story story WHERE EXISTS (SELECT 1'
+            . ' FROM trending_story_entry member WHERE member.story_id = story.id AND '
+            . TrendingPlacementSql::placedIn($window, 'member') . ')',
         );
     }
 

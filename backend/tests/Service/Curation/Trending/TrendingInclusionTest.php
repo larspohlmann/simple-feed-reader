@@ -22,7 +22,6 @@ use App\Repository\ReadingSettingsRepository;
 use App\Repository\TrendingEntryRepository;
 use App\Repository\TrendingStoryRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
-use App\Service\Curation\Trending\Exception\TrendingStoryNotFoundException;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\TrendingStoryCardModel;
 use App\Service\Curation\Trending\ReaderWindows;
@@ -73,6 +72,7 @@ final class TrendingInclusionTest extends DbTestCase
         self::assertSame([3], self::outletCountsOf($this->rankedDay()));
         self::assertCount(3, $this->storyRepository()->shownEntriesByStory(
             $this->reader->requireId(),
+            TrendingWindow::Day,
             [$story->requireId()],
         )->entryIdsByStory()[$story->requireId()]);
     }
@@ -187,30 +187,6 @@ final class TrendingInclusionTest extends DbTestCase
         $this->fixtures->flush();
 
         self::assertSame([3], self::outletCountsOf($this->rankedDay()));
-    }
-
-    public function testAnEntryOfASwitchedOutFeedHoldsNoStoryTheReaderCanHide(): void
-    {
-        [$alpha, $beta, $gamma, $delta] = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta');
-        $this->fixtures->subscribe($this->reader, $alpha, $beta, $gamma, $delta);
-        $switchedOut = $this->fixtures->entry($alpha, 'Alpha', '2031-05-14 07:00:00');
-        $this->fixtures->story(
-            TrendingWindow::Day,
-            '2031-05-14 10:00:00',
-            $switchedOut,
-            $this->fixtures->entry($beta, 'Beta', '2031-05-14 08:00:00'),
-            $this->fixtures->entry($gamma, 'Gamma', '2031-05-14 09:00:00'),
-            $this->fixtures->entry($delta, 'Delta', '2031-05-14 10:00:00'),
-        );
-        $this->subscriptionTo($alpha)->changeInclusions(new InclusionChange(trending: false));
-        $this->fixtures->flush();
-
-        $this->expectException(TrendingStoryNotFoundException::class);
-
-        $this->storyRepository()->storyIdContaining(
-            $this->readerWindows()->of($this->reader->requireId(), TrendingWindow::Day),
-            $switchedOut->requireId(),
-        );
     }
 
     public function testACopyOfTheLeadInASwitchedOutFeedIsNotShownOnTheCard(): void

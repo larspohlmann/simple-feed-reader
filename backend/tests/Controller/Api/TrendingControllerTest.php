@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\InclusionChange;
 use App\Entity\LinkCardContent;
@@ -37,7 +38,7 @@ final class TrendingControllerTest extends ApiTestCase
         $lead = $fixtures->entry($alpha, 'Lead', '2031-05-14 10:00:00');
         $second = $fixtures->entry($beta, 'Second', '2031-05-14 09:00:00');
         $third = $fixtures->entry($gamma, 'Third', '2031-05-14 08:00:00');
-        $fixtures->story(TrendingWindow::Day, '2031-05-14 10:00:00', $lead, $second, $third);
+        $stored = $fixtures->story(TrendingWindow::Day, '2031-05-14 10:00:00', $lead, $second, $third);
 
         $this->client->request('GET', '/api/trending?window=day', server: $headers);
 
@@ -59,8 +60,36 @@ final class TrendingControllerTest extends ApiTestCase
                 $story['duplicates'],
             ),
         );
-        self::assertSame(['outletCount' => 3, 'viewed' => false, 'shareCount' => 0], $story['story']);
+        self::assertSame(
+            ['id' => $stored->requireId(), 'outletCount' => 3, 'viewed' => false, 'shareCount' => 0],
+            $story['story'],
+        );
         self::assertSame([], $story['shares']);
+    }
+
+    public function testEachStoryCarriesItsId(): void
+    {
+        [$headers, $user] = $this->bearerAndUser('trending-story-id@example.com');
+        $fixtures = new TrendingFixtures($this->entityManager());
+        $feeds = [$fixtures->feed('alpha'), $fixtures->feed('beta'), $fixtures->feed('gamma')];
+        $fixtures->subscribe($user, ...$feeds);
+        $fixtures->story(TrendingWindow::Day, '2031-05-14 09:00:00', ...array_map(
+            static fn (Feed $feed): Entry => $fixtures->entry($feed, 'Older', '2031-05-14 09:00:00'),
+            $feeds,
+        ));
+        $newer = $fixtures->story(TrendingWindow::Day, '2031-05-14 10:00:00', ...array_map(
+            static fn (Feed $feed): Entry => $fixtures->entry($feed, 'Newer', '2031-05-14 10:00:00'),
+            $feeds,
+        ));
+
+        $this->client->request('GET', '/api/trending?window=day', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $stories = $this->payload($this->client)['stories'];
+        self::assertIsArray($stories);
+        self::assertIsArray($stories[0]);
+        self::assertIsArray($stories[0]['story']);
+        self::assertSame($newer->requireId(), $stories[0]['story']['id']);
     }
 
     public function testAStoryNoFollowedOutletCarriesIsLedByItsMostSharedArticleWithItsSharesUnderIt(): void
@@ -87,7 +116,7 @@ final class TrendingControllerTest extends ApiTestCase
             null,
             'Other',
         ));
-        $fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
+        $stored = $fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
             [$pictured, 'outlet.example'],
             [$alsoSharing, 'outlet.example'],
             [$other, 'other.example'],
@@ -106,7 +135,10 @@ final class TrendingControllerTest extends ApiTestCase
         self::assertIsArray($story['duplicates']);
         self::assertIsArray($story['duplicates'][0]);
         self::assertSame([$other->requireId()], self::idsOf($story['duplicates'][0]['shares']));
-        self::assertSame(['outletCount' => 3, 'viewed' => false, 'shareCount' => 3], $story['story']);
+        self::assertSame(
+            ['id' => $stored->requireId(), 'outletCount' => 3, 'viewed' => false, 'shareCount' => 3],
+            $story['story'],
+        );
     }
 
     public function testAPostSharingAFollowedOutletsArticleIsAShareOfItsRowNotASourceOrARow(): void
@@ -126,7 +158,7 @@ final class TrendingControllerTest extends ApiTestCase
             'https://alpha.example.com/lead.jpg',
             'Alpha',
         ));
-        $fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
+        $stored = $fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
             [$lead, 'alpha.example.com'],
             [$second, 'beta.example.com'],
             [$post, 'alpha.example.com'],
@@ -139,7 +171,10 @@ final class TrendingControllerTest extends ApiTestCase
         self::assertSame($lead->requireId(), $story['id']);
         self::assertSame([$post->requireId()], self::idsOf($story['shares']));
         self::assertSame([$second->requireId()], self::idsOf($story['duplicates']));
-        self::assertSame(['outletCount' => 3, 'viewed' => false, 'shareCount' => 1], $story['story']);
+        self::assertSame(
+            ['id' => $stored->requireId(), 'outletCount' => 3, 'viewed' => false, 'shareCount' => 1],
+            $story['story'],
+        );
     }
 
     public function testAStorysSourceCountIsTheOutletsItsCardShowsTheReader(): void
@@ -153,7 +188,7 @@ final class TrendingControllerTest extends ApiTestCase
         $ann = $fixtures->feed('ann', SocialNetwork::Mastodon);
         $fixtures->subscribe($user, $alpha, $beta, $switchedOut, $ann);
         $lead = $fixtures->entry($alpha, 'Lead', '2031-05-14 10:00:00');
-        $fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
+        $stored = $fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
             [$lead, 'alpha.example.com'],
             [$fixtures->entry($beta, 'Second', '2031-05-14 09:00:00'), 'beta.example.com'],
             [$fixtures->entry($switchedOut, 'Switched out', '2031-05-14 08:00:00'), 'gamma.example.com'],
@@ -168,7 +203,10 @@ final class TrendingControllerTest extends ApiTestCase
         $story = self::onlyStoryOf($this->payload($this->client));
         self::assertSame($lead->requireId(), $story['id']);
         self::assertCount(1, self::idsOf($story['duplicates']));
-        self::assertSame(['outletCount' => 2, 'viewed' => false, 'shareCount' => 0], $story['story']);
+        self::assertSame(
+            ['id' => $stored->requireId(), 'outletCount' => 2, 'viewed' => false, 'shareCount' => 0],
+            $story['story'],
+        );
     }
 
     public function testBuiltAtIsSerialisedAsAtomInUtc(): void

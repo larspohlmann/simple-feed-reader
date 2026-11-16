@@ -18,7 +18,7 @@ final readonly class TrendingProblems implements ExceptionProblemsInterface
                 'trending_story_not_found',
                 'Trending story not found',
                 Response::HTTP_NOT_FOUND,
-                'No story of this window holds that entry.',
+                'No Trending story has that id.',
             )),
             default => null,
         };

@@ -32,10 +32,11 @@ final readonly class TrendingSnapshotBuilder implements SnapshotBuilderInterface
         unset($run);
 
         return $this->entityManager->wrapInTransaction(function () use ($window, $entryCount, $stories, $stopwatch) {
-            $this->snapshots->replaceStories($window, $stories);
+            $builtAt = $this->clock->now();
+            $this->snapshots->replaceStories($window, $stories, $builtAt);
             $report = new TrendingBuildReportModel(
                 $window,
-                $this->clock->now(),
+                $builtAt,
                 $entryCount,
                 \count($stories),
                 $stopwatch->elapsedMilliseconds(),

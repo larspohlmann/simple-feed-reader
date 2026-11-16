@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\TrendingStory;
+use App\Enum\TrendingWindow;
 use App\Service\Curation\Trending\Exception\TrendingStoryNotFoundException;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\ReaderWindowModel;
@@ -40,7 +41,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     }
 
     /**
-     * The stories the reader is shown, leaving out any holding an entry they hid: widest first, then newest.
+     * The stories the reader is shown, leaving out those they hid: widest first, then newest.
      *
      * @return list<RankedStoryModel>
      */
@@ -48,11 +49,9 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     {
         /** @var list<array{story_id: int|string, outlet_count: int|string, last_seen: string}> $rows */
         $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
-            self::visibleStories()
-            . ' AND NOT EXISTS (SELECT 1 FROM trending_story_entry hidden_member'
-            . ' JOIN trending_hidden_entry hidden'
-            . ' ON hidden.entry_id = hidden_member.entry_id AND hidden.user_id = :user'
-            . ' WHERE hidden_member.story_id = story.id)'
+            self::visibleStories($reader)
+            . ' AND NOT EXISTS (SELECT 1 FROM trending_story_hide hidden'
+            . ' WHERE hidden.story_id = story.id AND hidden.user_id = :user)'
             . self::visibleCoverage()
             . \sprintf(' ORDER BY outlet_count DESC, story.last_seen DESC, story.id DESC LIMIT %d', $limit),
             self::visibilityParameters($reader),
@@ -69,37 +68,23 @@ final class TrendingStoryRepository extends ServiceEntityRepository
         );
     }
 
-    /**
-     * @throws TrendingStoryNotFoundException when no story the reader is shown, hidden or not, holds the entry
-     *                                        through a feed they follow
-     */
-    public function storyIdContaining(ReaderWindowModel $reader, int $entryId): int
+    /** @throws TrendingStoryNotFoundException */
+    public function requireExists(int $storyId): void
     {
-        $storyId = $this->getEntityManager()->getConnection()->fetchOne(
-            self::visibleStories()
-            . ' AND EXISTS (SELECT 1 FROM trending_story_entry asked'
-            . ' JOIN subscription asker ON asker.feed_id = asked.feed_id AND asker.user_id = :user'
-            . ' AND ' . TrendingInclusionSql::includes('asker')
-            . ' WHERE asked.story_id = story.id AND asked.entry_id = :entry)'
-            . self::visibleCoverage(),
-            [...self::visibilityParameters($reader), 'entry' => $entryId],
-            [...self::VISIBILITY_TYPES, 'entry' => ParameterType::INTEGER],
-        );
-        if (!is_numeric($storyId)) {
-            throw new TrendingStoryNotFoundException(
-                \sprintf('No %s story holds entry %d for this reader.', $reader->window->value, $entryId),
-            );
+        $found = $this->getEntityManager()->getConnection()
+            ->fetchOne('SELECT 1 FROM trending_story WHERE id = ?', [$storyId], [ParameterType::INTEGER]);
+        if ($found === false) {
+            throw new TrendingStoryNotFoundException(\sprintf('No Trending story has id %d.', $storyId));
         }
-
-        return (int) $storyId;
     }
 
     /**
      * @param list<int> $storyIds
      *
-     * @return ShownEntriesModel each story's articles and story-card posts of the feeds the reader follows
+     * @return ShownEntriesModel each story's articles and story-card posts in the window of the feeds the reader
+     *                           follows
      */
-    public function shownEntriesByStory(int $userId, array $storyIds): ShownEntriesModel
+    public function shownEntriesByStory(int $userId, TrendingWindow $window, array $storyIds): ShownEntriesModel
     {
         if ($storyIds === []) {
             return new ShownEntriesModel([]);
@@ -114,7 +99,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             . LinkLandingSql::JOIN
             . ' JOIN subscription reader ON reader.feed_id = shown.feed_id AND reader.user_id = :user'
             . ' AND ' . TrendingInclusionSql::includes('reader')
-            . ' WHERE shown.story_id IN (:storyIds)'
+            . ' WHERE shown.story_id IN (:storyIds) AND ' . TrendingPlacementSql::placedIn($window, 'shown')
             . ' AND (shown_feed.network IS NULL OR shown.article_site IS NOT NULL)',
             ['user' => $userId, 'storyIds' => $storyIds],
             ['user' => ParameterType::INTEGER, 'storyIds' => ArrayParameterType::INTEGER],
@@ -131,9 +116,9 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     /**
      * @param list<int> $storyIds
      *
-     * @return list<int> the stories one of whose entries, social ones included, the reader opened
+     * @return list<int> the stories one of whose entries in the window, social ones included, the reader opened
      */
-    public function viewedStoryIds(int $userId, array $storyIds): array
+    public function viewedStoryIds(int $userId, TrendingWindow $window, array $storyIds): array
     {
         if ($storyIds === []) {
             return [];
@@ -144,7 +129,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             'SELECT DISTINCT opened.story_id FROM trending_story_entry opened'
             . ' JOIN entry_state reading ON reading.entry_id = opened.entry_id'
             . ' AND reading.user_id = :user AND reading.is_viewed = 1'
-            . ' WHERE opened.story_id IN (:storyIds)',
+            . ' WHERE opened.story_id IN (:storyIds) AND ' . TrendingPlacementSql::placedIn($window, 'opened'),
             ['user' => $userId, 'storyIds' => $storyIds],
             ['user' => ParameterType::INTEGER, 'storyIds' => ArrayParameterType::INTEGER],
         );
@@ -153,11 +138,11 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     }
 
     /**
-     * The window's stories, counting only feeds the reader follows in Trending, an article once and a post by its
-     * account, leaving out any sharing an entry with a story the reader is shown in a shorter window; an `AND` on
-     * `story`, then visibleCoverage(). An empty id list expands to `IN (NULL)`, which leaves nothing out.
+     * The window's stories, counting only their members in it from feeds the reader follows in Trending, an article
+     * once and a post by its account, leaving out those the reader is shown in a shorter window; an `AND` on `story`,
+     * then visibleCoverage().
      */
-    private static function visibleStories(): string
+    private static function visibleStories(ReaderWindowModel $reader): string
     {
         return 'SELECT story.id AS story_id, story.last_seen,'
             . ' ' . self::sources() . ' AS outlet_count'
@@ -168,11 +153,15 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             . ' ON subscribed.feed_id = story_member.feed_id AND subscribed.user_id = :user'
             . ' AND ' . TrendingInclusionSql::includes('subscribed')
             . ' JOIN entry member_entry ON member_entry.id = story_member.entry_id'
-            . ' WHERE story.time_window = :window'
-            . self::noEarlierCopy()
-            . ' AND NOT EXISTS (SELECT 1 FROM trending_story_entry overlap_member'
-            . ' JOIN trending_story_entry shorter_member ON shorter_member.entry_id = overlap_member.entry_id'
-            . ' WHERE overlap_member.story_id = story.id AND shorter_member.story_id IN (:shorterWindowStoryIds))';
+            . ' WHERE ' . TrendingPlacementSql::placedIn($reader->window, 'story_member')
+            . self::noEarlierCopy($reader->window)
+            . self::notShownInAShorterWindow($reader);
+    }
+
+    /** Without this guard an empty list would expand to `NOT IN (NULL)`, which leaves every story out. */
+    private static function notShownInAShorterWindow(ReaderWindowModel $reader): string
+    {
+        return $reader->shorterWindowStoryIds === [] ? '' : ' AND story.id NOT IN (:shorterWindowStoryIds)';
     }
 
     /** At least the reader's threshold of sources (the select's `outlet_count`), and two article feeds or two sites. */
@@ -203,7 +192,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
      * As in DuplicateCollapseDql, only the lowest-id copy of an article the reader can see in the story counts;
      * the earlier copy must be one of theirs, or the article would count for no feed. A post counts by its account.
      */
-    private static function noEarlierCopy(): string
+    private static function noEarlierCopy(TrendingWindow $window): string
     {
         return ' AND (member_feed.network IS NOT NULL'
             . ' OR NOT EXISTS (SELECT 1 FROM trending_story_entry earlier_member'
@@ -212,27 +201,26 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             . ' JOIN subscription earlier_reader'
             . ' ON earlier_reader.feed_id = earlier_member.feed_id AND earlier_reader.user_id = :user'
             . ' AND ' . TrendingInclusionSql::includes('earlier_reader')
-            . ' WHERE earlier_member.story_id = story.id AND earlier_member.entry_id < story_member.entry_id'
+            . ' WHERE earlier_member.story_id = story.id'
+            . ' AND ' . TrendingPlacementSql::placedIn($window, 'earlier_member')
+            . ' AND earlier_member.entry_id < story_member.entry_id'
             . ' AND earlier_entry.url_hash = member_entry.url_hash))';
     }
 
     /**
-     * @return array{
-     *     user: int,
-     *     window: string,
-     *     minimum: int,
-     *     minimumArticleSources: int,
-     *     shorterWindowStoryIds: list<int>,
-     * }
+     * @return array{user: int, minimum: int, minimumArticleSources: int, shorterWindowStoryIds?: list<int>}
      */
     private static function visibilityParameters(ReaderWindowModel $reader): array
     {
-        return [
+        $parameters = [
             'user' => $reader->userId,
-            'window' => $reader->window->value,
             'minimum' => $reader->minimumOutlets,
             'minimumArticleSources' => self::MINIMUM_ARTICLE_SOURCES,
-            'shorterWindowStoryIds' => $reader->shorterWindowStoryIds,
         ];
+        if ($reader->shorterWindowStoryIds === []) {
+            return $parameters;
+        }
+
+        return [...$parameters, 'shorterWindowStoryIds' => $reader->shorterWindowStoryIds];
     }
 }

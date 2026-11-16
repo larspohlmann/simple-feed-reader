@@ -8,7 +8,6 @@ use App\Service\Curation\Trending\Model\StoryArticleModel;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
-use App\Entity\TrendingHiddenEntry;
 use App\Entity\TrendingSnapshot;
 use App\Entity\TrendingStory;
 use App\Entity\User;
@@ -211,12 +210,19 @@ final class TrendingStoriesTest extends DbTestCase
 
         self::assertSame(
             [$story->requireId() => [$article->requireId()]],
-            $this->storyRepository()->shownEntriesByStory($userId, [$story->requireId()])->entryIdsByStory(),
+            $this->storyRepository()
+                ->shownEntriesByStory($userId, TrendingWindow::Day, [$story->requireId()])
+                ->entryIdsByStory(),
         );
         self::assertSame([$otherStory->requireId()], array_keys(
-            $this->storyRepository()->shownEntriesByStory($userId, [$otherStory->requireId()])->entryIdsByStory(),
+            $this->storyRepository()
+                ->shownEntriesByStory($userId, TrendingWindow::Day, [$otherStory->requireId()])
+                ->entryIdsByStory(),
         ));
-        self::assertSame([], $this->storyRepository()->shownEntriesByStory($userId, [])->entryIdsByStory());
+        self::assertSame(
+            [],
+            $this->storyRepository()->shownEntriesByStory($userId, TrendingWindow::Day, [])->entryIdsByStory(),
+        );
     }
 
     public function testViewedStoriesAreLimitedToTheAskedStories(): void
@@ -232,7 +238,8 @@ final class TrendingStoriesTest extends DbTestCase
 
         self::assertSame(
             [$asked->requireId()],
-            $this->storyRepository()->viewedStoryIds($this->reader->requireId(), [$asked->requireId()]),
+            $this->storyRepository()
+                ->viewedStoryIds($this->reader->requireId(), TrendingWindow::Day, [$asked->requireId()]),
         );
     }
 
@@ -478,13 +485,11 @@ final class TrendingStoriesTest extends DbTestCase
         );
     }
 
-    public function testAWeekStorySharingAnEntryWithAShownDayStoryIsLeftOutOfTheListAndTheBadge(): void
+    public function testAStoryShownInTheDayIsLeftOutOfTheWeeksListAndBadge(): void
     {
         $feeds = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta', 'omega');
         $this->fixtures->subscribe($this->reader, ...$feeds);
-        $shared = $this->fixtures->entry($feeds[0], 'Shared', '2031-05-14 11:00:00');
-        $this->storySharing($shared, TrendingWindow::Day, \array_slice($feeds, 1, 2));
-        $this->storySharing($shared, TrendingWindow::Week, \array_slice($feeds, 1));
+        $this->storyInTheDayAndTheWeek($feeds);
         $earlier = $this->storyOf('2031-05-12 10:00:00', $feeds, TrendingWindow::Week);
 
         self::assertSame([$earlier->requireId()], $this->storyIdsFor(TrendingWindow::Week));
@@ -496,18 +501,17 @@ final class TrendingStoriesTest extends DbTestCase
         $feeds = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta', 'omega');
         $this->fixtures->subscribe($this->reader, ...$feeds);
         $inANarrowDayStory = $this->fixtures->entry($feeds[0], 'Narrow', '2031-05-14 11:00:00');
-        $this->storySharing($inANarrowDayStory, TrendingWindow::Day, []);
         $narrowWeek = $this->storySharing($inANarrowDayStory, TrendingWindow::Week, \array_slice($feeds, 1));
+        $this->fixtures->place(TrendingWindow::Day, $narrowWeek, $inANarrowDayStory);
         $inAHiddenDayStory = $this->fixtures->entry($feeds[0], 'Hidden', '2031-05-14 10:00:00');
-        $hiddenDayMember = $this->fixtures->entry($feeds[1], 'Hidden', '2031-05-14 09:00:00');
-        $this->fixtures->story(
+        $hiddenDay = $this->fixtures->story(
             TrendingWindow::Day,
             '2031-05-14 10:00:00',
             $inAHiddenDayStory,
-            $hiddenDayMember,
+            $this->fixtures->entry($feeds[1], 'Hidden', '2031-05-14 09:00:00'),
             $this->fixtures->entry($feeds[2], 'Hidden', '2031-05-14 09:00:00'),
         );
-        $this->hideFor($this->reader, $hiddenDayMember);
+        $this->fixtures->hide($this->reader, $hiddenDay);
         $hiddenWeek = $this->storySharing($inAHiddenDayStory, TrendingWindow::Week, \array_slice($feeds, 1));
 
         self::assertSame([], $this->rankedDayStoryIdsOf($this->reader));
@@ -521,9 +525,7 @@ final class TrendingStoriesTest extends DbTestCase
     {
         $feeds = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta', 'omega');
         $this->fixtures->subscribe($this->reader, ...$feeds);
-        $shared = $this->fixtures->entry($feeds[0], 'Shared', '2031-05-14 11:00:00');
-        $this->storySharing($shared, TrendingWindow::Day, \array_slice($feeds, 1, 2));
-        $excluded = $this->storySharing($shared, TrendingWindow::Week, \array_slice($feeds, 1));
+        $excluded = $this->storyInTheDayAndTheWeek($feeds);
         for ($hour = 0; $hour < 15; ++$hour) {
             $this->storyOf(\sprintf('2031-05-13 %02d:30:00', $hour + 5), $feeds, TrendingWindow::Week);
         }
@@ -555,31 +557,19 @@ final class TrendingStoriesTest extends DbTestCase
         self::assertNull($week->builtAt);
     }
 
-    public function testAStoryHoldingAnEntryTheReaderHidStaysOutEvenOnceItGrows(): void
+    public function testAStoryTheReaderHidStaysOutEvenOnceItGrows(): void
     {
         [$alpha, $beta, $gamma, $delta] = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta');
         $this->fixtures->subscribe($this->reader, $alpha, $beta, $gamma, $delta);
-        $hidden = $this->fixtures->entry($alpha, 'Hidden', '2031-05-14 10:00:00');
-        $this->fixtures->story(
-            TrendingWindow::Day,
-            '2031-05-14 10:00:00',
-            $hidden,
-            $this->fixtures->entry($beta, 'Hidden', '2031-05-14 09:00:00'),
-            $this->fixtures->entry($gamma, 'Hidden', '2031-05-14 08:00:00'),
-        );
+        $hidden = $this->storyOf('2031-05-14 10:00:00', [$alpha, $beta, $gamma]);
         $untouched = $this->storyOf('2031-05-14 07:00:00', [$alpha, $beta, $gamma]);
-        $this->hideFor($this->reader, $hidden);
+        $this->fixtures->hide($this->reader, $hidden);
 
         self::assertSame([$untouched->requireId()], $this->rankedDayStoryIdsOf($this->reader));
 
-        $this->fixtures->story(
-            TrendingWindow::Day,
-            '2031-05-14 11:00:00',
-            $hidden,
-            $this->fixtures->entry($beta, 'Grown', '2031-05-14 11:00:00'),
-            $this->fixtures->entry($gamma, 'Grown', '2031-05-14 11:00:00'),
-            $this->fixtures->entry($delta, 'Grown', '2031-05-14 11:00:00'),
-        );
+        $grown = $this->fixtures->entry($delta, 'Grown', '2031-05-14 11:00:00');
+        $this->fixtures->join($hidden, '2031-05-14 11:00:00', $grown);
+        $this->fixtures->place(TrendingWindow::Day, $hidden, $grown);
 
         self::assertSame([$untouched->requireId()], $this->rankedDayStoryIdsOf($this->reader));
 
@@ -587,7 +577,7 @@ final class TrendingStoriesTest extends DbTestCase
         $this->fixtures->subscribe($other, $alpha, $beta, $gamma, $delta);
         $this->fixtures->flush();
 
-        self::assertCount(3, $this->rankedDayStoryIdsOf($other));
+        self::assertSame([$hidden->requireId(), $untouched->requireId()], $this->rankedDayStoryIdsOf($other));
     }
 
     public function testAThreeOutletStoryShowsToAFewActiveFeedsAndNotToOneHundredAndOneBesideFiveWiderStories(): void
@@ -640,14 +630,13 @@ final class TrendingStoriesTest extends DbTestCase
         ));
     }
 
-    public function testAFeedWhoseOnlyWindowEntryTheReaderHidIsNotActive(): void
+    public function testAnEntryOfAHiddenStoryDoesNotMakeItsFeedActive(): void
     {
         [$hidden, $visible] = $this->articleFeeds('hidden', 'visible');
         $this->fixtures->subscribe($this->reader, $hidden, $visible);
         $hiddenEntry = $this->fixtures->entry($hidden, 'Hidden', '2031-05-14 08:00:00');
         $this->fixtures->entry($visible, 'Visible', '2031-05-14 09:00:00');
-        $this->fixtures->flush();
-        $this->hideFor($this->reader, $hiddenEntry);
+        $this->hideStoryOf($this->reader, $hiddenEntry);
 
         self::assertSame(1, $this->activeFeedCountOf($this->reader));
     }
@@ -657,8 +646,7 @@ final class TrendingStoriesTest extends DbTestCase
         $feed = $this->fixtures->feed('shared');
         $this->fixtures->subscribe($this->reader, $feed);
         $entry = $this->fixtures->entry($feed, 'Shared', '2031-05-14 08:00:00');
-        $this->fixtures->flush();
-        $this->hideFor($this->user('other-reader@example.com'), $entry);
+        $this->hideStoryOf($this->user('other-reader@example.com'), $entry);
 
         self::assertSame(1, $this->activeFeedCountOf($this->reader));
     }
@@ -669,8 +657,7 @@ final class TrendingStoriesTest extends DbTestCase
         $this->fixtures->subscribe($this->reader, $feed);
         $hiddenEntry = $this->fixtures->entry($feed, 'Hidden', '2031-05-14 08:00:00');
         $this->fixtures->entry($feed, 'Visible', '2031-05-14 09:00:00');
-        $this->fixtures->flush();
-        $this->hideFor($this->reader, $hiddenEntry);
+        $this->hideStoryOf($this->reader, $hiddenEntry);
 
         self::assertSame(1, $this->activeFeedCountOf($this->reader));
     }
@@ -737,7 +724,7 @@ final class TrendingStoriesTest extends DbTestCase
             $this->storyOf(\sprintf('2031-05-14 %02d:30:00', $hour + 5), [$alpha, $beta, $gamma]);
         }
         $two = $this->storyOf('2031-05-14 10:00:00', [$alpha, $beta]);
-        $this->hideFor($this->reader, $hiddenEntry);
+        $this->fixtures->hide($this->reader, $hidden);
 
         $shown = $this->storyIdsFor(TrendingWindow::Day);
 
@@ -764,24 +751,6 @@ final class TrendingStoriesTest extends DbTestCase
         self::assertSame([$three->requireId()], $this->storyIdsFor(TrendingWindow::Day));
     }
 
-    public function testHidingFindsAStoryShownOnlyThanksToTheRelaxedMinimum(): void
-    {
-        [$alpha, $beta] = $this->articleFeeds('alpha', 'beta');
-        $this->fixtures->subscribe($this->reader, $alpha, $beta);
-        $member = $this->fixtures->entry($alpha, 'Member', '2031-05-14 09:00:00');
-        $two = $this->fixtures->story(
-            TrendingWindow::Day,
-            '2031-05-14 10:00:00',
-            $member,
-            $this->fixtures->entry($beta, 'Member', '2031-05-14 10:00:00'),
-        );
-
-        self::assertSame(
-            $two->requireId(),
-            $this->storyRepository()->storyIdContaining($this->dayOf($this->reader->requireId()), $member->requireId()),
-        );
-    }
-
     private function activeFeedCountOf(User $user): int
     {
         return (new TrendingEntryRepository($this->entityManager))->activeFeedCount(
@@ -801,12 +770,26 @@ final class TrendingStoriesTest extends DbTestCase
         $this->fixtures->flush();
     }
 
-    private function hideFor(User $user, Entry $entry): void
+    private function hideStoryOf(User $user, Entry $entry): void
     {
-        $this->entityManager->persist(
-            new TrendingHiddenEntry($user, $entry, new \DateTimeImmutable('2031-05-14 12:00:00')),
-        );
-        $this->entityManager->flush();
+        $this->fixtures->hide($user, $this->fixtures->story(TrendingWindow::Day, '2031-05-14 10:00:00', $entry));
+    }
+
+    /**
+     * One story of five feeds in the week, three of whose members the day places too, so the day shows it.
+     *
+     * @param list<Feed> $feeds
+     */
+    private function storyInTheDayAndTheWeek(array $feeds): TrendingStory
+    {
+        $members = [];
+        foreach ($feeds as $index => $feed) {
+            $members[] = $this->fixtures->entry($feed, 'Shared', \sprintf('2031-05-14 %02d:00:00', 11 - $index));
+        }
+        $story = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 11:00:00', ...$members);
+        $this->fixtures->place(TrendingWindow::Day, $story, ...\array_slice($members, 0, 3));
+
+        return $story;
     }
 
     /**

@@ -7,6 +7,7 @@ namespace App\Tests\Repository;
 use App\Entity\Entry;
 use App\Entity\TrendingSnapshot;
 use App\Enum\TrendingWindow;
+use App\Repository\TrendingPlacementSql;
 use App\Repository\TrendingSnapshotRepository;
 use App\Service\Curation\Trending\Model\StoryMemberModel;
 use App\Service\Curation\Trending\Model\TrendingBuildReportModel;
@@ -89,6 +90,28 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
         self::assertSame(0, $this->storyCount(TrendingWindow::Day));
         self::assertSame(1, $this->storyCount(TrendingWindow::Week));
         self::assertSame(2, $this->memberCount(), 'the dropped day story took its members with it');
+    }
+
+    public function testAStoryJoinsItsMembersAtTheBuildAndPlacesThemInItsWindowOnly(): void
+    {
+        [$one, $two] = $this->twoEntries();
+
+        $this->replace(self::report(TrendingWindow::Week, 1), [self::story($one, $two)]);
+
+        self::assertSame(
+            [['first_joined_at' => '2031-05-14 12:00:00', 'last_joined_at' => '2031-05-14 12:00:00']],
+            $this->entityManager->getConnection()
+                ->fetchAllAssociative('SELECT first_joined_at, last_joined_at FROM trending_story'),
+        );
+        self::assertEquals(
+            [
+                ['entry_id' => $one, 'joined_at' => '2031-05-14 12:00:00', 'in_day' => 0, 'in_week' => 1],
+                ['entry_id' => $two, 'joined_at' => '2031-05-14 12:00:00', 'in_day' => 0, 'in_week' => 1],
+            ],
+            $this->entityManager->getConnection()->fetchAllAssociative(
+                'SELECT entry_id, joined_at, in_day, in_week FROM trending_story_entry ORDER BY entry_id',
+            ),
+        );
     }
 
     public function testPurgingAnEntryRemovesItsStoryLink(): void
@@ -204,7 +227,7 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
     /** @param list<TrendingStoryModel> $stories */
     private function replace(TrendingBuildReportModel $report, array $stories): void
     {
-        $this->snapshots()->replaceStories($report->window, $stories);
+        $this->snapshots()->replaceStories($report->window, $stories, $report->builtAt);
         $this->snapshots()->recordSnapshot($report);
     }
 
@@ -288,8 +311,10 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
 
     private function storyCount(TrendingWindow $window): int
     {
-        $count = $this->entityManager->getConnection()
-            ->fetchOne('SELECT COUNT(*) FROM trending_story WHERE time_window = ?', [$window->value]);
+        $count = $this->entityManager->getConnection()->fetchOne(
+            'SELECT COUNT(DISTINCT member.story_id) FROM trending_story_entry member WHERE '
+            . TrendingPlacementSql::placedIn($window, 'member'),
+        );
         self::assertIsNumeric($count);
 
         return (int) $count;

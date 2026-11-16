@@ -12,6 +12,7 @@ use App\Entity\SharedLink;
 use App\Entity\Subscription;
 use App\Entity\TrendingStory;
 use App\Entity\TrendingStoryEntry;
+use App\Entity\TrendingStoryHide;
 use App\Entity\User;
 use App\Enum\ShareKind;
 use App\Enum\SocialNetwork;
@@ -117,7 +118,7 @@ final readonly class TrendingFixtures
         ));
     }
 
-    /** Flushes first: a story entry copies its feed's id. */
+    /** Flushes first: a story entry copies its feed's id. Every member joined at $lastSeen and is placed in $window. */
     public function story(TrendingWindow $window, string $lastSeen, Entry ...$members): TrendingStory
     {
         return $this->storyOfSites(
@@ -128,27 +129,60 @@ final readonly class TrendingFixtures
     }
 
     /**
-     * Flushes first: a story entry copies its feed's id.
+     * Flushes first: a story entry copies its feed's id. Every member joined at $lastSeen and is placed in $window.
      *
      * @param list<array{Entry, ?string}> $members each entry with its article site
      */
     public function storyOfSites(TrendingWindow $window, string $lastSeen, array $members): TrendingStory
     {
         $this->entityManager->flush();
-        $story = new TrendingStory(
-            $window,
-            new \DateTimeImmutable('2031-05-14 00:00:00'),
-            new \DateTimeImmutable($lastSeen),
-        );
+        $joinedAt = new \DateTimeImmutable($lastSeen);
+        $story = new TrendingStory(new \DateTimeImmutable('2031-05-14 00:00:00'), $joinedAt, $joinedAt);
         $this->entityManager->persist($story);
         foreach ($members as [$member, $articleSite]) {
-            $this->entityManager->persist(
-                new TrendingStoryEntry($story, $member, $articleSite, $this->firstLinkOf($member)),
-            );
+            $storyEntry = new TrendingStoryEntry($story, $member, $articleSite, $this->firstLinkOf($member), $joinedAt);
+            $storyEntry->placeIn($window);
+            $this->entityManager->persist($storyEntry);
         }
         $this->entityManager->flush();
 
         return $story;
+    }
+
+    /** Flushes first: the new members join the story at $joinedAt, placed in no window. */
+    public function join(TrendingStory $story, string $joinedAt, Entry ...$members): void
+    {
+        $this->entityManager->flush();
+        foreach ($members as $member) {
+            $this->entityManager->persist(new TrendingStoryEntry(
+                $story,
+                $member,
+                null,
+                $this->firstLinkOf($member),
+                new \DateTimeImmutable($joinedAt),
+            ));
+        }
+        $this->entityManager->flush();
+    }
+
+    /** Places members the story already holds in one more window. */
+    public function place(TrendingWindow $window, TrendingStory $story, Entry ...$members): void
+    {
+        foreach ($members as $member) {
+            $storyEntry = $this->entityManager->getRepository(TrendingStoryEntry::class)
+                ->findOneBy(['story' => $story, 'entry' => $member]);
+            \assert($storyEntry instanceof TrendingStoryEntry);
+            $storyEntry->placeIn($window);
+        }
+        $this->entityManager->flush();
+    }
+
+    public function hide(User $user, TrendingStory $story): void
+    {
+        $this->entityManager->persist(
+            new TrendingStoryHide($user, $story, new \DateTimeImmutable('2031-05-14 12:00:00')),
+        );
+        $this->entityManager->flush();
     }
 
     private function firstLinkOf(Entry $entry): ?SharedLink

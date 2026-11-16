@@ -12,7 +12,6 @@ use App\Service\Curation\Trending\Model\TrendingBuildReportModel;
 use App\Service\Curation\Trending\Model\TrendingLastBuildsModel;
 use App\Service\Curation\Trending\Model\TrendingStoryModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
-use Doctrine\DBAL\Connection;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -22,8 +21,8 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 final class TrendingSnapshotRepository extends ServiceEntityRepository
 {
-    /** Rows per INSERT: 4 placeholders each, kept under SQLite's historical 999. */
-    private const int INSERT_ROWS = 240;
+    /** Rows per INSERT: 8 placeholders each, kept under SQLite's historical 999. */
+    private const int INSERT_ROWS = 120;
 
     private const int SITE_LENGTH = 255;
 
@@ -49,17 +48,20 @@ final class TrendingSnapshotRepository extends ServiceEntityRepository
     }
 
     /**
-     * Deleting the window's stories cascades to their members. The caller wraps this and recordSnapshot() in one
-     * transaction, so readers keep the old snapshot until the commit (#2017).
+     * Deleting the stories placed in the window cascades to their members. The caller wraps this and
+     * recordSnapshot() in one transaction, so readers keep the old snapshot until the commit (#2017).
      *
      * @param list<TrendingStoryModel> $stories
      */
-    public function replaceStories(TrendingWindow $window, array $stories): void
+    public function replaceStories(TrendingWindow $window, array $stories, \DateTimeImmutable $builtAt): void
     {
         $connection = $this->getEntityManager()->getConnection();
-        $connection->executeStatement('DELETE FROM trending_story WHERE time_window = ?', [$window->value]);
+        $connection->executeStatement(
+            'DELETE FROM trending_story WHERE id IN (SELECT member.story_id FROM trending_story_entry member WHERE '
+            . TrendingPlacementSql::placedIn($window, 'member') . ')',
+        );
         foreach ($stories as $story) {
-            $this->insertStory($connection, $window, $story);
+            $this->insertStory($window, $story, $builtAt->format('Y-m-d H:i:s'));
         }
     }
 
@@ -77,16 +79,21 @@ final class TrendingSnapshotRepository extends ServiceEntityRepository
         ]);
     }
 
-    private function insertStory(Connection $connection, TrendingWindow $window, TrendingStoryModel $story): void
+    private function insertStory(TrendingWindow $window, TrendingStoryModel $story, string $joinedAt): void
     {
+        $connection = $this->getEntityManager()->getConnection();
         $connection->insert('trending_story', [
-            'time_window' => $window->value,
             'first_seen' => $story->firstSeen->format('Y-m-d H:i:s'),
             'last_seen' => $story->lastSeen->format('Y-m-d H:i:s'),
+            'first_joined_at' => $joinedAt,
+            'last_joined_at' => $joinedAt,
         ]);
         $storyId = (int) $connection->lastInsertId();
+        $inDay = (int) ($window === TrendingWindow::Day);
+        $inWeek = (int) ($window === TrendingWindow::Week);
         BulkInsert::into(
-            'INSERT INTO trending_story_entry (story_id, entry_id, feed_id, article_site, shared_link_id)',
+            'INSERT INTO trending_story_entry'
+            . ' (story_id, entry_id, feed_id, article_site, shared_link_id, joined_at, in_day, in_week)',
             self::INSERT_ROWS,
         )->rows(
             $connection,
@@ -97,6 +104,9 @@ final class TrendingSnapshotRepository extends ServiceEntityRepository
                     $member->feedId,
                     $member->articleSite === null ? null : mb_substr($member->articleSite, 0, self::SITE_LENGTH),
                     $member->sharedLinkId,
+                    $joinedAt,
+                    $inDay,
+                    $inWeek,
                 ],
                 $story->members,
             ),

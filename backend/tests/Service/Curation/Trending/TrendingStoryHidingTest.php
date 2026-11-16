@@ -4,33 +4,23 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Curation\Trending;
 
-use App\Entity\Entry;
-use App\Entity\TrendingHiddenEntry;
 use App\Entity\TrendingStory;
+use App\Entity\TrendingStoryHide;
 use App\Entity\User;
 use App\Enum\TrendingWindow;
-use App\Repository\TrendingEntryRepository;
-use App\Repository\TrendingHiddenEntryRepository;
+use App\Repository\TrendingStoryHideRepository;
 use App\Repository\TrendingStoryRepository;
-use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Curation\Trending\Exception\TrendingStoryNotFoundException;
-use App\Service\Curation\Trending\ReaderWindows;
 use App\Service\Curation\Trending\TrendingStoryHiding;
+use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Tests\DbTestCase;
-use App\Tests\Support\InterruptingClock;
 use App\Tests\Support\TrendingFixtures;
 use Symfony\Component\Clock\MockClock;
 
 final class TrendingStoryHidingTest extends DbTestCase
 {
-    private const string NOW = '2031-05-14 12:00:00';
-
     private TrendingFixtures $fixtures;
     private User $reader;
-
-    /** @var list<Entry> */
-    private array $members;
-
     private TrendingStory $story;
 
     protected function setUp(): void
@@ -39,69 +29,58 @@ final class TrendingStoryHidingTest extends DbTestCase
         $this->fixtures = new TrendingFixtures($this->entityManager);
         $this->reader = new User('trending-hider@example.com', new \DateTimeImmutable('2031-01-01 00:00:00'));
         $this->entityManager->persist($this->reader);
-        $feeds = [$this->fixtures->feed('alpha'), $this->fixtures->feed('beta'), $this->fixtures->feed('gamma')];
-        $this->fixtures->subscribe($this->reader, ...$feeds);
-        $this->members = array_map(
-            fn ($feed): Entry => $this->fixtures->entry($feed, 'Member', '2031-05-14 10:00:00'),
-            $feeds,
+        $this->story = $this->fixtures->story(
+            TrendingWindow::Day,
+            '2031-05-14 10:00:00',
+            $this->fixtures->entry($this->fixtures->feed('alpha'), 'Member', '2031-05-14 10:00:00'),
         );
-        $this->story = $this->fixtures->story(TrendingWindow::Day, '2031-05-14 10:00:00', ...$this->members);
     }
 
-    public function testAHideRacingARebuildHidesTheStoryTheRebuildRegroupedTheEntryInto(): void
+    public function testHidingRecordsTheStoryAtTheClocksNow(): void
     {
-        $hiding = $this->hidingInterruptedBy(function (): void {
-            $this->deleteStory();
-            $this->fixtures->story(TrendingWindow::Day, '2031-05-14 10:00:00', ...$this->members);
-        });
+        $this->hiding('2031-05-14 12:00:00')->hide($this->reader->requireId(), $this->story->requireId());
 
-        $hiding->hide($this->reader->requireId(), TrendingWindow::Day, $this->members[0]->requireId());
-
-        self::assertSame(3, $this->hiddenCount());
+        self::assertSame([[$this->story->requireId(), '2031-05-14 12:00:00']], $this->hides());
     }
 
-    public function testAHideRacingARebuildThatDroppedTheEntryFindsNoStory(): void
+    public function testHidingAgainKeepsTheFirstTime(): void
     {
-        $hiding = $this->hidingInterruptedBy($this->deleteStory(...));
+        $this->hiding('2031-05-14 12:00:00')->hide($this->reader->requireId(), $this->story->requireId());
+        $this->hiding('2031-05-14 13:00:00')->hide($this->reader->requireId(), $this->story->requireId());
 
-        $this->expectException(TrendingStoryNotFoundException::class);
-
-        $hiding->hide($this->reader->requireId(), TrendingWindow::Day, $this->members[0]->requireId());
+        self::assertSame([[$this->story->requireId(), '2031-05-14 12:00:00']], $this->hides());
     }
 
-    /** @param \Closure(): void $rebuild */
-    private function hidingInterruptedBy(\Closure $rebuild): TrendingStoryHiding
+    public function testAStoryThatIsGoneIsNotFoundAndHidesNothing(): void
+    {
+        try {
+            $this->hiding('2031-05-14 12:00:00')->hide($this->reader->requireId(), $this->story->requireId() + 1);
+            self::fail('an unknown story must not be hidden');
+        } catch (TrendingStoryNotFoundException) {
+        }
+
+        self::assertSame([], $this->hides());
+    }
+
+    private function hiding(string $now): TrendingStoryHiding
     {
         $stories = $this->entityManager->getRepository(TrendingStory::class);
         self::assertInstanceOf(TrendingStoryRepository::class, $stories);
-        $hiddenEntries = $this->entityManager->getRepository(TrendingHiddenEntry::class);
-        self::assertInstanceOf(TrendingHiddenEntryRepository::class, $hiddenEntries);
+        $hides = $this->entityManager->getRepository(TrendingStoryHide::class);
+        self::assertInstanceOf(TrendingStoryHideRepository::class, $hides);
 
-        return new TrendingStoryHiding(
-            $stories,
-            new ReaderWindows(
-                new TrendingEntryRepository($this->entityManager),
-                $stories,
-                new NaiveUtcClock(new MockClock(self::NOW, 'UTC')),
-            ),
-            $hiddenEntries,
-            new NaiveUtcClock(new InterruptingClock(new \DateTimeImmutable(self::NOW), $rebuild)),
+        return new TrendingStoryHiding($stories, $hides, new NaiveUtcClock(new MockClock($now, 'UTC')));
+    }
+
+    /** @return list<array{int, string}> each hidden story with when it was hidden */
+    private function hides(): array
+    {
+        /** @var list<array{story_id: int|string, hidden_at: string}> $rows */
+        $rows = $this->entityManager->getConnection()->fetchAllAssociative(
+            'SELECT story_id, hidden_at FROM trending_story_hide WHERE user_id = ?',
+            [$this->reader->requireId()],
         );
-    }
 
-    private function deleteStory(): void
-    {
-        $connection = $this->entityManager->getConnection();
-        $storyId = $this->story->requireId();
-        $connection->executeStatement('DELETE FROM trending_story_entry WHERE story_id = ?', [$storyId]);
-        $connection->executeStatement('DELETE FROM trending_story WHERE id = ?', [$storyId]);
-    }
-
-    private function hiddenCount(): int
-    {
-        $count = $this->entityManager->getConnection()->fetchOne('SELECT COUNT(*) FROM trending_hidden_entry');
-        self::assertIsNumeric($count);
-
-        return (int) $count;
+        return array_map(static fn (array $row): array => [(int) $row['story_id'], $row['hidden_at']], $rows);
     }
 }
