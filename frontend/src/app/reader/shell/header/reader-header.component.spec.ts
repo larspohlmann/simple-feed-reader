@@ -95,8 +95,7 @@ describe('ReaderHeaderComponent', () => {
           unseenNotificationsTotal: signal(total),
         },
       });
-      const fixture = create();
-      return fixture;
+      return create();
     }
 
     function accountButton(fixture: ReturnType<typeof create>): HTMLButtonElement {
