@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Trending\Support;
 
+use App\Service\Foundation\Text\Support\CaseFold;
+
 final class HeadlineStems
 {
     private const int CUT_LENGTH = 6;
@@ -13,10 +15,9 @@ final class HeadlineStems
     /** Casefolded, without diacritics. */
     public static function bare(string $word): string
     {
-        $folded = mb_convert_case($word, \MB_CASE_FOLD, 'UTF-8');
-        $decomposed = \Normalizer::normalize($folded, \Normalizer::FORM_KD);
+        $decomposed = CaseFold::normalized($word, \Normalizer::FORM_KD);
 
-        return preg_replace('/\p{Mn}+/u', '', \is_string($decomposed) ? $decomposed : $folded) ?? $folded;
+        return preg_replace('/\p{Mn}+/u', '', $decomposed) ?? $decomposed;
     }
 
     /** The stem of a word whose language is unknown. */
