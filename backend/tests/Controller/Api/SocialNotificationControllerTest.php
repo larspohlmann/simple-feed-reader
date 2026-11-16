@@ -84,7 +84,10 @@ final class SocialNotificationControllerTest extends ApiTestCase
         $client->request('GET', '/api/me/notifications?network=lemmy');
 
         self::assertResponseIsSuccessful();
-        self::assertSame(['groups' => [], 'nextCursor' => null, 'scopeMissing' => [], 'needsReconnect' => []], $this->payload($client));
+        self::assertSame(
+            ['groups' => [], 'nextCursor' => null, 'scopeMissing' => [], 'needsReconnect' => []],
+            $this->payload($client),
+        );
     }
 
     public function testUnknownNetworkIs400(): void

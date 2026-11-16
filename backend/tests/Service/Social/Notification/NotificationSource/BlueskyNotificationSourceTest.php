@@ -10,6 +10,7 @@ use App\Entity\SocialAccount;
 use App\Entity\SocialNotification;
 use App\Enum\SocialNotificationKind;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Notification\NotificationSource\BlueskyNotificationSource;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
@@ -166,9 +167,8 @@ final class BlueskyNotificationSourceTest extends TestCase
         $this->source($http)->markSeen($account, [$stored], static function (): void {
         });
 
-        $body = json_decode($http->requests[1]['body'], true);
-        self::assertIsArray($body);
-        self::assertGreaterThanOrEqual($indexedAt, new \DateTimeImmutable((string) $body['seenAt']));
+        $body = JsonNodeModel::of(json_decode($http->requests[1]['body'], true));
+        self::assertGreaterThanOrEqual($indexedAt, new \DateTimeImmutable((string) $body->string('seenAt')));
     }
 
     #[DataProvider('refusedStatuses')]
