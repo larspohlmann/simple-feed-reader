@@ -1,4 +1,3 @@
-import { RunGroup } from '../for-you-runs';
 import { MagazineBlock } from '../magazine/magazine-block';
 
 /** The run divider the list interleaves between per-run magazine block groups
@@ -68,15 +67,4 @@ function withoutEmptyRuns(blocks: ListBlock[]): ListBlock[] {
     if (next === undefined || isDivider(next)) return false;
     return block.kind === 'run-header' || index > 0;
   });
-}
-
-/** `groups` minus the hidden ids — the list layout's counterpart to `blocksWithout`. */
-export function runGroupsWithout(groups: RunGroup[], hidden: ReadonlySet<number>): RunGroup[] {
-  if (hidden.size === 0) return groups;
-  return groups
-    .map((group) => {
-      const entries = group.entries.filter((entry) => !hidden.has(entry.id));
-      return entries.length === group.entries.length ? group : { ...group, entries };
-    })
-    .filter((group) => group.entries.length > 0);
 }

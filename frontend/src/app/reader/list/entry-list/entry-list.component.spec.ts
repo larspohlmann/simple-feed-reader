@@ -2561,15 +2561,15 @@ describe('EntryListComponent', () => {
   });
 
   describe('freeze & remove after mark-above-read (#1080)', () => {
-    it('drops a hidden id from visibleRunGroups while keeping the rest, in order', () => {
+    it('drops a hidden id from visibleSegments while keeping the rest, in order', () => {
       const fixture = mount({ entries: [entry(1), entry(2), entry(3)] });
 
       fixture.componentInstance.content.hiddenAboveIds.set(new Set([2]));
 
       expect(
         fixture.componentInstance.content
-          .visibleRunGroups()[0]
-          .entries.map((groupEntry) => groupEntry.id),
+          .visibleSegments()[0]
+          .entries.map((segmentEntry) => segmentEntry.id),
       ).toEqual([1, 3]);
     });
 

@@ -8,20 +8,14 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { groupByRun, RunGroup } from '../for-you-runs';
 import { planMagazine } from '../magazine/magazine-planner';
 import { REVEAL_STEP, isAppendedPage } from '../paging';
 import { EntryDto } from '../../models';
 import { Selection, isSingleStreamView, listOrderOf } from '../../query/query';
 import { isPrivateFeed, isSavedFeed } from '../../state/social-sections';
 import { SubscriptionRows } from '../../state/subscription-rows';
-import {
-  blocksWithout,
-  groupMembersWithout,
-  ListBlock,
-  runGroupsWithout,
-  SINCE_VISIT_BLOCK,
-} from './hidden-overlay';
+import { blocksWithout, groupMembersWithout, ListBlock } from './hidden-overlay';
+import { ListSegment, segmentList, segmentsWithout } from './list-segments';
 
 export interface ListContentOptions {
   readonly entries: Signal<EntryDto[]>;
@@ -33,7 +27,7 @@ export interface ListContentOptions {
 }
 
 /** What the list renders: the entries revealed so far, planned into blocks and
- *  run groups, minus the rows hidden by a mark-above-read. Built in a field
+ *  segments, minus the rows hidden by a mark-above-read. Built in a field
  *  initializer, so its effects are created there. */
 export class ListContent {
   private readonly zone = inject(NgZone);
@@ -72,12 +66,18 @@ export class ListContent {
     untracked(() => this.startReveal(previous, next));
   });
 
-  /** The loaded entries split into one group per recommendation run (#348). One
-   *  run-less group for every non-for-you view, so those render exactly as before. */
-  readonly runGroups = computed<RunGroup[]>(() => groupByRun(this.rendered()));
+  /** The rendered entries cut at every run header and the visit's divider, for both layouts. */
+  readonly segments = computed<ListSegment[]>(() =>
+    segmentList(this.rendered(), {
+      // The run the header already names ("Last refreshed") gets none; a non-for-you view never does.
+      showsRunHeader: (group) => group.runId != null && group.runId !== this.options.newestRunId(),
+      newSinceVisitIds: this.options.newSinceVisitIds(),
+      newestFirst: listOrderOf(this.options.selection()) === 'newest',
+    }),
+  );
 
+  /** Each segment planned on its own behind its divider; a plain list is one plan, as before. */
   readonly blocks = computed<ListBlock[]>(() => {
-    const groups = this.runGroups();
     // Only multi-feed views collapse same-source runs into a group widget; a
     // single-stream view (a feed, or the for-you list) must not.
     const collapse = {
@@ -85,33 +85,16 @@ export class ListContent {
       uncollapsibleSources: this.uncollapsibleSources(),
     };
     const complete = !this.options.hasMore() && this.fullyRevealed();
-    const rendered = this.rendered();
-    const visitEnd = this.visitEnd(rendered);
-    if (visitEnd !== null) {
-      return [
-        ...planMagazine({ ...collapse, entries: rendered.slice(0, visitEnd), complete: true }),
-        SINCE_VISIT_BLOCK,
-        ...planMagazine({ ...collapse, entries: rendered.slice(visitEnd), complete }),
-      ];
-    }
-
-    // Fast path: no dividers (every non-for-you view, and a for-you list showing
-    // only the newest run). Plan the whole list at once — identical to before.
-    if (!groups.some((group) => this.showRunHeader(group))) {
-      return planMagazine({ ...collapse, entries: rendered, complete });
-    }
-
-    const out: ListBlock[] = [];
-    groups.forEach((group, index) => {
-      if (this.showRunHeader(group)) {
-        out.push({ kind: 'run-header', generatedAt: group.generatedAt! });
-      }
-      // Only the last loaded group may still grow on the next page; every earlier
-      // group is provably complete (a different run follows it).
-      const groupComplete = index === groups.length - 1 ? complete : true;
-      out.push(...planMagazine({ ...collapse, entries: group.entries, complete: groupComplete }));
-    });
-    return out;
+    const segments = this.segments();
+    // Only the last segment may still grow on the next page; every earlier one is provably complete.
+    return segments.flatMap(({ divider, entries }, index) => [
+      ...(divider === null ? [] : [divider]),
+      ...planMagazine({
+        ...collapse,
+        entries,
+        complete: index === segments.length - 1 ? complete : true,
+      }),
+    ]);
   });
 
   /** Ids hidden from the render after a mark-above-read on an unread view — a
@@ -132,16 +115,9 @@ export class ListContent {
       this.options.leavingIds(),
     ),
   );
-  readonly visibleRunGroups = computed(() =>
-    runGroupsWithout(this.runGroups(), this.hiddenAboveIds()),
+  readonly visibleSegments = computed(() =>
+    segmentsWithout(this.segments(), this.hiddenAboveIds()),
   );
-
-  /** The list layout's first visible row that is not new, which the visit's divider sits above. */
-  readonly visitEndId = computed(() => {
-    const visible = this.visibleRunGroups().flatMap((group) => group.entries);
-    const end = this.visitEnd(visible);
-    return end === null ? null : visible[end].id;
-  });
 
   /** Rows the user can still see — loaded set minus the collapsed and the
    *  mark-above-hidden ones. The empty state keys on this, not `entries().length`,
@@ -160,29 +136,12 @@ export class ListContent {
     inject(DestroyRef).onDestroy(() => this.cancelReveal());
   }
 
-  /** Whether a run group opens with a divider. Suppressed only for the run the
-   *  header already names ("Last refreshed"), matched by id; every other run
-   *  gets one, even at the top. No run id (non-for-you view) means never. */
-  showRunHeader(group: RunGroup): boolean {
-    return group.runId != null && group.runId !== this.options.newestRunId();
-  }
-
   hide(ids: number[]): void {
     this.hiddenAboveIds.update((current) => new Set([...current, ...ids]));
   }
 
   clearHidden(): void {
     this.hiddenAboveIds.set(new Set());
-  }
-
-  /** Where the rows that joined since the last visit end, when the list opens with one of them and holds an
-   *  earlier one too. Oldest first, the new rows trail the list, so it marks nothing. */
-  private visitEnd(entries: EntryDto[]): number | null {
-    const newIds = this.options.newSinceVisitIds();
-    if (newIds.size === 0 || listOrderOf(this.options.selection()) !== 'newest') return null;
-    if (entries.length === 0 || !newIds.has(entries[0].id)) return null;
-    const end = entries.findIndex((entry) => !newIds.has(entry.id));
-    return end === -1 ? null : end;
   }
 
   private countVisible(entries: EntryDto[]): number {
