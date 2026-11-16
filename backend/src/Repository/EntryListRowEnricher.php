@@ -13,7 +13,6 @@ use App\Enum\VoteScore;
 use App\Service\Content\Comments\Support\LemmyPostAddress;
 use App\Service\Content\Comments\Support\SubstackPostAddress;
 use App\Service\Social\Social\Model\SocialPostAddressModel;
-use App\Service\Social\Social\Support\OwnInstancePostUrl;
 use App\Service\Social\Social\Support\PostAuthor;
 use App\Service\Social\Social\Support\SocialPostAddress;
 
@@ -159,7 +158,6 @@ final readonly class EntryListRowEnricher
                 isLiked: isset($likedIds[$entryId]),
                 canLike: $canLike,
                 isOwn: $canLike && null !== PostAuthor::accountAmong($entries[$entryId], $networkAccounts),
-                openUrl: OwnInstancePostUrl::of($post, $networkAccounts),
             );
         }
 

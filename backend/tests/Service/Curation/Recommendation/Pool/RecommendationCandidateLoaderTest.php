@@ -9,12 +9,15 @@ use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\InclusionChange;
+use App\Entity\LinkCardContent;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Repository\LinkCardRepository;
 use App\Service\Curation\Recommendation\Pool\Model\CandidatePoolRequestModel;
 use App\Service\Curation\Recommendation\Pool\RecommendationCandidateLoader;
 use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
+use App\Tests\Support\SharedLinks;
 
 final class RecommendationCandidateLoaderTest extends DbTestCase
 {
@@ -263,6 +266,26 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
 
         self::assertSame([$keptId], array_keys($linesById));
         self::assertSame('kept', $linesById[$keptId]->title);
+    }
+
+    public function testLinesForIdsCarryTheirSharedArticle(): void
+    {
+        $socialFeed = new Feed('https://bsky.app/profile/alice.bsky.social/rss');
+        $this->entityManager->persist($socialFeed);
+        $this->entityManager->persist(
+            new Subscription($this->user, $socialFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
+        );
+        $this->entityManager->flush();
+        $post = $this->entryIn($socialFeed, 'post', '2026-07-10T00:00:00Z');
+        $content = new LinkCardContent('https://news.example.com/story', 'Story', null, null, 'Example');
+        $cards = self::getContainer()->get(LinkCardRepository::class);
+        self::assertInstanceOf(LinkCardRepository::class, $cards);
+        $cards->append($post, [SharedLinks::of($this->entityManager, $content)]);
+        $this->entityManager->flush();
+
+        $linesById = $this->loader()->linesForIds($this->userId(), [$post->requireId()]);
+
+        self::assertSame('Story', $linesById[$post->requireId()]->sharedArticle?->title);
     }
 
     public function testLinesForIdsWithAnEmptyIdListReturnsNothing(): void

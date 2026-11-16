@@ -88,9 +88,7 @@ final readonly class TrendingEntryRepository
                 . ' link.title AS card_title, link.site_name AS card_site_name, link.language AS card_language,'
                 . ' SUBSTR(link.description, 1, %d) AS card_description'
                 . ' FROM entry e JOIN feed f ON f.id = e.feed_id'
-                . ' LEFT JOIN link_card card ON card.entry_id = e.id AND card.thread_post_id IS NULL'
-                . ' AND card.position = (SELECT MIN(first_card.position) FROM link_card first_card'
-                . ' WHERE first_card.entry_id = e.id AND first_card.thread_post_id IS NULL)'
+                . ' LEFT JOIN link_card card ON card.entry_id = e.id AND' . LinkLandingSql::FIRST_ROOT_CARD
                 . ' LEFT JOIN shared_link link ON link.id = card.shared_link_id'
                 . LinkLandingSql::JOIN
                 . ' WHERE e.effective_date >= :since AND e.id > :afterId ORDER BY e.id LIMIT %d',

@@ -36,7 +36,7 @@ function account(
   network: SocialAccountRefDto['network'],
   handle: string,
 ): SocialAccountRefDto {
-  return { id, network, handle, status: 'connected' };
+  return { id, network, handle, status: 'connected', serviceUrl: 'https://example.test' };
 }
 
 let selectionProviders: Provider[] = [];

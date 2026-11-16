@@ -48,6 +48,7 @@ import { PostMediaComponent } from '../../media/post-media/post-media.component'
 import { EntryCommentDto } from '../../entry-comment';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
+import { aMastodonAccount } from '../../../../testing/social-accounts-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -344,6 +345,11 @@ describe('ReaderViewComponent', () => {
   });
 
   it('opens a Mastodon post on the reader’s own instance', () => {
+    TestBed.overrideProvider(SubscriptionsStore, {
+      useValue: {
+        socialAccounts: signal([aMastodonAccount('https://home.test')]),
+      },
+    });
     const fixture = mount(
       entry({
         url: 'https://mastodon.social/@Gargron/1',
@@ -352,15 +358,30 @@ describe('ReaderViewComponent', () => {
           isLiked: false,
           canLike: true,
           isOwn: false,
-          openUrl: 'https://home.test/authorize_interaction?uri=x',
         },
       }),
     );
 
     const element = fixture.nativeElement as HTMLElement;
     expect(
-      element.querySelector('.meta a[href="https://home.test/authorize_interaction?uri=x"]'),
+      element.querySelector(
+        `.meta a[href="https://home.test/authorize_interaction?uri=${encodeURIComponent('https://mastodon.social/@Gargron/1')}"]`,
+      ),
     ).not.toBeNull();
+  });
+
+  it('opens a Lemmy post at its post page', () => {
+    const fixture = mount(
+      entry({
+        url: null,
+        discussionUrl: 'https://lemmy.test/post/7',
+        comments: 'auto',
+        social: null,
+      }),
+    );
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('.meta a[href="https://lemmy.test/post/7"]')).not.toBeNull();
   });
 
   it('opens an article at its own address', () => {
@@ -562,6 +583,33 @@ describe('ReaderViewComponent', () => {
       expect(quoted.textContent).toContain('The quoted words');
       expect(element.querySelector('.content')!.nextElementSibling).toBe(quoted);
       expect(element.querySelector('app-link-cards')).toBeNull();
+    });
+
+    describe("the quoted post's link on the reader's instance", () => {
+      const quotedOpenLink = (network: 'mastodon' | 'bluesky') => {
+        TestBed.overrideProvider(SubscriptionsStore, {
+          useValue: { socialAccounts: signal([aMastodonAccount('https://home.test')]) },
+        });
+        const element = mount(
+          entryWithBody('<p>Just a post</p>', {
+            titleDerived: true,
+            share: 'quote',
+            quote: aQuotedPost({ url: 'https://mastodon.social/@Gargron/9' }),
+            social: { network, isLiked: false, canLike: true, isOwn: false },
+          }),
+        ).nativeElement as HTMLElement;
+        return element.querySelector('app-quoted-post a.open')!.getAttribute('href');
+      };
+
+      it('rewrites the quoted post of a Mastodon entry', () => {
+        expect(quotedOpenLink('mastodon')).toBe(
+          `https://home.test/authorize_interaction?uri=${encodeURIComponent('https://mastodon.social/@Gargron/9')}`,
+        );
+      });
+
+      it("leaves the quoted post of another network's entry alone", () => {
+        expect(quotedOpenLink('bluesky')).toBe('https://mastodon.social/@Gargron/9');
+      });
     });
 
     it('renders the quoted post and the link cards of a quote share that carries both', () => {
@@ -1002,7 +1050,6 @@ describe('ReaderViewComponent', () => {
             isLiked: false,
             canLike: true,
             isOwn: false,
-            openUrl: null,
           },
         }),
       );
@@ -1175,7 +1222,7 @@ describe('ReaderViewComponent', () => {
     const realIntersectionObserver = globalThis.IntersectionObserver;
     const post = (over: Partial<EntryDto> = {}): EntryDto =>
       entry({
-        social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false, openUrl: null },
+        social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
         ...over,
       });
     let counts: { state: () => Signal<SocialCountsState>; load: jest.Mock; reload: jest.Mock };

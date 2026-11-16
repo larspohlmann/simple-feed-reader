@@ -180,6 +180,12 @@ final class Feed
         return $this->network;
     }
 
+    /** Whether the feed publishes articles, rather than a social network's posts. */
+    public function isFromAnOutlet(): bool
+    {
+        return $this->network === null;
+    }
+
     public function classifyAs(?SocialNetwork $network): void
     {
         $this->network = $network;

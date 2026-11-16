@@ -110,7 +110,7 @@
       />
     }
     @if (e.share === 'quote' && e.quote) {
-      <app-quoted-post [quote]="e.quote" layout="article" />
+      <app-quoted-post [quote]="e.quote" layout="article" [network]="e.social?.network ?? null" />
     }
     @if (e.linkCards.length || e.pending) {
       <app-link-cards [entry]="e" />

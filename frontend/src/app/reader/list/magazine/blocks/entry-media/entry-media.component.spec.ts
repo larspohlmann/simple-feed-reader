@@ -18,6 +18,7 @@ import {
   stubIntersectionObserver,
 } from '../../../../../../testing/intersection-observer-testing';
 import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
+import { provideSocialAccounts } from '../../../../../../testing/social-accounts-testing';
 
 jest.mock(
   'hls.js',
@@ -72,6 +73,7 @@ async function mountFixture(testEntry: EntryDto) {
   TestBed.configureTestingModule({
     imports: [EntryMediaComponent, provideTranslocoTesting()],
     providers: [
+      provideSocialAccounts(),
       provideAccountIdentity(),
       { provide: EntryActionHandler, useValue: entryActions },
       provideRouter([]),
@@ -368,6 +370,7 @@ describe('EntryMediaComponent in an autoplaying list', () => {
     TestBed.configureTestingModule({
       imports: [EntryMediaComponent, provideTranslocoTesting()],
       providers: [
+        provideSocialAccounts(),
         provideAccountIdentity(),
         { provide: EntryActionHandler, useValue: entryActions },
         { provide: ListAutoplayCoordinator, useValue: coordinator },

@@ -31,12 +31,14 @@ describe('SelectionShareComponent', () => {
     network: 'bluesky',
     handle: 'me.bsky.social',
     status: 'connected',
+    serviceUrl: 'https://example.test',
   };
   const mastodon: SocialAccountRefDto = {
     id: 2,
     network: 'mastodon',
     handle: '@me@mastodon.social',
     status: 'connected',
+    serviceUrl: 'https://example.test',
   };
   const accounts = signal<SocialAccountRefDto[]>([]);
   const coarse = signal(false);

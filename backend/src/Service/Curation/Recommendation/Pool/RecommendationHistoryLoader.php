@@ -12,8 +12,10 @@ use App\Service\Curation\Recommendation\Settings\Model\EffectiveRecommendationSe
 /** The reader's weighted history: four capped, newest-first sections. */
 final readonly class RecommendationHistoryLoader
 {
-    public function __construct(private ReadingHistoryRepository $history)
-    {
+    public function __construct(
+        private ReadingHistoryRepository $history,
+        private ArticleLines $articleLines,
+    ) {
     }
 
     public function load(int $userId, EffectiveRecommendationSettingsModel $settings): RecommendationHistoryModel
@@ -22,18 +24,15 @@ final readonly class RecommendationHistoryLoader
 
         return new RecommendationHistoryModel(
             favorites: $this->favorites($userId, $settings),
-            kept: array_map(ArticleLineModel::of(...), $this->history->kept($userId, $caps->kept)),
-            viewed: array_map(ArticleLineModel::of(...), $this->history->viewed($userId, $caps->viewed)),
-            shared: array_map(ArticleLineModel::of(...), $this->history->shared($userId, $caps->shared)),
+            kept: $this->articleLines->of($this->history->kept($userId, $caps->kept)),
+            viewed: $this->articleLines->of($this->history->viewed($userId, $caps->viewed)),
+            shared: $this->articleLines->of($this->history->shared($userId, $caps->shared)),
         );
     }
 
     /** @return list<ArticleLineModel> newest first */
     public function favorites(int $userId, EffectiveRecommendationSettingsModel $settings): array
     {
-        return array_map(
-            ArticleLineModel::of(...),
-            $this->history->favorites($userId, $settings->historyCaps->favorites),
-        );
+        return $this->articleLines->of($this->history->favorites($userId, $settings->historyCaps->favorites));
     }
 }

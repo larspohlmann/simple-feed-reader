@@ -58,7 +58,7 @@ it('shows an account that shared the article twice on one pill, opening its newe
 
 const onNetwork = (entry: EntryDto, network: 'bluesky' | 'mastodon'): EntryDto => ({
   ...entry,
-  social: { network, isLiked: false, canLike: true, isOwn: false, openUrl: null },
+  social: { network, isLiked: false, canLike: true, isOwn: false },
 });
 
 it("marks each pill with the sharer's network, then its avatar", () => {

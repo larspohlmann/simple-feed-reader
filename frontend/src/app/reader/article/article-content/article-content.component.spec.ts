@@ -9,6 +9,11 @@ import { UnlockedVideoElements } from '../../media/autoplay/unlocked-video-eleme
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { anEntry } from '../../../../testing/entry-testing';
 import { embedTrackOrigin } from '../../audio/embed-track';
+import { SocialNetworkName } from '../../../core/social-network';
+import {
+  aMastodonAccount,
+  provideSocialAccounts,
+} from '../../../../testing/social-accounts-testing';
 
 @Component({
   imports: [ArticleContentComponent],
@@ -22,6 +27,16 @@ import { embedTrackOrigin } from '../../audio/embed-track';
 class HostComponent {
   readonly html = signal('<p>One <a href="https://example.com">link</a></p>');
   readonly decorated: HTMLElement[] = [];
+}
+
+@Component({
+  imports: [ArticleContentComponent],
+  providers: [ListAutoplayCoordinator, UnlockedVideoElements],
+  template: `<app-article-content [html]="html" [pageUrl]="null" [network]="network" />`,
+})
+class MentionHostComponent {
+  readonly html = '<a href="https://mastodon.social/tags/rust">#rust</a>';
+  network: SocialNetworkName | null = 'mastodon';
 }
 
 @Component({
@@ -42,6 +57,7 @@ describe('ArticleContentComponent', () => {
       imports: [provideTranslocoTesting()],
       providers: [
         provideAccountIdentity(),
+        provideSocialAccounts([aMastodonAccount('https://home.example')]),
         { provide: ListAutoplayService, useValue: { enabled: signal(false) } },
         NO_EMBED_DETAILS,
       ],
@@ -58,6 +74,27 @@ describe('ArticleContentComponent', () => {
     expect(content.querySelector('p')?.textContent).toContain('One');
     expect(content.querySelector('a')?.target).toBe('_blank');
     expect(fixture.componentInstance.decorated).toEqual([content]);
+  });
+
+  it("opens a Mastodon post's hashtag on the reader's instance", async () => {
+    const fixture = TestBed.createComponent(MentionHostComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await Promise.resolve();
+
+    const link = (fixture.nativeElement as HTMLElement).querySelector('a')!;
+    expect(link.getAttribute('href')).toBe('https://home.example/tags/rust');
+  });
+
+  it("leaves another network's hashtag alone", async () => {
+    const fixture = TestBed.createComponent(MentionHostComponent);
+    fixture.componentInstance.network = 'bluesky';
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await Promise.resolve();
+
+    const link = (fixture.nativeElement as HTMLElement).querySelector('a')!;
+    expect(link.getAttribute('href')).toBe('https://mastodon.social/tags/rust');
   });
 
   it("times the body audio's Listen row from markup that crossed Angular's sanitizer", async () => {

@@ -268,7 +268,7 @@ describe('PostActions', () => {
   const ownPost = (replies: number): EntryDto =>
     anEntry({
       id: 9,
-      social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: true, openUrl: null },
+      social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: true },
       thread: Array.from({ length: replies }, () => aThreadPost()),
     });
 

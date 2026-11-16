@@ -10,6 +10,7 @@ import {
 } from '../../../../../../testing/short-marking-testing';
 import { anEntry } from '../../../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
+import { provideSocialAccounts } from '../../../../../../testing/social-accounts-testing';
 import { INCLUDED_EVERYWHERE } from '../../../../tag-inclusion';
 
 const entryActions = {
@@ -44,6 +45,7 @@ describe('EntryCompactComponent', () => {
     TestBed.configureTestingModule({
       imports: [EntryCompactComponent, provideTranslocoTesting()],
       providers: [
+        provideSocialAccounts(),
         provideAccountIdentity(),
         { provide: EntryActionHandler, useValue: entryActions },
         provideRouter([]),
@@ -87,6 +89,7 @@ describe('EntryCompactComponent', () => {
     TestBed.configureTestingModule({
       imports: [EntryCompactComponent, provideTranslocoTesting()],
       providers: [
+        provideSocialAccounts(),
         provideAccountIdentity(),
         { provide: EntryActionHandler, useValue: entryActions },
         provideRouter([]),
@@ -110,6 +113,7 @@ describe('EntryCompactComponent', () => {
   it('hides the source when showSource is false', () => {
     TestBed.configureTestingModule({
       providers: [
+        provideSocialAccounts(),
         provideAccountIdentity(),
         { provide: EntryActionHandler, useValue: entryActions },
       ],
@@ -128,6 +132,7 @@ describe('EntryCompactComponent', () => {
     TestBed.configureTestingModule({
       imports: [EntryCompactComponent, provideTranslocoTesting()],
       providers: [
+        provideSocialAccounts(),
         provideAccountIdentity(),
         { provide: EntryActionHandler, useValue: entryActions },
         provideRouter([]),
@@ -146,6 +151,7 @@ describe('EntryCompactComponent', () => {
     TestBed.configureTestingModule({
       imports: [EntryCompactComponent, provideTranslocoTesting()],
       providers: [
+        provideSocialAccounts(),
         provideAccountIdentity(),
         { provide: EntryActionHandler, useValue: entryActions },
         provideRouter([]),

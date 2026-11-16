@@ -5,6 +5,7 @@ import { EntryKickerLineComponent } from './entry-kicker-line.component';
 import { EntryDto } from '../../models';
 import { anEntry } from '../../../../testing/entry-testing';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
+import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto =>
   anEntry({
@@ -19,7 +20,7 @@ function mount(testEntry: EntryDto, inputs: Record<string, unknown> = {}, arrang
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     imports: [EntryKickerLineComponent, provideTranslocoTesting()],
-    providers: [provideRouter([])],
+    providers: [provideRouter([]), provideSocialAccounts()],
   });
   arrange?.();
   const fixture = TestBed.createComponent(EntryKickerLineComponent);

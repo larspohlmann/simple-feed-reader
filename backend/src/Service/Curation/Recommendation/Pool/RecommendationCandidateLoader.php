@@ -14,8 +14,10 @@ use Random\Randomizer;
 /** Loads the candidate pool a run picks from, and re-resolves a checkpointed batch of ids. */
 final readonly class RecommendationCandidateLoader
 {
-    public function __construct(private RecommendationCandidateRepository $candidates)
-    {
+    public function __construct(
+        private RecommendationCandidateRepository $candidates,
+        private ArticleLines $articleLines,
+    ) {
     }
 
     /**
@@ -26,10 +28,7 @@ final readonly class RecommendationCandidateLoader
      */
     public function load(int $userId, CandidatePoolRequestModel $request): array
     {
-        $lines = array_map(
-            ArticleLineModel::of(...),
-            $this->candidates->newestPool($userId, $request->since, $request->poolSize),
-        );
+        $lines = $this->articleLines->of($this->candidates->newestPool($userId, $request->since, $request->poolSize));
 
         /** @var list<ArticleLineModel> $shuffled shuffleArray() has no generic stub, so it widens to mixed */
         $shuffled = new Randomizer(new Mt19937($request->orderSeed))->shuffleArray($lines);
@@ -49,8 +48,7 @@ final readonly class RecommendationCandidateLoader
         }
 
         $linesById = [];
-        foreach ($this->candidates->forIds($userId, $entryIds) as $titled) {
-            $line = ArticleLineModel::of($titled);
+        foreach ($this->articleLines->of($this->candidates->forIds($userId, $entryIds)) as $line) {
             $linesById[$line->entryId] = $line;
         }
 

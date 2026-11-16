@@ -16,6 +16,7 @@ import { aThreadPost } from '../../../../testing/thread-testing';
 import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
+import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -105,6 +106,7 @@ describe('EntryRowComponent', () => {
     TestBed.configureTestingModule({
       imports: [EntryRowComponent, provideTranslocoTesting()],
       providers: [
+        provideSocialAccounts(),
         provideAccountIdentity(),
         { provide: EntryActionHandler, useValue: entryActions },
         { provide: ImageProxyService, useValue: imageProxy },
@@ -329,6 +331,7 @@ describe('EntryRowComponent', () => {
     function mountThread(thread: EntryDto['thread']): HTMLElement {
       TestBed.configureTestingModule({
         providers: [
+          provideSocialAccounts(),
           provideAccountIdentity(),
           { provide: LinkReaderNavigation, useValue: navigation },
         ],

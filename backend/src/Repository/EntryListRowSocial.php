@@ -14,7 +14,6 @@ final readonly class EntryListRowSocial
         public bool $isLiked,
         public bool $canLike,
         public bool $isOwn = false,
-        public ?string $openUrl = null,
     ) {
     }
 }

@@ -15,7 +15,7 @@
     />
   }
   @if (entry().quote; as quote) {
-    <app-quoted-post [quote]="quote" layout="block" />
+    <app-quoted-post [quote]="quote" layout="block" [network]="entry().social?.network ?? null" />
   }
   <app-entry-meta [entry]="entry()" [tags]="tags()" />
   <app-more-sources [entry]="entry()" />

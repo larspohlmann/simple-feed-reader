@@ -344,32 +344,8 @@ final class EntryJsonTest extends TestCase
         );
 
         self::assertSame(
-            ['network' => 'bluesky', 'isLiked' => true, 'canLike' => true, 'isOwn' => false, 'openUrl' => null],
+            ['network' => 'bluesky', 'isLiked' => true, 'canLike' => true, 'isOwn' => false],
             JsonMappers::entryJson()->detail($row, new ServedChaptersModel([], null), null)['social'],
-        );
-    }
-
-    public function testAMastodonPostCarriesWhereTheReaderOpensItSignedIn(): void
-    {
-        $row = $this->row(
-            $this->entryTitled('Post'),
-            new EntryListRowEnrichment(social: new EntryListRowSocial(
-                SocialNetwork::Mastodon,
-                false,
-                true,
-                openUrl: 'https://home.example/authorize_interaction?uri=x',
-            )),
-        );
-
-        self::assertSame(
-            [
-                'network' => 'mastodon',
-                'isLiked' => false,
-                'canLike' => true,
-                'isOwn' => false,
-                'openUrl' => 'https://home.example/authorize_interaction?uri=x',
-            ],
-            JsonMappers::entryJson()->listRow($row)['social'],
         );
     }
 
@@ -395,7 +371,7 @@ final class EntryJsonTest extends TestCase
         );
 
         self::assertSame(
-            ['network' => 'bluesky', 'isLiked' => false, 'canLike' => true, 'isOwn' => true, 'openUrl' => null],
+            ['network' => 'bluesky', 'isLiked' => false, 'canLike' => true, 'isOwn' => true],
             JsonMappers::entryJson()->listRow($row)['social'],
         );
     }
@@ -408,7 +384,7 @@ final class EntryJsonTest extends TestCase
         );
 
         self::assertSame(
-            ['network' => 'mastodon', 'isLiked' => false, 'canLike' => false, 'isOwn' => false, 'openUrl' => null],
+            ['network' => 'mastodon', 'isLiked' => false, 'canLike' => false, 'isOwn' => false],
             JsonMappers::entryJson()->listRow($row)['social'],
         );
     }

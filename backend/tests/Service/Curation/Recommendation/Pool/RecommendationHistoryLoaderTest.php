@@ -8,16 +8,19 @@ use App\Entity\Entry;
 use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\LinkCardContent;
 use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
+use App\Repository\LinkCardRepository;
 use App\Service\Curation\Recommendation\Pool\RecommendationHistoryLoader;
 use App\Service\Curation\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
 use App\Service\Curation\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 use App\Tests\DbTestCase;
+use App\Tests\Support\SharedLinks;
 
 final class RecommendationHistoryLoaderTest extends DbTestCase
 {
@@ -272,6 +275,24 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         $history = $this->loader()->load($this->userId(), $this->settings());
 
         self::assertSame($this->feed->getUrl(), $history->favorites[0]->feedName);
+    }
+
+    public function testHistoryLinesCarryTheirSharedArticle(): void
+    {
+        $this->feed->setUrl('https://bsky.app/profile/alice.bsky.social/rss');
+        $post = $this->entry('post', '2026-07-10T00:00:00Z');
+        $content = new LinkCardContent('https://news.example.com/story', 'Story', null, null, 'Example');
+        $cards = self::getContainer()->get(LinkCardRepository::class);
+        self::assertInstanceOf(LinkCardRepository::class, $cards);
+        $cards->append($post, [SharedLinks::of($this->entityManager, $content)]);
+        $state = new EntryState($this->user, $post);
+        $state->markFavorite();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
+
+        $history = $this->loader()->load($this->userId(), $this->settings());
+
+        self::assertSame('Story', $history->favorites[0]->sharedArticle?->title);
     }
 
     public function testAHistoryWithoutAnyEntryIsEmpty(): void

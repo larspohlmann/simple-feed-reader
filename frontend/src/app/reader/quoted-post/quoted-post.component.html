@@ -6,7 +6,12 @@
       [name]="post.authorName"
       [toneSeed]="post.authorHandle"
     />
-    <a class="open" [href]="post.url" target="_blank" rel="noopener noreferrer">
+    <a
+      class="open"
+      [href]="links.open(post.url, network())"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
       <span class="name">{{ post.authorName }}</span>
       <span class="handle">{{ '@' + post.authorHandle }}</span>
     </a>
@@ -33,7 +38,12 @@
     />
   }
   @if (post.nestedQuote; as nested) {
-    <a class="nested" [href]="nested.url" target="_blank" rel="noopener noreferrer">
+    <a
+      class="nested"
+      [href]="links.open(nested.url, network())"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
       @if (nested.handle) {
         {{ 'reader.quotingPostBy' | transloco: { handle: '@' + nested.handle } }}
       } @else {
