@@ -1,11 +1,5 @@
 import { SINCE_VISIT_BLOCK } from './hidden-overlay';
-import {
-  ListSegment,
-  SegmentMarks,
-  segmentKey,
-  segmentList,
-  segmentsWithout,
-} from './list-segments';
+import { ListSegment, SegmentMarks, segmentList, segmentsWithout } from './list-segments';
 import { EntryDto } from '../../models';
 
 const NEWEST = '2026-08-09T10:00:00+00:00';
@@ -60,16 +54,16 @@ describe('segmentList', () => {
   it('keeps one divider-less segment for a plain list', () => {
     const entries = [entry(1), entry(2)];
 
-    expect(segmentList(entries, marks())).toEqual([{ divider: null, entries }]);
+    expect(segmentList(entries, marks())).toEqual([{ key: 'head:0', divider: null, entries }]);
   });
 });
 
-describe('segmentsWithout', () => {
-  const split = segmentList(
-    [entry(1), entry(2), entry(3), entry(4)],
-    marks({ newSinceVisitIds: new Set([1, 2]) }),
-  );
+const split = segmentList(
+  [entry(1), entry(2), entry(3), entry(4)],
+  marks({ newSinceVisitIds: new Set([1, 2]) }),
+);
 
+describe('segmentsWithout', () => {
   it('returns the input itself when nothing is hidden', () => {
     expect(segmentsWithout(split, new Set())).toBe(split);
   });
@@ -81,6 +75,13 @@ describe('segmentsWithout', () => {
     expect(out[0]).toBe(split[0]);
   });
 
+  it('keeps the visit divider while some new rows are still shown', () => {
+    const out = segmentsWithout(split, new Set([1]));
+
+    expect(ids(out)).toEqual([[2], [3, 4]]);
+    expect(dividers(out)).toEqual([null, SINCE_VISIT_BLOCK]);
+  });
+
   it('drops the visit divider once hiding leaves nothing new above it', () => {
     const out = segmentsWithout(split, new Set([1, 2, 3]));
 
@@ -89,14 +90,21 @@ describe('segmentsWithout', () => {
   });
 });
 
-describe('segmentKey', () => {
+describe('segment keys', () => {
   it('keys a segment by its divider, else by its place', () => {
     const [head, sinceVisit] = segmentList(
       [entry(1), entry(2)],
       marks({ newSinceVisitIds: new Set([1]) }),
     );
 
-    expect(segmentKey(head, 0)).toBe('head:0');
-    expect(segmentKey(sinceVisit, 1)).toBe('since-last-visit');
+    expect(head.key).toBe('head:0');
+    expect(sinceVisit.key).toBe('since-last-visit');
+  });
+
+  it('keeps the key of a segment whose divider hiding takes', () => {
+    const [sinceVisit] = segmentsWithout(split, new Set([1, 2]));
+
+    expect(sinceVisit.divider).toBeNull();
+    expect(sinceVisit.key).toBe('since-last-visit');
   });
 });

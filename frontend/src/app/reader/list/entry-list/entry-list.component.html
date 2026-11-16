@@ -160,7 +160,7 @@
         <ng-container [ngTemplateOutlet]="block" />
       </div>
     }
-    @for (segment of content.visibleSegments(); track segmentKey(segment, $index)) {
+    @for (segment of content.visibleSegments(); track segment.key) {
       @if (segment.divider; as divider) {
         @if (divider.kind === 'run-header') {
           <app-run-header [generatedAt]="divider.generatedAt" />

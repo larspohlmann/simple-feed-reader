@@ -4,6 +4,8 @@ import { listBlockKey, RunHeaderBlock, SINCE_VISIT_BLOCK, SinceVisitBlock } from
 
 /** A stretch of the list both layouts render under one divider: a run header, the visit's, or none. */
 export interface ListSegment {
+  /** Fixed when segmented, so a segment whose divider hiding takes keeps its rows mounted. */
+  readonly key: string;
   readonly divider: RunHeaderBlock | SinceVisitBlock | null;
   readonly entries: EntryDto[];
 }
@@ -19,7 +21,10 @@ export interface SegmentMarks {
 export function segmentList(entries: EntryDto[], marks: SegmentMarks): ListSegment[] {
   const [first, ...rest] = groupByRun(entries).map((group) => runSegment(group, marks));
   if (first === undefined) return [];
-  return [...splitAtVisitEnd(first, marks), ...rest];
+  return [...splitAtVisitEnd(first, marks), ...rest].map((segment, index) => ({
+    ...segment,
+    key: segment.divider === null ? `head:${index}` : listBlockKey(segment.divider),
+  }));
 }
 
 /** `segments` minus the hidden ids: an emptied segment goes, and the visit's divider once nothing
@@ -39,11 +44,9 @@ export function segmentsWithout(
     );
 }
 
-export function segmentKey(segment: ListSegment, index: number): string {
-  return segment.divider === null ? `head:${index}` : listBlockKey(segment.divider);
-}
+type UnkeyedSegment = Omit<ListSegment, 'key'>;
 
-function runSegment(group: RunGroup, marks: SegmentMarks): ListSegment {
+function runSegment(group: RunGroup, marks: SegmentMarks): UnkeyedSegment {
   const divider: RunHeaderBlock | null = marks.showsRunHeader(group)
     ? { kind: 'run-header', generatedAt: group.generatedAt! }
     : null;
@@ -51,7 +54,7 @@ function runSegment(group: RunGroup, marks: SegmentMarks): ListSegment {
 }
 
 /** Oldest first, the new rows trail the list, so it marks nothing. */
-function splitAtVisitEnd(segment: ListSegment, marks: SegmentMarks): ListSegment[] {
+function splitAtVisitEnd(segment: UnkeyedSegment, marks: SegmentMarks): UnkeyedSegment[] {
   const newIds = marks.newSinceVisitIds;
   const { entries } = segment;
   if (!marks.newestFirst || !newIds.has(entries[0].id)) return [segment];

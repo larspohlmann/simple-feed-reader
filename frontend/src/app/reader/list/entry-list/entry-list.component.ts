@@ -44,7 +44,6 @@ import { NearViewportMedia } from '../../media/near-viewport-media';
 import { pauseMediaWhileAnEntryIsOpen } from '../magazine/blocks/entry-media/pause-media';
 import { listBlockKey } from './hidden-overlay';
 import { ListContent } from './list-content';
-import { segmentKey } from './list-segments';
 import { PullToRefresh } from './pull-to-refresh';
 import { ListScrollState } from './list-scroll-state';
 import { ListReadingFocus } from './list-reading-focus';
@@ -417,7 +416,6 @@ export class EntryListComponent implements OnDestroy {
   }
 
   protected readonly blockKey = listBlockKey;
-  protected readonly segmentKey = segmentKey;
 
   /** The entry a recommendation strip should read, or null for a group block
    *  (which carries several entries and no single reason to show). */

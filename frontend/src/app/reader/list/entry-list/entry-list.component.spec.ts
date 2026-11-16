@@ -330,6 +330,23 @@ describe('EntryListComponent', () => {
       expect(divider(mountStory([1, 2, 3], [1, 2], { selection: oldestFirst })).length).toBe(0);
     });
 
+    it('keeps the remaining rows mounted when hiding empties the head of a followed story', () => {
+      const fixture = mount({
+        entries: [entry(1), entry(2), entry(3)],
+        newSinceVisitIds: new Set([1, 2]),
+        selection: story,
+        layout: 'list',
+      });
+      const element = fixture.nativeElement as HTMLElement;
+      const earlierRow = element.querySelectorAll('.row-slot')[2];
+
+      fixture.componentInstance.content.hiddenAboveIds.set(new Set([1, 2]));
+      fixture.detectChanges();
+
+      expect(divider(element).length).toBe(0);
+      expect(element.querySelector('.row-slot')).toBe(earlierRow);
+    });
+
     it('sits between the new and the earlier rows in the magazine layout', () => {
       const element = mountStory([1, 2, 3], [1, 2], { layout: 'magazine' });
 
