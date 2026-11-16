@@ -15,7 +15,6 @@ export class TrendingFollowAction {
     if (!story) return;
     this.entries.runReported(
       this.followedStories.setFollowing(story.id, !this.followedStories.isFollowed(story)),
-      {},
       () => this.run(entry),
     );
   }

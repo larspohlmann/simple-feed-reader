@@ -292,13 +292,15 @@ export class EntriesStore {
   hideTrendingStory(entryId: number, outcome: StateSaveOutcome = {}): void {
     const story = this.entry(entryId)?.story;
     if (!story) return;
-    this.runReported(this.trendingApi.hideStory(story.id), outcome, () =>
-      this.hideTrendingStory(entryId, outcome),
+    this.runReported(
+      this.trendingApi.hideStory(story.id),
+      () => this.hideTrendingStory(entryId, outcome),
+      outcome,
     );
   }
 
   /** Clears the banner and runs `request$`; a failure shows the banner with `retry` behind it. */
-  runReported<T>(request$: Observable<T>, outcome: StateSaveOutcome, retry: () => void): void {
+  runReported<T>(request$: Observable<T>, retry: () => void, outcome: StateSaveOutcome = {}): void {
     this.failure.clear();
     outcome.onStarted?.();
     request$.subscribe({
