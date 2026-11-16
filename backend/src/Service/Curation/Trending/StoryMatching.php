@@ -25,7 +25,7 @@ use App\Service\Curation\Trending\Model\TrendingStoryModel;
 final readonly class StoryMatching
 {
     /** A group sharing less than half of the smaller side is a different event, not the same story grown. */
-    public const float MATCH_THRESHOLD = 0.5;
+    private const float MATCH_THRESHOLD = 0.5;
 
     /**
      * @param list<TrendingStoryModel> $groups
@@ -49,7 +49,7 @@ final readonly class StoryMatching
                 ),
                 $merges,
             ),
-            $this->splitCount($groups, $candidates, $storyOfGroup),
+            $this->splitCount($candidates, $storyOfGroup),
         );
     }
 
@@ -61,54 +61,88 @@ final readonly class StoryMatching
      */
     private function rankedCandidates(array $groups, array $stored): array
     {
+        $storiesOfEntry = $this->storiesByEntry($stored);
         $candidates = [];
         foreach ($groups as $groupIndex => $group) {
             $entryIds = $group->entryIds();
-            foreach ($stored as $storyIndex => $story) {
-                $candidate = $this->candidate($groupIndex, $entryIds, $storyIndex, $story);
+            foreach ($this->sharedByStory($entryIds, $storiesOfEntry) as $storyIndex => $shared) {
+                $candidate = $this->candidate($entryIds, $stored[$storyIndex], $shared);
                 if ($candidate !== null) {
-                    $candidates[] = $candidate;
+                    $candidates[] = ['group' => $groupIndex, 'story' => $storyIndex] + $candidate;
                 }
             }
         }
-        usort(
-            $candidates,
-            static fn (array $left, array $right): int => self::rankKey($right) <=> self::rankKey($left),
-        );
 
-        return $candidates;
+        return $this->ranked($candidates);
+    }
+
+    /**
+     * @param list<StoredStoryModel> $stored
+     *
+     * @return array<int, list<int>> story indexes by entry id
+     */
+    private function storiesByEntry(array $stored): array
+    {
+        $storiesOfEntry = [];
+        foreach ($stored as $storyIndex => $story) {
+            foreach ($story->entryIds as $entryId) {
+                $storiesOfEntry[$entryId][] = $storyIndex;
+            }
+        }
+
+        return $storiesOfEntry;
+    }
+
+    /**
+     * @param list<int>             $entryIds
+     * @param array<int, list<int>> $storiesOfEntry
+     *
+     * @return array<int, positive-int> entries shared by story index
+     */
+    private function sharedByStory(array $entryIds, array $storiesOfEntry): array
+    {
+        $sharedByStory = [];
+        foreach ($entryIds as $entryId) {
+            foreach ($storiesOfEntry[$entryId] ?? [] as $storyIndex) {
+                $sharedByStory[$storyIndex] = ($sharedByStory[$storyIndex] ?? 0) + 1;
+            }
+        }
+
+        return $sharedByStory;
     }
 
     /**
      * @param non-empty-list<int> $groupEntryIds
      *
-     * @return Candidate|null
+     * @return array{storyId: int, storySize: int, shared: int, overlap: float, lowestEntryId: int}|null
      */
-    private function candidate(
-        int $groupIndex,
-        array $groupEntryIds,
-        int $storyIndex,
-        StoredStoryModel $story,
-    ): ?array {
-        $shared = \count(array_intersect($groupEntryIds, $story->entryIds));
-        $smallerSide = min(\count($groupEntryIds), \count($story->entryIds));
-        if ($shared === 0) {
-            return null;
-        }
-        $overlap = $shared / $smallerSide;
+    private function candidate(array $groupEntryIds, StoredStoryModel $story, int $shared): ?array
+    {
+        $overlap = $shared / min(\count($groupEntryIds), \count($story->entryIds));
         if ($overlap < self::MATCH_THRESHOLD) {
             return null;
         }
 
         return [
-            'group' => $groupIndex,
-            'story' => $storyIndex,
             'storyId' => $story->id,
             'storySize' => \count($story->entryIds),
             'shared' => $shared,
             'overlap' => $overlap,
             'lowestEntryId' => min($groupEntryIds),
         ];
+    }
+
+    /**
+     * @param list<Candidate> $candidates
+     *
+     * @return list<Candidate>
+     */
+    private function ranked(array $candidates): array
+    {
+        $keyed = array_map(static fn (array $candidate): array => [self::rankKey($candidate), $candidate], $candidates);
+        usort($keyed, static fn (array $left, array $right): int => $right[0] <=> $left[0]);
+
+        return array_column($keyed, 1);
     }
 
     /**
@@ -211,11 +245,10 @@ final readonly class StoryMatching
     }
 
     /**
-     * @param list<TrendingStoryModel> $groups
-     * @param list<Candidate>          $candidates
-     * @param array<int, int>          $storyOfGroup
+     * @param list<Candidate> $candidates
+     * @param array<int, int> $storyOfGroup
      */
-    private function splitCount(array $groups, array $candidates, array $storyOfGroup): int
+    private function splitCount(array $candidates, array $storyOfGroup): int
     {
         $groupsWithCandidate = array_flip(array_column($candidates, 'group'));
 

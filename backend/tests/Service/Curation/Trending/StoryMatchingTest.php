@@ -275,6 +275,18 @@ final class StoryMatchingTest extends TestCase
         self::assertSame(['kept' => 1, 'created' => 1, 'merged' => 0, 'split' => 0], $match->toLogContext());
     }
 
+    public function testAnEntryTwoStoriesHoldCountsTowardBoth(): void
+    {
+        $match = $this->matching()->match(
+            [self::group(2, 3, 4)],
+            [new StoredStoryModel(7, [1, 2]), new StoredStoryModel(9, [2, 3])],
+            TrendingWindow::Week,
+        );
+
+        self::assertSame(9, $match->assignments[0]->storyId);
+        self::assertEquals([new StoryMergeModel(9, 7)], $match->merges);
+    }
+
     public function testTheOutcomeDoesNotDependOnInputOrder(): void
     {
         $splitGroups = [self::group(1, 2), self::group(3, 4, 5, 6)];

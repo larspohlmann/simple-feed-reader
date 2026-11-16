@@ -17,18 +17,22 @@ final readonly class StoryAssignmentModel
     /** @return list<StoryMemberModel> */
     public function joining(): array
     {
+        $stored = array_flip($this->storedEntryIds);
+
         return array_values(array_filter(
             $this->group->members,
-            fn (StoryMemberModel $member): bool => !\in_array($member->entryId, $this->storedEntryIds, true),
+            static fn (StoryMemberModel $member): bool => !isset($stored[$member->entryId]),
         ));
     }
 
     /** @return list<int> */
     public function staying(): array
     {
+        $stored = array_flip($this->storedEntryIds);
+
         return array_values(array_filter(
             $this->group->entryIds(),
-            fn (int $entryId): bool => \in_array($entryId, $this->storedEntryIds, true),
+            static fn (int $entryId): bool => isset($stored[$entryId]),
         ));
     }
 }

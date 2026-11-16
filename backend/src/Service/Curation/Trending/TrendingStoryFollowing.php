@@ -15,7 +15,7 @@ use App\Service\Foundation\Clock\NaiveUtcClock;
 /** A reader's followed Trending stories and what joined each since they last opened it. */
 final readonly class TrendingStoryFollowing
 {
-    public const int QUIET_AFTER_HOURS = 48;
+    private const int QUIET_AFTER_HOURS = 48;
 
     public function __construct(
         private TrendingStoryRepository $stories,
