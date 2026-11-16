@@ -13,7 +13,6 @@ use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
-/** One network's notifications for an account, keyed by its SocialNetwork value. */
 #[AutoconfigureTag('app.social_notification_source')]
 interface NotificationSourceInterface
 {

@@ -23,7 +23,7 @@ final readonly class NotificationStore
     ) {
     }
 
-    /** The bulk seen line reaches rows beyond the page; re-read before relying on their seen flag. */
+    /** @return int the rows stored that were not there before */
     public function record(SocialAccount $account, NotificationPageModel $page): int
     {
         $retained = $this->retained($page->oldestFirst());

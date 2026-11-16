@@ -8,18 +8,20 @@ use App\Entity\NotificationActor;
 use App\Service\Social\Notification\Model\NotificationGroupModel;
 use App\Service\Social\Notification\Model\NotificationListPageModel;
 
+/**
+ * @phpstan-type ActorJson array{
+ *     handle: string, displayName: string|null, avatarUrl: string|null, profileUrl: string
+ * }
+ * @phpstan-type GroupJson array{
+ *     id: int, kind: string, account: string, actors: list<ActorJson>,
+ *     actorCount: int, excerpt: string|null, linkUrl: string, latestAt: string, seen: bool
+ * }
+ */
 final class SocialNotificationsJson
 {
     /**
      * @return array{
-     *   groups: list<array{
-     *     id: int, kind: string, account: string,
-     *     actors: list<array{handle: string, displayName: string|null, avatarUrl: string|null, profileUrl: string}>,
-     *     actorCount: int, excerpt: string|null, linkUrl: string, latestAt: string, seen: bool
-     *   }>,
-     *   nextCursor: int|null,
-     *   scopeMissing: list<string>,
-     *   needsReconnect: list<string>
+     *     groups: list<GroupJson>, nextCursor: int|null, scopeMissing: list<string>, needsReconnect: list<string>
      * }
      */
     public static function page(NotificationListPageModel $page): array
@@ -32,13 +34,7 @@ final class SocialNotificationsJson
         ];
     }
 
-    /**
-     * @return array{
-     *   id: int, kind: string, account: string,
-     *   actors: list<array{handle: string, displayName: string|null, avatarUrl: string|null, profileUrl: string}>,
-     *   actorCount: int, excerpt: string|null, linkUrl: string, latestAt: string, seen: bool
-     * }
-     */
+    /** @return GroupJson */
     private static function group(NotificationGroupModel $group): array
     {
         return [
@@ -54,7 +50,7 @@ final class SocialNotificationsJson
         ];
     }
 
-    /** @return array{handle: string, displayName: string|null, avatarUrl: string|null, profileUrl: string} */
+    /** @return ActorJson */
     private static function actor(NotificationActor $actor): array
     {
         return [

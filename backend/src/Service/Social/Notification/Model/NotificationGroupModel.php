@@ -8,7 +8,6 @@ use App\Entity\NotificationActor;
 use App\Entity\NotificationSubject;
 use App\Enum\SocialNotificationKind;
 
-/** One list row: the notifications of one account, kind and subject on one side of the seen line. */
 final readonly class NotificationGroupModel
 {
     /** @param list<NotificationActor> $actors the newest few; $actorCount counts them all */

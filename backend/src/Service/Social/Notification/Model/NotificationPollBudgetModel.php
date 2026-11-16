@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Notification\Model;
 
-/** How many accounts one notification poll pass may check. */
 final readonly class NotificationPollBudgetModel
 {
     /** What the tick asks to have left before it starts one account: typical checks take 1-3 s. */

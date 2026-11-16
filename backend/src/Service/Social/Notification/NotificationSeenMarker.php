@@ -16,7 +16,6 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 
-/** Moves a network's notification marker, for every account of the user on it, up to the newest row shown. */
 final readonly class NotificationSeenMarker
 {
     public function __construct(

@@ -37,9 +37,9 @@ final readonly class NotificationPollSweep
         foreach ($this->polls->findAccountIdsDue($this->clock->now(), $budget->accounts) as $accountId) {
             $account = $this->socialAccounts->find($accountId);
             if (null !== $account) {
-                $report = $this->pollIsolated($account, $report);
+                $report = $this->pollIsolated($account, $accountId, $report);
             }
-            if (!$this->reopenedEntityManagerIsOpen()) {
+            if (!$this->ensureManagerOpen()) {
                 return $report;
             }
         }
@@ -49,9 +49,9 @@ final readonly class NotificationPollSweep
 
     private function pollIsolated(
         SocialAccount $account,
+        int $accountId,
         NotificationPollReportModel $report,
     ): NotificationPollReportModel {
-        $accountId = $account->requireId();
         try {
             return $report->addingPolled($this->notificationPoll->poll($account));
         } catch (\Throwable $exception) {
@@ -59,7 +59,7 @@ final readonly class NotificationPollSweep
                 'socialAccountId' => $accountId,
                 'exception' => $exception,
             ]);
-            if ($this->reopenedEntityManagerIsOpen()) {
+            if ($this->ensureManagerOpen()) {
                 $this->entityManager->clear();
             }
             $this->stampFailed($accountId);
@@ -85,7 +85,7 @@ final readonly class NotificationPollSweep
         }
     }
 
-    private function reopenedEntityManagerIsOpen(): bool
+    private function ensureManagerOpen(): bool
     {
         if (!$this->entityManager->isOpen()) {
             $this->registry->resetManager();

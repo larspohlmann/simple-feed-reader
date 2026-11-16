@@ -18,7 +18,6 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 
-/** One account's check: ask its network what is new, store it, and stamp the check. */
 final readonly class NotificationPoll
 {
     public function __construct(
@@ -38,20 +37,23 @@ final readonly class NotificationPoll
     {
         $stamp = $this->polls->stampOf($account);
         if ($this->hostThrottle->remainingSeconds($account->getServiceUrl()) > 0) {
-            return $this->stampChecked($stamp);
+            $this->stampChecked($stamp);
+
+            return 0;
         }
 
         try {
             $inserted = $this->store->record($account, $this->fetch($account));
         } catch (SocialTokenScopeMissingException) {
-            $stamp->recordScopeMissing($this->clock->now());
-            $this->entityManager->flush();
+            $this->flushStamp($stamp->recordScopeMissing(...));
 
             return 0;
         } catch (SocialNetworkThrottledException $exception) {
             $this->hostThrottle->record($account->getServiceUrl(), $exception->retryAfterSeconds);
 
-            return $this->stampChecked($stamp);
+            $this->stampChecked($stamp);
+
+            return 0;
         }
         $this->stampChecked($stamp);
 
@@ -66,11 +68,15 @@ final readonly class NotificationPoll
         return $this->guard->actAs($account, static fn (): NotificationPageModel => $source->fetch($account));
     }
 
-    private function stampChecked(SocialNotificationPoll $stamp): int
+    private function stampChecked(SocialNotificationPoll $stamp): void
     {
-        $stamp->recordChecked($this->clock->now());
-        $this->entityManager->flush();
+        $this->flushStamp($stamp->recordChecked(...));
+    }
 
-        return 0;
+    /** @param \Closure(\DateTimeImmutable): void $record */
+    private function flushStamp(\Closure $record): void
+    {
+        $record($this->clock->now());
+        $this->entityManager->flush();
     }
 }
