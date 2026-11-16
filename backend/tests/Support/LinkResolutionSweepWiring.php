@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
+use App\Repository\SharedLinkRepository;
 use App\Repository\SharedLinkResolutionRepository;
 use App\Service\Content\LinkResolution\LinkResolutionSweep;
 use App\Service\Foundation\Clock\NaiveUtcClock;
@@ -28,8 +29,12 @@ final class LinkResolutionSweepWiring
         /** @var SharedLinkResolutionRepository $linkResolutions */
         $linkResolutions = $container->get(SharedLinkResolutionRepository::class);
 
+        /** @var SharedLinkRepository $sharedLinks */
+        $sharedLinks = $container->get(SharedLinkRepository::class);
+
         return new LinkResolutionSweep(
             $linkResolutions,
+            $sharedLinks,
             $wiring->landing($responses),
             new NaiveUtcClock($clock),
             new NullLogger(),

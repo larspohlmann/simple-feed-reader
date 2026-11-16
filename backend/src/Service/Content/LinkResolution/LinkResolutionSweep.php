@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Content\LinkResolution;
 
+use App\Repository\SharedLinkRepository;
 use App\Repository\SharedLinkResolutionRepository;
 use App\Service\Content\LinkResolution\Model\LinkLandingModel;
 use App\Service\Content\LinkResolution\Model\LinkResolutionBudgetModel;
@@ -11,6 +12,7 @@ use App\Service\Content\LinkResolution\Model\LinkResolutionReportModel;
 use App\Service\Content\LinkResolution\Model\PendingLinkModel;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Foundation\Clock\Support\ElapsedSeconds;
+use App\Service\Outbound\Fetch\Support\HostKey;
 use Psr\Log\LoggerInterface;
 
 /** Follows the queued short links, oldest first, within a budget; each is settled as soon as it lands. */
@@ -21,6 +23,7 @@ final readonly class LinkResolutionSweep
 
     public function __construct(
         private SharedLinkResolutionRepository $linkResolutions,
+        private SharedLinkRepository $sharedLinks,
         private LinkLanding $landing,
         private NaiveUtcClock $clock,
         private LoggerInterface $logger,
@@ -62,6 +65,7 @@ final readonly class LinkResolutionSweep
     {
         if (!$landing->isRetryable()) {
             $this->linkResolutions->settle($link, $landing);
+            $this->nameAfterLanding($link, $landing);
 
             return $landing;
         }
@@ -72,6 +76,13 @@ final readonly class LinkResolutionSweep
         }
 
         return $this->giveUp($link);
+    }
+
+    private function nameAfterLanding(PendingLinkModel $link, LinkLandingModel $landing): void
+    {
+        if ($landing->url !== null) {
+            $this->sharedLinks->renameSite($link->linkId, HostKey::forUrl($link->url), HostKey::forUrl($landing->url));
+        }
     }
 
     private function giveUp(PendingLinkModel $link): LinkLandingModel
