@@ -333,6 +333,21 @@ it("heads a Trending story's other outlets as the feeds that also covered it", (
   expect(element.querySelector('.lead')!.textContent!.trim()).toBe('Also covered by');
 });
 
+describe('the footer icon', () => {
+  const iconOf = (row: EntryDto) =>
+    (mount(row).nativeElement as HTMLElement).querySelector('app-icon.layers')!.textContent!.trim();
+
+  it("marks a Trending story's other outlets with the Trending icon", () => {
+    const story = aStory({ outletCount: 3, viewed: false, shareCount: 0 });
+
+    expect(iconOf(entry({ duplicates: [entry({ id: 2 })], story }))).toBe('trending_up');
+  });
+
+  it("marks a row's copies with layers", () => {
+    expect(iconOf(entry({ duplicates: [entry({ id: 2 })] }))).toBe('layers');
+  });
+});
+
 describe('more than four copies', () => {
   const six = () => [2, 3, 4, 5, 6, 7].map((id) => entry({ id, source: `Feed ${id}` }));
 

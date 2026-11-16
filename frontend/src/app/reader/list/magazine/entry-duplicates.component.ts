@@ -51,6 +51,7 @@ export class EntryDuplicatesComponent implements EntryActionHandler {
   protected readonly viewportMargin = MENU_VIEWPORT_MARGIN;
   protected readonly copies = computed(() => this.foot().copies);
   protected readonly label = computed(() => this.foot().label);
+  protected readonly icon = computed(() => (this.entry().story ? 'trending_up' : 'layers'));
   private readonly shellActions = inject(EntryActionHandler, { skipSelf: true });
 
   private readonly language = inject(LanguageService);

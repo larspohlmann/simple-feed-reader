@@ -2,7 +2,7 @@
   <div class="also-foot">
     <app-story-actions [entry]="entry()" />
     @if (copies().length) {
-      <app-icon class="layers" name="layers" size="sm" aria-hidden="true" />
+      <app-icon class="layers" [name]="icon()" size="sm" aria-hidden="true" />
       <span class="lead">{{ label() | transloco }}</span>
     }
     @for (item of shown(); track item.copy.id) {
