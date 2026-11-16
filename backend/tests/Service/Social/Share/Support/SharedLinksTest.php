@@ -120,11 +120,11 @@ final class SharedLinksTest extends TestCase
 
     public function testALinkThatLostAnUndocumentedKeyRemembersHowItWasPosted(): void
     {
-        $body = '<p><a href="https://example.com/a?ref=rss">https://example.com/a?ref=rss</a>'
+        $body = '<p><a href="https://example.com/a?cmp=rss">https://example.com/a?cmp=rss</a>'
             . ' https://example.com/b</p>';
 
         self::assertSame(
-            ['https://example.com/a' => 'https://example.com/a?ref=rss'],
+            ['https://example.com/a' => 'https://example.com/a?cmp=rss'],
             SharedLinks::of($body)->postedForms,
         );
     }
@@ -135,7 +135,7 @@ final class SharedLinksTest extends TestCase
             static fn (int $index): string => 'https://example.com/' . $index,
             range(1, SharedLinks::MAX),
         );
-        $body = '<p>' . implode(' ', $links) . ' https://example.com/late?ref=rss</p>';
+        $body = '<p>' . implode(' ', $links) . ' https://example.com/late?cmp=rss</p>';
 
         self::assertSame([], SharedLinks::of($body)->postedForms);
     }

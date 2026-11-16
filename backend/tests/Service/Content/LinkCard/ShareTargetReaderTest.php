@@ -60,10 +60,10 @@ final class ShareTargetReaderTest extends TestCase
         $cards = $this->reader(new StubQuotedPostSource())->cardsFor(
             self::entry('<p><a href="' . self::PAGE . '">a</a></p>'),
             [],
-            new ShareFetchPlanModel([self::PAGE], [self::PAGE => self::PAGE . '?ref=rss']),
+            new ShareFetchPlanModel([self::PAGE], [self::PAGE => self::PAGE . '?cmp=rss']),
         );
 
-        self::assertSame([self::PAGE, self::PAGE . '?ref=rss'], $this->pages->readUrls());
+        self::assertSame([self::PAGE, self::PAGE . '?cmp=rss'], $this->pages->readUrls());
         self::assertSame(self::PAGE, $cards->pageCards[0]->card?->url);
     }
 
