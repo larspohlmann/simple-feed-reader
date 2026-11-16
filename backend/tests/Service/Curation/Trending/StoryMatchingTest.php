@@ -307,6 +307,73 @@ final class StoryMatchingTest extends TestCase
         self::assertSame($split->split, $splitReversed->split);
     }
 
+    public function testAWeekGroupClaimsOnlyTheEntriesAnotherStoryHolds(): void
+    {
+        $match = $this->matching()->match(
+            [self::group(1, 2, 3, 4), self::group(5)],
+            [new StoredStoryModel(7, [1, 2, 3]), new StoredStoryModel(9, [4, 5])],
+            TrendingWindow::Week,
+        );
+
+        self::assertSame(7, $match->assignments[0]->storyId);
+        self::assertSame([4], $match->assignments[0]->claimedEntryIds);
+        self::assertSame([], $match->assignments[1]->claimedEntryIds);
+    }
+
+    public function testAWeekGroupClaimsNothingFromAStoryMergedIntoItsOwn(): void
+    {
+        $match = $this->matching()->match(
+            [self::group(1, 2, 3, 4, 5)],
+            [new StoredStoryModel(7, [1, 2, 3]), new StoredStoryModel(9, [4, 5])],
+            TrendingWindow::Week,
+        );
+
+        self::assertEquals([new StoryMergeModel(7, 9)], $match->merges);
+        self::assertSame([], $match->assignments[0]->claimedEntryIds);
+    }
+
+    public function testAWeekGroupClaimsWhatAStoryMergedIntoAnotherHolds(): void
+    {
+        $match = $this->matching()->match(
+            [self::group(1, 2, 3, 4, 5, 6), self::group(7, 8, 9)],
+            [
+                new StoredStoryModel(11, [1, 2, 3, 4, 5]),
+                new StoredStoryModel(12, [7, 8, 9]),
+                new StoredStoryModel(13, [6, 7, 8]),
+            ],
+            TrendingWindow::Week,
+        );
+
+        self::assertEquals([new StoryMergeModel(12, 13)], $match->merges);
+        self::assertSame([6], $match->assignments[0]->claimedEntryIds);
+        self::assertSame([], $match->assignments[1]->claimedEntryIds);
+    }
+
+    public function testANewWeekStoryClaimsEveryEntryAStoredStoryHolds(): void
+    {
+        $match = $this->matching()->match(
+            [self::group(1, 2, 8, 9, 10)],
+            [new StoredStoryModel(7, [1, 2, 3, 4, 5])],
+            TrendingWindow::Week,
+        );
+
+        self::assertNull($match->assignments[0]->storyId);
+        self::assertSame([1, 2], $match->assignments[0]->claimedEntryIds);
+    }
+
+    public function testTheDayNeverClaims(): void
+    {
+        $match = $this->matching()->match(
+            [self::group(1, 2, 3, 4, 5), self::group(8, 9, 10)],
+            [new StoredStoryModel(7, [1, 2, 3]), new StoredStoryModel(9, [4, 5, 8])],
+            TrendingWindow::Day,
+        );
+
+        self::assertSame([4, 5], self::entryIds($match->assignments[0]->joining()));
+        self::assertSame([], $match->assignments[0]->claimedEntryIds);
+        self::assertSame([], $match->assignments[1]->claimedEntryIds);
+    }
+
     private function matching(): StoryMatching
     {
         return new StoryMatching();

@@ -16,6 +16,7 @@ use App\Service\Curation\Trending\Model\StoryMemberModel;
 use App\Service\Curation\Trending\Model\StoryMergeModel;
 use App\Service\Curation\Trending\Model\TrendingStoryModel;
 use App\Tests\DbTestCase;
+use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SharedLinks;
 use App\Tests\Support\TrendingFixtures;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -325,6 +326,7 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
                 $this->group([$one->requireId(), $two->requireId()]),
                 $story->requireId(),
                 [$one->requireId()],
+                [$one->requireId(), $two->requireId()],
             ),
             self::build(TrendingWindow::Week),
         );
@@ -346,7 +348,12 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
         $original = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $one, $two, $three);
         $this->history()->clearPlacement(TrendingWindow::Week);
 
-        $storyId = $this->saveNew(TrendingWindow::Week, $this->group([$two->requireId(), $three->requireId()]));
+        $splitOff = [$two->requireId(), $three->requireId()];
+        $this->history()->save(
+            new StoryAssignmentModel($this->group($splitOff), null, [], $splitOff),
+            self::build(TrendingWindow::Week),
+        );
+        $storyId = $this->latestStoryId();
 
         self::assertEquals(
             [
@@ -356,6 +363,53 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
             ],
             $this->members(),
         );
+    }
+
+    public function testAWeekSaveLeavesAnEntryItDoesNotClaimInTheOtherStory(): void
+    {
+        [$one, $two] = $this->entries(2);
+        $story = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $one);
+        $holder = $this->fixtures->story(TrendingWindow::Day, '2031-05-14 09:00:00', $two);
+        $this->history()->clearPlacement(TrendingWindow::Week);
+
+        $this->history()->save(
+            new StoryAssignmentModel(
+                $this->group([$one->requireId(), $two->requireId()]),
+                $story->requireId(),
+                [$one->requireId()],
+            ),
+            self::build(TrendingWindow::Week),
+        );
+
+        self::assertEquals(
+            [
+                [$story->requireId(), $one->requireId(), '2031-05-14 10:00:00', 0, 1],
+                [$story->requireId(), $two->requireId(), self::BUILT_AT, 0, 1],
+                [$holder->requireId(), $two->requireId(), '2031-05-14 09:00:00', 1, 0],
+            ],
+            $this->members(),
+        );
+    }
+
+    public function testASaveWithNothingToClaimReadsNoOtherStory(): void
+    {
+        [$one, $two] = $this->entries(2);
+        $story = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $one);
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        self::assertInstanceOf(QueryRecorder::class, $recorder);
+        $recorder->reset();
+
+        $this->history()->save(
+            new StoryAssignmentModel(
+                $this->group([$one->requireId(), $two->requireId()]),
+                $story->requireId(),
+                [$one->requireId()],
+            ),
+            self::build(TrendingWindow::Week),
+        );
+
+        self::assertNotSame([], $recorder->queriesMatching('trending_story_entry'));
+        self::assertSame([], $recorder->queriesMatching('story_id <> ?'));
     }
 
     public function testAStoryEmptiedByAWeekSaveIsPrunedUnlessFollowed(): void
@@ -371,6 +425,7 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
                 $this->group([$one->requireId(), $two->requireId()]),
                 $story->requireId(),
                 [$one->requireId()],
+                [$two->requireId()],
             ),
             self::build(TrendingWindow::Week),
         );
@@ -597,6 +652,12 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
     private function saveNew(TrendingWindow $window, TrendingStoryModel $group): int
     {
         $this->history()->save(new StoryAssignmentModel($group, null, []), self::build($window));
+
+        return $this->latestStoryId();
+    }
+
+    private function latestStoryId(): int
+    {
         $storyId = $this->entityManager->getConnection()->fetchOne('SELECT MAX(id) FROM trending_story');
         self::assertIsNumeric($storyId);
 

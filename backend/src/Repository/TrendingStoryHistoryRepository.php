@@ -95,8 +95,8 @@ final readonly class TrendingStoryHistoryRepository
         }
         $this->placeStaying($storyId, $assignment->staying(), $build->window);
         $this->insertMembers($storyId, $assignment->joining(), $build);
-        if ($build->window->mergesStories()) {
-            $this->claimFromOtherStories($storyId, $assignment->group->entryIds());
+        if ($assignment->claimedEntryIds !== []) {
+            $this->claimFromOtherStories($storyId, $assignment->claimedEntryIds);
         }
     }
 

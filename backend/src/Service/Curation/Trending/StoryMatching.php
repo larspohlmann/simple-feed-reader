@@ -33,7 +33,8 @@ final readonly class StoryMatching
      */
     public function match(array $groups, array $stored, TrendingWindow $window): StoryMatchModel
     {
-        $candidates = $this->rankedCandidates($groups, $stored);
+        $storiesOfEntry = $this->storiesByEntry($stored);
+        $candidates = $this->rankedCandidates($groups, $stored, $storiesOfEntry);
         if (!$window->mergesStories()) {
             return $this->attachedToTheirBest($groups, $stored, $candidates);
         }
@@ -41,7 +42,11 @@ final readonly class StoryMatching
         $merges = $this->merges($candidates, $storyOfGroup);
 
         return new StoryMatchModel(
-            $this->assignments($groups, $stored, $storyOfGroup, $merges),
+            $this->claiming(
+                $this->assignments($groups, $stored, $storyOfGroup, $merges),
+                $storiesOfEntry,
+                $this->survivorIds($stored, $merges),
+            ),
             array_map(
                 static fn (array $merge): StoryMergeModel => new StoryMergeModel(
                     $stored[$merge['survivor']]->id,
@@ -56,12 +61,12 @@ final readonly class StoryMatching
     /**
      * @param list<TrendingStoryModel> $groups
      * @param list<StoredStoryModel>   $stored
+     * @param array<int, list<int>>    $storiesOfEntry
      *
      * @return list<Candidate>
      */
-    private function rankedCandidates(array $groups, array $stored): array
+    private function rankedCandidates(array $groups, array $stored, array $storiesOfEntry): array
     {
-        $storiesOfEntry = $this->storiesByEntry($stored);
         $candidates = [];
         foreach ($groups as $groupIndex => $group) {
             $entryIds = $group->entryIds();
@@ -224,6 +229,56 @@ final readonly class StoryMatching
         }
 
         return $assignments;
+    }
+
+    /**
+     * @param list<StoryAssignmentModel> $assignments
+     * @param array<int, list<int>>      $storiesOfEntry
+     * @param array<int, int>            $survivorIds
+     *
+     * @return list<StoryAssignmentModel>
+     */
+    private function claiming(array $assignments, array $storiesOfEntry, array $survivorIds): array
+    {
+        return array_map(
+            fn (StoryAssignmentModel $assignment): StoryAssignmentModel => $assignment->claiming(
+                $this->heldElsewhere($assignment, $storiesOfEntry, $survivorIds),
+            ),
+            $assignments,
+        );
+    }
+
+    /**
+     * @param array<int, list<int>> $storiesOfEntry
+     * @param array<int, int>       $survivorIds
+     *
+     * @return list<int>
+     */
+    private function heldElsewhere(StoryAssignmentModel $assignment, array $storiesOfEntry, array $survivorIds): array
+    {
+        return array_values(array_filter(
+            $assignment->group->entryIds(),
+            static fn (int $entryId): bool => array_any(
+                $storiesOfEntry[$entryId] ?? [],
+                static fn (int $storyIndex): bool => $survivorIds[$storyIndex] !== $assignment->storyId,
+            ),
+        ));
+    }
+
+    /**
+     * @param list<StoredStoryModel>                  $stored
+     * @param list<array{survivor: int, merged: int}> $merges
+     *
+     * @return array<int, int> by story index, the id of the story that holds its members once the merges are done
+     */
+    private function survivorIds(array $stored, array $merges): array
+    {
+        $survivorIds = array_map(static fn (StoredStoryModel $story): int => $story->id, $stored);
+        foreach ($merges as $merge) {
+            $survivorIds[$merge['merged']] = $stored[$merge['survivor']]->id;
+        }
+
+        return $survivorIds;
     }
 
     /**

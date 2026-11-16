@@ -448,6 +448,35 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         self::assertSame('2031-05-07 13:00:00', $this->joinedAtByEntry()[$onTheStart->requireId()]);
     }
 
+    public function testAGroupEntryOnTheWindowStartIsStillClaimed(): void
+    {
+        $onTheStart = $this->fixtures->hafenstreik($this->fixtures->feed('alpha'), 0, '2031-05-07 12:00:00');
+        $others = [];
+        foreach (['beta', 'gamma', 'delta', 'omega'] as $variant => $name) {
+            $others[] = $this->fixtures->hafenstreik($this->fixtures->feed($name), $variant + 1, '2031-05-08 08:00:00');
+        }
+        $unrelatedFeed = $this->fixtures->feed('unrelated');
+        $story = $this->fixtures->story(TrendingWindow::Week, '2031-05-08 09:00:00', ...$others);
+        $holder = $this->fixtures->story(
+            TrendingWindow::Week,
+            '2031-05-07 13:00:00',
+            $onTheStart,
+            $this->fixtures->entry($unrelatedFeed, 'Gartenschau eröffnet', '2031-05-09 08:00:00'),
+            $this->fixtures->entry($unrelatedFeed, 'Neue Brücke freigegeben', '2031-05-10 08:00:00'),
+        );
+
+        $this->builder()->build(TrendingWindow::Week);
+
+        self::assertSame(
+            [$story->requireId()],
+            $this->intColumn(
+                'SELECT story_id FROM trending_story_entry WHERE entry_id = ?',
+                [$onTheStart->requireId()],
+            ),
+        );
+        self::assertContains($holder->requireId(), $this->storyIds());
+    }
+
     public function testFollowsAndHidesSurviveARebuild(): void
     {
         [$entries] = $this->hafenstreikEntries();

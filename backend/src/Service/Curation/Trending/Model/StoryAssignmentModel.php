@@ -6,12 +6,23 @@ namespace App\Service\Curation\Trending\Model;
 
 final readonly class StoryAssignmentModel
 {
-    /** @param list<int> $storedEntryIds empty when the group is a new story */
+    /**
+     * @param list<int> $storedEntryIds  empty when the group is a new story
+     * @param list<int> $claimedEntryIds the group's entries another stored story holds after this build's merges
+     */
     public function __construct(
         public TrendingStoryModel $group,
         public ?int $storyId,
         public array $storedEntryIds,
+        public array $claimedEntryIds = [],
     ) {
+    }
+
+    /** @param list<int> $claimedEntryIds */
+    #[\NoDiscard]
+    public function claiming(array $claimedEntryIds): self
+    {
+        return clone($this, ['claimedEntryIds' => $claimedEntryIds]);
     }
 
     /** @return list<StoryMemberModel> */
