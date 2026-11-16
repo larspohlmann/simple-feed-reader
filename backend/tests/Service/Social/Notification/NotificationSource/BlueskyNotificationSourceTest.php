@@ -148,8 +148,27 @@ final class BlueskyNotificationSourceTest extends TestCase
         $update = $http->requests[1];
         self::assertSame('POST', $update['method']);
         self::assertSame(self::UPDATE_SEEN, 'POST ' . $update['url']);
-        self::assertSame(['seenAt' => '2026-11-16T09:30:00+00:00'], json_decode($update['body'], true));
+        self::assertSame(['seenAt' => '2026-11-16T09:30:00.999Z'], json_decode($update['body'], true));
         self::assertSame(['a', 'b'], $marked);
+    }
+
+    public function testTheMarkerCoversTheMillisecondsTheStoredSecondLost(): void
+    {
+        $http = RoutedHttpClient::answering(static fn (string $method, string $url): MockResponse => match (true) {
+            str_contains($url, 'createSession') => SocialApiWiring::blueskySessionAnswer('jwt'),
+            str_contains($url, 'updateSeen') => new MockResponse('{}'),
+            default => self::fail('Unexpected request: ' . $url),
+        });
+        $account = SocialApiWiring::blueskyAccount();
+        $indexedAt = new \DateTimeImmutable('2026-11-16T09:30:00.750Z');
+        $stored = self::stored($account, 'a', $indexedAt->format('Y-m-d H:i:s'));
+
+        $this->source($http)->markSeen($account, [$stored], static function (): void {
+        });
+
+        $body = json_decode($http->requests[1]['body'], true);
+        self::assertIsArray($body);
+        self::assertGreaterThanOrEqual($indexedAt, new \DateTimeImmutable((string) $body['seenAt']));
     }
 
     #[DataProvider('refusedStatuses')]
