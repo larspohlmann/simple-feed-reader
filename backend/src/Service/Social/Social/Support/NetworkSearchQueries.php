@@ -18,12 +18,10 @@ final class NetworkSearchQueries
      */
     public static function of(SocialNetwork $network, string $query): array
     {
-        $alternatives = new SearchQueryAlternatives(SearchQueryTokens::of($query));
-
         return match ($network) {
             SocialNetwork::Bluesky => [$query],
-            SocialNetwork::Mastodon => $alternatives->queries(),
-            SocialNetwork::Lemmy => LemmySearchTerms::of($alternatives->factors()),
+            SocialNetwork::Mastodon => self::alternativesOf($query)->queries(),
+            SocialNetwork::Lemmy => LemmySearchTerms::of(self::alternativesOf($query)->factors()),
         };
     }
 
@@ -42,6 +40,11 @@ final class NetworkSearchQueries
         }
 
         return true;
+    }
+
+    private static function alternativesOf(string $query): SearchQueryAlternatives
+    {
+        return new SearchQueryAlternatives(SearchQueryTokens::of($query));
     }
 
     private function __construct()

@@ -19,7 +19,6 @@ use App\Service\Social\Social\Support\SearchQueryTokens;
  */
 final class SearchQueryParser
 {
-    private const string NETWORK_FILTER_PATTERN = '/^\p{L}+:./u';
     // `from:me` names the searching account, which the reader cannot tell from an author called "me".
     private const string AUTHOR_FILTER_PATTERN = '/^from:@?(?!me$)(?<author>[^@].*)$/iu';
 
@@ -97,7 +96,7 @@ final class SearchQueryParser
     {
         return match (true) {
             1 === preg_match(self::AUTHOR_FILTER_PATTERN, $text, $filter) => new AuthorSearchModel($filter['author']),
-            1 === preg_match(self::NETWORK_FILTER_PATTERN, $text) => new UncheckedSearchModel(),
+            SearchQueryTokens::isFilter($text) => new UncheckedSearchModel(),
             default => self::termOf($text),
         };
     }

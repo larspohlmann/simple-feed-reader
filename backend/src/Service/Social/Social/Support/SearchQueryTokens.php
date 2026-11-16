@@ -12,6 +12,7 @@ final class SearchQueryTokens
     public const string PHRASE = 'phrase';
     public const string NOT = 'not';
     public const string WORD = 'word';
+    private const string FILTER_PATTERN = '/^\p{L}+:./u';
     private const string PATTERN = '/(?<or>\|\|)|(?<open>\()|(?<close>\))|"(?<phrase>[^"]*)"?'
         . '|(?<not>-)(?=[^\s|)])|(?<word>[^\s()"|]+)|\S/u';
 
@@ -30,6 +31,11 @@ final class SearchQueryTokens
         }
 
         return $tokens;
+    }
+
+    public static function isFilter(string $word): bool
+    {
+        return 1 === preg_match(self::FILTER_PATTERN, $word);
     }
 
     private function __construct()

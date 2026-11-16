@@ -42,7 +42,7 @@ final class LemmySearchTerms
 
     private static function termOf(string $factor): string
     {
-        if (str_starts_with($factor, '-') || 1 === preg_match('/^\p{L}+:./u', $factor)) {
+        if (str_starts_with($factor, '-') || SearchQueryTokens::isFilter($factor)) {
             return '';
         }
 

@@ -256,8 +256,7 @@ final class NetworkSocialSearchTest extends TestCase
             ]),
         ]);
 
-        $page = $this->search($http->client())
-            ->newest(SocialApiWiring::lemmyAccount(), '"rss reader"');
+        $page = $this->search($http->client())->newest(SocialApiWiring::lemmyAccount(), '"rss reader"');
 
         self::assertSame([self::LEMMY_SEARCH], $http->requestLines());
         self::assertSame(

@@ -21,8 +21,8 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 interface TimelineSourceInterface
 {
     /**
-     * @return non-empty-list<ApiRequestModel> sent one after another, a search once per `||` alternative on a
-     *     network without `||`
+     * @return non-empty-list<ApiRequestModel> sent one after another, a search once per query
+     *     `NetworkSearchQueries` yields for the network
      *
      * @throws SocialCredentialsRejectedException
      * @throws SocialNetworkThrottledException
