@@ -27,6 +27,7 @@ import { ListHeaderComponent } from '../../list/list-header/list-header.componen
 import { publishListBarHeight } from '../../list/list-bar-height';
 import { observeSentinel } from '../../list/paging';
 import { SelectionOf } from '../../query/query';
+import { hasSeveralConnectedAccounts } from '../../state/social-sections';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { NotificationRowComponent } from '../notification-row/notification-row.component';
 import { NotificationsStore } from '../notifications.store';
@@ -68,10 +69,8 @@ export class NotificationListComponent {
   private readonly sentinel = viewChild<ElementRef<HTMLElement>>('sentinel');
 
   protected readonly network = computed(() => this.selection().network);
-  protected readonly showsAccount = computed(
-    () =>
-      (this.subscriptions.socialSections().find((section) => section.network === this.network())
-        ?.networkAccounts.length ?? 0) > 1,
+  protected readonly showsAccount = computed(() =>
+    hasSeveralConnectedAccounts(this.subscriptions.socialSections(), this.network()),
   );
 
   protected readonly hintKeys = computed(() => [

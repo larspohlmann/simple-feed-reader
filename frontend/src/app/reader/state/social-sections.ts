@@ -157,6 +157,14 @@ export function feedAvatarUrl(subscription: SubscriptionDto | null): string | nu
   return subscription.imageUrl;
 }
 
+export function hasSeveralConnectedAccounts(
+  sections: readonly SocialSection[],
+  network: SocialNetworkName,
+): boolean {
+  const connected = sections.find((section) => section.network === network)?.networkAccounts;
+  return (connected?.length ?? 0) > 1;
+}
+
 export interface SocialSectionCounts {
   readonly unread: UnreadTotals;
   readonly notifications: NotificationCounts;
