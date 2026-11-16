@@ -44,6 +44,8 @@ use App\Entity\SharedLinkResolution;
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Entity\SocialLike;
+use App\Entity\SocialNotification;
+use App\Entity\SocialNotificationPoll;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionDay;
 use App\Entity\SubscriptionTag;
@@ -184,6 +186,10 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . 'drops, and a restore cannot give them back without it.',
         DiscussionVote::class => 'Votes cast through a connected Lemmy account (#2218). They belong to an account a '
             . 'backup drops, and a restore cannot give them back without it.',
+        SocialNotification::class => 'Notifications of a connected account (#2240). They belong to an account a '
+            . 'backup drops; the network keeps them, and the next poll refills them.',
+        SocialNotificationPoll::class => 'When a connected account\'s notifications were last checked (#2240); '
+            . 'account telemetry a backup drops.',
         KnownSocialCollection::class => 'What the hourly sync remembers of a connected account (#1666). It belongs '
             . 'to an account a backup drops.',
         PrivateFeedSyncChange::class => 'The recent automatic changes to a connected account\'s lists and feeds '
