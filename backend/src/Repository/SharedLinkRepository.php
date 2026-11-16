@@ -7,7 +7,6 @@ namespace App\Repository;
 use App\Doctrine\BulkInsert;
 use App\Entity\SharedLink;
 use App\Service\Content\LinkCard\Model\NewSharedLinkModel;
-use App\Service\Operations\UrlCleanup\Model\StoredLinkAddressModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\Persistence\ManagerRegistry;
@@ -18,8 +17,6 @@ final class SharedLinkRepository extends ServiceEntityRepository
     private const int ROWS_PER_INSERT = 100;
     /** The columns that keep a link from the GC. */
     private const array OWNING_REFERENCES = ['link_card' => 'shared_link_id', 'entry' => 'quoted_shared_link_id'];
-    /** A trending member's link is SET NULL on delete: the next snapshot rebuilds every member from its card. */
-    private const array REFERENCES = [...self::OWNING_REFERENCES, 'trending_story_entry' => 'shared_link_id'];
 
     public function __construct(ManagerRegistry $registry)
     {
@@ -110,91 +107,6 @@ final class SharedLinkRepository extends ServiceEntityRepository
             'DELETE FROM shared_link WHERE unreferenced_since < ? AND ' . self::unreferenced(),
             [$markedBefore->format('Y-m-d H:i:s')],
         );
-    }
-
-    /** @return list<SharedLink> rows without a language, in id order */
-    public function unsetLanguageAfterId(int $afterId, int $limit): array
-    {
-        /** @var list<SharedLink> $links */
-        $links = $this->createQueryBuilder('link')
-            ->andWhere('link.language IS NULL')
-            ->andWhere('link.id > :afterId')
-            ->setParameter('afterId', $afterId)
-            ->orderBy('link.id', 'ASC')
-            ->setMaxResults($limit)
-            ->getQuery()
-            ->getResult();
-
-        return $links;
-    }
-
-    /** @return list<StoredLinkAddressModel> in id order */
-    public function addressesAfterId(int $afterId, int $limit): array
-    {
-        /** @var list<array{id: int|string, url: string, urlHash: string}> $rows */
-        $rows = $this->createQueryBuilder('link')
-            ->select('link.id', 'link.url', 'link.urlHash')
-            ->andWhere('link.id > :afterId')
-            ->setParameter('afterId', $afterId)
-            ->orderBy('link.id', 'ASC')
-            ->setMaxResults($limit)
-            ->getQuery()
-            ->getArrayResult();
-
-        return array_map(
-            static fn (array $row): StoredLinkAddressModel
-                => new StoredLinkAddressModel((int) $row['id'], $row['url'], $row['urlHash']),
-            $rows,
-        );
-    }
-
-    /** Moves every reference of one link onto another that holds the same URL, then deletes the first. */
-    public function mergeInto(int $mergedLinkId, int $holderLinkId): void
-    {
-        $connection = $this->getEntityManager()->getConnection();
-        foreach (self::REFERENCES as $table => $column) {
-            $connection->executeStatement(
-                \sprintf('UPDATE %s SET %s = ? WHERE %s = ?', $table, $column, $column),
-                [$holderLinkId, $mergedLinkId],
-            );
-        }
-        $connection->executeStatement(
-            'UPDATE shared_link SET unreferenced_since = NULL WHERE id = ?',
-            [$holderLinkId],
-        );
-        $connection->executeStatement('DELETE FROM shared_link WHERE id = ?', [$mergedLinkId]);
-    }
-
-    public function relocate(int $linkId, string $url, string $urlHash): void
-    {
-        $this->getEntityManager()->getConnection()->executeStatement(
-            'UPDATE shared_link SET url = ?, url_hash = ? WHERE id = ?',
-            [$url, $urlHash, $linkId],
-        );
-    }
-
-    /**
-     * @param list<string> $urlHashes
-     *
-     * @return array<string, int> link id by url hash, for the hashes a link holds
-     */
-    public function idsByUrlHashes(array $urlHashes): array
-    {
-        if ($urlHashes === []) {
-            return [];
-        }
-        /** @var list<array{url_hash: string, id: int|string}> $rows */
-        $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
-            'SELECT url_hash, id FROM shared_link WHERE url_hash IN (?)',
-            [$urlHashes],
-            [ArrayParameterType::STRING],
-        );
-        $ids = [];
-        foreach ($rows as $row) {
-            $ids[$row['url_hash']] = (int) $row['id'];
-        }
-
-        return $ids;
     }
 
     private static function unreferenced(): string
