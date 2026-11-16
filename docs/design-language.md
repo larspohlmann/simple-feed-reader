@@ -2301,7 +2301,8 @@ does not compile. So publisher FAQs are bare `<details>` that the FAQ pass (`rea
 7. **Give a full border the glass rim** — `glass-rim.filled(…)` or
    `glass-rim.ring(…)` ([§1 Glass rim](#glass-rim-1402)), never a bare
    `border: 1px solid`; the coverage spec rejects one.
-8. **Run `npm run check`** from `frontend/`.
+8. **Run `npm run check`** inside the Docker frontend container
+   (`docker compose exec -T frontend npm run check`).
 
 ## 8. Adding a new settings section
 

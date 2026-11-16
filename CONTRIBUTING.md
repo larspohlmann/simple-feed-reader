@@ -54,10 +54,10 @@ Also run the MySQL leg against the Docker stack:
 docker compose exec php vendor/bin/phpunit
 ```
 
-Frontend (from `frontend/`):
+Frontend, inside the Docker `frontend` container (from the repo root):
 
 ```bash
-npm run check        # ESLint + Prettier + Stylelint + Jest
+docker compose exec -T frontend npm run check   # ESLint + Prettier + Stylelint + tsc + Jest
 ```
 
 Style expectations beyond the linters — intention-revealing names, short
