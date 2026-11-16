@@ -5,6 +5,7 @@ import { API_BASE_URL } from '../../core/api';
 import { anEntry } from '../../../testing/entry-testing';
 import { EntriesPage } from '../models';
 import { TrendingApi } from './trending-api';
+import { TrendingBuiltAt } from './trending-built-at';
 
 describe('TrendingApi (#2017)', () => {
   let api: TrendingApi;
@@ -32,6 +33,15 @@ describe('TrendingApi (#2017)', () => {
     request.flush({ window: 'week', builtAt: null, stories: [anEntry({ id: 9 })] });
 
     expect(page).toEqual({ entries: [anEntry({ id: 9 })], nextCursor: null });
+  });
+
+  it("records when the window's stories were built (#2264)", () => {
+    api.page('week').subscribe();
+    ctrl
+      .expectOne((each) => each.url === 'https://api.test/api/trending')
+      .flush({ window: 'week', builtAt: '2026-11-16T07:00:00+00:00', stories: [] });
+
+    expect(TestBed.inject(TrendingBuiltAt).at('week')).toBe('2026-11-16T07:00:00+00:00');
   });
 
   it('hides a story of a window by its lead', () => {

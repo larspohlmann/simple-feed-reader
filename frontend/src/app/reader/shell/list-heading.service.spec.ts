@@ -20,6 +20,8 @@ import { TagNode, countDescendants, tagNodesById } from '../state/subscription-d
 import { NO_UNREAD_TOTALS, UnreadTotals } from '../state/unread-totals';
 import { anEntry } from '../../../testing/entry-testing';
 import { makeSubscription } from '../testing/subscription.factory';
+import { TrendingBuiltAt } from '../trending/trending-built-at';
+import { TrendingWindowService } from '../trending/trending-window.service';
 import { ListHeading } from './list-heading.service';
 import { ReaderRouteState } from './reader-route-state.service';
 
@@ -55,6 +57,7 @@ function listHeadingFor(subscription: SubscriptionDto, sections: SocialSection[]
       { provide: RecommendationsService, useValue: {} },
       { provide: SavedSearchesStore, useValue: {} },
       { provide: VisibilitySwitchesStore, useValue: {} },
+      { provide: TrendingWindowService, useValue: { window: signal('day') } },
       { provide: ReadingLayoutService, useValue: { mode: signal('magazine') } },
     ],
   });
@@ -299,6 +302,7 @@ function headingWith(
       { provide: RecommendationsService, useValue: {} },
       { provide: SavedSearchesStore, useValue: {} },
       { provide: VisibilitySwitchesStore, useValue: { switches: signal(switches) } },
+      { provide: TrendingWindowService, useValue: { window: signal('day') } },
       { provide: ReadingLayoutService, useValue: { mode: signal('magazine') } },
     ],
   });
@@ -395,6 +399,7 @@ describe('ListHeading for the Trending list (#2017)', () => {
         { provide: SavedSearchesStore, useValue: {} },
         { provide: VisibilitySwitchesStore, useValue: {} },
         { provide: VisibilitySwitchesStore, useValue: {} },
+        { provide: TrendingWindowService, useValue: { window: signal('day') } },
         { provide: ReadingLayoutService, useValue: { mode: signal('magazine') } },
       ],
     });
@@ -407,5 +412,39 @@ describe('ListHeading for the Trending list (#2017)', () => {
 
   it('counts the stories it lists', () => {
     expect(trendingHeading().titleCount()).toEqual({ value: 2, counts: 'items' });
+  });
+});
+
+describe('ListHeading last refreshed on Trending (#2264)', () => {
+  function trendingHeading(window: 'day' | 'week'): ListHeading {
+    TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
+      providers: [
+        ListHeading,
+        { provide: ReaderRouteState, useValue: { selection: signal({ kind: 'trending' }) } },
+        { provide: TrendingWindowService, useValue: { window: signal(window) } },
+        { provide: SubscriptionsStore, useValue: {} },
+        { provide: LanguageService, useValue: { lang: signal('en') } },
+        { provide: EntriesStore, useValue: {} },
+        { provide: RecommendationsService, useValue: {} },
+        { provide: SavedSearchesStore, useValue: {} },
+        { provide: VisibilitySwitchesStore, useValue: {} },
+        { provide: ReadingLayoutService, useValue: { mode: signal('magazine') } },
+      ],
+    });
+    return TestBed.inject(ListHeading);
+  }
+
+  it('reads the build time of the window on screen', () => {
+    const heading = trendingHeading('week');
+    const builtAt = TestBed.inject(TrendingBuiltAt);
+    builtAt.record('day', '2026-11-16T07:30:00+00:00');
+    builtAt.record('week', '2026-11-16T07:00:00+00:00');
+
+    expect(heading.lastRefreshed()).toBe('2026-11-16T07:00:00+00:00');
+  });
+
+  it('has nothing to say before the window was loaded', () => {
+    expect(trendingHeading('day').lastRefreshed()).toBeNull();
   });
 });

@@ -22,6 +22,8 @@ import { isUnrenamedTimeline } from '../feeds/display-title';
 import { SubscriptionDto } from '../models';
 import { FeedGroupName } from '../../core/feed-group';
 import { SocialNetworkName } from '../../core/social-network';
+import { TrendingBuiltAt } from '../trending/trending-built-at';
+import { TrendingWindowService } from '../trending/trending-window.service';
 import { ReaderRouteState } from './reader-route-state.service';
 import { networkFeedKindLabels, SocialSection, feedAvatarUrl } from '../state/social-sections';
 
@@ -36,6 +38,8 @@ export class ListHeading {
   private readonly language = inject(LanguageService);
   private readonly i18n = inject(TranslocoService);
   private readonly visibilitySwitches = inject(VisibilitySwitchesStore);
+  private readonly trendingWindow = inject(TrendingWindowService);
+  private readonly trendingBuiltAt = inject(TrendingBuiltAt);
 
   private readonly allItemsEntries = computed(() =>
     sumEntries(this.subscriptions.subscriptions(), this.visibilitySwitches.switches()),
@@ -97,7 +101,9 @@ export class ListHeading {
   );
 
   readonly lastRefreshed = computed(() => {
-    if (this.routeState.selection().kind === 'for-you') return this.recommendations.generatedAt();
+    const kind = this.routeState.selection().kind;
+    if (kind === 'for-you') return this.recommendations.generatedAt();
+    if (kind === 'trending') return this.trendingBuiltAt.at(this.trendingWindow.window());
     return this.selectedSubscription()?.lastFetchedAt ?? null;
   });
 
