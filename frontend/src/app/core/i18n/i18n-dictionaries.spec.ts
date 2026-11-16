@@ -63,6 +63,27 @@ describe('i18n dictionaries', () => {
     expect(differing).toEqual([]);
   });
 
+  it('call a followed Trending story a gefolgte Story in German', () => {
+    const german = new Map(flatten(de));
+    const mismatched = [
+      'reader.followedStories',
+      'reader.toggleFollowedStories',
+      'reader.followedStoryFallback',
+      'reader.followedStoryMenu',
+      'reader.followStory',
+      'reader.unfollowStory',
+      'reader.storyActions',
+      'reader.actionHint.followStory',
+      'reader.actionHint.unfollowStory',
+    ].filter((key) => {
+      const value = String(german.get(key));
+
+      return !/Stor(y|ies)/.test(value) || /Geschichte|verfolg/i.test(value);
+    });
+
+    expect(mismatched).toEqual([]);
+  });
+
   it('cover every language the app offers', () => {
     expect(Object.keys(dictionaries)).toEqual([...LANGS]);
   });
