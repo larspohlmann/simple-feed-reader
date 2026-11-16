@@ -22,9 +22,10 @@ final readonly class ArticleLines
      */
     public function of(array $titled): array
     {
-        $stories = $this->linkCards->storyLinksByEntryIds(
-            array_map(static fn (TitledEntry $each): int => $each->entry->requireId(), $titled),
-        );
+        $stories = $this->linkCards->storyLinksByEntryIds(array_values(array_map(
+            static fn (TitledEntry $each): int => $each->entry->requireId(),
+            array_filter($titled, static fn (TitledEntry $each): bool => !$each->entry->getFeed()->isFromAnOutlet()),
+        )));
 
         return array_map(
             static fn (TitledEntry $each): ArticleLineModel => ArticleLineModel::of(

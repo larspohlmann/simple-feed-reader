@@ -102,9 +102,7 @@ final class LinkCardRepository extends ServiceEntityRepository
             . ' link.title, link.description, link.site_name'
             . ' FROM link_card card JOIN shared_link link ON link.id = card.shared_link_id'
             . LinkLandingSql::JOIN
-            . ' WHERE card.entry_id IN (:entryIds) AND card.thread_post_id IS NULL'
-            . ' AND card.position = (SELECT MIN(first_card.position) FROM link_card first_card'
-            . ' WHERE first_card.entry_id = card.entry_id AND first_card.thread_post_id IS NULL)',
+            . ' WHERE card.entry_id IN (:entryIds) AND' . LinkLandingSql::FIRST_ROOT_CARD,
             ['entryIds' => $entryIds],
             ['entryIds' => ArrayParameterType::INTEGER],
         );

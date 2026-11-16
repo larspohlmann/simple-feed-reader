@@ -34,7 +34,7 @@ final readonly class ArticleLineModel
     public static function of(TitledEntry $titled, ?StoryLinkModel $storyLink): self
     {
         $entry = $titled->entry;
-        $isOutlet = $entry->getFeed()->getNetwork() === null;
+        $isOutlet = $entry->getFeed()->isFromAnOutlet();
 
         return new self(
             entryId: $entry->requireId(),

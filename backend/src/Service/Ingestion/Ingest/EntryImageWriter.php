@@ -32,7 +32,7 @@ final readonly class EntryImageWriter
 
     private function store(Entry $entry, string $url, DeclaredImageModel $image): void
     {
-        if ($entry->getFeed()->getNetwork() !== null) {
+        if (!$entry->getFeed()->isFromAnOutlet()) {
             $entry->getImage()->storeUnverified($url, $image->width, $image->height);
 
             return;

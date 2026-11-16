@@ -27,7 +27,7 @@ final readonly class EntryListRow
     /** Whether the row's feed publishes articles, rather than a social network's posts. */
     public function isFromAnOutlet(): bool
     {
-        return $this->entry->getFeed()->getNetwork() === null;
+        return $this->entry->getFeed()->isFromAnOutlet();
     }
 
     /** The given hash as the row's key, else one no other row shares. */
