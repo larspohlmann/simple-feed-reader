@@ -194,6 +194,21 @@ final class TrackingUrlCleanupTest extends DbTestCase
         );
     }
 
+    public function testAHashALinkOfTheBatchGaveUpIsFreeForTheNext(): void
+    {
+        $leaving = $this->storeLink('https://example.com/leaving?utm_source=x', self::hashOf(self::HELD_URL));
+        $arriving = $this->storeLink(self::HELD_URL, hash('sha256', 'arriving'));
+
+        $report = $this->cleanup(10)->clean();
+
+        self::assertSame(0, $report->cardsMerged);
+        self::assertSame(
+            [['id' => $arriving, 'url_hash' => self::hashOf(self::HELD_URL)]],
+            $this->linksOn(self::HELD_URL),
+        );
+        self::assertSame(self::hashOf('https://example.com/leaving'), $this->linkHashOf($leaving));
+    }
+
     /**
      * A link stored under the old lists' hash beside one a writer stored after deploy under the new hash (marked
      * unreferenced by the GC), and an entry whose card, quote and trending row point at the stale one.
@@ -279,6 +294,13 @@ final class TrackingUrlCleanupTest extends DbTestCase
             'quote' => $this->idFrom('SELECT quoted_shared_link_id FROM entry WHERE id = ?', $entryId),
             'trending' => $this->idFrom('SELECT shared_link_id FROM trending_story_entry WHERE entry_id = ?', $entryId),
         ];
+    }
+
+    private function linkHashOf(int $linkId): string
+    {
+        return self::textOf(
+            $this->entityManager->getConnection()->fetchOne('SELECT url_hash FROM shared_link WHERE id = ?', [$linkId]),
+        );
     }
 
     private function idFrom(string $query, int $id): int

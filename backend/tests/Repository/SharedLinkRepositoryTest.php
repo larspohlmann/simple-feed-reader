@@ -62,6 +62,19 @@ final class SharedLinkRepositoryTest extends DbTestCase
     public function testFindingNoHashesIsEmpty(): void
     {
         self::assertSame([], $this->repository()->byUrlHashes([]));
+        self::assertSame([], $this->repository()->idsByUrlHashes([]));
+    }
+
+    public function testTheIdsOfTheHeldHashesAreReadByHash(): void
+    {
+        $links = $this->repository();
+        $links->insertMissing([self::newLink('h1', 'One'), self::newLink('h2', 'Two')]);
+        $stored = $links->byUrlHashes(['h1', 'h2']);
+
+        self::assertEquals(
+            ['h1' => $stored['h1']->requireId(), 'h2' => $stored['h2']->requireId()],
+            $links->idsByUrlHashes(['h2', 'h1', 'missing']),
+        );
     }
 
     public function testInsertingNothingWritesNothing(): void

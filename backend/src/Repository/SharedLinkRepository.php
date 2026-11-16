@@ -186,7 +186,7 @@ final class SharedLinkRepository extends ServiceEntityRepository
         /** @var list<array{url_hash: string, id: int|string}> $rows */
         $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
             'SELECT url_hash, id FROM shared_link WHERE url_hash IN (?)',
-            [array_values(array_unique($urlHashes))],
+            [$urlHashes],
             [ArrayParameterType::STRING],
         );
         $ids = [];
