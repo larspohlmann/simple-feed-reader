@@ -153,33 +153,44 @@ describe('FollowedStoriesStore (#2128)', () => {
       expect(store.byId(3)?.newCount).toBe(0);
     });
 
-    it('posts for a story opened before the stories have loaded, and zeroes it once they do', () => {
+    it('posts for a story opened before the stories have loaded, and asks again once that load answers', () => {
       const pending = new Subject<{ stories: FollowedStoryDto[] }>();
+      const followed = jest
+        .fn()
+        .mockReturnValueOnce(pending)
+        .mockReturnValue(of({ stories: [story(3, 0), rows[1]] }));
       const opened = jest.fn(() => of(undefined));
-      const store = setup({ followed: () => pending, opened });
+      const store = setup({ followed, opened });
       store.load();
 
       store.markOpened(3);
       pending.next({ stories: rows });
 
       expect(opened).toHaveBeenCalledWith(3);
+      expect(followed).toHaveBeenCalledTimes(2);
       expect(store.byId(3)?.newCount).toBe(0);
     });
   });
 
   describe('a load already out when the reader acts', () => {
-    function loadStillOut(stories: FollowedStoryDto[], api: Partial<TrendingApi>) {
+    function loadStillOut(afterwards: FollowedStoryDto[], api: Partial<TrendingApi>) {
       const stale = new Subject<{ stories: FollowedStoryDto[] }>();
-      const followed = jest.fn().mockReturnValueOnce(of({ stories })).mockReturnValueOnce(stale);
+      const followed = jest
+        .fn()
+        .mockReturnValueOnce(of({ stories: rows }))
+        .mockReturnValueOnce(stale)
+        .mockReturnValue(of({ stories: afterwards }));
       const store = setup({ followed, ...api });
       store.load();
       jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
       store.load();
-      return { store, stale };
+      return { store, stale, followed };
     }
 
     it('does not bring back a count markOpened() zeroed', () => {
-      const { store, stale } = loadStillOut(rows, { opened: () => of(undefined) });
+      const { store, stale } = loadStillOut([story(3, 0), rows[1]], {
+        opened: () => of(undefined),
+      });
 
       store.markOpened(3);
       stale.next({ stories: rows });
@@ -187,8 +198,28 @@ describe('FollowedStoriesStore (#2128)', () => {
       expect(store.byId(3)?.newCount).toBe(0);
     });
 
+    it('drops an answer sent after the open but before its POST answered', () => {
+      const sentMeanwhile = new Subject<{ stories: FollowedStoryDto[] }>();
+      const followed = jest
+        .fn()
+        .mockReturnValueOnce(of({ stories: rows }))
+        .mockReturnValueOnce(sentMeanwhile)
+        .mockReturnValue(of({ stories: [story(3, 0), rows[1]] }));
+      const posted = new Subject<void>();
+      const store = setup({ followed, opened: () => posted });
+      store.load();
+      store.markOpened(3);
+      store.load();
+
+      posted.next();
+      sentMeanwhile.next({ stories: rows });
+
+      expect(followed).toHaveBeenCalledTimes(3);
+      expect(store.byId(3)?.newCount).toBe(0);
+    });
+
     it('does not bring back a row unfollow() removed', () => {
-      const { store, stale } = loadStillOut(rows, { unfollow: () => of(undefined) });
+      const { store, stale } = loadStillOut([rows[1]], { unfollow: () => of(undefined) });
 
       store.unfollow(3);
       stale.next({ stories: rows });
@@ -207,28 +238,40 @@ describe('FollowedStoriesStore (#2128)', () => {
 
       expect(store.byId(3)?.newCount).toBe(6);
     });
-  });
 
-  describe('loadAfterFollowing()', () => {
     it('shows a story followed again after this session unfollowed it', () => {
       const store = setup({ followed: answering(), unfollow: () => of(undefined) });
       store.load();
       store.unfollow(3);
 
-      store.loadAfterFollowing(3);
+      store.load();
 
       expect(store.stories().map((story) => story.id)).toEqual([3, 5]);
     });
+  });
 
-    it('still holds back another story unfollowed while the load was out', () => {
-      const store = setup({ followed: answering(), unfollow: () => of(undefined) });
+  it('keeps the same list when a load answers what it already holds', () => {
+    const store = setup({
+      followed: jest.fn(() => of({ stories: rows.map((row) => ({ ...row })) })),
+    });
+    store.load();
+    const held = store.stories();
+
+    store.load();
+
+    expect(store.stories()).toBe(held);
+  });
+
+  describe('removeUnfollowed()', () => {
+    it('drops the row without asking the server', () => {
+      const followed = answering();
+      const store = setup({ followed });
       store.load();
-      store.unfollow(3);
-      store.unfollow(5);
 
-      store.loadAfterFollowing(3);
+      store.removeUnfollowed(3);
 
-      expect(store.stories().map((story) => story.id)).toEqual([3]);
+      expect(store.stories()).toEqual([rows[1]]);
+      expect(followed).toHaveBeenCalledTimes(1);
     });
   });
 

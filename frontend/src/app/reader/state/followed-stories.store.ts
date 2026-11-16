@@ -1,103 +1,88 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
-import { Subscription } from 'rxjs';
+import { Injectable, computed, inject } from '@angular/core';
 import { accountSignal, onIdentityChange } from '../../core/auth/session-identity';
 import { FollowedStoryDto } from '../trending/trending.models';
 import { TrendingApi } from '../trending/trending-api';
-import { countsAreStale } from './sidebar-freshness';
+import { StaleGatedLoad } from './stale-gated-load';
 
 /** The Trending stories the reader follows (#2128), in the order the server ranks them. */
 @Injectable({ providedIn: 'root' })
 export class FollowedStoriesStore {
   private readonly api = inject(TrendingApi);
 
-  private readonly followed = accountSignal<FollowedStoryDto[]>([]);
+  private readonly followed = accountSignal<FollowedStoryDto[]>([], { equal: sameFollowedStories });
   readonly stories = this.followed.asReadonly();
   private readonly storiesById = computed(
     () => new Map(this.followed().map((story) => [story.id, story])),
   );
 
-  /** Settled here since the last load was sent: a response already out predates them, so it must not undo them. */
-  private readonly zeroedSinceLoad = signal<ReadonlySet<number>>(new Set());
-  private readonly removedSinceLoad = signal<ReadonlySet<number>>(new Set());
-
-  private lastLoadedAt = 0;
-  private inFlight: Subscription | null = null;
+  private readonly loads = new StaleGatedLoad();
+  /** Bumped by every change made here: a load sent before one predates it, so its answer is dropped. */
+  private localChanges = 0;
 
   constructor() {
-    onIdentityChange(() => this.forgetLoad());
+    onIdentityChange(() => this.loads.forget());
   }
 
   byId(id: number): FollowedStoryDto | null {
     return this.storiesById().get(id) ?? null;
   }
 
+  /** An answer overtaken by a change made here asks again, so the list never waits a poll for the server's word. */
   load(): void {
-    this.lastLoadedAt = Date.now();
-    this.inFlight?.unsubscribe();
-    const zeroedWhenSent = this.zeroedSinceLoad();
-    const removedWhenSent = this.removedSinceLoad();
-    const request = this.api.followed().subscribe({
-      next: (response) => {
-        this.inFlight = null;
-        this.followed.set(this.withLocalChanges(response.stories));
-        this.zeroedSinceLoad.update((ids) => withoutAll(ids, zeroedWhenSent));
-        this.removedSinceLoad.update((ids) => withoutAll(ids, removedWhenSent));
-      },
-      error: () => (this.inFlight = null),
+    const changesWhenSent = this.localChanges;
+    this.loads.run(this.api.followed(), (response) => {
+      if (this.localChanges !== changesWhenSent) {
+        this.load();
+        return;
+      }
+      this.followed.set(response.stories);
     });
-    this.inFlight = request.closed ? null : request;
-  }
-
-  /** A story unfollowed earlier in this session is held back from every load; following it again lifts that. */
-  loadAfterFollowing(id: number): void {
-    this.removedSinceLoad.update((ids) => withoutAll(ids, new Set([id])));
-    this.load();
   }
 
   reloadIfStale(): void {
-    if (this.inFlight) return;
-    if (!countsAreStale(this.lastLoadedAt)) return;
-    this.load();
+    if (this.loads.isStale()) this.load();
   }
 
   unfollow(id: number, onSuccess?: () => void): void {
     this.api.unfollow(id).subscribe({
       next: () => {
-        this.removedSinceLoad.update((ids) => new Set(ids).add(id));
-        this.followed.update((stories) => stories.filter((story) => story.id !== id));
+        this.removeUnfollowed(id);
         onSuccess?.();
       },
       error: () => undefined,
     });
   }
 
+  /** Drops a story the reader unfollowed elsewhere, as on its Trending card. */
+  removeUnfollowed(id: number): void {
+    this.localChanges++;
+    this.followed.update((stories) => stories.filter((story) => story.id !== id));
+  }
+
   /** Zero at once; a failed POST keeps the zero and the next load puts the server's count back. The caller has
-   *  just been served the story, so it posts even before the stories have loaded. */
+   *  just been served the story, so it posts even before the stories have loaded. A load sent before the POST
+   *  answered counted without it, so the answer counts as a change too. */
   markOpened(id: number): void {
-    this.zeroedSinceLoad.update((ids) => new Set(ids).add(id));
+    this.localChanges++;
     this.followed.update((stories) =>
       stories.map((story) => (story.id === id ? { ...story, newCount: 0 } : story)),
     );
-    this.api.opened(id).subscribe({ error: () => undefined });
-  }
-
-  private withLocalChanges(stories: FollowedStoryDto[]): FollowedStoryDto[] {
-    const zeroed = this.zeroedSinceLoad();
-    const removed = this.removedSinceLoad();
-    return stories
-      .filter((story) => !removed.has(story.id))
-      .map((story) => (zeroed.has(story.id) ? { ...story, newCount: 0 } : story));
-  }
-
-  private forgetLoad(): void {
-    this.inFlight?.unsubscribe();
-    this.inFlight = null;
-    this.lastLoadedAt = 0;
-    this.zeroedSinceLoad.set(new Set());
-    this.removedSinceLoad.set(new Set());
+    this.api.opened(id).subscribe({ next: () => this.localChanges++, error: () => undefined });
   }
 }
 
-function withoutAll(ids: ReadonlySet<number>, spent: ReadonlySet<number>): ReadonlySet<number> {
-  return new Set([...ids].filter((id) => !spent.has(id)));
+function sameFollowedStories(left: FollowedStoryDto[], right: FollowedStoryDto[]): boolean {
+  return (
+    left.length === right.length && left.every((story, index) => sameStory(story, right[index]))
+  );
+}
+
+function sameStory(left: FollowedStoryDto, right: FollowedStoryDto): boolean {
+  return (
+    left.id === right.id &&
+    left.headline === right.headline &&
+    left.newCount === right.newCount &&
+    left.quiet === right.quiet &&
+    left.lastJoinedAt === right.lastJoinedAt
+  );
 }

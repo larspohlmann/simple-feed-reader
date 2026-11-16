@@ -11,7 +11,7 @@ import { TrendingFollowAction } from './trending-follow-action';
 describe('TrendingFollowAction (#2128)', () => {
   let ctrl: HttpTestingController;
   let store: EntriesStore;
-  let followedStories: { load: jest.Mock; loadAfterFollowing: jest.Mock };
+  let followedStories: { load: jest.Mock; removeUnfollowed: jest.Mock };
 
   const card = (followed: boolean): EntryDto =>
     anEntry({ id: 7, story: aStory({ id: 12, followed }) });
@@ -25,7 +25,7 @@ describe('TrendingFollowAction (#2128)', () => {
   };
 
   beforeEach(() => {
-    followedStories = { load: jest.fn(), loadAfterFollowing: jest.fn() };
+    followedStories = { load: jest.fn(), removeUnfollowed: jest.fn() };
     TestBed.configureTestingModule({
       providers: [
         TrendingFollowAction,
@@ -49,13 +49,14 @@ describe('TrendingFollowAction (#2128)', () => {
     expect(followedOnScreen()).toBe(true);
     const request = ctrl.expectOne('https://api.test/api/trending/stories/12/follow');
     expect(request.request.method).toBe('PUT');
-    expect(followedStories.loadAfterFollowing).not.toHaveBeenCalled();
+    expect(followedStories.load).not.toHaveBeenCalled();
     request.flush(null, { status: 204, statusText: 'No Content' });
     expect(followedOnScreen()).toBe(true);
-    expect(followedStories.loadAfterFollowing).toHaveBeenCalledWith(12);
+    expect(followedStories.load).toHaveBeenCalledTimes(1);
+    expect(followedStories.removeUnfollowed).not.toHaveBeenCalled();
   });
 
-  it('reloads the followed stories once an unfollow has landed', () => {
+  it('drops the followed row, without a reload, once an unfollow has landed', () => {
     loadTrending(card(true));
 
     action().run(store.entries()[0]);
@@ -63,8 +64,8 @@ describe('TrendingFollowAction (#2128)', () => {
     ctrl
       .expectOne('https://api.test/api/trending/stories/12/follow')
       .flush(null, { status: 204, statusText: 'No Content' });
-    expect(followedStories.load).toHaveBeenCalledTimes(1);
-    expect(followedStories.loadAfterFollowing).not.toHaveBeenCalled();
+    expect(followedStories.removeUnfollowed).toHaveBeenCalledWith(12);
+    expect(followedStories.load).not.toHaveBeenCalled();
   });
 
   it('unfollows a followed story, and shows it followed again when the request fails', () => {
@@ -79,6 +80,6 @@ describe('TrendingFollowAction (#2128)', () => {
     expect(followedOnScreen()).toBe(true);
     expect(store.error()).not.toBeNull();
     expect(followedStories.load).not.toHaveBeenCalled();
-    expect(followedStories.loadAfterFollowing).not.toHaveBeenCalled();
+    expect(followedStories.removeUnfollowed).not.toHaveBeenCalled();
   });
 });
