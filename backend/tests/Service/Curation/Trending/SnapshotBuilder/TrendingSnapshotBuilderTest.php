@@ -40,6 +40,7 @@ use Symfony\Component\Clock\MockClock;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\Lock\Exception\LockConflictedException;
 use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\SharedLockInterface;
 use Symfony\Component\Lock\Store\InMemoryStore;
 
 final class TrendingSnapshotBuilderTest extends DbTestCase
@@ -130,6 +131,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
     public function testEveryBuildReleasesTheLock(): void
     {
         $this->weekSizedHafenstreik();
+        $this->locks = self::locksReleasedOnlyByTheirHolder();
         $this->builder()->build(TrendingWindow::Day);
         $this->builder()->build(TrendingWindow::Week);
         try {
@@ -138,6 +140,21 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         }
 
         self::assertTrue($this->locks->createLock(TrendingSnapshotBuilder::LOCK_NAME)->acquire());
+    }
+
+    public function testABuildAfterOneThatThrewCanTakeTheLock(): void
+    {
+        $this->weekSizedHafenstreik();
+        $this->locks = self::locksReleasedOnlyByTheirHolder();
+        try {
+            $this->builderWith($this->failingToStartTheTransaction())->build(TrendingWindow::Day);
+            self::fail('the failure before the save must surface');
+        } catch (SimulatedFailure) {
+        }
+
+        $report = $this->builder()->build(TrendingWindow::Day);
+
+        self::assertSame(TrendingWindow::Day, $report->window);
     }
 
     public function testGroupsTheDaysHeadlinesIntoAStoryAndRecordsTheSnapshot(): void
@@ -484,7 +501,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
             ],
             $this->follows()->followedBy($reader->requireId()),
         ));
-        $this->clock->modify('2031-05-16 12:00:00');
+        $this->clock->modify('2031-05-16 13:00:00');
         self::assertSame([true], array_map(
             static fn (FollowedStoryModel $story): bool => $story->quiet,
             $this->following()->followedBy($reader->requireId())->stories,
@@ -586,6 +603,16 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         self::assertSame([$followed->requireId()], $this->storyIds());
     }
 
+    private function failingToStartTheTransaction(): EntityManagerInterface
+    {
+        return new class ($this->entityManager) extends EntityManagerDecorator {
+            public function wrapInTransaction(callable $func): never
+            {
+                throw new SimulatedFailure('Simulated failure before the replacement.');
+            }
+        };
+    }
+
     private function failingAfterTheTransactionBody(): EntityManagerInterface
     {
         return new class ($this->entityManager) extends EntityManagerDecorator {
@@ -598,6 +625,20 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
                         throw new SimulatedFailure('Simulated failure after the replacement.');
                     },
                 );
+            }
+        };
+    }
+
+    /** A lock left behind would otherwise free itself when the builder drops it, hiding a missing release. */
+    private static function locksReleasedOnlyByTheirHolder(): LockFactory
+    {
+        return new class (new InMemoryStore()) extends LockFactory {
+            public function createLock(
+                string $resource,
+                ?float $ttl = 300.0,
+                bool $autoRelease = true,
+            ): SharedLockInterface {
+                return parent::createLock($resource, $ttl, false);
             }
         };
     }
