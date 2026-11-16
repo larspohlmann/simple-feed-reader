@@ -41,7 +41,7 @@ final class TrackingUrlCleanupTest extends DbTestCase
 
         $report = $this->cleanup()->count();
 
-        self::assertEquals(new TrackingUrlCleanupReportModel(3, 2, 1, 1), $report);
+        self::assertEquals(new TrackingUrlCleanupReportModel(3, 2, 2, 2), $report);
         self::assertSame($before, $this->rows());
     }
 
@@ -51,7 +51,7 @@ final class TrackingUrlCleanupTest extends DbTestCase
 
         $report = $this->cleanup()->clean();
 
-        self::assertEquals(new TrackingUrlCleanupReportModel(3, 2, 1, 1), $report);
+        self::assertEquals(new TrackingUrlCleanupReportModel(3, 2, 2, 2), $report);
         self::assertSame(
             ['url' => 'https://example.com/a', 'url_hash' => self::hashOf('https://example.com/a')],
             $this->row('tracked'),
@@ -74,7 +74,7 @@ final class TrackingUrlCleanupTest extends DbTestCase
 
     public function testTheWalkCrossesBatchBoundaries(): void
     {
-        self::assertEquals(new TrackingUrlCleanupReportModel(3, 2, 1, 1), $this->cleanup(1)->clean());
+        self::assertEquals(new TrackingUrlCleanupReportModel(3, 2, 2, 2), $this->cleanup(1)->clean());
         self::assertEquals(new TrackingUrlCleanupReportModel(0, 0, 0, 0), $this->cleanup(3)->clean());
     }
 
@@ -102,6 +102,24 @@ final class TrackingUrlCleanupTest extends DbTestCase
             $stale,
         );
         self::assertNotSame(self::hashOf('https://www.aljazeera.com/news/1'), $stale['url_hash']);
+    }
+
+    public function testALinkWhoseUrlAndHashBothChangeGetsBoth(): void
+    {
+        $this->cleanup()->clean();
+
+        $url = 'https://www.aljazeera.com/news/2?traffic_source=rss';
+        self::assertSame(['url' => $url, 'url_hash' => self::hashOf($url)], $this->linkRow('staleAndTracked'));
+    }
+
+    public function testALinkWithoutAnAbsoluteUrlIsLeftAsItIs(): void
+    {
+        $this->cleanup()->clean();
+
+        self::assertSame(
+            ['url' => '/news/3?utm_source=x', 'url_hash' => self::hashOf('https://example.com/news/3')],
+            $this->linkRow('relative'),
+        );
     }
 
     private function cleanup(int $batchSize = 2): TrackingUrlCleanup
@@ -157,6 +175,11 @@ final class TrackingUrlCleanupTest extends DbTestCase
                 'https://www.aljazeera.com/news/1?traffic_source=rss',
                 self::hashOf('https://www.aljazeera.com/news/1'),
             ],
+            'staleAndTracked' => [
+                'https://www.aljazeera.com/news/2?traffic_source=rss&utm_source=x',
+                self::hashOf('https://www.aljazeera.com/news/2'),
+            ],
+            'relative' => ['/news/3?utm_source=x', self::hashOf('https://example.com/news/3')],
         ];
         foreach ($links as $name => [$url, $urlHash]) {
             $connection->insert('shared_link', [
