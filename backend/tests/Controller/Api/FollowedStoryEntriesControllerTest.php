@@ -133,12 +133,13 @@ final class FollowedStoryEntriesControllerTest extends ApiTestCase
         $atTheVisit = $this->fixtures->entry($this->reloaded($gamma), 'At the visit', '2031-05-14 10:00:00');
         $joinedLater = $this->fixtures->entry($this->reloaded($delta), 'After the visit', '2031-05-14 08:00:00');
         $this->fixtures->join($this->reloaded($story), '2031-05-14 10:00:00', $atTheVisit);
-        $this->fixtures->join($this->reloaded($story), '2031-05-14 11:00:00', $joinedLater);
+        $newestJoinedLater = $this->fixtures->entry($this->reloaded($delta), 'Newest', '2031-05-14 09:30:00');
+        $this->fixtures->join($this->reloaded($story), '2031-05-14 11:00:00', $joinedLater, $newestJoinedLater);
 
         $page = $this->page($story);
 
         self::assertSame('2031-05-14T10:00:00+00:00', $page['lastOpenedAt']);
-        self::assertSame([$joinedLater->requireId()], $page['newEntryIds']);
+        self::assertSame([$newestJoinedLater->requireId(), $joinedLater->requireId()], $page['newEntryIds']);
     }
 
     public function testACopyJoinedAfterTheVisitMarksItsRowNew(): void
@@ -182,6 +183,24 @@ final class FollowedStoryEntriesControllerTest extends ApiTestCase
             '2031-05-14 11:00:00',
             $this->copyOf($this->reloaded($unfollowed), 'Unseen copy'),
         );
+
+        self::assertSame([], $this->page($story)['newEntryIds']);
+    }
+
+    public function testACopyInAFeedSwitchedOutOfTrendingMarksNothingNew(): void
+    {
+        $reader = $this->signIn($this->client, 'story-list-new-switched-out@example.com');
+        [$alpha, $beta, $gamma] = $this->followedFeeds($reader);
+        $story = $this->fixtures->story(
+            TrendingWindow::Day,
+            '2031-05-14 09:00:00',
+            $this->copyOf($alpha, 'Shown'),
+            $this->fixtures->entry($beta, 'Untouched', '2031-05-14 07:00:00'),
+        );
+        $this->follow($story);
+        $copy = $this->copyOf($this->reloaded($gamma), 'Copy');
+        $this->fixtures->join($this->reloaded($story), '2031-05-14 11:00:00', $copy);
+        $this->switchOutOfTrending($reader, $this->reloaded($gamma));
 
         self::assertSame([], $this->page($story)['newEntryIds']);
     }
@@ -254,7 +273,7 @@ final class FollowedStoryEntriesControllerTest extends ApiTestCase
             TrendingWindow::Day,
             '2031-05-14 09:00:00',
             $starred,
-            $this->fixtures->entry($beta, 'Plain', '2031-05-14 08:00:00'),
+            $this->fixtures->postSharing($beta, 'Sharing', '2031-05-14 08:00:00', 'https://news.example/card'),
         );
         $this->follow($story);
         $this->client->request(
@@ -268,7 +287,10 @@ final class FollowedStoryEntriesControllerTest extends ApiTestCase
         $entries = $this->entries($this->page($story));
 
         self::assertSame([true, false], array_column($entries, 'isFavorite'));
-        self::assertSame([[], []], array_column($entries, 'savedSearches'));
+        self::assertSame([[], ['https://news.example/card']], array_map(
+            static fn (mixed $cards): array => \is_array($cards) ? array_column($cards, 'url') : [],
+            array_column($entries, 'linkCards'),
+        ));
     }
 
     public function testRejectsAnonymous(): void
