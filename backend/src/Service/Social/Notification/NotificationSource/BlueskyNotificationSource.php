@@ -68,7 +68,7 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
             static fn (SocialNotification $row): \DateTimeImmutable => $row->getCreatedAt(),
             $unseen,
         ));
-        $marker = $newest->setTimezone(new \DateTimeZone('UTC'))->format(\DATE_ATOM);
+        $marker = $newest->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.999\Z');
         try {
             BlueskySessions::accepted($this->sessions->actAs($account, self::UPDATE_SEEN, ['seenAt' => $marker]));
         } catch (SocialPostNotFoundException | SocialPostRefusedException $exception) {
