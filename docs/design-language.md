@@ -1745,6 +1745,16 @@ The sidebar is a column of cards on `--surface-0`: the search card (desktop) or 
 
 **Phone.** The drawer is a full-height sheet over the app bar, flush left, `--drawer-shadow` over `--drawer-scrim`. Organise mode swaps the header for "Organise" and **Done**, pinned above the body; once the body leaves the top the head takes `.collapsed` (base-size title, sub-row-height Done). It leaves Saved searches out, and lays every row out as handle (40px) · body · ⋯ · chevron, all 44px. Its tag sheet offers Edit tag, Move up, Move down, the four surface switches (All items, For You, saved searches, Trending) as checks, and Delete tag; the moves reorder within the sibling set the drag uses and disable at its ends.
 
+### Notifications list (#2240)
+
+A network's notifications (`reader/notifications/notification-list`) take the entry list's place in the list pane and borrow its chrome from `theme/_list-chrome.scss`: the floating list header (`floating-header`), the rows' `$header-clear` and `$corner-clear`, the error banner under the header. The list reads only what the server has stored; nothing on it fetches from the network.
+
+- **The header** carries the network's logo and "Notifications", then only Refresh and **Mark all seen** (`done_all`, disabled once nothing is unseen). No order, no unread switch, no mark-read discs.
+- **A row** is `icon-lg` kind glyph · body · side at comfortable density: the avatars, the sentence with the actors in bold, the excerpt, and the receiving account when the network has several. The side holds the narrow time and, while unseen, an 8px `--accent` dot under it. Unseen is the dot alone, never a row tint.
+- **A row is a link** that opens the post or profile on the network, in a new tab.
+- **Hints** sit above the rows as `app-warning-box`, one per problem (a missing scope, a lapsed connection), with a warning glyph in `--warning`, `--fs-sm` text and an accent "Reconnect …" link to Settings → Social.
+- **The foot** is a sentinel while more is stored, then the muted, centred 30-day end line; an empty list says so in the same style instead.
+
 ### Hidden-feed favicon
 
 A feed hidden from All items, For you, saved searches or Trending (#688, #2202) shows it on its favicon, not with a trailing glyph. Settings → Visibility lays every one of these switches, network, tag and feed, out in one matrix. Only the feed's own exclusions mark it: a network-level saved-search exclusion is not repeated on each of the network's rows. It marks the network (Bluesky, Mastodon) head's logo instead, with the same treatment and title (`row.hidden-feed-mark` in `_sidebar-row.scss` styles both). The favicon greys and fades (`--hidden-favicon-opacity`, `grayscale(1)`), and a small eye badge sits on its bottom-right corner:

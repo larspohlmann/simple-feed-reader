@@ -55,6 +55,7 @@ import { EntryDto, SubscriptionTagDto, TagDto } from '../models';
 import { ReaderHeaderComponent } from './header/reader-header.component';
 import { SidebarComponent } from './sidebar/sidebar.component';
 import { EntryListComponent } from '../list/entry-list/entry-list.component';
+import { NotificationListComponent } from '../notifications/notification-list/notification-list.component';
 import { ReaderViewComponent } from '../article/reader-view/reader-view.component';
 import { LinkReaderComponent } from '../article/link-reader/link-reader.component';
 import { LinkArticleSource } from '../article/link-reader/link-article-source.service';
@@ -89,6 +90,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
     ReaderHeaderComponent,
     SidebarComponent,
     EntryListComponent,
+    NotificationListComponent,
     ReaderViewComponent,
     LinkReaderComponent,
     AudioPlayerBarComponent,

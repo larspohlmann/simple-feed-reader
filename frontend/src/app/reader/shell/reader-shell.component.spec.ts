@@ -1997,6 +1997,21 @@ describe('ReaderShellComponent', () => {
     expect(fixture.componentInstance.heading.title()).toBe('For you');
   });
 
+  it('hosts the notification list for a notifications selection', () => {
+    const fixture = boot();
+    qp.next(convertToParamMap({ view: 'notifications', network: 'bluesky' }));
+    fixture.detectChanges();
+    ctrl
+      .expectOne('https://api.test/api/me/notifications?network=bluesky')
+      .flush({ groups: [], nextCursor: null, scopeMissing: [], needsReconnect: [] });
+    fixture.detectChanges();
+
+    const element: HTMLElement = fixture.nativeElement;
+    expect(element.querySelector('app-notification-list')).not.toBeNull();
+    expect(element.querySelector('app-entry-list')).toBeNull();
+    ctrl.expectNone((request) => request.url.startsWith('https://api.test/api/entries'));
+  });
+
   // The For-You badge counts unread picks (#724), so the heading and the tab
   // must label it "unread" too — not "items" — the way All items, a tag and a
   // feed already do. Otherwise the same number is described two ways.

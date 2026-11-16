@@ -1,0 +1,84 @@
+<div class="list-frame lead">
+  <header class="list-header" #listHdr>
+    <app-list-header
+      [selection]="selection()"
+      [title]="title()"
+      [headerLeading]="headerLeading()"
+      [headerActions]="markSeen"
+      [refreshing]="store.loading()"
+      (refresh)="refresh()"
+    />
+  </header>
+
+  @if (store.error(); as problem) {
+    <app-error-banner
+      class="list-error text-scaled"
+      [message]="
+        problem.status === 0
+          ? ('reader.errorOffline' | transloco)
+          : ('reader.errorServer' | transloco: { status: problem.status })
+      "
+      [actionLabel]="'reader.retry' | transloco"
+      [dismissLabel]="'reader.dismiss' | transloco"
+      (action)="store.reload()"
+      (dismiss)="store.dismissError()"
+    />
+  }
+</div>
+
+@let networkName = 'settings.social.' + network() | transloco;
+<div class="rows text-scaled" #rows>
+  @for (key of hintKeys(); track key) {
+    <app-warning-box class="hint">
+      <app-icon class="hint-glyph" name="warning" size="sm" />
+      <span class="hint-text">
+        {{ key | transloco: { network: networkName } }}
+        <a class="reconnect" routerLink="/settings/social">{{
+          'reader.notifications.reconnect' | transloco: { network: networkName }
+        }}</a>
+      </span>
+    </app-warning-box>
+  }
+
+  @if (store.loading() && store.groups().length === 0) {
+    <app-skeleton [label]="'reader.notifications.loading' | transloco" />
+  } @else {
+    @for (group of store.groups(); track group.id) {
+      <app-notification-row [group]="group" [showsAccount]="showsAccount()" />
+    }
+    @if (store.nextCursor() !== null) {
+      <div class="foot" #sentinel></div>
+    } @else if (store.groups().length === 0) {
+      @if (!store.error()) {
+        <p class="empty">{{ 'reader.notifications.empty' | transloco }}</p>
+      }
+    } @else {
+      <p class="end">{{ 'reader.notifications.end' | transloco }}</p>
+    }
+  }
+</div>
+
+<div class="list-frame tail">
+  @if (cornerTrailing(); as trailing) {
+    <div class="corner-cluster" [class.left-handed]="leftHanded()">
+      <div class="end-corner">
+        <ng-container [ngTemplateOutlet]="trailing" />
+      </div>
+    </div>
+  }
+</div>
+
+<ng-template #markSeen>
+  <button
+    appListAction
+    class="mark-seen"
+    type="button"
+    [disabled]="!store.hasUnseen() || store.marking()"
+    (click)="store.markAllSeen()"
+    [attr.aria-label]="'reader.notifications.markAllSeen' | transloco"
+    [attr.title]="'reader.notifications.markAllSeen' | transloco"
+  >
+    <app-icon name="done_all" size="sm" />
+    <span class="txt">{{ 'reader.notifications.markAllSeen' | transloco }}</span>
+  </button>
+</ng-template>

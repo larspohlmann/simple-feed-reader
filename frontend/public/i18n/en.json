@@ -1372,6 +1372,13 @@
     "followedStoryFallback": "Followed story",
     "notifications": {
       "title": "Notifications",
+      "loading": "Loading notifications…",
+      "markAllSeen": "Mark all seen",
+      "end": "That's everything from the last 30 days.",
+      "empty": "No notifications from the last 30 days.",
+      "scopeMissing": "{{network}} needs permission to read your notifications.",
+      "needsReconnect": "{{network}} needs reconnecting before new notifications arrive.",
+      "reconnect": "Reconnect {{network}}",
       "unseen": "Unseen",
       "poll": "A poll you voted in has ended",
       "who": {

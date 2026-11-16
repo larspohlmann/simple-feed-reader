@@ -1376,6 +1376,13 @@
     "followedStoryFallback": "Sujet suivi",
     "notifications": {
       "title": "Notifications",
+      "loading": "Chargement des notifications…",
+      "markAllSeen": "Tout marquer comme vu",
+      "end": "C'est tout pour les 30 derniers jours.",
+      "empty": "Aucune notification ces 30 derniers jours.",
+      "scopeMissing": "{{network}} a besoin d'une autorisation pour lire vos notifications.",
+      "needsReconnect": "{{network}} doit être reconnecté pour recevoir de nouvelles notifications.",
+      "reconnect": "Reconnecter {{network}}",
       "unseen": "Non vue",
       "poll": "Un sondage auquel vous avez participé est terminé",
       "who": {

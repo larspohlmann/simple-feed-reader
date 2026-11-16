@@ -1372,6 +1372,13 @@
     "followedStoryFallback": "Gefolgte Story",
     "notifications": {
       "title": "Benachrichtigungen",
+      "loading": "Benachrichtigungen werden geladen…",
+      "markAllSeen": "Alle als gesehen markieren",
+      "end": "Das ist alles aus den letzten 30 Tagen.",
+      "empty": "Keine Benachrichtigungen aus den letzten 30 Tagen.",
+      "scopeMissing": "{{network}} braucht die Berechtigung, deine Benachrichtigungen zu lesen.",
+      "needsReconnect": "{{network}} muss neu verbunden werden, damit neue Benachrichtigungen ankommen.",
+      "reconnect": "{{network}} neu verbinden",
       "unseen": "Ungesehen",
       "poll": "Eine Umfrage, an der du teilgenommen hast, ist beendet",
       "who": {
