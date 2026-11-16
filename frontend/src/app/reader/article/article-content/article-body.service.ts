@@ -19,6 +19,8 @@ import { withScriptablePlayer } from '../../media/media-embeds';
 import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
 import { EmbedMedia, embedMediaOfFrame } from '../../audio/embed-media';
 import { EmbedTrackOrigin } from '../../audio/embed-track';
+import { SocialNetworkName } from '../../../core/social-network';
+import { OwnInstanceLinks } from '../../own-instance/own-instance-links.service';
 import { ChapterDto } from '../../models';
 import { EmbedDetailsApi } from '../../embed-details-api';
 import { ArticleChapters, apiPlayerFrame, chapterFrames } from './article-chapters';
@@ -41,6 +43,7 @@ export interface ArticleBodyParts {
   readonly content: Signal<ElementRef<HTMLElement> | undefined>;
   readonly html: Signal<string>;
   readonly pageUrl: () => string | null;
+  readonly network: () => SocialNetworkName | null;
   readonly enclosureUrl: () => string | null;
   readonly chapters: () => ChapterDto[];
   readonly audioTrack: () => AudioTrack | null;
@@ -54,6 +57,7 @@ export class ArticleBody {
   private readonly zone = inject(NgZone);
   private readonly media = new HandPlayedMedia(inject(ListAutoplayCoordinator));
   private readonly audio = inject(AudioPlayerService);
+  private readonly links = inject(OwnInstanceLinks);
   private readonly islands = new ArticleIslands(this.injector);
   private readonly unplayableVideos = new ArticleUnplayableVideos(
     this.islands,
@@ -139,6 +143,7 @@ export class ArticleBody {
     const track = parts.audioTrack();
     decorateArticle(host, {
       enclosureUrl: parts.enclosureUrl(),
+      mastodonInstance: parts.network() === 'mastodon' ? this.links.instance() : null,
       embedSource: (url) => withScriptablePlayer(url, window.location.origin),
     });
     const listen = this.embedAudio.actions({

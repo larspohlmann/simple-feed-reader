@@ -9,16 +9,19 @@ import { expandFaqDisclosures } from './reader-faq';
 import { removeEnclosurePlayers } from './enclosure-players';
 import { wrapCinemaBoxes } from './reader-cinema';
 import { linkBareUrls } from './bare-url-links';
+import { openMastodonLinksOnOwnInstance } from './own-instance-body-links';
 
 /** What one render's decorations depend on beyond the body itself. */
 export interface ArticleDecorations {
   enclosureUrl: string | null;
+  mastodonInstance: string | null;
   embedSource?: EmbedSourceOf;
 }
 
 /** Every decoration the rendered article body gets, in order. */
 export function decorateArticle(host: HTMLElement, decorations: ArticleDecorations): void {
   linkBareUrls(host);
+  openMastodonLinksOnOwnInstance(host, decorations.mastodonInstance);
   openExternalLinksInNewTab(host);
   removeEnclosurePlayers(host, decorations.enclosureUrl);
   markLeadParagraph(host);

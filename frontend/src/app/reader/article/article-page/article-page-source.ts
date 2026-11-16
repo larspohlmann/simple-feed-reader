@@ -1,11 +1,13 @@
 import { InjectionToken, Signal } from '@angular/core';
 import { AudioTrack } from '../../audio-player.service';
 import { EmbedTrackOrigin } from '../../audio/embed-track';
+import { SocialNetworkName } from '../../../core/social-network';
 import { ChapterDto, HeroImageDto } from '../../models';
 
 export interface ArticlePageBody {
   readonly html: string;
   readonly pageUrl: string | null;
+  readonly network: SocialNetworkName | null;
 }
 
 export interface ArticlePageBodyAudio {

@@ -5,7 +5,9 @@ import { decorateArticle } from './decorate-article';
 jest.mock('hls.js', () => jest.requireActual('../../../../testing/hls-testing').fakeHlsModule);
 
 const decorated = (html: string): HTMLElement =>
-  articleHost(html, (host) => decorateArticle(host, { enclosureUrl: null }));
+  articleHost(html, (host) =>
+    decorateArticle(host, { enclosureUrl: null, mastodonInstance: null }),
+  );
 
 const YOUTUBE_LINK = '<a href="https://www.youtube-nocookie.com/embed/GhUuOxrCato">x</a>';
 
@@ -20,6 +22,14 @@ describe('decorateArticle', () => {
     expect(link.getAttribute('href')).toBe('https://soundcloud.com/radiozora');
     expect(link.target).toBe('_blank');
     expect(link.rel).toBe('noopener noreferrer');
+  });
+
+  it('opens a hashtag on the Mastodon instance it is given', () => {
+    const host = articleHost('<a href="https://mastodon.social/tags/rust">#rust</a>', (element) =>
+      decorateArticle(element, { enclosureUrl: null, mastodonInstance: 'https://home.example' }),
+    );
+
+    expect(host.querySelector('a')!.getAttribute('href')).toBe('https://home.example/tags/rust');
   });
 
   it('puts the landscape embed the media step builds from a link inside a cinema box', () => {
@@ -51,7 +61,7 @@ describe('decorateArticle', () => {
   it('streams a playlist video through hls.js once the cinema box has wrapped it', async () => {
     resetFakeHls();
     const host = attachedArticleHost('<video src="https://x.test/master.m3u8"></video>');
-    decorateArticle(host, { enclosureUrl: null });
+    decorateArticle(host, { enclosureUrl: null, mastodonInstance: null });
     const video = host.querySelector<HTMLVideoElement>('.reader-cinema video')!;
 
     await firstPlay(video);

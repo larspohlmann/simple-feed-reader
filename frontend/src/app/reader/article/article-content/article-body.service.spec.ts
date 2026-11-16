@@ -26,6 +26,7 @@ import { TrackDetails, chaptersOnly } from '../../audio/audio-track';
 import { EmbedDetailsApi } from '../../embed-details-api';
 import { EmbedMedia } from '../../audio/embed-media';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
+import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 
 jest.mock('hls.js', () => jest.requireActual('../../../../testing/hls-testing').fakeHlsModule);
 
@@ -89,6 +90,7 @@ describe('ArticleBody', () => {
       content: signal(new ElementRef(content)),
       html,
       pageUrl: () => 'https://news.test/story',
+      network: () => null,
       enclosureUrl: () => null,
       chapters,
       audioTrack,
@@ -129,6 +131,7 @@ describe('ArticleBody', () => {
       imports: [provideTranslocoTesting()],
       providers: [
         provideAccountIdentity(),
+        provideSocialAccounts(),
         { provide: ImageProxyService, useValue: imageProxy },
         { provide: EmbedDetailsApi, useValue: { detailsOf: embedDetails } },
       ],
