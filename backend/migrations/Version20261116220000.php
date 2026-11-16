@@ -10,7 +10,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /** An entry flagged in two stories of one window keeps the lower story id: the new key allows only one. */
-final class Version20261116200000 extends AbstractMigration
+final class Version20261116220000 extends AbstractMigration
 {
     private const array FLAG_BY_WINDOW = ['day' => 'in_day', 'week' => 'in_week'];
     private const string PLACEMENTS_FROM_FLAGS = 'INSERT INTO trending_story_placement (time_window, entry_id, story_id)'
