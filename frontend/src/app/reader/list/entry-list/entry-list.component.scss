@@ -1,14 +1,8 @@
 @use '../../../theme/breakpoints' as bp;
 @use '../../../theme/corner-circle-button' as circle;
 @use '../../../theme/glass-rim';
+@use '../../../theme/list-chrome';
 @use '../../../theme/page-chrome';
-
-$header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
-
-/* Tail room so the last row can scroll up clear of the corner buttons and the audio bar. */
-$corner-clear: calc(
-  3 * (var(--space-5) + var(--corner-button-size) + var(--space-3)) + var(--audio-bar-h, 0rem)
-);
 
 :host {
   display: block;
@@ -37,42 +31,8 @@ $corner-clear: calc(
   pointer-events: auto;
 }
 
-/* Floats over the rows, which reserve its expanded height: collapsing it moves no row (#87). */
 .list-header {
-  position: absolute;
-  top: var(--app-bar-h, var(--bar-h));
-  left: 0;
-  right: 0;
-  z-index: 3;
-
-  /* Travels with the app bar. It hangs directly beneath it, so if it stayed put
-     while the bar retracted it would float over a strip of nothing. Only this
-     bar moves — the rows below are untouched. */
-  transform: translateY(var(--app-bar-shift, 0));
-  transition: transform 0.4s ease;
-
-  /* The solid colour is the fallback where backdrop-filter is unsupported. */
-  background: var(--surface-0);
-  background: color-mix(in srgb, var(--surface-0) 80%, transparent);
-  backdrop-filter: blur(12px) saturate(1.4);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--border);
-  container: list-header / inline-size;
-
-  /* Deliberately NOT animated: the rows' reservation follows this bar's measured
-     height, and an animating box reports every intermediate value (#87). */
-}
-
-@media (width >= bp.$bp-lg) {
-  .list-header {
-    min-block-size: var(--bar-h);
-    padding-block: 0;
-  }
+  @include list-chrome.floating-header;
 }
 
 /* Narrow layout: scrolled down, the header collapses to a slim bar; the
@@ -140,8 +100,8 @@ $corner-clear: calc(
   /* Reserves both floating bars, constant: tracks neither the app bar's hidden
      state nor this list's collapsed one, so the rows never move (#87). They
      pass behind the bars instead, which is the point of retracting them. */
-  padding-top: $header-clear;
-  padding-bottom: $corner-clear;
+  padding-top: list-chrome.$header-clear;
+  padding-bottom: list-chrome.$corner-clear;
 }
 
 .rows.dragging {
@@ -244,8 +204,8 @@ app-progress-rail {
   --magazine-gap: var(--space-3);
 
   padding: var(--space-3);
-  padding-top: $header-clear;
-  padding-bottom: $corner-clear;
+  padding-top: list-chrome.$header-clear;
+  padding-bottom: list-chrome.$corner-clear;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -360,7 +320,7 @@ app-progress-rail {
    reservation lives here, not on `.empty`, so a projected topBlock sits
    inside it instead of the message growing an extra gap above. */
 .empty-wrap {
-  padding-top: calc(#{$header-clear} + var(--space-6));
+  padding-top: calc(#{list-chrome.$header-clear} + var(--space-6));
 }
 
 /* Overlays the top of the content, just below the floating header, instead of
@@ -369,7 +329,7 @@ app-progress-rail {
    (#996 — the old flow banner handed the reservation back and forth, #321). */
 .list-error {
   position: absolute;
-  top: $header-clear;
+  top: list-chrome.$header-clear;
   left: var(--space-4);
   right: var(--space-4);
   z-index: 2;
@@ -388,7 +348,7 @@ app-progress-rail {
    header so the bar stays readable while it is up, and so "centred" means
    centred in the rows the reader is looking at rather than in the whole host. */
 app-loading-overlay {
-  --loading-overlay-inset: #{$header-clear} 0 0;
+  --loading-overlay-inset: #{list-chrome.$header-clear} 0 0;
 }
 
 .foot {

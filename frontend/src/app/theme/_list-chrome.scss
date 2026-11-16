@@ -1,0 +1,45 @@
+@use 'breakpoints' as bp;
+
+// What a list's rows reserve above them: the app bar, the floating list header, and the gap.
+$header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
+
+// Tail room so the last row can scroll up clear of the corner buttons and the audio bar.
+$corner-clear: calc(
+  3 * (var(--space-5) + var(--corner-button-size) + var(--space-3)) + var(--audio-bar-h, 0rem)
+);
+
+// The list header floating over the rows, which reserve its expanded height: collapsing it moves no row (#87).
+@mixin floating-header {
+  position: absolute;
+  top: var(--app-bar-h, var(--bar-h));
+  left: 0;
+  right: 0;
+  z-index: 3;
+
+  /* Travels with the app bar. It hangs directly beneath it, so if it stayed put
+     while the bar retracted it would float over a strip of nothing. Only this
+     bar moves — the rows below are untouched. */
+  transform: translateY(var(--app-bar-shift, 0));
+  transition: transform 0.4s ease;
+
+  /* The solid colour is the fallback where backdrop-filter is unsupported. */
+  background: var(--surface-0);
+  background: color-mix(in srgb, var(--surface-0) 80%, transparent);
+  backdrop-filter: blur(12px) saturate(1.4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  container: list-header / inline-size;
+
+  /* Deliberately NOT animated: the rows' reservation follows this bar's measured
+     height, and an animating box reports every intermediate value (#87). */
+
+  @media (width >= bp.$bp-lg) {
+    min-block-size: var(--bar-h);
+    padding-block: 0;
+  }
+}
