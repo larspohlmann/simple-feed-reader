@@ -159,6 +159,19 @@ final class StoryMatchingTest extends TestCase
         self::assertSame([], $match->merges);
     }
 
+    public function testAStoredStoryBelowTheThresholdIsNotMerged(): void
+    {
+        $match = $this->matching()->match(
+            [self::group(1, 2, 3, 4, 5)],
+            [new StoredStoryModel(7, [1, 2, 3]), new StoredStoryModel(9, [4, 8, 9, 10])],
+            TrendingWindow::Week,
+        );
+
+        self::assertSame(7, $match->assignments[0]->storyId);
+        self::assertSame([], $match->merges);
+        self::assertSame([4, 5], self::entryIds($match->assignments[0]->joining()));
+    }
+
     public function testTiesGoToTheStoryWithMoreInWindowMembersThenTheOlderId(): void
     {
         $sameSize = $this->matching()->match(

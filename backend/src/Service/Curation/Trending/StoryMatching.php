@@ -140,7 +140,7 @@ final readonly class StoryMatching
         $taken = array_flip($storyOfGroup);
         $merges = [];
         foreach ($candidates as $candidate) {
-            if (isset($taken[$candidate['story']]) || !isset($storyOfGroup[$candidate['group']])) {
+            if (isset($taken[$candidate['story']])) {
                 continue;
             }
             $taken[$candidate['story']] = true;
