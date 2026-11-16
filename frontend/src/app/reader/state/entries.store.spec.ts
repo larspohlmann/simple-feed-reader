@@ -1508,121 +1508,104 @@ describe('EntriesStore', () => {
     const storyUrl = 'https://api.test/api/entries/trending-stories/42';
     const openedUrl = 'https://api.test/api/trending/stories/42/opened';
     const noContent = { status: 204, statusText: 'No Content' };
-    const storyPage = (ids: number[], newEntryIds: number[], nextCursor: string | null = null) => ({
-      entries: ids.map((id) => entry(id)),
+    const lastOpenedAt = '2026-11-16T08:00:00+00:00';
+    const before = '2026-11-16T07:00:00+00:00';
+    const since = '2026-11-16T09:00:00+00:00';
+    const member = (id: number, joinedAt: string) => entry(id, { joinedAt });
+    const storyPage = (
+      entries: EntryDto[],
+      nextCursor: string | null = null,
+      openedAt: string = lastOpenedAt,
+    ) => ({
+      entries,
       nextCursor,
-      lastOpenedAt: '2026-11-16T08:00:00+00:00',
-      newEntryIds,
+      lastOpenedAt: openedAt,
+      newEntryIds: entries.filter((row) => (row.joinedAt ?? '') > openedAt).map((row) => row.id),
     });
     const storyRequest = () => ctrl.expectOne((request) => request.url === storyUrl);
     const openStory = () => {
       store.load({ view: 'all', followedStoryId: 42 });
-      storyRequest().flush(storyPage([1, 2, 3], [1, 2], 'C1'));
+      storyRequest().flush(
+        storyPage([member(1, since), member(2, since), member(3, before)], 'C1'),
+      );
+    };
+    const showAnotherList = () => {
+      store.load({ view: 'all' });
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({ entries: [entry(1)], nextCursor: null });
     };
     const newIds = () => [...store.newSinceVisitIds()].sort();
 
-    it('marks what joined since the last visit and records the visit once', () => {
+    it('marks what joined since the last visit', () => {
       openStory();
 
       expect(newIds()).toEqual([1, 2]);
-      const opened = ctrl.match(openedUrl);
-      expect(opened.map((request) => request.request.method)).toEqual(['POST']);
-      opened[0].flush(null, noContent);
+      ctrl.expectOne(openedUrl).flush(null, noContent);
     });
 
     it('records nothing before the first page has landed', () => {
       store.load({ view: 'all', followedStoryId: 42 });
 
       ctrl.expectNone(openedUrl);
-      storyRequest().flush(storyPage([1], []));
+      storyRequest().flush(storyPage([member(1, before)]));
       ctrl.expectOne(openedUrl).flush(null, noContent);
     });
 
-    it('leaves the marks alone and records nothing on the next page', () => {
+    it('records the visit once per story visit', () => {
       openStory();
-      ctrl.expectOne(openedUrl).flush(null, noContent);
+      const opened = ctrl.match(openedUrl);
+      expect(opened.map((request) => request.request.method)).toEqual(['POST']);
+      opened[0].flush(null, noContent);
 
       store.loadMore();
-      storyRequest().flush(storyPage([4], [4]));
+      storyRequest().flush(storyPage([member(4, before)]));
+      store.reload();
+      storyRequest().flush(storyPage([member(1, since)], null, since));
 
-      expect(newIds()).toEqual([1, 2]);
       ctrl.expectNone(openedUrl);
     });
 
-    it('keeps its marks and records no second visit when the same story loads again', () => {
+    it('marks the rows of a later page that joined since the visit began', () => {
+      store.load({ view: 'all', followedStoryId: 42 });
+      storyRequest().flush(storyPage([member(1, since), member(2, since), member(3, since)], 'C1'));
+      ctrl.expectOne(openedUrl).flush(null, noContent);
+
+      store.loadMore();
+      storyRequest().flush(storyPage([member(4, since), member(5, before)]));
+
+      expect(newIds()).toEqual([1, 2, 3, 4]);
+    });
+
+    it("keeps the visit's marks across a reload whose lastOpenedAt has moved", () => {
       openStory();
       ctrl.expectOne(openedUrl).flush(null, noContent);
 
       store.reload();
-      storyRequest().flush(storyPage([9, 1, 2, 3], [9]));
+      const joinedDuringTheVisit = '2026-11-16T11:00:00+00:00';
+      storyRequest().flush(
+        storyPage(
+          [member(9, joinedDuringTheVisit), member(1, since), member(2, since), member(3, before)],
+          'C1',
+          '2026-11-16T10:00:00+00:00',
+        ),
+      );
 
       expect(newIds()).toEqual([1, 2, 9]);
       ctrl.expectNone(openedUrl);
     });
 
-    it('clears the marks on another list, and records a new visit on coming back', () => {
+    it('ends the visit when another list lands', () => {
       openStory();
       ctrl.expectOne(openedUrl).flush(null, noContent);
 
-      store.load({ view: 'all' });
-      ctrl
-        .expectOne((request) => request.url === 'https://api.test/api/entries')
-        .flush({ entries: [entry(1)], nextCursor: null });
+      showAnotherList();
       expect(newIds()).toEqual([]);
 
-      openStory();
+      store.load({ view: 'all', followedStoryId: 42 });
+      storyRequest().flush(storyPage([member(1, since), member(2, before)], null, since));
+      expect(newIds()).toEqual([]);
       ctrl.expectOne(openedUrl).flush(null, noContent);
-    });
-
-    describe('when the first page holds only new rows and more follow', () => {
-      const openLongStory = () => {
-        store.load({ view: 'all', followedStoryId: 42 });
-        storyRequest().flush(storyPage([1, 2, 3], [1, 2, 3], 'C1'));
-        ctrl.expectOne(openedUrl).flush(null, noContent);
-      };
-
-      it('marks nothing, since where the new rows end is unknown', () => {
-        openLongStory();
-
-        expect(newIds()).toEqual([]);
-      });
-
-      it('marks nothing once the next page brings earlier rows', () => {
-        openLongStory();
-
-        store.loadMore();
-        storyRequest().flush(storyPage([4, 5], []));
-
-        expect(newIds()).toEqual([]);
-      });
-
-      it('marks nothing when the story reloads with rows that joined since', () => {
-        openLongStory();
-
-        store.reload();
-        storyRequest().flush(storyPage([9, 1, 2, 3], [9], 'C1'));
-
-        expect(newIds()).toEqual([]);
-      });
-
-      it('marks again on the next visit', () => {
-        openLongStory();
-        store.load({ view: 'all' });
-        ctrl
-          .expectOne((request) => request.url === 'https://api.test/api/entries')
-          .flush({ entries: [entry(1)], nextCursor: null });
-
-        openStory();
-
-        expect(newIds()).toEqual([1, 2]);
-      });
-    });
-
-    it('marks the new rows of a first page that ends among earlier ones, more pages or not', () => {
-      openStory();
-
-      expect(store.nextCursor()).toBe('C1');
-      expect(newIds()).toEqual([1, 2]);
     });
 
     it('marks nothing and records no visit for a story no longer followed', () => {

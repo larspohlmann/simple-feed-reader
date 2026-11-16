@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http;
 
+use App\Repository\EntryListRow;
 use App\Repository\EntryListSort;
 use App\Service\Curation\Trending\Model\FollowedStoryEntriesModel;
 
-/** The `{entries, nextCursor, lastOpenedAt, newEntryIds}` shape of a followed story's entry list. */
+/** The `{entries, nextCursor, lastOpenedAt, newEntryIds}` shape of a followed story's list; each entry adds `joinedAt`. */
 final readonly class FollowedStoryPage
 {
     public function __construct(
@@ -25,9 +26,18 @@ final readonly class FollowedStoryPage
      */
     public function of(FollowedStoryEntriesModel $result, int $limit): array
     {
-        return $this->entryPage->of($result->rows, $limit, EntryListSort::PublishedDate) + [
+        $page = $this->entryPage->of($result->rows, $limit, EntryListSort::PublishedDate);
+        $page['entries'] = array_map(
+            static fn (array $entry, EntryListRow $row): array => $entry + [
+                'joinedAt' => $result->joinedAtByEntry[$row->entry->requireId()]->format(\DateTimeInterface::ATOM),
+            ],
+            $page['entries'],
+            $result->rows,
+        );
+
+        return $page + [
             'lastOpenedAt' => $result->lastOpenedAt->format(\DateTimeInterface::ATOM),
-            'newEntryIds' => $result->newEntryIds,
+            'newEntryIds' => $result->newEntryIds(),
         ];
     }
 }

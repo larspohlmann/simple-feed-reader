@@ -26,9 +26,4 @@ final readonly class EntryListPage
     {
         return EntryListOrdering::byPublishedDate($this->order);
     }
-
-    public function isFirstPage(): bool
-    {
-        return $this->cursor === null;
-    }
 }

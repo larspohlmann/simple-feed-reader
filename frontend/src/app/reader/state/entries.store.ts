@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Injectable, inject } from '@angular/core';
+import { Injectable, computed, inject } from '@angular/core';
 import { Observable, Subscription, finalize, tap } from 'rxjs';
 import { Problem, parseProblem } from '../../core/problem';
 import { accountSignal, onIdentityChange } from '../../core/auth/session-identity';
@@ -48,8 +48,8 @@ export class EntriesStore {
   private readonly searchMatches = new MatchedWords();
   readonly matchedWords = this.searchMatches.words;
   private readonly storyVisit = new StoryVisit();
-  /** On a followed Trending story, the first page's rows that joined since the last visit (#2128). */
-  readonly newSinceVisitIds = this.storyVisit.newSinceVisitIds;
+  /** On a followed Trending story, the loaded rows that joined since the visit began (#2128). */
+  readonly newSinceVisitIds = computed(() => this.storyVisit.newAmong(this.rawEntries()));
 
   private readonly query = accountSignal<EntryQuery | null>(null);
   /** The list request on the wire, cancelled once a newer load or another account supersedes it: a stale
@@ -75,7 +75,6 @@ export class EntriesStore {
     this.failure.clear();
     this.loadedAt.set(new Date().toISOString());
     this.listRequest?.unsubscribe();
-    this.storyVisit.starting(query);
     this.listRequest = this.api.entries(query).subscribe({
       next: (page) => {
         this.rawEntries.set(this.inFlight.overlayAll(page.entries));
@@ -89,7 +88,6 @@ export class EntriesStore {
         // turn interactive again while belonging to a view the user has left.
         this.rawEntries.set([]);
         this.searchMatches.clear();
-        this.storyVisit.failed();
         this.failure.report(error, () => this.load(query));
         this.loading.set(false);
       },
