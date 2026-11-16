@@ -1,10 +1,33 @@
+@use '../../../theme/breakpoints' as bp;
+
 /* Its spans join the host line directly: flex items beside the magazine kicker's, inline text in a list row. */
 :host {
   display: contents;
 }
 
 .sources,
+.compact,
 .separator {
   flex: none;
   white-space: nowrap;
+}
+
+.compact {
+  display: none;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* The kicker is the only container around these (#2271): a split card's narrow
+   text column cannot hold the words in any language, so it shows the glyphs and
+   keeps the words for screen readers. A list row has no container and keeps the words. */
+@container (width < #{bp.$container-kicker-narrow}) {
+  .sources {
+    position: absolute;
+    clip-path: inset(50%);
+  }
+
+  .compact {
+    display: inline-flex;
+  }
 }
