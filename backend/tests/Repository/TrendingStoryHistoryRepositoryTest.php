@@ -272,7 +272,7 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
         );
     }
 
-    public function testAStoredStoryPlacesItsStayingMembersAndJoinsTheNewOnesAtTheBuild(): void
+    public function testAStoredStoryPlacesItsStayingMembersAndJoinsTheOthers(): void
     {
         [$one, $two, $three] = $this->entries(3);
         $story = $this->fixtures->storyOfSites(
@@ -297,7 +297,7 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
             [
                 [$story->requireId(), $one->requireId(), '2031-05-14 10:00:00', 1, 0],
                 [$story->requireId(), $two->requireId(), '2031-05-14 10:00:00', 1, 0],
-                [$story->requireId(), $three->requireId(), self::BUILT_AT, 1, 0],
+                [$story->requireId(), $three->requireId(), '2031-05-14 10:00:00', 1, 0],
                 [$bystander->requireId(), $three->requireId(), '2031-05-14 10:00:00', 0, 0],
             ],
             $this->members(),
@@ -310,6 +310,35 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
         self::assertSame(
             ['first_joined_at' => '2031-05-14 10:00:00', 'last_joined_at' => '2031-05-14 10:00:00'],
             $this->joinTimes($bystander),
+        );
+    }
+
+    public function testAnEntryJoiningASecondStoryKeepsItsEarliestJoin(): void
+    {
+        [$one, $regrouped, $fresh] = $this->entries(3);
+        $story = $this->fixtures->story(TrendingWindow::Day, '2031-05-14 10:00:00', $one);
+        $later = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 11:00:00', $regrouped);
+        $earlier = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 09:00:00', $regrouped);
+        $this->clearPlacements();
+
+        $this->history()->save(
+            new StoryAssignmentModel(
+                $this->group([$one->requireId(), $regrouped->requireId(), $fresh->requireId()]),
+                $story->requireId(),
+                [$one->requireId()],
+            ),
+            self::build(TrendingWindow::Day),
+        );
+
+        self::assertEquals(
+            [
+                [$story->requireId(), $one->requireId(), '2031-05-14 10:00:00', 0, 0],
+                [$story->requireId(), $regrouped->requireId(), '2031-05-14 09:00:00', 0, 0],
+                [$story->requireId(), $fresh->requireId(), self::BUILT_AT, 0, 0],
+                [$later->requireId(), $regrouped->requireId(), '2031-05-14 11:00:00', 0, 0],
+                [$earlier->requireId(), $regrouped->requireId(), '2031-05-14 09:00:00', 0, 0],
+            ],
+            $this->members(),
         );
     }
 
@@ -380,7 +409,7 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
         self::assertEquals(
             [
                 [$story->requireId(), $one->requireId(), '2031-05-14 10:00:00', 0, 1],
-                [$story->requireId(), $two->requireId(), self::BUILT_AT, 0, 1],
+                [$story->requireId(), $two->requireId(), '2031-05-14 09:00:00', 0, 1],
                 [$holder->requireId(), $two->requireId(), '2031-05-14 09:00:00', 1, 0],
             ],
             $this->members(),

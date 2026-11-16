@@ -8,13 +8,20 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\TrendingSnapshot;
 use App\Entity\TrendingStory;
+use App\Entity\TrendingStoryFollow;
 use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
 use App\Repository\TrendingEntryRepository;
 use App\Repository\TrendingPlacementSql;
+use App\Repository\TrendingStoryFollowRepository;
 use App\Repository\TrendingStoryHistoryRepository;
 use App\Repository\TrendingStoryRepository;
+use App\Service\Curation\Trending\Model\FollowedStoryRowModel;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
+use App\Service\Curation\Trending\Model\StoryAssignmentModel;
+use App\Service\Curation\Trending\Model\StoryBuildModel;
+use App\Service\Curation\Trending\Model\StoryMemberModel;
+use App\Service\Curation\Trending\Model\TrendingStoryModel;
 use App\Service\Curation\Trending\ReaderWindows;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Curation\Trending\SnapshotBuilder\TrendingSnapshotBuilder;
@@ -441,6 +448,38 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         self::assertSame(array_fill_keys(array_keys($joinedAt), '2031-05-14 11:00:00'), $joinedAt);
     }
 
+    public function testAnEntryTheWeekClaimsAndTheDayReattachesIsNotNewAgain(): void
+    {
+        [$strike, $feeds] = $this->hafenstreikEntries();
+        $reader = $this->fixtures->reader('regrouped@example.com');
+        $this->fixtures->subscribe($reader, ...$feeds);
+        $this->fixtures->flush();
+        $this->builder()->build(TrendingWindow::Day);
+        [$dayStoryId] = $this->storyIds();
+        $dayStory = $this->entityManager->find(TrendingStory::class, $dayStoryId);
+        self::assertInstanceOf(TrendingStory::class, $dayStory);
+        $this->fixtures->follow($reader, $dayStory, self::NOW);
+        $this->clock->modify('+1 hour');
+        $this->weekClaims($strike[0], ...$this->volcanoEntries());
+        self::assertNotContains($strike[0]->requireId(), $this->memberIdsOf($dayStoryId));
+        $this->clock->modify('+1 hour');
+
+        $this->builder()->build(TrendingWindow::Day);
+
+        self::assertContains($strike[0]->requireId(), $this->memberIdsOf($dayStoryId));
+        self::assertSame(
+            [self::NOW],
+            $this->entityManager->getConnection()->fetchFirstColumn(
+                'SELECT joined_at FROM trending_story_entry WHERE story_id = ? AND entry_id = ?',
+                [$dayStoryId, $strike[0]->requireId()],
+            ),
+        );
+        self::assertSame([0], array_map(
+            static fn (FollowedStoryRowModel $row): int => $row->newCount,
+            $this->follows()->followedBy($reader->requireId()),
+        ));
+    }
+
     public function testSeedStoriesOfBothWindowsConvergeOnTheFirstWeekBuild(): void
     {
         [$entries] = $this->hafenstreikEntries();
@@ -567,6 +606,57 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
             $entityManager,
             new NaiveUtcClock($this->clock),
             $this->locks,
+        );
+    }
+
+    /** A week save whose group, the week story of $weekMembers, takes $claimed from the story holding it. */
+    private function weekClaims(Entry $claimed, Entry ...$weekMembers): void
+    {
+        $weekStory = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 11:00:00', ...$weekMembers);
+        $weekMembers = array_values($weekMembers);
+        $entries = [$claimed, ...$weekMembers];
+        $builtAt = new \DateTimeImmutable($this->clock->now()->format('Y-m-d H:i:s'), new \DateTimeZone('UTC'));
+        $history = new TrendingStoryHistoryRepository($this->entityManager);
+        $storyId = $history->save(
+            new StoryAssignmentModel(
+                new TrendingStoryModel(
+                    array_map(
+                        static fn (Entry $entry): StoryMemberModel => new StoryMemberModel(
+                            $entry->requireId(),
+                            $entry->getFeed()->requireId(),
+                            null,
+                        ),
+                        $entries,
+                    ),
+                    $claimed->getEffectiveDate(),
+                    $builtAt,
+                ),
+                $weekStory->requireId(),
+                array_map(static fn (Entry $entry): int => $entry->requireId(), $weekMembers),
+                [$claimed->requireId()],
+            ),
+            new StoryBuildModel(TrendingWindow::Week, TrendingWindow::Week->startBefore($builtAt), $builtAt),
+        );
+        $history->place(
+            TrendingWindow::Week,
+            array_fill_keys(array_map(static fn (Entry $entry): int => $entry->requireId(), $entries), $storyId),
+        );
+    }
+
+    private function follows(): TrendingStoryFollowRepository
+    {
+        $follows = $this->entityManager->getRepository(TrendingStoryFollow::class);
+        self::assertInstanceOf(TrendingStoryFollowRepository::class, $follows);
+
+        return $follows;
+    }
+
+    /** @return list<int> */
+    private function memberIdsOf(int $storyId): array
+    {
+        return $this->intColumn(
+            'SELECT entry_id FROM trending_story_entry WHERE story_id = ? ORDER BY entry_id',
+            [$storyId],
         );
     }
 

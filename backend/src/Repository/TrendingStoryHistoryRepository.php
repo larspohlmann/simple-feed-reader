@@ -288,10 +288,15 @@ final readonly class TrendingStoryHistoryRepository
         );
     }
 
-    /** @param list<StoryMemberModel> $members */
+    /**
+     * A member another story already holds keeps its earliest join, so regrouping never makes it new again.
+     *
+     * @param list<StoryMemberModel> $members
+     */
     private function insertMembers(int $storyId, array $members, \DateTimeImmutable $builtAt): void
     {
         $joinedAt = self::stored($builtAt);
+        $earliestJoins = $this->earliestJoinsOf($members);
         BulkInsert::into(self::INSERT_MEMBERS, self::INSERT_ROWS)->rows(
             $this->connection(),
             array_map(
@@ -301,11 +306,31 @@ final readonly class TrendingStoryHistoryRepository
                     $member->feedId,
                     $member->articleSite === null ? null : mb_substr($member->articleSite, 0, self::SITE_LENGTH),
                     $member->sharedLinkId,
-                    $joinedAt,
+                    $earliestJoins[$member->entryId] ?? $joinedAt,
                 ],
                 $members,
             ),
         );
+    }
+
+    /**
+     * @param list<StoryMemberModel> $members
+     *
+     * @return array<int, string> the earliest join by entry id, of the members any story holds
+     */
+    private function earliestJoinsOf(array $members): array
+    {
+        if ($members === []) {
+            return [];
+        }
+        $entryIds = array_map(static fn (StoryMemberModel $member): int => $member->entryId, $members);
+        /** @var array<int, string> $earliestJoins */
+        $earliestJoins = $this->connection()->fetchAllKeyValue(
+            'SELECT entry_id, MIN(joined_at) FROM trending_story_entry WHERE entry_id IN ('
+            . self::idList($entryIds) . ') GROUP BY entry_id',
+        );
+
+        return $earliestJoins;
     }
 
     private function connection(): Connection
