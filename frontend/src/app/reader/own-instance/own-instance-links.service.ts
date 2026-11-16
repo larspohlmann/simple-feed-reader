@@ -12,7 +12,11 @@ export class OwnInstanceLinks {
     return account === undefined ? null : instanceOrigin(account.serviceUrl);
   });
 
+  instanceFor(network: SocialNetworkName | null): string | null {
+    return network === 'mastodon' ? this.instance() : null;
+  }
+
   open(address: string, network: SocialNetworkName | null): string {
-    return network === 'mastodon' ? ownInstancePostUrl(address, this.instance()) : address;
+    return ownInstancePostUrl(address, this.instanceFor(network));
   }
 }

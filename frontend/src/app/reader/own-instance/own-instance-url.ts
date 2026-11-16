@@ -1,12 +1,16 @@
+import { parseUrl } from '../../shared/url-host';
+
 const MENTION_PATH = /^\/(?:@[^/]+|users\/[^/]+)$/;
 const HASHTAG_PATH = /^\/tags\/[^/]+$/;
 
 function parseHttpUrl(value: string): URL | null {
-  if (!URL.canParse(value)) {
-    return null;
-  }
-  const parsed = new URL(value);
-  return /^https?:$/.test(parsed.protocol) ? parsed : null;
+  const parsed = parseUrl(value);
+  return parsed !== null && /^https?:$/.test(parsed.protocol) ? parsed : null;
+}
+
+function foreignTarget(address: string, instance: string | null): URL | null {
+  const target = parseHttpUrl(address);
+  return instance === null || target === null || target.origin === instance ? null : target;
 }
 
 function authorizeInteraction(instance: string, address: string): string {
@@ -18,16 +22,14 @@ export function instanceOrigin(serviceUrl: string): string | null {
 }
 
 export function ownInstancePostUrl(address: string, instance: string | null): string {
-  const target = parseHttpUrl(address);
-  if (instance === null || target === null || target.origin === instance) {
-    return address;
-  }
-  return authorizeInteraction(instance, address);
+  return instance !== null && foreignTarget(address, instance) !== null
+    ? authorizeInteraction(instance, address)
+    : address;
 }
 
 export function ownInstanceBodyUrl(href: string, text: string, instance: string | null): string {
-  const target = parseHttpUrl(href);
-  if (instance === null || target === null || target.origin === instance) {
+  const target = foreignTarget(href, instance);
+  if (instance === null || target === null) {
     return href;
   }
   if (text.startsWith('#') && HASHTAG_PATH.test(target.pathname)) {
