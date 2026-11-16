@@ -15,7 +15,7 @@ final readonly class StopWordVote
     private const int MIN_WORD_LENGTH = 2;
 
     /** A link, a mention or a hashtag is no running text in the post's language. */
-    private const string LINK_MENTION_OR_HASHTAG = '~\bhttps?://\S+|[^\s/]+\.\p{L}{2,}/\S*|[@#]\S+~u';
+    private const string LINK_MENTION_OR_HASHTAG = '~\bhttps?://\S+|(?<![^\s/])[^\s/]+\.\p{L}{2,}/\S*|[@#]\S+~u';
 
     /** An acronym is no function word: English "AI" is not French "ai". */
     private const string WORD_IN_CAPITALS = '/(?<![\p{L}\p{M}\p{N}])\p{Lu}[\p{Lu}\p{M}]+(?![\p{L}\p{M}\p{N}])/u';
