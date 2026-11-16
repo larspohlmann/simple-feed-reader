@@ -30,6 +30,7 @@ use App\Service\Ingestion\Language\Factory\LanguageDetectionFactory;
 use App\Service\Ingestion\Language\LanguageGuess;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
+use Psr\Log\NullLogger;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Lock\Store\InMemoryStore;
@@ -54,7 +55,7 @@ final class TrendingWiring
             $locks,
         );
 
-        return new TrendingRebuild($builder, $snapshots, $naiveClock);
+        return new TrendingRebuild($builder, $snapshots, $naiveClock, new NullLogger());
     }
 
     public static function grouping(EntityManagerInterface $entityManager, ClockInterface $clock): TrendingGrouping

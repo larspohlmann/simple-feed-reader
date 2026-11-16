@@ -15,8 +15,11 @@ use App\Service\Curation\Trending\SnapshotBuilder\SnapshotBuilderInterface;
 use App\Service\Curation\Trending\SnapshotBuilder\TrendingSnapshotBuilder;
 use App\Service\Curation\Trending\TrendingRebuild;
 use App\Tests\DbTestCase;
+use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\TrendingWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Psr\Log\LogLevel;
+use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Lock\Store\InMemoryStore;
@@ -66,9 +69,20 @@ final class TrendingRebuildTest extends DbTestCase
             }
         };
         $clock = new NaiveUtcClock(new MockClock('2031-05-14 12:00:00', 'UTC'));
-        $rebuild = new TrendingRebuild($builder, TrendingWiring::snapshots($this->entityManager), $clock);
+        $logger = new RecordingLogger();
+        $rebuild = new TrendingRebuild($builder, TrendingWiring::snapshots($this->entityManager), $clock, $logger);
 
         self::assertSame([TrendingWindow::Week], self::windowsOf($rebuild->rebuildDue()));
+        self::assertSame(
+            [
+                [
+                    'level' => LogLevel::DEBUG,
+                    'message' => 'Trending build skipped: another build is running.',
+                    'context' => ['window' => 'day'],
+                ],
+            ],
+            $logger->records,
+        );
     }
 
     public function testRebuildsAWindowOnceItsSnapshotIsAsOldAsItsInterval(): void
@@ -186,7 +200,12 @@ final class TrendingRebuildTest extends DbTestCase
             }
         };
 
-        return new TrendingRebuild($builder, TrendingWiring::snapshots($this->entityManager), $naiveClock);
+        return new TrendingRebuild(
+            $builder,
+            TrendingWiring::snapshots($this->entityManager),
+            $naiveClock,
+            new NullLogger(),
+        );
     }
 
     private function snapshotBuiltAt(TrendingWindow $window, string $builtAt, int $durationMilliseconds = 0): void

@@ -11,10 +11,11 @@ use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Curation\Trending\Model\TrendingLastBuildsModel;
 use App\Service\Curation\Trending\Model\TrendingRebuildReportModel;
 use App\Service\Curation\Trending\SnapshotBuilder\SnapshotBuilderInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * Rebuilds every window whose snapshot is missing or as old as its interval; the worker and the tick call it.
- * A window whose build finds another running is skipped quietly and stays due for the next sweep.
+ * A window whose build finds another running is skipped and stays due for the next sweep.
  */
 final readonly class TrendingRebuild
 {
@@ -22,6 +23,7 @@ final readonly class TrendingRebuild
         private SnapshotBuilderInterface $builder,
         private TrendingSnapshotRepository $snapshots,
         private NaiveUtcClock $clock,
+        private LoggerInterface $logger,
     ) {
     }
 
@@ -58,6 +60,10 @@ final readonly class TrendingRebuild
             try {
                 $builds[] = $this->builder->build($window);
             } catch (TrendingBuildBusyException) {
+                $this->logger->debug(
+                    'Trending build skipped: another build is running.',
+                    ['window' => $window->value],
+                );
             }
         }
 
