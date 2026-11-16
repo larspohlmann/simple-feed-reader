@@ -251,6 +251,75 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
         );
     }
 
+    public function testAWeekSaveMovesItsGroupsEntriesOutOfEveryOtherStoryWithTheEarlierJoinAndTheDay(): void
+    {
+        [$one, $two, $three] = $this->entries(3);
+        $story = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $one);
+        $holder = $this->fixtures->story(TrendingWindow::Day, '2031-05-14 09:00:00', $two, $three);
+        $older = $this->fixtures->story(TrendingWindow::Day, '2031-05-14 08:00:00', $one);
+        $this->history()->clearPlacement(TrendingWindow::Week);
+
+        $this->history()->save(
+            new StoryAssignmentModel(
+                $this->group([$one->requireId(), $two->requireId()]),
+                $story->requireId(),
+                [$one->requireId()],
+            ),
+            self::build(TrendingWindow::Week),
+        );
+
+        self::assertEquals(
+            [
+                [$story->requireId(), $one->requireId(), '2031-05-14 08:00:00', 1, 1],
+                [$story->requireId(), $two->requireId(), '2031-05-14 09:00:00', 1, 1],
+                [$holder->requireId(), $three->requireId(), '2031-05-14 09:00:00', 1, 0],
+            ],
+            $this->members(),
+        );
+        self::assertSame([$story->requireId(), $holder->requireId(), $older->requireId()], $this->storyIds());
+    }
+
+    public function testANewWeekStoryTakesItsEntriesFromTheStoryItSplitOffFrom(): void
+    {
+        [$one, $two, $three] = $this->entries(3);
+        $original = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $one, $two, $three);
+        $this->history()->clearPlacement(TrendingWindow::Week);
+
+        $storyId = $this->saveNew(TrendingWindow::Week, $this->group([$two->requireId(), $three->requireId()]));
+
+        self::assertEquals(
+            [
+                [$original->requireId(), $one->requireId(), '2031-05-14 10:00:00', 0, 0],
+                [$storyId, $two->requireId(), '2031-05-14 10:00:00', 0, 1],
+                [$storyId, $three->requireId(), '2031-05-14 10:00:00', 0, 1],
+            ],
+            $this->members(),
+        );
+    }
+
+    public function testAStoryEmptiedByAWeekSaveIsPrunedUnlessFollowed(): void
+    {
+        [$one, $two] = $this->entries(2);
+        $story = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $one);
+        $emptied = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $two);
+        $followed = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $two);
+        $this->fixtures->follow($this->fixtures->reader('stays@example.com'), $followed, '2031-05-14 10:00:00');
+
+        $this->history()->save(
+            new StoryAssignmentModel(
+                $this->group([$one->requireId(), $two->requireId()]),
+                $story->requireId(),
+                [$one->requireId()],
+            ),
+            self::build(TrendingWindow::Week),
+        );
+        $pruned = $this->history()->pruneUnfollowedOutside(self::utc('2031-05-07 12:00:00'));
+
+        self::assertSame(1, $pruned);
+        self::assertSame([$story->requireId(), $followed->requireId()], $this->storyIds());
+        self::assertNotContains($emptied->requireId(), $this->storyIds());
+    }
+
     public function testAStoredStoryWithNothingJoiningKeepsItsLastJoinedTime(): void
     {
         [$one, $two] = $this->entries(2);

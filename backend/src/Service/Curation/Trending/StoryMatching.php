@@ -8,7 +8,6 @@ use App\Enum\TrendingWindow;
 use App\Service\Curation\Trending\Model\StoredStoryModel;
 use App\Service\Curation\Trending\Model\StoryAssignmentModel;
 use App\Service\Curation\Trending\Model\StoryMatchModel;
-use App\Service\Curation\Trending\Model\StoryMemberModel;
 use App\Service\Curation\Trending\Model\StoryMergeModel;
 use App\Service\Curation\Trending\Model\TrendingStoryModel;
 
@@ -64,7 +63,7 @@ final readonly class StoryMatching
     {
         $candidates = [];
         foreach ($groups as $groupIndex => $group) {
-            $entryIds = self::entryIdsOf($group);
+            $entryIds = $group->entryIds();
             foreach ($stored as $storyIndex => $story) {
                 $candidate = $this->candidate($groupIndex, $entryIds, $storyIndex, $story);
                 if ($candidate !== null) {
@@ -237,11 +236,5 @@ final readonly class StoryMatching
             -$candidate['storyId'],
             -$candidate['lowestEntryId'],
         ];
-    }
-
-    /** @return non-empty-list<int> */
-    private static function entryIdsOf(TrendingStoryModel $group): array
-    {
-        return array_map(static fn (StoryMemberModel $member): int => $member->entryId, $group->members);
     }
 }

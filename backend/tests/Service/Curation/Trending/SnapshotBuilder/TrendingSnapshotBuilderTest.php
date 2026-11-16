@@ -299,6 +299,33 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         );
     }
 
+    public function testTheNextDayBuildKeepsTheSplitOffGroupOnItsNewStory(): void
+    {
+        [$strike] = $this->hafenstreikEntries();
+        $volcano = $this->volcanoEntries();
+        $story = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 11:00:00', ...$strike, ...$volcano);
+        $this->builder()->build(TrendingWindow::Week);
+        [, $newStoryId] = $this->storyIds();
+
+        $this->builder()->build(TrendingWindow::Day);
+
+        $strikeIds = array_map(static fn (Entry $entry): int => $entry->requireId(), $strike);
+        self::assertSame(
+            $strikeIds,
+            $this->intColumn(
+                'SELECT entry_id FROM trending_story_entry WHERE story_id = ? AND in_day = 1 ORDER BY entry_id',
+                [$newStoryId],
+            ),
+        );
+        self::assertSame(
+            array_map(static fn (Entry $entry): int => $entry->requireId(), $volcano),
+            $this->intColumn(
+                'SELECT entry_id FROM trending_story_entry WHERE story_id = ? ORDER BY entry_id',
+                [$story->requireId()],
+            ),
+        );
+    }
+
     public function testTwoDayGroupsOverOneStoryBothAttachToIt(): void
     {
         [$strike] = $this->hafenstreikEntries();

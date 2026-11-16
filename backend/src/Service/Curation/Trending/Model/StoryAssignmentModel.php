@@ -27,7 +27,7 @@ final readonly class StoryAssignmentModel
     public function staying(): array
     {
         return array_values(array_filter(
-            array_map(static fn (StoryMemberModel $member): int => $member->entryId, $this->group->members),
+            $this->group->entryIds(),
             fn (int $entryId): bool => \in_array($entryId, $this->storedEntryIds, true),
         ));
     }

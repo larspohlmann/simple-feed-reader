@@ -28,6 +28,15 @@ use Doctrine\ORM\EntityManagerInterface;
  *     in_day: int|string,
  *     in_week: int|string,
  * }
+ * @phpstan-type HeldMemberRow array{
+ *     entry_id: int|string,
+ *     feed_id: int|string,
+ *     article_site: string|null,
+ *     shared_link_id: int|string|null,
+ *     joined_at: string,
+ *     in_day: int|string,
+ *     in_week: int|string,
+ * }
  * @phpstan-type FollowRow array{followed_at: string, last_opened_at: string}
  */
 final readonly class TrendingStoryHistoryRepository
@@ -92,6 +101,9 @@ final readonly class TrendingStoryHistoryRepository
         }
         $this->placeStaying($storyId, $assignment->staying(), $build->window);
         $this->insertMembers($storyId, $assignment->joining(), $build);
+        if ($build->window->mergesStories()) {
+            $this->claimFromOtherStories($storyId, $assignment->group->entryIds());
+        }
     }
 
     /** No future group can overlap a story without a member in the week; one a reader follows stays. */
@@ -127,28 +139,84 @@ final readonly class TrendingStoryHistoryRepository
                 ];
                 continue;
             }
-            $this->combineMember($merge->survivorId, $entryId, $kept, $member);
+            $this->combineMember($merge->survivorId, $entryId, self::combined($kept, $member));
         }
         BulkInsert::into(self::INSERT_MEMBERS, self::INSERT_ROWS)->rows($this->connection(), $moving);
     }
 
     /**
-     * @param MemberRow $kept
-     * @param MemberRow $merged
+     * The week places an entry in one story only, or the next day build ties it back to the story it left.
+     *
+     * @param non-empty-list<int> $entryIds
      */
-    private function combineMember(int $survivorId, int $entryId, array $kept, array $merged): void
+    private function claimFromOtherStories(int $storyId, array $entryIds): void
+    {
+        foreach (array_chunk($entryIds, self::INSERT_ROWS) as $chunk) {
+            $this->claimChunk($storyId, $chunk);
+        }
+    }
+
+    /** @param list<int> $entryIds */
+    private function claimChunk(int $storyId, array $entryIds): void
+    {
+        $elsewhere = $this->membersOfOtherStories($storyId, $entryIds);
+        if ($elsewhere === []) {
+            return;
+        }
+        $claimed = $this->membersOf($storyId);
+        foreach ($elsewhere as $member) {
+            $entryId = (int) $member['entry_id'];
+            $claimed[$entryId] = self::combined($claimed[$entryId], $member);
+            $this->combineMember($storyId, $entryId, $claimed[$entryId]);
+        }
+        $this->connection()->executeStatement(
+            'DELETE FROM trending_story_entry WHERE story_id <> ? AND entry_id IN (?)',
+            [$storyId, $entryIds],
+            [ParameterType::INTEGER, ArrayParameterType::INTEGER],
+        );
+    }
+
+    /**
+     * @param list<int> $entryIds
+     *
+     * @return list<HeldMemberRow>
+     */
+    private function membersOfOtherStories(int $storyId, array $entryIds): array
+    {
+        /** @var list<HeldMemberRow> $members */
+        $members = $this->connection()->fetchAllAssociative(
+            'SELECT entry_id, feed_id, article_site, shared_link_id, joined_at, in_day, in_week'
+            . ' FROM trending_story_entry WHERE story_id <> ? AND entry_id IN (?)',
+            [$storyId, $entryIds],
+            [ParameterType::INTEGER, ArrayParameterType::INTEGER],
+        );
+
+        return $members;
+    }
+
+    /** @param MemberRow $member */
+    private function combineMember(int $storyId, int $entryId, array $member): void
     {
         $this->connection()->executeStatement(
             'UPDATE trending_story_entry SET joined_at = ?, in_day = ?, in_week = ?'
             . ' WHERE story_id = ? AND entry_id = ?',
-            [
-                min($kept['joined_at'], $merged['joined_at']),
-                max((int) $kept['in_day'], (int) $merged['in_day']),
-                max((int) $kept['in_week'], (int) $merged['in_week']),
-                $survivorId,
-                $entryId,
-            ],
+            [$member['joined_at'], $member['in_day'], $member['in_week'], $storyId, $entryId],
         );
+    }
+
+    /**
+     * @param MemberRow $kept
+     * @param MemberRow $other
+     *
+     * @return MemberRow the kept row with the earlier join and the placement of both
+     */
+    private static function combined(array $kept, array $other): array
+    {
+        return [
+            'joined_at' => min($kept['joined_at'], $other['joined_at']),
+            'in_day' => max((int) $kept['in_day'], (int) $other['in_day']),
+            'in_week' => max((int) $kept['in_week'], (int) $other['in_week']),
+        ] + $kept;
     }
 
     /** A reader following both keeps one follow with the earlier times, so nothing joined since goes unseen. */
