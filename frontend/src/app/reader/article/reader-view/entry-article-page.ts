@@ -42,8 +42,8 @@ export class EntryArticlePage implements ArticlePageSource {
   readonly key = computed(() => entryPageKey(this.entry().id));
   readonly url = computed(() => this.entry().url);
   readonly openUrl = computed(() => {
-    const { url, social } = this.entry();
-    return url === null ? null : this.links.open(url, social?.network ?? null);
+    const { url, social, discussionUrl } = this.entry();
+    return url === null ? discussionUrl : this.links.open(url, social?.network ?? null);
   });
   readonly title = computed(() => entryDisplayTitle(this.entry()));
   readonly shareTitle = computed(() => this.entry().title);

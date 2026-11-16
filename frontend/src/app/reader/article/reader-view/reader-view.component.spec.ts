@@ -370,6 +370,20 @@ describe('ReaderViewComponent', () => {
     ).not.toBeNull();
   });
 
+  it('opens a Lemmy post at its post page', () => {
+    const fixture = mount(
+      entry({
+        url: null,
+        discussionUrl: 'https://lemmy.test/post/7',
+        comments: 'auto',
+        social: null,
+      }),
+    );
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('.meta a[href="https://lemmy.test/post/7"]')).not.toBeNull();
+  });
+
   it('opens an article at its own address', () => {
     const element = mount(entry()).nativeElement as HTMLElement;
 
