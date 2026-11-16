@@ -16,7 +16,6 @@ use App\Repository\TrendingStoryHistoryRepository;
 use App\Repository\TrendingStoryRepository;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\ReaderWindows;
-use App\Service\Curation\Trending\StoryMatching;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Curation\Trending\SnapshotBuilder\TrendingSnapshotBuilder;
 use App\Tests\DbTestCase;
@@ -28,6 +27,7 @@ use Doctrine\ORM\Decorator\EntityManagerDecorator;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Service\Curation\Trending\Exception\TrendingBuildBusyException;
 use Symfony\Component\Clock\MockClock;
+use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\Lock\Exception\LockConflictedException;
 use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Lock\Store\InMemoryStore;
@@ -67,6 +67,24 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
             [],
             $this->entityManager->getConnection()->fetchFirstColumn('SELECT time_window FROM trending_snapshot'),
         );
+    }
+
+    public function testAWindowWithoutABuildPolicyFailsNamingIt(): void
+    {
+        $builder = new TrendingSnapshotBuilder(
+            TrendingWiring::grouping($this->entityManager, $this->clock),
+            new ServiceLocator([]),
+            new TrendingStoryHistoryRepository($this->entityManager),
+            TrendingWiring::snapshots($this->entityManager),
+            $this->entityManager,
+            new NaiveUtcClock($this->clock),
+            $this->locks,
+        );
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('No story build policy is wired for the "week" window.');
+
+        $builder->build(TrendingWindow::Week);
     }
 
     public function testABuildPutsOffItsLockBeforeWriting(): void
@@ -543,7 +561,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
     {
         return new TrendingSnapshotBuilder(
             TrendingWiring::grouping($this->entityManager, $this->clock),
-            new StoryMatching(),
+            TrendingWiring::policies($this->entityManager),
             new TrendingStoryHistoryRepository($this->entityManager),
             TrendingWiring::snapshots($this->entityManager),
             $entityManager,

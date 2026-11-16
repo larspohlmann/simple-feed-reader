@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Trending;
 
-use App\Enum\TrendingWindow;
 use App\Service\Curation\Trending\Model\StoredStoryModel;
 use App\Service\Curation\Trending\Model\StoryAssignmentModel;
 use App\Service\Curation\Trending\Model\StoryMatchModel;
@@ -28,16 +27,30 @@ final readonly class StoryMatching
     private const float MATCH_THRESHOLD = 0.5;
 
     /**
+     * A day group joins the story it overlaps best, even one another day group joined: only the week shapes identity.
+     *
      * @param list<TrendingStoryModel> $groups
      * @param list<StoredStoryModel>   $stored
      */
-    public function match(array $groups, array $stored, TrendingWindow $window): StoryMatchModel
+    public function attach(array $groups, array $stored): StoryMatchModel
+    {
+        $candidates = $this->rankedCandidates($groups, $stored, $this->storiesByEntry($stored));
+        $storyOfGroup = [];
+        foreach ($candidates as $candidate) {
+            $storyOfGroup[$candidate['group']] ??= $candidate['story'];
+        }
+
+        return new StoryMatchModel($this->assignments($groups, $stored, $storyOfGroup, []), [], 0);
+    }
+
+    /**
+     * @param list<TrendingStoryModel> $groups
+     * @param list<StoredStoryModel>   $stored
+     */
+    public function reshape(array $groups, array $stored): StoryMatchModel
     {
         $storiesOfEntry = $this->storiesByEntry($stored);
         $candidates = $this->rankedCandidates($groups, $stored, $storiesOfEntry);
-        if (!$window->mergesStories()) {
-            return $this->attachedToTheirBest($groups, $stored, $candidates);
-        }
         $storyOfGroup = $this->oneToOne($candidates);
         $merges = $this->merges($candidates, $storyOfGroup);
 
@@ -148,23 +161,6 @@ final readonly class StoryMatching
         usort($keyed, static fn (array $left, array $right): int => $right[0] <=> $left[0]);
 
         return array_column($keyed, 1);
-    }
-
-    /**
-     * A day group joins the story it overlaps best, even one another day group joined: only the week shapes identity.
-     *
-     * @param list<TrendingStoryModel> $groups
-     * @param list<StoredStoryModel>   $stored
-     * @param list<Candidate>          $candidates
-     */
-    private function attachedToTheirBest(array $groups, array $stored, array $candidates): StoryMatchModel
-    {
-        $storyOfGroup = [];
-        foreach ($candidates as $candidate) {
-            $storyOfGroup[$candidate['group']] ??= $candidate['story'];
-        }
-
-        return new StoryMatchModel($this->assignments($groups, $stored, $storyOfGroup, []), [], 0);
     }
 
     /**

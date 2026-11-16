@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Curation\Trending;
 
-use App\Enum\TrendingWindow;
 use App\Service\Curation\Trending\Model\StoredStoryModel;
 use App\Service\Curation\Trending\Model\StoryAssignmentModel;
 use App\Service\Curation\Trending\Model\StoryMatchModel;
@@ -18,10 +17,9 @@ final class StoryMatchingTest extends TestCase
 {
     public function testAnUnchangedGroupKeepsItsStory(): void
     {
-        $match = $this->matching()->match(
+        $match = $this->matching()->reshape(
             [self::group(1, 2, 3)],
             [new StoredStoryModel(7, [1, 2, 3])],
-            TrendingWindow::Week,
         );
 
         self::assertCount(1, $match->assignments);
@@ -33,10 +31,9 @@ final class StoryMatchingTest extends TestCase
 
     public function testAGroupWithANewEntryKeepsItsStoryAndJoinsTheEntry(): void
     {
-        $match = $this->matching()->match(
+        $match = $this->matching()->reshape(
             [self::group(1, 2, 3, 4)],
             [new StoredStoryModel(7, [1, 2, 3])],
-            TrendingWindow::Week,
         );
 
         self::assertSame(7, $match->assignments[0]->storyId);
@@ -46,10 +43,9 @@ final class StoryMatchingTest extends TestCase
 
     public function testOverlapIsMeasuredAgainstTheSmallerSide(): void
     {
-        $match = $this->matching()->match(
+        $match = $this->matching()->reshape(
             [self::group(1, 2, 3, 4, 5, 6)],
             [new StoredStoryModel(7, [1, 2])],
-            TrendingWindow::Week,
         );
 
         self::assertSame(7, $match->assignments[0]->storyId);
@@ -57,10 +53,9 @@ final class StoryMatchingTest extends TestCase
 
     public function testBelowHalfIsANewStory(): void
     {
-        $match = $this->matching()->match(
+        $match = $this->matching()->reshape(
             [self::group(1, 2, 8, 9, 10)],
             [new StoredStoryModel(7, [1, 2, 3, 4, 5])],
-            TrendingWindow::Week,
         );
 
         self::assertNull($match->assignments[0]->storyId);
@@ -71,10 +66,9 @@ final class StoryMatchingTest extends TestCase
 
     public function testExactlyHalfMatches(): void
     {
-        $match = $this->matching()->match(
+        $match = $this->matching()->reshape(
             [self::group(1, 2, 8, 9)],
             [new StoredStoryModel(7, [1, 2, 3, 4])],
-            TrendingWindow::Week,
         );
 
         self::assertSame(7, $match->assignments[0]->storyId);
@@ -82,10 +76,9 @@ final class StoryMatchingTest extends TestCase
 
     public function testAStoryWithNoInWindowMembersMatchesNothing(): void
     {
-        $match = $this->matching()->match(
+        $match = $this->matching()->reshape(
             [self::group(1, 2)],
             [new StoredStoryModel(7, [])],
-            TrendingWindow::Week,
         );
 
         self::assertNull($match->assignments[0]->storyId);
@@ -94,10 +87,9 @@ final class StoryMatchingTest extends TestCase
 
     public function testAGroupSharingNothingIsNewAndNotASplit(): void
     {
-        $match = $this->matching()->match(
+        $match = $this->matching()->reshape(
             [self::group(1, 2)],
             [new StoredStoryModel(7, [3, 4])],
-            TrendingWindow::Week,
         );
 
         self::assertNull($match->assignments[0]->storyId);
@@ -106,10 +98,9 @@ final class StoryMatchingTest extends TestCase
 
     public function testASplitGivesTheLargerPartTheIdAndTheSmallerANewStory(): void
     {
-        $match = $this->matching()->match(
+        $match = $this->matching()->reshape(
             [self::group(1, 2), self::group(3, 4, 5, 6)],
             [new StoredStoryModel(7, [1, 2, 3, 4, 5, 6])],
-            TrendingWindow::Week,
         );
 
         self::assertNull($match->assignments[0]->storyId);
@@ -120,10 +111,9 @@ final class StoryMatchingTest extends TestCase
 
     public function testAWeekGroupOverTwoStoriesMergesTheSmallerIntoTheLarger(): void
     {
-        $match = $this->matching()->match(
+        $match = $this->matching()->reshape(
             [self::group(1, 2, 3, 4, 5)],
             [new StoredStoryModel(7, [1, 2, 3]), new StoredStoryModel(9, [4, 5])],
-            TrendingWindow::Week,
         );
 
         self::assertSame(7, $match->assignments[0]->storyId);
@@ -135,10 +125,9 @@ final class StoryMatchingTest extends TestCase
 
     public function testADayGroupOverTwoStoriesAttachesToTheBestAndMergesNothing(): void
     {
-        $match = $this->matching()->match(
+        $match = $this->matching()->attach(
             [self::group(1, 2, 3, 4, 5)],
             [new StoredStoryModel(7, [1, 2, 3]), new StoredStoryModel(9, [4, 5])],
-            TrendingWindow::Day,
         );
 
         self::assertSame(7, $match->assignments[0]->storyId);
@@ -149,10 +138,9 @@ final class StoryMatchingTest extends TestCase
 
     public function testAStoryAnotherGroupAlreadyTookIsNotMerged(): void
     {
-        $match = $this->matching()->match(
+        $match = $this->matching()->reshape(
             [self::group(1, 2, 3), self::group(4, 5)],
             [new StoredStoryModel(7, [1, 2, 3]), new StoredStoryModel(9, [4, 5])],
-            TrendingWindow::Week,
         );
 
         self::assertSame([7, 9], self::storyIds($match));
@@ -161,10 +149,9 @@ final class StoryMatchingTest extends TestCase
 
     public function testAStoredStoryBelowTheThresholdIsNotMerged(): void
     {
-        $match = $this->matching()->match(
+        $match = $this->matching()->reshape(
             [self::group(1, 2, 3, 4, 5)],
             [new StoredStoryModel(7, [1, 2, 3]), new StoredStoryModel(9, [4, 8, 9, 10])],
-            TrendingWindow::Week,
         );
 
         self::assertSame(7, $match->assignments[0]->storyId);
@@ -174,15 +161,13 @@ final class StoryMatchingTest extends TestCase
 
     public function testTiesGoToTheStoryWithMoreInWindowMembersThenTheOlderId(): void
     {
-        $sameSize = $this->matching()->match(
+        $sameSize = $this->matching()->attach(
             [self::group(1, 2)],
             [new StoredStoryModel(9, [1, 2]), new StoredStoryModel(7, [1, 2])],
-            TrendingWindow::Day,
         );
-        $largerWins = $this->matching()->match(
+        $largerWins = $this->matching()->attach(
             [self::group(1, 2)],
             [new StoredStoryModel(9, [1, 2, 3]), new StoredStoryModel(7, [1, 2])],
-            TrendingWindow::Day,
         );
 
         self::assertSame(7, $sameSize->assignments[0]->storyId);
@@ -191,10 +176,9 @@ final class StoryMatchingTest extends TestCase
 
     public function testWeekAssignmentIsOneToOne(): void
     {
-        $match = $this->matching()->match(
+        $match = $this->matching()->reshape(
             [self::group(1, 2), self::group(3, 4)],
             [new StoredStoryModel(7, [1, 2, 3, 4])],
-            TrendingWindow::Week,
         );
 
         self::assertSame([7, null], self::storyIds($match));
@@ -203,10 +187,9 @@ final class StoryMatchingTest extends TestCase
 
     public function testAWeekGroupLeftWithoutItsBestStoryTakesTheNextItReaches(): void
     {
-        $match = $this->matching()->match(
+        $match = $this->matching()->reshape(
             [self::group(1, 2, 3), self::group(4, 5)],
             [new StoredStoryModel(7, [1, 2, 3, 4, 5]), new StoredStoryModel(9, [5, 6])],
-            TrendingWindow::Week,
         );
 
         self::assertSame([7, 9], self::storyIds($match));
@@ -215,10 +198,9 @@ final class StoryMatchingTest extends TestCase
 
     public function testAWeekGroupOverThreeStoriesMergesBothOthersIntoTheLargest(): void
     {
-        $match = $this->matching()->match(
+        $match = $this->matching()->reshape(
             [self::group(1, 2, 3, 4, 5, 6)],
             [new StoredStoryModel(11, [6]), new StoredStoryModel(9, [4, 5]), new StoredStoryModel(7, [1, 2, 3])],
-            TrendingWindow::Week,
         );
 
         self::assertSame([7], self::storyIds($match));
@@ -227,10 +209,9 @@ final class StoryMatchingTest extends TestCase
 
     public function testASplitIsCountedOncePerGroupHoweverManyStoriesItReaches(): void
     {
-        $match = $this->matching()->match(
+        $match = $this->matching()->reshape(
             [self::group(1, 2, 3, 4), self::group(5, 6)],
             [new StoredStoryModel(7, [1, 2, 3, 4, 5, 6]), new StoredStoryModel(9, [3, 4])],
-            TrendingWindow::Week,
         );
 
         self::assertSame([7, null], self::storyIds($match));
@@ -240,10 +221,9 @@ final class StoryMatchingTest extends TestCase
 
     public function testAGroupGoesToTheStoryItOverlapsMostBeforeTheOneItSharesMostWith(): void
     {
-        $match = $this->matching()->match(
+        $match = $this->matching()->attach(
             [self::group(1, 2, 3, 4, 5, 6)],
             [new StoredStoryModel(9, [3, 4, 5, 8, 9, 10, 11, 12]), new StoredStoryModel(7, [1, 2])],
-            TrendingWindow::Day,
         );
 
         self::assertSame([7], self::storyIds($match));
@@ -251,10 +231,9 @@ final class StoryMatchingTest extends TestCase
 
     public function testDayGroupsSharingTheirBestStoryAllAttachToItAndNothingSplits(): void
     {
-        $match = $this->matching()->match(
+        $match = $this->matching()->attach(
             [self::group(1, 2), self::group(3, 4, 5)],
             [new StoredStoryModel(7, [1, 2, 3, 4]), new StoredStoryModel(9, [5, 6])],
-            TrendingWindow::Day,
         );
 
         self::assertSame([7, 7], self::storyIds($match));
@@ -265,10 +244,9 @@ final class StoryMatchingTest extends TestCase
 
     public function testADayGroupBelowTheThresholdOfEveryStoryStillGetsANewStory(): void
     {
-        $match = $this->matching()->match(
+        $match = $this->matching()->attach(
             [self::group(1, 2, 3), self::group(4, 8, 9)],
             [new StoredStoryModel(7, [1, 2, 3, 4, 5, 6])],
-            TrendingWindow::Day,
         );
 
         self::assertSame([7, null], self::storyIds($match));
@@ -277,10 +255,9 @@ final class StoryMatchingTest extends TestCase
 
     public function testAnEntryTwoStoriesHoldCountsTowardBoth(): void
     {
-        $match = $this->matching()->match(
+        $match = $this->matching()->reshape(
             [self::group(2, 3, 4)],
             [new StoredStoryModel(7, [1, 2]), new StoredStoryModel(9, [2, 3])],
-            TrendingWindow::Week,
         );
 
         self::assertSame(9, $match->assignments[0]->storyId);
@@ -294,10 +271,10 @@ final class StoryMatchingTest extends TestCase
         $mergeGroups = [self::group(1, 2, 3, 4, 5)];
         $mergeStored = [new StoredStoryModel(7, [1, 2, 3]), new StoredStoryModel(9, [4, 5])];
 
-        $split = $this->matching()->match($splitGroups, $splitStored, TrendingWindow::Week);
-        $merge = $this->matching()->match($mergeGroups, $mergeStored, TrendingWindow::Week);
-        $mergeReversed = $this->matching()->match($mergeGroups, array_reverse($mergeStored), TrendingWindow::Week);
-        $splitReversed = $this->matching()->match(array_reverse($splitGroups), $splitStored, TrendingWindow::Week);
+        $split = $this->matching()->reshape($splitGroups, $splitStored);
+        $merge = $this->matching()->reshape($mergeGroups, $mergeStored);
+        $mergeReversed = $this->matching()->reshape($mergeGroups, array_reverse($mergeStored));
+        $splitReversed = $this->matching()->reshape(array_reverse($splitGroups), $splitStored);
 
         self::assertEquals($merge, $mergeReversed);
         self::assertSame(
@@ -309,10 +286,9 @@ final class StoryMatchingTest extends TestCase
 
     public function testAWeekGroupClaimsOnlyTheEntriesAnotherStoryHolds(): void
     {
-        $match = $this->matching()->match(
+        $match = $this->matching()->reshape(
             [self::group(1, 2, 3, 4), self::group(5)],
             [new StoredStoryModel(7, [1, 2, 3]), new StoredStoryModel(9, [4, 5])],
-            TrendingWindow::Week,
         );
 
         self::assertSame(7, $match->assignments[0]->storyId);
@@ -322,10 +298,9 @@ final class StoryMatchingTest extends TestCase
 
     public function testAWeekGroupClaimsNothingFromAStoryMergedIntoItsOwn(): void
     {
-        $match = $this->matching()->match(
+        $match = $this->matching()->reshape(
             [self::group(1, 2, 3, 4, 5)],
             [new StoredStoryModel(7, [1, 2, 3]), new StoredStoryModel(9, [4, 5])],
-            TrendingWindow::Week,
         );
 
         self::assertEquals([new StoryMergeModel(7, 9)], $match->merges);
@@ -334,14 +309,13 @@ final class StoryMatchingTest extends TestCase
 
     public function testAWeekGroupClaimsWhatAStoryMergedIntoAnotherHolds(): void
     {
-        $match = $this->matching()->match(
+        $match = $this->matching()->reshape(
             [self::group(1, 2, 3, 4, 5, 6), self::group(7, 8, 9)],
             [
                 new StoredStoryModel(11, [1, 2, 3, 4, 5]),
                 new StoredStoryModel(12, [7, 8, 9]),
                 new StoredStoryModel(13, [6, 7, 8]),
             ],
-            TrendingWindow::Week,
         );
 
         self::assertEquals([new StoryMergeModel(12, 13)], $match->merges);
@@ -351,10 +325,9 @@ final class StoryMatchingTest extends TestCase
 
     public function testANewWeekStoryClaimsEveryEntryAStoredStoryHolds(): void
     {
-        $match = $this->matching()->match(
+        $match = $this->matching()->reshape(
             [self::group(1, 2, 8, 9, 10)],
             [new StoredStoryModel(7, [1, 2, 3, 4, 5])],
-            TrendingWindow::Week,
         );
 
         self::assertNull($match->assignments[0]->storyId);
@@ -363,10 +336,9 @@ final class StoryMatchingTest extends TestCase
 
     public function testTheDayNeverClaims(): void
     {
-        $match = $this->matching()->match(
+        $match = $this->matching()->attach(
             [self::group(1, 2, 3, 4, 5), self::group(8, 9, 10)],
             [new StoredStoryModel(7, [1, 2, 3]), new StoredStoryModel(9, [4, 5, 8])],
-            TrendingWindow::Day,
         );
 
         self::assertSame([4, 5], self::entryIds($match->assignments[0]->joining()));

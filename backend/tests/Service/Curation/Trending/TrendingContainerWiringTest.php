@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Service\Curation\Trending;
 
 use App\Enum\FeedLanguage;
+use App\Enum\TrendingWindow;
 use App\Service\Curation\Trending\GermanLexicon\BundledGermanLexicon;
 use App\Service\Curation\Trending\GermanLexicon\GermanLexiconInterface;
 use App\Service\Curation\Trending\HeadlineEquivalents;
+use App\Service\Curation\Trending\SnapshotBuilder\TrendingSnapshotBuilder;
+use App\Service\Curation\Trending\StoryBuildPolicy\DayStoryBuildPolicy;
+use App\Service\Curation\Trending\StoryBuildPolicy\WeekStoryBuildPolicy;
 use App\Service\Curation\Trending\TrendingRebuild;
 use App\Service\Foundation\Text\StopWords\BundledStopWords;
 use App\Service\Foundation\Text\StopWords\StopWordsInterface;
@@ -39,6 +43,16 @@ final class TrendingContainerWiringTest extends DbTestCase
         $report = $rebuild->rebuildDue();
 
         self::assertSame(2, $report->builds[0]->storyCount);
+    }
+
+    public function testEachWindowHasABuildPolicy(): void
+    {
+        $builder = self::getContainer()->get(TrendingSnapshotBuilder::class);
+        self::assertInstanceOf(TrendingSnapshotBuilder::class, $builder);
+        $policyFor = new \ReflectionMethod($builder, 'policyFor');
+
+        self::assertInstanceOf(DayStoryBuildPolicy::class, $policyFor->invoke($builder, TrendingWindow::Day));
+        self::assertInstanceOf(WeekStoryBuildPolicy::class, $policyFor->invoke($builder, TrendingWindow::Week));
     }
 
     public function testTheContainersGermanLexiconIsTheBundledOne(): void

@@ -59,11 +59,6 @@ enum TrendingWindow: string
         };
     }
 
-    public function mergesStories(): bool
-    {
-        return $this === self::Week;
-    }
-
     public function rebuildIntervalSeconds(): int
     {
         return match ($this) {
