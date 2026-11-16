@@ -7,6 +7,7 @@ import { EntriesStore } from './entries.store';
 import { LandedList } from './landed-list';
 import { FollowedStoriesStore } from './followed-stories.store';
 import { FollowedStoryVisit } from './followed-story-visit';
+import { FollowedStoryPageDto } from '../trending/trending.models';
 
 describe('FollowedStoryVisit (#2128)', () => {
   const lastOpenedAt = '2026-11-16T08:00:00+00:00';
@@ -37,10 +38,13 @@ describe('FollowedStoryVisit (#2128)', () => {
 
   const landStory = (rows: EntryDto[], openedAt: string = lastOpenedAt) => {
     entries.set(rows);
-    listLanded.next({
-      query: story,
-      page: { entries: rows, nextCursor: null, lastOpenedAt: openedAt, newEntryIds: [] },
-    });
+    const page: FollowedStoryPageDto = {
+      entries: rows,
+      nextCursor: null,
+      lastOpenedAt: openedAt,
+      newEntryIds: [],
+    };
+    listLanded.next({ query: story, page });
   };
   const landAnotherList = () => {
     entries.set([anEntry({ id: 1 })]);
@@ -136,5 +140,14 @@ describe('FollowedStoryVisit (#2128)', () => {
     landAnotherList();
 
     expect(visit.newSinceVisitIds()).toBe(outside);
+  });
+
+  it('keeps the marked set while a later load marks the same rows', () => {
+    landStory([member(1, since)]);
+    const marked = visit.newSinceVisitIds();
+
+    entries.set([member(1, since), member(2, before)]);
+
+    expect(visit.newSinceVisitIds()).toBe(marked);
   });
 });

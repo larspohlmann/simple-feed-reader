@@ -1,6 +1,4 @@
-import { SocialNetworkName } from '../../core/social-network';
-
-export const sameMembers = (
-  left: ReadonlySet<SocialNetworkName>,
-  right: ReadonlySet<SocialNetworkName>,
-): boolean => left.size === right.size && [...left].every((network) => right.has(network));
+export const sameMembers = <Member>(
+  left: ReadonlySet<Member>,
+  right: ReadonlySet<Member>,
+): boolean => left.size === right.size && [...left].every((member) => right.has(member));
