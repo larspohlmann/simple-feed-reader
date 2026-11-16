@@ -31,9 +31,15 @@ Frontend (from `frontend/`):
 ```bash
 npm ci
 npm start            # dev server on :4200; calls /api same-origin (only the Docker frontend service proxies it)
-npm run check        # ESLint + Prettier + Stylelint + tsc (app, spec, e2e) + Jest — the CI gate
 npm run build
 npm run e2e          # Playwright smokes; needs the Docker stack up
+```
+
+Anything that runs Jest goes through the Docker `frontend` container (from the repo root):
+
+```bash
+docker compose exec -T frontend npm run check   # ESLint + Prettier + Stylelint + tsc (app, spec, e2e) + Jest — the CI gate
+docker compose exec -T frontend npm test
 ```
 
 Docker stack (from the repo root) — see [docs/local-docker.md](docs/local-docker.md):
@@ -360,9 +366,9 @@ control, not ceremony — do not "simplify" it away, and do not delete
   inflates the score rather than breaking the build.
   Prove isolation with `infection --noop`: noop mutants leave the code unchanged,
   so **every** one of them must survive. Any reported kill is a false one.
-- Frontend unit: `docker compose exec -T frontend npm test` (Jest, jsdom). Always
-  run frontend tests inside the Docker frontend container. Playwright smokes need
-  Docker and are deliberately outside the CI gate.
+- Frontend unit: `docker compose exec -T frontend npm test` (Jest, jsdom). Run every
+  Jest-running command inside the Docker frontend container, `npm run check` included,
+  never natively. Playwright smokes need Docker and are deliberately outside the CI gate.
 - Both e2e suites run weekly in CI
   (`.github/workflows/e2e-rot-check.yml`) and open an `e2e-rot` issue when they
   break. Never give that workflow a `pull_request` trigger — the cost was
