@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, Subscription, finalize, tap } from 'rxjs';
+import { Observable, Subject, Subscription, finalize, tap } from 'rxjs';
 import { Problem, parseProblem } from '../../core/problem';
 import { accountSignal, onIdentityChange } from '../../core/auth/session-identity';
 import { ReaderApi } from '../reader-api';
@@ -14,7 +14,7 @@ import { CompletedEntryDto, withCompleted } from './completed-entry';
 import { withPatchedRow } from './entry-rows';
 import { InFlightPatches, RowPatch, valuesBefore } from './in-flight-patches';
 import { RetryableFailure } from './retryable-failure';
-import { StoryVisit } from './story-visit';
+import { LandedList } from './landed-list';
 import { MatchedWords } from './matched-words';
 
 /** A failed state change has already rolled its row back when `onFailed` runs. */
@@ -47,9 +47,8 @@ export class EntriesStore {
   readonly loadedAt = accountSignal<string>('');
   private readonly searchMatches = new MatchedWords();
   readonly matchedWords = this.searchMatches.words;
-  private readonly storyVisit = new StoryVisit();
-  /** On a followed Trending story, the first page's rows that joined since the last visit (#2128). */
-  readonly newSinceVisitIds = this.storyVisit.newSinceVisitIds;
+  private readonly landedLists = new Subject<LandedList>();
+  readonly listLanded: Observable<LandedList> = this.landedLists.asObservable();
 
   private readonly query = accountSignal<EntryQuery | null>(null);
   /** The list request on the wire, cancelled once a newer load or another account supersedes it: a stale
@@ -75,23 +74,22 @@ export class EntriesStore {
     this.failure.clear();
     this.loadedAt.set(new Date().toISOString());
     this.listRequest?.unsubscribe();
-    this.storyVisit.starting(query);
     this.listRequest = this.api.entries(query).subscribe({
       next: (page) => {
         this.rawEntries.set(this.inFlight.overlayAll(page.entries));
         this.nextCursor.set(page.nextCursor);
         this.searchMatches.replaceWith(page);
-        this.storyVisit.landed(query, page);
         this.loading.set(false);
+        this.landedLists.next({ query, page });
       },
       error: (error: HttpErrorResponse) => {
         // Drop the retained rows: loading ends here, so they would un-dim and
         // turn interactive again while belonging to a view the user has left.
         this.rawEntries.set([]);
         this.searchMatches.clear();
-        this.storyVisit.failed();
         this.failure.report(error, () => this.load(query));
         this.loading.set(false);
+        this.landedLists.next({ query, page: null });
       },
     });
   }
@@ -289,47 +287,20 @@ export class EntriesStore {
     this.patchEntries([id], (entry) => (entry.isShared ? entry : { ...entry, isShared: true }));
   }
 
-  /** Reflects an unfollow made away from the cards, as from the sidebar (#2128); no request. */
-  markStoryUnfollowedLocally(storyId: number): void {
-    const cards = this.rawEntries().filter((row) => row.story?.id === storyId);
-    this.patchEntries(
-      cards.map((card) => card.id),
-      (entry) => (entry.story ? { ...entry, story: { ...entry.story, followed: false } } : entry),
-    );
-  }
-
   /** Hides a card's story (#2017, #2128); the card stays in the list, so the caller can let it leave in
    *  place (#2066). A failure shows the banner and its retry. */
   hideTrendingStory(entryId: number, outcome: StateSaveOutcome = {}): void {
     const story = this.entry(entryId)?.story;
     if (!story) return;
-    this.reportedMutation(this.trendingApi.hideStory(story.id), outcome, () =>
-      this.hideTrendingStory(entryId, outcome),
-    );
-  }
-
-  /** Optimistic follow of a card's story (#2128); dropped while one is on the wire, put back with the
-   *  banner and its retry when it fails. */
-  setStoryFollowed(entryId: number, followed: boolean, outcome: StateSaveOutcome = {}): void {
-    const row = this.entry(entryId);
-    const story = row?.story;
-    if (!row || !story || this.inFlight.onTheWire(entryId, 'story')) return;
-    const request$ = followed
-      ? this.trendingApi.follow(story.id)
-      : this.trendingApi.unfollow(story.id);
-    this.reportedMutation(
-      this.optimistic(row, { story: { ...story, followed } }, request$),
+    this.runReported(
+      this.trendingApi.hideStory(story.id),
+      () => this.hideTrendingStory(entryId, outcome),
       outcome,
-      () => this.setStoryFollowed(entryId, followed, outcome),
     );
   }
 
   /** Clears the banner and runs `request$`; a failure shows the banner with `retry` behind it. */
-  private reportedMutation<T>(
-    request$: Observable<T>,
-    outcome: StateSaveOutcome,
-    retry: () => void,
-  ): void {
+  runReported<T>(request$: Observable<T>, retry: () => void, outcome: StateSaveOutcome = {}): void {
     this.failure.clear();
     outcome.onStarted?.();
     request$.subscribe({

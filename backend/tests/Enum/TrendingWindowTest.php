@@ -27,12 +27,6 @@ final class TrendingWindowTest extends TestCase
         self::assertSame(5, TrendingWindow::Week->minSubscribedFeeds());
     }
 
-    public function testOnlyTheWeekWindowMergesStories(): void
-    {
-        self::assertTrue(TrendingWindow::Week->mergesStories());
-        self::assertFalse(TrendingWindow::Day->mergesStories());
-    }
-
     #[DataProvider('outletMinimums')]
     public function testTheOutletMinimumIsTheFloorOrTheWindowsShareOfTheActiveFeedsRoundedUp(
         TrendingWindow $window,

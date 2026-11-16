@@ -8,16 +8,16 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { Observable, Subscription } from 'rxjs';
+import { Observable } from 'rxjs';
 import { FeedGroupName } from '../../core/feed-group';
 import { Problem, parseProblem } from '../../core/problem';
 import { onIdentityChange } from '../../core/auth/session-identity';
 import { unhealthyFeeds } from '../feeds/feed-health';
 import { ReaderApi } from '../reader-api';
-import { countsAreStale } from './sidebar-freshness';
 import { TagsStore } from './tags.store';
 import { SocialAccountRefDto } from '../social-feed';
 import { SubscriptionFlags } from '../subscription-bulk';
+import { StaleGatedLoad } from './stale-gated-load';
 import { SubscriptionRows } from './subscription-rows';
 import { buildSocialSections, isEmptySavedFeed, isSocialFeed } from './social-sections';
 import {
@@ -109,9 +109,7 @@ export class SubscriptionsStore {
   readonly unhealthy = computed(() => unhealthyFeeds(this.subscriptions()));
   readonly unhealthyCount = computed(() => this.unhealthy().length);
 
-  private latestLoad = 0;
-  private lastLoadedAt = 0;
-  private inFlight: Subscription | null = null;
+  private readonly loads = new StaleGatedLoad();
 
   /** Optimistic patches this store applied; a quiet reload compares it across its round trip. */
   private localEdits = 0;
@@ -126,58 +124,26 @@ export class SubscriptionsStore {
   }
 
   load(): void {
-    const request = this.beginRequest();
     this.loading.set(true);
     this.error.set(null);
     this.resolved.set(false);
-    this.inFlight = this.trackWhileOpen(
-      this.api.subscriptions(this.trendingWindow.window()).subscribe({
-        next: (response) => {
-          if (!this.settle(request)) return;
-          this.applyCounts(response);
-          this.loading.set(false);
-          this.resolved.set(true);
-        },
-        error: (error: HttpErrorResponse) => {
-          if (!this.settle(request)) return;
-          this.error.set(parseProblem(error));
-          this.loading.set(false);
-          this.resolved.set(true);
-        },
-      }),
+    this.loads.run(
+      this.api.subscriptions(this.trendingWindow.window()),
+      (response) => {
+        this.applyCounts(response);
+        this.loading.set(false);
+        this.resolved.set(true);
+      },
+      (error) => {
+        this.error.set(parseProblem(error as HttpErrorResponse));
+        this.loading.set(false);
+        this.resolved.set(true);
+      },
     );
   }
 
-  /** Claim the store for a new request: abandon whatever it supersedes, stamp
-   *  the freshness clock, and take the epoch that tells a late response it has
-   *  been overtaken. */
-  private beginRequest(): number {
-    this.inFlight?.unsubscribe();
-    this.inFlight = null;
-    this.lastLoadedAt = Date.now();
-    return ++this.latestLoad;
-  }
-
-  /** True while `request` is still the store's current one — false once a newer
-   *  load, or a logout, has taken it over. */
-  private settle(request: number): boolean {
-    if (request !== this.latestLoad) return false;
-    this.inFlight = null;
-    return true;
-  }
-
-  /** Park a request in the in-flight slot only while it is still out. A
-   *  response that came back synchronously has already left, and holding its
-   *  closed subscription would jam the poll's in-flight guard for good. */
-  private trackWhileOpen(request: Subscription): Subscription | null {
-    return request.closed ? null : request;
-  }
-
   private invalidate(): void {
-    ++this.latestLoad;
-    this.inFlight?.unsubscribe();
-    this.inFlight = null;
-    this.lastLoadedAt = 0;
+    this.loads.forget();
     this.storedSubscriptions.set([]);
     this.favoritesCount.set(0);
     this.keptCount.set(0);
@@ -193,7 +159,7 @@ export class SubscriptionsStore {
 
   /** Reload sidebar counts only after their freshness window has elapsed. */
   loadIfStale(): void {
-    if (!countsAreStale(this.lastLoadedAt)) return;
+    if (!this.loads.isStale()) return;
     this.load();
   }
 
@@ -253,9 +219,7 @@ export class SubscriptionsStore {
     // first real load would stamp the freshness clock, silence that load, and
     // leave `resolved` false — so the onboarding redirect could never decide.
     if (!this.resolved()) return;
-    // A tick already on the wire is about to answer this question; don't stack another.
-    if (this.inFlight) return;
-    if (!countsAreStale(this.lastLoadedAt)) return;
+    if (!this.loads.isStale()) return;
 
     this.quietFetch(fetch, apply, () => undefined);
   }
@@ -271,27 +235,20 @@ export class SubscriptionsStore {
     apply: (response: T) => void,
     whenOvertaken: () => void,
   ): void {
-    const request = this.beginRequest();
     const editsWhenSent = this.localEdits;
-    this.inFlight = this.trackWhileOpen(
-      fetch().subscribe({
-        next: (response) => {
-          if (!this.settle(request)) return;
-          // Only the server edits the totals and the Trending counts,
-          // so even an overtaken answer carries the latest.
-          this.storedUnreadTotals.set(unreadTotalsFrom(response.unreadTotals));
-          this.trendingUnopened.set(response.trending);
-          // The user changed a feed count while this was on the wire. The server
-          // counted before that, so adopting those counts now would put the badge back up.
-          if (this.localEdits !== editsWhenSent) {
-            whenOvertaken();
-            return;
-          }
-          apply(response);
-        },
-        error: () => void this.settle(request),
-      }),
-    );
+    this.loads.run(fetch(), (response) => {
+      // Only the server edits the totals and the Trending counts,
+      // so even an overtaken answer carries the latest.
+      this.storedUnreadTotals.set(unreadTotalsFrom(response.unreadTotals));
+      this.trendingUnopened.set(response.trending);
+      // The user changed a feed count while this was on the wire. The server
+      // counted before that, so adopting those counts now would put the badge back up.
+      if (this.localEdits !== editsWhenSent) {
+        whenOvertaken();
+        return;
+      }
+      apply(response);
+    });
   }
 
   private applyCounts(response: SubscriptionsResponse): void {

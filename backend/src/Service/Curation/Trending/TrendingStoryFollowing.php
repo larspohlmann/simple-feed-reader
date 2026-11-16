@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Trending;
 
+use App\Repository\TrendingSnapshotRepository;
 use App\Repository\TrendingStoryFollowRepository;
 use App\Repository\TrendingStoryRepository;
 use App\Service\Curation\Trending\Exception\TrendingStoryNotFollowedException;
 use App\Service\Curation\Trending\Exception\TrendingStoryNotFoundException;
+use App\Service\Curation\Trending\Model\FollowedStoriesModel;
 use App\Service\Curation\Trending\Model\FollowedStoryModel;
 use App\Service\Curation\Trending\Model\FollowedStoryRowModel;
 use App\Service\Foundation\Clock\NaiveUtcClock;
@@ -20,6 +22,7 @@ final readonly class TrendingStoryFollowing
     public function __construct(
         private TrendingStoryRepository $stories,
         private TrendingStoryFollowRepository $follows,
+        private TrendingSnapshotRepository $snapshots,
         private NaiveUtcClock $clock,
     ) {
     }
@@ -44,15 +47,18 @@ final readonly class TrendingStoryFollowing
         }
     }
 
-    /** @return list<FollowedStoryModel> newest joined first */
-    public function followedBy(int $userId): array
+    /** Stories newest joined first, with when the next Trending build is due. */
+    public function followedBy(int $userId): FollowedStoriesModel
     {
         $quietSince = $this->clock->now()->modify(\sprintf('-%d hours', self::QUIET_AFTER_HOURS));
 
-        return array_map(
-            static fn (FollowedStoryRowModel $row): FollowedStoryModel
-                => new FollowedStoryModel($row, $row->lastJoinedAt <= $quietSince),
-            $this->follows->followedBy($userId),
+        return new FollowedStoriesModel(
+            array_map(
+                static fn (FollowedStoryRowModel $row): FollowedStoryModel
+                    => new FollowedStoryModel($row, $row->lastJoinedAt <= $quietSince),
+                $this->follows->followedBy($userId),
+            ),
+            $this->snapshots->lastBuilds()->nextBuildDueAt(),
         );
     }
 }

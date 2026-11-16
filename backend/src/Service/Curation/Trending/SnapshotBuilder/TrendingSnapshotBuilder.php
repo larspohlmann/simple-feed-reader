@@ -12,11 +12,16 @@ use App\Service\Curation\Trending\Model\StoryBuildModel;
 use App\Service\Curation\Trending\Model\StoryMatchModel;
 use App\Service\Curation\Trending\Model\TrendingBuildReportModel;
 use App\Service\Curation\Trending\Pass\BuildStopwatch;
-use App\Service\Curation\Trending\StoryMatching;
+use App\Service\Curation\Trending\StoryBuildPolicy\StoryBuildPolicyInterface;
 use App\Service\Curation\Trending\TrendingGrouping;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Container\ContainerExceptionInterface;
+use Psr\Container\ContainerInterface;
+use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
+use Symfony\Component\Lock\Exception\ExceptionInterface as LockExceptionInterface;
 use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\LockInterface;
 
 /**
  * Groups one window and matches the groups to the stored stories, updating them in place in one transaction:
@@ -31,7 +36,8 @@ final readonly class TrendingSnapshotBuilder implements SnapshotBuilderInterface
 
     public function __construct(
         private TrendingGrouping $grouping,
-        private StoryMatching $matching,
+        #[AutowireLocator('app.trending_story_build_policy')]
+        private ContainerInterface $policies,
         private TrendingStoryHistoryRepository $history,
         private TrendingSnapshotRepository $snapshots,
         private EntityManagerInterface $entityManager,
@@ -49,13 +55,13 @@ final readonly class TrendingSnapshotBuilder implements SnapshotBuilderInterface
         }
 
         try {
-            return $this->buildLocked($window);
+            return $this->buildLocked($window, $lock);
         } finally {
             $lock->release();
         }
     }
 
-    private function buildLocked(TrendingWindow $window): TrendingBuildReportModel
+    private function buildLocked(TrendingWindow $window, LockInterface $lock): TrendingBuildReportModel
     {
         $stopwatch = BuildStopwatch::start();
         $run = $this->grouping->collect($window);
@@ -63,10 +69,19 @@ final readonly class TrendingSnapshotBuilder implements SnapshotBuilderInterface
         $entryCount = $run->entryCount();
         $build = new StoryBuildModel($window, $run->since, $this->clock->now());
         unset($run);
-        $match = $this->matching->match($groups, $this->history->storedInWindow($build->since), $window);
+        $policy = $this->policyFor($window);
+        $match = $policy->match($groups, $this->history->storedInWindow($build->since));
 
-        return $this->entityManager->wrapInTransaction(function () use ($build, $match, $entryCount, $stopwatch) {
-            $pruned = $this->write($build, $match);
+        $this->refreshLock($lock);
+
+        return $this->entityManager->wrapInTransaction(function () use (
+            $build,
+            $policy,
+            $match,
+            $entryCount,
+            $stopwatch,
+        ) {
+            $pruned = $this->write($build, $policy, $match);
             $report = new TrendingBuildReportModel(
                 $build->window,
                 $build->builtAt,
@@ -83,17 +98,38 @@ final readonly class TrendingSnapshotBuilder implements SnapshotBuilderInterface
         });
     }
 
+    private function refreshLock(LockInterface $lock): void
+    {
+        try {
+            $lock->refresh();
+        } catch (LockExceptionInterface $exception) {
+            throw new TrendingBuildBusyException(previous: $exception);
+        }
+    }
+
     /** @return int the stories pruned */
-    private function write(StoryBuildModel $build, StoryMatchModel $match): int
+    private function write(StoryBuildModel $build, StoryBuildPolicyInterface $policy, StoryMatchModel $match): int
     {
         foreach ($match->merges as $merge) {
             $this->history->merge($merge);
         }
-        $this->history->clearPlacement($build->window);
-        foreach ($match->assignments as $assignment) {
-            $this->history->save($assignment, $build);
-        }
+        $this->history->place($build->window, $this->history->saveAll($build, $match->assignments));
 
-        return $build->window->mergesStories() ? $this->history->pruneUnfollowedOutside($build->since) : 0;
+        return $policy->prune($build);
+    }
+
+    private function policyFor(TrendingWindow $window): StoryBuildPolicyInterface
+    {
+        try {
+            $policy = $this->policies->get($window->value);
+        } catch (ContainerExceptionInterface $exception) {
+            throw new \LogicException(
+                \sprintf('No story build policy is wired for the "%s" window.', $window->value),
+                previous: $exception,
+            );
+        }
+        \assert($policy instanceof StoryBuildPolicyInterface);
+
+        return $policy;
     }
 }

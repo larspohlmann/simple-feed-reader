@@ -9,7 +9,6 @@ use App\Entity\Subscription;
 use App\Entity\TrendingStoryEntry;
 use App\Enum\InclusionSurface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
-use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -34,16 +33,16 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
     /** @return list<EntryListRow> */
     public function listMembers(TrendingStoryListQuery $query): array
     {
-        $ordering = $query->ordering();
+        $ordering = $query->page->ordering();
         $qb = $this->projection->orderedBy($this->projection->rowQueryBuilder($query->userId), $ordering)
-            ->setMaxResults($query->limit)
+            ->setMaxResults($query->page->limit)
             ->setParameter('story', $query->storyId);
         $this->applyMembership($qb, EntryAliases::primary());
         $this->collapse->apply($qb, $this->applyMembership(...), $query->userId);
-        if ($query->onlyUnread) {
+        if ($query->page->onlyUnread) {
             $this->scopes->unread($qb, EntryAliases::primary());
         }
-        $this->projection->applyCursor($qb, $query->cursor, $ordering);
+        $this->projection->applyCursor($qb, $query->page->cursor, $ordering);
 
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $qb->getQuery()->getResult();
@@ -52,43 +51,44 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
     }
 
     /**
-     * The given entries that, or whose collapsed copy the reader sees, joined the story after $since.
+     * When each given entry joined the story: the latest join among it and the collapsed copies the reader sees.
      *
      * @param list<int> $entryIds
      *
-     * @return list<int>
+     * @return array<int, \DateTimeImmutable>
      */
-    public function joinedAfter(TrendingStoryListQuery $query, array $entryIds, \DateTimeImmutable $since): array
+    public function joinedAtByEntry(TrendingStoryListQuery $query, array $entryIds): array
     {
         if ($entryIds === []) {
             return [];
         }
 
-        $joined = $this->getEntityManager()->createQueryBuilder()
-            ->select('1')
-            ->from(TrendingStoryEntry::class, 'joined')
+        $qb = $this->createQueryBuilder('e')
+            ->select('e.id AS id', 'MAX(joined.joinedAt) AS joinedAt')
+            ->join(TrendingStoryEntry::class, 'joined', 'WITH', 'joined.story = :story')
             ->join('joined.entry', 'joinedEntry')
             ->join(
                 Subscription::class,
                 'joinedReader',
-                'ON',
+                'WITH',
                 'joinedReader.feed = joinedEntry.feed AND joinedReader.user = :user',
             )
-            ->andWhere('joined.story = :story')
-            ->andWhere('joined.joinedAt > :since')
-            ->andWhere('joinedEntry = e OR joinedEntry.location.urlHash = e.location.urlHash');
-        InclusionScopeDql::restrict($joined, 'joinedReader', InclusionSurface::Trending);
-
-        $qb = $this->createQueryBuilder('e')
-            ->select('e.id')
+            ->andWhere('joinedEntry = e OR joinedEntry.location.urlHash = e.location.urlHash')
             ->andWhere('e.id IN (:entryIds)')
-            ->andWhere('EXISTS (' . $joined->getDQL() . ')')
+            ->groupBy('e.id')
             ->setParameter('entryIds', $entryIds)
             ->setParameter('user', $query->userId)
-            ->setParameter('story', $query->storyId)
-            ->setParameter('since', $since, Types::DATETIME_IMMUTABLE);
+            ->setParameter('story', $query->storyId);
+        InclusionScopeDql::restrict($qb, 'joinedReader', InclusionSurface::Trending);
 
-        return $this->projection->scalarIds($qb);
+        /** @var list<array{id: int|string, joinedAt: string}> $rows */
+        $rows = $qb->getQuery()->getScalarResult();
+        $joinedAt = [];
+        foreach ($rows as $row) {
+            $joinedAt[(int) $row['id']] = NaiveUtc::parse($row['joinedAt']);
+        }
+
+        return $joinedAt;
     }
 
     /** On the primary alias and inside the collapse subquery alike, or a collapsed copy punches a hole in the page. */

@@ -17,8 +17,7 @@ import { LinkReaderNavigation } from './link-reader-navigation.service';
 import { ReaderRouteState } from './reader-route-state.service';
 import { ListHeading } from './list-heading.service';
 import { EntryStateActions } from './entry-state-actions.service';
-import { TrendingFollowAction } from '../trending/trending-follow-action';
-import { TrendingHideAction } from '../trending/trending-hide-action';
+import { provideTrendingStoryActions } from '../trending/story-actions/story-actions';
 import { MarkReadActions } from './mark-read-actions.service';
 import { ReaderOnboarding } from './reader-onboarding.service';
 import { PasskeyFirstBootOffer } from './passkey-first-boot-offer.service';
@@ -35,6 +34,7 @@ import { SubscriptionsStore } from '../state/subscriptions.store';
 import { flattenTagTree } from '../state/subscription-derivations';
 import { TagsStore } from '../state/tags.store';
 import { EntriesStore } from '../state/entries.store';
+import { FollowedStoryVisit } from '../state/followed-story-visit';
 import { RefreshService } from '../state/refresh.service';
 import { RecommendationsService } from '../state/recommendations.service';
 import { NetworkSurfaceSwitches } from '../state/network-surface-switches.service';
@@ -118,8 +118,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
     LinkReaderNavigation,
     ListHeading,
     EntryStateActions,
-    TrendingFollowAction,
-    TrendingHideAction,
+    ...provideTrendingStoryActions(),
     MarkReadActions,
     ReaderOnboarding,
     PasskeyFirstBootOffer,
@@ -143,6 +142,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly subs = inject(SubscriptionsStore);
   readonly tags = inject(TagsStore);
   readonly entries = inject(EntriesStore);
+  readonly storyVisit = inject(FollowedStoryVisit);
   readonly refreshSvc = inject(RefreshService);
   readonly recs = inject(RecommendationsService);
   readonly savedSearchesStore = inject(SavedSearchesStore);

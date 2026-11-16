@@ -1,14 +1,17 @@
 import { Provider, signal } from '@angular/core';
 import { SelectionKind } from '../app/reader/query/query';
-import { ReaderRouteState } from '../app/reader/shell/reader-route-state.service';
-import { TrendingFollowAction } from '../app/reader/trending/trending-follow-action';
-import { TrendingHideAction } from '../app/reader/trending/trending-hide-action';
+import { TrendingStory } from '../app/reader/trending/trending.models';
+import { STORY_ACTIONS } from '../app/reader/trending/story-actions/story-actions';
 
-/** What the reader shell gives a Trending card's story actions (#2128): the list on screen and the two actions. */
+/** What the reader shell gives a Trending card's story actions (#2128): actions on Trending, none elsewhere. */
 export function provideStoryActions(kind: SelectionKind = 'trending'): Provider[] {
-  return [
-    { provide: ReaderRouteState, useValue: { selection: signal({ kind }) } },
-    { provide: TrendingFollowAction, useValue: { run: jest.fn() } },
-    { provide: TrendingHideAction, useValue: { run: jest.fn() } },
-  ];
+  const actions =
+    kind === 'trending'
+      ? {
+          follow: jest.fn(),
+          hide: jest.fn(),
+          isFollowed: jest.fn((story: TrendingStory) => story.followed),
+        }
+      : null;
+  return [{ provide: STORY_ACTIONS, useValue: signal(actions) }];
 }

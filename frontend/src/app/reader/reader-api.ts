@@ -16,7 +16,6 @@ import { CommentsResponse } from './entry-comment';
 import {
   DiscoverResult,
   EntriesPage,
-  FollowedStoryPageDto,
   EntryQuery,
   EntryStatePatch,
   FeedPreview,
@@ -35,7 +34,7 @@ import {
   TagInput,
   TagUpdate,
 } from './models';
-import { TrendingWindow } from './trending/trending.models';
+import { FollowedStoryPageDto, TrendingWindow } from './trending/trending.models';
 import { BulkSubscriptionUpdate } from './subscription-bulk';
 import { TrendingApi } from './trending/trending-api';
 import { DEFAULT_TRENDING_WINDOW } from './trending/trending-window';

@@ -6,28 +6,16 @@ namespace App\Repository;
 
 use App\Enum\TrendingWindow;
 
-/** The one place a window maps to the trending_story_entry flag that places a member in it (#2128). */
+/** The one place a window's placement rows decide which members of a story it shows (#2128, #2272). */
 final class TrendingPlacementSql
 {
     public static function placedIn(TrendingWindow $window, string $member): string
     {
-        return \sprintf('%s.%s = 1', $member, self::flagOf($window));
-    }
-
-    /** @return list<int> one 0 or 1 per window, in case order: the order the member columns list the flags */
-    public static function placementIn(TrendingWindow $window): array
-    {
-        return array_map(
-            static fn (TrendingWindow $each): int => $each === $window ? 1 : 0,
-            TrendingWindow::cases(),
+        return \sprintf(
+            'EXISTS (SELECT 1 FROM trending_story_placement placed_%1$s WHERE placed_%1$s.time_window = \'%2$s\''
+            . ' AND placed_%1$s.entry_id = %1$s.entry_id AND placed_%1$s.story_id = %1$s.story_id)',
+            $member,
+            $window->value,
         );
-    }
-
-    public static function flagOf(TrendingWindow $window): string
-    {
-        return match ($window) {
-            TrendingWindow::Day => 'in_day',
-            TrendingWindow::Week => 'in_week',
-        };
     }
 }

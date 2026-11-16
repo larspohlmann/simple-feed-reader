@@ -1,3 +1,5 @@
+import type { EntriesPage } from '../models';
+
 export type TrendingWindow = 'day' | 'week';
 
 /** The sidebar badge: the stories of one window the reader has not opened (#2017). */
@@ -31,4 +33,12 @@ export interface FollowedStoryDto {
 
 export interface FollowedStoriesResponseDto {
   stories: FollowedStoryDto[];
+  nextBuildDueAt: string | null;
+}
+
+/** A followed Trending story's page (#2128): `newEntryIds` are its rows whose `joinedAt` is after `lastOpenedAt`. */
+export interface FollowedStoryPageDto extends EntriesPage {
+  lastOpenedAt: string;
+  /** Kept for other clients such as iOS; the web client derives its marks from `lastOpenedAt`. */
+  newEntryIds: number[];
 }

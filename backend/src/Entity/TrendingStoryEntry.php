@@ -38,12 +38,6 @@ final class TrendingStoryEntry
     #[ORM\Column(name: 'joined_at', type: Types::DATETIME_IMMUTABLE)]
     public readonly \DateTimeImmutable $joinedAt;
 
-    #[ORM\Column(name: 'in_day', options: ['default' => false])]
-    private bool $inDay = false;
-
-    #[ORM\Column(name: 'in_week', options: ['default' => false])]
-    private bool $inWeek = false;
-
     /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(
         TrendingStory $story,

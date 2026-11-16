@@ -1,11 +1,4 @@
-import {
-  blocksWithout,
-  groupMembersWithout,
-  ListBlock,
-  runGroupsWithout,
-  SINCE_VISIT_BLOCK,
-} from './hidden-overlay';
-import { RunGroup } from '../for-you-runs';
+import { blocksWithout, groupMembersWithout, ListBlock, SINCE_VISIT_BLOCK } from './hidden-overlay';
 import { EntryDto } from '../../models';
 
 const entry = (id: number): EntryDto => ({ id }) as EntryDto;
@@ -86,25 +79,5 @@ describe('groupMembersWithout (#1972)', () => {
   it('drops a group, and then its run divider, once every member is leaving', () => {
     const blocks = [header('t1'), group([1, 2]), header('t2'), compact(3)];
     expect(groupMembersWithout(blocks, new Set([1, 2]))).toEqual([header('t2'), compact(3)]);
-  });
-});
-
-describe('runGroupsWithout', () => {
-  const group = (runId: number, ids: number[]): RunGroup => ({
-    runId,
-    generatedAt: undefined,
-    entries: ids.map(entry),
-  });
-
-  it('returns the input itself when nothing is hidden', () => {
-    const groups = [group(1, [1])];
-    expect(runGroupsWithout(groups, new Set())).toBe(groups);
-  });
-
-  it('keeps an untouched group by identity and drops an emptied one', () => {
-    const untouched = group(1, [1]);
-    const out = runGroupsWithout([untouched, group(2, [2, 3])], new Set([2, 3]));
-    expect(out).toHaveLength(1);
-    expect(out[0]).toBe(untouched);
   });
 });

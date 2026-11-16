@@ -54,6 +54,7 @@ use App\Entity\TrendingStoryHide;
 use App\Entity\TrendingSnapshot;
 use App\Entity\TrendingStory;
 use App\Entity\TrendingStoryEntry;
+use App\Entity\TrendingStoryPlacement;
 use App\Entity\User;
 use App\Entity\UserIdentity;
 use App\Entity\UserPasskey;
@@ -159,6 +160,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
         TrendingStory::class => 'A Trending story of the instance\'s latest grouping (#2017); regrouped from the '
             . 'entries on the next rebuild.',
         TrendingStoryEntry::class => 'An entry\'s membership of a Trending story (#2017); regrouped from the '
+            . 'entries on the next rebuild.',
+        TrendingStoryPlacement::class => 'The story a Trending window shows an entry in (#2272); regrouped from the '
             . 'entries on the next rebuild.',
         SharedLink::class => 'A linked article, stored once for every post that shares it (#2239); a card\'s line '
             . 'carries its preview, and a restore finds or creates the row from it.',

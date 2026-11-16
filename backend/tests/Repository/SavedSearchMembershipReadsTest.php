@@ -14,6 +14,7 @@ use App\Entity\User;
 use App\Pagination\EntryCursor;
 use App\Repository\EntryListRow;
 use App\Repository\SavedSearchEntryRepository;
+use App\Repository\EntryListPage;
 use App\Repository\SavedSearchListQuery;
 use App\Tests\DbTestCase;
 
@@ -315,9 +316,7 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
                 static fn (SavedSearch $savedSearch): int => $savedSearch->requireId(),
                 $searches,
             ),
-            onlyUnread: $onlyUnread,
-            cursor: $cursor,
-            limit: $limit,
+            page: new EntryListPage($cursor, $limit, onlyUnread: $onlyUnread),
         );
     }
 

@@ -11,7 +11,14 @@ import { REFRESH_REVEAL } from './pull-to-refresh';
 import { ListScrollMemory } from '../../scroll/list-scroll-memory';
 import { CatalogAvailability } from '../../feeds/catalog/catalog-availability';
 import { REVEAL_STEP, prefetchMargin } from '../paging';
-import { EntryDto, ListOrder, SubscriptionDto } from '../../models';
+import { EntryDto, EntryQuery, ListOrder, SubscriptionDto } from '../../models';
+import { ReaderApi } from '../../reader-api';
+import { TrendingApi } from '../../trending/trending-api';
+import { FollowedStoryPageDto } from '../../trending/trending.models';
+import { SocialPostApi } from '../../social-post-api';
+import { EntriesStore } from '../../state/entries.store';
+import { FollowedStoriesStore } from '../../state/followed-stories.store';
+import { FollowedStoryVisit } from '../../state/followed-story-visit';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { SubscriptionRows } from '../../state/subscription-rows';
 import { makeSubscription } from '../../testing/subscription.factory';
@@ -328,6 +335,89 @@ describe('EntryListComponent', () => {
 
       expect(divider(mountStory([3, 1, 2], [3], { selection: oldestFirst })).length).toBe(0);
       expect(divider(mountStory([1, 2, 3], [1, 2], { selection: oldestFirst })).length).toBe(0);
+    });
+
+    it('keeps the remaining rows mounted when hiding empties the head of a followed story', () => {
+      const fixture = mount({
+        entries: [entry(1), entry(2), entry(3)],
+        newSinceVisitIds: new Set([1, 2]),
+        selection: story,
+        layout: 'list',
+      });
+      const element = fixture.nativeElement as HTMLElement;
+      const earlierRow = element.querySelectorAll('.row-slot')[2];
+
+      fixture.componentInstance.content.hiddenAboveIds.set(new Set([1, 2]));
+      fixture.detectChanges();
+
+      expect(divider(element).length).toBe(0);
+      expect(element.querySelector('.row-slot')).toBe(earlierRow);
+    });
+
+    describe('through the store and the visit (#2272)', () => {
+      const openedAt = '2026-11-16T08:00:00+00:00';
+      const joinedSince = '2026-11-16T09:00:00+00:00';
+      const joinedBefore = '2026-11-16T07:00:00+00:00';
+      const member = (id: number, joinedAt: string) => entry(id, { joinedAt });
+      const pages: Record<string, FollowedStoryPageDto> = {
+        first: {
+          entries: [member(1, joinedSince), member(2, joinedSince), member(3, joinedBefore)],
+          nextCursor: 'C2',
+          lastOpenedAt: openedAt,
+          newEntryIds: [1, 2],
+        },
+        C2: {
+          entries: [member(4, joinedSince), member(5, joinedBefore)],
+          nextCursor: null,
+          lastOpenedAt: openedAt,
+          newEntryIds: [4],
+        },
+      };
+      const readerApi = {
+        entries: (query: EntryQuery, cursor?: string | null) => of(pages[cursor ?? 'first']),
+      };
+
+      it('marks a later page, then drops the divider and keeps the earlier rows once the new head hides', async () => {
+        const fixture = mount({ entries: [], selection: story, layout: 'list' }, [
+          { provide: ReaderApi, useValue: readerApi },
+          { provide: TrendingApi, useValue: {} },
+          { provide: SocialPostApi, useValue: {} },
+          { provide: FollowedStoriesStore, useValue: { markOpened: jest.fn() } },
+        ]);
+        const element = fixture.nativeElement as HTMLElement;
+        const store = TestBed.inject(EntriesStore);
+        const visit = TestBed.inject(FollowedStoryVisit);
+        const render = async () => {
+          fixture.componentRef.setInput('entries', store.entries());
+          fixture.componentRef.setInput('hasMore', store.nextCursor() !== null);
+          fixture.componentRef.setInput('newSinceVisitIds', visit.newSinceVisitIds());
+          for (let frame = 0; frame < 12; frame++) {
+            await frames();
+            fixture.detectChanges();
+          }
+        };
+        const rows = () => Array.from(element.querySelectorAll('.row-slot'));
+
+        store.load({ view: 'all', followedStoryId: 42 });
+        await render();
+        expect([...visit.newSinceVisitIds()]).toEqual([1, 2]);
+        expect(rowsAboveDivider(element)).toBe(2);
+
+        store.loadMore();
+        await render();
+        expect([...visit.newSinceVisitIds()]).toEqual([1, 2, 4]);
+        expect(divider(element).length).toBe(1);
+        expect(rowsAboveDivider(element)).toBe(2);
+        expect(rows()).toHaveLength(5);
+        const earlierRows = rows().slice(2);
+
+        fixture.componentInstance.content.hiddenAboveIds.set(new Set([1, 2]));
+        fixture.detectChanges();
+
+        expect(divider(element).length).toBe(0);
+        expect(rows()).toHaveLength(earlierRows.length);
+        rows().forEach((row, index) => expect(row).toBe(earlierRows[index]));
+      });
     });
 
     it('sits between the new and the earlier rows in the magazine layout', () => {
@@ -2561,15 +2651,15 @@ describe('EntryListComponent', () => {
   });
 
   describe('freeze & remove after mark-above-read (#1080)', () => {
-    it('drops a hidden id from visibleRunGroups while keeping the rest, in order', () => {
+    it('drops a hidden id from visibleSegments while keeping the rest, in order', () => {
       const fixture = mount({ entries: [entry(1), entry(2), entry(3)] });
 
       fixture.componentInstance.content.hiddenAboveIds.set(new Set([2]));
 
       expect(
         fixture.componentInstance.content
-          .visibleRunGroups()[0]
-          .entries.map((groupEntry) => groupEntry.id),
+          .visibleSegments()[0]
+          .entries.map((segmentEntry) => segmentEntry.id),
       ).toEqual([1, 3]);
     });
 

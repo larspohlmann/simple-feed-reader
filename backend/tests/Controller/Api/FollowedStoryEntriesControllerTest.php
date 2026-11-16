@@ -77,7 +77,6 @@ final class FollowedStoryEntriesControllerTest extends ApiTestCase
 
         $second = $this->page($story, ['limit' => 2, 'cursor' => $first['nextCursor']]);
         self::assertSame(['Third', 'Oldest, joined late'], $this->titles($second));
-        self::assertSame([], $second['newEntryIds']);
         self::assertIsString($second['nextCursor']);
 
         $last = $this->page($story, ['limit' => 2, 'cursor' => $second['nextCursor']]);
@@ -180,6 +179,87 @@ final class FollowedStoryEntriesControllerTest extends ApiTestCase
 
         self::assertSame('2031-05-14T10:00:00+00:00', $page['lastOpenedAt']);
         self::assertSame([$newestJoinedLater->requireId(), $joinedLater->requireId()], $page['newEntryIds']);
+    }
+
+    public function testEachRowSaysWhenItJoinedTheStory(): void
+    {
+        $reader = $this->signIn($this->client, 'story-list-joined-at@example.com');
+        [$alpha, $beta, $gamma] = $this->followedFeeds($reader);
+        $story = $this->fixtures->story(
+            TrendingWindow::Day,
+            '2031-05-14 09:00:00',
+            $this->fixtures->entry($alpha, 'Joined first', '2031-05-14 09:00:00'),
+        );
+        $this->follow($story);
+        $this->fixtures->join(
+            $this->reloaded($story),
+            '2031-05-14 11:00:00',
+            $this->fixtures->entry($this->reloaded($beta), 'Joined later', '2031-05-14 08:00:00'),
+        );
+        $this->fixtures->join(
+            $this->reloaded($story),
+            '2031-05-14 10:30:00',
+            $this->fixtures->entry($this->reloaded($gamma), 'Joined in between', '2031-05-14 07:00:00'),
+        );
+
+        $entries = $this->entries($this->page($story));
+
+        self::assertSame(
+            ['Joined first', 'Joined later', 'Joined in between'],
+            array_column($entries, 'title'),
+        );
+        self::assertSame(
+            ['2031-05-14T09:00:00+00:00', '2031-05-14T11:00:00+00:00', '2031-05-14T10:30:00+00:00'],
+            array_column($entries, 'joinedAt'),
+        );
+    }
+
+    public function testASecondPageMarksItsNewRowsToo(): void
+    {
+        $reader = $this->signIn($this->client, 'story-list-new-second-page@example.com');
+        [$alpha, $beta, $gamma] = $this->followedFeeds($reader);
+        $story = $this->fixtures->story(
+            TrendingWindow::Day,
+            '2031-05-14 09:00:00',
+            $this->fixtures->entry($alpha, 'First', '2031-05-14 09:00:00'),
+            $this->fixtures->entry($beta, 'Second', '2031-05-14 08:00:00'),
+            $this->fixtures->entry($gamma, 'Third', '2031-05-14 07:00:00'),
+        );
+        $this->follow($story);
+        $joinedLate = $this->fixtures->entry($this->reloaded($alpha), 'Oldest, joined late', '2031-05-14 06:00:00');
+        $this->fixtures->join($this->reloaded($story), '2031-05-14 11:00:00', $joinedLate);
+
+        $first = $this->page($story, ['limit' => 2]);
+        self::assertIsString($first['nextCursor']);
+        $second = $this->page($story, ['limit' => 2, 'cursor' => $first['nextCursor']]);
+
+        self::assertSame([], $first['newEntryIds']);
+        self::assertSame(['Third', 'Oldest, joined late'], $this->titles($second));
+        self::assertSame([$joinedLate->requireId()], $second['newEntryIds']);
+    }
+
+    public function testACollapsedRowJoinsAtItsLatestVisibleCopy(): void
+    {
+        $reader = $this->signIn($this->client, 'story-list-joined-at-copy@example.com');
+        [$alpha, $beta] = $this->followedFeeds($reader);
+        $unfollowed = $this->fixtures->feed('unfollowed');
+        $story = $this->fixtures->story(TrendingWindow::Day, '2031-05-14 09:00:00', $this->copyOf($alpha, 'Shown'));
+        $this->follow($story);
+        $this->fixtures->join(
+            $this->reloaded($story),
+            '2031-05-14 11:00:00',
+            $this->copyOf($this->reloaded($beta), 'Copy'),
+        );
+        $this->fixtures->join(
+            $this->reloaded($story),
+            '2031-05-14 12:00:00',
+            $this->copyOf($this->reloaded($unfollowed), 'Unseen copy'),
+        );
+
+        $entries = $this->entries($this->page($story));
+
+        self::assertSame(['Shown'], array_column($entries, 'title'));
+        self::assertSame(['2031-05-14T11:00:00+00:00'], array_column($entries, 'joinedAt'));
     }
 
     public function testACopyJoinedAfterTheVisitMarksItsRowNew(): void

@@ -308,6 +308,8 @@ export interface EntryDto {
   story?: TrendingStory;
   /** Only on a Trending article: the posts sharing it, newest first, each post once (#2229). */
   shares?: EntryDto[];
+  /** Only on a followed story's row (#2272): when it, or the latest copy of it the reader sees, joined the story. */
+  joinedAt?: string;
 }
 
 /** The `/api/entries/{id}` detail shape: every list field plus the full body,
@@ -326,12 +328,6 @@ export interface EntriesPage {
    *  unreachable). The typo-tolerant engine can match rows the literal term never
    *  appears in, so highlighting must prefer this over splitting the typed term. */
   matchedWords?: string[];
-}
-
-/** A followed Trending story's page (#2128): `newEntryIds` are this page's rows that joined since `lastOpenedAt`. */
-export interface FollowedStoryPageDto extends EntriesPage {
-  lastOpenedAt: string;
-  newEntryIds: number[];
 }
 
 export interface EntryStateDto {

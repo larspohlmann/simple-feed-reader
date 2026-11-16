@@ -6,6 +6,7 @@ import { toggled } from '../../core/toggled-set';
 import { ExclusionSurface } from '../feed-exclusions';
 import { NetworkExclusionSurface, NetworkExclusionsApi } from '../network-exclusions-api';
 import { EntriesStore } from './entries.store';
+import { FollowedStoriesStore } from './followed-stories.store';
 import { sameMembers } from './same-members';
 import { countsAreStale } from './sidebar-freshness';
 import { SubscriptionsStore } from './subscriptions.store';
@@ -30,6 +31,7 @@ export class NetworkExclusionsStore implements NetworkSwitchStore {
   private readonly api = inject(NetworkExclusionsApi);
   private readonly subscriptions = inject(SubscriptionsStore);
   private readonly entries = inject(EntriesStore);
+  private readonly followedStories = inject(FollowedStoriesStore);
 
   private readonly stored = signal<ReadonlySet<SocialNetworkName>>(new Set(), {
     equal: sameMembers,
@@ -66,6 +68,7 @@ export class NetworkExclusionsStore implements NetworkSwitchStore {
       this.load();
       this.subscriptions.reloadCountsQuietly();
       this.entries.reloadIfShowing(this.surface);
+      if (this.surface === 'trending') this.followedStories.load();
     });
   }
 }

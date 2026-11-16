@@ -6,9 +6,7 @@ namespace App\Controller\Api;
 
 use App\Dto\Entry\EntryPageParameters;
 use App\Entity\User;
-use App\Enum\ListOrder;
 use App\Http\FollowedStoryPage;
-use App\Pagination\EntryCursor;
 use App\Repository\EntryListRowEnricher;
 use App\Repository\TrendingStoryListQuery;
 use App\Service\Curation\Trending\FollowedStoryEntries;
@@ -40,14 +38,11 @@ final readonly class FollowedStoryEntriesController
         $query = new TrendingStoryListQuery(
             userId: $userId,
             storyId: $id,
-            onlyUnread: $page->unread,
-            cursor: EntryCursor::fromRequestValue($page->cursor),
-            limit: $page->limit,
-            order: ListOrder::fromRequestValue($page->order),
+            page: $page->toListPage(),
         );
         $result = $this->entries->list($query);
         $rows = $this->enricher->enrich($result->rows, $userId);
 
-        return new JsonResponse($this->followedStoryPage->of($result->withRows($rows), $query->limit));
+        return new JsonResponse($this->followedStoryPage->of($result->withRows($rows), $query->page->limit));
     }
 }

@@ -15,6 +15,7 @@ describe('SidebarCountsPoll', () => {
   let reloadFull: jest.Mock;
   let reloadBadges: jest.Mock;
   let reloadFollowed: jest.Mock;
+  let loadFollowed: jest.Mock;
   let fetchMock: jest.Mock;
 
   /** The marker the mocked web server serves. `null` means the file is missing
@@ -71,6 +72,7 @@ describe('SidebarCountsPoll', () => {
     reloadFull = jest.fn();
     reloadBadges = jest.fn();
     reloadFollowed = jest.fn();
+    loadFollowed = jest.fn();
     TestBed.configureTestingModule({
       providers: [
         SidebarCountsPoll,
@@ -80,7 +82,10 @@ describe('SidebarCountsPoll', () => {
           useValue: { reloadCountsIfStale: reloadCounts, reloadQuietlyIfStale: reloadFull },
         },
         { provide: SavedSearchesStore, useValue: { reloadIfStale: reloadBadges } },
-        { provide: FollowedStoriesStore, useValue: { reloadIfStale: reloadFollowed } },
+        {
+          provide: FollowedStoriesStore,
+          useValue: { reloadIfStale: reloadFollowed, load: loadFollowed },
+        },
       ],
     });
   });
@@ -166,7 +171,17 @@ describe('SidebarCountsPoll', () => {
     setVisibility('hidden');
     setVisibility('visible');
     expect(reloadFull).toHaveBeenCalledTimes(1);
-    expect(reloadFollowed).toHaveBeenCalledTimes(2);
+    expect(loadFollowed).toHaveBeenCalledTimes(1);
+  });
+
+  it('reloads the followed stories on tab regain even before the next build is due', async () => {
+    await start(null);
+
+    setVisibility('hidden');
+    setVisibility('visible');
+
+    expect(loadFollowed).toHaveBeenCalledTimes(1);
+    expect(reloadFollowed).not.toHaveBeenCalled();
   });
 
   it('does not refresh before the first interval has elapsed', async () => {

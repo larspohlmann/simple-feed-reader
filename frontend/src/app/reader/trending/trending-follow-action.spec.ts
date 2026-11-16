@@ -10,76 +10,93 @@ import { TrendingFollowAction } from './trending-follow-action';
 
 describe('TrendingFollowAction (#2128)', () => {
   let ctrl: HttpTestingController;
-  let store: EntriesStore;
-  let followedStories: { load: jest.Mock; removeUnfollowed: jest.Mock };
+  let entries: EntriesStore;
+  let followedStories: FollowedStoriesStore;
 
+  const followUrl = 'https://api.test/api/trending/stories/12/follow';
+  const followedUrl = 'https://api.test/api/trending/followed';
+  const noContent = { status: 204, statusText: 'No Content' };
+  const failed = { status: 500, statusText: 'err' };
+  const problem = { type: 'x', title: 't', status: 500 };
   const card = (followed: boolean): EntryDto =>
     anEntry({ id: 7, story: aStory({ id: 12, followed }) });
   const action = () => TestBed.inject(TrendingFollowAction);
-  const followedOnScreen = () => store.entries()[0].story?.followed;
-  const loadTrending = (row: EntryDto) => {
-    store.load({ view: 'trending', window: 'day' });
-    ctrl
-      .expectOne((request) => request.url === 'https://api.test/api/trending')
-      .flush({ window: 'day', builtAt: null, stories: [row] });
-  };
+  const followedOnScreen = (entry: EntryDto) => followedStories.isFollowed(entry.story!);
 
   beforeEach(() => {
-    followedStories = { load: jest.fn(), removeUnfollowed: jest.fn() };
     TestBed.configureTestingModule({
       providers: [
         TrendingFollowAction,
-        { provide: FollowedStoriesStore, useValue: followedStories },
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: 'https://api.test' },
       ],
     });
     ctrl = TestBed.inject(HttpTestingController);
-    store = TestBed.inject(EntriesStore);
+    entries = TestBed.inject(EntriesStore);
+    followedStories = TestBed.inject(FollowedStoriesStore);
   });
 
   afterEach(() => ctrl.verify());
 
-  it('follows the story at once and keeps it followed once the server took it', () => {
-    loadTrending(card(false));
+  it('follows the story at once and reloads the followed stories once the server took it', () => {
+    const entry = card(false);
 
-    action().run(store.entries()[0]);
+    action().run(entry);
 
-    expect(followedOnScreen()).toBe(true);
-    const request = ctrl.expectOne('https://api.test/api/trending/stories/12/follow');
+    expect(followedOnScreen(entry)).toBe(true);
+    const request = ctrl.expectOne(followUrl);
     expect(request.request.method).toBe('PUT');
-    expect(followedStories.load).not.toHaveBeenCalled();
-    request.flush(null, { status: 204, statusText: 'No Content' });
-    expect(followedOnScreen()).toBe(true);
-    expect(followedStories.load).toHaveBeenCalledTimes(1);
-    expect(followedStories.removeUnfollowed).not.toHaveBeenCalled();
+    ctrl.expectNone(followedUrl);
+    request.flush(null, noContent);
+    ctrl.expectOne(followedUrl);
+    expect(followedOnScreen(entry)).toBe(true);
   });
 
-  it('drops the followed row, without a reload, once an unfollow has landed', () => {
-    loadTrending(card(true));
+  it('unfollows a followed story with a DELETE, without a reload', () => {
+    const entry = card(true);
 
-    action().run(store.entries()[0]);
+    action().run(entry);
 
-    ctrl
-      .expectOne('https://api.test/api/trending/stories/12/follow')
-      .flush(null, { status: 204, statusText: 'No Content' });
-    expect(followedStories.removeUnfollowed).toHaveBeenCalledWith(12);
-    expect(followedStories.load).not.toHaveBeenCalled();
-  });
-
-  it('unfollows a followed story, and shows it followed again when the request fails', () => {
-    loadTrending(card(true));
-
-    action().run(store.entries()[0]);
-
-    expect(followedOnScreen()).toBe(false);
-    const request = ctrl.expectOne('https://api.test/api/trending/stories/12/follow');
+    expect(followedOnScreen(entry)).toBe(false);
+    const request = ctrl.expectOne(followUrl);
     expect(request.request.method).toBe('DELETE');
-    request.flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
-    expect(followedOnScreen()).toBe(true);
-    expect(store.error()).not.toBeNull();
-    expect(followedStories.load).not.toHaveBeenCalled();
-    expect(followedStories.removeUnfollowed).not.toHaveBeenCalled();
+    request.flush(null, noContent);
+    ctrl.expectNone(followedUrl);
+    expect(followedOnScreen(entry)).toBe(false);
+  });
+
+  it('shows the story followed again with the banner when an unfollow fails, and unfollows on retry', () => {
+    const entry = card(true);
+
+    action().run(entry);
+    ctrl.expectOne(followUrl).flush(problem, failed);
+
+    expect(followedOnScreen(entry)).toBe(true);
+    expect(entries.error()).not.toBeNull();
+
+    entries.retry();
+    expect(followedOnScreen(entry)).toBe(false);
+    const retried = ctrl.expectOne(followUrl);
+    expect(retried.request.method).toBe('DELETE');
+    retried.flush(null, noContent);
+    expect(entries.error()).toBeNull();
+  });
+
+  it('sends nothing extra on a second click while the first is on the wire', () => {
+    const entry = card(false);
+
+    action().run(entry);
+    action().run(entry);
+
+    ctrl.expectOne(followUrl).flush(null, noContent);
+    ctrl.expectOne(followedUrl);
+    expect(followedOnScreen(entry)).toBe(true);
+  });
+
+  it('does nothing for a row with no story', () => {
+    action().run(anEntry({ id: 7 }));
+
+    ctrl.expectNone(followUrl);
   });
 });

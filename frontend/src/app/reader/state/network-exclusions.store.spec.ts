@@ -8,7 +8,11 @@ import {
 } from './network-exclusions.store';
 import { SubscriptionsStore } from './subscriptions.store';
 import { EntriesStore } from './entries.store';
+import { FollowedStoriesStore } from './followed-stories.store';
 import { SIDEBAR_RELOAD_INTERVAL_MS } from './sidebar-freshness';
+
+const followedStories = { load: jest.fn() };
+beforeEach(() => followedStories.load.mockClear());
 
 describe.each<{ store: NetworkExcludingSurface; surface: NetworkExclusionSurface }>([
   { store: 'allItems', surface: 'all-items' },
@@ -23,6 +27,7 @@ describe.each<{ store: NetworkExcludingSurface; surface: NetworkExclusionSurface
         { provide: NetworkExclusionsApi, useValue: api },
         { provide: SubscriptionsStore, useValue: { reloadCountsQuietly } },
         { provide: EntriesStore, useValue: { reloadIfShowing: jest.fn() } },
+        { provide: FollowedStoriesStore, useValue: followedStories },
       ],
     });
     return TestBed.inject(NETWORK_EXCLUSION_STORES)[storeSurface];
@@ -121,6 +126,7 @@ describe('the Trending network switches', () => {
         },
         { provide: SubscriptionsStore, useValue: { reloadCountsQuietly: jest.fn() } },
         { provide: EntriesStore, useValue: { reloadIfShowing } },
+        { provide: FollowedStoriesStore, useValue: followedStories },
       ],
     });
     const store = TestBed.inject(NETWORK_EXCLUSION_STORES).trending;
@@ -131,6 +137,30 @@ describe('the Trending network switches', () => {
 
     expect(reloadIfShowing).toHaveBeenCalledTimes(1);
     expect(reloadIfShowing).toHaveBeenCalledWith('trending');
+  });
+
+  it('reload the followed stories once a switch lands', () => {
+    const write = new Subject<undefined>();
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: NetworkExclusionsApi,
+          useValue: {
+            excludedNetworks: () => of({ excludedNetworks: [] }),
+            exclude: () => write,
+          },
+        },
+        { provide: SubscriptionsStore, useValue: { reloadCountsQuietly: jest.fn() } },
+        { provide: EntriesStore, useValue: { reloadIfShowing: jest.fn() } },
+        { provide: FollowedStoriesStore, useValue: followedStories },
+      ],
+    });
+
+    TestBed.inject(NETWORK_EXCLUSION_STORES).trending.toggleNetwork('bluesky');
+    expect(followedStories.load).not.toHaveBeenCalled();
+    write.next(undefined);
+
+    expect(followedStories.load).toHaveBeenCalledTimes(1);
   });
 
   it('leave the other surfaces’ lists alone', () => {
@@ -146,11 +176,13 @@ describe('the Trending network switches', () => {
         },
         { provide: SubscriptionsStore, useValue: { reloadCountsQuietly: jest.fn() } },
         { provide: EntriesStore, useValue: { reloadIfShowing } },
+        { provide: FollowedStoriesStore, useValue: followedStories },
       ],
     });
 
     TestBed.inject(NETWORK_EXCLUSION_STORES).allItems.toggleNetwork('bluesky');
 
     expect(reloadIfShowing).not.toHaveBeenCalledWith('trending');
+    expect(followedStories.load).not.toHaveBeenCalled();
   });
 });

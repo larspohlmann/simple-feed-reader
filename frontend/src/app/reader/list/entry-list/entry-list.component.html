@@ -160,17 +160,18 @@
         <ng-container [ngTemplateOutlet]="block" />
       </div>
     }
-    @for (group of content.visibleRunGroups(); track group.runId) {
-      @if (content.showRunHeader(group)) {
-        <app-run-header [generatedAt]="group.generatedAt!" />
-      }
-      @for (e of group.entries; track e.id) {
-        @if (e.id === content.visitEndId()) {
+    @for (segment of content.visibleSegments(); track segment.key) {
+      @if (segment.divider; as divider) {
+        @if (divider.kind === 'run-header') {
+          <app-run-header [generatedAt]="divider.generatedAt" />
+        } @else {
           <app-list-divider
             class="since-last-visit"
             [label]="'reader.sinceLastVisit' | transloco"
           />
         }
+      }
+      @for (e of segment.entries; track e.id) {
         <!-- The slot collapses the gap when a row leaves; the inner box clips the
              fading content so the collapse reads as the row closing up (#478). -->
         <div class="row-slot" [class.leaving]="leavingIds().has(e.id)">

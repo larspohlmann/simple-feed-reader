@@ -12,6 +12,7 @@ import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { TagsStore } from '../../state/tags.store';
 import { RefreshService } from '../../state/refresh.service';
 import { EntriesStore } from '../../state/entries.store';
+import { FollowedStoriesStore } from '../../state/followed-stories.store';
 import { RefreshReport, SubscriptionDto, TagDto } from '../../models';
 import { makeSubscription } from '../../testing/subscription.factory';
 import { heldUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
@@ -43,6 +44,7 @@ describe('ManageActions', () => {
   let http: HttpTestingController;
   let closed: unknown;
   let savedSearchesLoad: jest.SpyInstance;
+  let loadFollowedStories: jest.SpyInstance;
   const open = jest.fn(() => ({ closed: of(closed) }));
 
   beforeEach(() => {
@@ -59,6 +61,9 @@ describe('ManageActions', () => {
     http = TestBed.inject(HttpTestingController);
     savedSearchesLoad = jest
       .spyOn(TestBed.inject(SavedSearchesStore), 'load')
+      .mockImplementation(() => undefined);
+    loadFollowedStories = jest
+      .spyOn(TestBed.inject(FollowedStoriesStore), 'load')
       .mockImplementation(() => undefined);
     open.mockClear();
   });
@@ -99,6 +104,7 @@ describe('ManageActions', () => {
     service.editSubscription(sub);
     expect(reloadIfShowing).toHaveBeenCalledTimes(1);
     expect(reloadIfShowing).toHaveBeenCalledWith('trending');
+    expect(loadFollowedStories).toHaveBeenCalledTimes(1);
     expect(savedSearchesLoad).not.toHaveBeenCalled();
   });
 
@@ -331,6 +337,19 @@ describe('ManageActions', () => {
     expect(reloadIfShowing).toHaveBeenCalledTimes(1);
     expect(reloadIfShowing).toHaveBeenCalledWith('trending');
     expect(savedSearchesLoad).not.toHaveBeenCalled();
+  });
+
+  it("reloads the followed stories after the reader switches a feed's Trending inclusion", () => {
+    const store = TestBed.inject(SubscriptionsStore);
+    store.storedSubscriptions.set([sub]);
+    jest.spyOn(store, 'reloadQuietly').mockImplementation(() => undefined);
+    jest.spyOn(TestBed.inject(EntriesStore), 'reloadIfShowing').mockImplementation(() => undefined);
+    service.setInclusion(sub, 'trending', false);
+    expect(loadFollowedStories).not.toHaveBeenCalled();
+
+    http.expectOne('https://api.test/api/subscriptions/5').flush({ subscription: sub });
+
+    expect(loadFollowedStories).toHaveBeenCalledTimes(1);
   });
 
   it('reorderUntagged: PATCHes /api/subscriptions/reorder then reloads subs', () => {

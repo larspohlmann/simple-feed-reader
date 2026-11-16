@@ -57,6 +57,35 @@ describe('StaleGatedLoad', () => {
     expect(adopt).toHaveBeenCalledWith('second');
   });
 
+  it('reports a failure to the caller after freeing the slot', () => {
+    const loads = new StaleGatedLoad();
+    const retry = new Subject<string>();
+    const failed = jest.fn(() => loads.run(retry, () => undefined));
+
+    loads.run(
+      throwError(() => new Error('down')),
+      () => undefined,
+      failed,
+    );
+
+    expect(failed).toHaveBeenCalledWith(new Error('down'));
+    jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
+    expect(retry.observed).toBe(true);
+    expect(loads.isStale()).toBe(false);
+  });
+
+  it('reports nothing for a request a newer one superseded', () => {
+    const loads = new StaleGatedLoad();
+    const first = new Subject<string>();
+    const failed = jest.fn();
+    loads.run(first, () => undefined, failed);
+    loads.run(new Subject<string>(), () => undefined);
+
+    first.error(new Error('late'));
+
+    expect(failed).not.toHaveBeenCalled();
+  });
+
   it('forget() drops the request out and makes the next tick load', () => {
     const loads = new StaleGatedLoad();
     const out = new Subject<string>();

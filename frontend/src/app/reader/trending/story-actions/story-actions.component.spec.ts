@@ -1,27 +1,25 @@
 import { signal } from '@angular/core';
+import { of } from 'rxjs';
 import { TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { anEntry, aStory } from '../../../../testing/entry-testing';
 import { EntryDto } from '../../models';
-import { SelectionKind } from '../../query/query';
-import { ReaderRouteState } from '../../shell/reader-route-state.service';
-import { TrendingFollowAction } from '../trending-follow-action';
-import { TrendingHideAction } from '../trending-hide-action';
+import { FollowedStoriesStore } from '../../state/followed-stories.store';
+import { TrendingApi } from '../trending-api';
+import { TrendingStory } from '../trending.models';
+import { STORY_ACTIONS, StoryActions } from './story-actions';
 import { StoryActionsComponent } from './story-actions.component';
 
 describe('StoryActionsComponent (#2128)', () => {
-  const follow = { run: jest.fn() };
-  const hide = { run: jest.fn() };
-  const selection = signal<{ kind: SelectionKind }>({ kind: 'trending' });
+  const follow = jest.fn();
+  const hide = jest.fn();
+  const isFollowed = (story: TrendingStory) => story.followed;
+  const provided = signal<StoryActions | null>({ follow, hide, isFollowed });
 
   const mount = (entry: EntryDto) => {
     TestBed.configureTestingModule({
       imports: [StoryActionsComponent, provideTranslocoTesting()],
-      providers: [
-        { provide: ReaderRouteState, useValue: { selection } },
-        { provide: TrendingFollowAction, useValue: follow },
-        { provide: TrendingHideAction, useValue: hide },
-      ],
+      providers: [{ provide: STORY_ACTIONS, useValue: provided }],
     });
     const fixture = TestBed.createComponent(StoryActionsComponent);
     fixture.componentRef.setInput('entry', entry);
@@ -35,9 +33,9 @@ describe('StoryActionsComponent (#2128)', () => {
   const glyph = (button: HTMLButtonElement) => button.querySelector('app-icon')!;
 
   beforeEach(() => {
-    follow.run.mockReset();
-    hide.run.mockReset();
-    selection.set({ kind: 'trending' });
+    follow.mockReset();
+    hide.mockReset();
+    provided.set({ follow, hide, isFollowed });
   });
 
   it('groups Follow before Hide under the story', () => {
@@ -68,6 +66,30 @@ describe('StoryActionsComponent (#2128)', () => {
     expect(glyph(toggle).classList.contains('filled')).toBe(true);
   });
 
+  it('unfollowing from the sidebar unfollows the card', () => {
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: TrendingApi,
+          useValue: {
+            followed: () => of({ stories: [], nextBuildDueAt: null }),
+            unfollow: () => of(undefined),
+          },
+        },
+      ],
+    });
+    const followedStories = () => TestBed.inject(FollowedStoriesStore);
+    provided.set({ follow, hide, isFollowed: (story) => followedStories().isFollowed(story) });
+    const element = mount(card(true));
+
+    followedStories().unfollow(12);
+    TestBed.tick();
+
+    const [toggle] = buttons(element);
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    expect(glyph(toggle).textContent!.trim()).toBe('notification_add');
+  });
+
   it('leaves Hide unmarked, since it is no toggle', () => {
     const hideButton = buttons(mount(card())).at(-1)!;
 
@@ -85,13 +107,13 @@ describe('StoryActionsComponent (#2128)', () => {
 
     buttons(element).forEach((button) => button.click());
 
-    expect(follow.run).toHaveBeenCalledWith(entry);
-    expect(hide.run).toHaveBeenCalledWith(entry);
+    expect(follow).toHaveBeenCalledWith(entry);
+    expect(hide).toHaveBeenCalledWith(entry);
     expect(cardClicks).not.toHaveBeenCalled();
   });
 
-  it('offers nothing outside Trending', () => {
-    selection.set({ kind: 'all' });
+  it('offers nothing while the list provides no story actions', () => {
+    provided.set(null);
 
     expect(mount(card()).querySelector('.story-actions')).toBeNull();
   });

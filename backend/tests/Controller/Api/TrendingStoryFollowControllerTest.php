@@ -9,10 +9,14 @@ use App\Entity\EntryAuthor;
 use App\Entity\Feed;
 use App\Entity\InclusionChange;
 use App\Entity\Subscription;
+use App\Entity\TrendingSnapshot;
 use App\Entity\TrendingStory;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
+use App\Repository\TrendingSnapshotRepository;
+use App\Service\Curation\Trending\Model\StoryMatchModel;
+use App\Service\Curation\Trending\Model\TrendingBuildReportModel;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\TrendingFixtures;
@@ -59,6 +63,28 @@ final class TrendingStoryFollowControllerTest extends ApiTestCase
             'quiet' => false,
             'lastJoinedAt' => '2031-05-14T09:00:00+00:00',
         ]], $this->followedStories());
+    }
+
+    public function testTheFollowedListSaysWhenTheNextBuildIsDue(): void
+    {
+        $this->signIn($this->client, 'follow-next-build@example.com');
+        foreach ([TrendingWindow::Day, TrendingWindow::Week] as $window) {
+            $this->snapshots()->recordSnapshot(new TrendingBuildReportModel(
+                $window,
+                new \DateTimeImmutable('2031-05-14 09:50:00', new \DateTimeZone('UTC')),
+                0,
+                0,
+                1,
+                1,
+                new StoryMatchModel([], [], 0),
+                0,
+            ));
+        }
+
+        $this->client->request('GET', '/api/trending/followed');
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('2031-05-14T10:00:00+00:00', $this->payload($this->client)['nextBuildDueAt']);
     }
 
     public function testFollowingTwiceKeepsTheFirstVisit(): void
@@ -390,6 +416,14 @@ final class TrendingStoryFollowControllerTest extends ApiTestCase
         yield 'unfollow' => ['DELETE', '/api/trending/stories/1/follow'];
         yield 'opened' => ['POST', '/api/trending/stories/1/opened'];
         yield 'followed' => ['GET', '/api/trending/followed'];
+    }
+
+    private function snapshots(): TrendingSnapshotRepository
+    {
+        $repository = $this->entityManager()->getRepository(TrendingSnapshot::class);
+        self::assertInstanceOf(TrendingSnapshotRepository::class, $repository);
+
+        return $repository;
     }
 
     /** @return array{Feed, Feed, Feed, Feed, Feed, Feed} four article feeds and two social accounts the reader follows */

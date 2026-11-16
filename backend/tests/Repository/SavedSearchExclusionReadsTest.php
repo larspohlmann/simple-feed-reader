@@ -16,6 +16,7 @@ use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Repository\EntryListRow;
 use App\Repository\SavedSearchEntryRepository;
+use App\Repository\EntryListPage;
 use App\Repository\SavedSearchListQuery;
 use App\Tests\DbTestCase;
 
@@ -252,9 +253,7 @@ final class SavedSearchExclusionReadsTest extends DbTestCase
         $rows = $this->repository()->listMembers(new SavedSearchListQuery(
             userId: $this->user->requireId(),
             savedSearchIds: [$this->search->requireId()],
-            onlyUnread: false,
-            cursor: null,
-            limit: 50,
+            page: new EntryListPage(limit: 50),
         ));
 
         return array_map(static fn (EntryListRow $row): ?int => $row->entry->getId(), $rows);

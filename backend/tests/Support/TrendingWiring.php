@@ -21,6 +21,8 @@ use App\Service\Curation\Trending\HeadlineStemmer;
 use App\Service\Curation\Trending\SnapshotBuilder\TrendingSnapshotBuilder;
 use App\Service\Curation\Trending\StoryGrouping;
 use App\Service\Curation\Trending\StoryLinks;
+use App\Service\Curation\Trending\StoryBuildPolicy\DayStoryBuildPolicy;
+use App\Service\Curation\Trending\StoryBuildPolicy\WeekStoryBuildPolicy;
 use App\Service\Curation\Trending\StoryMatching;
 use App\Service\Curation\Trending\StoryLinkSource\HeadlineLinks;
 use App\Service\Curation\Trending\StoryLinkSource\SharedUrlLinks;
@@ -32,6 +34,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\DependencyInjection\ServiceLocator;
+use Psr\Container\ContainerInterface;
 use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Lock\Store\InMemoryStore;
 
@@ -47,7 +50,7 @@ final class TrendingWiring
         $snapshots = self::snapshots($entityManager);
         $builder = new TrendingSnapshotBuilder(
             self::grouping($entityManager, $clock),
-            new StoryMatching(),
+            self::policies($entityManager),
             new TrendingStoryHistoryRepository($entityManager),
             $snapshots,
             $entityManager,
@@ -56,6 +59,19 @@ final class TrendingWiring
         );
 
         return new TrendingRebuild($builder, $snapshots, $naiveClock, new NullLogger());
+    }
+
+    public static function policies(EntityManagerInterface $entityManager): ContainerInterface
+    {
+        $matching = new StoryMatching();
+
+        return new ServiceLocator([
+            'day' => static fn (): DayStoryBuildPolicy => new DayStoryBuildPolicy($matching),
+            'week' => static fn (): WeekStoryBuildPolicy => new WeekStoryBuildPolicy(
+                $matching,
+                new TrendingStoryHistoryRepository($entityManager),
+            ),
+        ]);
     }
 
     public static function grouping(EntityManagerInterface $entityManager, ClockInterface $clock): TrendingGrouping

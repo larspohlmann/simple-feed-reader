@@ -11,7 +11,7 @@ use App\Repository\TrendingStoryListQuery;
 use App\Service\Curation\Trending\Exception\TrendingStoryNotFollowedException;
 use App\Service\Curation\Trending\Model\FollowedStoryEntriesModel;
 
-/** A followed story's entries, marking on the first page what joined since the reader's last visit. */
+/** Lists a followed story's entries. */
 final readonly class FollowedStoryEntries
 {
     public function __construct(
@@ -25,24 +25,8 @@ final readonly class FollowedStoryEntries
     {
         $lastOpenedAt = $this->follows->lastOpenedAt($query->userId, $query->storyId);
         $rows = $this->entries->listMembers($query);
-
-        return new FollowedStoryEntriesModel($rows, $lastOpenedAt, $this->newEntryIds($query, $rows, $lastOpenedAt));
-    }
-
-    /**
-     * @param list<EntryListRow> $rows
-     *
-     * @return list<int> in page order
-     */
-    private function newEntryIds(TrendingStoryListQuery $query, array $rows, \DateTimeImmutable $lastOpenedAt): array
-    {
-        if (!$query->isFirstPage()) {
-            return [];
-        }
-
         $rowIds = array_map(static fn (EntryListRow $row): int => $row->entry->requireId(), $rows);
-        $joined = $this->entries->joinedAfter($query, $rowIds, $lastOpenedAt);
 
-        return array_values(array_intersect($rowIds, $joined));
+        return new FollowedStoryEntriesModel($rows, $lastOpenedAt, $this->entries->joinedAtByEntry($query, $rowIds));
     }
 }

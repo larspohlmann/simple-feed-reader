@@ -10,6 +10,7 @@ import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { TagsStore } from '../../state/tags.store';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { EntriesStore } from '../../state/entries.store';
+import { FollowedStoriesStore } from '../../state/followed-stories.store';
 import { TagDrop } from '../../tag-drop';
 import { TagDto } from '../../models';
 import { makeTag } from '../../testing/tag.factory';
@@ -138,6 +139,9 @@ describe('TagActions', () => {
         .spyOn(TestBed.inject(EntriesStore), 'reloadIfShowing')
         .mockImplementation(() => undefined);
 
+      const loadFollowedStories = jest
+        .spyOn(TestBed.inject(FollowedStoriesStore), 'load')
+        .mockImplementation(() => undefined);
       service.setTagInclusion(tag, 'trending', false);
       const testRequest = http.expectOne('https://api.test/api/tags/3');
       expect(testRequest.request.body).toEqual(
@@ -147,6 +151,7 @@ describe('TagActions', () => {
 
       expect(reloadIfShowing).toHaveBeenCalledTimes(1);
       expect(reloadIfShowing).toHaveBeenCalledWith('trending');
+      expect(loadFollowedStories).toHaveBeenCalledTimes(1);
     });
 
     it('reloads the tags after a failed write, which snaps the switch back', () => {

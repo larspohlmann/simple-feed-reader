@@ -8,18 +8,28 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\TrendingSnapshot;
 use App\Entity\TrendingStory;
+use App\Entity\TrendingStoryFollow;
 use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
 use App\Repository\TrendingEntryRepository;
 use App\Repository\TrendingPlacementSql;
+use App\Repository\TrendingSnapshotRepository;
+use App\Repository\TrendingStoryFollowRepository;
 use App\Repository\TrendingStoryHistoryRepository;
 use App\Repository\TrendingStoryRepository;
+use App\Service\Curation\Trending\Model\FollowedStoryModel;
+use App\Service\Curation\Trending\Model\FollowedStoryRowModel;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
+use App\Service\Curation\Trending\Model\StoryAssignmentModel;
+use App\Service\Curation\Trending\Model\StoryBuildModel;
+use App\Service\Curation\Trending\Model\StoryMemberModel;
+use App\Service\Curation\Trending\Model\TrendingStoryModel;
 use App\Service\Curation\Trending\ReaderWindows;
-use App\Service\Curation\Trending\StoryMatching;
+use App\Service\Curation\Trending\TrendingStoryFollowing;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Curation\Trending\SnapshotBuilder\TrendingSnapshotBuilder;
 use App\Tests\DbTestCase;
+use App\Tests\Support\CountingLockStore;
 use App\Tests\Support\SimulatedFailure;
 use App\Tests\Support\TrendingFixtures;
 use App\Tests\Support\TrendingWiring;
@@ -27,7 +37,10 @@ use Doctrine\ORM\Decorator\EntityManagerDecorator;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Service\Curation\Trending\Exception\TrendingBuildBusyException;
 use Symfony\Component\Clock\MockClock;
+use Symfony\Component\DependencyInjection\ServiceLocator;
+use Symfony\Component\Lock\Exception\LockConflictedException;
 use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\SharedLockInterface;
 use Symfony\Component\Lock\Store\InMemoryStore;
 
 final class TrendingSnapshotBuilderTest extends DbTestCase
@@ -67,9 +80,58 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         );
     }
 
+    public function testAWindowWithoutABuildPolicyFailsNamingIt(): void
+    {
+        $builder = new TrendingSnapshotBuilder(
+            TrendingWiring::grouping($this->entityManager, $this->clock),
+            new ServiceLocator([]),
+            new TrendingStoryHistoryRepository($this->entityManager),
+            TrendingWiring::snapshots($this->entityManager),
+            $this->entityManager,
+            new NaiveUtcClock($this->clock),
+            $this->locks,
+        );
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('No story build policy is wired for the "week" window.');
+
+        $builder->build(TrendingWindow::Week);
+    }
+
+    public function testABuildPutsOffItsLockBeforeWriting(): void
+    {
+        $this->weekSizedHafenstreik();
+        $store = new CountingLockStore();
+        $this->locks = new LockFactory($store);
+
+        $this->builder()->build(TrendingWindow::Day);
+
+        self::assertGreaterThan(CountingLockStore::ACQUIRING_PUT_OFFS, $store->putOffs);
+    }
+
+    public function testABuildThatLostItsLockWritesNothing(): void
+    {
+        $this->weekSizedHafenstreik();
+        $this->locks = new LockFactory(new CountingLockStore(lockLost: true));
+
+        try {
+            $this->builder()->build(TrendingWindow::Day);
+            self::fail('a build that lost its lock must not write');
+        } catch (TrendingBuildBusyException $busy) {
+            self::assertInstanceOf(LockConflictedException::class, $busy->getPrevious());
+        }
+
+        self::assertSame([], $this->storyIds());
+        self::assertSame(
+            [],
+            $this->entityManager->getConnection()->fetchFirstColumn('SELECT time_window FROM trending_snapshot'),
+        );
+    }
+
     public function testEveryBuildReleasesTheLock(): void
     {
         $this->weekSizedHafenstreik();
+        $this->locks = self::locksReleasedOnlyByTheirHolder();
         $this->builder()->build(TrendingWindow::Day);
         $this->builder()->build(TrendingWindow::Week);
         try {
@@ -78,6 +140,21 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         }
 
         self::assertTrue($this->locks->createLock(TrendingSnapshotBuilder::LOCK_NAME)->acquire());
+    }
+
+    public function testABuildAfterOneThatThrewCanTakeTheLock(): void
+    {
+        $this->weekSizedHafenstreik();
+        $this->locks = self::locksReleasedOnlyByTheirHolder();
+        try {
+            $this->builderWith($this->failingToStartTheTransaction())->build(TrendingWindow::Day);
+            self::fail('the failure before the save must surface');
+        } catch (SimulatedFailure) {
+        }
+
+        $report = $this->builder()->build(TrendingWindow::Day);
+
+        self::assertSame(TrendingWindow::Day, $report->window);
     }
 
     public function testGroupsTheDaysHeadlinesIntoAStoryAndRecordsTheSnapshot(): void
@@ -305,7 +382,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         self::assertSame(0, $report->match->merged());
         self::assertSame(
             [$larger->requireId()],
-            $this->intColumn('SELECT DISTINCT story_id FROM trending_story_entry WHERE in_day = 1'),
+            $this->intColumn("SELECT DISTINCT story_id FROM trending_story_placement WHERE time_window = 'day'"),
         );
     }
 
@@ -351,7 +428,8 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         self::assertSame(
             $strikeIds,
             $this->intColumn(
-                'SELECT entry_id FROM trending_story_entry WHERE story_id = ? AND in_day = 1 ORDER BY entry_id',
+                "SELECT entry_id FROM trending_story_placement WHERE story_id = ? AND time_window = 'day'"
+                . ' ORDER BY entry_id',
                 [$newStoryId],
             ),
         );
@@ -390,6 +468,46 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         self::assertSame(array_fill_keys(array_keys($joinedAt), '2031-05-14 11:00:00'), $joinedAt);
     }
 
+    public function testAnEntryTheWeekClaimsAndTheDayReattachesIsNotNewAgain(): void
+    {
+        [$strike, $feeds] = $this->hafenstreikEntries();
+        $reader = $this->fixtures->reader('regrouped@example.com');
+        $this->fixtures->subscribe($reader, ...$feeds);
+        $this->fixtures->flush();
+        $this->builder()->build(TrendingWindow::Day);
+        [$dayStoryId] = $this->storyIds();
+        $dayStory = $this->entityManager->find(TrendingStory::class, $dayStoryId);
+        self::assertInstanceOf(TrendingStory::class, $dayStory);
+        $this->fixtures->follow($reader, $dayStory, self::NOW);
+        $this->clock->modify('+1 hour');
+        $this->weekClaims($strike[0], ...$this->volcanoEntries());
+        self::assertNotContains($strike[0]->requireId(), $this->memberIdsOf($dayStoryId));
+        $this->clock->modify('+1 hour');
+
+        $this->builder()->build(TrendingWindow::Day);
+
+        self::assertContains($strike[0]->requireId(), $this->memberIdsOf($dayStoryId));
+        self::assertSame(
+            [self::NOW],
+            $this->entityManager->getConnection()->fetchFirstColumn(
+                'SELECT joined_at FROM trending_story_entry WHERE story_id = ? AND entry_id = ?',
+                [$dayStoryId, $strike[0]->requireId()],
+            ),
+        );
+        self::assertSame([[0, self::NOW]], array_map(
+            static fn (FollowedStoryRowModel $row): array => [
+                $row->newCount,
+                $row->lastJoinedAt->format('Y-m-d H:i:s'),
+            ],
+            $this->follows()->followedBy($reader->requireId()),
+        ));
+        $this->clock->modify('2031-05-16 13:00:00');
+        self::assertSame([true], array_map(
+            static fn (FollowedStoryModel $story): bool => $story->quiet,
+            $this->following()->followedBy($reader->requireId())->stories,
+        ));
+    }
+
     public function testSeedStoriesOfBothWindowsConvergeOnTheFirstWeekBuild(): void
     {
         [$entries] = $this->hafenstreikEntries();
@@ -414,6 +532,35 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
 
         self::assertSame(1, $report->match->kept());
         self::assertSame('2031-05-07 13:00:00', $this->joinedAtByEntry()[$onTheStart->requireId()]);
+    }
+
+    public function testAGroupEntryOnTheWindowStartIsStillClaimed(): void
+    {
+        $onTheStart = $this->fixtures->hafenstreik($this->fixtures->feed('alpha'), 0, '2031-05-07 12:00:00');
+        $others = [];
+        foreach (['beta', 'gamma', 'delta', 'omega'] as $variant => $name) {
+            $others[] = $this->fixtures->hafenstreik($this->fixtures->feed($name), $variant + 1, '2031-05-08 08:00:00');
+        }
+        $unrelatedFeed = $this->fixtures->feed('unrelated');
+        $story = $this->fixtures->story(TrendingWindow::Week, '2031-05-08 09:00:00', ...$others);
+        $holder = $this->fixtures->story(
+            TrendingWindow::Week,
+            '2031-05-07 13:00:00',
+            $onTheStart,
+            $this->fixtures->entry($unrelatedFeed, 'Gartenschau eröffnet', '2031-05-09 08:00:00'),
+            $this->fixtures->entry($unrelatedFeed, 'Neue Brücke freigegeben', '2031-05-10 08:00:00'),
+        );
+
+        $this->builder()->build(TrendingWindow::Week);
+
+        self::assertSame(
+            [$story->requireId()],
+            $this->intColumn(
+                'SELECT story_id FROM trending_story_entry WHERE entry_id = ?',
+                [$onTheStart->requireId()],
+            ),
+        );
+        self::assertContains($holder->requireId(), $this->storyIds());
     }
 
     public function testFollowsAndHidesSurviveARebuild(): void
@@ -456,6 +603,16 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         self::assertSame([$followed->requireId()], $this->storyIds());
     }
 
+    private function failingToStartTheTransaction(): EntityManagerInterface
+    {
+        return new class ($this->entityManager) extends EntityManagerDecorator {
+            public function wrapInTransaction(callable $func): never
+            {
+                throw new SimulatedFailure('Simulated failure before the replacement.');
+            }
+        };
+    }
+
     private function failingAfterTheTransactionBody(): EntityManagerInterface
     {
         return new class ($this->entityManager) extends EntityManagerDecorator {
@@ -472,6 +629,20 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         };
     }
 
+    /** A lock left behind would otherwise free itself when the builder drops it, hiding a missing release. */
+    private static function locksReleasedOnlyByTheirHolder(): LockFactory
+    {
+        return new class (new InMemoryStore()) extends LockFactory {
+            public function createLock(
+                string $resource,
+                ?float $ttl = 300.0,
+                bool $autoRelease = true,
+            ): SharedLockInterface {
+                return parent::createLock($resource, $ttl, false);
+            }
+        };
+    }
+
     private function builder(): TrendingSnapshotBuilder
     {
         return $this->builderWith($this->entityManager);
@@ -481,12 +652,70 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
     {
         return new TrendingSnapshotBuilder(
             TrendingWiring::grouping($this->entityManager, $this->clock),
-            new StoryMatching(),
+            TrendingWiring::policies($this->entityManager),
             new TrendingStoryHistoryRepository($this->entityManager),
             TrendingWiring::snapshots($this->entityManager),
             $entityManager,
             new NaiveUtcClock($this->clock),
             $this->locks,
+        );
+    }
+
+    /** A week save whose group, the week story of $weekMembers, takes $claimed from the story holding it. */
+    private function weekClaims(Entry $claimed, Entry ...$weekMembers): void
+    {
+        $weekStory = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 11:00:00', ...$weekMembers);
+        $weekMembers = array_values($weekMembers);
+        $entries = [$claimed, ...$weekMembers];
+        $builtAt = new \DateTimeImmutable($this->clock->now()->format('Y-m-d H:i:s'), new \DateTimeZone('UTC'));
+        $history = new TrendingStoryHistoryRepository($this->entityManager);
+        $storyIdByEntry = $history->saveAll(
+            new StoryBuildModel(TrendingWindow::Week, TrendingWindow::Week->startBefore($builtAt), $builtAt),
+            [new StoryAssignmentModel(
+                new TrendingStoryModel(
+                    array_map(
+                        static fn (Entry $entry): StoryMemberModel => new StoryMemberModel(
+                            $entry->requireId(),
+                            $entry->getFeed()->requireId(),
+                            null,
+                        ),
+                        $entries,
+                    ),
+                    $claimed->getEffectiveDate(),
+                    $builtAt,
+                ),
+                $weekStory->requireId(),
+                array_map(static fn (Entry $entry): int => $entry->requireId(), $weekMembers),
+                [$claimed->requireId()],
+            )],
+        );
+        $history->place(TrendingWindow::Week, $storyIdByEntry);
+    }
+
+    private function following(): TrendingStoryFollowing
+    {
+        $stories = $this->entityManager->getRepository(TrendingStory::class);
+        self::assertInstanceOf(TrendingStoryRepository::class, $stories);
+        $snapshots = $this->entityManager->getRepository(TrendingSnapshot::class);
+        self::assertInstanceOf(TrendingSnapshotRepository::class, $snapshots);
+
+        return new TrendingStoryFollowing($stories, $this->follows(), $snapshots, new NaiveUtcClock($this->clock));
+    }
+
+    private function follows(): TrendingStoryFollowRepository
+    {
+        $follows = $this->entityManager->getRepository(TrendingStoryFollow::class);
+        self::assertInstanceOf(TrendingStoryFollowRepository::class, $follows);
+
+        return $follows;
+    }
+
+    /** @return list<int> */
+    private function memberIdsOf(int $storyId): array
+    {
+        return $this->intColumn(
+            'SELECT entry_id FROM trending_story_entry WHERE story_id = ? ORDER BY entry_id',
+            [$storyId],
         );
     }
 
@@ -548,9 +777,15 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
     private function history(): array
     {
         return $this->entityManager->getConnection()->fetchAllAssociative(
-            'SELECT story_id, entry_id, joined_at, in_day, in_week FROM trending_story_entry'
-            . ' ORDER BY story_id, entry_id',
+            'SELECT member.story_id, member.entry_id, member.joined_at, ' . self::placedFlag(TrendingWindow::Day)
+            . ' AS in_day, ' . self::placedFlag(TrendingWindow::Week) . ' AS in_week FROM trending_story_entry member'
+            . ' ORDER BY member.story_id, member.entry_id',
         );
+    }
+
+    private static function placedFlag(TrendingWindow $window): string
+    {
+        return 'CASE WHEN ' . TrendingPlacementSql::placedIn($window, 'member') . ' THEN 1 ELSE 0 END';
     }
 
     /** @return list<array<string, mixed>> */
@@ -572,7 +807,10 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
     {
         return array_map(
             static fn (int $flags): array => [intdiv($flags, 2), $flags % 2],
-            $this->intColumn('SELECT DISTINCT in_day * 2 + in_week FROM trending_story_entry'),
+            $this->intColumn(
+                'SELECT DISTINCT ' . self::placedFlag(TrendingWindow::Day) . ' * 2 + '
+                . self::placedFlag(TrendingWindow::Week) . ' FROM trending_story_entry member',
+            ),
         );
     }
 
@@ -580,7 +818,8 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
     private function flagsOf(Entry $entry): array
     {
         $row = $this->entityManager->getConnection()->fetchAssociative(
-            'SELECT in_day, joined_at FROM trending_story_entry WHERE entry_id = ?',
+            'SELECT ' . self::placedFlag(TrendingWindow::Day) . ' AS in_day, member.joined_at'
+            . ' FROM trending_story_entry member WHERE member.entry_id = ?',
             [$entry->requireId()],
         );
         self::assertIsArray($row);
