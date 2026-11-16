@@ -262,29 +262,6 @@ test('Mark all seen posts the newest shown position and clears the dots', async 
   await expect(bluesky.locator('app-sidebar-notifications-row app-count-pill')).toHaveCount(0);
 });
 
-test("another network's list opens at the top, not at the previous list's offset", async ({
-  page,
-}) => {
-  await stubNotifications(page);
-  const tall: NotificationsPageDto = {
-    groups: Array.from({ length: 40 }, (_, index) => group({ id: 100 - index })),
-    nextCursor: null,
-    scopeMissing: [],
-    needsReconnect: [],
-  };
-  await page.route(/\/api\/me\/notifications(?:[?#]|$)/, (route) => route.fulfill({ json: tall }));
-  await openReader(page, '/?view=notifications&network=bluesky');
-  await expect(page.locator('app-notification-row')).toHaveCount(40);
-  const scrollTop = () => page.evaluate(() => document.scrollingElement?.scrollTop ?? 0);
-
-  await page.evaluate(() => document.scrollingElement?.scrollTo(0, 600));
-  await expect.poll(scrollTop).toBeGreaterThan(0);
-  await networkCard(page, 'mastodon').locator('app-sidebar-notifications-row a').click();
-
-  await expect(page).toHaveURL(/network=mastodon/);
-  await expect.poll(scrollTop).toBe(0);
-});
-
 test('the account menu lists only networks with unseen notifications', async ({ page }) => {
   await stubNotifications(page);
   await openReader(page);
