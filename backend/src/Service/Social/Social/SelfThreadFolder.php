@@ -9,6 +9,7 @@ use App\Enum\ShareKind;
 use App\Service\Content\Comments\Model\EntryCommentModel;
 use App\Service\Content\LinkCard\EntryLinks;
 use App\Service\Social\Social\Factory\ThreadPostFactory;
+use App\Service\Social\Social\Model\SelfReplyChainModel;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class SelfThreadFolder
@@ -20,12 +21,12 @@ final readonly class SelfThreadFolder
     ) {
     }
 
-    /** @param list<EntryCommentModel> $chain */
-    public function fold(Entry $entry, array $chain): void
+    public function fold(Entry $entry, SelfReplyChainModel $chain): void
     {
-        foreach ($chain as $index => $reply) {
+        foreach ($chain->replies as $index => $reply) {
             $this->foldAt($entry, $index + 1, $reply);
         }
+        $entry->countSelfReplies($chain->replyCount);
     }
 
     public function foldAt(Entry $entry, int $position, EntryCommentModel $reply): void

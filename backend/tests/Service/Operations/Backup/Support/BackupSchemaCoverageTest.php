@@ -318,6 +318,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
                 . 'still lists the post; a restored one would be stale before the reader saw it.',
             'discussion.commentCount' => 'A Lemmy post\'s comment count (#2217), rewritten on every fetch '
                 . 'while its feed still lists the post; a restored one would be stale before the reader saw it.',
+            'discussion.selfReplyCount' => 'The length of the thread whose replies, ThreadPost rows, stay out of '
+                . 'the file (#2269); a restored article shows its root post alone.',
         ],
         LinkCard::class => [
             'threadPost' => 'A reply\'s card stays out of the file with its reply (#1668).',

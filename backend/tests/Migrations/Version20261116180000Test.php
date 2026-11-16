@@ -6,18 +6,18 @@ namespace App\Tests\Migrations;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
-use DoctrineMigrations\Version20261116120000;
+use DoctrineMigrations\Version20261116180000;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 
 /** Today's per-window Trending stories become the seed stories of #2128, built here since the test schema is mapped. */
-final class Version20261116120000Test extends TestCase
+final class Version20261116180000Test extends TestCase
 {
     private Connection $connection;
 
     protected function setUp(): void
     {
-        require_once \dirname(__DIR__, 2) . '/migrations/Version20261116120000.php';
+        require_once \dirname(__DIR__, 2) . '/migrations/Version20261116180000.php';
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         $this->connection->executeStatement('PRAGMA foreign_keys = ON');
         foreach ([...$this->oldSchema(), ...$this->oldRows()] as $statement) {
@@ -229,7 +229,7 @@ final class Version20261116120000Test extends TestCase
 
     private function migrate(string $direction): void
     {
-        $migration = new Version20261116120000($this->connection, new NullLogger());
+        $migration = new Version20261116180000($this->connection, new NullLogger());
         $schema = $this->connection->createSchemaManager()->introspectSchema();
         'up' === $direction ? $migration->up($schema) : $migration->down($schema);
         foreach ($migration->getSql() as $query) {

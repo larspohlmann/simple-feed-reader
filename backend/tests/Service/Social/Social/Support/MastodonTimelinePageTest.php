@@ -90,7 +90,7 @@ final class MastodonTimelinePageTest extends TestCase
 
         self::assertSame(self::URI, $entry->guid);
         self::assertSame(
-            self::CONTENT . '<p>Boosted by <a href="https://mastodon.example/@carol">Carol</a></p>',
+            self::CONTENT . '<p>Boosted by <a href="https://mastodon.example/@carol">@carol@mastodon.example</a></p>',
             $entry->contentHtml,
         );
         self::assertEquals(EntryTitle::of(null, self::CONTENT), $entry->headline);
@@ -284,6 +284,14 @@ final class MastodonTimelinePageTest extends TestCase
         yield 'a name but no web page' => [
             ['display_name' => 'Carol <3', 'url' => 'javascript:alert(1)'],
             self::CONTENT . '<p>Boosted by Carol &lt;3</p>',
+        ];
+        yield 'a remote handle' => [
+            ['acct' => 'carol@other.example', 'display_name' => 'Carol', 'url' => 'https://other.example/@carol'],
+            self::CONTENT . '<p>Boosted by <a href="https://other.example/@carol">@carol@other.example</a></p>',
+        ];
+        yield 'a handle but no web page' => [
+            ['acct' => 'carol', 'display_name' => 'Carol', 'url' => 'javascript:alert(1)'],
+            self::CONTENT . '<p>Boosted by @carol</p>',
         ];
     }
 

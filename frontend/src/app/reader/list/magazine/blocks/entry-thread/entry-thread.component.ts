@@ -15,7 +15,6 @@ import { OpensEntryDirective } from '../../../opens-entry.directive';
 import { ThreadLineComponent } from '../../../../../shared/thread-line/thread-line.component';
 import { ThreadLinePostComponent } from '../../../../../shared/thread-line/thread-line-post.component';
 import { ThreadCountComponent } from '../../../../../shared/thread-line/thread-count.component';
-import { threadTotal } from '../../../../thread-post';
 
 @Component({
   selector: 'app-entry-thread',
@@ -39,7 +38,7 @@ import { threadTotal } from '../../../../thread-post';
   styleUrl: './entry-thread.component.scss',
 })
 export class EntryThreadComponent extends EntryBlockBase {
-  protected readonly total = computed(() => threadTotal(this.entry()));
+  protected readonly total = computed(() => this.entry().threadLength);
   protected readonly rootMedia = computed(() => threadRootMedia(this.entry()));
   protected readonly rootQuote = computed(() =>
     sharesQuotedPost(this.entry()) ? this.entry().quote : null,

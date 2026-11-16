@@ -248,8 +248,8 @@ git commit -m "feat(#2128): store Trending stories once for both windows and hid
 ### Task 3: The migration (SQLite and MySQL 8.0)
 
 **Files:**
-- Create: `backend/migrations/Version20261116120000.php`
-- Test: `backend/tests/Migrations/Version20261116120000Test.php`
+- Create: `backend/migrations/Version20261116180000.php`
+- Test: `backend/tests/Migrations/Version20261116180000Test.php`
 
 **Interfaces:**
 - Consumes: the schema of Task 2 exactly (columns, keys, FK names Doctrine generates — copy them from `bin/console doctrine:schema:update --dump-sql` on each platform).
@@ -278,10 +278,10 @@ public function testDownRestoresTheWindowColumnAndTheHiddenEntries(): void
 
 - [ ] **Step 2: Run it to verify it fails**
 
-Run: `php bin/phpunit tests/Migrations/Version20261116120000Test.php`
+Run: `php bin/phpunit tests/Migrations/Version20261116180000Test.php`
 Expected: FAIL, migration class missing.
 
-- [ ] **Step 3: Write `Version20261116120000`**
+- [ ] **Step 3: Write `Version20261116180000`**
 
 Platform switch as in `Version20261115140200`; `isTransactional(): false`; `skipIf` on `trending_story_follow` existing (up) / missing (down).
 
@@ -291,7 +291,7 @@ Platform switch as in `Version20261115140200`; `isTransactional(): false`; `skip
 
 - [ ] **Step 4: Run the test, then migrate from empty on both platforms and validate**
 
-Run: `php bin/phpunit tests/Migrations/Version20261116120000Test.php` — expected PASS.
+Run: `php bin/phpunit tests/Migrations/Version20261116180000Test.php` — expected PASS.
 
 Then the CI leg locally, against throwaway databases (never the dev database):
 
@@ -307,7 +307,7 @@ Expected: both report "The database schema is in sync with the mapping files." T
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/migrations/Version20261116120000.php backend/tests/Migrations/Version20261116120000Test.php
+git add backend/migrations/Version20261116180000.php backend/tests/Migrations/Version20261116180000Test.php
 git commit -m "feat(#2128): migrate Trending stories to persistent stories with history, follows and hides"
 ```
 

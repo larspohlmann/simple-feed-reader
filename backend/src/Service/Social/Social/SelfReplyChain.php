@@ -5,32 +5,31 @@ declare(strict_types=1);
 namespace App\Service\Social\Social;
 
 use App\Service\Content\Comments\Model\EntryCommentModel;
+use App\Service\Social\Social\Model\SelfReplyChainModel;
 use App\Service\Social\Social\Pass\ReplyNode;
 use App\Service\Social\Social\Support\OldestFirstUndatedLast;
 
 final readonly class SelfReplyChain
 {
-    public const int MAX_REPLIES = 3;
+    public const int MAX_REPLIES = 4;
 
-    /**
-     * @param list<ReplyNode> $replies the post's direct replies
-     *
-     * @return list<EntryCommentModel>
-     */
-    public function of(array $replies): array
+    /** @param list<ReplyNode> $replies the post's direct replies */
+    public function of(array $replies): SelfReplyChainModel
     {
         $chain = [];
-        $level = $replies;
-        while (\count($chain) < self::MAX_REPLIES) {
-            $next = self::oldestByAuthor($level);
-            if ($next === null) {
-                break;
-            }
-            $chain[] = $next->comment();
-            $level = $next->replies;
+        $next = self::oldestByAuthor($replies);
+        while ($next !== null) {
+            $chain[] = $next;
+            $next = self::oldestByAuthor($next->replies);
         }
 
-        return $chain;
+        return new SelfReplyChainModel(
+            array_map(
+                static fn (ReplyNode $node): EntryCommentModel => $node->comment(),
+                \array_slice($chain, 0, self::MAX_REPLIES),
+            ),
+            \count($chain),
+        );
     }
 
     /** @param list<ReplyNode> $nodes */

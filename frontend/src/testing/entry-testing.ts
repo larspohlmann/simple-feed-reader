@@ -37,6 +37,7 @@ export function anEntry(overrides: Partial<EntryDto> = {}): EntryDto {
     share: null,
     linkCards: [],
     thread: [],
+    threadLength: (overrides.thread?.length ?? 0) + 1,
     quote: null,
     pending: false,
     social: null,

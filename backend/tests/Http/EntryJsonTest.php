@@ -245,7 +245,20 @@ final class EntryJsonTest extends TestCase
 
     public function testARowWithoutAThreadHasAnEmptyOne(): void
     {
-        self::assertSame([], JsonMappers::entryJson()->listRow($this->row($this->entryTitled('Plain')))['thread']);
+        $json = JsonMappers::entryJson()->listRow($this->row($this->entryTitled('Plain')));
+
+        self::assertSame([], $json['thread']);
+        self::assertSame(1, $json['threadLength']);
+    }
+
+    public function testTheThreadLengthCountsTheRepliesNotFolded(): void
+    {
+        $entry = $this->entryTitled('Root');
+        $entry->countSelfReplies(6);
+        $post = new ThreadPostModel('https://x/2', null, '<p>two</p>', [], null);
+        $row = $this->row($entry, new EntryListRowEnrichment(threadPosts: [$post]));
+
+        self::assertSame(7, JsonMappers::entryJson()->completed($row)['threadLength']);
     }
 
     public function testACompletedRowCarriesOnlyWhatACompletionCanChange(): void
@@ -261,7 +274,7 @@ final class EntryJsonTest extends TestCase
         self::assertSame(
             [
                 'id', 'pending', 'summary', 'excerpt', 'imageUrl', 'imageWidth', 'imageHeight',
-                'imageRenditions', 'media', 'linkCards', 'thread', 'share', 'quote',
+                'imageRenditions', 'media', 'linkCards', 'thread', 'threadLength', 'share', 'quote',
             ],
             array_keys($json),
         );
@@ -474,7 +487,8 @@ final class EntryJsonTest extends TestCase
         self::assertSame(
             [
                 'id', 'pending', 'summary', 'excerpt', 'imageUrl', 'imageWidth', 'imageHeight',
-                'imageRenditions', 'media', 'linkCards', 'thread', 'share', 'quote', 'title', 'url', 'discussionUrl',
+                'imageRenditions', 'media', 'linkCards', 'thread', 'threadLength', 'share', 'quote', 'title', 'url',
+                'discussionUrl',
                 'comments', 'score', 'commentCount',
                 'author', 'imageAspectRatio', 'attachments', 'categories', 'publishedAt', 'createdAt',
                 'subscriptionId', 'source', 'poster',

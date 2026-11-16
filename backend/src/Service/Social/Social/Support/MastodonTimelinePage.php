@@ -191,7 +191,7 @@ final class MastodonTimelinePage
 
         return ($body ?? '') . ShareAttribution::line(
             'Boosted by',
-            MastodonAuthor::name($booster),
+            MastodonAuthor::mention($booster) ?? MastodonAuthor::name($booster),
             MastodonAuthor::profile($booster),
         );
     }

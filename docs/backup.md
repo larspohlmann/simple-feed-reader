@@ -319,6 +319,7 @@ article mark, each included social network and each social network kept out of F
 | `image.verifyAttempts` | The queue marker and failure count of this instance's check. A restored image is not put into the queue. The instance shows it as the old instance did. |
 | `discussion.score` | A Lemmy post's score, rewritten on every fetch while its feed still lists the post; a restored one would be stale before the reader saw it. |
 | `discussion.commentCount` | A Lemmy post's comment count, rewritten on every fetch while its feed still lists the post; a restored one would be stale before the reader saw it. |
+| `discussion.selfReplyCount` | How many replies the author continued the post with. The replies themselves stay out of the file, so a restored article shows its root post alone. |
 
 **On a link card.**
 

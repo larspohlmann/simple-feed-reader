@@ -60,11 +60,9 @@ final readonly class MastodonPostResolver implements PostResolverInterface
     private static function previewOf(JsonNodeModel $status): PostPreviewModel
     {
         $author = $status->node('account');
-        $handle = MastodonAuthor::handle($author);
-
         return new PostPreviewModel(
             MastodonAuthor::name($author),
-            null === $handle ? null : '@' . $handle,
+            MastodonAuthor::mention($author),
             PlainText::fromHtmlBlocks($status->string('content')) ?? '',
             MastodonCard::of($status->node('card')),
         );

@@ -28,6 +28,13 @@ final class MastodonAuthor
         return $acct . '@' . $host;
     }
 
+    public static function mention(JsonNodeModel $account): ?string
+    {
+        $handle = self::handle($account);
+
+        return null === $handle ? null : '@' . $handle;
+    }
+
     /** The account as a social account identity, which is its handle in lower case. */
     public static function identity(JsonNodeModel $account): ?string
     {

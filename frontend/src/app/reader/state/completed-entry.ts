@@ -14,6 +14,7 @@ export type CompletedEntryDto = Pick<
   | 'media'
   | 'linkCards'
   | 'thread'
+  | 'threadLength'
   | 'share'
   | 'quote'
 >;

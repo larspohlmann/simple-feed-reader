@@ -45,6 +45,15 @@ describe('ThreadRepliesComponent', () => {
     expect(counts).toEqual(['2/3', '3/3']);
   });
 
+  it('counts the replies past the folded ones in the total', () => {
+    const element = mount(anEntry({ thread: [aThreadPost({}), aThreadPost({})], threadLength: 6 }));
+
+    const counts = [...element.querySelectorAll('app-thread-count')].map((count) =>
+      count.textContent!.trim(),
+    );
+    expect(counts).toEqual(['2/6', '3/6']);
+  });
+
   it('opens a reply’s card in the reader layer', () => {
     const replyCard = aLinkCard({ url: 'https://reply.test/' });
     const element = mount(
