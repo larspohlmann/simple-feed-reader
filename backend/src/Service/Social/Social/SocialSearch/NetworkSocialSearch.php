@@ -8,12 +8,14 @@ use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Outbound\Fetch\AnswerSettler\AnswerSettlerInterface;
 use App\Service\Outbound\Fetch\ConcurrentRequestEngine;
+use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
 use App\Service\Outbound\Fetch\Model\RequestTicketModel;
 use App\Service\Social\Social\ActingAccountGuard;
 use App\Service\Social\Social\BlueskySessions;
 use App\Service\Social\Social\LemmyAccountApi;
+use App\Service\Social\Social\LemmyApiClient;
 use App\Service\Social\Social\LemmyPostEntries;
 use App\Service\Social\Social\MastodonAccountApi;
 use App\Service\Social\Social\MastodonApiClient;
@@ -53,28 +55,66 @@ final readonly class NetworkSocialSearch implements SocialSearchInterface
                 $query,
             ),
             SocialNetwork::Mastodon => MastodonSearchPage::of($this->mastodonAnswers($account, $query), $query),
-            SocialNetwork::Lemmy => $this->lemmyEntries->page(
+            SocialNetwork::Lemmy => $this->lemmyEntries->searchPage(
                 $account,
-                $this->lemmy->get($account, SocialSearchPaths::lemmy($query)),
+                $this->lemmyAnswers($account, $query),
+                $query,
             ),
         };
     }
 
-    /** @return list<ApiResponseModel> one accepted answer per alternative, in the alternatives' order */
+    /** @return list<ApiResponseModel> */
     private function mastodonAnswers(SocialAccount $account, string $query): array
+    {
+        return $this->answers(
+            $account,
+            array_map(
+                fn (string $alternative): ApiRequestModel => $this->mastodon->authorizedGet(
+                    $account,
+                    SocialSearchPaths::mastodon($alternative, null),
+                ),
+                NetworkSearchQueries::of(SocialNetwork::Mastodon, $query),
+            ),
+            static fn (FetchOutcomeModel $outcome): ApiResponseModel => MastodonApiClient::accepted(
+                MastodonApiClient::answerOf($outcome),
+            ),
+        );
+    }
+
+    /** @return list<ApiResponseModel> */
+    private function lemmyAnswers(SocialAccount $account, string $query): array
+    {
+        return $this->answers(
+            $account,
+            array_map(
+                fn (string $term): ApiRequestModel => $this->lemmy->authorizedGet(
+                    $account,
+                    SocialSearchPaths::lemmy($term),
+                ),
+                NetworkSearchQueries::of(SocialNetwork::Lemmy, $query),
+            ),
+            static fn (FetchOutcomeModel $outcome): ApiResponseModel => LemmyApiClient::accepted(
+                LemmyApiClient::answerOf($outcome),
+            ),
+        );
+    }
+
+    /**
+     * @param list<ApiRequestModel> $requests
+     * @param \Closure(FetchOutcomeModel): ApiResponseModel $accept
+     * @return list<ApiResponseModel> one accepted answer per request, in the requests' order
+     */
+    private function answers(SocialAccount $account, array $requests, \Closure $accept): array
     {
         $slots = $this->timelineRounds->slots();
         $tickets = array_map(
-            fn (string $alternative): RequestTicketModel => $slots->ticketFor(
-                $account,
-                $this->mastodon->authorizedGet($account, SocialSearchPaths::mastodon($alternative, null)),
-            ),
-            NetworkSearchQueries::of(SocialNetwork::Mastodon, $query),
+            static fn (ApiRequestModel $request): RequestTicketModel => $slots->ticketFor($account, $request),
+            $requests,
         );
 
         $answers = [];
         foreach ($this->engine->sendAll($tickets, $this->settler) as $position => $outcome) {
-            $answers[$position] = MastodonApiClient::accepted(MastodonApiClient::answerOf($outcome));
+            $answers[$position] = $accept($outcome);
         }
 
         return array_values($answers);

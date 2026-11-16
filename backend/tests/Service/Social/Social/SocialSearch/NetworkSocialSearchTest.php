@@ -31,6 +31,8 @@ final class NetworkSocialSearchTest extends TestCase
         . '?type=statuses&resolve=false&limit=40&q=rss%20reader';
     private const string LEMMY_SEARCH = 'GET https://lemmy.example/api/v3/search'
         . '?q=rss%20reader&type_=Posts&sort=New&listing_type=All&limit=50';
+    private const string LEMMY_WORD_SEARCH = 'GET https://lemmy.example/api/v3/search'
+        . '?q=post&type_=Posts&sort=New&listing_type=All&limit=50';
     private const string LEMMY_FOUND = __DIR__ . '/../../../../Fixtures/lemmy/search.json';
 
     private ArrayAdapter $cache;
@@ -209,17 +211,71 @@ final class NetworkSocialSearchTest extends TestCase
     public function testALemmySearchPreviewsThePostsFound(): void
     {
         $http = new RoutedHttpClient([
-            self::LEMMY_SEARCH => new MockResponse((string) file_get_contents(self::LEMMY_FOUND)),
+            self::LEMMY_WORD_SEARCH => new MockResponse((string) file_get_contents(self::LEMMY_FOUND)),
         ]);
 
-        $page = $this->search($http->client())->newest(SocialAccounts::lemmyOf(SocialAccounts::owner()), 'rss reader');
+        $page = $this->search($http->client())->newest(SocialApiWiring::lemmyAccount(), 'post');
 
         self::assertSame(
-            ['https://feddit.example/post/7', 'https://lemmy.example/post/102'],
+            ['https://lemmy.example/post/102', 'https://feddit.example/post/7'],
             array_map(static fn (ParsedEntryModel $entry): string => $entry->guid, $page->parsed->entries),
         );
-        self::assertSame([self::LEMMY_SEARCH], $http->requestLines());
+        self::assertSame([self::LEMMY_WORD_SEARCH], $http->requestLines());
         self::assertContains('Authorization: Bearer ' . SocialAccounts::LEMMY_JWT, $http->requests[0]['headers']);
+    }
+
+    public function testALemmySearchPreviewAsksEachAlternative(): void
+    {
+        $rss = 'GET https://lemmy.example/api/v3/search?q=rss&type_=Posts&sort=New&listing_type=All&limit=50';
+        $atom = 'GET https://lemmy.example/api/v3/search?q=atom&type_=Posts&sort=New&listing_type=All&limit=50';
+        $http = new RoutedHttpClient([
+            $rss => self::lemmyAnswer([
+                self::lemmyPost(1, 'rss news', '2026-11-14T05:00:00Z'),
+            ]),
+            $atom => self::lemmyAnswer([
+                self::lemmyPost(1, 'rss news', '2026-11-14T05:00:00Z'),
+                self::lemmyPost(2, 'atom feeds', '2026-11-14T06:00:00Z'),
+            ]),
+        ]);
+
+        $page = $this->search($http->client())->newest(SocialApiWiring::lemmyAccount(), 'rss || atom');
+
+        self::assertSame([$rss, $atom], $http->requestLines());
+        self::assertSame(
+            ['https://feddit.example/post/2', 'https://feddit.example/post/1'],
+            array_map(static fn (ParsedEntryModel $entry): string => $entry->guid, $page->parsed->entries),
+        );
+    }
+
+    public function testALemmySearchPreviewChecksAPhrase(): void
+    {
+        $http = new RoutedHttpClient([
+            self::LEMMY_SEARCH => self::lemmyAnswer([
+                self::lemmyPost(1, 'the rss reader', '2026-11-14T05:00:00Z'),
+                self::lemmyPost(2, 'reader for rss', '2026-11-14T06:00:00Z'),
+            ]),
+        ]);
+
+        $page = $this->search($http->client())
+            ->newest(SocialApiWiring::lemmyAccount(), '"rss reader"');
+
+        self::assertSame([self::LEMMY_SEARCH], $http->requestLines());
+        self::assertSame(
+            ['https://feddit.example/post/1'],
+            array_map(static fn (ParsedEntryModel $entry): string => $entry->guid, $page->parsed->entries),
+        );
+    }
+
+    public function testALemmySearchPreviewWithoutATermIsTooBroad(): void
+    {
+        $http = new RoutedHttpClient([]);
+
+        try {
+            $this->search($http->client())->newest(SocialApiWiring::lemmyAccount(), '-gazette');
+            self::fail('Lemmy needs a word to search for.');
+        } catch (SearchQueryTooBroadException) {
+            self::assertSame([], $http->requestLines());
+        }
     }
 
     private function search(HttpClientInterface $http): NetworkSocialSearch
@@ -263,6 +319,43 @@ final class NetworkSocialSearchTest extends TestCase
             'content' => $content,
             'in_reply_to_id' => null,
             'account' => ['acct' => 'bob', 'display_name' => 'Bob', 'url' => 'https://mastodon.example/@bob'],
+        ];
+    }
+
+    /** @param list<array<string, mixed>> $posts */
+    private static function lemmyAnswer(array $posts): MockResponse
+    {
+        return self::json(['type_' => 'Posts', 'comments' => [], 'posts' => $posts]);
+    }
+
+    /** @return array<string, mixed> */
+    private static function lemmyPost(int $id, string $name, string $published): array
+    {
+        return [
+            'post' => [
+                'id' => $id,
+                'name' => $name,
+                'url' => null,
+                'creator_id' => 9,
+                'community_id' => 5,
+                'removed' => false,
+                'deleted' => false,
+                'published' => $published,
+                'ap_id' => 'https://feddit.example/post/' . $id,
+            ],
+            'creator' => [
+                'id' => 9,
+                'name' => 'ada',
+                'display_name' => 'Ada',
+                'actor_id' => 'https://feddit.example/u/ada',
+            ],
+            'community' => [
+                'id' => 5,
+                'name' => 'rss',
+                'title' => 'RSS',
+                'actor_id' => 'https://feddit.example/c/rss',
+            ],
+            'counts' => ['post_id' => $id, 'comments' => 3, 'score' => 12, 'upvotes' => 12, 'downvotes' => 0],
         ];
     }
 
