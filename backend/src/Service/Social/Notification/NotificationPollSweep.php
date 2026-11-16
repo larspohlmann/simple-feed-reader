@@ -59,7 +59,7 @@ final readonly class NotificationPollSweep
                 'socialAccountId' => $accountId,
                 'exception' => $exception,
             ]);
-            if ($this->entityManager->isOpen()) {
+            if ($this->reopenedEntityManagerIsOpen()) {
                 $this->entityManager->clear();
             }
             $this->stampFailed($accountId);

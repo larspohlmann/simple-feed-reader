@@ -28,6 +28,7 @@ use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StubNotificationSource;
 use App\Tests\Support\UserFactory;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -139,6 +140,40 @@ final class NotificationPollSweepTest extends DbTestCase
         self::assertSame($first->requireId(), $this->logger->records[0]['context']['socialAccountId']);
     }
 
+    public function testAFailureThatClosesTheManagerStillStampsTheAccount(): void
+    {
+        $first = $this->account('did:plc:closes-manager');
+        $second = $this->account('did:plc:after-closed');
+        $entityManager = $this->entityManager;
+        $source = new class ($entityManager) implements NotificationSourceInterface {
+            public function __construct(private readonly EntityManagerInterface $entityManager)
+            {
+            }
+
+            public function fetch(SocialAccount $account): NotificationPageModel
+            {
+                if ($account->getIdentity() === 'did:plc:closes-manager') {
+                    $this->entityManager->close();
+
+                    throw new \RuntimeException('the unit of work is gone');
+                }
+
+                return new NotificationPageModel([], null);
+            }
+
+            public function markSeen(SocialAccount $account, array $unseen, \Closure $marked): void
+            {
+            }
+        };
+
+        $report = $this->sweepOver(NotificationPollWiring::allNetworks($source))
+            ->sweep(NotificationPollBudgetModel::accounts(10));
+
+        self::assertSame(1, $report->failed);
+        self::assertNotNull($this->stampOf($first)->getCheckedAt());
+        self::assertNotNull($this->stampOf($second)->getCheckedAt());
+    }
+
     public function testPrunesAfterTheAccounts(): void
     {
         $account = $this->account('did:plc:prune');
@@ -167,7 +202,7 @@ final class NotificationPollSweepTest extends DbTestCase
         self::assertSame([], $source->fetchedIdentities);
     }
 
-    private function sweep(StubNotificationSource $source): NotificationPollSweep
+    private function sweep(NotificationSourceInterface $source): NotificationPollSweep
     {
         return $this->sweepOver(NotificationPollWiring::allNetworks($source));
     }
