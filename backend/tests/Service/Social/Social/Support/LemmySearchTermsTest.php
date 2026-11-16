@@ -25,7 +25,7 @@ final class LemmySearchTermsTest extends TestCase
         yield 'case does not matter' => ['Reader || reader', ['reader']];
         yield 'an exclusion is no term' => ['reader -gazette', ['reader']];
         yield 'a negated phrase is no term' => ['reader -"daily gazette"', ['reader']];
-        yield 'only the author filter is no term' => ['reader from:ada lang:de', ['lang de']];
+        yield 'an operator is no term' => ['reader from:ada lang:de', ['reader']];
         yield 'the first on a tie' => ['atom feed', ['atom']];
         yield 'a hyphenated word as its words' => ['rss-reader', ['rss reader']];
         yield 'a phrase as its words' => ['"rss, reader" atom', ['rss reader']];
@@ -35,7 +35,10 @@ final class LemmySearchTermsTest extends TestCase
         yield 'a word without a letter is no term' => ['rss !!!!!!', ['rss']];
         yield 'a url as its words' => ['https://example.com/a', ['https example com a']];
         yield 'a colon word is a term' => ['re:zero', ['re zero']];
-        yield 'a language filter is a term' => ['reader lang:de', ['lang de']];
+        yield 'a filter word yields to a checked word' => ['reader lang:de', ['reader']];
+        yield 'a url yields to a checked word' => ['rust https://example.com/a', ['rust']];
+        yield 'a filter word alone is the term' => ['lang:de from:ada', ['lang de']];
+        yield 'a filter word per alternative' => ['reader || lang:de', ['reader', 'lang de']];
         yield 'an author filter is no term' => ['reader from:ada', ['reader']];
         yield 'the own author filter is no term' => ['rust from:me', ['rust']];
         yield 'a quoted author filter is a phrase' => ['"from:ada"', ['from ada']];
