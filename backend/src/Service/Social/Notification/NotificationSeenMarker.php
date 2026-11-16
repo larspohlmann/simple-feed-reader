@@ -34,7 +34,7 @@ final readonly class NotificationSeenMarker
         $source = $this->sources->get($network->value);
         \assert($source instanceof NotificationSourceInterface);
 
-        foreach ($this->accounts->findAllOnNetwork($user, $network) as $account) {
+        foreach ($this->accounts->findConnectedOnNetwork($user, $network) as $account) {
             $this->markAccountSeen($source, $account, $upTo);
         }
     }

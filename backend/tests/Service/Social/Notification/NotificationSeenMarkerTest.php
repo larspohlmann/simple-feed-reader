@@ -95,6 +95,23 @@ final class NotificationSeenMarkerTest extends DbTestCase
         self::assertSame([true, true, false, false], $this->seenStates($rows));
     }
 
+    public function testAnAccountNeedingReconnectIsLeftUnseenWithoutStoppingTheRest(): void
+    {
+        $broken = SocialAccounts::blueskyOf($this->owner);
+        $broken->markNeedsReconnect();
+        $broken = $this->persisted($broken);
+        $connected = $this->persisted(SocialAccounts::secondBlueskyOf($this->owner));
+        $brokenRow = $this->rows->add($broken, SocialNotificationKind::Like, 'a');
+        $connectedRow = $this->rows->add($connected, SocialNotificationKind::Like, 'b');
+        $source = new MarkingNotificationSource();
+
+        $this->marker([SocialNetwork::Bluesky->value => $source])
+            ->markSeen($this->owner, SocialNetwork::Bluesky, $connectedRow->requireId());
+
+        $this->entityManager->clear();
+        self::assertSame([false, true], $this->seenStates([$brokenRow, $connectedRow]));
+    }
+
     public function testNoUnseenRowsCallsNoNetwork(): void
     {
         $account = $this->persisted(SocialAccounts::blueskyOf($this->owner));

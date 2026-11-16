@@ -9,7 +9,16 @@ use App\Entity\SocialNotification;
 use App\Entity\SocialNotificationPoll;
 use App\Entity\User;
 use App\Enum\SocialNotificationKind;
+use App\Repository\SocialAccountRepository;
+use App\Repository\SocialNotificationRepository;
+use App\Service\Social\Notification\NotificationSeenMarker;
+use App\Service\Social\Notification\NotificationSource\NotificationSourceInterface;
+use App\Service\Social\Social\ActingAccountGuard;
+use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\MarkingNotificationSource;
+use App\Tests\Support\NotificationPollWiring;
+use Symfony\Component\DependencyInjection\ServiceLocator;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialNotificationRows;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -103,18 +112,39 @@ final class SocialNotificationControllerTest extends ApiTestCase
         $this->assertRejected($client, Response::HTTP_BAD_REQUEST);
     }
 
-    public function testSeenReturns204(): void
+    public function testSeenReturns204AndMarksTheRows(): void
     {
         $client = self::createClient();
         $user = $this->signIn($client, 'notification-seen@example.test');
         $account = $this->persisted(SocialAccounts::lemmyOf($user));
         $rows = new SocialNotificationRows($this->entityManager());
-        $row = $rows->add($account, SocialNotificationKind::Reply, 'c1', true);
-        $rowId = $row->requireId();
+        $rowId = $rows->add($account, SocialNotificationKind::Reply, 'c1')->requireId();
+        $source = new MarkingNotificationSource();
+        $this->useSource($source);
 
         $this->postSeen($client, ['network' => 'lemmy', 'upTo' => $rowId]);
 
         self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
+        self::assertSame([$rowId], $source->handed[$account->getIdentity()]);
+        $this->entityManager()->clear();
+        $stored = $this->entityManager()->find(SocialNotification::class, $rowId);
+        self::assertNotNull($stored);
+        self::assertTrue($stored->isSeen());
+    }
+
+    public function testSeenMapsAThrottledNetworkTo503WithRetryAfter(): void
+    {
+        $client = self::createClient();
+        $user = $this->signIn($client, 'notification-seen-throttled@example.test');
+        $account = $this->persisted(SocialAccounts::lemmyOf($user));
+        $rows = new SocialNotificationRows($this->entityManager());
+        $rowId = $rows->add($account, SocialNotificationKind::Reply, 'c1')->requireId();
+        $this->useSource(new MarkingNotificationSource(0, new SocialNetworkThrottledException('slow down', 120)));
+
+        $this->postSeen($client, ['network' => 'lemmy', 'upTo' => $rowId]);
+
+        $this->assertRejected($client, Response::HTTP_SERVICE_UNAVAILABLE);
+        self::assertSame('120', $client->getResponse()->headers->get('Retry-After'));
     }
 
     public function testUpToOfAnotherUserMarksNothing(): void
@@ -144,6 +174,25 @@ final class SocialNotificationControllerTest extends ApiTestCase
         $this->postSeen($client, ['network' => 'bluesky']);
 
         $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    private function useSource(NotificationSourceInterface $source): void
+    {
+        $container = self::getContainer();
+        $accounts = $container->get(SocialAccountRepository::class);
+        $notifications = $container->get(SocialNotificationRepository::class);
+        self::assertInstanceOf(SocialAccountRepository::class, $accounts);
+        self::assertInstanceOf(SocialNotificationRepository::class, $notifications);
+        $container->set(NotificationSeenMarker::class, new NotificationSeenMarker(
+            new ServiceLocator(array_map(
+                static fn (NotificationSourceInterface $source): \Closure => static fn () => $source,
+                NotificationPollWiring::allNetworks($source),
+            )),
+            new ActingAccountGuard($this->entityManager()),
+            $accounts,
+            $notifications,
+            $this->entityManager(),
+        ));
     }
 
     /** @param array<string, mixed> $body */
