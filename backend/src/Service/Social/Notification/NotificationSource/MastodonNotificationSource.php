@@ -67,11 +67,9 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
             $account->getServiceUrl() . self::MARKERS,
             ['notifications' => ['last_read_id' => $newest]],
         );
-        try {
-            $this->mastodon->writeAs($account, $request, MastodonAccountApi::STATUSES_SCOPE);
-        } catch (SocialPostNotFoundException | SocialPostRefusedException $exception) {
-            throw SocialNetworkUnreachableException::from($exception);
-        }
+        SocialNetworkUnreachableException::around(
+            fn () => $this->mastodon->writeAs($account, $request, MastodonAccountApi::STATUSES_SCOPE),
+        );
 
         foreach ($unseen as $row) {
             $marked($row);
@@ -80,11 +78,7 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
 
     private function ask(SocialAccount $account, string $path): ApiResponseModel
     {
-        try {
-            return $this->mastodon->askAboutPost($account, $path);
-        } catch (SocialPostNotFoundException | SocialPostRefusedException $exception) {
-            throw SocialNetworkUnreachableException::from($exception);
-        }
+        return SocialNetworkUnreachableException::around(fn () => $this->mastodon->askAboutPost($account, $path));
     }
 
     /** @param list<JsonNodeModel> $entries */
@@ -165,12 +159,14 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
         $linkUrl = $authorAcct === null || $status->string('id') === null
             ? $actorProfileUrl
             : self::profileUrl($account, $authorAcct) . '/' . $status->string('id');
-        $standalone = $kind === SocialNotificationKind::Reply
-            || $kind === SocialNotificationKind::Mention
-            || $kind === SocialNotificationKind::Quote;
+        $groupKey = match ($kind) {
+            SocialNotificationKind::Like, SocialNotificationKind::Repost, SocialNotificationKind::Poll
+                => $status->string('uri') ?? $remoteId,
+            default => $remoteId,
+        };
 
         return new NotificationSubject(
-            $standalone ? $remoteId : $status->string('uri') ?? $remoteId,
+            $groupKey,
             Excerpt::of(PlainText::fromHtmlBlocks($status->text('content'))),
             $linkUrl,
         );

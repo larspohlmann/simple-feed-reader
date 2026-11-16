@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Notification\Support;
 
+use App\Service\Foundation\Text\Support\ClippedText;
+
 final class Excerpt
 {
     private const int LENGTH = 280;
@@ -12,7 +14,7 @@ final class Excerpt
     {
         $trimmed = trim($text ?? '');
 
-        return $trimmed === '' ? null : mb_substr($trimmed, 0, self::LENGTH);
+        return $trimmed === '' ? null : ClippedText::ofScrubbed($trimmed, self::LENGTH);
     }
 
     private function __construct()

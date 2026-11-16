@@ -21,8 +21,6 @@ use App\Service\Social\Notification\Support\Excerpt;
 use App\Service\Social\Notification\Support\NetworkTimestamp;
 use App\Service\Social\Social\BlueskySessions;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Bluesky->value)]
@@ -47,19 +45,18 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
         }
 
         $list = JsonNodeModel::of(BlueskySessions::accepted($this->sessions->askAs($account, self::LIST))->json());
-        $entries = array_values(array_filter(
-            $list->nodes('notifications'),
-            static fn (JsonNodeModel $entry): bool => self::kindOf($entry) instanceof SocialNotificationKind,
-        ));
-        $postTexts = $this->postTexts($account, $entries);
+        $known = self::knownEntries($list->nodes('notifications'));
+        $postTexts = $this->postTexts($account, self::likedPosts($known));
 
-        return new NotificationPageModel(
-            array_values(array_filter(array_map(
-                fn (JsonNodeModel $entry): ?FetchedNotificationModel => self::fetched($account, $entry, $postTexts),
-                $entries,
-            ))),
-            NetworkTimestamp::toUtc($list->string('seenAt')),
-        );
+        $notifications = [];
+        foreach ($known as [$entry, $kind]) {
+            $notification = self::fetched($account, $entry, $kind, $postTexts);
+            if ($notification instanceof FetchedNotificationModel) {
+                $notifications[] = $notification;
+            }
+        }
+
+        return new NotificationPageModel($notifications, NetworkTimestamp::toUtc($list->string('seenAt')));
     }
 
     public function markSeen(SocialAccount $account, array $unseen, \Closure $marked): void
@@ -69,11 +66,11 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
             $unseen,
         ));
         $marker = $newest->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.999\Z');
-        try {
-            BlueskySessions::accepted($this->sessions->actAs($account, self::UPDATE_SEEN, ['seenAt' => $marker]));
-        } catch (SocialPostNotFoundException | SocialPostRefusedException $exception) {
-            throw SocialNetworkUnreachableException::from($exception);
-        }
+        SocialNetworkUnreachableException::around(
+            fn () => BlueskySessions::accepted(
+                $this->sessions->actAs($account, self::UPDATE_SEEN, ['seenAt' => $marker]),
+            ),
+        );
 
         foreach ($unseen as $row) {
             $marked($row);
@@ -83,20 +80,48 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
     /**
      * @param list<JsonNodeModel> $entries
      *
-     * @return array<string, string> post text by AT URI, for the posts that likes and reposts point at
+     * @return list<array{JsonNodeModel, SocialNotificationKind}>
      */
-    private function postTexts(SocialAccount $account, array $entries): array
+    private static function knownEntries(array $entries): array
     {
-        $subjects = [];
+        $known = [];
         foreach ($entries as $entry) {
-            $subject = self::likedPost($entry);
-            if ($subject !== null) {
-                $subjects[$subject] = $subject;
+            $kind = self::kindOf($entry);
+            if ($kind instanceof SocialNotificationKind) {
+                $known[] = [$entry, $kind];
             }
         }
 
+        return $known;
+    }
+
+    /**
+     * @param list<array{JsonNodeModel, SocialNotificationKind}> $known
+     *
+     * @return list<string>
+     */
+    private static function likedPosts(array $known): array
+    {
+        $posts = [];
+        foreach ($known as [$entry, $kind]) {
+            $post = self::likedPost($entry, $kind);
+            if ($post !== null) {
+                $posts[] = $post;
+            }
+        }
+
+        return array_values(array_unique($posts));
+    }
+
+    /**
+     * @param list<string> $postUris
+     *
+     * @return array<string, string> post text by AT URI
+     */
+    private function postTexts(SocialAccount $account, array $postUris): array
+    {
         $texts = [];
-        foreach (array_chunk(array_values($subjects), AppViewClient::URIS_PER_CALL) as $uris) {
+        foreach (array_chunk($postUris, AppViewClient::URIS_PER_CALL) as $uris) {
             $query = implode('&', array_map(static fn (string $uri): string => 'uris=' . rawurlencode($uri), $uris));
             $answer = BlueskySessions::accepted($this->sessions->askAs($account, self::GET_POSTS . $query));
             foreach (JsonNodeModel::of($answer->json())->nodes('posts') as $post) {
@@ -114,15 +139,15 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
     private static function fetched(
         SocialAccount $account,
         JsonNodeModel $entry,
+        SocialNotificationKind $kind,
         array $postTexts,
     ): ?FetchedNotificationModel {
-        $kind = self::kindOf($entry);
         $remoteId = $entry->string('uri');
         $createdAt = NetworkTimestamp::toUtc($entry->string('indexedAt'));
         $author = $entry->node('author');
         $did = $author->string('did');
         $handle = $author->string('handle');
-        if ($kind === null || $remoteId === null || $createdAt === null || $did === null || $handle === null) {
+        if ($remoteId === null || $createdAt === null || $did === null || $handle === null) {
             return null;
         }
         $profileUrl = BlueskyWeb::profileUrl($did);
@@ -148,7 +173,7 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
     ): NotificationSubject {
         return match ($kind) {
             SocialNotificationKind::Like, SocialNotificationKind::Repost => self::likedSubject(
-                self::likedPost($entry) ?? '',
+                self::likedPost($entry, $kind) ?? '',
                 $account,
                 $postTexts,
             ),
@@ -171,10 +196,8 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
         );
     }
 
-    private static function likedPost(JsonNodeModel $entry): ?string
+    private static function likedPost(JsonNodeModel $entry, SocialNotificationKind $kind): ?string
     {
-        $kind = self::kindOf($entry);
-
         return $kind === SocialNotificationKind::Like || $kind === SocialNotificationKind::Repost
             ? $entry->node('record')->node('subject')->string('uri')
             : null;

@@ -61,7 +61,7 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
 
     private function markRead(SocialAccount $account, SocialNotification $row): void
     {
-        $id = (int) substr(strstr($row->getRemoteId(), ':') ?: '', 1);
+        $id = self::itemIdOf($row->getRemoteId());
         try {
             if ($row->getKind() === SocialNotificationKind::Reply) {
                 $this->lemmy->post($account, self::MARK_REPLY, ['comment_reply_id' => $id, 'read' => true]);
@@ -78,11 +78,7 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
 
     private function ask(SocialAccount $account, string $path): ApiResponseModel
     {
-        try {
-            return $this->lemmy->get($account, $path);
-        } catch (SocialPostNotFoundException | SocialPostRefusedException $exception) {
-            throw SocialNetworkUnreachableException::from($exception);
-        }
+        return SocialNetworkUnreachableException::around(fn () => $this->lemmy->get($account, $path));
     }
 
     private static function fetched(
@@ -99,7 +95,7 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
         if ($itemId === null || $createdAt === null || $actor === null || $commentId === null) {
             return null;
         }
-        $remoteId = $kind->value . ':' . $itemId;
+        $remoteId = self::remoteIdOf($kind, $itemId);
 
         return new FetchedNotificationModel(
             $remoteId,
@@ -115,14 +111,22 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
         );
     }
 
+    private static function remoteIdOf(SocialNotificationKind $kind, int $itemId): string
+    {
+        return $kind->value . ':' . $itemId;
+    }
+
+    private static function itemIdOf(string $remoteId): int
+    {
+        return (int) substr(strstr($remoteId, ':') ?: '', 1);
+    }
+
     private static function actorOf(SocialAccount $account, JsonNodeModel $creator): ?NotificationActor
     {
-        $name = $creator->string('name');
-        $handle = LemmyAuthor::handle($name, $creator->string('actor_id'));
+        $handle = LemmyAuthor::identity($creator->string('name'), $creator->string('actor_id'));
         if ($handle === null) {
             return null;
         }
-        $handle = substr($handle, 1);
 
         return new NotificationActor(
             $handle,
