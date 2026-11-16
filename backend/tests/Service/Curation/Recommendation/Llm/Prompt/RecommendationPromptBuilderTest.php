@@ -8,6 +8,7 @@ use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
 use App\Enum\RecommendationBatchSize;
+use App\Service\Content\LinkCard\Model\StoryLinkModel;
 use App\Service\Curation\Recommendation\Llm\Completion\Model\Reasoning;
 use App\Service\Curation\Recommendation\Llm\Prompt\Model\OutputLimitModel;
 use App\Service\Curation\Recommendation\Llm\Prompt\Pass\PromptContext;
@@ -62,6 +63,95 @@ final class RecommendationPromptBuilderTest extends TestCase
         );
 
         self::assertStringEndsWith('- [1] Short — F — D — ' . $description, $messages[1]['content']);
+    }
+
+    public function testACandidateLineShowsTheArticleItsPostShares(): void
+    {
+        $messages = $this->builder->batchMessages(
+            $this->defaultContext(),
+            [$this->postSharing(self::councilArticle('The council approved the budget for the coming year.'))],
+        );
+
+        self::assertStringEndsWith(
+            '- [7] This 👇 — Mastodon — 2026-11-10 — This 👇 — shares: Council votes on budget (Example News): '
+            . 'The council approved the budget for the coming year.',
+            $messages[1]['content'],
+        );
+    }
+
+    public function testAHistoryLineShowsTheSharedArticle(): void
+    {
+        $history = new RecommendationHistoryModel(
+            favorites: [$this->postSharing(self::councilArticle('The council approved the budget.'))],
+            kept: [],
+            viewed: [],
+        );
+
+        $messages = $this->builder->batchMessages(
+            new PromptContext($history, $this->settings(32768, 100), null),
+            [],
+        );
+
+        self::assertStringContainsString(
+            "\n- This 👇 — Mastodon — 2026-11-10 — This 👇 — shares: Council votes on budget (Example News): "
+            . 'The council approved the budget.',
+            $messages[1]['content'],
+        );
+    }
+
+    public function testThePostTextGivesWayToTheSharedArticle(): void
+    {
+        $line = new ArticleLineModel(
+            7,
+            'Post',
+            'Mastodon',
+            '2026-11-10',
+            str_repeat('p', 1200),
+            self::councilArticle(str_repeat('c', 400)),
+        );
+
+        $messages = $this->builder->batchMessages($this->defaultContext(), [$line]);
+
+        $summary = $line->sharedArticle?->summary() ?? '';
+        $postText = str_repeat('p', 1000 - mb_strlen($summary)) . '…';
+        self::assertStringEndsWith(
+            '- [7] Post — Mastodon — 2026-11-10 — ' . $postText . ' — shares: ' . $summary,
+            $messages[1]['content'],
+        );
+        self::assertStringContainsString('shares: Council votes on budget (Example News): ', $messages[1]['content']);
+    }
+
+    public function testASharedArticleWithoutADescriptionEndsAtItsSite(): void
+    {
+        $messages = $this->builder->batchMessages(
+            $this->defaultContext(),
+            [$this->postSharing(self::councilArticle(null))],
+        );
+
+        self::assertStringEndsWith(
+            '- [7] This 👇 — Mastodon — 2026-11-10 — This 👇 — shares: Council votes on budget (Example News)',
+            $messages[1]['content'],
+        );
+    }
+
+    public function testALineWithoutASharedArticleIsUnchanged(): void
+    {
+        $messages = $this->builder->batchMessages(
+            $this->defaultContext(),
+            [new ArticleLineModel(7, 'This 👇', 'Mastodon', '2026-11-10', 'This 👇')],
+        );
+
+        self::assertStringEndsWith('- [7] This 👇 — Mastodon — 2026-11-10 — This 👇', $messages[1]['content']);
+    }
+
+    private function postSharing(StoryLinkModel $sharedArticle): ArticleLineModel
+    {
+        return new ArticleLineModel(7, 'This 👇', 'Mastodon', '2026-11-10', 'This 👇', $sharedArticle);
+    }
+
+    private static function councilArticle(?string $description): StoryLinkModel
+    {
+        return new StoryLinkModel(str_repeat('a', 64), 'Council votes on budget', $description, 'Example News');
     }
 
     public function testAClippedReplyIsStillValidUtf8(): void
