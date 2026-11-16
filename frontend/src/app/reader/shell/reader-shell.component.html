@@ -188,7 +188,7 @@
           [error]="entries.error()"
           [hasMore]="heading.hasMore()"
           [canMarkAllRead]="markRead.canMarkAllRead()"
-          [selection]="selection()"
+          [selection]="current"
           [openEntryId]="entryId()"
           [leavingIds]="entryActions.leavingIds()"
           [newSinceVisitIds]="storyVisit.newSinceVisitIds()"
@@ -207,7 +207,7 @@
           (dismiss)="entries.dismissError()"
           (markAllRead)="markRead.confirmMarkAllRead()"
           (unreadOnlyChange)="onUnreadOnlyChange($event)"
-          (orderChange)="listOrder.set(selection(), $event)"
+          (orderChange)="listOrder.set(current, $event)"
           (markAboveRead)="onMarkAboveRead($event)"
           (refresh)="refresh.refreshScoped()"
         />
