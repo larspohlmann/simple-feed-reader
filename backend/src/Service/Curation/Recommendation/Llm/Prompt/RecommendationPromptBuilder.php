@@ -54,6 +54,8 @@ final readonly class RecommendationPromptBuilder
 
     private const int DESCRIPTION_CHARS = 1000;
 
+    private const int SHARED_ARTICLE_CHARS = 500;
+
     public function __construct(private RecommendationAnswerBudget $answerBudget)
     {
     }
@@ -386,29 +388,33 @@ final readonly class RecommendationPromptBuilder
 
     private function historyLine(ArticleLineModel $line): string
     {
-        $description = $this->truncatedDescription($line->description);
-
-        return null === $description
-            ? \sprintf('- %s — %s — %s', $line->title, $line->feedName, $line->date)
-            : \sprintf('- %s — %s — %s — %s', $line->title, $line->feedName, $line->date, $description);
+        return $this->lineWithSharedArticle(
+            \sprintf('- %s — %s — %s', $line->title, $line->feedName, $line->date),
+            $line,
+        );
     }
 
     private function candidateLine(ArticleLineModel $line): string
     {
-        $description = $this->truncatedDescription($line->description);
-        $baseLine = \sprintf('- [%d] %s — %s — %s', $line->entryId, $line->title, $line->feedName, $line->date);
-
-        return null === $description
-            ? $baseLine
-            : $baseLine . ' — ' . $description;
+        return $this->lineWithSharedArticle(
+            \sprintf('- [%d] %s — %s — %s', $line->entryId, $line->title, $line->feedName, $line->date),
+            $line,
+        );
     }
 
-    private function truncatedDescription(?string $description): ?string
+    private function lineWithSharedArticle(string $baseLine, ArticleLineModel $line): string
     {
-        if (null === $description) {
-            return null;
-        }
+        $sharedArticle = null === $line->sharedArticle
+            ? null
+            : ClippedText::of($line->sharedArticle->summary(), self::SHARED_ARTICLE_CHARS);
+        $descriptionChars = self::DESCRIPTION_CHARS - mb_strlen($sharedArticle ?? '');
+        $description = null === $line->description
+            ? null
+            : ClippedText::of($line->description, $descriptionChars);
 
-        return ClippedText::of($description, self::DESCRIPTION_CHARS);
+        return implode(' — ', array_filter(
+            [$baseLine, $description, null === $sharedArticle ? null : 'shares: ' . $sharedArticle],
+            static fn (?string $part): bool => null !== $part,
+        ));
     }
 }

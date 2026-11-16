@@ -18,10 +18,14 @@ final class RecommendationPromptText
     public const string DEFAULT_GUIDANCE = 'Recommend the posts this reader is most likely to open next, '
         . 'judged by how strongly they match the interests visible in the reading history.';
 
+    private const string SHARED_ARTICLE_NOTE = 'A line may end with "shares:" and the article the post links to; '
+        . 'that article counts as much as the post. ';
+
     public const string BATCH_SYSTEM_ROLE = 'You score candidate posts for one reader of an RSS reader. The user '
         . 'message holds a PROFILE describing the reader, a FAVORITES section listing the posts the reader liked most '
         . '(newest first), and a CANDIDATES section listing unread posts; each candidate line starts with the '
-        . 'candidate id in square brackets. Score each candidate from 0 to 1000 for how strongly the PROFILE and the '
+        . 'candidate id in square brackets. ' . self::SHARED_ARTICLE_NOTE
+        . 'Score each candidate from 0 to 1000 for how strongly the PROFILE and the '
         . 'FAVORITES suggest the reader would open it. Be critical and sparing with high scores: most candidates are '
         . 'only a weak or partial fit and must score below 500. Reserve 900-1000 for the rare candidate that is an '
         . 'unmistakable, specific match to a strong, repeated interest; 700-899 for a clear, direct match; 400-699 '
@@ -43,7 +47,7 @@ final class RecommendationPromptText
         . 'preference profile for them. The user message holds four sections — FAVORITES, SHARED, KEPT and VIEWED, '
         . 'newest first — and, when the reader has any, a SAVED SEARCHES section ahead of them: the search terms '
         . 'they saved to keep following a subject. SAVED SEARCHES and FAVORITES weigh strongest, SHARED next, then '
-        . 'KEPT, VIEWED least. '
+        . 'KEPT, VIEWED least. ' . self::SHARED_ARTICLE_NOTE
         . 'A saved search is a standing interest even when nothing in the history matches it. Write a compact '
         . 'profile, at most about ' . self::PROFILE_WORD_CAP . ' words, that names the reader\'s specific, '
         . 'repeated interests — topics, '
@@ -60,7 +64,8 @@ final class RecommendationPromptText
     public const string CONSOLIDATION_ROLE = 'You rank a candidate list of unread posts for one reader of an RSS '
         . 'reader and remove duplicates. The user message holds a PROFILE describing the reader, a FAVORITES section '
         . 'listing the posts the reader liked most (newest first), and a CANDIDATES section listing candidate posts, '
-        . 'each line starting with the candidate id in square brackets. Do two things. First, score each candidate '
+        . 'each line starting with the candidate id in square brackets. ' . self::SHARED_ARTICLE_NOTE
+        . 'Do two things. First, score each candidate '
         . 'post from 0 to 1000 for how strongly the PROFILE and the FAVORITES suggest the reader would open it. Be '
         . 'critical and sparing with high scores: most candidates are only a weak or partial fit and must score '
         . 'below 500. Reserve 900-1000 for an unmistakable, specific match to a strong, repeated interest; 700-899 '
