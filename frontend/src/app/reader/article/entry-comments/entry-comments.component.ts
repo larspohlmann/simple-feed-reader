@@ -75,7 +75,7 @@ export class EntryCommentsComponent {
 
   readonly state = computed(() => this.service.state(this.entryId())());
   protected readonly likeable = computed(() => likeableSocial(this.entry()) !== null);
-  protected readonly networkName = computed(() => this.entry().social?.network ?? null);
+  protected readonly socialNetwork = computed(() => this.entry().social?.network ?? null);
   readonly network = computed(() => {
     const social = this.entry().social;
     return social ? SOCIAL_NETWORK_NAMES[social.network] : null;
