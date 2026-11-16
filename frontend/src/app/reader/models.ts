@@ -156,7 +156,7 @@ export interface SubscriptionDto {
   social: SocialFeedRefDto | null;
 }
 
-interface SidebarTotalsDto {
+export interface SidebarTotalsDto {
   favoritesCount: number;
   keptCount: number;
   sharedCount: number;
