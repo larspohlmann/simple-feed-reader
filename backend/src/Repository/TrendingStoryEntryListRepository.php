@@ -34,16 +34,16 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
     /** @return list<EntryListRow> */
     public function listMembers(TrendingStoryListQuery $query): array
     {
-        $ordering = $query->ordering();
+        $ordering = $query->page->ordering();
         $qb = $this->projection->orderedBy($this->projection->rowQueryBuilder($query->userId), $ordering)
-            ->setMaxResults($query->limit)
+            ->setMaxResults($query->page->limit)
             ->setParameter('story', $query->storyId);
         $this->applyMembership($qb, EntryAliases::primary());
         $this->collapse->apply($qb, $this->applyMembership(...), $query->userId);
-        if ($query->onlyUnread) {
+        if ($query->page->onlyUnread) {
             $this->scopes->unread($qb, EntryAliases::primary());
         }
-        $this->projection->applyCursor($qb, $query->cursor, $ordering);
+        $this->projection->applyCursor($qb, $query->page->cursor, $ordering);
 
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $qb->getQuery()->getResult();

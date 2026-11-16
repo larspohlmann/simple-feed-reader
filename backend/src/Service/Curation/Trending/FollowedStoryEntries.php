@@ -36,7 +36,7 @@ final readonly class FollowedStoryEntries
      */
     private function newEntryIds(TrendingStoryListQuery $query, array $rows, \DateTimeImmutable $lastOpenedAt): array
     {
-        if (!$query->isFirstPage()) {
+        if (!$query->page->isFirstPage()) {
             return [];
         }
 

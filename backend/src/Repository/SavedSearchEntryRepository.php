@@ -41,16 +41,16 @@ final class SavedSearchEntryRepository extends ServiceEntityRepository
             return [];
         }
 
-        $ordering = $query->ordering();
+        $ordering = $query->page->ordering();
         $qb = $this->projection->orderedBy($this->projection->rowQueryBuilder($query->userId), $ordering)
-            ->setMaxResults($query->limit);
+            ->setMaxResults($query->page->limit);
         $this->restrictToMembers($qb, $query->savedSearchIds, $query->userId);
 
-        if ($query->onlyUnread) {
+        if ($query->page->onlyUnread) {
             $qb->andWhere(UnreadDql::predicate())->setParameter('notHidden', false, Types::BOOLEAN);
         }
 
-        $this->projection->applyCursor($qb, $query->cursor, $ordering);
+        $this->projection->applyCursor($qb, $query->page->cursor, $ordering);
 
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $qb->getQuery()->getResult();

@@ -7,9 +7,7 @@ namespace App\Controller\Api;
 use App\Dto\Entry\EntryPageParameters;
 use App\Dto\Entry\MarkSavedSearchesReadRequest;
 use App\Entity\User;
-use App\Enum\ListOrder;
 use App\Http\SavedSearchPage;
-use App\Pagination\EntryCursor;
 use App\Repository\EntryListRowEnricher;
 use App\Repository\SavedSearchListQuery;
 use App\Repository\SavedSearchRepository;
@@ -49,15 +47,12 @@ final readonly class SavedSearchEntriesController
         $query = new SavedSearchListQuery(
             userId: $userId,
             savedSearchIds: $this->savedSearches->idsForUser($userId),
-            onlyUnread: $page->unread,
-            cursor: EntryCursor::fromRequestValue($page->cursor),
-            limit: $page->limit,
-            order: ListOrder::fromRequestValue($page->order),
+            page: $page->toListPage(),
         );
         $result = $this->entries->list($query);
         $rows = $this->enricher->enrich($result->rows, $userId);
 
-        return new JsonResponse($this->savedSearchPage->of($result->withRows($rows), $query->limit));
+        return new JsonResponse($this->savedSearchPage->of($result->withRows($rows), $query->page->limit));
     }
 
     #[Route('/{id}', name: 'api_entries_saved_search_one', methods: ['GET'], requirements: ['id' => '\d+'])]
@@ -73,15 +68,12 @@ final readonly class SavedSearchEntriesController
         $query = new SavedSearchListQuery(
             userId: $userId,
             savedSearchIds: [$savedSearch->requireId()],
-            onlyUnread: $page->unread,
-            cursor: EntryCursor::fromRequestValue($page->cursor),
-            limit: $page->limit,
-            order: ListOrder::fromRequestValue($page->order),
+            page: $page->toListPage(),
         );
         $result = $this->entries->list($query);
         $rows = $this->enricher->enrich($result->rows, $userId);
 
-        return new JsonResponse($this->savedSearchPage->of($result->withRows($rows), $query->limit));
+        return new JsonResponse($this->savedSearchPage->of($result->withRows($rows), $query->page->limit));
     }
 
     #[Route('/mark-read', name: 'api_entries_saved_searches_mark_read', methods: ['POST'])]

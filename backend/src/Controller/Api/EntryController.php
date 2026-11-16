@@ -13,7 +13,6 @@ use App\Enum\ListOrder;
 use App\Http\EntryPage;
 use App\Http\EntryStateJson;
 use App\Http\RecommendationFeedJson;
-use App\Pagination\EntryCursor;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryListRowEnricher;
 use App\Repository\EntryListSort;
@@ -68,13 +67,14 @@ final readonly class EntryController
             )));
         }
 
+        $listPage = $page->toListPage();
         $query = new EntryQuery(
             userId: $user->requireId(),
             view: $entryView,
             subscriptionId: $subscription,
             tagId: $tag,
-            cursor: EntryCursor::fromRequestValue($page->cursor),
-            limit: $page->limit,
+            cursor: $listPage->cursor,
+            limit: $listPage->limit,
             order: $listOrder,
             networkScope: $networkScope,
             feedGroup: FeedGroup::fromRequestValue($group),
