@@ -571,6 +571,33 @@ describe('ReaderViewComponent', () => {
       expect(element.querySelector('app-link-cards')).toBeNull();
     });
 
+    describe("the quoted post's link on the reader's instance", () => {
+      const quotedOpenLink = (network: 'mastodon' | 'bluesky') => {
+        TestBed.overrideProvider(SubscriptionsStore, {
+          useValue: { socialAccounts: signal([aMastodonAccount('https://home.test')]) },
+        });
+        const element = mount(
+          entryWithBody('<p>Just a post</p>', {
+            titleDerived: true,
+            share: 'quote',
+            quote: aQuotedPost({ url: 'https://mastodon.social/@Gargron/9' }),
+            social: { network, isLiked: false, canLike: true, isOwn: false },
+          }),
+        ).nativeElement as HTMLElement;
+        return element.querySelector('app-quoted-post a.open')!.getAttribute('href');
+      };
+
+      it('rewrites the quoted post of a Mastodon entry', () => {
+        expect(quotedOpenLink('mastodon')).toBe(
+          `https://home.test/authorize_interaction?uri=${encodeURIComponent('https://mastodon.social/@Gargron/9')}`,
+        );
+      });
+
+      it("leaves the quoted post of another network's entry alone", () => {
+        expect(quotedOpenLink('bluesky')).toBe('https://mastodon.social/@Gargron/9');
+      });
+    });
+
     it('renders the quoted post and the link cards of a quote share that carries both', () => {
       const element = mount(
         entryWithBody('<p>Just a post</p>', {

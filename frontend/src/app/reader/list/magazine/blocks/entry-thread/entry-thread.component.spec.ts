@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../../../testing/transloco-testing';
@@ -11,7 +12,11 @@ import { neverRecoveringImageProxy } from '../../../../../../testing/image-proxy
 import { aLinkCard, aQuotedPost, anEntry } from '../../../../../../testing/entry-testing';
 import { aThreadPost } from '../../../../../../testing/thread-testing';
 import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
-import { provideSocialAccounts } from '../../../../../../testing/social-accounts-testing';
+import {
+  aMastodonAccount,
+  provideSocialAccounts,
+} from '../../../../../../testing/social-accounts-testing';
+import { SubscriptionsStore } from '../../../../state/subscriptions.store';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -60,6 +65,23 @@ function mount(testEntry: EntryDto): HTMLElement {
 }
 
 describe('EntryThreadComponent', () => {
+  it("opens a Mastodon entry's quoted post on the reader's instance", () => {
+    TestBed.overrideProvider(SubscriptionsStore, {
+      useValue: { socialAccounts: signal([aMastodonAccount('https://home.test')]) },
+    });
+    const element = mount(
+      thread({
+        social: { network: 'mastodon', isLiked: false, canLike: true, isOwn: false },
+        share: 'quote',
+        quote: aQuotedPost({ url: 'https://mastodon.social/@Gargron/9' }),
+      }),
+    );
+
+    expect(element.querySelector('app-quoted-post a.open')!.getAttribute('href')).toBe(
+      `https://home.test/authorize_interaction?uri=${encodeURIComponent('https://mastodon.social/@Gargron/9')}`,
+    );
+  });
+
   it('draws the root and each reply on the thread line, counted n/N', () => {
     const element = mount(thread());
 
