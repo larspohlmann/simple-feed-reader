@@ -7,6 +7,7 @@ namespace App\Tests\Service\Operations\Worker;
 use App\Service\Operations\Worker\Message\AdvanceRecommendationRuns;
 use App\Service\Operations\Worker\Message\CompleteQueuedLinkCards;
 use App\Service\Operations\Worker\Message\CompleteQueuedTranscripts;
+use App\Service\Operations\Worker\Message\PollSocialNotifications;
 use App\Service\Operations\Worker\Message\PurgeFailedMessages;
 use App\Service\Operations\Worker\Message\RebuildDueTrendingStories;
 use App\Service\Operations\Worker\Message\RefreshDueFeeds;
@@ -38,7 +39,7 @@ final class WorkerScheduleWiringTest extends KernelTestCase
 
         $recurringMessages = $provider->getSchedule()->getRecurringMessages();
 
-        self::assertCount(15, $recurringMessages);
+        self::assertCount(16, $recurringMessages);
         $classes = array_map(
             static fn ($recurring) => self::firstMessageClass($recurring),
             $recurringMessages,
@@ -60,6 +61,7 @@ final class WorkerScheduleWiringTest extends KernelTestCase
                 CompleteQueuedTranscripts::class,
                 RebuildDueTrendingStories::class,
                 ResolvePendingLinks::class,
+                PollSocialNotifications::class,
             ],
             $classes,
         );
@@ -86,9 +88,24 @@ final class WorkerScheduleWiringTest extends KernelTestCase
                 'every 1 minute',
                 'every 5 minutes',
                 'every 1 minute',
+                'every 5 minutes',
             ],
             $frequencies,
         );
+    }
+
+    public function testPollSocialNotificationsIsTheLastEntryEveryFiveMinutes(): void
+    {
+        self::bootKernel();
+        $provider = self::getContainer()->get(WorkerSchedule::class);
+        self::assertInstanceOf(WorkerSchedule::class, $provider);
+
+        $recurringMessages = $provider->getSchedule()->getRecurringMessages();
+        $last = array_last($recurringMessages);
+        self::assertNotNull($last);
+
+        self::assertSame(PollSocialNotifications::class, self::firstMessageClass($last));
+        self::assertSame('every 5 minutes', (string) $last->getTrigger());
     }
 
     /** Without a persistent pool the daily entry never fires: an in-process checkpoint re-anchors at each restart. */

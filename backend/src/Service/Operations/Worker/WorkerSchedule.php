@@ -7,6 +7,7 @@ namespace App\Service\Operations\Worker;
 use App\Service\Operations\Worker\Message\AdvanceRecommendationRuns;
 use App\Service\Operations\Worker\Message\CompleteQueuedLinkCards;
 use App\Service\Operations\Worker\Message\CompleteQueuedTranscripts;
+use App\Service\Operations\Worker\Message\PollSocialNotifications;
 use App\Service\Operations\Worker\Message\PurgeFailedMessages;
 use App\Service\Operations\Worker\Message\RebuildDueTrendingStories;
 use App\Service\Operations\Worker\Message\RefreshDueFeeds;
@@ -58,6 +59,7 @@ final readonly class WorkerSchedule implements ScheduleProviderInterface
             ->add(RecurringMessage::every('1 minute', new CompleteQueuedTranscripts()))
             ->add(RecurringMessage::every('5 minutes', new RebuildDueTrendingStories()))
             ->add(RecurringMessage::every('1 minute', new ResolvePendingLinks()))
+            ->add(RecurringMessage::every('5 minutes', new PollSocialNotifications()))
             ->stateful($this->schedulerStateCache)
             ->processOnlyLastMissedRun(true);
     }

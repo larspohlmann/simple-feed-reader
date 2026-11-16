@@ -267,6 +267,7 @@ final class MaintenanceControllerTest extends WebTestCase
                 'hiddenProfiles',
                 'savedSearchMemberships',
                 'privateFeedSync',
+                'notificationPoll',
                 'trending',
                 'logShipping',
             ],

@@ -17,6 +17,7 @@ use App\Service\Curation\Recommendation\Run\Model\ForYouSweepReportModel;
 use App\Service\Ingestion\Refresh\Model\RefreshReportModel;
 use App\Service\Library\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
 use App\Service\Social\Social\Model\HiddenProfileSwitchReportModel;
+use App\Service\Social\Notification\Model\NotificationPollReportModel;
 use App\Service\Social\Social\Model\PrivateFeedSyncReportModel;
 use App\Service\Social\Social\Model\ProfileImageSweepReportModel;
 use App\Service\Content\Transcript\Model\TranscriptSweepReportModel;
@@ -42,6 +43,7 @@ final class MaintenanceTickJsonTest extends KernelTestCase
                 'hiddenProfiles' => new HiddenProfileSwitchReportModel(24, 25),
                 'savedSearchMemberships' => new SavedSearchMembershipSweepReportModel(11, 12, 13, true),
                 'privateFeedSync' => new PrivateFeedSyncReportModel(20, 21, 22, 23),
+                'notificationPoll' => new NotificationPollReportModel(40, 41, 42, 43),
                 'trending' => new TrendingRebuildReportModel([
                     new TrendingBuildReportModel(
                         TrendingWindow::Day,
@@ -109,6 +111,7 @@ final class MaintenanceTickJsonTest extends KernelTestCase
                     'caughtUp' => true,
                 ],
                 'privateFeedSync' => ['accountsChecked' => 20, 'accountsSkipped' => 21, 'added' => 22, 'removed' => 23],
+                'notificationPoll' => ['accountsChecked' => 40, 'failed' => 41, 'newRows' => 42, 'pruned' => 43],
                 'trending' => ['windowsRebuilt' => 2, 'storiesBuilt' => 57],
                 'logShipping' => ['shipped' => 14, 'failed' => 15],
             ],
