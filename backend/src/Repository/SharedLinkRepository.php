@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Doctrine\BulkInsert;
 use App\Entity\SharedLink;
 use App\Service\Content\LinkCard\Model\NewSharedLinkModel;
+use App\Service\Operations\UrlCleanup\Model\StoredLinkAddressModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\Persistence\ManagerRegistry;
@@ -131,12 +132,12 @@ final class SharedLinkRepository extends ServiceEntityRepository
         return $links;
     }
 
-    /** @return array<int, string> by shared link id */
+    /** @return array<int, StoredLinkAddressModel> by shared link id */
     public function urlsAfterId(int $afterId, int $limit): array
     {
-        /** @var list<array{id: int|string, url: string}> $rows */
+        /** @var list<array{id: int|string, url: string, urlHash: string}> $rows */
         $rows = $this->createQueryBuilder('link')
-            ->select('link.id', 'link.url')
+            ->select('link.id', 'link.url', 'link.urlHash')
             ->andWhere('link.id > :afterId')
             ->setParameter('afterId', $afterId)
             ->orderBy('link.id', 'ASC')
@@ -146,19 +147,21 @@ final class SharedLinkRepository extends ServiceEntityRepository
 
         $urls = [];
         foreach ($rows as $row) {
-            $urls[(int) $row['id']] = $row['url'];
+            $urls[(int) $row['id']] = new StoredLinkAddressModel($row['url'], $row['urlHash']);
         }
 
         return $urls;
     }
 
-    public function moveTo(int $linkId, string $url): void
+    public function relocate(int $linkId, string $url, string $urlHash): void
     {
         $this->createQueryBuilder('link')
             ->update()
             ->set('link.url', ':url')
+            ->set('link.urlHash', ':urlHash')
             ->andWhere('link.id = :id')
             ->setParameter('url', $url)
+            ->setParameter('urlHash', $urlHash)
             ->setParameter('id', $linkId)
             ->getQuery()
             ->execute();

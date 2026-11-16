@@ -10,6 +10,7 @@ final readonly class TrackingUrlCleanupReportModel
         public int $entriesCleaned = 0,
         public int $hashesChanged = 0,
         public int $cardsCleaned = 0,
+        public int $cardHashesChanged = 0,
     ) {
     }
 
@@ -20,6 +21,7 @@ final readonly class TrackingUrlCleanupReportModel
             $this->entriesCleaned + $other->entriesCleaned,
             $this->hashesChanged + $other->hashesChanged,
             $this->cardsCleaned + $other->cardsCleaned,
+            $this->cardHashesChanged + $other->cardHashesChanged,
         );
     }
 }

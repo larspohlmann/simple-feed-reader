@@ -41,7 +41,7 @@ final class TrackingUrlCleanupTest extends DbTestCase
 
         $report = $this->cleanup()->count();
 
-        self::assertEquals(new TrackingUrlCleanupReportModel(3, 2, 1), $report);
+        self::assertEquals(new TrackingUrlCleanupReportModel(3, 2, 1, 1), $report);
         self::assertSame($before, $this->rows());
     }
 
@@ -51,7 +51,7 @@ final class TrackingUrlCleanupTest extends DbTestCase
 
         $report = $this->cleanup()->clean();
 
-        self::assertEquals(new TrackingUrlCleanupReportModel(3, 2, 1), $report);
+        self::assertEquals(new TrackingUrlCleanupReportModel(3, 2, 1, 1), $report);
         self::assertSame(
             ['url' => 'https://example.com/a', 'url_hash' => self::hashOf('https://example.com/a')],
             $this->row('tracked'),
@@ -69,13 +69,13 @@ final class TrackingUrlCleanupTest extends DbTestCase
     {
         $this->cleanup()->clean();
 
-        self::assertEquals(new TrackingUrlCleanupReportModel(0, 0, 0), $this->cleanup()->clean());
+        self::assertEquals(new TrackingUrlCleanupReportModel(0, 0, 0, 0), $this->cleanup()->clean());
     }
 
     public function testTheWalkCrossesBatchBoundaries(): void
     {
-        self::assertEquals(new TrackingUrlCleanupReportModel(3, 2, 1), $this->cleanup(1)->clean());
-        self::assertEquals(new TrackingUrlCleanupReportModel(0, 0, 0), $this->cleanup(3)->clean());
+        self::assertEquals(new TrackingUrlCleanupReportModel(3, 2, 1, 1), $this->cleanup(1)->clean());
+        self::assertEquals(new TrackingUrlCleanupReportModel(0, 0, 0, 0), $this->cleanup(3)->clean());
     }
 
     public function testSharedLinkUrlsAreCleaned(): void
@@ -89,6 +89,21 @@ final class TrackingUrlCleanupTest extends DbTestCase
         self::assertSame('https://example.com/card', $this->linkRow('clean')['url']);
     }
 
+    public function testAStaleLinkHashIsRecomputedAndItsUrlKept(): void
+    {
+        $this->cleanup()->clean();
+
+        $stale = $this->linkRow('stale');
+        self::assertSame(
+            [
+                'url' => 'https://www.aljazeera.com/news/1?traffic_source=rss',
+                'url_hash' => self::hashOf('https://www.aljazeera.com/news/1?traffic_source=rss'),
+            ],
+            $stale,
+        );
+        self::assertNotSame(self::hashOf('https://www.aljazeera.com/news/1'), $stale['url_hash']);
+    }
+
     private function cleanup(int $batchSize = 2): TrackingUrlCleanup
     {
         $entries = self::getContainer()->get(EntryRepository::class);
@@ -96,7 +111,14 @@ final class TrackingUrlCleanupTest extends DbTestCase
         self::assertInstanceOf(EntryRepository::class, $entries);
         self::assertInstanceOf(SharedLinkRepository::class, $sharedLinks);
 
-        return new TrackingUrlCleanup($entries, $sharedLinks, $this->urlHash, $this->entityManager, $batchSize);
+        return new TrackingUrlCleanup(
+            $entries,
+            $sharedLinks,
+            $this->urlHash,
+            new UrlNormalizer(),
+            $this->entityManager,
+            $batchSize,
+        );
     }
 
     private function store(): void
@@ -128,11 +150,18 @@ final class TrackingUrlCleanupTest extends DbTestCase
     private function storeLinks(): void
     {
         $connection = $this->entityManager->getConnection();
-        $urls = ['clean' => 'https://example.com/card', 'tracked' => 'https://youtu.be/abc?si=y'];
-        foreach ($urls as $name => $url) {
+        $links = [
+            'clean' => ['https://example.com/card', self::hashOf('https://example.com/card')],
+            'tracked' => ['https://youtu.be/abc?si=y', self::hashOf('https://youtu.be/abc?si=y')],
+            'stale' => [
+                'https://www.aljazeera.com/news/1?traffic_source=rss',
+                self::hashOf('https://www.aljazeera.com/news/1'),
+            ],
+        ];
+        foreach ($links as $name => [$url, $urlHash]) {
             $connection->insert('shared_link', [
                 'url' => $url,
-                'url_hash' => self::hashOf($url),
+                'url_hash' => $urlHash,
                 'title' => 'Card',
                 'site_name' => 'example.com',
                 'created_at' => '2026-11-15 12:00:00',

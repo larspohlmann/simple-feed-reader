@@ -33,8 +33,8 @@ final class CleanTrackingUrlsCommandTest extends DbTestCase
         $tester->execute(['--dry-run' => true]);
 
         self::assertStringContainsString(
-            'Would clean: 1 entries cleaned, 1 hashes changed, 0 cards cleaned',
-            $tester->getDisplay(),
+            'Would clean: 1 entries cleaned, 1 hashes changed, 0 cards cleaned, 0 card hashes changed',
+            self::unwrapped($tester),
         );
         self::assertSame('https://example.com/a?utm_source=rss', $this->storedUrl());
     }
@@ -44,7 +44,10 @@ final class CleanTrackingUrlsCommandTest extends DbTestCase
         $tester = $this->tester();
 
         self::assertSame(Command::SUCCESS, $tester->execute([]));
-        self::assertStringContainsString('1 entries cleaned, 1 hashes changed, 0 cards cleaned', $tester->getDisplay());
+        self::assertStringContainsString(
+            '1 entries cleaned, 1 hashes changed, 0 cards cleaned, 0 card hashes changed',
+            self::unwrapped($tester),
+        );
         self::assertStringNotContainsString('Would clean', $tester->getDisplay());
         self::assertSame('https://example.com/a', $this->storedUrl());
     }
@@ -54,6 +57,11 @@ final class CleanTrackingUrlsCommandTest extends DbTestCase
         $application = new Application(self::$kernel ?? self::bootKernel());
 
         return new CommandTester($application->find('app:urls:clean-tracking'));
+    }
+
+    private static function unwrapped(CommandTester $tester): string
+    {
+        return (string) preg_replace('/\s+/', ' ', $tester->getDisplay());
     }
 
     private function storedUrl(): mixed
