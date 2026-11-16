@@ -30,7 +30,7 @@
 <div class="rows text-scaled" #rows>
   @for (key of hintKeys(); track key) {
     <app-warning-box class="hint">
-      <app-icon class="hint-glyph" name="warning" size="sm" />
+      <app-icon class="hint-glyph" name="warning" size="md" />
       <span class="hint-text">
         {{ key | transloco: { network: networkName } }}
         <a class="reconnect" routerLink="/settings/social">{{
