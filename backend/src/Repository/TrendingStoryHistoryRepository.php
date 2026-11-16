@@ -21,14 +21,6 @@ use Doctrine\ORM\EntityManagerInterface;
  * The one writer of Trending's stories and their members: a build updates them in place (#2128).
  *
  * @phpstan-type MemberRow array{
- *     feed_id: int|string,
- *     article_site: string|null,
- *     shared_link_id: int|string|null,
- *     joined_at: string,
- *     in_day: int|string,
- *     in_week: int|string,
- * }
- * @phpstan-type HeldMemberRow array{
  *     entry_id: int|string,
  *     feed_id: int|string,
  *     article_site: string|null,
@@ -46,8 +38,9 @@ final readonly class TrendingStoryHistoryRepository
 
     private const int SITE_LENGTH = 255;
 
-    private const string INSERT_MEMBERS = 'INSERT INTO trending_story_entry'
-        . ' (story_id, entry_id, feed_id, article_site, shared_link_id, joined_at, in_day, in_week)';
+    private const string MEMBER_COLUMNS = 'entry_id, feed_id, article_site, shared_link_id, joined_at, in_day, in_week';
+
+    private const string INSERT_MEMBERS = 'INSERT INTO trending_story_entry (story_id, ' . self::MEMBER_COLUMNS . ')';
 
     public function __construct(private EntityManagerInterface $entityManager)
     {
@@ -78,7 +71,7 @@ final readonly class TrendingStoryHistoryRepository
     /** Moves the merged story's members, follows and hides onto the survivor, then deletes the merged story. */
     public function merge(StoryMergeModel $merge): void
     {
-        $this->mergeMembers($merge);
+        $this->absorbMembers($merge->survivorId, $this->membersOf($merge->mergedId));
         $this->mergeFollows($merge);
         $this->mergeHides($merge);
         $this->widenToCover($merge);
@@ -120,31 +113,6 @@ final readonly class TrendingStoryHistoryRepository
         );
     }
 
-    /** A shared entry keeps the earlier join and both stories' placement; the rest move as they are. */
-    private function mergeMembers(StoryMergeModel $merge): void
-    {
-        $survivorMembers = $this->membersOf($merge->survivorId);
-        $moving = [];
-        foreach ($this->membersOf($merge->mergedId) as $entryId => $member) {
-            $kept = $survivorMembers[$entryId] ?? null;
-            if ($kept === null) {
-                $moving[] = [
-                    $merge->survivorId,
-                    $entryId,
-                    $member['feed_id'],
-                    $member['article_site'],
-                    $member['shared_link_id'],
-                    $member['joined_at'],
-                    $member['in_day'],
-                    $member['in_week'],
-                ];
-                continue;
-            }
-            $this->combineMember($merge->survivorId, $entryId, self::combined($kept, $member));
-        }
-        BulkInsert::into(self::INSERT_MEMBERS, self::INSERT_ROWS)->rows($this->connection(), $moving);
-    }
-
     /**
      * The week places an entry in one story only, or the next day build ties it back to the story it left.
      *
@@ -164,12 +132,7 @@ final readonly class TrendingStoryHistoryRepository
         if ($elsewhere === []) {
             return;
         }
-        $claimed = $this->membersOf($storyId);
-        foreach ($elsewhere as $member) {
-            $entryId = (int) $member['entry_id'];
-            $claimed[$entryId] = self::combined($claimed[$entryId], $member);
-            $this->combineMember($storyId, $entryId, $claimed[$entryId]);
-        }
+        $this->absorbMembers($storyId, $elsewhere);
         $this->connection()->executeStatement(
             'DELETE FROM trending_story_entry WHERE story_id <> ? AND entry_id IN (?)',
             [$storyId, $entryIds],
@@ -178,16 +141,37 @@ final readonly class TrendingStoryHistoryRepository
     }
 
     /**
+     * An entry the target already holds keeps the earlier join and both placements; the rest move as they are.
+     *
+     * @param list<MemberRow> $members
+     */
+    private function absorbMembers(int $targetId, array $members): void
+    {
+        $held = array_column($this->membersOf($targetId), null, 'entry_id');
+        $moving = [];
+        foreach ($members as $member) {
+            $entryId = (int) $member['entry_id'];
+            $kept = $held[$entryId] ?? null;
+            if ($kept === null) {
+                $moving[] = [$targetId, ...array_values($member)];
+                continue;
+            }
+            $held[$entryId] = self::combined($kept, $member);
+            $this->combineMember($targetId, $entryId, $held[$entryId]);
+        }
+        BulkInsert::into(self::INSERT_MEMBERS, self::INSERT_ROWS)->rows($this->connection(), $moving);
+    }
+
+    /**
      * @param list<int> $entryIds
      *
-     * @return list<HeldMemberRow>
+     * @return list<MemberRow>
      */
     private function membersOfOtherStories(int $storyId, array $entryIds): array
     {
-        /** @var list<HeldMemberRow> $members */
+        /** @var list<MemberRow> $members */
         $members = $this->connection()->fetchAllAssociative(
-            'SELECT entry_id, feed_id, article_site, shared_link_id, joined_at, in_day, in_week'
-            . ' FROM trending_story_entry WHERE story_id <> ? AND entry_id IN (?)',
+            'SELECT ' . self::MEMBER_COLUMNS . ' FROM trending_story_entry WHERE story_id <> ? AND entry_id IN (?)',
             [$storyId, $entryIds],
             [ParameterType::INTEGER, ArrayParameterType::INTEGER],
         );
@@ -229,12 +213,9 @@ final readonly class TrendingStoryHistoryRepository
             [$merge->mergedId],
         );
         $this->connection()->executeStatement(
-            'UPDATE trending_story SET'
-            . ' first_seen = CASE WHEN first_seen < :firstSeen THEN first_seen ELSE :firstSeen END,'
-            . ' last_seen = CASE WHEN last_seen > :lastSeen THEN last_seen ELSE :lastSeen END,'
-            . ' first_joined_at = CASE WHEN first_joined_at < :firstJoinedAt'
-            . ' THEN first_joined_at ELSE :firstJoinedAt END,'
-            . ' last_joined_at = CASE WHEN last_joined_at > :lastJoinedAt THEN last_joined_at ELSE :lastJoinedAt END'
+            'UPDATE trending_story SET '
+            . self::earliest('first_seen', 'firstSeen') . ', ' . self::latest('last_seen', 'lastSeen') . ', '
+            . self::earliest('first_joined_at', 'firstJoinedAt') . ', ' . self::latest('last_joined_at', 'lastJoinedAt')
             . ' WHERE id = :story',
             [
                 'firstSeen' => $merged['first_seen'],
@@ -295,13 +276,12 @@ final readonly class TrendingStoryHistoryRepository
         );
     }
 
-    /** @return array<int, MemberRow> by entry id */
+    /** @return list<MemberRow> */
     private function membersOf(int $storyId): array
     {
-        /** @var array<int, MemberRow> $members */
-        $members = $this->connection()->fetchAllAssociativeIndexed(
-            'SELECT entry_id, feed_id, article_site, shared_link_id, joined_at, in_day, in_week'
-            . ' FROM trending_story_entry WHERE story_id = ?',
+        /** @var list<MemberRow> $members */
+        $members = $this->connection()->fetchAllAssociative(
+            'SELECT ' . self::MEMBER_COLUMNS . ' FROM trending_story_entry WHERE story_id = ?',
             [$storyId],
         );
 
@@ -337,9 +317,8 @@ final readonly class TrendingStoryHistoryRepository
     private function updateStory(int $storyId, StoryAssignmentModel $assignment, \DateTimeImmutable $builtAt): void
     {
         $this->connection()->executeStatement(
-            'UPDATE trending_story SET'
-            . ' first_seen = CASE WHEN first_seen < :firstSeen THEN first_seen ELSE :firstSeen END,'
-            . ' last_seen = CASE WHEN last_seen > :lastSeen THEN last_seen ELSE :lastSeen END,'
+            'UPDATE trending_story SET '
+            . self::earliest('first_seen', 'firstSeen') . ', ' . self::latest('last_seen', 'lastSeen') . ','
             . ' last_joined_at = COALESCE(:lastJoinedAt, last_joined_at)'
             . ' WHERE id = :story',
             [
@@ -370,8 +349,7 @@ final readonly class TrendingStoryHistoryRepository
     private function insertMembers(int $storyId, array $members, StoryBuildModel $build): void
     {
         $joinedAt = self::stored($build->builtAt);
-        $inDay = $build->window === TrendingWindow::Day ? 1 : 0;
-        $inWeek = $build->window === TrendingWindow::Week ? 1 : 0;
+        $placement = TrendingPlacementSql::placementIn($build->window);
         BulkInsert::into(self::INSERT_MEMBERS, self::INSERT_ROWS)->rows(
             $this->connection(),
             array_map(
@@ -382,8 +360,7 @@ final readonly class TrendingStoryHistoryRepository
                     $member->articleSite === null ? null : mb_substr($member->articleSite, 0, self::SITE_LENGTH),
                     $member->sharedLinkId,
                     $joinedAt,
-                    $inDay,
-                    $inWeek,
+                    ...$placement,
                 ],
                 $members,
             ),
@@ -393,6 +370,17 @@ final readonly class TrendingStoryHistoryRepository
     private function connection(): Connection
     {
         return $this->entityManager->getConnection();
+    }
+
+    /** SQLite has no LEAST or GREATEST, MySQL no two-argument MIN or MAX. */
+    private static function earliest(string $column, string $parameter): string
+    {
+        return \sprintf('%1$s = CASE WHEN %1$s < :%2$s THEN %1$s ELSE :%2$s END', $column, $parameter);
+    }
+
+    private static function latest(string $column, string $parameter): string
+    {
+        return \sprintf('%1$s = CASE WHEN %1$s > :%2$s THEN %1$s ELSE :%2$s END', $column, $parameter);
     }
 
     private static function stored(\DateTimeImmutable $moment): string

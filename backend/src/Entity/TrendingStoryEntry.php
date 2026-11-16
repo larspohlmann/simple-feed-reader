@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
-use App\Enum\TrendingWindow;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -59,13 +58,5 @@ final class TrendingStoryEntry
         $this->articleSite = $articleSite;
         $this->link = $link;
         $this->joinedAt = $joinedAt;
-    }
-
-    public function placeIn(TrendingWindow $window): void
-    {
-        match ($window) {
-            TrendingWindow::Day => $this->inDay = true,
-            TrendingWindow::Week => $this->inWeek = true,
-        };
     }
 }

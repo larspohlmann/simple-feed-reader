@@ -14,6 +14,15 @@ final class TrendingPlacementSql
         return \sprintf('%s.%s = 1', $member, self::flagOf($window));
     }
 
+    /** @return list<int> one 0 or 1 per window, in case order: the order the member columns list the flags */
+    public static function placementIn(TrendingWindow $window): array
+    {
+        return array_map(
+            static fn (TrendingWindow $each): int => $each === $window ? 1 : 0,
+            TrendingWindow::cases(),
+        );
+    }
+
     public static function flagOf(TrendingWindow $window): string
     {
         return match ($window) {

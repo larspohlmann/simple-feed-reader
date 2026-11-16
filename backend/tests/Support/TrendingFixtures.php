@@ -18,7 +18,10 @@ use App\Entity\User;
 use App\Enum\ShareKind;
 use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
+use App\Repository\TrendingPlacementSql;
 use App\Service\Foundation\Url\UrlNormalizer;
+use Doctrine\DBAL\ArrayParameterType;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManagerInterface;
 
 /** Feeds, entries and stored stories for the Trending integration tests; dates are naive UTC strings. */
@@ -141,11 +144,11 @@ final readonly class TrendingFixtures
         $story = new TrendingStory(new \DateTimeImmutable('2031-05-14 00:00:00'), $joinedAt, $joinedAt);
         $this->entityManager->persist($story);
         foreach ($members as [$member, $articleSite]) {
-            $storyEntry = new TrendingStoryEntry($story, $member, $articleSite, $this->firstLinkOf($member), $joinedAt);
-            $storyEntry->placeIn($window);
-            $this->entityManager->persist($storyEntry);
+            $this->entityManager->persist(
+                new TrendingStoryEntry($story, $member, $articleSite, $this->firstLinkOf($member), $joinedAt),
+            );
         }
-        $this->entityManager->flush();
+        $this->place($window, $story, ...array_column($members, 0));
 
         return $story;
     }
@@ -169,13 +172,15 @@ final readonly class TrendingFixtures
     /** Places members the story already holds in one more window. */
     public function place(TrendingWindow $window, TrendingStory $story, Entry ...$members): void
     {
-        foreach ($members as $member) {
-            $storyEntry = $this->entityManager->getRepository(TrendingStoryEntry::class)
-                ->findOneBy(['story' => $story, 'entry' => $member]);
-            \assert($storyEntry instanceof TrendingStoryEntry);
-            $storyEntry->placeIn($window);
-        }
         $this->entityManager->flush();
+        $this->entityManager->getConnection()->executeStatement(
+            \sprintf(
+                'UPDATE trending_story_entry SET %s = 1 WHERE story_id = ? AND entry_id IN (?)',
+                TrendingPlacementSql::flagOf($window),
+            ),
+            [$story->requireId(), array_map(static fn (Entry $member): int => $member->requireId(), $members)],
+            [ParameterType::INTEGER, ArrayParameterType::INTEGER],
+        );
     }
 
     public function reader(string $email): User
