@@ -231,7 +231,10 @@ export class SubscriptionsStore {
   /** The shared body of every silent tick: refresh only when worth a request,
    *  drop an answer the user has overtaken, never touch `loading`/`resolved`.
    *  The `apply` closure is the only difference between full and counts-only. */
-  private quietReload<T extends SidebarTotalsDto>(fetch: () => Observable<T>, apply: (response: T) => void): void {
+  private quietReload<T extends SidebarTotalsDto>(
+    fetch: () => Observable<T>,
+    apply: (response: T) => void,
+  ): void {
     // A tick refreshes counts; it never bootstraps them. Fetching before the
     // first real load would stamp the freshness clock, silence that load, and
     // leave `resolved` false — so the onboarding redirect could never decide.
@@ -247,7 +250,11 @@ export class SubscriptionsStore {
    *  through `whenOvertaken`, since only its answer carries the change; a poll
    *  tick waits for the next one. The gates that decide WHEN to fire belong to
    *  each caller. */
-  private quietFetch<T extends SidebarTotalsDto>(fetch: () => Observable<T>, apply: (response: T) => void, whenOvertaken: () => void): void {
+  private quietFetch<T extends SidebarTotalsDto>(
+    fetch: () => Observable<T>,
+    apply: (response: T) => void,
+    whenOvertaken: () => void,
+  ): void {
     const editsWhenSent = this.localEdits;
     this.loads.run(fetch(), (response) => {
       // Only the server edits the totals and the Trending and notification counts,

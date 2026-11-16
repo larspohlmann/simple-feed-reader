@@ -8,7 +8,6 @@ import {
   inject,
   input,
   output,
-  signal,
   viewChild,
 } from '@angular/core';
 import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
@@ -265,7 +264,11 @@ export class EntryListComponent {
     const header = this.listHdr()?.nativeElement;
     if (header)
       onCleanup(
-        publishListBarHeight(this.zone, this.host.nativeElement, header, () => !this.collapsed()),
+        publishListBarHeight(this.zone, {
+          host: this.host.nativeElement,
+          header,
+          isPublishing: () => !this.collapsed(),
+        }),
       );
   });
 

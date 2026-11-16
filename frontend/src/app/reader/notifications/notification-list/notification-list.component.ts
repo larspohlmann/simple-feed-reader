@@ -94,7 +94,7 @@ export class NotificationListComponent {
 
   private readonly _publishBarHeight = effect((onCleanup) => {
     const header = this.listHdr()?.nativeElement;
-    if (header) onCleanup(publishListBarHeight(this.zone, this.host, header));
+    if (header) onCleanup(publishListBarHeight(this.zone, { host: this.host, header }));
   });
 
   private readonly _wire = effect((onCleanup) => {
