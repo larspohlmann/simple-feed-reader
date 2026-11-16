@@ -8,7 +8,11 @@ export class StaleGatedLoad {
   private inFlight: Subscription | null = null;
 
   /** A failed request leaves the last answer standing; the next stale tick asks again. */
-  run<T>(request: Observable<T>, adopt: (response: T) => void): void {
+  run<T>(
+    request: Observable<T>,
+    adopt: (response: T) => void,
+    failed: (error: unknown) => void = () => undefined,
+  ): void {
     this.lastLoadedAt = Date.now();
     this.inFlight?.unsubscribe();
     this.inFlight = null;
@@ -17,7 +21,10 @@ export class StaleGatedLoad {
         this.inFlight = null;
         adopt(response);
       },
-      error: () => (this.inFlight = null),
+      error: (error: unknown) => {
+        this.inFlight = null;
+        failed(error);
+      },
     });
     // A response that came back synchronously has already left; parking its
     // closed subscription here would jam the in-flight guard for good.
