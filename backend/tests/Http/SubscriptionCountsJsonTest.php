@@ -21,6 +21,7 @@ final class SubscriptionCountsJsonTest extends TestCase
             ['favorites' => 8, 'kept' => 2, 'shared' => 6, 'viewed' => 41],
             new UnreadTotalsModel(7, [3 => 2], ['bluesky' => 5], ['bluesky' => 2], 3, ['tags' => 0, 'feeds' => 0]),
             new TrendingUnopenedModel(TrendingWindow::Week, 7),
+            [],
         ));
 
         self::assertSame([
@@ -40,6 +41,7 @@ final class SubscriptionCountsJsonTest extends TestCase
                 'networks' => [['network' => 'bluesky', 'unreadCount' => 5, 'profilesUnreadCount' => 2]],
                 'groups' => ['tags' => 0, 'feeds' => 0],
             ],
+            'notifications' => [],
         ], $payload);
     }
 
@@ -52,6 +54,7 @@ final class SubscriptionCountsJsonTest extends TestCase
                 ['favorites' => 0, 'kept' => 0, 'shared' => 0, 'viewed' => 0],
                 new UnreadTotalsModel(0, [], [], [], 0, ['tags' => 0, 'feeds' => 0]),
                 new TrendingUnopenedModel(TrendingWindow::Day, 0),
+                [],
             ),
         );
 
@@ -60,5 +63,22 @@ final class SubscriptionCountsJsonTest extends TestCase
         self::assertSame(['window' => 'day', 'unopened' => 0], $payload['trending']);
         self::assertSame(0, $payload['unreadTotals']['allItems']);
         self::assertSame(0, $payload['unreadTotals']['forYou']);
+    }
+
+    public function testCarriesNotificationCounts(): void
+    {
+        $payload = SubscriptionCountsJson::from(new SubscriptionTalliesModel(
+            [],
+            [],
+            ['favorites' => 0, 'kept' => 0, 'shared' => 0, 'viewed' => 0],
+            new UnreadTotalsModel(0, [], [], [], 0, ['tags' => 0, 'feeds' => 0]),
+            new TrendingUnopenedModel(TrendingWindow::Day, 0),
+            ['mastodon' => 2, 'bluesky' => 1],
+        ));
+
+        self::assertSame([
+            ['network' => 'bluesky', 'unseenCount' => 1],
+            ['network' => 'mastodon', 'unseenCount' => 2],
+        ], $payload['notifications']);
     }
 }

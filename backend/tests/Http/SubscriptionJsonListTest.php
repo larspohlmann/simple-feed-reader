@@ -30,6 +30,7 @@ final class SubscriptionJsonListTest extends DbTestCase
             ['favorites' => 8, 'kept' => 2, 'shared' => 0, 'viewed' => 41],
             new UnreadTotalsModel(7, [], [], [], 0, ['tags' => 0, 'feeds' => 0]),
             new TrendingUnopenedModel(TrendingWindow::Day, 0),
+            [],
         );
 
         $payload = SubscriptionJson::list([$counted, $silent], $tallies, []);
@@ -37,7 +38,7 @@ final class SubscriptionJsonListTest extends DbTestCase
         self::assertSame(
             [
                 'subscriptions', 'favoritesCount', 'keptCount', 'sharedCount', 'viewedCount', 'trending',
-                'unreadTotals', 'socialAccounts',
+                'unreadTotals', 'notifications', 'socialAccounts',
             ],
             array_keys($payload),
         );
@@ -70,6 +71,7 @@ final class SubscriptionJsonListTest extends DbTestCase
                 ['favorites' => 0, 'kept' => 0, 'shared' => 0, 'viewed' => 0],
                 new UnreadTotalsModel(0, [], [], [], 0, ['tags' => 0, 'feeds' => 0]),
                 new TrendingUnopenedModel(TrendingWindow::Day, 0),
+                [],
             ),
             [$bluesky, $mastodon],
         );
@@ -113,6 +115,7 @@ final class SubscriptionJsonListTest extends DbTestCase
                 ['favorites' => 0, 'kept' => 0, 'shared' => 0, 'viewed' => 0],
                 new UnreadTotalsModel(0, [], [], [], 0, ['tags' => 0, 'feeds' => 0]),
                 new TrendingUnopenedModel(TrendingWindow::Day, 0),
+                [],
             ),
             [$bluesky],
         );

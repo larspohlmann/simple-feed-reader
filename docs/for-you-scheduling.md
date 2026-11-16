@@ -127,7 +127,7 @@ each active run one step; Trending last) and returns one report per step:
         "startedProfileRuns": p, "advancedProfileRuns": q, "activeProfileRuns": r },
       "digests": { ... }, "imageVerification": { ... }, "linkCards": { ... },
       "transcripts": { ... }, "profileImages": { ... }, "hiddenProfiles": { ... },
-      "savedSearchMemberships": { ... }, "privateFeedSync": { ... },
+      "savedSearchMemberships": { ... }, "privateFeedSync": { ... }, "notificationPoll": { ... },
       "trending": { "windowsRebuilt": w, "storiesBuilt": s },
       "logShipping": { "shipped": a, "failed": b } }
 

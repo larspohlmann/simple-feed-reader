@@ -1,0 +1,16 @@
+{
+  "posts": [
+    {
+      "uri": "at://did:plc:alice/app.bsky.feed.post/3lpost1",
+      "record": {
+        "text": "First post text"
+      }
+    },
+    {
+      "uri": "at://did:plc:alice/app.bsky.feed.post/3lpost2",
+      "record": {
+        "text": "Second post text"
+      }
+    }
+  ]
+}

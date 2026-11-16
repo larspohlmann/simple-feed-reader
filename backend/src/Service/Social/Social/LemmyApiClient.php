@@ -77,7 +77,7 @@ final readonly class LemmyApiClient
         try {
             return self::accepted($answer);
         } catch (SocialPostRefusedException | SocialPostNotFoundException $exception) {
-            throw new SocialNetworkUnreachableException($exception->getMessage(), previous: $exception);
+            throw SocialNetworkUnreachableException::from($exception);
         }
     }
 

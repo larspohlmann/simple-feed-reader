@@ -9,6 +9,7 @@ use App\Enum\TrendingWindow;
 use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\RecommendationItemRepository;
+use App\Repository\SocialNotificationRepository;
 use App\Repository\SubscriptionEntryCountRepository;
 use App\Repository\UnreadCountRepository;
 use App\Service\Library\Subscription\Model\SubscriptionTalliesModel;
@@ -24,6 +25,7 @@ final readonly class SubscriptionTallyReader
         private RecommendationItemRepository $recommendationItems,
         private EntryShareRepository $entryShares,
         private TrendingStories $trendingStories,
+        private SocialNotificationRepository $socialNotifications,
     ) {
     }
 
@@ -45,6 +47,7 @@ final readonly class SubscriptionTallyReader
                 $this->unreadCounts->perFeedGroup($userId, $perSubscription),
             ),
             $this->trendingStories->unopenedFor($user, $trendingWindow),
+            $this->socialNotifications->countUnseenGroups($user),
         );
     }
 

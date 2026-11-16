@@ -1,0 +1,7 @@
+{
+  "id": "1075",
+  "type": "favourite",
+  "created_at": "2026-11-16T08:30:00.000Z",
+  "account": {"id": "201", "acct": "bob", "display_name": "Bob", "avatar": "https://cdn.example/bob.png"},
+  "status": {"id": "1000", "uri": "https://mastodon.example/users/alice/statuses/1000", "content": "<p>Old</p>", "account": {"id": "109", "acct": "alice"}}
+}

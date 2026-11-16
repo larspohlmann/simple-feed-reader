@@ -12,6 +12,7 @@ use App\Service\Operations\Maintenance\MaintenanceSweep\ImageVerificationTickSwe
 use App\Service\Operations\Maintenance\MaintenanceSweep\LinkCardsTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\LinkResolutionsTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\MaintenanceSweepInterface;
+use App\Service\Operations\Maintenance\MaintenanceSweep\NotificationPollTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\PrivateFeedSyncTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\ProfileImagesTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\RecommendationsTickSweep;
@@ -41,6 +42,7 @@ final class MaintenanceSweepWiringTest extends KernelTestCase
             'hiddenProfiles' => HiddenProfilesTickSweep::class,
             'savedSearchMemberships' => SavedSearchMembershipsTickSweep::class,
             'privateFeedSync' => PrivateFeedSyncTickSweep::class,
+            'notificationPoll' => NotificationPollTickSweep::class,
             'trending' => TrendingTickSweep::class,
         ], $this->wiredSweeps());
     }
