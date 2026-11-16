@@ -141,6 +141,10 @@ final class TrackingUrlCleanupTest extends DbTestCase
             $this->referencesFrom($held['entry']),
         );
         self::assertSame([[$held['holder'], 'https://landing.example/stale']], $this->resolutions());
+        self::assertNull($this->entityManager->getConnection()->fetchOne(
+            'SELECT unreferenced_since FROM shared_link WHERE id = ?',
+            [$held['holder']],
+        ));
         self::assertEquals(new TrackingUrlCleanupReportModel(0, 0, 0, 0, 0), $this->cleanup()->clean());
     }
 
@@ -168,8 +172,8 @@ final class TrackingUrlCleanupTest extends DbTestCase
     }
 
     /**
-     * A link stored under the old lists' hash beside one a writer stored after deploy under the new hash, and an
-     * entry whose card, quote and trending row point at the stale one.
+     * A link stored under the old lists' hash beside one a writer stored after deploy under the new hash (marked
+     * unreferenced by the GC), and an entry whose card, quote and trending row point at the stale one.
      *
      * @return array{stale: int, holder: int, entry: int}
      */
@@ -178,6 +182,7 @@ final class TrackingUrlCleanupTest extends DbTestCase
         $connection = $this->entityManager->getConnection();
         $stale = $this->storeLink(self::HELD_URL, self::hashOf(self::HELD_LANDING));
         $holder = $this->storeLink(self::HELD_URL, self::hashOf(self::HELD_URL));
+        $connection->update('shared_link', ['unreferenced_since' => '2026-11-15 12:00:00'], ['id' => $holder]);
         $feed = new Feed('https://example.com/quotes');
         $this->entityManager->persist($feed);
         $entry = $this->entry($feed, 'g-quote', 'https://example.com/q', self::hashOf('https://example.com/q'));

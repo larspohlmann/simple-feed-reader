@@ -189,6 +189,7 @@ final class SharedLinkRepository extends ServiceEntityRepository
             ->execute();
     }
 
+    /** The holder keeps its own resolution; the merged link's goes with its row (ON DELETE CASCADE). */
     private function moveResolution(int $mergedLinkId, int $holderLinkId): void
     {
         $connection = $this->getEntityManager()->getConnection();
@@ -197,11 +198,6 @@ final class SharedLinkRepository extends ServiceEntityRepository
             [$holderLinkId],
         ) !== false;
         if ($holderHasOne) {
-            $connection->executeStatement(
-                'DELETE FROM shared_link_resolution WHERE shared_link_id = ?',
-                [$mergedLinkId],
-            );
-
             return;
         }
         $connection->executeStatement(
