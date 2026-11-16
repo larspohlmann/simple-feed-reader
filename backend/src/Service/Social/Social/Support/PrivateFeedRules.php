@@ -54,7 +54,8 @@ final class PrivateFeedRules
             SocialFeedKind::Home, SocialFeedKind::Trending => true,
             SocialFeedKind::UserList => self::isMastodonListId($remoteId),
             SocialFeedKind::Tag => self::isMastodonTagName($remoteId),
-            SocialFeedKind::Search => self::isSearchQuery($remoteId) && MastodonSearchQueries::fits($remoteId),
+            SocialFeedKind::Search => self::isSearchQuery($remoteId)
+                && NetworkSearchQueries::fits(SocialNetwork::Mastodon, $remoteId),
             SocialFeedKind::CustomFeed, SocialFeedKind::Author, SocialFeedKind::Local, SocialFeedKind::All => false,
         };
     }
@@ -63,7 +64,8 @@ final class PrivateFeedRules
     {
         return match ($privateFeed->kind) {
             SocialFeedKind::Home, SocialFeedKind::Local, SocialFeedKind::All => true,
-            SocialFeedKind::Search => self::isSearchQuery($privateFeed->remoteId),
+            SocialFeedKind::Search => self::isSearchQuery($privateFeed->remoteId)
+                && NetworkSearchQueries::fits(SocialNetwork::Lemmy, $privateFeed->remoteId),
             SocialFeedKind::UserList,
             SocialFeedKind::CustomFeed,
             SocialFeedKind::Author,

@@ -1,0 +1,61 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Social\Social\Support;
+
+use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
+use App\Service\Social\Social\Pass\SearchQueryAlternatives;
+use App\Service\Social\Social\Support\LemmySearchTerms;
+use App\Service\Social\Social\Support\SearchQueryTokens;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
+
+final class LemmySearchTermsTest extends TestCase
+{
+    /** @return iterable<string, array{string, list<string>}> */
+    public static function queries(): iterable
+    {
+        yield 'one word' => ['rss', ['rss']];
+        yield 'the longest word' => ['rss reader', ['reader']];
+        yield 'a phrase as one term' => ['"rss reader" atom', ['rss reader']];
+        yield 'one term per alternative' => ['rss || atom', ['rss', 'atom']];
+        yield 'a group crossed with a word' => ['rss (reader || feed)', ['reader', 'feed']];
+        yield 'a shared longest term is asked once' => ['feed (rss || atom)', ['feed']];
+        yield 'case does not matter' => ['Reader || reader', ['reader']];
+        yield 'an exclusion is no term' => ['reader -gazette', ['reader']];
+        yield 'a negated phrase is no term' => ['reader -"daily gazette"', ['reader']];
+        yield 'an operator is no term' => ['reader from:ada lang:de', ['reader']];
+        yield 'the first on a tie' => ['atom feed', ['atom']];
+    }
+
+    /** @param list<string> $terms */
+    #[DataProvider('queries')]
+    public function testEachAlternativeAsksItsLongestTerm(string $query, array $terms): void
+    {
+        self::assertSame($terms, LemmySearchTerms::of(self::factorsOf($query)));
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function termless(): iterable
+    {
+        yield 'only an exclusion' => ['-gazette'];
+        yield 'only an operator' => ['from:ada'];
+        yield 'one alternative without a term' => ['rss || -gazette'];
+    }
+
+    #[DataProvider('termless')]
+    public function testAnAlternativeWithoutATermIsTooBroad(string $query): void
+    {
+        $this->expectException(SearchQueryTooBroadException::class);
+        $this->expectExceptionMessage('Lemmy needs a word to search for in every alternative.');
+
+        LemmySearchTerms::of(self::factorsOf($query));
+    }
+
+    /** @return list<list<string>> */
+    private static function factorsOf(string $query): array
+    {
+        return new SearchQueryAlternatives(SearchQueryTokens::of($query))->factors();
+    }
+}

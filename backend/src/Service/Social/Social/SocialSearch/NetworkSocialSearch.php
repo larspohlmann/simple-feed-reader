@@ -20,7 +20,7 @@ use App\Service\Social\Social\MastodonApiClient;
 use App\Service\Social\Social\Model\TimelinePageModel;
 use App\Service\Social\Social\Support\BlueskySearchPage;
 use App\Service\Social\Social\Support\MastodonSearchPage;
-use App\Service\Social\Social\Support\MastodonSearchQueries;
+use App\Service\Social\Social\Support\NetworkSearchQueries;
 use App\Service\Social\Social\Support\SocialSearchPaths;
 use App\Service\Social\Social\TimelineRounds;
 
@@ -69,7 +69,7 @@ final readonly class NetworkSocialSearch implements SocialSearchInterface
                 $account,
                 $this->mastodon->authorizedGet($account, SocialSearchPaths::mastodon($alternative, null)),
             ),
-            MastodonSearchQueries::of($query),
+            NetworkSearchQueries::of(SocialNetwork::Mastodon, $query),
         );
 
         $answers = [];

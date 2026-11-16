@@ -48,11 +48,18 @@ final class PrivateFeedRulesTest extends TestCase
         self::assertTrue(PrivateFeedRules::allows(SocialNetwork::Mastodon, $fits));
     }
 
+    public function testALemmySearchWithoutATermIsNotAllowed(): void
+    {
+        self::assertFalse(PrivateFeedRules::allows(SocialNetwork::Lemmy, PrivateFeedModel::search('-gazette')));
+    }
+
+    public function testALemmySearchWithAlternativesIsAllowed(): void
+    {
+        self::assertTrue(PrivateFeedRules::allows(SocialNetwork::Lemmy, PrivateFeedModel::search('rss || atom')));
+    }
+
     public function testLemmyTakesAPlainSearch(): void
     {
-        $nineAlternatives = PrivateFeedModel::search('a || b || c || d || e || f || g || h || i');
-
-        self::assertTrue(PrivateFeedRules::allows(SocialNetwork::Lemmy, $nineAlternatives));
         self::assertFalse(PrivateFeedRules::allows(SocialNetwork::Lemmy, PrivateFeedModel::search('')));
         $tooLong = PrivateFeedModel::search(str_repeat('a', SocialSearchQuery::MAX_LENGTH + 1));
         self::assertFalse(PrivateFeedRules::allows(SocialNetwork::Lemmy, $tooLong));
