@@ -130,9 +130,7 @@ export class NotificationsStore {
         this.isLoading.set(false);
       },
       error: (error: HttpErrorResponse) => {
-        this.shownGroups.set([]);
-        this.missingScope.set([]);
-        this.reconnectNeeded.set([]);
+        this.clearList();
         this.failure.set(parseProblem(error));
         this.isLoading.set(false);
       },
