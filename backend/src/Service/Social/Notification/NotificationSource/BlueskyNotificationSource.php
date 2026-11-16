@@ -19,6 +19,9 @@ use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Notification\Model\NotificationPageModel;
 use App\Service\Social\Notification\Support\Excerpt;
 use App\Service\Social\Social\BlueskySessions;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Bluesky->value)]
@@ -65,7 +68,11 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
             $unseen,
         ));
         $marker = $newest->setTimezone(new \DateTimeZone('UTC'))->format(\DATE_ATOM);
-        BlueskySessions::accepted($this->sessions->actAs($account, self::UPDATE_SEEN, ['seenAt' => $marker]));
+        try {
+            BlueskySessions::accepted($this->sessions->actAs($account, self::UPDATE_SEEN, ['seenAt' => $marker]));
+        } catch (SocialPostNotFoundException | SocialPostRefusedException $exception) {
+            throw new SocialNetworkUnreachableException($exception->getMessage(), 0, $exception);
+        }
 
         foreach ($unseen as $row) {
             $marked($row);

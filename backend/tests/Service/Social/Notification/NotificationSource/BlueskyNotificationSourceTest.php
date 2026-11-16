@@ -12,11 +12,14 @@ use App\Enum\SocialNotificationKind;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Notification\NotificationSource\BlueskyNotificationSource;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 final class BlueskyNotificationSourceTest extends TestCase
 {
@@ -147,6 +150,42 @@ final class BlueskyNotificationSourceTest extends TestCase
         self::assertSame(self::UPDATE_SEEN, 'POST ' . $update['url']);
         self::assertSame(['seenAt' => '2026-11-16T09:30:00+00:00'], json_decode($update['body'], true));
         self::assertSame(['a', 'b'], $marked);
+    }
+
+    #[DataProvider('refusedStatuses')]
+    public function testMarkSeenRefusalIsUnreachable(int $status): void
+    {
+        $http = RoutedHttpClient::answering(static fn (string $method, string $url): MockResponse => match (true) {
+            str_contains($url, 'createSession') => SocialApiWiring::blueskySessionAnswer('jwt'),
+            str_contains($url, 'updateSeen') => new MockResponse(
+                '{"error":"InvalidRequest"}',
+                ['http_code' => $status],
+            ),
+            default => self::fail('Unexpected request: ' . $url),
+        });
+        $account = SocialApiWiring::blueskyAccount();
+        $marked = 0;
+
+        try {
+            $this->source($http)->markSeen(
+                $account,
+                [self::stored($account, 'a', '2026-11-16 08:00:00')],
+                static function () use (&$marked): void {
+                    ++$marked;
+                },
+            );
+            self::fail('A refused marker must not pass.');
+        } catch (SocialNetworkUnreachableException $exception) {
+            self::assertNotNull($exception->getPrevious());
+            self::assertSame(0, $marked);
+        }
+    }
+
+    /** @return iterable<string, array{int}> */
+    public static function refusedStatuses(): iterable
+    {
+        yield 'bad request' => [Response::HTTP_BAD_REQUEST];
+        yield 'not found' => [Response::HTTP_NOT_FOUND];
     }
 
     private static function stored(SocialAccount $account, string $remoteId, string $createdAt): SocialNotification
