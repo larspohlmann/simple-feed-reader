@@ -26,7 +26,7 @@ final class LinkRehash
         StoredLinkAddressModel $cleaned,
     ): TrackingUrlCleanupReportModel {
         $holderId = $this->holders[$cleaned->urlHash] ?? $stored->id;
-        $this->release($stored);
+        unset($this->holders[$stored->urlHash]);
         if ($holderId !== $stored->id) {
             $this->writer->mergeLink($stored->id, $holderId);
 
@@ -39,12 +39,5 @@ final class LinkRehash
             cardsCleaned: (int) ($cleaned->url !== $stored->url),
             cardHashesChanged: (int) ($cleaned->urlHash !== $stored->urlHash),
         );
-    }
-
-    private function release(StoredLinkAddressModel $stored): void
-    {
-        if (($this->holders[$stored->urlHash] ?? null) === $stored->id) {
-            unset($this->holders[$stored->urlHash]);
-        }
     }
 }
