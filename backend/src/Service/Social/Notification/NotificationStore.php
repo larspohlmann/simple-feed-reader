@@ -23,7 +23,7 @@ final readonly class NotificationStore
     ) {
     }
 
-    /** @return int how many rows were new */
+    /** The bulk seen line reaches rows beyond the page; re-read before relying on their seen flag. */
     public function record(SocialAccount $account, NotificationPageModel $page): int
     {
         $retained = $this->retained($page->oldestFirst());
@@ -40,7 +40,7 @@ final readonly class NotificationStore
                 ++$inserted;
                 continue;
             }
-            if ($fetched->seen) {
+            if ($fetched->seen || $this->isAtOrBefore($row->getCreatedAt(), $page->seenUntil)) {
                 $row->markSeen();
             }
         }
@@ -66,10 +66,22 @@ final readonly class NotificationStore
     {
         $cutoff = $this->retentionCutoff();
 
-        return array_values(array_filter(
-            $notifications,
-            static fn (FetchedNotificationModel $fetched): bool => $fetched->createdAt >= $cutoff,
-        ));
+        $byRemoteId = [];
+        foreach ($notifications as $fetched) {
+            if ($fetched->createdAt < $cutoff) {
+                continue;
+            }
+            if (!isset($byRemoteId[$fetched->remoteId]) || $fetched->seen) {
+                $byRemoteId[$fetched->remoteId] = $fetched;
+            }
+        }
+
+        return array_values($byRemoteId);
+    }
+
+    private function isAtOrBefore(\DateTimeImmutable $moment, ?\DateTimeImmutable $line): bool
+    {
+        return $line !== null && $moment <= $line;
     }
 
     private function rowOf(
@@ -84,7 +96,7 @@ final readonly class NotificationStore
             $fetched->actor,
             $fetched->subject,
             $fetched->createdAt,
-            $fetched->seen || ($seenUntil !== null && $fetched->createdAt <= $seenUntil),
+            $fetched->seen || $this->isAtOrBefore($fetched->createdAt, $seenUntil),
         );
     }
 

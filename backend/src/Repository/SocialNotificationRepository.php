@@ -47,7 +47,6 @@ final class SocialNotificationRepository extends ServiceEntityRepository
         return $byRemoteId;
     }
 
-    /** A bulk UPDATE: it bypasses the identity map, so a caller holding these rows must clear() or refresh them. */
     public function markSeenUpTo(SocialAccount $account, \DateTimeImmutable $until): void
     {
         $this->createQueryBuilder('notification')

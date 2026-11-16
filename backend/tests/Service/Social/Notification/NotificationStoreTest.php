@@ -77,6 +77,30 @@ final class NotificationStoreTest extends DbTestCase
         self::assertTrue($stored[0]->isSeen());
     }
 
+    public function testTheSameRemoteIdTwiceInOnePageStoresOneSeenRow(): void
+    {
+        $inserted = $this->record([
+            $this->fetched('a', '2026-11-17 09:00:00'),
+            $this->fetched('a', '2026-11-17 09:00:00', true),
+        ], null);
+
+        self::assertSame(1, $inserted);
+        $this->entityManager->clear();
+        $stored = $this->notifications->findAll();
+        self::assertCount(1, $stored);
+        self::assertTrue($stored[0]->isSeen());
+    }
+
+    public function testSeenUntilKeepsTheManagedRowsOfThePageConsistent(): void
+    {
+        $this->record([$this->fetched('a', '2026-11-17 09:00:00')], null);
+
+        $this->record([$this->fetched('a', '2026-11-17 09:00:00')], new \DateTimeImmutable('2026-11-17 10:00:00'));
+
+        $managed = $this->notifications->findByRemoteIds($this->account, ['a'])['a'];
+        self::assertTrue($managed->isSeen());
+    }
+
     public function testASeenRowNeverTurnsUnseen(): void
     {
         $this->record([$this->fetched('a', '2026-11-17 09:00:00', true)], null);
