@@ -361,7 +361,9 @@ are left out of backups (docs/backup.md §6.2).
 - The Bluesky PDS comes from the account's DID document, must be `https`, and is normalised to its origin.
 - The app-password format check refuses a main password, which would grant far more than the app needs. It runs in
   the domain model (`SocialCredentialsModel`) on connect and on reconnect, before the rate limit and any network call.
-- The Mastodon token needs only `read` and `write:favourites`.
+- The Mastodon token asks for `read`, `write:favourites` and `write:statuses`. `read` also covers notifications and
+  their marker; `write:statuses` moves the notifications marker and carries reposts. A token without the scope is
+  recorded by the notifications poll and shown as a reconnect hint (#2240).
 - Lemmy connects with a username and password, once (#2218). Only the JWT the instance returns is sealed; the password
   is neither stored nor hinted at in any answer or log. The JWT goes only to the account's own instance: the anonymous
   `ap_id` lookup on a feed's instance carries none. Post, comment and parent ids reach a URL or a body only as
