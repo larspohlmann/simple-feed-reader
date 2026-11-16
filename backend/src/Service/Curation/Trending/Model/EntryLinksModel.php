@@ -31,4 +31,13 @@ final readonly class EntryLinksModel
     {
         return $this->articleSite;
     }
+
+    /** @return list<string> */
+    public function urlHashes(): array
+    {
+        return array_values(array_unique(array_filter(
+            [$this->urlHash, $this->card?->urlHash],
+            static fn (?string $urlHash): bool => $urlHash !== null,
+        )));
+    }
 }
