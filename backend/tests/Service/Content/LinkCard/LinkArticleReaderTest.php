@@ -207,7 +207,8 @@ final class LinkArticleReaderTest extends DbTestCase
     private function storedRow(): SharedLink
     {
         $this->entityManager->clear();
-        $row = $this->sharedLinks()->findOneByUrlHash((string) (new UrlNormalizer())->hash(self::URL));
+        $urlHash = (string) (new UrlNormalizer())->hash(self::URL);
+        $row = $this->sharedLinks()->byUrlHashes([$urlHash])[$urlHash] ?? null;
         self::assertInstanceOf(SharedLink::class, $row);
 
         return $row;

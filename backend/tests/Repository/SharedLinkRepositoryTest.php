@@ -47,23 +47,34 @@ final class SharedLinkRepositoryTest extends DbTestCase
         ]);
 
         $rows = $links->byUrlHashes(['h1', 'h2', 'missing']);
-        $found = $links->findOneByUrlHash('h1');
+        $found = $rows['h1'] ?? null;
 
         self::assertEqualsCanonicalizing(['h1', 'h2'], array_keys($rows));
         self::assertInstanceOf(SharedLink::class, $found);
-        self::assertSame($rows['h1'], $found);
         self::assertSame('h1', $found->getUrlHash());
         self::assertSame(FeedLanguage::Spanish, $found->getLanguage());
         self::assertEquals(
             new LinkCardContent('https://example.com/h1', 'One', 'About', 'https://example.com/i.jpg', 'Ex'),
             $found->preview(),
         );
-        self::assertNull($links->findOneByUrlHash('missing'));
     }
 
     public function testFindingNoHashesIsEmpty(): void
     {
         self::assertSame([], $this->repository()->byUrlHashes([]));
+        self::assertSame([], $this->repository()->idsByUrlHashes([]));
+    }
+
+    public function testTheIdsOfTheHeldHashesAreReadByHash(): void
+    {
+        $links = $this->repository();
+        $links->insertMissing([self::newLink('h1', 'One'), self::newLink('h2', 'Two')]);
+        $stored = $links->byUrlHashes(['h1', 'h2']);
+
+        self::assertEquals(
+            ['h1' => $stored['h1']->requireId(), 'h2' => $stored['h2']->requireId()],
+            $links->idsByUrlHashes(['h2', 'h1', 'missing']),
+        );
     }
 
     public function testInsertingNothingWritesNothing(): void

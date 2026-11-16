@@ -12,22 +12,30 @@ use PHPUnit\Framework\TestCase;
 
 final class TrackingFreeUrlTest extends TestCase
 {
-    /** Never stripped, on any host: testNoRuleEverMatchesAGiftKey fails when a rule matches one. */
-    private const array GIFT_KEYS = [
+    /** Never stripped, on any host: gift and gift-like keys. */
+    private const array NEVER_STRIPPED_KEYS = [
         'unlocked_article_code', 'gift', 'pwapi_token', 'accesstoken', 'sharetype', 'gifttoken',
         'giftcode', 'gift_token', 'share_token', 'access_token',
+        'freebie', 'shared', 'view_token', 'reduced', 'premium', 'leadsource',
+        'link_source', 'taid',
+        'mkt_tok', 'oly_enc_id', 'traffic_source', 'ref', 'at_bbc_team', 'at_specific',
     ];
-    private const array GIFT_KEYS_BY_DOMAIN = ['wsj.com' => ['st']];
+    private const array NEVER_STRIPPED_KEYS_BY_DOMAIN = [
+        'wsj.com' => ['st', 'reflink'],
+        'nytimes.com' => ['source', 'smtyp'],
+    ];
     private const array DOCUMENTED_KEYS = [
         'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'utm_id', 'utm_souce',
         'gclid', 'gclsrc', 'dclid', 'gbraid', 'wbraid', 'srsltid', '_gl',
         'fbclid', 'msclkid', 'ttclid', 'twclid', 'li_fat_id', 'yclid',
         'mc_cid', 'mc_eid', 'mc_tc',
         '_hsenc', '_hsmi', '__hstc', '__hssc', '__hsfp',
-        'mkt_tok', 'adobe_mc', 'vero_id', 'vero_conv', 'oly_enc_id',
-        'mtm_campaign', 'mtm_keyword', 'pk_campaign', 'pk_kwd', 'pk_keyword', 'pk_source', 'pk_medium',
+        'adobe_mc', 'vero_id', 'vero_conv',
+        'mtm_campaign', 'mtm_source', 'mtm_medium', 'mtm_keyword', 'mtm_kwd', 'mtm_content', 'mtm_cid', 'mtm_group',
+        'mtm_placement', 'pk_campaign', 'pk_kwd', 'pk_keyword', 'pk_source', 'pk_medium',
         'pk_content', 'pk_cid', 'piwik_campaign', 'piwik_kwd', 'matomo_campaign', 'matomo_kwd',
-        'at_medium', 'at_campaign', 'xtor', 'wt_mc', 'wt_cc1', 'echobox',
+        'at_medium', 'at_campaign', 'at_platform', 'at_creation', 'at_variant', 'at_network', 'at_term',
+        'xtor', 'wt_mc', 'wt_cc1', 'echobox',
     ];
 
     /** @return iterable<string, array{string}> */
@@ -39,6 +47,8 @@ final class TrackingFreeUrlTest extends TestCase
         yield 'upper case' => ['UTM_Source'];
         yield 'percent-encoded' => ['utm%5Fsource'];
         yield 'mixed-case vendor key' => ['FbClId'];
+        yield 'upper-case piano key' => ['AT_Medium'];
+        yield 'percent-encoded matomo key' => ['mtm%5Fcampaign'];
     }
 
     #[DataProvider('documentedKeys')]
@@ -62,6 +72,10 @@ final class TrackingFreeUrlTest extends TestCase
         yield 'a share key off its host' => ['https://example.com/?si=1&feature=x&smid=y&smtyp=z'];
         yield 'a share key on a host that only ends like its own' => ['https://notyoutube.com/?si=1'];
         yield 'a share key on a host that only contains its own' => ['https://youtube.com.example.org/?si=1'];
+        yield 'a key that only starts like a piano, mapp or matomo key' => [
+            'https://example.com/a?at_foo=x&wt_zmc=y&mtm_foo=z',
+        ];
+        yield 'a marketo token' => ['https://example.com/unsubscribe?mkt_tok=abc'];
     }
 
     #[DataProvider('contentUrls')]
@@ -85,7 +99,7 @@ final class TrackingFreeUrlTest extends TestCase
         yield 'an upper-case host' => ['https://OPEN.Spotify.com/track/1?si=z', 'https://OPEN.Spotify.com/track/1'];
         yield 'the times keeps its gift link' => [
             'https://www.nytimes.com/2026/a.html?smid=url-share&smtyp=cur&unlocked_article_code=k',
-            'https://www.nytimes.com/2026/a.html?unlocked_article_code=k',
+            'https://www.nytimes.com/2026/a.html?smtyp=cur&unlocked_article_code=k',
         ];
         yield 'a share fragment on its host' => ['https://youtu.be/x#si=y', 'https://youtu.be/x'];
     }
@@ -99,7 +113,7 @@ final class TrackingFreeUrlTest extends TestCase
     /** @return iterable<string, array{string}> */
     public static function undocumentedTrackers(): iterable
     {
-        $keys = ['mrfcid', 'traffic_source', 'sara_ref', 'igshid', 'igsh', '_bhlid', 'sfmc_id', 'rb_clickid'];
+        $keys = ['mrfcid', 'sara_ref', 'igshid', 'igsh', '_bhlid', 'sfmc_id', 'rb_clickid'];
         foreach ($keys as $key) {
             yield $key => [$key];
         }
@@ -154,10 +168,6 @@ final class TrackingFreeUrlTest extends TestCase
     {
         yield 'cbc cmp' => ['https://www.cbc.ca/news/a-1.2?cmp=rss', 'https://www.cbc.ca/news/a-1.2'];
         yield 'slate via' => ['https://slate.com/a.html?via=rss', 'https://slate.com/a.html'];
-        yield 'standard ref, upper case' => [
-            'https://www.derstandard.at/story/1?ref=RSS',
-            'https://www.derstandard.at/story/1',
-        ];
         yield 'feed' => ['https://example.com/a?id=1&cmp=Feed', 'https://example.com/a?id=1'];
         yield 'atom' => ['https://example.com/a?via=atom', 'https://example.com/a'];
     }
@@ -176,12 +186,21 @@ final class TrackingFreeUrlTest extends TestCase
         yield 'a via value that only starts with rss' => ['https://example.com/a?via=rssfeed'];
         yield 'a key without value' => ['https://example.com/a?ref'];
         yield 'a value holding an equals sign' => ['https://example.com/a?cmp=rss=spring'];
+        yield 'a ref feed marker' => ['https://www.derstandard.at/story/1?ref=RSS'];
     }
 
     #[DataProvider('keysWithAnotherValue')]
     public function testAKeyWithAnotherValueStays(string $url): void
     {
         self::assertSame($url, TrackingFreeUrl::of($url));
+    }
+
+    public function testOnlyTheVendorsExactKeyGoes(): void
+    {
+        self::assertSame(
+            'https://www.bbc.com/news/a?at_bbc_team=x',
+            TrackingFreeUrl::of('https://www.bbc.com/news/a?at_medium=RSS&at_bbc_team=x'),
+        );
     }
 
     /** @return iterable<string, array{string, string}> */
@@ -313,6 +332,7 @@ final class TrackingFreeUrlTest extends TestCase
         yield 'a pair that does not track' => ['a=b'];
         yield 'a tracking key without a value' => ['utm_source'];
         yield 'an empty fragment' => [''];
+        yield 'a custom piano key' => ['at_foo=x'];
     }
 
     #[DataProvider('navigationFragments')]
@@ -364,8 +384,8 @@ final class TrackingFreeUrlTest extends TestCase
     public static function strippedKeys(): iterable
     {
         yield 'query and fragment' => [
-            'https://example.com/a?id=1&UTM_Source=x&ref=rss#xtor=RSS-3',
-            ['utm_source', 'ref', 'xtor'],
+            'https://example.com/a?id=1&UTM_Source=x&cmp=rss#xtor=RSS-3',
+            ['utm_source', 'cmp', 'xtor'],
         ];
         yield 'a navigation fragment' => ['https://example.com/a?fbclid=1#utm_source=x&section=2', ['fbclid']];
         yield 'a fragment of two trackers' => [
@@ -385,25 +405,25 @@ final class TrackingFreeUrlTest extends TestCase
     }
 
     /** @return iterable<string, array{string}> */
-    public static function giftKeysOnEveryHost(): iterable
+    public static function neverStrippedKeysOnEveryHost(): iterable
     {
         $domainRules = new \ReflectionClassConstant(TrackedUrl::class, 'KEYS_BY_DOMAIN')->getValue();
         self::assertIsArray($domainRules);
         $hosts = ['example.com', ...array_map(strval(...), array_keys($domainRules))];
         foreach ($hosts as $host) {
-            foreach (self::GIFT_KEYS as $key) {
+            foreach (self::NEVER_STRIPPED_KEYS as $key) {
                 yield $key . ' on ' . $host => ['https://www.' . $host . '/a?' . $key . '=rss&' . $key . '=1'];
             }
         }
-        foreach (self::GIFT_KEYS_BY_DOMAIN as $domain => $keys) {
+        foreach (self::NEVER_STRIPPED_KEYS_BY_DOMAIN as $domain => $keys) {
             foreach ($keys as $key) {
                 yield $key . ' on ' . $domain => ['https://www.' . $domain . '/a?' . $key . '=rss&' . $key . '=1'];
             }
         }
     }
 
-    #[DataProvider('giftKeysOnEveryHost')]
-    public function testNoRuleEverMatchesAGiftKey(string $url): void
+    #[DataProvider('neverStrippedKeysOnEveryHost')]
+    public function testNoRuleEverMatchesAKeyThatMayNameContent(string $url): void
     {
         self::assertSame([], TrackingFreeUrl::strippedKeysIn($url));
     }
@@ -418,6 +438,7 @@ final class TrackingFreeUrlTest extends TestCase
             'https://example.com/a?id=5&amp;utm_medium=rss',
             'https://example.com/a?utm_source=x&',
             'HTTPS://Example.COM:443/A?utm_source=x#top',
+            'https://www.bbc.com/news/a?at_medium=RSS&at_bbc_team=x',
         ];
         $providers = [
             self::contentUrls(),
@@ -429,6 +450,7 @@ final class TrackingFreeUrlTest extends TestCase
             self::hostScopedTrackers(),
             self::feedMarkers(),
             self::giftLinks(),
+            self::keysWithAnotherValue(),
         ];
         foreach ($providers as $examples) {
             foreach ($examples as [$url]) {

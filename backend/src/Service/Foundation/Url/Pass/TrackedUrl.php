@@ -7,19 +7,23 @@ namespace App\Service\Foundation\Url\Pass;
 /** One URL split once and read against its host's tracking rules: what the cleaner keeps, and what it strips. */
 final readonly class TrackedUrl
 {
-    private const array DOCUMENTED_PREFIXES = ['utm_', 'at_', 'wt_', 'mtm_'];
+    private const string DOCUMENTED_PREFIX = 'utm_';
     private const array DOCUMENTED_KEYS = [
         'gclid' => true, 'gclsrc' => true, 'dclid' => true, 'gbraid' => true, 'wbraid' => true, 'srsltid' => true,
         '_gl' => true, 'fbclid' => true, 'msclkid' => true, 'ttclid' => true, 'twclid' => true, 'li_fat_id' => true,
         'yclid' => true, 'mc_cid' => true, 'mc_eid' => true, 'mc_tc' => true,
         '_hsenc' => true, '_hsmi' => true, '__hstc' => true, '__hssc' => true, '__hsfp' => true,
-        'mkt_tok' => true, 'adobe_mc' => true, 'vero_id' => true, 'vero_conv' => true, 'oly_enc_id' => true,
+        'adobe_mc' => true, 'vero_id' => true, 'vero_conv' => true,
+        'at_medium' => true, 'at_campaign' => true, 'at_platform' => true, 'at_creation' => true,
+        'at_variant' => true, 'at_network' => true, 'at_term' => true, 'wt_mc' => true, 'wt_cc1' => true,
+        'mtm_campaign' => true, 'mtm_source' => true, 'mtm_medium' => true, 'mtm_keyword' => true, 'mtm_kwd' => true,
+        'mtm_content' => true, 'mtm_cid' => true, 'mtm_group' => true, 'mtm_placement' => true,
         'pk_campaign' => true, 'pk_kwd' => true, 'pk_keyword' => true, 'pk_source' => true, 'pk_medium' => true,
         'pk_content' => true, 'pk_cid' => true, 'piwik_campaign' => true, 'piwik_kwd' => true,
         'matomo_campaign' => true, 'matomo_kwd' => true, 'xtor' => true, 'echobox' => true,
     ];
     private const array UNDOCUMENTED_KEYS = [
-        'mrfcid' => true, 'traffic_source' => true, 'sara_ref' => true, 'igshid' => true, 'igsh' => true,
+        'mrfcid' => true, 'sara_ref' => true, 'igshid' => true, 'igsh' => true,
         '_bhlid' => true, 'sfmc_id' => true, 'rb_clickid' => true, 'triedredirect' => true,
         'showwelcomeonshare' => true,
     ];
@@ -27,13 +31,13 @@ final readonly class TrackedUrl
         'youtube.com' => ['si' => true, 'feature' => true],
         'youtu.be' => ['si' => true, 'feature' => true],
         'spotify.com' => ['si' => true],
-        'nytimes.com' => ['smid' => true, 'smtyp' => true],
+        'nytimes.com' => ['smid' => true],
         'substack.com' => ['r' => true],
         'x.com' => ['s' => true, 't' => true],
         'twitter.com' => ['s' => true, 't' => true],
         'instagram.com' => ['exln' => true, 'srtk' => true, 'rpxt' => true],
     ];
-    private const array FEED_MARKER_KEYS = ['cmp' => true, 'via' => true, 'ref' => true];
+    private const array FEED_MARKER_KEYS = ['cmp' => true, 'via' => true];
     private const array FEED_MARKERS = ['rss' => true, 'feed' => true, 'atom' => true];
     private const string DOUBLE_ESCAPED_SEPARATOR = 'amp;';
 
@@ -138,10 +142,7 @@ final readonly class TrackedUrl
     private function isTracking(array $pair): bool
     {
         return isset(self::DOCUMENTED_KEYS[$pair['key']])
-            || array_any(
-                self::DOCUMENTED_PREFIXES,
-                static fn (string $prefix): bool => str_starts_with($pair['key'], $prefix),
-            )
+            || str_starts_with($pair['key'], self::DOCUMENTED_PREFIX)
             || $this->isUndocumentedTracking($pair);
     }
 

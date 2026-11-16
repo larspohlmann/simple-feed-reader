@@ -9,7 +9,13 @@ use App\Repository\EntryRepository;
 use App\Repository\SharedLinkRepository;
 use App\Service\Foundation\Url\EntryUrlHash;
 use App\Service\Foundation\Url\Support\TrackingFreeUrl;
+use App\Service\Foundation\Url\UrlNormalizer;
+use App\Service\Operations\UrlCleanup\Model\StoredLinkAddressModel;
 use App\Service\Operations\UrlCleanup\Model\TrackingUrlCleanupReportModel;
+use App\Service\Operations\UrlCleanup\Pass\LinkRehash;
+use App\Service\Operations\UrlCleanup\StoredUrlWriter\DryRunStoredUrlWriter;
+use App\Service\Operations\UrlCleanup\StoredUrlWriter\StoredUrlWriter;
+use App\Service\Operations\UrlCleanup\StoredUrlWriter\StoredUrlWriterInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
 /** Brings stored entry and card URLs in line with what ingest now stores, and their url_hash with the cleaned URL. */
@@ -19,41 +25,38 @@ final readonly class TrackingUrlCleanup
         private EntryRepository $entries,
         private SharedLinkRepository $sharedLinks,
         private EntryUrlHash $urlHash,
+        private UrlNormalizer $urlNormalizer,
         private EntityManagerInterface $entityManager,
+        private StoredUrlWriter $writer,
+        private DryRunStoredUrlWriter $dryRunWriter,
         private int $batchSize = 500,
     ) {
     }
 
     public function count(): TrackingUrlCleanupReportModel
     {
-        $writeNothing = static function (): void {
-        };
-
-        return $this->walk($writeNothing, $writeNothing);
+        return $this->walk($this->dryRunWriter);
     }
 
     public function clean(): TrackingUrlCleanupReportModel
     {
-        return $this->walk(
-            static fn (Entry $entry, string $url, ?string $urlHash) => $entry->relocate($url, $urlHash),
-            $this->sharedLinks->moveTo(...),
-        );
+        return $this->walk($this->writer);
     }
 
-    private function walk(\Closure $relocateEntry, \Closure $moveCard): TrackingUrlCleanupReportModel
+    private function walk(StoredUrlWriterInterface $writer): TrackingUrlCleanupReportModel
     {
-        return $this->walkEntries($relocateEntry)->plus($this->walkCards($moveCard));
+        return $this->walkEntries($writer)->plus($this->walkCards($writer));
     }
 
-    private function walkEntries(\Closure $relocateEntry): TrackingUrlCleanupReportModel
+    private function walkEntries(StoredUrlWriterInterface $writer): TrackingUrlCleanupReportModel
     {
         $report = new TrackingUrlCleanupReportModel();
         $afterId = 0;
         do {
             $batch = $this->entries->entriesAfterId($afterId, $this->batchSize);
-            $afterId = $batch === [] ? $afterId : $batch[array_key_last($batch)]->requireId();
+            $afterId = array_last($batch)?->requireId() ?? $afterId;
             $report = $report->plus($this->inOwnTransaction(
-                fn (): TrackingUrlCleanupReportModel => $this->entryBatch($batch, $relocateEntry),
+                fn (): TrackingUrlCleanupReportModel => $this->entryBatch($batch, $writer),
             ));
         } while (\count($batch) === $this->batchSize);
 
@@ -61,17 +64,17 @@ final readonly class TrackingUrlCleanup
     }
 
     /** @param list<Entry> $batch */
-    private function entryBatch(array $batch, \Closure $relocateEntry): TrackingUrlCleanupReportModel
+    private function entryBatch(array $batch, StoredUrlWriterInterface $writer): TrackingUrlCleanupReportModel
     {
         $report = new TrackingUrlCleanupReportModel();
         foreach ($batch as $entry) {
-            $report = $report->plus($this->entryChange($entry, $relocateEntry));
+            $report = $report->plus($this->entryChange($entry, $writer));
         }
 
         return $report;
     }
 
-    private function entryChange(Entry $entry, \Closure $relocateEntry): TrackingUrlCleanupReportModel
+    private function entryChange(Entry $entry, StoredUrlWriterInterface $writer): TrackingUrlCleanupReportModel
     {
         $storedUrl = $entry->getUrl();
         if ($storedUrl === null) {
@@ -83,39 +86,65 @@ final readonly class TrackingUrlCleanup
         if ($url === $storedUrl && $hash === $storedHash) {
             return new TrackingUrlCleanupReportModel();
         }
-        $relocateEntry($entry, $url, $hash);
+        $writer->relocateEntry($entry, $url, $hash);
 
-        return new TrackingUrlCleanupReportModel((int) ($url !== $storedUrl), (int) ($hash !== $storedHash));
+        return new TrackingUrlCleanupReportModel(
+            entriesCleaned: (int) ($url !== $storedUrl),
+            hashesChanged: (int) ($hash !== $storedHash),
+        );
     }
 
-    private function walkCards(\Closure $moveCard): TrackingUrlCleanupReportModel
+    private function walkCards(StoredUrlWriterInterface $writer): TrackingUrlCleanupReportModel
     {
         $report = new TrackingUrlCleanupReportModel();
         $afterId = 0;
         do {
-            $batch = $this->sharedLinks->urlsAfterId($afterId, $this->batchSize);
+            $batch = $this->sharedLinks->addressesAfterId($afterId, $this->batchSize);
+            $afterId = array_last($batch)->id ?? $afterId;
             $report = $report->plus($this->inOwnTransaction(
-                static fn (): TrackingUrlCleanupReportModel => self::cardBatch($batch, $moveCard),
+                fn (): TrackingUrlCleanupReportModel => $this->cardBatch($batch, $writer),
             ));
-            $afterId = array_key_last($batch) ?? $afterId;
         } while (\count($batch) === $this->batchSize);
 
         return $report;
     }
 
-    /** @param array<int, string> $batch shared link URLs by link id */
-    private static function cardBatch(array $batch, \Closure $moveCard): TrackingUrlCleanupReportModel
+    /** @param list<StoredLinkAddressModel> $batch */
+    private function cardBatch(array $batch, StoredUrlWriterInterface $writer): TrackingUrlCleanupReportModel
     {
-        $cleaned = 0;
-        foreach ($batch as $linkId => $url) {
-            $trackingFree = TrackingFreeUrl::of($url);
-            if ($trackingFree !== $url) {
-                $moveCard($linkId, $trackingFree);
-                ++$cleaned;
+        $moves = $this->movesIn($batch);
+        $rehash = new LinkRehash(
+            $writer,
+            $this->sharedLinks->idsByUrlHashes(array_map(
+                static fn (array $move): string => $move['cleaned']->urlHash,
+                $moves,
+            )),
+        );
+        $report = new TrackingUrlCleanupReportModel();
+        foreach ($moves as $move) {
+            $report = $report->plus($rehash->apply($move['stored'], $move['cleaned']));
+        }
+
+        return $report;
+    }
+
+    /**
+     * @param list<StoredLinkAddressModel> $batch
+     *
+     * @return list<array{stored: StoredLinkAddressModel, cleaned: StoredLinkAddressModel}> the links that move
+     */
+    private function movesIn(array $batch): array
+    {
+        $moves = [];
+        foreach ($batch as $stored) {
+            $url = TrackingFreeUrl::of($stored->url);
+            $urlHash = $this->urlNormalizer->hash($url);
+            if ($urlHash !== null && ($url !== $stored->url || $urlHash !== $stored->urlHash)) {
+                $moves[] = ['stored' => $stored, 'cleaned' => new StoredLinkAddressModel($stored->id, $url, $urlHash)];
             }
         }
 
-        return new TrackingUrlCleanupReportModel(cardsCleaned: $cleaned);
+        return $moves;
     }
 
     /** @param \Closure(): TrackingUrlCleanupReportModel $batch */

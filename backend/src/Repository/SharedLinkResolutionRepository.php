@@ -81,6 +81,23 @@ final class SharedLinkResolutionRepository extends ServiceEntityRepository
         return $urls;
     }
 
+    /** The holder keeps its own resolution; without one the merged link's moves to it, else it goes with its row. */
+    public function moveUnlessHeld(int $mergedLinkId, int $holderLinkId): void
+    {
+        $connection = $this->getEntityManager()->getConnection();
+        $holderHasOne = $connection->fetchOne(
+            'SELECT 1 FROM shared_link_resolution WHERE shared_link_id = ?',
+            [$holderLinkId],
+        ) !== false;
+        if ($holderHasOne) {
+            return;
+        }
+        $connection->executeStatement(
+            'UPDATE shared_link_resolution SET shared_link_id = ? WHERE shared_link_id = ?',
+            [$holderLinkId, $mergedLinkId],
+        );
+    }
+
     /**
      * A link already queued or settled keeps its state.
      *

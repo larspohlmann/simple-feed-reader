@@ -25,13 +25,18 @@ final class TrackedUrlTest extends TestCase
         yield 'an undocumented host-scoped key' => ['https://x.com/a/status/1?s=20', 'https://x.com/a/status/1', true];
         yield 'a value-scoped feed marker' => ['https://example.com/a?cmp=rss', 'https://example.com/a', true];
         yield 'a documented key beside a feed marker' => [
-            'https://example.com/a?utm_source=x&ref=feed',
+            'https://example.com/a?utm_source=x&cmp=feed',
             'https://example.com/a',
             true,
         ];
         yield 'a feed marker key with another value' => [
             'https://example.com/a?ref=home&utm_source=x',
             'https://example.com/a?ref=home',
+            false,
+        ];
+        yield 'an exact piano key is documented' => [
+            'https://www.bbc.com/a?at_campaign=rss',
+            'https://www.bbc.com/a',
             false,
         ];
         yield 'nothing stripped' => ['https://example.com/a?id=1', 'https://example.com/a?id=1', false];

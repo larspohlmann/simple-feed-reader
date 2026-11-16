@@ -17,7 +17,7 @@ use Psr\Log\LogLevel;
 final class PostedUrlCheckTest extends TestCase
 {
     private const string CLEANED = 'https://news.example/a?id=1';
-    private const string POSTED = 'https://news.example/a?ref=rss&id=1';
+    private const string POSTED = 'https://news.example/a?cmp=rss&id=1';
 
     private RecordingLogger $logger;
 
@@ -61,7 +61,7 @@ final class PostedUrlCheckTest extends TestCase
         self::assertSame(LogLevel::INFO, $this->logger->records[0]['level']);
         self::assertStringContainsString('showed another page', $this->logger->records[0]['message']);
         self::assertSame(
-            ['host' => 'news.example', 'strippedKeys' => ['ref']],
+            ['host' => 'news.example', 'strippedKeys' => ['cmp']],
             $this->logger->records[0]['context'],
         );
     }
@@ -87,7 +87,7 @@ final class PostedUrlCheckTest extends TestCase
         self::assertStringContainsString('cleaned URL failed', $this->logger->records[0]['message']);
         self::assertStringNotContainsString('another page', $this->logger->records[0]['message']);
         self::assertSame(
-            ['host' => 'news.example', 'strippedKeys' => ['ref']],
+            ['host' => 'news.example', 'strippedKeys' => ['cmp']],
             $this->logger->records[0]['context'],
         );
     }

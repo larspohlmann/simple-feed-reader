@@ -99,6 +99,8 @@ A pair is **tracking** when its key, after `rawurldecode`, lower-casing and remo
 | Mapp Intelligence (Webtrekk) | prefix `wt_*` | "Campaigns" (docs.mapp.com/docs/tracking-configuration-campaign), which names `wt_mc`, `wt_cc1` and `wt_ga` |
 | Echobox | `echobox` | Echobox Help, "Query parameters" (help.echobox.com/query-parameters). Echobox adds it as a fragment, or as a query pair when the URL already has a fragment |
 
+Narrowed by #2248, see `2026-11-16-2248-conservative-url-cleaner-design.md`.
+
 **Per-host keys.** These are the share-attribution parameters each site appends to its own share links. They are
 applied only on the named domain and its subdomains (`host === domain` or it ends in `.domain`), because the key is
 generic elsewhere. No vendor documents them; each is a single observed fact, not a copied list.
@@ -109,6 +111,8 @@ generic elsewhere. No vendor documents them; each is a single observed fact, not
 | `spotify.com` (`open.spotify.com`) | `si` | observed on the site's own share button | The share-session id. The item is the path. |
 | `nytimes.com` and subdomains | `smid`, `smtyp` | observed on the site's own share button | The share-medium tags. The article is the path. `unlocked_article_code` (a gift link) stays. |
 
+Narrowed by #2248, see `2026-11-16-2248-conservative-url-cleaner-design.md`.
+
 **Undocumented trackers (D3 ruling).** No vendor documents these; each is a key whose name never carries content.
 
 | Tier | Keys | Where |
@@ -118,6 +122,8 @@ generic elsewhere. No vendor documents them; each is a single observed fact, not
 | | `s`, `t` | `x.com`, `twitter.com` and subdomains |
 | | `exln`, `srtk`, `rpxt` | `instagram.com` and subdomains |
 | Value-scoped (D4 ruling) | `cmp`, `via`, `ref` | any host, only when the value is `rss`, `feed` or `atom` (case-insensitive) |
+
+Narrowed by #2248, see `2026-11-16-2248-conservative-url-cleaner-design.md`.
 
 YouTube's `t` (a time) is content and stays everywhere.
 

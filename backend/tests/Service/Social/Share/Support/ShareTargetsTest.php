@@ -71,7 +71,7 @@ final class ShareTargetsTest extends TestCase
         $plan = ShareTargets::planOf($entry, []);
 
         self::assertSame(['https://a.example/1', 'https://b.example/2'], $plan->urls);
-        self::assertSame(['https://a.example/1' => 'https://a.example/1?ref=rss'], $plan->postedForms);
+        self::assertSame(['https://a.example/1' => 'https://a.example/1?cmp=rss'], $plan->postedForms);
         self::assertSame([], ShareTargets::planOf($entry, ['https://a.example/1'])->postedForms);
     }
 
@@ -79,7 +79,7 @@ final class ShareTargetsTest extends TestCase
     {
         self::assertSame(
             ['https://b.example/2'],
-            ShareTargets::planOf(self::trackedPost(), ['https://a.example/1?ref=rss'])->urls,
+            ShareTargets::planOf(self::trackedPost(), ['https://a.example/1?cmp=rss'])->urls,
         );
     }
 
@@ -93,7 +93,7 @@ final class ShareTargetsTest extends TestCase
         $entry = self::titledShare();
         $entry->setHeadline(Headline::derived('A real headline'));
         $entry->recordText($entry->getText()->withContentHtml(
-            '<p><a href="https://a.example/1?ref=rss">https://a.example/1?ref=rss</a> '
+            '<p><a href="https://a.example/1?cmp=rss">https://a.example/1?cmp=rss</a> '
             . '<a href="https://b.example/2">https://b.example/2</a></p>',
         ));
 
