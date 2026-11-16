@@ -32,4 +32,11 @@ final class HostKeyTest extends TestCase
     {
         self::assertSame('not-a-url', HostKey::forUrl('not-a-url'));
     }
+
+    public function testTheNullableKeyIsNullWhenNoHostCanBeParsed(): void
+    {
+        self::assertNull(HostKey::forUrlOrNull('not-a-url'));
+        self::assertNull(HostKey::forUrlOrNull('https://'));
+        self::assertSame('example.com', HostKey::forUrlOrNull('https://www.Example.com/feed'));
+    }
 }
