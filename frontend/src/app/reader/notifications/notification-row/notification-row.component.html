@@ -17,11 +17,7 @@
     }
     <p class="line">
       @for (part of parts(); track $index) {
-        @if (part.strong) {
-          <b>{{ part.text }}</b>
-        } @else {
-          {{ part.text }}
-        }
+        <span [class.strong]="part.strong">{{ part.text }}</span>
       }
     </p>
     @if (group().excerpt; as excerpt) {

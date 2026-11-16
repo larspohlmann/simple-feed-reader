@@ -94,4 +94,12 @@ describe('NotificationRowComponent', () => {
     );
     expect(render(group()).querySelector('.account')).toBeNull();
   });
+
+  it('renders the line without stray spaces', () => {
+    const actors = [1, 2, 3].map(actor);
+    const element = render(group({ actors, actorCount: 7 }));
+    expect(element.querySelector('.line')?.textContent).toBe(
+      'Actor 1, Actor 2 and 5 others liked your post',
+    );
+  });
 });
