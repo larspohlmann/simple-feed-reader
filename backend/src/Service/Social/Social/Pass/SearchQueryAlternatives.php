@@ -33,14 +33,18 @@ final class SearchQueryAlternatives
     {
         $queries = array_values(array_unique(array_map(
             static fn (array $factors): string => implode(' ', array_unique($factors)),
-            $this->alternatives(),
+            $this->factors(),
         )));
 
         return [] === $queries ? [''] : $queries;
     }
 
-    /** @return list<list<string>> */
-    private function alternatives(): array
+    /**
+     * @return list<list<string>>
+     *
+     * @throws SearchQueryTooBroadException
+     */
+    public function factors(): array
     {
         $alternatives = $this->conjunction();
         while ($this->accepts(SearchQueryTokens::OR)) {
@@ -82,7 +86,7 @@ final class SearchQueryAlternatives
     private function group(): array
     {
         ++$this->groupDepth;
-        $alternatives = $this->alternatives();
+        $alternatives = $this->factors();
         $this->accepts(SearchQueryTokens::CLOSE);
         --$this->groupDepth;
 
@@ -140,7 +144,7 @@ final class SearchQueryAlternatives
     {
         if (\count($alternatives) > self::MAX_ALTERNATIVES) {
             throw new SearchQueryTooBroadException(sprintf(
-                'Mastodon searches each alternative on its own; this query spells out more than %d.',
+                'Each alternative is searched on its own; this query spells out more than %d.',
                 self::MAX_ALTERNATIVES,
             ));
         }

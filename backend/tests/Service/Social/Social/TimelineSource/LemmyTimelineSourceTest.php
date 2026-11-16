@@ -111,15 +111,40 @@ final class LemmyTimelineSourceTest extends TestCase
     public function testASearchFeedAsksTheSearch(): void
     {
         $source = self::source();
-        $search = self::socialFeed(SocialFeedKind::Search, 'rss reader');
+        $search = self::socialFeed(SocialFeedKind::Search, '"rss reader"');
         $requests = $source->requests($search);
-        $answer = new ApiResponseModel(Response::HTTP_OK, (string) file_get_contents(self::FOUND), []);
-
-        $page = $source->pageOf($search, [$source->accepted($search, FetchOutcomeModel::answered($answer))]);
 
         self::assertCount(1, $requests);
         self::assertSame(self::SEARCH, $requests[0]->method . ' ' . $requests[0]->url);
-        self::assertCount(2, $page->parsed->entries);
+    }
+
+    public function testASearchFeedAsksOnceForEachAlternative(): void
+    {
+        $requests = self::source()->requests(self::socialFeed(SocialFeedKind::Search, '"rss reader" || atom'));
+
+        self::assertCount(2, $requests);
+        self::assertStringContainsString('q=rss%20reader&', $requests[0]->url);
+        self::assertStringContainsString('q=atom&', $requests[1]->url);
+    }
+
+    public function testASearchPageKeepsOnlyWhatTheQueryMatches(): void
+    {
+        $source = self::source();
+        $search = self::socialFeed(SocialFeedKind::Search, 'bold');
+        $answer = new ApiResponseModel(Response::HTTP_OK, (string) file_get_contents(self::FOUND), []);
+        $accepted = $source->accepted($search, FetchOutcomeModel::answered($answer));
+
+        $page = $source->pageOf($search, [$accepted, $accepted]);
+
+        self::assertCount(1, $page->parsed->entries);
+        self::assertSame('A text post', $page->parsed->entries[0]->headline->text);
+    }
+
+    public function testATooBroadSearchFeedIsUnreachable(): void
+    {
+        $this->expectException(SocialNetworkUnreachableException::class);
+
+        self::source()->requests(self::socialFeed(SocialFeedKind::Search, '-gazette'));
     }
 
     public function testAPageIsReadFromItsOneAnswer(): void

@@ -148,5 +148,6 @@ The code becomes general over the three networks. The capability split added in 
 - **Ruling — syntax:** Lemmy search is plain text. No `||` alternatives (that is Mastodon's #2104 split);
   only the existing length cap applies (`SocialSearchQuery::MAX_LENGTH`). The search form shows a
   Lemmy-specific syntax hint ("plain words; matches post titles and bodies"). *If wrong:* a hint text.
+  Superseded by #2277: Lemmy takes the full search syntax (see `docs/superpowers/plans/2026-11-16-2277-lemmy-search-alternatives.md`).
 - **Ruling — scope:** `listing_type=All`, so a search covers everything the home instance knows, not only
   subscribed communities. *If wrong:* one parameter.

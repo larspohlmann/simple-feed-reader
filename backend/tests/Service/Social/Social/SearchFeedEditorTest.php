@@ -234,12 +234,12 @@ final class SearchFeedEditorTest extends DbTestCase
         self::assertSame(['remote'], $this->remainingGuids($subscription));
     }
 
-    public function testRequeryingALemmySearchKeepsItsPosts(): void
+    public function testRequeryingALemmySearchRemovesThePostsThatNoLongerMatch(): void
     {
         $account = $this->stored(SocialAccounts::lemmyOf($this->user));
         $subscription = $this->searchFor($account, 'rss reader');
-        $this->post($subscription, 'https://lemmy.example/post/1', '<p>rss reader</p>', 'https://lemmy.example/u/ada');
-        $this->post($subscription, 'https://feddit.example/post/2', '<p>An RSS gazette</p>', null);
+        $this->post($subscription, 'https://lemmy.example/post/1', '<p>news</p>', null, 'rss reader');
+        $this->post($subscription, 'https://lemmy.example/post/2', '<p>news</p>', null, 'atom feeds');
 
         $this->editor()->requery($subscription, 'atom');
 
@@ -247,11 +247,25 @@ final class SearchFeedEditorTest extends DbTestCase
             sprintf('social:lemmy:%d:search:atom', $account->requireId()),
             $subscription->getFeed()->getUrl(),
         );
-        self::assertEqualsCanonicalizing(
-            ['https://lemmy.example/post/1', 'https://feddit.example/post/2'],
-            $this->remainingGuids($subscription),
-        );
-        self::assertSame([], $this->indexWriter->forgets);
+        self::assertSame(['https://lemmy.example/post/2'], $this->remainingGuids($subscription));
+    }
+
+    public function testRequeryingALemmySearchToAQueryWithoutATermIsRefused(): void
+    {
+        $account = $this->stored(SocialAccounts::lemmyOf($this->user));
+        $subscription = $this->searchFor($account, 'rss');
+        $this->post($subscription, 'https://lemmy.example/post/1', '<p>news</p>', null, 'rss reader');
+
+        try {
+            $this->editor()->requery($subscription, '-gazette');
+            self::fail('A Lemmy query without a term must be refused.');
+        } catch (SearchQueryTooBroadException) {
+            self::assertSame(
+                sprintf('social:lemmy:%d:search:rss', $account->requireId()),
+                $subscription->getFeed()->getUrl(),
+            );
+            self::assertSame(['https://lemmy.example/post/1'], $this->remainingGuids($subscription));
+        }
     }
 
     private function editor(): SearchFeedEditor
@@ -288,10 +302,15 @@ final class SearchFeedEditorTest extends DbTestCase
         return $socialFeed;
     }
 
-    private function post(Subscription $subscription, string $guid, string $contentHtml, ?string $authorUrl): Entry
-    {
+    private function post(
+        Subscription $subscription,
+        string $guid,
+        string $contentHtml,
+        ?string $authorUrl,
+        ?string $title = null,
+    ): Entry {
         $fetchedAt = new \DateTimeImmutable(self::NOW);
-        $entry = new Entry($subscription->getFeed(), $guid, null, $guid, $fetchedAt, $fetchedAt);
+        $entry = new Entry($subscription->getFeed(), $guid, null, $title ?? $guid, $fetchedAt, $fetchedAt);
         $entry->recordText($entry->getText()->withContentHtml($contentHtml));
         $entry->setAuthor(new EntryAuthor('Someone', $authorUrl));
         $this->entityManager->persist($entry);

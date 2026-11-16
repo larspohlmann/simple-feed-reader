@@ -12,6 +12,8 @@ final class SearchQueryTokens
     public const string PHRASE = 'phrase';
     public const string NOT = 'not';
     public const string WORD = 'word';
+    private const string WORD_PATTERN = '/[\p{L}\p{N}]+/u';
+    private const string FILTER_PATTERN = '/^\p{L}+:./u';
     private const string PATTERN = '/(?<or>\|\|)|(?<open>\()|(?<close>\))|"(?<phrase>[^"]*)"?'
         . '|(?<not>-)(?=[^\s|)])|(?<word>[^\s()"|]+)|\S/u';
 
@@ -30,6 +32,24 @@ final class SearchQueryTokens
         }
 
         return $tokens;
+    }
+
+    public static function isFilter(string $word): bool
+    {
+        return 1 === preg_match(self::FILTER_PATTERN, $word);
+    }
+
+    public static function isAuthorFilter(string $word): bool
+    {
+        return str_starts_with(mb_strtolower($word), 'from:');
+    }
+
+    /** @return list<string> the lower-cased letter and digit runs of a text, as the matcher reads it */
+    public static function wordsOf(string $text): array
+    {
+        preg_match_all(self::WORD_PATTERN, mb_strtolower($text), $words);
+
+        return $words[0];
     }
 
     private function __construct()

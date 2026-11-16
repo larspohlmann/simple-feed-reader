@@ -136,6 +136,14 @@ final class SocialApiWiring
         return $account;
     }
 
+    public static function lemmyAccount(): SocialAccount
+    {
+        $account = SocialAccounts::lemmyOf(SocialAccounts::owner());
+        self::assignId($account, self::ACCOUNT_ID);
+
+        return $account;
+    }
+
     public static function blueskySessionAnswer(string $accessJwt): MockResponse
     {
         return new MockResponse(json_encode(

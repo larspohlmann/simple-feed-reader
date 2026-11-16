@@ -149,7 +149,7 @@ final class SocialFeedRepository extends ServiceEntityRepository
     public function unprotectedPostsAfter(SocialFeed $socialFeed, int $lastEntryId): array
     {
         $qb = $this->getEntityManager()->createQueryBuilder()
-            ->select('e.id AS id', 'e.guid.value AS guid')
+            ->select('e.id AS id', 'e.guid.value AS guid', 'e.headline.title AS title')
             ->addSelect('e.text.contentHtml AS contentHtml', 'e.author.profileUrl AS authorUrl')
             ->from(Entry::class, 'e')
             ->where('e.feed = :feed')
@@ -159,13 +159,18 @@ final class SocialFeedRepository extends ServiceEntityRepository
             ->setParameter('feed', $socialFeed->getFeed())
             ->setParameter('lastEntryId', $lastEntryId);
         ProtectedEntryDql::exclude($qb, 'e');
-        /** @var list<array{id: int, guid: string, contentHtml: string|null, authorUrl: string|null}> $rows */
+        /**
+         * @var list<array{
+         *     id: int, guid: string, title: string, contentHtml: string|null, authorUrl: string|null
+         * }> $rows
+         */
         $rows = $qb->getQuery()->getArrayResult();
 
         return array_map(
             static fn (array $row): StoredPostModel => new StoredPostModel(
                 $row['id'],
                 $row['guid'],
+                $row['title'],
                 $row['contentHtml'],
                 $row['authorUrl'],
             ),

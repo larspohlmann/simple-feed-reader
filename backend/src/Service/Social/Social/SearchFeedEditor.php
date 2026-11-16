@@ -7,7 +7,6 @@ namespace App\Service\Social\Social;
 use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Enum\SocialFeedKind;
-use App\Enum\SocialNetwork;
 use App\Repository\RetentionRepository;
 use App\Repository\SocialFeedRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
@@ -15,7 +14,7 @@ use App\Service\Library\Search\EntryIndexer;
 use App\Service\Social\Social\Exception\NotASearchFeedException;
 use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Social\Model\PrivateFeedModel;
-use App\Service\Social\Social\Support\MastodonSearchQueries;
+use App\Service\Social\Social\Support\NetworkSearchQueries;
 use App\Service\Social\Social\Support\PrivateFeedSite;
 use App\Service\Social\Social\Support\SocialFeedUrl;
 use App\Service\Social\Social\Support\SocialSearchMatch;
@@ -38,7 +37,7 @@ final readonly class SearchFeedEditor
     /**
      * @throws NotASearchFeedException
      * @throws AlreadySubscribedException when the account already searches for the query
-     * @throws SearchQueryTooBroadException when Mastodon cannot search the query
+     * @throws SearchQueryTooBroadException when the network cannot search the query
      */
     public function requery(Subscription $subscription, string $query): void
     {
@@ -84,9 +83,7 @@ final readonly class SearchFeedEditor
     /** @throws SearchQueryTooBroadException */
     private static function refuseTooBroadFor(SocialFeed $socialFeed, PrivateFeedModel $search): void
     {
-        if (SocialNetwork::Mastodon === $socialFeed->getSocialAccount()->getNetwork()) {
-            MastodonSearchQueries::requireFits($search->remoteId);
-        }
+        NetworkSearchQueries::requireFits($socialFeed->getSocialAccount()->getNetwork(), $search->remoteId);
     }
 
     private function retarget(SocialFeed $socialFeed, PrivateFeedModel $search): void
@@ -104,9 +101,6 @@ final readonly class SearchFeedEditor
     private function nonMatchingIds(SocialFeed $socialFeed, PrivateFeedModel $search): array
     {
         $account = $socialFeed->getSocialAccount();
-        if (!$account->getNetwork()->checksSearchResults()) {
-            return [];
-        }
         $matches = SocialSearchMatch::matcher($search->remoteId);
         $nonMatchingIds = [];
         $lastEntryId = 0;
