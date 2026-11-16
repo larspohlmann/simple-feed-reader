@@ -1,5 +1,3 @@
-@use '../../../theme/breakpoints' as bp;
-@use '../../../theme/corner-circle-button' as circle;
 @use '../../../theme/list-chrome';
 @use '../../../theme/page-chrome';
 
@@ -32,11 +30,7 @@
 }
 
 .list-error {
-  position: absolute;
-  top: list-chrome.$header-clear;
-  left: var(--space-4);
-  right: var(--space-4);
-  z-index: 2;
+  @include list-chrome.error-overlay;
 }
 
 .rows {
@@ -80,15 +74,10 @@
 }
 
 .corner-cluster {
-  @include circle.corner-cluster(4);
+  @include list-chrome.corner-cluster;
 }
 
-/* An open playlist can squeeze the list to a strip, where the corner button would ride up over the header. */
-@container notification-list (height < #{bp.$container-list-corner-buttons}) {
-  .corner-cluster {
-    display: none;
-  }
-}
+@include list-chrome.hide-corner-cluster-in-strip(notification-list);
 
 @media (prefers-reduced-motion: reduce) {
   .list-header {

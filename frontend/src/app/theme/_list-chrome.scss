@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'corner-circle-button' as circle;
 
 // What a list's rows reserve above them: the app bar, the floating list header, and the gap.
 $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
@@ -41,5 +42,27 @@ $corner-clear: calc(
   @media (width >= bp.$bp-lg) {
     min-block-size: var(--bar-h);
     padding-block: 0;
+  }
+}
+
+// An error banner overlaying the top of the rows, just below the floating header.
+@mixin error-overlay {
+  position: absolute;
+  top: $header-clear;
+  left: var(--space-4);
+  right: var(--space-4);
+  z-index: 2;
+}
+
+@mixin corner-cluster {
+  @include circle.corner-cluster(4);
+}
+
+// An open playlist can squeeze a list to a strip, where the corner buttons would ride up over its header.
+@mixin hide-corner-cluster-in-strip($container) {
+  @container #{$container} (height < #{bp.$container-list-corner-buttons}) {
+    .corner-cluster {
+      display: none;
+    }
   }
 }

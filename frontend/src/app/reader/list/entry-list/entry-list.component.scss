@@ -328,11 +328,7 @@ app-progress-rail {
    unconditionally, so the error appearing or being dismissed never moves a row
    (#996 — the old flow banner handed the reservation back and forth, #321). */
 .list-error {
-  position: absolute;
-  top: list-chrome.$header-clear;
-  left: var(--space-4);
-  right: var(--space-4);
-  z-index: 2;
+  @include list-chrome.error-overlay;
 }
 
 .skeleton {
@@ -384,7 +380,7 @@ app-loading-overlay {
 /* Anchored to the tail frame, so in split view they stay in the list column; the
    frame sits below `.article-overlay`'s z-index: 5, which covers them under an article. */
 .corner-cluster {
-  @include circle.corner-cluster(4);
+  @include list-chrome.corner-cluster;
 }
 
 /* On touch each mark-read disc has its own row, so mark all read sits at one height in every list (#2203). */
@@ -411,11 +407,7 @@ app-loading-overlay {
 
 /* An open playlist can squeeze the list to a strip; there the corner buttons
    would ride up over the list header, and the player wins. */
-@container entry-list (height < #{bp.$container-list-corner-buttons}) {
-  .corner-cluster {
-    display: none;
-  }
-}
+@include list-chrome.hide-corner-cluster-in-strip(entry-list);
 
 /* A landscape phone keeps the pair, which still fits; only the column would ride up. */
 @container entry-list (height < #{bp.$container-list-corner-cluster}) {
