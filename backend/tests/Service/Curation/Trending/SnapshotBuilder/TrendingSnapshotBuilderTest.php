@@ -20,6 +20,7 @@ use App\Service\Curation\Trending\StoryMatching;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Curation\Trending\SnapshotBuilder\TrendingSnapshotBuilder;
 use App\Tests\DbTestCase;
+use App\Tests\Support\CountingLockStore;
 use App\Tests\Support\SimulatedFailure;
 use App\Tests\Support\TrendingFixtures;
 use App\Tests\Support\TrendingWiring;
@@ -27,6 +28,7 @@ use Doctrine\ORM\Decorator\EntityManagerDecorator;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Service\Curation\Trending\Exception\TrendingBuildBusyException;
 use Symfony\Component\Clock\MockClock;
+use Symfony\Component\Lock\Exception\LockConflictedException;
 use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Lock\Store\InMemoryStore;
 
@@ -58,6 +60,36 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
             $this->builder()->build(TrendingWindow::Day);
             self::fail('a build overlapping another must not run');
         } catch (TrendingBuildBusyException) {
+        }
+
+        self::assertSame([], $this->storyIds());
+        self::assertSame(
+            [],
+            $this->entityManager->getConnection()->fetchFirstColumn('SELECT time_window FROM trending_snapshot'),
+        );
+    }
+
+    public function testABuildPutsOffItsLockBeforeWriting(): void
+    {
+        $this->weekSizedHafenstreik();
+        $store = new CountingLockStore();
+        $this->locks = new LockFactory($store);
+
+        $this->builder()->build(TrendingWindow::Day);
+
+        self::assertGreaterThan(CountingLockStore::ACQUIRING_PUT_OFFS, $store->putOffs);
+    }
+
+    public function testABuildThatLostItsLockWritesNothing(): void
+    {
+        $this->weekSizedHafenstreik();
+        $this->locks = new LockFactory(new CountingLockStore(lockLost: true));
+
+        try {
+            $this->builder()->build(TrendingWindow::Day);
+            self::fail('a build that lost its lock must not write');
+        } catch (TrendingBuildBusyException $busy) {
+            self::assertInstanceOf(LockConflictedException::class, $busy->getPrevious());
         }
 
         self::assertSame([], $this->storyIds());

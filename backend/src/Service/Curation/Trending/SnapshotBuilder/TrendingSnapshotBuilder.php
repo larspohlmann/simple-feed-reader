@@ -16,7 +16,9 @@ use App\Service\Curation\Trending\StoryMatching;
 use App\Service\Curation\Trending\TrendingGrouping;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Lock\Exception\ExceptionInterface as LockExceptionInterface;
 use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\LockInterface;
 
 /**
  * Groups one window and matches the groups to the stored stories, updating them in place in one transaction:
@@ -49,13 +51,13 @@ final readonly class TrendingSnapshotBuilder implements SnapshotBuilderInterface
         }
 
         try {
-            return $this->buildLocked($window);
+            return $this->buildLocked($window, $lock);
         } finally {
             $lock->release();
         }
     }
 
-    private function buildLocked(TrendingWindow $window): TrendingBuildReportModel
+    private function buildLocked(TrendingWindow $window, LockInterface $lock): TrendingBuildReportModel
     {
         $stopwatch = BuildStopwatch::start();
         $run = $this->grouping->collect($window);
@@ -64,6 +66,8 @@ final readonly class TrendingSnapshotBuilder implements SnapshotBuilderInterface
         $build = new StoryBuildModel($window, $run->since, $this->clock->now());
         unset($run);
         $match = $this->matching->match($groups, $this->history->storedInWindow($build->since), $window);
+
+        $this->putOffTheLock($lock);
 
         return $this->entityManager->wrapInTransaction(function () use ($build, $match, $entryCount, $stopwatch) {
             $pruned = $this->write($build, $match);
@@ -81,6 +85,15 @@ final readonly class TrendingSnapshotBuilder implements SnapshotBuilderInterface
 
             return $report;
         });
+    }
+
+    private function putOffTheLock(LockInterface $lock): void
+    {
+        try {
+            $lock->refresh();
+        } catch (LockExceptionInterface $exception) {
+            throw new TrendingBuildBusyException(previous: $exception);
+        }
     }
 
     /** @return int the stories pruned */
