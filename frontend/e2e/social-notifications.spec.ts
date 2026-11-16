@@ -119,6 +119,14 @@ const MASTODON_PAGE: NotificationsPageDto = {
   needsReconnect: [],
 };
 
+const UNREAD_TOTALS = {
+  allItems: 41,
+  forYou: 0,
+  tags: [],
+  networks: [{ network: 'bluesky', unreadCount: 51, profilesUnreadCount: 0 }],
+  groups: { tags: 0, feeds: 0 },
+};
+
 async function stubNotifications(page: Page, unseen = UNSEEN) {
   const seenBodies: unknown[] = [];
   const shown = () => (seenBodies.length > 0 ? NONE_UNSEEN : unseen);
@@ -128,15 +136,7 @@ async function stubNotifications(page: Page, unseen = UNSEEN) {
     sharedCount: 0,
     viewedCount: 0,
     trending: { window: 'day', unopened: 0 },
-    unreadTotals: subscriptionsJson(SUBSCRIPTIONS, {
-      unreadTotals: {
-        allItems: 41,
-        forYou: 0,
-        tags: [],
-        networks: [{ network: 'bluesky', unreadCount: 51, profilesUnreadCount: 0 }],
-        groups: { tags: 0, feeds: 0 },
-      },
-    }).unreadTotals,
+    unreadTotals: UNREAD_TOTALS,
     notifications: shown(),
   });
 
