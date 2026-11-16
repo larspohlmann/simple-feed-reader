@@ -11,7 +11,7 @@ use App\Repository\TrendingStoryListQuery;
 use App\Service\Curation\Trending\Exception\TrendingStoryNotFollowedException;
 use App\Service\Curation\Trending\Model\FollowedStoryEntriesModel;
 
-/** A followed story's entries, newest first, marking on the first page what joined since the reader's last visit. */
+/** A followed story's entries, marking on the first page what joined since the reader's last visit. */
 final readonly class FollowedStoryEntries
 {
     public function __construct(

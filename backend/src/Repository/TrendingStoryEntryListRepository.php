@@ -39,6 +39,9 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
             ->setParameter('story', $query->storyId);
         $this->applyMembership($qb, EntryAliases::primary());
         $this->collapse->apply($qb, $this->applyMembership(...), $query->userId);
+        if ($query->onlyUnread) {
+            $qb->andWhere(UnreadDql::predicate())->setParameter('notHidden', false, Types::BOOLEAN);
+        }
         $this->projection->applyCursor($qb, $query->cursor, $ordering);
 
         /** @var list<array<array-key, mixed>> $rows */

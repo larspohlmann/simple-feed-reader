@@ -85,6 +85,46 @@ final class FollowedStoryEntriesControllerTest extends ApiTestCase
         self::assertNull($last['nextCursor']);
     }
 
+    public function testItPagesAcrossMembersPublishedAtTheSameTime(): void
+    {
+        $reader = $this->signIn($this->client, 'story-list-tie@example.com');
+        [$alpha, $beta] = $this->followedFeeds($reader);
+        $story = $this->storyOf($alpha, $beta);
+        $this->follow($story);
+
+        $first = $this->page($story, ['limit' => 1]);
+        self::assertSame(['Second'], $this->titles($first));
+        self::assertIsString($first['nextCursor']);
+        $second = $this->page($story, ['limit' => 1, 'cursor' => $first['nextCursor']]);
+        self::assertSame(['First'], $this->titles($second));
+        self::assertIsString($second['nextCursor']);
+        self::assertSame([], $this->titles($this->page($story, ['limit' => 1, 'cursor' => $second['nextCursor']])));
+    }
+
+    public function testItListsOnlyUnreadEntriesWhenAsked(): void
+    {
+        $reader = $this->signIn($this->client, 'story-list-unread@example.com');
+        [$alpha, $beta] = $this->followedFeeds($reader);
+        $viewed = $this->fixtures->entry($alpha, 'Viewed', '2031-05-14 09:00:00');
+        $story = $this->fixtures->story(
+            TrendingWindow::Day,
+            '2031-05-14 09:00:00',
+            $viewed,
+            $this->fixtures->entry($beta, 'Unread', '2031-05-14 08:00:00'),
+        );
+        $this->follow($story);
+        $this->client->request(
+            'PATCH',
+            \sprintf('/api/entries/%d/state', $viewed->requireId()),
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: '{"isViewed":true}',
+        );
+        self::assertResponseIsSuccessful();
+
+        self::assertSame(['Unread'], $this->titles($this->page($story, ['unread' => 1])));
+        self::assertSame(['Viewed', 'Unread'], $this->titles($this->page($story)));
+    }
+
     public function testItListsOldestFirstWhenAsked(): void
     {
         $reader = $this->signIn($this->client, 'story-list-oldest@example.com');

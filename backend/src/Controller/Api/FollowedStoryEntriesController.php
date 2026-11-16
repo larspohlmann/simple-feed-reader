@@ -40,6 +40,7 @@ final readonly class FollowedStoryEntriesController
         $query = new TrendingStoryListQuery(
             userId: $userId,
             storyId: $id,
+            onlyUnread: $page->unread,
             cursor: EntryCursor::fromRequestValue($page->cursor),
             limit: $page->limit,
             order: ListOrder::fromRequestValue($page->order),

@@ -16,6 +16,7 @@ final readonly class TrendingStoryListQuery
     public function __construct(
         public int $userId,
         public int $storyId,
+        public bool $onlyUnread = false,
         public ?EntryCursor $cursor = null,
         int $limit = EntryQuery::DEFAULT_LIMIT,
         public ListOrder $order = ListOrder::NewestFirst,
