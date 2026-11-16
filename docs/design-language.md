@@ -1363,6 +1363,27 @@ quoted post and the social import dialog.
 
 ---
 
+### `<app-count-pill>`
+
+A soft accent count for a surface that counts unseen things, not unread posts.
+
+| Input | Type | Default |
+|---|---|---|
+| `count` | `number` (required) | — the number shown |
+
+```html
+@if (unseen() > 0) {
+  <app-count-pill [count]="unseen()" />
+}
+```
+
+Render it only for a count above 0; the pill shows whatever number it is given.
+Used by the sidebar Notifications row and the account menu. A row that aligns its
+digit with sibling counts pulls the pill right by its own horizontal padding
+(`margin-right: calc(var(--space-2) * -1)`).
+
+---
+
 ### `<app-search-field>`
 
 The entry-search input. It owns every timing rule the search has, so no caller
