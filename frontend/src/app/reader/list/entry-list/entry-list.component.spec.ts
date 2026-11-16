@@ -188,6 +188,10 @@ function fireRowsResize(fixture: ComponentFixture<EntryListComponent>): void {
   obs?.fire();
 }
 
+function fireResizeOf(element: Element): void {
+  MockResizeObserver.instances.find((observer) => observer.targets.has(element))?.fire();
+}
+
 describe('EntryListComponent', () => {
   describe('near-viewport media', () => {
     beforeEach(installMockIntersectionObserver);
@@ -750,15 +754,17 @@ describe('EntryListComponent', () => {
     it('publishes the expanded bar height and keeps it while collapsed', () => {
       const fixture = mount({ layout: 'list' });
       const host = fixture.nativeElement as HTMLElement;
-      // jsdom has no ResizeObserver, so stand in for the measurement.
-      fixture.componentInstance.headerHeight.set(53);
-      fixture.detectChanges();
+      const header = host.querySelector<HTMLElement>('.list-header')!;
+      Object.defineProperty(header, 'offsetHeight', { configurable: true, value: 53 });
+      fireResizeOf(header);
       expect(host.style.getPropertyValue('--list-bar-h')).toBe('53px');
 
       // The reservation must not follow the bar down: the scroller's padding is
       // computed from this value, and shrinking it would move every row.
       fixture.componentInstance.collapsed.set(true);
       fixture.detectChanges();
+      Object.defineProperty(header, 'offsetHeight', { configurable: true, value: 20 });
+      fireResizeOf(header);
       expect(host.style.getPropertyValue('--list-bar-h')).toBe('53px');
       expect(host.querySelector('.list-header')!.classList).toContain('collapsed');
     });

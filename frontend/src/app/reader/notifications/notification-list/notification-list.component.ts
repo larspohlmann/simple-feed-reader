@@ -18,14 +18,14 @@ import { HandednessService } from '../../../core/preferences/handedness.service'
 import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { ListActionDirective } from '../../../shared/list-action/list-action.directive';
-import { observeResize } from '../../../shared/observe-resize';
 import { PageLayer } from '../../../shared/scroll-host/page-layer';
 import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { ScrollHosts } from '../../../shared/scroll-host/scroll-hosts.service';
 import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
 import { WarningBoxComponent } from '../../../shared/warning-box/warning-box.component';
 import { ListHeaderComponent } from '../../list/list-header/list-header.component';
-import { prefetchMargin } from '../../list/paging';
+import { publishListBarHeight } from '../../list/list-bar-height';
+import { observeSentinel } from '../../list/paging';
 import { SelectionOf } from '../../query/query';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { NotificationRowComponent } from '../notification-row/notification-row.component';
@@ -95,12 +95,7 @@ export class NotificationListComponent {
 
   private readonly _publishBarHeight = effect((onCleanup) => {
     const header = this.listHdr()?.nativeElement;
-    if (!header) return;
-    onCleanup(
-      observeResize(this.zone, [header], () =>
-        this.host.style.setProperty('--list-bar-h', `${header.offsetHeight}px`),
-      ),
-    );
+    if (header) onCleanup(publishListBarHeight(this.zone, this.host, header));
   });
 
   private readonly _wire = effect((onCleanup) => {
@@ -108,15 +103,7 @@ export class NotificationListComponent {
     const scroller = this.scrollHost();
     // Observing afresh per cursor: a sentinel still in reach after a page reports no change.
     this.store.nextCursor();
-    if (!node || !scroller || typeof IntersectionObserver === 'undefined') return;
-    const observer = new IntersectionObserver(
-      (sightings) => {
-        if (sightings.some((sighting) => sighting.isIntersecting)) this.store.loadMore();
-      },
-      { root: scroller.intersectionRoot, rootMargin: prefetchMargin(scroller.clientHeight) },
-    );
-    observer.observe(node);
-    onCleanup(() => observer.disconnect());
+    if (node && scroller) onCleanup(observeSentinel(scroller, node, () => this.store.loadMore()));
   });
 
   refresh(): void {
