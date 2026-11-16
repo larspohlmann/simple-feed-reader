@@ -48,6 +48,12 @@ export class FollowedStoriesStore {
     this.inFlight = request.closed ? null : request;
   }
 
+  /** A story unfollowed earlier in this session is held back from every load; following it again lifts that. */
+  loadAfterFollowing(id: number): void {
+    this.removedSinceLoad.update((ids) => withoutAll(ids, new Set([id])));
+    this.load();
+  }
+
   reloadIfStale(): void {
     if (this.inFlight) return;
     if (!countsAreStale(this.lastLoadedAt)) return;

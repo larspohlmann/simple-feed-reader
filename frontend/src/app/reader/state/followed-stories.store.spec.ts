@@ -209,6 +209,29 @@ describe('FollowedStoriesStore (#2128)', () => {
     });
   });
 
+  describe('loadAfterFollowing()', () => {
+    it('shows a story followed again after this session unfollowed it', () => {
+      const store = setup({ followed: answering(), unfollow: () => of(undefined) });
+      store.load();
+      store.unfollow(3);
+
+      store.loadAfterFollowing(3);
+
+      expect(store.stories().map((story) => story.id)).toEqual([3, 5]);
+    });
+
+    it('still holds back another story unfollowed while the load was out', () => {
+      const store = setup({ followed: answering(), unfollow: () => of(undefined) });
+      store.load();
+      store.unfollow(3);
+      store.unfollow(5);
+
+      store.loadAfterFollowing(3);
+
+      expect(store.stories().map((story) => story.id)).toEqual([3]);
+    });
+  });
+
   describe('unfollow()', () => {
     it('drops the row on success and calls onSuccess', () => {
       const unfollow = jest.fn(() => of(undefined));

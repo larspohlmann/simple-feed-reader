@@ -10,8 +10,12 @@ export class TrendingFollowAction {
   private readonly followedStories = inject(FollowedStoriesStore);
 
   run(entry: EntryDto): void {
-    this.entries.setStoryFollowed(entry.id, !entry.story?.followed, {
-      onSaved: () => this.followedStories.load(),
+    const story = entry.story;
+    if (!story) return;
+    const following = !story.followed;
+    this.entries.setStoryFollowed(entry.id, following, {
+      onSaved: () =>
+        following ? this.followedStories.loadAfterFollowing(story.id) : this.followedStories.load(),
     });
   }
 }
