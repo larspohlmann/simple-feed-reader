@@ -52,6 +52,11 @@ final class ShareTargetsTest extends TestCase
         self::assertSame([], ShareTargets::planOf($entry, [self::TARGET])->urls);
     }
 
+    public function testATitledShareMatchesACardKeptUnderATrackedForm(): void
+    {
+        self::assertSame([], ShareTargets::planOf(self::titledShare(), [self::TARGET . '?utm_source=x'])->urls);
+    }
+
     public function testAPostTargetsTheLinksItsBodyShares(): void
     {
         $entry = self::titledShare();
