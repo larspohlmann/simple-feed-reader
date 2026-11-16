@@ -28,13 +28,6 @@ final class SocialNetworkTest extends TestCase
         self::assertFalse(SocialNetwork::Lemmy->takesLinkPosts());
     }
 
-    public function testOnlyLemmyLeavesSearchResultsToTheInstance(): void
-    {
-        self::assertTrue(SocialNetwork::Bluesky->checksSearchResults());
-        self::assertTrue(SocialNetwork::Mastodon->checksSearchResults());
-        self::assertFalse(SocialNetwork::Lemmy->checksSearchResults());
-    }
-
     public function testTheRouteRequirementNamesEveryNetwork(): void
     {
         self::assertSame(

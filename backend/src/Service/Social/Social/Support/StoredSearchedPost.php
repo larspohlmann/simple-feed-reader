@@ -19,20 +19,17 @@ final class StoredSearchedPost
 {
     public static function of(SocialAccount $account, StoredPostModel $post): SearchedPostModel
     {
-        return new SearchedPostModel(
-            self::authorNamesOf($account, $post),
-            [PlainText::fromHtmlBlocks($post->contentHtml) ?? ''],
-        );
+        return match ($account->getNetwork()) {
+            SocialNetwork::Bluesky => self::judgedByText(self::blueskyNamesOf($post), $post),
+            SocialNetwork::Mastodon => self::judgedByText(self::mastodonNamesOf($account, $post->authorUrl), $post),
+            SocialNetwork::Lemmy => LemmySearchedPost::of($post->title, $post->contentHtml, $post->authorUrl),
+        };
     }
 
-    /** @return list<string> */
-    private static function authorNamesOf(SocialAccount $account, StoredPostModel $post): array
+    /** @param list<string> $authorNames */
+    private static function judgedByText(array $authorNames, StoredPostModel $post): SearchedPostModel
     {
-        return match ($account->getNetwork()) {
-            SocialNetwork::Bluesky => self::blueskyNamesOf($post),
-            SocialNetwork::Mastodon => self::mastodonNamesOf($account, $post->authorUrl),
-            SocialNetwork::Lemmy => throw new \LogicException('A Lemmy search is never matched by the reader.'),
-        };
+        return new SearchedPostModel($authorNames, [PlainText::fromHtmlBlocks($post->contentHtml) ?? '']);
     }
 
     /** @return list<string> the handle the author page shows and the DID the post's at:// address carries */
