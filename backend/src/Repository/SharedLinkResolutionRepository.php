@@ -62,42 +62,6 @@ final class SharedLinkResolutionRepository extends ServiceEntityRepository
         );
     }
 
-    /** @return array<int, string> the URLs of links never queued, by shared link id, in id order */
-    public function unqueuedUrlsAfterId(int $afterId, int $limit): array
-    {
-        /** @var list<array{id: int|string, url: string}> $rows */
-        $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
-            'SELECT link.id, link.url FROM shared_link link'
-            . ' LEFT JOIN shared_link_resolution resolution ON resolution.shared_link_id = link.id'
-            . ' WHERE resolution.shared_link_id IS NULL AND link.id > ? ORDER BY link.id LIMIT ' . $limit,
-            [$afterId],
-        );
-
-        $urls = [];
-        foreach ($rows as $row) {
-            $urls[(int) $row['id']] = $row['url'];
-        }
-
-        return $urls;
-    }
-
-    /** The holder keeps its own resolution; without one the merged link's moves to it, else it goes with its row. */
-    public function moveUnlessHeld(int $mergedLinkId, int $holderLinkId): void
-    {
-        $connection = $this->getEntityManager()->getConnection();
-        $holderHasOne = $connection->fetchOne(
-            'SELECT 1 FROM shared_link_resolution WHERE shared_link_id = ?',
-            [$holderLinkId],
-        ) !== false;
-        if ($holderHasOne) {
-            return;
-        }
-        $connection->executeStatement(
-            'UPDATE shared_link_resolution SET shared_link_id = ? WHERE shared_link_id = ?',
-            [$holderLinkId, $mergedLinkId],
-        );
-    }
-
     /**
      * A link already queued or settled keeps its state.
      *
