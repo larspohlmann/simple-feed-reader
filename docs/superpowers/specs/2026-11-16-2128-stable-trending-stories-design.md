@@ -39,9 +39,9 @@ reader follow it from the sidebar with a "new since you last opened it" count, a
 
 - **Same event:** after each rebuild, the new group that shares most members with a stored story keeps that story's
   id; follows, hides and "last opened" carry over.
-- **Split:** one story becomes two groups. The larger part keeps the id and the follow; the smaller part is a new
+- **Split (week build):** one story becomes two groups. The larger part keeps the id and the follow; the smaller part is a new
   story nobody follows yet.
-- **Merge:** two stories become one group. The merged story keeps the id of the larger one; follows and hides of
+- **Merge (week build):** two stories become one group. The merged story keeps the id of the larger one; follows and hides of
   both carry over; a reader who hid either one has the merged story hidden ("exclusion wins", as in #2202).
 - **New** in the follow count means joined after the reader last opened the story, not published after it. An old
   article that a rebuild groups in only now counts as new.
