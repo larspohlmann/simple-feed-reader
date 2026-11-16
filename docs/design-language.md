@@ -1757,6 +1757,14 @@ A network's notifications (`reader/notifications/notification-list`) take the en
 - **Hints** sit above the rows as `app-warning-box`, one per problem (a missing scope, a lapsed connection), with a warning glyph in `--warning`, `--fs-sm` text and an accent "Reconnect …" link to Settings → Social.
 - **The foot** is a sentinel while more is stored, then the muted, centred 30-day end line; an empty list says so in the same style instead.
 
+### Account menu and avatar badge (#2240)
+
+The app bar's account button wears the unseen-notification total on its avatar; the menu under it lists where those notifications are.
+
+- **The badge** is a `--accent` disc on the avatar's top-right, `--icon-sm` tall with a `--surface-0` ring, the numeral in `font-size: 10px` (an escape hatch: `--fs-xs` overflows the disc at two digits). It is hidden at 0 and caps at `99+`. It is `aria-hidden`; the button's label carries the count ("Account, 6 unseen notifications").
+- **The menu** is 288px wide at `--radius-lg`, in `glass-rim.filled(var(--surface-2))`. Top to bottom: the signed-in head (avatar 32, the email, a muted "Signed in"), a separator, the **Notifications** group, a separator, Settings and Admin (admins only), a separator, Sign out. Every item is an `icon-md` glyph and a label at `--control-h` (`--tap-target` on coarse pointers); Sign out is `--text-secondary`.
+- **The Notifications group** appears only while a network has unseen notifications: a `--fs-sm` heading, then one row per such network, in network order, of its logo, its name and an `<app-count-pill>`. A row opens that network's notifications list and closes the menu.
+
 ### Hidden-feed favicon
 
 A feed hidden from All items, For you, saved searches or Trending (#688, #2202) shows it on its favicon, not with a trailing glyph. Settings → Visibility lays every one of these switches, network, tag and feed, out in one matrix. Only the feed's own exclusions mark it: a network-level saved-search exclusion is not repeated on each of the network's rows. It marks the network (Bluesky, Mastodon) head's logo instead, with the same treatment and title (`row.hidden-feed-mark` in `_sidebar-row.scss` styles both). The favicon greys and fades (`--hidden-favicon-opacity`, `grayscale(1)`), and a small eye badge sits on its bottom-right corner:

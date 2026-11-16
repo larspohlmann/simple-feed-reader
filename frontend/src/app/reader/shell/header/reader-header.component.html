@@ -56,11 +56,16 @@
       <div class="account" [appDismissOnOutside]="menuOpen()" (dismiss)="menuOpen.set(false)">
         <button
           aria-haspopup="menu"
-          [attr.aria-label]="'reader.account' | transloco"
+          [attr.aria-label]="accountLabel().key | transloco: { count: accountLabel().count }"
           [attr.aria-expanded]="menuOpen()"
           (click)="toggleMenu()"
         >
-          <app-user-avatar [email]="auth.user()?.email ?? null" [size]="26" />
+          <span class="avatar">
+            <app-user-avatar [email]="auth.user()?.email ?? null" [size]="26" />
+            @if (unseenTotal() > 0) {
+              <span class="badge" aria-hidden="true">{{ badgeText() }}</span>
+            }
+          </span>
           <app-icon name="expand_more" size="md" />
         </button>
         @if (menuOpen()) {
@@ -68,19 +73,56 @@
             @if (auth.user(); as u) {
               <div class="who">
                 <app-user-avatar [email]="u.email" [size]="32" />
-                <span class="who-email">{{ u.email }}</span>
+                <span class="who-text">
+                  <span class="who-email">{{ u.email }}</span>
+                  <span class="who-sub">{{ 'reader.signedIn' | transloco }}</span>
+                </span>
               </div>
+              <hr role="separator" />
             }
-            <a role="menuitem" routerLink="/settings" (click)="menuOpen.set(false)">{{
-              'reader.settings' | transloco
-            }}</a>
+            @if (unseenNotifications().length) {
+              <div role="group" [attr.aria-label]="'reader.notifications.title' | transloco">
+                <p class="head" aria-hidden="true">
+                  {{ 'reader.notifications.title' | transloco }}
+                </p>
+                @for (row of unseenNotifications(); track row.network) {
+                  <a
+                    class="item"
+                    role="menuitem"
+                    [routerLink]="['/']"
+                    [queryParams]="
+                      selectionQueryParams({ view: 'notifications', network: row.network })
+                    "
+                    queryParamsHandling="merge"
+                    (click)="menuOpen.set(false)"
+                  >
+                    <app-network-logo [network]="row.network" />
+                    <span class="label">{{ 'settings.social.' + row.network | transloco }}</span>
+                    <app-count-pill [count]="row.unseenCount" />
+                  </a>
+                }
+              </div>
+              <hr role="separator" />
+            }
+            <a class="item" role="menuitem" routerLink="/settings" (click)="menuOpen.set(false)">
+              <app-icon name="settings" size="md" />
+              <span class="label">{{ 'reader.settings' | transloco }}</span>
+            </a>
             @if (auth.isAdmin()) {
-              <a role="menuitem" routerLink="/admin/users" (click)="menuOpen.set(false)">{{
-                'reader.admin' | transloco
-              }}</a>
+              <a
+                class="item"
+                role="menuitem"
+                routerLink="/admin/users"
+                (click)="menuOpen.set(false)"
+              >
+                <app-icon name="admin_panel_settings" size="md" />
+                <span class="label">{{ 'reader.admin' | transloco }}</span>
+              </a>
             }
-            <button role="menuitem" (click)="auth.logout()">
-              {{ 'reader.signOut' | transloco }}
+            <hr role="separator" />
+            <button class="item signout" role="menuitem" type="button" (click)="auth.logout()">
+              <app-icon name="logout" size="md" />
+              <span class="label">{{ 'reader.signOut' | transloco }}</span>
             </button>
           </div>
         }

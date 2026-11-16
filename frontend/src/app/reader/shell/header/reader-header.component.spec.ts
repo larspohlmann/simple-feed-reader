@@ -10,6 +10,7 @@ import { SearchFieldComponent } from '../search-field/search-field.component';
 import { signal } from '@angular/core';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { LayoutService } from '../../layout.service';
+import { SubscriptionsStore } from '../../state/subscriptions.store';
 
 describe('ReaderHeaderComponent', () => {
   const auth = { user: signal({ email: 'a@b.c' }), logout: jest.fn(), isAdmin: () => false };
@@ -80,6 +81,133 @@ describe('ReaderHeaderComponent', () => {
     expect(chips[0].getAttribute('href')).toContain('tag=1');
     expect(chips[0].textContent).toContain('News');
     expect(chips[1].classList).toContain('active');
+  });
+
+  describe('the account button and menu (#2240)', () => {
+    type Unseen = { network: 'bluesky' | 'mastodon' | 'lemmy'; unseenCount: number }[];
+
+    function createWith(unseen: Unseen, admin = false) {
+      auth.isAdmin = () => admin;
+      const total = unseen.reduce((sum, row) => sum + row.unseenCount, 0);
+      TestBed.overrideProvider(SubscriptionsStore, {
+        useValue: {
+          unseenNotifications: signal(unseen),
+          unseenNotificationsTotal: signal(total),
+        },
+      });
+      const fixture = create();
+      return fixture;
+    }
+
+    function accountButton(fixture: ReturnType<typeof create>): HTMLButtonElement {
+      return (fixture.nativeElement as HTMLElement).querySelector(
+        '.account > button',
+      ) as HTMLButtonElement;
+    }
+
+    function openMenu(fixture: ReturnType<typeof create>): HTMLElement {
+      accountButton(fixture).click();
+      fixture.detectChanges();
+      return (fixture.nativeElement as HTMLElement).querySelector('.menu') as HTMLElement;
+    }
+
+    afterEach(() => {
+      auth.isAdmin = () => false;
+    });
+
+    it('badges the avatar with the unseen total', () => {
+      const fixture = createWith([
+        { network: 'bluesky', unseenCount: 4 },
+        { network: 'mastodon', unseenCount: 2 },
+      ]);
+      const badge = accountButton(fixture).querySelector('.badge') as HTMLElement;
+      expect(badge.textContent?.trim()).toBe('6');
+      expect(badge.getAttribute('aria-hidden')).toBe('true');
+      expect(accountButton(fixture).getAttribute('aria-label')).toBe(
+        'Account, 6 unseen notifications',
+      );
+    });
+
+    it('says "1 unseen notification" in the singular', () => {
+      const fixture = createWith([{ network: 'bluesky', unseenCount: 1 }]);
+      expect(accountButton(fixture).getAttribute('aria-label')).toBe(
+        'Account, 1 unseen notification',
+      );
+    });
+
+    it('shows no badge without unseen notifications', () => {
+      const fixture = createWith([]);
+      expect(accountButton(fixture).querySelector('.badge')).toBeNull();
+      expect(accountButton(fixture).getAttribute('aria-label')).toBe('Account');
+    });
+
+    it('caps the badge at 99+', () => {
+      const fixture = createWith([{ network: 'bluesky', unseenCount: 140 }]);
+      expect(accountButton(fixture).querySelector('.badge')?.textContent?.trim()).toBe('99+');
+      expect(accountButton(fixture).getAttribute('aria-label')).toBe(
+        'Account, 140 unseen notifications',
+      );
+    });
+
+    it('heads the menu with the signed-in account', () => {
+      const menu = openMenu(createWith([]));
+      expect(menu.querySelector('.who-email')?.textContent?.trim()).toBe('a@b.c');
+      expect(menu.querySelector('.who-sub')?.textContent?.trim()).toBe('Signed in');
+    });
+
+    it('lists the networks with unseen notifications', () => {
+      const fixture = createWith([
+        { network: 'bluesky', unseenCount: 4 },
+        { network: 'mastodon', unseenCount: 2 },
+      ]);
+      const menu = openMenu(fixture);
+      const group = menu.querySelector('[role=group]') as HTMLElement;
+      expect(group.getAttribute('aria-label')).toBe('Notifications');
+      expect(group.querySelector('.head')?.textContent?.trim()).toBe('Notifications');
+      const rows = Array.from(group.querySelectorAll('a[role=menuitem]'));
+      expect(rows).toHaveLength(2);
+      expect(rows.map((row) => row.querySelector('.label')?.textContent?.trim())).toEqual([
+        'Bluesky',
+        'Mastodon',
+      ]);
+      expect(rows.map((row) => row.querySelector('app-count-pill')?.textContent?.trim())).toEqual([
+        '4',
+        '2',
+      ]);
+      expect(rows.every((row) => row.querySelector('app-network-logo') !== null)).toBe(true);
+      expect(rows[0].getAttribute('href')).toContain('view=notifications');
+      expect(rows[0].getAttribute('href')).toContain('network=bluesky');
+      expect(rows[1].getAttribute('href')).toContain('network=mastodon');
+
+      (rows[0] as HTMLAnchorElement).click();
+      fixture.detectChanges();
+      expect(fixture.componentInstance.menuOpen()).toBe(false);
+    });
+
+    it('leaves the notifications out when nothing is unseen', () => {
+      const menu = openMenu(createWith([]));
+      expect(menu.querySelector('[role=group]')).toBeNull();
+      expect(menu.querySelector('.head')).toBeNull();
+    });
+
+    it('keeps settings, admin and sign out with their icons', () => {
+      const menu = openMenu(createWith([], true));
+      expect(menu.getAttribute('role')).toBe('menu');
+      const icons = Array.from(menu.querySelectorAll('[role=menuitem] app-icon')).map((icon) =>
+        icon.getAttribute('name'),
+      );
+      expect(icons).toEqual(['settings', 'admin_panel_settings', 'logout']);
+      expect(menu.querySelectorAll('[role=menuitem]')).toHaveLength(3);
+      expect(menu.querySelector('button[role=menuitem]')?.classList).toContain('signout');
+    });
+
+    it('leaves the admin item out for a non-admin', () => {
+      const menu = openMenu(createWith([]));
+      const icons = Array.from(menu.querySelectorAll('[role=menuitem] app-icon')).map((icon) =>
+        icon.getAttribute('name'),
+      );
+      expect(icons).toEqual(['settings', 'logout']);
+    });
   });
 
   describe('the All Items pill that leads the mobile tag row', () => {
