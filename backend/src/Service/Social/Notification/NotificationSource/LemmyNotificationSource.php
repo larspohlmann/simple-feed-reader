@@ -69,7 +69,9 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
                 return;
             }
             $this->lemmy->post($account, self::MARK_MENTION, ['person_mention_id' => $id, 'read' => true]);
-        } catch (SocialPostNotFoundException | SocialPostRefusedException $exception) {
+        } catch (SocialPostNotFoundException) {
+            return;
+        } catch (SocialPostRefusedException $exception) {
             throw SocialNetworkUnreachableException::from($exception);
         }
     }

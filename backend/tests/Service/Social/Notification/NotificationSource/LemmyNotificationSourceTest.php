@@ -176,7 +176,10 @@ final class LemmyNotificationSourceTest extends TestCase
 
     public function testRefusedMarkingIsUnreachable(): void
     {
-        $http = $this->markingHttp(replyStatus: Response::HTTP_NOT_FOUND);
+        $http = RoutedHttpClient::answering(static fn (): MockResponse => new MockResponse(
+            '{"error":"person_is_banned_from_site"}',
+            ['http_code' => Response::HTTP_BAD_REQUEST],
+        ));
         $account = SocialApiWiring::lemmyAccount();
 
         try {
@@ -190,6 +193,45 @@ final class LemmyNotificationSourceTest extends TestCase
         } catch (SocialNetworkUnreachableException $exception) {
             self::assertNotNull($exception->getPrevious());
         }
+    }
+
+    public function testAGoneReplyIsMarkedAndTheRestFollow(): void
+    {
+        $http = $this->markingHttp(replyStatus: Response::HTTP_NOT_FOUND);
+        $account = SocialApiWiring::lemmyAccount();
+        $marked = [];
+
+        $this->source($http)->markSeen(
+            $account,
+            self::storedPair($account),
+            static function (SocialNotification $row) use (&$marked): void {
+                $marked[] = $row->getRemoteId();
+            },
+        );
+
+        self::assertSame(['reply:7', 'mention:3'], $marked);
+        self::assertCount(2, $http->requests);
+    }
+
+    public function testAGoneMentionIsMarkedAndTheRestFollow(): void
+    {
+        $http = $this->markingHttp(mentionStatus: Response::HTTP_NOT_FOUND);
+        $account = SocialApiWiring::lemmyAccount();
+        $marked = [];
+
+        $this->source($http)->markSeen(
+            $account,
+            [
+                self::stored($account, 'mention:3', SocialNotificationKind::Mention),
+                self::stored($account, 'reply:7', SocialNotificationKind::Reply),
+            ],
+            static function (SocialNotification $row) use (&$marked): void {
+                $marked[] = $row->getRemoteId();
+            },
+        );
+
+        self::assertSame(['mention:3', 'reply:7'], $marked);
+        self::assertCount(2, $http->requests);
     }
 
     private static function utc(string $timestamp): \DateTimeImmutable
