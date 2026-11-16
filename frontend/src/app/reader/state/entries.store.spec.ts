@@ -1068,7 +1068,7 @@ describe('EntriesStore', () => {
   describe('liking a post (#1600)', () => {
     const post = (isLiked = false): EntryDto =>
       entry(1, {
-        social: { network: 'bluesky', isLiked, canLike: true, isOwn: false, openUrl: null },
+        social: { network: 'bluesky', isLiked, canLike: true, isOwn: false },
       });
 
     const loadPost = (isLiked = false): void => {
@@ -1092,7 +1092,6 @@ describe('EntriesStore', () => {
         isLiked: true,
         canLike: true,
         isOwn: false,
-        openUrl: null,
       });
     });
 
@@ -1228,7 +1227,7 @@ describe('EntriesStore', () => {
     describe('a copy shown inside another row (duplicates)', () => {
       const copy = (isLiked = false): EntryDto =>
         entry(2, {
-          social: { network: 'mastodon', isLiked, canLike: true, isOwn: false, openUrl: null },
+          social: { network: 'mastodon', isLiked, canLike: true, isOwn: false },
         });
 
       const loadRowWithCopy = (): void => {
@@ -1329,7 +1328,6 @@ describe('EntriesStore', () => {
                 isLiked: false,
                 canLike: false,
                 isOwn: false,
-                openUrl: null,
               },
             }),
           ],

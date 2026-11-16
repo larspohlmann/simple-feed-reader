@@ -1,3 +1,4 @@
+import { provideSocialAccounts } from '../../../../../../testing/social-accounts-testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../../../testing/transloco-testing';
@@ -38,6 +39,7 @@ function mount(testEntry: EntryDto) {
   TestBed.configureTestingModule({
     imports: [EntryWideComponent, provideTranslocoTesting()],
     providers: [
+      provideSocialAccounts(),
       provideAccountIdentity(),
       { provide: EntryActionHandler, useValue: entryActions },
       { provide: ImageProxyService, useValue: imageProxy },

@@ -1,3 +1,4 @@
+import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
@@ -19,7 +20,7 @@ function mount(testEntry: EntryDto, inputs: Record<string, unknown> = {}, arrang
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     imports: [EntryKickerLineComponent, provideTranslocoTesting()],
-    providers: [provideRouter([])],
+    providers: [provideRouter([]), provideSocialAccounts()],
   });
   arrange?.();
   const fixture = TestBed.createComponent(EntryKickerLineComponent);

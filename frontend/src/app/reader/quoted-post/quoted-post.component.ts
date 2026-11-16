@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { QuotedPostDto } from './quoted-post';
+import { SocialNetworkName } from '../../core/social-network';
+import { OwnInstanceLinks } from '../own-instance/own-instance-links.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { AvatarComponent } from '../../shared/avatar/avatar.component';
 import { formatLongDateTime, relativeTimeNarrow } from '../format';
@@ -28,6 +30,9 @@ export type QuotedPostLayout = 'block' | 'article';
 export class QuotedPostComponent {
   readonly quote = input.required<QuotedPostDto>();
   readonly layout = input.required<QuotedPostLayout>();
+  readonly network = input<SocialNetworkName | null>(null);
+
+  protected readonly links = inject(OwnInstanceLinks);
 
   private readonly language = inject(LanguageService);
   protected readonly postedAt = computed(() => {

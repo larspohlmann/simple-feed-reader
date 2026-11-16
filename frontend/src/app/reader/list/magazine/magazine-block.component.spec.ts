@@ -1,3 +1,4 @@
+import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
@@ -31,6 +32,7 @@ function mount(block: MagazineBlock): HTMLElement {
   TestBed.configureTestingModule({
     imports: [MagazineBlockComponent, provideTranslocoTesting()],
     providers: [
+      provideSocialAccounts(),
       provideAccountIdentity(),
       { provide: EntryActionHandler, useValue: { open: jest.fn() } },
       { provide: ImageProxyService, useValue: neverRecoveringImageProxy() },

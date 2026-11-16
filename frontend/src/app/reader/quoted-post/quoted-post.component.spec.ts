@@ -1,4 +1,6 @@
+import { aMastodonAccount, provideSocialAccounts } from '../../../testing/social-accounts-testing';
 import { TestBed } from '@angular/core/testing';
+import { SocialNetworkName } from '../../core/social-network';
 import { QuotedPostComponent, QuotedPostLayout } from './quoted-post.component';
 import { QuotedPostDto } from './quoted-post';
 import { ImageProxyService } from '../../shared/proxied-image/image-proxy.service';
@@ -12,14 +14,22 @@ beforeEach(() => {
 });
 afterEach(() => jest.useRealTimers());
 
-function mount(overrides: Partial<QuotedPostDto> = {}, layout: QuotedPostLayout = 'block') {
+function mount(
+  overrides: Partial<QuotedPostDto> = {},
+  layout: QuotedPostLayout = 'block',
+  network: SocialNetworkName | null = null,
+) {
   TestBed.configureTestingModule({
     imports: [QuotedPostComponent, provideTranslocoTesting()],
-    providers: [{ provide: ImageProxyService, useValue: failingProxy }],
+    providers: [
+      { provide: ImageProxyService, useValue: failingProxy },
+      provideSocialAccounts([aMastodonAccount()]),
+    ],
   });
   const fixture = TestBed.createComponent(QuotedPostComponent);
   fixture.componentRef.setInput('quote', aQuotedPost(overrides));
   fixture.componentRef.setInput('layout', layout);
+  fixture.componentRef.setInput('network', network);
   fixture.detectChanges();
   return fixture;
 }
@@ -175,6 +185,31 @@ describe('QuotedPostComponent', () => {
     expect(tone('a')).toBe(first);
     TestBed.resetTestingModule();
     expect(tone('b')).not.toBe(first);
+  });
+
+  describe('on a Mastodon thread', () => {
+    const rewritten = (address: string) =>
+      `https://home.example/authorize_interaction?uri=${encodeURIComponent(address)}`;
+    const quote = {
+      url: 'https://mastodon.social/@a/1',
+      nestedQuote: { url: 'https://mastodon.social/@b/2', handle: null },
+    };
+
+    it('opens the quote and its nested quote on the reader’s instance', () => {
+      const fixture = mount(quote, 'block', 'mastodon');
+
+      expect(query(fixture, 'a.open')!.getAttribute('href')).toBe(rewritten(quote.url));
+      expect(query(fixture, 'a.nested')!.getAttribute('href')).toBe(
+        rewritten(quote.nestedQuote.url),
+      );
+    });
+
+    it('leaves both links alone without a network', () => {
+      const fixture = mount(quote);
+
+      expect(query(fixture, 'a.open')!.getAttribute('href')).toBe(quote.url);
+      expect(query(fixture, 'a.nested')!.getAttribute('href')).toBe(quote.nestedQuote.url);
+    });
   });
 
   it('names the handle of a nested quote', () => {

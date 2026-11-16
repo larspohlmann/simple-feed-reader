@@ -344,6 +344,19 @@ describe('ReaderViewComponent', () => {
   });
 
   it('opens a Mastodon post on the reader’s own instance', () => {
+    TestBed.overrideProvider(SubscriptionsStore, {
+      useValue: {
+        socialAccounts: signal([
+          {
+            id: 1,
+            network: 'mastodon',
+            handle: '@me@home.test',
+            status: 'connected',
+            serviceUrl: 'https://home.test',
+          },
+        ]),
+      },
+    });
     const fixture = mount(
       entry({
         url: 'https://mastodon.social/@Gargron/1',
@@ -352,14 +365,15 @@ describe('ReaderViewComponent', () => {
           isLiked: false,
           canLike: true,
           isOwn: false,
-          openUrl: 'https://home.test/authorize_interaction?uri=x',
         },
       }),
     );
 
     const element = fixture.nativeElement as HTMLElement;
     expect(
-      element.querySelector('.meta a[href="https://home.test/authorize_interaction?uri=x"]'),
+      element.querySelector(
+        `.meta a[href="https://home.test/authorize_interaction?uri=${encodeURIComponent('https://mastodon.social/@Gargron/1')}"]`,
+      ),
     ).not.toBeNull();
   });
 
@@ -1002,7 +1016,6 @@ describe('ReaderViewComponent', () => {
             isLiked: false,
             canLike: true,
             isOwn: false,
-            openUrl: null,
           },
         }),
       );
@@ -1175,7 +1188,7 @@ describe('ReaderViewComponent', () => {
     const realIntersectionObserver = globalThis.IntersectionObserver;
     const post = (over: Partial<EntryDto> = {}): EntryDto =>
       entry({
-        social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false, openUrl: null },
+        social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
         ...over,
       });
     let counts: { state: () => Signal<SocialCountsState>; load: jest.Mock; reload: jest.Mock };

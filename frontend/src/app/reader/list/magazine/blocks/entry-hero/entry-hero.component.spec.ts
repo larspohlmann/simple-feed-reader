@@ -1,3 +1,4 @@
+import { provideSocialAccounts } from '../../../../../../testing/social-accounts-testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { provideRouter } from '@angular/router';
@@ -38,6 +39,7 @@ function mount(testEntry: EntryDto) {
   TestBed.configureTestingModule({
     imports: [EntryHeroComponent, provideTranslocoTesting()],
     providers: [
+      provideSocialAccounts(),
       provideAccountIdentity(),
       { provide: EntryActionHandler, useValue: entryActions },
       { provide: ImageProxyService, useValue: imageProxy },

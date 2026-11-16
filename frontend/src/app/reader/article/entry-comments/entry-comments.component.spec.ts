@@ -1,3 +1,7 @@
+import {
+  aMastodonAccount,
+  provideSocialAccounts,
+} from '../../../../testing/social-accounts-testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WritableSignal, signal } from '@angular/core';
 import { EntryCommentsComponent } from './entry-comments.component';
@@ -20,7 +24,6 @@ const BLUESKY: EntrySocialDto = {
   isLiked: false,
   canLike: true,
   isOwn: false,
-  openUrl: null,
 };
 
 const navigation = { layer: jest.fn() };
@@ -56,6 +59,7 @@ describe('EntryCommentsComponent', () => {
         { provide: CommentsService, useValue: service },
         { provide: PostActions, useValue: responses },
         { provide: LinkReaderNavigation, useValue: navigation },
+        provideSocialAccounts([aMastodonAccount()]),
         { provide: ImageProxyService, useValue: { recover: () => Promise.resolve('failed') } },
       ],
     });
@@ -93,6 +97,40 @@ describe('EntryCommentsComponent', () => {
     fixture.detectChanges();
     return fixture.nativeElement;
   }
+
+  describe('on a Mastodon entry', () => {
+    const rewritten = (address: string) =>
+      `https://home.example/authorize_interaction?uri=${encodeURIComponent(address)}`;
+
+    it('opens the author, the date and the quote on the reader’s instance', () => {
+      showEntry({
+        id: 5,
+        comments: 'auto',
+        discussionUrl: null,
+        social: { ...BLUESKY, network: 'mastodon' },
+      });
+
+      const element = settleComments([
+        anEntryComment({
+          author: 'Ann',
+          authorUrl: 'https://mastodon.social/@ann',
+          url: 'https://mastodon.social/@ann/1',
+          publishedAt: new Date().toISOString(),
+          quote: aQuotedPost({ url: 'https://mastodon.social/@bob/2' }),
+        }),
+      ]);
+
+      expect(element.querySelector('a.author')?.getAttribute('href')).toBe(
+        rewritten('https://mastodon.social/@ann'),
+      );
+      expect(element.querySelector('a.when')?.getAttribute('href')).toBe(
+        rewritten('https://mastodon.social/@ann/1'),
+      );
+      expect(element.querySelector('app-quoted-post a.open')?.getAttribute('href')).toBe(
+        rewritten('https://mastodon.social/@bob/2'),
+      );
+    });
+  });
 
   describe('a comment that is a network post', () => {
     const post: EntryCommentPostDto = {
@@ -479,7 +517,7 @@ describe('EntryCommentsComponent', () => {
       id: 5,
       comments: 'auto',
       discussionUrl: DISCUSSION,
-      social: { network: 'mastodon', isLiked: false, canLike: false, isOwn: false, openUrl: null },
+      social: { network: 'mastodon', isLiked: false, canLike: false, isOwn: false },
     });
     const element = settleComments([anEntryComment()], 1);
     expect(element.querySelector('a.all')?.textContent).toContain('1 more on Mastodon');

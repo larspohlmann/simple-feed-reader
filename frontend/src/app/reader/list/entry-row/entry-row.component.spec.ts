@@ -1,3 +1,4 @@
+import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
@@ -105,6 +106,7 @@ describe('EntryRowComponent', () => {
     TestBed.configureTestingModule({
       imports: [EntryRowComponent, provideTranslocoTesting()],
       providers: [
+        provideSocialAccounts(),
         provideAccountIdentity(),
         { provide: EntryActionHandler, useValue: entryActions },
         { provide: ImageProxyService, useValue: imageProxy },
@@ -329,6 +331,7 @@ describe('EntryRowComponent', () => {
     function mountThread(thread: EntryDto['thread']): HTMLElement {
       TestBed.configureTestingModule({
         providers: [
+          provideSocialAccounts(),
           provideAccountIdentity(),
           { provide: LinkReaderNavigation, useValue: navigation },
         ],

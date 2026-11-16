@@ -36,7 +36,7 @@ describe('SocialCountsService', () => {
   const post = (id = 1, isLiked = false) =>
     anEntry({
       id,
-      social: { network: 'bluesky', isLiked, canLike: true, isOwn: false, openUrl: null },
+      social: { network: 'bluesky', isLiked, canLike: true, isOwn: false },
     });
 
   beforeEach(() => {
@@ -138,7 +138,6 @@ describe('SocialCountsService', () => {
           isLiked: false,
           canLike: false,
           isOwn: false,
-          openUrl: null,
         },
       }),
     );
@@ -298,7 +297,6 @@ describe('SocialCountsService', () => {
             isLiked: false,
             canLike: false,
             isOwn: false,
-            openUrl: null,
           },
         }),
       );

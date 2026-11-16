@@ -1,3 +1,7 @@
+import {
+  aMastodonAccount,
+  provideSocialAccounts,
+} from '../../../../testing/social-accounts-testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
@@ -12,7 +16,7 @@ const BOB = { name: 'Bob', url: 'https://bsky.app/profile/bob', imageUrl: null }
 function renderSource(entry: EntryDto, sourceFormat: 'xml' | 'saved'): HTMLElement {
   TestBed.configureTestingModule({
     imports: [EntrySourceComponent, provideTranslocoTesting()],
-    providers: [provideRouter([])],
+    providers: [provideRouter([]), provideSocialAccounts([aMastodonAccount()])],
   });
   TestBed.inject(SubscriptionRows).stored.set([
     makeSubscription({
@@ -47,6 +51,25 @@ describe('EntrySourceComponent', () => {
 
   it('names the feed alone when nobody else posted', () => {
     expect(sourceLine(anEntry(), 'xml')).toBe('A feed');
+  });
+
+  it('links a Mastodon poster through the reader’s own instance', () => {
+    const poster = { name: 'Gargron', url: 'https://mastodon.social/@Gargron', imageUrl: null };
+    const social = { network: 'mastodon' as const, isLiked: false, canLike: true, isOwn: false };
+
+    const link = renderSource(anEntry({ poster, social }), 'saved').querySelector('a.source');
+
+    expect(link?.getAttribute('href')).toBe(
+      `https://home.example/authorize_interaction?uri=${encodeURIComponent(poster.url)}`,
+    );
+  });
+
+  it('links a Bluesky poster to its own profile', () => {
+    const social = { network: 'bluesky' as const, isLiked: false, canLike: true, isOwn: false };
+
+    const link = renderSource(anEntry({ poster: BOB, social }), 'saved').querySelector('a.source');
+
+    expect(link?.getAttribute('href')).toBe(BOB.url);
   });
 
   it("prefixes its layout class, so the list row's own .row card styles never reach it", () => {

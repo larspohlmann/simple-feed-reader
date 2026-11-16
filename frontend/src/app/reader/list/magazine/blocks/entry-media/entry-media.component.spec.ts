@@ -1,3 +1,4 @@
+import { provideSocialAccounts } from '../../../../../../testing/social-accounts-testing';
 import { Provider } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -72,6 +73,7 @@ async function mountFixture(testEntry: EntryDto) {
   TestBed.configureTestingModule({
     imports: [EntryMediaComponent, provideTranslocoTesting()],
     providers: [
+      provideSocialAccounts(),
       provideAccountIdentity(),
       { provide: EntryActionHandler, useValue: entryActions },
       provideRouter([]),
@@ -368,6 +370,7 @@ describe('EntryMediaComponent in an autoplaying list', () => {
     TestBed.configureTestingModule({
       imports: [EntryMediaComponent, provideTranslocoTesting()],
       providers: [
+        provideSocialAccounts(),
         provideAccountIdentity(),
         { provide: EntryActionHandler, useValue: entryActions },
         { provide: ListAutoplayCoordinator, useValue: coordinator },
