@@ -219,6 +219,11 @@ Ingestion owns the rule; the stopword data moves to the module that now reads it
   only). — An acronym is no function word: English *AI* voted French *ai* in 4 of V2's 5 wrong French tags. A
   structural rule, no word list. — If wrong: a shouted short post (*AUS DEM ARCHIV*) loses its vote and keeps no
   language, as today.
+- **D9. A derived headline is not voted twice, and links, mentions and hashtags do not vote** (whole-branch review,
+  I1 and M1). — A Bluesky or Mastodon headline is the body's first sentence, so voting `headline + body` counted it
+  twice and turned ties into wins; a Lemmy title is separate text and still votes. A link (with or without its scheme),
+  an `@mention` or a `#hashtag` is no running text in the post's language. — If wrong: a short post whose only
+  stopwords sit in a hashtag or a link loses its vote, as on develop.
 
 ## Measurement plan
 
@@ -269,3 +274,20 @@ Measured on `feedreader_2243_copy` with the pinned week (7,412 social posts), A 
   alike. Trending is unchanged: week 81 s, peak 197 MB under both.
 - **Deviation from the prediction:** none in pairs; 11 tags, all from D8, which removes 3 wrong fr tags and costs no
   pair.
+
+### After the review's fix wave (D9)
+
+`lang-of.php` now builds each headline as the post stores it (`title_derived`: Bluesky and Mastodon derived, Lemmy
+from the feed); A is unchanged by that (0 of 7,412 differ).
+
+- **Tags.** B changes 250 posts from no language: en 192, de 54, es 3, fr 1. Against the first B, 5 differ: *#ai*
+  (fr) and two link-only posts lose their vote, as the rule intends; *In Dresden regnet's Kebab!* loses de (`in` ties
+  de/en once the derived headline and *der-postillon* no longer count); *Kannste echt niemandem mehr erzählen. Nur
+  grotesk.* gains de. Wrong fr tags: 0 of 1 (*Des zadistes radicalisés…*). Wrong es: 3 of 3 (Catalan ×2, Turkish).
+- **Pairs, A → B:** week **+148** (de–de +16, en–en +125, fr–fr 0, es–es 0, mixed +7), unchanged; day **+6**
+  (en–en +6). The one day pair lost joined two posts that are only *bsky.app/profile/…* links.
+- **French-only and Spanish-only windows:** French day 283 → 283, week 326 → 326; Spanish day 54 → 54, week
+  96 → 96; 0 new and 0 lost in all four.
+- **Not the vote:** the full detector itself reads a Japanese post with an English URL slug as en (develop too), so
+  the vote is never asked there; and the French list lacks *est*, *été*, *sommes* because Snowball omits them as
+  homonyms and the Ngram supplement tags them VERB (#2231's sources, not a parser fault).
