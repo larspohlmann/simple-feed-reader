@@ -23,6 +23,7 @@ import { MarkReadActions } from './mark-read-actions.service';
 import { ReaderOnboarding } from './reader-onboarding.service';
 import { PasskeyFirstBootOffer } from './passkey-first-boot-offer.service';
 import { SavedSearchToggle } from './saved-search-toggle.service';
+import { FollowedStoryUnfollow } from './followed-story-unfollow.service';
 import { RefreshActions } from './refresh-actions.service';
 import { ListReload } from './list-reload.service';
 import { ReaderTabTitle } from './reader-tab-title.service';
@@ -123,6 +124,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
     ReaderOnboarding,
     PasskeyFirstBootOffer,
     SavedSearchToggle,
+    FollowedStoryUnfollow,
     RefreshActions,
     ListReload,
     LinkArticleSource,
@@ -181,6 +183,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly entryActions = inject(EntryStateActions);
   readonly markRead = inject(MarkReadActions);
   readonly savedSearch = inject(SavedSearchToggle);
+  readonly followedStory = inject(FollowedStoryUnfollow);
   readonly refresh = inject(RefreshActions);
 
   /** Feed tags keyed by subscription id — feeds the tag pills on entries and the

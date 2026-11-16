@@ -8,6 +8,8 @@ import { ReadingLayoutService } from '../reading-layout.service';
 import { EntriesStore } from '../state/entries.store';
 import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
+import { FollowedStoriesStore } from '../state/followed-stories.store';
+import { FollowedStoryDto } from '../trending/trending.models';
 import { VisibilitySwitchesStore } from '../state/visibility-switches.store';
 import { tagsById } from '../state/tag-ancestry';
 import { VisibilitySwitches } from '../state/visibility';
@@ -56,6 +58,7 @@ function listHeadingFor(subscription: SubscriptionDto, sections: SocialSection[]
       { provide: EntriesStore, useValue: {} },
       { provide: RecommendationsService, useValue: {} },
       { provide: SavedSearchesStore, useValue: {} },
+      { provide: FollowedStoriesStore, useValue: {} },
       { provide: VisibilitySwitchesStore, useValue: {} },
       { provide: TrendingWindowService, useValue: { window: signal('day') } },
       { provide: ReadingLayoutService, useValue: { mode: signal('magazine') } },
@@ -301,6 +304,7 @@ function headingWith(
       { provide: EntriesStore, useValue: {} },
       { provide: RecommendationsService, useValue: {} },
       { provide: SavedSearchesStore, useValue: {} },
+      { provide: FollowedStoriesStore, useValue: {} },
       { provide: VisibilitySwitchesStore, useValue: { switches: signal(switches) } },
       { provide: TrendingWindowService, useValue: { window: signal('day') } },
       { provide: ReadingLayoutService, useValue: { mode: signal('magazine') } },
@@ -397,7 +401,7 @@ describe('ListHeading for the Trending list (#2017)', () => {
         },
         { provide: RecommendationsService, useValue: {} },
         { provide: SavedSearchesStore, useValue: {} },
-        { provide: VisibilitySwitchesStore, useValue: {} },
+        { provide: FollowedStoriesStore, useValue: {} },
         { provide: VisibilitySwitchesStore, useValue: {} },
         { provide: TrendingWindowService, useValue: { window: signal('day') } },
         { provide: ReadingLayoutService, useValue: { mode: signal('magazine') } },
@@ -428,6 +432,7 @@ describe('ListHeading last refreshed on Trending (#2264)', () => {
         { provide: EntriesStore, useValue: {} },
         { provide: RecommendationsService, useValue: {} },
         { provide: SavedSearchesStore, useValue: {} },
+        { provide: FollowedStoriesStore, useValue: {} },
         { provide: VisibilitySwitchesStore, useValue: {} },
         { provide: ReadingLayoutService, useValue: { mode: signal('magazine') } },
       ],
@@ -446,5 +451,60 @@ describe('ListHeading last refreshed on Trending (#2264)', () => {
 
   it('has nothing to say before the window was loaded', () => {
     expect(trendingHeading('day').lastRefreshed()).toBeNull();
+  });
+});
+
+describe('ListHeading for a followed Trending story (#2128)', () => {
+  const followed = (headline: string | null): FollowedStoryDto => ({
+    id: 42,
+    headline,
+    newCount: 3,
+    quiet: false,
+    lastJoinedAt: '2026-11-16T10:00:00+00:00',
+  });
+
+  function storyHeading(stories: FollowedStoryDto[]): ListHeading {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
+      providers: [
+        ListHeading,
+        {
+          provide: ReaderRouteState,
+          useValue: { selection: signal<Selection>({ kind: 'followed-story', id: 42 }) },
+        },
+        {
+          provide: FollowedStoriesStore,
+          useValue: {
+            byId: (id: number) => stories.find((story) => story.id === id) ?? null,
+          },
+        },
+        { provide: SubscriptionsStore, useValue: {} },
+        { provide: LanguageService, useValue: { lang: signal('en') } },
+        {
+          provide: EntriesStore,
+          useValue: { entries: signal([anEntry({ id: 1 }), anEntry({ id: 2 })]) },
+        },
+        { provide: RecommendationsService, useValue: {} },
+        { provide: SavedSearchesStore, useValue: {} },
+        { provide: VisibilitySwitchesStore, useValue: {} },
+        { provide: TrendingWindowService, useValue: { window: signal('day') } },
+        { provide: ReadingLayoutService, useValue: { mode: signal('magazine') } },
+      ],
+    });
+    return TestBed.inject(ListHeading);
+  }
+
+  it("is titled by the story's headline", () => {
+    expect(storyHeading([followed('Storm hits the coast')]).title()).toBe('Storm hits the coast');
+  });
+
+  it('falls back to "Followed story" while the story has no headline', () => {
+    expect(storyHeading([]).title()).toBe('Followed story');
+    expect(storyHeading([followed(null)]).title()).toBe('Followed story');
+  });
+
+  it('counts the entries it lists', () => {
+    expect(storyHeading([followed('Storm')]).titleCount()).toEqual({ value: 2, counts: 'items' });
   });
 });

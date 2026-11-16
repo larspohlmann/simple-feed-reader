@@ -119,8 +119,8 @@ export class ListScrollReset {
   }
 
   /** Where a URL puts the user, or null when the URL is not the reader. The reader's
-   *  own route matcher decides, so a saved-search path counts like the root does. A
-   *  saved search's path outranks any `q`, so nothing is layered over it. */
+   *  own route matcher decides, so a saved-search or followed-story path counts like the root
+   *  does. Such a path outranks any `q`, so nothing is layered over it. */
   private readerPlaceFrom(url: string): ReaderPlace | null {
     const tree = this.router.parseUrl(url);
     const match = readerMatcher(tree.root.children[PRIMARY_OUTLET]?.segments ?? []);
@@ -129,9 +129,7 @@ export class ListScrollReset {
     const context = this.viewContext.context();
     const queryParams = convertToParamMap(tree.queryParams);
     const shown = selectionFromRoute(pathParams, queryParams, context).selection;
-    const list = pathParams.has('savedSearch')
-      ? shown
-      : listSelectionFrom(tree.queryParams, context);
+    const list = pathParams.keys.length > 0 ? shown : listSelectionFrom(tree.queryParams, context);
     return { list, shown };
   }
 }

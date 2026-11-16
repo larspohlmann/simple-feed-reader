@@ -19,7 +19,7 @@ describe('RunHeaderComponent', () => {
     const threeDaysAgo = new Date(Date.now() - 3 * 86_400_000).toISOString();
     const element = mount(threeDaysAgo);
 
-    const header = element.querySelector('.run-header');
+    const header = element.querySelector('[role="separator"]');
     expect(header).not.toBeNull();
     expect(header!.textContent).toContain('Generated');
     expect(header!.textContent).toContain('day');

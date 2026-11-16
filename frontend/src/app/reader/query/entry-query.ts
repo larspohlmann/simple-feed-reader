@@ -35,6 +35,7 @@ const VIEW_QUERY: BySelectionKind<EntryQuery> = {
   // query, so it carries the id and takes the unread refinement like any list.
   'saved-search': (selection) =>
     unreadAsFlag({ view: 'all', savedSearchId: selection.id }, selection),
+  'followed-story': (selection) => ({ view: 'all', followedStoryId: selection.id }),
   search: (selection) => unreadAsFlag({ view: 'all', q: selection.term }, selection),
 };
 

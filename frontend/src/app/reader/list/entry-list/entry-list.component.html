@@ -115,6 +115,8 @@
     @for (b of content.visibleBlocks(); track blockKey(b)) {
       @if (b.kind === 'run-header') {
         <app-run-header [generatedAt]="b.generatedAt" />
+      } @else if (b.kind === 'since-last-visit') {
+        <app-list-divider class="since-last-visit" [label]="'reader.sinceLastVisit' | transloco" />
       } @else {
         <!-- Same leave animation as the list layout: the slot collapses the
              block's height once its content has faded, closing the gap (#478). -->
@@ -163,6 +165,12 @@
         <app-run-header [generatedAt]="group.generatedAt!" />
       }
       @for (e of group.entries; track e.id) {
+        @if (e.id === content.visitEndId()) {
+          <app-list-divider
+            class="since-last-visit"
+            [label]="'reader.sinceLastVisit' | transloco"
+          />
+        }
         <!-- The slot collapses the gap when a row leaves; the inner box clips the
              fading content so the collapse reads as the row closing up (#478). -->
         <div class="row-slot" [class.leaving]="leavingIds().has(e.id)">

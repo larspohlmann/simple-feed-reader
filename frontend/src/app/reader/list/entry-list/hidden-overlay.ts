@@ -9,11 +9,31 @@ export interface RunHeaderBlock {
   generatedAt: string;
 }
 
-/** What the magazine branch actually renders: planner blocks plus run dividers. */
-export type ListBlock = MagazineBlock | RunHeaderBlock;
+/** Where a followed story's rows that joined since the last visit end (#2128). */
+export interface SinceVisitBlock {
+  kind: 'since-last-visit';
+}
+
+export const SINCE_VISIT_BLOCK: SinceVisitBlock = { kind: 'since-last-visit' };
+
+/** What the magazine branch actually renders: planner blocks plus dividers. */
+export type ListBlock = MagazineBlock | RunHeaderBlock | SinceVisitBlock;
+
+/** A block's identity across re-plans: a divider by what it marks, a block by its first entry. */
+export function listBlockKey(block: ListBlock): string {
+  if (block.kind === 'run-header') return `run-header:${block.generatedAt}`;
+  if (block.kind === 'since-last-visit') return block.kind;
+  return block.kind === 'group'
+    ? `g${block.subscriptionId}:${block.entries[0].id}`
+    : `${block.kind}:${block.entry.id}`;
+}
+
+function isDivider(block: ListBlock): block is RunHeaderBlock | SinceVisitBlock {
+  return block.kind === 'run-header' || block.kind === 'since-last-visit';
+}
 
 /** `blocks` minus the hidden ids, applied to the planner's OUTPUT so nothing
- *  re-plans (#1080): a group keeps its surviving members, and a run divider left
+ *  re-plans (#1080): a group keeps its surviving members, and a divider left
  *  with no block goes too. The input itself comes back when nothing is hidden. */
 export function blocksWithout(blocks: ListBlock[], hidden: ReadonlySet<number>): ListBlock[] {
   if (hidden.size === 0) return blocks;
@@ -33,18 +53,20 @@ export function groupMembersWithout(
 }
 
 function blockWithout(block: ListBlock, hidden: ReadonlySet<number>): ListBlock[] {
-  if (block.kind === 'run-header') return [block];
+  if (isDivider(block)) return [block];
   if (block.kind !== 'group') return hidden.has(block.entry.id) ? [] : [block];
   const entries = block.entries.filter((entry) => !hidden.has(entry.id));
   if (entries.length === 0) return [];
   return entries.length === block.entries.length ? [block] : [{ ...block, entries }];
 }
 
+/** A divider goes once nothing is left below it, and the visit's once nothing new is left above it. */
 function withoutEmptyRuns(blocks: ListBlock[]): ListBlock[] {
   return blocks.filter((block, index) => {
-    if (block.kind !== 'run-header') return true;
+    if (!isDivider(block)) return true;
     const next = blocks[index + 1];
-    return next !== undefined && next.kind !== 'run-header';
+    if (next === undefined || isDivider(next)) return false;
+    return block.kind === 'run-header' || index > 0;
   });
 }
 

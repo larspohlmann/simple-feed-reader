@@ -14,21 +14,8 @@ import { CompletedEntryDto, withCompleted } from './completed-entry';
 import { withPatchedRow } from './entry-rows';
 import { InFlightPatches, RowPatch, valuesBefore } from './in-flight-patches';
 import { RetryableFailure } from './retryable-failure';
-
-/** Adds `incoming` to `existing`, deduped case-insensitively, keeping first-seen
- *  casing — mirrors `MeilisearchIndex::matchedWordsOf`. A case-only duplicate
- *  would just lengthen the marker pattern for no benefit (search-marks.ts). */
-function unionMatchedWords(existing: string[], incoming: string[]): string[] {
-  const seen = new Set(existing.map((word) => word.toLowerCase()));
-  const union = [...existing];
-  for (const word of incoming) {
-    const key = word.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    union.push(word);
-  }
-  return union;
-}
+import { StoryVisit } from './story-visit';
+import { MatchedWords } from './matched-words';
 
 /** A failed state change has already rolled its row back when `onFailed` runs. */
 export interface StateSaveOutcome {
@@ -58,10 +45,11 @@ export class EntriesStore {
   readonly loadingMore = accountSignal(false);
   readonly error = this.failure.problem;
   readonly loadedAt = accountSignal<string>('');
-  /** Words the current search engine actually matched (empty outside a search, or
-   *  when the LIKE fallback answered it). `load()` REPLACES this (new result set);
-   *  `loadMore()` UNIONS into it (earlier pages' matched words must stay marked). */
-  readonly matchedWords = accountSignal<string[]>([]);
+  private readonly searchMatches = new MatchedWords();
+  readonly matchedWords = this.searchMatches.words;
+  private readonly storyVisit = new StoryVisit();
+  /** On a followed Trending story, the first page's rows that joined since the last visit (#2128). */
+  readonly newSinceVisitIds = this.storyVisit.newSinceVisitIds;
 
   private readonly query = accountSignal<EntryQuery | null>(null);
   /** The list request on the wire, cancelled once a newer load or another account supersedes it: a stale
@@ -87,18 +75,21 @@ export class EntriesStore {
     this.failure.clear();
     this.loadedAt.set(new Date().toISOString());
     this.listRequest?.unsubscribe();
+    this.storyVisit.starting(query);
     this.listRequest = this.api.entries(query).subscribe({
       next: (page) => {
         this.rawEntries.set(this.inFlight.overlayAll(page.entries));
         this.nextCursor.set(page.nextCursor);
-        this.matchedWords.set(page.matchedWords ?? []);
+        this.searchMatches.replaceWith(page);
+        this.storyVisit.landed(query, page);
         this.loading.set(false);
       },
       error: (error: HttpErrorResponse) => {
         // Drop the retained rows: loading ends here, so they would un-dim and
         // turn interactive again while belonging to a view the user has left.
         this.rawEntries.set([]);
-        this.matchedWords.set([]);
+        this.searchMatches.clear();
+        this.storyVisit.failed();
         this.failure.report(error, () => this.load(query));
         this.loading.set(false);
       },
@@ -143,12 +134,7 @@ export class EntriesStore {
           ...this.inFlight.overlayAll(page.entries),
         ]);
         this.nextCursor.set(page.nextCursor);
-        // Unioned, not replaced: the previous page's rows are still on
-        // screen and are still marked by the words they matched — see the
-        // field comment above.
-        this.matchedWords.update((existing) =>
-          unionMatchedWords(existing, page.matchedWords ?? []),
-        );
+        this.searchMatches.addFrom(page);
         this.loadingMore.set(false);
       },
       error: (error: HttpErrorResponse) => {
@@ -301,6 +287,15 @@ export class EntriesStore {
   /** Reflects a share the server already recorded, as for a repost; no request. */
   markSharedLocally(id: number): void {
     this.patchEntries([id], (entry) => (entry.isShared ? entry : { ...entry, isShared: true }));
+  }
+
+  /** Reflects an unfollow made away from the cards, as from the sidebar (#2128); no request. */
+  markStoryUnfollowedLocally(storyId: number): void {
+    const cards = this.rawEntries().filter((row) => row.story?.id === storyId);
+    this.patchEntries(
+      cards.map((card) => card.id),
+      (entry) => (entry.story ? { ...entry, story: { ...entry.story, followed: false } } : entry),
+    );
   }
 
   /** Hides a card's story (#2017, #2128); the card stays in the list, so the caller can let it leave in

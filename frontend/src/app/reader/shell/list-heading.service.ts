@@ -5,6 +5,7 @@ import { SubscriptionsStore } from '../state/subscriptions.store';
 import { EntriesStore } from '../state/entries.store';
 import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
+import { FollowedStoriesStore } from '../state/followed-stories.store';
 import { VisibilitySwitchesStore } from '../state/visibility-switches.store';
 import { sumEntries } from '../state/subscription-derivations';
 import { ReadingLayoutService } from '../reading-layout.service';
@@ -34,6 +35,7 @@ export class ListHeading {
   private readonly entries = inject(EntriesStore);
   private readonly recommendations = inject(RecommendationsService);
   private readonly savedSearches = inject(SavedSearchesStore);
+  private readonly followedStories = inject(FollowedStoriesStore);
   private readonly layout = inject(ReadingLayoutService);
   private readonly language = inject(LanguageService);
   private readonly i18n = inject(TranslocoService);
@@ -124,6 +126,9 @@ export class ListHeading {
     'saved-searches': () => this.i18n.translate('reader.savedSearches'),
     'saved-search': () =>
       this.activeSavedSearch()?.term ?? this.i18n.translate('reader.savedSearches'),
+    'followed-story': (selection) =>
+      this.followedStories.byId(selection.id)?.headline ??
+      this.i18n.translate('reader.followedStoryFallback'),
     all: () => this.i18n.translate('reader.allItems'),
     tag: () => this.selectedTag()?.name ?? this.i18n.translate('reader.tagFallback'),
     network: (selection) => this.networkTitle(selection),
@@ -204,6 +209,7 @@ export class ListHeading {
       const saved = this.activeSavedSearch();
       return bySwitch(selection, saved?.unreadCount ?? 0, saved?.memberCount ?? 0);
     },
+    'followed-story': () => items(this.entries.entries().length),
     search: () => items(0),
   };
 

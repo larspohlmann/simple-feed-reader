@@ -1374,6 +1374,7 @@
     "followedStories": "Sujets suivis",
     "toggleFollowedStories": "Afficher ou masquer les sujets suivis",
     "followedStoryFallback": "Sujet suivi",
+    "sinceLastVisit": "Depuis votre dernière visite",
     "followedStoryQuiet": "calme",
     "followedStoryQuietHint": "Rien de nouveau depuis deux jours",
     "followedStoryMenu": "Actions du sujet suivi",

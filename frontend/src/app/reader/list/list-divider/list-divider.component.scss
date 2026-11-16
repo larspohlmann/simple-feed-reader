@@ -1,17 +1,17 @@
-.run-header {
+.list-divider {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4) var(--space-2);
 }
 
-.run-header::after {
+.list-divider::after {
   content: '';
   flex: 1;
   border-top: 1px solid var(--accent);
 }
 
-.run-header__label {
+.list-divider__label {
   font-size: var(--fs-xs, var(--fs-sm));
   color: var(--text-muted);
   text-transform: uppercase;

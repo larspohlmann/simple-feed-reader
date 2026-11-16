@@ -49,10 +49,7 @@
               [label]="'reader.followedStoryMenu' | transloco"
             >
               <ng-template>
-                <button
-                  role="menuitem"
-                  (click)="followedStories.unfollow(story.id); rows.closeMenu()"
-                >
+                <button role="menuitem" (click)="unfollowing.unfollow(story.id); rows.closeMenu()">
                   {{ 'reader.unfollowStory' | transloco }}
                 </button>
               </ng-template>

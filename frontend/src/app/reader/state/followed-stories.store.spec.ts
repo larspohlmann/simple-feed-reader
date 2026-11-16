@@ -153,14 +153,17 @@ describe('FollowedStoriesStore (#2128)', () => {
       expect(store.byId(3)?.newCount).toBe(0);
     });
 
-    it('does not post for a story that is not followed', () => {
+    it('posts for a story opened before the stories have loaded, and zeroes it once they do', () => {
+      const pending = new Subject<{ stories: FollowedStoryDto[] }>();
       const opened = jest.fn(() => of(undefined));
-      const store = setup({ followed: answering(), opened });
+      const store = setup({ followed: () => pending, opened });
       store.load();
 
-      store.markOpened(99);
+      store.markOpened(3);
+      pending.next({ stories: rows });
 
-      expect(opened).not.toHaveBeenCalled();
+      expect(opened).toHaveBeenCalledWith(3);
+      expect(store.byId(3)?.newCount).toBe(0);
     });
   });
 

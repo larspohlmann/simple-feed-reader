@@ -1370,6 +1370,7 @@
     "followedStories": "Verfolgte Geschichten",
     "toggleFollowedStories": "Verfolgte Geschichten ein- oder ausklappen",
     "followedStoryFallback": "Verfolgte Geschichte",
+    "sinceLastVisit": "Seit deinem letzten Besuch",
     "followedStoryQuiet": "ruhig",
     "followedStoryQuietHint": "Seit zwei Tagen nichts Neues",
     "followedStoryMenu": "Aktionen für die verfolgte Geschichte",

@@ -1480,6 +1480,19 @@ describe('EntriesStore', () => {
         ctrl.expectNone('https://api.test/api/trending/stories/10/follow');
       });
 
+      it('shows a story unfollowed elsewhere as unfollowed on its cards, with no request', () => {
+        loadThree();
+
+        store.markStoryUnfollowedLocally(20);
+
+        expect([followedOnScreen(1), followedOnScreen(2), followedOnScreen(3)]).toEqual([
+          false,
+          false,
+          false,
+        ]);
+        ctrl.expectNone(() => true);
+      });
+
       it('sends nothing while the same story is still on the wire', () => {
         loadThree();
 
@@ -1489,6 +1502,97 @@ describe('EntriesStore', () => {
         followRequest(10).flush(null, noContent);
         expect(followedOnScreen(1)).toBe(true);
       });
+    });
+  });
+  describe('a followed Trending story (#2128)', () => {
+    const storyUrl = 'https://api.test/api/entries/trending-stories/42';
+    const openedUrl = 'https://api.test/api/trending/stories/42/opened';
+    const noContent = { status: 204, statusText: 'No Content' };
+    const storyPage = (ids: number[], newEntryIds: number[], nextCursor: string | null = null) => ({
+      entries: ids.map((id) => entry(id)),
+      nextCursor,
+      lastOpenedAt: '2026-11-16T08:00:00+00:00',
+      newEntryIds,
+    });
+    const storyRequest = () => ctrl.expectOne((request) => request.url === storyUrl);
+    const openStory = () => {
+      store.load({ view: 'all', followedStoryId: 42 });
+      storyRequest().flush(storyPage([1, 2, 3], [1, 2], 'C1'));
+    };
+    const newIds = () => [...store.newSinceVisitIds()].sort();
+
+    it('marks what joined since the last visit and records the visit once', () => {
+      openStory();
+
+      expect(newIds()).toEqual([1, 2]);
+      const opened = ctrl.match(openedUrl);
+      expect(opened.map((request) => request.request.method)).toEqual(['POST']);
+      opened[0].flush(null, noContent);
+    });
+
+    it('records nothing before the first page has landed', () => {
+      store.load({ view: 'all', followedStoryId: 42 });
+
+      ctrl.expectNone(openedUrl);
+      storyRequest().flush(storyPage([1], []));
+      ctrl.expectOne(openedUrl).flush(null, noContent);
+    });
+
+    it('leaves the marks alone and records nothing on the next page', () => {
+      openStory();
+      ctrl.expectOne(openedUrl).flush(null, noContent);
+
+      store.loadMore();
+      storyRequest().flush(storyPage([4], [4]));
+
+      expect(newIds()).toEqual([1, 2]);
+      ctrl.expectNone(openedUrl);
+    });
+
+    it('keeps its marks and records no second visit when the same story loads again', () => {
+      openStory();
+      ctrl.expectOne(openedUrl).flush(null, noContent);
+
+      store.reload();
+      storyRequest().flush(storyPage([9, 1, 2, 3], [9]));
+
+      expect(newIds()).toEqual([1, 2, 9]);
+      ctrl.expectNone(openedUrl);
+    });
+
+    it('clears the marks on another list, and records a new visit on coming back', () => {
+      openStory();
+      ctrl.expectOne(openedUrl).flush(null, noContent);
+
+      store.load({ view: 'all' });
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({ entries: [entry(1)], nextCursor: null });
+      expect(newIds()).toEqual([]);
+
+      openStory();
+      ctrl.expectOne(openedUrl).flush(null, noContent);
+    });
+
+    it('marks nothing and records no visit for a story no longer followed', () => {
+      openStory();
+      ctrl.expectOne(openedUrl).flush(null, noContent);
+
+      store.load({ view: 'all', followedStoryId: 43 });
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries/trending-stories/43')
+        .flush(
+          {
+            type: 'trending_story_not_followed',
+            title: 'Trending story not followed',
+            status: 404,
+          },
+          { status: 404, statusText: 'Not Found' },
+        );
+
+      expect(newIds()).toEqual([]);
+      ctrl.expectNone('https://api.test/api/trending/stories/43/opened');
+      expect(store.error()?.type).toBe('trending_story_not_followed');
     });
   });
 });

@@ -65,9 +65,9 @@ export class FollowedStoriesStore {
     });
   }
 
-  /** Zero at once; a failed POST keeps the zero and the next load puts the server's count back. */
+  /** Zero at once; a failed POST keeps the zero and the next load puts the server's count back. The caller has
+   *  just been served the story, so it posts even before the stories have loaded. */
   markOpened(id: number): void {
-    if (!this.storiesById().has(id)) return;
     this.zeroedSinceLoad.update((ids) => new Set(ids).add(id));
     this.followed.update((stories) =>
       stories.map((story) => (story.id === id ? { ...story, newCount: 0 } : story)),

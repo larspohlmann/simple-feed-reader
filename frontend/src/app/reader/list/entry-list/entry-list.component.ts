@@ -22,6 +22,7 @@ import { ProgressRailComponent } from '../../../shared/progress-rail/progress-ra
 import { EntryRowComponent } from '../entry-row/entry-row.component';
 import { RecommendationStripComponent } from '../recommendation-strip/recommendation-strip.component';
 import { RunHeaderComponent } from '../run-header/run-header.component';
+import { ListDividerComponent } from '../list-divider/list-divider.component';
 import { MagazineBlock } from '../magazine/magazine-block';
 import { MagazineBlockComponent, NO_TAGS } from '../magazine/magazine-block.component';
 import { ListHeaderComponent, TitleCount } from '../list-header/list-header.component';
@@ -41,7 +42,7 @@ import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coor
 import { UnlockedVideoElements } from '../../media/autoplay/unlocked-video-elements';
 import { NearViewportMedia } from '../../media/near-viewport-media';
 import { pauseMediaWhileAnEntryIsOpen } from '../magazine/blocks/entry-media/pause-media';
-import { ListBlock } from './hidden-overlay';
+import { listBlockKey } from './hidden-overlay';
 import { ListContent } from './list-content';
 import { PullToRefresh } from './pull-to-refresh';
 import { ListScrollState } from './list-scroll-state';
@@ -72,6 +73,7 @@ const WAIT_OVERLAY_DELAY_MS = 150;
     EntryRowComponent,
     RecommendationStripComponent,
     RunHeaderComponent,
+    ListDividerComponent,
     MagazineBlockComponent,
     ListHeaderComponent,
     ListEmptyStateComponent,
@@ -115,6 +117,8 @@ export class EntryListComponent implements OnDestroy {
    *  in their saved view). A leaving row fades then collapses in place, staying
    *  in `entries` so the magazine plan keeps its shape; a reload clears it. */
   readonly leavingIds = input<ReadonlySet<number>>(new Set());
+  /** On a followed story, the rows that joined since the last visit; the "Since your last visit" divider follows them. */
+  readonly newSinceVisitIds = input<ReadonlySet<number>>(new Set());
 
   readonly loading = input.required<boolean>();
   readonly mutating = input(false);
@@ -227,6 +231,7 @@ export class EntryListComponent implements OnDestroy {
     selection: this.selection,
     newestRunId: this.newestRunId,
     leavingIds: this.leavingIds,
+    newSinceVisitIds: this.newSinceVisitIds,
   });
 
   /**
@@ -410,12 +415,7 @@ export class EntryListComponent implements OnDestroy {
     return this.feedTags().get(subscriptionId) ?? NO_TAGS;
   }
 
-  blockKey(block: ListBlock): string {
-    if (block.kind === 'run-header') return `run-header:${block.generatedAt}`;
-    return block.kind === 'group'
-      ? `g${block.subscriptionId}:${block.entries[0].id}`
-      : `${block.kind}:${block.entry.id}`;
-  }
+  protected readonly blockKey = listBlockKey;
 
   /** The entry a recommendation strip should read, or null for a group block
    *  (which carries several entries and no single reason to show). */

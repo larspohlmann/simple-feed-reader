@@ -14,6 +14,7 @@ import {
   selectionFromParams,
   searchTermOf,
   selectedGroupOf,
+  selectedFollowedStoryIdOf,
   selectedSavedSearchIdOf,
   selectedTagIdOf,
   selectionQueryParams,
@@ -920,5 +921,40 @@ describe('identityKey (#2107)', () => {
       sameSelection({ kind: 'favorites' }, withListOrder({ kind: 'favorites' }, 'newest')),
     ).toBe(true);
     expect(sameSelection({ kind: 'favorites' }, { kind: 'kept' })).toBe(false);
+  });
+});
+
+describe('a followed Trending story (#2128)', () => {
+  const story: Selection = { kind: 'followed-story', id: 42 };
+
+  it('is told apart by its id', () => {
+    expect(identityKey(story)).toBe('42');
+    expect(sameSelection(story, { kind: 'followed-story', id: 43 })).toBe(false);
+  });
+
+  it('takes the newest/oldest order, remembered per story, and no unread switch', () => {
+    expect(hasListOrder(story)).toBe(true);
+    expect(listOrderKey(story)).toBe('followed-story:42');
+    expect(hasUnreadFilter(story)).toBe(false);
+  });
+
+  it('asks for the story by id, oldest first when the order says so', () => {
+    expect(queryFromSelection(story)).toEqual({ view: 'all', followedStoryId: 42 });
+    expect(queryFromSelection(withListOrder(story, 'oldest'))).toEqual({
+      view: 'all',
+      followedStoryId: 42,
+      order: 'oldest',
+    });
+  });
+
+  it('offers no Mark all read and no scoped refresh', () => {
+    expect(markReadTarget(story)).toBeNull();
+    expect(canScopedRefresh(story)).toBe(false);
+  });
+
+  it("reads the story's id, null on any other list", () => {
+    expect(selectedFollowedStoryIdOf(story)).toBe(42);
+    expect(selectedFollowedStoryIdOf({ kind: 'saved-search', id: 42, unread: false })).toBeNull();
+    expect(selectedFollowedStoryIdOf({ kind: 'trending', window: 'day' })).toBeNull();
   });
 });

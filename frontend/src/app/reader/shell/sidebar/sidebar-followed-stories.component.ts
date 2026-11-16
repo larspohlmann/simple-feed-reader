@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, signal } f
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
-import { FollowedStoriesStore } from '../../state/followed-stories.store';
+import { FollowedStoryUnfollow } from '../followed-story-unfollow.service';
 import { FollowedStoryDto } from '../../trending/trending.models';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
@@ -19,7 +19,7 @@ export class SidebarFollowedStoriesComponent {
   readonly stories = input<FollowedStoryDto[]>([]);
   readonly activeStoryId = input<number | null>(null);
 
-  protected readonly followedStories = inject(FollowedStoriesStore);
+  protected readonly unfollowing = inject(FollowedStoryUnfollow);
   protected readonly rows = inject(SidebarRowActions);
 
   readonly expanded = signal(false);
