@@ -1,0 +1,150 @@
+[
+  {
+    "id": "1100",
+    "type": "favourite",
+    "created_at": "2026-11-16T09:00:00.000Z",
+    "account": {
+      "id": "201",
+      "acct": "bob",
+      "display_name": "Bob",
+      "avatar": "https://cdn.example/bob.png"
+    },
+    "status": {
+      "id": "1100",
+      "uri": "https://mastodon.example/users/alice/statuses/1100",
+      "content": "<p>First post</p><p>second para</p>",
+      "in_reply_to_account_id": null,
+      "account": {
+        "id": "109",
+        "acct": "alice"
+      }
+    }
+  },
+  {
+    "id": "1090",
+    "type": "reblog",
+    "created_at": "2026-11-16T08:55:00.000Z",
+    "account": {
+      "id": "202",
+      "acct": "carol@other.example",
+      "display_name": "",
+      "avatar": "https://cdn.example/carol.png"
+    },
+    "status": {
+      "id": "1090",
+      "uri": "https://mastodon.example/users/alice/statuses/1090",
+      "content": "<p>Boosted</p>",
+      "in_reply_to_account_id": null,
+      "account": {
+        "id": "109",
+        "acct": "alice"
+      }
+    }
+  },
+  {
+    "id": "1080",
+    "type": "mention",
+    "created_at": "2026-11-16T08:50:00.000Z",
+    "account": {
+      "id": "203",
+      "acct": "dave",
+      "display_name": "Dave",
+      "avatar": "https://cdn.example/dave.png"
+    },
+    "status": {
+      "id": "5001",
+      "uri": "https://other.example/users/dave/statuses/5001",
+      "content": "<p>a reply</p>",
+      "in_reply_to_account_id": "109",
+      "account": {
+        "id": "203",
+        "acct": "dave"
+      }
+    }
+  },
+  {
+    "id": "1070",
+    "type": "mention",
+    "created_at": "2026-11-16T08:20:00.000Z",
+    "account": {
+      "id": "204",
+      "acct": "erin",
+      "display_name": "Erin",
+      "avatar": "https://cdn.example/erin.png"
+    },
+    "status": {
+      "id": "5002",
+      "uri": "https://other.example/users/erin/statuses/5002",
+      "content": "<p>hi @alice</p>",
+      "in_reply_to_account_id": "999",
+      "account": {
+        "id": "204",
+        "acct": "erin"
+      }
+    }
+  },
+  {
+    "id": "1060",
+    "type": "follow",
+    "created_at": "2026-11-16T08:10:00.000Z",
+    "account": {
+      "id": "205",
+      "acct": "bob@other.example",
+      "display_name": "Bob Other",
+      "avatar": "https://cdn.example/bob.png"
+    }
+  },
+  {
+    "id": "1050",
+    "type": "admin.sign_up",
+    "created_at": "2026-11-16T08:05:00.000Z",
+    "account": {
+      "id": "206",
+      "acct": "zed",
+      "display_name": "Zed",
+      "avatar": "https://cdn.example/zed.png"
+    }
+  },
+  {
+    "id": "1040",
+    "type": "poll",
+    "created_at": "2026-11-16T08:00:00.000Z",
+    "account": {
+      "id": "109",
+      "acct": "alice",
+      "display_name": "Alice",
+      "avatar": "https://cdn.example/alice.png"
+    },
+    "status": {
+      "id": "1040",
+      "uri": "https://mastodon.example/users/alice/statuses/1040",
+      "content": "<p>Poll?</p>",
+      "in_reply_to_account_id": null,
+      "account": {
+        "id": "109",
+        "acct": "alice"
+      }
+    }
+  },
+  {
+    "id": "1030",
+    "type": "quote",
+    "created_at": "2026-11-16T07:00:00.000Z",
+    "account": {
+      "id": "207",
+      "acct": "gus",
+      "display_name": "Gus",
+      "avatar": "https://cdn.example/gus.png"
+    },
+    "status": {
+      "id": "5003",
+      "uri": "https://other.example/users/gus/statuses/5003",
+      "content": "<p>quoting</p>",
+      "in_reply_to_account_id": null,
+      "account": {
+        "id": "207",
+        "acct": "gus"
+      }
+    }
+  }
+]
