@@ -89,7 +89,7 @@ final class SocialNotificationControllerTest extends ApiTestCase
         $client->request('GET', '/api/me/notifications?network=lemmy');
 
         self::assertResponseIsSuccessful();
-        self::assertSame(['groups' => [], 'nextCursor' => null, 'scopeMissing' => []], $this->payload($client));
+        self::assertSame(['groups' => [], 'nextCursor' => null, 'scopeMissing' => [], 'needsReconnect' => []], $this->payload($client));
     }
 
     public function testUnknownNetworkIs400(): void
@@ -222,6 +222,21 @@ final class SocialNotificationControllerTest extends ApiTestCase
         self::assertSame([$account->getHandle()], $this->payload($client)['scopeMissing']);
     }
 
+    public function testListsNeedsReconnectHandles(): void
+    {
+        $client = self::createClient();
+        $user = $this->signIn($client, 'notification-reconnect@example.test');
+        $account = SocialAccounts::mastodonOf($user);
+        $account->markNeedsReconnect();
+        $this->persisted($account);
+        $this->persisted(SocialAccounts::blueskyAs($user, 'did:plc:fine'));
+
+        $client->request('GET', '/api/me/notifications?network=mastodon');
+
+        self::assertResponseIsSuccessful();
+        self::assertSame([$account->getHandle()], $this->payload($client)['needsReconnect']);
+    }
+
     public function testListNeedsAToken(): void
     {
         $client = self::createClient();
@@ -231,10 +246,10 @@ final class SocialNotificationControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
     }
 
-    /** @return array{groups: list<array<string, mixed>>, nextCursor: int|null, scopeMissing: list<string>} */
+    /** @return array{groups: list<array<string, mixed>>, nextCursor: int|null, scopeMissing: list<string>, needsReconnect: list<string>} */
     private function listPayload(KernelBrowser $client): array
     {
-        /** @var array{groups: list<array<string, mixed>>, nextCursor: int|null, scopeMissing: list<string>} $payload */
+        /** @var array{groups: list<array<string, mixed>>, nextCursor: int|null, scopeMissing: list<string>, needsReconnect: list<string>} $payload */
         $payload = $this->payload($client);
 
         return $payload;

@@ -7,6 +7,7 @@ namespace App\Service\Social\Notification;
 use App\Entity\SocialAccount;
 use App\Entity\SocialNotification;
 use App\Entity\User;
+use App\Enum\SocialAccountStatus;
 use App\Enum\SocialNetwork;
 use App\Enum\SocialNotificationKind;
 use App\Repository\SocialAccountRepository;
@@ -31,7 +32,7 @@ final readonly class NotificationList
     {
         $accounts = $this->accounts->findAllOnNetwork($user, $network);
         if ($accounts === []) {
-            return new NotificationListPageModel([], null, []);
+            return new NotificationListPageModel([], null, [], []);
         }
 
         $accountIds = array_map(static fn (SocialAccount $account): int => $account->requireId(), $accounts);
@@ -64,7 +65,25 @@ final readonly class NotificationList
             $groups,
             $hasNextPage ? $shown[array_key_last($shown)]['latestId'] : null,
             $this->polls->scopeMissingHandles($accountIds),
+            self::needingReconnect($accounts),
         );
+    }
+
+    /**
+     * @param list<SocialAccount> $accounts
+     *
+     * @return list<string>
+     */
+    private static function needingReconnect(array $accounts): array
+    {
+        return array_values(array_map(
+            static fn (SocialAccount $account): string => $account->getHandle(),
+            array_filter(
+                $accounts,
+                static fn (SocialAccount $account): bool
+                    => $account->getStatus() === SocialAccountStatus::NeedsReconnect,
+            ),
+        ));
     }
 
     /** @param non-empty-list<SocialNotification> $newest */

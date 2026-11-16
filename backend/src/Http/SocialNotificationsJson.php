@@ -18,7 +18,8 @@ final class SocialNotificationsJson
      *     actorCount: int, excerpt: string|null, linkUrl: string, latestAt: string, seen: bool
      *   }>,
      *   nextCursor: int|null,
-     *   scopeMissing: list<string>
+     *   scopeMissing: list<string>,
+     *   needsReconnect: list<string>
      * }
      */
     public static function page(NotificationListPageModel $page): array
@@ -27,6 +28,7 @@ final class SocialNotificationsJson
             'groups' => array_map(self::group(...), $page->groups),
             'nextCursor' => $page->nextCursor,
             'scopeMissing' => $page->scopeMissingHandles,
+            'needsReconnect' => $page->needsReconnectHandles,
         ];
     }
 
