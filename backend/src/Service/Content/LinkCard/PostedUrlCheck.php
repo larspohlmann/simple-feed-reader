@@ -57,10 +57,10 @@ final readonly class PostedUrlCheck
 
     private function kept(string $postedUrl, PageCardModel $posted, string $reason): PageCardModel
     {
-        $this->logger->info(
-            $reason,
-            ['host' => HostKey::forUrl($postedUrl), 'strippedKeys' => TrackingFreeUrl::strippedKeysIn($postedUrl)],
-        );
+        $this->logger->info($reason, [
+            'host' => HostKey::forUrl($postedUrl),
+            'strippedKeys' => TrackingFreeUrl::read($postedUrl)->strippedKeys(),
+        ]);
 
         return $posted->card === null
             ? $posted

@@ -29,12 +29,6 @@ final class TrackingFreeUrl
         return TrackedUrl::inQuery($query, $host)->keptQuery();
     }
 
-    /** @return list<string> the keys the cleaner strips from the URL, as it reads them */
-    public static function strippedKeysIn(string $url): array
-    {
-        return TrackedUrl::of($url)->strippedKeys();
-    }
-
     private function __construct()
     {
     }
