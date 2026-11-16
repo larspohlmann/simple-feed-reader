@@ -34,11 +34,14 @@ final readonly class OneWinnerPerArticle
                 $kept[] = $winner;
                 continue;
             }
-            $stays = \array_key_exists($key, $outletWinnerByKey)
-                ? $outletWinnerByKey[$key] === $winner['id']
-                : !isset($seenKeys[$key]);
-            $seenKeys[$key] = true;
-            if ($stays) {
+            if (\array_key_exists($key, $outletWinnerByKey)) {
+                if ($outletWinnerByKey[$key] === $winner['id']) {
+                    $kept[] = $winner;
+                }
+                continue;
+            }
+            if (!isset($seenKeys[$key])) {
+                $seenKeys[$key] = true;
                 $kept[] = $winner;
             }
         }

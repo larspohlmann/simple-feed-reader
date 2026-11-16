@@ -10,6 +10,7 @@ use App\Entity\LinkCardContent;
 use App\Repository\LinkCardRepository;
 use App\Repository\TitledEntry;
 use App\Service\Curation\Recommendation\Pool\ArticleLines;
+use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
 use App\Service\Foundation\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SharedLinks;
@@ -60,14 +61,14 @@ final class ArticleLinesTest extends DbTestCase
 
         self::assertSame(
             [$third->requireId(), $first->requireId(), $second->requireId()],
-            array_map(static fn ($line) => $line->entryId, $lines),
+            array_map(static fn (ArticleLineModel $line): int => $line->entryId, $lines),
         );
     }
 
     /**
      * @param list<Entry> $entries
      *
-     * @return list<\App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel>
+     * @return list<ArticleLineModel>
      */
     private function lines(array $entries): array
     {

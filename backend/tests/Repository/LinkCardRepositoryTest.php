@@ -214,6 +214,22 @@ final class LinkCardRepositoryTest extends DbTestCase
         self::assertSame((new UrlNormalizer())->hash($landing), $stories[$entry->requireId()]->urlHash);
     }
 
+    public function testAShortLinkLandingOnAFrontPageNamesNoStory(): void
+    {
+        $entry = $this->entry('one');
+        $short = $this->linkOf(new LinkCardContent('https://n.pr/x', 'Short', null, null, 'Example'));
+        $this->repository()->append($entry, [$short]);
+        $this->entityManager->flush();
+        $landing = 'https://www.npr.org/';
+        $this->entityManager->getConnection()->executeStatement(
+            "UPDATE shared_link_resolution SET status = 'resolved', resolved_url = ?, resolved_url_hash = ?"
+            . ' WHERE shared_link_id = ?',
+            [$landing, (new UrlNormalizer())->hash($landing), $short->requireId()],
+        );
+
+        self::assertSame([], $this->repository()->storyLinksByEntryIds([$entry->requireId()]));
+    }
+
     public function testStoryLinksForNoEntriesIsEmpty(): void
     {
         self::assertSame([], $this->repository()->storyLinksByEntryIds([]));

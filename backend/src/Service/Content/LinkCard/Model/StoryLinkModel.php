@@ -16,7 +16,7 @@ final readonly class StoryLinkModel
 
     public function summary(): string
     {
-        $headline = $this->title . ' (' . $this->siteName . ')';
+        $headline = trim($this->siteName) === '' ? $this->title : $this->title . ' (' . $this->siteName . ')';
 
         return $this->description === null || trim($this->description) === ''
             ? $headline

@@ -23,6 +23,20 @@ final class StoryLinkModelTest extends TestCase
         self::assertSame('Title (Example)', (new StoryLinkModel('hash', 'Title', $description, 'Example'))->summary());
     }
 
+    #[DataProvider('siteNamesThatSayNothing')]
+    public function testTheSummaryOmitsABlankSiteName(string $siteName): void
+    {
+        self::assertSame('Title: About it', (new StoryLinkModel('hash', 'Title', 'About it', $siteName))->summary());
+        self::assertSame('Title', (new StoryLinkModel('hash', 'Title', null, $siteName))->summary());
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function siteNamesThatSayNothing(): iterable
+    {
+        yield 'empty' => [''];
+        yield 'blank' => [" \t"];
+    }
+
     /** @return iterable<string, array{?string}> */
     public static function descriptionsThatSayNothing(): iterable
     {
