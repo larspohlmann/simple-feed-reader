@@ -52,7 +52,7 @@ final readonly class ScoringRecommendationEngine implements RecommendationEngine
             return $this->runFailure->fail($run, self::NO_PROFILE);
         }
         if ($run->getProgress()->allBatchCallsDone) {
-            return $this->finalizer->finalize($run, $this->ranker->ranked($run->getWinners()));
+            return $this->finalizer->finalize($run, $this->ranker->ranked($tick->userId(), $run->getWinners()));
         }
 
         return $this->batchWavePhase->advance(
