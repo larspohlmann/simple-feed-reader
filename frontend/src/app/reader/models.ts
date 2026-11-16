@@ -156,8 +156,6 @@ export interface SubscriptionDto {
   social: SocialFeedRefDto | null;
 }
 
-/** The totals both sidebar payloads carry: the user-wide favourite, kept, shared and viewed
- *  badges, the unread totals per scope, the Trending count and the unseen notifications. */
 interface SidebarTotalsDto {
   favoritesCount: number;
   keptCount: number;
@@ -183,7 +181,6 @@ export interface SubscriptionCountsResponse extends SidebarTotalsDto {
   subscriptions: { id: number; unreadCount: number; entryCount: number }[];
 }
 
-/** Unseen social notifications of one network. */
 export interface NotificationCountDto {
   network: SocialNetworkName;
   unseenCount: number;

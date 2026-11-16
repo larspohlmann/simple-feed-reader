@@ -144,7 +144,6 @@ export function trendingWindowOf(selection: Selection): TrendingWindow | null {
   return selection.kind === 'trending' ? selection.window : null;
 }
 
-/** The network whose notifications are on screen, or null on every other list. */
 export function notificationsNetworkOf(selection: Selection): SocialNetworkName | null {
   return selection.kind === 'notifications' ? selection.network : null;
 }
@@ -341,7 +340,6 @@ function viewFromParams(paramMap: ParamMap, context: ViewContext): ParsedView {
   return { selection: feedScopedSelection(paramMap), urlCorrection: null };
 }
 
-/** Without a known network there is nothing to list, so the URL opens All items as an unknown view does. */
 function notificationsFromParams(paramMap: ParamMap): ParsedView {
   const network = selectionParam(paramMap, 'network');
   if (!isSocialNetworkName(network)) {

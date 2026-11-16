@@ -7,7 +7,6 @@ import {
   listOrderOf,
 } from './query';
 
-/** The entry list a selection loads, or null where the pane shows no entries. */
 export function queryFromSelection(selection: Selection): EntryQuery | null {
   const query = bySelectionKind(VIEW_QUERY, selection);
   if (query === null) return null;
