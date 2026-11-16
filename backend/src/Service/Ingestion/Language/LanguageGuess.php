@@ -18,7 +18,7 @@ final readonly class LanguageGuess
     ) {
     }
 
-    public function overrulesAStatedLanguage(string $text): bool
+    public function readsReliably(string $text): bool
     {
         return mb_strlen($text) >= self::LONG_TEXT_LENGTH;
     }
@@ -26,7 +26,7 @@ final readonly class LanguageGuess
     /** The guess where it may overrule a stated language, on a long text; null on a short one. */
     public function confidentFor(string $text): ?FeedLanguage
     {
-        return $this->overrulesAStatedLanguage($text) ? $this->bestFor($text) : null;
+        return $this->readsReliably($text) ? $this->bestFor($text) : null;
     }
 
     public function bestFor(string $text): ?FeedLanguage

@@ -28,7 +28,7 @@ final readonly class SocialEntryLanguage
         }
 
         $stated = FeedLanguage::fromTag($entry->statedLanguage);
-        if (null === $stated || !$this->languageGuess->overrulesAStatedLanguage($body)) {
+        if (null === $stated || !$this->languageGuess->readsReliably($body)) {
             return $stated;
         }
 
@@ -39,8 +39,11 @@ final readonly class SocialEntryLanguage
     {
         $text = $entry->headline->text . "\n" . $body;
         $guess = $this->languageGuess->bestFor($text);
-        if (null !== $guess || $this->languageGuess->overrulesAStatedLanguage($body)) {
+        if (null !== $guess) {
             return $guess;
+        }
+        if ($this->languageGuess->readsReliably($body)) {
+            return null;
         }
 
         // A derived headline repeats the body's first sentence: counted twice, it would break the vote's ties.
