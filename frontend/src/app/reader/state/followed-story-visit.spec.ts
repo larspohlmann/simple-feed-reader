@@ -129,4 +129,12 @@ describe('FollowedStoryVisit (#2128)', () => {
     expect(newIds()).toEqual([]);
     expect(markOpened).toHaveBeenCalledTimes(2);
   });
+
+  it('hands out one empty set outside a visit, so the list does not re-segment on every load', () => {
+    const outside = visit.newSinceVisitIds();
+
+    landAnotherList();
+
+    expect(visit.newSinceVisitIds()).toBe(outside);
+  });
 });

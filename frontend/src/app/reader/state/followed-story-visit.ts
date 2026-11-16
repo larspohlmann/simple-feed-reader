@@ -5,6 +5,8 @@ import { EntriesStore } from './entries.store';
 import { LandedList } from './landed-list';
 import { FollowedStoriesStore } from './followed-stories.store';
 
+const NONE_NEW: ReadonlySet<number> = Object.freeze(new Set<number>());
+
 /** A visit to a followed Trending story's list (#2128): it begins at the story's "last opened" its first page
  *  carries, records the one "opened", and ends when any other list lands or any list fails to load. */
 @Injectable({ providedIn: 'root' })
@@ -36,7 +38,7 @@ export class FollowedStoryVisit {
 
   private newAmong(entries: EntryDto[]): ReadonlySet<number> {
     const openedAt = this.visitOpenedAt();
-    if (openedAt === null) return new Set();
+    if (openedAt === null) return NONE_NEW;
     const since = Date.parse(openedAt);
     return new Set(
       entries
