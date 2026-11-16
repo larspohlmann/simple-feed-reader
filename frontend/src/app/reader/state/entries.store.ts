@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Injectable, computed, inject } from '@angular/core';
-import { Observable, Subscription, finalize, tap } from 'rxjs';
+import { Injectable, inject } from '@angular/core';
+import { Observable, Subject, Subscription, finalize, tap } from 'rxjs';
 import { Problem, parseProblem } from '../../core/problem';
 import { accountSignal, onIdentityChange } from '../../core/auth/session-identity';
 import { ReaderApi } from '../reader-api';
@@ -14,7 +14,7 @@ import { CompletedEntryDto, withCompleted } from './completed-entry';
 import { withPatchedRow } from './entry-rows';
 import { InFlightPatches, RowPatch, valuesBefore } from './in-flight-patches';
 import { RetryableFailure } from './retryable-failure';
-import { StoryVisit } from './story-visit';
+import { LandedList } from './landed-list';
 import { MatchedWords } from './matched-words';
 
 /** A failed state change has already rolled its row back when `onFailed` runs. */
@@ -47,9 +47,8 @@ export class EntriesStore {
   readonly loadedAt = accountSignal<string>('');
   private readonly searchMatches = new MatchedWords();
   readonly matchedWords = this.searchMatches.words;
-  private readonly storyVisit = new StoryVisit();
-  /** On a followed Trending story, the loaded rows that joined since the visit began (#2128). */
-  readonly newSinceVisitIds = computed(() => this.storyVisit.newAmong(this.rawEntries()));
+  private readonly landedLists = new Subject<LandedList>();
+  readonly listLanded: Observable<LandedList> = this.landedLists.asObservable();
 
   private readonly query = accountSignal<EntryQuery | null>(null);
   /** The list request on the wire, cancelled once a newer load or another account supersedes it: a stale
@@ -80,8 +79,8 @@ export class EntriesStore {
         this.rawEntries.set(this.inFlight.overlayAll(page.entries));
         this.nextCursor.set(page.nextCursor);
         this.searchMatches.replaceWith(page);
-        this.storyVisit.landed(query, page);
         this.loading.set(false);
+        this.landedLists.next({ query, page });
       },
       error: (error: HttpErrorResponse) => {
         // Drop the retained rows: loading ends here, so they would un-dim and
@@ -90,6 +89,7 @@ export class EntriesStore {
         this.searchMatches.clear();
         this.failure.report(error, () => this.load(query));
         this.loading.set(false);
+        this.landedLists.next({ query, page: null });
       },
     });
   }

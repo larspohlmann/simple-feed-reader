@@ -9,6 +9,7 @@ import { API_BASE_URL } from '../../core/api';
 import { transientGatewayRetryInterceptor } from '../../core/http/retry-transient-gateway-errors';
 import { TokenStore } from '../../core/auth/token.store';
 import { EntriesStore } from './entries.store';
+import { LandedList } from './landed-list';
 import { EntryDto } from '../models';
 import { VoteValue } from '../vote-pill/vote';
 import { CompletedEntryDto } from './completed-entry';
@@ -1504,128 +1505,49 @@ describe('EntriesStore', () => {
       });
     });
   });
-  describe('a followed Trending story (#2128)', () => {
+  describe('the landed-list hook', () => {
     const storyUrl = 'https://api.test/api/entries/trending-stories/42';
-    const openedUrl = 'https://api.test/api/trending/stories/42/opened';
-    const noContent = { status: 204, statusText: 'No Content' };
-    const lastOpenedAt = '2026-11-16T08:00:00+00:00';
-    const before = '2026-11-16T07:00:00+00:00';
-    const since = '2026-11-16T09:00:00+00:00';
-    const member = (id: number, joinedAt: string) => entry(id, { joinedAt });
-    const storyPage = (
-      entries: EntryDto[],
-      nextCursor: string | null = null,
-      openedAt: string = lastOpenedAt,
-    ) => ({
-      entries,
-      nextCursor,
-      lastOpenedAt: openedAt,
-      newEntryIds: entries.filter((row) => (row.joinedAt ?? '') > openedAt).map((row) => row.id),
-    });
+    const story = { view: 'all' as const, followedStoryId: 42 };
     const storyRequest = () => ctrl.expectOne((request) => request.url === storyUrl);
-    const openStory = () => {
-      store.load({ view: 'all', followedStoryId: 42 });
-      storyRequest().flush(
-        storyPage([member(1, since), member(2, since), member(3, before)], 'C1'),
-      );
+    const storyPage = {
+      entries: [entry(1)],
+      nextCursor: 'C1',
+      lastOpenedAt: '2026-11-16T08:00:00+00:00',
+      newEntryIds: [],
     };
-    const showAnotherList = () => {
-      store.load({ view: 'all' });
-      ctrl
-        .expectOne((request) => request.url === 'https://api.test/api/entries')
-        .flush({ entries: [entry(1)], nextCursor: null });
-    };
-    const newIds = () => [...store.newSinceVisitIds()].sort();
-
-    it('marks what joined since the last visit', () => {
-      openStory();
-
-      expect(newIds()).toEqual([1, 2]);
-      ctrl.expectOne(openedUrl).flush(null, noContent);
+    let landed: LandedList[];
+    beforeEach(() => {
+      landed = [];
+      store.listLanded.subscribe((list) => landed.push(list));
     });
 
-    it('records nothing before the first page has landed', () => {
-      store.load({ view: 'all', followedStoryId: 42 });
+    it('announces each first page as it lands, with its query', () => {
+      store.load(story);
+      expect(landed).toEqual([]);
+      storyRequest().flush(storyPage);
 
-      ctrl.expectNone(openedUrl);
-      storyRequest().flush(storyPage([member(1, before)]));
-      ctrl.expectOne(openedUrl).flush(null, noContent);
+      expect(landed).toEqual([{ query: story, page: storyPage }]);
+      expect(store.entries().map((row) => row.id)).toEqual([1]);
     });
 
-    it('records the visit once per story visit', () => {
-      openStory();
-      const opened = ctrl.match(openedUrl);
-      expect(opened.map((request) => request.request.method)).toEqual(['POST']);
-      opened[0].flush(null, noContent);
+    it('announces no appended page', () => {
+      store.load(story);
+      storyRequest().flush(storyPage);
 
       store.loadMore();
-      storyRequest().flush(storyPage([member(4, before)]));
-      store.reload();
-      storyRequest().flush(storyPage([member(1, since)], null, since));
+      storyRequest().flush({ ...storyPage, entries: [entry(2)], nextCursor: null });
 
-      ctrl.expectNone(openedUrl);
+      expect(landed).toHaveLength(1);
     });
 
-    it('marks the rows of a later page that joined since the visit began', () => {
-      store.load({ view: 'all', followedStoryId: 42 });
-      storyRequest().flush(storyPage([member(1, since), member(2, since), member(3, since)], 'C1'));
-      ctrl.expectOne(openedUrl).flush(null, noContent);
-
-      store.loadMore();
-      storyRequest().flush(storyPage([member(4, since), member(5, before)]));
-
-      expect(newIds()).toEqual([1, 2, 3, 4]);
-    });
-
-    it("keeps the visit's marks across a reload whose lastOpenedAt has moved", () => {
-      openStory();
-      ctrl.expectOne(openedUrl).flush(null, noContent);
-
-      store.reload();
-      const joinedDuringTheVisit = '2026-11-16T11:00:00+00:00';
+    it('announces a failed load with its query and no page', () => {
+      store.load(story);
       storyRequest().flush(
-        storyPage(
-          [member(9, joinedDuringTheVisit), member(1, since), member(2, since), member(3, before)],
-          'C1',
-          '2026-11-16T10:00:00+00:00',
-        ),
+        { type: 'trending_story_not_followed', title: 'Trending story not followed', status: 404 },
+        { status: 404, statusText: 'Not Found' },
       );
 
-      expect(newIds()).toEqual([1, 2, 9]);
-      ctrl.expectNone(openedUrl);
-    });
-
-    it('ends the visit when another list lands', () => {
-      openStory();
-      ctrl.expectOne(openedUrl).flush(null, noContent);
-
-      showAnotherList();
-      expect(newIds()).toEqual([]);
-
-      store.load({ view: 'all', followedStoryId: 42 });
-      storyRequest().flush(storyPage([member(1, since), member(2, before)], null, since));
-      expect(newIds()).toEqual([]);
-      ctrl.expectOne(openedUrl).flush(null, noContent);
-    });
-
-    it('marks nothing and records no visit for a story no longer followed', () => {
-      openStory();
-      ctrl.expectOne(openedUrl).flush(null, noContent);
-
-      store.load({ view: 'all', followedStoryId: 43 });
-      ctrl
-        .expectOne((request) => request.url === 'https://api.test/api/entries/trending-stories/43')
-        .flush(
-          {
-            type: 'trending_story_not_followed',
-            title: 'Trending story not followed',
-            status: 404,
-          },
-          { status: 404, statusText: 'Not Found' },
-        );
-
-      expect(newIds()).toEqual([]);
-      ctrl.expectNone('https://api.test/api/trending/stories/43/opened');
+      expect(landed).toEqual([{ query: story, page: null }]);
       expect(store.error()?.type).toBe('trending_story_not_followed');
     });
   });

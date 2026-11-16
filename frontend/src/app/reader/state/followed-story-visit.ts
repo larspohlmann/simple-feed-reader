@@ -1,20 +1,29 @@
-import { inject } from '@angular/core';
+import { Injectable, computed, inject } from '@angular/core';
 import { accountSignal } from '../../core/auth/session-identity';
-import { EntriesPage, EntryDto, EntryQuery } from '../models';
-import { FollowedStoryPageDto } from '../trending/trending.models';
+import { EntryDto } from '../models';
+import { EntriesStore } from './entries.store';
+import { LandedList } from './landed-list';
 import { FollowedStoriesStore } from './followed-stories.store';
 
 /** A visit to a followed Trending story's list (#2128): it begins at the story's "last opened" its first page
- *  carries, and records the one "opened". Built in a field initializer, so it injects there. */
-export class StoryVisit {
+ *  carries, records the one "opened", and ends when any other list lands or any list fails to load. */
+@Injectable({ providedIn: 'root' })
+export class FollowedStoryVisit {
+  private readonly entries = inject(EntriesStore);
   private readonly followedStories = inject(FollowedStoriesStore);
   private readonly visitedStoryId = accountSignal<number | null>(null);
   /** Held for the visit: the record it posts moves the server's "last opened" past the rows it marks. */
   private readonly visitOpenedAt = accountSignal<string | null>(null);
+  /** The loaded rows that joined the story since the visit began. */
+  readonly newSinceVisitIds = computed(() => this.newAmong(this.entries.entries()));
 
-  landed(query: EntryQuery, page: EntriesPage | FollowedStoryPageDto): void {
+  constructor() {
+    this.entries.listLanded.subscribe((list) => this.landed(list));
+  }
+
+  private landed({ query, page }: LandedList): void {
     const storyId = query.followedStoryId;
-    if (storyId == null || !('lastOpenedAt' in page)) {
+    if (storyId == null || page === null || !('lastOpenedAt' in page)) {
       this.visitedStoryId.set(null);
       this.visitOpenedAt.set(null);
       return;
@@ -25,8 +34,7 @@ export class StoryVisit {
     this.followedStories.markOpened(storyId);
   }
 
-  /** The rows that joined the story since the visit began. */
-  newAmong(entries: EntryDto[]): ReadonlySet<number> {
+  private newAmong(entries: EntryDto[]): ReadonlySet<number> {
     const openedAt = this.visitOpenedAt();
     if (openedAt === null) return new Set();
     const since = Date.parse(openedAt);

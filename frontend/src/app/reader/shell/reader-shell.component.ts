@@ -34,6 +34,7 @@ import { SubscriptionsStore } from '../state/subscriptions.store';
 import { flattenTagTree } from '../state/subscription-derivations';
 import { TagsStore } from '../state/tags.store';
 import { EntriesStore } from '../state/entries.store';
+import { FollowedStoryVisit } from '../state/followed-story-visit';
 import { RefreshService } from '../state/refresh.service';
 import { RecommendationsService } from '../state/recommendations.service';
 import { NetworkSurfaceSwitches } from '../state/network-surface-switches.service';
@@ -141,6 +142,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly subs = inject(SubscriptionsStore);
   readonly tags = inject(TagsStore);
   readonly entries = inject(EntriesStore);
+  readonly storyVisit = inject(FollowedStoryVisit);
   readonly refreshSvc = inject(RefreshService);
   readonly recs = inject(RecommendationsService);
   readonly savedSearchesStore = inject(SavedSearchesStore);
