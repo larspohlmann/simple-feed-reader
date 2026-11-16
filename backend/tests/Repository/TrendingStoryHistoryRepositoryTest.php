@@ -321,7 +321,7 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
         $earlier = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 09:00:00', $regrouped);
         $this->clearPlacements();
 
-        $this->history()->save(
+        $this->save(
             new StoryAssignmentModel(
                 $this->group([$one->requireId(), $regrouped->requireId(), $fresh->requireId()]),
                 $story->requireId(),
@@ -416,6 +416,31 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
         );
     }
 
+    public function testABuildReadsTheEarliestJoinsOfEveryJoiningEntryOnce(): void
+    {
+        [$one, $two, $three, $four] = $this->entries(4);
+        $first = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $one);
+        $second = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $three);
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        self::assertInstanceOf(QueryRecorder::class, $recorder);
+        $recorder->reset();
+
+        $this->history()->saveAll(self::build(TrendingWindow::Week), [
+            new StoryAssignmentModel(
+                $this->group([$one->requireId(), $two->requireId()]),
+                $first->requireId(),
+                [$one->requireId()],
+            ),
+            new StoryAssignmentModel(
+                $this->group([$three->requireId(), $four->requireId()]),
+                $second->requireId(),
+                [$three->requireId()],
+            ),
+        ]);
+
+        self::assertCount(1, $recorder->queriesMatching('MIN(joined_at)'));
+    }
+
     public function testASaveWithNothingToClaimReadsNoOtherStory(): void
     {
         [$one, $two] = $this->entries(2);
@@ -424,7 +449,7 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
         self::assertInstanceOf(QueryRecorder::class, $recorder);
         $recorder->reset();
 
-        $this->history()->save(
+        $this->save(
             new StoryAssignmentModel(
                 $this->group([$one->requireId(), $two->requireId()]),
                 $story->requireId(),
@@ -445,7 +470,7 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
         $followed = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $two);
         $this->fixtures->follow($this->fixtures->reader('stays@example.com'), $followed, '2031-05-14 10:00:00');
 
-        $this->history()->save(
+        $this->save(
             new StoryAssignmentModel(
                 $this->group([$one->requireId(), $two->requireId()]),
                 $story->requireId(),
@@ -466,7 +491,7 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
         [$one, $two] = $this->entries(2);
         $story = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $one, $two);
 
-        $this->history()->save(
+        $this->save(
             new StoryAssignmentModel(
                 $this->group([$one->requireId(), $two->requireId()]),
                 $story->requireId(),
@@ -486,7 +511,7 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
         [$one, $fresh] = $this->entries(2);
         $story = $this->fixtures->story(TrendingWindow::Day, '2031-05-14 10:00:00', $one);
 
-        $this->history()->save(
+        $this->save(
             new StoryAssignmentModel(
                 $this->group([$one->requireId(), $fresh->requireId()]),
                 $story->requireId(),
@@ -517,7 +542,7 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
         $story = $this->fixtures->story(TrendingWindow::Day, '2031-05-14 10:00:00', $one);
         $this->fixtures->story(TrendingWindow::Week, $heldSince, $regrouped);
 
-        $this->history()->save(
+        $this->save(
             new StoryAssignmentModel(
                 $this->group([$one->requireId(), $regrouped->requireId()]),
                 $story->requireId(),
@@ -588,7 +613,7 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
             self::utc($groupLastSeen),
         );
 
-        $this->history()->save(
+        $this->save(
             new StoryAssignmentModel($group, $story->requireId(), [$one->requireId()]),
             self::build(TrendingWindow::Week),
         );
@@ -610,7 +635,7 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
             self::utc('2031-05-14 11:00:00'),
         );
 
-        $this->history()->save(
+        $this->save(
             new StoryAssignmentModel($group, $saved->requireId(), [$one->requireId()]),
             self::build(TrendingWindow::Week),
         );
@@ -809,7 +834,7 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
         $story = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $one);
         $other = $this->fixtures->story(TrendingWindow::Day, '2031-05-14 08:00:00', $one, $two);
 
-        $this->history()->save(
+        $this->save(
             new StoryAssignmentModel(
                 $this->group([$one->requireId()]),
                 $story->requireId(),
@@ -841,10 +866,15 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
     /** As a build does: the group's entries are all the window places. */
     private function saveAndPlace(StoryAssignmentModel $assignment, TrendingWindow $window): int
     {
-        $storyId = $this->history()->save($assignment, self::build($window));
+        $storyId = $this->save($assignment, self::build($window));
         $this->history()->place($window, array_fill_keys($assignment->group->entryIds(), $storyId));
 
         return $storyId;
+    }
+
+    private function save(StoryAssignmentModel $assignment, StoryBuildModel $build): int
+    {
+        return $this->history()->saveAll($build, [$assignment])[$assignment->group->entryIds()[0]];
     }
 
     private static function build(TrendingWindow $window): StoryBuildModel

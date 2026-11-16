@@ -73,23 +73,21 @@ final readonly class TrendingStoryHistoryRepository
         $this->connection()->executeStatement('DELETE FROM trending_story WHERE id = ?', [$merge->mergedId]);
     }
 
-    /** @return int the story's id; where the window places its members is place()'s */
-    public function save(StoryAssignmentModel $assignment, StoryBuildModel $build): int
+    /**
+     * @param list<StoryAssignmentModel> $assignments
+     *
+     * @return array<int, int> the story each grouped entry now belongs to
+     */
+    public function saveAll(StoryBuildModel $build, array $assignments): array
     {
-        $joining = $assignment->joining();
-        $joinedAts = $this->joinedAtsOf($joining, $build->builtAt);
-        $storyId = $assignment->storyId;
-        if ($storyId === null) {
-            $storyId = $this->insertStory($assignment->group, $build->builtAt);
-        } else {
-            $this->updateStory($storyId, $assignment->group, $joinedAts);
-        }
-        $this->insertMembers($storyId, $joining, $joinedAts);
-        foreach (array_chunk($assignment->claimedEntryIds, self::INSERT_ROWS) as $claimed) {
-            $this->absorb($storyId, \sprintf('story_id <> %d AND entry_id IN (%s)', $storyId, self::idList($claimed)));
+        $earliestJoins = $this->earliestJoinsOf($assignments);
+        $storyIdByEntry = [];
+        foreach ($assignments as $assignment) {
+            $storyId = $this->save($assignment, $build, $earliestJoins);
+            $storyIdByEntry += array_fill_keys($assignment->group->entryIds(), $storyId);
         }
 
-        return $storyId;
+        return $storyIdByEntry;
     }
 
     /**
@@ -135,6 +133,25 @@ final readonly class TrendingStoryHistoryRepository
             . ' WHERE member.story_id = trending_story.id AND recent.effective_date >= ?)',
             [self::stored($weekStart)],
         );
+    }
+
+    /** @param array<int, string> $earliestJoins by entry id */
+    private function save(StoryAssignmentModel $assignment, StoryBuildModel $build, array $earliestJoins): int
+    {
+        $joining = $assignment->joining();
+        $joinedAts = self::joinedAtsOf($joining, $earliestJoins, $build->builtAt);
+        $storyId = $assignment->storyId;
+        if ($storyId === null) {
+            $storyId = $this->insertStory($assignment->group, $build->builtAt);
+        } else {
+            $this->updateStory($storyId, $assignment->group, $joinedAts);
+        }
+        $this->insertMembers($storyId, $joining, $joinedAts);
+        foreach (array_chunk($assignment->claimedEntryIds, self::INSERT_ROWS) as $claimed) {
+            $this->absorb($storyId, \sprintf('story_id <> %d AND entry_id IN (%s)', $storyId, self::idList($claimed)));
+        }
+
+        return $storyId;
     }
 
     /**
@@ -317,24 +334,48 @@ final readonly class TrendingStoryHistoryRepository
 
     /**
      * A member another story already holds keeps its earliest join, so regrouping never makes it new again.
+     * Read once before the saves: a save's claims move rows but keep each entry's earliest join.
      *
-     * @param list<StoryMemberModel> $members
+     * @param list<StoryAssignmentModel> $assignments
      *
      * @return array<int, string> by entry id
      */
-    private function joinedAtsOf(array $members, \DateTimeImmutable $builtAt): array
+    private function earliestJoinsOf(array $assignments): array
     {
-        if ($members === []) {
-            return [];
+        $entryIds = [];
+        foreach ($assignments as $assignment) {
+            foreach ($assignment->joining() as $member) {
+                $entryIds[] = $member->entryId;
+            }
         }
-        $entryIds = array_map(static fn (StoryMemberModel $member): int => $member->entryId, $members);
-        /** @var array<int, string> $earliestJoins */
-        $earliestJoins = $this->connection()->fetchAllKeyValue(
-            'SELECT entry_id, MIN(joined_at) FROM trending_story_entry WHERE entry_id IN ('
-            . self::idList($entryIds) . ') GROUP BY entry_id',
-        );
+        $earliestJoins = [];
+        foreach (array_chunk($entryIds, self::INSERT_ROWS) as $chunk) {
+            /** @var array<int, string> $chunkJoins */
+            $chunkJoins = $this->connection()->fetchAllKeyValue(
+                'SELECT entry_id, MIN(joined_at) FROM trending_story_entry WHERE entry_id IN (?) GROUP BY entry_id',
+                [$chunk],
+                [ArrayParameterType::INTEGER],
+            );
+            $earliestJoins += $chunkJoins;
+        }
 
-        return $earliestJoins + array_fill_keys($entryIds, self::stored($builtAt));
+        return $earliestJoins;
+    }
+
+    /**
+     * @param list<StoryMemberModel> $members
+     * @param array<int, string>     $earliestJoins by entry id
+     *
+     * @return array<int, string> by entry id
+     */
+    private static function joinedAtsOf(array $members, array $earliestJoins, \DateTimeImmutable $builtAt): array
+    {
+        $joinedAts = [];
+        foreach ($members as $member) {
+            $joinedAts[$member->entryId] = $earliestJoins[$member->entryId] ?? self::stored($builtAt);
+        }
+
+        return $joinedAts;
     }
 
     private function connection(): Connection

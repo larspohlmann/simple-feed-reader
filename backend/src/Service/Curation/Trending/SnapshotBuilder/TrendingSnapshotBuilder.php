@@ -113,7 +113,7 @@ final readonly class TrendingSnapshotBuilder implements SnapshotBuilderInterface
         foreach ($match->merges as $merge) {
             $this->history->merge($merge);
         }
-        $this->history->place($build->window, $this->saveAll($build, $match));
+        $this->history->place($build->window, $this->history->saveAll($build, $match->assignments));
 
         return $policy->prune($build);
     }
@@ -131,17 +131,5 @@ final readonly class TrendingSnapshotBuilder implements SnapshotBuilderInterface
         \assert($policy instanceof StoryBuildPolicyInterface);
 
         return $policy;
-    }
-
-    /** @return array<int, int> the story each grouped entry now belongs to */
-    private function saveAll(StoryBuildModel $build, StoryMatchModel $match): array
-    {
-        $storyIdByEntry = [];
-        foreach ($match->assignments as $assignment) {
-            $storyId = $this->history->save($assignment, $build);
-            $storyIdByEntry += array_fill_keys($assignment->group->entryIds(), $storyId);
-        }
-
-        return $storyIdByEntry;
     }
 }
