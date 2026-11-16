@@ -17,8 +17,7 @@ import { LinkReaderNavigation } from './link-reader-navigation.service';
 import { ReaderRouteState } from './reader-route-state.service';
 import { ListHeading } from './list-heading.service';
 import { EntryStateActions } from './entry-state-actions.service';
-import { TrendingFollowAction } from '../trending/trending-follow-action';
-import { TrendingHideAction } from '../trending/trending-hide-action';
+import { provideTrendingStoryActions } from '../trending/story-actions/story-actions';
 import { MarkReadActions } from './mark-read-actions.service';
 import { ReaderOnboarding } from './reader-onboarding.service';
 import { PasskeyFirstBootOffer } from './passkey-first-boot-offer.service';
@@ -118,8 +117,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
     LinkReaderNavigation,
     ListHeading,
     EntryStateActions,
-    TrendingFollowAction,
-    TrendingHideAction,
+    ...provideTrendingStoryActions(),
     MarkReadActions,
     ReaderOnboarding,
     PasskeyFirstBootOffer,

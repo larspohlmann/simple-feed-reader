@@ -1,5 +1,5 @@
-@if (actions(); as actions) {
-  @let story = actions.story;
+@if (actions(); as shown) {
+  @let story = shown.story;
   <span class="story-actions" role="group" [attr.aria-label]="'reader.storyActions' | transloco">
     <button
       type="button"
@@ -13,7 +13,7 @@
         (story.followed ? 'reader.actionHint.unfollowStory' : 'reader.actionHint.followStory')
           | transloco
       "
-      (click)="$event.stopPropagation(); actions.follow.run(entry())"
+      (click)="$event.stopPropagation(); shown.actions.follow(entry())"
       (keydown.enter)="$event.stopPropagation()"
       (keydown.space)="$event.stopPropagation()"
     >
@@ -29,7 +29,7 @@
       class="boxed round"
       [attr.aria-label]="'reader.hideStory' | transloco"
       [attr.title]="'reader.actionHint.hideStory' | transloco"
-      (click)="$event.stopPropagation(); actions.hide.run(entry())"
+      (click)="$event.stopPropagation(); shown.actions.hide(entry())"
       (keydown.enter)="$event.stopPropagation()"
       (keydown.space)="$event.stopPropagation()"
     >
