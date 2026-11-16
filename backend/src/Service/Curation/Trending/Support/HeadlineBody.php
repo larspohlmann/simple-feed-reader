@@ -7,7 +7,7 @@ namespace App\Service\Curation\Trending\Support;
 use App\Service\Foundation\Text\Support\EntryPlainText;
 use App\Service\Foundation\Text\Support\WordBoundary;
 
-final class EntryText
+final class HeadlineBody
 {
     private const int BODY_LENGTH = 300;
     private const string TRAILING_ELLIPSIS = '/…$/u';

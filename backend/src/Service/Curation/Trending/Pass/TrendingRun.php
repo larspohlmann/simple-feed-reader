@@ -8,7 +8,7 @@ use App\Enum\TrendingWindow;
 use App\Service\Curation\Trending\Model\SharedArticleModel;
 use App\Service\Curation\Trending\Model\StoryMemberModel;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
-use App\Service\Curation\Trending\Support\EntryText;
+use App\Service\Curation\Trending\Support\HeadlineBody;
 
 /** One rebuild of one window: who published each entry when, which URLs it carries, and the headline index. */
 final class TrendingRun
@@ -53,8 +53,8 @@ final class TrendingRun
         $this->headlines->add(
             $entry,
             $entry->titleDerived
-                ? EntryText::bodyAfterTitle($entry->title, $entry->summary)
-                : EntryText::body($entry->summary),
+                ? HeadlineBody::bodyAfterTitle($entry->title, $entry->summary)
+                : HeadlineBody::body($entry->summary),
             $article,
         );
     }

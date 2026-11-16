@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ingestion\Language\Support;
 
-use App\Service\Curation\Trending\Support\EntryText;
+use App\Service\Curation\Trending\Support\HeadlineBody;
 use App\Service\Ingestion\Language\Support\PreviewText;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -14,7 +14,7 @@ final class PreviewTextTest extends TestCase
     #[DataProvider('cards')]
     public function testItIsWhatSharedArticlesGuessesOn(string $title, string $description): void
     {
-        self::assertSame($title . "\n" . EntryText::body($description), PreviewText::of($title, $description));
+        self::assertSame($title . "\n" . HeadlineBody::body($description), PreviewText::of($title, $description));
     }
 
     /** @return iterable<string, array{string, string}> */

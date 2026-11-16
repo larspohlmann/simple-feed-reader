@@ -10,7 +10,7 @@ use App\Service\Curation\Trending\Model\EntryLinksModel;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Service\Curation\Trending\Model\WindowLinkCardModel;
 use App\Service\Curation\Trending\Pass\SharedArticles;
-use App\Service\Curation\Trending\Support\EntryText;
+use App\Service\Curation\Trending\Support\HeadlineBody;
 use App\Service\Ingestion\Language\LanguageGuess;
 use App\Tests\Support\StubbedDetector;
 use App\Tests\Support\TrendingWiring;
@@ -111,7 +111,7 @@ final class SharedArticlesTest extends TestCase
         $article = (new SharedArticles(TrendingWiring::cardLanguage()))->of($entry);
 
         self::assertSame(
-            TrendingWiring::cardLanguage()->of('Bibliothèque' . "\n" . EntryText::body($description), $postLanguage),
+            TrendingWiring::cardLanguage()->of('Bibliothèque' . "\n" . HeadlineBody::body($description), $postLanguage),
             $article?->language,
         );
     }
