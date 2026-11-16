@@ -54,7 +54,7 @@ final readonly class TrendingRebuild
     ): TrendingRebuildReportModel {
         $builds = [];
         foreach (TrendingWindow::cases() as $window) {
-            if (!$this->isDue($window, $lastBuilds->builtAt($window)) || !$mayStart($window)) {
+            if (!$this->isDue($lastBuilds->dueAt($window)) || !$mayStart($window)) {
                 continue;
             }
             try {
@@ -70,10 +70,9 @@ final readonly class TrendingRebuild
         return new TrendingRebuildReportModel($builds);
     }
 
-    private function isDue(TrendingWindow $window, ?\DateTimeImmutable $builtAt): bool
+    private function isDue(?\DateTimeImmutable $dueAt): bool
     {
-        return $builtAt === null
-            || $this->clock->now()->getTimestamp() - $builtAt->getTimestamp() >= $window->rebuildIntervalSeconds();
+        return $dueAt === null || $this->clock->now()->getTimestamp() >= $dueAt->getTimestamp();
     }
 
     private function remainingMilliseconds(\DateTimeImmutable $deadline): int
