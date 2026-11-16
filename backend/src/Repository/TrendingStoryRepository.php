@@ -62,7 +62,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             static fn (array $row): RankedStoryModel => new RankedStoryModel(
                 (int) $row['story_id'],
                 (int) $row['outlet_count'],
-                new \DateTimeImmutable($row['last_seen'], new \DateTimeZone('UTC')),
+                NaiveUtc::parse($row['last_seen']),
             ),
             $rows,
         );

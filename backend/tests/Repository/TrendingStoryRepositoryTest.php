@@ -369,8 +369,7 @@ final class TrendingStoryRepositoryTest extends DbTestCase
     {
         $story = $this->twoFeedWeekStory();
         $kept = $this->twoFeedWeekStory();
-        $other = new User('sites-other@example.com', new \DateTimeImmutable('2031-01-01 00:00:00'));
-        $this->entityManager->persist($other);
+        $other = $this->fixtures->reader('sites-other@example.com');
         $this->fixtures->subscribe($other, ...$this->entityManager->getRepository(Feed::class)->findAll());
         $this->fixtures->hide($this->reader, $story);
 

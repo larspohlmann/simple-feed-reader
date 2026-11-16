@@ -119,7 +119,7 @@ final readonly class TrendingEntryRepository
             $row['title'],
             (bool) (int) $row['title_derived'],
             $row['summary'],
-            new \DateTimeImmutable($row['effective_date'], new \DateTimeZone('UTC')),
+            NaiveUtc::parse($row['effective_date']),
             new EntryLinksModel($row['url_hash'], $row['article_url'], self::cardOf($row)),
         );
     }

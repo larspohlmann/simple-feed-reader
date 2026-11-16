@@ -67,19 +67,13 @@ final class TrendingStoryFollowRepository extends ServiceEntityRepository
             throw self::notFollowed($userId, $storyId);
         }
 
-        return self::storedTime($lastOpenedAt);
+        return NaiveUtc::parse($lastOpenedAt);
     }
 
     /** @throws TrendingStoryNotFollowedException */
     public function requireFollowed(int $userId, int $storyId): void
     {
-        $found = $this->getEntityManager()->getConnection()->fetchOne(
-            'SELECT 1 FROM trending_story_follow WHERE user_id = ? AND story_id = ?',
-            [$userId, $storyId],
-        );
-        if ($found === false) {
-            throw self::notFollowed($userId, $storyId);
-        }
+        $this->lastOpenedAt($userId, $storyId);
     }
 
     /**
@@ -127,7 +121,7 @@ final class TrendingStoryFollowRepository extends ServiceEntityRepository
                 (int) $row['story_id'],
                 $row['headline'],
                 (int) $row['new_count'],
-                self::storedTime($row['last_joined_at']),
+                NaiveUtc::parse($row['last_joined_at']),
             ),
             $rows,
         );
@@ -181,10 +175,5 @@ final class TrendingStoryFollowRepository extends ServiceEntityRepository
         return new TrendingStoryNotFollowedException(
             \sprintf('User %d does not follow Trending story %d.', $userId, $storyId),
         );
-    }
-
-    private static function storedTime(string $stored): \DateTimeImmutable
-    {
-        return new \DateTimeImmutable($stored, new \DateTimeZone('UTC'));
     }
 }

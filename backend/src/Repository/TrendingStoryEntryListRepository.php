@@ -26,6 +26,7 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
         private readonly EntryListRowHydrator $rowHydrator,
         private readonly DuplicateCollapseDql $collapse,
         private readonly EntryProjection $projection,
+        private readonly EntryScopePredicates $scopes,
     ) {
         parent::__construct($registry, Entry::class);
     }
@@ -40,7 +41,7 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
         $this->applyMembership($qb, EntryAliases::primary());
         $this->collapse->apply($qb, $this->applyMembership(...), $query->userId);
         if ($query->onlyUnread) {
-            $qb->andWhere(UnreadDql::predicate())->setParameter('notHidden', false, Types::BOOLEAN);
+            $this->scopes->unread($qb, EntryAliases::primary());
         }
         $this->projection->applyCursor($qb, $query->cursor, $ordering);
 

@@ -31,7 +31,7 @@ final class TrendingSnapshotRepository extends ServiceEntityRepository
         $builtAt = [];
         $durations = [];
         foreach ($rows as $row) {
-            $builtAt[$row['time_window']] = new \DateTimeImmutable($row['built_at'], new \DateTimeZone('UTC'));
+            $builtAt[$row['time_window']] = NaiveUtc::parse($row['built_at']);
             $durations[$row['time_window']] = (int) $row['duration_ms'];
         }
 
