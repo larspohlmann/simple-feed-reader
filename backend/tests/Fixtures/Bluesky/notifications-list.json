@@ -1,0 +1,128 @@
+{
+  "notifications": [
+    {
+      "uri": "at://did:plc:bob/app.bsky.feed.like/3l01",
+      "cid": "c3l01",
+      "author": {
+        "did": "did:plc:bob",
+        "handle": "bob.test",
+        "displayName": "Bob",
+        "avatar": "https://cdn.test/bob.jpg"
+      },
+      "reason": "like",
+      "record": {},
+      "isRead": false,
+      "indexedAt": "2026-11-16T09:00:00.000Z",
+      "reasonSubject": "at://did:plc:alice/app.bsky.feed.post/3lpost1"
+    },
+    {
+      "uri": "at://did:plc:carol/app.bsky.feed.like/3l02",
+      "cid": "c3l02",
+      "author": {
+        "did": "did:plc:carol",
+        "handle": "carol.test"
+      },
+      "reason": "like-via-repost",
+      "record": {},
+      "isRead": false,
+      "indexedAt": "2026-11-16T08:50:00.000Z",
+      "reasonSubject": "at://did:plc:alice/app.bsky.feed.post/3lpost1"
+    },
+    {
+      "uri": "at://did:plc:dave/app.bsky.feed.post/3l03",
+      "cid": "c3l03",
+      "author": {
+        "did": "did:plc:dave",
+        "handle": "dave.test"
+      },
+      "reason": "repost",
+      "record": {},
+      "isRead": false,
+      "indexedAt": "2026-11-16T08:40:00.000Z",
+      "reasonSubject": "at://did:plc:alice/app.bsky.feed.post/3lpost2"
+    },
+    {
+      "uri": "at://did:plc:erin/app.bsky.feed.post/3l04",
+      "cid": "c3l04",
+      "author": {
+        "did": "did:plc:erin",
+        "handle": "erin.test"
+      },
+      "reason": "repost-via-repost",
+      "record": {},
+      "isRead": true,
+      "indexedAt": "2026-11-16T08:30:00.000Z",
+      "reasonSubject": "at://did:plc:alice/app.bsky.feed.post/3lpost2"
+    },
+    {
+      "uri": "at://did:plc:frank/app.bsky.feed.post/3l05",
+      "cid": "c3l05",
+      "author": {
+        "did": "did:plc:frank",
+        "handle": "frank.test"
+      },
+      "reason": "reply",
+      "record": {
+        "text": "  a reply  "
+      },
+      "isRead": true,
+      "indexedAt": "2026-11-16T08:20:00.000Z",
+      "reasonSubject": "at://did:plc:alice/app.bsky.feed.post/3lpost1"
+    },
+    {
+      "uri": "at://did:plc:gina/app.bsky.feed.post/3l06",
+      "cid": "c3l06",
+      "author": {
+        "did": "did:plc:gina",
+        "handle": "gina.test"
+      },
+      "reason": "mention",
+      "record": {
+        "text": "hello @alice"
+      },
+      "isRead": true,
+      "indexedAt": "2026-11-16T08:10:00.000Z"
+    },
+    {
+      "uri": "at://did:plc:hank/app.bsky.feed.post/3l07",
+      "cid": "c3l07",
+      "author": {
+        "did": "did:plc:hank",
+        "handle": "hank.test"
+      },
+      "reason": "quote",
+      "record": {
+        "text": "quoting"
+      },
+      "isRead": true,
+      "indexedAt": "2026-11-16T08:00:00.000Z",
+      "reasonSubject": "at://did:plc:alice/app.bsky.feed.post/3lpost1"
+    },
+    {
+      "uri": "at://did:plc:ivy/app.bsky.feed.post/3l08",
+      "cid": "c3l08",
+      "author": {
+        "did": "did:plc:ivy",
+        "handle": "ivy.test"
+      },
+      "reason": "follow",
+      "record": {},
+      "isRead": true,
+      "indexedAt": "2026-11-16T07:50:00.000Z"
+    },
+    {
+      "uri": "at://did:plc:jon/app.bsky.feed.post/3l09",
+      "cid": "c3l09",
+      "author": {
+        "did": "did:plc:jon",
+        "handle": "jon.test"
+      },
+      "reason": "starterpack-joined",
+      "record": {},
+      "isRead": true,
+      "indexedAt": "2026-11-16T07:40:00.000Z"
+    }
+  ],
+  "seenAt": "2026-11-16T10:30:00.000+02:00",
+  "cursor": "x"
+}
