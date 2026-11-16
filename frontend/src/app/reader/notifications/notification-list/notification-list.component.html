@@ -48,12 +48,10 @@
     }
     @if (store.nextCursor() !== null) {
       <div class="foot" #sentinel></div>
-    } @else if (store.groups().length === 0) {
-      @if (!store.error()) {
-        <p class="empty">{{ 'reader.notifications.empty' | transloco }}</p>
-      }
-    } @else {
+    } @else if (store.groups().length > 0) {
       <p class="end">{{ 'reader.notifications.end' | transloco }}</p>
+    } @else if (!store.error()) {
+      <p class="empty">{{ 'reader.notifications.empty' | transloco }}</p>
     }
   }
 </div>
