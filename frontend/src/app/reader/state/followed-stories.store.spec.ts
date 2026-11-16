@@ -1,3 +1,4 @@
+import { computed } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Subject, of, throwError } from 'rxjs';
 import { FollowedStoriesResponseDto, FollowedStoryDto } from '../trending/trending.models';
@@ -316,6 +317,24 @@ describe('FollowedStoriesStore (#2128)', () => {
 
   describe('isFollowed() and setFollowing() (#2272)', () => {
     const card = (id: number, followed = false) => aStory({ id, followed });
+
+    it('leaves a follow flag unrecomputed when a load drops no intent', () => {
+      const store = setup({
+        followed: jest.fn(() => of(reply(rows.map((row) => ({ ...row }))))),
+      });
+      store.load();
+      let computations = 0;
+      const flag = computed(() => {
+        computations++;
+        return store.isFollowed(card(3));
+      });
+      flag();
+
+      store.load();
+      flag();
+
+      expect(computations).toBe(1);
+    });
 
     it("shows the card's own flag until the followed list has answered", () => {
       const pending = new Subject<FollowedStoriesResponseDto>();

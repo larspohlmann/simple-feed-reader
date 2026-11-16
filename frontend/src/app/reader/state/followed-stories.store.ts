@@ -48,9 +48,10 @@ export class FollowedStoriesStore {
       }
       this.followed.set(response.stories);
       this.answered.set(true);
-      this.intents.update(
-        (intents) => new Map([...intents].filter(([id]) => this.sending.has(id))),
-      );
+      this.intents.update((intents) => {
+        const sent = new Map([...intents].filter(([id]) => this.sending.has(id)));
+        return sent.size === intents.size ? intents : sent;
+      });
       this.nextBuildDueAt =
         response.nextBuildDueAt === null ? null : Date.parse(response.nextBuildDueAt);
     });
