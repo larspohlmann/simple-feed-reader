@@ -85,7 +85,6 @@ export class ListContent {
     };
     const complete = !this.options.hasMore() && this.fullyRevealed();
     const segments = this.segments();
-    // Only the last segment may still grow on the next page; every earlier one is provably complete.
     return segments.flatMap(({ divider, entries }, index) => [
       ...(divider === null ? [] : [divider]),
       ...planMagazine({

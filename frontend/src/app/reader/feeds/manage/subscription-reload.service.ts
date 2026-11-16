@@ -5,7 +5,7 @@ import { EntriesStore } from '../../state/entries.store';
 import { FollowedStoriesStore } from '../../state/followed-stories.store';
 import { ExclusionSurface } from '../../feed-exclusions';
 
-/** What only a reload re-learns: saved-search badges and counts, a list a switch changed, the followed Trending stories. */
+/** Reloads what a subscription write changed. */
 @Injectable({ providedIn: 'root' })
 export class SubscriptionReload {
   private readonly subscriptions = inject(SubscriptionsStore);
