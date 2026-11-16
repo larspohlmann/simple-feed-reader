@@ -5,7 +5,6 @@ import {
   NgZone,
   OnDestroy,
   OnInit,
-  afterRenderEffect,
   computed,
   effect,
   inject,
@@ -38,6 +37,7 @@ import { EntriesStore } from '../state/entries.store';
 import { RefreshService } from '../state/refresh.service';
 import { RecommendationsService } from '../state/recommendations.service';
 import { NetworkSurfaceSwitches } from '../state/network-surface-switches.service';
+import { FollowedStoriesStore } from '../state/followed-stories.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { AiAvailabilityService } from '../../core/ai-availability.service';
 import { DigestService } from '../../core/preferences/digest.service';
@@ -66,6 +66,7 @@ import { SidebarCountsPoll } from './sidebar-counts-poll.service';
 import { CompletedEntriesMerge } from './completed-entries-merge';
 import { PendingEntriesPoll } from './pending-entries-poll.service';
 import { holdReaderPage } from './reader-page';
+import { focusShowSidebarButtonOnCollapse } from './show-sidebar-focus';
 import { PageChromeGeometry } from './page-chrome-geometry';
 import { PageScrollOwner } from './page-scroll-owner';
 import { PageLayerDirective } from './page-layer.directive';
@@ -143,6 +144,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly refreshSvc = inject(RefreshService);
   readonly recs = inject(RecommendationsService);
   readonly savedSearchesStore = inject(SavedSearchesStore);
+  readonly followedStoriesStore = inject(FollowedStoriesStore);
   private readonly networkSwitches = inject(NetworkSurfaceSwitches);
   readonly ai = inject(AiAvailabilityService);
   readonly digest = inject(DigestService);
@@ -270,26 +272,14 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     main: () => this.mainColumn()?.nativeElement,
     audioBar: () => this.audioBar()?.nativeElement as HTMLElement | undefined,
   });
-  /** Armed while the sidebar is visible, so the very first render does not pull
-   *  focus onto the (absent) show button. */
-  private sidebarWasVisible = false;
-
-  /** When the sidebar collapses, focus the "Show sidebar" button so a keyboard
-   *  user who clicked "Hide sidebar" is not dropped to `<body>`. The sidebar's
-   *  own collapse button focuses itself the same way when the sidebar returns.
-   *  `afterRenderEffect` because the button must be in the DOM already. */
-  private readonly focusShowSidebarButton = afterRenderEffect(() => {
-    if (!this.sidebarCollapsed()) {
-      this.sidebarWasVisible = true;
-      return;
-    }
-    if (!this.sidebarWasVisible) return;
-    this.sidebarWasVisible = false;
-    this.showSidebarButton()?.nativeElement.focus({ preventScroll: true });
-  });
+  private readonly _focusShowButton = focusShowSidebarButtonOnCollapse(
+    this.sidebarCollapsed,
+    this.showSidebarButton,
+  );
 
   ngOnInit(): void {
     this.savedSearchesStore.load();
+    this.followedStoriesStore.load();
     this.networkSwitches.loadExclusions();
     this.tags.load(); // the sidebar tag tree (order, empty tags) reads TagsStore
     // Reopening the app resumes a for-you run left in flight by an earlier session.

@@ -250,9 +250,7 @@ describe('ReaderShellComponent', () => {
     );
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
     ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
-    ctrl
-      .match('https://api.test/api/trending/followed')
-      .forEach((request) => request.flush({ stories: [] }));
+    ctrl.expectOne('https://api.test/api/trending/followed').flush({ stories: [] });
     ctrl
       .expectOne('https://api.test/api/for-you/excluded-networks')
       .flush({ excludedNetworks: [] });
@@ -486,9 +484,7 @@ describe('ReaderShellComponent', () => {
     });
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
     ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
-    ctrl
-      .match('https://api.test/api/trending/followed')
-      .forEach((request) => request.flush({ stories: [] }));
+    ctrl.expectOne('https://api.test/api/trending/followed').flush({ stories: [] });
     ctrl
       .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [], nextCursor: null });
@@ -3752,12 +3748,13 @@ describe('ReaderShellComponent', () => {
       expect(host.querySelector('app-feed-intro')).toBeNull();
     });
 
-    it('shows no feed intro for the aggregated and saved views', () => {
-      for (const view of ['all', 'tag', 'search', 'favorites', 'kept', 'viewed', 'for-you']) {
+    it.each(['all', 'tag', 'search', 'favorites', 'kept', 'viewed', 'for-you'])(
+      'shows no feed intro for the %s view',
+      (view) => {
         const host = mountWithSelectionKind(view);
         expect(host.querySelector('app-feed-intro')).toBeNull();
-      }
-    });
+      },
+    );
 
     it('shows no feed intro for a feed that has none of the three values', () => {
       const host = mountWithSubscriptionSelected({

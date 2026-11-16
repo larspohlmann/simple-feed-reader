@@ -33,7 +33,6 @@ import { atTop } from '../../reader-gestures';
 import { SidebarFootComponent } from './sidebar-foot.component';
 import { SidebarFeedRowComponent } from './sidebar-feed-row.component';
 import { SidebarGroupRowComponent } from './sidebar-group-row.component';
-import { FollowedStoriesStore } from '../../state/followed-stories.store';
 import { SidebarFollowedStoriesComponent } from './sidebar-followed-stories.component';
 import { SidebarSavedSearchesComponent } from './sidebar-saved-searches.component';
 import { SidebarSocialSectionComponent } from './sidebar-social-section.component';
@@ -54,7 +53,7 @@ import {
 } from '../../query/query';
 import { FeedGroupName } from '../../../core/feed-group';
 import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../models';
-import { TrendingUnopened } from '../../trending/trending.models';
+import { FollowedStoryDto, TrendingUnopened } from '../../trending/trending.models';
 import { NO_TRENDING_UNOPENED } from '../../trending/trending-window';
 import { isSubscriptionDrag } from '../../drag-payload';
 import { RefreshService } from '../../state/refresh.service';
@@ -145,6 +144,7 @@ export class SidebarComponent {
   readonly trendingUnopened = input<TrendingUnopened>(NO_TRENDING_UNOPENED);
   readonly groupUnread = input<Readonly<Record<FeedGroupName, number>>>({ tags: 0, feeds: 0 });
   readonly activeFollowedStoryId = input<number | null>(null);
+  readonly followedStories = input<FollowedStoryDto[]>([]);
   readonly savedSearches = input<SavedSearchDto[]>([]);
   /** The saved search the list is currently showing, by id, or null. The shell
    *  decides it — re-encoding the term to string-compare made a subtly
@@ -192,12 +192,7 @@ export class SidebarComponent {
   readonly screen = inject(LayoutService);
   readonly visibility = inject(SidebarVisibilityService);
   private readonly tagsStore = inject(TagsStore);
-  protected readonly followedStories = inject(FollowedStoriesStore);
   readonly organising = model(false);
-
-  constructor() {
-    this.followedStories.reloadIfStale();
-  }
 
   private readonly collapseButton = viewChild<ElementRef<HTMLButtonElement>>('collapseButton');
   /** Skips the mount run so a page load does not pull focus onto the collapse

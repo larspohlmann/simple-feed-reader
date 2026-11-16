@@ -119,14 +119,14 @@ describe('FollowedStoriesStore (#2128)', () => {
     it('zeroes the count before the POST answers', () => {
       const response = new Subject<void>();
       const opened = jest.fn(() => response);
-      const store = setup({ followed: answering(), opened });
+      const store = setup({ followed: answering([story(3, 2), story(5, 4)]), opened });
       store.load();
 
       store.markOpened(3);
 
       expect(opened).toHaveBeenCalledWith(3);
       expect(store.byId(3)?.newCount).toBe(0);
-      expect(store.byId(5)?.newCount).toBe(0);
+      expect(store.byId(5)?.newCount).toBe(4);
     });
 
     it('leaves the other stories untouched', () => {
@@ -161,6 +161,48 @@ describe('FollowedStoriesStore (#2128)', () => {
       store.markOpened(99);
 
       expect(opened).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('a load already out when the reader acts', () => {
+    function loadStillOut(stories: FollowedStoryDto[], api: Partial<TrendingApi>) {
+      const stale = new Subject<{ stories: FollowedStoryDto[] }>();
+      const followed = jest.fn().mockReturnValueOnce(of({ stories })).mockReturnValueOnce(stale);
+      const store = setup({ followed, ...api });
+      store.load();
+      jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
+      store.load();
+      return { store, stale };
+    }
+
+    it('does not bring back a count markOpened() zeroed', () => {
+      const { store, stale } = loadStillOut(rows, { opened: () => of(undefined) });
+
+      store.markOpened(3);
+      stale.next({ stories: rows });
+
+      expect(store.byId(3)?.newCount).toBe(0);
+    });
+
+    it('does not bring back a row unfollow() removed', () => {
+      const { store, stale } = loadStillOut(rows, { unfollow: () => of(undefined) });
+
+      store.unfollow(3);
+      stale.next({ stories: rows });
+
+      expect(store.stories().map((story) => story.id)).toEqual([5]);
+    });
+
+    it('takes the server count again once a later load has answered', () => {
+      const answers = [rows, rows, [story(3, 6), rows[1]]];
+      const followed = jest.fn(() => of({ stories: answers.shift() ?? [] }));
+      const store = setup({ followed, opened: () => of(undefined) });
+      store.load();
+      store.markOpened(3);
+      store.load();
+      store.load();
+
+      expect(store.byId(3)?.newCount).toBe(6);
     });
   });
 
