@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Entity\SocialAccount;
+use App\Entity\SocialNotification;
 use App\Entity\SocialNotificationPoll;
 use App\Entity\User;
 use App\Enum\SocialNotificationKind;
@@ -100,6 +101,60 @@ final class SocialNotificationControllerTest extends ApiTestCase
         $client->request('GET', '/api/me/notifications?network=bluesky&cursor=abc');
 
         $this->assertRejected($client, Response::HTTP_BAD_REQUEST);
+    }
+
+    public function testSeenReturns204(): void
+    {
+        $client = self::createClient();
+        $user = $this->signIn($client, 'notification-seen@example.test');
+        $account = $this->persisted(SocialAccounts::lemmyOf($user));
+        $rows = new SocialNotificationRows($this->entityManager());
+        $row = $rows->add($account, SocialNotificationKind::Reply, 'c1', true);
+        $rowId = $row->requireId();
+
+        $this->postSeen($client, ['network' => 'lemmy', 'upTo' => $rowId]);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
+    }
+
+    public function testUpToOfAnotherUserMarksNothing(): void
+    {
+        $client = self::createClient();
+        $user = $this->signIn($client, 'notification-seen-own@example.test');
+        $other = $this->factory()->create('notification-seen-other@example.test');
+        $rows = new SocialNotificationRows($this->entityManager());
+        $otherRow = $rows->add($this->persisted(SocialAccounts::blueskyOf($other)), SocialNotificationKind::Like, 'a');
+        $otherRowId = $otherRow->requireId();
+        $this->persisted(SocialAccounts::blueskyAs($user, 'did:plc:mine'));
+
+        $this->postSeen($client, ['network' => 'bluesky', 'upTo' => $otherRowId + 100]);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
+        $this->entityManager()->clear();
+        $stored = $this->entityManager()->find(SocialNotification::class, $otherRowId);
+        self::assertNotNull($stored);
+        self::assertFalse($stored->isSeen());
+    }
+
+    public function testMissingUpToIs422(): void
+    {
+        $client = self::createClient();
+        $this->signIn($client, 'notification-seen-missing@example.test');
+
+        $this->postSeen($client, ['network' => 'bluesky']);
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    /** @param array<string, mixed> $body */
+    private function postSeen(KernelBrowser $client, array $body): void
+    {
+        $client->request(
+            'POST',
+            '/api/me/notifications/seen',
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode($body, JSON_THROW_ON_ERROR),
+        );
     }
 
     public function testListsScopeMissingHandles(): void

@@ -55,6 +55,23 @@ final class SocialNotificationRepository extends ServiceEntityRepository
         return $byRemoteId;
     }
 
+    /** @return list<SocialNotification> the account's unseen rows with an id up to $upTo, oldest first */
+    public function findUnseenUpTo(SocialAccount $account, int $upTo): array
+    {
+        /** @var list<SocialNotification> $rows */
+        $rows = $this->createQueryBuilder('notification')
+            ->andWhere('notification.socialAccount = :account')
+            ->andWhere('notification.seen = false')
+            ->andWhere('notification.id <= :upTo')
+            ->setParameter('account', $account)
+            ->setParameter('upTo', $upTo)
+            ->orderBy('notification.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return $rows;
+    }
+
     public function markSeenUpTo(SocialAccount $account, \DateTimeImmutable $until): void
     {
         $this->createQueryBuilder('notification')

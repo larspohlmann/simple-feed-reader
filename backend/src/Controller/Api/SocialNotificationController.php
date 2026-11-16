@@ -4,21 +4,32 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Dto\Social\MarkNotificationsSeenRequest;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Http\SocialNotificationsJson;
+use App\Service\Foundation\RateLimit\RateLimitGuard;
 use App\Service\Social\Notification\NotificationList;
+use App\Service\Social\Notification\NotificationSeenMarker;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
+use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 #[Route('/api/me/notifications')]
 final readonly class SocialNotificationController
 {
-    public function __construct(private NotificationList $notificationList)
-    {
+    public function __construct(
+        private NotificationList $notificationList,
+        private NotificationSeenMarker $seenMarker,
+        private RateLimitGuard $rateLimitGuard,
+        #[Target]
+        private RateLimiterFactoryInterface $socialWritesLimiter,
+    ) {
     }
 
     #[Route('', name: 'api_me_notifications', methods: ['GET'])]
@@ -28,5 +39,17 @@ final readonly class SocialNotificationController
         #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] ?int $cursor = null,
     ): JsonResponse {
         return new JsonResponse(SocialNotificationsJson::page($this->notificationList->page($user, $network, $cursor)));
+    }
+
+    #[Route('/seen', name: 'api_me_notifications_seen', methods: ['POST'])]
+    public function seen(
+        #[MapRequestPayload] MarkNotificationsSeenRequest $request,
+        #[CurrentUser] User $user,
+    ): Response {
+        $this->rateLimitGuard->enforceForUser($this->socialWritesLimiter, $user);
+
+        $this->seenMarker->markSeen($user, $request->toNetwork(), $request->toUpTo());
+
+        return new Response(status: Response::HTTP_NO_CONTENT);
     }
 }
