@@ -33,6 +33,8 @@ import { atTop } from '../../reader-gestures';
 import { SidebarFootComponent } from './sidebar-foot.component';
 import { SidebarFeedRowComponent } from './sidebar-feed-row.component';
 import { SidebarGroupRowComponent } from './sidebar-group-row.component';
+import { FollowedStoriesStore } from '../../state/followed-stories.store';
+import { SidebarFollowedStoriesComponent } from './sidebar-followed-stories.component';
 import { SidebarSavedSearchesComponent } from './sidebar-saved-searches.component';
 import { SidebarSocialSectionComponent } from './sidebar-social-section.component';
 import { SidebarSubtagPillComponent } from './sidebar-subtag-pill.component';
@@ -102,6 +104,7 @@ const FEEDS_COLLAPSED_KEY = 'sfr.feeds.collapsed';
     SidebarFootComponent,
     SidebarFeedRowComponent,
     SidebarGroupRowComponent,
+    SidebarFollowedStoriesComponent,
     SidebarSavedSearchesComponent,
     SidebarSocialSectionComponent,
     SidebarSubtagPillComponent,
@@ -141,6 +144,7 @@ export class SidebarComponent {
   readonly forYouUnread = input(0);
   readonly trendingUnopened = input<TrendingUnopened>(NO_TRENDING_UNOPENED);
   readonly groupUnread = input<Readonly<Record<FeedGroupName, number>>>({ tags: 0, feeds: 0 });
+  readonly activeFollowedStoryId = input<number | null>(null);
   readonly savedSearches = input<SavedSearchDto[]>([]);
   /** The saved search the list is currently showing, by id, or null. The shell
    *  decides it — re-encoding the term to string-compare made a subtly
@@ -188,7 +192,12 @@ export class SidebarComponent {
   readonly screen = inject(LayoutService);
   readonly visibility = inject(SidebarVisibilityService);
   private readonly tagsStore = inject(TagsStore);
+  protected readonly followedStories = inject(FollowedStoriesStore);
   readonly organising = model(false);
+
+  constructor() {
+    this.followedStories.reloadIfStale();
+  }
 
   private readonly collapseButton = viewChild<ElementRef<HTMLButtonElement>>('collapseButton');
   /** Skips the mount run so a page load does not pull focus onto the collapse

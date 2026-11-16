@@ -64,6 +64,10 @@
         [forYouUnread]="forYouUnread()"
         [trendingUnopened]="trendingUnopened()"
       />
+      <app-sidebar-followed-stories
+        [stories]="followedStories.stories()"
+        [activeStoryId]="activeFollowedStoryId()"
+      />
       <app-sidebar-saved-searches
         [savedSearches]="savedSearches()"
         [activeSavedSearchId]="activeSavedSearchId()"

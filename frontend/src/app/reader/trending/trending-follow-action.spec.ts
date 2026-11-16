@@ -5,11 +5,13 @@ import { API_BASE_URL } from '../../core/api';
 import { anEntry, aStory } from '../../../testing/entry-testing';
 import { EntryDto } from '../models';
 import { EntriesStore } from '../state/entries.store';
+import { FollowedStoriesStore } from '../state/followed-stories.store';
 import { TrendingFollowAction } from './trending-follow-action';
 
 describe('TrendingFollowAction (#2128)', () => {
   let ctrl: HttpTestingController;
   let store: EntriesStore;
+  let followedStories: { load: jest.Mock };
 
   const card = (followed: boolean): EntryDto =>
     anEntry({ id: 7, story: aStory({ id: 12, followed }) });
@@ -23,9 +25,11 @@ describe('TrendingFollowAction (#2128)', () => {
   };
 
   beforeEach(() => {
+    followedStories = { load: jest.fn() };
     TestBed.configureTestingModule({
       providers: [
         TrendingFollowAction,
+        { provide: FollowedStoriesStore, useValue: followedStories },
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: 'https://api.test' },
@@ -45,8 +49,10 @@ describe('TrendingFollowAction (#2128)', () => {
     expect(followedOnScreen()).toBe(true);
     const request = ctrl.expectOne('https://api.test/api/trending/stories/12/follow');
     expect(request.request.method).toBe('PUT');
+    expect(followedStories.load).not.toHaveBeenCalled();
     request.flush(null, { status: 204, statusText: 'No Content' });
     expect(followedOnScreen()).toBe(true);
+    expect(followedStories.load).toHaveBeenCalledTimes(1);
   });
 
   it('unfollows a followed story, and shows it followed again when the request fails', () => {
@@ -60,5 +66,6 @@ describe('TrendingFollowAction (#2128)', () => {
     request.flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
     expect(followedOnScreen()).toBe(true);
     expect(store.error()).not.toBeNull();
+    expect(followedStories.load).not.toHaveBeenCalled();
   });
 });

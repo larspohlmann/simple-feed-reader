@@ -251,6 +251,9 @@ describe('ReaderShellComponent', () => {
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
     ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
     ctrl
+      .match('https://api.test/api/trending/followed')
+      .forEach((request) => request.flush({ stories: [] }));
+    ctrl
       .expectOne('https://api.test/api/for-you/excluded-networks')
       .flush({ excludedNetworks: [] });
     ctrl
@@ -483,6 +486,9 @@ describe('ReaderShellComponent', () => {
     });
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
     ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
+    ctrl
+      .match('https://api.test/api/trending/followed')
+      .forEach((request) => request.flush({ stories: [] }));
     ctrl
       .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [], nextCursor: null });
@@ -2918,6 +2924,7 @@ describe('ReaderShellComponent', () => {
       const currentSubscriptions = ctrl.expectOne('https://api.test/api/subscriptions');
       ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
+      ctrl.expectOne('https://api.test/api/trending/followed').flush({ stories: [] });
       ctrl
         .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [], nextCursor: null });
@@ -2990,6 +2997,7 @@ describe('ReaderShellComponent', () => {
         .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
       ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
+      ctrl.expectOne('https://api.test/api/trending/followed').flush({ stories: [] });
       ctrl
         .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [], nextCursor: null });
@@ -3274,6 +3282,7 @@ describe('ReaderShellComponent', () => {
       fixture.detectChanges();
       ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
+      ctrl.expectOne('https://api.test/api/trending/followed').flush({ stories: [] });
       ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
         status: 'none',
         batchesTotal: null,
@@ -3339,6 +3348,7 @@ describe('ReaderShellComponent', () => {
             tags: [],
             entries: [],
             savedSearches: [],
+            stories: [],
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
             trending: { window: 'day', unopened: 0 },
@@ -3391,6 +3401,7 @@ describe('ReaderShellComponent', () => {
             tags: [],
             entries: [],
             savedSearches: [],
+            stories: [],
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
             trending: { window: 'day', unopened: 0 },
@@ -3495,6 +3506,7 @@ describe('ReaderShellComponent', () => {
             tags: [],
             entries: [],
             savedSearches: [],
+            stories: [],
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
             trending: { window: 'day', unopened: 0 },
