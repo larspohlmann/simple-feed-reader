@@ -15,6 +15,7 @@ use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -77,6 +78,33 @@ final class LemmyNotificationSourceTest extends TestCase
             ),
         );
         self::assertNull($page->seenUntil);
+    }
+
+    /** @return iterable<string, array{string, string}> the first reply's field, and what it becomes */
+    public static function malformedReplies(): iterable
+    {
+        yield 'no reply id' => ['"comment_reply": {"id": 7,', '"comment_reply": {'];
+        yield 'no comment id' => ['"comment": {"id": 41,', '"comment": {'];
+        yield 'no published' => ['"published": "2026-11-16T09:00:00.123456Z"', '"edited": true'];
+        yield 'unparseable published' => ['"published": "2026-11-16T09:00:00.123456Z"', '"published": "never"'];
+        yield 'no creator name' => ['"name": "carol"', '"nick": "carol"'];
+        yield 'no creator actor id' => ['"actor_id": "https://lemmy.other/u/carol"', '"home": "lemmy.other"'];
+    }
+
+    #[DataProvider('malformedReplies')]
+    public function testDropsEntriesMissingWhatTheRowNeeds(string $field, string $replacement): void
+    {
+        $replies = (string) file_get_contents(__DIR__ . '/../../../../Fixtures/lemmy/notifications-replies.json');
+        $broken = preg_replace('/' . preg_quote($field, '/') . '/', $replacement, $replies, 1);
+        $page = $this->source($this->http((string) $broken))->fetch(SocialApiWiring::lemmyAccount());
+
+        self::assertSame(
+            ['reply:6', 'mention:3'],
+            array_map(
+                static fn (FetchedNotificationModel $notification): string => $notification->remoteId,
+                $page->notifications,
+            ),
+        );
     }
 
     public function testNeverAsksForPrivateMessages(): void
@@ -194,13 +222,13 @@ final class LemmyNotificationSourceTest extends TestCase
         );
     }
 
-    private function http(): RoutedHttpClient
+    private function http(?string $replies = null): RoutedHttpClient
     {
-        $fixtures = __DIR__ . '/../../../../Fixtures/Lemmy/';
+        $fixtures = __DIR__ . '/../../../../Fixtures/lemmy/';
 
         return new RoutedHttpClient([
             'GET ' . self::REPLIES => new MockResponse(
-                (string) file_get_contents($fixtures . 'notifications-replies.json'),
+                $replies ?? (string) file_get_contents($fixtures . 'notifications-replies.json'),
             ),
             'GET ' . self::MENTIONS => new MockResponse(
                 (string) file_get_contents($fixtures . 'notifications-mentions.json'),
