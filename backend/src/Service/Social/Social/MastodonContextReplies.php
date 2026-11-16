@@ -114,11 +114,9 @@ final readonly class MastodonContextReplies
 
     private static function authorOf(JsonNodeModel $account): CommentAuthorModel
     {
-        $handle = MastodonAuthor::handle($account);
-
         return new CommentAuthorModel(
             MastodonAuthor::name($account),
-            $handle === null ? null : '@' . $handle,
+            MastodonAuthor::mention($account),
             MastodonAuthor::profile($account),
             MastodonAuthor::avatar($account),
         );

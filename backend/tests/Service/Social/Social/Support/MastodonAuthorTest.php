@@ -46,6 +46,18 @@ final class MastodonAuthorTest extends TestCase
         self::assertSame($handle, MastodonAuthor::handle(JsonNodeModel::of($account)));
     }
 
+    public function testTheMentionIsTheHandleAfterAnAt(): void
+    {
+        $account = JsonNodeModel::of(['acct' => 'ann', 'url' => 'https://hachyderm.io/@ann']);
+
+        self::assertSame('@ann@hachyderm.io', MastodonAuthor::mention($account));
+    }
+
+    public function testAnAccountWithoutAHandleHasNoMention(): void
+    {
+        self::assertNull(MastodonAuthor::mention(JsonNodeModel::of(['url' => 'https://hachyderm.io/@ann'])));
+    }
+
     /** @return iterable<string, array{array<string, string>, ?string}> */
     public static function avatars(): iterable
     {
