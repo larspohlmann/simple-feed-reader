@@ -16,23 +16,14 @@ use Doctrine\Persistence\ManagerRegistry;
 final class SharedLinkRepository extends ServiceEntityRepository
 {
     private const int ROWS_PER_INSERT = 100;
-    private const array REFERENCES = [
-        'link_card' => 'shared_link_id',
-        'entry' => 'quoted_shared_link_id',
-        'trending_story_entry' => 'shared_link_id',
-    ];
-    private const string UNREFERENCED
-        = 'NOT EXISTS (SELECT 1 FROM link_card card WHERE card.shared_link_id = shared_link.id)'
-        . ' AND NOT EXISTS (SELECT 1 FROM entry quoting WHERE quoting.quoted_shared_link_id = shared_link.id)';
+    /** The columns that keep a link from the GC. */
+    private const array OWNING_REFERENCES = ['link_card' => 'shared_link_id', 'entry' => 'quoted_shared_link_id'];
+    /** A trending member's link is SET NULL on delete: the next snapshot rebuilds every member from its card. */
+    private const array REFERENCES = [...self::OWNING_REFERENCES, 'trending_story_entry' => 'shared_link_id'];
 
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, SharedLink::class);
-    }
-
-    public function findOneByUrlHash(string $urlHash): ?SharedLink
-    {
-        return $this->findOneBy(['urlHash' => $urlHash]);
     }
 
     /**
@@ -107,16 +98,16 @@ final class SharedLinkRepository extends ServiceEntityRepository
         $connection = $this->getEntityManager()->getConnection();
         $connection->executeStatement(
             'UPDATE shared_link SET unreferenced_since = NULL WHERE unreferenced_since IS NOT NULL AND NOT ('
-            . self::UNREFERENCED . ')',
+            . self::unreferenced() . ')',
         );
         $connection->executeStatement(
             'UPDATE shared_link SET unreferenced_since = ? WHERE unreferenced_since IS NULL AND '
-            . self::UNREFERENCED,
+            . self::unreferenced(),
             [$now->format('Y-m-d H:i:s')],
         );
 
         return (int) $connection->executeStatement(
-            'DELETE FROM shared_link WHERE unreferenced_since < ? AND ' . self::UNREFERENCED,
+            'DELETE FROM shared_link WHERE unreferenced_since < ? AND ' . self::unreferenced(),
             [$markedBefore->format('Y-m-d H:i:s')],
         );
     }
@@ -163,11 +154,10 @@ final class SharedLinkRepository extends ServiceEntityRepository
         $connection = $this->getEntityManager()->getConnection();
         foreach (self::REFERENCES as $table => $column) {
             $connection->executeStatement(
-                sprintf('UPDATE %s SET %s = ? WHERE %s = ?', $table, $column, $column),
+                \sprintf('UPDATE %s SET %s = ? WHERE %s = ?', $table, $column, $column),
                 [$holderLinkId, $mergedLinkId],
             );
         }
-        $this->moveResolution($mergedLinkId, $holderLinkId);
         $connection->executeStatement(
             'UPDATE shared_link SET unreferenced_since = NULL WHERE id = ?',
             [$holderLinkId],
@@ -177,33 +167,44 @@ final class SharedLinkRepository extends ServiceEntityRepository
 
     public function relocate(int $linkId, string $url, string $urlHash): void
     {
-        $this->createQueryBuilder('link')
-            ->update()
-            ->set('link.url', ':url')
-            ->set('link.urlHash', ':urlHash')
-            ->andWhere('link.id = :id')
-            ->setParameter('url', $url)
-            ->setParameter('urlHash', $urlHash)
-            ->setParameter('id', $linkId)
-            ->getQuery()
-            ->execute();
+        $this->getEntityManager()->getConnection()->executeStatement(
+            'UPDATE shared_link SET url = ?, url_hash = ? WHERE id = ?',
+            [$url, $urlHash, $linkId],
+        );
     }
 
-    /** The holder keeps its own resolution; the merged link's goes with its row (ON DELETE CASCADE). */
-    private function moveResolution(int $mergedLinkId, int $holderLinkId): void
+    /**
+     * @param list<string> $urlHashes
+     *
+     * @return array<string, int> link id by url hash, for the hashes a link holds
+     */
+    public function idsByUrlHashes(array $urlHashes): array
     {
-        $connection = $this->getEntityManager()->getConnection();
-        $holderHasOne = $connection->fetchOne(
-            'SELECT 1 FROM shared_link_resolution WHERE shared_link_id = ?',
-            [$holderLinkId],
-        ) !== false;
-        if ($holderHasOne) {
-            return;
+        if ($urlHashes === []) {
+            return [];
         }
-        $connection->executeStatement(
-            'UPDATE shared_link_resolution SET shared_link_id = ? WHERE shared_link_id = ?',
-            [$holderLinkId, $mergedLinkId],
+        /** @var list<array{url_hash: string, id: int|string}> $rows */
+        $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
+            'SELECT url_hash, id FROM shared_link WHERE url_hash IN (?)',
+            [array_values(array_unique($urlHashes))],
+            [ArrayParameterType::STRING],
         );
+        $ids = [];
+        foreach ($rows as $row) {
+            $ids[$row['url_hash']] = (int) $row['id'];
+        }
+
+        return $ids;
+    }
+
+    private static function unreferenced(): string
+    {
+        return implode(' AND ', array_map(
+            static fn (string $table, string $column): string
+                => \sprintf('NOT EXISTS (SELECT 1 FROM %s WHERE %s.%s = shared_link.id)', $table, $table, $column),
+            array_keys(self::OWNING_REFERENCES),
+            self::OWNING_REFERENCES,
+        ));
     }
 
     /** @return list<int|string|null> */

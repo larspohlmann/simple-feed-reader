@@ -8,9 +8,12 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Repository\EntryRepository;
 use App\Repository\SharedLinkRepository;
+use App\Repository\SharedLinkResolutionRepository;
 use App\Service\Foundation\Url\EntryUrlHash;
 use App\Service\Foundation\Url\UrlNormalizer;
 use App\Service\Operations\UrlCleanup\Model\TrackingUrlCleanupReportModel;
+use App\Service\Operations\UrlCleanup\StoredUrlWriter\DryRunStoredUrlWriter;
+use App\Service\Operations\UrlCleanup\StoredUrlWriter\StoredUrlWriter;
 use App\Service\Operations\UrlCleanup\TrackingUrlCleanup;
 use App\Tests\DbTestCase;
 
@@ -43,7 +46,7 @@ final class TrackingUrlCleanupTest extends DbTestCase
 
         $report = $this->cleanup()->count();
 
-        self::assertEquals(new TrackingUrlCleanupReportModel(3, 2, 2, 2), $report);
+        self::assertEquals(self::fixtureReport(), $report);
         self::assertSame($before, $this->rows());
     }
 
@@ -53,7 +56,7 @@ final class TrackingUrlCleanupTest extends DbTestCase
 
         $report = $this->cleanup()->clean();
 
-        self::assertEquals(new TrackingUrlCleanupReportModel(3, 2, 2, 2), $report);
+        self::assertEquals(self::fixtureReport(), $report);
         self::assertSame(
             ['url' => 'https://example.com/a', 'url_hash' => self::hashOf('https://example.com/a')],
             $this->row('tracked'),
@@ -71,13 +74,13 @@ final class TrackingUrlCleanupTest extends DbTestCase
     {
         $this->cleanup()->clean();
 
-        self::assertEquals(new TrackingUrlCleanupReportModel(0, 0, 0, 0), $this->cleanup()->clean());
+        self::assertEquals(new TrackingUrlCleanupReportModel(), $this->cleanup()->clean());
     }
 
     public function testTheWalkCrossesBatchBoundaries(): void
     {
-        self::assertEquals(new TrackingUrlCleanupReportModel(3, 2, 2, 2), $this->cleanup(1)->clean());
-        self::assertEquals(new TrackingUrlCleanupReportModel(0, 0, 0, 0), $this->cleanup(3)->clean());
+        self::assertEquals(self::fixtureReport(), $this->cleanup(1)->clean());
+        self::assertEquals(new TrackingUrlCleanupReportModel(), $this->cleanup(3)->clean());
     }
 
     public function testSharedLinkUrlsAreCleaned(): void
@@ -131,7 +134,7 @@ final class TrackingUrlCleanupTest extends DbTestCase
 
         $report = $this->cleanup()->clean();
 
-        self::assertEquals(new TrackingUrlCleanupReportModel(3, 2, 2, 2, 1), $report);
+        self::assertEquals(self::fixtureReport(cardsMerged: 1), $report);
         self::assertSame(
             [['id' => $held['holder'], 'url_hash' => self::hashOf(self::HELD_URL)]],
             $this->linksOn(self::HELD_URL),
@@ -145,7 +148,7 @@ final class TrackingUrlCleanupTest extends DbTestCase
             'SELECT unreferenced_since FROM shared_link WHERE id = ?',
             [$held['holder']],
         ));
-        self::assertEquals(new TrackingUrlCleanupReportModel(0, 0, 0, 0, 0), $this->cleanup()->clean());
+        self::assertEquals(new TrackingUrlCleanupReportModel(), $this->cleanup()->clean());
     }
 
     public function testTheHoldersResolutionWinsOverTheMergedOne(): void
@@ -167,8 +170,28 @@ final class TrackingUrlCleanupTest extends DbTestCase
 
         $report = $this->cleanup()->count();
 
-        self::assertEquals(new TrackingUrlCleanupReportModel(3, 2, 2, 2, 1), $report);
+        self::assertEquals(self::fixtureReport(cardsMerged: 1), $report);
         self::assertSame($before, [$this->rows(), $this->referencesFrom($held['entry']), $this->resolutions()]);
+    }
+
+    public function testTwoLinksOfOneBatchMovingOntoOneHashBecomeOne(): void
+    {
+        $first = $this->storeLink(self::HELD_URL, hash('sha256', 'first'));
+        $this->storeLink(self::HELD_URL, hash('sha256', 'second'));
+        $expected = new TrackingUrlCleanupReportModel(
+            entriesCleaned: 3,
+            hashesChanged: 2,
+            cardsCleaned: 2,
+            cardHashesChanged: 3,
+            cardsMerged: 1,
+        );
+
+        self::assertEquals($expected, $this->cleanup(10)->count());
+        self::assertEquals($expected, $this->cleanup(10)->clean());
+        self::assertSame(
+            [['id' => $first, 'url_hash' => self::hashOf(self::HELD_URL)]],
+            $this->linksOn(self::HELD_URL),
+        );
     }
 
     /**
@@ -251,20 +274,16 @@ final class TrackingUrlCleanupTest extends DbTestCase
     /** @return array{card: int, quote: int, trending: int} */
     private function referencesFrom(int $entryId): array
     {
-        $connection = $this->entityManager->getConnection();
-
         return [
-            'card' => self::idOf(
-                $connection->fetchOne('SELECT shared_link_id FROM link_card WHERE entry_id = ?', [$entryId]),
-            ),
-            'quote' => self::idOf(
-                $connection->fetchOne('SELECT quoted_shared_link_id FROM entry WHERE id = ?', [$entryId]),
-            ),
-            'trending' => self::idOf($connection->fetchOne(
-                'SELECT shared_link_id FROM trending_story_entry WHERE entry_id = ?',
-                [$entryId],
-            )),
+            'card' => $this->idFrom('SELECT shared_link_id FROM link_card WHERE entry_id = ?', $entryId),
+            'quote' => $this->idFrom('SELECT quoted_shared_link_id FROM entry WHERE id = ?', $entryId),
+            'trending' => $this->idFrom('SELECT shared_link_id FROM trending_story_entry WHERE entry_id = ?', $entryId),
         ];
+    }
+
+    private function idFrom(string $query, int $id): int
+    {
+        return self::idOf($this->entityManager->getConnection()->fetchOne($query, [$id]));
     }
 
     /** @return list<array{int, string}> shared link id and resolved URL */
@@ -285,12 +304,17 @@ final class TrackingUrlCleanupTest extends DbTestCase
         self::assertInstanceOf(EntryRepository::class, $entries);
         self::assertInstanceOf(SharedLinkRepository::class, $sharedLinks);
 
+        $resolutions = self::getContainer()->get(SharedLinkResolutionRepository::class);
+        self::assertInstanceOf(SharedLinkResolutionRepository::class, $resolutions);
+
         return new TrackingUrlCleanup(
             $entries,
             $sharedLinks,
             $this->urlHash,
             new UrlNormalizer(),
             $this->entityManager,
+            new StoredUrlWriter($sharedLinks, $resolutions),
+            new DryRunStoredUrlWriter(),
             $batchSize,
         );
     }
@@ -323,7 +347,6 @@ final class TrackingUrlCleanupTest extends DbTestCase
 
     private function storeLinks(): void
     {
-        $connection = $this->entityManager->getConnection();
         $links = [
             'clean' => ['https://example.com/card', self::hashOf('https://example.com/card')],
             'tracked' => ['https://youtu.be/abc?si=y', self::hashOf('https://youtu.be/abc?si=y')],
@@ -338,14 +361,7 @@ final class TrackingUrlCleanupTest extends DbTestCase
             'relative' => ['/news/3?utm_source=x', self::hashOf('https://example.com/news/3')],
         ];
         foreach ($links as $name => [$url, $urlHash]) {
-            $connection->insert('shared_link', [
-                'url' => $url,
-                'url_hash' => $urlHash,
-                'title' => 'Card',
-                'site_name' => 'example.com',
-                'created_at' => '2026-11-15 12:00:00',
-            ]);
-            $this->linkIds[$name] = (int) $connection->lastInsertId();
+            $this->linkIds[$name] = $this->storeLink($url, $urlHash);
         }
     }
 
@@ -400,6 +416,18 @@ final class TrackingUrlCleanupTest extends DbTestCase
         self::assertNotSame(self::hashOf('https://bsky.app/x'), $hash);
 
         return $hash;
+    }
+
+    /** What one run over the fixture of store() reports. */
+    private static function fixtureReport(int $cardsMerged = 0): TrackingUrlCleanupReportModel
+    {
+        return new TrackingUrlCleanupReportModel(
+            entriesCleaned: 3,
+            hashesChanged: 2,
+            cardsCleaned: 2,
+            cardHashesChanged: 2,
+            cardsMerged: $cardsMerged,
+        );
     }
 
     private static function idOf(mixed $value): int

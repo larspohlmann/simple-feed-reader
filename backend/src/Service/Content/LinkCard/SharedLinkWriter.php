@@ -99,7 +99,7 @@ final readonly class SharedLinkWriter
     {
         $urlHash = $this->hashesByUrl([$url])[$url] ?? null;
 
-        return $urlHash === null ? null : $this->sharedLinks->findOneByUrlHash($urlHash);
+        return $urlHash === null ? null : ($this->sharedLinks->byUrlHashes([$urlHash])[$urlHash] ?? null);
     }
 
     private function newLink(string $urlHash, LinkCardContent $card, ?FeedLanguage $statedLanguage): NewSharedLinkModel

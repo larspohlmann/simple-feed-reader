@@ -47,18 +47,16 @@ final class SharedLinkRepositoryTest extends DbTestCase
         ]);
 
         $rows = $links->byUrlHashes(['h1', 'h2', 'missing']);
-        $found = $links->findOneByUrlHash('h1');
+        $found = $rows['h1'] ?? null;
 
         self::assertEqualsCanonicalizing(['h1', 'h2'], array_keys($rows));
         self::assertInstanceOf(SharedLink::class, $found);
-        self::assertSame($rows['h1'], $found);
         self::assertSame('h1', $found->getUrlHash());
         self::assertSame(FeedLanguage::Spanish, $found->getLanguage());
         self::assertEquals(
             new LinkCardContent('https://example.com/h1', 'One', 'About', 'https://example.com/i.jpg', 'Ex'),
             $found->preview(),
         );
-        self::assertNull($links->findOneByUrlHash('missing'));
     }
 
     public function testFindingNoHashesIsEmpty(): void
