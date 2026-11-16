@@ -27,7 +27,7 @@ final class StoryMatchingTest extends TestCase
         self::assertCount(1, $match->assignments);
         self::assertSame(7, $match->assignments[0]->storyId);
         self::assertSame([], $match->assignments[0]->joining());
-        self::assertSame([1, 2, 3], $match->assignments[0]->staying());
+        self::assertSame([1, 2, 3], $match->assignments[0]->storedEntryIds);
         self::assertSame(['kept' => 1, 'created' => 0, 'merged' => 0, 'split' => 0], $match->toLogContext());
     }
 
@@ -41,7 +41,7 @@ final class StoryMatchingTest extends TestCase
 
         self::assertSame(7, $match->assignments[0]->storyId);
         self::assertSame([4], self::entryIds($match->assignments[0]->joining()));
-        self::assertSame([1, 2, 3], $match->assignments[0]->staying());
+        self::assertSame([1, 2, 3], $match->assignments[0]->storedEntryIds);
     }
 
     public function testOverlapIsMeasuredAgainstTheSmallerSide(): void

@@ -18,10 +18,7 @@ use App\Entity\User;
 use App\Enum\ShareKind;
 use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
-use App\Repository\TrendingPlacementSql;
 use App\Service\Foundation\Url\UrlNormalizer;
-use Doctrine\DBAL\ArrayParameterType;
-use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManagerInterface;
 
 /** Feeds, entries and stored stories for the Trending integration tests; dates are naive UTC strings. */
@@ -169,18 +166,22 @@ final readonly class TrendingFixtures
         $this->entityManager->flush();
     }
 
-    /** Places members the story already holds in one more window. */
+    /** Places members the story already holds in one more window, moving them off any story it showed them in. */
     public function place(TrendingWindow $window, TrendingStory $story, Entry ...$members): void
     {
         $this->entityManager->flush();
-        $this->entityManager->getConnection()->executeStatement(
-            \sprintf(
-                'UPDATE trending_story_entry SET %s = 1 WHERE story_id = ? AND entry_id IN (?)',
-                TrendingPlacementSql::flagOf($window),
-            ),
-            [$story->requireId(), array_map(static fn (Entry $member): int => $member->requireId(), $members)],
-            [ParameterType::INTEGER, ArrayParameterType::INTEGER],
-        );
+        $connection = $this->entityManager->getConnection();
+        foreach ($members as $member) {
+            $connection->delete(
+                'trending_story_placement',
+                ['time_window' => $window->value, 'entry_id' => $member->requireId()],
+            );
+            $connection->insert('trending_story_placement', [
+                'time_window' => $window->value,
+                'entry_id' => $member->requireId(),
+                'story_id' => $story->requireId(),
+            ]);
+        }
     }
 
     public function reader(string $email): User

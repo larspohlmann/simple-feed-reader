@@ -35,15 +35,4 @@ final readonly class StoryAssignmentModel
             static fn (StoryMemberModel $member): bool => !isset($stored[$member->entryId]),
         ));
     }
-
-    /** @return list<int> */
-    public function staying(): array
-    {
-        $stored = array_flip($this->storedEntryIds);
-
-        return array_values(array_filter(
-            $this->group->entryIds(),
-            static fn (int $entryId): bool => isset($stored[$entryId]),
-        ));
-    }
 }

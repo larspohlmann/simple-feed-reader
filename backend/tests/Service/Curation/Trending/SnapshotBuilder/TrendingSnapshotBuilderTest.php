@@ -337,7 +337,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         self::assertSame(0, $report->match->merged());
         self::assertSame(
             [$larger->requireId()],
-            $this->intColumn('SELECT DISTINCT story_id FROM trending_story_entry WHERE in_day = 1'),
+            $this->intColumn("SELECT DISTINCT story_id FROM trending_story_placement WHERE time_window = 'day'"),
         );
     }
 
@@ -383,7 +383,8 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         self::assertSame(
             $strikeIds,
             $this->intColumn(
-                'SELECT entry_id FROM trending_story_entry WHERE story_id = ? AND in_day = 1 ORDER BY entry_id',
+                "SELECT entry_id FROM trending_story_placement WHERE story_id = ? AND time_window = 'day'"
+                . ' ORDER BY entry_id',
                 [$newStoryId],
             ),
         );
@@ -609,9 +610,15 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
     private function history(): array
     {
         return $this->entityManager->getConnection()->fetchAllAssociative(
-            'SELECT story_id, entry_id, joined_at, in_day, in_week FROM trending_story_entry'
-            . ' ORDER BY story_id, entry_id',
+            'SELECT member.story_id, member.entry_id, member.joined_at, ' . self::placedFlag(TrendingWindow::Day)
+            . ' AS in_day, ' . self::placedFlag(TrendingWindow::Week) . ' AS in_week FROM trending_story_entry member'
+            . ' ORDER BY member.story_id, member.entry_id',
         );
+    }
+
+    private static function placedFlag(TrendingWindow $window): string
+    {
+        return 'CASE WHEN ' . TrendingPlacementSql::placedIn($window, 'member') . ' THEN 1 ELSE 0 END';
     }
 
     /** @return list<array<string, mixed>> */
@@ -633,7 +640,10 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
     {
         return array_map(
             static fn (int $flags): array => [intdiv($flags, 2), $flags % 2],
-            $this->intColumn('SELECT DISTINCT in_day * 2 + in_week FROM trending_story_entry'),
+            $this->intColumn(
+                'SELECT DISTINCT ' . self::placedFlag(TrendingWindow::Day) . ' * 2 + '
+                . self::placedFlag(TrendingWindow::Week) . ' FROM trending_story_entry member',
+            ),
         );
     }
 
@@ -641,7 +651,8 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
     private function flagsOf(Entry $entry): array
     {
         $row = $this->entityManager->getConnection()->fetchAssociative(
-            'SELECT in_day, joined_at FROM trending_story_entry WHERE entry_id = ?',
+            'SELECT ' . self::placedFlag(TrendingWindow::Day) . ' AS in_day, member.joined_at'
+            . ' FROM trending_story_entry member WHERE member.entry_id = ?',
             [$entry->requireId()],
         );
         self::assertIsArray($row);

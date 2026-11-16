@@ -280,17 +280,17 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
             '2031-05-14 10:00:00',
             [[$one, 'kept.example'], [$two, null]],
         );
-        $this->clearFlags();
+        $this->clearPlacements();
         $bystander = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $three);
-        $this->clearFlags();
+        $this->clearPlacements();
 
-        $this->history()->save(
+        $this->saveAndPlace(
             new StoryAssignmentModel(
                 $this->group([$one->requireId(), $two->requireId(), $three->requireId()], 'rewritten.example'),
                 $story->requireId(),
                 [$one->requireId(), $two->requireId()],
             ),
-            self::build(TrendingWindow::Day),
+            TrendingWindow::Day,
         );
 
         self::assertEquals(
@@ -319,16 +319,15 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
         $story = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $one);
         $holder = $this->fixtures->story(TrendingWindow::Day, '2031-05-14 09:00:00', $two, $three);
         $older = $this->fixtures->story(TrendingWindow::Day, '2031-05-14 08:00:00', $one);
-        $this->history()->clearPlacement(TrendingWindow::Week);
 
-        $this->history()->save(
+        $this->saveAndPlace(
             new StoryAssignmentModel(
                 $this->group([$one->requireId(), $two->requireId()]),
                 $story->requireId(),
                 [$one->requireId()],
                 [$one->requireId(), $two->requireId()],
             ),
-            self::build(TrendingWindow::Week),
+            TrendingWindow::Week,
         );
 
         self::assertEquals(
@@ -346,14 +345,12 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
     {
         [$one, $two, $three] = $this->entries(3);
         $original = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $one, $two, $three);
-        $this->history()->clearPlacement(TrendingWindow::Week);
 
         $splitOff = [$two->requireId(), $three->requireId()];
-        $this->history()->save(
+        $storyId = $this->saveAndPlace(
             new StoryAssignmentModel($this->group($splitOff), null, [], $splitOff),
-            self::build(TrendingWindow::Week),
+            TrendingWindow::Week,
         );
-        $storyId = $this->latestStoryId();
 
         self::assertEquals(
             [
@@ -370,15 +367,14 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
         [$one, $two] = $this->entries(2);
         $story = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $one);
         $holder = $this->fixtures->story(TrendingWindow::Day, '2031-05-14 09:00:00', $two);
-        $this->history()->clearPlacement(TrendingWindow::Week);
 
-        $this->history()->save(
+        $this->saveAndPlace(
             new StoryAssignmentModel(
                 $this->group([$one->requireId(), $two->requireId()]),
                 $story->requireId(),
                 [$one->requireId()],
             ),
-            self::build(TrendingWindow::Week),
+            TrendingWindow::Week,
         );
 
         self::assertEquals(
@@ -409,7 +405,7 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
         );
 
         self::assertNotSame([], $recorder->queriesMatching('trending_story_entry'));
-        self::assertSame([], $recorder->queriesMatching('story_id <> ?'));
+        self::assertSame([], $recorder->queriesMatching('story_id <>'));
     }
 
     public function testAStoryEmptiedByAWeekSaveIsPrunedUnlessFollowed(): void
@@ -460,11 +456,11 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
     {
         [$one, $two] = $this->entries(2);
         $story = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $one, $two);
-        $this->clearFlags();
+        $this->clearPlacements();
 
-        $this->history()->save(
+        $this->saveAndPlace(
             new StoryAssignmentModel($this->group([$one->requireId()]), $story->requireId(), [$one->requireId()]),
-            self::build(TrendingWindow::Week),
+            TrendingWindow::Week,
         );
 
         self::assertEquals(
@@ -525,12 +521,12 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
     {
         $entries = $this->entries(301);
         $story = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', ...$entries);
-        $this->clearFlags();
+        $this->clearPlacements();
         $entryIds = array_map(static fn (Entry $entry): int => $entry->requireId(), $entries);
 
-        $this->history()->save(
+        $this->saveAndPlace(
             new StoryAssignmentModel($this->group($entryIds), $story->requireId(), $entryIds),
-            self::build(TrendingWindow::Week),
+            TrendingWindow::Week,
         );
 
         self::assertSame(301, $this->placedCount());
@@ -549,7 +545,7 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
         $story = $this->fixtures->story(TrendingWindow::Day, '2031-05-14 10:00:00', $one, $two);
         $this->fixtures->place(TrendingWindow::Week, $story, $one);
 
-        $this->history()->clearPlacement(TrendingWindow::Day);
+        $this->history()->place(TrendingWindow::Day, []);
 
         self::assertEquals(
             [
@@ -566,7 +562,7 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
         $story = $this->fixtures->story(TrendingWindow::Day, '2031-05-14 10:00:00', $one);
         $this->fixtures->place(TrendingWindow::Week, $story, $one);
 
-        $this->history()->clearPlacement(TrendingWindow::Week);
+        $this->history()->place(TrendingWindow::Week, []);
 
         self::assertEquals([[$story->requireId(), $one->requireId(), '2031-05-14 10:00:00', 1, 0]], $this->members());
     }
@@ -644,6 +640,93 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
         self::assertSame(1, $this->placedCount());
     }
 
+    public function testPlacingAWindowWritesItsRowsAndLeavesTheOtherWindow(): void
+    {
+        [$one, $two] = $this->entries(2);
+        $story = $this->fixtures->story(TrendingWindow::Day, '2031-05-14 10:00:00', $one, $two);
+
+        $written = $this->history()->place(TrendingWindow::Week, [$one->requireId() => $story->requireId()]);
+
+        self::assertSame(1, $written);
+        self::assertSame([$one->requireId()], $this->placedEntries(TrendingWindow::Week, $story->requireId()));
+        self::assertSame(
+            [$one->requireId(), $two->requireId()],
+            $this->placedEntries(TrendingWindow::Day, $story->requireId()),
+        );
+    }
+
+    public function testPlacingTheSamePlacementAgainWritesNothing(): void
+    {
+        [$one, $two] = $this->entries(2);
+        $story = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $one, $two);
+        $placement = [$one->requireId() => $story->requireId(), $two->requireId() => $story->requireId()];
+        $this->history()->place(TrendingWindow::Day, $placement);
+
+        self::assertSame(0, $this->history()->place(TrendingWindow::Day, $placement));
+        self::assertSame(
+            [$one->requireId(), $two->requireId()],
+            $this->placedEntries(TrendingWindow::Day, $story->requireId()),
+        );
+    }
+
+    public function testPlacingMovesAnEntryToItsNewStoryAndDropsOneNoLongerGrouped(): void
+    {
+        [$one, $two, $three] = $this->entries(3);
+        $first = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $one, $two);
+        $second = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $three);
+        $this->fixtures->join($second, '2031-05-14 11:00:00', $two);
+
+        $written = $this->history()->place(
+            TrendingWindow::Week,
+            [$one->requireId() => $first->requireId(), $two->requireId() => $second->requireId()],
+        );
+
+        self::assertSame(2, $written);
+        self::assertSame([$one->requireId()], $this->placedEntries(TrendingWindow::Week, $first->requireId()));
+        self::assertSame([$two->requireId()], $this->placedEntries(TrendingWindow::Week, $second->requireId()));
+    }
+
+    public function testAMergeMovesTheMergedStorysDayPlacementToTheSurvivor(): void
+    {
+        [$one, $two] = $this->entries(2);
+        $survivor = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $one);
+        $merged = $this->fixtures->story(TrendingWindow::Day, '2031-05-14 09:00:00', $one, $two);
+
+        $this->history()->merge(new StoryMergeModel($survivor->requireId(), $merged->requireId()));
+
+        self::assertSame(
+            [$one->requireId(), $two->requireId()],
+            $this->placedEntries(TrendingWindow::Day, $survivor->requireId()),
+        );
+        self::assertSame([$one->requireId()], $this->placedEntries(TrendingWindow::Week, $survivor->requireId()));
+        self::assertSame(3, $this->placedCount());
+    }
+
+    public function testAClaimTakesTheEarlierJoinAndTheOtherStorysPlacementOfTheClaimedEntriesOnly(): void
+    {
+        [$one, $two] = $this->entries(2);
+        $story = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $one);
+        $other = $this->fixtures->story(TrendingWindow::Day, '2031-05-14 08:00:00', $one, $two);
+
+        $this->history()->save(
+            new StoryAssignmentModel(
+                $this->group([$one->requireId()]),
+                $story->requireId(),
+                [$one->requireId()],
+                [$one->requireId()],
+            ),
+            self::build(TrendingWindow::Week),
+        );
+
+        self::assertEquals(
+            [
+                [$story->requireId(), $one->requireId(), '2031-05-14 08:00:00', 1, 1],
+                [$other->requireId(), $two->requireId(), '2031-05-14 08:00:00', 1, 0],
+            ],
+            $this->members(),
+        );
+    }
+
     private function history(): TrendingStoryHistoryRepository
     {
         return new TrendingStoryHistoryRepository($this->entityManager);
@@ -651,17 +734,16 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
 
     private function saveNew(TrendingWindow $window, TrendingStoryModel $group): int
     {
-        $this->history()->save(new StoryAssignmentModel($group, null, []), self::build($window));
-
-        return $this->latestStoryId();
+        return $this->saveAndPlace(new StoryAssignmentModel($group, null, []), $window);
     }
 
-    private function latestStoryId(): int
+    /** As a build does: the group's entries are all the window places. */
+    private function saveAndPlace(StoryAssignmentModel $assignment, TrendingWindow $window): int
     {
-        $storyId = $this->entityManager->getConnection()->fetchOne('SELECT MAX(id) FROM trending_story');
-        self::assertIsNumeric($storyId);
+        $storyId = $this->history()->save($assignment, self::build($window));
+        $this->history()->place($window, array_fill_keys($assignment->group->entryIds(), $storyId));
 
-        return (int) $storyId;
+        return $storyId;
     }
 
     private static function build(TrendingWindow $window): StoryBuildModel
@@ -720,10 +802,9 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
         );
     }
 
-    private function clearFlags(): void
+    private function clearPlacements(): void
     {
-        $this->entityManager->getConnection()
-            ->executeStatement('UPDATE trending_story_entry SET in_day = 0, in_week = 0');
+        $this->entityManager->getConnection()->executeStatement('DELETE FROM trending_story_placement');
     }
 
     private static function utc(string $moment): \DateTimeImmutable
@@ -731,30 +812,43 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
         return new \DateTimeImmutable($moment, new \DateTimeZone('UTC'));
     }
 
-    /** @return list<array{int, int, string, int, int}> */
+    /** @return list<array{int, int, string, int, int}> each member, its join, and 1 where the day and the week place it */
     private function members(): array
     {
-        /**
-         * @var list<array{
-         *     story_id: int|string, entry_id: int|string, joined_at: string,
-         *     in_day: int|string|bool, in_week: int|string|bool,
-         * }> $rows
-         */
+        /** @var list<array{story_id: int|string, entry_id: int|string, joined_at: string}> $rows */
         $rows = $this->entityManager->getConnection()->fetchAllAssociative(
-            'SELECT story_id, entry_id, joined_at, in_day, in_week FROM trending_story_entry'
-            . ' ORDER BY story_id, entry_id',
+            'SELECT story_id, entry_id, joined_at FROM trending_story_entry ORDER BY story_id, entry_id',
+        );
+        $members = [];
+        foreach ($rows as $row) {
+            [$storyId, $entryId] = [(int) $row['story_id'], (int) $row['entry_id']];
+            $members[] = [
+                $storyId,
+                $entryId,
+                $row['joined_at'],
+                $this->placedFlag(TrendingWindow::Day, $storyId, $entryId),
+                $this->placedFlag(TrendingWindow::Week, $storyId, $entryId),
+            ];
+        }
+
+        return $members;
+    }
+
+    private function placedFlag(TrendingWindow $window, int $storyId, int $entryId): int
+    {
+        return (int) \in_array($entryId, $this->placedEntries($window, $storyId), true);
+    }
+
+    /** @return list<int> */
+    private function placedEntries(TrendingWindow $window, int $storyId): array
+    {
+        /** @var list<int|string> $entryIds */
+        $entryIds = $this->entityManager->getConnection()->fetchFirstColumn(
+            'SELECT entry_id FROM trending_story_placement WHERE time_window = ? AND story_id = ? ORDER BY entry_id',
+            [$window->value, $storyId],
         );
 
-        return array_map(
-            static fn (array $row): array => [
-                (int) $row['story_id'],
-                (int) $row['entry_id'],
-                $row['joined_at'],
-                (int) $row['in_day'],
-                (int) $row['in_week'],
-            ],
-            $rows,
-        );
+        return array_map(intval(...), $entryIds);
     }
 
     /** @return list<array<string, mixed>> */
@@ -852,7 +946,7 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
     private function placedCount(): int
     {
         $count = $this->entityManager->getConnection()
-            ->fetchOne('SELECT COUNT(*) FROM trending_story_entry WHERE in_day = 1 OR in_week = 1');
+            ->fetchOne('SELECT COUNT(*) FROM trending_story_placement');
         self::assertIsNumeric($count);
 
         return (int) $count;
