@@ -103,9 +103,9 @@ final class SearchQueryParser
 
     private static function termOf(string $text): ?SearchExpressionModelInterface
     {
-        preg_match_all('/[\p{L}\p{N}]+/u', mb_strtolower($text), $words);
+        $words = SearchQueryTokens::wordsOf($text);
 
-        return [] === $words[0] ? null : new SearchTermModel($words[0]);
+        return [] === $words ? null : new SearchTermModel($words);
     }
 
     private static function negated(?SearchExpressionModelInterface $operand): ?SearchExpressionModelInterface

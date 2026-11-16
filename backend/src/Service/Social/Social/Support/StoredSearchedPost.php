@@ -11,10 +11,7 @@ use App\Service\Social\Social\Model\SearchedPostModel;
 use App\Service\Social\Social\Model\StoredPostModel;
 use App\Service\Foundation\Text\Support\PlainText;
 
-/**
- * A stored search result as the reader judges it, its author named as the live search names them: the author page
- * keeps the handle, and a Mastodon account local to the searching instance also goes by its bare user name.
- */
+/** A stored search result as the reader judges it, its author named as the live search names them. */
 final class StoredSearchedPost
 {
     public static function of(SocialAccount $account, StoredPostModel $post): SearchedPostModel

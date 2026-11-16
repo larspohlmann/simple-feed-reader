@@ -42,11 +42,11 @@ final class LemmySearchTerms
 
     private static function termOf(string $factor): string
     {
-        if (str_starts_with($factor, '-') || SearchQueryTokens::isFilter($factor)) {
+        if (str_starts_with($factor, '-') || SearchQueryTokens::isAuthorFilter($factor)) {
             return '';
         }
 
-        return mb_strtolower(trim($factor, '"'));
+        return implode(' ', SearchQueryTokens::wordsOf($factor));
     }
 
     private static function termless(): SearchQueryTooBroadException

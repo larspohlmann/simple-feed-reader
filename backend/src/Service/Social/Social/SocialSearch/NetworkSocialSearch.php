@@ -117,6 +117,8 @@ final readonly class NetworkSocialSearch implements SocialSearchInterface
             $answers[$position] = $accept($outcome);
         }
 
+        ksort($answers);
+
         return array_values($answers);
     }
 }

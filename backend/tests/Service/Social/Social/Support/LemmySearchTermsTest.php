@@ -25,8 +25,20 @@ final class LemmySearchTermsTest extends TestCase
         yield 'case does not matter' => ['Reader || reader', ['reader']];
         yield 'an exclusion is no term' => ['reader -gazette', ['reader']];
         yield 'a negated phrase is no term' => ['reader -"daily gazette"', ['reader']];
-        yield 'an operator is no term' => ['reader from:ada lang:de', ['reader']];
+        yield 'only the author filter is no term' => ['reader from:ada lang:de', ['lang de']];
         yield 'the first on a tie' => ['atom feed', ['atom']];
+        yield 'a hyphenated word as its words' => ['rss-reader', ['rss reader']];
+        yield 'a phrase as its words' => ['"rss, reader" atom', ['rss reader']];
+        yield 'a hashtag as its word' => ['#rust', ['rust']];
+        yield 'a dotted name as its words' => ['node.js', ['node js']];
+        yield 'a phrase without a word is no term' => ['"!!!!!!" rss', ['rss']];
+        yield 'a word without a letter is no term' => ['rss !!!!!!', ['rss']];
+        yield 'a url as its words' => ['https://example.com/a', ['https example com a']];
+        yield 'a colon word is a term' => ['re:zero', ['re zero']];
+        yield 'a language filter is a term' => ['reader lang:de', ['lang de']];
+        yield 'an author filter is no term' => ['reader from:ada', ['reader']];
+        yield 'the own author filter is no term' => ['rust from:me', ['rust']];
+        yield 'a quoted author filter is a phrase' => ['"from:ada"', ['from ada']];
     }
 
     /** @param list<string> $terms */
@@ -41,6 +53,8 @@ final class LemmySearchTermsTest extends TestCase
     {
         yield 'only an exclusion' => ['-gazette'];
         yield 'only an operator' => ['from:ada'];
+        yield 'only the own author filter' => ['from:me'];
+        yield 'only punctuation' => ['!!!'];
         yield 'one alternative without a term' => ['rss || -gazette'];
     }
 

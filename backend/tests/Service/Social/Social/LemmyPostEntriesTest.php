@@ -140,6 +140,17 @@ final class LemmyPostEntriesTest extends TestCase
         self::assertSame(['https://lemmy.example/post/2'], self::guidsOf($page));
     }
 
+    public function testAPhraseNeverSpansTitleAndBody(): void
+    {
+        $posts = [[1 => 'My RSS']];
+
+        self::assertSame([], self::guidsOf(self::searchPage('"rss reader"', $posts, 'reader notes')));
+        self::assertSame(
+            ['https://lemmy.example/post/1'],
+            self::guidsOf(self::searchPage('rss reader', $posts, 'reader notes')),
+        );
+    }
+
     public function testAnExcludedWordDropsThePost(): void
     {
         $page = self::searchPage('rss -gazette', [[1 => 'RSS gazette', 2 => 'RSS news']]);
@@ -189,7 +200,7 @@ final class LemmyPostEntriesTest extends TestCase
     }
 
     /** @param list<array<int, string>> $titlesByPostId one answer per element, each mapping post id to title */
-    private static function searchPage(string $query, array $titlesByPostId): TimelinePageModel
+    private static function searchPage(string $query, array $titlesByPostId, ?string $body = null): TimelinePageModel
     {
         return SocialApiWiring::lemmyPostEntries()->searchPage(
             SocialAccounts::lemmyOf(SocialAccounts::owner()),
@@ -203,6 +214,7 @@ final class LemmyPostEntriesTest extends TestCase
                                 'name' => $title,
                                 'ap_id' => 'https://lemmy.example/post/' . $postId,
                                 'published' => '2026-11-14T05:05:09Z',
+                                ...(null === $body ? [] : ['body' => $body]),
                             ],
                             'creator' => ['name' => 'ada'],
                             'counts' => ['score' => 1, 'comments' => 0],
