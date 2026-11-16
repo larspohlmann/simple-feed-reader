@@ -52,7 +52,8 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         self::assertSame(
             [self::NOW],
             $this->entityManager->getConnection()->fetchFirstColumn(
-                'SELECT DISTINCT joined_at FROM trending_story_entry UNION SELECT first_joined_at FROM trending_story',
+                'SELECT joined_at FROM trending_story_entry UNION SELECT first_joined_at FROM trending_story'
+                . ' UNION SELECT last_joined_at FROM trending_story',
             ),
         );
         $snapshot = $this->entityManager->find(TrendingSnapshot::class, 'day');

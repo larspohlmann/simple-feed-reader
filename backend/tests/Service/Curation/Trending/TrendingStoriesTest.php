@@ -503,22 +503,10 @@ final class TrendingStoriesTest extends DbTestCase
         $inANarrowDayStory = $this->fixtures->entry($feeds[0], 'Narrow', '2031-05-14 11:00:00');
         $narrowWeek = $this->storySharing($inANarrowDayStory, TrendingWindow::Week, \array_slice($feeds, 1));
         $this->fixtures->place(TrendingWindow::Day, $narrowWeek, $inANarrowDayStory);
-        $inAHiddenDayStory = $this->fixtures->entry($feeds[0], 'Hidden', '2031-05-14 10:00:00');
-        $hiddenDay = $this->fixtures->story(
-            TrendingWindow::Day,
-            '2031-05-14 10:00:00',
-            $inAHiddenDayStory,
-            $this->fixtures->entry($feeds[1], 'Hidden', '2031-05-14 09:00:00'),
-            $this->fixtures->entry($feeds[2], 'Hidden', '2031-05-14 09:00:00'),
-        );
-        $this->fixtures->hide($this->reader, $hiddenDay);
-        $hiddenWeek = $this->storySharing($inAHiddenDayStory, TrendingWindow::Week, \array_slice($feeds, 1));
+        $this->fixtures->hide($this->reader, $this->storyInTheDayAndTheWeek($feeds));
 
         self::assertSame([], $this->rankedDayStoryIdsOf($this->reader));
-        self::assertSame(
-            [$narrowWeek->requireId(), $hiddenWeek->requireId()],
-            $this->storyIdsFor(TrendingWindow::Week),
-        );
+        self::assertSame([$narrowWeek->requireId()], $this->storyIdsFor(TrendingWindow::Week));
     }
 
     public function testTheWeekCapCountsAfterTheExclusion(): void

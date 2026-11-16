@@ -15,7 +15,7 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * The one writer of the Trending tables: a rebuild replaces one window's stories and its snapshot row together.
+ * The one writer of Trending's stories and snapshots: a rebuild replaces one window's stories and its snapshot row.
  *
  * @extends ServiceEntityRepository<TrendingSnapshot>
  */
