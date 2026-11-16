@@ -147,6 +147,7 @@ export function subscriptionsJson(
     trending: { window: 'day', unopened: 0 },
     socialAccounts: [],
     unreadTotals: unreadTotalsOf(subscriptions),
+    notifications: [],
     ...totals,
   };
 }

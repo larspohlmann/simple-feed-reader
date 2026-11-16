@@ -22,6 +22,7 @@ import { SubscriptionRows } from './subscription-rows';
 import { buildSocialSections, isEmptySavedFeed, isSocialFeed } from './social-sections';
 import {
   EntryDto,
+  NotificationCountDto,
   SubscriptionCountsResponse,
   UnreadTotalsDto,
   SubscriptionDto,
@@ -38,6 +39,14 @@ import {
   totalEntryCount,
   untaggedSubscriptions,
 } from './subscription-derivations';
+import {
+  NO_NOTIFICATION_COUNTS,
+  NotificationCounts,
+  notificationCountsFrom,
+  sameNotificationCounts,
+  totalUnseen,
+  unseenNetworks,
+} from './notification-counts';
 import {
   NO_UNREAD_TOTALS,
   UnreadTotals,
@@ -77,6 +86,14 @@ export class SubscriptionsStore {
   });
   /** The server's per-scope unread totals: each badge counts its own scope. */
   readonly unreadTotals = this.storedUnreadTotals.asReadonly();
+
+  private readonly storedNotificationCounts = signal<NotificationCounts>(NO_NOTIFICATION_COUNTS, {
+    equal: sameNotificationCounts,
+  });
+  /** Unseen social notifications per network; only the server moves them (#2240). */
+  readonly notificationCounts = this.storedNotificationCounts.asReadonly();
+  readonly unseenNotifications = computed(() => unseenNetworks(this.notificationCounts()));
+  readonly unseenNotificationsTotal = computed(() => totalUnseen(this.notificationCounts()));
 
   readonly tagTree = computed(() =>
     buildTagTree(this.subscriptions(), this.tags.tags(), this.unreadTotals().tags),
@@ -152,6 +169,7 @@ export class SubscriptionsStore {
     this.trendingUnopened.set(NO_TRENDING_UNOPENED);
     this.socialAccounts.set([]);
     this.storedUnreadTotals.set(NO_UNREAD_TOTALS);
+    this.storedNotificationCounts.set(NO_NOTIFICATION_COUNTS);
     this.loading.set(false);
     this.error.set(null);
     this.resolved.set(false);
@@ -211,10 +229,13 @@ export class SubscriptionsStore {
   /** The shared body of every silent tick: refresh only when worth a request,
    *  drop an answer the user has overtaken, never touch `loading`/`resolved`.
    *  The `apply` closure is the only difference between full and counts-only. */
-  private quietReload<T extends { unreadTotals: UnreadTotalsDto; trending: TrendingUnopened }>(
-    fetch: () => Observable<T>,
-    apply: (response: T) => void,
-  ): void {
+  private quietReload<
+    T extends {
+      unreadTotals: UnreadTotalsDto;
+      trending: TrendingUnopened;
+      notifications: NotificationCountDto[];
+    },
+  >(fetch: () => Observable<T>, apply: (response: T) => void): void {
     // A tick refreshes counts; it never bootstraps them. Fetching before the
     // first real load would stamp the freshness clock, silence that load, and
     // leave `resolved` false — so the onboarding redirect could never decide.
@@ -230,17 +251,20 @@ export class SubscriptionsStore {
    *  through `whenOvertaken`, since only its answer carries the change; a poll
    *  tick waits for the next one. The gates that decide WHEN to fire belong to
    *  each caller. */
-  private quietFetch<T extends { unreadTotals: UnreadTotalsDto; trending: TrendingUnopened }>(
-    fetch: () => Observable<T>,
-    apply: (response: T) => void,
-    whenOvertaken: () => void,
-  ): void {
+  private quietFetch<
+    T extends {
+      unreadTotals: UnreadTotalsDto;
+      trending: TrendingUnopened;
+      notifications: NotificationCountDto[];
+    },
+  >(fetch: () => Observable<T>, apply: (response: T) => void, whenOvertaken: () => void): void {
     const editsWhenSent = this.localEdits;
     this.loads.run(fetch(), (response) => {
-      // Only the server edits the totals and the Trending counts,
+      // Only the server edits the totals and the Trending and notification counts,
       // so even an overtaken answer carries the latest.
       this.storedUnreadTotals.set(unreadTotalsFrom(response.unreadTotals));
       this.trendingUnopened.set(response.trending);
+      this.storedNotificationCounts.set(notificationCountsFrom(response.notifications));
       // The user changed a feed count while this was on the wire. The server
       // counted before that, so adopting those counts now would put the badge back up.
       if (this.localEdits !== editsWhenSent) {
@@ -260,6 +284,7 @@ export class SubscriptionsStore {
     this.trendingUnopened.set(response.trending);
     this.socialAccounts.set(response.socialAccounts);
     this.storedUnreadTotals.set(unreadTotalsFrom(response.unreadTotals));
+    this.storedNotificationCounts.set(notificationCountsFrom(response.notifications));
   }
 
   /** Patch unread and entry counts into the list already held, replacing the

@@ -116,6 +116,7 @@ describe('ReaderShellComponent', () => {
     viewedCount: 0,
     trending: { window: 'day', unopened: 0 },
     unreadTotals: NO_UNREAD_TOTALS_DTO,
+    notifications: [],
   };
 
   const subscriptionsBody = {
@@ -144,6 +145,7 @@ describe('ReaderShellComponent', () => {
     ],
     socialAccounts: [],
     unreadTotals: { ...NO_UNREAD_TOTALS_DTO, allItems: 2 },
+    notifications: [],
     trending: { window: 'day', unopened: 0 },
   };
   const entry = anEntry({
@@ -480,6 +482,7 @@ describe('ReaderShellComponent', () => {
       keptCount: 0,
       socialAccounts: [],
       unreadTotals: NO_UNREAD_TOTALS_DTO,
+      notifications: [],
       trending: { window: 'day', unopened: 0 },
     });
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
@@ -1219,6 +1222,7 @@ describe('ReaderShellComponent', () => {
       viewedCount: 1,
       trending: { window: 'day', unopened: 0 },
       unreadTotals: { ...subscriptionsBody.unreadTotals, forYou: 0 },
+      notifications: [],
     });
 
     expect(subscriptions.forYouUnread()).toBe(0);
@@ -1768,6 +1772,7 @@ describe('ReaderShellComponent', () => {
             subscriptions: [{ ...SUBSCRIPTION_FIXTURE, lastFetchedAt: null }],
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
+            notifications: [],
             trending: { window: 'day', unopened: 0 },
             socialAccounts: [],
             keptCount: 0,
@@ -1805,6 +1810,7 @@ describe('ReaderShellComponent', () => {
             subscriptions: [{ ...SUBSCRIPTION_FIXTURE, lastFetchedAt: '2026-08-21T00:00:00Z' }],
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
+            notifications: [],
             trending: { window: 'day', unopened: 0 },
             socialAccounts: [],
             keptCount: 0,
@@ -1970,6 +1976,7 @@ describe('ReaderShellComponent', () => {
       ...subscriptionsBody,
       subscriptions: [{ ...subscriptionsBody.subscriptions[0], unreadCount: 3 }],
       unreadTotals: { ...NO_UNREAD_TOTALS_DTO, allItems: 3 },
+      notifications: [],
     });
     fixture.detectChanges();
 
@@ -2905,6 +2912,7 @@ describe('ReaderShellComponent', () => {
         subscriptions: [],
         favoritesCount: 0,
         unreadTotals: NO_UNREAD_TOTALS_DTO,
+        notifications: [],
         socialAccounts: [],
         keptCount: 0,
         viewedCount: 0,
@@ -2950,6 +2958,7 @@ describe('ReaderShellComponent', () => {
         subscriptions: [SUBSCRIPTION_FIXTURE],
         favoritesCount: 0,
         unreadTotals: NO_UNREAD_TOTALS_DTO,
+        notifications: [],
         socialAccounts: [],
         keptCount: 0,
         viewedCount: 0,
@@ -3347,6 +3356,7 @@ describe('ReaderShellComponent', () => {
             stories: [],
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
+            notifications: [],
             trending: { window: 'day', unopened: 0 },
             socialAccounts: [],
             keptCount: 0,
@@ -3400,6 +3410,7 @@ describe('ReaderShellComponent', () => {
             stories: [],
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
+            notifications: [],
             trending: { window: 'day', unopened: 0 },
             socialAccounts: [],
             keptCount: 0,
@@ -3505,6 +3516,7 @@ describe('ReaderShellComponent', () => {
             stories: [],
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
+            notifications: [],
             trending: { window: 'day', unopened: 0 },
             socialAccounts: [],
             keptCount: 0,
@@ -4691,6 +4703,7 @@ describe('ReaderShellComponent', () => {
       subscriptions: [{ id: 5, unreadCount: 2 }],
       favoritesCount: 0,
       unreadTotals: NO_UNREAD_TOTALS_DTO,
+      notifications: [],
       socialAccounts: [],
       keptCount: 0,
       viewedCount: 0,
@@ -4735,6 +4748,7 @@ describe('ReaderShellComponent', () => {
         ...countsBody,
         subscriptions: [{ id: 5, unreadCount: 9 }],
         unreadTotals: { ...NO_UNREAD_TOTALS_DTO, allItems: 9 },
+        notifications: [],
       });
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
       fixture.detectChanges();

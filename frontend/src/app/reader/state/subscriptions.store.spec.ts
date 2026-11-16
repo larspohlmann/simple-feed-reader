@@ -23,7 +23,13 @@ import {
   tagsInTreeOrder,
   untaggedSubscriptions,
 } from './subscription-derivations';
-import { SubscriptionDto, SubscriptionTagDto, TagDto, UnreadTotalsDto } from '../models';
+import {
+  NotificationCountDto,
+  SubscriptionDto,
+  SubscriptionTagDto,
+  TagDto,
+  UnreadTotalsDto,
+} from '../models';
 import { TrendingUnopened } from '../trending/trending.models';
 import { TrendingWindowService } from '../trending/trending-window.service';
 import { anEntry } from '../../../testing/entry-testing';
@@ -79,6 +85,7 @@ interface CountTotals {
   viewed?: number;
   trending?: TrendingUnopened;
   unreadTotals?: Partial<UnreadTotalsDto>;
+  notifications?: NotificationCountDto[];
 }
 
 const unreadTotalsDto = (over: Partial<UnreadTotalsDto> = {}): UnreadTotalsDto => ({
@@ -98,6 +105,7 @@ const counts = <Row>(subscriptions: Row[], totals: CountTotals = {}) => ({
   viewedCount: totals.viewed ?? 0,
   trending: totals.trending ?? { window: 'day', unopened: 0 },
   unreadTotals: unreadTotalsDto(totals.unreadTotals),
+  notifications: totals.notifications ?? [],
 });
 
 describe('subscription derivations', () => {
@@ -388,6 +396,7 @@ describe('SubscriptionsStore', () => {
       subscriptions: [sub(1, 3, [tag(20, 'Tech')]), sub(2, 6, [tag(20, 'Tech')])],
       favoritesCount: 4,
       unreadTotals: unreadTotalsDto({ allItems: 4, tags: [{ id: 20, unreadCount: 4 }] }),
+      notifications: [],
       keptCount: 2,
       sharedCount: 3,
       trending: { window: 'day', unopened: 2 },
@@ -399,6 +408,16 @@ describe('SubscriptionsStore', () => {
     expect(store.keptCount()).toBe(2);
     expect(store.sharedCount()).toBe(3);
     expect(store.loading()).toBe(false);
+  });
+
+  it('holds the notification counts the full load carries', () => {
+    store.load();
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush(counts([sub(1, 3)], { notifications: [{ network: 'bluesky', unseenCount: 4 }] }));
+
+    expect(store.notificationCounts().get('bluesky')).toBe(4);
+    expect(store.unseenNotificationsTotal()).toBe(4);
   });
 
   it('cancels an older subscription request when a newer load starts', () => {
@@ -414,6 +433,7 @@ describe('SubscriptionsStore', () => {
       sharedCount: 0,
       trending: { window: 'day', unopened: 0 },
       unreadTotals: unreadTotalsDto({ allItems: 5 }),
+      notifications: [],
     });
 
     expect(olderRequest.cancelled).toBe(true);
@@ -432,6 +452,7 @@ describe('SubscriptionsStore', () => {
       sharedCount: 0,
       trending: { window: 'day', unopened: 0 },
       unreadTotals: unreadTotalsDto(),
+      notifications: [],
     });
     tokens.clear();
     TestBed.tick();
@@ -445,6 +466,7 @@ describe('SubscriptionsStore', () => {
       subscriptions: [],
       favoritesCount: 0,
       unreadTotals: unreadTotalsDto(),
+      notifications: [],
       keptCount: 0,
       sharedCount: 0,
       viewedCount: 0,
@@ -459,6 +481,7 @@ describe('SubscriptionsStore', () => {
       subscriptions: [sub(1, 3)],
       favoritesCount: 0,
       unreadTotals: unreadTotalsDto(),
+      notifications: [],
       keptCount: 0,
       sharedCount: 0,
       viewedCount: 0,
@@ -474,6 +497,7 @@ describe('SubscriptionsStore', () => {
         subscriptions: [sub(1, 3)],
         favoritesCount: 2,
         unreadTotals: unreadTotalsDto(),
+        notifications: [],
         keptCount: 1,
         sharedCount: 2,
         viewedCount: 4,
@@ -490,6 +514,18 @@ describe('SubscriptionsStore', () => {
       expect(store.viewedCount()).toBe(0);
       expect(store.trendingUnopened()).toEqual({ window: 'day', unopened: 0 });
       expect(store.resolved()).toBe(false);
+    });
+
+    it('forgets the notification counts', () => {
+      store.load();
+      ctrl
+        .expectOne('https://api.test/api/subscriptions')
+        .flush(counts([sub(1, 3)], { notifications: [{ network: 'bluesky', unseenCount: 4 }] }));
+
+      tokens.clear();
+      TestBed.tick();
+
+      expect(store.unseenNotificationsTotal()).toBe(0);
     });
 
     it('abandons a subscription request from the previous user', () => {
@@ -511,6 +547,7 @@ describe('SubscriptionsStore', () => {
         subscriptions: [],
         favoritesCount: 0,
         unreadTotals: unreadTotalsDto(),
+        notifications: [],
         keptCount: 0,
         sharedCount: 0,
         viewedCount: 0,
@@ -526,6 +563,7 @@ describe('SubscriptionsStore', () => {
         subscriptions: [sub(2, 1)],
         favoritesCount: 0,
         unreadTotals: unreadTotalsDto(),
+        notifications: [],
         keptCount: 0,
         sharedCount: 0,
         viewedCount: 0,
@@ -544,6 +582,7 @@ describe('SubscriptionsStore', () => {
       subscriptions: [sub(1, 2)],
       favoritesCount: 0,
       unreadTotals: unreadTotalsDto(),
+      notifications: [],
       keptCount: 0,
       sharedCount: 0,
       trending: { window: 'day', unopened: 0 },
@@ -561,6 +600,7 @@ describe('SubscriptionsStore', () => {
       subscriptions: [sub(1, 3)],
       favoritesCount: 0,
       unreadTotals: unreadTotalsDto(),
+      notifications: [],
       keptCount: 0,
       sharedCount: 0,
       trending: { window: 'day', unopened: 0 },
@@ -578,6 +618,7 @@ describe('SubscriptionsStore', () => {
       sharedCount: 0,
       trending: { window: 'day', unopened: 0 },
       unreadTotals: unreadTotalsDto(),
+      notifications: [],
     });
     store.bumpFavorites(1);
     expect(store.favoritesCount()).toBe(2);
@@ -596,6 +637,7 @@ describe('SubscriptionsStore', () => {
       sharedCount: 0,
       trending: { window: 'day', unopened: 0 },
       unreadTotals: unreadTotalsDto(),
+      notifications: [],
     });
     store.bumpShared(-1);
     expect(store.sharedCount()).toBe(0);
@@ -609,6 +651,7 @@ describe('SubscriptionsStore', () => {
       subscriptions: [sub(1, 3, [tag(20, 'Tech')]), sub(2, 6)],
       favoritesCount: 0,
       unreadTotals: unreadTotalsDto(),
+      notifications: [],
       keptCount: 0,
       sharedCount: 0,
       trending: { window: 'day', unopened: 0 },
@@ -673,6 +716,7 @@ describe('SubscriptionsStore', () => {
       subscriptions: [sub(1, 3), sub(2, 6)],
       favoritesCount: 0,
       unreadTotals: unreadTotalsDto(),
+      notifications: [],
       keptCount: 0,
       sharedCount: 0,
       trending: { window: 'day', unopened: 0 },
@@ -1049,6 +1093,7 @@ describe('SubscriptionsStore against an API that answers synchronously', () => {
     subscriptions: [sub(1, unread)],
     favoritesCount: 0,
     unreadTotals: unreadTotalsDto({ allItems: unread }),
+    notifications: [],
     keptCount: 0,
     sharedCount: 0,
     viewedCount: 0,
@@ -1160,6 +1205,20 @@ describe('SubscriptionsStore counts-only reload', () => {
 
     expect(store.subscriptions()[0].unreadCount).toBe(0);
     expect(store.favoritesCount()).toBe(1);
+  });
+
+  it('takes notification counts from a counts tick even when overtaken by a local edit', () => {
+    settleAndAge([sub(1, 2)]);
+
+    store.reloadCountsIfStale();
+    store.bumpFavorites(1);
+    ctrl.expectOne(countsUrl).flush(
+      countsBody([{ id: 1, unreadCount: 2 }], {
+        notifications: [{ network: 'mastodon', unseenCount: 2 }],
+      }),
+    );
+
+    expect(store.unseenNotifications()).toEqual([{ network: 'mastodon', unseenCount: 2 }]);
   });
 
   it('adopts the Trending count of a counts tick (#2017)', () => {
