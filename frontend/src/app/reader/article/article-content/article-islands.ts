@@ -39,7 +39,7 @@ export class ArticleIslands {
         elementInjector: this.injector,
         bindings,
       });
-      const host = hostOf(ref);
+      const host = hostElementOf(ref);
       host.classList.add(READER_ISLAND);
       insert(host);
       this.injector.get(ApplicationRef).attachView(ref.hostView);
@@ -57,7 +57,7 @@ export class ArticleIslands {
 
   releaseAll(): void {
     for (const ref of this.mounted) {
-      const host = hostOf(ref);
+      const host = hostElementOf(ref);
       ref.destroy();
       host.remove();
     }
@@ -77,6 +77,6 @@ export function isInIsland(node: Element): boolean {
   return node.closest(`.${READER_ISLAND}`) !== null;
 }
 
-function hostOf(ref: ComponentRef<unknown>): HTMLElement {
+function hostElementOf(ref: ComponentRef<unknown>): HTMLElement {
   return ref.location.nativeElement as HTMLElement;
 }
