@@ -597,6 +597,27 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
         self::assertSame([$firstSeen, $lastSeen], [$row['first_seen'], $row['last_seen']]);
     }
 
+    public function testSavingAStoredStoryLeavesTheTimesOfEveryOtherStory(): void
+    {
+        [$one, $two] = $this->entries(2);
+        $saved = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $one);
+        $other = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $two);
+        $this->storyTimes($other, '2031-05-14 09:00:00', '2031-05-14 09:30:00');
+        $before = $this->stories()[1];
+        $group = new TrendingStoryModel(
+            [new StoryMemberModel($one->requireId(), 101, null)],
+            self::utc('2031-05-14 07:00:00'),
+            self::utc('2031-05-14 11:00:00'),
+        );
+
+        $this->history()->save(
+            new StoryAssignmentModel($group, $saved->requireId(), [$one->requireId()]),
+            self::build(TrendingWindow::Week),
+        );
+
+        self::assertSame($before, $this->stories()[1]);
+    }
+
     public function testMoreStayingMembersThanOneChunkAreAllPlaced(): void
     {
         $entries = $this->entries(301);
