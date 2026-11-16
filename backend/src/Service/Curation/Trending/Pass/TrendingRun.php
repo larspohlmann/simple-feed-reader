@@ -31,8 +31,11 @@ final class TrendingRun
     /** @var array<string, string> one string per site, however many entries share it */
     private array $sites = [];
 
-    public function __construct(public readonly TrendingWindow $window, public readonly HeadlineWindow $headlines)
-    {
+    public function __construct(
+        public readonly TrendingWindow $window,
+        public readonly \DateTimeImmutable $since,
+        public readonly HeadlineWindow $headlines,
+    ) {
     }
 
     /** @param list<string> $urlHashes the entry's own and its shared article's, distinct */

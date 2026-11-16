@@ -12,6 +12,7 @@ use App\Entity\SharedLink;
 use App\Entity\Subscription;
 use App\Entity\TrendingStory;
 use App\Entity\TrendingStoryEntry;
+use App\Entity\TrendingStoryFollow;
 use App\Entity\TrendingStoryHide;
 use App\Entity\User;
 use App\Enum\ShareKind;
@@ -174,6 +175,22 @@ final readonly class TrendingFixtures
             \assert($storyEntry instanceof TrendingStoryEntry);
             $storyEntry->placeIn($window);
         }
+        $this->entityManager->flush();
+    }
+
+    public function reader(string $email): User
+    {
+        $user = new User($email, new \DateTimeImmutable('2031-01-01 00:00:00'));
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
+
+        return $user;
+    }
+
+    /** The reader last opened the story when they followed it. */
+    public function follow(User $user, TrendingStory $story, string $followedAt): void
+    {
+        $this->entityManager->persist(new TrendingStoryFollow($user, $story, new \DateTimeImmutable($followedAt)));
         $this->entityManager->flush();
     }
 

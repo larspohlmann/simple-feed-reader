@@ -15,10 +15,17 @@ final readonly class TrendingBuildReportModel
         public int $storyCount,
         public int $durationMilliseconds,
         public int $peakMemoryBytes,
+        public StoryMatchModel $match,
+        public int $pruned,
     ) {
     }
 
-    /** @return array{window: string, entryCount: int, storyCount: int, durationMs: int, peakMemoryBytes: int} */
+    /**
+     * @return array{
+     *     window: string, entryCount: int, storyCount: int, durationMs: int, peakMemoryBytes: int,
+     *     kept: int, created: int, merged: int, split: int, pruned: int,
+     * }
+     */
     public function toLogContext(): array
     {
         return [
@@ -27,6 +34,8 @@ final readonly class TrendingBuildReportModel
             'storyCount' => $this->storyCount,
             'durationMs' => $this->durationMilliseconds,
             'peakMemoryBytes' => $this->peakMemoryBytes,
+            ...$this->match->toLogContext(),
+            'pruned' => $this->pruned,
         ];
     }
 }

@@ -7,6 +7,7 @@ namespace App\Tests\Support;
 use App\Entity\TrendingSnapshot;
 use App\Repository\TrendingEntryRepository;
 use App\Repository\TrendingSnapshotRepository;
+use App\Repository\TrendingStoryHistoryRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Curation\Trending\CardLanguage;
 use App\Service\Curation\Trending\Factory\SnowballStemmerFactory;
@@ -18,6 +19,7 @@ use App\Service\Curation\Trending\HeadlineStemmer;
 use App\Service\Curation\Trending\SnapshotBuilder\TrendingSnapshotBuilder;
 use App\Service\Curation\Trending\StoryGrouping;
 use App\Service\Curation\Trending\StoryLinks;
+use App\Service\Curation\Trending\StoryMatching;
 use App\Service\Curation\Trending\StoryLinkSource\HeadlineLinks;
 use App\Service\Curation\Trending\StoryLinkSource\SharedUrlLinks;
 use App\Service\Curation\Trending\TrendingGrouping;
@@ -37,6 +39,8 @@ final class TrendingWiring
         $snapshots = self::snapshots($entityManager);
         $builder = new TrendingSnapshotBuilder(
             self::grouping($entityManager, $clock),
+            new StoryMatching(),
+            new TrendingStoryHistoryRepository($entityManager),
             $snapshots,
             $entityManager,
             $naiveClock,

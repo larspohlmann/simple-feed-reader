@@ -18,7 +18,11 @@ final class TrendingRuns
 
     public static function of(TrendingWindow $window): TrendingRun
     {
-        return new TrendingRun($window, new HeadlineWindow(TrendingWiring::filler(), TrendingWiring::equivalents()));
+        return new TrendingRun(
+            $window,
+            new \DateTimeImmutable('2031-05-07 12:00:00', new \DateTimeZone('UTC')),
+            new HeadlineWindow(TrendingWiring::filler(), TrendingWiring::equivalents()),
+        );
     }
 
     public static function entry(int $id, int $feedId, string $title, string $effectiveDate): WindowEntryModel

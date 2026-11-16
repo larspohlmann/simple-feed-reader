@@ -11,9 +11,14 @@ final class TrendingPlacementSql
 {
     public static function placedIn(TrendingWindow $window, string $member): string
     {
+        return \sprintf('%s.%s = 1', $member, self::flagOf($window));
+    }
+
+    public static function flagOf(TrendingWindow $window): string
+    {
         return match ($window) {
-            TrendingWindow::Day => \sprintf('%s.in_day = 1', $member),
-            TrendingWindow::Week => \sprintf('%s.in_week = 1', $member),
+            TrendingWindow::Day => 'in_day',
+            TrendingWindow::Week => 'in_week',
         };
     }
 }

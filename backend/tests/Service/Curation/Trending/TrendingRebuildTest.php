@@ -7,6 +7,7 @@ namespace App\Tests\Service\Curation\Trending;
 use App\Entity\TrendingSnapshot;
 use App\Enum\TrendingWindow;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Curation\Trending\Model\StoryMatchModel;
 use App\Service\Curation\Trending\Model\TrendingBuildReportModel;
 use App\Service\Curation\Trending\Model\TrendingRebuildReportModel;
 use App\Service\Curation\Trending\SnapshotBuilder\SnapshotBuilderInterface;
@@ -125,7 +126,16 @@ final class TrendingRebuildTest extends DbTestCase
             {
                 $this->clock->sleep($this->secondsPerBuild);
 
-                return new TrendingBuildReportModel($window, $this->naiveClock->now(), 0, 0, 0, 0);
+                return new TrendingBuildReportModel(
+                    $window,
+                    $this->naiveClock->now(),
+                    0,
+                    0,
+                    0,
+                    0,
+                    new StoryMatchModel([], [], 0),
+                    0,
+                );
             }
         };
 

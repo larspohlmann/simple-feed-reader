@@ -4,10 +4,19 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Curation\Trending\SnapshotBuilder;
 
+use App\Entity\Entry;
+use App\Entity\Feed;
 use App\Entity\TrendingSnapshot;
+use App\Entity\TrendingStory;
 use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
+use App\Repository\TrendingEntryRepository;
 use App\Repository\TrendingPlacementSql;
+use App\Repository\TrendingStoryHistoryRepository;
+use App\Repository\TrendingStoryRepository;
+use App\Service\Curation\Trending\Model\RankedStoryModel;
+use App\Service\Curation\Trending\ReaderWindows;
+use App\Service\Curation\Trending\StoryMatching;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Curation\Trending\SnapshotBuilder\TrendingSnapshotBuilder;
 use App\Tests\DbTestCase;
@@ -24,10 +33,13 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
 
     private TrendingFixtures $fixtures;
 
+    private MockClock $clock;
+
     protected function setUp(): void
     {
         parent::setUp();
         $this->fixtures = new TrendingFixtures($this->entityManager);
+        $this->clock = new MockClock(self::NOW, 'UTC');
     }
 
     public function testGroupsTheDaysHeadlinesIntoAStoryAndRecordsTheSnapshot(): void
@@ -115,38 +127,242 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         self::assertCount(1, $this->storedStories(TrendingWindow::Day));
     }
 
-    public function testAFailureAfterTheReplacementLeavesTheOldSnapshotInPlace(): void
+    public function testAFailedSaveKeepsTheOldStories(): void
     {
-        $oldMember = $this->fixtures->hafenstreik($this->fixtures->feed('old'), 0, '2031-05-14 01:00:00');
-        $this->fixtures->story(TrendingWindow::Day, '2031-05-14 01:00:00', $oldMember);
+        $alpha = $this->fixtures->hafenstreik($this->fixtures->feed('alpha'), 0, '2031-05-14 08:00:00');
+        $beta = $this->fixtures->hafenstreik($this->fixtures->feed('beta'), 1, '2031-05-14 09:00:00');
+        $this->fixtures->story(TrendingWindow::Day, '2031-05-14 11:00:00', $alpha, $beta);
         $this->entityManager->persist(
             new TrendingSnapshot(TrendingWindow::Day, new \DateTimeImmutable('2031-05-14 11:00:00'), 1, 1, 0, 0),
         );
-        $this->fixtures->hafenstreik($this->fixtures->feed('alpha'), 0, '2031-05-14 08:00:00');
-        $this->fixtures->hafenstreik($this->fixtures->feed('beta'), 1, '2031-05-14 09:00:00');
         $this->fixtures->hafenstreik($this->fixtures->feed('gamma'), 2, '2031-05-14 10:00:00');
         $this->fixtures->flush();
-        $clock = new MockClock(self::NOW, 'UTC');
-        $builder = new TrendingSnapshotBuilder(
-            TrendingWiring::grouping($this->entityManager, $clock),
-            TrendingWiring::snapshots($this->entityManager),
-            $this->failingAfterTheTransactionBody(),
-            new NaiveUtcClock($clock),
-        );
+        $before = $this->history();
 
         try {
-            $builder->build(TrendingWindow::Day);
-            self::fail('the failure after the replacement must surface');
+            $this->builderWith($this->failingAfterTheTransactionBody())->build(TrendingWindow::Day);
+            self::fail('the failure after the save must surface');
         } catch (SimulatedFailure) {
         }
 
+        self::assertSame($before, $this->history());
         self::assertSame(
-            [['stories' => 1, 'built_at' => '2031-05-14 11:00:00']],
-            $this->entityManager->getConnection()->fetchAllAssociative(
-                'SELECT (SELECT COUNT(DISTINCT member.story_id) FROM trending_story_entry member'
-                . ' WHERE member.in_day = 1) AS stories, built_at FROM trending_snapshot WHERE time_window = \'day\'',
+            ['2031-05-14 11:00:00'],
+            $this->entityManager->getConnection()
+                ->fetchFirstColumn('SELECT built_at FROM trending_snapshot WHERE time_window = \'day\''),
+        );
+    }
+
+    public function testARebuildOverUnchangedInputChangesNothing(): void
+    {
+        $this->weekSizedHafenstreik();
+        $this->builder()->build(TrendingWindow::Week);
+        $history = $this->history();
+        $stories = $this->storyRows();
+
+        $report = $this->builder()->build(TrendingWindow::Week);
+
+        self::assertSame($history, $this->history());
+        self::assertSame($stories, $this->storyRows());
+        self::assertSame(
+            ['kept' => 1, 'created' => 0, 'merged' => 0, 'split' => 0, 'pruned' => 0],
+            array_intersect_key($report->toLogContext(), array_flip(['kept', 'created', 'merged', 'split', 'pruned'])),
+        );
+    }
+
+    public function testTheDayAndTheWeekPlaceOneStory(): void
+    {
+        $feeds = $this->weekSizedHafenstreik();
+        $reader = $this->fixtures->reader('d41@example.com');
+        $this->fixtures->subscribe($reader, ...$feeds);
+        $this->fixtures->flush();
+
+        $this->builder()->build(TrendingWindow::Day);
+        $this->builder()->build(TrendingWindow::Week);
+
+        $storyIds = $this->storyIds();
+        self::assertCount(1, $storyIds);
+        self::assertSame([[1, 1]], $this->flagsOfEveryMember());
+        self::assertSame(
+            $storyIds,
+            RankedStoryModel::storyIdsOf(
+                $this->readerWindows()->shownStories($reader->requireId(), TrendingWindow::Day),
             ),
         );
+        self::assertSame([], $this->readerWindows()->shownStories($reader->requireId(), TrendingWindow::Week));
+    }
+
+    public function testANewArticleJoinsTheStoryWithTheBuildTime(): void
+    {
+        $this->weekSizedHafenstreik();
+        $this->builder()->build(TrendingWindow::Week);
+        $storyIds = $this->storyIds();
+        $late = $this->fixtures->hafenstreik($this->fixtures->feed('late'), 0, '2031-05-14 12:30:00');
+        $this->fixtures->flush();
+        $this->clock->modify('+1 hour');
+
+        $this->builder()->build(TrendingWindow::Week);
+
+        self::assertSame($storyIds, $this->storyIds());
+        $joinedAt = $this->joinedAtByEntry();
+        self::assertSame('2031-05-14 13:00:00', $joinedAt[$late->requireId()]);
+        unset($joinedAt[$late->requireId()]);
+        self::assertSame(array_fill_keys(array_keys($joinedAt), self::NOW), $joinedAt);
+        self::assertSame(
+            ['2031-05-14 12:00:00', '2031-05-14 13:00:00'],
+            array_values($this->entityManager->getConnection()
+                ->fetchAssociative('SELECT first_joined_at, last_joined_at FROM trending_story') ?: []),
+        );
+    }
+
+    public function testAMemberThatLeavesTheWindowStaysInTheHistory(): void
+    {
+        $leaving = $this->fixtures->hafenstreik($this->fixtures->feed('alpha'), 0, '2031-05-13 13:00:00');
+        $this->fixtures->hafenstreik($this->fixtures->feed('beta'), 1, '2031-05-14 08:00:00');
+        $this->fixtures->hafenstreik($this->fixtures->feed('gamma'), 2, '2031-05-14 09:00:00');
+        $this->fixtures->hafenstreik($this->fixtures->feed('delta'), 3, '2031-05-14 10:00:00');
+        $this->fixtures->flush();
+        $this->builder()->build(TrendingWindow::Day);
+        $storyIds = $this->storyIds();
+        $this->clock->modify('+2 hours');
+
+        $this->builder()->build(TrendingWindow::Day);
+
+        self::assertSame($storyIds, $this->storyIds());
+        self::assertSame(4, $this->memberCount());
+        self::assertSame(
+            ['in_day' => 0, 'joined_at' => self::NOW],
+            $this->flagsOf($leaving),
+        );
+    }
+
+    public function testTwoStoriesOneWeekGroupBridgesAreMergedIntoTheLarger(): void
+    {
+        [$entries] = $this->hafenstreikEntries();
+        $smaller = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 11:00:00', $entries[3], $entries[4]);
+        $larger = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 11:00:00', ...\array_slice($entries, 0, 3));
+        $reader = $this->fixtures->reader('merge@example.com');
+        $this->fixtures->follow($reader, $smaller, '2031-05-14 11:00:00');
+
+        $report = $this->builder()->build(TrendingWindow::Week);
+
+        self::assertSame([$larger->requireId()], $this->storyIds());
+        self::assertSame(5, $this->memberCount());
+        self::assertSame(1, $report->match->merged());
+        self::assertSame(
+            [$larger->requireId()],
+            $this->intColumn('SELECT story_id FROM trending_story_follow'),
+        );
+    }
+
+    public function testTheDayBuildNeverMerges(): void
+    {
+        [$entries] = $this->hafenstreikEntries();
+        $smaller = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 11:00:00', $entries[3], $entries[4]);
+        $larger = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 11:00:00', ...\array_slice($entries, 0, 3));
+
+        $report = $this->builder()->build(TrendingWindow::Day);
+
+        self::assertSame([$smaller->requireId(), $larger->requireId()], $this->storyIds());
+        self::assertSame(0, $report->match->merged());
+        self::assertSame(
+            [$larger->requireId()],
+            $this->intColumn('SELECT DISTINCT story_id FROM trending_story_entry WHERE in_day = 1'),
+        );
+    }
+
+    public function testASplitKeepsTheIdAndTheFollowOnTheLargerPart(): void
+    {
+        [$strike] = $this->hafenstreikEntries();
+        $volcano = $this->volcanoEntries();
+        $story = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 11:00:00', ...$strike, ...$volcano);
+        $reader = $this->fixtures->reader('split@example.com');
+        $this->fixtures->follow($reader, $story, '2031-05-14 11:00:00');
+
+        $report = $this->builder()->build(TrendingWindow::Week);
+
+        self::assertSame(
+            ['kept' => 1, 'created' => 1, 'split' => 1],
+            [
+                'kept' => $report->match->kept(),
+                'created' => $report->match->created(),
+                'split' => $report->match->split,
+            ],
+        );
+        self::assertSame(
+            array_map(static fn (Entry $entry): int => $entry->requireId(), $volcano),
+            $this->weekEntriesOf($story->requireId()),
+        );
+        self::assertSame(
+            [$story->requireId()],
+            $this->intColumn('SELECT story_id FROM trending_story_follow'),
+        );
+    }
+
+    public function testSeedStoriesOfBothWindowsConvergeOnTheFirstWeekBuild(): void
+    {
+        [$entries] = $this->hafenstreikEntries();
+        $day = $this->fixtures->story(TrendingWindow::Day, '2031-05-14 11:00:00', ...$entries);
+        $this->fixtures->story(TrendingWindow::Week, '2031-05-14 11:00:00', ...$entries);
+
+        $this->builder()->build(TrendingWindow::Week);
+
+        self::assertSame([$day->requireId()], $this->storyIds());
+        self::assertSame([[1, 1]], $this->flagsOfEveryMember());
+    }
+
+    public function testAnEntryOnTheWindowStartIsNeverInsertedTwice(): void
+    {
+        $onTheStart = $this->fixtures->hafenstreik($this->fixtures->feed('alpha'), 0, '2031-05-07 12:00:00');
+        foreach (['beta', 'gamma', 'delta', 'omega'] as $variant => $name) {
+            $this->fixtures->hafenstreik($this->fixtures->feed($name), $variant + 1, '2031-05-08 08:00:00');
+        }
+        $this->fixtures->story(TrendingWindow::Week, '2031-05-07 13:00:00', $onTheStart);
+
+        $report = $this->builder()->build(TrendingWindow::Week);
+
+        self::assertSame(1, $report->match->kept());
+        self::assertSame('2031-05-07 13:00:00', $this->joinedAtByEntry()[$onTheStart->requireId()]);
+    }
+
+    public function testFollowsAndHidesSurviveARebuild(): void
+    {
+        [$entries] = $this->hafenstreikEntries();
+        $story = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 11:00:00', ...$entries);
+        $reader = $this->fixtures->reader('keeps@example.com');
+        $this->fixtures->follow($reader, $story, '2031-05-14 11:00:00');
+        $this->fixtures->hide($reader, $story);
+
+        $this->builder()->build(TrendingWindow::Week);
+        $this->builder()->build(TrendingWindow::Day);
+
+        self::assertSame([$story->requireId()], $this->storyIds());
+        self::assertSame(
+            [$story->requireId()],
+            $this->intColumn('SELECT story_id FROM trending_story_follow'),
+        );
+        self::assertSame(
+            [$story->requireId()],
+            $this->intColumn('SELECT story_id FROM trending_story_hide'),
+        );
+    }
+
+    public function testAnUnfollowedStoryOutsideTheWeekIsPrunedAndAFollowedOneStays(): void
+    {
+        $old = $this->fixtures->hafenstreik($this->fixtures->feed('old'), 0, '2031-05-01 08:00:00');
+        $unfollowed = $this->fixtures->story(TrendingWindow::Week, '2031-05-01 09:00:00', $old);
+        $followed = $this->fixtures->story(TrendingWindow::Week, '2031-05-01 09:00:00', $old);
+        $this->fixtures->follow($this->fixtures->reader('follows@example.com'), $followed, '2031-05-01 09:00:00');
+
+        $dayReport = $this->builder()->build(TrendingWindow::Day);
+
+        self::assertSame(0, $dayReport->pruned);
+        self::assertSame([$unfollowed->requireId(), $followed->requireId()], $this->storyIds());
+
+        $weekReport = $this->builder()->build(TrendingWindow::Week);
+
+        self::assertSame(1, $weekReport->pruned);
+        self::assertSame([$followed->requireId()], $this->storyIds());
     }
 
     private function failingAfterTheTransactionBody(): EntityManagerInterface
@@ -167,13 +383,137 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
 
     private function builder(): TrendingSnapshotBuilder
     {
-        $clock = new MockClock(self::NOW, 'UTC');
+        return $this->builderWith($this->entityManager);
+    }
 
+    private function builderWith(EntityManagerInterface $entityManager): TrendingSnapshotBuilder
+    {
         return new TrendingSnapshotBuilder(
-            TrendingWiring::grouping($this->entityManager, $clock),
+            TrendingWiring::grouping($this->entityManager, $this->clock),
+            new StoryMatching(),
+            new TrendingStoryHistoryRepository($this->entityManager),
             TrendingWiring::snapshots($this->entityManager),
-            $this->entityManager,
-            new NaiveUtcClock($clock),
+            $entityManager,
+            new NaiveUtcClock($this->clock),
+        );
+    }
+
+    private function readerWindows(): ReaderWindows
+    {
+        $stories = $this->entityManager->getRepository(TrendingStory::class);
+        self::assertInstanceOf(TrendingStoryRepository::class, $stories);
+
+        return new ReaderWindows(
+            new TrendingEntryRepository($this->entityManager),
+            $stories,
+            new NaiveUtcClock($this->clock),
+        );
+    }
+
+    /** @return list<Feed> five feeds, one variant each, inside the day */
+    private function weekSizedHafenstreik(): array
+    {
+        [, $feeds] = $this->hafenstreikEntries();
+
+        return $feeds;
+    }
+
+    /** @return array{list<Entry>, list<Feed>} */
+    private function hafenstreikEntries(): array
+    {
+        $entries = [];
+        $feeds = [];
+        foreach (['alpha', 'beta', 'gamma', 'delta', 'omega'] as $variant => $name) {
+            $feeds[] = $feed = $this->fixtures->feed($name);
+            $entries[] = $this->fixtures->hafenstreik($feed, $variant, \sprintf('2031-05-14 %02d:00:00', 6 + $variant));
+        }
+        $this->fixtures->flush();
+
+        return [$entries, $feeds];
+    }
+
+    /** @return list<Entry> an article and the five posts sharing it, a story of six feeds */
+    private function volcanoEntries(): array
+    {
+        $url = 'https://news.example.com/vulkan';
+        $entries = [
+            $this->fixtures->article($this->fixtures->feed('news'), 'Etwas ganz anderes', '2031-05-14 08:00:00', $url),
+        ];
+        foreach (['ann', 'ben', 'cat', 'dan', 'eve'] as $index => $handle) {
+            $entries[] = $this->fixtures->postSharing(
+                $this->fixtures->feed($handle, SocialNetwork::Bluesky),
+                'Seht euch das an ' . $index,
+                \sprintf('2031-05-14 %02d:00:00', 9 + $index),
+                $url,
+            );
+        }
+        $this->fixtures->flush();
+
+        return $entries;
+    }
+
+    /** @return list<array<string, mixed>> every member with its story, join time and placement */
+    private function history(): array
+    {
+        return $this->entityManager->getConnection()->fetchAllAssociative(
+            'SELECT story_id, entry_id, joined_at, in_day, in_week FROM trending_story_entry'
+            . ' ORDER BY story_id, entry_id',
+        );
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function storyRows(): array
+    {
+        return $this->entityManager->getConnection()->fetchAllAssociative(
+            'SELECT id, first_seen, last_seen, first_joined_at, last_joined_at FROM trending_story ORDER BY id',
+        );
+    }
+
+    /** @return list<int> */
+    private function storyIds(): array
+    {
+        return $this->intColumn('SELECT id FROM trending_story ORDER BY id');
+    }
+
+    /** @return list<array{int, int}> the distinct (in_day, in_week) pairs */
+    private function flagsOfEveryMember(): array
+    {
+        return array_map(
+            static fn (int $flags): array => [intdiv($flags, 2), $flags % 2],
+            $this->intColumn('SELECT DISTINCT in_day * 2 + in_week FROM trending_story_entry'),
+        );
+    }
+
+    /** @return array<string, mixed> */
+    private function flagsOf(Entry $entry): array
+    {
+        $row = $this->entityManager->getConnection()->fetchAssociative(
+            'SELECT in_day, joined_at FROM trending_story_entry WHERE entry_id = ?',
+            [$entry->requireId()],
+        );
+        self::assertIsArray($row);
+
+        self::assertIsNumeric($row['in_day']);
+
+        return ['in_day' => (int) $row['in_day'], 'joined_at' => $row['joined_at']];
+    }
+
+    /** @return array<int, mixed> */
+    private function joinedAtByEntry(): array
+    {
+        $rows = $this->entityManager->getConnection()
+            ->fetchAllKeyValue('SELECT entry_id, joined_at FROM trending_story_entry ORDER BY entry_id');
+
+        return array_combine(array_map(intval(...), array_keys($rows)), array_values($rows));
+    }
+
+    /** @return list<int> */
+    private function weekEntriesOf(int $storyId): array
+    {
+        return $this->intColumn(
+            'SELECT member.entry_id FROM trending_story_entry member WHERE member.story_id = ? AND '
+            . TrendingPlacementSql::placedIn(TrendingWindow::Week, 'member') . ' ORDER BY member.entry_id',
+            [$storyId],
         );
     }
 
@@ -193,5 +533,21 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         self::assertIsNumeric($count);
 
         return (int) $count;
+    }
+
+    /**
+     * @param list<int> $parameters
+     *
+     * @return list<int>
+     */
+    private function intColumn(string $sql, array $parameters = []): array
+    {
+        $values = [];
+        foreach ($this->entityManager->getConnection()->fetchFirstColumn($sql, $parameters) as $value) {
+            self::assertIsNumeric($value);
+            $values[] = (int) $value;
+        }
+
+        return $values;
     }
 }
