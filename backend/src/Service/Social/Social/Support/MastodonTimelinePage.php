@@ -191,9 +191,16 @@ final class MastodonTimelinePage
 
         return ($body ?? '') . ShareAttribution::line(
             'Boosted by',
-            MastodonAuthor::name($booster),
+            self::boosterName($booster),
             MastodonAuthor::profile($booster),
         );
+    }
+
+    private static function boosterName(JsonNodeModel $booster): ?string
+    {
+        $handle = MastodonAuthor::handle($booster);
+
+        return null === $handle ? MastodonAuthor::name($booster) : '@' . $handle;
     }
 
     /** @param list<JsonNodeModel> $attachments */
