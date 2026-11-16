@@ -92,6 +92,16 @@ final class SocialNotificationControllerTest extends ApiTestCase
         $this->assertRejected($client, Response::HTTP_BAD_REQUEST);
     }
 
+    public function testBadCursorIs400(): void
+    {
+        $client = self::createClient();
+        $this->signIn($client, 'notification-bad-cursor@example.test');
+
+        $client->request('GET', '/api/me/notifications?network=bluesky&cursor=abc');
+
+        $this->assertRejected($client, Response::HTTP_BAD_REQUEST);
+    }
+
     public function testListsScopeMissingHandles(): void
     {
         $client = self::createClient();

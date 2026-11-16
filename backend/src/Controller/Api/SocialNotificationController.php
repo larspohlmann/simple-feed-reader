@@ -25,7 +25,7 @@ final readonly class SocialNotificationController
     public function list(
         #[CurrentUser] User $user,
         #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] SocialNetwork $network,
-        #[MapQueryParameter] ?int $cursor = null,
+        #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] ?int $cursor = null,
     ): JsonResponse {
         return new JsonResponse(SocialNotificationsJson::page($this->notificationList->page($user, $network, $cursor)));
     }
