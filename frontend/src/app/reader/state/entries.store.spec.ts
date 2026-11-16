@@ -1574,6 +1574,57 @@ describe('EntriesStore', () => {
       ctrl.expectOne(openedUrl).flush(null, noContent);
     });
 
+    describe('when the first page holds only new rows and more follow', () => {
+      const openLongStory = () => {
+        store.load({ view: 'all', followedStoryId: 42 });
+        storyRequest().flush(storyPage([1, 2, 3], [1, 2, 3], 'C1'));
+        ctrl.expectOne(openedUrl).flush(null, noContent);
+      };
+
+      it('marks nothing, since where the new rows end is unknown', () => {
+        openLongStory();
+
+        expect(newIds()).toEqual([]);
+      });
+
+      it('marks nothing once the next page brings earlier rows', () => {
+        openLongStory();
+
+        store.loadMore();
+        storyRequest().flush(storyPage([4, 5], []));
+
+        expect(newIds()).toEqual([]);
+      });
+
+      it('marks nothing when the story reloads with rows that joined since', () => {
+        openLongStory();
+
+        store.reload();
+        storyRequest().flush(storyPage([9, 1, 2, 3], [9], 'C1'));
+
+        expect(newIds()).toEqual([]);
+      });
+
+      it('marks again on the next visit', () => {
+        openLongStory();
+        store.load({ view: 'all' });
+        ctrl
+          .expectOne((request) => request.url === 'https://api.test/api/entries')
+          .flush({ entries: [entry(1)], nextCursor: null });
+
+        openStory();
+
+        expect(newIds()).toEqual([1, 2]);
+      });
+    });
+
+    it('marks the new rows of a first page that ends among earlier ones, more pages or not', () => {
+      openStory();
+
+      expect(store.nextCursor()).toBe('C1');
+      expect(newIds()).toEqual([1, 2]);
+    });
+
     it('marks nothing and records no visit for a story no longer followed', () => {
       openStory();
       ctrl.expectOne(openedUrl).flush(null, noContent);

@@ -11,6 +11,8 @@ export class StoryVisit {
   private readonly followedStories = inject(FollowedStoriesStore);
   private readonly marked = accountSignal<ReadonlySet<number>>(NOTHING_NEW);
   private readonly visitedStoryId = accountSignal<number | null>(null);
+  /** The server marks the first page only: one wholly new with more to come leaves the visit's end unknown. */
+  private readonly visitEndUnknown = accountSignal(false);
   readonly newSinceVisitIds = this.marked.asReadonly();
 
   /** A load of another list ends the visit, so coming back to the story is a new one. */
@@ -27,15 +29,22 @@ export class StoryVisit {
       return;
     }
     if (this.visitedStoryId() === storyId) {
-      this.marked.update((marked) => new Set([...marked, ...page.newEntryIds]));
+      if (!this.visitEndUnknown())
+        this.marked.update((marked) => new Set([...marked, ...page.newEntryIds]));
       return;
     }
     this.visitedStoryId.set(storyId);
-    this.marked.set(new Set(page.newEntryIds));
+    this.visitEndUnknown.set(endsBeyond(page));
+    this.marked.set(this.visitEndUnknown() ? NOTHING_NEW : new Set(page.newEntryIds));
     this.followedStories.markOpened(storyId);
   }
 
   failed(): void {
     this.marked.set(NOTHING_NEW);
   }
+}
+
+function endsBeyond(page: FollowedStoryPageDto): boolean {
+  const newIds = new Set(page.newEntryIds);
+  return page.nextCursor !== null && page.entries.every((entry) => newIds.has(entry.id));
 }
