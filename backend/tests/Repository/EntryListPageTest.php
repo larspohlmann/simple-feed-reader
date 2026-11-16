@@ -23,4 +23,9 @@ final class EntryListPageTest extends TestCase
 
         self::assertEquals(EntryListOrdering::byPublishedDate(ListOrder::OldestFirst), $page->ordering());
     }
+
+    public function testKeepsReadEntriesUnlessAskedToSkipThem(): void
+    {
+        self::assertFalse(new EntryListPage()->onlyUnread);
+    }
 }
