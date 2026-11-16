@@ -9,6 +9,27 @@ use PHPUnit\Framework\TestCase;
 
 final class ApiRequestModelTest extends TestCase
 {
+    public function testARequestWaitsTheStandardTimeUnlessToldToWaitLonger(): void
+    {
+        $request = ApiRequestModel::get('https://api.example.test/x', ['Accept' => 'application/json']);
+
+        $patient = $request->waitingUpTo(25.0);
+
+        self::assertSame(10.0, $request->timeoutSeconds);
+        self::assertSame(25.0, $patient->timeoutSeconds);
+        self::assertSame(
+            ['GET', 'https://api.example.test/x', ['Accept' => 'application/json']],
+            [$patient->method, $patient->url, $patient->headers],
+        );
+    }
+
+    public function testAddedHeadersKeepHowLongTheRequestWaits(): void
+    {
+        $request = ApiRequestModel::get('https://api.example.test/x')->waitingUpTo(25.0);
+
+        self::assertSame(25.0, $request->withHeaders(['Accept' => 'application/json'])->timeoutSeconds);
+    }
+
     public function testAddedHeadersJoinTheOnesTheRequestHadAndWinOnAClash(): void
     {
         $request = ApiRequestModel::postJson('https://api.example.test/x', ['a' => 1], [

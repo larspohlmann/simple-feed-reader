@@ -28,7 +28,7 @@ final readonly class GuardedApiClient
     /** @throws FetchException */
     public function send(ApiRequestModel $request): ApiResponseModel
     {
-        return $this->sendWithin($request, ApiBudgetModel::standard());
+        return $this->sendWithin($request, ApiBudgetModel::waitingUpTo($request->timeoutSeconds));
     }
 
     /** @throws FetchException */

@@ -93,6 +93,21 @@ final class GuardedApiClientTest extends TestCase
         self::assertArrayNotHasKey('json', $seenOptions);
     }
 
+    public function testAPatientRequestCarriesItsOwnTimeouts(): void
+    {
+        $seenOptions = [];
+        $http = new MockHttpClient(static function (string $method, string $url, array $options) use (&$seenOptions) {
+            $seenOptions = $options;
+
+            return new MockResponse('{}');
+        });
+
+        $this->client($http)->send(ApiRequestModel::get('https://api.example.test/x')->waitingUpTo(25.0));
+
+        self::assertSame(25.0, $seenOptions['timeout']);
+        self::assertSame(50.0, $seenOptions['max_duration']);
+    }
+
     public function testABytesRequestSendsItsBodyAndNoJson(): void
     {
         $seenOptions = [];

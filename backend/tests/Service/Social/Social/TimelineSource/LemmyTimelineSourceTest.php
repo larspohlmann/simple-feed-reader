@@ -127,6 +127,18 @@ final class LemmyTimelineSourceTest extends TestCase
         self::assertStringContainsString('q=atom&', $requests[1]->url);
     }
 
+    public function testASearchWaitsLongerForItsAnswerThanATimeline(): void
+    {
+        $source = self::source();
+
+        $search = $source->requests(self::socialFeed(SocialFeedKind::Search, 'rss || atom'));
+        $home = $source->requests(self::socialFeed(SocialFeedKind::Home));
+
+        self::assertSame([25.0, 25.0], [$search[0]->timeoutSeconds, $search[1]->timeoutSeconds]);
+        self::assertCount(1, $home);
+        self::assertSame(10.0, $home[0]->timeoutSeconds);
+    }
+
     public function testASearchPageKeepsOnlyWhatTheQueryMatches(): void
     {
         $source = self::source();
