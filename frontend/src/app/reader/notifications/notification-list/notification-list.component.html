@@ -73,7 +73,7 @@
     appListAction
     class="mark-seen"
     type="button"
-    [disabled]="!store.hasUnseen() || store.marking()"
+    [disabled]="!store.hasUnseen() || store.marking() || store.loading()"
     (click)="store.markAllSeen()"
     [attr.aria-label]="'reader.notifications.markAllSeen' | transloco"
     [attr.title]="'reader.notifications.markAllSeen' | transloco"

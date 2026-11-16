@@ -95,6 +95,9 @@ export class NotificationsStore {
       error: (error: HttpErrorResponse) => {
         this.toast.showProblem(parseProblem(error));
         this.isMarking.set(false);
+        if (this.openNetwork() !== network) return;
+        this.subscriptions.reloadCountsQuietly();
+        this.reload();
       },
     });
   }
@@ -128,6 +131,8 @@ export class NotificationsStore {
       },
       error: (error: HttpErrorResponse) => {
         this.shownGroups.set([]);
+        this.missingScope.set([]);
+        this.reconnectNeeded.set([]);
         this.failure.set(parseProblem(error));
         this.isLoading.set(false);
       },

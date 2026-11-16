@@ -86,7 +86,11 @@ export class NotificationListComponent {
 
   private readonly _open = effect(() => {
     const network = this.network();
-    untracked(() => this.store.open(network));
+    untracked(() => {
+      this.store.open(network);
+      const scroller = this.scrollHost();
+      if (scroller) scroller.scrollTop = 0;
+    });
   });
 
   private readonly _publishBarHeight = effect((onCleanup) => {

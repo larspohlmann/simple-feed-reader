@@ -112,7 +112,7 @@ describe('NotificationsStore (#2240)', () => {
     expect(store.marking()).toBe(false);
   });
 
-  it('keeps the dots and toasts the problem when marking fails', () => {
+  it('toasts the problem and reloads the counts and the list when marking fails', () => {
     openWithUnseen();
 
     store.markAllSeen();
@@ -123,11 +123,14 @@ describe('NotificationsStore (#2240)', () => {
         { status: 502, statusText: 'Bad Gateway' },
       );
 
-    expect(store.groups().some((item) => !item.seen)).toBe(true);
     expect(showProblem).toHaveBeenCalledTimes(1);
     expect(showProblem).toHaveBeenCalledWith(expect.objectContaining({ status: 502 }));
-    expect(reloadCountsQuietly).not.toHaveBeenCalled();
+    expect(reloadCountsQuietly).toHaveBeenCalledTimes(1);
     expect(store.marking()).toBe(false);
+    http
+      .expectOne(list('bluesky'))
+      .flush(page([group(9, { seen: true }), group(7, { seen: false })]));
+    expect(store.groups().map((item) => item.seen)).toEqual([true, false]);
   });
 
   it('marks nothing when the list is empty', () => {
@@ -150,6 +153,19 @@ describe('NotificationsStore (#2240)', () => {
     http.expectOne(list('bluesky')).flush(page([group(1)]));
     expect(ids()).toEqual([1]);
     expect(store.error()).toBeNull();
+  });
+
+  it('clears the scope and reconnect hints when the first page fails', () => {
+    store.open('bluesky');
+    http
+      .expectOne(list('bluesky'))
+      .flush(page([group(1)], { scopeMissing: ['@a'], needsReconnect: ['@b'] }));
+
+    store.reload();
+    http.expectOne(list('bluesky')).flush(null, { status: 500, statusText: 'Server Error' });
+
+    expect(store.scopeMissing()).toEqual([]);
+    expect(store.needsReconnect()).toEqual([]);
   });
 
   it('ignores a seen answer once another network is open', () => {

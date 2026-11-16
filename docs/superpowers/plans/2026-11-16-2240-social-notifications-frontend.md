@@ -57,7 +57,7 @@ The network's display name is the existing `settings.social.<network>` key. The 
 ## Review Focus
 
 1. **Switching networks while a page is in flight** (Bluesky → Mastodon in the sidebar before Bluesky answers): the Mastodon list must never show Bluesky's rows. Pinned by Task 3's `drops a page answered for a network the user has left`.
-2. **Mark all seen fails** (502 unreachable, 503 + Retry-After, 429): dots stay, counts are not reloaded, a toast says why, the button is usable again. Pinned by Task 3's `keeps the dots and toasts the problem when marking fails`.
+2. **Mark all seen fails** (502 unreachable, 503 + Retry-After, 429): a toast says why, the counts and the list are reloaded because the server may have marked part of the set, the button is usable again. Pinned by Task 3's `toasts the problem and reloads the counts and the list when marking fails`.
 3. **An actor with no display name** (Mastodon/Lemmy often send none): the line names the handle instead of rendering empty bold text. Pinned by Task 5's `names an actor by handle when the display name is missing`.
 4. **A hand-edited or stale URL** (`?view=notifications` without a network, or `network=myspace`): opens All items, as an unknown `network` does today. Pinned by Task 4's `reads notifications without a known network as all items`.
 5. **A big unseen total on the avatar badge** (a popular account after a weekend, 140 unseen): the 16px badge shows `99+`, the accessible name the real number. Pinned by Task 8's `caps the badge at 99+`.

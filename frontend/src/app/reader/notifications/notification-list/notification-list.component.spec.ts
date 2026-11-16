@@ -12,6 +12,7 @@ import {
   stubIntersectionObserver,
 } from '../../../../testing/intersection-observer-testing';
 import { API_BASE_URL } from '../../../core/api';
+import { restorePageScroll, trackPageScrollTop } from '../../../../testing/scroll-testing';
 import { SocialNetworkName } from '../../../core/social-network';
 import { ToastService } from '../../../shared/toast/toast.service';
 import { SocialSection } from '../../state/social-sections';
@@ -72,6 +73,7 @@ describe('NotificationListComponent (#2240)', () => {
   afterEach(() => {
     http.verify();
     restoreIntersectionObserver();
+    restorePageScroll();
   });
 
   function render(network: SocialNetworkName = 'bluesky'): HTMLElement {
@@ -112,6 +114,30 @@ describe('NotificationListComponent (#2240)', () => {
     fixture.detectChanges();
 
     http.expectOne(`${listUrl}?network=mastodon`).flush(page([]));
+  });
+
+  it("lands a newly opened network's list at the top of the page", () => {
+    const scrolled = trackPageScrollTop();
+    showing(page([group(9)]));
+    scrolled.top = 500;
+
+    fixture.componentRef.setInput('selection', { kind: 'notifications', network: 'mastodon' });
+    fixture.detectChanges();
+    http.expectOne(`${listUrl}?network=mastodon`).flush(page([]));
+
+    expect(scrolled.top).toBe(0);
+  });
+
+  it('disables mark all seen while the list loads', () => {
+    const element = render();
+    expect(element.querySelector<HTMLButtonElement>('.mark-seen')?.disabled).toBe(true);
+    flushList(page([group(9, { seen: false })]));
+    expect(element.querySelector<HTMLButtonElement>('.mark-seen')?.disabled).toBe(false);
+
+    element.querySelector<HTMLButtonElement>('.refresh')?.click();
+    fixture.detectChanges();
+    expect(element.querySelector<HTMLButtonElement>('.mark-seen')?.disabled).toBe(true);
+    flushList(page([group(9, { seen: false })]));
   });
 
   it('offers refresh and mark all seen, nothing else', () => {

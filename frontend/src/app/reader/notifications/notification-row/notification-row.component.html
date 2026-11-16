@@ -5,7 +5,7 @@
   <div class="body">
     @if (avatars().length > 0) {
       <div class="avatars">
-        @for (actor of avatars(); track actor.handle) {
+        @for (actor of avatars(); track $index) {
           <app-avatar
             size="md"
             [url]="actor.avatarUrl"
