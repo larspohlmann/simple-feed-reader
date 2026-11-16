@@ -151,4 +151,64 @@ describe('NotificationsStore (#2240)', () => {
     expect(ids()).toEqual([1]);
     expect(store.error()).toBeNull();
   });
+
+  it('ignores a seen answer once another network is open', () => {
+    openWithUnseen();
+    store.markAllSeen();
+    const marking = http.expectOne(seenUrl);
+
+    store.open('mastodon');
+    http.expectOne(list('mastodon')).flush(page([group(3, { seen: false })]));
+
+    expect(marking.cancelled).toBe(true);
+    expect(store.marking()).toBe(false);
+    expect(store.groups().map((item) => item.seen)).toEqual([false]);
+    expect(reloadCountsQuietly).not.toHaveBeenCalled();
+  });
+
+  it('leaves a group newer than the marked position unseen after a mid-flight reload', () => {
+    openWithUnseen();
+    store.markAllSeen();
+    const marking = http.expectOne(seenUrl);
+
+    store.reload();
+    http
+      .expectOne(list('bluesky'))
+      .flush(page([group(12, { seen: false }), group(9, { seen: false })]));
+    marking.flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(store.groups().map((item) => item.seen)).toEqual([false, true]);
+  });
+
+  it("clears the previous network's list on open and marks nothing while loading", () => {
+    store.open('bluesky');
+    http
+      .expectOne(list('bluesky'))
+      .flush(page([group(9, { seen: false })], { scopeMissing: ['@a'], needsReconnect: ['@b'] }));
+
+    store.open('mastodon');
+    store.markAllSeen();
+
+    expect(store.groups()).toEqual([]);
+    expect(store.scopeMissing()).toEqual([]);
+    expect(store.needsReconnect()).toEqual([]);
+    http.expectNone(seenUrl);
+    http.expectOne(list('mastodon')).flush(page([]));
+  });
+
+  it('clears a failure when loadMore starts again', () => {
+    store.open('bluesky');
+    http.expectOne(list('bluesky')).flush(page([group(9)], { nextCursor: 9 }));
+    store.loadMore();
+    http
+      .expectOne(`${list('bluesky')}&cursor=9`)
+      .flush(null, { status: 500, statusText: 'Server Error' });
+    expect(store.error()?.status).toBe(500);
+
+    store.loadMore();
+
+    expect(store.error()).toBeNull();
+    http.expectOne(`${list('bluesky')}&cursor=9`).flush(page([group(5)]));
+    expect(ids()).toEqual([9, 5]);
+  });
 });

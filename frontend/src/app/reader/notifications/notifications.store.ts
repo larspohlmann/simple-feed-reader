@@ -37,12 +37,18 @@ export class NotificationsStore {
   readonly hasUnseen = computed(() => this.shownGroups().some((group) => !group.seen));
 
   private listRequest: Subscription | null = null;
+  private markRequest: Subscription | null = null;
 
   constructor() {
-    onIdentityChange(() => this.listRequest?.unsubscribe());
+    onIdentityChange(() => {
+      this.listRequest?.unsubscribe();
+      this.cancelMarking();
+    });
   }
 
   open(network: SocialNetworkName): void {
+    if (this.openNetwork() !== network) this.clearList();
+    this.cancelMarking();
     this.openNetwork.set(network);
     this.loadFirstPage(network);
   }
@@ -57,6 +63,7 @@ export class NotificationsStore {
     const cursor = this.cursor();
     if (network === null || cursor === null || this.isLoading() || this.isLoadingMore()) return;
     this.isLoadingMore.set(true);
+    this.failure.set(null);
     this.listRequest = this.api.page(network, cursor).subscribe({
       next: (page) => {
         this.shownGroups.update((current) => [...current, ...page.groups]);
@@ -73,11 +80,15 @@ export class NotificationsStore {
   markAllSeen(): void {
     const network = this.openNetwork();
     const newest = this.shownGroups()[0];
-    if (network === null || newest === undefined || this.isMarking()) return;
+    if (network === null || newest === undefined || this.isMarking() || this.isLoading()) return;
     this.isMarking.set(true);
-    this.api.markSeen(network, newest.id).subscribe({
+    const upTo = newest.id;
+    this.markRequest = this.api.markSeen(network, upTo).subscribe({
       next: () => {
-        this.shownGroups.update((current) => current.map((group) => ({ ...group, seen: true })));
+        if (this.openNetwork() !== network) return;
+        this.shownGroups.update((current) =>
+          current.map((group) => (group.id <= upTo ? { ...group, seen: true } : group)),
+        );
         this.subscriptions.reloadCountsQuietly();
         this.isMarking.set(false);
       },
@@ -90,6 +101,17 @@ export class NotificationsStore {
 
   dismissError(): void {
     this.failure.set(null);
+  }
+
+  private cancelMarking(): void {
+    this.markRequest?.unsubscribe();
+    this.isMarking.set(false);
+  }
+
+  private clearList(): void {
+    this.shownGroups.set([]);
+    this.missingScope.set([]);
+    this.reconnectNeeded.set([]);
   }
 
   private loadFirstPage(network: SocialNetworkName): void {
