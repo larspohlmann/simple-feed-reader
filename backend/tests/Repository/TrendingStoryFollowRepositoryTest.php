@@ -10,6 +10,7 @@ use App\Enum\TrendingWindow;
 use App\Repository\TrendingStoryFollowRepository;
 use App\Service\Curation\Trending\Exception\TrendingStoryNotFollowedException;
 use App\Tests\DbTestCase;
+use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\TrendingFixtures;
 
 final class TrendingStoryFollowRepositoryTest extends DbTestCase
@@ -118,7 +119,16 @@ final class TrendingStoryFollowRepositoryTest extends DbTestCase
                 [$followed->requireId(), $notFollowed->requireId()],
             ),
         );
+    }
+
+    public function testAskingForNoStoriesRunsNoQuery(): void
+    {
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        self::assertInstanceOf(QueryRecorder::class, $recorder);
+        $recorder->reset();
+
         self::assertSame([], $this->follows->followedStoryIds($this->reader->requireId(), []));
+        self::assertSame([], $recorder->queriesMatching('trending_story_follow'));
     }
 
     public function testUnfollowingRemovesThatReadersFollowAlone(): void

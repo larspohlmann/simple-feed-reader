@@ -281,6 +281,26 @@ final class TrendingStoryFollowControllerTest extends ApiTestCase
         self::assertSame(['Newest article'], array_column($this->followedStories(), 'headline'));
     }
 
+    public function testEachStoryIsHeadedByItsOwnMembers(): void
+    {
+        $reader = $this->signIn($this->client, 'follow-headline-own@example.com');
+        [$alpha, $beta] = $this->followedFeeds($reader);
+        $older = $this->fixtures->story(
+            TrendingWindow::Day,
+            '2031-05-14 08:00:00',
+            $this->fixtures->entry($alpha, 'Older story', '2031-05-14 08:00:00'),
+        );
+        $newer = $this->fixtures->story(
+            TrendingWindow::Day,
+            '2031-05-14 09:00:00',
+            $this->fixtures->entry($beta, 'Newer story', '2031-05-14 09:00:00'),
+        );
+        $this->follow($older);
+        $this->follow($newer);
+
+        self::assertSame(['Newer story', 'Older story'], array_column($this->followedStories(), 'headline'));
+    }
+
     public function testAStoryOfPostsAloneIsHeadedByItsNewestPost(): void
     {
         $reader = $this->signIn($this->client, 'follow-headline-posts@example.com');
