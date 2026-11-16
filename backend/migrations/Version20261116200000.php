@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace DoctrineMigrations;
 
 use App\Service\Outbound\Fetch\Support\HostKey;
+use App\Service\Outbound\Fetch\Support\LandingSite;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
@@ -21,16 +22,18 @@ final class Version20261116200000 extends AbstractMigration
         $links = $this->connection->fetchAllAssociative(
             'SELECT link.id, link.url, link.site_name, landing.resolved_url FROM shared_link link'
             . ' JOIN shared_link_resolution landing ON landing.shared_link_id = link.id'
-            . " WHERE landing.status = 'resolved' AND landing.resolved_url IS NOT NULL",
+            . ' WHERE landing.resolved_url IS NOT NULL',
         );
         foreach ($links as $link) {
-            if ($link['site_name'] === HostKey::forUrl($link['url'])) {
-                $this->addSql(\sprintf(
-                    'UPDATE shared_link SET site_name = %s WHERE id = %d',
-                    $this->connection->quote(HostKey::forUrl($link['resolved_url'])),
-                    (int) $link['id'],
-                ));
+            $landingSite = LandingSite::hostOf($link['url'], $link['resolved_url']);
+            if ($link['site_name'] !== HostKey::forUrl($link['url']) || $link['site_name'] === $landingSite) {
+                continue;
             }
+            $this->addSql(\sprintf(
+                'UPDATE shared_link SET site_name = %s WHERE id = %d',
+                $this->connection->quote($landingSite),
+                (int) $link['id'],
+            ));
         }
     }
 

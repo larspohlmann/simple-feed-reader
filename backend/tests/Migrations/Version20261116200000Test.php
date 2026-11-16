@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Migrations;
 
-use App\Entity\LinkCardContent;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SharedLinks;
 use Doctrine\DBAL\Schema\Schema;
@@ -35,6 +34,16 @@ final class Version20261116200000Test extends DbTestCase
         self::assertSame('The Independent', $this->siteNameOf($linkId));
     }
 
+    public function testALandingOnASubdomainOfTheLinksOwnSiteIsKept(): void
+    {
+        $linkId = $this->linkNamed('https://the-independent.com/abc', 'the-independent.com');
+        $this->resolve($linkId, 'https://edition.the-independent.com/news/article.html');
+
+        self::assertSame(0, $this->migrateUp());
+
+        self::assertSame('the-independent.com', $this->siteNameOf($linkId));
+    }
+
     public function testALinkThatDidNotResolveIsKept(): void
     {
         $linkId = $this->linkNamed('https://bit.ly/abc', 'bit.ly');
@@ -50,18 +59,15 @@ final class Version20261116200000Test extends DbTestCase
 
     private function linkNamed(string $url, string $siteName): int
     {
-        return SharedLinks::of(
-            $this->entityManager,
-            new LinkCardContent($url, 'Title', null, null, $siteName),
-        )->requireId();
+        return SharedLinks::named($this->entityManager, $url, $siteName);
     }
 
-    private function resolve(int $linkId): void
+    private function resolve(int $linkId, string $landingUrl = self::LANDING): void
     {
         $this->entityManager->getConnection()->executeStatement(
             "UPDATE shared_link_resolution SET status = 'resolved', resolved_url = ?, resolved_url_hash = ?"
             . ' WHERE shared_link_id = ?',
-            [self::LANDING, hash('sha256', self::LANDING), $linkId],
+            [$landingUrl, hash('sha256', $landingUrl), $linkId],
         );
     }
 
@@ -82,7 +88,6 @@ final class Version20261116200000Test extends DbTestCase
 
     private function siteNameOf(int $linkId): mixed
     {
-        return $this->entityManager->getConnection()
-            ->fetchOne('SELECT site_name FROM shared_link WHERE id = ?', [$linkId]);
+        return SharedLinks::siteNameOf($this->entityManager, $linkId);
     }
 }

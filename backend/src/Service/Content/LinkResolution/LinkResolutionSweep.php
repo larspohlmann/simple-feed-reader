@@ -13,6 +13,7 @@ use App\Service\Content\LinkResolution\Model\PendingLinkModel;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Foundation\Clock\Support\ElapsedSeconds;
 use App\Service\Outbound\Fetch\Support\HostKey;
+use App\Service\Outbound\Fetch\Support\LandingSite;
 use Psr\Log\LoggerInterface;
 
 /** Follows the queued short links, oldest first, within a budget; each is settled as soon as it lands. */
@@ -80,8 +81,13 @@ final readonly class LinkResolutionSweep
 
     private function nameAfterLanding(PendingLinkModel $link, LinkLandingModel $landing): void
     {
-        if ($landing->url !== null) {
-            $this->sharedLinks->renameSite($link->linkId, HostKey::forUrl($link->url), HostKey::forUrl($landing->url));
+        if ($landing->url === null) {
+            return;
+        }
+        $postedHost = HostKey::forUrl($link->url);
+        $landingSite = LandingSite::hostOf($link->url, $landing->url);
+        if ($landingSite !== $postedHost) {
+            $this->sharedLinks->renameSite($link->linkId, $postedHost, $landingSite);
         }
     }
 

@@ -70,6 +70,19 @@ final class LinkResolutionSweepTest extends DbTestCase
         self::assertSame('NPR', $this->siteNameOf($linkId));
     }
 
+    public function testALinkThatLandsOnASubdomainOfItsOwnSiteKeepsItsName(): void
+    {
+        $linkId = $this->linkNamed('https://fsfe.org/donate', 'fsfe.org');
+
+        $this->sweep([
+            LinkLandingWiring::redirect('https://my.fsfe.org/donate'),
+            LinkLandingWiring::answer(Response::HTTP_OK),
+        ])->resolvePending(LinkResolutionBudgetModel::links(5));
+
+        self::assertSame(LinkResolution::Resolved, $this->stored($linkId)->getStatus());
+        self::assertSame('fsfe.org', $this->siteNameOf($linkId));
+    }
+
     public function testALinkThatLandsOnItselfKeepsItsName(): void
     {
         $linkId = $this->linkNamed('https://n.pr/b', 'n.pr');
@@ -252,16 +265,12 @@ final class LinkResolutionSweepTest extends DbTestCase
 
     private function linkNamed(string $url, string $siteName): int
     {
-        return SharedLinks::of(
-            $this->entityManager,
-            new LinkCardContent($url, 'Title', null, null, $siteName),
-        )->requireId();
+        return SharedLinks::named($this->entityManager, $url, $siteName);
     }
 
     private function siteNameOf(int $linkId): mixed
     {
-        return $this->entityManager->getConnection()
-            ->fetchOne('SELECT site_name FROM shared_link WHERE id = ?', [$linkId]);
+        return SharedLinks::siteNameOf($this->entityManager, $linkId);
     }
 
     private function stored(int $linkId): SharedLinkResolution
