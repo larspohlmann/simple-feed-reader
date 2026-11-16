@@ -124,7 +124,7 @@ final readonly class TrendingSnapshotBuilder implements SnapshotBuilderInterface
             $policy = $this->policies->get($window->value);
         } catch (ContainerExceptionInterface $exception) {
             throw new \LogicException(
-                sprintf('No story build policy is wired for the "%s" window.', $window->value),
+                \sprintf('No story build policy is wired for the "%s" window.', $window->value),
                 previous: $exception,
             );
         }
