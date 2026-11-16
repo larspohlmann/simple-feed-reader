@@ -95,8 +95,11 @@ final class Version20261116220000 extends AbstractMigration
         $this->addSql('CREATE INDEX IDX_66654322AA5D4036 ON trending_story_placement (story_id)');
     }
 
-    /** Neither flag carries an index or a key, so SQLite drops them in place and the entry search triggers stay. */
-    /** @param list<string> $flags */
+    /**
+     * Neither flag carries an index or a key, so SQLite drops them in place and the entry search triggers stay.
+     *
+     * @param list<string> $flags
+     */
     private function dropFlags(array $flags): void
     {
         $platform = $this->connection->getDatabasePlatform();

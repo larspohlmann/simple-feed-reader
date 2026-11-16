@@ -257,7 +257,7 @@ final readonly class TrendingStoryHistoryRepository
         );
     }
 
-    /** @return array<int, int|string> the story of each entry the window places, compared as a string by place() */
+    /** @return array<int, int|string> the story of each entry the window places */
     private function placedIn(TrendingWindow $window): array
     {
         /** @var array<int, int|string> $placed */
@@ -393,7 +393,6 @@ final readonly class TrendingStoryHistoryRepository
         return \sprintf('%1$s = CASE WHEN %1$s < :%2$s THEN %1$s ELSE :%2$s END', $column, $parameter);
     }
 
-    /** A null parameter keeps the column. */
     private static function latest(string $column, string $parameter): string
     {
         return \sprintf('%1$s = CASE WHEN :%2$s > %1$s THEN :%2$s ELSE %1$s END', $column, $parameter);

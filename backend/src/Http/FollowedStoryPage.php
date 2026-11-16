@@ -8,7 +8,7 @@ use App\Repository\EntryListRow;
 use App\Repository\EntryListSort;
 use App\Service\Curation\Trending\Model\FollowedStoryEntriesModel;
 
-/** The `{entries, nextCursor, lastOpenedAt, newEntryIds}` shape of a followed story's list; each entry adds `joinedAt`. */
+/** A followed story's page of entries. */
 final readonly class FollowedStoryPage
 {
     public function __construct(

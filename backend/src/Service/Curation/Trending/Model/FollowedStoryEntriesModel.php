@@ -10,7 +10,7 @@ use App\Repository\EntryListRow;
 final readonly class FollowedStoryEntriesModel
 {
     /**
-     * @param list<EntryListRow>               $rows
+     * @param list<EntryListRow>             $rows
      * @param array<int, \DateTimeImmutable> $joinedAtByEntry one for every row
      */
     public function __construct(

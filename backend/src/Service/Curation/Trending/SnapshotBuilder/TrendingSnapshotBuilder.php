@@ -72,7 +72,7 @@ final readonly class TrendingSnapshotBuilder implements SnapshotBuilderInterface
         $policy = $this->policyFor($window);
         $match = $policy->match($groups, $this->history->storedInWindow($build->since));
 
-        $this->putOffTheLock($lock);
+        $this->refreshLock($lock);
 
         return $this->entityManager->wrapInTransaction(function () use (
             $build,
@@ -98,7 +98,7 @@ final readonly class TrendingSnapshotBuilder implements SnapshotBuilderInterface
         });
     }
 
-    private function putOffTheLock(LockInterface $lock): void
+    private function refreshLock(LockInterface $lock): void
     {
         try {
             $lock->refresh();
