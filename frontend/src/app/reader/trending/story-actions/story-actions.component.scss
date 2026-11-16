@@ -1,0 +1,18 @@
+// The host joins its line's flex row; without a story it holds no box.
+:host {
+  display: contents;
+}
+
+.story-actions {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-1);
+  flex: none;
+}
+
+// Sized like the line's "more articles" toggle beside it, not like a form control.
+.ib.boxed {
+  width: auto;
+  height: auto;
+  padding: var(--space-1) var(--space-2);
+}

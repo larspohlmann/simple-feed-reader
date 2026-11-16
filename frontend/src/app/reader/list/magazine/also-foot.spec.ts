@@ -1,4 +1,4 @@
-import { anEntry } from '../../../../testing/entry-testing';
+import { anEntry, aStory } from '../../../../testing/entry-testing';
 import { alsoFootOf } from './also-foot';
 
 describe('alsoFootOf', () => {
@@ -23,7 +23,7 @@ describe('alsoFootOf', () => {
     const other = anEntry({ id: 3 });
     const lead = anEntry({
       duplicates: [other],
-      story: { outletCount: 4, viewed: false, shareCount: 0 },
+      story: aStory({ outletCount: 4, viewed: false, shareCount: 0 }),
     });
 
     expect(alsoFootOf(lead)).toEqual({ copies: [other], label: 'reader.alsoCoveredBy' });

@@ -34,7 +34,7 @@ import {
   trackPageScrollTop,
 } from '../../../../testing/scroll-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
-import { anEntry } from '../../../../testing/entry-testing';
+import { anEntry, aStory } from '../../../../testing/entry-testing';
 import {
   MockIntersectionObserver,
   installMockIntersectionObserver,
@@ -2864,7 +2864,7 @@ describe('EntryListComponent', () => {
         layout: 'magazine',
         entries: MIXED_SOURCE_RUN.map((each) => ({
           ...each,
-          story: { outletCount: 3, viewed: false, shareCount: 0 },
+          story: aStory({ outletCount: 3, viewed: false, shareCount: 0 }),
         })),
       });
 

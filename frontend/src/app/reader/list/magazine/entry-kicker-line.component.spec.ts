@@ -3,7 +3,7 @@ import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryKickerLineComponent } from './entry-kicker-line.component';
 import { EntryDto } from '../../models';
-import { anEntry } from '../../../../testing/entry-testing';
+import { anEntry, aStory } from '../../../../testing/entry-testing';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 
@@ -125,7 +125,7 @@ describe('EntryKickerLineComponent', () => {
 
   describe('on a Trending lead (#2017)', () => {
     const lead = (viewed = false) =>
-      entry({ isHidden: false, story: { outletCount: 7, viewed, shareCount: 0 } });
+      entry({ isHidden: false, story: aStory({ outletCount: 7, viewed, shareCount: 0 }) });
 
     it('names how many feeds covered the story', () => {
       expect(mount(lead()).querySelector('.sources')?.textContent?.trim()).toBe('7 sources');

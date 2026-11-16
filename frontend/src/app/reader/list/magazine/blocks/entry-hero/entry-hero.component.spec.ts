@@ -7,7 +7,7 @@ import { EntryDto, ImageRenditionDto } from '../../../../models';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
 import { ImageProxyService } from '../../../../../shared/proxied-image/image-proxy.service';
 import { neverRecoveringImageProxy } from '../../../../../../testing/image-proxy-testing';
-import { anEntry } from '../../../../../../testing/entry-testing';
+import { anEntry, aStory } from '../../../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
 import { provideSocialAccounts } from '../../../../../../testing/social-accounts-testing';
 
@@ -213,7 +213,7 @@ describe('EntryHeroComponent', () => {
   it("opens a story's other outlet from its mini card, and not the hero", () => {
     const dup = entry({ id: 9, source: 'NDR SH' });
     const fixture = mount(
-      entry({ duplicates: [dup], story: { outletCount: 2, viewed: false, shareCount: 0 } }),
+      entry({ duplicates: [dup], story: aStory({ outletCount: 2, viewed: false, shareCount: 0 }) }),
     );
     const element = fixture.nativeElement as HTMLElement;
     element.querySelector<HTMLButtonElement>('app-more-sources .toggle')!.click();

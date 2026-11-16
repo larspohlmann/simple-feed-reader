@@ -7,7 +7,7 @@ import { ReaderApi } from './reader-api';
 import { PAGE_SIZE } from './list/paging';
 import { ReaderContent } from './models';
 import { Observable } from 'rxjs';
-import { A_READER_TOKEN, anEntry } from '../../testing/entry-testing';
+import { A_READER_TOKEN, anEntry, aStory } from '../../testing/entry-testing';
 import { refreshReport } from '../../testing/refresh-report';
 
 describe('ReaderApi', () => {
@@ -346,7 +346,9 @@ describe('ReaderApi', () => {
     testRequest.flush({
       window: 'day',
       builtAt: null,
-      stories: [anEntry({ id: 9, story: { outletCount: 3, viewed: false, shareCount: 0 } })],
+      stories: [
+        anEntry({ id: 9, story: aStory({ outletCount: 3, viewed: false, shareCount: 0 }) }),
+      ],
     });
     expect(ids).toEqual([9]);
   });

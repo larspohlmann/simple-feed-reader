@@ -18,6 +18,8 @@ import { LinkReaderNavigation } from './link-reader-navigation.service';
 import { ReaderRouteState } from './reader-route-state.service';
 import { ListHeading } from './list-heading.service';
 import { EntryStateActions } from './entry-state-actions.service';
+import { TrendingFollowAction } from '../trending/trending-follow-action';
+import { TrendingHideAction } from '../trending/trending-hide-action';
 import { MarkReadActions } from './mark-read-actions.service';
 import { ReaderOnboarding } from './reader-onboarding.service';
 import { PasskeyFirstBootOffer } from './passkey-first-boot-offer.service';
@@ -75,7 +77,6 @@ import { IconButtonDirective } from '../../shared/icon-button/icon-button.direct
 import { ListActionDirective } from '../../shared/list-action/list-action.directive';
 import { FeedIntroComponent } from './feed-intro/feed-intro.component';
 import { TrendingWindowSwitchComponent } from '../trending/trending-window-switch/trending-window-switch.component';
-import { TrendingListDirective } from '../trending/trending-list.directive';
 import { UrlDropZoneComponent } from './url-drop/url-drop-zone.component';
 import { TranslocoPipe } from '@jsverse/transloco';
 
@@ -98,7 +99,6 @@ import { TranslocoPipe } from '@jsverse/transloco';
     ListActionDirective,
     FeedIntroComponent,
     TrendingWindowSwitchComponent,
-    TrendingListDirective,
     RouterLink,
     TranslocoPipe,
   ],
@@ -116,6 +116,8 @@ import { TranslocoPipe } from '@jsverse/transloco';
     LinkReaderNavigation,
     ListHeading,
     EntryStateActions,
+    TrendingFollowAction,
+    TrendingHideAction,
     MarkReadActions,
     ReaderOnboarding,
     PasskeyFirstBootOffer,

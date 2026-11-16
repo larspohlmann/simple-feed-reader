@@ -9,7 +9,7 @@ import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action
 import { LinkReaderNavigation } from '../../../../shell/link-reader-navigation.service';
 import { PreviewProgress } from '../../../../link-card/preview-progress';
 import { ProxiedImageDirective } from '../../../../../shared/proxied-image/proxied-image.directive';
-import { aLinkCard, anEntry } from '../../../../../../testing/entry-testing';
+import { aLinkCard, anEntry, aStory } from '../../../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
 import { provideSocialAccounts } from '../../../../../../testing/social-accounts-testing';
 
@@ -193,7 +193,7 @@ describe('EntryLinkComponent', () => {
         poster: { name: 'Ann', url: null, imageUrl: null },
         linkCards: [card()],
         duplicates: [other(2, 'Ben'), other(3, 'Cat'), other(4, 'Dan')],
-        story: { outletCount: 4, viewed: false, shareCount: 0 },
+        story: aStory({ outletCount: 4, viewed: false, shareCount: 0 }),
       }),
     );
     const element = fixture.nativeElement as HTMLElement;
@@ -219,7 +219,7 @@ describe('EntryLinkComponent', () => {
         linkCards: [card()],
         shares: [sharer(1, 'Ann'), sharer(5, 'Eve'), sharer(6, 'Fay')],
         duplicates: [],
-        story: { outletCount: 2, viewed: false, shareCount: 3 },
+        story: aStory({ outletCount: 2, viewed: false, shareCount: 3 }),
       }),
     );
     const element = fixture.nativeElement as HTMLElement;
@@ -237,8 +237,9 @@ describe('EntryLinkComponent', () => {
   });
 
   it('names no shares on a story no post shares', () => {
-    const element = mount(entry({ story: { outletCount: 2, viewed: false, shareCount: 0 } }))
-      .nativeElement as HTMLElement;
+    const element = mount(
+      entry({ story: aStory({ outletCount: 2, viewed: false, shareCount: 0 }) }),
+    ).nativeElement as HTMLElement;
 
     expect(element.querySelector('app-story-source-count')!.textContent).not.toContain('share');
     expect(element.querySelector('app-story-sharers .sharers')).toBeNull();
@@ -247,7 +248,7 @@ describe('EntryLinkComponent', () => {
   it('shows the sharers of the other articles on their mini cards', () => {
     const fixture = mount(
       entry({
-        story: { outletCount: 3, viewed: false, shareCount: 2 },
+        story: aStory({ outletCount: 3, viewed: false, shareCount: 2 }),
         duplicates: [
           entry({
             id: 2,

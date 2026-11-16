@@ -13,7 +13,7 @@ import { EntryDto } from '../models';
 import { VoteValue } from '../vote-pill/vote';
 import { CompletedEntryDto } from './completed-entry';
 import { markTerms } from '../../shared/marked-text/search-marks';
-import { aLinkCard, anEntry } from '../../../testing/entry-testing';
+import { aLinkCard, anEntry, aStory } from '../../../testing/entry-testing';
 import { aThreadPost } from '../../../testing/thread-testing';
 
 const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
@@ -1341,64 +1341,153 @@ describe('EntriesStore', () => {
     });
   });
 
-  describe('hiding a Trending story (#2017)', () => {
+  describe('a Trending story (#2017, #2128)', () => {
+    const card = (id: number, followed = false) =>
+      entry(id, { story: aStory({ id: id * 10, followed }) });
     const listed = () => store.entries().map((row) => row.id);
+    const followedOnScreen = (id: number) =>
+      store.entries().find((row) => row.id === id)?.story?.followed;
     const hideRequest = () => ctrl.expectOne('https://api.test/api/trending/hidden');
+    const followRequest = (storyId: number) =>
+      ctrl.expectOne(`https://api.test/api/trending/stories/${storyId}/follow`);
+    const failed = { status: 500, statusText: 'err' };
+    const problem = { type: 'x', title: 't', status: 500 };
+    const noContent = { status: 204, statusText: 'No Content' };
     const loadThree = (window: 'day' | 'week' = 'day') => {
       store.load({ view: 'trending', window });
       ctrl
         .expectOne((request) => request.url === 'https://api.test/api/trending')
-        .flush({ window, builtAt: null, stories: [entry(1), entry(2), entry(3)] });
+        .flush({ window, builtAt: null, stories: [card(1), card(2, true), card(3)] });
     };
 
-    it('keeps the card in the list for its caller to let leave, and hides its story in the window on screen', () => {
-      loadThree('week');
-      const onStarted = jest.fn();
-      const onSaved = jest.fn();
+    describe('hiding it', () => {
+      it('keeps the card in the list for its caller to let leave, and hides its story by id', () => {
+        loadThree('week');
+        const onStarted = jest.fn();
+        const onSaved = jest.fn();
 
-      store.hideTrendingStory(2, { onStarted, onSaved });
+        store.hideTrendingStory(2, { onStarted, onSaved });
 
-      expect(onStarted).toHaveBeenCalledTimes(1);
-      const request = hideRequest();
-      expect(request.request.method).toBe('POST');
-      expect(request.request.body).toEqual({ window: 'week', entryId: 2 });
-      expect(onSaved).not.toHaveBeenCalled();
-      request.flush(null, { status: 204, statusText: 'No Content' });
-      expect(onSaved).toHaveBeenCalledTimes(1);
-      expect(listed()).toEqual([1, 2, 3]);
+        expect(onStarted).toHaveBeenCalledTimes(1);
+        const request = hideRequest();
+        expect(request.request.method).toBe('POST');
+        expect(request.request.body).toEqual({ storyId: 20 });
+        expect(onSaved).not.toHaveBeenCalled();
+        request.flush(null, noContent);
+        expect(onSaved).toHaveBeenCalledTimes(1);
+        expect(listed()).toEqual([1, 2, 3]);
+      });
+
+      it('hides nothing for a row that carries no story', () => {
+        store.load({ view: 'all' });
+        ctrl
+          .expectOne((request) => request.url === 'https://api.test/api/entries')
+          .flush({ entries: [entry(1), entry(2)], nextCursor: null });
+        const onStarted = jest.fn();
+
+        store.hideTrendingStory(2, { onStarted });
+
+        expect(onStarted).not.toHaveBeenCalled();
+        ctrl.expectNone('https://api.test/api/trending/hidden');
+      });
+
+      it('reports a failed hide with the error banner, and starts again on retry', () => {
+        loadThree();
+        const onStarted = jest.fn();
+        const onFailed = jest.fn();
+
+        store.hideTrendingStory(2, { onStarted, onFailed });
+        hideRequest().flush(problem, failed);
+
+        expect(onFailed).toHaveBeenCalledTimes(1);
+        expect(store.error()).not.toBeNull();
+
+        store.retry();
+        expect(onStarted).toHaveBeenCalledTimes(2);
+        hideRequest().flush(null, noContent);
+        expect(store.error()).toBeNull();
+      });
     });
 
-    it('hides nothing outside a Trending list', () => {
-      store.load({ view: 'all' });
-      ctrl
-        .expectOne((request) => request.url === 'https://api.test/api/entries')
-        .flush({ entries: [entry(1), entry(2)], nextCursor: null });
-      const onStarted = jest.fn();
+    describe('following it', () => {
+      it('shows the story followed at once and reports once the server took it', () => {
+        loadThree();
+        const onStarted = jest.fn();
+        const onSaved = jest.fn();
 
-      store.hideTrendingStory(2, { onStarted });
+        store.setStoryFollowed(1, true, { onStarted, onSaved });
 
-      expect(onStarted).not.toHaveBeenCalled();
-      ctrl.expectNone('https://api.test/api/trending/hidden');
-    });
+        expect(onStarted).toHaveBeenCalledTimes(1);
+        expect(followedOnScreen(1)).toBe(true);
+        const request = followRequest(10);
+        expect(request.request.method).toBe('PUT');
+        expect(onSaved).not.toHaveBeenCalled();
+        request.flush(null, noContent);
+        expect(onSaved).toHaveBeenCalledTimes(1);
+        expect(followedOnScreen(1)).toBe(true);
+      });
 
-    it('reports a failed hide with the error banner, and starts again on retry', () => {
-      loadThree();
-      const onStarted = jest.fn();
-      const onFailed = jest.fn();
+      it('unfollows with a DELETE', () => {
+        loadThree();
 
-      store.hideTrendingStory(2, { onStarted, onFailed });
-      hideRequest().flush(
-        { type: 'x', title: 't', status: 500 },
-        { status: 500, statusText: 'err' },
-      );
+        store.setStoryFollowed(2, false, {});
 
-      expect(onFailed).toHaveBeenCalledTimes(1);
-      expect(store.error()).not.toBeNull();
+        expect(followedOnScreen(2)).toBe(false);
+        const request = followRequest(20);
+        expect(request.request.method).toBe('DELETE');
+        request.flush(null, noContent);
+      });
 
-      store.retry();
-      expect(onStarted).toHaveBeenCalledTimes(2);
-      hideRequest().flush(null, { status: 204, statusText: 'No Content' });
-      expect(store.error()).toBeNull();
+      it('puts the story back, shows the banner and follows again on retry when the request fails', () => {
+        loadThree();
+        const onStarted = jest.fn();
+        const onFailed = jest.fn();
+
+        store.setStoryFollowed(1, true, { onStarted, onFailed });
+        followRequest(10).flush(problem, failed);
+
+        expect(followedOnScreen(1)).toBe(false);
+        expect(onFailed).toHaveBeenCalledTimes(1);
+        expect(store.error()).not.toBeNull();
+
+        store.retry();
+        expect(onStarted).toHaveBeenCalledTimes(2);
+        expect(followedOnScreen(1)).toBe(true);
+        followRequest(10).flush(null, noContent);
+        expect(store.error()).toBeNull();
+      });
+
+      it('leaves the other cards alone', () => {
+        loadThree();
+
+        store.setStoryFollowed(1, true, {});
+        followRequest(10).flush(null, noContent);
+
+        expect([followedOnScreen(2), followedOnScreen(3)]).toEqual([true, false]);
+      });
+
+      it('sends nothing for a row that carries no story', () => {
+        store.load({ view: 'all' });
+        ctrl
+          .expectOne((request) => request.url === 'https://api.test/api/entries')
+          .flush({ entries: [entry(1)], nextCursor: null });
+        const onStarted = jest.fn();
+
+        store.setStoryFollowed(1, true, { onStarted });
+
+        expect(onStarted).not.toHaveBeenCalled();
+        ctrl.expectNone('https://api.test/api/trending/stories/10/follow');
+      });
+
+      it('sends nothing while the same story is still on the wire', () => {
+        loadThree();
+
+        store.setStoryFollowed(1, true, {});
+        store.setStoryFollowed(1, false, {});
+
+        followRequest(10).flush(null, noContent);
+        expect(followedOnScreen(1)).toBe(true);
+      });
     });
   });
 });

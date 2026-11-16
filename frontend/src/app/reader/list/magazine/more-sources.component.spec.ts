@@ -1,12 +1,14 @@
+import { Provider } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { EntryDto } from '../../models';
 import { MoreSourcesComponent } from './more-sources.component';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
-import { aLinkCard, anEntry } from '../../../../testing/entry-testing';
+import { aLinkCard, anEntry, aStory } from '../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service';
+import { provideStoryActions } from '../../../../testing/story-actions-testing';
 
 const open = jest.fn();
 const navigation = { layer: jest.fn(), openAlone: jest.fn() };
@@ -21,10 +23,12 @@ beforeEach(() => {
 function mount(
   entry: EntryDto,
   reader: Partial<LinkReaderNavigation> | null = navigation,
+  storyActions: Provider[] = [],
 ): HTMLElement {
   TestBed.configureTestingModule({
     imports: [MoreSourcesComponent, provideTranslocoTesting()],
     providers: [
+      ...storyActions,
       provideAccountIdentity(),
       { provide: EntryActionHandler, useValue: { open } },
       ...(reader ? [{ provide: LinkReaderNavigation, useValue: reader }] : []),
@@ -45,7 +49,7 @@ function expand(element: HTMLElement): void {
 const storyOf = (duplicates: EntryDto[]): EntryDto =>
   anEntry({
     duplicates,
-    story: { outletCount: duplicates.length + 1, viewed: false, shareCount: 0 },
+    story: aStory({ outletCount: duplicates.length + 1, viewed: false, shareCount: 0 }),
   });
 
 const copies = [
@@ -70,6 +74,41 @@ it("opens a story's other outlets as mini cards, not pills", () => {
 
   expect(element.querySelector('.more-sources')).not.toBeNull();
   expect(element.querySelector('app-entry-duplicates')).toBeNull();
+});
+
+describe("a Trending story's line (#2128)", () => {
+  const lineOf = (element: HTMLElement) => element.querySelector('.more-sources .story-line')!;
+  const onTrending = (entry: EntryDto) => mount(entry, navigation, provideStoryActions());
+
+  it('holds the story actions first and the more-articles toggle last', () => {
+    const line = lineOf(onTrending(storyOf(copies)));
+
+    expect([...line.children].map((child) => child.localName)).toEqual([
+      'app-story-actions',
+      'button',
+    ]);
+    expect(line.querySelector('app-story-actions .story-actions')).not.toBeNull();
+    expect(line.lastElementChild!.classList.contains('toggle')).toBe(true);
+  });
+
+  it('marks the toggle with the Trending icon', () => {
+    const toggle = lineOf(onTrending(storyOf(copies))).querySelector('.toggle')!;
+
+    expect(toggle.querySelector('app-icon')!.textContent!.trim()).toBe('trending_up');
+  });
+
+  it('still shows for a story with no other articles, holding only its actions', () => {
+    const line = lineOf(onTrending(storyOf([])));
+
+    expect(line.querySelector('.toggle')).toBeNull();
+    expect(line.querySelectorAll('.story-actions button').length).toBe(2);
+  });
+
+  it('offers no story actions off Trending', () => {
+    const element = mount(storyOf(copies), navigation, provideStoryActions('all'));
+
+    expect(element.querySelector('.story-actions')).toBeNull();
+  });
 });
 
 it('counts the other sources on one collapsed line', () => {

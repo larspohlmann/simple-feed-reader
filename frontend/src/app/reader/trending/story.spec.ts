@@ -1,10 +1,10 @@
-import { anEntry } from '../../../testing/entry-testing';
+import { anEntry, aStory } from '../../../testing/entry-testing';
 import { EntryDto } from '../models';
 import { isStoryViewed, showsUnreadMark } from './story';
 import { TrendingStory } from './trending.models';
 
 const lead = (story: Partial<TrendingStory> = {}, over: Partial<EntryDto> = {}): EntryDto =>
-  anEntry({ story: { outletCount: 5, viewed: false, shareCount: 0, ...story }, ...over });
+  anEntry({ story: aStory({ outletCount: 5, ...story }), ...over });
 
 describe('isStoryViewed', () => {
   it('is false for a story nobody opened', () => {

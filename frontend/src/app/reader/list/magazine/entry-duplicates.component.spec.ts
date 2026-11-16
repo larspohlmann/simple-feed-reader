@@ -1,4 +1,4 @@
-import { signal } from '@angular/core';
+import { Provider } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { OverlayContainer } from '@angular/cdk/overlay';
@@ -6,11 +6,11 @@ import { EntryDto } from '../../models';
 import { EntryDuplicatesComponent } from './entry-duplicates.component';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
-import { anEntry } from '../../../../testing/entry-testing';
+import { anEntry, aStory } from '../../../../testing/entry-testing';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
-import { ENTRY_ROW_ACTION, EntryRowAction } from '../../entry/entry-actions/entry-row-action';
+import { provideStoryActions } from '../../../../testing/story-actions-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -34,10 +34,11 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto =>
     ...over,
   });
 
-function mount(testEntry: EntryDto, arrange?: () => void) {
+function mount(testEntry: EntryDto, arrange?: () => void, storyActions: Provider[] = []) {
   TestBed.configureTestingModule({
     imports: [EntryDuplicatesComponent, provideTranslocoTesting()],
     providers: [
+      ...storyActions,
       provideSocialAccounts(),
       provideAccountIdentity(),
       { provide: EntryActionHandler, useValue: entryActions },
@@ -58,6 +59,35 @@ function hold(fixture: ComponentFixture<EntryDuplicatesComponent>, row: EntryDto
 it('renders nothing without duplicates', () => {
   const element = mount(entry()).nativeElement as HTMLElement;
   expect(element.querySelector('.also-foot')).toBeNull();
+});
+
+describe("a Trending story's footer in the list layout (#2128)", () => {
+  const footOf = (row: EntryDto, storyActions = provideStoryActions()) =>
+    (mount(row, undefined, storyActions).nativeElement as HTMLElement).querySelector('.also-foot');
+
+  it('leads with the story actions, before the other outlets', () => {
+    const foot = footOf(entry({ story: aStory(), duplicates: [entry({ id: 2 })] }))!;
+
+    expect(foot.firstElementChild!.localName).toBe('app-story-actions');
+    expect(foot.querySelectorAll('.story-actions button').length).toBe(2);
+    expect(foot.querySelectorAll('.also-entry').length).toBe(1);
+  });
+
+  it('still shows for a story with no other articles, holding only its actions', () => {
+    const foot = footOf(entry({ story: aStory() }))!;
+
+    expect(foot.querySelector('.lead')).toBeNull();
+    expect(foot.querySelectorAll('.story-actions button').length).toBe(2);
+  });
+
+  it('offers no story actions off Trending', () => {
+    const foot = footOf(
+      entry({ story: aStory(), duplicates: [entry({ id: 2 })] }),
+      provideStoryActions('all'),
+    )!;
+
+    expect(foot.querySelector('.story-actions')).toBeNull();
+  });
 });
 
 it('renders one chip per duplicate with its feed', () => {
@@ -120,7 +150,7 @@ it("names a Trending story's post by its poster, not by the timeline holding it"
     poster: { name: 'Bob', url: null, imageUrl: null },
   });
   const element = mount(
-    entry({ duplicates: [dup], story: { outletCount: 2, viewed: false, shareCount: 0 } }),
+    entry({ duplicates: [dup], story: aStory({ outletCount: 2, viewed: false, shareCount: 0 }) }),
   ).nativeElement as HTMLElement;
   const chip = element.querySelector('.also-entry')!;
 
@@ -143,30 +173,6 @@ it('opens a popover with the copy card and re-emits open for that copy', () => {
 
   (panel!.querySelector('app-entry-row .row') as HTMLElement).click();
   expect(opened).toHaveBeenCalledWith(dup);
-});
-
-it("gives the copies in the popover none of the list's own row action", () => {
-  const listAction: EntryRowAction = {
-    icon: 'visibility_off',
-    label: 'test.listAction',
-    hint: 'test.listAction',
-    run: jest.fn(),
-  };
-  const dup = entry({ id: 2, source: 'NDR SH' });
-  const fixture = mount(entry({ duplicates: [dup] }), () =>
-    TestBed.configureTestingModule({
-      providers: [{ provide: ENTRY_ROW_ACTION, useValue: signal(listAction) }],
-    }),
-  );
-
-  (fixture.nativeElement.querySelector('.also-entry') as HTMLElement).click();
-  fixture.detectChanges();
-  const panel = TestBed.inject(OverlayContainer)
-    .getContainerElement()
-    .querySelector('.dup-popover')!;
-
-  expect(panel.querySelector('app-entry-row')).not.toBeNull();
-  expect(panel.querySelector('[aria-label="test.listAction"]')).toBeNull();
 });
 
 it('closes the popover once the copy is opened', () => {
@@ -320,7 +326,7 @@ it("heads a row's duplicates as the places it also ran in", () => {
 it("heads a Trending story's other outlets as the feeds that also covered it", () => {
   const lead = entry({
     duplicates: [entry({ id: 2 })],
-    story: { outletCount: 3, viewed: false, shareCount: 0 },
+    story: aStory({ outletCount: 3, viewed: false, shareCount: 0 }),
   });
   const element = mount(lead).nativeElement as HTMLElement;
 

@@ -1530,6 +1530,9 @@
     "unshare": "Quitar de compartidos",
     "toggleRead": "Marcar como leído o no leído",
     "hideStory": "Ocultar noticia",
+    "followStory": "Seguir noticia",
+    "unfollowStory": "Dejar de seguir noticia",
+    "storyActions": "Noticia",
     "actionHint": {
       "favoriteAdd": "Añadir a favoritos",
       "favoriteRemove": "Quitar de favoritos",
@@ -1546,7 +1549,9 @@
       "unshare": "Compartido: quitarlo de la lista Compartidos",
       "readAdd": "Marcar como leído: lo añade a Leídos recientemente",
       "readRemove": "Quitar de Leídos recientemente",
-      "hideStory": "Ocultar esta noticia de Tendencias: sigue oculta aunque crezca"
+      "hideStory": "Ocultar esta noticia de Tendencias: sigue oculta aunque crezca",
+      "followStory": "Seguir esta noticia: lo que se le añada aparece en la barra lateral",
+      "unfollowStory": "Dejar de seguir esta noticia"
     },
     "filterByTag": "Filtrar por {{name}}",
     "shortBadge": "Short",

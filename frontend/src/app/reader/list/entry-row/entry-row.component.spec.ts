@@ -11,7 +11,7 @@ import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.ser
 import { neverRecoveringImageProxy } from '../../../../testing/image-proxy-testing';
 import { describeShortMarking } from '../../../../testing/short-marking-testing';
 import { describePortraitCover } from '../../../../testing/portrait-cover-testing';
-import { aLinkCard, anEntry } from '../../../../testing/entry-testing';
+import { aLinkCard, anEntry, aStory } from '../../../../testing/entry-testing';
 import { aThreadPost } from '../../../../testing/thread-testing';
 import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
@@ -117,7 +117,7 @@ describe('EntryRowComponent', () => {
 
   describe('a Trending lead (#2017)', () => {
     const lead = (duplicates: EntryDto[] = []) =>
-      entry({ duplicates, story: { outletCount: 7, viewed: false, shareCount: 0 } });
+      entry({ duplicates, story: aStory({ outletCount: 7, viewed: false, shareCount: 0 }) });
 
     it('names how many feeds covered the story in its meta line', () => {
       const element = mount(lead()).nativeElement as HTMLElement;
@@ -128,7 +128,7 @@ describe('EntryRowComponent', () => {
     it('names who shared the lead article and how often the story was shared', () => {
       const element = mount(
         entry({
-          story: { outletCount: 7, viewed: false, shareCount: 2 },
+          story: aStory({ outletCount: 7, viewed: false, shareCount: 2 }),
           shares: [
             anEntry({ id: 8, poster: { name: 'Ann', url: null, imageUrl: null } }),
             anEntry({ id: 9, poster: { name: 'Ben', url: null, imageUrl: null } }),

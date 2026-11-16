@@ -1526,6 +1526,9 @@
     "unshare": "Remove from shared",
     "toggleRead": "Toggle read",
     "hideStory": "Hide story",
+    "followStory": "Follow story",
+    "unfollowStory": "Unfollow story",
+    "storyActions": "Story",
     "actionHint": {
       "favoriteAdd": "Add to favourites",
       "favoriteRemove": "Remove from favourites",
@@ -1542,7 +1545,9 @@
       "unshare": "Shared — remove it from the Shared list",
       "readAdd": "Mark as read — adds it to Recently read",
       "readRemove": "Remove from Recently read",
-      "hideStory": "Hide this story from Trending — it stays hidden as it grows"
+      "hideStory": "Hide this story from Trending — it stays hidden as it grows",
+      "followStory": "Follow this story — what joins it shows in the sidebar",
+      "unfollowStory": "Stop following this story"
     },
     "filterByTag": "Filter by {{name}}",
     "shortBadge": "Short",

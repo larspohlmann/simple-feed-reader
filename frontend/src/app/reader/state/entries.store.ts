@@ -4,7 +4,6 @@ import { Observable, Subscription, finalize, tap } from 'rxjs';
 import { Problem, parseProblem } from '../../core/problem';
 import { accountSignal, onIdentityChange } from '../../core/auth/session-identity';
 import { ReaderApi } from '../reader-api';
-import { DEFAULT_TRENDING_WINDOW } from '../trending/trending-window';
 import { TrendingApi } from '../trending/trending-api';
 import { SocialPostApi } from '../social-post-api';
 import { likeableSocial } from '../entry-social';
@@ -14,6 +13,7 @@ import { ExclusionSurface, SURFACE_DESCRIPTOR } from '../feed-exclusions';
 import { CompletedEntryDto, withCompleted } from './completed-entry';
 import { withPatchedRow } from './entry-rows';
 import { InFlightPatches, RowPatch, valuesBefore } from './in-flight-patches';
+import { RetryableFailure } from './retryable-failure';
 
 /** Adds `incoming` to `existing`, deduped case-insensitively, keeping first-seen
  *  casing — mirrors `MeilisearchIndex::matchedWordsOf`. A case-only duplicate
@@ -48,6 +48,7 @@ export class EntriesStore {
   /** The open entry when the loaded list does not hold it, e.g. a deep link; `entries()` never shows it. */
   private readonly unlisted = accountSignal<EntryDto | null>(null);
   private readonly inFlight = new InFlightPatches();
+  private readonly failure = new RetryableFailure();
   readonly entries = this.rawEntries.asReadonly();
   readonly nextCursor = accountSignal<string | null>(null);
   readonly loading = accountSignal(false);
@@ -55,7 +56,7 @@ export class EntriesStore {
    *  whose true -> false edge the list reads as a finished reload. */
   readonly mutating = accountSignal(false);
   readonly loadingMore = accountSignal(false);
-  readonly error = accountSignal<Problem | null>(null);
+  readonly error = this.failure.problem;
   readonly loadedAt = accountSignal<string>('');
   /** Words the current search engine actually matched (empty outside a search, or
    *  when the LIKE fallback answered it). `load()` REPLACES this (new result set);
@@ -63,11 +64,6 @@ export class EntriesStore {
   readonly matchedWords = accountSignal<string[]>([]);
 
   private readonly query = accountSignal<EntryQuery | null>(null);
-  /** Replays whichever request last failed, so the error banner's retry resumes
-   *  exactly that operation — a first-page load, a pagination page, or a row
-   *  state PATCH. Cleared when any fresh operation starts, so a stale failure
-   *  never lingers behind a later success (#996). */
-  private readonly failedOperation = accountSignal<(() => void) | null>(null);
   /** The list request on the wire, cancelled once a newer load or another account supersedes it: a stale
    *  response can't clobber a fresher one (#158), nor a pending gateway retry fire for a list the user left. */
   private listRequest: Subscription | null = null;
@@ -88,8 +84,7 @@ export class EntriesStore {
     this.loading.set(true);
     // A fresh top-of-list load abandons any pagination still on the wire.
     this.loadingMore.set(false);
-    this.error.set(null);
-    this.failedOperation.set(null);
+    this.failure.clear();
     this.loadedAt.set(new Date().toISOString());
     this.listRequest?.unsubscribe();
     this.listRequest = this.api.entries(query).subscribe({
@@ -104,8 +99,7 @@ export class EntriesStore {
         // turn interactive again while belonging to a view the user has left.
         this.rawEntries.set([]);
         this.matchedWords.set([]);
-        this.error.set(parseProblem(error));
-        this.failedOperation.set(() => this.load(query));
+        this.failure.report(error, () => this.load(query));
         this.loading.set(false);
       },
     });
@@ -141,7 +135,7 @@ export class EntriesStore {
     const query = this.query();
     if (!cursor || !query || this.loading() || this.loadingMore()) return;
     this.loadingMore.set(true);
-    this.failedOperation.set(null);
+    this.failure.abandonRetry();
     this.listRequest = this.api.entries(query, cursor).subscribe({
       next: (page) => {
         this.rawEntries.update((current) => [
@@ -158,8 +152,7 @@ export class EntriesStore {
         this.loadingMore.set(false);
       },
       error: (error: HttpErrorResponse) => {
-        this.error.set(parseProblem(error));
-        this.failedOperation.set(() => this.loadMore());
+        this.failure.report(error, () => this.loadMore());
         this.loadingMore.set(false);
       },
     });
@@ -184,13 +177,11 @@ export class EntriesStore {
   /** Optimistic patch of one entry's flags; reverts only that entry if the PATCH
    *  fails (never clobbering pages appended in the meantime), surfaces the error, and reports to `outcome`. */
   setState(entryId: number, patch: EntryStatePatch, outcome: StateSaveOutcome = {}): void {
-    this.error.set(null);
-    this.failedOperation.set(null);
+    this.failure.clear();
     this.saveState(entryId, patch, {
       ...outcome,
       onFailed: (error) => {
-        this.error.set(parseProblem(error));
-        this.failedOperation.set(() => this.setState(entryId, patch, outcome));
+        this.failure.report(error, () => this.setState(entryId, patch, outcome));
         outcome.onFailed?.();
       },
     });
@@ -312,20 +303,44 @@ export class EntriesStore {
     this.patchEntries([id], (entry) => (entry.isShared ? entry : { ...entry, isShared: true }));
   }
 
-  /** Hides a card's story in the loaded Trending list's window (#2017); the card stays in the list, so the
-   *  caller can let it leave in place (#2066). A failure shows the banner and its retry. */
+  /** Hides a card's story (#2017, #2128); the card stays in the list, so the caller can let it leave in
+   *  place (#2066). A failure shows the banner and its retry. */
   hideTrendingStory(entryId: number, outcome: StateSaveOutcome = {}): void {
-    const query = this.query();
-    if (query?.view !== 'trending' || !this.rawEntries().some((entry) => entry.id === entryId))
-      return;
-    const window = query.window ?? DEFAULT_TRENDING_WINDOW;
-    this.error.set(null);
-    this.failedOperation.set(null);
+    const story = this.entry(entryId)?.story;
+    if (!story) return;
+    this.reportedMutation(this.trendingApi.hideStory(story.id), outcome, () =>
+      this.hideTrendingStory(entryId, outcome),
+    );
+  }
+
+  /** Optimistic follow of a card's story (#2128); dropped while one is on the wire, put back with the
+   *  banner and its retry when it fails. */
+  setStoryFollowed(entryId: number, followed: boolean, outcome: StateSaveOutcome = {}): void {
+    const row = this.entry(entryId);
+    const story = row?.story;
+    if (!row || !story || this.inFlight.onTheWire(entryId, 'story')) return;
+    const request$ = followed
+      ? this.trendingApi.follow(story.id)
+      : this.trendingApi.unfollow(story.id);
+    this.reportedMutation(
+      this.optimistic(row, { story: { ...story, followed } }, request$),
+      outcome,
+      () => this.setStoryFollowed(entryId, followed, outcome),
+    );
+  }
+
+  /** Clears the banner and runs `request$`; a failure shows the banner with `retry` behind it. */
+  private reportedMutation<T>(
+    request$: Observable<T>,
+    outcome: StateSaveOutcome,
+    retry: () => void,
+  ): void {
+    this.failure.clear();
     outcome.onStarted?.();
-    this.trendingApi.hideStory(window, entryId).subscribe({
+    request$.subscribe({
       next: () => outcome.onSaved?.(),
       error: (error: HttpErrorResponse) => {
-        this.reportMutationFailure(error, () => this.hideTrendingStory(entryId, outcome));
+        this.failure.report(error, retry);
         outcome.onFailed?.();
       },
     });
@@ -351,23 +366,17 @@ export class EntriesStore {
    *  banner `load`/`setState` use — for a batch with no single row to revert.
    *  `retry` resubmits exactly that mutation. */
   reportMutationFailure(error: HttpErrorResponse, retry: () => void): void {
-    this.error.set(parseProblem(error));
-    this.failedOperation.set(retry);
+    this.failure.report(error, retry);
   }
 
-  /** Replays the request that set the current error, clearing the banner first
-   *  so a fresh attempt reads as progress. A no-op when nothing has failed. */
+  /** Replays the request that set the current error. */
   retry(): void {
-    const operation = this.failedOperation();
-    if (!operation) return;
-    this.error.set(null);
-    operation();
+    this.failure.retry();
   }
 
   /** Clears the error banner and abandons its pending retry. */
   dismissError(): void {
-    this.error.set(null);
-    this.failedOperation.set(null);
+    this.failure.clear();
   }
 }
 

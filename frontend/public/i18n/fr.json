@@ -1530,6 +1530,9 @@
     "unshare": "Retirer des partagés",
     "toggleRead": "Marquer comme lu ou non lu",
     "hideStory": "Masquer le sujet",
+    "followStory": "Suivre le sujet",
+    "unfollowStory": "Ne plus suivre le sujet",
+    "storyActions": "Sujet",
     "actionHint": {
       "favoriteAdd": "Ajouter aux favoris",
       "favoriteRemove": "Retirer des favoris",
@@ -1546,7 +1549,9 @@
       "unshare": "Partagé — le retirer de la liste Partagés",
       "readAdd": "Marquer comme lu — l'ajoute à Lus récemment",
       "readRemove": "Retirer de Lus récemment",
-      "hideStory": "Masquer ce sujet des Tendances — il reste masqué même s'il prend de l'ampleur"
+      "hideStory": "Masquer ce sujet des Tendances — il reste masqué même s'il prend de l'ampleur",
+      "followStory": "Suivre ce sujet — ce qui s'y ajoute apparaît dans la barre latérale",
+      "unfollowStory": "Ne plus suivre ce sujet"
     },
     "filterByTag": "Filtrer par {{name}}",
     "shortBadge": "Short",
