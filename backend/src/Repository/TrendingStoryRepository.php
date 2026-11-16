@@ -72,7 +72,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     public function requireExists(int $storyId): void
     {
         $found = $this->getEntityManager()->getConnection()
-            ->fetchOne('SELECT 1 FROM trending_story WHERE id = ?', [$storyId], [ParameterType::INTEGER]);
+            ->fetchOne('SELECT 1 FROM trending_story WHERE id = ?', [$storyId]);
         if ($found === false) {
             throw new TrendingStoryNotFoundException(\sprintf('No Trending story has id %d.', $storyId));
         }
@@ -153,15 +153,21 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             . ' ON subscribed.feed_id = story_member.feed_id AND subscribed.user_id = :user'
             . ' AND ' . TrendingInclusionSql::includes('subscribed')
             . ' JOIN entry member_entry ON member_entry.id = story_member.entry_id'
-            . ' WHERE ' . TrendingPlacementSql::placedIn($reader->window, 'story_member')
-            . self::noEarlierCopy($reader->window)
-            . self::notShownInAShorterWindow($reader);
+            . ' WHERE ' . implode(' AND ', [
+                TrendingPlacementSql::placedIn($reader->window, 'story_member'),
+                self::noEarlierCopy($reader->window),
+                ...self::notShownInAShorterWindow($reader),
+            ]);
     }
 
-    /** Without this guard an empty list would expand to `NOT IN (NULL)`, which leaves every story out. */
-    private static function notShownInAShorterWindow(ReaderWindowModel $reader): string
+    /**
+     * Without this guard an empty list would expand to `NOT IN (NULL)`, which leaves every story out.
+     *
+     * @return list<string>
+     */
+    private static function notShownInAShorterWindow(ReaderWindowModel $reader): array
     {
-        return $reader->shorterWindowStoryIds === [] ? '' : ' AND story.id NOT IN (:shorterWindowStoryIds)';
+        return $reader->shorterWindowStoryIds === [] ? [] : ['story.id NOT IN (:shorterWindowStoryIds)'];
     }
 
     /** At least the reader's threshold of sources (the select's `outlet_count`), and two article feeds or two sites. */
@@ -194,7 +200,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
      */
     private static function noEarlierCopy(TrendingWindow $window): string
     {
-        return ' AND (member_feed.network IS NOT NULL'
+        return '(member_feed.network IS NOT NULL'
             . ' OR NOT EXISTS (SELECT 1 FROM trending_story_entry earlier_member'
             . ' JOIN entry earlier_entry ON earlier_entry.id = earlier_member.entry_id'
             . ' JOIN feed earlier_feed ON earlier_feed.id = earlier_member.feed_id AND earlier_feed.network IS NULL'
@@ -208,19 +214,15 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     }
 
     /**
-     * @return array{user: int, minimum: int, minimumArticleSources: int, shorterWindowStoryIds?: list<int>}
+     * @return array{user: int, minimum: int, minimumArticleSources: int, shorterWindowStoryIds: list<int>}
      */
     private static function visibilityParameters(ReaderWindowModel $reader): array
     {
-        $parameters = [
+        return [
             'user' => $reader->userId,
             'minimum' => $reader->minimumOutlets,
             'minimumArticleSources' => self::MINIMUM_ARTICLE_SOURCES,
+            'shorterWindowStoryIds' => $reader->shorterWindowStoryIds,
         ];
-        if ($reader->shorterWindowStoryIds === []) {
-            return $parameters;
-        }
-
-        return [...$parameters, 'shorterWindowStoryIds' => $reader->shorterWindowStoryIds];
     }
 }

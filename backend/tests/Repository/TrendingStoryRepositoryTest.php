@@ -305,6 +305,38 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         self::assertSame([[$story->requireId(), 2]], $this->rankedIn(TrendingWindow::Week, []));
     }
 
+    public function testAnEarlierCopyInAnotherStoryLeavesThisStorysCopyCounted(): void
+    {
+        $url = 'https://news.example.com/storm';
+        $this->fixtures->story(
+            TrendingWindow::Week,
+            '2031-05-14 08:00:00',
+            $this->fixtures->article($this->articleFeed('alpha'), 'Storm', '2031-05-14 08:00:00', $url),
+        );
+        $story = $this->fixtures->story(
+            TrendingWindow::Week,
+            '2031-05-14 10:00:00',
+            $this->fixtures->article($this->articleFeed('beta'), 'Storm', '2031-05-14 09:00:00', $url),
+            $this->member($this->articleFeed('gamma')),
+        );
+
+        self::assertSame([[$story->requireId(), 2]], $this->rankedIn(TrendingWindow::Week, []));
+    }
+
+    public function testAnEarlierCopyPlacedOnlyInTheWeekLeavesTheDaysCopyCounted(): void
+    {
+        $url = 'https://news.example.com/storm';
+        $weekOnly = $this->fixtures->article($this->articleFeed('alpha'), 'Storm', '2031-05-14 08:00:00', $url);
+        $inBoth = [
+            $this->fixtures->article($this->articleFeed('beta'), 'Storm', '2031-05-14 09:00:00', $url),
+            $this->member($this->articleFeed('gamma')),
+        ];
+        $story = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $weekOnly, ...$inBoth);
+        $this->fixtures->place(TrendingWindow::Day, $story, ...$inBoth);
+
+        self::assertSame([[$story->requireId(), 2]], $this->rankedIn(TrendingWindow::Day, []));
+    }
+
     public function testTheWeekLeavesOutAStoryIdShownInTheDay(): void
     {
         $story = $this->twoFeedWeekStory();

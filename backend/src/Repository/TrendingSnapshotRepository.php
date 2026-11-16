@@ -89,8 +89,8 @@ final class TrendingSnapshotRepository extends ServiceEntityRepository
             'last_joined_at' => $joinedAt,
         ]);
         $storyId = (int) $connection->lastInsertId();
-        $inDay = (int) ($window === TrendingWindow::Day);
-        $inWeek = (int) ($window === TrendingWindow::Week);
+        $inDay = $window === TrendingWindow::Day ? 1 : 0;
+        $inWeek = $window === TrendingWindow::Week ? 1 : 0;
         BulkInsert::into(
             'INSERT INTO trending_story_entry'
             . ' (story_id, entry_id, feed_id, article_site, shared_link_id, joined_at, in_day, in_week)',
