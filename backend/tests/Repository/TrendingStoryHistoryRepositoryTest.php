@@ -304,7 +304,7 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
         );
         self::assertSame(['kept.example', null, 'rewritten.example', null], $this->sites());
         self::assertSame(
-            ['first_joined_at' => '2031-05-14 10:00:00', 'last_joined_at' => self::BUILT_AT],
+            ['first_joined_at' => '2031-05-14 10:00:00', 'last_joined_at' => '2031-05-14 10:00:00'],
             $this->joinTimes($story),
         );
         self::assertSame(
@@ -477,6 +477,57 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
 
         self::assertSame(
             ['first_joined_at' => '2031-05-14 10:00:00', 'last_joined_at' => '2031-05-14 10:00:00'],
+            $this->joinTimes($story),
+        );
+    }
+
+    public function testAStoredStoryWhoseOnlyJoiningMemberIsNewMovesItsLastJoinToTheBuild(): void
+    {
+        [$one, $fresh] = $this->entries(2);
+        $story = $this->fixtures->story(TrendingWindow::Day, '2031-05-14 10:00:00', $one);
+
+        $this->history()->save(
+            new StoryAssignmentModel(
+                $this->group([$one->requireId(), $fresh->requireId()]),
+                $story->requireId(),
+                [$one->requireId()],
+            ),
+            self::build(TrendingWindow::Day),
+        );
+
+        self::assertSame(
+            ['first_joined_at' => '2031-05-14 10:00:00', 'last_joined_at' => self::BUILT_AT],
+            $this->joinTimes($story),
+        );
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function earlierJoinsOfARegroupedEntry(): iterable
+    {
+        yield 'joined before the story last joined' => ['2031-05-14 09:00:00', '2031-05-14 10:00:00'];
+        yield 'joined after the story last joined' => ['2031-05-14 11:00:00', '2031-05-14 11:00:00'];
+    }
+
+    #[DataProvider('earlierJoinsOfARegroupedEntry')]
+    public function testAStoredStoryWhoseOnlyJoiningMemberRegroupedMovesItsLastJoinOnlyToThatJoin(
+        string $heldSince,
+        string $lastJoinedAt,
+    ): void {
+        [$one, $regrouped] = $this->entries(2);
+        $story = $this->fixtures->story(TrendingWindow::Day, '2031-05-14 10:00:00', $one);
+        $this->fixtures->story(TrendingWindow::Week, $heldSince, $regrouped);
+
+        $this->history()->save(
+            new StoryAssignmentModel(
+                $this->group([$one->requireId(), $regrouped->requireId()]),
+                $story->requireId(),
+                [$one->requireId()],
+            ),
+            self::build(TrendingWindow::Day),
+        );
+
+        self::assertSame(
+            ['first_joined_at' => '2031-05-14 10:00:00', 'last_joined_at' => $lastJoinedAt],
             $this->joinTimes($story),
         );
     }

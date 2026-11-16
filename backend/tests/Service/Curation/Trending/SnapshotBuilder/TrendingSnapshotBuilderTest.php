@@ -13,9 +13,11 @@ use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
 use App\Repository\TrendingEntryRepository;
 use App\Repository\TrendingPlacementSql;
+use App\Repository\TrendingSnapshotRepository;
 use App\Repository\TrendingStoryFollowRepository;
 use App\Repository\TrendingStoryHistoryRepository;
 use App\Repository\TrendingStoryRepository;
+use App\Service\Curation\Trending\Model\FollowedStoryModel;
 use App\Service\Curation\Trending\Model\FollowedStoryRowModel;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\StoryAssignmentModel;
@@ -23,6 +25,7 @@ use App\Service\Curation\Trending\Model\StoryBuildModel;
 use App\Service\Curation\Trending\Model\StoryMemberModel;
 use App\Service\Curation\Trending\Model\TrendingStoryModel;
 use App\Service\Curation\Trending\ReaderWindows;
+use App\Service\Curation\Trending\TrendingStoryFollowing;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Curation\Trending\SnapshotBuilder\TrendingSnapshotBuilder;
 use App\Tests\DbTestCase;
@@ -474,9 +477,17 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
                 [$dayStoryId, $strike[0]->requireId()],
             ),
         );
-        self::assertSame([0], array_map(
-            static fn (FollowedStoryRowModel $row): int => $row->newCount,
+        self::assertSame([[0, self::NOW]], array_map(
+            static fn (FollowedStoryRowModel $row): array => [
+                $row->newCount,
+                $row->lastJoinedAt->format('Y-m-d H:i:s'),
+            ],
             $this->follows()->followedBy($reader->requireId()),
+        ));
+        $this->clock->modify('2031-05-16 12:00:00');
+        self::assertSame([true], array_map(
+            static fn (FollowedStoryModel $story): bool => $story->quiet,
+            $this->following()->followedBy($reader->requireId())->stories,
         ));
     }
 
@@ -641,6 +652,16 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
             TrendingWindow::Week,
             array_fill_keys(array_map(static fn (Entry $entry): int => $entry->requireId(), $entries), $storyId),
         );
+    }
+
+    private function following(): TrendingStoryFollowing
+    {
+        $stories = $this->entityManager->getRepository(TrendingStory::class);
+        self::assertInstanceOf(TrendingStoryRepository::class, $stories);
+        $snapshots = $this->entityManager->getRepository(TrendingSnapshot::class);
+        self::assertInstanceOf(TrendingSnapshotRepository::class, $snapshots);
+
+        return new TrendingStoryFollowing($stories, $this->follows(), $snapshots, new NaiveUtcClock($this->clock));
     }
 
     private function follows(): TrendingStoryFollowRepository

@@ -76,13 +76,15 @@ final readonly class TrendingStoryHistoryRepository
     /** @return int the story's id; where the window places its members is place()'s */
     public function save(StoryAssignmentModel $assignment, StoryBuildModel $build): int
     {
+        $joining = $assignment->joining();
+        $joinedAts = $this->joinedAtsOf($joining, $build->builtAt);
         $storyId = $assignment->storyId;
         if ($storyId === null) {
             $storyId = $this->insertStory($assignment->group, $build->builtAt);
         } else {
-            $this->updateStory($storyId, $assignment, $build->builtAt);
+            $this->updateStory($storyId, $assignment->group, $joinedAts);
         }
-        $this->insertMembers($storyId, $assignment->joining(), $build->builtAt);
+        $this->insertMembers($storyId, $joining, $joinedAts);
         foreach (array_chunk($assignment->claimedEntryIds, self::INSERT_ROWS) as $claimed) {
             $this->absorb($storyId, \sprintf('story_id <> %d AND entry_id IN (%s)', $storyId, self::idList($claimed)));
         }
@@ -271,32 +273,32 @@ final readonly class TrendingStoryHistoryRepository
         return (int) $connection->lastInsertId();
     }
 
-    /** The stored bounds only widen; the last join moves only when a member joins. */
-    private function updateStory(int $storyId, StoryAssignmentModel $assignment, \DateTimeImmutable $builtAt): void
+    /**
+     * The stored bounds only widen; the last join moves only to the latest join a member is given.
+     *
+     * @param array<int, string> $joinedAts
+     */
+    private function updateStory(int $storyId, TrendingStoryModel $group, array $joinedAts): void
     {
         $this->connection()->executeStatement(
             'UPDATE trending_story SET '
-            . self::earliest('first_seen', 'firstSeen') . ', ' . self::latest('last_seen', 'lastSeen') . ','
-            . ' last_joined_at = COALESCE(:lastJoinedAt, last_joined_at)'
-            . ' WHERE id = :story',
+            . self::earliest('first_seen', 'firstSeen') . ', ' . self::latest('last_seen', 'lastSeen') . ', '
+            . self::latest('last_joined_at', 'lastJoinedAt') . ' WHERE id = :story',
             [
-                'firstSeen' => self::stored($assignment->group->firstSeen),
-                'lastSeen' => self::stored($assignment->group->lastSeen),
-                'lastJoinedAt' => $assignment->joining() === [] ? null : self::stored($builtAt),
+                'firstSeen' => self::stored($group->firstSeen),
+                'lastSeen' => self::stored($group->lastSeen),
+                'lastJoinedAt' => $joinedAts === [] ? null : max($joinedAts),
                 'story' => $storyId,
             ],
         );
     }
 
     /**
-     * A member another story already holds keeps its earliest join, so regrouping never makes it new again.
-     *
      * @param list<StoryMemberModel> $members
+     * @param array<int, string>     $joinedAts by entry id
      */
-    private function insertMembers(int $storyId, array $members, \DateTimeImmutable $builtAt): void
+    private function insertMembers(int $storyId, array $members, array $joinedAts): void
     {
-        $joinedAt = self::stored($builtAt);
-        $earliestJoins = $this->earliestJoinsOf($members);
         BulkInsert::into(self::INSERT_MEMBERS, self::INSERT_ROWS)->rows(
             $this->connection(),
             array_map(
@@ -306,7 +308,7 @@ final readonly class TrendingStoryHistoryRepository
                     $member->feedId,
                     $member->articleSite === null ? null : mb_substr($member->articleSite, 0, self::SITE_LENGTH),
                     $member->sharedLinkId,
-                    $earliestJoins[$member->entryId] ?? $joinedAt,
+                    $joinedAts[$member->entryId],
                 ],
                 $members,
             ),
@@ -314,11 +316,13 @@ final readonly class TrendingStoryHistoryRepository
     }
 
     /**
+     * A member another story already holds keeps its earliest join, so regrouping never makes it new again.
+     *
      * @param list<StoryMemberModel> $members
      *
-     * @return array<int, string> the earliest join by entry id, of the members any story holds
+     * @return array<int, string> by entry id
      */
-    private function earliestJoinsOf(array $members): array
+    private function joinedAtsOf(array $members, \DateTimeImmutable $builtAt): array
     {
         if ($members === []) {
             return [];
@@ -330,7 +334,7 @@ final readonly class TrendingStoryHistoryRepository
             . self::idList($entryIds) . ') GROUP BY entry_id',
         );
 
-        return $earliestJoins;
+        return $earliestJoins + array_fill_keys($entryIds, self::stored($builtAt));
     }
 
     private function connection(): Connection
@@ -344,9 +348,10 @@ final readonly class TrendingStoryHistoryRepository
         return \sprintf('%1$s = CASE WHEN %1$s < :%2$s THEN %1$s ELSE :%2$s END', $column, $parameter);
     }
 
+    /** A null parameter keeps the column. */
     private static function latest(string $column, string $parameter): string
     {
-        return \sprintf('%1$s = CASE WHEN %1$s > :%2$s THEN %1$s ELSE :%2$s END', $column, $parameter);
+        return \sprintf('%1$s = CASE WHEN :%2$s > %1$s THEN :%2$s ELSE %1$s END', $column, $parameter);
     }
 
     /** @param list<int> $ids typed integers, safe to write into the statement */
