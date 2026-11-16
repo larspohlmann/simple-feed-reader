@@ -81,6 +81,7 @@ final readonly class TrendingStoryHistoryRepository
         $this->mergeMembers($merge);
         $this->mergeFollows($merge);
         $this->mergeHides($merge);
+        $this->widenToCover($merge);
         $this->connection()->executeStatement('DELETE FROM trending_story WHERE id = ?', [$merge->mergedId]);
     }
 
@@ -217,6 +218,32 @@ final readonly class TrendingStoryHistoryRepository
             'in_day' => max((int) $kept['in_day'], (int) $other['in_day']),
             'in_week' => max((int) $kept['in_week'], (int) $other['in_week']),
         ] + $kept;
+    }
+
+    /** A follower of the merged story finds its last join on the survivor, so the survivor does not turn quiet. */
+    private function widenToCover(StoryMergeModel $merge): void
+    {
+        /** @var array{first_seen: string, last_seen: string, first_joined_at: string, last_joined_at: string} $merged */
+        $merged = $this->connection()->fetchAssociative(
+            'SELECT first_seen, last_seen, first_joined_at, last_joined_at FROM trending_story WHERE id = ?',
+            [$merge->mergedId],
+        );
+        $this->connection()->executeStatement(
+            'UPDATE trending_story SET'
+            . ' first_seen = CASE WHEN first_seen < :firstSeen THEN first_seen ELSE :firstSeen END,'
+            . ' last_seen = CASE WHEN last_seen > :lastSeen THEN last_seen ELSE :lastSeen END,'
+            . ' first_joined_at = CASE WHEN first_joined_at < :firstJoinedAt'
+            . ' THEN first_joined_at ELSE :firstJoinedAt END,'
+            . ' last_joined_at = CASE WHEN last_joined_at > :lastJoinedAt THEN last_joined_at ELSE :lastJoinedAt END'
+            . ' WHERE id = :story',
+            [
+                'firstSeen' => $merged['first_seen'],
+                'lastSeen' => $merged['last_seen'],
+                'firstJoinedAt' => $merged['first_joined_at'],
+                'lastJoinedAt' => $merged['last_joined_at'],
+                'story' => $merge->survivorId,
+            ],
+        );
     }
 
     /** A reader following both keeps one follow with the earlier times, so nothing joined since goes unseen. */

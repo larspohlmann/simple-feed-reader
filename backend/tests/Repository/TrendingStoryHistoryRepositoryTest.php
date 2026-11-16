@@ -53,6 +53,67 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
         self::assertSame([$survivor->requireId()], $this->storyIds());
     }
 
+    /** @return iterable<string, array{string, string, string, string}> */
+    public static function storyTimesOfAMerge(): iterable
+    {
+        yield 'the merged story is newer' => [
+            '2031-05-13 08:00:00',
+            '2031-05-14 11:00:00',
+            '2031-05-13 08:00:00',
+            '2031-05-14 11:00:00',
+        ];
+        yield 'the merged story is older' => [
+            '2031-05-12 08:00:00',
+            '2031-05-13 11:00:00',
+            '2031-05-12 08:00:00',
+            '2031-05-14 10:00:00',
+        ];
+        yield 'the merged story lies inside the survivor' => [
+            '2031-05-13 10:00:00',
+            '2031-05-14 09:00:00',
+            '2031-05-13 09:00:00',
+            '2031-05-14 10:00:00',
+        ];
+    }
+
+    #[DataProvider('storyTimesOfAMerge')]
+    public function testAMergeWidensTheSurvivorsTimesToCoverTheMergedStory(
+        string $mergedFirst,
+        string $mergedLast,
+        string $expectedFirst,
+        string $expectedLast,
+    ): void {
+        [$one, $two, $three] = $this->entries(3);
+        $survivor = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $one);
+        $merged = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $two);
+        $bystander = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $three);
+        $this->storyTimes($survivor, '2031-05-13 09:00:00', '2031-05-14 10:00:00');
+        $this->storyTimes($merged, $mergedFirst, $mergedLast);
+        $this->storyTimes($bystander, '2031-05-14 09:30:00', '2031-05-14 09:30:00');
+
+        $this->history()->merge(new StoryMergeModel($survivor->requireId(), $merged->requireId()));
+
+        self::assertSame(
+            [
+                [
+                    'id' => $survivor->requireId(),
+                    'first_seen' => $expectedFirst,
+                    'last_seen' => $expectedLast,
+                    'first_joined_at' => $expectedFirst,
+                    'last_joined_at' => $expectedLast,
+                ],
+                [
+                    'id' => $bystander->requireId(),
+                    'first_seen' => '2031-05-14 09:30:00',
+                    'last_seen' => '2031-05-14 09:30:00',
+                    'first_joined_at' => '2031-05-14 09:30:00',
+                    'last_joined_at' => '2031-05-14 09:30:00',
+                ],
+            ],
+            $this->stories(),
+        );
+    }
+
     public function testAMergeKeepsTheLaterJoinOfTheSurvivorWhenItWasEarlier(): void
     {
         [$one, $two] = $this->entries(2);
@@ -586,6 +647,15 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
         $this->entityManager->getConnection()->executeStatement(
             'UPDATE trending_story_follow SET last_opened_at = ? WHERE user_id = ? AND story_id = ?',
             [$openedAt, $userId, $story->requireId()],
+        );
+    }
+
+    private function storyTimes(TrendingStory $story, string $first, string $last): void
+    {
+        $this->entityManager->getConnection()->executeStatement(
+            'UPDATE trending_story SET first_seen = ?, first_joined_at = ?, last_seen = ?, last_joined_at = ?'
+            . ' WHERE id = ?',
+            [$first, $first, $last, $last, $story->requireId()],
         );
     }
 
