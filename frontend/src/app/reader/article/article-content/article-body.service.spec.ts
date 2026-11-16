@@ -26,7 +26,10 @@ import { TrackDetails, chaptersOnly } from '../../audio/audio-track';
 import { EmbedDetailsApi } from '../../embed-details-api';
 import { EmbedMedia } from '../../audio/embed-media';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
-import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
+import { aMastodonAccount } from '../../../../testing/social-accounts-testing';
+import { SubscriptionsStore } from '../../state/subscriptions.store';
+import { SocialAccountRefDto } from '../../social-feed';
+import { SocialNetworkName } from '../../../core/social-network';
 
 jest.mock('hls.js', () => jest.requireActual('../../../../testing/hls-testing').fakeHlsModule);
 
@@ -81,8 +84,9 @@ describe('ArticleBody', () => {
   const chapters = signal<ChapterDto[]>([]);
   const audioTrack = signal<AudioTrack | null>(null);
   const origin = signal<EmbedTrackOrigin | null>(null);
+  const accounts = signal<SocialAccountRefDto[]>([]);
 
-  function connectBody(body: string): void {
+  function connectBody(body: string, network: SocialNetworkName | null = null): void {
     content = articleHost(body);
     html.set(body);
     decorated = jest.fn();
@@ -90,7 +94,7 @@ describe('ArticleBody', () => {
       content: signal(new ElementRef(content)),
       html,
       pageUrl: () => 'https://news.test/story',
-      network: () => null,
+      network: () => network,
       enclosureUrl: () => null,
       chapters,
       audioTrack,
@@ -125,13 +129,14 @@ describe('ArticleBody', () => {
     chapters.set([]);
     audioTrack.set(null);
     origin.set(null);
+    accounts.set([]);
     imageProxy = neverRecoveringImageProxy();
     embedDetails = jest.fn<Observable<TrackDetails>, [EmbedMedia]>(() => of(NO_DETAILS));
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
         provideAccountIdentity(),
-        provideSocialAccounts(),
+        { provide: SubscriptionsStore, useValue: { socialAccounts: accounts } },
         { provide: ImageProxyService, useValue: imageProxy },
         { provide: EmbedDetailsApi, useValue: { detailsOf: embedDetails } },
       ],
@@ -184,6 +189,31 @@ describe('ArticleBody', () => {
     await Promise.resolve();
 
     expect(decorated).toHaveBeenCalledTimes(2);
+  });
+
+  it("opens a mention on the reader's instance once the account arrives after the body rendered", async () => {
+    connectBody('<a href="https://mastodon.social/@bob">@bob</a>', 'mastodon');
+    await Promise.resolve();
+    expect(content.querySelector('a')!.getAttribute('href')).toBe('https://mastodon.social/@bob');
+
+    accounts.set([aMastodonAccount('https://home.example')]);
+    TestBed.tick();
+    await Promise.resolve();
+
+    expect(content.querySelector('a')!.getAttribute('href')).toBe(
+      `https://home.example/authorize_interaction?uri=${encodeURIComponent('https://mastodon.social/@bob')}`,
+    );
+  });
+
+  it('does not decorate the body again when the account arrives', async () => {
+    connectBody('<a href="https://mastodon.social/@bob">@bob</a>', 'mastodon');
+    await Promise.resolve();
+
+    accounts.set([aMastodonAccount('https://home.example')]);
+    TestBed.tick();
+    await Promise.resolve();
+
+    expect(decorated).toHaveBeenCalledTimes(1);
   });
 
   it('destroys the list under a video when the HTML changes, leaving none behind', async () => {

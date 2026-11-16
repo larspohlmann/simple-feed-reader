@@ -20,6 +20,7 @@ import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
 import { EmbedMedia, embedMediaOfFrame } from '../../audio/embed-media';
 import { EmbedTrackOrigin } from '../../audio/embed-track';
 import { SocialNetworkName } from '../../../core/social-network';
+import { openMastodonLinksOnOwnInstance } from '../decorators/own-instance-body-links';
 import { OwnInstanceLinks } from '../../own-instance/own-instance-links.service';
 import { ChapterDto } from '../../models';
 import { EmbedDetailsApi } from '../../embed-details-api';
@@ -81,6 +82,7 @@ export class ArticleBody {
   connect(parts: ArticleBodyParts): void {
     this.recoverFailedMedia(parts);
     this.decorateEachRender(parts);
+    this.openLinksOnOwnInstance(parts);
   }
 
   /** Body media arrive through [innerHTML], so one capturing listener gives images the proxy
@@ -131,6 +133,25 @@ export class ArticleBody {
     );
   }
 
+  /** Runs apart from the render effect: the account can arrive after the body rendered, and a
+   *  re-render would release the streams under a playing video. */
+  private openLinksOnOwnInstance(parts: ArticleBodyParts): void {
+    effect(
+      (onCleanup) => {
+        parts.html();
+        const instance = parts.network() === 'mastodon' ? this.links.instance() : null;
+        if (!parts.content()?.nativeElement) return;
+        let cancelled = false;
+        onCleanup(() => (cancelled = true));
+        queueMicrotask(() => {
+          const host = parts.content()?.nativeElement;
+          if (host && !cancelled) openMastodonLinksOnOwnInstance(host, instance);
+        });
+      },
+      { injector: this.injector },
+    );
+  }
+
   private releaseRender(content: HTMLElement): void {
     releaseHlsStreams(content);
     this.media.forgetAll();
@@ -143,7 +164,6 @@ export class ArticleBody {
     const track = parts.audioTrack();
     decorateArticle(host, {
       enclosureUrl: parts.enclosureUrl(),
-      mastodonInstance: parts.network() === 'mastodon' ? this.links.instance() : null,
       embedSource: (url) => withScriptablePlayer(url, window.location.origin),
     });
     const listen = this.embedAudio.actions({
