@@ -70,7 +70,7 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
         try {
             $this->mastodon->writeAs($account, $request, MastodonAccountApi::STATUSES_SCOPE);
         } catch (SocialPostNotFoundException | SocialPostRefusedException $exception) {
-            throw self::unreachable($exception);
+            throw SocialNetworkUnreachableException::from($exception);
         }
 
         foreach ($unseen as $row) {
@@ -83,13 +83,8 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
         try {
             return $this->mastodon->askAboutPost($account, $path);
         } catch (SocialPostNotFoundException | SocialPostRefusedException $exception) {
-            throw self::unreachable($exception);
+            throw SocialNetworkUnreachableException::from($exception);
         }
-    }
-
-    private static function unreachable(\Throwable $exception): SocialNetworkUnreachableException
-    {
-        return new SocialNetworkUnreachableException($exception->getMessage(), 0, $exception);
     }
 
     /** @param list<JsonNodeModel> $entries */
@@ -109,7 +104,7 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
         } catch (SocialPostNotFoundException) {
             return null;
         } catch (SocialPostRefusedException $exception) {
-            throw self::unreachable($exception);
+            throw SocialNetworkUnreachableException::from($exception);
         }
 
         return NetworkTimestamp::toUtc(JsonNodeModel::of($item->json())->string('created_at'));

@@ -72,7 +72,7 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
         try {
             BlueskySessions::accepted($this->sessions->actAs($account, self::UPDATE_SEEN, ['seenAt' => $marker]));
         } catch (SocialPostNotFoundException | SocialPostRefusedException $exception) {
-            throw new SocialNetworkUnreachableException($exception->getMessage(), 0, $exception);
+            throw SocialNetworkUnreachableException::from($exception);
         }
 
         foreach ($unseen as $row) {

@@ -70,7 +70,7 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
             }
             $this->lemmy->post($account, self::MARK_MENTION, ['person_mention_id' => $id, 'read' => true]);
         } catch (SocialPostNotFoundException | SocialPostRefusedException $exception) {
-            throw self::unreachable($exception);
+            throw SocialNetworkUnreachableException::from($exception);
         }
     }
 
@@ -79,13 +79,8 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
         try {
             return $this->lemmy->get($account, $path);
         } catch (SocialPostNotFoundException | SocialPostRefusedException $exception) {
-            throw self::unreachable($exception);
+            throw SocialNetworkUnreachableException::from($exception);
         }
-    }
-
-    private static function unreachable(\Throwable $exception): SocialNetworkUnreachableException
-    {
-        return new SocialNetworkUnreachableException($exception->getMessage(), 0, $exception);
     }
 
     private static function fetched(
