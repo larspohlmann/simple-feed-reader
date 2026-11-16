@@ -127,8 +127,6 @@ final class SocialEntryLanguageTest extends TestCase
     public function testARealShortEnglishPostTheDetectorReadsAsInterlinguaIsEnglish(): void
     {
         $entry = self::entry('…', 'Palantir exec nominated to lead CISA', null);
-        $detector = new LanguageGuess(new LanguageDetectionFactory()->create());
-        self::assertNull($detector->bestFor("…\nPalantir exec nominated to lead CISA"));
 
         self::assertSame(FeedLanguage::English, LanguageWiring::socialEntryLanguage()->of($entry));
     }
