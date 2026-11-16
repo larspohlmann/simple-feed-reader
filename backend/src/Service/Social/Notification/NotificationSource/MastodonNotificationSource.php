@@ -17,6 +17,7 @@ use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Notification\Model\NotificationPageModel;
 use App\Service\Social\Notification\Support\Excerpt;
+use App\Service\Social\Notification\Support\NetworkTimestamp;
 use App\Service\Social\Notification\Support\MastodonIds;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
@@ -99,7 +100,7 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
         }
         foreach ($entries as $entry) {
             if ($entry->string('id') === $lastReadId) {
-                return self::utc($entry->string('created_at'));
+                return NetworkTimestamp::toUtc($entry->string('created_at'));
             }
         }
 
@@ -111,7 +112,7 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
             throw self::unreachable($exception);
         }
 
-        return self::utc(JsonNodeModel::of($item->json())->string('created_at'));
+        return NetworkTimestamp::toUtc(JsonNodeModel::of($item->json())->string('created_at'));
     }
 
     private static function fetched(
@@ -122,7 +123,7 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
     ): ?FetchedNotificationModel {
         $remoteId = $entry->string('id');
         $kind = self::kindOf($entry, $ownId);
-        $createdAt = self::utc($entry->string('created_at'));
+        $createdAt = NetworkTimestamp::toUtc($entry->string('created_at'));
         $actor = self::actorOf($account, $entry->node('account'));
         if ($remoteId === null || $kind === null || $createdAt === null || $actor === null) {
             return null;
@@ -198,17 +199,5 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
     private static function profileUrl(SocialAccount $account, string $acct): string
     {
         return $account->getServiceUrl() . '/@' . $acct;
-    }
-
-    private static function utc(?string $timestamp): ?\DateTimeImmutable
-    {
-        if ($timestamp === null) {
-            return null;
-        }
-        try {
-            return (new \DateTimeImmutable($timestamp))->setTimezone(new \DateTimeZone('UTC'));
-        } catch (\DateMalformedStringException) {
-            return null;
-        }
     }
 }

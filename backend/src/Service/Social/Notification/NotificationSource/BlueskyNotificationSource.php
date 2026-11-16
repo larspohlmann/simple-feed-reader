@@ -18,6 +18,7 @@ use App\Service\Social\Bluesky\Support\BlueskyWeb;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Notification\Model\NotificationPageModel;
 use App\Service\Social\Notification\Support\Excerpt;
+use App\Service\Social\Notification\Support\NetworkTimestamp;
 use App\Service\Social\Social\BlueskySessions;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
@@ -57,7 +58,7 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
                 fn (JsonNodeModel $entry): ?FetchedNotificationModel => self::fetched($account, $entry, $postTexts),
                 $entries,
             ))),
-            self::utc($list->string('seenAt')),
+            NetworkTimestamp::toUtc($list->string('seenAt')),
         );
     }
 
@@ -117,7 +118,7 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
     ): ?FetchedNotificationModel {
         $kind = self::kindOf($entry);
         $remoteId = $entry->string('uri');
-        $createdAt = self::utc($entry->string('indexedAt'));
+        $createdAt = NetworkTimestamp::toUtc($entry->string('indexedAt'));
         $author = $entry->node('author');
         $did = $author->string('did');
         $handle = $author->string('handle');
@@ -190,17 +191,5 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
             'follow' => SocialNotificationKind::Follow,
             default => null,
         };
-    }
-
-    private static function utc(?string $timestamp): ?\DateTimeImmutable
-    {
-        if ($timestamp === null) {
-            return null;
-        }
-        try {
-            return (new \DateTimeImmutable($timestamp))->setTimezone(new \DateTimeZone('UTC'));
-        } catch (\DateMalformedStringException) {
-            return null;
-        }
     }
 }
