@@ -113,7 +113,8 @@ jobs:
 
     steps:
       # Backgrounded and awaited only before its first use, so the image pull and
-      # first boot overlap checkout and install.
+      # first boot overlap checkout and install. --old-alter-table forces
+      # ALGORITHM=COPY, as Strato runs ALTERs; in-place passed what COPY rejects (#2254).
       - name: Start MySQL
         if: matrix.database == 'mysql'
         working-directory: ${{ github.workspace }}
@@ -124,6 +125,7 @@ jobs:
           --publish 3306:3306
           --tmpfs /var/lib/mysql
           mysql:8.4
+          --old-alter-table=ON
           --innodb-flush-log-at-trx-commit=0
           --skip-log-bin
           --innodb-doublewrite=OFF
