@@ -19,7 +19,6 @@ use App\Service\Social\Social\LemmyPostEntries;
 use App\Service\Social\Social\Model\LemmyListing;
 use App\Service\Social\Social\Model\TimelinePageModel;
 use App\Service\Social\Social\Support\NetworkSearchQueries;
-use App\Service\Social\Social\Support\SocialSearchPaths;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Lemmy->value)]
@@ -34,11 +33,14 @@ final readonly class LemmyTimelineSource implements TimelineSourceInterface
     public function requests(SocialFeed $socialFeed): array
     {
         $account = $socialFeed->getSocialAccount();
+        if (SocialFeedKind::Search === $socialFeed->getKind()) {
+            return array_map(
+                fn (string $term): ApiRequestModel => $this->lemmy->searchGet($account, $term),
+                self::searchTermsOf($socialFeed),
+            );
+        }
 
-        return array_map(
-            fn (string $path): ApiRequestModel => $this->lemmy->authorizedGet($account, $path),
-            self::pathsOf($socialFeed),
-        );
+        return [$this->lemmy->authorizedGet($account, self::listingPathOf($socialFeed))];
     }
 
     public function accepted(SocialFeed $socialFeed, FetchOutcomeModel $outcome): ApiResponseModel
@@ -61,28 +63,21 @@ final readonly class LemmyTimelineSource implements TimelineSourceInterface
     {
     }
 
-    /** @return non-empty-list<string> */
-    private static function pathsOf(SocialFeed $socialFeed): array
+    private static function listingPathOf(SocialFeed $socialFeed): string
     {
-        $listing = LemmyListing::ofFeedKind($socialFeed->getKind());
-        if (null !== $listing) {
-            return ['/api/v3/post/list?type_=' . $listing->value . '&sort=New&limit=' . LemmyListing::PAGE_SIZE];
-        }
+        $listing = LemmyListing::ofFeedKind($socialFeed->getKind())
+            ?? throw new SocialNetworkUnreachableException('Lemmy has no such timeline.');
 
-        return SocialFeedKind::Search === $socialFeed->getKind()
-            ? self::searchPathsOf($socialFeed)
-            : throw new SocialNetworkUnreachableException('Lemmy has no such timeline.');
+        return '/api/v3/post/list?type_=' . $listing->value . '&sort=New&limit=' . LemmyListing::PAGE_SIZE;
     }
 
     /** @return non-empty-list<string> */
-    private static function searchPathsOf(SocialFeed $socialFeed): array
+    private static function searchTermsOf(SocialFeed $socialFeed): array
     {
         try {
-            $queries = NetworkSearchQueries::of(SocialNetwork::Lemmy, $socialFeed->getRemoteId());
+            return NetworkSearchQueries::of(SocialNetwork::Lemmy, $socialFeed->getRemoteId());
         } catch (SearchQueryTooBroadException $tooBroad) {
             throw new SocialNetworkUnreachableException($tooBroad->getMessage(), previous: $tooBroad);
         }
-
-        return array_map(SocialSearchPaths::lemmy(...), $queries);
     }
 }

@@ -10,6 +10,7 @@ use App\Service\Outbound\Fetch\EgressProxySource\EgressProxySourceInterface;
 use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
 use App\Service\Outbound\Fetch\Exception\FetchException;
 use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Outbound\Fetch\Model\ApiBudgetModel;
 use App\Service\Outbound\Fetch\Model\ExchangeStepModel;
 use App\Service\Outbound\Fetch\Model\FetchAttemptModel;
 use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
@@ -37,8 +38,6 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  */
 final readonly class ConcurrentRequestEngine
 {
-    private const float TIMEOUT_SECONDS = 10.0;
-
     public function __construct(
         private HttpClientInterface $httpClient,
         private UrlGuard $urlGuard,
@@ -155,7 +154,7 @@ final readonly class ConcurrentRequestEngine
      */
     private function awaitNext(FetchQueue $queue, \SplObjectStorage $inFlight, SettledAnswers $answers): \Generator
     {
-        foreach ($this->httpClient->stream($inFlight, self::TIMEOUT_SECONDS) as $response => $chunk) {
+        foreach ($this->httpClient->stream($inFlight, self::longestTimeoutOf($inFlight)) as $response => $chunk) {
             $attempt = $inFlight[$response];
 
             try {
@@ -239,6 +238,21 @@ final readonly class ConcurrentRequestEngine
         return $exchange;
     }
 
+    /**
+     * The stream times every in-flight response by one idle clock, so it waits as long as the most patient one asks.
+     *
+     * @param \SplObjectStorage<ResponseInterface, FetchAttemptModel> $inFlight
+     */
+    private static function longestTimeoutOf(\SplObjectStorage $inFlight): float
+    {
+        $longest = 0.0;
+        foreach ($inFlight as $response) {
+            $longest = max($longest, $inFlight[$response]->ticket->request->timeoutSeconds);
+        }
+
+        return $longest;
+    }
+
     /** @param \SplObjectStorage<ResponseInterface, FetchAttemptModel> $inFlight */
     private function retire(FetchQueue $queue, \SplObjectStorage $inFlight, ResponseInterface $response): void
     {
@@ -265,8 +279,8 @@ final readonly class ConcurrentRequestEngine
             return $this->httpClient->request($request->method, $attempt->url, EgressOptions::merge([
                 'headers' => $this->headersOf($attempt->ticket),
                 'max_redirects' => 0,
-                'timeout' => self::TIMEOUT_SECONDS,
-                'max_duration' => self::TIMEOUT_SECONDS * 2,
+                'timeout' => $request->timeoutSeconds,
+                'max_duration' => ApiBudgetModel::maxDurationOf($request->timeoutSeconds),
                 ...PersistentConnection::options(),
                 'on_progress' => static function (int $downloaded) use ($sizeLimit): void {
                     ResponseTooLargeException::throwIfExceeded($sizeLimit, $downloaded);

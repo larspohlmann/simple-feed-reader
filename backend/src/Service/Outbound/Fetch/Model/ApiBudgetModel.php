@@ -6,7 +6,7 @@ namespace App\Service\Outbound\Fetch\Model;
 
 final readonly class ApiBudgetModel
 {
-    private const float STANDARD_TIMEOUT_SECONDS = 10.0;
+    public const float STANDARD_TIMEOUT_SECONDS = 10.0;
 
     public const float STANDARD_MAX_DURATION_SECONDS = self::STANDARD_TIMEOUT_SECONDS * 2;
 
@@ -19,6 +19,16 @@ final readonly class ApiBudgetModel
 
     public static function standard(): self
     {
-        return new self(self::STANDARD_TIMEOUT_SECONDS, self::STANDARD_MAX_DURATION_SECONDS, ResponseSizeLimit::Api);
+        return self::waitingUpTo(self::STANDARD_TIMEOUT_SECONDS);
+    }
+
+    public static function waitingUpTo(float $timeoutSeconds): self
+    {
+        return new self($timeoutSeconds, self::maxDurationOf($timeoutSeconds), ResponseSizeLimit::Api);
+    }
+
+    public static function maxDurationOf(float $timeoutSeconds): float
+    {
+        return $timeoutSeconds * 2;
     }
 }
