@@ -253,7 +253,6 @@ final readonly class TrendingStoryHistoryRepository
                 'lastJoinedAt' => $assignment->joining() === [] ? null : self::stored($builtAt),
                 'story' => $storyId,
             ],
-            ['story' => ParameterType::INTEGER],
         );
     }
 
