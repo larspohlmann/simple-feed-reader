@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Content\LinkResolution\Model;
 
+use App\Service\Foundation\Clock\Support\DeadlineFit;
+
 /** How many short links one pass may follow, each budgeted at two attempts. */
 final readonly class LinkResolutionBudgetModel
 {
@@ -32,9 +34,7 @@ final readonly class LinkResolutionBudgetModel
     /** The whole links that end before $deadline, at most a pass: none once less than one fits. */
     public static function fittingBefore(\DateTimeImmutable $deadline, \DateTimeImmutable $now): self
     {
-        $remaining = $deadline->getTimestamp() - $now->getTimestamp();
-
-        return self::links(min(self::PER_PASS, (int) floor(max(0, $remaining) / self::MAX_SECONDS)));
+        return self::links(min(self::PER_PASS, DeadlineFit::wholeUnits($deadline, $now, self::MAX_SECONDS)));
     }
 
     /** Whether one more worst-case link still fits after $elapsedSeconds. */

@@ -6,6 +6,7 @@ namespace App\Service\Content\LinkCard\Model;
 
 use App\Entity\ShareEnrichment;
 use App\Service\Content\Reader\PageHeadFetcher;
+use App\Service\Foundation\Clock\Support\DeadlineFit;
 
 /** How many page fetches one pass may spend on link cards, and so how long it may take. */
 final readonly class LinkCardBudgetModel
@@ -36,8 +37,7 @@ final readonly class LinkCardBudgetModel
     /** The whole fetches that end before $deadline, at most $maxFetches: none once less than one fits. */
     public static function fittingBefore(\DateTimeImmutable $deadline, \DateTimeImmutable $now, int $maxFetches): self
     {
-        $remaining = $deadline->getTimestamp() - $now->getTimestamp();
-        $fitting = (int) floor(max(0, $remaining) / PageHeadFetcher::MAX_DURATION_SECONDS);
+        $fitting = DeadlineFit::wholeUnits($deadline, $now, PageHeadFetcher::MAX_DURATION_SECONDS);
 
         return self::fetches(min($maxFetches, $fitting));
     }
