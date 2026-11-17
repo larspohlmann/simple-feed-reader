@@ -36,6 +36,7 @@ describe('NotificationListComponent (#2240)', () => {
     threadTitle: null,
     threadPlace: null,
     threadBy: null,
+    onComment: false,
     linkUrl: 'https://example.test/post',
     latestAt: '2026-11-16T10:00:00+00:00',
     seen: true,

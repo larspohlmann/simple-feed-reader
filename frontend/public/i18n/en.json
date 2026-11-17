@@ -1405,10 +1405,6 @@
           "one": "{{who}} replied to your post",
           "other": "{{who}} replied to your post"
         },
-        "comment_reply": {
-          "one": "{{who}} replied to your comment",
-          "other": "{{who}} replied to your comment"
-        },
         "mention": {
           "one": "{{who}} mentioned you",
           "other": "{{who}} mentioned you"
@@ -1420,6 +1416,24 @@
         "follow": {
           "one": "{{who}} followed you",
           "other": "{{who}} followed you"
+        }
+      },
+      "actionOnComment": {
+        "like": {
+          "one": "{{who}} liked your comment",
+          "other": "{{who}} liked your comment"
+        },
+        "repost": {
+          "one": "{{who}} reposted your comment",
+          "other": "{{who}} reposted your comment"
+        },
+        "reply": {
+          "one": "{{who}} replied to your comment",
+          "other": "{{who}} replied to your comment"
+        },
+        "quote": {
+          "one": "{{who}} quoted your comment",
+          "other": "{{who}} quoted your comment"
         }
       }
     },

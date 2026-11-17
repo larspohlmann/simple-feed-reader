@@ -28,10 +28,15 @@ function group(
     threadTitle: null,
     threadPlace: null,
     threadBy: null,
+    onComment: false,
     linkUrl: 'https://social.example/p/1',
     latestAt: '2026-11-16T10:00:00Z',
     seen: true,
   };
+}
+
+function onComment(source: NotificationGroupDto): NotificationGroupDto {
+  return { ...source, onComment: true };
 }
 
 function marked(parts: readonly LinePart[]): string {
@@ -86,9 +91,28 @@ describe('notificationLine', () => {
     expect(parts.filter((part) => part.strong)).toEqual([{ text: 'a ** b', strong: true }]);
   });
 
-  it('says a comment reply answered your comment', () => {
-    expect(marked(line(group('comment_reply', [actor('Carol')])))).toBe(
-      '**Carol** replied to your comment',
+  it.each([
+    ['like', 'liked'],
+    ['repost', 'reposted'],
+    ['reply', 'replied to'],
+    ['quote', 'quoted'],
+  ] as const)('says a %s is about your comment or your post', (kind, verb) => {
+    expect(marked(line(onComment(group(kind, [actor('Carol')]))))).toBe(
+      `**Carol** ${verb} your comment`,
+    );
+    expect(marked(line(group(kind, [actor('Carol')])))).toBe(`**Carol** ${verb} your post`);
+  });
+
+  it('counts several actors on your comment', () => {
+    const actors = [actor('Hank Green'), actor('Jay Graber')];
+    expect(marked(line(onComment(group('like', actors))))).toBe(
+      '**Hank Green** and **Jay Graber** liked your comment',
+    );
+  });
+
+  it('keeps a mention a mention even when marked as on a comment', () => {
+    expect(marked(line(onComment(group('mention', [actor('Carol')]))))).toBe(
+      '**Carol** mentioned you',
     );
   });
 });

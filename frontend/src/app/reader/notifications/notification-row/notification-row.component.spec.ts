@@ -27,6 +27,7 @@ function group(overrides: Partial<NotificationGroupDto> = {}): NotificationGroup
     threadTitle: null,
     threadPlace: null,
     threadBy: null,
+    onComment: false,
     linkUrl: 'https://social.example/p/1',
     latestAt: '2026-11-16T10:00:00Z',
     seen: true,
@@ -152,11 +153,12 @@ describe('NotificationRowComponent', () => {
       );
     });
 
-    it('draws a comment reply with the reply glyph in the accent tone', () => {
-      const element = render(group({ kind: 'comment_reply' }));
+    it('draws a reply to your comment with the reply glyph and the comment wording', () => {
+      const element = render(group({ kind: 'reply', onComment: true }));
       const icon = fixture.debugElement.query(By.directive(IconComponent));
       expect(icon.componentInstance.name()).toBe('chat_bubble');
-      expect(element.querySelector('.kind')?.classList.contains('comment_reply')).toBe(true);
+      expect(element.querySelector('.kind')?.classList.contains('reply')).toBe(true);
+      expect(element.textContent).toContain('replied to your comment');
     });
 
     it('shows no quote or place line without context', () => {
