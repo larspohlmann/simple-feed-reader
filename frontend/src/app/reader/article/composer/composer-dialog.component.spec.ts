@@ -1141,4 +1141,125 @@ describe('ComposerDialogComponent', () => {
       });
     });
   });
+
+  describe('the link outside the text and the kind note', () => {
+    const URL_OF_STORY = 'https://example.com/story';
+    const forKind = (kind: ComposerContextDto['kind'], overrides = {}) =>
+      context({
+        kind,
+        text: kind === 'quote' ? '' : 'A long read',
+        target: kind === 'quote' ? QUOTED : STORY,
+        ...overrides,
+      });
+    const urlLine = (fixture: ReturnType<typeof mount>) =>
+      element(fixture).querySelector('.fixed-url');
+    const note = (fixture: ReturnType<typeof mount>) =>
+      element(fixture).querySelector('.kind-note');
+    const toggleMastodon = (fixture: ReturnType<typeof mount>) => {
+      const pill = Array.from(element(fixture).querySelectorAll('app-network-pills button')).find(
+        (button) => button.textContent?.includes('Mastodon'),
+      ) as HTMLButtonElement;
+      pill.click();
+      fixture.detectChanges();
+    };
+
+    beforeEach(() =>
+      connected.set([
+        { network: 'bluesky', handles: ['@alice.bsky.social'] },
+        { network: 'mastodon', handles: ['@alice@mastodon.example'] },
+      ]),
+    );
+
+    it('a Mastodon link lane shows the fixed line "Mastodon adds <url>" while active', () => {
+      api.composer.mockReturnValue(of(forKind('link')));
+
+      const fixture = mount(article());
+
+      expect(urlLine(fixture)?.textContent).toContain(`Mastodon adds ${URL_OF_STORY}`);
+      expect(urlLine(fixture)?.querySelector('a, button, input, [tabindex]')).toBeNull();
+    });
+
+    it('a Mastodon quote lane shows no URL line', () => {
+      api.composer.mockReturnValue(of(forKind('quote')));
+
+      expect(urlLine(mount(article()))).toBeNull();
+    });
+
+    it('Bluesky alone shows no URL line', () => {
+      api.composer.mockReturnValue(of(forKind('link', { visibility: null })));
+
+      expect(urlLine(mount(article({ network: 'bluesky' })))).toBeNull();
+    });
+
+    it('a link post with blank text can be sent', () => {
+      api.composer.mockReturnValue(of(forKind('link', { text: '' })));
+
+      expect(sendButton(mount(article())).disabled).toBe(false);
+    });
+
+    it('a blank quote cannot', () => {
+      api.composer.mockReturnValue(of(forKind('quote')));
+
+      expect(sendButton(mount(article())).disabled).toBe(true);
+    });
+
+    describe('with both networks on', () => {
+      const bothOn = (
+        kinds: { bluesky: ComposerContextDto['kind']; mastodon: ComposerContextDto['kind'] },
+        from: 'bluesky' | 'mastodon',
+        text = 'A long read',
+      ) => {
+        api.composer.mockImplementation((posted: PostTargetDto) =>
+          of(
+            posted.network === 'bluesky'
+              ? forKind(kinds.bluesky, { visibility: null, text })
+              : forKind(kinds.mastodon, { text }),
+          ),
+        );
+        const fixture = mount(article({ network: from }));
+        toggleMastodon(fixture);
+        if (from === 'mastodon') {
+          (
+            Array.from(element(fixture).querySelectorAll('app-network-pills button')).find(
+              (button) => button.textContent?.includes('Bluesky'),
+            ) as HTMLButtonElement
+          ).click();
+          fixture.detectChanges();
+        }
+        return fixture;
+      };
+
+      it('names Mastodon under a Bluesky quote preview', () => {
+        const fixture = bothOn({ bluesky: 'quote', mastodon: 'link' }, 'bluesky');
+
+        expect(note(fixture)?.textContent).toContain('Mastodon shares this post as a link');
+      });
+
+      it('names Bluesky when Mastodon quotes and Bluesky links', () => {
+        const fixture = bothOn({ bluesky: 'link', mastodon: 'quote' }, 'mastodon');
+
+        expect(note(fixture)?.textContent).toContain('Bluesky shares this post as a link');
+      });
+
+      it('shows no note when the kinds match', () => {
+        expect(note(bothOn({ bluesky: 'link', mastodon: 'link' }, 'bluesky'))).toBeNull();
+      });
+
+      it('shows no note with one lane', () => {
+        api.composer.mockReturnValue(of(forKind('link')));
+
+        expect(note(mount(article()))).toBeNull();
+      });
+
+      it('sends blank text only when every pending lane is a link', () => {
+        expect(
+          sendButton(bothOn({ bluesky: 'link', mastodon: 'link' }, 'bluesky', '')).disabled,
+        ).toBe(false);
+        TestBed.resetTestingModule();
+        expect(
+          sendButton(bothOn({ bluesky: 'quote', mastodon: 'link' }, 'bluesky', '')).disabled,
+        ).toBe(true);
+      });
+    });
+  });
 });

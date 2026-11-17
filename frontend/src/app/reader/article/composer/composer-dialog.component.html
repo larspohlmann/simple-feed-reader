@@ -38,6 +38,14 @@
 
     @if (context(); as context) {
       <app-composer-subject [subject]="context.target" />
+      @if (linkNote(); as note) {
+        <p class="kind-note">
+          @for (network of note.networks; track network) {
+            <app-network-logo [network]="network" />
+          }
+          <span>{{ 'reader.composer.sharesAsLink' | transloco: { network: note.network } }}</span>
+        </p>
+      }
 
       @for (key of forbiddenKeys(); track key) {
         <app-error-banner [message]="key | transloco" />
@@ -53,6 +61,14 @@
           (input)="write($event)"
         ></textarea>
       </app-field>
+      @if (appendedUrl(); as url) {
+        <p class="fixed-url">
+          <app-icon name="link" size="xs" />
+          <span>{{
+            'reader.composer.linkAdded' | transloco: { network: names.mastodon, url }
+          }}</span>
+        </p>
+      }
       <div class="text-tools">
         <app-button
           class="clear"

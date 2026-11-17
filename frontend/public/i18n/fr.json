@@ -1774,6 +1774,8 @@
       "accountOn": "Publier sur {{ network }} en tant que",
       "pillPosted": "Publié",
       "retry": "Réessayer {{ network }}",
+      "linkAdded": "{{ network }} ajoute {{ url }}",
+      "sharesAsLink": "{{ network }} partage cette publication sous forme de lien",
       "clear": "Effacer le texte",
       "visibility": "Visibilité",
       "visibilities": {

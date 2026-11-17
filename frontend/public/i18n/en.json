@@ -1770,6 +1770,8 @@
       "accountOn": "Post as on {{ network }}",
       "pillPosted": "Posted",
       "retry": "Retry {{ network }}",
+      "linkAdded": "{{ network }} adds {{ url }}",
+      "sharesAsLink": "{{ network }} shares this post as a link",
       "clear": "Clear text",
       "visibility": "Visibility",
       "visibilities": {

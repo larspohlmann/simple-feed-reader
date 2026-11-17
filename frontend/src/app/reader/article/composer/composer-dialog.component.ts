@@ -17,6 +17,8 @@ import { filter, finalize, merge } from 'rxjs';
 import { networkList } from '../../../core/network-list';
 import { SOCIAL_NETWORK_NAMES } from '../../../core/social-network';
 import { ButtonComponent } from '../../../shared/button/button.component';
+import { IconComponent } from '../../../shared/icon/icon.component';
+import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
 import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
 import { FieldComponent } from '../../../shared/field/field.component';
 import { inputValue } from '../../../shared/input-value';
@@ -53,6 +55,8 @@ import { postLength } from './post-length';
     ComposerSubjectComponent,
     ErrorBannerComponent,
     FieldComponent,
+    IconComponent,
+    NetworkLogoComponent,
     NetworkPillsComponent,
     OverlayPanelComponent,
     SkeletonComponent,
@@ -155,11 +159,35 @@ export class ComposerDialogComponent {
   protected readonly writable = computed(() =>
     this.lanes.active().some((lane) => lane.context()?.canSend === true),
   );
+  /** The link post's page URL, which a Mastodon link lane appends after the text instead of inside it. */
+  protected readonly appendedUrl = computed(() => {
+    const target = this.target;
+    const adds = this.lanes
+      .active()
+      .some((lane) => lane.network === 'mastodon' && lane.context()?.kind === 'link');
+    return adds && target.kind === 'link' ? target.url : null;
+  });
+  /** The networks whose post is a link while the preview shows another kind of post. */
+  protected readonly linkNote = computed(() => {
+    const shown = this.kind();
+    const networks = this.lanes
+      .active()
+      .filter((lane) => {
+        const kind = lane.context()?.kind;
+        return kind === 'link' && kind !== shown;
+      })
+      .map(({ network }) => network);
+    if (networks.length === 0) return null;
+    return { networks, network: networkList(networks, this.language()) };
+  });
+  private readonly textOptional = computed(() =>
+    this.lanes.pending().every((lane) => lane.context()?.kind === 'link'),
+  );
   protected readonly canSend = computed(
     () =>
       this.lanes.pending().length > 0 &&
       this.pendingFit() &&
-      this.text().trim() !== '' &&
+      (this.textOptional() || this.text().trim() !== '') &&
       !this.sending(),
   );
 

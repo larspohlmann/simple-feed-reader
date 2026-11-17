@@ -1770,6 +1770,8 @@
       "accountOn": "Auf {{ network }} posten als",
       "pillPosted": "Gepostet",
       "retry": "{{ network }} erneut versuchen",
+      "linkAdded": "{{ network }} hängt {{ url }} an",
+      "sharesAsLink": "{{ network }} teilt diesen Beitrag als Link",
       "clear": "Text löschen",
       "visibility": "Sichtbarkeit",
       "visibilities": {
