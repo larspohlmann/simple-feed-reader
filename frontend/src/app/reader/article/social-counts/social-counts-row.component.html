@@ -1,7 +1,32 @@
 @if (shown()) {
   <div class="row">
+    @for (pill of responsePills().slice(0, 1); track pill.kind) {
+      @let hint = hintKey(pill) | transloco;
+      @let name = pill.kind === 'reply' ? (pill.label | transloco) : hint;
+      <button
+        type="button"
+        [class]="pill.kind"
+        aria-haspopup="dialog"
+        [attr.aria-disabled]="pill.allowed ? null : 'true'"
+        [attr.title]="hint"
+        [attr.aria-label]="
+          pill.count === null
+            ? name
+            : name +
+              ', ' +
+              (labelKey(pill.countKind, pill.count) | transloco: { count: pill.count })
+        "
+        (click)="pill.allowed && pill.requested.emit()"
+      >
+        <app-icon [name]="pill.icon" size="sm" />
+        <span class="label">{{ pill.label | transloco }}</span>
+        @if (pill.count !== null) {
+          <span class="number">{{ format(pill.count) }}</span>
+        }
+      </button>
+    }
     @let postActions = actions();
-    @if (postActions) {
+    @if (postActions && shares()) {
       @let reposts = counts()?.reposts ?? null;
       <app-repost-button
         [network]="network()"
@@ -18,8 +43,9 @@
         (quoteRequested)="quoteRequested.emit()"
       />
     }
-    @for (pill of responsePills(); track pill.kind) {
+    @for (pill of responsePills().slice(1); track pill.kind) {
       @let hint = hintKey(pill) | transloco;
+      @let name = pill.kind === 'reply' ? (pill.label | transloco) : hint;
       <button
         type="button"
         [class]="pill.kind"
@@ -28,14 +54,15 @@
         [attr.title]="hint"
         [attr.aria-label]="
           pill.count === null
-            ? hint
-            : hint +
+            ? name
+            : name +
               ', ' +
               (labelKey(pill.countKind, pill.count) | transloco: { count: pill.count })
         "
         (click)="pill.allowed && pill.requested.emit()"
       >
         <app-icon [name]="pill.icon" size="sm" />
+        <span class="label">{{ pill.label | transloco }}</span>
         @if (pill.count !== null) {
           <span class="number">{{ format(pill.count) }}</span>
         }
@@ -61,10 +88,20 @@
         (click)="likeToggled.emit()"
       >
         <app-icon name="thumb_up" size="sm" [fill]="liked() === true" />
+        <span class="label">{{ 'reader.actionLabel.like' | transloco }}</span>
         @if (likeCount !== null) {
           <span class="number">{{ format(likeCount) }}</span>
         }
       </button>
+    }
+    @let points = score();
+    @if (points !== null) {
+      <app-vote-pill
+        variant="outline"
+        [score]="points"
+        [myVote]="myVote()"
+        (voted)="voted.emit($event)"
+      />
     }
   </div>
 }

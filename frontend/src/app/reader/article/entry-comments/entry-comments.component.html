@@ -81,8 +81,6 @@
                 <app-comment-actions
                   [comment]="c"
                   [deletable]="canDelete(c)"
-                  (voted)="vote(c, $event)"
-                  (replyRequested)="replyOnLemmy($event)"
                   (deleteRequested)="deleteReply(c)"
                 />
               </p>
@@ -106,10 +104,23 @@
                   [counts]="post.counts"
                   [liked]="likeable() ? post.isLiked : null"
                   [actions]="likeable() ? post : null"
+                  replyLabel="reader.replyToComment"
                   (likeToggled)="toggleLike(post)"
                   (repostToggled)="toggleRepost(post)"
                   (replyRequested)="reply(social.network, post)"
                   (quoteRequested)="quote(social.network, post)"
+                />
+              } @else if (c.vote; as lemmyVote) {
+                <app-social-counts-row
+                  network="lemmy"
+                  [counts]="null"
+                  [liked]="null"
+                  [actions]="lemmyActionsOf(lemmyVote)"
+                  replyLabel="reader.replyToComment"
+                  [score]="c.score ?? 0"
+                  [myVote]="lemmyVote.myVote"
+                  (voted)="vote(c, $event)"
+                  (replyRequested)="replyOnLemmy(lemmyVote)"
                 />
               }
             </li>

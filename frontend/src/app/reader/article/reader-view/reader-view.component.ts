@@ -35,10 +35,11 @@ import { PostMediaComponent } from '../../media/post-media/post-media.component'
 import { entryMediumRatio } from '../../entry-medium';
 import { QuotedPostComponent } from '../../quoted-post/quoted-post.component';
 import { SocialCountsComponent } from '../social-counts/social-counts.component';
+import { SocialCountsRowComponent } from '../social-counts/social-counts-row.component';
+import { PostActionsView } from '../../entry-social';
 import { SocialCountsService } from '../social-counts/social-counts.service';
 import { PostActions } from '../composer/post-actions.service';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
-import { IconButtonDirective } from '../../../shared/icon-button/icon-button.directive';
 import { CommentsService } from '../entry-comments/comments.service';
 import { CommentsForecast } from '../entry-comments/comments-forecast';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
@@ -52,6 +53,13 @@ import { ArticlePageSlotDirective } from '../article-page/article-page-slot.dire
 import { provideArticlePage } from '../article-page/provide-article-page';
 import { EntryArticlePage } from './entry-article-page';
 
+const LEMMY_ACTIONS: PostActionsView = {
+  isReposted: false,
+  canRepost: false,
+  canReply: true,
+  canQuote: false,
+};
+
 @Component({
   selector: 'app-reader-view',
   imports: [
@@ -61,7 +69,6 @@ import { EntryArticlePage } from './entry-article-page';
     EntrySourceComponent,
     EntryPillsComponent,
     VotePillComponent,
-    IconButtonDirective,
     EntryActionsComponent,
     TranslocoPipe,
     ErrorBannerComponent,
@@ -73,6 +80,7 @@ import { EntryArticlePage } from './entry-article-page';
     QuotedPostComponent,
     PostMediaComponent,
     SocialCountsComponent,
+    SocialCountsRowComponent,
     EntryCornerFlagsComponent,
     EntryDiscussionLinkComponent,
     ArticlePageComponent,
@@ -137,6 +145,9 @@ export class ReaderViewComponent implements OnChanges {
     this.subscriptions
       .socialAccounts()
       .some((account) => account.network === 'lemmy' && account.status === 'connected'),
+  );
+  protected readonly lemmyActions = computed<PostActionsView | null>(() =>
+    this.lemmyConnected() ? LEMMY_ACTIONS : null,
   );
   protected readonly readerMode = inject(ReaderModeService);
   private readonly language = inject(LanguageService);

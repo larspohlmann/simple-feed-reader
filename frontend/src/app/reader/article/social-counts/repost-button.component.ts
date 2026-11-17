@@ -57,6 +57,9 @@ export class RepostButtonComponent {
   protected readonly actionKey = computed(
     () => `reader.${this.reposted() ? 'unrepost' : 'repost'}.${this.network()}`,
   );
+  protected readonly labelKey = computed(
+    () => `reader.actionLabel.${this.network() === 'mastodon' ? 'boost' : 'repost'}`,
+  );
   protected readonly opens = computed(() => this.canRepost() || this.canQuote());
   private readonly repostForbiddenKey = computed(() => `reader.repostForbidden.${this.network()}`);
   /** Named for the repost while it is allowed, for the menu while only quoting is, for the refusal otherwise. */

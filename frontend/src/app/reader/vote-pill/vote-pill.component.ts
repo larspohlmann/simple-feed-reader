@@ -11,12 +11,13 @@ import { VoteValue, nextVote } from './vote';
   imports: [IconComponent, NgTemplateOutlet, TranslocoPipe],
   templateUrl: './vote-pill.component.html',
   styleUrl: './vote-pill.component.scss',
-  host: { '[class.bare]': "variant() === 'bare'" },
+  host: { '[class.bare]': "variant() === 'bare'", '[class.outline]': "variant() === 'outline'" },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class VotePillComponent {
   readonly score = input.required<number>();
-  readonly variant = input<'framed' | 'bare'>('framed');
+  /** `outline` sits in a post's action row: its height and plain rim, the vote colouring only arrow and number. */
+  readonly variant = input<'framed' | 'bare' | 'outline'>('framed');
   readonly myVote = input<VoteValue | null>(null);
   readonly voted = output<VoteValue>();
 

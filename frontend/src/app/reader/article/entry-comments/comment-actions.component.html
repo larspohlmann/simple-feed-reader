@@ -1,26 +1,6 @@
 @let score = comment().score;
-@if (score !== null) {
-  <app-vote-pill
-    class="score"
-    variant="bare"
-    [score]="score"
-    [myVote]="comment().vote?.myVote ?? null"
-    (voted)="voted.emit($event)"
-  />
-}
-@if (comment().vote; as lemmyVote) {
-  @if (lemmyVote.canReply) {
-    <button
-      appIconButton
-      type="button"
-      class="reply-action"
-      [attr.aria-label]="'reader.reply.lemmy' | transloco"
-      [title]="'reader.reply.lemmy' | transloco"
-      (click)="replyRequested.emit(lemmyVote)"
-    >
-      <app-icon name="reply" size="sm" />
-    </button>
-  }
+@if (score !== null && comment().vote === null) {
+  <app-vote-pill class="score" variant="bare" [score]="score" />
 }
 @if (deletable()) {
   <button

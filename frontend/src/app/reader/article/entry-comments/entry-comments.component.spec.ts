@@ -431,7 +431,9 @@ describe('EntryCommentsComponent', () => {
       show('auto');
       const element = settleComments([lemmy(true)]);
 
-      element.querySelector<HTMLButtonElement>('.byline button[aria-label="Upvote"]')!.click();
+      element
+        .querySelector<HTMLButtonElement>('app-social-counts-row button[aria-label="Upvote"]')!
+        .click();
 
       expect(service.vote).toHaveBeenCalledWith(5, lemmy(true), 1);
     });
@@ -439,21 +441,25 @@ describe('EntryCommentsComponent', () => {
     it('offersReplyOnAReplyableLemmyComment', () => {
       show('auto');
       const button = settleComments([lemmy(true)]).querySelector<HTMLButtonElement>(
-        '.byline button.reply-action',
+        'app-social-counts-row button.reply',
       )!;
 
-      expect(button.getAttribute('aria-label')).toBe('Reply on Lemmy');
-      expect(button.textContent).toContain('reply');
+      expect(button.textContent).toContain('Reply');
       button.click();
 
       expect(responses.reply).toHaveBeenCalledWith(5, 'lemmy', address);
     });
 
-    it('offersNoReplyOnALockedPost', () => {
+    it('refusesReplyOnALockedPostWithItsReason', () => {
       show('auto');
-      expect(
-        settleComments([lemmy(false)]).querySelector('.byline button.reply-action'),
-      ).toBeNull();
+      const button = settleComments([lemmy(false)]).querySelector<HTMLButtonElement>(
+        'app-social-counts-row button.reply',
+      )!;
+
+      expect(button.getAttribute('aria-disabled')).toBe('true');
+      expect(button.title).toBe('This post is locked');
+      button.click();
+      expect(responses.reply).not.toHaveBeenCalled();
     });
   });
 
