@@ -1379,6 +1379,9 @@
       "scopeMissing": "{{network}} braucht die Berechtigung, deine Benachrichtigungen zu lesen.",
       "needsReconnect": "{{network}} muss neu verbunden werden, damit neue Benachrichtigungen ankommen.",
       "reconnect": "{{network}} neu verbinden",
+      "bell": "{{network}}-Benachrichtigungen",
+      "bellWithUnseenOne": "{{network}}-Benachrichtigungen, 1 ungesehen",
+      "bellWithUnseenOther": "{{network}}-Benachrichtigungen, {{count}} ungesehen",
       "unseen": "Ungesehen",
       "poll": "Eine Umfrage, an der du teilgenommen hast, ist beendet",
       "who": {

@@ -1383,6 +1383,9 @@
       "scopeMissing": "{{network}} a besoin d'une autorisation pour lire vos notifications.",
       "needsReconnect": "{{network}} doit être reconnecté pour recevoir de nouvelles notifications.",
       "reconnect": "Reconnecter {{network}}",
+      "bell": "Notifications {{network}}",
+      "bellWithUnseenOne": "Notifications {{network}}, 1 non vue",
+      "bellWithUnseenOther": "Notifications {{network}}, {{count}} non vues",
       "unseen": "Non vue",
       "poll": "Un sondage auquel vous avez participé est terminé",
       "who": {

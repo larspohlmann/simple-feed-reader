@@ -1383,6 +1383,9 @@
       "scopeMissing": "{{network}} necesita permiso para leer tus notificaciones.",
       "needsReconnect": "Hay que volver a conectar {{network}} para que lleguen nuevas notificaciones.",
       "reconnect": "Volver a conectar {{network}}",
+      "bell": "Notificaciones de {{network}}",
+      "bellWithUnseenOne": "Notificaciones de {{network}}, 1 sin ver",
+      "bellWithUnseenOther": "Notificaciones de {{network}}, {{count}} sin ver",
       "unseen": "Sin ver",
       "poll": "Ha terminado una encuesta en la que votaste",
       "who": {
