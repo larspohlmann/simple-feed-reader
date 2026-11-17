@@ -56,7 +56,7 @@ import { postLength } from './post-length';
   providers: [ComposerLanes],
 })
 export class ComposerDialogComponent {
-  protected readonly ref = inject<DialogRef<SentPost>>(DialogRef);
+  protected readonly ref = inject<DialogRef<SentPost[]>>(DialogRef);
   protected readonly target = inject<PostTargetDto>(DIALOG_DATA);
   private readonly lanes = inject(ComposerLanes);
   private readonly textField = viewChild<ElementRef<HTMLTextAreaElement>>('textField');
@@ -146,7 +146,7 @@ export class ComposerDialogComponent {
     this.primary()
       .send(this.sharedDraft(), this.text())
       .subscribe({
-        next: (sent) => this.ref.close(sent),
+        next: (sent) => this.ref.close([sent]),
         error: () => {
           this.sending.set(false);
           this.ref.disableClose = false;

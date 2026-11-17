@@ -1831,6 +1831,8 @@
         "bluesky": "Zitat auf Bluesky veröffentlicht",
         "mastodon": "Zitat auf Mastodon veröffentlicht"
       },
+      "many": "Auf {{ networks }} veröffentlicht",
+      "and": "und",
       "as": "Als {{ handle }}",
       "open": "Beitrag öffnen"
     }

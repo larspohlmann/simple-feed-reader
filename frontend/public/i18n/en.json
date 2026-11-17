@@ -1831,6 +1831,8 @@
         "bluesky": "Quote posted on Bluesky",
         "mastodon": "Quote posted on Mastodon"
       },
+      "many": "Posted on {{ networks }}",
+      "and": "and",
       "as": "As {{ handle }}",
       "open": "Open post"
     }

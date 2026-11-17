@@ -21,7 +21,7 @@ import { PostSentDialogComponent } from './post-sent-dialog.component';
 const ADDRESS = 'https://mastodon.example/users/alice/statuses/200';
 
 describe('PostActions', () => {
-  let composed: Observable<SentPost | undefined>;
+  let composed: Observable<SentPost[] | undefined>;
   let comments: { insertReply: jest.Mock; removeReply: jest.Mock; countQuote: jest.Mock };
   let counts: { stepReplies: jest.Mock; stepQuotes: jest.Mock };
   let shares: { reflect: jest.Mock };
@@ -50,7 +50,7 @@ describe('PostActions', () => {
     dialog.open.mock.calls.filter(([component]) => component === PostSentDialogComponent);
 
   beforeEach(() => {
-    composed = of(sent);
+    composed = of([sent]);
     comments = { insertReply: jest.fn(), removeReply: jest.fn(), countQuote: jest.fn() };
     counts = { stepReplies: jest.fn(), stepQuotes: jest.fn() };
     shares = { reflect: jest.fn() };
@@ -110,7 +110,7 @@ describe('PostActions', () => {
 
   it('counts a quote of the post there and shows what was posted, leaving the thread alone', () => {
     const posted: SentPost = { ...sent, url: 'https://x.test/@a/9', kind: 'quote' };
-    composed = of(posted);
+    composed = of([posted]);
 
     actions.quote(7, 'mastodon', null);
 
@@ -123,7 +123,7 @@ describe('PostActions', () => {
     expect(shares.reflect).toHaveBeenCalledWith(7);
     expect(dialog.open).toHaveBeenCalledWith(
       PostSentDialogComponent,
-      expect.objectContaining({ data: posted }),
+      expect.objectContaining({ data: [posted] }),
     );
   });
 
@@ -160,13 +160,13 @@ describe('PostActions', () => {
         },
       },
     };
-    composed = of(posted);
+    composed = of([posted]);
 
-    const sentPosts: SentPost[] = [];
+    const sentPosts: SentPost[][] = [];
     actions
       .postLink('bluesky', { url: 'https://example.com/story', title: 'A story', quote: null })
       .subscribe((sent) => sentPosts.push(sent));
-    expect(sentPosts).toEqual([posted]);
+    expect(sentPosts).toEqual([[posted]]);
 
     expect(dialog.open).toHaveBeenCalledWith(
       ComposerDialogComponent,
@@ -186,7 +186,7 @@ describe('PostActions', () => {
     expect(counts.stepQuotes).not.toHaveBeenCalled();
     expect(dialog.open).toHaveBeenCalledWith(
       PostSentDialogComponent,
-      expect.objectContaining({ data: posted }),
+      expect.objectContaining({ data: [posted] }),
     );
   });
 
@@ -332,5 +332,38 @@ describe('PostActions', () => {
     expect(toast.showProblem).toHaveBeenCalledWith(
       expect.objectContaining({ detail: 'Bluesky is down.' }),
     );
+  });
+
+  describe('with a composer that sent two posts', () => {
+    const second: SentPost = { ...sent, kind: 'link', network: 'bluesky', address: 'at://2' };
+    const first: SentPost = { ...sent, kind: 'link', address: 'https://x/10' };
+    const link = { url: 'https://example.com/story', title: 'A story', quote: null };
+
+    it('postLink emits the list and shows one overlay for it', () => {
+      composed = of([first, second]);
+      const emitted: SentPost[][] = [];
+
+      actions.postLink('mastodon', link).subscribe((posts) => emitted.push(posts));
+
+      expect(emitted).toEqual([[first, second]]);
+      expect(sentOverlays()).toHaveLength(1);
+      expect(dialog.open).toHaveBeenCalledWith(
+        PostSentDialogComponent,
+        expect.objectContaining({ data: [first, second] }),
+      );
+    });
+
+    it('reply and quote still use the single post', () => {
+      composed = of([{ ...first, kind: 'reply' }, second]);
+
+      actions.reply(7, 'mastodon', null);
+
+      expect(comments.insertReply).toHaveBeenCalledTimes(1);
+      expect(comments.insertReply).toHaveBeenCalledWith(
+        7,
+        null,
+        expect.objectContaining({ post: expect.objectContaining({ address: 'https://x/10' }) }),
+      );
+    });
   });
 });

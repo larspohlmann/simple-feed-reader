@@ -244,15 +244,17 @@ describe('ComposerDialogComponent', () => {
         idempotencyKey: expect.any(String),
       }),
     );
-    expect(close).toHaveBeenCalledWith({
-      address: 'https://x/1',
-      url: null,
-      text: '@ann@hachyderm.io Agreed',
-      authorHandle: '@alice@mastodon.example',
-      kind: 'reply',
-      network: 'mastodon',
-      target: QUOTED,
-    });
+    expect(close).toHaveBeenCalledWith([
+      {
+        address: 'https://x/1',
+        url: null,
+        text: '@ann@hachyderm.io Agreed',
+        authorHandle: '@alice@mastodon.example',
+        kind: 'reply',
+        network: 'mastodon',
+        target: QUOTED,
+      },
+    ]);
   });
 
   it('keeps the text after a failed send, says why, and resends with the same key', () => {
@@ -361,7 +363,7 @@ describe('ComposerDialogComponent', () => {
       expect.objectContaining({ kind: 'quote', entryId: 7, address: REPLY }),
       expect.objectContaining({ text: 'Worth reading' }),
     );
-    expect(close).toHaveBeenCalledWith(expect.objectContaining({ address: 'https://x/1' }));
+    expect(close).toHaveBeenCalledWith([expect.objectContaining({ address: 'https://x/1' })]);
   });
 
   it('says so and sends nothing when the author keeps the post from quotes', () => {
@@ -500,9 +502,9 @@ describe('ComposerDialogComponent', () => {
         expect.objectContaining({ kind: 'link', url: 'https://mastodon.social/@ann/110' }),
         expect.objectContaining({ text: 'Look' }),
       );
-      expect(close).toHaveBeenCalledWith(
+      expect(close).toHaveBeenCalledWith([
         expect.objectContaining({ kind: 'quote', network: 'mastodon', target: QUOTED }),
-      );
+      ]);
     });
 
     it('shows a card without an image or site when the page has none', () => {
@@ -583,9 +585,9 @@ describe('ComposerDialogComponent', () => {
         }),
         expect.objectContaining({ text: 'A long read', accountId: 4 }),
       );
-      expect(close).toHaveBeenCalledWith(
+      expect(close).toHaveBeenCalledWith([
         expect.objectContaining({ address: 'https://x/1', kind: 'link', target: STORY }),
-      );
+      ]);
     });
   });
 });

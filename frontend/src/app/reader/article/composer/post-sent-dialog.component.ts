@@ -1,14 +1,15 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { SOCIAL_NETWORK_NAMES } from '../../../core/social-network';
 import { ButtonComponent } from '../../../shared/button/button.component';
 import { openExternal } from '../../../shared/open-external';
 import { OverlayPanelComponent } from '../../../shared/overlay-panel/overlay-panel.component';
 import { SentPost } from './composed-post';
 import { ComposerSubjectComponent } from './composer-subject.component';
 
-/** Shows a just-published link post or quote as it went out, with a way to open it on the network. */
+/** Shows the just-published link posts or quote as they went out, each with a way to open it on its network. */
 @Component({
   selector: 'app-post-sent-dialog',
   imports: [
@@ -24,11 +25,23 @@ import { ComposerSubjectComponent } from './composer-subject.component';
 })
 export class PostSentDialogComponent {
   protected readonly ref = inject(DialogRef);
-  protected readonly posted = inject<SentPost>(DIALOG_DATA);
-  protected readonly headingKey = `reader.posted.${this.posted.kind}.${this.posted.network}`;
+  private readonly transloco = inject(TranslocoService);
+  protected readonly posts = inject<SentPost[]>(DIALOG_DATA);
+  protected readonly single = this.posts.length === 1 ? this.posts[0] : null;
+  protected readonly firstOpenable = this.posts.find(({ url }) => url !== null);
+  protected readonly heading = this.headingFor(this.posts);
 
   protected open(url: string): void {
     openExternal(url);
     this.ref.close();
+  }
+
+  private headingFor(posts: SentPost[]): string {
+    if (posts.length === 1) {
+      return this.transloco.translate(`reader.posted.${posts[0].kind}.${posts[0].network}`);
+    }
+    const names = posts.map(({ network }) => SOCIAL_NETWORK_NAMES[network]);
+    const joiner = ` ${this.transloco.translate('reader.posted.and')} `;
+    return this.transloco.translate('reader.posted.many', { networks: names.join(joiner) });
   }
 }
