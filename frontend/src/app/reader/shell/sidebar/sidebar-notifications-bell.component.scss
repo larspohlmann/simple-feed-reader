@@ -1,3 +1,5 @@
+@use '../../../theme/count-badge';
+
 :host {
   display: inline-flex;
 }
@@ -23,27 +25,11 @@
 }
 
 .badge {
+  @include count-badge.disc(calc(var(--icon-sm) - var(--space-0)), 9px);
+
   position: absolute;
   top: calc(var(--space-1) * -1);
   left: 55%;
-  display: grid;
-  place-items: center;
-  box-sizing: border-box;
-  min-width: calc(var(--icon-sm) - var(--space-0));
-  height: calc(var(--icon-sm) - var(--space-0));
-  padding: 0 var(--space-1);
-  border-radius: var(--radius-pill);
-  background: var(--accent);
-  box-shadow: 0 0 0 var(--space-0) var(--surface-0);
-  color: var(--surface-0);
-  white-space: nowrap;
-
-  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-     the numeral fits a 14px disc; --fs-xs overflows it at two digits. */
-  font-size: 9px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
 }
 
 @media (pointer: coarse) {

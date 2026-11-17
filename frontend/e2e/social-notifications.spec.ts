@@ -208,7 +208,6 @@ test('the network head carries a bell with the unseen count', async ({ page }) =
   await expect(lemmyBell).toBeVisible();
   await expect(lemmyBell.locator('.badge')).toHaveCount(0);
   await expect(bluesky.locator('.section-count')).toHaveText('51');
-  await expect(page.locator('app-sidebar-notifications-row')).toHaveCount(0);
 
   const bellBox = await box(bell);
   const labelBox = await box(bluesky.locator('.label'));

@@ -1,5 +1,6 @@
 @use '../../../theme/breakpoints' as bp;
 @use '../../../theme/glass-rim';
+@use '../../../theme/count-badge';
 
 /* Opaque backing shared by the transparent header row and tag row, spanning
    their seam: each is its own compositing layer, and their bounds can round
@@ -290,25 +291,11 @@ header {
 }
 
 .badge {
+  @include count-badge.disc(var(--icon-sm), 10px);
+
   position: absolute;
   top: calc(var(--space-0) * -1);
   left: calc(var(--icon-md) - var(--space-2));
-  display: grid;
-  place-items: center;
-  box-sizing: border-box;
-  min-width: var(--icon-sm);
-  height: var(--icon-sm);
-  padding: 0 var(--space-1);
-  border-radius: var(--radius-pill);
-  background: var(--accent);
-  box-shadow: 0 0 0 var(--space-0) var(--surface-0);
-  color: var(--surface-0);
-
-  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-     the numeral fits a 16px disc; --fs-xs overflows it at two digits. */
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1;
 }
 
 /* Takes the bar's empty middle. Capped and centred so it stays a readout,

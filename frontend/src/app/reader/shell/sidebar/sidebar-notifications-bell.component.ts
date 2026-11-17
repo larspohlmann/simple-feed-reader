@@ -16,12 +16,13 @@ import { selectionQueryParams } from '../../query/query';
   host: { '[class.current]': 'active()', '[class.has-unseen]': 'count() > 0' },
 })
 export class SidebarNotificationsBellComponent {
-  protected readonly selectionQueryParams = selectionQueryParams;
-
   readonly network = input.required<SocialNetworkName>();
   readonly count = input(0);
   readonly active = input(false);
 
+  protected readonly queryParams = computed(() =>
+    selectionQueryParams({ view: 'notifications', network: this.network() }),
+  );
   protected readonly badgeText = computed(() => badgeCount(this.count()));
   protected readonly labelKey = computed(() =>
     this.count() === 0

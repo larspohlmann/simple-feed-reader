@@ -14,8 +14,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: linear-gradient(var(--sheet), var(--sheet)) center /
-    min(100%, calc(var(--magazine-measure) + 2 * var(--space-5))) 100% no-repeat;
+
+  @include list-chrome.sheet-column(var(--sheet));
 }
 
 :host-context([data-theme='dark']) .rows {

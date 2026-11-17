@@ -67,3 +67,9 @@ $corner-clear: calc(
     }
   }
 }
+
+// The sheet a magazine-measure column sits on, padded by the list's --space-5 gutter.
+@mixin sheet-column($fill) {
+  background: linear-gradient($fill, $fill) center /
+    min(100%, calc(var(--magazine-measure) + 2 * var(--space-5))) 100% no-repeat;
+}
