@@ -17,6 +17,13 @@ final readonly class FetchedNotificationModel
         public NotificationSubject $subject,
         public \DateTimeImmutable $createdAt,
         public bool $seen,
+        public ContextReferenceModel $references = new ContextReferenceModel(),
     ) {
+    }
+
+    #[\NoDiscard]
+    public function withSubject(NotificationSubject $subject): self
+    {
+        return clone($this, ['subject' => $subject]);
     }
 }

@@ -30,4 +30,20 @@ final readonly class NotificationPageModel
 
         return $sorted;
     }
+
+    /** @param list<FetchedNotificationModel> $completed */
+    #[\NoDiscard]
+    public function withSubjectsOf(array $completed): self
+    {
+        $subjects = [];
+        foreach ($completed as $fetched) {
+            $subjects[$fetched->remoteId] = $fetched->subject;
+        }
+
+        return clone($this, ['notifications' => array_map(
+            static fn (FetchedNotificationModel $fetched): FetchedNotificationModel
+                => $fetched->withSubject($subjects[$fetched->remoteId] ?? $fetched->subject),
+            $this->notifications,
+        )]);
+    }
 }

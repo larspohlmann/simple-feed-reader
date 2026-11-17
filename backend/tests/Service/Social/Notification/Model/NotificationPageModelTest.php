@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Notification\Model;
 
 use App\Entity\NotificationActor;
+use App\Entity\NotificationContext;
 use App\Entity\NotificationSubject;
 use App\Enum\SocialNotificationKind;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
@@ -26,6 +27,27 @@ final class NotificationPageModelTest extends TestCase
             static fn (FetchedNotificationModel $notification): string => $notification->remoteId,
             $page->oldestFirst(),
         ));
+    }
+
+    public function testWithSubjectsOfSwapsSubjectsByRemoteId(): void
+    {
+        $createdAt = new \DateTimeImmutable('2026-11-16 09:00:00');
+        $unseen = self::notification('a', $createdAt);
+        $seen = new FetchedNotificationModel('a', $unseen->kind, $unseen->actor, $unseen->subject, $createdAt, true);
+        $page = new NotificationPageModel([$unseen, $seen, self::notification('b', $createdAt)], $createdAt);
+        $context = new NotificationContext('You said');
+
+        $swapped = $page->withSubjectsOf([$unseen->withSubject($unseen->subject->withContext($context))]);
+
+        self::assertEquals([$context, $context, new NotificationContext()], array_map(
+            static fn (FetchedNotificationModel $notification): NotificationContext => $notification->subject->context,
+            $swapped->notifications,
+        ));
+        self::assertSame([false, true, false], array_map(
+            static fn (FetchedNotificationModel $notification): bool => $notification->seen,
+            $swapped->notifications,
+        ));
+        self::assertSame($createdAt, $swapped->seenUntil);
     }
 
     private static function notification(string $remoteId, \DateTimeImmutable $createdAt): FetchedNotificationModel
