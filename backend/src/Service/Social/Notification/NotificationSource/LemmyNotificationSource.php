@@ -35,7 +35,6 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
     private const string MENTIONS = '/api/v3/user/mention' . self::QUERY;
     private const string MARK_REPLY = '/api/v3/comment/mark_as_read';
     private const string MARK_MENTION = '/api/v3/user/mention/mark_as_read';
-    private const array REPLY_KINDS = [SocialNotificationKind::Reply, SocialNotificationKind::CommentReply];
 
     public function __construct(private LemmyAccountApi $lemmy, private MarkdownHtml $markdown)
     {
@@ -68,7 +67,7 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
     {
         $id = self::itemIdOf($row->getRemoteId());
         try {
-            if (in_array($row->getKind(), self::REPLY_KINDS, true)) {
+            if ($row->getKind() === SocialNotificationKind::Reply) {
                 $this->lemmy->post($account, self::MARK_REPLY, ['comment_reply_id' => $id, 'read' => true]);
 
                 return;
@@ -104,16 +103,17 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
         $answeredId = $kind === SocialNotificationKind::Reply
             ? LemmyCommentPath::parentOf($entry->node('comment')->string('path'))
             : null;
+        $context = self::contextOf($entry);
 
         return new FetchedNotificationModel(
             $remoteId,
-            $answeredId === null ? $kind : SocialNotificationKind::CommentReply,
+            $kind,
             $actor,
             new NotificationSubject(
                 $remoteId,
                 $this->excerptOf($entry->node('comment')->string('content')),
                 $account->getServiceUrl() . '/comment/' . $commentId,
-                self::contextOf($entry),
+                $answeredId === null ? $context : $context->withOnComment(),
             ),
             $createdAt,
             $item->isTrue('read'),

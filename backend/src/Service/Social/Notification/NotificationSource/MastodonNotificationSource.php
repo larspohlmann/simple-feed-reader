@@ -184,12 +184,27 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
 
     private static function contextOf(SocialNotificationKind $kind, JsonNodeModel $status): NotificationContext
     {
-        $quoted = $status->node('quote')->node('quoted_status');
-        if ($kind !== SocialNotificationKind::Quote || $quoted->string('content') === null) {
-            return new NotificationContext();
-        }
+        return match ($kind) {
+            SocialNotificationKind::Like, SocialNotificationKind::Repost
+                => self::aboutYourCommentWhenAReply(new NotificationContext(), $status),
+            SocialNotificationKind::Quote => self::quotedContextOf($status->node('quote')->node('quoted_status')),
+            default => new NotificationContext(),
+        };
+    }
 
-        return new NotificationContext(answeredExcerpt: Excerpt::ofHtml($quoted->text('content')));
+    private static function quotedContextOf(JsonNodeModel $quoted): NotificationContext
+    {
+        return self::aboutYourCommentWhenAReply(
+            new NotificationContext(answeredExcerpt: Excerpt::ofHtml($quoted->text('content'))),
+            $quoted,
+        );
+    }
+
+    private static function aboutYourCommentWhenAReply(
+        NotificationContext $context,
+        JsonNodeModel $status,
+    ): NotificationContext {
+        return $status->string('in_reply_to_id') === null ? $context : $context->withOnComment();
     }
 
     private static function kindOf(JsonNodeModel $entry, string $ownId): ?SocialNotificationKind

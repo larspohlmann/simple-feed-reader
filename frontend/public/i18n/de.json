@@ -1405,10 +1405,6 @@
           "one": "{{who}} hat auf deinen Beitrag geantwortet",
           "other": "{{who}} haben auf deinen Beitrag geantwortet"
         },
-        "comment_reply": {
-          "one": "{{who}} hat auf deinen Kommentar geantwortet",
-          "other": "{{who}} haben auf deinen Kommentar geantwortet"
-        },
         "mention": {
           "one": "{{who}} hat dich erwähnt",
           "other": "{{who}} haben dich erwähnt"
@@ -1420,6 +1416,24 @@
         "follow": {
           "one": "{{who}} folgt dir jetzt",
           "other": "{{who}} folgen dir jetzt"
+        }
+      },
+      "actionOnComment": {
+        "like": {
+          "one": "{{who}} hat deinen Kommentar geliked",
+          "other": "{{who}} haben deinen Kommentar geliked"
+        },
+        "repost": {
+          "one": "{{who}} hat deinen Kommentar repostet",
+          "other": "{{who}} haben deinen Kommentar repostet"
+        },
+        "reply": {
+          "one": "{{who}} hat auf deinen Kommentar geantwortet",
+          "other": "{{who}} haben auf deinen Kommentar geantwortet"
+        },
+        "quote": {
+          "one": "{{who}} hat deinen Kommentar zitiert",
+          "other": "{{who}} haben deinen Kommentar zitiert"
         }
       }
     },

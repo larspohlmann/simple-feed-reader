@@ -95,6 +95,67 @@ final class BlueskyNotificationSourceTest extends TestCase
         self::assertEquals(new ContextReferenceModel(), $page->notifications[5]->references);
     }
 
+    /** @return iterable<string, array{list<array<string, mixed>>, list<bool>}> */
+    public static function likedPosts(): iterable
+    {
+        $first = self::post(self::POST_ONE, 'First post text');
+        $second = self::post(self::POST_TWO, 'Second post text');
+        $nothing = [false, false, false, false, false, false, false, false, false];
+
+        yield 'two top-level posts' => [[$first, $second], $nothing];
+        yield 'a liked reply of yours' => [
+            [self::asReply($first), $second],
+            [true, true, false, false, false, false, false, false, false],
+        ];
+        yield 'a reposted reply of yours' => [
+            [$first, self::asReply($second)],
+            [false, false, true, true, false, false, false, false, false],
+        ];
+    }
+
+    /**
+     * @param list<array<string, mixed>> $posts
+     * @param list<bool> $onComment
+     */
+    #[DataProvider('likedPosts')]
+    public function testALikeOrRepostIsAboutYourCommentWhenTheLikedPostIsYourReply(array $posts, array $onComment): void
+    {
+        $answer = (string) json_encode(['posts' => $posts]);
+
+        $page = $this->source($this->http(posts: $answer))->fetch(SocialApiWiring::blueskyAccount());
+
+        self::assertSame($onComment, array_map(
+            static fn (FetchedNotificationModel $notification): bool => $notification->subject->context->onComment,
+            $page->notifications,
+        ));
+        self::assertSame('First post text', $page->notifications[0]->subject->excerpt);
+    }
+
+    public function testALikeViaRepostOfSomeoneElsesReplyIsNotAboutYourComment(): void
+    {
+        $theirs = 'at://did:plc:zoe/app.bsky.feed.post/3lzreply';
+        $list = (string) json_encode(['notifications' => [[
+            'uri' => 'at://did:plc:carol/app.bsky.feed.like/3l02',
+            'author' => ['did' => 'did:plc:carol', 'handle' => 'carol.test'],
+            'reason' => 'like-via-repost',
+            'record' => ['$type' => 'app.bsky.feed.like', 'subject' => ['uri' => $theirs]],
+            'isRead' => false,
+            'indexedAt' => '2026-11-16T08:50:00.000Z',
+        ]]]);
+        $posts = (string) json_encode(['posts' => [[
+            'uri' => $theirs,
+            'record' => [
+                'text' => 'Their reply',
+                'reply' => ['parent' => ['uri' => 'at://did:plc:zoe/app.bsky.feed.post/3lz']],
+            ],
+        ]]]);
+
+        $page = $this->source($this->http($list, $posts, [$theirs]))->fetch(SocialApiWiring::blueskyAccount());
+
+        self::assertSame('Their reply', $page->notifications[0]->subject->excerpt);
+        self::assertFalse($page->notifications[0]->subject->context->onComment);
+    }
+
     public function testAsksOnePostLookupWithRepeatedUrisKeys(): void
     {
         $http = $this->http();
@@ -240,19 +301,50 @@ final class BlueskyNotificationSourceTest extends TestCase
         );
     }
 
-    private function http(): RoutedHttpClient
+    /** @return array{uri: string, record: array<string, mixed>} */
+    private static function post(string $uri, string $text): array
     {
-        $fixtures = __DIR__ . '/../../../../Fixtures/Bluesky/';
+        return ['uri' => $uri, 'record' => ['text' => $text]];
+    }
+
+    /**
+     * @param array{uri: string, record: array<string, mixed>} $post
+     *
+     * @return array{uri: string, record: array<string, mixed>}
+     */
+    private static function asReply(array $post): array
+    {
+        $post['record']['reply'] = ['parent' => ['uri' => 'at://did:plc:zoe/app.bsky.feed.post/3lz']];
+
+        return $post;
+    }
+
+    private static function list(): string
+    {
+        return self::fixture('notifications-list.json');
+    }
+
+    private static function fixture(string $name): string
+    {
+        return (string) file_get_contents(__DIR__ . '/../../../../Fixtures/Bluesky/' . $name);
+    }
+
+    /** @param list<string> $postUris */
+    private function http(
+        ?string $list = null,
+        ?string $posts = null,
+        array $postUris = [self::POST_ONE, self::POST_TWO],
+    ): RoutedHttpClient {
+        $lookup = implode('&', array_map(static fn (string $uri): string => 'uris=' . rawurlencode($uri), $postUris));
 
         return new RoutedHttpClient([
             'POST ' . self::PDS . '/xrpc/com.atproto.server.createSession'
                 => SocialApiWiring::blueskySessionAnswer('jwt'),
-            self::UNREAD => new MockResponse((string) file_get_contents($fixtures . 'notifications-unread.json')),
-            self::LIST => new MockResponse((string) file_get_contents($fixtures . 'notifications-list.json')),
-            'GET ' . self::PDS . '/xrpc/app.bsky.feed.getPosts?uris=' . rawurlencode(self::POST_ONE)
-                . '&uris=' . rawurlencode(self::POST_TWO) => new MockResponse(
-                    (string) file_get_contents($fixtures . 'notifications-posts.json'),
-                ),
+            self::UNREAD => new MockResponse(self::fixture('notifications-unread.json')),
+            self::LIST => new MockResponse($list ?? self::list()),
+            'GET ' . self::PDS . '/xrpc/app.bsky.feed.getPosts?' . $lookup => new MockResponse(
+                $posts ?? self::fixture('notifications-posts.json'),
+            ),
         ]);
     }
 

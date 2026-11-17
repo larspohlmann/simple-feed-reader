@@ -57,6 +57,7 @@ final class SocialNotificationControllerTest extends ApiTestCase
             self::assertArrayHasKey($key, $group);
             self::assertNull($group[$key]);
         }
+        self::assertFalse($group['onComment']);
         self::assertNull($payload['nextCursor']);
         self::assertSame([], $payload['scopeMissing']);
     }
@@ -67,11 +68,11 @@ final class SocialNotificationControllerTest extends ApiTestCase
         $user = $this->signIn($client, 'notification-context@example.test');
         $account = $this->persisted(SocialAccounts::lemmyOf($user));
         $subject = (new NotificationSubject('c9', 'reply text', 'https://lemmy.test/comment/9'))
-            ->withContext(new NotificationContext('my comment', 'Post title', 'c/php', null));
+            ->withContext((new NotificationContext('my comment', 'Post title', 'c/php', null))->withOnComment());
         $this->entityManager()->persist(new SocialNotification(
             $account,
             'reply:9',
-            SocialNotificationKind::CommentReply,
+            SocialNotificationKind::Reply,
             new NotificationActor('@bob@lemmy.test', null, null, 'https://lemmy.test/u/bob'),
             $subject,
             new \DateTimeImmutable('2026-11-16 10:00:00'),
@@ -83,7 +84,8 @@ final class SocialNotificationControllerTest extends ApiTestCase
 
         self::assertResponseIsSuccessful();
         $group = $this->listPayload($client)['groups'][0];
-        self::assertSame('comment_reply', $group['kind']);
+        self::assertSame('reply', $group['kind']);
+        self::assertTrue($group['onComment']);
         self::assertSame('my comment', $group['answeredExcerpt']);
         self::assertSame('Post title', $group['threadTitle']);
         self::assertSame('c/php', $group['threadPlace']);

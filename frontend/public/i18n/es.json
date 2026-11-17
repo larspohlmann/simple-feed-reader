@@ -1409,10 +1409,6 @@
           "one": "{{who}} respondió a tu publicación",
           "other": "{{who}} respondieron a tu publicación"
         },
-        "comment_reply": {
-          "one": "{{who}} respondió a tu comentario",
-          "other": "{{who}} respondieron a tu comentario"
-        },
         "mention": {
           "one": "{{who}} te mencionó",
           "other": "{{who}} te mencionaron"
@@ -1424,6 +1420,24 @@
         "follow": {
           "one": "{{who}} empezó a seguirte",
           "other": "{{who}} empezaron a seguirte"
+        }
+      },
+      "actionOnComment": {
+        "like": {
+          "one": "A {{who}} le gustó tu comentario",
+          "other": "A {{who}} les gustó tu comentario"
+        },
+        "repost": {
+          "one": "{{who}} compartió tu comentario",
+          "other": "{{who}} compartieron tu comentario"
+        },
+        "reply": {
+          "one": "{{who}} respondió a tu comentario",
+          "other": "{{who}} respondieron a tu comentario"
+        },
+        "quote": {
+          "one": "{{who}} citó tu comentario",
+          "other": "{{who}} citaron tu comentario"
         }
       }
     },

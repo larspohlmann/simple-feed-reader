@@ -45,4 +45,12 @@ final class NotificationSubjectTest extends TestCase
 
         self::assertEquals(new NotificationContext('mine', 'Title', null, 'Ann'), $context);
     }
+
+    public function testAContextIsAboutACommentOnlyWhenMarked(): void
+    {
+        $context = new NotificationContext('mine', 'Title', 'c/php', 'Ann');
+
+        self::assertFalse($context->onComment);
+        self::assertEquals(new NotificationContext('mine', 'Title', 'c/php', 'Ann', true), $context->withOnComment());
+    }
 }

@@ -18,6 +18,8 @@ final readonly class NotificationContext
         public ?string $threadPlace = null,
         #[ORM\Column(length: 255, nullable: true)]
         public ?string $threadBy = null,
+        #[ORM\Column(options: ['default' => false])]
+        public bool $onComment = false,
     ) {
     }
 
@@ -31,5 +33,11 @@ final readonly class NotificationContext
     public function withThread(?string $threadTitle, ?string $threadBy): self
     {
         return clone($this, ['threadTitle' => $threadTitle, 'threadBy' => $threadBy]);
+    }
+
+    #[\NoDiscard]
+    public function withOnComment(): self
+    {
+        return clone($this, ['onComment' => true]);
     }
 }

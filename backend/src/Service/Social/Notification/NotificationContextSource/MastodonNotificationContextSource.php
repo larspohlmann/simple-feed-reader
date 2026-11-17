@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Notification\NotificationContextSource;
 
+use App\Entity\NotificationContext;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
@@ -27,13 +28,13 @@ final readonly class MastodonNotificationContextSource implements NotificationCo
 
     public function withContext(SocialAccount $account, array $fresh): array
     {
-        $excerpts = [];
+        $statuses = [];
         foreach (array_chunk(self::answeredIds($fresh), self::STATUSES_PER_CALL) as $ids) {
-            $excerpts += $this->excerptsOf($account, $ids);
+            $statuses += $this->statusesOf($account, $ids);
         }
 
         return array_map(
-            static fn (FetchedNotificationModel $row): FetchedNotificationModel => self::answered($row, $excerpts),
+            static fn (FetchedNotificationModel $row): FetchedNotificationModel => self::answered($row, $statuses),
             $fresh,
         );
     }
@@ -52,9 +53,9 @@ final readonly class MastodonNotificationContextSource implements NotificationCo
 
     /**
      * @param list<string> $ids
-     * @return array<string, string|null>
+     * @return array<string, JsonNodeModel> status by id
      */
-    private function excerptsOf(SocialAccount $account, array $ids): array
+    private function statusesOf(SocialAccount $account, array $ids): array
     {
         $query = implode('&', array_map(static fn (string $id): string => 'id[]=' . rawurlencode($id), $ids));
         try {
@@ -66,26 +67,40 @@ final readonly class MastodonNotificationContextSource implements NotificationCo
             return [];
         }
 
-        $excerpts = [];
+        $statuses = [];
         foreach (JsonNodeModel::listOf($answer->json()) ?? [] as $status) {
             $id = $status->string('id');
             if ($id !== null) {
-                $excerpts[$id] = Excerpt::ofHtml($status->text('content'));
+                $statuses[$id] = $status;
             }
         }
 
-        return $excerpts;
+        return $statuses;
     }
 
-    /** @param array<string, string|null> $excerpts */
-    private static function answered(FetchedNotificationModel $row, array $excerpts): FetchedNotificationModel
+    /** @param array<string, JsonNodeModel> $statuses */
+    private static function answered(FetchedNotificationModel $row, array $statuses): FetchedNotificationModel
     {
         $answeredId = $row->references->answeredId;
-        $excerpt = $answeredId !== null && isset($excerpts[$answeredId]) ? $excerpts[$answeredId] : null;
-        if ($excerpt === null) {
+        if ($answeredId === null || !isset($statuses[$answeredId])) {
             return $row;
         }
+        $answered = $statuses[$answeredId];
+        $context = self::withExcerptOf($row->subject->context, $answered);
+        if ($answered->string('in_reply_to_id') !== null) {
+            $context = $context->withOnComment();
+        }
 
-        return $row->withContext($row->subject->context->withAnsweredExcerpt($excerpt));
+        return $row->withContext($context);
+    }
+
+    private static function withExcerptOf(NotificationContext $context, JsonNodeModel $answered): NotificationContext
+    {
+        $excerpt = Excerpt::ofHtml($answered->text('content'));
+        if ($excerpt === null) {
+            return $context;
+        }
+
+        return $context->withAnsweredExcerpt($excerpt);
     }
 }

@@ -13,6 +13,7 @@ function group(overrides: Partial<NotificationGroupDto> = {}): NotificationGroup
     threadTitle: null,
     threadPlace: null,
     threadBy: null,
+    onComment: false,
     linkUrl: 'https://social.example/p/1',
     latestAt: '2026-11-16T10:00:00Z',
     seen: true,
