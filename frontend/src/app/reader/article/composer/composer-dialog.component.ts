@@ -210,6 +210,10 @@ export class ComposerDialogComponent {
   }
 
   /** Lane controls keep today's ids in a one-network composer and carry the network beside pills. */
+  protected networkName(lane: ComposerLane): string {
+    return this.names[lane.network];
+  }
+
   protected controlId(control: string, lane: ComposerLane): string {
     return this.lanes.showsPills() ? `reply-${control}-${lane.network}` : `reply-${control}`;
   }

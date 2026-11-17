@@ -166,7 +166,7 @@
 </form>
 
 <ng-template #accountSelect let-lane="lane" let-laneContext="laneContext">
-  <app-field [label]="accountLabel() | transloco: { network: names[lane.network] }">
+  <app-field [label]="accountLabel() | transloco: { network: networkName(lane) }">
     <select
       [id]="controlId('account', lane)"
       [disabled]="sending() || lane.sent() !== null"
