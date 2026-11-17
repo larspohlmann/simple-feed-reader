@@ -14,7 +14,8 @@ use App\Service\Social\Notification\Model\NotificationListPageModel;
  * }
  * @phpstan-type GroupJson array{
  *     id: int, kind: string, account: string, actors: list<ActorJson>,
- *     actorCount: int, excerpt: string|null, linkUrl: string, latestAt: string, seen: bool
+ *     actorCount: int, excerpt: string|null, linkUrl: string, latestAt: string, seen: bool,
+ * answeredExcerpt: string|null, threadTitle: string|null, threadPlace: string|null, threadBy: string|null
  * }
  */
 final class SocialNotificationsJson
@@ -47,6 +48,10 @@ final class SocialNotificationsJson
             'linkUrl' => $group->subject->linkUrl,
             'latestAt' => $group->latestAt->setTimezone(new \DateTimeZone('UTC'))->format(\DateTimeInterface::ATOM),
             'seen' => $group->seen,
+            'answeredExcerpt' => $group->subject->context->answeredExcerpt,
+            'threadTitle' => $group->subject->context->threadTitle,
+            'threadPlace' => $group->subject->context->threadPlace,
+            'threadBy' => $group->subject->context->threadBy,
         ];
     }
 

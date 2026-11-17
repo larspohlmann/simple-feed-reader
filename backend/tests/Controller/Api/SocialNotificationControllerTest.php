@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\NotificationActor;
+use App\Entity\NotificationContext;
+use App\Entity\NotificationSubject;
 use App\Entity\SocialAccount;
 use App\Entity\SocialNotification;
 use App\Entity\SocialNotificationPoll;
@@ -50,8 +53,41 @@ final class SocialNotificationControllerTest extends ApiTestCase
         self::assertSame('https://bsky.app/post/at://x/1', $group['linkUrl']);
         self::assertSame('2026-11-16T10:00:00+00:00', $group['latestAt']);
         self::assertFalse($group['seen']);
+        foreach (['answeredExcerpt', 'threadTitle', 'threadPlace', 'threadBy'] as $key) {
+            self::assertArrayHasKey($key, $group);
+            self::assertNull($group[$key]);
+        }
         self::assertNull($payload['nextCursor']);
         self::assertSame([], $payload['scopeMissing']);
+    }
+
+    public function testAGroupCarriesItsContext(): void
+    {
+        $client = self::createClient();
+        $user = $this->signIn($client, 'notification-context@example.test');
+        $account = $this->persisted(SocialAccounts::lemmyOf($user));
+        $subject = (new NotificationSubject('c9', 'reply text', 'https://lemmy.test/comment/9'))
+            ->withContext(new NotificationContext('my comment', 'Post title', 'c/php', null));
+        $this->entityManager()->persist(new SocialNotification(
+            $account,
+            'reply:9',
+            SocialNotificationKind::CommentReply,
+            new NotificationActor('@bob@lemmy.test', null, null, 'https://lemmy.test/u/bob'),
+            $subject,
+            new \DateTimeImmutable('2026-11-16 10:00:00'),
+            false,
+        ));
+        $this->entityManager()->flush();
+
+        $client->request('GET', '/api/me/notifications?network=lemmy');
+
+        self::assertResponseIsSuccessful();
+        $group = $this->listPayload($client)['groups'][0];
+        self::assertSame('comment_reply', $group['kind']);
+        self::assertSame('my comment', $group['answeredExcerpt']);
+        self::assertSame('Post title', $group['threadTitle']);
+        self::assertSame('c/php', $group['threadPlace']);
+        self::assertNull($group['threadBy']);
     }
 
     public function testAFullPageCarriesTheCursorOfItsLastGroup(): void
