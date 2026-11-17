@@ -375,7 +375,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         $this->send(
             $client,
             self::LINKS . 'lemmy&url=' . rawurlencode(self::ARTICLE_URL),
-            ['text' => '', 'title' => 'T'],
+            ['text' => '', 'title' => 'Title'],
         );
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);

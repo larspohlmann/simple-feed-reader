@@ -17,6 +17,8 @@ import { SocialPostApi } from '../../social-post-api';
 import { SentPost } from './composed-post';
 import { LemmyCommunityMemory } from './lemmy-community-memory';
 
+const MIN_LEMMY_TITLE_CHARACTERS = 3;
+
 type ContextState =
   | { status: 'idle' }
   | { status: 'loading' }
@@ -80,7 +82,11 @@ export class ComposerLane {
     const lemmy = this.context()?.lemmy ?? null;
     if (lemmy === null) return true;
     const length = this.titleLength();
-    return this.community() !== null && length > 0 && length <= lemmy.maxTitleCharacters;
+    return (
+      this.community() !== null &&
+      length >= MIN_LEMMY_TITLE_CHARACTERS &&
+      length <= lemmy.maxTitleCharacters
+    );
   });
 
   constructor(readonly target: PostTargetDto) {

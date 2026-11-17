@@ -1395,7 +1395,7 @@ describe('ComposerDialogComponent', () => {
       ).toBeTruthy();
     });
 
-    it('keeps Send off until a community is chosen and the title is not blank', () => {
+    it('keeps Send off until a community is chosen and the title has three characters', () => {
       const fixture = lemmyOnly();
       expect(sendButton(fixture).disabled).toBe(true);
 
@@ -1404,6 +1404,12 @@ describe('ComposerDialogComponent', () => {
 
       writeTitle(fixture, '   ');
       expect(sendButton(fixture).disabled).toBe(true);
+
+      writeTitle(fixture, ' ab ');
+      expect(sendButton(fixture).disabled).toBe(true);
+
+      writeTitle(fixture, 'abc');
+      expect(sendButton(fixture).disabled).toBe(false);
     });
 
     it('turns the title counter red over the limit and Send off', () => {

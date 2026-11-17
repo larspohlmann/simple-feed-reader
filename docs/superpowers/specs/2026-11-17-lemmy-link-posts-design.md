@@ -10,7 +10,7 @@ Lars asked to include Lemmy during #2287. That composer was built Lemmy-ready (s
 
 1. **Community picker: a plain select of the reader's subscribed communities only** (Lars, mockup A). No search, no typing. The list is sorted A–Z and each option reads `!name@instance` (my call).
 2. **The last-used community is remembered in the browser, per Lemmy account** (Lars, approach 2). It goes in `localStorage`, keyed by the social account id, and is written after a Lemmy link post succeeds. It is preselected the next time the composer opens with that account, if that community is still in the subscribed list. Each device remembers its own. It is a convenience only: losing it (private window, cleared storage) just means picking again, and every read and write tolerates storage being unavailable. The server stores nothing new. This is the only thing any composer remembers.
-3. **The title is required, up to 200 characters, and prefilled with the page title** (cut at a word when longer). It has its own counter under its input.
+3. **The title is required, 3–200 characters once trimmed (Lemmy's floor is 3), and prefilled with the page title** (cut at a word when longer). It has its own counter under its input.
 4. **The body may be empty** for a Lemmy link post. A title and a link are a complete Lemmy post. The body limit is Lemmy's existing 10,000 (`LemmyComposerDefaults::MAX_CHARACTERS`).
 5. **A selection quote goes into the body.** It is part of the shared text, so this needs no special handling.
 6. **Send is off until a community is chosen** for the Lemmy lane. Decision 1 makes the last-used community the starting value, so this bites only on the first share, or when the remembered community is no longer subscribed.
@@ -38,7 +38,7 @@ With Lemmy as the only lane (opened from "Post to Lemmy"), the heading reads "Po
 
 - `LemmyPostWriter::share` creates the post with `POST /api/v3/post`: `name` (the title), `url`, `body` (omitted when blank) and `community_id`. The answer's `post_view.post.ap_id` is the published address.
   - **No `language_id`** (my call, from the builder check). The composer's language is only the browser's language, and many communities allow just some languages, so sending it would make posts fail with `language_not_allowed` and give the reader no way around it. Lemmy picks the post language from the account's own settings, as Lemmy comments already do here.
-  - Validation, as typed exceptions mapped to 422 problems: a missing or blank title, a title over 200 characters, a missing community, and a body over 10,000 characters.
+  - Validation, as typed exceptions mapped to 422 problems: a title under 3 characters once trimmed (blank or missing included), a title over 200 characters, a missing community, and a body over 10,000 characters.
 - The draft carries the Lemmy-only fields (title, community id), the way it already carries the Mastodon-only ones. The link-post request DTO accepts them.
 - The Lemmy link composer context carries:
   - the subscribed communities (id, `!name@host` handle), from the existing paged `community/list?type_=Subscribed` fetch that `LemmyCandidateSource` uses. Share the fetch rather than copy it. The shared part must keep the raw community view, because `FollowedAccountModel` drops the community id.
@@ -52,7 +52,7 @@ With Lemmy as the only lane (opened from "Post to Lemmy"), the heading reads "Po
 - `LINK_POST_NETWORKS` gains `'lemmy'`, which puts it in the share menu and the pills.
 - The Lemmy lane holds `community` and `title` signals, seeded from its context, and adds them to its own draft fields. The community starts from the remembered one (decision 2) when it is in the list, else none.
 - After the Lemmy lane's post succeeds, the frontend remembers its community for that account. A failed post remembers nothing.
-- The lane is ready to send only with a community and a title that is non-blank and within 200 characters. This feeds the existing `pendingFit` / `canSend` rules.
+- The lane is ready to send only with a community and a title of 3–200 characters once trimmed. This feeds the existing `pendingFit` / `canSend` rules.
 - The per-lane controls block renders the Lemmy fields.
 - i18n in en, de, fr and es: "Post to Lemmy", community, title, the no-communities note, and any new problem messages.
 

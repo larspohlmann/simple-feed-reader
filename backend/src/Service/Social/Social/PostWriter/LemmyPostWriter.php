@@ -12,7 +12,7 @@ use App\Service\Social\Social\ComposerDefaults\LemmyComposerDefaults;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostCommunityMissingException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
-use App\Service\Social\Social\Exception\SocialPostTitleMissingException;
+use App\Service\Social\Social\Exception\SocialPostTitleTooShortException;
 use App\Service\Social\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Social\LemmyAccountApi;
 use App\Service\Social\Social\Model\LemmyLinkModel;
@@ -73,8 +73,10 @@ final readonly class LemmyPostWriter implements PostWriterInterface
         $communityId = $draft->communityId
             ?? throw new SocialPostCommunityMissingException('A Lemmy link post goes to a community.');
         $title = trim($draft->title ?? '');
-        if ('' === $title) {
-            throw new SocialPostTitleMissingException('A Lemmy link post needs a title.');
+        if (mb_strlen($title) < LemmyLinkModel::MIN_TITLE_CHARACTERS) {
+            throw new SocialPostTitleTooShortException(
+                sprintf('A Lemmy title needs at least %d characters.', LemmyLinkModel::MIN_TITLE_CHARACTERS),
+            );
         }
         if (mb_strlen($title) > LemmyLinkModel::MAX_TITLE_CHARACTERS) {
             throw new SocialPostTooLongException(

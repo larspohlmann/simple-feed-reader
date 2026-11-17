@@ -15,7 +15,7 @@ use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Exception\SocialPostRemovedException;
 use App\Service\Social\Social\Exception\SocialPostTextMissingException;
-use App\Service\Social\Social\Exception\SocialPostTitleMissingException;
+use App\Service\Social\Social\Exception\SocialPostTitleTooShortException;
 use App\Service\Social\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
 use Symfony\Component\HttpFoundation\Response;
@@ -62,9 +62,9 @@ final readonly class SocialInteractionProblems implements ExceptionProblemsInter
                 Response::HTTP_UNPROCESSABLE_ENTITY,
                 $exception->getMessage(),
             )),
-            $exception instanceof SocialPostTitleMissingException => new ResolvedProblem(new ApiProblem(
-                'social_post_title_missing',
-                'The post needs a title',
+            $exception instanceof SocialPostTitleTooShortException => new ResolvedProblem(new ApiProblem(
+                'social_post_title_too_short',
+                'The post title is too short',
                 Response::HTTP_UNPROCESSABLE_ENTITY,
                 $exception->getMessage(),
             )),

@@ -10,7 +10,7 @@ use App\Service\Outbound\Fetch\UrlGuard;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostCommunityMissingException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
-use App\Service\Social\Social\Exception\SocialPostTitleMissingException;
+use App\Service\Social\Social\Exception\SocialPostTitleTooShortException;
 use App\Service\Social\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Social\LemmyAccountApi;
 use App\Service\Social\Social\LemmyApiClient;
@@ -152,7 +152,7 @@ final class LemmyPostWriterTest extends TestCase
         $this->writer($http)->share(
             $this->account(),
             self::ARTICLE,
-            new PostDraftModel('', title: 'T', communityId: 7),
+            new PostDraftModel('', title: 'Title', communityId: 7),
         );
     }
 
@@ -180,9 +180,13 @@ final class LemmyPostWriterTest extends TestCase
         ];
         yield 'a whitespace title' => [
             new PostDraftModel('Hi', title: "  \n", communityId: 7),
-            SocialPostTitleMissingException::class,
+            SocialPostTitleTooShortException::class,
         ];
-        yield 'no title' => [new PostDraftModel('Hi', communityId: 7), SocialPostTitleMissingException::class];
+        yield 'no title' => [new PostDraftModel('Hi', communityId: 7), SocialPostTitleTooShortException::class];
+        yield 'a title of two characters once trimmed' => [
+            new PostDraftModel('Hi', title: ' äb ', communityId: 7),
+            SocialPostTitleTooShortException::class,
+        ];
         yield 'a title over two hundred' => [
             new PostDraftModel('Hi', title: str_repeat('ä', 201), communityId: 7),
             SocialPostTooLongException::class,
@@ -195,6 +199,35 @@ final class LemmyPostWriterTest extends TestCase
             new PostDraftModel('Hi'),
             SocialPostCommunityMissingException::class,
         ];
+    }
+
+    public function testATooShortTitleSaysHowLongATitleMustBe(): void
+    {
+        $this->expectExceptionObject(
+            new SocialPostTitleTooShortException('A Lemmy title needs at least 3 characters.'),
+        );
+
+        $this->writer(new RoutedHttpClient([]))->share(
+            $this->account(),
+            self::ARTICLE,
+            new PostDraftModel('', title: 'Hi', communityId: 7),
+        );
+    }
+
+    public function testATitleOfThreeCharactersFits(): void
+    {
+        $http = new RoutedHttpClient([self::POST => self::postCreated()]);
+
+        $this->writer($http)->share(
+            $this->account(),
+            self::ARTICLE,
+            new PostDraftModel('', title: ' Hey ', communityId: 7),
+        );
+
+        self::assertSame(
+            '{"name":"Hey","url":"https:\/\/example.com\/a","community_id":7}',
+            $http->requests[0]['body'],
+        );
     }
 
     public function testATitleOfTwoHundredAndABodyOfTenThousandFit(): void

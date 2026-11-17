@@ -14,7 +14,7 @@ use App\Service\Social\Social\Exception\SocialPostCommunityMissingException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Exception\SocialPostRemovedException;
-use App\Service\Social\Social\Exception\SocialPostTitleMissingException;
+use App\Service\Social\Social\Exception\SocialPostTitleTooShortException;
 use App\Service\Social\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -49,9 +49,9 @@ final class SocialInteractionProblemsTest extends TestCase
             Response::HTTP_GONE,
         ];
         yield 'post refused' => [new SocialPostRefusedException('x'), 'social_post_refused', Response::HTTP_CONFLICT];
-        yield 'link without a title' => [
-            new SocialPostTitleMissingException('x'),
-            'social_post_title_missing',
+        yield 'link title too short' => [
+            new SocialPostTitleTooShortException('x'),
+            'social_post_title_too_short',
             Response::HTTP_UNPROCESSABLE_ENTITY,
         ];
         yield 'link without a community' => [
@@ -91,6 +91,13 @@ final class SocialInteractionProblemsTest extends TestCase
             'Reconnect this account with an access token that has the write:favourites scope.',
             $resolved?->problem->detail,
         );
+    }
+
+    public function testATooShortTitleIsNamedInTheProblemTitle(): void
+    {
+        $resolved = (new SocialInteractionProblems())->resolve(new SocialPostTitleTooShortException('x'));
+
+        self::assertSame('The post title is too short', $resolved?->problem->title);
     }
 
     public function testAThrottleNamesItsDelayOnlyWhenTheNetworkGaveOne(): void

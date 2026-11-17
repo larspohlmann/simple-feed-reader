@@ -426,6 +426,18 @@ describe('ComposerLanes', () => {
       expect(lane.fieldsReady()).toBe(false);
     });
 
+    it("is not ready with a title under Lemmy's three characters once trimmed", () => {
+      memory.recall.mockReturnValue(41);
+      api.composer.mockReturnValue(of(lemmyContext()));
+      const lane = lemmyLane();
+
+      lane.writeTitle(' ab ');
+      expect(lane.fieldsReady()).toBe(false);
+
+      lane.writeTitle(' abc ');
+      expect(lane.fieldsReady()).toBe(true);
+    });
+
     it('is not ready with a title over the limit, counting code points', () => {
       memory.recall.mockReturnValue(41);
       api.composer.mockReturnValue(of(lemmyContext()));
