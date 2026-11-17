@@ -77,6 +77,47 @@ final class MastodonNotificationSourceTest extends TestCase
         self::assertSame('quoting', $quote->subject->excerpt);
     }
 
+    public function testAFavouriteOrABoostOfYourReplyIsAboutYourComment(): void
+    {
+        $list = str_replace(
+            ['"content": "<p>First post</p><p>second para</p>",', '"content": "<p>Boosted</p>",'],
+            [
+                '"content": "<p>First post</p><p>second para</p>", "in_reply_to_id": "777",',
+                '"content": "<p>Boosted</p>", "in_reply_to_id": "778",',
+            ],
+            self::list(),
+        );
+
+        $page = $this->source($this->http(listBody: $list))->fetch(SocialApiWiring::mastodonAccount());
+
+        self::assertTrue($page->notifications[0]->subject->context->onComment);
+        self::assertTrue($page->notifications[1]->subject->context->onComment);
+    }
+
+    public function testAQuoteOfYourReplyIsAboutYourComment(): void
+    {
+        $list = str_replace(
+            '"content": "<p>The post they quoted</p>",',
+            '"content": "<p>The post they quoted</p>", "in_reply_to_id": "779",',
+            self::list(),
+        );
+
+        $page = $this->source($this->http(listBody: $list))->fetch(SocialApiWiring::mastodonAccount());
+
+        $quote = $page->notifications[6];
+        self::assertTrue($quote->subject->context->onComment);
+        self::assertSame('The post they quoted', $quote->subject->context->answeredExcerpt);
+    }
+
+    public function testNotificationsAboutTopLevelPostsAreAboutYourPost(): void
+    {
+        $page = $this->source($this->http())->fetch(SocialApiWiring::mastodonAccount());
+
+        foreach ($page->notifications as $notification) {
+            self::assertFalse($notification->subject->context->onComment);
+        }
+    }
+
     public function testDropsUnlistedKinds(): void
     {
         $page = $this->source($this->http())->fetch(SocialApiWiring::mastodonAccount());
@@ -261,6 +302,11 @@ final class MastodonNotificationSourceTest extends TestCase
         );
     }
 
+    private static function list(): string
+    {
+        return (string) file_get_contents(__DIR__ . '/../../../../Fixtures/Mastodon/notifications-list.json');
+    }
+
     private function http(
         ?string $markers = null,
         int $listStatus = Response::HTTP_OK,
@@ -281,9 +327,7 @@ final class MastodonNotificationSourceTest extends TestCase
                 $markers ?? (string) file_get_contents($fixtures . 'notifications-markers.json'),
             ),
             'GET ' . self::LIST => new MockResponse(
-                $listStatus === Response::HTTP_OK
-                    ? (string) file_get_contents($fixtures . 'notifications-list.json')
-                    : $listBody ?? $forbidden,
+                $listBody ?? ($listStatus === Response::HTTP_OK ? self::list() : $forbidden),
                 ['http_code' => $listStatus],
             ),
             'GET ' . self::MARKER_ITEM => new MockResponse(

@@ -31,6 +31,22 @@ final class MastodonNotificationContextSourceTest extends TestCase
         self::assertSame([self::STATUSES . 'id[]=4000'], $http->requestedUrls());
         self::assertSame('My own post', $rows[0]->subject->context->answeredExcerpt);
         self::assertSame('My own post', $rows[1]->subject->context->answeredExcerpt);
+        self::assertFalse($rows[0]->subject->context->onComment);
+    }
+
+    public function testAReplyToYourReplyIsAboutYourComment(): void
+    {
+        $statuses = (string) json_encode([[
+            'id' => '4000',
+            'content' => '<p>My reply</p>',
+            'in_reply_to_id' => '3999',
+        ]]);
+        $http = new RoutedHttpClient(['GET ' . self::STATUSES . 'id[]=4000' => new MockResponse($statuses)]);
+
+        $rows = $this->source($http)->withContext(SocialApiWiring::mastodonAccount(), [self::row('1', '4000')]);
+
+        self::assertTrue($rows[0]->subject->context->onComment);
+        self::assertSame('My reply', $rows[0]->subject->context->answeredExcerpt);
     }
 
     public function testAPostMissingFromTheAnswerLeavesItsRowAlone(): void
