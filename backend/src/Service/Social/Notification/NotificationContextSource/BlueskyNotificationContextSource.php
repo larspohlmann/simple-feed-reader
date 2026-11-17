@@ -78,7 +78,9 @@ final readonly class BlueskyNotificationContextSource implements NotificationCon
         $context = $row->subject->context;
         $ownAnswered = self::ownAnsweredOf($account, $row);
         if ($ownAnswered !== null && isset($posts[$ownAnswered])) {
-            $context = $context->withAnsweredExcerpt(Excerpt::of($posts[$ownAnswered]->node('record')->text('text')));
+            $answeredRecord = $posts[$ownAnswered]->node('record');
+            $context = $context->withAnsweredExcerpt(Excerpt::of($answeredRecord->text('text')));
+            $context = $answeredRecord->has('reply') ? $context->withOnComment() : $context;
         }
         $threadRoot = self::threadRootOf($account, $row);
         if ($threadRoot !== null && isset($posts[$threadRoot])) {

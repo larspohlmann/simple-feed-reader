@@ -117,6 +117,24 @@ final class BlueskyNotificationContextSourceTest extends TestCase
         );
 
         self::assertSame('The post you quoted', $rows[0]->subject->context->answeredExcerpt);
+        self::assertFalse($rows[0]->subject->context->onComment);
+    }
+
+    public function testAQuoteOfYourReplyIsAboutYourComment(): void
+    {
+        $posts = str_replace(
+            '"text": "The post you quoted"',
+            '"text": "The post you quoted", "reply": {"parent": {"uri": "' . self::ROOT . '"}}',
+            self::posts(),
+        );
+
+        $rows = $this->source($this->http($posts))->withContext(
+            SocialApiWiring::blueskyAccount(),
+            [self::row(SocialNotificationKind::Quote, new ContextReferenceModel(self::QUOTED))],
+        );
+
+        self::assertTrue($rows[0]->subject->context->onComment);
+        self::assertSame('The post you quoted', $rows[0]->subject->context->answeredExcerpt);
     }
 
     public function testAnUnreachableAppViewLeavesTheRowsAlone(): void
