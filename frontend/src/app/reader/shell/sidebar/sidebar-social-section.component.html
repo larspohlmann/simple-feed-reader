@@ -28,6 +28,9 @@
       >
         <ng-container *ngTemplateOutlet="networkLogo" />
         <span class="label">{{ networkName }}</span>
+        @if (current.unreadCount > 0) {
+          <span class="sr-only">{{ current.unreadCount }}</span>
+        }
       </a>
       @if (current.networkAccounts.length > 0) {
         <app-sidebar-notifications-bell
