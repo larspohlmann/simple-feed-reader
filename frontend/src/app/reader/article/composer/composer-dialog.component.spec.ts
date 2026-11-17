@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { Observable, Subject, config, of, throwError } from 'rxjs';
+import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import {
   ComposerCardDto,
@@ -80,6 +81,7 @@ describe('ComposerDialogComponent', () => {
         { provide: DIALOG_DATA, useValue: replyTarget },
         { provide: SocialPostApi, useValue: api },
         { provide: PostNetworks, useValue: { connected } },
+        provideAccountIdentity(),
       ],
     });
     const fixture = TestBed.createComponent(ComposerDialogComponent);
