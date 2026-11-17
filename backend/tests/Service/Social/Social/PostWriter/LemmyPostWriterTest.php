@@ -8,7 +8,9 @@ use App\Entity\SocialAccount;
 use App\Service\Outbound\Fetch\IpValidator;
 use App\Service\Outbound\Fetch\UrlGuard;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostCommunityMissingException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Social\Exception\SocialPostTitleMissingException;
 use App\Service\Social\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Social\LemmyAccountApi;
 use App\Service\Social\Social\LemmyApiClient;
@@ -21,12 +23,15 @@ use App\Tests\Support\FetchWiring;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StaticDnsResolver;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class LemmyPostWriterTest extends TestCase
 {
     private const string COMMENT = 'POST https://lemmy.example/api/v3/comment';
+    private const string POST = 'POST https://lemmy.example/api/v3/post';
+    private const string ARTICLE = 'https://example.com/a';
     private const string PUBLISHED_ADDRESS = 'https://lemmy.example/comment/9001';
 
     public function testAReplyToAPostIsACommentOnIt(): void
@@ -93,7 +98,7 @@ final class LemmyPostWriterTest extends TestCase
 
     public function testAQuoteIsRefused(): void
     {
-        $this->expectExceptionObject(new SocialPostRefusedException('Lemmy takes no quotes or link posts.'));
+        $this->expectExceptionObject(new SocialPostRefusedException('Lemmy takes no quotes.'));
 
         $this->writer(new RoutedHttpClient([]))->quote(
             SocialPostModel::onLemmy($this->account(), '42', null),
@@ -101,15 +106,108 @@ final class LemmyPostWriterTest extends TestCase
         );
     }
 
-    public function testALinkPostIsRefused(): void
+    public function testALinkIsALinkPostInTheChosenCommunity(): void
     {
-        $this->expectExceptionObject(new SocialPostRefusedException('Lemmy takes no quotes or link posts.'));
+        $http = new RoutedHttpClient([self::POST => self::postCreated()]);
 
-        $this->writer(new RoutedHttpClient([]))->share(
+        $published = $this->writer($http)->share(
             $this->account(),
-            'https://example.com/article',
-            new PostDraftModel('Hi'),
+            self::ARTICLE,
+            new PostDraftModel('Worth a read.', language: 'de', title: 'Title', communityId: 7),
         );
+
+        self::assertSame(
+            '{"name":"Title","url":"https:\/\/example.com\/a","body":"Worth a read.","community_id":7}',
+            $http->requests[0]['body'],
+        );
+        self::assertContains('Authorization: Bearer ' . SocialAccounts::LEMMY_JWT, $http->requests[0]['headers']);
+        self::assertEquals(
+            new PublishedPostModel('https://lemmy.example/post/501', 'https://lemmy.example/post/501'),
+            $published,
+        );
+    }
+
+    public function testABlankTextLeavesOutTheBody(): void
+    {
+        $http = new RoutedHttpClient([self::POST => self::postCreated()]);
+
+        $this->writer($http)->share(
+            $this->account(),
+            self::ARTICLE,
+            new PostDraftModel(" \n", title: 'Title', communityId: 7),
+        );
+
+        self::assertSame(
+            '{"name":"Title","url":"https:\/\/example.com\/a","community_id":7}',
+            $http->requests[0]['body'],
+        );
+    }
+
+    public function testAnAnswerWithoutAPostAddressIsUnreachable(): void
+    {
+        $http = new RoutedHttpClient([self::POST => new MockResponse('{"post_view":{"post":{"id":1}}}')]);
+
+        $this->expectException(SocialNetworkUnreachableException::class);
+
+        $this->writer($http)->share(
+            $this->account(),
+            self::ARTICLE,
+            new PostDraftModel('', title: 'T', communityId: 7),
+        );
+    }
+
+    /** @param class-string<\Throwable> $exception */
+    #[DataProvider('refusedLinkDrafts')]
+    public function testAnIncompleteOrOverlongLinkIsRefusedAndNeverSent(PostDraftModel $draft, string $exception): void
+    {
+        $http = new RoutedHttpClient([]);
+
+        try {
+            $this->writer($http)->share($this->account(), self::ARTICLE, $draft);
+            self::fail('The link is not sent.');
+        } catch (\Throwable $thrown) {
+            self::assertInstanceOf($exception, $thrown);
+            self::assertSame([], $http->requests);
+        }
+    }
+
+    /** @return iterable<string, array{PostDraftModel, class-string<\Throwable>}> */
+    public static function refusedLinkDrafts(): iterable
+    {
+        yield 'without a community' => [
+            new PostDraftModel('Hi', title: 'Title'),
+            SocialPostCommunityMissingException::class,
+        ];
+        yield 'a whitespace title' => [
+            new PostDraftModel('Hi', title: "  \n", communityId: 7),
+            SocialPostTitleMissingException::class,
+        ];
+        yield 'no title' => [new PostDraftModel('Hi', communityId: 7), SocialPostTitleMissingException::class];
+        yield 'a title over two hundred' => [
+            new PostDraftModel('Hi', title: str_repeat('ä', 201), communityId: 7),
+            SocialPostTooLongException::class,
+        ];
+        yield 'a body over ten thousand' => [
+            new PostDraftModel(str_repeat('ä', 10001), title: 'Title', communityId: 7),
+            SocialPostTooLongException::class,
+        ];
+        yield 'the community is checked before the title' => [
+            new PostDraftModel('Hi'),
+            SocialPostCommunityMissingException::class,
+        ];
+    }
+
+    public function testATitleOfTwoHundredAndABodyOfTenThousandFit(): void
+    {
+        $http = new RoutedHttpClient([self::POST => self::postCreated()]);
+
+        $this->writer($http)->share(
+            $this->account(),
+            self::ARTICLE,
+            new PostDraftModel(str_repeat('ä', 10000), title: str_repeat('ä', 200), communityId: 7),
+        );
+
+        self::assertCount(1, $http->requests);
     }
 
     public function testADeletionIsRefused(): void
@@ -139,5 +237,12 @@ final class LemmyPostWriterTest extends TestCase
         $fixture = __DIR__ . '/../../../../Fixtures/lemmy/comment-create.json';
 
         return new MockResponse((string) file_get_contents($fixture));
+    }
+
+    private static function postCreated(): MockResponse
+    {
+        return new MockResponse(
+            '{"post_view":{"post":{"id":501,"ap_id":"https://lemmy.example/post/501","name":"Title"}}}',
+        );
     }
 }

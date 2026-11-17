@@ -334,6 +334,54 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         );
     }
 
+    public function testALinkPostIsPublishedOnLemmyInTheChosenCommunity(): void
+    {
+        $client = $this->clientRouting(['lemmy.example'], [
+            'POST https://lemmy.example/api/v3/post' => new MockResponse(
+                '{"post_view":{"post":{"id":501,"ap_id":"https://lemmy.example/post/501"}}}',
+            ),
+        ]);
+        $user = $this->signIn($client, 'link-post-lemmy@example.test');
+        $this->lemmyAccountOf($user);
+
+        $this->send($client, self::LINKS . 'lemmy&url=' . rawurlencode(self::ARTICLE_URL), [
+            'text' => 'Worth reading',
+            'title' => 'The article',
+            'communityId' => 7,
+        ]);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        self::assertSame(
+            ['address' => 'https://lemmy.example/post/501', 'url' => 'https://lemmy.example/post/501'],
+            $this->payload($client),
+        );
+        self::assertSame(
+            [
+                'name' => 'The article',
+                'url' => self::ARTICLE_URL,
+                'body' => 'Worth reading',
+                'community_id' => 7,
+            ],
+            json_decode($this->http->requests[0]['body'], true),
+        );
+    }
+
+    public function testALemmyLinkPostWithoutACommunityIsRefused(): void
+    {
+        $client = $this->clientRouting(['lemmy.example'], []);
+        $user = $this->signIn($client, 'link-post-lemmy-bare@example.test');
+        $this->lemmyAccountOf($user);
+
+        $this->send(
+            $client,
+            self::LINKS . 'lemmy&url=' . rawurlencode(self::ARTICLE_URL),
+            ['text' => '', 'title' => 'T'],
+        );
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame('social_post_community_missing', $this->payload($client)['type']);
+    }
+
     public function testBlankTextOnAQuotedLinkIsRefused(): void
     {
         $client = $this->clientRouting([...self::ROUTED_HOSTS, 'pds.example.test', 'public.api.bsky.app'], [
@@ -567,7 +615,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         ));
     }
 
-    /** @param array<string, string> $body */
+    /** @param array<string, int|string> $body */
     private function send(KernelBrowser $client, string $path, array $body): void
     {
         $client->request(

@@ -12,6 +12,8 @@ final readonly class PostDraftModel
      *
      * @param string|null $language       a language code such as "de"
      * @param string|null $idempotencyKey minted when the composer opened, so a resent reply is published once
+     * @param string|null $title          the Lemmy link post's title
+     * @param int|null    $communityId    the Lemmy community a link post goes to
      */
     public function __construct(
         public string $text,
@@ -19,6 +21,8 @@ final readonly class PostDraftModel
         public ?string $contentWarning = null,
         public ?string $language = null,
         public ?string $idempotencyKey = null,
+        public ?string $title = null,
+        public ?int $communityId = null,
     ) {
     }
 

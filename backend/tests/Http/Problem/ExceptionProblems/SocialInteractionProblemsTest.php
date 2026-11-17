@@ -11,8 +11,10 @@ use App\Service\Social\Social\Exception\NotASocialPostException;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Exception\SocialPostCommunityMissingException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Exception\SocialPostRemovedException;
+use App\Service\Social\Social\Exception\SocialPostTitleMissingException;
 use App\Service\Social\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -47,6 +49,16 @@ final class SocialInteractionProblemsTest extends TestCase
             Response::HTTP_GONE,
         ];
         yield 'post refused' => [new SocialPostRefusedException('x'), 'social_post_refused', Response::HTTP_CONFLICT];
+        yield 'link without a title' => [
+            new SocialPostTitleMissingException('x'),
+            'social_post_title_missing',
+            Response::HTTP_UNPROCESSABLE_ENTITY,
+        ];
+        yield 'link without a community' => [
+            new SocialPostCommunityMissingException('x'),
+            'social_post_community_missing',
+            Response::HTTP_UNPROCESSABLE_ENTITY,
+        ];
         yield 'reply too long' => [
             new SocialPostTooLongException('x'),
             'social_post_too_long',

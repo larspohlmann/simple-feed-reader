@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Social;
 
+use App\Service\Social\Social\Model\LemmyLinkModel;
 use App\Service\Social\Social\Model\PostDraftModel;
 use App\Service\Social\Social\Support\MastodonVisibility;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -23,6 +24,10 @@ final readonly class LinkPostDraftRequest
         public ?string $idempotencyKey = null,
         #[Assert\Positive]
         public ?int $accountId = null,
+        #[Assert\Length(max: LemmyLinkModel::MAX_TITLE_CHARACTERS)]
+        public ?string $title = null,
+        #[Assert\Positive]
+        public ?int $communityId = null,
     ) {
     }
 
@@ -34,6 +39,8 @@ final readonly class LinkPostDraftRequest
             $this->contentWarning,
             $this->language,
             $this->idempotencyKey,
+            $this->title,
+            $this->communityId,
         );
     }
 }
