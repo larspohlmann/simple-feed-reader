@@ -147,7 +147,10 @@ export class ComposerDialogComponent {
       .map((counter) => counter.lane);
     return this.lanes
       .pending()
-      .every((lane) => lane.context()?.canSend === true && !over.includes(lane.network));
+      .every(
+        (lane) =>
+          lane.context()?.canSend === true && lane.fieldsReady() && !over.includes(lane.network),
+      );
   });
   protected readonly accountLabel = computed(() =>
     this.crossposts() ? 'reader.composer.accountOn' : `${this.copy()}.account`,
@@ -236,6 +239,14 @@ export class ComposerDialogComponent {
 
   protected writeWarning(lane: ComposerLane, event: Event): void {
     lane.contentWarning.set(inputValue(event));
+  }
+
+  protected chooseCommunity(lane: ComposerLane, event: Event): void {
+    lane.community.set(Number(inputValue(event)));
+  }
+
+  protected writeTitle(lane: ComposerLane, event: Event): void {
+    lane.title.set(inputValue(event));
   }
 
   protected send(event: Event): void {

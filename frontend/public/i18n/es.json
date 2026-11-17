@@ -1796,6 +1796,10 @@
       },
       "addWarning": "Añadir una advertencia de contenido",
       "warning": "Advertencia de contenido",
+      "community": "Comunidad",
+      "chooseCommunity": "Elige una comunidad",
+      "title": "Título",
+      "noCommunities": "Suscríbete primero a una comunidad en Lemmy",
       "reply": {
         "loading": "Preparando la respuesta",
         "account": "Responder como",

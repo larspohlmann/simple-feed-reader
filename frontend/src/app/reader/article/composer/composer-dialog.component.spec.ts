@@ -51,6 +51,7 @@ describe('ComposerDialogComponent', () => {
     visibility: 'unlisted',
     text: '@ann@hachyderm.io ',
     target: QUOTED,
+    lemmy: null,
     ...overrides,
   });
 
@@ -1327,6 +1328,143 @@ describe('ComposerDialogComponent', () => {
         expect(note(fixture)?.textContent).toContain('Bluesky quotes this post');
         expect(note(fixture)?.textContent).not.toContain('shares this post as a link');
       });
+    });
+  });
+
+  describe('the Lemmy lane', () => {
+    const TITLE = 'The quiet return of the RSS reader';
+    const COMMUNITIES = [
+      { id: 41, handle: '!php@programming.dev' },
+      { id: 42, handle: '!rss@lemmy.world' },
+    ];
+    let lemmyCommunities: { id: number; handle: string }[];
+
+    const onLemmy = () =>
+      context({
+        kind: 'link',
+        accounts: [{ id: 8, handle: '@alice@lemmy.world' }],
+        accountId: 8,
+        maxCharacters: 10000,
+        visibility: null,
+        text: '',
+        target: STORY,
+        lemmy: { communities: lemmyCommunities, title: TITLE, maxTitleCharacters: 200 },
+      });
+    const onMastodon = () =>
+      context({ kind: 'link', text: TITLE, target: STORY, visibility: 'public' });
+
+    beforeEach(() => {
+      localStorage.clear();
+      lemmyCommunities = COMMUNITIES;
+      api.composer.mockImplementation((posted: PostTargetDto) =>
+        of(posted.network === 'lemmy' ? onLemmy() : onMastodon()),
+      );
+    });
+
+    const lemmyOnly = () => mount(article({ network: 'lemmy' }));
+    const communitySelect = (fixture: ReturnType<typeof mount>) =>
+      element(fixture).querySelector('[id^="reply-community"]') as HTMLSelectElement | null;
+    const titleInput = (fixture: ReturnType<typeof mount>) =>
+      element(fixture).querySelector('[id^="reply-title"]') as HTMLInputElement;
+    const titleCounter = (fixture: ReturnType<typeof mount>) =>
+      element(fixture).querySelector('.title-counter')!;
+    function chooseCommunity(fixture: ReturnType<typeof mount>, id: string): void {
+      communitySelect(fixture)!.value = id;
+      communitySelect(fixture)!.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+    }
+    function writeTitle(fixture: ReturnType<typeof mount>, title: string): void {
+      titleInput(fixture).value = title;
+      titleInput(fixture).dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+    }
+
+    it('offers the communities, first asking for one, and the title with its counter', () => {
+      const fixture = lemmyOnly();
+
+      const options = Array.from(communitySelect(fixture)!.options).map((option) =>
+        option.textContent?.trim(),
+      );
+      expect(options).toEqual(['Choose a community', '!php@programming.dev', '!rss@lemmy.world']);
+      expect(communitySelect(fixture)!.value).toBe('');
+      expect(titleInput(fixture).value).toBe(TITLE);
+      expect(titleCounter(fixture).textContent?.trim()).toBe('34 / 200');
+      expect(
+        textArea(fixture).compareDocumentPosition(communitySelect(fixture)!) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it('keeps Send off until a community is chosen and the title is not blank', () => {
+      const fixture = lemmyOnly();
+      expect(sendButton(fixture).disabled).toBe(true);
+
+      chooseCommunity(fixture, '42');
+      expect(sendButton(fixture).disabled).toBe(false);
+
+      writeTitle(fixture, '   ');
+      expect(sendButton(fixture).disabled).toBe(true);
+    });
+
+    it('turns the title counter red over the limit and Send off', () => {
+      const fixture = lemmyOnly();
+      chooseCommunity(fixture, '42');
+
+      writeTitle(fixture, 'x'.repeat(201));
+
+      expect(titleCounter(fixture).textContent?.trim()).toBe('201 / 200');
+      expect(titleCounter(fixture).classList).toContain('over');
+      expect(sendButton(fixture).disabled).toBe(true);
+    });
+
+    it('sends the chosen community and title, and preselects it next time', () => {
+      const fixture = lemmyOnly();
+      chooseCommunity(fixture, '42');
+      writeTitle(fixture, 'My title');
+
+      submit(fixture);
+
+      expect(api.send).toHaveBeenCalledWith(
+        expect.objectContaining({ network: 'lemmy' }),
+        expect.objectContaining({ accountId: 8, title: 'My title', communityId: 42 }),
+      );
+      TestBed.resetTestingModule();
+      const reopened = lemmyOnly();
+      expect(communitySelect(reopened)!.value).toBe('42');
+      expect(sendButton(reopened).disabled).toBe(false);
+    });
+
+    it('says to subscribe first instead of an empty select, and keeps Send off', () => {
+      lemmyCommunities = [];
+      const fixture = lemmyOnly();
+
+      expect(communitySelect(fixture)).toBeNull();
+      expect(element(fixture).textContent).toContain('Subscribe to a community on Lemmy first');
+      expect(sendButton(fixture).disabled).toBe(true);
+    });
+
+    it("sits after Mastodon's block and leaves with its pill", () => {
+      connected.set([
+        { network: 'mastodon', handles: ['@alice@mastodon.example'] },
+        { network: 'lemmy', handles: ['@alice@lemmy.world'] },
+      ]);
+      const fixture = mount(article());
+      expect(communitySelect(fixture)).toBeNull();
+
+      const lemmyPill = Array.from(
+        element(fixture).querySelectorAll('app-network-pills button'),
+      ).find((button) => button.textContent?.includes('Lemmy')) as HTMLButtonElement;
+      lemmyPill.click();
+      fixture.detectChanges();
+
+      const visibility = element(fixture).querySelector('#reply-visibility-mastodon')!;
+      expect(communitySelect(fixture)!.id).toBe('reply-community-lemmy');
+      expect(titleInput(fixture).id).toBe('reply-title-lemmy');
+      expect(
+        visibility.compareDocumentPosition(communitySelect(fixture)!) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(sendButton(fixture).disabled).toBe(true);
     });
   });
 });

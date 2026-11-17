@@ -59,7 +59,8 @@ textarea {
 }
 
 .fixed-url,
-.kind-note {
+.kind-note,
+.lemmy-note {
   display: flex;
   gap: var(--space-2);
   align-items: center;
@@ -69,6 +70,12 @@ textarea {
   overflow-wrap: anywhere;
 }
 
-.kind-note {
+.kind-note,
+.lemmy-note {
   margin: 0 0 var(--space-3);
+}
+
+.title-counter {
+  margin: calc(-1 * var(--space-2)) 0 var(--space-3);
+  text-align: right;
 }

@@ -136,6 +136,46 @@
               </app-field>
             }
           }
+          @if (laneContext.lemmy; as lemmy) {
+            @if (lemmy.communities.length === 0) {
+              <p class="lemmy-note">{{ 'reader.composer.noCommunities' | transloco }}</p>
+            } @else {
+              <app-field [label]="'reader.composer.community' | transloco">
+                <select
+                  [id]="controlId('community', lane)"
+                  [disabled]="sending() || lane.sent() !== null"
+                  (change)="chooseCommunity(lane, $event)"
+                >
+                  <option value="" disabled [selected]="lane.community() === null">
+                    {{ 'reader.composer.chooseCommunity' | transloco }}
+                  </option>
+                  @for (community of lemmy.communities; track community.id) {
+                    <option [value]="community.id" [selected]="community.id === lane.community()">
+                      {{ community.handle }}
+                    </option>
+                  }
+                </select>
+              </app-field>
+            }
+            <app-field [label]="'reader.composer.title' | transloco">
+              <input
+                [id]="controlId('title', lane)"
+                [value]="lane.title()"
+                [disabled]="sending() || lane.sent() !== null"
+                (input)="writeTitle(lane, $event)"
+              />
+            </app-field>
+            <p
+              class="counter title-counter"
+              [class.over]="lane.titleLength() > lemmy.maxTitleCharacters"
+              aria-live="polite"
+            >
+              {{
+                'reader.composer.counter'
+                  | transloco: { used: lane.titleLength(), max: lemmy.maxTitleCharacters }
+              }}
+            </p>
+          }
         }
       }
     }

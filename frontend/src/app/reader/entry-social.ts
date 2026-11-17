@@ -81,6 +81,14 @@ export interface ComposerContextDto {
   visibility: MastodonVisibility | null;
   text: string;
   target: ComposerSubjectDto;
+  lemmy: LemmyLinkFieldsDto | null;
+}
+
+/** What a Lemmy link post chooses from: the communities it may go to and the title it starts with. */
+export interface LemmyLinkFieldsDto {
+  communities: { id: number; handle: string }[];
+  title: string;
+  maxTitleCharacters: number;
 }
 
 /**
@@ -121,6 +129,8 @@ export interface PostDraftDto {
   idempotencyKey: string;
   visibility?: MastodonVisibility;
   contentWarning?: string;
+  title?: string;
+  communityId?: number;
 }
 
 /** A reply the network took: its address in the thread and where a browser shows it. */

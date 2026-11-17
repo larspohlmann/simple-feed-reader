@@ -1792,6 +1792,10 @@
       },
       "addWarning": "Add a content warning",
       "warning": "Content warning",
+      "community": "Community",
+      "chooseCommunity": "Choose a community",
+      "title": "Title",
+      "noCommunities": "Subscribe to a community on Lemmy first",
       "reply": {
         "loading": "Getting the reply ready",
         "account": "Reply as",

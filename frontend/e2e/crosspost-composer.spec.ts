@@ -49,6 +49,7 @@ function composerContext(network: 'bluesky' | 'mastodon'): ComposerContextDto {
         siteName: 'fixtures.invalid',
       },
     },
+    lemmy: null,
   };
 }
 
