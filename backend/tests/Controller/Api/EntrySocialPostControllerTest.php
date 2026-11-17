@@ -311,6 +311,18 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         self::assertSame([], $this->http->requests);
     }
 
+    public function testBlankReplyIsStillRefused(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
+        $user = $this->signIn($client, 'reply-empty@example.test');
+        $this->mastodonAccountOf($user);
+
+        $this->postReply($client, $this->mastodonPostFor($user), ['text' => '']);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame([], $this->http->requests);
+    }
+
     /** @return iterable<string, array{array<string, string>}> */
     public static function invalidReplies(): iterable
     {

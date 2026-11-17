@@ -20,6 +20,7 @@ use App\Service\Social\Social\Exception\SocialAccountNotFoundException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Social\Exception\SocialPostTextMissingException;
 use App\Service\Social\Social\LinkPosts;
 use App\Service\Social\Social\Model\ComposerDefaultsModel;
 use App\Service\Social\Social\Model\ComposerKind;
@@ -264,6 +265,22 @@ final class LinkPostsTest extends DbTestCase
             new PublishedPostModel(FakeMastodonNetwork::REPLY_URI, FakeMastodonNetwork::REPLY_URI),
             $published,
         );
+    }
+
+    public function testBlankTextQuoteThrows(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
+
+        $this->assertRefused(
+            fn () => $this->linkPosts()->share(
+                $this->owner,
+                self::target(null, self::STATUS_URL),
+                new PostDraftModel('  '),
+            ),
+            SocialPostTextMissingException::class,
+            'A quote of a post needs some text of its own.',
+        );
+        self::assertSame(['resolve ' . self::STATUS_URL], $this->mastodon->calls);
     }
 
     public function testAStatusWhoseAuthorForbidsQuotingIsSharedAsALink(): void
