@@ -56,6 +56,16 @@ final class ProfileFeedTitleTest extends TestCase
         self::assertSame('simplefeedreader - Lemmy - The World', $title);
     }
 
+    public function testALemmyUserFeedNamesTheUserBeforeTheSite(): void
+    {
+        $title = (new ProfileFeedTitle())->of(
+            'https://lemmy.world/feeds/u/lars_pohlmann.xml',
+            'Lemmy.World - lars_pohlmann',
+        );
+
+        self::assertSame('lars_pohlmann - Lemmy.World', $title);
+    }
+
     /** @return iterable<string, array{string, string}> */
     public static function untouchedTitles(): iterable
     {

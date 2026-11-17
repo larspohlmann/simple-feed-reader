@@ -37,7 +37,8 @@ final readonly class ProfileFeedTitle implements FeedTitleInterface
 
     private function lemmyTitle(string $feedUrl, string $channelTitle): string
     {
-        $community = strstr((string) ProfileFeedUrl::identityOf(SocialNetwork::Lemmy, $feedUrl), '@', true);
+        $identity = ltrim((string) ProfileFeedUrl::identityOf(SocialNetwork::Lemmy, $feedUrl), '@');
+        $community = strstr($identity, '@', true);
         $siteThenCommunity = '/^(?<site>.*\S) - (?<community>' . preg_quote((string) $community, '/') . ')$/sui';
         if (1 !== preg_match($siteThenCommunity, $channelTitle, $match)) {
             return $channelTitle;

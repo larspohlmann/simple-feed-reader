@@ -90,7 +90,13 @@ final class ProfileFeedUrlTest extends TestCase
         yield 'upper case and a query' => ['https://Feddit.Example/feeds/c/RSS.xml?sort=New', 'rss@feddit.example'];
         yield 'over http' => ['http://feddit.example/feeds/c/rss.xml', 'rss@feddit.example'];
         yield 'on a port' => ['https://feddit.example:8443/feeds/c/rss.xml', 'rss@feddit.example:8443'];
-        yield 'a user feed' => ['https://feddit.example/feeds/u/ada.xml', null];
+        yield 'a user feed' => ['https://feddit.example/feeds/u/ada.xml', '@ada@feddit.example'];
+        yield 'a user feed with capitals and a query' => [
+            'https://Feddit.Example/feeds/u/Ada.xml?sort=New',
+            '@ada@feddit.example',
+        ];
+        yield 'a user feed on a port' => ['https://feddit.example:8443/feeds/u/ada.xml', '@ada@feddit.example:8443'];
+        yield 'a nested user path' => ['https://feddit.example/feeds/u/a/b.xml', null];
         yield 'no extension' => ['https://feddit.example/feeds/c/rss', null];
         yield 'a nested path' => ['https://feddit.example/feeds/c/a/b.xml', null];
         yield 'over ftp' => ['ftp://feddit.example/feeds/c/rss.xml', null];
@@ -118,6 +124,23 @@ final class ProfileFeedUrlTest extends TestCase
             ProfileFeedUrl::of(SocialNetwork::Lemmy, 'rss@feddit.example:8443'),
         );
         self::assertNull(ProfileFeedUrl::of(SocialNetwork::Lemmy, 'rss'));
+    }
+
+    public function testAUserAndACommunityOfOneNameAreTwoIdentities(): void
+    {
+        self::assertSame(
+            'ada@feddit.example',
+            ProfileFeedUrl::identityOf(SocialNetwork::Lemmy, 'https://feddit.example/feeds/c/ada.xml'),
+        );
+        self::assertSame(
+            '@ada@feddit.example',
+            ProfileFeedUrl::identityOf(SocialNetwork::Lemmy, 'https://feddit.example/feeds/u/ada.xml'),
+        );
+    }
+
+    public function testOfBuildsNoUserFeed(): void
+    {
+        self::assertNull(ProfileFeedUrl::of(SocialNetwork::Lemmy, '@ada@feddit.example'));
     }
 
     public function testNetworkOfNamesTheNetworkWhoseProfileFeedTheUrlIs(): void

@@ -14,6 +14,7 @@ final class ProfileFeedUrl
     private const string BLUESKY_PROFILE_PAGE = '#^/profile/(?<actor>[^/@]+)(?<rss>/rss)?/?$#';
     private const string MASTODON_PATH = '#^/@([^/@]+)\.rss$#';
     private const string LEMMY_COMMUNITY_PATH = '#^/feeds/c/([^/]+)\.xml$#';
+    private const string LEMMY_USER_PATH = '#^/feeds/u/([^/]+)\.xml$#';
 
     public static function bluesky(string $did): string
     {
@@ -147,7 +148,15 @@ final class ProfileFeedUrl
 
     private static function lemmyIdentity(string $host, string $path): ?string
     {
-        return 1 === preg_match(self::LEMMY_COMMUNITY_PATH, $path, $match) ? strtolower($match[1]) . '@' . $host : null;
+        if (1 === preg_match(self::LEMMY_COMMUNITY_PATH, $path, $match)) {
+            return strtolower($match[1]) . '@' . $host;
+        }
+
+        if (1 === preg_match(self::LEMMY_USER_PATH, $path, $match)) {
+            return '@' . strtolower($match[1]) . '@' . $host;
+        }
+
+        return null;
     }
 
     private function __construct()
