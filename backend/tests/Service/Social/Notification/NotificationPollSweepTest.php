@@ -46,7 +46,7 @@ final class NotificationPollSweepTest extends DbTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->clock = new MockClock('now', 'UTC');
+        $this->clock = new MockClock('2026-11-17 12:00:00', 'UTC');
         $this->throttle = NotificationPollWiring::throttle($this->clock);
         $this->logger = new RecordingLogger();
         $polls = $this->entityManager->getRepository(SocialNotificationPoll::class);
