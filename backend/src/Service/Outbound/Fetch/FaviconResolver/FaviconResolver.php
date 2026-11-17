@@ -14,9 +14,9 @@ use App\Service\Outbound\Fetch\Support\LemmyPageIcon;
 use Psr\Log\LoggerInterface;
 
 /**
- * Best-effort favicons for a batch of feeds' sites: the largest https icon each homepage's <link> tags advertise,
- * else a Lemmy actor's or instance's own icon, else /favicon.ico. Never throws: a favicon must not disturb the
- * refresh that asked for it.
+ * Best-effort favicons for a batch of feeds' sites: a Lemmy actor's avatar or icon, else the largest https icon each
+ * homepage's <link> tags advertise, else a Lemmy instance's site icon, else /favicon.ico. Never throws: a favicon
+ * must not disturb the refresh that asked for it.
  */
 final readonly class FaviconResolver implements FaviconResolverInterface
 {
@@ -135,7 +135,9 @@ final readonly class FaviconResolver implements FaviconResolverInterface
 
         $pageUrls = new PageUrls($response->finalUrl);
 
-        return $this->pickIcon($body, $pageUrls) ?? LemmyPageIcon::in($body, $pageUrls);
+        return LemmyPageIcon::actorIn($body, $pageUrls)
+            ?? $this->pickIcon($body, $pageUrls)
+            ?? LemmyPageIcon::siteIn($body);
     }
 
     private function pickIcon(string $html, PageUrls $pageUrls): ?string

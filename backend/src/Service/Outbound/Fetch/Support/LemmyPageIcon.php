@@ -8,15 +8,14 @@ use App\Service\Foundation\Url\Support\HttpsImageUrl;
 use App\Service\Outbound\Fetch\Pass\PageUrls;
 
 /**
- * For FaviconResolver: lemmy-ui advertises no https icon, but the person, community and site records of the
- * `window.isoData` state it embeds, a script literal that is not strict JSON, carry the originals.
+ * For FaviconResolver: the person, community and site icons in lemmy-ui's `window.isoData` script literal.
  */
 final class LemmyPageIcon
 {
-    private const string RECORD_BODY = '(\{(?:[^{}"]++|"(?:[^"\\\\]++|\\\\.)*+")*+\})/';
-
     // Strings are stepped over whole, so a brace in a sidebar never ends the flat record early; possessive
     // quantifiers keep a long sidebar from exhausting PCRE's JIT stack.
+    private const string RECORD_BODY = '(\{(?:[^{}"]++|"(?:[^"\\\\]++|\\\\.)*+")*+\})/';
+
     private const string SITE_RECORD = '/"site_view":\{"site":' . self::RECORD_BODY;
 
     private const string COMMUNITY_RECORD = '/"community_view":\{"community":' . self::RECORD_BODY;
@@ -25,28 +24,48 @@ final class LemmyPageIcon
 
     private const string STATIC_BUILD = '#/static/([0-9a-z]+)/assets/#';
 
-    public static function in(string $html, PageUrls $pageUrls): ?string
+    public static function actorIn(string $html, PageUrls $pageUrls): ?string
     {
-        $actorIcon = self::hasRecord(self::PERSON_RECORD, $html)
-            ? self::field(self::PERSON_RECORD, 'avatar', $html) ?? self::mouse($html, $pageUrls)
-            : self::field(self::COMMUNITY_RECORD, 'icon', $html);
+        $person = self::record(self::PERSON_RECORD, $html);
+        if (null === $person) {
+            return self::field(self::COMMUNITY_RECORD, 'icon', $html);
+        }
 
-        return $actorIcon ?? self::field(self::SITE_RECORD, 'icon', $html);
+        return self::imageUrl($person, 'avatar') ?? self::mouse($html, $pageUrls);
     }
 
-    private static function hasRecord(string $pattern, string $html): bool
+    public static function siteIn(string $html): ?string
     {
-        return 1 === preg_match($pattern, $html);
+        return self::field(self::SITE_RECORD, 'icon', $html);
     }
 
     private static function field(string $pattern, string $key, string $html): ?string
+    {
+        $record = self::record($pattern, $html);
+
+        return null === $record ? null : self::imageUrl($record, $key);
+    }
+
+    /**
+     * @return array<array-key, mixed>|null
+     */
+    private static function record(string $pattern, string $html): ?array
     {
         if (1 !== preg_match($pattern, $html, $matches)) {
             return null;
         }
 
         $record = json_decode($matches[1], true);
-        $value = \is_array($record) ? $record[$key] ?? null : null;
+
+        return \is_array($record) ? $record : null;
+    }
+
+    /**
+     * @param array<array-key, mixed> $record
+     */
+    private static function imageUrl(array $record, string $key): ?string
+    {
+        $value = $record[$key] ?? null;
 
         return HttpsImageUrl::orNull(\is_string($value) ? $value : null);
     }

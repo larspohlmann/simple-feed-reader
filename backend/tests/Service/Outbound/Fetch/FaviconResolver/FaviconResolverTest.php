@@ -460,8 +460,11 @@ final class FaviconResolverTest extends TestCase
     ): FetchResponseModel {
         $escapedSlash = '\\' . 'u002F';
 
+        $instanceIconLink = '' === $actorFragment ? '' : '<link id="favicon" rel="shortcut icon" type="image/x-icon"'
+            . ' href=https://lemmy.example.com/pictrs/image/site.png />';
+
         return $this->page(
-            '<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgo=">' . $extraHead
+            '<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgo=">' . $instanceIconLink . $extraHead
             . '<script>window.isoData = {"path":"/","site_res":{"site_view":{"site":'
             . str_replace('/', $escapedSlash, $siteRecord)
             . ',"local_site":{"id":1}}}' . str_replace('/', $escapedSlash, $actorFragment)
