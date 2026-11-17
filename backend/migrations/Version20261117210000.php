@@ -21,14 +21,15 @@ final class Version20261117210000 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        $this->skipIf($schema->getTable(self::TABLE)->hasColumn(self::COLUMN), 'Already applied.');
-
-        $this->addSql(\sprintf(
-            'ALTER TABLE %s ADD COLUMN %s %s DEFAULT 0 NOT NULL',
-            self::TABLE,
-            self::COLUMN,
-            $this->booleanType(),
-        ));
+        $this->abortIfUnsupportedPlatform();
+        if (!$schema->getTable(self::TABLE)->hasColumn(self::COLUMN)) {
+            $this->addSql(\sprintf(
+                'ALTER TABLE %s ADD COLUMN %s %s DEFAULT 0 NOT NULL',
+                self::TABLE,
+                self::COLUMN,
+                $this->booleanType(),
+            ));
+        }
         $this->addSql(\sprintf(
             "UPDATE %s SET kind = 'reply', %s = 1 WHERE kind = 'comment_reply'",
             self::TABLE,
@@ -56,8 +57,6 @@ final class Version20261117210000 extends AbstractMigration
 
     private function booleanType(): string
     {
-        $this->abortIfUnsupportedPlatform();
-
         return $this->connection->getDatabasePlatform() instanceof SQLitePlatform ? 'BOOLEAN' : 'TINYINT';
     }
 
