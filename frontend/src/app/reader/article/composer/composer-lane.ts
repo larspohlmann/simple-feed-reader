@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Signal, WritableSignal, computed, inject, signal } from '@angular/core';
 import { TranslocoService } from '@jsverse/transloco';
-import { Observable, Subscription, map, tap } from 'rxjs';
+import { Observable, Subject, Subscription, map, tap } from 'rxjs';
 import { SocialNetworkName } from '../../../core/social-network';
 import { parseProblem, problemText } from '../../../core/problem';
 import { randomUuid } from '../../../shared/random-uuid';
@@ -15,7 +15,7 @@ import {
 import { SocialPostApi } from '../../social-post-api';
 import { SentPost } from './composed-post';
 
-export type ContextState =
+type ContextState =
   | { status: 'idle' }
   | { status: 'loading' }
   | { status: 'ready'; context: ComposerContextDto }
@@ -35,7 +35,7 @@ export class ComposerLane {
   private readonly api = inject(SocialPostApi);
   private readonly i18n = inject(TranslocoService);
   readonly network: SocialNetworkName;
-  readonly idempotencyKey = randomUuid();
+  private readonly idempotencyKey = randomUuid();
   readonly active: WritableSignal<boolean> = signal(false);
   /** Mastodon's own fields, which the lane carries only while its context offers a visibility. */
   readonly visibility: WritableSignal<MastodonVisibility | null> = signal(null);
@@ -45,11 +45,11 @@ export class ComposerLane {
   private readonly chosenAccountId = signal<number | undefined>(undefined);
   private readonly sentPost = signal<SentPost | null>(null);
   private readonly sendFailure = signal<string | null>(null);
+  private readonly loadFailure = new Subject<void>();
   private visibilityChosen = false;
   private loading = Subscription.EMPTY;
 
   readonly state: Signal<ContextState> = this.loadState.asReadonly();
-  readonly accountId: Signal<number | undefined> = this.chosenAccountId.asReadonly();
   readonly sent: Signal<SentPost | null> = this.sentPost.asReadonly();
   readonly sendError: Signal<string | null> = this.sendFailure.asReadonly();
   readonly context = computed(() => {
@@ -60,11 +60,15 @@ export class ComposerLane {
     const state = this.loadState();
     return state.status === 'failed' ? state.message : null;
   });
+  readonly error = computed(() => {
+    const loadError = this.loadError();
+    if (loadError !== null) return { message: loadError, retries: true };
+    const sendError = this.sendFailure();
+    return sendError === null ? null : { message: sendError, retries: false };
+  });
+  readonly loadFailed: Observable<void> = this.loadFailure.asObservable();
 
-  constructor(
-    readonly target: PostTargetDto,
-    private readonly loadFailed: (lane: ComposerLane) => void,
-  ) {
+  constructor(readonly target: PostTargetDto) {
     this.network = target.network;
   }
 
@@ -76,7 +80,7 @@ export class ComposerLane {
       next: (context) => this.adopt(context),
       error: (error: HttpErrorResponse) => {
         this.loadState.set({ status: 'failed', message: this.messageOf(error) });
-        this.loadFailed(this);
+        this.loadFailure.next();
       },
     });
   }
@@ -121,6 +125,7 @@ export class ComposerLane {
 
   dispose(): void {
     this.loading.unsubscribe();
+    this.loadFailure.complete();
   }
 
   private adopt(context: ComposerContextDto): void {

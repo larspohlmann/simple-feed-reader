@@ -50,18 +50,15 @@ describe('NetworkPillsComponent', () => {
   });
 
   it('locks a sent pill as posted', () => {
-    const { buttons, toggled } = mount([
+    const { buttons } = mount([
       lane('bluesky', { active: true, sent: true }),
       lane('mastodon', { active: true }),
     ]);
-
-    buttons[0].click();
 
     expect(buttons[0].classList).toContain('sent');
     expect(buttons[0].getAttribute('aria-disabled')).toBe('true');
     expect(buttons[0].textContent).toContain('✓ Posted');
     expect(buttons[1].getAttribute('aria-disabled')).toBeNull();
-    expect(toggled).not.toHaveBeenCalled();
   });
 
   it('marks a pill whose load or send failed', () => {

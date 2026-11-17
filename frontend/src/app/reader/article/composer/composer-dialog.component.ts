@@ -12,16 +12,17 @@ import {
 import { NgTemplateOutlet } from '@angular/common';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { filter, finalize, merge } from 'rxjs';
+import { LanguageService } from '../../../core/i18n/language.service';
 import { networkList } from '../../../core/network-list';
 import { SOCIAL_NETWORK_NAMES } from '../../../core/social-network';
 import { ButtonComponent } from '../../../shared/button/button.component';
 import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
 import { FieldComponent } from '../../../shared/field/field.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
-import { inputValue } from '../../../shared/input-value';
+import { inputChecked, inputValue } from '../../../shared/input-value';
 import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
 import { OverlayPanelComponent } from '../../../shared/overlay-panel/overlay-panel.component';
 import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
@@ -73,11 +74,8 @@ export class ComposerDialogComponent {
   protected readonly ref = inject<DialogRef<SentPost[]>>(DialogRef);
   protected readonly target = inject<PostTargetDto>(DIALOG_DATA);
   protected readonly lanes = inject(ComposerLanes);
-  private readonly i18n = inject(TranslocoService);
+  private readonly language = inject(LanguageService).lang;
   private readonly textField = viewChild<ElementRef<HTMLTextAreaElement>>('textField');
-  private readonly language = toSignal(this.i18n.langChanges$, {
-    initialValue: this.i18n.getActiveLang(),
-  });
 
   protected readonly visibilities = MASTODON_VISIBILITIES;
   protected readonly names = SOCIAL_NETWORK_NAMES;
@@ -90,19 +88,17 @@ export class ComposerDialogComponent {
   });
   private readonly caretBeforeText = this.target.kind === 'link' && this.target.quote !== null;
   protected readonly sending = signal(false);
+  private readonly holdsOpen = computed(() => this.sending() || this.lanes.sentPosts().length > 0);
 
-  /** The primary lane, or while its context is missing the first active lane that has one. */
-  private readonly shown = computed(() => {
-    const primary = this.primary();
-    if (primary.context() !== null) return primary;
-    return this.lanes.active().find((lane) => lane.context() !== null) ?? primary;
-  });
-  protected readonly context = computed(() => this.shown().context());
+  protected readonly context = computed(() => this.primary().context());
   private readonly kind = linkedSignal<ComposerContextDto | null, ComposerKind>({
     source: this.context,
     computation: (context, previous) => context?.kind ?? previous?.value ?? this.target.kind,
   });
-  private readonly crossposts = computed(() => this.lanes.active().length > 1);
+  private readonly activeNetworks = computed(() =>
+    this.lanes.active().map(({ network }) => network),
+  );
+  private readonly crossposts = computed(() => this.activeNetworks().length > 1);
   protected readonly forbiddenKeys = computed(() =>
     this.lanes.active().flatMap((lane) => {
       const context = lane.context();
@@ -113,14 +109,10 @@ export class ComposerDialogComponent {
   /** Where the words that differ between a reply, a quote and a link post live. */
   protected readonly copy = computed(() => `reader.composer.${this.kind()}`);
   protected readonly heading = computed(() => {
-    const active = this.lanes.active();
-    if (active.length < 2) {
-      return { key: `reader.${this.kind()}.${this.shown().network}`, params: {} };
+    if (!this.crossposts()) {
+      return { key: `reader.${this.kind()}.${this.primary().network}`, params: {} };
     }
-    const networks = networkList(
-      active.map(({ network }) => network),
-      this.language(),
-    );
+    const networks = networkList(this.activeNetworks(), this.language());
     return { key: 'reader.link.many', params: { networks } };
   });
   protected readonly sendLabel = computed(() => {
@@ -135,7 +127,7 @@ export class ComposerDialogComponent {
     return { key: 'reader.composer.retry', params: { network } };
   });
   private readonly sendKey = computed(() => {
-    const count = this.lanes.active().length;
+    const count = this.activeNetworks().length;
     if (count === 2) return 'reader.composer.link.sendBoth';
     return count > 2 ? 'reader.composer.link.send' : `${this.copy()}.send`;
   });
@@ -144,17 +136,19 @@ export class ComposerDialogComponent {
       const max = lane.context()?.maxCharacters;
       if (max === undefined) return [];
       const used = postLength(this.text(), lane.network);
-      return [{ network: this.names[lane.network], used, max, over: used > max }];
+      return [
+        { lane: lane.network, network: this.names[lane.network], used, max, over: used > max },
+      ];
     }),
   );
-  private readonly pendingFit = computed(() =>
-    this.lanes.pending().every((lane) => {
-      const context = lane.context();
-      return (
-        context?.canSend === true && postLength(this.text(), lane.network) <= context.maxCharacters
-      );
-    }),
-  );
+  private readonly pendingFit = computed(() => {
+    const over = this.counters()
+      .filter((counter) => counter.over)
+      .map((counter) => counter.lane);
+    return this.lanes
+      .pending()
+      .every((lane) => lane.context()?.canSend === true && !over.includes(lane.network));
+  });
   protected readonly accountLabel = computed(() =>
     this.crossposts() ? 'reader.composer.accountOn' : `${this.copy()}.account`,
   );
@@ -209,7 +203,6 @@ export class ComposerDialogComponent {
     if (this.caretBeforeText && !this.textTouched) field.setSelectionRange(0, 0);
   }
 
-  /** Lane controls keep today's ids in a one-network composer and carry the network beside pills. */
   protected networkName(lane: ComposerLane): string {
     return this.names[lane.network];
   }
@@ -238,14 +231,13 @@ export class ComposerDialogComponent {
   }
 
   protected toggleWarning(lane: ComposerLane, event: Event): void {
-    lane.contentWarning.set((event.target as HTMLInputElement).checked ? '' : null);
+    lane.contentWarning.set(inputChecked(event) ? '' : null);
   }
 
   protected writeWarning(lane: ComposerLane, event: Event): void {
     lane.contentWarning.set(inputValue(event));
   }
 
-  /** Settling in finalize means a send that throws can never leave the composer unclosable. */
   protected send(event: Event): void {
     event.preventDefault();
     if (!this.canSend()) return;
@@ -264,12 +256,12 @@ export class ComposerDialogComponent {
 
   private holdOpen(sending: boolean): void {
     this.sending.set(sending);
-    this.ref.disableClose = sending || this.lanes.sentPosts().length > 0;
+    this.ref.disableClose = this.holdsOpen();
   }
 
   /** The dialog closes itself on Escape or a backdrop click until a post went out. */
   private dismiss(): void {
-    if (this.ref.disableClose && !this.sending()) this.cancel();
+    if (this.holdsOpen() && !this.sending()) this.cancel();
   }
 
   private closeOnceAllSent(): void {

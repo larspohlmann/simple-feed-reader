@@ -10,7 +10,7 @@
     [attr.aria-pressed]="lane.active()"
     [attr.aria-disabled]="sent ? 'true' : null"
     [disabled]="disabled()"
-    (click)="press(lane)"
+    (click)="toggleNetwork.emit(lane.network)"
   >
     <app-network-logo [network]="lane.network" />
     {{ names[lane.network] }}

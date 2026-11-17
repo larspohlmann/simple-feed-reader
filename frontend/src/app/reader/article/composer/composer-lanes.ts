@@ -8,7 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { Observable, catchError, defer, forkJoin, map, of } from 'rxjs';
-import { LINK_POST_NETWORKS, SocialNetworkName } from '../../../core/social-network';
+import { SocialNetworkName } from '../../../core/social-network';
 import { PostTargetDto } from '../../entry-social';
 import { PostNetworks } from '../share/post-networks.service';
 import { SentPost } from './composed-post';
@@ -36,10 +36,11 @@ export class ComposerLanes {
     if (picked === undefined) throw new Error('ComposerLanes.init has not run');
     return picked;
   });
-  /** The lane whose subject the dialog shows. */
+  /** The lane whose subject the dialog shows: the first active one with a context, the picked one ahead. */
   readonly primary = computed(() => {
     const picked = this.picked();
-    return picked.active() ? picked : (this.active()[0] ?? picked);
+    const candidates = picked.active() ? [picked, ...this.active()] : this.active();
+    return candidates.find((lane) => lane.context() !== null) ?? candidates[0] ?? picked;
   });
 
   constructor() {
@@ -49,7 +50,11 @@ export class ComposerLanes {
   init(target: PostTargetDto): void {
     this.dispose();
     this.pickedNetwork.set(target.network);
-    this.built.set(this.networksFor(target).map((network) => this.laneFor({ ...target, network })));
+    const lanes = runInInjectionContext(this.injector, () =>
+      this.networksFor(target).map((network) => new ComposerLane({ ...target, network })),
+    );
+    for (const lane of lanes) lane.loadFailed.subscribe(() => this.switchOff(lane));
+    this.built.set(lanes);
     this.picked().activate();
   }
 
@@ -61,7 +66,7 @@ export class ComposerLanes {
       lane.activate();
       return;
     }
-    if (this.active().length > 1) lane.deactivate();
+    this.switchOff(lane);
   }
 
   /** Posts every pending lane at once and answers once all have; each lane keeps its own outcome. */
@@ -73,22 +78,13 @@ export class ComposerLanes {
     ).pipe(map(() => undefined));
   }
 
-  private laneFor(target: PostTargetDto): ComposerLane {
-    return runInInjectionContext(
-      this.injector,
-      () => new ComposerLane(target, (lane) => this.dropFailed(lane)),
-    );
-  }
-
   private networksFor(target: PostTargetDto): SocialNetworkName[] {
     if (target.kind !== 'link') return [target.network];
     const connected = this.postNetworks.connected().map(({ network }) => network);
-    return LINK_POST_NETWORKS.filter(
-      (network) => network === target.network || connected.includes(network),
-    );
+    return connected.includes(target.network) ? connected : [target.network];
   }
 
-  private dropFailed(lane: ComposerLane): void {
+  private switchOff(lane: ComposerLane): void {
     if (this.active().length > 1) lane.deactivate();
   }
 

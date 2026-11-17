@@ -8,20 +8,14 @@
         (toggleNetwork)="lanes.toggle($event)"
       />
       @for (lane of lanes.lanes(); track lane.network) {
-        @if (lane.loadError(); as message) {
+        @if (lane.error(); as error) {
           <app-error-banner
             [message]="
-              'reader.composer.networkError' | transloco: { network: names[lane.network], message }
+              'reader.composer.networkError'
+                | transloco: { network: names[lane.network], message: error.message }
             "
-            [actionLabel]="'reader.retry' | transloco"
+            [actionLabel]="error.retries ? ('reader.retry' | transloco) : null"
             (action)="lane.activate()"
-          />
-        }
-        @if (lane.sendError(); as message) {
-          <app-error-banner
-            [message]="
-              'reader.composer.networkError' | transloco: { network: names[lane.network], message }
-            "
           />
         }
       }

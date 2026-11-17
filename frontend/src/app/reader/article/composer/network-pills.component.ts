@@ -23,8 +23,4 @@ export class NetworkPillsComponent {
   readonly toggleNetwork = output<SocialNetworkName>();
 
   protected readonly names = SOCIAL_NETWORK_NAMES;
-
-  protected press(lane: PillLane): void {
-    if (lane.sent() === null) this.toggleNetwork.emit(lane.network);
-  }
 }

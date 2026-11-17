@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { LanguageService } from '../../../core/i18n/language.service';
 import { networkList } from '../../../core/network-list';
 import { ButtonComponent } from '../../../shared/button/button.component';
 import { openExternal } from '../../../shared/open-external';
@@ -26,6 +27,7 @@ import { ComposerSubjectComponent } from './composer-subject.component';
 export class PostSentDialogComponent {
   protected readonly ref = inject(DialogRef);
   private readonly transloco = inject(TranslocoService);
+  private readonly language = inject(LanguageService).lang;
   protected readonly posts = inject<SentPost[]>(DIALOG_DATA);
   protected readonly single = this.posts.length === 1 ? this.posts[0] : null;
   protected readonly firstOpenable = this.posts.find(({ url }) => url !== null);
@@ -42,7 +44,7 @@ export class PostSentDialogComponent {
     }
     const networks = networkList(
       posts.map(({ network }) => network),
-      this.transloco.getActiveLang(),
+      this.language(),
     );
     return this.transloco.translate('reader.posted.many', { networks });
   }
