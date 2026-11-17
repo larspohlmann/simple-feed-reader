@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Notification\NotificationContextSource;
 
-use App\Entity\NotificationActor;
-use App\Entity\NotificationSubject;
 use App\Enum\SocialNotificationKind;
 use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Notification\NotificationContextSource\MastodonNotificationContextSource;
+use App\Tests\Support\NotificationRows;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\TestCase;
@@ -119,13 +118,9 @@ final class MastodonNotificationContextSourceTest extends TestCase
 
     private static function row(string $remoteId, string $answeredId): FetchedNotificationModel
     {
-        return new FetchedNotificationModel(
+        return NotificationRows::fetched(
             $remoteId,
             SocialNotificationKind::Reply,
-            new NotificationActor('dave', null, null, 'https://mastodon.example/@dave'),
-            new NotificationSubject($remoteId, 'a reply', 'https://mastodon.example/@dave/5001'),
-            new \DateTimeImmutable('2026-11-16 09:00:00', new \DateTimeZone('UTC')),
-            false,
             new ContextReferenceModel(answeredId: $answeredId),
         );
     }

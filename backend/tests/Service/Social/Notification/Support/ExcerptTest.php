@@ -29,4 +29,11 @@ final class ExcerptTest extends TestCase
         self::assertIsString($excerpt);
         self::assertTrue(mb_check_encoding($excerpt, 'UTF-8'));
     }
+
+    public function testOfHtmlReadsBlocksAsPlainTextAndNullsBlank(): void
+    {
+        self::assertSame('one two', Excerpt::ofHtml('<p>one</p><p>two</p>'));
+        self::assertNull(Excerpt::ofHtml(null));
+        self::assertNull(Excerpt::ofHtml('<p> </p>'));
+    }
 }

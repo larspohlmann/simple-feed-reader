@@ -7,9 +7,7 @@ namespace App\Service\Social\Notification\NotificationContextSource;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Foundation\Text\MarkdownHtml;
-use App\Service\Foundation\Text\Support\PlainText;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
-use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Notification\Support\Excerpt;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
@@ -28,6 +26,7 @@ final readonly class LemmyNotificationContextSource implements NotificationConte
     public function withContext(SocialAccount $account, array $fresh): array
     {
         $rows = [];
+        $excerpts = [];
         $throttled = false;
         foreach ($fresh as $row) {
             $answeredId = $row->references->answeredId;
@@ -35,33 +34,32 @@ final readonly class LemmyNotificationContextSource implements NotificationConte
                 $rows[] = $row;
                 continue;
             }
-            try {
-                $rows[] = $this->withAnswered($account, $row, $answeredId);
-            } catch (SocialNetworkThrottledException) {
-                $throttled = true;
-                $rows[] = $row;
-            } catch (SocialPostNotFoundException | SocialPostRefusedException | SocialNetworkUnreachableException) {
-                $rows[] = $row;
+            if (!array_key_exists($answeredId, $excerpts)) {
+                try {
+                    $excerpts[$answeredId] = $this->excerptOf($account, $answeredId);
+                } catch (SocialNetworkThrottledException) {
+                    $throttled = true;
+                    $rows[] = $row;
+                    continue;
+                } catch (SocialPostNotFoundException | SocialPostRefusedException | SocialNetworkUnreachableException) {
+                    $excerpts[$answeredId] = null;
+                }
             }
+            $rows[] = $excerpts[$answeredId] === null
+                ? $row
+                : $row->withContext($row->subject->context->withAnsweredExcerpt($excerpts[$answeredId]));
         }
 
         return $rows;
     }
 
-    private function withAnswered(
-        SocialAccount $account,
-        FetchedNotificationModel $row,
-        string $answeredId,
-    ): FetchedNotificationModel {
+    private function excerptOf(SocialAccount $account, string $answeredId): ?string
+    {
         $content = JsonNodeModel::of($this->lemmy->get($account, '/api/v3/comment?id=' . $answeredId)->json())
             ->node('comment_view')
             ->node('comment')
             ->string('content');
-        if ($content === null) {
-            return $row;
-        }
-        $answered = Excerpt::of(PlainText::fromHtmlBlocks($this->markdown->of($content)));
 
-        return $row->withContext($row->subject->context->withAnsweredExcerpt($answered));
+        return Excerpt::ofHtml($content === null ? null : $this->markdown->of($content));
     }
 }

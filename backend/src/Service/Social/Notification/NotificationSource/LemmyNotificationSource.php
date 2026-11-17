@@ -13,7 +13,6 @@ use App\Enum\SocialNetwork;
 use App\Enum\SocialNotificationKind;
 use App\Service\Content\Comments\Support\LemmyAuthor;
 use App\Service\Foundation\Text\MarkdownHtml;
-use App\Service\Foundation\Text\Support\PlainText;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Notification\Model\ContextReferenceModel;
@@ -124,7 +123,7 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
 
     private function excerptOf(?string $markdown): ?string
     {
-        return $markdown === null ? null : Excerpt::of(PlainText::fromHtmlBlocks($this->markdown->of($markdown)));
+        return $markdown === null ? null : Excerpt::ofHtml($this->markdown->of($markdown));
     }
 
     private static function remoteIdOf(SocialNotificationKind $kind, int $itemId): string

@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Notification\NotificationContextSource;
 
-use App\Entity\NotificationActor;
 use App\Entity\NotificationContext;
-use App\Entity\NotificationSubject;
 use App\Enum\SocialNotificationKind;
 use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Notification\NotificationContextSource\LemmyNotificationContextSource;
+use App\Tests\Support\NotificationRows;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\TestCase;
@@ -104,6 +103,20 @@ final class LemmyNotificationContextSourceTest extends TestCase
         self::assertCount(2, $http->requests);
     }
 
+    public function testTwoRowsAnsweringTheSameCommentAskForItOnce(): void
+    {
+        $http = new RoutedHttpClient(['GET ' . self::COMMENT . '26906403' => self::parentComment()]);
+
+        $rows = $this->source($http)->withContext(
+            SocialApiWiring::lemmyAccount(),
+            [self::row('reply:7', '26906403'), self::row('reply:8', '26906403')],
+        );
+
+        self::assertCount(1, $http->requests);
+        self::assertSame('My original comment', $rows[0]->subject->context->answeredExcerpt);
+        self::assertSame('My original comment', $rows[1]->subject->context->answeredExcerpt);
+    }
+
     public function testRowsWithoutReferencesMakeNoCall(): void
     {
         $http = RoutedHttpClient::answering(static fn (): MockResponse => new MockResponse('{}'));
@@ -124,19 +137,11 @@ final class LemmyNotificationContextSourceTest extends TestCase
 
     private static function row(string $remoteId, ?string $answeredId): FetchedNotificationModel
     {
-        return new FetchedNotificationModel(
+        return NotificationRows::fetched(
             $remoteId,
             SocialNotificationKind::CommentReply,
-            new NotificationActor('carol@lemmy.other', null, null, 'https://lemmy.example/u/carol@lemmy.other'),
-            new NotificationSubject(
-                $remoteId,
-                'Thanks',
-                'https://lemmy.example/comment/41',
-                new NotificationContext(threadTitle: 'A post', threadPlace: 'c/selfhosted'),
-            ),
-            new \DateTimeImmutable('2026-11-16 09:00:00', new \DateTimeZone('UTC')),
-            false,
             new ContextReferenceModel(answeredId: $answeredId),
+            new NotificationContext(threadTitle: 'A post', threadPlace: 'c/selfhosted'),
         );
     }
 

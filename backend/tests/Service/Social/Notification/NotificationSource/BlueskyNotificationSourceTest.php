@@ -91,8 +91,8 @@ final class BlueskyNotificationSourceTest extends TestCase
         $quoted = new ContextReferenceModel('at://did:plc:alice/app.bsky.feed.post/3lquoted');
         self::assertEquals($quoted, $page->notifications[6]->references);
         self::assertEquals($quoted, $page->notifications[8]->references);
-        self::assertTrue($page->notifications[0]->references->isEmpty());
-        self::assertTrue($page->notifications[5]->references->isEmpty());
+        self::assertEquals(new ContextReferenceModel(), $page->notifications[0]->references);
+        self::assertEquals(new ContextReferenceModel(), $page->notifications[5]->references);
     }
 
     public function testAsksOnePostLookupWithRepeatedUrisKeys(): void

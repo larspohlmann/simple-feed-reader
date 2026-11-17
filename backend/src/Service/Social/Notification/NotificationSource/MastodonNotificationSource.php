@@ -11,7 +11,6 @@ use App\Entity\SocialAccount;
 use App\Entity\SocialNotification;
 use App\Enum\SocialNetwork;
 use App\Enum\SocialNotificationKind;
-use App\Service\Foundation\Text\Support\PlainText;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
@@ -170,7 +169,7 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
 
         return new NotificationSubject(
             $groupKey,
-            Excerpt::of(PlainText::fromHtmlBlocks($status->text('content'))),
+            Excerpt::ofHtml($status->text('content')),
             $linkUrl,
             self::contextOf($kind, $status),
         );
@@ -190,9 +189,7 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
             return new NotificationContext();
         }
 
-        $quotedText = PlainText::fromHtmlBlocks($quoted->text('content'));
-
-        return new NotificationContext(answeredExcerpt: Excerpt::of($quotedText));
+        return new NotificationContext(answeredExcerpt: Excerpt::ofHtml($quoted->text('content')));
     }
 
     private static function kindOf(JsonNodeModel $entry, string $ownId): ?SocialNotificationKind

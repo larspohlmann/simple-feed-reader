@@ -11,9 +11,4 @@ final readonly class ContextReferenceModel
         public ?string $threadRootId = null,
     ) {
     }
-
-    public function isEmpty(): bool
-    {
-        return $this->answeredId === null && $this->threadRootId === null;
-    }
 }

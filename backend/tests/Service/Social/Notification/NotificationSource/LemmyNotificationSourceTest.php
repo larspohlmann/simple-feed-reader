@@ -10,6 +10,7 @@ use App\Entity\NotificationSubject;
 use App\Entity\SocialAccount;
 use App\Entity\SocialNotification;
 use App\Enum\SocialNotificationKind;
+use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Notification\NotificationSource\LemmyNotificationSource;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
@@ -67,7 +68,7 @@ final class LemmyNotificationSourceTest extends TestCase
         self::assertEquals(self::utc('2026-11-16 09:00:00.123456'), $reply->createdAt);
         self::assertNull($page->notifications[1]->subject->excerpt);
         self::assertSame(SocialNotificationKind::Reply, $page->notifications[1]->kind);
-        self::assertTrue($page->notifications[1]->references->isEmpty());
+        self::assertEquals(new ContextReferenceModel(), $page->notifications[1]->references);
         self::assertSame(
             'Which self-hosted reader do you use?',
             $page->notifications[1]->subject->context->threadTitle,

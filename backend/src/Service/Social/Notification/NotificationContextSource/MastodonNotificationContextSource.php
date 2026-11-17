@@ -6,7 +6,6 @@ namespace App\Service\Social\Notification\NotificationContextSource;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Foundation\Text\Support\PlainText;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Notification\Support\Excerpt;
@@ -45,14 +44,10 @@ final readonly class MastodonNotificationContextSource implements NotificationCo
      */
     private static function answeredIds(array $rows): array
     {
-        $ids = [];
-        foreach ($rows as $row) {
-            if ($row->references->answeredId !== null) {
-                $ids[$row->references->answeredId] = true;
-            }
-        }
-
-        return array_map(strval(...), array_keys($ids));
+        return array_values(array_unique(array_filter(
+            array_map(static fn (FetchedNotificationModel $row): ?string => $row->references->answeredId, $rows),
+            static fn (?string $id): bool => $id !== null,
+        )));
     }
 
     /**
@@ -75,7 +70,7 @@ final readonly class MastodonNotificationContextSource implements NotificationCo
         foreach (JsonNodeModel::listOf($answer->json()) ?? [] as $status) {
             $id = $status->string('id');
             if ($id !== null) {
-                $excerpts[$id] = Excerpt::of(PlainText::fromHtmlBlocks($status->text('content')));
+                $excerpts[$id] = Excerpt::ofHtml($status->text('content'));
             }
         }
 
@@ -85,7 +80,8 @@ final readonly class MastodonNotificationContextSource implements NotificationCo
     /** @param array<string, string|null> $excerpts */
     private static function answered(FetchedNotificationModel $row, array $excerpts): FetchedNotificationModel
     {
-        $excerpt = $excerpts[$row->references->answeredId ?? ''] ?? null;
+        $answeredId = $row->references->answeredId;
+        $excerpt = $answeredId !== null && isset($excerpts[$answeredId]) ? $excerpts[$answeredId] : null;
         if ($excerpt === null) {
             return $row;
         }

@@ -9,6 +9,7 @@ use App\Entity\NotificationSubject;
 use App\Entity\SocialAccount;
 use App\Entity\SocialNotification;
 use App\Enum\SocialNotificationKind;
+use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Notification\NotificationSource\MastodonNotificationSource;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
@@ -65,7 +66,7 @@ final class MastodonNotificationSourceTest extends TestCase
         $page = $this->source($this->http())->fetch(SocialApiWiring::mastodonAccount());
 
         self::assertSame('4000', $page->notifications[2]->references->answeredId);
-        self::assertTrue($page->notifications[3]->references->isEmpty());
+        self::assertEquals(new ContextReferenceModel(), $page->notifications[3]->references);
     }
 
     public function testAQuoteCarriesTheQuotedPost(): void

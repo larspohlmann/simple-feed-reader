@@ -76,15 +76,15 @@ final readonly class BlueskyNotificationContextSource implements NotificationCon
         array $posts,
     ): FetchedNotificationModel {
         $context = $row->subject->context;
-        $answered = $posts[self::ownAnsweredOf($account, $row) ?? ''] ?? null;
-        if ($answered instanceof JsonNodeModel) {
-            $context = $context->withAnsweredExcerpt(Excerpt::of($answered->node('record')->text('text')));
+        $ownAnswered = self::ownAnsweredOf($account, $row);
+        if ($ownAnswered !== null && isset($posts[$ownAnswered])) {
+            $context = $context->withAnsweredExcerpt(Excerpt::of($posts[$ownAnswered]->node('record')->text('text')));
         }
-        $root = $posts[self::threadRootOf($account, $row) ?? ''] ?? null;
-        if ($root instanceof JsonNodeModel) {
-            $author = $root->node('author');
+        $threadRoot = self::threadRootOf($account, $row);
+        if ($threadRoot !== null && isset($posts[$threadRoot])) {
+            $author = $posts[$threadRoot]->node('author');
             $context = $context->withThread(
-                Excerpt::of($root->node('record')->text('text')),
+                Excerpt::of($posts[$threadRoot]->node('record')->text('text')),
                 $author->string('displayName') ?? $author->string('handle'),
             );
         }

@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Notification\NotificationContextSource;
 
-use App\Entity\NotificationActor;
-use App\Entity\NotificationSubject;
 use App\Enum\SocialNotificationKind;
 use App\Service\Social\Notification\BlueskyPostLookup;
 use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Notification\NotificationContextSource\BlueskyNotificationContextSource;
+use App\Tests\Support\NotificationRows;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\TestCase;
@@ -178,15 +177,7 @@ final class BlueskyNotificationContextSourceTest extends TestCase
         SocialNotificationKind $kind,
         ContextReferenceModel $references,
     ): FetchedNotificationModel {
-        return new FetchedNotificationModel(
-            'at://did:plc:frank/app.bsky.feed.post/3l05',
-            $kind,
-            new NotificationActor('frank.test', null, null, 'https://bsky.app/profile/did:plc:frank'),
-            new NotificationSubject('at://did:plc:frank/app.bsky.feed.post/3l05', 'a reply', 'https://bsky.app'),
-            new \DateTimeImmutable('2026-11-16 09:00:00', new \DateTimeZone('UTC')),
-            false,
-            $references,
-        );
+        return NotificationRows::fetched('at://did:plc:frank/app.bsky.feed.post/3l05', $kind, $references);
     }
 
     private function source(RoutedHttpClient $http): BlueskyNotificationContextSource
