@@ -160,6 +160,7 @@
             <app-field [label]="'reader.composer.title' | transloco">
               <input
                 [id]="controlId('title', lane)"
+                [attr.aria-describedby]="controlId('title-counter', lane)"
                 [value]="lane.title()"
                 [disabled]="sending() || lane.sent() !== null"
                 (input)="writeTitle(lane, $event)"
@@ -167,6 +168,7 @@
             </app-field>
             <p
               class="counter title-counter"
+              [id]="controlId('title-counter', lane)"
               [class.over]="lane.titleLength() > lemmy.maxTitleCharacters"
               aria-live="polite"
             >

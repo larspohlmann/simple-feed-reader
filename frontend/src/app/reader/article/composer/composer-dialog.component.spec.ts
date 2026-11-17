@@ -1365,7 +1365,7 @@ describe('ComposerDialogComponent', () => {
     const communitySelect = (fixture: ReturnType<typeof mount>) =>
       element(fixture).querySelector('[id^="reply-community"]') as HTMLSelectElement | null;
     const titleInput = (fixture: ReturnType<typeof mount>) =>
-      element(fixture).querySelector('[id^="reply-title"]') as HTMLInputElement;
+      element(fixture).querySelector('input[id^="reply-title"]') as HTMLInputElement;
     const titleCounter = (fixture: ReturnType<typeof mount>) =>
       element(fixture).querySelector('.title-counter')!;
     function chooseCommunity(fixture: ReturnType<typeof mount>, id: string): void {
@@ -1410,6 +1410,13 @@ describe('ComposerDialogComponent', () => {
 
       writeTitle(fixture, 'abc');
       expect(sendButton(fixture).disabled).toBe(false);
+    });
+
+    it('describes the title input by its counter', () => {
+      const fixture = lemmyOnly();
+
+      expect(titleCounter(fixture).id).toBe('reply-title-counter');
+      expect(titleInput(fixture).getAttribute('aria-describedby')).toBe('reply-title-counter');
     });
 
     it('turns the title counter red over the limit and Send off', () => {
@@ -1466,6 +1473,9 @@ describe('ComposerDialogComponent', () => {
       const visibility = element(fixture).querySelector('#reply-visibility-mastodon')!;
       expect(communitySelect(fixture)!.id).toBe('reply-community-lemmy');
       expect(titleInput(fixture).id).toBe('reply-title-lemmy');
+      expect(titleInput(fixture).getAttribute('aria-describedby')).toBe(
+        'reply-title-counter-lemmy',
+      );
       expect(
         visibility.compareDocumentPosition(communitySelect(fixture)!) &
           Node.DOCUMENT_POSITION_FOLLOWING,
