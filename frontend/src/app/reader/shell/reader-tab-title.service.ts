@@ -27,7 +27,7 @@ export class ReaderTabTitle {
         this.pageTitle.useText(entryDisplayTitle(entry));
         return;
       }
-      this.pageTitle.useText(this.heading.title(), this.heading.titleCount().value);
+      this.pageTitle.useText(this.heading.tabTitle(), this.heading.titleCount().value);
     });
   }
 }

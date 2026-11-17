@@ -1,41 +1,38 @@
-<div class="list-frame lead">
-  <!-- Floats over the scroller's reserved top padding rather than sitting above
-       it in the flow, so collapsing the bar never resizes the scroller and the
-       rows stay put under the finger (#87). -->
-  <header
-    class="list-header"
-    #listHdr
-    [class.collapsed]="collapsed()"
-    [class.is-search]="selection().kind === 'search'"
-  >
-    <app-list-header
-      [selection]="selection()"
-      [title]="title()"
-      [searchTitlePrefix]="searchTitlePrefix()"
-      [searchTitleTerm]="searchTitleTerm()"
-      [searchCountLabel]="searchCountLabel()"
-      [titleCount]="titleCount()"
-      [titleTag]="titleTag()"
-      [titleFaviconUrl]="titleFaviconUrl()"
-      [titleLanguage]="titleLanguage()"
-      [titleAvatarUrl]="titleAvatarUrl()"
-      [lastRefreshed]="lastRefreshed()"
-      [nextRefresh]="nextRefresh()"
-      [headerLeading]="headerLeading()"
-      [leadingActions]="leadingActions()"
-      [headerActions]="headerActions()"
-      [collapsed]="collapsed()"
-      [refreshing]="refreshing()"
-      [canMarkAllRead]="canMarkAllRead()"
-      (refresh)="refresh.emit()"
-      (orderChange)="orderChange.emit($event)"
-      (unreadOnlyChange)="unreadOnlyChange.emit($event)"
-      (markAllRead)="markAllRead.emit()"
-    />
-  </header>
+<app-list-frame
+  [problem]="error()"
+  [collapsed]="collapsed()"
+  (retry)="retry.emit()"
+  (dismiss)="dismiss.emit()"
+>
+  <app-list-header
+    frameHeader
+    [selection]="selection()"
+    [title]="title()"
+    [searchTitlePrefix]="searchTitlePrefix()"
+    [searchTitleTerm]="searchTitleTerm()"
+    [searchCountLabel]="searchCountLabel()"
+    [titleCount]="titleCount()"
+    [titleTag]="titleTag()"
+    [titleFaviconUrl]="titleFaviconUrl()"
+    [titleLanguage]="titleLanguage()"
+    [titleAvatarUrl]="titleAvatarUrl()"
+    [lastRefreshed]="lastRefreshed()"
+    [nextRefresh]="nextRefresh()"
+    [headerLeading]="headerLeading()"
+    [leadingActions]="leadingActions()"
+    [headerActions]="headerActions()"
+    [collapsed]="collapsed()"
+    [refreshing]="refreshing()"
+    [canMarkAllRead]="canMarkAllRead()"
+    (refresh)="refresh.emit()"
+    (orderChange)="orderChange.emit($event)"
+    (unreadOnlyChange)="unreadOnlyChange.emit($event)"
+    (markAllRead)="markAllRead.emit()"
+  />
 
   @if (revealVisible()) {
     <div
+      frameLead
       class="pull-indicator"
       [class.armed]="pull.pullArmed()"
       [class.dragging]="pull.dragging()"
@@ -51,201 +48,189 @@
     </div>
   }
 
-  @if (error(); as problem) {
-    <app-error-banner
-      class="list-error text-scaled"
-      [message]="
-        problem.status === 0
-          ? ('reader.errorOffline' | transloco)
-          : ('reader.errorServer' | transloco: { status: problem.status })
-      "
-      [actionLabel]="'reader.retry' | transloco"
-      [dismissLabel]="'reader.dismiss' | transloco"
-      (action)="retry.emit()"
-      (dismiss)="dismiss.emit()"
-    />
+  @if (selection().kind === 'search') {
+    <!-- Announces the count, not the rows: speaking every row would drown a
+         screen-reader user in noise. It re-announces on Load more too — a
+         deliberate choice, since that's a discrete manual action, not a stream. -->
+    <p class="sr-only" aria-live="polite" role="status">
+      {{ 'reader.searchCount' | transloco: { count: entries().length } }}
+    </p>
   }
-</div>
 
-@if (selection().kind === 'search') {
-  <!-- Announces the count, not the rows: speaking every row would drown a
-       screen-reader user in noise. It re-announces on Load more too — a
-       deliberate choice, since that's a discrete manual action, not a stream. -->
-  <p class="sr-only" aria-live="polite" role="status">
-    {{ 'reader.searchCount' | transloco: { count: entries().length } }}
-  </p>
-}
-
-@if (loading() && entries().length === 0) {
-  <div class="rows text-scaled">
-    @for (i of [1, 2, 3, 4, 5]; track i) {
-      <div class="skeleton"></div>
-    }
-  </div>
-} @else if (content.visibleEntryCount() === 0) {
-  <div class="empty-wrap text-scaled" [class.magazine]="layout() === 'magazine'">
-    @if (topBlock(); as block) {
-      <!-- Wrapped in an element this component owns, so it can apply the active
-           layout's measure to projected content. -->
-      <div class="top-block">
-        <ng-container [ngTemplateOutlet]="block" />
-      </div>
-    }
-    <app-list-empty-state [selection]="selection()" [savedSearchCount]="savedSearchCount()" />
-  </div>
-} @else if (layout() === 'magazine') {
-  <div
-    class="rows magazine text-scaled"
-    [class.airy]="isAiryMagazine()"
-    [class.reloading]="reloadCue()"
-    [attr.inert]="reloadCue() ? '' : null"
-    [attr.aria-busy]="loading() || mutating() ? 'true' : null"
-    [class.dragging]="pull.dragging()"
-    [style.transform]="pull.revealTransform()"
-    #rows
-  >
-    @if (topBlock(); as block) {
-      <!-- Wrapped in an element this component owns, so the column's own
-           `.rows.magazine > *` sizing reaches it: ng-container renders no node,
-           and the projected component carries the caller's encapsulation attribute. -->
-      <div class="top-block">
-        <ng-container [ngTemplateOutlet]="block" />
-      </div>
-    }
-    @for (b of content.visibleBlocks(); track blockKey(b)) {
-      @if (b.kind === 'run-header') {
-        <app-run-header [generatedAt]="b.generatedAt" />
-      } @else if (b.kind === 'since-last-visit') {
-        <app-list-divider class="since-last-visit" [label]="'reader.sinceLastVisit' | transloco" />
-      } @else {
-        <!-- Same leave animation as the list layout: the slot collapses the
-             block's height once its content has faded, closing the gap (#478). -->
-        <div class="row-slot magazine-slot" [class.leaving]="isBlockLeaving(b)">
-          <div class="row-slot-inner">
-            <app-recommendation-strip [entry]="strippableEntry(b)">
-              <app-magazine-block [block]="b" [feedTags]="feedTags()" />
-            </app-recommendation-strip>
-          </div>
+  @if (loading() && entries().length === 0) {
+    <div class="rows text-scaled">
+      @for (i of [1, 2, 3, 4, 5]; track i) {
+        <div class="skeleton"></div>
+      }
+    </div>
+  } @else if (content.visibleEntryCount() === 0) {
+    <div class="empty-wrap text-scaled" [class.magazine]="layout() === 'magazine'">
+      @if (topBlock(); as block) {
+        <!-- Wrapped in an element this component owns, so it can apply the active
+             layout's measure to projected content. -->
+        <div class="top-block">
+          <ng-container [ngTemplateOutlet]="block" />
         </div>
       }
-    }
-    @if (hasMore()) {
-      <div class="foot" #sentinel>
-        <button
-          class="load-more"
-          type="button"
-          [disabled]="loadingMore()"
-          (click)="loadMore.emit()"
-        >
-          {{ loadingMore() ? ('common.loading' | transloco) : ('reader.loadMore' | transloco) }}
-        </button>
-      </div>
-    }
-  </div>
-} @else {
-  <div
-    class="rows text-scaled"
-    [class.reloading]="reloadCue()"
-    [attr.inert]="reloadCue() ? '' : null"
-    [attr.aria-busy]="loading() || mutating() ? 'true' : null"
-    [class.dragging]="pull.dragging()"
-    [style.transform]="pull.revealTransform()"
-    #rows
-  >
-    @if (topBlock(); as block) {
-      <!-- Wrapped in an element this component owns, so the column's own
-           `.rows.magazine > *` sizing reaches it: ng-container renders no node,
-           and the projected component carries the caller's encapsulation attribute. -->
-      <div class="top-block">
-        <ng-container [ngTemplateOutlet]="block" />
-      </div>
-    }
-    @for (segment of content.visibleSegments(); track segment.key) {
-      @if (segment.divider; as divider) {
-        @if (divider.kind === 'run-header') {
-          <app-run-header [generatedAt]="divider.generatedAt" />
-        } @else {
+      <app-list-empty-state [selection]="selection()" [savedSearchCount]="savedSearchCount()" />
+    </div>
+  } @else if (layout() === 'magazine') {
+    <div
+      class="rows magazine text-scaled"
+      [class.airy]="isAiryMagazine()"
+      [class.reloading]="reloadCue()"
+      [attr.inert]="reloadCue() ? '' : null"
+      [attr.aria-busy]="loading() || mutating() ? 'true' : null"
+      [class.dragging]="pull.dragging()"
+      [style.transform]="pull.revealTransform()"
+      #rows
+    >
+      @if (topBlock(); as block) {
+        <!-- Wrapped in an element this component owns, so the column's own
+             `.rows.magazine > *` sizing reaches it: ng-container renders no node,
+             and the projected component carries the caller's encapsulation attribute. -->
+        <div class="top-block">
+          <ng-container [ngTemplateOutlet]="block" />
+        </div>
+      }
+      @for (b of content.visibleBlocks(); track blockKey(b)) {
+        @if (b.kind === 'run-header') {
+          <app-run-header [generatedAt]="b.generatedAt" />
+        } @else if (b.kind === 'since-last-visit') {
           <app-list-divider
             class="since-last-visit"
             [label]="'reader.sinceLastVisit' | transloco"
           />
+        } @else {
+          <!-- Same leave animation as the list layout: the slot collapses the
+               block's height once its content has faded, closing the gap (#478). -->
+          <div class="row-slot magazine-slot" [class.leaving]="isBlockLeaving(b)">
+            <div class="row-slot-inner">
+              <app-recommendation-strip [entry]="strippableEntry(b)">
+                <app-magazine-block [block]="b" [feedTags]="feedTags()" />
+              </app-recommendation-strip>
+            </div>
+          </div>
         }
       }
-      @for (e of segment.entries; track e.id) {
-        <!-- The slot collapses the gap when a row leaves; the inner box clips the
-             fading content so the collapse reads as the row closing up (#478). -->
-        <div class="row-slot" [class.leaving]="leavingIds().has(e.id)">
-          <div class="row-slot-inner">
-            <app-recommendation-strip [entry]="e">
-              <app-entry-row
-                [entry]="e"
-                [tags]="tagsFor(e.subscriptionId)"
-                [terms]="searchTerms()"
-                [class.in-search]="isSearch()"
-                [class.open]="openEntryId() === e.id"
-              />
-            </app-recommendation-strip>
-          </div>
+      @if (hasMore()) {
+        <div class="foot" #sentinel>
+          <button
+            class="load-more"
+            type="button"
+            [disabled]="loadingMore()"
+            (click)="loadMore.emit()"
+          >
+            {{ loadingMore() ? ('common.loading' | transloco) : ('reader.loadMore' | transloco) }}
+          </button>
         </div>
       }
-    }
-    @if (hasMore()) {
-      <div class="foot" #sentinel>
-        <button
-          class="load-more"
-          type="button"
-          [disabled]="loadingMore()"
-          (click)="loadMore.emit()"
-        >
-          {{ loadingMore() ? ('common.loading' | transloco) : ('reader.loadMore' | transloco) }}
-        </button>
-      </div>
-    }
-  </div>
-}
-
-<div class="list-frame tail">
-  <app-progress-rail [progress]="progressRail" />
-
-  <app-loading-overlay [shown]="waitOverlay()" [label]="'common.loading' | transloco" />
-
-  @let hasEntries = content.visibleEntryCount() > 0;
-  @let markAllShown = canMarkAllRead() && hasEntries;
-  @let markAboveShown = hasEntries && marksAboveFold();
-  <div class="corner-cluster" [class.left-handed]="leftHanded()">
-    @if (markAllShown || markAboveShown) {
-      <div class="corner-actions">
-        @if (markAllShown) {
-          <button
-            type="button"
-            class="mark-all"
-            (click)="markAllRead.emit()"
-            [attr.aria-label]="'reader.markAllRead' | transloco"
-            [attr.title]="'reader.markAllRead' | transloco"
-          >
-            <app-icon name="done_all" size="dense" />
-          </button>
-        }
-        @if (markAboveShown) {
-          <button
-            type="button"
-            class="mark-above"
-            (click)="onMarkAboveRead()"
-            [attr.aria-label]="'reader.markAboveRead' | transloco"
-            [attr.title]="'reader.markAboveRead' | transloco"
-          >
-            <app-icon name="playlist_add_check" size="dense" />
-          </button>
-        }
-      </div>
-    }
-    <div class="end-corner">
-      @if (hasEntries) {
-        <app-to-top-button (activate)="scrollToTop()" />
+    </div>
+  } @else {
+    <div
+      class="rows text-scaled"
+      [class.reloading]="reloadCue()"
+      [attr.inert]="reloadCue() ? '' : null"
+      [attr.aria-busy]="loading() || mutating() ? 'true' : null"
+      [class.dragging]="pull.dragging()"
+      [style.transform]="pull.revealTransform()"
+      #rows
+    >
+      @if (topBlock(); as block) {
+        <!-- Wrapped in an element this component owns, so the column's own
+             `.rows.magazine > *` sizing reaches it: ng-container renders no node,
+             and the projected component carries the caller's encapsulation attribute. -->
+        <div class="top-block">
+          <ng-container [ngTemplateOutlet]="block" />
+        </div>
       }
-      @if (cornerTrailing(); as trailing) {
-        <span class="corner-trailing"><ng-container [ngTemplateOutlet]="trailing" /></span>
+      @for (segment of content.visibleSegments(); track segment.key) {
+        @if (segment.divider; as divider) {
+          @if (divider.kind === 'run-header') {
+            <app-run-header [generatedAt]="divider.generatedAt" />
+          } @else {
+            <app-list-divider
+              class="since-last-visit"
+              [label]="'reader.sinceLastVisit' | transloco"
+            />
+          }
+        }
+        @for (e of segment.entries; track e.id) {
+          <!-- The slot collapses the gap when a row leaves; the inner box clips the
+               fading content so the collapse reads as the row closing up (#478). -->
+          <div class="row-slot" [class.leaving]="leavingIds().has(e.id)">
+            <div class="row-slot-inner">
+              <app-recommendation-strip [entry]="e">
+                <app-entry-row
+                  [entry]="e"
+                  [tags]="tagsFor(e.subscriptionId)"
+                  [terms]="searchTerms()"
+                  [class.in-search]="isSearch()"
+                  [class.open]="openEntryId() === e.id"
+                />
+              </app-recommendation-strip>
+            </div>
+          </div>
+        }
+      }
+      @if (hasMore()) {
+        <div class="foot" #sentinel>
+          <button
+            class="load-more"
+            type="button"
+            [disabled]="loadingMore()"
+            (click)="loadMore.emit()"
+          >
+            {{ loadingMore() ? ('common.loading' | transloco) : ('reader.loadMore' | transloco) }}
+          </button>
+        </div>
       }
     </div>
-  </div>
-</div>
+  }
+
+  <ng-container ngProjectAs="[frameTail]">
+    <app-progress-rail [progress]="progressRail" />
+
+    <app-loading-overlay [shown]="waitOverlay()" [label]="'common.loading' | transloco" />
+
+    @let hasEntries = content.visibleEntryCount() > 0;
+    @let markAllShown = canMarkAllRead() && hasEntries;
+    @let markAboveShown = hasEntries && marksAboveFold();
+    <div class="corner-cluster" [class.left-handed]="leftHanded()">
+      @if (markAllShown || markAboveShown) {
+        <div class="corner-actions">
+          @if (markAllShown) {
+            <button
+              type="button"
+              class="mark-all"
+              (click)="markAllRead.emit()"
+              [attr.aria-label]="'reader.markAllRead' | transloco"
+              [attr.title]="'reader.markAllRead' | transloco"
+            >
+              <app-icon name="done_all" size="dense" />
+            </button>
+          }
+          @if (markAboveShown) {
+            <button
+              type="button"
+              class="mark-above"
+              (click)="onMarkAboveRead()"
+              [attr.aria-label]="'reader.markAboveRead' | transloco"
+              [attr.title]="'reader.markAboveRead' | transloco"
+            >
+              <app-icon name="playlist_add_check" size="dense" />
+            </button>
+          }
+        </div>
+      }
+      <div class="end-corner">
+        @if (hasEntries) {
+          <app-to-top-button (activate)="scrollToTop()" />
+        }
+        @if (cornerTrailing(); as trailing) {
+          <span class="corner-trailing"><ng-container [ngTemplateOutlet]="trailing" /></span>
+        }
+      </div>
+    </div>
+  </ng-container>
+</app-list-frame>
