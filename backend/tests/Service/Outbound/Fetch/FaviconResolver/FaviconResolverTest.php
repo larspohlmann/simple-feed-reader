@@ -310,6 +310,11 @@ final class FaviconResolverTest extends TestCase
             '',
             'https://lemmy.example.com/pictrs/image/a.png',
         ];
+        yield 'a user avatar outranks the lemmy-ui mouse' => [
+            $personFragment('{"id":9,"name":"lars","avatar":"https://lemmy.example.com/pictrs/image/a.png"}'),
+            $mouseBody,
+            'https://lemmy.example.com/pictrs/image/a.png',
+        ];
         yield 'a user without an avatar gets the lemmy-ui mouse' => [
             $personFragment('{"id":9,"name":"lars"}'),
             $mouseBody,
