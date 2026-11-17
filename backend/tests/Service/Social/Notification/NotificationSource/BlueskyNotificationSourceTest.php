@@ -32,7 +32,7 @@ final class BlueskyNotificationSourceTest extends TestCase
     private const string UPDATE_SEEN = 'POST ' . self::PDS . '/xrpc/app.bsky.notification.updateSeen';
     private const string POST_ONE = 'at://did:plc:alice/app.bsky.feed.post/3lpost1';
     private const string POST_TWO = 'at://did:plc:alice/app.bsky.feed.post/3lpost2';
-    private const string MINE = 'did:plc:alice/app.bsky.feed.post/3lmine';
+    private const string MY_REPLY_PATH = 'did:plc:alice/app.bsky.feed.post/3lmine';
 
     public function testMapsEveryKeptKind(): void
     {
@@ -108,7 +108,7 @@ final class BlueskyNotificationSourceTest extends TestCase
 
     public function testAReplyToYourThreadStartingPostIsAboutYourPost(): void
     {
-        $list = str_replace('did:plc:zoe/app.bsky.feed.post/3lroot', self::MINE, self::list());
+        $list = str_replace('did:plc:zoe/app.bsky.feed.post/3lroot', self::MY_REPLY_PATH, self::list());
 
         $page = $this->source($this->http($list))->fetch(SocialApiWiring::blueskyAccount());
 
@@ -117,7 +117,7 @@ final class BlueskyNotificationSourceTest extends TestCase
 
     public function testAReplyToSomeoneElsesPostIsNotAboutYourComment(): void
     {
-        $list = str_replace(self::MINE, 'did:plc:zoe/app.bsky.feed.post/3lmine', self::list());
+        $list = str_replace(self::MY_REPLY_PATH, 'did:plc:zoe/app.bsky.feed.post/3lmine', self::list());
 
         $page = $this->source($this->http($list))->fetch(SocialApiWiring::blueskyAccount());
 
@@ -138,6 +138,31 @@ final class BlueskyNotificationSourceTest extends TestCase
         self::assertTrue($page->notifications[1]->subject->context->onComment);
         self::assertSame('First post text', $page->notifications[0]->subject->excerpt);
         self::assertFalse($page->notifications[2]->subject->context->onComment);
+    }
+
+    public function testALikeViaRepostOfSomeoneElsesReplyIsNotAboutYourComment(): void
+    {
+        $theirs = 'at://did:plc:zoe/app.bsky.feed.post/3lzreply';
+        $list = (string) json_encode(['notifications' => [[
+            'uri' => 'at://did:plc:carol/app.bsky.feed.like/3l02',
+            'author' => ['did' => 'did:plc:carol', 'handle' => 'carol.test'],
+            'reason' => 'like-via-repost',
+            'record' => ['$type' => 'app.bsky.feed.like', 'subject' => ['uri' => $theirs]],
+            'isRead' => false,
+            'indexedAt' => '2026-11-16T08:50:00.000Z',
+        ]]]);
+        $posts = (string) json_encode(['posts' => [[
+            'uri' => $theirs,
+            'record' => [
+                'text' => 'Their reply',
+                'reply' => ['parent' => ['uri' => 'at://did:plc:zoe/app.bsky.feed.post/3lz']],
+            ],
+        ]]]);
+
+        $page = $this->source($this->http($list, $posts, [$theirs]))->fetch(SocialApiWiring::blueskyAccount());
+
+        self::assertSame('Their reply', $page->notifications[0]->subject->excerpt);
+        self::assertFalse($page->notifications[0]->subject->context->onComment);
     }
 
     public function testALikeOfATopLevelPostIsAboutYourPost(): void
@@ -303,17 +328,22 @@ final class BlueskyNotificationSourceTest extends TestCase
         return (string) file_get_contents(__DIR__ . '/../../../../Fixtures/Bluesky/' . $name);
     }
 
-    private function http(?string $list = null, ?string $posts = null): RoutedHttpClient
-    {
+    /** @param list<string> $postUris */
+    private function http(
+        ?string $list = null,
+        ?string $posts = null,
+        array $postUris = [self::POST_ONE, self::POST_TWO],
+    ): RoutedHttpClient {
+        $lookup = implode('&', array_map(static fn (string $uri): string => 'uris=' . rawurlencode($uri), $postUris));
+
         return new RoutedHttpClient([
             'POST ' . self::PDS . '/xrpc/com.atproto.server.createSession'
                 => SocialApiWiring::blueskySessionAnswer('jwt'),
             self::UNREAD => new MockResponse(self::fixture('notifications-unread.json')),
             self::LIST => new MockResponse($list ?? self::list()),
-            'GET ' . self::PDS . '/xrpc/app.bsky.feed.getPosts?uris=' . rawurlencode(self::POST_ONE)
-                . '&uris=' . rawurlencode(self::POST_TWO) => new MockResponse(
-                    $posts ?? self::fixture('notifications-posts.json'),
-                ),
+            'GET ' . self::PDS . '/xrpc/app.bsky.feed.getPosts?' . $lookup => new MockResponse(
+                $posts ?? self::fixture('notifications-posts.json'),
+            ),
         ]);
     }
 

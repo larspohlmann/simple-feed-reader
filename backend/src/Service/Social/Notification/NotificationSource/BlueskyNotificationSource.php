@@ -151,11 +151,7 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
         SocialAccount $account,
         array $likedPosts,
     ): NotificationSubject {
-        $postSubject = new NotificationSubject(
-            $remoteId,
-            Excerpt::of($entry->node('record')->text('text')),
-            AtPostUri::webUrl($remoteId) ?? $actorProfileUrl,
-        );
+        $record = $entry->node('record');
 
         return match ($kind) {
             SocialNotificationKind::Like, SocialNotificationKind::Repost => self::likedSubject(
@@ -164,11 +160,33 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
                 $likedPosts,
             ),
             SocialNotificationKind::Follow => NotificationSubject::follow($actorProfileUrl),
-            SocialNotificationKind::Reply => self::answersYourComment($account, $entry->node('record')->node('reply'))
-                ? self::aboutYourComment($postSubject)
-                : $postSubject,
-            default => $postSubject,
+            SocialNotificationKind::Reply => self::repliedSubject(
+                self::postSubject($record, $remoteId, $actorProfileUrl),
+                $account,
+                $record->node('reply'),
+            ),
+            default => self::postSubject($record, $remoteId, $actorProfileUrl),
         };
+    }
+
+    private static function postSubject(
+        JsonNodeModel $record,
+        string $remoteId,
+        string $actorProfileUrl,
+    ): NotificationSubject {
+        return new NotificationSubject(
+            $remoteId,
+            Excerpt::of($record->text('text')),
+            AtPostUri::webUrl($remoteId) ?? $actorProfileUrl,
+        );
+    }
+
+    private static function repliedSubject(
+        NotificationSubject $subject,
+        SocialAccount $account,
+        JsonNodeModel $reply,
+    ): NotificationSubject {
+        return self::answersYourComment($account, $reply) ? self::aboutYourComment($subject) : $subject;
     }
 
     /** @param array<string, JsonNodeModel> $likedPosts */
@@ -184,7 +202,9 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
             AtPostUri::webUrl($postUri) ?? BlueskyWeb::profileUrl($account->getIdentity()),
         );
 
-        return $record->has('reply') ? self::aboutYourComment($subject) : $subject;
+        return $record->has('reply') && AtPostUri::authorityOf($postUri) === $account->getIdentity()
+            ? self::aboutYourComment($subject)
+            : $subject;
     }
 
     private static function answersYourComment(SocialAccount $account, JsonNodeModel $reply): bool
