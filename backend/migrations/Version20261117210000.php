@@ -23,12 +23,7 @@ final class Version20261117210000 extends AbstractMigration
     {
         $this->abortIfUnsupportedPlatform();
         if (!$schema->getTable(self::TABLE)->hasColumn(self::COLUMN)) {
-            $this->addSql(\sprintf(
-                'ALTER TABLE %s ADD COLUMN %s %s DEFAULT 0 NOT NULL',
-                self::TABLE,
-                self::COLUMN,
-                $this->booleanType(),
-            ));
+            $this->addSql(\sprintf('ALTER TABLE %s ADD COLUMN %s BOOLEAN DEFAULT 0 NOT NULL', self::TABLE, self::COLUMN));
         }
         $this->addSql(\sprintf(
             "UPDATE %s SET kind = 'reply', %s = 1 WHERE kind = 'comment_reply'",
@@ -53,11 +48,6 @@ final class Version20261117210000 extends AbstractMigration
     public function isTransactional(): bool
     {
         return false;
-    }
-
-    private function booleanType(): string
-    {
-        return $this->connection->getDatabasePlatform() instanceof SQLitePlatform ? 'BOOLEAN' : 'TINYINT';
     }
 
     private function abortIfUnsupportedPlatform(): void
