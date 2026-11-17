@@ -59,7 +59,7 @@ final class SocialInteractionProblemsTest extends TestCase
             'social_post_community_missing',
             Response::HTTP_UNPROCESSABLE_ENTITY,
         ];
-        yield 'reply too long' => [
+        yield 'post too long' => [
             new SocialPostTooLongException('x'),
             'social_post_too_long',
             Response::HTTP_UNPROCESSABLE_ENTITY,
@@ -98,6 +98,13 @@ final class SocialInteractionProblemsTest extends TestCase
         $resolved = (new SocialInteractionProblems())->resolve(new SocialPostTitleTooShortException('x'));
 
         self::assertSame('The post title is too short', $resolved?->problem->title);
+    }
+
+    public function testAnOverlongPostIsNamedAPostNotAReply(): void
+    {
+        $resolved = (new SocialInteractionProblems())->resolve(new SocialPostTooLongException('x'));
+
+        self::assertSame('The post is too long for the network', $resolved?->problem->title);
     }
 
     public function testAThrottleNamesItsDelayOnlyWhenTheNetworkGaveOne(): void

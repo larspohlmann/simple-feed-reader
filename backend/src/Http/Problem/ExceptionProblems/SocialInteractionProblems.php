@@ -76,7 +76,7 @@ final readonly class SocialInteractionProblems implements ExceptionProblemsInter
             )),
             $exception instanceof SocialPostTooLongException => new ResolvedProblem(new ApiProblem(
                 'social_post_too_long',
-                'The reply is too long for the network',
+                'The post is too long for the network',
                 Response::HTTP_UNPROCESSABLE_ENTITY,
                 $exception->getMessage(),
             )),
