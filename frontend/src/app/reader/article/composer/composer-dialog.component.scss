@@ -23,11 +23,21 @@ textarea {
   margin: calc(-1 * var(--space-2)) 0 var(--space-3);
 }
 
+.clear {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.counters {
+  margin: 0;
+  text-align: right;
+}
+
 .counter {
   margin: 0;
   color: var(--text-muted);
   font-size: var(--fs-sm);
-  text-align: right;
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
