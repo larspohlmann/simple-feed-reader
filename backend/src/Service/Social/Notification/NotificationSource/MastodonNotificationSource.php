@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Notification\NotificationSource;
 
 use App\Entity\NotificationActor;
+use App\Entity\NotificationContext;
 use App\Entity\NotificationSubject;
 use App\Entity\SocialAccount;
 use App\Entity\SocialNotification;
@@ -14,6 +15,7 @@ use App\Service\Foundation\Text\Support\PlainText;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Notification\Model\NotificationPageModel;
 use App\Service\Social\Notification\Support\Excerpt;
@@ -125,6 +127,7 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
             self::subjectOf($account, $kind, $entry, $remoteId, $actor->profileUrl),
             $createdAt,
             $lastReadId !== null && MastodonIds::atOrBefore($remoteId, $lastReadId),
+            self::referencesOf($kind, $entry->node('status')),
         );
     }
 
@@ -169,7 +172,27 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
             $groupKey,
             Excerpt::of(PlainText::fromHtmlBlocks($status->text('content'))),
             $linkUrl,
+            self::contextOf($kind, $status),
         );
+    }
+
+    private static function referencesOf(SocialNotificationKind $kind, JsonNodeModel $status): ContextReferenceModel
+    {
+        return new ContextReferenceModel(
+            answeredId: $kind === SocialNotificationKind::Reply ? $status->string('in_reply_to_id') : null,
+        );
+    }
+
+    private static function contextOf(SocialNotificationKind $kind, JsonNodeModel $status): NotificationContext
+    {
+        $quoted = $status->node('quote')->node('quoted_status');
+        if ($kind !== SocialNotificationKind::Quote || $quoted->string('content') === null) {
+            return new NotificationContext();
+        }
+
+        $quotedText = PlainText::fromHtmlBlocks($quoted->text('content'));
+
+        return new NotificationContext(answeredExcerpt: Excerpt::of($quotedText));
     }
 
     private static function kindOf(JsonNodeModel $entry, string $ownId): ?SocialNotificationKind

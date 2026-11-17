@@ -60,6 +60,22 @@ final class MastodonNotificationSourceTest extends TestCase
         self::assertSame('1030', $page->notifications[6]->subject->groupKey);
     }
 
+    public function testAReplyPointsAtThePostItAnswers(): void
+    {
+        $page = $this->source($this->http())->fetch(SocialApiWiring::mastodonAccount());
+
+        self::assertSame('4000', $page->notifications[2]->references->answeredId);
+        self::assertTrue($page->notifications[3]->references->isEmpty());
+    }
+
+    public function testAQuoteCarriesTheQuotedPost(): void
+    {
+        $quote = $this->source($this->http())->fetch(SocialApiWiring::mastodonAccount())->notifications[6];
+
+        self::assertSame('The post they quoted', $quote->subject->context->answeredExcerpt);
+        self::assertSame('quoting', $quote->subject->excerpt);
+    }
+
     public function testDropsUnlistedKinds(): void
     {
         $page = $this->source($this->http())->fetch(SocialApiWiring::mastodonAccount());
