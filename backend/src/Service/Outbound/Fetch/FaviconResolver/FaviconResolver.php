@@ -9,13 +9,14 @@ use App\Service\Outbound\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
 use App\Service\Outbound\Fetch\Model\FetchTicketModel;
 use App\Service\Outbound\Fetch\Pass\PageUrls;
+use App\Service\Outbound\Fetch\Support\LemmyActorPage;
 use App\Service\Outbound\Fetch\Support\LemmyPageIcon;
 use Psr\Log\LoggerInterface;
 
 /**
  * Best-effort favicons for a batch of feeds' sites: the largest https icon each homepage's <link> tags advertise,
- * else a Lemmy instance's own site icon, else /favicon.ico. Never throws: a favicon must not disturb the refresh that
- * asked for it.
+ * else a Lemmy actor's or instance's own icon, else /favicon.ico. Never throws: a favicon must not disturb the
+ * refresh that asked for it.
  */
 final readonly class FaviconResolver implements FaviconResolverInterface
 {
@@ -35,6 +36,7 @@ final readonly class FaviconResolver implements FaviconResolverInterface
     public function resolveAll(array $baseUrlsByFeedId): array
     {
         $origins = [];
+        $pages = [];
         $icons = [];
         foreach ($baseUrlsByFeedId as $feedId => $baseUrl) {
             $origin = self::httpsOrigin($baseUrl);
@@ -43,52 +45,56 @@ final readonly class FaviconResolver implements FaviconResolverInterface
                 continue;
             }
             $origins[$feedId] = $origin;
+            $pages[$feedId] = LemmyActorPage::of($baseUrl) ?? $origin;
         }
 
-        return $icons + $this->fetchAllIcons($origins);
+        return $icons + $this->fetchAllIcons($origins, $pages);
     }
 
     /**
      * @param array<int, string> $origins
+     * @param array<int, string> $pages
      *
      * @return array<int, string>
      */
-    private function fetchAllIcons(array $origins): array
+    private function fetchAllIcons(array $origins, array $pages): array
     {
-        $iconsByOrigin = $this->fetchIconsByOrigin($origins);
+        $iconsByPage = $this->fetchIconsByPage($pages);
 
-        return array_map(
-            static fn (string $origin): string => mb_substr(
-                $iconsByOrigin[$origin] ?? $origin . '/favicon.ico',
+        $icons = [];
+        foreach ($pages as $feedId => $page) {
+            $icons[$feedId] = mb_substr(
+                $iconsByPage[$page] ?? $origins[$feedId] . '/favicon.ico',
                 0,
                 self::URL_MAX,
-            ),
-            $origins,
-        );
+            );
+        }
+
+        return $icons;
     }
 
     /**
-     * One ticket per origin, however many feeds share it. Catches even the batch fetcher's own invariant failures,
-     * which a best-effort component does not propagate; a site the batch never answered for is simply absent.
+     * One ticket per page, however many feeds share it. Catches even the batch fetcher's own invariant failures,
+     * which a best-effort component does not propagate; a page the batch never answered for is simply absent.
      *
-     * @param array<int, string> $origins
+     * @param array<int, string> $pages
      *
      * @return array<string, string>
      */
-    private function fetchIconsByOrigin(array $origins): array
+    private function fetchIconsByPage(array $pages): array
     {
         $icons = [];
         $tickets = [];
-        foreach ($origins as $origin) {
-            $tickets[$origin] = new FetchTicketModel($origin);
+        foreach ($pages as $page) {
+            $tickets[$page] = new FetchTicketModel($page);
         }
 
         try {
-            foreach ($this->fetcher->fetchAll($tickets) as $origin => $outcome) {
-                $origin = (string) $origin;
-                $icon = $this->iconOrNull($outcome, $origin);
+            foreach ($this->fetcher->fetchAll($tickets) as $page => $outcome) {
+                $page = (string) $page;
+                $icon = $this->iconOrNull($outcome, $page);
                 if (null !== $icon) {
-                    $icons[$origin] = $icon;
+                    $icons[$page] = $icon;
                 }
             }
         } catch (\Throwable $exception) {
@@ -98,25 +104,25 @@ final readonly class FaviconResolver implements FaviconResolverInterface
         return $icons;
     }
 
-    private function iconOrNull(FetchOutcomeModel $outcome, string $origin): ?string
+    private function iconOrNull(FetchOutcomeModel $outcome, string $page): ?string
     {
         try {
-            return $this->iconFrom($outcome, $origin);
+            return $this->iconFrom($outcome, $page);
         } catch (\Throwable $exception) {
             $this->logger->warning(
-                'Favicon parse failed for {origin}',
-                ['origin' => $origin, 'exception' => $exception],
+                'Favicon parse failed for {page}',
+                ['page' => $page, 'exception' => $exception],
             );
 
             return null;
         }
     }
 
-    private function iconFrom(FetchOutcomeModel $outcome, string $origin): ?string
+    private function iconFrom(FetchOutcomeModel $outcome, string $page): ?string
     {
         $failure = $outcome->failure();
         if (null !== $failure) {
-            $this->logger->info('Favicon fetch failed for {origin}', ['origin' => $origin, 'exception' => $failure]);
+            $this->logger->info('Favicon fetch failed for {page}', ['page' => $page, 'exception' => $failure]);
 
             return null;
         }

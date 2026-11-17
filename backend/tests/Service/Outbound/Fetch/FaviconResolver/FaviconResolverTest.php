@@ -263,7 +263,7 @@ final class FaviconResolverTest extends TestCase
         string $expectedIcon,
     ): void {
         $fetcher = new StubFeedFetcher();
-        $fetcher->willReturn('https://lemmy.example.com', $this->lemmyPage($siteRecord, $extraHead));
+        $fetcher->willReturn('https://lemmy.example.com/c/technology', $this->lemmyPage($siteRecord, $extraHead));
 
         $icons = $this->resolver($fetcher)->resolveAll([1 => 'https://lemmy.example.com/c/technology']);
 
@@ -335,7 +335,7 @@ final class FaviconResolverTest extends TestCase
     ): void {
         $fetcher = new StubFeedFetcher();
         $fetcher->willReturn(
-            'https://lemmy.example.com',
+            'https://lemmy.example.com/c/technology',
             $this->lemmyPage(
                 '{"id":1,"icon":"https://lemmy.example.com/pictrs/image/site.png"}',
                 '',
@@ -376,13 +376,80 @@ final class FaviconResolverTest extends TestCase
         $fetcher->willReturn('https://blog.example.com', $this->page('<link rel="icon" href="/fav.png">'));
 
         $icons = $this->resolver($fetcher)->resolveAll([
-            1 => 'https://blog.example.com/c/one',
-            2 => 'https://blog.example.com/c/two',
+            1 => 'https://blog.example.com/blog/one',
+            2 => 'https://blog.example.com/blog/two',
         ]);
 
         self::assertSame(['https://blog.example.com'], $fetcher->fetchedUrls);
         self::assertSame('https://blog.example.com/fav.png', $icons[1]);
         self::assertSame('https://blog.example.com/fav.png', $icons[2]);
+    }
+
+    public function testALemmyCommunityFeedFetchesItsCommunityPage(): void
+    {
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willReturn(
+            'https://lemmy.example.com/c/technology',
+            $this->lemmyPage(
+                '{"id":1}',
+                '',
+                ',"community_res":{"community_view":{"community":{"id":7,"icon":"https://lemmy.example.com/c.png"}}}',
+            ),
+        );
+
+        $icons = $this->resolver($fetcher)
+            ->resolveAll([1 => 'https://lemmy.example.com/feeds/c/technology.xml?sort=New']);
+
+        self::assertSame(['https://lemmy.example.com/c/technology'], $fetcher->fetchedUrls);
+        self::assertSame('https://lemmy.example.com/c.png', $icons[1]);
+    }
+
+    public function testALemmyUserFeedFetchesItsUserPage(): void
+    {
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willReturn(
+            'https://lemmy.example.com/u/lars',
+            $this->lemmyPage(
+                '{"id":1}',
+                '',
+                ',"person_res":{"person_view":{"person":{"id":9,"avatar":"https://lemmy.example.com/a.png"}}}',
+            ),
+        );
+
+        $icons = $this->resolver($fetcher)->resolveAll([1 => 'https://lemmy.example.com/feeds/u/lars.xml']);
+
+        self::assertSame(['https://lemmy.example.com/u/lars'], $fetcher->fetchedUrls);
+        self::assertSame('https://lemmy.example.com/a.png', $icons[1]);
+    }
+
+    public function testBothFormsOfOneActorShareOneFetch(): void
+    {
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willReturn(
+            'https://lemmy.example.com/c/technology',
+            $this->lemmyPage(
+                '{"id":1}',
+                '',
+                ',"community_res":{"community_view":{"community":{"id":7,"icon":"https://lemmy.example.com/c.png"}}}',
+            ),
+        );
+
+        $icons = $this->resolver($fetcher)->resolveAll([
+            1 => 'https://lemmy.example.com/c/technology',
+            2 => 'https://lemmy.example.com/feeds/c/technology.xml',
+        ]);
+
+        self::assertSame(['https://lemmy.example.com/c/technology'], $fetcher->fetchedUrls);
+        self::assertSame('https://lemmy.example.com/c.png', $icons[1]);
+        self::assertSame($icons[1], $icons[2]);
+    }
+
+    public function testAnUnreachableActorPageFallsBackToTheOriginFaviconIco(): void
+    {
+        $icons = $this->resolver(new StubFeedFetcher())
+            ->resolveAll([1 => 'https://lemmy.example.com/c/technology']);
+
+        self::assertSame('https://lemmy.example.com/favicon.ico', $icons[1]);
     }
 
     private function lemmyPage(
