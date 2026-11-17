@@ -23,6 +23,7 @@ import { preloadInitialLanguage } from './core/i18n/boot-language';
 import { ReportingErrorHandler } from './core/errors/global-error-handler';
 import { NavigationFailureReporter } from './core/errors/navigation-failure';
 import { startNavigationWatchdog } from './core/errors/navigation-watchdog';
+import { startTruncatedTextTitles } from './core/truncated-text-titles';
 import { DIGEST_WRITER } from './core/preferences/digest-writer';
 import { HttpDigestWriter } from './core/preferences/http-digest-writer';
 import { HttpLocaleWriter } from './core/i18n/http-locale-writer';
@@ -101,5 +102,6 @@ export const appConfig: ApplicationConfig = {
     }),
     // Must run in an injection context, and only once the router exists.
     provideAppInitializer(() => startNavigationWatchdog()),
+    provideAppInitializer(() => startTruncatedTextTitles()),
   ],
 };
