@@ -117,13 +117,42 @@ final class LemmyProfilePicturesTest extends DbTestCase
     {
         foreach (['a', 'b', 'c'] as $name) {
             $this->lemmyFeed('https://lemmy.world/feeds/c/' . $name . '.xml');
-            $this->answer('https://lemmy.world/api/v3/community?name=' . $name, ['community_view' => []]);
+            $this->answer(
+                'https://lemmy.world/api/v3/community?name=' . $name,
+                ['community_view' => ['community' => ['name' => 'x']]],
+            );
         }
 
         $report = $this->refresh(2);
 
         self::assertSame(2, $report->calls);
         self::assertCount(2, $this->requestedUrls());
+    }
+
+    public function testAnAnswerWithoutTheViewKeepsThePicture(): void
+    {
+        $feed = $this->lemmyFeed('https://lemmy.world/feeds/c/technology.xml', 'https://lemmy.world/old.png');
+        $this->answer(self::COMMUNITY_API, []);
+        $logger = new RecordingLogger();
+
+        $report = $this->refresh(5, $logger);
+
+        self::assertSame('https://lemmy.world/old.png', $feed->getImageUrl());
+        self::assertNotNull($feed->getImageCheckedAt());
+        self::assertSame(0, $report->changed);
+        self::assertSame(['warning'], array_column($logger->records, 'level'));
+    }
+
+    public function testAUserWithAnInsecureAvatarHasNoPicture(): void
+    {
+        $feed = $this->lemmyFeed('https://lemmy.world/feeds/u/lars_pohlmann.xml', 'https://lemmy.world/old.png');
+        $this->answer(self::USER_API, [
+            'person_view' => ['person' => ['avatar' => 'http://lemmy.world/a.png']],
+        ]);
+
+        $this->refresh(5);
+
+        self::assertNull($feed->getImageUrl());
     }
 
     public function testAnInsecureIconIsNoPicture(): void
@@ -142,8 +171,14 @@ final class LemmyProfilePicturesTest extends DbTestCase
     {
         $this->lemmyFeed('https://lemmy.world/feeds/u/ada.xml');
         $this->lemmyFeed('https://lemmy.world/feeds/c/ada.xml');
-        $this->answer('https://lemmy.world/api/v3/user?username=ada&limit=1', ['person_view' => []]);
-        $this->answer('https://lemmy.world/api/v3/community?name=ada', ['community_view' => []]);
+        $this->answer(
+            'https://lemmy.world/api/v3/user?username=ada&limit=1',
+            ['person_view' => ['person' => ['name' => 'ada']]],
+        );
+        $this->answer(
+            'https://lemmy.world/api/v3/community?name=ada',
+            ['community_view' => ['community' => ['name' => 'x']]],
+        );
 
         $this->refresh(5);
 

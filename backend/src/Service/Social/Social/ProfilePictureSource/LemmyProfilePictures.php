@@ -95,12 +95,15 @@ final readonly class LemmyProfilePictures implements ProfilePictureSourceInterfa
             ? '/api/v3/user?username=' . rawurlencode($name) . '&limit=1'
             : '/api/v3/community?name=' . rawurlencode($name);
         $answer = JsonNodeModel::of($this->lemmy->send(ApiRequestModel::get('https://' . $host . $path))->json());
+        $view = $isUser ? 'person_view' : 'community_view';
+        if (!$answer->has($view)) {
+            throw new SocialNetworkUnreachableException('The Lemmy instance answered without a ' . $view . '.');
+        }
         $picture = $isUser
-            ? $answer->node('person_view')->node('person')->string('avatar')
-            : $answer->node('community_view')->node('community')->string('icon');
-        $url = AbsoluteHttpUrl::httpsOrNull($picture);
-        $url = null === $url ? null : AbsoluteHttpUrl::orNullWithin($url, Feed::IMAGE_URL_MAX);
+            ? $answer->node($view)->node('person')->string('avatar')
+            : $answer->node($view)->node('community')->string('icon');
+        $url = AbsoluteHttpUrl::orNullWithin(AbsoluteHttpUrl::httpsOrNull($picture), Feed::IMAGE_URL_MAX);
 
-        return $isUser ? ($url ?? self::MOUSE) : $url;
+        return $isUser && null === $picture ? self::MOUSE : $url;
     }
 }
