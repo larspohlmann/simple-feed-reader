@@ -2,7 +2,6 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
-  NgZone,
   TemplateRef,
   computed,
   effect,
@@ -15,7 +14,6 @@ import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { HandednessService } from '../../../core/preferences/handedness.service';
-import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { ListActionDirective } from '../../../shared/list-action/list-action.directive';
 import { PageLayer } from '../../../shared/scroll-host/page-layer';
@@ -24,7 +22,7 @@ import { ScrollHosts } from '../../../shared/scroll-host/scroll-hosts.service';
 import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
 import { WarningBoxComponent } from '../../../shared/warning-box/warning-box.component';
 import { ListHeaderComponent } from '../../list/list-header/list-header.component';
-import { publishListBarHeight } from '../../list/list-bar-height';
+import { ListFrameComponent } from '../../list/list-frame/list-frame.component';
 import { observeSentinel } from '../../list/paging';
 import { SelectionOf } from '../../query/query';
 import { hasSeveralConnectedAccounts } from '../../state/social-sections';
@@ -39,7 +37,7 @@ import { NotificationsStore } from '../notifications.store';
     NgTemplateOutlet,
     RouterLink,
     TranslocoPipe,
-    ErrorBannerComponent,
+    ListFrameComponent,
     IconComponent,
     ListActionDirective,
     SkeletonComponent,
@@ -58,13 +56,10 @@ export class NotificationListComponent {
 
   protected readonly store = inject(NotificationsStore);
   private readonly subscriptions = inject(SubscriptionsStore);
-  private readonly host: HTMLElement = inject(ElementRef).nativeElement;
-  private readonly zone = inject(NgZone);
   private readonly scrollHosts = inject(ScrollHosts);
   private readonly pageLayer = inject(PageLayer, { optional: true });
   protected readonly leftHanded = inject(HandednessService).leftHanded;
 
-  private readonly listHdr = viewChild<ElementRef<HTMLElement>>('listHdr');
   private readonly rows = viewChild<ElementRef<HTMLElement>>('rows');
   private readonly sentinel = viewChild<ElementRef<HTMLElement>>('sentinel');
 
@@ -90,11 +85,6 @@ export class NotificationListComponent {
       const scroller = this.scrollHost();
       if (scroller) scroller.scrollTop = 0;
     });
-  });
-
-  private readonly _publishBarHeight = effect((onCleanup) => {
-    const header = this.listHdr()?.nativeElement;
-    if (header) onCleanup(publishListBarHeight(this.zone, { host: this.host, header }));
   });
 
   private readonly _wire = effect((onCleanup) => {

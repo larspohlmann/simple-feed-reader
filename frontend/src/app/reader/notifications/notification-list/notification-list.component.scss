@@ -1,36 +1,7 @@
 @use '../../../theme/list-chrome';
-@use '../../../theme/page-chrome';
 
 :host {
   display: block;
-}
-
-.list-frame {
-  @include page-chrome.list-column-box;
-
-  pointer-events: none;
-}
-
-.list-frame.lead {
-  z-index: 2;
-}
-
-.list-frame.tail {
-  z-index: 1;
-  container: notification-list / size;
-}
-
-.list-header,
-.list-error {
-  pointer-events: auto;
-}
-
-.list-header {
-  @include list-chrome.floating-header;
-}
-
-.list-error {
-  @include list-chrome.error-overlay;
 }
 
 .rows {
@@ -77,10 +48,4 @@
   @include list-chrome.corner-cluster;
 }
 
-@include list-chrome.hide-corner-cluster-in-strip(notification-list);
-
-@media (prefers-reduced-motion: reduce) {
-  .list-header {
-    transition: none;
-  }
-}
+@include list-chrome.hide-corner-cluster-in-strip(list-tail);

@@ -1,7 +1,10 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Problem } from '../../../core/problem';
-import { MockResizeObserver, installMockResizeObserver } from '../../../../testing/resize-observer-testing';
+import {
+  MockResizeObserver,
+  installMockResizeObserver,
+} from '../../../../testing/resize-observer-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { ListFrameComponent } from './list-frame.component';
 
@@ -65,7 +68,9 @@ describe('ListFrameComponent', () => {
     host.problem.set(problemWith(0));
     fixture.detectChanges();
 
-    expect(element.querySelector('app-error-banner')!.textContent).toContain('Could not reach the server');
+    expect(element.querySelector('app-error-banner')!.textContent).toContain(
+      'Could not reach the server',
+    );
   });
 
   it('shows the server message with the status', () => {
