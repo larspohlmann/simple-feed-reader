@@ -85,7 +85,9 @@ final readonly class MastodonNotificationContextSource implements NotificationCo
             return $row;
         }
         $answered = $statuses[$answeredId];
-        $context = $row->subject->context->withAnsweredExcerpt(Excerpt::ofHtml($answered->text('content')));
+        $context = $row->subject->context;
+        $excerpt = Excerpt::ofHtml($answered->text('content'));
+        $context = $excerpt === null ? $context : $context->withAnsweredExcerpt($excerpt);
 
         return $row->withContext(
             $answered->string('in_reply_to_id') === null ? $context : $context->withOnComment(),

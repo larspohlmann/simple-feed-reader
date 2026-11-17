@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Notification\NotificationContextSource;
 
+use App\Entity\NotificationContext;
 use App\Enum\SocialNotificationKind;
 use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
@@ -105,6 +106,23 @@ final class MastodonNotificationContextSourceTest extends TestCase
         $this->source($http)->withContext(SocialApiWiring::mastodonAccount(), $rows);
 
         self::assertCount(2, $http->requests);
+    }
+
+    public function testAnAnsweredPostWithoutTextKeepsTheExcerptButMarksTheComment(): void
+    {
+        $statuses = (string) json_encode([['id' => '4000', 'in_reply_to_id' => '3999']]);
+        $http = new RoutedHttpClient(['GET ' . self::STATUSES . 'id[]=4000' => new MockResponse($statuses)]);
+        $row = NotificationRows::fetched(
+            '1',
+            SocialNotificationKind::Reply,
+            new ContextReferenceModel(answeredId: '4000'),
+            new NotificationContext(answeredExcerpt: 'Kept'),
+        );
+
+        $rows = $this->source($http)->withContext(SocialApiWiring::mastodonAccount(), [$row]);
+
+        self::assertSame('Kept', $rows[0]->subject->context->answeredExcerpt);
+        self::assertTrue($rows[0]->subject->context->onComment);
     }
 
     public function testEveryAnsweredPostOfEveryChunkIsApplied(): void
