@@ -231,7 +231,8 @@ final class FaviconResolverTest extends TestCase
             'https://lemmy.example.com/site.png',
         ];
         yield 'a long sidebar dense with escapes does not exhaust the JIT stack' => [
-            '{"id":1,"sidebar":"' . str_repeat('Be \"polite\". ', 10000) . '","icon":"https://lemmy.example.com/site.png"}',
+            '{"id":1,"sidebar":"' . str_repeat('Be \"polite\". ', 10000)
+                . '","icon":"https://lemmy.example.com/site.png"}',
             '',
             'https://lemmy.example.com/site.png',
         ];
