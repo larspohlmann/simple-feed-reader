@@ -65,7 +65,7 @@ final class ProfileFeedTitleTest extends TestCase
         yield 'a Mastodon profile feed' => ['https://mastodon.social/@Gargron.rss', '@Gargron - Eugen Rochko'];
         yield 'a Lemmy title without a site' => [self::LEMMY_COMMUNITY, 'simplefeedreader'];
         yield 'a Lemmy title with a blank site' => [self::LEMMY_COMMUNITY, ' - simplefeedreader'];
-        yield 'a Lemmy title ending in no community' => [self::LEMMY_COMMUNITY, 'Lemmy.World - Simple Feeds'];
+        yield 'a Lemmy title ending in another community' => [self::LEMMY_COMMUNITY, 'Lemmy.World - technology'];
         yield 'a feed that is no profile feed' => ['https://example.com/feed', '@example - Example'];
     }
 

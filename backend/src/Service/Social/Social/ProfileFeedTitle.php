@@ -16,13 +16,12 @@ use App\Service\Social\Social\Support\ProfileFeedUrl;
 final readonly class ProfileFeedTitle implements FeedTitleInterface
 {
     private const string HANDLE_THEN_DISPLAY_NAME = '/^@\S+ - (.*)$/su';
-    private const string SITE_THEN_COMMUNITY = '/^(?<site>.*\S) - (?<community>\S+)$/su';
 
     public function of(string $feedUrl, string $channelTitle): string
     {
         return match (ProfileFeedUrl::networkOf($feedUrl)) {
             SocialNetwork::Bluesky => $this->blueskyTitle($channelTitle),
-            SocialNetwork::Lemmy => $this->lemmyTitle($channelTitle),
+            SocialNetwork::Lemmy => $this->lemmyTitle($feedUrl, $channelTitle),
             default => $channelTitle,
         };
     }
@@ -36,9 +35,11 @@ final readonly class ProfileFeedTitle implements FeedTitleInterface
         return trim($match[1]);
     }
 
-    private function lemmyTitle(string $channelTitle): string
+    private function lemmyTitle(string $feedUrl, string $channelTitle): string
     {
-        if (1 !== preg_match(self::SITE_THEN_COMMUNITY, $channelTitle, $match)) {
+        $community = strstr((string) ProfileFeedUrl::identityOf(SocialNetwork::Lemmy, $feedUrl), '@', true);
+        $siteThenCommunity = '/^(?<site>.*\S) - (?<community>' . preg_quote((string) $community, '/') . ')$/sui';
+        if (1 !== preg_match($siteThenCommunity, $channelTitle, $match)) {
             return $channelTitle;
         }
 
