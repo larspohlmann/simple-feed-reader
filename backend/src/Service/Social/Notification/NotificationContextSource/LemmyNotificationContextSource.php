@@ -54,8 +54,6 @@ final readonly class LemmyNotificationContextSource implements NotificationConte
         $comment = JsonNodeModel::of($this->lemmy->get($account, '/api/v3/comment?id=' . $answeredId)->json())
             ->node('comment_view')
             ->node('comment');
-        $context = $row->subject->context->withAnsweredExcerpt(Excerpt::of($comment->text('content')));
-
-        return $row->withSubject($row->subject->withContext($context));
+        return $row->withContext($row->subject->context->withAnsweredExcerpt(Excerpt::of($comment->text('content'))));
     }
 }

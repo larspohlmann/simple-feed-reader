@@ -37,7 +37,7 @@ final class NotificationPageModelTest extends TestCase
         $page = new NotificationPageModel([$unseen, $seen, self::notification('b', $createdAt)], $createdAt);
         $context = new NotificationContext('You said');
 
-        $swapped = $page->withSubjectsOf([$unseen->withSubject($unseen->subject->withContext($context))]);
+        $swapped = $page->withSubjectsOf([$unseen->withContext($context)]);
 
         self::assertEquals([$context, $context, new NotificationContext()], array_map(
             static fn (FetchedNotificationModel $notification): NotificationContext => $notification->subject->context,

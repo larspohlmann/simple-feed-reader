@@ -90,6 +90,6 @@ final readonly class MastodonNotificationContextSource implements NotificationCo
             return $row;
         }
 
-        return $row->withSubject($row->subject->withContext($row->subject->context->withAnsweredExcerpt($excerpt)));
+        return $row->withContext($row->subject->context->withAnsweredExcerpt($excerpt));
     }
 }

@@ -34,6 +34,7 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
     private const string MENTIONS = '/api/v3/user/mention' . self::QUERY;
     private const string MARK_REPLY = '/api/v3/comment/mark_as_read';
     private const string MARK_MENTION = '/api/v3/user/mention/mark_as_read';
+    private const array REPLY_KINDS = [SocialNotificationKind::Reply, SocialNotificationKind::CommentReply];
 
     public function __construct(private LemmyAccountApi $lemmy)
     {
@@ -45,10 +46,10 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
         $mentions = JsonNodeModel::of($this->ask($account, self::MENTIONS)->json())->nodes('mentions');
         $notifications = [];
         foreach ($replies as $entry) {
-            $notifications[] = self::fetched($account, $entry, 'comment_reply', 'reply');
+            $notifications[] = self::fetched($account, $entry, 'comment_reply', SocialNotificationKind::Reply);
         }
         foreach ($mentions as $entry) {
-            $notifications[] = self::fetched($account, $entry, 'person_mention', 'mention');
+            $notifications[] = self::fetched($account, $entry, 'person_mention', SocialNotificationKind::Mention);
         }
 
         return new NotificationPageModel(array_values(array_filter($notifications)), null);
@@ -66,7 +67,7 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
     {
         $id = self::itemIdOf($row->getRemoteId());
         try {
-            if ($row->getKind() !== SocialNotificationKind::Mention) {
+            if (in_array($row->getKind(), self::REPLY_KINDS, true)) {
                 $this->lemmy->post($account, self::MARK_REPLY, ['comment_reply_id' => $id, 'read' => true]);
 
                 return;
@@ -88,7 +89,7 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
         SocialAccount $account,
         JsonNodeModel $entry,
         string $envelope,
-        string $remoteIdPrefix,
+        SocialNotificationKind $kind,
     ): ?FetchedNotificationModel {
         $item = $entry->node($envelope);
         $itemId = $item->int('id');
@@ -98,14 +99,14 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
         if ($itemId === null || $createdAt === null || $actor === null || $commentId === null) {
             return null;
         }
-        $remoteId = $remoteIdPrefix . ':' . $itemId;
-        $answeredId = $remoteIdPrefix === 'reply'
+        $remoteId = self::remoteIdOf($kind, $itemId);
+        $answeredId = $kind === SocialNotificationKind::Reply
             ? LemmyCommentPath::parentOf($entry->node('comment')->string('path'))
             : null;
 
         return new FetchedNotificationModel(
             $remoteId,
-            self::kindOf($remoteIdPrefix, $answeredId),
+            $answeredId === null ? $kind : SocialNotificationKind::CommentReply,
             $actor,
             new NotificationSubject(
                 $remoteId,
@@ -119,13 +120,9 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
         );
     }
 
-    private static function kindOf(string $remoteIdPrefix, ?string $answeredId): SocialNotificationKind
+    private static function remoteIdOf(SocialNotificationKind $kind, int $itemId): string
     {
-        return match (true) {
-            $remoteIdPrefix === 'mention' => SocialNotificationKind::Mention,
-            $answeredId !== null => SocialNotificationKind::CommentReply,
-            default => SocialNotificationKind::Reply,
-        };
+        return $kind->value . ':' . $itemId;
     }
 
     private static function contextOf(JsonNodeModel $entry): NotificationContext

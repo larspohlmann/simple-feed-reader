@@ -89,6 +89,6 @@ final readonly class BlueskyNotificationContextSource implements NotificationCon
             );
         }
 
-        return $row->withSubject($row->subject->withContext($context));
+        return $row->withContext($context);
     }
 }

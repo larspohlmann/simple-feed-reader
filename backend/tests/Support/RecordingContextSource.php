@@ -9,7 +9,6 @@ use App\Entity\SocialAccount;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Notification\NotificationContextSource\NotificationContextSourceInterface;
 
-/** A context source that remembers the remote ids it was handed and puts $adds on every row. */
 final class RecordingContextSource implements NotificationContextSourceInterface
 {
     /** @var list<list<string>> */
@@ -28,9 +27,7 @@ final class RecordingContextSource implements NotificationContextSourceInterface
         }
 
         return array_map(
-            static fn (FetchedNotificationModel $fetched): FetchedNotificationModel => $fetched->withSubject(
-                $fetched->subject->withContext($adds),
-            ),
+            static fn (FetchedNotificationModel $fetched): FetchedNotificationModel => $fetched->withContext($adds),
             $fresh,
         );
     }
