@@ -109,10 +109,4 @@ describe('notificationLine', () => {
       '**Hank Green** and **Jay Graber** liked your comment',
     );
   });
-
-  it('keeps a mention a mention even when marked as on a comment', () => {
-    expect(marked(line(onComment(group('mention', [actor('Carol')]))))).toBe(
-      '**Carol** mentioned you',
-    );
-  });
 });

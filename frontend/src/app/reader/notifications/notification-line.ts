@@ -19,13 +19,6 @@ export const NOTIFICATION_GLYPH: Readonly<Record<NotificationKind, string>> = {
 
 const MARK = '\u0000';
 
-const ON_COMMENT_KINDS: ReadonlySet<NotificationKind> = new Set([
-  'like',
-  'repost',
-  'reply',
-  'quote',
-]);
-
 export function notificationLine(
   group: NotificationGroupDto,
   translate: Translate,
@@ -44,7 +37,7 @@ export function notificationLine(
     count: others,
   });
   const number = group.actorCount > 1 ? 'other' : 'one';
-  const action = group.onComment && ON_COMMENT_KINDS.has(group.kind) ? 'actionOnComment' : 'action';
+  const action = group.onComment ? 'actionOnComment' : 'action';
 
   return translate(`reader.notifications.${action}.${group.kind}.${number}`, { who })
     .split(MARK)
