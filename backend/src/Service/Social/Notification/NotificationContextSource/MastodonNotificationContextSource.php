@@ -13,6 +13,7 @@ use App\Service\Social\Notification\Support\Excerpt;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
 use App\Service\Social\Social\MastodonAccountApi;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
@@ -63,7 +64,10 @@ final readonly class MastodonNotificationContextSource implements NotificationCo
         $query = implode('&', array_map(static fn (string $id): string => 'id[]=' . rawurlencode($id), $ids));
         try {
             $answer = $this->mastodon->askAboutPost($account, '/api/v1/statuses?' . $query);
-        } catch (SocialPostNotFoundException | SocialPostRefusedException | SocialNetworkUnreachableException) {
+        } catch (
+            SocialPostNotFoundException | SocialPostRefusedException | SocialTokenScopeMissingException
+            | SocialNetworkUnreachableException
+        ) {
             return [];
         }
 

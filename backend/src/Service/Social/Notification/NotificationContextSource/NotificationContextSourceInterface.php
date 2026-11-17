@@ -14,7 +14,8 @@ interface NotificationContextSourceInterface
 {
     /**
      * Returns the same rows in the same order, with context added where found; a row with empty references is
-     * returned untouched, and no call is made when no row has references.
+     * returned untouched, and no call is made when no row has references. A failed lookup, a missing token scope
+     * included, leaves its rows without that context; only a rejected credential propagates.
      *
      * @param non-empty-list<FetchedNotificationModel> $fresh
      * @return list<FetchedNotificationModel>

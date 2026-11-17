@@ -64,6 +64,21 @@ final class MastodonNotificationContextSourceTest extends TestCase
         self::assertEquals([$row], $rows);
     }
 
+    public function testATokenWithoutTheStatusesScopeStoresRepliesWithoutContext(): void
+    {
+        $http = RoutedHttpClient::answering(
+            static fn (): MockResponse => new MockResponse(
+                '{"error":"This action is outside the authorized scopes"}',
+                ['http_code' => Response::HTTP_FORBIDDEN],
+            ),
+        );
+        $row = self::row('1', '4000');
+
+        $rows = $this->source($http)->withContext(SocialApiWiring::mastodonAccount(), [$row]);
+
+        self::assertEquals([$row], $rows);
+    }
+
     public function testChunksOfTwenty(): void
     {
         $http = RoutedHttpClient::answering(static fn (): MockResponse => new MockResponse('[]'));
