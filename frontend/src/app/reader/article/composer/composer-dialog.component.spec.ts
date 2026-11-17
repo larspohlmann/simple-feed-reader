@@ -1350,7 +1350,12 @@ describe('ComposerDialogComponent', () => {
         visibility: null,
         text: '',
         target: STORY,
-        lemmy: { communities: lemmyCommunities, title: TITLE, minTitleCharacters: 3, maxTitleCharacters: 200 },
+        lemmy: {
+          communities: lemmyCommunities,
+          title: TITLE,
+          minTitleCharacters: 3,
+          maxTitleCharacters: 200,
+        },
       });
     const onMastodon = () =>
       context({ kind: 'link', text: TITLE, target: STORY, visibility: 'public' });
