@@ -256,6 +256,26 @@ final class BlueskyPostWriterTest extends TestCase
         self::assertSame([self::SESSION, self::getRecordLine($recordKey)], $http->requestLines());
     }
 
+    public function testARetryThatFindsItsSharedPostNeverBuildsTheLinkCard(): void
+    {
+        $recordKey = $this->rememberedRecordKey();
+        $http = new RoutedHttpClient([
+            self::SESSION => SocialApiWiring::blueskySessionAnswer('jwt-1'),
+            self::getRecordLine($recordKey) => self::recordFound($recordKey),
+        ]);
+        $pageCards = $this->createMock(PageCardReaderInterface::class);
+        $pageCards->expects($this->never())->method('read');
+
+        $published = $this->writerReadingPagesWith($http, $pageCards)->share(
+            SocialApiWiring::blueskyAccount(),
+            self::ARTICLE_URL,
+            new PostDraftModel('Hi @bob.bsky.social', idempotencyKey: self::IDEMPOTENCY_KEY),
+        );
+
+        self::assertSame(self::ownPostUri($recordKey), $published->address);
+        self::assertSame([self::SESSION, self::getRecordLine($recordKey)], $http->requestLines());
+    }
+
     public function testRetryCreatesWhenTheFirstAttemptNeverLanded(): void
     {
         $recordKey = $this->rememberedRecordKey();

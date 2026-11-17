@@ -10,8 +10,10 @@ use App\Service\Foundation\Text\Support\WordBoundary;
 /** Where the composer's text starts before the reader types. */
 final class ComposerStartingText
 {
-    /** What a Mastodon link post sets aside for the blank line and the link, which Mastodon counts as 23 characters. */
-    public const int LINK_ROOM = 25;
+    private const int BLANK_LINE_LENGTH = 2;
+    private const int MASTODON_LINK_LENGTH = 23;
+    /** What a Mastodon link post sets aside for the blank line and the link. */
+    public const int LINK_ROOM = self::BLANK_LINE_LENGTH + self::MASTODON_LINK_LENGTH;
     private const string OPENING_QUOTE = '“';
     private const string CLOSING_QUOTE = '”';
 

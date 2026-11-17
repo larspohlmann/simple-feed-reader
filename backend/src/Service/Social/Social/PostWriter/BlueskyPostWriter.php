@@ -38,12 +38,14 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
 
     public function reply(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
     {
-        return $this->published($target->account, $draft, ['reply' => self::replyRefsOf($target)]);
+        return $this->published($target->account, $draft, static fn (): array => [
+            'reply' => self::replyRefsOf($target),
+        ]);
     }
 
     public function quote(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
     {
-        return $this->published($target->account, $draft, ['embed' => [
+        return $this->published($target->account, $draft, static fn (): array => ['embed' => [
             '$type' => self::QUOTE_EMBED,
             'record' => BlueskyStrongRef::of($target),
         ]]);
@@ -51,9 +53,9 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
 
     public function share(SocialAccount $account, string $url, PostDraftModel $draft): PublishedPostModel
     {
-        self::assertFits($draft);
-
-        return $this->published($account, $draft, ['embed' => $this->externalEmbeds->embedOf($account, $url)]);
+        return $this->published($account, $draft, fn (): array => [
+            'embed' => $this->externalEmbeds->embedOf($account, $url),
+        ]);
     }
 
     public function delete(SocialAccount $account, string $postId): PostDeletion
@@ -61,19 +63,23 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
         return $this->records->delete($account, BlueskyRecordUri::POST, $postId);
     }
 
-    /** @param array<string, mixed> $attachment */
-    private function published(SocialAccount $account, PostDraftModel $draft, array $attachment): PublishedPostModel
+    /**
+     * Built only when a post is created, so a resend that finds its post uploads no thumbnail.
+     *
+     * @param \Closure(): array<string, mixed> $attachment
+     */
+    private function published(SocialAccount $account, PostDraftModel $draft, \Closure $attachment): PublishedPostModel
     {
         self::assertFits($draft);
 
-        $fields = [
+        $fields = fn (): array => [
             'text' => $draft->text,
-            ...$attachment,
+            ...$attachment(),
             ...$this->facetsOf($draft->text),
             ...(null === $draft->language ? [] : ['langs' => [$draft->language]]),
         ];
         $uri = null === $draft->idempotencyKey
-            ? $this->records->createPost($account, $fields, null)
+            ? $this->records->createPost($account, $fields(), null)
             : $this->publishedOnce($account, $fields, $this->postKeys->recordKeyFor($account, $draft->idempotencyKey));
 
         return new PublishedPostModel($uri, AtPostUri::webUrl($uri));
@@ -83,9 +89,9 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
      * The reference PDS answers a create on a record key already taken with a bare 500, so a failed create is looked
      * up before it counts as failed.
      *
-     * @param array<string, mixed> $fields
+     * @param \Closure(): array<string, mixed> $fields
      */
-    private function publishedOnce(SocialAccount $account, array $fields, BlueskyPostKeyModel $postKey): string
+    private function publishedOnce(SocialAccount $account, \Closure $fields, BlueskyPostKeyModel $postKey): string
     {
         $existing = $postKey->seenBefore ? $this->records->findPost($account, $postKey->recordKey) : null;
         if (null !== $existing) {
@@ -93,7 +99,7 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
         }
 
         try {
-            return $this->records->createPost($account, $fields, $postKey->recordKey);
+            return $this->records->createPost($account, $fields(), $postKey->recordKey);
         } catch (SocialNetworkUnreachableException $exception) {
             return $this->records->findPost($account, $postKey->recordKey) ?? throw $exception;
         }
