@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { SOCIAL_NETWORK_NAMES } from '../../../core/social-network';
+import { networkList } from '../../../core/network-list';
 import { ButtonComponent } from '../../../shared/button/button.component';
 import { openExternal } from '../../../shared/open-external';
 import { OverlayPanelComponent } from '../../../shared/overlay-panel/overlay-panel.component';
@@ -40,8 +40,10 @@ export class PostSentDialogComponent {
     if (posts.length === 1) {
       return this.transloco.translate(`reader.posted.${posts[0].kind}.${posts[0].network}`);
     }
-    const names = posts.map(({ network }) => SOCIAL_NETWORK_NAMES[network]);
-    const joiner = ` ${this.transloco.translate('reader.posted.and')} `;
-    return this.transloco.translate('reader.posted.many', { networks: names.join(joiner) });
+    const networks = networkList(
+      posts.map(({ network }) => network),
+      this.transloco.getActiveLang(),
+    );
+    return this.transloco.translate('reader.posted.many', { networks });
   }
 }

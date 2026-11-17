@@ -11,7 +11,10 @@ import {
 } from '@angular/core';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { networkList } from '../../../core/network-list';
+import { SOCIAL_NETWORK_NAMES } from '../../../core/social-network';
 import { ButtonComponent } from '../../../shared/button/button.component';
 import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
 import { FieldComponent } from '../../../shared/field/field.component';
@@ -26,9 +29,10 @@ import {
   PostTargetDto,
 } from '../../entry-social';
 import { SentPost } from './composed-post';
-import { SharedDraft } from './composer-lane';
+import { ComposerLane, SharedDraft } from './composer-lane';
 import { ComposerLanes } from './composer-lanes';
 import { ComposerSubjectComponent } from './composer-subject.component';
+import { NetworkPillsComponent } from './network-pills.component';
 import { postLength } from './post-length';
 
 /**
@@ -46,6 +50,7 @@ import { postLength } from './post-length';
     ComposerSubjectComponent,
     ErrorBannerComponent,
     FieldComponent,
+    NetworkPillsComponent,
     OverlayPanelComponent,
     SkeletonComponent,
     TranslocoPipe,
@@ -58,44 +63,81 @@ import { postLength } from './post-length';
 export class ComposerDialogComponent {
   protected readonly ref = inject<DialogRef<SentPost[]>>(DialogRef);
   protected readonly target = inject<PostTargetDto>(DIALOG_DATA);
-  private readonly lanes = inject(ComposerLanes);
+  protected readonly lanes = inject(ComposerLanes);
+  private readonly i18n = inject(TranslocoService);
   private readonly textField = viewChild<ElementRef<HTMLTextAreaElement>>('textField');
+  private readonly language = toSignal(this.i18n.langChanges$, {
+    initialValue: this.i18n.getActiveLang(),
+  });
 
   protected readonly visibilities = MASTODON_VISIBILITIES;
+  protected readonly names = SOCIAL_NETWORK_NAMES;
   protected readonly primary = this.lanes.primary;
   private textTouched = false;
   protected readonly text = linkedSignal<string | undefined, string>({
-    source: () => this.primary().context()?.text,
+    source: () => this.lanes.picked().context()?.text,
     computation: (starting, previous) =>
       this.textTouched || starting === undefined ? (previous?.value ?? '') : starting,
   });
   private readonly caretBeforeText = this.target.kind === 'link' && this.target.quote !== null;
-  protected readonly contentWarning = signal<string | null>(null);
   protected readonly sending = signal(false);
 
-  protected readonly context = computed(() => this.primary().context());
+  /** The primary lane, or while its context is missing the first active lane that has one. */
+  private readonly shown = computed(() => {
+    const primary = this.primary();
+    if (primary.context() !== null) return primary;
+    return this.lanes.active().find((lane) => lane.context() !== null) ?? primary;
+  });
+  protected readonly context = computed(() => this.shown().context());
   private readonly kind = linkedSignal<ComposerContextDto | null, ComposerKind>({
     source: this.context,
     computation: (context, previous) => context?.kind ?? previous?.value ?? this.target.kind,
   });
-  protected readonly forbiddenKey = computed(() => {
-    const context = this.context();
-    if (context === null || context.canSend || context.kind === 'link') return null;
-    return `reader.${context.kind}Forbidden.${this.target.network}`;
-  });
+  private readonly crossposts = computed(() => this.lanes.active().length > 1);
+  protected readonly forbiddenKeys = computed(() =>
+    this.lanes.active().flatMap((lane) => {
+      const context = lane.context();
+      if (context === null || context.canSend || context.kind === 'link') return [];
+      return [`reader.${context.kind}Forbidden.${lane.network}`];
+    }),
+  );
   /** Where the words that differ between a reply, a quote and a link post live. */
   protected readonly copy = computed(() => `reader.composer.${this.kind()}`);
-  protected readonly headingKey = computed(() => `reader.${this.kind()}.${this.target.network}`);
-  protected readonly used = computed(() => postLength(this.text(), this.target.network));
-  protected readonly over = computed(() => {
-    const max = this.context()?.maxCharacters;
-    return max !== undefined && this.used() > max;
+  protected readonly heading = computed(() => {
+    const active = this.lanes.active();
+    if (active.length < 2) {
+      return { key: `reader.${this.kind()}.${this.shown().network}`, params: {} };
+    }
+    const networks = networkList(
+      active.map(({ network }) => network),
+      this.language(),
+    );
+    return { key: 'reader.link.many', params: { networks } };
   });
+  protected readonly sendKey = computed(() => {
+    const count = this.lanes.active().length;
+    if (count === 2) return 'reader.composer.link.sendBoth';
+    return count > 2 ? 'reader.composer.link.send' : `${this.copy()}.send`;
+  });
+  protected readonly counters = computed(() =>
+    this.lanes.active().flatMap((lane) => {
+      const max = lane.context()?.maxCharacters;
+      if (max === undefined) return [];
+      const used = postLength(this.text(), lane.network);
+      return [{ network: this.names[lane.network], used, max, over: used > max }];
+    }),
+  );
+  protected readonly accountLabel = computed(() =>
+    this.crossposts() ? 'reader.composer.accountOn' : `${this.copy()}.account`,
+  );
+  protected readonly writable = computed(() =>
+    this.lanes.active().some((lane) => lane.context()?.canSend === true),
+  );
   protected readonly canSend = computed(
     () =>
-      this.context()?.canSend === true &&
+      this.lanes.active().every((lane) => lane.context()?.canSend === true) &&
       this.text().trim() !== '' &&
-      !this.over() &&
+      this.counters().every(({ over }) => !over) &&
       !this.sending(),
   );
 
@@ -111,8 +153,13 @@ export class ComposerDialogComponent {
     if (this.caretBeforeText && !this.textTouched) field.setSelectionRange(0, 0);
   }
 
-  protected chooseAccount(event: Event): void {
-    this.primary().chooseAccount(Number(inputValue(event)));
+  /** Lane controls keep today's ids in a one-network composer and carry the network beside pills. */
+  protected controlId(control: string, lane: ComposerLane): string {
+    return this.lanes.showsPills() ? `reply-${control}-${lane.network}` : `reply-${control}`;
+  }
+
+  protected chooseAccount(lane: ComposerLane, event: Event): void {
+    lane.chooseAccount(Number(inputValue(event)));
   }
 
   protected write(event: Event): void {
@@ -126,16 +173,16 @@ export class ComposerDialogComponent {
     this.textField()?.nativeElement.focus();
   }
 
-  protected chooseVisibility(event: Event): void {
-    this.primary().chooseVisibility(inputValue(event) as MastodonVisibility);
+  protected chooseVisibility(lane: ComposerLane, event: Event): void {
+    lane.chooseVisibility(inputValue(event) as MastodonVisibility);
   }
 
-  protected toggleWarning(event: Event): void {
-    this.contentWarning.set((event.target as HTMLInputElement).checked ? '' : null);
+  protected toggleWarning(lane: ComposerLane, event: Event): void {
+    lane.contentWarning.set((event.target as HTMLInputElement).checked ? '' : null);
   }
 
-  protected writeWarning(event: Event): void {
-    this.contentWarning.set(inputValue(event));
+  protected writeWarning(lane: ComposerLane, event: Event): void {
+    lane.contentWarning.set(inputValue(event));
   }
 
   protected send(event: Event): void {
@@ -155,12 +202,7 @@ export class ComposerDialogComponent {
   }
 
   private sharedDraft(): SharedDraft {
-    const warning = this.contentWarning()?.trim() ?? '';
-    return {
-      text: this.text(),
-      language: browserLanguage(),
-      ...(warning === '' ? {} : { contentWarning: warning }),
-    };
+    return { text: this.text(), language: browserLanguage() };
   }
 }
 

@@ -1769,6 +1769,10 @@
     },
     "composer": {
       "counter": "{{ used }} / {{ max }}",
+      "namedCounter": "{{ network }} {{ used }} / {{ max }}",
+      "networkError": "{{ network }}: {{ message }}",
+      "accountOn": "Publicar en {{ network }} como",
+      "pillPosted": "Publicado",
       "clear": "Borrar texto",
       "visibility": "Visibilidad",
       "visibilities": {
@@ -1795,7 +1799,8 @@
         "loading": "Preparando la publicación",
         "account": "Publicar como",
         "text": "Tu publicación",
-        "send": "Publicar"
+        "send": "Publicar",
+        "sendBoth": "Publicar en ambos"
       }
     },
     "deleteReply": {
@@ -1824,7 +1829,8 @@
     },
     "link": {
       "bluesky": "Publicar en Bluesky",
-      "mastodon": "Publicar en Mastodon"
+      "mastodon": "Publicar en Mastodon",
+      "many": "Publicar en {{ networks }}"
     },
     "posted": {
       "link": {
@@ -1836,7 +1842,6 @@
         "mastodon": "Cita publicada en Mastodon"
       },
       "many": "Publicado en {{ networks }}",
-      "and": "y",
       "as": "Como {{ handle }}",
       "open": "Abrir publicación"
     }

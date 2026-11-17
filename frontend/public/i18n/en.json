@@ -1765,6 +1765,10 @@
     },
     "composer": {
       "counter": "{{ used }} / {{ max }}",
+      "namedCounter": "{{ network }} {{ used }} / {{ max }}",
+      "networkError": "{{ network }}: {{ message }}",
+      "accountOn": "Post as on {{ network }}",
+      "pillPosted": "Posted",
       "clear": "Clear text",
       "visibility": "Visibility",
       "visibilities": {
@@ -1791,7 +1795,8 @@
         "loading": "Getting the post ready",
         "account": "Post as",
         "text": "Your post",
-        "send": "Post"
+        "send": "Post",
+        "sendBoth": "Post to both"
       }
     },
     "deleteReply": {
@@ -1820,7 +1825,8 @@
     },
     "link": {
       "bluesky": "Post on Bluesky",
-      "mastodon": "Post on Mastodon"
+      "mastodon": "Post on Mastodon",
+      "many": "Post to {{ networks }}"
     },
     "posted": {
       "link": {
@@ -1832,7 +1838,6 @@
         "mastodon": "Quote posted on Mastodon"
       },
       "many": "Posted on {{ networks }}",
-      "and": "and",
       "as": "As {{ handle }}",
       "open": "Open post"
     }

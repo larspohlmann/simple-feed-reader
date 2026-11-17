@@ -1,14 +1,18 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Subject, of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import {
   ComposerContextDto,
+  LinkTargetDto,
   PostComposerSubjectDto,
+  PostTargetDto,
   PublishedPostDto,
   ResponseTargetDto,
 } from '../../entry-social';
 import { SocialPostApi } from '../../social-post-api';
+import { PostNetwork, PostNetworks } from '../share/post-networks.service';
 import { ComposerLanes } from './composer-lanes';
 
 const QUOTED: PostComposerSubjectDto = {
@@ -25,6 +29,19 @@ const TARGET: ResponseTargetDto = {
   network: 'mastodon',
   address: 'https://hachyderm.io/users/ann/statuses/200',
 };
+
+const LINK: LinkTargetDto = {
+  kind: 'link',
+  network: 'mastodon',
+  url: 'https://example.com/story',
+  title: 'A long read',
+  quote: null,
+};
+
+const BOTH: PostNetwork[] = [
+  { network: 'bluesky', handles: ['@alice.bsky.social'] },
+  { network: 'mastodon', handles: ['@alice@mastodon.example'] },
+];
 
 const DRAFT = { text: 'Hi', language: 'en' };
 
@@ -52,15 +69,26 @@ describe('ComposerLanes', () => {
       error: { type: 'social_post_refused', title: 'Refused', detail: 'Mastodon said no' },
     });
 
-  function initialised(): ComposerLanes {
+  function initialised(
+    target: PostTargetDto = TARGET,
+    connected: PostNetwork[] = [],
+  ): ComposerLanes {
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
-      providers: [ComposerLanes, { provide: SocialPostApi, useValue: api }],
+      providers: [
+        ComposerLanes,
+        { provide: SocialPostApi, useValue: api },
+        { provide: PostNetworks, useValue: { connected: signal(connected) } },
+      ],
     });
     const lanes = TestBed.inject(ComposerLanes);
-    lanes.init(TARGET);
+    lanes.init(target);
     return lanes;
   }
+
+  const networksOf = (lanes: readonly { network: string }[]) => lanes.map(({ network }) => network);
+  const laneOf = (lanes: ComposerLanes, network: string) =>
+    lanes.lanes().find((lane) => lane.network === network)!;
 
   beforeEach(() => {
     api = {
@@ -138,5 +166,141 @@ describe('ComposerLanes', () => {
     expect(failed).toHaveBeenCalled();
     expect(lane.sent()).toBeNull();
     expect(lane.sendError()).toContain('Mastodon said no');
+  });
+
+  it('keeps a chosen visibility over the next account default', () => {
+    const lane = initialised().primary();
+    lane.chooseVisibility('private');
+    api.composer.mockReturnValue(of(context({ accountId: 5, visibility: 'public' })));
+
+    lane.chooseAccount(5);
+
+    expect(lane.visibility()).toBe('private');
+  });
+
+  it('drops a load still on the wire when the composer goes', () => {
+    const slow = new Subject<ComposerContextDto>();
+    api.composer.mockReturnValueOnce(slow);
+    initialised();
+    expect(slow.observed).toBe(true);
+
+    TestBed.resetTestingModule();
+
+    expect(slow.observed).toBe(false);
+  });
+
+  it('gives a reply one lane, whatever networks are connected', () => {
+    const lanes = initialised(TARGET, BOTH);
+
+    expect(networksOf(lanes.lanes())).toEqual(['mastodon']);
+    expect(lanes.showsPills()).toBe(false);
+  });
+
+  describe('for a link post', () => {
+    it('builds a lane per connected link network, the picked one active and loading', () => {
+      const lanes = initialised(LINK, BOTH);
+
+      expect(networksOf(lanes.lanes())).toEqual(['bluesky', 'mastodon']);
+      expect(networksOf(lanes.active())).toEqual(['mastodon']);
+      expect(lanes.showsPills()).toBe(true);
+      expect(api.composer).toHaveBeenCalledTimes(1);
+      expect(api.composer).toHaveBeenCalledWith(LINK, undefined);
+      expect(laneOf(lanes, 'bluesky').target).toEqual({ ...LINK, network: 'bluesky' });
+    });
+
+    it('keeps the picked lane when nothing else is connected', () => {
+      const lanes = initialised(LINK, []);
+
+      expect(networksOf(lanes.lanes())).toEqual(['mastodon']);
+      expect(lanes.showsPills()).toBe(false);
+    });
+
+    it('loads a lane once, when it is first activated', () => {
+      const lanes = initialised(LINK, BOTH);
+
+      lanes.toggle('bluesky');
+      lanes.toggle('bluesky');
+      lanes.toggle('bluesky');
+
+      expect(networksOf(lanes.active())).toEqual(['bluesky', 'mastodon']);
+      expect(api.composer).toHaveBeenCalledTimes(2);
+      expect(api.composer).toHaveBeenLastCalledWith({ ...LINK, network: 'bluesky' }, undefined);
+    });
+
+    it('refuses to switch off the last active lane', () => {
+      const lanes = initialised(LINK, BOTH);
+
+      lanes.toggle('mastodon');
+
+      expect(networksOf(lanes.active())).toEqual(['mastodon']);
+    });
+
+    it('makes the first active lane primary once the picked one is off', () => {
+      const lanes = initialised(LINK, BOTH);
+      lanes.toggle('bluesky');
+      expect(lanes.primary().network).toBe('mastodon');
+
+      lanes.toggle('mastodon');
+
+      expect(lanes.primary().network).toBe('bluesky');
+      expect(lanes.picked().network).toBe('mastodon');
+    });
+
+    it('turns a lane off whose load fails while another is active', () => {
+      const lanes = initialised(LINK, BOTH);
+      api.composer.mockReturnValueOnce(throwError(refusal));
+
+      lanes.toggle('bluesky');
+
+      expect(laneOf(lanes, 'bluesky').active()).toBe(false);
+      expect(laneOf(lanes, 'bluesky').loadError()).toContain('Mastodon said no');
+    });
+
+    it('keeps the only active lane on when its load fails', () => {
+      api.composer.mockReturnValueOnce(throwError(refusal));
+      const lanes = initialised(LINK, BOTH);
+
+      expect(lanes.primary().active()).toBe(true);
+      expect(lanes.primary().loadError()).toContain('Mastodon said no');
+    });
+
+    it('reloads a failed lane when it is activated again', () => {
+      const lanes = initialised(LINK, BOTH);
+      api.composer.mockReturnValueOnce(throwError(refusal));
+      lanes.toggle('bluesky');
+
+      lanes.toggle('bluesky');
+
+      expect(laneOf(lanes, 'bluesky').active()).toBe(true);
+      expect(laneOf(lanes, 'bluesky').context()).toEqual(context());
+    });
+
+    it('drops the load of a lane switched off mid-load, and loads again on its return', () => {
+      const lanes = initialised(LINK, BOTH);
+      const slow = new Subject<ComposerContextDto>();
+      api.composer.mockReturnValueOnce(slow);
+      lanes.toggle('bluesky');
+
+      lanes.toggle('bluesky');
+
+      expect(slow.observed).toBe(false);
+      expect(laneOf(lanes, 'bluesky').context()).toBeNull();
+      lanes.toggle('bluesky');
+      expect(api.composer).toHaveBeenCalledTimes(3);
+    });
+
+    it('lets only the Mastodon lane carry its content warning', () => {
+      const lanes = initialised(LINK, BOTH);
+      api.composer.mockReturnValueOnce(of(context({ kind: 'link', visibility: null })));
+      lanes.toggle('bluesky');
+      lanes.primary().contentWarning.set(' Ending ');
+      laneOf(lanes, 'bluesky').contentWarning.set('Stray');
+
+      laneOf(lanes, 'mastodon').send(DRAFT, 'Hi').subscribe();
+      laneOf(lanes, 'bluesky').send(DRAFT, 'Hi').subscribe();
+
+      expect(api.send.mock.calls[0][1]).toMatchObject({ contentWarning: 'Ending' });
+      expect(api.send.mock.calls[1][1]).not.toHaveProperty('contentWarning');
+    });
   });
 });

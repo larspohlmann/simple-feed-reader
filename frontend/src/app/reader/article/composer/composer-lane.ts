@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Signal, WritableSignal, computed, signal } from '@angular/core';
+import { Signal, WritableSignal, computed, inject, signal } from '@angular/core';
 import { TranslocoService } from '@jsverse/transloco';
 import { Observable, Subscription, map, tap } from 'rxjs';
 import { SocialNetworkName } from '../../../core/social-network';
@@ -16,23 +16,32 @@ import { SocialPostApi } from '../../social-post-api';
 import { SentPost } from './composed-post';
 
 export type ContextState =
+  | { status: 'idle' }
   | { status: 'loading' }
   | { status: 'ready'; context: ComposerContextDto }
   | { status: 'failed'; message: string };
 
 /** What the dialog's shared fields contribute to a lane's post. */
-export type SharedDraft = Omit<PostDraftDto, 'accountId' | 'idempotencyKey' | 'visibility'>;
+export type SharedDraft = Omit<
+  PostDraftDto,
+  'accountId' | 'idempotencyKey' | 'visibility' | 'contentWarning'
+>;
 
 /**
- * One network the composer posts to: its context, account and visibility, and what its send did.
- * The key is minted once, so a resend publishes the post once.
+ * One network the composer posts to: its context, account and own fields, and what its send did.
+ * The key is minted once, so a resend publishes the post once. Built in an injection context.
  */
 export class ComposerLane {
+  private readonly api = inject(SocialPostApi);
+  private readonly i18n = inject(TranslocoService);
   readonly network: SocialNetworkName;
   readonly idempotencyKey = randomUuid();
+  readonly active: WritableSignal<boolean> = signal(false);
+  /** Mastodon's own fields, which the lane carries only while its context offers a visibility. */
   readonly visibility: WritableSignal<MastodonVisibility | null> = signal(null);
+  readonly contentWarning: WritableSignal<string | null> = signal(null);
 
-  private readonly loadState = signal<ContextState>({ status: 'loading' });
+  private readonly loadState = signal<ContextState>({ status: 'idle' });
   private readonly chosenAccountId = signal<number | undefined>(undefined);
   private readonly sentPost = signal<SentPost | null>(null);
   private readonly sendFailure = signal<string | null>(null);
@@ -54,8 +63,7 @@ export class ComposerLane {
 
   constructor(
     readonly target: PostTargetDto,
-    private readonly api: SocialPostApi,
-    private readonly i18n: TranslocoService,
+    private readonly loadFailed: (lane: ComposerLane) => void,
   ) {
     this.network = target.network;
   }
@@ -66,9 +74,26 @@ export class ComposerLane {
     this.loadState.set({ status: 'loading' });
     this.loading = this.api.composer(this.target, this.chosenAccountId()).subscribe({
       next: (context) => this.adopt(context),
-      error: (error: HttpErrorResponse) =>
-        this.loadState.set({ status: 'failed', message: this.messageOf(error) }),
+      error: (error: HttpErrorResponse) => {
+        this.loadState.set({ status: 'failed', message: this.messageOf(error) });
+        this.loadFailed(this);
+      },
     });
+  }
+
+  /** Loads the context the first time, and again after a failed load. */
+  activate(): void {
+    this.active.set(true);
+    const status = this.loadState().status;
+    if (status === 'idle' || status === 'failed') this.load();
+  }
+
+  /** A load still on the wire is dropped, so its late answer never shows. */
+  deactivate(): void {
+    this.active.set(false);
+    if (this.loadState().status !== 'loading') return;
+    this.loading.unsubscribe();
+    this.loadState.set({ status: 'idle' });
   }
 
   chooseAccount(id: number): void {
@@ -109,13 +134,19 @@ export class ComposerLane {
   }
 
   private draftFor(draft: SharedDraft, context: ComposerContextDto): PostDraftDto {
-    const visibility = this.visibility();
     return {
       ...draft,
       accountId: context.accountId,
       idempotencyKey: this.idempotencyKey,
-      ...(visibility === null ? {} : { visibility }),
+      ...this.mastodonFields(),
     };
+  }
+
+  private mastodonFields(): Pick<PostDraftDto, 'visibility' | 'contentWarning'> {
+    const visibility = this.visibility();
+    if (visibility === null) return {};
+    const warning = this.contentWarning()?.trim() ?? '';
+    return { visibility, ...(warning === '' ? {} : { contentWarning: warning }) };
   }
 
   private sentAs(published: PublishedPostDto, context: ComposerContextDto, text: string): SentPost {

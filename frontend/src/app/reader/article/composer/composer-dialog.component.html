@@ -1,34 +1,42 @@
 <!-- The form wraps the panel so the footer's Send submits it, as in passkey-name-dialog. -->
 <form (submit)="send($event)" cdkTrapFocus>
-  <app-overlay-panel fillOnMobile [heading]="headingKey() | transloco">
-    @if (primary().state().status === 'loading') {
-      <app-skeleton [label]="copy() + '.loading' | transloco" [rows]="2" />
-    }
-    @if (primary().loadError(); as message) {
+  <app-overlay-panel fillOnMobile [heading]="heading().key | transloco: heading().params">
+    @if (lanes.showsPills()) {
+      <app-network-pills [lanes]="lanes.lanes()" (toggleNetwork)="lanes.toggle($event)" />
+      @for (lane of lanes.lanes(); track lane.network) {
+        @if (lane.loadError(); as message) {
+          <app-error-banner
+            [message]="
+              'reader.composer.networkError' | transloco: { network: names[lane.network], message }
+            "
+            [actionLabel]="'reader.retry' | transloco"
+            (action)="lane.activate()"
+          />
+        }
+        @if (lane.sendError(); as message) {
+          <app-error-banner
+            [message]="
+              'reader.composer.networkError' | transloco: { network: names[lane.network], message }
+            "
+          />
+        }
+      }
+    } @else if (primary().loadError(); as message) {
       <app-error-banner
         [message]="message"
         [actionLabel]="'reader.retry' | transloco"
         (action)="primary().load()"
       />
     }
+    @if (context() === null && primary().state().status === 'loading') {
+      <app-skeleton [label]="copy() + '.loading' | transloco" [rows]="2" />
+    }
 
     @if (context(); as context) {
       <app-composer-subject [subject]="context.target" />
 
-      @if (forbiddenKey(); as key) {
+      @for (key of forbiddenKeys(); track key) {
         <app-error-banner [message]="key | transloco" />
-      }
-
-      @if (context.accounts.length > 1) {
-        <app-field [label]="copy() + '.account' | transloco">
-          <select id="reply-account" (change)="chooseAccount($event)">
-            @for (account of context.accounts; track account.id) {
-              <option [value]="account.id" [selected]="account.id === context.accountId">
-                {{ account.handle }}
-              </option>
-            }
-          </select>
-        </app-field>
       }
 
       <app-field [label]="copy() + '.text' | transloco">
@@ -37,7 +45,7 @@
           id="reply-text"
           rows="5"
           [value]="text()"
-          [disabled]="!context.canSend"
+          [disabled]="!writable()"
           (input)="write($event)"
         ></textarea>
       </app-field>
@@ -51,43 +59,69 @@
         >
           {{ 'reader.composer.clear' | transloco }}
         </app-button>
-        <p class="counter" [class.over]="over()" aria-live="polite">
-          {{ 'reader.composer.counter' | transloco: { used: used(), max: context.maxCharacters } }}
+        <p class="counters" aria-live="polite">
+          @for (counter of counters(); track counter.network) {
+            <span class="counter" [class.over]="counter.over">
+              @if (counters().length > 1) {
+                {{ 'reader.composer.namedCounter' | transloco: counter }}
+              } @else {
+                {{ 'reader.composer.counter' | transloco: counter }}
+              }
+            </span>
+          }
         </p>
       </div>
 
-      @if (primary().visibility(); as current) {
-        <app-field [label]="'reader.composer.visibility' | transloco">
-          <select id="reply-visibility" (change)="chooseVisibility($event)">
-            @for (option of visibilities; track option) {
-              <option [value]="option" [selected]="option === current">
-                {{ 'reader.composer.visibilities.' + option | transloco }}
-              </option>
+      @for (lane of lanes.active(); track lane.network) {
+        @if (lane.context(); as laneContext) {
+          @if (laneContext.accounts.length > 1) {
+            <app-field [label]="accountLabel() | transloco: { network: names[lane.network] }">
+              <select [id]="controlId('account', lane)" (change)="chooseAccount(lane, $event)">
+                @for (account of laneContext.accounts; track account.id) {
+                  <option [value]="account.id" [selected]="account.id === laneContext.accountId">
+                    {{ account.handle }}
+                  </option>
+                }
+              </select>
+            </app-field>
+          }
+          @if (lane.visibility(); as current) {
+            <app-field [label]="'reader.composer.visibility' | transloco">
+              <select
+                [id]="controlId('visibility', lane)"
+                (change)="chooseVisibility(lane, $event)"
+              >
+                @for (option of visibilities; track option) {
+                  <option [value]="option" [selected]="option === current">
+                    {{ 'reader.composer.visibilities.' + option | transloco }}
+                  </option>
+                }
+              </select>
+            </app-field>
+            <label class="warns">
+              <input
+                type="checkbox"
+                [checked]="lane.contentWarning() !== null"
+                (change)="toggleWarning(lane, $event)"
+              />
+              {{ 'reader.composer.addWarning' | transloco }}
+            </label>
+            @if (lane.contentWarning() !== null) {
+              <app-field [label]="'reader.composer.warning' | transloco">
+                <input
+                  [id]="controlId('warning', lane)"
+                  maxlength="500"
+                  [value]="lane.contentWarning()"
+                  (input)="writeWarning(lane, $event)"
+                />
+              </app-field>
             }
-          </select>
-        </app-field>
-        <label class="warns">
-          <input
-            type="checkbox"
-            [checked]="contentWarning() !== null"
-            (change)="toggleWarning($event)"
-          />
-          {{ 'reader.composer.addWarning' | transloco }}
-        </label>
-        @if (contentWarning() !== null) {
-          <app-field [label]="'reader.composer.warning' | transloco">
-            <input
-              id="reply-warning"
-              maxlength="500"
-              [value]="contentWarning()"
-              (input)="writeWarning($event)"
-            />
-          </app-field>
+          }
         }
       }
     }
 
-    @if (primary().sendError(); as message) {
+    @if (!lanes.showsPills() && primary().sendError(); as message) {
       <app-error-banner [message]="message" />
     }
 
@@ -101,7 +135,7 @@
       [loading]="sending()"
       [disabled]="!canSend()"
     >
-      {{ copy() + '.send' | transloco }}
+      {{ sendKey() | transloco }}
     </app-button>
   </app-overlay-panel>
 </form>
