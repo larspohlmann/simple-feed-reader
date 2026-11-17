@@ -24,6 +24,10 @@ function group(
     actors,
     actorCount,
     excerpt: null,
+    answeredExcerpt: null,
+    threadTitle: null,
+    threadPlace: null,
+    threadBy: null,
     linkUrl: 'https://social.example/p/1',
     latestAt: '2026-11-16T10:00:00Z',
     seen: true,
@@ -80,5 +84,11 @@ describe('notificationLine', () => {
   it('keeps a name containing the marker text intact', () => {
     const parts = line(group('follow', [actor('a ** b')]));
     expect(parts.filter((part) => part.strong)).toEqual([{ text: 'a ** b', strong: true }]);
+  });
+
+  it('says a comment reply answered your comment', () => {
+    expect(marked(line(group('comment_reply', [actor('Carol')])))).toBe(
+      '**Carol** replied to your comment',
+    );
   });
 });

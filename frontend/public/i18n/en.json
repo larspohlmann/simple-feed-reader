@@ -1380,6 +1380,8 @@
       "needsReconnect": "{{network}} needs reconnecting before new notifications arrive.",
       "reconnect": "Reconnect {{network}}",
       "unseen": "Unseen",
+      "you": "You:",
+      "threadBy": "in a thread by {{name}}:",
       "poll": "A poll you voted in has ended",
       "who": {
         "one": "{{first}}",
@@ -1399,6 +1401,10 @@
         "reply": {
           "one": "{{who}} replied to your post",
           "other": "{{who}} replied to your post"
+        },
+        "comment_reply": {
+          "one": "{{who}} replied to your comment",
+          "other": "{{who}} replied to your comment"
         },
         "mention": {
           "one": "{{who}} mentioned you",

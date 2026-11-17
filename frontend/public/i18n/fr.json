@@ -1384,6 +1384,8 @@
       "needsReconnect": "{{network}} doit être reconnecté pour recevoir de nouvelles notifications.",
       "reconnect": "Reconnecter {{network}}",
       "unseen": "Non vue",
+      "you": "Vous :",
+      "threadBy": "dans un fil de {{name}} :",
       "poll": "Un sondage auquel vous avez participé est terminé",
       "who": {
         "one": "{{first}}",
@@ -1403,6 +1405,10 @@
         "reply": {
           "one": "{{who}} a répondu à votre publication",
           "other": "{{who}} ont répondu à votre publication"
+        },
+        "comment_reply": {
+          "one": "{{who}} a répondu à votre commentaire",
+          "other": "{{who}} ont répondu à votre commentaire"
         },
         "mention": {
           "one": "{{who}} vous a mentionné",

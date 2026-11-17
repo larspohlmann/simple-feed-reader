@@ -5,6 +5,7 @@ import { AvatarComponent } from '../../../shared/avatar/avatar.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { relativeTimeNarrow } from '../../format';
 import { NotificationGroupDto } from '../notification.models';
+import { notificationContext } from '../notification-context';
 import { NOTIFICATION_GLYPH, notificationLine } from '../notification-line';
 
 const MAX_AVATARS = 3;
@@ -24,6 +25,7 @@ export class NotificationRowComponent {
   private readonly language = inject(LanguageService);
 
   protected readonly glyph = computed(() => NOTIFICATION_GLYPH[this.group().kind]);
+  protected readonly context = computed(() => notificationContext(this.group()));
   protected readonly avatars = computed(() => this.group().actors.slice(0, MAX_AVATARS));
   protected readonly time = computed(() =>
     relativeTimeNarrow(this.group().latestAt, this.language.lang()),
