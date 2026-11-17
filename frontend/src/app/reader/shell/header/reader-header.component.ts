@@ -13,6 +13,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { badgeCount } from '../../../shared/badge-count';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { TagGlyphComponent } from '../../../shared/tag-glyph/tag-glyph.component';
 import { SpinnerComponent } from '../../../shared/spinner/spinner.component';
@@ -100,10 +101,7 @@ export class ReaderHeaderComponent {
   private readonly subscriptions = inject(SubscriptionsStore);
   protected readonly unseenNotifications = this.subscriptions.unseenNotifications;
   protected readonly unseenTotal = this.subscriptions.unseenNotificationsTotal;
-  protected readonly badgeText = computed(() => {
-    const total = this.unseenTotal();
-    return total > 99 ? '99+' : String(total);
-  });
+  protected readonly badgeText = computed(() => badgeCount(this.unseenTotal()));
   protected readonly accountLabel = computed(() => {
     const count = this.unseenTotal();
     const key =

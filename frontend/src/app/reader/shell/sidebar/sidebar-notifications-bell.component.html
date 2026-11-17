@@ -1,0 +1,13 @@
+@let networkName = 'settings.social.' + network() | transloco;
+<a
+  class="bell"
+  [routerLink]="['/']"
+  [queryParams]="selectionQueryParams({ view: 'notifications', network: network() })"
+  queryParamsHandling="merge"
+  [attr.aria-label]="labelKey() | transloco: { network: networkName, count: count() }"
+>
+  <app-icon name="notifications" size="dense" />
+  @if (count() > 0) {
+    <span class="badge" aria-hidden="true">{{ badgeText() }}</span>
+  }
+</a>
