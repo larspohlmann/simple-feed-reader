@@ -6,6 +6,7 @@ namespace App\Service\Social\Social\ComposerDefaults;
 
 use App\Entity\SocialAccount;
 use App\Service\Social\Social\Model\ComposerDefaultsModel;
+use App\Service\Social\Social\Model\SharedLinkModel;
 use App\Service\Social\Social\Model\SocialPostModel;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
@@ -23,5 +24,5 @@ interface ComposerDefaultsInterface
     public function forAccount(SocialAccount $account): ComposerDefaultsModel;
 
     /** The defaults of a post that shares a link, net of what the network adds to the text. */
-    public function forLinkFrom(SocialAccount $account): ComposerDefaultsModel;
+    public function forLinkFrom(SocialAccount $account, SharedLinkModel $link): ComposerDefaultsModel;
 }

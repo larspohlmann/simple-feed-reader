@@ -12,11 +12,13 @@ final readonly class ComposerDefaultsModel
      *
      * @param string|null  $visibility the Mastodon visibility to start from; null on Bluesky
      * @param list<string> $mentions   handles with their "@", in the order they open the text
+     * @param LemmyLinkModel|null $lemmyLink the communities and title a Lemmy link post chooses from; null elsewhere
      */
     public function __construct(
         public int $maxCharacters,
         public ?string $visibility = null,
         public array $mentions = [],
+        public ?LemmyLinkModel $lemmyLink = null,
     ) {
     }
 

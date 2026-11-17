@@ -7,6 +7,7 @@ namespace App\Service\Social\Social\ComposerDefaults;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Social\Model\ComposerDefaultsModel;
+use App\Service\Social\Social\Model\SharedLinkModel;
 use App\Service\Social\Social\Model\SocialPostModel;
 use App\Service\Social\Social\PostWriter\BlueskyPostWriter;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
@@ -24,7 +25,7 @@ final readonly class BlueskyComposerDefaults implements ComposerDefaultsInterfac
         return new ComposerDefaultsModel(BlueskyPostWriter::MAX_GRAPHEMES);
     }
 
-    public function forLinkFrom(SocialAccount $account): ComposerDefaultsModel
+    public function forLinkFrom(SocialAccount $account, SharedLinkModel $link): ComposerDefaultsModel
     {
         return $this->forAccount($account);
     }

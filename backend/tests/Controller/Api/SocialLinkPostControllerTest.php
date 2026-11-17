@@ -91,10 +91,36 @@ final class SocialLinkPostControllerTest extends ApiTestCase
             'canSend' => true,
             'maxCharacters' => 975,
             'visibility' => 'unlisted',
+            'lemmy' => null,
             'kind' => 'link',
             'text' => 'The article',
             'target' => self::ARTICLE_HOST_CARD,
         ], $this->payload($client));
+    }
+
+    public function testTheLinkComposerOnLemmyOffersThePostableCommunitiesAndThePageTitle(): void
+    {
+        $communities = json_encode(['communities' => [
+            ['community' => ['id' => 7, 'name' => 'rss', 'actor_id' => 'https://lemmy.world/c/rss']],
+        ]], \JSON_THROW_ON_ERROR);
+        $client = $this->clientRouting(['lemmy.example'], [
+            'GET https://lemmy.example/api/v3/community/list?type_=Subscribed&sort=Old&limit=50&page=1'
+                => new MockResponse($communities),
+        ]);
+        $user = $this->signIn($client, 'link-composer-lemmy@example.test');
+        $this->lemmyAccountOf($user);
+
+        $client->request('GET', self::LINK_COMPOSER . 'lemmy&title=The+article');
+
+        self::assertResponseIsSuccessful();
+        $payload = $this->payload($client);
+        self::assertSame('', $payload['text']);
+        self::assertSame(10000, $payload['maxCharacters']);
+        self::assertSame([
+            'communities' => [['id' => 7, 'handle' => '!rss@lemmy.world']],
+            'title' => 'The article',
+            'maxTitleCharacters' => 200,
+        ], $payload['lemmy']);
     }
 
     public function testTheLinkComposerOnBlueskyStartsFromItsGraphemeLimit(): void
@@ -114,6 +140,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
             'canSend' => true,
             'maxCharacters' => BlueskyPostWriter::MAX_GRAPHEMES,
             'visibility' => null,
+            'lemmy' => null,
             'kind' => 'link',
             'text' => 'The article',
             'target' => self::ARTICLE_HOST_CARD,
@@ -227,18 +254,6 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
 
         $this->send($client, '/api/social/links?url=' . rawurlencode(self::ARTICLE_URL) . $query, ['text' => 'Hi']);
-        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
-        self::assertSame([], $this->http->requests);
-    }
-
-    public function testTheLinkComposerTakesNoLemmyNetwork(): void
-    {
-        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
-        $user = $this->signIn($client, 'link-lemmy@example.test');
-        $this->lemmyAccountOf($user);
-
-        $client->request('GET', '/api/social/link-composer?url=' . rawurlencode(self::ARTICLE_URL) . '&network=lemmy');
-
         self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
         self::assertSame([], $this->http->requests);
     }

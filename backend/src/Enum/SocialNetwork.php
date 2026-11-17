@@ -41,8 +41,7 @@ enum SocialNetwork: string
     public function takesLinkPosts(): bool
     {
         return match ($this) {
-            self::Bluesky, self::Mastodon => true,
-            self::Lemmy => false,
+            self::Bluesky, self::Mastodon, self::Lemmy => true,
         };
     }
 

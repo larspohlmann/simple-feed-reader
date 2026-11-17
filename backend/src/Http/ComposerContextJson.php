@@ -7,6 +7,8 @@ namespace App\Http;
 use App\Entity\LinkCardContent;
 use App\Entity\SocialAccount;
 use App\Service\Social\Social\Model\ComposerContextModel;
+use App\Service\Social\Social\Model\LemmyCommunityModel;
+use App\Service\Social\Social\Model\LemmyLinkModel;
 use App\Service\Social\Social\Model\PostPreviewModel;
 
 /**
@@ -14,6 +16,9 @@ use App\Service\Social\Social\Model\PostPreviewModel;
  *
  * @phpstan-type PostTargetRow array{
  *     kind: 'post', authorName: string|null, authorHandle: string|null, excerpt: string, card: LinkCardFields|null
+ * }
+ * @phpstan-type LemmyRow array{
+ *     communities: list<array{id: int, handle: string}>, title: string, maxTitleCharacters: int
  * }
  * @phpstan-type LinkTargetRow array{kind: 'link', card: LinkCardFields}
  */
@@ -26,6 +31,7 @@ final class ComposerContextJson
      *     canSend: bool,
      *     maxCharacters: int,
      *     visibility: string|null,
+     *     lemmy: LemmyRow|null,
      *     kind: 'reply'|'quote'|'link',
      *     text: string,
      *     target: PostTargetRow|LinkTargetRow,
@@ -45,11 +51,28 @@ final class ComposerContextJson
             'canSend' => $context->canSend,
             'maxCharacters' => $context->defaults->maxCharacters,
             'visibility' => $context->defaults->visibility,
+            'lemmy' => null === $context->defaults->lemmyLink ? null : self::lemmyOf($context->defaults->lemmyLink),
             'kind' => $context->kind->value,
             'text' => $context->text,
             'target' => $context->target instanceof PostPreviewModel
                 ? self::postOf($context->target)
                 : self::linkOf($context->target),
+        ];
+    }
+
+    /** @return LemmyRow */
+    private static function lemmyOf(LemmyLinkModel $link): array
+    {
+        return [
+            'communities' => array_map(
+                static fn (LemmyCommunityModel $community): array => [
+                    'id' => $community->id,
+                    'handle' => $community->handle,
+                ],
+                $link->communities,
+            ),
+            'title' => $link->title,
+            'maxTitleCharacters' => LemmyLinkModel::MAX_TITLE_CHARACTERS,
         ];
     }
 

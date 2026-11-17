@@ -7,6 +7,7 @@ namespace App\Tests\Service\Social\Social\ComposerDefaults;
 use App\Service\Social\Social\ComposerDefaults\MastodonComposerDefaults;
 use App\Service\Social\Social\Model\ComposerDefaultsModel;
 use App\Service\Social\Social\Model\ResponseContextModel;
+use App\Service\Social\Social\Model\SharedLinkModel;
 use App\Service\Social\Social\Model\SocialPostModel;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
@@ -83,7 +84,10 @@ final class MastodonComposerDefaultsTest extends TestCase
 
     public function testALinkPostLeavesRoomForTheBlankLineAndTheLinkMastodonAppends(): void
     {
-        $defaults = $this->defaults($this->answering(1000, 'unlisted'))->forLinkFrom(SocialAccounts::mastodon());
+        $defaults = $this->defaults($this->answering(1000, 'unlisted'))->forLinkFrom(
+            SocialAccounts::mastodon(),
+            new SharedLinkModel('https://example.com', 'A title'),
+        );
 
         self::assertEquals(new ComposerDefaultsModel(975, 'unlisted', []), $defaults);
     }

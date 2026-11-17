@@ -12,6 +12,7 @@ use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\MastodonAccountApi;
 use App\Service\Social\Social\MastodonApiClient;
 use App\Service\Social\Social\Model\ComposerDefaultsModel;
+use App\Service\Social\Social\Model\SharedLinkModel;
 use App\Service\Social\Social\Model\SocialPostModel;
 use App\Service\Social\Social\Support\ComposerStartingText;
 use App\Service\Social\Social\Support\MastodonVisibility;
@@ -51,7 +52,7 @@ final readonly class MastodonComposerDefaults implements ComposerDefaultsInterfa
         return new ComposerDefaultsModel($this->maxCharactersOf($account), $this->privacyOf($account));
     }
 
-    public function forLinkFrom(SocialAccount $account): ComposerDefaultsModel
+    public function forLinkFrom(SocialAccount $account, SharedLinkModel $link): ComposerDefaultsModel
     {
         $defaults = $this->forAccount($account);
 
