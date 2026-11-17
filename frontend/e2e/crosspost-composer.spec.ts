@@ -10,11 +10,6 @@ import {
   stubOneFeedReader,
 } from './support/reader';
 
-/**
- * #2287: the share menu's composer crossposts. Bluesky goes out once, Mastodon
- * fails, and its retry sends to Mastodon alone. Every API read is stubbed, so
- * the spec owns the accounts and the composer it asserts on.
- */
 const ENTRY = entryWire({ id: 1, title: 'A story worth sharing' });
 
 const ACCOUNTS: SocialAccountRefDto[] = [
@@ -99,7 +94,8 @@ test('a crosspost sends to Bluesky once and retries only Mastodon', async ({ pag
   await page.route(
     (url) => url.pathname === '/api/social/links',
     (route) => {
-      const network = new URL(route.request().url()).searchParams.get('network') ?? '';
+      const requested = new URL(route.request().url()).searchParams.get('network');
+      const network = requested === 'mastodon' ? 'mastodon' : 'bluesky';
       sends.push(network);
       if (network === 'mastodon' && ++mastodonAttempts === 1) {
         return route.fulfill({ status: 503, json: { title: 'Mastodon is unavailable' } });
@@ -127,7 +123,9 @@ test('a crosspost sends to Bluesky once and retries only Mastodon', async ({ pag
   expect(sends).toEqual(['bluesky', 'mastodon']);
 
   await dialog.getByRole('button', { name: 'Retry Mastodon' }).click();
-  await expect(page.getByRole('button', { name: 'Open post' })).toHaveCount(2);
+  await expect(
+    page.locator('app-post-sent-dialog').getByRole('button', { name: 'Open post' }),
+  ).toHaveCount(2);
   expect(sends.filter((network) => network === 'bluesky')).toHaveLength(1);
   expect(sends).toEqual(['bluesky', 'mastodon', 'mastodon']);
 });
