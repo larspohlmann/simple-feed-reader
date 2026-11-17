@@ -4,7 +4,6 @@ import { relativeTime, relativeTimeNarrow } from '../../format';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { EntrySourceComponent } from '../../entry/entry-source/entry-source.component';
 import { showsUnreadMark } from '../../trending/story';
-import { StorySourceCountComponent } from '../../trending/story-source-count/story-source-count.component';
 
 /**
  * The one-line attribution every magazine block carries: unread dot, favicon,
@@ -15,7 +14,7 @@ import { StorySourceCountComponent } from '../../trending/story-source-count/sto
  */
 @Component({
   selector: 'app-entry-kicker-line',
-  imports: [EntrySourceComponent, StorySourceCountComponent],
+  imports: [EntrySourceComponent],
   templateUrl: './entry-kicker-line.component.html',
   styleUrl: './entry-kicker-line.component.scss',
 })

@@ -4,7 +4,7 @@ import { IconComponent } from '../../../shared/icon/icon.component';
 import { EntryDto } from '../../models';
 import { STORY_ICON } from '../story';
 
-/** "7 sources · 3 shares ·" on a Trending row's attribution line; nothing on any other row (#2017, #2229). */
+/** "7 sources · 3 shares" on a Trending story; nothing on any other entry (#2017, #2229). */
 @Component({
   selector: 'app-story-source-count',
   changeDetection: ChangeDetectionStrategy.OnPush,

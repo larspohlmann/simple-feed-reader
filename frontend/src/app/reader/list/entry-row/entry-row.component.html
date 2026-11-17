@@ -14,6 +14,9 @@
         <app-entry-source [entry]="entry()" layout="row" [size]="14" />
         ·
         <app-story-source-count [entry]="entry()" />
+        @if (entry().story) {
+          ·
+        }
         {{ when() }}
         <span class="dot" [class.on]="unreadMark()" aria-hidden="true"></span>
       </p>
