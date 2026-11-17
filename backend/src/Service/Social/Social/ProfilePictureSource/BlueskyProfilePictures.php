@@ -27,8 +27,6 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 #[AsTaggedItem(index: 'bluesky', priority: 20)]
 final readonly class BlueskyProfilePictures implements ProfilePictureSourceInterface
 {
-    private const string REFRESH_AFTER = '-7 days';
-
     public function __construct(
         private FeedRepository $feeds,
         private AppViewClient $appView,

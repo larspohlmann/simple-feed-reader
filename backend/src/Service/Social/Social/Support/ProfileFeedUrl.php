@@ -14,6 +14,7 @@ final class ProfileFeedUrl
     private const string BLUESKY_PROFILE_PAGE = '#^/profile/(?<actor>[^/@]+)(?<rss>/rss)?/?$#';
     private const string MASTODON_PATH = '#^/@([^/@]+)\.rss$#';
     private const string LEMMY_COMMUNITY_PATH = '#^/feeds/c/([^/]+)\.xml$#';
+    private const string LEMMY_USER_MARKER = '@';
     private const string LEMMY_USER_PATH = '#^/feeds/u/([^/]+)\.xml$#';
 
     public static function bluesky(string $did): string
@@ -146,6 +147,14 @@ final class ProfileFeedUrl
         return 1 === preg_match(self::MASTODON_PATH, $path, $match) ? $match[1] . '@' . $host : null;
     }
 
+    /** @return string|null the user's `name@host` when $identity names a Lemmy user; null for a community */
+    public static function lemmyUserOf(string $identity): ?string
+    {
+        return str_starts_with($identity, self::LEMMY_USER_MARKER)
+            ? substr($identity, \strlen(self::LEMMY_USER_MARKER))
+            : null;
+    }
+
     private static function lemmyIdentity(string $host, string $path): ?string
     {
         if (1 === preg_match(self::LEMMY_COMMUNITY_PATH, $path, $match)) {
@@ -153,7 +162,7 @@ final class ProfileFeedUrl
         }
 
         if (1 === preg_match(self::LEMMY_USER_PATH, $path, $match)) {
-            return '@' . strtolower($match[1]) . '@' . $host;
+            return self::LEMMY_USER_MARKER . strtolower($match[1]) . '@' . $host;
         }
 
         return null;

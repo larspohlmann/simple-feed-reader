@@ -6,6 +6,7 @@ namespace App\Service\Social\Social\Model;
 
 use App\Enum\SocialNetwork;
 use App\Service\Social\Bluesky\Support\BlueskyActorKey;
+use App\Service\Social\Social\Support\ProfileFeedUrl;
 
 final readonly class ProfileFeedSubscriptionModel
 {
@@ -23,7 +24,9 @@ final readonly class ProfileFeedSubscriptionModel
         return match ($network) {
             SocialNetwork::Bluesky => BlueskyActorKey::isDid($this->identity) ? $this->identity : '@' . $this->identity,
             SocialNetwork::Mastodon => '@' . $this->identity,
-            SocialNetwork::Lemmy => str_starts_with($this->identity, '@') ? $this->identity : '!' . $this->identity,
+            SocialNetwork::Lemmy => null === ProfileFeedUrl::lemmyUserOf($this->identity)
+                ? '!' . $this->identity
+                : $this->identity,
         };
     }
 }

@@ -7,7 +7,7 @@ namespace App\Service\Social\Social\ProfilePictureSource;
 use App\Entity\Feed;
 use App\Enum\SocialNetwork;
 use App\Repository\FeedRepository;
-use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
+use App\Service\Foundation\Url\Support\HttpsImageUrl;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
@@ -25,8 +25,6 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 final readonly class LemmyProfilePictures implements ProfilePictureSourceInterface
 {
     public const string MOUSE = 'https://join-lemmy.org/static/assets/icons/apple-touch-icon.png';
-
-    private const string REFRESH_AFTER = '-7 days';
 
     public function __construct(
         private FeedRepository $feeds,
@@ -88,8 +86,9 @@ final readonly class LemmyProfilePictures implements ProfilePictureSourceInterfa
      */
     private function pictureOf(string $identity): ?string
     {
-        if (str_starts_with($identity, '@')) {
-            return $this->userPictureOf(substr($identity, 1));
+        $user = ProfileFeedUrl::lemmyUserOf($identity);
+        if (null !== $user) {
+            return $this->userPictureOf($user);
         }
 
         return $this->communityPictureOf($identity);
@@ -107,7 +106,7 @@ final readonly class LemmyProfilePictures implements ProfilePictureSourceInterfa
         $answer = $this->answerOf($host, '/api/v3/community?name=' . rawurlencode($name), 'community_view');
         $icon = $answer->node('community_view')->node('community')->string('icon');
 
-        return AbsoluteHttpUrl::orNullWithin(AbsoluteHttpUrl::httpsOrNull($icon), Feed::IMAGE_URL_MAX);
+        return HttpsImageUrl::orNull($icon);
     }
 
     /**
@@ -125,7 +124,7 @@ final readonly class LemmyProfilePictures implements ProfilePictureSourceInterfa
             return self::MOUSE;
         }
 
-        return AbsoluteHttpUrl::orNullWithin(AbsoluteHttpUrl::httpsOrNull($avatar), Feed::IMAGE_URL_MAX);
+        return HttpsImageUrl::orNull($avatar);
     }
 
     /**
