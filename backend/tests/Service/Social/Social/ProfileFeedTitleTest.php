@@ -11,6 +11,7 @@ use PHPUnit\Framework\TestCase;
 final class ProfileFeedTitleTest extends TestCase
 {
     private const string BLUESKY_PROFILE = 'https://bsky.app/profile/motherjones.com/rss';
+    private const string LEMMY_COMMUNITY = 'https://lemmy.world/feeds/c/simplefeedreader.xml';
 
     public function testABlueskyProfileFeedKeepsOnlyTheDisplayName(): void
     {
@@ -41,6 +42,20 @@ final class ProfileFeedTitleTest extends TestCase
         self::assertSame('Mother Jones', $title);
     }
 
+    public function testALemmyCommunityFeedNamesTheCommunityBeforeTheSite(): void
+    {
+        $title = (new ProfileFeedTitle())->of(self::LEMMY_COMMUNITY, 'Lemmy.World - simplefeedreader');
+
+        self::assertSame('simplefeedreader - Lemmy.World', $title);
+    }
+
+    public function testASiteNameContainingTheSeparatorStaysWhole(): void
+    {
+        $title = (new ProfileFeedTitle())->of(self::LEMMY_COMMUNITY, 'Lemmy - The World - simplefeedreader');
+
+        self::assertSame('simplefeedreader - Lemmy - The World', $title);
+    }
+
     /** @return iterable<string, array{string, string}> */
     public static function untouchedTitles(): iterable
     {
@@ -48,6 +63,9 @@ final class ProfileFeedTitleTest extends TestCase
         yield 'a blank display name' => [self::BLUESKY_PROFILE, '@motherjones.com -  '];
         yield 'a title not led by a handle' => [self::BLUESKY_PROFILE, 'Mother Jones - Politics'];
         yield 'a Mastodon profile feed' => ['https://mastodon.social/@Gargron.rss', '@Gargron - Eugen Rochko'];
+        yield 'a Lemmy title without a site' => [self::LEMMY_COMMUNITY, 'simplefeedreader'];
+        yield 'a Lemmy title with a blank site' => [self::LEMMY_COMMUNITY, ' - simplefeedreader'];
+        yield 'a Lemmy title ending in no community' => [self::LEMMY_COMMUNITY, 'Lemmy.World - Simple Feeds'];
         yield 'a feed that is no profile feed' => ['https://example.com/feed', '@example - Example'];
     }
 
