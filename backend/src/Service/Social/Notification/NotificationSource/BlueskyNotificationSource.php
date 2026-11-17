@@ -151,8 +151,6 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
         SocialAccount $account,
         array $likedPosts,
     ): NotificationSubject {
-        $record = $entry->node('record');
-
         return match ($kind) {
             SocialNotificationKind::Like, SocialNotificationKind::Repost => self::likedSubject(
                 self::likedPost($entry, $kind) ?? '',
@@ -160,33 +158,20 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
                 $likedPosts,
             ),
             SocialNotificationKind::Follow => NotificationSubject::follow($actorProfileUrl),
-            SocialNotificationKind::Reply => self::repliedSubject(
-                self::postSubject($record, $remoteId, $actorProfileUrl),
-                $account,
-                $record->node('reply'),
-            ),
-            default => self::postSubject($record, $remoteId, $actorProfileUrl),
+            default => self::postSubject($entry, $remoteId, $actorProfileUrl),
         };
     }
 
     private static function postSubject(
-        JsonNodeModel $record,
+        JsonNodeModel $entry,
         string $remoteId,
         string $actorProfileUrl,
     ): NotificationSubject {
         return new NotificationSubject(
             $remoteId,
-            Excerpt::of($record->text('text')),
+            Excerpt::of($entry->node('record')->text('text')),
             AtPostUri::webUrl($remoteId) ?? $actorProfileUrl,
         );
-    }
-
-    private static function repliedSubject(
-        NotificationSubject $subject,
-        SocialAccount $account,
-        JsonNodeModel $reply,
-    ): NotificationSubject {
-        return self::answersYourComment($account, $reply) ? self::aboutYourComment($subject) : $subject;
     }
 
     /** @param array<string, JsonNodeModel> $likedPosts */
@@ -202,22 +187,10 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
             AtPostUri::webUrl($postUri) ?? BlueskyWeb::profileUrl($account->getIdentity()),
         );
 
-        return $record->has('reply') && AtPostUri::authorityOf($postUri) === $account->getIdentity()
-            ? self::aboutYourComment($subject)
-            : $subject;
-    }
+        if (!$record->has('reply') || AtPostUri::authorityOf($postUri) !== $account->getIdentity()) {
+            return $subject;
+        }
 
-    private static function answersYourComment(SocialAccount $account, JsonNodeModel $reply): bool
-    {
-        $parent = $reply->node('parent')->string('uri');
-
-        return $parent !== null
-            && AtPostUri::authorityOf($parent) === $account->getIdentity()
-            && $reply->node('root')->string('uri') !== $parent;
-    }
-
-    private static function aboutYourComment(NotificationSubject $subject): NotificationSubject
-    {
         return $subject->withContext($subject->context->withOnComment());
     }
 

@@ -32,7 +32,6 @@ final class BlueskyNotificationSourceTest extends TestCase
     private const string UPDATE_SEEN = 'POST ' . self::PDS . '/xrpc/app.bsky.notification.updateSeen';
     private const string POST_ONE = 'at://did:plc:alice/app.bsky.feed.post/3lpost1';
     private const string POST_TWO = 'at://did:plc:alice/app.bsky.feed.post/3lpost2';
-    private const string MY_REPLY_PATH = 'did:plc:alice/app.bsky.feed.post/3lmine';
 
     public function testMapsEveryKeptKind(): void
     {
@@ -96,48 +95,40 @@ final class BlueskyNotificationSourceTest extends TestCase
         self::assertEquals(new ContextReferenceModel(), $page->notifications[5]->references);
     }
 
-    public function testAReplyToYourReplyInSomeoneElsesThreadIsAboutYourComment(): void
+    /** @return iterable<string, array{list<array<string, mixed>>, list<bool>}> */
+    public static function likedPosts(): iterable
     {
-        $page = $this->source($this->http())->fetch(SocialApiWiring::blueskyAccount());
+        $first = self::post(self::POST_ONE, 'First post text');
+        $second = self::post(self::POST_TWO, 'Second post text');
+        $nothing = [false, false, false, false, false, false, false, false, false];
 
-        self::assertTrue($page->notifications[4]->subject->context->onComment);
-        self::assertFalse($page->notifications[5]->subject->context->onComment);
-        self::assertFalse($page->notifications[6]->subject->context->onComment);
-        self::assertFalse($page->notifications[7]->subject->context->onComment);
+        yield 'two top-level posts' => [[$first, $second], $nothing];
+        yield 'a liked reply of yours' => [
+            [self::asReply($first), $second],
+            [true, true, false, false, false, false, false, false, false],
+        ];
+        yield 'a reposted reply of yours' => [
+            [$first, self::asReply($second)],
+            [false, false, true, true, false, false, false, false, false],
+        ];
     }
 
-    public function testAReplyToYourThreadStartingPostIsAboutYourPost(): void
+    /**
+     * @param list<array<string, mixed>> $posts
+     * @param list<bool> $onComment
+     */
+    #[DataProvider('likedPosts')]
+    public function testALikeOrRepostIsAboutYourCommentWhenTheLikedPostIsYourReply(array $posts, array $onComment): void
     {
-        $list = str_replace('did:plc:zoe/app.bsky.feed.post/3lroot', self::MY_REPLY_PATH, self::list());
+        $answer = (string) json_encode(['posts' => $posts]);
 
-        $page = $this->source($this->http($list))->fetch(SocialApiWiring::blueskyAccount());
+        $page = $this->source($this->http(posts: $answer))->fetch(SocialApiWiring::blueskyAccount());
 
-        self::assertFalse($page->notifications[4]->subject->context->onComment);
-    }
-
-    public function testAReplyToSomeoneElsesPostIsNotAboutYourComment(): void
-    {
-        $list = str_replace(self::MY_REPLY_PATH, 'did:plc:zoe/app.bsky.feed.post/3lmine', self::list());
-
-        $page = $this->source($this->http($list))->fetch(SocialApiWiring::blueskyAccount());
-
-        self::assertFalse($page->notifications[4]->subject->context->onComment);
-    }
-
-    public function testALikeOfYourReplyIsAboutYourComment(): void
-    {
-        $posts = str_replace(
-            '"text": "First post text"',
-            '"text": "First post text", "reply": {"parent": {"uri": "at://did:plc:zoe/app.bsky.feed.post/3lz"}}',
-            self::fixture('notifications-posts.json'),
-        );
-
-        $page = $this->source($this->http(posts: $posts))->fetch(SocialApiWiring::blueskyAccount());
-
-        self::assertTrue($page->notifications[0]->subject->context->onComment);
-        self::assertTrue($page->notifications[1]->subject->context->onComment);
+        self::assertSame($onComment, array_map(
+            static fn (FetchedNotificationModel $notification): bool => $notification->subject->context->onComment,
+            $page->notifications,
+        ));
         self::assertSame('First post text', $page->notifications[0]->subject->excerpt);
-        self::assertFalse($page->notifications[2]->subject->context->onComment);
     }
 
     public function testALikeViaRepostOfSomeoneElsesReplyIsNotAboutYourComment(): void
@@ -163,14 +154,6 @@ final class BlueskyNotificationSourceTest extends TestCase
 
         self::assertSame('Their reply', $page->notifications[0]->subject->excerpt);
         self::assertFalse($page->notifications[0]->subject->context->onComment);
-    }
-
-    public function testALikeOfATopLevelPostIsAboutYourPost(): void
-    {
-        $page = $this->source($this->http())->fetch(SocialApiWiring::blueskyAccount());
-
-        self::assertFalse($page->notifications[0]->subject->context->onComment);
-        self::assertFalse($page->notifications[2]->subject->context->onComment);
     }
 
     public function testAsksOnePostLookupWithRepeatedUrisKeys(): void
@@ -316,6 +299,24 @@ final class BlueskyNotificationSourceTest extends TestCase
             new \DateTimeImmutable($createdAt, new \DateTimeZone('UTC')),
             false,
         );
+    }
+
+    /** @return array{uri: string, record: array<string, mixed>} */
+    private static function post(string $uri, string $text): array
+    {
+        return ['uri' => $uri, 'record' => ['text' => $text]];
+    }
+
+    /**
+     * @param array{uri: string, record: array<string, mixed>} $post
+     *
+     * @return array{uri: string, record: array<string, mixed>}
+     */
+    private static function asReply(array $post): array
+    {
+        $post['record']['reply'] = ['parent' => ['uri' => 'at://did:plc:zoe/app.bsky.feed.post/3lz']];
+
+        return $post;
     }
 
     private static function list(): string
