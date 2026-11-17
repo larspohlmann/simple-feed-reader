@@ -14,6 +14,7 @@ import {
 import { SocialPostApi } from '../../social-post-api';
 import { PostNetwork, PostNetworks } from '../share/post-networks.service';
 import { ComposerLanes } from './composer-lanes';
+import { SentPost } from './composed-post';
 import { LemmyCommunityMemory } from './lemmy-community-memory';
 
 const QUOTED: PostComposerSubjectDto = {
@@ -479,6 +480,18 @@ describe('ComposerLanes', () => {
         communityId: 42,
       });
       expect(memory.remember).toHaveBeenCalledWith(8, 42);
+    });
+
+    it('shows what it posted by its title, not its body', () => {
+      memory.recall.mockReturnValue(41);
+      api.composer.mockReturnValue(of(lemmyContext()));
+      const lane = lemmyLane();
+      lane.writeTitle(' A long read ');
+      let sent: SentPost | undefined;
+
+      lane.send(DRAFT, 'The body').subscribe((post) => (sent = post));
+
+      expect(sent?.text).toBe('A long read');
     });
 
     it('remembers nothing when the send fails', () => {

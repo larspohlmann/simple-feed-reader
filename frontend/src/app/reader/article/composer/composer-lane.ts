@@ -211,7 +211,7 @@ export class ComposerLane {
       ...published,
       kind: context.kind,
       network: this.network,
-      text,
+      text: context.lemmy === null ? text : this.title().trim(),
       authorHandle: account?.handle ?? null,
       target: context.target,
     };
