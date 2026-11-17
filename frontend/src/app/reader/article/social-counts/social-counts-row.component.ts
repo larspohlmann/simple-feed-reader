@@ -14,6 +14,8 @@ import { pluralKey } from '../../../core/i18n/plural-key';
 import { SocialNetworkName } from '../../../core/social-network';
 import { PostActionsView, SocialCountsDto } from '../../entry-social';
 import { RepostButtonComponent } from './repost-button.component';
+import { VotePillComponent } from '../../vote-pill/vote-pill.component';
+import { VoteValue } from '../../vote-pill/vote';
 
 type CountKind = 'likes' | 'reposts' | 'boosts' | 'replies' | 'quotes';
 
@@ -28,6 +30,7 @@ interface ResponsePill {
   kind: 'reply' | 'quote';
   countKind: CountKind;
   icon: string;
+  label: string;
   count: number | null;
   allowed: boolean;
   requested: OutputEmitterRef<void>;
@@ -39,7 +42,7 @@ interface ResponsePill {
  */
 @Component({
   selector: 'app-social-counts-row',
-  imports: [IconComponent, TranslocoPipe, RepostButtonComponent],
+  imports: [IconComponent, TranslocoPipe, RepostButtonComponent, VotePillComponent],
   templateUrl: './social-counts-row.component.html',
   styleUrl: './social-counts-row.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -49,6 +52,11 @@ export class SocialCountsRowComponent {
   readonly counts = input.required<SocialCountsDto | null>();
   readonly liked = input.required<boolean | null>();
   readonly actions = input<PostActionsView | null>(null);
+  readonly replyLabel = input<'reader.addComment' | 'reader.replyToComment'>('reader.addComment');
+  /** Lemmy's score with the reader's vote; it stands where the other networks show their like. */
+  readonly score = input<number | null>(null);
+  readonly myVote = input<VoteValue | null>(null);
+  readonly voted = output<VoteValue>();
   readonly likeToggled = output<void>();
   readonly repostToggled = output<void>();
   readonly replyRequested = output<void>();
@@ -57,17 +65,23 @@ export class SocialCountsRowComponent {
   private readonly compactCount = inject(CompactCount);
 
   protected readonly shown = computed(
-    () => this.liked() !== null || this.actions() !== null || this.counts() !== null,
+    () =>
+      this.score() !== null ||
+      this.liked() !== null ||
+      this.actions() !== null ||
+      this.counts() !== null,
   );
+  protected readonly shares = computed(() => this.network() !== 'lemmy');
   protected readonly responsePills = computed<ResponsePill[]>(() => {
     const counts = this.counts();
     const actions = this.actions();
     if (actions === null) return [];
-    return [
+    const pills: ResponsePill[] = [
       {
         kind: 'reply',
         countKind: 'replies',
-        icon: 'chat_bubble',
+        icon: 'reply',
+        label: this.replyLabel(),
         count: counts?.replies ?? null,
         allowed: actions.canReply,
         requested: this.replyRequested,
@@ -76,11 +90,13 @@ export class SocialCountsRowComponent {
         kind: 'quote',
         countKind: 'quotes',
         icon: 'format_quote',
+        label: 'reader.actionLabel.quote',
         count: counts?.quotes ?? null,
         allowed: actions.canQuote,
         requested: this.quoteRequested,
       },
     ];
+    return this.shares() ? pills : pills.slice(0, 1);
   });
   protected readonly likeKey = computed(
     () => `${this.liked() ? 'unlike' : 'like'}.${this.network()}`,

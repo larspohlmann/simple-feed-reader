@@ -13,6 +13,7 @@
   (click)="press()"
 >
   <app-icon name="repeat" size="sm" [fill]="reposted()" />
+  <span class="label">{{ labelKey() | transloco }}</span>
   @if (countText(); as text) {
     <span class="number">{{ text }}</span>
   }

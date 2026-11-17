@@ -1780,6 +1780,14 @@
       "selection": "Compartir la selección",
       "selectedWords": "{{count}} palabras seleccionadas"
     },
+    "addComment": "Comentar",
+    "replyToComment": "Responder",
+    "actionLabel": {
+      "like": "Me gusta",
+      "repost": "Republicar",
+      "boost": "Impulsar",
+      "quote": "Citar"
+    },
     "replyForbidden": {
       "bluesky": "El autor limita quién puede responder",
       "mastodon": "No puedes responder a esta publicación",

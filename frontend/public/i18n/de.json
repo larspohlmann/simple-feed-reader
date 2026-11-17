@@ -1776,6 +1776,14 @@
       "selection": "Markierung teilen",
       "selectedWords": "{{count}} Wörter markiert"
     },
+    "addComment": "Kommentieren",
+    "replyToComment": "Antworten",
+    "actionLabel": {
+      "like": "Gefällt mir",
+      "repost": "Reposten",
+      "boost": "Boosten",
+      "quote": "Zitieren"
+    },
     "replyForbidden": {
       "bluesky": "Antworten auf diesen Beitrag sind eingeschränkt",
       "mastodon": "Auf diesen Beitrag kannst du nicht antworten",

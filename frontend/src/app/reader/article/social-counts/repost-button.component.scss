@@ -1,16 +1,12 @@
+@use '../../../theme/action-button';
 @use '../../../theme/menu-items';
-@use '../../../theme/pill-toggle';
 
 :host {
   display: contents;
 }
 
 .repost {
-  @include pill-toggle.pill-toggle;
-}
-
-.number {
-  font-variant-numeric: tabular-nums;
+  @include action-button.action-button;
 }
 
 .menu {

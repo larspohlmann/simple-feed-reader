@@ -27,7 +27,7 @@ import { relativeTime } from '../../format';
 import { EntryDto } from '../../models';
 import { EntryCommentDto, EntryCommentPostDto, EntryCommentVoteDto } from '../../entry-comment';
 import { VoteValue } from '../../vote-pill/vote';
-import { likeableSocial } from '../../entry-social';
+import { PostActionsView, likeableSocial } from '../../entry-social';
 import { mediumRatio } from '../../entry-medium';
 import { PostMediaComponent } from '../../media/post-media/post-media.component';
 import { QuotedPostComponent } from '../../quoted-post/quoted-post.component';
@@ -128,6 +128,10 @@ export class EntryCommentsComponent {
 
   vote(comment: EntryCommentDto, to: VoteValue): void {
     this.service.vote(this.entryId(), comment, to);
+  }
+
+  lemmyActionsOf(vote: EntryCommentVoteDto): PostActionsView {
+    return { isReposted: false, canRepost: false, canReply: vote.canReply, canQuote: false };
   }
 
   replyOnLemmy(vote: EntryCommentVoteDto): void {

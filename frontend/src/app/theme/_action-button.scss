@@ -1,0 +1,27 @@
+@use 'breakpoints' as bp;
+@use 'pill-toggle';
+
+// A button of a post's action row (#2309): icon, label and count, the label dropped on phones.
+@mixin action-button {
+  @include pill-toggle.pill-toggle;
+
+  min-height: var(--action-height);
+
+  .number {
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (width > bp.$bp-sm) {
+    .label + .number::before {
+      content: '·';
+      margin-inline-end: var(--space-1);
+    }
+  }
+
+  @media (width <= bp.$bp-sm) {
+    .label {
+      display: none;
+    }
+  }
+}

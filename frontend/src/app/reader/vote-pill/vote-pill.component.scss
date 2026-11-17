@@ -50,13 +50,13 @@ button.arrow {
   color: var(--danger);
 }
 
-:host(:not(.bare)) .pill.up {
+:host(:not(.bare, .outline)) .pill.up {
   --rim-base: var(--accent);
 
   background: var(--accent-soft);
 }
 
-:host(:not(.bare)) .pill.down {
+:host(:not(.bare, .outline)) .pill.down {
   --rim-base: var(--danger);
 
   background: var(--bg-danger);
@@ -71,4 +71,23 @@ button.arrow {
   .arrow {
     padding: 0 var(--space-1);
   }
+}
+
+:host(.outline) .pill {
+  min-height: var(--vote-pill-height);
+  border-radius: var(--radius);
+  color: inherit;
+}
+
+:host(.outline) .pill.up,
+:host(.outline) .pill.down {
+  color: inherit;
+}
+
+:host(.outline) .pill.up :is(.voted, .number) {
+  color: var(--accent);
+}
+
+:host(.outline) .pill.down :is(.voted, .number) {
+  color: var(--danger);
 }

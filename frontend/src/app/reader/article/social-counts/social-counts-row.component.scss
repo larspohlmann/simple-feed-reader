@@ -1,7 +1,14 @@
-@use '../../../theme/pill-toggle';
+@use '../../../theme/action-button';
 
 :host {
+  --action-height: calc(var(--space-5) + var(--space-1));
+  --pill-toggle-radius: var(--radius);
+
   display: block;
+
+  @media (pointer: coarse) {
+    --action-height: var(--tap-target);
+  }
 }
 
 .row {
@@ -9,16 +16,17 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--space-4);
+  gap: var(--space-2);
   margin-top: var(--space-4);
   font-size: var(--fs-sm);
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .count {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
+  color: var(--text-muted);
 }
 
 .number {
@@ -28,5 +36,9 @@
 .like,
 .reply,
 .quote {
-  @include pill-toggle.pill-toggle;
+  @include action-button.action-button;
+}
+
+app-vote-pill {
+  --vote-pill-height: var(--action-height);
 }

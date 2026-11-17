@@ -1776,6 +1776,14 @@
       "selection": "Share the selection",
       "selectedWords": "{{count}} words selected"
     },
+    "addComment": "Add comment",
+    "replyToComment": "Reply",
+    "actionLabel": {
+      "like": "Like",
+      "repost": "Repost",
+      "boost": "Boost",
+      "quote": "Quote"
+    },
     "replyForbidden": {
       "bluesky": "The author limits who can reply",
       "mastodon": "You can’t reply to this post",

@@ -224,7 +224,7 @@ describe('SocialCountsComponent', () => {
         ),
       )!;
 
-      expect(button.getAttribute('aria-label')).toBe('Reply on Bluesky, 7 replies');
+      expect(button.getAttribute('aria-label')).toBe('Add comment, 7 replies');
       button.click();
 
       expect(responses.reply).toHaveBeenCalledWith(1, 'bluesky', null);
@@ -338,7 +338,7 @@ describe('SocialCountsComponent', () => {
       expect(labels(element)[0]).toBe('5 reposts');
     });
 
-    it('turns the repost count into the first button once the network answers', () => {
+    it('turns the repost count into the button after the reply once the network answers', () => {
       show(post());
       const element = settle(
         loaded({}, false, { isReposted: false, canRepost: true, canReply: true, canQuote: true }),
@@ -346,7 +346,7 @@ describe('SocialCountsComponent', () => {
       const button = repostButton(element)!;
 
       expect(labels(element)).toEqual([]);
-      expect(element.querySelector('.row')!.firstElementChild?.tagName).toBe('APP-REPOST-BUTTON');
+      expect(element.querySelector('.row')!.children[1]?.tagName).toBe('APP-REPOST-BUTTON');
       expect(button.querySelector('.number')?.textContent?.trim()).toBe('5');
       expect(button.getAttribute('aria-label')).toBe('Repost on Bluesky, 5 reposts');
       expect(button.classList).not.toContain('on');
