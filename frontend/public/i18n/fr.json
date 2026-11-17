@@ -1384,8 +1384,8 @@
       "needsReconnect": "{{network}} doit être reconnecté pour recevoir de nouvelles notifications.",
       "reconnect": "Reconnecter {{network}}",
       "unseen": "Non vue",
-      "you": "Vous :",
-      "threadBy": "dans un fil de {{name}} :",
+      "you": "Vous :",
+      "threadBy": "dans un fil de {{name}} :",
       "poll": "Un sondage auquel vous avez participé est terminé",
       "who": {
         "one": "{{first}}",
