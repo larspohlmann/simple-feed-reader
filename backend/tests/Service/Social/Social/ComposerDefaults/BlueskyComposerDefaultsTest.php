@@ -18,4 +18,12 @@ final class BlueskyComposerDefaultsTest extends TestCase
             (new BlueskyComposerDefaults())->forAccount(SocialApiWiring::blueskyAccount()),
         );
     }
+
+    public function testALinkPostKeepsTheFullLimitBecauseTheLinkRidesInTheCard(): void
+    {
+        self::assertEquals(
+            new ComposerDefaultsModel(300),
+            (new BlueskyComposerDefaults())->forLinkFrom(SocialApiWiring::blueskyAccount()),
+        );
+    }
 }

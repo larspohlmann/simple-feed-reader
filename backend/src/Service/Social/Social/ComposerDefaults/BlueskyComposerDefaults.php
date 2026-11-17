@@ -23,4 +23,9 @@ final readonly class BlueskyComposerDefaults implements ComposerDefaultsInterfac
     {
         return new ComposerDefaultsModel(BlueskyPostWriter::MAX_GRAPHEMES);
     }
+
+    public function forLinkFrom(SocialAccount $account): ComposerDefaultsModel
+    {
+        return $this->forAccount($account);
+    }
 }
