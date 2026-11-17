@@ -181,6 +181,22 @@ describe("ListHeading for a network's combined view", () => {
     });
   }
 
+  it('names the tab after the list title', () => {
+    expect(networkHeading(true).tabTitle()).toBe('Bluesky');
+  });
+
+  it('heads the notifications list Notifications, beside the network logo', () => {
+    const heading = headingWith({ kind: 'notifications', network: 'bluesky' }, {});
+
+    expect(heading.title()).toBe('Notifications');
+  });
+
+  it("names the notifications' network in the tab, which shows no logo", () => {
+    const heading = headingWith({ kind: 'notifications', network: 'mastodon' }, {});
+
+    expect(heading.tabTitle()).toBe('Mastodon · Notifications');
+  });
+
   it('is titled by the network', () => {
     expect(networkHeading(true).title()).toBe('Bluesky');
   });

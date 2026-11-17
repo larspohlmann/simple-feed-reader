@@ -239,6 +239,13 @@ export class ListHeading {
     return bySelectionKind(this.titleByKind, this.routeState.selection());
   });
 
+  /** The tab carries no network logo, so it names the network the header shows as one. */
+  readonly tabTitle = computed(() => {
+    const selection = this.routeState.selection();
+    if (selection.kind !== 'notifications') return this.title();
+    return `${this.i18n.translate(`settings.social.${selection.network}`)} · ${this.title()}`;
+  });
+
   readonly titleCount = computed<TitleCount>(() =>
     bySelectionKind(this.countByKind, this.routeState.selection()),
   );
