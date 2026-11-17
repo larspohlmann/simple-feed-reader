@@ -4,18 +4,17 @@ import { relativeTime, relativeTimeNarrow } from '../../format';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { EntrySourceComponent } from '../../entry/entry-source/entry-source.component';
 import { showsUnreadMark } from '../../trending/story';
-import { StorySourceCountComponent } from '../../trending/story-source-count/story-source-count.component';
 
 /**
  * The one-line attribution every magazine block carries: unread dot, favicon,
- * source name, a Trending story's source count, relative time. Owned here,
+ * source name, relative time. Owned here,
  * not repeated per block, to keep the single-line guarantee in one place —
  * seven copies once let `flex: none` on the dot go missing from two of them
  * (#155).
  */
 @Component({
   selector: 'app-entry-kicker-line',
-  imports: [EntrySourceComponent, StorySourceCountComponent],
+  imports: [EntrySourceComponent],
   templateUrl: './entry-kicker-line.component.html',
   styleUrl: './entry-kicker-line.component.scss',
 })

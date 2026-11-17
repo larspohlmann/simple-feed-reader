@@ -23,12 +23,23 @@
   gap: var(--space-2);
 }
 
+.counts {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  overflow: hidden;
+  container-type: inline-size;
+  color: var(--text-muted);
+}
+
 .toggle {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
   padding: var(--space-1) var(--space-2);
-  margin-inline: auto calc(-1 * var(--space-2));
+  margin-inline-end: calc(-1 * var(--space-2));
   border: none;
   border-radius: var(--radius-pill);
   background: none;

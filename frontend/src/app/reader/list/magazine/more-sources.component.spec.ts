@@ -80,15 +80,25 @@ describe("a Trending story's line (#2128)", () => {
   const lineOf = (element: HTMLElement) => element.querySelector('.more-sources .story-line')!;
   const onTrending = (entry: EntryDto) => mount(entry, navigation, provideStoryActions());
 
-  it('holds the story actions first and the more-articles toggle last', () => {
+  it('holds the story actions first, the counts beside them and the toggle last', () => {
     const line = lineOf(onTrending(storyOf(copies)));
 
     expect([...line.children].map((child) => child.localName)).toEqual([
       'app-story-actions',
+      'span',
       'button',
     ]);
+    expect(line.children[1].classList.contains('counts')).toBe(true);
     expect(line.querySelector('app-story-actions .story-actions')).not.toBeNull();
     expect(line.lastElementChild!.classList.contains('toggle')).toBe(true);
+  });
+
+  it('names the story counts between the actions and the toggle (#2291)', () => {
+    const story = anEntry({ story: aStory({ outletCount: 7, viewed: false, shareCount: 2 }) });
+    const counts = lineOf(onTrending(story)).querySelector('.counts')!;
+
+    expect(counts.textContent).toContain('7 sources');
+    expect(counts.textContent).toContain('2 shares');
   });
 
   it('marks the toggle with the Trending icon', () => {
@@ -121,13 +131,11 @@ it('counts the other sources on one collapsed line', () => {
 });
 
 it("counts a story's other articles, not its sources, on the toggle", () => {
-  expect(mount(storyOf(copies)).querySelector('.toggle')!.textContent).toContain('2 more articles');
+  expect(mount(storyOf(copies)).querySelector('.toggle')!.textContent).toContain('2 more');
 });
 
-it('counts a single other article in the singular', () => {
-  expect(mount(storyOf([copies[0]])).querySelector('.toggle')!.textContent).toContain(
-    '1 more article',
-  );
+it('counts a single other article too', () => {
+  expect(mount(storyOf([copies[0]])).querySelector('.toggle')!.textContent).toContain('1 more');
 });
 
 it('shows an article no followed outlet carries as the card its posts share', () => {

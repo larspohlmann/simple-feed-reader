@@ -105,7 +105,7 @@ for (const layout of ['magazine', 'list'] as const) {
     await expect(story.locator('.sources')).toHaveText('7 sources');
     if (layout === 'magazine') {
       const toggle = story.locator('app-more-sources .toggle');
-      await expect(toggle).toHaveText(/6 more articles/);
+      await expect(toggle).toHaveText(/6 more/);
       await expect(story.locator('.mini')).toHaveCount(0);
       await toggle.click();
       await expect(story.locator('.mini')).toHaveCount(6);

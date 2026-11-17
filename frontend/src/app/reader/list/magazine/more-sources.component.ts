@@ -25,6 +25,7 @@ import { StorySharersComponent } from '../../trending/story-sharers/story-sharer
 import { ArticleFace, articleFaceOf } from '../../trending/shared-article-card';
 import { OpenInReaderComponent } from '../../link-card/open-in-reader.component';
 import { StoryActionsComponent } from '../../trending/story-actions/story-actions.component';
+import { StorySourceCountComponent } from '../../trending/story-source-count/story-source-count.component';
 import { STORY_ICON } from '../../trending/story';
 
 let nextId = 0;
@@ -42,6 +43,7 @@ let nextId = 0;
     StorySharersComponent,
     OpenInReaderComponent,
     StoryActionsComponent,
+    StorySourceCountComponent,
   ],
   templateUrl: './more-sources.component.html',
   styleUrl: './more-sources.component.scss',

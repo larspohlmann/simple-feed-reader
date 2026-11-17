@@ -8,6 +8,7 @@ $bp-lg: 900px; // desktop layout switch
 
 // Container queries take their thresholds from here too, for the same reason.
 $container-kicker-narrow: 17rem; // measured against a split-card kicker line at 249.64px
+$container-story-counts-narrow: 11.5rem; // fits "123 fuentes · compartido 123 veces", the longest wording, at --fs-xs
 $container-list-header-compact: $bp-sm; // measured against the header's content box, so the compact form reaches a ~592px viewport
 $container-list-corner-buttons: 13rem; // list height: header clearance (~120px) plus the corner buttons' own (~80px)
 $container-list-corner-cluster: 18rem; // on touch, room for the stacked column (~164px) above the pair
