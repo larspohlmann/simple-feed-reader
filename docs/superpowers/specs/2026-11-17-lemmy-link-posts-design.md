@@ -14,7 +14,7 @@ Lars asked to include Lemmy during #2287. That composer was built Lemmy-ready (s
 4. **The body may be empty** for a Lemmy link post. A title and a link are a complete Lemmy post. The body limit is Lemmy's existing 10,000 (`LemmyComposerDefaults::MAX_CHARACTERS`).
 5. **A selection quote goes into the body.** It is part of the shared text, so this needs no special handling.
 6. **Send is off until a community is chosen** for the Lemmy lane. Decision 1 makes the last-used community the starting value, so this bites only on the first share, or when the remembered community is no longer subscribed.
-7. **No subscribed communities:** the Lemmy lane shows the note "Subscribe to a community on Lemmy first", and the Lemmy lane cannot send. The other lanes still can (my call).
+7. **No subscribed communities:** the Lemmy lane shows the note "Subscribe to a community on Lemmy first", and Send stays off while the Lemmy pill is on, as with a lane over its limit in #2287. Turning the pill off lets the other networks post (my call).
 8. **No duplicate protection for Lemmy** (my call). Lemmy's API has no idempotency key and no client-chosen post id. A retry after an unclear failure may therefore post twice. The #2287 lane model already resends only failed lanes, so a Lemmy lane that succeeded is never resent.
 9. **Lemmy never quotes.** A shared URL that names a Bluesky or Mastodon post is still a plain link post on Lemmy. The #2287 kind notes ("{{ network }} shares this as a link") already say so in a crosspost.
 
