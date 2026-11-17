@@ -7,7 +7,7 @@
     queryParamsHandling="merge"
   >
     <app-icon name="inbox" size="md" />
-    <span class="name">{{ 'reader.allItems' | transloco }}</span>
+    <span class="name" appTruncationTitle>{{ 'reader.allItems' | transloco }}</span>
     @if (totalUnread() > 0) {
       <span class="count">{{ totalUnread() }}</span>
     }
@@ -20,7 +20,7 @@
     queryParamsHandling="merge"
   >
     <app-icon name="star" size="md" />
-    <span class="name">{{ 'reader.favorites' | transloco }}</span>
+    <span class="name" appTruncationTitle>{{ 'reader.favorites' | transloco }}</span>
     @if (favoritesCount() > 0) {
       <span class="count">{{ favoritesCount() }}</span>
     }
@@ -33,7 +33,7 @@
     queryParamsHandling="merge"
   >
     <app-icon name="bookmark" size="md" />
-    <span class="name">{{ 'reader.kept' | transloco }}</span>
+    <span class="name" appTruncationTitle>{{ 'reader.kept' | transloco }}</span>
     @if (keptCount() > 0) {
       <span class="count">{{ keptCount() }}</span>
     }
@@ -47,7 +47,7 @@
       queryParamsHandling="merge"
     >
       <app-icon name="share" size="md" />
-      <span class="name">{{ 'reader.shared' | transloco }}</span>
+      <span class="name" appTruncationTitle>{{ 'reader.shared' | transloco }}</span>
       <span class="count">{{ sharedCount() }}</span>
     </a>
   }
@@ -59,7 +59,7 @@
     queryParamsHandling="merge"
   >
     <app-icon name="history" size="md" />
-    <span class="name">{{ 'reader.viewed' | transloco }}</span>
+    <span class="name" appTruncationTitle>{{ 'reader.viewed' | transloco }}</span>
     @if (viewedCount() > 0) {
       <span class="count">{{ viewedCount() }}</span>
     }
@@ -73,7 +73,7 @@
       queryParamsHandling="merge"
     >
       <app-icon name="trending_up" size="md" />
-      <span class="name">{{ 'reader.trending' | transloco }}</span>
+      <span class="name" appTruncationTitle>{{ 'reader.trending' | transloco }}</span>
       @if (trendingUnopened().unopened > 0) {
         <span class="count">{{ trendingUnopened().unopened }}</span>
       }
@@ -88,7 +88,7 @@
       queryParamsHandling="merge"
     >
       <app-icon name="auto_awesome" size="md" [class.pulse]="recs.running()" />
-      <span class="name">{{ 'reader.forYou' | transloco }}</span>
+      <span class="name" appTruncationTitle>{{ 'reader.forYou' | transloco }}</span>
       @if (forYouUnread() > 0) {
         <span class="count">{{ forYouUnread() }}</span>
       }

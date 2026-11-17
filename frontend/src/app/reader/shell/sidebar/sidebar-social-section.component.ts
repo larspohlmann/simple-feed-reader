@@ -3,6 +3,7 @@ import { Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
+import { TruncationTitleDirective } from '../../../shared/truncation-title.directive';
 import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
 import { NetworkFeedKind, SocialNetworkName } from '../../../core/social-network';
 import { PersistedToggle, persistedToggle } from '../../../core/preferences/persisted-toggle';
@@ -32,6 +33,7 @@ const groupCollapsedKey = (network: SocialNetworkName, kind: NetworkFeedKind): s
 @Component({
   selector: 'app-sidebar-social-section',
   imports: [
+    TruncationTitleDirective,
     NgTemplateOutlet,
     RouterLink,
     TranslocoPipe,

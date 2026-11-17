@@ -2,6 +2,7 @@ import { Component, computed, effect, input, output, signal, untracked } from '@
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
+import { TruncationTitleDirective } from '../../../shared/truncation-title.directive';
 import { SavedSearchDto } from '../../models';
 
 /** How many saved-search rows the sidebar shows before the "Show more" link. */
@@ -24,7 +25,7 @@ const sameIds = (current: readonly number[], frozen: readonly number[]): boolean
  *  and expanded state survive the list emptying and refilling. */
 @Component({
   selector: 'app-sidebar-saved-searches',
-  imports: [RouterLink, TranslocoPipe, IconComponent],
+  imports: [TruncationTitleDirective, RouterLink, TranslocoPipe, IconComponent],
   templateUrl: './sidebar-saved-searches.component.html',
   styleUrl: './sidebar-saved-searches.component.scss',
 })

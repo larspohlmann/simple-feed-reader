@@ -7,7 +7,7 @@
         [attr.aria-expanded]="expanded()"
         (click)="toggle()"
       >
-        <span class="label">{{ 'reader.followedStories' | transloco }}</span>
+        <span class="label" appTruncationTitle>{{ 'reader.followedStories' | transloco }}</span>
         @if (newTotal() > 0) {
           <span class="section-count">{{ newTotal() }}</span>
         }
@@ -29,7 +29,7 @@
           <div class="followed-row" [class.active]="story.id === activeStoryId()">
             <a class="nav" [routerLink]="['/trending/followed', story.id]">
               <app-icon name="notifications_active" size="md" />
-              <span class="name">{{
+              <span class="name" appTruncationTitle>{{
                 story.headline ?? ('reader.followedStoryFallback' | transloco)
               }}</span>
               @if (story.quiet) {

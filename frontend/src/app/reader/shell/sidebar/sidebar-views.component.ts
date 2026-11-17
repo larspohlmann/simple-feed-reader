@@ -4,6 +4,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { AiAvailabilityService } from '../../../core/ai-availability.service';
 import { PreferencesService } from '../../../core/preferences/preferences.service';
 import { IconComponent } from '../../../shared/icon/icon.component';
+import { TruncationTitleDirective } from '../../../shared/truncation-title.directive';
 import { TrendingUnopened } from '../../trending/trending.models';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { RecommendationsService } from '../../state/recommendations.service';
@@ -12,7 +13,7 @@ import { NO_TRENDING_UNOPENED } from '../../trending/trending-window';
 /** The sidebar's first card: All items and the lists drawn from entry state, Trending and For you. */
 @Component({
   selector: 'app-sidebar-views',
-  imports: [IconComponent, RouterLink, TranslocoPipe],
+  imports: [TruncationTitleDirective, IconComponent, RouterLink, TranslocoPipe],
   templateUrl: './sidebar-views.component.html',
   styleUrl: './sidebar-views.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

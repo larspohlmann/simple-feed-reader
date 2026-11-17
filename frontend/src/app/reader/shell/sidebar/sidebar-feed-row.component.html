@@ -10,7 +10,7 @@
   }
   <span class="feedname">
     <ng-container *ngTemplateOutlet="favicon" />
-    <span class="name">{{ name }}</span>
+    <span class="name" appTruncationTitle>{{ name }}</span>
   </span>
   <button
     class="dots"
@@ -31,7 +31,7 @@
     queryParamsHandling="merge"
   >
     <ng-container *ngTemplateOutlet="favicon" />
-    <span class="name">{{ name }}</span>
+    <span class="name" appTruncationTitle>{{ name }}</span>
     @if (feed.unreadCount > 0) {
       <span class="count">{{ feed.unreadCount }}</span>
     }

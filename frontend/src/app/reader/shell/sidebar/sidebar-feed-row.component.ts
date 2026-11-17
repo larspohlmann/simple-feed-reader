@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { CDK_DRAG_PARENT, CdkDragHandle } from '@angular/cdk/drag-drop';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
+import { TruncationTitleDirective } from '../../../shared/truncation-title.directive';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { SubscriptionDto } from '../../models';
@@ -25,6 +26,7 @@ import { FeedExclusionMarkerComponent } from './feed-exclusion-marker.component'
 @Component({
   selector: 'app-sidebar-feed-row',
   imports: [
+    TruncationTitleDirective,
     NgTemplateOutlet,
     RouterLink,
     CdkDragHandle,

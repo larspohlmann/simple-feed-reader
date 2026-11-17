@@ -25,6 +25,7 @@ import {
 } from '@angular/cdk/drag-drop';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
+import { TruncationTitleDirective } from '../../../shared/truncation-title.directive';
 import { TagGlyphComponent } from '../../../shared/tag-glyph/tag-glyph.component';
 import { SectionHeadTemplateDirective, SectionHeadView } from './section-head-template.directive';
 import { SearchFieldComponent } from '../search-field/search-field.component';
@@ -95,6 +96,7 @@ const FEEDS_COLLAPSED_KEY = 'sfr.feeds.collapsed';
 @Component({
   selector: 'app-sidebar',
   imports: [
+    TruncationTitleDirective,
     RouterLink,
     IconComponent,
     TagGlyphComponent,

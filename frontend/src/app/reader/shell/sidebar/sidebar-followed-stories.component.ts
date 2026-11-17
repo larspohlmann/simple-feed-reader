@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, signal } f
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
+import { TruncationTitleDirective } from '../../../shared/truncation-title.directive';
 import { FollowedStoryUnfollow } from '../followed-story-unfollow.service';
 import { FollowedStoryDto } from '../../trending/trending.models';
 import { SidebarRowActions } from './sidebar-row-actions.service';
@@ -10,7 +11,13 @@ import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
 /** The sidebar's "Followed stories" card (#2128): one row per followed Trending story, in the server's order. */
 @Component({
   selector: 'app-sidebar-followed-stories',
-  imports: [RouterLink, TranslocoPipe, IconComponent, SidebarRowMenuComponent],
+  imports: [
+    TruncationTitleDirective,
+    RouterLink,
+    TranslocoPipe,
+    IconComponent,
+    SidebarRowMenuComponent,
+  ],
   templateUrl: './sidebar-followed-stories.component.html',
   styleUrl: './sidebar-followed-stories.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

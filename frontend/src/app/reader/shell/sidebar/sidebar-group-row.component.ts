@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IconComponent, IconSize } from '../../../shared/icon/icon.component';
+import { TruncationTitleDirective } from '../../../shared/truncation-title.directive';
 import { TagGlyphComponent } from '../../../shared/tag-glyph/tag-glyph.component';
 import { SelectionParams } from '../../query/query';
 import { TagInclusion } from '../../models';
@@ -10,7 +11,13 @@ import { FeedExclusionMarkerComponent } from './feed-exclusion-marker.component'
 /** A tag-style group header: a link to the group's combined list, an optional projected subtag pill and menu, and the expand chevron. */
 @Component({
   selector: 'app-sidebar-group-row',
-  imports: [RouterLink, IconComponent, TagGlyphComponent, FeedExclusionMarkerComponent],
+  imports: [
+    TruncationTitleDirective,
+    RouterLink,
+    IconComponent,
+    TagGlyphComponent,
+    FeedExclusionMarkerComponent,
+  ],
   templateUrl: './sidebar-group-row.component.html',
   styleUrl: './sidebar-group-row.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
