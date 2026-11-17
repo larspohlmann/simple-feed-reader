@@ -6,6 +6,8 @@ namespace App\Service\Social\Notification\NotificationContextSource;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
+use App\Service\Foundation\Text\MarkdownHtml;
+use App\Service\Foundation\Text\Support\PlainText;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Notification\Support\Excerpt;
@@ -19,7 +21,7 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 #[AsTaggedItem(index: SocialNetwork::Lemmy->value)]
 final readonly class LemmyNotificationContextSource implements NotificationContextSourceInterface
 {
-    public function __construct(private LemmyAccountApi $lemmy)
+    public function __construct(private LemmyAccountApi $lemmy, private MarkdownHtml $markdown)
     {
     }
 
@@ -51,9 +53,15 @@ final readonly class LemmyNotificationContextSource implements NotificationConte
         FetchedNotificationModel $row,
         string $answeredId,
     ): FetchedNotificationModel {
-        $comment = JsonNodeModel::of($this->lemmy->get($account, '/api/v3/comment?id=' . $answeredId)->json())
+        $content = JsonNodeModel::of($this->lemmy->get($account, '/api/v3/comment?id=' . $answeredId)->json())
             ->node('comment_view')
-            ->node('comment');
-        return $row->withContext($row->subject->context->withAnsweredExcerpt(Excerpt::of($comment->text('content'))));
+            ->node('comment')
+            ->string('content');
+        if ($content === null) {
+            return $row;
+        }
+        $answered = Excerpt::of(PlainText::fromHtmlBlocks($this->markdown->of($content)));
+
+        return $row->withContext($row->subject->context->withAnsweredExcerpt($answered));
     }
 }

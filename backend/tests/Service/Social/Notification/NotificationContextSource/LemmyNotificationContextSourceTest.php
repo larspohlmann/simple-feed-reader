@@ -11,7 +11,6 @@ use App\Enum\SocialNotificationKind;
 use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Notification\NotificationContextSource\LemmyNotificationContextSource;
-use App\Service\Social\Notification\Support\Excerpt;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\TestCase;
@@ -32,10 +31,24 @@ final class LemmyNotificationContextSourceTest extends TestCase
         );
 
         self::assertCount(1, $rows);
-        self::assertSame(Excerpt::of('My **original** comment'), $rows[0]->subject->context->answeredExcerpt);
-        self::assertSame('My **original** comment', $rows[0]->subject->context->answeredExcerpt);
+        self::assertSame('My original comment', $rows[0]->subject->context->answeredExcerpt);
         self::assertSame('A post', $rows[0]->subject->context->threadTitle);
         self::assertSame('c/selfhosted', $rows[0]->subject->context->threadPlace);
+    }
+
+    public function testAQuotedLineInTheAnsweredCommentReadsAsPlainText(): void
+    {
+        $parent = ['comment_view' => ['comment' => ['content' => "> earlier\n\nMy [answer](https://x.test)"]]];
+        $http = new RoutedHttpClient([
+            'GET ' . self::COMMENT . '26906403' => new MockResponse((string) json_encode($parent)),
+        ]);
+
+        $rows = $this->source($http)->withContext(
+            SocialApiWiring::lemmyAccount(),
+            [self::row('reply:7', '26906403')],
+        );
+
+        self::assertSame('earlier My answer', $rows[0]->subject->context->answeredExcerpt);
     }
 
     public function testAGoneParentLeavesTheRowWithoutAnsweredText(): void
@@ -67,7 +80,7 @@ final class LemmyNotificationContextSourceTest extends TestCase
         );
 
         self::assertEquals($first, $rows[0]);
-        self::assertSame('My **original** comment', $rows[1]->subject->context->answeredExcerpt);
+        self::assertSame('My original comment', $rows[1]->subject->context->answeredExcerpt);
     }
 
     public function testAThrottleStopsTheLookupsAndKeepsTheRows(): void
@@ -85,7 +98,7 @@ final class LemmyNotificationContextSourceTest extends TestCase
         );
 
         self::assertCount(3, $rows);
-        self::assertSame('My **original** comment', $rows[0]->subject->context->answeredExcerpt);
+        self::assertSame('My original comment', $rows[0]->subject->context->answeredExcerpt);
         self::assertEquals($second, $rows[1]);
         self::assertEquals($third, $rows[2]);
         self::assertCount(2, $http->requests);
@@ -129,6 +142,9 @@ final class LemmyNotificationContextSourceTest extends TestCase
 
     private function source(RoutedHttpClient $http): LemmyNotificationContextSource
     {
-        return new LemmyNotificationContextSource(SocialApiWiring::lemmyAccountApi($http->client()));
+        return new LemmyNotificationContextSource(
+            SocialApiWiring::lemmyAccountApi($http->client()),
+            SocialApiWiring::markdownHtml(),
+        );
     }
 }

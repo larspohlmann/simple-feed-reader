@@ -12,6 +12,8 @@ use App\Entity\SocialNotification;
 use App\Enum\SocialNetwork;
 use App\Enum\SocialNotificationKind;
 use App\Service\Content\Comments\Support\LemmyAuthor;
+use App\Service\Foundation\Text\MarkdownHtml;
+use App\Service\Foundation\Text\Support\PlainText;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Notification\Model\ContextReferenceModel;
@@ -36,7 +38,7 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
     private const string MARK_MENTION = '/api/v3/user/mention/mark_as_read';
     private const array REPLY_KINDS = [SocialNotificationKind::Reply, SocialNotificationKind::CommentReply];
 
-    public function __construct(private LemmyAccountApi $lemmy)
+    public function __construct(private LemmyAccountApi $lemmy, private MarkdownHtml $markdown)
     {
     }
 
@@ -46,10 +48,10 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
         $mentions = JsonNodeModel::of($this->ask($account, self::MENTIONS)->json())->nodes('mentions');
         $notifications = [];
         foreach ($replies as $entry) {
-            $notifications[] = self::fetched($account, $entry, 'comment_reply', SocialNotificationKind::Reply);
+            $notifications[] = $this->fetched($account, $entry, 'comment_reply', SocialNotificationKind::Reply);
         }
         foreach ($mentions as $entry) {
-            $notifications[] = self::fetched($account, $entry, 'person_mention', SocialNotificationKind::Mention);
+            $notifications[] = $this->fetched($account, $entry, 'person_mention', SocialNotificationKind::Mention);
         }
 
         return new NotificationPageModel(array_values(array_filter($notifications)), null);
@@ -85,7 +87,7 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
         return SocialNetworkUnreachableException::around(fn () => $this->lemmy->get($account, $path));
     }
 
-    private static function fetched(
+    private function fetched(
         SocialAccount $account,
         JsonNodeModel $entry,
         string $envelope,
@@ -110,7 +112,7 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
             $actor,
             new NotificationSubject(
                 $remoteId,
-                Excerpt::of($entry->node('comment')->text('content')),
+                $this->excerptOf($entry->node('comment')->string('content')),
                 $account->getServiceUrl() . '/comment/' . $commentId,
                 self::contextOf($entry),
             ),
@@ -118,6 +120,11 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
             $item->isTrue('read'),
             new ContextReferenceModel(answeredId: $answeredId),
         );
+    }
+
+    private function excerptOf(?string $markdown): ?string
+    {
+        return $markdown === null ? null : Excerpt::of(PlainText::fromHtmlBlocks($this->markdown->of($markdown)));
     }
 
     private static function remoteIdOf(SocialNotificationKind $kind, int $itemId): string

@@ -55,7 +55,7 @@ final class LemmyNotificationSourceTest extends TestCase
         self::assertEquals(
             new NotificationSubject(
                 'reply:7',
-                'Thanks, **that** helped a lot',
+                'Thanks, that helped a lot',
                 'https://lemmy.example/comment/41',
                 new NotificationContext(
                     threadTitle: 'Which self-hosted reader do you use?',
@@ -91,6 +91,17 @@ final class LemmyNotificationSourceTest extends TestCase
 
         self::assertSame('reply:7', $page->notifications[0]->remoteId);
         self::assertSame('reply:7', $page->notifications[0]->subject->groupKey);
+    }
+
+    public function testAQuotedLineAndALinkReadAsPlainText(): void
+    {
+        $replies = (string) file_get_contents(__DIR__ . '/../../../../Fixtures/lemmy/notifications-replies.json');
+        $markdown = json_encode("> you said this\n\nSee [the docs](https://example.com) **now**");
+        $quoting = str_replace('"Thanks, **that** helped a lot"', (string) $markdown, $replies);
+
+        $page = $this->source($this->http($quoting))->fetch(SocialApiWiring::lemmyAccount());
+
+        self::assertSame('you said this See the docs now', $page->notifications[0]->subject->excerpt);
     }
 
     public function testAMissingCommunityLeavesNoPlace(): void
@@ -345,6 +356,9 @@ final class LemmyNotificationSourceTest extends TestCase
 
     private function source(RoutedHttpClient $http): LemmyNotificationSource
     {
-        return new LemmyNotificationSource(SocialApiWiring::lemmyAccountApi($http->client()));
+        return new LemmyNotificationSource(
+            SocialApiWiring::lemmyAccountApi($http->client()),
+            SocialApiWiring::markdownHtml(),
+        );
     }
 }
