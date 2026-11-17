@@ -107,6 +107,28 @@ final class MastodonNotificationContextSourceTest extends TestCase
         self::assertCount(2, $http->requests);
     }
 
+    public function testEveryAnsweredPostOfEveryChunkIsApplied(): void
+    {
+        $http = RoutedHttpClient::answering(static function (string $method, string $url): MockResponse {
+            preg_match_all('/id\[\]=(\d+)/', $url, $ids);
+
+            return new MockResponse((string) json_encode(array_map(
+                static fn (string $id): array => ['id' => $id, 'content' => 'Post ' . $id],
+                $ids[1],
+            )));
+        });
+        $rows = [];
+        foreach (range(1, 21) as $number) {
+            $rows[] = self::row((string) $number, (string) (4000 + $number));
+        }
+
+        $result = $this->source($http)->withContext(SocialApiWiring::mastodonAccount(), $rows);
+
+        self::assertSame('Post 4001', $result[0]->subject->context->answeredExcerpt);
+        self::assertSame('Post 4002', $result[1]->subject->context->answeredExcerpt);
+        self::assertSame('Post 4021', $result[20]->subject->context->answeredExcerpt);
+    }
+
     public function testAFailedChunkLeavesTheOtherChunksApplied(): void
     {
         $http = RoutedHttpClient::answering(
