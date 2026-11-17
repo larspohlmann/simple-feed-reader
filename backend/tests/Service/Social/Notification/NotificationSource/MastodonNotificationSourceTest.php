@@ -17,6 +17,7 @@ use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -75,6 +76,39 @@ final class MastodonNotificationSourceTest extends TestCase
 
         self::assertSame('The post they quoted', $quote->subject->context->answeredExcerpt);
         self::assertSame('quoting', $quote->subject->excerpt);
+    }
+
+    /** @return iterable<string, array{string, int}> */
+    public static function repliesOfYours(): iterable
+    {
+        yield 'a favourite of your reply' => ['"content": "<p>First post</p><p>second para</p>",', 0];
+        yield 'a boost of your reply' => ['"content": "<p>Boosted</p>",', 1];
+        yield 'a quote of your reply' => ['"content": "<p>The post they quoted</p>",', 6];
+    }
+
+    #[DataProvider('repliesOfYours')]
+    public function testANotificationAboutYourReplyIsAboutYourComment(string $statusContent, int $index): void
+    {
+        $list = str_replace($statusContent, $statusContent . ' "in_reply_to_id": "777",', self::list(), $patched);
+        self::assertSame(1, $patched);
+
+        $page = $this->source($this->http(listBody: $list))->fetch(SocialApiWiring::mastodonAccount());
+
+        $onComment = array_fill(0, count($page->notifications), false);
+        $onComment[$index] = true;
+        self::assertSame($onComment, array_map(
+            static fn (FetchedNotificationModel $notification): bool => $notification->subject->context->onComment,
+            $page->notifications,
+        ));
+    }
+
+    public function testNotificationsAboutTopLevelPostsAreAboutYourPost(): void
+    {
+        $page = $this->source($this->http())->fetch(SocialApiWiring::mastodonAccount());
+
+        foreach ($page->notifications as $notification) {
+            self::assertFalse($notification->subject->context->onComment);
+        }
     }
 
     public function testDropsUnlistedKinds(): void
@@ -261,6 +295,11 @@ final class MastodonNotificationSourceTest extends TestCase
         );
     }
 
+    private static function list(): string
+    {
+        return (string) file_get_contents(__DIR__ . '/../../../../Fixtures/Mastodon/notifications-list.json');
+    }
+
     private function http(
         ?string $markers = null,
         int $listStatus = Response::HTTP_OK,
@@ -281,9 +320,7 @@ final class MastodonNotificationSourceTest extends TestCase
                 $markers ?? (string) file_get_contents($fixtures . 'notifications-markers.json'),
             ),
             'GET ' . self::LIST => new MockResponse(
-                $listStatus === Response::HTTP_OK
-                    ? (string) file_get_contents($fixtures . 'notifications-list.json')
-                    : $listBody ?? $forbidden,
+                $listBody ?? ($listStatus === Response::HTTP_OK ? self::list() : $forbidden),
                 ['http_code' => $listStatus],
             ),
             'GET ' . self::MARKER_ITEM => new MockResponse(

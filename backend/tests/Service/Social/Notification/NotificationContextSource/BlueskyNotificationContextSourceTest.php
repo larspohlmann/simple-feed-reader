@@ -12,6 +12,7 @@ use App\Service\Social\Notification\NotificationContextSource\BlueskyNotificatio
 use App\Tests\Support\NotificationRows;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -79,7 +80,7 @@ final class BlueskyNotificationContextSourceTest extends TestCase
         $http = $this->http((string) json_encode(['posts' => [[
             'uri' => self::THEIRS,
             'author' => ['did' => 'did:plc:someone-else', 'handle' => 'else.bsky.social', 'displayName' => 'Else'],
-            'record' => ['text' => 'Not your post'],
+            'record' => ['text' => 'Not your post', 'reply' => ['parent' => ['uri' => self::ROOT]]],
         ], [
             'uri' => self::ROOT,
             'author' => ['did' => 'did:plc:zoe', 'handle' => 'zoe.bsky.social', 'displayName' => 'Zoe'],
@@ -92,6 +93,7 @@ final class BlueskyNotificationContextSourceTest extends TestCase
         );
 
         self::assertNull($rows[0]->subject->context->answeredExcerpt);
+        self::assertFalse($rows[0]->subject->context->onComment);
         self::assertSame('Zoe', $rows[0]->subject->context->threadBy);
         self::assertSame([self::lookup(self::ROOT)], $this->lookups($http));
     }
@@ -117,6 +119,64 @@ final class BlueskyNotificationContextSourceTest extends TestCase
         );
 
         self::assertSame('The post you quoted', $rows[0]->subject->context->answeredExcerpt);
+    }
+
+    /** @return iterable<string, array{SocialNotificationKind, ContextReferenceModel, array<string, mixed>, bool}> */
+    public static function answeredPostsOfYours(): iterable
+    {
+        $reply = [
+            'text' => 'My own post',
+            'reply' => ['parent' => ['uri' => self::ROOT], 'root' => ['uri' => self::ROOT]],
+        ];
+        $topLevel = ['text' => 'My own post'];
+
+        yield 'a reply to your reply in someone else\'s thread' => [
+            SocialNotificationKind::Reply,
+            new ContextReferenceModel(self::MINE, self::ROOT),
+            $reply,
+            true,
+        ];
+        yield 'a reply to your thread-starting post' => [
+            SocialNotificationKind::Reply,
+            new ContextReferenceModel(self::MINE),
+            $topLevel,
+            false,
+        ];
+        yield 'a quote of your reply' => [
+            SocialNotificationKind::Quote,
+            new ContextReferenceModel(self::MINE),
+            $reply,
+            true,
+        ];
+        yield 'a quote of your top-level post' => [
+            SocialNotificationKind::Quote,
+            new ContextReferenceModel(self::MINE),
+            $topLevel,
+            false,
+        ];
+    }
+
+    /** @param array<string, mixed> $answeredRecord */
+    #[DataProvider('answeredPostsOfYours')]
+    public function testAnAnsweredPostOfYoursIsYourCommentWhenItIsAReply(
+        SocialNotificationKind $kind,
+        ContextReferenceModel $references,
+        array $answeredRecord,
+        bool $onComment,
+    ): void {
+        $posts = (string) json_encode(['posts' => [[
+            'uri' => self::MINE,
+            'author' => ['did' => 'did:plc:alice', 'handle' => 'alice.bsky.social'],
+            'record' => $answeredRecord,
+        ]]]);
+
+        $rows = $this->source($this->http($posts))->withContext(
+            SocialApiWiring::blueskyAccount(),
+            [self::row($kind, $references)],
+        );
+
+        self::assertSame($onComment, $rows[0]->subject->context->onComment);
+        self::assertSame('My own post', $rows[0]->subject->context->answeredExcerpt);
     }
 
     public function testAnUnreachableAppViewLeavesTheRowsAlone(): void

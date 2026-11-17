@@ -47,11 +47,11 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
 
         $list = JsonNodeModel::of(BlueskySessions::accepted($this->sessions->askAs($account, self::LIST))->json());
         $known = self::knownEntries($list->nodes('notifications'));
-        $postTexts = $this->postTexts($account, self::likedPosts($known));
+        $likedPosts = $this->posts->byUri($account, self::likedPosts($known));
 
         $notifications = [];
         foreach ($known as [$entry, $kind]) {
-            $notification = self::fetched($account, $entry, $kind, $postTexts);
+            $notification = self::fetched($account, $entry, $kind, $likedPosts);
             if ($notification instanceof FetchedNotificationModel) {
                 $notifications[] = $notification;
             }
@@ -114,25 +114,12 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
         return array_values(array_unique($posts));
     }
 
-    /**
-     * @param list<string> $postUris
-     *
-     * @return array<string, string> post text by AT URI
-     */
-    private function postTexts(SocialAccount $account, array $postUris): array
-    {
-        return array_map(
-            static fn (JsonNodeModel $post): string => $post->node('record')->text('text') ?? '',
-            $this->posts->byUri($account, $postUris),
-        );
-    }
-
-    /** @param array<string, string> $postTexts */
+    /** @param array<string, JsonNodeModel> $likedPosts */
     private static function fetched(
         SocialAccount $account,
         JsonNodeModel $entry,
         SocialNotificationKind $kind,
-        array $postTexts,
+        array $likedPosts,
     ): ?FetchedNotificationModel {
         $remoteId = $entry->string('uri');
         $createdAt = NetworkTimestamp::toUtc($entry->string('indexedAt'));
@@ -148,45 +135,63 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
             $remoteId,
             $kind,
             new NotificationActor($handle, $author->string('displayName'), $author->string('avatar'), $profileUrl),
-            self::subjectOf($kind, $entry, $remoteId, $profileUrl, $account, $postTexts),
+            self::subjectOf($kind, $entry, $remoteId, $profileUrl, $account, $likedPosts),
             $createdAt,
             $entry->isTrue('isRead'),
             BlueskyReplyReferences::of($entry->node('record'), $kind),
         );
     }
 
-    /** @param array<string, string> $postTexts */
+    /** @param array<string, JsonNodeModel> $likedPosts */
     private static function subjectOf(
         SocialNotificationKind $kind,
         JsonNodeModel $entry,
         string $remoteId,
         string $actorProfileUrl,
         SocialAccount $account,
-        array $postTexts,
+        array $likedPosts,
     ): NotificationSubject {
         return match ($kind) {
             SocialNotificationKind::Like, SocialNotificationKind::Repost => self::likedSubject(
                 self::likedPost($entry, $kind) ?? '',
                 $account,
-                $postTexts,
+                $likedPosts,
             ),
             SocialNotificationKind::Follow => NotificationSubject::follow($actorProfileUrl),
-            default => new NotificationSubject(
-                $remoteId,
-                Excerpt::of($entry->node('record')->text('text')),
-                AtPostUri::webUrl($remoteId) ?? $actorProfileUrl,
-            ),
+            default => self::postSubject($entry, $remoteId, $actorProfileUrl),
         };
     }
 
-    /** @param array<string, string> $postTexts */
-    private static function likedSubject(string $postUri, SocialAccount $account, array $postTexts): NotificationSubject
-    {
+    private static function postSubject(
+        JsonNodeModel $entry,
+        string $remoteId,
+        string $actorProfileUrl,
+    ): NotificationSubject {
         return new NotificationSubject(
+            $remoteId,
+            Excerpt::of($entry->node('record')->text('text')),
+            AtPostUri::webUrl($remoteId) ?? $actorProfileUrl,
+        );
+    }
+
+    /** @param array<string, JsonNodeModel> $likedPosts */
+    private static function likedSubject(
+        string $postUri,
+        SocialAccount $account,
+        array $likedPosts,
+    ): NotificationSubject {
+        $record = ($likedPosts[$postUri] ?? JsonNodeModel::of(null))->node('record');
+        $subject = new NotificationSubject(
             $postUri,
-            Excerpt::of($postTexts[$postUri] ?? null),
+            Excerpt::of($record->text('text')),
             AtPostUri::webUrl($postUri) ?? BlueskyWeb::profileUrl($account->getIdentity()),
         );
+
+        if (!$record->has('reply') || AtPostUri::authorityOf($postUri) !== $account->getIdentity()) {
+            return $subject;
+        }
+
+        return $subject->withContext($subject->context->withOnComment());
     }
 
     private static function likedPost(JsonNodeModel $entry, SocialNotificationKind $kind): ?string

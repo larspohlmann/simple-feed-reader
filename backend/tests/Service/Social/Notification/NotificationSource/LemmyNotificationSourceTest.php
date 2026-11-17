@@ -42,7 +42,7 @@ final class LemmyNotificationSourceTest extends TestCase
             ),
         );
         $reply = $page->notifications[0];
-        self::assertSame(SocialNotificationKind::CommentReply, $reply->kind);
+        self::assertSame(SocialNotificationKind::Reply, $reply->kind);
         self::assertSame('26906403', $reply->references->answeredId);
         self::assertEquals(
             new NotificationActor(
@@ -61,6 +61,7 @@ final class LemmyNotificationSourceTest extends TestCase
                 new NotificationContext(
                     threadTitle: 'Which self-hosted reader do you use?',
                     threadPlace: 'c/selfhosted',
+                    onComment: true,
                 ),
             ),
             $reply->subject,
@@ -74,19 +75,21 @@ final class LemmyNotificationSourceTest extends TestCase
             $page->notifications[1]->subject->context->threadTitle,
         );
         self::assertSame('c/selfhosted', $page->notifications[1]->subject->context->threadPlace);
+        self::assertFalse($page->notifications[1]->subject->context->onComment);
         self::assertEquals(self::utc('2026-11-16 08:00:00'), $page->notifications[1]->createdAt);
         $mention = $page->notifications[2];
         self::assertSame(SocialNotificationKind::Mention, $mention->kind);
         self::assertSame('mention:3', $mention->subject->groupKey);
         self::assertSame('c/askme', $mention->subject->context->threadPlace);
         self::assertSame('Weekly question thread', $mention->subject->context->threadTitle);
+        self::assertFalse($mention->subject->context->onComment);
         self::assertSame('https://lemmy.example/comment/55', $mention->subject->linkUrl);
         self::assertSame('dave@lemmy.example', $mention->actor->handle);
         self::assertNull($mention->actor->avatarUrl);
         self::assertEquals(self::utc('2026-11-16 07:30:00'), $mention->createdAt);
     }
 
-    public function testACommentReplyKeepsTheReplyRemoteId(): void
+    public function testAReplyToYourCommentKeepsTheReplyRemoteId(): void
     {
         $page = $this->source($this->http())->fetch(SocialApiWiring::lemmyAccount());
 
@@ -223,22 +226,6 @@ final class LemmyNotificationSourceTest extends TestCase
         } catch (SocialNetworkThrottledException) {
             self::assertSame(1, $marked);
         }
-    }
-
-    public function testMarkSeenMarksACommentReplyThroughTheReplyEndpoint(): void
-    {
-        $http = $this->markingHttp();
-        $account = SocialApiWiring::lemmyAccount();
-
-        $this->source($http)->markSeen(
-            $account,
-            [self::stored($account, 'reply:7', SocialNotificationKind::CommentReply)],
-            static function (): void {
-            },
-        );
-
-        self::assertSame(['POST ' . self::MARK_REPLY], $http->requestLines());
-        self::assertSame('{"comment_reply_id":7,"read":true}', $http->requests[0]['body']);
     }
 
     public function testRefusedMarkingIsUnreachable(): void

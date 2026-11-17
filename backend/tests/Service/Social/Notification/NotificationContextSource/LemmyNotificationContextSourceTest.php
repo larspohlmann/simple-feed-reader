@@ -139,7 +139,7 @@ final class LemmyNotificationContextSourceTest extends TestCase
     {
         return NotificationRows::fetched(
             $remoteId,
-            SocialNotificationKind::CommentReply,
+            SocialNotificationKind::Reply,
             new ContextReferenceModel(answeredId: $answeredId),
             new NotificationContext(threadTitle: 'A post', threadPlace: 'c/selfhosted'),
         );

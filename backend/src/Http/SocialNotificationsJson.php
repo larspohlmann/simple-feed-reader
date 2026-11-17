@@ -15,7 +15,8 @@ use App\Service\Social\Notification\Model\NotificationListPageModel;
  * @phpstan-type GroupJson array{
  *     id: int, kind: string, account: string, actors: list<ActorJson>,
  *     actorCount: int, excerpt: string|null, linkUrl: string, latestAt: string, seen: bool,
- *     answeredExcerpt: string|null, threadTitle: string|null, threadPlace: string|null, threadBy: string|null
+ *     answeredExcerpt: string|null, threadTitle: string|null, threadPlace: string|null, threadBy: string|null,
+ *     onComment: bool
  * }
  */
 final class SocialNotificationsJson
@@ -52,6 +53,7 @@ final class SocialNotificationsJson
             'threadTitle' => $group->subject->context->threadTitle,
             'threadPlace' => $group->subject->context->threadPlace,
             'threadBy' => $group->subject->context->threadBy,
+            'onComment' => $group->subject->context->onComment,
         ];
     }
 

@@ -150,7 +150,7 @@ final class SocialNotificationRepositoryTest extends DbTestCase
 
     public function testContextSurvivesAFlushAndReload(): void
     {
-        $context = new NotificationContext('my comment', 'Post title', 'c/php', 'Ann');
+        $context = (new NotificationContext('my comment', 'Post title', 'c/php', 'Ann'))->withOnComment();
         $row = new SocialNotification(
             $this->bluesky,
             'remote-context',

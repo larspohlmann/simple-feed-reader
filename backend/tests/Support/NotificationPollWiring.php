@@ -81,7 +81,7 @@ final class NotificationPollWiring
 
     public static function throttle(ClockInterface $clock): HostThrottle
     {
-        return new HostThrottle(new ArrayAdapter(), $clock);
+        return new HostThrottle(new ArrayAdapter(clock: $clock), $clock);
     }
 
     /**

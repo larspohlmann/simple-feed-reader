@@ -11,7 +11,6 @@ export const NOTIFICATION_GLYPH: Readonly<Record<NotificationKind, string>> = {
   like: 'favorite',
   repost: 'repeat',
   reply: 'chat_bubble',
-  comment_reply: 'chat_bubble',
   mention: 'alternate_email',
   quote: 'format_quote',
   follow: 'person_add',
@@ -38,8 +37,9 @@ export function notificationLine(
     count: others,
   });
   const number = group.actorCount > 1 ? 'other' : 'one';
+  const action = group.onComment ? 'actionOnComment' : 'action';
 
-  return translate(`reader.notifications.action.${group.kind}.${number}`, { who })
+  return translate(`reader.notifications.${action}.${group.kind}.${number}`, { who })
     .split(MARK)
     .map((text, index) => ({ text, strong: index % 2 === 1 }))
     .filter((part) => part.text !== '');

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Notification\NotificationContextSource;
 
+use App\Entity\NotificationContext;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
@@ -78,7 +79,7 @@ final readonly class BlueskyNotificationContextSource implements NotificationCon
         $context = $row->subject->context;
         $ownAnswered = self::ownAnsweredOf($account, $row);
         if ($ownAnswered !== null && isset($posts[$ownAnswered])) {
-            $context = $context->withAnsweredExcerpt(Excerpt::of($posts[$ownAnswered]->node('record')->text('text')));
+            $context = self::answering($context, $posts[$ownAnswered]->node('record'));
         }
         $threadRoot = self::threadRootOf($account, $row);
         if ($threadRoot !== null && isset($posts[$threadRoot])) {
@@ -90,5 +91,15 @@ final readonly class BlueskyNotificationContextSource implements NotificationCon
         }
 
         return $row->withContext($context);
+    }
+
+    private static function answering(NotificationContext $context, JsonNodeModel $answeredRecord): NotificationContext
+    {
+        $answering = $context->withAnsweredExcerpt(Excerpt::of($answeredRecord->text('text')));
+        if (!$answeredRecord->has('reply')) {
+            return $answering;
+        }
+
+        return $answering->withOnComment();
     }
 }
