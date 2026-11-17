@@ -18,7 +18,8 @@ use App\Service\Social\Social\Model\PostPreviewModel;
  *     kind: 'post', authorName: string|null, authorHandle: string|null, excerpt: string, card: LinkCardFields|null
  * }
  * @phpstan-type LemmyRow array{
- *     communities: list<array{id: int, handle: string}>, title: string, maxTitleCharacters: int
+ *     communities: list<array{id: int, handle: string}>, title: string,
+ *     minTitleCharacters: int, maxTitleCharacters: int
  * }
  * @phpstan-type LinkTargetRow array{kind: 'link', card: LinkCardFields}
  */
@@ -72,6 +73,7 @@ final class ComposerContextJson
                 $link->communities,
             ),
             'title' => $link->title,
+            'minTitleCharacters' => LemmyLinkModel::MIN_TITLE_CHARACTERS,
             'maxTitleCharacters' => LemmyLinkModel::MAX_TITLE_CHARACTERS,
         ];
     }

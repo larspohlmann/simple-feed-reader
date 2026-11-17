@@ -119,6 +119,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         self::assertSame([
             'communities' => [['id' => 7, 'handle' => '!rss@lemmy.world']],
             'title' => 'The article',
+            'minTitleCharacters' => 3,
             'maxTitleCharacters' => 200,
         ], $payload['lemmy']);
     }

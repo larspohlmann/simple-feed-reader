@@ -36,6 +36,7 @@ final class ComposerContextJsonTest extends TestCase
             [
                 'communities' => [['id' => 7, 'handle' => '!rss@lemmy.world']],
                 'title' => 'The article',
+                'minTitleCharacters' => 3,
                 'maxTitleCharacters' => 200,
             ],
             $row['lemmy'],

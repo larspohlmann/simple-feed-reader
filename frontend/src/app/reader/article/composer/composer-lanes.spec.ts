@@ -361,6 +361,7 @@ describe('ComposerLanes', () => {
         lemmy: {
           communities: COMMUNITIES,
           title: 'A long read',
+          minTitleCharacters: 3,
           maxTitleCharacters: 200,
           ...lemmy,
         },

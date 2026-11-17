@@ -64,6 +64,7 @@ function composerContext(network: 'bluesky' | 'mastodon' | 'lemmy'): ComposerCon
         ? {
             communities: [{ id: COMMUNITY_ID, handle: 'rust@lemmy.invalid' }],
             title: ENTRY.title,
+            minTitleCharacters: 3,
             maxTitleCharacters: 200,
           }
         : null,

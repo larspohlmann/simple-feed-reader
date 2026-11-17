@@ -88,6 +88,7 @@ export interface ComposerContextDto {
 export interface LemmyLinkFieldsDto {
   communities: { id: number; handle: string }[];
   title: string;
+  minTitleCharacters: number;
   maxTitleCharacters: number;
 }
 
