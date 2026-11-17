@@ -8,7 +8,7 @@ export const SOCIAL_NETWORK_NAMES: Record<SocialNetworkName, string> = {
   lemmy: 'Lemmy',
 };
 
-export const LINK_POST_NETWORKS: readonly SocialNetworkName[] = ['bluesky', 'mastodon'];
+export const LINK_POST_NETWORKS: readonly SocialNetworkName[] = ['bluesky', 'mastodon', 'lemmy'];
 
 const NETWORK_FEED_KINDS = ['profile', 'search'] as const;
 

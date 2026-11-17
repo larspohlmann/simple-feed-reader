@@ -1838,7 +1838,8 @@
     "postDeletedThere": "Eliminada en {{ network }}; quitada de aquí.",
     "quote": {
       "bluesky": "Citar en Bluesky",
-      "mastodon": "Citar en Mastodon"
+      "mastodon": "Citar en Mastodon",
+      "lemmy": "Citar en Lemmy"
     },
     "quoteForbidden": {
       "bluesky": "El autor no permite citar esta publicación",
@@ -1847,12 +1848,14 @@
     "link": {
       "bluesky": "Publicar en Bluesky",
       "mastodon": "Publicar en Mastodon",
+      "lemmy": "Publicar en Lemmy",
       "many": "Publicar en {{ networks }}"
     },
     "posted": {
       "link": {
         "bluesky": "Publicado en Bluesky",
-        "mastodon": "Publicado en Mastodon"
+        "mastodon": "Publicado en Mastodon",
+        "lemmy": "Publicado en Lemmy"
       },
       "quote": {
         "bluesky": "Cita publicada en Bluesky",

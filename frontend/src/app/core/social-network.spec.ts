@@ -7,7 +7,7 @@ describe('social networks', () => {
     expect(isSocialNetworkName('threads')).toBe(false);
   });
 
-  it('takes link posts on Bluesky and Mastodon only', () => {
-    expect(LINK_POST_NETWORKS).toEqual(['bluesky', 'mastodon']);
+  it('takes link posts on Bluesky, Mastodon and Lemmy', () => {
+    expect(LINK_POST_NETWORKS).toEqual(['bluesky', 'mastodon', 'lemmy']);
   });
 });

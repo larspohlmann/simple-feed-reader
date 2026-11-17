@@ -21,6 +21,17 @@ describe('shareMenuItems', () => {
     expect(target(items, 'X').linkOnly).toBe(false);
   });
 
+  it('labels a Lemmy post like its siblings', () => {
+    const lemmy: PostNetwork = { network: 'lemmy', handles: ['lars@lemmy.example'] };
+
+    expect(shareMenuItems([lemmy], 'link')[0]).toEqual(
+      expect.objectContaining({ network: 'lemmy', labelKey: 'reader.link.lemmy' }),
+    );
+    expect(shareMenuItems([lemmy], 'quote')[0]).toEqual(
+      expect.objectContaining({ network: 'lemmy', labelKey: 'reader.quote.lemmy' }),
+    );
+  });
+
   it('names the one account a post goes out as, or asks to pick one', () => {
     const items = shareMenuItems(
       [...NETWORKS, { network: 'mastodon', handles: ['@a@one.social', '@b@two.social'] }],

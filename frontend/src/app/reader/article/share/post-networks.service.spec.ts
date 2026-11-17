@@ -45,7 +45,7 @@ describe('PostNetworks', () => {
     ]);
   });
 
-  it('adds no post network for a connected Lemmy account', () => {
+  it('offers Lemmy last for a connected Lemmy account', () => {
     const networks = postNetworksOf([
       {
         id: 7,
@@ -56,6 +56,6 @@ describe('PostNetworks', () => {
       },
     ]);
 
-    expect(networks.connected()).toEqual([]);
+    expect(networks.connected()).toEqual([{ network: 'lemmy', handles: ['lars@lemmy.example'] }]);
   });
 });

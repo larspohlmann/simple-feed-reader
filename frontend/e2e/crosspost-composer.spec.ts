@@ -29,14 +29,24 @@ const ACCOUNTS: SocialAccountRefDto[] = [
   },
 ];
 
-function composerContext(network: 'bluesky' | 'mastodon'): ComposerContextDto {
-  const account = ACCOUNTS.find((each) => each.network === network)!;
+const LEMMY_ACCOUNT: SocialAccountRefDto = {
+  id: 13,
+  network: 'lemmy',
+  handle: 'ada@lemmy.invalid',
+  status: 'connected',
+  serviceUrl: 'https://lemmy.invalid',
+};
+
+const COMMUNITY_ID = 42;
+
+function composerContext(network: 'bluesky' | 'mastodon' | 'lemmy'): ComposerContextDto {
+  const account = [...ACCOUNTS, LEMMY_ACCOUNT].find((each) => each.network === network)!;
   return {
     kind: 'link',
     accounts: [{ id: account.id, handle: account.handle }],
     accountId: account.id,
     canSend: true,
-    maxCharacters: network === 'bluesky' ? 300 : 500,
+    maxCharacters: { bluesky: 300, mastodon: 500, lemmy: 10000 }[network],
     visibility: network === 'mastodon' ? 'public' : null,
     text: '',
     target: {
@@ -49,7 +59,14 @@ function composerContext(network: 'bluesky' | 'mastodon'): ComposerContextDto {
         siteName: 'fixtures.invalid',
       },
     },
-    lemmy: null,
+    lemmy:
+      network === 'lemmy'
+        ? {
+            communities: [{ id: COMMUNITY_ID, handle: 'rust@lemmy.invalid' }],
+            title: ENTRY.title,
+            maxTitleCharacters: 200,
+          }
+        : null,
   };
 }
 
@@ -57,10 +74,13 @@ function published(network: string): PublishedPostDto {
   return { address: `${network}-post`, url: `https://${network}.invalid/post/1` };
 }
 
-async function stubShareableEntry(page: Page): Promise<void> {
+async function stubShareableEntry(
+  page: Page,
+  accounts: SocialAccountRefDto[] = ACCOUNTS,
+): Promise<void> {
   await stubOneFeedReader(page, 'Fixture feed');
   await page.route(/\/api\/subscriptions(?:[?#]|$)/, (route) =>
-    route.fulfill({ json: { ...oneFeedJson('Fixture feed'), socialAccounts: ACCOUNTS } }),
+    route.fulfill({ json: { ...oneFeedJson('Fixture feed'), socialAccounts: accounts } }),
   );
   await page.route(
     (url) => url.pathname === '/api/entries',
@@ -129,4 +149,55 @@ test('a crosspost sends to Bluesky once and retries only Mastodon', async ({ pag
   ).toHaveCount(2);
   expect(sends.filter((network) => network === 'bluesky')).toHaveLength(1);
   expect(sends).toEqual(['bluesky', 'mastodon', 'mastodon']);
+});
+
+test('a crosspost to all three networks sends one Lemmy post with its title and community', async ({
+  page,
+}) => {
+  await stubShareableEntry(page, [...ACCOUNTS, LEMMY_ACCOUNT]);
+  await page.route(
+    (url) => url.pathname === '/api/social/link-composer',
+    (route) => {
+      const network = new URL(route.request().url()).searchParams.get('network');
+      return route.fulfill({
+        json: composerContext(network === 'mastodon' || network === 'lemmy' ? network : 'bluesky'),
+      });
+    },
+  );
+  const sends: { network: string; body: Record<string, unknown> }[] = [];
+  await page.route(
+    (url) => url.pathname === '/api/social/links',
+    (route) => {
+      const requested = new URL(route.request().url()).searchParams.get('network') ?? 'bluesky';
+      sends.push({ network: requested, body: route.request().postDataJSON() });
+      return route.fulfill({ status: 201, json: published(requested) });
+    },
+  );
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await presetLocalStorage(page, { 'sfr.layout': 'pane' });
+  await page.goto('/?subscription=1');
+  await page.locator('app-entry-list').getByText(ENTRY.title, { exact: true }).click();
+  await page.getByRole('button', { name: 'Share', exact: true }).first().click();
+  await page.getByRole('menuitem', { name: 'Post on Bluesky' }).click();
+
+  const dialog = page.locator('app-composer-dialog');
+  await dialog.getByRole('button', { name: 'Mastodon' }).click();
+  await dialog.getByRole('button', { name: 'Lemmy' }).click();
+  await expect(dialog.getByRole('button', { name: 'Lemmy' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await dialog.getByLabel('Community').selectOption({ label: 'rust@lemmy.invalid' });
+  await dialog.getByRole('button', { name: 'Post', exact: true }).click();
+
+  await expect(
+    page.locator('app-post-sent-dialog').getByRole('button', { name: 'Open post' }),
+  ).toHaveCount(3);
+  expect(sends.map(({ network }) => network).sort()).toEqual(['bluesky', 'lemmy', 'mastodon']);
+  const lemmySends = sends.filter(({ network }) => network === 'lemmy');
+  expect(lemmySends).toHaveLength(1);
+  expect(lemmySends[0].body).toEqual(
+    expect.objectContaining({ title: ENTRY.title, communityId: COMMUNITY_ID }),
+  );
 });
