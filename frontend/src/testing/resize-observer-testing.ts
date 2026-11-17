@@ -24,3 +24,8 @@ export function installMockResizeObserver(): void {
   MockResizeObserver.instances = [];
   (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = MockResizeObserver;
 }
+
+/** Fire the mock observer watching `element`, as a resize of it would. */
+export function fireResizeOf(element: Element): void {
+  MockResizeObserver.instances.find((observer) => observer.targets.has(element))?.fire();
+}

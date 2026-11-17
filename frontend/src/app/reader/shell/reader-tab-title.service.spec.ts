@@ -19,7 +19,7 @@ function setup({
       { provide: PageTitleService, useValue: pageTitle },
       {
         provide: ListHeading,
-        useValue: { title: () => 'Unread', titleCount: () => ({ value: 3 }) },
+        useValue: { tabTitle: () => 'Unread', titleCount: () => ({ value: 3 }) },
       },
       { provide: ReaderRouteState, useValue: { openEntry: signal(openEntry) } },
       { provide: LinkArticleSource, useValue: link },

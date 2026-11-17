@@ -49,6 +49,7 @@ import {
 } from '../../../../testing/intersection-observer-testing';
 import {
   MockResizeObserver,
+  fireResizeOf,
   installMockResizeObserver,
 } from '../../../../testing/resize-observer-testing';
 
@@ -186,10 +187,6 @@ function fireRowsResize(fixture: ComponentFixture<EntryListComponent>): void {
   const rows = (fixture.nativeElement as HTMLElement).querySelector('.rows')!;
   const obs = MockResizeObserver.instances.find((observer) => observer.targets.has(rows));
   obs?.fire();
-}
-
-function fireResizeOf(element: Element): void {
-  MockResizeObserver.instances.find((observer) => observer.targets.has(element))?.fire();
 }
 
 describe('EntryListComponent', () => {
@@ -754,10 +751,11 @@ describe('EntryListComponent', () => {
     it('publishes the expanded bar height and keeps it while collapsed', () => {
       const fixture = mount({ layout: 'list' });
       const host = fixture.nativeElement as HTMLElement;
+      const frame = host.querySelector<HTMLElement>('app-list-frame')!;
       const header = host.querySelector<HTMLElement>('.list-header')!;
       Object.defineProperty(header, 'offsetHeight', { configurable: true, value: 53 });
       fireResizeOf(header);
-      expect(host.style.getPropertyValue('--list-bar-h')).toBe('53px');
+      expect(frame.style.getPropertyValue('--list-bar-h')).toBe('53px');
 
       // The reservation must not follow the bar down: the scroller's padding is
       // computed from this value, and shrinking it would move every row.
@@ -765,8 +763,8 @@ describe('EntryListComponent', () => {
       fixture.detectChanges();
       Object.defineProperty(header, 'offsetHeight', { configurable: true, value: 20 });
       fireResizeOf(header);
-      expect(host.style.getPropertyValue('--list-bar-h')).toBe('53px');
-      expect(host.querySelector('.list-header')!.classList).toContain('collapsed');
+      expect(frame.style.getPropertyValue('--list-bar-h')).toBe('53px');
+      expect(header.classList).toContain('collapsed');
     });
 
     it('keeps the scroller reservation constant whether or not an error shows (#996)', () => {

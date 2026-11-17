@@ -1,0 +1,28 @@
+<div class="list-frame lead">
+  <header class="list-header" #header [class.collapsed]="collapsed()">
+    <ng-content select="[frameHeader]" />
+  </header>
+
+  <ng-content select="[frameLead]" />
+
+  @if (problem(); as problem) {
+    <app-error-banner
+      class="list-error text-scaled"
+      [message]="
+        problem.status === 0
+          ? ('reader.errorOffline' | transloco)
+          : ('reader.errorServer' | transloco: { status: problem.status })
+      "
+      [actionLabel]="'reader.retry' | transloco"
+      [dismissLabel]="'reader.dismiss' | transloco"
+      (action)="retry.emit()"
+      (dismiss)="dismiss.emit()"
+    />
+  }
+</div>
+
+<ng-content />
+
+<div class="list-frame tail">
+  <ng-content select="[frameTail]" />
+</div>

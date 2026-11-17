@@ -1,7 +1,6 @@
 import {
   Component,
   ElementRef,
-  NgZone,
   TemplateRef,
   computed,
   effect,
@@ -13,7 +12,6 @@ import {
 import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
-import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
 import { SpinnerComponent } from '../../../shared/spinner/spinner.component';
 import { LoadingOverlayComponent } from '../../../shared/loading-overlay/loading-overlay.component';
 import { ToTopButtonComponent } from '../../../shared/to-top-button/to-top-button.component';
@@ -32,7 +30,7 @@ import { Selection, canScopedRefresh, offersMarkAboveRead, searchTermOf } from '
 import { searchWords } from '../../query/search-term';
 import { Problem } from '../../../core/problem';
 import { LayoutService } from '../../layout.service';
-import { publishListBarHeight } from '../list-bar-height';
+import { ListFrameComponent } from '../list-frame/list-frame.component';
 import { observeSentinel } from '../paging';
 import { HandednessService } from '../../../core/preferences/handedness.service';
 import { MagazineStyleService } from '../../../core/preferences/magazine-style.service';
@@ -67,7 +65,7 @@ const WAIT_OVERLAY_DELAY_MS = 150;
     NgTemplateOutlet,
     TranslocoPipe,
     IconComponent,
-    ErrorBannerComponent,
+    ListFrameComponent,
     SpinnerComponent,
     LoadingOverlayComponent,
     EntryRowComponent,
@@ -205,7 +203,6 @@ export class EntryListComponent {
   private readonly reduceMotion = prefersReducedMotion();
   private readonly screen = inject(LayoutService);
   private readonly host = inject(ElementRef<HTMLElement>);
-  private readonly zone = inject(NgZone);
   private readonly autoplay = inject(ListAutoplayCoordinator);
   private readonly magazineStyle = inject(MagazineStyleService);
   protected readonly leftHanded = inject(HandednessService).leftHanded;
@@ -213,7 +210,8 @@ export class EntryListComponent {
   private readonly rows = viewChild<ElementRef<HTMLElement>>('rows');
   private readonly nearViewport = inject(NearViewportMedia);
   private readonly sentinel = viewChild<ElementRef<HTMLElement>>('sentinel');
-  private readonly listHdr = viewChild<ElementRef<HTMLElement>>('listHdr');
+  private readonly frame = viewChild(ListFrameComponent);
+  private readonly listHdr = computed(() => this.frame()?.header());
   private readonly header = viewChild(ListHeaderComponent);
   private readonly scrollHosts = inject(ScrollHosts);
   private readonly pageLayer = inject(PageLayer, { optional: true });
@@ -254,23 +252,6 @@ export class EntryListComponent {
     () => this.busy() || (this.reloadCue() && this.entries().length > 0),
     WAIT_OVERLAY_DELAY_MS,
   );
-
-  /**
-   * Published as `--list-bar-h` for the stylesheet to add to the app bar's own
-   * reservation. Only measured while expanded: feeding back the collapsed height
-   * would shrink the reservation and reintroduce the jump this replaces (#87).
-   */
-  private readonly _publishBarHeight = effect((onCleanup) => {
-    const header = this.listHdr()?.nativeElement;
-    if (header)
-      onCleanup(
-        publishListBarHeight(this.zone, {
-          host: this.host.nativeElement,
-          header,
-          isPublishing: () => !this.collapsed(),
-        }),
-      );
-  });
 
   private readonly readingFocus = new ListReadingFocus({
     scroller: this.scrollHost,

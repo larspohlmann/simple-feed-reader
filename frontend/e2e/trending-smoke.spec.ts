@@ -105,7 +105,7 @@ for (const layout of ['magazine', 'list'] as const) {
     await expect(story.locator('.sources')).toHaveText('7 sources');
     if (layout === 'magazine') {
       const toggle = story.locator('app-more-sources .toggle');
-      await expect(toggle).toHaveText(/6 more sources/);
+      await expect(toggle).toHaveText(/6 more articles/);
       await expect(story.locator('.mini')).toHaveCount(0);
       await toggle.click();
       await expect(story.locator('.mini')).toHaveCount(6);
@@ -128,7 +128,7 @@ for (const layout of ['magazine', 'list'] as const) {
     const hidden = page.waitForRequest(hideRequest);
     await opened.hover();
     await opened.getByRole('button', { name: 'Hide story', exact: true }).click();
-    expect((await hidden).postDataJSON()).toEqual({ window: 'day', entryId: 9011 });
+    expect((await hidden).postDataJSON()).toEqual({ storyId: 9011 });
     await expect(opened).toHaveClass(/\bleaving\b/);
     await expect(story.getByText('Trending fixture day story')).toBeVisible();
 
