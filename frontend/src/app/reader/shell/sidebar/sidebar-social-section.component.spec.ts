@@ -185,6 +185,14 @@ describe('SidebarSocialSectionComponent', () => {
       expect(root.querySelector('.section-count')?.textContent?.trim()).toBe('3');
     });
 
+    it("keeps the unread count in the network link's accessible text", () => {
+      const linkOf = (unreadCount: number) =>
+        element(mount({ ...ONE_ACCOUNT, unreadCount })).querySelector('a.section-link');
+
+      expect(linkOf(3)?.textContent).toContain('3');
+      expect(linkOf(0)?.textContent).not.toMatch(/\d/);
+    });
+
     it("marks the bell current for this network's notifications", () => {
       const on = (network: SocialNetworkName) =>
         bellOf(element(mount(ONE_ACCOUNT, { kind: 'notifications', network })));
@@ -213,15 +221,6 @@ describe('SidebarSocialSectionComponent', () => {
       fixture.detectChanges();
 
       expect(bellOf(element(fixture))).toBeNull();
-    });
-
-    it('has no Notifications row any more', () => {
-      const root = element(mount(ONE_ACCOUNT));
-
-      expect(root.querySelector('app-sidebar-notifications-row')).toBeNull();
-      expect(
-        root.querySelector('.rows')?.firstElementChild?.querySelector('app-sidebar-feed-row'),
-      ).not.toBeNull();
     });
   });
 

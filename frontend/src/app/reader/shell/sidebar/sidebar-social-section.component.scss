@@ -28,8 +28,8 @@
 .section-head .section-rest {
   flex: 1;
   justify-content: flex-end;
-  margin-left: 0;
-  padding-left: 0;
+  margin-left: calc(var(--space-3) * -1);
+  padding-left: var(--space-3);
 }
 
 .section-head app-sidebar-notifications-bell {
