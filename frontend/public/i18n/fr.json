@@ -408,7 +408,7 @@
       "connectedSince": "Connecté depuis le {{date}}",
       "connectAnother": "Connecter un autre compte",
       "importSectionTitle": "Gérer les flux",
-      "importSectionCaption": "Choisissez lesquels de vos abonnements, listes et flux Bluesky et Mastodon, et de vos communautés et fils Lemmy, arrivent ici sous forme de flux ; les comptes suivis apparaissent sous la ligne Flux de la section Bluesky ou Mastodon, les communautés sous Communautés dans la section Lemmy. Une coche signifie que vous êtes abonné : décochez un flux pour vous désabonner, et revenez quand vous voulez pour les nouveaux comptes suivis. Les listes, hashtags suivis et flux que vous enregistrez, suivez ou créez sur le réseau sont ajoutés dans l'heure, et ceux que vous y retirez ou cessez de suivre disparaissent aussi ; ce que vous retirez ici n'est pas rajouté.",
+      "importSectionCaption": "Choisissez lesquels de vos abonnements, listes et flux Bluesky et Mastodon, et de vos communautés et fils Lemmy, arrivent ici sous forme de flux ; les comptes suivis apparaissent sous la ligne Flux de la section Bluesky ou Mastodon, les communautés sous Communautés dans la section Lemmy. Une coche signifie que vous êtes abonné : décochez un flux pour vous désabonner, et revenez quand vous voulez pour les nouveaux comptes suivis. Les listes, hashtags suivis et flux que vous enregistrez, suivez ou créez sur le réseau sont ajoutés dans l'heure, et ceux que vous y retirez ou cessez de suivre disparaissent aussi ; ce que vous retirez ici n'est pas rajouté.",
       "importChoose": "Gérer les flux…",
       "importTitle": "Gérer les flux de {{handle}}",
       "importLoading": "Chargement des comptes que vous suivez…",
@@ -440,7 +440,7 @@
         "syntaxCombined": "Tout combiné :",
         "syntaxAllWords": "chaque mot doit apparaître",
         "syntaxMastodonNote": "Nécessite la recherche plein texte sur votre instance ; seules les publications des personnes qui autorisent la recherche sont trouvées.",
-        "syntaxAlternativesApart": "{{network}} ne connaît pas || : chaque alternative est recherchée séparément, 8 au maximum par requête.",
+        "syntaxAlternativesApart": "{{network}} ne connaît pas || : chaque alternative est recherchée séparément, 8 au maximum par requête.",
         "syntaxLemmyNote": "Trouve les titres et les textes des publications. Chaque alternative doit contenir au moins un mot à rechercher.",
         "preview": "Aperçu",
         "subscribe": "S'abonner",
@@ -1387,6 +1387,8 @@
       "bellWithUnseenOne": "Notifications {{network}}, 1 non vue",
       "bellWithUnseenOther": "Notifications {{network}}, {{count}} non vues",
       "unseen": "Non vue",
+      "you": "Vous :",
+      "threadBy": "dans un fil de {{name}} :",
       "poll": "Un sondage auquel vous avez participé est terminé",
       "who": {
         "one": "{{first}}",
@@ -1406,6 +1408,10 @@
         "reply": {
           "one": "{{who}} a répondu à votre publication",
           "other": "{{who}} ont répondu à votre publication"
+        },
+        "comment_reply": {
+          "one": "{{who}} a répondu à votre commentaire",
+          "other": "{{who}} ont répondu à votre commentaire"
         },
         "mention": {
           "one": "{{who}} vous a mentionné",

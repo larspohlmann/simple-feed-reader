@@ -16,7 +16,15 @@ final readonly class NotificationSubject
         public ?string $excerpt,
         #[ORM\Column(length: 2048)]
         public string $linkUrl,
+        #[ORM\Embedded(class: NotificationContext::class, columnPrefix: 'context_')]
+        public NotificationContext $context = new NotificationContext(),
     ) {
+    }
+
+    #[\NoDiscard]
+    public function withContext(NotificationContext $context): self
+    {
+        return clone($this, ['context' => $context]);
     }
 
     public static function follow(string $profileUrl): self

@@ -1,5 +1,5 @@
 export type NotificationKind =
-  'like' | 'repost' | 'reply' | 'mention' | 'quote' | 'follow' | 'poll';
+  'like' | 'repost' | 'reply' | 'comment_reply' | 'mention' | 'quote' | 'follow' | 'poll';
 
 export interface NotificationActorDto {
   handle: string;
@@ -15,6 +15,10 @@ export interface NotificationGroupDto {
   actors: NotificationActorDto[];
   actorCount: number;
   excerpt: string | null;
+  answeredExcerpt: string | null;
+  threadTitle: string | null;
+  threadPlace: string | null;
+  threadBy: string | null;
   linkUrl: string;
   latestAt: string;
   seen: boolean;

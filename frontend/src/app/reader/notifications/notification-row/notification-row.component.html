@@ -20,8 +20,25 @@
         <span [class.strong]="part.strong">{{ part.text }}</span>
       }
     </p>
-    @if (group().excerpt; as excerpt) {
-      <p class="excerpt">{{ excerpt }}</p>
+    @if (context().replyText; as replyText) {
+      <p class="excerpt">{{ replyText }}</p>
+    }
+    @if (context().quoted; as quoted) {
+      <p class="quote">
+        <span class="you">{{ 'reader.notifications.you' | transloco }}</span> {{ quoted }}
+      </p>
+    }
+    @if (context().place; as place) {
+      <p class="place">
+        <app-icon [name]="place.icon" size="xs" />
+        @if (place.by; as by) {
+          <span>{{ 'reader.notifications.threadBy' | transloco: { name: by } }}</span>
+        }
+        <span class="title">{{ place.title }}</span>
+        @if (place.community; as community) {
+          <span>· {{ community }}</span>
+        }
+      </p>
     }
     @if (showsAccount()) {
       <p class="account">{{ group().account }}</p>

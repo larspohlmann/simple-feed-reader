@@ -11,6 +11,7 @@ export const NOTIFICATION_GLYPH: Readonly<Record<NotificationKind, string>> = {
   like: 'favorite',
   repost: 'repeat',
   reply: 'chat_bubble',
+  comment_reply: 'chat_bubble',
   mention: 'alternate_email',
   quote: 'format_quote',
   follow: 'person_add',

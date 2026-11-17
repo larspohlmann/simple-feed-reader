@@ -1383,6 +1383,8 @@
       "bellWithUnseenOne": "{{network}}-Benachrichtigungen, 1 ungesehen",
       "bellWithUnseenOther": "{{network}}-Benachrichtigungen, {{count}} ungesehen",
       "unseen": "Ungesehen",
+      "you": "Du:",
+      "threadBy": "im Thread von {{name}}:",
       "poll": "Eine Umfrage, an der du teilgenommen hast, ist beendet",
       "who": {
         "one": "{{first}}",
@@ -1402,6 +1404,10 @@
         "reply": {
           "one": "{{who}} hat auf deinen Beitrag geantwortet",
           "other": "{{who}} haben auf deinen Beitrag geantwortet"
+        },
+        "comment_reply": {
+          "one": "{{who}} hat auf deinen Kommentar geantwortet",
+          "other": "{{who}} haben auf deinen Kommentar geantwortet"
         },
         "mention": {
           "one": "{{who}} hat dich erwähnt",

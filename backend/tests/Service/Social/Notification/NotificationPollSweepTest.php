@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Notification;
 
 use App\Entity\NotificationActor;
+use App\Entity\NotificationContext;
 use App\Entity\NotificationSubject;
 use App\Entity\SocialAccount;
 use App\Entity\SocialNotification;
@@ -19,11 +20,13 @@ use App\Service\Social\Notification\Model\NotificationPageModel;
 use App\Service\Social\Notification\Model\NotificationPollBudgetModel;
 use App\Service\Social\Notification\Model\NotificationPollReportModel;
 use App\Service\Social\Notification\NotificationPollSweep;
+use App\Service\Social\Notification\NotificationContextSource\NotificationContextSourceInterface;
 use App\Service\Social\Notification\NotificationSource\NotificationSourceInterface;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
 use App\Tests\DbTestCase;
 use App\Tests\Support\NotificationPollWiring;
+use App\Tests\Support\RecordingContextSource;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StubNotificationSource;
@@ -202,6 +205,51 @@ final class NotificationPollSweepTest extends DbTestCase
         self::assertSame([], $source->fetchedIdentities);
     }
 
+    public function testContextIsLookedUpOnlyForNewRows(): void
+    {
+        $this->account('did:plc:context-new-rows');
+        $first = new NotificationPageModel([
+            $this->fetched('r1', '2026-11-17 11:00:00'),
+            $this->fetched('r2', '2026-11-17 11:01:00'),
+        ], null);
+        $later = new NotificationPageModel(
+            [...$first->notifications, $this->fetched('r3', '2026-11-17 12:01:00')],
+            null,
+        );
+        $contextSource = new RecordingContextSource();
+
+        $this->sweepWithContext(new StubNotificationSource(['did:plc:context-new-rows' => $first]), $contextSource)
+            ->sweep(NotificationPollBudgetModel::accounts(10));
+        self::assertSame([['r1', 'r2']], $contextSource->asked);
+
+        $this->clock->modify('+6 minutes');
+        $laterSource = new StubNotificationSource(['did:plc:context-new-rows' => $later]);
+        $laterSweep = $this->sweepWithContext($laterSource, $contextSource);
+        $laterSweep->sweep(NotificationPollBudgetModel::accounts(10));
+        self::assertSame([['r1', 'r2'], ['r3']], $contextSource->asked);
+
+        $this->clock->modify('+6 minutes');
+        $laterSweep->sweep(NotificationPollBudgetModel::accounts(10));
+        self::assertCount(2, $laterSource->fetchedIdentities);
+        self::assertCount(2, $contextSource->asked);
+    }
+
+    public function testTheStoredRowCarriesTheContext(): void
+    {
+        $this->account('did:plc:context-stored');
+        $page = new NotificationPageModel([$this->fetched('r1', '2026-11-17 11:00:00')], null);
+
+        $this->sweepWithContext(
+            new StubNotificationSource(['did:plc:context-stored' => $page]),
+            new RecordingContextSource(new NotificationContext('You said')),
+        )->sweep(NotificationPollBudgetModel::accounts(10));
+
+        $this->entityManager->clear();
+        $stored = $this->entityManager->getRepository(SocialNotification::class)->findAll();
+        self::assertCount(1, $stored);
+        self::assertSame('You said', $stored[0]->getSubject()->context->answeredExcerpt);
+    }
+
     private function sweep(NotificationSourceInterface $source): NotificationPollSweep
     {
         return $this->sweepOver(NotificationPollWiring::allNetworks($source));
@@ -217,6 +265,21 @@ final class NotificationPollSweepTest extends DbTestCase
             $this->throttle,
             $sources,
             $this->logger,
+        );
+    }
+
+    private function sweepWithContext(
+        StubNotificationSource $source,
+        NotificationContextSourceInterface $contextSource,
+    ): NotificationPollSweep {
+        return NotificationPollWiring::sweep(
+            self::getContainer(),
+            $this->entityManager,
+            $this->clock,
+            $this->throttle,
+            NotificationPollWiring::allNetworks($source),
+            $this->logger,
+            contextSource: $contextSource,
         );
     }
 

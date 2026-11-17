@@ -25,6 +25,7 @@ final readonly class NotificationPoll
         private ContainerInterface $sources,
         private ActingAccountGuard $guard,
         private NotificationStore $store,
+        private NotificationContextLookup $contextLookup,
         private HostThrottle $hostThrottle,
         private SocialNotificationPollRepository $polls,
         private EntityManagerInterface $entityManager,
@@ -65,7 +66,10 @@ final readonly class NotificationPoll
         $source = $this->sources->get($account->getNetwork()->value);
         \assert($source instanceof NotificationSourceInterface);
 
-        return $this->guard->actAs($account, static fn (): NotificationPageModel => $source->fetch($account));
+        return $this->guard->actAs(
+            $account,
+            fn (): NotificationPageModel => $this->contextLookup->completing($account, $source->fetch($account)),
+        );
     }
 
     private function stampChecked(SocialNotificationPoll $stamp): void

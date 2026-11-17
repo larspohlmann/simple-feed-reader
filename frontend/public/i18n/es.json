@@ -1387,6 +1387,8 @@
       "bellWithUnseenOne": "Notificaciones de {{network}}, 1 sin ver",
       "bellWithUnseenOther": "Notificaciones de {{network}}, {{count}} sin ver",
       "unseen": "Sin ver",
+      "you": "Tú:",
+      "threadBy": "en un hilo de {{name}}:",
       "poll": "Ha terminado una encuesta en la que votaste",
       "who": {
         "one": "{{first}}",
@@ -1406,6 +1408,10 @@
         "reply": {
           "one": "{{who}} respondió a tu publicación",
           "other": "{{who}} respondieron a tu publicación"
+        },
+        "comment_reply": {
+          "one": "{{who}} respondió a tu comentario",
+          "other": "{{who}} respondieron a tu comentario"
         },
         "mention": {
           "one": "{{who}} te mencionó",

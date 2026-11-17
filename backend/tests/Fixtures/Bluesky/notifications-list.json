@@ -91,7 +91,17 @@
       },
       "reason": "reply",
       "record": {
-        "text": "  a reply  "
+        "text": "  a reply  ",
+        "reply": {
+          "parent": {
+            "uri": "at://did:plc:alice/app.bsky.feed.post/3lmine",
+            "cid": "bafymine"
+          },
+          "root": {
+            "uri": "at://did:plc:zoe/app.bsky.feed.post/3lroot",
+            "cid": "bafyroot"
+          }
+        }
       },
       "isRead": true,
       "indexedAt": "2026-11-16T08:20:00.000Z",
@@ -120,7 +130,14 @@
       },
       "reason": "quote",
       "record": {
-        "text": "quoting"
+        "text": "quoting",
+        "embed": {
+          "$type": "app.bsky.embed.record",
+          "record": {
+            "uri": "at://did:plc:alice/app.bsky.feed.post/3lquoted",
+            "cid": "bafyq"
+          }
+        }
       },
       "isRead": true,
       "indexedAt": "2026-11-16T08:00:00.000Z",
@@ -149,6 +166,34 @@
       "record": {},
       "isRead": true,
       "indexedAt": "2026-11-16T07:40:00.000Z"
+    },
+    {
+      "uri": "at://did:plc:kim/app.bsky.feed.post/3l10",
+      "cid": "c3l10",
+      "author": {
+        "did": "did:plc:kim",
+        "handle": "kim.test"
+      },
+      "reason": "quote",
+      "record": {
+        "text": "quoting with media",
+        "embed": {
+          "$type": "app.bsky.embed.recordWithMedia",
+          "record": {
+            "$type": "app.bsky.embed.record",
+            "record": {
+              "uri": "at://did:plc:alice/app.bsky.feed.post/3lquoted",
+              "cid": "bafyq"
+            }
+          },
+          "media": {
+            "$type": "app.bsky.embed.images",
+            "images": []
+          }
+        }
+      },
+      "isRead": true,
+      "indexedAt": "2026-11-16T07:30:00.000Z"
     }
   ],
   "seenAt": "2026-11-16T10:30:00.000+02:00",
