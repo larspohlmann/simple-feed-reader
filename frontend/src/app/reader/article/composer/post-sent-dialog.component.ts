@@ -33,7 +33,7 @@ export class PostSentDialogComponent {
 
   protected open(url: string): void {
     openExternal(url);
-    this.ref.close();
+    if (this.single !== null) this.ref.close();
   }
 
   private headingFor(posts: SentPost[]): string {

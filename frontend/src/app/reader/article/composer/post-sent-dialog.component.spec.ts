@@ -116,6 +116,7 @@ describe('PostSentDialogComponent', () => {
       '_blank',
       'noopener,noreferrer',
     );
+    expect(close).toHaveBeenCalled();
     open.mockRestore();
   });
 
@@ -148,7 +149,22 @@ describe('PostSentDialogComponent', () => {
       expect(element.querySelectorAll('.text')).toHaveLength(2);
       opens[1].click();
       expect(open).toHaveBeenCalledWith('https://m.test/@bob/1', '_blank', 'noopener,noreferrer');
-      expect(close).toHaveBeenCalled();
+      expect(close).not.toHaveBeenCalled();
+      open.mockRestore();
+    });
+
+    it('keeps the overlay open after opening the first post', () => {
+      const open = jest.spyOn(window, 'open').mockImplementation(() => null);
+      const element = mount([sent(), mastodonPost]);
+
+      buttonLabelled(element, 'Open post')!.click();
+
+      expect(open).toHaveBeenCalledWith(
+        'https://bsky.app/profile/alice.test/post/9',
+        '_blank',
+        'noopener,noreferrer',
+      );
+      expect(close).not.toHaveBeenCalled();
       open.mockRestore();
     });
 
