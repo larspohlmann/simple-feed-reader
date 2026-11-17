@@ -45,7 +45,8 @@ export class ComposerLane {
   readonly contentWarning: WritableSignal<string | null> = signal(null);
   /** Lemmy's own fields, which the lane carries only while its context has Lemmy fields. */
   readonly community: WritableSignal<number | null> = signal(null);
-  readonly title: WritableSignal<string> = signal('');
+  private readonly typedTitle = signal('');
+  readonly title: Signal<string> = this.typedTitle.asReadonly();
   readonly titleLength: Signal<number> = computed(() => [...this.title().trim()].length);
 
   private readonly loadState = signal<ContextState>({ status: 'idle' });
@@ -54,6 +55,7 @@ export class ComposerLane {
   private readonly sendFailure = signal<string | null>(null);
   private readonly loadFailure = new Subject<void>();
   private visibilityChosen = false;
+  private titleWritten = false;
   private loading = Subscription.EMPTY;
 
   readonly state: Signal<ContextState> = this.loadState.asReadonly();
@@ -124,6 +126,11 @@ export class ComposerLane {
     this.visibilityChosen = true;
   }
 
+  writeTitle(value: string): void {
+    this.typedTitle.set(value);
+    this.titleWritten = true;
+  }
+
   send(draft: SharedDraft, text: string): Observable<SentPost> {
     const context = this.requireContext();
     this.sendFailure.set(null);
@@ -153,7 +160,7 @@ export class ComposerLane {
   private adoptLemmy(accountId: number, lemmy: LemmyLinkFieldsDto): void {
     const remembered = this.communityMemory.recall(accountId);
     const offered = lemmy.communities.some((community) => community.id === remembered);
-    this.title.set(lemmy.title);
+    if (!this.titleWritten) this.typedTitle.set(lemmy.title);
     this.community.set(offered ? remembered : null);
   }
 

@@ -392,16 +392,27 @@ describe('ComposerLanes', () => {
       expect(lane.fieldsReady()).toBe(false);
     });
 
-    it('resets the community and title to the next account on a switch', () => {
+    it("keeps a typed title on a switch, and resets the community to the next account's", () => {
       memory.recall.mockImplementation((accountId: number) => (accountId === 8 ? 41 : 42));
       api.composer.mockReturnValue(of(lemmyContext()));
       const lane = lemmyLane();
-      lane.title.set('Mine');
+      lane.writeTitle('Mine');
       api.composer.mockReturnValue(of(lemmyContext({ title: 'Theirs' }, { accountId: 9 })));
 
       lane.chooseAccount(9);
 
       expect(lane.community()).toBe(42);
+      expect(lane.title()).toBe('Mine');
+    });
+
+    it('reseeds an untouched title from the next account on a switch', () => {
+      memory.recall.mockReturnValue(41);
+      api.composer.mockReturnValue(of(lemmyContext()));
+      const lane = lemmyLane();
+      api.composer.mockReturnValue(of(lemmyContext({ title: 'Theirs' }, { accountId: 9 })));
+
+      lane.chooseAccount(9);
+
       expect(lane.title()).toBe('Theirs');
     });
 
@@ -410,7 +421,7 @@ describe('ComposerLanes', () => {
       api.composer.mockReturnValue(of(lemmyContext()));
       const lane = lemmyLane();
 
-      lane.title.set('   ');
+      lane.writeTitle('   ');
 
       expect(lane.fieldsReady()).toBe(false);
     });
@@ -420,11 +431,11 @@ describe('ComposerLanes', () => {
       api.composer.mockReturnValue(of(lemmyContext()));
       const lane = lemmyLane();
 
-      lane.title.set('😀'.repeat(200));
+      lane.writeTitle('😀'.repeat(200));
       expect(lane.fieldsReady()).toBe(true);
       expect(lane.titleLength()).toBe(200);
 
-      lane.title.set('😀'.repeat(201));
+      lane.writeTitle('😀'.repeat(201));
       expect(lane.fieldsReady()).toBe(false);
     });
 
@@ -434,7 +445,7 @@ describe('ComposerLanes', () => {
       const lane = lemmyLane();
       expect(lane.fieldsReady()).toBe(false);
 
-      lane.title.set('Typed');
+      lane.writeTitle('Typed');
 
       expect(lane.fieldsReady()).toBe(true);
     });
@@ -444,7 +455,7 @@ describe('ComposerLanes', () => {
       api.composer.mockReturnValue(of(lemmyContext()));
       const lane = lemmyLane();
       lane.community.set(42);
-      lane.title.set(' A long read ');
+      lane.writeTitle(' A long read ');
 
       lane.send(DRAFT, 'Hi').subscribe();
 

@@ -246,7 +246,7 @@ export class ComposerDialogComponent {
   }
 
   protected writeTitle(lane: ComposerLane, event: Event): void {
-    lane.title.set(inputValue(event));
+    lane.writeTitle(inputValue(event));
   }
 
   protected send(event: Event): void {
