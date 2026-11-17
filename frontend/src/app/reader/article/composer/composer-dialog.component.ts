@@ -11,9 +11,9 @@ import {
 } from '@angular/core';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { finalize } from 'rxjs';
+import { filter, finalize, merge } from 'rxjs';
 import { networkList } from '../../../core/network-list';
 import { SOCIAL_NETWORK_NAMES } from '../../../core/social-network';
 import { ButtonComponent } from '../../../shared/button/button.component';
@@ -39,7 +39,8 @@ import { postLength } from './post-length';
 /**
  * Writes a reply to a Lemmy post or comment, a reply to or a quote of a Bluesky or Mastodon post, or a post of a shared URL.
  * Closing never asks: typed text is discarded.
- * It stays open while a post is on the wire, so the reader always learns what was published.
+ * It stays open while a post is on the wire, and once one went out it closes only with it, so
+ * the reader always learns what was published.
  * Send posts to every active network still to post. A failed send keeps the text and says why;
  * a resend reaches only the networks that failed, each under the key its lane minted, so no
  * network publishes the post twice.
@@ -166,6 +167,12 @@ export class ComposerDialogComponent {
     this.lanes.init(this.target);
     // The field appears only once the context loads, after the focus trap placed its initial focus.
     effect(() => this.placeCaret(this.textField()?.nativeElement));
+    merge(
+      this.ref.backdropClick,
+      this.ref.keydownEvents.pipe(filter((event) => event.key === 'Escape')),
+    )
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.dismiss());
   }
 
   private placeCaret(field: HTMLTextAreaElement | undefined): void {
@@ -225,7 +232,12 @@ export class ComposerDialogComponent {
 
   private holdOpen(sending: boolean): void {
     this.sending.set(sending);
-    this.ref.disableClose = sending;
+    this.ref.disableClose = sending || this.lanes.sentPosts().length > 0;
+  }
+
+  /** The dialog closes itself on Escape or a backdrop click until a post went out. */
+  private dismiss(): void {
+    if (this.ref.disableClose && !this.sending()) this.cancel();
   }
 
   private closeOnceAllSent(): void {

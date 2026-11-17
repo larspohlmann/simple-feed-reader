@@ -37,6 +37,8 @@ const STORY: LinkComposerSubjectDto = { kind: 'link', card: STORY_CARD };
 
 describe('ComposerDialogComponent', () => {
   const close = jest.fn();
+  let backdropClick: Subject<MouseEvent>;
+  let keydownEvents: Subject<KeyboardEvent>;
   const connected = signal<PostNetwork[]>([]);
   let api: { composer: jest.Mock; send: jest.Mock };
 
@@ -73,7 +75,7 @@ describe('ComposerDialogComponent', () => {
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
-        { provide: DialogRef, useValue: { close } },
+        { provide: DialogRef, useValue: { close, backdropClick, keydownEvents } },
         { provide: DIALOG_DATA, useValue: replyTarget },
         { provide: SocialPostApi, useValue: api },
         { provide: PostNetworks, useValue: { connected } },
@@ -103,6 +105,8 @@ describe('ComposerDialogComponent', () => {
 
   beforeEach(() => {
     close.mockReset();
+    backdropClick = new Subject<MouseEvent>();
+    keydownEvents = new Subject<KeyboardEvent>();
     connected.set([]);
     api = {
       composer: jest.fn(() => of(context())),
@@ -1057,8 +1061,9 @@ describe('ComposerDialogComponent', () => {
         ).toBe(true);
         pending.error(new HttpErrorResponse({ status: 502 }));
         fixture.detectChanges();
-        expect(ref.disableClose).toBe(false);
+        expect(ref.disableClose).toBe(true);
         expect(pill(fixture, 'Mastodon').disabled).toBe(false);
+        expect(cancel(fixture).disabled).toBe(false);
       });
 
       it('a send that throws leaves the composer closable', async () => {
@@ -1080,6 +1085,47 @@ describe('ComposerDialogComponent', () => {
         expect(unhandled).toHaveBeenCalledWith(new Error('broken'));
         expect(ref.disableClose).toBe(false);
         expect(cancel(fixture).disabled).toBe(false);
+      });
+
+      it('Escape or a backdrop click after a partial failure closes with the Bluesky post', () => {
+        failMastodonOnce();
+        const fixture = bothOn();
+        const ref = TestBed.inject(DialogRef);
+        submit(fixture);
+
+        expect(ref.disableClose).toBe(true);
+        keydownEvents.next(new KeyboardEvent('keydown', { key: 'Enter' }));
+        expect(close).not.toHaveBeenCalled();
+        keydownEvents.next(new KeyboardEvent('keydown', { key: 'Escape' }));
+        expect(close).toHaveBeenLastCalledWith([blueskySent]);
+        close.mockReset();
+        backdropClick.next(new MouseEvent('click'));
+        expect(close).toHaveBeenLastCalledWith([blueskySent]);
+      });
+
+      it('Escape or a backdrop click before anything was sent leaves the closing to the dialog', () => {
+        const fixture = bothOn();
+        const ref = TestBed.inject(DialogRef);
+
+        keydownEvents.next(new KeyboardEvent('keydown', { key: 'Escape' }));
+        backdropClick.next(new MouseEvent('click'));
+
+        expect(ref.disableClose).toBeFalsy();
+        expect(close).not.toHaveBeenCalled();
+        fixture.destroy();
+      });
+
+      it('Escape while a send is on the wire does nothing', () => {
+        const pending = new Subject<PublishedPostDto>();
+        mastodonSend = () => pending;
+        const fixture = bothOn();
+        submit(fixture);
+
+        keydownEvents.next(new KeyboardEvent('keydown', { key: 'Escape' }));
+        backdropClick.next(new MouseEvent('click'));
+
+        expect(close).not.toHaveBeenCalled();
+        fixture.destroy();
       });
 
       it('a sent pill cannot be toggled', () => {
