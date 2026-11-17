@@ -117,15 +117,20 @@ final class SocialApiWiring
         return new LemmyAccountApi($client, new StoredCredential(SocialAccounts::cipher()));
     }
 
-    /** The container's untrusted-Markdown converter, as config/services.yaml configures it. */
     public static function lemmyPostEntries(): LemmyPostEntries
     {
-        return new LemmyPostEntries(new MarkdownHtml(new CommonMarkConverter([
+        return new LemmyPostEntries(self::markdownHtml());
+    }
+
+    /** The container's untrusted-Markdown converter, as config/services.yaml configures it. */
+    public static function markdownHtml(): MarkdownHtml
+    {
+        return new MarkdownHtml(new CommonMarkConverter([
             'html_input' => 'escape',
             'allow_unsafe_links' => false,
             'max_nesting_level' => 20,
             'max_delimiters_per_line' => 1000,
-        ])));
+        ]));
     }
 
     public static function blueskyAccount(): SocialAccount

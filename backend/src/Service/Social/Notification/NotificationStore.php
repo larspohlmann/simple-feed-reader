@@ -27,10 +27,7 @@ final readonly class NotificationStore
     public function record(SocialAccount $account, NotificationPageModel $page): int
     {
         $retained = $this->retained($page->oldestFirst());
-        $stored = $this->notifications->findByRemoteIds(
-            $account,
-            array_map(static fn (FetchedNotificationModel $fetched): string => $fetched->remoteId, $retained),
-        );
+        $stored = $this->storedOf($account, $retained);
 
         $inserted = 0;
         foreach ($retained as $fetched) {
@@ -51,6 +48,18 @@ final readonly class NotificationStore
         }
 
         return $inserted;
+    }
+
+    /** @return list<FetchedNotificationModel> the rows record() would insert */
+    public function unstored(SocialAccount $account, NotificationPageModel $page): array
+    {
+        $retained = $this->retained($page->oldestFirst());
+        $stored = $this->storedOf($account, $retained);
+
+        return array_values(array_filter(
+            $retained,
+            static fn (FetchedNotificationModel $fetched): bool => !isset($stored[$fetched->remoteId]),
+        ));
     }
 
     public function prune(): int
@@ -77,6 +86,18 @@ final readonly class NotificationStore
         }
 
         return array_values($byRemoteId);
+    }
+
+    /**
+     * @param list<FetchedNotificationModel> $retained
+     * @return array<string, SocialNotification>
+     */
+    private function storedOf(SocialAccount $account, array $retained): array
+    {
+        return $this->notifications->findByRemoteIds(
+            $account,
+            array_map(static fn (FetchedNotificationModel $fetched): string => $fetched->remoteId, $retained),
+        );
     }
 
     private function isAtOrBefore(\DateTimeImmutable $moment, ?\DateTimeImmutable $line): bool

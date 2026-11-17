@@ -32,6 +32,7 @@
   }
 
   &.reply,
+  &.comment_reply,
   &.mention,
   &.quote,
   &.follow {
@@ -84,6 +85,45 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+%one-line {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.quote {
+  @extend %one-line;
+
+  margin: 0;
+  padding-left: var(--space-2);
+  border-left: 3px solid var(--border-strong);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+
+  .you {
+    font-weight: 600;
+  }
+}
+
+.place {
+  @extend %one-line;
+
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+  min-width: 0;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+
+  .title {
+    @extend %one-line;
+
+    min-width: 0;
+  }
 }
 
 .account {

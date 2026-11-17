@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
+use App\Entity\NotificationActor;
+use App\Entity\NotificationContext;
+use App\Entity\NotificationSubject;
 use App\Entity\SocialAccount;
 use App\Entity\SocialNotification;
 use App\Entity\User;
@@ -143,6 +146,29 @@ final class SocialNotificationRepositoryTest extends DbTestCase
             $newest[$groups[1]['latestId']][1]->requireId(),
             $newest[$groups[1]['latestId']][0]->requireId(),
         );
+    }
+
+    public function testContextSurvivesAFlushAndReload(): void
+    {
+        $context = new NotificationContext('my comment', 'Post title', 'c/php', 'Ann');
+        $row = new SocialNotification(
+            $this->bluesky,
+            'remote-context',
+            SocialNotificationKind::Reply,
+            new NotificationActor('@a', null, null, 'https://example.test/a'),
+            (new NotificationSubject('k', 'text', 'https://example.test/p'))->withContext($context),
+            new \DateTimeImmutable('2026-11-16 10:00:00'),
+            false,
+        );
+        $this->entityManager->persist($row);
+        $this->entityManager->flush();
+        $id = $row->requireId();
+        $this->entityManager->clear();
+
+        $reloaded = $this->entityManager->find(SocialNotification::class, $id);
+
+        self::assertNotNull($reloaded);
+        self::assertEquals($context, $reloaded->getSubject()->context);
     }
 
     private function like(string $groupKey, bool $seen = false): SocialNotification

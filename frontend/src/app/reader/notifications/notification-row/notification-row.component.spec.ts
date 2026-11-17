@@ -23,6 +23,10 @@ function group(overrides: Partial<NotificationGroupDto> = {}): NotificationGroup
     actors: [actor(1)],
     actorCount: 1,
     excerpt: 'An excerpt',
+    answeredExcerpt: null,
+    threadTitle: null,
+    threadPlace: null,
+    threadBy: null,
     linkUrl: 'https://social.example/p/1',
     latestAt: '2026-11-16T10:00:00Z',
     seen: true,
@@ -73,7 +77,9 @@ describe('NotificationRowComponent', () => {
   });
 
   it('shows the excerpt only when there is one', () => {
-    expect(render(group()).querySelector('.excerpt')?.textContent).toContain('An excerpt');
+    expect(render(group({ kind: 'reply' })).querySelector('.excerpt')?.textContent).toContain(
+      'An excerpt',
+    );
     expect(render(group({ excerpt: null })).querySelector('.excerpt')).toBeNull();
   });
 
@@ -101,5 +107,62 @@ describe('NotificationRowComponent', () => {
     expect(element.querySelector('.line')?.textContent).toBe(
       'Actor 1, Actor 2 and 5 others liked your post',
     );
+  });
+
+  describe('context', () => {
+    const replyWithContext = group({
+      kind: 'reply',
+      excerpt: 'Their reply',
+      answeredExcerpt: 'My post',
+      threadTitle: 'Self-hosting',
+      threadPlace: 'c/selfhosted',
+    });
+
+    it('renders reply text, quote line and place line in that order', () => {
+      const element = render(replyWithContext);
+      const excerpt = element.querySelector('.excerpt') as Element;
+      const quote = element.querySelector('.quote') as Element;
+      const place = element.querySelector('.place') as Element;
+      expect(
+        excerpt.compareDocumentPosition(quote) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(quote.compareDocumentPosition(place) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(place.textContent).toContain('Self-hosting');
+      expect(place.textContent).toContain('· c/selfhosted');
+    });
+
+    it('prefixes the quote with a bold You:', () => {
+      const element = render(replyWithContext);
+      expect(element.querySelector('.quote .you')?.textContent).toBe('You:');
+      expect(element.querySelector('.quote')?.textContent).toContain('My post');
+    });
+
+    it("draws a like's excerpt as a quote, not as reply text", () => {
+      const element = render(group({ kind: 'like', excerpt: 'My liked post' }));
+      expect(element.querySelector('.excerpt')).toBeNull();
+      expect(element.querySelector('.quote')?.textContent).toContain('My liked post');
+    });
+
+    it('says "in a thread by Zoe:" before a Bluesky thread title', () => {
+      const element = render(group({ threadBy: 'Zoe', threadTitle: 'A thread' }));
+      const place = element.querySelector('.place') as Element;
+      expect(place.textContent).toContain('in a thread by Zoe:');
+      expect(place.textContent?.indexOf('Zoe')).toBeLessThan(
+        place.textContent?.indexOf('A thread') ?? 0,
+      );
+    });
+
+    it('draws a comment reply with the reply glyph in the accent tone', () => {
+      const element = render(group({ kind: 'comment_reply' }));
+      const icon = fixture.debugElement.query(By.directive(IconComponent));
+      expect(icon.componentInstance.name()).toBe('chat_bubble');
+      expect(element.querySelector('.kind')?.classList.contains('comment_reply')).toBe(true);
+    });
+
+    it('shows no quote or place line without context', () => {
+      const element = render(group({ kind: 'reply' }));
+      expect(element.querySelector('.quote')).toBeNull();
+      expect(element.querySelector('.place')).toBeNull();
+    });
   });
 });

@@ -1,0 +1,21 @@
+// The accent disc carrying an unseen count on an icon's shoulder (header avatar, notifications bell).
+@mixin disc($size, $numeral-size) {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  min-width: $size;
+  height: $size;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  box-shadow: 0 0 0 var(--space-0) var(--surface-0);
+  color: var(--surface-0);
+  white-space: nowrap;
+
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     the numeral fits the disc in px; --fs-xs overflows it at two digits. */
+  font-size: $numeral-size;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}

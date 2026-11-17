@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Notification\Support;
 
 use App\Service\Foundation\Text\Support\ClippedText;
+use App\Service\Foundation\Text\Support\PlainText;
 
 final class Excerpt
 {
@@ -15,6 +16,11 @@ final class Excerpt
         $trimmed = trim($text ?? '');
 
         return $trimmed === '' ? null : ClippedText::ofScrubbed($trimmed, self::LENGTH);
+    }
+
+    public static function ofHtml(?string $html): ?string
+    {
+        return self::of(PlainText::fromHtmlBlocks($html));
     }
 
     private function __construct()

@@ -59,7 +59,8 @@
       "account": {
         "id": "203",
         "acct": "dave"
-      }
+      },
+      "in_reply_to_id": "4000"
     }
   },
   {
@@ -144,6 +145,17 @@
       "account": {
         "id": "207",
         "acct": "gus"
+      },
+      "quote": {
+        "state": "accepted",
+        "quoted_status": {
+          "id": "4001",
+          "content": "<p>The post they quoted</p>",
+          "account": {
+            "id": "109",
+            "acct": "alice"
+          }
+        }
       }
     }
   }

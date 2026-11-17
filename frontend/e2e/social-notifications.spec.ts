@@ -9,10 +9,13 @@ import { presetLocalStorage } from './support/auth';
 import { stubOneFeedReader, subscriptionsJson } from './support/reader';
 
 /**
- * #2240: each network's sidebar card leads with a Notifications row, the list
- * groups what happened, and the account menu and avatar carry the unseen count.
+ * #2240: each network's sidebar card head carries a notifications bell with the
+ * unseen count, the list groups what happened, and the account menu and avatar
+ * carry the unseen count.
  * Every API read is stubbed, so the spec owns the counts it asserts on.
  */
+test.use({ viewport: { width: 1440, height: 860 } });
+
 const SUBSCRIPTIONS = [
   aSubscription({
     id: 1,
@@ -83,6 +86,10 @@ function group(overrides: Partial<NotificationGroupDto> & Pick<NotificationGroup
     actors: [actor('Anna Example', 'anna.bsky.social')],
     actorCount: 1,
     excerpt: null,
+    answeredExcerpt: null,
+    threadTitle: null,
+    threadPlace: null,
+    threadBy: null,
     linkUrl: `https://bsky.app/post/${overrides.id}`,
     latestAt: '2026-11-16T10:00:00+00:00',
     seen: true,
@@ -175,9 +182,8 @@ async function stubNotifications(page: Page, unseen = UNSEEN) {
   return seenBodies;
 }
 
-async function openReader(page: Page, path = '/') {
-  await page.setViewportSize({ width: 1280, height: 860 });
-  await presetLocalStorage(page, { 'sfr.layout': 'pane', 'sfr.lang': 'en' });
+async function openReader(page: Page, path = '/', layout = 'pane') {
+  await presetLocalStorage(page, { 'sfr.layout': layout, 'sfr.lang': 'en' });
   await page.goto(path);
 }
 
@@ -187,43 +193,38 @@ function networkCard(page: Page, network: string) {
   });
 }
 
-async function textRight(locator: ReturnType<Page['locator']>): Promise<number> {
-  return locator.evaluate((element) => {
-    const range = document.createRange();
-    range.selectNodeContents(element);
-    return range.getBoundingClientRect().right;
-  });
+async function box(locator: ReturnType<Page['locator']>) {
+  const rect = await locator.boundingBox();
+  if (rect === null) {
+    throw new Error('element has no bounding box');
+  }
+  return rect;
 }
 
-test('the network card leads with Notifications, its pill aligned with the counts', async ({
-  page,
-}) => {
+test('the network head carries a bell with the unseen count', async ({ page }) => {
   await stubNotifications(page);
   await openReader(page);
 
   const bluesky = networkCard(page, 'bluesky');
-  const row = bluesky.locator('app-sidebar-notifications-row');
-  await expect(row.locator('.name')).toHaveText('Notifications');
-  await expect(row.locator('app-count-pill')).toHaveText('4');
-  await expect(bluesky.locator('.rows .feedrow').first()).toContainText('Notifications');
-  await expect(networkCard(page, 'lemmy').locator('app-sidebar-notifications-row')).toBeVisible();
-  await expect(
-    networkCard(page, 'lemmy').locator('app-sidebar-notifications-row app-count-pill'),
-  ).toHaveCount(0);
+  const bell = bluesky.locator('app-sidebar-notifications-bell');
+  await expect(bell.locator('.badge')).toHaveText('4');
+  const lemmyBell = networkCard(page, 'lemmy').locator('app-sidebar-notifications-bell');
+  await expect(lemmyBell).toBeVisible();
+  await expect(lemmyBell.locator('.badge')).toHaveCount(0);
   await expect(bluesky.locator('.section-count')).toHaveText('51');
 
-  const homeCount = bluesky.locator('app-sidebar-feed-row .count', { hasText: '41' });
-  await expect(homeCount).toBeVisible();
-  const pillRight = await textRight(row.locator('app-count-pill'));
-  const countRight = await textRight(homeCount);
-  expect(Math.abs(pillRight - countRight)).toBeLessThanOrEqual(1);
+  const bellBox = await box(bell);
+  const labelBox = await box(bluesky.locator('.label'));
+  const countBox = await box(bluesky.locator('.section-count'));
+  expect(bellBox.x).toBeGreaterThanOrEqual(labelBox.x + labelBox.width);
+  expect(bellBox.x + bellBox.width).toBeLessThanOrEqual(countBox.x);
 });
 
 test('the list shows the grouped notifications', async ({ page }) => {
   await stubNotifications(page);
-  await openReader(page);
+  await openReader(page, '/', 'list');
 
-  await networkCard(page, 'bluesky').locator('app-sidebar-notifications-row a').click();
+  await networkCard(page, 'bluesky').locator('app-sidebar-notifications-bell a').click();
 
   await expect(page).toHaveURL(/view=notifications/);
   await expect(page).toHaveURL(/network=bluesky/);
@@ -244,6 +245,14 @@ test('the list shows the grouped notifications', async ({ page }) => {
   await expect(list.locator('.dot')).toHaveCount(2);
   await expect(rows.first().locator('a.row')).toHaveAttribute('target', '_blank');
   await expect(list.locator('.end')).toHaveText("That's everything from the last 30 days.");
+
+  const rowBox = await box(rows.first());
+  const columnBox = await box(list.locator('.rows'));
+  expect(rowBox.width).toBeGreaterThanOrEqual(600);
+  expect(rowBox.width).toBeLessThanOrEqual(680);
+  expect(
+    Math.abs(rowBox.x + rowBox.width / 2 - (columnBox.x + columnBox.width / 2)),
+  ).toBeLessThanOrEqual(2);
 });
 
 test('Mark all seen posts the newest shown position and clears the dots', async ({ page }) => {
@@ -253,13 +262,13 @@ test('Mark all seen posts the newest shown position and clears the dots', async 
   const list = page.locator('app-notification-list');
   await expect(list.locator('.dot')).toHaveCount(2);
   const bluesky = networkCard(page, 'bluesky');
-  await expect(bluesky.locator('app-sidebar-notifications-row app-count-pill')).toHaveText('4');
+  await expect(bluesky.locator('app-sidebar-notifications-bell .badge')).toHaveText('4');
 
   await list.locator('.mark-seen').click();
 
   await expect(list.locator('.dot')).toHaveCount(0);
   expect(seenBodies).toEqual([{ network: 'bluesky', upTo: 40 }]);
-  await expect(bluesky.locator('app-sidebar-notifications-row app-count-pill')).toHaveCount(0);
+  await expect(bluesky.locator('app-sidebar-notifications-bell .badge')).toHaveCount(0);
 });
 
 test('the account menu lists only networks with unseen notifications', async ({ page }) => {

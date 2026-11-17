@@ -20,10 +20,10 @@ final class FaviconResolverTest extends TestCase
         return new FaviconResolver($fetcher, new NullLogger());
     }
 
-    private function page(string $head): FetchResponseModel
+    private function page(string $head, string $finalUrl = 'https://blog.example.com/'): FetchResponseModel
     {
         return FetchResponseModel::fetched(
-            'https://blog.example.com/',
+            $finalUrl,
             permanentRedirect: false,
             body: /** @lang TEXT */ '<!doctype html><html><head>' . $head . '</head><body>x</body></html>',
             etag: null,
@@ -213,6 +213,107 @@ final class FaviconResolverTest extends TestCase
         self::assertSame('error', $logger->records[0]['level']);
         self::assertSame('Favicon batch fetch failed', $logger->records[0]['message']);
         self::assertInstanceOf(\Throwable::class, $logger->records[0]['context']['exception'] ?? null);
+    }
+
+    /**
+     * @return iterable<string, array{string, string, string}>
+     */
+    public static function lemmySiteRecords(): iterable
+    {
+        yield 'the site record carries the icon' => [
+            '{"id":1,"name":"Lemmy Example","icon":"https://lemmy.example.com/pictrs/image/site.png"}',
+            '',
+            'https://lemmy.example.com/pictrs/image/site.png',
+        ];
+        yield 'a brace in the sidebar does not hide the icon' => [
+            '{"id":1,"sidebar":"Rules: {be nice} \"quoted\"","icon":"https://lemmy.example.com/site.png"}',
+            '',
+            'https://lemmy.example.com/site.png',
+        ];
+        yield 'a long sidebar dense with escapes does not exhaust the JIT stack' => [
+            '{"id":1,"sidebar":"' . str_repeat('Be \"polite\". ', 10000)
+                . '","icon":"https://lemmy.example.com/site.png"}',
+            '',
+            'https://lemmy.example.com/site.png',
+        ];
+        yield 'a site without an icon never borrows another record\'s' => [
+            '{"id":1,"name":"Lemmy Example"},"community":{"icon":"https://lemmy.example.com/c.png"}',
+            '',
+            'https://lemmy.example.com/favicon.ico',
+        ];
+        yield 'an insecure site icon falls back to /favicon.ico' => [
+            '{"id":1,"icon":"http://lemmy.example.com/site.png"}',
+            '',
+            'https://lemmy.example.com/favicon.ico',
+        ];
+        yield 'an advertised https icon outranks the site record' => [
+            '{"id":1,"icon":"https://lemmy.example.com/site.png"}',
+            '<link rel="icon" href="/static/icon.png">',
+            'https://lemmy.example.com/static/icon.png',
+        ];
+    }
+
+    #[DataProvider('lemmySiteRecords')]
+    public function testALemmyInstanceIconComesFromItsEmbeddedSiteRecord(
+        string $siteRecord,
+        string $extraHead,
+        string $expectedIcon,
+    ): void {
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willReturn('https://lemmy.example.com', $this->lemmyPage($siteRecord, $extraHead));
+
+        $icons = $this->resolver($fetcher)->resolveAll([1 => 'https://lemmy.example.com/c/technology']);
+
+        self::assertSame($expectedIcon, $icons[1]);
+    }
+
+    public function testADataUriIconCostsNoOtherSiteInTheBatchItsIcon(): void
+    {
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willReturn(
+            'https://one.example.com',
+            $this->page('<link rel="icon" href="data:image/png;base64,iVBORw0KGgo=">', 'https://one.example.com/'),
+        );
+        $fetcher->willReturn(
+            'https://blog.example.com',
+            $this->page('<link rel="icon" href="https://cdn.example.com/fav.png">'),
+        );
+
+        $icons = $this->resolver($fetcher)->resolveAll([
+            1 => 'https://one.example.com/',
+            2 => 'https://blog.example.com/',
+        ]);
+
+        self::assertSame('https://one.example.com/favicon.ico', $icons[1]);
+        self::assertSame('https://cdn.example.com/fav.png', $icons[2]);
+    }
+
+    public function testFeedsOnOneSiteShareASingleHomepageFetch(): void
+    {
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willReturn('https://blog.example.com', $this->page('<link rel="icon" href="/fav.png">'));
+
+        $icons = $this->resolver($fetcher)->resolveAll([
+            1 => 'https://blog.example.com/c/one',
+            2 => 'https://blog.example.com/c/two',
+        ]);
+
+        self::assertSame(['https://blog.example.com'], $fetcher->fetchedUrls);
+        self::assertSame('https://blog.example.com/fav.png', $icons[1]);
+        self::assertSame('https://blog.example.com/fav.png', $icons[2]);
+    }
+
+    private function lemmyPage(string $siteRecord, string $extraHead): FetchResponseModel
+    {
+        $escapedSlash = '\\' . 'u002F';
+
+        return $this->page(
+            '<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgo=">' . $extraHead
+            . '<script>window.isoData = {"path":"/","site_res":{"site_view":{"site":'
+            . str_replace('/', $escapedSlash, $siteRecord)
+            . ',"local_site":{"id":1}}},"errorPageData":undefined};</script>',
+            'https://lemmy.example.com/',
+        );
     }
 
     /**
