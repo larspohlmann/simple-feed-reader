@@ -121,10 +121,7 @@ test('a crosspost sends to Bluesky once and retries only Mastodon', async ({ pag
     'aria-pressed',
     'true',
   );
-  await dialog
-    .getByRole('button', { name: /^Post on both|^Post/ })
-    .last()
-    .click();
+  await dialog.getByRole('button', { name: 'Post to both' }).click();
 
   await expect(dialog.getByRole('button', { name: 'Retry Mastodon' })).toBeVisible();
   expect(sends).toEqual(['bluesky', 'mastodon']);
