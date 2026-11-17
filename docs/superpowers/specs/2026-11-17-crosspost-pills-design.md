@@ -168,6 +168,18 @@ The endpoints and their JSON shape stay the same. No migration.
   title + URL, then gets no doubled link, and the backend and frontend need not ship in lockstep.
 - **Send stays off while any active lane is still loading.**
 
+## Keep Lemmy in mind (Lars, 2026-11-17; follow-up #2295)
+
+Lemmy link posts come later, as a third pill. Nothing in this work may assume exactly
+Bluesky + Mastodon:
+- Lanes, pills, the heading, the Send label and the counters work off `LINK_POST_NETWORKS`.
+  The heading joins the active network names. "Post to both" shows only with exactly two
+  active, else "Post".
+- Per-network controls render as one block per active lane, under the text field, in lane
+  order: the account select first, then the network's own fields (Mastodon: visibility and
+  content warning; later, Lemmy: community and title).
+- Each lane builds its own network-specific draft fields.
+
 ## Left to the builder
 
 - The names and file split of the lane state class and the pill component.
