@@ -178,8 +178,8 @@ async function stubNotifications(page: Page, unseen = UNSEEN) {
   return seenBodies;
 }
 
-async function openReader(page: Page, path = '/') {
-  await presetLocalStorage(page, { 'sfr.layout': 'pane', 'sfr.lang': 'en' });
+async function openReader(page: Page, path = '/', layout = 'pane') {
+  await presetLocalStorage(page, { 'sfr.layout': layout, 'sfr.lang': 'en' });
   await page.goto(path);
 }
 
@@ -219,7 +219,7 @@ test('the network head carries a bell with the unseen count', async ({ page }) =
 
 test('the list shows the grouped notifications', async ({ page }) => {
   await stubNotifications(page);
-  await openReader(page);
+  await openReader(page, '/', 'list');
 
   await networkCard(page, 'bluesky').locator('app-sidebar-notifications-bell a').click();
 
