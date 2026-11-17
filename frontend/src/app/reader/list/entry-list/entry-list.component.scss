@@ -2,46 +2,13 @@
 @use '../../../theme/corner-circle-button' as circle;
 @use '../../../theme/glass-rim';
 @use '../../../theme/list-chrome';
-@use '../../../theme/page-chrome';
 
 :host {
   display: block;
 }
 
-/* The list's chrome, held over its column while the rows scroll the page (#2038). */
-.list-frame {
-  @include page-chrome.list-column-box;
-
-  z-index: 1;
-  pointer-events: none;
-}
-
-/* Above the tail frame, so the list header still covers the rail and the wait veil. */
-.list-frame.lead {
-  z-index: 2;
-}
-
-.list-frame.tail {
-  container: entry-list / size;
-}
-
-.list-header,
-.list-error,
 .corner-actions {
   pointer-events: auto;
-}
-
-.list-header {
-  @include list-chrome.floating-header;
-}
-
-/* Narrow layout: scrolled down, the header collapses to a slim bar; the
-   heading and tools inside step down with it (list-header). */
-@media (width < bp.$bp-lg) {
-  .list-header.collapsed {
-    padding-top: var(--space-1);
-    padding-bottom: var(--space-1);
-  }
 }
 
 /* Pull-to-refresh reveal tray: parked one --refresh-reveal above the bars,
@@ -323,14 +290,6 @@ app-progress-rail {
   padding-top: calc(#{list-chrome.$header-clear} + var(--space-6));
 }
 
-/* Overlays the top of the content, just below the floating header, instead of
-   sitting in the flow. The rows keep their own `$header-clear` reservation
-   unconditionally, so the error appearing or being dismissed never moves a row
-   (#996 — the old flow banner handed the reservation back and forth, #321). */
-.list-error {
-  @include list-chrome.error-overlay;
-}
-
 .skeleton {
   /* stylelint-disable-next-line declaration-property-unit-allowed-list --
      tuned placeholder height, sized to a real entry row. */
@@ -363,10 +322,6 @@ app-loading-overlay {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .list-header {
-    transition: none;
-  }
-
   .skeleton {
     animation: none;
   }
@@ -407,10 +362,10 @@ app-loading-overlay {
 
 /* An open playlist can squeeze the list to a strip; there the corner buttons
    would ride up over the list header, and the player wins. */
-@include list-chrome.hide-corner-cluster-in-strip(entry-list);
+@include list-chrome.hide-corner-cluster-in-strip(list-tail);
 
 /* A landscape phone keeps the pair, which still fits; only the column would ride up. */
-@container entry-list (height < #{bp.$container-list-corner-cluster}) {
+@container list-tail (height < #{bp.$container-list-corner-cluster}) {
   @media (pointer: coarse) {
     .corner-cluster .corner-actions {
       display: none;

@@ -754,10 +754,11 @@ describe('EntryListComponent', () => {
     it('publishes the expanded bar height and keeps it while collapsed', () => {
       const fixture = mount({ layout: 'list' });
       const host = fixture.nativeElement as HTMLElement;
+      const frame = host.querySelector<HTMLElement>('app-list-frame')!;
       const header = host.querySelector<HTMLElement>('.list-header')!;
       Object.defineProperty(header, 'offsetHeight', { configurable: true, value: 53 });
       fireResizeOf(header);
-      expect(host.style.getPropertyValue('--list-bar-h')).toBe('53px');
+      expect(frame.style.getPropertyValue('--list-bar-h')).toBe('53px');
 
       // The reservation must not follow the bar down: the scroller's padding is
       // computed from this value, and shrinking it would move every row.
@@ -765,8 +766,8 @@ describe('EntryListComponent', () => {
       fixture.detectChanges();
       Object.defineProperty(header, 'offsetHeight', { configurable: true, value: 20 });
       fireResizeOf(header);
-      expect(host.style.getPropertyValue('--list-bar-h')).toBe('53px');
-      expect(host.querySelector('.list-header')!.classList).toContain('collapsed');
+      expect(frame.style.getPropertyValue('--list-bar-h')).toBe('53px');
+      expect(header.classList).toContain('collapsed');
     });
 
     it('keeps the scroller reservation constant whether or not an error shows (#996)', () => {
