@@ -48,11 +48,18 @@ final readonly class BlueskyNotificationContextSource implements NotificationCon
     {
         $uris = [];
         foreach ($rows as $row) {
-            $uris[] = $row->references->answeredId;
+            $uris[] = self::ownAnsweredOf($account, $row);
             $uris[] = self::threadRootOf($account, $row);
         }
 
         return array_values(array_unique(array_filter($uris, static fn (?string $uri): bool => $uri !== null)));
+    }
+
+    private static function ownAnsweredOf(SocialAccount $account, FetchedNotificationModel $row): ?string
+    {
+        $answered = $row->references->answeredId;
+
+        return $answered !== null && AtPostUri::authorityOf($answered) === $account->getIdentity() ? $answered : null;
     }
 
     private static function threadRootOf(SocialAccount $account, FetchedNotificationModel $row): ?string
@@ -69,7 +76,7 @@ final readonly class BlueskyNotificationContextSource implements NotificationCon
         array $posts,
     ): FetchedNotificationModel {
         $context = $row->subject->context;
-        $answered = $posts[$row->references->answeredId ?? ''] ?? null;
+        $answered = $posts[self::ownAnsweredOf($account, $row) ?? ''] ?? null;
         if ($answered instanceof JsonNodeModel) {
             $context = $context->withAnsweredExcerpt(Excerpt::of($answered->node('record')->text('text')));
         }

@@ -23,6 +23,7 @@ final class BlueskyNotificationContextSourceTest extends TestCase
     private const string ROOT = 'at://did:plc:zoe/app.bsky.feed.post/3lroot';
     private const string OWN_ROOT = 'at://did:plc:alice/app.bsky.feed.post/3lownroot';
     private const string QUOTED = 'at://did:plc:alice/app.bsky.feed.post/3lquoted';
+    private const string THEIRS = 'at://did:plc:someone-else/app.bsky.feed.post/3ltheirs';
 
     public function testAddsTheAnsweredPostAndTheThreadStart(): void
     {
@@ -72,6 +73,28 @@ final class BlueskyNotificationContextSourceTest extends TestCase
             self::assertNull($row->subject->context->threadBy);
         }
         self::assertSame([self::lookup(self::MINE)], $this->lookups($http));
+    }
+
+    public function testAReplyToSomeoneElsesPostQuotesNothing(): void
+    {
+        $http = $this->http((string) json_encode(['posts' => [[
+            'uri' => self::THEIRS,
+            'author' => ['did' => 'did:plc:someone-else', 'handle' => 'else.bsky.social', 'displayName' => 'Else'],
+            'record' => ['text' => 'Not your post'],
+        ], [
+            'uri' => self::ROOT,
+            'author' => ['did' => 'did:plc:zoe', 'handle' => 'zoe.bsky.social', 'displayName' => 'Zoe'],
+            'record' => ['text' => 'How do you all handle feeds?'],
+        ]]]));
+
+        $rows = $this->source($http)->withContext(
+            SocialApiWiring::blueskyAccount(),
+            [self::row(SocialNotificationKind::Reply, new ContextReferenceModel(self::THEIRS, self::ROOT))],
+        );
+
+        self::assertNull($rows[0]->subject->context->answeredExcerpt);
+        self::assertSame('Zoe', $rows[0]->subject->context->threadBy);
+        self::assertSame([self::lookup(self::ROOT)], $this->lookups($http));
     }
 
     public function testAQuoteGetsYourQuotedPost(): void
