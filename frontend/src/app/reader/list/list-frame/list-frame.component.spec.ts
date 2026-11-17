@@ -1,7 +1,10 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Problem } from '../../../core/problem';
-import { fireResizeOf, installMockResizeObserver } from '../../../../testing/resize-observer-testing';
+import {
+  fireResizeOf,
+  installMockResizeObserver,
+} from '../../../../testing/resize-observer-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { ListFrameComponent } from './list-frame.component';
 
