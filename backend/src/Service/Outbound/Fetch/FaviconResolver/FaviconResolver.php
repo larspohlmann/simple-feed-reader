@@ -9,7 +9,7 @@ use App\Service\Outbound\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
 use App\Service\Outbound\Fetch\Model\FetchTicketModel;
 use App\Service\Outbound\Fetch\Pass\PageUrls;
-use App\Service\Outbound\Fetch\Support\LemmySiteIcon;
+use App\Service\Outbound\Fetch\Support\LemmyPageIcon;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -127,7 +127,9 @@ final readonly class FaviconResolver implements FaviconResolverInterface
             return null;
         }
 
-        return $this->pickIcon($body, new PageUrls($response->finalUrl)) ?? LemmySiteIcon::in($body);
+        $pageUrls = new PageUrls($response->finalUrl);
+
+        return $this->pickIcon($body, $pageUrls) ?? LemmyPageIcon::in($body, $pageUrls);
     }
 
     private function pickIcon(string $html, PageUrls $pageUrls): ?string

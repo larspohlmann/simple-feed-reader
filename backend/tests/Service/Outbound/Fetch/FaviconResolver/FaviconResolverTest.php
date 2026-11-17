@@ -20,12 +20,15 @@ final class FaviconResolverTest extends TestCase
         return new FaviconResolver($fetcher, new NullLogger());
     }
 
-    private function page(string $head, string $finalUrl = 'https://blog.example.com/'): FetchResponseModel
-    {
+    private function page(
+        string $head,
+        string $finalUrl = 'https://blog.example.com/',
+        string $body = 'x',
+    ): FetchResponseModel {
         return FetchResponseModel::fetched(
             $finalUrl,
             permanentRedirect: false,
-            body: /** @lang TEXT */ '<!doctype html><html><head>' . $head . '</head><body>x</body></html>',
+            body: /** @lang TEXT */ '<!doctype html><html><head>' . $head . '</head><body>' . $body . '</body></html>',
             etag: null,
             lastModified: null,
         );
@@ -267,6 +270,85 @@ final class FaviconResolverTest extends TestCase
         self::assertSame($expectedIcon, $icons[1]);
     }
 
+    /**
+     * @return iterable<string, array{string, string, string}>
+     */
+    public static function lemmyActorRecords(): iterable
+    {
+        $communityFragment = static fn (string $record): string => ',"community_res":{"community_view":{"community":'
+            . $record . ',"subscribed":"NotSubscribed"}}';
+        $personFragment = static fn (string $record): string => ',"person_res":{"person_view":{"person":'
+            . $record . ',"counts":{"post_count":1}}}';
+        $mouseBody = '<svg><use xlink:href="/static/9acd6610/assets/symbols.svg#icon-heart"></use></svg>';
+        $mouse = 'https://lemmy.example.com/static/9acd6610/assets/icons/icon-96x96.png';
+        $site = 'https://lemmy.example.com/pictrs/image/site.png';
+
+        yield 'a community icon' => [
+            $communityFragment('{"id":7,"name":"technology","icon":"https://lemmy.example.com/pictrs/image/c.png"}'),
+            '',
+            'https://lemmy.example.com/pictrs/image/c.png',
+        ];
+        yield 'a community without an icon falls back to the instance icon' => [
+            $communityFragment('{"id":7,"name":"technology"}'),
+            '',
+            $site,
+        ];
+        yield 'braces and quotes in a community description do not hide its icon' => [
+            $communityFragment(
+                '{"id":7,"description":"Rules: {be nice} \\"quoted\\"","icon":"https://lemmy.example.com/c.png"}',
+            ),
+            '',
+            'https://lemmy.example.com/c.png',
+        ];
+        yield 'an insecure community icon falls back to the instance icon' => [
+            $communityFragment('{"id":7,"icon":"http://lemmy.example.com/c.png"}'),
+            '',
+            $site,
+        ];
+        yield 'a user avatar' => [
+            $personFragment('{"id":9,"name":"lars","avatar":"https://lemmy.example.com/pictrs/image/a.png"}'),
+            '',
+            'https://lemmy.example.com/pictrs/image/a.png',
+        ];
+        yield 'a user without an avatar gets the lemmy-ui mouse' => [
+            $personFragment('{"id":9,"name":"lars"}'),
+            $mouseBody,
+            $mouse,
+        ];
+        yield 'braces in a user bio do not hide the missing avatar' => [
+            $personFragment('{"id":9,"bio":"likes {braces}"}'),
+            $mouseBody,
+            $mouse,
+        ];
+        yield 'a user without an avatar on a page with no static build falls back to the instance icon' => [
+            $personFragment('{"id":9,"name":"lars"}'),
+            '',
+            $site,
+        ];
+    }
+
+    #[DataProvider('lemmyActorRecords')]
+    public function testALemmyActorIconOutranksItsInstanceIcon(
+        string $actorFragment,
+        string $body,
+        string $expectedIcon,
+    ): void {
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willReturn(
+            'https://lemmy.example.com',
+            $this->lemmyPage(
+                '{"id":1,"icon":"https://lemmy.example.com/pictrs/image/site.png"}',
+                '',
+                $actorFragment,
+                $body,
+            ),
+        );
+
+        $icons = $this->resolver($fetcher)->resolveAll([1 => 'https://lemmy.example.com/c/technology']);
+
+        self::assertSame($expectedIcon, $icons[1]);
+    }
+
     public function testADataUriIconCostsNoOtherSiteInTheBatchItsIcon(): void
     {
         $fetcher = new StubFeedFetcher();
@@ -303,16 +385,22 @@ final class FaviconResolverTest extends TestCase
         self::assertSame('https://blog.example.com/fav.png', $icons[2]);
     }
 
-    private function lemmyPage(string $siteRecord, string $extraHead): FetchResponseModel
-    {
+    private function lemmyPage(
+        string $siteRecord,
+        string $extraHead,
+        string $actorFragment = '',
+        string $body = '',
+    ): FetchResponseModel {
         $escapedSlash = '\\' . 'u002F';
 
         return $this->page(
             '<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgo=">' . $extraHead
             . '<script>window.isoData = {"path":"/","site_res":{"site_view":{"site":'
             . str_replace('/', $escapedSlash, $siteRecord)
-            . ',"local_site":{"id":1}}},"errorPageData":undefined};</script>',
+            . ',"local_site":{"id":1}}}' . str_replace('/', $escapedSlash, $actorFragment)
+            . ',"errorPageData":undefined};</script>',
             'https://lemmy.example.com/',
+            $body,
         );
     }
 
