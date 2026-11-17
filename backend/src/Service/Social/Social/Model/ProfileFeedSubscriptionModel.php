@@ -23,7 +23,7 @@ final readonly class ProfileFeedSubscriptionModel
         return match ($network) {
             SocialNetwork::Bluesky => BlueskyActorKey::isDid($this->identity) ? $this->identity : '@' . $this->identity,
             SocialNetwork::Mastodon => '@' . $this->identity,
-            SocialNetwork::Lemmy => '!' . $this->identity,
+            SocialNetwork::Lemmy => str_starts_with($this->identity, '@') ? $this->identity : '!' . $this->identity,
         };
     }
 }
