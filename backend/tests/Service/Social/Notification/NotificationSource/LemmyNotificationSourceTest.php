@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Notification\NotificationSource;
 
 use App\Entity\NotificationActor;
+use App\Entity\NotificationContext;
 use App\Entity\NotificationSubject;
 use App\Entity\SocialAccount;
 use App\Entity\SocialNotification;
@@ -40,7 +41,8 @@ final class LemmyNotificationSourceTest extends TestCase
             ),
         );
         $reply = $page->notifications[0];
-        self::assertSame(SocialNotificationKind::Reply, $reply->kind);
+        self::assertSame(SocialNotificationKind::CommentReply, $reply->kind);
+        self::assertSame('26906403', $reply->references->answeredId);
         self::assertEquals(
             new NotificationActor(
                 'carol@lemmy.other',
@@ -51,19 +53,56 @@ final class LemmyNotificationSourceTest extends TestCase
             $reply->actor,
         );
         self::assertEquals(
-            new NotificationSubject('reply:7', 'Thanks, **that** helped a lot', 'https://lemmy.example/comment/41'),
+            new NotificationSubject(
+                'reply:7',
+                'Thanks, **that** helped a lot',
+                'https://lemmy.example/comment/41',
+                new NotificationContext(
+                    threadTitle: 'Which self-hosted reader do you use?',
+                    threadPlace: 'c/selfhosted',
+                ),
+            ),
             $reply->subject,
         );
         self::assertEquals(self::utc('2026-11-16 09:00:00.123456'), $reply->createdAt);
         self::assertNull($page->notifications[1]->subject->excerpt);
+        self::assertSame(SocialNotificationKind::Reply, $page->notifications[1]->kind);
+        self::assertTrue($page->notifications[1]->references->isEmpty());
+        self::assertSame(
+            'Which self-hosted reader do you use?',
+            $page->notifications[1]->subject->context->threadTitle,
+        );
+        self::assertSame('c/selfhosted', $page->notifications[1]->subject->context->threadPlace);
         self::assertEquals(self::utc('2026-11-16 08:00:00'), $page->notifications[1]->createdAt);
         $mention = $page->notifications[2];
         self::assertSame(SocialNotificationKind::Mention, $mention->kind);
         self::assertSame('mention:3', $mention->subject->groupKey);
+        self::assertSame('c/askme', $mention->subject->context->threadPlace);
+        self::assertSame('Weekly question thread', $mention->subject->context->threadTitle);
         self::assertSame('https://lemmy.example/comment/55', $mention->subject->linkUrl);
         self::assertSame('dave@lemmy.example', $mention->actor->handle);
         self::assertNull($mention->actor->avatarUrl);
         self::assertEquals(self::utc('2026-11-16 07:30:00'), $mention->createdAt);
+    }
+
+    public function testACommentReplyKeepsTheReplyRemoteId(): void
+    {
+        $page = $this->source($this->http())->fetch(SocialApiWiring::lemmyAccount());
+
+        self::assertSame('reply:7', $page->notifications[0]->remoteId);
+        self::assertSame('reply:7', $page->notifications[0]->subject->groupKey);
+    }
+
+    public function testAMissingCommunityLeavesNoPlace(): void
+    {
+        $replies = (string) file_get_contents(__DIR__ . '/../../../../Fixtures/lemmy/notifications-replies.json');
+        $community = '/"community": \{"id": 4, "name": "selfhosted"\}/';
+        $broken = preg_replace($community, '"community": {"id": 4}', $replies, 1);
+
+        $page = $this->source($this->http((string) $broken))->fetch(SocialApiWiring::lemmyAccount());
+
+        self::assertNull($page->notifications[0]->subject->context->threadPlace);
+        self::assertSame('c/selfhosted', $page->notifications[1]->subject->context->threadPlace);
     }
 
     public function testSeenComesFromTheNetwork(): void
@@ -172,6 +211,22 @@ final class LemmyNotificationSourceTest extends TestCase
         } catch (SocialNetworkThrottledException) {
             self::assertSame(1, $marked);
         }
+    }
+
+    public function testMarkSeenMarksACommentReplyThroughTheReplyEndpoint(): void
+    {
+        $http = $this->markingHttp();
+        $account = SocialApiWiring::lemmyAccount();
+
+        $this->source($http)->markSeen(
+            $account,
+            [self::stored($account, 'reply:7', SocialNotificationKind::CommentReply)],
+            static function (): void {
+            },
+        );
+
+        self::assertSame(['POST ' . self::MARK_REPLY], $http->requestLines());
+        self::assertSame('{"comment_reply_id":7,"read":true}', $http->requests[0]['body']);
     }
 
     public function testRefusedMarkingIsUnreachable(): void

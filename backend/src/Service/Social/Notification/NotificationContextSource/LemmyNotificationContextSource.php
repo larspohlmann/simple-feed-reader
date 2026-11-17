@@ -6,13 +6,56 @@ namespace App\Service\Social\Notification\NotificationContextSource;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Notification\Model\FetchedNotificationModel;
+use App\Service\Social\Notification\Support\Excerpt;
+use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Social\LemmyAccountApi;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Lemmy->value)]
 final readonly class LemmyNotificationContextSource implements NotificationContextSourceInterface
 {
+    public function __construct(private LemmyAccountApi $lemmy)
+    {
+    }
+
     public function withContext(SocialAccount $account, array $fresh): array
     {
-        return $fresh;
+        $rows = [];
+        $throttled = false;
+        foreach ($fresh as $row) {
+            $answeredId = $row->references->answeredId;
+            if ($throttled || $answeredId === null) {
+                $rows[] = $row;
+                continue;
+            }
+            try {
+                $rows[] = $this->withAnswered($account, $row, $answeredId);
+            } catch (SocialNetworkThrottledException) {
+                $throttled = true;
+                $rows[] = $row;
+            } catch (SocialPostNotFoundException | SocialPostRefusedException | SocialNetworkUnreachableException) {
+                $rows[] = $row;
+            }
+        }
+
+        return $rows;
+    }
+
+    private function withAnswered(
+        SocialAccount $account,
+        FetchedNotificationModel $row,
+        string $answeredId,
+    ): FetchedNotificationModel {
+        $comment = JsonNodeModel::of($this->lemmy->get($account, '/api/v3/comment?id=' . $answeredId)->json())
+            ->node('comment_view')
+            ->node('comment');
+        $context = $row->subject->context->withAnsweredExcerpt(Excerpt::of($comment->text('content')));
+
+        return $row->withSubject($row->subject->withContext($context));
     }
 }
