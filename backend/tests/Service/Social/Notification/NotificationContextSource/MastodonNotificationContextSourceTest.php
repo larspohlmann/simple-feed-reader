@@ -126,7 +126,7 @@ final class MastodonNotificationContextSourceTest extends TestCase
     public function testEveryAnsweredPostOfEveryChunkIsApplied(): void
     {
         $http = RoutedHttpClient::answering(static function (string $method, string $url): MockResponse {
-            preg_match_all('/id\[\]=(\d+)/', $url, $ids);
+            preg_match_all('/id\[]=(\d+)/', $url, $ids);
 
             return new MockResponse((string) json_encode(array_map(
                 static fn (string $id): array => ['id' => $id, 'content' => 'Post ' . $id],
