@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Notification\Model;
 
+use App\Entity\NotificationContext;
+
 final readonly class NotificationPageModel
 {
     /**
@@ -31,19 +33,28 @@ final readonly class NotificationPageModel
         return $sorted;
     }
 
+    /** @param array<string, NotificationContext> $contexts by remote id */
+    #[\NoDiscard]
+    public function withContexts(array $contexts): self
+    {
+        return clone($this, ['notifications' => array_map(
+            static fn (FetchedNotificationModel $fetched): FetchedNotificationModel
+                => isset($contexts[$fetched->remoteId])
+                    ? $fetched->withContext($contexts[$fetched->remoteId])
+                    : $fetched,
+            $this->notifications,
+        )]);
+    }
+
     /** @param list<FetchedNotificationModel> $completed */
     #[\NoDiscard]
     public function withSubjectsOf(array $completed): self
     {
-        $subjects = [];
+        $contexts = [];
         foreach ($completed as $fetched) {
-            $subjects[$fetched->remoteId] = $fetched->subject;
+            $contexts[$fetched->remoteId] = $fetched->subject->context;
         }
 
-        return clone($this, ['notifications' => array_map(
-            static fn (FetchedNotificationModel $fetched): FetchedNotificationModel
-                => $fetched->withSubject($subjects[$fetched->remoteId] ?? $fetched->subject),
-            $this->notifications,
-        )]);
+        return $this->withContexts($contexts);
     }
 }

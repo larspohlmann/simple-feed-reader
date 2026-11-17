@@ -29,7 +29,7 @@ final class NotificationPageModelTest extends TestCase
         ));
     }
 
-    public function testWithSubjectsOfSwapsSubjectsByRemoteId(): void
+    public function testWithContextsSetsTheContextOfEveryRowWithThatRemoteId(): void
     {
         $createdAt = new \DateTimeImmutable('2026-11-16 09:00:00');
         $unseen = self::notification('a', $createdAt);
@@ -37,7 +37,7 @@ final class NotificationPageModelTest extends TestCase
         $page = new NotificationPageModel([$unseen, $seen, self::notification('b', $createdAt)], $createdAt);
         $context = new NotificationContext('You said');
 
-        $swapped = $page->withSubjectsOf([$unseen->withContext($context)]);
+        $swapped = $page->withContexts(['a' => $context, 'z' => new NotificationContext('ignored')]);
 
         self::assertEquals([$context, $context, new NotificationContext()], array_map(
             static fn (FetchedNotificationModel $notification): NotificationContext => $notification->subject->context,
@@ -47,6 +47,7 @@ final class NotificationPageModelTest extends TestCase
             static fn (FetchedNotificationModel $notification): bool => $notification->seen,
             $swapped->notifications,
         ));
+        self::assertCount(3, $swapped->notifications);
         self::assertSame($createdAt, $swapped->seenUntil);
     }
 

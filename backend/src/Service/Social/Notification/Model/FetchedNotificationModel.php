@@ -23,14 +23,8 @@ final readonly class FetchedNotificationModel
     }
 
     #[\NoDiscard]
-    public function withSubject(NotificationSubject $subject): self
-    {
-        return clone($this, ['subject' => $subject]);
-    }
-
-    #[\NoDiscard]
     public function withContext(NotificationContext $context): self
     {
-        return $this->withSubject($this->subject->withContext($context));
+        return clone($this, ['subject' => $this->subject->withContext($context)]);
     }
 }
