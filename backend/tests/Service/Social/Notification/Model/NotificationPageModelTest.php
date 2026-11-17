@@ -29,7 +29,7 @@ final class NotificationPageModelTest extends TestCase
         ));
     }
 
-    public function testWithSubjectsOfSwapsSubjectsByRemoteId(): void
+    public function testWithContextsSetsTheContextOfEveryRowWithThatRemoteId(): void
     {
         $createdAt = new \DateTimeImmutable('2026-11-16 09:00:00');
         $unseen = self::notification('a', $createdAt);
@@ -37,17 +37,29 @@ final class NotificationPageModelTest extends TestCase
         $page = new NotificationPageModel([$unseen, $seen, self::notification('b', $createdAt)], $createdAt);
         $context = new NotificationContext('You said');
 
-        $swapped = $page->withSubjectsOf([$unseen->withContext($context)]);
+        $applied = $page->withContexts(['a' => $context, 'z' => new NotificationContext('ignored')]);
 
         self::assertEquals([$context, $context, new NotificationContext()], array_map(
             static fn (FetchedNotificationModel $notification): NotificationContext => $notification->subject->context,
-            $swapped->notifications,
+            $applied->notifications,
         ));
         self::assertSame([false, true, false], array_map(
             static fn (FetchedNotificationModel $notification): bool => $notification->seen,
-            $swapped->notifications,
+            $applied->notifications,
         ));
-        self::assertSame($createdAt, $swapped->seenUntil);
+        self::assertCount(3, $applied->notifications);
+        self::assertSame($createdAt, $applied->seenUntil);
+    }
+
+    public function testWithContextsFindsARowWhoseNumericRemoteIdBecameAnIntegerKey(): void
+    {
+        $createdAt = new \DateTimeImmutable('2026-11-16 09:00:00');
+        $page = new NotificationPageModel([self::notification('123', $createdAt)], null);
+        $context = new NotificationContext('You said');
+
+        $applied = $page->withContexts(['123' => $context]);
+
+        self::assertSame($context, $applied->notifications[0]->subject->context);
     }
 
     private static function notification(string $remoteId, \DateTimeImmutable $createdAt): FetchedNotificationModel

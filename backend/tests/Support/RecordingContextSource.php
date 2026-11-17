@@ -18,17 +18,14 @@ final class RecordingContextSource implements NotificationContextSourceInterface
     {
     }
 
-    public function withContext(SocialAccount $account, array $fresh): array
+    public function contextsOf(SocialAccount $account, array $fresh): array
     {
-        $this->asked[] = array_map(static fn (FetchedNotificationModel $fetched): string => $fetched->remoteId, $fresh);
-        $adds = $this->adds;
-        if ($adds === null) {
-            return $fresh;
+        $remoteIds = array_map(static fn (FetchedNotificationModel $fetched): string => $fetched->remoteId, $fresh);
+        $this->asked[] = $remoteIds;
+        if ($this->adds === null) {
+            return [];
         }
 
-        return array_map(
-            static fn (FetchedNotificationModel $fetched): FetchedNotificationModel => $fetched->withContext($adds),
-            $fresh,
-        );
+        return array_fill_keys($remoteIds, $this->adds);
     }
 }
