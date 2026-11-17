@@ -218,17 +218,19 @@ final class NotificationPollSweepTest extends DbTestCase
         );
         $contextSource = new RecordingContextSource();
 
-        $this->sweepWithContext(['did:plc:context-new-rows' => $first], $contextSource)
+        $this->sweepWithContext(new StubNotificationSource(['did:plc:context-new-rows' => $first]), $contextSource)
             ->sweep(NotificationPollBudgetModel::accounts(10));
         self::assertSame([['r1', 'r2']], $contextSource->asked);
 
         $this->clock->modify('+6 minutes');
-        $laterSweep = $this->sweepWithContext(['did:plc:context-new-rows' => $later], $contextSource);
+        $laterSource = new StubNotificationSource(['did:plc:context-new-rows' => $later]);
+        $laterSweep = $this->sweepWithContext($laterSource, $contextSource);
         $laterSweep->sweep(NotificationPollBudgetModel::accounts(10));
         self::assertSame([['r1', 'r2'], ['r3']], $contextSource->asked);
 
         $this->clock->modify('+6 minutes');
         $laterSweep->sweep(NotificationPollBudgetModel::accounts(10));
+        self::assertCount(2, $laterSource->fetchedIdentities);
         self::assertCount(2, $contextSource->asked);
     }
 
@@ -238,7 +240,7 @@ final class NotificationPollSweepTest extends DbTestCase
         $page = new NotificationPageModel([$this->fetched('r1', '2026-11-17 11:00:00')], null);
 
         $this->sweepWithContext(
-            ['did:plc:context-stored' => $page],
+            new StubNotificationSource(['did:plc:context-stored' => $page]),
             new RecordingContextSource(new NotificationContext('You said')),
         )->sweep(NotificationPollBudgetModel::accounts(10));
 
@@ -266,9 +268,8 @@ final class NotificationPollSweepTest extends DbTestCase
         );
     }
 
-    /** @param array<string, NotificationPageModel> $pages per identity */
     private function sweepWithContext(
-        array $pages,
+        StubNotificationSource $source,
         NotificationContextSourceInterface $contextSource,
     ): NotificationPollSweep {
         return NotificationPollWiring::sweep(
@@ -276,7 +277,7 @@ final class NotificationPollSweepTest extends DbTestCase
             $this->entityManager,
             $this->clock,
             $this->throttle,
-            NotificationPollWiring::allNetworks(new StubNotificationSource($pages)),
+            NotificationPollWiring::allNetworks($source),
             $this->logger,
             contextSource: $contextSource,
         );
