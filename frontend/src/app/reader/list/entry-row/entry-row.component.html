@@ -13,8 +13,8 @@
       <p class="meta">
         <app-entry-source [entry]="entry()" layout="row" [size]="14" />
         ·
-        <app-story-source-count [entry]="entry()" />
         @if (entry().story) {
+          <app-story-source-count [entry]="entry()" />
           ·
         }
         {{ when() }}

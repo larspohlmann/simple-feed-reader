@@ -1,0 +1,57 @@
+import { TestBed } from '@angular/core/testing';
+import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
+import { anEntry, aStory } from '../../../../testing/entry-testing';
+import { EntryDto } from '../../models';
+import { StorySourceCountComponent } from './story-source-count.component';
+
+function mount(entry: EntryDto): HTMLElement {
+  TestBed.configureTestingModule({
+    imports: [StorySourceCountComponent, provideTranslocoTesting()],
+  });
+  const fixture = TestBed.createComponent(StorySourceCountComponent);
+  fixture.componentRef.setInput('entry', entry);
+  fixture.detectChanges();
+  return fixture.nativeElement as HTMLElement;
+}
+
+const storyWith = (shareCount: number): EntryDto =>
+  anEntry({ story: aStory({ outletCount: 7, viewed: false, shareCount }) });
+
+const wordsOf = (element: HTMLElement): string[] =>
+  [...element.querySelectorAll('.sources')].map((count) => count.textContent!.trim());
+
+it('names how many feeds covered the story and how often it was shared', () => {
+  const element = mount(storyWith(2));
+
+  expect(wordsOf(element)).toEqual(['7 sources', '2 shares']);
+  expect(element.querySelectorAll('.separator').length).toBe(1);
+});
+
+it('names a single share in the singular', () => {
+  expect(wordsOf(mount(storyWith(1)))).toEqual(['7 sources', '1 share']);
+});
+
+it('names no shares, and no separator, on a story no post shares', () => {
+  const element = mount(storyWith(0));
+
+  expect(wordsOf(element)).toEqual(['7 sources']);
+  expect(element.querySelector('.separator')).toBeNull();
+});
+
+it('carries a compact icon-and-number form of each count, its words as the tooltip', () => {
+  const compact = [...mount(storyWith(2)).querySelectorAll('.compact')].map((glyph) => ({
+    icon: glyph.querySelector('app-icon')!.textContent!.trim(),
+    count: glyph.textContent!.replace(glyph.querySelector('app-icon')!.textContent!, '').trim(),
+    title: glyph.getAttribute('title'),
+    hidden: glyph.getAttribute('aria-hidden'),
+  }));
+
+  expect(compact).toEqual([
+    { icon: 'trending_up', count: '7', title: '7 sources', hidden: 'true' },
+    { icon: 'share', count: '2', title: '2 shares', hidden: 'true' },
+  ]);
+});
+
+it('renders nothing on an entry that leads no story', () => {
+  expect(mount(anEntry()).textContent!.trim()).toBe('');
+});

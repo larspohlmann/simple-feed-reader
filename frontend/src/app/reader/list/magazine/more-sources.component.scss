@@ -16,14 +16,13 @@
   font-size: var(--fs-xs);
 }
 
-// Story actions at the start, the counts beside them, the toggle at the end where the thumb reaches it.
+// Story actions at the start, the toggle at the end where the thumb reaches it.
 .story-line {
   display: flex;
   align-items: stretch;
   gap: var(--space-2);
 }
 
-// Takes the room the buttons leave; `app-story-source-count` measures it to pick words or glyphs.
 .counts {
   flex: 1;
   display: flex;
@@ -40,7 +39,7 @@
   align-items: center;
   gap: var(--space-1);
   padding: var(--space-1) var(--space-2);
-  margin-inline: auto calc(-1 * var(--space-2));
+  margin-inline-end: calc(-1 * var(--space-2));
   border: none;
   border-radius: var(--radius-pill);
   background: none;

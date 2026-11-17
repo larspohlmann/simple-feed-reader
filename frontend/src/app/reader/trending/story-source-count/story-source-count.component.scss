@@ -18,10 +18,8 @@
   gap: var(--space-1);
 }
 
-/* The story line's `.counts` is the only container around these (#2271, #2291): where the
-   buttons leave too little room for the words in any language, it shows the glyphs and
-   keeps the words for screen readers. A list row has no container and keeps the words. */
-@container (width < #{bp.$container-kicker-narrow}) {
+/* A story line's `.counts` is the only container (#2291): too narrow for the words, it shows the glyphs. */
+@container (width < #{bp.$container-story-counts-narrow}) {
   .sources {
     position: absolute;
     clip-path: inset(50%);

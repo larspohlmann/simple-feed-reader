@@ -1577,7 +1577,7 @@ boxes tile edge to edge — a tap on the star must never land on keep.
 ### `<app-more-sources>`
 
 A magazine card's footer slot. A Trending story's line (#2291) holds the story actions, then
-`<app-story-source-count>` ("7 sources · 3 shares", icon and number where the line is narrower than 17rem),
+`<app-story-source-count>` ("7 sources · 3 shares", icon and number where the room beside the buttons is narrower than 11.5rem),
 then at the end the accent toggle for its other outlets (#2036), "x more" (#2229), that opens in place into a stack of full-width mini cards (#2055) — a smaller
 compact card on `--surface-sunken`: the copy's picture at `--mini-card-thumb-w`, 104 / 68, from
 the smallest rendition covering 104px (else, or when the picture fails to load, its favicon
