@@ -17,7 +17,7 @@ import {
 } from '../../state/social-sections';
 import { ActiveDictionary } from '../../../core/i18n/active-dictionary';
 import { SidebarRowActions } from './sidebar-row-actions.service';
-import { SidebarNotificationsRowComponent } from './sidebar-notifications-row.component';
+import { SidebarNotificationsBellComponent } from './sidebar-notifications-bell.component';
 import { SidebarFeedRowComponent } from './sidebar-feed-row.component';
 import { SidebarGroupRowComponent } from './sidebar-group-row.component';
 import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
@@ -39,7 +39,7 @@ const groupCollapsedKey = (network: SocialNetworkName, kind: NetworkFeedKind): s
     NetworkLogoComponent,
     SidebarRowMenuComponent,
     SidebarFeedRowComponent,
-    SidebarNotificationsRowComponent,
+    SidebarNotificationsBellComponent,
     SidebarGroupRowComponent,
     MenuCheckboxComponent,
     FeedExclusionMarkerComponent,

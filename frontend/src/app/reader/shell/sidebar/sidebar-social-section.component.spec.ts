@@ -151,64 +151,77 @@ const element = (fixture: ComponentFixture<SidebarSocialSectionComponent>): HTML
   fixture.nativeElement as HTMLElement;
 
 describe('SidebarSocialSectionComponent', () => {
-  describe('Notifications row', () => {
-    const rowOf = (root: HTMLElement): HTMLElement | null =>
-      root.querySelector('app-sidebar-notifications-row');
+  describe('Notifications bell', () => {
+    const bellOf = (root: HTMLElement): HTMLElement | null =>
+      root.querySelector('app-sidebar-notifications-bell');
+    const headOf = (root: HTMLElement): HTMLElement =>
+      root.querySelector('[data-testid=sidebar-social-bluesky]') as HTMLElement;
 
-    it('leads the rows with Notifications', () => {
+    it('sits between the network name and the count', () => {
+      const head = headOf(element(mount(ONE_ACCOUNT)));
+      const label = head.querySelector('.label') as HTMLElement;
+      const bell = head.querySelector('app-sidebar-notifications-bell') as HTMLElement;
+      const count = head.querySelector('.section-count') as HTMLElement;
+
+      expect(label.compareDocumentPosition(bell) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(bell.compareDocumentPosition(count) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('keeps the head opening the network on both sides of the bell', () => {
       const root = element(mount(ONE_ACCOUNT));
 
-      const first = root.querySelector('.rows')?.firstElementChild as HTMLElement;
-      const row = first.querySelector('app-sidebar-notifications-row') as HTMLElement;
-      expect(row.textContent).toContain('Notifications');
-      expect(row.querySelector('app-icon')?.textContent).toContain('notifications');
-      expect(row.querySelector('a')?.getAttribute('href')).toBe(
-        '/?view=notifications&network=bluesky',
-      );
-      expect(row.querySelector('.slot')?.textContent).toBe('');
-      expect(row.querySelector('.trail')).not.toBeNull();
-      expect(row.querySelector('app-sidebar-row-menu, .section-chevron, .dots')).toBeNull();
+      const links = [...headOf(root).querySelectorAll('a.section-link')];
+      expect(links.map((link) => link.getAttribute('href'))).toEqual([
+        '/?network=bluesky',
+        '/?network=bluesky',
+      ]);
+      expect(bellOf(root)?.closest('a.section-link')).toBeNull();
     });
 
-    it('shows the unseen count as a pill', () => {
-      const root = element(mount({ ...ONE_ACCOUNT, notificationsUnseen: 4 }));
-
-      expect(rowOf(root)?.querySelector('app-count-pill')?.textContent?.trim()).toBe('4');
-    });
-
-    it('keeps the row without a pill at zero', () => {
-      const root = element(mount(ONE_ACCOUNT));
-
-      expect(rowOf(root)).not.toBeNull();
-      expect(rowOf(root)?.querySelector('app-count-pill')).toBeNull();
-    });
-
-    it("leaves the head's count alone", () => {
+    it('passes the unseen count', () => {
       const root = element(mount({ ...ONE_ACCOUNT, unreadCount: 3, notificationsUnseen: 4 }));
 
+      expect(bellOf(root)?.querySelector('.badge')?.textContent?.trim()).toBe('4');
       expect(root.querySelector('.section-count')?.textContent?.trim()).toBe('3');
     });
 
-    it("marks the row current for this network's notifications", () => {
+    it("marks the bell current for this network's notifications", () => {
       const on = (network: SocialNetworkName) =>
-        rowOf(element(mount(ONE_ACCOUNT, { kind: 'notifications', network })));
+        bellOf(element(mount(ONE_ACCOUNT, { kind: 'notifications', network })));
 
       expect(on('bluesky')?.classList).toContain('current');
       expect(on('mastodon')?.classList).not.toContain('current');
     });
 
-    it('offers no Notifications row without a connected account', () => {
-      const root = element(mount({ ...ONE_ACCOUNT, networkAccounts: [] }));
+    it('shows the bell on a collapsed card', () => {
+      localStorage.setItem('sfr.bluesky.collapsed', 'true');
+      const root = element(mount(ONE_ACCOUNT));
 
-      expect(rowOf(root)).toBeNull();
+      expect(bellOf(root)).not.toBeNull();
+      expect(root.querySelector('.rows')).toBeNull();
     });
 
-    it('hides the row while organising', () => {
+    it('offers no bell without a connected account', () => {
+      const root = element(mount({ ...ONE_ACCOUNT, networkAccounts: [] }));
+
+      expect(bellOf(root)).toBeNull();
+    });
+
+    it('hides the bell while organising', () => {
       const fixture = mount(ONE_ACCOUNT);
       fixture.componentRef.setInput('organising', true);
       fixture.detectChanges();
 
-      expect(rowOf(element(fixture))).toBeNull();
+      expect(bellOf(element(fixture))).toBeNull();
+    });
+
+    it('has no Notifications row any more', () => {
+      const root = element(mount(ONE_ACCOUNT));
+
+      expect(root.querySelector('app-sidebar-notifications-row')).toBeNull();
+      expect(
+        root.querySelector('.rows')?.firstElementChild?.querySelector('app-sidebar-feed-row'),
+      ).not.toBeNull();
     });
   });
 

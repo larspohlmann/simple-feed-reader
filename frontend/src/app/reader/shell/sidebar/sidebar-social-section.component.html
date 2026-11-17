@@ -28,6 +28,22 @@
       >
         <ng-container *ngTemplateOutlet="networkLogo" />
         <span class="label">{{ networkName }}</span>
+      </a>
+      @if (current.networkAccounts.length > 0) {
+        <app-sidebar-notifications-bell
+          [network]="current.network"
+          [count]="current.notificationsUnseen"
+          [active]="notificationsActive()"
+        />
+      }
+      <a
+        class="section-link section-rest"
+        tabindex="-1"
+        aria-hidden="true"
+        [routerLink]="['/']"
+        [queryParams]="selectionQueryParams({ network: current.network })"
+        queryParamsHandling="merge"
+      >
         @if (current.unreadCount > 0) {
           <span class="section-count">{{ current.unreadCount }}</span>
         }
@@ -74,15 +90,6 @@
   </div>
   @if (expanded() || organising()) {
     <div class="rows">
-      @if (!organising() && current.networkAccounts.length > 0) {
-        <div class="feedrow">
-          <app-sidebar-notifications-row
-            [network]="current.network"
-            [count]="current.notificationsUnseen"
-            [active]="notificationsActive()"
-          />
-        </div>
-      }
       @for (group of current.accounts; track group.accountId) {
         @if (current.showsHandles && group.handle) {
           <p class="account-handle">{{ group.handle }}</p>

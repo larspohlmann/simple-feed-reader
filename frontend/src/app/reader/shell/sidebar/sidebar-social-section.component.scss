@@ -17,6 +17,26 @@
   height: var(--icon-dense);
 }
 
+.section-head .section-link {
+  flex: 0 1 auto;
+}
+
+.section-head .section-link .label {
+  flex: 0 1 auto;
+}
+
+.section-head .section-rest {
+  flex: 1;
+  justify-content: flex-end;
+  margin-left: 0;
+  padding-left: 0;
+}
+
+.section-head app-sidebar-notifications-bell {
+  flex: none;
+  margin-left: calc(var(--space-2) - var(--space-3));
+}
+
 .rows {
   --row-h: var(--sidebar-sub-row-h);
   --row-fs: var(--fs-dense);
