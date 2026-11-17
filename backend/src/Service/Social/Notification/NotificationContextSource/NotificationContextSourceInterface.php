@@ -19,7 +19,7 @@ interface NotificationContextSourceInterface
      * rejected credential propagates.
      *
      * @param non-empty-list<FetchedNotificationModel> $fresh
-     * @return array<string, NotificationContext> by remote id
+     * @return array<array-key, NotificationContext> by remote id
      *
      * @throws SocialCredentialsRejectedException
      */

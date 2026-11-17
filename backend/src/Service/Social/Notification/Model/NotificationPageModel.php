@@ -33,7 +33,7 @@ final readonly class NotificationPageModel
         return $sorted;
     }
 
-    /** @param array<string, NotificationContext> $contexts by remote id */
+    /** @param array<array-key, NotificationContext> $contexts by remote id */
     #[\NoDiscard]
     public function withContexts(array $contexts): self
     {

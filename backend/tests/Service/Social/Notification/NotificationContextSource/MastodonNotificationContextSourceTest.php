@@ -27,14 +27,14 @@ final class MastodonNotificationContextSourceTest extends TestCase
 
         $contexts = $this->source($http)->contextsOf(
             SocialApiWiring::mastodonAccount(),
-            [self::row('note-1', '4000'), self::row('note-2', '4000')],
+            [self::row('1', '4000'), self::row('2', '4000')],
         );
 
         self::assertSame([self::STATUSES . 'id[]=4000'], $http->requestedUrls());
-        self::assertSame(['note-1', 'note-2'], array_keys($contexts));
-        self::assertSame('My own post', $contexts['note-1']->answeredExcerpt);
-        self::assertSame('My own post', $contexts['note-2']->answeredExcerpt);
-        self::assertFalse($contexts['note-1']->onComment);
+        self::assertSame([1, 2], array_keys($contexts));
+        self::assertSame('My own post', $contexts['1']->answeredExcerpt);
+        self::assertSame('My own post', $contexts['2']->answeredExcerpt);
+        self::assertFalse($contexts['1']->onComment);
     }
 
     public function testAPostMissingFromTheAnswerFindsNoContextForItsRow(): void
@@ -44,11 +44,11 @@ final class MastodonNotificationContextSourceTest extends TestCase
         ]);
         $contexts = $this->source($http)->contextsOf(
             SocialApiWiring::mastodonAccount(),
-            [self::row('note-1', '4000'), self::row('note-2', '4002')],
+            [self::row('1', '4000'), self::row('2', '4002')],
         );
 
-        self::assertSame(['note-1'], array_keys($contexts));
-        self::assertSame('My own post', $contexts['note-1']->answeredExcerpt);
+        self::assertSame([1], array_keys($contexts));
+        self::assertSame('My own post', $contexts['1']->answeredExcerpt);
     }
 
     public function testAServerWithoutBatchStatusesStoresRepliesWithoutContext(): void
@@ -59,7 +59,7 @@ final class MastodonNotificationContextSourceTest extends TestCase
             ]),
         );
 
-        $contexts = $this->source($http)->contextsOf(SocialApiWiring::mastodonAccount(), [self::row('note-1', '4000')]);
+        $contexts = $this->source($http)->contextsOf(SocialApiWiring::mastodonAccount(), [self::row('1', '4000')]);
 
         self::assertSame([], $contexts);
     }
@@ -73,7 +73,7 @@ final class MastodonNotificationContextSourceTest extends TestCase
             ),
         );
 
-        $contexts = $this->source($http)->contextsOf(SocialApiWiring::mastodonAccount(), [self::row('note-1', '4000')]);
+        $contexts = $this->source($http)->contextsOf(SocialApiWiring::mastodonAccount(), [self::row('1', '4000')]);
 
         self::assertSame([], $contexts);
     }
@@ -83,7 +83,7 @@ final class MastodonNotificationContextSourceTest extends TestCase
         $http = RoutedHttpClient::answering(static fn (): MockResponse => new MockResponse('[]'));
         $rows = [];
         foreach (range(1, 21) as $number) {
-            $rows[] = self::row('note-' . $number, (string) (4000 + $number));
+            $rows[] = self::row((string) $number, (string) (4000 + $number));
         }
 
         $this->source($http)->contextsOf(SocialApiWiring::mastodonAccount(), $rows);
@@ -111,7 +111,7 @@ final class MastodonNotificationContextSourceTest extends TestCase
         $answer = new MockResponse((string) json_encode([$status]));
         $http = new RoutedHttpClient(['GET ' . self::STATUSES . 'id[]=4000' => $answer]);
         $row = NotificationRows::fetched(
-            'note-1',
+            '1',
             SocialNotificationKind::Reply,
             new ContextReferenceModel(answeredId: '4000'),
             new NotificationContext(answeredExcerpt: 'Kept'),
@@ -119,8 +119,8 @@ final class MastodonNotificationContextSourceTest extends TestCase
 
         $contexts = $this->source($http)->contextsOf(SocialApiWiring::mastodonAccount(), [$row]);
 
-        self::assertSame($excerpt, $contexts['note-1']->answeredExcerpt);
-        self::assertTrue($contexts['note-1']->onComment);
+        self::assertSame($excerpt, $contexts['1']->answeredExcerpt);
+        self::assertTrue($contexts['1']->onComment);
     }
 
     public function testEveryAnsweredPostOfEveryChunkIsApplied(): void
@@ -135,18 +135,15 @@ final class MastodonNotificationContextSourceTest extends TestCase
         });
         $rows = [];
         foreach (range(1, 21) as $number) {
-            $rows[] = self::row('note-' . $number, (string) (4000 + $number));
+            $rows[] = self::row((string) $number, (string) (4000 + $number));
         }
 
         $contexts = $this->source($http)->contextsOf(SocialApiWiring::mastodonAccount(), $rows);
 
-        self::assertSame(
-            array_map(static fn (int $number): string => 'note-' . $number, range(1, 21)),
-            array_keys($contexts),
-        );
-        self::assertSame('Post 4001', $contexts['note-1']->answeredExcerpt);
-        self::assertSame('Post 4002', $contexts['note-2']->answeredExcerpt);
-        self::assertSame('Post 4021', $contexts['note-21']->answeredExcerpt);
+        self::assertSame(range(1, 21), array_keys($contexts));
+        self::assertSame('Post 4001', $contexts['1']->answeredExcerpt);
+        self::assertSame('Post 4002', $contexts['2']->answeredExcerpt);
+        self::assertSame('Post 4021', $contexts['21']->answeredExcerpt);
     }
 
     public function testAFailedChunkLeavesTheOtherChunksApplied(): void
@@ -158,13 +155,13 @@ final class MastodonNotificationContextSourceTest extends TestCase
         );
         $rows = [];
         foreach (range(1, 21) as $number) {
-            $rows[] = self::row('note-' . $number, (string) (4000 + $number));
+            $rows[] = self::row((string) $number, (string) (4000 + $number));
         }
 
         $contexts = $this->source($http)->contextsOf(SocialApiWiring::mastodonAccount(), $rows);
 
-        self::assertSame(['note-21'], array_keys($contexts));
-        self::assertSame('Later', $contexts['note-21']->answeredExcerpt);
+        self::assertSame([21], array_keys($contexts));
+        self::assertSame('Later', $contexts['21']->answeredExcerpt);
     }
 
     private static function statuses(): MockResponse

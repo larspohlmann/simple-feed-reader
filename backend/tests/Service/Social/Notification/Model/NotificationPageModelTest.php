@@ -51,6 +51,17 @@ final class NotificationPageModelTest extends TestCase
         self::assertSame($createdAt, $applied->seenUntil);
     }
 
+    public function testWithContextsFindsARowWhoseNumericRemoteIdBecameAnIntegerKey(): void
+    {
+        $createdAt = new \DateTimeImmutable('2026-11-16 09:00:00');
+        $page = new NotificationPageModel([self::notification('123', $createdAt)], null);
+        $context = new NotificationContext('You said');
+
+        $applied = $page->withContexts(['123' => $context]);
+
+        self::assertSame($context, $applied->notifications[0]->subject->context);
+    }
+
     private static function notification(string $remoteId, \DateTimeImmutable $createdAt): FetchedNotificationModel
     {
         return new FetchedNotificationModel(

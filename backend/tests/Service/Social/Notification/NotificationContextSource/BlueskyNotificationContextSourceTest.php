@@ -105,6 +105,20 @@ final class BlueskyNotificationContextSourceTest extends TestCase
         self::assertSame([self::lookup(self::ROOT)], $this->lookups($http));
     }
 
+    public function testARowWithNeitherPostFoundGetsNoContext(): void
+    {
+        $contexts = $this->source($this->http(self::posts()))->contextsOf(SocialApiWiring::blueskyAccount(), [
+            self::row(SocialNotificationKind::Reply, new ContextReferenceModel(self::MINE)),
+            self::row(
+                SocialNotificationKind::Reply,
+                new ContextReferenceModel(self::THEIRS, self::OWN_ROOT),
+                self::SECOND_NOTIFICATION,
+            ),
+        ]);
+
+        self::assertSame([self::NOTIFICATION], array_keys($contexts));
+    }
+
     public function testTwoRowsAnsweringOnePostAskForItOnce(): void
     {
         $http = $this->http(self::posts());

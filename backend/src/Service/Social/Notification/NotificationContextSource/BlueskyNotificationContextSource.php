@@ -82,6 +82,7 @@ final readonly class BlueskyNotificationContextSource implements NotificationCon
         if ($ownAnswered === null && $threadRoot === null) {
             return null;
         }
+
         $context = $row->subject->context;
         if ($ownAnswered !== null) {
             $context = self::answering($context, $ownAnswered->node('record'));
