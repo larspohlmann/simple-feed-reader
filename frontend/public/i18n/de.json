@@ -1769,6 +1769,7 @@
       "networkError": "{{ network }}: {{ message }}",
       "accountOn": "Auf {{ network }} posten als",
       "pillPosted": "Gepostet",
+      "retry": "{{ network }} erneut versuchen",
       "clear": "Text löschen",
       "visibility": "Sichtbarkeit",
       "visibilities": {

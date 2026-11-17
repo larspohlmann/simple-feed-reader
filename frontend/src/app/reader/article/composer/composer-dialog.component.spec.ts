@@ -2,7 +2,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
-import { Observable, Subject, of, throwError } from 'rxjs';
+import { Observable, Subject, config, of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import {
   ComposerCardDto,
@@ -670,6 +670,8 @@ describe('ComposerDialogComponent', () => {
       Array.from(element(fixture).querySelectorAll('app-error-banner'));
     const loadsOf = (network: string) =>
       api.composer.mock.calls.filter(([posted]) => posted.network === network);
+    const sendsOf = (network: string) =>
+      api.send.mock.calls.filter(([posted]) => posted.network === network);
     function choose(fixture: ReturnType<typeof mount>, selector: string, value: string): void {
       const select = element(fixture).querySelector(selector) as HTMLSelectElement;
       select.value = value;
@@ -899,10 +901,6 @@ describe('ComposerDialogComponent', () => {
 
       expect(element(fixture).querySelector('#reply-visibility-mastodon')).toBeNull();
       expect(element(fixture).querySelector('.warns')).toBeNull();
-      submit(fixture);
-      expect(api.send.mock.calls[0][1]).not.toHaveProperty('contentWarning');
-      expect(api.send.mock.calls[0][1]).not.toHaveProperty('visibility');
-      close.mockReset();
       toggle(fixture, 'Mastodon');
       const visibility = element(fixture).querySelector(
         '#reply-visibility-mastodon',
@@ -911,6 +909,190 @@ describe('ComposerDialogComponent', () => {
       expect(
         (element(fixture).querySelector('#reply-warning-mastodon') as HTMLInputElement).value,
       ).toBe('Ending');
+      submit(fixture);
+      const blueskyDraft = sendsOf('bluesky')[0][1];
+      const mastodonDraft = sendsOf('mastodon')[0][1];
+      expect(blueskyDraft).not.toHaveProperty('contentWarning');
+      expect(blueskyDraft).not.toHaveProperty('visibility');
+      expect(mastodonDraft).toMatchObject({ visibility: 'private', contentWarning: 'Ending' });
+    });
+
+    describe('sending to both', () => {
+      const published = (network: string): PublishedPostDto => ({
+        address: `https://${network}.example/1`,
+        url: null,
+      });
+      const sentPost = (network: 'bluesky' | 'mastodon', handle: string) => ({
+        ...published(network),
+        kind: 'link',
+        network,
+        text: TITLE,
+        authorHandle: handle,
+        target: STORY,
+      });
+      const blueskySent = sentPost('bluesky', '@alice.bsky.social');
+      const mastodonSent = sentPost('mastodon', '@alice@mastodon.example');
+      let mastodonSend: () => Observable<PublishedPostDto>;
+
+      beforeEach(() => {
+        mastodonSend = () => of(published('mastodon'));
+        api.send.mockImplementation((posted: PostTargetDto) =>
+          posted.network === 'bluesky' ? of(published('bluesky')) : mastodonSend(),
+        );
+      });
+
+      function bothOn(): ReturnType<typeof mount> {
+        const fixture = fromBluesky();
+        toggle(fixture, 'Mastodon');
+        return fixture;
+      }
+      const cancel = (fixture: ReturnType<typeof mount>) =>
+        Array.from(element(fixture).querySelectorAll('button')).find(
+          (button) => button.textContent?.trim() === 'Cancel',
+        )!;
+      function failMastodonOnce(): void {
+        mastodonSend = () => {
+          mastodonSend = () => of(published('mastodon'));
+          return throwError(
+            () =>
+              new HttpErrorResponse({
+                status: 502,
+                error: { type: 'social_post_refused', title: 'Refused', detail: 'No answer' },
+              }),
+          );
+        };
+      }
+
+      it('sends one request per active network, each with its own key', () => {
+        const fixture = bothOn();
+
+        submit(fixture);
+
+        expect(sendsOf('bluesky')).toHaveLength(1);
+        expect(sendsOf('mastodon')).toHaveLength(1);
+        expect(sendsOf('bluesky')[0][1].idempotencyKey).not.toBe(
+          sendsOf('mastodon')[0][1].idempotencyKey,
+        );
+      });
+
+      it('closes with both posts when both succeed', () => {
+        const fixture = bothOn();
+
+        submit(fixture);
+
+        expect(close).toHaveBeenCalledTimes(1);
+        expect(close).toHaveBeenCalledWith([blueskySent, mastodonSent]);
+      });
+
+      it('when Mastodon fails, Bluesky locks as Posted, the error names Mastodon, the text is kept, and Send reads "Retry Mastodon"', () => {
+        failMastodonOnce();
+        const fixture = bothOn();
+        type(fixture, TITLE);
+
+        submit(fixture);
+
+        expect(close).not.toHaveBeenCalled();
+        expect(pill(fixture, 'Bluesky').textContent).toContain('Posted');
+        expect(pill(fixture, 'Bluesky').getAttribute('aria-disabled')).toBe('true');
+        expect(pill(fixture, 'Mastodon').classList).toContain('failed');
+        const [banner] = banners(fixture);
+        expect(banner.textContent).toContain('Mastodon: No answer');
+        expect(banner.previousElementSibling?.tagName).toBe('APP-NETWORK-PILLS');
+        expect(textArea(fixture).value).toBe(TITLE);
+        expect(sendButton(fixture).textContent?.trim()).toBe('Retry Mastodon');
+        expect(sendButton(fixture).disabled).toBe(false);
+      });
+
+      it('retry sends only Mastodon, under its first key', () => {
+        failMastodonOnce();
+        const fixture = bothOn();
+        submit(fixture);
+
+        submit(fixture);
+
+        expect(sendsOf('bluesky')).toHaveLength(1);
+        const keys = sendsOf('mastodon').map(([, draft]) => draft.idempotencyKey);
+        expect(keys).toHaveLength(2);
+        expect(keys[1]).toBe(keys[0]);
+        expect(close).toHaveBeenCalledWith([blueskySent, mastodonSent]);
+      });
+
+      it('Cancel after a partial failure closes with the Bluesky post', () => {
+        failMastodonOnce();
+        const fixture = bothOn();
+        submit(fixture);
+
+        cancel(fixture).click();
+
+        expect(close).toHaveBeenCalledWith([blueskySent]);
+      });
+
+      it('Cancel with nothing sent closes empty', () => {
+        const fixture = bothOn();
+
+        cancel(fixture).click();
+
+        expect(close).toHaveBeenCalledWith();
+      });
+
+      it('while sending, pills, account selects and Clear are disabled', () => {
+        blueskyContext = () => of(onBluesky({ accounts: blueskyAccounts }));
+        mastodonContext = () => of(onMastodon({ accounts: mastodonAccounts }));
+        const pending = new Subject<PublishedPostDto>();
+        mastodonSend = () => pending;
+        const fixture = bothOn();
+        const ref = TestBed.inject(DialogRef);
+
+        submit(fixture);
+
+        expect(ref.disableClose).toBe(true);
+        expect(pills(fixture).every((button) => button.disabled)).toBe(true);
+        const selects = Array.from(
+          element(fixture).querySelectorAll('select[id^="reply-account-"]'),
+        ) as HTMLSelectElement[];
+        expect(selects).toHaveLength(2);
+        expect(selects.every((select) => select.disabled)).toBe(true);
+        expect(
+          (element(fixture).querySelector('.clear button') as HTMLButtonElement).disabled,
+        ).toBe(true);
+        pending.error(new HttpErrorResponse({ status: 502 }));
+        fixture.detectChanges();
+        expect(ref.disableClose).toBe(false);
+        expect(pill(fixture, 'Mastodon').disabled).toBe(false);
+      });
+
+      it('a send that throws leaves the composer closable', async () => {
+        const fixture = bothOn();
+        const ref = TestBed.inject(DialogRef);
+        const unhandled = jest.fn();
+        config.onUnhandledError = unhandled;
+        api.send.mockImplementation(() => {
+          throw new Error('broken');
+        });
+
+        try {
+          submit(fixture);
+          await new Promise((resolve) => setTimeout(resolve));
+        } finally {
+          config.onUnhandledError = null;
+        }
+
+        expect(unhandled).toHaveBeenCalledWith(new Error('broken'));
+        expect(ref.disableClose).toBe(false);
+        expect(cancel(fixture).disabled).toBe(false);
+      });
+
+      it('a sent pill cannot be toggled', () => {
+        failMastodonOnce();
+        const fixture = bothOn();
+        submit(fixture);
+
+        toggle(fixture, 'Bluesky');
+        toggle(fixture, 'Mastodon');
+
+        expect(pressed(fixture)).toEqual(['true', 'false']);
+        expect(sendButton(fixture).disabled).toBe(true);
+      });
     });
   });
 });

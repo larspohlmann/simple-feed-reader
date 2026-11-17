@@ -13,6 +13,7 @@ import { A11yModule } from '@angular/cdk/a11y';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { finalize } from 'rxjs';
 import { networkList } from '../../../core/network-list';
 import { SOCIAL_NETWORK_NAMES } from '../../../core/social-network';
 import { ButtonComponent } from '../../../shared/button/button.component';
@@ -39,8 +40,9 @@ import { postLength } from './post-length';
  * Writes a reply to a Lemmy post or comment, a reply to or a quote of a Bluesky or Mastodon post, or a post of a shared URL.
  * Closing never asks: typed text is discarded.
  * It stays open while a post is on the wire, so the reader always learns what was published.
- * A failed send keeps the text and says why; a resend carries the key its lane minted, so the
- * network publishes the post once.
+ * Send posts to every active network still to post. A failed send keeps the text and says why;
+ * a resend reaches only the networks that failed, each under the key its lane minted, so no
+ * network publishes the post twice.
  */
 @Component({
   selector: 'app-composer-dialog',
@@ -114,7 +116,18 @@ export class ComposerDialogComponent {
     );
     return { key: 'reader.link.many', params: { networks } };
   });
-  protected readonly sendKey = computed(() => {
+  protected readonly sendLabel = computed(() => {
+    const pending = this.lanes.pending();
+    if (this.lanes.sentPosts().length === 0 || pending.length === 0) {
+      return { key: this.sendKey(), params: {} };
+    }
+    const network = networkList(
+      pending.map(({ network }) => network),
+      this.language(),
+    );
+    return { key: 'reader.composer.retry', params: { network } };
+  });
+  private readonly sendKey = computed(() => {
     const count = this.lanes.active().length;
     if (count === 2) return 'reader.composer.link.sendBoth';
     return count > 2 ? 'reader.composer.link.send' : `${this.copy()}.send`;
@@ -127,6 +140,14 @@ export class ComposerDialogComponent {
       return [{ network: this.names[lane.network], used, max, over: used > max }];
     }),
   );
+  private readonly pendingFit = computed(() =>
+    this.lanes.pending().every((lane) => {
+      const context = lane.context();
+      return (
+        context?.canSend === true && postLength(this.text(), lane.network) <= context.maxCharacters
+      );
+    }),
+  );
   protected readonly accountLabel = computed(() =>
     this.crossposts() ? 'reader.composer.accountOn' : `${this.copy()}.account`,
   );
@@ -135,9 +156,9 @@ export class ComposerDialogComponent {
   );
   protected readonly canSend = computed(
     () =>
-      this.lanes.active().every((lane) => lane.context()?.canSend === true) &&
+      this.lanes.pending().length > 0 &&
+      this.pendingFit() &&
       this.text().trim() !== '' &&
-      this.counters().every(({ over }) => !over) &&
       !this.sending(),
   );
 
@@ -185,20 +206,30 @@ export class ComposerDialogComponent {
     lane.contentWarning.set(inputValue(event));
   }
 
+  /** Settling in finalize means a send that throws can never leave the composer unclosable. */
   protected send(event: Event): void {
     event.preventDefault();
     if (!this.canSend()) return;
-    this.sending.set(true);
-    this.ref.disableClose = true;
-    this.primary()
-      .send(this.sharedDraft(), this.text())
-      .subscribe({
-        next: (sent) => this.ref.close([sent]),
-        error: () => {
-          this.sending.set(false);
-          this.ref.disableClose = false;
-        },
-      });
+    this.holdOpen(true);
+    this.lanes
+      .sendAll(this.sharedDraft(), this.text())
+      .pipe(finalize(() => this.holdOpen(false)))
+      .subscribe({ complete: () => this.closeOnceAllSent() });
+  }
+
+  protected cancel(): void {
+    const sent = this.lanes.sentPosts();
+    if (sent.length === 0) this.ref.close();
+    else this.ref.close(sent);
+  }
+
+  private holdOpen(sending: boolean): void {
+    this.sending.set(sending);
+    this.ref.disableClose = sending;
+  }
+
+  private closeOnceAllSent(): void {
+    if (this.lanes.pending().length === 0) this.ref.close(this.lanes.sentPosts());
   }
 
   private sharedDraft(): SharedDraft {

@@ -9,6 +9,7 @@
     [class.failed]="failed"
     [attr.aria-pressed]="lane.active()"
     [attr.aria-disabled]="sent ? 'true' : null"
+    [disabled]="disabled()"
     (click)="press(lane)"
   >
     <app-network-logo [network]="lane.network" />

@@ -1773,6 +1773,7 @@
       "networkError": "{{ network }} : {{ message }}",
       "accountOn": "Publier sur {{ network }} en tant que",
       "pillPosted": "Publié",
+      "retry": "Réessayer {{ network }}",
       "clear": "Effacer le texte",
       "visibility": "Visibilité",
       "visibilities": {

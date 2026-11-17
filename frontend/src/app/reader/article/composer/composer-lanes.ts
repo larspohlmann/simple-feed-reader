@@ -7,10 +7,12 @@ import {
   runInInjectionContext,
   signal,
 } from '@angular/core';
+import { Observable, catchError, defer, forkJoin, map, of } from 'rxjs';
 import { LINK_POST_NETWORKS, SocialNetworkName } from '../../../core/social-network';
 import { PostTargetDto } from '../../entry-social';
 import { PostNetworks } from '../share/post-networks.service';
-import { ComposerLane } from './composer-lane';
+import { SentPost } from './composed-post';
+import { ComposerLane, SharedDraft } from './composer-lane';
 
 /** The lanes of one open composer: a link post gets one per connected link network, anything else one. */
 @Injectable()
@@ -22,6 +24,11 @@ export class ComposerLanes {
 
   readonly lanes = this.built.asReadonly();
   readonly active = computed(() => this.built().filter((lane) => lane.active()));
+  /** The active lanes still to post, so a retry never reaches a network that took the post. */
+  readonly pending = computed(() => this.active().filter((lane) => lane.sent() === null));
+  readonly sentPosts = computed<SentPost[]>(() =>
+    this.built().flatMap((lane) => lane.sent() ?? []),
+  );
   readonly showsPills = computed(() => this.built().length > 1);
   /** The lane of the network the composer was opened for, whose context gives the starting text. */
   readonly picked = computed(() => {
@@ -46,15 +53,24 @@ export class ComposerLanes {
     this.picked().activate();
   }
 
-  /** Switches a lane on or off; the last active lane stays on. */
+  /** Switches a lane on or off; the last active lane stays on, and a sent one stays as it is. */
   toggle(network: SocialNetworkName): void {
     const lane = this.built().find((candidate) => candidate.network === network);
-    if (lane === undefined) return;
+    if (lane === undefined || lane.sent() !== null) return;
     if (!lane.active()) {
       lane.activate();
       return;
     }
     if (this.active().length > 1) lane.deactivate();
+  }
+
+  /** Posts every pending lane at once and answers once all have; each lane keeps its own outcome. */
+  sendAll(draft: SharedDraft, text: string): Observable<void> {
+    return defer(() =>
+      forkJoin(
+        this.pending().map((lane) => lane.send(draft, text).pipe(catchError(() => of(null)))),
+      ),
+    ).pipe(map(() => undefined));
   }
 
   private laneFor(target: PostTargetDto): ComposerLane {

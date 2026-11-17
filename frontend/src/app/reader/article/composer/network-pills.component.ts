@@ -19,6 +19,7 @@ export type PillLane = Pick<
 })
 export class NetworkPillsComponent {
   readonly lanes = input.required<readonly PillLane[]>();
+  readonly disabled = input(false);
   readonly toggleNetwork = output<SocialNetworkName>();
 
   protected readonly names = SOCIAL_NETWORK_NAMES;

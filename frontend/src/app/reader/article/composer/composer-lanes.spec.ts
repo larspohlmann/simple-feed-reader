@@ -302,5 +302,24 @@ describe('ComposerLanes', () => {
       expect(api.send.mock.calls[0][1]).toMatchObject({ contentWarning: 'Ending' });
       expect(api.send.mock.calls[1][1]).not.toHaveProperty('contentWarning');
     });
+
+    it('sends every pending lane, answering once all have, and leaves a sent lane as it is', () => {
+      const lanes = initialised(LINK, BOTH);
+      lanes.toggle('bluesky');
+      api.send.mockImplementation((posted: PostTargetDto) =>
+        posted.network === 'mastodon'
+          ? of<PublishedPostDto>({ address: 'https://x/1', url: null })
+          : throwError(refusal),
+      );
+      const answered = jest.fn();
+
+      lanes.sendAll(DRAFT, 'Hi').subscribe({ complete: answered });
+
+      expect(answered).toHaveBeenCalled();
+      expect(networksOf(lanes.sentPosts())).toEqual(['mastodon']);
+      expect(networksOf(lanes.pending())).toEqual(['bluesky']);
+      lanes.toggle('mastodon');
+      expect(laneOf(lanes, 'mastodon').active()).toBe(true);
+    });
   });
 });

@@ -2,7 +2,11 @@
 <form (submit)="send($event)" cdkTrapFocus>
   <app-overlay-panel fillOnMobile [heading]="heading().key | transloco: heading().params">
     @if (lanes.showsPills()) {
-      <app-network-pills [lanes]="lanes.lanes()" (toggleNetwork)="lanes.toggle($event)" />
+      <app-network-pills
+        [lanes]="lanes.lanes()"
+        [disabled]="sending()"
+        (toggleNetwork)="lanes.toggle($event)"
+      />
       @for (lane of lanes.lanes(); track lane.network) {
         @if (lane.loadError(); as message) {
           <app-error-banner
@@ -76,7 +80,11 @@
         @if (lane.context(); as laneContext) {
           @if (laneContext.accounts.length > 1) {
             <app-field [label]="accountLabel() | transloco: { network: names[lane.network] }">
-              <select [id]="controlId('account', lane)" (change)="chooseAccount(lane, $event)">
+              <select
+                [id]="controlId('account', lane)"
+                [disabled]="sending() || lane.sent() !== null"
+                (change)="chooseAccount(lane, $event)"
+              >
                 @for (account of laneContext.accounts; track account.id) {
                   <option [value]="account.id" [selected]="account.id === laneContext.accountId">
                     {{ account.handle }}
@@ -125,7 +133,7 @@
       <app-error-banner [message]="message" />
     }
 
-    <app-button footer [disabled]="sending()" (click)="ref.close()">{{
+    <app-button footer [disabled]="sending()" (click)="cancel()">{{
       'dialog.cancel' | transloco
     }}</app-button>
     <app-button
@@ -135,7 +143,7 @@
       [loading]="sending()"
       [disabled]="!canSend()"
     >
-      {{ sendKey() | transloco }}
+      {{ sendLabel().key | transloco: sendLabel().params }}
     </app-button>
   </app-overlay-panel>
 </form>
