@@ -1,10 +1,10 @@
 <article class="link" [appOpensEntry]="entry()">
   <app-entry-kicker-line [entry]="entry()" />
-  @if (headline() && !ledByItsCard()) {
-    <p class="title" [class.post]="isPost()">{{ headline() }}</p>
+  @if (title() && !ledByItsCard()) {
+    <p class="title" [class.post]="isPost()">{{ title() }}</p>
   }
-  @if (snippet() && !ledByItsCard()) {
-    <p class="dek">{{ snippet() }}</p>
+  @if (dek() && !ledByItsCard()) {
+    <p class="dek">{{ dek() }}</p>
   }
   @if (entry().linkCards[0]; as shared) {
     <app-link-card
