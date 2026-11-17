@@ -4,25 +4,28 @@ declare(strict_types=1);
 
 namespace App\Service\Outbound\Fetch\Support;
 
+use App\Service\Foundation\Url\Support\HttpsImageUrl;
+
 /**
- * lemmy-ui advertises its icon only as data: URIs and has no /favicon.ico; the https original is the site record of
- * the `window.isoData` state it embeds, a script literal that is not strict JSON.
+ * For FaviconResolver: lemmy-ui advertises its icon only as data: URIs and has no /favicon.ico; the https original is
+ * in the site record of the `window.isoData` state it embeds, a script literal that is not strict JSON.
  */
 final class LemmySiteIcon
 {
-    // JSON strings are stepped over whole, so a brace in the sidebar's markdown never ends the flat site record early.
-    private const string SITE_ICON
-        = '/"site_view":\{"site":\{(?:[^{}"]|"(?:[^"\\\\]|\\\\.)*")*?"icon":("(?:[^"\\\\]|\\\\.)*")/';
+    // Strings are stepped over whole, so a brace in the sidebar never ends the flat record early; possessive
+    // quantifiers keep a long sidebar from exhausting PCRE's JIT stack.
+    private const string SITE_RECORD = '/"site_view":\{"site":(\{(?:[^{}"]++|"(?:[^"\\\\]++|\\\\.)*+")*+\})/';
 
     public static function in(string $html): ?string
     {
-        if (1 !== preg_match(self::SITE_ICON, $html, $matches)) {
+        if (1 !== preg_match(self::SITE_RECORD, $html, $matches)) {
             return null;
         }
 
-        $icon = json_decode($matches[1]);
+        $record = json_decode($matches[1], true);
+        $icon = \is_array($record) ? $record['icon'] ?? null : null;
 
-        return \is_string($icon) && str_starts_with($icon, 'https://') ? $icon : null;
+        return HttpsImageUrl::orNull(\is_string($icon) ? $icon : null);
     }
 
     private function __construct()

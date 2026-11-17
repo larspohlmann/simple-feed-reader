@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Outbound\Fetch\FaviconResolver;
 
+use App\Service\Foundation\Url\Support\HttpsImageUrl;
 use App\Service\Outbound\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
 use App\Service\Outbound\Fetch\Model\FetchTicketModel;
@@ -48,36 +49,66 @@ final readonly class FaviconResolver implements FaviconResolverInterface
     }
 
     /**
-     * Catches even the batch fetcher's own invariant failures, which a best-effort component does not propagate, and
-     * falls back to /favicon.ico for every site the batch never answered for.
-     *
      * @param array<int, string> $origins
      *
      * @return array<int, string>
      */
     private function fetchAllIcons(array $origins): array
     {
+        $iconsByOrigin = $this->fetchIconsByOrigin(array_unique($origins));
+
+        return array_map(
+            static fn (string $origin): string => mb_substr(
+                $iconsByOrigin[$origin] ?? $origin . '/favicon.ico',
+                0,
+                self::URL_MAX,
+            ),
+            $origins,
+        );
+    }
+
+    /**
+     * Catches even the batch fetcher's own invariant failures, which a best-effort component does not propagate; a
+     * site the batch never answered for is simply absent.
+     *
+     * @param array<int, string> $origins
+     *
+     * @return array<string, string>
+     */
+    private function fetchIconsByOrigin(array $origins): array
+    {
         $icons = [];
-        $tickets = array_map(static fn (string $origin): FetchTicketModel => new FetchTicketModel($origin), $origins);
+        $tickets = [];
+        foreach ($origins as $origin) {
+            $tickets[$origin] = new FetchTicketModel($origin);
+        }
 
         try {
-            foreach ($this->fetcher->fetchAll($tickets) as $feedId => $outcome) {
-                $feedId = (int) $feedId;
-                $icons[$feedId] = mb_substr(
-                    $this->iconFrom($outcome, $origins[$feedId]) ?? $origins[$feedId] . '/favicon.ico',
-                    0,
-                    self::URL_MAX,
-                );
+            foreach ($this->fetcher->fetchAll($tickets) as $origin => $outcome) {
+                $icon = $this->iconOrNull($outcome, (string) $origin);
+                if (null !== $icon) {
+                    $icons[(string) $origin] = $icon;
+                }
             }
         } catch (\Throwable $exception) {
             $this->logger->error('Favicon batch fetch failed', ['exception' => $exception]);
         }
 
-        foreach ($origins as $feedId => $origin) {
-            $icons[$feedId] ??= mb_substr($origin . '/favicon.ico', 0, self::URL_MAX);
-        }
-
         return $icons;
+    }
+
+    private function iconOrNull(FetchOutcomeModel $outcome, string $origin): ?string
+    {
+        try {
+            return $this->iconFrom($outcome, $origin);
+        } catch (\Throwable $exception) {
+            $this->logger->warning(
+                'Favicon parse failed for {origin}',
+                ['origin' => $origin, 'exception' => $exception],
+            );
+
+            return null;
+        }
     }
 
     private function iconFrom(FetchOutcomeModel $outcome, string $origin): ?string
@@ -115,9 +146,8 @@ final readonly class FaviconResolver implements FaviconResolverInterface
             if (!str_contains(strtolower(trim($link->getAttribute('rel'))), 'icon')) {
                 continue;
             }
-            $resolved = $pageUrls->httpUrl($link->getAttribute('href'));
-            // The app is https, so a http icon would be mixed-content blocked.
-            if (null === $resolved || !str_starts_with($resolved, 'https://')) {
+            $resolved = HttpsImageUrl::orNull($pageUrls->httpUrl($link->getAttribute('href')));
+            if (null === $resolved) {
                 continue;
             }
 
