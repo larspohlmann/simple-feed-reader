@@ -1775,6 +1775,7 @@
       "pillPosted": "Publicado",
       "retry": "Reintentar {{ network }}",
       "linkAdded": "{{ network }} añade {{ url }}",
+      "quotesPost": "{{ network }} cita esta publicación",
       "sharesAsLink": "{{ network }} comparte esta publicación como enlace",
       "clear": "Borrar texto",
       "visibility": "Visibilidad",

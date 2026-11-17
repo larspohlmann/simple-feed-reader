@@ -38,12 +38,12 @@
 
     @if (context(); as context) {
       <app-composer-subject [subject]="context.target" />
-      @if (linkNote(); as note) {
+      @for (note of kindNotes(); track note.key) {
         <p class="kind-note">
           @for (network of note.networks; track network) {
             <app-network-logo [network]="network" />
           }
-          <span>{{ 'reader.composer.sharesAsLink' | transloco: { network: note.network } }}</span>
+          <span>{{ note.key | transloco: { network: note.network } }}</span>
         </p>
       }
 

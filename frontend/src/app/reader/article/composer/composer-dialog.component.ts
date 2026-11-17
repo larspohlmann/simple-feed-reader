@@ -17,11 +17,11 @@ import { filter, finalize, merge } from 'rxjs';
 import { networkList } from '../../../core/network-list';
 import { SOCIAL_NETWORK_NAMES } from '../../../core/social-network';
 import { ButtonComponent } from '../../../shared/button/button.component';
-import { IconComponent } from '../../../shared/icon/icon.component';
-import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
 import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
 import { FieldComponent } from '../../../shared/field/field.component';
+import { IconComponent } from '../../../shared/icon/icon.component';
 import { inputValue } from '../../../shared/input-value';
+import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
 import { OverlayPanelComponent } from '../../../shared/overlay-panel/overlay-panel.component';
 import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
 import {
@@ -159,7 +159,6 @@ export class ComposerDialogComponent {
   protected readonly writable = computed(() =>
     this.lanes.active().some((lane) => lane.context()?.canSend === true),
   );
-  /** The link post's page URL, which a Mastodon link lane appends after the text instead of inside it. */
   protected readonly appendedUrl = computed(() => {
     const target = this.target;
     const adds = this.lanes
@@ -167,18 +166,17 @@ export class ComposerDialogComponent {
       .some((lane) => lane.network === 'mastodon' && lane.context()?.kind === 'link');
     return adds && target.kind === 'link' ? target.url : null;
   });
-  /** The networks whose post is a link while the preview shows another kind of post. */
-  protected readonly linkNote = computed(() => {
+  protected readonly kindNotes = computed(() => {
     const shown = this.kind();
-    const networks = this.lanes
-      .active()
-      .filter((lane) => {
-        const kind = lane.context()?.kind;
-        return kind === 'link' && kind !== shown;
-      })
-      .map(({ network }) => network);
-    if (networks.length === 0) return null;
-    return { networks, network: networkList(networks, this.language()) };
+    return KIND_NOTES.flatMap(({ kind, key }) => {
+      if (kind === shown) return [];
+      const networks = this.lanes
+        .active()
+        .filter((lane) => lane.context()?.kind === kind)
+        .map(({ network }) => network);
+      if (networks.length === 0) return [];
+      return [{ key, networks, network: networkList(networks, this.language()) }];
+    });
   });
   private readonly textOptional = computed(() =>
     this.lanes.pending().every((lane) => lane.context()?.kind === 'link'),
@@ -276,6 +274,11 @@ export class ComposerDialogComponent {
     return { text: this.text(), language: browserLanguage() };
   }
 }
+
+const KIND_NOTES: readonly { kind: ComposerKind; key: string }[] = [
+  { kind: 'link', key: 'reader.composer.sharesAsLink' },
+  { kind: 'quote', key: 'reader.composer.quotesPost' },
+];
 
 function browserLanguage(): string | null {
   const primary = navigator.language.split('-')[0]?.toLowerCase() ?? '';

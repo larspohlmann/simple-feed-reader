@@ -1251,14 +1251,23 @@ describe('ComposerDialogComponent', () => {
         expect(note(mount(article()))).toBeNull();
       });
 
-      it('sends blank text only when every pending lane is a link', () => {
+      it('sends blank text when every pending lane is a link', () => {
         expect(
           sendButton(bothOn({ bluesky: 'link', mastodon: 'link' }, 'bluesky', '')).disabled,
         ).toBe(false);
-        TestBed.resetTestingModule();
+      });
+
+      it('refuses blank text when a pending lane quotes', () => {
         expect(
           sendButton(bothOn({ bluesky: 'quote', mastodon: 'link' }, 'bluesky', '')).disabled,
         ).toBe(true);
+      });
+
+      it('names Bluesky when it quotes under a link preview', () => {
+        const fixture = bothOn({ bluesky: 'quote', mastodon: 'link' }, 'mastodon');
+
+        expect(note(fixture)?.textContent).toContain('Bluesky quotes this post');
+        expect(note(fixture)?.textContent).not.toContain('shares this post as a link');
       });
     });
   });
