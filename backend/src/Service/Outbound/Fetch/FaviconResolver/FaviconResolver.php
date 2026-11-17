@@ -55,7 +55,7 @@ final readonly class FaviconResolver implements FaviconResolverInterface
      */
     private function fetchAllIcons(array $origins): array
     {
-        $iconsByOrigin = $this->fetchIconsByOrigin(array_unique($origins));
+        $iconsByOrigin = $this->fetchIconsByOrigin($origins);
 
         return array_map(
             static fn (string $origin): string => mb_substr(
@@ -68,8 +68,8 @@ final readonly class FaviconResolver implements FaviconResolverInterface
     }
 
     /**
-     * Catches even the batch fetcher's own invariant failures, which a best-effort component does not propagate; a
-     * site the batch never answered for is simply absent.
+     * One ticket per origin, however many feeds share it. Catches even the batch fetcher's own invariant failures,
+     * which a best-effort component does not propagate; a site the batch never answered for is simply absent.
      *
      * @param array<int, string> $origins
      *
@@ -85,9 +85,10 @@ final readonly class FaviconResolver implements FaviconResolverInterface
 
         try {
             foreach ($this->fetcher->fetchAll($tickets) as $origin => $outcome) {
-                $icon = $this->iconOrNull($outcome, (string) $origin);
+                $origin = (string) $origin;
+                $icon = $this->iconOrNull($outcome, $origin);
                 if (null !== $icon) {
-                    $icons[(string) $origin] = $icon;
+                    $icons[$origin] = $icon;
                 }
             }
         } catch (\Throwable $exception) {
@@ -122,8 +123,7 @@ final readonly class FaviconResolver implements FaviconResolverInterface
 
         $response = $outcome->responseOrThrow();
         $body = $response->modifiedBody();
-
-        if ('' === trim($body)) {
+        if ('' === $body) {
             return null;
         }
 
