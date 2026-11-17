@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Notification\NotificationContextSource;
 
+use App\Entity\NotificationContext;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
@@ -85,12 +86,21 @@ final readonly class MastodonNotificationContextSource implements NotificationCo
             return $row;
         }
         $answered = $statuses[$answeredId];
-        $context = $row->subject->context;
-        $excerpt = Excerpt::ofHtml($answered->text('content'));
-        $context = $excerpt === null ? $context : $context->withAnsweredExcerpt($excerpt);
+        $context = self::withExcerptOf($row->subject->context, $answered);
+        if ($answered->string('in_reply_to_id') !== null) {
+            $context = $context->withOnComment();
+        }
 
-        return $row->withContext(
-            $answered->string('in_reply_to_id') === null ? $context : $context->withOnComment(),
-        );
+        return $row->withContext($context);
+    }
+
+    private static function withExcerptOf(NotificationContext $context, JsonNodeModel $answered): NotificationContext
+    {
+        $excerpt = Excerpt::ofHtml($answered->text('content'));
+        if ($excerpt === null) {
+            return $context;
+        }
+
+        return $context->withAnsweredExcerpt($excerpt);
     }
 }

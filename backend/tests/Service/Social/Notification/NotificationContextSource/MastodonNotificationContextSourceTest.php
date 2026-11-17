@@ -12,6 +12,7 @@ use App\Service\Social\Notification\NotificationContextSource\MastodonNotificati
 use App\Tests\Support\NotificationRows;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -33,21 +34,6 @@ final class MastodonNotificationContextSourceTest extends TestCase
         self::assertSame('My own post', $rows[0]->subject->context->answeredExcerpt);
         self::assertSame('My own post', $rows[1]->subject->context->answeredExcerpt);
         self::assertFalse($rows[0]->subject->context->onComment);
-    }
-
-    public function testAReplyToYourReplyIsAboutYourComment(): void
-    {
-        $statuses = (string) json_encode([[
-            'id' => '4000',
-            'content' => '<p>My reply</p>',
-            'in_reply_to_id' => '3999',
-        ]]);
-        $http = new RoutedHttpClient(['GET ' . self::STATUSES . 'id[]=4000' => new MockResponse($statuses)]);
-
-        $rows = $this->source($http)->withContext(SocialApiWiring::mastodonAccount(), [self::row('1', '4000')]);
-
-        self::assertTrue($rows[0]->subject->context->onComment);
-        self::assertSame('My reply', $rows[0]->subject->context->answeredExcerpt);
     }
 
     public function testAPostMissingFromTheAnswerLeavesItsRowAlone(): void
@@ -108,10 +94,25 @@ final class MastodonNotificationContextSourceTest extends TestCase
         self::assertCount(2, $http->requests);
     }
 
-    public function testAnAnsweredPostWithoutTextKeepsTheExcerptButMarksTheComment(): void
+    /** @return iterable<string, array{array<string, string>, string}> */
+    public static function answeredReplies(): iterable
     {
-        $statuses = (string) json_encode([['id' => '4000', 'in_reply_to_id' => '3999']]);
-        $http = new RoutedHttpClient(['GET ' . self::STATUSES . 'id[]=4000' => new MockResponse($statuses)]);
+        yield 'a reply of yours with text' => [
+            ['id' => '4000', 'content' => '<p>My reply</p>', 'in_reply_to_id' => '3999'],
+            'My reply',
+        ];
+        yield 'a reply of yours without text keeps the excerpt' => [
+            ['id' => '4000', 'in_reply_to_id' => '3999'],
+            'Kept',
+        ];
+    }
+
+    /** @param array<string, string> $status */
+    #[DataProvider('answeredReplies')]
+    public function testAnAnsweredReplyOfYoursIsYourComment(array $status, string $excerpt): void
+    {
+        $answer = new MockResponse((string) json_encode([$status]));
+        $http = new RoutedHttpClient(['GET ' . self::STATUSES . 'id[]=4000' => $answer]);
         $row = NotificationRows::fetched(
             '1',
             SocialNotificationKind::Reply,
@@ -121,7 +122,7 @@ final class MastodonNotificationContextSourceTest extends TestCase
 
         $rows = $this->source($http)->withContext(SocialApiWiring::mastodonAccount(), [$row]);
 
-        self::assertSame('Kept', $rows[0]->subject->context->answeredExcerpt);
+        self::assertSame($excerpt, $rows[0]->subject->context->answeredExcerpt);
         self::assertTrue($rows[0]->subject->context->onComment);
     }
 

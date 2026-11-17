@@ -17,6 +17,7 @@ use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -77,36 +78,28 @@ final class MastodonNotificationSourceTest extends TestCase
         self::assertSame('quoting', $quote->subject->excerpt);
     }
 
-    public function testAFavouriteOrABoostOfYourReplyIsAboutYourComment(): void
+    /** @return iterable<string, array{string, int}> */
+    public static function repliesOfYours(): iterable
     {
-        $list = str_replace(
-            ['"content": "<p>First post</p><p>second para</p>",', '"content": "<p>Boosted</p>",'],
-            [
-                '"content": "<p>First post</p><p>second para</p>", "in_reply_to_id": "777",',
-                '"content": "<p>Boosted</p>", "in_reply_to_id": "778",',
-            ],
-            self::list(),
-        );
-
-        $page = $this->source($this->http(listBody: $list))->fetch(SocialApiWiring::mastodonAccount());
-
-        self::assertTrue($page->notifications[0]->subject->context->onComment);
-        self::assertTrue($page->notifications[1]->subject->context->onComment);
+        yield 'a favourite of your reply' => ['"content": "<p>First post</p><p>second para</p>",', 0];
+        yield 'a boost of your reply' => ['"content": "<p>Boosted</p>",', 1];
+        yield 'a quote of your reply' => ['"content": "<p>The post they quoted</p>",', 6];
     }
 
-    public function testAQuoteOfYourReplyIsAboutYourComment(): void
+    #[DataProvider('repliesOfYours')]
+    public function testANotificationAboutYourReplyIsAboutYourComment(string $statusContent, int $index): void
     {
-        $list = str_replace(
-            '"content": "<p>The post they quoted</p>",',
-            '"content": "<p>The post they quoted</p>", "in_reply_to_id": "779",',
-            self::list(),
-        );
+        $list = str_replace($statusContent, $statusContent . ' "in_reply_to_id": "777",', self::list(), $patched);
+        self::assertSame(1, $patched);
 
         $page = $this->source($this->http(listBody: $list))->fetch(SocialApiWiring::mastodonAccount());
 
-        $quote = $page->notifications[6];
-        self::assertTrue($quote->subject->context->onComment);
-        self::assertSame('The post they quoted', $quote->subject->context->answeredExcerpt);
+        $onComment = array_fill(0, count($page->notifications), false);
+        $onComment[$index] = true;
+        self::assertSame($onComment, array_map(
+            static fn (FetchedNotificationModel $notification): bool => $notification->subject->context->onComment,
+            $page->notifications,
+        ));
     }
 
     public function testNotificationsAboutTopLevelPostsAreAboutYourPost(): void
