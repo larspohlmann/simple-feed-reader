@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { inputChecked } from '../input-value';
 
 /**
  * A labelled on/off switch built on a native checkbox, so keyboard focus,
@@ -21,6 +22,6 @@ export class ToggleComponent {
   readonly toggled = output<boolean>();
 
   onChange(event: Event): void {
-    this.toggled.emit((event.target as HTMLInputElement).checked);
+    this.toggled.emit(inputChecked(event));
   }
 }

@@ -36,12 +36,12 @@ describe('PostSentDialogComponent', () => {
     ...overrides,
   });
 
-  function mount(posted: SentPost): HTMLElement {
+  function mount(posted: SentPost | SentPost[]): HTMLElement {
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
         { provide: DialogRef, useValue: { close } },
-        { provide: DIALOG_DATA, useValue: posted },
+        { provide: DIALOG_DATA, useValue: Array.isArray(posted) ? posted : [posted] },
       ],
     });
     const fixture = TestBed.createComponent(PostSentDialogComponent);
@@ -116,6 +116,7 @@ describe('PostSentDialogComponent', () => {
       '_blank',
       'noopener,noreferrer',
     );
+    expect(close).toHaveBeenCalled();
     open.mockRestore();
   });
 
@@ -125,5 +126,62 @@ describe('PostSentDialogComponent', () => {
     buttonLabelled(element, 'Close')!.click();
 
     expect(close).toHaveBeenCalled();
+  });
+
+  describe('with two posts', () => {
+    const mastodonPost = sent({
+      address: 'https://m.test/1',
+      url: 'https://m.test/@bob/1',
+      authorHandle: '@bob@m.test',
+      network: 'mastodon',
+      text: 'Worth a read https://example.com/story',
+    });
+
+    it('lists each post with its handle and its own Open', () => {
+      const open = jest.spyOn(window, 'open').mockImplementation(() => null);
+      const element = mount([sent(), mastodonPost]);
+
+      const opens = Array.from(element.querySelectorAll('button')).filter(
+        (button) => button.textContent?.trim() === 'Open post',
+      );
+      expect(opens).toHaveLength(2);
+      expect(element.querySelectorAll('.account')).toHaveLength(2);
+      expect(element.querySelectorAll('.text')).toHaveLength(2);
+      opens[1].click();
+      expect(open).toHaveBeenCalledWith('https://m.test/@bob/1', '_blank', 'noopener,noreferrer');
+      expect(close).not.toHaveBeenCalled();
+      open.mockRestore();
+    });
+
+    it('keeps the overlay open after opening the first post', () => {
+      const open = jest.spyOn(window, 'open').mockImplementation(() => null);
+      const element = mount([sent(), mastodonPost]);
+
+      buttonLabelled(element, 'Open post')!.click();
+
+      expect(open).toHaveBeenCalledWith(
+        'https://bsky.app/profile/alice.test/post/9',
+        '_blank',
+        'noopener,noreferrer',
+      );
+      expect(close).not.toHaveBeenCalled();
+      open.mockRestore();
+    });
+
+    it('names both networks in the heading', () => {
+      const element = mount([sent(), mastodonPost]);
+
+      expect(element.querySelector('h1, h2')?.textContent).toContain(
+        'Posted on Bluesky and Mastodon',
+      );
+    });
+  });
+
+  it('reads one post as it does today', () => {
+    const element = mount([sent()]);
+
+    expect(element.querySelector('h1, h2')?.textContent).toContain('Posted on Bluesky');
+    expect(element.querySelector('h1, h2')?.textContent).not.toContain(' and ');
+    expect(element.querySelectorAll('.text')).toHaveLength(1);
   });
 });

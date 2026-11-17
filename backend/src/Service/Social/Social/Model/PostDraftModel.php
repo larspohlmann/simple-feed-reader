@@ -21,4 +21,10 @@ final readonly class PostDraftModel
         public ?string $idempotencyKey = null,
     ) {
     }
+
+    #[\NoDiscard]
+    public function withText(string $text): self
+    {
+        return clone($this, ['text' => $text]);
+    }
 }

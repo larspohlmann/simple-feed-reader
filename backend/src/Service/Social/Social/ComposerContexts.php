@@ -51,7 +51,7 @@ final readonly class ComposerContexts
 
     public function ofLink(SocialAccount $account, SharedLinkModel $link): ComposerContextModel
     {
-        $defaults = $this->defaults->get($account->getNetwork()->value)->forAccount($account);
+        $defaults = $this->defaults->get($account->getNetwork()->value)->forLinkFrom($account);
 
         return new ComposerContextModel(
             $this->connectedBeside($account),
@@ -60,7 +60,7 @@ final readonly class ComposerContexts
             defaults: $defaults,
             target: $this->pageCards->cardOf($link->url),
             kind: ComposerKind::Link,
-            text: ComposerStartingText::sharing($account->getNetwork(), $link, $defaults->maxCharacters),
+            text: ComposerStartingText::sharing($link, $defaults->maxCharacters),
         );
     }
 

@@ -1,7 +1,8 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
-import { Subject, of, throwError } from 'rxjs';
+import { Observable, Subject, config, of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import {
   ComposerCardDto,
@@ -14,6 +15,7 @@ import {
   ResponseTargetDto,
 } from '../../entry-social';
 import { SocialPostApi } from '../../social-post-api';
+import { PostNetwork, PostNetworks } from '../share/post-networks.service';
 import { ComposerDialogComponent } from './composer-dialog.component';
 
 const REPLY = 'https://hachyderm.io/users/ann/statuses/200';
@@ -35,6 +37,9 @@ const STORY: LinkComposerSubjectDto = { kind: 'link', card: STORY_CARD };
 
 describe('ComposerDialogComponent', () => {
   const close = jest.fn();
+  let backdropClick: Subject<MouseEvent>;
+  let keydownEvents: Subject<KeyboardEvent>;
+  const connected = signal<PostNetwork[]>([]);
   let api: { composer: jest.Mock; send: jest.Mock };
 
   const context = (overrides: Partial<ComposerContextDto> = {}): ComposerContextDto => ({
@@ -70,9 +75,10 @@ describe('ComposerDialogComponent', () => {
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
-        { provide: DialogRef, useValue: { close } },
+        { provide: DialogRef, useValue: { close, backdropClick, keydownEvents } },
         { provide: DIALOG_DATA, useValue: replyTarget },
         { provide: SocialPostApi, useValue: api },
+        { provide: PostNetworks, useValue: { connected } },
       ],
     });
     const fixture = TestBed.createComponent(ComposerDialogComponent);
@@ -99,6 +105,9 @@ describe('ComposerDialogComponent', () => {
 
   beforeEach(() => {
     close.mockReset();
+    backdropClick = new Subject<MouseEvent>();
+    keydownEvents = new Subject<KeyboardEvent>();
+    connected.set([]);
     api = {
       composer: jest.fn(() => of(context())),
       send: jest.fn(() => of<PublishedPostDto>({ address: 'https://x/1', url: null })),
@@ -159,6 +168,25 @@ describe('ComposerDialogComponent', () => {
       5,
     );
     expect(textArea(fixture).value).toBe('Kept');
+  });
+
+  it('puts the account choice above the text in a reply, as before crossposting', () => {
+    api.composer.mockReturnValue(
+      of(
+        context({
+          accounts: [
+            { id: 4, handle: '@alice@mastodon.example' },
+            { id: 5, handle: '@bea@mastodon.example' },
+          ],
+        }),
+      ),
+    );
+    const fixture = mount();
+
+    const select = element(fixture).querySelector('#reply-account')!;
+    expect(
+      select.compareDocumentPosition(textArea(fixture)) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   describe('on a chosen account', () => {
@@ -244,15 +272,17 @@ describe('ComposerDialogComponent', () => {
         idempotencyKey: expect.any(String),
       }),
     );
-    expect(close).toHaveBeenCalledWith({
-      address: 'https://x/1',
-      url: null,
-      text: '@ann@hachyderm.io Agreed',
-      authorHandle: '@alice@mastodon.example',
-      kind: 'reply',
-      network: 'mastodon',
-      target: QUOTED,
-    });
+    expect(close).toHaveBeenCalledWith([
+      {
+        address: 'https://x/1',
+        url: null,
+        text: '@ann@hachyderm.io Agreed',
+        authorHandle: '@alice@mastodon.example',
+        kind: 'reply',
+        network: 'mastodon',
+        target: QUOTED,
+      },
+    ]);
   });
 
   it('keeps the text after a failed send, says why, and resends with the same key', () => {
@@ -361,7 +391,7 @@ describe('ComposerDialogComponent', () => {
       expect.objectContaining({ kind: 'quote', entryId: 7, address: REPLY }),
       expect.objectContaining({ text: 'Worth reading' }),
     );
-    expect(close).toHaveBeenCalledWith(expect.objectContaining({ address: 'https://x/1' }));
+    expect(close).toHaveBeenCalledWith([expect.objectContaining({ address: 'https://x/1' })]);
   });
 
   it('says so and sends nothing when the author keeps the post from quotes', () => {
@@ -500,9 +530,9 @@ describe('ComposerDialogComponent', () => {
         expect.objectContaining({ kind: 'link', url: 'https://mastodon.social/@ann/110' }),
         expect.objectContaining({ text: 'Look' }),
       );
-      expect(close).toHaveBeenCalledWith(
+      expect(close).toHaveBeenCalledWith([
         expect.objectContaining({ kind: 'quote', network: 'mastodon', target: QUOTED }),
-      );
+      ]);
     });
 
     it('shows a card without an image or site when the page has none', () => {
@@ -583,9 +613,720 @@ describe('ComposerDialogComponent', () => {
         }),
         expect.objectContaining({ text: 'A long read', accountId: 4 }),
       );
-      expect(close).toHaveBeenCalledWith(
+      expect(close).toHaveBeenCalledWith([
         expect.objectContaining({ address: 'https://x/1', kind: 'link', target: STORY }),
+      ]);
+    });
+  });
+
+  describe('crosspost', () => {
+    const TITLE = 'The quiet return of the RSS reader';
+    const blueskyAccounts = [
+      { id: 1, handle: '@alice.bsky.social' },
+      { id: 2, handle: '@work.bsky.social' },
+    ];
+    const mastodonAccounts = [
+      { id: 4, handle: '@alice@mastodon.example' },
+      { id: 5, handle: '@bea@mastodon.example' },
+    ];
+    let blueskyContext: () => Observable<ComposerContextDto>;
+    let mastodonContext: () => Observable<ComposerContextDto>;
+
+    const linkContext = (overrides: Partial<ComposerContextDto> = {}) =>
+      context({ kind: 'link', text: TITLE, target: STORY, ...overrides });
+    const onBluesky = (overrides: Partial<ComposerContextDto> = {}) =>
+      linkContext({
+        accounts: [blueskyAccounts[0]],
+        accountId: 1,
+        maxCharacters: 300,
+        visibility: null,
+        ...overrides,
+      });
+    const onMastodon = (overrides: Partial<ComposerContextDto> = {}) =>
+      linkContext({
+        maxCharacters: 475,
+        visibility: 'public',
+        text: 'Mastodon text',
+        ...overrides,
+      });
+    const failure = () =>
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 409,
+            error: { type: 'social_post_refused', title: 'Refused', detail: 'Reconnect first' },
+          }),
       );
+
+    beforeEach(() => {
+      connected.set([
+        { network: 'bluesky', handles: ['@alice.bsky.social'] },
+        { network: 'mastodon', handles: ['@alice@mastodon.example'] },
+      ]);
+      blueskyContext = () => of(onBluesky());
+      mastodonContext = () => of(onMastodon());
+      api.composer.mockImplementation((posted: PostTargetDto) =>
+        posted.network === 'bluesky' ? blueskyContext() : mastodonContext(),
+      );
+    });
+
+    const fromBluesky = () => mount(article({ network: 'bluesky' }));
+    const pills = (fixture: ReturnType<typeof mount>) =>
+      Array.from(
+        element(fixture).querySelectorAll('app-network-pills button'),
+      ) as HTMLButtonElement[];
+    const pill = (fixture: ReturnType<typeof mount>, name: string) =>
+      pills(fixture).find((button) => button.textContent?.includes(name))!;
+    const pressed = (fixture: ReturnType<typeof mount>) =>
+      pills(fixture).map((button) => button.getAttribute('aria-pressed'));
+    function toggle(fixture: ReturnType<typeof mount>, name: string): void {
+      pill(fixture, name).click();
+      fixture.detectChanges();
+    }
+    const heading = (fixture: ReturnType<typeof mount>) =>
+      element(fixture).querySelector('h1, h2')?.textContent?.trim();
+    const counters = (fixture: ReturnType<typeof mount>) =>
+      Array.from(element(fixture).querySelectorAll('.counter')).map((counter) =>
+        counter.textContent?.trim(),
+      );
+    const banners = (fixture: ReturnType<typeof mount>) =>
+      Array.from(element(fixture).querySelectorAll('app-error-banner'));
+    const loadsOf = (network: string) =>
+      api.composer.mock.calls.filter(([posted]) => posted.network === network);
+    const sendsOf = (network: string) =>
+      api.send.mock.calls.filter(([posted]) => posted.network === network);
+    function choose(fixture: ReturnType<typeof mount>, selector: string, value: string): void {
+      const select = element(fixture).querySelector(selector) as HTMLSelectElement;
+      select.value = value;
+      select.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+    }
+
+    it('opened from Bluesky, Bluesky is on and Mastodon off', () => {
+      const fixture = fromBluesky();
+
+      expect(pills(fixture).map((button) => button.textContent?.trim())).toEqual([
+        'Bluesky',
+        'Mastodon',
+      ]);
+      expect(pressed(fixture)).toEqual(['true', 'false']);
+      expect(loadsOf('mastodon')).toHaveLength(0);
+    });
+
+    it('opened from Mastodon, Mastodon is on and Bluesky off', () => {
+      const fixture = mount(article());
+
+      expect(pressed(fixture)).toEqual(['false', 'true']);
+      expect(loadsOf('bluesky')).toHaveLength(0);
+    });
+
+    it('one connected network shows no pills', () => {
+      connected.set([{ network: 'bluesky', handles: ['@alice.bsky.social'] }]);
+      const fixture = fromBluesky();
+
+      expect(element(fixture).querySelector('app-network-pills')).toBeNull();
+      expect(heading(fixture)).toBe('Post on Bluesky');
+    });
+
+    it('activating Mastodon loads its context once', () => {
+      const fixture = fromBluesky();
+
+      toggle(fixture, 'Mastodon');
+      toggle(fixture, 'Mastodon');
+      toggle(fixture, 'Mastodon');
+
+      expect(pressed(fixture)).toEqual(['true', 'true']);
+      expect(loadsOf('mastodon')).toEqual([[{ ...article(), network: 'mastodon' }, undefined]]);
+    });
+
+    it('the text is not replaced', () => {
+      const fixture = fromBluesky();
+
+      toggle(fixture, 'Mastodon');
+      expect(textArea(fixture).value).toBe(TITLE);
+      type(fixture, 'Mine');
+      toggle(fixture, 'Bluesky');
+
+      expect(textArea(fixture).value).toBe('Mine');
+    });
+
+    it('the last active pill cannot be switched off', () => {
+      const fixture = fromBluesky();
+
+      toggle(fixture, 'Bluesky');
+
+      expect(pressed(fixture)).toEqual(['true', 'false']);
+    });
+
+    it('the picked pill can be switched off once the other is on, and the preview follows', () => {
+      mastodonContext = () => of(onMastodon({ kind: 'quote', target: QUOTED }));
+      const fixture = fromBluesky();
+      toggle(fixture, 'Mastodon');
+      expect(element(fixture).querySelector('.article')).not.toBeNull();
+
+      toggle(fixture, 'Bluesky');
+
+      expect(pressed(fixture)).toEqual(['false', 'true']);
+      expect(element(fixture).querySelector('.target .handle')!.textContent).toContain(
+        '@ann@hachyderm.io',
+      );
+      expect(element(fixture).querySelector('.article')).toBeNull();
+      expect(heading(fixture)).toBe('Quote on Mastodon');
+    });
+
+    it('a failed Mastodon load turns its pill off with an error and a retry; Bluesky stays sendable', () => {
+      mastodonContext = failure;
+      const fixture = fromBluesky();
+
+      toggle(fixture, 'Mastodon');
+
+      expect(pressed(fixture)).toEqual(['true', 'false']);
+      expect(pill(fixture, 'Mastodon').classList).toContain('failed');
+      const [banner] = banners(fixture);
+      expect(banner.textContent).toContain('Mastodon: Reconnect first');
+      expect(banner.previousElementSibling?.tagName).toBe('APP-NETWORK-PILLS');
+      expect(sendButton(fixture).disabled).toBe(false);
+      mastodonContext = () => of(onMastodon());
+      (banner.querySelector('button') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(pressed(fixture)).toEqual(['true', 'true']);
+      expect(banners(fixture)).toHaveLength(0);
+    });
+
+    it('a failed load of the picked lane keeps it on with the error under the pills; the other can be activated', () => {
+      blueskyContext = failure;
+      const fixture = fromBluesky();
+
+      expect(pressed(fixture)).toEqual(['true', 'false']);
+      expect(pill(fixture, 'Bluesky').classList).toContain('failed');
+      expect(banners(fixture)[0].textContent).toContain('Bluesky: Reconnect first');
+      expect(banners(fixture)[0].previousElementSibling?.tagName).toBe('APP-NETWORK-PILLS');
+      expect(textArea(fixture)).toBeNull();
+
+      toggle(fixture, 'Mastodon');
+      toggle(fixture, 'Bluesky');
+
+      expect(pressed(fixture)).toEqual(['false', 'true']);
+      expect(textArea(fixture)).not.toBeNull();
+    });
+
+    it('heading reads "Post to Bluesky and Mastodon" and Send "Post to both"', () => {
+      const fixture = fromBluesky();
+
+      toggle(fixture, 'Mastodon');
+
+      expect(heading(fixture)).toBe('Post to Bluesky and Mastodon');
+      expect(sendButton(fixture).textContent?.trim()).toBe('Post to both');
+      toggle(fixture, 'Mastodon');
+      expect(heading(fixture)).toBe('Post on Bluesky');
+      expect(sendButton(fixture).textContent?.trim()).toBe('Post');
+    });
+
+    it('counters are named when both are on ("Bluesky 34 / 300", "Mastodon 34 / 475") and unnamed with one', () => {
+      const fixture = fromBluesky();
+      expect(counters(fixture)).toEqual(['34 / 300']);
+
+      toggle(fixture, 'Mastodon');
+
+      expect(counters(fixture)).toEqual(['Bluesky 34 / 300', 'Mastodon 34 / 475']);
+      expect(element(fixture).querySelector('.counters')?.textContent?.replace(/\s+/g, ' ')).toBe(
+        ' Bluesky 34 / 300 · Mastodon 34 / 475 ',
+      );
+    });
+
+    it('a single counter has no separator', () => {
+      const fixture = fromBluesky();
+
+      expect(element(fixture).querySelector('.counter-separator')).toBeNull();
+    });
+
+    it('puts each account choice under the text beside pills', () => {
+      blueskyContext = () => of(onBluesky({ accounts: blueskyAccounts }));
+      const fixture = fromBluesky();
+
+      const select = element(fixture).querySelector('#reply-account-bluesky')!;
+      expect(
+        textArea(fixture).compareDocumentPosition(select) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it('an over-limit active lane turns Send off', () => {
+      mastodonContext = () => of(onMastodon({ maxCharacters: 10 }));
+      const fixture = fromBluesky();
+      toggle(fixture, 'Mastodon');
+      type(fixture, 'Twelve chars');
+
+      expect(sendButton(fixture).disabled).toBe(true);
+      expect(element(fixture).querySelectorAll('.counter')[1].classList).toContain('over');
+      expect(element(fixture).querySelectorAll('.counter')[0].classList).not.toContain('over');
+      toggle(fixture, 'Mastodon');
+      expect(sendButton(fixture).disabled).toBe(false);
+    });
+
+    it('Send is off while an active lane is loading', () => {
+      const slow = new Subject<ComposerContextDto>();
+      mastodonContext = () => slow;
+      const fixture = fromBluesky();
+
+      toggle(fixture, 'Mastodon');
+
+      expect(sendButton(fixture).disabled).toBe(true);
+      slow.next(onMastodon());
+      fixture.detectChanges();
+      expect(sendButton(fixture).disabled).toBe(false);
+    });
+
+    it('account select per active lane with more than one account, labelled by network when both are on', () => {
+      mastodonContext = () => of(onMastodon({ accounts: mastodonAccounts }));
+      const fixture = fromBluesky();
+      expect(element(fixture).querySelector('select')).toBeNull();
+
+      toggle(fixture, 'Mastodon');
+
+      const selects = element(fixture).querySelectorAll(
+        'app-field select[id$="-account-mastodon"]',
+      );
+      expect(selects).toHaveLength(1);
+      expect(element(fixture).textContent).toContain('Mastodon account');
+      toggle(fixture, 'Bluesky');
+      expect(element(fixture).textContent).not.toContain('Mastodon account');
+      expect(element(fixture).textContent).toContain('Post as');
+    });
+
+    it("switching account on Mastodon leaves Bluesky's load alone", () => {
+      blueskyContext = () => of(onBluesky({ accounts: blueskyAccounts }));
+      mastodonContext = () => of(onMastodon({ accounts: mastodonAccounts }));
+      const fixture = fromBluesky();
+      toggle(fixture, 'Mastodon');
+      const slow = new Subject<ComposerContextDto>();
+      blueskyContext = () => slow;
+      choose(fixture, '#reply-account-bluesky', '2');
+
+      choose(fixture, '#reply-account-mastodon', '5');
+
+      expect(slow.observed).toBe(true);
+      expect(loadsOf('mastodon').at(-1)).toEqual([{ ...article(), network: 'mastodon' }, 5]);
+      slow.next(onBluesky({ accounts: blueskyAccounts, accountId: 2 }));
+      fixture.detectChanges();
+      expect(sendButton(fixture).disabled).toBe(false);
+    });
+
+    it('switching Mastodon off mid-load ignores the late answer', () => {
+      const slow = new Subject<ComposerContextDto>();
+      mastodonContext = () => slow;
+      const fixture = fromBluesky();
+      toggle(fixture, 'Mastodon');
+
+      toggle(fixture, 'Mastodon');
+      slow.next(onMastodon());
+      fixture.detectChanges();
+
+      expect(slow.observed).toBe(false);
+      expect(pressed(fixture)).toEqual(['true', 'false']);
+      expect(counters(fixture)).toEqual(['34 / 300']);
+      expect(element(fixture).querySelector('[id$="-visibility-mastodon"]')).toBeNull();
+    });
+
+    it("Mastodon's warning and visibility hide when it is off and come back with their values", () => {
+      const fixture = fromBluesky();
+      toggle(fixture, 'Mastodon');
+      choose(fixture, '#reply-visibility-mastodon', 'private');
+      const box = element(fixture).querySelector('.warns input') as HTMLInputElement;
+      box.checked = true;
+      box.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+      const warning = element(fixture).querySelector('#reply-warning-mastodon') as HTMLInputElement;
+      warning.value = 'Ending';
+      warning.dispatchEvent(new Event('input'));
+
+      toggle(fixture, 'Mastodon');
+
+      expect(element(fixture).querySelector('#reply-visibility-mastodon')).toBeNull();
+      expect(element(fixture).querySelector('.warns')).toBeNull();
+      toggle(fixture, 'Mastodon');
+      const visibility = element(fixture).querySelector(
+        '#reply-visibility-mastodon',
+      ) as HTMLSelectElement;
+      expect(visibility.value).toBe('private');
+      expect(
+        (element(fixture).querySelector('#reply-warning-mastodon') as HTMLInputElement).value,
+      ).toBe('Ending');
+      submit(fixture);
+      const blueskyDraft = sendsOf('bluesky')[0][1];
+      const mastodonDraft = sendsOf('mastodon')[0][1];
+      expect(blueskyDraft).not.toHaveProperty('contentWarning');
+      expect(blueskyDraft).not.toHaveProperty('visibility');
+      expect(mastodonDraft).toMatchObject({ visibility: 'private', contentWarning: 'Ending' });
+    });
+
+    describe('sending to both', () => {
+      const published = (network: string): PublishedPostDto => ({
+        address: `https://${network}.example/1`,
+        url: null,
+      });
+      const sentPost = (network: 'bluesky' | 'mastodon', handle: string) => ({
+        ...published(network),
+        kind: 'link',
+        network,
+        text: TITLE,
+        authorHandle: handle,
+        target: STORY,
+      });
+      const blueskySent = sentPost('bluesky', '@alice.bsky.social');
+      const mastodonSent = sentPost('mastodon', '@alice@mastodon.example');
+      let mastodonSend: () => Observable<PublishedPostDto>;
+
+      beforeEach(() => {
+        mastodonSend = () => of(published('mastodon'));
+        api.send.mockImplementation((posted: PostTargetDto) =>
+          posted.network === 'bluesky' ? of(published('bluesky')) : mastodonSend(),
+        );
+      });
+
+      function bothOn(): ReturnType<typeof mount> {
+        const fixture = fromBluesky();
+        toggle(fixture, 'Mastodon');
+        return fixture;
+      }
+      const cancel = (fixture: ReturnType<typeof mount>) =>
+        Array.from(element(fixture).querySelectorAll('button')).find(
+          (button) => button.textContent?.trim() === 'Cancel',
+        )!;
+      function failMastodonOnce(): void {
+        mastodonSend = () => {
+          mastodonSend = () => of(published('mastodon'));
+          return throwError(
+            () =>
+              new HttpErrorResponse({
+                status: 502,
+                error: { type: 'social_post_refused', title: 'Refused', detail: 'No answer' },
+              }),
+          );
+        };
+      }
+
+      it('sends one request per active network, each with its own key', () => {
+        const fixture = bothOn();
+
+        submit(fixture);
+
+        expect(sendsOf('bluesky')).toHaveLength(1);
+        expect(sendsOf('mastodon')).toHaveLength(1);
+        expect(sendsOf('bluesky')[0][1].idempotencyKey).not.toBe(
+          sendsOf('mastodon')[0][1].idempotencyKey,
+        );
+      });
+
+      it('closes with both posts when both succeed', () => {
+        const fixture = bothOn();
+
+        submit(fixture);
+
+        expect(close).toHaveBeenCalledTimes(1);
+        expect(close).toHaveBeenCalledWith([blueskySent, mastodonSent]);
+      });
+
+      it('when Mastodon fails, Bluesky locks as Posted, the error names Mastodon, the text is kept, and Send reads "Retry Mastodon"', () => {
+        failMastodonOnce();
+        const fixture = bothOn();
+        type(fixture, TITLE);
+
+        submit(fixture);
+
+        expect(close).not.toHaveBeenCalled();
+        expect(pill(fixture, 'Bluesky').textContent).toContain('Posted');
+        expect(pill(fixture, 'Bluesky').getAttribute('aria-disabled')).toBe('true');
+        expect(pill(fixture, 'Mastodon').classList).toContain('failed');
+        const [banner] = banners(fixture);
+        expect(banner.textContent).toContain('Mastodon: No answer');
+        expect(banner.previousElementSibling?.tagName).toBe('APP-NETWORK-PILLS');
+        expect(textArea(fixture).value).toBe(TITLE);
+        expect(sendButton(fixture).textContent?.trim()).toBe('Retry Mastodon');
+        expect(sendButton(fixture).disabled).toBe(false);
+      });
+
+      it('a failed lane switched off drops its send error', () => {
+        failMastodonOnce();
+        const fixture = bothOn();
+        submit(fixture);
+        expect(banners(fixture)).toHaveLength(1);
+
+        toggle(fixture, 'Mastodon');
+
+        expect(banners(fixture)).toHaveLength(0);
+      });
+
+      it('retry sends only Mastodon, under its first key', () => {
+        failMastodonOnce();
+        const fixture = bothOn();
+        submit(fixture);
+
+        submit(fixture);
+
+        expect(sendsOf('bluesky')).toHaveLength(1);
+        const keys = sendsOf('mastodon').map(([, draft]) => draft.idempotencyKey);
+        expect(keys).toHaveLength(2);
+        expect(keys[1]).toBe(keys[0]);
+        expect(close).toHaveBeenCalledWith([blueskySent, mastodonSent]);
+      });
+
+      it('Cancel after a partial failure closes with the Bluesky post', () => {
+        failMastodonOnce();
+        const fixture = bothOn();
+        submit(fixture);
+
+        cancel(fixture).click();
+
+        expect(close).toHaveBeenCalledWith([blueskySent]);
+      });
+
+      it('Cancel with nothing sent closes empty', () => {
+        const fixture = bothOn();
+
+        cancel(fixture).click();
+
+        expect(close).toHaveBeenCalledWith();
+      });
+
+      it('while sending, pills, account selects and Clear are disabled', () => {
+        blueskyContext = () => of(onBluesky({ accounts: blueskyAccounts }));
+        mastodonContext = () => of(onMastodon({ accounts: mastodonAccounts }));
+        const pending = new Subject<PublishedPostDto>();
+        mastodonSend = () => pending;
+        const fixture = bothOn();
+        const ref = TestBed.inject(DialogRef);
+
+        submit(fixture);
+
+        expect(ref.disableClose).toBe(true);
+        expect(pills(fixture).every((button) => button.disabled)).toBe(true);
+        const selects = Array.from(
+          element(fixture).querySelectorAll('select[id^="reply-account-"]'),
+        ) as HTMLSelectElement[];
+        expect(selects).toHaveLength(2);
+        expect(selects.every((select) => select.disabled)).toBe(true);
+        expect(
+          (element(fixture).querySelector('.clear button') as HTMLButtonElement).disabled,
+        ).toBe(true);
+        pending.error(new HttpErrorResponse({ status: 502 }));
+        fixture.detectChanges();
+        expect(ref.disableClose).toBe(true);
+        expect(pill(fixture, 'Mastodon').disabled).toBe(false);
+        expect(cancel(fixture).disabled).toBe(false);
+      });
+
+      it('a send that throws leaves the composer closable', async () => {
+        const fixture = bothOn();
+        const ref = TestBed.inject(DialogRef);
+        const unhandled = jest.fn();
+        config.onUnhandledError = unhandled;
+        api.send.mockImplementation(() => {
+          throw new Error('broken');
+        });
+
+        try {
+          submit(fixture);
+          await new Promise((resolve) => setTimeout(resolve));
+        } finally {
+          config.onUnhandledError = null;
+        }
+
+        expect(unhandled).toHaveBeenCalledWith(new Error('broken'));
+        expect(ref.disableClose).toBe(false);
+        expect(cancel(fixture).disabled).toBe(false);
+      });
+
+      it('Escape or a backdrop click after a partial failure closes with the Bluesky post', () => {
+        failMastodonOnce();
+        const fixture = bothOn();
+        const ref = TestBed.inject(DialogRef);
+        submit(fixture);
+
+        expect(ref.disableClose).toBe(true);
+        keydownEvents.next(new KeyboardEvent('keydown', { key: 'Enter' }));
+        expect(close).not.toHaveBeenCalled();
+        keydownEvents.next(new KeyboardEvent('keydown', { key: 'Escape' }));
+        expect(close).toHaveBeenLastCalledWith([blueskySent]);
+        close.mockReset();
+        backdropClick.next(new MouseEvent('click'));
+        expect(close).toHaveBeenLastCalledWith([blueskySent]);
+      });
+
+      it('Escape or a backdrop click before anything was sent leaves the closing to the dialog', () => {
+        const fixture = bothOn();
+        const ref = TestBed.inject(DialogRef);
+
+        keydownEvents.next(new KeyboardEvent('keydown', { key: 'Escape' }));
+        backdropClick.next(new MouseEvent('click'));
+
+        expect(ref.disableClose).toBeFalsy();
+        expect(close).not.toHaveBeenCalled();
+        fixture.destroy();
+      });
+
+      it('Escape while a send is on the wire does nothing', () => {
+        const pending = new Subject<PublishedPostDto>();
+        mastodonSend = () => pending;
+        const fixture = bothOn();
+        submit(fixture);
+
+        keydownEvents.next(new KeyboardEvent('keydown', { key: 'Escape' }));
+        backdropClick.next(new MouseEvent('click'));
+
+        expect(close).not.toHaveBeenCalled();
+        fixture.destroy();
+      });
+
+      it('a sent pill cannot be toggled', () => {
+        failMastodonOnce();
+        const fixture = bothOn();
+        submit(fixture);
+
+        toggle(fixture, 'Bluesky');
+        toggle(fixture, 'Mastodon');
+
+        expect(pressed(fixture)).toEqual(['true', 'false']);
+        expect(sendButton(fixture).disabled).toBe(true);
+      });
+    });
+  });
+
+  describe('the link outside the text and the kind note', () => {
+    const URL_OF_STORY = 'https://example.com/story';
+    const forKind = (kind: ComposerContextDto['kind'], overrides = {}) =>
+      context({
+        kind,
+        text: kind === 'quote' ? '' : 'A long read',
+        target: kind === 'quote' ? QUOTED : STORY,
+        ...overrides,
+      });
+    const urlLine = (fixture: ReturnType<typeof mount>) =>
+      element(fixture).querySelector('.fixed-url');
+    const note = (fixture: ReturnType<typeof mount>) =>
+      element(fixture).querySelector('.kind-note');
+    const toggleMastodon = (fixture: ReturnType<typeof mount>) => {
+      const pill = Array.from(element(fixture).querySelectorAll('app-network-pills button')).find(
+        (button) => button.textContent?.includes('Mastodon'),
+      ) as HTMLButtonElement;
+      pill.click();
+      fixture.detectChanges();
+    };
+
+    beforeEach(() =>
+      connected.set([
+        { network: 'bluesky', handles: ['@alice.bsky.social'] },
+        { network: 'mastodon', handles: ['@alice@mastodon.example'] },
+      ]),
+    );
+
+    it('a Mastodon link lane shows the fixed line "Mastodon adds <url>" while active', () => {
+      api.composer.mockReturnValue(of(forKind('link')));
+
+      const fixture = mount(article());
+
+      expect(urlLine(fixture)?.textContent).toContain(`Mastodon adds ${URL_OF_STORY}`);
+      expect(urlLine(fixture)?.querySelector('a, button, input, [tabindex]')).toBeNull();
+    });
+
+    it('names the URL the server appends, which the card carries without tracking', () => {
+      api.composer.mockReturnValue(of(forKind('link')));
+
+      const fixture = mount(article({ url: `${URL_OF_STORY}?utm_source=feed` }));
+
+      expect(urlLine(fixture)?.textContent).toContain(`Mastodon adds ${URL_OF_STORY}`);
+      expect(urlLine(fixture)?.textContent).not.toContain('utm_source');
+    });
+
+    it('a Mastodon quote lane shows no URL line', () => {
+      api.composer.mockReturnValue(of(forKind('quote')));
+
+      expect(urlLine(mount(article()))).toBeNull();
+    });
+
+    it('Bluesky alone shows no URL line', () => {
+      api.composer.mockReturnValue(of(forKind('link', { visibility: null })));
+
+      expect(urlLine(mount(article({ network: 'bluesky' })))).toBeNull();
+    });
+
+    it('a link post with blank text can be sent', () => {
+      api.composer.mockReturnValue(of(forKind('link', { text: '' })));
+
+      expect(sendButton(mount(article())).disabled).toBe(false);
+    });
+
+    it('a blank quote cannot', () => {
+      api.composer.mockReturnValue(of(forKind('quote')));
+
+      expect(sendButton(mount(article())).disabled).toBe(true);
+    });
+
+    describe('with both networks on', () => {
+      const bothOn = (
+        kinds: { bluesky: ComposerContextDto['kind']; mastodon: ComposerContextDto['kind'] },
+        from: 'bluesky' | 'mastodon',
+        text = 'A long read',
+      ) => {
+        api.composer.mockImplementation((posted: PostTargetDto) =>
+          of(
+            posted.network === 'bluesky'
+              ? forKind(kinds.bluesky, { visibility: null, text })
+              : forKind(kinds.mastodon, { text }),
+          ),
+        );
+        const fixture = mount(article({ network: from }));
+        toggleMastodon(fixture);
+        if (from === 'mastodon') {
+          (
+            Array.from(element(fixture).querySelectorAll('app-network-pills button')).find(
+              (button) => button.textContent?.includes('Bluesky'),
+            ) as HTMLButtonElement
+          ).click();
+          fixture.detectChanges();
+        }
+        return fixture;
+      };
+
+      it('names Mastodon under a Bluesky quote preview', () => {
+        const fixture = bothOn({ bluesky: 'quote', mastodon: 'link' }, 'bluesky');
+
+        expect(note(fixture)?.textContent).toContain('Mastodon shares this post as a link');
+      });
+
+      it('names Bluesky when Mastodon quotes and Bluesky links', () => {
+        const fixture = bothOn({ bluesky: 'link', mastodon: 'quote' }, 'mastodon');
+
+        expect(note(fixture)?.textContent).toContain('Bluesky shares this post as a link');
+      });
+
+      it('shows no note when the kinds match', () => {
+        expect(note(bothOn({ bluesky: 'link', mastodon: 'link' }, 'bluesky'))).toBeNull();
+      });
+
+      it('shows no note with one lane', () => {
+        api.composer.mockReturnValue(of(forKind('link')));
+
+        expect(note(mount(article()))).toBeNull();
+      });
+
+      it('sends blank text when every pending lane is a link', () => {
+        expect(
+          sendButton(bothOn({ bluesky: 'link', mastodon: 'link' }, 'bluesky', '')).disabled,
+        ).toBe(false);
+      });
+
+      it('refuses blank text when a pending lane quotes', () => {
+        expect(
+          sendButton(bothOn({ bluesky: 'quote', mastodon: 'link' }, 'bluesky', '')).disabled,
+        ).toBe(true);
+      });
+
+      it('names Bluesky when it quotes under a link preview', () => {
+        const fixture = bothOn({ bluesky: 'quote', mastodon: 'link' }, 'mastodon');
+
+        expect(note(fixture)?.textContent).toContain('Bluesky quotes this post');
+        expect(note(fixture)?.textContent).not.toContain('shares this post as a link');
+      });
     });
   });
 });

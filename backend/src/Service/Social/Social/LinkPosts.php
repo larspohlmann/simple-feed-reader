@@ -12,6 +12,7 @@ use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Social\Exception\SocialPostTextMissingException;
 use App\Service\Social\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
 use App\Service\Social\Social\Model\ComposerContextModel;
@@ -57,6 +58,7 @@ final readonly class LinkPosts
      * @throws NoSocialAccountForNetworkException
      * @throws SocialAccountNotFoundException
      * @throws SocialAccountNeedsReconnectException
+     * @throws SocialPostTextMissingException when the URL resolves to a quote and the text is blank
      * @throws SocialPostTooLongException
      * @throws SocialTokenScopeMissingException
      * @throws SocialCredentialsRejectedException
@@ -67,9 +69,15 @@ final readonly class LinkPosts
     {
         $share = $this->resolve($user, $target);
 
-        return null === $share->quoted
-            ? $this->writing->share($share->account, $share->link->url, $draft)
-            : $this->writing->respond(ResponseKind::Quote, $share->quoted, $draft);
+        if (null === $share->quoted) {
+            return $this->writing->share($share->account, $share->link->url, $draft);
+        }
+
+        if ('' === trim($draft->text)) {
+            throw new SocialPostTextMissingException('A quote of a post needs some text of its own.');
+        }
+
+        return $this->writing->respond(ResponseKind::Quote, $share->quoted, $draft);
     }
 
     /**

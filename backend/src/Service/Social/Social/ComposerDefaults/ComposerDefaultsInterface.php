@@ -21,4 +21,7 @@ interface ComposerDefaultsInterface
 
     /** The defaults of a post the account writes on its own, mentioning no one. */
     public function forAccount(SocialAccount $account): ComposerDefaultsModel;
+
+    /** The defaults of a post that shares a link, net of what the network adds to the text. */
+    public function forLinkFrom(SocialAccount $account): ComposerDefaultsModel;
 }

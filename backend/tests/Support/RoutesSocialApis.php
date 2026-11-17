@@ -68,6 +68,26 @@ trait RoutesSocialApis
         return $account;
     }
 
+    private function blueskyAccountOf(User $user): SocialAccount
+    {
+        /** @var InstanceSecretCipher $instanceCipher */
+        $instanceCipher = self::getContainer()->get(InstanceSecretCipher::class);
+        $account = new SocialAccount(
+            $user,
+            SocialNetwork::Bluesky,
+            'did:plc:alice',
+            '@alice.bsky.social',
+            'https://pds.example.test',
+            (new SocialCredentialCipher($instanceCipher))->seal($user->requireId(), SocialAccounts::APP_PASSWORD),
+            'mnop',
+            new \DateTimeImmutable('2026-10-12 10:00:00'),
+        );
+        $this->entityManager()->persist($account);
+        $this->entityManager()->flush();
+
+        return $account;
+    }
+
     private function lemmyPostFor(User $user, string $page = 'https://lemmy.example/post/42'): int
     {
         $fixtures = new NetworkFeedSubscriptions($this->entityManager());

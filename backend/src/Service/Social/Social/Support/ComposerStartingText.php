@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\Support;
 
-use App\Enum\SocialNetwork;
 use App\Service\Social\Social\Model\SharedLinkModel;
 use App\Service\Foundation\Text\Support\WordBoundary;
 
 /** Where the composer's text starts before the reader types. */
 final class ComposerStartingText
 {
-    /** Mastodon counts every link as this many characters, whatever its length. */
+    private const int BLANK_LINE_LENGTH = 2;
     private const int MASTODON_LINK_LENGTH = 23;
-    private const string LINK_GAP = "\n\n";
+    /** What a Mastodon link post sets aside for the blank line and the link. */
+    public const int LINK_ROOM = self::BLANK_LINE_LENGTH + self::MASTODON_LINK_LENGTH;
     private const string OPENING_QUOTE = '“';
     private const string CLOSING_QUOTE = '”';
 
@@ -27,18 +27,14 @@ final class ComposerStartingText
         return [] === $mentions ? '' : implode(' ', $mentions) . ' ';
     }
 
-    /** A Bluesky link post carries its link in the card, so the text starts with the title, or the quote, alone. */
-    public static function sharing(SocialNetwork $network, SharedLinkModel $link, int $maxCharacters): string
+    /** The title, or the quote, alone: a link post carries its link outside the text, in the card or the status. */
+    public static function sharing(SharedLinkModel $link, int $maxCharacters): string
     {
         if ('' !== $link->quote) {
-            return self::sharingQuote($network, $link, $maxCharacters);
+            return self::quoting($link->quote, $maxCharacters);
         }
 
-        return match (true) {
-            SocialNetwork::Bluesky === $network => $link->title,
-            '' === $link->title => $link->url,
-            default => $link->title . self::LINK_GAP . $link->url,
-        };
+        return $link->title;
     }
 
     /** The quote in typographic quotes, cut at a word so the whole fits $room characters; nothing without a quote. */
@@ -51,16 +47,5 @@ final class ComposerStartingText
         $marks = mb_strlen(self::OPENING_QUOTE) + mb_strlen(self::CLOSING_QUOTE);
 
         return self::OPENING_QUOTE . WordBoundary::clipped($quote, $room - $marks) . self::CLOSING_QUOTE;
-    }
-
-    private static function sharingQuote(SocialNetwork $network, SharedLinkModel $link, int $maxCharacters): string
-    {
-        if (SocialNetwork::Bluesky === $network) {
-            return self::quoting($link->quote, $maxCharacters);
-        }
-
-        $linkRoom = mb_strlen(self::LINK_GAP) + self::MASTODON_LINK_LENGTH;
-
-        return self::quoting($link->quote, $maxCharacters - $linkRoom) . self::LINK_GAP . $link->url;
     }
 }

@@ -13,6 +13,7 @@ use App\Service\Social\Social\MastodonAccountApi;
 use App\Service\Social\Social\MastodonApiClient;
 use App\Service\Social\Social\Model\ComposerDefaultsModel;
 use App\Service\Social\Social\Model\SocialPostModel;
+use App\Service\Social\Social\Support\ComposerStartingText;
 use App\Service\Social\Social\Support\MastodonVisibility;
 use App\Service\Social\Social\Support\SocialIdentity;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
@@ -48,6 +49,13 @@ final readonly class MastodonComposerDefaults implements ComposerDefaultsInterfa
     public function forAccount(SocialAccount $account): ComposerDefaultsModel
     {
         return new ComposerDefaultsModel($this->maxCharactersOf($account), $this->privacyOf($account));
+    }
+
+    public function forLinkFrom(SocialAccount $account): ComposerDefaultsModel
+    {
+        $defaults = $this->forAccount($account);
+
+        return $defaults->withMaxCharacters($defaults->maxCharacters - ComposerStartingText::LINK_ROOM);
     }
 
     private function maxCharactersOf(SocialAccount $account): int

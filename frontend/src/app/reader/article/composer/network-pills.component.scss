@@ -1,0 +1,26 @@
+@use '../../../theme/pill-toggle';
+
+:host {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.pill {
+  @include pill-toggle.pill-toggle;
+}
+
+.pill.sent {
+  --rim-base: var(--success);
+
+  background: var(--bg-success);
+  color: var(--success);
+  opacity: 1;
+}
+
+.pill.failed {
+  --rim-base: var(--danger);
+
+  color: var(--danger);
+}

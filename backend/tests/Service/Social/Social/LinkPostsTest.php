@@ -20,6 +20,7 @@ use App\Service\Social\Social\Exception\SocialAccountNotFoundException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Social\Exception\SocialPostTextMissingException;
 use App\Service\Social\Social\LinkPosts;
 use App\Service\Social\Social\Model\ComposerDefaultsModel;
 use App\Service\Social\Social\Model\ComposerKind;
@@ -50,6 +51,7 @@ use App\Tests\Support\StubPageCardReader;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Container\ContainerInterface;
 use Psr\Log\NullLogger;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -97,11 +99,11 @@ final class LinkPostsTest extends DbTestCase
         self::assertSame([$default, $first], $context->accounts);
         self::assertSame($default, $context->account);
         self::assertTrue($context->canSend);
-        self::assertEquals(new ComposerDefaultsModel(500, 'public'), $context->defaults);
+        self::assertEquals(new ComposerDefaultsModel(475, 'public'), $context->defaults);
         self::assertSame([], $this->mastodon->calls);
     }
 
-    public function testTheLinkComposerStartsWithTheTitleAndTheNormalisedAddress(): void
+    public function testTheLinkComposerStartsWithTheTitleAlone(): void
     {
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
         $target = new LinkTargetModel(SocialNetwork::Mastodon, null, self::ARTICLE_URL . '&utm_source=x', 'A story');
@@ -109,7 +111,7 @@ final class LinkPostsTest extends DbTestCase
         $context = $this->linkPosts()->contextFor($this->owner, $target);
 
         self::assertSame(ComposerKind::Link, $context->kind);
-        self::assertSame("A story\n\n" . self::ARTICLE_URL, $context->text);
+        self::assertSame('A story', $context->text);
     }
 
     public function testTheSharedAddressKeepsItsFragment(): void
@@ -120,7 +122,7 @@ final class LinkPostsTest extends DbTestCase
 
         $context = $this->linkPosts()->contextFor($this->owner, $target);
 
-        self::assertSame("A story\n\n" . $page . '#comment-5', $context->text);
+        self::assertSame('A story', $context->text);
         self::assertSame([$page . '#comment-5'], $this->pages->readUrls());
     }
 
@@ -193,7 +195,7 @@ final class LinkPostsTest extends DbTestCase
         self::assertSame([], $this->pages->readUrls());
     }
 
-    public function testTheLinkComposerStartsWithTheSelectedQuoteAboveTheLink(): void
+    public function testTheLinkComposerStartsWithTheSelectedQuoteAlone(): void
     {
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
         $target = new LinkTargetModel(
@@ -207,7 +209,7 @@ final class LinkPostsTest extends DbTestCase
         $context = $this->linkPosts()->contextFor($this->owner, $target);
 
         self::assertSame(ComposerKind::Link, $context->kind);
-        self::assertSame("“A line worth sharing”\n\n" . self::ARTICLE_URL, $context->text);
+        self::assertSame('“A line worth sharing”', $context->text);
     }
 
     public function testTheSharedAddressKeepsTheTextFragmentThatPointsAtTheQuote(): void
@@ -218,7 +220,7 @@ final class LinkPostsTest extends DbTestCase
 
         $context = $this->linkPosts()->contextFor($this->owner, $target);
 
-        self::assertSame("“A line worth sharing”\n\n" . $page, $context->text);
+        self::assertSame('“A line worth sharing”', $context->text);
     }
 
     public function testTheComposerForAQuotedStatusStartsWithTheSelectedQuote(): void
@@ -264,6 +266,22 @@ final class LinkPostsTest extends DbTestCase
             new PublishedPostModel(FakeMastodonNetwork::REPLY_URI, FakeMastodonNetwork::REPLY_URI),
             $published,
         );
+    }
+
+    public function testBlankTextQuoteThrows(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
+
+        $this->assertRefused(
+            fn () => $this->linkPosts()->share(
+                $this->owner,
+                self::target(null, self::STATUS_URL),
+                new PostDraftModel('  '),
+            ),
+            SocialPostTextMissingException::class,
+            'A quote of a post needs some text of its own.',
+        );
+        self::assertSame(['resolve ' . self::STATUS_URL], $this->mastodon->calls);
     }
 
     public function testAStatusWhoseAuthorForbidsQuotingIsSharedAsALink(): void
@@ -434,6 +452,7 @@ final class LinkPostsTest extends DbTestCase
                 SocialApiWiring::blueskySessions($client),
                 new NullLogger(),
             ),
+            SocialApiWiring::blueskyPostKeys(new ArrayAdapter()),
         );
 
         return $this->linkPostsOver(
