@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, Subject, Subscription, finalize, tap } from 'rxjs';
 import { Problem, parseProblem } from '../../core/problem';
+import { wireTimestamp } from '../../core/wire-timestamp';
 import { accountSignal, onIdentityChange } from '../../core/auth/session-identity';
 import { ReaderApi } from '../reader-api';
 import { TrendingApi } from '../trending/trending-api';
@@ -76,7 +77,7 @@ export class EntriesStore {
     // A fresh top-of-list load abandons any pagination still on the wire.
     this.loadingMore.set(false);
     this.failure.clear();
-    this.loadedAt.set(new Date().toISOString());
+    this.loadedAt.set(wireTimestamp(new Date()));
     this.listRequest?.unsubscribe();
     this.listRequest = this.api.entries(query).subscribe({
       next: (page) => {

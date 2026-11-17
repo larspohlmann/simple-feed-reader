@@ -67,7 +67,7 @@ describe('EntriesStore', () => {
       .flush({ entries: [entry(1)], nextCursor: 'C1' });
     expect(store.entries().map((listedEntry) => listedEntry.id)).toEqual([1]);
     expect(store.nextCursor()).toBe('C1');
-    expect(store.loadedAt()).not.toBe('');
+    expect(store.loadedAt()).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
   });
 
   it('reloads the list it last loaded', () => {
