@@ -10,11 +10,11 @@ export function startTruncatedTextTitles(): void {
   const titled = new WeakSet<Element>();
 
   const syncTitle = (event: Event): void => {
-    const ellipsised = ellipsisedAncestor(event.target, document);
+    const ellipsised = ellipsisedAncestor(event.target);
     if (ellipsised === null) return;
     if (ellipsised.hasAttribute('title') && !titled.has(ellipsised)) return;
     if (ellipsised.scrollWidth > ellipsised.clientWidth) {
-      ellipsised.setAttribute('title', ellipsised.textContent?.trim() ?? '');
+      ellipsised.setAttribute('title', spokenText(ellipsised));
       titled.add(ellipsised);
       return;
     }
@@ -26,11 +26,16 @@ export function startTruncatedTextTitles(): void {
   inject(DestroyRef).onDestroy(() => document.removeEventListener('mouseover', syncTitle));
 }
 
-function ellipsisedAncestor(target: EventTarget | null, document: Document): Element | null {
-  const view = document.defaultView;
-  if (view === null || !(target instanceof Element)) return null;
+function spokenText(element: Element): string {
+  const copy = element.cloneNode(true) as Element;
+  copy.querySelectorAll('[aria-hidden="true"]').forEach((hidden) => hidden.remove());
+  return copy.textContent?.trim() ?? '';
+}
+
+function ellipsisedAncestor(target: EventTarget | null): Element | null {
+  if (!(target instanceof Element)) return null;
   for (let node: Element | null = target; node !== null; node = node.parentElement) {
-    if (view.getComputedStyle(node).textOverflow === 'ellipsis') return node;
+    if (getComputedStyle(node).textOverflow === 'ellipsis') return node;
   }
   return null;
 }

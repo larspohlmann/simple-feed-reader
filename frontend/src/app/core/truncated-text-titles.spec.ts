@@ -42,6 +42,15 @@ describe('startTruncatedTextTitles', () => {
     expect(name.title).toBe('A rather long feed name');
   });
 
+  it('leaves aria-hidden copies and icons out of the tooltip', () => {
+    const name = ellipsised(
+      '<span aria-hidden="true">rss_feed</span>A rather long feed name<span aria-hidden="true">A rather long feed name</span>',
+    );
+    layOut(name, 200, 120);
+    hover(name);
+    expect(name.title).toBe('A rather long feed name');
+  });
+
   it('shows no tooltip on a text that fits', () => {
     const name = ellipsised('Short');
     layOut(name, 120, 120);
