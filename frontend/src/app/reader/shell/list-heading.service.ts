@@ -162,10 +162,14 @@ export class ListHeading {
   };
 
   private networkTitle(selection: SelectionOf<'network'>): string {
-    const network = this.i18n.translate(`settings.social.${selection.network}`);
+    const network = this.networkName(selection.network);
     return selection.feedKind
       ? `${network} · ${this.i18n.translate(networkFeedKindLabels(selection.feedKind, selection.network).labelKey)}`
       : network;
+  }
+
+  private networkName(network: SocialNetworkName): string {
+    return this.i18n.translate(`settings.social.${network}`);
   }
 
   private feedTitle(subscription: SubscriptionDto): string {
@@ -243,7 +247,7 @@ export class ListHeading {
   readonly tabTitle = computed(() => {
     const selection = this.routeState.selection();
     if (selection.kind !== 'notifications') return this.title();
-    return `${this.i18n.translate(`settings.social.${selection.network}`)} · ${this.title()}`;
+    return `${this.networkName(selection.network)} · ${this.title()}`;
   });
 
   readonly titleCount = computed<TitleCount>(() =>
