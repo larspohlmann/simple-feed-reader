@@ -47,7 +47,7 @@ function composerContext(network: 'bluesky' | 'mastodon'): ComposerContextDto {
     target: {
       kind: 'link',
       card: {
-        url: ENTRY.url,
+        url: `https://fixtures.invalid/${ENTRY.id}`,
         title: ENTRY.title,
         description: null,
         imageUrl: null,
