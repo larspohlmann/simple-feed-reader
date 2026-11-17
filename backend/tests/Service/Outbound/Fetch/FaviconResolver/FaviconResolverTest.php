@@ -390,63 +390,51 @@ final class FaviconResolverTest extends TestCase
         self::assertSame('https://blog.example.com/fav.png', $icons[2]);
     }
 
-    public function testALemmyCommunityFeedFetchesItsCommunityPage(): void
+    /**
+     * @return iterable<string, array{array<int, string>, string, string, string}>
+     */
+    public static function lemmyActorFeeds(): iterable
     {
-        $fetcher = new StubFeedFetcher();
-        $fetcher->willReturn(
+        $community = ',"community_res":{"community_view":{"community":'
+            . '{"id":7,"icon":"https://lemmy.example.com/c.png"}}}';
+
+        yield 'a community feed with a query' => [
+            [1 => 'https://lemmy.example.com/feeds/c/technology.xml?sort=New'],
             'https://lemmy.example.com/c/technology',
-            $this->lemmyPage(
-                '{"id":1}',
-                '',
-                ',"community_res":{"community_view":{"community":{"id":7,"icon":"https://lemmy.example.com/c.png"}}}',
-            ),
-        );
-
-        $icons = $this->resolver($fetcher)
-            ->resolveAll([1 => 'https://lemmy.example.com/feeds/c/technology.xml?sort=New']);
-
-        self::assertSame(['https://lemmy.example.com/c/technology'], $fetcher->fetchedUrls);
-        self::assertSame('https://lemmy.example.com/c.png', $icons[1]);
-    }
-
-    public function testALemmyUserFeedFetchesItsUserPage(): void
-    {
-        $fetcher = new StubFeedFetcher();
-        $fetcher->willReturn(
+            $community,
+            'https://lemmy.example.com/c.png',
+        ];
+        yield 'a user feed' => [
+            [1 => 'https://lemmy.example.com/feeds/u/lars.xml'],
             'https://lemmy.example.com/u/lars',
-            $this->lemmyPage(
-                '{"id":1}',
-                '',
-                ',"person_res":{"person_view":{"person":{"id":9,"avatar":"https://lemmy.example.com/a.png"}}}',
-            ),
-        );
-
-        $icons = $this->resolver($fetcher)->resolveAll([1 => 'https://lemmy.example.com/feeds/u/lars.xml']);
-
-        self::assertSame(['https://lemmy.example.com/u/lars'], $fetcher->fetchedUrls);
-        self::assertSame('https://lemmy.example.com/a.png', $icons[1]);
+            ',"person_res":{"person_view":{"person":{"id":9,"avatar":"https://lemmy.example.com/a.png"}}}',
+            'https://lemmy.example.com/a.png',
+        ];
+        yield 'both forms of one community' => [
+            [1 => 'https://lemmy.example.com/c/technology', 2 => 'https://lemmy.example.com/feeds/c/technology.xml'],
+            'https://lemmy.example.com/c/technology',
+            $community,
+            'https://lemmy.example.com/c.png',
+        ];
     }
 
-    public function testBothFormsOfOneActorShareOneFetch(): void
-    {
+    /**
+     * @param array<int, string> $baseUrls
+     */
+    #[DataProvider('lemmyActorFeeds')]
+    public function testALemmyActorFeedFetchesItsActorPageOnce(
+        array $baseUrls,
+        string $actorPage,
+        string $actorFragment,
+        string $expectedIcon,
+    ): void {
         $fetcher = new StubFeedFetcher();
-        $fetcher->willReturn(
-            'https://lemmy.example.com/c/technology',
-            $this->lemmyPage(
-                '{"id":1}',
-                '',
-                ',"community_res":{"community_view":{"community":{"id":7,"icon":"https://lemmy.example.com/c.png"}}}',
-            ),
-        );
+        $fetcher->willReturn($actorPage, $this->lemmyPage('{"id":1}', '', $actorFragment));
 
-        $icons = $this->resolver($fetcher)->resolveAll([
-            1 => 'https://lemmy.example.com/c/technology',
-            2 => 'https://lemmy.example.com/feeds/c/technology.xml',
-        ]);
+        $icons = $this->resolver($fetcher)->resolveAll($baseUrls);
 
-        self::assertSame(['https://lemmy.example.com/c/technology'], $fetcher->fetchedUrls);
-        self::assertSame('https://lemmy.example.com/c.png', $icons[1]);
-        self::assertSame($icons[1], $icons[2]);
+        self::assertSame([$actorPage], $fetcher->fetchedUrls);
+        self::assertSame(array_fill_keys(array_keys($baseUrls), $expectedIcon), $icons);
     }
 
     public function testAnUnreachableActorPageFallsBackToTheOriginFaviconIco(): void
