@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Social\PostWriter;
 
+use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
@@ -89,6 +90,36 @@ final class MastodonPostWriterTest extends TestCase
         self::assertEquals(new PublishedPostModel(self::REPLY_URI, self::REPLY_URL), $published);
     }
 
+    public function testShareAppendsTheUrlAfterABlankLine(): void
+    {
+        self::assertSame("Title\n\nhttps://e.x/a", $this->sharedStatusOf('Title'));
+    }
+
+    public function testShareOfBlankTextPostsTheUrlAlone(): void
+    {
+        self::assertSame('https://e.x/a', $this->sharedStatusOf(''));
+        self::assertSame('https://e.x/a', $this->sharedStatusOf("  \n"));
+    }
+
+    public function testShareKeepsTextThatAlreadyCarriesTheUrl(): void
+    {
+        self::assertSame("Title\n\nhttps://e.x/a", $this->sharedStatusOf("Title\n\nhttps://e.x/a"));
+    }
+
+    public function testReplyAndQuoteAppendNothing(): void
+    {
+        $http = new RoutedHttpClient([self::STATUSES => self::published()]);
+
+        $this->writer($http)->reply(self::post(), new PostDraftModel('Hi'));
+        $this->writer($http)->quote(self::post(), new PostDraftModel('Hi'));
+
+        self::assertSame(['status' => 'Hi', 'in_reply_to_id' => '110'], json_decode($http->requests[0]['body'], true));
+        self::assertSame(
+            ['status' => 'Hi', 'quoted_status_id' => '110'],
+            json_decode($http->requests[1]['body'], true),
+        );
+    }
+
     public function testAQuoteTheAuthorsPolicyRefusesIsARefusedPost(): void
     {
         $http = new RoutedHttpClient([self::STATUSES => new MockResponse(
@@ -161,6 +192,18 @@ final class MastodonPostWriterTest extends TestCase
 
         self::assertSame(PostDeletion::Deleted, $this->writer($http)->delete(SocialAccounts::mastodon(), '120'));
         self::assertSame(PostDeletion::AlreadyGone, $this->writer($http)->delete(SocialAccounts::mastodon(), '121'));
+    }
+
+    private function sharedStatusOf(string $text): string
+    {
+        $http = new RoutedHttpClient([self::STATUSES => self::published()]);
+
+        $this->writer($http)->share(SocialAccounts::mastodon(), 'https://e.x/a', new PostDraftModel($text));
+
+        $status = JsonNodeModel::of(json_decode($http->requests[0]['body'], true))->string('status');
+        self::assertNotNull($status);
+
+        return $status;
     }
 
     private function writer(RoutedHttpClient $http): MastodonPostWriter

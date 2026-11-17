@@ -85,10 +85,10 @@ final class SocialLinkPostControllerTest extends ApiTestCase
             'accounts' => [['id' => $account->requireId(), 'handle' => '@alice@mastodon.example']],
             'accountId' => $account->requireId(),
             'canSend' => true,
-            'maxCharacters' => 1000,
+            'maxCharacters' => 975,
             'visibility' => 'unlisted',
             'kind' => 'link',
-            'text' => "The article\n\nhttps://example.com/article",
+            'text' => 'The article',
             'target' => self::ARTICLE_HOST_CARD,
         ], $this->payload($client));
     }
@@ -117,7 +117,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         self::assertSame([], $this->http->requests);
     }
 
-    public function testTheLinkComposerStartsWithTheSelectedQuoteAboveTheLinkOnMastodon(): void
+    public function testTheLinkComposerStartsWithTheSelectedQuoteAloneOnMastodon(): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, [
             self::INSTANCE => new MockResponse('{"configuration":{"statuses":{"max_characters":500}}}'),
@@ -132,7 +132,8 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         );
 
         self::assertResponseIsSuccessful();
-        self::assertSame("“A line worth sharing”\n\nhttps://example.com/article", $this->payload($client)['text']);
+        self::assertSame('“A line worth sharing”', $this->payload($client)['text']);
+        self::assertSame(475, $this->payload($client)['maxCharacters']);
     }
 
     public function testTheLinkComposerStartsWithTheSelectedQuoteAloneOnBluesky(): void
@@ -165,7 +166,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
             . '&quote=' . rawurlencode('A line worth sharing'));
 
         self::assertResponseIsSuccessful();
-        self::assertSame("“A line worth sharing”\n\n" . $page, $this->payload($client)['text']);
+        self::assertSame('“A line worth sharing”', $this->payload($client)['text']);
     }
 
     public function testTheLinkComposerRefusesAQuoteLongerThanTheFrontendSends(): void
@@ -341,6 +342,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         $client->request('GET', self::STATUS_COMPOSER);
 
         self::assertResponseIsSuccessful();
+        self::assertSame(500, $this->payload($client)['maxCharacters']);
         self::assertSame(
             [
                 'kind' => 'post',
@@ -401,7 +403,10 @@ final class SocialLinkPostControllerTest extends ApiTestCase
 
         self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
         self::assertSame([self::STATUS_SEARCH, self::STATUSES], $this->routesAsked());
-        self::assertSame(['status' => 'Look'], json_decode($this->http->requests[1]['body'], true));
+        self::assertSame(
+            ['status' => "Look\n\n" . self::MASTODON_POST_URL],
+            json_decode($this->http->requests[1]['body'], true),
+        );
     }
 
     public function testABlueskyPostSharedOnMastodonIsALinkPostAndItsComposerQuotesNothing(): void
@@ -424,7 +429,10 @@ final class SocialLinkPostControllerTest extends ApiTestCase
 
         self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
         self::assertSame([self::INSTANCE, self::OWN_ACCOUNT, self::STATUSES], $this->routesAsked());
-        self::assertSame(['status' => 'Look'], json_decode($this->http->requests[2]['body'], true));
+        self::assertSame(
+            ['status' => "Look\n\n" . $blueskyPost],
+            json_decode($this->http->requests[2]['body'], true),
+        );
     }
 
     public function testALinkPostDrawsOnTheWriteBudget(): void

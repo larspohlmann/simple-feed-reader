@@ -97,11 +97,11 @@ final class LinkPostsTest extends DbTestCase
         self::assertSame([$default, $first], $context->accounts);
         self::assertSame($default, $context->account);
         self::assertTrue($context->canSend);
-        self::assertEquals(new ComposerDefaultsModel(500, 'public'), $context->defaults);
+        self::assertEquals(new ComposerDefaultsModel(475, 'public'), $context->defaults);
         self::assertSame([], $this->mastodon->calls);
     }
 
-    public function testTheLinkComposerStartsWithTheTitleAndTheNormalisedAddress(): void
+    public function testTheLinkComposerStartsWithTheTitleAlone(): void
     {
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
         $target = new LinkTargetModel(SocialNetwork::Mastodon, null, self::ARTICLE_URL . '&utm_source=x', 'A story');
@@ -109,7 +109,7 @@ final class LinkPostsTest extends DbTestCase
         $context = $this->linkPosts()->contextFor($this->owner, $target);
 
         self::assertSame(ComposerKind::Link, $context->kind);
-        self::assertSame("A story\n\n" . self::ARTICLE_URL, $context->text);
+        self::assertSame('A story', $context->text);
     }
 
     public function testTheSharedAddressKeepsItsFragment(): void
@@ -120,7 +120,7 @@ final class LinkPostsTest extends DbTestCase
 
         $context = $this->linkPosts()->contextFor($this->owner, $target);
 
-        self::assertSame("A story\n\n" . $page . '#comment-5', $context->text);
+        self::assertSame('A story', $context->text);
         self::assertSame([$page . '#comment-5'], $this->pages->readUrls());
     }
 
@@ -193,7 +193,7 @@ final class LinkPostsTest extends DbTestCase
         self::assertSame([], $this->pages->readUrls());
     }
 
-    public function testTheLinkComposerStartsWithTheSelectedQuoteAboveTheLink(): void
+    public function testTheLinkComposerStartsWithTheSelectedQuoteAlone(): void
     {
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
         $target = new LinkTargetModel(
@@ -207,7 +207,7 @@ final class LinkPostsTest extends DbTestCase
         $context = $this->linkPosts()->contextFor($this->owner, $target);
 
         self::assertSame(ComposerKind::Link, $context->kind);
-        self::assertSame("“A line worth sharing”\n\n" . self::ARTICLE_URL, $context->text);
+        self::assertSame('“A line worth sharing”', $context->text);
     }
 
     public function testTheSharedAddressKeepsTheTextFragmentThatPointsAtTheQuote(): void
@@ -218,7 +218,7 @@ final class LinkPostsTest extends DbTestCase
 
         $context = $this->linkPosts()->contextFor($this->owner, $target);
 
-        self::assertSame("“A line worth sharing”\n\n" . $page, $context->text);
+        self::assertSame('“A line worth sharing”', $context->text);
     }
 
     public function testTheComposerForAQuotedStatusStartsWithTheSelectedQuote(): void

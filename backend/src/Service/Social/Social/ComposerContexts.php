@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Social;
 
 use App\Entity\SocialAccount;
+use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
 use App\Service\Social\Social\ComposerDefaults\ComposerDefaultsInterface;
 use App\Service\Social\Social\Exception\SocialAccountNeedsReconnectException;
@@ -52,6 +53,9 @@ final readonly class ComposerContexts
     public function ofLink(SocialAccount $account, SharedLinkModel $link): ComposerContextModel
     {
         $defaults = $this->defaults->get($account->getNetwork()->value)->forAccount($account);
+        if (SocialNetwork::Mastodon === $account->getNetwork()) {
+            $defaults = $defaults->withMaxCharacters($defaults->maxCharacters - ComposerStartingText::LINK_ROOM);
+        }
 
         return new ComposerContextModel(
             $this->connectedBeside($account),
@@ -60,7 +64,7 @@ final readonly class ComposerContexts
             defaults: $defaults,
             target: $this->pageCards->cardOf($link->url),
             kind: ComposerKind::Link,
-            text: ComposerStartingText::sharing($account->getNetwork(), $link, $defaults->maxCharacters),
+            text: ComposerStartingText::sharing($link, $defaults->maxCharacters),
         );
     }
 
