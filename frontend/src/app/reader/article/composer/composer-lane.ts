@@ -43,7 +43,7 @@ export class ComposerLane {
   /** Mastodon's own fields, which the lane carries only while its context offers a visibility. */
   readonly visibility: WritableSignal<MastodonVisibility | null> = signal(null);
   readonly contentWarning: WritableSignal<string | null> = signal(null);
-  /** Lemmy's own fields, which the lane carries only while its context offers communities. */
+  /** Lemmy's own fields, which the lane carries only while its context has Lemmy fields. */
   readonly community: WritableSignal<number | null> = signal(null);
   readonly title: WritableSignal<string> = signal('');
   readonly titleLength: Signal<number> = computed(() => [...this.title().trim()].length);

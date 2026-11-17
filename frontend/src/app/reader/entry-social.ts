@@ -121,7 +121,7 @@ export type PostTargetDto = ResponseTargetDto | LinkTargetDto;
 export const MASTODON_VISIBILITIES = ['public', 'unlisted', 'private', 'direct'] as const;
 export type MastodonVisibility = (typeof MASTODON_VISIBILITIES)[number];
 
-/** The body of every composer `POST`; the Mastodon-only fields are ignored on Bluesky. */
+/** The body of every composer `POST`; each network ignores the fields only Mastodon or only Lemmy takes. */
 export interface PostDraftDto {
   text: string;
   accountId: number;

@@ -54,8 +54,26 @@ describe('PostNetworks', () => {
         status: 'connected',
         serviceUrl: 'https://example.test',
       },
+      {
+        id: 2,
+        network: 'mastodon',
+        handle: '@bob@mastodon.example',
+        status: 'connected',
+        serviceUrl: 'https://example.test',
+      },
+      {
+        id: 1,
+        network: 'bluesky',
+        handle: '@alice.bsky.social',
+        status: 'connected',
+        serviceUrl: 'https://example.test',
+      },
     ]);
 
-    expect(networks.connected()).toEqual([{ network: 'lemmy', handles: ['lars@lemmy.example'] }]);
+    expect(networks.connected()).toEqual([
+      { network: 'bluesky', handles: ['@alice.bsky.social'] },
+      { network: 'mastodon', handles: ['@bob@mastodon.example'] },
+      { network: 'lemmy', handles: ['lars@lemmy.example'] },
+    ]);
   });
 });
