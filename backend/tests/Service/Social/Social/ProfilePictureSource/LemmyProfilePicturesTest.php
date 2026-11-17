@@ -188,6 +188,19 @@ final class LemmyProfilePicturesTest extends DbTestCase
         );
     }
 
+    public function testAFederatedCommunityAsksItsOwnInstance(): void
+    {
+        $this->lemmyFeed('https://feddit.org/feeds/c/linux@lemmy.ml.xml');
+        $this->answer(
+            'https://feddit.org/api/v3/community?name=linux%40lemmy.ml',
+            ['community_view' => ['community' => ['name' => 'linux']]],
+        );
+
+        $this->refresh(5);
+
+        self::assertSame(['https://feddit.org/api/v3/community?name=linux%40lemmy.ml'], $this->requestedUrls());
+    }
+
     /** @param array<string, mixed> $body */
     private function answer(string $url, array $body): void
     {

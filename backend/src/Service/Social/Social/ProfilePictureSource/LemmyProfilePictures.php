@@ -21,7 +21,6 @@ use App\Service\Social\Social\Support\ProfileFeedUrl;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
-/** Takes the pictures of Lemmy community and user feeds from their instance's API, asked again about weekly. */
 #[AsTaggedItem(index: 'lemmy', priority: 10)]
 final readonly class LemmyProfilePictures implements ProfilePictureSourceInterface
 {
@@ -69,7 +68,7 @@ final readonly class LemmyProfilePictures implements ProfilePictureSourceInterfa
             | SocialCredentialsRejectedException
             | SocialPostRefusedException $exception
         ) {
-            $this->logger->warning('Lemmy profile picture check set aside a feed its instance refused.', [
+            $this->logger->warning('Lemmy profile picture check set aside a feed its instance did not answer usably.', [
                 'feed' => $feed->getUrl(),
                 'exception' => $exception,
             ]);
@@ -89,21 +88,68 @@ final readonly class LemmyProfilePictures implements ProfilePictureSourceInterfa
      */
     private function pictureOf(string $identity): ?string
     {
-        $isUser = str_starts_with($identity, '@');
-        [$name, $host] = explode('@', ltrim($identity, '@'), 2);
-        $path = $isUser
-            ? '/api/v3/user?username=' . rawurlencode($name) . '&limit=1'
-            : '/api/v3/community?name=' . rawurlencode($name);
+        if (str_starts_with($identity, '@')) {
+            return $this->userPictureOf(substr($identity, 1));
+        }
+
+        return $this->communityPictureOf($identity);
+    }
+
+    /**
+     * @throws SocialPostNotFoundException
+     * @throws SocialNetworkUnreachableException
+     * @throws SocialCredentialsRejectedException
+     * @throws SocialPostRefusedException
+     */
+    private function communityPictureOf(string $identity): ?string
+    {
+        [$name, $host] = $this->splitAtLastAt($identity);
+        $answer = $this->answerOf($host, '/api/v3/community?name=' . rawurlencode($name), 'community_view');
+        $icon = $answer->node('community_view')->node('community')->string('icon');
+
+        return AbsoluteHttpUrl::orNullWithin(AbsoluteHttpUrl::httpsOrNull($icon), Feed::IMAGE_URL_MAX);
+    }
+
+    /**
+     * @throws SocialPostNotFoundException
+     * @throws SocialNetworkUnreachableException
+     * @throws SocialCredentialsRejectedException
+     * @throws SocialPostRefusedException
+     */
+    private function userPictureOf(string $identity): ?string
+    {
+        [$name, $host] = $this->splitAtLastAt($identity);
+        $answer = $this->answerOf($host, '/api/v3/user?username=' . rawurlencode($name) . '&limit=1', 'person_view');
+        $avatar = $answer->node('person_view')->node('person')->string('avatar');
+        if (null === $avatar) {
+            return self::MOUSE;
+        }
+
+        return AbsoluteHttpUrl::orNullWithin(AbsoluteHttpUrl::httpsOrNull($avatar), Feed::IMAGE_URL_MAX);
+    }
+
+    /**
+     * @throws SocialPostNotFoundException
+     * @throws SocialNetworkUnreachableException
+     * @throws SocialCredentialsRejectedException
+     * @throws SocialPostRefusedException
+     */
+    private function answerOf(string $host, string $path, string $view): JsonNodeModel
+    {
         $answer = JsonNodeModel::of($this->lemmy->send(ApiRequestModel::get('https://' . $host . $path))->json());
-        $view = $isUser ? 'person_view' : 'community_view';
         if (!$answer->has($view)) {
             throw new SocialNetworkUnreachableException('The Lemmy instance answered without a ' . $view . '.');
         }
-        $picture = $isUser
-            ? $answer->node($view)->node('person')->string('avatar')
-            : $answer->node($view)->node('community')->string('icon');
-        $url = AbsoluteHttpUrl::orNullWithin(AbsoluteHttpUrl::httpsOrNull($picture), Feed::IMAGE_URL_MAX);
 
-        return $isUser && null === $picture ? self::MOUSE : $url;
+        return $answer;
+    }
+
+    /** @return array{string, string} */
+    private function splitAtLastAt(string $identity): array
+    {
+        $parts = explode('@', $identity);
+        $host = array_pop($parts);
+
+        return [implode('@', $parts), $host];
     }
 }

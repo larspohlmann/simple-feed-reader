@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Social\ProfilePictureSource;
 
 use App\Entity\Feed;
+use App\Enum\SocialNetwork;
 use App\Repository\FeedRepository;
 use App\Service\Social\Bluesky\AppViewClient;
 use App\Service\Social\Bluesky\Exception\AppViewAnswerException;
@@ -18,7 +19,6 @@ use App\Service\Social\Social\Support\ProfileIdentity;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
-use App\Enum\SocialNetwork;
 
 /**
  * Fills and refreshes the pictures of Bluesky profile and author feeds, whose RSS or timeline carries none, from the

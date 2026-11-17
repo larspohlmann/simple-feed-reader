@@ -169,6 +169,7 @@ final class BlueskyProfilePicturesTest extends DbTestCase
 
         self::assertNull($feed->getImageCheckedAt());
         self::assertSame(0, $report->checked);
+        self::assertSame(1, $report->calls);
     }
 
     public function testAThrottledAppViewIsNotAsked(): void
