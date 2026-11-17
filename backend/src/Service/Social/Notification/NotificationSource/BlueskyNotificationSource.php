@@ -11,12 +11,13 @@ use App\Entity\SocialNotification;
 use App\Enum\SocialNetwork;
 use App\Enum\SocialNotificationKind;
 use App\Service\Foundation\Clock\NaiveUtcClock;
-use App\Service\Social\Bluesky\AppViewClient;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Bluesky\Support\AtPostUri;
 use App\Service\Social\Bluesky\Support\BlueskyWeb;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
+use App\Service\Social\Notification\BlueskyPostLookup;
 use App\Service\Social\Notification\Model\NotificationPageModel;
+use App\Service\Social\Notification\Support\BlueskyReplyReferences;
 use App\Service\Social\Notification\Support\Excerpt;
 use App\Service\Social\Notification\Support\NetworkTimestamp;
 use App\Service\Social\Social\BlueskySessions;
@@ -29,10 +30,10 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
     private const string UNREAD_COUNT = '/xrpc/app.bsky.notification.getUnreadCount';
     private const string LIST = '/xrpc/app.bsky.notification.listNotifications?limit=50';
     private const string UPDATE_SEEN = '/xrpc/app.bsky.notification.updateSeen';
-    private const string GET_POSTS = '/xrpc/app.bsky.feed.getPosts?';
 
     public function __construct(
         private BlueskySessions $sessions,
+        private BlueskyPostLookup $posts,
         private NaiveUtcClock $clock,
     ) {
     }
@@ -120,19 +121,10 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
      */
     private function postTexts(SocialAccount $account, array $postUris): array
     {
-        $texts = [];
-        foreach (array_chunk($postUris, AppViewClient::URIS_PER_CALL) as $uris) {
-            $query = implode('&', array_map(static fn (string $uri): string => 'uris=' . rawurlencode($uri), $uris));
-            $answer = BlueskySessions::accepted($this->sessions->askAs($account, self::GET_POSTS . $query));
-            foreach (JsonNodeModel::of($answer->json())->nodes('posts') as $post) {
-                $uri = $post->string('uri');
-                if ($uri !== null) {
-                    $texts[$uri] = $post->node('record')->text('text') ?? '';
-                }
-            }
-        }
-
-        return $texts;
+        return array_map(
+            static fn (JsonNodeModel $post): string => $post->node('record')->text('text') ?? '',
+            $this->posts->byUri($account, $postUris),
+        );
     }
 
     /** @param array<string, string> $postTexts */
@@ -159,6 +151,7 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
             self::subjectOf($kind, $entry, $remoteId, $profileUrl, $account, $postTexts),
             $createdAt,
             $entry->isTrue('isRead'),
+            BlueskyReplyReferences::of($entry->node('record'), $kind),
         );
     }
 

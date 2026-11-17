@@ -11,6 +11,8 @@ use App\Entity\SocialNotification;
 use App\Enum\SocialNotificationKind;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Notification\BlueskyPostLookup;
+use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Notification\NotificationSource\BlueskyNotificationSource;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
@@ -36,7 +38,7 @@ final class BlueskyNotificationSourceTest extends TestCase
         $page = $this->source($this->http())->fetch(SocialApiWiring::blueskyAccount());
 
         self::assertSame(
-            ['like', 'like', 'repost', 'repost', 'reply', 'mention', 'quote', 'follow'],
+            ['like', 'like', 'repost', 'repost', 'reply', 'mention', 'quote', 'follow', 'quote'],
             array_map(
                 static fn (FetchedNotificationModel $notification): string => $notification->kind->value,
                 $page->notifications,
@@ -75,6 +77,24 @@ final class BlueskyNotificationSourceTest extends TestCase
         );
     }
 
+    public function testRepliesAndQuotesPointAtWhatTheyAnswer(): void
+    {
+        $page = $this->source($this->http())->fetch(SocialApiWiring::blueskyAccount());
+
+        self::assertEquals(
+            new ContextReferenceModel(
+                'at://did:plc:alice/app.bsky.feed.post/3lmine',
+                'at://did:plc:zoe/app.bsky.feed.post/3lroot',
+            ),
+            $page->notifications[4]->references,
+        );
+        $quoted = new ContextReferenceModel('at://did:plc:alice/app.bsky.feed.post/3lquoted');
+        self::assertEquals($quoted, $page->notifications[6]->references);
+        self::assertEquals($quoted, $page->notifications[8]->references);
+        self::assertTrue($page->notifications[0]->references->isEmpty());
+        self::assertTrue($page->notifications[5]->references->isEmpty());
+    }
+
     public function testAsksOnePostLookupWithRepeatedUrisKeys(): void
     {
         $http = $this->http();
@@ -94,7 +114,7 @@ final class BlueskyNotificationSourceTest extends TestCase
         foreach ($page->notifications as $notification) {
             self::assertStringNotContainsString('did:plc:jon', $notification->remoteId);
         }
-        self::assertCount(8, $page->notifications);
+        self::assertCount(9, $page->notifications);
     }
 
     public function testSeenComesFromTheNetwork(): void
@@ -102,7 +122,7 @@ final class BlueskyNotificationSourceTest extends TestCase
         $page = $this->source($this->http())->fetch(SocialApiWiring::blueskyAccount());
 
         self::assertSame(
-            [false, false, false, true, true, true, true, true],
+            [false, false, false, true, true, true, true, true, true],
             array_map(
                 static fn (FetchedNotificationModel $notification): bool => $notification->seen,
                 $page->notifications,
@@ -238,8 +258,11 @@ final class BlueskyNotificationSourceTest extends TestCase
 
     private function source(RoutedHttpClient $http): BlueskyNotificationSource
     {
+        $sessions = SocialApiWiring::blueskySessions($http->client());
+
         return new BlueskyNotificationSource(
-            SocialApiWiring::blueskySessions($http->client()),
+            $sessions,
+            new BlueskyPostLookup($sessions),
             new NaiveUtcClock(new MockClock('2026-11-16 12:00:00', 'UTC')),
         );
     }

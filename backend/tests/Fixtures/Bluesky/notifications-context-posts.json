@@ -1,0 +1,37 @@
+{
+  "posts": [
+    {
+      "uri": "at://did:plc:alice/app.bsky.feed.post/3lmine",
+      "author": {
+        "did": "did:plc:alice",
+        "handle": "alice.bsky.social",
+        "displayName": "Alice"
+      },
+      "record": {
+        "text": "My own post"
+      }
+    },
+    {
+      "uri": "at://did:plc:zoe/app.bsky.feed.post/3lroot",
+      "author": {
+        "did": "did:plc:zoe",
+        "handle": "zoe.bsky.social",
+        "displayName": "Zoe"
+      },
+      "record": {
+        "text": "How do you all handle feeds?"
+      }
+    },
+    {
+      "uri": "at://did:plc:alice/app.bsky.feed.post/3lquoted",
+      "author": {
+        "did": "did:plc:alice",
+        "handle": "alice.bsky.social",
+        "displayName": "Alice"
+      },
+      "record": {
+        "text": "The post you quoted"
+      }
+    }
+  ]
+}
