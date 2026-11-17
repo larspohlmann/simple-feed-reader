@@ -20,6 +20,8 @@ final readonly class BlueskyRecords
 {
     private const string CREATE_RECORD = '/xrpc/com.atproto.repo.createRecord';
     private const string DELETE_RECORD = '/xrpc/com.atproto.repo.deleteRecord';
+    private const string GET_RECORD = '/xrpc/com.atproto.repo.getRecord';
+    private const string RECORD_NOT_FOUND = 'RecordNotFound';
 
     public function __construct(
         private BlueskySessions $sessions,
@@ -44,22 +46,42 @@ final readonly class BlueskyRecords
     }
 
     /**
-     * @param array<string, mixed> $fields the post record beyond its type and creation time
+     * @param array<string, mixed> $fields    the post record beyond its type and creation time
+     * @param string|null          $recordKey null lets Bluesky pick one
      *
      * @return string the AT URI Bluesky gave the new post
      *
      * @throws SocialNetworkUnreachableException when Bluesky answers without one
      */
-    public function createPost(SocialAccount $account, array $fields): string
+    public function createPost(SocialAccount $account, array $fields, ?string $recordKey): string
     {
         $answer = $this->sessions->actAs($account, self::CREATE_RECORD, [
             'repo' => $account->getIdentity(),
             'collection' => BlueskyRecordUri::POST,
+            ...(null === $recordKey ? [] : ['rkey' => $recordKey]),
             'record' => ['$type' => BlueskyRecordUri::POST, ...$fields, 'createdAt' => $this->now()],
         ]);
 
-        return JsonNodeModel::of($answer->json())->string('uri')
-            ?? throw new SocialNetworkUnreachableException('Bluesky took the post but named no address for it.');
+        return self::uriOf($answer->json(), 'Bluesky took the post but named no address for it.');
+    }
+
+    /**
+     * @return string|null the AT URI of the account's own post under $recordKey, null when it has none
+     *
+     * @throws SocialNetworkUnreachableException
+     */
+    public function findPost(SocialAccount $account, string $recordKey): ?string
+    {
+        $answer = $this->sessions->askAs($account, self::GET_RECORD . '?' . http_build_query([
+            'repo' => $account->getIdentity(),
+            'collection' => BlueskyRecordUri::POST,
+            'rkey' => $recordKey,
+        ]));
+        if (self::RECORD_NOT_FOUND === JsonNodeModel::of($answer->json())->string('error')) {
+            return null;
+        }
+
+        return self::uriOf(BlueskySessions::accepted($answer)->json(), 'Bluesky found the post but named no address.');
     }
 
     /**
@@ -82,6 +104,12 @@ final readonly class BlueskyRecords
         }
 
         return JsonNodeModel::of($answer->json())->has('commit') ? PostDeletion::Deleted : PostDeletion::AlreadyGone;
+    }
+
+    /** @param array<mixed> $answer */
+    private static function uriOf(array $answer, string $withoutOne): string
+    {
+        return JsonNodeModel::of($answer)->string('uri') ?? throw new SocialNetworkUnreachableException($withoutOne);
     }
 
     private function now(): string

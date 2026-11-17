@@ -9,8 +9,11 @@ use App\Enum\SocialNetwork;
 use App\Service\Social\Bluesky\Support\AtPostUri;
 use App\Service\Social\Social\BlueskyFacets;
 use App\Service\Social\Social\BlueskyExternalEmbeds;
+use App\Service\Social\Social\BlueskyPostKeys;
 use App\Service\Social\Social\BlueskyRecords;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostTooLongException;
+use App\Service\Social\Social\Model\BlueskyPostKeyModel;
 use App\Service\Social\Social\Model\PostDeletion;
 use App\Service\Social\Social\Model\PostDraftModel;
 use App\Service\Social\Social\Model\PublishedPostModel;
@@ -29,6 +32,7 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
         private BlueskyRecords $records,
         private BlueskyFacets $facets,
         private BlueskyExternalEmbeds $externalEmbeds,
+        private BlueskyPostKeys $postKeys,
     ) {
     }
 
@@ -62,14 +66,37 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
     {
         self::assertFits($draft);
 
-        $uri = $this->records->createPost($account, [
+        $fields = [
             'text' => $draft->text,
             ...$attachment,
             ...$this->facetsOf($draft->text),
             ...(null === $draft->language ? [] : ['langs' => [$draft->language]]),
-        ]);
+        ];
+        $uri = null === $draft->idempotencyKey
+            ? $this->records->createPost($account, $fields, null)
+            : $this->publishedOnce($account, $fields, $this->postKeys->recordKeyFor($account, $draft->idempotencyKey));
 
         return new PublishedPostModel($uri, AtPostUri::webUrl($uri));
+    }
+
+    /**
+     * The reference PDS answers a create on a record key already taken with a bare 500, so a failed create is looked
+     * up before it counts as failed.
+     *
+     * @param array<string, mixed> $fields
+     */
+    private function publishedOnce(SocialAccount $account, array $fields, BlueskyPostKeyModel $postKey): string
+    {
+        $existing = $postKey->seenBefore ? $this->records->findPost($account, $postKey->recordKey) : null;
+        if (null !== $existing) {
+            return $existing;
+        }
+
+        try {
+            return $this->records->createPost($account, $fields, $postKey->recordKey);
+        } catch (SocialNetworkUnreachableException $exception) {
+            return $this->records->findPost($account, $postKey->recordKey) ?? throw $exception;
+        }
     }
 
     /** @throws SocialPostTooLongException */

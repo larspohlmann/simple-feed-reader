@@ -51,6 +51,7 @@ use App\Tests\Support\StubPageCardReader;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Container\ContainerInterface;
 use Psr\Log\NullLogger;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -451,6 +452,7 @@ final class LinkPostsTest extends DbTestCase
                 SocialApiWiring::blueskySessions($client),
                 new NullLogger(),
             ),
+            SocialApiWiring::blueskyPostKeys(new ArrayAdapter()),
         );
 
         return $this->linkPostsOver(

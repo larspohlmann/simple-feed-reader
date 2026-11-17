@@ -120,6 +120,11 @@ framework:
                 adapter: cache.adapter.filesystem
                 default_lifetime: 604800
 
+            # The record key a Bluesky post went out under, per account and idempotency key (#2287).
+            social.bluesky_post_keys.cache:
+                adapter: cache.adapter.filesystem
+                default_lifetime: 86400
+
 when@test:
     framework:
         cache:
@@ -130,4 +135,6 @@ when@test:
                 # The suite's database starts empty every run while a filesystem pool would not: a stale tombstone
                 # would hide a recycled feed id's entries.
                 social.deleted_posts.cache:
+                    adapter: cache.adapter.array
+                social.bluesky_post_keys.cache:
                     adapter: cache.adapter.array
