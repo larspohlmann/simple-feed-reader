@@ -1,14 +1,14 @@
 <!-- The form wraps the panel so the footer's Send submits it, as in passkey-name-dialog. -->
 <form (submit)="send($event)" cdkTrapFocus>
   <app-overlay-panel fillOnMobile [heading]="headingKey() | transloco">
-    @if (state().status === 'loading') {
+    @if (primary().state().status === 'loading') {
       <app-skeleton [label]="copy() + '.loading' | transloco" [rows]="2" />
     }
-    @if (loadError(); as message) {
+    @if (primary().loadError(); as message) {
       <app-error-banner
         [message]="message"
         [actionLabel]="'reader.retry' | transloco"
-        (action)="load()"
+        (action)="primary().load()"
       />
     }
 
@@ -56,7 +56,7 @@
         </p>
       </div>
 
-      @if (visibility(); as current) {
+      @if (primary().visibility(); as current) {
         <app-field [label]="'reader.composer.visibility' | transloco">
           <select id="reply-visibility" (change)="chooseVisibility($event)">
             @for (option of visibilities; track option) {
@@ -87,7 +87,7 @@
       }
     }
 
-    @if (sendError(); as message) {
+    @if (primary().sendError(); as message) {
       <app-error-banner [message]="message" />
     }
 
