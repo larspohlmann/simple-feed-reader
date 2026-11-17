@@ -212,16 +212,13 @@ app-progress-rail {
   --card-hover-decoration: underline;
   --magazine-gap: var(--space-5);
 
-  /* No cards left, so the card colour becomes the sheet the column sits on. */
-  --airy-sheet: min(100%, calc(var(--magazine-measure) + 2 * var(--space-5)));
-
   /* Dark mode pulls this down to --surface-read so the sheet matches the open
      article; light keeps --surface-2, which the sheet needs to stay distinct
      from the page it floats on. */
   --airy-sheet-fill: var(--surface-2);
 
-  background: linear-gradient(var(--airy-sheet-fill), var(--airy-sheet-fill)) center center /
-    var(--airy-sheet) 100% no-repeat;
+  /* No cards left, so the card colour becomes the sheet the column sits on. */
+  @include list-chrome.sheet-column(var(--airy-sheet-fill));
 
   /* The rule between blocks is airy's only separator. In dark mode --border
      sits a hair off the sheet (--surface-2) and vanishes, so lift it well
