@@ -1,10 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Problem } from '../../../core/problem';
-import {
-  MockResizeObserver,
-  installMockResizeObserver,
-} from '../../../../testing/resize-observer-testing';
+import { fireResizeOf, installMockResizeObserver } from '../../../../testing/resize-observer-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { ListFrameComponent } from './list-frame.component';
 
@@ -46,7 +43,7 @@ function problemWith(status: number): Problem {
 function resizeHeaderTo(element: HTMLElement, height: number): void {
   const header = element.querySelector<HTMLElement>('.list-header')!;
   Object.defineProperty(header, 'offsetHeight', { configurable: true, value: height });
-  MockResizeObserver.instances.find((observer) => observer.targets.has(header))!.fire();
+  fireResizeOf(header);
 }
 
 describe('ListFrameComponent', () => {

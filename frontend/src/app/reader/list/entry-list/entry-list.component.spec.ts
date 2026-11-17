@@ -49,6 +49,7 @@ import {
 } from '../../../../testing/intersection-observer-testing';
 import {
   MockResizeObserver,
+  fireResizeOf,
   installMockResizeObserver,
 } from '../../../../testing/resize-observer-testing';
 
@@ -186,10 +187,6 @@ function fireRowsResize(fixture: ComponentFixture<EntryListComponent>): void {
   const rows = (fixture.nativeElement as HTMLElement).querySelector('.rows')!;
   const obs = MockResizeObserver.instances.find((observer) => observer.targets.has(rows));
   obs?.fire();
-}
-
-function fireResizeOf(element: Element): void {
-  MockResizeObserver.instances.find((observer) => observer.targets.has(element))?.fire();
 }
 
 describe('EntryListComponent', () => {
