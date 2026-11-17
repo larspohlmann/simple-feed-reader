@@ -10,6 +10,7 @@ use App\Service\Social\Social\PostWriter\BlueskyPostWriter;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\RoutesSocialApis;
 use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -41,6 +42,9 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         'imageUrl' => null,
         'siteName' => 'example.com',
     ]];
+    private const string PDS_SESSION = 'POST https://pds.example.test/xrpc/com.atproto.server.createSession';
+    private const string PDS_CREATE_RECORD = 'POST https://pds.example.test/xrpc/com.atproto.repo.createRecord';
+    private const string BLUESKY_POST_URL = 'https://bsky.app/profile/bob.test/post/3abc';
     private const string IDEMPOTENCY_KEY = '9b2f6c1e-4a7d-4c1b-8f3e-2d5a6b7c8d9e';
 
     /** Must match framework.rate_limiter.social_writes.limit in rate_limiter.yaml. */
@@ -85,10 +89,10 @@ final class SocialLinkPostControllerTest extends ApiTestCase
             'accounts' => [['id' => $account->requireId(), 'handle' => '@alice@mastodon.example']],
             'accountId' => $account->requireId(),
             'canSend' => true,
-            'maxCharacters' => 1000,
+            'maxCharacters' => 975,
             'visibility' => 'unlisted',
             'kind' => 'link',
-            'text' => "The article\n\nhttps://example.com/article",
+            'text' => 'The article',
             'target' => self::ARTICLE_HOST_CARD,
         ], $this->payload($client));
     }
@@ -117,7 +121,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         self::assertSame([], $this->http->requests);
     }
 
-    public function testTheLinkComposerStartsWithTheSelectedQuoteAboveTheLinkOnMastodon(): void
+    public function testTheLinkComposerStartsWithTheSelectedQuoteAloneOnMastodon(): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, [
             self::INSTANCE => new MockResponse('{"configuration":{"statuses":{"max_characters":500}}}'),
@@ -132,7 +136,8 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         );
 
         self::assertResponseIsSuccessful();
-        self::assertSame("“A line worth sharing”\n\nhttps://example.com/article", $this->payload($client)['text']);
+        self::assertSame('“A line worth sharing”', $this->payload($client)['text']);
+        self::assertSame(475, $this->payload($client)['maxCharacters']);
     }
 
     public function testTheLinkComposerStartsWithTheSelectedQuoteAloneOnBluesky(): void
@@ -165,7 +170,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
             . '&quote=' . rawurlencode('A line worth sharing'));
 
         self::assertResponseIsSuccessful();
-        self::assertSame("“A line worth sharing”\n\n" . $page, $this->payload($client)['text']);
+        self::assertSame('“A line worth sharing”', $this->payload($client)['text']);
     }
 
     public function testTheLinkComposerRefusesAQuoteLongerThanTheFrontendSends(): void
@@ -275,6 +280,65 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         self::assertContains('Idempotency-Key: ' . self::IDEMPOTENCY_KEY, $this->http->requests[0]['headers']);
     }
 
+    public function testBlankTextLinkPostIsPublishedOnBluesky(): void
+    {
+        $client = $this->clientRouting([...self::ROUTED_HOSTS, 'pds.example.test'], [
+            self::PDS_SESSION => SocialApiWiring::blueskySessionAnswer('jwt-1'),
+            self::PDS_CREATE_RECORD => new MockResponse(
+                '{"uri":"at://did:plc:alice/app.bsky.feed.post/3new","cid":"bafy-new"}',
+            ),
+        ]);
+        $user = $this->signIn($client, 'link-blank-bluesky@example.test');
+        $this->blueskyAccountOf($user);
+
+        $this->send($client, self::LINKS . 'bluesky&url=' . rawurlencode(self::ARTICLE_URL), ['text' => '']);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        $createRecord = array_last($this->http->requests);
+        self::assertIsArray($createRecord);
+        $created = json_decode($createRecord['body'], true);
+        self::assertIsArray($created);
+        self::assertIsArray($created['record']);
+        self::assertSame('', $created['record']['text']);
+        self::assertIsArray($created['record']['embed']);
+        self::assertSame('app.bsky.embed.external', $created['record']['embed']['$type']);
+    }
+
+    public function testBlankTextLinkPostIsPublishedOnMastodon(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [self::STATUSES => self::published()]);
+        $user = $this->signIn($client, 'link-blank-mastodon@example.test');
+        $this->mastodonAccountOf($user);
+
+        $this->send($client, self::MASTODON_LINKS . rawurlencode(self::ARTICLE_URL), ['text' => '']);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        self::assertSame(
+            ['status' => 'https://example.com/article?id=7'],
+            json_decode($this->http->requests[0]['body'], true),
+        );
+    }
+
+    public function testBlankTextOnAQuotedLinkIsRefused(): void
+    {
+        $client = $this->clientRouting([...self::ROUTED_HOSTS, 'pds.example.test', 'public.api.bsky.app'], [
+            'GET https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle=bob.test'
+                => new MockResponse('{"did":"did:plc:bob"}'),
+            self::PDS_SESSION => SocialApiWiring::blueskySessionAnswer('jwt-1'),
+            'GET https://pds.example.test/xrpc/app.bsky.feed.getPosts?uris='
+                . 'at%3A%2F%2Fdid%3Aplc%3Abob%2Fapp.bsky.feed.post%2F3abc' => new MockResponse(
+                    '{"posts":[{"uri":"at://did:plc:bob/app.bsky.feed.post/3abc","cid":"bafy-bob"}]}',
+                ),
+        ]);
+        $user = $this->signIn($client, 'link-blank-quote@example.test');
+        $this->blueskyAccountOf($user);
+
+        $this->send($client, self::LINKS . 'bluesky&url=' . rawurlencode(self::BLUESKY_POST_URL), ['text' => '  ']);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame('social_post_text_missing', $this->payload($client)['type']);
+    }
+
     #[DataProvider('invalidLinkPosts')]
     public function testALinkPostWithoutASharableUrlIsRejectedBeforeAnyCall(string $query, string $text): void
     {
@@ -300,7 +364,6 @@ final class SocialLinkPostControllerTest extends ApiTestCase
             '&url=' . rawurlencode('https://example.com/' . str_repeat('a', LinkCardContent::URL_MAX)),
             'Hi',
         ];
-        yield 'blank text' => ['&url=' . rawurlencode(self::ARTICLE_URL), '   '];
     }
 
     /** @return iterable<string, array{string}> */
@@ -341,6 +404,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         $client->request('GET', self::STATUS_COMPOSER);
 
         self::assertResponseIsSuccessful();
+        self::assertSame(500, $this->payload($client)['maxCharacters']);
         self::assertSame(
             [
                 'kind' => 'post',
@@ -401,7 +465,10 @@ final class SocialLinkPostControllerTest extends ApiTestCase
 
         self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
         self::assertSame([self::STATUS_SEARCH, self::STATUSES], $this->routesAsked());
-        self::assertSame(['status' => 'Look'], json_decode($this->http->requests[1]['body'], true));
+        self::assertSame(
+            ['status' => "Look\n\n" . self::MASTODON_POST_URL],
+            json_decode($this->http->requests[1]['body'], true),
+        );
     }
 
     public function testABlueskyPostSharedOnMastodonIsALinkPostAndItsComposerQuotesNothing(): void
@@ -424,7 +491,10 @@ final class SocialLinkPostControllerTest extends ApiTestCase
 
         self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
         self::assertSame([self::INSTANCE, self::OWN_ACCOUNT, self::STATUSES], $this->routesAsked());
-        self::assertSame(['status' => 'Look'], json_decode($this->http->requests[2]['body'], true));
+        self::assertSame(
+            ['status' => "Look\n\n" . $blueskyPost],
+            json_decode($this->http->requests[2]['body'], true),
+        );
     }
 
     public function testALinkPostDrawsOnTheWriteBudget(): void

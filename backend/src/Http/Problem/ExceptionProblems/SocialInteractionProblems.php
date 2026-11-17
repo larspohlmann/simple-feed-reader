@@ -13,6 +13,7 @@ use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Exception\SocialPostRemovedException;
+use App\Service\Social\Social\Exception\SocialPostTextMissingException;
 use App\Service\Social\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
 use Symfony\Component\HttpFoundation\Response;
@@ -51,6 +52,12 @@ final readonly class SocialInteractionProblems implements ExceptionProblemsInter
                 'social_post_refused',
                 'The network refused this action on the post',
                 Response::HTTP_CONFLICT,
+                $exception->getMessage(),
+            )),
+            $exception instanceof SocialPostTextMissingException => new ResolvedProblem(new ApiProblem(
+                'social_post_text_missing',
+                'The post needs some text',
+                Response::HTTP_UNPROCESSABLE_ENTITY,
                 $exception->getMessage(),
             )),
             $exception instanceof SocialPostTooLongException => new ResolvedProblem(new ApiProblem(

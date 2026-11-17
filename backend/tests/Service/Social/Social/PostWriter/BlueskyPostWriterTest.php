@@ -27,6 +27,7 @@ use App\Tests\Support\StubGuardedImageDownloader;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -38,7 +39,16 @@ final class BlueskyPostWriterTest extends TestCase
     private const string SESSION = 'POST https://pds.example.test/xrpc/com.atproto.server.createSession';
     private const string CREATE_RECORD = 'POST https://pds.example.test/xrpc/com.atproto.repo.createRecord';
     private const string DELETE_RECORD = 'POST https://pds.example.test/xrpc/com.atproto.repo.deleteRecord';
+    private const string GET_RECORD = 'GET https://pds.example.test/xrpc/com.atproto.repo.getRecord';
     private const string ARTICLE_URL = 'https://example.com/article';
+    private const string IDEMPOTENCY_KEY = 'composer-key-1';
+
+    private ArrayAdapter $postKeyCache;
+
+    protected function setUp(): void
+    {
+        $this->postKeyCache = new ArrayAdapter();
+    }
 
     public function testAReplyToATopLevelPostNamesThePostAsRootAndParent(): void
     {
@@ -217,6 +227,222 @@ final class BlueskyPostWriterTest extends TestCase
         $this->writer(new RoutedHttpClient([]))->delete(SocialApiWiring::blueskyAccount(), 'at://did:plc:alice/x/y');
     }
 
+    public function testFirstSendCreatesUnderTheRememberedKey(): void
+    {
+        $http = $this->creating();
+
+        $published = $this->writer($http)->reply(self::post(), self::keyedDraft());
+
+        $body = self::createRecordBody($http);
+        self::assertSame($this->rememberedRecordKey(), $body['rkey']);
+        self::assertSame([self::SESSION, self::CREATE_RECORD], $http->requestLines());
+        self::assertSame(self::REPLY_URI, $published->address);
+    }
+
+    public function testRetryReturnsThePostAlreadyCreated(): void
+    {
+        $recordKey = $this->rememberedRecordKey();
+        $http = new RoutedHttpClient([
+            self::SESSION => SocialApiWiring::blueskySessionAnswer('jwt-1'),
+            self::getRecordLine($recordKey) => self::recordFound($recordKey),
+        ]);
+
+        $published = $this->writer($http)->reply(self::post(), self::keyedDraft());
+
+        self::assertEquals(new PublishedPostModel(
+            self::ownPostUri($recordKey),
+            'https://bsky.app/profile/did:plc:alice/post/' . $recordKey,
+        ), $published);
+        self::assertSame([self::SESSION, self::getRecordLine($recordKey)], $http->requestLines());
+    }
+
+    public function testARetryThatFindsItsSharedPostNeverBuildsTheLinkCard(): void
+    {
+        $recordKey = $this->rememberedRecordKey();
+        $http = new RoutedHttpClient([
+            self::SESSION => SocialApiWiring::blueskySessionAnswer('jwt-1'),
+            self::getRecordLine($recordKey) => self::recordFound($recordKey),
+        ]);
+        $pageCards = $this->createMock(PageCardReaderInterface::class);
+        $pageCards->expects($this->never())->method('read');
+
+        $published = $this->writerReadingPagesWith($http, $pageCards)->share(
+            SocialApiWiring::blueskyAccount(),
+            self::ARTICLE_URL,
+            new PostDraftModel('Hi @bob.bsky.social', idempotencyKey: self::IDEMPOTENCY_KEY),
+        );
+
+        self::assertSame(self::ownPostUri($recordKey), $published->address);
+        self::assertSame([self::SESSION, self::getRecordLine($recordKey)], $http->requestLines());
+    }
+
+    public function testRetryCreatesWhenTheFirstAttemptNeverLanded(): void
+    {
+        $recordKey = $this->rememberedRecordKey();
+        $http = new RoutedHttpClient([
+            self::SESSION => SocialApiWiring::blueskySessionAnswer('jwt-1'),
+            self::getRecordLine($recordKey) => self::recordNotFound(),
+            self::CREATE_RECORD => self::created(),
+        ]);
+
+        $published = $this->writer($http)
+            ->share(SocialApiWiring::blueskyAccount(), self::ARTICLE_URL, self::keyedDraft());
+
+        self::assertSame($recordKey, self::createRecordBody($http)['rkey']);
+        self::assertSame(self::REPLY_URI, $published->address);
+    }
+
+    public function testRaceOnCreateResolvesToTheExistingPost(): void
+    {
+        $http = RoutedHttpClient::answering(fn (string $method, string $url): MockResponse => match (true) {
+            self::SESSION === $method . ' ' . $url => SocialApiWiring::blueskySessionAnswer('jwt-1'),
+            self::CREATE_RECORD === $method . ' ' . $url => self::duplicateRecordKey(),
+            default => self::recordFound($this->rememberedRecordKey()),
+        });
+
+        $published = $this->writer($http)->quote(self::post(), self::keyedDraft());
+
+        $recordKey = $this->rememberedRecordKey();
+        self::assertSame(self::ownPostUri($recordKey), $published->address);
+        self::assertSame(
+            [self::SESSION, self::CREATE_RECORD, self::getRecordLine($recordKey)],
+            $http->requestLines(),
+        );
+    }
+
+    public function testAFailedCreateWithNothingBehindItIsRethrown(): void
+    {
+        $http = RoutedHttpClient::answering(static fn (string $method, string $url): MockResponse => match (true) {
+            self::SESSION === $method . ' ' . $url => SocialApiWiring::blueskySessionAnswer('jwt-1'),
+            self::CREATE_RECORD === $method . ' ' . $url => self::duplicateRecordKey(),
+            default => self::recordNotFound(),
+        });
+
+        $this->expectException(SocialNetworkUnreachableException::class);
+        $this->expectExceptionMessage('Bluesky answered 500.');
+
+        $this->writer($http)->reply(self::post(), self::keyedDraft());
+    }
+
+    public function testARefusedCreateIsNotLookedUp(): void
+    {
+        $http = new RoutedHttpClient([
+            self::SESSION => SocialApiWiring::blueskySessionAnswer('jwt-1'),
+            self::CREATE_RECORD => new MockResponse(
+                '{"error":"InvalidRequest","message":"Invalid app.bsky.feed.post record"}',
+                ['http_code' => Response::HTTP_BAD_REQUEST],
+            ),
+        ]);
+
+        $this->expectException(SocialPostRefusedException::class);
+
+        try {
+            $this->writer($http)->reply(self::post(), self::keyedDraft());
+        } finally {
+            self::assertSame([self::SESSION, self::CREATE_RECORD], $http->requestLines());
+        }
+    }
+
+    public function testALookupBlueskyCannotAnswerIsAnUnreachableNetwork(): void
+    {
+        $recordKey = $this->rememberedRecordKey();
+        $http = new RoutedHttpClient([
+            self::SESSION => SocialApiWiring::blueskySessionAnswer('jwt-1'),
+            self::getRecordLine($recordKey) => new MockResponse(
+                '{"error":"InvalidRequest","message":"Could not locate record"}',
+                ['http_code' => Response::HTTP_BAD_REQUEST],
+            ),
+        ]);
+
+        $this->expectException(SocialNetworkUnreachableException::class);
+
+        $this->writer($http)->reply(self::post(), self::keyedDraft());
+    }
+
+    public function testAFoundRecordWithoutItsAddressIsAnUnreachableNetwork(): void
+    {
+        $recordKey = $this->rememberedRecordKey();
+        $http = new RoutedHttpClient([
+            self::SESSION => SocialApiWiring::blueskySessionAnswer('jwt-1'),
+            self::getRecordLine($recordKey) => new MockResponse('{}'),
+        ]);
+
+        $this->expectException(SocialNetworkUnreachableException::class);
+
+        $this->writer($http)->reply(self::post(), self::keyedDraft());
+    }
+
+    public function testWithoutAKeyNothingChanges(): void
+    {
+        $http = $this->creating();
+
+        $this->writer($http)->reply(self::post(), new PostDraftModel('Hi'));
+
+        self::assertArrayNotHasKey('rkey', self::createRecordBody($http));
+        self::assertSame([self::SESSION, self::CREATE_RECORD], $http->requestLines());
+    }
+
+    private function rememberedRecordKey(): string
+    {
+        return SocialApiWiring::blueskyPostKeys($this->postKeyCache)
+            ->recordKeyFor(SocialApiWiring::blueskyAccount(), self::IDEMPOTENCY_KEY)
+            ->recordKey;
+    }
+
+    private static function keyedDraft(): PostDraftModel
+    {
+        return new PostDraftModel('Hi', idempotencyKey: self::IDEMPOTENCY_KEY);
+    }
+
+    private static function ownPostUri(string $recordKey): string
+    {
+        return 'at://did:plc:alice/app.bsky.feed.post/' . $recordKey;
+    }
+
+    private static function getRecordLine(string $recordKey): string
+    {
+        return self::GET_RECORD . '?repo=did%3Aplc%3Aalice&collection=app.bsky.feed.post&rkey=' . $recordKey;
+    }
+
+    private static function recordFound(string $recordKey): MockResponse
+    {
+        return new MockResponse(json_encode(
+            ['uri' => self::ownPostUri($recordKey), 'cid' => 'bafy-own', 'value' => ['text' => 'Hi']],
+            \JSON_THROW_ON_ERROR,
+        ));
+    }
+
+    private static function recordNotFound(): MockResponse
+    {
+        return new MockResponse(
+            '{"error":"RecordNotFound","message":"Could not locate record"}',
+            ['http_code' => Response::HTTP_BAD_REQUEST],
+        );
+    }
+
+    private static function duplicateRecordKey(): MockResponse
+    {
+        return new MockResponse(
+            '{"error":"InternalServerError","message":"Internal Server Error"}',
+            ['http_code' => Response::HTTP_INTERNAL_SERVER_ERROR],
+        );
+    }
+
+    /** @return array<mixed> */
+    private static function createRecordBody(RoutedHttpClient $http): array
+    {
+        foreach ($http->requests as $request) {
+            if (self::CREATE_RECORD === $request['method'] . ' ' . $request['url']) {
+                $body = json_decode($request['body'], true);
+                self::assertIsArray($body);
+
+                return $body;
+            }
+        }
+
+        self::fail('No record was created.');
+    }
+
     private function deleting(MockResponse $answer): RoutedHttpClient
     {
         return new RoutedHttpClient([
@@ -239,10 +465,13 @@ final class BlueskyPostWriterTest extends TestCase
     {
         return new RoutedHttpClient([
             self::SESSION => SocialApiWiring::blueskySessionAnswer('jwt-1'),
-            self::CREATE_RECORD => new MockResponse(
-                json_encode(['uri' => self::REPLY_URI, 'cid' => 'bafy-rep'], \JSON_THROW_ON_ERROR),
-            ),
+            self::CREATE_RECORD => self::created(),
         ]);
+    }
+
+    private static function created(): MockResponse
+    {
+        return new MockResponse(json_encode(['uri' => self::REPLY_URI, 'cid' => 'bafy-rep'], \JSON_THROW_ON_ERROR));
     }
 
     private function writer(RoutedHttpClient $http): BlueskyPostWriter
@@ -270,6 +499,7 @@ final class BlueskyPostWriterTest extends TestCase
                 SocialApiWiring::blueskySessions($http->client()),
                 new NullLogger(),
             ),
+            SocialApiWiring::blueskyPostKeys($this->postKeyCache),
         );
     }
 

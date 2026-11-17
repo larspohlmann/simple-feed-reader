@@ -2,7 +2,6 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
-  DestroyRef,
   computed,
   effect,
   inject,
@@ -10,44 +9,45 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { HttpErrorResponse } from '@angular/common/http';
+import { NgTemplateOutlet } from '@angular/common';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
-import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { Subscription } from 'rxjs';
-import { parseProblem, problemText } from '../../../core/problem';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { filter, finalize, merge } from 'rxjs';
+import { LanguageService } from '../../../core/i18n/language.service';
+import { networkList } from '../../../core/network-list';
+import { SOCIAL_NETWORK_NAMES } from '../../../core/social-network';
 import { ButtonComponent } from '../../../shared/button/button.component';
 import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
 import { FieldComponent } from '../../../shared/field/field.component';
-import { inputValue } from '../../../shared/input-value';
+import { IconComponent } from '../../../shared/icon/icon.component';
+import { inputChecked, inputValue } from '../../../shared/input-value';
+import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
 import { OverlayPanelComponent } from '../../../shared/overlay-panel/overlay-panel.component';
-import { randomUuid } from '../../../shared/random-uuid';
 import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
 import {
   ComposerContextDto,
   ComposerKind,
   MASTODON_VISIBILITIES,
   MastodonVisibility,
-  PublishedPostDto,
-  PostDraftDto,
   PostTargetDto,
 } from '../../entry-social';
-import { SocialPostApi } from '../../social-post-api';
 import { SentPost } from './composed-post';
+import { ComposerLane, SharedDraft } from './composer-lane';
+import { ComposerLanes } from './composer-lanes';
 import { ComposerSubjectComponent } from './composer-subject.component';
+import { NetworkPillsComponent } from './network-pills.component';
 import { postLength } from './post-length';
-
-type ContextState =
-  | { status: 'loading' }
-  | { status: 'ready'; context: ComposerContextDto }
-  | { status: 'failed'; message: string };
 
 /**
  * Writes a reply to a Lemmy post or comment, a reply to or a quote of a Bluesky or Mastodon post, or a post of a shared URL.
  * Closing never asks: typed text is discarded.
- * It stays open while a post is on the wire, so the reader always learns what was published.
- * A failed send keeps the text and says why; a resend carries the key minted on open, so Mastodon
- * publishes the post once.
+ * It stays open while a post is on the wire, and once one went out it closes only with it, so
+ * the reader always learns what was published.
+ * Send posts to every active network still to post. A failed send keeps the text and says why;
+ * a resend reaches only the networks that failed, each under the key its lane minted, so no
+ * network publishes the post twice.
  */
 @Component({
   selector: 'app-composer-dialog',
@@ -57,6 +57,10 @@ type ContextState =
     ComposerSubjectComponent,
     ErrorBannerComponent,
     FieldComponent,
+    IconComponent,
+    NetworkLogoComponent,
+    NetworkPillsComponent,
+    NgTemplateOutlet,
     OverlayPanelComponent,
     SkeletonComponent,
     TranslocoPipe,
@@ -64,66 +68,133 @@ type ContextState =
   templateUrl: './composer-dialog.component.html',
   styleUrl: './composer-dialog.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [ComposerLanes],
 })
 export class ComposerDialogComponent {
-  protected readonly ref = inject<DialogRef<SentPost>>(DialogRef);
+  protected readonly ref = inject<DialogRef<SentPost[]>>(DialogRef);
   protected readonly target = inject<PostTargetDto>(DIALOG_DATA);
-  private readonly api = inject(SocialPostApi);
-  private readonly i18n = inject(TranslocoService);
-  private readonly idempotencyKey = randomUuid();
+  protected readonly lanes = inject(ComposerLanes);
+  private readonly language = inject(LanguageService).lang;
   private readonly textField = viewChild<ElementRef<HTMLTextAreaElement>>('textField');
 
   protected readonly visibilities = MASTODON_VISIBILITIES;
-  protected readonly state = signal<ContextState>({ status: 'loading' });
-  protected readonly text = signal('');
+  protected readonly names = SOCIAL_NETWORK_NAMES;
+  protected readonly primary = this.lanes.primary;
   private textTouched = false;
+  protected readonly text = linkedSignal<string | undefined, string>({
+    source: () => this.lanes.picked().context()?.text,
+    computation: (starting, previous) =>
+      this.textTouched || starting === undefined ? (previous?.value ?? '') : starting,
+  });
   private readonly caretBeforeText = this.target.kind === 'link' && this.target.quote !== null;
-  protected readonly visibility = signal<MastodonVisibility | null>(null);
-  protected readonly contentWarning = signal<string | null>(null);
-  private readonly accountId = signal<number | undefined>(undefined);
-  private visibilityChosen = false;
-  private loading = Subscription.EMPTY;
   protected readonly sending = signal(false);
-  protected readonly sendError = signal<string | null>(null);
+  private readonly holdsOpen = computed(() => this.sending() || this.lanes.sentPosts().length > 0);
 
-  protected readonly context = computed(() => {
-    const state = this.state();
-    return state.status === 'ready' ? state.context : null;
-  });
-  protected readonly loadError = computed(() => {
-    const state = this.state();
-    return state.status === 'failed' ? state.message : null;
-  });
+  protected readonly context = computed(() => this.primary().context());
   private readonly kind = linkedSignal<ComposerContextDto | null, ComposerKind>({
     source: this.context,
     computation: (context, previous) => context?.kind ?? previous?.value ?? this.target.kind,
   });
-  protected readonly forbiddenKey = computed(() => {
-    const context = this.context();
-    if (context === null || context.canSend || context.kind === 'link') return null;
-    return `reader.${context.kind}Forbidden.${this.target.network}`;
-  });
+  private readonly activeNetworks = computed(() =>
+    this.lanes.active().map(({ network }) => network),
+  );
+  private readonly crossposts = computed(() => this.activeNetworks().length > 1);
+  protected readonly forbiddenKeys = computed(() =>
+    this.lanes.active().flatMap((lane) => {
+      const context = lane.context();
+      if (context === null || context.canSend || context.kind === 'link') return [];
+      return [`reader.${context.kind}Forbidden.${lane.network}`];
+    }),
+  );
   /** Where the words that differ between a reply, a quote and a link post live. */
   protected readonly copy = computed(() => `reader.composer.${this.kind()}`);
-  protected readonly headingKey = computed(() => `reader.${this.kind()}.${this.target.network}`);
-  protected readonly used = computed(() => postLength(this.text(), this.target.network));
-  protected readonly over = computed(() => {
-    const max = this.context()?.maxCharacters;
-    return max !== undefined && this.used() > max;
+  protected readonly heading = computed(() => {
+    if (!this.crossposts()) {
+      return { key: `reader.${this.kind()}.${this.primary().network}`, params: {} };
+    }
+    const networks = networkList(this.activeNetworks(), this.language());
+    return { key: 'reader.link.many', params: { networks } };
   });
+  protected readonly sendLabel = computed(() => {
+    const pending = this.lanes.pending();
+    if (this.lanes.sentPosts().length === 0 || pending.length === 0) {
+      return { key: this.sendKey(), params: {} };
+    }
+    const network = networkList(
+      pending.map(({ network }) => network),
+      this.language(),
+    );
+    return { key: 'reader.composer.retry', params: { network } };
+  });
+  private readonly sendKey = computed(() => {
+    const count = this.activeNetworks().length;
+    if (count === 2) return 'reader.composer.link.sendBoth';
+    return count > 2 ? 'reader.composer.link.send' : `${this.copy()}.send`;
+  });
+  protected readonly counters = computed(() =>
+    this.lanes.active().flatMap((lane) => {
+      const max = lane.context()?.maxCharacters;
+      if (max === undefined) return [];
+      const used = postLength(this.text(), lane.network);
+      return [
+        { lane: lane.network, network: this.names[lane.network], used, max, over: used > max },
+      ];
+    }),
+  );
+  private readonly pendingFit = computed(() => {
+    const over = this.counters()
+      .filter((counter) => counter.over)
+      .map((counter) => counter.lane);
+    return this.lanes
+      .pending()
+      .every((lane) => lane.context()?.canSend === true && !over.includes(lane.network));
+  });
+  protected readonly accountLabel = computed(() =>
+    this.crossposts() ? 'reader.composer.accountOn' : `${this.copy()}.account`,
+  );
+  protected readonly writable = computed(() =>
+    this.lanes.active().some((lane) => lane.context()?.canSend === true),
+  );
+  protected readonly appendedUrl = computed(() => {
+    const subject = this.lanes
+      .active()
+      .find((lane) => lane.network === 'mastodon' && lane.context()?.kind === 'link')
+      ?.context()?.target;
+    return subject?.kind === 'link' ? subject.card.url : null;
+  });
+  protected readonly kindNotes = computed(() => {
+    const shown = this.kind();
+    return KIND_NOTES.flatMap(({ kind, key }) => {
+      if (kind === shown) return [];
+      const networks = this.lanes
+        .active()
+        .filter((lane) => lane.context()?.kind === kind)
+        .map(({ network }) => network);
+      if (networks.length === 0) return [];
+      return [{ key, networks, network: networkList(networks, this.language()) }];
+    });
+  });
+  private readonly textOptional = computed(() =>
+    this.lanes.pending().every((lane) => lane.context()?.kind === 'link'),
+  );
   protected readonly canSend = computed(
     () =>
-      this.context()?.canSend === true &&
-      this.text().trim() !== '' &&
-      !this.over() &&
+      this.lanes.pending().length > 0 &&
+      this.pendingFit() &&
+      (this.textOptional() || this.text().trim() !== '') &&
       !this.sending(),
   );
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.loading.unsubscribe());
-    this.load();
+    this.lanes.init(this.target);
     // The field appears only once the context loads, after the focus trap placed its initial focus.
     effect(() => this.placeCaret(this.textField()?.nativeElement));
+    merge(
+      this.ref.backdropClick,
+      this.ref.keydownEvents.pipe(filter((event) => event.key === 'Escape')),
+    )
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.dismiss());
   }
 
   private placeCaret(field: HTMLTextAreaElement | undefined): void {
@@ -132,20 +203,16 @@ export class ComposerDialogComponent {
     if (this.caretBeforeText && !this.textTouched) field.setSelectionRange(0, 0);
   }
 
-  /** A newer load drops the one still on the wire, so a slow answer never replaces a later choice. */
-  protected load(): void {
-    this.loading.unsubscribe();
-    this.state.set({ status: 'loading' });
-    this.loading = this.api.composer(this.target, this.accountId()).subscribe({
-      next: (context) => this.adopt(context),
-      error: (error: HttpErrorResponse) =>
-        this.state.set({ status: 'failed', message: problemText(parseProblem(error), this.i18n) }),
-    });
+  protected networkName(lane: ComposerLane): string {
+    return this.names[lane.network];
   }
 
-  protected chooseAccount(event: Event): void {
-    this.accountId.set(Number(inputValue(event)));
-    this.load();
+  protected controlId(control: string, lane: ComposerLane): string {
+    return this.lanes.showsPills() ? `reply-${control}-${lane.network}` : `reply-${control}`;
+  }
+
+  protected chooseAccount(lane: ComposerLane, event: Event): void {
+    lane.chooseAccount(Number(inputValue(event)));
   }
 
   protected write(event: Event): void {
@@ -159,67 +226,57 @@ export class ComposerDialogComponent {
     this.textField()?.nativeElement.focus();
   }
 
-  protected chooseVisibility(event: Event): void {
-    this.visibility.set(inputValue(event) as MastodonVisibility);
-    this.visibilityChosen = true;
+  protected chooseVisibility(lane: ComposerLane, event: Event): void {
+    lane.chooseVisibility(inputValue(event) as MastodonVisibility);
   }
 
-  protected toggleWarning(event: Event): void {
-    this.contentWarning.set((event.target as HTMLInputElement).checked ? '' : null);
+  protected toggleWarning(lane: ComposerLane, event: Event): void {
+    lane.contentWarning.set(inputChecked(event) ? '' : null);
   }
 
-  protected writeWarning(event: Event): void {
-    this.contentWarning.set(inputValue(event));
+  protected writeWarning(lane: ComposerLane, event: Event): void {
+    lane.contentWarning.set(inputValue(event));
   }
 
   protected send(event: Event): void {
     event.preventDefault();
-    const context = this.context();
-    if (!this.canSend() || context === null) return;
-    this.sending.set(true);
-    this.ref.disableClose = true;
-    this.sendError.set(null);
-    this.api.send(this.target, this.draftFor(context)).subscribe({
-      next: (published) => this.ref.close(this.sentAs(published, context)),
-      error: (error: HttpErrorResponse) => {
-        this.sending.set(false);
-        this.ref.disableClose = false;
-        this.sendError.set(problemText(parseProblem(error), this.i18n));
-      },
-    });
+    if (!this.canSend()) return;
+    this.holdOpen(true);
+    this.lanes
+      .sendAll(this.sharedDraft(), this.text())
+      .pipe(finalize(() => this.holdOpen(false)))
+      .subscribe({ complete: () => this.closeOnceAllSent() });
   }
 
-  private adopt(context: ComposerContextDto): void {
-    this.state.set({ status: 'ready', context });
-    if (!this.visibilityChosen) this.visibility.set(context.visibility);
-    if (!this.textTouched) this.text.set(context.text);
+  protected cancel(): void {
+    const sent = this.lanes.sentPosts();
+    if (sent.length === 0) this.ref.close();
+    else this.ref.close(sent);
   }
 
-  private sentAs(published: PublishedPostDto, context: ComposerContextDto): SentPost {
-    const account = context.accounts.find((candidate) => candidate.id === context.accountId);
-    return {
-      ...published,
-      kind: context.kind,
-      network: this.target.network,
-      text: this.text(),
-      authorHandle: account?.handle ?? null,
-      target: context.target,
-    };
+  private holdOpen(sending: boolean): void {
+    this.sending.set(sending);
+    this.ref.disableClose = this.holdsOpen();
   }
 
-  private draftFor(context: ComposerContextDto): PostDraftDto {
-    const visibility = this.visibility();
-    const warning = this.contentWarning()?.trim() ?? '';
-    return {
-      text: this.text(),
-      accountId: context.accountId,
-      language: browserLanguage(),
-      idempotencyKey: this.idempotencyKey,
-      ...(visibility === null ? {} : { visibility }),
-      ...(warning === '' ? {} : { contentWarning: warning }),
-    };
+  /** The dialog closes itself on Escape or a backdrop click until a post went out. */
+  private dismiss(): void {
+    if (this.holdsOpen() && !this.sending()) this.cancel();
+  }
+
+  private closeOnceAllSent(): void {
+    if (this.lanes.pending().length === 0) this.ref.close(this.lanes.sentPosts());
+  }
+
+  private sharedDraft(): SharedDraft {
+    return { text: this.text(), language: browserLanguage() };
   }
 }
+
+const KIND_NOTES: readonly { kind: ComposerKind; key: string }[] = [
+  { kind: 'link', key: 'reader.composer.sharesAsLink' },
+  { kind: 'quote', key: 'reader.composer.quotesPost' },
+];
 
 function browserLanguage(): string | null {
   const primary = navigator.language.split('-')[0]?.toLowerCase() ?? '';

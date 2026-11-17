@@ -21,6 +21,12 @@ final readonly class ComposerDefaultsModel
     }
 
     #[\NoDiscard]
+    public function withMaxCharacters(int $maxCharacters): self
+    {
+        return clone($this, ['maxCharacters' => $maxCharacters]);
+    }
+
+    #[\NoDiscard]
     public function withoutMentions(): self
     {
         return clone($this, ['mentions' => []]);

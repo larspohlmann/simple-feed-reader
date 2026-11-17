@@ -13,6 +13,7 @@ use App\Service\Ingestion\Refresh\PassFetcher\ConcurrentPassFetcher;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Social\Social\BlueskyApiClient;
 use App\Service\Social\Social\BlueskyIdentityResolver;
+use App\Service\Social\Social\BlueskyPostKeys;
 use App\Service\Social\Social\BlueskyRecords;
 use App\Service\Social\Social\BlueskySessionCache;
 use App\Service\Social\Social\BlueskySessionOpener;
@@ -81,6 +82,13 @@ final class SocialApiWiring
             self::blueskySessions($http),
             new NaiveUtcClock(new MockClock(new \DateTimeImmutable($now))),
         );
+    }
+
+    public static function blueskyPostKeys(
+        ArrayAdapter $cache,
+        string $now = '2026-10-13T08:30:00.123+02:00',
+    ): BlueskyPostKeys {
+        return new BlueskyPostKeys($cache, new NaiveUtcClock(new MockClock(new \DateTimeImmutable($now))));
     }
 
     public static function blueskyIdentityResolver(HttpClientInterface $http): BlueskyIdentityResolver

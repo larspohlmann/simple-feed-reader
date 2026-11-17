@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Dto\Social\LinkPostDraftRequest;
 use App\Dto\Social\LinkTargetQuery;
-use App\Dto\Social\PostDraftRequest;
 use App\Entity\User;
 use App\Http\ComposerContextJson;
 use App\Http\PublishedPostJson;
@@ -50,7 +50,7 @@ final readonly class SocialLinkPostController
     #[Route('/links', name: 'api_social_link', methods: ['POST'])]
     public function link(
         #[CurrentUser] User $user,
-        #[MapRequestPayload] PostDraftRequest $request,
+        #[MapRequestPayload] LinkPostDraftRequest $request,
         #[MapQueryString(validationFailedStatusCode: Response::HTTP_UNPROCESSABLE_ENTITY)] LinkTargetQuery $query,
     ): JsonResponse {
         $this->rateLimitGuard->enforceForUser($this->socialWritesLimiter, $user);

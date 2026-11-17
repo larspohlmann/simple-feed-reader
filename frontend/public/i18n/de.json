@@ -1774,6 +1774,14 @@
     },
     "composer": {
       "counter": "{{ used }} / {{ max }}",
+      "namedCounter": "{{ network }} {{ used }} / {{ max }}",
+      "networkError": "{{ network }}: {{ message }}",
+      "accountOn": "{{ network }}-Konto",
+      "pillPosted": "Gepostet",
+      "retry": "{{ network }} erneut versuchen",
+      "linkAdded": "{{ network }} hängt {{ url }} an",
+      "quotesPost": "{{ network }} zitiert diesen Beitrag",
+      "sharesAsLink": "{{ network }} teilt diesen Beitrag als Link",
       "clear": "Text löschen",
       "visibility": "Sichtbarkeit",
       "visibilities": {
@@ -1800,7 +1808,8 @@
         "loading": "Beitrag wird vorbereitet",
         "account": "Posten als",
         "text": "Dein Beitrag",
-        "send": "Posten"
+        "send": "Posten",
+        "sendBoth": "Auf beiden posten"
       }
     },
     "deleteReply": {
@@ -1829,7 +1838,8 @@
     },
     "link": {
       "bluesky": "Auf Bluesky posten",
-      "mastodon": "Auf Mastodon posten"
+      "mastodon": "Auf Mastodon posten",
+      "many": "Auf {{ networks }} posten"
     },
     "posted": {
       "link": {
@@ -1840,6 +1850,7 @@
         "bluesky": "Zitat auf Bluesky veröffentlicht",
         "mastodon": "Zitat auf Mastodon veröffentlicht"
       },
+      "many": "Auf {{ networks }} veröffentlicht",
       "as": "Als {{ handle }}",
       "open": "Beitrag öffnen"
     }

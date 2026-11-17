@@ -29,4 +29,9 @@ final class FakeComposerDefaults implements ComposerDefaultsInterface
     {
         return new ComposerDefaultsModel(500, 'public');
     }
+
+    public function forLinkFrom(SocialAccount $account): ComposerDefaultsModel
+    {
+        return new ComposerDefaultsModel(475, 'public');
+    }
 }

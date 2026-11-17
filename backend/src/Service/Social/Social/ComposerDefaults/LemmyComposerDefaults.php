@@ -25,6 +25,11 @@ final readonly class LemmyComposerDefaults implements ComposerDefaultsInterface
         return self::defaults();
     }
 
+    public function forLinkFrom(SocialAccount $account): ComposerDefaultsModel
+    {
+        return self::defaults();
+    }
+
     private static function defaults(): ComposerDefaultsModel
     {
         return new ComposerDefaultsModel(self::MAX_CHARACTERS);

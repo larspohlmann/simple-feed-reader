@@ -24,6 +24,7 @@ import { FieldComponent } from '../../shared/field/field.component';
 import { PasswordInputComponent } from '../../shared/password-input/password-input.component';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { InfoTipComponent } from '../../shared/info-tip/info-tip.component';
+import { inputChecked } from '../../shared/input-value';
 import {
   SearchableSelectComponent,
   SelectOption,
@@ -294,11 +295,11 @@ export class AiSectionComponent {
   }
 
   toggleReasoning(config: AiConfig, event: Event): void {
-    this.ai.setReasoning(config.id, (event.target as HTMLInputElement).checked);
+    this.ai.setReasoning(config.id, inputChecked(event));
   }
 
   toggleSlowModel(config: AiConfig, event: Event): void {
-    this.ai.setSlowModel(config.id, (event.target as HTMLInputElement).checked);
+    this.ai.setSlowModel(config.id, inputChecked(event));
   }
 
   offersTuning(config: AiConfig, field: RecommendationTuningField): boolean {

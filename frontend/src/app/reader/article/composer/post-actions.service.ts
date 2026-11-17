@@ -38,7 +38,7 @@ export class PostActions {
 
   /** Replies to the entry's own post, or to the reply in its thread named by `address`. */
   reply(entryId: number, network: SocialNetworkName, address: string | null): void {
-    this.respond({ kind: 'reply', entryId, network, address }).subscribe((sent) => {
+    this.respond({ kind: 'reply', entryId, network, address }).subscribe(([sent]) => {
       this.comments.insertReply(entryId, address, sentComment(sent, new Date()));
       if (address === null) this.counts.stepReplies(entryId, true);
     });
@@ -46,17 +46,17 @@ export class PostActions {
 
   /** Quotes the entry's own post, or the reply in its thread named by `address`. */
   quote(entryId: number, network: SocialNetworkName, address: string | null): void {
-    this.respond({ kind: 'quote', entryId, network, address }).subscribe((sent) => {
+    this.respond({ kind: 'quote', entryId, network, address }).subscribe((posts) => {
       if (address === null) this.quotedPost(entryId);
       else this.comments.countQuote(entryId, address);
-      this.announce(sent);
+      this.announce(posts);
     });
   }
 
-  /** Emits once the link post went out; a closed composer emits nothing. */
-  postLink(network: SocialNetworkName, link: SharedLinkDto): Observable<SentPost> {
+  /** Emits the posts that went out; a closed composer emits nothing. */
+  postLink(network: SocialNetworkName, link: SharedLinkDto): Observable<SentPost[]> {
     return this.respond({ kind: 'link', network, ...link }).pipe(
-      tap((sent) => this.announce(sent)),
+      tap((posts) => this.announce(posts)),
     );
   }
 
@@ -116,14 +116,14 @@ export class PostActions {
     );
   }
 
-  /** Opens the composer; it answers the published post, and nothing when closed. */
-  private respond(target: PostTargetDto): Observable<SentPost> {
+  /** Opens the composer; it answers the published posts, and nothing when closed. */
+  private respond(target: PostTargetDto): Observable<SentPost[]> {
     return this.dialog
-      .open<SentPost, PostTargetDto>(ComposerDialogComponent, {
+      .open<SentPost[], PostTargetDto>(ComposerDialogComponent, {
         panelClass: 'app-dialog',
         data: target,
       })
-      .closed.pipe(filter((sent): sent is SentPost => sent !== undefined));
+      .closed.pipe(filter((posts): posts is SentPost[] => posts !== undefined));
   }
 
   private quotedPost(entryId: number): void {
@@ -137,10 +137,10 @@ export class PostActions {
     return this.transloco.translate('reader.deletePost.titleWithReplies', { count: replies });
   }
 
-  private announce(sent: SentPost): void {
-    this.dialog.open<void, SentPost>(PostSentDialogComponent, {
+  private announce(posts: SentPost[]): void {
+    this.dialog.open<void, SentPost[]>(PostSentDialogComponent, {
       panelClass: 'app-dialog',
-      data: sent,
+      data: posts,
     });
   }
 }

@@ -1,34 +1,55 @@
 <!-- The form wraps the panel so the footer's Send submits it, as in passkey-name-dialog. -->
 <form (submit)="send($event)" cdkTrapFocus>
-  <app-overlay-panel fillOnMobile [heading]="headingKey() | transloco">
-    @if (state().status === 'loading') {
-      <app-skeleton [label]="copy() + '.loading' | transloco" [rows]="2" />
-    }
-    @if (loadError(); as message) {
+  <app-overlay-panel fillOnMobile [heading]="heading().key | transloco: heading().params">
+    @if (lanes.showsPills()) {
+      <app-network-pills
+        [lanes]="lanes.lanes()"
+        [disabled]="sending()"
+        (toggleNetwork)="lanes.toggle($event)"
+      />
+      @for (lane of lanes.lanes(); track lane.network) {
+        @if (lane.error(); as error) {
+          <app-error-banner
+            [message]="
+              'reader.composer.networkError'
+                | transloco: { network: names[lane.network], message: error.message }
+            "
+            [actionLabel]="error.retries ? ('reader.retry' | transloco) : null"
+            (action)="lane.activate()"
+          />
+        }
+      }
+    } @else if (primary().loadError(); as message) {
       <app-error-banner
         [message]="message"
         [actionLabel]="'reader.retry' | transloco"
-        (action)="load()"
+        (action)="primary().load()"
       />
+    }
+    @if (context() === null && primary().state().status === 'loading') {
+      <app-skeleton [label]="copy() + '.loading' | transloco" [rows]="2" />
     }
 
     @if (context(); as context) {
       <app-composer-subject [subject]="context.target" />
+      @for (note of kindNotes(); track note.key) {
+        <p class="kind-note">
+          @for (network of note.networks; track network) {
+            <app-network-logo [network]="network" />
+          }
+          <span>{{ note.key | transloco: { network: note.network } }}</span>
+        </p>
+      }
 
-      @if (forbiddenKey(); as key) {
+      @for (key of forbiddenKeys(); track key) {
         <app-error-banner [message]="key | transloco" />
       }
 
-      @if (context.accounts.length > 1) {
-        <app-field [label]="copy() + '.account' | transloco">
-          <select id="reply-account" (change)="chooseAccount($event)">
-            @for (account of context.accounts; track account.id) {
-              <option [value]="account.id" [selected]="account.id === context.accountId">
-                {{ account.handle }}
-              </option>
-            }
-          </select>
-        </app-field>
+      @if (!lanes.showsPills() && context.accounts.length > 1) {
+        <ng-container
+          [ngTemplateOutlet]="accountSelect"
+          [ngTemplateOutletContext]="{ lane: primary(), laneContext: context }"
+        />
       }
 
       <app-field [label]="copy() + '.text' | transloco">
@@ -37,10 +58,18 @@
           id="reply-text"
           rows="5"
           [value]="text()"
-          [disabled]="!context.canSend"
+          [disabled]="!writable()"
           (input)="write($event)"
         ></textarea>
       </app-field>
+      @if (appendedUrl(); as url) {
+        <p class="fixed-url">
+          <app-icon name="link" size="xs" />
+          <span>{{
+            'reader.composer.linkAdded' | transloco: { network: names.mastodon, url }
+          }}</span>
+        </p>
+      }
       <div class="text-tools">
         <app-button
           class="clear"
@@ -51,47 +80,71 @@
         >
           {{ 'reader.composer.clear' | transloco }}
         </app-button>
-        <p class="counter" [class.over]="over()" aria-live="polite">
-          {{ 'reader.composer.counter' | transloco: { used: used(), max: context.maxCharacters } }}
+        <p class="counters" aria-live="polite">
+          @for (counter of counters(); track counter.network; let first = $first) {
+            @if (!first) {
+              <span class="counter-separator" aria-hidden="true">·</span>
+            }
+            <span class="counter" [class.over]="counter.over">
+              @if (counters().length > 1) {
+                {{ 'reader.composer.namedCounter' | transloco: counter }}
+              } @else {
+                {{ 'reader.composer.counter' | transloco: counter }}
+              }
+            </span>
+          }
         </p>
       </div>
 
-      @if (visibility(); as current) {
-        <app-field [label]="'reader.composer.visibility' | transloco">
-          <select id="reply-visibility" (change)="chooseVisibility($event)">
-            @for (option of visibilities; track option) {
-              <option [value]="option" [selected]="option === current">
-                {{ 'reader.composer.visibilities.' + option | transloco }}
-              </option>
-            }
-          </select>
-        </app-field>
-        <label class="warns">
-          <input
-            type="checkbox"
-            [checked]="contentWarning() !== null"
-            (change)="toggleWarning($event)"
-          />
-          {{ 'reader.composer.addWarning' | transloco }}
-        </label>
-        @if (contentWarning() !== null) {
-          <app-field [label]="'reader.composer.warning' | transloco">
-            <input
-              id="reply-warning"
-              maxlength="500"
-              [value]="contentWarning()"
-              (input)="writeWarning($event)"
+      @for (lane of lanes.active(); track lane.network) {
+        @if (lane.context(); as laneContext) {
+          @if (lanes.showsPills() && laneContext.accounts.length > 1) {
+            <ng-container
+              [ngTemplateOutlet]="accountSelect"
+              [ngTemplateOutletContext]="{ lane, laneContext }"
             />
-          </app-field>
+          }
+          @if (lane.visibility(); as current) {
+            <app-field [label]="'reader.composer.visibility' | transloco">
+              <select
+                [id]="controlId('visibility', lane)"
+                (change)="chooseVisibility(lane, $event)"
+              >
+                @for (option of visibilities; track option) {
+                  <option [value]="option" [selected]="option === current">
+                    {{ 'reader.composer.visibilities.' + option | transloco }}
+                  </option>
+                }
+              </select>
+            </app-field>
+            <label class="warns">
+              <input
+                type="checkbox"
+                [checked]="lane.contentWarning() !== null"
+                (change)="toggleWarning(lane, $event)"
+              />
+              {{ 'reader.composer.addWarning' | transloco }}
+            </label>
+            @if (lane.contentWarning() !== null) {
+              <app-field [label]="'reader.composer.warning' | transloco">
+                <input
+                  [id]="controlId('warning', lane)"
+                  maxlength="500"
+                  [value]="lane.contentWarning()"
+                  (input)="writeWarning(lane, $event)"
+                />
+              </app-field>
+            }
+          }
         }
       }
     }
 
-    @if (sendError(); as message) {
+    @if (!lanes.showsPills() && primary().sendError(); as message) {
       <app-error-banner [message]="message" />
     }
 
-    <app-button footer [disabled]="sending()" (click)="ref.close()">{{
+    <app-button footer [disabled]="sending()" (click)="cancel()">{{
       'dialog.cancel' | transloco
     }}</app-button>
     <app-button
@@ -101,7 +154,23 @@
       [loading]="sending()"
       [disabled]="!canSend()"
     >
-      {{ copy() + '.send' | transloco }}
+      {{ sendLabel().key | transloco: sendLabel().params }}
     </app-button>
   </app-overlay-panel>
 </form>
+
+<ng-template #accountSelect let-lane="lane" let-laneContext="laneContext">
+  <app-field [label]="accountLabel() | transloco: { network: networkName(lane) }">
+    <select
+      [id]="controlId('account', lane)"
+      [disabled]="sending() || lane.sent() !== null"
+      (change)="chooseAccount(lane, $event)"
+    >
+      @for (account of laneContext.accounts; track account.id) {
+        <option [value]="account.id" [selected]="account.id === laneContext.accountId">
+          {{ account.handle }}
+        </option>
+      }
+    </select>
+  </app-field>
+</ng-template>

@@ -40,7 +40,16 @@ final readonly class MastodonPostWriter implements PostWriterInterface
 
     public function share(SocialAccount $account, string $url, PostDraftModel $draft): PublishedPostModel
     {
-        return $this->published($account, $draft, []);
+        return $this->published($account, $draft->withText(self::textCarrying($url, $draft->text)), []);
+    }
+
+    private static function textCarrying(string $url, string $text): string
+    {
+        return match (true) {
+            '' === trim($text) => $url,
+            str_contains($text, $url) => $text,
+            default => $text . "\n\n" . $url,
+        };
     }
 
     /** @param array<string, string> $attachment the id the status answers or quotes */

@@ -81,6 +81,13 @@ final class MastodonComposerDefaultsTest extends TestCase
         self::assertEquals(new ComposerDefaultsModel(500, 'public', []), $defaults);
     }
 
+    public function testALinkPostLeavesRoomForTheBlankLineAndTheLinkMastodonAppends(): void
+    {
+        $defaults = $this->defaults($this->answering(1000, 'unlisted'))->forLinkFrom(SocialAccounts::mastodon());
+
+        self::assertEquals(new ComposerDefaultsModel(975, 'unlisted', []), $defaults);
+    }
+
     private function answering(int $maxCharacters, string $privacy): RoutedHttpClient
     {
         return new RoutedHttpClient([
