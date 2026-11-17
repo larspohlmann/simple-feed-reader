@@ -37,18 +37,18 @@ final class NotificationPageModelTest extends TestCase
         $page = new NotificationPageModel([$unseen, $seen, self::notification('b', $createdAt)], $createdAt);
         $context = new NotificationContext('You said');
 
-        $swapped = $page->withContexts(['a' => $context, 'z' => new NotificationContext('ignored')]);
+        $applied = $page->withContexts(['a' => $context, 'z' => new NotificationContext('ignored')]);
 
         self::assertEquals([$context, $context, new NotificationContext()], array_map(
             static fn (FetchedNotificationModel $notification): NotificationContext => $notification->subject->context,
-            $swapped->notifications,
+            $applied->notifications,
         ));
         self::assertSame([false, true, false], array_map(
             static fn (FetchedNotificationModel $notification): bool => $notification->seen,
-            $swapped->notifications,
+            $applied->notifications,
         ));
-        self::assertCount(3, $swapped->notifications);
-        self::assertSame($createdAt, $swapped->seenUntil);
+        self::assertCount(3, $applied->notifications);
+        self::assertSame($createdAt, $applied->seenUntil);
     }
 
     private static function notification(string $remoteId, \DateTimeImmutable $createdAt): FetchedNotificationModel

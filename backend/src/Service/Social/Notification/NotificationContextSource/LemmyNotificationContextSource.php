@@ -23,34 +23,30 @@ final readonly class LemmyNotificationContextSource implements NotificationConte
     {
     }
 
-    public function withContext(SocialAccount $account, array $fresh): array
+    public function contextsOf(SocialAccount $account, array $fresh): array
     {
-        $rows = [];
+        $contexts = [];
         $excerpts = [];
-        $throttled = false;
         foreach ($fresh as $row) {
             $answeredId = $row->references->answeredId;
-            if ($throttled || $answeredId === null) {
-                $rows[] = $row;
+            if ($answeredId === null) {
                 continue;
             }
             if (!array_key_exists($answeredId, $excerpts)) {
                 try {
                     $excerpts[$answeredId] = $this->excerptOf($account, $answeredId);
                 } catch (SocialNetworkThrottledException) {
-                    $throttled = true;
-                    $rows[] = $row;
-                    continue;
+                    break;
                 } catch (SocialPostNotFoundException | SocialPostRefusedException | SocialNetworkUnreachableException) {
                     $excerpts[$answeredId] = null;
                 }
             }
-            $rows[] = $excerpts[$answeredId] === null
-                ? $row
-                : $row->withContext($row->subject->context->withAnsweredExcerpt($excerpts[$answeredId]));
+            if ($excerpts[$answeredId] !== null) {
+                $contexts[$row->remoteId] = $row->subject->context->withAnsweredExcerpt($excerpts[$answeredId]);
+            }
         }
 
-        return $rows;
+        return $contexts;
     }
 
     private function excerptOf(SocialAccount $account, string $answeredId): ?string

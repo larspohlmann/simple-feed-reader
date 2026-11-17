@@ -22,22 +22,23 @@ final readonly class BlueskyNotificationContextSource implements NotificationCon
     {
     }
 
-    public function withContext(SocialAccount $account, array $fresh): array
+    public function contextsOf(SocialAccount $account, array $fresh): array
     {
         try {
             $posts = $this->posts->byUri($account, self::uris($account, $fresh));
         } catch (SocialNetworkUnreachableException) {
-            return $fresh;
+            return [];
         }
 
-        return array_map(
-            static fn (FetchedNotificationModel $row): FetchedNotificationModel => self::contextual(
-                $account,
-                $row,
-                $posts,
-            ),
-            $fresh,
-        );
+        $contexts = [];
+        foreach ($fresh as $row) {
+            $context = self::contextOf($account, $row, $posts);
+            if ($context !== null) {
+                $contexts[$row->remoteId] = $context;
+            }
+        }
+
+        return $contexts;
     }
 
     /**
@@ -71,26 +72,35 @@ final readonly class BlueskyNotificationContextSource implements NotificationCon
     }
 
     /** @param array<string, JsonNodeModel> $posts */
-    private static function contextual(
+    private static function contextOf(
         SocialAccount $account,
         FetchedNotificationModel $row,
         array $posts,
-    ): FetchedNotificationModel {
-        $context = $row->subject->context;
-        $ownAnswered = self::ownAnsweredOf($account, $row);
-        if ($ownAnswered !== null && isset($posts[$ownAnswered])) {
-            $context = self::answering($context, $posts[$ownAnswered]->node('record'));
+    ): ?NotificationContext {
+        $ownAnswered = self::postAt($posts, self::ownAnsweredOf($account, $row));
+        $threadRoot = self::postAt($posts, self::threadRootOf($account, $row));
+        if ($ownAnswered === null && $threadRoot === null) {
+            return null;
         }
-        $threadRoot = self::threadRootOf($account, $row);
-        if ($threadRoot !== null && isset($posts[$threadRoot])) {
-            $author = $posts[$threadRoot]->node('author');
+        $context = $row->subject->context;
+        if ($ownAnswered !== null) {
+            $context = self::answering($context, $ownAnswered->node('record'));
+        }
+        if ($threadRoot !== null) {
+            $author = $threadRoot->node('author');
             $context = $context->withThread(
-                Excerpt::of($posts[$threadRoot]->node('record')->text('text')),
+                Excerpt::of($threadRoot->node('record')->text('text')),
                 $author->string('displayName') ?? $author->string('handle'),
             );
         }
 
-        return $row->withContext($context);
+        return $context;
+    }
+
+    /** @param array<string, JsonNodeModel> $posts */
+    private static function postAt(array $posts, ?string $uri): ?JsonNodeModel
+    {
+        return $uri === null ? null : $posts[$uri] ?? null;
     }
 
     private static function answering(NotificationContext $context, JsonNodeModel $answeredRecord): NotificationContext

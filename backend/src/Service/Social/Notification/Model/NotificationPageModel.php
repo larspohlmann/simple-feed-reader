@@ -45,16 +45,4 @@ final readonly class NotificationPageModel
             $this->notifications,
         )]);
     }
-
-    /** @param list<FetchedNotificationModel> $completed */
-    #[\NoDiscard]
-    public function withSubjectsOf(array $completed): self
-    {
-        $contexts = [];
-        foreach ($completed as $fetched) {
-            $contexts[$fetched->remoteId] = $fetched->subject->context;
-        }
-
-        return $this->withContexts($contexts);
-    }
 }
