@@ -170,6 +170,25 @@ describe('ComposerDialogComponent', () => {
     expect(textArea(fixture).value).toBe('Kept');
   });
 
+  it('puts the account choice above the text in a reply, as before crossposting', () => {
+    api.composer.mockReturnValue(
+      of(
+        context({
+          accounts: [
+            { id: 4, handle: '@alice@mastodon.example' },
+            { id: 5, handle: '@bea@mastodon.example' },
+          ],
+        }),
+      ),
+    );
+    const fixture = mount();
+
+    const select = element(fixture).querySelector('#reply-account')!;
+    expect(
+      select.compareDocumentPosition(textArea(fixture)) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   describe('on a chosen account', () => {
     const accounts = [
       { id: 4, handle: '@alice@mastodon.example' },
@@ -810,6 +829,25 @@ describe('ComposerDialogComponent', () => {
       toggle(fixture, 'Mastodon');
 
       expect(counters(fixture)).toEqual(['Bluesky 34 / 300', 'Mastodon 34 / 475']);
+      expect(element(fixture).querySelector('.counters')?.textContent?.replace(/\s+/g, ' ')).toBe(
+        ' Bluesky 34 / 300 · Mastodon 34 / 475 ',
+      );
+    });
+
+    it('a single counter has no separator', () => {
+      const fixture = fromBluesky();
+
+      expect(element(fixture).querySelector('.counter-separator')).toBeNull();
+    });
+
+    it('puts each account choice under the text beside pills', () => {
+      blueskyContext = () => of(onBluesky({ accounts: blueskyAccounts }));
+      const fixture = fromBluesky();
+
+      const select = element(fixture).querySelector('#reply-account-bluesky')!;
+      expect(
+        textArea(fixture).compareDocumentPosition(select) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
     });
 
     it('an over-limit active lane turns Send off', () => {
@@ -849,9 +887,9 @@ describe('ComposerDialogComponent', () => {
         'app-field select[id$="-account-mastodon"]',
       );
       expect(selects).toHaveLength(1);
-      expect(element(fixture).textContent).toContain('Post as on Mastodon');
+      expect(element(fixture).textContent).toContain('Mastodon account');
       toggle(fixture, 'Bluesky');
-      expect(element(fixture).textContent).not.toContain('Post as on Mastodon');
+      expect(element(fixture).textContent).not.toContain('Mastodon account');
       expect(element(fixture).textContent).toContain('Post as');
     });
 
@@ -1005,6 +1043,17 @@ describe('ComposerDialogComponent', () => {
         expect(textArea(fixture).value).toBe(TITLE);
         expect(sendButton(fixture).textContent?.trim()).toBe('Retry Mastodon');
         expect(sendButton(fixture).disabled).toBe(false);
+      });
+
+      it('a failed lane switched off drops its send error', () => {
+        failMastodonOnce();
+        const fixture = bothOn();
+        submit(fixture);
+        expect(banners(fixture)).toHaveLength(1);
+
+        toggle(fixture, 'Mastodon');
+
+        expect(banners(fixture)).toHaveLength(0);
       });
 
       it('retry sends only Mastodon, under its first key', () => {
@@ -1177,6 +1226,15 @@ describe('ComposerDialogComponent', () => {
 
       expect(urlLine(fixture)?.textContent).toContain(`Mastodon adds ${URL_OF_STORY}`);
       expect(urlLine(fixture)?.querySelector('a, button, input, [tabindex]')).toBeNull();
+    });
+
+    it('names the URL the server appends, which the card carries without tracking', () => {
+      api.composer.mockReturnValue(of(forKind('link')));
+
+      const fixture = mount(article({ url: `${URL_OF_STORY}?utm_source=feed` }));
+
+      expect(urlLine(fixture)?.textContent).toContain(`Mastodon adds ${URL_OF_STORY}`);
+      expect(urlLine(fixture)?.textContent).not.toContain('utm_source');
     });
 
     it('a Mastodon quote lane shows no URL line', () => {

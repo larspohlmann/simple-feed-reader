@@ -1767,7 +1767,7 @@
       "counter": "{{ used }} / {{ max }}",
       "namedCounter": "{{ network }} {{ used }} / {{ max }}",
       "networkError": "{{ network }}: {{ message }}",
-      "accountOn": "Auf {{ network }} posten als",
+      "accountOn": "{{ network }}-Konto",
       "pillPosted": "Gepostet",
       "retry": "{{ network }} erneut versuchen",
       "linkAdded": "{{ network }} hängt {{ url }} an",

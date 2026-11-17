@@ -9,6 +9,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
@@ -58,6 +59,7 @@ import { postLength } from './post-length';
     IconComponent,
     NetworkLogoComponent,
     NetworkPillsComponent,
+    NgTemplateOutlet,
     OverlayPanelComponent,
     SkeletonComponent,
     TranslocoPipe,
@@ -160,11 +162,11 @@ export class ComposerDialogComponent {
     this.lanes.active().some((lane) => lane.context()?.canSend === true),
   );
   protected readonly appendedUrl = computed(() => {
-    const target = this.target;
-    const adds = this.lanes
+    const subject = this.lanes
       .active()
-      .some((lane) => lane.network === 'mastodon' && lane.context()?.kind === 'link');
-    return adds && target.kind === 'link' ? target.url : null;
+      .find((lane) => lane.network === 'mastodon' && lane.context()?.kind === 'link')
+      ?.context()?.target;
+    return subject?.kind === 'link' ? subject.card.url : null;
   });
   protected readonly kindNotes = computed(() => {
     const shown = this.kind();

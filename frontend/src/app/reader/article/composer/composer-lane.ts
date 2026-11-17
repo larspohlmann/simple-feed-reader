@@ -88,9 +88,10 @@ export class ComposerLane {
     if (status === 'idle' || status === 'failed') this.load();
   }
 
-  /** A load still on the wire is dropped, so its late answer never shows. */
+  /** A load still on the wire is dropped, so its late answer never shows, and a failed send's banner goes. */
   deactivate(): void {
     this.active.set(false);
+    this.sendFailure.set(null);
     if (this.loadState().status !== 'loading') return;
     this.loading.unsubscribe();
     this.loadState.set({ status: 'idle' });

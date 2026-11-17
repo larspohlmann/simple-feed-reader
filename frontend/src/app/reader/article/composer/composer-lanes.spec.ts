@@ -168,6 +168,16 @@ describe('ComposerLanes', () => {
     expect(lane.sendError()).toContain('Mastodon said no');
   });
 
+  it('deactivating a lane clears its send error', () => {
+    api.send.mockReturnValue(throwError(refusal));
+    const lane = initialised().primary();
+    lane.send(DRAFT, 'Hi').subscribe({ error: () => undefined });
+
+    lane.deactivate();
+
+    expect(lane.sendError()).toBeNull();
+  });
+
   it('keeps a chosen visibility over the next account default', () => {
     const lane = initialised().primary();
     lane.chooseVisibility('private');

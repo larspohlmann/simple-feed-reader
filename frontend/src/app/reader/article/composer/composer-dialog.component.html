@@ -51,6 +51,13 @@
         <app-error-banner [message]="key | transloco" />
       }
 
+      @if (!lanes.showsPills() && context.accounts.length > 1) {
+        <ng-container
+          [ngTemplateOutlet]="accountSelect"
+          [ngTemplateOutletContext]="{ lane: primary(), laneContext: context }"
+        />
+      }
+
       <app-field [label]="copy() + '.text' | transloco">
         <textarea
           #textField
@@ -80,7 +87,10 @@
           {{ 'reader.composer.clear' | transloco }}
         </app-button>
         <p class="counters" aria-live="polite">
-          @for (counter of counters(); track counter.network) {
+          @for (counter of counters(); track counter.network; let first = $first) {
+            @if (!first) {
+              <span class="counter-separator" aria-hidden="true">·</span>
+            }
             <span class="counter" [class.over]="counter.over">
               @if (counters().length > 1) {
                 {{ 'reader.composer.namedCounter' | transloco: counter }}
@@ -94,20 +104,11 @@
 
       @for (lane of lanes.active(); track lane.network) {
         @if (lane.context(); as laneContext) {
-          @if (laneContext.accounts.length > 1) {
-            <app-field [label]="accountLabel() | transloco: { network: names[lane.network] }">
-              <select
-                [id]="controlId('account', lane)"
-                [disabled]="sending() || lane.sent() !== null"
-                (change)="chooseAccount(lane, $event)"
-              >
-                @for (account of laneContext.accounts; track account.id) {
-                  <option [value]="account.id" [selected]="account.id === laneContext.accountId">
-                    {{ account.handle }}
-                  </option>
-                }
-              </select>
-            </app-field>
+          @if (lanes.showsPills() && laneContext.accounts.length > 1) {
+            <ng-container
+              [ngTemplateOutlet]="accountSelect"
+              [ngTemplateOutletContext]="{ lane, laneContext }"
+            />
           }
           @if (lane.visibility(); as current) {
             <app-field [label]="'reader.composer.visibility' | transloco">
@@ -163,3 +164,19 @@
     </app-button>
   </app-overlay-panel>
 </form>
+
+<ng-template #accountSelect let-lane="lane" let-laneContext="laneContext">
+  <app-field [label]="accountLabel() | transloco: { network: names[lane.network] }">
+    <select
+      [id]="controlId('account', lane)"
+      [disabled]="sending() || lane.sent() !== null"
+      (change)="chooseAccount(lane, $event)"
+    >
+      @for (account of laneContext.accounts; track account.id) {
+        <option [value]="account.id" [selected]="account.id === laneContext.accountId">
+          {{ account.handle }}
+        </option>
+      }
+    </select>
+  </app-field>
+</ng-template>

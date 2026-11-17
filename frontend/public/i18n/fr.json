@@ -1771,7 +1771,7 @@
       "counter": "{{ used }} / {{ max }}",
       "namedCounter": "{{ network }} {{ used }} / {{ max }}",
       "networkError": "{{ network }} : {{ message }}",
-      "accountOn": "Publier sur {{ network }} en tant que",
+      "accountOn": "Compte {{ network }}",
       "pillPosted": "Publié",
       "retry": "Réessayer {{ network }}",
       "linkAdded": "{{ network }} ajoute {{ url }}",
