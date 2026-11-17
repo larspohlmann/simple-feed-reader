@@ -8,11 +8,13 @@ use App\Service\Outbound\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
 use App\Service\Outbound\Fetch\Model\FetchTicketModel;
 use App\Service\Outbound\Fetch\Pass\PageUrls;
+use App\Service\Outbound\Fetch\Support\LemmySiteIcon;
 use Psr\Log\LoggerInterface;
 
 /**
  * Best-effort favicons for a batch of feeds' sites: the largest https icon each homepage's <link> tags advertise,
- * else /favicon.ico. Never throws: a favicon must not disturb the refresh that asked for it.
+ * else a Lemmy instance's own site icon, else /favicon.ico. Never throws: a favicon must not disturb the refresh that
+ * asked for it.
  */
 final readonly class FaviconResolver implements FaviconResolverInterface
 {
@@ -90,7 +92,11 @@ final readonly class FaviconResolver implements FaviconResolverInterface
         $response = $outcome->responseOrThrow();
         $body = $response->modifiedBody();
 
-        return '' === trim($body) ? null : $this->pickIcon($body, new PageUrls($response->finalUrl));
+        if ('' === trim($body)) {
+            return null;
+        }
+
+        return $this->pickIcon($body, new PageUrls($response->finalUrl)) ?? LemmySiteIcon::in($body);
     }
 
     private function pickIcon(string $html, PageUrls $pageUrls): ?string
@@ -109,14 +115,9 @@ final readonly class FaviconResolver implements FaviconResolverInterface
             if (!str_contains(strtolower(trim($link->getAttribute('rel'))), 'icon')) {
                 continue;
             }
-            $href = trim($link->getAttribute('href'));
-            if ('' === $href) {
-                continue;
-            }
-
-            $resolved = $pageUrls->resolve($href);
+            $resolved = $pageUrls->httpUrl($link->getAttribute('href'));
             // The app is https, so a http icon would be mixed-content blocked.
-            if (!str_starts_with($resolved, 'https://')) {
+            if (null === $resolved || !str_starts_with($resolved, 'https://')) {
                 continue;
             }
 

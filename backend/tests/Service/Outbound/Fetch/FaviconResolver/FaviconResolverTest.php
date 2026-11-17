@@ -215,6 +215,101 @@ final class FaviconResolverTest extends TestCase
         self::assertInstanceOf(\Throwable::class, $logger->records[0]['context']['exception'] ?? null);
     }
 
+    public function testALemmyInstanceIconComesFromItsEmbeddedSiteRecord(): void
+    {
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willReturn('https://lemmy.example.com', $this->lemmyPage(
+            '{"id":1,"name":"Lemmy Example","icon":"https://lemmy.example.com/pictrs/image/site.png"}',
+        ));
+
+        $icons = $this->resolver($fetcher)->resolveAll([1 => 'https://lemmy.example.com/c/technology']);
+
+        self::assertSame('https://lemmy.example.com/pictrs/image/site.png', $icons[1]);
+    }
+
+    public function testABraceInTheLemmySidebarDoesNotHideTheSiteIcon(): void
+    {
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willReturn('https://lemmy.example.com', $this->lemmyPage(
+            '{"id":1,"sidebar":"Rules: {be nice} \"quoted\"","icon":"https://lemmy.example.com/site.png"}',
+        ));
+
+        $icons = $this->resolver($fetcher)->resolveAll([1 => 'https://lemmy.example.com/']);
+
+        self::assertSame('https://lemmy.example.com/site.png', $icons[1]);
+    }
+
+    public function testADataUriIconCostsNoOtherSiteInTheBatchItsIcon(): void
+    {
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willReturn('https://lemmy.example.com', $this->lemmyPage('{"id":1}'));
+        $fetcher->willReturn(
+            'https://blog.example.com',
+            $this->page('<link rel="icon" href="https://cdn.example.com/fav.png">'),
+        );
+
+        $icons = $this->resolver($fetcher)->resolveAll([
+            1 => 'https://lemmy.example.com/',
+            2 => 'https://blog.example.com/',
+        ]);
+
+        self::assertSame('https://lemmy.example.com/favicon.ico', $icons[1]);
+        self::assertSame('https://cdn.example.com/fav.png', $icons[2]);
+    }
+
+    public function testALemmySiteWithoutAnIconNeverBorrowsAnotherRecordsIcon(): void
+    {
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willReturn('https://lemmy.example.com', $this->lemmyPage(
+            '{"id":1,"name":"Lemmy Example"},"community":{"icon":"https://lemmy.example.com/c.png"}',
+        ));
+
+        $icons = $this->resolver($fetcher)->resolveAll([1 => 'https://lemmy.example.com/']);
+
+        self::assertSame('https://lemmy.example.com/favicon.ico', $icons[1]);
+    }
+
+    public function testAnInsecureLemmySiteIconFallsBackToFaviconIco(): void
+    {
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willReturn('https://lemmy.example.com', $this->lemmyPage(
+            '{"id":1,"icon":"http://lemmy.example.com/site.png"}',
+        ));
+
+        $icons = $this->resolver($fetcher)->resolveAll([1 => 'https://lemmy.example.com/']);
+
+        self::assertSame('https://lemmy.example.com/favicon.ico', $icons[1]);
+    }
+
+    public function testAnAdvertisedHttpsIconOutranksTheLemmySiteRecord(): void
+    {
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willReturn('https://lemmy.example.com', $this->lemmyPage(
+            '{"id":1,"icon":"https://lemmy.example.com/site.png"}',
+            '<link rel="icon" href="/static/icon.png">',
+        ));
+
+        $icons = $this->resolver($fetcher)->resolveAll([1 => 'https://lemmy.example.com/']);
+
+        self::assertSame('https://lemmy.example.com/static/icon.png', $icons[1]);
+    }
+
+    /** lemmy-ui's homepage: data: URI icons, and its state as a script literal that is not strict JSON. */
+    private function lemmyPage(string $siteRecord, string $extraHead = ''): FetchResponseModel
+    {
+        return FetchResponseModel::fetched(
+            'https://lemmy.example.com/',
+            permanentRedirect: false,
+            body: /** @lang TEXT */ '<!doctype html><html><head>'
+                . '<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgo=">' . $extraHead
+                . '<script>window.isoData = {"path":"/","site_res":{"site_view":{"site":' . $siteRecord
+                . ',"local_site":{"id":1}}},"errorPageData":undefined};</script>'
+                . '</head><body>x</body></html>',
+            etag: null,
+            lastModified: null,
+        );
+    }
+
     /**
      * @return iterable<string, array{string}>
      */
