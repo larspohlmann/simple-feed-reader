@@ -62,6 +62,7 @@ use App\Service\Social\Social\Model\HiddenProfileModel;
 use App\Service\Social\Social\Model\HiddenProfileSwitchReportModel;
 use App\Service\Social\Social\Model\ProfileImageSweepReportModel;
 use App\Service\Social\Social\ProfileImageSweep;
+use App\Service\Social\Social\ProfilePictureSource\BlueskyProfilePictures;
 use App\Service\Social\Social\ProfileVisibilityCache;
 use App\Service\Content\Transcript\TranscriptSweep;
 use App\Service\Curation\Trending\Model\TrendingRebuildReportModel;
@@ -518,12 +519,14 @@ final class MaintenanceTickTest extends DbTestCase
         self::assertInstanceOf(FeedRepository::class, $feeds);
 
         return new ProfileImageSweep(
-            $feeds,
-            new AppViewClient($fetcher, new HostThrottle(new ArrayAdapter(clock: $clock), $clock)),
+            [new BlueskyProfilePictures(
+                $feeds,
+                new AppViewClient($fetcher, new HostThrottle(new ArrayAdapter(clock: $clock), $clock)),
+                new NullLogger(),
+                new ProfileVisibilityCache(new ArrayAdapter()),
+            )],
             $this->entityManager,
             new NaiveUtcClock($clock),
-            new NullLogger(),
-            new ProfileVisibilityCache(new ArrayAdapter()),
         );
     }
 

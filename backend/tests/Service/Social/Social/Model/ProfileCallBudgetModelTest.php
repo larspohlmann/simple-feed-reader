@@ -35,6 +35,16 @@ final class ProfileCallBudgetModelTest extends TestCase
         ProfileCallBudgetModel::calls(-1);
     }
 
+    public function testSpendingLeavesTheRest(): void
+    {
+        self::assertSame(1, ProfileCallBudgetModel::calls(2)->spending(1)->calls);
+    }
+
+    public function testSpendingMoreThanLeftLeavesNothing(): void
+    {
+        self::assertTrue(ProfileCallBudgetModel::calls(1)->spending(3)->isEmpty());
+    }
+
     private function fittingWithin(int $seconds, int $maxCalls): ProfileCallBudgetModel
     {
         $now = new \DateTimeImmutable(self::NOW);

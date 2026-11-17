@@ -9,18 +9,23 @@ final readonly class ProfileImageSweepReportModel
     public function __construct(
         public int $checked,
         public int $changed,
+        public int $calls = 0,
     ) {
     }
 
     public static function none(): self
     {
-        return new self(0, 0);
+        return new self(0, 0, 0);
     }
 
     #[\NoDiscard]
     public function adding(self $other): self
     {
-        return new self($this->checked + $other->checked, $this->changed + $other->changed);
+        return new self(
+            $this->checked + $other->checked,
+            $this->changed + $other->changed,
+            $this->calls + $other->calls,
+        );
     }
 
     /** @return array{checked: int, changed: int} */

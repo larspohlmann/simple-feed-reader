@@ -6,7 +6,7 @@ namespace App\Service\Social\Social\Model;
 
 use App\Service\Foundation\Clock\Support\DeadlineFit;
 
-/** How many AppView profile calls one pass may spend, each asking for up to a page of actors. */
+/** How many profile-picture API calls one pass may spend. */
 final readonly class ProfileCallBudgetModel
 {
     /** The guarded fetcher's max_duration, the longest one call can take. */
@@ -29,6 +29,12 @@ final readonly class ProfileCallBudgetModel
     public static function fittingBefore(\DateTimeImmutable $deadline, \DateTimeImmutable $now, int $maxCalls): self
     {
         return self::calls(min($maxCalls, DeadlineFit::wholeUnits($deadline, $now, self::CALL_SECONDS)));
+    }
+
+    #[\NoDiscard]
+    public function spending(int $calls): self
+    {
+        return new self(max(0, $this->calls - $calls));
     }
 
     public function isEmpty(): bool
