@@ -6,6 +6,7 @@ namespace App\Tests\Service\Social\Social\CandidateSource;
 
 use App\Service\Social\Social\CandidateSource\LemmyCandidateSource;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\LemmyCommunities;
 use App\Service\Social\Social\Model\CollectedItemsModel;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
@@ -23,7 +24,7 @@ final class LemmyCandidateSourceTest extends TestCase
 
     private function source(RoutedHttpClient $http): LemmyCandidateSource
     {
-        return new LemmyCandidateSource(SocialApiWiring::lemmyAccountApi($http->client()));
+        return new LemmyCandidateSource(new LemmyCommunities(SocialApiWiring::lemmyAccountApi($http->client())));
     }
 
     private static function fixture(): MockResponse

@@ -7,11 +7,8 @@ namespace App\Service\Social\Social\CandidateSource;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
-use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Social\LemmyAccountApi;
-use App\Service\Social\Social\Model\CollectedItemsModel;
+use App\Service\Social\Social\LemmyCommunities;
 use App\Service\Social\Social\Model\FollowedAccountModel;
-use App\Service\Social\Social\Model\LemmyListing;
 use App\Service\Social\Social\Model\NetworkCandidatesModel;
 use App\Service\Social\Social\Model\NetworkCollectionsModel;
 use App\Service\Social\Social\Support\LemmyCommunity;
@@ -20,15 +17,13 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 #[AsTaggedItem(index: SocialNetwork::Lemmy->value)]
 final readonly class LemmyCandidateSource implements CandidateSourceInterface
 {
-    private const string COMMUNITIES = '/api/v3/community/list?';
-
-    public function __construct(private LemmyAccountApi $lemmy)
+    public function __construct(private LemmyCommunities $communities)
     {
     }
 
     public function candidates(SocialAccount $account): NetworkCandidatesModel
     {
-        $communities = $this->communities($account);
+        $communities = $this->communities->subscribedViews($account);
 
         return new NetworkCandidatesModel(
             self::followedCommunities($communities->items),
@@ -41,32 +36,6 @@ final readonly class LemmyCandidateSource implements CandidateSourceInterface
     public function collections(SocialAccount $account): NetworkCollectionsModel
     {
         return new NetworkCollectionsModel([], []);
-    }
-
-    private function communities(SocialAccount $account): CollectedItemsModel
-    {
-        $items = [];
-        $page = 1;
-        do {
-            $fresh = $this->pageOf($account, $page++);
-            array_push($items, ...$fresh);
-        } while (LemmyListing::PAGE_SIZE === \count($fresh) && \count($items) <= CollectedItemsModel::MAX_ITEMS);
-
-        return CollectedItemsModel::capped($items);
-    }
-
-    /** @return list<JsonNodeModel> */
-    private function pageOf(SocialAccount $account, int $page): array
-    {
-        $answer = $this->lemmy->get($account, self::COMMUNITIES . http_build_query([
-            'type_' => LemmyListing::Subscribed->value,
-            'sort' => 'Old',
-            'limit' => LemmyListing::PAGE_SIZE,
-            'page' => $page,
-        ]));
-
-        return JsonNodeModel::of($answer->json())->listAt('communities')
-            ?? throw new SocialNetworkUnreachableException('The Lemmy instance answered without communities.');
     }
 
     /**
