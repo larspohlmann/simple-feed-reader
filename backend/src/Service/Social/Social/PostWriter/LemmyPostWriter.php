@@ -7,6 +7,7 @@ namespace App\Service\Social\Social\PostWriter;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
+use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Social\ComposerDefaults\LemmyComposerDefaults;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
@@ -33,17 +34,10 @@ final readonly class LemmyPostWriter implements PostWriterInterface
 
     public function reply(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
     {
-        if (mb_strlen($draft->text) > LemmyComposerDefaults::MAX_CHARACTERS) {
-            throw new SocialPostTooLongException(
-                sprintf('A Lemmy comment holds %d characters.', LemmyComposerDefaults::MAX_CHARACTERS),
-            );
-        }
+        self::guardLength($draft->text, LemmyComposerDefaults::MAX_CHARACTERS, 'A Lemmy comment holds %d characters.');
         $answer = $this->lemmy->post($target->account, '/api/v3/comment', self::commentOf($target, $draft));
-        $address = AbsoluteHttpUrl::httpsOrNull(
-            JsonNodeModel::of($answer->json())->node('comment_view')->node('comment')->string('ap_id'),
-        ) ?? throw new SocialNetworkUnreachableException('Lemmy took the comment but named no address for it.');
 
-        return new PublishedPostModel($address, $address);
+        return self::publishedAt($answer, 'comment_view', 'comment');
     }
 
     public function quote(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
@@ -53,13 +47,9 @@ final readonly class LemmyPostWriter implements PostWriterInterface
 
     public function share(SocialAccount $account, string $url, PostDraftModel $draft): PublishedPostModel
     {
-        $post = self::linkPostOf($url, $draft);
-        $answer = $this->lemmy->post($account, '/api/v3/post', $post);
-        $address = AbsoluteHttpUrl::httpsOrNull(
-            JsonNodeModel::of($answer->json())->node('post_view')->node('post')->string('ap_id'),
-        ) ?? throw new SocialNetworkUnreachableException('Lemmy took the post but named no address for it.');
+        $answer = $this->lemmy->post($account, '/api/v3/post', self::linkPostOf($url, $draft));
 
-        return new PublishedPostModel($address, $address);
+        return self::publishedAt($answer, 'post_view', 'post');
     }
 
     public function delete(SocialAccount $account, string $postId): PostDeletion
@@ -72,29 +62,43 @@ final readonly class LemmyPostWriter implements PostWriterInterface
     {
         $communityId = $draft->communityId
             ?? throw new SocialPostCommunityMissingException('A Lemmy link post goes to a community.');
+        $title = self::titleOf($draft);
+        self::guardLength($draft->text, LemmyComposerDefaults::MAX_CHARACTERS, 'A Lemmy post holds %d characters.');
+
+        return ['name' => $title, 'url' => $url]
+            + ('' === trim($draft->text) ? [] : ['body' => $draft->text])
+            + ['community_id' => $communityId];
+    }
+
+    private static function titleOf(PostDraftModel $draft): string
+    {
         $title = trim($draft->title ?? '');
         if (mb_strlen($title) < LemmyLinkModel::MIN_TITLE_CHARACTERS) {
             throw new SocialPostTitleTooShortException(
                 sprintf('A Lemmy title needs at least %d characters.', LemmyLinkModel::MIN_TITLE_CHARACTERS),
             );
         }
-        if (mb_strlen($title) > LemmyLinkModel::MAX_TITLE_CHARACTERS) {
-            throw new SocialPostTooLongException(
-                sprintf('A Lemmy post title holds %d characters.', LemmyLinkModel::MAX_TITLE_CHARACTERS),
-            );
-        }
-        if (mb_strlen($draft->text) > LemmyComposerDefaults::MAX_CHARACTERS) {
-            throw new SocialPostTooLongException(
-                sprintf('A Lemmy post holds %d characters.', LemmyComposerDefaults::MAX_CHARACTERS),
-            );
-        }
-        $post = ['name' => $title, 'url' => $url];
-        if ('' !== trim($draft->text)) {
-            $post['body'] = $draft->text;
-        }
-        $post['community_id'] = $communityId;
+        self::guardLength($title, LemmyLinkModel::MAX_TITLE_CHARACTERS, 'A Lemmy post title holds %d characters.');
 
-        return $post;
+        return $title;
+    }
+
+    private static function guardLength(string $text, int $maxCharacters, string $limitMessage): void
+    {
+        if (mb_strlen($text) > $maxCharacters) {
+            throw new SocialPostTooLongException(sprintf($limitMessage, $maxCharacters));
+        }
+    }
+
+    private static function publishedAt(ApiResponseModel $answer, string $view, string $object): PublishedPostModel
+    {
+        $address = AbsoluteHttpUrl::httpsOrNull(
+            JsonNodeModel::of($answer->json())->node($view)->node($object)->string('ap_id'),
+        ) ?? throw new SocialNetworkUnreachableException(
+            sprintf('Lemmy took the %s but named no address for it.', $object),
+        );
+
+        return new PublishedPostModel($address, $address);
     }
 
     /** @return array<string, string|int> */
