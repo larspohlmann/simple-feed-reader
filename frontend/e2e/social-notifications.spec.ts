@@ -14,6 +14,8 @@ import { stubOneFeedReader, subscriptionsJson } from './support/reader';
  * carry the unseen count.
  * Every API read is stubbed, so the spec owns the counts it asserts on.
  */
+test.use({ viewport: { width: 1440, height: 860 } });
+
 const SUBSCRIPTIONS = [
   aSubscription({
     id: 1,
@@ -177,7 +179,6 @@ async function stubNotifications(page: Page, unseen = UNSEEN) {
 }
 
 async function openReader(page: Page, path = '/') {
-  await page.setViewportSize({ width: 1280, height: 860 });
   await presetLocalStorage(page, { 'sfr.layout': 'pane', 'sfr.lang': 'en' });
   await page.goto(path);
 }
@@ -219,7 +220,6 @@ test('the network head carries a bell with the unseen count', async ({ page }) =
 test('the list shows the grouped notifications', async ({ page }) => {
   await stubNotifications(page);
   await openReader(page);
-  await page.setViewportSize({ width: 1440, height: 860 });
 
   await networkCard(page, 'bluesky').locator('app-sidebar-notifications-bell a').click();
 
@@ -245,6 +245,7 @@ test('the list shows the grouped notifications', async ({ page }) => {
 
   const rowBox = await box(rows.first());
   const columnBox = await box(list.locator('.rows'));
+  expect(rowBox.width).toBeGreaterThanOrEqual(600);
   expect(rowBox.width).toBeLessThanOrEqual(680);
   expect(
     Math.abs(rowBox.x + rowBox.width / 2 - (columnBox.x + columnBox.width / 2)),
