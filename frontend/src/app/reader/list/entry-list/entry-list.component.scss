@@ -362,7 +362,7 @@ app-loading-overlay {
 
 /* An open playlist can squeeze the list to a strip; there the corner buttons
    would ride up over the list header, and the player wins. */
-@include list-chrome.hide-corner-cluster-in-strip(list-tail);
+@include list-chrome.hide-corner-cluster-in-strip;
 
 /* A landscape phone keeps the pair, which still fits; only the column would ride up. */
 @container list-tail (height < #{bp.$container-list-corner-cluster}) {

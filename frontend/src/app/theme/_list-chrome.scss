@@ -59,9 +59,9 @@ $corner-clear: calc(
 }
 
 // An open playlist can squeeze a list to a strip, where the corner buttons would ride up over its header.
-@mixin hide-corner-cluster-in-strip($container) {
-  // stylelint-disable-next-line container-name-pattern -- the name is the caller's, interpolated.
-  @container #{$container} (height < #{bp.$container-list-corner-buttons}) {
+// `list-tail` is the list frame's tail (list-frame.component.scss), which holds the cluster.
+@mixin hide-corner-cluster-in-strip {
+  @container list-tail (height < #{bp.$container-list-corner-buttons}) {
     .corner-cluster {
       display: none;
     }
