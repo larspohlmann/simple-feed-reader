@@ -16,12 +16,15 @@ import {
 import { SocialPostApi } from '../../social-post-api';
 import { SentPost } from './composed-post';
 import { LemmyCommunityMemory } from './lemmy-community-memory';
+import { postLength } from './post-length';
 
 type ContextState =
   | { status: 'idle' }
   | { status: 'loading' }
   | { status: 'ready'; context: ComposerContextDto }
   | { status: 'failed'; message: string };
+
+type LemmyChoice = Required<Pick<PostDraftDto, 'title' | 'communityId'>>;
 
 /** What the dialog's shared fields contribute to a lane's post. */
 export type SharedDraft = Omit<
@@ -47,7 +50,8 @@ export class ComposerLane {
   readonly community: WritableSignal<number | null> = signal(null);
   private readonly typedTitle = signal('');
   readonly title: Signal<string> = this.typedTitle.asReadonly();
-  readonly titleLength: Signal<number> = computed(() => [...this.title().trim()].length);
+  private readonly trimmedTitle = computed(() => this.title().trim());
+  readonly titleLength: Signal<number> = computed(() => postLength(this.trimmedTitle(), 'lemmy'));
 
   private readonly loadState = signal<ContextState>({ status: 'idle' });
   private readonly chosenAccountId = signal<number | undefined>(undefined);
@@ -169,9 +173,8 @@ export class ComposerLane {
   }
 
   private rememberCommunity(context: ComposerContextDto): void {
-    const community = this.community();
-    if (context.lemmy === null || community === null) return;
-    this.communityMemory.remember(context.accountId, community);
+    const choice = this.lemmyChoice(context);
+    if (choice !== null) this.communityMemory.remember(context.accountId, choice.communityId);
   }
 
   private requireContext(): ComposerContextDto {
@@ -186,7 +189,7 @@ export class ComposerLane {
       accountId: context.accountId,
       idempotencyKey: this.idempotencyKey,
       ...this.mastodonFields(),
-      ...this.lemmyFields(context),
+      ...(this.lemmyChoice(context) ?? {}),
     };
   }
 
@@ -197,10 +200,10 @@ export class ComposerLane {
     return { visibility, ...(warning === '' ? {} : { contentWarning: warning }) };
   }
 
-  private lemmyFields(context: ComposerContextDto): Pick<PostDraftDto, 'title' | 'communityId'> {
+  private lemmyChoice(context: ComposerContextDto): LemmyChoice | null {
     const community = this.community();
-    if (context.lemmy === null || community === null) return {};
-    return { title: this.title().trim(), communityId: community };
+    if (context.lemmy === null || community === null) return null;
+    return { title: this.trimmedTitle(), communityId: community };
   }
 
   private sentAs(published: PublishedPostDto, context: ComposerContextDto, text: string): SentPost {
@@ -209,7 +212,7 @@ export class ComposerLane {
       ...published,
       kind: context.kind,
       network: this.network,
-      text: context.lemmy === null ? text : this.title().trim(),
+      text: context.lemmy === null ? text : this.trimmedTitle(),
       authorHandle: account?.handle ?? null,
       target: context.target,
     };
