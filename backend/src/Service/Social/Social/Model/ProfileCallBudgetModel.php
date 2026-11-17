@@ -31,6 +31,12 @@ final readonly class ProfileCallBudgetModel
         return self::calls(min($maxCalls, DeadlineFit::wholeUnits($deadline, $now, self::CALL_SECONDS)));
     }
 
+    #[\NoDiscard]
+    public function spending(int $calls): self
+    {
+        return new self(max(0, $this->calls - $calls));
+    }
+
     public function isEmpty(): bool
     {
         return $this->calls === 0;

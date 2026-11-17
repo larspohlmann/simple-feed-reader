@@ -14,6 +14,7 @@ use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Outbound\Fetch\HostThrottle;
 use App\Service\Operations\Maintenance\MaintenanceSweep\ProfileImagesTickSweep;
 use App\Service\Social\Social\ProfileImageSweep;
+use App\Service\Social\Social\ProfilePictureSource\BlueskyProfilePictures;
 use App\Service\Social\Social\ProfileVisibilityCache;
 use App\Tests\DbTestCase;
 use App\Tests\Support\StubFeedFetcher;
@@ -25,7 +26,7 @@ final class ProfileImagesTickSweepTest extends DbTestCase
 {
     public function testAsksForThePicturesWhenOneCallFitsBeforeTheDeadline(): void
     {
-        self::assertEquals(new ProfileImageSweepReportModel(1, 0), $this->reportWithinSecondsOfTheDeadline(20));
+        self::assertEquals(new ProfileImageSweepReportModel(1, 0, 1), $this->reportWithinSecondsOfTheDeadline(20));
     }
 
     public function testLeavesThePicturesForLaterWhenLessThanOneCallIsLeft(): void
@@ -53,12 +54,14 @@ final class ProfileImagesTickSweepTest extends DbTestCase
         self::assertInstanceOf(FeedRepository::class, $feeds);
         $sweep = new ProfileImagesTickSweep(
             new ProfileImageSweep(
-                $feeds,
-                new AppViewClient($appView, new HostThrottle(new ArrayAdapter(clock: $clock), $clock)),
+                [new BlueskyProfilePictures(
+                    $feeds,
+                    new AppViewClient($appView, new HostThrottle(new ArrayAdapter(clock: $clock), $clock)),
+                    new NullLogger(),
+                    new ProfileVisibilityCache(new ArrayAdapter()),
+                )],
                 $this->entityManager,
                 new NaiveUtcClock($clock),
-                new NullLogger(),
-                new ProfileVisibilityCache(new ArrayAdapter()),
             ),
             $clock,
         );

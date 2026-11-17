@@ -9,6 +9,7 @@ use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SocialFeedKind;
+use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\FeedRepository;
 use App\Tests\DbTestCase;
@@ -31,7 +32,7 @@ final class FeedRepositoryProfileImageDueTest extends DbTestCase
         $this->feed('https://example.com/feed.xml', null);
         $this->feed('https://bsky.app/profile/orphan.bsky.social/rss', null, subscribed: false);
 
-        $due = $this->feeds()->findBlueskyProfileFeedsWithImageDue(new \DateTimeImmutable(self::CHECKED_BEFORE), 10);
+        $due = $this->due(SocialNetwork::Bluesky, 10);
 
         self::assertSame(
             [$never->requireId(), $older->requireId(), $old->requireId()],
@@ -40,12 +41,28 @@ final class FeedRepositoryProfileImageDueTest extends DbTestCase
         self::assertNotContains($recent, $due);
     }
 
+    public function testLemmyCommunityAndUserFeedsAreDueForLemmyOnly(): void
+    {
+        $community = $this->feed('https://lemmy.world/feeds/c/technology.xml?sort=New', null);
+        $user = $this->feed('https://lemmy.world/feeds/u/lars_pohlmann.xml', null);
+        $this->feed('https://bsky.app/profile/a.bsky.social/rss', null);
+
+        $lemmy = $this->due(SocialNetwork::Lemmy, 10);
+        $bluesky = $this->due(SocialNetwork::Bluesky, 10);
+
+        self::assertEqualsCanonicalizing(
+            [$community->requireId(), $user->requireId()],
+            array_map(static fn (Feed $feed): int => $feed->requireId(), $lemmy),
+        );
+        self::assertNotContains($community, $bluesky);
+    }
+
     public function testItHandsOutAtMostTheLimit(): void
     {
         $this->feed('https://bsky.app/profile/a.bsky.social/rss', null);
         $this->feed('https://bsky.app/profile/b.bsky.social/rss', null);
 
-        $due = $this->feeds()->findBlueskyProfileFeedsWithImageDue(new \DateTimeImmutable(self::CHECKED_BEFORE), 1);
+        $due = $this->due(SocialNetwork::Bluesky, 1);
 
         self::assertCount(1, $due);
     }
@@ -55,7 +72,7 @@ final class FeedRepositoryProfileImageDueTest extends DbTestCase
         $plain = $this->feed('http://bsky.app/profile/plain.bsky.social/rss', null);
         $shouting = $this->feed('https://BSKY.app/profile/shouting.bsky.social/rss', null);
 
-        $due = $this->feeds()->findBlueskyProfileFeedsWithImageDue(new \DateTimeImmutable(self::CHECKED_BEFORE), 10);
+        $due = $this->due(SocialNetwork::Bluesky, 10);
 
         self::assertSame(
             [$plain->requireId(), $shouting->requireId()],
@@ -75,7 +92,7 @@ final class FeedRepositoryProfileImageDueTest extends DbTestCase
 
         self::assertSame(
             [],
-            $this->feeds()->findBlueskyProfileFeedsWithImageDue(new \DateTimeImmutable(self::CHECKED_BEFORE), 10),
+            $this->due(SocialNetwork::Bluesky, 10),
         );
     }
 
@@ -94,7 +111,7 @@ final class FeedRepositoryProfileImageDueTest extends DbTestCase
             new SocialFeed($account, $author, SocialFeedKind::Author, 'did:plc:rusty'),
         );
 
-        $due = $this->feeds()->findBlueskyProfileFeedsWithImageDue(new \DateTimeImmutable(self::CHECKED_BEFORE), 10);
+        $due = $this->due(SocialNetwork::Bluesky, 10);
 
         self::assertSame([$author->requireId()], array_map(static fn (Feed $feed): int => $feed->requireId(), $due));
     }
@@ -123,6 +140,14 @@ final class FeedRepositoryProfileImageDueTest extends DbTestCase
         }
 
         return $this->subscriber;
+    }
+
+    /** @return list<Feed> */
+    private function due(SocialNetwork $network, int $limit): array
+    {
+        $checkedBefore = new \DateTimeImmutable(self::CHECKED_BEFORE);
+
+        return $this->feeds()->findProfileFeedsWithImageDue($network, $checkedBefore, $limit);
     }
 
     private function feeds(): FeedRepository
