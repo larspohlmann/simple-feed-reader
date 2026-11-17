@@ -59,6 +59,11 @@ export class ComposerLanes {
   }
 
   /** Switches a lane on or off; the last active lane stays on, and a sent one stays as it is. */
+  /** A control's id, suffixed by its lane's network while several lanes show their own. */
+  controlId(control: string, lane: ComposerLane): string {
+    return this.showsPills() ? `reply-${control}-${lane.network}` : `reply-${control}`;
+  }
+
   toggle(network: SocialNetworkName): void {
     const lane = this.built().find((candidate) => candidate.network === network);
     if (lane === undefined || lane.sent() !== null) return;

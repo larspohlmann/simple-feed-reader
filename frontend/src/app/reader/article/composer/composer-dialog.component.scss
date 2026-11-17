@@ -1,3 +1,5 @@
+@use 'composer-notes' as notes;
+
 // The frame is app-overlay-panel's; `display: contents` on host and form
 // removes the boxes CDK can't centre/stretch, as in passkey-name-dialog.
 :host {
@@ -35,19 +37,13 @@ textarea {
 
 .counter {
   margin: 0;
-  color: var(--text-muted);
-  font-size: var(--fs-sm);
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
+
+  @include notes.counter;
 }
 
 .counter-separator {
   margin: 0 var(--space-2);
   color: var(--text-muted);
-}
-
-.counter.over {
-  color: var(--danger);
 }
 
 .warns {
@@ -59,23 +55,10 @@ textarea {
 }
 
 .fixed-url,
-.kind-note,
-.lemmy-note {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
-  margin: calc(-1 * var(--space-2)) 0 var(--space-3);
-  color: var(--text-muted);
-  font-size: var(--fs-sm);
-  overflow-wrap: anywhere;
+.kind-note {
+  @include notes.note;
 }
 
-.kind-note,
-.lemmy-note {
-  margin: 0 0 var(--space-3);
-}
-
-.title-counter {
+.fixed-url {
   margin: calc(-1 * var(--space-2)) 0 var(--space-3);
-  text-align: right;
 }
