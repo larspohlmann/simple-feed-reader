@@ -10,9 +10,11 @@ use App\Service\Social\Social\Exception\NoSocialAccountForNetworkException;
 use App\Service\Social\Social\Exception\NotASocialPostException;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostCommunityMissingException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Exception\SocialPostRemovedException;
+use App\Service\Social\Social\Exception\SocialPostTitleTooShortException;
 use App\Service\Social\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -47,7 +49,17 @@ final class SocialInteractionProblemsTest extends TestCase
             Response::HTTP_GONE,
         ];
         yield 'post refused' => [new SocialPostRefusedException('x'), 'social_post_refused', Response::HTTP_CONFLICT];
-        yield 'reply too long' => [
+        yield 'link title too short' => [
+            new SocialPostTitleTooShortException('x'),
+            'social_post_title_too_short',
+            Response::HTTP_UNPROCESSABLE_ENTITY,
+        ];
+        yield 'link without a community' => [
+            new SocialPostCommunityMissingException('x'),
+            'social_post_community_missing',
+            Response::HTTP_UNPROCESSABLE_ENTITY,
+        ];
+        yield 'post too long' => [
             new SocialPostTooLongException('x'),
             'social_post_too_long',
             Response::HTTP_UNPROCESSABLE_ENTITY,
@@ -79,6 +91,20 @@ final class SocialInteractionProblemsTest extends TestCase
             'Reconnect this account with an access token that has the write:favourites scope.',
             $resolved?->problem->detail,
         );
+    }
+
+    public function testATooShortTitleIsNamedInTheProblemTitle(): void
+    {
+        $resolved = (new SocialInteractionProblems())->resolve(new SocialPostTitleTooShortException('x'));
+
+        self::assertSame('The post title is too short', $resolved?->problem->title);
+    }
+
+    public function testAnOverlongPostIsNamedAPostNotAReply(): void
+    {
+        $resolved = (new SocialInteractionProblems())->resolve(new SocialPostTooLongException('x'));
+
+        self::assertSame('The post is too long for the network', $resolved?->problem->title);
     }
 
     public function testAThrottleNamesItsDelayOnlyWhenTheNetworkGaveOne(): void

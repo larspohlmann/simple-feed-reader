@@ -6,6 +6,7 @@ namespace App\Tests\Service\Social\Social\ComposerDefaults;
 
 use App\Service\Social\Social\ComposerDefaults\BlueskyComposerDefaults;
 use App\Service\Social\Social\Model\ComposerDefaultsModel;
+use App\Service\Social\Social\Model\SharedLinkModel;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\TestCase;
 
@@ -23,7 +24,10 @@ final class BlueskyComposerDefaultsTest extends TestCase
     {
         self::assertEquals(
             new ComposerDefaultsModel(300),
-            (new BlueskyComposerDefaults())->forLinkFrom(SocialApiWiring::blueskyAccount()),
+            (new BlueskyComposerDefaults())->forLinkFrom(
+                SocialApiWiring::blueskyAccount(),
+                new SharedLinkModel('https://example.com', 'A title'),
+            ),
         );
     }
 }

@@ -1810,6 +1810,10 @@
       },
       "addWarning": "Ajouter un avertissement de contenu",
       "warning": "Avertissement de contenu",
+      "community": "Communauté",
+      "chooseCommunity": "Choisissez une communauté",
+      "title": "Titre",
+      "noCommunities": "Abonnez-vous d'abord à une communauté sur Lemmy",
       "reply": {
         "loading": "Préparation de la réponse",
         "account": "Répondre en tant que",
@@ -1848,7 +1852,8 @@
     "postDeletedThere": "Supprimée sur {{ network }} — retirée ici.",
     "quote": {
       "bluesky": "Citer sur Bluesky",
-      "mastodon": "Citer sur Mastodon"
+      "mastodon": "Citer sur Mastodon",
+      "lemmy": "Citer sur Lemmy"
     },
     "quoteForbidden": {
       "bluesky": "L'auteur n'autorise pas les citations de cette publication",
@@ -1857,12 +1862,14 @@
     "link": {
       "bluesky": "Publier sur Bluesky",
       "mastodon": "Publier sur Mastodon",
+      "lemmy": "Publier sur Lemmy",
       "many": "Publier sur {{ networks }}"
     },
     "posted": {
       "link": {
         "bluesky": "Publié sur Bluesky",
-        "mastodon": "Publié sur Mastodon"
+        "mastodon": "Publié sur Mastodon",
+        "lemmy": "Publié sur Lemmy"
       },
       "quote": {
         "bluesky": "Citation publiée sur Bluesky",

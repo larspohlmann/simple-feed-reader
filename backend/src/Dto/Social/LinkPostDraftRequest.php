@@ -23,6 +23,9 @@ final readonly class LinkPostDraftRequest
         public ?string $idempotencyKey = null,
         #[Assert\Positive]
         public ?int $accountId = null,
+        public ?string $title = null,
+        #[Assert\Positive]
+        public ?int $communityId = null,
     ) {
     }
 
@@ -34,6 +37,8 @@ final readonly class LinkPostDraftRequest
             $this->contentWarning,
             $this->language,
             $this->idempotencyKey,
+            $this->title,
+            $this->communityId,
         );
     }
 }

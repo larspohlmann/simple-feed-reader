@@ -51,7 +51,7 @@ final readonly class ComposerContexts
 
     public function ofLink(SocialAccount $account, SharedLinkModel $link): ComposerContextModel
     {
-        $defaults = $this->defaults->get($account->getNetwork()->value)->forLinkFrom($account);
+        $defaults = $this->defaults->get($account->getNetwork()->value)->forLinkFrom($account, $link);
 
         return new ComposerContextModel(
             $this->connectedBeside($account),
@@ -60,8 +60,17 @@ final readonly class ComposerContexts
             defaults: $defaults,
             target: $this->pageCards->cardOf($link->url),
             kind: ComposerKind::Link,
-            text: ComposerStartingText::sharing($link, $defaults->maxCharacters),
+            text: $this->startingTextOf($link, $defaults),
         );
+    }
+
+    private function startingTextOf(SharedLinkModel $link, ComposerDefaultsModel $defaults): string
+    {
+        if (null !== $defaults->lemmyLink) {
+            return ComposerStartingText::quoting($link->quote, $defaults->maxCharacters);
+        }
+
+        return ComposerStartingText::sharing($link, $defaults->maxCharacters);
     }
 
     /** A shared link that names a quotable post quotes it, starting with the selection the reader shares. */

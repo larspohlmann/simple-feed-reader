@@ -1806,6 +1806,10 @@
       },
       "addWarning": "Inhaltswarnung hinzufügen",
       "warning": "Inhaltswarnung",
+      "community": "Community",
+      "chooseCommunity": "Community wählen",
+      "title": "Titel",
+      "noCommunities": "Abonniere zuerst eine Community auf Lemmy",
       "reply": {
         "loading": "Antwort wird vorbereitet",
         "account": "Antworten als",
@@ -1844,7 +1848,8 @@
     "postDeletedThere": "Auf {{ network }} gelöscht – hier entfernt.",
     "quote": {
       "bluesky": "Auf Bluesky zitieren",
-      "mastodon": "Auf Mastodon zitieren"
+      "mastodon": "Auf Mastodon zitieren",
+      "lemmy": "Auf Lemmy zitieren"
     },
     "quoteForbidden": {
       "bluesky": "Die Autorin oder der Autor erlaubt keine Zitate dieses Beitrags",
@@ -1853,12 +1858,14 @@
     "link": {
       "bluesky": "Auf Bluesky posten",
       "mastodon": "Auf Mastodon posten",
+      "lemmy": "Auf Lemmy posten",
       "many": "Auf {{ networks }} posten"
     },
     "posted": {
       "link": {
         "bluesky": "Auf Bluesky veröffentlicht",
-        "mastodon": "Auf Mastodon veröffentlicht"
+        "mastodon": "Auf Mastodon veröffentlicht",
+        "lemmy": "Auf Lemmy veröffentlicht"
       },
       "quote": {
         "bluesky": "Zitat auf Bluesky veröffentlicht",

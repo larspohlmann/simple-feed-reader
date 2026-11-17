@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\Model;
 
-/** What the user wrote in the composer; the Mastodon-only parts are ignored on Bluesky. */
+/** What the user wrote in the composer; each network ignores the parts only Mastodon or only Lemmy takes. */
 final readonly class PostDraftModel
 {
     /**
-     * @noinspection AutowireWrongClass Built with new, never autowired
-     *
      * @param string|null $language       a language code such as "de"
      * @param string|null $idempotencyKey minted when the composer opened, so a resent reply is published once
+     * @param string|null $title          the Lemmy link post's title
+     * @param int|null    $communityId    the Lemmy community a link post goes to
      */
     public function __construct(
         public string $text,
@@ -19,6 +19,8 @@ final readonly class PostDraftModel
         public ?string $contentWarning = null,
         public ?string $language = null,
         public ?string $idempotencyKey = null,
+        public ?string $title = null,
+        public ?int $communityId = null,
     ) {
     }
 

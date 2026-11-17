@@ -15,14 +15,11 @@ final class LemmyCommunity
     public static function follow(JsonNodeModel $communityView): ?FollowedAccountModel
     {
         $community = $communityView->node('community');
-        $name = $community->string('name');
-        $host = self::httpsHostOf($community->string('actor_id') ?? '');
-        if (null === $name || null === $host) {
+        $identity = self::identityOf($community);
+        if (null === $identity) {
             return null;
         }
-        $lowerName = strtolower($name);
-        $lowerHost = strtolower($host);
-        $identity = $lowerName . '@' . $lowerHost;
+        [$lowerName, $lowerHost] = explode('@', $identity, 2);
 
         return new FollowedAccountModel(
             $identity,
@@ -31,6 +28,18 @@ final class LemmyCommunity
             ProfileFeedUrl::lemmy($lowerName, $lowerHost),
             $community->string('icon'),
         );
+    }
+
+    /** @return string|null the lower-cased `name@host`, null when the community is not on an https instance */
+    public static function identityOf(JsonNodeModel $community): ?string
+    {
+        $name = $community->string('name');
+        $host = self::httpsHostOf($community->string('actor_id') ?? '');
+        if (null === $name || null === $host) {
+            return null;
+        }
+
+        return strtolower($name) . '@' . strtolower($host);
     }
 
     private static function httpsHostOf(string $actorId): ?string

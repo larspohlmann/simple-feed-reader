@@ -91,10 +91,37 @@ final class SocialLinkPostControllerTest extends ApiTestCase
             'canSend' => true,
             'maxCharacters' => 975,
             'visibility' => 'unlisted',
+            'lemmy' => null,
             'kind' => 'link',
             'text' => 'The article',
             'target' => self::ARTICLE_HOST_CARD,
         ], $this->payload($client));
+    }
+
+    public function testTheLinkComposerOnLemmyOffersThePostableCommunitiesAndThePageTitle(): void
+    {
+        $communities = json_encode(['communities' => [
+            ['community' => ['id' => 7, 'name' => 'rss', 'actor_id' => 'https://lemmy.world/c/rss']],
+        ]], \JSON_THROW_ON_ERROR);
+        $client = $this->clientRouting(['lemmy.example'], [
+            'GET https://lemmy.example/api/v3/community/list?type_=Subscribed&sort=Old&limit=50&page=1'
+                => new MockResponse($communities),
+        ]);
+        $user = $this->signIn($client, 'link-composer-lemmy@example.test');
+        $this->lemmyAccountOf($user);
+
+        $client->request('GET', self::LINK_COMPOSER . 'lemmy&title=The+article');
+
+        self::assertResponseIsSuccessful();
+        $payload = $this->payload($client);
+        self::assertSame('', $payload['text']);
+        self::assertSame(10000, $payload['maxCharacters']);
+        self::assertSame([
+            'communities' => [['id' => 7, 'handle' => '!rss@lemmy.world']],
+            'title' => 'The article',
+            'minTitleCharacters' => 3,
+            'maxTitleCharacters' => 200,
+        ], $payload['lemmy']);
     }
 
     public function testTheLinkComposerOnBlueskyStartsFromItsGraphemeLimit(): void
@@ -114,6 +141,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
             'canSend' => true,
             'maxCharacters' => BlueskyPostWriter::MAX_GRAPHEMES,
             'visibility' => null,
+            'lemmy' => null,
             'kind' => 'link',
             'text' => 'The article',
             'target' => self::ARTICLE_HOST_CARD,
@@ -231,18 +259,6 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         self::assertSame([], $this->http->requests);
     }
 
-    public function testTheLinkComposerTakesNoLemmyNetwork(): void
-    {
-        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
-        $user = $this->signIn($client, 'link-lemmy@example.test');
-        $this->lemmyAccountOf($user);
-
-        $client->request('GET', '/api/social/link-composer?url=' . rawurlencode(self::ARTICLE_URL) . '&network=lemmy');
-
-        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
-        self::assertSame([], $this->http->requests);
-    }
-
     /** @return iterable<string, array{string}> */
     public static function missingNetworks(): iterable
     {
@@ -317,6 +333,54 @@ final class SocialLinkPostControllerTest extends ApiTestCase
             ['status' => 'https://example.com/article?id=7'],
             json_decode($this->http->requests[0]['body'], true),
         );
+    }
+
+    public function testALinkPostIsPublishedOnLemmyInTheChosenCommunity(): void
+    {
+        $client = $this->clientRouting(['lemmy.example'], [
+            'POST https://lemmy.example/api/v3/post' => new MockResponse(
+                '{"post_view":{"post":{"id":501,"ap_id":"https://lemmy.example/post/501"}}}',
+            ),
+        ]);
+        $user = $this->signIn($client, 'link-post-lemmy@example.test');
+        $this->lemmyAccountOf($user);
+
+        $this->send($client, self::LINKS . 'lemmy&url=' . rawurlencode(self::ARTICLE_URL), [
+            'text' => 'Worth reading',
+            'title' => 'The article',
+            'communityId' => 7,
+        ]);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        self::assertSame(
+            ['address' => 'https://lemmy.example/post/501', 'url' => 'https://lemmy.example/post/501'],
+            $this->payload($client),
+        );
+        self::assertSame(
+            [
+                'name' => 'The article',
+                'url' => self::ARTICLE_URL,
+                'body' => 'Worth reading',
+                'community_id' => 7,
+            ],
+            json_decode($this->http->requests[0]['body'], true),
+        );
+    }
+
+    public function testALemmyLinkPostWithoutACommunityIsRefused(): void
+    {
+        $client = $this->clientRouting(['lemmy.example'], []);
+        $user = $this->signIn($client, 'link-post-lemmy-bare@example.test');
+        $this->lemmyAccountOf($user);
+
+        $this->send(
+            $client,
+            self::LINKS . 'lemmy&url=' . rawurlencode(self::ARTICLE_URL),
+            ['text' => '', 'title' => 'Title'],
+        );
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame('social_post_community_missing', $this->payload($client)['type']);
     }
 
     public function testBlankTextOnAQuotedLinkIsRefused(): void
@@ -552,7 +616,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         ));
     }
 
-    /** @param array<string, string> $body */
+    /** @param array<string, int|string> $body */
     private function send(KernelBrowser $client, string $path, array $body): void
     {
         $client->request(

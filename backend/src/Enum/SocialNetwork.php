@@ -38,14 +38,6 @@ enum SocialNetwork: string
         return array_map(static fn (self $network): string => $network->value, $networks);
     }
 
-    public function takesLinkPosts(): bool
-    {
-        return match ($this) {
-            self::Bluesky, self::Mastodon => true,
-            self::Lemmy => false,
-        };
-    }
-
     public function displayName(): string
     {
         return match ($this) {

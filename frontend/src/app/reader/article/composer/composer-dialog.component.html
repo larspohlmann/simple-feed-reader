@@ -136,6 +136,9 @@
               </app-field>
             }
           }
+          @if (laneContext.lemmy; as lemmy) {
+            <app-lemmy-link-fields [lane]="lane" [lemmy]="lemmy" [disabled]="locked(lane)" />
+          }
         }
       }
     }
@@ -163,7 +166,7 @@
   <app-field [label]="accountLabel() | transloco: { network: networkName(lane) }">
     <select
       [id]="controlId('account', lane)"
-      [disabled]="sending() || lane.sent() !== null"
+      [disabled]="locked(lane)"
       (change)="chooseAccount(lane, $event)"
     >
       @for (account of laneContext.accounts; track account.id) {

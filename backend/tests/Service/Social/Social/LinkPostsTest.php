@@ -40,6 +40,7 @@ use App\Service\Foundation\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AssertsRefusal;
 use App\Tests\Support\FakeComposerDefaults;
+use App\Tests\Support\FakeLemmyComposerDefaults;
 use App\Tests\Support\FakeMastodonNetwork;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SeedsUsers;
@@ -210,6 +211,20 @@ final class LinkPostsTest extends DbTestCase
 
         self::assertSame(ComposerKind::Link, $context->kind);
         self::assertSame('“A line worth sharing”', $context->text);
+    }
+
+    public function testALemmyLinkStartsFromTheQuoteAloneNotTheTitle(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::lemmyOf($this->owner));
+        $withoutQuote = new LinkTargetModel(SocialNetwork::Lemmy, null, self::ARTICLE_URL, 'A story');
+        $withQuote = new LinkTargetModel(SocialNetwork::Lemmy, null, self::ARTICLE_URL, 'A story', 'foo');
+
+        $plain = $this->linkPosts()->contextFor($this->owner, $withoutQuote);
+        $quoting = $this->linkPosts()->contextFor($this->owner, $withQuote);
+
+        self::assertSame('', $plain->text);
+        self::assertSame('“foo”', $quoting->text);
+        self::assertSame('A story', $quoting->defaults->lemmyLink?->title);
     }
 
     public function testTheSharedAddressKeepsTheTextFragmentThatPointsAtTheQuote(): void
@@ -472,7 +487,11 @@ final class LinkPostsTest extends DbTestCase
         $accounts = $this->entityManager->getRepository(SocialAccount::class);
         $guard = new ActingAccountGuard($this->entityManager);
         $fakeDefaults = static fn (): FakeComposerDefaults => new FakeComposerDefaults();
-        $defaults = new ServiceLocator(['mastodon' => $fakeDefaults, 'bluesky' => $fakeDefaults]);
+        $defaults = new ServiceLocator([
+            'mastodon' => $fakeDefaults,
+            'bluesky' => $fakeDefaults,
+            'lemmy' => static fn (): FakeLemmyComposerDefaults => new FakeLemmyComposerDefaults(),
+        ]);
         $chooser = SocialFeeds::actingAccountChooser($this->entityManager, $accounts);
         $posts = new SocialPostFinder($chooser, $guard, $resolvers);
 

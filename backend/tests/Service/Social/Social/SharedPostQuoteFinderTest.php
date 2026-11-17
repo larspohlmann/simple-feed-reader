@@ -1,0 +1,40 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Social\Social;
+
+use App\Entity\SocialAccount;
+use App\Service\Social\Social\ActingAccountGuard;
+use App\Service\Social\Social\SharedPostQuoteFinder;
+use App\Service\Social\Social\SocialPostFinder;
+use App\Tests\DbTestCase;
+use App\Tests\Support\SeedsUsers;
+use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\SocialFeeds;
+use Symfony\Component\DependencyInjection\ServiceLocator;
+
+final class SharedPostQuoteFinderTest extends DbTestCase
+{
+    use SeedsUsers;
+
+    public function testALemmyPostUrlIsNeverQuotedByALemmyAccount(): void
+    {
+        $account = SocialFeeds::persistedAccount(
+            $this->entityManager,
+            SocialAccounts::lemmyOf($this->user('quote-finder@example.test')),
+        );
+
+        self::assertNull($this->finder()->quotableAt($account, 'https://lemmy.example/post/42'));
+    }
+
+    private function finder(): SharedPostQuoteFinder
+    {
+        $accounts = $this->entityManager->getRepository(SocialAccount::class);
+        $chooser = SocialFeeds::actingAccountChooser($this->entityManager, $accounts);
+
+        return new SharedPostQuoteFinder(
+            new SocialPostFinder($chooser, new ActingAccountGuard($this->entityManager), new ServiceLocator([])),
+        );
+    }
+}

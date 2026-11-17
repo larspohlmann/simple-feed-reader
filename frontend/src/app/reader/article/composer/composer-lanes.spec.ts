@@ -14,6 +14,8 @@ import {
 import { SocialPostApi } from '../../social-post-api';
 import { PostNetwork, PostNetworks } from '../share/post-networks.service';
 import { ComposerLanes } from './composer-lanes';
+import { SentPost } from './composed-post';
+import { LemmyCommunityMemory } from './lemmy-community-memory';
 
 const QUOTED: PostComposerSubjectDto = {
   kind: 'post',
@@ -47,6 +49,7 @@ const DRAFT = { text: 'Hi', language: 'en' };
 
 describe('ComposerLanes', () => {
   let api: { composer: jest.Mock; send: jest.Mock };
+  let memory: { recall: jest.Mock; remember: jest.Mock };
 
   const context = (overrides: Partial<ComposerContextDto> = {}): ComposerContextDto => ({
     kind: 'reply',
@@ -60,6 +63,7 @@ describe('ComposerLanes', () => {
     visibility: 'unlisted',
     text: '@ann@hachyderm.io ',
     target: QUOTED,
+    lemmy: null,
     ...overrides,
   });
 
@@ -79,6 +83,7 @@ describe('ComposerLanes', () => {
         ComposerLanes,
         { provide: SocialPostApi, useValue: api },
         { provide: PostNetworks, useValue: { connected: signal(connected) } },
+        { provide: LemmyCommunityMemory, useValue: memory },
       ],
     });
     const lanes = TestBed.inject(ComposerLanes);
@@ -95,6 +100,7 @@ describe('ComposerLanes', () => {
       composer: jest.fn(() => of(context())),
       send: jest.fn(() => of<PublishedPostDto>({ address: 'https://x/1', url: null })),
     };
+    memory = { recall: jest.fn(() => null), remember: jest.fn() };
   });
 
   it("loads the target's context on init", () => {
@@ -329,6 +335,189 @@ describe('ComposerLanes', () => {
       expect(networksOf(lanes.pending())).toEqual(['bluesky']);
       lanes.toggle('mastodon');
       expect(laneOf(lanes, 'mastodon').active()).toBe(true);
+    });
+  });
+
+  describe('the Lemmy lane', () => {
+    const ON_LEMMY: LinkTargetDto = { ...LINK, network: 'lemmy' };
+    const COMMUNITIES = [
+      { id: 41, handle: '!php@programming.dev' },
+      { id: 42, handle: '!rss@lemmy.world' },
+    ];
+    const lemmyContext = (
+      lemmy: Partial<NonNullable<ComposerContextDto['lemmy']>> = {},
+      overrides: Partial<ComposerContextDto> = {},
+    ): ComposerContextDto =>
+      context({
+        kind: 'link',
+        accounts: [
+          { id: 8, handle: '@alice@lemmy.world' },
+          { id: 9, handle: '@alice@programming.dev' },
+        ],
+        accountId: 8,
+        maxCharacters: 10000,
+        visibility: null,
+        text: '',
+        lemmy: {
+          communities: COMMUNITIES,
+          title: 'A long read',
+          minTitleCharacters: 3,
+          maxTitleCharacters: 200,
+          ...lemmy,
+        },
+        ...overrides,
+      });
+
+    function lemmyLane() {
+      return initialised(ON_LEMMY).primary();
+    }
+
+    it('seeds the title from the context and the community from memory', () => {
+      memory.recall.mockReturnValue(42);
+      api.composer.mockReturnValue(of(lemmyContext()));
+
+      const lane = lemmyLane();
+
+      expect(memory.recall).toHaveBeenCalledWith(8);
+      expect(lane.title()).toBe('A long read');
+      expect(lane.community()).toBe(42);
+      expect(lane.fieldsReady()).toBe(true);
+    });
+
+    it('drops a remembered community the account no longer offers', () => {
+      memory.recall.mockReturnValue(99);
+      api.composer.mockReturnValue(of(lemmyContext()));
+
+      const lane = lemmyLane();
+
+      expect(lane.community()).toBeNull();
+      expect(lane.fieldsReady()).toBe(false);
+    });
+
+    it("keeps a typed title on a switch, and resets the community to the next account's", () => {
+      memory.recall.mockImplementation((accountId: number) => (accountId === 8 ? 41 : 42));
+      api.composer.mockReturnValue(of(lemmyContext()));
+      const lane = lemmyLane();
+      lane.writeTitle('Mine');
+      api.composer.mockReturnValue(of(lemmyContext({ title: 'Theirs' }, { accountId: 9 })));
+
+      lane.chooseAccount(9);
+
+      expect(lane.community()).toBe(42);
+      expect(lane.title()).toBe('Mine');
+    });
+
+    it('reseeds an untouched title from the next account on a switch', () => {
+      memory.recall.mockReturnValue(41);
+      api.composer.mockReturnValue(of(lemmyContext()));
+      const lane = lemmyLane();
+      api.composer.mockReturnValue(of(lemmyContext({ title: 'Theirs' }, { accountId: 9 })));
+
+      lane.chooseAccount(9);
+
+      expect(lane.title()).toBe('Theirs');
+    });
+
+    it('is not ready with a title of only whitespace', () => {
+      memory.recall.mockReturnValue(41);
+      api.composer.mockReturnValue(of(lemmyContext()));
+      const lane = lemmyLane();
+
+      lane.writeTitle('   ');
+
+      expect(lane.fieldsReady()).toBe(false);
+    });
+
+    it("is not ready with a title under Lemmy's three characters once trimmed", () => {
+      memory.recall.mockReturnValue(41);
+      api.composer.mockReturnValue(of(lemmyContext()));
+      const lane = lemmyLane();
+
+      lane.writeTitle(' ab ');
+      expect(lane.fieldsReady()).toBe(false);
+
+      lane.writeTitle(' abc ');
+      expect(lane.fieldsReady()).toBe(true);
+    });
+
+    it('is not ready with a title over the limit, counting code points', () => {
+      memory.recall.mockReturnValue(41);
+      api.composer.mockReturnValue(of(lemmyContext()));
+      const lane = lemmyLane();
+
+      lane.writeTitle('😀'.repeat(200));
+      expect(lane.fieldsReady()).toBe(true);
+      expect(lane.titleLength()).toBe(200);
+
+      lane.writeTitle('😀'.repeat(201));
+      expect(lane.fieldsReady()).toBe(false);
+    });
+
+    it('waits for a title the context left empty', () => {
+      memory.recall.mockReturnValue(41);
+      api.composer.mockReturnValue(of(lemmyContext({ title: '' })));
+      const lane = lemmyLane();
+      expect(lane.fieldsReady()).toBe(false);
+
+      lane.writeTitle('Typed');
+
+      expect(lane.fieldsReady()).toBe(true);
+    });
+
+    it('sends the trimmed title and the community, and remembers the community', () => {
+      memory.recall.mockReturnValue(41);
+      api.composer.mockReturnValue(of(lemmyContext()));
+      const lane = lemmyLane();
+      lane.community.set(42);
+      lane.writeTitle(' A long read ');
+
+      lane.send(DRAFT, 'Hi').subscribe();
+
+      expect(api.send).toHaveBeenCalledWith(ON_LEMMY, {
+        ...DRAFT,
+        accountId: 8,
+        idempotencyKey: expect.any(String),
+        title: 'A long read',
+        communityId: 42,
+      });
+      expect(memory.remember).toHaveBeenCalledWith(8, 42);
+    });
+
+    it('shows what it posted by its title, not its body', () => {
+      memory.recall.mockReturnValue(41);
+      api.composer.mockReturnValue(of(lemmyContext()));
+      const lane = lemmyLane();
+      lane.writeTitle(' A long read ');
+      let sent: SentPost | undefined;
+
+      lane.send(DRAFT, 'The body').subscribe((post) => (sent = post));
+
+      expect(sent?.text).toBe('A long read');
+    });
+
+    it('remembers nothing when the send fails', () => {
+      memory.recall.mockReturnValue(41);
+      api.composer.mockReturnValue(of(lemmyContext()));
+      api.send.mockReturnValue(throwError(refusal));
+      const lane = lemmyLane();
+
+      lane.send(DRAFT, 'Hi').subscribe({ error: () => undefined });
+
+      expect(memory.remember).not.toHaveBeenCalled();
+    });
+
+    it('leaves a lane without Lemmy fields always ready, sending neither title nor community', () => {
+      const lanes = initialised(LINK, BOTH);
+      lanes.toggle('bluesky');
+      const bluesky = laneOf(lanes, 'bluesky');
+
+      bluesky.send(DRAFT, 'Hi').subscribe();
+
+      expect(bluesky.fieldsReady()).toBe(true);
+      expect(api.send.mock.calls[0][1]).not.toHaveProperty('title');
+      expect(api.send.mock.calls[0][1]).not.toHaveProperty('communityId');
+      expect(memory.recall).not.toHaveBeenCalled();
+      expect(memory.remember).not.toHaveBeenCalled();
     });
   });
 });

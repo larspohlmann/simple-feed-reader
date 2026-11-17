@@ -7,6 +7,7 @@ import { parseProblem, problemText } from '../../../core/problem';
 import { randomUuid } from '../../../shared/random-uuid';
 import {
   ComposerContextDto,
+  LemmyLinkFieldsDto,
   MastodonVisibility,
   PostDraftDto,
   PostTargetDto,
@@ -14,6 +15,8 @@ import {
 } from '../../entry-social';
 import { SocialPostApi } from '../../social-post-api';
 import { SentPost } from './composed-post';
+import { LemmyCommunityMemory } from './lemmy-community-memory';
+import { postLength } from './post-length';
 
 type ContextState =
   | { status: 'idle' }
@@ -21,10 +24,12 @@ type ContextState =
   | { status: 'ready'; context: ComposerContextDto }
   | { status: 'failed'; message: string };
 
+type LemmyChoice = Required<Pick<PostDraftDto, 'title' | 'communityId'>>;
+
 /** What the dialog's shared fields contribute to a lane's post. */
 export type SharedDraft = Omit<
   PostDraftDto,
-  'accountId' | 'idempotencyKey' | 'visibility' | 'contentWarning'
+  'accountId' | 'idempotencyKey' | 'visibility' | 'contentWarning' | 'title' | 'communityId'
 >;
 
 /**
@@ -34,12 +39,19 @@ export type SharedDraft = Omit<
 export class ComposerLane {
   private readonly api = inject(SocialPostApi);
   private readonly i18n = inject(TranslocoService);
+  private readonly communityMemory = inject(LemmyCommunityMemory);
   readonly network: SocialNetworkName;
   private readonly idempotencyKey = randomUuid();
   readonly active: WritableSignal<boolean> = signal(false);
   /** Mastodon's own fields, which the lane carries only while its context offers a visibility. */
   readonly visibility: WritableSignal<MastodonVisibility | null> = signal(null);
   readonly contentWarning: WritableSignal<string | null> = signal(null);
+  /** Lemmy's own fields, which the lane carries only while its context has Lemmy fields. */
+  readonly community: WritableSignal<number | null> = signal(null);
+  private readonly typedTitle = signal('');
+  readonly title: Signal<string> = this.typedTitle.asReadonly();
+  private readonly trimmedTitle = computed(() => this.title().trim());
+  readonly titleLength: Signal<number> = computed(() => postLength(this.trimmedTitle(), 'lemmy'));
 
   private readonly loadState = signal<ContextState>({ status: 'idle' });
   private readonly chosenAccountId = signal<number | undefined>(undefined);
@@ -47,6 +59,7 @@ export class ComposerLane {
   private readonly sendFailure = signal<string | null>(null);
   private readonly loadFailure = new Subject<void>();
   private visibilityChosen = false;
+  private titleWritten = false;
   private loading = Subscription.EMPTY;
 
   readonly state: Signal<ContextState> = this.loadState.asReadonly();
@@ -67,6 +80,16 @@ export class ComposerLane {
     return sendError === null ? null : { message: sendError, retries: false };
   });
   readonly loadFailed: Observable<void> = this.loadFailure.asObservable();
+  readonly fieldsReady: Signal<boolean> = computed(() => {
+    const lemmy = this.context()?.lemmy ?? null;
+    if (lemmy === null) return true;
+    const length = this.titleLength();
+    return (
+      this.community() !== null &&
+      length >= lemmy.minTitleCharacters &&
+      length <= lemmy.maxTitleCharacters
+    );
+  });
 
   constructor(readonly target: PostTargetDto) {
     this.network = target.network;
@@ -111,13 +134,21 @@ export class ComposerLane {
     this.visibilityChosen = true;
   }
 
+  writeTitle(value: string): void {
+    this.typedTitle.set(value);
+    this.titleWritten = true;
+  }
+
   send(draft: SharedDraft, text: string): Observable<SentPost> {
     const context = this.requireContext();
     this.sendFailure.set(null);
     return this.api.send(this.target, this.draftFor(draft, context)).pipe(
       map((published) => this.sentAs(published, context, text)),
       tap({
-        next: (sent) => this.sentPost.set(sent),
+        next: (sent) => {
+          this.sentPost.set(sent);
+          this.rememberCommunity(context);
+        },
         error: (error: HttpErrorResponse) => this.sendFailure.set(this.messageOf(error)),
       }),
     );
@@ -131,6 +162,19 @@ export class ComposerLane {
   private adopt(context: ComposerContextDto): void {
     this.loadState.set({ status: 'ready', context });
     if (!this.visibilityChosen) this.visibility.set(context.visibility);
+    if (context.lemmy !== null) this.adoptLemmy(context.accountId, context.lemmy);
+  }
+
+  private adoptLemmy(accountId: number, lemmy: LemmyLinkFieldsDto): void {
+    const remembered = this.communityMemory.recall(accountId);
+    const offered = lemmy.communities.some((community) => community.id === remembered);
+    if (!this.titleWritten) this.typedTitle.set(lemmy.title);
+    this.community.set(offered ? remembered : null);
+  }
+
+  private rememberCommunity(context: ComposerContextDto): void {
+    const choice = this.lemmyChoice(context);
+    if (choice !== null) this.communityMemory.remember(context.accountId, choice.communityId);
   }
 
   private requireContext(): ComposerContextDto {
@@ -145,6 +189,7 @@ export class ComposerLane {
       accountId: context.accountId,
       idempotencyKey: this.idempotencyKey,
       ...this.mastodonFields(),
+      ...(this.lemmyChoice(context) ?? {}),
     };
   }
 
@@ -155,13 +200,19 @@ export class ComposerLane {
     return { visibility, ...(warning === '' ? {} : { contentWarning: warning }) };
   }
 
+  private lemmyChoice(context: ComposerContextDto): LemmyChoice | null {
+    const community = this.community();
+    if (context.lemmy === null || community === null) return null;
+    return { title: this.trimmedTitle(), communityId: community };
+  }
+
   private sentAs(published: PublishedPostDto, context: ComposerContextDto, text: string): SentPost {
     const account = context.accounts.find((candidate) => candidate.id === context.accountId);
     return {
       ...published,
       kind: context.kind,
       network: this.network,
-      text,
+      text: context.lemmy === null ? text : this.trimmedTitle(),
       authorHandle: account?.handle ?? null,
       target: context.target,
     };

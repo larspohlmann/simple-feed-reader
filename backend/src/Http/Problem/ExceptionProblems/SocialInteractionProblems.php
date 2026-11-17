@@ -10,10 +10,12 @@ use App\Service\Social\Social\Exception\NoSocialAccountForNetworkException;
 use App\Service\Social\Social\Exception\NotASocialPostException;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostCommunityMissingException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Exception\SocialPostRemovedException;
 use App\Service\Social\Social\Exception\SocialPostTextMissingException;
+use App\Service\Social\Social\Exception\SocialPostTitleTooShortException;
 use App\Service\Social\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
 use Symfony\Component\HttpFoundation\Response;
@@ -60,9 +62,21 @@ final readonly class SocialInteractionProblems implements ExceptionProblemsInter
                 Response::HTTP_UNPROCESSABLE_ENTITY,
                 $exception->getMessage(),
             )),
+            $exception instanceof SocialPostTitleTooShortException => new ResolvedProblem(new ApiProblem(
+                'social_post_title_too_short',
+                'The post title is too short',
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+                $exception->getMessage(),
+            )),
+            $exception instanceof SocialPostCommunityMissingException => new ResolvedProblem(new ApiProblem(
+                'social_post_community_missing',
+                'The post needs a community',
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+                $exception->getMessage(),
+            )),
             $exception instanceof SocialPostTooLongException => new ResolvedProblem(new ApiProblem(
                 'social_post_too_long',
-                'The reply is too long for the network',
+                'The post is too long for the network',
                 Response::HTTP_UNPROCESSABLE_ENTITY,
                 $exception->getMessage(),
             )),

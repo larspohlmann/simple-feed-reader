@@ -37,6 +37,7 @@ import { SentPost } from './composed-post';
 import { ComposerLane, SharedDraft } from './composer-lane';
 import { ComposerLanes } from './composer-lanes';
 import { ComposerSubjectComponent } from './composer-subject.component';
+import { LemmyLinkFieldsComponent } from './lemmy-link-fields.component';
 import { NetworkPillsComponent } from './network-pills.component';
 import { postLength } from './post-length';
 
@@ -58,6 +59,7 @@ import { postLength } from './post-length';
     ErrorBannerComponent,
     FieldComponent,
     IconComponent,
+    LemmyLinkFieldsComponent,
     NetworkLogoComponent,
     NetworkPillsComponent,
     NgTemplateOutlet,
@@ -147,7 +149,10 @@ export class ComposerDialogComponent {
       .map((counter) => counter.lane);
     return this.lanes
       .pending()
-      .every((lane) => lane.context()?.canSend === true && !over.includes(lane.network));
+      .every(
+        (lane) =>
+          lane.context()?.canSend === true && lane.fieldsReady() && !over.includes(lane.network),
+      );
   });
   protected readonly accountLabel = computed(() =>
     this.crossposts() ? 'reader.composer.accountOn' : `${this.copy()}.account`,
@@ -208,7 +213,11 @@ export class ComposerDialogComponent {
   }
 
   protected controlId(control: string, lane: ComposerLane): string {
-    return this.lanes.showsPills() ? `reply-${control}-${lane.network}` : `reply-${control}`;
+    return this.lanes.controlId(control, lane);
+  }
+
+  protected locked(lane: ComposerLane): boolean {
+    return this.sending() || lane.sent() !== null;
   }
 
   protected chooseAccount(lane: ComposerLane, event: Event): void {
