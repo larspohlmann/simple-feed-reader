@@ -1,4 +1,5 @@
 import { Injectable, computed, inject } from '@angular/core';
+import { wireTimestamp } from '../../core/wire-timestamp';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { TranslocoService } from '@jsverse/transloco';
@@ -64,7 +65,7 @@ export class MarkReadActions {
   }
 
   private markAllReadNow(target: MarkReadTarget): void {
-    const until = this.entries.loadedAt() || new Date().toISOString();
+    const until = this.entries.loadedAt() || wireTimestamp(new Date());
     this.entries.runThenReload(this.markReadRequest(target, until), () =>
       this.reloadAfterMarkRead(),
     );
