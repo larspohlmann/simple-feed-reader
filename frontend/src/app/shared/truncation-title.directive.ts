@@ -11,7 +11,7 @@ import { Directive, ElementRef, inject } from '@angular/core';
 export class TruncationTitleDirective {
   private readonly host: HTMLElement = inject(ElementRef).nativeElement;
 
-  syncTitle(): void {
+  protected syncTitle(): void {
     if (this.host.scrollWidth > this.host.clientWidth) {
       this.host.title = this.host.textContent?.trim() ?? '';
       return;
