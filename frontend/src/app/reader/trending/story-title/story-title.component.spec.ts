@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { aStory } from '../../../../testing/entry-testing';
-import { STORY_ICON, storyListLink } from '../story';
+import { STORY_ICON } from '../story';
 import { StoryTitleComponent } from './story-title.component';
 
 @Component({ template: '' })
@@ -39,16 +39,11 @@ it('carries the full title as a tooltip for when the line is cut short', () => {
   expect(heading?.getAttribute('title')).toBe('A very long event headline');
 });
 
-it("links to the story's list, where a followed story's sidebar row links", () => {
-  const link = mount('Any event', 12).querySelector('a.story-link');
-
-  expect(storyListLink(12)).toEqual(['/trending/stories', 12]);
-  expect(link?.getAttribute('href')).toBe('/trending/stories/12');
-  expect(link?.querySelector('h3.title')).not.toBeNull();
-});
-
-it("opens the story's list when clicked", async () => {
+it("links to the story's list and opens it when clicked", async () => {
   const link = mount('Any event', 12).querySelector<HTMLAnchorElement>('a.story-link')!;
+
+  expect(link.getAttribute('href')).toBe('/trending/stories/12');
+  expect(link.querySelector('h3.title')).not.toBeNull();
 
   link.click();
   await TestBed.inject(Router).navigated;
