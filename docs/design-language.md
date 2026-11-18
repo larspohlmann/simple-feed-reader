@@ -1648,8 +1648,8 @@ indent ([§5](#5-magazine-blocks)).
 
 A Lemmy score (#2217): up arrow, compact score, down arrow, labelled "N points". Without a
 `myVote` it is one `role="img"` with inert, dimmed arrows; with one the arrows are vote buttons
-in a `role="group"` (#2218). A vote tints only the pressed arrow and the score — accent up,
-danger down — never the pill (#2345), the same in list rows, magazine cards and the article.
+in a `role="group"` (#2218). A vote tints only the pressed arrow and the score: accent up,
+danger down.
 
 | Input | Type | Default |
 |---|---|---|
@@ -1657,10 +1657,8 @@ danger down — never the pill (#2345), the same in list rows, magazine cards an
 | `myVote` | `-1 \| 0 \| 1 \| null` | `null` |
 | `variant` | `'framed' \| 'bare'` | `'framed'` — `framed` wears a `--radius` ring (list footers, the article head and action rows); `bare` has none (comment bylines) |
 
-A framed pill takes its colour from where it sits and its size from two custom properties
-the host sets: `--vote-pill-height` (the article action row's `--action-height`) and
-`--vote-pill-arrow-padding` (block padding of the arrows, `--space-1` by default; the list
-footer sets `--space-0` to match the tag pills' height).
+A framed pill inherits its colour; the host sizes it with `--vote-pill-height` (the action
+row) or `--vote-pill-arrow-padding` (`--space-1` by default, `--space-0` in the list footer).
 
 ```html
 <app-vote-pill [score]="comment.score" variant="bare" />

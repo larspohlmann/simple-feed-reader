@@ -68,8 +68,6 @@ button.arrow {
   font-variant-numeric: tabular-nums;
 }
 
-:host(.bare) .pill {
-  .arrow {
-    padding: 0 var(--space-1);
-  }
+:host(.bare) .arrow {
+  padding: 0 var(--space-1);
 }

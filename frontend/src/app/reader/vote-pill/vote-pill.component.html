@@ -6,8 +6,6 @@
     <button
       type="button"
       class="arrow"
-      [class.up]="direction === 'up'"
-      [class.down]="direction === 'down'"
       [class.voted]="vote === pressedValue"
       [attr.aria-pressed]="vote === pressedValue"
       [attr.aria-label]="'reader.vote.' + direction | transloco"
