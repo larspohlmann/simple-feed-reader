@@ -22,10 +22,7 @@ import { SettingsSaveBarComponent } from '../../shared/settings/save-bar/save-ba
 import { toastOnSaved } from '../../shared/toast/saved-toast';
 import { connectionLabel, unusableConnectionId } from '../connection-choice';
 import { ProfileDebugLogComponent } from './profile-debug-log.component';
-import {
-  ProfileCapField,
-  ProfileSettingsService,
-} from './profile-settings.service';
+import { ProfileCapField, ProfileSettingsService } from './profile-settings.service';
 
 /** The interest profile the For You runs score against: what it says, how it is built, and a manual start. */
 @Component({

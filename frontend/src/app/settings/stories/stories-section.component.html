@@ -22,7 +22,11 @@
       [title]="'settings.stories.connection' | transloco"
       [description]="'settings.stories.connectionDesc' | transloco"
     >
-      <select data-testid="story-connection" [disabled]="svc.busy()" (change)="onConnection($event)">
+      <select
+        data-testid="story-connection"
+        [disabled]="svc.busy()"
+        (change)="onConnection($event)"
+      >
         <option value="" [selected]="state.writingConnectionId === null">
           {{ 'settings.stories.connectionActive' | transloco }}
         </option>
