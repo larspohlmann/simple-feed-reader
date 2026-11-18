@@ -4,10 +4,11 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { API_BASE_URL } from '../core/api';
 import { transientGatewayRetryInterceptor } from '../core/http/retry-transient-gateway-errors';
 import { ReaderApi } from './reader-api';
+import { leadOf } from './state/list-item';
 import { PAGE_SIZE } from './list/paging';
 import { ReaderContent } from './models';
 import { Observable } from 'rxjs';
-import { A_READER_TOKEN, anEntry, aStory } from '../../testing/entry-testing';
+import { A_READER_TOKEN, anEntry, aStory, aStoryArticle } from '../../testing/entry-testing';
 import { refreshReport } from '../../testing/refresh-report';
 
 describe('ReaderApi', () => {
@@ -157,6 +158,35 @@ describe('ReaderApi', () => {
     expect(testRequest.request.params.get('tag')).toBeNull();
     expect(testRequest.request.params.get('cursor')).toBe('CUR');
     testRequest.flush({ entries: [], nextCursor: null });
+  });
+
+  it('maps an entries response to items that equal its entries', () => {
+    const entries = [anEntry({ id: 1 }), anEntry({ id: 2 })];
+    let page: unknown;
+    api.entries({ view: 'unread' }).subscribe((result) => (page = result));
+    ctrl
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
+      .flush({
+        entries,
+        nextCursor: 'NEXT',
+      });
+
+    expect(page).toEqual({ items: entries, nextCursor: 'NEXT' });
+  });
+
+  it('keeps what a followed-story page adds to its entries', () => {
+    let page: unknown;
+    api.entries({ view: 'unread' }).subscribe((result) => (page = result));
+    ctrl
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
+      .flush({
+        entries: [],
+        nextCursor: null,
+        lastOpenedAt: '2026-11-18T08:00:00Z',
+        newEntryIds: [3],
+      });
+
+    expect(page).toMatchObject({ items: [], lastOpenedAt: '2026-11-18T08:00:00Z' });
   });
 
   it("GETs a network's profile feeds with the feed kind", () => {
@@ -353,13 +383,18 @@ describe('ReaderApi', () => {
       newEntryIds: [5],
     };
     testRequest.flush(answer);
-    expect(page).toEqual(answer);
+    expect(page).toEqual({
+      items: [],
+      nextCursor: null,
+      lastOpenedAt: answer.lastOpenedAt,
+      newEntryIds: [5],
+    });
   });
 
-  it('answers the Trending list query with the stories as their leads (#2017)', () => {
+  it('answers the Trending list query with its stories as items (#2328)', () => {
     let ids: number[] = [];
     api.entries({ view: 'trending', window: 'day' }).subscribe((page) => {
-      ids = page.entries.map((entry) => entry.id);
+      ids = page.items.map((item) => leadOf(item).id);
     });
     const testRequest = ctrl.expectOne(
       (request) => request.url === 'https://api.test/api/trending',
@@ -370,7 +405,7 @@ describe('ReaderApi', () => {
       window: 'day',
       builtAt: null,
       stories: [
-        anEntry({ id: 9, story: aStory({ outletCount: 3, viewed: false, shareCount: 0 }) }),
+        aStory({ id: 3, outletCount: 3, articles: [aStoryArticle({ id: 9 })], leadEntryId: 9 }),
       ],
     });
     expect(ids).toEqual([9]);

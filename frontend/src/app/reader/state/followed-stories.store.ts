@@ -1,7 +1,7 @@
 import { Injectable, computed, inject } from '@angular/core';
 import { EMPTY, Observable, defer, finalize, tap } from 'rxjs';
 import { accountSignal, onIdentityChange } from '../../core/auth/session-identity';
-import { FollowedStoryDto, TrendingStory } from '../trending/trending.models';
+import { FollowedStoryDto, TrendingStoryDto } from '../trending/trending.models';
 import { TrendingApi } from '../trending/trending-api';
 import { StaleGatedLoad } from './stale-gated-load';
 
@@ -65,7 +65,7 @@ export class FollowedStoriesStore {
     return this.nextBuildDueAt === null || Date.now() >= this.nextBuildDueAt;
   }
 
-  isFollowed(story: TrendingStory): boolean {
+  isFollowed(story: Pick<TrendingStoryDto, 'id' | 'followed'>): boolean {
     const intent = this.intents().get(story.id);
     if (intent !== undefined) return intent;
     return this.answered() ? this.storiesById().has(story.id) : story.followed;

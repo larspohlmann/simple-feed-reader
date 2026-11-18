@@ -1,14 +1,14 @@
-import { EntriesPage, EntryDto } from '../models';
-import { TrendingWindow } from './trending.models';
+import { ListPage } from '../state/list-page';
+import { TrendingStoryDto, TrendingWindow } from './trending.models';
 
-/** `GET /api/trending` (#2017): each story is its lead's list row, the other outlets in its `duplicates`. */
+/** `GET /api/trending` (#2328): one entry per story, its articles lead first. */
 export interface TrendingResponseDto {
   window: TrendingWindow;
   builtAt: string | null;
-  stories: EntryDto[];
+  stories: TrendingStoryDto[];
 }
 
-/** The Trending list as the reader's list store holds any list: one row per story. */
-export function trendingPage(response: TrendingResponseDto): EntriesPage {
-  return { entries: response.stories, nextCursor: null };
+/** The Trending list as the reader's list store holds any list: one item per story. */
+export function trendingPage(response: TrendingResponseDto): ListPage {
+  return { items: response.stories, nextCursor: null };
 }

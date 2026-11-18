@@ -1,9 +1,9 @@
 import { anEntry, aStory } from '../../../testing/entry-testing';
 import { EntryDto } from '../models';
 import { isStoryViewed, showsUnreadMark } from './story';
-import { TrendingStory } from './trending.models';
+import { TrendingStoryDto } from './trending.models';
 
-const lead = (story: Partial<TrendingStory> = {}, over: Partial<EntryDto> = {}): EntryDto =>
+const lead = (story: Partial<TrendingStoryDto> = {}, over: Partial<EntryDto> = {}): EntryDto =>
   anEntry({ story: aStory({ outletCount: 5, ...story }), ...over });
 
 describe('isStoryViewed', () => {

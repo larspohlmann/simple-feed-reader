@@ -1,4 +1,4 @@
-import type { EntriesPage } from '../models';
+import type { EntriesPage, EntryDto } from '../models';
 
 export type TrendingWindow = 'day' | 'week';
 
@@ -8,8 +8,11 @@ export interface TrendingUnopened {
   unopened: number;
 }
 
-/** What a Trending row stands for beyond its lead (#2017). */
-export interface TrendingStory {
+/** A Trending article: its list row, and the posts that share it. */
+export type StoryArticleDto = EntryDto & { shares: EntryDto[] };
+
+/** A Trending story (#2017, #2328): its articles, the lead first. */
+export interface TrendingStoryDto {
   /** Stable across builds (#2128): a hide and a follow name the story by it. */
   id: number;
   followed: boolean;
@@ -19,6 +22,8 @@ export interface TrendingStory {
   viewed: boolean;
   /** Posts sharing the story's articles, each post once. */
   shareCount: number;
+  leadEntryId: number;
+  articles: StoryArticleDto[];
 }
 
 /** A story the reader follows, as the sidebar lists it (#2128). */

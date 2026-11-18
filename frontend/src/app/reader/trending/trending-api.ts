@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map, tap } from 'rxjs';
 import { API_BASE_URL } from '../../core/api';
 import { retryingTransientGatewayErrors } from '../../core/http/retry-transient-gateway-errors';
-import { EntriesPage } from '../models';
+import { ListPage } from '../state/list-page';
 import { TrendingBuiltAt } from './trending-built-at';
 import { TrendingResponseDto, trendingPage } from './trending-page';
 import { FollowedStoriesResponseDto, TrendingWindow } from './trending.models';
@@ -17,7 +17,7 @@ export class TrendingApi {
   private readonly builtAt = inject(TrendingBuiltAt);
 
   /** One window's stories as a list page; the API answers the day when no window is named. */
-  page(window: TrendingWindow = DEFAULT_TRENDING_WINDOW): Observable<EntriesPage> {
+  page(window: TrendingWindow = DEFAULT_TRENDING_WINDOW): Observable<ListPage> {
     return this.http
       .get<TrendingResponseDto>(`${this.base}/api/trending`, {
         params: new HttpParams().set('window', window),

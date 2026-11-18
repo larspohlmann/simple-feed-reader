@@ -1,30 +1,13 @@
-import { anEntry, aStory } from '../../../testing/entry-testing';
-import { TrendingResponseDto, trendingPage } from './trending-page';
-
-const response = (): TrendingResponseDto => ({
-  window: 'day',
-  builtAt: '2026-11-04T08:00:00Z',
-  stories: [
-    anEntry({
-      id: 1,
-      title: 'Lead one',
-      duplicates: [anEntry({ id: 2 }), anEntry({ id: 3 })],
-      story: aStory({ outletCount: 7, viewed: false, shareCount: 0 }),
-    }),
-    anEntry({
-      id: 4,
-      title: 'Lead two',
-      story: aStory({ outletCount: 3, viewed: true, shareCount: 0 }),
-    }),
-  ],
-});
+import { aStory } from '../../../testing/entry-testing';
+import { trendingPage } from './trending-page';
 
 describe('trendingPage', () => {
-  it('lists each story as its lead row, in the order the server ranked them', () => {
-    expect(trendingPage(response()).entries).toEqual(response().stories);
-  });
+  it('lists the stories as items, in the order the server ranked them, with no further page', () => {
+    const stories = [aStory({ id: 4 }), aStory({ id: 2 })];
 
-  it('has no further page', () => {
-    expect(trendingPage(response()).nextCursor).toBeNull();
+    expect(trendingPage({ window: 'day', builtAt: null, stories })).toEqual({
+      items: stories,
+      nextCursor: null,
+    });
   });
 });

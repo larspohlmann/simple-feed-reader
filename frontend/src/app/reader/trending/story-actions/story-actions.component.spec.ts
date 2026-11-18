@@ -6,14 +6,14 @@ import { anEntry, aStory } from '../../../../testing/entry-testing';
 import { EntryDto } from '../../models';
 import { FollowedStoriesStore } from '../../state/followed-stories.store';
 import { TrendingApi } from '../trending-api';
-import { TrendingStory } from '../trending.models';
+import { TrendingStoryDto } from '../trending.models';
 import { STORY_ACTIONS, StoryActions } from './story-actions';
 import { StoryActionsComponent } from './story-actions.component';
 
 describe('StoryActionsComponent (#2128)', () => {
   const follow = jest.fn();
   const hide = jest.fn();
-  const isFollowed = (story: TrendingStory) => story.followed;
+  const isFollowed = (story: TrendingStoryDto) => story.followed;
   const provided = signal<StoryActions | null>({ follow, hide, isFollowed });
 
   const mount = (entry: EntryDto) => {
