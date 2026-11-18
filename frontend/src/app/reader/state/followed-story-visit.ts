@@ -1,4 +1,5 @@
 import { Injectable, computed, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { accountSignal } from '../../core/auth/session-identity';
 import { EntryDto } from '../models';
 import { ListContext } from './list-context';
@@ -22,7 +23,7 @@ export class FollowedStoryVisit {
   });
 
   constructor() {
-    this.storyList.listLanded.subscribe((list) => this.landed(list));
+    this.storyList.listLanded.pipe(takeUntilDestroyed()).subscribe((list) => this.landed(list));
   }
 
   private landed({ query, page }: LandedList): void {

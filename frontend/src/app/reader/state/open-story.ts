@@ -1,4 +1,5 @@
 import { Injectable, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { accountSignal } from '../../core/auth/session-identity';
 import { ListContext } from './list-context';
 import { LandedList } from './landed-list';
@@ -23,7 +24,9 @@ export class OpenStory {
   private readonly landedStory = accountSignal<LandedStory | null>(null);
 
   constructor() {
-    inject(ListContext).entries.listLanded.subscribe((list) => this.landed(list));
+    inject(ListContext)
+      .entries.listLanded.pipe(takeUntilDestroyed())
+      .subscribe((list) => this.landed(list));
   }
 
   titleOf(id: number): string | null {
