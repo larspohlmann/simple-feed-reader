@@ -163,8 +163,8 @@
             <div class="row-slot-inner">
               <app-recommendation-strip [entry]="e">
                 <app-entry-row
+                  [appStory]="storyOf(item)"
                   [entry]="e"
-                  [story]="storyOf(item)"
                   [tags]="tagsFor(e.subscriptionId)"
                   [terms]="searchTerms()"
                   [class.in-search]="isSearch()"

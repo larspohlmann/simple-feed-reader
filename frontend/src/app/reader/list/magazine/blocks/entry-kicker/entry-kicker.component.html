@@ -1,5 +1,5 @@
 <article class="kicker-card" [appOpensEntry]="entry()">
-  <app-entry-kicker-line [entry]="entry()" [story]="story()" />
+  <app-entry-kicker-line [entry]="entry()" />
   @if (headline()) {
     <p class="title">{{ headline() }}</p>
   }
@@ -7,5 +7,5 @@
     <p class="dek">{{ snippet() }}</p>
   }
   <app-entry-meta [entry]="entry()" [tags]="tags()" />
-  <app-more-sources [entry]="entry()" [story]="story()" />
+  <app-more-sources [entry]="entry()" />
 </article>

@@ -18,6 +18,7 @@ import { aThreadPost } from '../../../../testing/thread-testing';
 import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
+import { provideStoryContext } from '../../../../testing/story-context-testing';
 import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 
 const entryActions = {
@@ -44,9 +45,15 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto =>
   });
 
 function mount(item: ListItem) {
+  TestBed.configureTestingModule({
+    providers: [provideStoryContext(storyOf(item)).provider],
+  });
+  return createRow(item);
+}
+
+function createRow(item: ListItem) {
   const fixture = TestBed.createComponent(EntryRowComponent);
   fixture.componentRef.setInput('entry', leadOf(item));
-  fixture.componentRef.setInput('story', storyOf(item));
   fixture.detectChanges();
   return fixture;
 }
@@ -118,6 +125,14 @@ describe('EntryRowComponent', () => {
     });
   });
 
+  it('renders no story pieces without a story context', () => {
+    const element = mount(entry()).nativeElement as HTMLElement;
+
+    expect(element.querySelector('app-story-source-count')).toBeNull();
+    expect(element.querySelector('app-story-sharers')).toBeNull();
+    expect(element.querySelector('app-story-actions')).toBeNull();
+  });
+
   describe('a Trending lead (#2017)', () => {
     const lead = (others: StoryArticleDto[] = []) =>
       aStory({
@@ -177,8 +192,10 @@ describe('EntryRowComponent', () => {
   });
 
   it("names an authorless Home post by the Home's label", () => {
+    const item = authorlessHomePost(7);
+    TestBed.configureTestingModule({ providers: [provideStoryContext(null).provider] });
     holdUnrenamedHome(7);
-    const element = mount(authorlessHomePost(7)).nativeElement as HTMLElement;
+    const element = createRow(item).nativeElement as HTMLElement;
 
     expect(element.querySelector('.meta')?.textContent).toContain('Home@bsky');
   });

@@ -16,11 +16,11 @@
     />
   }
   <div class="body">
-    <app-entry-kicker-line [entry]="entry()" [story]="story()" />
+    <app-entry-kicker-line [entry]="entry()" />
     @if (headline()) {
       <p class="title" [class.post]="isPost()">{{ headline() }}</p>
     }
     <app-entry-meta [entry]="entry()" [tags]="tags()" />
-    <app-more-sources [entry]="entry()" [story]="story()" />
+    <app-more-sources [entry]="entry()" />
   </div>
 </article>

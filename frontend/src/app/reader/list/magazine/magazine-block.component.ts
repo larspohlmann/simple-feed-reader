@@ -1,4 +1,4 @@
-import { Component, input } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
 import { SubscriptionTagDto } from '../../models';
 import { BlockCard, MagazineBlock } from './magazine-block';
 import { EntryHeroComponent } from './blocks/entry-hero/entry-hero.component';
@@ -12,6 +12,8 @@ import { EntryLinkComponent } from './blocks/entry-link/entry-link.component';
 import { EntryThreadComponent } from './blocks/entry-thread/entry-thread.component';
 import { EntryMediaComponent } from './blocks/entry-media/entry-media.component';
 import { EntryQuotingComponent } from './blocks/entry-quoting/entry-quoting.component';
+import { STORY_CONTEXT } from '../../trending/story-context';
+import { TrendingStoryDto } from '../../trending/trending.models';
 import { SourceGroupComponent } from './source-group.component';
 
 // One shared instance: a fresh `[]` per check would change every tag-less block's
@@ -37,11 +39,17 @@ export const NO_TAGS: SubscriptionTagDto[] = [];
   ],
   templateUrl: './magazine-block.component.html',
   styleUrl: './magazine-block.component.scss',
+  providers: [{ provide: STORY_CONTEXT, useFactory: () => inject(MagazineBlockComponent).story }],
 })
 export class MagazineBlockComponent {
   readonly block = input.required<MagazineBlock>();
   /** Feed tags keyed by subscription id, used to render each entry's tag pills. */
   readonly feedTags = input<Map<number, SubscriptionTagDto[]>>(new Map());
+
+  readonly story = computed<TrendingStoryDto | null>(() => {
+    const block = this.block();
+    return block.kind === 'group' ? null : block.story;
+  });
 
   protected tagsFor(subscriptionId: number): SubscriptionTagDto[] {
     return this.feedTags().get(subscriptionId) ?? NO_TAGS;

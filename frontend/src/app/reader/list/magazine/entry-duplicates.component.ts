@@ -14,7 +14,7 @@ import { alsoFootOf } from './also-foot';
 import { sourceNameOf } from '../../entry/entry-source/source-name';
 import { StoryActionsComponent } from '../../trending/story-actions/story-actions.component';
 import { STORY_ICON } from '../../trending/story';
-import { TrendingStoryDto } from '../../trending/trending.models';
+import { injectStory, StoryContextDirective } from '../../trending/story-context';
 
 let nextId = 0;
 
@@ -38,6 +38,7 @@ export const ALSO_FOOT_NAMES = 4;
     IconComponent,
     CdkConnectedOverlay,
     StoryActionsComponent,
+    StoryContextDirective,
     forwardRef(() => EntryRowComponent),
   ],
   templateUrl: './entry-duplicates.component.html',
@@ -49,7 +50,7 @@ export const ALSO_FOOT_NAMES = 4;
 export class EntryDuplicatesComponent implements EntryActionHandler {
   /** The row the footer sits on; deleting from a copy's card deletes this row's post (#1972). */
   readonly entry = input.required<EntryDto>();
-  readonly story = input<TrendingStoryDto | null>(null);
+  protected readonly story = injectStory();
   private readonly foot = computed(() => alsoFootOf(this.entry(), this.story()));
   protected readonly viewportMargin = MENU_VIEWPORT_MARGIN;
   protected readonly copies = computed(() => this.foot().copies);

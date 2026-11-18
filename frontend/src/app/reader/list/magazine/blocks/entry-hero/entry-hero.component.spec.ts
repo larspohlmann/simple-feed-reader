@@ -10,6 +10,7 @@ import { ImageProxyService } from '../../../../../shared/proxied-image/image-pro
 import { neverRecoveringImageProxy } from '../../../../../../testing/image-proxy-testing';
 import { anEntry, aStory, aStoryArticle } from '../../../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
+import { provideStoryContext } from '../../../../../../testing/story-context-testing';
 import { provideSocialAccounts } from '../../../../../../testing/social-accounts-testing';
 
 const entryActions = {
@@ -40,6 +41,7 @@ function mount(item: ListItem) {
   TestBed.configureTestingModule({
     imports: [EntryHeroComponent, provideTranslocoTesting()],
     providers: [
+      provideStoryContext(storyOf(item)).provider,
       provideSocialAccounts(),
       provideAccountIdentity(),
       { provide: EntryActionHandler, useValue: entryActions },
@@ -49,7 +51,6 @@ function mount(item: ListItem) {
   });
   const fixture = TestBed.createComponent(EntryHeroComponent);
   fixture.componentRef.setInput('entry', leadOf(item));
-  fixture.componentRef.setInput('story', storyOf(item));
   fixture.detectChanges();
   return fixture;
 }

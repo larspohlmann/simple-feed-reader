@@ -1,9 +1,9 @@
 <article class="quote" [appOpensEntry]="entry()">
-  <app-entry-kicker-line [entry]="entry()" [story]="story()" />
+  <app-entry-kicker-line [entry]="entry()" />
   <p class="pull">{{ lead() }}</p>
   @if (headline()) {
     <p class="title">{{ headline() }}</p>
   }
   <app-entry-meta [entry]="entry()" [tags]="tags()" />
-  <app-more-sources [entry]="entry()" [story]="story()" />
+  <app-more-sources [entry]="entry()" />
 </article>

@@ -8,7 +8,7 @@ import { EntryDto } from '../../models';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
-import { aQuotedPost, anEntry } from '../../../../testing/entry-testing';
+import { aQuotedPost, anEntry, aStory, aStoryArticle } from '../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 
@@ -65,6 +65,20 @@ describe('MagazineBlockComponent', () => {
 
   it.each(ENTRY_KINDS)('renders no empty headline in a %s block', (kind) => {
     expect(mount(blockOf(kind, entry({ title: '' }))).querySelector('.title')).toBeNull();
+  });
+
+  it("hands a story block's story to its widgets", () => {
+    const lead = entry();
+    const story = aStory({
+      outletCount: 7,
+      viewed: false,
+      shareCount: 0,
+      articles: [aStoryArticle(lead)],
+    });
+
+    const element = mount({ kind: 'hero', entry: lead, story });
+
+    expect(element.querySelector('app-entry-hero app-story-source-count')).not.toBeNull();
   });
 
   it('renders a quoting block as app-entry-quoting', () => {

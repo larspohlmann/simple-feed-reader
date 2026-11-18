@@ -53,6 +53,7 @@ import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progres
 import { prefersReducedMotion } from '../../../core/reduced-motion';
 import { heldFor } from '../../../core/held-for';
 import { FeedLanguage } from '../../feed-language';
+import { StoryContextDirective } from '../../trending/story-context';
 import { ListItem, leadOf, storyOf } from '../../state/list-item';
 
 // How long a reload or a command may run before it earns the overlay. One that
@@ -70,6 +71,7 @@ const WAIT_OVERLAY_DELAY_MS = 150;
     SpinnerComponent,
     LoadingOverlayComponent,
     EntryRowComponent,
+    StoryContextDirective,
     RecommendationStripComponent,
     RunHeaderComponent,
     ListDividerComponent,

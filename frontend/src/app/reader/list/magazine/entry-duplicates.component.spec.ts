@@ -1,16 +1,18 @@
-import { Provider } from '@angular/core';
+import { Component, Provider } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { EntryDto } from '../../models';
 import { ListItem, leadOf, storyOf } from '../../state/list-item';
-import { StoryArticleDto } from '../../trending/trending.models';
+import { StoryContextDirective } from '../../trending/story-context';
+import { StoryArticleDto, TrendingStoryDto } from '../../trending/trending.models';
 import { EntryDuplicatesComponent } from './entry-duplicates.component';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { anEntry, aStory, aStoryArticle } from '../../../../testing/entry-testing';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
+import { provideStoryContext } from '../../../../testing/story-context-testing';
 import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 import { provideStoryActions } from '../../../../testing/story-actions-testing';
 
@@ -44,6 +46,7 @@ function mount(testEntry: ListItem, arrange?: () => void, storyActions: Provider
     imports: [EntryDuplicatesComponent, provideTranslocoTesting()],
     providers: [
       ...storyActions,
+      provideStoryContext(storyOf(testEntry)).provider,
       provideSocialAccounts(),
       provideAccountIdentity(),
       { provide: EntryActionHandler, useValue: entryActions },
@@ -58,7 +61,6 @@ function mount(testEntry: ListItem, arrange?: () => void, storyActions: Provider
 
 function hold(fixture: ComponentFixture<EntryDuplicatesComponent>, row: ListItem): void {
   fixture.componentRef.setInput('entry', leadOf(row));
-  fixture.componentRef.setInput('story', storyOf(row));
   fixture.detectChanges();
 }
 
@@ -399,4 +401,50 @@ describe('more than four copies', () => {
     expect(element.querySelectorAll('.also-entry')).toHaveLength(4);
     expect(element.querySelector('.also-more')).toBeNull();
   });
+});
+
+@Component({
+  imports: [EntryDuplicatesComponent, StoryContextDirective],
+  template: '<app-entry-duplicates [appStory]="story" [entry]="lead" />',
+})
+class StoryCardHostComponent {
+  story: TrendingStoryDto = aStory();
+  lead: EntryDto = article();
+}
+
+it("shows a copy's row in the popover without the story's pieces", () => {
+  const lead = article();
+  const copy = article({ id: 2, title: 'Second outlet', source: 'NDR SH' });
+  const story = aStory({
+    outletCount: 2,
+    viewed: false,
+    shareCount: 2,
+    articles: [lead, copy],
+  });
+  TestBed.configureTestingModule({
+    imports: [StoryCardHostComponent, provideTranslocoTesting()],
+    providers: [
+      ...provideStoryActions(),
+      provideSocialAccounts(),
+      provideAccountIdentity(),
+      { provide: EntryActionHandler, useValue: entryActions },
+      provideRouter([]),
+    ],
+  });
+  const fixture = TestBed.createComponent(StoryCardHostComponent);
+  fixture.componentInstance.story = story;
+  fixture.componentInstance.lead = lead;
+  fixture.detectChanges();
+
+  (fixture.nativeElement.querySelector('.also-entry') as HTMLElement).click();
+  fixture.detectChanges();
+
+  const panel = TestBed.inject(OverlayContainer)
+    .getContainerElement()
+    .querySelector('.dup-popover')!;
+  expect(panel.querySelector('app-entry-row')).not.toBeNull();
+  expect(fixture.nativeElement.querySelector('app-story-actions')).not.toBeNull();
+  expect(panel.querySelector('app-story-source-count')).toBeNull();
+  expect(panel.querySelector('app-story-sharers')).toBeNull();
+  expect(panel.querySelector('app-story-actions')).toBeNull();
 });

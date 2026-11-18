@@ -3,7 +3,6 @@ import { EntryDto, SubscriptionTagDto } from '../../models';
 import { entryRelativeTime } from '../../format';
 import { entryDek, entryHeadline, isPost } from '../../entry/entry-text';
 import { LanguageService } from '../../../core/i18n/language.service';
-import { TrendingStoryDto } from '../../trending/trending.models';
 
 /** The signal inputs/outputs every magazine block shares, whether or not it
  *  renders an image. The `@Directive()` decorator is required — without it
@@ -14,7 +13,6 @@ import { TrendingStoryDto } from '../../trending/trending.models';
 })
 export abstract class EntryBlockBase {
   readonly entry = input.required<EntryDto>();
-  readonly story = input<TrendingStoryDto | null>(null);
   readonly tags = input<SubscriptionTagDto[]>([]);
   private readonly language = inject(LanguageService);
   readonly when = computed(() => entryRelativeTime(this.entry(), this.language.lang()));
