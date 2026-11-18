@@ -25,6 +25,20 @@ final readonly class HeadlineMarkers
             'Vídeo', 'Video', 'Análisis', 'Opinión'],
     ];
 
+    private const string EVERY_LANGUAGE = '';
+
+    /** @var array<string, string> the label pattern of each language, and of every list under EVERY_LANGUAGE */
+    private array $labelPatterns;
+
+    public function __construct()
+    {
+        $patterns = [self::EVERY_LANGUAGE => self::labelPattern(array_merge(...array_values(self::LABELS)))];
+        foreach (self::LABELS as $language => $labels) {
+            $patterns[$language] = self::labelPattern($labels);
+        }
+        $this->labelPatterns = $patterns;
+    }
+
     public function clean(string $headline, ?string $feedTitle, ?FeedLanguage $language): CleanedHeadlineModel
     {
         $withoutTicker = $this->withoutTicker(trim($headline));
@@ -43,20 +57,19 @@ final readonly class HeadlineMarkers
 
     private function withoutLabel(string $headline, ?FeedLanguage $language): string
     {
-        $pattern = '/^(?:' . implode('|', $this->labels($language)) . ')'
-            . self::SPACE . '*:' . self::SPACE . '+/iu';
+        $pattern = $this->labelPatterns[$language->value ?? self::EVERY_LANGUAGE];
 
         return preg_replace($pattern, '', $headline, 1) ?? $headline;
     }
 
-    /** @return list<string> */
-    private function labels(?FeedLanguage $language): array
+    /** @param list<string> $labels */
+    private static function labelPattern(array $labels): string
     {
-        $lists = null === $language ? self::LABELS : [self::LABELS[$language->value]];
-        $labels = array_unique(array_merge(...array_values($lists)));
+        $labels = array_unique($labels);
         usort($labels, static fn (string $left, string $right): int => \strlen($right) <=> \strlen($left));
 
-        return array_map(static fn (string $label): string => preg_quote($label, '/'), $labels);
+        return '/^(?:' . implode('|', array_map(static fn (string $label): string => preg_quote($label, '/'), $labels))
+            . ')' . self::SPACE . '*:' . self::SPACE . '+/iu';
     }
 
     private function withoutOutletSuffix(string $headline, ?string $feedTitle): string
