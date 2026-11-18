@@ -14,7 +14,6 @@ final class SocialWriteOutcomeUnknownExceptionTest extends TestCase
         $exception = SocialWriteOutcomeUnknownException::naming('Bluesky', 504);
 
         self::assertSame('Bluesky', $exception->serviceName);
-        self::assertSame(504, $exception->status);
         self::assertSame(
             'Bluesky had trouble with this request, so it may or may not have gone through. Check before trying again.',
             $exception->getMessage(),

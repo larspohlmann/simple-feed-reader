@@ -4,21 +4,17 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\Exception;
 
-final class SocialWriteOutcomeUnknownException extends SocialNetworkUnreachableException
+final class SocialWriteOutcomeUnknownException extends SocialServiceFailureException
 {
-    private function __construct(public readonly string $serviceName, public readonly int $status)
+    public static function naming(string $serviceName, int $status): self
     {
-        parent::__construct(
+        return new self(
+            $serviceName,
+            $status,
             sprintf(
                 '%s had trouble with this request, so it may or may not have gone through. Check before trying again.',
                 $serviceName,
             ),
-            previous: new \RuntimeException(sprintf('%s answered %d.', $serviceName, $status)),
         );
-    }
-
-    public static function naming(string $serviceName, int $status): self
-    {
-        return new self($serviceName, $status);
     }
 }
