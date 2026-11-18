@@ -11,7 +11,7 @@ use App\Service\Curation\StoryAi\Model\StoryAiOutcomeModel;
 use App\Service\Curation\StoryAi\Pass\StoryAiPass;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
-/** One kind of AI work on a reader's stories; the sweep runs every tagged task, so a new task is one new class. */
+/** One kind of AI work on a reader's stories; the sweep runs every tagged task; a new task is one class plus a StoryAiTask case, whose phase() says its CallPhase. */
 #[AutoconfigureTag('app.story_ai_task')]
 interface StoryAiTaskInterface
 {
