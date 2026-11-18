@@ -259,6 +259,26 @@ describe('ListScrollReset', () => {
 
       expect(memory.forget).not.toHaveBeenCalled();
     });
+
+    it('forgets the place of the story a flip of its order shows, not of the list beneath', () => {
+      navigate('/?view=trending&window=day');
+      navigate('/trending/stories/42?view=trending&window=day');
+      TestBed.tick();
+
+      TestBed.inject(ListOrderService).set(
+        { kind: 'trending-story', id: 42, unread: false },
+        'oldest',
+      );
+      TestBed.tick();
+
+      expect(memory.forget).toHaveBeenCalledTimes(1);
+      expect(memory.forget).toHaveBeenCalledWith({
+        kind: 'trending-story',
+        id: 42,
+        unread: false,
+        order: 'oldest',
+      });
+    });
   });
 
   describe('on a story path (#2128, #2329)', () => {

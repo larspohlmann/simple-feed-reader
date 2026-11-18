@@ -12,7 +12,12 @@ import { distinctUntilChanged, skip, startWith } from 'rxjs';
 import { ListPreferences } from '../list/list-preferences.service';
 import { ListScrollMemory } from './list-scroll-memory';
 import { AccountViewContext } from '../query/account-view-context';
-import { Selection, listSelectionFrom, sameSelection } from '../query/query';
+import {
+  Selection,
+  listSelectionFrom,
+  sameSelection,
+  trendingStorySelection,
+} from '../query/query';
 import { readerMatcher, selectionFromRoute } from '../query/reader-matcher';
 
 /** How the router says a navigation began. Taken from the event rather than
@@ -29,7 +34,7 @@ type NavigationTrigger = NavigationStart['navigationTrigger'];
 export interface ReaderPlace {
   /** The list underneath, with any search set aside. */
   list: Selection;
-  /** The list actually on screen: the search, or `list` when there is none. */
+  /** The list actually on screen: a story's over `list` (#2329), the search, or `list` itself. */
   shown: Selection;
 }
 
@@ -128,10 +133,12 @@ export class ListScrollReset {
     const pathParams = pathParamsOf(match);
     const context = this.viewContext.context();
     const queryParams = convertToParamMap(tree.queryParams);
-    const shown = selectionFromRoute(pathParams, queryParams, context).selection;
+    const parsed = selectionFromRoute(pathParams, queryParams, context);
     const list = pathParams.has('savedSearch')
-      ? shown
+      ? parsed.selection
       : listSelectionFrom(tree.queryParams, context);
+    const shown =
+      parsed.storyId === null ? parsed.selection : trendingStorySelection(parsed.storyId);
     return { list, shown };
   }
 }
