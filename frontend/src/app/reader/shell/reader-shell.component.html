@@ -52,7 +52,9 @@
   [class.sidebar-hidden]="sidebarCollapsed()"
   appDrawerSwipe
   [appDrawerSwipeOpen]="sidebarOpen()"
-  [appDrawerSwipeDisabled]="!screen.isNarrow() || articleFullscreen() || sidebarOrganising()"
+  [appDrawerSwipeDisabled]="
+    !screen.isNarrow() || articleFullscreen() || storyOverlay.open() || sidebarOrganising()
+  "
   (appDrawerSwipeOpenDrawer)="setSidebarOpen(true)"
   (appDrawerSwipeCloseDrawer)="setSidebarOpen(false)"
 >
@@ -222,6 +224,7 @@
       <div class="article-overlay story-overlay" appPageLayer animate.leave="article-leave">
         <app-story-layer
           [layout]="layout.mode()"
+          [fullscreen]="!screen.isWide()"
           [feedTags]="feedTags()"
           [openEntryId]="entryId()"
           [listLeading]="sidebarShow"

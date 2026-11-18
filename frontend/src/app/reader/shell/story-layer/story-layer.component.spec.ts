@@ -8,7 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { anEntry } from '../../../../testing/entry-testing';
 import { EntryListComponent } from '../../list/entry-list/entry-list.component';
@@ -30,6 +30,7 @@ import { StoryFollowing } from '../story-following.service';
 import { StoryOverlay } from '../story-overlay.service';
 import { StoryLayerComponent } from './story-layer.component';
 import { StoryListContext } from './story-list-context';
+import { ArticleGestures } from '../../article/article-layer/article-gestures.service';
 
 const LISTS = new InjectionToken<EntryListStubComponent[]>('LISTS', {
   providedIn: 'root',
@@ -77,6 +78,13 @@ class EntryListStubComponent {
 
 describe('StoryLayerComponent (#2329)', () => {
   const story: SelectionOf<'trending-story'> = { kind: 'trending-story', id: 42, unread: false };
+  const touch = (x: number, y: number) =>
+    ({
+      touches: [{ clientX: x, clientY: y }],
+      preventDefault() {
+        /* test stub */
+      },
+    }) as unknown as TouchEvent;
 
   let close: jest.Mock;
   let toggleOpen: jest.Mock;
@@ -215,5 +223,58 @@ describe('StoryLayerComponent (#2329)', () => {
     expect(setUnreadOnly).toHaveBeenCalledWith(story, true);
     expect(confirmMarkAllRead).toHaveBeenCalled();
     expect(confirmMarkAboveRead).toHaveBeenCalledWith([7], expect.any(Function));
+  });
+
+  describe("the article's back-swipe", () => {
+    function swipe(fixture: ComponentFixture<StoryLayerComponent>, deltaX: number): void {
+      const gestures = fixture.debugElement.injector.get(ArticleGestures);
+      gestures.onTouchStart(touch(0, 0));
+      gestures.onTouchMove(touch(deltaX, 6));
+      fixture.detectChanges();
+      gestures.onTouchEnd();
+      fixture.detectChanges();
+    }
+
+    it('follows the finger and takes the full-screen story off on a decisive rightward swipe', fakeAsync(() => {
+      const fixture = mountFixture();
+      fixture.componentRef.setInput('fullscreen', true);
+      fixture.detectChanges();
+      const host = fixture.nativeElement as HTMLElement;
+
+      const gestures = fixture.debugElement.injector.get(ArticleGestures);
+      gestures.onTouchStart(touch(0, 0));
+      gestures.onTouchMove(touch(40, 4));
+      fixture.detectChanges();
+      expect(host.style.transform).toBe('translate3d(40px, 0px, 0)');
+      gestures.onTouchMove(touch(130, 6));
+      gestures.onTouchEnd();
+      fixture.detectChanges();
+
+      expect(host.style.transform).toContain(`${window.innerWidth}px`);
+      expect(close).not.toHaveBeenCalled();
+      tick(220);
+      expect(close).toHaveBeenCalledTimes(1);
+    }));
+
+    it('snaps back on a short swipe', fakeAsync(() => {
+      const fixture = mountFixture();
+      fixture.componentRef.setInput('fullscreen', true);
+      fixture.detectChanges();
+
+      swipe(fixture, 30);
+      tick(220);
+
+      expect(close).not.toHaveBeenCalled();
+    }));
+
+    it('leaves a story beside the list in the wide layout alone', fakeAsync(() => {
+      const fixture = mountFixture();
+
+      swipe(fixture, 130);
+      tick(220);
+
+      expect(close).not.toHaveBeenCalled();
+      expect((fixture.nativeElement as HTMLElement).style.transform).toBe('none');
+    }));
   });
 });

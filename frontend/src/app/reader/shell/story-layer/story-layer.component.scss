@@ -1,3 +1,5 @@
+/* Opaque, as the article's sliding frame is: a back-swipe moves it aside to show the pinned list beneath. */
 :host {
   display: block;
+  background: var(--surface-0);
 }

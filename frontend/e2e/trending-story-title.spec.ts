@@ -2,6 +2,7 @@ import { expect, Page, test } from '@playwright/test';
 import { nextFrames, settleAnimations } from './support/animations';
 import { signInWithLayout } from './support/auth';
 import { entryWire } from './support/reader';
+import { liftTouch, touchDrag } from './support/scroll';
 import type { EntryDto } from '../src/app/reader/models';
 import type { TrendingResponseDto } from '../src/app/reader/trending/trending-page';
 import type {
@@ -108,7 +109,7 @@ async function stubStories(page: Page, followed: boolean): Promise<Stubbed> {
   return { trendingRequests: () => trendingRequests };
 }
 
-async function signIn(page: Page, layout: 'magazine' | 'list'): Promise<void> {
+async function signIn(page: Page, layout: 'magazine' | 'list' | 'pane'): Promise<void> {
   test.skip(
     !(await signInWithLayout(page, layout)),
     'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
@@ -282,6 +283,28 @@ declare global {
   }
 }
 
+/** The animation the story's overlay leaves with, through `close`. */
+async function leaveAnimation(page: Page, close: () => Promise<void>): Promise<string[]> {
+  const overlay = page.locator('.story-overlay');
+  await settleAnimations(overlay);
+  await page.evaluate(() => {
+    window.storyAnimations = [];
+    const leaving = new Set<Element>();
+    new MutationObserver((records) => {
+      for (const record of records) {
+        const target = record.target as HTMLElement;
+        if (!leaving.has(target) && target.matches('.story-overlay.article-leave')) {
+          leaving.add(target);
+          window.storyAnimations.push(getComputedStyle(target).animationName);
+        }
+      }
+    }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+  });
+  await close();
+  await expect(overlay).toHaveCount(0);
+  return page.evaluate(() => window.storyAnimations);
+}
+
 test.describe("a story's list slides like an article (phone)", () => {
   test.use({ viewport: { width: 375, height: 667 } });
 
@@ -297,24 +320,8 @@ test.describe("a story's list slides like an article (phone)", () => {
       await page.getByRole('link', { name: TITLE }).click();
       const overlay = page.locator('.story-overlay');
       const entered = await overlay.evaluate((element) => getComputedStyle(element).animationName);
-      await settleAnimations(overlay);
-      await page.evaluate(() => {
-        window.storyAnimations = [];
-        const leaving = new Set<Element>();
-        new MutationObserver((records) => {
-          for (const record of records) {
-            const target = record.target as HTMLElement;
-            if (!leaving.has(target) && target.matches('.story-overlay.article-leave')) {
-              leaving.add(target);
-              window.storyAnimations.push(getComputedStyle(target).animationName);
-            }
-          }
-        }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
-      });
-      await closeStory(page);
-      await expect(overlay).toHaveCount(0);
+      const left = await leaveAnimation(page, () => closeStory(page));
 
-      const left = await page.evaluate(() => window.storyAnimations);
       if (reducedMotion === 'reduce') {
         expect(entered).toBe('none');
         expect(left).toEqual(['none']);
@@ -322,6 +329,59 @@ test.describe("a story's list slides like an article (phone)", () => {
         expect(entered).toMatch(/article-enter$/);
         expect(left).toEqual([expect.stringMatching(/article-leave$/)]);
       }
+    });
+  }
+});
+
+test.describe("a story's list slides like a drill-in in the split layout too", () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+    test(`slides in and out of the list column (${reducedMotion})`, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion });
+      await stubStories(page, false);
+      await signIn(page, 'pane');
+      await openTrending(page);
+
+      await page.getByRole('link', { name: TITLE }).click();
+      const overlay = page.locator('.main.split > .story-overlay');
+      const entered = await overlay.evaluate((element) => getComputedStyle(element).animationName);
+      const left = await leaveAnimation(page, () => closeStory(page));
+
+      if (reducedMotion === 'reduce') {
+        expect(entered).toBe('none');
+        expect(left).toEqual(['none']);
+      } else {
+        expect(entered).toMatch(/article-enter$/);
+        expect(left).toEqual([expect.stringMatching(/article-leave$/)]);
+      }
+    });
+  }
+});
+
+test.describe("a story's list goes back on the article's swipe (phone)", () => {
+  test.use({ viewport: { width: 375, height: 667 }, hasTouch: true, isMobile: true });
+
+  for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+    test(`a rightward swipe takes the story off, Trending as it was (${reducedMotion})`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ reducedMotion });
+      const stubbed = await stubStories(page, false);
+      await signIn(page, 'magazine');
+      await openTrending(page);
+      const requests = stubbed.trendingRequests();
+      await page.getByRole('link', { name: TITLE }).click();
+      await expect(layer(page)).toContainText(TITLE);
+      await settleAnimations(page.locator('.story-overlay'));
+
+      await touchDrag(page, 'app-story-layer', { x: 20, y: 400 }, { x: 260, y: 410 });
+      await expect(layer(page)).toHaveAttribute('style', /translate3d\(240px/);
+      await liftTouch(page, 'app-story-layer');
+
+      await expect(layer(page)).toHaveCount(0);
+      await expect(page).toHaveURL(/\/\?view=trending&window=day$/);
+      expect(stubbed.trendingRequests()).toBe(requests);
     });
   }
 });
