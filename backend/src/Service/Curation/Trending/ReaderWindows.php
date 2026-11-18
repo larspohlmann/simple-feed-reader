@@ -5,22 +5,20 @@ declare(strict_types=1);
 namespace App\Service\Curation\Trending;
 
 use App\Enum\TrendingWindow;
-use App\Repository\TrendingEntryRepository;
+use App\Repository\TrendingSnapshotRepository;
 use App\Repository\TrendingStoryRepository;
-use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\ReaderWindowModel;
 
 /**
- * Cuts a window to one reader: the threshold from how many of their feeds posted within it, relaxed until five
- * stories show (D38), and the stories they are shown in a shorter window, which this one leaves out (D41).
+ * Cuts a window to one reader: the threshold from how many of their feeds were active at its last build, relaxed
+ * until five stories show (D38), and the stories they are shown in a shorter window, which this one leaves out (D41).
  */
 final readonly class ReaderWindows
 {
     public function __construct(
-        private TrendingEntryRepository $windowEntries,
+        private TrendingSnapshotRepository $snapshots,
         private TrendingStoryRepository $stories,
-        private NaiveUtcClock $clock,
     ) {
     }
 
@@ -71,12 +69,9 @@ final readonly class ReaderWindows
             return TrendingWindow::MULTIPLE_SOURCES;
         }
         $window = $atMultipleSources->window;
-        $since = $window->startBefore($this->clock->now());
+        $activeFeeds = $this->snapshots->lastBuilds($atMultipleSources->userId)->activeFeedCount($window);
 
-        return min(
-            $window->minimumOutletsFor($this->windowEntries->activeFeedCount($atMultipleSources->userId, $since)),
-            $lastWorthShowing->outletCount,
-        );
+        return min($window->minimumOutletsFor($activeFeeds), $lastWorthShowing->outletCount);
     }
 
     /** @return list<int> */

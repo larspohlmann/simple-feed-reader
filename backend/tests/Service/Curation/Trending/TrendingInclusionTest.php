@@ -10,6 +10,7 @@ use App\Entity\InclusionChange;
 use App\Entity\NetworkExclusion;
 use App\Entity\Subscription;
 use App\Entity\Tag;
+use App\Entity\TrendingSnapshot;
 use App\Entity\TrendingStory;
 use App\Entity\User;
 use App\Enum\InclusionSurface;
@@ -21,17 +22,16 @@ use App\Repository\EntryListRowEnricher;
 use App\Repository\ReadingSettingsRepository;
 use App\Repository\TrendingEntryRepository;
 use App\Repository\TrendingStoryRepository;
-use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
+use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Service\Curation\Trending\Model\TrendingStoryCardModel;
 use App\Service\Curation\Trending\ReaderWindows;
 use App\Service\Curation\Trending\TrendingStories;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
 use App\Tests\Support\TrendingWiring;
-use Symfony\Component\Clock\MockClock;
 
-/** A feed switched out of Trending, by its own switch, a tag or its network, is no source of a story. */
+/** A feed switched out of Trending, by its own switch, a tag or its network, is left out of the next build. */
 final class TrendingInclusionTest extends DbTestCase
 {
     private TrendingFixtures $fixtures;
@@ -40,15 +40,14 @@ final class TrendingInclusionTest extends DbTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->fixtures = new TrendingFixtures($this->entityManager);
         $this->reader = new User('trending-inclusion@example.com', new \DateTimeImmutable('2031-01-01 00:00:00'));
         $this->entityManager->persist($this->reader);
+        $this->fixtures = (new TrendingFixtures($this->entityManager))->ownedBy($this->reader);
     }
 
-    public function testAStoryWhoseSourcesAreSwitchedOutIsNeitherShownNorCounted(): void
+    public function testAStoryWhoseSourcesAreSwitchedOutAfterTheBuildStaysAsBuilt(): void
     {
         $feeds = $this->articleFeeds('alpha', 'beta', 'gamma');
-        $this->fixtures->subscribe($this->reader, ...$feeds);
         $this->storyOf($feeds);
         $this->fixtures->flush();
         foreach ($feeds as $feed) {
@@ -56,45 +55,24 @@ final class TrendingInclusionTest extends DbTestCase
         }
         $this->fixtures->flush();
 
-        self::assertSame([], $this->storiesOfTheDay());
-        self::assertSame(0, $this->stories()->unopenedFor($this->reader, TrendingWindow::Day)->unopened);
+        self::assertSame([3], self::outletCountsOf($this->rankedDay()));
+        self::assertSame(1, $this->stories()->unopenedFor($this->reader, TrendingWindow::Day)->unopened);
     }
 
-    public function testASwitchedOutFeedIsNoSourceAndItsArticleIsNotListed(): void
+    public function testASwitchedOutFeedIsNotBuilt(): void
     {
-        [$alpha, $beta, $gamma, $delta] = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta');
-        $this->fixtures->subscribe($this->reader, $alpha, $beta, $gamma, $delta);
-        $story = $this->storyOf([$alpha, $beta, $gamma, $delta]);
-        $this->fixtures->flush();
+        [$alpha, $beta] = $this->articleFeeds('alpha', 'beta');
+        $this->fixtures->entry($alpha, 'Switched out', '2031-05-14 08:00:00');
+        $kept = $this->fixtures->entry($beta, 'Kept', '2031-05-14 09:00:00');
         $this->subscriptionTo($alpha)->changeInclusions(new InclusionChange(trending: false));
         $this->fixtures->flush();
 
-        self::assertSame([3], self::outletCountsOf($this->rankedDay()));
-        self::assertCount(3, $this->storyRepository()->shownEntriesByStory(
-            $this->reader->requireId(),
-            TrendingWindow::Day,
-            [$story->requireId()],
-        )->entryIdsByStory()[$story->requireId()]);
-    }
-
-    public function testASwitchedOutFeedNoLongerHelpsAStoryReachTwoSources(): void
-    {
-        $feeds = $this->articleFeeds('alpha', 'beta');
-        $this->fixtures->subscribe($this->reader, ...$feeds);
-        $this->storyOf($feeds);
-        $this->fixtures->flush();
-        self::assertSame([2], self::outletCountsOf($this->rankedDay()));
-
-        $this->subscriptionTo($feeds[0])->changeInclusions(new InclusionChange(trending: false));
-        $this->fixtures->flush();
-
-        self::assertSame([], $this->rankedDay());
+        self::assertSame([$kept->requireId()], $this->windowEntryIds());
     }
 
     public function testASwitchedOutFeedIsNotAnActiveFeedOfTheReader(): void
     {
         $feeds = $this->articleFeeds('alpha', 'beta');
-        $this->fixtures->subscribe($this->reader, ...$feeds);
         $this->fixtures->entry($feeds[0], 'Alpha', '2031-05-14 08:00:00');
         $this->fixtures->entry($feeds[1], 'Beta', '2031-05-14 09:00:00');
         $this->fixtures->flush();
@@ -110,7 +88,6 @@ final class TrendingInclusionTest extends DbTestCase
     public function testAnEarlierCopyInASwitchedOutFeedLeavesTheLaterCopyCounted(): void
     {
         [$alpha, $beta, $gamma, $delta] = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta');
-        $this->fixtures->subscribe($this->reader, $alpha, $beta, $gamma, $delta);
         $shared = 'https://news.example.com/switched-out-first';
         $this->fixtures->story(
             TrendingWindow::Day,
@@ -150,49 +127,45 @@ final class TrendingInclusionTest extends DbTestCase
         $tag->changeInclusions(new InclusionChange(allItems: false));
         $tag->changeInclusions(new InclusionChange(forYou: false));
         $tag->changeInclusions(new InclusionChange(savedSearches: false));
-        [$alpha, $beta, $gamma, $delta] = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta');
-        $this->fixtures->subscribe($this->reader, $alpha, $beta, $gamma, $delta);
-        $this->storyOf([$alpha, $beta, $gamma, $delta]);
-        $this->subscriptionTo($alpha)->addTag($tag);
+        [$tagged] = $this->articleFeeds('tagged');
+        $entry = $this->fixtures->entry($tagged, 'Tagged', '2031-05-14 09:00:00');
+        $this->subscriptionTo($tagged)->addTag($tag);
         $this->fixtures->flush();
 
-        self::assertSame([4], self::outletCountsOf($this->rankedDay()));
+        self::assertSame([$entry->requireId()], $this->windowEntryIds());
     }
 
     public function testANetworkSwitchedOutOfTrendingTakesItsFeedsOut(): void
     {
-        [$alpha, $beta] = $this->articleFeeds('alpha', 'beta');
-        $social = $this->fixtures->feed('ann', SocialNetwork::Bluesky);
-        $this->fixtures->subscribe($this->reader, $alpha, $beta, $social);
-        $this->storySharedBy([$alpha, $beta], $social);
-        self::assertSame([3], self::outletCountsOf($this->rankedDay()));
-
+        [$alpha] = $this->articleFeeds('alpha');
+        $article = $this->fixtures->entry($alpha, 'Article', '2031-05-14 09:00:00');
+        $this->fixtures->entry($this->fixtures->feed('ann', SocialNetwork::Bluesky), 'Post', '2031-05-14 10:00:00');
         $this->entityManager->persist(
             new NetworkExclusion($this->reader, SocialNetwork::Bluesky, InclusionSurface::Trending),
         );
         $this->fixtures->flush();
 
-        self::assertSame([2], self::outletCountsOf($this->rankedDay()));
+        self::assertSame([$article->requireId()], $this->windowEntryIds());
     }
 
     public function testANetworkSwitchedOutOfAnotherSurfaceLeavesTrendingAlone(): void
     {
-        [$alpha, $beta] = $this->articleFeeds('alpha', 'beta');
-        $social = $this->fixtures->feed('ann', SocialNetwork::Bluesky);
-        $this->fixtures->subscribe($this->reader, $alpha, $beta, $social);
-        $this->storySharedBy([$alpha, $beta], $social);
+        $post = $this->fixtures->entry(
+            $this->fixtures->feed('ann', SocialNetwork::Bluesky),
+            'Post',
+            '2031-05-14 10:00:00',
+        );
         $this->entityManager->persist(
             new NetworkExclusion($this->reader, SocialNetwork::Bluesky, InclusionSurface::AllItems),
         );
         $this->fixtures->flush();
 
-        self::assertSame([3], self::outletCountsOf($this->rankedDay()));
+        self::assertSame([$post->requireId()], $this->windowEntryIds());
     }
 
     public function testACopyOfTheLeadInASwitchedOutFeedIsNotShownOnTheCard(): void
     {
         [$alpha, $beta, $gamma, $delta] = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta');
-        $this->fixtures->subscribe($this->reader, $alpha, $beta, $gamma, $delta);
         $url = 'https://news.example.com/lead-article';
         $lead = $this->fixtures->article($alpha, 'Lead', '2031-05-14 10:00:00', $url);
         $betaEntry = $this->fixtures->entry($beta, 'Beta', '2031-05-14 09:00:00');
@@ -212,13 +185,28 @@ final class TrendingInclusionTest extends DbTestCase
 
     private function assertTheTaggedFeedIsNoSource(Tag $tag): void
     {
-        [$alpha, $beta, $gamma, $delta] = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta');
-        $this->fixtures->subscribe($this->reader, $alpha, $beta, $gamma, $delta);
-        $this->storyOf([$alpha, $beta, $gamma, $delta]);
-        $this->subscriptionTo($alpha)->addTag($tag);
+        [$tagged, $untagged] = $this->articleFeeds('tagged', 'untagged');
+        $this->fixtures->entry($tagged, 'Tagged', '2031-05-14 08:00:00');
+        $kept = $this->fixtures->entry($untagged, 'Untagged', '2031-05-14 09:00:00');
+        $this->subscriptionTo($tagged)->addTag($tag);
         $this->fixtures->flush();
 
-        self::assertSame([3], self::outletCountsOf($this->rankedDay()));
+        self::assertSame([$kept->requireId()], $this->windowEntryIds());
+    }
+
+    /** @return list<int> the entries the reader's next build reads */
+    private function windowEntryIds(): array
+    {
+        return array_map(
+            static fn (WindowEntryModel $entry): int => $entry->id,
+            iterator_to_array(
+                (new TrendingEntryRepository($this->entityManager))->windowEntries(
+                    $this->reader->requireId(),
+                    new \DateTimeImmutable('2031-05-14 00:00:00', new \DateTimeZone('UTC')),
+                ),
+                false,
+            ),
+        );
     }
 
     private function tag(string $name): Tag
@@ -291,9 +279,8 @@ final class TrendingInclusionTest extends DbTestCase
     private function readerWindows(): ReaderWindows
     {
         return new ReaderWindows(
-            new TrendingEntryRepository($this->entityManager),
+            $this->entityManager->getRepository(TrendingSnapshot::class),
             $this->storyRepository(),
-            new NaiveUtcClock(new MockClock('2031-05-14 12:00:00', 'UTC')),
         );
     }
 
@@ -320,25 +307,6 @@ final class TrendingInclusionTest extends DbTestCase
         }
 
         return $this->fixtures->story(TrendingWindow::Day, $lastSeen, ...$members);
-    }
-
-    /**
-     * One article per feed and a post of the social feed sharing a story card of another site.
-     *
-     * @param list<Feed> $articleFeeds
-     */
-    private function storySharedBy(array $articleFeeds, Feed $social): void
-    {
-        $members = array_map(
-            fn (Feed $feed): array => [$this->fixtures->entry($feed, 'Story entry', '2031-05-14 09:00:00'), null],
-            $articleFeeds,
-        );
-        $post = $this->fixtures->entry($social, 'Story post', '2031-05-14 10:00:00');
-        $this->fixtures->storyOfSites(
-            TrendingWindow::Day,
-            '2031-05-14 10:00:00',
-            [...$members, [$post, 'shared.example']],
-        );
     }
 
     /** @return list<Feed> */

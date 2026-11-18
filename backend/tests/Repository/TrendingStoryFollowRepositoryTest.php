@@ -25,6 +25,7 @@ final class TrendingStoryFollowRepositoryTest extends DbTestCase
         $this->fixtures = new TrendingFixtures($this->entityManager);
         $this->follows = self::getContainer()->get(TrendingStoryFollowRepository::class);
         $this->reader = $this->fixtures->reader('follow-repository@example.com');
+        $this->fixtures = $this->fixtures->ownedBy($this->reader);
     }
 
     public function testASecondFollowKeepsTheFirstVisit(): void

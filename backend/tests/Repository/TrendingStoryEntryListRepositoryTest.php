@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\InclusionChange;
 use App\Entity\Subscription;
+use App\Entity\TrendingStory;
 use App\Entity\User;
 use App\Enum\TrendingWindow;
 use App\Repository\TrendingStoryEntryListRepository;
@@ -32,24 +33,33 @@ final class TrendingStoryEntryListRepositoryTest extends DbTestCase
     public function testJoinedAtByEntryReadsOnlyCopiesTheReaderSees(): void
     {
         $reader = $this->fixtures->reader('story-entry-list-joined-at@example.com');
-        $alpha = $this->fixtures->feed('alpha');
-        $beta = $this->fixtures->feed('beta');
-        $switchedOut = $this->fixtures->feed('switched-out');
-        $this->fixtures->subscribe($reader, $alpha, $beta, $switchedOut);
-        $shown = $this->copyOf($alpha, 'Shown');
-        $story = $this->fixtures->story(TrendingWindow::Day, '2031-05-14 09:00:00', $shown);
-        $this->fixtures->join($story, '2031-05-14 10:00:00', $this->copyOf($beta, 'Visible copy'));
-        $this->fixtures->join($story, '2031-05-14 11:00:00', $this->copyOf($switchedOut, 'Excluded copy'));
-        $this->switchOutOfTrending($reader, $switchedOut);
-
-        $joinedAt = $this->entries->joinedAtByEntry(
-            new TrendingStoryListQuery($reader->requireId(), $story->requireId()),
-            [$shown->requireId()],
-        );
+        $fixtures = $this->fixtures->ownedBy($reader);
+        $shown = $this->copyOf($fixtures->feed('alpha'), 'Shown');
+        $story = $fixtures->story(TrendingWindow::Day, '2031-05-14 09:00:00', $shown);
+        $fixtures->join($story, '2031-05-14 10:00:00', $this->copyOf($fixtures->feed('beta'), 'Visible copy'));
+        $unfollowed = $fixtures->feedNobodyFollows('unfollowed');
+        $fixtures->join($story, '2031-05-14 11:00:00', $this->copyOf($unfollowed, 'Copy of a feed no longer followed'));
 
         self::assertEquals(
-            [$shown->requireId() => new \DateTimeImmutable('2031-05-14 10:00:00', new \DateTimeZone('UTC'))],
-            $joinedAt,
+            [$shown->requireId() => self::at('2031-05-14 10:00:00')],
+            $this->joinedAtOf($reader, $story, $shown),
+        );
+    }
+
+    public function testJoinedAtByEntryReadsACopyInAFeedSwitchedOutAfterTheBuild(): void
+    {
+        $reader = $this->fixtures->reader('story-entry-list-joined-at-switched@example.com');
+        $fixtures = $this->fixtures->ownedBy($reader);
+        $shown = $this->copyOf($fixtures->feed('alpha'), 'Shown');
+        $story = $fixtures->story(TrendingWindow::Day, '2031-05-14 09:00:00', $shown);
+        $switchedOut = $fixtures->feed('switched-out');
+        $fixtures->join($story, '2031-05-14 11:00:00', $this->copyOf($switchedOut, 'Switched out later'));
+
+        $this->switchOutOfTrending($reader, $switchedOut);
+
+        self::assertEquals(
+            [$shown->requireId() => self::at('2031-05-14 11:00:00')],
+            $this->joinedAtOf($reader, $story, $shown),
         );
     }
 
@@ -58,6 +68,20 @@ final class TrendingStoryEntryListRepositoryTest extends DbTestCase
         $reader = $this->fixtures->reader('story-entry-list-joined-at-none@example.com');
 
         self::assertSame([], $this->entries->joinedAtByEntry(new TrendingStoryListQuery($reader->requireId(), 1), []));
+    }
+
+    /** @return array<int, \DateTimeImmutable> */
+    private function joinedAtOf(User $reader, TrendingStory $story, Entry $entry): array
+    {
+        return $this->entries->joinedAtByEntry(
+            new TrendingStoryListQuery($reader->requireId(), $story->requireId()),
+            [$entry->requireId()],
+        );
+    }
+
+    private static function at(string $time): \DateTimeImmutable
+    {
+        return new \DateTimeImmutable($time, new \DateTimeZone('UTC'));
     }
 
     private function copyOf(Feed $feed, string $title): Entry

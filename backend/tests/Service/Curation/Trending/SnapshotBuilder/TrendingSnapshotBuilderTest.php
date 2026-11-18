@@ -435,10 +435,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
 
     public function testTheDayAndTheWeekPlaceOneStory(): void
     {
-        $feeds = $this->weekSizedHafenstreik();
-        $reader = $this->fixtures->reader('d41@example.com');
-        $this->fixtures->subscribe($reader, ...$feeds);
-        $this->fixtures->flush();
+        $this->weekSizedHafenstreik();
 
         $this->builder()->build($this->ownerId(), TrendingWindow::Day);
         $this->builder()->build($this->ownerId(), TrendingWindow::Week);
@@ -449,10 +446,10 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         self::assertSame(
             $storyIds,
             RankedStoryModel::storyIdsOf(
-                $this->readerWindows()->shownStories($reader->requireId(), TrendingWindow::Day),
+                $this->readerWindows()->shownStories($this->ownerId(), TrendingWindow::Day),
             ),
         );
-        self::assertSame([], $this->readerWindows()->shownStories($reader->requireId(), TrendingWindow::Week));
+        self::assertSame([], $this->readerWindows()->shownStories($this->ownerId(), TrendingWindow::Week));
     }
 
     public function testANewArticleJoinsTheStoryWithTheBuildTime(): void
@@ -930,9 +927,8 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         self::assertInstanceOf(TrendingStoryRepository::class, $stories);
 
         return new ReaderWindows(
-            new TrendingEntryRepository($this->entityManager),
+            $this->entityManager->getRepository(TrendingSnapshot::class),
             $stories,
-            new NaiveUtcClock($this->clock),
         );
     }
 

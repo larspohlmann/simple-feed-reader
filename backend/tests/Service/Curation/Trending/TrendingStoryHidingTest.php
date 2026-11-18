@@ -26,9 +26,9 @@ final class TrendingStoryHidingTest extends DbTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->fixtures = new TrendingFixtures($this->entityManager);
         $this->reader = new User('trending-hider@example.com', new \DateTimeImmutable('2031-01-01 00:00:00'));
         $this->entityManager->persist($this->reader);
+        $this->fixtures = (new TrendingFixtures($this->entityManager))->ownedBy($this->reader);
         $this->story = $this->fixtures->story(
             TrendingWindow::Day,
             '2031-05-14 10:00:00',

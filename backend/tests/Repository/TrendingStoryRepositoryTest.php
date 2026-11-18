@@ -8,21 +8,21 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\EntryAuthor;
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
+use App\Entity\Subscription;
+use App\Entity\TrendingSnapshot;
 use App\Entity\TrendingStory;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
-use App\Repository\TrendingEntryRepository;
 use App\Repository\TrendingStoryRepository;
 use App\Service\Curation\Trending\Exception\TrendingStoryNotFoundException;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\ReaderWindowModel;
 use App\Service\Curation\Trending\ReaderWindows;
 use App\Service\Curation\Trending\TrendingStories;
-use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
-use Symfony\Component\Clock\MockClock;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 use App\Service\Foundation\Url\UrlNormalizer;
@@ -41,9 +41,9 @@ final class TrendingStoryRepositoryTest extends DbTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->fixtures = new TrendingFixtures($this->entityManager);
         $this->reader = new User('sites-reader@example.com', new \DateTimeImmutable('2031-01-01 00:00:00'));
         $this->entityManager->persist($this->reader);
+        $this->fixtures = (new TrendingFixtures($this->entityManager))->ownedBy($this->reader);
     }
 
     public function testOneArticleFeedAndAPostSharingAnotherSiteAreTwoSources(): void
@@ -111,13 +111,13 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         self::assertSame(
             [$story->requireId() => [$article->requireId(), $carded->requireId()]],
             $this->stories()
-                ->shownEntriesByStory($this->reader->requireId(), TrendingWindow::Day, [$story->requireId()])
+                ->shownEntriesByStory(TrendingWindow::Day, [$story->requireId()])
                 ->entryIdsByStory(),
         );
         self::assertSame(
             [],
             $this->stories()
-                ->shownEntriesByStory($this->reader->requireId(), TrendingWindow::Day, [])
+                ->shownEntriesByStory(TrendingWindow::Day, [])
                 ->entryIdsByStory(),
         );
     }
@@ -136,7 +136,7 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         ]);
 
         $shown = $this->stories()
-            ->shownEntriesByStory($this->reader->requireId(), TrendingWindow::Day, [$story->requireId()]);
+            ->shownEntriesByStory(TrendingWindow::Day, [$story->requireId()]);
 
         self::assertNull($shown->linkHashOf($article->requireId(), $article->requireId()));
         self::assertSame(
@@ -163,7 +163,7 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         ]);
 
         $shown = $this->stories()
-            ->shownEntriesByStory($this->reader->requireId(), TrendingWindow::Day, [$story->requireId()]);
+            ->shownEntriesByStory(TrendingWindow::Day, [$story->requireId()]);
 
         self::assertSame('resolved-hash', $shown->linkHashOf($carded->requireId(), $carded->requireId()));
     }
@@ -191,20 +191,6 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         self::assertSame([[$story->requireId(), 4]], $this->shownStoriesAndSources());
     }
 
-    public function testACopyInAFeedTheReaderDoesNotFollowLeavesTheirCopyCounted(): void
-    {
-        $stranger = $this->fixtures->feed('stranger', SocialNetwork::Mastodon);
-        $strangersCopy = $this->fixtures->article($stranger, 'Post', '2031-05-14 08:00:00', self::POST);
-        $story = $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
-            [$strangersCopy, 'shared.example'],
-            [$this->member($this->articleFeed('alpha')), 'alpha.example'],
-            [$this->member($this->articleFeed('beta')), 'beta.example'],
-            ...$this->copiesOf(self::POST, 'shared.example', 'home'),
-        ]);
-
-        self::assertSame([[$story->requireId(), 3]], $this->shownStoriesAndSources());
-    }
-
     public function testCopiesOfOnePostDoNotLiftAStoryOverTheMinimum(): void
     {
         $this->fiveStoriesOfThreeArticleFeeds();
@@ -214,33 +200,6 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         ]);
 
         self::assertNotContains($copied->requireId(), $this->shownStoryIds());
-    }
-
-    public function testStoriesRankByTheReadersFeedsNotByFeedsTheyDoNotFollow(): void
-    {
-        $unfollowed = array_map(
-            fn (string $name): array => [$this->member($this->fixtures->feed($name)), $name . '.example'],
-            ['one', 'two', 'three', 'four', 'five', 'six'],
-        );
-        $widerElsewhere = $this->storyOf([
-            [$this->articleFeed('alpha'), 'alpha.example'],
-            [$this->articleFeed('beta'), 'beta.example'],
-        ]);
-        $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 09:00:00', [
-            ...$unfollowed,
-            [$this->member($this->articleFeed('alpha-again')), 'alpha.example'],
-            [$this->member($this->articleFeed('beta-again')), 'beta.example'],
-        ]);
-        $widerForTheReader = $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 08:00:00', [
-            [$this->member($this->articleFeed('gamma')), 'gamma.example'],
-            [$this->member($this->articleFeed('delta')), 'delta.example'],
-            [$this->member($this->articleFeed('epsilon')), 'epsilon.example'],
-        ]);
-
-        self::assertSame(
-            [$widerForTheReader->requireId(), $widerElsewhere->requireId()],
-            \array_slice($this->shownStoryIds(), 0, 2),
-        );
     }
 
     public function testPostsWithoutAStoryCardAreNoSources(): void
@@ -365,19 +324,15 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         self::assertSame([[$story->requireId(), 2]], $this->rankedIn(TrendingWindow::Week, []));
     }
 
-    public function testAHiddenStoryIsLeftOutForThatReaderOnly(): void
+    public function testAHiddenStoryIsLeftOutAndAnotherUsersHideRowIsIgnored(): void
     {
         $story = $this->twoFeedWeekStory();
         $kept = $this->twoFeedWeekStory();
-        $other = $this->fixtures->reader('sites-other@example.com');
-        $this->fixtures->subscribe($other, ...$this->entityManager->getRepository(Feed::class)->findAll());
+
         $this->fixtures->hide($this->reader, $story);
+        $this->fixtures->hide($this->fixtures->reader('sites-other@example.com'), $kept);
 
         self::assertSame([[$kept->requireId(), 2]], $this->rankedIn(TrendingWindow::Week, []));
-        self::assertSame(
-            [[$story->requireId(), 2], [$kept->requireId(), 2]],
-            $this->rankedIn(TrendingWindow::Week, [], $other),
-        );
     }
 
     public function testShownEntriesAndViewedReadOnlyTheWindowsMembers(): void
@@ -395,25 +350,67 @@ final class TrendingStoryRepositoryTest extends DbTestCase
 
         self::assertSame(
             [$story->requireId() => [$inBoth->requireId()]],
-            $this->stories()->shownEntriesByStory($userId, TrendingWindow::Day, $storyIds)->entryIdsByStory(),
+            $this->stories()->shownEntriesByStory(TrendingWindow::Day, $storyIds)->entryIdsByStory(),
         );
         self::assertSame(
             [$story->requireId() => [$inBoth->requireId(), $weekOnly->requireId()]],
-            $this->stories()->shownEntriesByStory($userId, TrendingWindow::Week, $storyIds)->entryIdsByStory(),
+            $this->stories()->shownEntriesByStory(TrendingWindow::Week, $storyIds)->entryIdsByStory(),
         );
         self::assertSame([], $this->stories()->viewedStoryIds($userId, TrendingWindow::Day, $storyIds));
         self::assertSame($storyIds, $this->stories()->viewedStoryIds($userId, TrendingWindow::Week, $storyIds));
         self::assertSame([], $this->stories()->viewedStoryIds($userId, TrendingWindow::Week, []));
     }
 
-    public function testRequireExistsRefusesAStoryThatIsGone(): void
+    public function testRankedForUserIsOnlyTheirStories(): void
+    {
+        $other = $this->fixtures->reader('sites-other-owner@example.com');
+        $members = [$this->member($this->articleFeed('alpha')), $this->member($this->articleFeed('beta'))];
+        $this->fixtures->subscribe($other, ...$this->entityManager->getRepository(Feed::class)->findAll());
+        $own = $this->fixtures->storyOf($this->reader, TrendingWindow::Day, '2031-05-14 10:00:00', ...$members);
+        $this->fixtures->storyOf($other, TrendingWindow::Day, '2031-05-14 11:00:00', ...$members);
+
+        self::assertSame([[$own->requireId(), 2]], $this->rankedIn(TrendingWindow::Day, []));
+    }
+
+    public function testAMemberFromASwitchedOffFeedStillCounts(): void
+    {
+        $switchedOff = $this->articleFeed('gamma');
+        $story = $this->fixtures->storyOf(
+            $this->reader,
+            TrendingWindow::Day,
+            '2031-05-14 10:00:00',
+            $this->member($this->articleFeed('alpha')),
+            $this->member($this->articleFeed('beta')),
+            $this->member($switchedOff),
+        );
+        $subscription = $this->entityManager->getRepository(Subscription::class)
+            ->findOneBy(['user' => $this->reader, 'feed' => $switchedOff]);
+        self::assertInstanceOf(Subscription::class, $subscription);
+
+        $subscription->changeInclusions(new InclusionChange(trending: false));
+        $this->entityManager->flush();
+
+        self::assertSame([[$story->requireId(), 3]], $this->rankedIn(TrendingWindow::Day, []));
+    }
+
+    public function testRequireOwnedByRefusesAStoryThatIsGone(): void
     {
         $story = $this->twoFeedWeekStory();
-        $this->stories()->requireExists($story->requireId());
+        $this->stories()->requireOwnedBy($this->reader->requireId(), $story->requireId());
 
         $this->expectException(TrendingStoryNotFoundException::class);
 
-        $this->stories()->requireExists($story->requireId() + 1);
+        $this->stories()->requireOwnedBy($this->reader->requireId(), $story->requireId() + 1);
+    }
+
+    public function testRequireOwnedByRefusesAnotherUsersStory(): void
+    {
+        $story = $this->twoFeedWeekStory();
+        $other = $this->fixtures->reader('sites-not-the-owner@example.com');
+
+        $this->expectException(TrendingStoryNotFoundException::class);
+
+        $this->stories()->requireOwnedBy($other->requireId(), $story->requireId());
     }
 
     private function twoFeedWeekStory(): TrendingStory
@@ -529,9 +526,8 @@ final class TrendingStoryRepositoryTest extends DbTestCase
     private function ranked(): array
     {
         $readerWindows = new ReaderWindows(
-            new TrendingEntryRepository($this->entityManager),
+            $this->entityManager->getRepository(TrendingSnapshot::class),
             $this->stories(),
-            new NaiveUtcClock(new MockClock('2031-05-14 12:00:00', 'UTC')),
         );
 
         return $this->stories()->rankedForUser(

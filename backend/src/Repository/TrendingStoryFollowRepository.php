@@ -127,13 +127,12 @@ final class TrendingStoryFollowRepository extends ServiceEntityRepository
         );
     }
 
-    /** The newest member from an article feed the reader sees in Trending, else their newest member of any feed. */
+    /** The newest member from an article feed, else the newest member of any feed. */
     private static function headline(): string
     {
         return '(SELECT headline_entry.title FROM trending_story_entry headline_member'
             . ' JOIN entry headline_entry ON headline_entry.id = headline_member.entry_id'
             . ' JOIN feed headline_feed ON headline_feed.id = headline_member.feed_id'
-            . self::seenThrough('headline_member', 'headline_reader')
             . ' WHERE headline_member.story_id = follow.story_id'
             . ' ORDER BY CASE WHEN headline_feed.network IS NULL THEN 0 ELSE 1 END,'
             . ' headline_entry.effective_date DESC, headline_entry.id DESC LIMIT 1)';
@@ -155,19 +154,7 @@ final class TrendingStoryFollowRepository extends ServiceEntityRepository
             . ' FROM trending_story_entry new_member'
             . ' JOIN entry new_entry ON new_entry.id = new_member.entry_id'
             . ' JOIN feed new_feed ON new_feed.id = new_member.feed_id'
-            . self::seenThrough('new_member', 'new_reader')
             . ' WHERE new_member.story_id = follow.story_id AND new_member.joined_at > follow.last_opened_at)';
-    }
-
-    /** Joins the follower's subscription to the member's feed, while it counts in their Trending. */
-    private static function seenThrough(string $member, string $subscription): string
-    {
-        return \sprintf(
-            ' JOIN subscription %2$s ON %2$s.feed_id = %1$s.feed_id AND %2$s.user_id = follow.user_id AND %3$s',
-            $member,
-            $subscription,
-            TrendingInclusionSql::includes($subscription),
-        );
     }
 
     private static function notFollowed(int $userId, int $storyId): TrendingStoryNotFollowedException

@@ -33,8 +33,15 @@ final readonly class TrendingFixtures
         'Hamburg Terminals lahm: Hafenstreik',
     ];
 
-    public function __construct(private EntityManagerInterface $entityManager)
+    public function __construct(private EntityManagerInterface $entityManager, private ?User $owner = null)
     {
+    }
+
+    /** Fixtures whose stories belong to $owner and whose feeds $owner follows. */
+    #[\NoDiscard]
+    public function ownedBy(User $owner): self
+    {
+        return clone($this, ['owner' => $owner]);
     }
 
     /** The reader every story of these fixtures belongs to follows the feed. */
@@ -60,13 +67,23 @@ final readonly class TrendingFixtures
         return $feed;
     }
 
+    /** Skips a feed the user already follows, as feed() subscribes the owner to each. */
     public function subscribe(User $user, Feed ...$feeds): void
     {
+        $this->entityManager->flush();
         foreach ($feeds as $feed) {
+            if ($this->subscribes($user, $feed)) {
+                continue;
+            }
             $this->entityManager->persist(
                 new Subscription($user, $feed, new \DateTimeImmutable('2031-01-01 00:00:00')),
             );
         }
+    }
+
+    private function subscribes(User $user, Feed $feed): bool
+    {
+        return $this->entityManager->getRepository(Subscription::class)->count(['user' => $user, 'feed' => $feed]) > 0;
     }
 
     /** Variants 0 to 4 of one recurring story; any three link, all five make a week-sized story. */
@@ -220,6 +237,9 @@ final readonly class TrendingFixtures
     /** The reader every story of these fixtures belongs to. */
     public function owner(): User
     {
+        if ($this->owner !== null) {
+            return $this->owner;
+        }
         $email = 'trending-fixtures-owner@example.com';
 
         return $this->entityManager->getRepository(User::class)->findOneBy(['email' => $email])

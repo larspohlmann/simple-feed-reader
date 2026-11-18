@@ -22,7 +22,7 @@ final readonly class TrendingStoryHiding
     /** @throws TrendingStoryNotFoundException */
     public function hide(int $userId, int $storyId): void
     {
-        $this->stories->requireExists($storyId);
+        $this->stories->requireOwnedBy($userId, $storyId);
         $this->hides->hide($userId, $storyId, $this->clock->now());
     }
 }

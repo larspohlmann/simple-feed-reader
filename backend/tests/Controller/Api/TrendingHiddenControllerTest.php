@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\TrendingStory;
 use App\Entity\User;
@@ -28,7 +29,7 @@ final class TrendingHiddenControllerTest extends ApiTestCase
 
     public function testHidingAStoryTakesItOffTheListAndTheBadge(): void
     {
-        $reader = $this->signIn($this->client, 'trending-hide@example.com');
+        $reader = $this->signInAsOwner('trending-hide@example.com');
         $feeds = $this->followedFeeds($reader);
         $hidden = $this->story($feeds);
         $kept = $this->story(\array_slice($feeds, 0, 3));
@@ -44,11 +45,15 @@ final class TrendingHiddenControllerTest extends ApiTestCase
 
     public function testHidingAgainAnswersTheSameAndLeavesOtherReadersAlone(): void
     {
-        $reader = $this->signIn($this->client, 'trending-hide-twice@example.com');
+        $reader = $this->signInAsOwner('trending-hide-twice@example.com');
         $feeds = $this->followedFeeds($reader);
         $other = $this->factory()->create('trending-hide-other@example.com');
         $this->fixtures->subscribe($other, ...$feeds);
         $hidden = $this->story($feeds);
+        $othersStory = $this->fixtures->storyOf($other, TrendingWindow::Day, '2031-05-14 10:00:00', ...array_map(
+            fn (Feed $feed): Entry => $this->fixtures->entry($feed, 'Story', '2031-05-14 09:00:00'),
+            $feeds,
+        ));
 
         $this->hide($hidden->requireId());
         $this->hide($hidden->requireId());
@@ -56,12 +61,12 @@ final class TrendingHiddenControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
         self::assertSame([$hidden->requireId()], $this->hiddenStoryIdsOf($reader));
         $this->authenticate($this->client, $other);
-        self::assertSame([$hidden->requireId()], $this->storyIdsOfTheDay());
+        self::assertSame([$othersStory->requireId()], $this->storyIdsOfTheDay());
     }
 
     public function testAnUnknownStoryIsNotFound(): void
     {
-        $reader = $this->signIn($this->client, 'trending-hide-missing@example.com');
+        $reader = $this->signInAsOwner('trending-hide-missing@example.com');
         $story = $this->story($this->followedFeeds($reader));
 
         $this->hide($story->requireId() + 1);
@@ -75,7 +80,7 @@ final class TrendingHiddenControllerTest extends ApiTestCase
     #[DataProvider('malformedBodies')]
     public function testAMalformedBodyIsRefusedAndHidesNothing(array $body, string $field): void
     {
-        $reader = $this->signIn($this->client, 'trending-hide-malformed@example.com');
+        $reader = $this->signInAsOwner('trending-hide-malformed@example.com');
         $this->story($this->followedFeeds($reader));
 
         $this->client->request(
@@ -156,6 +161,14 @@ final class TrendingHiddenControllerTest extends ApiTestCase
         }
 
         return $storyIds;
+    }
+
+    private function signInAsOwner(string $email): User
+    {
+        $reader = $this->signIn($this->client, $email);
+        $this->fixtures = $this->fixtures->ownedBy($reader);
+
+        return $reader;
     }
 
     /** @return list<int> */

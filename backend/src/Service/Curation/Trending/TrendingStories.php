@@ -20,7 +20,7 @@ use App\Service\Curation\Trending\Model\TrendingUnopenedModel;
 use App\Service\Curation\Trending\Model\TrendingPageModel;
 use App\Service\Curation\Trending\Pass\StoryCardSource;
 
-/** One reader's Trending: the shared snapshot cut to their subscriptions and their threshold (#2017). */
+/** One reader's Trending: their own snapshot cut to their threshold (#2017, #2328). */
 final readonly class TrendingStories
 {
     public const int MAX_STORIES = 15;
@@ -42,7 +42,7 @@ final readonly class TrendingStories
 
         return new TrendingPageModel(
             $window,
-            $this->snapshots->lastBuilds()->builtAt($window),
+            $this->snapshots->lastBuilds($userId)->builtAt($window),
             $this->sourceFor($userId, $window, $ranked)->cardsOf($ranked),
         );
     }
@@ -73,7 +73,7 @@ final readonly class TrendingStories
     private function sourceFor(int $userId, TrendingWindow $window, array $ranked): StoryCardSource
     {
         $storyIds = RankedStoryModel::storyIdsOf($ranked);
-        $shown = $this->stories->shownEntriesByStory($userId, $window, $storyIds);
+        $shown = $this->stories->shownEntriesByStory($window, $storyIds);
 
         return new StoryCardSource(
             $shown->entryIdsByStory(),

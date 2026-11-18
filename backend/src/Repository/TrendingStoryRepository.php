@@ -22,7 +22,7 @@ use App\Service\Curation\Trending\Model\ShownEntriesModel;
  */
 final class TrendingStoryRepository extends ServiceEntityRepository
 {
-    /** A story is shown only when this many article feeds the reader follows, or this many article sites, carry it. */
+    /** A story is shown only when this many article feeds, or this many article sites, carry it. */
     private const int MINIMUM_ARTICLE_SOURCES = 2;
 
     private const string ARTICLE_FEEDS
@@ -50,8 +50,6 @@ final class TrendingStoryRepository extends ServiceEntityRepository
         /** @var list<array{story_id: int|string, outlet_count: int|string, last_seen: string}> $rows */
         $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
             self::visibleStories($reader)
-            . ' AND NOT EXISTS (SELECT 1 FROM trending_story_hide hidden'
-            . ' WHERE hidden.story_id = story.id AND hidden.user_id = :user)'
             . self::visibleCoverage()
             . \sprintf(' ORDER BY outlet_count DESC, story.last_seen DESC, story.id DESC LIMIT %d', $limit),
             self::visibilityParameters($reader),
@@ -68,23 +66,24 @@ final class TrendingStoryRepository extends ServiceEntityRepository
         );
     }
 
-    /** @throws TrendingStoryNotFoundException */
-    public function requireExists(int $storyId): void
+    /** @throws TrendingStoryNotFoundException when the story is gone or another user's */
+    public function requireOwnedBy(int $userId, int $storyId): void
     {
         $found = $this->getEntityManager()->getConnection()
-            ->fetchOne('SELECT 1 FROM trending_story WHERE id = ?', [$storyId]);
+            ->fetchOne('SELECT 1 FROM trending_story WHERE id = ? AND user_id = ?', [$storyId, $userId]);
         if ($found === false) {
-            throw new TrendingStoryNotFoundException(\sprintf('No Trending story has id %d.', $storyId));
+            throw new TrendingStoryNotFoundException(
+                \sprintf('User %d has no Trending story with id %d.', $userId, $storyId),
+            );
         }
     }
 
     /**
      * @param list<int> $storyIds
      *
-     * @return ShownEntriesModel each story's articles and story-card posts in the window of the feeds the reader
-     *                           follows
+     * @return ShownEntriesModel each story's articles and story-card posts in the window
      */
-    public function shownEntriesByStory(int $userId, TrendingWindow $window, array $storyIds): ShownEntriesModel
+    public function shownEntriesByStory(TrendingWindow $window, array $storyIds): ShownEntriesModel
     {
         if ($storyIds === []) {
             return new ShownEntriesModel([]);
@@ -97,12 +96,10 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             . ' JOIN feed shown_feed ON shown_feed.id = shown.feed_id'
             . ' LEFT JOIN shared_link link ON link.id = shown.shared_link_id'
             . LinkLandingSql::JOIN
-            . ' JOIN subscription reader ON reader.feed_id = shown.feed_id AND reader.user_id = :user'
-            . ' AND ' . TrendingInclusionSql::includes('reader')
             . ' WHERE shown.story_id IN (:storyIds) AND ' . TrendingPlacementSql::placedIn($window, 'shown')
             . ' AND (shown_feed.network IS NULL OR shown.article_site IS NOT NULL)',
-            ['user' => $userId, 'storyIds' => $storyIds],
-            ['user' => ParameterType::INTEGER, 'storyIds' => ArrayParameterType::INTEGER],
+            ['storyIds' => $storyIds],
+            ['storyIds' => ArrayParameterType::INTEGER],
         );
 
         $linkHashes = [];
@@ -138,9 +135,9 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     }
 
     /**
-     * The window's stories, counting only their members in it from feeds the reader follows in Trending, an article
-     * once and a post by its account, leaving out those the reader is shown in a shorter window; an `AND` on `story`,
-     * then visibleCoverage().
+     * The reader's stories of the window, counting their members in it, an article once and a post by its account,
+     * leaving out those they hid or are shown in a shorter window; an `AND` on `story`, then visibleCoverage().
+     * MySQL 8.4 drops rows when the hide test is a NOT EXISTS beside the placement semijoin: keep the LEFT JOIN.
      */
     private static function visibleStories(ReaderWindowModel $reader): string
     {
@@ -149,11 +146,11 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             . ' FROM trending_story story'
             . ' JOIN trending_story_entry story_member ON story_member.story_id = story.id'
             . ' JOIN feed member_feed ON member_feed.id = story_member.feed_id'
-            . ' JOIN subscription subscribed'
-            . ' ON subscribed.feed_id = story_member.feed_id AND subscribed.user_id = :user'
-            . ' AND ' . TrendingInclusionSql::includes('subscribed')
             . ' JOIN entry member_entry ON member_entry.id = story_member.entry_id'
+            . ' LEFT JOIN trending_story_hide hidden ON hidden.story_id = story.id AND hidden.user_id = :user'
             . ' WHERE ' . implode(' AND ', [
+                'story.user_id = :user',
+                'hidden.story_id IS NULL',
                 TrendingPlacementSql::placedIn($reader->window, 'story_member'),
                 self::noEarlierCopy($reader->window),
                 ...self::notShownInAShorterWindow($reader),
@@ -180,7 +177,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     }
 
     /**
-     * A story's sources for the reader (#2229, #2056): each article feed they follow, and each social account whose
+     * A story's sources (#2229, #2056): each article feed, and each social account whose
      * post shares a story card. An account is the post's author, else its feed when it names none, so a post's copies
      * in several timelines and two posts of one account count once.
      */
@@ -195,8 +192,8 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     }
 
     /**
-     * As in DuplicateCollapseDql, only the lowest-id copy of an article the reader can see in the story counts;
-     * the earlier copy must be one of theirs, or the article would count for no feed. A post counts by its account.
+     * As in DuplicateCollapseDql, only the lowest-id copy of an article in the story counts. A post counts by its
+     * account.
      */
     private static function noEarlierCopy(TrendingWindow $window): string
     {
@@ -204,9 +201,6 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             . ' OR NOT EXISTS (SELECT 1 FROM trending_story_entry earlier_member'
             . ' JOIN entry earlier_entry ON earlier_entry.id = earlier_member.entry_id'
             . ' JOIN feed earlier_feed ON earlier_feed.id = earlier_member.feed_id AND earlier_feed.network IS NULL'
-            . ' JOIN subscription earlier_reader'
-            . ' ON earlier_reader.feed_id = earlier_member.feed_id AND earlier_reader.user_id = :user'
-            . ' AND ' . TrendingInclusionSql::includes('earlier_reader')
             . ' WHERE earlier_member.story_id = story.id'
             . ' AND ' . TrendingPlacementSql::placedIn($window, 'earlier_member')
             . ' AND earlier_member.entry_id < story_member.entry_id'
