@@ -394,6 +394,43 @@ final class TrendingStoryEntriesControllerTest extends ApiTestCase
         self::assertSame('trending_story_not_found', $this->payload($this->client)['type']);
     }
 
+    public function testMarkingAStoryReadMarksItsUnreadMembersUpToTheMoment(): void
+    {
+        $reader = $this->signInAsOwner('story-mark-read@example.com');
+        [$alpha, $beta, $gamma] = $this->followedFeeds($reader);
+        $story = $this->fixtures->story(
+            TrendingWindow::Day,
+            '2031-05-14 09:00:00',
+            $this->fixtures->entry($alpha, 'Before', '2031-05-14 08:00:00'),
+            $this->fixtures->entry($beta, 'Also before', '2031-05-14 08:30:00'),
+            $this->fixtures->entry($gamma, 'After the moment', '2031-05-14 09:30:00'),
+        );
+        $elsewhere = $this->fixtures->entry($this->reloaded($alpha), 'Not in the story', '2031-05-14 08:00:00');
+        $this->entityManager()->flush();
+
+        $this->markRead($story, '2031-05-14T09:00:00+00:00');
+
+        self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
+        self::assertSame(['After the moment'], $this->titles($this->page($this->reloaded($story), ['unread' => 1])));
+        $this->client->request('GET', '/api/entries', ['unread' => 1, 'limit' => 50]);
+        $stillUnread = array_column($this->entries($this->payload($this->client)), 'title');
+        self::assertContains($elsewhere->getTitle(), $stillUnread);
+    }
+
+    public function testMarkingAnotherUsersStoryReadIsNotFound(): void
+    {
+        $reader = $this->signInAsOwner('story-mark-read-own@example.com');
+        [$alpha, $beta] = $this->followedFeeds($reader);
+        $story = $this->storyOf($alpha, $beta);
+        $other = $this->factory()->create('story-mark-read-other@example.com');
+        $this->authenticate($this->client, $other);
+
+        $this->markRead($story, '2031-05-14T10:00:00+00:00');
+
+        $this->assertRejected($this->client, Response::HTTP_NOT_FOUND);
+        self::assertSame('trending_story_not_found', $this->payload($this->client)['type']);
+    }
+
     public function testRowsCarryTheUsualEntryStateAndEnrichment(): void
     {
         $reader = $this->signInAsOwner('story-list-state@example.com');
@@ -492,6 +529,16 @@ final class TrendingStoryEntriesControllerTest extends ApiTestCase
         self::assertInstanceOf(Subscription::class, $subscription);
         $subscription->changeInclusions(new InclusionChange(trending: false));
         $this->entityManager()->flush();
+    }
+
+    private function markRead(TrendingStory $story, string $until): void
+    {
+        $this->client->request(
+            'POST',
+            \sprintf('/api/entries/trending-stories/%d/mark-read', $story->requireId()),
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: \json_encode(['until' => $until], \JSON_THROW_ON_ERROR),
+        );
     }
 
     private function follow(TrendingStory $story): void

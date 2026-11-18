@@ -65,6 +65,7 @@ describe('MarkReadActions recounting after a mark-read', () => {
           provide: EntriesStore,
           useValue: {
             loadedAt: () => '2026-10-16T10:00:00Z',
+            entries: () => [],
             load: jest.fn(),
             markHiddenLocally: jest.fn(),
             runThenReload: (
@@ -86,6 +87,7 @@ describe('MarkReadActions recounting after a mark-read', () => {
       'markForYouRead',
       'markSavedSearchesRead',
       'markSingleSavedSearchRead',
+      'markTrendingStoryRead',
       'markEntriesRead',
     ] as const) {
       jest.spyOn(api, request).mockReturnValue(of(undefined));
@@ -151,5 +153,31 @@ describe('MarkReadActions recounting after a mark-read', () => {
 
     expect(reloadCountsQuietly).toHaveBeenCalledTimes(1);
     expect(fullLoad).not.toHaveBeenCalled();
+  });
+
+  describe("a Trending story's list over the reader's (#2329)", () => {
+    const story: Selection = { kind: 'trending-story', id: 42, unread: false };
+    const storyRows = () => ({
+      loadedAt: () => '2026-10-16T11:00:00Z',
+      entries: () => [{ id: 7 }, { id: 8 }],
+      load: jest.fn(),
+      markHiddenLocally: jest.fn(),
+      runThenReload: (mutation: { subscribe: (next: () => void) => void }, reload: () => void) =>
+        mutation.subscribe(reload),
+    });
+
+    it('marks the story read, shows its rows read at once, and reloads only the story', () => {
+      const markStoryRead = jest.spyOn(TestBed.inject(ReaderApi), 'markTrendingStoryRead');
+      const rows = storyRows();
+      currentSelection.set({ kind: 'trending', window: 'day' });
+
+      actions.confirmMarkAllReadIn({ selection: story, entries: rows as unknown as EntriesStore });
+
+      expect(markStoryRead).toHaveBeenCalledWith(42, '2026-10-16T11:00:00Z');
+      expect(rows.markHiddenLocally).toHaveBeenCalledWith([7, 8]);
+      expect(rows.load).toHaveBeenCalledWith({ view: 'all', storyId: 42 });
+      expect(TestBed.inject(EntriesStore).load).not.toHaveBeenCalled();
+      expect(reloadCountsQuietly).toHaveBeenCalledTimes(1);
+    });
   });
 });

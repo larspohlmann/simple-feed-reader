@@ -101,7 +101,7 @@ async function openTrending(page: Page): Promise<void> {
 }
 
 const layer = (page: Page) => page.locator('app-story-layer');
-const closeStory = (page: Page) => layer(page).locator('.bar .close').click();
+const closeStory = (page: Page) => layer(page).locator('.story-back').click();
 
 for (const layout of ['magazine', 'list'] as const) {
   for (const [device, viewport] of [
@@ -205,6 +205,54 @@ test.describe("a story's list loads in its own column (magazine, desktop)", () =
 
     expect(Math.abs(placeholder!.x - landed!.x)).toBeLessThanOrEqual(2);
     expect(Math.abs(placeholder!.width - landed!.width)).toBeLessThanOrEqual(2);
+  });
+});
+
+test.describe("a story's list reads like any list (desktop)", () => {
+  test.use({ viewport: { width: 1280, height: 900 } });
+
+  test('marks the story read and shows only its unread articles', async ({ page }) => {
+    await stubStories(page, false);
+    const marked: unknown[] = [];
+    await page.route(
+      (url) => url.pathname === `/api/entries/trending-stories/${STORY_ID}/mark-read`,
+      (route) => {
+        marked.push(route.request().postDataJSON());
+        return route.fulfill({ status: 204 });
+      },
+    );
+    await signIn(page, 'list');
+    await openTrending(page);
+    await page.getByRole('link', { name: TITLE }).click();
+    const header = layer(page).locator('app-list-header');
+    await expect(header.locator('h2')).toContainText(TITLE);
+    await expect(header.locator('.title-count')).toHaveText('1');
+
+    const unreadOnly = page.waitForRequest(
+      (request) =>
+        request.url().includes(`/api/entries/trending-stories/${STORY_ID}`) &&
+        new URL(request.url()).searchParams.get('unread') === '1',
+    );
+    await header.getByRole('switch', { name: 'Unread' }).click();
+    await unreadOnly;
+    await header.getByRole('switch', { name: 'Unread' }).click();
+
+    await header.getByRole('button', { name: 'Mark all read' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Mark all read' }).click();
+
+    await expect.poll(() => marked.length).toBe(1);
+    expect(marked[0]).toEqual({ until: expect.any(String) });
+  });
+
+  test("shows the list's own corner buttons, and none of the article's", async ({ page }) => {
+    await stubStories(page, false);
+    await signIn(page, 'magazine');
+    await openTrending(page);
+    await page.getByRole('link', { name: TITLE }).click();
+    await expect(layer(page)).toContainText(TITLE);
+
+    await expect(page.locator('.story-overlay app-article-layer')).toHaveCount(0);
+    await expect(page.locator('.story-overlay .corner-back')).toHaveCount(0);
   });
 });
 

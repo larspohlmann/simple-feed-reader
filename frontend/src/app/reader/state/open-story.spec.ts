@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Subject } from 'rxjs';
 import { EntryQuery } from '../models';
-import { StoryListStore } from './story-list.store';
+import { STORY_ENTRIES } from './story-entries';
 import { LandedList } from './landed-list';
 import { ListPage } from './list-page';
 import { OpenStory } from './open-story';
@@ -23,7 +23,7 @@ describe('OpenStory (#2329)', () => {
     localStorage.clear();
     listLanded = new Subject<LandedList>();
     TestBed.configureTestingModule({
-      providers: [{ provide: StoryListStore, useValue: { listLanded } }],
+      providers: [{ provide: STORY_ENTRIES, useValue: { listLanded } }],
     });
     open = TestBed.inject(OpenStory);
   });

@@ -9,7 +9,7 @@ import { API_BASE_URL } from '../../core/api';
 import { transientGatewayRetryInterceptor } from '../../core/http/retry-transient-gateway-errors';
 import { TokenStore } from '../../core/auth/token.store';
 import { EntriesStore } from './entries.store';
-import { StoryListStore } from './story-list.store';
+import { STORY_ENTRIES } from './story-entries';
 import { LandedList } from './landed-list';
 import { EntryDto } from '../models';
 import { VoteValue } from '../vote-pill/vote';
@@ -65,8 +65,8 @@ describe('EntriesStore', () => {
   });
 
   describe('with a story open over the list (#2329)', () => {
-    function openStory(): StoryListStore {
-      const storyList = TestBed.inject(StoryListStore);
+    function openStory(): EntriesStore {
+      const storyList = TestBed.inject(STORY_ENTRIES);
       storyList.load({ view: 'all', storyId: 42 });
       ctrl
         .expectOne((request) => request.url === 'https://api.test/api/entries/trending-stories/42')
@@ -86,7 +86,7 @@ describe('EntriesStore', () => {
       expect(store.entry(7)?.id).toBe(7);
       store.setState(7, { isFavorite: true });
 
-      expect(storyList.entry(7)?.isFavorite).toBe(true);
+      expect(storyList.entries()[0].isFavorite).toBe(true);
       ctrl.expectOne('https://api.test/api/entries/7/state').flush({ state: {} });
     });
   });
@@ -124,6 +124,7 @@ describe('EntriesStore', () => {
     expect(first.cancelled).toBe(true);
     expect(store.loading()).toBe(false);
     expect(store.nextCursor()).toBeNull();
+    expect(store.items()).toEqual([]);
     store.reload();
     ctrl.expectNone((request) => request.url === 'https://api.test/api/entries');
   });

@@ -88,8 +88,6 @@ const WAIT_OVERLAY_DELAY_MS = 150;
 })
 export class EntryListComponent {
   readonly title = input.required<string>();
-  /** For a list whose layer brings its own bar, as a story's list does (#2329). */
-  readonly headerless = input(false);
   /** The search title's lead, quoted term, and count pill, kept as three pieces
    *  (#581 round 2) so the count renders as a pill instead of inline text. Only
    *  meaningful for a search; empty/null otherwise, where `title()` is unsplit. */

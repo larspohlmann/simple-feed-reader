@@ -71,6 +71,19 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
         return array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
     }
 
+    /** @return list<int> the story's members the reader has not read, no newer than $until */
+    public function unreadMemberIdsUpTo(TrendingStoryListQuery $query, \DateTimeImmutable $until): array
+    {
+        $qb = $this->projection->unreadEntriesQueryBuilder($query->userId)
+            ->select('e.id')
+            ->andWhere('e.effectiveDate <= :until')
+            ->setParameter('until', $until)
+            ->setParameter('story', $query->storyId);
+        $this->applyMembership($qb, EntryAliases::primary());
+
+        return $this->projection->scalarIds($qb);
+    }
+
     /**
      * When each given entry joined the story: the latest join among it and the collapsed copies the reader sees.
      *

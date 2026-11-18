@@ -10,8 +10,14 @@ import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { MarkReadTarget, markReadTarget } from '../query/mark-read-target';
 import { queryFromSelection } from '../query/entry-query';
-import { isUnreadOnly } from '../query/query';
+import { Selection, isUnreadOnly } from '../query/query';
 import { ReaderRouteState } from './reader-route-state.service';
+
+/** A list on screen with the store holding its rows: the reader's list, or a Trending story's over it (#2329). */
+export interface ListOnScreen {
+  readonly selection: Selection;
+  readonly entries: EntriesStore;
+}
 
 @Injectable()
 export class MarkReadActions {
@@ -26,48 +32,60 @@ export class MarkReadActions {
   readonly canMarkAllRead = computed(() => markReadTarget(this.routeState.selection()) !== null);
 
   confirmMarkAllRead(): void {
-    const target = markReadTarget(this.routeState.selection());
+    this.confirmMarkAllReadIn(this.readerList());
+  }
+
+  confirmMarkAllReadIn(list: ListOnScreen): void {
+    const target = markReadTarget(list.selection);
     if (!target) return;
     const question = {
       title: this.i18n.translate('reader.markAllReadConfirm'),
       message: this.i18n.translate('reader.markAllReadConfirmMessage'),
       confirmLabel: this.i18n.translate('reader.markAllReadConfirmAction'),
     };
-    this.confirm.confirmThen(question, () => this.markAllReadNow(target));
+    this.confirm.confirmThen(question, () => this.markAllReadNow(list, target));
   }
 
   confirmMarkAboveRead(ids: number[], hideInUnreadList: () => void): void {
+    this.confirmMarkAboveReadIn(this.readerList(), ids, hideInUnreadList);
+  }
+
+  confirmMarkAboveReadIn(list: ListOnScreen, ids: number[], hideInUnreadList: () => void): void {
     if (ids.length === 0) return;
     const question = {
       title: this.i18n.translate('reader.markAboveReadConfirm'),
       message: this.i18n.translate('reader.markAboveReadConfirmMessage', { count: ids.length }),
       confirmLabel: this.i18n.translate('reader.markAboveReadConfirmAction'),
     };
-    this.confirm.confirmThen(question, () => this.markAboveReadNow(ids, hideInUnreadList));
+    this.confirm.confirmThen(question, () => this.markAboveReadNow(list, ids, hideInUnreadList));
+  }
+
+  private readerList(): ListOnScreen {
+    return { selection: this.routeState.selection(), entries: this.entries };
   }
 
   /** Never a re-fetch: a reload lets the magazine planner lift newer posts above the boundary. */
-  private markAboveReadNow(ids: number[], hideInUnreadList: () => void): void {
-    const hideLocally = isUnreadOnly(this.routeState.selection())
+  private markAboveReadNow(list: ListOnScreen, ids: number[], hideInUnreadList: () => void): void {
+    const hideLocally = isUnreadOnly(list.selection)
       ? hideInUnreadList
-      : () => this.entries.markHiddenLocally(ids);
-    this.entries.withMutatingCue(this.api.markEntriesRead(ids)).subscribe({
+      : () => list.entries.markHiddenLocally(ids);
+    list.entries.withMutatingCue(this.api.markEntriesRead(ids)).subscribe({
       next: () => {
         hideLocally();
         this.subscriptions.reloadCountsQuietly();
         this.savedSearches.load();
       },
       error: (error: HttpErrorResponse) =>
-        this.entries.reportMutationFailure(error, () =>
-          this.markAboveReadNow(ids, hideInUnreadList),
+        list.entries.reportMutationFailure(error, () =>
+          this.markAboveReadNow(list, ids, hideInUnreadList),
         ),
     });
   }
 
-  private markAllReadNow(target: MarkReadTarget): void {
-    const until = this.entries.loadedAt() || wireTimestamp(new Date());
-    this.entries.runThenReload(this.markReadRequest(target, until), () =>
-      this.reloadAfterMarkRead(),
+  private markAllReadNow(list: ListOnScreen, target: MarkReadTarget): void {
+    const until = list.entries.loadedAt() || wireTimestamp(new Date());
+    list.entries.runThenReload(this.markReadRequest(target, until), () =>
+      this.reloadAfterMarkRead(list),
     );
   }
 
@@ -81,17 +99,17 @@ export class MarkReadActions {
         return this.api.markSavedSearchesRead(until);
       case 'saved-search':
         return this.api.markSingleSavedSearchRead(target.id, until);
-      case 'network':
-      case 'group':
-      case 'all':
-      case 'tag':
-      case 'feed':
+      case 'trending-story':
+        return this.api.markTrendingStoryRead(target.id, until);
+      default:
         return this.api.markRead(target, until);
     }
   }
 
-  private reloadAfterMarkRead(): void {
-    this.entries.load(queryFromSelection(this.routeState.selection()));
+  /** The rows marked read on screen are marked here too, so a list linked to this one shows them read at once. */
+  private reloadAfterMarkRead(list: ListOnScreen): void {
+    list.entries.markHiddenLocally(list.entries.entries().map((entry) => entry.id));
+    list.entries.load(queryFromSelection(list.selection));
     this.subscriptions.reloadCountsQuietly();
     this.savedSearches.load();
   }

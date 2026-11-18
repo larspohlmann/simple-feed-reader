@@ -1,7 +1,7 @@
 import { Injectable, computed, inject } from '@angular/core';
 import { accountSignal } from '../../core/auth/session-identity';
 import { EntryDto } from '../models';
-import { StoryListStore } from './story-list.store';
+import { STORY_ENTRIES } from './story-entries';
 import { LandedList } from './landed-list';
 import { FollowedStoriesStore } from './followed-stories.store';
 import { sameMembers } from './same-members';
@@ -12,7 +12,7 @@ const NONE_NEW: ReadonlySet<number> = new Set();
  *  carries, records the one "opened", and ends when any other list lands or any list fails to load. */
 @Injectable({ providedIn: 'root' })
 export class FollowedStoryVisit {
-  private readonly storyList = inject(StoryListStore);
+  private readonly storyList = inject(STORY_ENTRIES);
   private readonly followedStories = inject(FollowedStoriesStore);
   /** `openedAt` is held for the visit: the record it posts moves the server's "last opened" past the rows it marks. */
   private readonly visit = accountSignal<{ storyId: number; openedAt: string } | null>(null);

@@ -19,7 +19,6 @@ import { InFlightPatches, RowPatch, valuesBefore } from './in-flight-patches';
 import { RetryableFailure } from './retryable-failure';
 import { LandedList } from './landed-list';
 import { MatchedWords } from './matched-words';
-import { StoryListStore } from './story-list.store';
 
 /** A failed state change has already rolled its row back when `onFailed` runs. */
 export interface StateSaveOutcome {
@@ -34,7 +33,8 @@ export class EntriesStore {
   private readonly api = inject(ReaderApi);
   private readonly socialPosts = inject(SocialPostApi);
   private readonly trendingApi = inject(TrendingApi);
-  private readonly storyList = inject(StoryListStore);
+  /** The other list on screen at once, as a Trending story's over the list it opened from (#2329). */
+  private linked: EntriesStore | null = null;
 
   private readonly rawItems = accountSignal<ListItem[]>([]);
   /** The open entry when the loaded list does not hold it, e.g. a deep link; `entries()` never shows it. */
@@ -105,8 +105,10 @@ export class EntriesStore {
     });
   }
 
+  /** No list on screen, so none of its rows either: a list shown next starts from its placeholders. */
   private dropList(): void {
     this.listRequest?.unsubscribe();
+    this.rawItems.set([]);
     this.query.set(null);
     this.nextCursor.set(null);
     this.loading.set(false);
@@ -159,12 +161,20 @@ export class EntriesStore {
     });
   }
 
-  /** The entry with `id`: its listed row, else the open story's row, else the unlisted one held for it. */
+  /** Two lists on screen at once each find and patch the other's rows, so a row reads the same in both. */
+  link(other: EntriesStore): void {
+    this.linked = other;
+    other.linked = this;
+  }
+
+  /** The entry with `id`: its listed row, else the linked list's, else the unlisted one held for it. */
   entry(id: number): EntryDto | null {
-    const listed = this.entries().find((entry) => entry.id === id) ?? this.storyList.entry(id);
-    if (listed) return listed;
+    return this.ownEntry(id) ?? this.linked?.ownEntry(id) ?? null;
+  }
+
+  private ownEntry(id: number): EntryDto | null {
     const held = this.unlisted();
-    return held?.id === id ? held : null;
+    return this.entries().find((entry) => entry.id === id) ?? (held?.id === id ? held : null);
   }
 
   holdUnlisted(entry: EntryDto): void {
@@ -281,8 +291,7 @@ export class EntriesStore {
     const found = this.entry(id);
     if (found) return found;
     const held = this.unlisted();
-    const listed = [...this.entries(), ...this.storyList.entries()];
-    const rows = held ? [...listed, held] : listed;
+    const rows = [...this.entries(), ...(this.linked?.entries() ?? []), ...(held ? [held] : [])];
     return rows.flatMap((row) => row.duplicates ?? []).find((copy) => copy.id === id) ?? null;
   }
 
@@ -328,11 +337,15 @@ export class EntriesStore {
     });
   }
 
-  /** Reaches each target as a row, as a copy inside a row's `duplicates` and as a story's article, in the list
-   *  and in the open story's list. A list keeps its identity when `patch` hands every entry back. */
   private patchEntries(ids: Iterable<number>, patch: (entry: EntryDto) => EntryDto): void {
     const targets = new Set(ids);
-    this.storyList.patch(targets, patch);
+    this.patchOwn(targets, patch);
+    this.linked?.patchOwn(targets, patch);
+  }
+
+  /** Reaches each target as a row, as a copy inside a row's `duplicates` and as a story's article.
+   *  The list keeps its identity when `patch` hands every entry back, so nothing derived recomputes. */
+  private patchOwn(targets: ReadonlySet<number>, patch: (entry: EntryDto) => EntryDto): void {
     this.unlisted.update((held) => (held ? withPatchedRow(held, targets, patch) : held));
     this.rawItems.update((current) => {
       let changed = false;

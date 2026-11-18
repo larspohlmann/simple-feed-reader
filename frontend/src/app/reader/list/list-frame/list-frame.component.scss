@@ -33,10 +33,6 @@
   @include list-chrome.floating-header;
 }
 
-:host(.headerless) .list-header {
-  display: none;
-}
-
 /* Narrow layout: scrolled down, the header collapses to a slim bar. */
 @media (width < bp.$bp-lg) {
   .list-header.collapsed {

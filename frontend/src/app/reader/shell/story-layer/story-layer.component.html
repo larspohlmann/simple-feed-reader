@@ -1,70 +1,58 @@
-<app-article-layer
-  [fullscreen]="fullscreen()"
-  [progressRail]="progressRail"
-  [backLabel]="'reader.backToList' | transloco"
-  [resetKey]="resetKey()"
-  (back)="overlay.close()"
->
-  <ng-container articleMini>
-    <app-icon class="glyph" [name]="storyIcon" size="sm" />
-    <span class="mini-title">{{ title() }}</span>
-  </ng-container>
-  @if (!fullscreen()) {
-    <span articleBar class="bar-name" aria-hidden="true">
-      <app-icon class="glyph" [name]="storyIcon" size="dense" />
-      <span class="bar-title">{{ title() }}</span>
-    </span>
+<ng-template #leading>
+  <button
+    appIconButton
+    class="story-back"
+    type="button"
+    [attr.aria-label]="'reader.backToList' | transloco"
+    [attr.title]="'reader.backToList' | transloco"
+    (click)="overlay.close()"
+  >
+    <app-icon name="arrow_back" size="md" />
+  </button>
+  @if (listLeading(); as shared) {
+    <ng-container [ngTemplateOutlet]="shared" />
   }
-  <div articleBar class="nav">
-    @let orderHint =
-      (oldestFirst() ? 'reader.sortedOldestFirst' : 'reader.sortedNewestFirst') | transloco;
-    <button
-      appListAction
-      class="list-order mobile-icon-only"
-      type="button"
-      [attr.aria-label]="orderHint"
-      [attr.title]="orderHint"
-      (click)="flipOrder()"
-    >
-      <app-icon [name]="oldestFirst() ? 'arrow_upward' : 'arrow_downward'" size="sm" />
-      <span class="txt">{{
-        (oldestFirst() ? 'reader.oldestFirst' : 'reader.newestFirst') | transloco
-      }}</span>
-    </button>
-    @let followLabel = following.following() ? 'reader.unfollowStory' : 'reader.followStory';
-    <button
-      appListAction
-      class="follow-story mobile-icon-only"
-      type="button"
-      [attr.aria-label]="followLabel | transloco"
-      [attr.title]="followLabel | transloco"
-      (click)="following.toggleOpen()"
-    >
-      <app-icon
-        [name]="following.following() ? 'notifications_off' : 'notification_add'"
-        size="sm"
-      />
-      <span class="txt">{{ followLabel | transloco }}</span>
-    </button>
-  </div>
-  <h2 class="sr-only">{{ title() }}</h2>
-  <app-entry-list
-    [headerless]="true"
-    [layout]="layout()"
-    [title]="title()"
-    [items]="storyList.items()"
-    [loading]="storyList.loading()"
-    [loadingMore]="storyList.loadingMore()"
-    [error]="storyList.error()"
-    [hasMore]="storyList.hasMore()"
-    [canMarkAllRead]="false"
-    [selection]="selection()"
-    [openEntryId]="openEntryId()"
-    [leavingIds]="leavingIds()"
-    [newSinceVisitIds]="visit.newSinceVisitIds()"
-    [feedTags]="feedTags()"
-    (loadMore)="storyList.loadMore()"
-    (retry)="storyList.retry()"
-    (dismiss)="storyList.dismissError()"
-  />
-</app-article-layer>
+</ng-template>
+
+<ng-template #actions>
+  @let followLabel = following.following() ? 'reader.unfollowStory' : 'reader.followStory';
+  <button
+    appListAction
+    class="follow-story"
+    type="button"
+    [attr.aria-label]="followLabel | transloco"
+    [attr.title]="followLabel | transloco"
+    (click)="following.toggleOpen()"
+  >
+    <app-icon [name]="following.following() ? 'notifications_off' : 'notification_add'" size="sm" />
+    <span class="txt">{{ followLabel | transloco }}</span>
+  </button>
+</ng-template>
+
+<app-entry-list
+  [layout]="layout()"
+  [title]="title()"
+  [titleCount]="titleCount()"
+  [items]="story.items()"
+  [loading]="story.loading()"
+  [mutating]="story.mutating()"
+  [loadingMore]="story.loadingMore()"
+  [error]="story.error()"
+  [hasMore]="story.nextCursor() !== null"
+  [canMarkAllRead]="true"
+  [selection]="selection()"
+  [openEntryId]="openEntryId()"
+  [leavingIds]="leavingIds()"
+  [newSinceVisitIds]="visit.newSinceVisitIds()"
+  [feedTags]="feedTags()"
+  [headerLeading]="leading"
+  [headerActions]="actions"
+  [cornerTrailing]="cornerTrailing()"
+  (loadMore)="story.loadMore()"
+  (retry)="story.retry()"
+  (dismiss)="story.dismissError()"
+  (markAllRead)="markAllRead()"
+  (unreadOnlyChange)="listPreferences.setUnreadOnly(selection(), $event)"
+  (orderChange)="listOrder.set(selection(), $event)"
+  (markAboveRead)="markAboveRead($event)"
+/>

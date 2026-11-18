@@ -5,7 +5,7 @@ import { Problem } from '../../core/problem';
 import { ListPreferences } from '../list/list-preferences.service';
 import { Selection } from '../query/query';
 import { FollowedStoriesStore } from '../state/followed-stories.store';
-import { StoryListStore } from '../state/story-list.store';
+import { STORY_ENTRIES } from '../state/story-entries';
 import { ReaderRouteState } from './reader-route-state.service';
 import { StoryOverlay } from './story-overlay.service';
 
@@ -15,7 +15,6 @@ describe('StoryOverlay (#2329)', () => {
   let order: ReturnType<typeof signal<'newest' | 'oldest'>>;
   let navigate: jest.Mock;
   let load: jest.Mock;
-  let close: jest.Mock;
   let dismissError: jest.Mock;
   let reloadFollowed: jest.Mock;
 
@@ -25,7 +24,6 @@ describe('StoryOverlay (#2329)', () => {
     order = signal<'newest' | 'oldest'>('newest');
     navigate = jest.fn(() => Promise.resolve(true));
     load = jest.fn();
-    close = jest.fn();
     dismissError = jest.fn();
     reloadFollowed = jest.fn();
     TestBed.configureTestingModule({
@@ -33,7 +31,7 @@ describe('StoryOverlay (#2329)', () => {
         StoryOverlay,
         { provide: Router, useValue: { navigate } },
         { provide: ReaderRouteState, useValue: { storyId } },
-        { provide: StoryListStore, useValue: { load, close, error, dismissError } },
+        { provide: STORY_ENTRIES, useValue: { load, error, dismissError } },
         { provide: FollowedStoriesStore, useValue: { load: reloadFollowed } },
         {
           provide: ListPreferences,
@@ -66,7 +64,7 @@ describe('StoryOverlay (#2329)', () => {
     TestBed.tick();
 
     expect(overlay.open()).toBe(false);
-    expect(close).toHaveBeenCalled();
+    expect(load).toHaveBeenLastCalledWith(null);
   });
 
   it('closes onto the list underneath, whose URL it keeps', () => {

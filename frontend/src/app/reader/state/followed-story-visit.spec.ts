@@ -3,7 +3,7 @@ import { signal } from '@angular/core';
 import { Subject } from 'rxjs';
 import { EntryDto, EntryQuery } from '../models';
 import { anEntry } from '../../../testing/entry-testing';
-import { StoryListStore } from './story-list.store';
+import { STORY_ENTRIES } from './story-entries';
 import { LandedList } from './landed-list';
 import { FollowedStoriesStore } from './followed-stories.store';
 import { FollowedStoryVisit } from './followed-story-visit';
@@ -29,7 +29,7 @@ describe('FollowedStoryVisit (#2128)', () => {
     markOpened = jest.fn();
     TestBed.configureTestingModule({
       providers: [
-        { provide: StoryListStore, useValue: { listLanded, entries } },
+        { provide: STORY_ENTRIES, useValue: { listLanded, entries } },
         { provide: FollowedStoriesStore, useValue: { markOpened } },
       ],
     });

@@ -4,7 +4,7 @@ import { ListPreferences } from '../list/list-preferences.service';
 import { Selection, SelectionOf, sameSelection } from '../query/query';
 import { queryFromSelection } from '../query/entry-query';
 import { FollowedStoriesStore } from '../state/followed-stories.store';
-import { StoryListStore } from '../state/story-list.store';
+import { STORY_ENTRIES } from '../state/story-entries';
 import { ReaderRouteState } from './reader-route-state.service';
 
 const NOT_FOUND = 'trending_story_not_found';
@@ -15,7 +15,7 @@ const ONTO_THE_LIST: NavigationExtras = { queryParamsHandling: 'preserve' };
 @Injectable()
 export class StoryOverlay {
   private readonly router = inject(Router);
-  private readonly storyList = inject(StoryListStore);
+  private readonly storyList = inject(STORY_ENTRIES);
   private readonly followedStories = inject(FollowedStoriesStore);
   private readonly listPreferences = inject(ListPreferences);
 
@@ -25,7 +25,7 @@ export class StoryOverlay {
     (): SelectionOf<'trending-story'> | null => {
       const id = this.storyId();
       if (id === null) return null;
-      const applied = this.listPreferences.appliedTo({ kind: 'trending-story', id });
+      const applied = this.listPreferences.appliedTo({ kind: 'trending-story', id, unread: false });
       return applied.kind === 'trending-story' ? applied : null;
     },
     { equal: (left, right) => (left && right ? sameSelection(left, right) : left === right) },
@@ -47,9 +47,7 @@ export class StoryOverlay {
   }
 
   private show(selection: Selection | null): void {
-    const query = selection === null ? null : queryFromSelection(selection);
-    if (query === null) this.storyList.close();
-    else this.storyList.load(query);
+    this.storyList.load(selection === null ? null : queryFromSelection(selection));
   }
 
   private leaveStoryThatIsGone(): void {

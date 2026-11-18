@@ -145,6 +145,11 @@ app-reader-header.hidden {
   }
 }
 
+/* A story's list is a whole list, not a framed article: it brings the page's own ground (#2329). */
+.story-overlay {
+  background: var(--surface-0);
+}
+
 /* In the split layout a story's list takes the list column, the list beneath pinned in it (#2329). */
 .main.split > .story-overlay {
   flex: 0 0 var(--list-width, 42%);

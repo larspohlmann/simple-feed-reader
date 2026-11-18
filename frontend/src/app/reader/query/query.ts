@@ -37,7 +37,7 @@ interface SelectionFields {
   notifications: { network: SocialNetworkName };
   'saved-searches': FilteredList;
   'saved-search': FilteredList & { id: number };
-  'trending-story': OrderedList & { id: number };
+  'trending-story': FilteredList & { id: number };
   search: FilteredList & { term: string };
 }
 

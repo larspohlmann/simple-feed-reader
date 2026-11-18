@@ -222,11 +222,12 @@
       <div class="article-overlay story-overlay" appPageLayer animate.leave="article-leave">
         <app-story-layer
           [selection]="story"
-          [fullscreen]="!screen.isWide()"
           [layout]="layout.mode()"
           [feedTags]="feedTags()"
           [openEntryId]="entryId()"
           [leavingIds]="entryActions.leavingIds()"
+          [listLeading]="sidebarShow"
+          [cornerTrailing]="sidebarCorner"
         />
       </div>
     }
