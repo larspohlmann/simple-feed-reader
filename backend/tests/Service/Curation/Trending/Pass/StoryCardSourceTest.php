@@ -9,6 +9,7 @@ use App\Repository\EntryListRowMarks;
 use App\Repository\EntryListRowSubscription;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\ShownRowModel;
+use App\Service\Curation\Trending\Model\StoryTitleModel;
 use App\Service\Curation\Trending\Pass\StoryCardSource;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
@@ -31,6 +32,7 @@ final class StoryCardSourceTest extends DbTestCase
             [$entry->requireId() => new ShownRowModel($row, 'article')],
             [6 => 0],
             [6 => 0],
+            [],
         );
 
         $lastSeen = new \DateTimeImmutable('2031-05-14 10:00:00');
@@ -40,15 +42,39 @@ final class StoryCardSourceTest extends DbTestCase
 
         self::assertCount(1, $cards);
         self::assertSame($entry, $cards[0]->articles->lead->row->entry);
-        self::assertSame($wider, $cards[0]->story);
+        self::assertEquals($wider, $cards[0]->story);
         self::assertTrue($cards[0]->viewed);
         self::assertTrue($cards[0]->followed);
     }
 
     public function testAStoryWithoutAnyEntryIdsGetsNoCard(): void
     {
-        self::assertSame([], (new StoryCardSource([], [], [], []))->cardsOf([
+        self::assertSame([], (new StoryCardSource([], [], [], [], []))->cardsOf([
             new RankedStoryModel(7, 3, new \DateTimeImmutable('2031-05-14 10:00:00')),
         ]));
+    }
+
+    public function testACardCarriesItsStoryTitle(): void
+    {
+        $fixtures = new TrendingFixtures($this->entityManager);
+        $entry = $fixtures->entry($fixtures->feed('alpha'), 'Alpha', '2031-05-14 08:00:00');
+        $fixtures->flush();
+        $row = new EntryListRow(
+            $entry,
+            new EntryListRowSubscription(1, 'Alpha'),
+            new EntryListRowMarks(isHidden: false, isFavorite: false, isKept: false, viewedAt: null, sharedAt: null),
+            null,
+        );
+        $source = new StoryCardSource(
+            [6 => [$entry->requireId()]],
+            [$entry->requireId() => new ShownRowModel($row, 'article')],
+            [],
+            [],
+            [6 => new StoryTitleModel('Hafenstreik in Hamburg')],
+        );
+
+        $cards = $source->cardsOf([new RankedStoryModel(6, 4, new \DateTimeImmutable('2031-05-14 10:00:00'))]);
+
+        self::assertSame('Hafenstreik in Hamburg', $cards[0]->story->title?->text);
     }
 }

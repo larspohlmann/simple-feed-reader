@@ -19,6 +19,7 @@ use App\Repository\TrendingStoryRepository;
 use App\Service\Curation\Trending\Exception\TrendingStoryNotFoundException;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\ReaderWindowModel;
+use App\Service\Curation\Trending\Model\StoryTitleModel;
 use App\Service\Curation\Trending\ReaderWindows;
 use App\Service\Curation\Trending\TrendingStories;
 use App\Tests\DbTestCase;
@@ -445,6 +446,56 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         return array_map(
             static fn (RankedStoryModel $story): array => [$story->storyId, $story->outletCount],
             $ranked,
+        );
+    }
+
+    public function testTitlesPreferTheLlmTitle(): void
+    {
+        $first = $this->storyOf([
+            [$this->articleFeed('outlet'), 'outlet.example'],
+            [$this->articleFeed('second'), 'second.example'],
+        ]);
+        $second = $this->storyOf([
+            [$this->articleFeed('third'), 'third.example'],
+            [$this->articleFeed('fourth'), 'fourth.example'],
+        ]);
+        $this->storeTitles($first, 'Hafenstreik in Hamburg', 'Hafenarbeiter in Hamburg streiken');
+        $this->storeTitles($second, 'Hafenstreik in Hamburg', null);
+
+        $titles = $this->entityManager->getRepository(TrendingStory::class)
+            ->titlesOf([$first->requireId(), $second->requireId()]);
+
+        self::assertSame(
+            [
+                $first->requireId() => 'Hafenarbeiter in Hamburg streiken',
+                $second->requireId() => 'Hafenstreik in Hamburg',
+            ],
+            array_map(static fn (StoryTitleModel $title): string => $title->text, $titles),
+        );
+    }
+
+    public function testTitlesLeaveOutAStoryWithoutTitles(): void
+    {
+        $untitled = $this->storyOf([
+            [$this->articleFeed('outlet'), 'outlet.example'],
+            [$this->articleFeed('second'), 'second.example'],
+        ]);
+
+        self::assertSame([], $this->entityManager->getRepository(TrendingStory::class)
+            ->titlesOf([$untitled->requireId()]));
+    }
+
+    public function testTitlesOfNoStoriesRunNoQuery(): void
+    {
+        self::assertSame([], $this->entityManager->getRepository(TrendingStory::class)->titlesOf([]));
+    }
+
+    private function storeTitles(TrendingStory $story, ?string $fallbackTitle, ?string $llmTitle): void
+    {
+        $this->entityManager->flush();
+        $this->entityManager->getConnection()->executeStatement(
+            'UPDATE trending_story SET fallback_title = ?, llm_title = ? WHERE id = ?',
+            [$fallbackTitle, $llmTitle, $story->requireId()],
         );
     }
 

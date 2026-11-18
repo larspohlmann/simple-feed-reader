@@ -37,6 +37,24 @@ final class TrendingStory
     #[ORM\Column(name: 'last_joined_at', type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $lastJoinedAt;
 
+    #[ORM\Column(name: 'fallback_title', length: 1024, nullable: true)]
+    private ?string $fallbackTitle = null;
+
+    #[ORM\Column(name: 'fallback_entry_id', nullable: true)]
+    private ?int $fallbackEntryId = null;
+
+    #[ORM\Column(name: 'llm_title', length: 255, nullable: true)]
+    private ?string $llmTitle = null;
+
+    #[ORM\Column(name: 'llm_title_language', length: 5, nullable: true)]
+    private ?string $llmTitleLanguage = null;
+
+    #[ORM\Column(name: 'llm_title_member_count', nullable: true)]
+    private ?int $llmTitleMemberCount = null;
+
+    #[ORM\Column(name: 'llm_title_attempted_at', type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $llmTitleAttemptedAt = null;
+
     /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(
         User $user,

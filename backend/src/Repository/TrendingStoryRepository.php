@@ -9,6 +9,7 @@ use App\Enum\TrendingWindow;
 use App\Service\Curation\Trending\Exception\TrendingStoryNotFoundException;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\ReaderWindowModel;
+use App\Service\Curation\Trending\Model\StoryTitleModel;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -64,6 +65,33 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             ),
             $rows,
         );
+    }
+
+    /**
+     * @param list<int> $storyIds
+     *
+     * @return array<int, StoryTitleModel> the stories that have a title
+     */
+    public function titlesOf(array $storyIds): array
+    {
+        if ($storyIds === []) {
+            return [];
+        }
+
+        /** @var list<array{id: int|string, title: string}> $rows */
+        $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
+            'SELECT id, COALESCE(llm_title, fallback_title) AS title FROM trending_story'
+            . ' WHERE id IN (:storyIds) AND COALESCE(llm_title, fallback_title) IS NOT NULL',
+            ['storyIds' => $storyIds],
+            ['storyIds' => ArrayParameterType::INTEGER],
+        );
+
+        $titles = [];
+        foreach ($rows as $row) {
+            $titles[(int) $row['id']] = new StoryTitleModel($row['title']);
+        }
+
+        return $titles;
     }
 
     public function requireOwnedBy(int $userId, int $storyId): void
