@@ -168,7 +168,7 @@ final class UserRepository extends ServiceEntityRepository implements UserLoader
     {
         /** @var list<User> $readers */
         $readers = $this->createQueryBuilder('u')
-            ->leftJoin(ReadingSettings::class, 'settings', 'WITH', 'settings.user = u')
+            ->leftJoin(ReadingSettings::class, 'settings', 'ON', 'settings.user = u')
             ->andWhere('u.lastLoginAt >= :since')
             ->andWhere('settings.trendingEnabled = true OR settings.user IS NULL')
             ->setParameter('since', $now->modify(\sprintf('-%d days', self::TRENDING_ACTIVE_DAYS)))
