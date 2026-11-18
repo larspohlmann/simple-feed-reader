@@ -819,6 +819,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
             $this->entityManager->getConnection()
                 ->fetchAllKeyValue('SELECT user_id, active_feed_count FROM trending_snapshot') as $userId => $count
         ) {
+            self::assertIsNumeric($count);
             $counts[(int) $userId] = (int) $count;
         }
         ksort($counts);

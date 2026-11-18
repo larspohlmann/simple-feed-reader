@@ -10,6 +10,7 @@ use App\Repository\TrendingSnapshotRepository;
 use App\Repository\UserRepository;
 use App\Service\Curation\Trending\Exception\TrendingBuildBusyException;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Curation\Trending\Model\DueTrendingBuildModel;
 use App\Service\Curation\Trending\Model\TrendingBuildReportModel;
 use App\Service\Curation\Trending\Model\TrendingLastBuildsModel;
 use App\Service\Curation\Trending\Model\TrendingRebuildReportModel;
@@ -18,7 +19,7 @@ use Psr\Log\LoggerInterface;
 
 /**
  * Rebuilds, for every reader active in the last ACTIVE_DAYS, each window whose snapshot is missing or as old as its
- * interval and whose feeds have news since; the worker and the tick call it.
+ * interval and whose feeds have news since, stalest first across readers; the worker and the tick call it.
  * A build that finds another running is skipped and stays due for the next sweep.
  */
 final readonly class TrendingRebuild
@@ -56,21 +57,39 @@ final readonly class TrendingRebuild
     private function rebuildDueWhere(\Closure $mayStart): TrendingRebuildReportModel
     {
         $builds = [];
-        $since = $this->clock->now()->modify(\sprintf('-%d days', self::ACTIVE_DAYS));
-        foreach ($this->users->trendingReaderIdsLoggedInSince($since) as $userId) {
-            $lastBuilds = $this->snapshots->lastBuilds($userId);
-            foreach (TrendingWindow::cases() as $window) {
-                if (!$this->isDue($userId, $lastBuilds, $window) || !$mayStart($lastBuilds, $window)) {
-                    continue;
-                }
-                $build = $this->buildUnlessBusy($userId, $window);
-                if ($build !== null) {
-                    $builds[] = $build;
-                }
+        foreach ($this->dueStalestFirst() as $due) {
+            if (!$mayStart($due->lastBuilds, $due->window)) {
+                continue;
+            }
+            $build = $this->buildUnlessBusy($due->userId, $due->window);
+            if ($build !== null) {
+                $builds[] = $build;
             }
         }
 
         return new TrendingRebuildReportModel($builds);
+    }
+
+    /** @return list<DueTrendingBuildModel> */
+    private function dueStalestFirst(): array
+    {
+        $since = $this->clock->now()->modify(\sprintf('-%d days', self::ACTIVE_DAYS));
+        $due = [];
+        foreach ($this->users->trendingReaderIdsLoggedInSince($since) as $userId) {
+            $lastBuilds = $this->snapshots->lastBuilds($userId);
+            foreach (TrendingWindow::cases() as $window) {
+                if ($this->isDue($userId, $lastBuilds, $window)) {
+                    $due[] = new DueTrendingBuildModel($userId, $window, $lastBuilds);
+                }
+            }
+        }
+        usort(
+            $due,
+            static fn (DueTrendingBuildModel $left, DueTrendingBuildModel $right): int => $left->lastBuiltTimestamp()
+                <=> $right->lastBuiltTimestamp(),
+        );
+
+        return $due;
     }
 
     private function buildUnlessBusy(int $userId, TrendingWindow $window): ?TrendingBuildReportModel
@@ -89,13 +108,13 @@ final readonly class TrendingRebuild
 
     private function isDue(int $userId, TrendingLastBuildsModel $lastBuilds, TrendingWindow $window): bool
     {
-        $dueAt = $lastBuilds->dueAt($window);
-        if ($dueAt === null) {
+        $builtAt = $lastBuilds->builtAt($window);
+        if ($builtAt === null) {
             return true;
         }
 
-        return $this->clock->now()->getTimestamp() >= $dueAt->getTimestamp()
-            && $this->entries->hasEntriesCreatedAfter($userId, $lastBuilds->builtAt($window) ?? $dueAt);
+        return $this->clock->now()->getTimestamp() >= $builtAt->getTimestamp() + $window->rebuildIntervalSeconds()
+            && $this->entries->hasEntriesCreatedAfter($userId, $builtAt);
     }
 
     private function remainingMilliseconds(\DateTimeImmutable $deadline): int

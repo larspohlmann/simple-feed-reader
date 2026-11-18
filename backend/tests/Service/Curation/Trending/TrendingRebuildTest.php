@@ -104,7 +104,7 @@ final class TrendingRebuildTest extends DbTestCase
         $this->snapshotBuiltAt(TrendingWindow::Day, '2031-05-14 11:50:00');
         $this->snapshotBuiltAt(TrendingWindow::Week, '2031-05-14 11:00:00');
 
-        self::assertSame([TrendingWindow::Day, TrendingWindow::Week], self::windowsOf($this->rebuildDue()));
+        self::assertSame([TrendingWindow::Week, TrendingWindow::Day], self::windowsOf($this->rebuildDue()));
     }
 
     public function testLeavesASnapshotYoungerThanItsIntervalAlone(): void
@@ -143,7 +143,7 @@ final class TrendingRebuildTest extends DbTestCase
 
         $report = $this->rebuildTaking($clock, 3)->rebuildDueBefore($clock->now()->modify('+4 seconds'));
 
-        self::assertSame([TrendingWindow::Day], self::windowsOf($report));
+        self::assertSame([TrendingWindow::Week], self::windowsOf($report));
     }
 
     public function testAtTheDeadlineNotEvenABuildThatTookNoTimeStarts(): void
@@ -241,6 +241,95 @@ final class TrendingRebuildTest extends DbTestCase
         self::assertSame([], $builder->calls);
     }
 
+    public function testTheStalestPairAcrossUsersBuildsFirstWhenTimeFitsOneBuild(): void
+    {
+        $first = $this->activeOwner();
+        $second = $this->loggedInReader('stalest-reader@example.com');
+        $this->newsFor($first, '2031-05-14 11:59:00');
+        $this->newsFor($second, '2031-05-14 11:59:00');
+        $this->persistSnapshot($first, TrendingWindow::Day, '2031-05-14 11:00:00', 2_000);
+        $this->persistSnapshot($second, TrendingWindow::Day, '2031-05-14 10:00:00', 2_000);
+        $this->persistSnapshot($first, TrendingWindow::Week, '2031-05-14 11:59:00', 0);
+        $this->persistSnapshot($second, TrendingWindow::Week, '2031-05-14 11:59:00', 0);
+        $clock = new MockClock('2031-05-14 12:00:00', 'UTC');
+
+        $report = $this->rebuildTaking($clock, 3)->rebuildDueBefore($clock->now()->modify('+4 seconds'));
+
+        self::assertSame([$second->requireId()], self::usersOf($report));
+    }
+
+    public function testBeforeADeadlineEachUsersOwnLastBuildDurationIsItsEstimate(): void
+    {
+        $slow = $this->activeOwner();
+        $quick = $this->loggedInReader('quick-reader@example.com');
+        foreach ([$slow, $quick] as $user) {
+            $this->newsFor($user, '2031-05-14 11:59:00');
+            $this->persistSnapshot($user, TrendingWindow::Week, '2031-05-14 11:59:00', 0);
+        }
+        $this->persistSnapshot($slow, TrendingWindow::Day, '2031-05-14 11:00:00', 2_000);
+        $this->persistSnapshot($quick, TrendingWindow::Day, '2031-05-14 11:00:00', 500);
+        $clock = new MockClock('2031-05-14 12:00:00', 'UTC');
+
+        $report = $this->rebuildTaking($clock, 0)->rebuildDueBefore($clock->now()->modify('+1 second'));
+
+        self::assertSame([$quick->requireId()], self::usersOf($report));
+    }
+
+    public function testAnEntryCreatedExactlyWhenTheSnapshotWasBuiltIsNotNews(): void
+    {
+        $owner = $this->activeOwner();
+        $this->newsFor($owner, '2031-05-14 11:00:00');
+        $this->persistSnapshot($owner, TrendingWindow::Day, '2031-05-14 11:00:00', 0);
+        $this->persistSnapshot($owner, TrendingWindow::Week, '2031-05-14 11:00:00', 0);
+        $builder = new RecordingSnapshotBuilder();
+
+        $this->rebuildWith($builder)->rebuildDue();
+
+        self::assertSame([], $builder->calls);
+    }
+
+    public function testAUserWhoLoggedInExactlyTwoWeeksAgoIsStillActive(): void
+    {
+        $owner = $this->activeOwner();
+        $owner->setLastLoginAt(new \DateTimeImmutable('2031-04-30 12:00:00'));
+        $this->entityManager->flush();
+        $builder = new RecordingSnapshotBuilder();
+
+        $this->rebuildWith($builder)->rebuildDue();
+
+        self::assertSame(
+            [[$owner->requireId(), TrendingWindow::Day], [$owner->requireId(), TrendingWindow::Week]],
+            $builder->calls,
+        );
+    }
+
+    private function loggedInReader(string $email): User
+    {
+        $reader = (new TrendingFixtures($this->entityManager))->reader($email);
+        $reader->setLastLoginAt(new \DateTimeImmutable('2031-05-14 10:00:00'));
+        $this->entityManager->flush();
+
+        return $reader;
+    }
+
+    private function newsFor(User $user, string $createdAt): void
+    {
+        $fixtures = new TrendingFixtures($this->entityManager);
+        $feed = $fixtures->feedNobodyFollows(uniqid('news', true));
+        $fixtures->subscribe($user, $feed);
+        $fixtures->entry($feed, 'Headline', $createdAt);
+        $this->entityManager->flush();
+    }
+
+    /** @return list<int> */
+    private static function usersOf(TrendingRebuildReportModel $report): array
+    {
+        return array_map(
+            static fn (TrendingBuildReportModel $build): int => $build->userId,
+            $report->builds,
+        );
+    }
+
     private function rebuildWith(SnapshotBuilderInterface $builder): TrendingRebuild
     {
         return new TrendingRebuild(
@@ -305,9 +394,19 @@ final class TrendingRebuildTest extends DbTestCase
     private function snapshotBuiltAt(TrendingWindow $window, string $builtAt, int $durationMilliseconds = 0): void
     {
         $this->newsAt('2031-05-14 11:59:00');
+        $owner = (new TrendingFixtures($this->entityManager))->owner();
+        $this->persistSnapshot($owner, $window, $builtAt, $durationMilliseconds);
+    }
+
+    private function persistSnapshot(
+        User $user,
+        TrendingWindow $window,
+        string $builtAt,
+        int $durationMilliseconds,
+    ): void {
         $this->entityManager->persist(
             new TrendingSnapshot(
-                (new TrendingFixtures($this->entityManager))->owner(),
+                $user,
                 $window,
                 new \DateTimeImmutable($builtAt),
                 0,
