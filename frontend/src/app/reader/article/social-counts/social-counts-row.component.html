@@ -96,12 +96,7 @@
     }
     @let points = score();
     @if (points !== null) {
-      <app-vote-pill
-        variant="outline"
-        [score]="points"
-        [myVote]="myVote()"
-        (voted)="voted.emit($event)"
-      />
+      <app-vote-pill [score]="points" [myVote]="myVote()" (voted)="voted.emit($event)" />
     }
   </div>
 }

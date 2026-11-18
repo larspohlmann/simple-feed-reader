@@ -7,18 +7,21 @@
 .pill {
   display: inline-flex;
   align-items: center;
-  border-radius: var(--radius-pill);
   font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
 :host(:not(.bare)) .pill {
   @include glass-rim.ring(var(--border-strong), control);
+
+  min-height: var(--vote-pill-height);
+  border-radius: var(--radius);
+  color: inherit;
 }
 
 .arrow {
   display: inline-flex;
-  padding: var(--space-1) var(--space-2);
+  padding: var(--vote-pill-arrow-padding, var(--space-1)) var(--space-2);
   opacity: 0.7;
 }
 
@@ -42,24 +45,12 @@ button.arrow {
   }
 }
 
-.pill.up {
+.pill.up :is(.voted, .number) {
   color: var(--accent);
 }
 
-.pill.down {
+.pill.down :is(.voted, .number) {
   color: var(--danger);
-}
-
-:host(:not(.bare, .outline)) .pill.up {
-  --rim-base: var(--accent);
-
-  background: var(--accent-soft);
-}
-
-:host(:not(.bare, .outline)) .pill.down {
-  --rim-base: var(--danger);
-
-  background: var(--bg-danger);
 }
 
 .number {
@@ -71,23 +62,4 @@ button.arrow {
   .arrow {
     padding: 0 var(--space-1);
   }
-}
-
-:host(.outline) .pill {
-  min-height: var(--vote-pill-height);
-  border-radius: var(--radius);
-  color: inherit;
-}
-
-:host(.outline) .pill.up,
-:host(.outline) .pill.down {
-  color: inherit;
-}
-
-:host(.outline) .pill.up :is(.voted, .number) {
-  color: var(--accent);
-}
-
-:host(.outline) .pill.down :is(.voted, .number) {
-  color: var(--danger);
 }
