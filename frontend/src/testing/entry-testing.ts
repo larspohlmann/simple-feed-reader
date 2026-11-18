@@ -2,7 +2,7 @@ import { EntryCommentDto, EntryCommentPostDto } from '../app/reader/entry-commen
 import { EntryDto } from '../app/reader/models';
 import { QuotedPostDto } from '../app/reader/quoted-post/quoted-post';
 import { LinkCardDto } from '../app/reader/link-card/link-card';
-import { TrendingStory } from '../app/reader/trending/trending.models';
+import { StoryArticleDto, TrendingStoryDto } from '../app/reader/trending/trending.models';
 
 /** A plain list entry: no image, no summary, nothing marked; `overrides` name what a test is about. */
 export function anEntry(overrides: Partial<EntryDto> = {}): EntryDto {
@@ -50,9 +50,24 @@ export function anEntry(overrides: Partial<EntryDto> = {}): EntryDto {
   };
 }
 
-/** A Trending story nobody follows (#2017, #2128); `overrides` name what a test is about. */
-export function aStory(overrides: Partial<TrendingStory> = {}): TrendingStory {
-  return { id: 1, followed: false, outletCount: 2, viewed: false, shareCount: 0, ...overrides };
+/** A Trending article with no sharing posts; `overrides` name what a test is about. */
+export function aStoryArticle(overrides: Partial<StoryArticleDto> = {}): StoryArticleDto {
+  return { ...anEntry(), shares: [], ...overrides };
+}
+
+/** A one-article Trending story nobody follows (#2017, #2128, #2328); `overrides` name what a test is about. */
+export function aStory(overrides: Partial<TrendingStoryDto> = {}): TrendingStoryDto {
+  const articles = overrides.articles ?? [aStoryArticle()];
+  return {
+    id: 1,
+    followed: false,
+    outletCount: 2,
+    viewed: false,
+    shareCount: 0,
+    leadEntryId: articles[0].id,
+    articles,
+    ...overrides,
+  };
 }
 
 export function aQuotedPost(overrides: Partial<QuotedPostDto> = {}): QuotedPostDto {

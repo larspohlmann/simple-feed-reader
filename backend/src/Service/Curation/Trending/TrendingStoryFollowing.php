@@ -30,7 +30,7 @@ final readonly class TrendingStoryFollowing
     /** @throws TrendingStoryNotFoundException */
     public function follow(int $userId, int $storyId): void
     {
-        $this->stories->requireExists($storyId);
+        $this->stories->requireOwnedBy($userId, $storyId);
         $this->follows->follow($userId, $storyId, $this->clock->now());
     }
 
@@ -58,7 +58,7 @@ final readonly class TrendingStoryFollowing
                     => new FollowedStoryModel($row, $row->lastJoinedAt <= $quietSince),
                 $this->follows->followedBy($userId),
             ),
-            $this->snapshots->lastBuilds()->nextBuildDueAt(),
+            $this->snapshots->lastBuilds($userId)->nextBuildDueAt(),
         );
     }
 }

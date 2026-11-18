@@ -26,6 +26,6 @@ final readonly class WeekStoryBuildPolicy implements StoryBuildPolicyInterface
 
     public function prune(StoryBuildModel $build): int
     {
-        return $this->history->pruneUnfollowedOutside($build->since);
+        return $this->history->pruneUnfollowedOutside($build);
     }
 }

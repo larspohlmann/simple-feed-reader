@@ -7,15 +7,11 @@ namespace App\Repository;
 use App\Entity\Entry;
 use App\Entity\Subscription;
 use App\Entity\TrendingStoryEntry;
-use App\Enum\InclusionSurface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * A followed Trending story's entries: its whole history, seen through the feeds the reader follows and includes in
- * Trending, the rule the followed story's new count uses.
- *
  * @extends ServiceEntityRepository<Entry>
  */
 final class TrendingStoryEntryListRepository extends ServiceEntityRepository
@@ -65,12 +61,12 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
 
         $qb = $this->createQueryBuilder('e')
             ->select('e.id AS id', 'MAX(joined.joinedAt) AS joinedAt')
-            ->join(TrendingStoryEntry::class, 'joined', 'WITH', 'joined.story = :story')
+            ->join(TrendingStoryEntry::class, 'joined', 'ON', 'joined.story = :story')
             ->join('joined.entry', 'joinedEntry')
             ->join(
                 Subscription::class,
                 'joinedReader',
-                'WITH',
+                'ON',
                 'joinedReader.feed = joinedEntry.feed AND joinedReader.user = :user',
             )
             ->andWhere('joinedEntry = e OR joinedEntry.location.urlHash = e.location.urlHash')
@@ -79,7 +75,6 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
             ->setParameter('entryIds', $entryIds)
             ->setParameter('user', $query->userId)
             ->setParameter('story', $query->storyId);
-        InclusionScopeDql::restrict($qb, 'joinedReader', InclusionSurface::Trending);
 
         /** @var list<array{id: int|string, joinedAt: string}> $rows */
         $rows = $qb->getQuery()->getScalarResult();
@@ -101,6 +96,5 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
             $member,
             $aliases->entry,
         ));
-        InclusionScopeDql::restrict($qb, $aliases->subscription, InclusionSurface::Trending);
     }
 }

@@ -4,10 +4,11 @@ import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../../../testing/transloco-testing';
 import { EntryHeroComponent } from './entry-hero.component';
 import { EntryDto, ImageRenditionDto } from '../../../../models';
+import { ListItem, leadOf, storyOf } from '../../../../state/list-item';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
 import { ImageProxyService } from '../../../../../shared/proxied-image/image-proxy.service';
 import { neverRecoveringImageProxy } from '../../../../../../testing/image-proxy-testing';
-import { anEntry, aStory } from '../../../../../../testing/entry-testing';
+import { anEntry, aStory, aStoryArticle } from '../../../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
 import { provideSocialAccounts } from '../../../../../../testing/social-accounts-testing';
 
@@ -35,7 +36,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto =>
     ...over,
   });
 
-function mount(testEntry: EntryDto) {
+function mount(item: ListItem) {
   TestBed.configureTestingModule({
     imports: [EntryHeroComponent, provideTranslocoTesting()],
     providers: [
@@ -47,7 +48,8 @@ function mount(testEntry: EntryDto) {
     ],
   });
   const fixture = TestBed.createComponent(EntryHeroComponent);
-  fixture.componentRef.setInput('entry', testEntry);
+  fixture.componentRef.setInput('entry', leadOf(item));
+  fixture.componentRef.setInput('story', storyOf(item));
   fixture.detectChanges();
   return fixture;
 }
@@ -211,9 +213,14 @@ describe('EntryHeroComponent', () => {
   });
 
   it("opens a story's other outlet from its mini card, and not the hero", () => {
-    const dup = entry({ id: 9, source: 'NDR SH' });
+    const dup = aStoryArticle(entry({ id: 9, source: 'NDR SH' }));
     const fixture = mount(
-      entry({ duplicates: [dup], story: aStory({ outletCount: 2, viewed: false, shareCount: 0 }) }),
+      aStory({
+        outletCount: 2,
+        viewed: false,
+        shareCount: 0,
+        articles: [aStoryArticle(entry()), dup],
+      }),
     );
     const element = fixture.nativeElement as HTMLElement;
     element.querySelector<HTMLButtonElement>('app-more-sources .toggle')!.click();

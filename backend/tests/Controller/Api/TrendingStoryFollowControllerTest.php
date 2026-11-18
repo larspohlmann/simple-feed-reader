@@ -44,7 +44,7 @@ final class TrendingStoryFollowControllerTest extends ApiTestCase
 
     public function testFollowingAStoryListsItWithNothingNew(): void
     {
-        $reader = $this->signIn($this->client, 'follow-listed@example.com');
+        $reader = $this->signInAsOwner('follow-listed@example.com');
         [$alpha, $beta] = $this->followedFeeds($reader);
         $story = $this->fixtures->story(
             TrendingWindow::Day,
@@ -67,11 +67,13 @@ final class TrendingStoryFollowControllerTest extends ApiTestCase
 
     public function testTheFollowedListSaysWhenTheNextBuildIsDue(): void
     {
-        $this->signIn($this->client, 'follow-next-build@example.com');
+        $reader = $this->signInAsOwner('follow-next-build@example.com');
         foreach ([TrendingWindow::Day, TrendingWindow::Week] as $window) {
             $this->snapshots()->recordSnapshot(new TrendingBuildReportModel(
+                $reader->requireId(),
                 $window,
                 new \DateTimeImmutable('2031-05-14 09:50:00', new \DateTimeZone('UTC')),
+                0,
                 0,
                 0,
                 1,
@@ -89,7 +91,7 @@ final class TrendingStoryFollowControllerTest extends ApiTestCase
 
     public function testFollowingTwiceKeepsTheFirstVisit(): void
     {
-        $reader = $this->signIn($this->client, 'follow-twice@example.com');
+        $reader = $this->signInAsOwner('follow-twice@example.com');
         [$alpha, $beta, $gamma, $delta] = $this->followedFeeds($reader);
         $story = $this->storyOf($alpha, $beta);
         $this->follow($story);
@@ -109,7 +111,7 @@ final class TrendingStoryFollowControllerTest extends ApiTestCase
 
     public function testFollowingAnUnknownStoryIsNotFound(): void
     {
-        $reader = $this->signIn($this->client, 'follow-unknown@example.com');
+        $reader = $this->signInAsOwner('follow-unknown@example.com');
         [$alpha, $beta] = $this->followedFeeds($reader);
         $story = $this->storyOf($alpha, $beta);
 
@@ -120,9 +122,44 @@ final class TrendingStoryFollowControllerTest extends ApiTestCase
         self::assertSame([], $this->followedStories());
     }
 
+    public function testFollowingAnotherUsersStoryIs404(): void
+    {
+        $reader = $this->signInAsOwner('follow-cross-user@example.com');
+        $owner = $this->factory()->create('follow-cross-user-owner@example.com');
+        [$alpha, $beta] = $this->followedFeeds($reader);
+        $this->fixtures->subscribe($owner, $alpha, $beta);
+        $othersStory = $this->fixtures->storyOf(
+            $owner,
+            TrendingWindow::Day,
+            '2031-05-14 09:00:00',
+            $this->fixtures->entry($alpha, 'First', '2031-05-14 09:00:00'),
+            $this->fixtures->entry($beta, 'Second', '2031-05-14 09:00:00'),
+        );
+
+        $this->follow($othersStory);
+        $this->assertRejected($this->client, Response::HTTP_NOT_FOUND);
+        self::assertSame('trending_story_not_found', $this->payload($this->client)['type']);
+
+        $this->client->request(
+            'POST',
+            '/api/trending/hidden',
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['storyId' => $othersStory->requireId()], \JSON_THROW_ON_ERROR),
+        );
+        $this->assertRejected($this->client, Response::HTTP_NOT_FOUND);
+        self::assertSame('trending_story_not_found', $this->payload($this->client)['type']);
+
+        $this->open($othersStory);
+        $this->assertRejected($this->client, Response::HTTP_NOT_FOUND);
+        self::assertSame('trending_story_not_followed', $this->payload($this->client)['type']);
+
+        self::assertSame(0, $this->rowsIn('trending_story_follow'));
+        self::assertSame(0, $this->rowsIn('trending_story_hide'));
+    }
+
     public function testUnfollowingRemovesTheRowAndIsIdempotent(): void
     {
-        $reader = $this->signIn($this->client, 'follow-unfollow@example.com');
+        $reader = $this->signInAsOwner('follow-unfollow@example.com');
         [$alpha, $beta] = $this->followedFeeds($reader);
         $story = $this->storyOf($alpha, $beta);
         $kept = $this->storyOf($alpha, $beta);
@@ -139,7 +176,7 @@ final class TrendingStoryFollowControllerTest extends ApiTestCase
 
     public function testMembersJoinedAfterTheVisitCountAsNew(): void
     {
-        $reader = $this->signIn($this->client, 'follow-new@example.com');
+        $reader = $this->signInAsOwner('follow-new@example.com');
         [$alpha, $beta, $gamma, $delta] = $this->followedFeeds($reader);
         $story = $this->storyOf($alpha, $beta);
         $this->follow($story);
@@ -161,7 +198,7 @@ final class TrendingStoryFollowControllerTest extends ApiTestCase
 
     public function testAnOldArticleGroupedInNowCountsAsNew(): void
     {
-        $reader = $this->signIn($this->client, 'follow-old-article@example.com');
+        $reader = $this->signInAsOwner('follow-old-article@example.com');
         [$alpha, $beta, $gamma] = $this->followedFeeds($reader);
         $story = $this->storyOf($alpha, $beta);
         $this->follow($story);
@@ -177,7 +214,7 @@ final class TrendingStoryFollowControllerTest extends ApiTestCase
 
     public function testNewCountsAnArticleOnceAndAnAccountOnce(): void
     {
-        $reader = $this->signIn($this->client, 'follow-once@example.com');
+        $reader = $this->signInAsOwner('follow-once@example.com');
         [$alpha, $beta, , , $ann, $ben] = $this->followedFeeds($reader);
         $story = $this->storyOf($alpha, $beta);
         $this->follow($story);
@@ -196,7 +233,7 @@ final class TrendingStoryFollowControllerTest extends ApiTestCase
 
     public function testAPostNamingNoAccountCountsByItsFeed(): void
     {
-        $reader = $this->signIn($this->client, 'follow-no-account@example.com');
+        $reader = $this->signInAsOwner('follow-no-account@example.com');
         [$alpha, $beta, , , $ann, $ben] = $this->followedFeeds($reader);
         $story = $this->storyOf($alpha, $beta);
         $this->follow($story);
@@ -212,29 +249,27 @@ final class TrendingStoryFollowControllerTest extends ApiTestCase
         self::assertSame([2], $this->newCounts());
     }
 
-    public function testOnlyFeedsTheReaderFollowsAndIncludesInTrendingCount(): void
+    public function testAFeedSwitchedOutOfTrendingAfterTheBuildStillCountsAsNew(): void
     {
-        $reader = $this->signIn($this->client, 'follow-included@example.com');
+        $reader = $this->signInAsOwner('follow-included@example.com');
         [$alpha, $beta, $gamma] = $this->followedFeeds($reader);
-        $unfollowed = $this->fixtures->feed('unfollowed');
         $story = $this->storyOf($alpha, $beta);
         $this->follow($story);
-        $this->switchOutOfTrending($reader, $beta);
-
         $this->fixtures->join(
             $story,
             '2031-05-14 11:00:00',
-            $this->fixtures->entry($beta, 'Switched out', '2031-05-14 11:00:00'),
+            $this->fixtures->entry($beta, 'Switched out later', '2031-05-14 11:00:00'),
             $this->fixtures->entry($gamma, 'Included', '2031-05-14 11:00:00'),
-            $this->fixtures->entry($unfollowed, 'Not followed', '2031-05-14 11:00:00'),
         );
 
-        self::assertSame([1], $this->newCounts());
+        $this->switchOutOfTrending($reader, $this->reloaded($beta));
+
+        self::assertSame([2], $this->newCounts());
     }
 
     public function testOpeningClearsTheNewCount(): void
     {
-        $reader = $this->signIn($this->client, 'follow-opened@example.com');
+        $reader = $this->signInAsOwner('follow-opened@example.com');
         [$alpha, $beta, $gamma, $delta] = $this->followedFeeds($reader);
         $story = $this->storyOf($alpha, $beta);
         $this->follow($story);
@@ -261,7 +296,7 @@ final class TrendingStoryFollowControllerTest extends ApiTestCase
 
     public function testOpeningAStoryNotFollowedIsNotFound(): void
     {
-        $reader = $this->signIn($this->client, 'follow-open-unfollowed@example.com');
+        $reader = $this->signInAsOwner('follow-open-unfollowed@example.com');
         [$alpha, $beta] = $this->followedFeeds($reader);
         $story = $this->storyOf($alpha, $beta);
 
@@ -274,7 +309,7 @@ final class TrendingStoryFollowControllerTest extends ApiTestCase
 
     public function testAStoryWithNothingJoinedForTwoDaysIsQuiet(): void
     {
-        $reader = $this->signIn($this->client, 'follow-quiet@example.com');
+        $reader = $this->signInAsOwner('follow-quiet@example.com');
         [$alpha, $beta] = $this->followedFeeds($reader);
         $quiet = $this->storyOf($alpha, $beta, '2031-05-14 09:00:00');
         $active = $this->storyOf($alpha, $beta, '2031-05-14 10:00:00');
@@ -290,15 +325,13 @@ final class TrendingStoryFollowControllerTest extends ApiTestCase
 
     public function testTheHeadlinePrefersTheNewestArticleOverANewerPost(): void
     {
-        $reader = $this->signIn($this->client, 'follow-headline@example.com');
+        $reader = $this->signInAsOwner('follow-headline@example.com');
         [$alpha, $beta, , , $ann] = $this->followedFeeds($reader);
-        $unfollowed = $this->fixtures->feed('unfollowed');
         $story = $this->fixtures->story(
             TrendingWindow::Day,
             '2031-05-14 09:00:00',
             $this->fixtures->entry($alpha, 'Older article', '2031-05-14 07:00:00'),
             $this->fixtures->entry($beta, 'Newest article', '2031-05-14 08:00:00'),
-            $this->fixtures->entry($unfollowed, 'An article the reader does not follow', '2031-05-14 08:30:00'),
             $this->post($ann, 'A newer post', null),
         );
 
@@ -309,7 +342,7 @@ final class TrendingStoryFollowControllerTest extends ApiTestCase
 
     public function testEachStoryIsHeadedByItsOwnMembers(): void
     {
-        $reader = $this->signIn($this->client, 'follow-headline-own@example.com');
+        $reader = $this->signInAsOwner('follow-headline-own@example.com');
         [$alpha, $beta] = $this->followedFeeds($reader);
         $older = $this->fixtures->story(
             TrendingWindow::Day,
@@ -329,7 +362,7 @@ final class TrendingStoryFollowControllerTest extends ApiTestCase
 
     public function testAStoryOfPostsAloneIsHeadedByItsNewestPost(): void
     {
-        $reader = $this->signIn($this->client, 'follow-headline-posts@example.com');
+        $reader = $this->signInAsOwner('follow-headline-posts@example.com');
         [, , , , $ann, $ben] = $this->followedFeeds($reader);
         $story = $this->fixtures->story(
             TrendingWindow::Day,
@@ -343,9 +376,9 @@ final class TrendingStoryFollowControllerTest extends ApiTestCase
         self::assertSame(['Newer post'], array_column($this->followedStories(), 'headline'));
     }
 
-    public function testAStoryTheReaderCanNoLongerSeeStaysWithNoHeadline(): void
+    public function testAFeedUnsubscribedFromNeitherCountsAsNewNorHeadsAFollowedStory(): void
     {
-        $reader = $this->signIn($this->client, 'follow-unseen@example.com');
+        $reader = $this->signInAsOwner('follow-unsubscribed@example.com');
         [$alpha, $beta, $gamma] = $this->followedFeeds($reader);
         $story = $this->storyOf($alpha, $beta);
         $this->follow($story);
@@ -354,6 +387,24 @@ final class TrendingStoryFollowControllerTest extends ApiTestCase
             '2031-05-14 11:00:00',
             $this->fixtures->entry($gamma, 'Gamma joins', '2031-05-14 11:00:00'),
         );
+
+        $this->entityManager()->getConnection()->executeStatement(
+            'DELETE FROM subscription WHERE user_id = ? AND feed_id = ?',
+            [$reader->requireId(), $gamma->requireId()],
+        );
+
+        $stories = $this->followedStories();
+        self::assertSame([$story->requireId()], array_column($stories, 'id'));
+        self::assertSame(['Second'], array_column($stories, 'headline'));
+        self::assertSame([0], array_column($stories, 'newCount'));
+    }
+
+    public function testAFollowedStoryWithNoSubscribedFeedLeftStaysListedWithoutAHeadline(): void
+    {
+        $reader = $this->signInAsOwner('follow-none-subscribed@example.com');
+        [$alpha, $beta] = $this->followedFeeds($reader);
+        $story = $this->storyOf($alpha, $beta);
+        $this->follow($story);
 
         $this->entityManager()->getConnection()
             ->executeStatement('DELETE FROM subscription WHERE user_id = ?', [$reader->requireId()]);
@@ -366,7 +417,7 @@ final class TrendingStoryFollowControllerTest extends ApiTestCase
 
     public function testOtherReadersFollowsAreTheirOwn(): void
     {
-        $reader = $this->signIn($this->client, 'follow-own@example.com');
+        $reader = $this->signInAsOwner('follow-own@example.com');
         [$alpha, $beta] = $this->followedFeeds($reader);
         $other = $this->factory()->create('follow-own-other@example.com');
         $this->fixtures->subscribe($other, $alpha, $beta);
@@ -386,7 +437,7 @@ final class TrendingStoryFollowControllerTest extends ApiTestCase
 
     public function testFollowedStoriesAreNewestJoinedFirst(): void
     {
-        $reader = $this->signIn($this->client, 'follow-order@example.com');
+        $reader = $this->signInAsOwner('follow-order@example.com');
         [$alpha, $beta] = $this->followedFeeds($reader);
         $oldest = $this->storyOf($alpha, $beta, '2031-05-14 08:00:00');
         $newer = $this->storyOf($alpha, $beta, '2031-05-14 09:00:00');
@@ -416,6 +467,22 @@ final class TrendingStoryFollowControllerTest extends ApiTestCase
         yield 'unfollow' => ['DELETE', '/api/trending/stories/1/follow'];
         yield 'opened' => ['POST', '/api/trending/stories/1/opened'];
         yield 'followed' => ['GET', '/api/trending/followed'];
+    }
+
+    private function signInAsOwner(string $email): User
+    {
+        $reader = $this->signIn($this->client, $email);
+        $this->fixtures = $this->fixtures->ownedBy($reader);
+
+        return $reader;
+    }
+
+    private function rowsIn(string $table): int
+    {
+        $count = $this->entityManager()->getConnection()->fetchOne(\sprintf('SELECT COUNT(*) FROM %s', $table));
+        self::assertIsNumeric($count);
+
+        return (int) $count;
     }
 
     private function snapshots(): TrendingSnapshotRepository

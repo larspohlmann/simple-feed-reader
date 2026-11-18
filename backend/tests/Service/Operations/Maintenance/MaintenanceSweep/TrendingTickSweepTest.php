@@ -9,6 +9,7 @@ use App\Service\Curation\Trending\Model\TrendingBuildReportModel;
 use App\Enum\TrendingWindow;
 use App\Service\Operations\Maintenance\MaintenanceSweep\TrendingTickSweep;
 use App\Tests\DbTestCase;
+use App\Tests\Support\TrendingFixtures;
 use App\Tests\Support\TrendingWiring;
 use Symfony\Component\Clock\MockClock;
 
@@ -37,6 +38,10 @@ final class TrendingTickSweepTest extends DbTestCase
 
     private function sweep(MockClock $clock): TrendingTickSweep
     {
-        return new TrendingTickSweep(TrendingWiring::rebuild($this->entityManager, $clock));
+        $reader = (new TrendingFixtures($this->entityManager))->owner();
+        $reader->setLastLoginAt($clock->now());
+        $this->entityManager->flush();
+
+        return new TrendingTickSweep(TrendingWiring::rebuild($this->entityManager, $this->registry(), $clock));
     }
 }

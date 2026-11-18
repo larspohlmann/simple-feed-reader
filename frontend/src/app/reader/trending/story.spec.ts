@@ -1,45 +1,38 @@
-import { anEntry, aStory } from '../../../testing/entry-testing';
-import { EntryDto } from '../models';
+import { anEntry, aStory, aStoryArticle } from '../../../testing/entry-testing';
 import { isStoryViewed, showsUnreadMark } from './story';
-import { TrendingStory } from './trending.models';
-
-const lead = (story: Partial<TrendingStory> = {}, over: Partial<EntryDto> = {}): EntryDto =>
-  anEntry({ story: aStory({ outletCount: 5, ...story }), ...over });
 
 describe('isStoryViewed', () => {
   it('is false for a story nobody opened', () => {
-    expect(isStoryViewed(lead({}, { duplicates: [anEntry({ id: 2 })] }))).toBe(false);
+    const story = aStory({ articles: [aStoryArticle(), aStoryArticle({ id: 2 })] });
+
+    expect(isStoryViewed(story)).toBe(false);
   });
 
   it("follows the server's verdict, which counts social entries the card does not show", () => {
-    expect(isStoryViewed(lead({ viewed: true }))).toBe(true);
+    expect(isStoryViewed(aStory({ viewed: true }))).toBe(true);
   });
 
   it('is true once the lead was opened here', () => {
-    expect(isStoryViewed(lead({}, { isViewed: true }))).toBe(true);
+    expect(isStoryViewed(aStory({ articles: [aStoryArticle({ isViewed: true })] }))).toBe(true);
   });
 
   it('is true once another outlet was opened here', () => {
-    expect(isStoryViewed(lead({}, { duplicates: [anEntry({ id: 2, isViewed: true })] }))).toBe(
-      true,
-    );
-  });
+    const story = aStory({
+      articles: [aStoryArticle(), aStoryArticle({ id: 2, isViewed: true })],
+    });
 
-  it('is false for an ordinary row, whatever its duplicates say', () => {
-    const row = anEntry({ isViewed: true, duplicates: [anEntry({ id: 2, isViewed: true })] });
-
-    expect(isStoryViewed(row)).toBe(false);
+    expect(isStoryViewed(story)).toBe(true);
   });
 });
 
 describe('showsUnreadMark', () => {
   it('marks an ordinary row by its own read state', () => {
-    expect(showsUnreadMark(anEntry({ isHidden: false }))).toBe(true);
-    expect(showsUnreadMark(anEntry({ isHidden: true }))).toBe(false);
+    expect(showsUnreadMark(anEntry({ isHidden: false }), null)).toBe(true);
+    expect(showsUnreadMark(anEntry({ isHidden: true }), null)).toBe(false);
   });
 
   it('marks a Trending lead by its story, whatever the lead row says', () => {
-    expect(showsUnreadMark(lead({ viewed: true }, { isHidden: false }))).toBe(false);
-    expect(showsUnreadMark(lead({}, { isHidden: true }))).toBe(true);
+    expect(showsUnreadMark(anEntry({ isHidden: false }), aStory({ viewed: true }))).toBe(false);
+    expect(showsUnreadMark(anEntry({ isHidden: true }), aStory())).toBe(true);
   });
 });

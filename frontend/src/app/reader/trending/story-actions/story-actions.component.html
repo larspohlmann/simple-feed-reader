@@ -10,7 +10,7 @@
       [attr.title]="
         (followed ? 'reader.actionHint.unfollowStory' : 'reader.actionHint.followStory') | transloco
       "
-      (click)="$event.stopPropagation(); shown.actions.follow(entry())"
+      (click)="$event.stopPropagation(); shown.actions.follow(story())"
       (keydown.enter)="$event.stopPropagation()"
       (keydown.space)="$event.stopPropagation()"
     >
@@ -26,7 +26,7 @@
       class="boxed round"
       [attr.aria-label]="'reader.hideStory' | transloco"
       [attr.title]="'reader.actionHint.hideStory' | transloco"
-      (click)="$event.stopPropagation(); shown.actions.hide(entry())"
+      (click)="$event.stopPropagation(); shown.actions.hide(story())"
       (keydown.enter)="$event.stopPropagation()"
       (keydown.space)="$event.stopPropagation()"
     >

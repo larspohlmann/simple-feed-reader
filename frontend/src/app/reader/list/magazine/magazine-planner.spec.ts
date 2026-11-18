@@ -5,7 +5,13 @@ import { IMAGE_KINDS } from './magazine-slot-fit';
 import { IMAGE_TEMPLATES } from './magazine-templates';
 import { EntryDto } from '../../models';
 import { entryImage } from '../preview-image';
-import { aLinkCard, aQuotedPost, anEntry } from '../../../../testing/entry-testing';
+import {
+  aLinkCard,
+  aQuotedPost,
+  anEntry,
+  aStory,
+  aStoryArticle,
+} from '../../../../testing/entry-testing';
 
 const NOW = '2026-07-29T12:00:00.000Z';
 /** An ISO instant `hoursAgo` before NOW, for exercising the 24h activity window. */
@@ -95,28 +101,28 @@ const trigramEntropy = (ks: string[]): number => {
 describe('planMagazine', () => {
   it('emits every entry exactly once — nothing is ever hidden', () => {
     const entries = many(120, (index) => big(index, { subscriptionId: (index % 7) + 1 }));
-    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    const blocks = planMagazine({ items: entries, grouping: true, complete: true });
     expect(entryCount(blocks)).toBe(120);
   });
 
   it('is prefix-stable when more entries arrive', () => {
     const entries = many(120, (index) => big(index, { subscriptionId: (index % 7) + 1 }));
-    const first = planMagazine({ entries: entries.slice(0, 60), grouping: true, complete: false });
-    const second = planMagazine({ entries, grouping: true, complete: true });
+    const first = planMagazine({ items: entries.slice(0, 60), grouping: true, complete: false });
+    const second = planMagazine({ items: entries, grouping: true, complete: true });
     expect(kinds(second).slice(0, first.length)).toEqual(kinds(first));
   });
 
   it('preserves reverse-chronological order', () => {
     const entries = many(60, (index) => big(index, { subscriptionId: (index % 5) + 1 }));
-    const ids = planMagazine({ entries, grouping: false, complete: true }).flatMap((block) =>
-      block.kind === 'group' ? block.entries.map((x) => x.id) : [block.entry.id],
+    const ids = planMagazine({ items: entries, grouping: false, complete: true }).flatMap(
+      (block) => (block.kind === 'group' ? block.entries.map((x) => x.id) : [block.entry.id]),
     );
     expect(ids).toEqual([...ids].sort((left, right) => left - right));
   });
 
   it('keeps 3-gram entropy above the boredom floor', () => {
     const entries = many(200, (index) => big(index, { subscriptionId: (index % 9) + 1 }));
-    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    const blocks = planMagazine({ items: entries, grouping: true, complete: true });
     expect(trigramEntropy(kinds(blocks))).toBeGreaterThan(4);
   });
 
@@ -127,7 +133,7 @@ describe('planMagazine', () => {
       ...many(8, (index) => big(index, { subscriptionId: 1, source: 'Burst' })),
       ...many(40, (index) => big(100 + index, { subscriptionId: (index % 6) + 2 })),
     ];
-    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    const blocks = planMagazine({ items: entries, grouping: true, complete: true });
     expect(blocks[0].kind).not.toBe('group');
   });
 
@@ -135,7 +141,7 @@ describe('planMagazine', () => {
     // A portrait image belongs beside the text (split), not above it: a tall
     // image in a hero slot would own most of the screen.
     const entries = many(80, (index) => portrait(index, { subscriptionId: (index % 6) + 1 }));
-    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    const blocks = planMagazine({ items: entries, grouping: true, complete: true });
     expect(kinds(blocks)).not.toContain('hero');
     expect(kinds(blocks)).not.toContain('wide');
     // The image survives — it lands on an image-beside block, not a text block.
@@ -147,7 +153,7 @@ describe('planMagazine', () => {
     const entries = many(80, (index) =>
       big(index, { imageAspectRatio: 9 / 16, subscriptionId: (index % 6) + 1 }),
     );
-    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    const blocks = planMagazine({ items: entries, grouping: true, complete: true });
     expect(kinds(blocks)).not.toContain('hero');
     expect(kinds(blocks)).not.toContain('wide');
     expect(kinds(blocks)).toContain('split');
@@ -157,7 +163,7 @@ describe('planMagazine', () => {
   it('pulls the next landscape entry into a hero slot past a letterboxed portrait', () => {
     const plain = many(20, (index) => big(index, { subscriptionId: (index % 6) + 1 }));
     const plan = (entries: EntryDto[]) =>
-      planMagazine({ entries, grouping: false, complete: true }).filter(
+      planMagazine({ items: entries, grouping: false, complete: true }).filter(
         (block): block is Exclude<MagazineBlock, { kind: 'group' }> => block.kind !== 'group',
       );
     const heroAt = plan(plain).findIndex((block) => block.kind === 'hero');
@@ -193,11 +199,11 @@ describe('planMagazine', () => {
         ...over,
       });
     const withLadder = kinds(
-      planMagazine({ entries: many(80, factmag), grouping: true, complete: true }),
+      planMagazine({ items: many(80, factmag), grouping: true, complete: true }),
     );
     const withoutLadder = kinds(
       planMagazine({
-        entries: many(80, (index) => factmag(index, { imageRenditions: [] })),
+        items: many(80, (index) => factmag(index, { imageRenditions: [] })),
         grouping: true,
         complete: true,
       }),
@@ -217,7 +223,7 @@ describe('planMagazine', () => {
         subscriptionId: (index % 6) + 1,
       }),
     );
-    const ks = kinds(planMagazine({ entries, grouping: true, complete: true }));
+    const ks = kinds(planMagazine({ items: entries, grouping: true, complete: true }));
     expect(ks).not.toContain('hero');
     expect(ks).not.toContain('wide');
     expect(ks).toContain('split');
@@ -229,7 +235,7 @@ describe('planMagazine', () => {
     // planner switches to the text family: pull-quotes and headline bands, with
     // the small thumbnail as an accent, never the whole page.
     const entries = many(80, (index) => wire(index, { subscriptionId: (index % 6) + 1 }));
-    const ks = kinds(planMagazine({ entries, grouping: true, complete: true }));
+    const ks = kinds(planMagazine({ items: entries, grouping: true, complete: true }));
     expect(ks).not.toContain('hero');
     expect(ks).not.toContain('wide');
     expect(ks).not.toContain('split');
@@ -251,7 +257,7 @@ describe('planMagazine', () => {
         ? big(index, { subscriptionId: (index % 6) + 1 })
         : entryAt(index, { subscriptionId: (index % 6) + 1 }),
     );
-    const ks = kinds(planMagazine({ entries, grouping: true, complete: true }));
+    const ks = kinds(planMagazine({ items: entries, grouping: true, complete: true }));
     expect(
       ks.some((kind) => kind === 'hero' || kind === 'wide' || kind === 'split' || kind === 'thumb'),
     ).toBe(true);
@@ -261,7 +267,7 @@ describe('planMagazine', () => {
     // The three newest posts are image-less; the fourth carries a photo. The
     // reader should land on that photo, and nothing is lost.
     const entries = [entryAt(1), entryAt(2), entryAt(3), big(4), big(5), big(6), big(7), big(8)];
-    const blocks = planMagazine({ entries, grouping: false, complete: true });
+    const blocks = planMagazine({ items: entries, grouping: false, complete: true });
     const first = blocks[0];
     expect(first.kind).not.toBe('group');
     expect(first.kind === 'group' ? null : first.entry.id).toBe(4);
@@ -273,8 +279,8 @@ describe('planMagazine', () => {
     // The lead-image reorder reads only the fixed head, so a partial first
     // render and the full one pull the same entry up and share a prefix.
     const entries = [entryAt(1), entryAt(2), ...many(118, (index) => big(200 + index))];
-    const first = planMagazine({ entries: entries.slice(0, 60), grouping: true, complete: false });
-    const full = planMagazine({ entries, grouping: true, complete: true });
+    const first = planMagazine({ items: entries.slice(0, 60), grouping: true, complete: false });
+    const full = planMagazine({ items: entries, grouping: true, complete: true });
     expect(kinds(full).slice(0, first.length)).toEqual(kinds(first));
   });
 
@@ -285,14 +291,14 @@ describe('planMagazine', () => {
       ...many(7, (index) => entryAt(index)),
       ...many(20, (index) => big(100 + index)),
     ];
-    const blocks = planMagazine({ entries, grouping: false, complete: true });
+    const blocks = planMagazine({ items: entries, grouping: false, complete: true });
     const first = blocks[0];
     expect(first.kind === 'group' ? null : first.entry.id).toBe(1);
   });
 
   it('emits no image block when no entry has an image', () => {
     const entries = many(80, (index) => entryAt(index, { subscriptionId: (index % 6) + 1 }));
-    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    const blocks = planMagazine({ items: entries, grouping: true, complete: true });
     expect(kinds(blocks)).not.toContain('hero');
     expect(kinds(blocks)).not.toContain('wide');
     expect(kinds(blocks)).not.toContain('split');
@@ -303,7 +309,7 @@ describe('planMagazine', () => {
     // Fewer than MIN_VIEW_SOURCES distinct sources in the leading window ->
     // collapse is disabled entirely, so a mono view renders flat and smooth.
     const entries = many(40, (index) => big(index, { subscriptionId: 1 }));
-    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    const blocks = planMagazine({ items: entries, grouping: true, complete: true });
     expect(kinds(blocks)).not.toContain('group');
     expect(entryCount(blocks)).toBe(40);
   });
@@ -320,7 +326,7 @@ describe('planMagazine', () => {
       ),
       ...many(30, (index) => big(200 + index, { subscriptionId: (index % 6) + 2 })),
     ];
-    const group = planMagazine({ entries, grouping: true, complete: true }).find(
+    const group = planMagazine({ items: entries, grouping: true, complete: true }).find(
       (block) => block.kind === 'group',
     );
 
@@ -337,7 +343,7 @@ describe('planMagazine', () => {
 
     it('never collapses into a group widget', () => {
       const blocks = planMagazine({
-        entries: withRunOf(HOME),
+        items: withRunOf(HOME),
         grouping: true,
         complete: true,
         uncollapsibleSources: new Set([HOME]),
@@ -350,7 +356,7 @@ describe('planMagazine', () => {
     it('leaves a profile feed run to collapse as before', () => {
       const PROFILE = 9;
       const blocks = planMagazine({
-        entries: withRunOf(PROFILE),
+        items: withRunOf(PROFILE),
         grouping: true,
         complete: true,
         uncollapsibleSources: new Set([HOME]),
@@ -366,7 +372,7 @@ describe('planMagazine', () => {
       ...many(8, (index) => big(100 + index, { subscriptionId: 1, source: 'Burst' })),
       ...many(30, (index) => big(200 + index, { subscriptionId: (index % 6) + 2 })),
     ];
-    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    const blocks = planMagazine({ items: entries, grouping: true, complete: true });
     const group = blocks.find((block) => block.kind === 'group');
     expect(group).toBeDefined();
     // Widget owns the whole tail: run of 8, minus 3 featured, = 5 entries.
@@ -383,8 +389,8 @@ describe('planMagazine', () => {
 
   it('holds back a partial trailing page while more can load', () => {
     const entries = many(20, (index) => big(index, { subscriptionId: (index % 5) + 1 }));
-    const held = planMagazine({ entries, grouping: true, complete: false });
-    const done = planMagazine({ entries, grouping: true, complete: true });
+    const held = planMagazine({ items: entries, grouping: true, complete: false });
+    const done = planMagazine({ items: entries, grouping: true, complete: true });
     expect(held.length).toBeLessThanOrEqual(done.length);
     expect(entryCount(done)).toBe(20);
   });
@@ -396,14 +402,14 @@ describe('planMagazine', () => {
       ...many(30, (index) => big(index, { subscriptionId: 1, source: 'Burst' })),
       ...many(90, (index) => big(100 + index, { subscriptionId: (index % 6) + 2 })),
     ];
-    const first = planMagazine({ entries: entries.slice(0, 60), grouping: true, complete: false });
-    const full = planMagazine({ entries, grouping: true, complete: true });
+    const first = planMagazine({ items: entries.slice(0, 60), grouping: true, complete: false });
+    const full = planMagazine({ items: entries, grouping: true, complete: true });
     expect(kinds(full).slice(0, first.length)).toEqual(kinds(first));
   });
 
   it('never fills a wide or split block for image-less entries', () => {
     const entries = many(40, (index) => entryAt(index, { subscriptionId: (index % 6) + 1 }));
-    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    const blocks = planMagazine({ items: entries, grouping: true, complete: true });
     expect(kinds(blocks)).not.toContain('wide');
     expect(kinds(blocks)).not.toContain('split');
   });
@@ -414,7 +420,7 @@ describe('planMagazine', () => {
     // everything else stays in place — and no entry is lost or duplicated.
     const lookAhead = 2;
     const entries = [entryAt(1), big(2), big(3), big(4), big(5)];
-    const blocks = planMagazine({ entries, grouping: false, complete: true });
+    const blocks = planMagazine({ items: entries, grouping: false, complete: true });
     const ids = blocks.flatMap((block) =>
       block.kind === 'group' ? block.entries.map((x) => x.id) : [block.entry.id],
     );
@@ -432,7 +438,7 @@ describe('planMagazine', () => {
         big(200 + index, { subscriptionId: index + 2, source: `s${index + 2}` }),
       ),
     ];
-    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    const blocks = planMagazine({ items: entries, grouping: true, complete: true });
     const group = blocks.find((block) => block.kind === 'group');
     expect(group).toBeDefined();
     expect(group!.kind === 'group' && group!.entries.length).toBe(9); // 12 - 3 featured
@@ -447,7 +453,7 @@ describe('planMagazine', () => {
       ...many(10, (index) => big(index, { subscriptionId: 1, source: 'A' })),
       ...many(10, (index) => big(100 + index, { subscriptionId: 2, source: 'B' })),
     ];
-    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    const blocks = planMagazine({ items: entries, grouping: true, complete: true });
     expect(kinds(blocks)).not.toContain('group');
     expect(entryCount(blocks)).toBe(20);
   });
@@ -462,7 +468,7 @@ describe('planMagazine', () => {
         big(200 + index, { subscriptionId: index + 2, source: `s${index + 2}` }),
       ),
     ];
-    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    const blocks = planMagazine({ items: entries, grouping: true, complete: true });
     const group = blocks.find((block) => block.kind === 'group');
     expect(group).toBeDefined();
     // Both 6-entry segments merge into one run of 12, minus 3 featured = 9.
@@ -486,7 +492,7 @@ describe('planMagazine', () => {
         big(200 + index, { subscriptionId: index + 2, source: `s${index + 2}` }),
       ),
     ];
-    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    const blocks = planMagazine({ items: entries, grouping: true, complete: true });
     const group = blocks.find((block) => block.kind === 'group');
     expect(group).toBeDefined();
     // Run stops at the 2-post gap: 8 - 3 featured = 5, NOT merged past it.
@@ -506,7 +512,7 @@ describe('planMagazine', () => {
         big(200 + index, { subscriptionId: index + 2, source: `s${index + 2}` }),
       ),
     ];
-    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    const blocks = planMagazine({ items: entries, grouping: true, complete: true });
     const groups = blocks.filter((block) => block.kind === 'group');
     expect(groups.length).toBe(2);
     // 6 + 8 + 3 (A/B/C) + 8 + 6 = 31 entries, all surfaced exactly once.
@@ -520,8 +526,8 @@ describe('planMagazine', () => {
       ...many(6, (index) => big(index, { subscriptionId: index + 2, source: `s${index + 2}` })),
       ...many(8, (index) => big(100 + index, { subscriptionId: 1, source: 'Dom' })),
     ];
-    const held = planMagazine({ entries, grouping: true, complete: false });
-    const done = planMagazine({ entries, grouping: true, complete: true });
+    const held = planMagazine({ items: entries, grouping: true, complete: false });
+    const done = planMagazine({ items: entries, grouping: true, complete: true });
     expect(held.some((block) => block.kind === 'group')).toBe(false);
     expect(done.some((block) => block.kind === 'group')).toBe(true);
   });
@@ -535,7 +541,7 @@ describe('planMagazine', () => {
       big(200, { subscriptionId: 3, source: 's3' }),
       big(201, { subscriptionId: 4, source: 's4' }),
     ];
-    const held = planMagazine({ entries, grouping: true, complete: false });
+    const held = planMagazine({ items: entries, grouping: true, complete: false });
     expect(held.some((block) => block.kind === 'group')).toBe(true);
   });
 
@@ -545,8 +551,8 @@ describe('planMagazine', () => {
       ...many(12, (index) => big(100 + index, { subscriptionId: 1, source: 'Dom' })),
       ...many(102, (index) => big(200 + index, { subscriptionId: (index % 6) + 2 })),
     ];
-    const first = planMagazine({ entries: entries.slice(0, 60), grouping: true, complete: false });
-    const full = planMagazine({ entries, grouping: true, complete: true });
+    const first = planMagazine({ items: entries.slice(0, 60), grouping: true, complete: false });
+    const full = planMagazine({ items: entries, grouping: true, complete: true });
     expect(kinds(full).slice(0, first.length)).toEqual(kinds(first));
   });
 
@@ -558,7 +564,7 @@ describe('planMagazine', () => {
       ...many(5, (index) => big(160 + index, { subscriptionId: 1, source: 'Dom' })),
       ...many(8, (index) => big(200 + index, { subscriptionId: (index % 6) + 2 })),
     ];
-    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    const blocks = planMagazine({ items: entries, grouping: true, complete: true });
     // 6 + 5 + 1 (bridged X) + 5 + 8 = 25 entries, all surfaced exactly once.
     expect(entryCount(blocks)).toBe(25);
   });
@@ -573,11 +579,11 @@ describe('planMagazine', () => {
       ...many(12, (index) => big(200 + index, { subscriptionId: 2, source: 'Solo' })),
     ];
     const partial = planMagazine({
-      entries: entries.slice(0, 20),
+      items: entries.slice(0, 20),
       grouping: true,
       complete: false,
     });
-    const full = planMagazine({ entries, grouping: true, complete: true });
+    const full = planMagazine({ items: entries, grouping: true, complete: true });
     expect(kinds(full).slice(0, partial.length)).toEqual(kinds(partial));
   });
 
@@ -598,7 +604,7 @@ describe('planMagazine', () => {
         }),
       ),
     ];
-    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    const blocks = planMagazine({ items: entries, grouping: true, complete: true });
     // Both bursts collapse into their own widgets.
     expect(blocks.filter((block) => block.kind === 'group').length).toBe(2);
   });
@@ -619,7 +625,7 @@ describe('planMagazine', () => {
         }),
       ),
     ];
-    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    const blocks = planMagazine({ items: entries, grouping: true, complete: true });
     expect(kinds(blocks)).not.toContain('group');
   });
 
@@ -631,7 +637,7 @@ describe('planMagazine', () => {
       big(100, { subscriptionId: 2, source: 'B', publishedAt: at(80) }),
       big(101, { subscriptionId: 3, source: 'C', publishedAt: at(90) }),
     ];
-    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    const blocks = planMagazine({ items: entries, grouping: true, complete: true });
     expect(blocks.some((block) => block.kind === 'group')).toBe(true);
   });
 
@@ -657,9 +663,9 @@ describe('planMagazine', () => {
           block.kind === 'group' && block.entries.some((entry) => entry.source === 'Burst'),
       );
 
-    const before = planMagazine({ entries: firstPage, grouping: true, complete: true });
+    const before = planMagazine({ items: firstPage, grouping: true, complete: true });
     const after = planMagazine({
-      entries: [...firstPage, ...newerPage],
+      items: [...firstPage, ...newerPage],
       grouping: true,
       complete: true,
     });
@@ -677,7 +683,7 @@ describe('planMagazine', () => {
         big(100 + index, { subscriptionId: 1, source: 'Burst', publishedAt: at(8) }),
       ),
     ];
-    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    const blocks = planMagazine({ items: entries, grouping: true, complete: true });
     expect(blocks.some((block) => block.kind === 'group')).toBe(true);
   });
 
@@ -691,7 +697,7 @@ describe('planMagazine', () => {
         imageAspectRatio: index === 11 ? 9 / 16 : null,
       }),
     );
-    const ks = kinds(planMagazine({ entries, grouping: false, complete: true }));
+    const ks = kinds(planMagazine({ items: entries, grouping: false, complete: true }));
     expect(ks.every((kind) => IMAGE_KINDS.includes(kind as TemplateKind))).toBe(true);
   });
 
@@ -700,14 +706,14 @@ describe('planMagazine', () => {
     const entries = many(17, (index) =>
       big(index, { summary: 'A summary long enough to fill a pull quote. '.repeat(8) }),
     );
-    const ks = kinds(planMagazine({ entries, grouping: false, complete: true }));
+    const ks = kinds(planMagazine({ items: entries, grouping: false, complete: true }));
     expect(ks[15]).toBe('split');
     expect(ks[16]).toBe('thumb');
   });
 
   describe('a small-thumbnail feed', () => {
     const blocks = planMagazine({
-      entries: many(100, smallThumb),
+      items: many(100, smallThumb),
       grouping: false,
       complete: true,
     });
@@ -741,14 +747,14 @@ describe('planMagazine', () => {
 
   it('lifts a page that mixes thumbnails with text blocks but shows no large image', () => {
     const entries = many(6, (index) => (index === 3 ? entryAt(index) : smallThumb(index)));
-    const ks = kinds(planMagazine({ entries, grouping: false, complete: true }));
+    const ks = kinds(planMagazine({ items: entries, grouping: false, complete: true }));
     expect(ks[2]).toBe('kicker');
     expect(ks.some((kind) => LARGE_IMAGE_KINDS.includes(kind))).toBe(true);
   });
 
   it('keeps a small portrait picture out of a lifted hero or wide', () => {
     const entries = many(11, (index) => smallThumb(index, { imageHeight: 360 }));
-    const ks = kinds(planMagazine({ entries, grouping: false, complete: true }));
+    const ks = kinds(planMagazine({ items: entries, grouping: false, complete: true }));
     expect(ks[0]).toBe('split');
     expect(ks[6]).toBe('split');
   });
@@ -756,20 +762,20 @@ describe('planMagazine', () => {
   it('lifts only as far as the page height cap allows', () => {
     // Page 1 asks for a hero beside a pinned media share: the budget pass steps it down to split.
     const entries = many(11, (index) => (index === 8 ? mediaShare(index) : smallThumb(index)));
-    const ks = kinds(planMagazine({ entries, grouping: false, complete: true }));
+    const ks = kinds(planMagazine({ items: entries, grouping: false, complete: true }));
     expect(ks.slice(6, 8)).toEqual(['split', 'media']);
   });
 
   it('never lifts a text-family page to a larger image block', () => {
-    const ks = kinds(planMagazine({ entries: many(18, wire), grouping: false, complete: true }));
+    const ks = kinds(planMagazine({ items: many(18, wire), grouping: false, complete: true }));
     expect(ks.filter((kind) => LARGE_IMAGE_KINDS.includes(kind))).toEqual([]);
   });
 
   it('is prefix-stable for a small-thumbnail feed', () => {
     const entries = many(40, smallThumb);
-    const full = planned(planMagazine({ entries, grouping: false, complete: true }));
+    const full = planned(planMagazine({ items: entries, grouping: false, complete: true }));
     const partial = planned(
-      planMagazine({ entries: entries.slice(0, 23), grouping: false, complete: false }),
+      planMagazine({ items: entries.slice(0, 23), grouping: false, complete: false }),
     );
     expect(full.slice(0, partial.length)).toEqual(partial);
   });
@@ -779,7 +785,7 @@ describe('planMagazine', () => {
     const entries = many(80, (index) =>
       index % 8 === 0 ? big(index, { summary }) : entryAt(index, { summary }),
     );
-    const blocks = planMagazine({ entries, grouping: false, complete: true });
+    const blocks = planMagazine({ items: entries, grouping: false, complete: true });
     const pictureKinds = blocks
       .filter((block) => block.kind !== 'group' && block.entry.imageUrl !== null)
       .map((block) => block.kind);
@@ -798,7 +804,7 @@ describe('planMagazine', () => {
         ? big(index, { subscriptionId: (index % 6) + 1 })
         : entryAt(index, { subscriptionId: (index % 6) + 1 }),
     );
-    const blocks = planMagazine({ entries, grouping: false, complete: true });
+    const blocks = planMagazine({ items: entries, grouping: false, complete: true });
     const imagelessKinds = blocks
       .filter((block) => block.kind !== 'group' && entryImage(block.entry) === null)
       .map((block) => block.kind);
@@ -817,7 +823,7 @@ describe('planMagazine', () => {
     const entries = many(80, (index) =>
       entryAt(index, { subscriptionId: (index % 6) + 1, summary }),
     );
-    const ks = kinds(planMagazine({ entries, grouping: true, complete: true }));
+    const ks = kinds(planMagazine({ items: entries, grouping: true, complete: true }));
     expect(ks).not.toContain('hero');
     expect(ks).not.toContain('wide');
     expect(ks).not.toContain('split');
@@ -833,7 +839,7 @@ describe('planMagazine', () => {
     const entries = many(80, (index) =>
       entryAt(index, { subscriptionId: (index % 6) + 1, summary: null }),
     );
-    const ks = kinds(planMagazine({ entries, grouping: true, complete: true }));
+    const ks = kinds(planMagazine({ items: entries, grouping: true, complete: true }));
     expect(ks).toContain('compact');
   });
 
@@ -844,7 +850,7 @@ describe('planMagazine', () => {
     const entries = many(80, (index) =>
       entryAt(index, { subscriptionId: (index % 6) + 1, summary: null }),
     );
-    const ks = kinds(planMagazine({ entries, grouping: true, complete: true }));
+    const ks = kinds(planMagazine({ items: entries, grouping: true, complete: true }));
     expect(ks.every((kind) => kind === 'compact')).toBe(true);
   });
 
@@ -854,7 +860,7 @@ describe('planMagazine', () => {
     const entries = many(80, (index) =>
       entryAt(index, { subscriptionId: (index % 6) + 1, summary, titleDerived: true }),
     );
-    const ks = kinds(planMagazine({ entries, grouping: true, complete: true }));
+    const ks = kinds(planMagazine({ items: entries, grouping: true, complete: true }));
     expect(ks.every((kind) => kind === 'compact')).toBe(true);
   });
 
@@ -865,7 +871,7 @@ describe('planMagazine', () => {
         ? big(index, { subscriptionId: (index % 6) + 1 })
         : entryAt(index, { subscriptionId: (index % 6) + 1, summary, titleDerived: true }),
     );
-    const ks = kinds(planMagazine({ entries, grouping: false, complete: true }));
+    const ks = kinds(planMagazine({ items: entries, grouping: false, complete: true }));
     expect(ks).toContain('hero');
   });
 
@@ -875,8 +881,8 @@ describe('planMagazine', () => {
     const entries = many(120, (index) =>
       entryAt(index, { subscriptionId: (index % 6) + 1, summary }),
     );
-    const first = planMagazine({ entries: entries.slice(0, 60), grouping: true, complete: false });
-    const full = planMagazine({ entries, grouping: true, complete: true });
+    const first = planMagazine({ items: entries.slice(0, 60), grouping: true, complete: false });
+    const full = planMagazine({ items: entries, grouping: true, complete: true });
     expect(kinds(full).slice(0, first.length)).toEqual(kinds(first));
   });
 
@@ -897,7 +903,7 @@ describe('planMagazine', () => {
         }),
       ),
     ];
-    const groups = planMagazine({ entries, grouping: true, complete: true }).filter(
+    const groups = planMagazine({ items: entries, grouping: true, complete: true }).filter(
       (block) => block.kind === 'group',
     );
     expect(groups.length).toBe(2);
@@ -919,7 +925,8 @@ describe('planMagazine', () => {
   };
   const height = (page: MagazineBlock[]): number =>
     page.reduce(
-      (sum, block) => sum + (block.kind === 'group' ? 0 : blockHeight(block.kind, block.entry)),
+      (sum, block) =>
+        sum + (block.kind === 'group' ? 0 : blockHeight(block.kind, block.entry, block.story)),
       0,
     );
 
@@ -928,7 +935,7 @@ describe('planMagazine', () => {
       const entries = many(60, (index) =>
         index % 3 === 0 ? linkShare(index, { subscriptionId: 2 }) : big(index),
       );
-      const blocks = planMagazine({ entries, grouping: false, complete: true });
+      const blocks = planMagazine({ items: entries, grouping: false, complete: true });
 
       const linkKinds = blocks
         .filter((block) => block.kind !== 'group' && block.entry.linkCards.length > 0)
@@ -942,7 +949,7 @@ describe('planMagazine', () => {
         60,
         (index) => [entryAt(index, { summary: null }), linkShare(index), big(index)][index % 3],
       );
-      const blocks = planMagazine({ entries, grouping: false, complete: true });
+      const blocks = planMagazine({ items: entries, grouping: false, complete: true });
 
       expect(
         blocks
@@ -957,7 +964,7 @@ describe('planMagazine', () => {
           ? entryAt(index, { titleDerived: true, share: 'link' })
           : big(index, { linkCards: [CARD] }),
       );
-      const blockKinds = kinds(planMagazine({ entries, grouping: false, complete: true }));
+      const blockKinds = kinds(planMagazine({ items: entries, grouping: false, complete: true }));
 
       expect(blockKinds).not.toContain('link');
       expect(blockKinds).toContain('hero');
@@ -969,7 +976,7 @@ describe('planMagazine', () => {
           ? big(index, { titleDerived: true, share: 'link', pending: true })
           : big(index),
       );
-      const blocks = planMagazine({ entries, grouping: false, complete: true });
+      const blocks = planMagazine({ items: entries, grouping: false, complete: true });
 
       const pendingKinds = blocks
         .filter((block) => block.kind !== 'group' && block.entry.pending)
@@ -980,14 +987,14 @@ describe('planMagazine', () => {
 
     it('keeps the kind of a pending article, which shares nothing', () => {
       const entries = many(60, (index) => big(index, { pending: true }));
-      const blockKinds = kinds(planMagazine({ entries, grouping: false, complete: true }));
+      const blockKinds = kinds(planMagazine({ items: entries, grouping: false, complete: true }));
 
       expect(blockKinds).not.toContain('link');
     });
 
     it('counts a link block against the page height cap', () => {
       const entries = many(120, (index) => (index % 6 === 0 ? linkShare(index) : big(index)));
-      const pages = imagePages(planMagazine({ entries, grouping: false, complete: true }));
+      const pages = imagePages(planMagazine({ items: entries, grouping: false, complete: true }));
 
       expect(pages.some((page) => page.some((block) => block.kind === 'link'))).toBe(true);
       expect(pages.map(height).every((pageHeight) => pageHeight <= PAGE_HEIGHT_CAP)).toBe(true);
@@ -1001,7 +1008,7 @@ describe('planMagazine', () => {
             ? entryAt(index, { summary: null })
             : big(index),
       );
-      const pages = imagePages(planMagazine({ entries, grouping: false, complete: true }));
+      const pages = imagePages(planMagazine({ items: entries, grouping: false, complete: true }));
 
       expect(pages.map(height).every((pageHeight) => pageHeight <= PAGE_HEIGHT_CAP)).toBe(true);
     });
@@ -1010,7 +1017,7 @@ describe('planMagazine', () => {
       const entries = many(60, (index) =>
         index % 5 === 0 || index % 5 === 2 ? big(index) : entryAt(index),
       );
-      const pages = imagePages(planMagazine({ entries, grouping: false, complete: true }));
+      const pages = imagePages(planMagazine({ items: entries, grouping: false, complete: true }));
 
       expect(pages.map(height).every((pageHeight) => pageHeight <= PAGE_HEIGHT_CAP)).toBe(true);
     });
@@ -1021,7 +1028,7 @@ describe('planMagazine', () => {
       const entries = many(60, (index) =>
         index % 3 === 0 ? mediaShare(index, { subscriptionId: 2 }) : big(index),
       );
-      const blocks = planMagazine({ entries, grouping: false, complete: true });
+      const blocks = planMagazine({ items: entries, grouping: false, complete: true });
 
       const shareKinds = blocks
         .filter((block) => block.kind !== 'group' && block.entry.share === 'media')
@@ -1032,7 +1039,7 @@ describe('planMagazine', () => {
 
     it('counts a media block against the page height cap', () => {
       const entries = many(120, (index) => (index % 6 === 0 ? mediaShare(index) : big(index)));
-      const pages = imagePages(planMagazine({ entries, grouping: false, complete: true }));
+      const pages = imagePages(planMagazine({ items: entries, grouping: false, complete: true }));
 
       expect(pages.some((page) => page.some((block) => block.kind === 'media'))).toBe(true);
       expect(pages.map(height).every((pageHeight) => pageHeight <= PAGE_HEIGHT_CAP)).toBe(true);
@@ -1046,14 +1053,14 @@ describe('planMagazine', () => {
             ? entryAt(index, { summary: null })
             : big(index),
       );
-      const pages = imagePages(planMagazine({ entries, grouping: false, complete: true }));
+      const pages = imagePages(planMagazine({ items: entries, grouping: false, complete: true }));
 
       expect(pages.map(height).every((pageHeight) => pageHeight <= PAGE_HEIGHT_CAP)).toBe(true);
     });
 
     it('keeps the entries in order when a media share sits within reach of the tallest slot', () => {
       const entries = many(40, (index) => cycle(index, [big, imageless, mediaShare, big]));
-      const blocks = planMagazine({ entries, grouping: false, complete: true });
+      const blocks = planMagazine({ items: entries, grouping: false, complete: true });
 
       const order = blocks.flatMap((block) => (block.kind === 'group' ? [] : [block.entry.id]));
       expect(order).toEqual(entries.map((entry) => entry.id));
@@ -1061,14 +1068,14 @@ describe('planMagazine', () => {
 
     it('budgets a page around the media block it will hold, demoting the slot before it', () => {
       const entries = many(40, (index) => cycle(index, [big, big, mediaShare, imageless]));
-      const blocks = planMagazine({ entries, grouping: false, complete: true });
+      const blocks = planMagazine({ items: entries, grouping: false, complete: true });
 
       expect(blocks.slice(0, 3).map((block) => block.kind)).toEqual(['thumb', 'split', 'media']);
     });
 
     it('lets a slot that can be filled reach ahead although a media slot is taller', () => {
       const entries = many(40, (index) => cycle(index, [big, mediaShare, imageless, imageless]));
-      const blocks = planMagazine({ entries, grouping: false, complete: true });
+      const blocks = planMagazine({ items: entries, grouping: false, complete: true });
 
       expect(planned(blocks.slice(6, 9))).toEqual(['split9', 'compact7', 'compact8']);
     });
@@ -1084,7 +1091,7 @@ describe('planMagazine', () => {
     });
     const firstPage = (quote: EntryDto): MagazineBlock[] => {
       const entries = [big(1), quote, ...many(10, (index) => big(index + 2))];
-      return planMagazine({ entries, grouping: false, complete: true }).slice(0, 6);
+      return planMagazine({ items: entries, grouping: false, complete: true }).slice(0, 6);
     };
     const restOfPage = BLOCK_HEIGHT.wide + 2 * BLOCK_HEIGHT.thumb + 2 * BLOCK_HEIGHT.split;
 
@@ -1098,6 +1105,20 @@ describe('planMagazine', () => {
 
       expect(firstPage(shortQuote)[0].kind).toBe('wide');
       expect(firstPage(tallQuote)[0].kind).not.toBe('wide');
+    });
+  });
+
+  describe('a Trending story (#2328)', () => {
+    it('plans like its lead and keeps its story', () => {
+      const anImageArticle = aStoryArticle(big(1));
+      const story = aStory({ articles: [anImageArticle, aStoryArticle({ id: 2 })] });
+
+      const storyPlan = planMagazine({ items: [story], grouping: false, complete: true });
+      const leadPlan = planMagazine({ items: [anImageArticle], grouping: false, complete: true });
+
+      expect(kinds(storyPlan)).toEqual(kinds(leadPlan));
+      expect(storyPlan[0].kind !== 'group' && storyPlan[0].story).toBe(story);
+      expect(leadPlan[0].kind !== 'group' && leadPlan[0].story).toBeNull();
     });
   });
 });

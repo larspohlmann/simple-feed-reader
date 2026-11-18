@@ -32,13 +32,15 @@ final class TrendingRebuildCommandTest extends TestCase
     public function testItBuildsTheNamedWindowAndPrintsItsCounts(string $argument, TrendingWindow $window): void
     {
         $builder = $this->createMock(SnapshotBuilderInterface::class);
-        $builder->expects($this->once())->method('build')->with($window)->willReturn(self::reportOf($window));
+        $builder->expects($this->once())->method('build')->with(7, $window)->willReturn(self::reportOf($window));
         $tester = new CommandTester(new TrendingRebuildCommand($builder));
 
-        $tester->execute(['window' => $argument]);
+        $tester->execute(['window' => $argument, '--user' => '7']);
 
         self::assertSame(Command::SUCCESS, $tester->getStatusCode());
         $display = $tester->getDisplay();
+        self::assertMatchesRegularExpression('/\buserId\s+7\b/', $display);
+        self::assertMatchesRegularExpression('/\bactiveFeedCount\s+80\b/', $display);
         self::assertMatchesRegularExpression('/\bwindow\s+' . $window->value . '\b/', $display);
         self::assertMatchesRegularExpression('/\bentryCount\s+1200\b/', $display);
         self::assertMatchesRegularExpression('/\bstoryCount\s+14\b/', $display);
@@ -55,10 +57,22 @@ final class TrendingRebuildCommandTest extends TestCase
         $builder->method('build')->willThrowException(new TrendingBuildBusyException());
         $tester = new CommandTester(new TrendingRebuildCommand($builder));
 
-        $tester->execute(['window' => 'day']);
+        $tester->execute(['window' => 'day', '--user' => '7']);
 
         self::assertSame(Command::SUCCESS, $tester->getStatusCode());
         self::assertStringContainsString('Skipped: another Trending build is running.', $tester->getDisplay());
+    }
+
+    public function testItNeedsAUser(): void
+    {
+        $builder = $this->createMock(SnapshotBuilderInterface::class);
+        $builder->expects($this->never())->method('build');
+        $tester = new CommandTester(new TrendingRebuildCommand($builder));
+
+        $tester->execute(['window' => 'day']);
+
+        self::assertSame(Command::INVALID, $tester->getStatusCode());
+        self::assertStringContainsString('--user', $tester->getDisplay());
     }
 
     public function testAnUnknownWindowFails(): void
@@ -67,7 +81,7 @@ final class TrendingRebuildCommandTest extends TestCase
         $builder->expects($this->never())->method('build');
         $tester = new CommandTester(new TrendingRebuildCommand($builder));
 
-        $tester->execute(['window' => 'month']);
+        $tester->execute(['window' => 'month', '--user' => '7']);
 
         self::assertSame(Command::INVALID, $tester->getStatusCode());
         self::assertStringContainsString('Unknown window. Use one of: day, week.', $tester->getDisplay());
@@ -79,9 +93,11 @@ final class TrendingRebuildCommandTest extends TestCase
         $group = new TrendingStoryModel([new StoryMemberModel(1, 1, null)], $moment, $moment);
 
         return new TrendingBuildReportModel(
+            7,
             $window,
             $moment,
             1_200,
+            80,
             14,
             25_000,
             64_000_000,

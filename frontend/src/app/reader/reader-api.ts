@@ -34,6 +34,7 @@ import {
   TagInput,
   TagUpdate,
 } from './models';
+import { listPageOf, ListPage } from './state/list-page';
 import { FollowedStoryPageDto, TrendingWindow } from './trending/trending.models';
 import { BulkSubscriptionUpdate } from './subscription-bulk';
 import { TrendingApi } from './trending/trending-api';
@@ -89,18 +90,17 @@ export class ReaderApi {
     return this.http.get<EntryDetailResponse>(`${this.base}/api/entries/${id}`);
   }
 
-  entries(
-    query: EntryQuery,
-    cursor?: string | null,
-  ): Observable<EntriesPage | FollowedStoryPageDto> {
+  entries(query: EntryQuery, cursor?: string | null): Observable<ListPage> {
     if (query.view === 'trending') {
       return this.trendingApi.page(query.window);
     }
     const { path, params } = listRequest(query, this.pageParams(query, cursor));
-    return this.http.get<EntriesPage | FollowedStoryPageDto>(`${this.base}/api/entries${path}`, {
-      params,
-      context: retryingTransientGatewayErrors(),
-    });
+    return this.http
+      .get<EntriesPage | FollowedStoryPageDto>(`${this.base}/api/entries${path}`, {
+        params,
+        context: retryingTransientGatewayErrors(),
+      })
+      .pipe(map(listPageOf));
   }
 
   private pageParams(query: EntryQuery, cursor?: string | null): HttpParams {

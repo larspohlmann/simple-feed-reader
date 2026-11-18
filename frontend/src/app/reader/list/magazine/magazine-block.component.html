@@ -1,52 +1,82 @@
 @let current = block();
+@let card = cardOf(current);
 @switch (current.kind) {
   @case ('hero') {
-    <app-entry-hero [entry]="entryOf(current)" [tags]="tagsFor(entryOf(current).subscriptionId)" />
+    <app-entry-hero
+      [entry]="card.entry"
+      [story]="card.story"
+      [tags]="tagsFor(card.entry.subscriptionId)"
+    />
   }
   @case ('thread') {
     <app-entry-thread
-      [entry]="entryOf(current)"
-      [tags]="tagsFor(entryOf(current).subscriptionId)"
+      [entry]="card.entry"
+      [story]="card.story"
+      [tags]="tagsFor(card.entry.subscriptionId)"
     />
   }
   @case ('link') {
-    <app-entry-link [entry]="entryOf(current)" [tags]="tagsFor(entryOf(current).subscriptionId)" />
+    <app-entry-link
+      [entry]="card.entry"
+      [story]="card.story"
+      [tags]="tagsFor(card.entry.subscriptionId)"
+    />
   }
   @case ('media') {
-    <app-entry-media [entry]="entryOf(current)" [tags]="tagsFor(entryOf(current).subscriptionId)" />
+    <app-entry-media
+      [entry]="card.entry"
+      [story]="card.story"
+      [tags]="tagsFor(card.entry.subscriptionId)"
+    />
   }
   @case ('quoting') {
     <app-entry-quoting
-      [entry]="entryOf(current)"
-      [tags]="tagsFor(entryOf(current).subscriptionId)"
+      [entry]="card.entry"
+      [story]="card.story"
+      [tags]="tagsFor(card.entry.subscriptionId)"
     />
   }
   @case ('wide') {
-    <app-entry-wide [entry]="entryOf(current)" [tags]="tagsFor(entryOf(current).subscriptionId)" />
+    <app-entry-wide
+      [entry]="card.entry"
+      [story]="card.story"
+      [tags]="tagsFor(card.entry.subscriptionId)"
+    />
   }
   @case ('quote') {
-    <app-entry-quote [entry]="entryOf(current)" [tags]="tagsFor(entryOf(current).subscriptionId)" />
+    <app-entry-quote
+      [entry]="card.entry"
+      [story]="card.story"
+      [tags]="tagsFor(card.entry.subscriptionId)"
+    />
   }
   @case ('split') {
     <app-entry-split
-      [entry]="entryOf(current)"
+      [entry]="card.entry"
+      [story]="card.story"
       [imageSide]="side(current)"
-      [tags]="tagsFor(entryOf(current).subscriptionId)"
+      [tags]="tagsFor(card.entry.subscriptionId)"
     />
   }
   @case ('kicker') {
     <app-entry-kicker
-      [entry]="entryOf(current)"
-      [tags]="tagsFor(entryOf(current).subscriptionId)"
+      [entry]="card.entry"
+      [story]="card.story"
+      [tags]="tagsFor(card.entry.subscriptionId)"
     />
   }
   @case ('thumb') {
-    <app-entry-thumb [entry]="entryOf(current)" [tags]="tagsFor(entryOf(current).subscriptionId)" />
+    <app-entry-thumb
+      [entry]="card.entry"
+      [story]="card.story"
+      [tags]="tagsFor(card.entry.subscriptionId)"
+    />
   }
   @case ('compact') {
     <app-entry-compact
-      [entry]="entryOf(current)"
-      [tags]="tagsFor(entryOf(current).subscriptionId)"
+      [entry]="card.entry"
+      [story]="card.story"
+      [tags]="tagsFor(card.entry.subscriptionId)"
     />
   }
   @case ('group') {

@@ -38,7 +38,7 @@ final class FollowedStoryEntriesControllerTest extends ApiTestCase
 
     public function testItListsTheStorysWholeHistoryNewestFirst(): void
     {
-        $reader = $this->signIn($this->client, 'story-list-history@example.com');
+        $reader = $this->signInAsOwner('story-list-history@example.com');
         [$alpha, $beta, $gamma] = $this->followedFeeds($reader);
         $story = $this->fixtures->story(
             TrendingWindow::Day,
@@ -55,7 +55,7 @@ final class FollowedStoryEntriesControllerTest extends ApiTestCase
 
     public function testItPagesWithTheUsualCursor(): void
     {
-        $reader = $this->signIn($this->client, 'story-list-pages@example.com');
+        $reader = $this->signInAsOwner('story-list-pages@example.com');
         [$alpha, $beta, $gamma] = $this->followedFeeds($reader);
         $story = $this->fixtures->story(
             TrendingWindow::Day,
@@ -86,7 +86,7 @@ final class FollowedStoryEntriesControllerTest extends ApiTestCase
 
     public function testItPagesAcrossMembersPublishedAtTheSameTime(): void
     {
-        $reader = $this->signIn($this->client, 'story-list-tie@example.com');
+        $reader = $this->signInAsOwner('story-list-tie@example.com');
         [$alpha, $beta] = $this->followedFeeds($reader);
         $story = $this->storyOf($alpha, $beta);
         $this->follow($story);
@@ -102,7 +102,7 @@ final class FollowedStoryEntriesControllerTest extends ApiTestCase
 
     public function testItListsOnlyUnreadEntriesWhenAsked(): void
     {
-        $reader = $this->signIn($this->client, 'story-list-unread@example.com');
+        $reader = $this->signInAsOwner('story-list-unread@example.com');
         [$alpha, $beta] = $this->followedFeeds($reader);
         $viewed = $this->fixtures->entry($alpha, 'Viewed', '2031-05-14 09:00:00');
         $story = $this->fixtures->story(
@@ -126,7 +126,7 @@ final class FollowedStoryEntriesControllerTest extends ApiTestCase
 
     public function testItListsOldestFirstWhenAsked(): void
     {
-        $reader = $this->signIn($this->client, 'story-list-oldest@example.com');
+        $reader = $this->signInAsOwner('story-list-oldest@example.com');
         [$alpha, $beta] = $this->followedFeeds($reader);
         $story = $this->fixtures->story(
             TrendingWindow::Day,
@@ -139,33 +139,27 @@ final class FollowedStoryEntriesControllerTest extends ApiTestCase
         self::assertSame(['Older', 'Newer'], $this->titles($this->page($story, ['order' => 'asc'])));
     }
 
-    public function testOnlyFeedsTheReaderFollowsAndIncludesInTrendingAreListed(): void
+    public function testFeedsTheReaderStillFollowsAreListedWhateverTheirTrendingSwitch(): void
     {
-        $reader = $this->signIn($this->client, 'story-list-included@example.com');
-        [$alpha, $beta, $gamma] = $this->followedFeeds($reader);
-        $unfollowed = $this->fixtures->feed('unfollowed');
+        $reader = $this->signInAsOwner('story-list-included@example.com');
+        [$alpha, $beta] = $this->followedFeeds($reader);
+        $unfollowed = $this->fixtures->feedNobodyFollows('unfollowed');
         $story = $this->fixtures->story(
             TrendingWindow::Day,
             '2031-05-14 09:00:00',
             $this->fixtures->entry($alpha, 'Included', '2031-05-14 09:00:00'),
-            $this->fixtures->entry($beta, 'Switched out', '2031-05-14 09:00:00'),
-            $this->fixtures->entry($unfollowed, 'Not followed', '2031-05-14 09:00:00'),
-            $this->copyOf($beta, 'Older copy switched out'),
-        );
-        $this->fixtures->join(
-            $story,
-            '2031-05-14 09:00:00',
-            $this->copyOf($gamma, 'Copy the reader sees'),
+            $this->fixtures->entry($beta, 'Switched out after the build', '2031-05-14 08:00:00'),
+            $this->fixtures->entry($unfollowed, 'Not followed', '2031-05-14 07:00:00'),
         );
         $this->switchOutOfTrending($reader, $beta);
         $this->follow($story);
 
-        self::assertSame(['Included', 'Copy the reader sees'], $this->titles($this->page($story)));
+        self::assertSame(['Included', 'Switched out after the build'], $this->titles($this->page($story)));
     }
 
     public function testMembersJoinedAfterTheVisitAreMarkedNew(): void
     {
-        $reader = $this->signIn($this->client, 'story-list-new@example.com');
+        $reader = $this->signInAsOwner('story-list-new@example.com');
         [$alpha, $beta, $gamma, $delta] = $this->followedFeeds($reader);
         $story = $this->storyOf($alpha, $beta);
         $this->follow($story);
@@ -183,7 +177,7 @@ final class FollowedStoryEntriesControllerTest extends ApiTestCase
 
     public function testEachRowSaysWhenItJoinedTheStory(): void
     {
-        $reader = $this->signIn($this->client, 'story-list-joined-at@example.com');
+        $reader = $this->signInAsOwner('story-list-joined-at@example.com');
         [$alpha, $beta, $gamma] = $this->followedFeeds($reader);
         $story = $this->fixtures->story(
             TrendingWindow::Day,
@@ -216,7 +210,7 @@ final class FollowedStoryEntriesControllerTest extends ApiTestCase
 
     public function testASecondPageMarksItsNewRowsToo(): void
     {
-        $reader = $this->signIn($this->client, 'story-list-new-second-page@example.com');
+        $reader = $this->signInAsOwner('story-list-new-second-page@example.com');
         [$alpha, $beta, $gamma] = $this->followedFeeds($reader);
         $story = $this->fixtures->story(
             TrendingWindow::Day,
@@ -240,9 +234,9 @@ final class FollowedStoryEntriesControllerTest extends ApiTestCase
 
     public function testACollapsedRowJoinsAtItsLatestVisibleCopy(): void
     {
-        $reader = $this->signIn($this->client, 'story-list-joined-at-copy@example.com');
+        $reader = $this->signInAsOwner('story-list-joined-at-copy@example.com');
         [$alpha, $beta] = $this->followedFeeds($reader);
-        $unfollowed = $this->fixtures->feed('unfollowed');
+        $unfollowed = $this->fixtures->feedNobodyFollows('unfollowed');
         $story = $this->fixtures->story(TrendingWindow::Day, '2031-05-14 09:00:00', $this->copyOf($alpha, 'Shown'));
         $this->follow($story);
         $this->fixtures->join(
@@ -264,7 +258,7 @@ final class FollowedStoryEntriesControllerTest extends ApiTestCase
 
     public function testACopyJoinedAfterTheVisitMarksItsRowNew(): void
     {
-        $reader = $this->signIn($this->client, 'story-list-new-copy@example.com');
+        $reader = $this->signInAsOwner('story-list-new-copy@example.com');
         [$alpha, $beta, $gamma] = $this->followedFeeds($reader);
         $shown = $this->copyOf($alpha, 'Shown');
         $story = $this->fixtures->story(
@@ -288,9 +282,9 @@ final class FollowedStoryEntriesControllerTest extends ApiTestCase
 
     public function testACopyTheReaderCannotSeeMarksNothingNew(): void
     {
-        $reader = $this->signIn($this->client, 'story-list-new-unseen@example.com');
+        $reader = $this->signInAsOwner('story-list-new-unseen@example.com');
         [$alpha, $beta] = $this->followedFeeds($reader);
-        $unfollowed = $this->fixtures->feed('unfollowed');
+        $unfollowed = $this->fixtures->feedNobodyFollows('unfollowed');
         $story = $this->fixtures->story(
             TrendingWindow::Day,
             '2031-05-14 09:00:00',
@@ -307,14 +301,15 @@ final class FollowedStoryEntriesControllerTest extends ApiTestCase
         self::assertSame([], $this->page($story)['newEntryIds']);
     }
 
-    public function testACopyInAFeedSwitchedOutOfTrendingMarksNothingNew(): void
+    public function testACopyInAFeedSwitchedOutAfterTheBuildStillMarksItsRowNew(): void
     {
-        $reader = $this->signIn($this->client, 'story-list-new-switched-out@example.com');
+        $reader = $this->signInAsOwner('story-list-new-switched-out@example.com');
         [$alpha, $beta, $gamma] = $this->followedFeeds($reader);
+        $shown = $this->copyOf($alpha, 'Shown');
         $story = $this->fixtures->story(
             TrendingWindow::Day,
             '2031-05-14 09:00:00',
-            $this->copyOf($alpha, 'Shown'),
+            $shown,
             $this->fixtures->entry($beta, 'Untouched', '2031-05-14 07:00:00'),
         );
         $this->follow($story);
@@ -322,12 +317,12 @@ final class FollowedStoryEntriesControllerTest extends ApiTestCase
         $this->fixtures->join($this->reloaded($story), '2031-05-14 11:00:00', $copy);
         $this->switchOutOfTrending($reader, $this->reloaded($gamma));
 
-        self::assertSame([], $this->page($story)['newEntryIds']);
+        self::assertSame([$shown->requireId()], $this->page($story)['newEntryIds']);
     }
 
     public function testAMemberOfAnotherStoryMarksNothingNew(): void
     {
-        $reader = $this->signIn($this->client, 'story-list-new-other@example.com');
+        $reader = $this->signInAsOwner('story-list-new-other@example.com');
         [$alpha, $beta] = $this->followedFeeds($reader);
         $shown = $this->copyOf($alpha, 'Shown');
         $story = $this->fixtures->story(TrendingWindow::Day, '2031-05-14 09:00:00', $shown);
@@ -343,7 +338,7 @@ final class FollowedStoryEntriesControllerTest extends ApiTestCase
 
     public function testListingDoesNotRecordAVisit(): void
     {
-        $reader = $this->signIn($this->client, 'story-list-no-visit@example.com');
+        $reader = $this->signInAsOwner('story-list-no-visit@example.com');
         [$alpha, $beta, $gamma] = $this->followedFeeds($reader);
         $story = $this->storyOf($alpha, $beta);
         $this->follow($story);
@@ -360,7 +355,7 @@ final class FollowedStoryEntriesControllerTest extends ApiTestCase
 
     public function testAStoryNotFollowedIsNotFound(): void
     {
-        $reader = $this->signIn($this->client, 'story-list-unfollowed@example.com');
+        $reader = $this->signInAsOwner('story-list-unfollowed@example.com');
         [$alpha, $beta] = $this->followedFeeds($reader);
         $story = $this->storyOf($alpha, $beta);
 
@@ -372,7 +367,7 @@ final class FollowedStoryEntriesControllerTest extends ApiTestCase
 
     public function testAnotherReadersFollowOpensNothing(): void
     {
-        $reader = $this->signIn($this->client, 'story-list-own@example.com');
+        $reader = $this->signInAsOwner('story-list-own@example.com');
         [$alpha, $beta] = $this->followedFeeds($reader);
         $story = $this->storyOf($alpha, $beta);
         $this->follow($story);
@@ -386,7 +381,7 @@ final class FollowedStoryEntriesControllerTest extends ApiTestCase
 
     public function testRowsCarryTheUsualEntryStateAndEnrichment(): void
     {
-        $reader = $this->signIn($this->client, 'story-list-state@example.com');
+        $reader = $this->signInAsOwner('story-list-state@example.com');
         [$alpha, $beta] = $this->followedFeeds($reader);
         $starred = $this->fixtures->entry($alpha, 'Starred', '2031-05-14 09:00:00');
         $story = $this->fixtures->story(
@@ -418,6 +413,14 @@ final class FollowedStoryEntriesControllerTest extends ApiTestCase
         $this->client->request('GET', '/api/entries/trending-stories/1');
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
+    }
+
+    private function signInAsOwner(string $email): User
+    {
+        $reader = $this->signIn($this->client, $email);
+        $this->fixtures = $this->fixtures->ownedBy($reader);
+
+        return $reader;
     }
 
     /** @return array{Feed, Feed, Feed, Feed} four article feeds the reader follows */

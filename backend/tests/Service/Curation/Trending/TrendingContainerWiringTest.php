@@ -36,6 +36,7 @@ final class TrendingContainerWiringTest extends DbTestCase
                 'https://news.example.com/wiring',
             );
         }
+        $fixtures->owner()->setLastLoginAt(new \DateTimeImmutable('now', new \DateTimeZone('UTC')));
         $fixtures->flush();
         $rebuild = self::getContainer()->get(TrendingRebuild::class);
         self::assertInstanceOf(TrendingRebuild::class, $rebuild);

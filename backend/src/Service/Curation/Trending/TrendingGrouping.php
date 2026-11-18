@@ -26,12 +26,12 @@ final readonly class TrendingGrouping
     ) {
     }
 
-    public function collect(TrendingWindow $window): TrendingRun
+    public function collect(int $userId, TrendingWindow $window): TrendingRun
     {
         $since = $window->startBefore($this->clock->now());
         $run = new TrendingRun($window, $since, new HeadlineWindow($this->filler, $this->equivalents));
         $sharedArticles = new SharedArticles($this->cardLanguage);
-        foreach ($this->windowEntries->windowEntries($since) as $entry) {
+        foreach ($this->windowEntries->windowEntries($userId, $since) as $entry) {
             $run->add($entry, $entry->links->urlHashes(), $sharedArticles->of($entry));
         }
 
@@ -47,12 +47,12 @@ final readonly class TrendingGrouping
         );
     }
 
-    /** @return list<TrendingStoryModel> the groups spanning enough feeds that some reader could see them trend */
+    /** @return list<TrendingStoryModel> the groups spanning enough feeds a reader could see them trend */
     public function stories(TrendingRun $run): array
     {
         return array_values(array_filter(
             $this->groups($run),
-            static fn (TrendingStoryModel $story): bool => $story->outletCount() >= $run->window->minSubscribedFeeds(),
+            static fn (TrendingStoryModel $story): bool => $story->outletCount() >= TrendingWindow::MULTIPLE_SOURCES,
         ));
     }
 

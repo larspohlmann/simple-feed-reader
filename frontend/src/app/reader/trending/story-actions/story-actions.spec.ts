@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { anEntry, aStory } from '../../../../testing/entry-testing';
+import { aStory } from '../../../../testing/entry-testing';
 import { SelectionKind } from '../../query/query';
 import { FollowedStoriesStore } from '../../state/followed-stories.store';
 import { ReaderRouteState } from '../../shell/reader-route-state.service';
@@ -9,13 +9,13 @@ import { TrendingHideAction } from '../trending-hide-action';
 import { STORY_ACTIONS, provideTrendingStoryActions } from './story-actions';
 
 describe('provideTrendingStoryActions (#2272)', () => {
-  const follow = { run: jest.fn() };
+  const follow = { toggle: jest.fn() };
   const hide = { run: jest.fn() };
   const followedStories = { isFollowed: jest.fn(() => true) };
   const selection = signal<{ kind: SelectionKind }>({ kind: 'trending' });
 
   beforeEach(() => {
-    follow.run.mockReset();
+    follow.toggle.mockReset();
     hide.run.mockReset();
     selection.set({ kind: 'trending' });
     TestBed.configureTestingModule({
@@ -37,15 +37,15 @@ describe('provideTrendingStoryActions (#2272)', () => {
     expect(actions()).toBeNull();
   });
 
-  it('runs follow and hide on the entry', () => {
-    const entry = anEntry({ id: 7 });
+  it('follows and hides the story', () => {
+    const story = aStory({ id: 4 });
     const actions = TestBed.inject(STORY_ACTIONS)()!;
 
-    actions.follow(entry);
-    actions.hide(entry);
+    actions.follow(story);
+    actions.hide(story);
 
-    expect(follow.run).toHaveBeenCalledWith(entry);
-    expect(hide.run).toHaveBeenCalledWith(entry);
+    expect(follow.toggle).toHaveBeenCalledWith(story);
+    expect(hide.run).toHaveBeenCalledWith(story);
   });
 
   it('asks the followed stories whether a story is followed', () => {

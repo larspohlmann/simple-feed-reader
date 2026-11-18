@@ -67,7 +67,13 @@ import {
   installMockResizeObserver,
 } from '../../../testing/resize-observer-testing';
 import { LinkReaderComponent } from '../article/link-reader/link-reader.component';
-import { A_READER_TOKEN, aLinkCard, anEntry, aStory } from '../../../testing/entry-testing';
+import {
+  A_READER_TOKEN,
+  aLinkCard,
+  anEntry,
+  aStory,
+  aStoryArticle,
+} from '../../../testing/entry-testing';
 import { INCLUDED_EVERYWHERE } from '../tag-inclusion';
 
 describe('ReaderShellComponent', () => {
@@ -379,11 +385,13 @@ describe('ReaderShellComponent', () => {
       navigate.mock.calls
         .filter(([, extras]) => extras?.replaceUrl === true)
         .map(([, extras]) => extras.queryParams);
-    const story = () => ({
-      ...entry,
-      id: 77,
-      story: aStory({ outletCount: 3, viewed: false, shareCount: 0 }),
-    });
+    const story = () =>
+      aStory({
+        outletCount: 3,
+        viewed: false,
+        shareCount: 0,
+        articles: [aStoryArticle({ ...entry, id: 77 })],
+      });
     const hideButtons = (fixture: { nativeElement: HTMLElement }) =>
       fixture.nativeElement.querySelectorAll('button[aria-label="Hide story"]');
 
@@ -422,15 +430,6 @@ describe('ReaderShellComponent', () => {
 
       expect(hideButtons(fixture)).toHaveLength(1);
     });
-  });
-
-  it('offers no Hide on a list that is not Trending (#2017, D40)', () => {
-    const fixture = boot({ story: aStory({ outletCount: 3, viewed: false, shareCount: 0 }) });
-
-    expect(fixture.nativeElement.querySelectorAll('.row, app-entry-row').length).toBeGreaterThan(0);
-    expect(fixture.nativeElement.querySelectorAll('button[aria-label="Hide story"]')).toHaveLength(
-      0,
-    );
   });
 
   describe('previews still loading (#1502)', () => {

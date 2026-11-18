@@ -13,8 +13,8 @@
       <p class="meta">
         <app-entry-source [entry]="entry()" layout="row" [size]="14" />
         ·
-        @if (entry().story) {
-          <app-story-source-count [entry]="entry()" />
+        @if (story(); as story) {
+          <app-story-source-count [story]="story" />
           ·
         }
         {{ when() }}
@@ -79,8 +79,8 @@
     }
   </div>
   <app-entry-meta [entry]="entry()" [tags]="tags()" [imageShown]="showImage()" size="md" />
-  @if (entry().story) {
-    <app-story-sharers [entry]="entry()" />
+  @if (story(); as story) {
+    <app-story-sharers [article]="leadOf(story)" />
   }
-  <app-entry-duplicates [entry]="entry()" />
+  <app-entry-duplicates [entry]="entry()" [story]="story()" />
 </article>

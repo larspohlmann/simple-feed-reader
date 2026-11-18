@@ -3,7 +3,7 @@ import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryKickerLineComponent } from './entry-kicker-line.component';
 import { EntryDto } from '../../models';
-import { anEntry, aStory } from '../../../../testing/entry-testing';
+import { anEntry, aStory, aStoryArticle } from '../../../../testing/entry-testing';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 
@@ -124,15 +124,40 @@ describe('EntryKickerLineComponent', () => {
   });
 
   describe('on a Trending lead (#2017)', () => {
-    const lead = (viewed = false) =>
-      entry({ isHidden: false, story: aStory({ outletCount: 7, viewed, shareCount: 0 }) });
+    const lead = entry({ isHidden: false });
+    const storyOf = (viewed = false) => aStory({ outletCount: 7, viewed, shareCount: 0 });
 
     it('keeps the unread dot while nobody opened the story', () => {
-      expect(mount(lead()).querySelector('.dot')!.classList).toContain('on');
+      expect(mount(lead, { story: storyOf() }).querySelector('.dot')!.classList).toContain('on');
     });
 
     it('drops the unread dot once the story was opened anywhere', () => {
-      expect(mount(lead(true)).querySelector('.dot')!.classList).not.toContain('on');
+      expect(mount(lead, { story: storyOf(true) }).querySelector('.dot')!.classList).not.toContain(
+        'on',
+      );
+    });
+
+    it('drops the unread dot as soon as one of its articles is opened here (#2328)', () => {
+      const other = aStoryArticle({ id: 2 });
+      const story = aStory({ articles: [aStoryArticle(lead), other] });
+      TestBed.configureTestingModule({
+        imports: [EntryKickerLineComponent, provideTranslocoTesting()],
+        providers: [provideRouter([]), provideSocialAccounts()],
+      });
+      const fixture = TestBed.createComponent(EntryKickerLineComponent);
+      fixture.componentRef.setInput('entry', lead);
+      fixture.componentRef.setInput('story', story);
+      fixture.detectChanges();
+      const dot = () => (fixture.nativeElement as HTMLElement).querySelector('.dot')!.classList;
+      expect(dot()).toContain('on');
+
+      fixture.componentRef.setInput('story', {
+        ...story,
+        articles: [story.articles[0], { ...other, isViewed: true }],
+      });
+      fixture.detectChanges();
+
+      expect(dot()).not.toContain('on');
     });
   });
 });

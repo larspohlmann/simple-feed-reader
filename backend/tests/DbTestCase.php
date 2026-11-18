@@ -6,6 +6,7 @@ namespace App\Tests;
 
 use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 abstract class DbTestCase extends KernelTestCase
@@ -18,6 +19,14 @@ abstract class DbTestCase extends KernelTestCase
         /** @var EntityManagerInterface $entityManager */
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         $this->entityManager = $entityManager;
+    }
+
+    protected function registry(): ManagerRegistry
+    {
+        $registry = self::getContainer()->get('doctrine');
+        self::assertInstanceOf(ManagerRegistry::class, $registry);
+
+        return $registry;
     }
 
     /** @param class-string $entityClass */

@@ -1,13 +1,15 @@
 import { SINCE_VISIT_BLOCK } from './hidden-overlay';
 import { ListSegment, SegmentMarks, segmentList, segmentsWithout } from './list-segments';
 import { EntryDto } from '../../models';
+import { leadOf } from '../../state/list-item';
+import { aStory, aStoryArticle } from '../../../../testing/entry-testing';
 
 const NEWEST = '2026-08-09T10:00:00+00:00';
 const OLDER = '2026-08-07T09:05:00+00:00';
 
 const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({ id, ...over }) as EntryDto;
 const ids = (segments: ListSegment[]) =>
-  segments.map((segment) => segment.entries.map(({ id }) => id));
+  segments.map((segment) => segment.items.map((item) => leadOf(item).id));
 const dividers = (segments: ListSegment[]) => segments.map((segment) => segment.divider);
 
 const marks = (over: Partial<SegmentMarks> = {}): SegmentMarks => ({
@@ -51,10 +53,36 @@ describe('segmentList', () => {
     expect(segmentList(entries, marks({ newSinceVisitIds: new Set([1, 2, 3]) }))).toHaveLength(1);
   });
 
+  it("segments story items by their lead's run (#2328)", () => {
+    const storyLedBy = (id: number, runId: number, generatedAt: string) =>
+      aStory({ id, articles: [aStoryArticle({ id, runId, runGeneratedAt: generatedAt })] });
+
+    const segments = segmentList(
+      [storyLedBy(1, 9, NEWEST), storyLedBy(2, 9, NEWEST), storyLedBy(3, 7, OLDER)],
+      marks({ showsRunHeader: (group) => group.runId !== 9 }),
+    );
+
+    expect(ids(segments)).toEqual([[1, 2], [3]]);
+    expect(dividers(segments)).toEqual([null, { kind: 'run-header', generatedAt: OLDER }]);
+  });
+
+  it('splits at the first story whose lead is not new (#2328)', () => {
+    const storyLedBy = (id: number) => aStory({ id: 100 + id, articles: [aStoryArticle({ id })] });
+
+    const segments = segmentList(
+      [storyLedBy(1), storyLedBy(2), storyLedBy(3)],
+      marks({ newSinceVisitIds: new Set([1, 2]) }),
+    );
+
+    expect(ids(segments)).toEqual([[1, 2], [3]]);
+  });
+
   it('keeps one divider-less segment for a plain list', () => {
     const entries = [entry(1), entry(2)];
 
-    expect(segmentList(entries, marks())).toEqual([{ key: 'head:0', divider: null, entries }]);
+    expect(segmentList(entries, marks())).toEqual([
+      { key: 'head:0', divider: null, items: entries },
+    ]);
   });
 });
 

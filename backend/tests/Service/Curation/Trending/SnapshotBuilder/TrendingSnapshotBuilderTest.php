@@ -36,6 +36,7 @@ use App\Tests\Support\TrendingWiring;
 use Doctrine\ORM\Decorator\EntityManagerDecorator;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Service\Curation\Trending\Exception\TrendingBuildBusyException;
+use Psr\Clock\ClockInterface;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\Lock\Exception\LockConflictedException;
@@ -61,14 +62,46 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         $this->locks = new LockFactory(new InMemoryStore());
     }
 
+    public function testABuildIsStampedWithTheMomentBeforeItCollectedTheWindow(): void
+    {
+        $this->weekSizedHafenstreik();
+        $collectingTakesAMinute = new class ($this->clock) implements ClockInterface {
+            public function __construct(private readonly MockClock $clock)
+            {
+            }
+
+            public function now(): \DateTimeImmutable
+            {
+                $now = $this->clock->now();
+                $this->clock->sleep(60);
+
+                return $now;
+            }
+        };
+        $builder = new TrendingSnapshotBuilder(
+            TrendingWiring::grouping($this->entityManager, $collectingTakesAMinute),
+            new TrendingEntryRepository($this->entityManager),
+            TrendingWiring::policies($this->entityManager),
+            new TrendingStoryHistoryRepository($this->entityManager),
+            TrendingWiring::snapshots($this->entityManager),
+            $this->entityManager,
+            new NaiveUtcClock($this->clock),
+            $this->locks,
+        );
+
+        $report = $builder->build($this->ownerId(), TrendingWindow::Day);
+
+        self::assertSame(self::NOW, $report->builtAt->format('Y-m-d H:i:s'));
+    }
+
     public function testABuildWhileAnotherHoldsTheLockWritesNothing(): void
     {
         $this->weekSizedHafenstreik();
-        $running = $this->locks->createLock(TrendingSnapshotBuilder::LOCK_NAME);
+        $running = $this->locks->createLock(TrendingSnapshotBuilder::LOCK_NAME . '-' . $this->ownerId());
         $running->acquire();
 
         try {
-            $this->builder()->build(TrendingWindow::Day);
+            $this->builder()->build($this->ownerId(), TrendingWindow::Day);
             self::fail('a build overlapping another must not run');
         } catch (TrendingBuildBusyException) {
         }
@@ -84,6 +117,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
     {
         $builder = new TrendingSnapshotBuilder(
             TrendingWiring::grouping($this->entityManager, $this->clock),
+            new TrendingEntryRepository($this->entityManager),
             new ServiceLocator([]),
             new TrendingStoryHistoryRepository($this->entityManager),
             TrendingWiring::snapshots($this->entityManager),
@@ -95,7 +129,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessage('No story build policy is wired for the "week" window.');
 
-        $builder->build(TrendingWindow::Week);
+        $builder->build($this->ownerId(), TrendingWindow::Week);
     }
 
     public function testABuildPutsOffItsLockBeforeWriting(): void
@@ -104,7 +138,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         $store = new CountingLockStore();
         $this->locks = new LockFactory($store);
 
-        $this->builder()->build(TrendingWindow::Day);
+        $this->builder()->build($this->ownerId(), TrendingWindow::Day);
 
         self::assertGreaterThan(CountingLockStore::ACQUIRING_PUT_OFFS, $store->putOffs);
     }
@@ -115,7 +149,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         $this->locks = new LockFactory(new CountingLockStore(lockLost: true));
 
         try {
-            $this->builder()->build(TrendingWindow::Day);
+            $this->builder()->build($this->ownerId(), TrendingWindow::Day);
             self::fail('a build that lost its lock must not write');
         } catch (TrendingBuildBusyException $busy) {
             self::assertInstanceOf(LockConflictedException::class, $busy->getPrevious());
@@ -132,14 +166,15 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
     {
         $this->weekSizedHafenstreik();
         $this->locks = self::locksReleasedOnlyByTheirHolder();
-        $this->builder()->build(TrendingWindow::Day);
-        $this->builder()->build(TrendingWindow::Week);
+        $this->builder()->build($this->ownerId(), TrendingWindow::Day);
+        $this->builder()->build($this->ownerId(), TrendingWindow::Week);
         try {
-            $this->builderWith($this->failingAfterTheTransactionBody())->build(TrendingWindow::Day);
+            $this->builderWith($this->failingAfterTheTransactionBody())->build($this->ownerId(), TrendingWindow::Day);
         } catch (SimulatedFailure) {
         }
 
-        self::assertTrue($this->locks->createLock(TrendingSnapshotBuilder::LOCK_NAME)->acquire());
+        $lockName = TrendingSnapshotBuilder::LOCK_NAME . '-' . $this->ownerId();
+        self::assertTrue($this->locks->createLock($lockName)->acquire());
     }
 
     public function testABuildAfterOneThatThrewCanTakeTheLock(): void
@@ -147,12 +182,12 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         $this->weekSizedHafenstreik();
         $this->locks = self::locksReleasedOnlyByTheirHolder();
         try {
-            $this->builderWith($this->failingToStartTheTransaction())->build(TrendingWindow::Day);
+            $this->builderWith($this->failingToStartTheTransaction())->build($this->ownerId(), TrendingWindow::Day);
             self::fail('the failure before the save must surface');
         } catch (SimulatedFailure) {
         }
 
-        $report = $this->builder()->build(TrendingWindow::Day);
+        $report = $this->builder()->build($this->ownerId(), TrendingWindow::Day);
 
         self::assertSame(TrendingWindow::Day, $report->window);
     }
@@ -166,7 +201,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         $this->fixtures->hafenstreik($this->fixtures->feed('epsilon'), 0, '2031-05-13 11:59:59');
         $this->fixtures->flush();
 
-        $report = $this->builder()->build(TrendingWindow::Day);
+        $report = $this->builder()->build($this->ownerId(), TrendingWindow::Day);
         $this->entityManager->clear();
 
         self::assertSame(4, $report->entryCount, 'the entry a second before the window is not read');
@@ -183,20 +218,157 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
                 . ' UNION SELECT last_joined_at FROM trending_story',
             ),
         );
-        $snapshot = $this->entityManager->find(TrendingSnapshot::class, 'day');
+        $snapshot = $this->entityManager->find(
+            TrendingSnapshot::class,
+            ['user' => $this->ownerId(), 'window' => 'day'],
+        );
         self::assertInstanceOf(TrendingSnapshot::class, $snapshot);
         self::assertSame(self::NOW, $snapshot->getBuiltAt()->format('Y-m-d H:i:s'));
         self::assertSame(4, $snapshot->getEntryCount());
         self::assertGreaterThan(0, $snapshot->getPeakMemoryBytes());
     }
 
-    public function testAGroupOfTwoFeedsIsTooNarrowForTheDay(): void
+    public function testKeepsATwoOutletGroup(): void
     {
         $this->fixtures->hafenstreik($this->fixtures->feed('alpha'), 0, '2031-05-14 08:00:00');
         $this->fixtures->hafenstreik($this->fixtures->feed('beta'), 1, '2031-05-14 09:00:00');
         $this->fixtures->flush();
 
-        self::assertSame(0, $this->builder()->build(TrendingWindow::Day)->storyCount);
+        self::assertSame(1, $this->builder()->build($this->ownerId(), TrendingWindow::Day)->storyCount);
+        self::assertSame(2, $this->memberCount());
+    }
+
+    public function testBuildsOnlyTheUsersStories(): void
+    {
+        $reader = $this->fixtures->reader('other-reader@example.com');
+        [$alpha, $beta, $gamma] = array_map($this->fixtures->feed(...), ['alpha', 'beta', 'gamma']);
+        foreach ([$alpha, $beta, $gamma] as $variant => $feed) {
+            $this->fixtures->hafenstreik($feed, $variant, \sprintf('2031-05-14 %02d:00:00', 8 + $variant));
+        }
+        $unrelated = $this->fixtures->feedNobodyFollows('unrelated');
+        $this->fixtures->entry($unrelated, 'Wetter morgen sonnig', '2031-05-14 11:00:00');
+        $this->fixtures->subscribe($reader, $alpha, $unrelated);
+        $this->fixtures->flush();
+
+        $this->builder()->build($reader->requireId(), TrendingWindow::Day);
+        self::assertSame([], $this->storyIds(), 'one outlet is no story');
+
+        $this->builder()->build($this->ownerId(), TrendingWindow::Day);
+
+        self::assertSame(
+            [$this->ownerId()],
+            $this->intColumn('SELECT user_id FROM trending_story'),
+        );
+        self::assertSame(
+            [$this->ownerId()],
+            $this->intColumn('SELECT user_id FROM trending_story_placement GROUP BY user_id'),
+        );
+        self::assertSame(
+            [$reader->requireId(), $this->ownerId()],
+            $this->sortedIntColumn('SELECT user_id FROM trending_snapshot'),
+        );
+        self::assertSame(
+            [$reader->requireId() => 2, $this->ownerId() => 3],
+            $this->activeFeedCountsByUser(),
+        );
+    }
+
+    public function testAnotherUsersRunningBuildDoesNotBlock(): void
+    {
+        $this->weekSizedHafenstreik();
+        $reader = $this->fixtures->reader('busy-reader@example.com');
+        $running = $this->locks->createLock('trending-build-' . $reader->requireId());
+        self::assertTrue($running->acquire());
+
+        $report = $this->builder()->build($this->ownerId(), TrendingWindow::Day);
+
+        self::assertSame($this->ownerId(), $report->userId);
+        $this->expectException(TrendingBuildBusyException::class);
+        $this->builder()->build($reader->requireId(), TrendingWindow::Day);
+    }
+
+    public function testTheReportCountsTheUsersActiveFeeds(): void
+    {
+        $this->weekSizedHafenstreik();
+
+        $report = $this->builder()->build($this->ownerId(), TrendingWindow::Day);
+
+        self::assertSame(5, $report->activeFeedCount);
+        self::assertSame(
+            [5],
+            $this->intColumn('SELECT active_feed_count FROM trending_snapshot'),
+        );
+    }
+
+    public function testTheActiveFeedCountIsPerWindow(): void
+    {
+        $this->fixtures->entry($this->fixtures->feed('today'), 'Wetter morgen sonnig', '2031-05-14 08:00:00');
+        $this->fixtures->entry($this->fixtures->feed('yesterday'), 'Fahrplan ab Montag', '2031-05-13 11:00:00');
+        $this->fixtures->flush();
+
+        $day = $this->builder()->build($this->ownerId(), TrendingWindow::Day);
+        $week = $this->builder()->build($this->ownerId(), TrendingWindow::Week);
+
+        self::assertSame(1, $day->activeFeedCount);
+        self::assertSame(2, $week->activeFeedCount);
+        self::assertSame(
+            ['day' => 1, 'week' => 2],
+            $this->entityManager->getConnection()->fetchAllKeyValue(
+                'SELECT time_window, active_feed_count FROM trending_snapshot ORDER BY time_window',
+            ),
+        );
+    }
+
+    public function testTwoUsersStoriesNeverMerge(): void
+    {
+        $reader = $this->fixtures->reader('bridged-reader@example.com');
+        [$entries, $feeds] = $this->hafenstreikEntries();
+        $this->fixtures->subscribe($reader, $feeds[0], $feeds[1], $feeds[2]);
+        $this->fixtures->flush();
+        $owner = $this->fixtures->owner();
+        $this->fixtures->storyOf(
+            $owner,
+            TrendingWindow::Week,
+            '2031-05-14 11:00:00',
+            $entries[0],
+            $entries[1],
+            $entries[2],
+        );
+        $this->fixtures->storyOf(
+            $owner,
+            TrendingWindow::Week,
+            '2031-05-14 11:00:00',
+            $entries[3],
+            $entries[4],
+        );
+        $readersStory = $this->fixtures->storyOf(
+            $reader,
+            TrendingWindow::Week,
+            '2031-05-14 11:00:00',
+            $entries[0],
+            $entries[1],
+            $entries[2],
+        );
+        $readersRows = $this->rowsOfUser($reader->requireId());
+
+        $this->builder()->build($owner->requireId(), TrendingWindow::Week);
+
+        self::assertSame($readersRows, $this->rowsOfUser($reader->requireId()));
+        self::assertSame(
+            1,
+            $this->intColumn('SELECT COUNT(*) FROM trending_story WHERE user_id = ?', [$owner->requireId()])[0],
+            'the owner\'s two stories bridged into one',
+        );
+        $ownersRows = $this->rowsOfUser($owner->requireId());
+
+        $this->builder()->build($reader->requireId(), TrendingWindow::Week);
+
+        self::assertSame($ownersRows, $this->rowsOfUser($owner->requireId()));
+        self::assertSame(
+            1,
+            $this->intColumn('SELECT COUNT(*) FROM trending_story WHERE user_id = ?', [$reader->requireId()])[0],
+        );
+        self::assertContains($readersStory->requireId(), $this->storyIds());
     }
 
     public function testPostsSharingAnArticleJoinItsStoryThroughTheirLinkCards(): void
@@ -217,7 +389,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         }
         $this->fixtures->flush();
 
-        $report = $this->builder()->build(TrendingWindow::Day);
+        $report = $this->builder()->build($this->ownerId(), TrendingWindow::Day);
 
         self::assertSame(1, $report->storyCount);
         self::assertSame(4, $this->memberCount());
@@ -234,9 +406,9 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
             $this->fixtures->hafenstreik($this->fixtures->feed($name), $variant, '2031-05-14 10:00:00');
         }
         $this->fixtures->flush();
-        $this->builder()->build(TrendingWindow::Week);
+        $this->builder()->build($this->ownerId(), TrendingWindow::Week);
 
-        $this->builder()->build(TrendingWindow::Day);
+        $this->builder()->build($this->ownerId(), TrendingWindow::Day);
 
         self::assertCount(1, $this->storedStories(TrendingWindow::Week));
         self::assertCount(1, $this->storedStories(TrendingWindow::Day));
@@ -248,14 +420,23 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         $beta = $this->fixtures->hafenstreik($this->fixtures->feed('beta'), 1, '2031-05-14 09:00:00');
         $this->fixtures->story(TrendingWindow::Day, '2031-05-14 11:00:00', $alpha, $beta);
         $this->entityManager->persist(
-            new TrendingSnapshot(TrendingWindow::Day, new \DateTimeImmutable('2031-05-14 11:00:00'), 1, 1, 0, 0),
+            new TrendingSnapshot(
+                $this->fixtures->owner(),
+                TrendingWindow::Day,
+                new \DateTimeImmutable('2031-05-14 11:00:00'),
+                1,
+                1,
+                1,
+                0,
+                0,
+            ),
         );
         $this->fixtures->hafenstreik($this->fixtures->feed('gamma'), 2, '2031-05-14 10:00:00');
         $this->fixtures->flush();
         $before = $this->history();
 
         try {
-            $this->builderWith($this->failingAfterTheTransactionBody())->build(TrendingWindow::Day);
+            $this->builderWith($this->failingAfterTheTransactionBody())->build($this->ownerId(), TrendingWindow::Day);
             self::fail('the failure after the save must surface');
         } catch (SimulatedFailure) {
         }
@@ -271,11 +452,11 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
     public function testARebuildOverUnchangedInputChangesNothing(): void
     {
         $this->weekSizedHafenstreik();
-        $this->builder()->build(TrendingWindow::Week);
+        $this->builder()->build($this->ownerId(), TrendingWindow::Week);
         $history = $this->history();
         $stories = $this->storyRows();
 
-        $report = $this->builder()->build(TrendingWindow::Week);
+        $report = $this->builder()->build($this->ownerId(), TrendingWindow::Week);
 
         self::assertSame($history, $this->history());
         self::assertSame($stories, $this->storyRows());
@@ -287,13 +468,10 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
 
     public function testTheDayAndTheWeekPlaceOneStory(): void
     {
-        $feeds = $this->weekSizedHafenstreik();
-        $reader = $this->fixtures->reader('d41@example.com');
-        $this->fixtures->subscribe($reader, ...$feeds);
-        $this->fixtures->flush();
+        $this->weekSizedHafenstreik();
 
-        $this->builder()->build(TrendingWindow::Day);
-        $this->builder()->build(TrendingWindow::Week);
+        $this->builder()->build($this->ownerId(), TrendingWindow::Day);
+        $this->builder()->build($this->ownerId(), TrendingWindow::Week);
 
         $storyIds = $this->storyIds();
         self::assertCount(1, $storyIds);
@@ -301,22 +479,22 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         self::assertSame(
             $storyIds,
             RankedStoryModel::storyIdsOf(
-                $this->readerWindows()->shownStories($reader->requireId(), TrendingWindow::Day),
+                $this->readerWindows()->shownStories($this->ownerId(), TrendingWindow::Day),
             ),
         );
-        self::assertSame([], $this->readerWindows()->shownStories($reader->requireId(), TrendingWindow::Week));
+        self::assertSame([], $this->readerWindows()->shownStories($this->ownerId(), TrendingWindow::Week));
     }
 
     public function testANewArticleJoinsTheStoryWithTheBuildTime(): void
     {
         $this->weekSizedHafenstreik();
-        $this->builder()->build(TrendingWindow::Week);
+        $this->builder()->build($this->ownerId(), TrendingWindow::Week);
         $storyIds = $this->storyIds();
         $late = $this->fixtures->hafenstreik($this->fixtures->feed('late'), 0, '2031-05-14 12:30:00');
         $this->fixtures->flush();
         $this->clock->modify('+1 hour');
 
-        $this->builder()->build(TrendingWindow::Week);
+        $this->builder()->build($this->ownerId(), TrendingWindow::Week);
 
         self::assertSame($storyIds, $this->storyIds());
         $joinedAt = $this->joinedAtByEntry();
@@ -337,11 +515,11 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         $this->fixtures->hafenstreik($this->fixtures->feed('gamma'), 2, '2031-05-14 09:00:00');
         $this->fixtures->hafenstreik($this->fixtures->feed('delta'), 3, '2031-05-14 10:00:00');
         $this->fixtures->flush();
-        $this->builder()->build(TrendingWindow::Day);
+        $this->builder()->build($this->ownerId(), TrendingWindow::Day);
         $storyIds = $this->storyIds();
         $this->clock->modify('+2 hours');
 
-        $this->builder()->build(TrendingWindow::Day);
+        $this->builder()->build($this->ownerId(), TrendingWindow::Day);
 
         self::assertSame($storyIds, $this->storyIds());
         self::assertSame(4, $this->memberCount());
@@ -359,7 +537,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         $reader = $this->fixtures->reader('merge@example.com');
         $this->fixtures->follow($reader, $smaller, '2031-05-14 11:00:00');
 
-        $report = $this->builder()->build(TrendingWindow::Week);
+        $report = $this->builder()->build($this->ownerId(), TrendingWindow::Week);
 
         self::assertSame([$larger->requireId()], $this->storyIds());
         self::assertSame(5, $this->memberCount());
@@ -376,7 +554,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         $smaller = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 11:00:00', $entries[3], $entries[4]);
         $larger = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 11:00:00', ...\array_slice($entries, 0, 3));
 
-        $report = $this->builder()->build(TrendingWindow::Day);
+        $report = $this->builder()->build($this->ownerId(), TrendingWindow::Day);
 
         self::assertSame([$smaller->requireId(), $larger->requireId()], $this->storyIds());
         self::assertSame(0, $report->match->merged());
@@ -394,7 +572,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         $reader = $this->fixtures->reader('split@example.com');
         $this->fixtures->follow($reader, $story, '2031-05-14 11:00:00');
 
-        $report = $this->builder()->build(TrendingWindow::Week);
+        $report = $this->builder()->build($this->ownerId(), TrendingWindow::Week);
 
         self::assertSame(
             ['kept' => 1, 'created' => 1, 'split' => 1],
@@ -419,10 +597,10 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         [$strike] = $this->hafenstreikEntries();
         $volcano = $this->volcanoEntries();
         $story = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 11:00:00', ...$strike, ...$volcano);
-        $this->builder()->build(TrendingWindow::Week);
+        $this->builder()->build($this->ownerId(), TrendingWindow::Week);
         [, $newStoryId] = $this->storyIds();
 
-        $this->builder()->build(TrendingWindow::Day);
+        $this->builder()->build($this->ownerId(), TrendingWindow::Day);
 
         $strikeIds = array_map(static fn (Entry $entry): int => $entry->requireId(), $strike);
         self::assertSame(
@@ -453,7 +631,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
             ...\array_slice($volcano, 0, 5),
         );
 
-        $report = $this->builder()->build(TrendingWindow::Day);
+        $report = $this->builder()->build($this->ownerId(), TrendingWindow::Day);
 
         self::assertSame([$story->requireId()], $this->storyIds());
         self::assertSame(
@@ -474,7 +652,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         $reader = $this->fixtures->reader('regrouped@example.com');
         $this->fixtures->subscribe($reader, ...$feeds);
         $this->fixtures->flush();
-        $this->builder()->build(TrendingWindow::Day);
+        $this->builder()->build($this->ownerId(), TrendingWindow::Day);
         [$dayStoryId] = $this->storyIds();
         $dayStory = $this->entityManager->find(TrendingStory::class, $dayStoryId);
         self::assertInstanceOf(TrendingStory::class, $dayStory);
@@ -484,7 +662,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         self::assertNotContains($strike[0]->requireId(), $this->memberIdsOf($dayStoryId));
         $this->clock->modify('+1 hour');
 
-        $this->builder()->build(TrendingWindow::Day);
+        $this->builder()->build($this->ownerId(), TrendingWindow::Day);
 
         self::assertContains($strike[0]->requireId(), $this->memberIdsOf($dayStoryId));
         self::assertSame(
@@ -514,7 +692,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         $day = $this->fixtures->story(TrendingWindow::Day, '2031-05-14 11:00:00', ...$entries);
         $this->fixtures->story(TrendingWindow::Week, '2031-05-14 11:00:00', ...$entries);
 
-        $this->builder()->build(TrendingWindow::Week);
+        $this->builder()->build($this->ownerId(), TrendingWindow::Week);
 
         self::assertSame([$day->requireId()], $this->storyIds());
         self::assertSame([[1, 1]], $this->flagsOfEveryMember());
@@ -528,7 +706,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         }
         $this->fixtures->story(TrendingWindow::Week, '2031-05-07 13:00:00', $onTheStart);
 
-        $report = $this->builder()->build(TrendingWindow::Week);
+        $report = $this->builder()->build($this->ownerId(), TrendingWindow::Week);
 
         self::assertSame(1, $report->match->kept());
         self::assertSame('2031-05-07 13:00:00', $this->joinedAtByEntry()[$onTheStart->requireId()]);
@@ -551,7 +729,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
             $this->fixtures->entry($unrelatedFeed, 'Neue Brücke freigegeben', '2031-05-10 08:00:00'),
         );
 
-        $this->builder()->build(TrendingWindow::Week);
+        $this->builder()->build($this->ownerId(), TrendingWindow::Week);
 
         self::assertSame(
             [$story->requireId()],
@@ -571,8 +749,8 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         $this->fixtures->follow($reader, $story, '2031-05-14 11:00:00');
         $this->fixtures->hide($reader, $story);
 
-        $this->builder()->build(TrendingWindow::Week);
-        $this->builder()->build(TrendingWindow::Day);
+        $this->builder()->build($this->ownerId(), TrendingWindow::Week);
+        $this->builder()->build($this->ownerId(), TrendingWindow::Day);
 
         self::assertSame([$story->requireId()], $this->storyIds());
         self::assertSame(
@@ -592,12 +770,12 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         $followed = $this->fixtures->story(TrendingWindow::Week, '2031-05-01 09:00:00', $old);
         $this->fixtures->follow($this->fixtures->reader('follows@example.com'), $followed, '2031-05-01 09:00:00');
 
-        $dayReport = $this->builder()->build(TrendingWindow::Day);
+        $dayReport = $this->builder()->build($this->ownerId(), TrendingWindow::Day);
 
         self::assertSame(0, $dayReport->pruned);
         self::assertSame([$unfollowed->requireId(), $followed->requireId()], $this->storyIds());
 
-        $weekReport = $this->builder()->build(TrendingWindow::Week);
+        $weekReport = $this->builder()->build($this->ownerId(), TrendingWindow::Week);
 
         self::assertSame(1, $weekReport->pruned);
         self::assertSame([$followed->requireId()], $this->storyIds());
@@ -643,6 +821,56 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         };
     }
 
+    /** @return array{list<array<string, mixed>>, list<array<string, mixed>>, list<array<string, mixed>>} */
+    private function rowsOfUser(int $userId): array
+    {
+        $connection = $this->entityManager->getConnection();
+
+        return [
+            $connection->fetchAllAssociative('SELECT * FROM trending_story WHERE user_id = ? ORDER BY id', [$userId]),
+            $connection->fetchAllAssociative(
+                'SELECT member.* FROM trending_story_entry member'
+                . ' JOIN trending_story story ON story.id = member.story_id WHERE story.user_id = ?'
+                . ' ORDER BY member.story_id, member.entry_id',
+                [$userId],
+            ),
+            $connection->fetchAllAssociative(
+                'SELECT * FROM trending_story_placement WHERE user_id = ? ORDER BY time_window, entry_id',
+                [$userId],
+            ),
+        ];
+    }
+
+    /** @return array<int, int> */
+    private function activeFeedCountsByUser(): array
+    {
+        $counts = [];
+        foreach (
+            $this->entityManager->getConnection()
+                ->fetchAllKeyValue('SELECT user_id, active_feed_count FROM trending_snapshot') as $userId => $count
+        ) {
+            self::assertIsNumeric($count);
+            $counts[(int) $userId] = (int) $count;
+        }
+        ksort($counts);
+
+        return $counts;
+    }
+
+    /** @return list<int> */
+    private function sortedIntColumn(string $sql): array
+    {
+        $values = $this->intColumn($sql);
+        sort($values);
+
+        return $values;
+    }
+
+    private function ownerId(): int
+    {
+        return $this->fixtures->owner()->requireId();
+    }
+
     private function builder(): TrendingSnapshotBuilder
     {
         return $this->builderWith($this->entityManager);
@@ -652,6 +880,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
     {
         return new TrendingSnapshotBuilder(
             TrendingWiring::grouping($this->entityManager, $this->clock),
+            new TrendingEntryRepository($this->entityManager),
             TrendingWiring::policies($this->entityManager),
             new TrendingStoryHistoryRepository($this->entityManager),
             TrendingWiring::snapshots($this->entityManager),
@@ -669,8 +898,14 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         $entries = [$claimed, ...$weekMembers];
         $builtAt = new \DateTimeImmutable($this->clock->now()->format('Y-m-d H:i:s'), new \DateTimeZone('UTC'));
         $history = new TrendingStoryHistoryRepository($this->entityManager);
+        $build = new StoryBuildModel(
+            $this->fixtures->owner()->requireId(),
+            TrendingWindow::Week,
+            TrendingWindow::Week->startBefore($builtAt),
+            $builtAt,
+        );
         $storyIdByEntry = $history->saveAll(
-            new StoryBuildModel(TrendingWindow::Week, TrendingWindow::Week->startBefore($builtAt), $builtAt),
+            $build,
             [new StoryAssignmentModel(
                 new TrendingStoryModel(
                     array_map(
@@ -689,7 +924,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
                 [$claimed->requireId()],
             )],
         );
-        $history->place(TrendingWindow::Week, $storyIdByEntry);
+        $history->place($build, $storyIdByEntry);
     }
 
     private function following(): TrendingStoryFollowing
@@ -725,9 +960,8 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         self::assertInstanceOf(TrendingStoryRepository::class, $stories);
 
         return new ReaderWindows(
-            new TrendingEntryRepository($this->entityManager),
+            $this->entityManager->getRepository(TrendingSnapshot::class),
             $stories,
-            new NaiveUtcClock($this->clock),
         );
     }
 

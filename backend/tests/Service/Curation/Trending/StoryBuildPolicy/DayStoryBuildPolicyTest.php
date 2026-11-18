@@ -30,7 +30,12 @@ final class DayStoryBuildPolicyTest extends DbTestCase
         $old = $fixtures->entry($fixtures->feed('old'), 'Old', '2031-05-01 08:00:00');
         $fixtures->story(TrendingWindow::Day, '2031-05-01 08:00:00', $old);
         $builtAt = new \DateTimeImmutable('2031-05-14 12:00:00', new \DateTimeZone('UTC'));
-        $pruned = $policy->prune(new StoryBuildModel(TrendingWindow::Day, $builtAt->modify('-7 days'), $builtAt));
+        $pruned = $policy->prune(new StoryBuildModel(
+            $fixtures->owner()->requireId(),
+            TrendingWindow::Day,
+            $builtAt->modify('-7 days'),
+            $builtAt,
+        ));
 
         self::assertSame(7, $match->assignments[0]->storyId);
         self::assertSame([], $match->merges);

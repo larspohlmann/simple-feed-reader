@@ -23,7 +23,7 @@ final class TrendingExplainerTest extends DbTestCase
         $this->shareAnArticle($fixtures, 'Pokalfinale', 'https://news.example.com/newer', '2031-05-14 09:00:00', 2);
         $fixtures->flush();
 
-        $explanation = $this->explainer()->explain(TrendingWindow::Day);
+        $explanation = $this->explainer()->explain($fixtures->owner()->requireId(), TrendingWindow::Day);
 
         self::assertSame(7, $explanation->entryCount);
         self::assertSame(

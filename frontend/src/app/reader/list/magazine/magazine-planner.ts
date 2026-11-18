@@ -1,5 +1,14 @@
 import { EntryDto } from '../../models';
-import { BLOCK_HEIGHT, DEMOTION, EntryKind, MagazineBlock, TemplateKind } from './magazine-block';
+import { ListItem, leadOf, storyOf } from '../../state/list-item';
+import {
+  BLOCK_HEIGHT,
+  BlockCard,
+  DEMOTION,
+  EntryKind,
+  MagazineBlock,
+  TemplateKind,
+} from './magazine-block';
+import { DetectedRun, detectRun } from './magazine-run';
 import { leadWithImage, prefersTextFamily } from './magazine-family';
 import { blockHeight } from './magazine-block-height';
 import {
@@ -22,7 +31,7 @@ import {
 import { IMAGE_TEMPLATES, Slot, TEXT_TEMPLATES } from './magazine-templates';
 
 export interface MagazinePlanInput {
-  entries: EntryDto[];
+  items: ListItem[];
   /** True in aggregated views (All / tag / favorites / kept). */
   grouping: boolean;
   /** False while `hasMore` — a partial trailing page is held back. */
@@ -62,17 +71,20 @@ const JITTER_CHANCE = 1 / 3;
 interface MagazineFamily {
   readonly templates: readonly (readonly Slot[])[];
   readonly imageBar: ImageBar;
-  readonly fitFor: (slice: readonly EntryDto[], pinned: readonly (PinnedShare | null)[]) => SlotFit;
+  readonly fitFor: (
+    slice: readonly BlockCard[],
+    pinned: readonly (PinnedShare | null)[],
+  ) => SlotFit;
 }
 
 /** Variety over fit: a page with no entry that fills a `split` strictly judges its pictures
  *  without the size floor, so a feed of small thumbnails still gets larger blocks. */
 function imageFamilyFit(
-  slice: readonly EntryDto[],
+  slice: readonly BlockCard[],
   pinned: readonly (PinnedShare | null)[],
 ): SlotFit {
   const fillsSplit = slice.some(
-    (entry, position) => pinned[position] === null && fits('split', entry),
+    ({ entry }, position) => pinned[position] === null && fits('split', entry),
   );
   return fillsSplit ? fits : fitsWithoutSizeFloor;
 }
@@ -88,19 +100,10 @@ const TEXT_FAMILY: MagazineFamily = {
   fitFor: () => fits,
 };
 
-/** A same-source run, with any single foreign entries it bridges pulled aside. */
-interface DetectedRun {
-  source: number;
-  sourceEntries: EntryDto[];
-  interlopers: EntryDto[];
-  /** Exclusive index in `ordered` where the run's span ends. */
-  end: number;
-}
-
 /** One planning pass: what every step reads, and the blocks and page index it
  *  advances. */
 interface PlanPass {
-  readonly ordered: EntryDto[];
+  readonly ordered: BlockCard[];
   readonly family: MagazineFamily;
   readonly complete: boolean;
   readonly collapseEnabled: boolean;
@@ -122,13 +125,15 @@ export function planMagazine(input: MagazinePlanInput): MagazineBlock[] {
 }
 
 function startPass(input: MagazinePlanInput): PlanPass {
-  const { entries, grouping, complete, uncollapsibleSources = new Set<number>() } = input;
+  const { items, grouping, complete, uncollapsibleSources = new Set<number>() } = input;
+  const cards = items.map((item) => ({ entry: leadOf(item), story: storyOf(item) }));
+  const entries = cards.map(({ entry }) => entry);
   const useTextFamily = prefersTextFamily(entries.slice(0, LEADING_WINDOW));
   return {
     // Land the reader on a picture: the image family pulls the nearest image entry
     // to the front when the first are image-less. The text family opens on a
     // headline by design, so it keeps strict order.
-    ordered: useTextFamily ? entries : leadWithImage(entries),
+    ordered: useTextFamily ? cards : leadWithImage(cards),
     family: useTextFamily ? TEXT_FAMILY : IMAGE_FAMILY,
     complete,
     collapseEnabled: grouping && activeSourceCount(entries) >= MIN_VIEW_SOURCES,
@@ -156,7 +161,7 @@ function collapseRun(pass: PlanPass, run: DetectedRun): number | null {
   if (!pass.complete && run.end >= pass.ordered.length - 1) return null;
   // Featured lead comes FIRST, so a group block never opens the list.
   emitFeaturedLead(pass, run);
-  pass.blocks.push(digest(run.sourceEntries.slice(FEATURED_LEAD)));
+  pass.blocks.push(digest(run.sourceCards.slice(FEATURED_LEAD)));
   emitInterlopers(pass, run);
   return run.end;
 }
@@ -178,28 +183,6 @@ function emitOrdinaryPage(pass: PlanPass, index: number): number | null {
   pass.blocks.push(...layOutPage(pass, template, slice));
   pass.page += 1;
   return index + slice.length;
-}
-
-/** Walk a same-source run from `start`, bridging any single foreign entry the
- *  source resumes right after (`Dom…X…Dom`); a gap of two or more ends the run.
- *  Every entry in `[start, end)` is same-source or a bridged interloper. */
-function detectRun(ordered: EntryDto[], start: number): DetectedRun {
-  const source = ordered[start].subscriptionId;
-  const sourceEntries: EntryDto[] = [];
-  const interlopers: EntryDto[] = [];
-  let index = start;
-  while (index < ordered.length) {
-    if (ordered[index].subscriptionId === source) {
-      sourceEntries.push(ordered[index]);
-      index += 1;
-      continue;
-    }
-    const bridges = index + 1 < ordered.length && ordered[index + 1].subscriptionId === source;
-    if (!bridges) break;
-    interlopers.push(ordered[index]);
-    index += 1;
-  }
-  return { source, sourceEntries, interlopers, end: index };
 }
 
 function distinctSources(entries: EntryDto[]): number {
@@ -233,12 +216,12 @@ function activeSourceCount(entries: EntryDto[]): number {
  *  this firing inside a run's own continuation. Precondition: `start >= 1`. */
 function startsLongRun(pass: PlanPass, start: number): boolean {
   const { ordered } = pass;
-  if (ordered[start - 1].subscriptionId === ordered[start].subscriptionId) return false;
+  if (ordered[start - 1].entry.subscriptionId === ordered[start].entry.subscriptionId) return false;
   return isCollapsible(pass, detectRun(ordered, start));
 }
 
 function isCollapsible(pass: PlanPass, run: DetectedRun): boolean {
-  return run.sourceEntries.length >= RUN_MIN && !pass.uncollapsibleSources.has(run.source);
+  return run.sourceCards.length >= RUN_MIN && !pass.uncollapsibleSources.has(run.source);
 }
 
 /** How many entries an ordinary page may take from `index` before it reaches the
@@ -266,7 +249,11 @@ function resolveSlot(slot: Slot, page: number, position: number): TemplateKind {
   return seed(page, position) < 0.5 ? slot.either[0] : slot.either[1];
 }
 
-function layOutPage(pass: PlanPass, template: readonly Slot[], slice: EntryDto[]): MagazineBlock[] {
+function layOutPage(
+  pass: PlanPass,
+  template: readonly Slot[],
+  slice: BlockCard[],
+): MagazineBlock[] {
   const { page, family } = pass;
   const pinned = slice.map(pinnedShare);
   const layout: PageLayout = {
@@ -281,7 +268,7 @@ function layOutPage(pass: PlanPass, template: readonly Slot[], slice: EntryDto[]
   );
   const budgeted = withinBudget(wanted, layout, (kind) => DEMOTION[kind]);
   const assigned = withinBudget(assign(budgeted, slice, layout), layout, (kind, position) =>
-    settle(DEMOTION[kind], slice[position], layout),
+    settle(DEMOTION[kind], slice[position].entry, layout),
   );
 
   return assigned.map((kind, position) =>
@@ -307,7 +294,7 @@ function jittered(wanted: TemplateKind[], page: number, layout: PageLayout): Tem
 
 /** The run's first entries, laid out as ordinary magazine blocks. */
 function emitFeaturedLead(pass: PlanPass, run: DetectedRun): void {
-  emitPages(pass, run.sourceEntries.slice(0, FEATURED_LEAD));
+  emitPages(pass, run.sourceCards.slice(0, FEATURED_LEAD));
 }
 
 /** The foreign entries a run bridged, surfaced after its widget as ordinary
@@ -318,7 +305,7 @@ function emitInterlopers(pass: PlanPass, run: DetectedRun): void {
 
 /** Lay a short list of entries out through the template machinery, in
  *  template-sized chunks so a list longer than one template is never truncated. */
-function emitPages(pass: PlanPass, items: EntryDto[]): void {
+function emitPages(pass: PlanPass, items: BlockCard[]): void {
   let index = 0;
   while (index < items.length) {
     const template = templateFor(pass.page, pass.family.templates);
@@ -364,16 +351,16 @@ function withinBudget(
  * demotes TRANSITIVELY; a text slot given a picture promotes (`settle`). The reach
  * stops at a share that claims its own block, so every pinned slot keeps the entry it was pinned for.
  */
-function assign(kinds: TemplateKind[], slice: EntryDto[], layout: PageLayout): TemplateKind[] {
+function assign(kinds: TemplateKind[], slice: BlockCard[], layout: PageLayout): TemplateKind[] {
   const { pinned } = layout;
   const order = [...slice];
   const tallest = tallestWhere(kinds, (_kind, position) => pinned[position] === null);
 
-  if (tallest !== null && !layout.fit(kinds[tallest], order[tallest])) {
+  if (tallest !== null && !layout.fit(kinds[tallest], order[tallest].entry)) {
     const limit = Math.min(order.length, tallest + LOOK_AHEAD + 1);
     for (let index = tallest + 1; index < limit; index++) {
       if (pinned[index] !== null) break;
-      if (layout.fit(kinds[tallest], order[index])) {
+      if (layout.fit(kinds[tallest], order[index].entry)) {
         const [picked] = order.splice(index, 1);
         order.splice(tallest, 0, picked);
         break;
@@ -384,31 +371,31 @@ function assign(kinds: TemplateKind[], slice: EntryDto[], layout: PageLayout): T
   slice.splice(0, slice.length, ...order);
 
   return kinds.map((kind, position) =>
-    pinned[position] === null ? settle(kind, order[position], layout) : kind,
+    pinned[position] === null ? settle(kind, order[position].entry, layout) : kind,
   );
 }
 
-function pinnedShare(entry: EntryDto): PinnedShare | null {
+function pinnedShare({ entry, story }: BlockCard): PinnedShare | null {
   const kind = shareKind(entry);
-  return kind ? { kind, height: blockHeight(kind, entry) } : null;
+  return kind ? { kind, height: blockHeight(kind, entry, story) } : null;
 }
 
-function toBlock(kind: EntryKind, entry: EntryDto, at: SlotAt): MagazineBlock {
+function toBlock(kind: EntryKind, card: BlockCard, at: SlotAt): MagazineBlock {
   if (kind === 'split') {
-    return { kind, entry, imageSide: seed(at.page, at.position + 97) < 0.5 ? 'left' : 'right' };
+    return { kind, ...card, imageSide: seed(at.page, at.position + 97) < 0.5 ? 'left' : 'right' };
   }
-  return { kind, entry };
+  return { kind, ...card };
 }
 
 /** A widget owning a run's whole tail; the component previews `previewCount`
  *  rows and expands the rest in place. RUN_MIN (8) > FEATURED_LEAD (3)
  *  guarantees `tail` is non-empty, so `tail[0]` is defined. */
-function digest(tail: EntryDto[]): MagazineBlock {
+function digest(tail: BlockCard[]): MagazineBlock {
   return {
     kind: 'group',
-    subscriptionId: tail[0].subscriptionId,
-    source: tail[0].source,
-    entries: tail,
+    subscriptionId: tail[0].entry.subscriptionId,
+    source: tail[0].entry.source,
+    entries: tail.map(({ entry }) => entry),
     previewCount: Math.min(WIDGET_PREVIEW, tail.length),
   };
 }

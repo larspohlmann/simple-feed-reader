@@ -53,6 +53,7 @@ import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progres
 import { prefersReducedMotion } from '../../../core/reduced-motion';
 import { heldFor } from '../../../core/held-for';
 import { FeedLanguage } from '../../feed-language';
+import { ListItem, leadOf, storyOf } from '../../state/list-item';
 
 // How long a reload or a command may run before it earns the overlay. One that
 // lands sooner would only flash it, which reads as a glitch rather than as progress.
@@ -110,10 +111,10 @@ export class EntryListComponent {
   readonly titleFaviconUrl = input<string | null>(null);
   readonly titleLanguage = input<FeedLanguage | null>(null);
   readonly titleAvatarUrl = input<string | null>(null);
-  readonly entries = input.required<EntryDto[]>();
-  /** Ids of rows collapsed out of the list (un-favourited/un-kept/marked-unread
+  readonly items = input.required<ListItem[]>();
+  /** Lead ids of rows collapsed out of the list (un-favourited/un-kept/marked-unread
    *  in their saved view). A leaving row fades then collapses in place, staying
-   *  in `entries` so the magazine plan keeps its shape; a reload clears it. */
+   *  in `items` so the magazine plan keeps its shape; a reload clears it. */
   readonly leavingIds = input<ReadonlySet<number>>(new Set());
   /** On a followed story, the rows that joined since the last visit; the "Since your last visit" divider follows them. */
   readonly newSinceVisitIds = input<ReadonlySet<number>>(new Set());
@@ -225,7 +226,7 @@ export class EntryListComponent {
   });
 
   readonly content = new ListContent({
-    entries: this.entries,
+    items: this.items,
     hasMore: this.hasMore,
     selection: this.selection,
     newestRunId: this.newestRunId,
@@ -249,14 +250,14 @@ export class EntryListComponent {
    * or for a command of the shell's, which waits over an empty list too.
    */
   readonly waitOverlay = heldFor(
-    () => this.busy() || (this.reloadCue() && this.entries().length > 0),
+    () => this.busy() || (this.reloadCue() && this.items().length > 0),
     WAIT_OVERLAY_DELAY_MS,
   );
 
   private readonly readingFocus = new ListReadingFocus({
     scroller: this.scrollHost,
     rendered: this.content.rendered,
-    entries: this.entries,
+    items: this.items,
     selection: this.selection,
     reduceMotion: this.reduceMotion,
   });
@@ -305,7 +306,7 @@ export class EntryListComponent {
 
   private readonly listBottom = new EstimatedListBottom({
     content: this.content,
-    entries: this.entries,
+    items: this.items,
     hasMore: this.hasMore,
     titleCount: this.titleCount,
     isSearch: this.isSearch,
@@ -331,16 +332,16 @@ export class EntryListComponent {
    *  empty states have no content to slide, so a refresh started from those must
    *  not paint the tray over them. */
   readonly revealVisible = computed(
-    () => this.pull.revealOffset() > 0 && !this.loading() && this.entries().length > 0,
+    () => this.pull.revealOffset() > 0 && !this.loading() && this.items().length > 0,
   );
 
   /** Gates `.rows.magazine.airy`. Style first: computeds track dynamically, so
-   *  a boxed account never takes a dependency on `entries()` at all (#723). */
+   *  a boxed account never takes a dependency on `items()` at all (#723). */
   protected readonly isAiryMagazine = computed(
     () =>
       this.magazineStyle.style() === 'airy' &&
       this.layout() === 'magazine' &&
-      !(this.loading() && this.entries().length === 0) &&
+      !(this.loading() && this.items().length === 0) &&
       this.content.visibleEntryCount() !== 0,
   );
 
@@ -356,11 +357,11 @@ export class EntryListComponent {
   onMarkAboveRead(): void {
     const ids = this.aboveFold.entryIds();
     if (ids.length === 0) return;
-    this.markAboveRead.emit(withHiddenDuplicates(ids, this.entries()));
+    this.markAboveRead.emit(withHiddenDuplicates(ids, this.items().map(leadOf)));
   }
 
   /** Freeze & remove: hide the just-marked blocks from the render without
-   *  re-planning, and land the boundary at the top. entries() is untouched, so
+   *  re-planning, and land the boundary at the top. items() is untouched, so
    *  the planner does not re-run and the blocks below keep their positions. */
   hideAboveMarked(ids: number[]): void {
     this.scrolling.cancelSettle();
@@ -373,6 +374,8 @@ export class EntryListComponent {
   }
 
   protected readonly blockKey = listBlockKey;
+  protected readonly leadOf = leadOf;
+  protected readonly storyOf = storyOf;
 
   /** The entry a recommendation strip should read, or null for a group block
    *  (which carries several entries and no single reason to show). */

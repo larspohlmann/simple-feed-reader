@@ -4,13 +4,13 @@ import { ReadingFocusApplier } from '../../article/reading/reading-focus-applier
 import { ReadingFocusService } from '../../../core/preferences/reading-focus.service';
 import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { LayoutService } from '../../layout.service';
-import { EntryDto } from '../../models';
+import { ListItem } from '../../state/list-item';
 import { Selection } from '../../query/query';
 
 export interface ListReadingFocusOptions {
   readonly scroller: () => ScrollHost | undefined;
-  readonly rendered: Signal<EntryDto[]>;
-  readonly entries: Signal<EntryDto[]>;
+  readonly rendered: Signal<ListItem[]>;
+  readonly items: Signal<ListItem[]>;
   readonly selection: Signal<Selection>;
   readonly reduceMotion: boolean;
 }
@@ -57,7 +57,7 @@ export class ListReadingFocus {
       applier.clear();
       return;
     }
-    if (rendered === this.options.entries()) applier.refresh();
+    if (rendered === this.options.items()) applier.refresh();
   });
 
   constructor(private readonly options: ListReadingFocusOptions) {

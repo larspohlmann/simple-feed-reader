@@ -17,10 +17,10 @@ final readonly class TrendingExplainer
     {
     }
 
-    public function explain(TrendingWindow $window): TrendingExplanationModel
+    public function explain(int $userId, TrendingWindow $window): TrendingExplanationModel
     {
         $stopwatch = BuildStopwatch::start();
-        $run = $this->grouping->collect($window);
+        $run = $this->grouping->collect($userId, $window);
         $groups = $this->grouping->groups($run);
         usort(
             $groups,

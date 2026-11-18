@@ -70,7 +70,7 @@ final class SubscriptionTrendingCountsTest extends ApiTestCase
     {
         $client = self::createClient();
         [$headers, $user] = $this->bearerAndUser('trending-counts-card-led@example.com');
-        $fixtures = new TrendingFixtures($this->entityManager());
+        $fixtures = (new TrendingFixtures($this->entityManager()))->ownedBy($user);
         $ann = $fixtures->feed('ann', SocialNetwork::Mastodon);
         $ben = $fixtures->feed('ben', SocialNetwork::Bluesky);
         $fixtures->subscribe($user, $ann, $ben);
@@ -112,7 +112,7 @@ final class SubscriptionTrendingCountsTest extends ApiTestCase
 
     private function seedStories(User $user): void
     {
-        $fixtures = new TrendingFixtures($this->entityManager());
+        $fixtures = (new TrendingFixtures($this->entityManager()))->ownedBy($user);
         $feeds = array_map(
             static fn (string $name): Feed => $fixtures->feed($name),
             ['alpha', 'beta', 'gamma', 'delta', 'omega'],

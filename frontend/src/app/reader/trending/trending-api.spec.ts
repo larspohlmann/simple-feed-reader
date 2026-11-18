@@ -2,8 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../../core/api';
-import { anEntry } from '../../../testing/entry-testing';
-import { EntriesPage } from '../models';
+import { aStory } from '../../../testing/entry-testing';
+import { ListPage } from '../state/list-page';
 import { TrendingApi } from './trending-api';
 import { FollowedStoriesResponseDto } from './trending.models';
 import { TrendingBuiltAt } from './trending-built-at';
@@ -27,13 +27,13 @@ describe('TrendingApi (#2017)', () => {
   afterEach(() => ctrl.verify());
 
   it("reads a window's stories as a list page with no further page", () => {
-    let page: EntriesPage | undefined;
+    let page: ListPage | undefined;
     api.page('week').subscribe((answer) => (page = answer));
     const request = ctrl.expectOne((each) => each.url === 'https://api.test/api/trending');
     expect(request.request.params.get('window')).toBe('week');
-    request.flush({ window: 'week', builtAt: null, stories: [anEntry({ id: 9 })] });
+    request.flush({ window: 'week', builtAt: null, stories: [aStory({ id: 9 })] });
 
-    expect(page).toEqual({ entries: [anEntry({ id: 9 })], nextCursor: null });
+    expect(page).toEqual({ items: [aStory({ id: 9 })], nextCursor: null });
   });
 
   it("records when the window's stories were built (#2264)", () => {

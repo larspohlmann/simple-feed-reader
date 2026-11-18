@@ -1,6 +1,6 @@
 import { Component, input } from '@angular/core';
-import { EntryDto, SubscriptionTagDto } from '../../models';
-import { MagazineBlock } from './magazine-block';
+import { SubscriptionTagDto } from '../../models';
+import { BlockCard, MagazineBlock } from './magazine-block';
 import { EntryHeroComponent } from './blocks/entry-hero/entry-hero.component';
 import { EntryCompactComponent } from './blocks/entry-compact/entry-compact.component';
 import { EntrySplitComponent } from './blocks/entry-split/entry-split.component';
@@ -47,9 +47,8 @@ export class MagazineBlockComponent {
     return this.feedTags().get(subscriptionId) ?? NO_TAGS;
   }
 
-  /** Narrow a block to its entry-carrying form for the template. */
-  protected entryOf(block: MagazineBlock): EntryDto {
-    return (block as Extract<MagazineBlock, { entry: EntryDto }>).entry;
+  protected cardOf(block: MagazineBlock): BlockCard {
+    return block as Exclude<MagazineBlock, { kind: 'group' }>;
   }
 
   protected side(block: MagazineBlock): 'left' | 'right' {

@@ -8,6 +8,7 @@ use App\Service\Operations\Worker\Handler\RebuildDueTrendingStoriesHandler;
 use App\Service\Operations\Worker\Message\RebuildDueTrendingStories;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecordingLogger;
+use App\Tests\Support\TrendingFixtures;
 use App\Tests\Support\TrendingWiring;
 use Symfony\Component\Clock\MockClock;
 
@@ -15,8 +16,15 @@ final class RebuildDueTrendingStoriesHandlerTest extends DbTestCase
 {
     public function testFiringRebuildsTheDueWindowsAndLogsTheReport(): void
     {
+        $reader = (new TrendingFixtures($this->entityManager))->owner();
+        $reader->setLastLoginAt(new \DateTimeImmutable('2031-05-14 11:00:00'));
+        $this->entityManager->flush();
         $logger = new RecordingLogger();
-        $rebuild = TrendingWiring::rebuild($this->entityManager, new MockClock('2031-05-14 12:00:00', 'UTC'));
+        $rebuild = TrendingWiring::rebuild(
+            $this->entityManager,
+            $this->registry(),
+            new MockClock('2031-05-14 12:00:00', 'UTC'),
+        );
 
         (new RebuildDueTrendingStoriesHandler($rebuild, $logger))(new RebuildDueTrendingStories());
 

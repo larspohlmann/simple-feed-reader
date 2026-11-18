@@ -32,7 +32,7 @@ final class TrendingExplainCommandTest extends DbTestCase
         $fixtures->flush();
         $tester = new CommandTester($this->command());
 
-        $tester->execute(['--window' => 'day']);
+        $tester->execute(['--user' => (string) $fixtures->owner()->requireId(), '--window' => 'day']);
 
         self::assertSame(Command::SUCCESS, $tester->getStatusCode());
         $display = $tester->getDisplay();
@@ -58,7 +58,7 @@ final class TrendingExplainCommandTest extends DbTestCase
         $fixtures->flush();
         $tester = new CommandTester($this->command());
 
-        $tester->execute(['--window' => 'day']);
+        $tester->execute(['--user' => (string) $fixtures->owner()->requireId(), '--window' => 'day']);
 
         self::assertStringContainsString('Languages: de 2, en 0, fr 1, es 0, none 1', $tester->getDisplay());
     }
@@ -67,10 +67,20 @@ final class TrendingExplainCommandTest extends DbTestCase
     {
         $tester = new CommandTester($this->command());
 
-        $tester->execute(['--window' => 'month']);
+        $tester->execute(['--user' => '1', '--window' => 'month']);
 
         self::assertSame(Command::FAILURE, $tester->getStatusCode());
         self::assertStringContainsString('Unknown window. Use one of: day, week.', $tester->getDisplay());
+    }
+
+    public function testRejectsAMissingUser(): void
+    {
+        $tester = new CommandTester($this->command());
+
+        $tester->execute(['--window' => 'day']);
+
+        self::assertSame(Command::INVALID, $tester->getStatusCode());
+        self::assertStringContainsString('--user', $tester->getDisplay());
     }
 
     private function command(): TrendingExplainCommand

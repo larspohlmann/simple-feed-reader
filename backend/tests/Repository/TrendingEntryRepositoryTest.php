@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Repository;
 
 use App\Entity\Entry;
+use App\Entity\Feed;
+use App\Entity\InclusionChange;
+use App\Entity\Subscription;
+use App\Entity\Tag;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 use App\Entity\ThreadPost;
@@ -39,6 +43,7 @@ final class TrendingEntryRepositoryTest extends DbTestCase
 
         $rows = iterator_to_array(
             (new TrendingEntryRepository($this->entityManager))->windowEntries(
+                $this->ownerId(),
                 new \DateTimeImmutable('2031-05-13 12:00:00', new \DateTimeZone('UTC')),
             ),
             false,
@@ -80,7 +85,10 @@ final class TrendingEntryRepositoryTest extends DbTestCase
 
         $streamedIds = [];
         $rows = (new TrendingEntryRepository($this->entityManager))
-            ->windowEntries(new \DateTimeImmutable('2031-05-13 12:00:00', new \DateTimeZone('UTC')));
+            ->windowEntries(
+                $this->ownerId(),
+                new \DateTimeImmutable('2031-05-13 12:00:00', new \DateTimeZone('UTC')),
+            );
         foreach ($rows as $row) {
             $streamedIds[] = $row->id;
             if (\count($streamedIds) > 3_000) {
@@ -101,6 +109,7 @@ final class TrendingEntryRepositoryTest extends DbTestCase
 
         $rows = iterator_to_array(
             (new TrendingEntryRepository($this->entityManager))->windowEntries(
+                $this->ownerId(),
                 new \DateTimeImmutable('2031-05-13 12:00:00', new \DateTimeZone('UTC')),
             ),
             false,
@@ -121,6 +130,7 @@ final class TrendingEntryRepositoryTest extends DbTestCase
 
         $rows = iterator_to_array(
             (new TrendingEntryRepository($this->entityManager))->windowEntries(
+                $this->ownerId(),
                 new \DateTimeImmutable('2031-05-13 12:00:00', new \DateTimeZone('UTC')),
             ),
             false,
@@ -160,6 +170,7 @@ final class TrendingEntryRepositoryTest extends DbTestCase
 
         $rows = iterator_to_array(
             (new TrendingEntryRepository($this->entityManager))->windowEntries(
+                $this->ownerId(),
                 new \DateTimeImmutable('2031-05-13 12:00:00', new \DateTimeZone('UTC')),
             ),
             false,
@@ -232,6 +243,7 @@ final class TrendingEntryRepositoryTest extends DbTestCase
     {
         $rows = iterator_to_array(
             (new TrendingEntryRepository($this->entityManager))->windowEntries(
+                $this->ownerId(),
                 new \DateTimeImmutable('2031-05-13 12:00:00', new \DateTimeZone('UTC')),
             ),
             false,
@@ -240,6 +252,79 @@ final class TrendingEntryRepositoryTest extends DbTestCase
         self::assertNotNull($rows[0]->links->card);
 
         return $rows[0]->links->card;
+    }
+
+    public function testWindowEntriesAreOnlyTheUsersIncludedFeeds(): void
+    {
+        $fixtures = new TrendingFixtures($this->entityManager);
+        $included = $fixtures->feed('included');
+        $switchedOff = $fixtures->feed('switched-off');
+        $stranger = $fixtures->feedNobodyFollows('stranger');
+        $expected = $fixtures->entry($included, 'Included', '2031-05-14 09:00:00');
+        $fixtures->entry($switchedOff, 'Switched off', '2031-05-14 09:00:00');
+        $fixtures->entry($stranger, 'Stranger', '2031-05-14 09:00:00');
+        $fixtures->flush();
+        $this->subscriptionTo($switchedOff)->changeInclusions(new InclusionChange(trending: false));
+        $fixtures->flush();
+
+        self::assertSame([$expected->requireId()], $this->windowEntryIds());
+    }
+
+    public function testWindowEntriesLeaveOutAFeedUnderASwitchedOffTag(): void
+    {
+        $fixtures = new TrendingFixtures($this->entityManager);
+        $feed = $fixtures->feed('tagged');
+        $fixtures->entry($feed, 'Tagged', '2031-05-14 09:00:00');
+        $fixtures->flush();
+        $tag = new Tag($fixtures->owner(), 'Muted');
+        $this->entityManager->persist($tag);
+        $subscription = $this->subscriptionTo($feed);
+        $subscription->addTag($tag);
+        $tag->changeInclusions(new InclusionChange(trending: false));
+        $fixtures->flush();
+
+        self::assertSame([], $this->windowEntryIds());
+    }
+
+    public function testHasEntriesCreatedAfter(): void
+    {
+        $fixtures = new TrendingFixtures($this->entityManager);
+        $fixtures->entry($fixtures->feed('included'), 'Included', '2031-05-14 09:00:00');
+        $fixtures->entry($fixtures->feedNobodyFollows('stranger'), 'Newer stranger', '2031-05-14 10:00:00');
+        $fixtures->flush();
+        $created = new \DateTimeImmutable('2031-05-14 09:00:00', new \DateTimeZone('UTC'));
+        $repository = new TrendingEntryRepository($this->entityManager);
+
+        self::assertTrue($repository->hasEntriesCreatedAfter($this->ownerId(), $created->modify('-1 second')));
+        self::assertFalse($repository->hasEntriesCreatedAfter($this->ownerId(), $created));
+    }
+
+    private function ownerId(): int
+    {
+        return (new TrendingFixtures($this->entityManager))->owner()->requireId();
+    }
+
+    /** @return list<int> */
+    private function windowEntryIds(): array
+    {
+        return array_map(
+            static fn (WindowEntryModel $row): int => $row->id,
+            iterator_to_array(
+                (new TrendingEntryRepository($this->entityManager))->windowEntries(
+                    $this->ownerId(),
+                    new \DateTimeImmutable('2031-05-13 12:00:00', new \DateTimeZone('UTC')),
+                ),
+                false,
+            ),
+        );
+    }
+
+    private function subscriptionTo(Feed $feed): Subscription
+    {
+        $subscription = $this->entityManager->getRepository(Subscription::class)->findOneBy(['feed' => $feed]);
+        self::assertInstanceOf(Subscription::class, $subscription);
+
+        return $subscription;
     }
 
     private function sharedLinks(): SharedLinkWriter

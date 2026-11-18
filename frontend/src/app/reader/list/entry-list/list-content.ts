@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { planMagazine } from '../magazine/magazine-planner';
 import { REVEAL_STEP, isAppendedPage } from '../paging';
-import { EntryDto } from '../../models';
+import { ListItem, leadOf } from '../../state/list-item';
 import { Selection, isSingleStreamView, listOrderOf } from '../../query/query';
 import { sameMembers } from '../../state/same-members';
 import { isSavedFeed, isSocialFeed } from '../../state/social-sections';
@@ -19,7 +19,7 @@ import { blocksWithout, groupMembersWithout, ListBlock } from './hidden-overlay'
 import { ListSegment, segmentList, segmentsWithout } from './list-segments';
 
 export interface ListContentOptions {
-  readonly entries: Signal<EntryDto[]>;
+  readonly items: Signal<ListItem[]>;
   readonly hasMore: Signal<boolean>;
   readonly selection: Signal<Selection>;
   readonly newestRunId: Signal<number | null>;
@@ -27,7 +27,7 @@ export interface ListContentOptions {
   readonly newSinceVisitIds: Signal<ReadonlySet<number>>;
 }
 
-/** What the list renders: the entries revealed so far, planned into blocks and
+/** What the list renders: the items revealed so far, planned into blocks and
  *  segments, minus the rows hidden by a mark-above-read. Built in a field
  *  initializer, so its effects are created there. */
 export class ListContent {
@@ -47,27 +47,27 @@ export class ListContent {
     { equal: sameMembers },
   );
 
-  /** How many of `entries()` are rendered. Trails the list while an appended
+  /** How many of `items()` are rendered. Trails the list while an appended
    *  page is revealed a step per frame (#501); equals the length otherwise. */
   private readonly revealedCount = signal(0);
   private revealFrame = 0;
-  private lastEntries: EntryDto[] = [];
+  private lastItems: ListItem[] = [];
 
   readonly rendered = computed(() => {
-    const all = this.options.entries();
+    const all = this.options.items();
     const count = this.revealedCount();
     return count >= all.length ? all : all.slice(0, count);
   });
-  private readonly fullyRevealed = computed(() => this.rendered() === this.options.entries());
+  private readonly fullyRevealed = computed(() => this.rendered() === this.options.items());
 
   private readonly _revealAppended = effect(() => {
-    const next = this.options.entries();
-    const previous = this.lastEntries;
-    this.lastEntries = next;
+    const next = this.options.items();
+    const previous = this.lastItems;
+    this.lastItems = next;
     untracked(() => this.startReveal(previous, next));
   });
 
-  /** The rendered entries cut at every run header and the visit's divider, for both layouts. */
+  /** The rendered items cut at every run header and the visit's divider, for both layouts. */
   readonly segments = computed<ListSegment[]>(() =>
     segmentList(this.rendered(), {
       showsRunHeader: (group) => group.runId != null && group.runId !== this.options.newestRunId(),
@@ -86,18 +86,18 @@ export class ListContent {
     };
     const complete = !this.options.hasMore() && this.fullyRevealed();
     const segments = this.segments();
-    return segments.flatMap(({ divider, entries }, index) => [
+    return segments.flatMap(({ divider, items }, index) => [
       ...(divider === null ? [] : [divider]),
       ...planMagazine({
         ...collapse,
-        entries,
+        items,
         complete: index === segments.length - 1 ? complete : true,
       }),
     ]);
   });
 
   /** Ids hidden from the render after a mark-above-read on an unread view — a
-   *  post-plan overlay, never fed back into `entries()`, so the planner does
+   *  post-plan overlay, never fed back into `items()`, so the planner does
    *  not re-run and every block below the boundary keeps its position (#1080). */
   readonly hiddenAboveIds = signal<ReadonlySet<number>>(new Set());
 
@@ -119,9 +119,9 @@ export class ListContent {
   );
 
   /** Rows the user can still see — loaded set minus the collapsed and the
-   *  mark-above-hidden ones. The empty state keys on this, not `entries().length`,
+   *  mark-above-hidden ones. The empty state keys on this, not `items().length`,
    *  so removing the last row shows "nothing here" immediately. */
-  readonly visibleEntryCount = computed(() => this.countVisible(this.options.entries()));
+  readonly visibleEntryCount = computed(() => this.countVisible(this.options.items()));
 
   /** `visibleEntryCount` over the rows already in the DOM. */
   readonly renderedVisibleCount = computed(() =>
@@ -143,13 +143,16 @@ export class ListContent {
     this.hiddenAboveIds.set(new Set());
   }
 
-  private countVisible(entries: EntryDto[]): number {
+  private countVisible(items: ListItem[]): number {
     const leaving = this.options.leavingIds();
     const hidden = this.hiddenAboveIds();
-    return entries.filter((entry) => !leaving.has(entry.id) && !hidden.has(entry.id)).length;
+    return items.filter((item) => {
+      const { id } = leadOf(item);
+      return !leaving.has(id) && !hidden.has(id);
+    }).length;
   }
 
-  private startReveal(previous: EntryDto[], next: EntryDto[]): void {
+  private startReveal(previous: ListItem[], next: ListItem[]): void {
     this.cancelReveal();
     if (!isAppendedPage(previous, next)) {
       this.revealedCount.set(next.length);
@@ -161,13 +164,13 @@ export class ListContent {
 
   private scheduleRevealStep(): void {
     if (typeof requestAnimationFrame === 'undefined') {
-      this.revealedCount.set(this.options.entries().length);
+      this.revealedCount.set(this.options.items().length);
       return;
     }
     this.revealFrame = this.zone.runOutsideAngular(() =>
       requestAnimationFrame(() => {
         this.revealFrame = 0;
-        const total = this.options.entries().length;
+        const total = this.options.items().length;
         this.revealedCount.update((count) => Math.min(count + REVEAL_STEP, total));
         if (this.revealedCount() < total) this.scheduleRevealStep();
       }),

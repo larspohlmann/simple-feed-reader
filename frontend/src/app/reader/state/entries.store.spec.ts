@@ -14,7 +14,10 @@ import { EntryDto } from '../models';
 import { VoteValue } from '../vote-pill/vote';
 import { CompletedEntryDto } from './completed-entry';
 import { markTerms } from '../../shared/marked-text/search-marks';
-import { aLinkCard, anEntry, aStory } from '../../../testing/entry-testing';
+import { aLinkCard, anEntry, aStory, aStoryArticle } from '../../../testing/entry-testing';
+import { TrendingStoryDto } from '../trending/trending.models';
+import { storyOf } from './list-item';
+import { listPageOf } from './list-page';
 import { aThreadPost } from '../../../testing/thread-testing';
 
 const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
@@ -107,7 +110,7 @@ describe('EntriesStore', () => {
     store.load({ view: 'trending', window: 'day' });
     ctrl
       .expectOne('https://api.test/api/trending?window=day')
-      .flush({ entries: [entry(1)], nextCursor: null });
+      .flush({ window: 'day', builtAt: null, stories: [aStory()] });
 
     store.reloadIfShowing('trending');
 
@@ -1356,58 +1359,86 @@ describe('EntriesStore', () => {
     });
   });
 
-  describe('a Trending story (#2017, #2128)', () => {
-    const card = (id: number, followed = false) =>
-      entry(id, { story: aStory({ id: id * 10, followed }) });
-    const listed = () => store.entries().map((row) => row.id);
+  describe('a Trending story (#2017, #2128, #2328)', () => {
+    const storyOfThree = (id: number) =>
+      aStory({
+        id,
+        articles: [1, 2, 3].map((position) => aStoryArticle({ id: id * 10 + position })),
+      });
+    const loadStories = (stories: TrendingStoryDto[], window: 'day' | 'week' = 'day') => {
+      store.load({ view: 'trending', window });
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/trending')
+        .flush({ window, builtAt: null, stories });
+    };
+    const firstStory = (): TrendingStoryDto => {
+      const story = storyOf(store.items()[0]);
+      if (story === null) throw new Error('the list holds no story');
+      return story;
+    };
     const hideRequest = () => ctrl.expectOne('https://api.test/api/trending/hidden');
     const failed = { status: 500, statusText: 'err' };
     const problem = { type: 'x', title: 't', status: 500 };
     const noContent = { status: 204, statusText: 'No Content' };
-    const loadThree = (window: 'day' | 'week' = 'day') => {
-      store.load({ view: 'trending', window });
+
+    it('loads a Trending page as story items', () => {
+      const story = storyOfThree(4);
+      loadStories([story]);
+
+      expect(store.items()).toEqual([story]);
+      expect(store.entries().map((article) => article.id)).toEqual([41, 42, 43]);
+    });
+
+    it("marking a story's second article viewed patches it inside the story", () => {
+      loadStories([storyOfThree(4)]);
+      const lead = firstStory().articles[0];
+
+      store.setState(42, { isViewed: true });
+
+      expect(firstStory().articles[1].isViewed).toBe(true);
+      expect(firstStory().articles[0]).toBe(lead);
+      ctrl.expectOne('https://api.test/api/entries/42/state');
+    });
+
+    it('an in-flight patch survives a Trending reload', () => {
+      loadStories([storyOfThree(4)]);
+      store.setState(42, { isFavorite: true });
+      const patch = ctrl.expectOne('https://api.test/api/entries/42/state');
+
+      store.reload();
       ctrl
         .expectOne((request) => request.url === 'https://api.test/api/trending')
-        .flush({ window, builtAt: null, stories: [card(1), card(2, true), card(3)] });
-    };
+        .flush({ window: 'day', builtAt: null, stories: [storyOfThree(4)] });
+
+      expect(firstStory().articles[1].isFavorite).toBe(true);
+      expect(store.entry(42)?.isFavorite).toBe(true);
+      patch.flush({});
+    });
 
     describe('hiding it', () => {
-      it('keeps the card in the list for its caller to let leave, and hides its story by id', () => {
-        loadThree('week');
+      it('hideTrendingStory posts the story id', () => {
+        loadStories([storyOfThree(4)], 'week');
         const onStarted = jest.fn();
         const onSaved = jest.fn();
 
-        store.hideTrendingStory(2, { onStarted, onSaved });
+        store.hideTrendingStory(firstStory(), { onStarted, onSaved });
 
         expect(onStarted).toHaveBeenCalledTimes(1);
         const request = hideRequest();
         expect(request.request.method).toBe('POST');
-        expect(request.request.body).toEqual({ storyId: 20 });
+        expect(request.request.body).toEqual({ storyId: 4 });
         expect(onSaved).not.toHaveBeenCalled();
         request.flush(null, noContent);
         expect(onSaved).toHaveBeenCalledTimes(1);
-        expect(listed()).toEqual([1, 2, 3]);
-      });
-
-      it('hides nothing for a row that carries no story', () => {
-        store.load({ view: 'all' });
-        ctrl
-          .expectOne((request) => request.url === 'https://api.test/api/entries')
-          .flush({ entries: [entry(1), entry(2)], nextCursor: null });
-        const onStarted = jest.fn();
-
-        store.hideTrendingStory(2, { onStarted });
-
-        expect(onStarted).not.toHaveBeenCalled();
-        ctrl.expectNone('https://api.test/api/trending/hidden');
+        expect(store.items()).toHaveLength(1);
       });
 
       it('reports a failed hide with the error banner, and starts again on retry', () => {
-        loadThree();
+        loadStories([storyOfThree(4)]);
         const onStarted = jest.fn();
         const onFailed = jest.fn();
 
-        store.hideTrendingStory(2, { onStarted, onFailed });
+        store.hideTrendingStory(firstStory(), { onStarted, onFailed });
         hideRequest().flush(problem, failed);
 
         expect(onFailed).toHaveBeenCalledTimes(1);
@@ -1441,7 +1472,7 @@ describe('EntriesStore', () => {
       expect(landed).toEqual([]);
       storyRequest().flush(storyPage);
 
-      expect(landed).toEqual([{ query: story, page: storyPage }]);
+      expect(landed).toEqual([{ query: story, page: listPageOf(storyPage) }]);
       expect(store.entries().map((row) => row.id)).toEqual([1]);
     });
 

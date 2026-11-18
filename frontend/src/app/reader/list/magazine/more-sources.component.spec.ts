@@ -2,10 +2,12 @@ import { Provider } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { EntryDto } from '../../models';
+import { ListItem, leadOf, storyOf as storyOfItem } from '../../state/list-item';
+import { StoryArticleDto } from '../../trending/trending.models';
 import { MoreSourcesComponent } from './more-sources.component';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
-import { aLinkCard, anEntry, aStory } from '../../../../testing/entry-testing';
+import { aLinkCard, anEntry, aStory, aStoryArticle } from '../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service';
 import { provideStoryActions } from '../../../../testing/story-actions-testing';
@@ -21,7 +23,7 @@ beforeEach(() => {
 });
 
 function mount(
-  entry: EntryDto,
+  item: ListItem,
   reader: Partial<LinkReaderNavigation> | null = navigation,
   storyActions: Provider[] = [],
 ): HTMLElement {
@@ -36,7 +38,8 @@ function mount(
     ],
   });
   fixture = TestBed.createComponent(MoreSourcesComponent);
-  fixture.componentRef.setInput('entry', entry);
+  fixture.componentRef.setInput('entry', leadOf(item));
+  fixture.componentRef.setInput('story', storyOfItem(item));
   fixture.detectChanges();
   return fixture.nativeElement as HTMLElement;
 }
@@ -46,15 +49,22 @@ function expand(element: HTMLElement): void {
   fixture.detectChanges();
 }
 
-const storyOf = (duplicates: EntryDto[]): EntryDto =>
-  anEntry({
-    duplicates,
-    story: aStory({ outletCount: duplicates.length + 1, viewed: false, shareCount: 0 }),
+const storyOf = (others: StoryArticleDto[]): ListItem =>
+  aStory({
+    outletCount: others.length + 1,
+    viewed: false,
+    shareCount: 0,
+    articles: [aStoryArticle(), ...others],
   });
 
 const copies = [
-  anEntry({ id: 2, source: 'NDR', title: 'Storm hits the coast', imageUrl: 'https://img/2.jpg' }),
-  anEntry({ id: 3, source: 'taz', title: 'Coast braces for storm', imageUrl: null }),
+  aStoryArticle({
+    id: 2,
+    source: 'NDR',
+    title: 'Storm hits the coast',
+    imageUrl: 'https://img/2.jpg',
+  }),
+  aStoryArticle({ id: 3, source: 'taz', title: 'Coast braces for storm', imageUrl: null }),
 ];
 
 it('renders nothing without other sources', () => {
@@ -78,7 +88,7 @@ it("opens a story's other outlets as mini cards, not pills", () => {
 
 describe("a Trending story's line (#2128)", () => {
   const lineOf = (element: HTMLElement) => element.querySelector('.more-sources .story-line')!;
-  const onTrending = (entry: EntryDto) => mount(entry, navigation, provideStoryActions());
+  const onTrending = (item: ListItem) => mount(item, navigation, provideStoryActions());
 
   it('holds the story actions first, the counts beside them and the toggle last', () => {
     const line = lineOf(onTrending(storyOf(copies)));
@@ -94,7 +104,7 @@ describe("a Trending story's line (#2128)", () => {
   });
 
   it('names the story counts between the actions and the toggle (#2291)', () => {
-    const story = anEntry({ story: aStory({ outletCount: 7, viewed: false, shareCount: 2 }) });
+    const story = aStory({ outletCount: 7, viewed: false, shareCount: 2 });
     const counts = lineOf(onTrending(story)).querySelector('.counts')!;
 
     expect(counts.textContent).toContain('7 sources');
@@ -139,7 +149,7 @@ it('counts a single other article too', () => {
 });
 
 it('shows an article no followed outlet carries as the card its posts share', () => {
-  const sharedArticle = anEntry({
+  const sharedArticle = aStoryArticle({
     id: 4,
     titleDerived: true,
     excerpt: 'wow, look at this',
@@ -174,7 +184,7 @@ it('expands to one mini card per source, naming its feed and title', () => {
 });
 
 it('names a copy by its poster when someone other than the feed posted it', () => {
-  const post = anEntry({
+  const post = aStoryArticle({
     id: 4,
     source: 'Home',
     poster: { name: 'Hank Green', url: null, imageUrl: null },
@@ -204,7 +214,7 @@ it("loads a source's picture asynchronously and without a referrer", () => {
   expect(thumb.getAttribute('decoding')).toBe('async');
 });
 
-const withRenditions = anEntry({
+const withRenditions = aStoryArticle({
   id: 7,
   source: 'BBC',
   title: 'Raman wins',
@@ -268,12 +278,12 @@ function mountOnCard(type: 'click' | 'keydown'): { element: HTMLElement; reached
 
 function mountOnCardWith(
   type: 'click' | 'keydown',
-  entry: EntryDto,
+  item: ListItem,
 ): { element: HTMLElement; reached: jest.Mock } {
   const card = document.createElement('div');
   const reached = jest.fn();
   card.addEventListener(type, reached);
-  const element = mount(entry);
+  const element = mount(item);
   card.appendChild(element);
   return { element, reached };
 }
@@ -314,7 +324,7 @@ it.each([
 });
 
 it("shows each source's dek under its title", () => {
-  const withDek = anEntry({
+  const withDek = aStoryArticle({
     id: 5,
     source: 'BBC',
     title: 'Raman wins',
@@ -327,7 +337,7 @@ it("shows each source's dek under its title", () => {
 });
 
 it('leaves out the dek line when a source has none', () => {
-  const bare = anEntry({ id: 6, source: 'CBC', title: 'New mayor', excerpt: '' });
+  const bare = aStoryArticle({ id: 6, source: 'CBC', title: 'New mayor', excerpt: '' });
   const element = mount(storyOf([bare]));
   expand(element);
 
@@ -349,8 +359,8 @@ const poster = (id: number, name: string): EntryDto =>
     poster: { name, url: null, imageUrl: null },
   });
 
-const shareLed = (card: Parameters<typeof aLinkCard>[0], shares: EntryDto[]): EntryDto =>
-  anEntry({
+const shareLed = (card: Parameters<typeof aLinkCard>[0], shares: EntryDto[]): StoryArticleDto =>
+  aStoryArticle({
     id: 8,
     titleDerived: true,
     excerpt: 'look at this',
@@ -387,7 +397,7 @@ it('opens the post a sharer pill stands for, and not the card it sits on', () =>
 });
 
 it('shows sharer pills on an outlet mini card posts share too', () => {
-  const shared = anEntry({ id: 12, source: 'NDR', shares: [poster(10, 'Ann')] });
+  const shared = aStoryArticle({ id: 12, source: 'NDR', shares: [poster(10, 'Ann')] });
   const element = mount(storyOf([shared]));
   expand(element);
 
@@ -562,7 +572,7 @@ it('keeps a dek that merely mentions a URL', () => {
 });
 
 it('leads a link post with a title of its own by the card it shares, as a Lemmy link post', () => {
-  const linkPost = anEntry({
+  const linkPost = aStoryArticle({
     id: 13,
     titleDerived: false,
     title: 'Judge halts plan',

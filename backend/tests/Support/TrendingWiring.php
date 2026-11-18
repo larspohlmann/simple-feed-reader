@@ -6,6 +6,7 @@ namespace App\Tests\Support;
 
 use App\Entity\TrendingSnapshot;
 use App\Entity\TrendingStoryFollow;
+use App\Entity\User;
 use App\Repository\TrendingEntryRepository;
 use App\Repository\TrendingSnapshotRepository;
 use App\Repository\TrendingStoryFollowRepository;
@@ -31,6 +32,7 @@ use App\Service\Curation\Trending\TrendingRebuild;
 use App\Service\Ingestion\Language\Factory\LanguageDetectionFactory;
 use App\Service\Ingestion\Language\LanguageGuess;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\Persistence\ManagerRegistry;
 use Psr\Clock\ClockInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\DependencyInjection\ServiceLocator;
@@ -43,6 +45,7 @@ final class TrendingWiring
 {
     public static function rebuild(
         EntityManagerInterface $entityManager,
+        ManagerRegistry $registry,
         ClockInterface $clock,
         LockFactory $locks = new LockFactory(new InMemoryStore()),
     ): TrendingRebuild {
@@ -50,6 +53,7 @@ final class TrendingWiring
         $snapshots = self::snapshots($entityManager);
         $builder = new TrendingSnapshotBuilder(
             self::grouping($entityManager, $clock),
+            new TrendingEntryRepository($entityManager),
             self::policies($entityManager),
             new TrendingStoryHistoryRepository($entityManager),
             $snapshots,
@@ -58,7 +62,15 @@ final class TrendingWiring
             $locks,
         );
 
-        return new TrendingRebuild($builder, $snapshots, $naiveClock, new NullLogger());
+        return new TrendingRebuild(
+            $builder,
+            $snapshots,
+            new TrendingEntryRepository($entityManager),
+            $entityManager->getRepository(User::class),
+            $naiveClock,
+            new NullLogger(),
+            $registry,
+        );
     }
 
     public static function policies(EntityManagerInterface $entityManager): ContainerInterface

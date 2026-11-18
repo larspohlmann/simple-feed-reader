@@ -4,12 +4,14 @@ import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../../../testing/transloco-testing';
 import { EntryLinkComponent } from './entry-link.component';
 import { EntryDto } from '../../../../models';
+import { ListItem, leadOf, storyOf } from '../../../../state/list-item';
+import { StoryArticleDto } from '../../../../trending/trending.models';
 import { LinkCardDto } from '../../../../link-card/link-card';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
 import { LinkReaderNavigation } from '../../../../shell/link-reader-navigation.service';
 import { PreviewProgress } from '../../../../link-card/preview-progress';
 import { ProxiedImageDirective } from '../../../../../shared/proxied-image/proxied-image.directive';
-import { aLinkCard, anEntry, aStory } from '../../../../../../testing/entry-testing';
+import { aLinkCard, anEntry, aStory, aStoryArticle } from '../../../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
 import { provideSocialAccounts } from '../../../../../../testing/social-accounts-testing';
 
@@ -44,7 +46,10 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto =>
     ...over,
   });
 
-function mount(testEntry: EntryDto) {
+const article = (over: Partial<StoryArticleDto> = {}): StoryArticleDto =>
+  aStoryArticle({ ...entry(), ...over });
+
+function mount(item: ListItem) {
   TestBed.configureTestingModule({
     imports: [EntryLinkComponent, provideTranslocoTesting()],
     providers: [
@@ -57,7 +62,8 @@ function mount(testEntry: EntryDto) {
     ],
   });
   const fixture = TestBed.createComponent(EntryLinkComponent);
-  fixture.componentRef.setInput('entry', testEntry);
+  fixture.componentRef.setInput('entry', leadOf(item));
+  fixture.componentRef.setInput('story', storyOf(item));
   fixture.detectChanges();
   return fixture;
 }
@@ -226,14 +232,19 @@ describe('EntryLinkComponent', () => {
   });
 
   it('leads a Trending story with the post, its card, the sources line and the posters of the rest', () => {
-    const other = (id: number, name: string): EntryDto =>
-      entry({ id, source: 'Home@bsky', poster: { name, url: null, imageUrl: null } });
+    const other = (id: number, name: string): StoryArticleDto =>
+      article({ id, source: 'Home@bsky', poster: { name, url: null, imageUrl: null } });
     const fixture = mount(
-      entry({
-        poster: { name: 'Ann', url: null, imageUrl: null },
-        linkCards: [card()],
-        duplicates: [other(2, 'Ben'), other(3, 'Cat'), other(4, 'Dan')],
-        story: aStory({ outletCount: 4, viewed: false, shareCount: 0 }),
+      aStory({
+        outletCount: 4,
+        viewed: false,
+        shareCount: 0,
+        articles: [
+          article({ poster: { name: 'Ann', url: null, imageUrl: null }, linkCards: [card()] }),
+          other(2, 'Ben'),
+          other(3, 'Cat'),
+          other(4, 'Dan'),
+        ],
       }),
     );
     const element = fixture.nativeElement as HTMLElement;
@@ -254,12 +265,17 @@ describe('EntryLinkComponent', () => {
     const sharer = (id: number, name: string): EntryDto =>
       entry({ id, excerpt: `${name} says read this`, poster: { name, url: null, imageUrl: null } });
     const fixture = mount(
-      entry({
-        poster: { name: 'Ann', url: null, imageUrl: null },
-        linkCards: [card()],
-        shares: [sharer(1, 'Ann'), sharer(5, 'Eve'), sharer(6, 'Fay')],
-        duplicates: [],
-        story: aStory({ outletCount: 2, viewed: false, shareCount: 3 }),
+      aStory({
+        outletCount: 2,
+        viewed: false,
+        shareCount: 3,
+        articles: [
+          article({
+            poster: { name: 'Ann', url: null, imageUrl: null },
+            linkCards: [card()],
+            shares: [sharer(1, 'Ann'), sharer(5, 'Eve'), sharer(6, 'Fay')],
+          }),
+        ],
       }),
     );
     const element = fixture.nativeElement as HTMLElement;
@@ -278,7 +294,7 @@ describe('EntryLinkComponent', () => {
 
   it('names no shares on a story no post shares', () => {
     const element = mount(
-      entry({ story: aStory({ outletCount: 2, viewed: false, shareCount: 0 }) }),
+      aStory({ outletCount: 2, viewed: false, shareCount: 0, articles: [article()] }),
     ).nativeElement as HTMLElement;
 
     expect(element.querySelector('app-story-source-count')!.textContent).not.toContain('share');
@@ -287,10 +303,13 @@ describe('EntryLinkComponent', () => {
 
   it('shows the sharers of the other articles on their mini cards', () => {
     const fixture = mount(
-      entry({
-        story: aStory({ outletCount: 3, viewed: false, shareCount: 2 }),
-        duplicates: [
-          entry({
+      aStory({
+        outletCount: 3,
+        viewed: false,
+        shareCount: 2,
+        articles: [
+          article(),
+          article({
             id: 2,
             titleDerived: false,
             title: 'Other article',

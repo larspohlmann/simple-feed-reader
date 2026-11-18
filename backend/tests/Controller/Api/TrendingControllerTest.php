@@ -30,7 +30,7 @@ final class TrendingControllerTest extends ApiTestCase
     public function testListsTheReadersStoriesOfTheWindow(): void
     {
         [$headers, $user] = $this->bearerAndUser('trending-api@example.com');
-        $fixtures = new TrendingFixtures($this->entityManager());
+        $fixtures = (new TrendingFixtures($this->entityManager()))->ownedBy($user);
         $alpha = $fixtures->feed('alpha');
         $beta = $fixtures->feed('beta');
         $gamma = $fixtures->feed('gamma');
@@ -50,33 +50,25 @@ final class TrendingControllerTest extends ApiTestCase
         self::assertCount(1, $payload['stories']);
         $story = $payload['stories'][0];
         self::assertIsArray($story);
-        self::assertSame($lead->requireId(), $story['id']);
-        self::assertSame('Lead', $story['title']);
-        self::assertIsArray($story['duplicates']);
+        self::assertSame($stored->requireId(), $story['id']);
+        self::assertSame($lead->requireId(), $story['leadEntryId']);
+        self::assertSame(3, $story['outletCount']);
+        self::assertFalse($story['viewed']);
+        self::assertSame(0, $story['shareCount']);
+        self::assertFalse($story['followed']);
         self::assertSame(
-            [$second->requireId(), $third->requireId()],
-            array_map(
-                static fn (mixed $outlet): mixed => \is_array($outlet) ? $outlet['id'] : null,
-                $story['duplicates'],
-            ),
+            [$lead->requireId(), $second->requireId(), $third->requireId()],
+            self::idsOf($story['articles']),
         );
-        self::assertSame(
-            [
-                'id' => $stored->requireId(),
-                'outletCount' => 3,
-                'viewed' => false,
-                'shareCount' => 0,
-                'followed' => false,
-            ],
-            $story['story'],
-        );
-        self::assertSame([], $story['shares']);
+        $articles = self::articlesOf($story);
+        self::assertSame('Lead', $articles[0]['title']);
+        self::assertSame([], $articles[0]['shares']);
     }
 
     public function testEachStoryCarriesItsId(): void
     {
         [$headers, $user] = $this->bearerAndUser('trending-story-id@example.com');
-        $fixtures = new TrendingFixtures($this->entityManager());
+        $fixtures = (new TrendingFixtures($this->entityManager()))->ownedBy($user);
         $feeds = [$fixtures->feed('alpha'), $fixtures->feed('beta'), $fixtures->feed('gamma')];
         $fixtures->subscribe($user, ...$feeds);
         $fixtures->story(TrendingWindow::Day, '2031-05-14 09:00:00', ...array_map(
@@ -94,14 +86,13 @@ final class TrendingControllerTest extends ApiTestCase
         $stories = $this->payload($this->client)['stories'];
         self::assertIsArray($stories);
         self::assertIsArray($stories[0]);
-        self::assertIsArray($stories[0]['story']);
-        self::assertSame($newer->requireId(), $stories[0]['story']['id']);
+        self::assertSame($newer->requireId(), $stories[0]['id']);
     }
 
     public function testAStoryNoFollowedOutletCarriesIsLedByItsMostSharedArticleWithItsSharesUnderIt(): void
     {
         [$headers, $user] = $this->bearerAndUser('trending-card-led@example.com');
-        $fixtures = new TrendingFixtures($this->entityManager());
+        $fixtures = (new TrendingFixtures($this->entityManager()))->ownedBy($user);
         $ann = $fixtures->feed('ann', SocialNetwork::Mastodon);
         $ben = $fixtures->feed('ben', SocialNetwork::Bluesky);
         $cat = $fixtures->feed('cat', SocialNetwork::Bluesky);
@@ -132,31 +123,23 @@ final class TrendingControllerTest extends ApiTestCase
 
         self::assertResponseIsSuccessful();
         $story = self::onlyStoryOf($this->payload($this->client));
-        self::assertSame($alsoSharing->requireId(), $story['id'], 'the newest share with a pictured card');
-        self::assertIsArray($story['linkCards']);
-        self::assertIsArray($story['linkCards'][0]);
-        self::assertSame('Lighthouse keepers strike', $story['linkCards'][0]['title']);
-        self::assertSame([$alsoSharing->requireId(), $pictured->requireId()], self::idsOf($story['shares']));
-        self::assertSame([$other->requireId()], self::idsOf($story['duplicates']));
-        self::assertIsArray($story['duplicates']);
-        self::assertIsArray($story['duplicates'][0]);
-        self::assertSame([$other->requireId()], self::idsOf($story['duplicates'][0]['shares']));
-        self::assertSame(
-            [
-                'id' => $stored->requireId(),
-                'outletCount' => 3,
-                'viewed' => false,
-                'shareCount' => 3,
-                'followed' => false,
-            ],
-            $story['story'],
-        );
+        self::assertSame($stored->requireId(), $story['id']);
+        self::assertSame($alsoSharing->requireId(), $story['leadEntryId'], 'the newest share with a pictured card');
+        $articles = self::articlesOf($story);
+        self::assertSame([$alsoSharing->requireId(), $other->requireId()], self::idsOf($articles));
+        self::assertIsArray($articles[0]['linkCards']);
+        self::assertIsArray($articles[0]['linkCards'][0]);
+        self::assertSame('Lighthouse keepers strike', $articles[0]['linkCards'][0]['title']);
+        self::assertSame([$alsoSharing->requireId(), $pictured->requireId()], self::idsOf($articles[0]['shares']));
+        self::assertSame([$other->requireId()], self::idsOf($articles[1]['shares']));
+        self::assertSame(3, $story['outletCount']);
+        self::assertSame(3, $story['shareCount']);
     }
 
     public function testAPostSharingAFollowedOutletsArticleIsAShareOfItsRowNotASourceOrARow(): void
     {
         [$headers, $user] = $this->bearerAndUser('trending-article-led@example.com');
-        $fixtures = new TrendingFixtures($this->entityManager());
+        $fixtures = (new TrendingFixtures($this->entityManager()))->ownedBy($user);
         $alpha = $fixtures->feed('alpha');
         $beta = $fixtures->feed('beta');
         $ann = $fixtures->feed('ann', SocialNetwork::Mastodon);
@@ -180,29 +163,22 @@ final class TrendingControllerTest extends ApiTestCase
 
         self::assertResponseIsSuccessful();
         $story = self::onlyStoryOf($this->payload($this->client));
-        self::assertSame($lead->requireId(), $story['id']);
-        self::assertSame([$post->requireId()], self::idsOf($story['shares']));
-        self::assertSame([$second->requireId()], self::idsOf($story['duplicates']));
-        self::assertSame(
-            [
-                'id' => $stored->requireId(),
-                'outletCount' => 3,
-                'viewed' => false,
-                'shareCount' => 1,
-                'followed' => false,
-            ],
-            $story['story'],
-        );
+        self::assertSame($stored->requireId(), $story['id']);
+        self::assertSame($lead->requireId(), $story['leadEntryId']);
+        $articles = self::articlesOf($story);
+        self::assertSame([$lead->requireId(), $second->requireId()], self::idsOf($articles));
+        self::assertSame([$post->requireId()], self::idsOf($articles[0]['shares']));
+        self::assertSame(3, $story['outletCount']);
+        self::assertSame(1, $story['shareCount']);
     }
 
     public function testAStorysSourceCountIsTheOutletsItsCardShowsTheReader(): void
     {
         [$headers, $user] = $this->bearerAndUser('trending-shown-count@example.com');
-        $fixtures = new TrendingFixtures($this->entityManager());
+        $fixtures = (new TrendingFixtures($this->entityManager()))->ownedBy($user);
         $alpha = $fixtures->feed('alpha');
         $beta = $fixtures->feed('beta');
         $switchedOut = $fixtures->feed('gamma');
-        $unfollowed = $fixtures->feed('delta');
         $ann = $fixtures->feed('ann', SocialNetwork::Mastodon);
         $fixtures->subscribe($user, $alpha, $beta, $switchedOut, $ann);
         $lead = $fixtures->entry($alpha, 'Lead', '2031-05-14 10:00:00');
@@ -210,7 +186,6 @@ final class TrendingControllerTest extends ApiTestCase
             [$lead, 'alpha.example.com'],
             [$fixtures->entry($beta, 'Second', '2031-05-14 09:00:00'), 'beta.example.com'],
             [$fixtures->entry($switchedOut, 'Switched out', '2031-05-14 08:00:00'), 'gamma.example.com'],
-            [$fixtures->entry($unfollowed, 'Unfollowed', '2031-05-14 07:00:00'), 'delta.example.com'],
             [$fixtures->entry($ann, 'A post without a story card', '2031-05-14 06:00:00'), null],
         ]);
         $this->switchOutOfTrending($user, $switchedOut);
@@ -219,28 +194,18 @@ final class TrendingControllerTest extends ApiTestCase
 
         self::assertResponseIsSuccessful();
         $story = self::onlyStoryOf($this->payload($this->client));
-        self::assertSame($lead->requireId(), $story['id']);
-        self::assertCount(1, self::idsOf($story['duplicates']));
-        self::assertSame(
-            [
-                'id' => $stored->requireId(),
-                'outletCount' => 2,
-                'viewed' => false,
-                'shareCount' => 0,
-                'followed' => false,
-            ],
-            $story['story'],
-        );
+        self::assertSame($stored->requireId(), $story['id']);
+        self::assertSame($lead->requireId(), $story['leadEntryId']);
+        self::assertCount(3, self::idsOf($story['articles']), 'a feed switched out after the build still shows');
+        self::assertSame(3, $story['outletCount']);
+        self::assertSame(0, $story['shareCount']);
     }
 
     public function testAFollowedStoryCardSaysSo(): void
     {
         [$headers, $user] = $this->bearerAndUser('trending-followed-card@example.com');
-        [$otherHeaders, $other] = $this->bearerAndUser('trending-followed-card-other@example.com');
-        $fixtures = new TrendingFixtures($this->entityManager());
+        $fixtures = (new TrendingFixtures($this->entityManager()))->ownedBy($user);
         $feeds = [$fixtures->feed('alpha'), $fixtures->feed('beta'), $fixtures->feed('gamma')];
-        $fixtures->subscribe($user, ...$feeds);
-        $fixtures->subscribe($other, ...$feeds);
         $members = static fn (string $title): array => array_map(
             static fn (Feed $feed): Entry => $fixtures->entry($feed, $title, '2031-05-14 10:00:00'),
             $feeds,
@@ -250,15 +215,16 @@ final class TrendingControllerTest extends ApiTestCase
         $fixtures->follow($user, $followed, '2031-05-14 10:00:00');
 
         self::assertSame([true, false], $this->followedFlagsOfTheDay($headers));
-        self::assertSame([false, false], $this->followedFlagsOfTheDay($otherHeaders));
     }
 
     public function testBuiltAtIsSerialisedAsAtomInUtc(): void
     {
-        [$headers] = $this->bearerAndUser('trending-built@example.com');
+        [$headers, $user] = $this->bearerAndUser('trending-built@example.com');
         $this->entityManager()->persist(new TrendingSnapshot(
+            $user,
             TrendingWindow::Week,
             new \DateTimeImmutable('2031-05-14 12:30:00'),
+            10,
             10,
             0,
             5,
@@ -280,6 +246,40 @@ final class TrendingControllerTest extends ApiTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame(['window' => 'day', 'builtAt' => null, 'stories' => []], $this->payload($this->client));
+    }
+
+    public function testAReaderWithoutASnapshotSeesNoStoriesAndNoBuildDue(): void
+    {
+        [$headers, $reader] = $this->bearerAndUser('trending-unbuilt@example.com');
+        [, $builtFor] = $this->bearerAndUser('trending-unbuilt-other@example.com');
+        $fixtures = (new TrendingFixtures($this->entityManager()))->ownedBy($builtFor);
+        $feeds = [$fixtures->feed('alpha'), $fixtures->feed('beta'), $fixtures->feed('gamma')];
+        $fixtures->subscribe($reader, ...$feeds);
+        $fixtures->story(TrendingWindow::Day, '2031-05-14 10:00:00', ...array_map(
+            static fn (Feed $feed): Entry => $fixtures->entry($feed, 'Built for another', '2031-05-14 10:00:00'),
+            $feeds,
+        ));
+        foreach (TrendingWindow::cases() as $window) {
+            $this->entityManager()->persist(new TrendingSnapshot(
+                $builtFor,
+                $window,
+                new \DateTimeImmutable('2031-05-14 10:00:00'),
+                3,
+                3,
+                1,
+                5,
+                1_000,
+            ));
+        }
+        $this->entityManager()->flush();
+
+        $this->client->request('GET', '/api/trending?window=day', server: $headers);
+        self::assertResponseIsSuccessful();
+        self::assertSame(['window' => 'day', 'builtAt' => null, 'stories' => []], $this->payload($this->client));
+
+        $this->client->request('GET', '/api/trending/followed', server: $headers);
+        self::assertResponseIsSuccessful();
+        self::assertNull($this->payload($this->client)['nextBuildDueAt']);
     }
 
     public function testAnUnknownWindowIsAValidationProblem(): void
@@ -304,7 +304,7 @@ final class TrendingControllerTest extends ApiTestCase
     /**
      * @param array<string, string> $headers
      *
-     * @return list<mixed> each card's `story.followed`, in the list's order
+     * @return list<mixed> each story's `followed`, in the list's order
      */
     private function followedFlagsOfTheDay(array $headers): array
     {
@@ -315,9 +315,8 @@ final class TrendingControllerTest extends ApiTestCase
 
         return array_values(array_map(static function (mixed $story): mixed {
             self::assertIsArray($story);
-            self::assertIsArray($story['story']);
 
-            return $story['story']['followed'] ?? null;
+            return $story['followed'] ?? null;
         }, $stories));
     }
 
@@ -342,6 +341,22 @@ final class TrendingControllerTest extends ApiTestCase
         self::assertIsArray($payload['stories'][0]);
 
         return $payload['stories'][0];
+    }
+
+    /**
+     * @param array<mixed> $story
+     *
+     * @return list<array<mixed>>
+     */
+    private static function articlesOf(array $story): array
+    {
+        self::assertIsArray($story['articles']);
+
+        return array_values(array_map(static function (mixed $article): array {
+            self::assertIsArray($article);
+
+            return $article;
+        }, $story['articles']));
     }
 
     /** @return list<mixed> */

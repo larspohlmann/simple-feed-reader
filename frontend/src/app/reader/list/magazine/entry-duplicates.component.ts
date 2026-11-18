@@ -14,6 +14,7 @@ import { alsoFootOf } from './also-foot';
 import { sourceNameOf } from '../../entry/entry-source/source-name';
 import { StoryActionsComponent } from '../../trending/story-actions/story-actions.component';
 import { STORY_ICON } from '../../trending/story';
+import { TrendingStoryDto } from '../../trending/trending.models';
 
 let nextId = 0;
 
@@ -48,11 +49,12 @@ export const ALSO_FOOT_NAMES = 4;
 export class EntryDuplicatesComponent implements EntryActionHandler {
   /** The row the footer sits on; deleting from a copy's card deletes this row's post (#1972). */
   readonly entry = input.required<EntryDto>();
-  private readonly foot = computed(() => alsoFootOf(this.entry()));
+  readonly story = input<TrendingStoryDto | null>(null);
+  private readonly foot = computed(() => alsoFootOf(this.entry(), this.story()));
   protected readonly viewportMargin = MENU_VIEWPORT_MARGIN;
   protected readonly copies = computed(() => this.foot().copies);
   protected readonly label = computed(() => this.foot().label);
-  protected readonly icon = computed(() => (this.entry().story ? STORY_ICON : 'layers'));
+  protected readonly icon = computed(() => (this.story() ? STORY_ICON : 'layers'));
   private readonly shellActions = inject(EntryActionHandler, { skipSelf: true });
 
   private readonly language = inject(LanguageService);
@@ -60,7 +62,7 @@ export class EntryDuplicatesComponent implements EntryActionHandler {
   private readonly named = computed(() =>
     this.copies().map((copy) => ({
       copy,
-      feed: this.entry().story
+      feed: this.story()
         ? sourceNameOf(copy, this.rows)
         : (this.rows.find(copy.subscriptionId)?.title ?? copy.source),
       when: entryRelativeTime(copy, this.language.lang()),

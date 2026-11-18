@@ -5,11 +5,16 @@ import {
   quotingHeight,
   threadHeight,
 } from './magazine-block-height';
-import { aLinkCard, anEntry, aQuotedPost, aStory } from '../../../../testing/entry-testing';
+import {
+  aLinkCard,
+  anEntry,
+  aQuotedPost,
+  aStory,
+  aStoryArticle,
+} from '../../../../testing/entry-testing';
 import { aThreadPost } from '../../../../testing/thread-testing';
 import { EntryMediumDto } from '../../entry-medium';
 import { QuotedPostDto } from '../../quoted-post/quoted-post';
-import { EntryDto } from '../../models';
 
 const post = (title: string, quote: QuotedPostDto | null = aQuotedPost()) =>
   anEntry({ share: 'quote', titleDerived: true, title, quote });
@@ -24,49 +29,45 @@ const video = (width: number, height: number): EntryMediumDto => ({
 
 describe('blockHeight', () => {
   it('reads the fixed table for every other kind', () => {
-    expect(blockHeight('link', anEntry())).toBe(BLOCK_HEIGHT.link);
-    expect(blockHeight('compact', anEntry())).toBe(BLOCK_HEIGHT.compact);
+    expect(blockHeight('link', anEntry(), null)).toBe(BLOCK_HEIGHT.link);
+    expect(blockHeight('compact', anEntry(), null)).toBe(BLOCK_HEIGHT.compact);
   });
 
-  it('adds the row of sharer pills to a Trending article posts share', () => {
-    const shared = anEntry({
-      story: aStory({ outletCount: 2, viewed: false, shareCount: 0 }),
-      shares: [anEntry({ id: 9 })],
-    });
-
-    expect(blockHeight('link', shared)).toBe(BLOCK_HEIGHT.link + STORY_SHARERS_ROW.height);
-    expect(
-      blockHeight(
-        'link',
-        anEntry({ story: aStory({ outletCount: 2, viewed: false, shareCount: 0 }), shares: [] }),
-      ),
-    ).toBe(BLOCK_HEIGHT.link);
-  });
-
-  it('adds a second row once three sharers and a "+N" pill wrap at phone width', () => {
-    const story = aStory({ outletCount: 2, viewed: false, shareCount: 0 });
-    const sharedBy = (count: number): EntryDto =>
-      anEntry({
-        story,
-        shares: Array.from({ length: count }, (_, id) => anEntry({ id: 10 + id })),
+  it("adds a row of sharer pills per two of the lead's sharers, at most three pills shown", () => {
+    const sharedBy = (count: number) =>
+      aStory({
+        articles: [
+          aStoryArticle({
+            shares: Array.from({ length: count }, (_, id) => anEntry({ id: 10 + id })),
+          }),
+        ],
       });
 
-    expect(blockHeight('link', sharedBy(2))).toBe(BLOCK_HEIGHT.link + STORY_SHARERS_ROW.height);
-    expect(blockHeight('link', sharedBy(3))).toBe(
+    expect(blockHeight('link', anEntry(), sharedBy(1))).toBe(
+      BLOCK_HEIGHT.link + STORY_SHARERS_ROW.height,
+    );
+    expect(blockHeight('link', anEntry(), sharedBy(5))).toBe(
       BLOCK_HEIGHT.link + 2 * STORY_SHARERS_ROW.height + STORY_SHARERS_ROW.gap,
+    );
+    expect(blockHeight('link', anEntry(), sharedBy(0))).toBe(BLOCK_HEIGHT.link);
+  });
+
+  it('adds no sharer pills without a story', () => {
+    expect(blockHeight('link', aStoryArticle({ shares: [anEntry({ id: 9 })] }), null)).toBe(
+      BLOCK_HEIGHT.link,
     );
   });
 
   it('reads the entry for a quoting block', () => {
     const entry = post('Hi', aQuotedPost({ text: lines(5) }));
 
-    expect(blockHeight('quoting', entry)).toBe(quotingHeight(entry));
+    expect(blockHeight('quoting', entry, null)).toBe(quotingHeight(entry));
   });
 
   it('reads the entry for a thread block', () => {
     const entry = anEntry({ thread: [aThreadPost()] });
 
-    expect(blockHeight('thread', entry)).toBe(threadHeight(entry));
+    expect(blockHeight('thread', entry, null)).toBe(threadHeight(entry));
   });
 });
 

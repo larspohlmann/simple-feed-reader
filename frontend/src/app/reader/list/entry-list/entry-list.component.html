@@ -53,11 +53,11 @@
          screen-reader user in noise. It re-announces on Load more too — a
          deliberate choice, since that's a discrete manual action, not a stream. -->
     <p class="sr-only" aria-live="polite" role="status">
-      {{ 'reader.searchCount' | transloco: { count: entries().length } }}
+      {{ 'reader.searchCount' | transloco: { count: items().length } }}
     </p>
   }
 
-  @if (loading() && entries().length === 0) {
+  @if (loading() && items().length === 0) {
     <div class="rows text-scaled">
       @for (i of [1, 2, 3, 4, 5]; track i) {
         <div class="skeleton"></div>
@@ -155,7 +155,8 @@
             />
           }
         }
-        @for (e of segment.entries; track e.id) {
+        @for (item of segment.items; track leadOf(item).id) {
+          @let e = leadOf(item);
           <!-- The slot collapses the gap when a row leaves; the inner box clips the
                fading content so the collapse reads as the row closing up (#478). -->
           <div class="row-slot" [class.leaving]="leavingIds().has(e.id)">
@@ -163,6 +164,7 @@
               <app-recommendation-strip [entry]="e">
                 <app-entry-row
                   [entry]="e"
+                  [story]="storyOf(item)"
                   [tags]="tagsFor(e.subscriptionId)"
                   [terms]="searchTerms()"
                   [class.in-search]="isSearch()"

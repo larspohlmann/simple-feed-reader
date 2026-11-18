@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Injectable, inject } from '@angular/core';
+import { Injectable, Signal, computed, inject } from '@angular/core';
 import { Observable, Subject, Subscription, finalize, tap } from 'rxjs';
 import { Problem, parseProblem } from '../../core/problem';
 import { wireTimestamp } from '../../core/wire-timestamp';
@@ -12,7 +12,9 @@ import { VoteValue, steppedScore } from '../vote-pill/vote';
 import { EntryDto, EntryQuery, EntryStatePatch } from '../models';
 import { ExclusionSurface, SURFACE_DESCRIPTOR } from '../feed-exclusions';
 import { CompletedEntryDto, withCompleted } from './completed-entry';
-import { withPatchedRow } from './entry-rows';
+import { withPatchedItem, withPatchedRow } from './entry-rows';
+import { ListItem, articlesOf } from './list-item';
+import { TrendingStoryDto } from '../trending/trending.models';
 import { InFlightPatches, RowPatch, valuesBefore } from './in-flight-patches';
 import { RetryableFailure } from './retryable-failure';
 import { LandedList } from './landed-list';
@@ -32,12 +34,14 @@ export class EntriesStore {
   private readonly socialPosts = inject(SocialPostApi);
   private readonly trendingApi = inject(TrendingApi);
 
-  private readonly rawEntries = accountSignal<EntryDto[]>([]);
+  private readonly rawItems = accountSignal<ListItem[]>([]);
   /** The open entry when the loaded list does not hold it, e.g. a deep link; `entries()` never shows it. */
   private readonly unlisted = accountSignal<EntryDto | null>(null);
   private readonly inFlight = new InFlightPatches();
   private readonly failure = new RetryableFailure();
-  readonly entries = this.rawEntries.asReadonly();
+  readonly items = this.rawItems.asReadonly();
+  /** Every article the list shows, a story's included; for lookups, not for counting rows. */
+  readonly entries: Signal<EntryDto[]> = computed(() => this.items().flatMap(articlesOf));
   readonly nextCursor = accountSignal<string | null>(null);
   readonly loading = accountSignal(false);
   /** A mutation that changes the list in place, with no reload to follow — kept off `loading`,
@@ -81,7 +85,7 @@ export class EntriesStore {
     this.listRequest?.unsubscribe();
     this.listRequest = this.api.entries(query).subscribe({
       next: (page) => {
-        this.rawEntries.set(this.inFlight.overlayAll(page.entries));
+        this.rawItems.set(this.inFlight.overlayAll(page.items));
         this.nextCursor.set(page.nextCursor);
         this.searchMatches.replaceWith(page);
         this.loading.set(false);
@@ -90,7 +94,7 @@ export class EntriesStore {
       error: (error: HttpErrorResponse) => {
         // Drop the retained rows: loading ends here, so they would un-dim and
         // turn interactive again while belonging to a view the user has left.
-        this.rawEntries.set([]);
+        this.rawItems.set([]);
         this.searchMatches.clear();
         this.failure.report(error, () => this.load(query));
         this.loading.set(false);
@@ -141,10 +145,7 @@ export class EntriesStore {
     this.failure.abandonRetry();
     this.listRequest = this.api.entries(query, cursor).subscribe({
       next: (page) => {
-        this.rawEntries.update((current) => [
-          ...current,
-          ...this.inFlight.overlayAll(page.entries),
-        ]);
+        this.rawItems.update((current) => [...current, ...this.inFlight.overlayAll(page.items)]);
         this.nextCursor.set(page.nextCursor);
         this.searchMatches.addFrom(page);
         this.loadingMore.set(false);
@@ -158,7 +159,7 @@ export class EntriesStore {
 
   /** The entry with `id`: its listed row, else the unlisted one held for it. */
   entry(id: number): EntryDto | null {
-    const listed = this.rawEntries().find((entry) => entry.id === id);
+    const listed = this.entries().find((entry) => entry.id === id);
     if (listed) return listed;
     const held = this.unlisted();
     return held?.id === id ? held : null;
@@ -278,7 +279,7 @@ export class EntriesStore {
     const listed = this.entry(id);
     if (listed) return listed;
     const held = this.unlisted();
-    const rows = held ? [...this.rawEntries(), held] : this.rawEntries();
+    const rows = held ? [...this.entries(), held] : this.entries();
     return rows.flatMap((row) => row.duplicates ?? []).find((copy) => copy.id === id) ?? null;
   }
 
@@ -303,12 +304,10 @@ export class EntriesStore {
 
   /** Hides a card's story (#2017, #2128); the card stays in the list, so the caller can let it leave in
    *  place (#2066). A failure shows the banner and its retry. */
-  hideTrendingStory(entryId: number, outcome: StateSaveOutcome = {}): void {
-    const story = this.entry(entryId)?.story;
-    if (!story) return;
+  hideTrendingStory(story: TrendingStoryDto, outcome: StateSaveOutcome = {}): void {
     this.runReported(
       this.trendingApi.hideStory(story.id),
-      () => this.hideTrendingStory(entryId, outcome),
+      () => this.hideTrendingStory(story, outcome),
       outcome,
     );
   }
@@ -326,16 +325,16 @@ export class EntriesStore {
     });
   }
 
-  /** Reaches each target as a row and as a copy inside a row's `duplicates`.
+  /** Reaches each target as a row, as a copy inside a row's `duplicates` and as a story's article.
    *  The list keeps its identity when `patch` hands every entry back, so nothing derived recomputes. */
   private patchEntries(ids: Iterable<number>, patch: (entry: EntryDto) => EntryDto): void {
     const targets = new Set(ids);
     this.unlisted.update((held) => (held ? withPatchedRow(held, targets, patch) : held));
-    this.rawEntries.update((current) => {
+    this.rawItems.update((current) => {
       let changed = false;
-      const patched = current.map((entry) => {
-        const next = withPatchedRow(entry, targets, patch);
-        changed ||= next !== entry;
+      const patched = current.map((item) => {
+        const next = withPatchedItem(item, targets, patch);
+        changed ||= next !== item;
         return next;
       });
       return changed ? patched : current;

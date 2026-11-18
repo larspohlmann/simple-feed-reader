@@ -26,12 +26,12 @@ final readonly class TrendingEntryRepository
     {
     }
 
-    /** @return iterable<WindowEntryModel> every entry dated at or after $since, in id order */
-    public function windowEntries(\DateTimeImmutable $since): iterable
+    /** @return iterable<WindowEntryModel> every entry of the user's Trending feeds dated at or after $since, in id order */
+    public function windowEntries(int $userId, \DateTimeImmutable $since): iterable
     {
         $afterId = 0;
         do {
-            $rows = $this->chunkAfter($since, $afterId);
+            $rows = $this->chunkAfter($userId, $since, $afterId);
             foreach ($rows as $row) {
                 $entry = self::modelOf($row);
                 $afterId = $entry->id;
@@ -40,14 +40,26 @@ final readonly class TrendingEntryRepository
         } while (\count($rows) === self::CHUNK_ROWS);
     }
 
+    public function hasEntriesCreatedAfter(int $userId, \DateTimeImmutable $after): bool
+    {
+        $found = $this->entityManager->getConnection()->fetchOne(
+            'SELECT 1 FROM subscription included WHERE ' . self::includedByUser()
+            . ' AND EXISTS (SELECT 1 FROM entry created WHERE created.feed_id = included.feed_id'
+            . ' AND created.created_at > :after)',
+            ['user' => $userId, 'after' => $after->format('Y-m-d H:i:s')],
+            ['user' => ParameterType::INTEGER],
+        );
+
+        return $found !== false;
+    }
+
     /** How many of the user's Trending feeds have an entry at or after $since in no story the user hid. */
     public function activeFeedCount(int $userId, \DateTimeImmutable $since): int
     {
         $activeFeeds = $this->entityManager->getConnection()->fetchOne(
-            'SELECT COUNT(*) FROM subscription followed WHERE followed.user_id = :user'
-            . ' AND ' . TrendingInclusionSql::includes('followed')
+            'SELECT COUNT(*) FROM subscription included WHERE ' . self::includedByUser()
             . ' AND EXISTS (SELECT 1 FROM entry recent'
-            . ' WHERE recent.feed_id = followed.feed_id AND recent.effective_date >= :since'
+            . ' WHERE recent.feed_id = included.feed_id AND recent.effective_date >= :since'
             . ' AND NOT EXISTS (SELECT 1 FROM trending_story_entry hidden_member JOIN trending_story_hide hidden'
             . ' ON hidden.story_id = hidden_member.story_id AND hidden.user_id = :user'
             . ' WHERE hidden_member.entry_id = recent.id))',
@@ -68,7 +80,7 @@ final readonly class TrendingEntryRepository
      *   card_description: string|null, card_site_name: string|null, card_language: string|null
      * }>
      */
-    private function chunkAfter(\DateTimeImmutable $since, int $afterId): array
+    private function chunkAfter(int $userId, \DateTimeImmutable $since, int $afterId): array
     {
         /**
          * @var list<array{
@@ -88,6 +100,7 @@ final readonly class TrendingEntryRepository
                 . ' link.title AS card_title, link.site_name AS card_site_name, link.language AS card_language,'
                 . ' SUBSTR(link.description, 1, %d) AS card_description'
                 . ' FROM entry e JOIN feed f ON f.id = e.feed_id'
+                . ' JOIN subscription included ON included.feed_id = e.feed_id AND ' . self::includedByUser()
                 . ' LEFT JOIN link_card card ON card.entry_id = e.id AND' . LinkLandingSql::FIRST_ROOT_CARD
                 . ' LEFT JOIN shared_link link ON link.id = card.shared_link_id'
                 . LinkLandingSql::JOIN
@@ -96,7 +109,8 @@ final readonly class TrendingEntryRepository
                 self::CARD_DESCRIPTION_CHARACTERS,
                 self::CHUNK_ROWS,
             ),
-            ['since' => $since->format('Y-m-d H:i:s'), 'afterId' => $afterId],
+            ['user' => $userId, 'since' => $since->format('Y-m-d H:i:s'), 'afterId' => $afterId],
+            ['user' => ParameterType::INTEGER],
         );
 
         return $rows;
@@ -148,5 +162,10 @@ final readonly class TrendingEntryRepository
             $row['card_site_name'],
             FeedLanguage::tryFrom((string) $row['card_language']),
         );
+    }
+
+    private static function includedByUser(): string
+    {
+        return 'included.user_id = :user AND ' . TrendingInclusionSql::includes('included');
     }
 }

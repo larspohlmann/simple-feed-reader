@@ -1,7 +1,9 @@
 import { EntryDto } from '../../models';
+import { TrendingStoryDto } from '../../trending/trending.models';
 import { EntryMediumDto, mediumRatio } from '../../entry-medium';
 import { entryDek, entryHeadline } from '../../entry/entry-text';
 import { QuotedPostDto } from '../../quoted-post/quoted-post';
+import { leadOf } from '../../state/list-item';
 import { BLOCK_HEIGHT, EntryKind } from './magazine-block';
 import { sharedMedia, sharesQuotedPost, threadRootMedia } from './magazine-slot-fit';
 import { LinkCardDto } from '../../link-card/link-card';
@@ -54,12 +56,16 @@ const GRID_RATIO = 16 / 9;
  */
 export const STORY_SHARERS_ROW = { height: 19, gap: 12, pillsPerRow: 2 } as const;
 
-export function blockHeight(kind: EntryKind, entry: EntryDto): number {
-  return ownHeight(kind, entry) + storySharersHeight(entry);
+export function blockHeight(
+  kind: EntryKind,
+  entry: EntryDto,
+  story: TrendingStoryDto | null,
+): number {
+  return ownHeight(kind, entry) + storySharersHeight(story);
 }
 
-function storySharersHeight(entry: EntryDto): number {
-  const sharers = entry.story ? Math.min(entry.shares?.length ?? 0, SHOWN_SHARERS) : 0;
+function storySharersHeight(story: TrendingStoryDto | null): number {
+  const sharers = story ? Math.min(leadOf(story).shares.length, SHOWN_SHARERS) : 0;
   const rows = Math.ceil(sharers / STORY_SHARERS_ROW.pillsPerRow);
   return rows === 0 ? 0 : rows * STORY_SHARERS_ROW.height + (rows - 1) * STORY_SHARERS_ROW.gap;
 }

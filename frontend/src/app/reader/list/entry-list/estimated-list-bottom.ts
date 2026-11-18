@@ -1,13 +1,13 @@
 import { Signal, computed, effect } from '@angular/core';
 import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
-import { EntryDto } from '../../models';
+import { ListItem } from '../../state/list-item';
 import { TitleCount } from '../list-header/list-header.component';
 import { ListContent } from './list-content';
 import { estimatedListBottom } from './list-length';
 
 export interface EstimatedListBottomOptions {
   readonly content: ListContent;
-  readonly entries: Signal<EntryDto[]>;
+  readonly items: Signal<ListItem[]>;
   readonly hasMore: Signal<boolean>;
   readonly titleCount: Signal<TitleCount>;
   readonly isSearch: Signal<boolean>;
@@ -31,7 +31,7 @@ export class EstimatedListBottom {
     renderedEntries: this.options.content.rendered().length,
     complete: this.options.content.complete(),
     headerTotal: this.headerTotal(),
-    loadedTotal: this.options.hasMore() ? null : this.options.entries().length,
+    loadedTotal: this.options.hasMore() ? null : this.options.items().length,
   }));
 
   private readonly _resetOnLoadEdge = effect(() => {

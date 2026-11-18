@@ -1,4 +1,11 @@
 import { EntryDto } from '../../models';
+import { TrendingStoryDto } from '../../trending/trending.models';
+
+/** What a single-entry block carries: the entry it lays out, and the story that entry leads (#2328). */
+export interface BlockCard {
+  entry: EntryDto;
+  story: TrendingStoryDto | null;
+}
 
 /** The kinds a template authors, and the only ones the demotion ladder walks. */
 const TEMPLATE_KINDS = ['hero', 'wide', 'quote', 'split', 'kicker', 'thumb', 'compact'] as const;
@@ -14,8 +21,8 @@ export type ShareKind = (typeof SHARE_KINDS)[number];
 export type EntryKind = TemplateKind | ShareKind;
 
 export type MagazineBlock =
-  | { kind: Exclude<EntryKind, 'split'>; entry: EntryDto }
-  | { kind: 'split'; entry: EntryDto; imageSide: 'left' | 'right' }
+  | ({ kind: Exclude<EntryKind, 'split'> } & BlockCard)
+  | ({ kind: 'split'; imageSide: 'left' | 'right' } & BlockCard)
   | {
       kind: 'group';
       subscriptionId: number;

@@ -33,12 +33,28 @@ final readonly class TrendingFixtures
         'Hamburg Terminals lahm: Hafenstreik',
     ];
 
-    public function __construct(private EntityManagerInterface $entityManager)
+    public function __construct(private EntityManagerInterface $entityManager, private ?User $owner = null)
     {
     }
 
-    /** A social feed's address is one the classifier recognises: the listener re-derives its network on flush. */
+    /** Fixtures whose stories belong to $owner and whose feeds $owner follows. */
+    #[\NoDiscard]
+    public function ownedBy(User $owner): self
+    {
+        return clone($this, ['owner' => $owner]);
+    }
+
+    /** The reader every story of these fixtures belongs to follows the feed. */
     public function feed(string $name, ?SocialNetwork $network = null): Feed
+    {
+        $feed = $this->feedNobodyFollows($name, $network);
+        $this->subscribe($this->owner(), $feed);
+
+        return $feed;
+    }
+
+    /** A social feed's address is one the classifier recognises: the listener re-derives its network on flush. */
+    public function feedNobodyFollows(string $name, ?SocialNetwork $network = null): Feed
     {
         $feed = new Feed(match ($network) {
             SocialNetwork::Bluesky => \sprintf('https://bsky.app/profile/%s.bsky.social/rss', $name),
@@ -51,13 +67,23 @@ final readonly class TrendingFixtures
         return $feed;
     }
 
+    /** Skips a feed the user already follows, as feed() subscribes the owner to each. */
     public function subscribe(User $user, Feed ...$feeds): void
     {
+        $this->entityManager->flush();
         foreach ($feeds as $feed) {
+            if ($this->subscribes($user, $feed)) {
+                continue;
+            }
             $this->entityManager->persist(
                 new Subscription($user, $feed, new \DateTimeImmutable('2031-01-01 00:00:00')),
             );
         }
+    }
+
+    private function subscribes(User $user, Feed $feed): bool
+    {
+        return $this->entityManager->getRepository(Subscription::class)->count(['user' => $user, 'feed' => $feed]) > 0;
     }
 
     /** Variants 0 to 4 of one recurring story; any three link, all five make a week-sized story. */
@@ -122,7 +148,13 @@ final readonly class TrendingFixtures
     /** Flushes first: a story entry copies its feed's id. Every member joined at $lastSeen and is placed in $window. */
     public function story(TrendingWindow $window, string $lastSeen, Entry ...$members): TrendingStory
     {
-        return $this->storyOfSites(
+        return $this->storyOf($this->owner(), $window, $lastSeen, ...$members);
+    }
+
+    public function storyOf(User $owner, TrendingWindow $window, string $lastSeen, Entry ...$members): TrendingStory
+    {
+        return $this->storyWithSites(
+            $owner,
             $window,
             $lastSeen,
             array_map(static fn (Entry $member): array => [$member, null], array_values($members)),
@@ -136,9 +168,24 @@ final readonly class TrendingFixtures
      */
     public function storyOfSites(TrendingWindow $window, string $lastSeen, array $members): TrendingStory
     {
+        return $this->storyWithSites($this->owner(), $window, $lastSeen, $members);
+    }
+
+    /** @param list<array{Entry, ?string}> $members */
+    private function storyWithSites(
+        User $owner,
+        TrendingWindow $window,
+        string $lastSeen,
+        array $members,
+    ): TrendingStory {
         $this->entityManager->flush();
         $joinedAt = new \DateTimeImmutable($lastSeen);
-        $story = new TrendingStory(new \DateTimeImmutable('2031-05-14 00:00:00'), $joinedAt, $joinedAt);
+        $story = new TrendingStory(
+            $owner,
+            new \DateTimeImmutable('2031-05-14 00:00:00'),
+            $joinedAt,
+            $joinedAt,
+        );
         $this->entityManager->persist($story);
         foreach ($members as [$member, $articleSite]) {
             $this->entityManager->persist(
@@ -166,22 +213,36 @@ final readonly class TrendingFixtures
         $this->entityManager->flush();
     }
 
-    /** Places members the story already holds in one more window, moving them off any story it showed them in. */
+    /** Places members the story already holds in one more window of its owner, moving them off any story it showed them in. */
     public function place(TrendingWindow $window, TrendingStory $story, Entry ...$members): void
     {
         $this->entityManager->flush();
         $connection = $this->entityManager->getConnection();
+        $ownerId = $connection->fetchOne('SELECT user_id FROM trending_story WHERE id = ?', [$story->requireId()]);
         foreach ($members as $member) {
             $connection->delete(
                 'trending_story_placement',
-                ['time_window' => $window->value, 'entry_id' => $member->requireId()],
+                ['user_id' => $ownerId, 'time_window' => $window->value, 'entry_id' => $member->requireId()],
             );
             $connection->insert('trending_story_placement', [
+                'user_id' => $ownerId,
                 'time_window' => $window->value,
                 'entry_id' => $member->requireId(),
                 'story_id' => $story->requireId(),
             ]);
         }
+    }
+
+    /** The reader every story of these fixtures belongs to. */
+    public function owner(): User
+    {
+        if ($this->owner !== null) {
+            return $this->owner;
+        }
+        $email = 'trending-fixtures-owner@example.com';
+
+        return $this->entityManager->getRepository(User::class)->findOneBy(['email' => $email])
+            ?? $this->reader($email);
     }
 
     public function reader(string $email): User

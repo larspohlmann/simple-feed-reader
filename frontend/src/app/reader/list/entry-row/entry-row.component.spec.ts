@@ -6,12 +6,14 @@ import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryRowComponent } from './entry-row.component';
 import { EntryActionsComponent } from '../../entry/entry-actions/entry-actions.component';
 import { EntryDto, ImageRenditionDto } from '../../models';
+import { ListItem, leadOf, storyOf } from '../../state/list-item';
+import { StoryArticleDto } from '../../trending/trending.models';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { neverRecoveringImageProxy } from '../../../../testing/image-proxy-testing';
 import { describeShortMarking } from '../../../../testing/short-marking-testing';
 import { describePortraitCover } from '../../../../testing/portrait-cover-testing';
-import { aLinkCard, anEntry, aStory } from '../../../../testing/entry-testing';
+import { aLinkCard, anEntry, aStory, aStoryArticle } from '../../../../testing/entry-testing';
 import { aThreadPost } from '../../../../testing/thread-testing';
 import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
@@ -41,9 +43,10 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto =>
     ...over,
   });
 
-function mount(testEntry: EntryDto) {
+function mount(item: ListItem) {
   const fixture = TestBed.createComponent(EntryRowComponent);
-  fixture.componentRef.setInput('entry', testEntry);
+  fixture.componentRef.setInput('entry', leadOf(item));
+  fixture.componentRef.setInput('story', storyOf(item));
   fixture.detectChanges();
   return fixture;
 }
@@ -116,8 +119,13 @@ describe('EntryRowComponent', () => {
   });
 
   describe('a Trending lead (#2017)', () => {
-    const lead = (duplicates: EntryDto[] = []) =>
-      entry({ duplicates, story: aStory({ outletCount: 7, viewed: false, shareCount: 0 }) });
+    const lead = (others: StoryArticleDto[] = []) =>
+      aStory({
+        outletCount: 7,
+        viewed: false,
+        shareCount: 0,
+        articles: [aStoryArticle(entry()), ...others],
+      });
 
     it('names how many feeds covered the story in its meta line', () => {
       const element = mount(lead()).nativeElement as HTMLElement;
@@ -127,11 +135,18 @@ describe('EntryRowComponent', () => {
 
     it('names who shared the lead article and how often the story was shared', () => {
       const element = mount(
-        entry({
-          story: aStory({ outletCount: 7, viewed: false, shareCount: 2 }),
-          shares: [
-            anEntry({ id: 8, poster: { name: 'Ann', url: null, imageUrl: null } }),
-            anEntry({ id: 9, poster: { name: 'Ben', url: null, imageUrl: null } }),
+        aStory({
+          outletCount: 7,
+          viewed: false,
+          shareCount: 2,
+          articles: [
+            aStoryArticle({
+              ...entry(),
+              shares: [
+                anEntry({ id: 8, poster: { name: 'Ann', url: null, imageUrl: null } }),
+                anEntry({ id: 9, poster: { name: 'Ben', url: null, imageUrl: null } }),
+              ],
+            }),
           ],
         }),
       ).nativeElement as HTMLElement;
@@ -145,14 +160,14 @@ describe('EntryRowComponent', () => {
     });
 
     it('drops the unread dot once another outlet was opened', () => {
-      const opened = anEntry({ id: 5, isViewed: true });
+      const opened = aStoryArticle({ id: 5, isViewed: true });
       const element = mount(lead([opened])).nativeElement as HTMLElement;
 
       expect(element.querySelector('.meta .dot')!.classList).not.toContain('on');
     });
 
     it('lists the other outlets under Also covered by', () => {
-      const other = anEntry({ id: 5, source: 'Spiegel' });
+      const other = aStoryArticle({ id: 5, source: 'Spiegel' });
       const element = mount(lead([other])).nativeElement as HTMLElement;
       const foot = element.querySelector('.also-foot')!;
 

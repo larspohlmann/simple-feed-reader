@@ -8,6 +8,7 @@ import { feedAvatarUrl, networkOf } from '../../state/social-sections';
 import { SocialNetworkName } from '../../../core/social-network';
 import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
+import { StoryArticleDto } from '../trending.models';
 
 /** The sharers a row shows before its "+N" pill. */
 export const SHOWN_SHARERS = 3;
@@ -36,7 +37,7 @@ function accountKey(share: EntryDto, sharer: Sharer): string {
   styleUrl: './story-sharers.component.scss',
 })
 export class StorySharersComponent {
-  readonly entry = input.required<EntryDto>();
+  readonly article = input.required<StoryArticleDto>();
 
   private readonly actions = inject(EntryActionHandler);
   private readonly rows = inject(SubscriptionRows);
@@ -44,7 +45,7 @@ export class StorySharersComponent {
   /** One per account, at its newest post: an account sharing the article in two feeds is one sharer. */
   private readonly all = computed(() => {
     const byAccount = new Map<string, Sharer>();
-    for (const share of this.entry().shares ?? []) {
+    for (const share of this.article().shares) {
       const sharer = this.sharerOf(share);
       const account = accountKey(share, sharer);
       if (!byAccount.has(account)) byAccount.set(account, sharer);
