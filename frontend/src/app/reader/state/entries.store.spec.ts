@@ -128,6 +128,19 @@ describe('EntriesStore', () => {
       expect(other.entry(7)?.isHidden).toBe(true);
     });
 
+    it("marks a story's rows read where the list underneath shares them, and leaves the rest of it unread", () => {
+      land(store, [entry(7, { isHidden: false }), entry(9, { isHidden: false })]);
+      landStory(other, [entry(7, { isHidden: false })]);
+
+      rows.markHiddenLocally(other.entries().map((row) => row.id));
+      expect(store.entry(9)?.isHidden).toBe(false);
+      land(store, [entry(7, { isHidden: true }), entry(9, { isHidden: false })]);
+
+      expect(other.entry(7)?.isHidden).toBe(true);
+      expect(store.entry(7)?.isHidden).toBe(true);
+      expect(store.entry(9)?.isHidden).toBe(false);
+    });
+
     it('shows a completed row completed in both lists', () => {
       land(store, [entry(7, { pending: true })]);
       landStory(other, [entry(7, { pending: true })]);

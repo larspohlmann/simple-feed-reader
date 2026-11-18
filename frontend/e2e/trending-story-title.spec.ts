@@ -517,6 +517,67 @@ test.describe("a story's list is a list of its own (desktop)", () => {
     expect(keptRequests).toBe(loads);
   });
 
+  test('mark all read in the story marks only its rows, so the rest of the list beneath stays unread', async ({
+    page,
+  }) => {
+    const shared: EntryDto = { ...keptLead, isHidden: false };
+    const onlyBeneath = entryWire({ id: 992, title: 'Fixture row only beneath', isKept: true });
+    let markedOnServer = false;
+    let keptRequests = 0;
+    const markReads: string[] = [];
+    await stubStories(page, false);
+    await page.route(
+      (url) => url.pathname === `/api/entries/trending-stories/${STORY_ID}`,
+      (route) =>
+        route.fulfill({
+          status: 200,
+          json: storyPage(STORY_ID, false, {
+            entries: [{ ...shared, isHidden: markedOnServer }],
+          }),
+        }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/entries' && url.searchParams.get('view') === 'kept',
+      (route) => {
+        keptRequests++;
+        const entries = [{ ...shared, isHidden: markedOnServer }, onlyBeneath];
+        return route.fulfill({ status: 200, json: { entries, nextCursor: null } });
+      },
+    );
+    await page.route(
+      (url) => url.pathname.endsWith('/mark-read'),
+      (route) => {
+        markReads.push(new URL(route.request().url()).pathname);
+        markedOnServer = true;
+        return route.fulfill({ status: 204 });
+      },
+    );
+    await signIn(page, 'list');
+    await page.goto(`/trending/stories/${STORY_ID}?view=kept`);
+    await expect(layer(page).locator('.row-slot')).toHaveCount(1);
+    const beneath = (title: string) =>
+      page.locator('section.list .row-slot', { hasText: title }).locator('.dot');
+    await expect(beneath(shared.title)).toHaveClass(/\bon\b/);
+    await expect(beneath(onlyBeneath.title)).toHaveClass(/\bon\b/);
+
+    const header = layer(page).locator('app-list-header');
+    await header.getByRole('button', { name: 'Mark all read' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Mark all read' }).click();
+    await expect
+      .poll(() => markReads)
+      .toEqual([`/api/entries/trending-stories/${STORY_ID}/mark-read`]);
+    await closeStory(page);
+    await expect(layer(page)).toHaveCount(0);
+
+    await expect(beneath(shared.title)).not.toHaveClass(/\bon\b/);
+    await expect(beneath(onlyBeneath.title)).toHaveClass(/\bon\b/);
+    const loads = keptRequests;
+    await page.reload();
+    await expect.poll(() => keptRequests).toBeGreaterThan(loads);
+    await expect(beneath(onlyBeneath.title)).toHaveClass(/\bon\b/);
+    await expect(beneath(shared.title)).not.toHaveClass(/\bon\b/);
+  });
+
   test("a failed change shows on the story's banner, not the list's beneath", async ({ page }) => {
     await page.route(
       (url) => url.pathname === `/api/entries/${keptLead.id}/state`,
