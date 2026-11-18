@@ -10,10 +10,7 @@ use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
 use App\Service\Curation\Ai\Exception\RetryableProviderException;
-use App\Service\Curation\Recommendation\Llm\Prompt\Factory\RecommendationCompletionRequestFactory;
 use App\Service\Curation\Recommendation\Llm\Prompt\Model\CallPromptModel;
-use App\Service\Curation\Recommendation\Llm\Run\CompletionCallRecorder;
-use App\Service\Curation\Recommendation\Llm\Run\RecommendationProviderCall;
 use App\Service\Curation\StoryAi\Model\StoryAiOutcomeModel;
 use App\Service\Curation\StoryAi\Pass\StoryAiPass;
 use App\Service\Curation\StoryAi\StoryAiCalls;
@@ -21,7 +18,6 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\StubChatClient;
-use Symfony\Component\Clock\ClockInterface;
 
 final class StoryAiCallsTest extends DbTestCase
 {
@@ -85,9 +81,12 @@ final class StoryAiCallsTest extends DbTestCase
     {
         $this->chat()->queueFailure(new RetryableProviderException(429, 20));
 
-        $this->expectException(ProviderRateLimitedException::class);
-
-        $this->complete();
+        try {
+            $this->complete();
+            self::fail('A rate limit must propagate.');
+        } catch (ProviderRateLimitedException) {
+            self::assertSame(['transport-failed'], $this->logVerdicts());
+        }
     }
 
     public function testTwoCallsOfOnePassShareOneRun(): void
@@ -152,20 +151,12 @@ final class StoryAiCallsTest extends DbTestCase
         return $verdicts;
     }
 
-    /** Built by hand until a task takes it: the container drops a service nothing in the app uses. */
     private function calls(): StoryAiCalls
     {
-        $container = self::getContainer();
-        /** @var RecommendationCompletionRequestFactory $requestFactory */
-        $requestFactory = $container->get(RecommendationCompletionRequestFactory::class);
-        /** @var CompletionCallRecorder $callRecorder */
-        $callRecorder = $container->get(CompletionCallRecorder::class);
-        /** @var RecommendationProviderCall $providerCall */
-        $providerCall = $container->get(RecommendationProviderCall::class);
-        /** @var ClockInterface $clock */
-        $clock = $container->get(ClockInterface::class);
+        /** @var StoryAiCalls $calls */
+        $calls = self::getContainer()->get(StoryAiCalls::class);
 
-        return new StoryAiCalls($requestFactory, $callRecorder, $providerCall, $this->entityManager, $clock);
+        return $calls;
     }
 
     private function chat(): StubChatClient

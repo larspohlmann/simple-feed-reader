@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\StoryAi;
 
-use App\Entity\StoryAiRun;
 use App\Service\Curation\Ai\Exception\AiKeyUnreadableException;
 use App\Service\Curation\Ai\Exception\CredentialsRejectedException;
 use App\Service\Curation\Ai\Exception\ProviderRejectedRequestException;
@@ -18,8 +17,6 @@ use App\Service\Curation\Recommendation\Llm\Run\RecommendationProviderCall;
 use App\Service\Curation\Recommendation\Run\Model\ProviderCallRouteModel;
 use App\Service\Curation\StoryAi\Model\StoryAiOutcomeModel;
 use App\Service\Curation\StoryAi\Pass\StoryAiPass;
-use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\Clock\ClockInterface;
 
 /**
  * One recorded chat call of a story AI task, billed to the pass's run. A rate limit propagates
@@ -31,8 +28,7 @@ final readonly class StoryAiCalls
         private RecommendationCompletionRequestFactory $requestFactory,
         private CompletionCallRecorder $callRecorder,
         private RecommendationProviderCall $providerCall,
-        private EntityManagerInterface $entityManager,
-        private ClockInterface $clock,
+        private StoryAiRuns $runs,
     ) {
     }
 
@@ -46,7 +42,7 @@ final readonly class StoryAiCalls
     public function complete(StoryAiPass $pass, CallPromptModel $prompt, \Closure $parse): StoryAiOutcomeModel
     {
         $request = $this->requestFactory->create($pass->connection, $prompt);
-        $recordedCall = $this->callRecorder->beginForStoryAiRun($this->runOf($pass), $request);
+        $recordedCall = $this->callRecorder->beginForStoryAiRun($this->runs->openFor($pass), $request);
 
         try {
             $content = $this->providerCall->complete(
@@ -71,20 +67,5 @@ final readonly class StoryAiCalls
         $recordedCall->finishUsable($content);
 
         return StoryAiOutcomeModel::usable($parsed);
-    }
-
-    private function runOf(StoryAiPass $pass): StoryAiRun
-    {
-        $run = $pass->run();
-        if ($run !== null) {
-            return $run;
-        }
-
-        $run = new StoryAiRun($pass->user, $pass->task, $this->clock->now());
-        $this->entityManager->persist($run);
-        $this->entityManager->flush();
-        $pass->billTo($run);
-
-        return $run;
     }
 }

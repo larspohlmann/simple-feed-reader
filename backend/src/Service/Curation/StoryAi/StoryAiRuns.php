@@ -1,0 +1,40 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Curation\StoryAi;
+
+use App\Entity\StoryAiRun;
+use App\Repository\StoryAiRunRepository;
+use App\Service\Curation\Recommendation\Run\Support\RunLogRetention;
+use App\Service\Curation\StoryAi\Pass\StoryAiPass;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use Doctrine\ORM\EntityManagerInterface;
+
+/** The run a pass's calls bill, opened on its first call so a pass that calls nothing leaves no row. */
+final readonly class StoryAiRuns
+{
+    public function __construct(
+        private StoryAiRunRepository $storyAiRuns,
+        private EntityManagerInterface $entityManager,
+        private NaiveUtcClock $clock,
+    ) {
+    }
+
+    /** The pass's run, opening one when it has none and trimming the account to the newest RunLogRetention::RUNS. */
+    public function openFor(StoryAiPass $pass): StoryAiRun
+    {
+        $run = $pass->run();
+        if ($run !== null) {
+            return $run;
+        }
+
+        $run = new StoryAiRun($pass->user, $pass->task, $this->clock->now());
+        $this->entityManager->persist($run);
+        $this->entityManager->flush();
+        $pass->billTo($run);
+        $this->storyAiRuns->pruneToNewest($pass->user, RunLogRetention::RUNS);
+
+        return $run;
+    }
+}

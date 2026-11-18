@@ -15,6 +15,7 @@ use App\Service\Curation\Trending\Model\StoryTitleModel;
 use App\Service\Curation\Trending\Support\HeadlineBody;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use App\Service\Curation\Trending\Model\ShownEntriesModel;
@@ -34,6 +35,9 @@ final class TrendingStoryRepository extends ServiceEntityRepository
 
     private const string ARTICLE_FEEDS
         = 'COUNT(DISTINCT CASE WHEN member_feed.network IS NULL THEN story_member.feed_id END)';
+
+    private const string MEMBER_COUNT
+        = '(SELECT COUNT(*) FROM trending_story_entry member WHERE member.story_id = story.id)';
 
     private const array VISIBILITY_TYPES = [
         'user' => ParameterType::INTEGER,
@@ -110,6 +114,46 @@ final class TrendingStoryRepository extends ServiceEntityRepository
         $outletHeadlines = $this->outletHeadlinesOf($storyId, $limit);
 
         return $outletHeadlines !== [] ? $outletHeadlines : $this->cardHeadlinesOf($storyId, $limit);
+    }
+
+    /**
+     * The user's stories without a title or grown by half since theirs, last attempted at or before $attemptedBefore.
+     *
+     * @return list<int>
+     */
+    public function titleDueOf(int $userId, \DateTimeImmutable $attemptedBefore): array
+    {
+        /** @var list<int|string> $storyIds */
+        $storyIds = $this->getEntityManager()->getConnection()->fetchFirstColumn(
+            'SELECT story.id FROM trending_story story WHERE story.user_id = :user'
+            . ' AND (story.llm_title_attempted_at IS NULL OR story.llm_title_attempted_at <= :attemptedBefore)'
+            . ' AND (story.llm_title IS NULL OR ' . self::MEMBER_COUNT . ' * 2 >= story.llm_title_member_count * 3)'
+            . ' ORDER BY story.id',
+            ['user' => $userId, 'attemptedBefore' => $attemptedBefore],
+            ['user' => ParameterType::INTEGER, 'attemptedBefore' => Types::DATETIME_IMMUTABLE],
+        );
+
+        return array_map(static fn (int|string $storyId): int => (int) $storyId, $storyIds);
+    }
+
+    public function recordTitle(int $storyId, string $title, string $language, \DateTimeImmutable $attemptedAt): void
+    {
+        $this->getEntityManager()->getConnection()->executeStatement(
+            'UPDATE trending_story SET llm_title = :title, llm_title_language = :language,'
+            . ' llm_title_member_count = (SELECT COUNT(*) FROM trending_story_entry member'
+            . ' WHERE member.story_id = :story), llm_title_attempted_at = :attemptedAt WHERE id = :story',
+            ['title' => $title, 'language' => $language, 'attemptedAt' => $attemptedAt, 'story' => $storyId],
+            ['attemptedAt' => Types::DATETIME_IMMUTABLE, 'story' => ParameterType::INTEGER],
+        );
+    }
+
+    public function recordTitleAttempt(int $storyId, \DateTimeImmutable $attemptedAt): void
+    {
+        $this->getEntityManager()->getConnection()->executeStatement(
+            'UPDATE trending_story SET llm_title_attempted_at = :attemptedAt WHERE id = :story',
+            ['attemptedAt' => $attemptedAt, 'story' => $storyId],
+            ['attemptedAt' => Types::DATETIME_IMMUTABLE, 'story' => ParameterType::INTEGER],
+        );
     }
 
     public function requireOwnedBy(int $userId, int $storyId): void
