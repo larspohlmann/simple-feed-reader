@@ -298,6 +298,27 @@ return $best;
 
 ---
 
+### Task 4b: Keep an unchanged story's fallback without scoring
+
+Added during execution at the user's request: Task 4 made user 2's week rebuild ~16 % slower (56–59 s → 66–69 s) by re-scoring every story.
+
+**Files:** the week policy / `FallbackTitles` from Task 4 and their tests; nothing new unless a tiny model is needed.
+
+**Interfaces:**
+- Consumes: `StoredStoryModel { id, entryIds (members inside the window), fallbackEntryId, titled }` (Task 3) and the build's story-to-stored-id match.
+- Produces: no new public API. Behaviour: when a story keeps a stored id, is `titled`, its `fallbackEntryId` is still a member, and its member entry ids equal the stored `entryIds` as a set, the build keeps the stored fallback title and entry and computes no `CentroidScores` for it. Every other story is chosen exactly as in Task 4.
+
+- [ ] **Step 1: Write the failing tests**
+  - `testAnUnchangedStoryKeepsItsStoredFallbackWithoutScoring`: store a story whose `fallback_title` is a member headline that would NOT win on score; rebuild the week with the same members. Assert the stored title and `fallback_entry_id` are unchanged.
+  - `testAStoryThatGainedAMemberIsScoredAgain`: same story plus one new member whose headline beats the stored one by more than 1.25×. Assert the title changes to it.
+  - `testAStoryThatLostItsFallbackMemberIsScoredAgain`: the stored fallback member leaves; assert a new member headline is chosen.
+- [ ] **Step 2: Run them; the first fails.**
+- [ ] **Step 3: Implement** the skip in the week path (the day path already titles only untitled stories).
+- [ ] **Step 4: Run the Trending tests (SQLite and the touched tests on MySQL), `composer cs/stan/md/tramp`, then re-measure user 2's week rebuild (durationMs, peak memory) twice and record before/after in the commit body.**
+- [ ] **Step 5: Commit** `perf(#2329): keep an unchanged story's fallback without scoring`
+
+---
+
 ### Task 5: The followed-story sidebar and page heading use the story title
 
 **Files:**
