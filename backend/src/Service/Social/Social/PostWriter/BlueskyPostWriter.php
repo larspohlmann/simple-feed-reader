@@ -101,8 +101,22 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
         try {
             return $this->records->createPost($account, $fields(), $postKey->recordKey);
         } catch (SocialNetworkUnreachableException $exception) {
-            return $this->records->findPost($account, $postKey->recordKey) ?? throw $exception;
+            return $this->foundAfterFailedCreate($account, $postKey->recordKey, $exception);
         }
+    }
+
+    private function foundAfterFailedCreate(
+        SocialAccount $account,
+        string $recordKey,
+        SocialNetworkUnreachableException $createFailure,
+    ): string {
+        try {
+            $existing = $this->records->findPost($account, $recordKey);
+        } catch (SocialNetworkUnreachableException) {
+            throw $createFailure;
+        }
+
+        return $existing ?? throw $createFailure;
     }
 
     /** @throws SocialPostTooLongException */

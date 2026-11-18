@@ -328,6 +328,27 @@ final class BlueskyPostWriterTest extends TestCase
         $this->writer($http)->reply(self::post(), self::keyedDraft());
     }
 
+    public function testAnUnknownCreateOutcomeOutlivesALookupBlueskyCannotAnswer(): void
+    {
+        $http = RoutedHttpClient::answering(static fn (string $method, string $url): MockResponse => match (true) {
+            self::SESSION === $method . ' ' . $url => SocialApiWiring::blueskySessionAnswer('jwt-1'),
+            default => self::serviceUnavailable(),
+        });
+
+        try {
+            $this->writer($http)->reply(self::post(), self::keyedDraft());
+            self::fail('The create should have failed.');
+        } catch (SocialWriteOutcomeUnknownException $exception) {
+            self::assertSame('Bluesky answered 503.', $exception->getPrevious()?->getMessage());
+        }
+
+        $getRecord = self::getRecordLine($this->rememberedRecordKey());
+        self::assertSame(
+            [self::SESSION, self::CREATE_RECORD, $getRecord, $getRecord, $getRecord],
+            $http->requestLines(),
+        );
+    }
+
     public function testARefusedCreateIsNotLookedUp(): void
     {
         $http = new RoutedHttpClient([
@@ -422,6 +443,11 @@ final class BlueskyPostWriterTest extends TestCase
             '{"error":"RecordNotFound","message":"Could not locate record"}',
             ['http_code' => Response::HTTP_BAD_REQUEST],
         );
+    }
+
+    private static function serviceUnavailable(): MockResponse
+    {
+        return new MockResponse('{}', ['http_code' => Response::HTTP_SERVICE_UNAVAILABLE]);
     }
 
     private static function duplicateRecordKey(): MockResponse
