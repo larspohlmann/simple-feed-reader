@@ -56,7 +56,7 @@ final readonly class BlueskyHomeServerCheck implements HomeServerCheckInterface
             '&',
             \PHP_QUERY_RFC3986,
         );
-        $answer = $this->bluesky->answerWhateverItsStatus(
+        $answer = $this->bluesky->answer(
             ApiRequestModel::get($identity->pdsUrl . self::GET_RECORD . $query),
         );
 

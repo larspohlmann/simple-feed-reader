@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Social\HomeServerCheck;
 
+use App\Service\Social\Social\Exception\SocialNetworkUnavailableException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\HomeServerCheck\MastodonHomeServerCheck;
 use App\Tests\Support\RoutedHttpClient;
@@ -52,7 +53,6 @@ final class MastodonHomeServerCheckTest extends TestCase
         yield 'forbidden' => [Response::HTTP_FORBIDDEN];
         yield 'gone is not a status answer' => [Response::HTTP_GONE];
         yield 'throttled' => [Response::HTTP_TOO_MANY_REQUESTS];
-        yield 'failing' => [Response::HTTP_INTERNAL_SERVER_ERROR];
     }
 
     public function testAnAddressOfAnotherShapeProvesNothingAndAsksNothing(): void
@@ -69,6 +69,15 @@ final class MastodonHomeServerCheckTest extends TestCase
 
         self::assertFalse($this->check($http)->confirmsDeleted('https://mastodon.social/@alice@other.social/123'));
         self::assertSame([], $http->requests);
+    }
+
+    public function testAFailingInstanceIsUnavailable(): void
+    {
+        $http = new RoutedHttpClient([self::STATUS => self::answer(Response::HTTP_INTERNAL_SERVER_ERROR)]);
+
+        $this->expectException(SocialNetworkUnavailableException::class);
+
+        $this->check($http)->confirmsDeleted(self::PROFILE_ADDRESS);
     }
 
     public function testAnInstanceThatDoesNotAnswerIsUnreachable(): void

@@ -120,7 +120,7 @@ final readonly class LemmyApiClient
     private function answer(ApiRequestModel $request): ApiResponseModel
     {
         $answer = NetworkAnswer::orUnreachable(fn (): ApiResponseModel => $this->api->send($request), self::NETWORK);
-        ServerFailure::throwIfServerError($request, $answer);
+        ServerFailure::throwIfServerError($request, $answer, (string) parse_url($request->url, PHP_URL_HOST));
 
         return $answer;
     }

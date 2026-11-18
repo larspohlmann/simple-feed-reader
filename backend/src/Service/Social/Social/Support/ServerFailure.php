@@ -17,18 +17,19 @@ final class ServerFailure
     }
 
     /**
+     * @param string $name what the message calls the failing service: the request host, or "Bluesky"
+     *
      * @throws SocialWriteOutcomeUnknownException when a write got a 5xx
      * @throws SocialNetworkUnavailableException  when a read got a 5xx
      */
-    public static function throwIfServerError(ApiRequestModel $request, ApiResponseModel $answer): void
+    public static function throwIfServerError(ApiRequestModel $request, ApiResponseModel $answer, string $name): void
     {
         if ($answer->status < Response::HTTP_INTERNAL_SERVER_ERROR) {
             return;
         }
-        $host = (string) parse_url($request->url, PHP_URL_HOST);
 
         throw 'GET' === $request->method
-            ? SocialNetworkUnavailableException::fromHost($host)
-            : SocialWriteOutcomeUnknownException::fromHost($host);
+            ? SocialNetworkUnavailableException::fromHost($name)
+            : SocialWriteOutcomeUnknownException::fromHost($name);
     }
 }

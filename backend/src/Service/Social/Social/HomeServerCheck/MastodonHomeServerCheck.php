@@ -26,7 +26,7 @@ final readonly class MastodonHomeServerCheck implements HomeServerCheckInterface
             return false;
         }
 
-        $answer = $this->mastodon->answerWhateverItsStatus(ApiRequestModel::get($status->apiUrl()));
+        $answer = $this->mastodon->answer(ApiRequestModel::get($status->apiUrl()));
 
         return Response::HTTP_NOT_FOUND === $answer->status;
     }

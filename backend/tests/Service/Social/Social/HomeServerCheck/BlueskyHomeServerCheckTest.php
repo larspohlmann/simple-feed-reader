@@ -8,6 +8,7 @@ use App\Service\Outbound\Fetch\IpValidator;
 use App\Service\Outbound\Fetch\UrlGuard;
 use App\Service\Social\Social\BlueskyApiClient;
 use App\Service\Social\Social\BlueskyIdentityResolver;
+use App\Service\Social\Social\Exception\SocialNetworkUnavailableException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\HomeServerCheck\BlueskyHomeServerCheck;
 use App\Tests\Support\FetchWiring;
@@ -67,7 +68,6 @@ final class BlueskyHomeServerCheckTest extends TestCase
         yield 'still there' => [new MockResponse('{"uri":"' . self::POST . '","value":{}}')];
         yield 'a taken-down repo' => [self::recordError(Response::HTTP_BAD_REQUEST, 'RepoTakendown')];
         yield 'not found without its error' => [self::recordError(Response::HTTP_NOT_FOUND, 'NotFound')];
-        yield 'failing' => [self::recordError(Response::HTTP_INTERNAL_SERVER_ERROR, 'InternalServerError')];
         yield 'redirected' => [new MockResponse('', [
             'http_code' => Response::HTTP_FOUND,
             'response_headers' => ['Location: https://elsewhere.example/xrpc/com.atproto.repo.getRecord'],
@@ -93,6 +93,18 @@ final class BlueskyHomeServerCheckTest extends TestCase
 
         self::assertFalse($this->check($http)->confirmsDeleted('at://did:plc:alice/app.bsky.feed.like/3klike'));
         self::assertSame([], $http->requests);
+    }
+
+    public function testAFailingPdsIsUnavailable(): void
+    {
+        $http = new RoutedHttpClient([
+            self::DID_DOCUMENT => self::didDocument(),
+            self::GET_RECORD => self::recordError(Response::HTTP_INTERNAL_SERVER_ERROR, 'InternalServerError'),
+        ]);
+
+        $this->expectException(SocialNetworkUnavailableException::class);
+
+        $this->check($http)->confirmsDeleted(self::POST);
     }
 
     public function testAPdsThatDoesNotAnswerIsUnreachable(): void

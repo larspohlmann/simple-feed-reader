@@ -7,6 +7,7 @@ namespace App\Tests\Service\Social\Social;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Enum\SourceFormat;
+use App\Service\Social\Social\Exception\SocialNetworkUnavailableException;
 use App\Service\Social\Social\Exception\SocialPostRemovedException;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ConfirmedDeletions;
@@ -41,6 +42,17 @@ final class ConfirmedDeletionTest extends DbTestCase
         $homeCopy = $this->postOn($this->feed('social:mastodon:1:home', SourceFormat::MASTODON_API));
 
         self::assertSame([false, false], $this->survivorsAfterRemoving($opened, [$homeCopy]));
+    }
+
+    public function testAHomeServerThatFailsMeansNotConfirmedDeleted(): void
+    {
+        $this->homeServer->failsWith(SocialNetworkUnavailableException::fromHost('mastodon.example'));
+        $entry = $this->postOn($this->feed('social:mastodon:1:home', SourceFormat::MASTODON_API));
+        $id = $entry->requireId();
+
+        ConfirmedDeletions::askingOf($this->entityManager, $this->homeServer)->removeIfConfirmed($entry);
+
+        self::assertNotNull($this->entityManager->find(Entry::class, $id));
     }
 
     /**

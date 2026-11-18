@@ -465,7 +465,7 @@ final class BlueskyCandidateSourceTest extends TestCase
         ]));
 
         $this->expectException(SocialNetworkUnreachableException::class);
-        $this->expectExceptionMessage("public.api.bsky.app isn't responding right now");
+        $this->expectExceptionMessage("Bluesky isn't responding right now");
 
         $this->source($http)->candidates($this->account);
     }

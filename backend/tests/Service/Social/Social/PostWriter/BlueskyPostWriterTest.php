@@ -321,7 +321,8 @@ final class BlueskyPostWriterTest extends TestCase
 
         $this->expectException(SocialWriteOutcomeUnknownException::class);
         $this->expectExceptionMessage(
-            'pds.example.test had trouble with this request, so it may or may not have gone through.',
+            'Bluesky had trouble with this request, so it may or may not have gone through. '
+            . 'Check before trying again.',
         );
 
         $this->writer($http)->reply(self::post(), self::keyedDraft());
