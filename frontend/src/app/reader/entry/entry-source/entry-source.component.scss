@@ -40,3 +40,24 @@
   color: inherit;
   white-space: pre;
 }
+
+.community {
+  color: inherit;
+  white-space: pre;
+}
+
+a.community {
+  text-decoration: none;
+}
+
+a.community:hover {
+  text-decoration: underline;
+}
+
+.community-text {
+  white-space: pre;
+}
+
+:host(.source-kicker) .community {
+  flex: none;
+}

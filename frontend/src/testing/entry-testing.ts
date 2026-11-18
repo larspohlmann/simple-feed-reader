@@ -26,6 +26,7 @@ export function anEntry(overrides: Partial<EntryDto> = {}): EntryDto {
     subscriptionId: 1,
     source: 'A feed',
     poster: null,
+    community: null,
     faviconUrl: null,
     isHidden: false,
     isFavorite: false,

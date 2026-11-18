@@ -25,6 +25,20 @@
 } @else {
   {{ name() }}
 }
+@if (current.community; as community) {
+  @if (layout() === 'article') {
+    <span class="community-text"> · </span>
+    <a
+      class="community"
+      [href]="links.open(community.url, 'lemmy')"
+      target="_blank"
+      rel="noopener noreferrer"
+      >c/{{ community.name }}</a
+    >
+  } @else {
+    <span class="community"> · c/{{ community.name }}</span>
+  }
+}
 @if (savedIn(); as savedTitle) {
   <span class="saved-in"> · {{ savedTitle }}</span>
 }

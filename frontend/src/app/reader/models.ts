@@ -250,6 +250,8 @@ export interface EntryDto {
   source: string;
   /** Who posted it when that is someone other than the feed: a private feed's author, a profile feed's person. */
   poster: { name: string; url: string | null; imageUrl: string | null } | null;
+  /** A Lemmy post's community, when the feed it sits in is not that community's own. */
+  community: { name: string; url: string } | null;
   /** Absolute https favicon URL for the entry's feed, or null if unresolved. */
   faviconUrl: string | null;
   isHidden: boolean;
