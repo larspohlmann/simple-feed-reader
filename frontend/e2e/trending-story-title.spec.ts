@@ -124,6 +124,21 @@ async function openTrending(page: Page): Promise<void> {
 const layer = (page: Page) => page.locator('app-story-layer');
 const closeStory = (page: Page) => layer(page).locator('.story-back').click();
 
+/** Opens the titled story from Trending, its page `over` the stubbed one; resolves once its list shows. */
+async function openStoryFromTrending(
+  page: Page,
+  layout: 'magazine' | 'list' | 'pane',
+  over?: Partial<StoryPageDto>,
+): Promise<Stubbed> {
+  const stubbed = await stubStories(page, false);
+  if (over) await stubStoryPage(page, over);
+  await signIn(page, layout);
+  await openTrending(page);
+  await page.getByRole('link', { name: TITLE }).click();
+  await expect(layer(page)).toContainText(TITLE);
+  return stubbed;
+}
+
 for (const layout of ['magazine', 'list'] as const) {
   for (const [device, viewport] of [
     ['desktop', { width: 1280, height: 900 }],
@@ -233,7 +248,6 @@ test.describe("a story's list reads like any list (desktop)", () => {
   test.use({ viewport: { width: 1280, height: 900 } });
 
   test('marks the story read and shows only its unread articles', async ({ page }) => {
-    await stubStories(page, false);
     const marked: unknown[] = [];
     await page.route(
       (url) => url.pathname === `/api/entries/trending-stories/${STORY_ID}/mark-read`,
@@ -242,9 +256,7 @@ test.describe("a story's list reads like any list (desktop)", () => {
         return route.fulfill({ status: 204 });
       },
     );
-    await signIn(page, 'list');
-    await openTrending(page);
-    await page.getByRole('link', { name: TITLE }).click();
+    await openStoryFromTrending(page, 'list');
     const header = layer(page).locator('app-list-header');
     await expect(header.locator('h2')).toContainText(TITLE);
     await expect(header.locator('.title-count')).toHaveText('1');
@@ -266,11 +278,7 @@ test.describe("a story's list reads like any list (desktop)", () => {
   });
 
   test("shows the list's own corner buttons, and none of the article's", async ({ page }) => {
-    await stubStories(page, false);
-    await signIn(page, 'magazine');
-    await openTrending(page);
-    await page.getByRole('link', { name: TITLE }).click();
-    await expect(layer(page)).toContainText(TITLE);
+    await openStoryFromTrending(page, 'magazine');
 
     await expect(page.locator('.story-overlay app-article-layer')).toHaveCount(0);
     await expect(page.locator('.story-overlay .corner-back')).toHaveCount(0);
@@ -312,6 +320,26 @@ async function leaveAnimation(
   return page.evaluate(() => window.storyAnimations);
 }
 
+/** Checks how the story slides in and, through its back button, out: `sliding` is what moves. */
+async function expectSlides(
+  page: Page,
+  reducedMotion: 'no-preference' | 'reduce',
+  sliding = '.story-overlay',
+): Promise<void> {
+  const entered = await page
+    .locator(sliding)
+    .evaluate((element) => getComputedStyle(element).animationName);
+  const left = await leaveAnimation(page, () => closeStory(page), sliding);
+
+  if (reducedMotion === 'reduce') {
+    expect(entered).toBe('none');
+    expect(left).toEqual(['none']);
+  } else {
+    expect(entered).toMatch(/article-enter$/);
+    expect(left).toEqual([expect.stringMatching(/article-leave$/)]);
+  }
+}
+
 test.describe("a story's list slides like an article (phone)", () => {
   test.use({ viewport: { width: 375, height: 667 } });
 
@@ -320,22 +348,9 @@ test.describe("a story's list slides like an article (phone)", () => {
       page,
     }) => {
       await page.emulateMedia({ reducedMotion });
-      await stubStories(page, false);
-      await signIn(page, 'magazine');
-      await openTrending(page);
+      await openStoryFromTrending(page, 'magazine');
 
-      await page.getByRole('link', { name: TITLE }).click();
-      const overlay = page.locator('.story-overlay');
-      const entered = await overlay.evaluate((element) => getComputedStyle(element).animationName);
-      const left = await leaveAnimation(page, () => closeStory(page));
-
-      if (reducedMotion === 'reduce') {
-        expect(entered).toBe('none');
-        expect(left).toEqual(['none']);
-      } else {
-        expect(entered).toMatch(/article-enter$/);
-        expect(left).toEqual([expect.stringMatching(/article-leave$/)]);
-      }
+      await expectSlides(page, reducedMotion);
     });
   }
 });
@@ -348,36 +363,19 @@ test.describe("a story's list slides inside the list column in the split layout"
       page,
     }) => {
       await page.emulateMedia({ reducedMotion });
-      await stubStories(page, false);
-      await signIn(page, 'pane');
-      await openTrending(page);
+      await openStoryFromTrending(page, 'pane');
 
-      await page.getByRole('link', { name: TITLE }).click();
-      const column = page.locator('.main.split > .story-overlay');
-      const sliding = column.locator('> app-story-layer');
-      const entered = await sliding.evaluate((element) => getComputedStyle(element).animationName);
-      const clip = await column.evaluate((element) => {
+      const clip = await page.locator('.main.split > .story-overlay').evaluate((element) => {
         const reader = document.querySelector('.main.split .reader')!.getBoundingClientRect();
         return {
           overflow: getComputedStyle(element).overflowX,
           gap: reader.left - element.getBoundingClientRect().right,
         };
       });
-      const left = await leaveAnimation(
-        page,
-        () => closeStory(page),
-        '.story-overlay > app-story-layer',
-      );
 
       expect(clip.overflow).toBe('clip');
       expect(clip.gap).toBeGreaterThanOrEqual(-1);
-      if (reducedMotion === 'reduce') {
-        expect(entered).toBe('none');
-        expect(left).toEqual(['none']);
-      } else {
-        expect(entered).toMatch(/article-enter$/);
-        expect(left).toEqual([expect.stringMatching(/article-leave$/)]);
-      }
+      await expectSlides(page, reducedMotion, '.story-overlay > app-story-layer');
     });
   }
 });
@@ -386,12 +384,7 @@ test.describe("a story's list is full screen on a phone, as an article is", () =
   test.use({ viewport: { width: 375, height: 667 } });
 
   test('its header starts at the top of the screen, over the app bar', async ({ page }) => {
-    await stubStories(page, false);
-    await signIn(page, 'magazine');
-    await openTrending(page);
-
-    await page.getByRole('link', { name: TITLE }).click();
-    await expect(layer(page)).toContainText(TITLE);
+    await openStoryFromTrending(page, 'magazine');
     await settleAnimations(page.locator('.story-overlay'));
 
     const header = await layer(page)
@@ -418,11 +411,7 @@ for (const [device, viewport, shown] of [
     test.use({ viewport });
 
     test(`${shown ? 'leads' : 'gives its room to'} the title`, async ({ page }) => {
-      await stubStories(page, false);
-      await signIn(page, 'magazine');
-      await openTrending(page);
-
-      await page.getByRole('link', { name: TITLE }).click();
+      await openStoryFromTrending(page, 'magazine');
       const header = layer(page).locator('app-list-header');
       await expect(header.locator('h2')).toContainText(TITLE);
 
@@ -439,12 +428,8 @@ test.describe("a story's list goes back on the article's swipe (phone)", () => {
       page,
     }) => {
       await page.emulateMedia({ reducedMotion });
-      const stubbed = await stubStories(page, false);
-      await signIn(page, 'magazine');
-      await openTrending(page);
+      const stubbed = await openStoryFromTrending(page, 'magazine');
       const requests = stubbed.trendingRequests();
-      await page.getByRole('link', { name: TITLE }).click();
-      await expect(layer(page)).toContainText(TITLE);
       await settleAnimations(page.locator('.story-overlay'));
 
       await touchDrag(page, 'app-story-layer', { x: 20, y: 400 }, { x: 260, y: 410 });
@@ -512,12 +497,11 @@ test.describe("a story's list is a list of its own (desktop)", () => {
   test("the count pill reads the server's tally of a story longer than a page", async ({
     page,
   }) => {
-    await stubStories(page, false);
-    await stubStoryPage(page, { nextCursor: 'next-page', memberCount: 31, unreadCount: 12 });
-    await signIn(page, 'list');
-    await openTrending(page);
-
-    await page.getByRole('link', { name: TITLE }).click();
+    await openStoryFromTrending(page, 'list', {
+      nextCursor: 'next-page',
+      memberCount: 31,
+      unreadCount: 12,
+    });
     const header = layer(page).locator('app-list-header');
     await expect(header.locator('.title-count')).toHaveText('31');
     await header.getByRole('switch', { name: 'Unread' }).click();
@@ -558,11 +542,7 @@ test.describe("a story's list is a list of its own (desktop)", () => {
   });
 
   test("hiding the sidebar focuses the story's own way back to it", async ({ page }) => {
-    await stubStories(page, false);
-    await signIn(page, 'list');
-    await openTrending(page);
-    await page.getByRole('link', { name: TITLE }).click();
-    await expect(layer(page)).toContainText(TITLE);
+    await openStoryFromTrending(page, 'list');
 
     await page.getByRole('button', { name: 'Hide sidebar' }).click();
 
