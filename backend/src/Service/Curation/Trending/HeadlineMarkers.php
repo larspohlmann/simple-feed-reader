@@ -41,9 +41,9 @@ final readonly class HeadlineMarkers
 
     public function clean(string $headline, ?string $feedTitle, ?FeedLanguage $language): CleanedHeadlineModel
     {
-        $withoutTicker = $this->withoutTicker(trim($headline));
-        $withoutLabel = $this->withoutLabel($withoutTicker, $language);
-        $markerFree = $withoutLabel === trim($headline);
+        $trimmed = trim($headline);
+        $withoutLabel = $this->withoutLabel($this->withoutTicker($trimmed), $language);
+        $markerFree = $withoutLabel === $trimmed;
 
         return new CleanedHeadlineModel($this->withoutOutletSuffix($withoutLabel, $feedTitle), $markerFree);
     }
