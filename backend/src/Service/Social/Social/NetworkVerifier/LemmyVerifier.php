@@ -10,6 +10,8 @@ use App\Service\Foundation\Url\Support\UrlOrigin;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkUnavailableException;
+use App\Service\Social\Social\Exception\SocialWriteOutcomeUnknownException;
 use App\Service\Social\Social\LemmyApiClient;
 use App\Service\Social\Social\Model\LemmySessionModel;
 use App\Service\Social\Social\Model\SocialCredentialsModel;
@@ -50,7 +52,11 @@ final readonly class LemmyVerifier implements NetworkVerifierInterface
         if (null !== $credentials->secondFactor) {
             $body['totp_2fa_token'] = $credentials->secondFactor;
         }
-        $answer = $this->lemmy->send(ApiRequestModel::postJson($credentials->address . '/api/v3/user/login', $body));
+        try {
+            $answer = $this->lemmy->send(ApiRequestModel::postJson($credentials->address . '/api/v3/user/login', $body));
+        } catch (SocialWriteOutcomeUnknownException $exception) {
+            throw SocialNetworkUnavailableException::naming($exception->serviceName, $exception->status);
+        }
 
         return JsonNodeModel::of($answer->json())->string('jwt')
             ?? throw new SocialCredentialsRejectedException(self::NO_SESSION);
