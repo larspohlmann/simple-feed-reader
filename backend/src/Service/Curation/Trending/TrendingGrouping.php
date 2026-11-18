@@ -26,12 +26,12 @@ final readonly class TrendingGrouping
     ) {
     }
 
-    public function collect(TrendingWindow $window): TrendingRun
+    public function collect(int $userId, TrendingWindow $window): TrendingRun
     {
         $since = $window->startBefore($this->clock->now());
         $run = new TrendingRun($window, $since, new HeadlineWindow($this->filler, $this->equivalents));
         $sharedArticles = new SharedArticles($this->cardLanguage);
-        foreach ($this->windowEntries->windowEntries($since) as $entry) {
+        foreach ($this->windowEntries->windowEntries($userId, $since) as $entry) {
             $run->add($entry, $entry->links->urlHashes(), $sharedArticles->of($entry));
         }
 

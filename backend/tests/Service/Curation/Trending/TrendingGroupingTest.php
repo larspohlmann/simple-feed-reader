@@ -150,6 +150,6 @@ final class TrendingGroupingTest extends DbTestCase
     private function collect(): TrendingRun
     {
         return TrendingWiring::grouping($this->entityManager, new MockClock('2031-05-14 12:00:00', 'UTC'))
-            ->collect(TrendingWindow::Day);
+            ->collect($this->fixtures->owner()->requireId(), TrendingWindow::Day);
     }
 }

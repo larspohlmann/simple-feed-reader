@@ -39,12 +39,19 @@ final class TrendingExplainCommand extends Command
 
     protected function configure(): void
     {
+        $this->addOption('user', null, InputOption::VALUE_REQUIRED, 'The user id whose included feeds are grouped');
         $this->addOption('window', null, InputOption::VALUE_REQUIRED, 'day or week', TrendingWindow::Day->value);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
+        $userId = ConsoleOption::wholeNumber($input, 'user');
+        if ($userId === null) {
+            $io->error('The --user option is required: the id of the user whose Trending feeds are grouped.');
+
+            return Command::INVALID;
+        }
         try {
             $window = TrendingWindow::fromRequestValue(ConsoleOption::text($input, 'window'));
         } catch (ValidationException $exception) {
@@ -52,7 +59,7 @@ final class TrendingExplainCommand extends Command
 
             return Command::FAILURE;
         }
-        $explanation = $this->explainer->explain($window);
+        $explanation = $this->explainer->explain($userId, $window);
         $headlines = $this->headlinesOf($explanation);
         $io->title(self::summaryOf($explanation));
         $io->writeln(self::languagesOf($explanation->languageCoverage));

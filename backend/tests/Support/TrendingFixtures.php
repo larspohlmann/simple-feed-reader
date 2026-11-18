@@ -37,8 +37,17 @@ final readonly class TrendingFixtures
     {
     }
 
-    /** A social feed's address is one the classifier recognises: the listener re-derives its network on flush. */
+    /** The reader every story of these fixtures belongs to follows the feed. */
     public function feed(string $name, ?SocialNetwork $network = null): Feed
+    {
+        $feed = $this->feedNobodyFollows($name, $network);
+        $this->subscribe($this->owner(), $feed);
+
+        return $feed;
+    }
+
+    /** A social feed's address is one the classifier recognises: the listener re-derives its network on flush. */
+    public function feedNobodyFollows(string $name, ?SocialNetwork $network = null): Feed
     {
         $feed = new Feed(match ($network) {
             SocialNetwork::Bluesky => \sprintf('https://bsky.app/profile/%s.bsky.social/rss', $name),
