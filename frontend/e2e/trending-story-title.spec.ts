@@ -410,6 +410,27 @@ test.describe("a story's list is full screen on a phone, as an article is", () =
   });
 });
 
+for (const [device, viewport, shown] of [
+  ['phone', { width: 375, height: 667 }, false],
+  ['desktop', { width: 1280, height: 900 }, true],
+] as const) {
+  test.describe(`the story's glyph in its header (${device})`, () => {
+    test.use({ viewport });
+
+    test(`${shown ? 'leads' : 'gives its room to'} the title`, async ({ page }) => {
+      await stubStories(page, false);
+      await signIn(page, 'magazine');
+      await openTrending(page);
+
+      await page.getByRole('link', { name: TITLE }).click();
+      const header = layer(page).locator('app-list-header');
+      await expect(header.locator('h2')).toContainText(TITLE);
+
+      await expect(header.locator('.story-glyph')).toBeVisible({ visible: shown });
+    });
+  });
+}
+
 test.describe("a story's list goes back on the article's swipe (phone)", () => {
   test.use({ viewport: { width: 375, height: 667 }, hasTouch: true, isMobile: true });
 
