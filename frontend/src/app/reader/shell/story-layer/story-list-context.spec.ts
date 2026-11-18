@@ -8,6 +8,7 @@ import { TokenStore } from '../../../core/auth/token.store';
 import { EntryDto } from '../../models';
 import { SelectionOf } from '../../query/query';
 import { EntriesStore } from '../../state/entries.store';
+import { EntryRowCache } from '../../state/entry-row-cache';
 import { StoryOverlay } from '../story-overlay.service';
 import { StoryListContext } from './story-list-context';
 
@@ -105,7 +106,7 @@ describe('StoryListContext (#2329)', () => {
     expect(context.leavingIds().size).toBe(0);
   });
 
-  it('lays each change to its rows over the list beneath too, which keeps its rows', () => {
+  it('shows each change to its rows in the list beneath too, which keeps its rows', () => {
     landRouteList([anEntry({ id: 7 }), anEntry({ id: 9 })]);
     const context = mount();
     ctrl.expectOne(storyRequest).flush(storyPage([anEntry({ id: 7 })]));
@@ -162,16 +163,16 @@ describe('StoryListContext (#2329)', () => {
     ctrl.expectNone((request) => request.url === 'https://api.test/api/entries');
   });
 
-  it('stops passing changes on once its layer is gone', () => {
+  it('lets go of the rows only it holds once its layer is gone', () => {
     landRouteList([anEntry({ id: 7 })]);
     const context = mount();
-    ctrl.expectOne(storyRequest).flush(storyPage([anEntry({ id: 7 })]));
-    const rows = context.entries;
+    ctrl.expectOne(storyRequest).flush(storyPage([anEntry({ id: 7 }), anEntry({ id: 8 })]));
+    const rows = TestBed.inject(EntryRowCache);
+    expect(context.entries.entry(8)).not.toBeNull();
+
     layer.destroy();
 
-    rows.layOver({ targets: new Set([7]), patch: (row) => row });
-    rows.markSharedLocally(7);
-
-    expect(beneath().entry(7)?.isShared).toBe(false);
+    expect(rows.entry(8)).toBeNull();
+    expect(beneath().entry(7)).not.toBeNull();
   });
 });

@@ -10,6 +10,7 @@ import { SavedSearchesStore } from '../state/saved-searches.store';
 import { MarkReadTarget, markReadTarget } from '../query/mark-read-target';
 import { isUnreadOnly } from '../query/query';
 import { ListContext } from '../state/list-context';
+import { EntryRowCache } from '../state/entry-row-cache';
 import { injectListOnScreen } from './list-cover';
 
 /** Mark all read and mark above read, on the list on screen (#2329). */
@@ -21,6 +22,7 @@ export class MarkReadActions {
   private readonly subscriptions = inject(SubscriptionsStore);
   private readonly savedSearches = inject(SavedSearchesStore);
   private readonly list = injectListOnScreen();
+  private readonly rows = inject(EntryRowCache);
 
   readonly canMarkAllRead = computed(() => markReadTarget(this.list().selection()) !== null);
 
@@ -51,7 +53,7 @@ export class MarkReadActions {
   private markAboveReadNow(list: ListContext, ids: number[], hideInUnreadList: () => void): void {
     const hideLocally = isUnreadOnly(list.selection())
       ? hideInUnreadList
-      : () => list.entries.markHiddenLocally(ids);
+      : () => this.rows.markHiddenLocally(ids);
     list.entries.withMutatingCue(this.api.markEntriesRead(ids)).subscribe({
       next: () => {
         hideLocally();

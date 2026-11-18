@@ -475,6 +475,48 @@ test.describe("a story's list is a list of its own (desktop)", () => {
     await expect(layer(page).locator('.row-slot.leaving')).toHaveCount(0);
   });
 
+  test('a favourite and a read in the story show on the same row beneath it, with no reload', async ({
+    page,
+  }) => {
+    let keptRequests = 0;
+    await page.route(
+      (url) => url.pathname === `/api/entries/${keptLead.id}/state`,
+      (route) => route.fulfill({ status: 200, json: {} }),
+    );
+    await stubStories(page, false);
+    await stubStoryPage(page, { entries: [keptLead] });
+    await page.route(
+      (url) => url.pathname === '/api/entries' && url.searchParams.get('view') === 'kept',
+      (route) => {
+        keptRequests++;
+        return route.fulfill({ status: 200, json: { entries: [keptLead], nextCursor: null } });
+      },
+    );
+    await signIn(page, 'list');
+    await page.goto(`/trending/stories/${STORY_ID}?view=kept`);
+    const storyRow = layer(page).locator('.row-slot').first();
+    await expect(storyRow).toHaveCount(1);
+    await expect(page.locator('section.list .row-slot')).toHaveCount(1);
+    const loads = keptRequests;
+
+    await storyRow.hover();
+    await storyRow.getByRole('button', { name: 'Favorite', exact: true }).click();
+    await storyRow.getByRole('button', { name: 'Toggle read', exact: true }).click();
+    await closeStory(page);
+    await expect(layer(page)).toHaveCount(0);
+
+    const beneath = page.locator('section.list .row-slot').first();
+    await expect(beneath.getByRole('button', { name: 'Favorite', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await expect(beneath.getByRole('button', { name: 'Toggle read', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(keptRequests).toBe(loads);
+  });
+
   test("a failed change shows on the story's banner, not the list's beneath", async ({ page }) => {
     await page.route(
       (url) => url.pathname === `/api/entries/${keptLead.id}/state`,

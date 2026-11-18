@@ -3,20 +3,20 @@ import { TestBed } from '@angular/core/testing';
 import { SharingService } from '../../../core/preferences/sharing.service';
 import { anEntry } from '../../../../testing/entry-testing';
 import { EntryDto } from '../../models';
-import { EntriesStore } from '../../state/entries.store';
+import { EntryRowCache } from '../../state/entry-row-cache';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { NetworkShares } from './network-shares.service';
 
 describe('NetworkShares', () => {
   const recordsShares = signal(true);
   let listed: EntryDto | null;
-  let entries: { entry: jest.Mock; markSharedLocally: jest.Mock };
+  let rows: { entry: jest.Mock; markSharedLocally: jest.Mock };
   let subscriptions: { bumpShared: jest.Mock };
 
   function shares(): NetworkShares {
     TestBed.configureTestingModule({
       providers: [
-        { provide: EntriesStore, useValue: entries },
+        { provide: EntryRowCache, useValue: rows },
         { provide: SubscriptionsStore, useValue: subscriptions },
         { provide: SharingService, useValue: { recordsShares } },
       ],
@@ -27,15 +27,15 @@ describe('NetworkShares', () => {
   beforeEach(() => {
     recordsShares.set(true);
     listed = anEntry({ id: 4, isShared: false });
-    entries = { entry: jest.fn(() => listed), markSharedLocally: jest.fn() };
+    rows = { entry: jest.fn(() => listed), markSharedLocally: jest.fn() };
     subscriptions = { bumpShared: jest.fn() };
   });
 
   it('marks the entry shared and counts it once', () => {
     shares().reflect(4);
 
-    expect(entries.entry).toHaveBeenCalledWith(4);
-    expect(entries.markSharedLocally).toHaveBeenCalledWith(4);
+    expect(rows.entry).toHaveBeenCalledWith(4);
+    expect(rows.markSharedLocally).toHaveBeenCalledWith(4);
     expect(subscriptions.bumpShared).toHaveBeenCalledTimes(1);
     expect(subscriptions.bumpShared).toHaveBeenCalledWith(1);
   });
@@ -45,7 +45,7 @@ describe('NetworkShares', () => {
 
     shares().reflect(4);
 
-    expect(entries.markSharedLocally).toHaveBeenCalledWith(4);
+    expect(rows.markSharedLocally).toHaveBeenCalledWith(4);
     expect(subscriptions.bumpShared).not.toHaveBeenCalled();
   });
 
@@ -54,7 +54,7 @@ describe('NetworkShares', () => {
 
     shares().reflect(4);
 
-    expect(entries.markSharedLocally).not.toHaveBeenCalled();
+    expect(rows.markSharedLocally).not.toHaveBeenCalled();
     expect(subscriptions.bumpShared).not.toHaveBeenCalled();
   });
 });

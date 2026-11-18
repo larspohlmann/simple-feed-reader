@@ -3,7 +3,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoService } from '@jsverse/transloco';
 import { EntryActionHandler } from '../entry/entry-actions/entry-action-handler';
-import { StateSaveOutcome, localStatePatch } from '../state/entries.store';
+import { StateSaveOutcome } from '../state/entries.store';
+import { EntryRowCache, localStatePatch } from '../state/entry-row-cache';
 import { countFirstShare } from '../state/first-share';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
@@ -25,6 +26,7 @@ export class EntryStateActions implements EntryActionHandler {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly list = injectListOnScreen();
+  private readonly rows = inject(EntryRowCache);
   private readonly subscriptions = inject(SubscriptionsStore);
   private readonly savedSearches = inject(SavedSearchesStore);
   private readonly routeState = inject(ReaderRouteState);
@@ -53,7 +55,7 @@ export class EntryStateActions implements EntryActionHandler {
       if (this.openVotableId() === null) return;
       untracked(() => {
         const entry = this.routeState.openEntry();
-        if (entry !== null) this.list().entries.refreshVote(entry);
+        if (entry !== null) this.rows.refreshVote(entry);
       });
     });
     inject(RemovedPosts)
@@ -72,13 +74,11 @@ export class EntryStateActions implements EntryActionHandler {
   }
 
   like(entry: EntryDto): void {
-    this.list().entries.setLiked(entry, !entry.social?.isLiked, (problem) =>
-      this.toast.showProblem(problem),
-    );
+    this.rows.setLiked(entry, !entry.social?.isLiked, (problem) => this.toast.showProblem(problem));
   }
 
   vote(entry: EntryDto, to: VoteValue): void {
-    this.list().entries.setVote(entry, to, (problem) => this.toast.showProblem(problem));
+    this.rows.setVote(entry, to, (problem) => this.toast.showProblem(problem));
   }
 
   keep(entry: EntryDto): void {

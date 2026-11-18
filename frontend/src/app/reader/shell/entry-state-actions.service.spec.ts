@@ -5,6 +5,7 @@ import { EMPTY, Observable, of } from 'rxjs';
 import { EntryStateActions } from './entry-state-actions.service';
 import { EntriesStore, StateSaveOutcome } from '../state/entries.store';
 import { ListContext } from '../state/list-context';
+import { EntryRowCache } from '../state/entry-row-cache';
 import { Selection } from '../query/query';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
@@ -39,6 +40,7 @@ function createActions(collaborators: Collaborators): EntryStateActions {
     imports: [provideTranslocoTesting()],
     providers: [
       EntryStateActions,
+      { provide: EntryRowCache, useValue: {} },
       provideRouter([]),
       ...provideRouteListForTest(collaborators.entries, selectionOf(collaborators.routeState)),
       { provide: SubscriptionsStore, useValue: collaborators.subscriptions },
@@ -64,7 +66,8 @@ describe('EntryStateActions liking (#1600)', () => {
       providers: [
         EntryStateActions,
         provideRouter([]),
-        ...provideRouteListForTest({ setLiked }),
+        ...provideRouteListForTest({}),
+        { provide: EntryRowCache, useValue: { setLiked } },
         { provide: SubscriptionsStore, useValue: {} },
         { provide: SavedSearchesStore, useValue: {} },
         {
@@ -121,6 +124,7 @@ describe('EntryStateActions opening', () => {
       imports: [provideTranslocoTesting()],
       providers: [
         EntryStateActions,
+        { provide: EntryRowCache, useValue: {} },
         provideRouter([]),
         ...provideRouteListForTest({}),
         { provide: SubscriptionsStore, useValue: {} },
@@ -363,6 +367,7 @@ describe('EntryStateActions deleting my own post (#1972)', () => {
       imports: [provideTranslocoTesting()],
       providers: [
         EntryStateActions,
+        { provide: EntryRowCache, useValue: {} },
         provideRouter([]),
         ...provideRouteListForTest({}),
         { provide: SubscriptionsStore, useValue: { reloadCountsQuietly } },
@@ -423,6 +428,7 @@ describe('EntryStateActions on a post deleted on its network (#1975)', () => {
       imports: [provideTranslocoTesting()],
       providers: [
         EntryStateActions,
+        { provide: EntryRowCache, useValue: {} },
         provideRouter([]),
         ...provideRouteListForTest({}),
         { provide: SubscriptionsStore, useValue: { reloadCountsQuietly } },
@@ -479,7 +485,8 @@ describe('EntryStateActions voting (#2218)', () => {
       providers: [
         EntryStateActions,
         provideRouter([]),
-        ...provideRouteListForTest({ setVote, refreshVote }),
+        ...provideRouteListForTest({}),
+        { provide: EntryRowCache, useValue: { setVote, refreshVote } },
         { provide: SubscriptionsStore, useValue: {} },
         { provide: SavedSearchesStore, useValue: {} },
         {

@@ -27,21 +27,19 @@ describe('InFlightPatches', () => {
   it('laysPatchesOverTheMatchingEntriesOnly', () => {
     const ledger = new InFlightPatches();
     ledger.add(1, { myVote: 1, score: 11 });
-    const rows = [
-      anEntry({ id: 1, score: 10, myVote: 0 }),
-      anEntry({ id: 2, score: 4, myVote: 0 }),
-    ];
+    const other = anEntry({ id: 2, score: 4, myVote: 0 });
 
-    const [first, second] = ledger.overlayAll(rows);
-
-    expect(first).toMatchObject({ myVote: 1, score: 11 });
-    expect(second).toBe(rows[1]);
+    expect(ledger.overlay(anEntry({ id: 1, score: 10, myVote: 0 }))).toMatchObject({
+      myVote: 1,
+      score: 11,
+    });
+    expect(ledger.overlay(other)).toBe(other);
   });
 
-  it('handsTheListBackWhenNothingIsOnTheWire', () => {
-    const rows = [anEntry({ id: 1 })];
+  it('handsTheEntryBackWhenNothingIsOnTheWire', () => {
+    const entry = anEntry({ id: 1 });
 
-    expect(new InFlightPatches().overlayAll(rows)).toBe(rows);
+    expect(new InFlightPatches().overlay(entry)).toBe(entry);
   });
 
   it('readsBackWhatAPatchChanges', () => {

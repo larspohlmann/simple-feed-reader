@@ -11,6 +11,7 @@ import { ReaderApi } from '../reader-api';
 import { SubscriptionDto } from '../models';
 import { Selection } from '../query/query';
 import { EntriesStore } from '../state/entries.store';
+import { EntryRowCache } from '../state/entry-row-cache';
 import { ListContext } from '../state/list-context';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { SubscriptionsStore } from '../state/subscriptions.store';
@@ -69,7 +70,6 @@ describe('MarkReadActions recounting after a mark-read', () => {
             loadedAt: () => '2026-10-16T10:00:00Z',
             entries: () => [{ id: 3 }],
             load: jest.fn(),
-            markHiddenLocally: jest.fn(),
             runThenReload: (
               mutation: { subscribe: (next: () => void) => void },
               reload: () => void,
@@ -79,6 +79,7 @@ describe('MarkReadActions recounting after a mark-read', () => {
           currentSelection as Signal<Selection>,
         ),
         { provide: SavedSearchesStore, useValue: { load: jest.fn() } },
+        { provide: EntryRowCache, useValue: { markHiddenLocally: jest.fn() } },
       ],
     });
     TestBed.inject(TokenStore).set('user-a.jwt');
@@ -164,7 +165,7 @@ describe('MarkReadActions recounting after a mark-read', () => {
     actions.confirmMarkAllRead();
 
     expect(routeRows.load).toHaveBeenCalledWith({ view: 'all', tag: 5 });
-    expect(routeRows.markHiddenLocally).not.toHaveBeenCalled();
+    expect(TestBed.inject(EntryRowCache).markHiddenLocally).not.toHaveBeenCalled();
   });
 
   describe("a Trending story's list over the reader's (#2329)", () => {
@@ -173,7 +174,6 @@ describe('MarkReadActions recounting after a mark-read', () => {
       loadedAt: () => string;
       entries: () => { id: number }[];
       load: jest.Mock;
-      markHiddenLocally: jest.Mock;
       runThenReload: (
         mutation: { subscribe: (next: () => void) => void },
         reload: () => void,
@@ -187,7 +187,6 @@ describe('MarkReadActions recounting after a mark-read', () => {
         loadedAt: () => '2026-10-16T11:00:00Z',
         entries: () => [{ id: 7 }, { id: 8 }],
         load: jest.fn(),
-        markHiddenLocally: jest.fn(),
         runThenReload: (mutation, reload) => mutation.subscribe(reload),
         withMutatingCue: (mutation) => mutation,
       };
@@ -210,11 +209,10 @@ describe('MarkReadActions recounting after a mark-read', () => {
       expect(reloadCountsQuietly).toHaveBeenCalledTimes(1);
     });
 
-    it("marks the rows above read in the story's list, not the reader's", () => {
+    it("marks the story's rows above read, in every list that shows them", () => {
       actions.confirmMarkAboveRead([7], jest.fn());
 
-      expect(storyRows.markHiddenLocally).toHaveBeenCalledWith([7]);
-      expect(TestBed.inject(ListContext).entries.markHiddenLocally).not.toHaveBeenCalled();
+      expect(TestBed.inject(EntryRowCache).markHiddenLocally).toHaveBeenCalledWith([7]);
     });
 
     it('offers mark all read for the story', () => {

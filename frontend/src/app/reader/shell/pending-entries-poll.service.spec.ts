@@ -14,6 +14,7 @@ import {
   PENDING_POLL_MAX_ROUNDS,
   PendingEntriesPoll,
 } from './pending-entries-poll.service';
+import { EntryRowCache } from '../state/entry-row-cache';
 import { provideRouteListForTest } from '../../../testing/list-context-testing';
 
 const row = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
@@ -86,7 +87,8 @@ describe('PendingEntriesPoll', () => {
       providers: [
         PendingEntriesPoll,
         CompletedEntriesMerge,
-        ...provideRouteListForTest({ entries, loading, loadedAt, mergeCompleted }),
+        ...provideRouteListForTest({ entries, loading, loadedAt }),
+        { provide: EntryRowCache, useValue: { mergeCompleted } },
         { provide: ReaderApi, useValue: { complete } },
         { provide: EntryBodyService, useValue: { refresh: refreshBody, forget: forgetBody } },
         { provide: ReaderRouteState, useValue: { openEntry } },

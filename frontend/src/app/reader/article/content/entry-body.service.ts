@@ -1,7 +1,7 @@
 import { Injectable, Signal, WritableSignal, inject, signal } from '@angular/core';
 import { Subscription, asapScheduler, finalize, subscribeOn } from 'rxjs';
 import { onIdentityChange } from '../../../core/auth/session-identity';
-import { EntriesStore } from '../../state/entries.store';
+import { EntryRowCache } from '../../state/entry-row-cache';
 import { ReaderApi } from '../../reader-api';
 import { ChapterDto, EntryDetailDto, TranscriptDto } from '../../models';
 
@@ -34,7 +34,7 @@ function okBody(detail: BodyOfDetail): EntryBodyState {
 export class EntryBodyService {
   private readonly api = inject(ReaderApi);
   private readonly cache = new Map<number, WritableSignal<EntryBodyState>>();
-  private readonly entries = inject(EntriesStore);
+  private readonly rows = inject(EntryRowCache);
   private readonly inFlight = new Map<WritableSignal<EntryBodyState>, Subscription>();
 
   constructor() {
@@ -116,7 +116,7 @@ export class EntryBodyService {
       .subscribe({
         next: (response) => {
           state.set(okBody(response.entry));
-          this.entries.mergeCompleted([response.completed]);
+          this.rows.mergeCompleted([response.completed]);
         },
         error: () => {
           if (state().status !== 'ok') state.set({ status: 'error' });

@@ -1,19 +1,19 @@
 import { Injectable, effect, inject, linkedSignal, untracked } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { queryFromSelection } from '../../query/entry-query';
 import { SelectionOf } from '../../query/query';
 import { EntriesStore } from '../../state/entries.store';
+import { EntryRowCache } from '../../state/entry-row-cache';
 import { ListContext } from '../../state/list-context';
 import { StoryOverlay } from '../story-overlay.service';
 
 const GONE = 'trending_story_not_found';
 
-/** A Trending story's list over the route's (#2329): rows of its own, loaded for the story the overlay names. A
- *  change to one of them shows in the list beneath too, which keeps its rows rather than reloading. */
+/** A Trending story's list over the route's (#2329), loaded for the story the overlay names. Its rows are the
+ *  shared cache's, so a change to one shows in the list beneath too, which keeps its rows rather than reloading. */
 @Injectable()
 export class StoryListContext extends ListContext {
   private readonly overlay = inject(StoryOverlay);
-  private readonly beneath = inject(EntriesStore);
+  private readonly rows = inject(EntryRowCache);
   readonly entries = new EntriesStore();
   /** The open story, held while the layer slides out after the overlay has closed. */
   readonly selection = linkedSignal<
@@ -40,14 +40,11 @@ export class StoryListContext extends ListContext {
         this.overlay.leaveStoryThatIsGone();
       });
     });
-    this.entries.rowsPatched
-      .pipe(takeUntilDestroyed())
-      .subscribe((change) => this.beneath.layOver(change));
   }
 
   /** Marks the rows read here first, so the list beneath shows them read without a reload. */
   override showMarkedAllRead(): void {
-    this.entries.markHiddenLocally(this.entries.entries().map((entry) => entry.id));
+    this.rows.markHiddenLocally(this.entries.entries().map((entry) => entry.id));
     super.showMarkedAllRead();
   }
 }

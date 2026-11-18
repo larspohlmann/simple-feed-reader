@@ -41,6 +41,7 @@ import { ReaderRouteState } from './reader-route-state.service';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SubscriptionRows } from '../state/subscription-rows';
 import { EntriesStore } from '../state/entries.store';
+import { EntryRowCache } from '../state/entry-row-cache';
 import { ListContext } from '../state/list-context';
 import { StoryLayerComponent } from './story-layer/story-layer.component';
 import { SidebarComponent } from './sidebar/sidebar.component';
@@ -4455,7 +4456,7 @@ describe('ReaderShellComponent', () => {
       const api = TestBed.inject(ReaderApi);
       jest.spyOn(api, 'markEntriesRead').mockReturnValue(of(undefined));
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
-      const markHiddenLocally = jest.spyOn(TestBed.inject(EntriesStore), 'markHiddenLocally');
+      const markHiddenLocally = jest.spyOn(TestBed.inject(EntryRowCache), 'markHiddenLocally');
       const load = jest.spyOn(TestBed.inject(EntriesStore), 'load');
 
       fixture.componentInstance.onMarkAboveRead([5, 6]);
@@ -4473,7 +4474,7 @@ describe('ReaderShellComponent', () => {
         .spyOn(api, 'markEntriesRead')
         .mockReturnValue(throwError(() => new HttpErrorResponse({ error: problem, status: 500 })));
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
-      const markHiddenLocally = jest.spyOn(TestBed.inject(EntriesStore), 'markHiddenLocally');
+      const markHiddenLocally = jest.spyOn(TestBed.inject(EntryRowCache), 'markHiddenLocally');
       const load = jest.spyOn(TestBed.inject(EntriesStore), 'load');
 
       fixture.componentInstance.onMarkAboveRead([5, 6]);
