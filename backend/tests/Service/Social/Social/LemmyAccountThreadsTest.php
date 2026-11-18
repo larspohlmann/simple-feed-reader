@@ -189,7 +189,7 @@ final class LemmyAccountThreadsTest extends DbTestCase
             ]),
             new IpValidator(),
         );
-        $client = new LemmyApiClient(FetchWiring::guardedApiClient($http->client(), $guard));
+        $client = new LemmyApiClient(FetchWiring::patientApiClient($http->client(), $guard));
         $api = new LemmyAccountApi($client, new StoredCredential(SocialAccounts::cipher()));
         $limiter = self::getContainer()->get('limiter.social_replies');
         self::assertInstanceOf(RateLimiterFactoryInterface::class, $limiter);

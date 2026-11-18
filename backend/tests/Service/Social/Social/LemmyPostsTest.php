@@ -188,7 +188,7 @@ final class LemmyPostsTest extends TestCase
             ]),
             new IpValidator(),
         );
-        $client = new LemmyApiClient(FetchWiring::guardedApiClient($http->client(), $guard));
+        $client = new LemmyApiClient(FetchWiring::patientApiClient($http->client(), $guard));
 
         return new LemmyPosts(
             new LemmyAccountApi($client, new StoredCredential(SocialAccounts::cipher())),

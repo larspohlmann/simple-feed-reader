@@ -59,7 +59,7 @@ final class SocialApiWiring
 
     public static function blueskySessions(HttpClientInterface $http, ?ArrayAdapter $cache = null): BlueskySessions
     {
-        $api = new BlueskyApiClient(FetchWiring::guardedApiClient($http, self::guardFor(self::BLUESKY_HOST)));
+        $api = new BlueskyApiClient(FetchWiring::patientApiClient($http, self::guardFor(self::BLUESKY_HOST)));
 
         return new BlueskySessions(
             $api,
@@ -94,7 +94,7 @@ final class SocialApiWiring
     public static function blueskyIdentityResolver(HttpClientInterface $http): BlueskyIdentityResolver
     {
         return new BlueskyIdentityResolver(
-            new BlueskyApiClient(FetchWiring::guardedApiClient($http, self::guardFor(self::APP_VIEW_HOST))),
+            new BlueskyApiClient(FetchWiring::patientApiClient($http, self::guardFor(self::APP_VIEW_HOST))),
         );
     }
 
@@ -102,7 +102,7 @@ final class SocialApiWiring
     {
         $guard = self::guardFor(self::MASTODON_HOST, self::ORIGIN_MASTODON_HOST);
 
-        return new MastodonApiClient(FetchWiring::guardedApiClient($http, $guard));
+        return new MastodonApiClient(FetchWiring::patientApiClient($http, $guard));
     }
 
     public static function mastodonAccountApi(HttpClientInterface $http): MastodonAccountApi
@@ -112,7 +112,7 @@ final class SocialApiWiring
 
     public static function lemmyAccountApi(HttpClientInterface $http): LemmyAccountApi
     {
-        $client = new LemmyApiClient(FetchWiring::guardedApiClient($http, self::guardFor(self::LEMMY_HOST)));
+        $client = new LemmyApiClient(FetchWiring::patientApiClient($http, self::guardFor(self::LEMMY_HOST)));
 
         return new LemmyAccountApi($client, new StoredCredential(SocialAccounts::cipher()));
     }

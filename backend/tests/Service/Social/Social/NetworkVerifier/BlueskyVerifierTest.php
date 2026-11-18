@@ -58,7 +58,7 @@ final class BlueskyVerifierTest extends TestCase
             ]),
             new IpValidator(),
         );
-        $api = new BlueskyApiClient(FetchWiring::guardedApiClient($http->client(), $guard));
+        $api = new BlueskyApiClient(FetchWiring::patientApiClient($http->client(), $guard));
 
         return new BlueskyVerifier(
             new BlueskyIdentityResolver($api),

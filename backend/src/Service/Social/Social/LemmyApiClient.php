@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social;
 
-use App\Service\Outbound\Fetch\GuardedApiClient;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
@@ -15,6 +14,7 @@ use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Support\NetworkAnswer;
+use App\Service\Social\Social\Support\ServerFailure;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class LemmyApiClient
@@ -32,7 +32,7 @@ final readonly class LemmyApiClient
     private const string PENDING_APPLICATION = 'The Lemmy instance has not approved this account yet.';
     private const string NO_DOWNVOTES = 'This Lemmy instance does not allow downvotes.';
 
-    public function __construct(private GuardedApiClient $api)
+    public function __construct(private PatientApiClient $api)
     {
     }
 
@@ -45,7 +45,10 @@ final readonly class LemmyApiClient
      */
     public function send(ApiRequestModel $request): ApiResponseModel
     {
-        return self::accepted($this->answer($request));
+        $answer = $this->answer($request);
+        ServerFailure::throwIfServerError($request, $answer);
+
+        return self::accepted($answer);
     }
 
     /**
@@ -92,7 +95,7 @@ final readonly class LemmyApiClient
         return self::failureOfCode($code) ?? match ($status) {
             Response::HTTP_UNAUTHORIZED => new SocialCredentialsRejectedException(self::REFUSED_SESSION),
             Response::HTTP_NOT_FOUND => new SocialPostNotFoundException(self::NOT_FOUND),
-            default => new SocialNetworkUnreachableException(sprintf('%s answered %d.', self::NETWORK, $status)),
+            default => new SocialNetworkUnreachableException(self::NETWORK . ' ran into a problem of its own.'),
         };
     }
 

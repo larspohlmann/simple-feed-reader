@@ -319,7 +319,7 @@ final class BlueskyPostWriterTest extends TestCase
         });
 
         $this->expectException(SocialNetworkUnreachableException::class);
-        $this->expectExceptionMessage('Bluesky answered 500.');
+        $this->expectExceptionMessage('Bluesky ran into a problem of its own.');
 
         $this->writer($http)->reply(self::post(), self::keyedDraft());
     }

@@ -118,7 +118,7 @@ final class BlueskyHomeServerCheckTest extends TestCase
             ]),
             new IpValidator(),
         );
-        $bluesky = new BlueskyApiClient(FetchWiring::guardedApiClient($http->client(), $guard));
+        $bluesky = new BlueskyApiClient(FetchWiring::patientApiClient($http->client(), $guard));
 
         return new BlueskyHomeServerCheck($bluesky, new BlueskyIdentityResolver($bluesky));
     }

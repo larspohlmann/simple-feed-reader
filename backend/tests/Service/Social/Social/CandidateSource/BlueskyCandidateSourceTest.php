@@ -76,7 +76,7 @@ final class BlueskyCandidateSourceTest extends TestCase
             new StaticDnsResolver(['public.api.bsky.app' => $address, 'pds.example.test' => $address]),
             new IpValidator(),
         );
-        $api = new BlueskyApiClient(FetchWiring::guardedApiClient($http, $guard));
+        $api = new BlueskyApiClient(FetchWiring::patientApiClient($http, $guard));
 
         return new BlueskyCandidateSource(
             $api,
@@ -465,7 +465,7 @@ final class BlueskyCandidateSourceTest extends TestCase
         ]));
 
         $this->expectException(SocialNetworkUnreachableException::class);
-        $this->expectExceptionMessage('Bluesky answered 503.');
+        $this->expectExceptionMessage("public.api.bsky.app isn't responding right now");
 
         $this->source($http)->candidates($this->account);
     }

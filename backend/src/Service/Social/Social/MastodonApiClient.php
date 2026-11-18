@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social;
 
-use App\Service\Outbound\Fetch\GuardedApiClient;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
@@ -13,6 +12,7 @@ use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Support\NetworkAnswer;
+use App\Service\Social\Social\Support\ServerFailure;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class MastodonApiClient
@@ -21,7 +21,7 @@ final readonly class MastodonApiClient
     private const string NETWORK = 'The Mastodon instance';
     private const array REFUSALS = [Response::HTTP_UNAUTHORIZED, Response::HTTP_FORBIDDEN];
 
-    public function __construct(private GuardedApiClient $api)
+    public function __construct(private PatientApiClient $api)
     {
     }
 
@@ -32,7 +32,10 @@ final readonly class MastodonApiClient
      */
     public function send(ApiRequestModel $request): ApiResponseModel
     {
-        return self::accepted($this->answer($request));
+        $answer = $this->answer($request);
+        ServerFailure::throwIfServerError($request, $answer);
+
+        return self::accepted($answer);
     }
 
     /**
@@ -47,7 +50,7 @@ final readonly class MastodonApiClient
             throw new SocialCredentialsRejectedException('The Mastodon instance refused this access token.');
         }
         if (!$answer->isSuccessful()) {
-            throw new SocialNetworkUnreachableException(sprintf('The Mastodon instance answered %d.', $answer->status));
+            throw new SocialNetworkUnreachableException('The Mastodon instance ran into a problem of its own.');
         }
 
         return $answer;

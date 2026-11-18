@@ -112,7 +112,7 @@ final class LemmyVerifierTest extends TestCase
     {
         $guard = new UrlGuard(new StaticDnsResolver(['lemmy.example' => ['93.184.216.34']]), new IpValidator());
 
-        return new LemmyVerifier(new LemmyApiClient(FetchWiring::guardedApiClient($http->client(), $guard)));
+        return new LemmyVerifier(new LemmyApiClient(FetchWiring::patientApiClient($http->client(), $guard)));
     }
 
     private function credentials(): SocialCredentialsModel

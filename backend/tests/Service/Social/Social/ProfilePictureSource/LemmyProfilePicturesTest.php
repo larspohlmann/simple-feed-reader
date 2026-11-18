@@ -228,7 +228,7 @@ final class LemmyProfilePicturesTest extends DbTestCase
             new StaticDnsResolver(['lemmy.world' => ['93.184.216.34'], 'feddit.org' => ['93.184.216.35']]),
             new IpValidator(),
         );
-        $lemmy = new LemmyApiClient(FetchWiring::guardedApiClient($this->http->client(), $guard));
+        $lemmy = new LemmyApiClient(FetchWiring::patientApiClient($this->http->client(), $guard));
 
         $report = (new LemmyProfilePictures($feeds, $lemmy, $logger))->refresh(
             ProfileCallBudgetModel::calls($calls),

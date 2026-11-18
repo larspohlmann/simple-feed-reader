@@ -528,10 +528,12 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         $this->send($client, self::MASTODON_LINKS . rawurlencode(self::MASTODON_POST_URL), ['text' => 'Look']);
 
         self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
-        self::assertSame([self::STATUS_SEARCH, self::STATUSES], $this->routesAsked());
+        $asked = $this->routesAsked();
+        self::assertSame(self::STATUS_SEARCH, $asked[0]);
+        self::assertSame(self::STATUSES, end($asked));
         self::assertSame(
             ['status' => "Look\n\n" . self::MASTODON_POST_URL],
-            json_decode($this->http->requests[1]['body'], true),
+            json_decode(end($this->http->requests)['body'] ?? '', true),
         );
     }
 

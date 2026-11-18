@@ -33,7 +33,7 @@ final class MastodonVerifierTest extends TestCase
             new IpValidator(),
         );
 
-        return new MastodonVerifier(new MastodonApiClient(FetchWiring::guardedApiClient($http->client(), $guard)));
+        return new MastodonVerifier(new MastodonApiClient(FetchWiring::patientApiClient($http->client(), $guard)));
     }
 
     private function credentials(): SocialCredentialsModel

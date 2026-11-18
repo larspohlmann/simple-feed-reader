@@ -56,7 +56,7 @@ final class BlueskyFacetsTest extends TestCase
         ]);
 
         self::assertSame([], $this->facets($http)->of('@down.test @down.test @later.test'));
-        self::assertCount(1, $http->requests);
+        self::assertCount(3, $http->requests);
     }
 
     public function testEveryMentionOfAHandleResolvesFromOneQuestion(): void

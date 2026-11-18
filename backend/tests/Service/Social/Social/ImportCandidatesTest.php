@@ -79,7 +79,7 @@ final class ImportCandidatesTest extends DbTestCase
         self::assertInstanceOf(SubscriptionRepository::class, $subscriptions);
         $guard = new UrlGuard(new StaticDnsResolver([]), new IpValidator());
         $resolver = new BlueskyIdentityResolver(
-            new BlueskyApiClient(FetchWiring::guardedApiClient((new RoutedHttpClient([]))->client(), $guard)),
+            new BlueskyApiClient(FetchWiring::patientApiClient((new RoutedHttpClient([]))->client(), $guard)),
         );
 
         return new ImportCandidates(

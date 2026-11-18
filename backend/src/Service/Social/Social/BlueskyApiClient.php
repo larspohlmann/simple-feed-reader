@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social;
 
-use App\Service\Outbound\Fetch\GuardedApiClient;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Support\NetworkAnswer;
+use App\Service\Social\Social\Support\ServerFailure;
 
 final readonly class BlueskyApiClient
 {
     private const string NETWORK = 'Bluesky';
 
-    public function __construct(private GuardedApiClient $api)
+    public function __construct(private PatientApiClient $api)
     {
     }
 
@@ -26,7 +26,10 @@ final readonly class BlueskyApiClient
      */
     public function send(ApiRequestModel $request): ApiResponseModel
     {
-        return self::accepted($this->answer($request));
+        $answer = $this->answer($request);
+        ServerFailure::throwIfServerError($request, $answer);
+
+        return self::accepted($answer);
     }
 
     /**
@@ -37,7 +40,7 @@ final readonly class BlueskyApiClient
     {
         SocialNetworkThrottledException::throwIfThrottled($answer, 'Bluesky asked for fewer requests.');
         if (!$answer->isSuccessful()) {
-            throw new SocialNetworkUnreachableException(sprintf('Bluesky answered %d.', $answer->status));
+            throw new SocialNetworkUnreachableException('Bluesky ran into a problem of its own.');
         }
 
         return $answer;

@@ -9,9 +9,11 @@ use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Outbound\Fetch\UrlGuard;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Social\Social\Exception\SocialNetworkUnavailableException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Social\Exception\SocialWriteOutcomeUnknownException;
 use App\Service\Social\Social\LemmyApiClient;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\RoutedHttpClient;
@@ -161,12 +163,63 @@ final class LemmyApiClientTest extends TestCase
 
     public function testAnyOtherAnswerIsUnreachable(): void
     {
-        $client = $this->clientAnswering($this->errorAnswer(Response::HTTP_INTERNAL_SERVER_ERROR, ''));
+        $client = $this->clientAnswering($this->errorAnswer(Response::HTTP_FORBIDDEN, ''));
 
         $this->expectException(SocialNetworkUnreachableException::class);
-        $this->expectExceptionMessage('The Lemmy instance answered 500.');
+        $this->expectExceptionMessage('The Lemmy instance ran into a problem of its own.');
 
         $client->send(ApiRequestModel::get(self::SITE));
+    }
+
+    public function testAGetThatKeepsGetting503NamesTheInstance(): void
+    {
+        $http = $this->alwaysAnswering(Response::HTTP_SERVICE_UNAVAILABLE);
+
+        try {
+            $this->clientOver($http)->send(ApiRequestModel::get(self::SITE));
+            self::fail('A 503 must not read as an answer.');
+        } catch (SocialNetworkUnavailableException $exception) {
+            self::assertSame(
+                "lemmy.example isn't responding right now — it's probably overloaded. Try again in a minute.",
+                $exception->getMessage(),
+            );
+            self::assertInstanceOf(SocialNetworkUnreachableException::class, $exception);
+            self::assertStringNotContainsString('503', $exception->getMessage());
+            self::assertCount(3, $http->requests);
+        }
+    }
+
+    public function testAPostThatGets502MayHaveGoneThrough(): void
+    {
+        $http = $this->alwaysAnswering(Response::HTTP_BAD_GATEWAY);
+
+        try {
+            $this->clientOver($http)->send(ApiRequestModel::postJson('https://lemmy.example/api/v3/post', []));
+            self::fail('A 502 must not read as an answer.');
+        } catch (SocialWriteOutcomeUnknownException $exception) {
+            self::assertSame(
+                'lemmy.example had trouble with this request, so it may or may not have gone through. '
+                . 'Check before trying again.',
+                $exception->getMessage(),
+            );
+            self::assertCount(1, $http->requests);
+        }
+    }
+
+    public function testA429StillThrottles(): void
+    {
+        $client = $this->clientAnswering(new MockResponse('', ['http_code' => Response::HTTP_TOO_MANY_REQUESTS]));
+
+        $this->expectException(SocialNetworkThrottledException::class);
+
+        $client->send(ApiRequestModel::get(self::SITE));
+    }
+
+    private function alwaysAnswering(int $status): RoutedHttpClient
+    {
+        return RoutedHttpClient::answering(
+            static fn (): MockResponse => new MockResponse('', ['http_code' => $status]),
+        );
     }
 
     private function errorAnswer(int $status, string $code): MockResponse
@@ -178,9 +231,15 @@ final class LemmyApiClientTest extends TestCase
 
     private function clientAnswering(MockResponse $response): LemmyApiClient
     {
-        $http = new RoutedHttpClient(['GET ' . self::SITE => $response]);
+        return $this->clientOver(new RoutedHttpClient(['GET ' . self::SITE => $response]));
+    }
+
+    private function clientOver(RoutedHttpClient $http): LemmyApiClient
+    {
         $guard = new UrlGuard(new StaticDnsResolver(['lemmy.example' => ['93.184.216.34']]), new IpValidator());
 
-        return new LemmyApiClient(FetchWiring::guardedApiClient($http->client(), $guard));
+        return new LemmyApiClient(
+            FetchWiring::patientApiClient($http->client(), $guard),
+        );
     }
 }
