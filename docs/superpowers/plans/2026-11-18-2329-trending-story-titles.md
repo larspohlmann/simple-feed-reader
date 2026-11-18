@@ -702,6 +702,28 @@ Added during execution from the user's requests (2026-11-18): the story view's b
 
 ---
 
+### Task 13: One shared cache of entry rows
+
+Added during execution at the user's request (2026-11-18): "Do it in this branch: a shared cache of entry rows to replace the two entry stores that are kept in sync by patches."
+
+**Problem:** the story overlay has its own `EntriesStore`; its rows are copies of rows the route list may also hold. Consistency is kept by a `rowsPatched` Subject that re-emits every patch closure into the store beneath (`layOver`), plus a `showMarkedAllRead` override in `StoryListContext`. Any mutation path that bypasses `patchEntries` (e.g. `markHiddenLocally`, the unlisted entry, in-flight overlays, pending/completed merges) can silently diverge the two lists.
+
+**Goal:** one root-provided entry-row cache (entry id → row/EntryDto signal, including the optimistic in-flight state) that every list references by ordered ids. A list (route list or story list) keeps only its own query, ordered ids, paging cursor, loading/error state and leaving set; row data — and every patch to it (favorite, keep, read/viewed, hidden, shares, votes, pending→completed merges, in-flight overlays) — lives once in the cache, so a change shows in every list that holds the row without any bus. `rowsPatched`, `layOver`, `beneath`, `link()`-style fallbacks and the `showMarkedAllRead` override disappear.
+
+**Constraints:**
+- Behaviour unchanged everywhere: main lists (all kinds), Trending (stories = `TrendingStoryDto` list items whose articles are entry rows — decide whether story items hold article ids into the cache or keep their own article copies; prefer ids if the story-level fields — `viewed`, counts — can be derived or patched without divergence, and explain the choice), the story overlay, the article view/opening, search, notifications view, optimistic patches + rollback + in-flight overlays, pending/completed merges, list reload not clobbering optimistic patches (see memory gotcha "list reload clobbers optimistic patch").
+- Cache lifetime/eviction: rows no list references can be dropped (e.g. on list replacement) — no unbounded growth over a long session; reference counting or "rows of currently mounted lists + open entry" is fine.
+- Reuse existing pieces (InFlightPatches, RetryableFailure, list-item helpers, entry-rows.ts patch helpers); don't hand-roll parallel versions. Keep the per-list context seam (ListContext/ListCover) — it now points at a list view over the shared cache.
+- Signals/OnPush performance: a row patch must not recompute every list's full item array more than today; per-row signals or a version map are fine — measure nothing heavy, but avoid O(n) copies per patch where the old code had O(n) anyway (no regression).
+
+**Tests:** existing entries-store / entry-state-actions / mark-read / pending-poll / story-list-context specs adapted (assertions unchanged where behaviour is unchanged); new specs: a patch in the story list shows in the route list holding the same row and vice versa (favorite, read, hidden via mark-all-read in the story, pending→completed merge); a rolled-back optimistic patch rolls back in both; a reload of one list doesn't clobber an in-flight patch visible in the other; an evicted row isn't kept after both lists drop it. e2e: the story e2e suite and article/list e2e that exercise row actions stay green.
+
+**Gates:** `docker compose exec -T frontend npm run check`; e2e `trending-story-title`, `article-slide-out`, the list/row-action specs; renders unchanged; live check on :4200 (favorite/read in a story shows on the Trending card underneath and in All items).
+
+**Commits:** `refactor(#2329): one shared cache of entry rows` (split if large: introduce cache → move route list → move story list → delete the bus).
+
+---
+
 ## Open questions (noted, not blocking)
 
 - An LLM title or fallback stays on a story that falls out of the week but is still followed. Nothing rewrites it later. That is accepted.
