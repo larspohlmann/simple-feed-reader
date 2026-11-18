@@ -106,7 +106,7 @@ final class TrendingStoryFollowRepository extends ServiceEntityRepository
          */
         $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
             'SELECT follow.story_id, story.last_joined_at,'
-            . ' ' . self::headline() . ' AS headline,'
+            . ' COALESCE(story.llm_title, story.fallback_title, ' . self::headline() . ') AS headline,'
             . ' ' . self::newCount() . ' AS new_count'
             . ' FROM trending_story_follow follow'
             . ' JOIN trending_story story ON story.id = follow.story_id'
@@ -127,7 +127,7 @@ final class TrendingStoryFollowRepository extends ServiceEntityRepository
         );
     }
 
-    /** The newest member from a subscribed article feed, else the newest member of any subscribed feed. */
+    /** The newest member from a subscribed article feed, else from any subscribed feed: an untitled story's headline. */
     private static function headline(): string
     {
         return '(SELECT headline_entry.title FROM trending_story_entry headline_member'
