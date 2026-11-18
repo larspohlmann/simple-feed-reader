@@ -18,6 +18,7 @@ use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\SavedSearch;
 use App\Entity\SocialAccount;
+use App\Entity\StorySettings;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
@@ -223,6 +224,23 @@ final class AccountResetTest extends DbTestCase
         $subscriptionTags = $this->entityManager->getRepository(SubscriptionTag::class)->findAll();
         self::assertSame([], $subscriptionTags);
         self::assertFalse(StoredUserSettings::reading($this->entityManager, $user)->isScrapeFallbackEnabled());
+    }
+
+    public function testAResetForgetsTheStorySettings(): void
+    {
+        [$user] = $this->seedAccount('reset-story-settings@example.com');
+        $bystander = $this->user('reset-story-bystander@example.com');
+        $this->entityManager->persist(new StorySettings($user));
+        $this->entityManager->persist(new StorySettings($bystander));
+        $this->entityManager->flush();
+        $userId = $user->requireId();
+        $bystanderId = $bystander->requireId();
+
+        $this->reset()->reset($user);
+
+        $this->entityManager->clear();
+        self::assertNull($this->entityManager->find(StorySettings::class, $userId));
+        self::assertNotNull($this->entityManager->find(StorySettings::class, $bystanderId));
     }
 
     public function testAWipedSubscriptionIsGoneWhenLookedUpByIdStraightAfterTheReset(): void

@@ -17,6 +17,7 @@ use App\Entity\RecommendationSettings;
 use App\Entity\SavedSearch;
 use App\Entity\SavedSearchNetworkInclusion;
 use App\Entity\SocialAccount;
+use App\Entity\StorySettings;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\TrendingSnapshot;
@@ -46,6 +47,7 @@ final readonly class AccountWipeRepository
         $this->deleteByUser(RecommendationRun::class, $user);
         $this->deleteByUser(ProfileRun::class, $user);
         $this->deleteByUser(RecommendationSettings::class, $user);
+        $this->deleteByUser(StorySettings::class, $user);
     }
 
     public function deleteOwnedRows(User $user): void
