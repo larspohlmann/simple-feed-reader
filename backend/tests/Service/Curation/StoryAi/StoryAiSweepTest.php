@@ -82,6 +82,18 @@ final class StoryAiSweepTest extends DbTestCase
         self::assertSame(['usable' => 0, 'unusable' => 0, 'failed' => 0], $report->toLogContext());
     }
 
+    public function testNoReaderIsWalkedAfterTheDeadline(): void
+    {
+        $first = $this->activeReader('sweep-late-first@example.test');
+        $second = $this->activeReader('sweep-late-second@example.test');
+        $task = new RecordingStoryAiTask($this->connectionOf($first), [$first->requireId() => [3]]);
+
+        $this->sweep($task)->runDueBefore($this->clock->now()->modify('-1 second'));
+
+        self::assertSame([], $task->connectionAskedFor);
+        self::assertNotSame($first, $second);
+    }
+
     public function testEveryTaggedTaskRuns(): void
     {
         $reader = $this->activeReader('sweep-every-task@example.test');

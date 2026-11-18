@@ -42,6 +42,9 @@ final readonly class StoryAiSweep
     {
         $report = StoryAiReportModel::none();
         foreach ($this->activeReaders() as $reader) {
+            if ($this->clock->now() >= $deadline) {
+                break;
+            }
             $report = $report->plus($this->runFor($reader, $deadline));
         }
 

@@ -18,8 +18,8 @@ final class StoryAiRunRepository extends ServiceEntityRepository
         parent::__construct($registry, StoryAiRun::class);
     }
 
-    /** Drops the account's story AI runs, and their log rows, beyond the newest $keptRuns. */
-    public function pruneToNewest(User $user, int $keptRuns): void
+    /** Drops the call logs of the account's story AI runs beyond the newest $keptRuns; the runs are its cost record. */
+    public function trimLogsToNewest(User $user, int $keptRuns): void
     {
         $keptRunIds = $this->newestIdsOf($user, $keptRuns);
         if ($keptRunIds === []) {
@@ -32,14 +32,6 @@ final class StoryAiRunRepository extends ServiceEntityRepository
             RecommendationRunLog::class,
             StoryAiRun::class,
         ))->setParameter('user', $user)->setParameter('kept', $keptRunIds)->execute();
-        $this->createQueryBuilder('run')
-            ->delete()
-            ->where('run.user = :user')
-            ->andWhere('run.id NOT IN (:kept)')
-            ->setParameter('user', $user)
-            ->setParameter('kept', $keptRunIds)
-            ->getQuery()
-            ->execute();
     }
 
     /** @return list<int> */

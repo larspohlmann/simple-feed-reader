@@ -21,7 +21,7 @@ final readonly class StoryAiRuns
     ) {
     }
 
-    /** The pass's run, opening one when it has none and trimming the account to the newest RunLogRetention::RUNS. */
+    /** The pass's run, opening one when it has none and keeping call logs only for the newest RunLogRetention::RUNS. */
     public function openFor(StoryAiPass $pass): StoryAiRun
     {
         $run = $pass->run();
@@ -33,7 +33,7 @@ final readonly class StoryAiRuns
         $this->entityManager->persist($run);
         $this->entityManager->flush();
         $pass->billTo($run);
-        $this->storyAiRuns->pruneToNewest($pass->user, RunLogRetention::RUNS);
+        $this->storyAiRuns->trimLogsToNewest($pass->user, RunLogRetention::RUNS);
 
         return $run;
     }

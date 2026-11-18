@@ -18,6 +18,9 @@ final class RecordingStoryAiTask implements StoryAiTaskInterface
     /** @var list<int> */
     public array $dueAskedFor = [];
 
+    /** @var list<int> */
+    public array $connectionAskedFor = [];
+
     /** @var list<array{int, int}> */
     public array $runs = [];
 
@@ -39,6 +42,8 @@ final class RecordingStoryAiTask implements StoryAiTaskInterface
 
     public function connectionFor(User $user): ?AiProviderSettings
     {
+        $this->connectionAskedFor[] = $user->requireId();
+
         return $this->connection;
     }
 

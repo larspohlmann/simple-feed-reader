@@ -38,7 +38,7 @@ final class StoryAiRunsTest extends DbTestCase
         );
     }
 
-    public function testOpeningARunTrimsTheAccountToTheNewestRunsAndTheirLogs(): void
+    public function testOpeningARunKeepsEveryRunAndTrimsLogsToTheNewestRuns(): void
     {
         $oldest = $this->runWithOneLogRow($this->owner);
         for ($index = 1; $index < RunLogRetention::RUNS; $index++) {
@@ -49,9 +49,9 @@ final class StoryAiRunsTest extends DbTestCase
         $opened = $this->runs()->openFor($this->pass);
 
         $runIds = $this->runIdsOf($this->owner);
-        self::assertCount(RunLogRetention::RUNS, $runIds);
+        self::assertCount(RunLogRetention::RUNS + 1, $runIds);
+        self::assertContains($oldest, $runIds);
         self::assertContains($opened->requireId(), $runIds);
-        self::assertNotContains($oldest, $runIds);
         self::assertSame(0, $this->logRowsOf($oldest));
         self::assertSame(1, $this->logRowsOf($otherAccountsRun));
         self::assertSame(RunLogRetention::RUNS - 1, $this->logRowsOfAccount($this->owner));
