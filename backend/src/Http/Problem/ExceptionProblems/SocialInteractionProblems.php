@@ -9,6 +9,7 @@ use App\Http\Problem\ResolvedProblem;
 use App\Service\Social\Social\Exception\NoSocialAccountForNetworkException;
 use App\Service\Social\Social\Exception\NotASocialPostException;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Social\Social\Exception\SocialNetworkUnavailableException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostCommunityMissingException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
@@ -18,9 +19,10 @@ use App\Service\Social\Social\Exception\SocialPostTextMissingException;
 use App\Service\Social\Social\Exception\SocialPostTitleTooShortException;
 use App\Service\Social\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
+use App\Service\Social\Social\Exception\SocialWriteOutcomeUnknownException;
 use Symfony\Component\HttpFoundation\Response;
 
-/** What acting on a network can end in. The throttled arm must stay above its parent, the unreachable one. */
+/** What acting on a network can end in. The throttled, unavailable and unknown-outcome arms must stay above their parent, the unreachable one. */
 final readonly class SocialInteractionProblems implements ExceptionProblemsInterface
 {
     public function resolve(\Throwable $exception): ?ResolvedProblem
@@ -87,6 +89,20 @@ final readonly class SocialInteractionProblems implements ExceptionProblemsInter
                 sprintf('Reconnect this account with an access token that has the %s scope.', $exception->missingScope),
             )),
             $exception instanceof SocialNetworkThrottledException => self::throttled($exception),
+            $exception instanceof SocialNetworkUnavailableException => new ResolvedProblem(new ApiProblem(
+                'social_network_unavailable',
+                'The network is not responding',
+                Response::HTTP_BAD_GATEWAY,
+                $exception->getMessage(),
+                extensions: ['instance' => $exception->instance],
+            )),
+            $exception instanceof SocialWriteOutcomeUnknownException => new ResolvedProblem(new ApiProblem(
+                'social_write_outcome_unknown',
+                'The network may not have finished the request',
+                Response::HTTP_BAD_GATEWAY,
+                $exception->getMessage(),
+                extensions: ['instance' => $exception->instance],
+            )),
             $exception instanceof SocialNetworkUnreachableException => new ResolvedProblem(new ApiProblem(
                 'social_network_unreachable',
                 'The network could not be reached',

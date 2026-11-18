@@ -9,6 +9,7 @@ use App\Http\Problem\ExceptionProblems\SocialProblems;
 use App\Service\Social\Social\Exception\NoSocialAccountForNetworkException;
 use App\Service\Social\Social\Exception\NotASocialPostException;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Social\Social\Exception\SocialNetworkUnavailableException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostCommunityMissingException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
@@ -17,6 +18,7 @@ use App\Service\Social\Social\Exception\SocialPostRemovedException;
 use App\Service\Social\Social\Exception\SocialPostTitleTooShortException;
 use App\Service\Social\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
+use App\Service\Social\Social\Exception\SocialWriteOutcomeUnknownException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Response;
@@ -79,6 +81,38 @@ final class SocialInteractionProblemsTest extends TestCase
             'social_network_unreachable',
             Response::HTTP_BAD_GATEWAY,
         ];
+    }
+
+    /** @return iterable<string, array{\Throwable, string, string}> */
+    public static function instanceProblems(): iterable
+    {
+        yield 'unavailable' => [
+            SocialNetworkUnavailableException::fromHost('lemmy.world'),
+            'social_network_unavailable',
+            'The network is not responding',
+        ];
+        yield 'write outcome unknown' => [
+            SocialWriteOutcomeUnknownException::fromHost('lemmy.world'),
+            'social_write_outcome_unknown',
+            'The network may not have finished the request',
+        ];
+    }
+
+    #[DataProvider('instanceProblems')]
+    public function testAnInstanceProblemNamesTheInstanceAndCarriesTheMessage(
+        \Throwable $exception,
+        string $type,
+        string $title,
+    ): void {
+        $resolved = (new SocialInteractionProblems())->resolve($exception);
+
+        self::assertNotNull($resolved);
+        self::assertSame($type, $resolved->problem->type);
+        self::assertSame($title, $resolved->problem->title);
+        self::assertSame(Response::HTTP_BAD_GATEWAY, $resolved->problem->status);
+        self::assertSame($exception->getMessage(), $resolved->problem->detail);
+        self::assertSame('lemmy.world', $resolved->problem->toArray()['instance']);
+        self::assertTrue($resolved->isServerFault());
     }
 
     public function testAMissingScopeIsNamedInTheDetail(): void
