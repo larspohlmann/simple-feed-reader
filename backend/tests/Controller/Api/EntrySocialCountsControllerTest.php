@@ -118,7 +118,9 @@ final class EntrySocialCountsControllerTest extends ApiTestCase
         $client->request('GET', sprintf('/api/entries/%d/social', $this->mastodonPostFor($user)));
 
         $this->assertRejected($client, Response::HTTP_BAD_GATEWAY);
-        self::assertSame('social_network_unreachable', $this->payload($client)['type']);
+        $payload = $this->payload($client);
+        self::assertSame('social_network_unavailable', $payload['type']);
+        self::assertSame('mastodon.social', $payload['serviceName']);
     }
 
     public function testAPostItsOriginNoLongerHasIsRemovedHereWithoutAnAccount(): void

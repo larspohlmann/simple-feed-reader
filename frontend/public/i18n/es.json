@@ -1814,6 +1814,8 @@
       "counter": "{{ used }} / {{ max }}",
       "namedCounter": "{{ network }} {{ used }} / {{ max }}",
       "networkError": "{{ network }}: {{ message }}",
+      "notSent": "{{serviceName}} no responde en este momento — probablemente está sobrecargado. No se envió nada; inténtalo de nuevo en un minuto.",
+      "mayHaveSent": "{{serviceName}} tuvo problemas con tu publicación, así que puede que se haya publicado o no. Compruébalo antes de volver a enviarla.",
       "accountOn": "Cuenta de {{ network }}",
       "pillPosted": "Publicado",
       "retry": "Reintentar {{ network }}",

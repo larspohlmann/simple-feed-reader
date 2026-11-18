@@ -87,3 +87,11 @@ services:
         autowire: true
         autoconfigure: true
         public: true
+
+    test.social.patient_clock:
+        class: Symfony\Component\Clock\MockClock
+
+    App\Service\Social\Social\PatientApiClient:
+        autowire: true
+        arguments:
+            $clock: '@test.social.patient_clock'

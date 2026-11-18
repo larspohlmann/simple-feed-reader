@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social;
 
-use App\Service\Outbound\Fetch\GuardedApiClient;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
@@ -13,6 +12,7 @@ use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Support\NetworkAnswer;
+use App\Service\Social\Social\Support\ServerFailure;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class MastodonApiClient
@@ -21,7 +21,7 @@ final readonly class MastodonApiClient
     private const string NETWORK = 'The Mastodon instance';
     private const array REFUSALS = [Response::HTTP_UNAUTHORIZED, Response::HTTP_FORBIDDEN];
 
-    public function __construct(private GuardedApiClient $api)
+    public function __construct(private PatientApiClient $api)
     {
     }
 
@@ -47,7 +47,7 @@ final readonly class MastodonApiClient
             throw new SocialCredentialsRejectedException('The Mastodon instance refused this access token.');
         }
         if (!$answer->isSuccessful()) {
-            throw new SocialNetworkUnreachableException(sprintf('The Mastodon instance answered %d.', $answer->status));
+            throw new SocialNetworkUnreachableException('The Mastodon instance turned this request down.');
         }
 
         return $answer;
@@ -72,10 +72,13 @@ final readonly class MastodonApiClient
         return self::accepted($answer);
     }
 
-    /** @throws SocialNetworkUnreachableException only when no answer arrived; any status is returned */
+    /** @throws SocialNetworkUnreachableException when no answer arrived or it was a 5xx */
     public function answer(ApiRequestModel $request): ApiResponseModel
     {
-        return NetworkAnswer::orUnreachable(fn (): ApiResponseModel => $this->api->send($request), self::NETWORK);
+        $answer = NetworkAnswer::orUnreachable(fn (): ApiResponseModel => $this->api->send($request), self::NETWORK);
+        ServerFailure::throwIfServerError($request, $answer, $request->host());
+
+        return $answer;
     }
 
     /** @throws SocialNetworkUnreachableException only when no answer arrived; any status is returned */

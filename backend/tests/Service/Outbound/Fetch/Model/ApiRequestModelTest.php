@@ -50,6 +50,48 @@ final class ApiRequestModelTest extends TestCase
         ]);
     }
 
+    public function testAGetIsARead(): void
+    {
+        self::assertTrue(ApiRequestModel::get('https://api.example.test/x')->isRead());
+    }
+
+    public function testAPostIsNoRead(): void
+    {
+        self::assertFalse(ApiRequestModel::postJson('https://api.example.test/x', ['a' => 1])->isRead());
+    }
+
+    public function testAPostChangingNothingIsAReadAndKeepsTheRestOfTheRequest(): void
+    {
+        $request = ApiRequestModel::postJson('https://api.example.test/x', ['a' => 1], ['Accept' => 'application/json'])
+            ->waitingUpTo(25.0);
+
+        $login = $request->changingNothing();
+
+        self::assertTrue($login->isRead());
+        self::assertFalse($request->isRead());
+        self::assertSame(
+            ['POST', 'https://api.example.test/x', ['Accept' => 'application/json'], ['a' => 1], 25.0],
+            [$login->method, $login->url, $login->headers, $login->json, $login->timeoutSeconds],
+        );
+    }
+
+    public function testARequestChangingNothingStaysAReadThroughAddedHeaders(): void
+    {
+        $request = ApiRequestModel::post('https://api.example.test/x')->changingNothing();
+
+        self::assertTrue($request->withHeaders(['Authorization' => 'Bearer jwt'])->isRead());
+    }
+
+    public function testTheHostIsTheUrlsHostName(): void
+    {
+        self::assertSame('lemmy.example', ApiRequestModel::get('https://lemmy.example:8443/api/v3/site?x=1')->host());
+    }
+
+    public function testADeleteIsNoRead(): void
+    {
+        self::assertFalse(ApiRequestModel::delete('https://api.example.test/x')->isRead());
+    }
+
     public function testADeleteCarriesItsHeadersAndNoBody(): void
     {
         $request = ApiRequestModel::delete('https://api.example.test/x', ['Accept' => 'application/json']);

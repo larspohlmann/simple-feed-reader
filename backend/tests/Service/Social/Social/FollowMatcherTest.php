@@ -31,7 +31,7 @@ final class FollowMatcherTest extends TestCase
         $guard = new UrlGuard(new StaticDnsResolver(['public.api.bsky.app' => ['93.184.216.34']]), new IpValidator());
 
         return new FollowMatcher(new BlueskyIdentityResolver(
-            new BlueskyApiClient(FetchWiring::guardedApiClient($http->client(), $guard)),
+            new BlueskyApiClient(FetchWiring::patientApiClient($http->client(), $guard)),
         ));
     }
 
@@ -155,7 +155,7 @@ final class FollowMatcherTest extends TestCase
             ],
         );
 
-        self::assertCount(1, $http->requests);
+        self::assertCount(3, $http->requests);
         self::assertCount(3, $candidates);
     }
 

@@ -10,6 +10,7 @@ use App\Service\Foundation\Text\MarkdownHtml;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Notification\Support\Excerpt;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Social\Social\Exception\SocialNetworkUnavailableException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
@@ -35,7 +36,7 @@ final readonly class LemmyNotificationContextSource implements NotificationConte
             if (!array_key_exists($answeredId, $excerpts)) {
                 try {
                     $excerpts[$answeredId] = $this->excerptOf($account, $answeredId);
-                } catch (SocialNetworkThrottledException) {
+                } catch (SocialNetworkThrottledException | SocialNetworkUnavailableException) {
                     break;
                 } catch (SocialPostNotFoundException | SocialPostRefusedException | SocialNetworkUnreachableException) {
                     $excerpts[$answeredId] = null;
