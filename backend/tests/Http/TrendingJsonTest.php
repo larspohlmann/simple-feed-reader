@@ -14,7 +14,6 @@ use App\Repository\EntryListRowSubscription;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\StoryArticleModel;
 use App\Service\Curation\Trending\Model\StoryArticlesModel;
-use App\Service\Curation\Trending\Model\StoryTitleModel;
 use App\Service\Curation\Trending\Model\TrendingPageModel;
 use App\Service\Curation\Trending\Model\TrendingStoryCardModel;
 use App\Tests\Support\JsonMappers;
@@ -56,7 +55,7 @@ final class TrendingJsonTest extends TestCase
     public function testAStoryCarriesItsTitle(): void
     {
         $ranked = (new RankedStoryModel(12, 2, new \DateTimeImmutable('2031-05-14 10:00:00')))
-            ->titled(new StoryTitleModel('Hafenstreik in Hamburg'));
+            ->titled('Hafenstreik in Hamburg');
 
         self::assertSame('Hafenstreik in Hamburg', $this->storyOf($ranked)['title']);
     }

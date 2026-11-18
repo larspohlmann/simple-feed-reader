@@ -11,7 +11,6 @@ use App\Service\Curation\Trending\Exception\TrendingStoryNotFoundException;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\ReaderWindowModel;
 use App\Service\Curation\Trending\Model\StoryHeadlineModel;
-use App\Service\Curation\Trending\Model\StoryTitleModel;
 use App\Service\Curation\Trending\Support\HeadlineBody;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
@@ -77,7 +76,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     /**
      * @param list<int> $storyIds
      *
-     * @return array<int, StoryTitleModel> the stories that have a title
+     * @return array<int, string> the stories that have a title
      */
     public function titlesOf(array $storyIds): array
     {
@@ -95,7 +94,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
 
         $titles = [];
         foreach ($rows as $row) {
-            $titles[(int) $row['id']] = new StoryTitleModel($row['title']);
+            $titles[(int) $row['id']] = $row['title'];
         }
 
         return $titles;

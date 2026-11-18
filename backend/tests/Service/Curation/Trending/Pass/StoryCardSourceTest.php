@@ -9,7 +9,6 @@ use App\Repository\EntryListRowMarks;
 use App\Repository\EntryListRowSubscription;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\ShownRowModel;
-use App\Service\Curation\Trending\Model\StoryTitleModel;
 use App\Service\Curation\Trending\Pass\StoryCardSource;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
@@ -70,11 +69,11 @@ final class StoryCardSourceTest extends DbTestCase
             [$entry->requireId() => new ShownRowModel($row, 'article')],
             [],
             [],
-            [6 => new StoryTitleModel('Hafenstreik in Hamburg')],
+            [6 => 'Hafenstreik in Hamburg'],
         );
 
         $cards = $source->cardsOf([new RankedStoryModel(6, 4, new \DateTimeImmutable('2031-05-14 10:00:00'))]);
 
-        self::assertSame('Hafenstreik in Hamburg', $cards[0]->story->title?->text);
+        self::assertSame('Hafenstreik in Hamburg', $cards[0]->story->title);
     }
 }

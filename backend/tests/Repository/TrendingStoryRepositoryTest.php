@@ -22,7 +22,6 @@ use App\Service\Curation\Trending\Exception\TrendingStoryNotFoundException;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\ReaderWindowModel;
 use App\Service\Curation\Trending\Model\StoryHeadlineModel;
-use App\Service\Curation\Trending\Model\StoryTitleModel;
 use App\Service\Curation\Trending\ReaderWindows;
 use App\Service\Curation\Trending\TrendingStories;
 use App\Tests\DbTestCase;
@@ -473,7 +472,7 @@ final class TrendingStoryRepositoryTest extends DbTestCase
                 $first->requireId() => 'Hafenarbeiter in Hamburg streiken',
                 $second->requireId() => 'Hafenstreik in Hamburg',
             ],
-            array_map(static fn (StoryTitleModel $title): string => $title->text, $titles),
+            $titles,
         );
     }
 

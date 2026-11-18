@@ -44,7 +44,7 @@ final readonly class TrendingJson
 
         return [
             'id' => $card->story->storyId,
-            'title' => $card->story->title->text ?? $articles->lead->row->entry->getTitle(),
+            'title' => $card->story->title ?? $articles->lead->row->entry->getTitle(),
             'outletCount' => $card->story->outletCount,
             'viewed' => $card->viewed,
             'shareCount' => $articles->shareCount(),
