@@ -12,7 +12,8 @@ import { planMagazine } from '../magazine/magazine-planner';
 import { REVEAL_STEP, isAppendedPage } from '../paging';
 import { EntryDto } from '../../models';
 import { Selection, isSingleStreamView, listOrderOf } from '../../query/query';
-import { isPrivateFeed, isSavedFeed } from '../../state/social-sections';
+import { sameMembers } from '../../state/same-members';
+import { isSavedFeed, isSocialFeed } from '../../state/social-sections';
 import { SubscriptionRows } from '../../state/subscription-rows';
 import { blocksWithout, groupMembersWithout, ListBlock } from './hidden-overlay';
 import { ListSegment, segmentList, segmentsWithout } from './list-segments';
@@ -33,17 +34,17 @@ export class ListContent {
   private readonly zone = inject(NgZone);
   private readonly subscriptions = inject(SubscriptionRows);
 
-  /** A home timeline, list, custom feed or saved feed carries many people: never filed under one source
-   *  in a group widget. Equal by members, so a counts-only refresh does not re-plan. */
+  /** A network subscription or a saved feed is never filed under one source in a group widget. Equal by
+   *  members, so a counts-only refresh does not re-plan. */
   private readonly uncollapsibleSources = computed<ReadonlySet<number>>(
     () =>
       new Set(
         this.subscriptions
           .stored()
-          .filter((subscription) => isPrivateFeed(subscription) || isSavedFeed(subscription))
+          .filter((subscription) => isSocialFeed(subscription) || isSavedFeed(subscription))
           .map(({ id }) => id),
       ),
-    { equal: (left, right) => left.size === right.size && [...left].every((id) => right.has(id)) },
+    { equal: sameMembers },
   );
 
   /** How many of `entries()` are rendered. Trails the list while an appended

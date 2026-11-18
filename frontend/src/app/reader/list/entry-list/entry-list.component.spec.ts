@@ -2462,6 +2462,30 @@ describe('EntryListComponent', () => {
       ).toBe(false);
     });
 
+    it("never collapses a network profile's run, while an RSS run beside it still folds", () => {
+      const profileRun = [
+        ...run,
+        ...Array.from({ length: 8 }, (_, index) =>
+          entry(index + 13, { subscriptionId: 4, source: 'd', publishedAt: now }),
+        ),
+      ];
+      const fixture = mount({
+        entries: profileRun,
+        selection: { kind: 'all', unread: false },
+        layout: 'magazine',
+      });
+      TestBed.inject(SubscriptionRows).stored.set([
+        makeSubscription({
+          id: 4,
+          social: { network: 'bluesky', kind: 'profile', accountId: null },
+        }),
+      ]);
+      const groups = fixture.componentInstance.content
+        .blocks()
+        .filter((block) => block.kind === 'group');
+      expect(groups.map((group) => group.source)).toEqual(['a']);
+    });
+
     it('never collapses the for-you list', () => {
       const fixture = mount({
         entries: run,
