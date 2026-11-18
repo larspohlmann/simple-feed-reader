@@ -51,7 +51,7 @@
       @if (displayed(); as copy) {
         <div class="dup-popover text-scaled" [id]="panelId" role="note">
           <span class="popover-heading">{{ 'reader.alsoPublishedAs' | transloco }}</span>
-          <ng-container [appStory]="null"><app-entry-row [entry]="copy" /></ng-container>
+          <app-entry-row [appStory]="null" [entry]="copy" />
         </div>
       }
     </ng-template>

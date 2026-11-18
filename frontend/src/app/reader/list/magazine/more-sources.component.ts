@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { EntryDto } from '../../models';
 import { EntryDuplicatesComponent } from './entry-duplicates.component';
-import { StorySourcesComponent } from '../../trending/story-sources/story-sources.component';
+import { StorySourcesComponent } from './story-sources/story-sources.component';
 import { injectStory } from '../../trending/story-context';
 
 @Component({

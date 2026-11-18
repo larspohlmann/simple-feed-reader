@@ -1,16 +1,15 @@
 import { Provider } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { EntryDto } from '../../models';
-import { ListItem, storyOf as storyOfItem } from '../../state/list-item';
-import { StoryArticleDto } from '../trending.models';
+import { EntryDto } from '../../../models';
+import { StoryArticleDto, TrendingStoryDto } from '../../../trending/trending.models';
 import { StorySourcesComponent } from './story-sources.component';
-import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
-import { aLinkCard, anEntry, aStory, aStoryArticle } from '../../../../testing/entry-testing';
-import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
-import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service';
-import { provideStoryActions } from '../../../../testing/story-actions-testing';
+import { provideTranslocoTesting } from '../../../../../testing/transloco-testing';
+import { EntryActionHandler } from '../../../entry/entry-actions/entry-action-handler';
+import { aLinkCard, anEntry, aStory, aStoryArticle } from '../../../../../testing/entry-testing';
+import { provideAccountIdentity } from '../../../../../testing/account-identity-testing';
+import { LinkReaderNavigation } from '../../../shell/link-reader-navigation.service';
+import { provideStoryActions } from '../../../../../testing/story-actions-testing';
 
 const open = jest.fn();
 const navigation = { layer: jest.fn(), openAlone: jest.fn() };
@@ -23,7 +22,7 @@ beforeEach(() => {
 });
 
 function mount(
-  item: ListItem,
+  story: TrendingStoryDto,
   reader: Partial<LinkReaderNavigation> | null = navigation,
   storyActions: Provider[] = [],
 ): HTMLElement {
@@ -38,7 +37,7 @@ function mount(
     ],
   });
   fixture = TestBed.createComponent(StorySourcesComponent);
-  fixture.componentRef.setInput('story', storyOfItem(item));
+  fixture.componentRef.setInput('story', story);
   fixture.detectChanges();
   return fixture.nativeElement as HTMLElement;
 }
@@ -48,7 +47,7 @@ function expand(element: HTMLElement): void {
   fixture.detectChanges();
 }
 
-const storyOf = (others: StoryArticleDto[]): ListItem =>
+const storyWith = (others: StoryArticleDto[]): TrendingStoryDto =>
   aStory({
     outletCount: others.length + 1,
     viewed: false,
@@ -68,10 +67,10 @@ const copies = [
 
 describe("a Trending story's line (#2128)", () => {
   const lineOf = (element: HTMLElement) => element.querySelector('.more-sources .story-line')!;
-  const onTrending = (item: ListItem) => mount(item, navigation, provideStoryActions());
+  const onTrending = (story: TrendingStoryDto) => mount(story, navigation, provideStoryActions());
 
   it('holds the story actions first, the counts beside them and the toggle last', () => {
-    const line = lineOf(onTrending(storyOf(copies)));
+    const line = lineOf(onTrending(storyWith(copies)));
 
     expect([...line.children].map((child) => child.localName)).toEqual([
       'app-story-actions',
@@ -92,27 +91,27 @@ describe("a Trending story's line (#2128)", () => {
   });
 
   it('marks the toggle with the Trending icon', () => {
-    const toggle = lineOf(onTrending(storyOf(copies))).querySelector('.toggle')!;
+    const toggle = lineOf(onTrending(storyWith(copies))).querySelector('.toggle')!;
 
     expect(toggle.querySelector('app-icon')!.textContent!.trim()).toBe('trending_up');
   });
 
   it('still shows for a story with no other articles, holding only its actions', () => {
-    const line = lineOf(onTrending(storyOf([])));
+    const line = lineOf(onTrending(storyWith([])));
 
     expect(line.querySelector('.toggle')).toBeNull();
     expect(line.querySelectorAll('.story-actions button').length).toBe(2);
   });
 
   it('offers no story actions off Trending', () => {
-    const element = mount(storyOf(copies), navigation, provideStoryActions('all'));
+    const element = mount(storyWith(copies), navigation, provideStoryActions('all'));
 
     expect(element.querySelector('.story-actions')).toBeNull();
   });
 });
 
 it('counts the other sources on one collapsed line', () => {
-  const element = mount(storyOf(copies));
+  const element = mount(storyWith(copies));
 
   const toggle = element.querySelector('.toggle')!;
   expect(toggle.textContent).toContain('2');
@@ -121,11 +120,11 @@ it('counts the other sources on one collapsed line', () => {
 });
 
 it("counts a story's other articles, not its sources, on the toggle", () => {
-  expect(mount(storyOf(copies)).querySelector('.toggle')!.textContent).toContain('2 more');
+  expect(mount(storyWith(copies)).querySelector('.toggle')!.textContent).toContain('2 more');
 });
 
 it('counts a single other article too', () => {
-  expect(mount(storyOf([copies[0]])).querySelector('.toggle')!.textContent).toContain('1 more');
+  expect(mount(storyWith([copies[0]])).querySelector('.toggle')!.textContent).toContain('1 more');
 });
 
 it('shows an article no followed outlet carries as the card its posts share', () => {
@@ -143,7 +142,7 @@ it('shows an article no followed outlet carries as the card its posts share', ()
     ],
     shares: [anEntry({ id: 9 })],
   });
-  const element = mount(storyOf([sharedArticle]));
+  const element = mount(storyWith([sharedArticle]));
   expand(element);
 
   const mini = element.querySelector('.mini')!;
@@ -153,7 +152,7 @@ it('shows an article no followed outlet carries as the card its posts share', ()
 });
 
 it('expands to one mini card per source, naming its feed and title', () => {
-  const element = mount(storyOf(copies));
+  const element = mount(storyWith(copies));
   expand(element);
 
   const minis = element.querySelectorAll('.mini');
@@ -169,14 +168,14 @@ it('names a copy by its poster when someone other than the feed posted it', () =
     source: 'Home',
     poster: { name: 'Hank Green', url: null, imageUrl: null },
   });
-  const element = mount(storyOf([post]));
+  const element = mount(storyWith([post]));
   expand(element);
 
   expect(element.querySelector('.mini .feed')!.textContent).toContain('Hank Green');
 });
 
 it("shows a source's picture as its thumbnail, its favicon when it has none", () => {
-  const element = mount(storyOf(copies));
+  const element = mount(storyWith(copies));
   expand(element);
 
   const [withImage, withoutImage] = Array.from(element.querySelectorAll('.mini'));
@@ -186,7 +185,7 @@ it("shows a source's picture as its thumbnail, its favicon when it has none", ()
 });
 
 it("loads a source's picture asynchronously and without a referrer", () => {
-  const element = mount(storyOf(copies));
+  const element = mount(storyWith(copies));
   expand(element);
 
   const thumb = element.querySelector('img.thumb')!;
@@ -211,7 +210,7 @@ function breakThumb(element: HTMLElement, index: number): void {
 }
 
 it("loads the smallest rendition that covers a mini card's picture", () => {
-  const element = mount(storyOf([withRenditions]));
+  const element = mount(storyWith([withRenditions]));
   expand(element);
 
   const thumb = element.querySelector('img.thumb')!;
@@ -220,7 +219,7 @@ it("loads the smallest rendition that covers a mini card's picture", () => {
 });
 
 it('retries the plain picture when its rendition fails to load', () => {
-  const element = mount(storyOf([withRenditions]));
+  const element = mount(storyWith([withRenditions]));
   expand(element);
   expect(element.querySelector('img.thumb')!.getAttribute('srcset')).not.toBeNull();
 
@@ -232,7 +231,7 @@ it('retries the plain picture when its rendition fails to load', () => {
 });
 
 it('shows the favicon box on the one card whose picture fails to load', () => {
-  const element = mount(storyOf([copies[0], withRenditions]));
+  const element = mount(storyWith([copies[0], withRenditions]));
   expand(element);
 
   breakThumb(element, 0);
@@ -244,7 +243,7 @@ it('shows the favicon box on the one card whose picture fails to load', () => {
 });
 
 it('collapses again on a second click', () => {
-  const element = mount(storyOf(copies));
+  const element = mount(storyWith(copies));
   expand(element);
   expand(element);
 
@@ -253,17 +252,17 @@ it('collapses again on a second click', () => {
 
 /** Mounts the footer inside a card that records whether an event of `type` reached it. */
 function mountOnCard(type: 'click' | 'keydown'): { element: HTMLElement; reached: jest.Mock } {
-  return mountOnCardWith(type, storyOf(copies));
+  return mountOnCardWith(type, storyWith(copies));
 }
 
 function mountOnCardWith(
   type: 'click' | 'keydown',
-  item: ListItem,
+  story: TrendingStoryDto,
 ): { element: HTMLElement; reached: jest.Mock } {
   const card = document.createElement('div');
   const reached = jest.fn();
   card.addEventListener(type, reached);
-  const element = mount(item);
+  const element = mount(story);
   card.appendChild(element);
   return { element, reached };
 }
@@ -310,7 +309,7 @@ it("shows each source's dek under its title", () => {
     title: 'Raman wins',
     excerpt: 'A second big win.',
   });
-  const element = mount(storyOf([withDek]));
+  const element = mount(storyWith([withDek]));
   expand(element);
 
   expect(element.querySelector('.mini .dek')!.textContent).toContain('A second big win.');
@@ -318,14 +317,14 @@ it("shows each source's dek under its title", () => {
 
 it('leaves out the dek line when a source has none', () => {
   const bare = aStoryArticle({ id: 6, source: 'CBC', title: 'New mayor', excerpt: '' });
-  const element = mount(storyOf([bare]));
+  const element = mount(storyWith([bare]));
   expand(element);
 
   expect(element.querySelector('.mini .dek')).toBeNull();
 });
 
 it("puts the source's favicon in its byline", () => {
-  const element = mount(storyOf(copies));
+  const element = mount(storyWith(copies));
   expand(element);
 
   expect(element.querySelector('.mini .byline app-favicon')).not.toBeNull();
@@ -351,7 +350,7 @@ const shareLed = (card: Parameters<typeof aLinkCard>[0], shares: EntryDto[]): St
 
 it("shows a pill for each account that shared a mini card's article, apart from its link", () => {
   const element = mount(
-    storyOf([shareLed({}, [poster(10, 'CharlesDarwin'), poster(11, 'Rosalind')])]),
+    storyWith([shareLed({}, [poster(10, 'CharlesDarwin'), poster(11, 'Rosalind')])]),
   );
   expand(element);
 
@@ -365,7 +364,7 @@ it('opens the post a sharer pill stands for, and not the card it sits on', () =>
   const second = poster(11, 'Rosalind');
   const { element, reached } = mountOnCardWith(
     'click',
-    storyOf([shareLed({}, [poster(10, 'CharlesDarwin'), second])]),
+    storyWith([shareLed({}, [poster(10, 'CharlesDarwin'), second])]),
   );
   expand(element);
   reached.mockReset();
@@ -378,14 +377,14 @@ it('opens the post a sharer pill stands for, and not the card it sits on', () =>
 
 it('shows sharer pills on an outlet mini card posts share too', () => {
   const shared = aStoryArticle({ id: 12, source: 'NDR', shares: [poster(10, 'Ann')] });
-  const element = mount(storyOf([shared]));
+  const element = mount(storyWith([shared]));
   expand(element);
 
   expect(element.querySelector('.mini app-story-sharers .sharer')!.textContent).toContain('Ann');
 });
 
 it('leaves out the sharer pills on a mini card no post shares', () => {
-  const element = mount(storyOf(copies));
+  const element = mount(storyWith(copies));
   expand(element);
 
   expect(element.querySelector('.mini app-story-sharers .sharers')).toBeNull();
@@ -401,7 +400,7 @@ it.each([
 ])('keeps a share-led "%s" key "%s" from reaching the card', (selector, key) => {
   const { element, reached } = mountOnCardWith(
     'keydown',
-    storyOf([shareLed({ url: cardUrl }, [poster(10, 'Ann')])]),
+    storyWith([shareLed({ url: cardUrl }, [poster(10, 'Ann')])]),
   );
   expand(element);
 
@@ -413,8 +412,8 @@ it.each([
 });
 
 it.each([
-  ['a share-led', storyOf([shareLed({ url: cardUrl }, [poster(10, 'Ann')])])],
-  ['an outlet', storyOf(copies)],
+  ['a share-led', storyWith([shareLed({ url: cardUrl }, [poster(10, 'Ann')])])],
+  ['an outlet', storyWith(copies)],
 ])("keeps a click on %s mini card's padding from opening the card it sits on", (_, story) => {
   const { element, reached } = mountOnCardWith('click', story);
   expand(element);
@@ -427,7 +426,7 @@ it.each([
 });
 
 it('marks the reader overlay available only where the reader can open', () => {
-  const story = storyOf([shareLed({ url: cardUrl }, [poster(10, 'Ann')])]);
+  const story = storyWith([shareLed({ url: cardUrl }, [poster(10, 'Ann')])]);
   const withReader = mount(story);
   expand(withReader);
   expect(withReader.querySelector('.mini > app-open-in-reader.available')).not.toBeNull();
@@ -440,7 +439,9 @@ it('marks the reader overlay available only where the reader can open', () => {
 });
 
 it("shows no thumb box on a share-led mini card without a picture, never the sharer's icon", () => {
-  const element = mount(storyOf([shareLed({ url: cardUrl, imageUrl: null }, [poster(10, 'Ann')])]));
+  const element = mount(
+    storyWith([shareLed({ url: cardUrl, imageUrl: null }, [poster(10, 'Ann')])]),
+  );
   expand(element);
 
   expect(element.querySelector('.mini .thumb')).toBeNull();
@@ -448,7 +449,7 @@ it("shows no thumb box on a share-led mini card without a picture, never the sha
 
 it('drops a broken picture on a share-led mini card without a thumb box', () => {
   const element = mount(
-    storyOf([shareLed({ url: cardUrl, imageUrl: 'https://img/card.jpg' }, [poster(10, 'Ann')])]),
+    storyWith([shareLed({ url: cardUrl, imageUrl: 'https://img/card.jpg' }, [poster(10, 'Ann')])]),
   );
   expand(element);
 
@@ -458,7 +459,7 @@ it('drops a broken picture on a share-led mini card without a thumb box', () => 
 });
 
 it('links a share-led mini card to the real article, in a new tab', () => {
-  const element = mount(storyOf([shareLed({ url: cardUrl }, [poster(10, 'Ann')])]));
+  const element = mount(storyWith([shareLed({ url: cardUrl }, [poster(10, 'Ann')])]));
   expand(element);
 
   const face = element.querySelector<HTMLAnchorElement>('.mini a.face')!;
@@ -470,7 +471,7 @@ it('links a share-led mini card to the real article, in a new tab', () => {
 it("keeps a click on a share-led mini card's link from opening the card it sits on", () => {
   const { element, reached } = mountOnCardWith(
     'click',
-    storyOf([shareLed({ url: cardUrl }, [poster(10, 'Ann')])]),
+    storyWith([shareLed({ url: cardUrl }, [poster(10, 'Ann')])]),
   );
   expand(element);
   reached.mockReset();
@@ -486,7 +487,7 @@ it("keeps a click on a share-led mini card's link from opening the card it sits 
 it("opens a share-led mini card's article in the reader from its overlay", () => {
   const { element, reached } = mountOnCardWith(
     'click',
-    storyOf([shareLed({ url: cardUrl }, [poster(10, 'Ann')])]),
+    storyWith([shareLed({ url: cardUrl }, [poster(10, 'Ann')])]),
   );
   expand(element);
   reached.mockReset();
@@ -499,7 +500,7 @@ it("opens a share-led mini card's article in the reader from its overlay", () =>
 });
 
 it('keeps an outlet mini card opening its entry, with no reader overlay', () => {
-  const element = mount(storyOf(copies));
+  const element = mount(storyWith(copies));
   expand(element);
 
   expect(element.querySelector('.mini button.face')).not.toBeNull();
@@ -507,14 +508,14 @@ it('keeps an outlet mini card opening its entry, with no reader overlay', () => 
 });
 
 it('counts no shares in the byline, which the sharers line already does', () => {
-  const element = mount(storyOf([shareLed({}, [poster(10, 'Ann'), poster(11, 'Ben')])]));
+  const element = mount(storyWith([shareLed({}, [poster(10, 'Ann'), poster(11, 'Ben')])]));
   expand(element);
 
   expect(element.querySelector('.mini .byline')!.textContent).not.toContain('share');
 });
 
 it("names a share-led mini card by its article's site, not the post that shared it", () => {
-  const element = mount(storyOf([shareLed({ siteName: 'CNN' }, [poster(10, 'CharlesDarwin')])]));
+  const element = mount(storyWith([shareLed({ siteName: 'CNN' }, [poster(10, 'CharlesDarwin')])]));
   expand(element);
 
   expect(element.querySelector('.mini .feed')!.textContent!.trim()).toBe('CNN');
@@ -522,7 +523,7 @@ it("names a share-led mini card by its article's site, not the post that shared 
 
 it('names a share-led mini card by its host when the card has no site name', () => {
   const element = mount(
-    storyOf([
+    storyWith([
       shareLed({ siteName: '', url: 'https://edition.cnn.com/2026/11/14/politics/judge' }, [
         poster(10, 'CharlesDarwin'),
       ]),
@@ -535,7 +536,7 @@ it('names a share-led mini card by its host when the card has no site name', () 
 
 it("names a share-led mini card by its host without the host's www.", () => {
   const element = mount(
-    storyOf([shareLed({ siteName: '', url: 'https://www.cnn.com/a' }, [poster(10, 'Ann')])]),
+    storyWith([shareLed({ siteName: '', url: 'https://www.cnn.com/a' }, [poster(10, 'Ann')])]),
   );
   expand(element);
 
@@ -544,7 +545,9 @@ it("names a share-led mini card by its host without the host's www.", () => {
 
 it('keeps a dek that merely mentions a URL', () => {
   const element = mount(
-    storyOf([shareLed({ description: 'Read more at https://cnn.com today' }, [poster(10, 'Ann')])]),
+    storyWith([
+      shareLed({ description: 'Read more at https://cnn.com today' }, [poster(10, 'Ann')]),
+    ]),
   );
   expand(element);
 
@@ -561,7 +564,7 @@ it('leads a link post with a title of its own by the card it shares, as a Lemmy 
     linkCards: [aLinkCard({ url: cardUrl, siteName: 'CNN', description: null })],
     shares: [poster(10, 'CharlesDarwin')],
   });
-  const element = mount(storyOf([linkPost]));
+  const element = mount(storyWith([linkPost]));
   expand(element);
 
   expect(element.querySelector('.mini a.face')!.getAttribute('href')).toBe(cardUrl);

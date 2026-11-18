@@ -1,5 +1,5 @@
-@use '../../list/magazine/magazine-card';
-@use '../../link-card/open-in-reader';
+@use '../magazine-card';
+@use '../../../link-card/open-in-reader';
 
 :host {
   display: contents;

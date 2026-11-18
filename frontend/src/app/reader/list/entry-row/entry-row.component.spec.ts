@@ -46,7 +46,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto =>
 
 function mount(item: ListItem) {
   TestBed.configureTestingModule({
-    providers: [provideStoryContext(storyOf(item) ?? null).provider],
+    providers: [provideStoryContext(storyOf(item)).provider],
   });
   return createRow(item);
 }

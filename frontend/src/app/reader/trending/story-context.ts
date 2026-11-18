@@ -2,7 +2,9 @@ import { Directive, inject, InjectionToken, input, Signal, signal } from '@angul
 
 import { TrendingStoryDto } from './trending.models';
 
-export const STORY_CONTEXT = new InjectionToken<Signal<TrendingStoryDto | null>>('STORY_CONTEXT');
+export const STORY_CONTEXT = new InjectionToken<Signal<TrendingStoryDto | null>>('STORY_CONTEXT', {
+  factory: () => signal(null).asReadonly(),
+});
 
 @Directive({
   selector: '[appStory]',
@@ -13,5 +15,5 @@ export class StoryContextDirective {
 }
 
 export function injectStory(): Signal<TrendingStoryDto | null> {
-  return inject(STORY_CONTEXT, { optional: true }) ?? signal(null).asReadonly();
+  return inject(STORY_CONTEXT);
 }
