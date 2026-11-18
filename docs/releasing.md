@@ -65,11 +65,15 @@ must never carry a `-dev.N` (or any other) suffix.**
 When the `### Highlights` block under `## [Unreleased]` is non-empty at tag time,
 [`announce-release.yml`](../.github/workflows/announce-release.yml) posts a thread
 to each configured network:
-- a root post that links the [homepage](https://lars-pohlmann.de/simplefeedreader/)
-  and carries `#rss #rssreader`. On Bluesky it shows a card with the homepage's
-  share image.
-- each highlight as a reply, split at sentence ends when it is longer than
-  Bluesky's 300 or Mastodon's 500 characters.
+- a root post written for searches and followed tags: it names the product as a
+  "self-hosted, open-source RSS reader", carries the block's
+  [lead sentence](#the-lead-sentence), links the
+  [homepage](https://lars-pohlmann.de/simplefeedreader/) and ends with
+  `#RSS #SelfHosted #OpenSource`. Without a lead, or when it does not fit the
+  network, the root lists the highlight titles instead, as many as fit followed by
+  `… and N more below`. On Bluesky it shows a card with the homepage's share image.
+- each titled highlight as a reply, split at sentence ends when it is longer than
+  Bluesky's 300 or Mastodon's 500 characters. The lead is not repeated.
 - a closing reply that links the GitHub Release.
 
 A release without highlights posts nothing.
@@ -158,6 +162,8 @@ and merge it to `develop` like any other change:
 
 ### Highlights
 
+This release adds saved searches and WordPress REST API support.
+
 **Saved searches.** Name a search and keep it as a saved view in the sidebar…
 
 **WordPress REST API support.** When a site exposes the WordPress REST API…
@@ -167,6 +173,28 @@ At tag time `scripts/changelog-insert-release.sh` lifts that block out of
 `[Unreleased]` and places it at the top of the new version section, above the
 generated notes, and `scripts/changelog-highlights.sh` leads the GitHub Release
 body with the same block. No block means both are just the generated notes.
+
+### The lead sentence
+
+The block's first paragraph, when it has no bold title, is the lead: an intro line
+in the changelog, the Release and the homepage, and the per-release part of the
+announcement's root post. That post is found through searches and followed tags,
+so word the lead and the titles for that, without sounding like an advert:
+
+- One sentence of at most 150 characters, e.g. "This release adds …".
+  `scripts/test/announce/changelog-lead.test.mjs` fails CI on a longer one.
+- Name each feature by the noun someone would search for, in the lead and in
+  the titles: "French and Spanish", "Feed directory", not "Choose what shows
+  where". Titles are the root's fallback list.
+- No praise adjectives, emoji, exclamation marks or hashtags; the root post
+  adds its own tags.
+
+Preview the thread before you merge the highlights:
+
+```bash
+awk '/^## \[Unreleased\]/{f=1;next} /^## \[/{f=0} f' CHANGELOG.md \
+  | node scripts/announce-release.mjs vX.Y.Z https://example.org --dry-run
+```
 
 ## Choosing the version number
 

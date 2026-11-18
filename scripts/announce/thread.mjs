@@ -14,7 +14,19 @@ export function graphemeLength(text) {
   return graphemes(text).length;
 }
 
+export const LEAD_LIMIT = 150;
+const TAGS = '#RSS #SelfHosted #OpenSource';
+
 export function extractHighlights(releaseBody) {
+  const highlights = highlightParagraphs(releaseBody).map(toHighlight);
+  const [first, ...rest] = highlights;
+  if (first !== undefined && first.title === null) {
+    return { lead: first.text, highlights: rest };
+  }
+  return { lead: null, highlights };
+}
+
+function highlightParagraphs(releaseBody) {
   const lines = releaseBody.replace(/\r\n/g, '\n').split('\n');
   const start = lines.findIndex((line) => /^###\s+Highlights\s*$/.test(line));
   if (start === -1) {
@@ -28,8 +40,17 @@ export function extractHighlights(releaseBody) {
   return block
     .join('\n')
     .split(/\n\s*\n/)
-    .map((paragraph) => toPlainText(paragraph.split('\n').map((line) => line.trim()).join(' ')))
+    .map((paragraph) => paragraph.split('\n').map((line) => line.trim()).join(' ').trim())
     .filter((paragraph) => paragraph !== '');
+}
+
+function toHighlight(paragraph) {
+  return { title: titleOf(paragraph), text: toPlainText(paragraph) };
+}
+
+function titleOf(paragraph) {
+  const bold = paragraph.match(/^\*\*(.+?)\*\*/);
+  return bold === null ? null : toPlainText(bold[1]).replace(/\.$/, '');
 }
 
 function toPlainText(markdown) {
@@ -83,10 +104,39 @@ function pack(pieces, limit) {
   return posts;
 }
 
-export function buildThread({ tag, releaseUrl, highlights, limit }) {
+export function buildThread({ tag, releaseUrl, lead, highlights, limit }) {
   return [
-    `simple-feed-reader ${tag} is out. The highlights follow in this thread. #rss #rssreader\n\n${HOMEPAGE_URL}`,
-    ...highlights.flatMap((highlight) => splitToFit(highlight, limit)),
+    rootPost({ tag, lead, highlights, limit }),
+    ...highlights.flatMap((highlight) => splitToFit(highlight.text, limit)),
     `Full release notes: ${releaseUrl}`,
   ];
+}
+
+function rootPost({ tag, lead, highlights, limit }) {
+  const product = `simple-feed-reader ${tag}, a self-hosted, open-source RSS reader`;
+  const fits = (post) => graphemeLength(post) <= limit;
+  const leadPost = lead === null ? null : withHomepage(`${product}, is out. ${lead}`);
+  if (leadPost !== null && fits(leadPost)) {
+    return leadPost;
+  }
+  const titles = highlights.map((highlight) => highlight.title).filter((title) => title !== null);
+  for (let shown = titles.length; shown > 0; shown -= 1) {
+    const post = titleList(product, titles, shown);
+    if (fits(post)) {
+      return post;
+    }
+  }
+  return withHomepage(`${product}, is out.`);
+}
+
+function titleList(product, titles, shown) {
+  const lines = titles.slice(0, shown).map((title) => `• ${title}`);
+  if (shown < titles.length) {
+    lines.push(`… and ${titles.length - shown} more below`);
+  }
+  return withHomepage(`New in ${product}:\n\n${lines.join('\n')}`);
+}
+
+function withHomepage(text) {
+  return `${text}\n\n${HOMEPAGE_URL}\n\n${TAGS}`;
 }

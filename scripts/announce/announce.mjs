@@ -3,14 +3,14 @@ import { MASTODON_LIMIT, postMastodonThread } from './mastodon.mjs';
 import { buildThread, extractHighlights, HOMEPAGE_DESCRIPTION, HOMEPAGE_TITLE, HOMEPAGE_URL } from './thread.mjs';
 
 export async function announce({ tag, releaseUrl, releaseBody, cardImage, env, fetch, log, dryRun }) {
-  const highlights = extractHighlights(releaseBody);
-  if (highlights.length === 0) {
+  const { lead, highlights } = extractHighlights(releaseBody);
+  if (lead === null && highlights.length === 0) {
     log(`${tag} has no highlights; nothing to announce.`);
     return 0;
   }
   let failures = 0;
   for (const network of networks({ cardImage, env, fetch })) {
-    const posts = network.compose({ tag, releaseUrl, highlights });
+    const posts = network.compose({ tag, releaseUrl, lead, highlights });
     if (dryRun) {
       log(`--- ${network.name} (${posts.length} ${posts.length === 1 ? 'post' : 'posts'})`);
       posts.forEach((post, index) => log(`[${index + 1}] ${post}`));
