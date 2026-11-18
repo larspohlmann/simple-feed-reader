@@ -7,6 +7,7 @@ namespace App\Tests\Service\Curation\Trending;
 use App\Entity\Entry;
 use App\Enum\FeedLanguage;
 use App\Enum\TrendingWindow;
+use App\Service\Curation\Trending\Model\StoredStoryModel;
 use App\Service\Curation\Trending\Model\StoryMatchModel;
 use App\Service\Curation\Trending\Model\TrendingStoryModel;
 use App\Service\Curation\Trending\Pass\TrendingRun;
@@ -35,22 +36,60 @@ final class FallbackTitlesTest extends DbTestCase
     {
         $entries = $this->portStrike();
 
-        $titles = $this->fallbackTitlesOfTheStoryRetitled([$entries[0]]);
+        $titles = $this->fallbackTitlesOfTheStory([$entries[0]]);
 
         self::assertSame(['Streik legt Hamburg lahm'], $titles);
     }
 
     public function testAStoryWhoseHeadlinesAreAllTickerMarksTakesNoFallback(): void
     {
-        self::assertSame([], $this->fallbackTitlesOfTheStoryRetitled($this->portStrike()));
+        self::assertSame([], $this->fallbackTitlesOfTheStory($this->portStrike()));
+    }
+
+    public function testAnUnchangedTitledStoryKeepsItsFallbackWhateverTheMemberOrder(): void
+    {
+        $entries = $this->portStrike();
+        $ids = array_map(static fn (Entry $entry): int => $entry->requireId(), $entries);
+
+        $titles = $this->fallbackTitlesOfTheStory([], [new StoredStoryModel(1, array_reverse($ids), $ids[1], true)]);
+
+        self::assertSame([], $titles);
+    }
+
+    public function testAStoryWithoutARecordedFallbackEntryIsTitledAgain(): void
+    {
+        $ids = array_map(static fn (Entry $entry): int => $entry->requireId(), $this->portStrike());
+
+        $titles = $this->fallbackTitlesOfTheStory([], [new StoredStoryModel(1, $ids, null, true)]);
+
+        self::assertCount(1, $titles);
+    }
+
+    public function testAStoryWhoseFallbackEntryLeftIsTitledAgain(): void
+    {
+        $ids = array_map(static fn (Entry $entry): int => $entry->requireId(), $this->portStrike());
+
+        $titles = $this->fallbackTitlesOfTheStory([], [new StoredStoryModel(1, $ids, 99_999_999, true)]);
+
+        self::assertCount(1, $titles);
+    }
+
+    public function testAStoryThatNeverHadATitleIsTitledAgain(): void
+    {
+        $ids = array_map(static fn (Entry $entry): int => $entry->requireId(), $this->portStrike());
+
+        $titles = $this->fallbackTitlesOfTheStory([], [new StoredStoryModel(1, $ids, $ids[1], false)]);
+
+        self::assertCount(1, $titles);
     }
 
     /**
-     * @param list<Entry> $tickered the entries whose title turns to ticker marks once the story is grouped
+     * @param list<Entry>             $tickered the entries whose title turns to ticker marks once the story is grouped
+     * @param list<StoredStoryModel>  $stored
      *
      * @return list<string> the fallback titles the story's assignments received
      */
-    private function fallbackTitlesOfTheStoryRetitled(array $tickered): array
+    private function fallbackTitlesOfTheStory(array $tickered, array $stored = []): array
     {
         $grouping = TrendingWiring::grouping($this->entityManager, $this->clock);
         $run = $grouping->collect($this->fixtures->owner()->requireId(), TrendingWindow::Week);
@@ -60,7 +99,7 @@ final class FallbackTitlesTest extends DbTestCase
             $this->retitle($entry, self::TICKER_ONLY);
         }
 
-        $match = $this->titled($run, $stories);
+        $match = $this->titled($run, $stories, $stored);
 
         return array_values(array_filter(
             array_map(static fn ($assignment): ?string => $assignment->fallbackTitle?->title, $match->assignments),
@@ -68,13 +107,16 @@ final class FallbackTitlesTest extends DbTestCase
         ));
     }
 
-    /** @param list<TrendingStoryModel> $stories */
-    private function titled(TrendingRun $run, array $stories): StoryMatchModel
+    /**
+     * @param list<TrendingStoryModel> $stories
+     * @param list<StoredStoryModel>   $stored
+     */
+    private function titled(TrendingRun $run, array $stories, array $stored): StoryMatchModel
     {
         return TrendingWiring::fallbackTitles($this->entityManager)->titledAll(
             $run,
-            (new StoryMatching())->reshape($stories, []),
-            [],
+            (new StoryMatching())->reshape($stories, $stored),
+            $stored,
         );
     }
 
