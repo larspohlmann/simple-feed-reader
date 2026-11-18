@@ -212,7 +212,7 @@ writes none of them.
 | `ShareEnrichment` | The queue of entries whose embed or link cards are still to come. It is a machine record, not your data. |
 | `ThreadPost` | The replies in which a post's author continued it, read from the network when the post arrives. A restored article shows its root post alone. |
 | `EntryTranscript` | An episode's transcript, fetched from the URL its feed declares. A restored episode has no transcript, since a backup carries no transcript declaration. |
-| `EntryLemmyPost` | A Lemmy post's score and community, rewritten on every fetch while its feed still lists the post; a restored one would be stale before the reader saw it. |
+| `EntryLemmyPost` | A Lemmy post's score and community label, derived from its instance and re-read while its feed lists the post. A restored older post shows no community. |
 | `TrendingSnapshot` | When a Trending window was last grouped and what the grouping cost. The next rebuild writes it again. |
 | `TrendingStory` | A Trending story and when its members joined. The next rebuild groups the restored entries again. |
 | `TrendingStoryEntry` | Which entries belong to a Trending story. The next rebuild groups the restored entries again. |

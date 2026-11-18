@@ -27,7 +27,7 @@ final readonly class EntryListRowEnrichment
         public ?EntryOrigin $origin = null,
         /** @var list<ThreadPostModel> the author's own replies folded into this entry, in thread order */
         public array $threadPosts = [],
-        /** null for every entry that is no Lemmy post */
+        /** null unless the post has a row and the reader has a Lemmy account */
         public ?EntryListRowLemmy $lemmy = null,
     ) {
     }
