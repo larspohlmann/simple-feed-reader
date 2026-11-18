@@ -14,7 +14,7 @@ interface HomeServerCheckInterface
     /**
      * True only when the post's own server answers that the post is gone; any other answer proves nothing.
      *
-     * @throws SocialNetworkUnreachableException when no answer arrived
+     * @throws SocialNetworkUnreachableException when no answer arrived or the server answered 5xx
      */
     public function confirmsDeleted(string $address): bool;
 }

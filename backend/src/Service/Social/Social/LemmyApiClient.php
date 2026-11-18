@@ -116,7 +116,7 @@ final readonly class LemmyApiClient
         };
     }
 
-    /** @throws SocialNetworkUnreachableException only when no answer arrived; any status is returned */
+    /** @throws SocialNetworkUnreachableException when no answer arrived or the instance answered 5xx */
     private function answer(ApiRequestModel $request): ApiResponseModel
     {
         $answer = NetworkAnswer::orUnreachable(fn (): ApiResponseModel => $this->api->send($request), self::NETWORK);
