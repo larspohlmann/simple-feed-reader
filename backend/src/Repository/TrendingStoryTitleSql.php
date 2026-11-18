@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-/** A Trending story's (aliased `story`) title: its written title, else its fallback, else the newest member headline
- * from a feed its reader subscribes to, an article feed's first. */
+/**
+ * A Trending story's (aliased `story`) title: its written title, else its fallback, else the newest member headline
+ * from a feed its reader subscribes to, an article feed's first.
+ */
 final class TrendingStoryTitleSql
 {
-    public const string TITLE = 'COALESCE(story.llm_title, story.fallback_title,'
+    public const string STORED = 'COALESCE(story.llm_title, story.fallback_title)';
+
+    public const string TITLE = 'COALESCE(' . self::STORED . ','
         . ' (SELECT headline_entry.title FROM trending_story_entry headline_member'
         . ' JOIN entry headline_entry ON headline_entry.id = headline_member.entry_id'
         . ' JOIN feed headline_feed ON headline_feed.id = headline_member.feed_id'

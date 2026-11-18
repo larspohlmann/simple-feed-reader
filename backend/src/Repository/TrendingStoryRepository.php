@@ -86,8 +86,8 @@ final class TrendingStoryRepository extends ServiceEntityRepository
 
         /** @var list<array{id: int|string, title: string}> $rows */
         $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
-            'SELECT id, COALESCE(llm_title, fallback_title) AS title FROM trending_story'
-            . ' WHERE id IN (:storyIds) AND COALESCE(llm_title, fallback_title) IS NOT NULL',
+            'SELECT story.id, ' . TrendingStoryTitleSql::STORED . ' AS title FROM trending_story story'
+            . ' WHERE story.id IN (:storyIds) AND ' . TrendingStoryTitleSql::STORED . ' IS NOT NULL',
             ['storyIds' => $storyIds],
             ['storyIds' => ArrayParameterType::INTEGER],
         );
