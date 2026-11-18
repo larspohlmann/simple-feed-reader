@@ -15,14 +15,15 @@ final class RecordingSnapshotBuilder implements SnapshotBuilderInterface
     /** @var list<array{int, TrendingWindow}> */
     public array $calls = [];
 
-    public function __construct(private readonly ?int $busyUserId = null)
+    /** @param ?\Throwable $failure what $failingUserId's builds throw; a busy lock when null */
+    public function __construct(private readonly ?int $failingUserId = null, private readonly ?\Throwable $failure = null)
     {
     }
 
     public function build(int $userId, TrendingWindow $window): TrendingBuildReportModel
     {
-        if ($userId === $this->busyUserId) {
-            throw new TrendingBuildBusyException();
+        if ($userId === $this->failingUserId) {
+            throw $this->failure ?? new TrendingBuildBusyException();
         }
         $this->calls[] = [$userId, $window];
 

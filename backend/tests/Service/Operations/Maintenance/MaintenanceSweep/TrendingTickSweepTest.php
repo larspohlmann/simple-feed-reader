@@ -42,6 +42,6 @@ final class TrendingTickSweepTest extends DbTestCase
         $reader->setLastLoginAt($clock->now());
         $this->entityManager->flush();
 
-        return new TrendingTickSweep(TrendingWiring::rebuild($this->entityManager, $clock));
+        return new TrendingTickSweep(TrendingWiring::rebuild($this->entityManager, $this->registry(), $clock));
     }
 }

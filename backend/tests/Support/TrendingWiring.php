@@ -32,6 +32,7 @@ use App\Service\Curation\Trending\TrendingRebuild;
 use App\Service\Ingestion\Language\Factory\LanguageDetectionFactory;
 use App\Service\Ingestion\Language\LanguageGuess;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\Persistence\ManagerRegistry;
 use Psr\Clock\ClockInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\DependencyInjection\ServiceLocator;
@@ -44,6 +45,7 @@ final class TrendingWiring
 {
     public static function rebuild(
         EntityManagerInterface $entityManager,
+        ManagerRegistry $registry,
         ClockInterface $clock,
         LockFactory $locks = new LockFactory(new InMemoryStore()),
     ): TrendingRebuild {
@@ -67,6 +69,7 @@ final class TrendingWiring
             $entityManager->getRepository(User::class),
             $naiveClock,
             new NullLogger(),
+            $registry,
         );
     }
 

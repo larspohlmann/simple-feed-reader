@@ -421,7 +421,7 @@ final class MaintenanceTickTest extends DbTestCase
         return new MaintenanceTick(
             $overrides->refreshRunner,
             self::inDeclaredOrder([
-                new TrendingTickSweep(TrendingWiring::rebuild($this->entityManager, $clock)),
+                new TrendingTickSweep(TrendingWiring::rebuild($this->entityManager, $this->registry(), $clock)),
                 new PrivateFeedSyncTickSweep(
                     PrivateFeedSyncWiring::sweep(
                         self::getContainer(),

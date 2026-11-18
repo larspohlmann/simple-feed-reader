@@ -21,7 +21,12 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\TrendingFixtures;
 use App\Tests\Support\TrendingWiring;
+use Doctrine\DBAL\Driver\AbstractException;
+use Doctrine\DBAL\Exception\DeadlockException;
+use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\Persistence\ManagerRegistry;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
@@ -41,7 +46,7 @@ final class TrendingRebuildTest extends DbTestCase
         $running = $locks->createLock(TrendingSnapshotBuilder::LOCK_NAME . '-' . $this->activeOwner()->requireId());
         $running->acquire();
         $clock = new MockClock('2031-05-14 12:00:00', 'UTC');
-        $rebuild = TrendingWiring::rebuild($this->entityManager, $clock, $locks);
+        $rebuild = TrendingWiring::rebuild($this->entityManager, $this->registry(), $clock, $locks);
 
         self::assertSame([], self::windowsOf($rebuild->rebuildDue()));
         self::assertSame([], self::windowsOf($rebuild->rebuildDueBefore($clock->now()->modify('+1 hour'))));
@@ -84,6 +89,7 @@ final class TrendingRebuildTest extends DbTestCase
             $this->users(),
             $clock,
             $logger,
+            $this->registry(),
         );
 
         self::assertSame([TrendingWindow::Week], self::windowsOf($rebuild->rebuildDue()));
@@ -129,7 +135,7 @@ final class TrendingRebuildTest extends DbTestCase
         $this->snapshotBuiltAt(TrendingWindow::Week, '2031-05-14 10:00:00', 1_000);
         $clock = new MockClock('2031-05-14 12:00:00', 'UTC');
 
-        $report = TrendingWiring::rebuild($this->entityManager, $clock)
+        $report = TrendingWiring::rebuild($this->entityManager, $this->registry(), $clock)
             ->rebuildDueBefore($clock->now()->modify('+1 second'));
 
         self::assertSame([TrendingWindow::Week], self::windowsOf($report));
@@ -227,6 +233,83 @@ final class TrendingRebuildTest extends DbTestCase
             [[$other->requireId(), TrendingWindow::Day], [$other->requireId(), TrendingWindow::Week]],
             $builder->calls,
         );
+    }
+
+    public function testALockTheDatabaseGaveUpLeavesThatUserDueAndTheNextUserStillBuilds(): void
+    {
+        $deadlocked = $this->activeOwner();
+        $other = $this->loggedInReader('other-reader@example.com');
+        $builder = new RecordingSnapshotBuilder($deadlocked->requireId(), self::deadlock());
+        $logger = new RecordingLogger();
+
+        $this->rebuildWith($builder, $logger)->rebuildDue();
+
+        self::assertSame(
+            [[$other->requireId(), TrendingWindow::Day], [$other->requireId(), TrendingWindow::Week]],
+            $builder->calls,
+        );
+        self::assertSame(
+            [
+                [LogLevel::WARNING, ['user' => $deadlocked->requireId(), 'window' => 'day']],
+                [LogLevel::WARNING, ['user' => $deadlocked->requireId(), 'window' => 'week']],
+            ],
+            array_map(
+                static fn (array $record): array => [
+                    $record['level'],
+                    array_diff_key($record['context'], ['exception' => true]),
+                ],
+                $logger->records,
+            ),
+        );
+    }
+
+    public function testTheNextBuildAfterALockTheDatabaseGaveUpFindsTheEntityManagerOpen(): void
+    {
+        $deadlocked = $this->activeOwner();
+        $this->loggedInReader('other-reader@example.com');
+        $builder = new class ($this->registry(), $deadlocked->requireId()) implements SnapshotBuilderInterface {
+            /** @var list<bool> */
+            public array $managerOpenAtEachBuild = [];
+
+            public function __construct(private readonly ManagerRegistry $registry, private readonly int $deadlockedId)
+            {
+            }
+
+            public function build(int $userId, TrendingWindow $window): TrendingBuildReportModel
+            {
+                $entityManager = $this->registry->getManager();
+                \assert($entityManager instanceof EntityManagerInterface);
+                $this->managerOpenAtEachBuild[] = $entityManager->isOpen();
+                if ($userId === $this->deadlockedId) {
+                    $entityManager->close();
+
+                    throw TrendingRebuildTest::deadlock();
+                }
+
+                return new TrendingBuildReportModel(
+                    $userId,
+                    $window,
+                    new \DateTimeImmutable('2031-05-14 12:00:00'),
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    new StoryMatchModel([], [], 0),
+                    0,
+                );
+            }
+        };
+
+        $this->rebuildWith($builder)->rebuildDue();
+
+        self::assertSame([true, true, true, true], $builder->managerOpenAtEachBuild);
+    }
+
+    public static function deadlock(): DeadlockException
+    {
+        return new DeadlockException(new class ('Deadlock found when trying to get lock') extends AbstractException {
+        }, null);
     }
 
     public function testLeavesAUserWhoLastLoggedInOverTwoWeeksAgoAlone(): void
@@ -330,15 +413,18 @@ final class TrendingRebuildTest extends DbTestCase
         );
     }
 
-    private function rebuildWith(SnapshotBuilderInterface $builder): TrendingRebuild
-    {
+    private function rebuildWith(
+        SnapshotBuilderInterface $builder,
+        LoggerInterface $logger = new NullLogger(),
+    ): TrendingRebuild {
         return new TrendingRebuild(
             $builder,
             TrendingWiring::snapshots($this->entityManager),
             new TrendingEntryRepository($this->entityManager),
             $this->users(),
             new NaiveUtcClock(new MockClock('2031-05-14 12:00:00', 'UTC')),
-            new NullLogger(),
+            $logger,
+            $this->registry(),
         );
     }
 
@@ -347,7 +433,7 @@ final class TrendingRebuildTest extends DbTestCase
         $clock = new MockClock('2031-05-14 12:00:00', 'UTC');
         $this->activeOwner();
 
-        return TrendingWiring::rebuild($this->entityManager, $clock)->rebuildDue();
+        return TrendingWiring::rebuild($this->entityManager, $this->registry(), $clock)->rebuildDue();
     }
 
     private function rebuildTaking(MockClock $clock, int $secondsPerBuild): TrendingRebuild
@@ -388,6 +474,7 @@ final class TrendingRebuildTest extends DbTestCase
             $this->users(),
             $naiveClock,
             new NullLogger(),
+            $this->registry(),
         );
     }
 

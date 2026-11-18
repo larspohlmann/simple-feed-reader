@@ -15,12 +15,14 @@ use App\Service\Curation\Trending\Model\TrendingBuildReportModel;
 use App\Service\Curation\Trending\Model\TrendingLastBuildsModel;
 use App\Service\Curation\Trending\Model\TrendingRebuildReportModel;
 use App\Service\Curation\Trending\SnapshotBuilder\SnapshotBuilderInterface;
+use Doctrine\DBAL\Exception\RetryableException;
+use Doctrine\Persistence\ManagerRegistry;
 use Psr\Log\LoggerInterface;
 
 /**
  * Rebuilds, for every reader active in the last ACTIVE_DAYS, each window whose snapshot is missing or as old as its
  * interval and whose feeds have news since, stalest first across readers; the worker and the tick call it.
- * A build that finds another running is skipped and stays due for the next sweep.
+ * A build that finds another running, or loses a lock wait or a deadlock, is skipped and stays due for the next sweep.
  */
 final readonly class TrendingRebuild
 {
@@ -33,6 +35,7 @@ final readonly class TrendingRebuild
         private UserRepository $users,
         private NaiveUtcClock $clock,
         private LoggerInterface $logger,
+        private ManagerRegistry $registry,
     ) {
     }
 
@@ -101,6 +104,15 @@ final readonly class TrendingRebuild
                 'Trending build skipped: another build is running.',
                 ['user' => $userId, 'window' => $window->value],
             );
+
+            return null;
+        } catch (RetryableException $exception) {
+            $this->logger->warning(
+                'Trending build skipped: the database gave up a lock.',
+                ['user' => $userId, 'window' => $window->value, 'exception' => $exception],
+            );
+            // The failed transaction closed the entity manager; every later build would fail on it.
+            $this->registry->resetManager();
 
             return null;
         }
