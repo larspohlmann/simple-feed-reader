@@ -17,6 +17,7 @@ use App\Entity\RecommendationSettings;
 use App\Entity\SavedSearch;
 use App\Entity\SavedSearchNetworkInclusion;
 use App\Entity\SocialAccount;
+use App\Entity\StoryAiRun;
 use App\Entity\StorySettings;
 use App\Entity\Subscription;
 use App\Entity\Tag;
@@ -44,7 +45,13 @@ final readonly class AccountWipeRepository
                 RecommendationRun::class,
             ))->setParameter('user', $user)->execute();
         }
+        $this->entityManager->createQuery(sprintf(
+            'DELETE FROM %s c WHERE IDENTITY(c.storyAiRun) IN (SELECT r.id FROM %s r WHERE r.user = :user)',
+            RecommendationRunLog::class,
+            StoryAiRun::class,
+        ))->setParameter('user', $user)->execute();
         $this->deleteByUser(RecommendationRun::class, $user);
+        $this->deleteByUser(StoryAiRun::class, $user);
         $this->deleteByUser(ProfileRun::class, $user);
         $this->deleteByUser(RecommendationSettings::class, $user);
         $this->deleteByUser(StorySettings::class, $user);

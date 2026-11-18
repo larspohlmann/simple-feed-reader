@@ -18,6 +18,7 @@ use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\SavedSearch;
 use App\Entity\SocialAccount;
+use App\Entity\StoryAiRun;
 use App\Entity\StorySettings;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
@@ -31,6 +32,7 @@ use App\Entity\User;
 use App\Enum\CallPhase;
 use App\Enum\PrivateFeedSyncReason;
 use App\Enum\ProfileRunTrigger;
+use App\Enum\StoryAiTask;
 use App\Enum\RecommendationBatchSize;
 use App\Enum\SocialFeedKind;
 use App\Enum\TrendingWindow;
@@ -241,6 +243,30 @@ final class AccountResetTest extends DbTestCase
         $this->entityManager->clear();
         self::assertNull($this->entityManager->find(StorySettings::class, $userId));
         self::assertNotNull($this->entityManager->find(StorySettings::class, $bystanderId));
+    }
+
+    public function testAResetForgetsStoryAiRunsAndTheirCalls(): void
+    {
+        [$user] = $this->seedAccount('reset-story-runs@example.com');
+        $storyRun = new StoryAiRun($user, StoryAiTask::Title, new \DateTimeImmutable('2026-08-05T00:00:00Z'));
+        $this->entityManager->persist($storyRun);
+        $this->entityManager->persist(
+            RecommendationRunLog::forStoryAiRun($storyRun, '{}', new \DateTimeImmutable('2026-08-05T00:00:00Z')),
+        );
+        $this->entityManager->flush();
+        $storyRunId = $storyRun->requireId();
+
+        $this->reset()->reset($user);
+
+        $connection = $this->entityManager->getConnection();
+        self::assertEquals(0, $connection->fetchOne('SELECT COUNT(*) FROM story_ai_run WHERE id = ?', [$storyRunId]));
+        self::assertEquals(
+            0,
+            $connection->fetchOne(
+                'SELECT COUNT(*) FROM recommendation_run_log WHERE story_ai_run_id = ?',
+                [$storyRunId],
+            ),
+        );
     }
 
     public function testAWipedSubscriptionIsGoneWhenLookedUpByIdStraightAfterTheReset(): void

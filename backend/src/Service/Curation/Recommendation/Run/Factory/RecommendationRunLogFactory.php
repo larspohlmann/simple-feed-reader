@@ -7,6 +7,7 @@ namespace App\Service\Curation\Recommendation\Run\Factory;
 use App\Entity\ProfileRun;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
+use App\Entity\StoryAiRun;
 use App\Repository\RecommendationRunLogRepository;
 use App\Service\Curation\Recommendation\Run\Model\CallSlotModel;
 use Symfony\Component\Clock\ClockInterface;
@@ -42,6 +43,11 @@ final readonly class RecommendationRunLogFactory
             $renderedRequest,
             $this->clock->now(),
         );
+    }
+
+    public function createForStoryAiRun(StoryAiRun $storyAiRun, string $renderedRequest): RecommendationRunLog
+    {
+        return RecommendationRunLog::forStoryAiRun($storyAiRun, $renderedRequest, $this->clock->now());
     }
 
     /** Derived from the rows already recorded, so the recorder cannot disagree with its own rows. */

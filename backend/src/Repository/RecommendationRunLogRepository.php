@@ -74,7 +74,7 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
                 'l.createdAt AS createdAt',
                 'l.finishedAt AS finishedAt',
                 'l.failure.errorDetail AS errorDetail',
-                'l.finishReason AS finishReason',
+                'l.receipt.finishReason AS finishReason',
                 'l.failure.adjustedSetting AS adjustedSetting',
                 'l.failure.adjustedValue AS adjustedValue',
             )

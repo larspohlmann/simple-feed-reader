@@ -24,9 +24,19 @@ final class CallReceipt
     // @phpstan-ignore property.unusedType (only the repository's SQL and Doctrine's hydration assign it)
     private ?int $costNanoCredits = null;
 
+    /** Why the provider stopped: `length` when max_tokens truncated the answer, `stop` at a natural end. */
+    #[ORM\Column(length: 32, nullable: true)]
+    // @phpstan-ignore property.unusedType (only the repository's SQL and Doctrine's hydration assign it)
+    private ?string $finishReason = null;
+
     public function getRequestId(): ?string
     {
         return $this->requestId;
+    }
+
+    public function getFinishReason(): ?string
+    {
+        return $this->finishReason;
     }
 
     public function getAnsweringModel(): ?string
