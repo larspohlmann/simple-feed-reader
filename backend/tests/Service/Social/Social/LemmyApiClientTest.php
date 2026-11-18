@@ -166,7 +166,7 @@ final class LemmyApiClientTest extends TestCase
         $client = $this->clientAnswering($this->errorAnswer(Response::HTTP_FORBIDDEN, ''));
 
         $this->expectException(SocialNetworkUnreachableException::class);
-        $this->expectExceptionMessage('The Lemmy instance ran into a problem of its own.');
+        $this->expectExceptionMessage('The Lemmy instance turned this request down.');
 
         $client->send(ApiRequestModel::get(self::SITE));
     }

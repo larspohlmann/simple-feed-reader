@@ -37,7 +37,7 @@ final readonly class BlueskyApiClient
     {
         SocialNetworkThrottledException::throwIfThrottled($answer, 'Bluesky asked for fewer requests.');
         if (!$answer->isSuccessful()) {
-            throw new SocialNetworkUnreachableException('Bluesky ran into a problem of its own.');
+            throw new SocialNetworkUnreachableException('Bluesky turned this request down.');
         }
 
         return $answer;

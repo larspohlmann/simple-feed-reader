@@ -81,7 +81,7 @@ final class MastodonApiClientTest extends TestCase
         $client = $this->clientOver($this->alwaysAnswering(Response::HTTP_NOT_FOUND));
 
         $this->expectException(SocialNetworkUnreachableException::class);
-        $this->expectExceptionMessage('The Mastodon instance ran into a problem of its own.');
+        $this->expectExceptionMessage('The Mastodon instance turned this request down.');
 
         $client->send(ApiRequestModel::get(self::HOME));
     }

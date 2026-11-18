@@ -47,7 +47,7 @@ final readonly class MastodonApiClient
             throw new SocialCredentialsRejectedException('The Mastodon instance refused this access token.');
         }
         if (!$answer->isSuccessful()) {
-            throw new SocialNetworkUnreachableException('The Mastodon instance ran into a problem of its own.');
+            throw new SocialNetworkUnreachableException('The Mastodon instance turned this request down.');
         }
 
         return $answer;
@@ -76,7 +76,7 @@ final readonly class MastodonApiClient
     public function answer(ApiRequestModel $request): ApiResponseModel
     {
         $answer = NetworkAnswer::orUnreachable(fn (): ApiResponseModel => $this->api->send($request), self::NETWORK);
-        ServerFailure::throwIfServerError($request, $answer, (string) parse_url($request->url, PHP_URL_HOST));
+        ServerFailure::throwIfServerError($request, $answer, $request->host());
 
         return $answer;
     }

@@ -92,7 +92,7 @@ final readonly class LemmyApiClient
         return self::failureOfCode($code) ?? match ($status) {
             Response::HTTP_UNAUTHORIZED => new SocialCredentialsRejectedException(self::REFUSED_SESSION),
             Response::HTTP_NOT_FOUND => new SocialPostNotFoundException(self::NOT_FOUND),
-            default => new SocialNetworkUnreachableException(self::NETWORK . ' ran into a problem of its own.'),
+            default => new SocialNetworkUnreachableException(self::NETWORK . ' turned this request down.'),
         };
     }
 
@@ -120,7 +120,7 @@ final readonly class LemmyApiClient
     private function answer(ApiRequestModel $request): ApiResponseModel
     {
         $answer = NetworkAnswer::orUnreachable(fn (): ApiResponseModel => $this->api->send($request), self::NETWORK);
-        ServerFailure::throwIfServerError($request, $answer, (string) parse_url($request->url, PHP_URL_HOST));
+        ServerFailure::throwIfServerError($request, $answer, $request->host());
 
         return $answer;
     }
