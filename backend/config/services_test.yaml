@@ -88,7 +88,6 @@ services:
         autoconfigure: true
         public: true
 
-    # The retry pause of a social GET must cost a test no real time.
     test.social.patient_clock:
         class: Symfony\Component\Clock\MockClock
 

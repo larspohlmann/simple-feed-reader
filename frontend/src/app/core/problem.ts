@@ -9,7 +9,6 @@ export interface Problem {
   detail?: string;
   errors?: Record<string, string[]>;
   accountStatus?: string;
-  /** The host (or `Bluesky`) a social-network problem names. */
   serviceName?: string;
   /** Set only on the 409 a passkey relying-party id change raises while
    *  credentials still exist -- the count the confirmation prompt quotes
