@@ -11,11 +11,7 @@ use App\Repository\EntryRepository;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
 
-/**
- * Brings the stored entries a fresh parse still serves up to date, matched by GUID hash: fills an image never
- * judged, so a feed dropping its images erases nothing, and records the discussion counts and the Lemmy
- * community and score the parse read. The caller flushes.
- */
+/** Brings the stored entries a fresh parse still serves up to date, matched by GUID hash. The caller flushes. */
 final readonly class StoredEntryRefresher
 {
     public function __construct(

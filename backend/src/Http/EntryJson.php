@@ -17,7 +17,6 @@ use App\Service\Foundation\Text\Support\EntryExcerpt;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use App\Service\Foundation\Url\Support\FeedWebsite;
 use App\Service\Foundation\Url\Support\YouTubeUrl;
-use App\Service\Social\Social\Support\ProfileFeedUrl;
 
 /**
  * Three shapes off one row: listRow() drops contentHtml for a plain-text
@@ -169,19 +168,12 @@ final readonly class EntryJson
         ];
     }
 
-    /** @return array{name: string, url: string}|null null inside the community's own feed, which names it already */
+    /** @return array{name: string, url: string}|null */
     private static function communityOf(EntryListRow $row): ?array
     {
         $community = $row->enrichment->lemmy?->community;
-        if (null === $community) {
-            return null;
-        }
-        $feedIdentity = ProfileFeedUrl::identityOf(SocialNetwork::Lemmy, $row->entry->getFeed()->getUrl());
-        if (null !== $feedIdentity && 0 === strcasecmp($feedIdentity, $community->identity)) {
-            return null;
-        }
 
-        return ['name' => $community->shortName(), 'url' => $community->url];
+        return null === $community ? null : ['name' => $community->shortName(), 'url' => $community->url];
     }
 
     /** @return array{network: 'bluesky'|'mastodon', isLiked: bool, canLike: bool, isOwn: bool}|null */

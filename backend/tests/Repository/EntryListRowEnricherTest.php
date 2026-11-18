@@ -34,6 +34,7 @@ use App\Enum\VoteScore;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowDiscussion;
 use App\Repository\EntryListRowEnricher;
+use App\Repository\EntryListRowLemmy;
 use App\Repository\EntryListRowMarks;
 use App\Repository\EntryListRowSocial;
 use App\Repository\EntryListRowSubscription;
@@ -504,6 +505,29 @@ final class EntryListRowEnricherTest extends DbTestCase
         self::assertNull($lemmy->myVote);
     }
 
+    public function testAPostInItsOwnCommunityFeedCarriesNoCommunityButItsScore(): void
+    {
+        $lemmy = $this->enrichedLemmyIn('https://lemmy.world/feeds/c/technology.xml');
+
+        self::assertNotNull($lemmy);
+        self::assertNull($lemmy->community);
+        self::assertSame(7, $lemmy->score);
+    }
+
+    public function testAPostInALemmyUserFeedCarriesItsCommunity(): void
+    {
+        $lemmy = $this->enrichedLemmyIn('https://lemmy.world/feeds/u/alice.xml');
+
+        self::assertSame('technology@lemmy.world', $lemmy?->community?->identity);
+    }
+
+    public function testAPostInAnotherCommunitysFeedCarriesItsCommunity(): void
+    {
+        $lemmy = $this->enrichedLemmyIn('https://lemmy.world/feeds/c/news.xml');
+
+        self::assertSame('technology@lemmy.world', $lemmy?->community?->identity);
+    }
+
     public function testAnEntryWithoutALemmyPostRowCarriesNoLemmy(): void
     {
         self::assertNull($this->enrich([$this->row($this->entry('plain-one'))])[0]->enrichment->lemmy);
@@ -591,6 +615,21 @@ final class EntryListRowEnricherTest extends DbTestCase
         $this->entityManager->flush();
 
         return $entry;
+    }
+
+    private function enrichedLemmyIn(string $feedUrl): ?EntryListRowLemmy
+    {
+        $feed = new Feed($feedUrl);
+        $this->entityManager->persist($feed);
+        $entry = LemmyPostEntries::on($feed, 'https://lemmy.world/post/77', 'own-feed-' . $feedUrl);
+        $this->entityManager->persist($entry);
+        $post = new EntryLemmyPost($entry);
+        $post->recordScore(7);
+        $post->placeIn(PostCommunity::of('Technology@lemmy.world', 'https://lemmy.world/c/technology'));
+        $this->entityManager->persist($post);
+        $this->entityManager->flush();
+
+        return $this->enrich([$this->row($entry)])[0]->enrichment->lemmy;
     }
 
     private function lemmyPost(string $guid, int $postId): Entry

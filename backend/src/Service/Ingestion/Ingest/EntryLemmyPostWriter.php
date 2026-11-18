@@ -24,39 +24,44 @@ final readonly class EntryLemmyPostWriter
     public function attach(array $pairs): void
     {
         foreach ($pairs as [$entry, $parsed]) {
-            $this->write($entry, $parsed, null);
+            if (self::carriesLemmyPost($parsed)) {
+                $this->write($entry, $parsed, null);
+            }
         }
     }
 
     /** @param list<array{0: Entry, 1: ParsedEntryModel}> $pairs entries that already have an id */
     public function refresh(array $pairs): void
     {
+        $writing = array_values(array_filter($pairs, fn (array $pair): bool => self::carriesLemmyPost($pair[1])));
+        if ($writing === []) {
+            return;
+        }
         $stored = $this->lemmyPosts->byEntryIds(array_map(
             static fn (array $pair): int => $pair[0]->requireId(),
-            $pairs,
+            $writing,
         ));
-        foreach ($pairs as [$entry, $parsed]) {
+        foreach ($writing as [$entry, $parsed]) {
             $entryId = $entry->requireId();
-            $post = $this->write($entry, $parsed, $stored[$entryId] ?? null);
-            if ($post !== null) {
-                $stored[$entryId] = $post;
-            }
+            $stored[$entryId] = $this->write($entry, $parsed, $stored[$entryId] ?? null);
         }
     }
 
-    private function write(Entry $entry, ParsedEntryModel $parsed, ?EntryLemmyPost $stored): ?EntryLemmyPost
+    private function write(Entry $entry, ParsedEntryModel $parsed, ?EntryLemmyPost $stored): EntryLemmyPost
     {
-        $community = self::storable($parsed->community);
-        if ($community === null && $parsed->discussionCounts->score === null) {
-            return $stored;
-        }
         $post = $stored ?? $this->created($entry);
         $post->recordScore($parsed->discussionCounts->score);
+        $community = self::storable($parsed->community);
         if ($community !== null) {
             $post->placeIn($community);
         }
 
         return $post;
+    }
+
+    private static function carriesLemmyPost(ParsedEntryModel $parsed): bool
+    {
+        return self::storable($parsed->community) !== null || $parsed->discussionCounts->score !== null;
     }
 
     private function created(Entry $entry): EntryLemmyPost

@@ -57,7 +57,7 @@ final readonly class ParsedEntryModel
     }
 
     #[\NoDiscard]
-    public function inCommunity(PostCommunity $community): self
+    public function inCommunity(?PostCommunity $community): self
     {
         return clone($this, ['community' => $community]);
     }

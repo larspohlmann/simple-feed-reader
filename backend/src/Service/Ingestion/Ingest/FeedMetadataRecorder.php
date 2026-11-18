@@ -41,7 +41,7 @@ final readonly class FeedMetadataRecorder
         if ($parsed->description !== null) {
             $feed->setDescription(mb_substr($parsed->description, 0, self::FEED_DESCRIPTION_MAX));
         }
-        // A fetch without <image> must not erase the logo; FeedImageExtractor already applied scheme and length rules.
+        // A fetch without <image> must not erase the logo.
         if ($parsed->imageUrl !== null) {
             $feed->setImageUrl($parsed->imageUrl);
         }

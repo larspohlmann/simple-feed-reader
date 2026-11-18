@@ -374,27 +374,12 @@ final class EntryJsonTest extends TestCase
 
     public function testALemmyPostNamesItsCommunity(): void
     {
-        $row = $this->lemmyRow('https://lemmy.world/feeds/home.xml');
+        $row = $this->lemmyRow();
 
         $json = JsonMappers::entryJson()->listRow($row);
 
         self::assertSame(['name' => 'technology', 'url' => 'https://lemmy.world/c/technology'], $json['community']);
         self::assertSame(5, $json['score']);
-    }
-
-    public function testAPostInItsOwnCommunityFeedNamesNoCommunity(): void
-    {
-        $json = JsonMappers::entryJson()->listRow($this->lemmyRow('https://lemmy.world/feeds/c/technology.xml'));
-
-        self::assertNull($json['community']);
-        self::assertSame(5, $json['score']);
-    }
-
-    public function testALemmyUserFeedNamesTheCommunity(): void
-    {
-        $json = JsonMappers::entryJson()->listRow($this->lemmyRow('https://lemmy.world/feeds/u/alice.xml'));
-
-        self::assertSame('technology', $json['community']['name'] ?? null);
     }
 
     public function testAnArticleHasNoCommunity(): void
@@ -892,10 +877,9 @@ final class EntryJsonTest extends TestCase
         return $entry;
     }
 
-    private function lemmyRow(string $feedUrl): EntryListRow
+    private function lemmyRow(): EntryListRow
     {
         $entry = $this->entryTitled('Post');
-        $entry->getFeed()->setUrl($feedUrl);
         $community = PostCommunity::of('Technology@lemmy.world', 'https://lemmy.world/c/technology');
 
         return $this->row($entry, new EntryListRowEnrichment(lemmy: new EntryListRowLemmy(5, $community, null)));

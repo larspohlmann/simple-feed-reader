@@ -5,16 +5,19 @@ declare(strict_types=1);
 namespace App\Tests\Service\Ingestion\Ingest;
 
 use App\Entity\DiscussionCounts;
+use App\Entity\Entry;
 use App\Entity\EntryLemmyPost;
 use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Entity\PostCommunity;
 use App\Service\Ingestion\Ingest\EntryIngestor;
+use App\Service\Ingestion\Ingest\EntryLemmyPostWriter;
 use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\EntryIngestors;
+use App\Tests\Support\QueryRecorder;
 use Symfony\Component\Clock\MockClock;
 
 final class EntryLemmyPostWriterTest extends DbTestCase
@@ -114,6 +117,23 @@ final class EntryLemmyPostWriterTest extends DbTestCase
         $this->ingest(self::post()->inCommunity(PostCommunity::of('a@x.test', $url)));
 
         self::assertSame([], $this->rows());
+    }
+
+    public function testRefreshingEntriesWithoutScoreOrCommunityAsksForNoRows(): void
+    {
+        $now = new \DateTimeImmutable('2026-11-18T12:00:00Z');
+        $entry = new Entry($this->feed, 'plain', 'https://example.com/plain', 'Plain', $now, $now);
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
+        /** @var QueryRecorder $recorder */
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        $recorder->reset();
+        $writer = self::getContainer()->get(EntryLemmyPostWriter::class);
+        self::assertInstanceOf(EntryLemmyPostWriter::class, $writer);
+
+        $writer->refresh([[$entry, self::post()]]);
+
+        self::assertSame([], $recorder->queriesMatching('entry_lemmy_post'));
     }
 
     private static function post(): ParsedEntryModel

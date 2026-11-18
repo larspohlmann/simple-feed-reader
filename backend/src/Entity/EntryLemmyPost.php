@@ -56,11 +56,11 @@ final class EntryLemmyPost
 
     public function getCommunity(): ?PostCommunity
     {
-        if ($this->communityIdentity === null || $this->communityUrl === null) {
+        if ($this->communityIdentity === null) {
             return null;
         }
 
-        return PostCommunity::of($this->communityIdentity, $this->communityUrl);
+        return PostCommunity::of($this->communityIdentity, (string) $this->communityUrl);
     }
 
     public function getEntry(): Entry

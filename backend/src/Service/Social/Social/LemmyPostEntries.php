@@ -121,12 +121,11 @@ final readonly class LemmyPostEntries
         }
         $thread = Discussion::platformThread(self::postPageOf($address, $homeInstance, $postId));
 
-        $entry = $this->postEntryOf($postView, $address)
-            ->asDiscussionThread($thread)
-            ->withDiscussionCounts(self::countsOf($postView->node('counts')));
-        $community = self::communityOf($postView->node('community'));
 
-        return null === $community ? $entry : $entry->inCommunity($community);
+        return $this->postEntryOf($postView, $address)
+            ->asDiscussionThread($thread)
+            ->withDiscussionCounts(self::countsOf($postView->node('counts')))
+            ->inCommunity(self::communityOf($postView->node('community')));
     }
 
     private static function communityOf(JsonNodeModel $community): ?PostCommunity

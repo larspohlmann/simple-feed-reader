@@ -30,7 +30,7 @@ final readonly class LemmyEntryRule implements PlatformEntryRuleInterface
             ->withAuthor($post->authorName, $post->profileUrl)
             ->withDiscussionCounts($post->counts);
 
-        return $post->community === null ? $thread : $thread->inCommunity($post->community);
+        return $thread->inCommunity($post->community);
     }
 
     private function postUrl(ParsedEntryModel $entry): ?string
