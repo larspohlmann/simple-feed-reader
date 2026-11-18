@@ -6,8 +6,7 @@ const releaseBody = '### Highlights\n\n**One.** First.\n\n## What\'s Changed\n';
 const base = { tag: 'v1.9.0', releaseUrl: 'https://example.org/release', releaseBody, cardImage: null, dryRun: false };
 const mastodonEnv = { MASTODON_INSTANCE: 'https://m.example', MASTODON_TOKEN: 't' };
 const blueskyEnv = { BLUESKY_HANDLE: 'h', BLUESKY_APP_PASSWORD: 'p' };
-const linkedInEnv = { LINKEDIN_TOKEN: 'l', LINKEDIN_AUTHOR: 'urn:li:person:abc' };
-const allEnv = { ...mastodonEnv, ...blueskyEnv, ...linkedInEnv };
+const allEnv = { ...mastodonEnv, ...blueskyEnv };
 
 function recorder() {
   const lines = [];
@@ -20,9 +19,6 @@ function respondingFetch({ failingHost = null } = {}) {
     urls.push(url);
     if (failingHost !== null && url.startsWith(failingHost)) {
       return new Response('{"error":"down"}', { status: 503 });
-    }
-    if (url === 'https://api.linkedin.com/rest/posts') {
-      return new Response(null, { status: 201, headers: { 'x-restli-id': 'urn:li:share:1' } });
     }
     const payload = url.includes('createSession')
       ? { accessJwt: 'jwt', did: 'did:plc:x' }
@@ -53,7 +49,6 @@ test('posts to every configured network', async () => {
   assert.equal(urls.filter((url) => url.endsWith('/api/v1/statuses')).length, 3);
   assert.equal(urls.filter((url) => url.endsWith('.createRecord')).length, 3);
   assert.ok(urls.includes('https://bsky.social/xrpc/com.atproto.server.createSession'));
-  assert.equal(urls.filter((url) => url === 'https://api.linkedin.com/rest/posts').length, 1);
 });
 
 test('a network without secrets is skipped with a warning', async () => {
@@ -64,7 +59,6 @@ test('a network without secrets is skipped with a warning', async () => {
 
   assert.equal(code, 0);
   assert.ok(lines.includes('::warning::Bluesky secrets are not set; skipping.'));
-  assert.ok(lines.includes('::warning::LinkedIn secrets are not set; skipping.'));
   assert.ok(urls.every((url) => url.startsWith('https://m.example')));
 });
 
@@ -92,11 +86,8 @@ test('a dry run prints every network\'s posts and calls nothing', async () => {
     '[2] One. First.',
     '[3] Full release notes: https://example.org/release',
   ];
-  const linkedInPost = '[1] simple-feed-reader v1.9.0 is out. #rss #rssreader\n\nHighlights:\n• One. First.\n\n'
-    + 'Full release notes: https://example.org/release';
   assert.deepEqual(lines, [
     '--- Mastodon (3 posts)', ...thread,
     '--- Bluesky (3 posts)', ...thread,
-    '--- LinkedIn (1 post)', linkedInPost,
   ]);
 });

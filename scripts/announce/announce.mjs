@@ -1,7 +1,6 @@
 import { BLUESKY_LIMIT, DEFAULT_BLUESKY_SERVICE, postBlueskyThread } from './bluesky.mjs';
-import { postLinkedIn } from './linkedin.mjs';
 import { MASTODON_LIMIT, postMastodonThread } from './mastodon.mjs';
-import { buildPost, buildThread, extractHighlights, HOMEPAGE_DESCRIPTION, HOMEPAGE_TITLE, HOMEPAGE_URL } from './thread.mjs';
+import { buildThread, extractHighlights, HOMEPAGE_DESCRIPTION, HOMEPAGE_TITLE, HOMEPAGE_URL } from './thread.mjs';
 
 export async function announce({ tag, releaseUrl, releaseBody, cardImage, env, fetch, log, dryRun }) {
   const highlights = extractHighlights(releaseBody);
@@ -51,12 +50,6 @@ function networks({ cardImage, env, fetch }) {
         card,
         fetch,
       }),
-    },
-    {
-      name: 'LinkedIn',
-      compose: (release) => [buildPost(release)],
-      configured: Boolean(env.LINKEDIN_TOKEN && env.LINKEDIN_AUTHOR),
-      post: ([commentary]) => postLinkedIn(commentary, { token: env.LINKEDIN_TOKEN, author: env.LINKEDIN_AUTHOR, card, fetch }),
     },
   ];
 }
