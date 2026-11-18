@@ -151,14 +151,13 @@ describe('StoryListContext (#2329)', () => {
     expect(context.entries.error()).toBeNull();
   });
 
-  it('shows its rows read in the list beneath too once marked all read, then reloads only itself', () => {
-    landRouteList([anEntry({ id: 7, isHidden: false })]);
+  it('reloads only itself once marked all read', () => {
+    landRouteList([anEntry({ id: 7 })]);
     const context = mount();
-    ctrl.expectOne(storyRequest).flush(storyPage([anEntry({ id: 7, isHidden: false })]));
+    ctrl.expectOne(storyRequest).flush(storyPage([anEntry({ id: 7 })]));
 
     context.showMarkedAllRead();
 
-    expect(beneath().entry(7)?.isHidden).toBe(true);
     ctrl.expectOne(storyRequest).flush(storyPage([]));
     ctrl.expectNone((request) => request.url === 'https://api.test/api/entries');
   });

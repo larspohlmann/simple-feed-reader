@@ -70,6 +70,7 @@ export class MarkReadActions {
   private markAllReadNow(list: ListContext, target: MarkReadTarget): void {
     const until = list.entries.loadedAt() || wireTimestamp(new Date());
     list.entries.runThenReload(this.markReadRequest(target, until), () => {
+      this.rows.markHiddenLocally(list.entries.entries().map((entry) => entry.id));
       list.showMarkedAllRead();
       this.subscriptions.reloadCountsQuietly();
       this.savedSearches.load();

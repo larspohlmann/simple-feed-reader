@@ -2,7 +2,6 @@ import { Injectable, effect, inject, linkedSignal, untracked } from '@angular/co
 import { queryFromSelection } from '../../query/entry-query';
 import { SelectionOf } from '../../query/query';
 import { EntriesStore } from '../../state/entries.store';
-import { EntryRowCache } from '../../state/entry-row-cache';
 import { ListContext } from '../../state/list-context';
 import { StoryOverlay } from '../story-overlay.service';
 
@@ -13,7 +12,6 @@ const GONE = 'trending_story_not_found';
 @Injectable()
 export class StoryListContext extends ListContext {
   private readonly overlay = inject(StoryOverlay);
-  private readonly rows = inject(EntryRowCache);
   readonly entries = new EntriesStore();
   /** The open story, held while the layer slides out after the overlay has closed. */
   readonly selection = linkedSignal<
@@ -40,11 +38,5 @@ export class StoryListContext extends ListContext {
         this.overlay.leaveStoryThatIsGone();
       });
     });
-  }
-
-  /** Marks the rows read here first, so the list beneath shows them read without a reload. */
-  override showMarkedAllRead(): void {
-    this.rows.markHiddenLocally(this.entries.entries().map((entry) => entry.id));
-    super.showMarkedAllRead();
   }
 }

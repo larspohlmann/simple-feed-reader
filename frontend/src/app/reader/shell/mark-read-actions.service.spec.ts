@@ -158,14 +158,14 @@ describe('MarkReadActions recounting after a mark-read', () => {
     expect(fullLoad).not.toHaveBeenCalled();
   });
 
-  it("reloads the reader's list after marking it read, leaving its rows as they were", () => {
+  it("shows the reader's rows read at once, then reloads its list", () => {
     const routeRows = TestBed.inject(ListContext).entries;
     currentSelection.set({ kind: 'tag', id: 5, unread: false });
 
     actions.confirmMarkAllRead();
 
     expect(routeRows.load).toHaveBeenCalledWith({ view: 'all', tag: 5 });
-    expect(TestBed.inject(EntryRowCache).markHiddenLocally).not.toHaveBeenCalled();
+    expect(TestBed.inject(EntryRowCache).markHiddenLocally).toHaveBeenCalledWith([3]);
   });
 
   describe("a Trending story's list over the reader's (#2329)", () => {
@@ -198,12 +198,13 @@ describe('MarkReadActions recounting after a mark-read', () => {
       currentSelection.set({ kind: 'trending', window: 'day' });
     });
 
-    it('marks the story read and reloads only the story', () => {
+    it('marks the story read, shows its rows read at once and reloads only the story', () => {
       const markStoryRead = jest.spyOn(TestBed.inject(ReaderApi), 'markTrendingStoryRead');
 
       actions.confirmMarkAllRead();
 
       expect(markStoryRead).toHaveBeenCalledWith(42, '2026-10-16T11:00:00Z');
+      expect(TestBed.inject(EntryRowCache).markHiddenLocally).toHaveBeenCalledWith([7, 8]);
       expect(storyRows.load).toHaveBeenCalledWith({ view: 'all', storyId: 42 });
       expect(TestBed.inject(ListContext).entries.load).not.toHaveBeenCalled();
       expect(reloadCountsQuietly).toHaveBeenCalledTimes(1);
