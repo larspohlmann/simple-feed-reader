@@ -48,6 +48,7 @@ import {
   Selection,
   searchTermOf,
   selectedGroupOf,
+  selectedSavedSearchIdOf,
   selectedTagIdOf,
   selectionQueryParams,
 } from '../../query/query';
@@ -150,7 +151,6 @@ export class SidebarComponent {
    *  decides it — re-encoding the term to string-compare made a subtly
    *  different rule (a trailing tab/nbsp reads whole-word to the decoder, not
    *  to a string match). An id compares one way only. */
-  readonly activeSavedSearchId = input<number | null>(null);
   /** Whether the account has mail sending enabled. The per-search digest
    *  toggle only renders when this is true — with mail off there is nowhere
    *  for the flag to send to. */
@@ -168,6 +168,9 @@ export class SidebarComponent {
   protected readonly activeGroup = computed(() => selectedGroupOf(this.selection()));
   protected readonly searchTerm = computed(() => searchTermOf(this.selection()));
   protected readonly activeTagId = computed(() => selectedTagIdOf(this.selection()));
+  protected readonly activeSavedSearchId = computed(() =>
+    selectedSavedSearchIdOf(this.selection()),
+  );
   readonly loading = input(false);
   /** A search request is in flight — distinct from `loading` above, which is
    *  the subscriptions store's own loading flag; conflating the two would show

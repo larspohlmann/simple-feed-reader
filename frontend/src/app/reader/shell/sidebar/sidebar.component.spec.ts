@@ -145,10 +145,13 @@ function inputDefaults() {
     searchLoading: false,
     organising: false,
     savedSearches: [] as SavedSearchDto[],
-    activeSavedSearchId: null as number | null,
     mailEnabled: false,
     digestEnabled: true,
   };
+}
+
+function savedSearch(id: number): Selection {
+  return { kind: 'saved-search', id, unread: false };
 }
 
 function clickSectionChevron(
@@ -179,7 +182,6 @@ function mount(
     sheetChoice?: string;
     searchLoading: boolean;
     savedSearches: SavedSearchDto[];
-    activeSavedSearchId: number | null;
     mailEnabled: boolean;
     digestEnabled: boolean;
   }> = {},
@@ -1782,7 +1784,7 @@ describe('SidebarComponent', () => {
             includeInDigest: false,
           },
         ],
-        activeSavedSearchId: 1,
+        selection: savedSearch(1),
       });
       savedSearchesOf(fixture).toggleSavedSearches();
       fixture.detectChanges();
@@ -1971,7 +1973,7 @@ describe('SidebarComponent', () => {
     });
 
     it('pins the active saved search as an extra row when it is outside the top six', () => {
-      const fixture = mount({ savedSearches: many, activeSavedSearchId: 8 }); // id 8 has the lowest count -> last
+      const fixture = mount({ savedSearches: many, selection: savedSearch(8) }); // id 8 has the lowest count -> last
       openSaved(fixture);
       const rows = fixture.nativeElement.querySelectorAll('.savedsearch-item');
       expect(rows.length).toBe(7); // top 6 + the pinned active
@@ -1981,13 +1983,13 @@ describe('SidebarComponent', () => {
     });
 
     it('does not pin when the active search is already in the top six', () => {
-      const fixture = mount({ savedSearches: many, activeSavedSearchId: 1 }); // id 1 has the highest count -> first
+      const fixture = mount({ savedSearches: many, selection: savedSearch(1) }); // id 1 has the highest count -> first
       openSaved(fixture);
       expect(fixture.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(6);
     });
 
     it('shows no duplicate pinned row once the list is expanded', () => {
-      const fixture = mount({ savedSearches: many, activeSavedSearchId: 8 });
+      const fixture = mount({ savedSearches: many, selection: savedSearch(8) });
       openSaved(fixture);
       (fixture.nativeElement.querySelector('.savedsearch-more') as HTMLButtonElement).click();
       fixture.detectChanges();
@@ -1999,7 +2001,7 @@ describe('SidebarComponent', () => {
     });
 
     it('excludes the pinned active row from the hidden count', () => {
-      const fixture = mount({ savedSearches: many, activeSavedSearchId: 8 });
+      const fixture = mount({ savedSearches: many, selection: savedSearch(8) });
       openSaved(fixture);
       // 8 total, 6 in the top + 1 pinned active on screen -> 1 hidden.
       expect(
@@ -2024,7 +2026,7 @@ describe('SidebarComponent', () => {
     });
 
     it('does not pin when the active id is absent from the saved-search list', () => {
-      const fixture = mount({ savedSearches: many, activeSavedSearchId: 999 });
+      const fixture = mount({ savedSearches: many, selection: savedSearch(999) });
       openSaved(fixture);
       expect(fixture.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(6);
     });
