@@ -50,27 +50,19 @@ final class TrendingControllerTest extends ApiTestCase
         self::assertCount(1, $payload['stories']);
         $story = $payload['stories'][0];
         self::assertIsArray($story);
-        self::assertSame($lead->requireId(), $story['id']);
-        self::assertSame('Lead', $story['title']);
-        self::assertIsArray($story['duplicates']);
+        self::assertSame($stored->requireId(), $story['id']);
+        self::assertSame($lead->requireId(), $story['leadEntryId']);
+        self::assertSame(3, $story['outletCount']);
+        self::assertFalse($story['viewed']);
+        self::assertSame(0, $story['shareCount']);
+        self::assertFalse($story['followed']);
         self::assertSame(
-            [$second->requireId(), $third->requireId()],
-            array_map(
-                static fn (mixed $outlet): mixed => \is_array($outlet) ? $outlet['id'] : null,
-                $story['duplicates'],
-            ),
+            [$lead->requireId(), $second->requireId(), $third->requireId()],
+            self::idsOf($story['articles']),
         );
-        self::assertSame(
-            [
-                'id' => $stored->requireId(),
-                'outletCount' => 3,
-                'viewed' => false,
-                'shareCount' => 0,
-                'followed' => false,
-            ],
-            $story['story'],
-        );
-        self::assertSame([], $story['shares']);
+        $articles = self::articlesOf($story);
+        self::assertSame('Lead', $articles[0]['title']);
+        self::assertSame([], $articles[0]['shares']);
     }
 
     public function testEachStoryCarriesItsId(): void
@@ -94,8 +86,7 @@ final class TrendingControllerTest extends ApiTestCase
         $stories = $this->payload($this->client)['stories'];
         self::assertIsArray($stories);
         self::assertIsArray($stories[0]);
-        self::assertIsArray($stories[0]['story']);
-        self::assertSame($newer->requireId(), $stories[0]['story']['id']);
+        self::assertSame($newer->requireId(), $stories[0]['id']);
     }
 
     public function testAStoryNoFollowedOutletCarriesIsLedByItsMostSharedArticleWithItsSharesUnderIt(): void
@@ -132,25 +123,17 @@ final class TrendingControllerTest extends ApiTestCase
 
         self::assertResponseIsSuccessful();
         $story = self::onlyStoryOf($this->payload($this->client));
-        self::assertSame($alsoSharing->requireId(), $story['id'], 'the newest share with a pictured card');
-        self::assertIsArray($story['linkCards']);
-        self::assertIsArray($story['linkCards'][0]);
-        self::assertSame('Lighthouse keepers strike', $story['linkCards'][0]['title']);
-        self::assertSame([$alsoSharing->requireId(), $pictured->requireId()], self::idsOf($story['shares']));
-        self::assertSame([$other->requireId()], self::idsOf($story['duplicates']));
-        self::assertIsArray($story['duplicates']);
-        self::assertIsArray($story['duplicates'][0]);
-        self::assertSame([$other->requireId()], self::idsOf($story['duplicates'][0]['shares']));
-        self::assertSame(
-            [
-                'id' => $stored->requireId(),
-                'outletCount' => 3,
-                'viewed' => false,
-                'shareCount' => 3,
-                'followed' => false,
-            ],
-            $story['story'],
-        );
+        self::assertSame($stored->requireId(), $story['id']);
+        self::assertSame($alsoSharing->requireId(), $story['leadEntryId'], 'the newest share with a pictured card');
+        $articles = self::articlesOf($story);
+        self::assertSame([$alsoSharing->requireId(), $other->requireId()], self::idsOf($articles));
+        self::assertIsArray($articles[0]['linkCards']);
+        self::assertIsArray($articles[0]['linkCards'][0]);
+        self::assertSame('Lighthouse keepers strike', $articles[0]['linkCards'][0]['title']);
+        self::assertSame([$alsoSharing->requireId(), $pictured->requireId()], self::idsOf($articles[0]['shares']));
+        self::assertSame([$other->requireId()], self::idsOf($articles[1]['shares']));
+        self::assertSame(3, $story['outletCount']);
+        self::assertSame(3, $story['shareCount']);
     }
 
     public function testAPostSharingAFollowedOutletsArticleIsAShareOfItsRowNotASourceOrARow(): void
@@ -180,19 +163,13 @@ final class TrendingControllerTest extends ApiTestCase
 
         self::assertResponseIsSuccessful();
         $story = self::onlyStoryOf($this->payload($this->client));
-        self::assertSame($lead->requireId(), $story['id']);
-        self::assertSame([$post->requireId()], self::idsOf($story['shares']));
-        self::assertSame([$second->requireId()], self::idsOf($story['duplicates']));
-        self::assertSame(
-            [
-                'id' => $stored->requireId(),
-                'outletCount' => 3,
-                'viewed' => false,
-                'shareCount' => 1,
-                'followed' => false,
-            ],
-            $story['story'],
-        );
+        self::assertSame($stored->requireId(), $story['id']);
+        self::assertSame($lead->requireId(), $story['leadEntryId']);
+        $articles = self::articlesOf($story);
+        self::assertSame([$lead->requireId(), $second->requireId()], self::idsOf($articles));
+        self::assertSame([$post->requireId()], self::idsOf($articles[0]['shares']));
+        self::assertSame(3, $story['outletCount']);
+        self::assertSame(1, $story['shareCount']);
     }
 
     public function testAStorysSourceCountIsTheOutletsItsCardShowsTheReader(): void
@@ -217,18 +194,11 @@ final class TrendingControllerTest extends ApiTestCase
 
         self::assertResponseIsSuccessful();
         $story = self::onlyStoryOf($this->payload($this->client));
-        self::assertSame($lead->requireId(), $story['id']);
-        self::assertCount(2, self::idsOf($story['duplicates']), 'a feed switched out after the build still shows');
-        self::assertSame(
-            [
-                'id' => $stored->requireId(),
-                'outletCount' => 3,
-                'viewed' => false,
-                'shareCount' => 0,
-                'followed' => false,
-            ],
-            $story['story'],
-        );
+        self::assertSame($stored->requireId(), $story['id']);
+        self::assertSame($lead->requireId(), $story['leadEntryId']);
+        self::assertCount(3, self::idsOf($story['articles']), 'a feed switched out after the build still shows');
+        self::assertSame(3, $story['outletCount']);
+        self::assertSame(0, $story['shareCount']);
     }
 
     public function testAFollowedStoryCardSaysSo(): void
@@ -334,7 +304,7 @@ final class TrendingControllerTest extends ApiTestCase
     /**
      * @param array<string, string> $headers
      *
-     * @return list<mixed> each card's `story.followed`, in the list's order
+     * @return list<mixed> each story's `followed`, in the list's order
      */
     private function followedFlagsOfTheDay(array $headers): array
     {
@@ -345,9 +315,8 @@ final class TrendingControllerTest extends ApiTestCase
 
         return array_values(array_map(static function (mixed $story): mixed {
             self::assertIsArray($story);
-            self::assertIsArray($story['story']);
 
-            return $story['story']['followed'] ?? null;
+            return $story['followed'] ?? null;
         }, $stories));
     }
 
@@ -372,6 +341,22 @@ final class TrendingControllerTest extends ApiTestCase
         self::assertIsArray($payload['stories'][0]);
 
         return $payload['stories'][0];
+    }
+
+    /**
+     * @param array<mixed> $story
+     *
+     * @return list<array<mixed>>
+     */
+    private static function articlesOf(array $story): array
+    {
+        self::assertIsArray($story['articles']);
+
+        return array_values(array_map(static function (mixed $article): array {
+            self::assertIsArray($article);
+
+            return $article;
+        }, $story['articles']));
     }
 
     /** @return list<mixed> */

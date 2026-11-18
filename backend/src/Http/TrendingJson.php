@@ -26,21 +26,29 @@ final readonly class TrendingJson
         ];
     }
 
-    /** @return array<string, mixed> the lead article's list row; its duplicates are the story's other articles */
-    private function story(TrendingStoryCardModel $card): array
+    /**
+     * @return array{
+     *     id: int,
+     *     outletCount: int,
+     *     viewed: bool,
+     *     shareCount: int,
+     *     followed: bool,
+     *     leadEntryId: int,
+     *     articles: list<array<string, mixed>>,
+     * }
+     */
+    public function story(TrendingStoryCardModel $card): array
     {
         $articles = $card->articles;
 
         return [
-            ...$this->article($articles->lead),
-            'duplicates' => array_map($this->article(...), $articles->others),
-            'story' => [
-                'id' => $card->story->storyId,
-                'outletCount' => $card->story->outletCount,
-                'viewed' => $card->viewed,
-                'shareCount' => $articles->shareCount(),
-                'followed' => $card->followed,
-            ],
+            'id' => $card->story->storyId,
+            'outletCount' => $card->story->outletCount,
+            'viewed' => $card->viewed,
+            'shareCount' => $articles->shareCount(),
+            'followed' => $card->followed,
+            'leadEntryId' => $articles->lead->row->entry->requireId(),
+            'articles' => array_map($this->article(...), [$articles->lead, ...$articles->others]),
         ];
     }
 
@@ -48,7 +56,7 @@ final readonly class TrendingJson
     private function article(StoryArticleModel $article): array
     {
         return [
-            ...$this->entryJson->listRow($article->row),
+            ...array_diff_key($this->entryJson->listRow($article->row), ['duplicates' => true]),
             'shares' => array_map($this->entryJson->listRow(...), $article->shares),
         ];
     }
