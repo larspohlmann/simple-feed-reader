@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Trending\Pass;
 
-use App\Enum\FeedLanguage;
 use App\Enum\TrendingWindow;
 use App\Service\Curation\Trending\Model\SharedArticleModel;
 use App\Service\Curation\Trending\Model\StoryMemberModel;
@@ -17,26 +16,14 @@ final class TrendingRun
     /** @var array<int, int> */
     private array $feedOfEntry = [];
 
-    /** @var array<int, FeedLanguage> */
-    private array $languages = [];
-
-    /** @var array<int, true> the entries whose feed publishes articles */
-    private array $outletEntries = [];
-
-    /** @var array<int, string> */
-    private array $urlHashes = [];
+    /** @var array<int, StoryMemberModel> */
+    private array $members = [];
 
     /** @var array<int, int> entry id => effective date in Unix seconds */
     private array $effectiveTimes = [];
 
     /** @var array<string, list<int>> */
     private array $entriesByUrlHash = [];
-
-    /** @var array<int, string> */
-    private array $articleSites = [];
-
-    /** @var array<int, int> entry id => the shared link of its first top-level card */
-    private array $sharedLinkIds = [];
 
     /** @var array<string, string> one string per site, however many entries share it */
     private array $sites = [];
@@ -53,25 +40,19 @@ final class TrendingRun
     {
         $this->feedOfEntry[$entry->id] = $entry->feedId;
         $this->effectiveTimes[$entry->id] = $entry->effectiveDate->getTimestamp();
-        if ($entry->language !== null) {
-            $this->languages[$entry->id] = $entry->language;
-        }
-        if ($entry->links->articleUrl !== null) {
-            $this->outletEntries[$entry->id] = true;
-        }
-        if ($entry->links->urlHash !== null) {
-            $this->urlHashes[$entry->id] = $entry->links->urlHash;
-        }
         foreach ($urlHashes as $urlHash) {
             $this->entriesByUrlHash[$urlHash][] = $entry->id;
         }
-        if ($entry->links->card !== null) {
-            $this->sharedLinkIds[$entry->id] = $entry->links->card->sharedLinkId;
-        }
         $articleSite = $entry->links->articleSite();
-        if ($articleSite !== null) {
-            $this->articleSites[$entry->id] = $this->sites[$articleSite] ??= $articleSite;
-        }
+        $this->members[$entry->id] = new StoryMemberModel(
+            $entry->id,
+            $entry->feedId,
+            $articleSite === null ? null : ($this->sites[$articleSite] ??= $articleSite),
+            $entry->links->card?->sharedLinkId,
+            $entry->language,
+            $entry->links->articleUrl !== null,
+            $entry->links->urlHash,
+        );
         $this->headlines->add(
             $entry,
             $entry->titleDerived
@@ -94,15 +75,7 @@ final class TrendingRun
 
     public function memberOf(int $entryId): StoryMemberModel
     {
-        return new StoryMemberModel(
-            $entryId,
-            $this->feedOfEntry[$entryId],
-            $this->articleSites[$entryId] ?? null,
-            $this->sharedLinkIds[$entryId] ?? null,
-            $this->languages[$entryId] ?? null,
-            isset($this->outletEntries[$entryId]),
-            $this->urlHashes[$entryId] ?? null,
-        );
+        return $this->members[$entryId];
     }
 
     public function effectiveTimeOf(int $entryId): int
