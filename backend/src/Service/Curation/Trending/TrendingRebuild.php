@@ -121,11 +121,12 @@ final readonly class TrendingRebuild
     private function isDue(int $userId, TrendingLastBuildsModel $lastBuilds, TrendingWindow $window): bool
     {
         $builtAt = $lastBuilds->builtAt($window);
-        if ($builtAt === null) {
+        $dueAt = $lastBuilds->dueAt($window);
+        if ($builtAt === null || $dueAt === null) {
             return true;
         }
 
-        return $this->clock->now()->getTimestamp() >= $builtAt->getTimestamp() + $window->rebuildIntervalSeconds()
+        return $this->clock->now()->getTimestamp() >= $dueAt->getTimestamp()
             && $this->entries->hasEntriesCreatedAfter($userId, $builtAt);
     }
 
