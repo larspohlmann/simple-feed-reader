@@ -70,6 +70,44 @@ final class EntryLemmyPostWriterTest extends DbTestCase
         self::assertNull($rows[0]->getCommunity());
     }
 
+    public function testACommunityExactlyAtTheColumnLengthsIsStored(): void
+    {
+        $identity = str_repeat('a', EntryLemmyPost::IDENTITY_MAX_LENGTH);
+        $url = 'https://x.test/c/' . str_repeat('a', EntryLemmyPost::URL_MAX_LENGTH - 17);
+        $this->ingest(self::post()->inCommunity(PostCommunity::of($identity, $url)));
+
+        $rows = $this->rows();
+        self::assertCount(1, $rows);
+        self::assertSame($identity, $rows[0]->getCommunity()?->identity);
+        self::assertSame($url, $rows[0]->getCommunity()->url);
+    }
+
+    public function testAUrlOneOverTheColumnLengthIsNotStored(): void
+    {
+        $url = 'https://x.test/c/' . str_repeat('a', EntryLemmyPost::URL_MAX_LENGTH - 16);
+        $this->ingest(
+            self::post()
+                ->withDiscussionCounts(DiscussionCounts::of(1, null))
+                ->inCommunity(PostCommunity::of('a@x.test', $url)),
+        );
+
+        $rows = $this->rows();
+        self::assertCount(1, $rows);
+        self::assertNull($rows[0]->getCommunity());
+    }
+
+    public function testTheColumnLengthsCountCharactersNotBytes(): void
+    {
+        $identity = str_repeat('é', EntryLemmyPost::IDENTITY_MAX_LENGTH);
+        $url = 'https://x.test/c/' . str_repeat('é', EntryLemmyPost::URL_MAX_LENGTH - 17);
+        $this->ingest(self::post()->inCommunity(PostCommunity::of($identity, $url)));
+
+        $rows = $this->rows();
+        self::assertCount(1, $rows);
+        self::assertSame($identity, $rows[0]->getCommunity()?->identity);
+        self::assertSame($url, $rows[0]->getCommunity()->url);
+    }
+
     public function testAnOverlongCommunityAloneLeavesNoRow(): void
     {
         $url = 'https://x.test/c/' . str_repeat('a', EntryLemmyPost::URL_MAX_LENGTH);

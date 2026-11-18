@@ -160,6 +160,19 @@ final class RefreshStoredEntriesTest extends DbTestCase
         self::assertNull($this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'missing']));
     }
 
+    public function testAnUnknownEntryDoesNotStopTheRefreshOfTheOnesAfterIt(): void
+    {
+        $feed = $this->feed();
+        $entry = $this->storedPost($feed);
+        $unknown = $this->parsedEntry('missing', null);
+        $known = self::lemmyPost('3 points | <a href="' . self::POST . '">1 comments</a>')->entries[0];
+
+        $this->refresher()->refreshStoredEntries($feed, new ParsedFeedModel('T', null, null, null, [$unknown, $known]));
+        $this->entityManager->flush();
+
+        self::assertSame(3, $this->lemmyPostRow($entry)?->getScore());
+    }
+
     public function testSkipsParsedEntriesThatCarryNoImage(): void
     {
         $feed = $this->feed();

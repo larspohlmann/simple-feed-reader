@@ -624,6 +624,19 @@ final class EntryIngestorTest extends DbTestCase
         self::assertSame('D' . str_repeat('d', 3999), $feed->getDescription());
     }
 
+    public function testAMultibyteFeedDescriptionIsCutByCharactersNotBytes(): void
+    {
+        $feed = $this->feed();
+
+        $this->ingestor->ingest(
+            $feed,
+            new ParsedFeedModel('T', null, str_repeat('é', 4001), null, []),
+            self::context(),
+        );
+
+        self::assertSame(str_repeat('é', 4000), $feed->getDescription());
+    }
+
     public function testAMultibyteFeedTitleIsCutByCharactersNotBytes(): void
     {
         $feed = $this->feed();

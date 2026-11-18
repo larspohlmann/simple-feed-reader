@@ -41,6 +41,7 @@ final class LemmyCommunityLinkTest extends TestCase
         yield 'deeper path' => ['https://lemmy.world/c/tech/extra'];
         yield 'relative' => ['/c/technology'];
         yield 'empty' => [''];
+        yield 'no path' => ['https://lemmy.world'];
     }
 
     #[DataProvider('notCommunities')]
