@@ -1,4 +1,5 @@
 import { EntryDto } from '../../models';
+import { BlockCard } from './magazine-card';
 
 /** The kinds a template authors, and the only ones the demotion ladder walks. */
 const TEMPLATE_KINDS = ['hero', 'wide', 'quote', 'split', 'kicker', 'thumb', 'compact'] as const;
@@ -14,8 +15,8 @@ export type ShareKind = (typeof SHARE_KINDS)[number];
 export type EntryKind = TemplateKind | ShareKind;
 
 export type MagazineBlock =
-  | { kind: Exclude<EntryKind, 'split'>; entry: EntryDto }
-  | { kind: 'split'; entry: EntryDto; imageSide: 'left' | 'right' }
+  | ({ kind: Exclude<EntryKind, 'split'> } & BlockCard)
+  | ({ kind: 'split'; imageSide: 'left' | 'right' } & BlockCard)
   | {
       kind: 'group';
       subscriptionId: number;

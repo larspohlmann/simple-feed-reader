@@ -13,6 +13,7 @@ import { EntryThreadComponent } from './blocks/entry-thread/entry-thread.compone
 import { EntryMediaComponent } from './blocks/entry-media/entry-media.component';
 import { EntryQuotingComponent } from './blocks/entry-quoting/entry-quoting.component';
 import { SourceGroupComponent } from './source-group.component';
+import { legacyRow } from '../../trending/legacy-story-row';
 
 // One shared instance: a fresh `[]` per check would change every tag-less block's
 // input identity on every tick and re-render it, defeating OnPush (#501).
@@ -49,7 +50,8 @@ export class MagazineBlockComponent {
 
   /** Narrow a block to its entry-carrying form for the template. */
   protected entryOf(block: MagazineBlock): EntryDto {
-    return (block as Extract<MagazineBlock, { entry: EntryDto }>).entry;
+    const { entry, story } = block as Extract<MagazineBlock, { entry: EntryDto }>;
+    return legacyRow(entry, story);
   }
 
   protected side(block: MagazineBlock): 'left' | 'right' {

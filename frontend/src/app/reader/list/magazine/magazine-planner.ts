@@ -1,5 +1,7 @@
 import { EntryDto } from '../../models';
+import { ListItem, leadOf } from '../../state/list-item';
 import { BLOCK_HEIGHT, DEMOTION, EntryKind, MagazineBlock, TemplateKind } from './magazine-block';
+import { BlockCard, cardsByLead } from './magazine-card';
 import { leadWithImage, prefersTextFamily } from './magazine-family';
 import { blockHeight } from './magazine-block-height';
 import {
@@ -22,7 +24,7 @@ import {
 import { IMAGE_TEMPLATES, Slot, TEXT_TEMPLATES } from './magazine-templates';
 
 export interface MagazinePlanInput {
-  entries: EntryDto[];
+  items: ListItem[];
   /** True in aggregated views (All / tag / favorites / kept). */
   grouping: boolean;
   /** False while `hasMore` — a partial trailing page is held back. */
@@ -105,6 +107,7 @@ interface PlanPass {
   readonly complete: boolean;
   readonly collapseEnabled: boolean;
   readonly uncollapsibleSources: ReadonlySet<number>;
+  readonly cardOf: (lead: EntryDto) => BlockCard;
   readonly blocks: MagazineBlock[];
   page: number;
 }
@@ -122,7 +125,8 @@ export function planMagazine(input: MagazinePlanInput): MagazineBlock[] {
 }
 
 function startPass(input: MagazinePlanInput): PlanPass {
-  const { entries, grouping, complete, uncollapsibleSources = new Set<number>() } = input;
+  const { items, grouping, complete, uncollapsibleSources = new Set<number>() } = input;
+  const entries = items.map(leadOf);
   const useTextFamily = prefersTextFamily(entries.slice(0, LEADING_WINDOW));
   return {
     // Land the reader on a picture: the image family pulls the nearest image entry
@@ -133,6 +137,7 @@ function startPass(input: MagazinePlanInput): PlanPass {
     complete,
     collapseEnabled: grouping && activeSourceCount(entries) >= MIN_VIEW_SOURCES,
     uncollapsibleSources,
+    cardOf: cardsByLead(items),
     blocks: [],
     page: 0,
   };
@@ -268,7 +273,7 @@ function resolveSlot(slot: Slot, page: number, position: number): TemplateKind {
 
 function layOutPage(pass: PlanPass, template: readonly Slot[], slice: EntryDto[]): MagazineBlock[] {
   const { page, family } = pass;
-  const pinned = slice.map(pinnedShare);
+  const pinned = slice.map((entry) => pinnedShare(pass.cardOf(entry)));
   const layout: PageLayout = {
     pinned,
     imageBar: family.imageBar,
@@ -285,7 +290,7 @@ function layOutPage(pass: PlanPass, template: readonly Slot[], slice: EntryDto[]
   );
 
   return assigned.map((kind, position) =>
-    toBlock(pinned[position]?.kind ?? kind, slice[position], { page, position }),
+    toBlock(pinned[position]?.kind ?? kind, pass.cardOf(slice[position]), { page, position }),
   );
 }
 
@@ -388,16 +393,16 @@ function assign(kinds: TemplateKind[], slice: EntryDto[], layout: PageLayout): T
   );
 }
 
-function pinnedShare(entry: EntryDto): PinnedShare | null {
+function pinnedShare({ entry, story }: BlockCard): PinnedShare | null {
   const kind = shareKind(entry);
-  return kind ? { kind, height: blockHeight(kind, entry) } : null;
+  return kind ? { kind, height: blockHeight(kind, entry, story) } : null;
 }
 
-function toBlock(kind: EntryKind, entry: EntryDto, at: SlotAt): MagazineBlock {
+function toBlock(kind: EntryKind, card: BlockCard, at: SlotAt): MagazineBlock {
   if (kind === 'split') {
-    return { kind, entry, imageSide: seed(at.page, at.position + 97) < 0.5 ? 'left' : 'right' };
+    return { kind, ...card, imageSide: seed(at.page, at.position + 97) < 0.5 ? 'left' : 'right' };
   }
-  return { kind, entry };
+  return { kind, ...card };
 }
 
 /** A widget owning a run's whole tail; the component previews `previewCount`

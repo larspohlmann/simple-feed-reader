@@ -2,7 +2,7 @@ import { blocksWithout, groupMembersWithout, ListBlock, SINCE_VISIT_BLOCK } from
 import { EntryDto } from '../../models';
 
 const entry = (id: number): EntryDto => ({ id }) as EntryDto;
-const compact = (id: number): ListBlock => ({ kind: 'compact', entry: entry(id) });
+const compact = (id: number): ListBlock => ({ kind: 'compact', entry: entry(id), story: null });
 const header = (generatedAt: string): ListBlock => ({ kind: 'run-header', generatedAt });
 
 describe('blocksWithout', () => {

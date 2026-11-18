@@ -41,7 +41,7 @@ import {
   trackPageScrollTop,
 } from '../../../../testing/scroll-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
-import { anEntry, aStory } from '../../../../testing/entry-testing';
+import { anEntry, aStory, aStoryArticle } from '../../../../testing/entry-testing';
 import { listPageOf } from '../../state/list-page';
 import {
   MockIntersectionObserver,
@@ -109,7 +109,7 @@ function mount(
   const fixture = TestBed.createComponent(EntryListComponent);
   const inputs = {
     title: 'All items',
-    entries: [entry(1), entry(2)],
+    items: [entry(1), entry(2)],
     loading: false,
     loadingMore: false,
     error: null,
@@ -243,7 +243,7 @@ describe('EntryListComponent', () => {
 
     it('renders above the empty state, so the run button still shows there', () => {
       const tb = topBlockTemplate();
-      const element = mount({ topBlock: tb, entries: [] }).nativeElement as HTMLElement;
+      const element = mount({ topBlock: tb, items: [] }).nativeElement as HTMLElement;
       expect(element.querySelector('.top-marker')).not.toBeNull();
       expect(element.querySelector('.empty')).not.toBeNull();
     });
@@ -262,7 +262,7 @@ describe('EntryListComponent', () => {
     const forYou: Selection = { kind: 'for-you', unread: false };
 
     it('shows the reason on each for-you entry in the list layout', () => {
-      const element = mount({ entries: recommended, selection: forYou, layout: 'list' })
+      const element = mount({ items: recommended, selection: forYou, layout: 'list' })
         .nativeElement as HTMLElement;
       const reasons = element.querySelectorAll('app-recommendation-strip .reason');
       expect(reasons.length).toBe(2);
@@ -273,7 +273,7 @@ describe('EntryListComponent', () => {
     });
 
     it('shows the reason on each for-you entry in the magazine layout', () => {
-      const element = mount({ entries: recommended, selection: forYou, layout: 'magazine' })
+      const element = mount({ items: recommended, selection: forYou, layout: 'magazine' })
         .nativeElement as HTMLElement;
       const reasons = element.querySelectorAll('app-recommendation-strip .reason');
       expect(reasons.length).toBe(2);
@@ -282,7 +282,7 @@ describe('EntryListComponent', () => {
 
     it('stays inert on a non-for-you view', () => {
       const element = mount({
-        entries: [entry(1), entry(2)],
+        items: [entry(1), entry(2)],
         selection: { kind: 'all', unread: true },
       }).nativeElement as HTMLElement;
       expect(element.querySelector('.reason')).toBeNull();
@@ -305,7 +305,7 @@ describe('EntryListComponent', () => {
 
     const mountStory = (ids: number[], newIds: number[], over: Record<string, unknown> = {}) =>
       mount({
-        entries: ids.map((id) => entry(id)),
+        items: ids.map((id) => entry(id)),
         newSinceVisitIds: new Set(newIds),
         selection: story,
         layout: 'list',
@@ -341,7 +341,7 @@ describe('EntryListComponent', () => {
 
     it('keeps the remaining rows mounted when hiding empties the head of a followed story', () => {
       const fixture = mount({
-        entries: [entry(1), entry(2), entry(3)],
+        items: [entry(1), entry(2), entry(3)],
         newSinceVisitIds: new Set([1, 2]),
         selection: story,
         layout: 'list',
@@ -381,7 +381,7 @@ describe('EntryListComponent', () => {
       };
 
       it('marks a later page, then drops the divider and keeps the earlier rows once the new head hides', async () => {
-        const fixture = mount({ entries: [], selection: story, layout: 'list' }, [
+        const fixture = mount({ items: [], selection: story, layout: 'list' }, [
           { provide: ReaderApi, useValue: readerApi },
           { provide: TrendingApi, useValue: {} },
           { provide: SocialPostApi, useValue: {} },
@@ -391,7 +391,7 @@ describe('EntryListComponent', () => {
         const store = TestBed.inject(EntriesStore);
         const visit = TestBed.inject(FollowedStoryVisit);
         const render = async () => {
-          fixture.componentRef.setInput('entries', store.entries());
+          fixture.componentRef.setInput('items', store.items());
           fixture.componentRef.setInput('hasMore', store.nextCursor() !== null);
           fixture.componentRef.setInput('newSinceVisitIds', visit.newSinceVisitIds());
           for (let frame = 0; frame < 12; frame++) {
@@ -444,7 +444,7 @@ describe('EntryListComponent', () => {
 
     it('shows a divider at the older run and none above the newest', () => {
       const element = mount({
-        entries: twoRuns,
+        items: twoRuns,
         selection: forYou,
         newestRunId: 9,
         layout: 'list',
@@ -461,7 +461,7 @@ describe('EntryListComponent', () => {
       // Header names run 9, but run 9 left nothing visible: the first visible
       // entry is run 7, so it gets its own divider.
       const element = mount({
-        entries: [entry(3, { runId: 7, runGeneratedAt: OLDER })],
+        items: [entry(3, { runId: 7, runGeneratedAt: OLDER })],
         selection: forYou,
         newestRunId: 9,
         layout: 'list',
@@ -472,7 +472,7 @@ describe('EntryListComponent', () => {
 
     it('shows no divider on a non-for-you view', () => {
       const element = mount({
-        entries: [entry(1), entry(2)],
+        items: [entry(1), entry(2)],
         selection: { kind: 'all', unread: true },
         layout: 'list',
       }).nativeElement as HTMLElement;
@@ -482,7 +482,7 @@ describe('EntryListComponent', () => {
 
     it('shows a divider at the older run in the magazine layout', () => {
       const element = mount({
-        entries: twoRuns,
+        items: twoRuns,
         selection: forYou,
         newestRunId: 9,
         layout: 'magazine',
@@ -833,7 +833,7 @@ describe('EntryListComponent', () => {
   });
 
   it('keeps the current rows rendered and marks them reloading while a reload is on the wire', () => {
-    const element = mount({ loading: true, entries: [entry(1), entry(2)], layout: 'list' })
+    const element = mount({ loading: true, items: [entry(1), entry(2)], layout: 'list' })
       .nativeElement as HTMLElement;
     expect(element.querySelector('.skeleton')).toBeNull();
     const rows = element.querySelector('.rows')!;
@@ -844,7 +844,7 @@ describe('EntryListComponent', () => {
   it('makes the retained rows inert while a reload is on the wire', () => {
     // Without this the stale rows stay clickable: a row click during a view
     // switch opens the PREVIOUS view's entry and marks it read (#254).
-    const element = mount({ loading: true, entries: [entry(1), entry(2)], layout: 'list' })
+    const element = mount({ loading: true, items: [entry(1), entry(2)], layout: 'list' })
       .nativeElement as HTMLElement;
     const rows = element.querySelector('.rows')!;
     expect(rows.hasAttribute('inert')).toBe(true);
@@ -852,7 +852,7 @@ describe('EntryListComponent', () => {
   });
 
   it('dims the rows and makes them inert while a mutation is on the wire', () => {
-    const element = mount({ mutating: true, entries: [entry(1), entry(2)], layout: 'list' })
+    const element = mount({ mutating: true, items: [entry(1), entry(2)], layout: 'list' })
       .nativeElement as HTMLElement;
     const rows = element.querySelector('.rows')!;
     expect(rows.classList).toContain('reloading');
@@ -861,7 +861,7 @@ describe('EntryListComponent', () => {
   });
 
   it('drops the inert guard once the rows are current', () => {
-    const element = mount({ loading: false, entries: [entry(1)], layout: 'list' })
+    const element = mount({ loading: false, items: [entry(1)], layout: 'list' })
       .nativeElement as HTMLElement;
     const rows = element.querySelector('.rows')!;
     expect(rows.hasAttribute('inert')).toBe(false);
@@ -870,7 +870,7 @@ describe('EntryListComponent', () => {
   describe('a reload that a search is typing its way through', () => {
     const typing = {
       loading: true,
-      entries: [entry(1), entry(2)],
+      items: [entry(1), entry(2)],
       layout: 'list',
       selection: { kind: 'search', unread: false, term: 'punk' } satisfies Selection,
     };
@@ -902,7 +902,7 @@ describe('EntryListComponent', () => {
     it('still raises the loading overlay for a reload outside a search', () => {
       jest.useFakeTimers();
       try {
-        const fixture = mount({ loading: true, entries: [entry(1), entry(2)], layout: 'list' });
+        const fixture = mount({ loading: true, items: [entry(1), entry(2)], layout: 'list' });
         jest.advanceTimersByTime(5000);
         fixture.detectChanges();
         expect(overlay(fixture)).not.toBeNull();
@@ -920,7 +920,7 @@ describe('EntryListComponent', () => {
 
     /** A busy list past the overlay's arming delay. */
     function busyList(entries: EntryDto[]): ComponentFixture<EntryListComponent> {
-      const fixture = mount({ busy: true, entries, layout: 'list', selection: search });
+      const fixture = mount({ busy: true, items: entries, layout: 'list', selection: search });
       jest.advanceTimersByTime(5000);
       fixture.detectChanges();
       return fixture;
@@ -953,19 +953,17 @@ describe('EntryListComponent', () => {
 
   it('shows skeletons while loading and an empty state when empty', () => {
     expect(
-      (mount({ loading: true, entries: [] }).nativeElement as HTMLElement).querySelector(
-        '.skeleton',
-      ),
+      (mount({ loading: true, items: [] }).nativeElement as HTMLElement).querySelector('.skeleton'),
     ).not.toBeNull();
     expect(
-      (mount({ loading: false, entries: [] }).nativeElement as HTMLElement).querySelector('.empty'),
+      (mount({ loading: false, items: [] }).nativeElement as HTMLElement).querySelector('.empty'),
     ).not.toBeNull();
   });
 
   it('shows the search empty state with the term, and no catalog link', () => {
     const element = mount({
       loading: false,
-      entries: [],
+      items: [],
       selection: { kind: 'search', unread: false, term: 'angular' },
     }).nativeElement as HTMLElement;
     const empty = element.querySelector('.empty')!;
@@ -978,7 +976,7 @@ describe('EntryListComponent', () => {
     it('says there are no saved searches yet when the account keeps none', () => {
       const element = mount({
         loading: false,
-        entries: [],
+        items: [],
         selection: { kind: 'saved-searches', unread: false },
         savedSearchCount: 0,
       }).nativeElement as HTMLElement;
@@ -989,7 +987,7 @@ describe('EntryListComponent', () => {
     it('says the list is empty when saved searches exist but match nothing', () => {
       const element = mount({
         loading: false,
-        entries: [],
+        items: [],
         selection: { kind: 'saved-searches', unread: false },
         savedSearchCount: 2,
       }).nativeElement as HTMLElement;
@@ -1123,7 +1121,7 @@ describe('EntryListComponent', () => {
   it('hides the whole-word-mode trailing space from the empty-state message (#408 follow-up)', () => {
     const element = mount({
       loading: false,
-      entries: [],
+      items: [],
       selection: { kind: 'search', unread: false, term: 'punk ' },
     }).nativeElement as HTMLElement;
     const empty = element.querySelector('.empty')!;
@@ -1134,7 +1132,7 @@ describe('EntryListComponent', () => {
   it('keeps the existing empty state and its catalog link for a non-search selection', () => {
     const element = mount({
       loading: false,
-      entries: [],
+      items: [],
       selection: { kind: 'all', unread: false },
     }).nativeElement as HTMLElement;
     const empty = element.querySelector('.empty')!;
@@ -1145,7 +1143,7 @@ describe('EntryListComponent', () => {
   describe('the suggested-feeds link in the empty state', () => {
     const emptyAll = {
       loading: false,
-      entries: [],
+      items: [],
       selection: { kind: 'all', unread: true } satisfies Selection,
     };
 
@@ -1196,7 +1194,7 @@ describe('EntryListComponent', () => {
     it('sits in the empty state of an unread selection', () => {
       const element = mount({
         loading: false,
-        entries: [],
+        items: [],
         selection: { kind: 'all', unread: true },
       }).nativeElement as HTMLElement;
       const empty = element.querySelector('.empty')!;
@@ -1208,7 +1206,7 @@ describe('EntryListComponent', () => {
     it('stays out of the "Nothing here yet." state', () => {
       const element = mount({
         loading: false,
-        entries: [],
+        items: [],
         selection: { kind: 'all', unread: false },
       }).nativeElement as HTMLElement;
 
@@ -1218,7 +1216,7 @@ describe('EntryListComponent', () => {
     it('stays out of an unread search that matches nothing', () => {
       const element = mount({
         loading: false,
-        entries: [],
+        items: [],
         selection: { kind: 'search', unread: true, term: 'angular' },
       }).nativeElement as HTMLElement;
 
@@ -1696,7 +1694,7 @@ describe('EntryListComponent', () => {
     );
     const element = mount({
       layout: 'magazine',
-      entries: [...lead, ...run, ...tail],
+      items: [...lead, ...run, ...tail],
     }).nativeElement as HTMLElement;
     expect(element.querySelector('app-source-group')).not.toBeNull();
     expect(element.querySelector('.rows.magazine')).not.toBeNull();
@@ -1714,7 +1712,7 @@ describe('EntryListComponent', () => {
     );
     const fixture = mount({
       layout: 'magazine',
-      entries: [...lead, ...run, ...tail],
+      items: [...lead, ...run, ...tail],
       leavingIds: new Set([15]),
     });
 
@@ -1781,7 +1779,7 @@ describe('EntryListComponent', () => {
   describe('search result live region (#408)', () => {
     it('announces the loaded count for a search selection', () => {
       const element = mount({
-        entries: [entry(1), entry(2), entry(3)],
+        items: [entry(1), entry(2), entry(3)],
         selection: { kind: 'search', unread: false, term: 'fox' },
       }).nativeElement as HTMLElement;
       const region = element.querySelector('[aria-live="polite"]');
@@ -1857,13 +1855,13 @@ describe('EntryListComponent', () => {
 
   it('restores the saved offset once a fresh load completes (return after a resume-reload)', () => {
     // Mount mid-load (skeletons, no scroll container yet) as on a fresh page boot.
-    const fixture = mount({ loading: true, entries: [] });
+    const fixture = mount({ loading: true, items: [] });
     memory.read.mockReturnValue(420);
     const apply = jest.spyOn(fixture.componentInstance.scrolling, 'applyScroll');
 
     // The first page lands: loading clears and the rows render.
     fixture.componentRef.setInput('loading', false);
-    fixture.componentRef.setInput('entries', [entry(1), entry(2)]);
+    fixture.componentRef.setInput('items', [entry(1), entry(2)]);
     fixture.detectChanges();
 
     expect(memory.read).toHaveBeenCalledWith({ kind: 'all', unread: true });
@@ -1872,7 +1870,7 @@ describe('EntryListComponent', () => {
 
   it('does not restore scroll while the list is still loading', () => {
     memory.read.mockReturnValue(420);
-    const fixture = mount({ loading: true, entries: [] });
+    const fixture = mount({ loading: true, items: [] });
     const apply = jest.spyOn(fixture.componentInstance.scrolling, 'applyScroll');
     fixture.detectChanges();
     expect(apply).not.toHaveBeenCalled();
@@ -1906,9 +1904,9 @@ describe('EntryListComponent', () => {
       memory.read.mockReturnValue(420);
       const apply = jest.spyOn(fixture.componentInstance.scrolling, 'applyScroll');
 
-      fixture.componentRef.setInput('entries', []);
+      fixture.componentRef.setInput('items', []);
       fixture.detectChanges();
-      fixture.componentRef.setInput('entries', [entry(1), entry(2)]);
+      fixture.componentRef.setInput('items', [entry(1), entry(2)]);
       fixture.detectChanges();
 
       expect(apply).not.toHaveBeenCalled();
@@ -2002,7 +2000,7 @@ describe('EntryListComponent', () => {
       fixture.componentInstance.scrolling.onScroll(900);
       fixture.detectChanges();
 
-      fixture.componentRef.setInput('entries', []);
+      fixture.componentRef.setInput('items', []);
       fixture.detectChanges();
 
       expect(element.querySelector('.empty')).not.toBeNull();
@@ -2077,7 +2075,7 @@ describe('EntryListComponent', () => {
     });
 
     it('does nothing when there is no scroll container yet', () => {
-      const fixture = mount({ entries: [] });
+      const fixture = mount({ items: [] });
       memory.save.mockClear();
       expect(() => fixture.componentInstance.scrollToTop()).not.toThrow();
       expect(memory.save).not.toHaveBeenCalled();
@@ -2129,7 +2127,7 @@ describe('EntryListComponent', () => {
     });
 
     it('is absent from an empty list (#1991)', () => {
-      expect(markAll(mount({ entries: [] }))).toBeNull();
+      expect(markAll(mount({ items: [] }))).toBeNull();
     });
 
     it('sits left of Mark above read', () => {
@@ -2210,7 +2208,7 @@ describe('EntryListComponent', () => {
 
     it('expands an above-fold entry with its hidden duplicate copies (#1080)', () => {
       const fixture = mount({
-        entries: [entry(1, { duplicates: [entry(101), entry(102)] }), entry(2)],
+        items: [entry(1, { duplicates: [entry(101), entry(102)] }), entry(2)],
       });
       stubGeometry(fixture, [measuredEntry('1', 40)]);
 
@@ -2239,7 +2237,7 @@ describe('EntryListComponent', () => {
       expect(element.querySelector('app-to-top-button')).not.toBeNull();
       expect(element.querySelector('.mark-above')).not.toBeNull();
 
-      fixture.componentRef.setInput('entries', []);
+      fixture.componentRef.setInput('items', []);
       fixture.detectChanges();
 
       expect(element.querySelector('app-to-top-button')).toBeNull();
@@ -2264,7 +2262,7 @@ describe('EntryListComponent', () => {
     // otherwise hiding the preview surfaces the tail above the boundary.
     it('marks the folded tail of a group whose whole preview sits above the fold', () => {
       const fixture = mount({
-        entries: MIXED_SOURCE_RUN,
+        items: MIXED_SOURCE_RUN,
         selection: { kind: 'all', unread: true },
         layout: 'magazine',
       });
@@ -2288,7 +2286,7 @@ describe('EntryListComponent', () => {
 
     it('keeps the folded tail of a group while one of its preview rows straddles the fold', () => {
       const fixture = mount({
-        entries: MIXED_SOURCE_RUN,
+        items: MIXED_SOURCE_RUN,
         selection: { kind: 'all', unread: true },
         layout: 'magazine',
       });
@@ -2385,13 +2383,13 @@ describe('EntryListComponent', () => {
     });
 
     it('does not paint the tray over the skeleton while a refresh runs during the initial load', () => {
-      const element = mount({ loading: true, entries: [], refreshing: true })
+      const element = mount({ loading: true, items: [], refreshing: true })
         .nativeElement as HTMLElement;
       expect(element.querySelector('.pull-indicator')).toBeNull();
     });
 
     it('does not paint the tray over the empty state while a refresh runs', () => {
-      const element = mount({ loading: false, entries: [], refreshing: true })
+      const element = mount({ loading: false, items: [], refreshing: true })
         .nativeElement as HTMLElement;
       expect(element.querySelector('.pull-indicator')).toBeNull();
     });
@@ -2441,7 +2439,7 @@ describe('EntryListComponent', () => {
 
     it('collapses a same-source run in an aggregated view', () => {
       const fixture = mount({
-        entries: run,
+        items: run,
         selection: { kind: 'all', unread: false },
         layout: 'magazine',
       });
@@ -2452,7 +2450,7 @@ describe('EntryListComponent', () => {
 
     it('never collapses the run of a home timeline, which carries many people', () => {
       const fixture = mount({
-        entries: run,
+        items: run,
         selection: { kind: 'all', unread: false },
         layout: 'magazine',
       });
@@ -2472,7 +2470,7 @@ describe('EntryListComponent', () => {
         ),
       ];
       const fixture = mount({
-        entries: profileRun,
+        items: profileRun,
         selection: { kind: 'all', unread: false },
         layout: 'magazine',
       });
@@ -2490,7 +2488,7 @@ describe('EntryListComponent', () => {
 
     it('never collapses the for-you list', () => {
       const fixture = mount({
-        entries: run,
+        items: run,
         selection: { kind: 'for-you', unread: false },
         layout: 'magazine',
       });
@@ -2506,7 +2504,7 @@ describe('EntryListComponent', () => {
     const loaded = [entry(1), entry(2), entry(3)];
 
     it('clears dimming from the open list when disabled', async () => {
-      const fixture = mount({ entries: loaded });
+      const fixture = mount({ items: loaded });
       await frames();
       expect(rowOpacities(fixture)).not.toContain('');
 
@@ -2517,7 +2515,7 @@ describe('EntryListComponent', () => {
     });
 
     it('restores dimming in the open list when enabled again', async () => {
-      const fixture = mount({ entries: loaded });
+      const fixture = mount({ items: loaded });
       await frames();
       const readingFocus = TestBed.inject(ReadingFocusService);
       readingFocus.setEnabled(false);
@@ -2532,19 +2530,19 @@ describe('EntryListComponent', () => {
     });
 
     it('fades the rows that arrive after the load finishes', async () => {
-      const fixture = mount({ loading: true, entries: [] });
+      const fixture = mount({ loading: true, items: [] });
       // Let the frame scheduled at mount drain while the request is still in
       // flight, which is where the skeleton has no rows to fade.
       await frames();
       fixture.componentRef.setInput('loading', false);
-      fixture.componentRef.setInput('entries', loaded);
+      fixture.componentRef.setInput('items', loaded);
       fixture.detectChanges();
       await frames();
       expect(rowOpacities(fixture)).not.toContain('');
     });
 
     it('fades the incoming rows when both lists sit at the top', async () => {
-      const fixture = mount({ entries: loaded });
+      const fixture = mount({ items: loaded });
       await frames();
       // A view switch keeps the outgoing rows on screen until the new page lands
       // (#254). Neither list has a remembered offset, so no scroll event fires.
@@ -2553,16 +2551,16 @@ describe('EntryListComponent', () => {
       fixture.detectChanges();
       await frames();
       fixture.componentRef.setInput('loading', false);
-      fixture.componentRef.setInput('entries', [entry(11), entry(12), entry(13)]);
+      fixture.componentRef.setInput('items', [entry(11), entry(12), entry(13)]);
       fixture.detectChanges();
       await frames();
       expect(rowOpacities(fixture)).not.toContain('');
     });
 
     it('fades the rows appended by load-more', async () => {
-      const fixture = mount({ entries: loaded, hasMore: true });
+      const fixture = mount({ items: loaded, hasMore: true });
       await frames();
-      fixture.componentRef.setInput('entries', [...loaded, entry(4), entry(5)]);
+      fixture.componentRef.setInput('items', [...loaded, entry(4), entry(5)]);
       fixture.detectChanges();
       await frames();
       expect(rowOpacities(fixture)).not.toContain('');
@@ -2578,7 +2576,7 @@ describe('EntryListComponent', () => {
     }
 
     it('recomputes focus when a row-collapse animation settles', async () => {
-      const fixture = mount({ entries: loaded });
+      const fixture = mount({ items: loaded });
       await frames();
       blankOpacities(fixture);
       fireRowsResize(fixture);
@@ -2588,7 +2586,7 @@ describe('EntryListComponent', () => {
     });
 
     it('recomputes focus on a view change, before the new page lands (#462)', async () => {
-      const fixture = mount({ entries: loaded });
+      const fixture = mount({ items: loaded });
       await frames();
       blankOpacities(fixture);
       select(fixture, { kind: 'favorites' });
@@ -2601,7 +2599,7 @@ describe('EntryListComponent', () => {
     // toggles a class on it, resizing every row; the applier's own ResizeObserver
     // is what catches it, not a signal this component tracks.
     it('recomputes focus when the magazine density switches boxed <-> airy', async () => {
-      const fixture = mount({ entries: loaded, layout: 'magazine' });
+      const fixture = mount({ items: loaded, layout: 'magazine' });
       await frames();
       blankOpacities(fixture);
       TestBed.inject(MagazineStyleService).set('airy');
@@ -2629,8 +2627,8 @@ describe('EntryListComponent', () => {
 
     it('reveals an appended page over several frames instead of one tick', async () => {
       const first = page(1, 3);
-      const fixture = mount({ entries: first, hasMore: true });
-      fixture.componentRef.setInput('entries', [...first, ...page(4, REVEAL_STEP * 3)]);
+      const fixture = mount({ items: first, hasMore: true });
+      fixture.componentRef.setInput('items', [...first, ...page(4, REVEAL_STEP * 3)]);
       fixture.detectChanges();
       expect(rowCount(fixture)).toBe(3);
 
@@ -2645,16 +2643,16 @@ describe('EntryListComponent', () => {
     });
 
     it('renders a replaced list at once', () => {
-      const fixture = mount({ entries: page(1, 3) });
-      fixture.componentRef.setInput('entries', page(100, REVEAL_STEP * 3));
+      const fixture = mount({ items: page(1, 3) });
+      fixture.componentRef.setInput('items', page(100, REVEAL_STEP * 3));
       fixture.detectChanges();
       expect(rowCount(fixture)).toBe(REVEAL_STEP * 3);
     });
 
     it('converges on the same magazine plan a one-shot render produces', async () => {
       const all = page(1, 6 + REVEAL_STEP * 2);
-      const fixture = mount({ entries: all.slice(0, 6), hasMore: true, layout: 'magazine' });
-      fixture.componentRef.setInput('entries', all);
+      const fixture = mount({ items: all.slice(0, 6), hasMore: true, layout: 'magazine' });
+      fixture.componentRef.setInput('items', all);
       fixture.componentRef.setInput('hasMore', false);
       fixture.detectChanges();
       await settle(fixture);
@@ -2662,7 +2660,7 @@ describe('EntryListComponent', () => {
         '.magazine-slot',
       ).length;
 
-      const oneShot = mount({ entries: all, hasMore: false, layout: 'magazine' });
+      const oneShot = mount({ items: all, hasMore: false, layout: 'magazine' });
       expect(revealed).toBe(
         (oneShot.nativeElement as HTMLElement).querySelectorAll('.magazine-slot').length,
       );
@@ -2670,9 +2668,9 @@ describe('EntryListComponent', () => {
 
     it('fades the rows of an appended page once they are all revealed', async () => {
       const first = page(1, 3);
-      const fixture = mount({ entries: first, hasMore: true });
+      const fixture = mount({ items: first, hasMore: true });
       await frames();
-      fixture.componentRef.setInput('entries', [...first, ...page(4, REVEAL_STEP * 2)]);
+      fixture.componentRef.setInput('items', [...first, ...page(4, REVEAL_STEP * 2)]);
       fixture.detectChanges();
       await settle(fixture);
       expect(rowOpacities(fixture)).toHaveLength(3 + REVEAL_STEP * 2);
@@ -2682,19 +2680,19 @@ describe('EntryListComponent', () => {
 
   describe('freeze & remove after mark-above-read (#1080)', () => {
     it('drops a hidden id from visibleSegments while keeping the rest, in order', () => {
-      const fixture = mount({ entries: [entry(1), entry(2), entry(3)] });
+      const fixture = mount({ items: [entry(1), entry(2), entry(3)] });
 
       fixture.componentInstance.content.hiddenAboveIds.set(new Set([2]));
 
       expect(
         fixture.componentInstance.content
           .visibleSegments()[0]
-          .entries.map((segmentEntry) => segmentEntry.id),
+          .items.map((segmentEntry) => segmentEntry.id),
       ).toEqual([1, 3]);
     });
 
     it('drops a hidden single-entry magazine block entirely', () => {
-      const fixture = mount({ entries: [entry(1), entry(2), entry(3)], layout: 'magazine' });
+      const fixture = mount({ items: [entry(1), entry(2), entry(3)], layout: 'magazine' });
       const before = fixture.componentInstance.content.blocks();
       const targetId = (before[0] as Extract<MagazineBlock, { entry: EntryDto }>).entry.id;
 
@@ -2707,7 +2705,7 @@ describe('EntryListComponent', () => {
 
     it('shrinks a group block to its remaining entries instead of dropping it', () => {
       const fixture = mount({
-        entries: MIXED_SOURCE_RUN,
+        items: MIXED_SOURCE_RUN,
         selection: { kind: 'all', unread: false },
         layout: 'magazine',
       });
@@ -2729,7 +2727,7 @@ describe('EntryListComponent', () => {
 
     it('drops a group block entirely once every one of its entries is hidden', () => {
       const fixture = mount({
-        entries: MIXED_SOURCE_RUN,
+        items: MIXED_SOURCE_RUN,
         selection: { kind: 'all', unread: false },
         layout: 'magazine',
       });
@@ -2747,7 +2745,7 @@ describe('EntryListComponent', () => {
     });
 
     it('adds the given ids to hiddenAboveIds and scrolls the boundary to the top', async () => {
-      const fixture = mount({ entries: [entry(1), entry(2), entry(3)] });
+      const fixture = mount({ items: [entry(1), entry(2), entry(3)] });
       const scroller = fakeScroller(fixture, 400);
 
       fixture.componentInstance.hideAboveMarked([1, 2]);
@@ -2760,7 +2758,7 @@ describe('EntryListComponent', () => {
 
     it('drops the divider of a run whose blocks are all hidden (magazine)', () => {
       const fixture = mount({
-        entries: [
+        items: [
           entry(1, { runId: 9, runGeneratedAt: '2026-08-09T10:00:00+00:00' }),
           entry(2, { runId: 7, runGeneratedAt: '2026-08-07T09:05:00+00:00' }),
         ],
@@ -2779,7 +2777,7 @@ describe('EntryListComponent', () => {
     });
 
     it('keeps hiddenAboveIds across a layout toggle — the overlay is keyed by id', () => {
-      const fixture = mount({ entries: [entry(1), entry(2)] });
+      const fixture = mount({ items: [entry(1), entry(2)] });
       fixture.componentInstance.hideAboveMarked([1]);
 
       fixture.componentRef.setInput('layout', 'magazine');
@@ -2789,14 +2787,14 @@ describe('EntryListComponent', () => {
     });
 
     it('counts the hidden rows out of visibleEntryCount', () => {
-      const fixture = mount({ entries: [entry(1), entry(2)] });
+      const fixture = mount({ items: [entry(1), entry(2)] });
       fixture.componentInstance.hideAboveMarked([1, 2]);
 
       expect(fixture.componentInstance.content.visibleEntryCount()).toBe(0);
     });
 
     it('resets hiddenAboveIds when the selection changes', () => {
-      const fixture = mount({ entries: [entry(1), entry(2)] });
+      const fixture = mount({ items: [entry(1), entry(2)] });
       fixture.componentInstance.hideAboveMarked([1]);
       expect(fixture.componentInstance.content.hiddenAboveIds().size).toBe(1);
 
@@ -2807,7 +2805,7 @@ describe('EntryListComponent', () => {
     });
 
     it('keeps hiddenAboveIds once the mark-read mutation settles — it is no reload', () => {
-      const fixture = mount({ entries: [entry(1), entry(2)] });
+      const fixture = mount({ items: [entry(1), entry(2)] });
       fixture.componentRef.setInput('mutating', true);
       fixture.detectChanges();
       fixture.componentInstance.hideAboveMarked([1]);
@@ -2819,13 +2817,13 @@ describe('EntryListComponent', () => {
     });
 
     it('resets hiddenAboveIds on a genuine reload', () => {
-      const fixture = mount({ entries: [entry(1), entry(2)] });
+      const fixture = mount({ items: [entry(1), entry(2)] });
       fixture.componentInstance.hideAboveMarked([1]);
       expect(fixture.componentInstance.content.hiddenAboveIds().size).toBe(1);
 
       fixture.componentRef.setInput('loading', true);
       fixture.detectChanges();
-      fixture.componentRef.setInput('entries', [entry(3), entry(4)]);
+      fixture.componentRef.setInput('items', [entry(3), entry(4)]);
       fixture.componentRef.setInput('loading', false);
       fixture.detectChanges();
 
@@ -2888,13 +2886,13 @@ describe('EntryListComponent', () => {
       hasMore: boolean,
     ): void {
       jest.spyOn(window, 'requestAnimationFrame').mockReturnValue(1);
-      fixture.componentRef.setInput('entries', [...TEN_ENTRIES, ...entriesFrom(11, 10)]);
+      fixture.componentRef.setInput('items', [...TEN_ENTRIES, ...entriesFrom(11, 10)]);
       fixture.componentRef.setInput('hasMore', hasMore);
       fixture.detectChanges();
     }
 
     const pagedList = {
-      entries: TEN_ENTRIES,
+      items: TEN_ENTRIES,
       hasMore: true,
       titleCount: { value: 30, counts: 'items' },
     };
@@ -2959,7 +2957,7 @@ describe('EntryListComponent', () => {
       scrollTo(fixture, layOut(fixture, 100, 1100), 0);
       expect(rail(fixture)).not.toBeNull();
 
-      fixture.componentRef.setInput('entries', []);
+      fixture.componentRef.setInput('items', []);
       fixture.componentRef.setInput('hasMore', false);
       fixture.detectChanges();
 
@@ -3031,17 +3029,43 @@ describe('EntryListComponent', () => {
       window,
     });
 
+    const storyLedBy = (lead: EntryDto, storyId: number) =>
+      aStory({
+        id: storyId,
+        articles: [aStoryArticle(lead), aStoryArticle({ ...entry(lead.id + 100), source: 'z' })],
+      });
+
     it('never folds leads of one source into a group widget', () => {
       const fixture = mount({
         selection: trending(),
         layout: 'magazine',
-        entries: MIXED_SOURCE_RUN.map((each) => ({
-          ...each,
-          story: aStory({ outletCount: 3, viewed: false, shareCount: 0 }),
-        })),
+        items: MIXED_SOURCE_RUN.map((each, index) => storyLedBy(each, index + 1)),
       });
 
       expect((fixture.nativeElement as HTMLElement).querySelector('app-source-group')).toBeNull();
+    });
+
+    describe.each(['magazine', 'list'] as const)('in the %s layout (#2328)', (layout) => {
+      it('renders one card per story, keyed by its lead', () => {
+        const stories = [storyLedBy(entry(1), 41), storyLedBy(entry(2), 42)];
+        const element = mount({ selection: trending(), layout, items: stories })
+          .nativeElement as HTMLElement;
+
+        const cardIds = Array.from(element.querySelectorAll('.row-slot'), (slot) =>
+          Number(slot.querySelector('[data-entry-id]')!.getAttribute('data-entry-id')),
+        );
+        expect(cardIds).toEqual(stories.map((story) => story.leadEntryId));
+      });
+
+      it("still shows each story's source count on its card", () => {
+        const stories = [storyLedBy(entry(1), 41), storyLedBy(entry(2), 42)];
+        const element = mount({ selection: trending(), layout, items: stories })
+          .nativeElement as HTMLElement;
+
+        expect(element.querySelectorAll('.row-slot app-story-source-count .sources')).toHaveLength(
+          2,
+        );
+      });
     });
 
     it('offers no mark-above-read', () => {
@@ -3052,7 +3076,7 @@ describe('EntryListComponent', () => {
     });
 
     it("states the day's rule when nothing trends", () => {
-      const fixture = mount({ selection: trending('day'), entries: [] });
+      const fixture = mount({ selection: trending('day'), items: [] });
 
       expect((fixture.nativeElement as HTMLElement).querySelector('.empty')!.textContent).toContain(
         'several of your feeds cover it within 24 hours',
@@ -3060,7 +3084,7 @@ describe('EntryListComponent', () => {
     });
 
     it("states the week's rule when nothing trends", () => {
-      const fixture = mount({ selection: trending('week'), entries: [] });
+      const fixture = mount({ selection: trending('week'), items: [] });
 
       expect((fixture.nativeElement as HTMLElement).querySelector('.empty')!.textContent).toContain(
         'several of your feeds cover it within 7 days',
@@ -3092,7 +3116,7 @@ describe('EntryListComponent', () => {
       page.top = 800;
       window.dispatchEvent(new Event('scroll'));
 
-      fixture.componentRef.setInput('entries', []);
+      fixture.componentRef.setInput('items', []);
       fixture.detectChanges();
 
       expect(fixture.componentInstance.collapsed()).toBe(false);

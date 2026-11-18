@@ -9,9 +9,9 @@ describe('groupByRun', () => {
     const groups = groupByRun([entry(1, 9, 'B'), entry(2, 9, 'B'), entry(3, 7, 'A')]);
 
     expect(groups.map((group) => group.runId)).toEqual([9, 7]);
-    expect(groups[0].entries.map((x) => x.id)).toEqual([1, 2]);
+    expect(groups[0].items.map((x) => x.id)).toEqual([1, 2]);
     expect(groups[0].generatedAt).toBe('B');
-    expect(groups[1].entries.map((x) => x.id)).toEqual([3]);
+    expect(groups[1].items.map((x) => x.id)).toEqual([3]);
   });
 
   it('returns a single run-less group when entries carry no runId', () => {
@@ -20,7 +20,7 @@ describe('groupByRun', () => {
     expect(groups).toHaveLength(1);
     expect(groups[0].runId).toBeUndefined();
     expect(groups[0].generatedAt).toBeUndefined();
-    expect(groups[0].entries).toHaveLength(2);
+    expect(groups[0].items).toHaveLength(2);
   });
 
   it('is empty for no entries', () => {

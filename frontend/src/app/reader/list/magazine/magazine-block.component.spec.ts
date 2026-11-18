@@ -24,8 +24,8 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto =>
 
 function blockOf(kind: EntryKind, blockEntry: EntryDto): MagazineBlock {
   return kind === 'split'
-    ? { kind, entry: blockEntry, imageSide: 'left' }
-    : ({ kind, entry: blockEntry } as MagazineBlock);
+    ? { kind, entry: blockEntry, story: null, imageSide: 'left' }
+    : ({ kind, entry: blockEntry, story: null } as MagazineBlock);
 }
 
 function mount(block: MagazineBlock): HTMLElement {
