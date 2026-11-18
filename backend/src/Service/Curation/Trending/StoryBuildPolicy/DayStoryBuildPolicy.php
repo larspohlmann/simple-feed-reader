@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Curation\Trending\StoryBuildPolicy;
 
 use App\Service\Curation\Trending\FallbackTitles;
+use App\Service\Curation\Trending\Model\StoredStoryModel;
+use App\Service\Curation\Trending\Model\StoryAssignmentModel;
 use App\Service\Curation\Trending\Model\StoryBuildModel;
 use App\Service\Curation\Trending\Model\StoryMatchModel;
 use App\Service\Curation\Trending\Pass\TrendingRun;
@@ -20,7 +22,12 @@ final readonly class DayStoryBuildPolicy implements StoryBuildPolicyInterface
 
     public function match(TrendingRun $run, array $groups, array $stored): StoryMatchModel
     {
-        return $this->fallbackTitles->titledWhereMissing($run, $this->matching->attach($groups, $stored), $stored);
+        return $this->fallbackTitles->titled(
+            $run,
+            $this->matching->attach($groups, $stored),
+            $stored,
+            static fn (StoryAssignmentModel $assignment, StoredStoryModel $story): bool => $story->titled,
+        );
     }
 
     public function prune(StoryBuildModel $build): int

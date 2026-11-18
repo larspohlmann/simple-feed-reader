@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Enum\FeedLanguage;
 use App\Enum\TrendingWindow;
 use App\Service\Curation\Trending\Model\StoredStoryModel;
+use App\Service\Curation\Trending\Model\StoryAssignmentModel;
 use App\Service\Curation\Trending\Model\StoryMatchModel;
 use App\Service\Curation\Trending\Model\TrendingStoryModel;
 use App\Service\Curation\Trending\Pass\TrendingRun;
@@ -113,10 +114,12 @@ final class FallbackTitlesTest extends DbTestCase
      */
     private function titled(TrendingRun $run, array $stories, array $stored): StoryMatchModel
     {
-        return TrendingWiring::fallbackTitles($this->entityManager)->titledAll(
+        return TrendingWiring::fallbackTitles($this->entityManager)->titled(
             $run,
             (new StoryMatching())->reshape($stories, $stored),
             $stored,
+            static fn (StoryAssignmentModel $assignment, StoredStoryModel $story): bool
+                => $story->keepsItsFallbackAgainst($assignment->group),
         );
     }
 

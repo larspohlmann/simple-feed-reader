@@ -32,48 +32,42 @@ final readonly class FallbackTitles
     ) {
     }
 
-    /** @param list<StoredStoryModel> $stored */
-    public function titledWhereMissing(TrendingRun $run, StoryMatchModel $match, array $stored): StoryMatchModel
-    {
-        $titled = array_flip(array_map(
-            static fn (StoredStoryModel $story): int => $story->id,
-            array_filter($stored, static fn (StoredStoryModel $story): bool => $story->titled),
-        ));
-
-        return $this->titledAmong($run, $match, $stored, array_filter(
-            $match->assignments,
-            static fn (StoryAssignmentModel $assignment): bool
-                => $assignment->storyId === null || !isset($titled[$assignment->storyId]),
-        ));
-    }
-
     /**
-     * An unchanged story keeps its fallback unscored: scoring every story made the week build ~16 % slower.
-     *
-     * @param list<StoredStoryModel> $stored
+     * @param list<StoredStoryModel>                                $stored
+     * @param \Closure(StoryAssignmentModel, StoredStoryModel): bool $keepsItsFallback
      */
-    public function titledAll(TrendingRun $run, StoryMatchModel $match, array $stored): StoryMatchModel
-    {
-        $storedById = [];
-        foreach ($stored as $story) {
-            $storedById[$story->id] = $story;
-        }
-
-        return $this->titledAmong($run, $match, $stored, array_filter(
+    public function titled(
+        TrendingRun $run,
+        StoryMatchModel $match,
+        array $stored,
+        \Closure $keepsItsFallback,
+    ): StoryMatchModel {
+        $storedById = array_column($stored, null, 'id');
+        $due = array_filter(
             $match->assignments,
             static fn (StoryAssignmentModel $assignment): bool => $assignment->storyId === null
-                || !self::keepsItsFallback($assignment, $storedById[$assignment->storyId]),
-        ));
+                || !$keepsItsFallback($assignment, $storedById[$assignment->storyId]),
+        );
+        $titles = $this->titlesOf($run, $due, $storedById);
+        $assignments = array_map(
+            static fn (StoryAssignmentModel $assignment, int $index): StoryAssignmentModel
+                => isset($titles[$index]) ? $assignment->titled($titles[$index]) : $assignment,
+            $match->assignments,
+            array_keys($match->assignments),
+        );
+
+        return $match->withAssignments($assignments);
     }
 
     /**
-     * @param list<StoredStoryModel>           $stored
-     * @param array<int, StoryAssignmentModel> $due    by their index in the match
+     * @param array<int, StoryAssignmentModel> $due        by their index in the match
+     * @param array<int, StoredStoryModel>     $storedById
+     *
+     * @return array<int, FallbackTitleModel> by the assignment's index in the match
      */
-    private function titledAmong(TrendingRun $run, StoryMatchModel $match, array $stored, array $due): StoryMatchModel
+    private function titlesOf(TrendingRun $run, array $due, array $storedById): array
     {
         $linkTitles = $this->windowEntries->linkTitlesOf(self::cardLinkIdsOf($due));
-        $fallbackIds = self::fallbackIdsOf($stored);
         $titles = [];
         $pools = [];
         foreach ($due as $index => $assignment) {
@@ -85,18 +79,11 @@ final readonly class FallbackTitles
             $pools[$index] = new HeadlinePoolModel(
                 self::candidatesOf($run, $assignment->group),
                 $assignment->group->entryIds(),
-                $assignment->storyId === null ? null : $fallbackIds[$assignment->storyId] ?? null,
+                $assignment->storyId === null ? null : $storedById[$assignment->storyId]->fallbackEntryId,
             );
         }
-        $titles += $this->headlineTitles($run, $pools);
-        $assignments = array_map(
-            static fn (StoryAssignmentModel $assignment, int $index): StoryAssignmentModel
-                => isset($titles[$index]) ? $assignment->titled($titles[$index]) : $assignment,
-            $match->assignments,
-            array_keys($match->assignments),
-        );
 
-        return $match->withAssignments($assignments);
+        return $titles + $this->headlineTitles($run, $pools);
     }
 
     /**
@@ -224,19 +211,6 @@ final readonly class FallbackTitles
         return new FallbackTitleModel(null, $linkTitles[$linkId]);
     }
 
-    private static function keepsItsFallback(StoryAssignmentModel $assignment, StoredStoryModel $story): bool
-    {
-        if (!$story->titled || $story->fallbackEntryId === null) {
-            return false;
-        }
-        $entryIds = $assignment->group->entryIds();
-        $storedEntryIds = $story->entryIds;
-        sort($entryIds);
-        sort($storedEntryIds);
-
-        return $entryIds === $storedEntryIds && \in_array($story->fallbackEntryId, $entryIds, true);
-    }
-
     /**
      * @param array<int, StoryAssignmentModel> $due
      *
@@ -263,23 +237,6 @@ final readonly class FallbackTitles
     private static function cardLinkOf(StoryMemberModel $member): ?int
     {
         return $member->articleSite === null ? null : $member->sharedLinkId;
-    }
-
-    /**
-     * @param list<StoredStoryModel> $stored
-     *
-     * @return array<int, int> by story id
-     */
-    private static function fallbackIdsOf(array $stored): array
-    {
-        $fallbackIds = [];
-        foreach ($stored as $story) {
-            if ($story->fallbackEntryId !== null) {
-                $fallbackIds[$story->id] = $story->fallbackEntryId;
-            }
-        }
-
-        return $fallbackIds;
     }
 
     /**
