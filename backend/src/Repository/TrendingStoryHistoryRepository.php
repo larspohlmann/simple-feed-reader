@@ -63,21 +63,21 @@ final readonly class TrendingStoryHistoryRepository
             [$userId, self::stored($since)],
         );
         $entryIdsByStory = [];
-        $fallbackByStory = [];
+        $storyRows = [];
         foreach ($rows as $row) {
-            $entryIdsByStory[(int) $row['story_id']][] = (int) $row['entry_id'];
-            $fallbackByStory[(int) $row['story_id']] = [
-                $row['fallback_entry_id'] === null ? null : (int) $row['fallback_entry_id'],
-                (bool) $row['titled'],
-            ];
+            $storyId = (int) $row['story_id'];
+            $entryIdsByStory[$storyId][] = (int) $row['entry_id'];
+            $storyRows[$storyId] ??= $row;
         }
 
         return array_map(
             static fn (int $storyId, array $entryIds): StoredStoryModel => new StoredStoryModel(
                 $storyId,
                 $entryIds,
-                $fallbackByStory[$storyId][0],
-                $fallbackByStory[$storyId][1],
+                $storyRows[$storyId]['fallback_entry_id'] === null
+                    ? null
+                    : (int) $storyRows[$storyId]['fallback_entry_id'],
+                (bool) $storyRows[$storyId]['titled'],
             ),
             array_keys($entryIdsByStory),
             $entryIdsByStory,
@@ -333,21 +333,20 @@ final readonly class TrendingStoryHistoryRepository
      */
     private function updateStory(int $storyId, StoryAssignmentModel $assignment, array $joinedAts): void
     {
-        $fallback = $assignment->fallbackTitle === null ? [] : self::fallbackColumnsOf($assignment->fallbackTitle);
-        $setFallback = implode('', array_map(
-            static fn (string $column): string => \sprintf(', %1$s = :%1$s', $column),
-            array_keys($fallback),
-        ));
         $this->connection()->executeStatement(
             'UPDATE trending_story SET '
             . self::earliest('first_seen', 'firstSeen') . ', ' . self::latest('last_seen', 'lastSeen') . ', '
-            . self::latest('last_joined_at', 'lastJoinedAt') . $setFallback . ' WHERE id = :story',
+            . self::latest('last_joined_at', 'lastJoinedAt') . ','
+            . ' fallback_title = COALESCE(:fallback_title, fallback_title),'
+            . ' fallback_entry_id'
+            . ' = CASE WHEN :fallback_title IS NULL THEN fallback_entry_id ELSE :fallback_entry_id END'
+            . ' WHERE id = :story',
             [
                 'firstSeen' => self::stored($assignment->group->firstSeen),
                 'lastSeen' => self::stored($assignment->group->lastSeen),
                 'lastJoinedAt' => $joinedAts === [] ? null : max($joinedAts),
                 'story' => $storyId,
-                ...$fallback,
+                ...self::fallbackColumnsOf($assignment->fallbackTitle),
             ],
         );
     }
