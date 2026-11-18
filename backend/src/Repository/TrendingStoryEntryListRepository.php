@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Entry;
+use App\Entity\EntryState;
 use App\Entity\Subscription;
 use App\Entity\TrendingStoryEntry;
 use App\Service\Curation\Trending\Exception\TrendingStoryNotFoundException;
+use App\Service\Curation\Trending\Model\TrendingStoryTallyModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\ParameterType;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -69,6 +72,25 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
         $rows = $qb->getQuery()->getResult();
 
         return array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
+    }
+
+    /** The rows the story's list holds whichever page or filter it shows, a collapsed article once. */
+    public function tallyOf(TrendingStoryListQuery $query): TrendingStoryTallyModel
+    {
+        $qb = $this->createQueryBuilder('e')
+            ->select('COUNT(e.id) AS memberCount')
+            ->addSelect(\sprintf('SUM(CASE WHEN %s THEN 1 ELSE 0 END) AS unreadCount', UnreadDql::predicate()))
+            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
+            ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
+            ->setParameter('notHidden', false, Types::BOOLEAN)
+            ->setParameter('story', $query->storyId);
+        $this->applyMembership($qb, EntryAliases::primary());
+        $this->collapse->apply($qb, $this->applyMembership(...), $query->userId);
+
+        /** @var array{memberCount: int|string, unreadCount: int|string|null} $row */
+        $row = $qb->getQuery()->getSingleResult();
+
+        return new TrendingStoryTallyModel((int) $row['memberCount'], (int) $row['unreadCount']);
     }
 
     /** @return list<int> the story's members the reader has not read, no newer than $until */

@@ -6,7 +6,7 @@ namespace App\Service\Curation\Trending\Model;
 
 use App\Repository\EntryListRow;
 
-/** A page of a story's entries, its title, the reader's last visit if they follow it, and when each row joined. */
+/** A page of a story's entries, its title, its tally, the reader's last visit if they follow it, and when each row joined. */
 final readonly class TrendingStoryEntriesModel
 {
     /**
@@ -16,6 +16,7 @@ final readonly class TrendingStoryEntriesModel
     public function __construct(
         public array $rows,
         public ?string $title,
+        public TrendingStoryTallyModel $tally,
         public ?\DateTimeImmutable $lastOpenedAt,
         public array $joinedAtByEntry,
     ) {

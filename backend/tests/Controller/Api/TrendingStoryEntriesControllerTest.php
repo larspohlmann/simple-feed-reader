@@ -379,6 +379,51 @@ final class TrendingStoryEntriesControllerTest extends ApiTestCase
         self::assertSame('Harbour strike in Hamburg', $this->page($story)['title']);
     }
 
+    public function testThePageCountsTheStorysRowsAndItsUnreadOnesBeyondThePage(): void
+    {
+        $reader = $this->signInAsOwner('story-list-tallies@example.com');
+        [$alpha, $beta, $gamma] = $this->followedFeeds($reader);
+        $viewed = $this->fixtures->entry($alpha, 'Viewed', '2031-05-14 09:00:00');
+        $story = $this->fixtures->story(
+            TrendingWindow::Day,
+            '2031-05-14 09:00:00',
+            $viewed,
+            $this->fixtures->entry($beta, 'Unread', '2031-05-14 08:00:00'),
+            $this->fixtures->entry($gamma, 'Also unread', '2031-05-14 07:00:00'),
+        );
+        $this->follow($story);
+        $this->client->request(
+            'PATCH',
+            \sprintf('/api/entries/%d/state', $viewed->requireId()),
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: '{"isViewed":true}',
+        );
+        self::assertResponseIsSuccessful();
+
+        $page = $this->page($story, ['limit' => 1]);
+
+        self::assertSame(3, $page['memberCount']);
+        self::assertSame(2, $page['unreadCount']);
+    }
+
+    public function testACollapsedArticleCountsOnce(): void
+    {
+        $reader = $this->signInAsOwner('story-list-tallies-collapsed@example.com');
+        [$alpha, $beta] = $this->followedFeeds($reader);
+        $story = $this->fixtures->story(
+            TrendingWindow::Day,
+            '2031-05-14 09:00:00',
+            $this->copyOf($alpha, 'Shown'),
+            $this->copyOf($beta, 'Copy'),
+        );
+
+        $page = $this->page($story);
+
+        self::assertSame(['Shown'], $this->titles($page));
+        self::assertSame(1, $page['memberCount']);
+        self::assertSame(1, $page['unreadCount']);
+    }
+
     public function testAnotherUsersStoryIsNotFound(): void
     {
         $reader = $this->signInAsOwner('story-list-own@example.com');
