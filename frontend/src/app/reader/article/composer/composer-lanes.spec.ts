@@ -199,6 +199,28 @@ describe('ComposerLanes', () => {
     expect(lane.sendError()).toBe(message);
   });
 
+  it('a social_network_unavailable send without an instance shows the problem detail', () => {
+    api.send.mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 502,
+            error: {
+              type: 'social_network_unavailable',
+              title: 'x',
+              status: 502,
+              detail: 'The network is down',
+            },
+          }),
+      ),
+    );
+    const lane = initialised().primary();
+
+    lane.send(DRAFT, 'Hi').subscribe({ error: () => undefined });
+
+    expect(lane.sendError()).toBe('The network is down');
+  });
+
   it('deactivating a lane clears its send error', () => {
     api.send.mockReturnValue(throwError(refusal));
     const lane = initialised().primary();

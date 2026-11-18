@@ -1799,7 +1799,7 @@
       "namedCounter": "{{ network }} {{ used }} / {{ max }}",
       "networkError": "{{ network }}: {{ message }}",
       "notSent": "{{instance}} antwortet gerade nicht — vermutlich ist der Server überlastet. Es wurde nichts gesendet; versuch es in einer Minute noch einmal.",
-      "mayHaveSent": "{{instance}} hatte Probleme mit deinem Beitrag, deshalb ist er möglicherweise veröffentlicht worden oder auch nicht. Prüfe das, bevor du ihn erneut sendest.",
+      "mayHaveSent": "{{instance}} hatte Probleme mit deinem Beitrag. Möglicherweise wurde er veröffentlicht, möglicherweise nicht. Prüfe das, bevor du ihn erneut sendest.",
       "accountOn": "{{ network }}-Konto",
       "pillPosted": "Gepostet",
       "retry": "{{ network }} erneut versuchen",
