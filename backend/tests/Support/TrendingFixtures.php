@@ -138,7 +138,12 @@ final readonly class TrendingFixtures
     {
         $this->entityManager->flush();
         $joinedAt = new \DateTimeImmutable($lastSeen);
-        $story = new TrendingStory(new \DateTimeImmutable('2031-05-14 00:00:00'), $joinedAt, $joinedAt);
+        $story = new TrendingStory(
+            $this->owner(),
+            new \DateTimeImmutable('2031-05-14 00:00:00'),
+            $joinedAt,
+            $joinedAt,
+        );
         $this->entityManager->persist($story);
         foreach ($members as [$member, $articleSite]) {
             $this->entityManager->persist(
@@ -171,17 +176,28 @@ final readonly class TrendingFixtures
     {
         $this->entityManager->flush();
         $connection = $this->entityManager->getConnection();
+        $ownerId = $this->owner()->requireId();
         foreach ($members as $member) {
             $connection->delete(
                 'trending_story_placement',
-                ['time_window' => $window->value, 'entry_id' => $member->requireId()],
+                ['user_id' => $ownerId, 'time_window' => $window->value, 'entry_id' => $member->requireId()],
             );
             $connection->insert('trending_story_placement', [
+                'user_id' => $ownerId,
                 'time_window' => $window->value,
                 'entry_id' => $member->requireId(),
                 'story_id' => $story->requireId(),
             ]);
         }
+    }
+
+    /** The reader every story of these fixtures belongs to. */
+    public function owner(): User
+    {
+        $email = 'trending-fixtures-owner@example.com';
+
+        return $this->entityManager->getRepository(User::class)->findOneBy(['email' => $email])
+            ?? $this->reader($email);
     }
 
     public function reader(string $email): User

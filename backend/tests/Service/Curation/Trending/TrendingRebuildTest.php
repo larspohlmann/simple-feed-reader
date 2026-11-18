@@ -16,6 +16,7 @@ use App\Service\Curation\Trending\SnapshotBuilder\TrendingSnapshotBuilder;
 use App\Service\Curation\Trending\TrendingRebuild;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecordingLogger;
+use App\Tests\Support\TrendingFixtures;
 use App\Tests\Support\TrendingWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Log\LogLevel;
@@ -211,7 +212,16 @@ final class TrendingRebuildTest extends DbTestCase
     private function snapshotBuiltAt(TrendingWindow $window, string $builtAt, int $durationMilliseconds = 0): void
     {
         $this->entityManager->persist(
-            new TrendingSnapshot($window, new \DateTimeImmutable($builtAt), 0, 0, $durationMilliseconds, 0),
+            new TrendingSnapshot(
+                (new TrendingFixtures($this->entityManager))->owner(),
+                $window,
+                new \DateTimeImmutable($builtAt),
+                0,
+                0,
+                0,
+                $durationMilliseconds,
+                0,
+            ),
         );
         $this->entityManager->flush();
     }

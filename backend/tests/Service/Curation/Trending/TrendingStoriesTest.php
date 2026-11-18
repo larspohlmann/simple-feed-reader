@@ -528,8 +528,10 @@ final class TrendingStoriesTest extends DbTestCase
     public function testThePageCarriesTheWindowAndWhenItsSnapshotWasBuilt(): void
     {
         $this->entityManager->persist(new TrendingSnapshot(
+            $this->reader,
             TrendingWindow::Day,
             new \DateTimeImmutable('2031-05-14 12:00:00'),
+            10,
             10,
             0,
             5,

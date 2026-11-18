@@ -255,10 +255,12 @@ final class TrendingControllerTest extends ApiTestCase
 
     public function testBuiltAtIsSerialisedAsAtomInUtc(): void
     {
-        [$headers] = $this->bearerAndUser('trending-built@example.com');
+        [$headers, $user] = $this->bearerAndUser('trending-built@example.com');
         $this->entityManager()->persist(new TrendingSnapshot(
+            $user,
             TrendingWindow::Week,
             new \DateTimeImmutable('2031-05-14 12:30:00'),
+            10,
             10,
             0,
             5,

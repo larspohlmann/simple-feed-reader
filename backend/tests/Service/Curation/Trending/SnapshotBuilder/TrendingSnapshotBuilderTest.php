@@ -248,7 +248,16 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         $beta = $this->fixtures->hafenstreik($this->fixtures->feed('beta'), 1, '2031-05-14 09:00:00');
         $this->fixtures->story(TrendingWindow::Day, '2031-05-14 11:00:00', $alpha, $beta);
         $this->entityManager->persist(
-            new TrendingSnapshot(TrendingWindow::Day, new \DateTimeImmutable('2031-05-14 11:00:00'), 1, 1, 0, 0),
+            new TrendingSnapshot(
+                $this->fixtures->owner(),
+                TrendingWindow::Day,
+                new \DateTimeImmutable('2031-05-14 11:00:00'),
+                1,
+                1,
+                1,
+                0,
+                0,
+            ),
         );
         $this->fixtures->hafenstreik($this->fixtures->feed('gamma'), 2, '2031-05-14 10:00:00');
         $this->fixtures->flush();
