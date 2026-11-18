@@ -3,45 +3,49 @@ import { signInWithLayout } from './support/auth';
 import { entryWire } from './support/reader';
 import type { EntryDto } from '../src/app/reader/models';
 import type { TrendingResponseDto } from '../src/app/reader/trending/trending-page';
-import type { TrendingWindow } from '../src/app/reader/trending/trending.models';
+import type {
+  StoryArticleDto,
+  TrendingStoryDto,
+  TrendingWindow,
+} from '../src/app/reader/trending/trending.models';
 
 /**
  * Stubs `GET /api/trending` and `POST /api/trending/hidden` so the spec owns every story it asserts on
  * (#2017): a fresh database has no snapshot, and the seeded account's real one changes every few minutes.
  * No card is opened and every Trending request is stubbed, so no state on the shared stack moves.
  */
-const outlet = (id: number, source: string): EntryDto =>
-  entryWire({ id, source, subscriptionId: id });
+const outlet = (id: number, source: string): StoryArticleDto => ({
+  ...entryWire({ id, source, subscriptionId: id }),
+  shares: [],
+});
+
+type FixtureStory = Pick<EntryDto, 'id' | 'title'> &
+  Pick<TrendingStoryDto, 'outletCount' | 'viewed'>;
 
 const story = (
-  lead: Pick<EntryDto, 'id' | 'title'>,
-  duplicates: EntryDto[],
-  outletCount: number,
-  viewed: boolean,
-) =>
-  entryWire({
-    ...lead,
-    source: 'Fixture lead',
-    duplicates,
-    story: { id: lead.id, followed: false, outletCount, viewed, shareCount: 0 },
-  });
+  { id, title, outletCount, viewed }: FixtureStory,
+  others: StoryArticleDto[],
+): TrendingStoryDto => ({
+  id,
+  followed: false,
+  outletCount,
+  viewed,
+  shareCount: 0,
+  leadEntryId: id,
+  articles: [{ ...entryWire({ id, title, source: 'Fixture lead' }), shares: [] }, ...others],
+});
 
 const DAY: TrendingResponseDto = {
   window: 'day',
   builtAt: '2026-11-04T08:00:00Z',
   stories: [
     story(
-      { id: 9001, title: 'Trending fixture day story' },
+      { id: 9001, title: 'Trending fixture day story', outletCount: 7, viewed: false },
       [9002, 9003, 9004, 9005, 9006, 9007].map((id) => outlet(id, `Outlet ${id}`)),
-      7,
-      false,
     ),
-    story(
-      { id: 9011, title: 'Trending fixture opened story' },
-      [outlet(9012, 'Outlet 9012')],
-      3,
-      true,
-    ),
+    story({ id: 9011, title: 'Trending fixture opened story', outletCount: 3, viewed: true }, [
+      outlet(9012, 'Outlet 9012'),
+    ]),
   ],
 };
 
@@ -49,12 +53,9 @@ const WEEK: TrendingResponseDto = {
   window: 'week',
   builtAt: '2026-11-04T08:00:00Z',
   stories: [
-    story(
-      { id: 9021, title: 'Trending fixture week story' },
-      [outlet(9022, 'Outlet 9022')],
-      5,
-      false,
-    ),
+    story({ id: 9021, title: 'Trending fixture week story', outletCount: 5, viewed: false }, [
+      outlet(9022, 'Outlet 9022'),
+    ]),
   ],
 };
 

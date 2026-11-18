@@ -53,7 +53,7 @@ describe('blockHeight', () => {
   });
 
   it('adds no sharer pills without a story', () => {
-    expect(blockHeight('link', anEntry({ shares: [anEntry({ id: 9 })] }), null)).toBe(
+    expect(blockHeight('link', aStoryArticle({ shares: [anEntry({ id: 9 })] }), null)).toBe(
       BLOCK_HEIGHT.link,
     );
   });

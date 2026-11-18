@@ -1,5 +1,4 @@
 import { InjectionToken, Provider, Signal, computed, inject } from '@angular/core';
-import { EntryDto } from '../../models';
 import { FollowedStoriesStore } from '../../state/followed-stories.store';
 import { ReaderRouteState } from '../../shell/reader-route-state.service';
 import { TrendingFollowAction } from '../trending-follow-action';
@@ -7,7 +6,7 @@ import { TrendingHideAction } from '../trending-hide-action';
 import { TrendingStoryDto } from '../trending.models';
 
 export interface StoryActions {
-  follow(entry: EntryDto): void;
+  follow(story: TrendingStoryDto): void;
   hide(story: TrendingStoryDto): void;
   isFollowed(story: Pick<TrendingStoryDto, 'id' | 'followed'>): boolean;
 }
@@ -28,7 +27,7 @@ export function provideTrendingStoryActions(): Provider[] {
         return computed<StoryActions | null>(() =>
           routeState.selection().kind === 'trending'
             ? {
-                follow: (entry) => follow.run(entry),
+                follow: (story) => follow.toggle(story),
                 hide: (story) => hide.run(story),
                 isFollowed: (story) => followedStories.isFollowed(story),
               }

@@ -1,21 +1,21 @@
 import { TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { anEntry, aStory } from '../../../../testing/entry-testing';
-import { EntryDto } from '../../models';
+import { aStory } from '../../../../testing/entry-testing';
+import { TrendingStoryDto } from '../trending.models';
 import { StorySourceCountComponent } from './story-source-count.component';
 
-function mount(entry: EntryDto): HTMLElement {
+function mount(story: TrendingStoryDto): HTMLElement {
   TestBed.configureTestingModule({
     imports: [StorySourceCountComponent, provideTranslocoTesting()],
   });
   const fixture = TestBed.createComponent(StorySourceCountComponent);
-  fixture.componentRef.setInput('entry', entry);
+  fixture.componentRef.setInput('story', story);
   fixture.detectChanges();
   return fixture.nativeElement as HTMLElement;
 }
 
-const storyWith = (shareCount: number): EntryDto =>
-  anEntry({ story: aStory({ outletCount: 7, viewed: false, shareCount }) });
+const storyWith = (shareCount: number): TrendingStoryDto =>
+  aStory({ outletCount: 7, viewed: false, shareCount });
 
 const wordsOf = (element: HTMLElement): string[] =>
   [...element.querySelectorAll('.sources')].map((count) => count.textContent!.trim());
@@ -50,8 +50,4 @@ it('carries a compact icon-and-number form of each count, its words as the toolt
     { icon: 'trending_up', count: '7', title: '7 sources', hidden: 'true' },
     { icon: 'share', count: '2', title: '2 shares', hidden: 'true' },
   ]);
-});
-
-it('renders nothing on an entry that leads no story', () => {
-  expect(mount(anEntry()).textContent!.trim()).toBe('');
 });

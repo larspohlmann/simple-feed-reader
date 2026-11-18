@@ -27,6 +27,7 @@ import { OpenInReaderComponent } from '../../link-card/open-in-reader.component'
 import { StoryActionsComponent } from '../../trending/story-actions/story-actions.component';
 import { StorySourceCountComponent } from '../../trending/story-source-count/story-source-count.component';
 import { STORY_ICON } from '../../trending/story';
+import { StoryArticleDto, TrendingStoryDto } from '../../trending/trending.models';
 
 let nextId = 0;
 
@@ -50,18 +51,20 @@ let nextId = 0;
 })
 export class MoreSourcesComponent {
   readonly entry = input.required<EntryDto>();
+  readonly story = input<TrendingStoryDto | null>(null);
 
   private readonly actions = inject(EntryActionHandler);
   private readonly language = inject(LanguageService);
   private readonly rows = inject(SubscriptionRows);
 
-  protected readonly copies = computed(() => this.entry().duplicates ?? []);
+  protected readonly hasDuplicates = computed(() => (this.entry().duplicates?.length ?? 0) > 0);
+  protected readonly copies = computed(() => this.story()?.articles.slice(1) ?? []);
   protected readonly countKey = computed(() =>
     this.copies().length === 1 ? 'reader.moreArticlesOne' : 'reader.moreArticles',
   );
   protected readonly thumbSizes = MINI_CARD_THUMB_SIZES;
   protected readonly storyIcon = STORY_ICON;
-  private readonly brokenThumbs = linkedSignal<readonly EntryDto[], ReadonlySet<number>>({
+  private readonly brokenThumbs = linkedSignal<readonly StoryArticleDto[], ReadonlySet<number>>({
     source: this.copies,
     computation: () => new Set(),
   });
@@ -85,7 +88,7 @@ export class MoreSourcesComponent {
     this.expanded.update((open) => !open);
   }
 
-  private faceOf(copy: EntryDto): ArticleFace {
+  private faceOf(copy: StoryArticleDto): ArticleFace {
     const face = articleFaceOf(copy);
     return { ...face, picture: this.brokenThumbs().has(copy.id) ? null : face.picture };
   }

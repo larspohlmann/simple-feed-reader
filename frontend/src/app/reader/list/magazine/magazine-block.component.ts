@@ -1,5 +1,5 @@
 import { Component, input } from '@angular/core';
-import { EntryDto, SubscriptionTagDto } from '../../models';
+import { SubscriptionTagDto } from '../../models';
 import { MagazineBlock } from './magazine-block';
 import { EntryHeroComponent } from './blocks/entry-hero/entry-hero.component';
 import { EntryCompactComponent } from './blocks/entry-compact/entry-compact.component';
@@ -13,7 +13,7 @@ import { EntryThreadComponent } from './blocks/entry-thread/entry-thread.compone
 import { EntryMediaComponent } from './blocks/entry-media/entry-media.component';
 import { EntryQuotingComponent } from './blocks/entry-quoting/entry-quoting.component';
 import { SourceGroupComponent } from './source-group.component';
-import { legacyRow } from '../../trending/legacy-story-row';
+import { BlockCard } from './magazine-card';
 
 // One shared instance: a fresh `[]` per check would change every tag-less block's
 // input identity on every tick and re-render it, defeating OnPush (#501).
@@ -49,9 +49,8 @@ export class MagazineBlockComponent {
   }
 
   /** Narrow a block to its entry-carrying form for the template. */
-  protected entryOf(block: MagazineBlock): EntryDto {
-    const { entry, story } = block as Extract<MagazineBlock, { entry: EntryDto }>;
-    return legacyRow(entry, story);
+  protected cardOf(block: MagazineBlock): BlockCard {
+    return block as Exclude<MagazineBlock, { kind: 'group' }>;
   }
 
   protected side(block: MagazineBlock): 'left' | 'right' {

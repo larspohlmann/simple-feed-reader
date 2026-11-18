@@ -2,11 +2,11 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../../core/api';
-import { anEntry, aStory } from '../../../testing/entry-testing';
-import { EntryDto } from '../models';
+import { aStory } from '../../../testing/entry-testing';
 import { EntriesStore } from '../state/entries.store';
 import { FollowedStoriesStore } from '../state/followed-stories.store';
 import { TrendingFollowAction } from './trending-follow-action';
+import { TrendingStoryDto } from './trending.models';
 
 describe('TrendingFollowAction (#2128)', () => {
   let ctrl: HttpTestingController;
@@ -18,10 +18,9 @@ describe('TrendingFollowAction (#2128)', () => {
   const noContent = { status: 204, statusText: 'No Content' };
   const failed = { status: 500, statusText: 'err' };
   const problem = { type: 'x', title: 't', status: 500 };
-  const card = (followed: boolean): EntryDto =>
-    anEntry({ id: 7, story: aStory({ id: 12, followed }) });
+  const card = (followed: boolean): TrendingStoryDto => aStory({ id: 12, followed });
   const action = () => TestBed.inject(TrendingFollowAction);
-  const followedOnScreen = (entry: EntryDto) => followedStories.isFollowed(entry.story!);
+  const followedOnScreen = (story: TrendingStoryDto) => followedStories.isFollowed(story);
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -40,43 +39,43 @@ describe('TrendingFollowAction (#2128)', () => {
   afterEach(() => ctrl.verify());
 
   it('follows the story at once and reloads the followed stories once the server took it', () => {
-    const entry = card(false);
+    const story = card(false);
 
-    action().run(entry);
+    action().toggle(story);
 
-    expect(followedOnScreen(entry)).toBe(true);
+    expect(followedOnScreen(story)).toBe(true);
     const request = ctrl.expectOne(followUrl);
     expect(request.request.method).toBe('PUT');
     ctrl.expectNone(followedUrl);
     request.flush(null, noContent);
     ctrl.expectOne(followedUrl);
-    expect(followedOnScreen(entry)).toBe(true);
+    expect(followedOnScreen(story)).toBe(true);
   });
 
   it('unfollows a followed story with a DELETE, without a reload', () => {
-    const entry = card(true);
+    const story = card(true);
 
-    action().run(entry);
+    action().toggle(story);
 
-    expect(followedOnScreen(entry)).toBe(false);
+    expect(followedOnScreen(story)).toBe(false);
     const request = ctrl.expectOne(followUrl);
     expect(request.request.method).toBe('DELETE');
     request.flush(null, noContent);
     ctrl.expectNone(followedUrl);
-    expect(followedOnScreen(entry)).toBe(false);
+    expect(followedOnScreen(story)).toBe(false);
   });
 
   it('shows the story followed again with the banner when an unfollow fails, and unfollows on retry', () => {
-    const entry = card(true);
+    const story = card(true);
 
-    action().run(entry);
+    action().toggle(story);
     ctrl.expectOne(followUrl).flush(problem, failed);
 
-    expect(followedOnScreen(entry)).toBe(true);
+    expect(followedOnScreen(story)).toBe(true);
     expect(entries.error()).not.toBeNull();
 
     entries.retry();
-    expect(followedOnScreen(entry)).toBe(false);
+    expect(followedOnScreen(story)).toBe(false);
     const retried = ctrl.expectOne(followUrl);
     expect(retried.request.method).toBe('DELETE');
     retried.flush(null, noContent);
@@ -84,19 +83,13 @@ describe('TrendingFollowAction (#2128)', () => {
   });
 
   it('sends nothing extra on a second click while the first is on the wire', () => {
-    const entry = card(false);
+    const story = card(false);
 
-    action().run(entry);
-    action().run(entry);
+    action().toggle(story);
+    action().toggle(story);
 
     ctrl.expectOne(followUrl).flush(null, noContent);
     ctrl.expectOne(followedUrl);
-    expect(followedOnScreen(entry)).toBe(true);
-  });
-
-  it('does nothing for a row with no story', () => {
-    action().run(anEntry({ id: 7 }));
-
-    ctrl.expectNone(followUrl);
+    expect(followedOnScreen(story)).toBe(true);
   });
 });

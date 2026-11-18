@@ -54,7 +54,6 @@ import { prefersReducedMotion } from '../../../core/reduced-motion';
 import { heldFor } from '../../../core/held-for';
 import { FeedLanguage } from '../../feed-language';
 import { ListItem, leadOf, storyOf } from '../../state/list-item';
-import { legacyRow } from '../../trending/legacy-story-row';
 
 // How long a reload or a command may run before it earns the overlay. One that
 // lands sooner would only flash it, which reads as a glitch rather than as progress.
@@ -376,10 +375,7 @@ export class EntryListComponent {
 
   protected readonly blockKey = listBlockKey;
   protected readonly leadOf = leadOf;
-
-  protected rowOf(item: ListItem): EntryDto {
-    return legacyRow(leadOf(item), storyOf(item));
-  }
+  protected readonly storyOf = storyOf;
 
   /** The entry a recommendation strip should read, or null for a group block
    *  (which carries several entries and no single reason to show). */

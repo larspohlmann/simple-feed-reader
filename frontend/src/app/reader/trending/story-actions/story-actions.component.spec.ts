@@ -2,8 +2,7 @@ import { signal } from '@angular/core';
 import { of } from 'rxjs';
 import { TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { anEntry, aStory } from '../../../../testing/entry-testing';
-import { EntryDto } from '../../models';
+import { aStory } from '../../../../testing/entry-testing';
 import { FollowedStoriesStore } from '../../state/followed-stories.store';
 import { TrendingApi } from '../trending-api';
 import { TrendingStoryDto } from '../trending.models';
@@ -16,17 +15,17 @@ describe('StoryActionsComponent (#2128)', () => {
   const isFollowed = (story: TrendingStoryDto) => story.followed;
   const provided = signal<StoryActions | null>({ follow, hide, isFollowed });
 
-  const mount = (entry: EntryDto) => {
+  const mount = (story: TrendingStoryDto) => {
     TestBed.configureTestingModule({
       imports: [StoryActionsComponent, provideTranslocoTesting()],
       providers: [{ provide: STORY_ACTIONS, useValue: provided }],
     });
     const fixture = TestBed.createComponent(StoryActionsComponent);
-    fixture.componentRef.setInput('entry', entry);
+    fixture.componentRef.setInput('story', story);
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
   };
-  const card = (followed = false) => anEntry({ id: 7, story: aStory({ id: 12, followed }) });
+  const card = (followed = false) => aStory({ id: 12, followed });
   const buttons = (element: HTMLElement) => [...element.querySelectorAll('button')];
   const labels = (element: HTMLElement) =>
     buttons(element).map((button) => button.getAttribute('aria-label'));
@@ -100,15 +99,15 @@ describe('StoryActionsComponent (#2128)', () => {
   });
 
   it('runs each action on its card without the click reaching the card', () => {
-    const entry = card();
-    const element = mount(entry);
+    const story = card();
+    const element = mount(story);
     const cardClicks = jest.fn();
     element.addEventListener('click', cardClicks);
 
     buttons(element).forEach((button) => button.click());
 
-    expect(follow).toHaveBeenCalledWith(entry);
-    expect(hide).toHaveBeenCalledWith(entry);
+    expect(follow).toHaveBeenCalledWith(story);
+    expect(hide).toHaveBeenCalledWith(story);
     expect(cardClicks).not.toHaveBeenCalled();
   });
 
@@ -123,13 +122,9 @@ describe('StoryActionsComponent (#2128)', () => {
       imports: [StoryActionsComponent, provideTranslocoTesting()],
     });
     const fixture = TestBed.createComponent(StoryActionsComponent);
-    fixture.componentRef.setInput('entry', card());
+    fixture.componentRef.setInput('story', card());
     fixture.detectChanges();
 
     expect((fixture.nativeElement as HTMLElement).querySelector('.story-actions')).toBeNull();
-  });
-
-  it('offers nothing for a row with no story', () => {
-    expect(mount(anEntry({ id: 7 })).querySelector('.story-actions')).toBeNull();
   });
 });

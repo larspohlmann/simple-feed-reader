@@ -28,6 +28,7 @@ import { ThreadCountComponent } from '../../../shared/thread-line/thread-count.c
 import { showsUnreadMark } from '../../trending/story';
 import { StorySourceCountComponent } from '../../trending/story-source-count/story-source-count.component';
 import { StorySharersComponent } from '../../trending/story-sharers/story-sharers.component';
+import { TrendingStoryDto } from '../../trending/trending.models';
 
 @Component({
   selector: 'app-entry-row',
@@ -57,6 +58,7 @@ import { StorySharersComponent } from '../../trending/story-sharers/story-sharer
 export class EntryRowComponent {
   protected readonly coverBoxSizes = COVER_BOX_SIZES;
   readonly entry = input.required<EntryDto>();
+  readonly story = input<TrendingStoryDto | null>(null);
   readonly imageSide = input<'left' | 'right'>('right');
   readonly tags = input<SubscriptionTagDto[]>([]);
   /** The current search's words, marked inside the title and the snippet.
@@ -79,7 +81,7 @@ export class EntryRowComponent {
   readonly isPost = computed(() => isPost(this.entry()));
   readonly headline = computed(() => entryHeadline(this.entry()));
   readonly snippet = computed(() => entryDek(this.entry()));
-  readonly unreadMark = computed(() => showsUnreadMark(this.entry()));
+  readonly unreadMark = computed(() => showsUnreadMark(this.entry(), this.story()));
   private readonly language = inject(LanguageService);
   readonly when = computed(() => entryRelativeTime(this.entry(), this.language.lang()));
 

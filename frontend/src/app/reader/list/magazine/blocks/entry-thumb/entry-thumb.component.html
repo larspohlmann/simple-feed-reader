@@ -20,7 +20,7 @@
       </div>
     }
     <div class="body">
-      <app-entry-kicker-line [entry]="entry()" />
+      <app-entry-kicker-line [entry]="entry()" [story]="story()" />
       @if (headline()) {
         <p class="title" [class.post]="isPost()">{{ headline() }}</p>
       }
@@ -32,5 +32,5 @@
   <!-- Full-width row under the image+text: beside the image, the text column
        could not hold the audio actions and the pills' names together (#1720). -->
   <app-entry-meta [entry]="entry()" [tags]="tags()" [imageShown]="showImage()" />
-  <app-more-sources [entry]="entry()" />
+  <app-more-sources [entry]="entry()" [story]="story()" />
 </article>

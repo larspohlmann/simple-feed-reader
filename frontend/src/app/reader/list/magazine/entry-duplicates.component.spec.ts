@@ -3,10 +3,12 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { EntryDto } from '../../models';
+import { ListItem, leadOf, storyOf } from '../../state/list-item';
+import { StoryArticleDto } from '../../trending/trending.models';
 import { EntryDuplicatesComponent } from './entry-duplicates.component';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
-import { anEntry, aStory } from '../../../../testing/entry-testing';
+import { anEntry, aStory, aStoryArticle } from '../../../../testing/entry-testing';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
@@ -34,7 +36,10 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto =>
     ...over,
   });
 
-function mount(testEntry: EntryDto, arrange?: () => void, storyActions: Provider[] = []) {
+const article = (over: Partial<StoryArticleDto> = {}): StoryArticleDto =>
+  aStoryArticle({ ...entry(), ...over });
+
+function mount(testEntry: ListItem, arrange?: () => void, storyActions: Provider[] = []) {
   TestBed.configureTestingModule({
     imports: [EntryDuplicatesComponent, provideTranslocoTesting()],
     providers: [
@@ -51,8 +56,9 @@ function mount(testEntry: EntryDto, arrange?: () => void, storyActions: Provider
   return fixture;
 }
 
-function hold(fixture: ComponentFixture<EntryDuplicatesComponent>, row: EntryDto): void {
-  fixture.componentRef.setInput('entry', row);
+function hold(fixture: ComponentFixture<EntryDuplicatesComponent>, row: ListItem): void {
+  fixture.componentRef.setInput('entry', leadOf(row));
+  fixture.componentRef.setInput('story', storyOf(row));
   fixture.detectChanges();
 }
 
@@ -62,11 +68,11 @@ it('renders nothing without duplicates', () => {
 });
 
 describe("a Trending story's footer in the list layout (#2128)", () => {
-  const footOf = (row: EntryDto, storyActions = provideStoryActions()) =>
+  const footOf = (row: ListItem, storyActions = provideStoryActions()) =>
     (mount(row, undefined, storyActions).nativeElement as HTMLElement).querySelector('.also-foot');
 
   it('leads with the story actions, before the other outlets', () => {
-    const foot = footOf(entry({ story: aStory(), duplicates: [entry({ id: 2 })] }))!;
+    const foot = footOf(aStory({ articles: [article(), article({ id: 2 })] }))!;
 
     expect(foot.firstElementChild!.localName).toBe('app-story-actions');
     expect(foot.querySelectorAll('.story-actions button').length).toBe(2);
@@ -74,7 +80,7 @@ describe("a Trending story's footer in the list layout (#2128)", () => {
   });
 
   it('still shows for a story with no other articles, holding only its actions', () => {
-    const foot = footOf(entry({ story: aStory() }))!;
+    const foot = footOf(aStory({ articles: [article()] }))!;
 
     expect(foot.querySelector('.lead')).toBeNull();
     expect(foot.querySelectorAll('.story-actions button').length).toBe(2);
@@ -82,7 +88,7 @@ describe("a Trending story's footer in the list layout (#2128)", () => {
 
   it('offers no story actions off Trending', () => {
     const foot = footOf(
-      entry({ story: aStory(), duplicates: [entry({ id: 2 })] }),
+      aStory({ articles: [article(), article({ id: 2 })] }),
       provideStoryActions('all'),
     )!;
 
@@ -144,13 +150,13 @@ it('names a duplicate by its feed, not by the poster', () => {
 });
 
 it("names a Trending story's post by its poster, not by the timeline holding it", () => {
-  const dup = entry({
+  const dup = article({
     id: 2,
     source: 'Home@bsky',
     poster: { name: 'Bob', url: null, imageUrl: null },
   });
   const element = mount(
-    entry({ duplicates: [dup], story: aStory({ outletCount: 2, viewed: false, shareCount: 0 }) }),
+    aStory({ outletCount: 2, viewed: false, shareCount: 0, articles: [article(), dup] }),
   ).nativeElement as HTMLElement;
   const chip = element.querySelector('.also-entry')!;
 
@@ -324,23 +330,30 @@ it("heads a row's duplicates as the places it also ran in", () => {
 });
 
 it("heads a Trending story's other outlets as the feeds that also covered it", () => {
-  const lead = entry({
-    duplicates: [entry({ id: 2 })],
-    story: aStory({ outletCount: 3, viewed: false, shareCount: 0 }),
+  const story = aStory({
+    outletCount: 3,
+    viewed: false,
+    shareCount: 0,
+    articles: [article(), article({ id: 2 })],
   });
-  const element = mount(lead).nativeElement as HTMLElement;
+  const element = mount(story).nativeElement as HTMLElement;
 
   expect(element.querySelector('.lead')!.textContent!.trim()).toBe('Also covered by');
 });
 
 describe('the footer icon', () => {
-  const iconOf = (row: EntryDto) =>
+  const iconOf = (row: ListItem) =>
     (mount(row).nativeElement as HTMLElement).querySelector('app-icon.layers')!.textContent!.trim();
 
   it("marks a Trending story's other outlets with the Trending icon", () => {
-    const story = aStory({ outletCount: 3, viewed: false, shareCount: 0 });
+    const story = aStory({
+      outletCount: 3,
+      viewed: false,
+      shareCount: 0,
+      articles: [article(), article({ id: 2 })],
+    });
 
-    expect(iconOf(entry({ duplicates: [entry({ id: 2 })], story }))).toBe('trending_up');
+    expect(iconOf(story)).toBe('trending_up');
   });
 
   it("marks a row's copies with layers", () => {

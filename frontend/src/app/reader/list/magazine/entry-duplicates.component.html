@@ -1,6 +1,8 @@
-@if (copies().length || entry().story) {
+@if (copies().length || story()) {
   <div class="also-foot">
-    <app-story-actions [entry]="entry()" />
+    @if (story(); as story) {
+      <app-story-actions [story]="story" />
+    }
     @if (copies().length) {
       <app-icon class="layers" [name]="icon()" size="sm" aria-hidden="true" />
       <span class="lead">{{ label() | transloco }}</span>

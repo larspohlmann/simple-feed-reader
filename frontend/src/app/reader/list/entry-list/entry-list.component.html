@@ -156,7 +156,7 @@
           }
         }
         @for (item of segment.items; track leadOf(item).id) {
-          @let e = rowOf(item);
+          @let e = leadOf(item);
           <!-- The slot collapses the gap when a row leaves; the inner box clips the
                fading content so the collapse reads as the row closing up (#478). -->
           <div class="row-slot" [class.leaving]="leavingIds().has(e.id)">
@@ -164,6 +164,7 @@
               <app-recommendation-strip [entry]="e">
                 <app-entry-row
                   [entry]="e"
+                  [story]="storyOf(item)"
                   [tags]="tagsFor(e.subscriptionId)"
                   [terms]="searchTerms()"
                   [class.in-search]="isSearch()"

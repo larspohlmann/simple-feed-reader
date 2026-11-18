@@ -1,5 +1,5 @@
 <article class="link" [appOpensEntry]="entry()">
-  <app-entry-kicker-line [entry]="entry()" />
+  <app-entry-kicker-line [entry]="entry()" [story]="story()" />
   @if (title() && !ledByItsCard()) {
     <p class="title" [class.post]="isPost()">{{ title() }}</p>
   }
@@ -19,5 +19,5 @@
     <app-link-card-placeholder [entryId]="entry().id" />
   }
   <app-entry-meta [entry]="entry()" [tags]="tags()" />
-  <app-more-sources [entry]="entry()" />
+  <app-more-sources [entry]="entry()" [story]="story()" />
 </article>

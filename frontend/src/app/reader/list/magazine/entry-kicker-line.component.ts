@@ -4,6 +4,7 @@ import { relativeTime, relativeTimeNarrow } from '../../format';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { EntrySourceComponent } from '../../entry/entry-source/entry-source.component';
 import { showsUnreadMark } from '../../trending/story';
+import { TrendingStoryDto } from '../../trending/trending.models';
 
 /**
  * The one-line attribution every magazine block carries: unread dot, favicon,
@@ -20,6 +21,7 @@ import { showsUnreadMark } from '../../trending/story';
 })
 export class EntryKickerLineComponent {
   readonly entry = input.required<EntryDto>();
+  readonly story = input<TrendingStoryDto | null>(null);
   /** Off inside a source group, whose header already names the source. */
   readonly showSource = input(true);
   /** The hero's larger type carries a larger mark. */
@@ -35,5 +37,5 @@ export class EntryKickerLineComponent {
   readonly whenNarrow = computed(() =>
     relativeTimeNarrow(this.publishedOrCreated(), this.language.lang()),
   );
-  readonly unreadMark = computed(() => showsUnreadMark(this.entry()));
+  readonly unreadMark = computed(() => showsUnreadMark(this.entry(), this.story()));
 }

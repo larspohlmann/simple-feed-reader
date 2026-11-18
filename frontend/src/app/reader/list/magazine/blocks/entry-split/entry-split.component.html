@@ -20,7 +20,7 @@
       </div>
     }
     <div class="body">
-      <app-entry-kicker-line [entry]="entry()" />
+      <app-entry-kicker-line [entry]="entry()" [story]="story()" />
       @if (headline()) {
         <p class="title" [class.post]="isPost()">{{ headline() }}</p>
       }
@@ -33,5 +33,5 @@
        card's edge rather than to the text column's — which lands mid-card when
        the image is on the right (#486). -->
   <app-entry-meta [entry]="entry()" [tags]="tags()" [imageShown]="showImage()" />
-  <app-more-sources [entry]="entry()" />
+  <app-more-sources [entry]="entry()" [story]="story()" />
 </article>

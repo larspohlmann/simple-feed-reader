@@ -1,17 +1,16 @@
 import { EntryDto } from '../models';
+import { TrendingStoryDto } from './trending.models';
 
 /** The glyph that marks a Trending story wherever a card names one. */
 export const STORY_ICON = 'trending_up';
 
 /** A Trending story is viewed once any of its entries was opened: by the server's word, which counts
- *  entries the card does not show, or because the lead or a listed outlet was opened here (#2017). */
-export function isStoryViewed(entry: EntryDto): boolean {
-  const story = entry.story;
-  if (!story) return false;
-  return story.viewed || entry.isViewed || (entry.duplicates ?? []).some((copy) => copy.isViewed);
+ *  entries the card does not show, or because one of its articles was opened here (#2017). */
+export function isStoryViewed(story: TrendingStoryDto): boolean {
+  return story.viewed || story.articles.some((article) => article.isViewed);
 }
 
 /** Whether a card shows the unread dot: an ordinary row by its read state, a Trending lead by its story. */
-export function showsUnreadMark(entry: EntryDto): boolean {
-  return entry.story ? !isStoryViewed(entry) : !entry.isHidden;
+export function showsUnreadMark(entry: EntryDto, story: TrendingStoryDto | null): boolean {
+  return story ? !isStoryViewed(story) : !entry.isHidden;
 }

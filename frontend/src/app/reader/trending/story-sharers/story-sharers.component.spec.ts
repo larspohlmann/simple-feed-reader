@@ -1,10 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { EntryDto } from '../../models';
+import { StoryArticleDto } from '../trending.models';
 import { StorySharersComponent } from './story-sharers.component';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
-import { anEntry } from '../../../../testing/entry-testing';
+import { anEntry, aStoryArticle } from '../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 
 const open = jest.fn();
@@ -12,7 +13,7 @@ let fixture: ComponentFixture<StorySharersComponent>;
 
 beforeEach(() => open.mockReset());
 
-function mount(entry: EntryDto): HTMLElement {
+function mount(article: StoryArticleDto): HTMLElement {
   TestBed.configureTestingModule({
     imports: [StorySharersComponent, provideTranslocoTesting()],
     providers: [
@@ -22,7 +23,7 @@ function mount(entry: EntryDto): HTMLElement {
     ],
   });
   fixture = TestBed.createComponent(StorySharersComponent);
-  fixture.componentRef.setInput('entry', entry);
+  fixture.componentRef.setInput('article', article);
   fixture.detectChanges();
   return fixture.nativeElement as HTMLElement;
 }
@@ -30,17 +31,13 @@ function mount(entry: EntryDto): HTMLElement {
 const share = (id: number, name: string, imageUrl: string | null = null): EntryDto =>
   anEntry({ id, titleDerived: true, poster: { name, url: null, imageUrl } });
 
-const sharedBy = (...shares: EntryDto[]): EntryDto => anEntry({ shares });
+const sharedBy = (...shares: EntryDto[]): StoryArticleDto => aStoryArticle({ shares });
 
 const names = (element: HTMLElement): string[] =>
   Array.from(element.querySelectorAll('.sharer .name')).map((name) => name.textContent!.trim());
 
 it('renders nothing for an article no post shares', () => {
-  expect(mount(anEntry({ shares: [] })).querySelector('.sharers')).toBeNull();
-});
-
-it('renders nothing for a row from a server without shares', () => {
-  expect(mount(anEntry()).querySelector('.sharers')).toBeNull();
+  expect(mount(aStoryArticle()).querySelector('.sharers')).toBeNull();
 });
 
 it('shows one pill per sharing account, named', () => {

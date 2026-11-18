@@ -1,5 +1,5 @@
 <article class="quoting" [appOpensEntry]="entry()">
-  <app-entry-kicker-line [entry]="entry()" />
+  <app-entry-kicker-line [entry]="entry()" [story]="story()" />
   @if (headline()) {
     <p class="title" [class.post]="isPost()">{{ headline() }}</p>
   }
@@ -18,5 +18,5 @@
     <app-quoted-post [quote]="quote" layout="block" [network]="entry().social?.network ?? null" />
   }
   <app-entry-meta [entry]="entry()" [tags]="tags()" />
-  <app-more-sources [entry]="entry()" />
+  <app-more-sources [entry]="entry()" [story]="story()" />
 </article>

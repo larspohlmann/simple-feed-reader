@@ -1,13 +1,9 @@
-@if (entry().story) {
-  <app-story-sharers [entry]="entry()" />
-}
-@if (copies().length && !entry().story) {
-  <app-entry-duplicates [entry]="entry()" />
-} @else if (entry().story) {
+@if (story(); as story) {
+  <app-story-sharers [article]="story.articles[0]" />
   <div class="more-sources">
     <div class="story-line">
-      <app-story-actions [entry]="entry()" />
-      <span class="counts"><app-story-source-count [entry]="entry()" /></span>
+      <app-story-actions [story]="story" />
+      <span class="counts"><app-story-source-count [story]="story" /></span>
       @if (copies().length) {
         <button
           type="button"
@@ -48,12 +44,14 @@
                 <ng-container *ngTemplateOutlet="face; context: { $implicit: source }" />
               </button>
             }
-            <app-story-sharers [entry]="source.copy" />
+            <app-story-sharers [article]="source.copy" />
           </div>
         }
       </div>
     }
   </div>
+} @else if (hasDuplicates()) {
+  <app-entry-duplicates [entry]="entry()" />
 }
 
 <ng-template #face let-source>

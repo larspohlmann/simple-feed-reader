@@ -25,7 +25,10 @@ import { withoutTrailingLinks } from '../../../../entry/entry-text';
 })
 export class EntryLinkComponent extends EntryBlockBase {
   /** A Trending row no followed outlet carries is the article its posts share: the card heads it (#2229). */
-  protected readonly ledByItsCard = computed(() => sharedArticleCard(this.entry()) !== null);
+  protected readonly ledByItsCard = computed(() => {
+    const story = this.story();
+    return story ? sharedArticleCard(story.articles[0]) !== null : false;
+  });
   protected readonly title = computed(() => this.withoutCardedLink(this.headline()));
   protected readonly dek = computed(() => this.withoutCardedLink(this.snippet()));
 

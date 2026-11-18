@@ -10,7 +10,7 @@ import { EntryActionHandler } from './entry-action-handler';
 import { AudioPlayerService } from '../../audio-player.service';
 import { StubAudioPlayer } from '../../../../testing/stub-audio-player';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
-import { anEntry, aStory } from '../../../../testing/entry-testing';
+import { anEntry, aStoryArticle } from '../../../../testing/entry-testing';
 import { OpensEntryDirective } from '../../list/opens-entry.directive';
 
 /** Stand-in for the card, wired like the real ones: proves an action never reaches it. */
@@ -485,7 +485,7 @@ describe('EntryActionsComponent', () => {
   });
 
   it("offers a Trending card's story actions nowhere in the post's row (#2128)", () => {
-    const labels = buttons(mount(anEntry({ id: 7, story: aStory() }))).map((button) =>
+    const labels = buttons(mount(aStoryArticle({ id: 7 }))).map((button) =>
       button.getAttribute('aria-label'),
     );
 

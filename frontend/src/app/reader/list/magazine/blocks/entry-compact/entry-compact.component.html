@@ -1,6 +1,6 @@
 <article class="compact" [appOpensEntry]="entry()">
   <div class="body">
-    <app-entry-kicker-line [entry]="entry()" [showSource]="showSource()">
+    <app-entry-kicker-line [entry]="entry()" [story]="story()" [showSource]="showSource()">
       @if (!showSource()) {
         @if (shortPill()) {
           <app-entry-pills [short]="true" />
@@ -16,7 +16,7 @@
     }
     @if (showSource()) {
       <app-entry-meta [entry]="entry()" [tags]="tags()" />
-      <app-more-sources [entry]="entry()" />
+      <app-more-sources [entry]="entry()" [story]="story()" />
     }
   </div>
 </article>

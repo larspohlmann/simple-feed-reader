@@ -8,7 +8,7 @@ import { FeedGroupName } from '../core/feed-group';
 import { NetworkFeedKind, SocialNetworkName } from '../core/social-network';
 import { EntrySocialDto } from './entry-social';
 import { ChapterDto, TranscriptDto } from './episode-detail';
-import { TrendingStoryDto, TrendingUnopened, TrendingWindow } from './trending/trending.models';
+import { TrendingUnopened, TrendingWindow } from './trending/trending.models';
 import { FeedLanguage, FeedLanguageChoice } from './feed-language';
 
 export type {
@@ -305,10 +305,6 @@ export interface EntryDto {
   /** Other copies of this article the reader also subscribes to, in this
    *  list's scope. Set by the API's collapse; empty for a non-duplicated row. */
   duplicates?: EntryDto[];
-  /** Only on a Trending row (#2017); its `duplicates` are then the story's other articles. */
-  story?: Omit<TrendingStoryDto, 'articles' | 'leadEntryId'>;
-  /** Only on a Trending article: the posts sharing it, newest first, each post once (#2229). */
-  shares?: EntryDto[];
   /** Only on a followed story's row (#2272): when it, or the latest copy of it the reader sees, joined the story. */
   joinedAt?: string;
 }
