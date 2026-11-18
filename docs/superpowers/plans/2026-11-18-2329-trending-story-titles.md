@@ -662,6 +662,28 @@ i18n under `settings.stories`:
 
 ---
 
+### Task 12: A story title opens the story's list view; the title is not bold
+
+Added during execution at the user's request (2026-11-18): "when I click on a title, I want to get to the same list view which I get when I click on a followed story in the sidebar", and "the title text should not be bold".
+
+**Files:** find them — the followed-story list view is reached through the `followedStoryId` query param (`frontend/src/app/reader/state/followed-story-visit.ts`, `reader/shell/list-heading.service.ts`, the sidebar's followed-stories component, `reader-api.ts`), served by `GET /api/entries/trending-stories/{id}` (`backend/src/Controller/Api/FollowedStoryEntriesController.php`, `TrendingStoryListQuery`). The title card is `frontend/src/app/reader/trending/story-title/story-title.component.*`.
+
+**Interfaces / behaviour:**
+- The title card becomes a link (a real `<a>` with `routerLink` + the same query params the sidebar uses), so it opens in the same list view, works with middle-click/new tab, and is keyboard-focusable; the card below stays as it is (its own clicks unchanged).
+- The view must work for a story the reader does **not** follow: the entries endpoint and the heading accept any story the reader owns (`TrendingStoryRepository::requireOwnedBy` → 404 for another user's story id, as today for follow). Check what the list view does with follow-only pieces (unfollow action, sidebar highlight, the "opened" visit post): unfollowed stories show the follow action instead of unfollow (reuse `app-story-actions` if it fits), and no sidebar entry is highlighted. If the param name `followedStoryId` no longer fits, rename it to `storyId` everywhere (sidebar links included) — one name, no alias.
+- The heading of that view shows the story title (Task 5 already makes it the story title for followed stories; do the same for unfollowed).
+- Title text weight: regular, not bold — use the regular weight token from `docs/design-language.md`; nothing else in the look changes. Re-render with the scratchpad capture script used for the sign-off (`real.mjs`) and compare against the signed-off renders: only the weight differs.
+
+- [ ] **Step 1: Write the failing tests**
+  - backend: `testTheEntriesOfAnUnfollowedOwnStoryAreListed` (200, the story's entries); `testAnotherUsersStoryIsNotFound` (404).
+  - frontend: story-title renders an `<a>` whose router link + query params equal the sidebar's link for the same story id; clicking it navigates there; the list heading shows the story title for an unfollowed story; the view offers "follow" (not "unfollow") for an unfollowed story.
+- [ ] **Step 2: Run them; they fail.**
+- [ ] **Step 3: Implement.**
+- [ ] **Step 4: Backend tests (SQLite + MySQL for the touched ones), `composer cs/stan/md`, `docker compose exec -T frontend npm run check`, re-render screenshots (desktop + phone, magazine + list) and click the title in a Playwright run against the stubbed page to confirm the list view opens.**
+- [ ] **Step 5: Commit** `feat(#2329): a story title opens the story's list view`
+
+---
+
 ## Open questions (noted, not blocking)
 
 - An LLM title or fallback stays on a story that falls out of the week but is still followed. Nothing rewrites it later. That is accepted.
