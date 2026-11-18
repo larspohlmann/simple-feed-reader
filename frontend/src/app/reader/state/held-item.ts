@@ -17,8 +17,7 @@ export function heldItem(item: ListItem, record: EntryRecord): HeldItem {
   return isStory(item) ? heldStory(item, record) : heldRow(item, record);
 }
 
-/** A plain row is its record itself. What a list sends with a row that belongs to the list, not to the entry, stays
- *  with the list: another list's copy of the row lacks it or differs in it, so a shared record must not carry it. */
+/** What a list sends with a row that belongs to the list, not to the entry, stays with the list: another list's copy of the row lacks it or differs in it, so a shared record must not carry it. */
 function heldRow(row: EntryDto, record: EntryRecord): HeldItem<EntryDto> {
   const {
     duplicates,
@@ -39,7 +38,6 @@ function heldRow(row: EntryDto, record: EntryRecord): HeldItem<EntryDto> {
   const entry = record(own);
   const copies = duplicates?.map((copy) => heldRow(copy, record));
   const ids = [row.id, ...(copies ?? []).flatMap((copy) => copy.ids)];
-  if (copies === undefined && Object.keys(listFields).length === 0) return { item: entry, ids };
   return {
     item: computed(() => {
       const shown: EntryDto = { ...entry(), ...listFields };

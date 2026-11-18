@@ -127,9 +127,8 @@ export class EntryRowCache {
     this.patch(finished.keys(), (entry) => withCompleted(entry, finished.get(entry.id) ?? entry));
   }
 
-  /** Restyle entries as read in place — no request. The caller marks them read
-   *  on the server first (mark-read-batch); this only reflects it in an
-   *  all-items list, where the rows stay visible. */
+  /** Restyles entries as read in every list that holds them, with no request: the caller has marked them read on
+   *  the server. */
   markHiddenLocally(ids: number[]): void {
     this.patch(ids, (entry) => ({ ...entry, isHidden: true }));
   }

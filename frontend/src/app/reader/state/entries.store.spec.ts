@@ -16,7 +16,7 @@ import { TokenStore } from '../../core/auth/token.store';
 import { EntriesStore } from './entries.store';
 import { EntryRowCache } from './entry-row-cache';
 import { LandedList } from './landed-list';
-import { EntryDto } from '../models';
+import { EntryDetailDto, EntryDto } from '../models';
 import { VoteValue } from '../vote-pill/vote';
 import { CompletedEntryDto } from './completed-entry';
 import { markTerms } from '../../shared/marked-text/search-marks';
@@ -797,6 +797,18 @@ describe('EntriesStore', () => {
     it('finds it by id without showing it in the list', () => {
       expect(store.entry(9)?.id).toBe(9);
       expect(store.entries().map((listed) => listed.id)).toEqual([1]);
+    });
+
+    it('keeps the body of a detail copy out of the row it holds', () => {
+      store.holdUnlisted({
+        ...entry(9),
+        contentHtml: '<p>Body</p>',
+        chapters: null,
+        transcript: null,
+      } as EntryDetailDto);
+
+      expect(store.entry(9)).not.toHaveProperty('contentHtml');
+      expect(rows.entry(9)).not.toHaveProperty('contentHtml');
     });
 
     it('prefers the listed row once the list holds the same entry', () => {

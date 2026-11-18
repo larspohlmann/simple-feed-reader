@@ -5,23 +5,20 @@ import { wireTimestamp } from '../../core/wire-timestamp';
 import { accountSignal, onIdentityChange } from '../../core/auth/session-identity';
 import { ReaderApi } from '../reader-api';
 import { TrendingApi } from '../trending/trending-api';
-import { EntryDto, EntryQuery, EntryStatePatch } from '../models';
+import { EntryDetailDto, EntryDto, EntryQuery, EntryStatePatch } from '../models';
 import { ExclusionSurface, SURFACE_DESCRIPTOR } from '../feed-exclusions';
 import { articlesOf } from './list-item';
 import { TrendingStoryDto } from '../trending/trending.models';
 import { RetryableFailure } from './retryable-failure';
 import { LandedList } from './landed-list';
 import { MatchedWords } from './matched-words';
-import { EntryRowCache } from './entry-row-cache';
+import { EntryRowCache, RowSaveOutcome } from './entry-row-cache';
 import { HeldItem } from './held-item';
 
-/** A failed state change has already rolled its row back when `onFailed` runs. */
-export interface StateSaveOutcome {
-  /** Runs as each attempt starts, a retry's included. */
-  readonly onStarted?: () => void;
-  readonly onSaved?: () => void;
+/** `RowSaveOutcome` for a caller the list's banner tells what failed. */
+export type StateSaveOutcome = Omit<RowSaveOutcome, 'onFailed'> & {
   readonly onFailed?: () => void;
-}
+};
 
 /** One list (#2329): what it lists, its order, its paging and its banner. Its rows live in `EntryRowCache`, so a
  *  change to one shows in every list that holds it. */
@@ -163,7 +160,7 @@ export class EntriesStore {
   }
 
   holdUnlisted(entry: EntryDto): void {
-    this.keep(this.heldItems(), this.rows.cached([entry])[0]);
+    this.keep(this.heldItems(), this.rows.cached([listRowOf(entry)])[0]);
   }
 
   releaseUnlisted(): void {
@@ -234,4 +231,14 @@ export class EntriesStore {
     const held = unlisted ? [...items, unlisted] : items;
     this.rows.hold(this, new Set(held.flatMap((item) => item.ids)));
   }
+}
+
+/** The list row a detail copy holds: an entry's record is shared, so it never carries the body. */
+function listRowOf(entry: EntryDto): EntryDto {
+  if (!('contentHtml' in entry)) return entry;
+  const row: Partial<EntryDetailDto> = { ...(entry as EntryDetailDto) };
+  delete row.contentHtml;
+  delete row.chapters;
+  delete row.transcript;
+  return row as EntryDto;
 }
