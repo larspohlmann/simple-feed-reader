@@ -51,4 +51,11 @@ final class ApiProblemTest extends TestCase
             'instance' => 'lemmy.world',
         ], $problem->toArray());
     }
+
+    public function testStandardMembersWinOverExtensions(): void
+    {
+        $problem = new ApiProblem('t', 'Title', 502, extensions: ['status' => 'x', 'type' => 'y']);
+
+        self::assertSame(['type' => 't', 'title' => 'Title', 'status' => 502], $problem->toArray());
+    }
 }
