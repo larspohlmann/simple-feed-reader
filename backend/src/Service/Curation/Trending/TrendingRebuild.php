@@ -8,6 +8,7 @@ use App\Enum\TrendingWindow;
 use App\Repository\TrendingEntryRepository;
 use App\Repository\TrendingSnapshotRepository;
 use App\Repository\UserRepository;
+use App\Service\Curation\StoryAi\StoryAiSweep;
 use App\Service\Curation\Trending\Exception\TrendingBuildBusyException;
 use App\Service\Curation\Trending\Model\DueTrendingBuildModel;
 use App\Service\Curation\Trending\Model\TrendingBuildReportModel;
@@ -21,14 +22,13 @@ use Doctrine\Persistence\ManagerRegistry;
 use Psr\Log\LoggerInterface;
 
 /**
- * Rebuilds, for every reader active in the last ACTIVE_DAYS, each window whose snapshot is missing or as old as its
- * interval and whose feeds have news since, stalest first across readers; the worker and the tick call it.
+ * Rebuilds, for every reader active in the last StoryAiSweep::ACTIVE_DAYS, each window whose snapshot is missing or
+ * as old as its interval and whose feeds have news since, stalest first across readers; the worker and the tick call
+ * it.
  * A build that finds another running, or loses a lock wait or a deadlock, is skipped and stays due for the next sweep.
  */
 final readonly class TrendingRebuild
 {
-    public const int ACTIVE_DAYS = 14;
-
     public function __construct(
         private SnapshotBuilderInterface $builder,
         private TrendingSnapshotRepository $snapshots,
@@ -77,7 +77,7 @@ final readonly class TrendingRebuild
     /** @return list<DueTrendingBuildModel> */
     private function dueStalestFirst(): array
     {
-        $since = $this->clock->now()->modify(\sprintf('-%d days', self::ACTIVE_DAYS));
+        $since = $this->clock->now()->modify(\sprintf('-%d days', StoryAiSweep::ACTIVE_DAYS));
         $due = [];
         foreach ($this->users->trendingReaderIdsLoggedInSince($since) as $userId) {
             $lastBuilds = $this->snapshots->lastBuilds($userId);

@@ -14,8 +14,8 @@ use App\Service\Foundation\Clock\NaiveUtcClock;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /**
- * Runs every story AI task over the due stories of each reader active in the last ACTIVE_DAYS, the same span as
- * TrendingRebuild's, which this module cannot name. A rate limit stops that reader until the next sweep.
+ * Runs every story AI task over the due stories of each reader active in the last ACTIVE_DAYS, the span
+ * TrendingRebuild reads too. A rate limit stops that reader until the next sweep.
  */
 final readonly class StoryAiSweep
 {
