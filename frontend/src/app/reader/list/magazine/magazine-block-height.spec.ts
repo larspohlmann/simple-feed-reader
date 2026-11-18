@@ -46,7 +46,7 @@ describe('blockHeight', () => {
     expect(blockHeight('link', anEntry(), sharedBy(1))).toBe(
       BLOCK_HEIGHT.link + STORY_SHARERS_ROW.height,
     );
-    expect(blockHeight('link', anEntry(), sharedBy(4))).toBe(
+    expect(blockHeight('link', anEntry(), sharedBy(5))).toBe(
       BLOCK_HEIGHT.link + 2 * STORY_SHARERS_ROW.height + STORY_SHARERS_ROW.gap,
     );
     expect(blockHeight('link', anEntry(), sharedBy(0))).toBe(BLOCK_HEIGHT.link);
