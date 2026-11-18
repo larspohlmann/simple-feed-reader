@@ -37,6 +37,16 @@ button.arrow {
     outline: var(--focus-ring);
     outline-offset: calc(-1 * var(--space-0));
   }
+
+  @media (pointer: coarse) {
+    position: relative;
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: calc((100% - var(--tap-target)) / 2) 0;
+    }
+  }
 }
 
 @media (hover: hover) {
