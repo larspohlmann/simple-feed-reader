@@ -37,7 +37,7 @@ final readonly class TrendingJson
      *     articles: list<array<string, mixed>>,
      * }
      */
-    public function story(TrendingStoryCardModel $card): array
+    private function story(TrendingStoryCardModel $card): array
     {
         $articles = $card->articles;
 
@@ -56,7 +56,7 @@ final readonly class TrendingJson
     private function article(StoryArticleModel $article): array
     {
         return [
-            ...array_diff_key($this->entryJson->listRow($article->row), ['duplicates' => true]),
+            ...$this->entryJson->listRow($article->row),
             'shares' => array_map($this->entryJson->listRow(...), $article->shares),
         ];
     }

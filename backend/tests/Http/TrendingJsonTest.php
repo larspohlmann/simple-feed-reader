@@ -6,6 +6,7 @@ namespace App\Tests\Http;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Enum\TrendingWindow;
 use App\Http\TrendingJson;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowMarks;
@@ -13,6 +14,7 @@ use App\Repository\EntryListRowSubscription;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\StoryArticleModel;
 use App\Service\Curation\Trending\Model\StoryArticlesModel;
+use App\Service\Curation\Trending\Model\TrendingPageModel;
 use App\Service\Curation\Trending\Model\TrendingStoryCardModel;
 use App\Tests\Support\JsonMappers;
 use PHPUnit\Framework\TestCase;
@@ -31,7 +33,9 @@ final class TrendingJsonTest extends TestCase
             true,
         );
 
-        $story = (new TrendingJson(JsonMappers::entryJson()))->story($card);
+        $page = (new TrendingJson(JsonMappers::entryJson()))
+            ->page(new TrendingPageModel(TrendingWindow::Day, null, [$card]));
+        $story = $page['stories'][0];
 
         self::assertSame(12, $story['id']);
         self::assertSame(4, $story['outletCount']);
@@ -39,14 +43,37 @@ final class TrendingJsonTest extends TestCase
         self::assertSame(3, $story['shareCount']);
         self::assertTrue($story['followed']);
         self::assertSame(501, $story['leadEntryId']);
-        self::assertSame([501, 502, 503], array_column($story['articles'], 'id'));
-        $shares = $story['articles'][0]['shares'];
+        $articles = $story['articles'];
+        self::assertIsList($articles);
+        self::assertSame([501, 502, 503], array_column($articles, 'id'));
+        self::assertIsArray($articles[0]);
+        $shares = $articles[0]['shares'];
         self::assertIsArray($shares);
         self::assertSame([601, 602], array_column($shares, 'id'));
-        foreach ($story['articles'] as $article) {
-            self::assertArrayNotHasKey('duplicates', $article);
-            self::assertArrayNotHasKey('story', $article);
-        }
+    }
+
+    public function testEveryArticleAndShareKeepsTheEntryRowShape(): void
+    {
+        $card = new TrendingStoryCardModel(
+            new StoryArticlesModel(new StoryArticleModel($this->row(501), [$this->row(601)]), []),
+            new RankedStoryModel(12, 2, new \DateTimeImmutable('2031-05-14 10:00:00')),
+            false,
+            false,
+        );
+        $entryRow = array_keys(JsonMappers::entryJson()->listRow($this->row(700)));
+
+        $page = (new TrendingJson(JsonMappers::entryJson()))
+            ->page(new TrendingPageModel(TrendingWindow::Day, null, [$card]));
+
+        $articles = $page['stories'][0]['articles'];
+        self::assertIsList($articles);
+        $article = $articles[0];
+        self::assertIsArray($article);
+        self::assertSame([...$entryRow, 'shares'], array_keys($article));
+        $shares = $article['shares'];
+        self::assertIsArray($shares);
+        self::assertIsArray($shares[0]);
+        self::assertSame($entryRow, array_keys($shares[0]));
     }
 
     private function row(int $id): EntryListRow
