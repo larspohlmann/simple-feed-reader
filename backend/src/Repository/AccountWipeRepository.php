@@ -31,8 +31,10 @@ use Doctrine\ORM\EntityManagerInterface;
 /** Bulk DELETEs of everything a user owns; they bypass the identity map, so the caller must clear() it. */
 final readonly class AccountWipeRepository
 {
-    public function __construct(private EntityManagerInterface $entityManager)
-    {
+    public function __construct(
+        private EntityManagerInterface $entityManager,
+        private RecommendationRunLogRepository $logs,
+    ) {
     }
 
     public function deleteRecommendationData(User $user): void
@@ -45,11 +47,7 @@ final readonly class AccountWipeRepository
                 RecommendationRun::class,
             ))->setParameter('user', $user)->execute();
         }
-        $this->entityManager->createQuery(sprintf(
-            'DELETE FROM %s c WHERE IDENTITY(c.storyAiRun) IN (SELECT r.id FROM %s r WHERE r.user = :user)',
-            RecommendationRunLog::class,
-            StoryAiRun::class,
-        ))->setParameter('user', $user)->execute();
+        $this->logs->deleteForUserOutsideStoryAiRuns($user, []);
         $this->deleteByUser(RecommendationRun::class, $user);
         $this->deleteByUser(StoryAiRun::class, $user);
         $this->deleteByUser(ProfileRun::class, $user);

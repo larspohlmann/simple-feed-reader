@@ -30,6 +30,7 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
 {
     private const string OWNER_RUN = 'run';
     private const string OWNER_PROFILE_RUN = 'profileRun';
+    private const string OWNER_STORY_AI_RUN = 'storyAiRun';
 
     public function __construct(ManagerRegistry $registry, private readonly RowIds $rowIds)
     {
@@ -208,15 +209,9 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
         return $log ?? throw new RecordNotFoundException('No such debug log entry.');
     }
 
-    /** The account's recommendation-run rows; profile-run rows are not this purge's. */
-    public function deleteForUser(User $user): void
-    {
-        $this->rowIds->delete(RecommendationRunLog::class, $this->idsForUser($user, self::OWNER_RUN, []));
-    }
-
     /**
-     * Drops every log row of the account except those of the named runs, the retention window at the start of a run.
-     * An empty keep list is a full wipe, which is what deleteForUser() asks for.
+     * Drops the account's recommendation-run rows except those of the named runs, the retention window at the start
+     * of a run; an empty keep list drops them all. Profile and story AI run rows stay.
      *
      * @param list<int> $keptRunIds
      */
@@ -235,6 +230,19 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
         $this->rowIds->delete(
             RecommendationRunLog::class,
             $this->idsForUser($user, self::OWNER_PROFILE_RUN, $keptProfileRunIds),
+        );
+    }
+
+    /**
+     * Drops the account's story AI run rows except those of the named runs; an empty keep list drops them all.
+     *
+     * @param list<int> $keptStoryAiRunIds
+     */
+    public function deleteForUserOutsideStoryAiRuns(User $user, array $keptStoryAiRunIds): void
+    {
+        $this->rowIds->delete(
+            RecommendationRunLog::class,
+            $this->idsForUser($user, self::OWNER_STORY_AI_RUN, $keptStoryAiRunIds),
         );
     }
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Curation\StoryAi;
 
 use App\Entity\StoryAiRun;
+use App\Repository\RecommendationRunLogRepository;
 use App\Repository\StoryAiRunRepository;
 use App\Service\Curation\Recommendation\Run\Support\RunLogRetention;
 use App\Service\Curation\StoryAi\Pass\StoryAiPass;
@@ -16,6 +17,7 @@ final readonly class StoryAiRuns
 {
     public function __construct(
         private StoryAiRunRepository $storyAiRuns,
+        private RecommendationRunLogRepository $logs,
         private EntityManagerInterface $entityManager,
         private NaiveUtcClock $clock,
     ) {
@@ -33,7 +35,10 @@ final readonly class StoryAiRuns
         $this->entityManager->persist($run);
         $this->entityManager->flush();
         $pass->billTo($run);
-        $this->storyAiRuns->trimLogsToNewest($pass->user, RunLogRetention::RUNS);
+        $this->logs->deleteForUserOutsideStoryAiRuns(
+            $pass->user,
+            $this->storyAiRuns->findNewestIdsForUser($pass->user, RunLogRetention::RUNS),
+        );
 
         return $run;
     }
