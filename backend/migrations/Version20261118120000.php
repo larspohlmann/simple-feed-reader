@@ -61,7 +61,10 @@ final class Version20261118120000 extends AbstractMigration
         $this->downSqlite();
     }
 
-    /** MySQL commits each DDL statement, so up checks what a failed earlier run left done. */
+    /**
+     * MySQL commits each DDL statement, so a wrapping transaction protects nothing. A MySQL run that fails midway needs
+     * manual repair: up skips as soon as trending_story has user_id, whatever else is still missing.
+     */
     public function isTransactional(): bool
     {
         return false;
