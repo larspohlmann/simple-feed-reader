@@ -85,7 +85,7 @@ final class TrendingInclusionTest extends DbTestCase
         ));
     }
 
-    public function testAnEarlierCopyInASwitchedOutFeedLeavesTheLaterCopyCounted(): void
+    public function testOnlyTheLowestIdCopyCountsEvenWhenItsFeedWasSwitchedOutAfterTheBuild(): void
     {
         [$alpha, $beta, $gamma, $delta] = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta');
         $shared = 'https://news.example.com/switched-out-first';

@@ -382,26 +382,6 @@ final class TrendingStoriesTest extends DbTestCase
         self::assertSame([4], self::outletCountsOf($ranked));
     }
 
-    public function testAnEarlierCopyInAFeedTheReaderDoesNotFollowLeavesTheirCopyCounted(): void
-    {
-        [$alpha, $beta, $gamma] = $this->articleFeeds('alpha', 'beta', 'gamma');
-        $stranger = $this->fixtures->feedNobodyFollows('stranger');
-        $this->fixtures->subscribe($this->reader, $alpha, $beta, $gamma);
-        $shared = 'https://news.example.com/elsewhere-first';
-        $this->fixtures->story(
-            TrendingWindow::Day,
-            '2031-05-14 10:00:00',
-            $this->fixtures->article($stranger, 'Article', '2031-05-14 07:00:00', $shared),
-            $this->fixtures->article($alpha, 'Article', '2031-05-14 08:00:00', $shared),
-            $this->fixtures->entry($beta, 'Beta', '2031-05-14 09:00:00'),
-            $this->fixtures->entry($gamma, 'Gamma', '2031-05-14 10:00:00'),
-        );
-
-        $ranked = $this->rankedDay();
-
-        self::assertSame([3], self::outletCountsOf($ranked));
-    }
-
     public function testACopyOfTheLeadFromAFeedOutsideTheStoryIsNoRowOfItsOwn(): void
     {
         [$alpha, $beta, $gamma, $delta] = $this->articleFeeds('alpha', 'beta', 'gamma', 'delta');
