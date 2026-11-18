@@ -15,7 +15,14 @@ final readonly class StoryAssignmentModel
         public ?int $storyId,
         public array $storedEntryIds,
         public array $claimedEntryIds = [],
+        public ?FallbackTitleModel $fallbackTitle = null,
     ) {
+    }
+
+    #[\NoDiscard]
+    public function titled(FallbackTitleModel $title): self
+    {
+        return clone($this, ['fallbackTitle' => $title]);
     }
 
     /** @param list<int> $claimedEntryIds */

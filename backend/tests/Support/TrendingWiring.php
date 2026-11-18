@@ -14,10 +14,13 @@ use App\Repository\TrendingStoryHistoryRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Curation\Trending\CardLanguage;
 use App\Service\Curation\Trending\Factory\SnowballStemmerFactory;
+use App\Service\Curation\Trending\FallbackChoice;
+use App\Service\Curation\Trending\FallbackTitles;
 use App\Service\Curation\Trending\GermanCompoundSplitter;
 use App\Service\Curation\Trending\GermanLexicon\BundledGermanLexicon;
 use App\Service\Curation\Trending\HeadlineEquivalents;
 use App\Service\Curation\Trending\HeadlineFiller;
+use App\Service\Curation\Trending\HeadlineMarkers;
 use App\Service\Curation\Trending\HeadlineStemmer;
 use App\Service\Curation\Trending\SnapshotBuilder\TrendingSnapshotBuilder;
 use App\Service\Curation\Trending\StoryGrouping;
@@ -76,14 +79,25 @@ final class TrendingWiring
     public static function policies(EntityManagerInterface $entityManager): ContainerInterface
     {
         $matching = new StoryMatching();
+        $fallbackTitles = self::fallbackTitles($entityManager);
 
         return new ServiceLocator([
-            'day' => static fn (): DayStoryBuildPolicy => new DayStoryBuildPolicy($matching),
+            'day' => static fn (): DayStoryBuildPolicy => new DayStoryBuildPolicy($matching, $fallbackTitles),
             'week' => static fn (): WeekStoryBuildPolicy => new WeekStoryBuildPolicy(
                 $matching,
                 new TrendingStoryHistoryRepository($entityManager),
+                $fallbackTitles,
             ),
         ]);
+    }
+
+    public static function fallbackTitles(EntityManagerInterface $entityManager): FallbackTitles
+    {
+        return new FallbackTitles(
+            new TrendingEntryRepository($entityManager),
+            new HeadlineMarkers(),
+            new FallbackChoice(),
+        );
     }
 
     public static function grouping(EntityManagerInterface $entityManager, ClockInterface $clock): TrendingGrouping

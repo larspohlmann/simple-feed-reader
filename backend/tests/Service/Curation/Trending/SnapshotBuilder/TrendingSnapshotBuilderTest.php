@@ -6,9 +6,11 @@ namespace App\Tests\Service\Curation\Trending\SnapshotBuilder;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\LinkCardContent;
 use App\Entity\TrendingSnapshot;
 use App\Entity\TrendingStory;
 use App\Entity\TrendingStoryFollow;
+use App\Enum\FeedLanguage;
 use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
 use App\Repository\TrendingEntryRepository;
@@ -25,6 +27,7 @@ use App\Service\Curation\Trending\Model\StoryBuildModel;
 use App\Service\Curation\Trending\Model\StoryMemberModel;
 use App\Service\Curation\Trending\Model\TrendingStoryModel;
 use App\Service\Curation\Trending\ReaderWindows;
+use App\Service\Curation\Trending\Support\CentroidScores;
 use App\Service\Curation\Trending\TrendingStoryFollowing;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Curation\Trending\SnapshotBuilder\TrendingSnapshotBuilder;
@@ -781,6 +784,141 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         self::assertSame([$followed->requireId()], $this->storyIds());
     }
 
+    public function testAStoryIsTitledByItsRepresentativeCleanedHeadline(): void
+    {
+        [$representative, $second, $third] = $this->portStrike();
+
+        $scores = $this->weekScores();
+        self::assertGreaterThan($scores[$second->requireId()], $scores[$representative->requireId()]);
+        self::assertGreaterThan($scores[$third->requireId()], $scores[$representative->requireId()]);
+        $this->builder()->build($this->ownerId(), TrendingWindow::Week);
+
+        self::assertSame([['Hafenstreik legt Hamburg lahm', $representative->requireId()]], $this->fallbacks());
+    }
+
+    public function testTheMajorityLanguageDecidesTheCandidates(): void
+    {
+        $german = [
+            $this->outletArticle(
+                $this->outlet('alpha', FeedLanguage::German),
+                'Hafenstreik legt Hamburg',
+                '2031-05-14 08:00:00',
+            ),
+            $this->outletArticle(
+                $this->outlet('beta', FeedLanguage::German),
+                'Hamburg lahm: Hafenstreik',
+                '2031-05-14 09:00:00',
+            ),
+        ];
+        $english = $this->outletArticle(
+            $this->outlet('gamma', FeedLanguage::English),
+            'Hafenstreik legt Hamburg lahm',
+            '2031-05-14 10:00:00',
+        );
+
+        $scores = $this->weekScores();
+        arsort($scores);
+        self::assertSame($english->requireId(), array_key_first($scores));
+        $this->builder()->build($this->ownerId(), TrendingWindow::Week);
+
+        $fallbacks = $this->fallbacks();
+        self::assertCount(1, $fallbacks);
+        $germanIds = array_map(static fn (Entry $entry): int => $entry->requireId(), $german);
+        self::assertContains($fallbacks[0][1], $germanIds);
+    }
+
+    public function testAStoryOfPostsIsTitledByItsCard(): void
+    {
+        foreach (['ann', 'ben'] as $index => $handle) {
+            $this->post($handle, \sprintf('2031-05-14 %02d:00:00', 8 + $index), self::sharedTwice(), $handle . '/1');
+        }
+        foreach (['cat', 'dan', 'eve'] as $index => $handle) {
+            $this->post($handle, \sprintf('2031-05-14 %02d:00:00', 10 + $index), self::copiedThrice(), 'cat/2');
+        }
+        $this->fixtures->flush();
+
+        $this->builder()->build($this->ownerId(), TrendingWindow::Week);
+
+        self::assertSame([[self::sharedTwice()->title, null]], $this->fallbacks());
+    }
+
+    public function testTheWeekBuildKeepsASteadyFallback(): void
+    {
+        [$representative] = $this->portStrike();
+        $this->builder()->build($this->ownerId(), TrendingWindow::Week);
+        $newcomer = $this->outletArticle(
+            $this->outlet('delta', FeedLanguage::German),
+            'Hafenstreik legt Hamburgs Terminals lahm',
+            '2031-05-14 11:00:00',
+        );
+
+        $scores = $this->weekScores();
+        self::assertGreaterThan($scores[$representative->requireId()], $scores[$newcomer->requireId()]);
+        self::assertLessThanOrEqual(1.25 * $scores[$representative->requireId()], $scores[$newcomer->requireId()]);
+        $this->builder()->build($this->ownerId(), TrendingWindow::Week);
+
+        self::assertSame($representative->requireId(), $this->fallbacks()[0][1]);
+    }
+
+    public function testTheWeekBuildReplacesAFallbackThatFellBehind(): void
+    {
+        [$representative] = $this->portStrike();
+        $this->builder()->build($this->ownerId(), TrendingWindow::Week);
+        $newcomer = $this->outletArticle(
+            $this->outlet('delta', FeedLanguage::German),
+            'Hafenstreik in Hamburg: Streik legt Terminals lahm, Containerschiffe warten auf Reede',
+            '2031-05-14 11:00:00',
+        );
+        $this->outletArticle(
+            $this->outlet('epsilon', FeedLanguage::German),
+            'Containerschiffe warten auf Reede vor Hamburg',
+            '2031-05-14 11:30:00',
+        );
+
+        $scores = $this->weekScores();
+        self::assertGreaterThan(1.25 * $scores[$representative->requireId()], $scores[$newcomer->requireId()]);
+        $this->builder()->build($this->ownerId(), TrendingWindow::Week);
+
+        self::assertSame($newcomer->requireId(), $this->fallbacks()[0][1]);
+    }
+
+    public function testTheDayBuildKeepsAFallbackTheWeekChose(): void
+    {
+        $beforeTheDay = $this->outletArticle(
+            $this->outlet('alpha', FeedLanguage::German),
+            'Hafenstreik legt Hamburg Terminals lahm',
+            '2031-05-13 10:00:00',
+        );
+        $this->outletArticle(
+            $this->outlet('beta', FeedLanguage::German),
+            'Hafenstreik legt Hamburg lahm',
+            '2031-05-14 09:00:00',
+        );
+        $this->outletArticle(
+            $this->outlet('gamma', FeedLanguage::German),
+            'Hafenstreik in Hamburg: Terminals lahm',
+            '2031-05-14 10:00:00',
+        );
+        $this->builder()->build($this->ownerId(), TrendingWindow::Week);
+        $weekFallbacks = $this->fallbacks();
+
+        $this->builder()->build($this->ownerId(), TrendingWindow::Day);
+
+        self::assertSame($beforeTheDay->requireId(), $weekFallbacks[0][1]);
+        self::assertSame($weekFallbacks, $this->fallbacks());
+    }
+
+    public function testTheDayBuildTitlesANewStory(): void
+    {
+        $this->portStrike();
+
+        $this->builder()->build($this->ownerId(), TrendingWindow::Day);
+
+        $fallbacks = $this->fallbacks();
+        self::assertCount(1, $fallbacks);
+        self::assertNotNull($fallbacks[0][0]);
+    }
+
     private function failingToStartTheTransaction(): EntityManagerInterface
     {
         return new class ($this->entityManager) extends EntityManagerDecorator {
@@ -962,6 +1100,113 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         return new ReaderWindows(
             $this->entityManager->getRepository(TrendingSnapshot::class),
             $stories,
+        );
+    }
+
+    /**
+     * The representative shares three terms with each other member, which share two: it wins on score while being the
+     * oldest, so a tie decided by time would pick another.
+     *
+     * @return array{Entry, Entry, Entry}
+     */
+    private function portStrike(): array
+    {
+        return [
+            $this->outletArticle(
+                $this->outlet('alpha', FeedLanguage::German, 'DER SPIEGEL'),
+                'Hafenstreik legt Hamburg lahm – Spiegel',
+                '2031-05-14 08:00:00',
+            ),
+            $this->outletArticle(
+                $this->outlet('beta', FeedLanguage::German),
+                'Hafenstreik in Hamburg: Terminals lahm',
+                '2031-05-14 09:00:00',
+            ),
+            $this->outletArticle(
+                $this->outlet('gamma', FeedLanguage::German),
+                'Streik legt Hamburg lahm',
+                '2031-05-14 10:00:00',
+            ),
+        ];
+    }
+
+    private function outlet(string $name, FeedLanguage $language, ?string $title = null): Feed
+    {
+        $feed = $this->fixtures->feed($name);
+        $feed->recordTraits($feed->getTraits()->withLanguage($language));
+        $feed->setTitle($title);
+
+        return $feed;
+    }
+
+    private function outletArticle(Feed $feed, string $title, string $effectiveDate): Entry
+    {
+        $entry = $this->fixtures->article(
+            $feed,
+            $title,
+            $effectiveDate,
+            $feed->getUrl() . '/' . md5($title),
+        );
+        $this->fixtures->flush();
+
+        return $entry;
+    }
+
+    private function post(string $handle, string $effectiveDate, LinkCardContent $card, string $postPath): void
+    {
+        $this->fixtures->postCarrying(
+            $this->fixtures->feed($handle, SocialNetwork::Mastodon),
+            'Hafenstreik legt Hamburg lahm',
+            $effectiveDate,
+            $card,
+            'https://mastodon.example.com/@' . $postPath,
+        );
+    }
+
+    private static function sharedTwice(): LinkCardContent
+    {
+        return new LinkCardContent(
+            'https://news.example.com/hafen',
+            'Hafenstreik: Hamburg steht still',
+            null,
+            null,
+            'news.example.com',
+        );
+    }
+
+    private static function copiedThrice(): LinkCardContent
+    {
+        return new LinkCardContent(
+            'https://other.example.com/streik',
+            'Hamburg im Streik',
+            null,
+            null,
+            'other.example.com',
+        );
+    }
+
+    /** @return array<int, float> the Centroid score of every member of the week's one story */
+    private function weekScores(): array
+    {
+        $grouping = TrendingWiring::grouping($this->entityManager, $this->clock);
+        $run = $grouping->collect($this->ownerId(), TrendingWindow::Week);
+        $stories = $grouping->stories($run);
+        self::assertCount(1, $stories);
+
+        return CentroidScores::of($run->headlines, $stories[0]->entryIds());
+    }
+
+    /** @return list<array{?string, ?int}> every story's fallback title and entry */
+    private function fallbacks(): array
+    {
+        return array_map(
+            static fn (array $row): array => [
+                \is_string($row['fallback_title']) ? $row['fallback_title'] : null,
+                is_numeric($row['fallback_entry_id']) ? (int) $row['fallback_entry_id'] : null,
+            ],
+            $this->entityManager->getConnection()->fetchAllAssociative(
+                'SELECT fallback_title, fallback_entry_id FROM trending_story ORDER BY id',
+            ),
         );
     }
 
