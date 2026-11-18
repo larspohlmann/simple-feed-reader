@@ -36,21 +36,27 @@ final readonly class EntryLemmyPostWriter
             $pairs,
         ));
         foreach ($pairs as [$entry, $parsed]) {
-            $this->write($entry, $parsed, $stored[$entry->requireId()] ?? null);
+            $entryId = $entry->requireId();
+            $post = $this->write($entry, $parsed, $stored[$entryId] ?? null);
+            if ($post !== null) {
+                $stored[$entryId] = $post;
+            }
         }
     }
 
-    private function write(Entry $entry, ParsedEntryModel $parsed, ?EntryLemmyPost $stored): void
+    private function write(Entry $entry, ParsedEntryModel $parsed, ?EntryLemmyPost $stored): ?EntryLemmyPost
     {
         $community = self::storable($parsed->community);
         if ($community === null && $parsed->discussionCounts->score === null) {
-            return;
+            return $stored;
         }
         $post = $stored ?? $this->created($entry);
         $post->recordScore($parsed->discussionCounts->score);
         if ($community !== null) {
             $post->placeIn($community);
         }
+
+        return $post;
     }
 
     private function created(Entry $entry): EntryLemmyPost

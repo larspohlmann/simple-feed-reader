@@ -92,6 +92,11 @@ final class RefreshStoredEntriesTest extends DbTestCase
         return $entry;
     }
 
+    private function lemmyPostRow(Entry $entry): ?EntryLemmyPost
+    {
+        return $this->entityManager->getRepository(EntryLemmyPost::class)->findOneBy(['entry' => $entry]);
+    }
+
     private function parsedEntry(string $guid, ?DeclaredImageModel $image): ParsedEntryModel
     {
         return new ParsedEntryModel(
@@ -249,11 +254,6 @@ final class RefreshStoredEntriesTest extends DbTestCase
         self::assertSame(1, $entry->getCommentCount());
     }
 
-    private function lemmyPostRow(Entry $entry): ?EntryLemmyPost
-    {
-        return $this->entityManager->getRepository(EntryLemmyPost::class)->findOneBy(['entry' => $entry]);
-    }
-
     public function testARefreshUpdatesTheStoredScore(): void
     {
         $feed = $this->feed();
@@ -291,5 +291,21 @@ final class RefreshStoredEntriesTest extends DbTestCase
         $created = $this->lemmyPostRow($entry);
         self::assertSame(4, $created?->getScore());
         self::assertSame('politics@lemmy.world', $created->getCommunity()?->identity);
+    }
+
+    public function testAPostListedTwiceInOneParseGetsOneRow(): void
+    {
+        $feed = $this->feed();
+        $entry = $this->storedPost($feed);
+        $row = $this->lemmyPostRow($entry);
+        self::assertNotNull($row);
+        $this->entityManager->remove($row);
+        $this->entityManager->flush();
+        $once = self::lemmyPost('4 points | <a href="' . self::POST . '">2 comments</a>')->entries[0];
+
+        $this->refresher()->refreshStoredEntries($feed, new ParsedFeedModel('T', null, null, null, [$once, $once]));
+        $this->entityManager->flush();
+
+        self::assertCount(1, $this->entityManager->getRepository(EntryLemmyPost::class)->findAll());
     }
 }

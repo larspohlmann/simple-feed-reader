@@ -17,7 +17,7 @@ final class LemmyCommunityLink
     {
         $httpsHref = AbsoluteHttpUrl::httpsOrNull($href);
         $host = null === $httpsHref ? null : UrlOrigin::hostWithPort($httpsHref);
-        $path = (string) parse_url($href, \PHP_URL_PATH);
+        $path = null === $httpsHref ? '' : (string) parse_url($httpsHref, \PHP_URL_PATH);
         if (null === $host || preg_match(self::COMMUNITY_PATH, $path, $matches) !== 1) {
             return null;
         }
