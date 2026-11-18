@@ -376,9 +376,9 @@ final class TrendingStoryFollowControllerTest extends ApiTestCase
         self::assertSame(['Newer post'], array_column($this->followedStories(), 'headline'));
     }
 
-    public function testUnsubscribingLeavesAFollowedStoryAsItWasBuilt(): void
+    public function testAFeedUnsubscribedFromNeitherCountsAsNewNorHeadsAFollowedStory(): void
     {
-        $reader = $this->signInAsOwner('follow-unseen@example.com');
+        $reader = $this->signInAsOwner('follow-unsubscribed@example.com');
         [$alpha, $beta, $gamma] = $this->followedFeeds($reader);
         $story = $this->storyOf($alpha, $beta);
         $this->follow($story);
@@ -388,13 +388,31 @@ final class TrendingStoryFollowControllerTest extends ApiTestCase
             $this->fixtures->entry($gamma, 'Gamma joins', '2031-05-14 11:00:00'),
         );
 
+        $this->entityManager()->getConnection()->executeStatement(
+            'DELETE FROM subscription WHERE user_id = ? AND feed_id = ?',
+            [$reader->requireId(), $gamma->requireId()],
+        );
+
+        $stories = $this->followedStories();
+        self::assertSame([$story->requireId()], array_column($stories, 'id'));
+        self::assertSame(['Second'], array_column($stories, 'headline'));
+        self::assertSame([0], array_column($stories, 'newCount'));
+    }
+
+    public function testAFollowedStoryWithNoSubscribedFeedLeftStaysListedWithoutAHeadline(): void
+    {
+        $reader = $this->signInAsOwner('follow-none-subscribed@example.com');
+        [$alpha, $beta] = $this->followedFeeds($reader);
+        $story = $this->storyOf($alpha, $beta);
+        $this->follow($story);
+
         $this->entityManager()->getConnection()
             ->executeStatement('DELETE FROM subscription WHERE user_id = ?', [$reader->requireId()]);
 
         $stories = $this->followedStories();
         self::assertSame([$story->requireId()], array_column($stories, 'id'));
-        self::assertSame(['Gamma joins'], array_column($stories, 'headline'));
-        self::assertSame([1], array_column($stories, 'newCount'));
+        self::assertSame([null], array_column($stories, 'headline'));
+        self::assertSame([0], array_column($stories, 'newCount'));
     }
 
     public function testOtherReadersFollowsAreTheirOwn(): void

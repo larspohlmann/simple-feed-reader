@@ -127,20 +127,21 @@ final class TrendingStoryFollowRepository extends ServiceEntityRepository
         );
     }
 
-    /** The newest member from an article feed, else the newest member of any feed. */
+    /** The newest member from a subscribed article feed, else the newest member of any subscribed feed. */
     private static function headline(): string
     {
         return '(SELECT headline_entry.title FROM trending_story_entry headline_member'
             . ' JOIN entry headline_entry ON headline_entry.id = headline_member.entry_id'
             . ' JOIN feed headline_feed ON headline_feed.id = headline_member.feed_id'
+            . ' ' . self::subscribedTo('headline_member')
             . ' WHERE headline_member.story_id = follow.story_id'
             . ' ORDER BY CASE WHEN headline_feed.network IS NULL THEN 0 ELSE 1 END,'
             . ' headline_entry.effective_date DESC, headline_entry.id DESC LIMIT 1)';
     }
 
     /**
-     * The members joined after the last visit, counted as Trending counts sources: an article once, by its address
-     * when it has one, and a post by its account, the post's author else its feed.
+     * The members from subscribed feeds joined after the last visit, counted as Trending counts sources: an article
+     * once, by its address when it has one, and a post by its account, the post's author else its feed.
      */
     private static function newCount(): string
     {
@@ -154,7 +155,18 @@ final class TrendingStoryFollowRepository extends ServiceEntityRepository
             . ' FROM trending_story_entry new_member'
             . ' JOIN entry new_entry ON new_entry.id = new_member.entry_id'
             . ' JOIN feed new_feed ON new_feed.id = new_member.feed_id'
+            . ' ' . self::subscribedTo('new_member')
             . ' WHERE new_member.story_id = follow.story_id AND new_member.joined_at > follow.last_opened_at)';
+    }
+
+    /** Inclusion rules apply at build time only; like the story's entries listing, this asks only for a subscription. */
+    private static function subscribedTo(string $memberAlias): string
+    {
+        return \sprintf(
+            'JOIN subscription %1$s_reader'
+            . ' ON %1$s_reader.feed_id = %1$s.feed_id AND %1$s_reader.user_id = follow.user_id',
+            $memberAlias,
+        );
     }
 
     private static function notFollowed(int $userId, int $storyId): TrendingStoryNotFollowedException
