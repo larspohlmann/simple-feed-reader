@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Curation\Trending\Pass;
 
+use App\Enum\FeedLanguage;
 use App\Enum\TrendingWindow;
 use App\Service\Curation\Trending\Model\EntryLinksModel;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
@@ -46,6 +47,50 @@ final class TrendingRunTest extends TestCase
                 new EntryLinksModel(null, null, null),
             ),
         ), 0.0001);
+    }
+
+    public function testAMemberKnowsItsLanguageAndWhetherAnOutletPublishedIt(): void
+    {
+        $run = TrendingRuns::of(TrendingWindow::Day);
+        $moment = new \DateTimeImmutable('2031-05-14 09:00:00', new \DateTimeZone('UTC'));
+        $run->add(
+            new WindowEntryModel(
+                1,
+                10,
+                FeedLanguage::German,
+                'Hafenstreik in Hamburg',
+                false,
+                null,
+                $moment,
+                new EntryLinksModel('article-hash', 'https://outlet.example/hafenstreik', null),
+            ),
+            ['article-hash'],
+            null,
+        );
+        $run->add(
+            new WindowEntryModel(
+                2,
+                20,
+                null,
+                'Hafenstreik',
+                false,
+                null,
+                $moment,
+                new EntryLinksModel('post-hash', null, null),
+            ),
+            ['post-hash'],
+            null,
+        );
+
+        $article = $run->memberOf(1);
+        $post = $run->memberOf(2);
+
+        self::assertSame(FeedLanguage::German, $article->language);
+        self::assertTrue($article->fromAnOutlet);
+        self::assertSame('article-hash', $article->urlHash);
+        self::assertNull($post->language);
+        self::assertFalse($post->fromAnOutlet);
+        self::assertSame('post-hash', $post->urlHash);
     }
 
     private function weightSharedWith(WindowEntryModel $later): float

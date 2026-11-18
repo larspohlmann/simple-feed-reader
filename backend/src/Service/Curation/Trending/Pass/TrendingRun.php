@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Trending\Pass;
 
+use App\Enum\FeedLanguage;
 use App\Enum\TrendingWindow;
 use App\Service\Curation\Trending\Model\SharedArticleModel;
 use App\Service\Curation\Trending\Model\StoryMemberModel;
@@ -15,6 +16,15 @@ final class TrendingRun
 {
     /** @var array<int, int> */
     private array $feedOfEntry = [];
+
+    /** @var array<int, FeedLanguage> */
+    private array $languages = [];
+
+    /** @var array<int, true> the entries whose feed publishes articles */
+    private array $outletEntries = [];
+
+    /** @var array<int, string> */
+    private array $urlHashes = [];
 
     /** @var array<int, int> entry id => effective date in Unix seconds */
     private array $effectiveTimes = [];
@@ -43,6 +53,15 @@ final class TrendingRun
     {
         $this->feedOfEntry[$entry->id] = $entry->feedId;
         $this->effectiveTimes[$entry->id] = $entry->effectiveDate->getTimestamp();
+        if ($entry->language !== null) {
+            $this->languages[$entry->id] = $entry->language;
+        }
+        if ($entry->links->articleUrl !== null) {
+            $this->outletEntries[$entry->id] = true;
+        }
+        if ($entry->links->urlHash !== null) {
+            $this->urlHashes[$entry->id] = $entry->links->urlHash;
+        }
         foreach ($urlHashes as $urlHash) {
             $this->entriesByUrlHash[$urlHash][] = $entry->id;
         }
@@ -80,6 +99,9 @@ final class TrendingRun
             $this->feedOfEntry[$entryId],
             $this->articleSites[$entryId] ?? null,
             $this->sharedLinkIds[$entryId] ?? null,
+            $this->languages[$entryId] ?? null,
+            isset($this->outletEntries[$entryId]),
+            $this->urlHashes[$entryId] ?? null,
         );
     }
 

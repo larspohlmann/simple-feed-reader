@@ -16,6 +16,7 @@ use App\Entity\ThreadPostContent;
 use App\Enum\FeedLanguage;
 use App\Enum\SocialNetwork;
 use App\Repository\TrendingEntryRepository;
+use App\Service\Curation\Trending\Model\MemberHeadlineModel;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Service\Curation\Trending\Model\WindowLinkCardModel;
 use App\Tests\DbTestCase;
@@ -65,6 +66,57 @@ final class TrendingEntryRepositoryTest extends DbTestCase
         self::assertSame('<p>Body</p>', $rows[1]->summary);
         self::assertSame('2031-05-14 09:00:00', $rows[1]->effectiveDate->format('Y-m-d H:i:s'));
         self::assertSame('UTC', $rows[1]->effectiveDate->getTimezone()->getName());
+    }
+
+    public function testHeadlinesOfCarryTheirFeedsTitle(): void
+    {
+        $fixtures = new TrendingFixtures($this->entityManager);
+        $feed = $fixtures->feed('spiegel');
+        $feed->setTitle('DER SPIEGEL');
+        $entry = $fixtures->entry($feed, 'Hafenstreik – Spiegel', '2031-05-14 09:00:00');
+        $fixtures->flush();
+        $entryId = $entry->requireId();
+
+        self::assertEquals(
+            [$entryId => new MemberHeadlineModel($entryId, 'Hafenstreik – Spiegel', 'DER SPIEGEL')],
+            (new TrendingEntryRepository($this->entityManager))->headlinesOf([$entryId]),
+        );
+    }
+
+    public function testHeadlinesOfReadMoreEntriesThanOneChunkHolds(): void
+    {
+        $fixtures = new TrendingFixtures($this->entityManager);
+        $feed = $fixtures->feed('chunked');
+        $entryIds = [];
+        for ($index = 0; $index < 250; ++$index) {
+            $entryIds[] = $fixtures->entry($feed, 'Headline ' . $index, '2031-05-14 09:00:00');
+        }
+        $fixtures->flush();
+        $entryIds = array_map(static fn (Entry $entry): int => $entry->requireId(), $entryIds);
+
+        self::assertSame(
+            $entryIds,
+            array_keys((new TrendingEntryRepository($this->entityManager))->headlinesOf($entryIds)),
+        );
+    }
+
+    public function testLinkTitlesOfReadTheSharedLinks(): void
+    {
+        $linkId = SharedLinks::of(
+            $this->entityManager,
+            new LinkCardContent(
+                'https://news.example.com/port-strike',
+                'Port strike in Hamburg',
+                null,
+                null,
+                'example.com',
+            ),
+        )->requireId();
+
+        self::assertSame(
+            [$linkId => 'Port strike in Hamburg'],
+            (new TrendingEntryRepository($this->entityManager))->linkTitlesOf([$linkId]),
+        );
     }
 
     public function testStreamsMoreThanOneChunkWithoutRepeatingOrSkipping(): void

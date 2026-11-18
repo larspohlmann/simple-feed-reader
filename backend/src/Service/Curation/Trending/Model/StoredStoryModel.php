@@ -10,6 +10,8 @@ final readonly class StoredStoryModel
     public function __construct(
         public int $id,
         public array $entryIds,
+        public ?int $fallbackEntryId = null,
+        public bool $titled = false,
     ) {
     }
 }

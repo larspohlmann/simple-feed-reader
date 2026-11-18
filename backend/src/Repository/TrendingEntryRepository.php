@@ -8,6 +8,8 @@ use App\Enum\FeedLanguage;
 use App\Service\Curation\Trending\Model\EntryLinksModel;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Service\Curation\Trending\Model\WindowLinkCardModel;
+use App\Service\Curation\Trending\Model\MemberHeadlineModel;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -15,6 +17,8 @@ use Doctrine\ORM\EntityManagerInterface;
 final readonly class TrendingEntryRepository
 {
     private const int CHUNK_ROWS = 1_000;
+
+    private const int LOOKUP_IDS = 120;
 
     /** A body is cut to 300 characters after its markup is stripped; this bounds what a chunk holds before that. */
     private const int BODY_SOURCE_CHARACTERS = 2_000;
@@ -38,6 +42,52 @@ final readonly class TrendingEntryRepository
                 yield $entry;
             }
         } while (\count($rows) === self::CHUNK_ROWS);
+    }
+
+    /**
+     * @param list<int> $entryIds
+     *
+     * @return array<int, MemberHeadlineModel> by entry id
+     */
+    public function headlinesOf(array $entryIds): array
+    {
+        $headlines = [];
+        foreach (array_chunk($entryIds, self::LOOKUP_IDS) as $chunk) {
+            /** @var list<array{id: int|string, title: string, feed_title: string|null}> $rows */
+            $rows = $this->entityManager->getConnection()->fetchAllAssociative(
+                'SELECT entry.id, entry.title, feed.title AS feed_title FROM entry JOIN feed ON feed.id = entry.feed_id'
+                . ' WHERE entry.id IN (?)',
+                [$chunk],
+                [ArrayParameterType::INTEGER],
+            );
+            foreach ($rows as $row) {
+                $entryId = (int) $row['id'];
+                $headlines[$entryId] = new MemberHeadlineModel($entryId, $row['title'], $row['feed_title']);
+            }
+        }
+
+        return $headlines;
+    }
+
+    /**
+     * @param list<int> $sharedLinkIds
+     *
+     * @return array<int, string> the title of every link that has one, by link id
+     */
+    public function linkTitlesOf(array $sharedLinkIds): array
+    {
+        $titles = [];
+        foreach (array_chunk($sharedLinkIds, self::LOOKUP_IDS) as $chunk) {
+            /** @var array<int, string> $chunkTitles */
+            $chunkTitles = $this->entityManager->getConnection()->fetchAllKeyValue(
+                'SELECT id, title FROM shared_link WHERE title IS NOT NULL AND id IN (?)',
+                [$chunk],
+                [ArrayParameterType::INTEGER],
+            );
+            $titles += $chunkTitles;
+        }
+
+        return $titles;
     }
 
     public function hasEntriesCreatedAfter(int $userId, \DateTimeImmutable $after): bool

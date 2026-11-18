@@ -47,21 +47,36 @@ final readonly class TrendingStoryHistoryRepository
     /** @return list<StoredStoryModel> the reader's stories with a member at or after $since, with those members */
     public function storedInWindow(int $userId, \DateTimeImmutable $since): array
     {
-        /** @var list<array{story_id: int|string, entry_id: int|string}> $rows */
+        /**
+         * @var list<array{
+         *   story_id: int|string, entry_id: int|string, fallback_entry_id: int|string|null, titled: int|string|bool
+         * }> $rows
+         */
         $rows = $this->connection()->fetchAllAssociative(
-            'SELECT member.story_id, member.entry_id FROM trending_story_entry member'
+            'SELECT member.story_id, member.entry_id, story.fallback_entry_id,'
+            . ' story.fallback_title IS NOT NULL AS titled FROM trending_story_entry member'
             . ' JOIN trending_story story ON story.id = member.story_id'
             . ' JOIN entry recent ON recent.id = member.entry_id WHERE story.user_id = ? AND recent.effective_date >= ?'
             . ' ORDER BY member.story_id, member.entry_id',
             [$userId, self::stored($since)],
         );
         $entryIdsByStory = [];
+        $fallbackByStory = [];
         foreach ($rows as $row) {
             $entryIdsByStory[(int) $row['story_id']][] = (int) $row['entry_id'];
+            $fallbackByStory[(int) $row['story_id']] = [
+                $row['fallback_entry_id'] === null ? null : (int) $row['fallback_entry_id'],
+                (bool) $row['titled'],
+            ];
         }
 
         return array_map(
-            static fn (int $storyId, array $entryIds): StoredStoryModel => new StoredStoryModel($storyId, $entryIds),
+            static fn (int $storyId, array $entryIds): StoredStoryModel => new StoredStoryModel(
+                $storyId,
+                $entryIds,
+                $fallbackByStory[$storyId][0],
+                $fallbackByStory[$storyId][1],
+            ),
             array_keys($entryIdsByStory),
             $entryIdsByStory,
         );
