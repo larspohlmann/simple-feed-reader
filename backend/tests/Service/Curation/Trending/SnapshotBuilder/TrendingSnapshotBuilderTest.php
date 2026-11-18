@@ -36,6 +36,7 @@ use App\Tests\Support\TrendingWiring;
 use Doctrine\ORM\Decorator\EntityManagerDecorator;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Service\Curation\Trending\Exception\TrendingBuildBusyException;
+use Psr\Clock\ClockInterface;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\Lock\Exception\LockConflictedException;
@@ -59,6 +60,38 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         $this->fixtures = new TrendingFixtures($this->entityManager);
         $this->clock = new MockClock(self::NOW, 'UTC');
         $this->locks = new LockFactory(new InMemoryStore());
+    }
+
+    public function testABuildIsStampedWithTheMomentBeforeItCollectedTheWindow(): void
+    {
+        $this->weekSizedHafenstreik();
+        $collectingTakesAMinute = new class ($this->clock) implements ClockInterface {
+            public function __construct(private readonly MockClock $clock)
+            {
+            }
+
+            public function now(): \DateTimeImmutable
+            {
+                $now = $this->clock->now();
+                $this->clock->sleep(60);
+
+                return $now;
+            }
+        };
+        $builder = new TrendingSnapshotBuilder(
+            TrendingWiring::grouping($this->entityManager, $collectingTakesAMinute),
+            new TrendingEntryRepository($this->entityManager),
+            TrendingWiring::policies($this->entityManager),
+            new TrendingStoryHistoryRepository($this->entityManager),
+            TrendingWiring::snapshots($this->entityManager),
+            $this->entityManager,
+            new NaiveUtcClock($this->clock),
+            $this->locks,
+        );
+
+        $report = $builder->build($this->ownerId(), TrendingWindow::Day);
+
+        self::assertSame(self::NOW, $report->builtAt->format('Y-m-d H:i:s'));
     }
 
     public function testABuildWhileAnotherHoldsTheLockWritesNothing(): void

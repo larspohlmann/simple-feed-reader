@@ -66,10 +66,11 @@ final readonly class TrendingSnapshotBuilder implements SnapshotBuilderInterface
     private function buildLocked(int $userId, TrendingWindow $window, LockInterface $lock): TrendingBuildReportModel
     {
         $stopwatch = BuildStopwatch::start();
+        $builtAt = $this->clock->now();
         $run = $this->grouping->collect($userId, $window);
         $groups = $this->grouping->stories($run);
         $entryCount = $run->entryCount();
-        $build = new StoryBuildModel($userId, $window, $run->since, $this->clock->now());
+        $build = new StoryBuildModel($userId, $window, $run->since, $builtAt);
         $activeFeedCount = $this->windowEntries->activeFeedCount($userId, $build->since);
         unset($run);
         $policy = $this->policyFor($window);
