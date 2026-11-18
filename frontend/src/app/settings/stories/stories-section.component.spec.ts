@@ -83,6 +83,23 @@ describe('StoriesSectionComponent', () => {
     );
   });
 
+  it('disables the connection select while a save is in flight', () => {
+    const fixture = mount();
+    const select = byTestId(fixture, 'story-connection') as HTMLSelectElement;
+
+    select.value = '7';
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    expect(select.disabled).toBe(true);
+    expectPut(
+      { writingConnectionId: 7, titlesEnabled: true },
+      storiesState({ writingConnectionId: 7 }),
+    );
+    fixture.detectChanges();
+    expect(select.disabled).toBe(false);
+  });
+
   it('choosing the active connection saves null', () => {
     const fixture = mount(storiesState({ writingConnectionId: 7 }));
     const select = byTestId(fixture, 'story-connection') as HTMLSelectElement;

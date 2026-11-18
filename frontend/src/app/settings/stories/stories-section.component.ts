@@ -13,7 +13,8 @@ import { SettingsGroupComponent } from '../../shared/settings/settings-group/set
 import { SettingsRowComponent } from '../../shared/settings/settings-row/settings-row.component';
 import { ToggleComponent } from '../../shared/toggle/toggle.component';
 import { toastOnSaved } from '../../shared/toast/saved-toast';
-import { StoriesSettingsService, StoryConnection } from './stories-settings.service';
+import { connectionLabel, unusableConnectionId } from '../connection-choice';
+import { StoriesSettingsService } from './stories-settings.service';
 
 /** What the LLM does for Trending stories: whether it writes their titles, and which connection does. */
 @Component({
@@ -34,15 +35,11 @@ export class StoriesSectionComponent {
   readonly connections = input<readonly unknown[]>([]);
   readonly svc = inject(StoriesSettingsService);
 
-  /** The server keeps a pick that can no longer write text, but it is no candidate: shown, never offered. */
   readonly unusableChoice = computed(() => {
     const state = this.svc.state();
-    if (!state || state.writingConnectionId === null) return null;
-    const isCandidate = state.writingCandidates.some(
-      (candidate) => candidate.id === state.writingConnectionId,
-    );
-    return isCandidate ? null : state.writingConnectionId;
+    return state ? unusableConnectionId(state.writingConnectionId, state.writingCandidates) : null;
   });
+  readonly label = connectionLabel;
 
   constructor() {
     this.svc.load();
@@ -56,11 +53,6 @@ export class StoriesSectionComponent {
       untracked(() => this.svc.load());
     });
     toastOnSaved(this.svc, 'settings.stories.saved');
-  }
-
-  label(connection: StoryConnection): string {
-    const name = connection.name ?? new URL(connection.baseUrl).host;
-    return connection.model ? `${name} · ${connection.model}` : name;
   }
 
   onTitles(enabled: boolean): void {

@@ -20,10 +20,10 @@ import { SettingsGroupComponent } from '../../shared/settings/settings-group/set
 import { SettingsRowComponent } from '../../shared/settings/settings-row/settings-row.component';
 import { SettingsSaveBarComponent } from '../../shared/settings/save-bar/save-bar.component';
 import { toastOnSaved } from '../../shared/toast/saved-toast';
+import { connectionLabel, unusableConnectionId } from '../connection-choice';
 import { ProfileDebugLogComponent } from './profile-debug-log.component';
 import {
   ProfileCapField,
-  ProfileConnection,
   ProfileSettingsService,
 } from './profile-settings.service';
 
@@ -63,13 +63,11 @@ export class ProfileSectionComponent {
     return generatedAt ? formatLongDateTime(generatedAt, this.language.lang()) : null;
   });
 
-  /** The server keeps a pick that can no longer build profiles, but it is no candidate: shown, never offered. */
   readonly unusableChoice = computed(() => {
     const state = this.svc.state();
-    if (!state || state.connectionId === null) return null;
-    const isCandidate = state.candidates.some((candidate) => candidate.id === state.connectionId);
-    return isCandidate ? null : state.connectionId;
+    return state ? unusableConnectionId(state.connectionId, state.candidates) : null;
   });
+  readonly label = connectionLabel;
 
   readonly canGenerate = computed(() => !this.svc.polling() && !this.svc.starting());
 
@@ -106,11 +104,6 @@ export class ProfileSectionComponent {
       untracked(() => this.svc.refresh());
     });
     toastOnSaved(this.svc, 'settings.profile.saved');
-  }
-
-  label(connection: ProfileConnection): string {
-    const name = connection.name ?? new URL(connection.baseUrl).host;
-    return connection.model ? `${name} · ${connection.model}` : name;
   }
 
   intervalKey(hours: number | null): string {
