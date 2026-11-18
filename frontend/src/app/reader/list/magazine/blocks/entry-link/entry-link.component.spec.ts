@@ -13,6 +13,7 @@ import { PreviewProgress } from '../../../../link-card/preview-progress';
 import { ProxiedImageDirective } from '../../../../../shared/proxied-image/proxied-image.directive';
 import { aLinkCard, anEntry, aStory, aStoryArticle } from '../../../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
+import { provideStoryContext } from '../../../../../../testing/story-context-testing';
 import { provideSocialAccounts } from '../../../../../../testing/social-accounts-testing';
 
 const entryActions = {
@@ -53,6 +54,7 @@ function mount(item: ListItem) {
   TestBed.configureTestingModule({
     imports: [EntryLinkComponent, provideTranslocoTesting()],
     providers: [
+      provideStoryContext(storyOf(item)).provider,
       provideSocialAccounts(),
       provideAccountIdentity(),
       { provide: EntryActionHandler, useValue: entryActions },
@@ -63,7 +65,6 @@ function mount(item: ListItem) {
   });
   const fixture = TestBed.createComponent(EntryLinkComponent);
   fixture.componentRef.setInput('entry', leadOf(item));
-  fixture.componentRef.setInput('story', storyOf(item));
   fixture.detectChanges();
   return fixture;
 }
@@ -290,6 +291,34 @@ describe('EntryLinkComponent', () => {
       'Eve',
       'Fay',
     ]);
+  });
+
+  describe('is led by its card only when the story in context shares one', () => {
+    it('is led by the card for a story whose lead shares one', () => {
+      const element = mount(
+        aStory({
+          outletCount: 2,
+          viewed: false,
+          shareCount: 3,
+          articles: [
+            article({
+              poster: { name: 'Ann', url: null, imageUrl: null },
+              linkCards: [card()],
+              shares: [entry({ id: 1 })],
+            }),
+          ],
+        }),
+      ).nativeElement as HTMLElement;
+
+      expect(element.querySelector('.title')).toBeNull();
+    });
+
+    it('keeps its own headline without a story context', () => {
+      const element = mount(entry({ title: 'Own headline', titleDerived: false }))
+        .nativeElement as HTMLElement;
+
+      expect(element.querySelector('.title')!.textContent).toContain('Own headline');
+    });
   });
 
   it('names no shares on a story no post shares', () => {

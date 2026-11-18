@@ -18,6 +18,7 @@ import { aThreadPost } from '../../../../testing/thread-testing';
 import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
+import { provideStoryContext } from '../../../../testing/story-context-testing';
 import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 
 const entryActions = {
@@ -44,9 +45,11 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto =>
   });
 
 function mount(item: ListItem) {
+  if (storyOf(item)) {
+    TestBed.configureTestingModule({ providers: [provideStoryContext(storyOf(item)).provider] });
+  }
   const fixture = TestBed.createComponent(EntryRowComponent);
   fixture.componentRef.setInput('entry', leadOf(item));
-  fixture.componentRef.setInput('story', storyOf(item));
   fixture.detectChanges();
   return fixture;
 }
@@ -116,6 +119,14 @@ describe('EntryRowComponent', () => {
         provideRouter([]),
       ],
     });
+  });
+
+  it('renders no story pieces without a story context', () => {
+    const element = mount(entry()).nativeElement as HTMLElement;
+
+    expect(element.querySelector('app-story-source-count')).toBeNull();
+    expect(element.querySelector('app-story-sharers')).toBeNull();
+    expect(element.querySelector('app-story-actions')).toBeNull();
   });
 
   describe('a Trending lead (#2017)', () => {

@@ -29,7 +29,7 @@ import { ThreadCountComponent } from '../../../shared/thread-line/thread-count.c
 import { showsUnreadMark } from '../../trending/story';
 import { StorySourceCountComponent } from '../../trending/story-source-count/story-source-count.component';
 import { StorySharersComponent } from '../../trending/story-sharers/story-sharers.component';
-import { TrendingStoryDto } from '../../trending/trending.models';
+import { injectStory } from '../../trending/story-context';
 
 @Component({
   selector: 'app-entry-row',
@@ -60,7 +60,7 @@ export class EntryRowComponent {
   protected readonly coverBoxSizes = COVER_BOX_SIZES;
   protected readonly leadOf = leadOf;
   readonly entry = input.required<EntryDto>();
-  readonly story = input<TrendingStoryDto | null>(null);
+  protected readonly story = injectStory();
   readonly imageSide = input<'left' | 'right'>('right');
   readonly tags = input<SubscriptionTagDto[]>([]);
   /** The current search's words, marked inside the title and the snippet.

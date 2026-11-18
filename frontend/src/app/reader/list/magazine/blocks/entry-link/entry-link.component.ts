@@ -6,6 +6,7 @@ import { EntryBlockBase } from '../../entry-block-base';
 import { LinkCardComponent } from '../../../../link-card/link-card.component';
 import { LinkCardPlaceholderComponent } from '../../../../link-card/link-card-placeholder.component';
 import { OpensEntryDirective } from '../../../opens-entry.directive';
+import { injectStory } from '../../../../trending/story-context';
 import { sharedArticleCard } from '../../../../trending/shared-article-card';
 import { leadOf } from '../../../../state/list-item';
 import { withoutLinks } from '../../../../entry/entry-text';
@@ -25,6 +26,7 @@ import { withoutLinks } from '../../../../entry/entry-text';
   styleUrl: './entry-link.component.scss',
 })
 export class EntryLinkComponent extends EntryBlockBase {
+  private readonly story = injectStory();
   /** A Trending row no followed outlet carries is the article its posts share: the card heads it (#2229). */
   protected readonly ledByItsCard = computed(() => {
     const story = this.story();

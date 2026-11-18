@@ -29,7 +29,8 @@ import { OpenInReaderComponent } from '../../link-card/open-in-reader.component'
 import { StoryActionsComponent } from '../../trending/story-actions/story-actions.component';
 import { StorySourceCountComponent } from '../../trending/story-source-count/story-source-count.component';
 import { STORY_ICON } from '../../trending/story';
-import { StoryArticleDto, TrendingStoryDto } from '../../trending/trending.models';
+import { injectStory } from '../../trending/story-context';
+import { StoryArticleDto } from '../../trending/trending.models';
 
 let nextId = 0;
 
@@ -58,7 +59,7 @@ const sameArticles = (
 })
 export class MoreSourcesComponent {
   readonly entry = input.required<EntryDto>();
-  readonly story = input<TrendingStoryDto | null>(null);
+  protected readonly story = injectStory();
 
   protected readonly leadOf = leadOf;
   private readonly actions = inject(EntryActionHandler);

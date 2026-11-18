@@ -8,6 +8,7 @@ import { MoreSourcesComponent } from './more-sources.component';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { aLinkCard, anEntry, aStory, aStoryArticle } from '../../../../testing/entry-testing';
+import { provideStoryContext } from '../../../../testing/story-context-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service';
 import { provideStoryActions } from '../../../../testing/story-actions-testing';
@@ -31,6 +32,7 @@ function mount(
     imports: [MoreSourcesComponent, provideTranslocoTesting()],
     providers: [
       ...storyActions,
+      provideStoryContext(storyOfItem(item)).provider,
       provideAccountIdentity(),
       { provide: EntryActionHandler, useValue: { open } },
       ...(reader ? [{ provide: LinkReaderNavigation, useValue: reader }] : []),
@@ -39,7 +41,6 @@ function mount(
   });
   fixture = TestBed.createComponent(MoreSourcesComponent);
   fixture.componentRef.setInput('entry', leadOf(item));
-  fixture.componentRef.setInput('story', storyOfItem(item));
   fixture.detectChanges();
   return fixture.nativeElement as HTMLElement;
 }
