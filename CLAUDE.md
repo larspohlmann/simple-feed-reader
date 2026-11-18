@@ -20,9 +20,9 @@ composer check       # cs + stan + tramp
 php bin/phpunit      # unit/integration suite (SQLite natively); `composer test` is the same
 composer test:parallel    # the suite over ParaTest, one TEST_TOKEN worker per CPU — what CI runs
 composer infection   # mutation testing over all of src (needs pcov or xdebug)
-composer infection:diff   # …over the files this branch changes — what CI gates
-composer infection:coverage    # collect coverage once, over ParaTest, for…
-composer infection:diff:rerun  # …infection:diff without its initial run; recollect once src lines move
+composer infection:diff   # …over the lines this branch changes, on ParaTest coverage — what CI gates
+composer infection:coverage    # its first step: collect coverage over ParaTest
+composer infection:diff:rerun  # its second step alone, on the last coverage; recollect once src lines move
 composer e2e         # black-box e2e against the running Docker stack
 ```
 
@@ -352,7 +352,7 @@ control, not ceremony — do not "simplify" it away, and do not delete
 - **Direct-invocation tests mislead.** A listener test that bypasses the dispatcher
   can assert something the real wiring makes impossible — back it with a
   functional test.
-- **Mutation testing gates changed files.** CI runs Infection over the files a PR
+- **Mutation testing gates changed lines.** CI runs Infection over the lines a PR
   touches (`composer infection:diff`), with `minMsi` in `infection.json5`. It is a
   ratchet: raise it as the tree catches up, never lower it to make a branch pass.
   A full sweep scores lower than the gate — that is expected and is not a
