@@ -21,6 +21,8 @@ final class PatientApiClientTest extends TestCase
     private const string SITE = 'https://lemmy.example/api/v3/site';
 
     private int $requests = 0;
+    /** @var list<int> */
+    private array $requestOffsets = [];
     private MockClock $clock;
     private int $startedAt;
 
@@ -78,6 +80,50 @@ final class PatientApiClientTest extends TestCase
         self::assertSame(0, $this->secondsSlept());
     }
 
+    public function testThePausesGrowFromOneSecondToTwo(): void
+    {
+        $client = $this->clientAnswering($this->unavailable(), $this->unavailable(), new MockResponse('{}'));
+
+        $client->send(ApiRequestModel::get(self::SITE));
+
+        self::assertSame([0, 1, 3], $this->requestOffsets);
+        self::assertSame(3, $this->secondsSlept());
+    }
+
+    public function testEachOutageStatusIsRetried(): void
+    {
+        $client = $this->clientAnswering(
+            new MockResponse('', ['http_code' => Response::HTTP_BAD_GATEWAY]),
+            new MockResponse('', ['http_code' => Response::HTTP_GATEWAY_TIMEOUT]),
+            new MockResponse('{}'),
+        );
+
+        $answer = $client->send(ApiRequestModel::get(self::SITE));
+
+        self::assertSame(Response::HTTP_OK, $answer->status);
+        self::assertSame(3, $this->requests);
+    }
+
+    public function testRetryAfterOfFourSecondsEndsTheRetries(): void
+    {
+        $client = $this->clientAnswering($this->unavailable('4'), new MockResponse('{}'));
+
+        $answer = $client->send(ApiRequestModel::get(self::SITE));
+
+        self::assertSame(Response::HTTP_SERVICE_UNAVAILABLE, $answer->status);
+        self::assertSame(1, $this->requests);
+        self::assertSame(0, $this->secondsSlept());
+    }
+
+    public function testASecondPauseFallsBackToTwoSecondsWithoutRetryAfter(): void
+    {
+        $client = $this->clientAnswering($this->unavailable('2'), $this->unavailable(), new MockResponse('{}'));
+
+        $client->send(ApiRequestModel::get(self::SITE));
+
+        self::assertSame([0, 2, 4], $this->requestOffsets);
+    }
+
     public function testA500IsNotRetried(): void
     {
         $client = $this->clientAnswering(
@@ -110,6 +156,7 @@ final class PatientApiClientTest extends TestCase
         $queue = $responses;
         $http = new MockHttpClient(function () use (&$queue): MockResponse {
             $this->requests++;
+            $this->requestOffsets[] = $this->secondsSlept();
 
             return array_shift($queue) ?? new MockResponse('', ['http_code' => Response::HTTP_BAD_GATEWAY]);
         });
