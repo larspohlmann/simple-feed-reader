@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Trending\Support;
 
+use App\Enum\FeedLanguage;
 use App\Service\Curation\Trending\Model\StoryHeadlineModel;
 
 final class StoryTitlePrompt
@@ -16,8 +17,6 @@ final class StoryTitlePrompt
         . " punctuation.\n"
         . 'Reply only with JSON: {"title": "..."}';
 
-    private const array LANGUAGES = ['en' => 'English', 'de' => 'German', 'fr' => 'French', 'es' => 'Spanish'];
-
     /**
      * @param list<StoryHeadlineModel> $headlines
      *
@@ -26,14 +25,12 @@ final class StoryTitlePrompt
     public static function messages(array $headlines, string $locale): array
     {
         return [
-            ['role' => 'system', 'content' => \sprintf(self::SYSTEM, self::languageOf($locale))],
+            ['role' => 'system', 'content' => \sprintf(
+                self::SYSTEM,
+                (FeedLanguage::fromTag($locale) ?? FeedLanguage::English)->englishName(),
+            )],
             ['role' => 'user', 'content' => self::headlineBlocks($headlines)],
         ];
-    }
-
-    private static function languageOf(string $locale): string
-    {
-        return self::LANGUAGES[$locale] ?? self::LANGUAGES['en'];
     }
 
     /** @param list<StoryHeadlineModel> $headlines */
