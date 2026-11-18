@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Curation\Trending;
 
 use App\Repository\TrendingEntryRepository;
+use App\Service\Curation\Trending\Model\CleanedHeadlineModel;
 use App\Service\Curation\Trending\Model\FallbackTitleModel;
 use App\Service\Curation\Trending\Model\HeadlinePoolModel;
 use App\Service\Curation\Trending\Model\MemberHeadlineModel;
@@ -128,27 +129,31 @@ final readonly class FallbackTitles
      */
     private function candidatesIn(TrendingRun $run, HeadlinePoolModel $pool, array $headlines): array
     {
-        $titled = array_values(array_filter(
-            $pool->members,
-            static fn (StoryMemberModel $member): bool => isset($headlines[$member->entryId]),
-        ));
-        if ($titled === []) {
+        $cleaned = [];
+        foreach ($pool->members as $member) {
+            $headline = $headlines[$member->entryId] ?? null;
+            if ($headline === null) {
+                continue;
+            }
+            $text = $this->markers->clean($headline->title, $headline->feedTitle, $member->language);
+            if ($text->text !== '') {
+                $cleaned[$member->entryId] = $text;
+            }
+        }
+        if ($cleaned === []) {
             return [];
         }
         $scores = CentroidScores::of($run->headlines, $pool->storyEntryIds);
 
         return array_map(
-            fn (StoryMemberModel $member): TitleCandidateModel => new TitleCandidateModel(
-                $member->entryId,
-                $this->markers->clean(
-                    $headlines[$member->entryId]->title,
-                    $headlines[$member->entryId]->feedTitle,
-                    $member->language,
-                ),
-                $scores[$member->entryId],
-                $run->effectiveTimeOf($member->entryId),
+            static fn (int $entryId, CleanedHeadlineModel $text): TitleCandidateModel => new TitleCandidateModel(
+                $entryId,
+                $text,
+                $scores[$entryId],
+                $run->effectiveTimeOf($entryId),
             ),
-            $titled,
+            array_keys($cleaned),
+            $cleaned,
         );
     }
 
