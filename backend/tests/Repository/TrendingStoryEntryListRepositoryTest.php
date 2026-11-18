@@ -14,7 +14,6 @@ use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
 use App\Repository\TrendingStoryEntryListRepository;
 use App\Repository\TrendingStoryListQuery;
-use App\Service\Curation\Trending\Exception\TrendingStoryNotFoundException;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
 
@@ -101,16 +100,14 @@ final class TrendingStoryEntryListRepositoryTest extends DbTestCase
         self::assertSame('Neue Gespräche', $this->titleOf($reader, $story));
     }
 
-    public function testTitleOfRefusesAnotherUsersStory(): void
+    public function testTitleOfReadsNothingFromAnotherUsersStory(): void
     {
         $reader = $this->fixtures->reader('story-entry-list-title-owner@example.com');
         $fixtures = $this->fixtures->ownedBy($reader);
         $story = $this->storyIn($fixtures, $fixtures->feed('owned'));
         $other = $this->fixtures->reader('story-entry-list-title-other@example.com');
 
-        $this->expectException(TrendingStoryNotFoundException::class);
-
-        $this->titleOf($other, $story);
+        self::assertNull($this->titleOf($other, $story));
     }
 
     private function storyIn(TrendingFixtures $fixtures, Feed $feed): TrendingStory

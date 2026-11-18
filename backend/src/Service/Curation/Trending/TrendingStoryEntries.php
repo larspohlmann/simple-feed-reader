@@ -8,6 +8,7 @@ use App\Repository\EntryListRow;
 use App\Repository\TrendingStoryEntryListRepository;
 use App\Repository\TrendingStoryFollowRepository;
 use App\Repository\TrendingStoryListQuery;
+use App\Repository\TrendingStoryRepository;
 use App\Service\Curation\Trending\Exception\TrendingStoryNotFoundException;
 use App\Service\Curation\Trending\Model\TrendingStoryEntriesModel;
 
@@ -15,6 +16,7 @@ use App\Service\Curation\Trending\Model\TrendingStoryEntriesModel;
 final readonly class TrendingStoryEntries
 {
     public function __construct(
+        private TrendingStoryRepository $stories,
         private TrendingStoryFollowRepository $follows,
         private TrendingStoryEntryListRepository $entries,
     ) {
@@ -23,6 +25,7 @@ final readonly class TrendingStoryEntries
     /** @throws TrendingStoryNotFoundException */
     public function list(TrendingStoryListQuery $query): TrendingStoryEntriesModel
     {
+        $this->stories->requireOwnedBy($query->userId, $query->storyId);
         $title = $this->entries->titleOf($query);
         $lastOpenedAt = $this->follows->lastOpenedAtIfFollowed($query->userId, $query->storyId);
         $rows = $this->entries->listMembers($query);
