@@ -23,7 +23,7 @@ import { ReaderOnboarding } from './reader-onboarding.service';
 import { PasskeyFirstBootOffer } from './passkey-first-boot-offer.service';
 import { SavedSearchToggle } from './saved-search-toggle.service';
 import { StoryOverlay } from './story-overlay.service';
-import { injectHeadingOnScreen, injectListOnScreen } from './list-cover';
+import { injectListOnScreen } from './list-cover';
 import { provideRouteList } from './route-list-context';
 import { ListContext } from '../state/list-context';
 import { RefreshActions } from './refresh-actions.service';
@@ -46,7 +46,12 @@ import { VersionService } from '../../core/version.service';
 import { ReadingLayoutService } from '../reading-layout.service';
 import { LayoutService } from '../layout.service';
 import { SidebarVisibilityService } from './sidebar-visibility.service';
-import { searchTermOf, selectedTagIdOf, trendingWindowOf } from '../query/query';
+import {
+  searchTermOf,
+  selectedSavedSearchIdOf,
+  selectedTagIdOf,
+  trendingWindowOf,
+} from '../query/query';
 import { entryChangeParams } from '../query/link-param';
 import { ListOrderService } from '../list/list-order.service';
 import { ListPreferences } from '../list/list-preferences.service';
@@ -189,7 +194,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly storyOverlay = inject(StoryOverlay);
   /** What the sidebar marks: a story's list over the route's while it is open (#2329). */
   protected readonly listOnScreen = injectListOnScreen();
-  protected readonly headingOnScreen = injectHeadingOnScreen();
+  protected readonly activeSavedSearchId = computed(() =>
+    selectedSavedSearchIdOf(this.listOnScreen().selection()),
+  );
   readonly refresh = inject(RefreshActions);
 
   /** Feed tags keyed by subscription id — feeds the tag pills on entries and the

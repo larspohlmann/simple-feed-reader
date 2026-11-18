@@ -29,17 +29,18 @@ export class ListCover {
   }
 }
 
-/** The list the reader sees: the one over the route's, else the route's. Call from an injection context at the
- *  reader shell, where `ListContext` is the route's. */
-export function injectListOnScreen(): Signal<ListContext> {
-  const route = inject(ListContext);
+/** What `pick` reads off the list the reader sees: the one over the route's, else `route`, the route list's own.
+ *  Call from an injection context at the reader shell. */
+export function onScreen<T>(route: T, pick: (list: CoveringList) => T): Signal<T> {
   const cover = inject(ListCover);
-  return computed(() => cover.list()?.context ?? route);
+  return computed(() => {
+    const list = cover.list();
+    return list ? pick(list) : route;
+  });
 }
 
-/** The heading of the list the reader sees. Call from an injection context at the reader shell. */
-export function injectHeadingOnScreen(): Signal<ListHeading> {
-  const route = inject(ListHeading);
-  const cover = inject(ListCover);
-  return computed(() => cover.list()?.heading ?? route);
+/** The list the reader sees. Call from an injection context at the reader shell, where `ListContext` is the
+ *  route's. */
+export function injectListOnScreen(): Signal<ListContext> {
+  return onScreen(inject(ListContext), (list) => list.context);
 }

@@ -3,7 +3,8 @@ import { PageTitleService } from '../../core/i18n/page-title.service';
 import { ReaderRouteState } from './reader-route-state.service';
 import { entryDisplayTitle } from '../entry/entry-text';
 import { LinkArticleSource } from '../article/link-reader/link-article-source.service';
-import { injectHeadingOnScreen } from './list-cover';
+import { onScreen } from './list-cover';
+import { ListHeading } from './list-heading.service';
 
 /** Names the tab after the open link's page, else the open article, else the list on screen (#2329).
  *  The reader route carries no title of its own, so this is the only writer
@@ -11,7 +12,7 @@ import { injectHeadingOnScreen } from './list-cover';
 @Injectable()
 export class ReaderTabTitle {
   private readonly pageTitle = inject(PageTitleService);
-  private readonly heading = injectHeadingOnScreen();
+  private readonly heading = onScreen(inject(ListHeading), (list) => list.heading);
   private readonly openEntry = inject(ReaderRouteState).openEntry;
   private readonly linkTitle = inject(LinkArticleSource).title;
 

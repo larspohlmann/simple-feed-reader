@@ -82,7 +82,7 @@
       [trendingUnopened]="subs.trendingUnopened()"
       [followedStories]="followedStoriesStore.stories()"
       [savedSearches]="savedSearchesStore.savedSearches()"
-      [activeSavedSearchId]="headingOnScreen().activeSavedSearchId()"
+      [activeSavedSearchId]="activeSavedSearchId()"
       [activeFollowedStoryId]="storyOverlay.storyId()"
       [mailEnabled]="auth.user()?.mail?.enabled ?? false"
       [digestEnabled]="digest.enabled()"
