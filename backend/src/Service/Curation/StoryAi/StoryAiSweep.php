@@ -13,14 +13,9 @@ use App\Service\Curation\StoryAi\StoryAiTask\StoryAiTaskInterface;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
-/**
- * Runs every story AI task over the due stories of each reader active in the last ACTIVE_DAYS, the span
- * TrendingRebuild reads too. A rate limit stops that reader until the next sweep.
- */
+/** Runs every story AI task over the due stories of each active Trending reader; a rate limit stops that reader. */
 final readonly class StoryAiSweep
 {
-    public const int ACTIVE_DAYS = 14;
-
     /** @param iterable<StoryAiTaskInterface> $tasks */
     public function __construct(
         #[AutowireIterator('app.story_ai_task')]
@@ -44,7 +39,7 @@ final readonly class StoryAiSweep
     private function runDueUntil(?\DateTimeImmutable $deadline): StoryAiReportModel
     {
         $report = StoryAiReportModel::none();
-        foreach ($this->activeReaders() as $reader) {
+        foreach ($this->users->activeTrendingReaders($this->clock->now()) as $reader) {
             if ($deadline !== null && $this->clock->now() >= $deadline) {
                 break;
             }
@@ -86,18 +81,6 @@ final readonly class StoryAiSweep
                 return;
             }
             yield $storyId;
-        }
-    }
-
-    /** @return \Generator<int, User> */
-    private function activeReaders(): \Generator
-    {
-        $since = $this->clock->now()->modify(\sprintf('-%d days', self::ACTIVE_DAYS));
-        foreach ($this->users->trendingReaderIdsLoggedInSince($since) as $userId) {
-            $reader = $this->users->find($userId);
-            if ($reader !== null) {
-                yield $reader;
-            }
         }
     }
 }

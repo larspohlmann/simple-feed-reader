@@ -32,7 +32,7 @@ final class UserRepositoryTest extends DbTestCase
         return $user;
     }
 
-    public function testTrendingReaderIdsLoggedInSince(): void
+    public function testActiveTrendingReaders(): void
     {
         $now = new \DateTimeImmutable('2031-05-14 12:00:00');
         $recent = $this->persist('recent@example.com', UserStatus::Active);
@@ -54,9 +54,12 @@ final class UserRepositoryTest extends DbTestCase
             ->execute();
         $this->entityManager->clear();
 
-        $readerIds = $this->users()->trendingReaderIdsLoggedInSince($now->modify('-14 days'));
+        $readers = $this->users()->activeTrendingReaders($now);
 
-        self::assertSame([$recent->requireId(), $exact->requireId(), $unrecorded->requireId()], $readerIds);
+        self::assertSame(
+            [$recent->requireId(), $exact->requireId(), $unrecorded->requireId()],
+            array_map(static fn (User $reader): int => $reader->requireId(), $readers),
+        );
     }
 
     public function testFindActiveAdminsReturnsOnlyActiveRoleAdminUsers(): void

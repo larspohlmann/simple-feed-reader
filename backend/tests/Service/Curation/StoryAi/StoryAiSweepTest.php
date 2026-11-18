@@ -110,7 +110,9 @@ final class StoryAiSweepTest extends DbTestCase
     public function testAReaderAwayLongerThanTheActiveDaysIsSkipped(): void
     {
         $reader = $this->user('sweep-away@example.test');
-        $reader->setLastLoginAt($this->clock->now()->modify(\sprintf('-%d days -1 minute', StoryAiSweep::ACTIVE_DAYS)));
+        $reader->setLastLoginAt(
+            $this->clock->now()->modify(\sprintf('-%d days -1 minute', UserRepository::TRENDING_ACTIVE_DAYS)),
+        );
         $this->entityManager->flush();
         $task = new RecordingStoryAiTask($this->connectionOf($reader), [$reader->requireId() => [3]]);
 
