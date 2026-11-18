@@ -7,7 +7,7 @@ import { LinkCardComponent } from '../../../../link-card/link-card.component';
 import { LinkCardPlaceholderComponent } from '../../../../link-card/link-card-placeholder.component';
 import { OpensEntryDirective } from '../../../opens-entry.directive';
 import { sharedArticleCard } from '../../../../trending/shared-article-card';
-import { withoutTrailingLinks } from '../../../../entry/entry-text';
+import { withoutLinks } from '../../../../entry/entry-text';
 
 @Component({
   selector: 'app-entry-link',
@@ -29,10 +29,10 @@ export class EntryLinkComponent extends EntryBlockBase {
     const story = this.story();
     return story ? sharedArticleCard(story.articles[0]) !== null : false;
   });
-  protected readonly title = computed(() => this.withoutCardedLink(this.headline()));
-  protected readonly dek = computed(() => this.withoutCardedLink(this.snippet()));
+  protected readonly title = computed(() => this.withoutLinksBesideCard(this.headline()));
+  protected readonly dek = computed(() => this.withoutLinksBesideCard(this.snippet()));
 
-  private withoutCardedLink(text: string): string {
-    return this.entry().linkCards.length > 0 ? withoutTrailingLinks(text) : text;
+  private withoutLinksBesideCard(text: string): string {
+    return this.entry().linkCards.length > 0 ? withoutLinks(text) : text;
   }
 }

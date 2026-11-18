@@ -103,6 +103,13 @@ describe('EntryLinkComponent', () => {
     expect(element.querySelector('.title')!.textContent!.trim()).toBe('Worth a read');
   });
 
+  it('drops a link inside a post’s text when its card shows it', () => {
+    const element = mount(entry({ excerpt: 'Read https://news.test/story #News' }))
+      .nativeElement as HTMLElement;
+
+    expect(element.querySelector('.title')!.textContent!.trim()).toBe('Read #News');
+  });
+
   it('shows no headline for a post that is only its link: the card heads the block', () => {
     const element = mount(entry({ excerpt: 'https://news.test/story' }))
       .nativeElement as HTMLElement;

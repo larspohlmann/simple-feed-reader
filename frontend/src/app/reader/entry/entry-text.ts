@@ -23,15 +23,10 @@ export function entryDisplayTitle(entry: Pick<EntryDto, 'title' | 'source' | 'po
 
 const LINK_TOKEN = /^(?:https?:\/\/\S*|(?:[\w-]+\.)+[a-z]{2,}\/\S*)$/i;
 
-/** The text without the run of links it ends in, full, shortened or cut off by the excerpt. */
-export function withoutTrailingLinks(text: string): string {
-  let rest = text.trimEnd();
-  while (LINK_TOKEN.test(lastWordOf(rest))) {
-    rest = rest.slice(0, -lastWordOf(rest).length).trimEnd();
-  }
-  return rest;
-}
-
-function lastWordOf(text: string): string {
-  return /\S*$/.exec(text)![0];
+/** The text without its links, full, shortened or cut off by the excerpt. */
+export function withoutLinks(text: string): string {
+  return text
+    .split(/\s+/)
+    .filter((word) => word !== '' && !LINK_TOKEN.test(word))
+    .join(' ');
 }
