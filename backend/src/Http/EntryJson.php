@@ -50,7 +50,7 @@ use App\Service\Foundation\Url\Support\YouTubeUrl;
  *   quote: QuoteRow|null,
  *   savedSearches: list<array{id: int, slug: string, term: string}>, pending: bool,
  *   social: array{network: 'bluesky'|'mastodon', isLiked: bool, canLike: bool, isOwn: bool}|null,
- *   myVote: int|null,
+ *   myVote: int|null, community: array{name: string, url: string}|null,
  *   duplicates: list<array<string, mixed>>,
  *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
  *   score: int|null, commentCount: int|null,
@@ -109,7 +109,8 @@ final readonly class EntryJson
             'titleDerived' => $entry->isTitleDerived(),
             'savedSearches' => $row->enrichment->savedSearches,
             'social' => self::socialOf($row),
-            'myVote' => $row->enrichment->myVote?->value,
+            'myVote' => $row->enrichment->lemmy?->myVote?->value,
+            'community' => self::communityOf($row),
             'duplicates' => array_map($this->listRow(...), $row->duplicates),
         ];
     }
@@ -159,14 +160,20 @@ final readonly class EntryJson
     {
         $discussion = $row->enrichment->discussion ?? EntryListRowDiscussion::storedOf($row->entry->getDiscussion());
 
-        $counts = $row->entry->getDiscussionCounts();
-
         return [
             'discussionUrl' => $discussion->url,
             'comments' => $discussion->commentsLoad?->value,
-            'score' => $counts->score,
-            'commentCount' => $counts->commentCount,
+            'score' => $row->enrichment->lemmy?->score,
+            'commentCount' => $row->entry->getCommentCount(),
         ];
+    }
+
+    /** @return array{name: string, url: string}|null */
+    private static function communityOf(EntryListRow $row): ?array
+    {
+        $community = $row->enrichment->lemmy?->community;
+
+        return null === $community ? null : ['name' => $community->shortName(), 'url' => $community->url];
     }
 
     /** @return array{network: 'bluesky'|'mastodon', isLiked: bool, canLike: bool, isOwn: bool}|null */

@@ -6,6 +6,7 @@ namespace App\Service\Social\Social;
 
 use App\Entity\Discussion;
 use App\Entity\DiscussionCounts;
+use App\Entity\PostCommunity;
 use App\Entity\SocialAccount;
 use App\Service\Foundation\Text\MarkdownHtml;
 use App\Service\Foundation\Text\Support\HtmlAnchor;
@@ -20,6 +21,7 @@ use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Completion\Model\KnownSharesModel;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Model\TimelinePageModel;
+use App\Service\Social\Social\Support\LemmyCommunity;
 use App\Service\Social\Social\Support\LemmyLanguageTag;
 use App\Service\Social\Social\Support\LemmySearchedPost;
 use App\Service\Social\Social\Support\SocialSearchMatch;
@@ -119,9 +121,19 @@ final readonly class LemmyPostEntries
         }
         $thread = Discussion::platformThread(self::postPageOf($address, $homeInstance, $postId));
 
+
         return $this->postEntryOf($postView, $address)
             ->asDiscussionThread($thread)
-            ->withDiscussionCounts(self::countsOf($postView->node('counts')));
+            ->withDiscussionCounts(self::countsOf($postView->node('counts')))
+            ->inCommunity(self::communityOf($postView->node('community')));
+    }
+
+    private static function communityOf(JsonNodeModel $community): ?PostCommunity
+    {
+        $identity = LemmyCommunity::identityOf($community);
+        $address = $community->string('actor_id');
+
+        return null === $identity || null === $address ? null : PostCommunity::of($identity, $address);
     }
 
     private function postEntryOf(JsonNodeModel $postView, string $address): ParsedEntryModel

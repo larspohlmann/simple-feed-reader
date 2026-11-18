@@ -279,18 +279,14 @@ final class Entry
         $this->discussion->store($discussion);
     }
 
-    public function getDiscussionCounts(): DiscussionCounts
+    public function getCommentCount(): ?int
     {
-        return $this->discussion->readCounts();
+        return $this->discussion->readCommentCount();
     }
 
     public function recordDiscussionCounts(DiscussionCounts $counts): void
     {
-        if ($counts->isUnknown()) {
-            return;
-        }
-
-        $this->discussion->storeCounts($counts);
+        $this->discussion->storeCommentCount($counts->commentCount);
     }
 
     public function getShareKind(): ?ShareKind

@@ -9,11 +9,16 @@ import {
   aMastodonAccount,
   provideSocialAccounts,
 } from '../../../../testing/social-accounts-testing';
+import { OwnInstanceLinks } from '../../own-instance/own-instance-links.service';
 import { EntrySourceComponent } from './entry-source.component';
 
 const BOB = { name: 'Bob', url: 'https://bsky.app/profile/bob', imageUrl: null };
 
-function renderSource(entry: EntryDto, sourceFormat: 'xml' | 'saved'): HTMLElement {
+function renderSource(
+  entry: EntryDto,
+  sourceFormat: 'xml' | 'saved',
+  layout: 'row' | 'kicker' | 'article' = 'row',
+): HTMLElement {
   TestBed.configureTestingModule({
     imports: [EntrySourceComponent, provideTranslocoTesting()],
     providers: [provideRouter([]), provideSocialAccounts([aMastodonAccount()])],
@@ -29,7 +34,7 @@ function renderSource(entry: EntryDto, sourceFormat: 'xml' | 'saved'): HTMLEleme
   ]);
   const fixture = TestBed.createComponent(EntrySourceComponent);
   fixture.componentRef.setInput('entry', entry);
-  fixture.componentRef.setInput('layout', 'row');
+  fixture.componentRef.setInput('layout', layout);
   fixture.detectChanges();
   return fixture.nativeElement as HTMLElement;
 }
@@ -74,5 +79,38 @@ describe('EntrySourceComponent', () => {
 
   it("prefixes its layout class, so the list row's own .row card styles never reach it", () => {
     expect([...renderSource(anEntry(), 'xml').classList]).toEqual(['source-row']);
+  });
+
+  describe('Lemmy community', () => {
+    const community = { name: 'technology', url: 'https://lemmy.world/c/technology' };
+    const alice = { name: 'alice', url: 'https://lemmy.world/u/alice', imageUrl: null };
+
+    it('names the community after the poster in a row, unlinked', () => {
+      const host = renderSource(anEntry({ poster: alice, community }), 'xml', 'row');
+
+      expect((host.textContent ?? '').replace(/\s+/g, ' ')).toContain('alice · c/technology');
+      expect(host.querySelector('a.community')).toBeNull();
+    });
+
+    it('names the community in a kicker as plain text', () => {
+      const host = renderSource(anEntry({ poster: alice, community }), 'xml', 'kicker');
+
+      expect(host.querySelector('span.community')?.textContent?.trim()).toBe('· c/technology');
+    });
+
+    it('links the community in the article through OwnInstanceLinks', () => {
+      const host = renderSource(anEntry({ poster: alice, community }), 'xml', 'article');
+      const links = TestBed.inject(OwnInstanceLinks);
+
+      expect(host.querySelector('a.community')?.getAttribute('href')).toBe(
+        links.open(community.url, 'lemmy'),
+      );
+    });
+
+    it('names no community when the entry has none', () => {
+      const host = renderSource(anEntry({ poster: alice }), 'xml', 'article');
+
+      expect(host.textContent).not.toContain('· c/');
+    });
   });
 });

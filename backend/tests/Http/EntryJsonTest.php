@@ -15,6 +15,7 @@ use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Entity\ImageRendition;
 use App\Entity\LinkCardContent;
+use App\Entity\PostCommunity;
 use App\Entity\QuotedPostContent;
 use App\Enum\CommentsLoad;
 use App\Enum\ShareKind;
@@ -24,6 +25,7 @@ use App\Enum\VoteScore;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowDiscussion;
 use App\Repository\EntryListRowEnrichment;
+use App\Repository\EntryListRowLemmy;
 use App\Repository\EntryListRowMarks;
 use App\Repository\EntryListRowSocial;
 use App\Repository\EntryListRowSubscription;
@@ -364,9 +366,28 @@ final class EntryJsonTest extends TestCase
 
     public function testTheReadersDownVoteIsSentAsMinusOne(): void
     {
-        $row = $this->row($this->entryTitled('Post'), new EntryListRowEnrichment(myVote: VoteScore::Down));
+        $lemmy = new EntryListRowLemmy(null, null, VoteScore::Down);
+        $row = $this->row($this->entryTitled('Post'), new EntryListRowEnrichment(lemmy: $lemmy));
 
         self::assertSame(-1, JsonMappers::entryJson()->listRow($row)['myVote']);
+    }
+
+    public function testALemmyPostNamesItsCommunity(): void
+    {
+        $row = $this->lemmyRow();
+
+        $json = JsonMappers::entryJson()->listRow($row);
+
+        self::assertSame(['name' => 'technology', 'url' => 'https://lemmy.world/c/technology'], $json['community']);
+        self::assertSame(5, $json['score']);
+    }
+
+    public function testAnArticleHasNoCommunity(): void
+    {
+        $json = JsonMappers::entryJson()->listRow($this->row($this->entryTitled('Article')));
+
+        self::assertNull($json['community']);
+        self::assertNull($json['score']);
     }
 
     public function testAnEntryTheReaderCannotVoteOnSendsNoVote(): void
@@ -438,14 +459,14 @@ final class EntryJsonTest extends TestCase
         self::assertSame('https://example.com/a#comments', $json['discussionUrl']);
     }
 
-    public function testTheStoredDiscussionCountsAreEmitted(): void
+    public function testTheStoredCommentCountIsEmitted(): void
     {
         $entry = $this->entryTitled('Post');
         $entry->recordDiscussionCounts(DiscussionCounts::of(-3, 0));
 
         $json = JsonMappers::entryJson()->listRow($this->row($entry));
 
-        self::assertSame(-3, $json['score']);
+        self::assertNull($json['score']);
         self::assertSame(0, $json['commentCount']);
     }
 
@@ -493,7 +514,7 @@ final class EntryJsonTest extends TestCase
                 'author', 'imageAspectRatio', 'attachments', 'categories', 'publishedAt', 'createdAt',
                 'subscriptionId', 'source', 'poster',
                 'faviconUrl', 'isHidden', 'isFavorite', 'isKept', 'isShared', 'isViewed',
-                'shortPlayerUrl', 'titleDerived', 'savedSearches', 'social', 'myVote', 'duplicates',
+                'shortPlayerUrl', 'titleDerived', 'savedSearches', 'social', 'myVote', 'community', 'duplicates',
             ],
             array_keys($json),
         );
@@ -854,6 +875,14 @@ final class EntryJsonTest extends TestCase
         $entry->setAuthor($author);
 
         return $entry;
+    }
+
+    private function lemmyRow(): EntryListRow
+    {
+        $entry = $this->entryTitled('Post');
+        $community = PostCommunity::of('Technology@lemmy.world', 'https://lemmy.world/c/technology');
+
+        return $this->row($entry, new EntryListRowEnrichment(lemmy: new EntryListRowLemmy(5, $community, null)));
     }
 
     private function row(Entry $entry, EntryListRowEnrichment $enrichment = new EntryListRowEnrichment()): EntryListRow

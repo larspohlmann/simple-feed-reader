@@ -25,10 +25,12 @@ final readonly class LemmyEntryRule implements PlatformEntryRuleInterface
             return $entry;
         }
 
-        return $entry->asDiscussionThread(Discussion::platformThread($pageUrl))
+        $thread = $entry->asDiscussionThread(Discussion::platformThread($pageUrl))
             ->withContentHtml($post->bodyHtml)
             ->withAuthor($post->authorName, $post->profileUrl)
             ->withDiscussionCounts($post->counts);
+
+        return $thread->inCommunity($post->community);
     }
 
     private function postUrl(ParsedEntryModel $entry): ?string

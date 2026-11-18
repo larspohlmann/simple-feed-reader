@@ -7,14 +7,11 @@ namespace App\Service\Ingestion\Ingest;
 use App\Entity\Entry;
 use App\Entity\EntryGuid;
 use App\Entity\Feed;
-use App\Enum\FeedPlatform;
 use App\Repository\EntryRepository;
 use App\Service\Ingestion\Ingest\Factory\IngestedEntryFactory;
-use App\Service\Ingestion\Ingest\FeedTitle\FeedTitleInterface;
 use App\Service\Ingestion\Ingest\Model\IncomingEntryModel;
 use App\Service\Ingestion\Ingest\Pass\EntryDeduplicator;
 use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
-use App\Service\Ingestion\Language\FeedLanguageResolver;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
 use App\Service\Foundation\Url\EntryUrlHash;
@@ -22,19 +19,10 @@ use Doctrine\ORM\EntityManagerInterface;
 
 /**
  * Turns a ParsedFeedModel into Entry rows, skipping any whose GUID hash or stable URL the feed already holds, and
- * refreshes the feed's metadata. The caller flushes.
+ * has the feed's metadata refreshed first. The caller flushes.
  */
 final readonly class EntryIngestor
 {
-    private const int FEED_TITLE_MAX = 512;
-    private const int SITE_URL_MAX = 2048;
-
-    /**
-     * The only bound on the TEXT column, which the sidebar bootstrap reduces to plain text for every subscription on
-     * every load. Generous: the longest description in a 111-feed library is 617 characters.
-     */
-    private const int FEED_DESCRIPTION_MAX = 4000;
-
     public function __construct(
         private EntityManagerInterface $entityManager,
         private EntryRepository $entries,
@@ -42,17 +30,16 @@ final readonly class EntryIngestor
         private EntryCategoryWriter $categoryWriter,
         private PlatformEntryRules $platformRules,
         private IngestedEntryFactory $entryFactory,
-        private EntryImageWriter $imageWriter,
-        private FeedTitleInterface $feedTitle,
+        private FeedMetadataRecorder $metadataRecorder,
         private EntryTranscriptWriter $transcriptWriter,
-        private FeedLanguageResolver $languageResolver,
+        private EntryLemmyPostWriter $lemmyPostWriter,
     ) {
     }
 
     /** @return list<Entry> the entries created, without ids until the caller flushes */
     public function ingest(Feed $feed, ParsedFeedModel $parsed, FeedIngestContext $context): array
     {
-        $this->updateFeedMetadata($feed, $parsed);
+        $this->metadataRecorder->record($feed, $parsed);
 
         if ($parsed->entries === []) {
             return [];
@@ -81,72 +68,16 @@ final readonly class EntryIngestor
 
         $this->categoryWriter->attach($newPairs);
         $this->transcriptWriter->attach($newPairs);
+        $this->lemmyPostWriter->attach($newPairs);
 
         return $created;
-    }
-
-    /**
-     * Brings the stored entries a fresh parse still serves up to date, matched by GUID hash: fills an image never
-     * judged, so a feed dropping its images erases nothing, and records the discussion counts the parse read.
-     */
-    public function refreshStoredEntries(Feed $feed, ParsedFeedModel $parsed): void
-    {
-        if ($parsed->entries === []) {
-            return;
-        }
-
-        $stored = $this->entries->findByFeedIndexedByGuidHash($feed, $this->guidHashesOf($parsed->entries));
-        foreach ($parsed->entries as $parsedEntry) {
-            $entry = $stored[self::guidHash($parsedEntry->guid)] ?? null;
-            if ($entry === null) {
-                continue;
-            }
-            $this->fillMissingImage($entry, $parsedEntry);
-            $entry->recordDiscussionCounts($this->platformRules->apply($parsedEntry)->discussionCounts);
-        }
-    }
-
-    private function fillMissingImage(Entry $entry, ParsedEntryModel $parsedEntry): void
-    {
-        $image = $parsedEntry->media->image;
-        if ($image === null || !$entry->getImage()->isMissing()) {
-            return;
-        }
-        $this->imageWriter->write($entry, $image);
-    }
-
-    private function updateFeedMetadata(Feed $feed, ParsedFeedModel $parsed): void
-    {
-        $this->recordTraits($feed, $parsed);
-        if ($parsed->title !== null) {
-            $title = $this->feedTitle->of($feed->getUrl(), $parsed->title);
-            $feed->setTitle(mb_substr($title, 0, self::FEED_TITLE_MAX));
-        }
-        if ($parsed->siteUrl !== null) {
-            $feed->setSiteUrl(mb_substr($parsed->siteUrl, 0, self::SITE_URL_MAX));
-        }
-        if ($parsed->description !== null) {
-            $feed->setDescription(mb_substr($parsed->description, 0, self::FEED_DESCRIPTION_MAX));
-        }
-        // A fetch without <image> must not erase the logo; FeedImageExtractor already applied scheme and length rules.
-        if ($parsed->imageUrl !== null) {
-            $feed->setImageUrl($parsed->imageUrl);
-        }
-    }
-
-    private function recordTraits(Feed $feed, ParsedFeedModel $parsed): void
-    {
-        $traits = $feed->getTraits()
-            ->withPlatform(FeedPlatform::fromGenerator($parsed->generator))
-            ->withLanguage($this->languageResolver->languageFor($feed, $parsed));
-        $feed->recordTraits($traits);
     }
 
     private function incoming(ParsedEntryModel $entry): IncomingEntryModel
     {
         return new IncomingEntryModel(
             $entry,
-            self::guidHash($entry->guid),
+            EntryGuid::hashOf($entry->guid),
             $this->urlHash->of($entry->guid, $entry->url),
         );
     }
@@ -166,16 +97,6 @@ final readonly class EntryIngestor
     }
 
     /**
-     * @param list<ParsedEntryModel> $entries
-     *
-     * @return list<string>
-     */
-    private function guidHashesOf(array $entries): array
-    {
-        return array_map(static fn (ParsedEntryModel $entry): string => self::guidHash($entry->guid), $entries);
-    }
-
-    /**
      * @param list<IncomingEntryModel> $incoming
      *
      * @return list<string> the url hashes of the entries that have one: a url-less item dedupes on GUID alone
@@ -190,10 +111,5 @@ final readonly class EntryIngestor
         }
 
         return $hashes;
-    }
-
-    private static function guidHash(string $guid): string
-    {
-        return EntryGuid::hashOf($guid);
     }
 }

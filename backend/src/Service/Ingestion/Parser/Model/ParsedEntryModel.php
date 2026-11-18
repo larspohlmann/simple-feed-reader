@@ -7,6 +7,7 @@ namespace App\Service\Ingestion\Parser\Model;
 use App\Entity\Discussion;
 use App\Entity\DiscussionCounts;
 use App\Entity\Headline;
+use App\Entity\PostCommunity;
 use App\Service\Outbound\Image\Model\DeclaredImageModel;
 
 /** @SuppressWarnings("PHPMD.ExcessiveParameterList") a pure data carrier: one parameter per parsed field. */
@@ -14,6 +15,7 @@ final readonly class ParsedEntryModel
 {
     public Discussion $discussion;
     public DiscussionCounts $discussionCounts;
+    public ?PostCommunity $community;
 
     public function __construct(
         public string $guid,
@@ -33,6 +35,7 @@ final readonly class ParsedEntryModel
     ) {
         $this->discussion = $discussion ?? Discussion::none();
         $this->discussionCounts = DiscussionCounts::unknown();
+        $this->community = null;
     }
 
     #[\NoDiscard]
@@ -51,6 +54,12 @@ final readonly class ParsedEntryModel
     public function withDiscussionCounts(DiscussionCounts $counts): self
     {
         return clone($this, ['discussionCounts' => $counts]);
+    }
+
+    #[\NoDiscard]
+    public function inCommunity(?PostCommunity $community): self
+    {
+        return clone($this, ['community' => $community]);
     }
 
     #[\NoDiscard]

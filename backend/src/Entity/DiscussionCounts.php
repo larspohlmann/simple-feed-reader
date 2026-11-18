@@ -21,9 +21,4 @@ final readonly class DiscussionCounts
     {
         return new self($score, $commentCount);
     }
-
-    public function isUnknown(): bool
-    {
-        return $this->score === null && $this->commentCount === null;
-    }
 }

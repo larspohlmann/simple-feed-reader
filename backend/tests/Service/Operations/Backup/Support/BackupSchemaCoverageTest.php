@@ -13,6 +13,7 @@ use App\Entity\DigestSettings;
 use App\Entity\DiscussionVote;
 use App\Entity\Entry;
 use App\Entity\EntryCategory;
+use App\Entity\EntryLemmyPost;
 use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\EntryTranscript;
@@ -157,6 +158,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . '(#1499, #1502, #1524); instance data, not the reader\'s.',
         ThreadPost::class => 'A post\'s self-reply continuation, read from the network at ingest (#1668); a '
             . 'restored entry shows its root post alone.',
+        EntryLemmyPost::class => 'A Lemmy post\'s score and community (#2347), rewritten on every fetch while its feed '
+            . 'still lists the post; a restored one would be stale before the reader saw it.',
         EntryTranscript::class => 'An episode\'s transcript, fetched from the URL its feed declares (#1809); a '
             . 'restored episode has none, since a backup carries no transcript declaration.',
         TrendingSnapshot::class => 'When a Trending window was last grouped and what it cost (#2017); regrouped from '
@@ -329,8 +332,6 @@ final class BackupSchemaCoverageTest extends DbTestCase
             'image.verifyAttempts' => 'The queue marker and failure count of this instance\'s '
                 . 'check. A restored image is not put into the queue. The instance shows it as '
                 . 'the old instance did.',
-            'discussion.score' => 'A Lemmy post\'s score (#2217), rewritten on every fetch while its feed '
-                . 'still lists the post; a restored one would be stale before the reader saw it.',
             'discussion.commentCount' => 'A Lemmy post\'s comment count (#2217), rewritten on every fetch '
                 . 'while its feed still lists the post; a restored one would be stale before the reader saw it.',
             'discussion.selfReplyCount' => 'The length of the thread whose replies, ThreadPost rows, stay out of '

@@ -212,6 +212,7 @@ writes none of them.
 | `ShareEnrichment` | The queue of entries whose embed or link cards are still to come. It is a machine record, not your data. |
 | `ThreadPost` | The replies in which a post's author continued it, read from the network when the post arrives. A restored article shows its root post alone. |
 | `EntryTranscript` | An episode's transcript, fetched from the URL its feed declares. A restored episode has no transcript, since a backup carries no transcript declaration. |
+| `EntryLemmyPost` | A Lemmy post's score and community label, derived from its instance and re-read while its feed lists the post. A restored older post shows no community. |
 | `TrendingSnapshot` | When a Trending window was last grouped and what the grouping cost. The next rebuild writes it again. |
 | `TrendingStory` | A Trending story and when its members joined. The next rebuild groups the restored entries again. |
 | `TrendingStoryEntry` | Which entries belong to a Trending story. The next rebuild groups the restored entries again. |
@@ -322,7 +323,6 @@ article mark, each included social network and each social network kept out of F
 | `image.urlHash` | A value the application calculates from the image address, which the file already carries. The restore calculates it again for each article, so it is never old. |
 | `image.checkedAt` | The time at which this instance judged the image. A restored image was not judged here, so the field stays empty. An empty field does not put the image into the check queue. |
 | `image.verifyAttempts` | The queue marker and failure count of this instance's check. A restored image is not put into the queue. The instance shows it as the old instance did. |
-| `discussion.score` | A Lemmy post's score, rewritten on every fetch while its feed still lists the post; a restored one would be stale before the reader saw it. |
 | `discussion.commentCount` | A Lemmy post's comment count, rewritten on every fetch while its feed still lists the post; a restored one would be stale before the reader saw it. |
 | `discussion.selfReplyCount` | How many replies the author continued the post with. The replies themselves stay out of the file, so a restored article shows its root post alone. |
 

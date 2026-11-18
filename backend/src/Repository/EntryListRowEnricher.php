@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Entry;
+use App\Entity\EntryLemmyPost;
 use App\Entity\SocialAccount;
 use App\Enum\CommentsLoad;
 use App\Enum\SocialNetwork;
@@ -14,6 +15,7 @@ use App\Service\Content\Comments\Support\LemmyPostAddress;
 use App\Service\Content\Comments\Support\SubstackPostAddress;
 use App\Service\Social\Social\Model\SocialPostAddressModel;
 use App\Service\Social\Social\Support\PostAuthor;
+use App\Service\Social\Social\Support\ProfileFeedUrl;
 use App\Service\Social\Social\Support\SocialPostAddress;
 
 /**
@@ -32,6 +34,7 @@ final readonly class EntryListRowEnricher
         private ThreadPostRepository $threadPosts,
         private SavedEntryOriginRepository $savedOrigins,
         private DiscussionVoteRepository $discussionVotes,
+        private EntryLemmyPostRepository $lemmyPosts,
     ) {
     }
 
@@ -67,6 +70,7 @@ final readonly class EntryListRowEnricher
         $socialStates = $this->socialStatesOf($entries, $postAddresses, $accountsByNetwork, $userId);
         $votes = $this->votesOf($lemmyPostIds, $accountsByNetwork, $userId);
         $origins = $this->savedOrigins->originsByEntryIds(self::savedEntryIdsOf($entries));
+        $lemmyPosts = $this->lemmyPosts->byEntryIds($entryIds);
 
         $enrichments = [];
         foreach ($entryIds as $entryId) {
@@ -79,7 +83,7 @@ final readonly class EntryListRowEnricher
                 self::discussionOf($entries[$entryId], $socialStates[$entryId] ?? null),
                 $origins[$entryId] ?? null,
                 $threads[$entryId] ?? [],
-                $votes[$entryId] ?? null,
+                self::lemmyOf($entries[$entryId], $lemmyPosts[$entryId] ?? null, $votes[$entryId] ?? null),
             );
         }
 
@@ -208,6 +212,18 @@ final readonly class EntryListRowEnricher
             $entries,
             static fn (Entry $entry): bool => SourceFormat::isSaved($entry->getFeed()->getSourceFormat()),
         ));
+    }
+
+    private static function lemmyOf(Entry $entry, ?EntryLemmyPost $post, ?VoteScore $myVote): ?EntryListRowLemmy
+    {
+        if (null === $post && null === $myVote) {
+            return null;
+        }
+        $community = $post?->getCommunity();
+        $feedIdentity = ProfileFeedUrl::identityOf(SocialNetwork::Lemmy, $entry->getFeed()->getUrl());
+        $inOwnFeed = null !== $feedIdentity && strtolower($feedIdentity) === $community?->identity;
+
+        return new EntryListRowLemmy($post?->getScore(), $inOwnFeed ? null : $community, $myVote);
     }
 
     private static function discussionOf(Entry $entry, ?EntryListRowSocial $social): ?EntryListRowDiscussion
