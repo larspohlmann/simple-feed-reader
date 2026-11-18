@@ -26,10 +26,12 @@ const LINK_TOKEN = /^(?:https?:\/\/\S*|(?:[\w-]+\.)+[a-z]{2,}\/\S*)$/i;
 /** The text without the run of links it ends in, full, shortened or cut off by the excerpt. */
 export function withoutTrailingLinks(text: string): string {
   let rest = text.trimEnd();
-  let lastWord = rest.slice(rest.search(/\S+$/));
-  while (rest !== '' && LINK_TOKEN.test(lastWord)) {
-    rest = rest.slice(0, -lastWord.length).trimEnd();
-    lastWord = rest.slice(rest.search(/\S+$/));
+  while (LINK_TOKEN.test(lastWordOf(rest))) {
+    rest = rest.slice(0, -lastWordOf(rest).length).trimEnd();
   }
   return rest;
+}
+
+function lastWordOf(text: string): string {
+  return /\S*$/.exec(text)![0];
 }

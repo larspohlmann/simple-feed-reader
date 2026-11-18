@@ -26,11 +26,10 @@ import { withoutTrailingLinks } from '../../../../entry/entry-text';
 export class EntryLinkComponent extends EntryBlockBase {
   /** A Trending row no followed outlet carries is the article its posts share: the card heads it (#2229). */
   protected readonly ledByItsCard = computed(() => sharedArticleCard(this.entry()) !== null);
-  private readonly showsCard = computed(() => this.entry().linkCards.length > 0);
   protected readonly title = computed(() => this.withoutCardedLink(this.headline()));
   protected readonly dek = computed(() => this.withoutCardedLink(this.snippet()));
 
   private withoutCardedLink(text: string): string {
-    return this.showsCard() ? withoutTrailingLinks(text) : text;
+    return this.entry().linkCards.length > 0 ? withoutTrailingLinks(text) : text;
   }
 }
