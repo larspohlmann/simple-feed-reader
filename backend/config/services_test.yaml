@@ -58,11 +58,6 @@ services:
         alias: App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\CompositeProviderCallHeartbeat
         public: true
 
-    # Public: nothing in the app runs the story AI sweep until its worker handler takes it; drop this entry then.
-    App\Service\Curation\StoryAi\StoryAiSweep:
-        autowire: true
-        public: true
-
     # Public: ImageProxyControllerTest replaces it, and its one consumer would otherwise inline it away.
     App\Service\Outbound\Image\ImageProxy\ImageProxyInterface:
         alias: App\Service\Outbound\Image\ImageProxy\ImageProxy
