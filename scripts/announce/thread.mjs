@@ -18,12 +18,12 @@ export const LEAD_LIMIT = 150;
 const TAGS = '#RSS #SelfHosted #OpenSource';
 
 export function extractHighlights(releaseBody) {
-  const paragraphs = highlightParagraphs(releaseBody);
-  const [first, ...rest] = paragraphs;
-  if (first !== undefined && titleOf(first) === null) {
-    return { lead: toPlainText(first), highlights: rest.map(toHighlight) };
+  const highlights = highlightParagraphs(releaseBody).map(toHighlight);
+  const [first, ...rest] = highlights;
+  if (first !== undefined && first.title === null) {
+    return { lead: first.text, highlights: rest };
   }
-  return { lead: null, highlights: paragraphs.map(toHighlight) };
+  return { lead: null, highlights };
 }
 
 function highlightParagraphs(releaseBody) {
@@ -114,12 +114,19 @@ export function buildThread({ tag, releaseUrl, lead, highlights, limit }) {
 
 function rootPost({ tag, lead, highlights, limit }) {
   const product = `simple-feed-reader ${tag}, a self-hosted, open-source RSS reader`;
+  const fits = (post) => graphemeLength(post) <= limit;
+  const leadPost = lead === null ? null : withHomepage(`${product}, is out. ${lead}`);
+  if (leadPost !== null && fits(leadPost)) {
+    return leadPost;
+  }
   const titles = highlights.map((highlight) => highlight.title).filter((title) => title !== null);
-  const candidates = [
-    ...(lead === null ? [] : [withHomepage(`${product}, is out. ${lead}`)]),
-    ...titles.map((_, index) => titleList(product, titles, titles.length - index)),
-  ];
-  return candidates.find((post) => graphemeLength(post) <= limit) ?? withHomepage(`${product}, is out.`);
+  for (let shown = titles.length; shown > 0; shown -= 1) {
+    const post = titleList(product, titles, shown);
+    if (fits(post)) {
+      return post;
+    }
+  }
+  return withHomepage(`${product}, is out.`);
 }
 
 function titleList(product, titles, shown) {

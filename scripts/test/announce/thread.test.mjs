@@ -47,15 +47,14 @@ test('extractHighlights returns one titled plain-text entry per paragraph', () =
   });
 });
 
+const titled = [
+  { title: 'One', text: 'One. First.' },
+  { title: 'Two', text: 'Two. Second.' },
+];
+
 test('extractHighlights takes an untitled first paragraph as the lead', () => {
   const body = '### Highlights\n\nThis release adds one and two.\n\n**One.** First.\n\n**Two.** Second.\n';
-  assert.deepEqual(extractHighlights(body), {
-    lead: 'This release adds one and two.',
-    highlights: [
-      { title: 'One', text: 'One. First.' },
-      { title: 'Two', text: 'Two. Second.' },
-    ],
-  });
+  assert.deepEqual(extractHighlights(body), { lead: 'This release adds one and two.', highlights: titled });
 });
 
 test('extractHighlights keeps a later untitled paragraph as an untitled highlight', () => {
@@ -68,13 +67,7 @@ test('extractHighlights keeps a later untitled paragraph as an untitled highligh
 
 test('extractHighlights treats each list item as a highlight of its own', () => {
   const body = '### Highlights\n\n- **One.** First.\n- **Two.** Second.\n';
-  assert.deepEqual(extractHighlights(body), {
-    lead: null,
-    highlights: [
-      { title: 'One', text: 'One. First.' },
-      { title: 'Two', text: 'Two. Second.' },
-    ],
-  });
+  assert.deepEqual(extractHighlights(body), { lead: null, highlights: titled });
 });
 
 test('extractHighlights returns nothing when the body has no highlights', () => {
@@ -109,11 +102,7 @@ test('splitToFit never returns a piece over the limit', () => {
 });
 
 const releaseUrl = 'https://github.com/larspohlmann/simple-feed-reader/releases/tag/v1.9.0';
-const titled = [
-  { title: 'One', text: 'One. First.' },
-  { title: 'Two', text: 'Two. Second.' },
-];
-const tail = '\n\nhttps://lars-pohlmann.de/simplefeedreader/\n\n#RSS #SelfHosted #OpenSource';
+const tail ='\n\nhttps://lars-pohlmann.de/simplefeedreader/\n\n#RSS #SelfHosted #OpenSource';
 const titleList = `New in simple-feed-reader v1.9.0, a self-hosted, open-source RSS reader:\n\n• One\n• Two${tail}`;
 
 test('buildThread leads with the lead sentence, and closes with the release notes', () => {

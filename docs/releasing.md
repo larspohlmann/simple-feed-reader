@@ -183,12 +183,11 @@ so word the lead and the titles for that, without sounding like an advert:
 
 - One sentence of at most 150 characters, e.g. "This release adds …".
   `scripts/test/announce/changelog-lead.test.mjs` fails CI on a longer one.
-- Name each highlight by the noun someone would search for: "French and
-  Spanish", "Lemmy", "podcast transcripts".
-- Plain verbs only: no praise adjectives, no emoji, no exclamation marks, no
-  hashtags. The root post adds its own tags.
-- A title names the feature ("Feed directory"), not what it lets you do
-  ("Choose what shows where"); titles are the root's fallback list.
+- Name each feature by the noun someone would search for, in the lead and in
+  the titles: "French and Spanish", "Feed directory", not "Choose what shows
+  where". Titles are the root's fallback list.
+- No praise adjectives, emoji, exclamation marks or hashtags; the root post
+  adds its own tags.
 
 Preview the thread before you merge the highlights:
 

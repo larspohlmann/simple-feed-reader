@@ -7,6 +7,7 @@ const base = { tag: 'v1.9.0', releaseUrl: 'https://example.org/release', release
 const mastodonEnv = { MASTODON_INSTANCE: 'https://m.example', MASTODON_TOKEN: 't' };
 const blueskyEnv = { BLUESKY_HANDLE: 'h', BLUESKY_APP_PASSWORD: 'p' };
 const allEnv = { ...mastodonEnv, ...blueskyEnv };
+const rootTail = '\n\nhttps://lars-pohlmann.de/simplefeedreader/\n\n#RSS #SelfHosted #OpenSource';
 
 function recorder() {
   const lines = [];
@@ -82,8 +83,7 @@ test('a dry run prints every network\'s posts and calls nothing', async () => {
   assert.equal(code, 0);
   assert.deepEqual(urls, []);
   const thread = [
-    '[1] New in simple-feed-reader v1.9.0, a self-hosted, open-source RSS reader:\n\n• One'
-      + '\n\nhttps://lars-pohlmann.de/simplefeedreader/\n\n#RSS #SelfHosted #OpenSource',
+    `[1] New in simple-feed-reader v1.9.0, a self-hosted, open-source RSS reader:\n\n• One${rootTail}`,
     '[2] One. First.',
     '[3] Full release notes: https://example.org/release',
   ];
@@ -104,8 +104,7 @@ test('a release with only a lead posts the root and the release notes', async ()
   assert.equal(code, 0);
   assert.deepEqual(lines.slice(0, 3), [
     '--- Mastodon (2 posts)',
-    '[1] simple-feed-reader v1.9.0, a self-hosted, open-source RSS reader, is out. This release adds one.'
-      + '\n\nhttps://lars-pohlmann.de/simplefeedreader/\n\n#RSS #SelfHosted #OpenSource',
+    `[1] simple-feed-reader v1.9.0, a self-hosted, open-source RSS reader, is out. This release adds one.${rootTail}`,
     '[2] Full release notes: https://example.org/release',
   ]);
 });
