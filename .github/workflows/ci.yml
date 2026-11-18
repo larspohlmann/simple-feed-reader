@@ -228,20 +228,34 @@ jobs:
           # default clone is not enough — the base ref has to be present.
           fetch-depth: 0
 
+      - name: Fetch the base branch
+        run: git fetch --no-tags origin '${{ github.event.pull_request.base.ref }}'
+
+      # Infection mutates only changed src lines, so a PR that leaves src alone
+      # has nothing to mutate and would spend the coverage run for nothing.
+      - name: Detect src changes
+        id: src
+        run: |
+          base=$(git merge-base 'origin/${{ github.event.pull_request.base.ref }}' HEAD)
+          if git diff --quiet "$base" HEAD -- src; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
       # The one job that needs a coverage driver: Infection maps each mutant
       # to the tests that reach it. PCOV over Xdebug because it is several
       # times faster and this job runs the suite many times over.
       - uses: ./.github/actions/setup-backend
+        if: steps.src.outputs.changed == 'true'
         with:
           coverage: pcov
-
-      - name: Fetch the base branch
-        run: git fetch --no-tags origin '${{ github.event.pull_request.base.ref }}'
 
       # Not Infection's own serial initial run: Symfony 8.1 collects cycles at every
       # kernel shutdown, and each pass walks the whole coverage map (#2188); a
       # ParaTest worker's map is small. A red suite fails here instead.
       - name: Collect coverage
+        if: steps.src.outputs.changed == 'true'
         run: composer infection:coverage
 
       # Escaped mutants come back as PR annotations on the offending line, so a
@@ -252,6 +266,7 @@ jobs:
       # Infection compares the threshold against an MSI of 0% and fails a PR
       # that has nothing to answer for.
       - name: Infection
+        if: steps.src.outputs.changed == 'true'
         run: >-
           vendor/bin/infection
           --git-diff-filter=AM
