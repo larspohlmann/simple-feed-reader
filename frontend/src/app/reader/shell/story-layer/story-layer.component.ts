@@ -88,7 +88,7 @@ export class StoryLayerComponent {
 
   constructor() {
     inject(ListCover).coverWith(
-      { context: this.context, heading: this.heading },
+      { context: this.context, heading: this.heading, open: this.overlay.open },
       inject(DestroyRef),
     );
     this.gestures.connect({

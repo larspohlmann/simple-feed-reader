@@ -192,7 +192,10 @@ describe('MarkReadActions recounting after a mark-read', () => {
         withMutatingCue: (mutation) => mutation,
       };
       const context = new TestListContext(storyRows as unknown as EntriesStore, signal(story));
-      TestBed.inject(ListCover).coverWith({ context, heading }, TestBed.inject(DestroyRef));
+      TestBed.inject(ListCover).coverWith(
+        { context, heading, open: signal(true) },
+        TestBed.inject(DestroyRef),
+      );
       currentSelection.set({ kind: 'trending', window: 'day' });
     });
 

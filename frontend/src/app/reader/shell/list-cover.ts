@@ -2,10 +2,12 @@ import { DestroyRef, Injectable, Signal, computed, inject, signal } from '@angul
 import { ListContext } from '../state/list-context';
 import { ListHeading } from './list-heading.service';
 
-/** A list shown over the route's list, with the heading it carries. */
+/** A list shown over the route's list, with the heading it carries, while `open` holds. */
 export interface CoveringList {
   readonly context: ListContext;
   readonly heading: ListHeading;
+  /** False from the moment the layer starts to leave, so a click on the list it reveals reaches that list. */
+  readonly open: Signal<boolean>;
 }
 
 /** The list a layer shows over the route's list, as a Trending story's does (#2329). Row and article actions, the
@@ -13,7 +15,10 @@ export interface CoveringList {
 @Injectable()
 export class ListCover {
   private readonly covering = signal<CoveringList | null>(null);
-  readonly list = this.covering.asReadonly();
+  readonly list = computed(() => {
+    const list = this.covering();
+    return list?.open() ? list : null;
+  });
 
   /** Shows `list` over the route's list until its host is destroyed. */
   coverWith(list: CoveringList, hostDestroyed: DestroyRef): void {

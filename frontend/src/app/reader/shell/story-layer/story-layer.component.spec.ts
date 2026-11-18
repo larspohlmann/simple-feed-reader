@@ -87,6 +87,7 @@ describe('StoryLayerComponent (#2329)', () => {
     }) as unknown as TouchEvent;
 
   let close: jest.Mock;
+  let overlayOpen: ReturnType<typeof signal<boolean>>;
   let toggleOpen: jest.Mock;
   let setOrder: jest.Mock;
   let setUnreadOnly: jest.Mock;
@@ -110,6 +111,7 @@ describe('StoryLayerComponent (#2329)', () => {
 
   function mountFixture(): ComponentFixture<StoryLayerComponent> {
     close = jest.fn();
+    overlayOpen = signal(true);
     toggleOpen = jest.fn();
     setOrder = jest.fn();
     setUnreadOnly = jest.fn();
@@ -120,7 +122,7 @@ describe('StoryLayerComponent (#2329)', () => {
       imports: [StoryLayerComponent, provideTranslocoTesting()],
       providers: [
         ListCover,
-        { provide: StoryOverlay, useValue: { close } },
+        { provide: StoryOverlay, useValue: { close, open: overlayOpen } },
         { provide: ListOrderService, useValue: { set: setOrder } },
         { provide: ListPreferences, useValue: { setUnreadOnly } },
         {
@@ -191,6 +193,15 @@ describe('StoryLayerComponent (#2329)', () => {
     expect(cover.list()?.context).toBe(context);
     expect(cover.list()?.heading).toBe(heading);
     fixture.destroy();
+    expect(cover.list()).toBeNull();
+  });
+
+  it('uncovers the list beneath as soon as the story starts to leave, not after its slide', () => {
+    mountFixture();
+    const cover = TestBed.inject(ListCover);
+
+    overlayOpen.set(false);
+
     expect(cover.list()).toBeNull();
   });
 

@@ -39,7 +39,11 @@ describe('ReaderTabTitle', () => {
     const storyHeading = { tabTitle: () => 'Harbour strike', titleCount: () => ({ value: 31 }) };
 
     TestBed.inject(ListCover).coverWith(
-      { context: {} as ListContext, heading: storyHeading as unknown as ListHeading },
+      {
+        context: {} as ListContext,
+        heading: storyHeading as unknown as ListHeading,
+        open: signal(true),
+      },
       TestBed.inject(DestroyRef),
     );
     TestBed.tick();

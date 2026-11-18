@@ -563,7 +563,7 @@ describe("EntryStateActions with a story's list over the reader's (#2329)", () =
       signal<Selection>({ kind: 'trending-story', id: 42, unread: false }),
     );
     TestBed.inject(ListCover).coverWith(
-      { context: story, heading: {} as ListHeading },
+      { context: story, heading: {} as ListHeading, open: signal(true) },
       TestBed.inject(DestroyRef),
     );
   });
