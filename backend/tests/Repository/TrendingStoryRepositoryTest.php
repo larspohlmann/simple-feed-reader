@@ -13,12 +13,15 @@ use App\Entity\Subscription;
 use App\Entity\TrendingSnapshot;
 use App\Entity\TrendingStory;
 use App\Entity\User;
+use App\Entity\Headline;
+use App\Enum\FeedLanguage;
 use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
 use App\Repository\TrendingStoryRepository;
 use App\Service\Curation\Trending\Exception\TrendingStoryNotFoundException;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\ReaderWindowModel;
+use App\Service\Curation\Trending\Model\StoryHeadlineModel;
 use App\Service\Curation\Trending\Model\StoryTitleModel;
 use App\Service\Curation\Trending\ReaderWindows;
 use App\Service\Curation\Trending\TrendingStories;
@@ -488,6 +491,116 @@ final class TrendingStoryRepositoryTest extends DbTestCase
     public function testTitlesOfNoStoriesRunNoQuery(): void
     {
         self::assertSame([], $this->entityManager->getRepository(TrendingStory::class)->titlesOf([]));
+    }
+
+    public function testMemberHeadlinesTakeOnePerOutletNewestFirst(): void
+    {
+        $members = [];
+        $outlets = [];
+        for ($outlet = 0; $outlet < 14; ++$outlet) {
+            $outlets[$outlet] = $this->articleFeed('outlet-' . $outlet);
+            $members[] = [$this->fixtures->entry(
+                $outlets[$outlet],
+                'Headline ' . $outlet,
+                \sprintf('2031-05-14 %02d:00:00', $outlet),
+            ), null];
+        }
+        $newer = $this->fixtures->entry($outlets[0], 'Spiegel: Newer headline', '2031-05-14 14:00:00');
+        $members[] = [$newer, null];
+        $members[] = [$this->fixtures->entry($this->socialFeed('ann'), 'A post', '2031-05-14 15:00:00'), null];
+        $story = $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 16:00:00', $members);
+        $connection = $this->entityManager->getConnection();
+        $connection->executeStatement(
+            "UPDATE feed SET title = 'DER SPIEGEL', language = 'de' WHERE id = ?",
+            [$outlets[0]->requireId()],
+        );
+        $connection->executeStatement(
+            "UPDATE entry SET summary = '<p>Der Hafen steht still.</p>' WHERE id = ?",
+            [$newer->requireId()],
+        );
+
+        $headlines = $this->stories()->memberHeadlinesOf($story->requireId(), 12);
+
+        self::assertSame(
+            ['Spiegel: Newer headline', ...array_map(
+                static fn (int $outlet): string => 'Headline ' . $outlet,
+                range(13, 3),
+            )],
+            array_map(static fn (StoryHeadlineModel $headline): string => $headline->headline, $headlines),
+        );
+        self::assertEquals(
+            new StoryHeadlineModel(
+                'Spiegel: Newer headline',
+                'Der Hafen steht still.',
+                'DER SPIEGEL',
+                FeedLanguage::German,
+            ),
+            $headlines[0],
+        );
+        self::assertSame('', $headlines[1]->snippet);
+    }
+
+    public function testADerivedHeadlinesSnippetStartsAfterIt(): void
+    {
+        $derived = $this->member($this->articleFeed('outlet'));
+        $derived->setHeadline(Headline::derived('Der Hafen steht still'));
+        $story = $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [[$derived, null]]);
+        $this->entityManager->getConnection()->executeStatement(
+            "UPDATE entry SET summary = 'Der Hafen steht still. Seit Montag.' WHERE id = ?",
+            [$derived->requireId()],
+        );
+
+        $headlines = $this->stories()->memberHeadlinesOf($story->requireId(), 12);
+
+        self::assertSame('Der Hafen steht still', $headlines[0]->headline);
+        self::assertSame('. Seit Montag.', $headlines[0]->snippet);
+    }
+
+    public function testMemberHeadlinesOfAPostStoryReadItsCards(): void
+    {
+        $older = $this->fixtures->linkShare($this->socialFeed('ann'), '2031-05-14 08:00:00', new LinkCardContent(
+            'https://outlet.example/strike',
+            'Port strike halts traffic',
+            '<p>The port is idle.</p>',
+            null,
+            'Outlet',
+        ));
+        $newer = $this->fixtures->linkShare($this->socialFeed('ben'), '2031-05-14 09:00:00', new LinkCardContent(
+            'https://other.example/strike',
+            'Dockers walk out',
+            null,
+            null,
+            'Other',
+        ));
+        $alsoOlder = $this->fixtures->linkShare($this->socialFeed('cat'), '2031-05-14 07:00:00', new LinkCardContent(
+            'https://outlet.example/strike',
+            'Port strike halts traffic',
+            '<p>The port is idle.</p>',
+            null,
+            'Outlet',
+        ));
+        $uncarded = $this->fixtures->linkShare($this->socialFeed('dan'), '2031-05-14 10:00:00', new LinkCardContent(
+            'https://elsewhere.example/strike',
+            'Not a story card',
+            null,
+            null,
+            'Elsewhere',
+        ));
+        $story = $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 11:00:00', [
+            [$older, 'outlet.example'],
+            [$newer, 'other.example'],
+            [$alsoOlder, 'outlet.example'],
+            [$uncarded, null],
+        ]);
+
+        self::assertEquals(
+            [
+                new StoryHeadlineModel('Dockers walk out', ''),
+                new StoryHeadlineModel('Port strike halts traffic', 'The port is idle.'),
+            ],
+            $this->stories()->memberHeadlinesOf($story->requireId(), 12),
+        );
+        self::assertCount(1, $this->stories()->memberHeadlinesOf($story->requireId(), 1));
     }
 
     private function storeTitles(TrendingStory $story, ?string $fallbackTitle, ?string $llmTitle): void

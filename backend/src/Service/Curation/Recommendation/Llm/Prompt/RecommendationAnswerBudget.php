@@ -61,6 +61,7 @@ final readonly class RecommendationAnswerBudget
             RecommendationResponseSchema::Distillation => self::PROFILE_ANSWER_TOKENS,
             RecommendationResponseSchema::BatchScore => $replyItemCount * self::TOKENS_PER_SCORE_PICK,
             RecommendationResponseSchema::Consolidation => $replyItemCount * self::TOKENS_PER_PICK,
+            RecommendationResponseSchema::StoryTitle => 0,
         };
 
         $bounded = max(self::MINIMUM_ANSWER_TOKENS, $expected);

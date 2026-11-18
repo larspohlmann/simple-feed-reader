@@ -58,4 +58,17 @@ final class RecommendationResponseSchemaTest extends TestCase
         self::assertSame('string', $profile['type']);
         self::assertSame(['profile'], $schema->schema['required']);
     }
+
+    public function testStoryTitleSchemaAsksForATitleStringOnly(): void
+    {
+        $schema = RecommendationResponseSchema::StoryTitle->toJsonSchema();
+
+        self::assertSame('story_title', $schema->name);
+        self::assertSame([
+            'type' => 'object',
+            'properties' => ['title' => ['type' => 'string']],
+            'required' => ['title'],
+            'additionalProperties' => false,
+        ], $schema->schema);
+    }
 }
