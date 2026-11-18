@@ -42,6 +42,7 @@ import {
 } from '../../../../testing/scroll-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { anEntry, aStory } from '../../../../testing/entry-testing';
+import { listPageOf } from '../../state/list-page';
 import {
   MockIntersectionObserver,
   installMockIntersectionObserver,
@@ -375,7 +376,8 @@ describe('EntryListComponent', () => {
         },
       };
       const readerApi = {
-        entries: (query: EntryQuery, cursor?: string | null) => of(pages[cursor ?? 'first']),
+        entries: (query: EntryQuery, cursor?: string | null) =>
+          of(listPageOf(pages[cursor ?? 'first'])),
       };
 
       it('marks a later page, then drops the divider and keeps the earlier rows once the new head hides', async () => {

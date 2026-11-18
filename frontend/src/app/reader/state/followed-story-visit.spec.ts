@@ -7,7 +7,7 @@ import { EntriesStore } from './entries.store';
 import { LandedList } from './landed-list';
 import { FollowedStoriesStore } from './followed-stories.store';
 import { FollowedStoryVisit } from './followed-story-visit';
-import { FollowedStoryPageDto } from '../trending/trending.models';
+import { ListPage } from './list-page';
 
 describe('FollowedStoryVisit (#2128)', () => {
   const lastOpenedAt = '2026-11-16T08:00:00+00:00';
@@ -38,8 +38,8 @@ describe('FollowedStoryVisit (#2128)', () => {
 
   const landStory = (rows: EntryDto[], openedAt: string = lastOpenedAt) => {
     entries.set(rows);
-    const page: FollowedStoryPageDto = {
-      entries: rows,
+    const page: ListPage = {
+      items: rows,
       nextCursor: null,
       lastOpenedAt: openedAt,
       newEntryIds: [],
@@ -48,7 +48,7 @@ describe('FollowedStoryVisit (#2128)', () => {
   };
   const landAnotherList = () => {
     entries.set([anEntry({ id: 1 })]);
-    listLanded.next({ query: anotherList, page: { entries: entries(), nextCursor: null } });
+    listLanded.next({ query: anotherList, page: { items: entries(), nextCursor: null } });
   };
   const failToLoad = (query: EntryQuery) => {
     entries.set([]);

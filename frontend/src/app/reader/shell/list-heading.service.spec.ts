@@ -21,7 +21,7 @@ import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SubscriptionRows } from '../state/subscription-rows';
 import { TagNode, countDescendants, tagNodesById } from '../state/subscription-derivations';
 import { NO_UNREAD_TOTALS, UnreadTotals } from '../state/unread-totals';
-import { anEntry } from '../../../testing/entry-testing';
+import { anEntry, aStory, aStoryArticle } from '../../../testing/entry-testing';
 import { makeSubscription } from '../testing/subscription.factory';
 import { TrendingBuiltAt } from '../trending/trending-built-at';
 import { TrendingWindowService } from '../trending/trending-window.service';
@@ -407,6 +407,11 @@ describe('ListHeading for the Shared list (#2007)', () => {
 });
 
 describe('ListHeading for the Trending list (#2017)', () => {
+  const storyOfThree = (id: number) =>
+    aStory({
+      id,
+      articles: [1, 2, 3].map((position) => aStoryArticle({ id: id * 10 + position })),
+    });
   const trendingHeading = (window: 'day' | 'week' = 'day') => {
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
@@ -418,10 +423,7 @@ describe('ListHeading for the Trending list (#2017)', () => {
         },
         { provide: SubscriptionsStore, useValue: {} },
         { provide: LanguageService, useValue: { lang: signal('en') } },
-        {
-          provide: EntriesStore,
-          useValue: { entries: signal([anEntry({ id: 1 }), anEntry({ id: 2 })]) },
-        },
+        { provide: EntriesStore, useValue: { items: signal([storyOfThree(1), storyOfThree(2)]) } },
         { provide: RecommendationsService, useValue: {} },
         { provide: SavedSearchesStore, useValue: {} },
         { provide: FollowedStoriesStore, useValue: {} },
@@ -441,7 +443,7 @@ describe('ListHeading for the Trending list (#2017)', () => {
     expect(trendingHeading('week').title()).toBe('Trending · 7 days');
   });
 
-  it('counts the stories it lists', () => {
+  it('counts each story once, however many articles it holds (#2328)', () => {
     expect(trendingHeading().titleCount()).toEqual({ value: 2, counts: 'items' });
   });
 });
@@ -510,7 +512,7 @@ describe('ListHeading for a followed Trending story (#2128)', () => {
         { provide: LanguageService, useValue: { lang: signal('en') } },
         {
           provide: EntriesStore,
-          useValue: { entries: signal([anEntry({ id: 1 }), anEntry({ id: 2 })]) },
+          useValue: { items: signal([anEntry({ id: 1 }), anEntry({ id: 2 })]) },
         },
         { provide: RecommendationsService, useValue: {} },
         { provide: SavedSearchesStore, useValue: {} },

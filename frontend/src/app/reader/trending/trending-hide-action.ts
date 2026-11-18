@@ -1,8 +1,8 @@
 import { inject, Injectable } from '@angular/core';
-import { EntryDto } from '../models';
 import { EntriesStore } from '../state/entries.store';
 import { EntryStateActions } from '../shell/entry-state-actions.service';
 import { SubscriptionsStore } from '../state/subscriptions.store';
+import { TrendingStoryDto } from './trending.models';
 
 /** Hide on a Trending card (#2017): the card leaves in place (#2066), comes back if the hide fails. */
 @Injectable()
@@ -11,11 +11,11 @@ export class TrendingHideAction {
   private readonly subscriptions = inject(SubscriptionsStore);
   private readonly rows = inject(EntryStateActions);
 
-  run(entry: EntryDto): void {
-    this.entries.hideTrendingStory(entry.id, {
-      onStarted: () => this.rows.markLeaving(entry.id),
+  run(story: TrendingStoryDto): void {
+    this.entries.hideTrendingStory(story, {
+      onStarted: () => this.rows.markLeaving(story.leadEntryId),
       onSaved: () => this.subscriptions.reloadCountsQuietly(),
-      onFailed: () => this.rows.stayInList(entry.id),
+      onFailed: () => this.rows.stayInList(story.leadEntryId),
     });
   }
 }

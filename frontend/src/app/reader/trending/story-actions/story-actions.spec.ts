@@ -37,15 +37,16 @@ describe('provideTrendingStoryActions (#2272)', () => {
     expect(actions()).toBeNull();
   });
 
-  it('runs follow and hide on the entry', () => {
+  it('follows the entry and hides its story', () => {
     const entry = anEntry({ id: 7 });
+    const story = aStory({ id: 4 });
     const actions = TestBed.inject(STORY_ACTIONS)()!;
 
     actions.follow(entry);
-    actions.hide(entry);
+    actions.hide(story);
 
     expect(follow.run).toHaveBeenCalledWith(entry);
-    expect(hide.run).toHaveBeenCalledWith(entry);
+    expect(hide.run).toHaveBeenCalledWith(story);
   });
 
   it('asks the followed stories whether a story is followed', () => {

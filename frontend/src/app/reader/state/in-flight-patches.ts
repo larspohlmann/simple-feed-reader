@@ -1,5 +1,6 @@
 import { EntryDto, EntryStatePatch } from '../models';
-import { withPatchedRow } from './entry-rows';
+import { EntryPatch, withPatchedItem, withPatchedRow } from './entry-rows';
+import { ListItem } from './list-item';
 
 export type RowPatch = EntryStatePatch & Pick<Partial<EntryDto>, 'social' | 'myVote' | 'score'>;
 
@@ -31,15 +32,22 @@ export class InFlightPatches {
     return false;
   }
 
-  overlayAll(entries: EntryDto[]): EntryDto[] {
-    if (this.patches.size === 0) return entries;
-    return entries.map((entry) => this.overlay(entry));
+  overlayAll(items: ListItem[]): ListItem[] {
+    if (this.patches.size === 0) return items;
+    return items.map((item) => this.laidOver(item, withPatchedItem));
   }
 
   overlay(entry: EntryDto): EntryDto {
-    let patched = entry;
+    return this.laidOver(entry, withPatchedRow);
+  }
+
+  private laidOver<T>(
+    value: T,
+    patchIn: (value: T, targets: ReadonlySet<number>, patch: EntryPatch) => T,
+  ): T {
+    let patched = value;
     for (const inFlight of this.patches) {
-      patched = withPatchedRow(patched, new Set([inFlight.entryId]), (target) => ({
+      patched = patchIn(patched, new Set([inFlight.entryId]), (target) => ({
         ...target,
         ...inFlight.patch,
       }));

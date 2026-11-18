@@ -8,11 +8,11 @@ export class MatchedWords {
   private readonly matched = accountSignal<string[]>([]);
   readonly words = this.matched.asReadonly();
 
-  replaceWith(page: EntriesPage): void {
+  replaceWith(page: Pick<EntriesPage, 'matchedWords'>): void {
     this.matched.set(page.matchedWords ?? []);
   }
 
-  addFrom(page: EntriesPage): void {
+  addFrom(page: Pick<EntriesPage, 'matchedWords'>): void {
     this.matched.update((existing) => unionMatchedWords(existing, page.matchedWords ?? []));
   }
 

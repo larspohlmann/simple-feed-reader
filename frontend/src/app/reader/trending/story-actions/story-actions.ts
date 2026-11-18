@@ -8,7 +8,7 @@ import { TrendingStoryDto } from '../trending.models';
 
 export interface StoryActions {
   follow(entry: EntryDto): void;
-  hide(entry: EntryDto): void;
+  hide(story: TrendingStoryDto): void;
   isFollowed(story: Pick<TrendingStoryDto, 'id' | 'followed'>): boolean;
 }
 
@@ -29,7 +29,7 @@ export function provideTrendingStoryActions(): Provider[] {
           routeState.selection().kind === 'trending'
             ? {
                 follow: (entry) => follow.run(entry),
-                hide: (entry) => hide.run(entry),
+                hide: (story) => hide.run(story),
                 isFollowed: (story) => followedStories.isFollowed(story),
               }
             : null,

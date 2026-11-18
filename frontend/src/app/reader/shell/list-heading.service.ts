@@ -226,7 +226,7 @@ export class ListHeading {
     viewed: () => items(this.subscriptions.viewedCount()),
     'for-you': (selection) =>
       bySwitch(selection, this.subscriptions.forYouUnread(), this.recommendations.forYouTotal()),
-    trending: () => items(this.entries.entries().length),
+    trending: () => items(this.entries.items().length),
     notifications: () => items(0),
     'saved-searches': (selection) =>
       bySwitch(selection, this.savedSearchesUnread(), this.savedSearchesTotal()),
@@ -234,7 +234,7 @@ export class ListHeading {
       const saved = this.activeSavedSearch();
       return bySwitch(selection, saved?.unreadCount ?? 0, saved?.memberCount ?? 0);
     },
-    'followed-story': () => items(this.entries.entries().length),
+    'followed-story': () => items(this.entries.items().length),
     search: () => items(0),
   };
 
@@ -265,7 +265,7 @@ export class ListHeading {
     const term = this.searchTerm();
     // In flight, the previous term's rows are still on screen, so no count yet.
     if (this.searching()) return this.i18n.translate('reader.searchResults', { term });
-    const count = this.entries.entries().length;
+    const count = this.entries.items().length;
     const key = this.hasMore() ? 'reader.searchResultsCountMore' : 'reader.searchResultsCount';
     return this.i18n.translate(key, { term, count });
   });
@@ -278,7 +278,7 @@ export class ListHeading {
   /** The loaded count, not a total: a trailing '+' while another page is out there. */
   readonly searchCountLabel = computed<string | null>(() => {
     if (this.searching()) return null;
-    const count = this.entries.entries().length;
+    const count = this.entries.items().length;
     return this.hasMore() ? `${count}+` : `${count}`;
   });
 
