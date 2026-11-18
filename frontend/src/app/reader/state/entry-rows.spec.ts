@@ -27,6 +27,12 @@ describe('withPatchedItem (#2328)', () => {
     expect(withPatchedItem(story, new Set([9]), viewed)).toBe(story);
   });
 
+  it('keeps a story whose targeted article the patch leaves as it was', () => {
+    const story = aStory({ articles: [aStoryArticle({ id: 1 }), aStoryArticle({ id: 2 })] });
+
+    expect(withPatchedItem(story, new Set([1]), (entry) => entry)).toBe(story);
+  });
+
   it('patches only the targeted article of a story', () => {
     const story = aStory({ articles: [aStoryArticle({ id: 1 }), aStoryArticle({ id: 2 })] });
 
