@@ -47,6 +47,9 @@ export interface FollowedStoriesResponseDto {
  *  which is null for a story the reader does not follow. */
 export interface StoryPageDto extends EntriesPage {
   title: string | null;
+  /** The rows the story's list holds whichever page it is, and the unread ones among them (#2329). */
+  memberCount: number;
+  unreadCount: number;
   lastOpenedAt: string | null;
   /** Kept for other clients such as iOS; the web client derives its marks from `lastOpenedAt`. */
   newEntryIds: number[];

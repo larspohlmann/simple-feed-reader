@@ -5214,6 +5214,8 @@ describe('ReaderShellComponent', () => {
           entries: [],
           nextCursor: null,
           title: 'Harbour strike',
+          memberCount: 31,
+          unreadCount: 12,
           lastOpenedAt: null,
           newEntryIds: [],
         });
@@ -5234,6 +5236,16 @@ describe('ReaderShellComponent', () => {
       expect(sidebar.selection()).toEqual({ kind: 'trending-story', id: 42, unread: false });
       expect(sidebar.activeFollowedStoryId()).toBe(42);
       expect(TestBed.inject(Title).getTitle()).toContain('Harbour strike');
+    });
+
+    it("heads the story's list with its title and the server's count of its rows", () => {
+      const fixture = boot();
+
+      openStory(fixture);
+
+      const header = element(fixture).querySelector('app-story-layer app-list-header')!;
+      expect(header.querySelector('h2')?.textContent).toContain('Harbour strike');
+      expect(header.querySelector('.title-count')?.textContent?.trim()).toBe('31');
     });
 
     it("hides the app bar and scrolls to the top by the story's list, not the one it covers", () => {

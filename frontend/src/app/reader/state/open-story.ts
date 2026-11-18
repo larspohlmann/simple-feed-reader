@@ -3,13 +3,20 @@ import { accountSignal } from '../../core/auth/session-identity';
 import { ListContext } from './list-context';
 import { LandedList } from './landed-list';
 
+/** How many rows a story's list holds, and how many of them are unread. */
+export interface StoryTally {
+  readonly memberCount: number;
+  readonly unreadCount: number;
+}
+
 interface LandedStory {
   readonly id: number;
   readonly title: string | null;
   readonly followed: boolean;
+  readonly tally: StoryTally;
 }
 
-/** What the last story page its host's list landed said of its story (#2329): its title, and whether
+/** What the last story page its host's list landed said of its story (#2329): its title, its tally, and whether
  *  the reader follows it. */
 @Injectable()
 export class OpenStory {
@@ -21,6 +28,10 @@ export class OpenStory {
 
   titleOf(id: number): string | null {
     return this.storyOf(id)?.title ?? null;
+  }
+
+  tallyOf(id: number): StoryTally | null {
+    return this.storyOf(id)?.tally ?? null;
   }
 
   followedOnServer(id: number): boolean {
@@ -41,6 +52,7 @@ export class OpenStory {
       id: query.storyId,
       title: page.title ?? null,
       followed: typeof page.lastOpenedAt === 'string',
+      tally: { memberCount: page.memberCount ?? 0, unreadCount: page.unreadCount ?? 0 },
     });
   }
 }

@@ -529,15 +529,35 @@ describe("ListHeading over a Trending story's list (#2329)", () => {
     return TestBed.inject(ListHeading);
   }
 
+  const tally = { memberCount: 31, unreadCount: 12 };
+
   it("titles the list with the story's page title, else its followed headline, else Story", () => {
-    expect(storyHeading(story(false), { titleOf: () => 'Harbour strike' }).title()).toBe(
-      'Harbour strike',
-    );
+    expect(
+      storyHeading(story(false), { titleOf: () => 'Harbour strike', tallyOf: () => tally }).title(),
+    ).toBe('Harbour strike');
     TestBed.resetTestingModule();
     expect(
-      storyHeading(story(false), { titleOf: () => null }, { headline: 'Port closed' }).title(),
+      storyHeading(
+        story(false),
+        { titleOf: () => null, tallyOf: () => tally },
+        { headline: 'Port closed' },
+      ).title(),
     ).toBe('Port closed');
     TestBed.resetTestingModule();
-    expect(storyHeading(story(false), { titleOf: () => null }).title()).toBe('Story');
+    expect(storyHeading(story(false), { titleOf: () => null, tallyOf: () => null }).title()).toBe(
+      'Story',
+    );
+  });
+
+  it("counts every row of the story from the server's tally, not the page loaded", () => {
+    const heading = storyHeading(story(false), { titleOf: () => null, tallyOf: () => tally });
+
+    expect(heading.titleCount()).toEqual({ value: 31, counts: 'items' });
+  });
+
+  it('counts the unread rows under Only unread', () => {
+    const heading = storyHeading(story(true), { titleOf: () => null, tallyOf: () => tally });
+
+    expect(heading.titleCount()).toEqual({ value: 12, counts: 'unread' });
   });
 });

@@ -53,6 +53,8 @@ function storyPage(id: number, followed: boolean, over: Partial<StoryPageDto> = 
     entries: [leadOf(id)],
     nextCursor: null,
     title: titleOf(id),
+    memberCount: 1,
+    unreadCount: 1,
     lastOpenedAt: followed ? '2026-11-18T06:00:00Z' : null,
     newEntryIds: [],
     ...over,
@@ -373,6 +375,22 @@ test.describe("a story's list is a list of its own (desktop)", () => {
 
     await expect(layer(page).locator('app-error-banner')).toBeVisible();
     await expect(page.locator('section.list app-error-banner')).toHaveCount(0);
+  });
+
+  test("the count pill reads the server's tally of a story longer than a page", async ({
+    page,
+  }) => {
+    await stubStories(page, false);
+    await stubStoryPage(page, { nextCursor: 'next-page', memberCount: 31, unreadCount: 12 });
+    await signIn(page, 'list');
+    await openTrending(page);
+
+    await page.getByRole('link', { name: TITLE }).click();
+    const header = layer(page).locator('app-list-header');
+    await expect(header.locator('.title-count')).toHaveText('31');
+    await header.getByRole('switch', { name: 'Unread' }).click();
+    await expect(header.locator('.title-count')).toHaveText('12');
+    await header.getByRole('switch', { name: 'Unread' }).click();
   });
 
   test("hiding the sidebar focuses the story's own way back to it", async ({ page }) => {

@@ -234,7 +234,10 @@ export class ListHeading {
       const saved = this.activeSavedSearch();
       return bySwitch(selection, saved?.unreadCount ?? 0, saved?.memberCount ?? 0);
     },
-    'trending-story': () => items(this.entries.items().length),
+    'trending-story': (selection) => {
+      const tally = this.openStory.tallyOf(selection.id);
+      return bySwitch(selection, tally?.unreadCount ?? 0, tally?.memberCount ?? 0);
+    },
     search: () => items(0),
   };
 

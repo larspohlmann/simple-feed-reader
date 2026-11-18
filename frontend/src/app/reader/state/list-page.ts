@@ -3,7 +3,7 @@ import { StoryPageDto } from '../trending/trending.models';
 import { ListItem } from './list-item';
 
 export interface ListPage extends Partial<
-  Pick<StoryPageDto, 'title' | 'lastOpenedAt' | 'newEntryIds'>
+  Pick<StoryPageDto, 'title' | 'memberCount' | 'unreadCount' | 'lastOpenedAt' | 'newEntryIds'>
 > {
   items: ListItem[];
   nextCursor: string | null;
