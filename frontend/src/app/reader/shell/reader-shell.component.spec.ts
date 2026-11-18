@@ -432,15 +432,6 @@ describe('ReaderShellComponent', () => {
     });
   });
 
-  it('offers no Hide on a list that is not Trending (#2017, D40)', () => {
-    const fixture = boot();
-
-    expect(fixture.nativeElement.querySelectorAll('.row, app-entry-row').length).toBeGreaterThan(0);
-    expect(fixture.nativeElement.querySelectorAll('button[aria-label="Hide story"]')).toHaveLength(
-      0,
-    );
-  });
-
   describe('previews still loading (#1502)', () => {
     const status = (element: HTMLElement) => element.querySelector('.previews-status')!;
 

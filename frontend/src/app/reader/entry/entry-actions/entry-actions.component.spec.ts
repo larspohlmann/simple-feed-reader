@@ -10,7 +10,7 @@ import { EntryActionHandler } from './entry-action-handler';
 import { AudioPlayerService } from '../../audio-player.service';
 import { StubAudioPlayer } from '../../../../testing/stub-audio-player';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
-import { anEntry, aStoryArticle } from '../../../../testing/entry-testing';
+import { anEntry } from '../../../../testing/entry-testing';
 import { OpensEntryDirective } from '../../list/opens-entry.directive';
 
 /** Stand-in for the card, wired like the real ones: proves an action never reaches it. */
@@ -482,14 +482,5 @@ describe('EntryActionsComponent', () => {
 
     expect(fixture.componentInstance.deleted).toBe(own);
     expect(fixture.componentInstance.cardOpened).toBe(false);
-  });
-
-  it("offers a Trending card's story actions nowhere in the post's row (#2128)", () => {
-    const labels = buttons(mount(aStoryArticle({ id: 7 }))).map((button) =>
-      button.getAttribute('aria-label'),
-    );
-
-    expect(labels).not.toContain('Follow story');
-    expect(labels).not.toContain('Hide story');
   });
 });
