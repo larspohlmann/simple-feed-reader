@@ -20,9 +20,6 @@ final class EntryDiscussion
     #[ORM\Column(name: 'comments_load', length: 8, nullable: true, enumType: CommentsLoad::class)]
     private ?CommentsLoad $commentsLoad = null;
 
-    #[ORM\Column(name: 'score', nullable: true)]
-    private ?int $score = null;
-
     #[ORM\Column(name: 'comment_count', nullable: true)]
     private ?int $commentCount = null;
 
@@ -46,15 +43,14 @@ final class EntryDiscussion
         return Discussion::of($this->url, $this->commentsFeedUrl, $this->commentsLoad ?? CommentsLoad::Manual);
     }
 
-    public function storeCounts(DiscussionCounts $counts): void
+    public function storeCommentCount(?int $commentCount): void
     {
-        $this->score = $counts->score;
-        $this->commentCount = $counts->commentCount;
+        $this->commentCount = $commentCount ?? $this->commentCount;
     }
 
-    public function readCounts(): DiscussionCounts
+    public function readCommentCount(): ?int
     {
-        return DiscussionCounts::of($this->score, $this->commentCount);
+        return $this->commentCount;
     }
 
     /** A read sees only part of a thread, a timeline page most of all, so the count only ever grows. */

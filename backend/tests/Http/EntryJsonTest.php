@@ -438,14 +438,14 @@ final class EntryJsonTest extends TestCase
         self::assertSame('https://example.com/a#comments', $json['discussionUrl']);
     }
 
-    public function testTheStoredDiscussionCountsAreEmitted(): void
+    public function testTheStoredCommentCountIsEmitted(): void
     {
         $entry = $this->entryTitled('Post');
         $entry->recordDiscussionCounts(DiscussionCounts::of(-3, 0));
 
         $json = JsonMappers::entryJson()->listRow($this->row($entry));
 
-        self::assertSame(-3, $json['score']);
+        self::assertNull($json['score']);
         self::assertSame(0, $json['commentCount']);
     }
 

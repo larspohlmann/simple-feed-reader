@@ -79,28 +79,28 @@ final class EntryTest extends TestCase
         self::assertFalse($this->entry(null)->isDiscussionThread());
     }
 
-    public function testANewEntryHasUnknownCounts(): void
+    public function testANewEntryHasNoCommentCount(): void
     {
-        self::assertTrue($this->entry()->getDiscussionCounts()->isUnknown());
+        self::assertNull($this->entry()->getCommentCount());
     }
 
-    public function testRecordsDiscussionCounts(): void
+    public function testRecordsTheCommentCount(): void
     {
         $entry = $this->entry();
 
         $entry->recordDiscussionCounts(DiscussionCounts::of(12, 4));
 
-        self::assertEquals(DiscussionCounts::of(12, 4), $entry->getDiscussionCounts());
+        self::assertSame(4, $entry->getCommentCount());
     }
 
-    public function testAnUnknownRecordKeepsTheStoredCounts(): void
+    public function testAnUnknownRecordKeepsTheStoredCommentCount(): void
     {
         $entry = $this->entry();
         $entry->recordDiscussionCounts(DiscussionCounts::of(12, 4));
 
         $entry->recordDiscussionCounts(DiscussionCounts::unknown());
 
-        self::assertEquals(DiscussionCounts::of(12, 4), $entry->getDiscussionCounts());
+        self::assertSame(4, $entry->getCommentCount());
     }
 
     private function entry(?string $url = 'https://example.test/1'): Entry

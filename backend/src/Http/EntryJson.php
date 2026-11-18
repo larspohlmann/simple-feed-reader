@@ -159,13 +159,11 @@ final readonly class EntryJson
     {
         $discussion = $row->enrichment->discussion ?? EntryListRowDiscussion::storedOf($row->entry->getDiscussion());
 
-        $counts = $row->entry->getDiscussionCounts();
-
         return [
             'discussionUrl' => $discussion->url,
             'comments' => $discussion->commentsLoad?->value,
-            'score' => $counts->score,
-            'commentCount' => $counts->commentCount,
+            'score' => null,
+            'commentCount' => $row->entry->getCommentCount(),
         ];
     }
 

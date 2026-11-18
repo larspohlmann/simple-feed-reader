@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ingestion\Ingest;
 
-use App\Entity\DiscussionCounts;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Headline;
@@ -78,7 +77,7 @@ final class RefreshStoredEntriesTest extends DbTestCase
         $this->entityManager->flush();
         $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => self::POST]);
         self::assertNotNull($entry);
-        self::assertEquals(DiscussionCounts::of(10, 1), $entry->getDiscussionCounts());
+        self::assertSame(1, $entry->getCommentCount());
 
         return $entry;
     }
@@ -226,10 +225,10 @@ final class RefreshStoredEntriesTest extends DbTestCase
         );
         $this->entityManager->flush();
 
-        self::assertEquals(DiscussionCounts::of(42, 9), $entry->getDiscussionCounts());
+        self::assertSame(9, $entry->getCommentCount());
     }
 
-    public function testUnknownCountsKeepTheStoredOnes(): void
+    public function testAnUnknownCommentCountKeepsTheStoredOne(): void
     {
         $feed = $this->feed();
         $entry = $this->storedPost($feed);
@@ -237,6 +236,6 @@ final class RefreshStoredEntriesTest extends DbTestCase
         $this->ingestor()->refreshStoredEntries($feed, self::lemmyPost('a header Lemmy no longer writes'));
         $this->entityManager->flush();
 
-        self::assertEquals(DiscussionCounts::of(10, 1), $entry->getDiscussionCounts());
+        self::assertSame(1, $entry->getCommentCount());
     }
 }
