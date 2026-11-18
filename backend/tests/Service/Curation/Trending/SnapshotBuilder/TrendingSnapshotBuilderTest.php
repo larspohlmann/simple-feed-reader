@@ -948,22 +948,84 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
     {
         [$representative] = $this->portStrike();
         $this->builder()->build($this->ownerId(), TrendingWindow::Week);
+        $this->containerShipsJoin();
+        $newcomer = $this->entryIdTitled(
+            'Hafenstreik in Hamburg: Streik legt Terminals lahm, Containerschiffe warten auf Reede',
+        );
+
+        $scores = $this->weekScores();
+        self::assertGreaterThan(1.25 * $scores[$representative->requireId()], $scores[$newcomer]);
+        $this->builder()->build($this->ownerId(), TrendingWindow::Week);
+
+        self::assertSame($newcomer, $this->fallbacks()[0][1]);
+    }
+
+    public function testAnUnchangedStoryKeepsItsStoredFallbackWithoutScoring(): void
+    {
+        $this->portStrike();
+        $this->containerShipsJoin();
+        $this->builder()->build($this->ownerId(), TrendingWindow::Week);
+        $outscored = $this->entryIdTitled('Containerschiffe warten auf Reede vor Hamburg');
+        $this->storeFallback('Containerschiffe warten auf Reede vor Hamburg', $outscored);
+
+        $scores = $this->weekScores();
+        self::assertLessThan(0.8 * max($scores), $scores[$outscored]);
+        $this->builder()->build($this->ownerId(), TrendingWindow::Week);
+
+        self::assertSame([['Containerschiffe warten auf Reede vor Hamburg', $outscored]], $this->fallbacks());
+    }
+
+    public function testAStoryThatGainedAMemberIsScoredAgain(): void
+    {
+        [, , $third] = $this->portStrike();
+        $this->builder()->build($this->ownerId(), TrendingWindow::Week);
+        $this->storeFallback('Streik legt Hamburg lahm', $third->requireId());
         $newcomer = $this->outletArticle(
             $this->outlet('delta', FeedLanguage::German),
             'Hafenstreik in Hamburg: Streik legt Terminals lahm, Containerschiffe warten auf Reede',
             '2031-05-14 11:00:00',
         );
-        $this->outletArticle(
-            $this->outlet('epsilon', FeedLanguage::German),
-            'Containerschiffe warten auf Reede vor Hamburg',
-            '2031-05-14 11:30:00',
-        );
 
         $scores = $this->weekScores();
-        self::assertGreaterThan(1.25 * $scores[$representative->requireId()], $scores[$newcomer->requireId()]);
+        self::assertGreaterThan(1.25 * $scores[$third->requireId()], $scores[$newcomer->requireId()]);
+        arsort($scores);
+        self::assertSame($newcomer->requireId(), array_key_first($scores));
         $this->builder()->build($this->ownerId(), TrendingWindow::Week);
 
         self::assertSame($newcomer->requireId(), $this->fallbacks()[0][1]);
+    }
+
+    public function testAStoryThatLostItsFallbackMemberIsScoredAgain(): void
+    {
+        $leaving = $this->outletArticle(
+            $this->outlet('alpha', FeedLanguage::German),
+            'Hafenstreik legt Hamburg Terminals lahm',
+            '2031-05-13 10:00:00',
+        );
+        $staying = [
+            $this->outletArticle(
+                $this->outlet('beta', FeedLanguage::German),
+                'Hafenstreik legt Hamburg lahm',
+                '2031-05-14 09:00:00',
+            ),
+            $this->outletArticle(
+                $this->outlet('gamma', FeedLanguage::German),
+                'Hafenstreik in Hamburg: Terminals lahm',
+                '2031-05-14 10:00:00',
+            ),
+        ];
+        $this->builder()->build($this->ownerId(), TrendingWindow::Week);
+        self::assertSame($leaving->requireId(), $this->fallbacks()[0][1]);
+
+        $this->clock->modify('2031-05-20 10:30:00');
+        $this->builder()->build($this->ownerId(), TrendingWindow::Week);
+
+        $fallbacks = $this->fallbacks();
+        self::assertCount(1, $fallbacks);
+        self::assertContains(
+            $fallbacks[0][1],
+            array_map(static fn (Entry $entry): int => $entry->requireId(), $staying),
+        );
     }
 
     public function testTheDayBuildKeepsAFallbackTheWeekChose(): void
@@ -1214,6 +1276,37 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         ];
     }
 
+    /** A newcomer that outscores the port strike's members and a short one that scores far below the best. */
+    private function containerShipsJoin(): void
+    {
+        $this->outletArticle(
+            $this->outlet('delta', FeedLanguage::German),
+            'Hafenstreik in Hamburg: Streik legt Terminals lahm, Containerschiffe warten auf Reede',
+            '2031-05-14 11:00:00',
+        );
+        $this->outletArticle(
+            $this->outlet('epsilon', FeedLanguage::German),
+            'Containerschiffe warten auf Reede vor Hamburg',
+            '2031-05-14 11:30:00',
+        );
+    }
+
+    private function storeFallback(string $title, int $entryId): void
+    {
+        $this->entityManager->getConnection()->executeStatement(
+            'UPDATE trending_story SET fallback_title = ?, fallback_entry_id = ?',
+            [$title, $entryId],
+        );
+    }
+
+    private function entryIdTitled(string $title): int
+    {
+        $entryId = $this->entityManager->getConnection()->fetchOne('SELECT id FROM entry WHERE title = ?', [$title]);
+        self::assertIsNumeric($entryId);
+
+        return (int) $entryId;
+    }
+
     private function outlet(string $name, FeedLanguage $language, ?string $title = null): Feed
     {
         $feed = $this->fixtures->feed($name);
@@ -1269,7 +1362,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         );
     }
 
-    /** @return array<int, float> the Centroid score of every member of the week's one story */
+    /** @return non-empty-array<int, float> the Centroid score of every member of the week's one story */
     private function weekScores(): array
     {
         $grouping = TrendingWiring::grouping($this->entityManager, $this->clock);
@@ -1277,7 +1370,12 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         $stories = $grouping->stories($run);
         self::assertCount(1, $stories);
 
-        return CentroidScores::of($run->headlines, $stories[0]->entryIds());
+        $scores = CentroidScores::of($run->headlines, $stories[0]->entryIds());
+        if ($scores === []) {
+            self::fail('the story has no members to score');
+        }
+
+        return $scores;
     }
 
     /** @return list<array{?string, ?int}> every story's fallback title and entry */

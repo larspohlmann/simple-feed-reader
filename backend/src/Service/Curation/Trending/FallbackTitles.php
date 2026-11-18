@@ -46,10 +46,23 @@ final readonly class FallbackTitles
         ));
     }
 
-    /** @param list<StoredStoryModel> $stored */
+    /**
+     * An unchanged story keeps its fallback unscored: scoring every story made the week build ~16 % slower.
+     *
+     * @param list<StoredStoryModel> $stored
+     */
     public function titledAll(TrendingRun $run, StoryMatchModel $match, array $stored): StoryMatchModel
     {
-        return $this->titledAmong($run, $match, $stored, $match->assignments);
+        $storedById = [];
+        foreach ($stored as $story) {
+            $storedById[$story->id] = $story;
+        }
+
+        return $this->titledAmong($run, $match, $stored, array_filter(
+            $match->assignments,
+            static fn (StoryAssignmentModel $assignment): bool => $assignment->storyId === null
+                || !self::keepsItsFallback($assignment, $storedById[$assignment->storyId]),
+        ));
     }
 
     /**
@@ -204,6 +217,19 @@ final readonly class FallbackTitles
         );
 
         return new FallbackTitleModel(null, $linkTitles[$linkId]);
+    }
+
+    private static function keepsItsFallback(StoryAssignmentModel $assignment, StoredStoryModel $story): bool
+    {
+        if (!$story->titled || $story->fallbackEntryId === null) {
+            return false;
+        }
+        $entryIds = $assignment->group->entryIds();
+        $storedEntryIds = $story->entryIds;
+        sort($entryIds);
+        sort($storedEntryIds);
+
+        return $entryIds === $storedEntryIds && \in_array($story->fallbackEntryId, $entryIds, true);
     }
 
     /**
