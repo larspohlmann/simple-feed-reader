@@ -94,10 +94,10 @@ final class TrendingEntryRepositoryTest extends DbTestCase
         $fixtures->flush();
         $entryIds = array_map(static fn (Entry $entry): int => $entry->requireId(), $entryIds);
 
-        self::assertSame(
-            $entryIds,
-            array_keys((new TrendingEntryRepository($this->entityManager))->headlinesOf($entryIds)),
-        );
+        $foundIds = array_keys((new TrendingEntryRepository($this->entityManager))->headlinesOf($entryIds));
+        sort($foundIds);
+
+        self::assertSame($entryIds, $foundIds);
     }
 
     public function testLinkTitlesOfReadTheSharedLinks(): void

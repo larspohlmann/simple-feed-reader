@@ -6,9 +6,9 @@ namespace App\Repository;
 
 use App\Enum\FeedLanguage;
 use App\Service\Curation\Trending\Model\EntryLinksModel;
+use App\Service\Curation\Trending\Model\MemberHeadlineModel;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Service\Curation\Trending\Model\WindowLinkCardModel;
-use App\Service\Curation\Trending\Model\MemberHeadlineModel;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManagerInterface;
