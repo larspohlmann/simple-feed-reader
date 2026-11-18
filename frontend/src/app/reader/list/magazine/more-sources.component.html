@@ -1,5 +1,5 @@
 @if (story(); as story) {
-  <app-story-sharers [article]="story.articles[0]" />
+  <app-story-sharers [article]="leadOf(story)" />
   <div class="more-sources">
     <div class="story-line">
       <app-story-actions [story]="story" />

@@ -15,6 +15,8 @@ import { LanguageService } from '../../../core/i18n/language.service';
 import { entryRelativeTime } from '../../format';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
+import { leadOf, otherArticlesOf } from '../../state/list-item';
+import { sameMembers } from '../../state/same-members';
 import { SubscriptionRows } from '../../state/subscription-rows';
 import { feedAvatarUrl } from '../../state/social-sections';
 import { sourceNameOf } from '../../entry/entry-source/source-name';
@@ -30,6 +32,11 @@ import { STORY_ICON } from '../../trending/story';
 import { StoryArticleDto, TrendingStoryDto } from '../../trending/trending.models';
 
 let nextId = 0;
+
+const sameArticles = (
+  left: readonly StoryArticleDto[],
+  right: readonly StoryArticleDto[],
+): boolean => sameMembers(new Set(left), new Set(right));
 
 @Component({
   selector: 'app-more-sources',
@@ -53,12 +60,19 @@ export class MoreSourcesComponent {
   readonly entry = input.required<EntryDto>();
   readonly story = input<TrendingStoryDto | null>(null);
 
+  protected readonly leadOf = leadOf;
   private readonly actions = inject(EntryActionHandler);
   private readonly language = inject(LanguageService);
   private readonly rows = inject(SubscriptionRows);
 
   protected readonly hasDuplicates = computed(() => (this.entry().duplicates?.length ?? 0) > 0);
-  protected readonly copies = computed(() => this.story()?.articles.slice(1) ?? []);
+  protected readonly copies = computed(
+    () => {
+      const story = this.story();
+      return story ? otherArticlesOf(story) : [];
+    },
+    { equal: sameArticles },
+  );
   protected readonly countKey = computed(() =>
     this.copies().length === 1 ? 'reader.moreArticlesOne' : 'reader.moreArticles',
   );

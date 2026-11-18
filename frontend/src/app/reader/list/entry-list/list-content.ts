@@ -146,8 +146,10 @@ export class ListContent {
   private countVisible(items: ListItem[]): number {
     const leaving = this.options.leavingIds();
     const hidden = this.hiddenAboveIds();
-    return items.map((item) => leadOf(item).id).filter((id) => !leaving.has(id) && !hidden.has(id))
-      .length;
+    return items.filter((item) => {
+      const { id } = leadOf(item);
+      return !leaving.has(id) && !hidden.has(id);
+    }).length;
   }
 
   private startReveal(previous: ListItem[], next: ListItem[]): void {

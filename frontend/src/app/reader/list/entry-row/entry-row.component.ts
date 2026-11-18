@@ -8,6 +8,7 @@ import {
   input,
   signal,
 } from '@angular/core';
+import { leadOf } from '../../state/list-item';
 import { EntrySourceComponent } from '../../entry/entry-source/entry-source.component';
 import { MarkedTextComponent } from '../../../shared/marked-text/marked-text.component';
 import { EntryMetaComponent } from '../entry-meta/entry-meta.component';
@@ -57,6 +58,7 @@ import { TrendingStoryDto } from '../../trending/trending.models';
 })
 export class EntryRowComponent {
   protected readonly coverBoxSizes = COVER_BOX_SIZES;
+  protected readonly leadOf = leadOf;
   readonly entry = input.required<EntryDto>();
   readonly story = input<TrendingStoryDto | null>(null);
   readonly imageSide = input<'left' | 'right'>('right');

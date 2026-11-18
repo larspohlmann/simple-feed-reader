@@ -1,5 +1,11 @@
 import { EntryDto } from '../../models';
-import { BlockCard } from './magazine-card';
+import { TrendingStoryDto } from '../../trending/trending.models';
+
+/** What a single-entry block carries: the entry it lays out, and the story that entry leads (#2328). */
+export interface BlockCard {
+  entry: EntryDto;
+  story: TrendingStoryDto | null;
+}
 
 /** The kinds a template authors, and the only ones the demotion ladder walks. */
 const TEMPLATE_KINDS = ['hero', 'wide', 'quote', 'split', 'kicker', 'thumb', 'compact'] as const;

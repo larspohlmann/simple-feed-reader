@@ -3,6 +3,7 @@ import { TrendingStoryDto } from '../../trending/trending.models';
 import { EntryMediumDto, mediumRatio } from '../../entry-medium';
 import { entryDek, entryHeadline } from '../../entry/entry-text';
 import { QuotedPostDto } from '../../quoted-post/quoted-post';
+import { leadOf } from '../../state/list-item';
 import { BLOCK_HEIGHT, EntryKind } from './magazine-block';
 import { sharedMedia, sharesQuotedPost, threadRootMedia } from './magazine-slot-fit';
 import { LinkCardDto } from '../../link-card/link-card';
@@ -64,7 +65,7 @@ export function blockHeight(
 }
 
 function storySharersHeight(story: TrendingStoryDto | null): number {
-  const sharers = story ? Math.min(story.articles[0].shares.length, SHOWN_SHARERS) : 0;
+  const sharers = story ? Math.min(leadOf(story).shares.length, SHOWN_SHARERS) : 0;
   const rows = Math.ceil(sharers / STORY_SHARERS_ROW.pillsPerRow);
   return rows === 0 ? 0 : rows * STORY_SHARERS_ROW.height + (rows - 1) * STORY_SHARERS_ROW.gap;
 }

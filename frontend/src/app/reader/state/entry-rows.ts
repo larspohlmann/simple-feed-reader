@@ -5,6 +5,16 @@ export type EntryPatch = (entry: EntryDto) => EntryDto;
 
 /** `item` itself when the patch changes nothing in it; a story's `shares` are never patched. */
 export function withPatchedItem(
+  item: EntryDto,
+  targets: ReadonlySet<number>,
+  patch: EntryPatch,
+): EntryDto;
+export function withPatchedItem(
+  item: ListItem,
+  targets: ReadonlySet<number>,
+  patch: EntryPatch,
+): ListItem;
+export function withPatchedItem(
   item: ListItem,
   targets: ReadonlySet<number>,
   patch: EntryPatch,

@@ -7,6 +7,7 @@ import { LinkCardComponent } from '../../../../link-card/link-card.component';
 import { LinkCardPlaceholderComponent } from '../../../../link-card/link-card-placeholder.component';
 import { OpensEntryDirective } from '../../../opens-entry.directive';
 import { sharedArticleCard } from '../../../../trending/shared-article-card';
+import { leadOf } from '../../../../state/list-item';
 import { withoutLinks } from '../../../../entry/entry-text';
 
 @Component({
@@ -27,7 +28,7 @@ export class EntryLinkComponent extends EntryBlockBase {
   /** A Trending row no followed outlet carries is the article its posts share: the card heads it (#2229). */
   protected readonly ledByItsCard = computed(() => {
     const story = this.story();
-    return story ? sharedArticleCard(story.articles[0]) !== null : false;
+    return story ? sharedArticleCard(leadOf(story)) !== null : false;
   });
   protected readonly title = computed(() => this.withoutLinksBesideCard(this.headline()));
   protected readonly dek = computed(() => this.withoutLinksBesideCard(this.snippet()));

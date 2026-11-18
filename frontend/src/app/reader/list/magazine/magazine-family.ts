@@ -57,11 +57,11 @@ function isImagePoor(entries: EntryDto[]): boolean {
  *  behind it, move it to the front so the opener leads on a picture — a single
  *  bounded move, tail order kept. `split` is the trust bar the opener's slot
  *  needs to render as an image rather than a headline. */
-export function leadWithImage(entries: EntryDto[]): EntryDto[] {
-  if (entries.length === 0 || fits('split', entries[0])) return entries;
+export function leadWithImage<Card extends { entry: EntryDto }>(entries: Card[]): Card[] {
+  if (entries.length === 0 || fits('split', entries[0].entry)) return entries;
   const reach = Math.min(entries.length, LEAD_IMAGE_REACH);
   for (let candidate = 1; candidate < reach; candidate++) {
-    if (fits('split', entries[candidate])) {
+    if (fits('split', entries[candidate].entry)) {
       const reordered = [...entries];
       const [lead] = reordered.splice(candidate, 1);
       reordered.unshift(lead);
