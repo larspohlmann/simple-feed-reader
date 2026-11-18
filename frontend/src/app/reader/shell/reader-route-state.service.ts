@@ -13,6 +13,7 @@ import { linkCardWithUrl } from '../link-card/link-card-with-url';
 import { LinkReaderNavigation } from './link-reader-navigation.service';
 import { TrendingWindowService } from '../trending/trending-window.service';
 import { PreferencesService } from '../../core/preferences/preferences.service';
+import { ListCover } from './list-cover';
 
 @Injectable()
 export class ReaderRouteState {
@@ -20,7 +21,12 @@ export class ReaderRouteState {
   private readonly router = inject(Router);
   private readonly api = inject(ReaderApi);
   private readonly bodyService = inject(EntryBodyService);
-  private readonly entries = inject(EntriesStore);
+  private readonly routeEntries = inject(EntriesStore);
+  private readonly cover = inject(ListCover);
+  /** The rows of the list on screen, which an article opens from (#2329). */
+  private readonly entries = computed(
+    () => this.cover.list()?.context.entries ?? this.routeEntries,
+  );
   private readonly listPreferences = inject(ListPreferences);
   private readonly linkNavigation = inject(LinkReaderNavigation);
   private readonly viewContext = inject(AccountViewContext);
@@ -57,26 +63,27 @@ export class ReaderRouteState {
     const open = this.openEntry();
     return (
       (open && linkCardWithUrl([open], target.url)) ??
-      linkCardWithUrl(this.entries.entries(), target.url)
+      linkCardWithUrl(this.entries().entries(), target.url)
     );
   });
 
   readonly openEntry = computed(() => {
     const id = this.entryId();
-    return id == null ? null : this.entries.entry(id);
+    return id == null ? null : this.entries().entry(id);
   });
   /** Identity only: effects keyed on it fire once per opened entry, never on its flag changes. */
   readonly openEntryId = computed(() => this.openEntry()?.id ?? null);
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.entries.releaseUnlisted());
+    inject(DestroyRef).onDestroy(() => this.routeEntries.releaseUnlisted());
     effect(() => {
       if (this.inSearch()) return;
       untracked(() => this.listPreferences.endSearch());
     });
     effect(() => {
       const id = this.entryId();
-      untracked(() => this.fetchUnlistedEntry(id));
+      const entries = this.entries();
+      untracked(() => this.fetchUnlistedEntry(id, entries));
     });
     // Waits for the account, whose stored window a bare Trending link opens; only the
     // account's own switch, never a stale device cache, may take Trending out of the URL.
@@ -104,24 +111,24 @@ export class ReaderRouteState {
     });
   }
 
-  private fetchUnlistedEntry(id: number | null): void {
-    if (id == null || this.isListed(id)) {
-      this.entries.releaseUnlisted();
+  private fetchUnlistedEntry(id: number | null, entries: EntriesStore): void {
+    if (id == null || isListed(entries, id)) {
+      entries.releaseUnlisted();
       return;
     }
-    if (this.entries.entry(id)) return;
-    this.entries.releaseUnlisted();
+    if (entries.entry(id)) return;
+    entries.releaseUnlisted();
     this.api.entry(id).subscribe({
       // Id-guarded: a slow answer for an abandoned deep link must not replace the entry now open.
       next: (response) => {
         if (this.entryId() !== id) return;
-        this.entries.holdUnlisted(response.entry);
+        entries.holdUnlisted(response.entry);
         this.bodyService.seed(response.entry.id, response.entry);
       },
     });
   }
+}
 
-  private isListed(id: number): boolean {
-    return this.entries.entries().some((entry) => entry.id === id);
-  }
+function isListed(entries: EntriesStore, id: number): boolean {
+  return entries.entries().some((entry) => entry.id === id);
 }

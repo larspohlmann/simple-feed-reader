@@ -3,7 +3,9 @@ import { signal } from '@angular/core';
 import { Subject } from 'rxjs';
 import { EntryDto, EntryQuery } from '../models';
 import { anEntry } from '../../../testing/entry-testing';
-import { STORY_ENTRIES } from './story-entries';
+import { EntriesStore } from './entries.store';
+import { TestListContext } from '../../../testing/list-context-testing';
+import { ListContext } from './list-context';
 import { LandedList } from './landed-list';
 import { FollowedStoriesStore } from './followed-stories.store';
 import { FollowedStoryVisit } from './followed-story-visit';
@@ -29,7 +31,11 @@ describe('FollowedStoryVisit (#2128)', () => {
     markOpened = jest.fn();
     TestBed.configureTestingModule({
       providers: [
-        { provide: STORY_ENTRIES, useValue: { listLanded, entries } },
+        FollowedStoryVisit,
+        {
+          provide: ListContext,
+          useValue: new TestListContext({ listLanded, entries } as unknown as EntriesStore),
+        },
         { provide: FollowedStoriesStore, useValue: { markOpened } },
       ],
     });

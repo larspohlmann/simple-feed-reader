@@ -14,8 +14,8 @@ import { sameIds } from '../../core/same-ids';
 import { isTabHidden, onTabVisibilityChange } from '../../core/tab-visibility';
 import { PreviewProgress } from '../link-card/preview-progress';
 import { ReaderApi } from '../reader-api';
-import { EntriesStore } from '../state/entries.store';
 import { CompletedEntriesMerge } from './completed-entries-merge';
+import { injectListOnScreen } from './list-cover';
 import { ReaderRouteState } from './reader-route-state.service';
 import { SightedPreviews } from './sighted-previews.service';
 
@@ -28,7 +28,7 @@ const PENDING_POLL_BATCH = 25;
  *  list load starts both counts afresh, and a newly opened entry its own. */
 @Injectable()
 export class PendingEntriesPoll implements PreviewProgress {
-  private readonly store = inject(EntriesStore);
+  private readonly list = injectListOnScreen();
   private readonly api = inject(ReaderApi);
   private readonly completed = inject(CompletedEntriesMerge);
   private readonly zone = inject(NgZone);
@@ -36,8 +36,8 @@ export class PendingEntriesPoll implements PreviewProgress {
   private readonly sightings = inject(SightedPreviews);
 
   private readonly listedPending = computed(() =>
-    this.store
-      .entries()
+    this.list()
+      .entries.entries()
       .filter((entry) => entry.pending)
       .sort((left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt)),
   );
@@ -77,10 +77,10 @@ export class PendingEntriesPoll implements PreviewProgress {
 
   constructor() {
     effect(() => {
-      const listLoad = this.store.loadedAt();
+      const listLoad = this.list().entries.loadedAt();
       const openId = this.openPendingId();
       this.listedBatch();
-      this.store.loading();
+      this.list().entries.loading();
       untracked(() => this.follow(listLoad, openId));
     });
     onTabVisibilityChange((hidden) => (hidden ? this.cancelTimer() : this.schedule()));
@@ -124,7 +124,7 @@ export class PendingEntriesPoll implements PreviewProgress {
   }
 
   private mayPoll(): boolean {
-    return !isTabHidden() && !this.store.loading() && this.due().length > 0;
+    return !isTabHidden() && !this.list().entries.loading() && this.due().length > 0;
   }
 
   private poll(): void {

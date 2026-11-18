@@ -4,24 +4,30 @@ import { FollowedStoriesStore } from '../state/followed-stories.store';
 import { OpenStory } from '../state/open-story';
 import { TrendingFollowAction } from '../trending/trending-follow-action';
 import { StoryFollowing } from './story-following.service';
-import { StoryOverlay } from './story-overlay.service';
+import { StoryListContext } from './story-layer/story-list-context';
 
 describe('StoryFollowing (#2128, #2329)', () => {
   let toggle: jest.Mock;
 
-  function setup(storyId: number | null, followedOnServer = true): StoryFollowing {
+  function setup(followedOnServer = true): StoryFollowing {
     toggle = jest.fn();
     TestBed.configureTestingModule({
       providers: [
         StoryFollowing,
-        { provide: StoryOverlay, useValue: { storyId: signal(storyId) } },
+        {
+          provide: StoryListContext,
+          useValue: { selection: signal({ kind: 'trending-story', id: 42, unread: false }) },
+        },
         {
           provide: FollowedStoriesStore,
           useValue: {
             isFollowed: (story: { id: number; followed: boolean }) => story.followed,
           },
         },
-        { provide: OpenStory, useValue: { followedOnServer: () => followedOnServer } },
+        {
+          provide: OpenStory,
+          useValue: { followedOnServer: (id: number) => id === 42 && followedOnServer },
+        },
         { provide: TrendingFollowAction, useValue: { toggle } },
       ],
     });
@@ -30,23 +36,15 @@ describe('StoryFollowing (#2128, #2329)', () => {
 
   afterEach(() => TestBed.resetTestingModule());
 
-  it('asks the followed stories whether the open story is followed, from what its page said', () => {
-    expect(setup(42).following()).toBe(true);
+  it("asks the followed stories whether the layer's story is followed, from what its page said", () => {
+    expect(setup().following()).toBe(true);
     TestBed.resetTestingModule();
-    expect(setup(42, false).following()).toBe(false);
-    TestBed.resetTestingModule();
-    expect(setup(null).following()).toBe(false);
+    expect(setup(false).following()).toBe(false);
   });
 
-  it('toggles following the open story', () => {
-    setup(42, false).toggleOpen();
+  it("toggles following the layer's story", () => {
+    setup(false).toggleOpen();
 
     expect(toggle).toHaveBeenCalledWith({ id: 42, followed: false });
-  });
-
-  it('does nothing with no story open', () => {
-    setup(null).toggleOpen();
-
-    expect(toggle).not.toHaveBeenCalled();
   });
 });

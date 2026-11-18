@@ -20,6 +20,12 @@ import { RetryableFailure } from './retryable-failure';
 import { LandedList } from './landed-list';
 import { MatchedWords } from './matched-words';
 
+/** Entries changed in one list, as another list showing the same entries lays the change over its own rows. */
+export interface RowsPatch {
+  readonly targets: ReadonlySet<number>;
+  readonly patch: (entry: EntryDto) => EntryDto;
+}
+
 /** A failed state change has already rolled its row back when `onFailed` runs. */
 export interface StateSaveOutcome {
   /** Runs as each attempt starts, a retry's included. */
@@ -33,8 +39,6 @@ export class EntriesStore {
   private readonly api = inject(ReaderApi);
   private readonly socialPosts = inject(SocialPostApi);
   private readonly trendingApi = inject(TrendingApi);
-  /** The other list on screen at once, as a Trending story's over the list it opened from (#2329). */
-  private linked: EntriesStore | null = null;
 
   private readonly rawItems = accountSignal<ListItem[]>([]);
   /** The open entry when the loaded list does not hold it, e.g. a deep link; `entries()` never shows it. */
@@ -56,6 +60,9 @@ export class EntriesStore {
   readonly matchedWords = this.searchMatches.words;
   private readonly landedLists = new Subject<LandedList>();
   readonly listLanded: Observable<LandedList> = this.landedLists.asObservable();
+  private readonly patches = new Subject<RowsPatch>();
+  /** Every change laid over these rows, for a list on screen beside this one (#2329). */
+  readonly rowsPatched: Observable<RowsPatch> = this.patches.asObservable();
 
   private readonly query = accountSignal<EntryQuery | null>(null);
   /** The list request on the wire, cancelled once a newer load or another account supersedes it: a stale
@@ -105,10 +112,8 @@ export class EntriesStore {
     });
   }
 
-  /** No list on screen, so none of its rows either: a list shown next starts from its placeholders. */
   private dropList(): void {
     this.listRequest?.unsubscribe();
-    this.rawItems.set([]);
     this.query.set(null);
     this.nextCursor.set(null);
     this.loading.set(false);
@@ -161,20 +166,12 @@ export class EntriesStore {
     });
   }
 
-  /** Two lists on screen at once each find and patch the other's rows, so a row reads the same in both. */
-  link(other: EntriesStore): void {
-    this.linked = other;
-    other.linked = this;
-  }
-
-  /** The entry with `id`: its listed row, else the linked list's, else the unlisted one held for it. */
+  /** The entry with `id`: its listed row, else the unlisted one held for it. */
   entry(id: number): EntryDto | null {
-    return this.ownEntry(id) ?? this.linked?.ownEntry(id) ?? null;
-  }
-
-  private ownEntry(id: number): EntryDto | null {
+    const listed = this.entries().find((entry) => entry.id === id);
+    if (listed) return listed;
     const held = this.unlisted();
-    return this.entries().find((entry) => entry.id === id) ?? (held?.id === id ? held : null);
+    return held?.id === id ? held : null;
   }
 
   holdUnlisted(entry: EntryDto): void {
@@ -288,10 +285,10 @@ export class EntriesStore {
 
   /** The entry with `id`, or its copy inside a row's `duplicates`, which the footer popover acts on. */
   private entryOrCopy(id: number): EntryDto | null {
-    const found = this.entry(id);
-    if (found) return found;
+    const listed = this.entry(id);
+    if (listed) return listed;
     const held = this.unlisted();
-    const rows = [...this.entries(), ...(this.linked?.entries() ?? []), ...(held ? [held] : [])];
+    const rows = held ? [...this.entries(), held] : this.entries();
     return rows.flatMap((row) => row.duplicates ?? []).find((copy) => copy.id === id) ?? null;
   }
 
@@ -337,15 +334,20 @@ export class EntriesStore {
     });
   }
 
+  /** Lays a change another list made over these rows; no request, and nothing passed on. */
+  layOver({ targets, patch }: RowsPatch): void {
+    this.patchRows(targets, patch);
+  }
+
   private patchEntries(ids: Iterable<number>, patch: (entry: EntryDto) => EntryDto): void {
     const targets = new Set(ids);
-    this.patchOwn(targets, patch);
-    this.linked?.patchOwn(targets, patch);
+    this.patchRows(targets, patch);
+    this.patches.next({ targets, patch });
   }
 
   /** Reaches each target as a row, as a copy inside a row's `duplicates` and as a story's article.
    *  The list keeps its identity when `patch` hands every entry back, so nothing derived recomputes. */
-  private patchOwn(targets: ReadonlySet<number>, patch: (entry: EntryDto) => EntryDto): void {
+  private patchRows(targets: ReadonlySet<number>, patch: (entry: EntryDto) => EntryDto): void {
     this.unlisted.update((held) => (held ? withPatchedRow(held, targets, patch) : held));
     this.rawItems.update((current) => {
       let changed = false;

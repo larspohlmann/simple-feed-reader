@@ -8,7 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { anEntry } from '../../../../testing/entry-testing';
 import { EntryListComponent } from '../../list/entry-list/entry-list.component';
@@ -16,16 +16,20 @@ import { ListOrderService } from '../../list/list-order.service';
 import { ListPreferences } from '../../list/list-preferences.service';
 import { TitleCount } from '../../list/list-header/list-header.component';
 import { SelectionOf } from '../../query/query';
-import { FollowedStoriesStore } from '../../state/followed-stories.store';
+import { EntriesStore } from '../../state/entries.store';
 import { FollowedStoryVisit } from '../../state/followed-story-visit';
+import { ListContext } from '../../state/list-context';
 import { ListItem } from '../../state/list-item';
 import { OpenStory } from '../../state/open-story';
-import { STORY_ENTRIES } from '../../state/story-entries';
-import { FollowedStoryDto } from '../../trending/trending.models';
+import { TrendingFollowAction } from '../../trending/trending-follow-action';
+import { TestListContext } from '../../../../testing/list-context-testing';
+import { ListCover } from '../list-cover';
+import { ListHeading } from '../list-heading.service';
 import { MarkReadActions } from '../mark-read-actions.service';
 import { StoryFollowing } from '../story-following.service';
 import { StoryOverlay } from '../story-overlay.service';
 import { StoryLayerComponent } from './story-layer.component';
+import { StoryListContext } from './story-list-context';
 
 const LISTS = new InjectionToken<EntryListStubComponent[]>('LISTS', {
   providedIn: 'root',
@@ -73,12 +77,14 @@ class EntryListStubComponent {
 
 describe('StoryLayerComponent (#2329)', () => {
   const story: SelectionOf<'trending-story'> = { kind: 'trending-story', id: 42, unread: false };
+
   let close: jest.Mock;
   let toggleOpen: jest.Mock;
   let setOrder: jest.Mock;
   let setUnreadOnly: jest.Mock;
-  let confirmMarkAllReadIn: jest.Mock;
-  let confirmMarkAboveReadIn: jest.Mock;
+  let confirmMarkAllRead: jest.Mock;
+  let confirmMarkAboveRead: jest.Mock;
+  let context: TestListContext;
   const rows = {
     items: signal<ListItem[]>([anEntry({ id: 7 }), anEntry({ id: 8 })]),
     entries: signal([anEntry({ id: 7 }), anEntry({ id: 8 })]),
@@ -88,76 +94,96 @@ describe('StoryLayerComponent (#2329)', () => {
     error: signal(null),
     nextCursor: signal<string | null>(null),
   };
+  const heading = {
+    title: signal('Harbour strike'),
+    titleCount: signal<TitleCount>({ value: 31, counts: 'items' }),
+    hasMore: signal(true),
+  };
 
-  function mount(
-    options: { pageTitle?: string | null; followed?: FollowedStoryDto[] } = {},
-    selection: SelectionOf<'trending-story'> = story,
-  ): { element: HTMLElement; list: EntryListStubComponent } {
+  function mountFixture(): ComponentFixture<StoryLayerComponent> {
     close = jest.fn();
     toggleOpen = jest.fn();
     setOrder = jest.fn();
     setUnreadOnly = jest.fn();
-    confirmMarkAllReadIn = jest.fn();
-    confirmMarkAboveReadIn = jest.fn();
-    const followed = options.followed ?? [];
+    confirmMarkAllRead = jest.fn();
+    confirmMarkAboveRead = jest.fn();
+    context = new TestListContext(rows as unknown as EntriesStore, signal(story));
     TestBed.configureTestingModule({
       imports: [StoryLayerComponent, provideTranslocoTesting()],
       providers: [
+        ListCover,
         { provide: StoryOverlay, useValue: { close } },
-        { provide: STORY_ENTRIES, useValue: rows },
-        { provide: FollowedStoryVisit, useValue: { newSinceVisitIds: signal(new Set()) } },
-        { provide: OpenStory, useValue: { titleOf: () => options.pageTitle ?? null } },
-        {
-          provide: FollowedStoriesStore,
-          useValue: { byId: (id: number) => followed.find((row) => row.id === id) ?? null },
-        },
         { provide: ListOrderService, useValue: { set: setOrder } },
         { provide: ListPreferences, useValue: { setUnreadOnly } },
-        { provide: MarkReadActions, useValue: { confirmMarkAllReadIn, confirmMarkAboveReadIn } },
+        {
+          provide: MarkReadActions,
+          useValue: { confirmMarkAllRead, confirmMarkAboveRead, canMarkAllRead: signal(true) },
+        },
       ],
     });
     TestBed.overrideComponent(StoryLayerComponent, {
-      remove: { imports: [EntryListComponent], providers: [StoryFollowing] },
+      remove: {
+        imports: [EntryListComponent],
+        providers: [
+          StoryListContext,
+          ListHeading,
+          OpenStory,
+          FollowedStoryVisit,
+          TrendingFollowAction,
+          StoryFollowing,
+        ],
+      },
       add: {
         imports: [EntryListStubComponent],
         providers: [
+          { provide: StoryListContext, useValue: context },
+          { provide: ListContext, useValue: context },
+          { provide: ListHeading, useValue: heading },
+          { provide: FollowedStoryVisit, useValue: { newSinceVisitIds: signal(new Set()) } },
           { provide: StoryFollowing, useValue: { following: signal(false), toggleOpen } },
         ],
       },
     });
     const fixture = TestBed.createComponent(StoryLayerComponent);
-    fixture.componentRef.setInput('selection', selection);
     fixture.detectChanges();
+    return fixture;
+  }
+
+  function mount(): { element: HTMLElement; list: EntryListStubComponent } {
+    const fixture = mountFixture();
     return { element: fixture.nativeElement as HTMLElement, list: TestBed.inject(LISTS).at(-1)! };
   }
 
   afterEach(() => TestBed.resetTestingModule());
 
-  it("heads the reader's own list with the story's title and the count of its rows", () => {
-    const { list } = mount({ pageTitle: 'Harbour strike' });
+  it("heads the reader's own list with the story's heading and lists its own rows", () => {
+    const { list } = mount();
 
     expect(list.title()).toBe('Harbour strike');
-    expect(list.titleCount()).toEqual({ value: 2, counts: 'items' });
+    expect(list.titleCount()).toEqual({ value: 31, counts: 'items' });
+    expect(list.hasMore()).toBe(true);
     expect(list.selection()).toEqual(story);
     expect(list.items().map((item) => item.id)).toEqual([7, 8]);
     expect(list.canMarkAllRead()).toBe(true);
   });
 
-  it('counts the unread rows under "Only unread", as every list does', () => {
-    expect(mount({}, { ...story, unread: true }).list.titleCount()).toEqual({
-      value: 2,
-      counts: 'unread',
-    });
+  it('lets rows leave its own list', () => {
+    const { list } = mount();
+
+    context.markLeaving(8);
+    TestBed.tick();
+
+    expect((list.leavingIds() as ReadonlySet<number>).has(8)).toBe(true);
   });
 
-  it("falls back to the followed row's headline, then to Story", () => {
-    const headed = mount({
-      followed: [{ id: 42, headline: 'Storm', newCount: 0, quiet: false, lastJoinedAt: '' }],
-    });
-    expect(headed.list.title()).toBe('Storm');
-    TestBed.resetTestingModule();
+  it("lays its list over the route's while it is up", () => {
+    const fixture = mountFixture();
+    const cover = TestBed.inject(ListCover);
 
-    expect(mount().list.title()).toBe('Story');
+    expect(cover.list()?.context).toBe(context);
+    expect(cover.list()?.heading).toBe(heading);
+    fixture.destroy();
+    expect(cover.list()).toBeNull();
   });
 
   it('leads with the way back to the list underneath', () => {
@@ -177,7 +203,7 @@ describe('StoryLayerComponent (#2329)', () => {
     expect(toggleOpen).toHaveBeenCalled();
   });
 
-  it("hands the list's order, unread switch and mark-read to the story's own list", () => {
+  it("hands the list's order, unread switch and mark-read on for the story's list", () => {
     const { list } = mount();
 
     list.orderChange.emit('oldest');
@@ -187,11 +213,7 @@ describe('StoryLayerComponent (#2329)', () => {
 
     expect(setOrder).toHaveBeenCalledWith(story, 'oldest');
     expect(setUnreadOnly).toHaveBeenCalledWith(story, true);
-    expect(confirmMarkAllReadIn).toHaveBeenCalledWith({ selection: story, entries: rows });
-    expect(confirmMarkAboveReadIn).toHaveBeenCalledWith(
-      { selection: story, entries: rows },
-      [7],
-      expect.any(Function),
-    );
+    expect(confirmMarkAllRead).toHaveBeenCalled();
+    expect(confirmMarkAboveRead).toHaveBeenCalledWith([7], expect.any(Function));
   });
 });

@@ -8,8 +8,7 @@ import {
 import { API_BASE_URL } from '../../core/api';
 import { transientGatewayRetryInterceptor } from '../../core/http/retry-transient-gateway-errors';
 import { TokenStore } from '../../core/auth/token.store';
-import { EntriesStore } from './entries.store';
-import { STORY_ENTRIES } from './story-entries';
+import { EntriesStore, RowsPatch } from './entries.store';
 import { LandedList } from './landed-list';
 import { EntryDto } from '../models';
 import { VoteValue } from '../vote-pill/vote';
@@ -64,30 +63,35 @@ describe('EntriesStore', () => {
     ctrl = TestBed.inject(HttpTestingController);
   });
 
-  describe('with a story open over the list (#2329)', () => {
-    function openStory(): EntriesStore {
-      const storyList = TestBed.inject(STORY_ENTRIES);
-      storyList.load({ view: 'all', storyId: 42 });
+  describe('beside another list on screen (#2329)', () => {
+    function listShowing(id: number): EntriesStore {
+      store.load({ view: 'all' });
       ctrl
-        .expectOne((request) => request.url === 'https://api.test/api/entries/trending-stories/42')
-        .flush({
-          entries: [entry(7)],
-          nextCursor: null,
-          title: 'T',
-          lastOpenedAt: null,
-          newEntryIds: [],
-        });
-      return storyList;
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({ entries: [entry(id)], nextCursor: null });
+      return store;
     }
 
-    it("finds the story's rows and patches them, which the list underneath does not hold", () => {
-      const storyList = openStory();
+    it('passes each change to its rows on, for the list beside it', () => {
+      const changes: RowsPatch[] = [];
+      listShowing(7).rowsPatched.subscribe((change) => changes.push(change));
 
-      expect(store.entry(7)?.id).toBe(7);
       store.setState(7, { isFavorite: true });
 
-      expect(storyList.entries()[0].isFavorite).toBe(true);
+      expect([...changes[0].targets]).toEqual([7]);
+      expect(changes[0].patch(entry(7)).isFavorite).toBe(true);
       ctrl.expectOne('https://api.test/api/entries/7/state').flush({ state: {} });
+    });
+
+    it('lays a change another list made over its rows, sending nothing and passing nothing on', () => {
+      const changes: RowsPatch[] = [];
+      listShowing(7).rowsPatched.subscribe((change) => changes.push(change));
+
+      store.layOver({ targets: new Set([7]), patch: (row) => ({ ...row, isKept: true }) });
+
+      expect(store.entries()[0].isKept).toBe(true);
+      expect(changes).toEqual([]);
+      ctrl.expectNone(() => true);
     });
   });
 
@@ -124,7 +128,6 @@ describe('EntriesStore', () => {
     expect(first.cancelled).toBe(true);
     expect(store.loading()).toBe(false);
     expect(store.nextCursor()).toBeNull();
-    expect(store.items()).toEqual([]);
     store.reload();
     ctrl.expectNone((request) => request.url === 'https://api.test/api/entries');
   });

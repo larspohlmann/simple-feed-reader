@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Component, NgZone, Provider, TemplateRef, ViewChild, signal } from '@angular/core';
+import { Component, NgZone, Provider, TemplateRef, ViewChild, inject, signal } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
@@ -16,7 +16,9 @@ import { ReaderApi } from '../../reader-api';
 import { TrendingApi } from '../../trending/trending-api';
 import { StoryPageDto } from '../../trending/trending.models';
 import { SocialPostApi } from '../../social-post-api';
-import { STORY_ENTRIES } from '../../state/story-entries';
+import { EntriesStore } from '../../state/entries.store';
+import { ListContext } from '../../state/list-context';
+import { TestListContext } from '../../../../testing/list-context-testing';
 import { FollowedStoriesStore } from '../../state/followed-stories.store';
 import { FollowedStoryVisit } from '../../state/followed-story-visit';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
@@ -393,9 +395,11 @@ describe('EntryListComponent', () => {
           { provide: TrendingApi, useValue: {} },
           { provide: SocialPostApi, useValue: {} },
           { provide: FollowedStoriesStore, useValue: { markOpened: jest.fn() } },
+          { provide: ListContext, useFactory: () => new TestListContext(inject(EntriesStore)) },
+          FollowedStoryVisit,
         ]);
         const element = fixture.nativeElement as HTMLElement;
-        const store = TestBed.inject(STORY_ENTRIES);
+        const store = TestBed.inject(EntriesStore);
         const visit = TestBed.inject(FollowedStoryVisit);
         const render = async () => {
           fixture.componentRef.setInput('items', store.items());

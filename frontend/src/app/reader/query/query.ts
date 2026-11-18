@@ -47,6 +47,11 @@ export type Selection = { [K in SelectionKind]: SelectionOf<K> }[SelectionKind];
 export type FilteredSelection = Extract<Selection, { unread: boolean }>;
 type OrderedSelection = Exclude<Selection, { kind: 'for-you' | 'trending' | 'notifications' }>;
 
+/** A Trending story's list as it opens, before the reader's switches apply (#2329). */
+export function trendingStorySelection(id: number): SelectionOf<'trending-story'> {
+  return { kind: 'trending-story', id, unread: false };
+}
+
 /** One arm per kind, each handed the selection already narrowed to that kind. */
 export type BySelectionKind<R> = { [K in SelectionKind]: (selection: SelectionOf<K>) => R };
 

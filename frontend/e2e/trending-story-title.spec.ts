@@ -2,6 +2,7 @@ import { expect, Page, test } from '@playwright/test';
 import { nextFrames, settleAnimations } from './support/animations';
 import { signInWithLayout } from './support/auth';
 import { entryWire } from './support/reader';
+import type { EntryDto } from '../src/app/reader/models';
 import type { TrendingResponseDto } from '../src/app/reader/trending/trending-page';
 import type {
   FollowedStoriesResponseDto,
@@ -47,14 +48,31 @@ function followedWith(followed: boolean): FollowedStoriesResponseDto {
   return { stories: followed ? [story] : [], nextBuildDueAt: null };
 }
 
-function storyPage(id: number, followed: boolean): StoryPageDto {
+function storyPage(id: number, followed: boolean, over: Partial<StoryPageDto> = {}): StoryPageDto {
   return {
     entries: [leadOf(id)],
     nextCursor: null,
     title: titleOf(id),
     lastOpenedAt: followed ? '2026-11-18T06:00:00Z' : null,
     newEntryIds: [],
+    ...over,
   };
+}
+
+/** The story's own page, over the stubbed one, with `rows` and the tally the server would count. */
+async function stubStoryPage(page: Page, over: Partial<StoryPageDto>): Promise<void> {
+  await page.route(
+    (url) => url.pathname === `/api/entries/trending-stories/${STORY_ID}`,
+    (route) => route.fulfill({ status: 200, json: storyPage(STORY_ID, false, over) }),
+  );
+}
+
+/** Kept, owned by the spec: empty, so nothing beneath the story is the seeded account's. */
+async function stubKept(page: Page): Promise<void> {
+  await page.route(
+    (url) => url.pathname === '/api/entries' && url.searchParams.get('view') === 'kept',
+    (route) => route.fulfill({ status: 200, json: { entries: [], nextCursor: null } }),
+  );
 }
 
 interface Stubbed {
@@ -304,4 +322,76 @@ test.describe("a story's list slides like an article (phone)", () => {
       }
     });
   }
+});
+
+test.describe("a story's list is a list of its own (desktop)", () => {
+  test.use({ viewport: { width: 1280, height: 900 } });
+
+  const keptLead: EntryDto = { ...leadOf(STORY_ID), isKept: true };
+  const keepButton = (page: Page) =>
+    layer(page).locator('.row-slot').first().getByRole('button', { name: 'Keep', exact: true });
+
+  async function openOverKept(page: Page): Promise<void> {
+    await stubStories(page, false);
+    await stubStoryPage(page, { entries: [keptLead] });
+    await stubKept(page);
+    await signIn(page, 'list');
+    await page.goto(`/trending/stories/${STORY_ID}?view=kept`);
+    await expect(layer(page).locator('.row-slot')).toHaveCount(1);
+  }
+
+  test('a row un-kept in a story over Kept stays in the story', async ({ page }) => {
+    await page.route(
+      (url) => url.pathname === `/api/entries/${keptLead.id}/state`,
+      (route) => route.fulfill({ status: 200, json: {} }),
+    );
+    await openOverKept(page);
+    const saved = page.waitForRequest((request) => request.url().includes('/state'));
+
+    await layer(page).locator('.row-slot').first().hover();
+    await keepButton(page).click();
+    await saved;
+
+    await expect(layer(page).locator('.row-slot')).toHaveCount(1);
+    await expect(layer(page).locator('.row-slot.leaving')).toHaveCount(0);
+  });
+
+  test("a failed change shows on the story's banner, not the list's beneath", async ({ page }) => {
+    await page.route(
+      (url) => url.pathname === `/api/entries/${keptLead.id}/state`,
+      (route) =>
+        route.fulfill({
+          status: 500,
+          contentType: 'application/problem+json',
+          json: { type: 'about:blank', title: 'Server error', status: 500 },
+        }),
+    );
+    await openOverKept(page);
+
+    await layer(page).locator('.row-slot').first().hover();
+    await keepButton(page).click();
+
+    await expect(layer(page).locator('app-error-banner')).toBeVisible();
+    await expect(page.locator('section.list app-error-banner')).toHaveCount(0);
+  });
+
+  test("hiding the sidebar focuses the story's own way back to it", async ({ page }) => {
+    await stubStories(page, false);
+    await signIn(page, 'list');
+    await openTrending(page);
+    await page.getByRole('link', { name: TITLE }).click();
+    await expect(layer(page)).toContainText(TITLE);
+
+    await page.getByRole('button', { name: 'Hide sidebar' }).click();
+
+    await expect
+      .poll(() =>
+        page.evaluate(() => ({
+          inStory: document.activeElement?.closest('app-story-layer') !== null,
+          label: document.activeElement?.getAttribute('aria-label'),
+        })),
+      )
+      .toEqual({ inStory: true, label: 'Show sidebar' });
+    await page.getByRole('button', { name: 'Show sidebar' }).first().click();
+  });
 });

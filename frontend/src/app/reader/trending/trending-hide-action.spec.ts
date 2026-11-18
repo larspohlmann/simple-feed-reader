@@ -1,24 +1,22 @@
 import { TestBed } from '@angular/core/testing';
 import { aStory, aStoryArticle } from '../../../testing/entry-testing';
 import { TrendingStoryDto } from './trending.models';
-import { EntriesStore, StateSaveOutcome } from '../state/entries.store';
+import { StateSaveOutcome } from '../state/entries.store';
+import { ListContext } from '../state/list-context';
 import { SubscriptionsStore } from '../state/subscriptions.store';
-import { EntryStateActions } from '../shell/entry-state-actions.service';
+import { provideRouteListForTest } from '../../../testing/list-context-testing';
 import { TrendingHideAction } from './trending-hide-action';
 
 describe('TrendingHideAction (#2017)', () => {
   const hideTrendingStory = jest.fn<void, [TrendingStoryDto, StateSaveOutcome?]>();
   const reloadCountsQuietly = jest.fn();
-  const markLeaving = jest.fn();
-  const stayInList = jest.fn();
 
   const action = (): TrendingHideAction => {
     TestBed.configureTestingModule({
       providers: [
         TrendingHideAction,
-        { provide: EntriesStore, useValue: { hideTrendingStory } },
+        ...provideRouteListForTest({ hideTrendingStory }),
         { provide: SubscriptionsStore, useValue: { reloadCountsQuietly } },
-        { provide: EntryStateActions, useValue: { markLeaving, stayInList } },
       ],
     });
     return TestBed.inject(TrendingHideAction);
@@ -29,8 +27,6 @@ describe('TrendingHideAction (#2017)', () => {
   beforeEach(() => {
     hideTrendingStory.mockReset();
     reloadCountsQuietly.mockReset();
-    markLeaving.mockReset();
-    stayInList.mockReset();
   });
 
   it('hides the story and recounts once the server took it', () => {
@@ -46,9 +42,10 @@ describe('TrendingHideAction (#2017)', () => {
     action().run({ ...story, leadEntryId: 99 });
     const outcome = hideTrendingStory.mock.calls[0][1];
 
+    const list = TestBed.inject(ListContext);
     outcome?.onStarted?.();
-    expect(markLeaving).toHaveBeenCalledWith(7);
+    expect(list.leavingIds().has(7)).toBe(true);
     outcome?.onFailed?.();
-    expect(stayInList).toHaveBeenCalledWith(7);
+    expect(list.leavingIds().has(7)).toBe(false);
   });
 });

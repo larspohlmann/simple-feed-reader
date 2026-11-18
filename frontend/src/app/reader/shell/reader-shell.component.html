@@ -80,11 +80,11 @@
       [trendingUnopened]="subs.trendingUnopened()"
       [followedStories]="followedStoriesStore.stories()"
       [savedSearches]="savedSearchesStore.savedSearches()"
-      [activeSavedSearchId]="heading.activeSavedSearchId()"
+      [activeSavedSearchId]="headingOnScreen().activeSavedSearchId()"
       [activeFollowedStoryId]="storyOverlay.storyId()"
       [mailEnabled]="auth.user()?.mail?.enabled ?? false"
       [digestEnabled]="digest.enabled()"
-      [selection]="selection()"
+      [selection]="listOnScreen().selection()"
       [loading]="subs.loading()"
       [searchLoading]="heading.searching()"
       (refresh)="refresh.refreshAll()"
@@ -181,18 +181,18 @@
           [searchCountLabel]="heading.searchCountLabel()"
           [titleCount]="heading.titleCount()"
           [savedSearchCount]="savedSearchesStore.savedSearches().length"
-          [items]="entries.items()"
-          [matchedWords]="entries.matchedWords()"
-          [loading]="listLoading()"
-          [mutating]="entries.mutating()"
+          [items]="routeList.entries.items()"
+          [matchedWords]="routeList.entries.matchedWords()"
+          [loading]="routeList.entries.loading() || !listPreferences.ready()"
+          [mutating]="routeList.entries.mutating()"
           [busy]="savedSearch.saving()"
-          [loadingMore]="entries.loadingMore()"
-          [error]="entries.error()"
+          [loadingMore]="routeList.entries.loadingMore()"
+          [error]="routeList.entries.error()"
           [hasMore]="heading.hasMore()"
           [canMarkAllRead]="markRead.canMarkAllRead()"
           [selection]="current"
           [openEntryId]="entryId()"
-          [leavingIds]="entryActions.leavingIds()"
+          [leavingIds]="routeList.leavingIds()"
           [feedTags]="feedTags()"
           [refreshing]="refreshSvc.running()"
           [lastRefreshed]="heading.lastRefreshed()"
@@ -203,9 +203,9 @@
           [topBlock]="feedIntro"
           [headerLeading]="sidebarShow"
           [cornerTrailing]="sidebarCorner"
-          (loadMore)="entries.loadMore()"
-          (retry)="entries.retry()"
-          (dismiss)="entries.dismissError()"
+          (loadMore)="routeList.entries.loadMore()"
+          (retry)="routeList.entries.retry()"
+          (dismiss)="routeList.entries.dismissError()"
           (markAllRead)="markRead.confirmMarkAllRead()"
           (unreadOnlyChange)="onUnreadOnlyChange($event)"
           (orderChange)="listOrder.set(current, $event)"
@@ -218,14 +218,12 @@
   <!-- A story's list over the list it was opened from, which stays mounted beneath it as under an
        article (#2329). -->
   <ng-template #storyPane>
-    @if (storyOverlay.selection(); as story) {
+    @if (storyOverlay.open()) {
       <div class="article-overlay story-overlay" appPageLayer animate.leave="article-leave">
         <app-story-layer
-          [selection]="story"
           [layout]="layout.mode()"
           [feedTags]="feedTags()"
           [openEntryId]="entryId()"
-          [leavingIds]="entryActions.leavingIds()"
           [listLeading]="sidebarShow"
           [cornerTrailing]="sidebarCorner"
         />
@@ -318,10 +316,9 @@
   @if (sidebarCollapsed()) {
     <span class="sidebar-show-slot">
       <button
-        #showSidebarButton
         appIconButton
         class="sidebar-show boxed"
-        [class.collapsed]="list()?.collapsed()"
+        [class.collapsed]="visibleList()?.collapsed()"
         type="button"
         [attr.aria-label]="'reader.showSidebar' | transloco"
         [attr.title]="'reader.showSidebar' | transloco"

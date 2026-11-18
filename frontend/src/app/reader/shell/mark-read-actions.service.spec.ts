@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
+import { DestroyRef, Signal, signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { of } from 'rxjs';
@@ -11,11 +11,14 @@ import { ReaderApi } from '../reader-api';
 import { SubscriptionDto } from '../models';
 import { Selection } from '../query/query';
 import { EntriesStore } from '../state/entries.store';
+import { ListContext } from '../state/list-context';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { makeSubscription } from '../testing/subscription.factory';
 import { MarkReadActions } from './mark-read-actions.service';
-import { ReaderRouteState } from './reader-route-state.service';
+import { ListCover } from './list-cover';
+import type { ListHeading } from './list-heading.service';
+import { TestListContext, provideRouteListForTest } from '../../../testing/list-context-testing';
 
 const subscription = (
   id: number,
@@ -61,11 +64,10 @@ describe('MarkReadActions recounting after a mark-read', () => {
           provide: ConfirmService,
           useValue: { confirmThen: (_: unknown, run: () => void) => run() },
         },
-        {
-          provide: EntriesStore,
-          useValue: {
+        ...provideRouteListForTest(
+          {
             loadedAt: () => '2026-10-16T10:00:00Z',
-            entries: () => [],
+            entries: () => [{ id: 3 }],
             load: jest.fn(),
             markHiddenLocally: jest.fn(),
             runThenReload: (
@@ -74,9 +76,9 @@ describe('MarkReadActions recounting after a mark-read', () => {
             ) => mutation.subscribe(reload),
             withMutatingCue: <T>(mutation: T) => mutation,
           },
-        },
+          currentSelection as Signal<Selection>,
+        ),
         { provide: SavedSearchesStore, useValue: { load: jest.fn() } },
-        { provide: ReaderRouteState, useValue: { selection: currentSelection } },
       ],
     });
     TestBed.inject(TokenStore).set('user-a.jwt');
@@ -155,29 +157,65 @@ describe('MarkReadActions recounting after a mark-read', () => {
     expect(fullLoad).not.toHaveBeenCalled();
   });
 
+  it("reloads the reader's list after marking it read, leaving its rows as they were", () => {
+    const routeRows = TestBed.inject(ListContext).entries;
+    currentSelection.set({ kind: 'tag', id: 5, unread: false });
+
+    actions.confirmMarkAllRead();
+
+    expect(routeRows.load).toHaveBeenCalledWith({ view: 'all', tag: 5 });
+    expect(routeRows.markHiddenLocally).not.toHaveBeenCalled();
+  });
+
   describe("a Trending story's list over the reader's (#2329)", () => {
     const story: Selection = { kind: 'trending-story', id: 42, unread: false };
-    const storyRows = () => ({
-      loadedAt: () => '2026-10-16T11:00:00Z',
-      entries: () => [{ id: 7 }, { id: 8 }],
-      load: jest.fn(),
-      markHiddenLocally: jest.fn(),
-      runThenReload: (mutation: { subscribe: (next: () => void) => void }, reload: () => void) =>
-        mutation.subscribe(reload),
+    let storyRows: {
+      loadedAt: () => string;
+      entries: () => { id: number }[];
+      load: jest.Mock;
+      markHiddenLocally: jest.Mock;
+      runThenReload: (
+        mutation: { subscribe: (next: () => void) => void },
+        reload: () => void,
+      ) => void;
+      withMutatingCue: <T>(mutation: T) => T;
+    };
+    const heading = {} as ListHeading;
+
+    beforeEach(() => {
+      storyRows = {
+        loadedAt: () => '2026-10-16T11:00:00Z',
+        entries: () => [{ id: 7 }, { id: 8 }],
+        load: jest.fn(),
+        markHiddenLocally: jest.fn(),
+        runThenReload: (mutation, reload) => mutation.subscribe(reload),
+        withMutatingCue: (mutation) => mutation,
+      };
+      const context = new TestListContext(storyRows as unknown as EntriesStore, signal(story));
+      TestBed.inject(ListCover).coverWith({ context, heading }, TestBed.inject(DestroyRef));
+      currentSelection.set({ kind: 'trending', window: 'day' });
     });
 
-    it('marks the story read, shows its rows read at once, and reloads only the story', () => {
+    it('marks the story read and reloads only the story', () => {
       const markStoryRead = jest.spyOn(TestBed.inject(ReaderApi), 'markTrendingStoryRead');
-      const rows = storyRows();
-      currentSelection.set({ kind: 'trending', window: 'day' });
 
-      actions.confirmMarkAllReadIn({ selection: story, entries: rows as unknown as EntriesStore });
+      actions.confirmMarkAllRead();
 
       expect(markStoryRead).toHaveBeenCalledWith(42, '2026-10-16T11:00:00Z');
-      expect(rows.markHiddenLocally).toHaveBeenCalledWith([7, 8]);
-      expect(rows.load).toHaveBeenCalledWith({ view: 'all', storyId: 42 });
-      expect(TestBed.inject(EntriesStore).load).not.toHaveBeenCalled();
+      expect(storyRows.load).toHaveBeenCalledWith({ view: 'all', storyId: 42 });
+      expect(TestBed.inject(ListContext).entries.load).not.toHaveBeenCalled();
       expect(reloadCountsQuietly).toHaveBeenCalledTimes(1);
+    });
+
+    it("marks the rows above read in the story's list, not the reader's", () => {
+      actions.confirmMarkAboveRead([7], jest.fn());
+
+      expect(storyRows.markHiddenLocally).toHaveBeenCalledWith([7]);
+      expect(TestBed.inject(ListContext).entries.markHiddenLocally).not.toHaveBeenCalled();
+    });
+
+    it('offers mark all read for the story', () => {
+      expect(actions.canMarkAllRead()).toBe(true);
     });
   });
 });

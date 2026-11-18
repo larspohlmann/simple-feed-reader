@@ -5,7 +5,6 @@ import { EntryBodyService } from '../article/content/entry-body.service';
 import { EntryDto } from '../models';
 import { ReaderApi } from '../reader-api';
 import { withCompleted } from '../state/completed-entry';
-import { EntriesStore } from '../state/entries.store';
 import { TokenStore } from '../../core/auth/token.store';
 import { CompletedEntriesMerge } from './completed-entries-merge';
 import { ReaderRouteState } from './reader-route-state.service';
@@ -15,6 +14,7 @@ import {
   PENDING_POLL_MAX_ROUNDS,
   PendingEntriesPoll,
 } from './pending-entries-poll.service';
+import { provideRouteListForTest } from '../../../testing/list-context-testing';
 
 const row = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
   ({
@@ -86,7 +86,7 @@ describe('PendingEntriesPoll', () => {
       providers: [
         PendingEntriesPoll,
         CompletedEntriesMerge,
-        { provide: EntriesStore, useValue: { entries, loading, loadedAt, mergeCompleted } },
+        ...provideRouteListForTest({ entries, loading, loadedAt, mergeCompleted }),
         { provide: ReaderApi, useValue: { complete } },
         { provide: EntryBodyService, useValue: { refresh: refreshBody, forget: forgetBody } },
         { provide: ReaderRouteState, useValue: { openEntry } },

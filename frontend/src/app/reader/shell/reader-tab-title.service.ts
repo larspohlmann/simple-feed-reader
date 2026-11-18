@@ -1,17 +1,17 @@
 import { Injectable, effect, inject } from '@angular/core';
 import { PageTitleService } from '../../core/i18n/page-title.service';
 import { ReaderRouteState } from './reader-route-state.service';
-import { ListHeading } from './list-heading.service';
 import { entryDisplayTitle } from '../entry/entry-text';
 import { LinkArticleSource } from '../article/link-reader/link-article-source.service';
+import { injectHeadingOnScreen } from './list-cover';
 
-/** Names the tab after the open link's page, else the open article, else the list.
+/** Names the tab after the open link's page, else the open article, else the list on screen (#2329).
  *  The reader route carries no title of its own, so this is the only writer
  *  while the reader is on screen. Injected for its effect. */
 @Injectable()
 export class ReaderTabTitle {
   private readonly pageTitle = inject(PageTitleService);
-  private readonly heading = inject(ListHeading);
+  private readonly heading = injectHeadingOnScreen();
   private readonly openEntry = inject(ReaderRouteState).openEntry;
   private readonly linkTitle = inject(LinkArticleSource).title;
 
@@ -27,7 +27,8 @@ export class ReaderTabTitle {
         this.pageTitle.useText(entryDisplayTitle(entry));
         return;
       }
-      this.pageTitle.useText(this.heading.tabTitle(), this.heading.titleCount().value);
+      const heading = this.heading();
+      this.pageTitle.useText(heading.tabTitle(), heading.titleCount().value);
     });
   }
 }
