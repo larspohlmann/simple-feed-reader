@@ -50,6 +50,7 @@ final class TrendingWiring
         $snapshots = self::snapshots($entityManager);
         $builder = new TrendingSnapshotBuilder(
             self::grouping($entityManager, $clock),
+            new TrendingEntryRepository($entityManager),
             self::policies($entityManager),
             new TrendingStoryHistoryRepository($entityManager),
             $snapshots,

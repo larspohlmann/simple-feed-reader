@@ -46,9 +46,11 @@ final class MaintenanceTickJsonTest extends KernelTestCase
                 'notificationPoll' => new NotificationPollReportModel(40, 41, 42, 43),
                 'trending' => new TrendingRebuildReportModel([
                     new TrendingBuildReportModel(
+                        7,
                         TrendingWindow::Day,
                         new \DateTimeImmutable('2031-05-14 12:00:00'),
                         300,
+                        12,
                         28,
                         400,
                         5_000,
@@ -56,9 +58,11 @@ final class MaintenanceTickJsonTest extends KernelTestCase
                         0,
                     ),
                     new TrendingBuildReportModel(
+                        7,
                         TrendingWindow::Week,
                         new \DateTimeImmutable('2031-05-14 12:00:00'),
                         900,
+                        12,
                         29,
                         800,
                         9_000,

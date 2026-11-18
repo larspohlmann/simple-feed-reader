@@ -12,12 +12,13 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
     name: 'app:trending:rebuild',
-    description: 'Build one Trending window now, due or not, and print how its stories matched the stored ones.',
+    description: 'Build one window of one user now, due or not, and print how its stories matched the stored ones.',
 )]
 final class TrendingRebuildCommand extends Command
 {
@@ -29,11 +30,18 @@ final class TrendingRebuildCommand extends Command
     protected function configure(): void
     {
         $this->addArgument('window', InputArgument::REQUIRED, 'day or week');
+        $this->addOption('user', null, InputOption::VALUE_REQUIRED, 'The id of the user to build for');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
+        $userId = ConsoleOption::wholeNumber($input, 'user');
+        if ($userId === null) {
+            $io->error('The --user option is required: the id of the user to build Trending for.');
+
+            return Command::INVALID;
+        }
         $argument = $input->getArgument('window');
         try {
             $window = TrendingWindow::fromRequestValue(\is_string($argument) ? $argument : null);
@@ -43,7 +51,7 @@ final class TrendingRebuildCommand extends Command
             return Command::INVALID;
         }
         try {
-            $report = $this->builder->build($window)->toLogContext();
+            $report = $this->builder->build($userId, $window)->toLogContext();
         } catch (TrendingBuildBusyException) {
             $io->warning('Skipped: another Trending build is running.');
 

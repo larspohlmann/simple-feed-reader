@@ -47,12 +47,12 @@ final readonly class TrendingGrouping
         );
     }
 
-    /** @return list<TrendingStoryModel> the groups spanning enough feeds that some reader could see them trend */
+    /** @return list<TrendingStoryModel> the groups spanning enough feeds a reader could see them trend */
     public function stories(TrendingRun $run): array
     {
         return array_values(array_filter(
             $this->groups($run),
-            static fn (TrendingStoryModel $story): bool => $story->outletCount() >= $run->window->minSubscribedFeeds(),
+            static fn (TrendingStoryModel $story): bool => $story->outletCount() >= TrendingWindow::MULTIPLE_SOURCES,
         ));
     }
 

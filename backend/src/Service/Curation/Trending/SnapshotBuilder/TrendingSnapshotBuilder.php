@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Curation\Trending\SnapshotBuilder;
 
 use App\Enum\TrendingWindow;
+use App\Repository\TrendingEntryRepository;
 use App\Repository\TrendingSnapshotRepository;
 use App\Repository\TrendingStoryHistoryRepository;
 use App\Service\Curation\Trending\Exception\TrendingBuildBusyException;
@@ -24,9 +25,9 @@ use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Lock\LockInterface;
 
 /**
- * Groups one window and matches the groups to the stored stories, updating them in place in one transaction:
- * readers see the old stories until the commit. Only the week build merges and prunes (#2128).
- * One build at a time across both windows: overlapping in-place updates collide.
+ * Groups one window of one user's feeds and matches the groups to that user's stored stories, updating them in place in
+ * one transaction: the reader sees the old stories until the commit. Only the week build merges and prunes (#2128).
+ * One build at a time per user across both windows: overlapping in-place updates collide.
  */
 final readonly class TrendingSnapshotBuilder implements SnapshotBuilderInterface
 {
@@ -36,6 +37,7 @@ final readonly class TrendingSnapshotBuilder implements SnapshotBuilderInterface
 
     public function __construct(
         private TrendingGrouping $grouping,
+        private TrendingEntryRepository $windowEntries,
         #[AutowireLocator('app.trending_story_build_policy')]
         private ContainerInterface $policies,
         private TrendingStoryHistoryRepository $history,
@@ -47,27 +49,28 @@ final readonly class TrendingSnapshotBuilder implements SnapshotBuilderInterface
     }
 
     /** @throws TrendingBuildBusyException while another build holds the lock */
-    public function build(TrendingWindow $window): TrendingBuildReportModel
+    public function build(int $userId, TrendingWindow $window): TrendingBuildReportModel
     {
-        $lock = $this->lockFactory->createLock(self::LOCK_NAME, self::LOCK_TTL_SECONDS);
+        $lock = $this->lockFactory->createLock(self::LOCK_NAME . '-' . $userId, self::LOCK_TTL_SECONDS);
         if (!$lock->acquire()) {
             throw new TrendingBuildBusyException();
         }
 
         try {
-            return $this->buildLocked($window, $lock);
+            return $this->buildLocked($userId, $window, $lock);
         } finally {
             $lock->release();
         }
     }
 
-    private function buildLocked(TrendingWindow $window, LockInterface $lock): TrendingBuildReportModel
+    private function buildLocked(int $userId, TrendingWindow $window, LockInterface $lock): TrendingBuildReportModel
     {
         $stopwatch = BuildStopwatch::start();
-        $run = $this->grouping->collect($window);
+        $run = $this->grouping->collect($userId, $window);
         $groups = $this->grouping->stories($run);
         $entryCount = $run->entryCount();
-        $build = new StoryBuildModel($window, $run->since, $this->clock->now());
+        $build = new StoryBuildModel($userId, $window, $run->since, $this->clock->now());
+        $activeFeedCount = $this->windowEntries->activeFeedCount($userId, $build->since);
         unset($run);
         $policy = $this->policyFor($window);
         $match = $policy->match($groups, $this->history->storedInWindow($build->userId, $build->since));
@@ -79,13 +82,16 @@ final readonly class TrendingSnapshotBuilder implements SnapshotBuilderInterface
             $policy,
             $match,
             $entryCount,
+            $activeFeedCount,
             $stopwatch,
         ) {
             $pruned = $this->write($build, $policy, $match);
             $report = new TrendingBuildReportModel(
+                $build->userId,
                 $build->window,
                 $build->builtAt,
                 $entryCount,
+                $activeFeedCount,
                 \count($match->assignments),
                 $stopwatch->elapsedMilliseconds(),
                 $stopwatch->peakMemoryBytes(),

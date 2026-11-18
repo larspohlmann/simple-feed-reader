@@ -11,5 +11,5 @@ use App\Service\Curation\Trending\Model\TrendingBuildReportModel;
 interface SnapshotBuilderInterface
 {
     /** @throws TrendingBuildBusyException */
-    public function build(TrendingWindow $window): TrendingBuildReportModel;
+    public function build(int $userId, TrendingWindow $window): TrendingBuildReportModel;
 }

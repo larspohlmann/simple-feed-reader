@@ -18,9 +18,11 @@ final class TrendingBuildReportModelTest extends TestCase
     public function testTheLogContextNamesEveryFigureOfTheBuild(): void
     {
         $report = new TrendingBuildReportModel(
+            42,
             TrendingWindow::Week,
             new \DateTimeImmutable('2031-05-14 12:00:00'),
             1_200,
+            80,
             14,
             25_000,
             64_000_000,
@@ -34,8 +36,10 @@ final class TrendingBuildReportModelTest extends TestCase
 
         self::assertSame(
             [
+                'userId' => 42,
                 'window' => 'week',
                 'entryCount' => 1_200,
+                'activeFeedCount' => 80,
                 'storyCount' => 14,
                 'durationMs' => 25_000,
                 'peakMemoryBytes' => 64_000_000,

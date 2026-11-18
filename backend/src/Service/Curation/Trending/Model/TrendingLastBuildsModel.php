@@ -6,20 +6,30 @@ namespace App\Service\Curation\Trending\Model;
 
 use App\Enum\TrendingWindow;
 
-/** When each window's snapshot was last built and how long that took. */
+/** When each window of one user was last built, how long that took and how many feeds were active in it. */
 final readonly class TrendingLastBuildsModel
 {
     /**
      * @param array<string, \DateTimeImmutable> $builtAtByWindow built_at in UTC, by window value
      * @param array<string, int> $durationMillisecondsByWindow by window value
+     * @param array<string, int> $activeFeedCountByWindow by window value
      */
-    public function __construct(private array $builtAtByWindow, private array $durationMillisecondsByWindow)
-    {
+    public function __construct(
+        private array $builtAtByWindow,
+        private array $durationMillisecondsByWindow,
+        private array $activeFeedCountByWindow,
+    ) {
     }
 
     public function builtAt(TrendingWindow $window): ?\DateTimeImmutable
     {
         return $this->builtAtByWindow[$window->value] ?? null;
+    }
+
+    /** 0 while the window was never built. */
+    public function activeFeedCount(TrendingWindow $window): int
+    {
+        return $this->activeFeedCountByWindow[$window->value] ?? 0;
     }
 
     /** Null while the window was never built: it is due now. */
