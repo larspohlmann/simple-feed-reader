@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
+use App\Entity\ReadingSettings;
 use App\Entity\User;
 use App\Enum\UserStatus;
 use App\Repository\UserRepository;
@@ -29,6 +30,24 @@ final class UserRepositoryTest extends DbTestCase
         $this->entityManager->flush();
 
         return $user;
+    }
+
+    public function testTrendingReaderIdsLoggedInSince(): void
+    {
+        $now = new \DateTimeImmutable('2031-05-14 12:00:00');
+        $recent = $this->persist('recent@example.com', UserStatus::Active);
+        $recent->setLastLoginAt($now->modify('-13 days'));
+        $old = $this->persist('old@example.com', UserStatus::Active);
+        $old->setLastLoginAt($now->modify('-15 days'));
+        $this->persist('never@example.com', UserStatus::Active);
+        $off = $this->persist('off@example.com', UserStatus::Active);
+        $off->setLastLoginAt($now->modify('-1 day'));
+        $this->entityManager->getRepository(ReadingSettings::class)->find($off)?->setTrendingEnabled(false);
+        $this->entityManager->flush();
+
+        $readerIds = $this->users()->trendingReaderIdsLoggedInSince($now->modify('-14 days'));
+
+        self::assertSame([$recent->requireId()], $readerIds);
     }
 
     public function testFindActiveAdminsReturnsOnlyActiveRoleAdminUsers(): void

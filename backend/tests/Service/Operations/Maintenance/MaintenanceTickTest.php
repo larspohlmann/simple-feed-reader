@@ -338,6 +338,7 @@ final class MaintenanceTickTest extends DbTestCase
         $clock = new MockClock('2026-10-11 12:00:00', 'UTC');
         $now = $clock->now();
         $subscriber = new User('tick-trending@example.com', $now);
+        $subscriber->setLastLoginAt($now);
         $this->entityManager->persist($subscriber);
         $feed = new Feed('https://one.example.com/feed');
         $feed->scheduleNextFetchAt($now->modify('-1 hour'));
@@ -366,6 +367,7 @@ final class MaintenanceTickTest extends DbTestCase
         $feed = new Feed('https://order.example.com/feed');
         $feed->scheduleNextFetchAt(new \DateTimeImmutable('2032-01-01 00:00:00'));
         $owner->approve($clock->now());
+        $owner->setLastLoginAt($clock->now());
         $this->entityManager->persist($owner);
         $this->entityManager->persist($feed);
         $this->entityManager->persist(new Subscription($owner, $feed, $clock->now()));

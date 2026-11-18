@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Entity\ReadingSettings;
 use App\Entity\User;
 use App\Enum\UserStatus;
 use App\Repository\Exception\RecordNotFoundException;
@@ -153,6 +154,28 @@ final class UserRepository extends ServiceEntityRepository implements UserLoader
         }
 
         return false;
+    }
+
+    /**
+     * The users who logged in at or after $since and have Trending on; a user without a settings row counts as on,
+     * the column's default.
+     *
+     * @return list<int>
+     */
+    public function trendingReaderIdsLoggedInSince(\DateTimeImmutable $since): array
+    {
+        /** @var list<array{id: int}> $rows */
+        $rows = $this->createQueryBuilder('u')
+            ->select('u.id')
+            ->leftJoin(ReadingSettings::class, 'settings', 'WITH', 'settings.user = u')
+            ->andWhere('u.lastLoginAt >= :since')
+            ->andWhere('settings.trendingEnabled = true OR settings.user IS NULL')
+            ->setParameter('since', $since)
+            ->orderBy('u.id', 'ASC')
+            ->getQuery()
+            ->getArrayResult();
+
+        return array_map(static fn (array $row): int => $row['id'], $rows);
     }
 
     public function countByStatus(UserStatus $status): int

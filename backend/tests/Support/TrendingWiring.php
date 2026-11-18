@@ -6,6 +6,7 @@ namespace App\Tests\Support;
 
 use App\Entity\TrendingSnapshot;
 use App\Entity\TrendingStoryFollow;
+use App\Entity\User;
 use App\Repository\TrendingEntryRepository;
 use App\Repository\TrendingSnapshotRepository;
 use App\Repository\TrendingStoryFollowRepository;
@@ -59,7 +60,14 @@ final class TrendingWiring
             $locks,
         );
 
-        return new TrendingRebuild($builder, $snapshots, $naiveClock, new NullLogger());
+        return new TrendingRebuild(
+            $builder,
+            $snapshots,
+            new TrendingEntryRepository($entityManager),
+            $entityManager->getRepository(User::class),
+            $naiveClock,
+            new NullLogger(),
+        );
     }
 
     public static function policies(EntityManagerInterface $entityManager): ContainerInterface
