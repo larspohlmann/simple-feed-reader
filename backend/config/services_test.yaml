@@ -87,3 +87,12 @@ services:
         autowire: true
         autoconfigure: true
         public: true
+
+    # The retry pause of a social GET must cost a test no real time.
+    test.social.patient_clock:
+        class: Symfony\Component\Clock\MockClock
+
+    App\Service\Social\Social\PatientApiClient:
+        autowire: true
+        arguments:
+            $clock: '@test.social.patient_clock'

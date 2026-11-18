@@ -189,6 +189,24 @@ final class LemmyApiClientTest extends TestCase
         }
     }
 
+    /** @return iterable<string, array{int}> */
+    public static function serverErrors(): iterable
+    {
+        yield '500 is the first server error' => [Response::HTTP_INTERNAL_SERVER_ERROR];
+        yield '504 gateway timeout' => [Response::HTTP_GATEWAY_TIMEOUT];
+    }
+
+    #[DataProvider('serverErrors')]
+    public function testAGetThatGetsAServerErrorNamesTheInstance(int $status): void
+    {
+        $client = $this->clientOver($this->alwaysAnswering($status));
+
+        $this->expectException(SocialNetworkUnavailableException::class);
+        $this->expectExceptionMessage("lemmy.example isn't responding right now");
+
+        $client->send(ApiRequestModel::get(self::SITE));
+    }
+
     public function testAPostThatGets502MayHaveGoneThrough(): void
     {
         $http = $this->alwaysAnswering(Response::HTTP_BAD_GATEWAY);

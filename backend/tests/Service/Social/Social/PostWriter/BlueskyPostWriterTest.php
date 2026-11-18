@@ -11,6 +11,7 @@ use App\Service\Content\LinkCard\PageCardReader\PageCardReaderInterface;
 use App\Service\Social\Social\BlueskyFacets;
 use App\Service\Social\Social\BlueskyExternalEmbeds;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialWriteOutcomeUnknownException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Social\Model\PostDeletion;
@@ -318,8 +319,10 @@ final class BlueskyPostWriterTest extends TestCase
             default => self::recordNotFound(),
         });
 
-        $this->expectException(SocialNetworkUnreachableException::class);
-        $this->expectExceptionMessage('Bluesky ran into a problem of its own.');
+        $this->expectException(SocialWriteOutcomeUnknownException::class);
+        $this->expectExceptionMessage(
+            'pds.example.test had trouble with this request, so it may or may not have gone through.',
+        );
 
         $this->writer($http)->reply(self::post(), self::keyedDraft());
     }

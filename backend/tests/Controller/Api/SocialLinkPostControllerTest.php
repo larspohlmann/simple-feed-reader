@@ -507,16 +507,22 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         );
     }
 
-    /** @return iterable<string, array{MockResponse}> */
+    /** @return iterable<string, array{MockResponse, list<string>}> */
     public static function unquotableStatuses(): iterable
     {
-        yield 'the author forbids quoting' => [self::statuses(['id' => '110'])];
-        yield 'the instance cannot find it' => [new MockResponse('{"statuses":[]}')];
-        yield 'the instance is down' => [new MockResponse('', ['http_code' => Response::HTTP_BAD_GATEWAY])];
+        $once = [self::STATUS_SEARCH, self::STATUSES];
+
+        yield 'the author forbids quoting' => [self::statuses(['id' => '110']), $once];
+        yield 'the instance cannot find it' => [new MockResponse('{"statuses":[]}'), $once];
+        yield 'the instance is down' => [
+            new MockResponse('', ['http_code' => Response::HTTP_BAD_GATEWAY]),
+            [self::STATUS_SEARCH, self::STATUS_SEARCH, self::STATUS_SEARCH, self::STATUSES],
+        ];
     }
 
+    /** @param list<string> $expectedRoutes */
     #[DataProvider('unquotableStatuses')]
-    public function testAStatusThatCannotBeQuotedIsSharedAsALink(MockResponse $search): void
+    public function testAStatusThatCannotBeQuotedIsSharedAsALink(MockResponse $search, array $expectedRoutes): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, [
             self::STATUS_SEARCH => $search,
@@ -528,9 +534,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         $this->send($client, self::MASTODON_LINKS . rawurlencode(self::MASTODON_POST_URL), ['text' => 'Look']);
 
         self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
-        $asked = $this->routesAsked();
-        self::assertSame(self::STATUS_SEARCH, $asked[0]);
-        self::assertSame(self::STATUSES, end($asked));
+        self::assertSame($expectedRoutes, $this->routesAsked());
         self::assertSame(
             ['status' => "Look\n\n" . self::MASTODON_POST_URL],
             json_decode(end($this->http->requests)['body'] ?? '', true),

@@ -56,7 +56,9 @@ final readonly class BlueskyHomeServerCheck implements HomeServerCheckInterface
             '&',
             \PHP_QUERY_RFC3986,
         );
-        $answer = $this->bluesky->answer(ApiRequestModel::get($identity->pdsUrl . self::GET_RECORD . $query));
+        $answer = $this->bluesky->answerWhateverItsStatus(
+            ApiRequestModel::get($identity->pdsUrl . self::GET_RECORD . $query),
+        );
 
         return Response::HTTP_BAD_REQUEST === $answer->status
             && self::RECORD_NOT_FOUND === JsonNodeModel::of($answer->json())->string('error');

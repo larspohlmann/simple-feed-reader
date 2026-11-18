@@ -45,10 +45,7 @@ final readonly class LemmyApiClient
      */
     public function send(ApiRequestModel $request): ApiResponseModel
     {
-        $answer = $this->answer($request);
-        ServerFailure::throwIfServerError($request, $answer);
-
-        return self::accepted($answer);
+        return self::accepted($this->answer($request));
     }
 
     /**
@@ -122,6 +119,9 @@ final readonly class LemmyApiClient
     /** @throws SocialNetworkUnreachableException only when no answer arrived; any status is returned */
     private function answer(ApiRequestModel $request): ApiResponseModel
     {
-        return NetworkAnswer::orUnreachable(fn (): ApiResponseModel => $this->api->send($request), self::NETWORK);
+        $answer = NetworkAnswer::orUnreachable(fn (): ApiResponseModel => $this->api->send($request), self::NETWORK);
+        ServerFailure::throwIfServerError($request, $answer);
+
+        return $answer;
     }
 }

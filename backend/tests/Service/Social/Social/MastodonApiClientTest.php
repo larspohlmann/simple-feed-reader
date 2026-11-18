@@ -76,6 +76,26 @@ final class MastodonApiClientTest extends TestCase
         }
     }
 
+    public function testAnyOtherFailureIsAProblemOfTheInstance(): void
+    {
+        $client = $this->clientOver($this->alwaysAnswering(Response::HTTP_NOT_FOUND));
+
+        $this->expectException(SocialNetworkUnreachableException::class);
+        $this->expectExceptionMessage('The Mastodon instance ran into a problem of its own.');
+
+        $client->send(ApiRequestModel::get(self::HOME));
+    }
+
+    public function testAnAnswerThatGets502OnAWriteMayHaveGoneThroughWhateverTheCaller(): void
+    {
+        $client = $this->clientOver($this->alwaysAnswering(Response::HTTP_BAD_GATEWAY));
+
+        $this->expectException(SocialWriteOutcomeUnknownException::class);
+        $this->expectExceptionMessage('mastodon.example had trouble with this request');
+
+        $client->answer(ApiRequestModel::postJson('https://mastodon.example/api/v1/statuses', ['status' => 'Hi']));
+    }
+
     private function alwaysAnswering(int $status): RoutedHttpClient
     {
         return RoutedHttpClient::answering(
