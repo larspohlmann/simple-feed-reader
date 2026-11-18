@@ -19,6 +19,10 @@
   margin: 0 0 var(--space-3);
 }
 
+app-vote-pill {
+  color: var(--text-muted);
+}
+
 .actions {
   display: flex;
   gap: var(--space-4);

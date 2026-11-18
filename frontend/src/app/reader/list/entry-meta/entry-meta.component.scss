@@ -35,6 +35,10 @@ app-entry-actions {
   color: var(--text-muted);
 }
 
+app-vote-pill {
+  --vote-pill-arrow-padding: var(--space-0);
+}
+
 .comments {
   display: inline-flex;
   align-items: center;
