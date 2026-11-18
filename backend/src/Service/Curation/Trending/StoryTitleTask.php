@@ -15,7 +15,6 @@ use App\Service\Curation\StoryAi\Pass\StoryAiPass;
 use App\Service\Curation\StoryAi\StoryAiCalls;
 use App\Service\Curation\StoryAi\StoryAiTask\StoryAiTaskInterface;
 use App\Service\Curation\StoryAi\StorySettingsProvider;
-use App\Service\Curation\StoryAi\StoryWritingConnections;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\StoryHeadlineModel;
 use App\Service\Curation\Trending\Support\StoryTitlePrompt;
@@ -31,7 +30,6 @@ final readonly class StoryTitleTask implements StoryAiTaskInterface
 
     public function __construct(
         private StorySettingsProvider $storySettings,
-        private StoryWritingConnections $writingConnections,
         private TrendingStoryRepository $stories,
         private ReaderWindows $readerWindows,
         private HeadlineMarkers $markers,
@@ -49,7 +47,7 @@ final readonly class StoryTitleTask implements StoryAiTaskInterface
 
     public function connectionFor(User $user): ?AiProviderSettings
     {
-        return $this->storySettings->titlesEnabledFor($user) ? $this->writingConnections->usableFor($user) : null;
+        return $this->storySettings->titleConnectionFor($user);
     }
 
     /** Ranks the reader's windows only when a story a window could show is due at all. */
