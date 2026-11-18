@@ -1,0 +1,151 @@
+@use '../../list/magazine/magazine-card';
+@use '../../link-card/open-in-reader';
+
+// No box without sources, or the card's gap reserves dead space below the meta row.
+:host {
+  display: contents;
+}
+
+.more-sources {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  margin-top: var(--space-2);
+  padding-top: var(--space-1);
+  border-top: var(--card-border-width) solid var(--border);
+  font-size: var(--fs-xs);
+}
+
+// Story actions at the start, the toggle at the end where the thumb reaches it.
+.story-line {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+
+.counts {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  overflow: hidden;
+  container-type: inline-size;
+  color: var(--text-muted);
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  margin-inline-end: calc(-1 * var(--space-2));
+  border: none;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}
+
+.minis {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.mini {
+  @include open-in-reader.room;
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+}
+
+.face {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+// The byline would sit under the reader button, so it makes room.
+.mini:has(> app-open-in-reader.available) .byline {
+  padding-inline-end: calc(var(--open-in-reader-width) + var(--space-2));
+}
+
+@media (hover: hover) {
+  .toggle:hover {
+    background: var(--card-hover-bg);
+  }
+
+  .mini:has(> .face:hover) {
+    background: var(--border);
+  }
+}
+
+.thumb {
+  flex: none;
+  width: var(--mini-card-thumb-w);
+  aspect-ratio: 104 / 68;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+
+.thumb.tile {
+  display: grid;
+  place-items: center;
+  background: var(--surface-1);
+}
+
+.text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0);
+  min-width: 0;
+}
+
+.byline {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space-1) + var(--space-0));
+  min-width: 0;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.feed {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.when {
+  flex: none;
+}
+
+.title {
+  color: var(--text-primary);
+  font-size: var(--fs-base);
+  line-height: var(--lh-tight);
+}
+
+.dek {
+  @include magazine-card.dek(1);
+}
