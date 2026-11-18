@@ -21,8 +21,6 @@ final readonly class StoryAiSweep
 {
     public const int ACTIVE_DAYS = 14;
 
-    private const string WITHOUT_DEADLINE = '+100 years';
-
     /** @param iterable<StoryAiTaskInterface> $tasks */
     public function __construct(
         #[AutowireIterator('app.story_ai_task')]
@@ -34,15 +32,20 @@ final readonly class StoryAiSweep
 
     public function runDue(): StoryAiReportModel
     {
-        return $this->runDueBefore($this->clock->now()->modify(self::WITHOUT_DEADLINE));
+        return $this->runDueUntil(null);
     }
 
     /** Starts a story only before the deadline. */
     public function runDueBefore(\DateTimeImmutable $deadline): StoryAiReportModel
     {
+        return $this->runDueUntil($deadline);
+    }
+
+    private function runDueUntil(?\DateTimeImmutable $deadline): StoryAiReportModel
+    {
         $report = StoryAiReportModel::none();
         foreach ($this->activeReaders() as $reader) {
-            if ($this->clock->now() >= $deadline) {
+            if ($deadline !== null && $this->clock->now() >= $deadline) {
                 break;
             }
             $report = $report->plus($this->runFor($reader, $deadline));
@@ -51,7 +54,7 @@ final readonly class StoryAiSweep
         return $report;
     }
 
-    private function runFor(User $reader, \DateTimeImmutable $deadline): StoryAiReportModel
+    private function runFor(User $reader, ?\DateTimeImmutable $deadline): StoryAiReportModel
     {
         $report = StoryAiReportModel::none();
         foreach ($this->tasks as $task) {

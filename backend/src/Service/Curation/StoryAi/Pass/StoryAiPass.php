@@ -19,13 +19,13 @@ final class StoryAiPass
         public readonly User $user,
         public readonly AiProviderSettings $connection,
         public readonly StoryAiTask $task,
-        public readonly \DateTimeImmutable $deadline,
+        public readonly ?\DateTimeImmutable $deadline,
     ) {
     }
 
     public function isPastDeadline(\DateTimeImmutable $now): bool
     {
-        return $now >= $this->deadline;
+        return $this->deadline !== null && $now >= $this->deadline;
     }
 
     /** Null until the first call opens it, so a pass that calls nothing leaves no row. */
