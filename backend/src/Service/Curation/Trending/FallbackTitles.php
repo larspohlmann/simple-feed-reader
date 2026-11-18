@@ -130,7 +130,9 @@ final readonly class FallbackTitles
         if ($cleaned === []) {
             return [];
         }
-        $scores = CentroidScores::of($run->headlines, $pool->storyEntryIds);
+        $scores = \count($cleaned) > 1
+            ? CentroidScores::of($run->headlines, $pool->storyEntryIds)
+            : array_fill_keys(array_keys($cleaned), 0.0);
 
         return array_map(
             static fn (int $entryId, CleanedHeadlineModel $text): TitleCandidateModel => new TitleCandidateModel(
