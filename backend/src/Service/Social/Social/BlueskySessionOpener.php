@@ -10,9 +10,7 @@ use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
-use App\Service\Social\Social\Exception\SocialNetworkUnavailableException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Social\Exception\SocialWriteOutcomeUnknownException;
 use App\Service\Social\Social\Model\BlueskyIdentityModel;
 use App\Service\Social\Social\Model\BlueskySessionModel;
 use Symfony\Component\HttpFoundation\Response;
@@ -69,13 +67,9 @@ final readonly class BlueskySessionOpener
 
     private function createSession(BlueskyIdentityModel $identity, string $appPassword): ApiResponseModel
     {
-        try {
-            return $this->bluesky->answer(ApiRequestModel::postJson(
-                $identity->pdsUrl . self::CREATE_SESSION,
-                ['identifier' => $identity->did, 'password' => $appPassword],
-            ));
-        } catch (SocialWriteOutcomeUnknownException $exception) {
-            throw SocialNetworkUnavailableException::naming($exception->serviceName, $exception->status);
-        }
+        return $this->bluesky->answer(ApiRequestModel::postJson(
+            $identity->pdsUrl . self::CREATE_SESSION,
+            ['identifier' => $identity->did, 'password' => $appPassword],
+        )->changingNothing());
     }
 }

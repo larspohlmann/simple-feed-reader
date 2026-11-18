@@ -18,6 +18,7 @@ final readonly class ApiRequestModel
         public ?array $json,
         public ?string $body,
         public float $timeoutSeconds = ApiBudgetModel::STANDARD_TIMEOUT_SECONDS,
+        private bool $changesNothing = false,
     ) {
     }
 
@@ -64,5 +65,21 @@ final readonly class ApiRequestModel
     public function waitingUpTo(float $timeoutSeconds): self
     {
         return clone($this, ['timeoutSeconds' => $timeoutSeconds]);
+    }
+
+    #[\NoDiscard]
+    public function changingNothing(): self
+    {
+        return clone($this, ['changesNothing' => true]);
+    }
+
+    public function isRead(): bool
+    {
+        return 'GET' === $this->method || $this->changesNothing;
+    }
+
+    public function host(): string
+    {
+        return (string) parse_url($this->url, PHP_URL_HOST);
     }
 }

@@ -17,8 +17,6 @@ final class ServerFailure
     }
 
     /**
-     * @param string $serviceName what the message calls the failing service: the request host, or "Bluesky"
-     *
      * @throws SocialWriteOutcomeUnknownException when a write got a 5xx
      * @throws SocialNetworkUnavailableException  when a read got a 5xx
      */
@@ -31,7 +29,7 @@ final class ServerFailure
             return;
         }
 
-        throw 'GET' === $request->method
+        throw $request->isRead()
             ? SocialNetworkUnavailableException::naming($serviceName, $answer->status)
             : SocialWriteOutcomeUnknownException::naming($serviceName, $answer->status);
     }

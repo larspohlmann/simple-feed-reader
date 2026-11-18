@@ -59,6 +59,16 @@ final class PatientApiClientTest extends TestCase
         self::assertSame(0, $this->secondsSlept());
     }
 
+    public function testAPostChangingNothingIsRetriedLikeAGet(): void
+    {
+        $client = $this->clientAnswering($this->unavailable(), new MockResponse('{}'));
+
+        $answer = $client->send(ApiRequestModel::postJson(self::SITE, ['a' => 'b'])->changingNothing());
+
+        self::assertSame(Response::HTTP_OK, $answer->status);
+        self::assertSame(2, $this->requests);
+    }
+
     public function testRetryAfterWithinThreeSecondsSetsThePause(): void
     {
         $client = $this->clientAnswering($this->unavailable('3'), new MockResponse('{}'));
@@ -183,6 +193,6 @@ final class PatientApiClientTest extends TestCase
         });
         $guard = new UrlGuard(new StaticDnsResolver(['lemmy.example' => ['93.184.216.34']]), new IpValidator());
 
-        return new PatientApiClient(FetchWiring::guardedApiClient($http, $guard), $this->clock);
+        return FetchWiring::patientApiClient($http, $guard, $this->clock);
     }
 }

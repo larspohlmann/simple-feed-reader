@@ -28,12 +28,12 @@ final readonly class PatientApiClient
     public function send(ApiRequestModel $request): ApiResponseModel
     {
         $response = $this->api->send($request);
-        if ('GET' !== $request->method) {
+        if (!$request->isRead()) {
             return $response;
         }
 
         foreach (self::PAUSES_SECONDS as $pause) {
-            if (!self::isWorthAnotherTry($response)) {
+            if (!\in_array($response->status, self::OUTAGE_STATUSES, true)) {
                 break;
             }
             $seconds = $this->pauseFor($response, $pause);
@@ -45,11 +45,6 @@ final readonly class PatientApiClient
         }
 
         return $response;
-    }
-
-    private static function isWorthAnotherTry(ApiResponseModel $response): bool
-    {
-        return \in_array($response->status, self::OUTAGE_STATUSES, true);
     }
 
     private function pauseFor(ApiResponseModel $response, int $defaultSeconds): ?int
