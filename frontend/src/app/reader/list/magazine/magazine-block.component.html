@@ -1,6 +1,6 @@
 @let current = block();
 @let card = cardOf(current);
-<ng-container [appStory]="card.story ?? null">
+<ng-container [appStory]="storyOf(current)">
   @switch (current.kind) {
     @case ('hero') {
       <app-entry-hero [entry]="card.entry" [tags]="tagsFor(card.entry.subscriptionId)" />

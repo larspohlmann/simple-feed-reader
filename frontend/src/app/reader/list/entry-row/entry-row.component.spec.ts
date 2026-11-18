@@ -45,9 +45,13 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto =>
   });
 
 function mount(item: ListItem) {
-  if (storyOf(item)) {
-    TestBed.configureTestingModule({ providers: [provideStoryContext(storyOf(item)).provider] });
-  }
+  TestBed.configureTestingModule({
+    providers: [provideStoryContext(storyOf(item) ?? null).provider],
+  });
+  return createRow(item);
+}
+
+function createRow(item: ListItem) {
   const fixture = TestBed.createComponent(EntryRowComponent);
   fixture.componentRef.setInput('entry', leadOf(item));
   fixture.detectChanges();
@@ -188,8 +192,10 @@ describe('EntryRowComponent', () => {
   });
 
   it("names an authorless Home post by the Home's label", () => {
+    const item = authorlessHomePost(7);
+    TestBed.configureTestingModule({ providers: [provideStoryContext(null).provider] });
     holdUnrenamedHome(7);
-    const element = mount(authorlessHomePost(7)).nativeElement as HTMLElement;
+    const element = createRow(item).nativeElement as HTMLElement;
 
     expect(element.querySelector('.meta')?.textContent).toContain('Home@bsky');
   });

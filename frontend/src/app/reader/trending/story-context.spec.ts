@@ -30,9 +30,9 @@ describe('story context', () => {
   function render() {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.detectChanges();
-    const probes = (selector: string): ProbeComponent =>
-      fixture.debugElement.query((node) => node.nativeElement.id === selector).componentInstance;
-    return { fixture, outer: probes('outer'), inner: probes('inner') };
+    const probe = (id: string): ProbeComponent =>
+      fixture.debugElement.query((node) => node.nativeElement.id === id).componentInstance;
+    return { fixture, outer: probe('outer'), inner: probe('inner') };
   }
 
   it('gives a child the story its host provides', () => {

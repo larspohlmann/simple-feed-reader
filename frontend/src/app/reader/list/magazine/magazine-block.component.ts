@@ -13,6 +13,7 @@ import { EntryThreadComponent } from './blocks/entry-thread/entry-thread.compone
 import { EntryMediaComponent } from './blocks/entry-media/entry-media.component';
 import { EntryQuotingComponent } from './blocks/entry-quoting/entry-quoting.component';
 import { StoryContextDirective } from '../../trending/story-context';
+import { TrendingStoryDto } from '../../trending/trending.models';
 import { SourceGroupComponent } from './source-group.component';
 
 // One shared instance: a fresh `[]` per check would change every tag-less block's
@@ -51,6 +52,10 @@ export class MagazineBlockComponent {
 
   protected cardOf(block: MagazineBlock): BlockCard {
     return block as Exclude<MagazineBlock, { kind: 'group' }>;
+  }
+
+  protected storyOf(block: MagazineBlock): TrendingStoryDto | null {
+    return block.kind === 'group' ? null : block.story;
   }
 
   protected side(block: MagazineBlock): 'left' | 'right' {

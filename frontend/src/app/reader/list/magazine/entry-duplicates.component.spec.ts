@@ -408,8 +408,8 @@ describe('more than four copies', () => {
   template: '<app-entry-duplicates [appStory]="story" [entry]="lead" />',
 })
 class StoryCardHostComponent {
-  readonly story!: TrendingStoryDto;
-  readonly lead!: EntryDto;
+  story: TrendingStoryDto = aStory();
+  lead: EntryDto = article();
 }
 
 it("shows a copy's row in the popover without the story's pieces", () => {
@@ -432,7 +432,8 @@ it("shows a copy's row in the popover without the story's pieces", () => {
     ],
   });
   const fixture = TestBed.createComponent(StoryCardHostComponent);
-  Object.assign(fixture.componentInstance, { story, lead });
+  fixture.componentInstance.story = story;
+  fixture.componentInstance.lead = lead;
   fixture.detectChanges();
 
   (fixture.nativeElement.querySelector('.also-entry') as HTMLElement).click();

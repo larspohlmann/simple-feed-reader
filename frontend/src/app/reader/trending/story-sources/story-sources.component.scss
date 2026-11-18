@@ -1,7 +1,6 @@
 @use '../../list/magazine/magazine-card';
 @use '../../link-card/open-in-reader';
 
-// No box without sources, or the card's gap reserves dead space below the meta row.
 :host {
   display: contents;
 }
