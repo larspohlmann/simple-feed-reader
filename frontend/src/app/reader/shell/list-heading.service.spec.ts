@@ -407,14 +407,14 @@ describe('ListHeading for the Shared list (#2007)', () => {
 });
 
 describe('ListHeading for the Trending list (#2017)', () => {
-  const trendingHeading = () => {
+  const trendingHeading = (window: 'day' | 'week' = 'day') => {
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
         ListHeading,
         {
           provide: ReaderRouteState,
-          useValue: { selection: signal<Selection>({ kind: 'trending', window: 'day' }) },
+          useValue: { selection: signal<Selection>({ kind: 'trending', window }) },
         },
         { provide: SubscriptionsStore, useValue: {} },
         { provide: LanguageService, useValue: { lang: signal('en') } },
@@ -433,8 +433,12 @@ describe('ListHeading for the Trending list (#2017)', () => {
     return TestBed.inject(ListHeading);
   };
 
-  it('is titled Trending', () => {
-    expect(trendingHeading().title()).toBe('Trending');
+  it('names the 24 h window in its title (#2326)', () => {
+    expect(trendingHeading('day').title()).toBe('Trending · 24 h');
+  });
+
+  it('names the 7 day window in its title (#2326)', () => {
+    expect(trendingHeading('week').title()).toBe('Trending · 7 days');
   });
 
   it('counts the stories it lists', () => {

@@ -140,7 +140,8 @@ export class ListHeading {
     shared: () => this.i18n.translate('reader.shared'),
     viewed: () => this.i18n.translate('reader.viewed'),
     'for-you': () => this.i18n.translate('reader.forYou'),
-    trending: () => this.i18n.translate('reader.trending'),
+    trending: (selection) =>
+      `${this.i18n.translate('reader.trending')} · ${this.i18n.translate(`reader.trendingWindow.${selection.window}`)}`,
     notifications: () => this.i18n.translate('reader.notifications.title'),
     'saved-searches': () => this.i18n.translate('reader.savedSearches'),
     'saved-search': () =>
