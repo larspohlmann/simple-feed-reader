@@ -9,6 +9,7 @@ use App\Entity\StorySettings;
 use App\Entity\User;
 use App\Repository\StorySettingsRepository;
 use App\Service\Curation\Ai\AiConfigurationForUser;
+use App\Service\Curation\Ai\ConnectionPicks;
 use App\Service\Curation\Ai\Exception\ConfigurationNotFoundException;
 use App\Service\Curation\StoryAi\Exception\WritingConnectionRejectedException;
 use App\Service\Curation\StoryAi\Model\StorySettingsChangeModel;
@@ -21,6 +22,7 @@ final readonly class StorySettingsEditor
     public function __construct(
         private AiConfigurationForUser $configurations,
         private StoryWritingConnections $writingConnections,
+        private ConnectionPicks $connectionPicks,
         private StorySettingsRepository $storySettings,
         private EntityManagerInterface $entityManager,
     ) {
@@ -50,8 +52,12 @@ final readonly class StorySettingsEditor
         }
 
         $connection = $this->configurations->require($user, $connectionId);
-        $isStoredPick = $storedSettings?->getWritingConnection() === $connection;
-        if (!$isStoredPick && !$this->writingConnections->canWriteText($connection)) {
+        $allowed = $this->connectionPicks->allows(
+            $connection,
+            $storedSettings?->getWritingConnection(),
+            $this->writingConnections->canWriteText(...),
+        );
+        if (!$allowed) {
             throw new WritingConnectionRejectedException(self::REJECTION);
         }
 
