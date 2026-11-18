@@ -16,7 +16,7 @@ import {
   selectionFromParams,
   searchTermOf,
   selectedGroupOf,
-  selectedFollowedStoryIdOf,
+  selectedStoryIdOf,
   selectedSavedSearchIdOf,
   selectedTagIdOf,
   selectionQueryParams,
@@ -959,25 +959,25 @@ describe('identityKey (#2107)', () => {
   });
 });
 
-describe('a followed Trending story (#2128)', () => {
-  const story: Selection = { kind: 'followed-story', id: 42 };
+describe("a Trending story's list (#2128, #2329)", () => {
+  const story: Selection = { kind: 'trending-story', id: 42 };
 
   it('is told apart by its id', () => {
     expect(identityKey(story)).toBe('42');
-    expect(sameSelection(story, { kind: 'followed-story', id: 43 })).toBe(false);
+    expect(sameSelection(story, { kind: 'trending-story', id: 43 })).toBe(false);
   });
 
   it('takes the newest/oldest order, remembered per story, and no unread switch', () => {
     expect(hasListOrder(story)).toBe(true);
-    expect(listOrderKey(story)).toBe('followed-story:42');
+    expect(listOrderKey(story)).toBe('trending-story:42');
     expect(hasUnreadFilter(story)).toBe(false);
   });
 
   it('asks for the story by id, oldest first when the order says so', () => {
-    expect(queryFromSelection(story)).toEqual({ view: 'all', followedStoryId: 42 });
+    expect(queryFromSelection(story)).toEqual({ view: 'all', storyId: 42 });
     expect(queryFromSelection(withListOrder(story, 'oldest'))).toEqual({
       view: 'all',
-      followedStoryId: 42,
+      storyId: 42,
       order: 'oldest',
     });
   });
@@ -988,8 +988,8 @@ describe('a followed Trending story (#2128)', () => {
   });
 
   it("reads the story's id, null on any other list", () => {
-    expect(selectedFollowedStoryIdOf(story)).toBe(42);
-    expect(selectedFollowedStoryIdOf({ kind: 'saved-search', id: 42, unread: false })).toBeNull();
-    expect(selectedFollowedStoryIdOf({ kind: 'trending', window: 'day' })).toBeNull();
+    expect(selectedStoryIdOf(story)).toBe(42);
+    expect(selectedStoryIdOf({ kind: 'saved-search', id: 42, unread: false })).toBeNull();
+    expect(selectedStoryIdOf({ kind: 'trending', window: 'day' })).toBeNull();
   });
 });

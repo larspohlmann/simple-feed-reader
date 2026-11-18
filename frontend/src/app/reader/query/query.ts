@@ -37,7 +37,7 @@ interface SelectionFields {
   notifications: { network: SocialNetworkName };
   'saved-searches': FilteredList;
   'saved-search': FilteredList & { id: number };
-  'followed-story': OrderedList & { id: number };
+  'trending-story': OrderedList & { id: number };
   search: FilteredList & { term: string };
 }
 
@@ -104,7 +104,7 @@ const IDENTITY_KEY: BySelectionKind<string> = {
   notifications: (selection) => selection.network,
   'saved-searches': () => '',
   'saved-search': (selection) => String(selection.id),
-  'followed-story': (selection) => String(selection.id),
+  'trending-story': (selection) => String(selection.id),
   search: (selection) => selection.term,
 };
 
@@ -161,9 +161,9 @@ export function selectedSavedSearchIdOf(selection: Selection): number | null {
   return selection.kind === 'saved-search' ? selection.id : null;
 }
 
-/** The followed Trending story on screen, or null on every other list. */
-export function selectedFollowedStoryIdOf(selection: Selection): number | null {
-  return selection.kind === 'followed-story' ? selection.id : null;
+/** The Trending story whose list is on screen, or null on every other list. */
+export function selectedStoryIdOf(selection: Selection): number | null {
+  return selection.kind === 'trending-story' ? selection.id : null;
 }
 
 /** Whether the list offers the newest/oldest-first toggle; the ranked for-you

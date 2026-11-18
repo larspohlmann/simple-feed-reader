@@ -14,7 +14,7 @@ import { REVEAL_STEP, prefetchMargin } from '../paging';
 import { EntryDto, EntryQuery, ListOrder, SubscriptionDto } from '../../models';
 import { ReaderApi } from '../../reader-api';
 import { TrendingApi } from '../../trending/trending-api';
-import { FollowedStoryPageDto } from '../../trending/trending.models';
+import { StoryPageDto } from '../../trending/trending.models';
 import { SocialPostApi } from '../../social-post-api';
 import { EntriesStore } from '../../state/entries.store';
 import { FollowedStoriesStore } from '../../state/followed-stories.store';
@@ -290,7 +290,7 @@ describe('EntryListComponent', () => {
   });
 
   describe('the "Since your last visit" divider (#2128)', () => {
-    const story: Selection = { kind: 'followed-story', id: 42 };
+    const story: Selection = { kind: 'trending-story', id: 42 };
     const divider = (element: HTMLElement) => element.querySelectorAll('.since-last-visit');
 
     /** How many rows the divider follows, or null when there is none. */
@@ -333,7 +333,7 @@ describe('EntryListComponent', () => {
     });
 
     it('is not drawn oldest first, where the new rows sit at the end', () => {
-      const oldestFirst: Selection = { kind: 'followed-story', id: 42, order: 'oldest' };
+      const oldestFirst: Selection = { kind: 'trending-story', id: 42, order: 'oldest' };
 
       expect(divider(mountStory([3, 1, 2], [3], { selection: oldestFirst })).length).toBe(0);
       expect(divider(mountStory([1, 2, 3], [1, 2], { selection: oldestFirst })).length).toBe(0);
@@ -361,16 +361,18 @@ describe('EntryListComponent', () => {
       const joinedSince = '2026-11-16T09:00:00+00:00';
       const joinedBefore = '2026-11-16T07:00:00+00:00';
       const member = (id: number, joinedAt: string) => entry(id, { joinedAt });
-      const pages: Record<string, FollowedStoryPageDto> = {
+      const pages: Record<string, StoryPageDto> = {
         first: {
           entries: [member(1, joinedSince), member(2, joinedSince), member(3, joinedBefore)],
           nextCursor: 'C2',
+          title: 'Harbour strike',
           lastOpenedAt: openedAt,
           newEntryIds: [1, 2],
         },
         C2: {
           entries: [member(4, joinedSince), member(5, joinedBefore)],
           nextCursor: null,
+          title: 'Harbour strike',
           lastOpenedAt: openedAt,
           newEntryIds: [4],
         },
@@ -401,7 +403,7 @@ describe('EntryListComponent', () => {
         };
         const rows = () => Array.from(element.querySelectorAll('.row-slot'));
 
-        store.load({ view: 'all', followedStoryId: 42 });
+        store.load({ view: 'all', storyId: 42 });
         await render();
         expect([...visit.newSinceVisitIds()]).toEqual([1, 2]);
         expect(rowsAboveDivider(element)).toBe(2);

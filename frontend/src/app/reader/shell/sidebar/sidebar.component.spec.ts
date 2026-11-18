@@ -1,4 +1,4 @@
-import { FollowedStoryUnfollow } from '../followed-story-unfollow.service';
+import { StoryFollowing } from '../story-following.service';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
@@ -189,7 +189,7 @@ function mount(
     providers: [
       { provide: ManageActions, useValue: manageActions },
       { provide: TagActions, useValue: tagActions },
-      { provide: FollowedStoryUnfollow, useValue: { unfollow: jest.fn() } },
+      { provide: StoryFollowing, useValue: { unfollow: jest.fn() } },
       provideRouter([{ path: '**', children: [] }]),
       provideHttpClient(),
       provideHttpClientTesting(),
@@ -2299,7 +2299,7 @@ describe('for-you row', () => {
       providers: [
         { provide: ManageActions, useValue: manageActions },
         { provide: TagActions, useValue: tagActions },
-        { provide: FollowedStoryUnfollow, useValue: { unfollow: jest.fn() } },
+        { provide: StoryFollowing, useValue: { unfollow: jest.fn() } },
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
@@ -2405,7 +2405,7 @@ describe('organise mode', () => {
       providers: [
         { provide: ManageActions, useValue: manageActions },
         { provide: TagActions, useValue: tagActions },
-        { provide: FollowedStoryUnfollow, useValue: { unfollow: jest.fn() } },
+        { provide: StoryFollowing, useValue: { unfollow: jest.fn() } },
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
@@ -2736,7 +2736,7 @@ describe('organise mode', () => {
       providers: [
         { provide: ManageActions, useValue: manageActions },
         { provide: TagActions, useValue: tagActions },
-        { provide: FollowedStoryUnfollow, useValue: { unfollow: jest.fn() } },
+        { provide: StoryFollowing, useValue: { unfollow: jest.fn() } },
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
@@ -2773,7 +2773,7 @@ describe('organise mode', () => {
         providers: [
           { provide: ManageActions, useValue: manageActions },
           { provide: TagActions, useValue: tagActions },
-          { provide: FollowedStoryUnfollow, useValue: { unfollow: jest.fn() } },
+          { provide: StoryFollowing, useValue: { unfollow: jest.fn() } },
           provideRouter([]),
           provideHttpClient(),
           provideHttpClientTesting(),

@@ -6,24 +6,24 @@ namespace App\Controller\Api;
 
 use App\Dto\Entry\EntryPageParameters;
 use App\Entity\User;
-use App\Http\FollowedStoryPage;
+use App\Http\TrendingStoryPage;
 use App\Repository\EntryListRowEnricher;
 use App\Repository\TrendingStoryListQuery;
-use App\Service\Curation\Trending\FollowedStoryEntries;
+use App\Service\Curation\Trending\TrendingStoryEntries;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryString;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
-/** A followed Trending story's entries; reading them records no visit, the client posts that separately. */
+/** A Trending story's entries; reading them records no visit, the client posts that separately. */
 #[Route('/api/entries/trending-stories')]
-final readonly class FollowedStoryEntriesController
+final readonly class TrendingStoryEntriesController
 {
     public function __construct(
-        private FollowedStoryEntries $entries,
+        private TrendingStoryEntries $entries,
         private EntryListRowEnricher $enricher,
-        private FollowedStoryPage $followedStoryPage,
+        private TrendingStoryPage $storyPage,
     ) {
     }
 
@@ -43,6 +43,6 @@ final readonly class FollowedStoryEntriesController
         $result = $this->entries->list($query);
         $rows = $this->enricher->enrich($result->rows, $userId);
 
-        return new JsonResponse($this->followedStoryPage->of($result->withRows($rows), $query->page->limit));
+        return new JsonResponse($this->storyPage->of($result->withRows($rows), $query->page->limit));
     }
 }

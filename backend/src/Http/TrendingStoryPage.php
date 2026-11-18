@@ -6,10 +6,10 @@ namespace App\Http;
 
 use App\Repository\EntryListRow;
 use App\Repository\EntryListSort;
-use App\Service\Curation\Trending\Model\FollowedStoryEntriesModel;
+use App\Service\Curation\Trending\Model\TrendingStoryEntriesModel;
 
-/** A followed story's page of entries. */
-final readonly class FollowedStoryPage
+/** A story's page of entries; `lastOpenedAt` is null for a story the reader does not follow. */
+final readonly class TrendingStoryPage
 {
     public function __construct(
         private EntryPage $entryPage,
@@ -20,11 +20,12 @@ final readonly class FollowedStoryPage
      * @return array{
      *   entries: list<array<string, mixed>>,
      *   nextCursor: string|null,
-     *   lastOpenedAt: string,
+     *   title: string|null,
+     *   lastOpenedAt: string|null,
      *   newEntryIds: list<int>,
      * }
      */
-    public function of(FollowedStoryEntriesModel $result, int $limit): array
+    public function of(TrendingStoryEntriesModel $result, int $limit): array
     {
         $page = $this->entryPage->of($result->rows, $limit, EntryListSort::PublishedDate);
         $page['entries'] = array_map(
@@ -36,7 +37,8 @@ final readonly class FollowedStoryPage
         );
 
         return $page + [
-            'lastOpenedAt' => $result->lastOpenedAt->format(\DateTimeInterface::ATOM),
+            'title' => $result->title,
+            'lastOpenedAt' => $result->lastOpenedAt?->format(\DateTimeInterface::ATOM),
             'newEntryIds' => $result->newEntryIds(),
         ];
     }

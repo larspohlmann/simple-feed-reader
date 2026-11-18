@@ -18,7 +18,7 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpFoundation\Response;
 
-final class FollowedStoryEntriesControllerTest extends ApiTestCase
+final class TrendingStoryEntriesControllerTest extends ApiTestCase
 {
     private const string ARTICLE = 'https://news.example/article';
 
@@ -353,19 +353,33 @@ final class FollowedStoryEntriesControllerTest extends ApiTestCase
         self::assertSame($first['newEntryIds'], $second['newEntryIds']);
     }
 
-    public function testAStoryNotFollowedIsNotFound(): void
+    public function testTheEntriesOfAnUnfollowedOwnStoryAreListed(): void
     {
         $reader = $this->signInAsOwner('story-list-unfollowed@example.com');
         [$alpha, $beta] = $this->followedFeeds($reader);
         $story = $this->storyOf($alpha, $beta);
 
-        $this->client->request('GET', \sprintf('/api/entries/trending-stories/%d', $story->requireId()));
+        $page = $this->page($story);
 
-        $this->assertRejected($this->client, Response::HTTP_NOT_FOUND);
-        self::assertSame('trending_story_not_followed', $this->payload($this->client)['type']);
+        self::assertSame(['Second', 'First'], $this->titles($page));
+        self::assertNull($page['lastOpenedAt']);
+        self::assertSame([], $page['newEntryIds']);
     }
 
-    public function testAnotherReadersFollowOpensNothing(): void
+    public function testThePageCarriesTheStorysTitle(): void
+    {
+        $reader = $this->signInAsOwner('story-list-title@example.com');
+        [$alpha, $beta] = $this->followedFeeds($reader);
+        $story = $this->storyOf($alpha, $beta);
+        $this->entityManager()->getConnection()->executeStatement(
+            'UPDATE trending_story SET fallback_title = ? WHERE id = ?',
+            ['Harbour strike in Hamburg', $story->requireId()],
+        );
+
+        self::assertSame('Harbour strike in Hamburg', $this->page($story)['title']);
+    }
+
+    public function testAnotherUsersStoryIsNotFound(): void
     {
         $reader = $this->signInAsOwner('story-list-own@example.com');
         [$alpha, $beta] = $this->followedFeeds($reader);
@@ -377,6 +391,7 @@ final class FollowedStoryEntriesControllerTest extends ApiTestCase
         $this->client->request('GET', \sprintf('/api/entries/trending-stories/%d', $story->requireId()));
 
         $this->assertRejected($this->client, Response::HTTP_NOT_FOUND);
+        self::assertSame('trending_story_not_found', $this->payload($this->client)['type']);
     }
 
     public function testRowsCarryTheUsualEntryStateAndEnrichment(): void

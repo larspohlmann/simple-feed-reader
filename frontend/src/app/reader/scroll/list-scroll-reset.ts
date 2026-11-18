@@ -119,7 +119,7 @@ export class ListScrollReset {
   }
 
   /** Where a URL puts the user, or null when the URL is not the reader. The reader's
-   *  own route matcher decides, so a saved-search or followed-story path counts like the root
+   *  own route matcher decides, so a saved-search or story path counts like the root
    *  does. Such a path outranks any `q`, so nothing is layered over it. */
   private readerPlaceFrom(url: string): ReaderPlace | null {
     const tree = this.router.parseUrl(url);

@@ -4,6 +4,11 @@ import { TrendingStoryDto } from './trending.models';
 /** The glyph that marks a Trending story wherever a card names one. */
 export const STORY_ICON = 'trending_up';
 
+/** The router link to a story's list, followed or not (#2128, #2329). */
+export function storyListLink(storyId: number): [string, number] {
+  return ['/trending/stories', storyId];
+}
+
 /** A Trending story is viewed once any of its entries was opened: by the server's word, which counts
  *  entries the card does not show, or because one of its articles was opened here (#2017). */
 export function isStoryViewed(story: TrendingStoryDto): boolean {

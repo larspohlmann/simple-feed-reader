@@ -48,7 +48,7 @@ const LIST_ICON: Record<SelectionKind, string | null> = {
   notifications: null,
   'saved-searches': 'saved_search',
   'saved-search': null,
-  'followed-story': 'notifications_active',
+  'trending-story': 'notifications_active',
   search: 'search',
 };
 

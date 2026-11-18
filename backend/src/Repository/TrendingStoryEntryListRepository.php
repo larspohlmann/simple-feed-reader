@@ -7,6 +7,8 @@ namespace App\Repository;
 use App\Entity\Entry;
 use App\Entity\Subscription;
 use App\Entity\TrendingStoryEntry;
+use App\Service\Curation\Trending\Exception\TrendingStoryNotFoundException;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -24,6 +26,29 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
         private readonly EntryScopePredicates $scopes,
     ) {
         parent::__construct($registry, Entry::class);
+    }
+
+    /**
+     * @return string|null null for a story with no stored title and no member in a feed its reader subscribes to
+     *
+     * @throws TrendingStoryNotFoundException for a story the reader does not own
+     */
+    public function titleOf(TrendingStoryListQuery $query): ?string
+    {
+        /** @var array{title: string|null}|false $row */
+        $row = $this->getEntityManager()->getConnection()->fetchAssociative(
+            'SELECT ' . TrendingStoryTitleSql::TITLE . ' AS title FROM trending_story story'
+            . ' WHERE story.id = ? AND story.user_id = ?',
+            [$query->storyId, $query->userId],
+            [ParameterType::INTEGER, ParameterType::INTEGER],
+        );
+        if ($row === false) {
+            throw new TrendingStoryNotFoundException(
+                \sprintf('User %d has no Trending story with id %d.', $query->userId, $query->storyId),
+            );
+        }
+
+        return $row['title'];
     }
 
     /** @return list<EntryListRow> */

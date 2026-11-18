@@ -450,17 +450,15 @@ describe('FollowedStoriesStore (#2128)', () => {
   });
 
   describe('unfollow()', () => {
-    it('drops the row on success and calls onSuccess', () => {
+    it('drops the row on success', () => {
       const unfollow = jest.fn(() => of(undefined));
       const store = setup({ followed: answering(), unfollow });
       store.load();
-      const onSuccess = jest.fn();
 
-      store.unfollow(3, onSuccess);
+      store.unfollow(3);
 
       expect(unfollow).toHaveBeenCalledWith(3);
       expect(store.stories()).toEqual([rows[1]]);
-      expect(onSuccess).toHaveBeenCalledTimes(1);
     });
 
     it('keeps the row on failure', () => {
@@ -469,12 +467,10 @@ describe('FollowedStoriesStore (#2128)', () => {
         unfollow: () => throwError(() => new Error('down')),
       });
       store.load();
-      const onSuccess = jest.fn();
 
-      store.unfollow(3, onSuccess);
+      store.unfollow(3);
 
       expect(store.stories()).toEqual(rows);
-      expect(onSuccess).not.toHaveBeenCalled();
     });
   });
 });

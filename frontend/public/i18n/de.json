@@ -1381,6 +1381,7 @@
     "followedStories": "Gefolgte Stories",
     "toggleFollowedStories": "Gefolgte Stories ein- oder ausklappen",
     "followedStoryFallback": "Gefolgte Story",
+    "storyFallback": "Story",
     "notifications": {
       "title": "Benachrichtigungen",
       "loading": "Benachrichtigungen werden geladen…",

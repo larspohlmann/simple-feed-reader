@@ -27,7 +27,7 @@
       <div class="followed-list">
         @for (story of stories(); track story.id) {
           <div class="followed-row" [class.active]="story.id === activeStoryId()">
-            <a class="nav" [routerLink]="['/trending/followed', story.id]">
+            <a class="nav" [routerLink]="storyListLink(story.id)">
               <app-icon name="notifications_active" size="md" />
               <span class="name">{{
                 story.headline ?? ('reader.followedStoryFallback' | transloco)

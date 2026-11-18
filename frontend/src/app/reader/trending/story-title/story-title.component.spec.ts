@@ -1,12 +1,22 @@
+import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { Router, provideRouter } from '@angular/router';
 import { aStory } from '../../../../testing/entry-testing';
-import { STORY_ICON } from '../story';
+import { STORY_ICON, storyListLink } from '../story';
 import { StoryTitleComponent } from './story-title.component';
 
-function mount(title: string): HTMLElement {
-  TestBed.configureTestingModule({ imports: [StoryTitleComponent] });
+@Component({ template: '' })
+class StoryListStubComponent {}
+
+function mount(title: string, id = 12): HTMLElement {
+  TestBed.configureTestingModule({
+    imports: [StoryTitleComponent],
+    providers: [
+      provideRouter([{ path: 'trending/stories/:story', component: StoryListStubComponent }]),
+    ],
+  });
   const fixture = TestBed.createComponent(StoryTitleComponent);
-  fixture.componentRef.setInput('story', aStory({ title }));
+  fixture.componentRef.setInput('story', aStory({ id, title }));
   fixture.detectChanges();
   return fixture.nativeElement as HTMLElement;
 }
@@ -27,4 +37,22 @@ it('carries the full title as a tooltip for when the line is cut short', () => {
   const heading = mount('A very long event headline').querySelector('h3.title');
 
   expect(heading?.getAttribute('title')).toBe('A very long event headline');
+});
+
+it("links to the story's list, where a followed story's sidebar row links", () => {
+  const link = mount('Any event', 12).querySelector('a.story-link');
+
+  expect(storyListLink(12)).toEqual(['/trending/stories', 12]);
+  expect(link?.getAttribute('href')).toBe('/trending/stories/12');
+  expect(link?.querySelector('h3.title')).not.toBeNull();
+});
+
+it("opens the story's list when clicked", async () => {
+  const link = mount('Any event', 12).querySelector<HTMLAnchorElement>('a.story-link')!;
+
+  link.click();
+  await TestBed.inject(Router).navigated;
+  await new Promise((resolve) => setTimeout(resolve));
+
+  expect(TestBed.inject(Router).url).toBe('/trending/stories/12');
 });

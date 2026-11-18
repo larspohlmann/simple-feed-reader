@@ -8,6 +8,7 @@ import { ReadingLayoutService } from '../reading-layout.service';
 import { EntriesStore } from '../state/entries.store';
 import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
+import { OpenStory } from '../state/open-story';
 import { FollowedStoriesStore } from '../state/followed-stories.store';
 import { FollowedStoryDto } from '../trending/trending.models';
 import { VisibilitySwitchesStore } from '../state/visibility-switches.store';
@@ -57,6 +58,7 @@ function listHeadingFor(subscription: SubscriptionDto, sections: SocialSection[]
       },
       { provide: LanguageService, useValue: { lang: signal('en') } },
       { provide: EntriesStore, useValue: {} },
+      { provide: OpenStory, useValue: { titleOf: () => null } },
       { provide: RecommendationsService, useValue: {} },
       { provide: SavedSearchesStore, useValue: {} },
       { provide: FollowedStoriesStore, useValue: {} },
@@ -325,6 +327,7 @@ function headingWith(
       { provide: SubscriptionsStore, useValue: subscriptionsStore },
       { provide: LanguageService, useValue: { lang: signal('en') } },
       { provide: EntriesStore, useValue: {} },
+      { provide: OpenStory, useValue: { titleOf: () => null } },
       { provide: RecommendationsService, useValue: {} },
       { provide: SavedSearchesStore, useValue: {} },
       { provide: FollowedStoriesStore, useValue: {} },
@@ -424,6 +427,7 @@ describe('ListHeading for the Trending list (#2017)', () => {
         { provide: SubscriptionsStore, useValue: {} },
         { provide: LanguageService, useValue: { lang: signal('en') } },
         { provide: EntriesStore, useValue: { items: signal([storyOfThree(1), storyOfThree(2)]) } },
+        { provide: OpenStory, useValue: { titleOf: () => null } },
         { provide: RecommendationsService, useValue: {} },
         { provide: SavedSearchesStore, useValue: {} },
         { provide: FollowedStoriesStore, useValue: {} },
@@ -459,6 +463,8 @@ describe('ListHeading last refreshed on Trending (#2264)', () => {
         { provide: SubscriptionsStore, useValue: {} },
         { provide: LanguageService, useValue: { lang: signal('en') } },
         { provide: EntriesStore, useValue: {} },
+        { provide: OpenStory, useValue: { titleOf: () => null } },
+        { provide: OpenStory, useValue: { titleOf: () => null } },
         { provide: RecommendationsService, useValue: {} },
         { provide: SavedSearchesStore, useValue: {} },
         { provide: FollowedStoriesStore, useValue: {} },
@@ -483,7 +489,7 @@ describe('ListHeading last refreshed on Trending (#2264)', () => {
   });
 });
 
-describe('ListHeading for a followed Trending story (#2128)', () => {
+describe("ListHeading for a Trending story's list (#2128, #2329)", () => {
   const followed = (headline: string | null): FollowedStoryDto => ({
     id: 42,
     headline,
@@ -492,7 +498,7 @@ describe('ListHeading for a followed Trending story (#2128)', () => {
     lastJoinedAt: '2026-11-16T10:00:00+00:00',
   });
 
-  function storyHeading(stories: FollowedStoryDto[]): ListHeading {
+  function storyHeading(stories: FollowedStoryDto[], pageTitle: string | null = null): ListHeading {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
@@ -500,13 +506,17 @@ describe('ListHeading for a followed Trending story (#2128)', () => {
         ListHeading,
         {
           provide: ReaderRouteState,
-          useValue: { selection: signal<Selection>({ kind: 'followed-story', id: 42 }) },
+          useValue: { selection: signal<Selection>({ kind: 'trending-story', id: 42 }) },
         },
         {
           provide: FollowedStoriesStore,
           useValue: {
             byId: (id: number) => stories.find((story) => story.id === id) ?? null,
           },
+        },
+        {
+          provide: OpenStory,
+          useValue: { titleOf: (id: number) => (id === 42 ? pageTitle : null) },
         },
         { provide: SubscriptionsStore, useValue: {} },
         { provide: LanguageService, useValue: { lang: signal('en') } },
@@ -528,9 +538,13 @@ describe('ListHeading for a followed Trending story (#2128)', () => {
     expect(storyHeading([followed('Storm hits the coast')]).title()).toBe('Storm hits the coast');
   });
 
-  it('falls back to "Followed story" while the story has no headline', () => {
-    expect(storyHeading([]).title()).toBe('Followed story');
-    expect(storyHeading([followed(null)]).title()).toBe('Followed story');
+  it('is titled by the title its page carries, for a story the reader does not follow too', () => {
+    expect(storyHeading([], 'Harbour strike in Hamburg').title()).toBe('Harbour strike in Hamburg');
+  });
+
+  it('falls back to "Story" while the story has no title', () => {
+    expect(storyHeading([]).title()).toBe('Story');
+    expect(storyHeading([followed(null)]).title()).toBe('Story');
   });
 
   it('counts the entries it lists', () => {

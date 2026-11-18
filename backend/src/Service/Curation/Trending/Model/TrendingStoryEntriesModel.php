@@ -6,8 +6,8 @@ namespace App\Service\Curation\Trending\Model;
 
 use App\Repository\EntryListRow;
 
-/** A page of a followed story's entries, the reader's last visit, and when each row joined the story. */
-final readonly class FollowedStoryEntriesModel
+/** A page of a story's entries, its title, the reader's last visit if they follow it, and when each row joined. */
+final readonly class TrendingStoryEntriesModel
 {
     /**
      * @param list<EntryListRow>             $rows
@@ -15,14 +15,18 @@ final readonly class FollowedStoryEntriesModel
      */
     public function __construct(
         public array $rows,
-        public \DateTimeImmutable $lastOpenedAt,
+        public ?string $title,
+        public ?\DateTimeImmutable $lastOpenedAt,
         public array $joinedAtByEntry,
     ) {
     }
 
-    /** @return list<int> the rows that joined since the last visit, in page order */
+    /** @return list<int> the rows that joined since the last visit, in page order; none for a story not followed */
     public function newEntryIds(): array
     {
+        if ($this->lastOpenedAt === null) {
+            return [];
+        }
         $newEntryIds = [];
         foreach ($this->rows as $row) {
             $entryId = $row->entry->requireId();

@@ -13,7 +13,7 @@ describe('FollowedStoryVisit (#2128)', () => {
   const lastOpenedAt = '2026-11-16T08:00:00+00:00';
   const before = '2026-11-16T07:00:00+00:00';
   const since = '2026-11-16T09:00:00+00:00';
-  const story: EntryQuery = { view: 'all', followedStoryId: 42 };
+  const story: EntryQuery = { view: 'all', storyId: 42 };
   const anotherList: EntryQuery = { view: 'all' };
   const member = (id: number, joinedAt: string): EntryDto => anEntry({ id, joinedAt });
 

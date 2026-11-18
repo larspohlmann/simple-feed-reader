@@ -3,8 +3,8 @@ import { ParsedRoute, ViewContext, selectionFromParams } from './query';
 import { entryIdFromParam } from './slug';
 
 /**
- * Owns the root URL, the saved-search paths and the followed-story paths through one route config, so the
- * shell is never torn down moving between a list and a saved search or a followed story.
+ * Owns the root URL, the saved-search paths and the Trending story paths through one route config, so the
+ * shell is never torn down moving between a list and a saved search or a story.
  */
 export function readerMatcher(segments: UrlSegment[]): UrlMatchResult | null {
   if (segments.length === 0) {
@@ -14,8 +14,8 @@ export function readerMatcher(segments: UrlSegment[]): UrlMatchResult | null {
   if (segments[0].path === 'searches' && segments[1].path === 'saved') {
     return { consumed: segments, posParams: { savedSearch: segments[2] } };
   }
-  if (segments[0].path === 'trending' && segments[1].path === 'followed') {
-    return { consumed: segments, posParams: { followedStory: segments[2] } };
+  if (segments[0].path === 'trending' && segments[1].path === 'stories') {
+    return { consumed: segments, posParams: { story: segments[2] } };
   }
   return null;
 }
@@ -25,8 +25,8 @@ export function selectionFromRoute(
   queryParams: ParamMap,
   context: ViewContext,
 ): ParsedRoute {
-  const followedStory = pathParams.get('followedStory');
-  if (followedStory !== null) return followedStoryFromRoute(followedStory, queryParams, context);
+  const story = pathParams.get('story');
+  if (story !== null) return storyFromRoute(story, queryParams, context);
   const savedSearch = pathParams.get('savedSearch');
   if (savedSearch === null) {
     return selectionFromParams(queryParams, context);
@@ -45,16 +45,12 @@ export function selectionFromRoute(
 }
 
 /** A path naming no story opens Trending itself; the path stays, as a saved-search path's does. */
-function followedStoryFromRoute(
-  followedStory: string,
-  queryParams: ParamMap,
-  context: ViewContext,
-): ParsedRoute {
+function storyFromRoute(story: string, queryParams: ParamMap, context: ViewContext): ParsedRoute {
   const entryId = entryIdFromParam(queryParams.get('entry'));
-  const id = entryIdFromParam(followedStory);
+  const id = entryIdFromParam(story);
   if (id === null) {
     const trending = selectionFromParams(convertToParamMap({ view: 'trending' }), context);
     return { selection: trending.selection, entryId, urlCorrection: null };
   }
-  return { selection: { kind: 'followed-story', id }, entryId, urlCorrection: null };
+  return { selection: { kind: 'trending-story', id }, entryId, urlCorrection: null };
 }

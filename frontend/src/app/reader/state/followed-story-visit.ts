@@ -26,7 +26,7 @@ export class FollowedStoryVisit {
   }
 
   private landed({ query, page }: LandedList): void {
-    const storyId = query.followedStoryId;
+    const storyId = query.storyId;
     if (
       storyId == null ||
       page === null ||

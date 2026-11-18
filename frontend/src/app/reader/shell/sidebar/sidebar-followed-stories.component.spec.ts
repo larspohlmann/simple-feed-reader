@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { LayoutService } from '../../layout.service';
-import { FollowedStoryUnfollow } from '../followed-story-unfollow.service';
+import { StoryFollowing } from '../story-following.service';
 import { FollowedStoryDto } from '../../trending/trending.models';
 import { SidebarFollowedStoriesComponent } from './sidebar-followed-stories.component';
 import { SidebarRowActions } from './sidebar-row-actions.service';
@@ -30,7 +30,7 @@ describe('SidebarFollowedStoriesComponent (#2128)', () => {
       imports: [SidebarFollowedStoriesComponent, provideTranslocoTesting()],
       providers: [
         provideRouter([{ path: '**', children: [] }]),
-        { provide: FollowedStoryUnfollow, useValue: { unfollow } },
+        { provide: StoryFollowing, useValue: { unfollow } },
         {
           provide: SidebarRowActions,
           useValue: { menuFor, toggleMenu: jest.fn(), closeMenu: jest.fn() },
@@ -108,7 +108,7 @@ describe('SidebarFollowedStoriesComponent (#2128)', () => {
     const links = Array.from(root(fixture).querySelectorAll('.followed-row .nav')).map((link) =>
       link.getAttribute('href'),
     );
-    expect(links).toEqual(['/trending/followed/7', '/trending/followed/4', '/trending/followed/9']);
+    expect(links).toEqual(['/trending/stories/7', '/trending/stories/4', '/trending/stories/9']);
   });
 
   it('shows the count on a row that has new members, and none on one that has not', () => {

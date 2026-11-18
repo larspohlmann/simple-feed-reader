@@ -6,6 +6,7 @@ import { EntriesStore } from '../state/entries.store';
 import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { FollowedStoriesStore } from '../state/followed-stories.store';
+import { OpenStory } from '../state/open-story';
 import { VisibilitySwitchesStore } from '../state/visibility-switches.store';
 import { sumEntries } from '../state/subscription-derivations';
 import { ReadingLayoutService } from '../reading-layout.service';
@@ -36,6 +37,7 @@ export class ListHeading {
   private readonly recommendations = inject(RecommendationsService);
   private readonly savedSearches = inject(SavedSearchesStore);
   private readonly followedStories = inject(FollowedStoriesStore);
+  private readonly openStory = inject(OpenStory);
   private readonly layout = inject(ReadingLayoutService);
   private readonly language = inject(LanguageService);
   private readonly i18n = inject(TranslocoService);
@@ -114,7 +116,7 @@ export class ListHeading {
     viewed: this.feedFetchedAt,
     'saved-searches': this.feedFetchedAt,
     'saved-search': this.feedFetchedAt,
-    'followed-story': this.feedFetchedAt,
+    'trending-story': this.feedFetchedAt,
     all: this.feedFetchedAt,
     tag: this.feedFetchedAt,
     network: this.feedFetchedAt,
@@ -146,9 +148,10 @@ export class ListHeading {
     'saved-searches': () => this.i18n.translate('reader.savedSearches'),
     'saved-search': () =>
       this.activeSavedSearch()?.term ?? this.i18n.translate('reader.savedSearches'),
-    'followed-story': (selection) =>
+    'trending-story': (selection) =>
+      this.openStory.titleOf(selection.id) ??
       this.followedStories.byId(selection.id)?.headline ??
-      this.i18n.translate('reader.followedStoryFallback'),
+      this.i18n.translate('reader.storyFallback'),
     all: () => this.i18n.translate('reader.allItems'),
     tag: () => this.selectedTag()?.name ?? this.i18n.translate('reader.tagFallback'),
     network: (selection) => this.networkTitle(selection),
@@ -234,7 +237,7 @@ export class ListHeading {
       const saved = this.activeSavedSearch();
       return bySwitch(selection, saved?.unreadCount ?? 0, saved?.memberCount ?? 0);
     },
-    'followed-story': () => items(this.entries.items().length),
+    'trending-story': () => items(this.entries.items().length),
     search: () => items(0),
   };
 

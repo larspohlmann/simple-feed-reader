@@ -81,7 +81,7 @@
       [followedStories]="followedStoriesStore.stories()"
       [savedSearches]="savedSearchesStore.savedSearches()"
       [activeSavedSearchId]="heading.activeSavedSearchId()"
-      [activeFollowedStoryId]="followedStory.activeId()"
+      [activeFollowedStoryId]="storyFollowing.activeId()"
       [mailEnabled]="auth.user()?.mail?.enabled ?? false"
       [digestEnabled]="digest.enabled()"
       [selection]="selection()"
@@ -349,17 +349,21 @@
       <span class="txt">{{ savedSearch.actionLabel() | transloco }}</span>
     </button>
   }
-  @if (followedStory.viewing()) {
+  @if (storyFollowing.viewing()) {
+    @let followLabel = storyFollowing.following() ? 'reader.unfollowStory' : 'reader.followStory';
     <button
       appListAction
-      class="unfollow-story"
+      class="follow-story"
       type="button"
-      [attr.aria-label]="'reader.unfollowStory' | transloco"
-      [attr.title]="'reader.unfollowStory' | transloco"
-      (click)="followedStory.unfollowOpen()"
+      [attr.aria-label]="followLabel | transloco"
+      [attr.title]="followLabel | transloco"
+      (click)="storyFollowing.toggleOpen()"
     >
-      <app-icon name="notifications_off" size="sm" />
-      <span class="txt">{{ 'reader.unfollowStory' | transloco }}</span>
+      <app-icon
+        [name]="storyFollowing.following() ? 'notifications_off' : 'notification_add'"
+        size="sm"
+      />
+      <span class="txt">{{ followLabel | transloco }}</span>
     </button>
   }
   @if (selection().kind === 'for-you' && ai.ready()) {

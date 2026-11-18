@@ -1453,7 +1453,7 @@ describe('EntriesStore', () => {
   });
   describe('the landed-list hook', () => {
     const storyUrl = 'https://api.test/api/entries/trending-stories/42';
-    const story = { view: 'all' as const, followedStoryId: 42 };
+    const story = { view: 'all' as const, storyId: 42 };
     const storyRequest = () => ctrl.expectOne((request) => request.url === storyUrl);
     const storyPage = {
       entries: [entry(1)],

@@ -174,7 +174,7 @@ describe('ReaderApi', () => {
     expect(page).toEqual({ items: entries, nextCursor: 'NEXT' });
   });
 
-  it('keeps what a followed-story page adds to its entries', () => {
+  it('keeps what a story page adds to its entries', () => {
     let page: unknown;
     api.entries({ view: 'unread' }).subscribe((result) => (page = result));
     ctrl
@@ -366,7 +366,7 @@ describe('ReaderApi', () => {
   it('fetches a followed Trending story by id, with the cursor, limit and order (#2128)', () => {
     let page: unknown = null;
     api
-      .entries({ view: 'all', followedStoryId: 42, order: 'oldest' }, 'C2')
+      .entries({ view: 'all', storyId: 42, order: 'oldest' }, 'C2')
       .subscribe((answer) => (page = answer));
     const testRequest = ctrl.expectOne((request) =>
       request.url.endsWith('/api/entries/trending-stories/42'),

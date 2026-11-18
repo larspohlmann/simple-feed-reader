@@ -59,15 +59,18 @@ final class TrendingStoryFollowRepository extends ServiceEntityRepository
     /** @throws TrendingStoryNotFollowedException */
     public function lastOpenedAt(int $userId, int $storyId): \DateTimeImmutable
     {
+        return $this->lastOpenedAtIfFollowed($userId, $storyId) ?? throw self::notFollowed($userId, $storyId);
+    }
+
+    /** @return \DateTimeImmutable|null null for a story the reader does not follow */
+    public function lastOpenedAtIfFollowed(int $userId, int $storyId): ?\DateTimeImmutable
+    {
         $lastOpenedAt = $this->getEntityManager()->getConnection()->fetchOne(
             'SELECT last_opened_at FROM trending_story_follow WHERE user_id = ? AND story_id = ?',
             [$userId, $storyId],
         );
-        if (!\is_string($lastOpenedAt)) {
-            throw self::notFollowed($userId, $storyId);
-        }
 
-        return NaiveUtc::parse($lastOpenedAt);
+        return \is_string($lastOpenedAt) ? NaiveUtc::parse($lastOpenedAt) : null;
     }
 
     /** @throws TrendingStoryNotFollowedException */
@@ -106,7 +109,7 @@ final class TrendingStoryFollowRepository extends ServiceEntityRepository
          */
         $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
             'SELECT follow.story_id, story.last_joined_at,'
-            . ' COALESCE(story.llm_title, story.fallback_title, ' . self::headline() . ') AS headline,'
+            . ' ' . TrendingStoryTitleSql::TITLE . ' AS headline,'
             . ' ' . self::newCount() . ' AS new_count'
             . ' FROM trending_story_follow follow'
             . ' JOIN trending_story story ON story.id = follow.story_id'
@@ -125,18 +128,6 @@ final class TrendingStoryFollowRepository extends ServiceEntityRepository
             ),
             $rows,
         );
-    }
-
-    /** The newest member from a subscribed article feed, else from any subscribed feed: an untitled story's headline. */
-    private static function headline(): string
-    {
-        return '(SELECT headline_entry.title FROM trending_story_entry headline_member'
-            . ' JOIN entry headline_entry ON headline_entry.id = headline_member.entry_id'
-            . ' JOIN feed headline_feed ON headline_feed.id = headline_member.feed_id'
-            . self::subscribedTo('headline_member')
-            . ' WHERE headline_member.story_id = follow.story_id'
-            . ' ORDER BY CASE WHEN headline_feed.network IS NULL THEN 0 ELSE 1 END,'
-            . ' headline_entry.effective_date DESC, headline_entry.id DESC LIMIT 1)';
     }
 
     /**
