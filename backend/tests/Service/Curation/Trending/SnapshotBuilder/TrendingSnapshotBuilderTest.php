@@ -212,7 +212,9 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         foreach ([$alpha, $beta, $gamma] as $variant => $feed) {
             $this->fixtures->hafenstreik($feed, $variant, \sprintf('2031-05-14 %02d:00:00', 8 + $variant));
         }
-        $this->fixtures->subscribe($reader, $alpha, $this->fixtures->feedNobodyFollows('unrelated'));
+        $unrelated = $this->fixtures->feedNobodyFollows('unrelated');
+        $this->fixtures->entry($unrelated, 'Wetter morgen sonnig', '2031-05-14 11:00:00');
+        $this->fixtures->subscribe($reader, $alpha, $unrelated);
         $this->fixtures->flush();
 
         $this->builder()->build($reader->requireId(), TrendingWindow::Day);
@@ -232,6 +234,10 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
             [$reader->requireId(), $this->ownerId()],
             $this->sortedIntColumn('SELECT user_id FROM trending_snapshot'),
         );
+        self::assertSame(
+            [$reader->requireId() => 2, $this->ownerId() => 3],
+            $this->activeFeedCountsByUser(),
+        );
     }
 
     public function testAnotherUsersRunningBuildDoesNotBlock(): void
@@ -239,7 +245,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         $this->weekSizedHafenstreik();
         $reader = $this->fixtures->reader('busy-reader@example.com');
         $running = $this->locks->createLock('trending-build-' . $reader->requireId());
-        $running->acquire();
+        self::assertTrue($running->acquire());
 
         $report = $this->builder()->build($this->ownerId(), TrendingWindow::Day);
 
@@ -261,6 +267,25 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         );
     }
 
+    public function testTheActiveFeedCountIsPerWindow(): void
+    {
+        $this->fixtures->entry($this->fixtures->feed('today'), 'Wetter morgen sonnig', '2031-05-14 08:00:00');
+        $this->fixtures->entry($this->fixtures->feed('yesterday'), 'Fahrplan ab Montag', '2031-05-13 11:00:00');
+        $this->fixtures->flush();
+
+        $day = $this->builder()->build($this->ownerId(), TrendingWindow::Day);
+        $week = $this->builder()->build($this->ownerId(), TrendingWindow::Week);
+
+        self::assertSame(1, $day->activeFeedCount);
+        self::assertSame(2, $week->activeFeedCount);
+        self::assertSame(
+            ['day' => 1, 'week' => 2],
+            $this->entityManager->getConnection()->fetchAllKeyValue(
+                'SELECT time_window, active_feed_count FROM trending_snapshot ORDER BY time_window',
+            ),
+        );
+    }
+
     public function testTwoUsersStoriesNeverMerge(): void
     {
         $reader = $this->fixtures->reader('bridged-reader@example.com');
@@ -268,7 +293,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         $this->fixtures->subscribe($reader, $feeds[0], $feeds[1], $feeds[2]);
         $this->fixtures->flush();
         $owner = $this->fixtures->owner();
-        $ownersFirst = $this->fixtures->storyOf(
+        $this->fixtures->storyOf(
             $owner,
             TrendingWindow::Week,
             '2031-05-14 11:00:00',
@@ -276,7 +301,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
             $entries[1],
             $entries[2],
         );
-        $ownersSecond = $this->fixtures->storyOf(
+        $this->fixtures->storyOf(
             $owner,
             TrendingWindow::Week,
             '2031-05-14 11:00:00',
@@ -292,7 +317,6 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
             $entries[2],
         );
         $readersRows = $this->rowsOfUser($reader->requireId());
-        $ownersFirstId = $ownersFirst->requireId();
 
         $this->builder()->build($owner->requireId(), TrendingWindow::Week);
 
@@ -307,9 +331,11 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         $this->builder()->build($reader->requireId(), TrendingWindow::Week);
 
         self::assertSame($ownersRows, $this->rowsOfUser($owner->requireId()));
+        self::assertSame(
+            1,
+            $this->intColumn('SELECT COUNT(*) FROM trending_story WHERE user_id = ?', [$reader->requireId()])[0],
+        );
         self::assertContains($readersStory->requireId(), $this->storyIds());
-        self::assertContains($ownersFirstId, $this->storyIds());
-        self::assertNotNull($ownersSecond->getId());
     }
 
     public function testPostsSharingAnArticleJoinItsStoryThroughTheirLinkCards(): void
@@ -783,6 +809,21 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
                 [$userId],
             ),
         ];
+    }
+
+    /** @return array<int, int> */
+    private function activeFeedCountsByUser(): array
+    {
+        $counts = [];
+        foreach (
+            $this->entityManager->getConnection()
+                ->fetchAllKeyValue('SELECT user_id, active_feed_count FROM trending_snapshot') as $userId => $count
+        ) {
+            $counts[(int) $userId] = (int) $count;
+        }
+        ksort($counts);
+
+        return $counts;
     }
 
     /** @return list<int> */
