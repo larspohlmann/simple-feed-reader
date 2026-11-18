@@ -3,6 +3,6 @@
 }
 
 /* Positioned, so the card paints over the title it tucks across. */
-app-story-title.tucked + * {
+app-story-title.tucked:not(.airy *) + * {
   position: relative;
 }

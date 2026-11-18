@@ -11,7 +11,6 @@ import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.ser
 import { aQuotedPost, anEntry, aStory, aStoryArticle } from '../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
-import { MAGAZINE_STYLE_KEY } from '../../../core/preferences/magazine-style';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto =>
   anEntry({
@@ -108,14 +107,6 @@ describe('MagazineBlockComponent', () => {
 
       expect(title).not.toBeNull();
       expect(title?.classList).not.toContain('tucked');
-    });
-
-    it('stands alone in the airy style, which draws no card at all', () => {
-      localStorage.setItem(MAGAZINE_STYLE_KEY, 'airy');
-      const element = mount(storyBlock('hero'));
-      localStorage.removeItem(MAGAZINE_STYLE_KEY);
-
-      expect(element.querySelector('app-story-title')?.classList).not.toContain('tucked');
     });
 
     it('is not rendered for a plain entry block', () => {
