@@ -1,5 +1,5 @@
 import { anEntry, aStory, aStoryArticle } from '../../../testing/entry-testing';
-import { articlesOf, leadOf, storyOf } from './list-item';
+import { articlesOf, isStory, leadOf, storyOf } from './list-item';
 
 describe('list items', () => {
   it('leads an entry with itself', () => {
@@ -26,6 +26,10 @@ describe('list items', () => {
     const entry = anEntry({ id: 5 });
 
     expect(articlesOf(entry)).toEqual([entry]);
+  });
+
+  it('does not take an entry for a story', () => {
+    expect(isStory(anEntry())).toBe(false);
   });
 
   it('has no story behind an entry', () => {
