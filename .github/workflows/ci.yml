@@ -205,12 +205,12 @@ jobs:
   # line were wrong. Infection changes the line and reports whether anything
   # failed, which is the property the suite is actually meant to have.
   #
-  # Scoped to the files the branch changes, in the spirit of the PHPMD rule: a
-  # file you touch has to be clean, and untouched code is not this branch's
-  # problem. That keeps the job to a minute or two and lets the threshold land
-  # without a tree-wide cleanup first. One leg only — the SQLite one; mutation
-  # scores do not differ by database engine, and the MySQL leg already proves
-  # the suite passes there.
+  # Scoped to the lines the branch changes: Infection 0.34 mutates only changed
+  # lines under --git-diff-filter, exactly as under --git-diff-lines, and
+  # untouched code is not this branch's problem. That keeps the job to a minute
+  # or two and lets the threshold land without a tree-wide cleanup first. One
+  # leg only — the SQLite one; mutation scores do not differ by database
+  # engine, and the MySQL leg already proves the suite passes there.
   mutation:
     name: Mutation (changed files)
     runs-on: ubuntu-latest
