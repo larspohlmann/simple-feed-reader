@@ -685,6 +685,23 @@ Added during execution at the user's request (2026-11-18): "when I click on a ti
 
 ---
 
+### Task 12b: The story's list opens as an overlay, like an article
+
+Added during execution from the user's requests (2026-11-18): the story view's back link must look and behave like the article view's top bar (arrow, icon, muted title; same slide); going back must not reload the underlying list and must keep its scroll position. User decisions: (a) the story view is an **overlay over the current list** (opened from a title: over Trending; from the sidebar: over whatever list was showing), like an article — the list underneath stays mounted; (b) the story's Follow/Unfollow toggle and the newest/oldest order sit at the **right end of the article-style top bar**.
+
+**Behaviour:**
+- Opening a story slides it in with the article view's transition; back slides it out and reveals the list exactly as it was (no `/api/trending` or other list request, same scroll offset, no spinner), magazine and list layouts, desktop and phone; prefers-reduced-motion as the article does.
+- The top bar is the article view's bar (shared piece extracted if needed, not copied): back arrow, story icon in the favicon slot, story title; Follow/Unfollow and newest/oldest at the right, styled like the bar's existing actions.
+- Deep link `/trending/stories/:id` opened directly: the story overlay over the default list underneath (as a deep-linked article does).
+- The sidebar's followed-story rows open the same overlay.
+- Interim work from Task 12 (header back link in the Settings look, `TrendingReturn` service, `_back-link.scss`) is replaced where the overlay makes it unnecessary; keep only what the overlay reuses.
+
+**Tests:** specs for the overlay open/close and the bar's controls; e2e: scroll Trending, open a story via its title, go back → scroll unchanged within 2 px and no new list request; the sidebar row opens the overlay; a deep link shows the overlay with a working back; reduced motion.
+
+**Commit:** `feat(#2329): a story's list opens over the current list, like an article`
+
+---
+
 ## Open questions (noted, not blocking)
 
 - An LLM title or fallback stays on a story that falls out of the week but is still followed. Nothing rewrites it later. That is accepted.
