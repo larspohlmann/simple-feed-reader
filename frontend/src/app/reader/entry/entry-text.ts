@@ -20,3 +20,18 @@ export function entryDek(entry: EntryDto): string {
 export function entryDisplayTitle(entry: Pick<EntryDto, 'title' | 'source' | 'poster'>): string {
   return entry.title || (entry.poster?.name ?? entry.source);
 }
+
+const LINK_TOKEN = /^(?:https?:\/\/\S*|(?:[\w-]+\.)+[a-z]{2,}\/\S*)$/i;
+
+/** The text without the run of links it ends in, full, shortened or cut off by the excerpt. */
+export function withoutTrailingLinks(text: string): string {
+  let rest = text.trimEnd();
+  while (LINK_TOKEN.test(lastWordOf(rest))) {
+    rest = rest.slice(0, -lastWordOf(rest).length).trimEnd();
+  }
+  return rest;
+}
+
+function lastWordOf(text: string): string {
+  return /\S*$/.exec(text)![0];
+}

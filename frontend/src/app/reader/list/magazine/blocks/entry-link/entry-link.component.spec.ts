@@ -90,6 +90,39 @@ describe('EntryLinkComponent', () => {
     expect(element.querySelector('.dek')).toBeNull();
   });
 
+  it('drops the link a post ends in when its card shows it', () => {
+    const element = mount(entry({ excerpt: 'Worth a read https://news.test/story' }))
+      .nativeElement as HTMLElement;
+
+    expect(element.querySelector('.title')!.textContent!.trim()).toBe('Worth a read');
+  });
+
+  it('shows no headline for a post that is only its link: the card heads the block', () => {
+    const element = mount(entry({ excerpt: 'https://news.test/story' }))
+      .nativeElement as HTMLElement;
+
+    expect(element.querySelector('.title')).toBeNull();
+    expect(element.querySelector('app-link-card')).not.toBeNull();
+  });
+
+  it('drops the link a titled share’s text ends in when its card shows it', () => {
+    const element = mount(
+      entry({ titleDerived: false, title: 'A headline', excerpt: 'Summary politi.co/4kVc0CX' }),
+    ).nativeElement as HTMLElement;
+
+    expect(element.querySelector('.dek')!.textContent!.trim()).toBe('Summary');
+  });
+
+  it('keeps the link while the card is still being completed', () => {
+    const element = mount(
+      entry({ excerpt: 'Worth a read https://news.test/story', linkCards: [], pending: true }),
+    ).nativeElement as HTMLElement;
+
+    expect(element.querySelector('.title')!.textContent!.trim()).toBe(
+      'Worth a read https://news.test/story',
+    );
+  });
+
   it('shows the post text as its headline and stacks the first card under it', () => {
     const element = mount(entry()).nativeElement as HTMLElement;
 
