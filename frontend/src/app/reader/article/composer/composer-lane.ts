@@ -226,8 +226,9 @@ export class ComposerLane {
   private sendFailureMessage(error: HttpErrorResponse): string {
     const problem = parseProblem(error);
     const key = SEND_FAILURE_KEYS[problem.type];
-    if (key === undefined || problem.instance === undefined) return problemText(problem, this.i18n);
-    return this.i18n.translate(key, { instance: problem.instance });
+    if (key === undefined || problem.serviceName === undefined)
+      return problemText(problem, this.i18n);
+    return this.i18n.translate(key, { serviceName: problem.serviceName });
   }
 
   private messageOf(error: HttpErrorResponse): string {

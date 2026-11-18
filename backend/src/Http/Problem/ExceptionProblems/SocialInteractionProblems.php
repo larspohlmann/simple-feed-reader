@@ -89,20 +89,24 @@ final readonly class SocialInteractionProblems implements ExceptionProblemsInter
                 sprintf('Reconnect this account with an access token that has the %s scope.', $exception->missingScope),
             )),
             $exception instanceof SocialNetworkThrottledException => self::throttled($exception),
-            $exception instanceof SocialNetworkUnavailableException => new ResolvedProblem(new ApiProblem(
-                'social_network_unavailable',
-                'The network is not responding',
-                Response::HTTP_BAD_GATEWAY,
-                $exception->getMessage(),
-                extensions: ['instance' => $exception->instance],
-            )),
-            $exception instanceof SocialWriteOutcomeUnknownException => new ResolvedProblem(new ApiProblem(
-                'social_write_outcome_unknown',
-                'The network may not have finished the request',
-                Response::HTTP_BAD_GATEWAY,
-                $exception->getMessage(),
-                extensions: ['instance' => $exception->instance],
-            )),
+            $exception instanceof SocialNetworkUnavailableException => new ResolvedProblem(
+                new ApiProblem(
+                    'social_network_unavailable',
+                    'The network is not responding',
+                    Response::HTTP_BAD_GATEWAY,
+                    $exception->getMessage(),
+                ),
+                extensions: ['serviceName' => $exception->serviceName],
+            ),
+            $exception instanceof SocialWriteOutcomeUnknownException => new ResolvedProblem(
+                new ApiProblem(
+                    'social_write_outcome_unknown',
+                    'The network may not have finished the request',
+                    Response::HTTP_BAD_GATEWAY,
+                    $exception->getMessage(),
+                ),
+                extensions: ['serviceName' => $exception->serviceName],
+            ),
             $exception instanceof SocialNetworkUnreachableException => new ResolvedProblem(new ApiProblem(
                 'social_network_unreachable',
                 'The network could not be reached',

@@ -182,13 +182,13 @@ describe('ComposerLanes', () => {
       'social_write_outcome_unknown',
       'lemmy.world had trouble with your post, so it may or may not have been published. Check before sending it again.',
     ],
-  ])('a send failing with %s names the instance and whether it was sent', (type, message) => {
+  ])('a send failing with %s names the service and whether it was sent', (type, message) => {
     api.send.mockReturnValue(
       throwError(
         () =>
           new HttpErrorResponse({
             status: 502,
-            error: { type, title: 'x', status: 502, detail: 'English', instance: 'lemmy.world' },
+            error: { type, title: 'x', status: 502, detail: 'English', serviceName: 'lemmy.world' },
           }),
       ),
     );
@@ -199,7 +199,7 @@ describe('ComposerLanes', () => {
     expect(lane.sendError()).toBe(message);
   });
 
-  it('a social_network_unavailable send without an instance shows the problem detail', () => {
+  it('a social_network_unavailable send without a service name shows the problem detail', () => {
     api.send.mockReturnValue(
       throwError(
         () =>

@@ -41,18 +41,18 @@ describe('parseProblem', () => {
     expect(parseProblem(error).accountStatus).toBe('suspended');
   });
 
-  it('reads the instance a problem names', () => {
+  it('reads the service a problem names', () => {
     const error = new HttpErrorResponse({
       status: 502,
       error: {
         type: 'social_network_unavailable',
         title: 'x',
         status: 502,
-        instance: 'lemmy.world',
+        serviceName: 'lemmy.world',
       },
     });
 
-    expect(parseProblem(error).instance).toBe('lemmy.world');
+    expect(parseProblem(error).serviceName).toBe('lemmy.world');
   });
 
   it('falls back to a generic problem when the body is not JSON', () => {

@@ -46,7 +46,7 @@ final class ConfirmedDeletionTest extends DbTestCase
 
     public function testAHomeServerThatFailsMeansNotConfirmedDeleted(): void
     {
-        $this->homeServer->failsWith(SocialNetworkUnavailableException::fromHost('mastodon.example'));
+        $this->homeServer->failsWith(SocialNetworkUnavailableException::naming('mastodon.example', 503));
         $entry = $this->postOn($this->feed('social:mastodon:1:home', SourceFormat::MASTODON_API));
         $id = $entry->requireId();
 

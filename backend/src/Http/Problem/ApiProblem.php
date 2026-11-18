@@ -14,8 +14,7 @@ use Symfony\Component\HttpFoundation\Response;
 final readonly class ApiProblem
 {
     /**
-     * @param array<string, list<string>> $errors     field name => messages
-     * @param array<string, string>       $extensions RFC 7807 extension members, merged after the standard ones
+     * @param array<string, list<string>> $errors field name => messages
      */
     public function __construct(
         public string $type,
@@ -23,7 +22,6 @@ final readonly class ApiProblem
         public int $status,
         public ?string $detail = null,
         public array $errors = [],
-        public array $extensions = [],
     ) {
     }
 
@@ -61,6 +59,6 @@ final readonly class ApiProblem
             $payload['errors'] = $this->errors;
         }
 
-        return $payload + $this->extensions;
+        return $payload;
     }
 }

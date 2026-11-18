@@ -84,22 +84,22 @@ final class SocialInteractionProblemsTest extends TestCase
     }
 
     /** @return iterable<string, array{\Throwable, string, string}> */
-    public static function instanceProblems(): iterable
+    public static function serviceProblems(): iterable
     {
         yield 'unavailable' => [
-            SocialNetworkUnavailableException::fromHost('lemmy.world'),
+            SocialNetworkUnavailableException::naming('lemmy.world', 503),
             'social_network_unavailable',
             'The network is not responding',
         ];
         yield 'write outcome unknown' => [
-            SocialWriteOutcomeUnknownException::fromHost('lemmy.world'),
+            SocialWriteOutcomeUnknownException::naming('lemmy.world', 503),
             'social_write_outcome_unknown',
             'The network may not have finished the request',
         ];
     }
 
-    #[DataProvider('instanceProblems')]
-    public function testAnInstanceProblemNamesTheInstanceAndCarriesTheMessage(
+    #[DataProvider('serviceProblems')]
+    public function testAServiceProblemNamesTheServiceAndCarriesTheMessage(
         \Throwable $exception,
         string $type,
         string $title,
@@ -111,7 +111,7 @@ final class SocialInteractionProblemsTest extends TestCase
         self::assertSame($title, $resolved->problem->title);
         self::assertSame(Response::HTTP_BAD_GATEWAY, $resolved->problem->status);
         self::assertSame($exception->getMessage(), $resolved->problem->detail);
-        self::assertSame('lemmy.world', $resolved->problem->toArray()['instance']);
+        self::assertSame(['serviceName' => 'lemmy.world'], $resolved->extensions);
         self::assertTrue($resolved->isServerFault());
     }
 
