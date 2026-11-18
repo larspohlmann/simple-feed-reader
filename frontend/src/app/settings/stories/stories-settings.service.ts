@@ -1,19 +1,13 @@
 import { Injectable } from '@angular/core';
 import { DraftSettingsService } from '../../shared/settings/draft-settings.service';
-
-export interface StoryConnection {
-  readonly id: number;
-  readonly name: string | null;
-  readonly baseUrl: string;
-  readonly model: string | null;
-}
+import { ConnectionChoice } from '../connection-choice';
 
 /** Mirrors `StorySettingsJson`; `writingConnection` is the one that writes, null when none can. */
 export interface StoriesSettingsState {
   readonly titlesEnabled: boolean;
   readonly writingConnectionId: number | null;
-  readonly writingConnection: StoryConnection | null;
-  readonly writingCandidates: readonly StoryConnection[];
+  readonly writingConnection: ConnectionChoice | null;
+  readonly writingCandidates: readonly ConnectionChoice[];
 }
 
 export interface SaveStoriesSettings {
