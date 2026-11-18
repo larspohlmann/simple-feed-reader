@@ -50,7 +50,7 @@ test('richTextFacets leaves a closing quote out of the link', () => {
 });
 
 test('a markdown link in a highlight becomes a facet over exactly its address', () => {
-  const [text] = extractHighlights('### Highlights\n\n**X.** See [the docs](https://example.org/a).\n');
+  const [{ text }] = extractHighlights('### Highlights\n\n**X.** See [the docs](https://example.org/a).\n').highlights;
   const { index, features } = richTextFacets(text).find((found) => found.features[0].uri);
   const covered = Buffer.from(text).subarray(index.byteStart, index.byteEnd).toString();
   assert.equal(features[0].uri, 'https://example.org/a');
