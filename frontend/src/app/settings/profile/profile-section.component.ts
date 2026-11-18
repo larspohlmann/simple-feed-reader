@@ -3,11 +3,9 @@ import {
   Component,
   WritableSignal,
   computed,
-  effect,
   input,
   inject,
   linkedSignal,
-  untracked,
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LanguageService } from '../../core/i18n/language.service';
@@ -20,7 +18,9 @@ import { SettingsGroupComponent } from '../../shared/settings/settings-group/set
 import { SettingsRowComponent } from '../../shared/settings/settings-row/settings-row.component';
 import { SettingsSaveBarComponent } from '../../shared/settings/save-bar/save-bar.component';
 import { toastOnSaved } from '../../shared/toast/saved-toast';
-import { connectionLabel, unusableConnectionId } from '../connection-choice';
+import { AiConfig } from '../ai/ai-settings.service';
+import { reloadOnConnectionChange } from '../connection-choice';
+import { ConnectionSelectComponent } from '../connection-select/connection-select.component';
 import { ProfileDebugLogComponent } from './profile-debug-log.component';
 import { ProfileCapField, ProfileSettingsService } from './profile-settings.service';
 
@@ -29,6 +29,7 @@ import { ProfileCapField, ProfileSettingsService } from './profile-settings.serv
   selector: 'app-profile-section',
   imports: [
     ButtonComponent,
+    ConnectionSelectComponent,
     DisclosureComponent,
     ErrorBannerComponent,
     FieldComponent,
@@ -44,7 +45,7 @@ import { ProfileCapField, ProfileSettingsService } from './profile-settings.serv
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProfileSectionComponent {
-  readonly connections = input<readonly unknown[]>([]);
+  readonly connections = input<readonly AiConfig[]>([]);
   readonly svc = inject(ProfileSettingsService);
   private readonly language = inject(LanguageService);
 
@@ -59,12 +60,6 @@ export class ProfileSectionComponent {
     const generatedAt = this.svc.state()?.generatedAt;
     return generatedAt ? formatLongDateTime(generatedAt, this.language.lang()) : null;
   });
-
-  readonly unusableChoice = computed(() => {
-    const state = this.svc.state();
-    return state ? unusableConnectionId(state.connectionId, state.candidates) : null;
-  });
-  readonly label = connectionLabel;
 
   readonly canGenerate = computed(() => !this.svc.polling() && !this.svc.starting());
 
@@ -91,15 +86,7 @@ export class ProfileSectionComponent {
   constructor() {
     this.svc.load();
     this.svc.loadRun();
-    let initial = true;
-    effect(() => {
-      this.connections();
-      if (initial) {
-        initial = false;
-        return;
-      }
-      untracked(() => this.svc.refresh());
-    });
+    reloadOnConnectionChange(this.connections, () => this.svc.refresh());
     toastOnSaved(this.svc, 'settings.profile.saved');
   }
 
@@ -116,9 +103,8 @@ export class ProfileSectionComponent {
     this.svc.saveInstant({ intervalHours: raw === '' ? null : +raw });
   }
 
-  onConnection(event: Event): void {
-    const raw = (event.target as HTMLSelectElement).value;
-    this.svc.saveInstant({ connectionId: raw === '' ? null : +raw });
+  onConnection(connectionId: number | null): void {
+    this.svc.saveInstant({ connectionId });
   }
 
   /** Blank input is not zero: a cleared field keeps its last valid value. */

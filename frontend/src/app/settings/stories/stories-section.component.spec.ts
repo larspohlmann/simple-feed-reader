@@ -72,7 +72,7 @@ describe('StoriesSectionComponent', () => {
 
   it('choosing a connection saves its id', () => {
     const fixture = mount();
-    const select = byTestId(fixture, 'story-connection') as HTMLSelectElement;
+    const select = byTestId(fixture, 'story-connection').querySelector('select')!;
 
     select.value = '7';
     select.dispatchEvent(new Event('change'));
@@ -85,7 +85,7 @@ describe('StoriesSectionComponent', () => {
 
   it('disables the connection select while a save is in flight', () => {
     const fixture = mount();
-    const select = byTestId(fixture, 'story-connection') as HTMLSelectElement;
+    const select = byTestId(fixture, 'story-connection').querySelector('select')!;
 
     select.value = '7';
     select.dispatchEvent(new Event('change'));
@@ -102,7 +102,7 @@ describe('StoriesSectionComponent', () => {
 
   it('choosing the active connection saves null', () => {
     const fixture = mount(storiesState({ writingConnectionId: 7 }));
-    const select = byTestId(fixture, 'story-connection') as HTMLSelectElement;
+    const select = byTestId(fixture, 'story-connection').querySelector('select')!;
 
     select.value = '';
     select.dispatchEvent(new Event('change'));
@@ -113,7 +113,9 @@ describe('StoriesSectionComponent', () => {
   it('a stored pick that is no candidate shows as unusable and disabled', () => {
     const fixture = mount(storiesState({ writingConnectionId: 99 }));
 
-    const option = byTestId(fixture, 'story-connection-unusable') as HTMLOptionElement;
+    const option = byTestId(fixture, 'story-connection').querySelector(
+      '[data-testid="connection-unusable"]',
+    ) as HTMLOptionElement;
     expect(option.disabled).toBe(true);
     expect(option.textContent).toContain('A connection that can no longer write text');
   });
@@ -121,12 +123,14 @@ describe('StoriesSectionComponent', () => {
   it('offers no unusable option for a stored pick that is a candidate', () => {
     const fixture = mount(storiesState({ writingConnectionId: 7 }));
 
-    expect(byTestId(fixture, 'story-connection-unusable')).toBeNull();
+    expect(
+      byTestId(fixture, 'story-connection').querySelector('[data-testid="connection-unusable"]'),
+    ).toBeNull();
   });
 
   it('shows a rejected pick as the server explains it', () => {
     const fixture = mount();
-    const select = byTestId(fixture, 'story-connection') as HTMLSelectElement;
+    const select = byTestId(fixture, 'story-connection').querySelector('select')!;
     select.value = '7';
     select.dispatchEvent(new Event('change'));
 

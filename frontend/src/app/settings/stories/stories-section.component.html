@@ -22,25 +22,15 @@
       [title]="'settings.stories.connection' | transloco"
       [description]="'settings.stories.connectionDesc' | transloco"
     >
-      <select
+      <app-connection-select
         data-testid="story-connection"
+        [chosenId]="state.writingConnectionId"
+        [candidates]="state.writingCandidates"
+        [activeLabel]="'settings.stories.connectionActive' | transloco"
+        [unusableLabel]="'settings.stories.connectionUnusable' | transloco"
         [disabled]="svc.busy()"
-        (change)="onConnection($event)"
-      >
-        <option value="" [selected]="state.writingConnectionId === null">
-          {{ 'settings.stories.connectionActive' | transloco }}
-        </option>
-        @if (unusableChoice(); as connectionId) {
-          <option data-testid="story-connection-unusable" [value]="connectionId" disabled selected>
-            {{ 'settings.stories.connectionUnusable' | transloco }}
-          </option>
-        }
-        @for (candidate of state.writingCandidates; track candidate.id) {
-          <option [value]="candidate.id" [selected]="state.writingConnectionId === candidate.id">
-            {{ label(candidate) }}
-          </option>
-        }
-      </select>
+        (chosen)="onConnection($event)"
+      />
     </app-settings-row>
 
     @if (svc.failureMessage(); as message) {

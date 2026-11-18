@@ -1,0 +1,13 @@
+<select [disabled]="disabled()" (change)="onChange($event)">
+  <option value="" [selected]="chosenId() === null">{{ activeLabel() }}</option>
+  @if (unusableId(); as connectionId) {
+    <option data-testid="connection-unusable" [value]="connectionId" disabled selected>
+      {{ unusableLabel() }}
+    </option>
+  }
+  @for (candidate of candidates(); track candidate.id) {
+    <option [value]="candidate.id" [selected]="chosenId() === candidate.id">
+      {{ label(candidate) }}
+    </option>
+  }
+</select>
