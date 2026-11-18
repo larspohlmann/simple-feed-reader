@@ -136,6 +136,23 @@ final class EntryLemmyPostWriterTest extends DbTestCase
         self::assertSame([], $recorder->queriesMatching('entry_lemmy_post'));
     }
 
+    public function testRefreshingAStoredPostUpdatesItsRowInPlace(): void
+    {
+        $this->ingest(self::post()->withDiscussionCounts(DiscussionCounts::of(7, 2)));
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $this->feed]);
+        self::assertInstanceOf(Entry::class, $entry);
+        $writer = self::getContainer()->get(EntryLemmyPostWriter::class);
+        self::assertInstanceOf(EntryLemmyPostWriter::class, $writer);
+
+        $writer->refresh([[$entry, self::post()->withDiscussionCounts(DiscussionCounts::of(9, 2))]]);
+        $this->entityManager->flush();
+        $this->entityManager->clear();
+
+        $rows = $this->rows();
+        self::assertCount(1, $rows);
+        self::assertSame(9, $rows[0]->getScore());
+    }
+
     private static function post(): ParsedEntryModel
     {
         return new ParsedEntryModel('g1', 'https://example.com/1', Headline::fromFeed('Post'), null, null, null, null);

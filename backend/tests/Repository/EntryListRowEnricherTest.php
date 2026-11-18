@@ -521,6 +521,29 @@ final class EntryListRowEnricherTest extends DbTestCase
         self::assertSame('technology@lemmy.world', $lemmy?->community?->identity);
     }
 
+    public function testTheOwnCommunityFeedMatchesWhateverCaseTheFeedUrlHas(): void
+    {
+        $lemmy = $this->enrichedLemmyIn('https://lemmy.world/feeds/c/Technology.xml');
+
+        self::assertNull($lemmy?->community);
+    }
+
+    public function testAVoteOnlyPostInACommunityFeedCarriesNoCommunity(): void
+    {
+        $feed = new Feed('https://lemmy.world/feeds/c/technology.xml');
+        $this->entityManager->persist($feed);
+        $entry = LemmyPostEntries::on($feed, 'https://lemmy.world/post/78', 'vote-only');
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
+        $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::lemmyOf($this->user));
+        $this->voteOn($entry, $account, VoteScore::Up);
+
+        $lemmy = $this->enrich([$this->row($entry)])[0]->enrichment->lemmy;
+
+        self::assertNull($lemmy?->community);
+        self::assertSame(VoteScore::Up, $lemmy?->myVote);
+    }
+
     public function testAPostInAnotherCommunitysFeedCarriesItsCommunity(): void
     {
         $lemmy = $this->enrichedLemmyIn('https://lemmy.world/feeds/c/news.xml');
