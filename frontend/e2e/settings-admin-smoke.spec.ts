@@ -2,6 +2,8 @@ import { test, expect, Page } from '@playwright/test';
 import { signInAsAdmin } from './support/auth';
 
 test('settings shell navigates sections; admin pages live inside it', async ({ page }) => {
+  // About a dozen page loads: 16 to 21 s beside other workers, too close to the 30 s default.
+  test.slow();
   const signedIn = await signInAsAdmin(page);
   test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
 
