@@ -21,6 +21,9 @@ use App\Entity\SocialAccount;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
+use App\Entity\TrendingSnapshot;
+use App\Entity\TrendingStory;
+use App\Entity\TrendingStoryEntry;
 use App\Entity\TrendingStoryFollow;
 use App\Entity\TrendingStoryHide;
 use App\Entity\User;
@@ -156,7 +159,17 @@ final class AccountResetTest extends DbTestCase
         [$user, , $entry, $run, $profileRun] = $this->seedAccount('reset-wipes@example.com');
         $userId = $user->requireId();
         $story = (new TrendingFixtures($this->entityManager))
-            ->story(TrendingWindow::Day, '2031-05-14 10:00:00', $entry);
+            ->storyOf($user, TrendingWindow::Day, '2031-05-14 10:00:00', $entry);
+        $this->entityManager->persist(new TrendingSnapshot(
+            $user,
+            TrendingWindow::Day,
+            new \DateTimeImmutable('2031-05-14 11:00:00'),
+            1,
+            1,
+            1,
+            10,
+            1024,
+        ));
         $this->entityManager->persist(
             new TrendingStoryFollow($user, $story, new \DateTimeImmutable('2031-05-14 12:00:00')),
         );
@@ -175,6 +188,12 @@ final class AccountResetTest extends DbTestCase
         self::assertSame([], $this->entityManager->getRepository(Tag::class)->findBy(['user' => $userId]));
         self::assertSame([], $this->entityManager->getRepository(SavedSearch::class)->findBy(['user' => $userId]));
         self::assertSame([], $this->entityManager->getRepository(EntryState::class)->findBy(['user' => $userId]));
+        self::assertSame([], $this->entityManager->getRepository(TrendingStory::class)->findBy(['user' => $userId]));
+        self::assertSame(
+            [],
+            $this->entityManager->getRepository(TrendingSnapshot::class)->findBy(['user' => $userId]),
+        );
+        self::assertSame([], $this->entityManager->getRepository(TrendingStoryEntry::class)->findAll());
         self::assertSame(
             [],
             $this->entityManager->getRepository(TrendingStoryFollow::class)->findBy(['user' => $userId]),

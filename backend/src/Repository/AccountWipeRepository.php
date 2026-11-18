@@ -19,6 +19,8 @@ use App\Entity\SavedSearchNetworkInclusion;
 use App\Entity\SocialAccount;
 use App\Entity\Subscription;
 use App\Entity\Tag;
+use App\Entity\TrendingSnapshot;
+use App\Entity\TrendingStory;
 use App\Entity\TrendingStoryFollow;
 use App\Entity\TrendingStoryHide;
 use App\Entity\User;
@@ -52,6 +54,9 @@ final readonly class AccountWipeRepository
         $this->deleteByUser(EntryShare::class, $user);
         $this->deleteByUser(TrendingStoryFollow::class, $user);
         $this->deleteByUser(TrendingStoryHide::class, $user);
+        // Members, placements and other readers' follows and hides of these stories die through story_id's CASCADE.
+        $this->deleteByUser(TrendingStory::class, $user);
+        $this->deleteByUser(TrendingSnapshot::class, $user);
         // subscription_tag rows die with their subscription and tag through both join columns' ON DELETE CASCADE.
         $this->deleteByUser(Subscription::class, $user);
         $this->deleteByUser(Tag::class, $user);
