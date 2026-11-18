@@ -8,6 +8,7 @@ use App\Entity\Category;
 use App\Entity\Discussion;
 use App\Entity\DiscussionVote;
 use App\Entity\Entry;
+use App\Entity\EntryLemmyPost;
 use App\Entity\EntryCategory;
 use App\Entity\EntryOrigin;
 use App\Entity\Feed;
@@ -16,6 +17,7 @@ use App\Entity\LinkCardContent;
 use App\Entity\SavedEntryOrigin;
 use App\Entity\SavedSearch;
 use App\Entity\SavedSearchEntry;
+use App\Entity\PostCommunity;
 use App\Entity\ShareEnrichment;
 use App\Entity\SocialAccount;
 use App\Entity\SocialLike;
@@ -223,7 +225,7 @@ final class EntryListRowEnricherTest extends DbTestCase
         $this->enrich([$this->row($first), $this->row($second, [$this->row($duplicate)])]);
 
         $queries = implode("\n", $recorder->queries());
-        self::assertCount(6, $recorder->queries(), $queries);
+        self::assertCount(7, $recorder->queries(), $queries);
         $tables = [
             'entry_category',
             'saved_search_entry',
@@ -231,6 +233,7 @@ final class EntryListRowEnricherTest extends DbTestCase
             'FROM thread_post',
             'share_enrichment',
             'saved_entry_origin',
+            'entry_lemmy_post',
         ];
         foreach ($tables as $table) {
             self::assertCount(1, $recorder->queriesMatching($table), $table . ":\n" . $queries);
@@ -376,7 +379,7 @@ final class EntryListRowEnricherTest extends DbTestCase
         $recorder = $this->recorder();
         $this->enrich($many);
 
-        self::assertSame(7, $singleCount);
+        self::assertSame(8, $singleCount);
         self::assertCount($singleCount, $recorder->queries(), implode("\n", $recorder->queries()));
         self::assertCount(1, $recorder->queriesMatching('social_like'));
     }
@@ -408,7 +411,7 @@ final class EntryListRowEnricherTest extends DbTestCase
         $entry = $this->lemmyPost('up', 11);
         $this->voteOn($entry, $account, VoteScore::Up);
 
-        self::assertSame(VoteScore::Up, $this->enrich([$this->row($entry)])[0]->enrichment->myVote);
+        self::assertSame(VoteScore::Up, $this->enrich([$this->row($entry)])[0]->enrichment->lemmy?->myVote);
     }
 
     public function testALemmyPostTheReaderHasNotVotedOnCarriesNone(): void
@@ -417,14 +420,14 @@ final class EntryListRowEnricherTest extends DbTestCase
 
         $rows = $this->enrich([$this->row($this->lemmyPost('unvoted', 12))]);
 
-        self::assertSame(VoteScore::None, $rows[0]->enrichment->myVote);
+        self::assertSame(VoteScore::None, $rows[0]->enrichment->lemmy?->myVote);
     }
 
     public function testWithoutALemmyAccountALemmyPostCarriesNoVote(): void
     {
         $rows = $this->enrich([$this->row($this->lemmyPost('no-account', 13))]);
 
-        self::assertNull($rows[0]->enrichment->myVote);
+        self::assertNull($rows[0]->enrichment->lemmy?->myVote);
     }
 
     public function testAPlainArticleCarriesNoVoteEvenWithALemmyAccount(): void
@@ -433,7 +436,7 @@ final class EntryListRowEnricherTest extends DbTestCase
 
         $rows = $this->enrich([$this->row($this->entry('article-for-voter'))]);
 
-        self::assertNull($rows[0]->enrichment->myVote);
+        self::assertNull($rows[0]->enrichment->lemmy?->myVote);
     }
 
     public function testAnAccountThatNeedsReconnectingStillCarriesTheVote(): void
@@ -444,7 +447,7 @@ final class EntryListRowEnricherTest extends DbTestCase
         $entry = $this->lemmyPost('reconnect', 14);
         $this->voteOn($entry, $account, VoteScore::Down);
 
-        self::assertSame(VoteScore::Down, $this->enrich([$this->row($entry)])[0]->enrichment->myVote);
+        self::assertSame(VoteScore::Down, $this->enrich([$this->row($entry)])[0]->enrichment->lemmy?->myVote);
     }
 
     public function testAnotherUsersVoteIsNotTheReaders(): void
@@ -455,7 +458,7 @@ final class EntryListRowEnricherTest extends DbTestCase
         $entry = $this->lemmyPost('shared-post', 15);
         $this->voteOn($entry, $otherAccount, VoteScore::Up, $other);
 
-        self::assertSame(VoteScore::None, $this->enrich([$this->row($entry)])[0]->enrichment->myVote);
+        self::assertSame(VoteScore::None, $this->enrich([$this->row($entry)])[0]->enrichment->lemmy?->myVote);
     }
 
     public function testTheVotesOfAPageAreOneQueryHoweverManyLemmyPostsItHolds(): void
@@ -482,7 +485,38 @@ final class EntryListRowEnricherTest extends DbTestCase
         $rows = $this->enrich([$this->row($this->entry('no-lemmy-here'))]);
 
         self::assertSame([], $recorder->queriesMatching('discussion_vote'));
-        self::assertNull($rows[0]->enrichment->myVote);
+        self::assertNull($rows[0]->enrichment->lemmy?->myVote);
+    }
+
+    public function testALemmyPostCarriesItsScoreAndCommunityWithoutAnAccount(): void
+    {
+        $entry = $this->lemmyPost('scored', 31);
+        $post = new EntryLemmyPost($entry);
+        $post->recordScore(7);
+        $post->placeIn(PostCommunity::of('Technology@lemmy.world', 'https://lemmy.world/c/technology'));
+        $this->entityManager->persist($post);
+        $this->entityManager->flush();
+
+        $lemmy = $this->enrich([$this->row($entry)])[0]->enrichment->lemmy;
+
+        self::assertSame(7, $lemmy?->score);
+        self::assertSame('technology@lemmy.world', $lemmy->community?->identity);
+        self::assertNull($lemmy->myVote);
+    }
+
+    public function testAnEntryWithoutALemmyPostRowCarriesNoLemmy(): void
+    {
+        self::assertNull($this->enrich([$this->row($this->entry('plain-one'))])[0]->enrichment->lemmy);
+    }
+
+    public function testTheLemmyPostsOfAPageAreOneQuery(): void
+    {
+        $rows = [$this->row($this->lemmyPost('l-one', 41)), $this->row($this->lemmyPost('l-two', 42))];
+        $recorder = $this->recorder();
+
+        $this->enrich($rows);
+
+        self::assertCount(1, $recorder->queriesMatching('entry_lemmy_post'));
     }
 
     public function testNoRowsStayNoRowsWithoutAQuery(): void

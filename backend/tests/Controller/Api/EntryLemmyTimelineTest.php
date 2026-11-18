@@ -57,7 +57,21 @@ final class EntryLemmyTimelineTest extends ApiTestCase
             self::assertIsArray($entry);
             self::assertNotNull($entry['myVote']);
             self::assertNull($entry['social']);
+            self::assertSame(['name' => 'rss', 'url' => 'https://feddit.example/c/rss'], $entry['community']);
+            self::assertIsInt($entry['score']);
         }
+        $first = $entries[0];
+        self::assertIsArray($first);
+
+        $firstId = $first['id'];
+        self::assertIsInt($firstId);
+
+        $client->request('GET', '/api/entries/' . $firstId);
+
+        $detail = $this->payload($client)['entry'];
+        self::assertIsArray($detail);
+        self::assertSame(['name' => 'rss', 'url' => 'https://feddit.example/c/rss'], $detail['community']);
+        self::assertSame($first['score'], $detail['score']);
     }
 
     private static function homepage(): StubFeedFetcher

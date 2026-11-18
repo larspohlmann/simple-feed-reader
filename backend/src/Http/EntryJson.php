@@ -17,6 +17,7 @@ use App\Service\Foundation\Text\Support\EntryExcerpt;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use App\Service\Foundation\Url\Support\FeedWebsite;
 use App\Service\Foundation\Url\Support\YouTubeUrl;
+use App\Service\Social\Social\Support\ProfileFeedUrl;
 
 /**
  * Three shapes off one row: listRow() drops contentHtml for a plain-text
@@ -50,7 +51,7 @@ use App\Service\Foundation\Url\Support\YouTubeUrl;
  *   quote: QuoteRow|null,
  *   savedSearches: list<array{id: int, slug: string, term: string}>, pending: bool,
  *   social: array{network: 'bluesky'|'mastodon', isLiked: bool, canLike: bool, isOwn: bool}|null,
- *   myVote: int|null,
+ *   myVote: int|null, community: array{name: string, url: string}|null,
  *   duplicates: list<array<string, mixed>>,
  *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
  *   score: int|null, commentCount: int|null,
@@ -109,7 +110,8 @@ final readonly class EntryJson
             'titleDerived' => $entry->isTitleDerived(),
             'savedSearches' => $row->enrichment->savedSearches,
             'social' => self::socialOf($row),
-            'myVote' => $row->enrichment->myVote?->value,
+            'myVote' => $row->enrichment->lemmy?->myVote?->value,
+            'community' => self::communityOf($row),
             'duplicates' => array_map($this->listRow(...), $row->duplicates),
         ];
     }
@@ -162,9 +164,24 @@ final readonly class EntryJson
         return [
             'discussionUrl' => $discussion->url,
             'comments' => $discussion->commentsLoad?->value,
-            'score' => null,
+            'score' => $row->enrichment->lemmy?->score,
             'commentCount' => $row->entry->getCommentCount(),
         ];
+    }
+
+    /** @return array{name: string, url: string}|null null inside the community's own feed, which names it already */
+    private static function communityOf(EntryListRow $row): ?array
+    {
+        $community = $row->enrichment->lemmy?->community;
+        if (null === $community) {
+            return null;
+        }
+        $feedIdentity = ProfileFeedUrl::identityOf(SocialNetwork::Lemmy, $row->entry->getFeed()->getUrl());
+        if (null !== $feedIdentity && 0 === strcasecmp($feedIdentity, $community->identity)) {
+            return null;
+        }
+
+        return ['name' => $community->shortName(), 'url' => $community->url];
     }
 
     /** @return array{network: 'bluesky'|'mastodon', isLiked: bool, canLike: bool, isOwn: bool}|null */
