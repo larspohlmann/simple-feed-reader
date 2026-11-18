@@ -133,7 +133,7 @@ final class TrendingStoryFollowRepository extends ServiceEntityRepository
         return '(SELECT headline_entry.title FROM trending_story_entry headline_member'
             . ' JOIN entry headline_entry ON headline_entry.id = headline_member.entry_id'
             . ' JOIN feed headline_feed ON headline_feed.id = headline_member.feed_id'
-            . ' ' . self::subscribedTo('headline_member')
+            . self::subscribedTo('headline_member')
             . ' WHERE headline_member.story_id = follow.story_id'
             . ' ORDER BY CASE WHEN headline_feed.network IS NULL THEN 0 ELSE 1 END,'
             . ' headline_entry.effective_date DESC, headline_entry.id DESC LIMIT 1)';
@@ -155,7 +155,7 @@ final class TrendingStoryFollowRepository extends ServiceEntityRepository
             . ' FROM trending_story_entry new_member'
             . ' JOIN entry new_entry ON new_entry.id = new_member.entry_id'
             . ' JOIN feed new_feed ON new_feed.id = new_member.feed_id'
-            . ' ' . self::subscribedTo('new_member')
+            . self::subscribedTo('new_member')
             . ' WHERE new_member.story_id = follow.story_id AND new_member.joined_at > follow.last_opened_at)';
     }
 
@@ -163,7 +163,7 @@ final class TrendingStoryFollowRepository extends ServiceEntityRepository
     private static function subscribedTo(string $memberAlias): string
     {
         return \sprintf(
-            'JOIN subscription %1$s_reader'
+            ' JOIN subscription %1$s_reader'
             . ' ON %1$s_reader.feed_id = %1$s.feed_id AND %1$s_reader.user_id = follow.user_id',
             $memberAlias,
         );

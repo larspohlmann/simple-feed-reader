@@ -151,7 +151,6 @@ final readonly class TrendingFixtures
         return $this->storyOf($this->owner(), $window, $lastSeen, ...$members);
     }
 
-    /** Flushes first: a story entry copies its feed's id. Every member joined at $lastSeen and is placed in $window. */
     public function storyOf(User $owner, TrendingWindow $window, string $lastSeen, Entry ...$members): TrendingStory
     {
         return $this->storyWithSites(

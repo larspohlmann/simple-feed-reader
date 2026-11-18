@@ -175,7 +175,7 @@ final class UserRepository extends ServiceEntityRepository implements UserLoader
             ->getQuery()
             ->getArrayResult();
 
-        return array_map(static fn (array $row): int => $row['id'], $rows);
+        return array_column($rows, 'id');
     }
 
     public function countByStatus(UserStatus $status): int

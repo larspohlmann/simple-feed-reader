@@ -40,8 +40,6 @@ final readonly class TrendingStoryHistoryRepository
         . ' FROM trending_story_entry WHERE %s) source)';
 
     /** Two readers' stories may hold the same entry: every read across stories by entry id stays in one reader's. */
-    private const string OF_READER = 'story_id IN (SELECT id FROM trending_story WHERE user_id = %d)';
-
     public function __construct(private EntityManagerInterface $entityManager)
     {
     }
@@ -164,7 +162,7 @@ final readonly class TrendingStoryHistoryRepository
             $this->absorb($storyId, \sprintf(
                 'story_id <> %d AND %s AND entry_id IN (%s)',
                 $storyId,
-                \sprintf(self::OF_READER, $build->userId),
+                self::ofReader($build->userId),
                 self::idList($claimed),
             ));
         }
@@ -373,7 +371,7 @@ final readonly class TrendingStoryHistoryRepository
             /** @var array<int, string> $chunkJoins */
             $chunkJoins = $this->connection()->fetchAllKeyValue(
                 'SELECT entry_id, MIN(joined_at) FROM trending_story_entry WHERE entry_id IN (?) AND '
-                . \sprintf(self::OF_READER, $build->userId) . ' GROUP BY entry_id',
+                . self::ofReader($build->userId) . ' GROUP BY entry_id',
                 [$chunk],
                 [ArrayParameterType::INTEGER],
             );
@@ -419,6 +417,12 @@ final readonly class TrendingStoryHistoryRepository
     private static function idList(array $ids): string
     {
         return implode(', ', $ids);
+    }
+
+    /** Two readers' stories may hold the same entry: every read across stories by entry id stays in one reader's. */
+    private static function ofReader(int $userId): string
+    {
+        return \sprintf('story_id IN (SELECT id FROM trending_story WHERE user_id = %d)', $userId);
     }
 
     private static function stored(\DateTimeImmutable $moment): string

@@ -16,7 +16,6 @@ use App\Service\Curation\Trending\Pass\BuildStopwatch;
 use App\Service\Curation\Trending\StoryBuildPolicy\StoryBuildPolicyInterface;
 use App\Service\Curation\Trending\TrendingGrouping;
 use App\Service\Foundation\Clock\NaiveUtcClock;
-use Doctrine\DBAL\Exception\RetryableException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
@@ -49,10 +48,7 @@ final readonly class TrendingSnapshotBuilder implements SnapshotBuilderInterface
     ) {
     }
 
-    /**
-     * @throws TrendingBuildBusyException while another build holds the lock
-     * @throws RetryableException when the database gives up a lock wait or picks the build as a deadlock's victim
-     */
+    /** @throws TrendingBuildBusyException while another build holds the lock */
     public function build(int $userId, TrendingWindow $window): TrendingBuildReportModel
     {
         $lock = $this->lockFactory->createLock(self::LOCK_NAME . '-' . $userId, self::LOCK_TTL_SECONDS);

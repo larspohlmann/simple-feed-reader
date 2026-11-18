@@ -54,7 +54,7 @@ final readonly class AccountWipeRepository
         $this->deleteByUser(EntryShare::class, $user);
         $this->deleteByUser(TrendingStoryFollow::class, $user);
         $this->deleteByUser(TrendingStoryHide::class, $user);
-        // Members, placements and other readers' follows and hides of these stories die through story_id's CASCADE.
+        // Members, placements, follows and hides of these stories die through story_id's CASCADE.
         $this->deleteByUser(TrendingStory::class, $user);
         $this->deleteByUser(TrendingSnapshot::class, $user);
         // subscription_tag rows die with their subscription and tag through both join columns' ON DELETE CASCADE.

@@ -9,13 +9,14 @@ use App\Repository\TrendingEntryRepository;
 use App\Repository\TrendingSnapshotRepository;
 use App\Repository\UserRepository;
 use App\Service\Curation\Trending\Exception\TrendingBuildBusyException;
-use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Curation\Trending\Model\DueTrendingBuildModel;
 use App\Service\Curation\Trending\Model\TrendingBuildReportModel;
 use App\Service\Curation\Trending\Model\TrendingLastBuildsModel;
 use App\Service\Curation\Trending\Model\TrendingRebuildReportModel;
 use App\Service\Curation\Trending\SnapshotBuilder\SnapshotBuilderInterface;
+use App\Service\Foundation\Clock\NaiveUtcClock;
 use Doctrine\DBAL\Exception\RetryableException;
+use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Psr\Log\LoggerInterface;
 
@@ -112,7 +113,7 @@ final readonly class TrendingRebuild
                 ['user' => $userId, 'window' => $window->value, 'exception' => $exception],
             );
             // The failed transaction closed the entity manager; every later build would fail on it.
-            $this->registry->resetManager();
+            $this->ensureManagerOpen();
 
             return null;
         }
@@ -121,13 +122,20 @@ final readonly class TrendingRebuild
     private function isDue(int $userId, TrendingLastBuildsModel $lastBuilds, TrendingWindow $window): bool
     {
         $builtAt = $lastBuilds->builtAt($window);
-        $dueAt = $lastBuilds->dueAt($window);
-        if ($builtAt === null || $dueAt === null) {
+        if ($builtAt === null) {
             return true;
         }
 
-        return $this->clock->now()->getTimestamp() >= $dueAt->getTimestamp()
+        return $this->clock->now()->getTimestamp() >= $builtAt->getTimestamp() + $window->rebuildIntervalSeconds()
             && $this->entries->hasEntriesCreatedAfter($userId, $builtAt);
+    }
+
+    private function ensureManagerOpen(): void
+    {
+        $manager = $this->registry->getManager();
+        if ($manager instanceof EntityManagerInterface && !$manager->isOpen()) {
+            $this->registry->resetManager();
+        }
     }
 
     private function remainingMilliseconds(\DateTimeImmutable $deadline): int

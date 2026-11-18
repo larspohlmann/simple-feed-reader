@@ -12,8 +12,6 @@ use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * A followed Trending story's entries: its whole history, seen through the feeds the reader follows.
- *
  * @extends ServiceEntityRepository<Entry>
  */
 final class TrendingStoryEntryListRepository extends ServiceEntityRepository

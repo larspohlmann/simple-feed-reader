@@ -66,7 +66,6 @@ final class TrendingStoryRepository extends ServiceEntityRepository
         );
     }
 
-    /** @throws TrendingStoryNotFoundException when the story is gone or another user's */
     public function requireOwnedBy(int $userId, int $storyId): void
     {
         $found = $this->getEntityManager()->getConnection()
@@ -78,11 +77,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
         }
     }
 
-    /**
-     * @param list<int> $storyIds
-     *
-     * @return ShownEntriesModel each story's articles and story-card posts in the window
-     */
+    /** @param list<int> $storyIds */
     public function shownEntriesByStory(TrendingWindow $window, array $storyIds): ShownEntriesModel
     {
         if ($storyIds === []) {
