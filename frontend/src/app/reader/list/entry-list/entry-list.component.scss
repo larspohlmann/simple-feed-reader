@@ -104,6 +104,11 @@ app-progress-rail {
   overflow: hidden;
 }
 
+/* A list row draws no card to tuck under, so its story title stands alone, inset to the row's text. */
+app-story-title {
+  margin: var(--row-pad-comfy-y) var(--row-pad-comfy-x) 0;
+}
+
 .row-slot.leaving {
   pointer-events: none;
   animation: row-leave 0.26s ease forwards;

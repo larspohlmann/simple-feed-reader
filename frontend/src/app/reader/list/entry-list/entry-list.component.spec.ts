@@ -3057,6 +3057,28 @@ describe('EntryListComponent', () => {
         expect(cardIds).toEqual(stories.map((story) => story.leadEntryId));
       });
 
+      it('titles each story above its card (#2329)', () => {
+        const stories = [
+          { ...storyLedBy(entry(1), 41), title: 'First event' },
+          { ...storyLedBy(entry(2), 42), title: 'Second event' },
+        ];
+        const element = mount({ selection: trending(), layout, items: stories })
+          .nativeElement as HTMLElement;
+
+        const titles = Array.from(
+          element.querySelectorAll('.row-slot app-story-title .title'),
+          (title) => title.textContent!.trim(),
+        );
+        expect(titles).toEqual(['First event', 'Second event']);
+      });
+
+      it('titles no row outside Trending (#2329)', () => {
+        const element = mount({ layout }).nativeElement as HTMLElement;
+
+        expect(element.querySelector('[data-entry-id]')).not.toBeNull();
+        expect(element.querySelector('app-story-title')).toBeNull();
+      });
+
       it("still shows each story's source count on its card", () => {
         const stories = [storyLedBy(entry(1), 41), storyLedBy(entry(2), 42)];
         const element = mount({ selection: trending(), layout, items: stories })

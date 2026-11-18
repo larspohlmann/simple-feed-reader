@@ -11,6 +11,7 @@ import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.ser
 import { aQuotedPost, anEntry, aStory, aStoryArticle } from '../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
+import { MAGAZINE_STYLE_KEY } from '../../../core/preferences/magazine-style';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto =>
   anEntry({
@@ -79,6 +80,47 @@ describe('MagazineBlockComponent', () => {
     const element = mount({ kind: 'hero', entry: lead, story });
 
     expect(element.querySelector('app-entry-hero app-story-source-count')).not.toBeNull();
+  });
+
+  describe("a story's title (#2329)", () => {
+    const storyBlock = (kind: EntryKind): MagazineBlock => {
+      const lead = entry();
+      const story = aStory({ title: 'Harbour barrier approved', articles: [aStoryArticle(lead)] });
+      return kind === 'split'
+        ? { kind, entry: lead, story, imageSide: 'left' }
+        : ({ kind, entry: lead, story } as MagazineBlock);
+    };
+
+    it.each(ENTRY_KINDS.filter((kind) => kind !== 'compact'))(
+      'sits tucked under a %s story card',
+      (kind) => {
+        const title = mount(storyBlock(kind)).querySelector('app-story-title');
+
+        expect(title?.querySelector('.title')?.textContent?.trim()).toBe(
+          'Harbour barrier approved',
+        );
+        expect(title?.classList).toContain('tucked');
+      },
+    );
+
+    it('stands alone above a compact block, which draws no card to tuck under', () => {
+      const title = mount(storyBlock('compact')).querySelector('app-story-title');
+
+      expect(title).not.toBeNull();
+      expect(title?.classList).not.toContain('tucked');
+    });
+
+    it('stands alone in the airy style, which draws no card at all', () => {
+      localStorage.setItem(MAGAZINE_STYLE_KEY, 'airy');
+      const element = mount(storyBlock('hero'));
+      localStorage.removeItem(MAGAZINE_STYLE_KEY);
+
+      expect(element.querySelector('app-story-title')?.classList).not.toContain('tucked');
+    });
+
+    it('is not rendered for a plain entry block', () => {
+      expect(mount(blockOf('hero', entry())).querySelector('app-story-title')).toBeNull();
+    });
   });
 
   it('renders a quoting block as app-entry-quoting', () => {

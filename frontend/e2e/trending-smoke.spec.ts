@@ -27,6 +27,7 @@ const story = (
   others: StoryArticleDto[],
 ): TrendingStoryDto => ({
   id,
+  title: `Fixture event ${id}`,
   followed: false,
   outletCount,
   viewed,

@@ -14,6 +14,8 @@ import { EntryMediaComponent } from './blocks/entry-media/entry-media.component'
 import { EntryQuotingComponent } from './blocks/entry-quoting/entry-quoting.component';
 import { STORY_CONTEXT } from '../../trending/story-context';
 import { TrendingStoryDto } from '../../trending/trending.models';
+import { StoryTitleComponent } from '../../trending/story-title/story-title.component';
+import { MagazineStyleService } from '../../../core/preferences/magazine-style.service';
 import { SourceGroupComponent } from './source-group.component';
 
 // One shared instance: a fresh `[]` per check would change every tag-less block's
@@ -36,12 +38,15 @@ export const NO_TAGS: SubscriptionTagDto[] = [];
     EntryMediaComponent,
     EntryQuotingComponent,
     SourceGroupComponent,
+    StoryTitleComponent,
   ],
   templateUrl: './magazine-block.component.html',
   styleUrl: './magazine-block.component.scss',
   providers: [{ provide: STORY_CONTEXT, useFactory: () => inject(MagazineBlockComponent).story }],
 })
 export class MagazineBlockComponent {
+  private readonly magazineStyle = inject(MagazineStyleService);
+
   readonly block = input.required<MagazineBlock>();
   /** Feed tags keyed by subscription id, used to render each entry's tag pills. */
   readonly feedTags = input<Map<number, SubscriptionTagDto[]>>(new Map());
@@ -50,6 +55,11 @@ export class MagazineBlockComponent {
     const block = this.block();
     return block.kind === 'group' ? null : block.story;
   });
+
+  /** Only a framed card can cover the title's foot: airy draws no frame, and compact is never framed. */
+  protected readonly tucksTitle = computed(
+    () => this.magazineStyle.style() === 'boxed' && this.block().kind !== 'compact',
+  );
 
   protected tagsFor(subscriptionId: number): SubscriptionTagDto[] {
     return this.feedTags().get(subscriptionId) ?? NO_TAGS;
