@@ -10,7 +10,7 @@
   - per-task connections: each task resolves its own (`StoryAiTaskInterface::connectionFor`). Titles use the story **writing** connection (chat models), independent of any feature switch.
   - a per-user `StoryAiPass` and one recorded `StoryAiCalls::complete()`, through `RecommendationProviderCall` (`RateLimitedCompletion` plus 429 handling)
   - a generic `story_ai_run` with a `task` column, so cost receipts and usage land where the other runs' land
-  - one sweep, `RunDueStoryAiTasks`, which the worker runs every minute and the maintenance tick runs right after the Trending rebuild
+  - one sweep, `RunDueStoryAiTasks`, which the worker runs every 5 minutes (the rebuild cadence) and the maintenance tick runs right after the Trending rebuild
   Trending implements `StoryAiTaskInterface` for titles. A later task (for example article finding) plugs in the same way; see *Extending*.
 - The API's `title` is `llm_title ?? fallback_title ?? lead row title`, so it is never null. The followed-story sidebar and page heading read the same story title through `TrendingStoryFollowRepository::followedBy()`.
 
@@ -41,8 +41,8 @@
 
 1. **Day build flip-flop.** The day build sees fewer members than the week build. If both re-chose the fallback, the title would flip twice a day. The expected behaviour: only the week build re-chooses; the day build titles only stories that have none yet. Pinned in Task 4 (`testTheDayBuildKeepsAFallbackTheWeekChose`).
 2. **A story built before this deploy** has a null `fallback_title` until its next build. Cards must still show a title, and a followed story outside the week must keep its newest-member headline. Pinned in Task 1 (`testAStoryWithoutStoredTitlesShowsItsLeadHeadline`) and Task 5 (`testAStoryWithoutStoredTitlesKeepsTheNewestMemberHeadline`).
-3. **A failing or rate-limited provider** must not be called every minute. Expected: a failed or unusable attempt waits an hour. A 429 stops that user's sweep without stamping, so the deferral is not billed and the story stays due. Pinned in Task 9 (`testAnUnusableReplyIsNotRetriedWithinTheHour`, `testARateLimitStopsTheUsersSweepWithoutStamping`).
-4. **An over-greedy suffix strip** could eat a real headline tail ("Merz – der Kanzler") or leave nothing. Expected: strip only when every word of the tail is in the feed title and one of them has at least three letters, and never strip down to empty. Pinned in Task 2.
+3. **A failing or rate-limited provider** must not be called on every sweep. Expected: a failed or unusable attempt waits an hour. A 429 stops that user's sweep without stamping, so the deferral is not billed and the story stays due. Pinned in Task 9 (`testAnUnusableReplyIsNotRetriedWithinTheHour`, `testARateLimitStopsTheUsersSweepWithoutStamping`).
+4. **An over-greedy suffix strip** could eat a real headline tail ("Merz – der Kanzler") or leave nothing. Expected: strip only when every word of the tail is in the feed title and one of them passes `HeadlineStems::isKept` (three or more letters, or a number of two or more digits), and never strip down to empty. Pinned in Task 2.
 5. **A deleted or switched-off writing connection.** Deleting the chosen connection falls back to the active one. A scoring-model connection writes nothing, and the fallback stays. Pinned in Task 6 (`testDeletingTheWritingConnectionFallsBackToTheActiveOne`) and Task 9 (`testAScoringConnectionWritesNoTitle`).
 
 ---
@@ -95,7 +95,7 @@
   - **Entity:** map the six columns on `TrendingStory` as nullable properties initialised to `null`, with no accessors. The DBAL repositories are their only reader and writer, like `firstSeen`.
   - **`StoryCardSource`:** takes a fifth lookup, `array<int, StoryTitleModel> $titlesByStory`, and passes `$story->titled($this->titlesByStory[$story->storyId] ?? null)` to `TrendingStoryCardModel::fromRows`. Update its "four lookups" docblock to five.
   - **`TrendingStories::sourceFor`** reads `$this->stories->titlesOf($storyIds)`.
-  - **`TrendingJson::story`:** `'title' => $card->story->title->text ?? $articles->lead->row->entry->getTitle()`. Use the accessor `EntryJson` uses for the row's title.
+  - **`TrendingJson::story`:** add `title: string` to its `@return` array shape, and `'title' => $card->story->title->text ?? $articles->lead->row->entry->getTitle()`. Use the accessor `EntryJson` uses for the row's title.
 
 - [ ] **Step 4: Run the tests and see them pass**
   Run the same filter. Expected: PASS. Then run `php bin/console doctrine:migrations:migrate --no-interaction` and `doctrine:schema:validate` against SQLite and against Docker MySQL (`docker compose exec php …`). Expected: "The database schema is in sync".
@@ -108,14 +108,14 @@
 ### Task 2: Headline cleaning
 
 **Files:**
-- Create: `backend/src/Service/Curation/Trending/Support/HeadlineMarkers.php`
+- Create: `backend/src/Service/Curation/Trending/HeadlineMarkers.php`
 - Create: `backend/src/Service/Curation/Trending/Model/CleanedHeadlineModel.php`
-- Test: `backend/tests/Service/Curation/Trending/Support/HeadlineMarkersTest.php`
+- Test: `backend/tests/Service/Curation/Trending/HeadlineMarkersTest.php`
 
 **Interfaces:**
 - Produces:
   - `final readonly class CleanedHeadlineModel { __construct(public string $text, public bool $markerFree) }`
-  - `HeadlineMarkers::clean(string $headline, ?string $feedTitle, ?FeedLanguage $language): CleanedHeadlineModel` is static-only. `markerFree` is false when a ticker or label prefix was stripped. An outlet suffix is not a marker: it is only stripped.
+  - `final readonly class HeadlineMarkers` is an injected root service: its label list is curated, so it is a tuned verdict (§10), not a `Support/` helper. It has `clean(string $headline, ?string $feedTitle, ?FeedLanguage $language): CleanedHeadlineModel`. `markerFree` is false when a ticker or label prefix was stripped. An outlet suffix is not a marker: it is only stripped.
 
 Prefix labels are matched case-insensitively at the start, followed by optional whitespace (a normal or no-break space), then `:`, then whitespace. A language of `null` applies every list.
 
@@ -152,8 +152,8 @@ Outlet suffix rule:
   - `['Exklusiv: Hafenstreik', null, null, 'Hafenstreik', false]` (a null language applies every list)
   - `['Update – Spiegel', 'Spiegel', de, 'Update', true]` (the rest has 3 or more characters, so the strip is allowed, and "Update" carries no colon, so it is no label)
 
-- [ ] **Step 2: Run them and see them fail.** Run `php bin/phpunit tests/Service/Curation/Trending/Support/HeadlineMarkersTest.php`. Expected: FAIL (the class is not found).
-- [ ] **Step 3: Implement `HeadlineMarkers::clean`** with the lists and the rule above.
+- [ ] **Step 2: Run them and see them fail.** Run `php bin/phpunit tests/Service/Curation/Trending/HeadlineMarkersTest.php`. Expected: FAIL (the class is not found).
+- [ ] **Step 3: Implement `HeadlineMarkers::clean`** with the lists and the rule above. The test builds it with `new HeadlineMarkers()`.
 - [ ] **Step 4: Run them and see them pass.** Same command. Expected: PASS.
 - [ ] **Step 5: Commit** `feat(#2329): clean outlet names and ticker labels off headlines`
 
@@ -172,19 +172,19 @@ Outlet suffix rule:
 
 **Interfaces:**
 - Produces:
-  - `StoryMemberModel` gains `public ?FeedLanguage $language = null, public bool $fromAnOutlet = false`. They are appended, so existing positional callers stay valid. `TrendingRun::memberOf()` fills them: `fromAnOutlet` is `$entry->links->articleUrl !== null`, and `language` is `$entry->language`.
+  - `StoryMemberModel` gains `public ?FeedLanguage $language = null, public bool $fromAnOutlet = false, public ?string $urlHash = null`. They are appended, so existing positional callers stay valid. `TrendingRun::memberOf()` fills them: `fromAnOutlet` is `$entry->links->articleUrl !== null`, `language` is `$entry->language`, and `urlHash` is `$entry->links->urlHash` (it counts a post once across timelines, as the card does).
   - `StoredStoryModel` gains `public ?int $fallbackEntryId = null, public bool $titled = false`. `storedInWindow` selects `story.fallback_entry_id` and `story.fallback_title IS NOT NULL`.
   - `final readonly class MemberHeadlineModel { __construct(public int $entryId, public string $title, public ?string $feedTitle) }`
-  - `TrendingEntryRepository::headlinesOf(list<int> $entryIds): array<int, MemberHeadlineModel>` reads `entry.title` and `feed.title`, chunked like `earliestJoinsOf`.
+  - `TrendingEntryRepository::headlinesOf(list<int> $entryIds): array<int, MemberHeadlineModel>` reads `entry.title` and `feed.title`, chunked by `INSERT_ROWS`-sized `IN (?)` lists as `TrendingStoryHistoryRepository::earliestJoinsOf` does.
   - `TrendingEntryRepository::linkTitlesOf(list<int> $sharedLinkIds): array<int, string>` reads `shared_link.title`.
 
 - [ ] **Step 1: Write the failing tests**
-  - `TrendingRunTest::testAMemberKnowsItsLanguageAndWhetherAnOutletPublishedIt`: an article entry with language `de` and a Mastodon post. Assert `memberOf($article)->language === FeedLanguage::German`, `->fromAnOutlet === true`, and `memberOf($post)->fromAnOutlet === false`.
+  - `TrendingRunTest::testAMemberKnowsItsLanguageAndWhetherAnOutletPublishedIt`: an article entry with language `de` and a Mastodon post. Assert `memberOf($article)->language === FeedLanguage::German`, `->fromAnOutlet === true`, `memberOf($post)->fromAnOutlet === false`, and `memberOf($post)->urlHash` equals the post's url hash.
   - `TrendingStoryHistoryRepositoryTest::testStoredStoriesCarryTheirFallbackMember`: the story has `fallback_entry_id = $entry->requireId()` and a title. Assert the `StoredStoryModel` has `fallbackEntryId === $entry->requireId()` and `titled === true`. An untitled story gives `null` and `false`.
   - `TrendingEntryRepositoryTest::testHeadlinesOfCarryTheirFeedsTitle`: feed title `'DER SPIEGEL'`, entry title `'Hafenstreik – Spiegel'`. Assert `headlinesOf([$id])[$id]` equals `new MemberHeadlineModel($id, 'Hafenstreik – Spiegel', 'DER SPIEGEL')`.
   - `TrendingEntryRepositoryTest::testLinkTitlesOfReadTheSharedLinks`: assert `linkTitlesOf([$linkId]) === [$linkId => 'Port strike in Hamburg']`.
 - [ ] **Step 2: Run them and see them fail.** Run `php bin/phpunit --filter 'testAMemberKnowsItsLanguage|testStoredStoriesCarryTheirFallbackMember|testHeadlinesOfCarryTheirFeedsTitle|testLinkTitlesOfReadTheSharedLinks'`. Expected: FAIL.
-- [ ] **Step 3: Implement.** `TrendingRun` keeps two more per-entry arrays (`array<int, ?FeedLanguage>` and `array<int, true>` for outlets), beside `feedOfEntry`.
+- [ ] **Step 3: Implement.** `TrendingRun` keeps three more per-entry arrays (`array<int, ?FeedLanguage>`, `array<int, true>` for outlets and `array<int, string>` for url hashes), beside `feedOfEntry`.
 - [ ] **Step 4: Run them and see them pass.** Same filter. Expected: PASS.
 - [ ] **Step 5: Commit** `feat(#2329): carry language, outlet and fallback member into the build`
 
@@ -194,31 +194,38 @@ Outlet suffix rule:
 
 **Files:**
 - Create: `backend/src/Service/Curation/Trending/Support/CentroidScores.php`
-- Create: `backend/src/Service/Curation/Trending/Support/FallbackChoice.php`
+- Create: `backend/src/Service/Curation/Trending/Support/MostShared.php`
+- Create: `backend/src/Service/Curation/Trending/FallbackChoice.php`
 - Create: `backend/src/Service/Curation/Trending/Model/TitleCandidateModel.php`
 - Create: `backend/src/Service/Curation/Trending/Model/FallbackTitleModel.php`
 - Create: `backend/src/Service/Curation/Trending/FallbackTitles.php`
-- Modify: `backend/src/Service/Curation/Trending/Model/StoryAssignmentModel.php`, `Model/StoryMatchModel.php`
+- Modify: `backend/src/Service/Curation/Trending/Model/StoryAssignmentModel.php`, `Model/StoryMatchModel.php`, `Model/TrendingStoryCardModel.php` (`mostShared` uses `MostShared::pick`)
 - Modify: `backend/src/Service/Curation/Trending/StoryBuildPolicy/StoryBuildPolicyInterface.php`, `DayStoryBuildPolicy.php`, `WeekStoryBuildPolicy.php`
 - Modify: `backend/src/Service/Curation/Trending/SnapshotBuilder/TrendingSnapshotBuilder.php`
 - Modify: `backend/src/Repository/TrendingStoryHistoryRepository.php` (`insertStory`, `updateStory`)
-- Test: `backend/tests/Service/Curation/Trending/Support/CentroidScoresTest.php`, `backend/tests/Service/Curation/Trending/Support/FallbackChoiceTest.php`, `backend/tests/Service/Curation/Trending/SnapshotBuilder/TrendingSnapshotBuilderTest.php`, `backend/tests/Support/TrendingWiring.php`
+- Test: `backend/tests/Service/Curation/Trending/Support/CentroidScoresTest.php`, `Support/MostSharedTest.php`, `FallbackChoiceTest.php`, `StoryBuildPolicy/*Test.php`, `SnapshotBuilder/TrendingSnapshotBuilderTest.php`, `backend/tests/Support/TrendingWiring.php`
 
 **Interfaces:**
 - Consumes:
-  - `StoryMemberModel::$language` and `$fromAnOutlet`
+  - `StoryMemberModel::$language`, `$fromAnOutlet` and `$urlHash`
   - `StoredStoryModel::$fallbackEntryId` and `$titled`
   - `TrendingEntryRepository::headlinesOf()` and `linkTitlesOf()`
-  - `HeadlineMarkers::clean()`
+  - `HeadlineMarkers::clean()` (injected)
 - Produces:
   - `final readonly class TitleCandidateModel { __construct(public int $entryId, public CleanedHeadlineModel $headline, public float $score, public int $effectiveTime) }`
   - `final readonly class FallbackTitleModel { __construct(public ?int $entryId, public string $title) }`. `entryId` is null for a link-card title.
-  - `CentroidScores::of(HeadlineWindow $headlines, list<int> $memberIds): array<int, float>`
-  - `FallbackChoice::of(non-empty-list<TitleCandidateModel> $candidates, ?int $currentEntryId): TitleCandidateModel`
-  - `FallbackTitles::titled(TrendingRun $run, StoryMatchModel $match, list<StoredStoryModel> $stored, StoryBuildPolicyInterface $policy): StoryMatchModel`
+  - `CentroidScores::of(HeadlineWindow $headlines, list<int> $memberIds): array<int, float>` (Support: it only computes)
+  - `MostShared::pick(non-empty-list<T> $newestFirst, \Closure(T): int $shareCount): T` (Support) is today's rule from `TrendingStoryCardModel::mostShared`, defined once: the most shares, with a tie going to the earliest in newest-first order. The card model and `FallbackTitles` both call it.
+  - `final readonly class FallbackChoice` is a root service: the 80 % stickiness and the marker-free precedence are a tuned verdict (§10). It has `choose(non-empty-list<TitleCandidateModel> $candidates, ?int $currentEntryId): TitleCandidateModel`.
+  - `FallbackTitles`, injected into the two policies, has two methods:
+    - `titledWhereMissing(TrendingRun $run, StoryMatchModel $match, list<StoredStoryModel> $stored): StoryMatchModel`, for the day build
+    - `titledAll(TrendingRun $run, StoryMatchModel $match, list<StoredStoryModel> $stored): StoryMatchModel`, for the week build
+  - `StoryBuildPolicyInterface::match(TrendingRun $run, list<TrendingStoryModel> $groups, list<StoredStoryModel> $stored): StoryMatchModel`. It now takes the run:
+    - `DayStoryBuildPolicy` returns `$this->fallbackTitles->titledWhereMissing($run, $this->matching->attach($groups, $stored), $stored)`.
+    - `WeekStoryBuildPolicy` uses `reshape` and then `titledAll`.
+    - The policy is the switch, so no boolean method is needed, and the builder keeps its 9 constructor parameters (PHPMD `ExcessiveParameterList`).
   - `StoryAssignmentModel` gains `public ?FallbackTitleModel $fallbackTitle = null` and `#[\NoDiscard] titled(FallbackTitleModel $title): self`.
   - `StoryMatchModel` gains `#[\NoDiscard] withAssignments(list<StoryAssignmentModel> $assignments): self`.
-  - `StoryBuildPolicyInterface::rechoosesStoredTitles(): bool`. The week build returns true, the day build false.
 
 Score: the sum of the weight a member shares with every other member, which reuses the grouping's measure. `sharedWeightsWithEarlier` also counts body terms; the spec's "weighted terms" is read as that measure.
 
@@ -245,31 +252,48 @@ return $best;
 ```
 
 `FallbackTitles`, per assignment:
-- If the policy does not re-choose and the assignment's stored story is titled, leave the assignment untouched.
+- `titledWhereMissing` leaves an assignment untouched when its stored story is titled.
 - Otherwise the candidates are the outlet members in the story's majority language. Count non-null languages only. A tie goes to the language of the newest outlet member. When no outlet member has a language, every outlet member is a candidate.
-- The title is the candidate's `HeadlineMarkers::clean(title, feedTitle, language)->text`.
-- With no outlet member, the title is the link title of the `sharedLinkId` held by the most members whose `articleSite` is non-null (a tie goes to the newest holder), uncleaned and with `entryId` null. With no such card either, the candidates are every member, scored the same way.
+- The title is the candidate's `$this->markers->clean(title, feedTitle, language)->text`.
+- **With no outlet member** — the representative card, today's rule:
+  - group the members whose `articleSite` and `sharedLinkId` are non-null by `sharedLinkId`, and order the cards newest-first by their newest holder
+  - `MostShared::pick` chooses among them, counting distinct `urlHash` (once per post)
+  - the title is that card's link title, uncleaned, with `entryId` null
+  - with no such card either, the candidates are every member, scored the same way
 - Read every needed title in one `headlinesOf` and one `linkTitlesOf` call per build, never per story.
 
-`TrendingSnapshotBuilder::buildLocked` reads `$stored` into a variable, matches, then calls `$this->fallbackTitles->titled($run, $match, $stored, $policy)` before `unset($run)`. The `unset` moves below the match, and the peak memory then holds both. The history repository writes `fallback_title` (cut to 1024 with `mb_substr`) and `fallback_entry_id` on insert, and on update when `$assignment->fallbackTitle !== null`. `insertStory` and `updateStory` take the assignment instead of its group.
+`TrendingSnapshotBuilder::buildLocked` reads `$stored` into a variable and calls `$policy->match($run, $groups, $stored)` before `unset($run)`. The `unset` moves below the match, and the peak memory then holds both (accepted; measured in Step 4). The history repository writes `fallback_title` (cut to 1024 with `mb_substr`) and `fallback_entry_id` on insert, and on update when `$assignment->fallbackTitle !== null`. `insertStory` and `updateStory` take the assignment instead of its group.
 
 - [ ] **Step 1: Write the failing tests**
   - `CentroidScoresTest::testTheMemberSharingMostWithTheOthersScoresHighest`: three entries, A "Hafenstreik Hamburg Container", B "Hafenstreik Hamburg", C "Hafenstreik Container". Assert `$scores[A] > $scores[B]` and `$scores[A] > $scores[C]`, and that an id outside `$memberIds` never appears as a key.
+  - `MostSharedTest::testTheMostSharedWins` and `testATieGoesToTheNewest`: share counts `[2, 3, 3]` in newest-first order. Assert index 1 wins.
   - `FallbackChoiceTest::testTheBestCandidateWinsWithoutACurrentOne`: scores 10.0 and 7.0. Assert the 10.0 one wins.
   - `FallbackChoiceTest::testTheCurrentStaysWithinEightyPercent`: current 8.0, best 10.0. Assert the current wins.
   - `FallbackChoiceTest::testTheCurrentGivesWayBelowEightyPercent`: current 7.9, best 10.0. Assert the best wins.
   - `FallbackChoiceTest::testAMarkerFreeCandidateBeatsAHigherMarkedOne`: marked 10.0, marker-free 3.0. Assert the marker-free one wins.
   - `FallbackChoiceTest::testAMarkedCurrentGivesWayToAMarkerFreeOne`: current marked 10.0, marker-free 9.0. Assert the marker-free one wins.
   - `FallbackChoiceTest::testATieGoesToTheNewer`: equal scores. Assert the candidate with the larger `effectiveTime` wins.
-  - `TrendingSnapshotBuilderTest::testAStoryIsTitledByItsRepresentativeCleanedHeadline`: three outlet articles with "Hafenstreik legt Hamburg lahm – Spiegel" (feed "DER SPIEGEL"), "Hafenstreik in Hamburg" and "Streik", built for the week. Assert the stored `fallback_title === 'Hafenstreik legt Hamburg lahm'`.
+  - `TrendingSnapshotBuilderTest::testAStoryIsTitledByItsRepresentativeCleanedHeadline` — a week build over three German outlet articles in three feeds:
+    - A at 08:00 "Hafenstreik legt Hamburg lahm – Spiegel" (feed "DER SPIEGEL")
+    - B at 09:00 "Hafenstreik in Hamburg"
+    - C at 10:00 "Streik legt Hamburg lahm"
+    - A shares hafenstreik and hamburg with B, and legt, hamburg and lahm with C, so it wins on score. It is also the oldest, so a time tie-break would pick C. The test asserts that precondition through `CentroidScores::of()` on the test's own run.
+    - Assert the stored `fallback_title === 'Hafenstreik legt Hamburg lahm'`.
   - `TrendingSnapshotBuilderTest::testTheMajorityLanguageDecidesTheCandidates`: two German and one English article. Assert the fallback is one of the German headlines.
-  - `TrendingSnapshotBuilderTest::testAStoryOfPostsIsTitledByItsCard`: only Mastodon posts sharing one card titled "Port strike in Hamburg". Assert `fallback_title === 'Port strike in Hamburg'` and `fallback_entry_id` is null.
-  - `TrendingSnapshotBuilderTest::testTheWeekBuildKeepsASteadyFallback`: build, add one member whose headline scores slightly higher, rebuild. Assert `fallback_entry_id` is unchanged.
+  - `TrendingSnapshotBuilderTest::testAStoryOfPostsIsTitledByItsCard`: Mastodon posts only. Card X is shared by 2 posts, and card Y by 3 copies of one post (one url hash) and is newer. Assert `fallback_title` is X's title, and `fallback_entry_id` is null.
+  - `TrendingSnapshotBuilderTest::testTheWeekBuildKeepsASteadyFallback`:
+    - after the first test's build, add D at 11:00, a marker-free German outlet headline in a fourth feed
+    - first assert through `CentroidScores` that D's score is greater than A's and at most 1.25 × A's
+    - rebuild, then assert `fallback_entry_id` is still A
+  - `TrendingSnapshotBuilderTest::testTheWeekBuildReplacesAFallbackThatFellBehind`: the same, but with D scoring more than 1.25 × A's (asserted the same way). Assert D replaces A.
   - `TrendingSnapshotBuilderTest::testTheDayBuildKeepsAFallbackTheWeekChose`: a week build titles the story, then a day build over a member subset. Assert `fallback_entry_id` is unchanged.
   - `TrendingSnapshotBuilderTest::testTheDayBuildTitlesANewStory`: a day build only. Assert `fallback_title` is non-null.
-- [ ] **Step 2: Run them and see them fail.** Run `php bin/phpunit tests/Service/Curation/Trending/Support tests/Service/Curation/Trending/SnapshotBuilder`. Expected: FAIL.
-- [ ] **Step 3: Implement** as specified. Wire `FallbackTitles` into `TrendingWiring` so every builder test constructs it.
-- [ ] **Step 4: Run them and see them pass.** Run the same, then the whole Trending suite: `php bin/phpunit tests/Service/Curation/Trending tests/Repository`. Expected: PASS. Then run `composer md`, `composer tramp` and `composer stan`. Expected: clean. If PHPMD flags `TrendingSnapshotBuilder` coupling, fix the design (for example, let `FallbackTitles` take the policy's verdict inside `StoryMatchModel`); never tune the threshold.
+- [ ] **Step 2: Run them and see them fail.** Run `php bin/phpunit tests/Service/Curation/Trending/Support tests/Service/Curation/Trending/FallbackChoiceTest.php tests/Service/Curation/Trending/SnapshotBuilder`. Expected: FAIL.
+- [ ] **Step 3: Implement** as specified. Wire `FallbackTitles` (with `HeadlineMarkers` and `FallbackChoice`) into `TrendingWiring::policies`, so every builder test constructs it.
+- [ ] **Step 4: Run them and see them pass.**
+  - Run the same, then the whole Trending suite: `php bin/phpunit tests/Service/Curation/Trending tests/Repository`. Expected: PASS.
+  - Run `composer md`, `composer tramp` and `composer stan`. Expected: clean.
+  - **Measure:** on the dev stack, rebuild user 2's week before and after this task (`TrendingBuildReportModel` `durationMs` and `peakMemoryBytes`, from the worker log or the rebuild command). Record both pairs in the commit message. If either rises clearly, have the grouping hand over the pair weights it already computed instead of `CentroidScores` recomputing them.
 - [ ] **Step 5: Commit** `feat(#2329): choose a steady representative headline for every story`
 
 ---
@@ -289,7 +313,7 @@ return $best;
   - `TrendingStoryFollowRepositoryTest::testTheLlmTitleHeadsAFollowedStory`: assert the LLM title wins over the fallback.
   - `TrendingStoryFollowRepositoryTest::testAStoryWithoutStoredTitlesKeepsTheNewestMemberHeadline`: assert `'Neue Gespräche'`.
 - [ ] **Step 2: Run them and see them fail.** Run `php bin/phpunit tests/Repository/TrendingStoryFollowRepositoryTest.php`. Expected: the first two fail.
-- [ ] **Step 3: Implement** the `COALESCE`, and update the `headline()` docblock.
+- [ ] **Step 3: Implement** the `COALESCE`, and update the `headline()` docblock. Update the `FollowedStoryRowModel` docblock to say `$headline` is null only for an untitled story with no member in their feeds (accepted: the sidebar fallback becomes rare).
 - [ ] **Step 4: Run them and see them pass.** Same command. Expected: PASS.
 - [ ] **Step 5: Commit** `feat(#2329): head followed stories with their story title`
 
@@ -302,9 +326,9 @@ return $best;
 - Create: `backend/migrations/Version20261118140000.php`
 - Create in `backend/src/Service/Curation/StoryAi/`: `StoryWritingConnections.php`, `StorySettingsEditor.php`, `StorySettingsProvider.php`, `Model/StorySettingsModel.php`, `Model/StorySettingsChangeModel.php`, `Exception/WritingConnectionRejectedException.php`
 - Create: `backend/src/Dto/Trending/SaveStorySettingsRequest.php`, `backend/src/Http/StorySettingsJson.php`, `backend/src/Controller/Api/StorySettingsController.php`, `backend/src/Http/Problem/ExceptionProblems/StoryAiProblems.php`
-- Modify: `backend/src/Service/Curation/Ai/AiProviderConfigurator.php` (`releasePointersTo`)
+- Modify: `backend/src/Service/Curation/Ai/AiProviderConfigurator.php` (`releasePointersTo`), `backend/src/Repository/AccountWipeRepository.php` (`deleteRecommendationData`)
 - Modify: `docs/architecture.md` §9 (add `StoryAi` to the `Curation` row)
-- Test: `backend/tests/Service/Curation/StoryAi/StoryWritingConnectionsTest.php`, `backend/tests/Controller/Api/StorySettingsControllerTest.php`, `backend/tests/Service/Curation/Ai/AiProviderConfiguratorTest.php`
+- Test: `backend/tests/Service/Curation/StoryAi/StoryWritingConnectionsTest.php`, `backend/tests/Controller/Api/StorySettingsControllerTest.php`, `backend/tests/Service/Curation/Ai/AiProviderConfiguratorTest.php`, `backend/tests/Service/Identity/Account/AccountResetTest.php`
 
 **Why a module:** the story AI plumbing serves Trending's title task and any later story task.
 - It depends on `Ai`, `Recommendation` and `Recommendation\Llm`. `Trending` depends on it; it never names `Trending`.
@@ -328,6 +352,10 @@ return $best;
     - `usableFor(User $user): ?AiProviderSettings` returns the chosen connection, else the active one, when it can write text; otherwise null.
     - `canWriteText(AiProviderSettings $connection): bool` is `AiReadiness::of($connection) && $connection->getModelKind() === RecommendationEngineKind::Llm`.
     - `candidatesFor(User $user): list<AiProviderSettings>`
+  - `final readonly class StorySettingsModel { __construct(public bool $titlesEnabled, public ?AiProviderSettings $storedWritingConnection, public ?AiProviderSettings $writingConnection, public array $writingCandidates) }`. `$writingCandidates` is a `list<AiProviderSettings>`, and `$writingConnection` is the resolved one.
+  - `final readonly class StorySettingsChangeModel { __construct(public ?int $writingConnectionId, public bool $titlesEnabled) }`
+  - `StorySettingsProvider::forUser(User $user): StorySettingsModel`, and `StorySettingsProvider::titlesEnabledFor(User $user): bool` (no row means `DEFAULT_TITLES_ENABLED`)
+  - `StorySettingsEditor::save(User $user, StorySettingsChangeModel $change): void`. It throws `ConfigurationNotFoundException` or `WritingConnectionRejectedException`, and creates the row on its first save.
   - `GET` and `PUT /api/me/ai/stories`, with body `{writingConnectionId: ?int (Positive), titlesEnabled: bool}`, answer `StorySettingsJson::state()`:
     `{writingConnectionId: ?int, writingConnection: ?{id,name,baseUrl,model}, writingCandidates: list<{id,name,baseUrl,model}>, titlesEnabled: bool}`. `writingConnection` is the resolved one, null when none can write.
   - The problem `writing_connection_rejected` is 422, raised when the picked connection cannot write text and is not the stored pick (as in `ProfileSettingsEditor`).
@@ -347,9 +375,11 @@ return $best;
   - `StorySettingsControllerTest::testAScoringPickIsRejected`: assert 422, `application/problem+json`, `type` ending `writing_connection_rejected`.
   - `StorySettingsControllerTest::testAnotherAccountsConnectionIsNotFound`: assert 404.
   - `AiProviderConfiguratorTest::testDeletingTheWritingConnectionFallsBackToTheActiveOne`: assert `StorySettings::getWritingConnection() === null` after the delete.
+  - `AccountResetTest::testAResetForgetsTheStorySettings`: assert no `user_story_settings` row remains for the user.
 - [ ] **Step 2: Run them and see them fail.** Run `php bin/phpunit --filter 'StoryWritingConnections|StorySettingsController|testDeletingTheWritingConnection'`. Expected: FAIL.
 - [ ] **Step 3: Implement.**
-  - The migration follows `Version20261003100000`'s pattern for `profile_connection_id`.
+  - The migration follows `Version20261003100000`'s pattern for `profile_connection_id`. The SQLite `down` drops the index before the table.
+  - `AccountWipeRepository::deleteRecommendationData` adds `$this->deleteByUser(StorySettings::class, $user)`.
   - The controller stays thin (`$request->toChange()`).
   - Run the §6 checklist in `docs/architecture.md`.
 - [ ] **Step 4: Run them and see them pass.** Run the same filter, then `composer stan` (the module rules), then migrate and validate on SQLite and MySQL. Expected: PASS, and the schema in sync.
@@ -363,8 +393,8 @@ return $best;
 - Create: `backend/src/Enum/StoryAiTask.php`, `backend/src/Entity/StoryAiRun.php`, `backend/src/Repository/StoryAiRunRepository.php`
 - Create: `backend/migrations/Version20261118150000.php`
 - Modify: `backend/src/Enum/CallPhase.php`, `backend/src/Repository/CallingRun.php`, `backend/src/Entity/RecommendationRunLog.php`
-- Modify: `backend/src/Service/Curation/Recommendation/Run/Factory/RecommendationRunLogFactory.php`, `Run/RecommendationCallRecorder.php`, `Llm/Run/CompletionCallRecorder.php`
-- Test: `backend/tests/Service/Curation/Recommendation/Run/RecommendationCallRecorderTest.php`
+- Modify: `backend/src/Service/Curation/Recommendation/Run/Factory/RecommendationRunLogFactory.php`, `Run/RecommendationCallRecorder.php`, `Llm/Run/CompletionCallRecorder.php`, `backend/src/Repository/AccountWipeRepository.php`
+- Test: `backend/tests/Service/Curation/Recommendation/Run/RecommendationCallRecorderTest.php`, `backend/tests/Service/Identity/Account/AccountResetTest.php`
 
 **Interfaces:**
 - Produces:
@@ -386,9 +416,13 @@ return $best;
 
 Run-log fit for another model kind: each log row already stores the request, the answering model and the receipt, and `addUsage` banks `prompt_tokens` and cost, which is what an embedding reply reports. A non-chat task adds only its `CallPhase` case and needs no new column.
 
-- [ ] **Step 1: Write the failing test** `RecommendationCallRecorderTest::testAStoryAiCallBanksItsUsageOnItsRun`: a `StoryAiTask::Title` run. Begin, `received(new ProviderCallReceiptModel('req-1', 'gpt-x', usage of 120 prompt and 8 completion tokens with cost 3000))`, then `finishUsable('{"title":"…"}')`. Assert the run's `prompt_tokens === 120` and `completion_tokens === 8`, the log row's `phase === 'story_title'`, its `cost_nano_credits === 3000`, and its `story_ai_run_id` set.
-- [ ] **Step 2: Run it and see it fail.** Run `php bin/phpunit --filter testAStoryAiCallBanksItsUsageOnItsRun`. Expected: FAIL.
-- [ ] **Step 3: Implement.** Give `StoryTitle` an arm in every exhaustive `match` over `CallPhase` (`grep -rn "CallPhase::" src`).
+- [ ] **Step 1: Write the failing test** `RecommendationCallRecorderTest::testAStoryAiCallBanksItsUsageOnItsRun`: a `StoryAiTask::Title` run. Begin, `received(new ProviderCallReceiptModel('req-1', 'gpt-x', usage of 120 prompt and 8 completion tokens with cost 3000), 512)`, then `finishUsable('{"title":"…"}')`. Assert the run's `prompt_tokens === 120` and `completion_tokens === 8`, the log row's `phase === 'story_title'`, its `cost_nano_credits === 3000`, and its `story_ai_run_id` set.
+  - `AccountResetTest::testAResetForgetsStoryAiRunsAndTheirCalls`: assert no `story_ai_run` row, and no `recommendation_run_log` row of that run, remains.
+- [ ] **Step 2: Run them and see them fail.** Run `php bin/phpunit --filter 'testAStoryAiCallBanksItsUsageOnItsRun|testAResetForgetsStoryAiRuns'`. Expected: FAIL.
+- [ ] **Step 3: Implement.**
+  - Give `StoryTitle` an arm in every exhaustive `match` over `CallPhase` (`grep -rn "CallPhase::" src`).
+  - `deleteRecommendationData` deletes `RecommendationRunLog` rows whose `IDENTITY(c.storyAiRun)` is among the user's `StoryAiRun`s, as it does for runs, then `deleteByUser(StoryAiRun::class, $user)`.
+  - The SQLite `down` drops `idx_recommendation_run_log_story_ai_run` before the column.
 - [ ] **Step 4: Run it and see it pass.** Run the same, then `php bin/phpunit tests/Service/Curation/Recommendation`, then migrate and validate on both platforms. Expected: PASS.
 - [ ] **Step 5: Commit** `feat(#2329): record story AI calls and costs on a story AI run`
 
@@ -417,11 +451,11 @@ Run-log fit for another model kind: each log row already stores the request, the
     - returns `failed` for any provider failure
     - **rethrows `ProviderRateLimitedException`**: the sweep (Task 9) stops that user
 - Produces (the title task, `Trending`):
-  - `final readonly class StoryHeadlineModel { __construct(public string $headline, public string $snippet) }`
+  - `final readonly class StoryHeadlineModel { __construct(public string $headline, public string $snippet, public ?string $feedTitle = null, public ?FeedLanguage $language = null) }`, with `#[\NoDiscard] cleaned(string $headline): self`
   - `TrendingStoryRepository::memberHeadlinesOf(int $storyId, int $limit): list<StoryHeadlineModel>` is a neutral reader any story task can reuse:
     - Outlet members (`feed.network IS NULL`), newest first by `effective_date` then id, one per `feed_id`, at most `$limit`.
-    - The headline is cleaned by `HeadlineMarkers::clean(title, feed.title, language)`. The snippet is `HeadlineBody::body(summary)`, or `bodyAfterTitle` for a derived title.
-    - Without outlet members: one per shared link of the story cards (`article_site IS NOT NULL`), newest sharing post first, giving `shared_link.title` and `HeadlineBody::body(shared_link.description)`.
+    - The headline is the **raw** entry title, with `feed.title` and the language beside it. The repository cannot inject `HeadlineMarkers`; the task cleans (Task 9). The snippet is `HeadlineBody::body(summary)`, or `bodyAfterTitle` for a derived title.
+    - Without outlet members: one per shared link of the story cards (`article_site IS NOT NULL`), newest sharing post first, giving `shared_link.title` and `HeadlineBody::body(shared_link.description)`, with no feed title. It only orders the cards; it never chooses one (choosing is `MostShared`, Task 4).
   - `RecommendationResponseSchema::StoryTitle` maps to `new JsonSchemaModel('story_title', ['type' => 'object', 'properties' => ['title' => ['type' => 'string']], 'required' => ['title'], 'additionalProperties' => false])`. `RecommendationAnswerBudget::answerBoundTokens` gets the arm `StoryTitle => 0`, so it uses the 1024 floor.
   - `CallPromptModel::storyTitle(list<array{role,content}> $messages): self` with reply count 1.
   - `StoryTitlePrompt::messages(list<StoryHeadlineModel> $headlines, string $locale): list<array{role: string, content: string}>`
@@ -485,14 +519,15 @@ The user message has one block per headline: `"%d. %s\n%s"` (a 1-based number, t
     - Per user and task: `connectionFor()` (skip when null), then `dueStoryIds()`, then one `StoryAiPass` built from that connection with `run()` per story. The sweep assumes neither one connection nor a chat model.
     - A story starts only before the deadline. `ProviderRateLimitedException` stops that user for this sweep.
   - `StoryAiReportModel { usable: int, unusable: int, failed: int }` with `none()` and `toLogContext()`.
+- Consumes: `StorySettingsProvider::titlesEnabledFor()`, `StoryWritingConnections::usableFor()`, `HeadlineMarkers::clean()`, `ReaderWindows::shownStories()`, `memberHeadlinesOf()`, `StoryTitlePrompt`, `StoryTitleParser`, `StoryAiCalls::complete()`.
 - Produces (`Trending`, the title task):
-  - `TrendingStoryRepository::titleDueAmong(list<int> $storyIds, \DateTimeImmutable $attemptedBefore): list<int>`. A story is due when `llm_title IS NULL OR member_count * 2 >= llm_title_member_count * 3`, and also `llm_title_attempted_at IS NULL OR llm_title_attempted_at <= :attemptedBefore`. `member_count` counts `trending_story_entry` rows.
+  - `TrendingStoryRepository::titleDueOf(int $userId, \DateTimeImmutable $attemptedBefore): list<int>` covers the user's stories. A story is due when `llm_title IS NULL OR member_count * 2 >= llm_title_member_count * 3`, and also `llm_title_attempted_at IS NULL OR llm_title_attempted_at <= :attemptedBefore`. `member_count` counts `trending_story_entry` rows.
   - `TrendingStoryRepository::recordTitle(int $storyId, string $title, string $language, \DateTimeImmutable $attemptedAt): void` stamps the member count at write.
   - `TrendingStoryRepository::recordTitleAttempt(int $storyId, \DateTimeImmutable $attemptedAt): void`
   - `StoryTitleTask implements StoryAiTaskInterface`:
-    - `connectionFor()` is `StoryWritingConnections::usableFor()`, or null when titles are switched off.
-    - `dueStoryIds()` takes the union of `ReaderWindows::shownStories()` ids over both windows, filtered by `titleDueAmong(…, now − 1 hour)`.
-    - `run()` takes `memberHeadlinesOf($storyId, 12)` (empty input: stamp and skip), then `StoryTitlePrompt` and `StoryTitleParser::parse(...)`.
+    - `connectionFor()` is null when `titlesEnabledFor()` is false, else `StoryWritingConnections::usableFor()`.
+    - `dueStoryIds()` first runs `titleDueOf($userId, now − 1 hour)`. It returns `[]` without ranking anything when that is empty; otherwise it intersects with the union of `ReaderWindows::shownStories()` ids over both windows.
+    - `run()` takes `memberHeadlinesOf($storyId, 12)` (empty input: stamp and skip), cleans each with `$headline->cleaned($this->markers->clean($headline->headline, $headline->feedTitle, $headline->language)->text)`, then calls `StoryTitlePrompt` and `StoryTitleParser::parse(...)`.
     - A usable reply → `recordTitle` with `$pass->user->getLocale()`. An unusable or failed reply → `recordTitleAttempt`, with a warning log on failure.
 
 - [ ] **Step 1: Write the failing tests**
@@ -511,6 +546,8 @@ The user message has one block per headline: `"%d. %s\n%s"` (a 1-based number, t
     - `testAScoringConnectionWritesNoTitle`: assert no call and no `story_ai_run` row.
     - `testSwitchedOffTitlesWriteNothing`: `titlesEnabled = false`. Assert no call.
     - `testAStoryTheReaderIsNotShownGetsNoTitle`: a story below the reader's threshold. Assert no call.
+    - `testTheTitleInputIsCleaned`: a member "Liveblog: Hafenstreik – Spiegel" from the feed "DER SPIEGEL". Assert the user message contains `1. Hafenstreik` and not `Spiegel`.
+    - Not unit-tested (review it): with nothing due, `shownStories` is never called. The ranking has no observable side effect to assert on.
 - [ ] **Step 2: Run them and see them fail.** Run `php bin/phpunit tests/Service/Curation/StoryAi tests/Service/Curation/Trending/StoryTitleTaskTest.php`. Expected: FAIL.
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Run them and see them pass.** Run the same, then `composer check` and `composer md`. Expected: PASS, clean, and no module cycle (`StoryAi` never names `Trending`).
@@ -525,12 +562,12 @@ The user message has one block per headline: `"%d. %s\n%s"` (a 1-based number, t
 - Create: `backend/src/Service/Operations/Maintenance/MaintenanceSweep/StoryAiTickSweep.php`
 - Modify: `backend/src/Service/Operations/Worker/WorkerSchedule.php`
 - Modify: `backend/src/Entity/User.php` (the `$locale` docblock: it is now also the language of story AI output)
-- Test: `backend/tests/Service/Operations/Worker/WorkerScheduleTest.php` (or the existing schedule test), `backend/tests/Service/Operations/Maintenance/MaintenanceTickTest.php`
+- Test: `backend/tests/Service/Operations/Worker/WorkerScheduleWiringTest.php`, `backend/tests/Service/Operations/Maintenance/MaintenanceTickTest.php`
 
 **Interfaces:**
 - Consumes: `StoryAiSweep::runDue()` and `runDueBefore()`.
 - Produces:
-  - A property-less message `RunDueStoryAiTasks`, added **last** in `WorkerSchedule` as `RecurringMessage::every('1 minute', new RunDueStoryAiTasks())`. The checkpoint stores list positions.
+  - A property-less message `RunDueStoryAiTasks`, added **last** in `WorkerSchedule` as `RecurringMessage::every('5 minutes', new RunDueStoryAiTasks())`. That is the rebuild's cadence ("after each build"), so titles appear up to 5 minutes after a build. The checkpoint stores list positions.
   - The handler logs `'Worker story AI tasks finished.'` with `toLogContext()`.
   - `#[AsTaggedItem(index: 'storyAi', priority: 5)]`, so it runs after `trending` (priority 10) in the same tick. `idleReport()` gives `StoryAiReportModel::none()`.
   - A later task needs no new message or sweep.
