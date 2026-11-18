@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { EntriesStore } from '../state/entries.store';
 import { EntryStateActions } from '../shell/entry-state-actions.service';
+import { leadOf } from '../state/list-item';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { TrendingStoryDto } from './trending.models';
 
@@ -13,9 +14,9 @@ export class TrendingHideAction {
 
   run(story: TrendingStoryDto): void {
     this.entries.hideTrendingStory(story, {
-      onStarted: () => this.rows.markLeaving(story.leadEntryId),
+      onStarted: () => this.rows.markLeaving(leadOf(story).id),
       onSaved: () => this.subscriptions.reloadCountsQuietly(),
-      onFailed: () => this.rows.stayInList(story.leadEntryId),
+      onFailed: () => this.rows.stayInList(leadOf(story).id),
     });
   }
 }

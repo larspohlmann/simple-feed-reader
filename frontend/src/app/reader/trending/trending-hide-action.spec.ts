@@ -43,7 +43,7 @@ describe('TrendingHideAction (#2017)', () => {
   });
 
   it('lets the card leave as each attempt starts and keeps it when the hide fails (#2066)', () => {
-    action().run(story);
+    action().run({ ...story, leadEntryId: 99 });
     const outcome = hideTrendingStory.mock.calls[0][1];
 
     outcome?.onStarted?.();
