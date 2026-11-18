@@ -161,11 +161,6 @@ export function selectedSavedSearchIdOf(selection: Selection): number | null {
   return selection.kind === 'saved-search' ? selection.id : null;
 }
 
-/** The Trending story whose list is on screen, or null on every other list. */
-export function selectedStoryIdOf(selection: Selection): number | null {
-  return selection.kind === 'trending-story' ? selection.id : null;
-}
-
 /** Whether the list offers the newest/oldest-first toggle; the ranked for-you
  *  and Trending lists have no date order to reverse. */
 export function hasListOrder(selection: Selection): selection is OrderedSelection {
@@ -296,10 +291,12 @@ export interface ViewContext {
 export interface ParsedRoute {
   selection: Selection;
   entryId: number | null;
+  /** A Trending story whose list lies over `selection` (#2329). */
+  storyId: number | null;
   urlCorrection: Params | null;
 }
 
-type ParsedView = Omit<ParsedRoute, 'entryId'>;
+type ParsedView = Omit<ParsedRoute, 'entryId' | 'storyId'>;
 
 export function selectionFromParams(paramMap: ParamMap, context: ViewContext): ParsedRoute {
   // The entry param is an id or an id-prefixed slug ("514-some-title").
@@ -313,10 +310,10 @@ export function selectionFromParams(paramMap: ParamMap, context: ViewContext): P
     // A `?q=` search is its own view over every subscription, so a tag or feed
     // parameter left in the URL by hand is ignored rather than combined.
     const selection: Selection = { kind: 'search', unread: false, term };
-    return { selection, entryId, urlCorrection: null };
+    return { selection, entryId, storyId: null, urlCorrection: null };
   }
 
-  return { ...viewFromParams(paramMap, context), entryId };
+  return { ...viewFromParams(paramMap, context), entryId, storyId: null };
 }
 
 /** The views of entry states: no feed, no unread switch. */

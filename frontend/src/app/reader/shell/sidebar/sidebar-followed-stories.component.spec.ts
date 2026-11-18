@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { LayoutService } from '../../layout.service';
-import { StoryFollowing } from '../story-following.service';
+import { FollowedStoriesStore } from '../../state/followed-stories.store';
 import { FollowedStoryDto } from '../../trending/trending.models';
 import { SidebarFollowedStoriesComponent } from './sidebar-followed-stories.component';
 import { SidebarRowActions } from './sidebar-row-actions.service';
@@ -30,7 +30,7 @@ describe('SidebarFollowedStoriesComponent (#2128)', () => {
       imports: [SidebarFollowedStoriesComponent, provideTranslocoTesting()],
       providers: [
         provideRouter([{ path: '**', children: [] }]),
-        { provide: StoryFollowing, useValue: { unfollow } },
+        { provide: FollowedStoriesStore, useValue: { unfollow } },
         {
           provide: SidebarRowActions,
           useValue: { menuFor, toggleMenu: jest.fn(), closeMenu: jest.fn() },

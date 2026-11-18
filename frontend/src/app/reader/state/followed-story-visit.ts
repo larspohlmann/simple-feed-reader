@@ -1,7 +1,7 @@
 import { Injectable, computed, inject } from '@angular/core';
 import { accountSignal } from '../../core/auth/session-identity';
 import { EntryDto } from '../models';
-import { EntriesStore } from './entries.store';
+import { StoryListStore } from './story-list.store';
 import { LandedList } from './landed-list';
 import { FollowedStoriesStore } from './followed-stories.store';
 import { sameMembers } from './same-members';
@@ -12,17 +12,17 @@ const NONE_NEW: ReadonlySet<number> = new Set();
  *  carries, records the one "opened", and ends when any other list lands or any list fails to load. */
 @Injectable({ providedIn: 'root' })
 export class FollowedStoryVisit {
-  private readonly entries = inject(EntriesStore);
+  private readonly storyList = inject(StoryListStore);
   private readonly followedStories = inject(FollowedStoriesStore);
   /** `openedAt` is held for the visit: the record it posts moves the server's "last opened" past the rows it marks. */
   private readonly visit = accountSignal<{ storyId: number; openedAt: string } | null>(null);
   /** The loaded rows that joined the story since the visit began. */
-  readonly newSinceVisitIds = computed(() => this.newAmong(this.entries.entries()), {
+  readonly newSinceVisitIds = computed(() => this.newAmong(this.storyList.entries()), {
     equal: sameMembers,
   });
 
   constructor() {
-    this.entries.listLanded.subscribe((list) => this.landed(list));
+    this.storyList.listLanded.subscribe((list) => this.landed(list));
   }
 
   private landed({ query, page }: LandedList): void {

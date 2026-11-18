@@ -129,7 +129,9 @@ export class ListScrollReset {
     const context = this.viewContext.context();
     const queryParams = convertToParamMap(tree.queryParams);
     const shown = selectionFromRoute(pathParams, queryParams, context).selection;
-    const list = pathParams.keys.length > 0 ? shown : listSelectionFrom(tree.queryParams, context);
+    const list = pathParams.has('savedSearch')
+      ? shown
+      : listSelectionFrom(tree.queryParams, context);
     return { list, shown };
   }
 }

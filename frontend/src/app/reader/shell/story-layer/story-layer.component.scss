@@ -1,0 +1,19 @@
+@use '../../article/article-layer/layer-bar';
+
+:host {
+  display: block;
+}
+
+@include layer-bar.nameplate-and-actions;
+
+.glyph {
+  flex: none;
+  color: var(--accent);
+}
+
+/* The layer's bar stands where the list's header would: the article layer already clears it, so the rows clear
+   neither the app bar nor a list header of their own. */
+app-entry-list {
+  --app-bar-h: 0px;
+  --bar-gap: 0px;
+}

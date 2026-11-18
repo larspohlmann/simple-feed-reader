@@ -19,6 +19,7 @@ import { InFlightPatches, RowPatch, valuesBefore } from './in-flight-patches';
 import { RetryableFailure } from './retryable-failure';
 import { LandedList } from './landed-list';
 import { MatchedWords } from './matched-words';
+import { StoryListStore } from './story-list.store';
 
 /** A failed state change has already rolled its row back when `onFailed` runs. */
 export interface StateSaveOutcome {
@@ -33,6 +34,7 @@ export class EntriesStore {
   private readonly api = inject(ReaderApi);
   private readonly socialPosts = inject(SocialPostApi);
   private readonly trendingApi = inject(TrendingApi);
+  private readonly storyList = inject(StoryListStore);
 
   private readonly rawItems = accountSignal<ListItem[]>([]);
   /** The open entry when the loaded list does not hold it, e.g. a deep link; `entries()` never shows it. */
@@ -157,9 +159,9 @@ export class EntriesStore {
     });
   }
 
-  /** The entry with `id`: its listed row, else the unlisted one held for it. */
+  /** The entry with `id`: its listed row, else the open story's row, else the unlisted one held for it. */
   entry(id: number): EntryDto | null {
-    const listed = this.entries().find((entry) => entry.id === id);
+    const listed = this.entries().find((entry) => entry.id === id) ?? this.storyList.entry(id);
     if (listed) return listed;
     const held = this.unlisted();
     return held?.id === id ? held : null;
@@ -276,10 +278,11 @@ export class EntriesStore {
 
   /** The entry with `id`, or its copy inside a row's `duplicates`, which the footer popover acts on. */
   private entryOrCopy(id: number): EntryDto | null {
-    const listed = this.entry(id);
-    if (listed) return listed;
+    const found = this.entry(id);
+    if (found) return found;
     const held = this.unlisted();
-    const rows = held ? [...this.entries(), held] : this.entries();
+    const listed = [...this.entries(), ...this.storyList.entries()];
+    const rows = held ? [...listed, held] : listed;
     return rows.flatMap((row) => row.duplicates ?? []).find((copy) => copy.id === id) ?? null;
   }
 
@@ -325,10 +328,11 @@ export class EntriesStore {
     });
   }
 
-  /** Reaches each target as a row, as a copy inside a row's `duplicates` and as a story's article.
-   *  The list keeps its identity when `patch` hands every entry back, so nothing derived recomputes. */
+  /** Reaches each target as a row, as a copy inside a row's `duplicates` and as a story's article, in the list
+   *  and in the open story's list. A list keeps its identity when `patch` hands every entry back. */
   private patchEntries(ids: Iterable<number>, patch: (entry: EntryDto) => EntryDto): void {
     const targets = new Set(ids);
+    this.storyList.patch(targets, patch);
     this.unlisted.update((held) => (held ? withPatchedRow(held, targets, patch) : held));
     this.rawItems.update((current) => {
       let changed = false;

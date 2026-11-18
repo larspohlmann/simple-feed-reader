@@ -22,7 +22,7 @@ import { MarkReadActions } from './mark-read-actions.service';
 import { ReaderOnboarding } from './reader-onboarding.service';
 import { PasskeyFirstBootOffer } from './passkey-first-boot-offer.service';
 import { SavedSearchToggle } from './saved-search-toggle.service';
-import { StoryFollowing } from './story-following.service';
+import { StoryOverlay } from './story-overlay.service';
 import { RefreshActions } from './refresh-actions.service';
 import { ListReload } from './list-reload.service';
 import { ReaderTabTitle } from './reader-tab-title.service';
@@ -34,7 +34,7 @@ import { SubscriptionsStore } from '../state/subscriptions.store';
 import { flattenTagTree } from '../state/subscription-derivations';
 import { TagsStore } from '../state/tags.store';
 import { EntriesStore } from '../state/entries.store';
-import { FollowedStoryVisit } from '../state/followed-story-visit';
+import { StoryLayerComponent } from './story-layer/story-layer.component';
 import { RefreshService } from '../state/refresh.service';
 import { RecommendationsService } from '../state/recommendations.service';
 import { NetworkSurfaceSwitches } from '../state/network-surface-switches.service';
@@ -93,6 +93,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
     NotificationListComponent,
     ReaderViewComponent,
     LinkReaderComponent,
+    StoryLayerComponent,
     AudioPlayerBarComponent,
     UrlDropZoneComponent,
     DrawerSwipeDirective,
@@ -125,7 +126,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
     ReaderOnboarding,
     PasskeyFirstBootOffer,
     SavedSearchToggle,
-    StoryFollowing,
+    StoryOverlay,
     RefreshActions,
     ListReload,
     LinkArticleSource,
@@ -144,7 +145,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly subs = inject(SubscriptionsStore);
   readonly tags = inject(TagsStore);
   readonly entries = inject(EntriesStore);
-  readonly storyVisit = inject(FollowedStoryVisit);
   readonly refreshSvc = inject(RefreshService);
   readonly recs = inject(RecommendationsService);
   readonly savedSearchesStore = inject(SavedSearchesStore);
@@ -185,7 +185,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly entryActions = inject(EntryStateActions);
   readonly markRead = inject(MarkReadActions);
   readonly savedSearch = inject(SavedSearchToggle);
-  readonly storyFollowing = inject(StoryFollowing);
+  readonly storyOverlay = inject(StoryOverlay);
   readonly refresh = inject(RefreshActions);
 
   /** Feed tags keyed by subscription id — feeds the tag pills on entries and the

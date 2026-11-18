@@ -31,6 +31,11 @@
   text-decoration: none;
 }
 
+/* Inside the link: the card tucked under the title covers its bottom edge. */
+.story-link:focus-visible {
+  outline-offset: -2px;
+}
+
 .icon {
   flex: none;
   color: var(--accent);

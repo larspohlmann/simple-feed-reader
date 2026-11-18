@@ -16,7 +16,6 @@ import {
   selectionFromParams,
   searchTermOf,
   selectedGroupOf,
-  selectedStoryIdOf,
   selectedSavedSearchIdOf,
   selectedTagIdOf,
   selectionQueryParams,
@@ -797,6 +796,7 @@ describe('the Trending view (#2017)', () => {
     expect(selectionFromParams(pm({ view: 'trending', window: 'week' }), ON)).toEqual({
       selection: { ...trending, window: 'week' },
       entryId: null,
+      storyId: null,
       urlCorrection: null,
     });
   });
@@ -805,6 +805,7 @@ describe('the Trending view (#2017)', () => {
     expect(selectionFromParams(pm({ view: 'trending' }), storedWeek)).toEqual({
       selection: { ...trending, window: 'week' },
       entryId: null,
+      storyId: null,
       urlCorrection: { window: 'week' },
     });
   });
@@ -827,6 +828,7 @@ describe('the Trending view (#2017)', () => {
     expect(selectionFromParams(pm({ view: 'kept', window: 'week' }), ON)).toEqual({
       selection: { kind: 'kept' },
       entryId: null,
+      storyId: null,
       urlCorrection: null,
     });
   });
@@ -985,11 +987,5 @@ describe("a Trending story's list (#2128, #2329)", () => {
   it('offers no Mark all read and no scoped refresh', () => {
     expect(markReadTarget(story)).toBeNull();
     expect(canScopedRefresh(story)).toBe(false);
-  });
-
-  it("reads the story's id, null on any other list", () => {
-    expect(selectedStoryIdOf(story)).toBe(42);
-    expect(selectedStoryIdOf({ kind: 'saved-search', id: 42, unread: false })).toBeNull();
-    expect(selectedStoryIdOf({ kind: 'trending', window: 'day' })).toBeNull();
   });
 });

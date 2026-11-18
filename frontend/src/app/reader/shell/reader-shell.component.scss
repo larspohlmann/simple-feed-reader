@@ -145,6 +145,12 @@ app-reader-header.hidden {
   }
 }
 
+/* In the split layout a story's list takes the list column, the list beneath pinned in it (#2329). */
+.main.split > .story-overlay {
+  flex: 0 0 var(--list-width, 42%);
+  min-width: 17.5rem;
+}
+
 /* The list pane's width is user-owned: dragged on the divider below, persisted
    per device (PaneSplitService, #810). `--list-width` is written by the
    divider; 42% is only the fallback before its effect writes the saved value. */

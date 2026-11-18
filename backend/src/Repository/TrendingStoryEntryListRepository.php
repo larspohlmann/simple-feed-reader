@@ -8,8 +8,8 @@ use App\Entity\Entry;
 use App\Entity\Subscription;
 use App\Entity\TrendingStoryEntry;
 use App\Service\Curation\Trending\Exception\TrendingStoryNotFoundException;
-use Doctrine\DBAL\ParameterType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 

@@ -43,6 +43,7 @@ export class ReaderRouteState {
   });
   private readonly inSearch = computed(() => this.parsed().selection.kind === 'search');
   readonly entryId = computed(() => this.parsed().entryId);
+  readonly storyId = computed(() => this.parsed().storyId);
   readonly linkTarget = computed(() => signedUrlFromParam(this.queryParameters().get('link')), {
     equal: sameSignedUrl,
   });

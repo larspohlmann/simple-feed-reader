@@ -16,7 +16,7 @@ import { ReaderApi } from '../../reader-api';
 import { TrendingApi } from '../../trending/trending-api';
 import { StoryPageDto } from '../../trending/trending.models';
 import { SocialPostApi } from '../../social-post-api';
-import { EntriesStore } from '../../state/entries.store';
+import { StoryListStore } from '../../state/story-list.store';
 import { FollowedStoriesStore } from '../../state/followed-stories.store';
 import { FollowedStoryVisit } from '../../state/followed-story-visit';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
@@ -390,11 +390,11 @@ describe('EntryListComponent', () => {
           { provide: FollowedStoriesStore, useValue: { markOpened: jest.fn() } },
         ]);
         const element = fixture.nativeElement as HTMLElement;
-        const store = TestBed.inject(EntriesStore);
+        const store = TestBed.inject(StoryListStore);
         const visit = TestBed.inject(FollowedStoryVisit);
         const render = async () => {
           fixture.componentRef.setInput('items', store.items());
-          fixture.componentRef.setInput('hasMore', store.nextCursor() !== null);
+          fixture.componentRef.setInput('hasMore', store.hasMore());
           fixture.componentRef.setInput('newSinceVisitIds', visit.newSinceVisitIds());
           for (let frame = 0; frame < 12; frame++) {
             await frames();

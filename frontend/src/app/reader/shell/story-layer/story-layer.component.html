@@ -1,0 +1,70 @@
+<app-article-layer
+  [fullscreen]="fullscreen()"
+  [progressRail]="progressRail"
+  [backLabel]="'reader.backToList' | transloco"
+  [resetKey]="resetKey()"
+  (back)="overlay.close()"
+>
+  <ng-container articleMini>
+    <app-icon class="glyph" [name]="storyIcon" size="sm" />
+    <span class="mini-title">{{ title() }}</span>
+  </ng-container>
+  @if (!fullscreen()) {
+    <span articleBar class="bar-name" aria-hidden="true">
+      <app-icon class="glyph" [name]="storyIcon" size="dense" />
+      <span class="bar-title">{{ title() }}</span>
+    </span>
+  }
+  <div articleBar class="nav">
+    @let orderHint =
+      (oldestFirst() ? 'reader.sortedOldestFirst' : 'reader.sortedNewestFirst') | transloco;
+    <button
+      appListAction
+      class="list-order mobile-icon-only"
+      type="button"
+      [attr.aria-label]="orderHint"
+      [attr.title]="orderHint"
+      (click)="flipOrder()"
+    >
+      <app-icon [name]="oldestFirst() ? 'arrow_upward' : 'arrow_downward'" size="sm" />
+      <span class="txt">{{
+        (oldestFirst() ? 'reader.oldestFirst' : 'reader.newestFirst') | transloco
+      }}</span>
+    </button>
+    @let followLabel = following.following() ? 'reader.unfollowStory' : 'reader.followStory';
+    <button
+      appListAction
+      class="follow-story mobile-icon-only"
+      type="button"
+      [attr.aria-label]="followLabel | transloco"
+      [attr.title]="followLabel | transloco"
+      (click)="following.toggleOpen()"
+    >
+      <app-icon
+        [name]="following.following() ? 'notifications_off' : 'notification_add'"
+        size="sm"
+      />
+      <span class="txt">{{ followLabel | transloco }}</span>
+    </button>
+  </div>
+  <h2 class="sr-only">{{ title() }}</h2>
+  <app-entry-list
+    [headerless]="true"
+    [layout]="layout()"
+    [title]="title()"
+    [items]="storyList.items()"
+    [loading]="storyList.loading()"
+    [loadingMore]="storyList.loadingMore()"
+    [error]="storyList.error()"
+    [hasMore]="storyList.hasMore()"
+    [canMarkAllRead]="false"
+    [selection]="selection()"
+    [openEntryId]="openEntryId()"
+    [leavingIds]="leavingIds()"
+    [newSinceVisitIds]="visit.newSinceVisitIds()"
+    [feedTags]="feedTags()"
+    (loadMore)="storyList.loadMore()"
+    (retry)="storyList.retry()"
+    (dismiss)="storyList.dismissError()"
+  />
+</app-article-layer>

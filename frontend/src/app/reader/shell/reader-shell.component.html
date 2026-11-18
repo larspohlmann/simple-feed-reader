@@ -81,7 +81,7 @@
       [followedStories]="followedStoriesStore.stories()"
       [savedSearches]="savedSearchesStore.savedSearches()"
       [activeSavedSearchId]="heading.activeSavedSearchId()"
-      [activeFollowedStoryId]="storyFollowing.activeId()"
+      [activeFollowedStoryId]="storyOverlay.storyId()"
       [mailEnabled]="auth.user()?.mail?.enabled ?? false"
       [digestEnabled]="digest.enabled()"
       [selection]="selection()"
@@ -97,6 +97,7 @@
   <main class="main" #mainEl [class.split]="splitView()">
     @if (splitView()) {
       <ng-container *ngTemplateOutlet="entryListPane" />
+      <ng-container *ngTemplateOutlet="storyPane" />
       <!-- The draggable seam between the two panes (#810). It writes `--list-width`
            onto `#mainEl` live; PaneResizeDirective owns the pointer, keyboard and
            double-click-reset behaviour and the separator ARIA. -->
@@ -119,6 +120,7 @@
            document's scroll, the ones beneath are pinned at their offsets (#2038). The app
            bar mirrors this list's own `collapsed` state, its only scroll source (#128). -->
       <ng-container *ngTemplateOutlet="entryListPane" />
+      <ng-container *ngTemplateOutlet="storyPane" />
       @if (openEntry()) {
         <div
           class="article-overlay"
@@ -191,7 +193,6 @@
           [selection]="current"
           [openEntryId]="entryId()"
           [leavingIds]="entryActions.leavingIds()"
-          [newSinceVisitIds]="storyVisit.newSinceVisitIds()"
           [feedTags]="feedTags()"
           [refreshing]="refreshSvc.running()"
           [lastRefreshed]="heading.lastRefreshed()"
@@ -213,6 +214,22 @@
         />
       }
     </section>
+  </ng-template>
+  <!-- A story's list over the list it was opened from, which stays mounted beneath it as under an
+       article (#2329). -->
+  <ng-template #storyPane>
+    @if (storyOverlay.selection(); as story) {
+      <div class="article-overlay story-overlay" appPageLayer animate.leave="article-leave">
+        <app-story-layer
+          [selection]="story"
+          [fullscreen]="!screen.isWide()"
+          [layout]="layout.mode()"
+          [feedTags]="feedTags()"
+          [openEntryId]="entryId()"
+          [leavingIds]="entryActions.leavingIds()"
+        />
+      </div>
+    }
   </ng-template>
   <ng-template #readerPane let-fullscreen="fullscreen">
     @if (openEntry(); as entry) {
@@ -347,23 +364,6 @@
     >
       <app-icon [name]="savedSearch.current() ? 'bookmark_remove' : 'bookmark_add'" size="sm" />
       <span class="txt">{{ savedSearch.actionLabel() | transloco }}</span>
-    </button>
-  }
-  @if (storyFollowing.viewing()) {
-    @let followLabel = storyFollowing.following() ? 'reader.unfollowStory' : 'reader.followStory';
-    <button
-      appListAction
-      class="follow-story"
-      type="button"
-      [attr.aria-label]="followLabel | transloco"
-      [attr.title]="followLabel | transloco"
-      (click)="storyFollowing.toggleOpen()"
-    >
-      <app-icon
-        [name]="storyFollowing.following() ? 'notifications_off' : 'notification_add'"
-        size="sm"
-      />
-      <span class="txt">{{ followLabel | transloco }}</span>
     </button>
   }
   @if (selection().kind === 'for-you' && ai.ready()) {

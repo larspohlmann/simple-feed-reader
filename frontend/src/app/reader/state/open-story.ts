@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { accountSignal } from '../../core/auth/session-identity';
-import { EntriesStore } from './entries.store';
+import { StoryListStore } from './story-list.store';
 import { LandedList } from './landed-list';
 
 interface LandedStory {
@@ -12,11 +12,11 @@ interface LandedStory {
 /** What the last story page that landed said of its story (#2329): its title, and whether the reader follows it. */
 @Injectable({ providedIn: 'root' })
 export class OpenStory {
-  private readonly entries = inject(EntriesStore);
+  private readonly storyList = inject(StoryListStore);
   private readonly landedStory = accountSignal<LandedStory | null>(null);
 
   constructor() {
-    this.entries.listLanded.subscribe((list) => this.landed(list));
+    this.storyList.listLanded.subscribe((list) => this.landed(list));
   }
 
   titleOf(id: number): string | null {

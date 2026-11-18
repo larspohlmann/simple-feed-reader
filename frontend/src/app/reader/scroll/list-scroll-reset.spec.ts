@@ -261,24 +261,13 @@ describe('ListScrollReset', () => {
     });
   });
 
-  describe('on a story path (#2128)', () => {
-    const STORY: Selection = { kind: 'trending-story', id: 42 };
+  describe('on a story path (#2128, #2329)', () => {
+    it('keeps the place of the list a story opens over, as an article does', () => {
+      navigate('/?view=trending&window=day');
+      navigate('/trending/stories/42?view=trending&window=day');
+      navigate('/?view=trending&window=day');
 
-    it('forgets the story a click opens', () => {
-      navigate('/?tag=5');
-      navigate('/trending/stories/42');
-
-      expect(memory.forget).toHaveBeenCalledWith(STORY);
-    });
-
-    it('forgets the story a flip of its order shows', () => {
-      navigate('/trending/stories/42');
-      TestBed.tick();
-
-      TestBed.inject(ListOrderService).set(STORY, 'oldest');
-      TestBed.tick();
-
-      expect(memory.forget).toHaveBeenCalledWith({ ...STORY, order: 'oldest' });
+      expect(memory.forget).not.toHaveBeenCalled();
     });
   });
 

@@ -5202,4 +5202,44 @@ describe('ReaderShellComponent', () => {
       expect(routeState.openLinkCard()?.title).toBe('Clicked card');
     });
   });
+  describe("a Trending story's list over the list (#2329)", () => {
+    const element = (fixture: ComponentFixture<ReaderShellComponent>) =>
+      fixture.nativeElement as HTMLElement;
+
+    function openStory(fixture: ComponentFixture<ReaderShellComponent>): void {
+      pp.next(convertToParamMap({ story: '42' }));
+      fixture.detectChanges();
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries/trending-stories/42')
+        .flush({
+          entries: [],
+          nextCursor: null,
+          title: 'Harbour strike',
+          lastOpenedAt: null,
+          newEntryIds: [],
+        });
+      fixture.detectChanges();
+    }
+
+    it('opens as a layer over the list, which stays mounted and is not asked for again', () => {
+      const fixture = boot();
+      const list = element(fixture).querySelector('section.list app-entry-list');
+
+      openStory(fixture);
+
+      expect(element(fixture).querySelector('.story-overlay app-story-layer')).not.toBeNull();
+      expect(element(fixture).querySelector('section.list app-entry-list')).toBe(list);
+      ctrl.expectNone((request) => request.url === 'https://api.test/api/entries');
+    });
+
+    it('leaves the list alone once the story closes', () => {
+      const fixture = boot();
+      openStory(fixture);
+
+      pp.next(convertToParamMap({}));
+      fixture.detectChanges();
+
+      ctrl.expectNone((request) => request.url === 'https://api.test/api/entries');
+    });
+  });
 });

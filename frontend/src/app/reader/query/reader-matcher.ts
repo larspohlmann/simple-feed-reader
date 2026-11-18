@@ -1,4 +1,4 @@
-import { ParamMap, UrlMatchResult, UrlSegment, convertToParamMap } from '@angular/router';
+import { ParamMap, UrlMatchResult, UrlSegment } from '@angular/router';
 import { ParsedRoute, ViewContext, selectionFromParams } from './query';
 import { entryIdFromParam } from './slug';
 
@@ -39,18 +39,23 @@ export function selectionFromRoute(
   // A slug with no leading id (hand-edited URL) has no single search to open,
   // so fall back to the combined view rather than fetching the plain list.
   if (savedSearch === 'all' || id === null) {
-    return { selection: { kind: 'saved-searches', unread: false }, entryId, urlCorrection: null };
+    return {
+      selection: { kind: 'saved-searches', unread: false },
+      entryId,
+      storyId: null,
+      urlCorrection: null,
+    };
   }
-  return { selection: { kind: 'saved-search', id, unread: false }, entryId, urlCorrection: null };
+  return {
+    selection: { kind: 'saved-search', id, unread: false },
+    entryId,
+    storyId: null,
+    urlCorrection: null,
+  };
 }
 
-/** A path naming no story opens Trending itself; the path stays, as a saved-search path's does. */
+/** A story's list lies over the list the query names, as an article does (#2329); a path naming no story opens
+ *  that list alone. */
 function storyFromRoute(story: string, queryParams: ParamMap, context: ViewContext): ParsedRoute {
-  const entryId = entryIdFromParam(queryParams.get('entry'));
-  const id = entryIdFromParam(story);
-  if (id === null) {
-    const trending = selectionFromParams(convertToParamMap({ view: 'trending' }), context);
-    return { selection: trending.selection, entryId, urlCorrection: null };
-  }
-  return { selection: { kind: 'trending-story', id }, entryId, urlCorrection: null };
+  return { ...selectionFromParams(queryParams, context), storyId: entryIdFromParam(story) };
 }

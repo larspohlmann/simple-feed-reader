@@ -9,6 +9,7 @@ import { API_BASE_URL } from '../../core/api';
 import { transientGatewayRetryInterceptor } from '../../core/http/retry-transient-gateway-errors';
 import { TokenStore } from '../../core/auth/token.store';
 import { EntriesStore } from './entries.store';
+import { StoryListStore } from './story-list.store';
 import { LandedList } from './landed-list';
 import { EntryDto } from '../models';
 import { VoteValue } from '../vote-pill/vote';
@@ -61,6 +62,33 @@ describe('EntriesStore', () => {
     tokens.set('account-a.jwt');
     store = TestBed.inject(EntriesStore);
     ctrl = TestBed.inject(HttpTestingController);
+  });
+
+  describe('with a story open over the list (#2329)', () => {
+    function openStory(): StoryListStore {
+      const storyList = TestBed.inject(StoryListStore);
+      storyList.load({ view: 'all', storyId: 42 });
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries/trending-stories/42')
+        .flush({
+          entries: [entry(7)],
+          nextCursor: null,
+          title: 'T',
+          lastOpenedAt: null,
+          newEntryIds: [],
+        });
+      return storyList;
+    }
+
+    it("finds the story's rows and patches them, which the list underneath does not hold", () => {
+      const storyList = openStory();
+
+      expect(store.entry(7)?.id).toBe(7);
+      store.setState(7, { isFavorite: true });
+
+      expect(storyList.entry(7)?.isFavorite).toBe(true);
+      ctrl.expectOne('https://api.test/api/entries/7/state').flush({ state: {} });
+    });
   });
 
   it('loads a first page and records a next cursor', () => {
