@@ -27,6 +27,9 @@ final readonly class RecommendationAnswerBudget
     /** Sized generously so a reasoning model still finishes the `{"profile": "..."}` JSON. */
     private const int PROFILE_ANSWER_TOKENS_PER_HUNDRED_WORDS = 400;
 
+    /** One `{"title": "..."}` story title of at most ~90 characters. */
+    private const int STORY_TITLE_ANSWER_TOKENS = 40;
+
     /** The distillation reply: one profile string at the cap DISTILL_ROLE sets. */
     public const int PROFILE_ANSWER_TOKENS = RecommendationPromptText::PROFILE_WORD_CAP
         * self::PROFILE_ANSWER_TOKENS_PER_HUNDRED_WORDS / 100;
@@ -61,7 +64,7 @@ final readonly class RecommendationAnswerBudget
             RecommendationResponseSchema::Distillation => self::PROFILE_ANSWER_TOKENS,
             RecommendationResponseSchema::BatchScore => $replyItemCount * self::TOKENS_PER_SCORE_PICK,
             RecommendationResponseSchema::Consolidation => $replyItemCount * self::TOKENS_PER_PICK,
-            RecommendationResponseSchema::StoryTitle => 0,
+            RecommendationResponseSchema::StoryTitle => self::STORY_TITLE_ANSWER_TOKENS,
         };
 
         $bounded = max(self::MINIMUM_ANSWER_TOKENS, $expected);
