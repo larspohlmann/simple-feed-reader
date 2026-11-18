@@ -37,7 +37,7 @@ final class TrendingStoryFollowRepositoryTest extends DbTestCase
 
         self::assertEquals(
             self::at('2031-05-14 10:00:00'),
-            $this->follows->lastOpenedAt($this->reader->requireId(), $story->requireId()),
+            $this->follows->lastOpenedAtIfFollowed($this->reader->requireId(), $story->requireId()),
         );
         self::assertSame(
             ['2031-05-14 10:00:00'],
@@ -66,15 +66,15 @@ final class TrendingStoryFollowRepositoryTest extends DbTestCase
         self::assertSame(1, $changed);
         self::assertEquals(
             self::at('2031-05-14 12:00:00'),
-            $this->follows->lastOpenedAt($this->reader->requireId(), $story->requireId()),
+            $this->follows->lastOpenedAtIfFollowed($this->reader->requireId(), $story->requireId()),
         );
         self::assertEquals(
             self::at('2031-05-14 10:00:00'),
-            $this->follows->lastOpenedAt($this->reader->requireId(), $other->requireId()),
+            $this->follows->lastOpenedAtIfFollowed($this->reader->requireId(), $other->requireId()),
         );
         self::assertEquals(
             self::at('2031-05-14 10:00:00'),
-            $this->follows->lastOpenedAt($otherReader->requireId(), $story->requireId()),
+            $this->follows->lastOpenedAtIfFollowed($otherReader->requireId(), $story->requireId()),
         );
     }
 
@@ -91,7 +91,7 @@ final class TrendingStoryFollowRepositoryTest extends DbTestCase
         self::assertSame(0, $changed);
     }
 
-    public function testTheLastVisitOfAStoryNotFollowedIsAnError(): void
+    public function testRequiringAStoryNotFollowedIsAnError(): void
     {
         $story = $this->story();
 
@@ -100,7 +100,7 @@ final class TrendingStoryFollowRepositoryTest extends DbTestCase
             \sprintf('User %d does not follow Trending story %d.', $this->reader->requireId(), $story->requireId()),
         );
 
-        $this->follows->lastOpenedAt($this->reader->requireId(), $story->requireId());
+        $this->follows->requireFollowed($this->reader->requireId(), $story->requireId());
     }
 
     public function testRequiringAFollowedStoryPassesForItsFollowerAlone(): void

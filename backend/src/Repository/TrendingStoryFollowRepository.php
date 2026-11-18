@@ -56,12 +56,6 @@ final class TrendingStoryFollowRepository extends ServiceEntityRepository
         );
     }
 
-    /** @throws TrendingStoryNotFollowedException */
-    public function lastOpenedAt(int $userId, int $storyId): \DateTimeImmutable
-    {
-        return $this->lastOpenedAtIfFollowed($userId, $storyId) ?? throw self::notFollowed($userId, $storyId);
-    }
-
     /** @return \DateTimeImmutable|null null for a story the reader does not follow */
     public function lastOpenedAtIfFollowed(int $userId, int $storyId): ?\DateTimeImmutable
     {
@@ -76,7 +70,11 @@ final class TrendingStoryFollowRepository extends ServiceEntityRepository
     /** @throws TrendingStoryNotFollowedException */
     public function requireFollowed(int $userId, int $storyId): void
     {
-        $this->lastOpenedAt($userId, $storyId);
+        if ($this->lastOpenedAtIfFollowed($userId, $storyId) === null) {
+            throw new TrendingStoryNotFollowedException(
+                \sprintf('User %d does not follow Trending story %d.', $userId, $storyId),
+            );
+        }
     }
 
     /**
@@ -157,13 +155,6 @@ final class TrendingStoryFollowRepository extends ServiceEntityRepository
             ' JOIN subscription %1$s_reader'
             . ' ON %1$s_reader.feed_id = %1$s.feed_id AND %1$s_reader.user_id = follow.user_id',
             $memberAlias,
-        );
-    }
-
-    private static function notFollowed(int $userId, int $storyId): TrendingStoryNotFollowedException
-    {
-        return new TrendingStoryNotFollowedException(
-            \sprintf('User %d does not follow Trending story %d.', $userId, $storyId),
         );
     }
 }
