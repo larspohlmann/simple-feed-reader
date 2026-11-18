@@ -531,6 +531,17 @@
       "unsaved": "Ungespeicherte Änderungen",
       "saved": "Gespeichert."
     },
+    "stories": {
+      "title": "Trending-Stories",
+      "caption": "Wie dein LLM bei Trending hilft.",
+      "titles": "Story-Titel",
+      "titlesDesc": "Dein LLM schreibt für jede Trending-Story eine eigene Schlagzeile. Ohne es zeigt jede Story ihre repräsentativste Schlagzeile.",
+      "connection": "Verbindung",
+      "connectionDesc": "Die LLM-Verbindung, die Story-Titel schreibt.",
+      "connectionActive": "Die aktive Verbindung",
+      "connectionUnusable": "Eine Verbindung, die keinen Text mehr schreiben kann",
+      "saved": "Story-Einstellungen gespeichert"
+    },
     "statistics": {
       "title": "Statistik"
     },

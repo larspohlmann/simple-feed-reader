@@ -531,6 +531,17 @@
       "unsaved": "Modifications non enregistrées",
       "saved": "Enregistré."
     },
+    "stories": {
+      "title": "Stories Trending",
+      "caption": "Comment votre LLM aide Trending.",
+      "titles": "Titres des stories",
+      "titlesDesc": "Votre LLM rédige un titre pour chaque story de Trending. Sans lui, chaque story affiche son titre le plus représentatif.",
+      "connection": "Connexion",
+      "connectionDesc": "La connexion LLM qui rédige les titres des stories.",
+      "connectionActive": "La connexion active",
+      "connectionUnusable": "Une connexion qui ne peut plus rédiger de texte",
+      "saved": "Réglages des stories enregistrés"
+    },
     "statistics": {
       "title": "Statistiques"
     },

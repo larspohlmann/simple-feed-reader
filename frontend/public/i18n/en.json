@@ -531,6 +531,17 @@
       "unsaved": "Unsaved changes",
       "saved": "Saved."
     },
+    "stories": {
+      "title": "Trending stories",
+      "caption": "How your LLM helps with Trending.",
+      "titles": "Story titles",
+      "titlesDesc": "Your LLM writes a headline for each Trending story. Without it, each story shows its most representative headline.",
+      "connection": "Connection",
+      "connectionDesc": "The LLM connection that writes story titles.",
+      "connectionActive": "The active connection",
+      "connectionUnusable": "A connection that can no longer write text",
+      "saved": "Story settings saved"
+    },
     "statistics": {
       "title": "Statistics"
     },

@@ -1,0 +1,48 @@
+@if (svc.state(); as state) {
+  <app-settings-group
+    icon="trending_up"
+    [title]="'settings.stories.title' | transloco"
+    [caption]="'settings.stories.caption' | transloco"
+  >
+    <app-settings-row
+      [title]="'settings.stories.titles' | transloco"
+      [description]="'settings.stories.titlesDesc' | transloco"
+    >
+      <app-toggle
+        data-testid="story-titles"
+        [label]="'settings.stories.titles' | transloco"
+        [checked]="state.titlesEnabled"
+        [disabled]="svc.busy()"
+        (toggled)="onTitles($event)"
+      />
+    </app-settings-row>
+
+    <app-settings-row
+      [stackable]="true"
+      [title]="'settings.stories.connection' | transloco"
+      [description]="'settings.stories.connectionDesc' | transloco"
+    >
+      <select data-testid="story-connection" (change)="onConnection($event)">
+        <option value="" [selected]="state.writingConnectionId === null">
+          {{ 'settings.stories.connectionActive' | transloco }}
+        </option>
+        @if (unusableChoice(); as connectionId) {
+          <option data-testid="story-connection-unusable" [value]="connectionId" disabled selected>
+            {{ 'settings.stories.connectionUnusable' | transloco }}
+          </option>
+        }
+        @for (candidate of state.writingCandidates; track candidate.id) {
+          <option [value]="candidate.id" [selected]="state.writingConnectionId === candidate.id">
+            {{ label(candidate) }}
+          </option>
+        }
+      </select>
+    </app-settings-row>
+
+    @if (svc.failureMessage(); as message) {
+      <div class="panel-banner">
+        <app-error-banner [message]="message" />
+      </div>
+    }
+  </app-settings-group>
+}

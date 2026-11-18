@@ -531,6 +531,17 @@
       "unsaved": "Cambios sin guardar",
       "saved": "Guardado."
     },
+    "stories": {
+      "title": "Historias de Trending",
+      "caption": "Cómo ayuda tu LLM en Trending.",
+      "titles": "Títulos de las historias",
+      "titlesDesc": "Tu LLM escribe un titular para cada historia de Trending. Sin él, cada historia muestra su titular más representativo.",
+      "connection": "Conexión",
+      "connectionDesc": "La conexión LLM que escribe los títulos de las historias.",
+      "connectionActive": "La conexión activa",
+      "connectionUnusable": "Una conexión que ya no puede escribir texto",
+      "saved": "Ajustes de las historias guardados"
+    },
     "statistics": {
       "title": "Estadísticas"
     },
