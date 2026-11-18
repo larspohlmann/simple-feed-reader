@@ -51,6 +51,13 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
 {
     private const string NOW = '2031-05-14 12:00:00';
 
+    /** @var list<string> the first scores highest, sharing three terms with each of the others */
+    private const array PORT_STRIKE = [
+        'Hafenstreik legt Hamburg lahm',
+        'Hafenstreik in Hamburg: Terminals lahm',
+        'Streik legt Hamburg lahm',
+    ];
+
     private TrendingFixtures $fixtures;
 
     private MockClock $clock;
@@ -840,6 +847,83 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         $this->builder()->build($this->ownerId(), TrendingWindow::Week);
 
         self::assertSame([[self::sharedTwice()->title, null]], $this->fallbacks());
+    }
+
+    public function testALanguageTieGoesToTheNewestOutletsLanguage(): void
+    {
+        $german = $this->outletArticle(
+            $this->outlet('alpha', FeedLanguage::German),
+            'Hafenstreik legt Hamburg lahm',
+            '2031-05-14 08:00:00',
+        );
+        $germanPoster = $this->fixtures->feed('ann', SocialNetwork::Mastodon);
+        $germanPoster->recordTraits($germanPoster->getTraits()->withLanguage(FeedLanguage::German));
+        $this->fixtures->entry($germanPoster, 'Hafenstreik legt Hamburg lahm, Terminals zu', '2031-05-14 09:00:00');
+        $english = $this->outletArticle(
+            $this->outlet('beta', FeedLanguage::English),
+            'Hafenstreik Hamburg lahm',
+            '2031-05-14 10:00:00',
+        );
+
+        $scores = $this->weekScores();
+        self::assertGreaterThan($scores[$english->requireId()], $scores[$german->requireId()]);
+        $this->builder()->build($this->ownerId(), TrendingWindow::Week);
+
+        self::assertSame($english->requireId(), $this->fallbacks()[0][1]);
+    }
+
+    public function testWithoutALanguageEveryOutletIsACandidate(): void
+    {
+        $entries = [];
+        foreach (self::PORT_STRIKE as $index => $title) {
+            $entries[] = $this->outletArticle(
+                $this->fixtures->feed('outlet' . $index),
+                $title,
+                \sprintf('2031-05-14 %02d:00:00', 8 + $index),
+            );
+        }
+
+        $scores = $this->weekScores();
+        arsort($scores);
+        $this->builder()->build($this->ownerId(), TrendingWindow::Week);
+
+        self::assertSame([array_key_first($scores)], array_column($this->fallbacks(), 1));
+        self::assertSame($entries[0]->requireId(), array_key_first($scores));
+    }
+
+    public function testAStoryWithoutAnOutletOrACardIsTitledByItsRepresentativePost(): void
+    {
+        $posts = [];
+        foreach (self::PORT_STRIKE as $index => $title) {
+            $posts[] = $this->fixtures->entry(
+                $this->fixtures->feed('poster' . $index, SocialNetwork::Mastodon),
+                $title,
+                \sprintf('2031-05-14 %02d:00:00', 8 + $index),
+            );
+        }
+        $this->fixtures->flush();
+
+        $scores = $this->weekScores();
+        arsort($scores);
+        $this->builder()->build($this->ownerId(), TrendingWindow::Week);
+
+        self::assertSame($posts[0]->requireId(), array_key_first($scores));
+        self::assertSame([['Hafenstreik legt Hamburg lahm', $posts[0]->requireId()]], $this->fallbacks());
+    }
+
+    public function testACardTieGoesToTheNewestCard(): void
+    {
+        foreach (['ann', 'ben'] as $index => $handle) {
+            $this->post($handle, \sprintf('2031-05-14 %02d:00:00', 8 + $index), self::sharedTwice(), $handle . '/1');
+        }
+        foreach (['cat', 'dan'] as $index => $handle) {
+            $this->post($handle, \sprintf('2031-05-14 %02d:00:00', 10 + $index), self::copiedThrice(), $handle . '/2');
+        }
+        $this->fixtures->flush();
+
+        $this->builder()->build($this->ownerId(), TrendingWindow::Week);
+
+        self::assertSame([[self::copiedThrice()->title, null]], $this->fallbacks());
     }
 
     public function testTheWeekBuildKeepsASteadyFallback(): void

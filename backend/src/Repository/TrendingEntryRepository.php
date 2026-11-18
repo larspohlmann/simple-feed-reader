@@ -72,7 +72,7 @@ final readonly class TrendingEntryRepository
     /**
      * @param list<int> $sharedLinkIds
      *
-     * @return array<int, string> the title of every link that has one, by link id
+     * @return array<int, string> the title of every link that has a non-blank one, by link id
      */
     public function linkTitlesOf(array $sharedLinkIds): array
     {
@@ -84,7 +84,7 @@ final readonly class TrendingEntryRepository
                 [$chunk],
                 [ArrayParameterType::INTEGER],
             );
-            $titles += $chunkTitles;
+            $titles += array_filter($chunkTitles, static fn (string $title): bool => trim($title) !== '');
         }
 
         return $titles;

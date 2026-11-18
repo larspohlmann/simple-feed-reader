@@ -119,6 +119,23 @@ final class TrendingEntryRepositoryTest extends DbTestCase
         );
     }
 
+    public function testLinkTitlesOfSkipBlankTitles(): void
+    {
+        $linkIds = array_map(
+            fn (string $title): int => SharedLinks::of(
+                $this->entityManager,
+                new LinkCardContent('https://news.example.com/' . md5($title), $title, null, null, 'example.com'),
+            )->requireId(),
+            ['', '   '],
+        );
+        $this->entityManager->getConnection()->executeStatement(
+            "UPDATE shared_link SET title = CASE WHEN id = ? THEN '' ELSE '   ' END WHERE id IN (?, ?)",
+            [$linkIds[0], ...$linkIds],
+        );
+
+        self::assertSame([], (new TrendingEntryRepository($this->entityManager))->linkTitlesOf($linkIds));
+    }
+
     public function testStreamsMoreThanOneChunkWithoutRepeatingOrSkipping(): void
     {
         $fixtures = new TrendingFixtures($this->entityManager);

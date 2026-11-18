@@ -70,13 +70,23 @@ final class FallbackChoiceTest extends TestCase
     {
         $chosen = (new FallbackChoice())->choose(
             [
-                new TitleCandidateModel(self::BEST, new CleanedHeadlineModel('Later', true), 5.0, self::LATER),
-                new TitleCandidateModel(self::CURRENT, new CleanedHeadlineModel('Earlier', true), 5.0, self::EARLIER),
+                new TitleCandidateModel(self::CURRENT, new CleanedHeadlineModel('Later', true), 5.0, self::LATER),
+                new TitleCandidateModel(self::BEST, new CleanedHeadlineModel('Earlier', true), 5.0, self::EARLIER),
             ],
             null,
         );
 
-        self::assertSame(self::BEST, $chosen->entryId);
+        self::assertSame(self::CURRENT, $chosen->entryId);
+    }
+
+    public function testAMarkedCurrentStaysAmongMarkedCandidates(): void
+    {
+        $chosen = (new FallbackChoice())->choose(
+            [self::marked(self::CURRENT, 9.0), self::marked(self::BEST, 10.0)],
+            self::CURRENT,
+        );
+
+        self::assertSame(self::CURRENT, $chosen->entryId);
     }
 
     private static function markerFree(int $entryId, float $score): TitleCandidateModel
