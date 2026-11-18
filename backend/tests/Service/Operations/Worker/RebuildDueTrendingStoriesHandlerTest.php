@@ -20,7 +20,11 @@ final class RebuildDueTrendingStoriesHandlerTest extends DbTestCase
         $reader->setLastLoginAt(new \DateTimeImmutable('2031-05-14 11:00:00'));
         $this->entityManager->flush();
         $logger = new RecordingLogger();
-        $rebuild = TrendingWiring::rebuild($this->entityManager, $this->registry(), new MockClock('2031-05-14 12:00:00', 'UTC'));
+        $rebuild = TrendingWiring::rebuild(
+            $this->entityManager,
+            $this->registry(),
+            new MockClock('2031-05-14 12:00:00', 'UTC'),
+        );
 
         (new RebuildDueTrendingStoriesHandler($rebuild, $logger))(new RebuildDueTrendingStories());
 
