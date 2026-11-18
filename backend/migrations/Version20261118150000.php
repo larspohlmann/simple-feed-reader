@@ -9,98 +9,80 @@ use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
-/**
- * SQLite drops entry.score in place, so the entry_search triggers on entry stay: none of them names that column.
- */
 final class Version20261118150000 extends AbstractMigration
 {
+    private const string TABLE = 'story_ai_run';
+
     public function getDescription(): string
     {
-        return 'entry_lemmy_post holds a Lemmy post\'s community and score (#2347)';
+        return 'Add story_ai_run and the story AI run each call-log row can belong to (#2329).';
     }
 
     public function up(Schema $schema): void
     {
-        $this->skipIf($schema->hasTable('entry_lemmy_post'), 'entry_lemmy_post already exists.');
+        $this->skipIf($schema->hasTable(self::TABLE), 'story_ai_run already exists.');
 
-        if ($this->mysql()) {
-            $this->upMySql();
+        $platform = $this->connection->getDatabasePlatform();
+        if ($platform instanceof AbstractMySQLPlatform) {
+            $this->addSql('CREATE TABLE story_ai_run (id INT AUTO_INCREMENT NOT NULL, task VARCHAR(16) NOT NULL,'
+                . ' created_at DATETIME NOT NULL, streamed_chars INT DEFAULT 0 NOT NULL,'
+                . ' provider_host VARCHAR(255) DEFAULT NULL, model VARCHAR(255) DEFAULT NULL,'
+                . ' prompt_tokens INT DEFAULT 0 NOT NULL, completion_tokens INT DEFAULT 0 NOT NULL,'
+                . ' reasoning_tokens INT DEFAULT 0 NOT NULL, cached_tokens INT DEFAULT 0 NOT NULL,'
+                . ' cost_nano_credits BIGINT DEFAULT NULL, user_id INT NOT NULL,'
+                . ' INDEX idx_story_ai_run_user (user_id), PRIMARY KEY (id),'
+                . ' CONSTRAINT FK_9512B8B4A76ED395 FOREIGN KEY (user_id) REFERENCES app_user (id)'
+                . ' ON DELETE CASCADE) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+            $this->addSql('ALTER TABLE recommendation_run_log ADD story_ai_run_id INT DEFAULT NULL');
+            $this->addSql('ALTER TABLE recommendation_run_log ADD CONSTRAINT FK_2505ECAD7BB3C691'
+                . ' FOREIGN KEY (story_ai_run_id) REFERENCES story_ai_run (id) ON DELETE CASCADE');
+            $this->addSql('CREATE INDEX idx_recommendation_run_log_story_ai_run'
+                . ' ON recommendation_run_log (story_ai_run_id)');
 
             return;
         }
-
-        $this->upSqlite();
+        $this->requireSqlite($platform);
+        $this->addSql('CREATE TABLE story_ai_run (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,'
+            . ' task VARCHAR(16) NOT NULL, created_at DATETIME NOT NULL, streamed_chars INTEGER DEFAULT 0 NOT NULL,'
+            . ' provider_host VARCHAR(255) DEFAULT NULL, model VARCHAR(255) DEFAULT NULL,'
+            . ' prompt_tokens INTEGER DEFAULT 0 NOT NULL, completion_tokens INTEGER DEFAULT 0 NOT NULL,'
+            . ' reasoning_tokens INTEGER DEFAULT 0 NOT NULL, cached_tokens INTEGER DEFAULT 0 NOT NULL,'
+            . ' cost_nano_credits BIGINT DEFAULT NULL, user_id INTEGER NOT NULL,'
+            . ' CONSTRAINT FK_9512B8B4A76ED395 FOREIGN KEY (user_id) REFERENCES app_user (id)'
+            . ' ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE)');
+        $this->addSql('CREATE INDEX idx_story_ai_run_user ON story_ai_run (user_id)');
+        $this->addSql('ALTER TABLE recommendation_run_log ADD COLUMN story_ai_run_id INTEGER DEFAULT NULL'
+            . ' REFERENCES story_ai_run (id) ON DELETE CASCADE');
+        $this->addSql('CREATE INDEX idx_recommendation_run_log_story_ai_run'
+            . ' ON recommendation_run_log (story_ai_run_id)');
     }
 
     public function down(Schema $schema): void
     {
-        $this->skipIf(!$schema->hasTable('entry_lemmy_post'), 'entry_lemmy_post does not exist.');
+        $this->skipIf(!$schema->hasTable(self::TABLE), 'story_ai_run does not exist.');
 
-        if ($this->mysql()) {
-            $this->downMySql();
-
-            return;
+        if ($this->connection->getDatabasePlatform() instanceof AbstractMySQLPlatform) {
+            $this->addSql('ALTER TABLE recommendation_run_log DROP FOREIGN KEY FK_2505ECAD7BB3C691');
+            $this->addSql('DROP INDEX idx_recommendation_run_log_story_ai_run ON recommendation_run_log');
+            $this->addSql('ALTER TABLE recommendation_run_log DROP story_ai_run_id');
+        } else {
+            $this->addSql('DROP INDEX idx_recommendation_run_log_story_ai_run');
+            $this->addSql('ALTER TABLE recommendation_run_log DROP COLUMN story_ai_run_id');
         }
-
-        $this->downSqlite();
+        $this->addSql('DROP TABLE story_ai_run');
     }
 
-    /** MySQL commits each DDL statement, so a wrapping transaction protects nothing. */
+    /** MySQL commits each DDL statement, so a transaction would protect nothing. */
     public function isTransactional(): bool
     {
         return false;
     }
 
-    private function upMySql(): void
+    private function requireSqlite(object $platform): void
     {
-        $this->addSql('CREATE TABLE entry_lemmy_post (id INT AUTO_INCREMENT NOT NULL, score INT DEFAULT NULL,'
-            . ' community_identity VARCHAR(255) DEFAULT NULL, community_url VARCHAR(2048) DEFAULT NULL,'
-            . ' entry_id INT NOT NULL, UNIQUE INDEX UNIQ_EA202E9CBA364942 (entry_id), PRIMARY KEY (id))'
-            . ' DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
-        $this->addSql('ALTER TABLE entry_lemmy_post ADD CONSTRAINT FK_EA202E9CBA364942 FOREIGN KEY (entry_id)'
-            . ' REFERENCES entry (id) ON DELETE CASCADE');
-        $this->addSql('INSERT INTO entry_lemmy_post (entry_id, score) SELECT id, score FROM entry WHERE score IS NOT NULL');
-        $this->addSql('ALTER TABLE entry DROP score');
-    }
-
-    private function upSqlite(): void
-    {
-        $this->addSql('CREATE TABLE entry_lemmy_post (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,'
-            . ' score INTEGER DEFAULT NULL, community_identity VARCHAR(255) DEFAULT NULL,'
-            . ' community_url VARCHAR(2048) DEFAULT NULL, entry_id INTEGER NOT NULL,'
-            . ' CONSTRAINT FK_EA202E9CBA364942 FOREIGN KEY (entry_id) REFERENCES entry (id) ON DELETE CASCADE'
-            . ' NOT DEFERRABLE INITIALLY IMMEDIATE)');
-        $this->addSql('CREATE UNIQUE INDEX UNIQ_EA202E9CBA364942 ON entry_lemmy_post (entry_id)');
-        $this->addSql('INSERT INTO entry_lemmy_post (entry_id, score) SELECT id, score FROM entry WHERE score IS NOT NULL');
-        $this->addSql('ALTER TABLE entry DROP COLUMN score');
-    }
-
-    private function downMySql(): void
-    {
-        $this->addSql('ALTER TABLE entry ADD score INT DEFAULT NULL');
-        $this->addSql('UPDATE entry INNER JOIN entry_lemmy_post post ON post.entry_id = entry.id'
-            . ' SET entry.score = post.score');
-        $this->addSql('ALTER TABLE entry_lemmy_post DROP FOREIGN KEY FK_EA202E9CBA364942');
-        $this->addSql('DROP TABLE entry_lemmy_post');
-    }
-
-    private function downSqlite(): void
-    {
-        $this->addSql('ALTER TABLE entry ADD COLUMN score INTEGER DEFAULT NULL');
-        $this->addSql('UPDATE entry SET score = (SELECT post.score FROM entry_lemmy_post post WHERE post.entry_id = entry.id)');
-        $this->addSql('DROP TABLE entry_lemmy_post');
-    }
-
-    /** Refuses any platform but the two supported ones: better a refusal than DDL nobody tested. */
-    private function mysql(): bool
-    {
-        $platform = $this->connection->getDatabasePlatform();
-
         $this->abortIf(
-            !$platform instanceof AbstractMySQLPlatform && !$platform instanceof SQLitePlatform,
+            !$platform instanceof SQLitePlatform,
             \sprintf('No DDL defined for platform %s; only MySQL and SQLite are supported.', $platform::class),
         );
-
-        return $platform instanceof AbstractMySQLPlatform;
     }
 }

@@ -1,9 +1,12 @@
 import { TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
+import { DestroyRef, Signal, signal } from '@angular/core';
 import { Router, provideRouter } from '@angular/router';
 import { EMPTY, Observable, of } from 'rxjs';
 import { EntryStateActions } from './entry-state-actions.service';
 import { EntriesStore, StateSaveOutcome } from '../state/entries.store';
+import { ListContext } from '../state/list-context';
+import { EntryRowCache } from '../state/entry-row-cache';
+import { Selection } from '../query/query';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { ReaderRouteState } from './reader-route-state.service';
@@ -14,6 +17,9 @@ import { anEntry } from '../../../testing/entry-testing';
 import { PostActions } from '../article/composer/post-actions.service';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { RemovedPosts } from '../removed-posts.service';
+import { TestListContext, provideRouteListForTest } from '../../../testing/list-context-testing';
+import { ListCover } from './list-cover';
+import type { ListHeading } from './list-heading.service';
 
 interface Collaborators {
   entries: object;
@@ -23,13 +29,20 @@ interface Collaborators {
   toast?: object;
 }
 
+/** The list on screen lists what the route names; a spec's route state gives its selection. */
+function selectionOf(routeState: object): Signal<Selection> {
+  const selection = (routeState as { selection?: () => Selection }).selection;
+  return (selection ?? (() => ({ kind: 'all', unread: false }))) as Signal<Selection>;
+}
+
 function createActions(collaborators: Collaborators): EntryStateActions {
   TestBed.configureTestingModule({
     imports: [provideTranslocoTesting()],
     providers: [
       EntryStateActions,
+      { provide: EntryRowCache, useValue: {} },
       provideRouter([]),
-      { provide: EntriesStore, useValue: collaborators.entries },
+      ...provideRouteListForTest(collaborators.entries, selectionOf(collaborators.routeState)),
       { provide: SubscriptionsStore, useValue: collaborators.subscriptions },
       { provide: SavedSearchesStore, useValue: collaborators.savedSearches ?? {} },
       { provide: ReaderRouteState, useValue: collaborators.routeState },
@@ -53,7 +66,8 @@ describe('EntryStateActions liking (#1600)', () => {
       providers: [
         EntryStateActions,
         provideRouter([]),
-        { provide: EntriesStore, useValue: { setLiked } },
+        ...provideRouteListForTest({}),
+        { provide: EntryRowCache, useValue: { setLiked } },
         { provide: SubscriptionsStore, useValue: {} },
         { provide: SavedSearchesStore, useValue: {} },
         {
@@ -110,8 +124,9 @@ describe('EntryStateActions opening', () => {
       imports: [provideTranslocoTesting()],
       providers: [
         EntryStateActions,
+        { provide: EntryRowCache, useValue: {} },
         provideRouter([]),
-        { provide: EntriesStore, useValue: {} },
+        ...provideRouteListForTest({}),
         { provide: SubscriptionsStore, useValue: {} },
         { provide: SavedSearchesStore, useValue: {} },
         {
@@ -301,7 +316,7 @@ describe('EntryStateActions unsharing (#2007)', () => {
 
     expect(bumpShared).toHaveBeenCalledWith(-1);
     expect(setState).toHaveBeenCalledWith(9, { isShared: false }, expect.anything());
-    expect(actions.leavingIds().has(9)).toBe(false);
+    expect(TestBed.inject(ListContext).leavingIds().has(9)).toBe(false);
   });
 
   it('leaves the Shared list', () => {
@@ -310,7 +325,7 @@ describe('EntryStateActions unsharing (#2007)', () => {
     actions.unshare(anEntry({ id: 9, isShared: true }));
     setState.mock.calls[0][2]?.onStarted?.();
 
-    expect(actions.leavingIds().has(9)).toBe(true);
+    expect(TestBed.inject(ListContext).leavingIds().has(9)).toBe(true);
   });
 
   it('leaves the Shared list again on each attempt (#2066)', () => {
@@ -322,7 +337,7 @@ describe('EntryStateActions unsharing (#2007)', () => {
     outcome?.onFailed?.();
     outcome?.onStarted?.();
 
-    expect(actions.leavingIds().has(9)).toBe(true);
+    expect(TestBed.inject(ListContext).leavingIds().has(9)).toBe(true);
   });
 
   it('restores the count and the row when the save fails', () => {
@@ -333,7 +348,7 @@ describe('EntryStateActions unsharing (#2007)', () => {
     setState.mock.calls[0][2]?.onFailed?.();
 
     expect(bumpShared).toHaveBeenLastCalledWith(1);
-    expect(actions.leavingIds().has(9)).toBe(false);
+    expect(TestBed.inject(ListContext).leavingIds().has(9)).toBe(false);
   });
 });
 
@@ -352,8 +367,9 @@ describe('EntryStateActions deleting my own post (#1972)', () => {
       imports: [provideTranslocoTesting()],
       providers: [
         EntryStateActions,
+        { provide: EntryRowCache, useValue: {} },
         provideRouter([]),
-        { provide: EntriesStore, useValue: {} },
+        ...provideRouteListForTest({}),
         { provide: SubscriptionsStore, useValue: { reloadCountsQuietly } },
         { provide: SavedSearchesStore, useValue: {} },
         {
@@ -371,7 +387,7 @@ describe('EntryStateActions deleting my own post (#1972)', () => {
   it('lets the row leave and recounts once the post is gone', () => {
     actions.deletePost(anEntry({ id: 7 }));
 
-    expect(actions.leavingIds().has(7)).toBe(true);
+    expect(TestBed.inject(ListContext).leavingIds().has(7)).toBe(true);
     expect(reloadCountsQuietly).toHaveBeenCalled();
     expect(navigate).not.toHaveBeenCalled();
   });
@@ -381,7 +397,7 @@ describe('EntryStateActions deleting my own post (#1972)', () => {
 
     actions.deletePost(anEntry({ id: 7 }));
 
-    expect(actions.leavingIds().has(7)).toBe(true);
+    expect(TestBed.inject(ListContext).leavingIds().has(7)).toBe(true);
     expect(navigate).toHaveBeenCalledWith(
       [],
       expect.objectContaining({ queryParams: { entry: null, link: null } }),
@@ -393,7 +409,7 @@ describe('EntryStateActions deleting my own post (#1972)', () => {
 
     actions.deletePost(anEntry({ id: 7 }));
 
-    expect(actions.leavingIds().size).toBe(0);
+    expect(TestBed.inject(ListContext).leavingIds().size).toBe(0);
     expect(reloadCountsQuietly).not.toHaveBeenCalled();
   });
 });
@@ -402,7 +418,6 @@ describe('EntryStateActions on a post deleted on its network (#1975)', () => {
   const show = jest.fn();
   const reloadCountsQuietly = jest.fn();
   const openEntryId = signal<number | null>(null);
-  let actions: EntryStateActions;
   let navigate: jest.SpyInstance;
 
   beforeEach(() => {
@@ -413,8 +428,9 @@ describe('EntryStateActions on a post deleted on its network (#1975)', () => {
       imports: [provideTranslocoTesting()],
       providers: [
         EntryStateActions,
+        { provide: EntryRowCache, useValue: {} },
         provideRouter([]),
-        { provide: EntriesStore, useValue: {} },
+        ...provideRouteListForTest({}),
         { provide: SubscriptionsStore, useValue: { reloadCountsQuietly } },
         { provide: SavedSearchesStore, useValue: {} },
         {
@@ -425,7 +441,7 @@ describe('EntryStateActions on a post deleted on its network (#1975)', () => {
         { provide: PostActions, useValue: {} },
       ],
     });
-    actions = TestBed.inject(EntryStateActions);
+    TestBed.inject(EntryStateActions);
     navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
   });
 
@@ -435,7 +451,7 @@ describe('EntryStateActions on a post deleted on its network (#1975)', () => {
     TestBed.inject(RemovedPosts).announce({ id: 7, network: 'bluesky' });
 
     expect(show).toHaveBeenCalledWith({ message: 'Deleted on Bluesky — removed here.' });
-    expect(actions.leavingIds().has(7)).toBe(true);
+    expect(TestBed.inject(ListContext).leavingIds().has(7)).toBe(true);
     expect(reloadCountsQuietly).toHaveBeenCalled();
     expect(navigate).toHaveBeenCalledWith(
       [],
@@ -449,7 +465,7 @@ describe('EntryStateActions on a post deleted on its network (#1975)', () => {
     TestBed.inject(RemovedPosts).announce({ id: 7, network: 'mastodon' });
 
     expect(show).toHaveBeenCalledWith({ message: 'Deleted on Mastodon — removed here.' });
-    expect(actions.leavingIds().has(7)).toBe(true);
+    expect(TestBed.inject(ListContext).leavingIds().has(7)).toBe(true);
     expect(navigate).not.toHaveBeenCalled();
   });
 });
@@ -469,7 +485,8 @@ describe('EntryStateActions voting (#2218)', () => {
       providers: [
         EntryStateActions,
         provideRouter([]),
-        { provide: EntriesStore, useValue: { setVote, refreshVote } },
+        ...provideRouteListForTest({}),
+        { provide: EntryRowCache, useValue: { setVote, refreshVote } },
         { provide: SubscriptionsStore, useValue: {} },
         { provide: SavedSearchesStore, useValue: {} },
         {
@@ -526,5 +543,45 @@ describe('EntryStateActions voting (#2218)', () => {
     TestBed.tick();
 
     expect(refreshVote).not.toHaveBeenCalled();
+  });
+});
+
+describe("EntryStateActions with a story's list over the reader's (#2329)", () => {
+  const routeSetState = jest.fn();
+  const storySetState = jest.fn();
+  const bumpKept = jest.fn();
+  let story: TestListContext;
+  let actions: EntryStateActions;
+
+  beforeEach(() => {
+    routeSetState.mockReset();
+    storySetState.mockReset();
+    actions = createActions({
+      entries: { setState: routeSetState },
+      subscriptions: { bumpKept },
+      routeState: {
+        openEntryId: signal(null),
+        openEntry: signal(null),
+        selection: signal<Selection>({ kind: 'kept' }),
+      },
+    });
+    story = new TestListContext(
+      { setState: storySetState } as unknown as EntriesStore,
+      signal<Selection>({ kind: 'trending-story', id: 42, unread: false }),
+    );
+    TestBed.inject(ListCover).coverWith(
+      { context: story, heading: {} as ListHeading, open: signal(true) },
+      TestBed.inject(DestroyRef),
+    );
+  });
+
+  it("changes the row in the story's list, which it does not leave, over Kept", () => {
+    actions.keep(anEntry({ id: 9, isKept: true }));
+    storySetState.mock.calls[0][2]?.onStarted?.();
+
+    expect(storySetState).toHaveBeenCalledWith(9, { isKept: false }, expect.anything());
+    expect(routeSetState).not.toHaveBeenCalled();
+    expect(story.leavingIds().has(9)).toBe(false);
+    expect(TestBed.inject(ListContext).leavingIds().has(9)).toBe(false);
   });
 });

@@ -52,6 +52,21 @@ final class TrendingJsonTest extends TestCase
         self::assertSame([601, 602], array_column($shares, 'id'));
     }
 
+    public function testAStoryCarriesItsTitle(): void
+    {
+        $ranked = (new RankedStoryModel(12, 2, new \DateTimeImmutable('2031-05-14 10:00:00')))
+            ->titled('Hafenstreik in Hamburg');
+
+        self::assertSame('Hafenstreik in Hamburg', $this->storyOf($ranked)['title']);
+    }
+
+    public function testAStoryWithoutStoredTitlesShowsItsLeadHeadline(): void
+    {
+        $ranked = new RankedStoryModel(12, 2, new \DateTimeImmutable('2031-05-14 10:00:00'));
+
+        self::assertSame('Entry 501', $this->storyOf($ranked)['title']);
+    }
+
     public function testEveryArticleAndShareKeepsTheEntryRowShape(): void
     {
         $card = new TrendingStoryCardModel(
@@ -74,6 +89,20 @@ final class TrendingJsonTest extends TestCase
         self::assertIsArray($shares);
         self::assertIsArray($shares[0]);
         self::assertSame($entryRow, array_keys($shares[0]));
+    }
+
+    /** @return array<string, mixed> */
+    private function storyOf(RankedStoryModel $ranked): array
+    {
+        $card = new TrendingStoryCardModel(
+            new StoryArticlesModel(new StoryArticleModel($this->row(501), []), []),
+            $ranked,
+            false,
+            false,
+        );
+
+        return (new TrendingJson(JsonMappers::entryJson()))
+            ->page(new TrendingPageModel(TrendingWindow::Day, null, [$card]))['stories'][0];
     }
 
     private function row(int $id): EntryListRow

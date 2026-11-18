@@ -2,8 +2,8 @@ import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { onIdentityChange } from '../../core/auth/session-identity';
 import { ReaderApi } from '../reader-api';
-import { EntriesStore } from '../state/entries.store';
 import { CompletedEntriesMerge } from './completed-entries-merge';
+import { injectListOnScreen } from './list-cover';
 import { ReaderRouteState } from './reader-route-state.service';
 
 /** Each call can tie up a PHP worker for a page fetch, and Strato has few of them. */
@@ -14,7 +14,7 @@ export const SIGHTED_PREVIEWS_IN_FLIGHT = 2;
 @Injectable()
 export class SightedPreviews {
   private readonly api = inject(ReaderApi);
-  private readonly store = inject(EntriesStore);
+  private readonly list = injectListOnScreen();
   private readonly routeState = inject(ReaderRouteState);
   private readonly completed = inject(CompletedEntriesMerge);
 
@@ -70,7 +70,9 @@ export class SightedPreviews {
   private isPending(entryId: number): boolean {
     const open = this.routeState.openEntry();
     if (open?.id === entryId) return open.pending;
-    return this.store.entries().some((entry) => entry.id === entryId && entry.pending);
+    return this.list()
+      .entries.entries()
+      .some((entry) => entry.id === entryId && entry.pending);
   }
 
   private reset(): void {

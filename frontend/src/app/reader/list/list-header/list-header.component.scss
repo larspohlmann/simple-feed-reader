@@ -128,6 +128,11 @@ h2.search-title {
   .compact-search-title-break {
     display: block;
   }
+
+  /* A story's row holds the most actions; on a phone its glyph's room goes to the title (#2329). */
+  .story-glyph {
+    display: none;
+  }
 }
 
 /* Loaded count as its own quiet chip, not trailing "— {{count}}" text

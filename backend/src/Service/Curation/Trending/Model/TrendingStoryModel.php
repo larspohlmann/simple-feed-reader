@@ -20,6 +20,15 @@ final readonly class TrendingStoryModel
         return array_map(static fn (StoryMemberModel $member): int => $member->entryId, $this->members);
     }
 
+    /** @return list<StoryMemberModel> */
+    public function outletMembers(): array
+    {
+        return array_values(array_filter(
+            $this->members,
+            static fn (StoryMemberModel $member): bool => $member->fromAnOutlet,
+        ));
+    }
+
     public function outletCount(): int
     {
         return \count(array_unique(array_map(

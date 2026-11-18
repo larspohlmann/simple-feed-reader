@@ -269,6 +269,7 @@ final class MaintenanceControllerTest extends WebTestCase
                 'privateFeedSync',
                 'notificationPoll',
                 'trending',
+                'storyAi',
                 'logShipping',
             ],
             array_keys($payload),

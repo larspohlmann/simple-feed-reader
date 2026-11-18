@@ -8,7 +8,7 @@ namespace App\Service\Curation\Recommendation\Run\Support;
  * How many runs keep their run log: the debug panel compares runs, and the ETA averages their phase timings. Ten
  * caps an account near 16 MB (a 35-batch run holds about 40 rows, 1.6 MB). The starter trims to it and the debug panel
  * offers exactly the survivors, so both read this one constant. Profile runs keep their log rows under the same
- * count, separately.
+ * count, separately; story AI runs keep this many runs, their rows with them.
  */
 final readonly class RunLogRetention
 {

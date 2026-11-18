@@ -399,8 +399,8 @@ export interface EntryQuery {
   q?: string;
   /** Set only for a single saved search: fetch its members from the membership table. */
   savedSearchId?: number;
-  /** Set only for a followed Trending story: fetch the story's entries. */
-  followedStoryId?: number;
+  /** Set only for a Trending story's list: fetch the story's entries. */
+  storyId?: number;
   /** Absent means newest first, the API's own default. */
   order?: ListOrder;
   /** Only the Trending list carries one. */

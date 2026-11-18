@@ -27,7 +27,7 @@
       <div class="followed-list">
         @for (story of stories(); track story.id) {
           <div class="followed-row" [class.active]="story.id === activeStoryId()">
-            <a class="nav" [routerLink]="['/trending/followed', story.id]">
+            <a class="nav" [routerLink]="storyListLink(story.id)" queryParamsHandling="preserve">
               <app-icon name="notifications_active" size="md" />
               <span class="name">{{
                 story.headline ?? ('reader.followedStoryFallback' | transloco)
@@ -49,7 +49,7 @@
               [label]="'reader.followedStoryMenu' | transloco"
             >
               <ng-template>
-                <button role="menuitem" (click)="unfollowing.unfollow(story.id); rows.closeMenu()">
+                <button role="menuitem" (click)="followed.unfollow(story.id); rows.closeMenu()">
                   {{ 'reader.unfollowStory' | transloco }}
                 </button>
               </ng-template>

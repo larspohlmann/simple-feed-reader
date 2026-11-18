@@ -13,6 +13,7 @@ use App\Service\Operations\Worker\Message\RebuildDueTrendingStories;
 use App\Service\Operations\Worker\Message\RefreshDueFeeds;
 use App\Service\Operations\Worker\Message\RefreshProfileImages;
 use App\Service\Operations\Worker\Message\ResolvePendingLinks;
+use App\Service\Operations\Worker\Message\RunDueStoryAiTasks;
 use App\Service\Operations\Worker\Message\SendDueDigests;
 use App\Service\Operations\Worker\Message\StartDueProfileRuns;
 use App\Service\Operations\Worker\Message\StartDueRecommendationRuns;
@@ -39,7 +40,7 @@ final class WorkerScheduleWiringTest extends KernelTestCase
 
         $recurringMessages = $provider->getSchedule()->getRecurringMessages();
 
-        self::assertCount(16, $recurringMessages);
+        self::assertCount(17, $recurringMessages);
         $classes = array_map(
             static fn ($recurring) => self::firstMessageClass($recurring),
             $recurringMessages,
@@ -62,6 +63,7 @@ final class WorkerScheduleWiringTest extends KernelTestCase
                 RebuildDueTrendingStories::class,
                 ResolvePendingLinks::class,
                 PollSocialNotifications::class,
+                RunDueStoryAiTasks::class,
             ],
             $classes,
         );
@@ -89,22 +91,22 @@ final class WorkerScheduleWiringTest extends KernelTestCase
                 'every 5 minutes',
                 'every 1 minute',
                 'every 5 minutes',
+                'every 5 minutes',
             ],
             $frequencies,
         );
     }
 
-    public function testPollSocialNotificationsIsTheLastEntryEveryFiveMinutes(): void
+    public function testStoryAiTasksAreScheduledLast(): void
     {
         self::bootKernel();
         $provider = self::getContainer()->get(WorkerSchedule::class);
         self::assertInstanceOf(WorkerSchedule::class, $provider);
 
-        $recurringMessages = $provider->getSchedule()->getRecurringMessages();
-        $last = array_last($recurringMessages);
+        $last = array_last($provider->getSchedule()->getRecurringMessages());
         self::assertNotNull($last);
 
-        self::assertSame(PollSocialNotifications::class, self::firstMessageClass($last));
+        self::assertSame(RunDueStoryAiTasks::class, self::firstMessageClass($last));
         self::assertSame('every 5 minutes', (string) $last->getTrigger());
     }
 

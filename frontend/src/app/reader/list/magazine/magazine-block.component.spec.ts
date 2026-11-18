@@ -81,6 +81,39 @@ describe('MagazineBlockComponent', () => {
     expect(element.querySelector('app-entry-hero app-story-source-count')).not.toBeNull();
   });
 
+  describe("a story's title (#2329)", () => {
+    const storyBlock = (kind: EntryKind): MagazineBlock => {
+      const lead = entry();
+      const story = aStory({ title: 'Harbour barrier approved', articles: [aStoryArticle(lead)] });
+      return kind === 'split'
+        ? { kind, entry: lead, story, imageSide: 'left' }
+        : ({ kind, entry: lead, story } as MagazineBlock);
+    };
+
+    it.each(ENTRY_KINDS.filter((kind) => kind !== 'compact'))(
+      'sits tucked under a %s story card',
+      (kind) => {
+        const title = mount(storyBlock(kind)).querySelector('app-story-title');
+
+        expect(title?.querySelector('.title')?.textContent?.trim()).toBe(
+          'Harbour barrier approved',
+        );
+        expect(title?.classList).toContain('tucked');
+      },
+    );
+
+    it('stands alone above a compact block, which draws no card to tuck under', () => {
+      const title = mount(storyBlock('compact')).querySelector('app-story-title');
+
+      expect(title).not.toBeNull();
+      expect(title?.classList).not.toContain('tucked');
+    });
+
+    it('is not rendered for a plain entry block', () => {
+      expect(mount(blockOf('hero', entry())).querySelector('app-story-title')).toBeNull();
+    });
+  });
+
   it('renders a quoting block as app-entry-quoting', () => {
     const element = mount(blockOf('quoting', entry({ share: 'quote', quote: aQuotedPost() })));
 

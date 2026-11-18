@@ -81,26 +81,14 @@
         [title]="'settings.profile.connection' | transloco"
         [description]="'settings.profile.connectionDesc' | transloco"
       >
-        <select data-testid="profile-connection" (change)="onConnection($event)">
-          <option value="" [selected]="state.connectionId === null">
-            {{ 'settings.profile.connectionActive' | transloco }}
-          </option>
-          @if (unusableChoice(); as connectionId) {
-            <option
-              data-testid="profile-connection-unusable"
-              [value]="connectionId"
-              disabled
-              selected
-            >
-              {{ 'settings.profile.connectionUnusable' | transloco }}
-            </option>
-          }
-          @for (candidate of state.candidates; track candidate.id) {
-            <option [value]="candidate.id" [selected]="state.connectionId === candidate.id">
-              {{ label(candidate) }}
-            </option>
-          }
-        </select>
+        <app-connection-select
+          data-testid="profile-connection"
+          [chosenId]="state.connectionId"
+          [candidates]="state.candidates"
+          [activeLabel]="'settings.profile.connectionActive' | transloco"
+          [unusableLabel]="'settings.profile.connectionUnusable' | transloco"
+          (chosen)="onConnection($event)"
+        />
       </app-settings-row>
 
       <div class="caps">

@@ -55,6 +55,7 @@ import { heldFor } from '../../../core/held-for';
 import { FeedLanguage } from '../../feed-language';
 import { StoryContextDirective } from '../../trending/story-context';
 import { ListItem, leadOf, storyOf } from '../../state/list-item';
+import { StoryTitleComponent } from '../../trending/story-title/story-title.component';
 
 // How long a reload or a command may run before it earns the overlay. One that
 // lands sooner would only flash it, which reads as a glitch rather than as progress.
@@ -76,6 +77,7 @@ const WAIT_OVERLAY_DELAY_MS = 150;
     RunHeaderComponent,
     ListDividerComponent,
     MagazineBlockComponent,
+    StoryTitleComponent,
     ListHeaderComponent,
     ListEmptyStateComponent,
     ToTopButtonComponent,

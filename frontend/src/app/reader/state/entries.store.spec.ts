@@ -1,3 +1,8 @@
+import {
+  EnvironmentInjector,
+  createEnvironmentInjector,
+  runInInjectionContext,
+} from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
@@ -9,8 +14,9 @@ import { API_BASE_URL } from '../../core/api';
 import { transientGatewayRetryInterceptor } from '../../core/http/retry-transient-gateway-errors';
 import { TokenStore } from '../../core/auth/token.store';
 import { EntriesStore } from './entries.store';
+import { EntryRowCache } from './entry-row-cache';
 import { LandedList } from './landed-list';
-import { EntryDto } from '../models';
+import { EntryDetailDto, EntryDto } from '../models';
 import { VoteValue } from '../vote-pill/vote';
 import { CompletedEntryDto } from './completed-entry';
 import { markTerms } from '../../shared/marked-text/search-marks';
@@ -46,6 +52,7 @@ const completed = (id: number, over: Partial<CompletedEntryDto> = {}): Completed
 
 describe('EntriesStore', () => {
   let store: EntriesStore;
+  let rows: EntryRowCache;
   let ctrl: HttpTestingController;
   let tokens: TokenStore;
   beforeEach(() => {
@@ -60,7 +67,168 @@ describe('EntriesStore', () => {
     tokens = TestBed.inject(TokenStore);
     tokens.set('account-a.jwt');
     store = TestBed.inject(EntriesStore);
+    rows = TestBed.inject(EntryRowCache);
     ctrl = TestBed.inject(HttpTestingController);
+  });
+
+  describe('beside another list on screen (#2329)', () => {
+    const ENTRIES_URL = 'https://api.test/api/entries';
+    const STORY_URL = 'https://api.test/api/entries/trending-stories/42';
+    let other: EntriesStore;
+    let otherHost: EnvironmentInjector;
+
+    beforeEach(() => {
+      otherHost = createEnvironmentInjector([], TestBed.inject(EnvironmentInjector));
+      other = runInInjectionContext(otherHost, () => new EntriesStore());
+    });
+
+    function land(list: EntriesStore, entries: EntryDto[]): void {
+      list.load({ view: 'all' });
+      ctrl.expectOne((request) => request.url === ENTRIES_URL).flush({ entries, nextCursor: null });
+    }
+
+    function landStory(list: EntriesStore, entries: EntryDto[]): void {
+      list.load({ view: 'all', storyId: 42 });
+      ctrl
+        .expectOne((request) => request.url === STORY_URL)
+        .flush({
+          entries,
+          nextCursor: null,
+          title: null,
+          memberCount: entries.length,
+          unreadCount: entries.length,
+          lastOpenedAt: null,
+          newEntryIds: [],
+        });
+    }
+
+    it('shows a change made in either list in the other that holds the same row', () => {
+      land(store, [entry(7), entry(9)]);
+      landStory(other, [entry(7)]);
+
+      other.setState(7, { isFavorite: true });
+      store.setState(7, { isViewed: true });
+
+      for (const list of [store, other]) {
+        expect(list.entry(7)).toMatchObject({ isFavorite: true, isViewed: true, isHidden: true });
+      }
+      expect(store.entries().map((row) => row.id)).toEqual([7, 9]);
+      ctrl
+        .match('https://api.test/api/entries/7/state')
+        .forEach((call) => call.flush({ state: {} }));
+    });
+
+    it('shows a row read in both lists once one marks it read without a request', () => {
+      land(store, [entry(7, { isHidden: false })]);
+      landStory(other, [entry(7, { isHidden: false })]);
+
+      rows.markHiddenLocally([7]);
+
+      expect(store.entry(7)?.isHidden).toBe(true);
+      expect(other.entry(7)?.isHidden).toBe(true);
+    });
+
+    it("marks a story's rows read where the list underneath shares them, and leaves the rest of it unread", () => {
+      land(store, [entry(7, { isHidden: false }), entry(9, { isHidden: false })]);
+      landStory(other, [entry(7, { isHidden: false })]);
+
+      rows.markHiddenLocally(other.entries().map((row) => row.id));
+      expect(store.entry(9)?.isHidden).toBe(false);
+      land(store, [entry(7, { isHidden: true }), entry(9, { isHidden: false })]);
+
+      expect(other.entry(7)?.isHidden).toBe(true);
+      expect(store.entry(7)?.isHidden).toBe(true);
+      expect(store.entry(9)?.isHidden).toBe(false);
+    });
+
+    it('shows a completed row completed in both lists', () => {
+      land(store, [entry(7, { pending: true })]);
+      landStory(other, [entry(7, { pending: true })]);
+
+      rows.mergeCompleted([completed(7, { summary: 'Filled in' })]);
+
+      expect(store.entry(7)).toMatchObject({ pending: false, summary: 'Filled in' });
+      expect(other.entry(7)).toMatchObject({ pending: false, summary: 'Filled in' });
+    });
+
+    it('rolls a failed change back in both lists, and shows the failure on the banner of the list that made it', () => {
+      land(store, [entry(7, { isKept: false })]);
+      landStory(other, [entry(7, { isKept: false })]);
+
+      other.setState(7, { isKept: true });
+      expect(store.entry(7)?.isKept).toBe(true);
+      ctrl
+        .expectOne('https://api.test/api/entries/7/state')
+        .flush({ title: 'err' }, { status: 500, statusText: 'err' });
+
+      expect(store.entry(7)?.isKept).toBe(false);
+      expect(other.entry(7)?.isKept).toBe(false);
+      expect(other.error()).not.toBeNull();
+      expect(store.error()).toBeNull();
+    });
+
+    it("keeps a change on the wire in one list across the other list's reload", () => {
+      land(store, [entry(7, { isFavorite: false })]);
+      landStory(other, [entry(7, { isFavorite: false })]);
+      other.setState(7, { isFavorite: true });
+
+      land(store, [entry(7, { isFavorite: false })]);
+
+      expect(store.entry(7)?.isFavorite).toBe(true);
+      expect(other.entry(7)?.isFavorite).toBe(true);
+      ctrl.expectOne('https://api.test/api/entries/7/state').flush({ state: {} });
+    });
+
+    it("shows a story's article changed in the story's list on the Trending card", () => {
+      const share = entry(3);
+      store.load({ view: 'trending', window: 'day' });
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/trending')
+        .flush({
+          window: 'day',
+          builtAt: null,
+          stories: [aStory({ articles: [aStoryArticle({ id: 7, shares: [share] })] })],
+        });
+      landStory(other, [entry(7), entry(3)]);
+
+      other.setState(7, { isViewed: true });
+      rows.markSharedLocally(3);
+
+      const article = storyOf(store.items()[0])?.articles[0];
+      expect(article?.isViewed).toBe(true);
+      expect(article?.shares[0]).toBe(share);
+      ctrl.expectOne('https://api.test/api/entries/7/state').flush({ state: {} });
+    });
+
+    it("keeps what only a list sends with a row, its copies' grouping included, when the other list reloads it", () => {
+      landStory(other, [
+        entry(7, { joinedAt: '2026-11-18T10:00:00+00:00', duplicates: [entry(8)] }),
+      ]);
+
+      land(store, [entry(7, { title: 'Newer' })]);
+      rows.markHiddenLocally([8]);
+
+      expect(other.entry(7)).toMatchObject({
+        title: 'Newer',
+        joinedAt: '2026-11-18T10:00:00+00:00',
+        duplicates: [expect.objectContaining({ id: 8, isHidden: true })],
+      });
+      expect(store.entry(7)?.joinedAt).toBeUndefined();
+      expect(store.entry(7)?.duplicates).toBeUndefined();
+    });
+
+    it('drops a row once neither list holds it, and keeps one a list still holds', () => {
+      land(store, [entry(7), entry(9)]);
+      landStory(other, [entry(7), entry(8)]);
+
+      land(store, [entry(9)]);
+      expect(rows.entry(7)).not.toBeNull();
+      otherHost.destroy();
+
+      expect(rows.entry(7)).toBeNull();
+      expect(rows.entry(8)).toBeNull();
+      expect(rows.entry(9)).not.toBeNull();
+    });
   });
 
   it('loads a first page and records a next cursor', () => {
@@ -515,7 +683,7 @@ describe('EntriesStore', () => {
       .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [entry(1), entry(2), entry(3)], nextCursor: null });
 
-    store.markHiddenLocally([1, 3]);
+    rows.markHiddenLocally([1, 3]);
 
     const byId = new Map(
       store.entries().map((listedEntry) => [listedEntry.id, listedEntry.isHidden]),
@@ -532,7 +700,7 @@ describe('EntriesStore', () => {
       .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [entry(1), entry(2)], nextCursor: null });
 
-    store.markSharedLocally(2);
+    rows.markSharedLocally(2);
 
     expect(store.entries().map((listedEntry) => listedEntry.isShared)).toEqual([false, true]);
     ctrl.expectNone(() => true);
@@ -557,13 +725,13 @@ describe('EntriesStore', () => {
     it('takes the self-reply thread a completion folded into the row', () => {
       const reply = aThreadPost({ text: 'Part two' });
 
-      store.mergeCompleted([completed(1, { thread: [reply] })]);
+      rows.mergeCompleted([completed(1, { thread: [reply] })]);
 
       expect(store.entries()[0].thread).toEqual([reply]);
     });
 
     it('takes everything completion filled in, keeping what only the list knows', () => {
-      store.mergeCompleted([
+      rows.mergeCompleted([
         completed(1, { linkCards: [card], pending: false, excerpt: 'Filled', share: 'media' }),
         completed(7),
       ]);
@@ -582,7 +750,7 @@ describe('EntriesStore', () => {
     it('keeps the list and its rows as they are when a round fills nothing in', () => {
       const before = store.entries();
 
-      store.mergeCompleted([completed(1, { pending: true }), completed(2, { pending: true })]);
+      rows.mergeCompleted([completed(1, { pending: true }), completed(2, { pending: true })]);
 
       expect(store.entries()).toBe(before);
     });
@@ -590,7 +758,7 @@ describe('EntriesStore', () => {
     it('replaces only the rows a round filled in', () => {
       const [first] = store.entries();
 
-      store.mergeCompleted([completed(1, { pending: true }), completed(2, { pending: false })]);
+      rows.mergeCompleted([completed(1, { pending: true }), completed(2, { pending: false })]);
 
       expect(store.entries()[0]).toBe(first);
       expect(store.entries()[1].pending).toBe(false);
@@ -599,7 +767,7 @@ describe('EntriesStore', () => {
     it('keeps what a round filled in when a state change on the wire fails', () => {
       store.setState(2, { isFavorite: true });
       const patch = ctrl.expectOne('https://api.test/api/entries/2/state');
-      store.mergeCompleted([completed(2, { linkCards: [card], pending: false })]);
+      rows.mergeCompleted([completed(2, { linkCards: [card], pending: false })]);
 
       patch.flush('nope', { status: 500, statusText: 'Server Error' });
 
@@ -611,17 +779,17 @@ describe('EntriesStore', () => {
     });
 
     it('keeps a completed card when a stale answer still says pending', () => {
-      store.mergeCompleted([completed(2, { linkCards: [card], pending: false })]);
+      rows.mergeCompleted([completed(2, { linkCards: [card], pending: false })]);
 
-      store.mergeCompleted([completed(2, { pending: true })]);
+      rows.mergeCompleted([completed(2, { pending: true })]);
 
       expect(store.entries()[1]).toMatchObject({ pending: false, linkCards: [card] });
     });
 
     it('keeps a post completed without cards when a stale answer still says pending', () => {
-      store.mergeCompleted([completed(2, { pending: false, excerpt: 'Filled' })]);
+      rows.mergeCompleted([completed(2, { pending: false, excerpt: 'Filled' })]);
 
-      store.mergeCompleted([completed(2, { pending: true, excerpt: 'Stale' })]);
+      rows.mergeCompleted([completed(2, { pending: true, excerpt: 'Stale' })]);
 
       expect(store.entries()[1]).toMatchObject({ pending: false, excerpt: 'Filled' });
     });
@@ -644,6 +812,18 @@ describe('EntriesStore', () => {
       expect(store.entries().map((listed) => listed.id)).toEqual([1]);
     });
 
+    it('keeps the body of a detail copy out of the row it holds', () => {
+      store.holdUnlisted({
+        ...entry(9),
+        contentHtml: '<p>Body</p>',
+        chapters: null,
+        transcript: null,
+      } as EntryDetailDto);
+
+      expect(store.entry(9)).not.toHaveProperty('contentHtml');
+      expect(rows.entry(9)).not.toHaveProperty('contentHtml');
+    });
+
     it('prefers the listed row once the list holds the same entry', () => {
       store.holdUnlisted(entry(1, { title: 'Held copy' }));
 
@@ -653,7 +833,7 @@ describe('EntriesStore', () => {
     it('keeps its cards when a state change on the wire fails after a completion', () => {
       store.setState(9, { isFavorite: true });
       const patch = ctrl.expectOne('https://api.test/api/entries/9/state');
-      store.mergeCompleted([completed(9, { linkCards: [card] })]);
+      rows.mergeCompleted([completed(9, { linkCards: [card] })]);
 
       patch.flush(failure, { status: 500, statusText: 'err' });
 
@@ -686,7 +866,7 @@ describe('EntriesStore', () => {
     it('keeps the held entry as it is when a round fills nothing in', () => {
       const before = store.entry(9);
 
-      store.mergeCompleted([completed(9, { pending: true })]);
+      rows.mergeCompleted([completed(9, { pending: true })]);
 
       expect(store.entry(9)).toBe(before);
     });
@@ -978,7 +1158,7 @@ describe('EntriesStore', () => {
     it('setsAVoteAndItsScoreAtOnce', () => {
       loadVotable();
 
-      store.setVote(store.entries()[0], 1, () => undefined);
+      rows.setVote(store.entries()[0], 1, () => undefined);
 
       expect(store.entries()[0]).toMatchObject({ myVote: 1, score: 11 });
       const request = ctrl.expectOne(votePath);
@@ -991,7 +1171,7 @@ describe('EntriesStore', () => {
     it('moves a flipped vote by two', () => {
       loadVotable(1);
 
-      store.setVote(store.entries()[0], -1, () => undefined);
+      rows.setVote(store.entries()[0], -1, () => undefined);
 
       expect(store.entries()[0]).toMatchObject({ myVote: -1, score: 8 });
       ctrl.expectOne(votePath).flush({ myVote: -1, score: 8 });
@@ -1001,7 +1181,7 @@ describe('EntriesStore', () => {
       loadVotable();
       const problems: string[] = [];
 
-      store.setVote(store.entries()[0], 1, (problem) => problems.push(problem.title));
+      rows.setVote(store.entries()[0], 1, (problem) => problems.push(problem.title));
       ctrl
         .expectOne(votePath)
         .flush(
@@ -1015,10 +1195,10 @@ describe('EntriesStore', () => {
 
     it('dropsAVoteWhileOneIsOnTheWire', () => {
       loadVotable();
-      store.setVote(store.entries()[0], 1, () => undefined);
+      rows.setVote(store.entries()[0], 1, () => undefined);
       const first = ctrl.expectOne(votePath);
 
-      store.setVote(store.entries()[0], -1, () => undefined);
+      rows.setVote(store.entries()[0], -1, () => undefined);
 
       ctrl.expectNone(votePath);
       expect(store.entries()[0]).toMatchObject({ myVote: 1, score: 11 });
@@ -1028,7 +1208,7 @@ describe('EntriesStore', () => {
     it('ignoresAnEntryWithoutAVote', () => {
       loadVotable(null);
 
-      store.setVote(store.entries()[0], 1, () => undefined);
+      rows.setVote(store.entries()[0], 1, () => undefined);
 
       ctrl.expectNone(votePath);
       expect(store.entries()[0]).toMatchObject({ myVote: null, score: 10 });
@@ -1037,7 +1217,7 @@ describe('EntriesStore', () => {
     it('refreshesTheVoteFromTheNetwork', () => {
       loadVotable(0);
 
-      store.refreshVote(store.entries()[0]);
+      rows.refreshVote(store.entries()[0]);
       const request = ctrl.expectOne(votePath);
       expect(request.request.method).toBe('GET');
       request.flush({ myVote: -1 });
@@ -1048,7 +1228,7 @@ describe('EntriesStore', () => {
     it('staysSilentWhenTheRefreshFails', () => {
       loadVotable(0);
 
-      store.refreshVote(store.entries()[0]);
+      rows.refreshVote(store.entries()[0]);
       ctrl.expectOne(votePath).flush({}, { status: 500, statusText: 'Server Error' });
 
       expect(store.entries()[0].myVote).toBe(0);
@@ -1058,7 +1238,7 @@ describe('EntriesStore', () => {
     it('asksNothingForAnEntryWithoutAVote', () => {
       loadVotable(null);
 
-      store.refreshVote(store.entries()[0]);
+      rows.refreshVote(store.entries()[0]);
 
       ctrl.expectNone(votePath);
     });
@@ -1066,17 +1246,17 @@ describe('EntriesStore', () => {
     it('adoptsTheNetworksVoteWithoutTouchingTheScore', () => {
       loadVotable(0);
 
-      store.adoptVote(1, { from: 0, to: -1 });
+      rows.adoptVote(1, { from: 0, to: -1 });
 
       expect(store.entries()[0]).toMatchObject({ myVote: -1, score: 10 });
     });
 
     it('lets a vote on the wire win over the network report', () => {
       loadVotable(0);
-      store.setVote(store.entries()[0], 1, () => undefined);
+      rows.setVote(store.entries()[0], 1, () => undefined);
       const request = ctrl.expectOne(votePath);
 
-      store.adoptVote(1, { from: 1, to: -1 });
+      rows.adoptVote(1, { from: 1, to: -1 });
 
       expect(store.entries()[0].myVote).toBe(1);
       request.flush({ myVote: 1, score: 11 });
@@ -1099,7 +1279,7 @@ describe('EntriesStore', () => {
     it('likes optimistically on its own route and keeps the like once the server agrees', () => {
       loadPost();
 
-      store.setLiked(store.entries()[0], true, () => undefined);
+      rows.setLiked(store.entries()[0], true, () => undefined);
       expect(store.entries()[0].social?.isLiked).toBe(true);
       const like = ctrl.expectOne('https://api.test/api/entries/1/like');
       expect(like.request.method).toBe('PUT');
@@ -1116,7 +1296,7 @@ describe('EntriesStore', () => {
     it('unlikes on DELETE', () => {
       loadPost(true);
 
-      store.setLiked(store.entries()[0], false, () => undefined);
+      rows.setLiked(store.entries()[0], false, () => undefined);
 
       expect(store.entries()[0].social?.isLiked).toBe(false);
       expect(ctrl.expectOne('https://api.test/api/entries/1/like').request.method).toBe('DELETE');
@@ -1125,7 +1305,7 @@ describe('EntriesStore', () => {
     it('adopts the like the network reports without a request', () => {
       loadPost();
 
-      store.adoptLike(1, { from: false, to: true });
+      rows.adoptLike(1, { from: false, to: true });
 
       expect(store.entries()[0].social?.isLiked).toBe(true);
       ctrl.expectNone('https://api.test/api/entries/1/like');
@@ -1134,17 +1314,17 @@ describe('EntriesStore', () => {
     it('adopts a like taken back on the network', () => {
       loadPost(true);
 
-      store.adoptLike(1, { from: true, to: false });
+      rows.adoptLike(1, { from: true, to: false });
 
       expect(store.entries()[0].social?.isLiked).toBe(false);
     });
 
     it('lets a like on the wire win over the network report', () => {
       loadPost();
-      store.setLiked(store.entries()[0], true, () => undefined);
+      rows.setLiked(store.entries()[0], true, () => undefined);
       const like = ctrl.expectOne('https://api.test/api/entries/1/like');
 
-      store.adoptLike(1, { from: true, to: false });
+      rows.adoptLike(1, { from: true, to: false });
 
       expect(store.entries()[0].social?.isLiked).toBe(true);
       like.flush({ isLiked: true });
@@ -1152,10 +1332,10 @@ describe('EntriesStore', () => {
 
     it('leaves a like settled since the network was asked alone', () => {
       loadPost();
-      store.setLiked(store.entries()[0], true, () => undefined);
+      rows.setLiked(store.entries()[0], true, () => undefined);
       ctrl.expectOne('https://api.test/api/entries/1/like').flush({ isLiked: true });
 
-      store.adoptLike(1, { from: false, to: false });
+      rows.adoptLike(1, { from: false, to: false });
 
       expect(store.entries()[0].social?.isLiked).toBe(true);
     });
@@ -1164,14 +1344,14 @@ describe('EntriesStore', () => {
       loadPost(true);
       const before = store.entries();
 
-      store.adoptLike(1, { from: true, to: true });
+      rows.adoptLike(1, { from: true, to: true });
 
       expect(store.entries()).toBe(before);
     });
 
     it('keeps an in-flight like across a list reload that lands first', () => {
       loadPost();
-      store.setLiked(store.entries()[0], true, () => undefined);
+      rows.setLiked(store.entries()[0], true, () => undefined);
       const like = ctrl.expectOne('https://api.test/api/entries/1/like');
 
       store.load({ view: 'all' });
@@ -1185,7 +1365,7 @@ describe('EntriesStore', () => {
 
     it('stops overlaying the like once the request has finished', () => {
       loadPost();
-      store.setLiked(store.entries()[0], true, () => undefined);
+      rows.setLiked(store.entries()[0], true, () => undefined);
       ctrl.expectOne('https://api.test/api/entries/1/like').flush({ isLiked: true });
 
       store.load({ view: 'all' });
@@ -1200,7 +1380,7 @@ describe('EntriesStore', () => {
       loadPost();
       const problems: string[] = [];
 
-      store.setLiked(store.entries()[0], true, (problem) => problems.push(problem.title));
+      rows.setLiked(store.entries()[0], true, (problem) => problems.push(problem.title));
       ctrl
         .expectOne('https://api.test/api/entries/1/like')
         .flush(
@@ -1215,7 +1395,7 @@ describe('EntriesStore', () => {
 
     it('stops overlaying the like once the request has failed', () => {
       loadPost();
-      store.setLiked(store.entries()[0], true, () => undefined);
+      rows.setLiked(store.entries()[0], true, () => undefined);
       ctrl
         .expectOne('https://api.test/api/entries/1/like')
         .flush({ title: 'Down', status: 500 }, { status: 500, statusText: 'Server Error' });
@@ -1230,15 +1410,15 @@ describe('EntriesStore', () => {
 
     it('drops a second click while the first like is still on the wire', () => {
       loadPost();
-      store.setLiked(store.entries()[0], true, () => undefined);
+      rows.setLiked(store.entries()[0], true, () => undefined);
       const like = ctrl.expectOne('https://api.test/api/entries/1/like');
 
-      store.setLiked(store.entries()[0], false, () => undefined);
+      rows.setLiked(store.entries()[0], false, () => undefined);
 
       ctrl.expectNone('https://api.test/api/entries/1/like');
       expect(store.entries()[0].social?.isLiked).toBe(true);
       like.flush({ isLiked: true });
-      store.setLiked(store.entries()[0], false, () => undefined);
+      rows.setLiked(store.entries()[0], false, () => undefined);
       expect(ctrl.expectOne('https://api.test/api/entries/1/like').request.method).toBe('DELETE');
     });
 
@@ -1258,7 +1438,7 @@ describe('EntriesStore', () => {
       it('likes the copy inside the row that holds it', () => {
         loadRowWithCopy();
 
-        store.setLiked(copy(), true, () => undefined);
+        rows.setLiked(copy(), true, () => undefined);
 
         expect(store.entries()[0].duplicates?.[0].social?.isLiked).toBe(true);
         ctrl.expectOne('https://api.test/api/entries/2/like').flush({ isLiked: true });
@@ -1268,7 +1448,7 @@ describe('EntriesStore', () => {
       it('adopts the network like on the copy inside the row that holds it', () => {
         loadRowWithCopy();
 
-        store.adoptLike(2, { from: false, to: true });
+        rows.adoptLike(2, { from: false, to: true });
 
         expect(store.entries()[0].duplicates?.[0].social?.isLiked).toBe(true);
       });
@@ -1276,7 +1456,7 @@ describe('EntriesStore', () => {
       it('puts the copy back when the network refuses the like', () => {
         loadRowWithCopy();
 
-        store.setLiked(copy(), true, () => undefined);
+        rows.setLiked(copy(), true, () => undefined);
         expect(store.entries()[0].duplicates?.[0].social?.isLiked).toBe(true);
         ctrl
           .expectOne('https://api.test/api/entries/2/like')
@@ -1300,7 +1480,7 @@ describe('EntriesStore', () => {
 
       it("keeps the copy's in-flight like across a list reload that lands first", () => {
         loadRowWithCopy();
-        store.setLiked(copy(), true, () => undefined);
+        rows.setLiked(copy(), true, () => undefined);
         const like = ctrl.expectOne('https://api.test/api/entries/2/like');
 
         loadRowWithCopy();
@@ -1316,7 +1496,7 @@ describe('EntriesStore', () => {
           .flush({ entries: [entry(1, { duplicates: [entry(3)] }), entry(4)], nextCursor: null });
         const before = store.entries();
 
-        store.setLiked(copy(), true, () => undefined);
+        rows.setLiked(copy(), true, () => undefined);
         ctrl.expectOne('https://api.test/api/entries/2/like').flush({ isLiked: true });
 
         expect(store.entries()).toBe(before);
@@ -1329,7 +1509,7 @@ describe('EntriesStore', () => {
         .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [entry(1)], nextCursor: null });
 
-      store.setLiked(store.entries()[0], true, () => undefined);
+      rows.setLiked(store.entries()[0], true, () => undefined);
 
       ctrl.expectNone('https://api.test/api/entries/1/like');
     });
@@ -1352,7 +1532,7 @@ describe('EntriesStore', () => {
           nextCursor: null,
         });
 
-      store.setLiked(store.entries()[0], true, () => undefined);
+      rows.setLiked(store.entries()[0], true, () => undefined);
 
       ctrl.expectNone('https://api.test/api/entries/1/like');
       expect(store.entries()[0].social?.isLiked).toBe(false);
@@ -1397,6 +1577,16 @@ describe('EntriesStore', () => {
 
       expect(firstStory().articles[1].isViewed).toBe(true);
       expect(firstStory().articles[0]).toBe(lead);
+      ctrl.expectOne('https://api.test/api/entries/42/state');
+    });
+
+    it('keeps a story the patch does not reach as it was', () => {
+      loadStories([storyOfThree(4), storyOfThree(5)]);
+      const untouched = storyOf(store.items()[1]);
+
+      store.setState(42, { isViewed: true });
+
+      expect(storyOf(store.items()[1])).toBe(untouched);
       ctrl.expectOne('https://api.test/api/entries/42/state');
     });
 
@@ -1453,7 +1643,7 @@ describe('EntriesStore', () => {
   });
   describe('the landed-list hook', () => {
     const storyUrl = 'https://api.test/api/entries/trending-stories/42';
-    const story = { view: 'all' as const, followedStoryId: 42 };
+    const story = { view: 'all' as const, storyId: 42 };
     const storyRequest = () => ctrl.expectOne((request) => request.url === storyUrl);
     const storyPage = {
       entries: [entry(1)],

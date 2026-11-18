@@ -2,6 +2,8 @@ import { test, expect, Page } from '@playwright/test';
 import { signInAsAdmin } from './support/auth';
 
 test('settings shell navigates sections; admin pages live inside it', async ({ page }) => {
+  // About a dozen page loads: 16 to 21 s beside other workers, too close to the 30 s default.
+  test.slow();
   const signedIn = await signInAsAdmin(page);
   test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
 
@@ -39,7 +41,8 @@ test('settings shell navigates sections; admin pages live inside it', async ({ p
 
   // The catalog renders read-only rows and its category dialog opens (no write).
   await page.goto('/settings/admin/catalog');
-  await expect(page.getByTestId('add-category')).toBeVisible();
+  // The whole catalog loads first; beside other workers that outlasts the 5 s default.
+  await expect(page.getByTestId('add-category')).toBeVisible({ timeout: 20_000 });
   await page.getByTestId('add-category').click();
   const categoryDialog = page.getByRole('dialog', { name: 'New category' });
   await expect(categoryDialog).toBeVisible();
@@ -100,12 +103,15 @@ async function renameTag(page: Page, from: string, to: string): Promise<void> {
 
 async function expectTagBefore(page: Page, before: string, after: string): Promise<void> {
   await expect
-    .poll(async () => {
-      const names = await tagGroups(page).locator('.head .name').allTextContents();
-      const beforeIndex = names.indexOf(before);
-      const afterIndex = names.indexOf(after);
-      return beforeIndex >= 0 && afterIndex >= 0 && beforeIndex < afterIndex;
-    })
+    .poll(
+      async () => {
+        const names = await tagGroups(page).locator('.head .name').allTextContents();
+        const beforeIndex = names.indexOf(before);
+        const afterIndex = names.indexOf(after);
+        return beforeIndex >= 0 && afterIndex >= 0 && beforeIndex < afterIndex;
+      },
+      { timeout: 20_000 },
+    )
     .toBe(true);
 }
 

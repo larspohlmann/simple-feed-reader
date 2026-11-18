@@ -7,6 +7,7 @@ namespace App\Service\Curation\Recommendation\Run;
 use App\Entity\ProfileRun;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
+use App\Entity\StoryAiRun;
 use App\Repository\CallingRun;
 use App\Repository\RecommendationCallRepository;
 use App\Service\Curation\Recommendation\Run\Factory\RecommendationRunLogFactory;
@@ -42,6 +43,14 @@ final readonly class RecommendationCallRecorder
         return $this->opened(
             $this->logFactory->createForProfileRun($profileRun, $renderedRequest),
             CallingRun::profileRun($profileRun->requireId()),
+        );
+    }
+
+    public function beginForStoryAiRun(StoryAiRun $storyAiRun, string $renderedRequest): RecordedCall
+    {
+        return $this->opened(
+            $this->logFactory->createForStoryAiRun($storyAiRun, $renderedRequest),
+            CallingRun::storyAiRun($storyAiRun->requireId()),
         );
     }
 

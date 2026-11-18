@@ -2,10 +2,10 @@ import { Injectable, computed, inject } from '@angular/core';
 import { TranslocoService } from '@jsverse/transloco';
 import { LanguageService } from '../../core/i18n/language.service';
 import { SubscriptionsStore } from '../state/subscriptions.store';
-import { EntriesStore } from '../state/entries.store';
+import { FollowedStoriesStore } from '../state/followed-stories.store';
+import { OpenStory } from '../state/open-story';
 import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
-import { FollowedStoriesStore } from '../state/followed-stories.store';
 import { VisibilitySwitchesStore } from '../state/visibility-switches.store';
 import { sumEntries } from '../state/subscription-derivations';
 import { ReadingLayoutService } from '../reading-layout.service';
@@ -25,17 +25,20 @@ import { FeedGroupName } from '../../core/feed-group';
 import { SocialNetworkName } from '../../core/social-network';
 import { TrendingBuiltAt } from '../trending/trending-built-at';
 import { TrendingWindowService } from '../trending/trending-window.service';
-import { ReaderRouteState } from './reader-route-state.service';
+import { ListContext } from '../state/list-context';
 import { networkFeedKindLabels, SocialSection, feedAvatarUrl } from '../state/social-sections';
 
+/** The title, counts and refresh times heading one host's list (#2329). */
 @Injectable()
 export class ListHeading {
-  private readonly routeState = inject(ReaderRouteState);
+  private readonly list = inject(ListContext);
+  private readonly selection = this.list.selection;
+  private readonly entries = this.list.entries;
   private readonly subscriptions = inject(SubscriptionsStore);
-  private readonly entries = inject(EntriesStore);
+  private readonly openStory = inject(OpenStory);
+  private readonly followedStories = inject(FollowedStoriesStore);
   private readonly recommendations = inject(RecommendationsService);
   private readonly savedSearches = inject(SavedSearchesStore);
-  private readonly followedStories = inject(FollowedStoriesStore);
   private readonly layout = inject(ReadingLayoutService);
   private readonly language = inject(LanguageService);
   private readonly i18n = inject(TranslocoService);
@@ -47,9 +50,7 @@ export class ListHeading {
     sumEntries(this.subscriptions.subscriptions(), this.visibilitySwitches.switches()),
   );
 
-  readonly activeSavedSearchId = computed(() =>
-    selectedSavedSearchIdOf(this.routeState.selection()),
-  );
+  readonly activeSavedSearchId = computed(() => selectedSavedSearchIdOf(this.selection()));
 
   readonly activeSavedSearch = computed(() => {
     const id = this.activeSavedSearchId();
@@ -58,7 +59,7 @@ export class ListHeading {
   });
 
   private readonly selectedTagNode = computed(() => {
-    const selection = this.routeState.selection();
+    const selection = this.selection();
     if (selection.kind !== 'tag') return null;
     return this.subscriptions.tagNodeById().get(selection.id) ?? null;
   });
@@ -66,7 +67,7 @@ export class ListHeading {
   readonly selectedTag = computed(() => this.selectedTagNode()?.tag ?? null);
 
   readonly selectedSubscription = computed(() => {
-    const selection = this.routeState.selection();
+    const selection = this.selection();
     if (selection.kind !== 'subscription') return null;
     return (
       this.subscriptions.subscriptions().find((subscription) => subscription.id === selection.id) ??
@@ -98,9 +99,7 @@ export class ListHeading {
   readonly hasMore = computed(() => this.entries.nextCursor() !== null);
 
   /** A search request in flight, not merely any list loading. */
-  readonly searching = computed(
-    () => this.routeState.selection().kind === 'search' && this.entries.loading(),
-  );
+  readonly searching = computed(() => this.selection().kind === 'search' && this.entries.loading());
 
   private readonly feedFetchedAt = () => this.selectedSubscription()?.lastFetchedAt ?? null;
 
@@ -114,7 +113,7 @@ export class ListHeading {
     viewed: this.feedFetchedAt,
     'saved-searches': this.feedFetchedAt,
     'saved-search': this.feedFetchedAt,
-    'followed-story': this.feedFetchedAt,
+    'trending-story': this.feedFetchedAt,
     all: this.feedFetchedAt,
     tag: this.feedFetchedAt,
     network: this.feedFetchedAt,
@@ -124,13 +123,13 @@ export class ListHeading {
   };
 
   readonly lastRefreshed = computed(() =>
-    bySelectionKind(this.lastRefreshedByKind, this.routeState.selection()),
+    bySelectionKind(this.lastRefreshedByKind, this.selection()),
   );
 
   readonly nextRefresh = computed(() => this.selectedSubscription()?.nextFetchAt ?? null);
 
   readonly newestRunId = computed(() =>
-    this.routeState.selection().kind === 'for-you' ? this.recommendations.newestRunId() : null,
+    this.selection().kind === 'for-you' ? this.recommendations.newestRunId() : null,
   );
 
   /** Keyed by every kind: a new selection kind must fail to compile here. */
@@ -146,9 +145,10 @@ export class ListHeading {
     'saved-searches': () => this.i18n.translate('reader.savedSearches'),
     'saved-search': () =>
       this.activeSavedSearch()?.term ?? this.i18n.translate('reader.savedSearches'),
-    'followed-story': (selection) =>
+    'trending-story': (selection) =>
+      this.openStory.titleOf(selection.id) ??
       this.followedStories.byId(selection.id)?.headline ??
-      this.i18n.translate('reader.followedStoryFallback'),
+      this.i18n.translate('reader.storyFallback'),
     all: () => this.i18n.translate('reader.allItems'),
     tag: () => this.selectedTag()?.name ?? this.i18n.translate('reader.tagFallback'),
     network: (selection) => this.networkTitle(selection),
@@ -234,25 +234,28 @@ export class ListHeading {
       const saved = this.activeSavedSearch();
       return bySwitch(selection, saved?.unreadCount ?? 0, saved?.memberCount ?? 0);
     },
-    'followed-story': () => items(this.entries.items().length),
+    'trending-story': (selection) => {
+      const tally = this.openStory.tallyOf(selection.id);
+      return bySwitch(selection, tally?.unreadCount ?? 0, tally?.memberCount ?? 0);
+    },
     search: () => items(0),
   };
 
   readonly title = computed(() => {
     // translate() is one-shot: reading the language re-runs this on a switch.
     this.language.lang();
-    return bySelectionKind(this.titleByKind, this.routeState.selection());
+    return bySelectionKind(this.titleByKind, this.selection());
   });
 
   /** The tab carries no network logo, so it names the network the header shows as one. */
   readonly tabTitle = computed(() => {
-    const selection = this.routeState.selection();
+    const selection = this.selection();
     if (selection.kind !== 'notifications') return this.title();
     return `${this.networkName(selection.network)} · ${this.title()}`;
   });
 
   readonly titleCount = computed<TitleCount>(() =>
-    bySelectionKind(this.countByKind, this.routeState.selection()),
+    bySelectionKind(this.countByKind, this.selection()),
   );
 
   readonly searchTitlePrefix = computed(() => {
@@ -282,9 +285,7 @@ export class ListHeading {
     return this.hasMore() ? `${count}+` : `${count}`;
   });
 
-  private readonly searchTerm = computed(() =>
-    visibleSearchTerm(searchTermOf(this.routeState.selection())),
-  );
+  private readonly searchTerm = computed(() => visibleSearchTerm(searchTermOf(this.selection())));
 
   /** A post matching two searches counts twice, so the heading matches the sidebar row. */
   private readonly savedSearchesUnread = computed(() =>

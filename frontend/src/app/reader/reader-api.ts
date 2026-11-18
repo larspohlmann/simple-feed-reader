@@ -35,7 +35,7 @@ import {
   TagUpdate,
 } from './models';
 import { listPageOf, ListPage } from './state/list-page';
-import { FollowedStoryPageDto, TrendingWindow } from './trending/trending.models';
+import { StoryPageDto, TrendingWindow } from './trending/trending.models';
 import { BulkSubscriptionUpdate } from './subscription-bulk';
 import { TrendingApi } from './trending/trending-api';
 import { DEFAULT_TRENDING_WINDOW } from './trending/trending-window';
@@ -96,7 +96,7 @@ export class ReaderApi {
     }
     const { path, params } = listRequest(query, this.pageParams(query, cursor));
     return this.http
-      .get<EntriesPage | FollowedStoryPageDto>(`${this.base}/api/entries${path}`, {
+      .get<EntriesPage | StoryPageDto>(`${this.base}/api/entries${path}`, {
         params,
         context: retryingTransientGatewayErrors(),
       })
@@ -137,6 +137,12 @@ export class ReaderApi {
 
   markSingleSavedSearchRead(id: number, until: string): Observable<void> {
     return this.http.post<void>(`${this.base}/api/entries/saved-searches/${id}/mark-read`, {
+      until,
+    });
+  }
+
+  markTrendingStoryRead(id: number, until: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/api/entries/trending-stories/${id}/mark-read`, {
       until,
     });
   }
@@ -352,8 +358,8 @@ function trendingWindowParams(trendingWindow: TrendingWindow): HttpParams {
 
 /** Which entries endpoint a list query reads, and what it adds to the page params. */
 function listRequest(query: EntryQuery, page: HttpParams): { path: string; params: HttpParams } {
-  if (query.followedStoryId != null) {
-    return { path: `/trending-stories/${query.followedStoryId}`, params: page };
+  if (query.storyId != null) {
+    return { path: `/trending-stories/${query.storyId}`, params: page };
   }
   if (query.savedSearchId != null) {
     return { path: `/saved-searches/${query.savedSearchId}`, params: page };

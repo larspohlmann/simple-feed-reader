@@ -18,7 +18,8 @@ export type MarkReadTarget =
   | { scope: 'search'; term: string }
   | { scope: 'for-you' }
   | { scope: 'saved-searches' }
-  | { scope: 'saved-search'; id: number };
+  | { scope: 'saved-search'; id: number }
+  | { scope: 'trending-story'; id: number };
 
 /** The targets the mark-read endpoint itself takes, sent as its body. */
 export type ScopedMarkReadTarget = Extract<MarkReadTarget, { scope: MarkReadScope }>;
@@ -49,5 +50,5 @@ const MARK_READ_TARGET: BySelectionKind<MarkReadTarget | null> = {
   viewed: () => null,
   trending: () => null,
   notifications: () => null,
-  'followed-story': () => null,
+  'trending-story': (selection) => ({ scope: 'trending-story', id: selection.id }),
 };

@@ -1,0 +1,42 @@
+@if (svc.state(); as state) {
+  <app-settings-group
+    icon="trending_up"
+    [title]="'settings.stories.title' | transloco"
+    [caption]="'settings.stories.caption' | transloco"
+  >
+    <app-settings-row
+      [title]="'settings.stories.titles' | transloco"
+      [description]="'settings.stories.titlesDesc' | transloco"
+    >
+      <app-toggle
+        data-testid="story-titles"
+        [label]="'settings.stories.titles' | transloco"
+        [checked]="state.titlesEnabled"
+        [disabled]="svc.busy()"
+        (toggled)="onTitles($event)"
+      />
+    </app-settings-row>
+
+    <app-settings-row
+      [stackable]="true"
+      [title]="'settings.stories.connection' | transloco"
+      [description]="'settings.stories.connectionDesc' | transloco"
+    >
+      <app-connection-select
+        data-testid="story-connection"
+        [chosenId]="state.writingConnectionId"
+        [candidates]="state.writingCandidates"
+        [activeLabel]="'settings.stories.connectionActive' | transloco"
+        [unusableLabel]="'settings.stories.connectionUnusable' | transloco"
+        [disabled]="svc.busy()"
+        (chosen)="onConnection($event)"
+      />
+    </app-settings-row>
+
+    @if (svc.failureMessage(); as message) {
+      <div class="panel-banner">
+        <app-error-banner [message]="message" />
+      </div>
+    }
+  </app-settings-group>
+}

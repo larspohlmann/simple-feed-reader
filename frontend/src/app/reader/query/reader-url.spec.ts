@@ -11,6 +11,7 @@ interface Opened {
   kind: string;
   query: EntryQuery | null;
   entryId: number | null;
+  storyId: number | null;
   urlCorrection: Record<string, string | null> | null;
 }
 
@@ -29,6 +30,7 @@ function opened(url: string, context: ViewContext): Opened | null {
     kind: parsed.selection.kind,
     query: queryFromSelection(parsed.selection),
     entryId: parsed.entryId,
+    storyId: parsed.storyId,
     urlCorrection: parsed.urlCorrection,
   };
 }
@@ -37,8 +39,12 @@ const list = (kind: string, query: EntryQuery, entryId: number | null = null): O
   kind,
   query,
   entryId,
+  storyId: null,
   urlCorrection: null,
 });
+
+/** A story's list laid over `under`, the list the URL's query names (#2329). */
+const storyOver = (under: Opened, storyId: number): Opened => ({ ...under, storyId });
 
 describe('the reader URLs (#2107 pin)', () => {
   it.each<[string, Opened]>([
@@ -134,17 +140,14 @@ describe('the reader URLs (#2107 pin)', () => {
       '/searches/saved/42-climate?unread=1',
       list('saved-search', { view: 'all', savedSearchId: 42 }),
     ],
-    ['/trending/followed/42', list('followed-story', { view: 'all', followedStoryId: 42 })],
+    ['/trending/stories/42', storyOver(list('all', { view: 'all' }), 42)],
     [
-      '/trending/followed/42?entry=7',
-      list('followed-story', { view: 'all', followedStoryId: 42 }, 7),
+      '/trending/stories/42?view=trending&window=week',
+      storyOver(list('trending', { view: 'trending', window: 'week' }), 42),
     ],
-    [
-      '/trending/followed/42?q=angular&tag=3',
-      list('followed-story', { view: 'all', followedStoryId: 42 }),
-    ],
-    ['/trending/followed/x', list('trending', { view: 'trending', window: 'day' })],
-    ['/trending/followed/0', list('trending', { view: 'trending', window: 'day' })],
+    ['/trending/stories/42?tag=3&entry=7', storyOver(list('tag', { view: 'all', tag: 3 }, 7), 42)],
+    ['/trending/stories/x', list('all', { view: 'all' })],
+    ['/trending/stories/0', list('all', { view: 'all' })],
   ])('opens %s', (url, expected) => {
     expect(opened(url, ON)).toEqual(expected);
   });
@@ -167,8 +170,8 @@ describe('the reader URLs (#2107 pin)', () => {
     '/searches/saved',
     '/searches/saved/1/extra',
     '/searches/42',
-    '/trending/followed',
-    '/trending/followed/1/extra',
+    '/trending/stories',
+    '/trending/stories/1/extra',
     '/trending/42',
   ])('leaves %s to another route', (url) => {
     expect(opened(url, ON)).toBeNull();

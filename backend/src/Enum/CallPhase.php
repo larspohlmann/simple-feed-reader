@@ -9,4 +9,5 @@ enum CallPhase: string
     case Distill = 'distill';
     case Batch = 'batch';
     case Consolidate = 'consolidate';
+    case StoryTitle = 'story_title';
 }

@@ -212,7 +212,7 @@ describe('ProfileSectionComponent', () => {
 
   it('saves the chosen connection the moment it changes', () => {
     const fixture = mount();
-    const select = byTestId(fixture, 'profile-connection') as HTMLSelectElement;
+    const select = byTestId(fixture, 'profile-connection')!.querySelector('select')!;
 
     select.value = '7';
     select.dispatchEvent(new Event('change'));
@@ -225,7 +225,7 @@ describe('ProfileSectionComponent', () => {
   it('names an unnamed connection by its host and model', () => {
     const fixture = mount();
     const options = Array.from(
-      (byTestId(fixture, 'profile-connection') as HTMLSelectElement).options,
+      byTestId(fixture, 'profile-connection')!.querySelector('select')!.options,
     ).map((option) => option.textContent?.trim());
 
     expect(options).toEqual([
@@ -237,8 +237,10 @@ describe('ProfileSectionComponent', () => {
 
   it('shows a chosen connection that can no longer build profiles as chosen, but not on offer', () => {
     const fixture = mount(profileState({ connectionId: 9, connection: null }));
-    const select = byTestId(fixture, 'profile-connection') as HTMLSelectElement;
-    const unusable = byTestId(fixture, 'profile-connection-unusable') as HTMLOptionElement;
+    const select = byTestId(fixture, 'profile-connection')!.querySelector('select')!;
+    const unusable = byTestId(fixture, 'profile-connection')!.querySelector(
+      '[data-testid="connection-unusable"]',
+    ) as HTMLOptionElement;
 
     expect(unusable.textContent?.trim()).toBe('A connection that can no longer build profiles');
     expect(unusable.disabled).toBe(true);
@@ -248,8 +250,10 @@ describe('ProfileSectionComponent', () => {
   it('offers no unusable entry when the chosen connection is a candidate', () => {
     const fixture = mount(profileState({ connectionId: 7 }));
 
-    expect(byTestId(fixture, 'profile-connection-unusable')).toBeNull();
-    expect((byTestId(fixture, 'profile-connection') as HTMLSelectElement).value).toBe('7');
+    expect(
+      byTestId(fixture, 'profile-connection')!.querySelector('[data-testid="connection-unusable"]'),
+    ).toBeNull();
+    expect(byTestId(fixture, 'profile-connection')!.querySelector('select')!.value).toBe('7');
   });
 
   it('holds a typed cap until Save', () => {

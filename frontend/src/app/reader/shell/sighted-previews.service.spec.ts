@@ -4,10 +4,10 @@ import { Observable, Subject, of } from 'rxjs';
 import { TokenStore } from '../../core/auth/token.store';
 import { EntryDto } from '../models';
 import { ReaderApi } from '../reader-api';
-import { EntriesStore } from '../state/entries.store';
 import { CompletedEntriesMerge } from './completed-entries-merge';
 import { ReaderRouteState } from './reader-route-state.service';
 import { SIGHTED_PREVIEWS_IN_FLIGHT, SightedPreviews } from './sighted-previews.service';
+import { provideRouteListForTest } from '../../../testing/list-context-testing';
 
 const row = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
   ({ id, pending: true, ...over }) as EntryDto;
@@ -47,7 +47,7 @@ describe('SightedPreviews', () => {
     TestBed.configureTestingModule({
       providers: [
         SightedPreviews,
-        { provide: EntriesStore, useValue: { entries } },
+        ...provideRouteListForTest({ entries }),
         { provide: ReaderRouteState, useValue: { openEntry } },
         { provide: ReaderApi, useValue: { complete } },
         { provide: CompletedEntriesMerge, useValue: { merge } },

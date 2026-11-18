@@ -104,6 +104,11 @@ app-progress-rail {
   overflow: hidden;
 }
 
+/* A list row draws no card to tuck under, so its story title stands alone, inset to the row's text. */
+app-story-title {
+  margin: var(--row-pad-comfy-y) var(--row-pad-comfy-x) 0;
+}
+
 .row-slot.leaving {
   pointer-events: none;
   animation: row-leave 0.26s ease forwards;
@@ -294,6 +299,11 @@ app-progress-rail {
   margin: var(--space-3) var(--space-4);
   border-radius: var(--radius);
   background: var(--surface-0);
+}
+
+/* A magazine's placeholders stand in its column, where its cards will land; its gap spaces them. */
+.rows.magazine > .skeleton {
+  margin: 0;
 }
 
 /* The shared overlay sits over the dimmed outgoing rows. Inset below the list

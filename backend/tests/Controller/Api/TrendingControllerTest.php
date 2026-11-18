@@ -65,6 +65,31 @@ final class TrendingControllerTest extends ApiTestCase
         self::assertSame([], $articles[0]['shares']);
     }
 
+    public function testTheDayPageNamesEachStory(): void
+    {
+        [$headers, $user] = $this->bearerAndUser('trending-story-title@example.com');
+        $fixtures = (new TrendingFixtures($this->entityManager()))->ownedBy($user);
+        $feeds = [$fixtures->feed('alpha'), $fixtures->feed('beta'), $fixtures->feed('gamma')];
+        $fixtures->subscribe($user, ...$feeds);
+        $story = $fixtures->story(TrendingWindow::Day, '2031-05-14 10:00:00', ...array_map(
+            static fn (Feed $feed): Entry => $fixtures->entry($feed, 'Lead', '2031-05-14 10:00:00'),
+            $feeds,
+        ));
+        $this->entityManager()->flush();
+        $this->entityManager()->getConnection()->executeStatement(
+            'UPDATE trending_story SET fallback_title = ? WHERE id = ?',
+            ['Hafenstreik in Hamburg', $story->requireId()],
+        );
+
+        $this->client->request('GET', '/api/trending?window=day', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $stories = $this->payload($this->client)['stories'];
+        self::assertIsArray($stories);
+        self::assertIsArray($stories[0]);
+        self::assertSame('Hafenstreik in Hamburg', $stories[0]['title']);
+    }
+
     public function testEachStoryCarriesItsId(): void
     {
         [$headers, $user] = $this->bearerAndUser('trending-story-id@example.com');

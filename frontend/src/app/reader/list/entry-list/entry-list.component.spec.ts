@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Component, NgZone, Provider, TemplateRef, ViewChild, signal } from '@angular/core';
+import { Component, NgZone, Provider, TemplateRef, ViewChild, inject, signal } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
@@ -14,9 +14,11 @@ import { REVEAL_STEP, prefetchMargin } from '../paging';
 import { EntryDto, EntryQuery, ListOrder, SubscriptionDto } from '../../models';
 import { ReaderApi } from '../../reader-api';
 import { TrendingApi } from '../../trending/trending-api';
-import { FollowedStoryPageDto } from '../../trending/trending.models';
+import { StoryPageDto } from '../../trending/trending.models';
 import { SocialPostApi } from '../../social-post-api';
 import { EntriesStore } from '../../state/entries.store';
+import { ListContext } from '../../state/list-context';
+import { TestListContext } from '../../../../testing/list-context-testing';
 import { FollowedStoriesStore } from '../../state/followed-stories.store';
 import { FollowedStoryVisit } from '../../state/followed-story-visit';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
@@ -290,7 +292,7 @@ describe('EntryListComponent', () => {
   });
 
   describe('the "Since your last visit" divider (#2128)', () => {
-    const story: Selection = { kind: 'followed-story', id: 42 };
+    const story: Selection = { kind: 'trending-story', id: 42, unread: false };
     const divider = (element: HTMLElement) => element.querySelectorAll('.since-last-visit');
 
     /** How many rows the divider follows, or null when there is none. */
@@ -333,7 +335,12 @@ describe('EntryListComponent', () => {
     });
 
     it('is not drawn oldest first, where the new rows sit at the end', () => {
-      const oldestFirst: Selection = { kind: 'followed-story', id: 42, order: 'oldest' };
+      const oldestFirst: Selection = {
+        kind: 'trending-story',
+        id: 42,
+        unread: false,
+        order: 'oldest',
+      };
 
       expect(divider(mountStory([3, 1, 2], [3], { selection: oldestFirst })).length).toBe(0);
       expect(divider(mountStory([1, 2, 3], [1, 2], { selection: oldestFirst })).length).toBe(0);
@@ -361,16 +368,22 @@ describe('EntryListComponent', () => {
       const joinedSince = '2026-11-16T09:00:00+00:00';
       const joinedBefore = '2026-11-16T07:00:00+00:00';
       const member = (id: number, joinedAt: string) => entry(id, { joinedAt });
-      const pages: Record<string, FollowedStoryPageDto> = {
+      const pages: Record<string, StoryPageDto> = {
         first: {
           entries: [member(1, joinedSince), member(2, joinedSince), member(3, joinedBefore)],
           nextCursor: 'C2',
+          title: 'Harbour strike',
+          memberCount: 4,
+          unreadCount: 4,
           lastOpenedAt: openedAt,
           newEntryIds: [1, 2],
         },
         C2: {
           entries: [member(4, joinedSince), member(5, joinedBefore)],
           nextCursor: null,
+          title: 'Harbour strike',
+          memberCount: 4,
+          unreadCount: 4,
           lastOpenedAt: openedAt,
           newEntryIds: [4],
         },
@@ -386,6 +399,8 @@ describe('EntryListComponent', () => {
           { provide: TrendingApi, useValue: {} },
           { provide: SocialPostApi, useValue: {} },
           { provide: FollowedStoriesStore, useValue: { markOpened: jest.fn() } },
+          { provide: ListContext, useFactory: () => new TestListContext(inject(EntriesStore)) },
+          FollowedStoryVisit,
         ]);
         const element = fixture.nativeElement as HTMLElement;
         const store = TestBed.inject(EntriesStore);
@@ -401,7 +416,7 @@ describe('EntryListComponent', () => {
         };
         const rows = () => Array.from(element.querySelectorAll('.row-slot'));
 
-        store.load({ view: 'all', followedStoryId: 42 });
+        store.load({ view: 'all', storyId: 42 });
         await render();
         expect([...visit.newSinceVisitIds()]).toEqual([1, 2]);
         expect(rowsAboveDivider(element)).toBe(2);
@@ -958,6 +973,16 @@ describe('EntryListComponent', () => {
     expect(
       (mount({ loading: false, items: [] }).nativeElement as HTMLElement).querySelector('.empty'),
     ).not.toBeNull();
+  });
+
+  it("puts a magazine's loading placeholders in the column its cards land in (#2329)", () => {
+    const loading = (layout: string) =>
+      (mount({ loading: true, items: [], layout }).nativeElement as HTMLElement).querySelector(
+        '.skeleton',
+      )?.parentElement?.classList;
+
+    expect(loading('magazine')).toContain('magazine');
+    expect(loading('list')).not.toContain('magazine');
   });
 
   it('shows the search empty state with the term, and no catalog link', () => {
@@ -3055,6 +3080,28 @@ describe('EntryListComponent', () => {
           Number(slot.querySelector('[data-entry-id]')!.getAttribute('data-entry-id')),
         );
         expect(cardIds).toEqual(stories.map((story) => story.leadEntryId));
+      });
+
+      it('titles each story above its card (#2329)', () => {
+        const stories = [
+          { ...storyLedBy(entry(1), 41), title: 'First event' },
+          { ...storyLedBy(entry(2), 42), title: 'Second event' },
+        ];
+        const element = mount({ selection: trending(), layout, items: stories })
+          .nativeElement as HTMLElement;
+
+        const titles = Array.from(
+          element.querySelectorAll('.row-slot app-story-title .title'),
+          (title) => title.textContent!.trim(),
+        );
+        expect(titles).toEqual(['First event', 'Second event']);
+      });
+
+      it('titles no row outside Trending (#2329)', () => {
+        const element = mount({ layout }).nativeElement as HTMLElement;
+
+        expect(element.querySelector('[data-entry-id]')).not.toBeNull();
+        expect(element.querySelector('app-story-title')).toBeNull();
       });
 
       it("still shows each story's source count on its card", () => {

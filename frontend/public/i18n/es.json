@@ -531,6 +531,17 @@
       "unsaved": "Cambios sin guardar",
       "saved": "Guardado."
     },
+    "stories": {
+      "title": "Noticias en Tendencias",
+      "caption": "Cómo ayuda tu LLM en Tendencias.",
+      "titles": "Títulos de las noticias",
+      "titlesDesc": "Tu LLM escribe un titular para cada noticia de Tendencias. Sin él, cada noticia muestra su titular más representativo.",
+      "connection": "Conexión",
+      "connectionDesc": "La conexión LLM que escribe los títulos de las noticias.",
+      "connectionActive": "La conexión activa",
+      "connectionUnusable": "Una conexión que ya no puede escribir texto",
+      "saved": "Ajustes de las noticias guardados"
+    },
     "statistics": {
       "title": "Estadísticas"
     },
@@ -1374,6 +1385,7 @@
     "followedStories": "Noticias seguidas",
     "toggleFollowedStories": "Mostrar u ocultar las noticias seguidas",
     "followedStoryFallback": "Noticia seguida",
+    "storyFallback": "Noticia",
     "notifications": {
       "title": "Notificaciones",
       "loading": "Cargando notificaciones…",

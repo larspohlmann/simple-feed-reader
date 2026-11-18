@@ -222,6 +222,29 @@ final class TrendingStoryHistoryRepositoryTest extends DbTestCase
         );
     }
 
+    public function testStoredStoriesCarryTheirFallbackMember(): void
+    {
+        $feed = $this->fixtures->feed('fallback');
+        $entry = $this->fixtures->entry($feed, 'Titled', '2031-05-14 08:00:00');
+        $other = $this->fixtures->entry($feed, 'Untitled', '2031-05-14 08:30:00');
+        $titled = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $entry);
+        $untitled = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $other);
+        $this->entityManager->getConnection()->executeStatement(
+            'UPDATE trending_story SET fallback_entry_id = ?, fallback_title = ? WHERE id = ?',
+            [$entry->requireId(), 'Hafenstreik', $titled->requireId()],
+        );
+
+        $stored = $this->history()->storedInWindow($this->ownerId(), self::utc('2031-05-13 12:00:00'));
+
+        self::assertEquals(
+            [
+                new StoredStoryModel($titled->requireId(), [$entry->requireId()], $entry->requireId(), true),
+                new StoredStoryModel($untitled->requireId(), [$other->requireId()], null, false),
+            ],
+            $stored,
+        );
+    }
+
     public function testStoredInWindowOrdersStoriesAndTheirMembersByIdWhateverOrderTheyJoinedIn(): void
     {
         [$one, $two, $three] = $this->entries(3);

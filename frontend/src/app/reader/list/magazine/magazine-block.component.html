@@ -1,5 +1,8 @@
 @let current = block();
 @let card = cardOf(current);
+@if (story(); as titled) {
+  <app-story-title [story]="titled" [class.tucked]="current.kind !== 'compact'" />
+}
 @switch (current.kind) {
   @case ('hero') {
     <app-entry-hero [entry]="card.entry" [tags]="tagsFor(card.entry.subscriptionId)" />

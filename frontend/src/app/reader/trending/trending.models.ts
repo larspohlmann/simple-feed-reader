@@ -15,6 +15,8 @@ export type StoryArticleDto = EntryDto & { shares: EntryDto[] };
 export interface TrendingStoryDto {
   /** Stable across builds (#2128): a hide and a follow name the story by it. */
   id: number;
+  /** The event the story's articles report, as a one-line headline (#2329). */
+  title: string;
   followed: boolean;
   /** The reader's sources: the article feeds they follow and the accounts whose posts share a card (#2229). */
   outletCount: number;
@@ -41,9 +43,14 @@ export interface FollowedStoriesResponseDto {
   nextBuildDueAt: string | null;
 }
 
-/** A followed Trending story's page (#2128): `newEntryIds` are its rows whose `joinedAt` is after `lastOpenedAt`. */
-export interface FollowedStoryPageDto extends EntriesPage {
-  lastOpenedAt: string;
+/** A Trending story's page (#2128, #2329): `newEntryIds` are its rows whose `joinedAt` is after `lastOpenedAt`,
+ *  which is null for a story the reader does not follow. */
+export interface StoryPageDto extends EntriesPage {
+  title: string | null;
+  /** The rows the story's list holds whichever page it is, and the unread ones among them (#2329). */
+  memberCount: number;
+  unreadCount: number;
+  lastOpenedAt: string | null;
   /** Kept for other clients such as iOS; the web client derives its marks from `lastOpenedAt`. */
   newEntryIds: number[];
 }

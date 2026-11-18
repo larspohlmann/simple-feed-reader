@@ -1,9 +1,10 @@
-import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
+import { Injectable, computed, effect, inject, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoService } from '@jsverse/transloco';
 import { EntryActionHandler } from '../entry/entry-actions/entry-action-handler';
-import { EntriesStore, StateSaveOutcome, localStatePatch } from '../state/entries.store';
+import { StateSaveOutcome } from '../state/entries.store';
+import { EntryRowCache, localStatePatch } from '../state/entry-row-cache';
 import { countFirstShare } from '../state/first-share';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
@@ -17,12 +18,15 @@ import { PostActions } from '../article/composer/post-actions.service';
 import { SOCIAL_NETWORK_NAMES } from '../../core/social-network';
 import { RemovedPost, RemovedPosts } from '../removed-posts.service';
 import { VoteValue } from '../vote-pill/vote';
+import { injectListOnScreen } from './list-cover';
 
+/** A row's or the open article's actions, on the list on screen they belong to (#2329). */
 @Injectable()
 export class EntryStateActions implements EntryActionHandler {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
-  private readonly entries = inject(EntriesStore);
+  private readonly list = injectListOnScreen();
+  private readonly rows = inject(EntryRowCache);
   private readonly subscriptions = inject(SubscriptionsStore);
   private readonly savedSearches = inject(SavedSearchesStore);
   private readonly routeState = inject(ReaderRouteState);
@@ -35,9 +39,6 @@ export class EntryStateActions implements EntryActionHandler {
   });
 
   private readonly viewedOnOpen = new Set<number>();
-  private readonly leaving = signal<ReadonlySet<number>>(new Set());
-  /** Rows fading out of a saved view or Trending; they stay in the list data so the magazine plan holds. */
-  readonly leavingIds = this.leaving.asReadonly();
 
   constructor() {
     // Once per session, even when the PATCH fails and rolls back.
@@ -54,7 +55,7 @@ export class EntryStateActions implements EntryActionHandler {
       if (this.openVotableId() === null) return;
       untracked(() => {
         const entry = this.routeState.openEntry();
-        if (entry !== null) this.entries.refreshVote(entry);
+        if (entry !== null) this.rows.refreshVote(entry);
       });
     });
     inject(RemovedPosts)
@@ -73,13 +74,11 @@ export class EntryStateActions implements EntryActionHandler {
   }
 
   like(entry: EntryDto): void {
-    this.entries.setLiked(entry, !entry.social?.isLiked, (problem) =>
-      this.toast.showProblem(problem),
-    );
+    this.rows.setLiked(entry, !entry.social?.isLiked, (problem) => this.toast.showProblem(problem));
   }
 
   vote(entry: EntryDto, to: VoteValue): void {
-    this.entries.setVote(entry, to, (problem) => this.toast.showProblem(problem));
+    this.rows.setVote(entry, to, (problem) => this.toast.showProblem(problem));
   }
 
   keep(entry: EntryDto): void {
@@ -97,7 +96,7 @@ export class EntryStateActions implements EntryActionHandler {
     const undoCount = () => {
       if (counted) this.subscriptions.bumpShared(-1);
     };
-    this.entries.setStateQuietly(entry.id, { isShared: true }, { onFailed: undoCount });
+    this.list().entries.setStateQuietly(entry.id, { isShared: true }, { onFailed: undoCount });
   }
 
   unshare(entry: EntryDto): void {
@@ -148,21 +147,9 @@ export class EntryStateActions implements EntryActionHandler {
     this.markOpenedViewed(entry);
   };
 
-  clearLeaving(): void {
-    this.leaving.set(new Set());
-  }
-
-  markLeaving(id: number): void {
-    this.leaving.update((ids) => new Set(ids).add(id));
-  }
-
-  stayInList(id: number): void {
-    this.leaving.update((ids) => withoutId(ids, id));
-  }
-
   /** The gone post's row leaves the list as an excluded one does; its open article closes. */
   private leaveGonePost(id: number): void {
-    this.markLeaving(id);
+    this.list().markLeaving(id);
     if (this.routeState.openEntryId() === id) this.closeEntry();
     this.subscriptions.reloadCountsQuietly();
   }
@@ -178,7 +165,7 @@ export class EntryStateActions implements EntryActionHandler {
 
   private markOpenedViewed(entry: EntryDto): void {
     this.subscriptions.bumpViewed(1);
-    this.entries.setState(
+    this.list().entries.setState(
       entry.id,
       { isViewed: true },
       this.viewOptimistically(entry, () => this.subscriptions.bumpViewed(-1)),
@@ -201,21 +188,22 @@ export class EntryStateActions implements EntryActionHandler {
   }
 
   private patchInList(entry: EntryDto, patch: EntryStatePatch, outcome: StateSaveOutcome): void {
-    const leaves = this.leavesSavedView(entry, patch);
-    this.entries.setState(entry.id, patch, {
+    const list = this.list();
+    const leaves = leavesSavedView(list.selection(), entry, patch);
+    list.entries.setState(entry.id, patch, {
       ...outcome,
-      onStarted: leaves ? () => this.markLeaving(entry.id) : undefined,
+      onStarted: leaves ? () => list.markLeaving(entry.id) : undefined,
       onFailed: () => {
         outcome.onFailed?.();
-        if (leaves) this.stayInList(entry.id);
+        if (leaves) list.stayInList(entry.id);
       },
     });
   }
+}
 
-  private leavesSavedView(entry: EntryDto, patch: EntryStatePatch): boolean {
-    const flag = savedViewMembership(this.routeState.selection().kind);
-    return flag !== null && (localStatePatch(patch)[flag] ?? entry[flag]) !== true;
-  }
+function leavesSavedView(selection: Selection, entry: EntryDto, patch: EntryStatePatch): boolean {
+  const flag = savedViewMembership(selection.kind);
+  return flag !== null && (localStatePatch(patch)[flag] ?? entry[flag]) !== true;
 }
 
 /** The flag a saved view filters on; an entry whose patch clears it leaves the view. */
@@ -234,10 +222,4 @@ function savedViewMembership(
     default:
       return null;
   }
-}
-
-function withoutId(ids: ReadonlySet<number>, id: number): ReadonlySet<number> {
-  const remaining = new Set(ids);
-  remaining.delete(id);
-  return remaining;
 }

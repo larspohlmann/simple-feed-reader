@@ -31,6 +31,7 @@ import { isPhraseTerm, isWholeWordTerm } from '../../query/search-term';
 import { relativeTime, relativeTimeUntil } from '../../format';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { FeedLanguage, feedLanguageNameKey } from '../../feed-language';
+import { STORY_ICON } from '../../trending/story';
 
 /** Each list's heading icon; null means the heading leads with its own glyph, favicon or logo. */
 const LIST_ICON: Record<SelectionKind, string | null> = {
@@ -48,7 +49,7 @@ const LIST_ICON: Record<SelectionKind, string | null> = {
   notifications: null,
   'saved-searches': 'saved_search',
   'saved-search': null,
-  'followed-story': 'notifications_active',
+  'trending-story': STORY_ICON,
   search: 'search',
 };
 

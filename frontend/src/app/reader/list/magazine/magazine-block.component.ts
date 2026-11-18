@@ -14,6 +14,7 @@ import { EntryMediaComponent } from './blocks/entry-media/entry-media.component'
 import { EntryQuotingComponent } from './blocks/entry-quoting/entry-quoting.component';
 import { STORY_CONTEXT } from '../../trending/story-context';
 import { TrendingStoryDto } from '../../trending/trending.models';
+import { StoryTitleComponent } from '../../trending/story-title/story-title.component';
 import { SourceGroupComponent } from './source-group.component';
 
 // One shared instance: a fresh `[]` per check would change every tag-less block's
@@ -36,6 +37,7 @@ export const NO_TAGS: SubscriptionTagDto[] = [];
     EntryMediaComponent,
     EntryQuotingComponent,
     SourceGroupComponent,
+    StoryTitleComponent,
   ],
   templateUrl: './magazine-block.component.html',
   styleUrl: './magazine-block.component.scss',

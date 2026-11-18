@@ -19,6 +19,8 @@ use Symfony\Component\Security\Core\User\UserInterface;
  */
 final class UserRepository extends ServiceEntityRepository implements UserLoaderInterface, UserByEmailInterface
 {
+    public const int TRENDING_ACTIVE_DAYS = 14;
+
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, User::class);
@@ -157,25 +159,24 @@ final class UserRepository extends ServiceEntityRepository implements UserLoader
     }
 
     /**
-     * The users who logged in at or after $since and have Trending on; a user without a settings row counts as on,
-     * the column's default.
+     * The users who logged in within the last TRENDING_ACTIVE_DAYS and have Trending on; a user without a settings row
+     * counts as on, the column's default.
      *
-     * @return list<int>
+     * @return list<User>
      */
-    public function trendingReaderIdsLoggedInSince(\DateTimeImmutable $since): array
+    public function activeTrendingReaders(\DateTimeImmutable $now): array
     {
-        /** @var list<array{id: int}> $rows */
-        $rows = $this->createQueryBuilder('u')
-            ->select('u.id')
-            ->leftJoin(ReadingSettings::class, 'settings', 'WITH', 'settings.user = u')
+        /** @var list<User> $readers */
+        $readers = $this->createQueryBuilder('u')
+            ->leftJoin(ReadingSettings::class, 'settings', 'ON', 'settings.user = u')
             ->andWhere('u.lastLoginAt >= :since')
             ->andWhere('settings.trendingEnabled = true OR settings.user IS NULL')
-            ->setParameter('since', $since)
+            ->setParameter('since', $now->modify(\sprintf('-%d days', self::TRENDING_ACTIVE_DAYS)))
             ->orderBy('u.id', 'ASC')
             ->getQuery()
-            ->getArrayResult();
+            ->getResult();
 
-        return array_column($rows, 'id');
+        return $readers;
     }
 
     public function countByStatus(UserStatus $status): int

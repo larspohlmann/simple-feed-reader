@@ -37,7 +37,7 @@ final class TrendingStoryFollowRepositoryTest extends DbTestCase
 
         self::assertEquals(
             self::at('2031-05-14 10:00:00'),
-            $this->follows->lastOpenedAt($this->reader->requireId(), $story->requireId()),
+            $this->follows->lastOpenedAtIfFollowed($this->reader->requireId(), $story->requireId()),
         );
         self::assertSame(
             ['2031-05-14 10:00:00'],
@@ -66,15 +66,15 @@ final class TrendingStoryFollowRepositoryTest extends DbTestCase
         self::assertSame(1, $changed);
         self::assertEquals(
             self::at('2031-05-14 12:00:00'),
-            $this->follows->lastOpenedAt($this->reader->requireId(), $story->requireId()),
+            $this->follows->lastOpenedAtIfFollowed($this->reader->requireId(), $story->requireId()),
         );
         self::assertEquals(
             self::at('2031-05-14 10:00:00'),
-            $this->follows->lastOpenedAt($this->reader->requireId(), $other->requireId()),
+            $this->follows->lastOpenedAtIfFollowed($this->reader->requireId(), $other->requireId()),
         );
         self::assertEquals(
             self::at('2031-05-14 10:00:00'),
-            $this->follows->lastOpenedAt($otherReader->requireId(), $story->requireId()),
+            $this->follows->lastOpenedAtIfFollowed($otherReader->requireId(), $story->requireId()),
         );
     }
 
@@ -91,7 +91,7 @@ final class TrendingStoryFollowRepositoryTest extends DbTestCase
         self::assertSame(0, $changed);
     }
 
-    public function testTheLastVisitOfAStoryNotFollowedIsAnError(): void
+    public function testRequiringAStoryNotFollowedIsAnError(): void
     {
         $story = $this->story();
 
@@ -100,7 +100,7 @@ final class TrendingStoryFollowRepositoryTest extends DbTestCase
             \sprintf('User %d does not follow Trending story %d.', $this->reader->requireId(), $story->requireId()),
         );
 
-        $this->follows->lastOpenedAt($this->reader->requireId(), $story->requireId());
+        $this->follows->requireFollowed($this->reader->requireId(), $story->requireId());
     }
 
     public function testRequiringAFollowedStoryPassesForItsFollowerAlone(): void
@@ -160,6 +160,55 @@ final class TrendingStoryFollowRepositoryTest extends DbTestCase
         self::assertSame(
             [$story->requireId()],
             $this->follows->followedStoryIds($otherReader->requireId(), [$story->requireId()]),
+        );
+    }
+
+    public function testAFollowedStoryIsHeadedByItsTitle(): void
+    {
+        $story = $this->followedStoryNewestHeadlinedNeueGespraeche();
+        $this->storeTitles($story, null, 'Hafenstreik in Hamburg');
+
+        self::assertSame('Hafenstreik in Hamburg', $this->follows->followedBy($this->reader->requireId())[0]->headline);
+    }
+
+    public function testTheLlmTitleHeadsAFollowedStory(): void
+    {
+        $story = $this->followedStoryNewestHeadlinedNeueGespraeche();
+        $this->storeTitles($story, 'Streik legt den Hafen lahm', 'Hafenstreik in Hamburg');
+
+        self::assertSame(
+            'Streik legt den Hafen lahm',
+            $this->follows->followedBy($this->reader->requireId())[0]->headline,
+        );
+    }
+
+    public function testAStoryWithoutStoredTitlesKeepsTheNewestMemberHeadline(): void
+    {
+        $this->followedStoryNewestHeadlinedNeueGespraeche();
+
+        self::assertSame('Neue Gespräche', $this->follows->followedBy($this->reader->requireId())[0]->headline);
+    }
+
+    private function followedStoryNewestHeadlinedNeueGespraeche(): TrendingStory
+    {
+        $feed = $this->fixtures->feed(bin2hex(random_bytes(4)));
+        $this->fixtures->subscribe($this->reader, $feed);
+        $story = $this->fixtures->story(
+            TrendingWindow::Day,
+            '2031-05-14 09:00:00',
+            $this->fixtures->entry($feed, 'Hafenstreik', '2031-05-14 08:00:00'),
+            $this->fixtures->entry($feed, 'Neue Gespräche', '2031-05-14 09:00:00'),
+        );
+        $this->fixtures->follow($this->reader, $story, '2031-05-14 10:00:00');
+
+        return $story;
+    }
+
+    private function storeTitles(TrendingStory $story, ?string $llmTitle, string $fallbackTitle): void
+    {
+        $this->entityManager->getConnection()->executeStatement(
+            'UPDATE trending_story SET llm_title = ?, fallback_title = ? WHERE id = ?',
+            [$llmTitle, $fallbackTitle, $story->requireId()],
         );
     }
 

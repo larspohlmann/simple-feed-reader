@@ -25,6 +25,14 @@ final class FeedLanguageTest extends TestCase
         yield 'three-letter code' => ['deu', null];
     }
 
+    public function testEachLanguageHasItsEnglishName(): void
+    {
+        self::assertSame(
+            ['German', 'English', 'French', 'Spanish'],
+            array_map(static fn (FeedLanguage $language): string => $language->englishName(), FeedLanguage::cases()),
+        );
+    }
+
     public function testValuesListsEveryLanguageCodeInCaseOrder(): void
     {
         self::assertSame(['de', 'en', 'fr', 'es'], FeedLanguage::values());
