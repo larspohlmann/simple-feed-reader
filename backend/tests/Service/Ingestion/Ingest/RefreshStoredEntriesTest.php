@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Service\Ingestion\Ingest;
 
 use App\Entity\Entry;
+use App\Entity\EntryLemmyPost;
 use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Service\Outbound\Image\Model\DeclaredImageModel;
 use App\Service\Ingestion\Ingest\EntryIngestor;
 use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
+use App\Service\Ingestion\Ingest\StoredEntryRefresher;
 use App\Service\Ingestion\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
@@ -23,6 +25,14 @@ final class RefreshStoredEntriesTest extends DbTestCase
         self::assertInstanceOf(EntryIngestor::class, $ingestor);
 
         return $ingestor;
+    }
+
+    private function refresher(): StoredEntryRefresher
+    {
+        $refresher = self::getContainer()->get(StoredEntryRefresher::class);
+        self::assertInstanceOf(StoredEntryRefresher::class, $refresher);
+
+        return $refresher;
     }
 
     private static function fetchedAt(): \DateTimeImmutable
@@ -106,7 +116,7 @@ final class RefreshStoredEntriesTest extends DbTestCase
         $withImage = new ParsedFeedModel('T', null, null, null, [
             $this->parsedEntry('g2', new DeclaredImageModel('https://i/2.jpg', 700, null)),
         ]);
-        $this->ingestor()->refreshStoredEntries($feed, $withImage);
+        $this->refresher()->refreshStoredEntries($feed, $withImage);
         $this->entityManager->flush();
 
         $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'g2']);
@@ -124,7 +134,7 @@ final class RefreshStoredEntriesTest extends DbTestCase
         ]), self::context());
         $this->entityManager->flush();
 
-        $this->ingestor()->refreshStoredEntries($feed, new ParsedFeedModel('T', null, null, null, [
+        $this->refresher()->refreshStoredEntries($feed, new ParsedFeedModel('T', null, null, null, [
             $this->parsedEntry('g3', new DeclaredImageModel('https://i/replacement.jpg', 100, 100)),
         ]));
         $this->entityManager->flush();
@@ -138,7 +148,7 @@ final class RefreshStoredEntriesTest extends DbTestCase
     {
         $feed = $this->feed();
 
-        $this->ingestor()->refreshStoredEntries($feed, new ParsedFeedModel('T', null, null, null, [
+        $this->refresher()->refreshStoredEntries($feed, new ParsedFeedModel('T', null, null, null, [
             $this->parsedEntry('missing', new DeclaredImageModel('https://i/4.jpg', 400, 300)),
         ]));
 
@@ -152,7 +162,7 @@ final class RefreshStoredEntriesTest extends DbTestCase
         $this->ingestor()->ingest($feed, $parsedFeed, self::context());
         $this->entityManager->flush();
 
-        $this->ingestor()->refreshStoredEntries($feed, new ParsedFeedModel('T', null, null, null, [
+        $this->refresher()->refreshStoredEntries($feed, new ParsedFeedModel('T', null, null, null, [
             $this->parsedEntry('g5', null),
         ]));
 
@@ -169,7 +179,7 @@ final class RefreshStoredEntriesTest extends DbTestCase
         $this->entityManager->flush();
 
         $overlongUrl = 'https://i/' . str_repeat('u', 2048) . '.jpg';
-        $this->ingestor()->refreshStoredEntries($feed, new ParsedFeedModel('T', null, null, null, [
+        $this->refresher()->refreshStoredEntries($feed, new ParsedFeedModel('T', null, null, null, [
             $this->parsedEntry('g6', new DeclaredImageModel($overlongUrl, 100, 100)),
         ]));
 
@@ -192,7 +202,7 @@ final class RefreshStoredEntriesTest extends DbTestCase
         $entry->getImage()->drop(new \DateTimeImmutable('2026-09-21 12:00:00'));
         $this->entityManager->flush();
 
-        $this->ingestor()->refreshStoredEntries($feed, $withImage);
+        $this->refresher()->refreshStoredEntries($feed, $withImage);
         $this->entityManager->flush();
 
         self::assertNull($entry->getImageUrl());
@@ -205,7 +215,7 @@ final class RefreshStoredEntriesTest extends DbTestCase
         $this->ingestor()->ingest($feed, $parsedFeed, self::context());
         $this->entityManager->flush();
 
-        $this->ingestor()->refreshStoredEntries($feed, new ParsedFeedModel('T', null, null, null, [
+        $this->refresher()->refreshStoredEntries($feed, new ParsedFeedModel('T', null, null, null, [
             $this->parsedEntry('g7', new DeclaredImageModel('http://i/7.jpg', 100, 100)),
         ]));
 
@@ -219,7 +229,7 @@ final class RefreshStoredEntriesTest extends DbTestCase
         $feed = $this->feed();
         $entry = $this->storedPost($feed);
 
-        $this->ingestor()->refreshStoredEntries(
+        $this->refresher()->refreshStoredEntries(
             $feed,
             self::lemmyPost('42 points | <a href="' . self::POST . '">9 comments</a>'),
         );
@@ -233,9 +243,53 @@ final class RefreshStoredEntriesTest extends DbTestCase
         $feed = $this->feed();
         $entry = $this->storedPost($feed);
 
-        $this->ingestor()->refreshStoredEntries($feed, self::lemmyPost('a header Lemmy no longer writes'));
+        $this->refresher()->refreshStoredEntries($feed, self::lemmyPost('a header Lemmy no longer writes'));
         $this->entityManager->flush();
 
         self::assertSame(1, $entry->getCommentCount());
+    }
+
+    private function lemmyPostRow(Entry $entry): ?EntryLemmyPost
+    {
+        return $this->entityManager->getRepository(EntryLemmyPost::class)->findOneBy(['entry' => $entry]);
+    }
+
+    public function testARefreshUpdatesTheStoredScore(): void
+    {
+        $feed = $this->feed();
+        $entry = $this->storedPost($feed);
+        self::assertSame(10, $this->lemmyPostRow($entry)?->getScore());
+
+        $this->refresher()->refreshStoredEntries(
+            $feed,
+            self::lemmyPost('9 points | <a href="' . self::POST . '">2 comments</a>'),
+        );
+        $this->entityManager->flush();
+        $this->entityManager->clear();
+
+        $rows = $this->entityManager->getRepository(EntryLemmyPost::class)->findAll();
+        self::assertCount(1, $rows);
+        self::assertSame(9, $rows[0]->getScore());
+        self::assertSame('politics@lemmy.world', $rows[0]->getCommunity()?->identity);
+    }
+
+    public function testARefreshCreatesTheRowAStoredLemmyPostLacks(): void
+    {
+        $feed = $this->feed();
+        $entry = $this->storedPost($feed);
+        $row = $this->lemmyPostRow($entry);
+        self::assertNotNull($row);
+        $this->entityManager->remove($row);
+        $this->entityManager->flush();
+
+        $this->refresher()->refreshStoredEntries(
+            $feed,
+            self::lemmyPost('4 points | <a href="' . self::POST . '">2 comments</a>'),
+        );
+        $this->entityManager->flush();
+
+        $created = $this->lemmyPostRow($entry);
+        self::assertSame(4, $created?->getScore());
+        self::assertSame('politics@lemmy.world', $created->getCommunity()?->identity);
     }
 }

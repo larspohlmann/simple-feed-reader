@@ -6,12 +6,16 @@ namespace App\Tests\Support;
 
 use App\Entity\Category;
 use App\Entity\Entry;
+use App\Entity\EntryLemmyPost;
 use App\Repository\CategoryRepository;
 use App\Repository\EntryRepository;
 use App\Service\Ingestion\Category\CategoryNormalizer;
 use App\Service\Ingestion\Ingest\EntryCategoryWriter;
 use App\Service\Ingestion\Ingest\EntryImageWriter;
 use App\Service\Ingestion\Ingest\EntryIngestor;
+use App\Service\Ingestion\Ingest\EntryLemmyPostWriter;
+use App\Service\Ingestion\Ingest\FeedMetadataRecorder;
+use App\Service\Ingestion\Ingest\StoredEntryRefresher;
 use App\Service\Ingestion\Ingest\EntryTranscriptWriter;
 use App\Service\Ingestion\Ingest\Factory\IngestedEntryFactory;
 use App\Service\Ingestion\Ingest\PlatformEntryRules;
@@ -41,7 +45,6 @@ final class EntryIngestors
         $entryRepository = $entityManager->getRepository(Entry::class);
         /** @var CategoryRepository $categoryRepository */
         $categoryRepository = $entityManager->getRepository(Category::class);
-        $imageWriter = new EntryImageWriter();
 
         return new EntryIngestor(
             $entityManager,
@@ -51,13 +54,35 @@ final class EntryIngestors
             $platformRules,
             new IngestedEntryFactory(
                 new EntrySanitizer(new TrailingBlankRemover()),
-                $imageWriter,
+                new EntryImageWriter(),
                 LanguageWiring::socialEntryLanguage(),
             ),
-            $imageWriter,
-            new ProfileFeedTitle(),
+            new FeedMetadataRecorder(
+                new ProfileFeedTitle(),
+                new FeedLanguageResolver(new LanguageGuess(new LanguageDetectionFactory()->create())),
+            ),
             new EntryTranscriptWriter($entityManager),
-            new FeedLanguageResolver(new LanguageGuess(new LanguageDetectionFactory()->create())),
+            self::lemmyPostWriter($entityManager),
         );
+    }
+
+    public static function refresher(
+        EntityManagerInterface $entityManager,
+        PlatformEntryRules $platformRules,
+    ): StoredEntryRefresher {
+        /** @var EntryRepository $entryRepository */
+        $entryRepository = $entityManager->getRepository(Entry::class);
+
+        return new StoredEntryRefresher(
+            $entryRepository,
+            $platformRules,
+            new EntryImageWriter(),
+            self::lemmyPostWriter($entityManager),
+        );
+    }
+
+    private static function lemmyPostWriter(EntityManagerInterface $entityManager): EntryLemmyPostWriter
+    {
+        return new EntryLemmyPostWriter($entityManager, $entityManager->getRepository(EntryLemmyPost::class));
     }
 }

@@ -39,6 +39,7 @@ final class LemmyPostHeader
             (string) $profile->getAttribute('href'),
             $body->innerHTML,
             self::counts($nodes),
+            $nodes[3] instanceof Element ? LemmyCommunityLink::of((string) $nodes[3]->getAttribute('href')) : null,
         );
     }
 

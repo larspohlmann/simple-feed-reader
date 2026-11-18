@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Ingestion\Ingest\Support;
 
 use App\Entity\DiscussionCounts;
+use App\Entity\PostCommunity;
 use App\Service\Ingestion\Ingest\Support\LemmyPostHeader;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -46,6 +47,14 @@ final class LemmyPostHeaderTest extends TestCase
     public function testReadsTheCommentCount(string $label, int $expected): void
     {
         self::assertSame($expected, LemmyPostHeader::read(self::header('5 points | ', $label))?->counts->commentCount);
+    }
+
+    public function testReadsTheCommunity(): void
+    {
+        self::assertEquals(
+            PostCommunity::of('politics@lemmy.world', 'https://lemmy.world/c/politics'),
+            LemmyPostHeader::read(self::header('5 points | '))?->community,
+        );
     }
 
     public function testACommentLinkWithoutANumberLeavesTheCountUnknown(): void

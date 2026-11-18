@@ -11,6 +11,7 @@ use App\Service\Social\Completion\ShareEnrichmentQueue;
 use App\Service\Ingestion\Feed\FeedScheduler;
 use App\Service\Ingestion\Ingest\EntryIngestor;
 use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
+use App\Service\Ingestion\Ingest\StoredEntryRefresher;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Refresh\Model\FeedRefreshResultModel;
 use App\Service\Ingestion\Refresh\Model\IncomingFeedModel;
@@ -26,6 +27,7 @@ final readonly class IncomingPageStore
     public function __construct(
         private EntityManagerInterface $entityManager,
         private EntryIngestor $ingestor,
+        private StoredEntryRefresher $storedEntryRefresher,
         private FeedScheduler $scheduler,
         private EntryIndexer $indexer,
         private FeedShareEnrichment $shareEnrichment,
@@ -52,7 +54,7 @@ final readonly class IncomingPageStore
         $stored = $this->withoutDeletedPosts($feed, $incoming);
         $createdEntries = $this->ingestor->ingest($feed, $stored->parsed, $context);
         // A backfilled image is not new content, so it stays out of the count.
-        $this->ingestor->refreshStoredEntries($feed, $stored->parsed);
+        $this->storedEntryRefresher->refreshStoredEntries($feed, $stored->parsed);
         $this->scheduler->recordSuccess($feed, \count($createdEntries));
         $this->settle($feed, $stored, $createdEntries);
         $this->entityManager->flush();

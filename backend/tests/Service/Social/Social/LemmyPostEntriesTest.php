@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Social;
 
 use App\Entity\DiscussionCounts;
+use App\Entity\PostCommunity;
 use App\Enum\CommentsLoad;
 use App\Service\Foundation\Url\Support\LemmyPostUrl;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
@@ -64,6 +65,27 @@ final class LemmyPostEntriesTest extends TestCase
         self::assertSame('https://feddit.example/pictrs/image/ada.png', $linkPost->authorAvatarUrl);
         self::assertEquals(DiscussionCounts::of(12, 3), $linkPost->discussionCounts);
         self::assertSame('lars', $entries[self::TEXT_POST]->author);
+    }
+
+    public function testAPostNamesItsCommunity(): void
+    {
+        self::assertEquals(
+            PostCommunity::of('rss@feddit.example', 'https://feddit.example/c/rss'),
+            self::entries()[self::LINK_POST]->community,
+        );
+    }
+
+    public function testACommunityOffAnHttpsInstanceIsLeftOutButTheScoreStays(): void
+    {
+        $body = str_replace(
+            'https://feddit.example/c/rss',
+            'http://old.example/c/rss',
+            (string) file_get_contents(self::POST_LIST),
+        );
+        $entry = self::page($body)->parsed->entries[0];
+
+        self::assertNull($entry->community);
+        self::assertSame(12, $entry->discussionCounts->score);
     }
 
     public function testPublishedTimesAreUtc(): void
