@@ -22,7 +22,7 @@ final readonly class StorySettingsProvider
         $storedSettings = $this->storySettings->findForUser($user);
 
         return new StorySettingsModel(
-            $storedSettings?->isTitlesEnabled() ?? StorySettings::DEFAULT_TITLES_ENABLED,
+            self::titlesEnabledIn($storedSettings),
             $storedSettings?->getWritingConnection(),
             $this->writingConnections->usableGiven($user, $storedSettings),
             $this->writingConnections->candidatesFor($user),
@@ -31,6 +31,11 @@ final readonly class StorySettingsProvider
 
     public function titlesEnabledFor(User $user): bool
     {
-        return $this->storySettings->findForUser($user)?->isTitlesEnabled() ?? StorySettings::DEFAULT_TITLES_ENABLED;
+        return self::titlesEnabledIn($this->storySettings->findForUser($user));
+    }
+
+    private static function titlesEnabledIn(?StorySettings $storedSettings): bool
+    {
+        return $storedSettings?->isTitlesEnabled() ?? StorySettings::DEFAULT_TITLES_ENABLED;
     }
 }
