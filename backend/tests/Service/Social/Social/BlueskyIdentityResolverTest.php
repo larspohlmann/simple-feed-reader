@@ -37,7 +37,7 @@ final class BlueskyIdentityResolverTest extends TestCase
         );
 
         return new BlueskyIdentityResolver(
-            new BlueskyApiClient(FetchWiring::guardedApiClient($http->client(), $guard)),
+            new BlueskyApiClient(FetchWiring::patientApiClient($http->client(), $guard)),
         );
     }
 

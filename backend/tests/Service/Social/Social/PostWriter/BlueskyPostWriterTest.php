@@ -11,6 +11,7 @@ use App\Service\Content\LinkCard\PageCardReader\PageCardReaderInterface;
 use App\Service\Social\Social\BlueskyFacets;
 use App\Service\Social\Social\BlueskyExternalEmbeds;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialWriteOutcomeUnknownException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Social\Model\PostDeletion;
@@ -318,10 +319,34 @@ final class BlueskyPostWriterTest extends TestCase
             default => self::recordNotFound(),
         });
 
-        $this->expectException(SocialNetworkUnreachableException::class);
-        $this->expectExceptionMessage('Bluesky answered 500.');
+        $this->expectException(SocialWriteOutcomeUnknownException::class);
+        $this->expectExceptionMessage(
+            'Bluesky had trouble with this request, so it may or may not have gone through. '
+            . 'Check before trying again.',
+        );
 
         $this->writer($http)->reply(self::post(), self::keyedDraft());
+    }
+
+    public function testAnUnknownCreateOutcomeOutlivesALookupBlueskyCannotAnswer(): void
+    {
+        $http = RoutedHttpClient::answering(static fn (string $method, string $url): MockResponse => match (true) {
+            self::SESSION === $method . ' ' . $url => SocialApiWiring::blueskySessionAnswer('jwt-1'),
+            default => self::serviceUnavailable(),
+        });
+
+        try {
+            $this->writer($http)->reply(self::post(), self::keyedDraft());
+            self::fail('The create should have failed.');
+        } catch (SocialWriteOutcomeUnknownException $exception) {
+            self::assertSame('Bluesky answered 503.', $exception->getPrevious()?->getMessage());
+        }
+
+        $getRecord = self::getRecordLine($this->rememberedRecordKey());
+        self::assertSame(
+            [self::SESSION, self::CREATE_RECORD, $getRecord, $getRecord, $getRecord],
+            $http->requestLines(),
+        );
     }
 
     public function testARefusedCreateIsNotLookedUp(): void
@@ -418,6 +443,11 @@ final class BlueskyPostWriterTest extends TestCase
             '{"error":"RecordNotFound","message":"Could not locate record"}',
             ['http_code' => Response::HTTP_BAD_REQUEST],
         );
+    }
+
+    private static function serviceUnavailable(): MockResponse
+    {
+        return new MockResponse('{}', ['http_code' => Response::HTTP_SERVICE_UNAVAILABLE]);
     }
 
     private static function duplicateRecordKey(): MockResponse

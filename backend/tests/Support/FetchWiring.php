@@ -18,7 +18,9 @@ use App\Service\Outbound\Fetch\UrlGuard;
 use App\Http\SymfonyStatusReasonPhrases;
 use App\Service\Content\Reader\LandingChallenge;
 use App\Service\Content\Reader\PageLanding;
+use App\Service\Social\Social\PatientApiClient;
 use Psr\Clock\ClockInterface;
+use Symfony\Component\Clock\ClockInterface as SleepingClockInterface;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -47,6 +49,14 @@ final class FetchWiring
             $urlGuard,
             'TestAgent/1.0',
         );
+    }
+
+    public static function patientApiClient(
+        HttpClientInterface $client,
+        UrlGuard $urlGuard,
+        SleepingClockInterface $clock = new MockClock(),
+    ): PatientApiClient {
+        return new PatientApiClient(self::guardedApiClient($client, $urlGuard), $clock);
     }
 
     public static function egressProxy(?ProxyConfigModel $proxy): EgressProxySourceInterface

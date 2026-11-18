@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social;
 
-use App\Service\Outbound\Fetch\GuardedApiClient;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Support\NetworkAnswer;
+use App\Service\Social\Social\Support\ServerFailure;
 
 final readonly class BlueskyApiClient
 {
     private const string NETWORK = 'Bluesky';
 
-    public function __construct(private GuardedApiClient $api)
+    public function __construct(private PatientApiClient $api)
     {
     }
 
@@ -37,16 +37,19 @@ final readonly class BlueskyApiClient
     {
         SocialNetworkThrottledException::throwIfThrottled($answer, 'Bluesky asked for fewer requests.');
         if (!$answer->isSuccessful()) {
-            throw new SocialNetworkUnreachableException(sprintf('Bluesky answered %d.', $answer->status));
+            throw new SocialNetworkUnreachableException('Bluesky turned this request down.');
         }
 
         return $answer;
     }
 
-    /** @throws SocialNetworkUnreachableException only when no answer arrived; any status is returned */
+    /** @throws SocialNetworkUnreachableException when no answer arrived or it was a 5xx */
     public function answer(ApiRequestModel $request): ApiResponseModel
     {
-        return NetworkAnswer::orUnreachable(fn (): ApiResponseModel => $this->api->send($request), self::NETWORK);
+        $answer = NetworkAnswer::orUnreachable(fn (): ApiResponseModel => $this->api->send($request), self::NETWORK);
+        ServerFailure::throwIfServerError($request, $answer, self::NETWORK);
+
+        return $answer;
     }
 
     /** @throws SocialNetworkUnreachableException only when no answer arrived; any status is returned */

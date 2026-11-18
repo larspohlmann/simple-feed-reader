@@ -260,7 +260,7 @@ final class LemmyPostWriterTest extends TestCase
     private function writer(RoutedHttpClient $http): LemmyPostWriter
     {
         $guard = new UrlGuard(new StaticDnsResolver(['lemmy.example' => ['93.184.216.34']]), new IpValidator());
-        $client = new LemmyApiClient(FetchWiring::guardedApiClient($http->client(), $guard));
+        $client = new LemmyApiClient(FetchWiring::patientApiClient($http->client(), $guard));
 
         return new LemmyPostWriter(new LemmyAccountApi($client, new StoredCredential(SocialAccounts::cipher())));
     }

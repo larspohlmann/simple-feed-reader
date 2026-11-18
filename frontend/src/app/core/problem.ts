@@ -9,6 +9,7 @@ export interface Problem {
   detail?: string;
   errors?: Record<string, string[]>;
   accountStatus?: string;
+  serviceName?: string;
   /** Set only on the 409 a passkey relying-party id change raises while
    *  credentials still exist -- the count the confirmation prompt quotes
    *  (RelyingPartyChangeRequiresConfirmationException, #624). */
@@ -74,6 +75,7 @@ function problemFromBody(body: unknown, status: number): Problem | null {
     detail: stringField(body, 'detail'),
     errors: (body['errors'] as Record<string, string[]> | undefined) ?? undefined,
     accountStatus: stringField(body, 'accountStatus'),
+    serviceName: stringField(body, 'serviceName'),
     invalidatedPasskeyCount: numberField(body, 'invalidatedPasskeyCount'),
   };
 }

@@ -1798,6 +1798,8 @@
       "counter": "{{ used }} / {{ max }}",
       "namedCounter": "{{ network }} {{ used }} / {{ max }}",
       "networkError": "{{ network }}: {{ message }}",
+      "notSent": "{{serviceName}} isn't responding right now — it's probably overloaded. Nothing was sent; try again in a minute.",
+      "mayHaveSent": "{{serviceName}} had trouble with your post, so it may or may not have been published. Check before sending it again.",
       "accountOn": "{{ network }} account",
       "pillPosted": "Posted",
       "retry": "Retry {{ network }}",

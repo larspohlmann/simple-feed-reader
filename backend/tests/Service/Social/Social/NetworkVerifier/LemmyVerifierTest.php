@@ -7,6 +7,7 @@ namespace App\Tests\Service\Social\Social\NetworkVerifier;
 use App\Service\Outbound\Fetch\IpValidator;
 use App\Service\Outbound\Fetch\UrlGuard;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkUnavailableException;
 use App\Service\Social\Social\LemmyApiClient;
 use App\Service\Social\Social\Model\SocialCredentialsModel;
 use App\Service\Social\Social\NetworkVerifier\LemmyVerifier;
@@ -16,6 +17,7 @@ use App\Tests\Support\StaticDnsResolver;
 use App\Tests\Support\TaggedItemOf;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 final class LemmyVerifierTest extends TestCase
 {
@@ -59,6 +61,21 @@ final class LemmyVerifierTest extends TestCase
         $this->expectExceptionMessage('The Lemmy instance gave no session; confirm the account first.');
 
         $this->verifier($http)->verify($this->credentials());
+    }
+
+    public function testAnOutageOnLoginIsAnUnavailableInstance(): void
+    {
+        $http = new RoutedHttpClient([
+            self::LOGIN => new MockResponse('', ['http_code' => Response::HTTP_BAD_GATEWAY]),
+        ]);
+
+        try {
+            $this->verifier($http)->verify($this->credentials());
+            self::fail('A 502 must not read as a login.');
+        } catch (SocialNetworkUnavailableException $exception) {
+            self::assertSame('lemmy.example', $exception->serviceName);
+            self::assertSame('lemmy.example answered 502.', $exception->getPrevious()?->getMessage());
+        }
     }
 
     public function testASiteWithoutAUserRefusesTheSession(): void
@@ -112,7 +129,7 @@ final class LemmyVerifierTest extends TestCase
     {
         $guard = new UrlGuard(new StaticDnsResolver(['lemmy.example' => ['93.184.216.34']]), new IpValidator());
 
-        return new LemmyVerifier(new LemmyApiClient(FetchWiring::guardedApiClient($http->client(), $guard)));
+        return new LemmyVerifier(new LemmyApiClient(FetchWiring::patientApiClient($http->client(), $guard)));
     }
 
     private function credentials(): SocialCredentialsModel

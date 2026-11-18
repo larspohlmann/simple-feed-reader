@@ -173,6 +173,54 @@ describe('ComposerLanes', () => {
     expect(lane.sendError()).toContain('Mastodon said no');
   });
 
+  it.each([
+    [
+      'social_network_unavailable',
+      "lemmy.world isn't responding right now — it's probably overloaded. Nothing was sent; try again in a minute.",
+    ],
+    [
+      'social_write_outcome_unknown',
+      'lemmy.world had trouble with your post, so it may or may not have been published. Check before sending it again.',
+    ],
+  ])('a send failing with %s names the service and whether it was sent', (type, message) => {
+    api.send.mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 502,
+            error: { type, title: 'x', status: 502, detail: 'English', serviceName: 'lemmy.world' },
+          }),
+      ),
+    );
+    const lane = initialised().primary();
+
+    lane.send(DRAFT, 'Hi').subscribe({ error: () => undefined });
+
+    expect(lane.sendError()).toBe(message);
+  });
+
+  it('a social_network_unavailable send without a service name shows the problem detail', () => {
+    api.send.mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 502,
+            error: {
+              type: 'social_network_unavailable',
+              title: 'x',
+              status: 502,
+              detail: 'The network is down',
+            },
+          }),
+      ),
+    );
+    const lane = initialised().primary();
+
+    lane.send(DRAFT, 'Hi').subscribe({ error: () => undefined });
+
+    expect(lane.sendError()).toBe('The network is down');
+  });
+
   it('deactivating a lane clears its send error', () => {
     api.send.mockReturnValue(throwError(refusal));
     const lane = initialised().primary();

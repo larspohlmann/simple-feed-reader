@@ -70,6 +70,6 @@ final readonly class BlueskySessionOpener
         return $this->bluesky->answer(ApiRequestModel::postJson(
             $identity->pdsUrl . self::CREATE_SESSION,
             ['identifier' => $identity->did, 'password' => $appPassword],
-        ));
+        )->changingNothing());
     }
 }

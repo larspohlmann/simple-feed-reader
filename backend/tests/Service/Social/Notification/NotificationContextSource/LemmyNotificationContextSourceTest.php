@@ -97,6 +97,26 @@ final class LemmyNotificationContextSourceTest extends TestCase
         self::assertCount(2, $http->requests);
     }
 
+    public function testAnUnavailableInstanceStopsTheLookups(): void
+    {
+        $http = RoutedHttpClient::answering(
+            static fn (string $method, string $url): MockResponse => str_ends_with($url, '=2')
+                ? new MockResponse('{}', ['http_code' => Response::HTTP_SERVICE_UNAVAILABLE])
+                : self::parentComment(),
+        );
+        $contexts = $this->source($http)->contextsOf(
+            SocialApiWiring::lemmyAccount(),
+            [self::row('reply:1', '1'), self::row('reply:2', '2'), self::row('reply:3', '3')],
+        );
+
+        self::assertSame(['reply:1'], array_keys($contexts));
+        $unavailable = 'GET ' . self::COMMENT . '2';
+        self::assertSame(
+            ['GET ' . self::COMMENT . '1', $unavailable, $unavailable, $unavailable],
+            $http->requestLines(),
+        );
+    }
+
     public function testTwoRowsAnsweringTheSameCommentAskForItOnce(): void
     {
         $http = new RoutedHttpClient(['GET ' . self::COMMENT . '26906403' => self::parentComment()]);

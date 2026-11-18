@@ -42,7 +42,7 @@ final class MastodonCandidateSourceTest extends TestCase
         );
 
         return new MastodonCandidateSource(
-            new MastodonApiClient(FetchWiring::guardedApiClient($http->client(), $guard)),
+            new MastodonApiClient(FetchWiring::patientApiClient($http->client(), $guard)),
             new StoredCredential(SocialAccounts::cipher()),
         );
     }

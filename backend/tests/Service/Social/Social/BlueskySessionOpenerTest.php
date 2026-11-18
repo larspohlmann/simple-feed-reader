@@ -10,6 +10,7 @@ use App\Service\Social\Social\BlueskyApiClient;
 use App\Service\Social\Social\BlueskySessionOpener;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Social\Social\Exception\SocialNetworkUnavailableException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\StoredCredential;
 use App\Tests\Support\FetchWiring;
@@ -30,7 +31,7 @@ final class BlueskySessionOpenerTest extends TestCase
         $guard = new UrlGuard(new StaticDnsResolver(['pds.example.test' => ['93.184.216.34']]), new IpValidator());
 
         return new BlueskySessionOpener(
-            new BlueskyApiClient(FetchWiring::guardedApiClient($http->client(), $guard)),
+            new BlueskyApiClient(FetchWiring::patientApiClient($http->client(), $guard)),
             new StoredCredential(SocialAccounts::cipher()),
         );
     }
@@ -95,6 +96,21 @@ final class BlueskySessionOpenerTest extends TestCase
         $this->expectException(SocialNetworkUnreachableException::class);
 
         $this->opener($http)->openForAccount(SocialAccounts::bluesky());
+    }
+
+    public function testAnOutageOnOpeningASessionIsAnUnavailableBluesky(): void
+    {
+        $http = new RoutedHttpClient([
+            self::SESSION => new MockResponse('', ['http_code' => Response::HTTP_GATEWAY_TIMEOUT]),
+        ]);
+
+        try {
+            $this->opener($http)->openForAccount(SocialAccounts::bluesky());
+            self::fail('A 504 must not read as a session.');
+        } catch (SocialNetworkUnavailableException $exception) {
+            self::assertSame('Bluesky', $exception->serviceName);
+            self::assertSame('Bluesky answered 504.', $exception->getPrevious()?->getMessage());
+        }
     }
 
     public function testTooManySessionsIsAThrottleCarryingItsDelay(): void

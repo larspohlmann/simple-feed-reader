@@ -303,7 +303,7 @@ final class BlueskyTimelineSourceTest extends TestCase
     private function source(HttpClientInterface $http): BlueskyTimelineSource
     {
         $guard = new UrlGuard(new StaticDnsResolver(['pds.example.test' => ['93.184.216.34']]), new IpValidator());
-        $api = new BlueskyApiClient(FetchWiring::guardedApiClient($http, $guard));
+        $api = new BlueskyApiClient(FetchWiring::patientApiClient($http, $guard));
 
         return new BlueskyTimelineSource(
             new BlueskySessions(

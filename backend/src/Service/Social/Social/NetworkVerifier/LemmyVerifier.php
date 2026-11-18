@@ -50,7 +50,9 @@ final readonly class LemmyVerifier implements NetworkVerifierInterface
         if (null !== $credentials->secondFactor) {
             $body['totp_2fa_token'] = $credentials->secondFactor;
         }
-        $answer = $this->lemmy->send(ApiRequestModel::postJson($credentials->address . '/api/v3/user/login', $body));
+        $answer = $this->lemmy->send(
+            ApiRequestModel::postJson($credentials->address . '/api/v3/user/login', $body)->changingNothing(),
+        );
 
         return JsonNodeModel::of($answer->json())->string('jwt')
             ?? throw new SocialCredentialsRejectedException(self::NO_SESSION);

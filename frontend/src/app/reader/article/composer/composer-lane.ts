@@ -18,6 +18,11 @@ import { SentPost } from './composed-post';
 import { LemmyCommunityMemory } from './lemmy-community-memory';
 import { postLength } from './post-length';
 
+const SEND_FAILURE_KEYS: Readonly<Record<string, string | undefined>> = {
+  social_network_unavailable: 'reader.composer.notSent',
+  social_write_outcome_unknown: 'reader.composer.mayHaveSent',
+};
+
 type ContextState =
   | { status: 'idle' }
   | { status: 'loading' }
@@ -149,7 +154,7 @@ export class ComposerLane {
           this.sentPost.set(sent);
           this.rememberCommunity(context);
         },
-        error: (error: HttpErrorResponse) => this.sendFailure.set(this.messageOf(error)),
+        error: (error: HttpErrorResponse) => this.sendFailure.set(this.sendFailureMessage(error)),
       }),
     );
   }
@@ -216,6 +221,14 @@ export class ComposerLane {
       authorHandle: account?.handle ?? null,
       target: context.target,
     };
+  }
+
+  private sendFailureMessage(error: HttpErrorResponse): string {
+    const problem = parseProblem(error);
+    const key = SEND_FAILURE_KEYS[problem.type];
+    if (key === undefined || problem.serviceName === undefined)
+      return problemText(problem, this.i18n);
+    return this.i18n.translate(key, { serviceName: problem.serviceName });
   }
 
   private messageOf(error: HttpErrorResponse): string {
