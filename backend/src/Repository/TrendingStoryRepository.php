@@ -30,9 +30,6 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     /** A story is shown only when this many article feeds, or this many article sites, carry it. */
     private const int MINIMUM_ARTICLE_SOURCES = 2;
 
-    /** A snippet is cut to 300 characters after its markup is stripped; this bounds what is read before that. */
-    private const int BODY_SOURCE_CHARACTERS = 2_000;
-
     private const string ARTICLE_FEEDS
         = 'COUNT(DISTINCT CASE WHEN member_feed.network IS NULL THEN story_member.feed_id END)';
 
@@ -236,7 +233,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
                 . ' AND (newer.effective_date > entry.effective_date'
                 . ' OR (newer.effective_date = entry.effective_date AND newer.id > entry.id)))'
                 . ' ORDER BY entry.effective_date DESC, entry.id DESC LIMIT %d',
-                self::BODY_SOURCE_CHARACTERS,
+                HeadlineBody::SOURCE_CHARACTERS,
                 $limit,
             ),
             ['story' => $storyId],
@@ -269,7 +266,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
                 . ' AND member.shared_link_id IS NOT NULL GROUP BY member.shared_link_id) card'
                 . ' JOIN shared_link link ON link.id = card.shared_link_id'
                 . ' ORDER BY card.newest_share DESC, link.id DESC LIMIT %d',
-                self::BODY_SOURCE_CHARACTERS,
+                HeadlineBody::SOURCE_CHARACTERS,
                 $limit,
             ),
             ['story' => $storyId],

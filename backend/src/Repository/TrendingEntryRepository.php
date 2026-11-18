@@ -9,6 +9,7 @@ use App\Service\Curation\Trending\Model\EntryLinksModel;
 use App\Service\Curation\Trending\Model\MemberHeadlineModel;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Service\Curation\Trending\Model\WindowLinkCardModel;
+use App\Service\Curation\Trending\Support\HeadlineBody;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManagerInterface;
@@ -19,9 +20,6 @@ final readonly class TrendingEntryRepository
     private const int CHUNK_ROWS = 1_000;
 
     private const int LOOKUP_IDS = 120;
-
-    /** A body is cut to 300 characters after its markup is stripped; this bounds what a chunk holds before that. */
-    private const int BODY_SOURCE_CHARACTERS = 2_000;
 
     /** A card's description is plain text far more often than markup, so less headroom over 300 is kept. */
     private const int CARD_DESCRIPTION_CHARACTERS = 600;
@@ -155,7 +153,7 @@ final readonly class TrendingEntryRepository
                 . ' LEFT JOIN shared_link link ON link.id = card.shared_link_id'
                 . LinkLandingSql::JOIN
                 . ' WHERE e.effective_date >= :since AND e.id > :afterId ORDER BY e.id LIMIT %d',
-                self::BODY_SOURCE_CHARACTERS,
+                HeadlineBody::SOURCE_CHARACTERS,
                 self::CARD_DESCRIPTION_CHARACTERS,
                 self::CHUNK_ROWS,
             ),
