@@ -5234,7 +5234,7 @@ describe('ReaderShellComponent', () => {
       const sidebar = fixture.debugElement.query(By.directive(SidebarComponent))
         .componentInstance as SidebarComponent;
       expect(sidebar.selection()).toEqual({ kind: 'trending-story', id: 42, unread: false });
-      expect(sidebar.activeFollowedStoryId()).toBe(42);
+      expect(sidebar.activeStoryId()).toBe(42);
       expect(TestBed.inject(Title).getTitle()).toContain('Harbour strike');
     });
 

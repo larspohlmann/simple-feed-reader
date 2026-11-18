@@ -83,7 +83,7 @@
       [followedStories]="followedStoriesStore.stories()"
       [savedSearches]="savedSearchesStore.savedSearches()"
       [activeSavedSearchId]="activeSavedSearchId()"
-      [activeFollowedStoryId]="storyOverlay.storyId()"
+      [activeStoryId]="storyOverlay.storyId()"
       [mailEnabled]="auth.user()?.mail?.enabled ?? false"
       [digestEnabled]="digest.enabled()"
       [selection]="listOnScreen().selection()"

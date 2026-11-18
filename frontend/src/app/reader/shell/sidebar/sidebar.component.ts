@@ -143,7 +143,7 @@ export class SidebarComponent {
   readonly forYouUnread = input(0);
   readonly trendingUnopened = input<TrendingUnopened>(NO_TRENDING_UNOPENED);
   readonly groupUnread = input<Readonly<Record<FeedGroupName, number>>>({ tags: 0, feeds: 0 });
-  readonly activeFollowedStoryId = input<number | null>(null);
+  readonly activeStoryId = input<number | null>(null);
   readonly followedStories = input<FollowedStoryDto[]>([]);
   readonly savedSearches = input<SavedSearchDto[]>([]);
   /** The saved search the list is currently showing, by id, or null. The shell
