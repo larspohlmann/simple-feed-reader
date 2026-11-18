@@ -532,10 +532,10 @@
       "saved": "Gespeichert."
     },
     "stories": {
-      "title": "Trending-Stories",
-      "caption": "Wie dein LLM bei Trending hilft.",
+      "title": "Stories im Trend",
+      "caption": "Wie dein LLM bei „Im Trend“ hilft.",
       "titles": "Story-Titel",
-      "titlesDesc": "Dein LLM schreibt für jede Trending-Story eine eigene Schlagzeile. Ohne es zeigt jede Story ihre repräsentativste Schlagzeile.",
+      "titlesDesc": "Dein LLM schreibt für jede Story in „Im Trend“ eine eigene Schlagzeile. Ohne es zeigt jede Story ihre repräsentativste Schlagzeile.",
       "connection": "Verbindung",
       "connectionDesc": "Die LLM-Verbindung, die Story-Titel schreibt.",
       "connectionActive": "Die aktive Verbindung",
