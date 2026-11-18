@@ -662,7 +662,7 @@ i18n under `settings.stories`:
 
 ---
 
-### Task 12: A story title opens the story's list view; the title is not bold
+### Task 12: A story title opens the story's list view; the title is not bold and its card is gray
 
 Added during execution at the user's request (2026-11-18): "when I click on a title, I want to get to the same list view which I get when I click on a followed story in the sidebar", and "the title text should not be bold".
 
@@ -672,7 +672,8 @@ Added during execution at the user's request (2026-11-18): "when I click on a ti
 - The title card becomes a link (a real `<a>` with `routerLink` + the same query params the sidebar uses), so it opens in the same list view, works with middle-click/new tab, and is keyboard-focusable; the card below stays as it is (its own clicks unchanged).
 - The view must work for a story the reader does **not** follow: the entries endpoint and the heading accept any story the reader owns (`TrendingStoryRepository::requireOwnedBy` → 404 for another user's story id, as today for follow). Check what the list view does with follow-only pieces (unfollow action, sidebar highlight, the "opened" visit post): unfollowed stories show the follow action instead of unfollow (reuse `app-story-actions` if it fits), and no sidebar entry is highlighted. If the param name `followedStoryId` no longer fits, rename it to `storyId` everywhere (sidebar links included) — one name, no alias.
 - The heading of that view shows the story title (Task 5 already makes it the story title for followed stories; do the same for unfollowed).
-- Title text weight: regular, not bold — use the regular weight token from `docs/design-language.md`; nothing else in the look changes. Re-render with the scratchpad capture script used for the sign-off (`real.mjs`) and compare against the signed-off renders: only the weight differs.
+- Title card tint: a neutral gray instead of the accent green (`--accent-soft`) — pick the existing neutral surface token from `docs/design-language.md` (e.g. `--surface-sunken`) that reads as a quiet gray in light and dark mode; the icon may stay in the accent colour. Same rim and shape.
+- Title text weight: regular, not bold — use the regular weight token from `docs/design-language.md`; nothing else in the look changes. Re-render with the scratchpad capture script used for the sign-off (`real.mjs`) and compare against the signed-off renders: only the weight and the tint differ. Send the user the new renders (light and dark).
 
 - [ ] **Step 1: Write the failing tests**
   - backend: `testTheEntriesOfAnUnfollowedOwnStoryAreListed` (200, the story's entries); `testAnotherUsersStoryIsNotFound` (404).
