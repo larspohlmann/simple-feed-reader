@@ -14,17 +14,21 @@ use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
 use App\Service\Curation\Ai\Exception\RetryableProviderException;
 use App\Service\Curation\StoryAi\StoryAiSweep;
+use App\Service\Curation\Trending\StoryTitleTask;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\StubChatClient;
 use App\Tests\Support\TrendingFixtures;
+use Symfony\Bridge\Doctrine\Middleware\Debug\DebugDataHolder;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpFoundation\Response;
 
 final class StoryTitleTaskTest extends DbTestCase
 {
     private const string NOW = '2031-05-14 12:00:00';
+
+    private const string BEFORE_THE_WEEK = '2031-05-07 11:59:00';
 
     private MockClock $clock;
     private TrendingFixtures $fixtures;
@@ -185,6 +189,28 @@ final class StoryTitleTaskTest extends DbTestCase
         self::assertCount(0, $this->chat()->calls());
     }
 
+    public function testAStoryOutsideEveryWindowIsNotDue(): void
+    {
+        $this->runFixtures->seedReadyAiSettingsFor($this->reader, 'qwen3-14b');
+        $this->storyLastSeen(self::BEFORE_THE_WEEK, 3);
+
+        $this->sweep()->runDue();
+
+        self::assertCount(0, $this->chat()->calls());
+    }
+
+    public function testAReaderWithOnlyStoriesOutsideEveryWindowIsNotRanked(): void
+    {
+        $this->storyLastSeen(self::BEFORE_THE_WEEK, 3);
+        $queries = $this->queries();
+        $queries->reset();
+
+        $due = $this->task()->dueStoryIds($this->reader, $this->clock->now());
+
+        self::assertSame([], $due);
+        self::assertSame([], $this->rankingQueriesIn($queries));
+    }
+
     public function testTheTitleInputIsCleaned(): void
     {
         $this->runFixtures->seedReadyAiSettingsFor($this->reader, 'qwen3-14b');
@@ -206,9 +232,14 @@ final class StoryTitleTaskTest extends DbTestCase
 
     private function shownStory(int $outlets): TrendingStory
     {
+        return $this->storyLastSeen('2031-05-14 10:00:00', $outlets);
+    }
+
+    private function storyLastSeen(string $lastSeen, int $outlets): TrendingStory
+    {
         return $this->fixtures->story(
             TrendingWindow::Day,
-            '2031-05-14 10:00:00',
+            $lastSeen,
             ...array_map(
                 fn (int $variant): Entry => $this->outletEntry('Hafenstreik legt Hamburg lahm, Teil ' . $variant),
                 range(1, $outlets),
@@ -262,6 +293,34 @@ final class StoryTitleTaskTest extends DbTestCase
         $messages = $this->chat()->calls()[$call]['messages'];
 
         return $messages[\count($messages) - 1]['content'];
+    }
+
+    private function task(): StoryTitleTask
+    {
+        /** @var StoryTitleTask $task */
+        $task = self::getContainer()->get(StoryTitleTask::class);
+
+        return $task;
+    }
+
+    /** @return list<string> */
+    private function rankingQueriesIn(DebugDataHolder $queries): array
+    {
+        /** @var list<array{sql: string}> $statements */
+        $statements = $queries->getData()['default'] ?? [];
+
+        return array_values(array_filter(
+            array_column($statements, 'sql'),
+            static fn (string $sql): bool => str_contains($sql, 'trending_story_hide'),
+        ));
+    }
+
+    private function queries(): DebugDataHolder
+    {
+        /** @var DebugDataHolder $queries */
+        $queries = self::getContainer()->get('doctrine.debug_data_holder');
+
+        return $queries;
     }
 
     private function sweep(): StoryAiSweep

@@ -113,20 +113,25 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     }
 
     /**
-     * The user's stories without a title or grown by half since theirs, last attempted at or before $attemptedBefore.
+     * The user's stories seen at or after $seenSince without a title or grown by half since theirs, last attempted at
+     * or before $attemptedBefore.
      *
      * @return list<int>
      */
-    public function titleDueOf(int $userId, \DateTimeImmutable $attemptedBefore): array
+    public function titleDueOf(int $userId, \DateTimeImmutable $attemptedBefore, \DateTimeImmutable $seenSince): array
     {
         /** @var list<int|string> $storyIds */
         $storyIds = $this->getEntityManager()->getConnection()->fetchFirstColumn(
-            'SELECT story.id FROM trending_story story WHERE story.user_id = :user'
+            'SELECT story.id FROM trending_story story WHERE story.user_id = :user AND story.last_seen >= :seenSince'
             . ' AND (story.llm_title_attempted_at IS NULL OR story.llm_title_attempted_at <= :attemptedBefore)'
             . ' AND (story.llm_title IS NULL OR ' . self::MEMBER_COUNT . ' * 2 >= story.llm_title_member_count * 3)'
             . ' ORDER BY story.id',
-            ['user' => $userId, 'attemptedBefore' => $attemptedBefore],
-            ['user' => ParameterType::INTEGER, 'attemptedBefore' => Types::DATETIME_IMMUTABLE],
+            ['user' => $userId, 'attemptedBefore' => $attemptedBefore, 'seenSince' => $seenSince],
+            [
+                'user' => ParameterType::INTEGER,
+                'attemptedBefore' => Types::DATETIME_IMMUTABLE,
+                'seenSince' => Types::DATETIME_IMMUTABLE,
+            ],
         );
 
         return array_map(static fn (int|string $storyId): int => (int) $storyId, $storyIds);

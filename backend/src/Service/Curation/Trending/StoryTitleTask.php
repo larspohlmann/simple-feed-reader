@@ -52,10 +52,14 @@ final readonly class StoryTitleTask implements StoryAiTaskInterface
         return $this->storySettings->titlesEnabledFor($user) ? $this->writingConnections->usableFor($user) : null;
     }
 
-    /** Ranks the reader's windows only when a story is due at all. */
+    /** Ranks the reader's windows only when a story a window could show is due at all. */
     public function dueStoryIds(User $user, \DateTimeImmutable $now): array
     {
-        $due = $this->stories->titleDueOf($user->requireId(), $now->modify(self::RETRY_AFTER));
+        $due = $this->stories->titleDueOf(
+            $user->requireId(),
+            $now->modify(self::RETRY_AFTER),
+            self::earliestWindowStart($now),
+        );
         if ($due === []) {
             return [];
         }
@@ -110,6 +114,14 @@ final readonly class StoryTitleTask implements StoryAiTaskInterface
             ),
             $this->stories->memberHeadlinesOf($storyId, self::HEADLINES),
         );
+    }
+
+    private static function earliestWindowStart(\DateTimeImmutable $now): \DateTimeImmutable
+    {
+        return min(array_map(
+            static fn (TrendingWindow $window): \DateTimeImmutable => $window->startBefore($now),
+            TrendingWindow::cases(),
+        ));
     }
 
     /** @return list<int> */
