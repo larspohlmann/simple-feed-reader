@@ -147,11 +147,6 @@ final class RecommendationRunLog
         return $this->profileRun;
     }
 
-    public function getStoryAiRun(): ?StoryAiRun
-    {
-        return $this->storyAiRun;
-    }
-
     public function getPhase(): CallPhase
     {
         return $this->phase;
