@@ -98,6 +98,12 @@ app-reader-header.hidden {
   .article-overlay {
     z-index: 12;
   }
+
+  /* Full screen as an article is, over the app bar: its list reserves none of the bar's height (#2329). */
+  .story-overlay {
+    --app-bar-h: env(safe-area-inset-top, 0px);
+    --app-bar-shift: 0px;
+  }
 }
 
 /* A page layer beneath the one that owns the page (PageScrollOwner): held in the list
@@ -114,9 +120,7 @@ app-reader-header.hidden {
   animation: none;
 }
 
-/* A story's list leaves as it came in the split layout too, where it takes the list column (#2329). */
-.main:not(.split) > .article-overlay.article-leave,
-.main.split > .story-overlay.article-leave {
+.main:not(.split) > .article-overlay.article-leave {
   animation: article-leave 0.22s ease-in forwards;
 }
 
@@ -142,16 +146,49 @@ app-reader-header.hidden {
 
 @media (prefers-reduced-motion: reduce) {
   .article-overlay,
-  .main:not(.split) > .article-overlay.article-leave,
-  .main.split > .story-overlay.article-leave {
+  .main:not(.split) > .article-overlay.article-leave {
     animation: none;
   }
 }
 
-/* In the split layout a story's list takes the list column, the list beneath pinned in it (#2329). */
+/* In the split layout a story's list takes the list column, the list beneath pinned in it (#2329).
+   The column stays put and clips, and the list slides inside it, so it never crosses the reader pane. */
 .main.split > .story-overlay {
   flex: 0 0 var(--list-width, 42%);
   min-width: 17.5rem;
+  overflow-x: clip;
+  animation: none;
+}
+
+.main.split > .story-overlay > app-story-layer {
+  animation: article-enter 0.22s ease-out;
+}
+
+/* The column's own leave animation does nothing but last as long as the slide, which the leave waits on. */
+.main.split > .story-overlay.article-leave {
+  animation: story-column-hold 0.22s linear;
+}
+
+.main.split > .story-overlay.article-leave > app-story-layer {
+  animation: article-leave 0.22s ease-in forwards;
+}
+
+@keyframes story-column-hold {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .main.split > .story-overlay > app-story-layer,
+  .main.split > .story-overlay.article-leave,
+  .main.split > .story-overlay.article-leave > app-story-layer {
+    animation: none;
+  }
 }
 
 /* The list pane's width is user-owned: dragged on the divider below, persisted

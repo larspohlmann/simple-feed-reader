@@ -70,11 +70,11 @@ async function stubStoryPage(page: Page, over: Partial<StoryPageDto>): Promise<v
   );
 }
 
-/** Kept, owned by the spec: empty, so nothing beneath the story is the seeded account's. */
-async function stubKept(page: Page): Promise<void> {
+/** Kept, owned by the spec: `entries`, so nothing beneath the story is the seeded account's. */
+async function stubKept(page: Page, entries: EntryDto[] = []): Promise<void> {
   await page.route(
     (url) => url.pathname === '/api/entries' && url.searchParams.get('view') === 'kept',
-    (route) => route.fulfill({ status: 200, json: { entries: [], nextCursor: null } }),
+    (route) => route.fulfill({ status: 200, json: { entries, nextCursor: null } }),
   );
 }
 
@@ -283,11 +283,15 @@ declare global {
   }
 }
 
-/** The animation the story's overlay leaves with, through `close`. */
-async function leaveAnimation(page: Page, close: () => Promise<void>): Promise<string[]> {
+/** The animation the story's overlay leaves with, through `close`; in the split layout, its list's inside it. */
+async function leaveAnimation(
+  page: Page,
+  close: () => Promise<void>,
+  moving = '.story-overlay',
+): Promise<string[]> {
   const overlay = page.locator('.story-overlay');
   await settleAnimations(overlay);
-  await page.evaluate(() => {
+  await page.evaluate((movingSelector) => {
     window.storyAnimations = [];
     const leaving = new Set<Element>();
     new MutationObserver((records) => {
@@ -295,11 +299,14 @@ async function leaveAnimation(page: Page, close: () => Promise<void>): Promise<s
         const target = record.target as HTMLElement;
         if (!leaving.has(target) && target.matches('.story-overlay.article-leave')) {
           leaving.add(target);
-          window.storyAnimations.push(getComputedStyle(target).animationName);
+          const slides = target.matches(movingSelector)
+            ? target
+            : target.querySelector(movingSelector)!;
+          window.storyAnimations.push(getComputedStyle(slides).animationName);
         }
       }
     }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
-  });
+  }, moving);
   await close();
   await expect(overlay).toHaveCount(0);
   return page.evaluate(() => window.storyAnimations);
@@ -333,21 +340,37 @@ test.describe("a story's list slides like an article (phone)", () => {
   }
 });
 
-test.describe("a story's list slides like a drill-in in the split layout too", () => {
+test.describe("a story's list slides inside the list column in the split layout", () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
   for (const reducedMotion of ['no-preference', 'reduce'] as const) {
-    test(`slides in and out of the list column (${reducedMotion})`, async ({ page }) => {
+    test(`slides in and out within its column, never over the reader pane (${reducedMotion})`, async ({
+      page,
+    }) => {
       await page.emulateMedia({ reducedMotion });
       await stubStories(page, false);
       await signIn(page, 'pane');
       await openTrending(page);
 
       await page.getByRole('link', { name: TITLE }).click();
-      const overlay = page.locator('.main.split > .story-overlay');
-      const entered = await overlay.evaluate((element) => getComputedStyle(element).animationName);
-      const left = await leaveAnimation(page, () => closeStory(page));
+      const column = page.locator('.main.split > .story-overlay');
+      const sliding = column.locator('> app-story-layer');
+      const entered = await sliding.evaluate((element) => getComputedStyle(element).animationName);
+      const clip = await column.evaluate((element) => {
+        const reader = document.querySelector('.main.split .reader')!.getBoundingClientRect();
+        return {
+          overflow: getComputedStyle(element).overflowX,
+          gap: reader.left - element.getBoundingClientRect().right,
+        };
+      });
+      const left = await leaveAnimation(
+        page,
+        () => closeStory(page),
+        '.story-overlay > app-story-layer',
+      );
 
+      expect(clip.overflow).toBe('clip');
+      expect(clip.gap).toBeGreaterThanOrEqual(-1);
       if (reducedMotion === 'reduce') {
         expect(entered).toBe('none');
         expect(left).toEqual(['none']);
@@ -357,6 +380,34 @@ test.describe("a story's list slides like a drill-in in the split layout too", (
       }
     });
   }
+});
+
+test.describe("a story's list is full screen on a phone, as an article is", () => {
+  test.use({ viewport: { width: 375, height: 667 } });
+
+  test('its header starts at the top of the screen, over the app bar', async ({ page }) => {
+    await stubStories(page, false);
+    await signIn(page, 'magazine');
+    await openTrending(page);
+
+    await page.getByRole('link', { name: TITLE }).click();
+    await expect(layer(page)).toContainText(TITLE);
+    await settleAnimations(page.locator('.story-overlay'));
+
+    const header = await layer(page)
+      .locator('.story-back')
+      .evaluate((back) => {
+        const bar = back.closest('.list-header') ?? back.parentElement!;
+        return {
+          top: bar.getBoundingClientRect().top,
+          backTop: back.getBoundingClientRect().top,
+          topmost: document.elementFromPoint(187, 4)?.closest('app-story-layer') !== null,
+        };
+      });
+    expect(header.top).toBeLessThanOrEqual(1);
+    expect(header.backTop).toBeLessThan(40);
+    expect(header.topmost).toBe(true);
+  });
 });
 
 test.describe("a story's list goes back on the article's swipe (phone)", () => {
@@ -451,6 +502,38 @@ test.describe("a story's list is a list of its own (desktop)", () => {
     await header.getByRole('switch', { name: 'Unread' }).click();
     await expect(header.locator('.title-count')).toHaveText('12');
     await header.getByRole('switch', { name: 'Unread' }).click();
+  });
+
+  test('a click on the list beneath while the story slides out reaches that list', async ({
+    page,
+  }) => {
+    const keptRow = entryWire({ id: 991, title: 'Fixture kept row', isKept: true });
+    const patched: string[] = [];
+    await page.route(
+      (url) => /^\/api\/entries\/\d+\/state$/.test(url.pathname),
+      (route) => {
+        patched.push(new URL(route.request().url()).pathname);
+        return route.fulfill({ status: 200, json: {} });
+      },
+    );
+    await stubStories(page, false);
+    await stubStoryPage(page, { entries: [keptLead] });
+    await stubKept(page, [keptRow]);
+    await signIn(page, 'list');
+    await page.goto(`/trending/stories/${STORY_ID}?view=kept`);
+    await expect(layer(page).locator('.row-slot')).toHaveCount(1);
+    await expect(page.locator('section.list .row-slot')).toHaveCount(1);
+    await settleAnimations(page.locator('.story-overlay'));
+
+    await closeStory(page);
+    await page.locator('.story-overlay.article-leave').waitFor({ state: 'attached' });
+    await page
+      .locator('section.list .row-slot')
+      .first()
+      .getByRole('button', { name: 'Favorite', exact: true })
+      .dispatchEvent('click');
+
+    await expect.poll(() => patched).toEqual([`/api/entries/${keptRow.id}/state`]);
   });
 
   test("hiding the sidebar focuses the story's own way back to it", async ({ page }) => {

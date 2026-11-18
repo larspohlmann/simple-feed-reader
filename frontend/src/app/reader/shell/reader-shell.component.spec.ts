@@ -5248,7 +5248,7 @@ describe('ReaderShellComponent', () => {
       expect(header.querySelector('.title-count')?.textContent?.trim()).toBe('31');
     });
 
-    it("hides the app bar and scrolls to the top by the story's list, not the one it covers", () => {
+    it("scrolls the story's list to the top, and leaves the app bar it covers to the list beneath", () => {
       const fixture = boot();
       openStory(fixture);
       const story = storyLayer(fixture).list()!;
@@ -5262,7 +5262,7 @@ describe('ReaderShellComponent', () => {
       fixture.detectChanges();
       fixture.componentInstance.onScrollListTop();
 
-      expect(fixture.componentInstance.headerHidden()).toBe(story.collapsed());
+      expect(fixture.componentInstance.headerHidden()).toBe(covered.collapsed());
       expect(toTop).toHaveBeenCalled();
       expect(coveredToTop).not.toHaveBeenCalled();
     });

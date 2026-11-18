@@ -247,7 +247,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   // recompute (#630). An open overlay (drawer/search bar) force-shows it; a
   // full-screen article sits above the bar with its own toolbar, untouched (#128).
   readonly headerHidden = computed(() =>
-    this.headerOverlayOpen() ? false : (this.visibleList()?.collapsed() ?? false),
+    this.headerOverlayOpen() ? false : (this.list()?.collapsed() ?? false),
   );
   private stopHeaderResize?: () => void;
   /** Mobile drawer state; the sidebar is a fixed overlay below 720px. */
