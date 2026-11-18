@@ -64,7 +64,6 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
         return array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
     }
 
-    /** The rows the story's list holds whichever page or filter it shows, a collapsed article once. */
     public function tallyOf(TrendingStoryListQuery $query): TrendingStoryTallyModel
     {
         $qb = $this->createQueryBuilder('e')

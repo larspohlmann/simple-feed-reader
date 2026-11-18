@@ -11,10 +11,10 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * One provider-call attempt of a recommendation, profile or story AI run: the request as sent, the response as it
- * streams (RecordedCall writes it straight to the database) and the verdict. Kept for the newest
- * RunLogRetention::RUNS runs, debug on or off: the ETA averages these rows. LONGTEXT, because one batch request over a
- * large context window passes MySQL TEXT's 64 KB.
+ * One provider-call attempt of a run, recommendation, profile or story AI: the request as sent, the response as it
+ * streams (RecordedCall writes it straight to the database) and the verdict. Kept for the newest RunLogRetention::RUNS
+ * runs, debug on or off: the ETA averages these rows. LONGTEXT, because one batch request over a large context window
+ * passes MySQL TEXT's 64 KB.
  */
 #[ORM\Entity(repositoryClass: RecommendationRunLogRepository::class)]
 #[ORM\Table(name: 'recommendation_run_log')]
@@ -81,7 +81,7 @@ final class RecommendationRunLog
     #[ORM\Embedded(class: CallFailure::class, columnPrefix: false)]
     private CallFailure $failure;
 
-    /** Private: the for…() factories are the only ways in, so exactly one owner is set. */
+    /** Private: the named constructors are the only ways in, so exactly one owner is set. */
     private function __construct(
         ?RecommendationRun $run,
         ?ProfileRun $profileRun,
