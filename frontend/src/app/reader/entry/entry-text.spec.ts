@@ -1,4 +1,4 @@
-import { entryDek, entryHeadline, withoutTrailingLinks } from './entry-text';
+import { entryDek, entryHeadline, withoutLinks } from './entry-text';
 import { anEntry } from '../../../testing/entry-testing';
 
 describe('entryDek', () => {
@@ -34,30 +34,32 @@ describe('entryHeadline', () => {
   });
 });
 
-describe('withoutTrailingLinks', () => {
+describe('withoutLinks', () => {
   it.each([
-    ['a shortened link', 'Texas issues air permit politi.co/3WPZZF1', 'Texas issues air permit'],
-    ['a link the excerpt cut off', 'could do exactly that. https://www.', 'could do exactly that.'],
     [
-      'a run of links and a trailing newline',
-      'Read this https://a.test/x slate.trib.al/PYBaii7\n',
+      'a trailing shortened link',
+      'Texas issues air permit politi.co/3WPZZF1',
+      'Texas issues air permit',
+    ],
+    ['a link the excerpt cut off', 'could do exactly that. https://www.', 'could do exactly that.'],
+    ['a link inside the sentence', 'Read https://a.test/x and comment', 'Read and comment'],
+    [
+      'a link before hashtags',
+      'Outages hit Apple https://heise.de/x #Apple',
+      'Outages hit Apple #Apple',
+    ],
+    ['a leading link', 'https://a.test/x Read this', 'Read this'],
+    [
+      'several links and line breaks',
+      'Read this\nhttps://a.test/x slate.trib.al/PYBaii7\n',
       'Read this',
     ],
     ['a text that is only a link', 'https://a.test/only', ''],
-    [
-      'a link after line breaks the text keeps',
-      'Line one\n\nLine  two https://a.test/x',
-      'Line one\n\nLine  two',
-    ],
   ])('drops %s', (_case, text, expected) => {
-    expect(withoutTrailingLinks(text)).toBe(expected);
+    expect(withoutLinks(text)).toBe(expected);
   });
 
-  it.each([
-    ['a link inside the sentence', 'Read https://a.test/x and comment'],
-    ['a link followed by a hashtag', 'Outages hit Apple https://heise.de/x #Apple'],
-    ['a dotted word without a path', 'Built with Node.js'],
-  ])('keeps %s', (_case, text) => {
-    expect(withoutTrailingLinks(text)).toBe(text);
+  it('keeps a dotted word without a path', () => {
+    expect(withoutLinks('Built with Node.js')).toBe('Built with Node.js');
   });
 });
