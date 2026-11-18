@@ -36,7 +36,7 @@ final readonly class PatientApiClient
             if (!self::isWorthAnotherTry($response)) {
                 break;
             }
-            $seconds = self::pauseFor($response, $pause);
+            $seconds = $this->pauseFor($response, $pause);
             if (null === $seconds) {
                 break;
             }
@@ -52,9 +52,9 @@ final readonly class PatientApiClient
         return \in_array($response->status, self::OUTAGE_STATUSES, true);
     }
 
-    private static function pauseFor(ApiResponseModel $response, int $defaultSeconds): ?int
+    private function pauseFor(ApiResponseModel $response, int $defaultSeconds): ?int
     {
-        $retryAfter = RetryAfterHeader::seconds($response->header('Retry-After'));
+        $retryAfter = RetryAfterHeader::secondsFrom($response->header('Retry-After'), $this->clock->now());
         if (null === $retryAfter) {
             return $defaultSeconds;
         }

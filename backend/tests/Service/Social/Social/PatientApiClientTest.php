@@ -80,6 +80,27 @@ final class PatientApiClientTest extends TestCase
         self::assertSame(0, $this->secondsSlept());
     }
 
+    public function testARetryAfterDateTwoHoursAheadEndsTheRetries(): void
+    {
+        $client = $this->clientAnswering($this->unavailable('Wed, 18 Nov 2026 16:52:21 GMT'), new MockResponse('{}'));
+
+        $answer = $client->send(ApiRequestModel::get(self::SITE));
+
+        self::assertSame(Response::HTTP_SERVICE_UNAVAILABLE, $answer->status);
+        self::assertSame(1, $this->requests);
+        self::assertSame(0, $this->secondsSlept());
+    }
+
+    public function testARetryAfterDateWithinThreeSecondsSetsThePause(): void
+    {
+        $client = $this->clientAnswering($this->unavailable('Wed, 18 Nov 2026 14:52:24 GMT'), new MockResponse('{}'));
+
+        $client->send(ApiRequestModel::get(self::SITE));
+
+        self::assertSame(2, $this->requests);
+        self::assertSame(3, $this->secondsSlept());
+    }
+
     public function testThePausesGrowFromOneSecondToTwo(): void
     {
         $client = $this->clientAnswering($this->unavailable(), $this->unavailable(), new MockResponse('{}'));
@@ -151,7 +172,7 @@ final class PatientApiClientTest extends TestCase
 
     private function clientAnswering(MockResponse ...$responses): PatientApiClient
     {
-        $this->clock = new MockClock('2026-11-18 14:52:21');
+        $this->clock = new MockClock('2026-11-18 14:52:21', 'UTC');
         $this->startedAt = $this->clock->now()->getTimestamp();
         $queue = $responses;
         $http = new MockHttpClient(function () use (&$queue): MockResponse {
