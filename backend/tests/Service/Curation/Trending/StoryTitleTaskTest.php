@@ -58,12 +58,12 @@ final class StoryTitleTaskTest extends DbTestCase
         self::assertSame(
             [
                 'llm_title' => 'Hafenarbeiter in Hamburg streiken',
-                'llm_title_language' => 'de',
                 'llm_title_member_count' => 3,
                 'llm_title_attempted_at' => self::NOW,
             ],
             $this->titleColumnsOf($story),
         );
+        self::assertStringContainsString('in German', $this->chat()->calls()[0]['messages'][0]['content']);
     }
 
     public function testTheRequestCarriesAtMostTwelveHeadlinesAndTheSchema(): void
@@ -237,21 +237,19 @@ final class StoryTitleTaskTest extends DbTestCase
     }
 
     /**
-     * @return array{llm_title: ?string, llm_title_language: ?string, llm_title_member_count: ?int,
-     *     llm_title_attempted_at: ?string}
+     * @return array{llm_title: ?string, llm_title_member_count: ?int, llm_title_attempted_at: ?string}
      */
     private function titleColumnsOf(TrendingStory $story): array
     {
-        /** @var array{llm_title: ?string, llm_title_language: ?string, llm_title_member_count: int|string|null, llm_title_attempted_at: ?string} $row */
+        /** @var array{llm_title: ?string, llm_title_member_count: int|string|null, llm_title_attempted_at: ?string} $row */
         $row = $this->entityManager->getConnection()->fetchAssociative(
-            'SELECT llm_title, llm_title_language, llm_title_member_count, llm_title_attempted_at'
+            'SELECT llm_title, llm_title_member_count, llm_title_attempted_at'
             . ' FROM trending_story WHERE id = ?',
             [$story->requireId()],
         );
 
         return [
             'llm_title' => $row['llm_title'],
-            'llm_title_language' => $row['llm_title_language'],
             'llm_title_member_count' => $row['llm_title_member_count'] === null
                 ? null
                 : (int) $row['llm_title_member_count'],

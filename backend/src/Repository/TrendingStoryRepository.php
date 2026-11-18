@@ -133,13 +133,13 @@ final class TrendingStoryRepository extends ServiceEntityRepository
         return array_map(static fn (int|string $storyId): int => (int) $storyId, $storyIds);
     }
 
-    public function recordTitle(int $storyId, string $title, string $language, \DateTimeImmutable $attemptedAt): void
+    public function recordTitle(int $storyId, string $title, \DateTimeImmutable $attemptedAt): void
     {
         $this->getEntityManager()->getConnection()->executeStatement(
-            'UPDATE trending_story SET llm_title = :title, llm_title_language = :language,'
+            'UPDATE trending_story SET llm_title = :title,'
             . ' llm_title_member_count = (SELECT COUNT(*) FROM trending_story_entry member'
             . ' WHERE member.story_id = :story), llm_title_attempted_at = :attemptedAt WHERE id = :story',
-            ['title' => $title, 'language' => $language, 'attemptedAt' => $attemptedAt, 'story' => $storyId],
+            ['title' => $title, 'attemptedAt' => $attemptedAt, 'story' => $storyId],
             ['attemptedAt' => Types::DATETIME_IMMUTABLE, 'story' => ParameterType::INTEGER],
         );
     }

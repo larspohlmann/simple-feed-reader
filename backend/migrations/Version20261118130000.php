@@ -15,7 +15,6 @@ final class Version20261118130000 extends AbstractMigration
         'fallback_title' => 'VARCHAR(1024) DEFAULT NULL',
         'fallback_entry_id' => 'INT DEFAULT NULL',
         'llm_title' => 'VARCHAR(255) DEFAULT NULL',
-        'llm_title_language' => 'VARCHAR(5) DEFAULT NULL',
         'llm_title_member_count' => 'INT DEFAULT NULL',
         'llm_title_attempted_at' => 'DATETIME DEFAULT NULL',
     ];

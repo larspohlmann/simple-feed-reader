@@ -73,22 +73,21 @@ final readonly class StoryTitleTask implements StoryAiTaskInterface
             return StoryAiOutcomeModel::unusable();
         }
 
-        $locale = $pass->user->getLocale();
         $outcome = $this->calls->complete(
             $pass,
-            CallPromptModel::storyTitle(StoryTitlePrompt::messages($headlines, $locale)),
+            CallPromptModel::storyTitle(StoryTitlePrompt::messages($headlines, $pass->user->getLocale())),
             $this->parser->parse(...),
         );
-        $this->record($storyId, $locale, $outcome);
+        $this->record($storyId, $outcome);
 
         return $outcome;
     }
 
     /** @param StoryAiOutcomeModel<string> $outcome */
-    private function record(int $storyId, string $locale, StoryAiOutcomeModel $outcome): void
+    private function record(int $storyId, StoryAiOutcomeModel $outcome): void
     {
         if ($outcome->isUsable()) {
-            $this->stories->recordTitle($storyId, $outcome->value(), $locale, $this->clock->now());
+            $this->stories->recordTitle($storyId, $outcome->value(), $this->clock->now());
 
             return;
         }
