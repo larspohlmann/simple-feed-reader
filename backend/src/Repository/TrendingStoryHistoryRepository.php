@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Doctrine\BulkInsert;
-use App\Enum\TrendingWindow;
 use App\Service\Curation\Trending\Model\StoredStoryModel;
 use App\Service\Curation\Trending\Model\StoryAssignmentModel;
 use App\Service\Curation\Trending\Model\StoryBuildModel;
@@ -40,19 +39,23 @@ final readonly class TrendingStoryHistoryRepository
     private const string AMONG_SOURCE_ENTRIES = 'entry_id IN (SELECT entry_id FROM (SELECT entry_id'
         . ' FROM trending_story_entry WHERE %s) source)';
 
+    /** Two readers' stories may hold the same entry: every read across stories by entry id stays in one reader's. */
+    private const string OF_READER = 'story_id IN (SELECT id FROM trending_story WHERE user_id = %d)';
+
     public function __construct(private EntityManagerInterface $entityManager)
     {
     }
 
-    /** @return list<StoredStoryModel> every story with a member dated at or after $since, with those members */
-    public function storedInWindow(\DateTimeImmutable $since): array
+    /** @return list<StoredStoryModel> the reader's stories with a member at or after $since, with those members */
+    public function storedInWindow(int $userId, \DateTimeImmutable $since): array
     {
         /** @var list<array{story_id: int|string, entry_id: int|string}> $rows */
         $rows = $this->connection()->fetchAllAssociative(
             'SELECT member.story_id, member.entry_id FROM trending_story_entry member'
-            . ' JOIN entry recent ON recent.id = member.entry_id WHERE recent.effective_date >= ?'
+            . ' JOIN trending_story story ON story.id = member.story_id'
+            . ' JOIN entry recent ON recent.id = member.entry_id WHERE story.user_id = ? AND recent.effective_date >= ?'
             . ' ORDER BY member.story_id, member.entry_id',
-            [self::stored($since)],
+            [$userId, self::stored($since)],
         );
         $entryIdsByStory = [];
         foreach ($rows as $row) {
@@ -83,7 +86,7 @@ final readonly class TrendingStoryHistoryRepository
      */
     public function saveAll(StoryBuildModel $build, array $assignments): array
     {
-        $earliestJoins = $this->earliestJoinsOf($assignments);
+        $earliestJoins = $this->earliestJoinsOf($build, $assignments);
         $storyIdByEntry = [];
         foreach ($assignments as $assignment) {
             $storyId = $this->save($assignment, $build, $earliestJoins);
@@ -100,41 +103,48 @@ final readonly class TrendingStoryHistoryRepository
      *
      * @return int the entries whose placement changed
      */
-    public function place(TrendingWindow $window, array $storyIdByEntry): int
+    public function place(StoryBuildModel $build, array $storyIdByEntry): int
     {
-        $placed = $this->placedIn($window);
+        $placed = $this->placedIn($build);
         $leaving = array_diff_assoc($placed, $storyIdByEntry);
         $arriving = array_diff_assoc($storyIdByEntry, $placed);
         foreach (array_chunk(array_keys($leaving), self::INSERT_ROWS) as $chunk) {
             $this->connection()->executeStatement(
-                'DELETE FROM trending_story_placement WHERE time_window = ? AND entry_id IN (?)',
-                [$window->value, $chunk],
-                [ParameterType::STRING, ArrayParameterType::INTEGER],
+                'DELETE FROM trending_story_placement WHERE user_id = ? AND time_window = ? AND entry_id IN (?)',
+                [$build->userId, $build->window->value, $chunk],
+                [ParameterType::INTEGER, ParameterType::STRING, ArrayParameterType::INTEGER],
             );
         }
-        BulkInsert::into('INSERT INTO trending_story_placement (time_window, entry_id, story_id)', self::INSERT_ROWS)
-            ->rows(
-                $this->connection(),
-                array_map(
-                    static fn (int $entryId, int $storyId): array => [$window->value, $entryId, $storyId],
-                    array_keys($arriving),
-                    $arriving,
-                ),
-            );
+        BulkInsert::into(
+            'INSERT INTO trending_story_placement (user_id, time_window, entry_id, story_id)',
+            self::INSERT_ROWS,
+        )->rows(
+            $this->connection(),
+            array_map(
+                static fn (int $entryId, int $storyId): array => [
+                    $build->userId,
+                    $build->window->value,
+                    $entryId,
+                    $storyId,
+                ],
+                array_keys($arriving),
+                $arriving,
+            ),
+        );
 
         return \count($leaving + $arriving);
     }
 
-    /** No future group can overlap a story without a member in the week; one a reader follows stays. */
-    public function pruneUnfollowedOutside(\DateTimeImmutable $weekStart): int
+    /** No future group can overlap a story without a member in the build's week; one a reader follows stays. */
+    public function pruneUnfollowedOutside(StoryBuildModel $build): int
     {
         return (int) $this->connection()->executeStatement(
-            'DELETE FROM trending_story WHERE NOT EXISTS (SELECT 1 FROM trending_story_follow follower'
+            'DELETE FROM trending_story WHERE user_id = ? AND NOT EXISTS (SELECT 1 FROM trending_story_follow follower'
             . ' WHERE follower.story_id = trending_story.id)'
             . ' AND NOT EXISTS (SELECT 1 FROM trending_story_entry member'
             . ' JOIN entry recent ON recent.id = member.entry_id'
             . ' WHERE member.story_id = trending_story.id AND recent.effective_date >= ?)',
-            [self::stored($weekStart)],
+            [$build->userId, self::stored($build->since)],
         );
     }
 
@@ -145,13 +155,18 @@ final readonly class TrendingStoryHistoryRepository
         $joinedAts = self::joinedAtsOf($joining, $earliestJoins, $build->builtAt);
         $storyId = $assignment->storyId;
         if ($storyId === null) {
-            $storyId = $this->insertStory($assignment->group, $build->builtAt);
+            $storyId = $this->insertStory($assignment->group, $build);
         } else {
             $this->updateStory($storyId, $assignment->group, $joinedAts);
         }
         $this->insertMembers($storyId, $joining, $joinedAts);
         foreach (array_chunk($assignment->claimedEntryIds, self::INSERT_ROWS) as $claimed) {
-            $this->absorb($storyId, \sprintf('story_id <> %d AND entry_id IN (%s)', $storyId, self::idList($claimed)));
+            $this->absorb($storyId, \sprintf(
+                'story_id <> %d AND %s AND entry_id IN (%s)',
+                $storyId,
+                \sprintf(self::OF_READER, $build->userId),
+                self::idList($claimed),
+            ));
         }
 
         return $storyId;
@@ -257,13 +272,13 @@ final readonly class TrendingStoryHistoryRepository
         );
     }
 
-    /** @return array<int, int|string> the story of each entry the window places */
-    private function placedIn(TrendingWindow $window): array
+    /** @return array<int, int|string> the story of each entry the reader's window places */
+    private function placedIn(StoryBuildModel $build): array
     {
         /** @var array<int, int|string> $placed */
         $placed = $this->connection()->fetchAllKeyValue(
-            'SELECT entry_id, story_id FROM trending_story_placement WHERE time_window = ?',
-            [$window->value],
+            'SELECT entry_id, story_id FROM trending_story_placement WHERE user_id = ? AND time_window = ?',
+            [$build->userId, $build->window->value],
         );
 
         return $placed;
@@ -281,14 +296,15 @@ final readonly class TrendingStoryHistoryRepository
         return $follows;
     }
 
-    private function insertStory(TrendingStoryModel $group, \DateTimeImmutable $builtAt): int
+    private function insertStory(TrendingStoryModel $group, StoryBuildModel $build): int
     {
         $connection = $this->connection();
         $connection->insert('trending_story', [
+            'user_id' => $build->userId,
             'first_seen' => self::stored($group->firstSeen),
             'last_seen' => self::stored($group->lastSeen),
-            'first_joined_at' => self::stored($builtAt),
-            'last_joined_at' => self::stored($builtAt),
+            'first_joined_at' => self::stored($build->builtAt),
+            'last_joined_at' => self::stored($build->builtAt),
         ]);
 
         return (int) $connection->lastInsertId();
@@ -337,14 +353,14 @@ final readonly class TrendingStoryHistoryRepository
     }
 
     /**
-     * A member another story already holds keeps its earliest join, so regrouping never makes it new again.
+     * A member another story of the reader holds keeps its earliest join, so regrouping never makes it new again.
      * Read once before the saves: a save's claims move rows but keep each entry's earliest join.
      *
      * @param list<StoryAssignmentModel> $assignments
      *
      * @return array<int, string> by entry id
      */
-    private function earliestJoinsOf(array $assignments): array
+    private function earliestJoinsOf(StoryBuildModel $build, array $assignments): array
     {
         $entryIds = [];
         foreach ($assignments as $assignment) {
@@ -356,7 +372,8 @@ final readonly class TrendingStoryHistoryRepository
         foreach (array_chunk($entryIds, self::INSERT_ROWS) as $chunk) {
             /** @var array<int, string> $chunkJoins */
             $chunkJoins = $this->connection()->fetchAllKeyValue(
-                'SELECT entry_id, MIN(joined_at) FROM trending_story_entry WHERE entry_id IN (?) GROUP BY entry_id',
+                'SELECT entry_id, MIN(joined_at) FROM trending_story_entry WHERE entry_id IN (?) AND '
+                . \sprintf(self::OF_READER, $build->userId) . ' GROUP BY entry_id',
                 [$chunk],
                 [ArrayParameterType::INTEGER],
             );

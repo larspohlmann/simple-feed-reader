@@ -131,7 +131,14 @@ final readonly class TrendingFixtures
     /** Flushes first: a story entry copies its feed's id. Every member joined at $lastSeen and is placed in $window. */
     public function story(TrendingWindow $window, string $lastSeen, Entry ...$members): TrendingStory
     {
-        return $this->storyOfSites(
+        return $this->storyOf($this->owner(), $window, $lastSeen, ...$members);
+    }
+
+    /** Flushes first: a story entry copies its feed's id. Every member joined at $lastSeen and is placed in $window. */
+    public function storyOf(User $owner, TrendingWindow $window, string $lastSeen, Entry ...$members): TrendingStory
+    {
+        return $this->storyWithSites(
+            $owner,
             $window,
             $lastSeen,
             array_map(static fn (Entry $member): array => [$member, null], array_values($members)),
@@ -145,10 +152,20 @@ final readonly class TrendingFixtures
      */
     public function storyOfSites(TrendingWindow $window, string $lastSeen, array $members): TrendingStory
     {
+        return $this->storyWithSites($this->owner(), $window, $lastSeen, $members);
+    }
+
+    /** @param list<array{Entry, ?string}> $members */
+    private function storyWithSites(
+        User $owner,
+        TrendingWindow $window,
+        string $lastSeen,
+        array $members,
+    ): TrendingStory {
         $this->entityManager->flush();
         $joinedAt = new \DateTimeImmutable($lastSeen);
         $story = new TrendingStory(
-            $this->owner(),
+            $owner,
             new \DateTimeImmutable('2031-05-14 00:00:00'),
             $joinedAt,
             $joinedAt,
@@ -180,12 +197,12 @@ final readonly class TrendingFixtures
         $this->entityManager->flush();
     }
 
-    /** Places members the story already holds in one more window, moving them off any story it showed them in. */
+    /** Places members the story already holds in one more window of its owner, moving them off any story it showed them in. */
     public function place(TrendingWindow $window, TrendingStory $story, Entry ...$members): void
     {
         $this->entityManager->flush();
         $connection = $this->entityManager->getConnection();
-        $ownerId = $this->owner()->requireId();
+        $ownerId = $connection->fetchOne('SELECT user_id FROM trending_story WHERE id = ?', [$story->requireId()]);
         foreach ($members as $member) {
             $connection->delete(
                 'trending_story_placement',

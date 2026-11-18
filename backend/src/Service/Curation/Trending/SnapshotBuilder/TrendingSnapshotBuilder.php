@@ -70,7 +70,7 @@ final readonly class TrendingSnapshotBuilder implements SnapshotBuilderInterface
         $build = new StoryBuildModel($window, $run->since, $this->clock->now());
         unset($run);
         $policy = $this->policyFor($window);
-        $match = $policy->match($groups, $this->history->storedInWindow($build->since));
+        $match = $policy->match($groups, $this->history->storedInWindow($build->userId, $build->since));
 
         $this->refreshLock($lock);
 
@@ -113,7 +113,7 @@ final readonly class TrendingSnapshotBuilder implements SnapshotBuilderInterface
         foreach ($match->merges as $merge) {
             $this->history->merge($merge);
         }
-        $this->history->place($build->window, $this->history->saveAll($build, $match->assignments));
+        $this->history->place($build, $this->history->saveAll($build, $match->assignments));
 
         return $policy->prune($build);
     }

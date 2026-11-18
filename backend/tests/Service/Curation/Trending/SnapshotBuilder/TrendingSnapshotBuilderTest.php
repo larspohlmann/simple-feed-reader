@@ -678,8 +678,14 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         $entries = [$claimed, ...$weekMembers];
         $builtAt = new \DateTimeImmutable($this->clock->now()->format('Y-m-d H:i:s'), new \DateTimeZone('UTC'));
         $history = new TrendingStoryHistoryRepository($this->entityManager);
+        $build = new StoryBuildModel(
+            $this->fixtures->owner()->requireId(),
+            TrendingWindow::Week,
+            TrendingWindow::Week->startBefore($builtAt),
+            $builtAt,
+        );
         $storyIdByEntry = $history->saveAll(
-            new StoryBuildModel(TrendingWindow::Week, TrendingWindow::Week->startBefore($builtAt), $builtAt),
+            $build,
             [new StoryAssignmentModel(
                 new TrendingStoryModel(
                     array_map(
@@ -698,7 +704,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
                 [$claimed->requireId()],
             )],
         );
-        $history->place(TrendingWindow::Week, $storyIdByEntry);
+        $history->place($build, $storyIdByEntry);
     }
 
     private function following(): TrendingStoryFollowing

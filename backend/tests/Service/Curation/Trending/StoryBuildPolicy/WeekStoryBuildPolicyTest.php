@@ -34,7 +34,12 @@ final class WeekStoryBuildPolicyTest extends DbTestCase
         $old = $fixtures->entry($fixtures->feed('old'), 'Old', '2031-05-01 08:00:00');
         $fixtures->story(TrendingWindow::Week, '2031-05-01 08:00:00', $old);
         $builtAt = new \DateTimeImmutable('2031-05-14 12:00:00', new \DateTimeZone('UTC'));
-        $pruned = $policy->prune(new StoryBuildModel(TrendingWindow::Week, $builtAt->modify('-7 days'), $builtAt));
+        $pruned = $policy->prune(new StoryBuildModel(
+            $fixtures->owner()->requireId(),
+            TrendingWindow::Week,
+            $builtAt->modify('-7 days'),
+            $builtAt,
+        ));
 
         self::assertCount(1, $match->merges);
         self::assertSame(1, $pruned);
