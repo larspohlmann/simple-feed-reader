@@ -89,8 +89,8 @@ export class FollowedStoriesStore {
     });
   }
 
-  unfollow(id: number, onSuccess?: () => void): void {
-    this.setFollowing(id, false).subscribe({ next: () => onSuccess?.(), error: () => undefined });
+  unfollow(id: number): void {
+    this.setFollowing(id, false).subscribe({ error: () => undefined });
   }
 
   private adoptChange(storyId: number, following: boolean): void {

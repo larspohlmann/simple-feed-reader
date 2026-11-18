@@ -31,7 +31,7 @@ final readonly class RecommendationRunPurger
             throw new RecommendationRunActiveException();
         }
 
-        $this->logs->deleteForUser($user);
+        $this->logs->deleteForUserOutsideRuns($user, []);
         $this->items->deleteForUser($user);
         $this->runs->deleteForUser($user);
     }

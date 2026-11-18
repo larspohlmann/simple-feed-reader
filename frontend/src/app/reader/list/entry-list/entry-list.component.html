@@ -58,7 +58,11 @@
   }
 
   @if (loading() && items().length === 0) {
-    <div class="rows text-scaled">
+    <div
+      class="rows text-scaled"
+      [class.magazine]="layout() === 'magazine'"
+      [class.airy]="layout() === 'magazine' && isAiryMagazine()"
+    >
       @for (i of [1, 2, 3, 4, 5]; track i) {
         <div class="skeleton"></div>
       }
@@ -161,6 +165,9 @@
                fading content so the collapse reads as the row closing up (#478). -->
           <div class="row-slot" [class.leaving]="leavingIds().has(e.id)">
             <div class="row-slot-inner">
+              @if (storyOf(item); as story) {
+                <app-story-title [story]="story" />
+              }
               <app-recommendation-strip [entry]="e">
                 <app-entry-row
                   [appStory]="storyOf(item)"

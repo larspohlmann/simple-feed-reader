@@ -22,19 +22,19 @@ import { MarkReadActions } from './mark-read-actions.service';
 import { ReaderOnboarding } from './reader-onboarding.service';
 import { PasskeyFirstBootOffer } from './passkey-first-boot-offer.service';
 import { SavedSearchToggle } from './saved-search-toggle.service';
-import { FollowedStoryUnfollow } from './followed-story-unfollow.service';
+import { StoryOverlay } from './story-overlay.service';
+import { injectListOnScreen } from './list-cover';
+import { provideRouteList } from './route-list-context';
+import { ListContext } from '../state/list-context';
 import { RefreshActions } from './refresh-actions.service';
 import { ListReload } from './list-reload.service';
 import { ReaderTabTitle } from './reader-tab-title.service';
-import { NavigationEnd, NavigationSkipped, Router, RouterLink } from '@angular/router';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { filter } from 'rxjs';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { flattenTagTree } from '../state/subscription-derivations';
 import { TagsStore } from '../state/tags.store';
-import { EntriesStore } from '../state/entries.store';
-import { FollowedStoryVisit } from '../state/followed-story-visit';
+import { StoryLayerComponent } from './story-layer/story-layer.component';
 import { RefreshService } from '../state/refresh.service';
 import { RecommendationsService } from '../state/recommendations.service';
 import { NetworkSurfaceSwitches } from '../state/network-surface-switches.service';
@@ -69,6 +69,7 @@ import { CompletedEntriesMerge } from './completed-entries-merge';
 import { PendingEntriesPoll } from './pending-entries-poll.service';
 import { holdReaderPage } from './reader-page';
 import { focusShowSidebarButtonOnCollapse } from './show-sidebar-focus';
+import { closeDrawerOnNavigation } from './drawer-navigation';
 import { PageChromeGeometry } from './page-chrome-geometry';
 import { PageScrollOwner } from './page-scroll-owner';
 import { PageLayerDirective } from './page-layer.directive';
@@ -93,6 +94,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
     NotificationListComponent,
     ReaderViewComponent,
     LinkReaderComponent,
+    StoryLayerComponent,
     AudioPlayerBarComponent,
     UrlDropZoneComponent,
     DrawerSwipeDirective,
@@ -117,6 +119,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
     PageScrollOwner,
     { provide: PreviewProgress, useExisting: PendingEntriesPoll },
     ReaderRouteState,
+    ...provideRouteList(),
     LinkReaderNavigation,
     ListHeading,
     EntryStateActions,
@@ -125,7 +128,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
     ReaderOnboarding,
     PasskeyFirstBootOffer,
     SavedSearchToggle,
-    FollowedStoryUnfollow,
+    StoryOverlay,
     RefreshActions,
     ListReload,
     LinkArticleSource,
@@ -143,8 +146,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly tagActions = inject(TagActions);
   readonly subs = inject(SubscriptionsStore);
   readonly tags = inject(TagsStore);
-  readonly entries = inject(EntriesStore);
-  readonly storyVisit = inject(FollowedStoryVisit);
   readonly refreshSvc = inject(RefreshService);
   readonly recs = inject(RecommendationsService);
   readonly savedSearchesStore = inject(SavedSearchesStore);
@@ -172,8 +173,8 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly passkeyOffer = inject(PasskeyFirstBootOffer);
 
   readonly listOrder = inject(ListOrderService);
-  private readonly listPreferences = inject(ListPreferences);
-  readonly listLoading = computed(() => this.entries.loading() || !this.listPreferences.ready());
+  protected readonly listPreferences = inject(ListPreferences);
+  protected readonly routeList = inject(ListContext);
   private readonly routeState = inject(ReaderRouteState);
   readonly selection = this.routeState.selection;
   readonly entryId = this.routeState.entryId;
@@ -185,7 +186,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly entryActions = inject(EntryStateActions);
   readonly markRead = inject(MarkReadActions);
   readonly savedSearch = inject(SavedSearchToggle);
-  readonly followedStory = inject(FollowedStoryUnfollow);
+  readonly storyOverlay = inject(StoryOverlay);
+  /** What the sidebar marks: a story's list over the route's while it is open (#2329). */
+  protected readonly listOnScreen = injectListOnScreen();
   readonly refresh = inject(RefreshActions);
 
   /** Feed tags keyed by subscription id — feeds the tag pills on entries and the
@@ -223,7 +226,10 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly headerHeight = signal(0);
   private readonly hdr = viewChild('hdr', { read: ElementRef });
   /** Only one of the two template branches renders a list at a time. */
-  protected readonly list = viewChild(EntryListComponent);
+  private readonly list = viewChild(EntryListComponent);
+  private readonly storyLayer = viewChild(StoryLayerComponent);
+  /** The list the shell's chrome acts on: a story's over the route's while it is open (#2329). */
+  protected readonly visibleList = computed(() => this.storyLayer()?.list() ?? this.list());
   private readonly header = viewChild(ReaderHeaderComponent);
   /** Whether the mobile header's own search bar covers it — read from the
    *  child rather than owned here, since the bar's open/closed state (trigger,
@@ -265,8 +271,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Closed drawer or collapsed column: what `openSidebar()` reveals. */
   readonly sidebarOutOfView = computed(() => this.screen.isNarrow() || this.sidebarCollapsed());
 
-  private readonly showSidebarButton =
-    viewChild<ElementRef<HTMLButtonElement>>('showSidebarButton');
   private readonly listColumn = viewChild<ElementRef<HTMLElement>>('listColumn');
   private readonly mainColumn = viewChild<ElementRef<HTMLElement>>('mainEl');
   private readonly audioBar = viewChild('audioBar', { read: ElementRef });
@@ -279,7 +283,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   });
   private readonly _focusShowButton = focusShowSidebarButtonOnCollapse(
     this.sidebarCollapsed,
-    this.showSidebarButton,
+    this.hostRef.nativeElement,
   );
 
   ngOnInit(): void {
@@ -335,15 +339,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private readonly listReload = inject(ListReload);
 
-  /** Dismiss the mobile drawer once a link in it is followed, the already-active one included:
-   *  the router skips that same-URL navigation rather than ending it. */
-  private readonly _closeDrawerOnNavigation = this.router.events
-    .pipe(
-      filter((event) => event instanceof NavigationEnd || event instanceof NavigationSkipped),
-      filter(() => this.sidebarOpen()),
-      takeUntilDestroyed(),
-    )
-    .subscribe(() => this.setSidebarOpen(false));
+  private readonly _closeDrawerOnNavigation = closeDrawerOnNavigation(this.sidebarOpen, () =>
+    this.setSidebarOpen(false),
+  );
 
   private readonly tabTitle = inject(ReaderTabTitle);
 
@@ -360,7 +358,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
 
   /** The top bar's empty middle was tapped: send the list back to the top. */
   onScrollListTop(): void {
-    this.list()?.scrollToTop();
+    this.visibleList()?.scrollToTop();
   }
 
   /** Reader-view outputs are payload-less; apply them to the currently open entry. */

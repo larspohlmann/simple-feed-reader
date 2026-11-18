@@ -120,6 +120,29 @@ final readonly class TrendingFixtures
         return $post;
     }
 
+    /** A post carrying $card; copies of one post across timelines share $postUrl, so one URL hash. Flushes first. */
+    public function postCarrying(
+        Feed $feed,
+        string $title,
+        string $effectiveDate,
+        LinkCardContent $card,
+        string $postUrl,
+    ): Entry {
+        $post = $this->persisted(new Entry(
+            $feed,
+            bin2hex(random_bytes(8)),
+            $postUrl,
+            $title,
+            new \DateTimeImmutable($effectiveDate),
+            new \DateTimeImmutable($effectiveDate),
+            (new UrlNormalizer())->hash($postUrl),
+        ));
+        $this->entityManager->flush();
+        $this->entityManager->persist(new LinkCard($post, 0, SharedLinks::of($this->entityManager, $card)));
+
+        return $post;
+    }
+
     public function entry(Feed $feed, string $title, string $effectiveDate): Entry
     {
         return $this->persisted(new Entry(

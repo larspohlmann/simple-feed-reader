@@ -27,6 +27,7 @@ use App\Service\Operations\Maintenance\MaintenanceSweep\ProfileImagesTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\RecommendationsTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\SavedSearchMembershipsTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\TranscriptsTickSweep;
+use App\Service\Operations\Maintenance\MaintenanceSweep\StoryAiTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\TrendingTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceTick;
 use App\Service\Operations\Maintenance\Model\MaintenanceTickReportModel;
@@ -65,6 +66,7 @@ use App\Service\Social\Social\ProfileImageSweep;
 use App\Service\Social\Social\ProfilePictureSource\BlueskyProfilePictures;
 use App\Service\Social\Social\ProfileVisibilityCache;
 use App\Service\Content\Transcript\TranscriptSweep;
+use App\Service\Curation\StoryAi\StoryAiSweep;
 use App\Service\Curation\Trending\Model\TrendingRebuildReportModel;
 use App\Tests\Support\PrivateFeedSyncWiring;
 use App\Tests\Support\SocialAccounts;
@@ -402,6 +404,22 @@ final class MaintenanceTickTest extends DbTestCase
         self::assertLessThan(new \DateTimeImmutable($builtAt, new \DateTimeZone('UTC')), $stamps->at('sync'));
     }
 
+    public function testTheTickRunsStoryAiTasksAfterTheTrendingBuild(): void
+    {
+        $clock = new TickingClock(new \DateTimeImmutable('2031-10-11 12:00:00', new \DateTimeZone('UTC')), 1);
+
+        $report = $this->tickAround(new MaintenanceTickOverrides(
+            RefreshRunners::fromContainer(self::getContainer(), $this->entityManager, $clock)
+                ->build(new StubPassFetcher(), new StubFeedFetcher()),
+            $clock,
+            100_000,
+        ))->run();
+
+        $sweeps = array_keys($report->sweeps->reports);
+        self::assertContains('storyAi', $sweeps);
+        self::assertLessThan(array_search('storyAi', $sweeps, true), array_search('trending', $sweeps, true));
+    }
+
     private function tickAround(MaintenanceTickOverrides $overrides): MaintenanceTick
     {
         $clock = $overrides->clock;
@@ -418,9 +436,13 @@ final class MaintenanceTickTest extends DbTestCase
             $clock,
         );
 
+        $storyAiSweep = self::getContainer()->get(StoryAiSweep::class);
+        self::assertInstanceOf(StoryAiSweep::class, $storyAiSweep);
+
         return new MaintenanceTick(
             $overrides->refreshRunner,
             self::inDeclaredOrder([
+                new StoryAiTickSweep($storyAiSweep),
                 new TrendingTickSweep(TrendingWiring::rebuild($this->entityManager, $this->registry(), $clock)),
                 new PrivateFeedSyncTickSweep(
                     PrivateFeedSyncWiring::sweep(

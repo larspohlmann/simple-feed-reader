@@ -11,15 +11,16 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * One provider-call attempt of a recommendation run or a profile run: the request as sent, the response as it streams
- * (RecordedCall writes it straight to the database) and the verdict. Kept for the newest RunLogRetention::RUNS runs,
- * debug on or off: the ETA averages these rows. LONGTEXT, because one batch request over a large context window passes
- * MySQL TEXT's 64 KB.
+ * One provider-call attempt of a run, recommendation, profile or story AI: the request as sent, the response as it
+ * streams (RecordedCall writes it straight to the database) and the verdict. Kept for the newest RunLogRetention::RUNS
+ * runs, debug on or off: the ETA averages these rows. LONGTEXT, because one batch request over a large context window
+ * passes MySQL TEXT's 64 KB.
  */
 #[ORM\Entity(repositoryClass: RecommendationRunLogRepository::class)]
 #[ORM\Table(name: 'recommendation_run_log')]
 #[ORM\Index(name: 'idx_recommendation_run_log_run', columns: ['run_id'])]
 #[ORM\Index(name: 'idx_recommendation_run_log_profile_run', columns: ['profile_run_id'])]
+#[ORM\Index(name: 'idx_recommendation_run_log_story_ai_run', columns: ['story_ai_run_id'])]
 final class RecommendationRunLog
 {
     use PersistedId;
@@ -38,6 +39,10 @@ final class RecommendationRunLog
     #[ORM\ManyToOne(targetEntity: ProfileRun::class)]
     #[ORM\JoinColumn(name: 'profile_run_id', nullable: true, onDelete: 'CASCADE')]
     private ?ProfileRun $profileRun;
+
+    #[ORM\ManyToOne(targetEntity: StoryAiRun::class)]
+    #[ORM\JoinColumn(name: 'story_ai_run_id', nullable: true, onDelete: 'CASCADE')]
+    private ?StoryAiRun $storyAiRun;
 
     #[ORM\Column(length: 16, enumType: CallPhase::class)]
     private CallPhase $phase;
@@ -70,20 +75,17 @@ final class RecommendationRunLog
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $finishedAt = null;
 
-    /** Why the provider stopped: `length` when max_tokens truncated the answer, `stop` at a natural end. */
-    #[ORM\Column(length: 32, nullable: true)]
-    private ?string $finishReason = null;
-
     #[ORM\Embedded(class: CallReceipt::class, columnPrefix: false)]
     private CallReceipt $receipt;
 
     #[ORM\Embedded(class: CallFailure::class, columnPrefix: false)]
     private CallFailure $failure;
 
-    /** Private: forRun() and forProfileRun() are the only ways in, so exactly one of the two owners is set. */
+    /** Private: the named constructors are the only ways in, so exactly one owner is set. */
     private function __construct(
         ?RecommendationRun $run,
         ?ProfileRun $profileRun,
+        ?StoryAiRun $storyAiRun,
         CallPhase $phase,
         ?int $batchNumber,
         int $attempt,
@@ -92,6 +94,7 @@ final class RecommendationRunLog
     ) {
         $this->run = $run;
         $this->profileRun = $profileRun;
+        $this->storyAiRun = $storyAiRun;
         $this->phase = $phase;
         $this->batchNumber = $batchNumber;
         $this->attempt = $attempt;
@@ -109,7 +112,7 @@ final class RecommendationRunLog
         string $requestBody,
         \DateTimeImmutable $createdAt,
     ): self {
-        return new self($run, null, $phase, $batchNumber, $attempt, $requestBody, $createdAt);
+        return new self($run, null, null, $phase, $batchNumber, $attempt, $requestBody, $createdAt);
     }
 
     public static function forProfileRun(
@@ -118,7 +121,15 @@ final class RecommendationRunLog
         string $requestBody,
         \DateTimeImmutable $createdAt,
     ): self {
-        return new self(null, $profileRun, CallPhase::Distill, null, $attempt, $requestBody, $createdAt);
+        return new self(null, $profileRun, null, CallPhase::Distill, null, $attempt, $requestBody, $createdAt);
+    }
+
+    public static function forStoryAiRun(
+        StoryAiRun $run,
+        string $requestBody,
+        \DateTimeImmutable $createdAt,
+    ): self {
+        return new self(null, null, $run, $run->getTask()->phase(), null, 1, $requestBody, $createdAt);
     }
 
     public function getId(): ?int
@@ -188,7 +199,7 @@ final class RecommendationRunLog
 
     public function getFinishReason(): ?string
     {
-        return $this->finishReason;
+        return $this->receipt->getFinishReason();
     }
 
     public function getRequestId(): ?string

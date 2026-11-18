@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Trending\Model;
 
-/** A story the reader follows, as they see it: $headline is null once none of its members is in their feeds. */
+/** A followed story as the reader sees it: $headline is null only when it is untitled and no member is in their feeds. */
 final readonly class FollowedStoryRowModel
 {
     public function __construct(

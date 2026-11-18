@@ -14,7 +14,7 @@ import {
 } from '../../entry-social';
 import { EntryDto } from '../../models';
 import { SocialPostApi } from '../../social-post-api';
-import { EntriesStore } from '../../state/entries.store';
+import { EntryRowCache } from '../../state/entry-row-cache';
 import { RemovedPosts } from '../../removed-posts.service';
 import { NetworkShares } from '../share/network-shares.service';
 
@@ -43,7 +43,7 @@ export type SocialCountsState =
 @Injectable({ providedIn: 'root' })
 export class SocialCountsService {
   private readonly api = inject(SocialPostApi);
-  private readonly entries = inject(EntriesStore);
+  private readonly rows = inject(EntryRowCache);
   private readonly removedPosts = inject(RemovedPosts);
   private readonly shares = inject(NetworkShares);
   private readonly states = new Map<number, WritableSignal<SocialCountsState>>();
@@ -126,7 +126,7 @@ export class SocialCountsService {
       next: ([counts, viewer]) => {
         if (generation !== this.generation) return;
         if (viewer !== null)
-          this.entries.adoptLike(entry.id, { from: likedBefore, to: viewer.isLiked });
+          this.rows.adoptLike(entry.id, { from: likedBefore, to: viewer.isLiked });
         state.set(loadedState(counts, viewer, likedBefore));
       },
       error: (error: unknown) => {

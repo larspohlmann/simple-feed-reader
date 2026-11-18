@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Doctrine\BulkInsert;
+use App\Service\Curation\Trending\Model\FallbackTitleModel;
 use App\Service\Curation\Trending\Model\StoredStoryModel;
 use App\Service\Curation\Trending\Model\StoryAssignmentModel;
 use App\Service\Curation\Trending\Model\StoryBuildModel;
 use App\Service\Curation\Trending\Model\StoryMemberModel;
 use App\Service\Curation\Trending\Model\StoryMergeModel;
-use App\Service\Curation\Trending\Model\TrendingStoryModel;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
@@ -27,6 +27,8 @@ final readonly class TrendingStoryHistoryRepository
     private const int INSERT_ROWS = 120;
 
     private const int SITE_LENGTH = 255;
+
+    private const int FALLBACK_TITLE_LENGTH = 1024;
 
     private const string MEMBER_COLUMNS = 'entry_id, feed_id, article_site, shared_link_id, joined_at';
 
@@ -47,21 +49,36 @@ final readonly class TrendingStoryHistoryRepository
     /** @return list<StoredStoryModel> the reader's stories with a member at or after $since, with those members */
     public function storedInWindow(int $userId, \DateTimeImmutable $since): array
     {
-        /** @var list<array{story_id: int|string, entry_id: int|string}> $rows */
+        /**
+         * @var list<array{
+         *   story_id: int|string, entry_id: int|string, fallback_entry_id: int|string|null, titled: int|string|bool
+         * }> $rows
+         */
         $rows = $this->connection()->fetchAllAssociative(
-            'SELECT member.story_id, member.entry_id FROM trending_story_entry member'
+            'SELECT member.story_id, member.entry_id, story.fallback_entry_id,'
+            . ' story.fallback_title IS NOT NULL AS titled FROM trending_story_entry member'
             . ' JOIN trending_story story ON story.id = member.story_id'
             . ' JOIN entry recent ON recent.id = member.entry_id WHERE story.user_id = ? AND recent.effective_date >= ?'
             . ' ORDER BY member.story_id, member.entry_id',
             [$userId, self::stored($since)],
         );
         $entryIdsByStory = [];
+        $storyRows = [];
         foreach ($rows as $row) {
-            $entryIdsByStory[(int) $row['story_id']][] = (int) $row['entry_id'];
+            $storyId = (int) $row['story_id'];
+            $entryIdsByStory[$storyId][] = (int) $row['entry_id'];
+            $storyRows[$storyId] ??= $row;
         }
 
         return array_map(
-            static fn (int $storyId, array $entryIds): StoredStoryModel => new StoredStoryModel($storyId, $entryIds),
+            static fn (int $storyId, array $entryIds): StoredStoryModel => new StoredStoryModel(
+                $storyId,
+                $entryIds,
+                $storyRows[$storyId]['fallback_entry_id'] === null
+                    ? null
+                    : (int) $storyRows[$storyId]['fallback_entry_id'],
+                (bool) $storyRows[$storyId]['titled'],
+            ),
             array_keys($entryIdsByStory),
             $entryIdsByStory,
         );
@@ -153,9 +170,9 @@ final readonly class TrendingStoryHistoryRepository
         $joinedAts = self::joinedAtsOf($joining, $earliestJoins, $build->builtAt);
         $storyId = $assignment->storyId;
         if ($storyId === null) {
-            $storyId = $this->insertStory($assignment->group, $build);
+            $storyId = $this->insertStory($assignment, $build);
         } else {
-            $this->updateStory($storyId, $assignment->group, $joinedAts);
+            $this->updateStory($storyId, $assignment, $joinedAts);
         }
         $this->insertMembers($storyId, $joining, $joinedAts);
         foreach (array_chunk($assignment->claimedEntryIds, self::INSERT_ROWS) as $claimed) {
@@ -294,15 +311,16 @@ final readonly class TrendingStoryHistoryRepository
         return $follows;
     }
 
-    private function insertStory(TrendingStoryModel $group, StoryBuildModel $build): int
+    private function insertStory(StoryAssignmentModel $assignment, StoryBuildModel $build): int
     {
         $connection = $this->connection();
         $connection->insert('trending_story', [
             'user_id' => $build->userId,
-            'first_seen' => self::stored($group->firstSeen),
-            'last_seen' => self::stored($group->lastSeen),
+            'first_seen' => self::stored($assignment->group->firstSeen),
+            'last_seen' => self::stored($assignment->group->lastSeen),
             'first_joined_at' => self::stored($build->builtAt),
             'last_joined_at' => self::stored($build->builtAt),
+            ...self::fallbackColumnsOf($assignment->fallbackTitle),
         ]);
 
         return (int) $connection->lastInsertId();
@@ -313,19 +331,33 @@ final readonly class TrendingStoryHistoryRepository
      *
      * @param array<int, string> $joinedAts
      */
-    private function updateStory(int $storyId, TrendingStoryModel $group, array $joinedAts): void
+    private function updateStory(int $storyId, StoryAssignmentModel $assignment, array $joinedAts): void
     {
         $this->connection()->executeStatement(
             'UPDATE trending_story SET '
             . self::earliest('first_seen', 'firstSeen') . ', ' . self::latest('last_seen', 'lastSeen') . ', '
-            . self::latest('last_joined_at', 'lastJoinedAt') . ' WHERE id = :story',
+            . self::latest('last_joined_at', 'lastJoinedAt') . ','
+            . ' fallback_title = COALESCE(:fallback_title, fallback_title),'
+            . ' fallback_entry_id'
+            . ' = CASE WHEN :fallback_title IS NULL THEN fallback_entry_id ELSE :fallback_entry_id END'
+            . ' WHERE id = :story',
             [
-                'firstSeen' => self::stored($group->firstSeen),
-                'lastSeen' => self::stored($group->lastSeen),
+                'firstSeen' => self::stored($assignment->group->firstSeen),
+                'lastSeen' => self::stored($assignment->group->lastSeen),
                 'lastJoinedAt' => $joinedAts === [] ? null : max($joinedAts),
                 'story' => $storyId,
+                ...self::fallbackColumnsOf($assignment->fallbackTitle),
             ],
         );
+    }
+
+    /** @return array{fallback_title: ?string, fallback_entry_id: ?int} */
+    private static function fallbackColumnsOf(?FallbackTitleModel $title): array
+    {
+        return [
+            'fallback_title' => $title === null ? null : mb_substr($title->title, 0, self::FALLBACK_TITLE_LENGTH),
+            'fallback_entry_id' => $title?->entryId,
+        ];
     }
 
     /**

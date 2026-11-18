@@ -33,6 +33,7 @@ import { SegmentedChoiceComponent } from '../../shared/segmented-choice/segmente
 import { SettingsGroupComponent } from '../../shared/settings/settings-group/settings-group.component';
 import { SettingsStackComponent } from '../../shared/settings/stack/settings-stack.component';
 import { ProfileSectionComponent } from '../profile/profile-section.component';
+import { StoriesSectionComponent } from '../stories/stories-section.component';
 import { AiFailure, SERVER_TEXT_KINDS } from './ai-failure';
 import {
   AiConfig,
@@ -68,6 +69,7 @@ function offeredKinds(models: readonly AiModel[]): readonly ModelKind[] {
     IconComponent,
     InfoTipComponent,
     ProfileSectionComponent,
+    StoriesSectionComponent,
     RecommendationDebugLogComponent,
     RecommendationRunHistoryComponent,
     RecommendationSettingsCardComponent,

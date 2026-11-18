@@ -8,6 +8,7 @@ use App\Entity\AiProviderSettings;
 use App\Entity\ModelDescriptor;
 use App\Entity\ProfileSettingsValues;
 use App\Entity\RecommendationSettings;
+use App\Entity\StorySettings;
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\ScoringProtocol;
@@ -361,6 +362,26 @@ final class AiProviderConfiguratorTest extends DbTestCase
             ->findOneBy(['user' => $userId]);
         self::assertNull($persisted?->profileSettings()->connection);
         self::assertSame(24, $persisted?->profileSettings()->intervalHours);
+    }
+
+    public function testDeletingTheWritingConnectionFallsBackToTheActiveOne(): void
+    {
+        $configurator = $this->configurator(['gpt-4o']);
+        $user = $this->user('cfg-delete-writing@example.test');
+        $this->readyConfiguration($configurator, $user, 'gpt-4o');
+        $chosen = $this->readyConfiguration($configurator, $user, 'gpt-4o');
+        $settings = new StorySettings($user);
+        $settings->update($chosen, false);
+        $this->entityManager->persist($settings);
+        $this->entityManager->flush();
+
+        $configurator->deleteConfiguration($chosen);
+
+        self::assertNull($settings->getWritingConnection());
+        self::assertFalse($settings->isTitlesEnabled());
+        $this->entityManager->clear();
+        $persisted = $this->entityManager->find(StorySettings::class, $user->requireId());
+        self::assertNull($persisted?->getWritingConnection());
     }
 
     public function testDuplicateReusesTheKeyAndStartsWithoutAModel(): void

@@ -72,9 +72,10 @@ final readonly class TrendingSnapshotBuilder implements SnapshotBuilderInterface
         $entryCount = $run->entryCount();
         $build = new StoryBuildModel($userId, $window, $run->since, $builtAt);
         $activeFeedCount = $this->windowEntries->activeFeedCount($userId, $build->since);
-        unset($run);
         $policy = $this->policyFor($window);
-        $match = $policy->match($groups, $this->history->storedInWindow($build->userId, $build->since));
+        $stored = $this->history->storedInWindow($build->userId, $build->since);
+        $match = $policy->match($run, $groups, $stored);
+        unset($run, $stored);
 
         $this->refreshLock($lock);
 

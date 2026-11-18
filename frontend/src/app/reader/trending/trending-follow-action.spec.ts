@@ -1,3 +1,4 @@
+import { inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -5,6 +6,8 @@ import { API_BASE_URL } from '../../core/api';
 import { aStory } from '../../../testing/entry-testing';
 import { EntriesStore } from '../state/entries.store';
 import { FollowedStoriesStore } from '../state/followed-stories.store';
+import { ListContext } from '../state/list-context';
+import { TestListContext } from '../../../testing/list-context-testing';
 import { TrendingFollowAction } from './trending-follow-action';
 import { TrendingStoryDto } from './trending.models';
 
@@ -29,6 +32,7 @@ describe('TrendingFollowAction (#2128)', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: 'https://api.test' },
+        { provide: ListContext, useFactory: () => new TestListContext(inject(EntriesStore)) },
       ],
     });
     ctrl = TestBed.inject(HttpTestingController);

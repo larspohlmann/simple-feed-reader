@@ -21,14 +21,12 @@ use Doctrine\Persistence\ManagerRegistry;
 use Psr\Log\LoggerInterface;
 
 /**
- * Rebuilds, for every reader active in the last ACTIVE_DAYS, each window whose snapshot is missing or as old as its
- * interval and whose feeds have news since, stalest first across readers; the worker and the tick call it.
+ * Rebuilds, for every active Trending reader, each window whose snapshot is missing or as old as its interval and
+ * whose feeds have news since, stalest first across readers; the worker and the tick call it.
  * A build that finds another running, or loses a lock wait or a deadlock, is skipped and stays due for the next sweep.
  */
 final readonly class TrendingRebuild
 {
-    public const int ACTIVE_DAYS = 14;
-
     public function __construct(
         private SnapshotBuilderInterface $builder,
         private TrendingSnapshotRepository $snapshots,
@@ -77,9 +75,9 @@ final readonly class TrendingRebuild
     /** @return list<DueTrendingBuildModel> */
     private function dueStalestFirst(): array
     {
-        $since = $this->clock->now()->modify(\sprintf('-%d days', self::ACTIVE_DAYS));
         $due = [];
-        foreach ($this->users->trendingReaderIdsLoggedInSince($since) as $userId) {
+        foreach ($this->users->activeTrendingReaders($this->clock->now()) as $reader) {
+            $userId = $reader->requireId();
             $lastBuilds = $this->snapshots->lastBuilds($userId);
             foreach (TrendingWindow::cases() as $window) {
                 if ($this->isDue($userId, $lastBuilds, $window)) {

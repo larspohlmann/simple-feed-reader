@@ -9,6 +9,9 @@ use App\Service\Foundation\Text\Support\WordBoundary;
 
 final class HeadlineBody
 {
+    /** What a query reads of a body before its markup is stripped and BODY_LENGTH cuts it. */
+    public const int SOURCE_CHARACTERS = 2_000;
+
     private const int BODY_LENGTH = 300;
     private const string TRAILING_ELLIPSIS = '/…$/u';
 

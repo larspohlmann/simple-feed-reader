@@ -4,6 +4,8 @@ import { Subject } from 'rxjs';
 import { EntryDto, EntryQuery } from '../models';
 import { anEntry } from '../../../testing/entry-testing';
 import { EntriesStore } from './entries.store';
+import { TestListContext } from '../../../testing/list-context-testing';
+import { ListContext } from './list-context';
 import { LandedList } from './landed-list';
 import { FollowedStoriesStore } from './followed-stories.store';
 import { FollowedStoryVisit } from './followed-story-visit';
@@ -13,7 +15,7 @@ describe('FollowedStoryVisit (#2128)', () => {
   const lastOpenedAt = '2026-11-16T08:00:00+00:00';
   const before = '2026-11-16T07:00:00+00:00';
   const since = '2026-11-16T09:00:00+00:00';
-  const story: EntryQuery = { view: 'all', followedStoryId: 42 };
+  const story: EntryQuery = { view: 'all', storyId: 42 };
   const anotherList: EntryQuery = { view: 'all' };
   const member = (id: number, joinedAt: string): EntryDto => anEntry({ id, joinedAt });
 
@@ -29,7 +31,11 @@ describe('FollowedStoryVisit (#2128)', () => {
     markOpened = jest.fn();
     TestBed.configureTestingModule({
       providers: [
-        { provide: EntriesStore, useValue: { listLanded, entries } },
+        FollowedStoryVisit,
+        {
+          provide: ListContext,
+          useValue: new TestListContext({ listLanded, entries } as unknown as EntriesStore),
+        },
         { provide: FollowedStoriesStore, useValue: { markOpened } },
       ],
     });

@@ -33,6 +33,10 @@ final class RecommendationAnswerBudgetTest extends TestCase
             intdiv(max(1024, RecommendationAnswerBudget::PROFILE_ANSWER_TOKENS) * 150, 100),
             $this->answerBudget->answerBoundTokens(1, RecommendationResponseSchema::Distillation),
         );
+        self::assertSame(
+            intdiv(1024 * 150, 100),
+            $this->answerBudget->answerBoundTokens(1, RecommendationResponseSchema::StoryTitle),
+        );
     }
 
     public function testTheOutputBoundAddsTheReasoningHeadroomWithoutACap(): void

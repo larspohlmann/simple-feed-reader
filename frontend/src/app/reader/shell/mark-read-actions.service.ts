@@ -5,70 +5,76 @@ import { Observable } from 'rxjs';
 import { TranslocoService } from '@jsverse/transloco';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
 import { ReaderApi } from '../reader-api';
-import { EntriesStore } from '../state/entries.store';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { MarkReadTarget, markReadTarget } from '../query/mark-read-target';
-import { queryFromSelection } from '../query/entry-query';
 import { isUnreadOnly } from '../query/query';
-import { ReaderRouteState } from './reader-route-state.service';
+import { ListContext } from '../state/list-context';
+import { EntryRowCache } from '../state/entry-row-cache';
+import { injectListOnScreen } from './list-cover';
 
+/** Mark all read and mark above read, on the list on screen (#2329). */
 @Injectable()
 export class MarkReadActions {
   private readonly api = inject(ReaderApi);
   private readonly confirm = inject(ConfirmService);
   private readonly i18n = inject(TranslocoService);
-  private readonly entries = inject(EntriesStore);
   private readonly subscriptions = inject(SubscriptionsStore);
   private readonly savedSearches = inject(SavedSearchesStore);
-  private readonly routeState = inject(ReaderRouteState);
+  private readonly list = injectListOnScreen();
+  private readonly rows = inject(EntryRowCache);
 
-  readonly canMarkAllRead = computed(() => markReadTarget(this.routeState.selection()) !== null);
+  readonly canMarkAllRead = computed(() => markReadTarget(this.list().selection()) !== null);
 
   confirmMarkAllRead(): void {
-    const target = markReadTarget(this.routeState.selection());
+    const list = this.list();
+    const target = markReadTarget(list.selection());
     if (!target) return;
     const question = {
       title: this.i18n.translate('reader.markAllReadConfirm'),
       message: this.i18n.translate('reader.markAllReadConfirmMessage'),
       confirmLabel: this.i18n.translate('reader.markAllReadConfirmAction'),
     };
-    this.confirm.confirmThen(question, () => this.markAllReadNow(target));
+    this.confirm.confirmThen(question, () => this.markAllReadNow(list, target));
   }
 
   confirmMarkAboveRead(ids: number[], hideInUnreadList: () => void): void {
     if (ids.length === 0) return;
+    const list = this.list();
     const question = {
       title: this.i18n.translate('reader.markAboveReadConfirm'),
       message: this.i18n.translate('reader.markAboveReadConfirmMessage', { count: ids.length }),
       confirmLabel: this.i18n.translate('reader.markAboveReadConfirmAction'),
     };
-    this.confirm.confirmThen(question, () => this.markAboveReadNow(ids, hideInUnreadList));
+    this.confirm.confirmThen(question, () => this.markAboveReadNow(list, ids, hideInUnreadList));
   }
 
   /** Never a re-fetch: a reload lets the magazine planner lift newer posts above the boundary. */
-  private markAboveReadNow(ids: number[], hideInUnreadList: () => void): void {
-    const hideLocally = isUnreadOnly(this.routeState.selection())
+  private markAboveReadNow(list: ListContext, ids: number[], hideInUnreadList: () => void): void {
+    const hideLocally = isUnreadOnly(list.selection())
       ? hideInUnreadList
-      : () => this.entries.markHiddenLocally(ids);
-    this.entries.withMutatingCue(this.api.markEntriesRead(ids)).subscribe({
+      : () => this.rows.markHiddenLocally(ids);
+    list.entries.withMutatingCue(this.api.markEntriesRead(ids)).subscribe({
       next: () => {
         hideLocally();
         this.subscriptions.reloadCountsQuietly();
         this.savedSearches.load();
       },
       error: (error: HttpErrorResponse) =>
-        this.entries.reportMutationFailure(error, () =>
-          this.markAboveReadNow(ids, hideInUnreadList),
+        list.entries.reportMutationFailure(error, () =>
+          this.markAboveReadNow(list, ids, hideInUnreadList),
         ),
     });
   }
 
-  private markAllReadNow(target: MarkReadTarget): void {
-    const until = this.entries.loadedAt() || wireTimestamp(new Date());
-    this.entries.runThenReload(this.markReadRequest(target, until), () =>
-      this.reloadAfterMarkRead(),
-    );
+  private markAllReadNow(list: ListContext, target: MarkReadTarget): void {
+    const until = list.entries.loadedAt() || wireTimestamp(new Date());
+    list.entries.runThenReload(this.markReadRequest(target, until), () => {
+      this.rows.markHiddenLocally(list.entries.entries().map((entry) => entry.id));
+      list.showMarkedAllRead();
+      this.subscriptions.reloadCountsQuietly();
+      this.savedSearches.load();
+    });
   }
 
   private markReadRequest(target: MarkReadTarget, until: string): Observable<void> {
@@ -81,18 +87,10 @@ export class MarkReadActions {
         return this.api.markSavedSearchesRead(until);
       case 'saved-search':
         return this.api.markSingleSavedSearchRead(target.id, until);
-      case 'network':
-      case 'group':
-      case 'all':
-      case 'tag':
-      case 'feed':
+      case 'trending-story':
+        return this.api.markTrendingStoryRead(target.id, until);
+      default:
         return this.api.markRead(target, until);
     }
-  }
-
-  private reloadAfterMarkRead(): void {
-    this.entries.load(queryFromSelection(this.routeState.selection()));
-    this.subscriptions.reloadCountsQuietly();
-    this.savedSearches.load();
   }
 }

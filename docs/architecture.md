@@ -260,7 +260,7 @@ may run either way (`Ingest → Reader` and `LinkCard → Ingest` both cross `In
 | `Content` (what an entry shows) | Reader, ReaderAudit, LinkCard, Comments, Transcript, Chapter |
 | `Library` (the user's own state) | Subscription, SubscriptionHistory, Tag, Reading, SavedPosts, Search, Opml |
 | `Social` | Social, Bluesky, Completion, Share |
-| `Curation` | Recommendation, Ai, Trending |
+| `Curation` | Recommendation, Ai, StoryAi, Trending |
 | `Identity` | Account, Auth, OAuth, Passkey |
 | `Operations` | Admin, Backup, Maintenance, SelfUpdate, Version, Grafana, Logging, ClientError, Settings, Worker, Queue |
 

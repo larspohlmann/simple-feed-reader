@@ -6,8 +6,11 @@ namespace App\Repository;
 
 use App\Enum\FeedLanguage;
 use App\Service\Curation\Trending\Model\EntryLinksModel;
+use App\Service\Curation\Trending\Model\MemberHeadlineModel;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Service\Curation\Trending\Model\WindowLinkCardModel;
+use App\Service\Curation\Trending\Support\HeadlineBody;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -16,8 +19,7 @@ final readonly class TrendingEntryRepository
 {
     private const int CHUNK_ROWS = 1_000;
 
-    /** A body is cut to 300 characters after its markup is stripped; this bounds what a chunk holds before that. */
-    private const int BODY_SOURCE_CHARACTERS = 2_000;
+    private const int LOOKUP_IDS = 120;
 
     /** A card's description is plain text far more often than markup, so less headroom over 300 is kept. */
     private const int CARD_DESCRIPTION_CHARACTERS = 600;
@@ -38,6 +40,52 @@ final readonly class TrendingEntryRepository
                 yield $entry;
             }
         } while (\count($rows) === self::CHUNK_ROWS);
+    }
+
+    /**
+     * @param list<int> $entryIds
+     *
+     * @return array<int, MemberHeadlineModel> by entry id
+     */
+    public function headlinesOf(array $entryIds): array
+    {
+        $headlines = [];
+        foreach (array_chunk($entryIds, self::LOOKUP_IDS) as $chunk) {
+            /** @var list<array{id: int|string, title: string, feed_title: string|null}> $rows */
+            $rows = $this->entityManager->getConnection()->fetchAllAssociative(
+                'SELECT entry.id, entry.title, feed.title AS feed_title FROM entry JOIN feed ON feed.id = entry.feed_id'
+                . ' WHERE entry.id IN (?)',
+                [$chunk],
+                [ArrayParameterType::INTEGER],
+            );
+            foreach ($rows as $row) {
+                $entryId = (int) $row['id'];
+                $headlines[$entryId] = new MemberHeadlineModel($entryId, $row['title'], $row['feed_title']);
+            }
+        }
+
+        return $headlines;
+    }
+
+    /**
+     * @param list<int> $sharedLinkIds
+     *
+     * @return array<int, string> the title of every link that has a non-blank one, by link id
+     */
+    public function linkTitlesOf(array $sharedLinkIds): array
+    {
+        $titles = [];
+        foreach (array_chunk($sharedLinkIds, self::LOOKUP_IDS) as $chunk) {
+            /** @var array<int, string> $chunkTitles */
+            $chunkTitles = $this->entityManager->getConnection()->fetchAllKeyValue(
+                'SELECT id, title FROM shared_link WHERE title IS NOT NULL AND id IN (?)',
+                [$chunk],
+                [ArrayParameterType::INTEGER],
+            );
+            $titles += array_filter($chunkTitles, static fn (string $title): bool => trim($title) !== '');
+        }
+
+        return $titles;
     }
 
     public function hasEntriesCreatedAfter(int $userId, \DateTimeImmutable $after): bool
@@ -105,7 +153,7 @@ final readonly class TrendingEntryRepository
                 . ' LEFT JOIN shared_link link ON link.id = card.shared_link_id'
                 . LinkLandingSql::JOIN
                 . ' WHERE e.effective_date >= :since AND e.id > :afterId ORDER BY e.id LIMIT %d',
-                self::BODY_SOURCE_CHARACTERS,
+                HeadlineBody::SOURCE_CHARACTERS,
                 self::CARD_DESCRIPTION_CHARACTERS,
                 self::CHUNK_ROWS,
             ),

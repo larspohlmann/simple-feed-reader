@@ -3,16 +3,10 @@ import { DestroyRef, Injectable, NgZone, OnDestroy, computed, inject, signal } f
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Problem, parseProblem } from '../../core/problem';
 import { DraftSettingsService } from '../../shared/settings/draft-settings.service';
+import { ConnectionChoice } from '../connection-choice';
 
 const POLL_MS = 2000;
 const MAX_POLL_FAILURES = 3;
-
-export interface ProfileConnection {
-  readonly id: number;
-  readonly name: string | null;
-  readonly baseUrl: string;
-  readonly model: string | null;
-}
 
 export interface ProfileCapBounds {
   readonly min: number;
@@ -29,8 +23,8 @@ export interface ProfileSettingsState {
   readonly intervalHours: number | null;
   readonly intervalChoices: readonly (number | null)[];
   readonly connectionId: number | null;
-  readonly connection: ProfileConnection | null;
-  readonly candidates: readonly ProfileConnection[];
+  readonly connection: ConnectionChoice | null;
+  readonly candidates: readonly ConnectionChoice[];
   readonly keptCap: number;
   readonly viewedCap: number;
   readonly defaults: Readonly<Record<ProfileCapField, number>>;

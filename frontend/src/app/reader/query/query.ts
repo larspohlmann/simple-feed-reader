@@ -37,7 +37,7 @@ interface SelectionFields {
   notifications: { network: SocialNetworkName };
   'saved-searches': FilteredList;
   'saved-search': FilteredList & { id: number };
-  'followed-story': OrderedList & { id: number };
+  'trending-story': FilteredList & { id: number };
   search: FilteredList & { term: string };
 }
 
@@ -46,6 +46,11 @@ export type SelectionOf<K extends SelectionKind> = { kind: K } & SelectionFields
 export type Selection = { [K in SelectionKind]: SelectionOf<K> }[SelectionKind];
 export type FilteredSelection = Extract<Selection, { unread: boolean }>;
 type OrderedSelection = Exclude<Selection, { kind: 'for-you' | 'trending' | 'notifications' }>;
+
+/** A Trending story's list as it opens, before the reader's switches apply (#2329). */
+export function trendingStorySelection(id: number): SelectionOf<'trending-story'> {
+  return { kind: 'trending-story', id, unread: false };
+}
 
 /** One arm per kind, each handed the selection already narrowed to that kind. */
 export type BySelectionKind<R> = { [K in SelectionKind]: (selection: SelectionOf<K>) => R };
@@ -104,7 +109,7 @@ const IDENTITY_KEY: BySelectionKind<string> = {
   notifications: (selection) => selection.network,
   'saved-searches': () => '',
   'saved-search': (selection) => String(selection.id),
-  'followed-story': (selection) => String(selection.id),
+  'trending-story': (selection) => String(selection.id),
   search: (selection) => selection.term,
 };
 
@@ -159,11 +164,6 @@ export function selectedGroupOf(selection: Selection): FeedGroupName | null {
 /** The saved search on screen, or null on every other list, the combined view included. */
 export function selectedSavedSearchIdOf(selection: Selection): number | null {
   return selection.kind === 'saved-search' ? selection.id : null;
-}
-
-/** The followed Trending story on screen, or null on every other list. */
-export function selectedFollowedStoryIdOf(selection: Selection): number | null {
-  return selection.kind === 'followed-story' ? selection.id : null;
 }
 
 /** Whether the list offers the newest/oldest-first toggle; the ranked for-you
@@ -296,10 +296,12 @@ export interface ViewContext {
 export interface ParsedRoute {
   selection: Selection;
   entryId: number | null;
+  /** A Trending story whose list lies over `selection` (#2329). */
+  storyId: number | null;
   urlCorrection: Params | null;
 }
 
-type ParsedView = Omit<ParsedRoute, 'entryId'>;
+type ParsedView = Omit<ParsedRoute, 'entryId' | 'storyId'>;
 
 export function selectionFromParams(paramMap: ParamMap, context: ViewContext): ParsedRoute {
   // The entry param is an id or an id-prefixed slug ("514-some-title").
@@ -313,10 +315,10 @@ export function selectionFromParams(paramMap: ParamMap, context: ViewContext): P
     // A `?q=` search is its own view over every subscription, so a tag or feed
     // parameter left in the URL by hand is ignored rather than combined.
     const selection: Selection = { kind: 'search', unread: false, term };
-    return { selection, entryId, urlCorrection: null };
+    return { selection, entryId, storyId: null, urlCorrection: null };
   }
 
-  return { ...viewFromParams(paramMap, context), entryId };
+  return { ...viewFromParams(paramMap, context), entryId, storyId: null };
 }
 
 /** The views of entry states: no feed, no unread switch. */

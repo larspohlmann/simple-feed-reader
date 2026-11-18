@@ -52,7 +52,9 @@
   [class.sidebar-hidden]="sidebarCollapsed()"
   appDrawerSwipe
   [appDrawerSwipeOpen]="sidebarOpen()"
-  [appDrawerSwipeDisabled]="!screen.isNarrow() || articleFullscreen() || sidebarOrganising()"
+  [appDrawerSwipeDisabled]="
+    !screen.isNarrow() || articleFullscreen() || storyOverlay.open() || sidebarOrganising()
+  "
   (appDrawerSwipeOpenDrawer)="setSidebarOpen(true)"
   (appDrawerSwipeCloseDrawer)="setSidebarOpen(false)"
 >
@@ -80,11 +82,10 @@
       [trendingUnopened]="subs.trendingUnopened()"
       [followedStories]="followedStoriesStore.stories()"
       [savedSearches]="savedSearchesStore.savedSearches()"
-      [activeSavedSearchId]="heading.activeSavedSearchId()"
-      [activeFollowedStoryId]="followedStory.activeId()"
+      [activeStoryId]="storyOverlay.storyId()"
       [mailEnabled]="auth.user()?.mail?.enabled ?? false"
       [digestEnabled]="digest.enabled()"
-      [selection]="selection()"
+      [selection]="listOnScreen().selection()"
       [loading]="subs.loading()"
       [searchLoading]="heading.searching()"
       (refresh)="refresh.refreshAll()"
@@ -97,6 +98,7 @@
   <main class="main" #mainEl [class.split]="splitView()">
     @if (splitView()) {
       <ng-container *ngTemplateOutlet="entryListPane" />
+      <ng-container *ngTemplateOutlet="storyPane" />
       <!-- The draggable seam between the two panes (#810). It writes `--list-width`
            onto `#mainEl` live; PaneResizeDirective owns the pointer, keyboard and
            double-click-reset behaviour and the separator ARIA. -->
@@ -119,6 +121,7 @@
            document's scroll, the ones beneath are pinned at their offsets (#2038). The app
            bar mirrors this list's own `collapsed` state, its only scroll source (#128). -->
       <ng-container *ngTemplateOutlet="entryListPane" />
+      <ng-container *ngTemplateOutlet="storyPane" />
       @if (openEntry()) {
         <div
           class="article-overlay"
@@ -179,19 +182,18 @@
           [searchCountLabel]="heading.searchCountLabel()"
           [titleCount]="heading.titleCount()"
           [savedSearchCount]="savedSearchesStore.savedSearches().length"
-          [items]="entries.items()"
-          [matchedWords]="entries.matchedWords()"
-          [loading]="listLoading()"
-          [mutating]="entries.mutating()"
+          [items]="routeList.entries.items()"
+          [matchedWords]="routeList.entries.matchedWords()"
+          [loading]="routeList.entries.loading() || !listPreferences.ready()"
+          [mutating]="routeList.entries.mutating()"
           [busy]="savedSearch.saving()"
-          [loadingMore]="entries.loadingMore()"
-          [error]="entries.error()"
+          [loadingMore]="routeList.entries.loadingMore()"
+          [error]="routeList.entries.error()"
           [hasMore]="heading.hasMore()"
           [canMarkAllRead]="markRead.canMarkAllRead()"
           [selection]="current"
           [openEntryId]="entryId()"
-          [leavingIds]="entryActions.leavingIds()"
-          [newSinceVisitIds]="storyVisit.newSinceVisitIds()"
+          [leavingIds]="routeList.leavingIds()"
           [feedTags]="feedTags()"
           [refreshing]="refreshSvc.running()"
           [lastRefreshed]="heading.lastRefreshed()"
@@ -202,9 +204,9 @@
           [topBlock]="feedIntro"
           [headerLeading]="sidebarShow"
           [cornerTrailing]="sidebarCorner"
-          (loadMore)="entries.loadMore()"
-          (retry)="entries.retry()"
-          (dismiss)="entries.dismissError()"
+          (loadMore)="routeList.entries.loadMore()"
+          (retry)="routeList.entries.retry()"
+          (dismiss)="routeList.entries.dismissError()"
           (markAllRead)="markRead.confirmMarkAllRead()"
           (unreadOnlyChange)="onUnreadOnlyChange($event)"
           (orderChange)="listOrder.set(current, $event)"
@@ -213,6 +215,22 @@
         />
       }
     </section>
+  </ng-template>
+  <!-- A story's list over the list it was opened from, which stays mounted beneath it as under an
+       article (#2329). -->
+  <ng-template #storyPane>
+    @if (storyOverlay.open()) {
+      <div class="article-overlay story-overlay" appPageLayer animate.leave="article-leave">
+        <app-story-layer
+          [layout]="layout.mode()"
+          [fullscreen]="!screen.isWide()"
+          [feedTags]="feedTags()"
+          [openEntryId]="entryId()"
+          [listLeading]="sidebarShow"
+          [cornerTrailing]="sidebarCorner"
+        />
+      </div>
+    }
   </ng-template>
   <ng-template #readerPane let-fullscreen="fullscreen">
     @if (openEntry(); as entry) {
@@ -300,10 +318,9 @@
   @if (sidebarCollapsed()) {
     <span class="sidebar-show-slot">
       <button
-        #showSidebarButton
         appIconButton
         class="sidebar-show boxed"
-        [class.collapsed]="list()?.collapsed()"
+        [class.collapsed]="visibleList()?.collapsed()"
         type="button"
         [attr.aria-label]="'reader.showSidebar' | transloco"
         [attr.title]="'reader.showSidebar' | transloco"
@@ -347,19 +364,6 @@
     >
       <app-icon [name]="savedSearch.current() ? 'bookmark_remove' : 'bookmark_add'" size="sm" />
       <span class="txt">{{ savedSearch.actionLabel() | transloco }}</span>
-    </button>
-  }
-  @if (followedStory.viewing()) {
-    <button
-      appListAction
-      class="unfollow-story"
-      type="button"
-      [attr.aria-label]="'reader.unfollowStory' | transloco"
-      [attr.title]="'reader.unfollowStory' | transloco"
-      (click)="followedStory.unfollowOpen()"
-    >
-      <app-icon name="notifications_off" size="sm" />
-      <span class="txt">{{ 'reader.unfollowStory' | transloco }}</span>
     </button>
   }
   @if (selection().kind === 'for-you' && ai.ready()) {

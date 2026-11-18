@@ -202,7 +202,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         $this->logs->getOneForUser($this->user, $theirsId);
     }
 
-    public function testDeleteForUserLeavesOtherUsersRows(): void
+    public function testAFullRunPurgeLeavesOtherUsersRows(): void
     {
         $run = $this->fixtures->createRun($this->user);
         $this->fixtures->log($run, CallPhase::Batch, 1, 1, 'r');
@@ -212,7 +212,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         $keptId = $kept->getId();
         self::assertNotNull($keptId);
 
-        $this->logs->deleteForUser($this->user);
+        $this->logs->deleteForUserOutsideRuns($this->user, []);
 
         // Bulk DQL bypasses the identity map: clear before asserting survival, or find() serves the stale in-memory
         // row.
@@ -273,7 +273,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
     {
         [$owner, $run, $profileRun] = $this->ownerWithARunAndAProfileRun();
 
-        $this->logs->deleteForUser($owner);
+        $this->logs->deleteForUserOutsideRuns($owner, []);
 
         self::assertSame([], $this->logs->listForRun($owner, $run->requireId()));
         self::assertCount(1, $this->logs->listForProfileRun($owner, $profileRun->requireId()));

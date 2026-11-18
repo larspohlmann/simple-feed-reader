@@ -8,8 +8,6 @@ import { ReadingLayoutService } from '../reading-layout.service';
 import { EntriesStore } from '../state/entries.store';
 import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
-import { FollowedStoriesStore } from '../state/followed-stories.store';
-import { FollowedStoryDto } from '../trending/trending.models';
 import { VisibilitySwitchesStore } from '../state/visibility-switches.store';
 import { tagsById } from '../state/tag-ancestry';
 import { VisibilitySwitches } from '../state/visibility';
@@ -21,12 +19,15 @@ import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SubscriptionRows } from '../state/subscription-rows';
 import { TagNode, countDescendants, tagNodesById } from '../state/subscription-derivations';
 import { NO_UNREAD_TOTALS, UnreadTotals } from '../state/unread-totals';
-import { anEntry, aStory, aStoryArticle } from '../../../testing/entry-testing';
+import { aStory, aStoryArticle } from '../../../testing/entry-testing';
 import { makeSubscription } from '../testing/subscription.factory';
 import { TrendingBuiltAt } from '../trending/trending-built-at';
 import { TrendingWindowService } from '../trending/trending-window.service';
 import { ListHeading } from './list-heading.service';
-import { ReaderRouteState } from './reader-route-state.service';
+import { ListContext } from '../state/list-context';
+import { OpenStory } from '../state/open-story';
+import { FollowedStoriesStore } from '../state/followed-stories.store';
+import { TestListContext } from '../../../testing/list-context-testing';
 
 const home = (accountId: number, over: Partial<SubscriptionDto> = {}): SubscriptionDto =>
   makeSubscription({
@@ -46,7 +47,6 @@ function listHeadingFor(subscription: SubscriptionDto, sections: SocialSection[]
     imports: [provideTranslocoTesting()],
     providers: [
       ListHeading,
-      { provide: ReaderRouteState, useValue: { selection: signal(selection) } },
       {
         provide: SubscriptionsStore,
         useFactory: () => {
@@ -56,10 +56,14 @@ function listHeadingFor(subscription: SubscriptionDto, sections: SocialSection[]
         },
       },
       { provide: LanguageService, useValue: { lang: signal('en') } },
-      { provide: EntriesStore, useValue: {} },
+      {
+        provide: ListContext,
+        useValue: new TestListContext({} as EntriesStore, signal(selection)),
+      },
+      { provide: OpenStory, useValue: {} },
+      { provide: FollowedStoriesStore, useValue: {} },
       { provide: RecommendationsService, useValue: {} },
       { provide: SavedSearchesStore, useValue: {} },
-      { provide: FollowedStoriesStore, useValue: {} },
       { provide: VisibilitySwitchesStore, useValue: {} },
       { provide: TrendingWindowService, useValue: { window: signal('day') } },
       { provide: ReadingLayoutService, useValue: { mode: signal('magazine') } },
@@ -321,13 +325,16 @@ function headingWith(
     imports: [provideTranslocoTesting()],
     providers: [
       ListHeading,
-      { provide: ReaderRouteState, useValue: { selection: signal(selection) } },
       { provide: SubscriptionsStore, useValue: subscriptionsStore },
       { provide: LanguageService, useValue: { lang: signal('en') } },
-      { provide: EntriesStore, useValue: {} },
+      {
+        provide: ListContext,
+        useValue: new TestListContext({} as EntriesStore, signal(selection)),
+      },
+      { provide: OpenStory, useValue: {} },
+      { provide: FollowedStoriesStore, useValue: {} },
       { provide: RecommendationsService, useValue: {} },
       { provide: SavedSearchesStore, useValue: {} },
-      { provide: FollowedStoriesStore, useValue: {} },
       { provide: VisibilitySwitchesStore, useValue: { switches: signal(switches) } },
       { provide: TrendingWindowService, useValue: { window: signal('day') } },
       { provide: ReadingLayoutService, useValue: { mode: signal('magazine') } },
@@ -417,16 +424,19 @@ describe('ListHeading for the Trending list (#2017)', () => {
       imports: [provideTranslocoTesting()],
       providers: [
         ListHeading,
-        {
-          provide: ReaderRouteState,
-          useValue: { selection: signal<Selection>({ kind: 'trending', window }) },
-        },
         { provide: SubscriptionsStore, useValue: {} },
         { provide: LanguageService, useValue: { lang: signal('en') } },
-        { provide: EntriesStore, useValue: { items: signal([storyOfThree(1), storyOfThree(2)]) } },
+        {
+          provide: ListContext,
+          useValue: new TestListContext(
+            { items: signal([storyOfThree(1), storyOfThree(2)]) } as unknown as EntriesStore,
+            signal<Selection>({ kind: 'trending', window }),
+          ),
+        },
+        { provide: OpenStory, useValue: {} },
+        { provide: FollowedStoriesStore, useValue: {} },
         { provide: RecommendationsService, useValue: {} },
         { provide: SavedSearchesStore, useValue: {} },
-        { provide: FollowedStoriesStore, useValue: {} },
         { provide: VisibilitySwitchesStore, useValue: {} },
         { provide: TrendingWindowService, useValue: { window: signal('day') } },
         { provide: ReadingLayoutService, useValue: { mode: signal('magazine') } },
@@ -454,14 +464,20 @@ describe('ListHeading last refreshed on Trending (#2264)', () => {
       imports: [provideTranslocoTesting()],
       providers: [
         ListHeading,
-        { provide: ReaderRouteState, useValue: { selection: signal({ kind: 'trending' }) } },
         { provide: TrendingWindowService, useValue: { window: signal(window) } },
         { provide: SubscriptionsStore, useValue: {} },
         { provide: LanguageService, useValue: { lang: signal('en') } },
-        { provide: EntriesStore, useValue: {} },
+        {
+          provide: ListContext,
+          useValue: new TestListContext(
+            {} as EntriesStore,
+            signal<Selection>({ kind: 'trending', window: 'day' }),
+          ),
+        },
+        { provide: OpenStory, useValue: {} },
+        { provide: FollowedStoriesStore, useValue: {} },
         { provide: RecommendationsService, useValue: {} },
         { provide: SavedSearchesStore, useValue: {} },
-        { provide: FollowedStoriesStore, useValue: {} },
         { provide: VisibilitySwitchesStore, useValue: {} },
         { provide: ReadingLayoutService, useValue: { mode: signal('magazine') } },
       ],
@@ -483,37 +499,26 @@ describe('ListHeading last refreshed on Trending (#2264)', () => {
   });
 });
 
-describe('ListHeading for a followed Trending story (#2128)', () => {
-  const followed = (headline: string | null): FollowedStoryDto => ({
-    id: 42,
-    headline,
-    newCount: 3,
-    quiet: false,
-    lastJoinedAt: '2026-11-16T10:00:00+00:00',
-  });
+describe("ListHeading over a Trending story's list (#2329)", () => {
+  const story = (unread: boolean): Selection => ({ kind: 'trending-story', id: 42, unread });
 
-  function storyHeading(stories: FollowedStoryDto[]): ListHeading {
-    TestBed.resetTestingModule();
+  function storyHeading(
+    selection: Selection,
+    openStory: Partial<OpenStory>,
+    followed: { headline: string } | null = null,
+  ): ListHeading {
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
         ListHeading,
         {
-          provide: ReaderRouteState,
-          useValue: { selection: signal<Selection>({ kind: 'followed-story', id: 42 }) },
+          provide: ListContext,
+          useValue: new TestListContext({} as EntriesStore, signal(selection)),
         },
-        {
-          provide: FollowedStoriesStore,
-          useValue: {
-            byId: (id: number) => stories.find((story) => story.id === id) ?? null,
-          },
-        },
+        { provide: OpenStory, useValue: openStory },
+        { provide: FollowedStoriesStore, useValue: { byId: () => followed } },
         { provide: SubscriptionsStore, useValue: {} },
         { provide: LanguageService, useValue: { lang: signal('en') } },
-        {
-          provide: EntriesStore,
-          useValue: { items: signal([anEntry({ id: 1 }), anEntry({ id: 2 })]) },
-        },
         { provide: RecommendationsService, useValue: {} },
         { provide: SavedSearchesStore, useValue: {} },
         { provide: VisibilitySwitchesStore, useValue: {} },
@@ -524,16 +529,35 @@ describe('ListHeading for a followed Trending story (#2128)', () => {
     return TestBed.inject(ListHeading);
   }
 
-  it("is titled by the story's headline", () => {
-    expect(storyHeading([followed('Storm hits the coast')]).title()).toBe('Storm hits the coast');
+  const tally = { memberCount: 31, unreadCount: 12 };
+
+  it("titles the list with the story's page title, else its followed headline, else Story", () => {
+    expect(
+      storyHeading(story(false), { titleOf: () => 'Harbour strike', tallyOf: () => tally }).title(),
+    ).toBe('Harbour strike');
+    TestBed.resetTestingModule();
+    expect(
+      storyHeading(
+        story(false),
+        { titleOf: () => null, tallyOf: () => tally },
+        { headline: 'Port closed' },
+      ).title(),
+    ).toBe('Port closed');
+    TestBed.resetTestingModule();
+    expect(storyHeading(story(false), { titleOf: () => null, tallyOf: () => null }).title()).toBe(
+      'Story',
+    );
   });
 
-  it('falls back to "Followed story" while the story has no headline', () => {
-    expect(storyHeading([]).title()).toBe('Followed story');
-    expect(storyHeading([followed(null)]).title()).toBe('Followed story');
+  it("counts every row of the story from the server's tally, not the page loaded", () => {
+    const heading = storyHeading(story(false), { titleOf: () => null, tallyOf: () => tally });
+
+    expect(heading.titleCount()).toEqual({ value: 31, counts: 'items' });
   });
 
-  it('counts the entries it lists', () => {
-    expect(storyHeading([followed('Storm')]).titleCount()).toEqual({ value: 2, counts: 'items' });
+  it('counts the unread rows under Only unread', () => {
+    const heading = storyHeading(story(true), { titleOf: () => null, tallyOf: () => tally });
+
+    expect(heading.titleCount()).toEqual({ value: 12, counts: 'unread' });
   });
 });

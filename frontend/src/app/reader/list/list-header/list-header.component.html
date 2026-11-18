@@ -30,7 +30,11 @@
         <!-- The fixed views (All items, Favorites, Kept, Recently read, For you,
              search) lead with the same glyph their sidebar row shows. Sized like
              the tag glyph and stepped down on collapse for the same reason (#411). -->
-        <app-icon [name]="icon" [size]="collapsed() ? 'xs' : 'md'" />
+        <app-icon
+          [name]="icon"
+          [size]="collapsed() ? 'xs' : 'md'"
+          [class.story-glyph]="selection().kind === 'trending-story'"
+        />
       }
       @if (selection().kind === 'search') {
         <!-- Split so "Results for" stays small/muted while the term stays

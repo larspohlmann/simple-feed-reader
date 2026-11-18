@@ -60,6 +60,7 @@ export function aStory(overrides: Partial<TrendingStoryDto> = {}): TrendingStory
   const articles = overrides.articles ?? [aStoryArticle()];
   return {
     id: 1,
+    title: 'Harbour authority approves the tidal barrier',
     followed: false,
     outletCount: 2,
     viewed: false,

@@ -17,6 +17,13 @@ final readonly class StoryMatchModel
     ) {
     }
 
+    /** @param list<StoryAssignmentModel> $assignments */
+    #[\NoDiscard]
+    public function withAssignments(array $assignments): self
+    {
+        return clone($this, ['assignments' => $assignments]);
+    }
+
     public function kept(): int
     {
         return \count(array_filter(

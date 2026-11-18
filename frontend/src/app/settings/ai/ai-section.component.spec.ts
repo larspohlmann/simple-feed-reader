@@ -15,6 +15,7 @@ import { NO_RECOMMENDATION_CAPABILITIES } from '../../core/ai-availability.servi
 import { API_BASE_URL } from '../../core/api';
 import { ConfirmData } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { profileRun, profileState } from '../../../testing/profile-settings';
+import { storiesState } from '../../../testing/stories-settings';
 import { AiFailure, ScopedAiFailure } from './ai-failure';
 import { AiSectionComponent } from './ai-section.component';
 import { AiConfig, AiModel, AiSettingsService } from './ai-settings.service';
@@ -240,6 +241,7 @@ describe('AiSectionComponent', () => {
   const flushProfile = (): void => {
     http.expectOne('/api/me/ai/profile').flush(profileState());
     http.expectOne('/api/me/ai/profile/runs/current').flush(profileRun());
+    http.expectOne('/api/me/ai/stories').flush(storiesState());
   };
 
   const CONFIG = config({ id: 7 });
@@ -1290,6 +1292,19 @@ describe('AiSectionComponent', () => {
 
     expect(profileAt).toBeGreaterThan(-1);
     expect(profileAt).toBeLessThan(html.indexOf('app-recommendation-settings-card'));
+  });
+
+  it('shows the stories section next to the profile once a connection is ready', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1, active: true, ready: true })]);
+    fixture.detectChanges();
+    flushReady();
+    fixture.detectChanges();
+    const html = (fixture.nativeElement as HTMLElement).innerHTML;
+    const storiesAt = html.indexOf('data-testid="story-titles"');
+
+    expect(storiesAt).toBeGreaterThan(html.indexOf('data-testid="profile-text"'));
+    expect(storiesAt).toBeLessThan(html.indexOf('app-recommendation-settings-card'));
   });
 
   it('folds the provider group to a one-line summary when a ready active connection exists', () => {

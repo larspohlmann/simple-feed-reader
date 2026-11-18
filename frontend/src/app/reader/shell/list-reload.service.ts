@@ -1,6 +1,5 @@
 import { Injectable, effect, inject, untracked } from '@angular/core';
 import { ReaderRouteState } from './reader-route-state.service';
-import { EntryStateActions } from './entry-state-actions.service';
 import { ReaderOnboarding } from './reader-onboarding.service';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { TagsStore } from '../state/tags.store';
@@ -10,6 +9,7 @@ import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { ListPreferences } from '../list/list-preferences.service';
 import { queryFromSelection } from '../query/entry-query';
+import { ListContext } from '../state/list-context';
 
 /** The single owner of list reloads (#502). Injected for its effects. */
 @Injectable()
@@ -21,7 +21,7 @@ export class ListReload {
   private readonly recs = inject(RecommendationsService);
   private readonly savedSearchesStore = inject(SavedSearchesStore);
   private readonly listPreferences = inject(ListPreferences);
-  private readonly entryActions = inject(EntryStateActions);
+  private readonly routeList = inject(ListContext);
   private readonly onboarding = inject(ReaderOnboarding);
   private readonly selection = inject(ReaderRouteState).selection;
 
@@ -33,7 +33,7 @@ export class ListReload {
       if (!this.listPreferences.ready()) return;
       const query = queryFromSelection(this.selection());
       untracked(() => {
-        this.entryActions.clearLeaving();
+        this.routeList.clearLeaving();
         this.entries.load(query);
         this.subs.loadIfStale();
       });

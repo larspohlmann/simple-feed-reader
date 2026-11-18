@@ -1,8 +1,10 @@
-import { signal } from '@angular/core';
+import { DestroyRef, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { PageTitleService } from '../../core/i18n/page-title.service';
 import { EntryDto } from '../models';
 import { LinkArticleSource } from '../article/link-reader/link-article-source.service';
+import { ListContext } from '../state/list-context';
+import { ListCover } from './list-cover';
 import { ListHeading } from './list-heading.service';
 import { ReaderRouteState } from './reader-route-state.service';
 import { ReaderTabTitle } from './reader-tab-title.service';
@@ -16,6 +18,7 @@ function setup({
   TestBed.configureTestingModule({
     providers: [
       ReaderTabTitle,
+      ListCover,
       { provide: PageTitleService, useValue: pageTitle },
       {
         provide: ListHeading,
@@ -31,6 +34,23 @@ function setup({
 }
 
 describe('ReaderTabTitle', () => {
+  it("names the tab after a story's list laid over the reader's (#2329)", () => {
+    const { pageTitle } = setup();
+    const storyHeading = { tabTitle: () => 'Harbour strike', titleCount: () => ({ value: 31 }) };
+
+    TestBed.inject(ListCover).coverWith(
+      {
+        context: {} as ListContext,
+        heading: storyHeading as unknown as ListHeading,
+        open: signal(true),
+      },
+      TestBed.inject(DestroyRef),
+    );
+    TestBed.tick();
+
+    expect(pageTitle.useText).toHaveBeenLastCalledWith('Harbour strike', 31);
+  });
+
   it('names the tab after the open article', () => {
     const { pageTitle } = setup({ openEntry: { title: 'Headline', source: 'Feed' } });
 

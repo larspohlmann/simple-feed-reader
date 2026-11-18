@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Entry;
+use App\Entity\EntryState;
 use App\Entity\Subscription;
 use App\Entity\TrendingStoryEntry;
+use App\Service\Curation\Trending\Model\TrendingStoryTallyModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\ParameterType;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -24,6 +28,20 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
         private readonly EntryScopePredicates $scopes,
     ) {
         parent::__construct($registry, Entry::class);
+    }
+
+    /** @return string|null null for a story with no stored title and no member in a feed its reader subscribes to */
+    public function titleOf(TrendingStoryListQuery $query): ?string
+    {
+        /** @var string|null|false $title */
+        $title = $this->getEntityManager()->getConnection()->fetchOne(
+            'SELECT ' . TrendingStoryTitleSql::TITLE . ' AS title FROM trending_story story'
+            . ' WHERE story.id = ? AND story.user_id = ?',
+            [$query->storyId, $query->userId],
+            [ParameterType::INTEGER, ParameterType::INTEGER],
+        );
+
+        return $title === false ? null : $title;
     }
 
     /** @return list<EntryListRow> */
@@ -44,6 +62,37 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
         $rows = $qb->getQuery()->getResult();
 
         return array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
+    }
+
+    public function tallyOf(TrendingStoryListQuery $query): TrendingStoryTallyModel
+    {
+        $qb = $this->createQueryBuilder('e')
+            ->select('COUNT(e.id) AS memberCount')
+            ->addSelect(\sprintf('SUM(CASE WHEN %s THEN 1 ELSE 0 END) AS unreadCount', UnreadDql::predicate()))
+            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
+            ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
+            ->setParameter('notHidden', false, Types::BOOLEAN)
+            ->setParameter('story', $query->storyId);
+        $this->applyMembership($qb, EntryAliases::primary());
+        $this->collapse->apply($qb, $this->applyMembership(...), $query->userId);
+
+        /** @var array{memberCount: int|string, unreadCount: int|string|null} $row */
+        $row = $qb->getQuery()->getSingleResult();
+
+        return new TrendingStoryTallyModel((int) $row['memberCount'], (int) $row['unreadCount']);
+    }
+
+    /** @return list<int> the story's members the reader has not read, no newer than $until */
+    public function unreadMemberIdsUpTo(TrendingStoryListQuery $query, \DateTimeImmutable $until): array
+    {
+        $qb = $this->projection->unreadEntriesQueryBuilder($query->userId)
+            ->select('e.id')
+            ->andWhere('e.effectiveDate <= :until')
+            ->setParameter('until', $until)
+            ->setParameter('story', $query->storyId);
+        $this->applyMembership($qb, EntryAliases::primary());
+
+        return $this->projection->scalarIds($qb);
     }
 
     /**

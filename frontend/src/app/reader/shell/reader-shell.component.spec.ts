@@ -41,6 +41,10 @@ import { ReaderRouteState } from './reader-route-state.service';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SubscriptionRows } from '../state/subscription-rows';
 import { EntriesStore } from '../state/entries.store';
+import { EntryRowCache } from '../state/entry-row-cache';
+import { ListContext } from '../state/list-context';
+import { StoryLayerComponent } from './story-layer/story-layer.component';
+import { SidebarComponent } from './sidebar/sidebar.component';
 import { ReaderApi } from '../reader-api';
 import { EntryBodyService } from '../article/content/entry-body.service';
 import { Selection, isUnreadOnly } from '../query/query';
@@ -2223,7 +2227,7 @@ describe('ReaderShellComponent', () => {
       fixture.detectChanges();
 
       expect(fixture.componentInstance.selection().kind).toBe('tag');
-      expect(fixture.componentInstance.entries.loading()).toBe(true);
+      expect(TestBed.inject(EntriesStore).loading()).toBe(true);
       expect(fixture.componentInstance.heading.searching()).toBe(false);
 
       ctrl
@@ -2252,7 +2256,7 @@ describe('ReaderShellComponent', () => {
       fixture.detectChanges();
 
       expect(fixture.componentInstance.selection().kind).toBe('search');
-      expect(fixture.componentInstance.entries.loading()).toBe(true);
+      expect(TestBed.inject(EntriesStore).loading()).toBe(true);
       expect(fixture.componentInstance.heading.searching()).toBe(true);
 
       ctrl
@@ -2277,7 +2281,9 @@ describe('ReaderShellComponent', () => {
       fixture.detectChanges();
 
       expect(
-        fixture.componentInstance.entries.entries().map((listedEntry) => listedEntry.id),
+        TestBed.inject(EntriesStore)
+          .entries()
+          .map((listedEntry) => listedEntry.id),
       ).toEqual([1]);
 
       qp.next(convertToParamMap({ q: 'daft punk' }));
@@ -2295,7 +2301,9 @@ describe('ReaderShellComponent', () => {
       fixture.detectChanges();
 
       expect(
-        fixture.componentInstance.entries.entries().map((listedEntry) => listedEntry.id),
+        TestBed.inject(EntriesStore)
+          .entries()
+          .map((listedEntry) => listedEntry.id),
       ).toEqual([2]);
       expect(fixture.componentInstance.heading.title()).toContain('daft punk');
     });
@@ -2478,7 +2486,7 @@ describe('ReaderShellComponent', () => {
       // Establish the fixture deliberately: boot() landed one row from the 'all'
       // list, still mounted — this is #254's behaviour (load() clears nextCursor
       // synchronously but leaves the outgoing list rendered until it lands).
-      expect(fixture.componentInstance.entries.entries().length).toBe(1);
+      expect(TestBed.inject(EntriesStore).entries().length).toBe(1);
 
       qp.next(convertToParamMap({ q: 'angular' }));
       fixture.detectChanges();
@@ -2486,7 +2494,7 @@ describe('ReaderShellComponent', () => {
       // The search request is now in flight. Prove the trap is live before asserting
       // the title: entries() still holds the stale 'all' row and hasMore() reads
       // false (nextCursor already cleared) — a naive read would show "— 1" here.
-      expect(fixture.componentInstance.entries.entries().length).toBe(1);
+      expect(TestBed.inject(EntriesStore).entries().length).toBe(1);
       expect(fixture.componentInstance.heading.hasMore()).toBe(false);
       expect(fixture.componentInstance.heading.searching()).toBe(true);
 
@@ -3607,26 +3615,24 @@ describe('ReaderShellComponent', () => {
 
     it('collapses an un-favourited row but keeps it in the data so the plan holds', () => {
       const fixture = bootInto('favorites', { isFavorite: true });
-      fixture.componentInstance.entryActions.favorite(
-        fixture.componentInstance.entries.entries()[0],
-      );
+      fixture.componentInstance.entryActions.favorite(TestBed.inject(EntriesStore).entries()[0]);
       flushStatePatch();
 
-      expect(fixture.componentInstance.entryActions.leavingIds().has(1)).toBe(true);
+      expect(fixture.debugElement.injector.get(ListContext).leavingIds().has(1)).toBe(true);
       // Kept in entries() on purpose: dropping it would re-flow the magazine plan.
       expect(
-        fixture.componentInstance.entries.entries().some((listedEntry) => listedEntry.id === 1),
+        TestBed.inject(EntriesStore)
+          .entries()
+          .some((listedEntry) => listedEntry.id === 1),
       ).toBe(true);
     });
 
     it('does NOT collapse the row when the flag is toggled outside its saved view', () => {
       const fixture = bootInto('all', { isFavorite: true });
-      fixture.componentInstance.entryActions.favorite(
-        fixture.componentInstance.entries.entries()[0],
-      );
+      fixture.componentInstance.entryActions.favorite(TestBed.inject(EntriesStore).entries()[0]);
       flushStatePatch();
 
-      expect(fixture.componentInstance.entryActions.leavingIds().has(1)).toBe(false);
+      expect(fixture.debugElement.injector.get(ListContext).leavingIds().has(1)).toBe(false);
     });
 
     it('collapses a Recently-read row on un-tick and drops the viewed badge', () => {
@@ -3634,12 +3640,10 @@ describe('ReaderShellComponent', () => {
       const subscriptions = TestBed.inject(SubscriptionsStore);
       expect(subscriptions.viewedCount()).toBe(3);
 
-      fixture.componentInstance.entryActions.toggleRead(
-        fixture.componentInstance.entries.entries()[0],
-      );
+      fixture.componentInstance.entryActions.toggleRead(TestBed.inject(EntriesStore).entries()[0]);
       flushStatePatch();
 
-      expect(fixture.componentInstance.entryActions.leavingIds().has(1)).toBe(true);
+      expect(fixture.debugElement.injector.get(ListContext).leavingIds().has(1)).toBe(true);
       expect(subscriptions.viewedCount()).toBe(2);
     });
 
@@ -3647,24 +3651,20 @@ describe('ReaderShellComponent', () => {
       const fixture = bootInto('viewed', { isHidden: true, isViewed: true });
       const subscriptions = TestBed.inject(SubscriptionsStore);
 
-      fixture.componentInstance.entryActions.toggleRead(
-        fixture.componentInstance.entries.entries()[0],
-      );
+      fixture.componentInstance.entryActions.toggleRead(TestBed.inject(EntriesStore).entries()[0]);
       ctrl
         .expectOne((request) => request.url === 'https://api.test/api/entries/1/state')
         .error(new ProgressEvent('fail'));
 
-      expect(fixture.componentInstance.entryActions.leavingIds().has(1)).toBe(false);
+      expect(fixture.debugElement.injector.get(ListContext).leavingIds().has(1)).toBe(false);
       expect(subscriptions.viewedCount()).toBe(3);
     });
 
     it('clears the collapsed set when the selection changes', () => {
       const fixture = bootInto('favorites', { isFavorite: true });
-      fixture.componentInstance.entryActions.favorite(
-        fixture.componentInstance.entries.entries()[0],
-      );
+      fixture.componentInstance.entryActions.favorite(TestBed.inject(EntriesStore).entries()[0]);
       flushStatePatch();
-      expect(fixture.componentInstance.entryActions.leavingIds().has(1)).toBe(true);
+      expect(fixture.debugElement.injector.get(ListContext).leavingIds().has(1)).toBe(true);
 
       qp.next(convertToParamMap({ view: 'kept' }));
       fixture.detectChanges();
@@ -3672,7 +3672,7 @@ describe('ReaderShellComponent', () => {
         .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [], nextCursor: null });
 
-      expect(fixture.componentInstance.entryActions.leavingIds().size).toBe(0);
+      expect(fixture.debugElement.injector.get(ListContext).leavingIds().size).toBe(0);
     });
   });
 
@@ -3972,12 +3972,12 @@ describe('ReaderShellComponent', () => {
       const fixture = bootWithForYouSelected();
       const ref = { closed: of(true) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
-      expect(fixture.componentInstance.entries.loading()).toBe(false);
+      expect(TestBed.inject(EntriesStore).loading()).toBe(false);
 
       fixture.componentInstance.markRead.confirmMarkAllRead();
 
       ctrl.expectOne('https://api.test/api/entries/for-you/mark-read');
-      expect(fixture.componentInstance.entries.loading()).toBe(true);
+      expect(TestBed.inject(EntriesStore).loading()).toBe(true);
     });
   });
 
@@ -4396,7 +4396,7 @@ describe('ReaderShellComponent', () => {
       const api = TestBed.inject(ReaderApi);
       jest.spyOn(api, 'markEntriesRead').mockReturnValue(of(undefined));
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
-      const load = jest.spyOn(fixture.componentInstance.entries, 'load');
+      const load = jest.spyOn(TestBed.inject(EntriesStore), 'load');
       const list = fixture.debugElement.query(By.directive(EntryListComponent))
         .componentInstance as EntryListComponent;
       const hideAboveMarked = jest
@@ -4424,7 +4424,7 @@ describe('ReaderShellComponent', () => {
 
       fixture.componentInstance.onMarkAboveRead([1, 2]);
 
-      expect(fixture.componentInstance.entries.error()).toEqual(expect.objectContaining(problem));
+      expect(TestBed.inject(EntriesStore).error()).toEqual(expect.objectContaining(problem));
       expect(hideAboveMarked).not.toHaveBeenCalled();
     });
 
@@ -4443,11 +4443,11 @@ describe('ReaderShellComponent', () => {
         jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
 
         fixture.componentInstance.onMarkAboveRead([1, 2]);
-        expect(fixture.componentInstance.entries.mutating()).toBe(true);
+        expect(TestBed.inject(EntriesStore).mutating()).toBe(true);
 
         settle(response);
         response.complete();
-        expect(fixture.componentInstance.entries.mutating()).toBe(false);
+        expect(TestBed.inject(EntriesStore).mutating()).toBe(false);
       },
     );
 
@@ -4456,8 +4456,8 @@ describe('ReaderShellComponent', () => {
       const api = TestBed.inject(ReaderApi);
       jest.spyOn(api, 'markEntriesRead').mockReturnValue(of(undefined));
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
-      const markHiddenLocally = jest.spyOn(fixture.componentInstance.entries, 'markHiddenLocally');
-      const load = jest.spyOn(fixture.componentInstance.entries, 'load');
+      const markHiddenLocally = jest.spyOn(TestBed.inject(EntryRowCache), 'markHiddenLocally');
+      const load = jest.spyOn(TestBed.inject(EntriesStore), 'load');
 
       fixture.componentInstance.onMarkAboveRead([5, 6]);
 
@@ -4474,12 +4474,12 @@ describe('ReaderShellComponent', () => {
         .spyOn(api, 'markEntriesRead')
         .mockReturnValue(throwError(() => new HttpErrorResponse({ error: problem, status: 500 })));
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
-      const markHiddenLocally = jest.spyOn(fixture.componentInstance.entries, 'markHiddenLocally');
-      const load = jest.spyOn(fixture.componentInstance.entries, 'load');
+      const markHiddenLocally = jest.spyOn(TestBed.inject(EntryRowCache), 'markHiddenLocally');
+      const load = jest.spyOn(TestBed.inject(EntriesStore), 'load');
 
       fixture.componentInstance.onMarkAboveRead([5, 6]);
 
-      expect(fixture.componentInstance.entries.error()).toEqual(expect.objectContaining(problem));
+      expect(TestBed.inject(EntriesStore).error()).toEqual(expect.objectContaining(problem));
       expect(markHiddenLocally).not.toHaveBeenCalled();
       expect(load).not.toHaveBeenCalled();
     });
@@ -5200,6 +5200,104 @@ describe('ReaderShellComponent', () => {
 
       const routeState = fixture.debugElement.injector.get(ReaderRouteState);
       expect(routeState.openLinkCard()?.title).toBe('Clicked card');
+    });
+  });
+  describe("a Trending story's list over the list (#2329)", () => {
+    const element = (fixture: ComponentFixture<ReaderShellComponent>) =>
+      fixture.nativeElement as HTMLElement;
+
+    function openStory(fixture: ComponentFixture<ReaderShellComponent>): void {
+      pp.next(convertToParamMap({ story: '42' }));
+      fixture.detectChanges();
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries/trending-stories/42')
+        .flush({
+          entries: [],
+          nextCursor: null,
+          title: 'Harbour strike',
+          memberCount: 31,
+          unreadCount: 12,
+          lastOpenedAt: null,
+          newEntryIds: [],
+        });
+      fixture.detectChanges();
+    }
+
+    const storyLayer = (fixture: ComponentFixture<ReaderShellComponent>) =>
+      fixture.debugElement.query(By.directive(StoryLayerComponent))
+        .componentInstance as StoryLayerComponent;
+
+    it('marks the story in the sidebar and names the tab after it, not the list beneath', () => {
+      const fixture = boot();
+
+      openStory(fixture);
+
+      const sidebar = fixture.debugElement.query(By.directive(SidebarComponent))
+        .componentInstance as SidebarComponent;
+      expect(sidebar.selection()).toEqual({ kind: 'trending-story', id: 42, unread: false });
+      expect(sidebar.activeStoryId()).toBe(42);
+      expect(TestBed.inject(Title).getTitle()).toContain('Harbour strike');
+    });
+
+    it("heads the story's list with its title and the server's count of its rows", () => {
+      const fixture = boot();
+
+      openStory(fixture);
+
+      const header = element(fixture).querySelector('app-story-layer app-list-header')!;
+      expect(header.querySelector('h2')?.textContent).toContain('Harbour strike');
+      expect(header.querySelector('.title-count')?.textContent?.trim()).toBe('31');
+    });
+
+    it("scrolls the story's list to the top, and leaves the app bar it covers to the list beneath", () => {
+      const fixture = boot();
+      openStory(fixture);
+      const story = storyLayer(fixture).list()!;
+      const covered = fixture.debugElement.query(By.directive(EntryListComponent))
+        .componentInstance as EntryListComponent;
+      const toTop = jest.spyOn(story, 'scrollToTop').mockImplementation();
+      const coveredToTop = jest.spyOn(covered, 'scrollToTop').mockImplementation();
+
+      story.scrolling.onScroll(900);
+      story.scrolling.onScroll(1200);
+      fixture.detectChanges();
+      fixture.componentInstance.onScrollListTop();
+
+      expect(fixture.componentInstance.headerHidden()).toBe(covered.collapsed());
+      expect(toTop).toHaveBeenCalled();
+      expect(coveredToTop).not.toHaveBeenCalled();
+    });
+
+    it("focuses the story's own show-sidebar button when the sidebar hides", () => {
+      const fixture = boot();
+      openStory(fixture);
+
+      TestBed.inject(SidebarVisibilityService).hide();
+      fixture.detectChanges();
+
+      expect(document.activeElement?.closest('app-story-layer')).not.toBeNull();
+      expect(document.activeElement?.getAttribute('aria-label')).toBe('Show sidebar');
+    });
+
+    it('opens as a layer over the list, which stays mounted and is not asked for again', () => {
+      const fixture = boot();
+      const list = element(fixture).querySelector('section.list app-entry-list');
+
+      openStory(fixture);
+
+      expect(element(fixture).querySelector('.story-overlay app-story-layer')).not.toBeNull();
+      expect(element(fixture).querySelector('section.list app-entry-list')).toBe(list);
+      ctrl.expectNone((request) => request.url === 'https://api.test/api/entries');
+    });
+
+    it('leaves the list alone once the story closes', () => {
+      const fixture = boot();
+      openStory(fixture);
+
+      pp.next(convertToParamMap({}));
+      fixture.detectChanges();
+
+      ctrl.expectNone((request) => request.url === 'https://api.test/api/entries');
     });
   });
 });

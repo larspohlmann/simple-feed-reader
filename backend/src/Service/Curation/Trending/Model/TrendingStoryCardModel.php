@@ -6,6 +6,7 @@ namespace App\Service\Curation\Trending\Model;
 
 use App\Enum\ShareKind;
 use App\Repository\EntryListRow;
+use App\Service\Curation\Trending\Support\MostShared;
 
 /**
  * One Trending card, one row per article (#2229): an outlet's row for an article the reader's feeds carry, else the
@@ -77,24 +78,11 @@ final readonly class TrendingStoryCardModel
             static fn (StoryArticleModel $article): bool => $article->row->isFromAnOutlet(),
         ));
         if ($fromOutlets === []) {
-            return self::mostShared($articles);
+            return MostShared::pick($articles, static fn (StoryArticleModel $article): int => \count($article->shares));
         }
 
         return array_find($fromOutlets, static fn (StoryArticleModel $article): bool => self::isPictured($article->row))
             ?? $fromOutlets[0];
-    }
-
-    /** @param non-empty-list<StoryArticleModel> $articles newest first */
-    private static function mostShared(array $articles): StoryArticleModel
-    {
-        $mostShared = $articles[0];
-        foreach ($articles as $article) {
-            if (\count($article->shares) > \count($mostShared->shares)) {
-                $mostShared = $article;
-            }
-        }
-
-        return $mostShared;
     }
 
     /** @param non-empty-list<EntryListRow> $rows newest first */

@@ -9,6 +9,7 @@ use App\Entity\ModelDescriptor;
 use App\Entity\User;
 use App\Repository\AiProviderSettingsRepository;
 use App\Repository\RecommendationSettingsRepository;
+use App\Repository\StorySettingsRepository;
 use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Ai\Exception\AiKeyUnreadableException;
 use App\Service\Curation\Ai\Exception\CredentialsRejectedException;
@@ -28,7 +29,7 @@ use Psr\Clock\ClockInterface;
  * Creates, verifies and removes provider connections. Every write is preceded by a live call, and a failed one
  * persists nothing; only duplicateConfiguration() skips it, reusing a verified row's key. The active configuration
  * is a single pointer on User, not a per-row flag; the profile connection is a pointer on the account's
- * recommendation settings.
+ * recommendation settings, and the story writing connection one on its story settings.
  */
 final readonly class AiProviderConfigurator
 {
@@ -42,6 +43,7 @@ final readonly class AiProviderConfigurator
         private ClockInterface $clock,
         private AiConfigurationFactory $configurationFactory,
         private RecommendationSettingsRepository $recommendationSettings,
+        private StorySettingsRepository $storySettings,
     ) {
     }
 
@@ -163,6 +165,7 @@ final readonly class AiProviderConfigurator
         }
 
         $this->recommendationSettings->findForUser($user)?->forgetProfileConnection($settings);
+        $this->storySettings->findForUser($user)?->forgetConnection($settings);
     }
 
     private function activateWhenNoneActive(AiProviderSettings $settings): void

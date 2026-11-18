@@ -4,7 +4,7 @@ import { TokenStore } from '../../../core/auth/token.store';
 import { SocialCountsDto, SocialViewerDto } from '../../entry-social';
 import { HttpErrorResponse } from '@angular/common/http';
 import { SocialPostApi } from '../../social-post-api';
-import { EntriesStore } from '../../state/entries.store';
+import { EntryRowCache } from '../../state/entry-row-cache';
 import { ToastService } from '../../../shared/toast/toast.service';
 import { anEntry } from '../../../../testing/entry-testing';
 import { SocialCountsService } from './social-counts.service';
@@ -18,7 +18,7 @@ describe('SocialCountsService', () => {
     repost: jest.Mock;
     unrepost: jest.Mock;
   };
-  let entries: { adoptLike: jest.Mock };
+  let rows: { adoptLike: jest.Mock };
   let toast: { showProblem: jest.Mock };
   let shares: { reflect: jest.Mock };
   let tokens: TokenStore;
@@ -49,13 +49,13 @@ describe('SocialCountsService', () => {
       repost: jest.fn(() => of({ isReposted: true })),
       unrepost: jest.fn(() => of({ isReposted: false })),
     };
-    entries = { adoptLike: jest.fn() };
+    rows = { adoptLike: jest.fn() };
     toast = { showProblem: jest.fn() };
     shares = { reflect: jest.fn() };
     TestBed.configureTestingModule({
       providers: [
         { provide: SocialPostApi, useValue: api },
-        { provide: EntriesStore, useValue: entries },
+        { provide: EntryRowCache, useValue: rows },
         { provide: ToastService, useValue: toast },
         { provide: NetworkShares, useValue: shares },
       ],
@@ -116,7 +116,7 @@ describe('SocialCountsService', () => {
     service.load(post(1, false));
 
     expect(api.viewer).toHaveBeenCalledWith(1);
-    expect(entries.adoptLike).toHaveBeenCalledWith(1, { from: false, to: true });
+    expect(rows.adoptLike).toHaveBeenCalledWith(1, { from: false, to: true });
     expect(service.state(1)()).toMatchObject({ status: 'ok', counts, likedAtLoad: true });
   });
 
@@ -125,7 +125,7 @@ describe('SocialCountsService', () => {
 
     service.load(post(1, true));
 
-    expect(entries.adoptLike).not.toHaveBeenCalled();
+    expect(rows.adoptLike).not.toHaveBeenCalled();
     expect(service.state(1)()).toMatchObject({ status: 'ok', likedAtLoad: true, actions: null });
   });
 
@@ -163,7 +163,7 @@ describe('SocialCountsService', () => {
     late.next(viewer({ isLiked: true }));
     late.complete();
 
-    expect(entries.adoptLike).not.toHaveBeenCalled();
+    expect(rows.adoptLike).not.toHaveBeenCalled();
   });
 
   it('keeps the repost the network reports and whether it allows one', () => {

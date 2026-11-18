@@ -7,13 +7,16 @@ namespace App\Tests\Service\Curation\Recommendation\Run;
 use App\Entity\ProfileRun;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
+use App\Entity\StoryAiRun;
 use App\Entity\User;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Enum\ProfileRunTrigger;
+use App\Enum\StoryAiTask;
 use App\Enum\TokenLimitParameter;
 use App\Repository\RecommendationCallRepository;
 use App\Repository\RecommendationRunLogRepository;
+use App\Service\Curation\Ai\Model\ProviderCallReceiptModel;
 use App\Service\Curation\Ai\Model\ProviderCallUsageModel;
 use App\Service\Curation\Recommendation\Llm\Completion\Model\CompletionRequestModel;
 use App\Service\Curation\Recommendation\Llm\Completion\Model\JsonSchemaModel;
@@ -264,6 +267,36 @@ final class RecommendationCallRecorderTest extends DbTestCase
         $columns = $this->profileRunColumns($otherProfileRun);
         self::assertSame(0, $columns['prompt_tokens']);
         self::assertNull($columns['cost_nano_credits']);
+    }
+
+    public function testAStoryAiCallBanksItsUsageOnItsRun(): void
+    {
+        $storyRun = new StoryAiRun($this->user, StoryAiTask::Title, new \DateTimeImmutable('2026-11-18T09:00:00Z'));
+        $this->entityManager->persist($storyRun);
+        $this->entityManager->flush();
+        $call = $this->recorder->beginForStoryAiRun($storyRun, $this->request([]));
+
+        $call->received(
+            new ProviderCallReceiptModel('req-1', 'gpt-x', new ProviderCallUsageModel(120, 8, 0, 0, 3_000)),
+            512,
+        );
+        $call->finishUsable('{"title":"A title"}');
+
+        /** @var array{prompt_tokens: int|string, completion_tokens: int|string} $run */
+        $run = $this->entityManager->getConnection()->fetchAssociative(
+            'SELECT prompt_tokens, completion_tokens FROM story_ai_run WHERE id = ?',
+            [$storyRun->requireId()],
+        );
+        self::assertSame(120, (int) $run['prompt_tokens']);
+        self::assertSame(8, (int) $run['completion_tokens']);
+        /** @var array{phase: string, cost_nano_credits: int|string, story_ai_run_id: int|string|null} $log */
+        $log = $this->entityManager->getConnection()->fetchAssociative(
+            'SELECT phase, cost_nano_credits, story_ai_run_id FROM recommendation_run_log WHERE story_ai_run_id = ?',
+            [$storyRun->requireId()],
+        );
+        self::assertSame('story_title', $log['phase']);
+        self::assertSame(3_000, (int) $log['cost_nano_credits']);
+        self::assertSame($storyRun->requireId(), (int) $log['story_ai_run_id']);
     }
 
     private function runningProfileRun(): ProfileRun

@@ -16,17 +16,14 @@ final class TrendingRun
     /** @var array<int, int> */
     private array $feedOfEntry = [];
 
+    /** @var array<int, StoryMemberModel> */
+    private array $members = [];
+
     /** @var array<int, int> entry id => effective date in Unix seconds */
     private array $effectiveTimes = [];
 
     /** @var array<string, list<int>> */
     private array $entriesByUrlHash = [];
-
-    /** @var array<int, string> */
-    private array $articleSites = [];
-
-    /** @var array<int, int> entry id => the shared link of its first top-level card */
-    private array $sharedLinkIds = [];
 
     /** @var array<string, string> one string per site, however many entries share it */
     private array $sites = [];
@@ -46,13 +43,16 @@ final class TrendingRun
         foreach ($urlHashes as $urlHash) {
             $this->entriesByUrlHash[$urlHash][] = $entry->id;
         }
-        if ($entry->links->card !== null) {
-            $this->sharedLinkIds[$entry->id] = $entry->links->card->sharedLinkId;
-        }
         $articleSite = $entry->links->articleSite();
-        if ($articleSite !== null) {
-            $this->articleSites[$entry->id] = $this->sites[$articleSite] ??= $articleSite;
-        }
+        $this->members[$entry->id] = new StoryMemberModel(
+            $entry->id,
+            $entry->feedId,
+            $articleSite === null ? null : ($this->sites[$articleSite] ??= $articleSite),
+            $entry->links->card?->sharedLinkId,
+            $entry->language,
+            $entry->links->articleUrl !== null,
+            $entry->links->urlHash,
+        );
         $this->headlines->add(
             $entry,
             $entry->titleDerived
@@ -75,12 +75,7 @@ final class TrendingRun
 
     public function memberOf(int $entryId): StoryMemberModel
     {
-        return new StoryMemberModel(
-            $entryId,
-            $this->feedOfEntry[$entryId],
-            $this->articleSites[$entryId] ?? null,
-            $this->sharedLinkIds[$entryId] ?? null,
-        );
+        return $this->members[$entryId];
     }
 
     public function effectiveTimeOf(int $entryId): int

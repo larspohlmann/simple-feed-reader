@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../../../core/api';
 import { TokenStore } from '../../../core/auth/token.store';
-import { EntriesStore } from '../../state/entries.store';
+import { EntryRowCache } from '../../state/entry-row-cache';
 import { EntryBodyService } from './entry-body.service';
 
 describe('EntryBodyService', () => {
@@ -20,7 +20,7 @@ describe('EntryBodyService', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: 'https://api.test' },
-        { provide: EntriesStore, useValue: { mergeCompleted } },
+        { provide: EntryRowCache, useValue: { mergeCompleted } },
       ],
     });
     tokens = TestBed.inject(TokenStore);

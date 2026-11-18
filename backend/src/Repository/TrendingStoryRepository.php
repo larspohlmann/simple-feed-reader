@@ -5,12 +5,16 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\TrendingStory;
+use App\Enum\FeedLanguage;
 use App\Enum\TrendingWindow;
 use App\Service\Curation\Trending\Exception\TrendingStoryNotFoundException;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\ReaderWindowModel;
+use App\Service\Curation\Trending\Model\StoryHeadlineModel;
+use App\Service\Curation\Trending\Support\HeadlineBody;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use App\Service\Curation\Trending\Model\ShownEntriesModel;
@@ -27,6 +31,9 @@ final class TrendingStoryRepository extends ServiceEntityRepository
 
     private const string ARTICLE_FEEDS
         = 'COUNT(DISTINCT CASE WHEN member_feed.network IS NULL THEN story_member.feed_id END)';
+
+    private const string MEMBER_COUNT
+        = '(SELECT COUNT(*) FROM trending_story_entry member WHERE member.story_id = story.id)';
 
     private const array VISIBILITY_TYPES = [
         'user' => ParameterType::INTEGER,
@@ -63,6 +70,90 @@ final class TrendingStoryRepository extends ServiceEntityRepository
                 NaiveUtc::parse($row['last_seen']),
             ),
             $rows,
+        );
+    }
+
+    /**
+     * @param list<int> $storyIds
+     *
+     * @return array<int, string> the stories that have a title
+     */
+    public function titlesOf(array $storyIds): array
+    {
+        if ($storyIds === []) {
+            return [];
+        }
+
+        /** @var list<array{id: int|string, title: string}> $rows */
+        $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
+            'SELECT story.id, ' . TrendingStoryTitleSql::STORED . ' AS title FROM trending_story story'
+            . ' WHERE story.id IN (:storyIds) AND ' . TrendingStoryTitleSql::STORED . ' IS NOT NULL',
+            ['storyIds' => $storyIds],
+            ['storyIds' => ArrayParameterType::INTEGER],
+        );
+
+        $titles = [];
+        foreach ($rows as $row) {
+            $titles[(int) $row['id']] = $row['title'];
+        }
+
+        return $titles;
+    }
+
+    /**
+     * The newest headline of each outlet in the story, or without one, each story card it shares, newest share first.
+     *
+     * @return list<StoryHeadlineModel>
+     */
+    public function memberHeadlinesOf(int $storyId, int $limit): array
+    {
+        $outletHeadlines = $this->outletHeadlinesOf($storyId, $limit);
+
+        return $outletHeadlines !== [] ? $outletHeadlines : $this->cardHeadlinesOf($storyId, $limit);
+    }
+
+    /**
+     * The user's stories seen at or after $seenSince without a title or grown by half since theirs, last attempted at
+     * or before $attemptedBefore.
+     *
+     * @return list<int>
+     */
+    public function titleDueOf(int $userId, \DateTimeImmutable $attemptedBefore, \DateTimeImmutable $seenSince): array
+    {
+        /** @var list<int|string> $storyIds */
+        $storyIds = $this->getEntityManager()->getConnection()->fetchFirstColumn(
+            'SELECT story.id FROM trending_story story WHERE story.user_id = :user AND story.last_seen >= :seenSince'
+            . ' AND (story.llm_title_attempted_at IS NULL OR story.llm_title_attempted_at <= :attemptedBefore)'
+            . ' AND (story.llm_title IS NULL OR ' . self::MEMBER_COUNT . ' * 2 >= story.llm_title_member_count * 3)'
+            . ' ORDER BY story.id',
+            ['user' => $userId, 'attemptedBefore' => $attemptedBefore, 'seenSince' => $seenSince],
+            [
+                'user' => ParameterType::INTEGER,
+                'attemptedBefore' => Types::DATETIME_IMMUTABLE,
+                'seenSince' => Types::DATETIME_IMMUTABLE,
+            ],
+        );
+
+        return array_map(static fn (int|string $storyId): int => (int) $storyId, $storyIds);
+    }
+
+    public function recordTitle(int $storyId, string $title, \DateTimeImmutable $attemptedAt): void
+    {
+        $this->getEntityManager()->getConnection()->executeStatement(
+            'UPDATE trending_story SET llm_title = :title,'
+            . ' llm_title_member_count = (SELECT COUNT(*) FROM trending_story_entry member'
+            . ' WHERE member.story_id = :story), llm_title_attempted_at = :attemptedAt WHERE id = :story',
+            ['title' => $title, 'attemptedAt' => $attemptedAt, 'story' => $storyId],
+            ['attemptedAt' => Types::DATETIME_IMMUTABLE, 'story' => ParameterType::INTEGER],
+        );
+    }
+
+    public function recordTitleAttempt(int $storyId, \DateTimeImmutable $attemptedAt): void
+    {
+        $this->getEntityManager()->getConnection()->executeStatement(
+            'UPDATE trending_story SET llm_title_attempted_at = :attemptedAt WHERE id = :story',
+            ['attemptedAt' => $attemptedAt, 'story' => $storyId],
+            ['attemptedAt' => Types::DATETIME_IMMUTABLE, 'story' => ParameterType::INTEGER],
         );
     }
 
@@ -127,6 +218,74 @@ final class TrendingStoryRepository extends ServiceEntityRepository
         );
 
         return array_map(static fn (int|string $storyId): int => (int) $storyId, $viewed);
+    }
+
+    /** @return list<StoryHeadlineModel> */
+    private function outletHeadlinesOf(int $storyId, int $limit): array
+    {
+        /** @var list<array{title: string, title_derived: bool|int|string, summary: string|null, feed_title: string|null, language: string|null}> $rows */
+        $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
+            \sprintf(
+                'SELECT entry.title, entry.title_derived, SUBSTR(entry.summary, 1, %d) AS summary,'
+                . ' feed.title AS feed_title, COALESCE(entry.language, feed.language) AS language'
+                . ' FROM trending_story_entry member'
+                . ' JOIN entry ON entry.id = member.entry_id'
+                . ' JOIN feed ON feed.id = member.feed_id AND feed.network IS NULL'
+                . ' WHERE member.story_id = :story AND NOT EXISTS (SELECT 1 FROM trending_story_entry sibling'
+                . ' JOIN entry newer ON newer.id = sibling.entry_id'
+                . ' WHERE sibling.story_id = member.story_id AND sibling.feed_id = member.feed_id'
+                . ' AND (newer.effective_date > entry.effective_date'
+                . ' OR (newer.effective_date = entry.effective_date AND newer.id > entry.id)))'
+                . ' ORDER BY entry.effective_date DESC, entry.id DESC LIMIT %d',
+                HeadlineBody::SOURCE_CHARACTERS,
+                $limit,
+            ),
+            ['story' => $storyId],
+            ['story' => ParameterType::INTEGER],
+        );
+
+        return array_map(
+            static fn (array $row): StoryHeadlineModel => new StoryHeadlineModel(
+                $row['title'],
+                (bool) (int) $row['title_derived']
+                    ? HeadlineBody::bodyAfterTitle($row['title'], $row['summary'])
+                    : HeadlineBody::body($row['summary']),
+                $row['feed_title'],
+                $row['language'] === null ? null : FeedLanguage::from($row['language']),
+            ),
+            $rows,
+        );
+    }
+
+    /** @return list<StoryHeadlineModel> */
+    private function cardHeadlinesOf(int $storyId, int $limit): array
+    {
+        /** @var list<array{title: string, description: string|null, language: string|null}> $rows */
+        $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
+            \sprintf(
+                'SELECT link.title, SUBSTR(link.description, 1, %d) AS description, link.language'
+                . ' FROM (SELECT member.shared_link_id, MAX(entry.effective_date) AS newest_share'
+                . ' FROM trending_story_entry member JOIN entry ON entry.id = member.entry_id'
+                . ' WHERE member.story_id = :story AND member.article_site IS NOT NULL'
+                . ' AND member.shared_link_id IS NOT NULL GROUP BY member.shared_link_id) card'
+                . ' JOIN shared_link link ON link.id = card.shared_link_id'
+                . ' ORDER BY card.newest_share DESC, link.id DESC LIMIT %d',
+                HeadlineBody::SOURCE_CHARACTERS,
+                $limit,
+            ),
+            ['story' => $storyId],
+            ['story' => ParameterType::INTEGER],
+        );
+
+        return array_map(
+            static fn (array $row): StoryHeadlineModel => new StoryHeadlineModel(
+                $row['title'],
+                HeadlineBody::body($row['description']),
+                null,
+                $row['language'] === null ? null : FeedLanguage::from($row['language']),
+            ),
+            $rows,
+        );
     }
 
     /**
