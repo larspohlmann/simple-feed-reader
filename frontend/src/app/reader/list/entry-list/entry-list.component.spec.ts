@@ -962,6 +962,16 @@ describe('EntryListComponent', () => {
     ).not.toBeNull();
   });
 
+  it("puts a magazine's loading placeholders in the column its cards land in (#2329)", () => {
+    const loading = (layout: string) =>
+      (mount({ loading: true, items: [], layout }).nativeElement as HTMLElement).querySelector(
+        '.skeleton',
+      )?.parentElement?.classList;
+
+    expect(loading('magazine')).toContain('magazine');
+    expect(loading('list')).not.toContain('magazine');
+  });
+
   it('shows the search empty state with the term, and no catalog link', () => {
     const element = mount({
       loading: false,

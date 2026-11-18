@@ -177,6 +177,37 @@ for (const layout of ['magazine', 'list'] as const) {
   });
 }
 
+test.describe("a story's list loads in its own column (magazine, desktop)", () => {
+  test.use({ viewport: { width: 1280, height: 900 } });
+
+  test('its placeholders stand where its cards land', async ({ page }) => {
+    await stubStories(page, false);
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    await page.route(
+      (url) => url.pathname === `/api/entries/trending-stories/${STORY_ID}`,
+      async (route) => {
+        await held;
+        return route.fulfill({ status: 200, json: storyPage(STORY_ID, false) });
+      },
+    );
+    await signIn(page, 'magazine');
+    await openTrending(page);
+
+    await page.getByRole('link', { name: TITLE }).click();
+    await layer(page).locator('.skeleton').first().waitFor();
+    await settleAnimations(page.locator('.story-overlay'));
+    const placeholder = await layer(page).locator('.skeleton').first().boundingBox();
+    release();
+    const card = layer(page).locator('.rows.magazine > .magazine-slot').first();
+    await expect(card).toBeVisible();
+    const landed = await card.boundingBox();
+
+    expect(Math.abs(placeholder!.x - landed!.x)).toBeLessThanOrEqual(2);
+    expect(Math.abs(placeholder!.width - landed!.width)).toBeLessThanOrEqual(2);
+  });
+});
+
 declare global {
   interface Window {
     storyAnimations: string[];
