@@ -2,18 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Social\Support;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Enum\SourceFormat;
 use App\Service\Social\Social\Model\ExportedSubscriptionModel;
-use App\Service\Social\Social\Support\ExportedFeed;
+use App\Service\Social\Social\ExportedFeeds;
 use App\Tests\Support\BlueskyProfiles;
 use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\SocialRuleWiring;
 use PHPUnit\Framework\TestCase;
 
-final class ExportedFeedTest extends TestCase
+final class ExportedFeedsTest extends TestCase
 {
     private const string RUSTY_RSS = 'https://bsky.app/profile/' . BlueskyProfiles::RUSTY . '/rss';
 
@@ -23,7 +24,7 @@ final class ExportedFeedTest extends TestCase
 
         self::assertEquals(
             new ExportedSubscriptionModel($author, self::RUSTY_RSS, SourceFormat::XML),
-            ExportedFeed::of($author),
+            self::exportedFeeds()->buildExport($author),
         );
     }
 
@@ -37,7 +38,7 @@ final class ExportedFeedTest extends TestCase
 
         self::assertEquals(
             new ExportedSubscriptionModel($scraped, 'https://blog.example.com/', SourceFormat::SCRAPED),
-            ExportedFeed::of($scraped),
+            self::exportedFeeds()->buildExport($scraped),
         );
         self::assertEquals(
             new ExportedSubscriptionModel(
@@ -45,7 +46,7 @@ final class ExportedFeedTest extends TestCase
                 'social:mastodon:4:author:' . BlueskyProfiles::RUSTY,
                 SourceFormat::MASTODON_API,
             ),
-            ExportedFeed::of($mastodonAuthor),
+            self::exportedFeeds()->buildExport($mastodonAuthor),
         );
     }
 
@@ -55,11 +56,27 @@ final class ExportedFeedTest extends TestCase
         $author = self::subscription('social:bluesky:4:author:' . BlueskyProfiles::RUSTY, SourceFormat::BLUESKY_API);
         $other = self::subscription('https://blog.example.com/feed.xml', SourceFormat::XML);
 
-        self::assertSame([$rss, $other], self::subscriptionsOf(ExportedFeed::withoutRepeats([$rss, $author, $other])));
+        self::assertSame(
+            [$rss, $other],
+            self::subscriptionsOf(self::exportedFeeds()->buildExportsWithoutRepeats([$rss, $author, $other])),
+        );
         self::assertSame(
             [$author, $other],
-            self::subscriptionsOf(ExportedFeed::withoutRepeats([$author, $rss, $other])),
+            self::subscriptionsOf(self::exportedFeeds()->buildExportsWithoutRepeats([$author, $rss, $other])),
         );
+    }
+
+    public function testAnAuthorFeedWithNoStoredNetworkStillExportsAsRss(): void
+    {
+        $author = self::subscription('social:bluesky:4:author:' . BlueskyProfiles::RUSTY, SourceFormat::BLUESKY_API);
+        self::assertNull($author->getFeed()->getNetwork());
+
+        self::assertSame(self::RUSTY_RSS, self::exportedFeeds()->buildExport($author)->feedUrl);
+    }
+
+    private static function exportedFeeds(): ExportedFeeds
+    {
+        return new ExportedFeeds(SocialRuleWiring::profileFeeds());
     }
 
     /**

@@ -18,4 +18,7 @@ interface ProfileFeedRuleInterface
     public function formatHandle(string $identity): string;
 
     public function formatTitle(string $feedUrl, string $channelTitle): string;
+
+    /** the public feed URL this feed leaves as on export; null when it leaves as it is */
+    public function buildExportUrl(string $feedUrl): ?string;
 }

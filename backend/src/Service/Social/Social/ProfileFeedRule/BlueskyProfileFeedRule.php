@@ -6,8 +6,10 @@ namespace App\Service\Social\Social\ProfileFeedRule;
 
 use App\Enum\SocialNetwork;
 use App\Service\Social\Bluesky\Support\BlueskyActorKey;
+use App\Service\Social\Social\Support\BlueskyActor;
 use App\Service\Social\Social\Support\BlueskyProfileFeed;
 use App\Service\Social\Social\Support\ProfileIdentity;
+use App\Service\Social\Social\Support\SocialFeedUrl;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Bluesky->value)]
@@ -40,5 +42,16 @@ final readonly class BlueskyProfileFeedRule implements ProfileFeedRuleInterface
         }
 
         return trim($match[1]);
+    }
+
+    /**
+     * An author feed leaves as its profile's public RSS: restored, that answers 403, and the hidden-profile switch
+     * moves it back to an author feed of the restoring account.
+     */
+    public function buildExportUrl(string $feedUrl): ?string
+    {
+        $author = SocialFeedUrl::parseAuthor(SocialNetwork::Bluesky, $feedUrl);
+
+        return null !== $author && BlueskyActor::isDid($author) ? BlueskyProfileFeed::buildUrl($author) : null;
     }
 }

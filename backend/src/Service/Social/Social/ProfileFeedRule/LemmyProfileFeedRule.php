@@ -46,4 +46,9 @@ final readonly class LemmyProfileFeedRule implements ProfileFeedRuleInterface
 
         return $match['community'] . ' - ' . $match['site'];
     }
+
+    public function buildExportUrl(string $feedUrl): ?string
+    {
+        return null;
+    }
 }
