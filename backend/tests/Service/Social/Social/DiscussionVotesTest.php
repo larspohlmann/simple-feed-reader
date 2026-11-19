@@ -27,6 +27,7 @@ use App\Service\Social\Social\Model\DiscussionVoteResultModel;
 use App\Service\Social\Social\PostVoter\PostVoterInterface;
 use App\Tests\DbTestCase;
 use App\Tests\Support\LemmyPostEntries;
+use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
@@ -37,9 +38,10 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class DiscussionVotesTest extends DbTestCase
 {
+    use ReadsFixtures;
     use SeedsUsers;
 
-    private const string FIXTURES = __DIR__ . '/../../../Fixtures/lemmy/';
+    private const string FIXTURES = 'lemmy/';
     private const string LIKE = 'POST https://lemmy.example/api/v3/post/like';
     private const string HOME_POST = 'GET https://lemmy.example/api/v3/post?id=42';
     private const string COMMENT_ADDRESS = 'https://origin.example/comment/5';
@@ -58,7 +60,7 @@ final class DiscussionVotesTest extends DbTestCase
 
     public function testAVoteIsCastAndMirrored(): void
     {
-        $votes = $this->votes([self::LIKE => self::fixture('post-like.json')]);
+        $votes = $this->votes([self::LIKE => $this->buildResponse('post-like.json')]);
         $account = $this->lemmyAccount();
         $entry = $this->lemmyPost();
 
@@ -72,7 +74,7 @@ final class DiscussionVotesTest extends DbTestCase
 
     public function testAVoteOfNoneDropsTheStoredRow(): void
     {
-        $votes = $this->votes([self::LIKE => self::fixture('post-like-no-vote.json')]);
+        $votes = $this->votes([self::LIKE => $this->buildResponse('post-like-no-vote.json')]);
         $account = $this->lemmyAccount();
         $entry = $this->lemmyPost();
         $this->storeVote($entry, $account, VoteScore::Up);
@@ -86,7 +88,7 @@ final class DiscussionVotesTest extends DbTestCase
 
     public function testARecastByAnotherAccountUpdatesTheStoredRow(): void
     {
-        $votes = $this->votes([self::LIKE => self::fixture('post-like-downvoted.json')]);
+        $votes = $this->votes([self::LIKE => $this->buildResponse('post-like-downvoted.json')]);
         $acting = $this->lemmyAccount();
         $other = $this->lemmyAccount('feddit.example');
         $entry = $this->lemmyPost();
@@ -100,8 +102,8 @@ final class DiscussionVotesTest extends DbTestCase
     public function testACommentVoteForgetsTheCachedComments(): void
     {
         $votes = $this->votes([
-            self::RESOLVE_COMMENT => self::fixture('resolve-comment.json'),
-            self::COMMENT_LIKE => self::fixture('comment-like.json'),
+            self::RESOLVE_COMMENT => $this->buildResponse('resolve-comment.json'),
+            self::COMMENT_LIKE => $this->buildResponse('comment-like.json'),
         ]);
         $account = $this->lemmyAccount();
         $entry = $this->lemmyPost();
@@ -120,7 +122,7 @@ final class DiscussionVotesTest extends DbTestCase
 
     public function testASyncMirrorsWhatTheNetworkReports(): void
     {
-        $votes = $this->votes([self::HOME_POST => self::fixture('post-like-downvoted.json')]);
+        $votes = $this->votes([self::HOME_POST => $this->buildResponse('post-like-downvoted.json')]);
         $account = $this->lemmyAccount();
         $entry = $this->lemmyPost();
 
@@ -295,8 +297,8 @@ final class DiscussionVotesTest extends DbTestCase
         );
     }
 
-    private static function fixture(string $name): MockResponse
+    private function buildResponse(string $name): MockResponse
     {
-        return new MockResponse((string) file_get_contents(self::FIXTURES . $name));
+        return new MockResponse($this->fixture(self::FIXTURES . $name));
     }
 }
