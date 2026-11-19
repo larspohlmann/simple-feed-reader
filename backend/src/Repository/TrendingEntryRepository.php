@@ -35,7 +35,7 @@ final readonly class TrendingEntryRepository
         do {
             $rows = $this->chunkAfter($userId, $since, $afterId);
             foreach ($rows as $row) {
-                $entry = self::modelOf($row);
+                $entry = self::buildEntry($row);
                 $afterId = $entry->id;
                 yield $entry;
             }
@@ -47,7 +47,7 @@ final readonly class TrendingEntryRepository
      *
      * @return array<int, MemberHeadlineModel> by entry id
      */
-    public function headlinesOf(array $entryIds): array
+    public function findHeadlines(array $entryIds): array
     {
         $headlines = [];
         foreach (array_chunk($entryIds, self::LOOKUP_IDS) as $chunk) {
@@ -72,7 +72,7 @@ final readonly class TrendingEntryRepository
      *
      * @return array<int, string> the title of every link that has a non-blank one, by link id
      */
-    public function linkTitlesOf(array $sharedLinkIds): array
+    public function findLinkTitles(array $sharedLinkIds): array
     {
         $titles = [];
         foreach (array_chunk($sharedLinkIds, self::LOOKUP_IDS) as $chunk) {
@@ -172,7 +172,7 @@ final readonly class TrendingEntryRepository
      *   card_description: string|null, card_site_name: string|null, card_language: string|null
      * } $row
      */
-    private static function modelOf(array $row): WindowEntryModel
+    private static function buildEntry(array $row): WindowEntryModel
     {
         return new WindowEntryModel(
             (int) $row['id'],
@@ -182,7 +182,7 @@ final readonly class TrendingEntryRepository
             (bool) (int) $row['title_derived'],
             $row['summary'],
             NaiveUtc::parse($row['effective_date']),
-            new EntryLinksModel($row['url_hash'], $row['article_url'], self::cardOf($row)),
+            new EntryLinksModel($row['url_hash'], $row['article_url'], self::buildCard($row)),
         );
     }
 
@@ -192,7 +192,7 @@ final readonly class TrendingEntryRepository
      *   card_description: string|null, card_site_name: string|null, card_language: string|null
      * } $row
      */
-    private static function cardOf(array $row): ?WindowLinkCardModel
+    private static function buildCard(array $row): ?WindowLinkCardModel
     {
         if (
             $row['card_link_id'] === null || $row['card_url_hash'] === null || $row['card_url'] === null

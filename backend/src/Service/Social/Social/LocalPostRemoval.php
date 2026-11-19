@@ -29,7 +29,8 @@ final readonly class LocalPostRemoval
     /** @param list<string> $replyGuids the guids the post's deleted thread replies may come back under */
     public function remove(Entry $entry, array $replyGuids): void
     {
-        $this->removeCopies($entry, $this->removals->copiesOf($entry), array_map(EntryGuid::hashOf(...), $replyGuids));
+        $copies = $this->removals->findCopies($entry);
+        $this->removeCopies($entry, $copies, array_map(EntryGuid::hashOf(...), $replyGuids));
     }
 
     /** Removes the entry alone: every other stored copy of its post stays. */

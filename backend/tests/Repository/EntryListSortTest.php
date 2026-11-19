@@ -18,28 +18,28 @@ final class EntryListSortTest extends TestCase
     {
         $viewedAt = new \DateTimeImmutable('2026-11-09T10:00:00Z');
 
-        self::assertSame($viewedAt, EntryListSort::ViewedAt->instantOf($this->row(viewedAt: $viewedAt)));
+        self::assertSame($viewedAt, EntryListSort::ViewedAt->requireInstant($this->row(viewedAt: $viewedAt)));
     }
 
     public function testTheSharedSortReadsTheSharedInstant(): void
     {
         $sharedAt = new \DateTimeImmutable('2026-11-09T11:00:00Z');
 
-        self::assertSame($sharedAt, EntryListSort::SharedAt->instantOf($this->row(sharedAt: $sharedAt)));
+        self::assertSame($sharedAt, EntryListSort::SharedAt->requireInstant($this->row(sharedAt: $sharedAt)));
     }
 
     public function testTheViewedSortRejectsARowThatWasNeverViewed(): void
     {
         $this->expectException(\LogicException::class);
 
-        EntryListSort::ViewedAt->instantOf($this->row());
+        EntryListSort::ViewedAt->requireInstant($this->row());
     }
 
     public function testTheSharedSortRejectsARowThatWasNeverShared(): void
     {
         $this->expectException(\LogicException::class);
 
-        EntryListSort::SharedAt->instantOf($this->row());
+        EntryListSort::SharedAt->requireInstant($this->row());
     }
 
     private function row(?\DateTimeImmutable $viewedAt = null, ?\DateTimeImmutable $sharedAt = null): EntryListRow

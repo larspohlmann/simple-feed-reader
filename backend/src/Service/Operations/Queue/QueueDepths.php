@@ -49,9 +49,11 @@ final readonly class QueueDepths
             QueueName::RecommendationRuns => $this->recommendationRuns->activeBacklog(),
             QueueName::ProfileRuns => $this->profileRuns->activeBacklog(),
             QueueName::ImageVerification => $this->pendingImages->backlog(),
-            QueueName::ShareEnrichmentAppView => $this->shareEnrichments->backlogOf(ShareEnrichmentKind::AppView),
-            QueueName::ShareEnrichmentLinkCards => $this->shareEnrichments->backlogOf(ShareEnrichmentKind::LinkCards),
-            QueueName::ShareEnrichmentSelfThread => $this->shareEnrichments->backlogOf(ShareEnrichmentKind::SelfThread),
+            QueueName::ShareEnrichmentAppView => $this->shareEnrichments->findBacklog(ShareEnrichmentKind::AppView),
+            QueueName::ShareEnrichmentLinkCards => $this->shareEnrichments->findBacklog(ShareEnrichmentKind::LinkCards),
+            QueueName::ShareEnrichmentSelfThread => $this->shareEnrichments->findBacklog(
+                ShareEnrichmentKind::SelfThread,
+            ),
             QueueName::Transcripts => $this->transcripts->pendingBacklog(),
             QueueName::DueFeeds => $this->feeds->dueBacklog(
                 new DueFeedCriteria($this->clock->now(), new EveryFeedTargetModel()),

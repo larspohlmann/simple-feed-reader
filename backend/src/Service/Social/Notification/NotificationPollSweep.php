@@ -75,7 +75,7 @@ final readonly class NotificationPollSweep
             if (null === $account) {
                 return;
             }
-            $this->polls->stampOf($account)->recordChecked($this->clock->now());
+            $this->polls->ensureStamp($account)->recordChecked($this->clock->now());
             $this->entityManager->flush();
         } catch (\Throwable $exception) {
             $this->logger->error('Stamping a failed notification poll failed.', [

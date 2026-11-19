@@ -236,7 +236,7 @@ final class PrivateFeedsTest extends DbTestCase
                 'list:at://did:plc:alice/app.bsky.graph.list/1' => true,
                 'custom_feed:at://did:plc:bob/app.bsky.feed.generator/f' => true,
             ],
-            $known->keysOf($account),
+            $known->findKeys($account),
         );
     }
 

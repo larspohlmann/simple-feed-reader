@@ -43,7 +43,9 @@ final readonly class SocialAccountController
     {
         $accounts = $this->editor->accountsOf($user);
 
-        return new JsonResponse($this->accountJson->list($accounts, $this->syncChanges->recentOf($accounts)));
+        $changes = $this->syncChanges->findChangesByAccount($accounts);
+
+        return new JsonResponse($this->accountJson->list($accounts, $changes));
     }
 
     #[Route('/bluesky', name: 'api_me_social_accounts_connect_bluesky', methods: ['POST'])]
@@ -99,7 +101,9 @@ final readonly class SocialAccountController
 
         $account = $this->connector->reconnect($account, $credentials);
 
-        return new JsonResponse($this->accountJson->account($account, $this->syncChanges->recentOf([$account])));
+        $changes = $this->syncChanges->findChangesByAccount([$account]);
+
+        return new JsonResponse($this->accountJson->account($account, $changes));
     }
 
     #[Route('/{id}/default', name: 'api_me_social_accounts_default', requirements: ['id' => '\d+'], methods: ['PUT'])]

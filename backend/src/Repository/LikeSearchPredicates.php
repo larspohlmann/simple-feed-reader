@@ -20,7 +20,7 @@ final readonly class LikeSearchPredicates
             $columnMatch = $terms->isWholeWord
                 ? $this->wholeWordMatch($qb, $parameter, $term)
                 : $this->substringMatch($qb, $parameter, $term);
-            $predicates[] = SearchedColumns::anyOf($columnMatch, $parameter, $entryAlias);
+            $predicates[] = SearchedColumns::buildAnyColumnMatch($columnMatch, $parameter, $entryAlias);
         }
 
         return '(' . implode(' AND ', $predicates) . ')';

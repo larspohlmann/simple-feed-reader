@@ -29,7 +29,7 @@ final readonly class SubscriptionActivityCounter
     public function lastDays(User $user): SubscriptionActivityModel
     {
         $window = DayWindowModel::lastDays(UtcDay::fromInstant($this->clock->now()));
-        $subscriptions = $this->activity->plainSubscriptionsOf($user->requireId());
+        $subscriptions = $this->activity->findPlainSubscriptions($user->requireId());
         $sources = $this->daySourcesFactory->forWindow($subscriptions, $window);
         $live = $this->liveCounter->since(
             $subscriptions,

@@ -13,7 +13,7 @@ final readonly class EntryListRowDiscussion
     {
     }
 
-    public static function storedOf(Discussion $discussion): self
+    public static function fromDiscussion(Discussion $discussion): self
     {
         return new self($discussion->url, $discussion->commentsLoad);
     }

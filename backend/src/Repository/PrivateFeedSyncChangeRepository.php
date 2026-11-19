@@ -47,7 +47,7 @@ final class PrivateFeedSyncChangeRepository extends ServiceEntityRepository
      *
      * @return array<int, list<PrivateFeedSyncChange>> newest first, by account id
      */
-    public function recentOf(array $accounts): array
+    public function findChangesByAccount(array $accounts): array
     {
         if ([] === $accounts) {
             return [];

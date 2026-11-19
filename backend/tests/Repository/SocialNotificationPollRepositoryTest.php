@@ -74,10 +74,10 @@ final class SocialNotificationPollRepositoryTest extends DbTestCase
     {
         $account = $this->account($this->users->create('poll-stamp-owner@example.test'), 'did:plc:stamp');
 
-        $created = $this->polls->stampOf($account);
+        $created = $this->polls->ensureStamp($account);
         $this->entityManager->flush();
 
-        self::assertSame($created, $this->polls->stampOf($account));
+        self::assertSame($created, $this->polls->ensureStamp($account));
         self::assertCount(1, $this->polls->findAll());
     }
 
@@ -92,6 +92,6 @@ final class SocialNotificationPollRepositoryTest extends DbTestCase
 
     private function checked(SocialAccount $account, string $at): void
     {
-        $this->polls->stampOf($account)->recordChecked(new \DateTimeImmutable($at));
+        $this->polls->ensureStamp($account)->recordChecked(new \DateTimeImmutable($at));
     }
 }

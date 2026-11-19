@@ -81,7 +81,7 @@ final class SharedLinkRepository extends ServiceEntityRepository
                 DatabasePlatform::insertIgnoreClause($connection),
             ),
             self::ROWS_PER_INSERT,
-        )->rows($connection, array_map(self::rowOf(...), $links));
+        )->rows($connection, array_map(self::buildRow(...), $links));
     }
 
     public function renameSite(int $linkId, string $from, string $to): void
@@ -128,7 +128,7 @@ final class SharedLinkRepository extends ServiceEntityRepository
     }
 
     /** @return list<int|string|null> */
-    private static function rowOf(NewSharedLinkModel $link): array
+    private static function buildRow(NewSharedLinkModel $link): array
     {
         return [
             $link->preview->url,

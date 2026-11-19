@@ -101,7 +101,7 @@ final readonly class TrendingStoryHistoryRepository
      */
     public function saveAll(StoryBuildModel $build, array $assignments): array
     {
-        $earliestJoins = $this->earliestJoinsOf($build, $assignments);
+        $earliestJoins = $this->findEarliestJoins($build, $assignments);
         $storyIdByEntry = [];
         foreach ($assignments as $assignment) {
             $storyId = $this->save($assignment, $build, $earliestJoins);
@@ -167,7 +167,7 @@ final readonly class TrendingStoryHistoryRepository
     private function save(StoryAssignmentModel $assignment, StoryBuildModel $build, array $earliestJoins): int
     {
         $joining = $assignment->joining();
-        $joinedAts = self::joinedAtsOf($joining, $earliestJoins, $build->builtAt);
+        $joinedAts = self::buildJoinedAts($joining, $earliestJoins, $build->builtAt);
         $storyId = $assignment->storyId;
         if ($storyId === null) {
             $storyId = $this->insertStory($assignment, $build);
@@ -179,7 +179,7 @@ final readonly class TrendingStoryHistoryRepository
             $this->absorb($storyId, \sprintf(
                 'story_id <> %d AND %s AND entry_id IN (%s)',
                 $storyId,
-                self::ofReader($build->userId),
+                self::buildReaderCondition($build->userId),
                 self::idList($claimed),
             ));
         }
@@ -241,8 +241,8 @@ final readonly class TrendingStoryHistoryRepository
     /** A reader following both keeps one follow with the earlier times, so nothing joined since goes unseen. */
     private function mergeFollows(StoryMergeModel $merge): void
     {
-        $survivorFollows = $this->followsOf($merge->survivorId);
-        foreach ($this->followsOf($merge->mergedId) as $userId => $follow) {
+        $survivorFollows = $this->findFollows($merge->survivorId);
+        foreach ($this->findFollows($merge->mergedId) as $userId => $follow) {
             $kept = $survivorFollows[$userId] ?? null;
             if ($kept === null) {
                 $this->connection()->executeStatement(
@@ -300,7 +300,7 @@ final readonly class TrendingStoryHistoryRepository
     }
 
     /** @return array<int, FollowRow> by user id */
-    private function followsOf(int $storyId): array
+    private function findFollows(int $storyId): array
     {
         /** @var array<int, FollowRow> $follows */
         $follows = $this->connection()->fetchAllAssociativeIndexed(
@@ -320,7 +320,7 @@ final readonly class TrendingStoryHistoryRepository
             'last_seen' => self::stored($assignment->group->lastSeen),
             'first_joined_at' => self::stored($build->builtAt),
             'last_joined_at' => self::stored($build->builtAt),
-            ...self::fallbackColumnsOf($assignment->fallbackTitle),
+            ...self::buildFallbackColumns($assignment->fallbackTitle),
         ]);
 
         return (int) $connection->lastInsertId();
@@ -346,13 +346,13 @@ final readonly class TrendingStoryHistoryRepository
                 'lastSeen' => self::stored($assignment->group->lastSeen),
                 'lastJoinedAt' => $joinedAts === [] ? null : max($joinedAts),
                 'story' => $storyId,
-                ...self::fallbackColumnsOf($assignment->fallbackTitle),
+                ...self::buildFallbackColumns($assignment->fallbackTitle),
             ],
         );
     }
 
     /** @return array{fallback_title: ?string, fallback_entry_id: ?int} */
-    private static function fallbackColumnsOf(?FallbackTitleModel $title): array
+    private static function buildFallbackColumns(?FallbackTitleModel $title): array
     {
         return [
             'fallback_title' => $title === null ? null : mb_substr($title->title, 0, self::FALLBACK_TITLE_LENGTH),
@@ -390,7 +390,7 @@ final readonly class TrendingStoryHistoryRepository
      *
      * @return array<int, string> by entry id
      */
-    private function earliestJoinsOf(StoryBuildModel $build, array $assignments): array
+    private function findEarliestJoins(StoryBuildModel $build, array $assignments): array
     {
         $entryIds = [];
         foreach ($assignments as $assignment) {
@@ -403,7 +403,7 @@ final readonly class TrendingStoryHistoryRepository
             /** @var array<int, string> $chunkJoins */
             $chunkJoins = $this->connection()->fetchAllKeyValue(
                 'SELECT entry_id, MIN(joined_at) FROM trending_story_entry WHERE entry_id IN (?) AND '
-                . self::ofReader($build->userId) . ' GROUP BY entry_id',
+                . self::buildReaderCondition($build->userId) . ' GROUP BY entry_id',
                 [$chunk],
                 [ArrayParameterType::INTEGER],
             );
@@ -419,7 +419,7 @@ final readonly class TrendingStoryHistoryRepository
      *
      * @return array<int, string> by entry id
      */
-    private static function joinedAtsOf(array $members, array $earliestJoins, \DateTimeImmutable $builtAt): array
+    private static function buildJoinedAts(array $members, array $earliestJoins, \DateTimeImmutable $builtAt): array
     {
         $joinedAts = [];
         foreach ($members as $member) {
@@ -452,7 +452,7 @@ final readonly class TrendingStoryHistoryRepository
     }
 
     /** Two readers' stories may hold the same entry: every read across stories by entry id stays in one reader's. */
-    private static function ofReader(int $userId): string
+    private static function buildReaderCondition(int $userId): string
     {
         return \sprintf('story_id IN (SELECT id FROM trending_story WHERE user_id = %d)', $userId);
     }

@@ -45,7 +45,7 @@ final class PrivateFeedSyncChangeRepositoryTest extends DbTestCase
         $this->repository()->trimTo($this->account, 10);
         $this->entityManager->clear();
 
-        $recent = $this->repository()->recentOf([
+        $recent = $this->repository()->findChangesByAccount([
             $this->accountAgain($this->account),
             $this->accountAgain($this->otherAccount),
         ]);
@@ -64,10 +64,10 @@ final class PrivateFeedSyncChangeRepositoryTest extends DbTestCase
         $this->change($this->account, 5);
         $this->entityManager->flush();
 
-        $recent = $this->repository()->recentOf([$this->account]);
+        $recent = $this->repository()->findChangesByAccount([$this->account]);
 
         self::assertSame(['9', '5', '2'], $this->remoteIds($recent[$this->account->requireId()]));
-        self::assertSame([], $this->repository()->recentOf([]));
+        self::assertSame([], $this->repository()->findChangesByAccount([]));
     }
 
     public function testALongNameIsCutToTheColumnLength(): void
@@ -84,7 +84,8 @@ final class PrivateFeedSyncChangeRepositoryTest extends DbTestCase
         $this->entityManager->flush();
         $this->entityManager->clear();
 
-        $stored = $this->repository()->recentOf([$this->accountAgain($this->account)])[$this->account->requireId()][0];
+        $changes = $this->repository()->findChangesByAccount([$this->accountAgain($this->account)]);
+        $stored = $changes[$this->account->requireId()][0];
 
         self::assertSame(str_repeat('é', 512), $stored->getName());
     }

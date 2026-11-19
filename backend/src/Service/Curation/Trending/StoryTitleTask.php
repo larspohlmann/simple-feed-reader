@@ -54,7 +54,7 @@ final readonly class StoryTitleTask implements StoryAiTaskInterface
     /** Ranks the reader's windows only when a story a window could show is due at all. */
     public function dueStoryIds(User $user, \DateTimeImmutable $now): array
     {
-        $due = $this->stories->titleDueOf(
+        $due = $this->stories->findStoriesDueForTitle(
             $user->requireId(),
             $now->modify(self::RETRY_AFTER),
             self::earliestWindowStart($now),
@@ -111,7 +111,7 @@ final readonly class StoryTitleTask implements StoryAiTaskInterface
             fn (StoryHeadlineModel $headline): StoryHeadlineModel => $headline->cleaned(
                 $this->markers->clean($headline->headline, $headline->feedTitle, $headline->language)->text,
             ),
-            $this->stories->memberHeadlinesOf($storyId, self::HEADLINES),
+            $this->stories->findMemberHeadlines($storyId, self::HEADLINES),
         );
     }
 

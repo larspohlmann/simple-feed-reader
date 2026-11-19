@@ -47,7 +47,7 @@ final class SocialNotificationPollRepository extends ServiceEntityRepository
         return array_map(intval(...), $ids);
     }
 
-    public function stampOf(SocialAccount $account): SocialNotificationPoll
+    public function ensureStamp(SocialAccount $account): SocialNotificationPoll
     {
         $stamp = $this->findOneBy(['socialAccount' => $account]);
         if (null !== $stamp) {

@@ -79,7 +79,7 @@ final class SubscriptionJson
     public static function one(Subscription $subscription, int $unreadCount = 0, int $entryCount = 0): array
     {
         $feed = $subscription->getFeed();
-        $title = SubscriptionDisplayTitle::ofSubscription($subscription);
+        $title = SubscriptionDisplayTitle::fromSubscription($subscription);
 
         $tags = [];
         foreach ($subscription->getSubscriptionTags() as $subscriptionTag) {

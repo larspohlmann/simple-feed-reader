@@ -40,13 +40,13 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
     /** @return list<DebugLogRow> */
     public function listForRun(User $user, int $runId): array
     {
-        return $this->listRowsOf($user, self::OWNER_RUN, $runId);
+        return $this->findListRows($user, self::OWNER_RUN, $runId);
     }
 
     /** @return list<DebugLogRow> the rows of one profile run; `runId` carries the profile run's id */
     public function listForProfileRun(User $user, int $profileRunId): array
     {
-        return $this->listRowsOf($user, self::OWNER_PROFILE_RUN, $profileRunId);
+        return $this->findListRows($user, self::OWNER_PROFILE_RUN, $profileRunId);
     }
 
     /**
@@ -54,7 +54,7 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
      *
      * @return list<DebugLogRow>
      */
-    private function listRowsOf(User $user, string $owner, int $ownerId): array
+    private function findListRows(User $user, string $owner, int $ownerId): array
     {
         /** @var list<array{id: int, runId: int, phase: CallPhase, batchNumber: ?int, attempt: int,
          *     verdict: ?CallVerdict, requestBytes: int|string, responseBytes: int|string,
@@ -157,13 +157,13 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
      */
     public function streamingTextForRun(User $user, int $runId): array
     {
-        return $this->streamingTextOf($user, self::OWNER_RUN, $runId);
+        return $this->findStreamingTexts($user, self::OWNER_RUN, $runId);
     }
 
     /** @return array<int, string> log id => response text so far */
     public function streamingTextForProfileRun(User $user, int $profileRunId): array
     {
-        return $this->streamingTextOf($user, self::OWNER_PROFILE_RUN, $profileRunId);
+        return $this->findStreamingTexts($user, self::OWNER_PROFILE_RUN, $profileRunId);
     }
 
     /**
@@ -171,7 +171,7 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
      *
      * @return array<int, string>
      */
-    private function streamingTextOf(User $user, string $owner, int $ownerId): array
+    private function findStreamingTexts(User $user, string $owner, int $ownerId): array
     {
         /** @var list<array{id: int, responseText: string}> $rows */
         $rows = $this->createQueryBuilder('l')

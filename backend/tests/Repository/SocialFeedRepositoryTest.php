@@ -138,8 +138,8 @@ final class SocialFeedRepositoryTest extends DbTestCase
         $profileFeeds = new ProfileFeedSubscriptions($this->entityManager);
         $profileFeeds->subscribe($this->user, 'https://bsky.app/profile/did:plc:bob/rss');
 
-        self::assertSame([$own], SocialFeeds::repository($this->entityManager)->subscriptionsOf($this->account));
-        self::assertSame([$home], SocialFeeds::repository($this->entityManager)->findAllOf($this->account));
+        self::assertSame([$own], SocialFeeds::repository($this->entityManager)->findSubscriptions($this->account));
+        self::assertSame([$home], SocialFeeds::repository($this->entityManager)->findAllForAccount($this->account));
     }
 
     public function testSubscribedCollectionsAreTheAccountsOwnSubscribedOnesOnly(): void
@@ -162,7 +162,7 @@ final class SocialFeedRepositoryTest extends DbTestCase
                     'subscriptionId' => $writers->requireId(),
                 ],
             ],
-            SocialFeeds::repository($this->entityManager)->subscribedCollectionsOf($this->account),
+            SocialFeeds::repository($this->entityManager)->findSubscribedCollections($this->account),
         );
     }
 
@@ -190,10 +190,10 @@ final class SocialFeedRepositoryTest extends DbTestCase
         $own = $this->subscribe($home);
         $this->subscribeAs($this->stranger(), $home);
 
-        self::assertSame([$own], SocialFeeds::repository($this->entityManager)->subscriptionsOf($this->account));
+        self::assertSame([$own], SocialFeeds::repository($this->entityManager)->findSubscriptions($this->account));
         self::assertSame(
             [['kind' => SocialFeedKind::Home, 'remoteId' => '', 'subscriptionId' => $own->requireId()]],
-            SocialFeeds::repository($this->entityManager)->subscribedCollectionsOf($this->account),
+            SocialFeeds::repository($this->entityManager)->findSubscribedCollections($this->account),
         );
     }
 

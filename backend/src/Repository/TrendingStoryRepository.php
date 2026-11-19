@@ -79,7 +79,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
      *
      * @return array<int, StoryHeadingModel> the stories that have a title
      */
-    public function headingsOf(array $storyIds): array
+    public function findHeadings(array $storyIds): array
     {
         if ($storyIds === []) {
             return [];
@@ -107,11 +107,11 @@ final class TrendingStoryRepository extends ServiceEntityRepository
      *
      * @return list<StoryHeadlineModel>
      */
-    public function memberHeadlinesOf(int $storyId, int $limit): array
+    public function findMemberHeadlines(int $storyId, int $limit): array
     {
-        $outletHeadlines = $this->outletHeadlinesOf($storyId, $limit);
+        $outletHeadlines = $this->findOutletHeadlines($storyId, $limit);
 
-        return $outletHeadlines !== [] ? $outletHeadlines : $this->cardHeadlinesOf($storyId, $limit);
+        return $outletHeadlines !== [] ? $outletHeadlines : $this->findCardHeadlines($storyId, $limit);
     }
 
     /**
@@ -120,8 +120,11 @@ final class TrendingStoryRepository extends ServiceEntityRepository
      *
      * @return list<int>
      */
-    public function titleDueOf(int $userId, \DateTimeImmutable $attemptedBefore, \DateTimeImmutable $seenSince): array
-    {
+    public function findStoriesDueForTitle(
+        int $userId,
+        \DateTimeImmutable $attemptedBefore,
+        \DateTimeImmutable $seenSince,
+    ): array {
         /** @var list<int|string> $storyIds */
         $storyIds = $this->getEntityManager()->getConnection()->fetchFirstColumn(
             'SELECT story.id FROM trending_story story WHERE story.user_id = :user AND story.last_seen >= :seenSince'
@@ -228,7 +231,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     }
 
     /** @return list<StoryHeadlineModel> */
-    private function outletHeadlinesOf(int $storyId, int $limit): array
+    private function findOutletHeadlines(int $storyId, int $limit): array
     {
         /** @var list<array{title: string, title_derived: bool|int|string, summary: string|null, feed_title: string|null, language: string|null}> $rows */
         $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
@@ -265,7 +268,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     }
 
     /** @return list<StoryHeadlineModel> */
-    private function cardHeadlinesOf(int $storyId, int $limit): array
+    private function findCardHeadlines(int $storyId, int $limit): array
     {
         /** @var list<array{title: string, description: string|null, language: string|null}> $rows */
         $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(

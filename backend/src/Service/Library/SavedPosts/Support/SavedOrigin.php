@@ -40,7 +40,7 @@ final class SavedOrigin
 
     private static function cutName(Subscription $leaving): string
     {
-        return mb_substr(SubscriptionDisplayTitle::ofSubscription($leaving), 0, self::NAME_MAX_LENGTH);
+        return mb_substr(SubscriptionDisplayTitle::fromSubscription($leaving), 0, self::NAME_MAX_LENGTH);
     }
 
     private function __construct()

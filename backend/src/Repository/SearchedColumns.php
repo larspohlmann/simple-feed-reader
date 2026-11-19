@@ -15,7 +15,7 @@ final readonly class SearchedColumns
      *
      * @param \Closure(string): string $columnMatch
      */
-    public static function anyOf(\Closure $columnMatch, string $parameter, string $entryAlias): string
+    public static function buildAnyColumnMatch(\Closure $columnMatch, string $parameter, string $entryAlias): string
     {
         $transcript = 'transcript' . $entryAlias . $parameter;
 

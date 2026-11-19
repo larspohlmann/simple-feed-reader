@@ -22,7 +22,7 @@ final class ShareEnrichmentBacklogRepository extends ServiceEntityRepository
         parent::__construct($registry, ShareEnrichment::class);
     }
 
-    public function backlogOf(ShareEnrichmentKind $kind): QueueBacklogModel
+    public function findBacklog(ShareEnrichmentKind $kind): QueueBacklogModel
     {
         /** @var array{waiting: int|string, oldest: ?string} $row */
         $row = $this->createQueryBuilder('s')

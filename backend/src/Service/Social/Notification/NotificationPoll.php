@@ -36,7 +36,7 @@ final readonly class NotificationPoll
     /** @return int the rows stored that were not there before */
     public function poll(SocialAccount $account): int
     {
-        $stamp = $this->polls->stampOf($account);
+        $stamp = $this->polls->ensureStamp($account);
         if ($this->hostThrottle->remainingSeconds($account->getServiceUrl()) > 0) {
             $this->stampChecked($stamp);
 

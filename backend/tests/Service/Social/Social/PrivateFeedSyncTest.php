@@ -585,7 +585,7 @@ final class PrivateFeedSyncTest extends DbTestCase
     {
         /** @var KnownSocialCollectionRepository $known */
         $known = $this->entityManager->getRepository(KnownSocialCollection::class);
-        $keys = array_keys($known->keysOf($this->reloadedAccount()));
+        $keys = array_keys($known->findKeys($this->reloadedAccount()));
         sort($keys);
 
         return $keys;

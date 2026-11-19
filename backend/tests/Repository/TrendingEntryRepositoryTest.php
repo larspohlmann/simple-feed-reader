@@ -79,7 +79,7 @@ final class TrendingEntryRepositoryTest extends DbTestCase
 
         self::assertEquals(
             [$entryId => new MemberHeadlineModel($entryId, 'Hafenstreik – Spiegel', 'DER SPIEGEL')],
-            (new TrendingEntryRepository($this->entityManager))->headlinesOf([$entryId]),
+            (new TrendingEntryRepository($this->entityManager))->findHeadlines([$entryId]),
         );
     }
 
@@ -94,7 +94,7 @@ final class TrendingEntryRepositoryTest extends DbTestCase
         $fixtures->flush();
         $entryIds = array_map(static fn (Entry $entry): int => $entry->requireId(), $entryIds);
 
-        $foundIds = array_keys((new TrendingEntryRepository($this->entityManager))->headlinesOf($entryIds));
+        $foundIds = array_keys((new TrendingEntryRepository($this->entityManager))->findHeadlines($entryIds));
         sort($foundIds);
 
         self::assertSame($entryIds, $foundIds);
@@ -115,7 +115,7 @@ final class TrendingEntryRepositoryTest extends DbTestCase
 
         self::assertSame(
             [$linkId => 'Port strike in Hamburg'],
-            (new TrendingEntryRepository($this->entityManager))->linkTitlesOf([$linkId]),
+            (new TrendingEntryRepository($this->entityManager))->findLinkTitles([$linkId]),
         );
     }
 
@@ -133,7 +133,7 @@ final class TrendingEntryRepositoryTest extends DbTestCase
             [$linkIds[0], ...$linkIds],
         );
 
-        self::assertSame([], (new TrendingEntryRepository($this->entityManager))->linkTitlesOf($linkIds));
+        self::assertSame([], (new TrendingEntryRepository($this->entityManager))->findLinkTitles($linkIds));
     }
 
     public function testStreamsMoreThanOneChunkWithoutRepeatingOrSkipping(): void

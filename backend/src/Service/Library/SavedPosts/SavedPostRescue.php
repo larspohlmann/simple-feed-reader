@@ -63,7 +63,7 @@ final readonly class SavedPostRescue
         if ([] === $flagged) {
             return [];
         }
-        $twins = $this->savedPosts->keptTwinsOf($userId, $flagged, $leavingFeedIds);
+        $twins = $this->savedPosts->findKeptTwins($userId, $flagged, $leavingFeedIds);
         $copies = $this->copied($subscription, array_keys(array_diff_key($flagged, $twins)));
         $this->stateMover->move($userId, $twins + $copies->held + $copies->created);
 
@@ -99,7 +99,7 @@ final readonly class SavedPostRescue
     /** @param list<int> $entryIds */
     private function planFor(int $savedFeedId, array $entryIds): SavedCopyPlan
     {
-        $originals = $this->savedPosts->originalsOf($entryIds);
+        $originals = $this->savedPosts->findOriginals($entryIds);
 
         return new SavedCopyPlan(
             $originals,

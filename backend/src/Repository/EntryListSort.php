@@ -48,7 +48,7 @@ enum EntryListSort
      * The row's instant for this sort, which becomes the next cursor. A null viewedAt or sharedAt means the
      * projection and the view's filter disagree: a fault, never a case to paper over.
      */
-    public function instantOf(EntryListRow $row): \DateTimeImmutable
+    public function requireInstant(EntryListRow $row): \DateTimeImmutable
     {
         return match ($this) {
             self::PublishedDate => $row->entry->getEffectiveDate(),

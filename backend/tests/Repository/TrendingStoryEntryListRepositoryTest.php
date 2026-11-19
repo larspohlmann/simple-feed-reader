@@ -151,7 +151,7 @@ final class TrendingStoryEntryListRepositoryTest extends DbTestCase
 
     private function headingOf(User $reader, TrendingStory $story): ?StoryHeadingModel
     {
-        return $this->entries->headingOf(new TrendingStoryListQuery($reader->requireId(), $story->requireId()));
+        return $this->entries->findHeading(new TrendingStoryListQuery($reader->requireId(), $story->requireId()));
     }
 
     /** @return array<int, \DateTimeImmutable> */

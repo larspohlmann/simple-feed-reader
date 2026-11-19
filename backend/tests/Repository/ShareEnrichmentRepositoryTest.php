@@ -242,7 +242,7 @@ final class ShareEnrichmentRepositoryTest extends DbTestCase
         $this->queued($feed, 'other-kind', '2026-10-11 08:00:00', ShareEnrichmentKind::AppView);
         $this->entityManager->flush();
 
-        $backlog = $this->backlogs()->backlogOf(ShareEnrichmentKind::LinkCards);
+        $backlog = $this->backlogs()->findBacklog(ShareEnrichmentKind::LinkCards);
 
         self::assertSame(2, $backlog->waiting);
         self::assertSame('2026-10-11 09:00:00', $backlog->oldestQueuedAt?->format('Y-m-d H:i:s'));
@@ -256,7 +256,7 @@ final class ShareEnrichmentRepositoryTest extends DbTestCase
         $claimed = $this->repository()->claim([$done], $this->now());
         $this->repository()->markDone($claimed, $this->now());
 
-        self::assertSame(0, $this->backlogs()->backlogOf(ShareEnrichmentKind::LinkCards)->waiting);
+        self::assertSame(0, $this->backlogs()->findBacklog(ShareEnrichmentKind::LinkCards)->waiting);
     }
 
     /**
