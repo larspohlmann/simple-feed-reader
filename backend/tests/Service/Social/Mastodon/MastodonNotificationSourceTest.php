@@ -9,12 +9,13 @@ use App\Entity\NotificationSubject;
 use App\Entity\SocialAccount;
 use App\Entity\SocialNotification;
 use App\Enum\SocialNotificationKind;
+use App\Service\Social\Mastodon\MastodonNotificationSource;
 use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
-use App\Service\Social\Mastodon\MastodonNotificationSource;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
+use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -24,6 +25,9 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class MastodonNotificationSourceTest extends TestCase
 {
+    use ReadsFixtures;
+
+    private const string FIXTURES = 'Mastodon/';
     private const string INSTANCE = 'https://mastodon.example';
     private const string VERIFY = self::INSTANCE . '/api/v1/accounts/verify_credentials';
     private const string MARKERS = self::INSTANCE . '/api/v1/markers?timeline[]=notifications';
@@ -89,7 +93,7 @@ final class MastodonNotificationSourceTest extends TestCase
     #[DataProvider('repliesOfYours')]
     public function testANotificationAboutYourReplyIsAboutYourComment(string $statusContent, int $index): void
     {
-        $list = str_replace($statusContent, $statusContent . ' "in_reply_to_id": "777",', self::list(), $patched);
+        $list = str_replace($statusContent, $statusContent . ' "in_reply_to_id": "777",', $this->list(), $patched);
         self::assertSame(1, $patched);
 
         $page = $this->source($this->http(listBody: $list))->fetch(SocialApiWiring::mastodonAccount());
@@ -295,9 +299,9 @@ final class MastodonNotificationSourceTest extends TestCase
         );
     }
 
-    private static function list(): string
+    private function list(): string
     {
-        return (string) file_get_contents(__DIR__ . '/../../../Fixtures/Mastodon/notifications-list.json');
+        return $this->fixture(self::FIXTURES . 'notifications-list.json');
     }
 
     private function http(
@@ -308,24 +312,23 @@ final class MastodonNotificationSourceTest extends TestCase
         ?string $verifyBody = null,
         ?string $listBody = null,
     ): RoutedHttpClient {
-        $fixtures = __DIR__ . '/../../../Fixtures/Mastodon/';
         $forbidden = '{"error":"This action is outside the authorized scopes"}';
 
         return new RoutedHttpClient([
             'GET ' . self::VERIFY => new MockResponse(
-                $verifyBody ?? (string) file_get_contents($fixtures . 'verify-credentials-notifications.json'),
+                $verifyBody ?? $this->fixture(self::FIXTURES . 'verify-credentials-notifications.json'),
                 ['http_code' => $verifyStatus],
             ),
             'GET ' . self::MARKERS => new MockResponse(
-                $markers ?? (string) file_get_contents($fixtures . 'notifications-markers.json'),
+                $markers ?? $this->fixture(self::FIXTURES . 'notifications-markers.json'),
             ),
             'GET ' . self::LIST => new MockResponse(
-                $listBody ?? ($listStatus === Response::HTTP_OK ? self::list() : $forbidden),
+                $listBody ?? ($listStatus === Response::HTTP_OK ? $this->list() : $forbidden),
                 ['http_code' => $listStatus],
             ),
             'GET ' . self::MARKER_ITEM => new MockResponse(
                 $markerItemStatus === Response::HTTP_OK
-                    ? (string) file_get_contents($fixtures . 'notifications-marker-item.json')
+                    ? $this->fixture(self::FIXTURES . 'notifications-marker-item.json')
                     : '{"error":"Record not found"}',
                 ['http_code' => $markerItemStatus],
             ),

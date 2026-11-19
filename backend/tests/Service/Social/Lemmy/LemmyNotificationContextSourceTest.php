@@ -6,10 +6,11 @@ namespace App\Tests\Service\Social\Lemmy;
 
 use App\Entity\NotificationContext;
 use App\Enum\SocialNotificationKind;
+use App\Service\Social\Lemmy\LemmyNotificationContextSource;
 use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
-use App\Service\Social\Lemmy\LemmyNotificationContextSource;
 use App\Tests\Support\NotificationRows;
+use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\TestCase;
@@ -18,11 +19,13 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class LemmyNotificationContextSourceTest extends TestCase
 {
+    use ReadsFixtures;
+
     private const string COMMENT = 'https://lemmy.example/api/v3/comment?id=';
 
     public function testAddsTheAnsweredComment(): void
     {
-        $http = new RoutedHttpClient(['GET ' . self::COMMENT . '26906403' => self::parentComment()]);
+        $http = new RoutedHttpClient(['GET ' . self::COMMENT . '26906403' => $this->parentComment()]);
 
         $contexts = $this->source($http)->contextsOf(
             SocialApiWiring::lemmyAccount(),
@@ -68,9 +71,9 @@ final class LemmyNotificationContextSourceTest extends TestCase
     public function testARefusedLookupFindsNoContextAndTheNextIsLookedUp(): void
     {
         $http = RoutedHttpClient::answering(
-            static fn (string $method, string $url): MockResponse => str_ends_with($url, '=1')
+            fn (string $method, string $url): MockResponse => str_ends_with($url, '=1')
                 ? new MockResponse('{"error":"banned"}', ['http_code' => Response::HTTP_BAD_REQUEST])
-                : self::parentComment(),
+                : $this->parentComment(),
         );
         $contexts = $this->source($http)->contextsOf(
             SocialApiWiring::lemmyAccount(),
@@ -84,7 +87,7 @@ final class LemmyNotificationContextSourceTest extends TestCase
     public function testAThrottleStopsTheLookups(): void
     {
         $http = new RoutedHttpClient([
-            'GET ' . self::COMMENT . '1' => self::parentComment(),
+            'GET ' . self::COMMENT . '1' => $this->parentComment(),
             'GET ' . self::COMMENT . '2' => new MockResponse('{}', ['http_code' => Response::HTTP_TOO_MANY_REQUESTS]),
         ]);
         $contexts = $this->source($http)->contextsOf(
@@ -100,9 +103,9 @@ final class LemmyNotificationContextSourceTest extends TestCase
     public function testAnUnavailableInstanceStopsTheLookups(): void
     {
         $http = RoutedHttpClient::answering(
-            static fn (string $method, string $url): MockResponse => str_ends_with($url, '=2')
+            fn (string $method, string $url): MockResponse => str_ends_with($url, '=2')
                 ? new MockResponse('{}', ['http_code' => Response::HTTP_SERVICE_UNAVAILABLE])
-                : self::parentComment(),
+                : $this->parentComment(),
         );
         $contexts = $this->source($http)->contextsOf(
             SocialApiWiring::lemmyAccount(),
@@ -119,7 +122,7 @@ final class LemmyNotificationContextSourceTest extends TestCase
 
     public function testTwoRowsAnsweringTheSameCommentAskForItOnce(): void
     {
-        $http = new RoutedHttpClient(['GET ' . self::COMMENT . '26906403' => self::parentComment()]);
+        $http = new RoutedHttpClient(['GET ' . self::COMMENT . '26906403' => $this->parentComment()]);
 
         $contexts = $this->source($http)->contextsOf(
             SocialApiWiring::lemmyAccount(),
@@ -141,10 +144,10 @@ final class LemmyNotificationContextSourceTest extends TestCase
         self::assertSame([], $http->requests);
     }
 
-    private static function parentComment(): MockResponse
+    private function parentComment(): MockResponse
     {
         return new MockResponse(
-            (string) file_get_contents(__DIR__ . '/../../../Fixtures/lemmy/notifications-parent-comment.json'),
+            $this->fixture('lemmy/notifications-parent-comment.json'),
         );
     }
 

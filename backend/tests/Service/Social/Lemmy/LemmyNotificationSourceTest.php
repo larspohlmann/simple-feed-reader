@@ -10,11 +10,12 @@ use App\Entity\NotificationSubject;
 use App\Entity\SocialAccount;
 use App\Entity\SocialNotification;
 use App\Enum\SocialNotificationKind;
+use App\Service\Social\Lemmy\LemmyNotificationSource;
 use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
-use App\Service\Social\Lemmy\LemmyNotificationSource;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -24,7 +25,10 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class LemmyNotificationSourceTest extends TestCase
 {
+    use ReadsFixtures;
+
     private const string INSTANCE = 'https://lemmy.example';
+    private const string REPLIES_FIXTURE = 'lemmy/notifications-replies.json';
     private const string REPLIES = self::INSTANCE . '/api/v3/user/replies?sort=New&limit=50&unread_only=false';
     private const string MENTIONS = self::INSTANCE . '/api/v3/user/mention?sort=New&limit=50&unread_only=false';
     private const string MARK_REPLY = self::INSTANCE . '/api/v3/comment/mark_as_read';
@@ -99,7 +103,7 @@ final class LemmyNotificationSourceTest extends TestCase
 
     public function testAQuotedLineAndALinkReadAsPlainText(): void
     {
-        $replies = (string) file_get_contents(__DIR__ . '/../../../Fixtures/lemmy/notifications-replies.json');
+        $replies = $this->fixture(self::REPLIES_FIXTURE);
         $markdown = json_encode("> you said this\n\nSee [the docs](https://example.com) **now**");
         $quoting = str_replace('"Thanks, **that** helped a lot"', (string) $markdown, $replies);
 
@@ -110,7 +114,7 @@ final class LemmyNotificationSourceTest extends TestCase
 
     public function testAMissingCommunityLeavesNoPlace(): void
     {
-        $replies = (string) file_get_contents(__DIR__ . '/../../../Fixtures/lemmy/notifications-replies.json');
+        $replies = $this->fixture(self::REPLIES_FIXTURE);
         $community = '/"community": \{"id": 4, "name": "selfhosted"\}/';
         $broken = preg_replace($community, '"community": {"id": 4}', $replies, 1);
 
@@ -148,7 +152,7 @@ final class LemmyNotificationSourceTest extends TestCase
     #[DataProvider('malformedReplies')]
     public function testDropsEntriesMissingWhatTheRowNeeds(string $field, string $replacement): void
     {
-        $replies = (string) file_get_contents(__DIR__ . '/../../../Fixtures/lemmy/notifications-replies.json');
+        $replies = $this->fixture(self::REPLIES_FIXTURE);
         $broken = preg_replace('/' . preg_quote($field, '/') . '/', $replacement, $replies, 1);
         $page = $this->source($this->http((string) $broken))->fetch(SocialApiWiring::lemmyAccount());
 
@@ -320,14 +324,12 @@ final class LemmyNotificationSourceTest extends TestCase
 
     private function http(?string $replies = null): RoutedHttpClient
     {
-        $fixtures = __DIR__ . '/../../../Fixtures/lemmy/';
-
         return new RoutedHttpClient([
             'GET ' . self::REPLIES => new MockResponse(
-                $replies ?? (string) file_get_contents($fixtures . 'notifications-replies.json'),
+                $replies ?? $this->fixture(self::REPLIES_FIXTURE),
             ),
             'GET ' . self::MENTIONS => new MockResponse(
-                (string) file_get_contents($fixtures . 'notifications-mentions.json'),
+                $this->fixture('lemmy/notifications-mentions.json'),
             ),
         ]);
     }

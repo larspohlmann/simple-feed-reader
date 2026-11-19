@@ -10,16 +10,17 @@ use App\Entity\SocialAccount;
 use App\Enum\VoteScore;
 use App\Service\Outbound\Fetch\IpValidator;
 use App\Service\Outbound\Fetch\UrlGuard;
-use App\Service\Social\Social\ActingAccountGuard;
-use App\Service\Social\Social\Exception\NotASocialPostException;
 use App\Service\Social\Lemmy\LemmyAccountApi;
 use App\Service\Social\Lemmy\LemmyApiClient;
 use App\Service\Social\Lemmy\LemmyPosts;
-use App\Service\Social\Social\Model\DiscussionVoteResultModel;
 use App\Service\Social\Lemmy\LemmyPostVoter;
+use App\Service\Social\Social\ActingAccountGuard;
+use App\Service\Social\Social\Exception\NotASocialPostException;
+use App\Service\Social\Social\Model\DiscussionVoteResultModel;
 use App\Service\Social\Social\StoredCredential;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\LemmyPostEntries;
+use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StaticDnsResolver;
@@ -29,7 +30,9 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class LemmyPostVoterTest extends TestCase
 {
-    private const string FIXTURES = __DIR__ . '/../../../Fixtures/lemmy/';
+    use ReadsFixtures;
+
+    private const string FIXTURES = 'lemmy/';
     private const string LIKE = 'POST https://lemmy.example/api/v3/post/like';
     private const string HOME_POST = 'GET https://lemmy.example/api/v3/post?id=42';
     private const string RESOLVE_COMMENT = 'GET https://lemmy.example/api/v3/resolve_object?q='
@@ -38,7 +41,7 @@ final class LemmyPostVoterTest extends TestCase
 
     public function testAVoteOnAPostReachesTheHomeInstance(): void
     {
-        $http = new RoutedHttpClient([self::LIKE => self::fixture('post-like.json')]);
+        $http = new RoutedHttpClient([self::LIKE => $this->buildResponse('post-like.json')]);
 
         $result = $this->voter($http)->castVoteOnPost($this->account(), $this->lemmyPost(), VoteScore::Up);
 
@@ -50,8 +53,8 @@ final class LemmyPostVoterTest extends TestCase
     public function testAVoteOnACommentResolvesTheCommentFirst(): void
     {
         $http = new RoutedHttpClient([
-            self::RESOLVE_COMMENT => self::fixture('resolve-comment.json'),
-            self::COMMENT_LIKE => self::fixture('comment-like.json'),
+            self::RESOLVE_COMMENT => $this->buildResponse('resolve-comment.json'),
+            self::COMMENT_LIKE => $this->buildResponse('comment-like.json'),
         ]);
 
         $result = $this->voter($http)->castVoteOnComment(
@@ -67,7 +70,7 @@ final class LemmyPostVoterTest extends TestCase
 
     public function testThePostVoteIsWhatTheHomeInstanceReports(): void
     {
-        $http = new RoutedHttpClient([self::HOME_POST => self::fixture('post-like-downvoted.json')]);
+        $http = new RoutedHttpClient([self::HOME_POST => $this->buildResponse('post-like-downvoted.json')]);
 
         self::assertSame(
             VoteScore::Down,
@@ -136,8 +139,8 @@ final class LemmyPostVoterTest extends TestCase
         );
     }
 
-    private static function fixture(string $name): MockResponse
+    private function buildResponse(string $name): MockResponse
     {
-        return new MockResponse((string) file_get_contents(self::FIXTURES . $name));
+        return new MockResponse($this->fixture(self::FIXTURES . $name));
     }
 }

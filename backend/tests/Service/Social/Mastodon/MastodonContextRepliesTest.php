@@ -4,21 +4,24 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Mastodon;
 
-use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Content\Comments\Exception\CommentsUnavailableException;
 use App\Service\Content\Comments\Model\CommentAuthorModel;
-use App\Service\Ingestion\Parser\Model\VisualMediaKind;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Foundation\Sanitize\EntrySanitizer;
 use App\Service\Foundation\Sanitize\TrailingBlankRemover;
+use App\Service\Ingestion\Parser\Model\VisualMediaKind;
 use App\Service\Social\Mastodon\MastodonContextReplies;
 use App\Service\Social\Social\Model\SocialCountsModel;
 use App\Service\Social\Social\Pass\ReplyNode;
-use PHPUnit\Framework\Assert;
+use App\Tests\Support\ReadsFixtures;
 use PHPUnit\Framework\TestCase;
 
 final class MastodonContextRepliesTest extends TestCase
 {
+    use ReadsFixtures;
+
     private const string POST = 'https://mastodon.social/@Gargron/110';
+    private const string CONTEXT = 'social/mastodon-context.json';
 
     public function testRepliesNestByTheStatusTheyAnswer(): void
     {
@@ -34,7 +37,7 @@ final class MastodonContextRepliesTest extends TestCase
 
     public function testASelfReplyRendersLikeItsThreadComment(): void
     {
-        $descendants = JsonNodeModel::of(json_decode(self::fixture(), true))->nodes('descendants');
+        $descendants = JsonNodeModel::of(json_decode($this->fixture(self::CONTEXT), true))->nodes('descendants');
         $status = array_values(array_filter(
             $descendants,
             static fn (JsonNodeModel $candidate): bool => $candidate->string('id') === '201',
@@ -259,7 +262,9 @@ final class MastodonContextRepliesTest extends TestCase
 
         $this->expectException(CommentsUnavailableException::class);
 
-        $reader->of(self::POST, json_encode(['context' => json_decode(self::fixture())], \JSON_THROW_ON_ERROR));
+        $answer = json_encode(['context' => json_decode($this->fixture(self::CONTEXT))], \JSON_THROW_ON_ERROR);
+
+        $reader->of(self::POST, $answer);
     }
 
     public function testAContextThatIsNoJsonCannotRenameThePost(): void
@@ -274,15 +279,7 @@ final class MastodonContextRepliesTest extends TestCase
     {
         $reader = new MastodonContextReplies(new EntrySanitizer(new TrailingBlankRemover()));
 
-        return $reader->of($post, MastodonContextReplies::answerOf('110', $answer ?? self::fixture()));
-    }
-
-    private static function fixture(): string
-    {
-        $contents = file_get_contents(__DIR__ . '/../../../Fixtures/social/mastodon-context.json');
-        Assert::assertIsString($contents);
-
-        return $contents;
+        return $reader->of($post, MastodonContextReplies::answerOf('110', $answer ?? $this->fixture(self::CONTEXT)));
     }
 
     /**

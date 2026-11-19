@@ -9,12 +9,13 @@ use App\Enum\VoteScore;
 use App\Service\Content\Comments\Model\LemmyPostModel;
 use App\Service\Outbound\Fetch\IpValidator;
 use App\Service\Outbound\Fetch\UrlGuard;
-use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Lemmy\LemmyAccountApi;
 use App\Service\Social\Lemmy\LemmyApiClient;
 use App\Service\Social\Lemmy\LemmyPosts;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\StoredCredential;
 use App\Tests\Support\FetchWiring;
+use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StaticDnsResolver;
@@ -23,7 +24,9 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class LemmyPostsTest extends TestCase
 {
-    private const string FIXTURES = __DIR__ . '/../../../Fixtures/lemmy/';
+    use ReadsFixtures;
+
+    private const string FIXTURES = 'lemmy/';
     private const string HOME_POST = 'GET https://lemmy.example/api/v3/post?id=42';
     private const string FEDERATED_POST = 'GET https://feddit.example/api/v3/post?id=7';
     private const string RESOLVE = 'GET https://lemmy.example/api/v3/resolve_object?q=';
@@ -32,7 +35,7 @@ final class LemmyPostsTest extends TestCase
 
     public function testAPostOnTheHomeInstanceIsReadByItsOwnId(): void
     {
-        $http = new RoutedHttpClient([self::HOME_POST => self::fixture('post-as-account.json')]);
+        $http = new RoutedHttpClient([self::HOME_POST => $this->buildResponse('post-as-account.json')]);
 
         $target = $this->posts($http)->postOn($this->account(), new LemmyPostModel('https://lemmy.example', 42));
 
@@ -45,7 +48,7 @@ final class LemmyPostsTest extends TestCase
 
     public function testAHomeInstanceHostDifferingOnlyInCaseIsStillTheHomeInstance(): void
     {
-        $http = new RoutedHttpClient([self::HOME_POST => self::fixture('post-as-account.json')]);
+        $http = new RoutedHttpClient([self::HOME_POST => $this->buildResponse('post-as-account.json')]);
 
         $this->posts($http)->postOn($this->account(), new LemmyPostModel('https://Lemmy.Example', 42));
 
@@ -54,7 +57,7 @@ final class LemmyPostsTest extends TestCase
 
     public function testAFederatedCopyResolvesItsOriginOnTheHomeInstance(): void
     {
-        $http = $this->federated(self::fixture('resolve-post.json'));
+        $http = $this->federated($this->buildResponse('resolve-post.json'));
 
         $target = $this->posts($http)->postOn($this->account(), new LemmyPostModel('https://feddit.example', 7));
 
@@ -74,7 +77,7 @@ final class LemmyPostsTest extends TestCase
 
     public function testAFederatedCopyFindsItsHomeIdByResolving(): void
     {
-        $http = $this->federated(self::fixture('resolve-post.json'));
+        $http = $this->federated($this->buildResponse('resolve-post.json'));
 
         $postId = $this->posts($http)->homePostIdOf($this->account(), new LemmyPostModel('https://feddit.example', 7));
 
@@ -84,7 +87,7 @@ final class LemmyPostsTest extends TestCase
 
     public function testAFederatedCopyIsLookedUpWithoutTheToken(): void
     {
-        $http = $this->federated(self::fixture('resolve-post.json'));
+        $http = $this->federated($this->buildResponse('resolve-post.json'));
 
         $this->posts($http)->postOn($this->account(), new LemmyPostModel('https://feddit.example', 7));
 
@@ -100,7 +103,7 @@ final class LemmyPostsTest extends TestCase
         $insecure = str_replace(
             'https://origin.example',
             'http://origin.example',
-            (string) file_get_contents(self::FIXTURES . 'post-anonymous.json'),
+            $this->fixture(self::FIXTURES . 'post-anonymous.json'),
         );
         $http = new RoutedHttpClient([self::FEDERATED_POST => new MockResponse($insecure)]);
 
@@ -114,7 +117,7 @@ final class LemmyPostsTest extends TestCase
 
     public function testAResolveWithoutAPostIsNotFound(): void
     {
-        $http = $this->federated(self::fixture('resolve-comment.json'));
+        $http = $this->federated($this->buildResponse('resolve-comment.json'));
 
         $this->expectException(SocialPostNotFoundException::class);
 
@@ -123,7 +126,9 @@ final class LemmyPostsTest extends TestCase
 
     public function testACommentResolvesByItsAddress(): void
     {
-        $http = new RoutedHttpClient([self::RESOLVE . self::ORIGIN_COMMENT => self::fixture('resolve-comment.json')]);
+        $http = new RoutedHttpClient([
+            self::RESOLVE . self::ORIGIN_COMMENT => $this->buildResponse('resolve-comment.json'),
+        ]);
 
         $target = $this->posts($http)->commentOn($this->account(), 'https://origin.example/comment/5');
 
@@ -147,7 +152,9 @@ final class LemmyPostsTest extends TestCase
 
     public function testAResolveWithoutACommentIsNotFound(): void
     {
-        $http = new RoutedHttpClient([self::RESOLVE . self::ORIGIN_COMMENT => self::fixture('resolve-post.json')]);
+        $http = new RoutedHttpClient([
+            self::RESOLVE . self::ORIGIN_COMMENT => $this->buildResponse('resolve-post.json'),
+        ]);
 
         $this->expectException(SocialPostNotFoundException::class);
 
@@ -157,7 +164,7 @@ final class LemmyPostsTest extends TestCase
     private function federated(MockResponse $resolved): RoutedHttpClient
     {
         return new RoutedHttpClient([
-            self::FEDERATED_POST => self::fixture('post-anonymous.json'),
+            self::FEDERATED_POST => $this->buildResponse('post-anonymous.json'),
             self::RESOLVE . self::ORIGIN_POST => $resolved,
         ]);
     }
@@ -196,8 +203,8 @@ final class LemmyPostsTest extends TestCase
         );
     }
 
-    private static function fixture(string $name): MockResponse
+    private function buildResponse(string $name): MockResponse
     {
-        return new MockResponse((string) file_get_contents(self::FIXTURES . $name));
+        return new MockResponse($this->fixture(self::FIXTURES . $name));
     }
 }

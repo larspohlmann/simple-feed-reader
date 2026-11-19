@@ -12,6 +12,7 @@ use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Model\TimelinePageModel;
+use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\TestCase;
@@ -19,14 +20,16 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class LemmyPostEntriesTest extends TestCase
 {
-    private const string POST_LIST = __DIR__ . '/../../../Fixtures/lemmy/post-list.json';
+    use ReadsFixtures;
+
+    private const string POST_LIST = 'lemmy/post-list.json';
     private const string LINK_POST = 'https://feddit.example/post/7';
     private const string TEXT_POST = 'https://lemmy.example/post/102';
     private const string MBIN_POST = 'https://mbin.example/m/rss/t/9';
 
     public function testEveryPostIsALemmyDiscussionThread(): void
     {
-        $entries = self::entries();
+        $entries = $this->entries();
 
         self::assertSame([self::LINK_POST, self::TEXT_POST, self::MBIN_POST], array_keys($entries));
         foreach ($entries as $entry) {
@@ -38,7 +41,7 @@ final class LemmyPostEntriesTest extends TestCase
 
     public function testALinkPostLeadsWithItsLink(): void
     {
-        $linkPost = self::entries()[self::LINK_POST];
+        $linkPost = $this->entries()[self::LINK_POST];
 
         self::assertStringStartsWith(
             '<p><a href="https://news.example/story">https://news.example/story</a></p>',
@@ -50,14 +53,14 @@ final class LemmyPostEntriesTest extends TestCase
 
     public function testTheBodyIsRenderedMarkdown(): void
     {
-        $textPost = self::entries()[self::TEXT_POST];
+        $textPost = $this->entries()[self::TEXT_POST];
 
         self::assertStringContainsString('<strong>bold</strong>', (string) $textPost->contentHtml);
     }
 
     public function testTheAuthorAndCountsAreThePosts(): void
     {
-        $entries = self::entries();
+        $entries = $this->entries();
         $linkPost = $entries[self::LINK_POST];
 
         self::assertSame('Ada', $linkPost->author);
@@ -71,7 +74,7 @@ final class LemmyPostEntriesTest extends TestCase
     {
         self::assertEquals(
             PostCommunity::of('rss@feddit.example', 'https://feddit.example/c/rss'),
-            self::entries()[self::LINK_POST]->community,
+            $this->entries()[self::LINK_POST]->community,
         );
     }
 
@@ -80,7 +83,7 @@ final class LemmyPostEntriesTest extends TestCase
         $body = str_replace(
             'https://feddit.example/c/rss',
             'http://old.example/c/rss',
-            (string) file_get_contents(self::POST_LIST),
+            $this->fixture(self::POST_LIST),
         );
         $entry = self::page($body)->parsed->entries[0];
 
@@ -90,7 +93,7 @@ final class LemmyPostEntriesTest extends TestCase
 
     public function testPublishedTimesAreUtc(): void
     {
-        $entries = self::entries();
+        $entries = $this->entries();
 
         $expected = [self::LINK_POST => '2026-11-14 05:05:09', self::TEXT_POST => '2026-11-14 06:00:00'];
         foreach ($expected as $guid => $utc) {
@@ -102,7 +105,7 @@ final class LemmyPostEntriesTest extends TestCase
 
     public function testDeletedAndRemovedPostsAreSkipped(): void
     {
-        $guids = array_keys(self::entries());
+        $guids = array_keys($this->entries());
 
         self::assertCount(3, $guids);
         self::assertNotContains('https://lemmy.example/post/103', $guids);
@@ -111,7 +114,7 @@ final class LemmyPostEntriesTest extends TestCase
 
     public function testAnOriginThatIsNoLemmyPostPageUsesTheHomeInstancePage(): void
     {
-        $mbinPost = self::entries()[self::MBIN_POST];
+        $mbinPost = $this->entries()[self::MBIN_POST];
 
         self::assertSame('https://lemmy.example/post/104', $mbinPost->discussion->url);
         self::assertSame(self::MBIN_POST, $mbinPost->guid);
@@ -119,7 +122,7 @@ final class LemmyPostEntriesTest extends TestCase
 
     public function testAPostStatesItsLanguageByTheInstancesLanguageId(): void
     {
-        $entries = self::entriesWithLanguageIds([32, 130, 37, 0, 47]);
+        $entries = $this->entriesWithLanguageIds([32, 130, 37, 0, 47]);
 
         self::assertSame('de', $entries[self::LINK_POST]->statedLanguage);
         self::assertSame('x-lemmy-130', $entries[self::TEXT_POST]->statedLanguage);
@@ -128,12 +131,12 @@ final class LemmyPostEntriesTest extends TestCase
 
     public function testAPostWithoutALanguageIdStatesNone(): void
     {
-        self::assertNull(self::entries()[self::LINK_POST]->statedLanguage);
+        self::assertNull($this->entries()[self::LINK_POST]->statedLanguage);
     }
 
     public function testTheNewestIdIsTheHighestPostId(): void
     {
-        self::assertSame('105', self::page((string) file_get_contents(self::POST_LIST))->newestId);
+        self::assertSame('105', self::page($this->fixture(self::POST_LIST))->newestId);
         self::assertNull(self::page('{"posts":[]}')->newestId);
     }
 
@@ -259,10 +262,10 @@ final class LemmyPostEntriesTest extends TestCase
     }
 
     /** @return array<string, ParsedEntryModel> keyed by guid */
-    private static function entries(): array
+    private function entries(): array
     {
         $entries = [];
-        foreach (self::page((string) file_get_contents(self::POST_LIST))->parsed->entries as $entry) {
+        foreach (self::page($this->fixture(self::POST_LIST))->parsed->entries as $entry) {
             $entries[$entry->guid] = $entry;
         }
 
@@ -274,14 +277,14 @@ final class LemmyPostEntriesTest extends TestCase
      *
      * @return array<string, ParsedEntryModel> keyed by guid
      */
-    private static function entriesWithLanguageIds(array $languageIds): array
+    private function entriesWithLanguageIds(array $languageIds): array
     {
         $body = preg_replace_callback(
             '/"language_id": 0/',
             static function () use (&$languageIds): string {
                 return '"language_id": ' . (array_shift($languageIds) ?? 0);
             },
-            (string) file_get_contents(self::POST_LIST),
+            $this->fixture(self::POST_LIST),
         );
 
         $entries = [];

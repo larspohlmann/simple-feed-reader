@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Lemmy;
 
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
-use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Lemmy\LemmyPrivateFeedRule;
 use App\Service\Social\Lemmy\LemmySearchSource;
+use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
+use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;
@@ -20,16 +21,18 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final class LemmySearchSourceTest extends TestCase
 {
+    use ReadsFixtures;
+
     private const string LEMMY_SEARCH = 'GET https://lemmy.example/api/v3/search'
         . '?q=rss%20reader&type_=Posts&sort=New&listing_type=All&limit=50';
     private const string LEMMY_WORD_SEARCH = 'GET https://lemmy.example/api/v3/search'
         . '?q=post&type_=Posts&sort=New&listing_type=All&limit=50';
-    private const string LEMMY_FOUND = __DIR__ . '/../../../Fixtures/lemmy/search.json';
+    private const string LEMMY_FOUND = 'lemmy/search.json';
 
     public function testASearchPreviewsThePostsFound(): void
     {
         $http = new RoutedHttpClient([
-            self::LEMMY_WORD_SEARCH => new MockResponse((string) file_get_contents(self::LEMMY_FOUND)),
+            self::LEMMY_WORD_SEARCH => new MockResponse($this->fixture(self::LEMMY_FOUND)),
         ]);
 
         $page = $this->source($http->client())->fetchNewest(SocialApiWiring::lemmyAccount(), 'post');
