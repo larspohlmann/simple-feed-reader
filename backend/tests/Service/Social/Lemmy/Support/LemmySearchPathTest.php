@@ -1,0 +1,19 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Social\Lemmy\Support;
+
+use App\Service\Social\Lemmy\Support\LemmySearchPath;
+use PHPUnit\Framework\TestCase;
+
+final class LemmySearchPathTest extends TestCase
+{
+    public function testALemmySearchAsksForNewPostsEverywhere(): void
+    {
+        self::assertSame(
+            '/api/v3/search?q=rss%20reader%20%7C%7C%20atom&type_=Posts&sort=New&listing_type=All&limit=50',
+            LemmySearchPath::buildPath('rss reader || atom'),
+        );
+    }
+}
