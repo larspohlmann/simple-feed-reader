@@ -14,7 +14,6 @@ use App\Service\Social\Social\ActingAccountGuard;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\FollowAvatarCache;
-use App\Service\Social\Social\FollowMatcher;
 use App\Service\Social\Social\ImportCandidates;
 use App\Service\Social\Social\Model\CollectionCandidateModel;
 use App\Service\Social\Social\Model\FollowedAccountModel;
@@ -79,7 +78,6 @@ final class ImportCandidatesTest extends DbTestCase
         return new ImportCandidates(
             $network,
             $subscriptions,
-            new FollowMatcher(),
             SocialFeeds::repository($this->entityManager),
             new ActingAccountGuard($this->entityManager),
             $this->followAvatars,
