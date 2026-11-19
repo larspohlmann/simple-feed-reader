@@ -430,6 +430,22 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         ];
     }
 
+    public function testALinkPostWithAnUnknownVisibilityIsRejectedBeforeAnyCall(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
+        $user = $this->signIn($client, 'link-invalid-visibility@example.test');
+        $this->mastodonAccountOf($user);
+
+        $this->send(
+            $client,
+            self::LINKS . 'mastodon&url=' . rawurlencode(self::ARTICLE_URL),
+            ['text' => 'Hi', 'visibility' => 'everyone'],
+        );
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame([], $this->http->requests);
+    }
+
     /** @return iterable<string, array{string}> */
     public static function invalidComposerQueries(): iterable
     {
