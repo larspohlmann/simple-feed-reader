@@ -23,4 +23,20 @@ describe('ListHeaderComponent', () => {
     expect(element.querySelector('.mark-all')).toBeNull();
     expect(element.querySelector('.title-count')).toBeNull();
   });
+
+  describe("a story's whole title in the collapsed phone bar (#2353)", () => {
+    afterEach(() => TestBed.resetTestingModule());
+
+    it("marks a Trending story's header, whose collapsed title wraps", () => {
+      const element = mount({ kind: 'trending-story', id: 42, unread: false }, 'Harbour strike');
+
+      expect(element.classList).toContain('is-story');
+    });
+
+    it("leaves every other list's header unmarked", () => {
+      const element = mount({ kind: 'all', unread: false }, 'All items');
+
+      expect(element.classList).not.toContain('is-story');
+    });
+  });
 });

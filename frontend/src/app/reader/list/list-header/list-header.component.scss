@@ -194,6 +194,13 @@ h2.search-title {
     display: none;
   }
 
+  /* With the tools gone, a story's slim bar has the room for its whole event title (#2353). */
+  :host(.collapsed.is-story) h2 {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
   :host(.collapsed) .meta,
   :host(.collapsed) .whole-word-badge,
   :host(.collapsed) .phrase-badge {

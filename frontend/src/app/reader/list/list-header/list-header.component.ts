@@ -79,6 +79,7 @@ export interface TitleCount {
   host: {
     '[class.collapsed]': 'collapsed()',
     '[class.is-search]': "selection().kind === 'search'",
+    '[class.is-story]': "selection().kind === 'trending-story'",
   },
 })
 export class ListHeaderComponent {
