@@ -93,9 +93,15 @@ describe('EntryMetaComponent', () => {
       expect(comments?.textContent).toContain('0');
     });
 
-    it('shows nothing without a score', () => {
+    it('shows the comment count alone without a score', () => {
+      const element = discussionMeta({ score: null, commentCount: 3 });
+      expect(element.querySelector('app-vote-pill')).toBeNull();
+      expect(element.querySelector('.discussion .comments')?.textContent).toContain('3');
+    });
+
+    it('shows nothing without a score or a comment count', () => {
       expect(
-        discussionMeta({ score: null, commentCount: 3 }).querySelector('.discussion'),
+        discussionMeta({ score: null, commentCount: null }).querySelector('.discussion'),
       ).toBeNull();
     });
 
