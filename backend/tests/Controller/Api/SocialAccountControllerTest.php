@@ -15,7 +15,6 @@ use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Model\CredentialReplacementModel;
 use App\Service\Social\Social\Model\SocialCredentialsModel;
 use App\Service\Social\Social\Model\VerifiedAccountModel;
-use App\Service\Social\Social\Support\BlueskyCredentials;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\RoutesSocialApis;
 use App\Tests\Support\StubAccountVerifier;
@@ -490,7 +489,7 @@ final class SocialAccountControllerTest extends ApiTestCase
                 SocialAccount $account,
                 CredentialReplacementModel $replacement,
             ): SocialCredentialsModel {
-                return BlueskyCredentials::buildReconnectCredentials($account, $replacement);
+                return StubAccountVerifier::buildNetworkReconnectCredentials($account, $replacement);
             }
         };
     }

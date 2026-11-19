@@ -14,7 +14,7 @@ use App\Service\Social\Social\Model\SocialCredentialsModel;
 use App\Service\Social\Social\Model\VerifiedAccountModel;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
-/** One network's live credential check, keyed by its SocialNetwork value in NetworkAccountVerifier's locator. */
+/** One network's live credential check and reconnect credentials, keyed in NetworkAccountVerifier's locator. */
 #[AutoconfigureTag('app.social_network_verifier')]
 interface NetworkVerifierInterface
 {

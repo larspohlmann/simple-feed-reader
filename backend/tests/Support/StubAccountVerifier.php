@@ -36,6 +36,13 @@ final class StubAccountVerifier implements AccountVerifierInterface
         SocialAccount $account,
         CredentialReplacementModel $replacement,
     ): SocialCredentialsModel {
+        return self::buildNetworkReconnectCredentials($account, $replacement);
+    }
+
+    public static function buildNetworkReconnectCredentials(
+        SocialAccount $account,
+        CredentialReplacementModel $replacement,
+    ): SocialCredentialsModel {
         return match ($account->getNetwork()) {
             SocialNetwork::Bluesky => BlueskyCredentials::buildReconnectCredentials($account, $replacement),
             SocialNetwork::Mastodon => MastodonCredentials::buildReconnectCredentials($account, $replacement),
