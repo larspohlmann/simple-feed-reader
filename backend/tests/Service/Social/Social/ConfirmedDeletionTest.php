@@ -17,6 +17,7 @@ final class ConfirmedDeletionTest extends DbTestCase
 {
     private const string STATUS_URL = 'https://mastodon.example/@alice/120';
     private const string URL_HASH = 'hash-120';
+    private const string BLUESKY_POST = 'at://did:plc:alice/app.bsky.feed.post/3k120';
 
     private FakeHomeServerCheck $homeServer;
 
@@ -42,6 +43,14 @@ final class ConfirmedDeletionTest extends DbTestCase
         $homeCopy = $this->postOn($this->feed('social:mastodon:1:home', SourceFormat::MASTODON_API));
 
         self::assertSame([false, false], $this->survivorsAfterRemoving($opened, [$homeCopy]));
+    }
+
+    public function testABlueskyAccountFeedPostIsRemovedWithoutReplies(): void
+    {
+        $opened = $this->postOn($this->feed('social:bluesky:1:home', SourceFormat::BLUESKY_API), self::BLUESKY_POST);
+        $sibling = $this->postOn($this->feed('social:bluesky:2:home', SourceFormat::BLUESKY_API), self::BLUESKY_POST);
+
+        self::assertSame([false, false], $this->survivorsAfterRemoving($opened, [$sibling]));
     }
 
     public function testAHomeServerThatFailsMeansNotConfirmedDeleted(): void
@@ -83,10 +92,10 @@ final class ConfirmedDeletionTest extends DbTestCase
         return $feed;
     }
 
-    private function postOn(Feed $feed): Entry
+    private function postOn(Feed $feed, string $guid = self::STATUS_URL): Entry
     {
         $now = new \DateTimeImmutable('2026-11-02 10:00:00');
-        $entry = new Entry($feed, self::STATUS_URL, self::STATUS_URL, 'Post', $now, $now, self::URL_HASH);
+        $entry = new Entry($feed, $guid, self::STATUS_URL, 'Post', $now, $now, self::URL_HASH);
         $this->entityManager->persist($entry);
         $this->entityManager->flush();
 

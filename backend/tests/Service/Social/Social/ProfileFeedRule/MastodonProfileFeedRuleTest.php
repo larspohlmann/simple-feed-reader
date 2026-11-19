@@ -23,4 +23,9 @@ final class MastodonProfileFeedRuleTest extends TestCase
 
         self::assertSame('@Gargron - Eugen Rochko', $title);
     }
+
+    public function testNoFeedChangesOnExport(): void
+    {
+        self::assertNull(new MastodonProfileFeedRule()->buildExportUrl('social:mastodon:4:author:123'));
+    }
 }

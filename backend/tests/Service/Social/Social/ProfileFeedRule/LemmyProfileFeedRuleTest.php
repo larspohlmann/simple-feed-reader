@@ -23,4 +23,9 @@ final class LemmyProfileFeedRuleTest extends TestCase
     {
         self::assertNull(new LemmyProfileFeedRule()->buildFeedUrl('@ada@feddit.example'));
     }
+
+    public function testNoFeedChangesOnExport(): void
+    {
+        self::assertNull(new LemmyProfileFeedRule()->buildExportUrl('social:lemmy:4:author:123'));
+    }
 }

@@ -12,8 +12,6 @@ use App\Enum\SocialNetwork;
 use App\Enum\VoteScore;
 use App\Repository\DiscussionVoteRepository;
 use App\Service\Content\Comments\CommentsLoader;
-use App\Service\Content\Comments\Model\LemmyPostModel;
-use App\Service\Content\Comments\Support\LemmyPostAddress;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use App\Service\Social\Social\Exception\NoSocialAccountForNetworkException;
@@ -25,14 +23,18 @@ use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Model\DiscussionVoteResultModel;
+use App\Service\Social\Social\PostVoter\PostVoterInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Container\ContainerInterface;
+use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 
-/** The reader's vote on a Lemmy post: cast through their account, kept as the network reports it. */
+/** The reader's vote on a post of a network that votes: cast through their account, kept as the network reports it. */
 final readonly class DiscussionVotes
 {
     public function __construct(
         private ActingAccountChooser $accounts,
-        private LemmyVoting $voting,
+        #[AutowireLocator('app.social_post_voter')]
+        private ContainerInterface $voters,
         private DiscussionVoteRepository $votes,
         private EntityManagerInterface $entityManager,
         private NaiveUtcClock $clock,
@@ -52,13 +54,13 @@ final readonly class DiscussionVotes
      */
     public function vote(User $user, Entry $entry, VoteScore $score): DiscussionVoteResultModel
     {
-        $post = self::postOf($entry);
-        $account = $this->accounts->accountFor($user, $entry, SocialNetwork::Lemmy);
+        $network = $this->requireVotingNetwork($entry);
+        $account = $this->accounts->accountFor($user, $entry, $network);
 
-        $target = $this->voting->castOnPost($account, $post, $score);
-        $this->mirror($user, $entry, $account, $target->myVote);
+        $result = $this->selectVoter($network)->castVoteOnPost($account, $entry, $score);
+        $this->mirror($user, $entry, $account, $result->myVote);
 
-        return new DiscussionVoteResultModel($target->myVote, $target->score);
+        return $result;
     }
 
     /**
@@ -77,16 +79,16 @@ final readonly class DiscussionVotes
         string $address,
         VoteScore $score,
     ): DiscussionVoteResultModel {
-        self::postOf($entry);
+        $network = $this->requireVotingNetwork($entry);
         if (null === AbsoluteHttpUrl::httpsOrNull($address)) {
-            throw new NotASocialPostException('The address names no Lemmy comment.');
+            throw new NotASocialPostException(sprintf('The address names no %s comment.', $this->formatNetworkNames()));
         }
-        $account = $this->accounts->accountFor($user, $entry, SocialNetwork::Lemmy);
+        $account = $this->accounts->accountFor($user, $entry, $network);
 
-        $target = $this->voting->castOnComment($account, $address, $score);
+        $result = $this->selectVoter($network)->castVoteOnComment($account, $address, $score);
         $this->comments->forget($user, $entry);
 
-        return new DiscussionVoteResultModel($target->myVote, $target->score);
+        return $result;
     }
 
     /**
@@ -101,19 +103,57 @@ final readonly class DiscussionVotes
      */
     public function syncFromNetwork(User $user, Entry $entry): VoteScore
     {
-        $post = self::postOf($entry);
-        $account = $this->accounts->accountFor($user, $entry, SocialNetwork::Lemmy);
+        $network = $this->requireVotingNetwork($entry);
+        $account = $this->accounts->accountFor($user, $entry, $network);
 
-        $myVote = $this->voting->readPost($account, $post)->myVote;
+        $myVote = $this->selectVoter($network)->fetchPostVote($account, $entry);
         $this->mirror($user, $entry, $account, $myVote);
 
         return $myVote;
     }
 
     /** @throws NotASocialPostException */
-    private static function postOf(Entry $entry): LemmyPostModel
+    private function requireVotingNetwork(Entry $entry): SocialNetwork
     {
-        return LemmyPostAddress::of($entry) ?? throw new NotASocialPostException('This entry is not a Lemmy post.');
+        foreach ($this->votingNetworks() as $network) {
+            if ($this->selectVoter($network)->isVotablePost($entry)) {
+                return $network;
+            }
+        }
+
+        throw new NotASocialPostException(sprintf('This entry is not a %s post.', $this->formatNetworkNames()));
+    }
+
+    private function selectVoter(SocialNetwork $network): PostVoterInterface
+    {
+        $voter = $this->voters->get($network->value);
+        \assert($voter instanceof PostVoterInterface);
+
+        return $voter;
+    }
+
+    /** @return list<SocialNetwork> */
+    private function votingNetworks(): array
+    {
+        $networks = [];
+        foreach (SocialNetwork::cases() as $network) {
+            if ($this->voters->has($network->value)) {
+                $networks[] = $network;
+            }
+        }
+
+        return $networks;
+    }
+
+    private function formatNetworkNames(): string
+    {
+        $names = array_map(
+            static fn (SocialNetwork $network): string => $network->displayName(),
+            $this->votingNetworks(),
+        );
+        $last = (string) array_pop($names);
+
+        return [] === $names ? $last : implode(', ', $names) . ' or ' . $last;
     }
 
     private function mirror(User $user, Entry $entry, SocialAccount $account, VoteScore $myVote): void

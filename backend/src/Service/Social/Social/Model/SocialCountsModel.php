@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\Model;
 
+use App\Service\Content\Comments\Model\CommentCountsModel;
+
 /** A post's public counts as its network reports them now; Mastodon has no quotes. */
 final readonly class SocialCountsModel
 {
@@ -24,6 +26,11 @@ final readonly class SocialCountsModel
             'replies' => $this->replies,
             'quotes' => $this->quotes,
         ];
+    }
+
+    public function toCommentCounts(): CommentCountsModel
+    {
+        return new CommentCountsModel($this->likes, $this->reposts, $this->replies, $this->quotes);
     }
 
     public static function fromCacheEntryOrNull(mixed $stored): ?self

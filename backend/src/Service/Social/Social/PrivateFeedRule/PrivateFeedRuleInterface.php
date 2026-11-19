@@ -26,6 +26,9 @@ interface PrivateFeedRuleInterface
     /** @return 'bluesky-api'|'mastodon-api'|'lemmy-api' */
     public function sourceFormat(): string;
 
+    /** True when a post in an account feed may be visible to followers only, so a stranger's 404 proves nothing. */
+    public function hasFollowersOnlyPosts(): bool;
+
     /**
      * The searches to send, one per `||` alternative where the network has no `||`.
      *

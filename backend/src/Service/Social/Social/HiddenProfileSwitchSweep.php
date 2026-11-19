@@ -16,7 +16,7 @@ use App\Service\Social\Social\Model\ProfileCallBudgetModel;
 use App\Service\Social\Social\Model\ProfileVisibilityModel;
 use App\Service\Social\Social\Model\RefusedProfileSubscriptionModel;
 use App\Service\Social\Social\Pass\RefusedSubscriptionSelection;
-use App\Service\Social\Social\Support\ProfileIdentity;
+use App\Service\Social\Social\Support\BlueskyProfileActor;
 use App\Service\Library\Subscription\Exception\AlreadySubscribedException;
 use App\Service\Library\Subscription\Exception\SubscriptionLimitReachedException;
 use Psr\Log\LoggerInterface;
@@ -131,7 +131,7 @@ final readonly class HiddenProfileSwitchSweep
     {
         $actors = [];
         foreach ($page as $index => $subscription) {
-            $actor = ProfileIdentity::validBlueskyActorOfRssFeed($subscription->getFeed()->getUrl());
+            $actor = BlueskyProfileActor::parseRssActor($subscription->getFeed()->getUrl());
             if (null !== $actor) {
                 $actors[$index] = $actor;
             }

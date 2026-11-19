@@ -57,6 +57,11 @@ final readonly class BlueskyPrivateFeedRule implements PrivateFeedRuleInterface
         return SourceFormat::BLUESKY_API;
     }
 
+    public function hasFollowersOnlyPosts(): bool
+    {
+        return false;
+    }
+
     public function buildSearchQueries(string $query): array
     {
         return [$query];

@@ -18,8 +18,8 @@ use App\Service\Ingestion\Parser\Support\DateParser;
 use App\Service\Foundation\Sanitize\EntrySanitizer;
 use App\Service\Social\Social\Pass\ReplyNode;
 use App\Service\Social\Social\Support\BlueskyAuthor;
-use App\Service\Social\Social\Support\CommentPost;
-use App\Service\Social\Social\Support\PostCounts;
+use App\Service\Social\Social\Support\BlueskyCommentPost;
+use App\Service\Social\Social\Support\BlueskyPostCounts;
 use App\Service\Foundation\Text\Support\HtmlAnchor;
 
 final readonly class BlueskyThreadReplies
@@ -63,7 +63,7 @@ final readonly class BlueskyThreadReplies
                     $this->nodesOf($reply->nodes('replies'), $entryAuthor),
                     url: AtPostUri::webUrl($post->string('uri') ?? ''),
                     byEntryAuthor: self::isByEntryAuthor($post->node('author'), $entryAuthor),
-                    counts: PostCounts::ofBlueskyPost($post),
+                    counts: BlueskyPostCounts::parsePost($post),
                 );
             }
         }
@@ -101,7 +101,7 @@ final readonly class BlueskyThreadReplies
             $this->htmlOf($post->node('record'), $rendered?->uncardedLink),
             self::isByEntryAuthor($author, $entryAuthor),
             self::embedsOf($rendered),
-            post: CommentPost::ofBlueskyPost($post),
+            post: BlueskyCommentPost::parsePost($post),
         );
     }
 

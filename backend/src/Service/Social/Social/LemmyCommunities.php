@@ -8,7 +8,7 @@ use App\Entity\SocialAccount;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Model\CollectedItemsModel;
-use App\Service\Social\Social\Model\LemmyCommunityModel;
+use App\Service\Social\Social\Model\CommunityModel;
 use App\Service\Social\Social\Model\LemmyListing;
 use App\Service\Social\Social\Support\LemmyCommunity;
 
@@ -32,7 +32,7 @@ final readonly class LemmyCommunities
         return CollectedItemsModel::capped($views);
     }
 
-    /** @return list<LemmyCommunityModel> */
+    /** @return list<CommunityModel> */
     public function postable(SocialAccount $account): array
     {
         $communities = [];
@@ -43,11 +43,11 @@ final readonly class LemmyCommunities
             if (null === $identity || null === $id || self::closedToPosts($community)) {
                 continue;
             }
-            $communities[] = new LemmyCommunityModel($id, '!' . $identity);
+            $communities[] = new CommunityModel($id, '!' . $identity);
         }
         usort(
             $communities,
-            static fn (LemmyCommunityModel $left, LemmyCommunityModel $right): int => $left->handle <=> $right->handle,
+            static fn (CommunityModel $left, CommunityModel $right): int => $left->handle <=> $right->handle,
         );
 
         return $communities;

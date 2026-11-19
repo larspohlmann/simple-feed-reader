@@ -21,7 +21,7 @@ use App\Service\Social\Social\PrivateFeedRule\MastodonPrivateFeedRule;
 use App\Service\Social\Social\Support\MastodonFeedIds;
 use App\Service\Social\Social\Support\MastodonSearchPage;
 use App\Service\Social\Social\Support\MastodonTimelinePage;
-use App\Service\Social\Social\Support\SocialSearchPaths;
+use App\Service\Social\Social\Support\MastodonSearchPath;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Mastodon->value)]
@@ -83,7 +83,7 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
         }
 
         return array_map(
-            static fn (string $query): string => SocialSearchPaths::mastodon($query, $socialFeed->getNewestSeenId()),
+            static fn (string $query): string => MastodonSearchPath::buildPath($query, $socialFeed->getNewestSeenId()),
             $queries,
         );
     }

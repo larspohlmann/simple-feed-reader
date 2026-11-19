@@ -6,8 +6,10 @@ namespace App\Service\Social\Social;
 
 use App\Entity\SocialAccount;
 use App\Entity\User;
+use App\Event\SocialAccountDisconnected;
 use App\Repository\SocialAccountRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\EventDispatcher\EventDispatcherInterface;
 
 final readonly class SocialAccountEditor
 {
@@ -15,7 +17,7 @@ final readonly class SocialAccountEditor
         private SocialAccountRepository $socialAccounts,
         private PrivateFeeds $privateFeeds,
         private EntityManagerInterface $entityManager,
-        private BlueskySessionCache $sessionCache,
+        private EventDispatcherInterface $events,
     ) {
     }
 
@@ -37,7 +39,7 @@ final readonly class SocialAccountEditor
     public function disconnect(SocialAccount $account): void
     {
         $successor = $account->isDefault() ? ($this->siblingsOf($account)[0] ?? null) : null;
-        $this->sessionCache->forget($account);
+        $this->events->dispatch(new SocialAccountDisconnected($account));
 
         $this->entityManager->wrapInTransaction(function () use ($account, $successor): void {
             $this->privateFeeds->removeAllOf($account);

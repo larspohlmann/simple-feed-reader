@@ -16,9 +16,7 @@ use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Repository\EntryStateRepository;
 use App\Repository\SocialAccountRepository;
-use App\Service\Foundation\Crypto\InstanceSecretCipher;
 use App\Service\Social\Social\BlueskySessionCache;
-use App\Service\Social\Social\Crypto\BlueskySessionCipher;
 use App\Service\Social\Social\Model\BlueskySessionModel;
 use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Service\Social\Social\PrivateFeeds;
@@ -28,20 +26,18 @@ use App\Tests\Support\PrivateFeedsWiring;
 use App\Tests\Support\ProfileFeedSubscriptions;
 use App\Tests\Support\SavedPostFixtures;
 use App\Tests\Support\UserFactory;
-use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Psr\Cache\CacheItemPoolInterface;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class SocialAccountEditorTest extends DbTestCase
 {
     private User $user;
-    private ArrayAdapter $sessionCacheStore;
 
     protected function setUp(): void
     {
         parent::setUp();
-
-        $this->sessionCacheStore = new ArrayAdapter();
 
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
@@ -134,14 +130,22 @@ final class SocialAccountEditorTest extends DbTestCase
         self::assertNotNull($this->entityManager->find(Subscription::class, $theirsId));
     }
 
-    public function testDisconnectingForgetsTheCachedBlueskySession(): void
+    public function testDisconnectingABlueskyAccountForgetsItsSession(): void
     {
         $account = $this->stored(SocialNetwork::Bluesky, 'did:plc:one', true);
-        $this->sessionCache()->remember($account, new BlueskySessionModel('jwt-1', 'one.bsky.social'));
+        $sessionCache = self::getContainer()->get(BlueskySessionCache::class);
+        self::assertInstanceOf(BlueskySessionCache::class, $sessionCache);
+        $sessionCache->remember($account, new BlueskySessionModel('jwt-1', 'one.bsky.social'));
+        $sessionKey = sprintf('bluesky_session.%d.%s', $account->requireId(), hash('xxh128', 'c'));
+        $pool = self::getContainer()->get('bluesky.session.cache');
+        self::assertInstanceOf(CacheItemPoolInterface::class, $pool);
+        self::assertTrue($pool->hasItem($sessionKey));
 
-        $this->editor()->disconnect($account);
+        $editor = self::getContainer()->get(SocialAccountEditor::class);
+        self::assertInstanceOf(SocialAccountEditor::class, $editor);
+        $editor->disconnect($account);
 
-        self::assertSame([], $this->sessionCacheStore->getValues());
+        self::assertFalse($pool->hasItem($sessionKey));
     }
 
     public function testDisconnectingMovesKeptPostsToSavedFromBluesky(): void
@@ -201,15 +205,7 @@ final class SocialAccountEditorTest extends DbTestCase
             $this->repository(),
             $this->privateFeeds(),
             $this->entityManager,
-            $this->sessionCache(),
-        );
-    }
-
-    private function sessionCache(): BlueskySessionCache
-    {
-        return new BlueskySessionCache(
-            $this->sessionCacheStore,
-            new BlueskySessionCipher(new InstanceSecretCipher(str_repeat('k', 32))),
+            self::getContainer()->get(EventDispatcherInterface::class),
         );
     }
 

@@ -38,4 +38,9 @@ final readonly class MastodonProfileFeedRule implements ProfileFeedRuleInterface
     {
         return $channelTitle;
     }
+
+    public function buildExportUrl(string $feedUrl): ?string
+    {
+        return null;
+    }
 }

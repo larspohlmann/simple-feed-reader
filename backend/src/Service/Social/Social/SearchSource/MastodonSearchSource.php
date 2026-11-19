@@ -15,7 +15,7 @@ use App\Service\Social\Social\Model\TimelinePageModel;
 use App\Service\Social\Social\PrivateFeedRule\MastodonPrivateFeedRule;
 use App\Service\Social\Social\SearchAnswers;
 use App\Service\Social\Social\Support\MastodonSearchPage;
-use App\Service\Social\Social\Support\SocialSearchPaths;
+use App\Service\Social\Social\Support\MastodonSearchPath;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Mastodon->value)]
@@ -35,7 +35,7 @@ final readonly class MastodonSearchSource implements SearchSourceInterface
             array_map(
                 fn (string $alternative): ApiRequestModel => $this->mastodon->authorizedGet(
                     $account,
-                    SocialSearchPaths::mastodon($alternative, null),
+                    MastodonSearchPath::buildPath($alternative, null),
                 ),
                 $this->privateFeedRule->buildSearchQueries($query),
             ),

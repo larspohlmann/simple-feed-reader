@@ -22,6 +22,7 @@ final readonly class ConfirmedDeletion
         #[AutowireLocator('app.social_home_server_check')]
         private ServiceLocator $homeServers,
         private SocialPostAddresses $postAddresses,
+        private PrivateFeedRules $privateFeedRules,
     ) {
     }
 
@@ -46,8 +47,8 @@ final readonly class ConfirmedDeletion
 
     private function remove(Entry $entry): void
     {
-        // Mastodon answers a followers-only status with 404 too: a reader who lost access proves no other copy gone.
-        if (SourceFormat::MASTODON_API === $entry->getFeed()->getSourceFormat()) {
+        $rule = $this->privateFeedRules->findRuleReading($entry->getFeed()->getSourceFormat());
+        if (true === $rule?->hasFollowersOnlyPosts()) {
             $this->localRemoval->removeOnlyThisCopy($entry);
 
             return;

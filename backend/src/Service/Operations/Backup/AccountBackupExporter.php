@@ -28,8 +28,8 @@ use App\Service\Operations\Backup\Model\BackupPartModel;
 use App\Service\Operations\Backup\Model\BackupProvenanceModel;
 use App\Service\Operations\Backup\Model\FoundationSnapshotModel;
 use App\Service\Operations\Backup\Pass\BackupPartWalk;
+use App\Service\Social\Social\ExportedFeeds;
 use App\Service\Social\Social\Model\ExportedSubscriptionModel;
-use App\Service\Social\Social\Support\ExportedFeed;
 use App\Service\Library\Tag\Pass\TagTree;
 use Psr\Clock\ClockInterface;
 
@@ -49,6 +49,7 @@ final readonly class AccountBackupExporter
         private SubscriptionRepository $subscriptions,
         private BackupPartWalkFactory $walkFactory,
         private ClockInterface $clock,
+        private ExportedFeeds $exportedFeeds,
     ) {
     }
 
@@ -78,7 +79,7 @@ final readonly class AccountBackupExporter
 
     private function foundationSnapshot(int $userId): FoundationSnapshotModel
     {
-        $subscriptions = ExportedFeed::withoutRepeats(
+        $subscriptions = $this->exportedFeeds->buildExportsWithoutRepeats(
             $this->subscriptions->findForUserWithTags($userId, SubscriptionSet::Backup),
         );
         $feedsById = self::feedsById($subscriptions);

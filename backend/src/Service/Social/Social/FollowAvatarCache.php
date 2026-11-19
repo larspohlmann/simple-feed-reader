@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Social\Social;
 
 use App\Entity\SocialAccount;
-use App\Enum\SocialNetwork;
 use App\Service\Social\Social\Model\FollowAvatarsModel;
 use App\Service\Social\Social\Model\FollowedAccountModel;
 use Psr\Cache\CacheItemPoolInterface;
@@ -19,16 +18,9 @@ final readonly class FollowAvatarCache
     ) {
     }
 
-    /**
-     * Bluesky's follows come from the public AppView; a Mastodon instance is the user's pick and may name any picture.
-     *
-     * @param list<FollowedAccountModel> $follows
-     */
+    /** @param list<FollowedAccountModel> $follows */
     public function remember(SocialAccount $account, array $follows): void
     {
-        if (SocialNetwork::Bluesky !== $account->getNetwork()) {
-            return;
-        }
         $item = $this->cache->getItem(self::keyOf($account));
         $item->set(FollowAvatarsModel::of($follows)->toCacheEntry());
         $this->cache->save($item);

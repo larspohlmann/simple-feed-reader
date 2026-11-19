@@ -10,7 +10,6 @@ use App\Service\Social\Social\Model\HiddenProfileModel;
 use App\Service\Social\Social\Model\SocialImportFeedModel;
 use App\Service\Social\Social\TolerantHiddenProfiles;
 use App\Tests\Support\RecordingLogger;
-use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StubHiddenProfiles;
 use PHPUnit\Framework\TestCase;
 
@@ -30,7 +29,7 @@ final class HiddenImportFollowsTest extends TestCase
     {
         $this->hiddenProfiles->hide(new HiddenProfileModel('did:plc:carol', 'Carol'));
 
-        $hidden = $this->follows()->among(SocialAccounts::bluesky(), [
+        $hidden = $this->follows()->among([
             new SocialImportFeedModel('did:plc:rusty', 'Rusty'),
             new SocialImportFeedModel('did:plc:bob', 'Bob'),
             new SocialImportFeedModel('did:plc:carol', 'Carol'),
@@ -46,7 +45,7 @@ final class HiddenImportFollowsTest extends TestCase
     {
         $this->hiddenProfiles->hide(new HiddenProfileModel('did:plc:rusty', 'Rusty'), 'rusty-17.bsky.social');
 
-        $hidden = $this->follows()->among(SocialAccounts::bluesky(), [
+        $hidden = $this->follows()->among([
             new SocialImportFeedModel('Rusty-17.bsky.social', 'Rusty'),
         ]);
 
@@ -56,7 +55,7 @@ final class HiddenImportFollowsTest extends TestCase
 
     public function testAnIdentityThatIsNoActorIsNeverAsked(): void
     {
-        $this->follows()->among(SocialAccounts::bluesky(), [
+        $this->follows()->among([
             new SocialImportFeedModel('did:plc:rusty', null),
             new SocialImportFeedModel('not an actor', null),
         ]);
@@ -64,17 +63,9 @@ final class HiddenImportFollowsTest extends TestCase
         self::assertSame([['did:plc:rusty']], $this->hiddenProfiles->asked);
     }
 
-    public function testAMastodonImportAsksNothing(): void
-    {
-        self::assertSame([], $this->follows()->among(SocialAccounts::mastodon(), [
-            new SocialImportFeedModel('did:plc:rusty', null),
-        ]));
-        self::assertSame([], $this->hiddenProfiles->asked);
-    }
-
     public function testNothingToAskAsksNothing(): void
     {
-        self::assertSame([], $this->follows()->among(SocialAccounts::bluesky(), []));
+        self::assertSame([], $this->follows()->among([]));
         self::assertSame([], $this->hiddenProfiles->asked);
     }
 
@@ -83,7 +74,7 @@ final class HiddenImportFollowsTest extends TestCase
         $failure = new SocialNetworkUnreachableException('down');
         $this->hiddenProfiles->failure = $failure;
 
-        self::assertSame([], $this->follows()->among(SocialAccounts::bluesky(), [
+        self::assertSame([], $this->follows()->among([
             new SocialImportFeedModel('did:plc:rusty', null),
         ]));
         self::assertSame('warning', $this->logger->records[0]['level'] ?? null);

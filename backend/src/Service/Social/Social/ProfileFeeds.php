@@ -48,4 +48,16 @@ final readonly class ProfileFeeds
 
         return null;
     }
+
+    public function findExportUrl(string $feedUrl): ?string
+    {
+        foreach (SocialNetwork::cases() as $network) {
+            $exportUrl = $this->selectRule($network)->buildExportUrl($feedUrl);
+            if (null !== $exportUrl) {
+                return $exportUrl;
+            }
+        }
+
+        return null;
+    }
 }

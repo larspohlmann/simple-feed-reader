@@ -5,10 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Social;
 
 use App\Enum\SocialNetwork;
-use App\Service\Outbound\Fetch\IpValidator;
-use App\Service\Outbound\Fetch\UrlGuard;
-use App\Service\Social\Social\BlueskyApiClient;
-use App\Service\Social\Social\BlueskyIdentityResolver;
 use App\Service\Social\Social\FollowMatcher;
 use App\Service\Social\Social\Model\FollowedAccountModel;
 use App\Service\Social\Social\Model\ImportCandidateModel;
@@ -16,10 +12,9 @@ use App\Service\Social\Social\Model\ProfileFeedSubscriptionModel;
 use App\Service\Social\Social\Pass\FollowMatching;
 use App\Service\Social\Social\Support\BlueskyProfileFeed;
 use App\Service\Social\Social\Support\MastodonProfileFeed;
-use App\Tests\Support\FetchWiring;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialRuleWiring;
-use App\Tests\Support\StaticDnsResolver;
+use App\Tests\Support\StubHiddenProfiles;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -28,13 +23,25 @@ final class FollowMatcherTest extends TestCase
 {
     private const string RESOLVE = 'GET https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle=';
 
-    private function matcher(RoutedHttpClient $http): FollowMatcher
-    {
-        $guard = new UrlGuard(new StaticDnsResolver(['public.api.bsky.app' => ['93.184.216.34']]), new IpValidator());
+    private RoutedHttpClient $http;
 
-        return new FollowMatcher(new BlueskyIdentityResolver(
-            new BlueskyApiClient(FetchWiring::patientApiClient($http->client(), $guard)),
-        ));
+    protected function setUp(): void
+    {
+        $this->http = new RoutedHttpClient([]);
+    }
+
+    /**
+     * @param list<FollowedAccountModel>         $follows
+     * @param list<ProfileFeedSubscriptionModel> $profileFeeds
+     *
+     * @return list<ImportCandidateModel>
+     */
+    private function match(SocialNetwork $network, array $follows, array $profileFeeds): array
+    {
+        $importRule = SocialRuleWiring::importRules($this->http, new StubHiddenProfiles())->selectRule($network);
+        $matching = new FollowMatching(SocialRuleWiring::profileFeeds()->selectRule($network), $importRule, $follows);
+
+        return new FollowMatcher()->match($matching, $importRule, $profileFeeds);
     }
 
     private static function bob(): FollowedAccountModel
@@ -46,12 +53,6 @@ final class FollowMatcherTest extends TestCase
             'https://bsky.app/profile/did:plc:bob/rss',
             null,
         );
-    }
-
-    /** @param list<FollowedAccountModel> $follows */
-    private static function matching(SocialNetwork $network, array $follows): FollowMatching
-    {
-        return new FollowMatching($network, SocialRuleWiring::profileFeeds()->selectRule($network), $follows);
     }
 
     private static function mastodonFollow(string $identity, string $feedUrl): FollowedAccountModel
@@ -94,8 +95,9 @@ final class FollowMatcherTest extends TestCase
 
     public function testAFeedKeyedByTheFollowsDidIsSubscribed(): void
     {
-        $candidates = $this->matcher(new RoutedHttpClient([]))->match(
-            self::matching(SocialNetwork::Bluesky, [self::bob()]),
+        $candidates = $this->match(
+            SocialNetwork::Bluesky,
+            [self::bob()],
             [self::blueskyFeed(1, 'https://bsky.app/profile/did:plc:bob/rss')],
         );
 
@@ -104,8 +106,9 @@ final class FollowMatcherTest extends TestCase
 
     public function testAFeedKeyedByTheFollowsCurrentHandleMatchesWithoutANetworkCall(): void
     {
-        $candidates = $this->matcher(new RoutedHttpClient([]))->match(
-            self::matching(SocialNetwork::Bluesky, [self::bob()]),
+        $candidates = $this->match(
+            SocialNetwork::Bluesky,
+            [self::bob()],
             [self::blueskyFeed(1, 'https://bsky.app/profile/Bob.Example.com/rss')],
         );
 
@@ -114,12 +117,13 @@ final class FollowMatcherTest extends TestCase
 
     public function testAFeedKeyedByAnOldHandleIsResolvedToItsDid(): void
     {
-        $http = new RoutedHttpClient([
+        $this->http = new RoutedHttpClient([
             self::RESOLVE . 'old-bob.bsky.social' => new MockResponse('{"did":"did:plc:bob"}'),
         ]);
 
-        $candidates = $this->matcher($http)->match(
-            self::matching(SocialNetwork::Bluesky, [self::bob()]),
+        $candidates = $this->match(
+            SocialNetwork::Bluesky,
+            [self::bob()],
             [self::blueskyFeed(1, 'https://bsky.app/profile/old-bob.bsky.social/rss')],
         );
 
@@ -128,15 +132,16 @@ final class FollowMatcherTest extends TestCase
 
     public function testAnUnresolvableHandleIsNoLongerFollowedWithoutAnError(): void
     {
-        $http = new RoutedHttpClient([
+        $this->http = new RoutedHttpClient([
             self::RESOLVE . 'gone.bsky.social' => new MockResponse(
                 '{"error":"InvalidRequest"}',
                 ['http_code' => Response::HTTP_BAD_REQUEST],
             ),
         ]);
 
-        $candidates = $this->matcher($http)->match(
-            self::matching(SocialNetwork::Bluesky, [self::bob()]),
+        $candidates = $this->match(
+            SocialNetwork::Bluesky,
+            [self::bob()],
             [self::blueskyFeed(2, 'https://bsky.app/profile/gone.bsky.social/rss')],
         );
 
@@ -148,22 +153,23 @@ final class FollowMatcherTest extends TestCase
 
     public function testAnUnreachableResolverStopsResolvingTheRest(): void
     {
-        $http = new RoutedHttpClient([
+        $this->http = new RoutedHttpClient([
             self::RESOLVE . 'first.bsky.social' => new MockResponse(
                 '',
                 ['http_code' => Response::HTTP_SERVICE_UNAVAILABLE],
             ),
         ]);
 
-        $candidates = $this->matcher($http)->match(
-            self::matching(SocialNetwork::Bluesky, [self::bob()]),
+        $candidates = $this->match(
+            SocialNetwork::Bluesky,
+            [self::bob()],
             [
                 self::blueskyFeed(1, 'https://bsky.app/profile/first.bsky.social/rss'),
                 self::blueskyFeed(2, 'https://bsky.app/profile/second.bsky.social/rss'),
             ],
         );
 
-        self::assertCount(3, $http->requests);
+        self::assertCount(3, $this->http->requests);
         self::assertCount(3, $candidates);
     }
 
@@ -178,17 +184,18 @@ final class FollowMatcherTest extends TestCase
             );
             $feeds[] = self::blueskyFeed($index, 'https://bsky.app/profile/h' . $index . '.bsky.social/rss');
         }
-        $http = new RoutedHttpClient($routes);
+        $this->http = new RoutedHttpClient($routes);
 
-        $this->matcher($http)->match(self::matching(SocialNetwork::Bluesky, [self::bob()]), $feeds);
+        $this->match(SocialNetwork::Bluesky, [self::bob()], $feeds);
 
-        self::assertCount(25, $http->requests);
+        self::assertCount(25, $this->http->requests);
     }
 
     public function testTwoFeedsOfOneFollowLeaveNothingBehind(): void
     {
-        $candidates = $this->matcher(new RoutedHttpClient([]))->match(
-            self::matching(SocialNetwork::Bluesky, [self::bob()]),
+        $candidates = $this->match(
+            SocialNetwork::Bluesky,
+            [self::bob()],
             [
                 self::blueskyFeed(1, 'https://bsky.app/profile/did:plc:bob/rss'),
                 self::blueskyFeed(2, 'https://bsky.app/profile/bob.example.com/rss'),
@@ -205,8 +212,9 @@ final class FollowMatcherTest extends TestCase
             self::mastodonFollow('carol@example.com', 'https://social.example.com/@carol.rss'),
         ];
 
-        $candidates = $this->matcher(new RoutedHttpClient([]))->match(
-            self::matching(SocialNetwork::Mastodon, $follows),
+        $candidates = $this->match(
+            SocialNetwork::Mastodon,
+            $follows,
             [
                 self::mastodonFeed(1, 'https://mastodon.example/@Bob.rss'),
                 self::mastodonFeed(2, 'https://social.example.com/@carol.rss'),
@@ -225,8 +233,9 @@ final class FollowMatcherTest extends TestCase
     {
         $bob = self::mastodonFollow('bob@host.example:8443', 'https://host.example:8443/@bob.rss');
 
-        $candidates = $this->matcher(new RoutedHttpClient([]))->match(
-            self::matching(SocialNetwork::Mastodon, [$bob]),
+        $candidates = $this->match(
+            SocialNetwork::Mastodon,
+            [$bob],
             [self::mastodonFeed(1, 'https://host.example:8443/@bob.rss')],
         );
 
@@ -243,8 +252,9 @@ final class FollowMatcherTest extends TestCase
             null,
         );
 
-        $candidates = $this->matcher(new RoutedHttpClient([]))->match(
-            self::matching(SocialNetwork::Bluesky, [self::bob(), $again]),
+        $candidates = $this->match(
+            SocialNetwork::Bluesky,
+            [self::bob(), $again],
             [],
         );
 
@@ -258,8 +268,9 @@ final class FollowMatcherTest extends TestCase
             self::mastodonFollow('Bob@mastodon.example', 'https://mastodon.example/@Bob.rss'),
         ];
 
-        $candidates = $this->matcher(new RoutedHttpClient([]))->match(
-            self::matching(SocialNetwork::Mastodon, $follows),
+        $candidates = $this->match(
+            SocialNetwork::Mastodon,
+            $follows,
             [],
         );
 
@@ -268,8 +279,9 @@ final class FollowMatcherTest extends TestCase
 
     public function testANoLongerFollowedFeedCarriesItsSubscriptionsTitleAndUrl(): void
     {
-        $candidates = $this->matcher(new RoutedHttpClient([]))->match(
-            self::matching(SocialNetwork::Bluesky, []),
+        $candidates = $this->match(
+            SocialNetwork::Bluesky,
+            [],
             [self::blueskyFeed(3, 'https://bsky.app/profile/did:plc:gone/rss')],
         );
 

@@ -61,6 +61,11 @@ final readonly class LemmyPrivateFeedRule implements PrivateFeedRuleInterface
         return SourceFormat::LEMMY_API;
     }
 
+    public function hasFollowersOnlyPosts(): bool
+    {
+        return false;
+    }
+
     public function buildSearchQueries(string $query): array
     {
         return LemmySearchTerms::of(new SearchQueryAlternatives(SearchQueryTokens::of($query))->factors());

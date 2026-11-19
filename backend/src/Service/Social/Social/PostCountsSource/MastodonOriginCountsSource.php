@@ -12,7 +12,7 @@ use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\MastodonApiClient;
 use App\Service\Social\Social\Model\SocialCountsModel;
 use App\Service\Social\Social\Support\MastodonStatusAddress;
-use App\Service\Social\Social\Support\PostCounts;
+use App\Service\Social\Social\Support\MastodonPostCounts;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /** Asks the status's own instance, anonymously: the counts every reader of the post sees there. */
@@ -37,7 +37,7 @@ final readonly class MastodonOriginCountsSource implements PostCountsSourceInter
             throw new PostNotPubliclyCountableException('The instance answered with another status.');
         }
 
-        return PostCounts::ofMastodonStatus($status)
+        return MastodonPostCounts::parseStatus($status)
             ?? throw new SocialNetworkUnreachableException('The instance answered a status without its counts.');
     }
 }

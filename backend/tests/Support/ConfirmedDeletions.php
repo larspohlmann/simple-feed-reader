@@ -34,6 +34,7 @@ final class ConfirmedDeletions
             ),
             new ServiceLocator(['mastodon' => $askHomeServer, 'bluesky' => $askHomeServer]),
             SocialRuleWiring::postAddresses(),
+            SocialRuleWiring::privateFeedRules(),
         );
     }
 }

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social;
 
-use App\Entity\SocialAccount;
-use App\Enum\SocialNetwork;
 use App\Service\Social\Bluesky\Support\BlueskyActorKey;
 use App\Service\Social\Social\Model\HiddenProfileModel;
 use App\Service\Social\Social\Model\SocialImportFeedModel;
@@ -24,9 +22,9 @@ final readonly class HiddenImportFollows
      * @return array<string, HiddenProfileModel> by the chosen identity; none when Bluesky cannot say, and the 403 of
      *                                          their RSS later moves them
      */
-    public function among(SocialAccount $account, array $feeds): array
+    public function among(array $feeds): array
     {
-        $actorByIdentity = SocialNetwork::Bluesky === $account->getNetwork() ? self::actorsOf($feeds) : [];
+        $actorByIdentity = self::actorsOf($feeds);
         if ([] === $actorByIdentity) {
             return [];
         }

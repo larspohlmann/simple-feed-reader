@@ -22,6 +22,7 @@ use App\Repository\EntryStateRepository;
 use App\Repository\KnownSocialCollectionRepository;
 use App\Repository\SubscriptionRepository;
 use App\Service\Social\Social\Exception\InvalidSocialImportFeedException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\FollowAvatarCache;
 use App\Service\Social\Social\Model\FollowedAccountModel;
 use App\Service\Social\Social\Model\HiddenProfileModel;
@@ -36,6 +37,9 @@ use App\Tests\Support\SavedPostFixtures;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StubHiddenProfiles;
 use App\Tests\Support\UserFactory;
+use Monolog\Handler\TestHandler;
+use Monolog\Level;
+use Monolog\Logger;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -520,6 +524,76 @@ final class SocialImporterTest extends DbTestCase
         self::assertSame(1, $result->skippedOverLimit);
         self::assertNotNull($this->feedAt('https://bsky.app/profile/did:plc:bob/rss'));
         self::assertNull($this->feedAt(sprintf('social:bluesky:%d:author:did:plc:rusty', $account->requireId())));
+    }
+
+    public function testALemmyImportTreatsNoFollowAsHidden(): void
+    {
+        $this->assertAHiddenDidIsRefusedAsNoAccountOf(
+            $this->storedAccount(SocialAccounts::lemmyOf($this->user)),
+            'rss@feddit.example',
+            'did:plc:rusty is no Lemmy account.',
+        );
+    }
+
+    public function testAMastodonImportTreatsNoFollowAsHidden(): void
+    {
+        $this->assertAHiddenDidIsRefusedAsNoAccountOf(
+            $this->storedAccount(SocialAccounts::mastodonOf($this->user)),
+            'bob@mastodon.example',
+            'did:plc:rusty is no Mastodon account.',
+        );
+    }
+
+    /** Bluesky's rule would move the hidden DID to an author feed; the account's own rule refuses it. */
+    private function assertAHiddenDidIsRefusedAsNoAccountOf(
+        SocialAccount $account,
+        string $follow,
+        string $refusal,
+    ): void {
+        $this->hiddenProfiles()->hide(new HiddenProfileModel('did:plc:rusty', 'Rusty'));
+
+        try {
+            $this->importer()->import($account, new SocialImportModel([
+                new SocialImportFeedModel($follow, null),
+                new SocialImportFeedModel('did:plc:rusty', 'Rusty'),
+            ], []));
+            self::fail('The hidden Bluesky follow was taken in.');
+        } catch (InvalidSocialImportFeedException $exception) {
+            self::assertSame($refusal, $exception->getMessage());
+        }
+        self::assertSame([], $this->hiddenProfiles()->asked);
+    }
+
+    public function testABlueskyImportTheAppViewCannotAnswerBringsEveryFollowInByRssAndSaysSo(): void
+    {
+        $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));
+        $this->hiddenProfiles()->hide(new HiddenProfileModel('did:plc:rusty', 'Rusty'));
+        $this->hiddenProfiles()->failure = new SocialNetworkUnreachableException('down');
+        $logSpy = $this->attachALogSpy();
+
+        $result = $this->importer()->import($account, new SocialImportModel([
+            new SocialImportFeedModel('did:plc:rusty', 'Rusty'),
+            new SocialImportFeedModel('did:plc:bob', 'Bob'),
+        ], []));
+
+        self::assertSame(2, $result->imported);
+        self::assertNotNull($this->feedAt(self::profileFeed('did:plc:rusty')));
+        self::assertNotNull($this->feedAt(self::profileFeed('did:plc:bob')));
+        self::assertNull($this->feedAt(sprintf('social:bluesky:%d:author:did:plc:rusty', $account->requireId())));
+        self::assertTrue($logSpy->hasWarning(
+            'Import could not tell which Bluesky follows are hidden; all come in by RSS.',
+        ));
+    }
+
+    /** Pushed onto the default logger: the test container refuses to replace an initialised service. */
+    private function attachALogSpy(): TestHandler
+    {
+        $logSpy = new TestHandler(Level::Warning);
+        $logger = self::getContainer()->get('monolog.logger');
+        self::assertInstanceOf(Logger::class, $logger);
+        $logger->pushHandler($logSpy);
+
+        return $logSpy;
     }
 
     private function hiddenProfiles(): StubHiddenProfiles

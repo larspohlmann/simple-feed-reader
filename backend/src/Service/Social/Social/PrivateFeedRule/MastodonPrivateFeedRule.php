@@ -63,6 +63,12 @@ final readonly class MastodonPrivateFeedRule implements PrivateFeedRuleInterface
         return SourceFormat::MASTODON_API;
     }
 
+    public function hasFollowersOnlyPosts(): bool
+    {
+        // Mastodon answers a followers-only status with 404 too: a reader who lost access proves no other copy gone.
+        return true;
+    }
+
     public function buildSearchQueries(string $query): array
     {
         return new SearchQueryAlternatives(SearchQueryTokens::of($query))->queries();

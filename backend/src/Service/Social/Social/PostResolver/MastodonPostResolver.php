@@ -17,7 +17,7 @@ use App\Service\Social\Social\Support\MastodonAuthor;
 use App\Service\Social\Social\Support\MastodonCard;
 use App\Service\Social\Social\Support\MastodonQuoting;
 use App\Service\Social\Social\Support\MastodonVisibility;
-use App\Service\Social\Social\Support\PostCounts;
+use App\Service\Social\Social\Support\MastodonPostCounts;
 use App\Service\Foundation\Text\Support\PlainText;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
@@ -42,7 +42,7 @@ final readonly class MastodonPostResolver implements PostResolverInterface
             throw new SocialNetworkUnreachableException('The Mastodon instance named a status id it cannot mean.');
         }
 
-        $post = SocialPostModel::onMastodon($account, $statusId)->withCounts(PostCounts::ofMastodonStatus($status));
+        $post = SocialPostModel::onMastodon($account, $statusId)->withCounts(MastodonPostCounts::parseStatus($status));
 
         return self::withViewer($post, $status, $statusId)->inResponseContext(self::responseContextOf($status));
     }

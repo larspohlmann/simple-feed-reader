@@ -10,8 +10,8 @@ use App\Enum\SourceFormat;
 use App\Enum\SubscriptionSet;
 use App\Repository\SubscriptionRepository;
 use App\Service\Library\Opml\Pass\OpmlTagTree;
+use App\Service\Social\Social\ExportedFeeds;
 use App\Service\Social\Social\Model\ExportedSubscriptionModel;
-use App\Service\Social\Social\Support\ExportedFeed;
 
 /**
  * Serialises a user's subscriptions to OPML 2.0, grouped by tag, each tag nested in its
@@ -22,6 +22,7 @@ final readonly class OpmlExporter
 {
     public function __construct(
         private SubscriptionRepository $subscriptions,
+        private ExportedFeeds $exportedFeeds,
     ) {
     }
 
@@ -30,7 +31,7 @@ final readonly class OpmlExporter
      */
     public function export(User $user): string
     {
-        $subscriptions = ExportedFeed::withoutRepeats(
+        $subscriptions = $this->exportedFeeds->buildExportsWithoutRepeats(
             $this->subscriptions->findForUserWithTags($user->requireId(), SubscriptionSet::OpmlExport),
         );
 

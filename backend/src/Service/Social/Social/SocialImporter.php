@@ -9,7 +9,6 @@ use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Exception\InvalidSelectionException;
 use App\Service\Social\Social\Exception\InvalidSocialImportFeedException;
-use App\Service\Social\Social\Model\HiddenProfileModel;
 use App\Service\Social\Social\Model\PrivateFeedImportModel;
 use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Service\Social\Social\Model\SocialImportFeedModel;
@@ -32,7 +31,7 @@ final readonly class SocialImporter
         private SubscriptionService $subscriptionService,
         private PrivateFeeds $privateFeeds,
         private ImportedProfilePictures $importedPictures,
-        private HiddenImportFollows $hiddenFollows,
+        private ImportRules $importRules,
         private TagStructureLock $tagStructureLock,
         private ProfileFeeds $profileFeeds,
         private PrivateFeedRules $privateFeedRules,
@@ -46,10 +45,10 @@ final readonly class SocialImporter
     public function import(SocialAccount $account, SocialImportModel $import): SocialImportResultModel
     {
         $network = $account->getNetwork();
-        $hidden = $this->hiddenFollows->among($account, $import->subscribe);
-        $items = $this->items($network, self::withoutHidden($import->subscribe, $hidden));
+        $accountOnly = $this->importRules->selectRule($network)->findAccountOnlyFeeds($account, $import->subscribe);
+        $items = $this->items($network, self::withoutAccountOnly($import->subscribe, $accountOnly));
         $this->assertCollectionsOf($network, $import->collections);
-        $privateFeeds = [...$import->collections, ...self::authorFeedsOf($hidden)];
+        $privateFeeds = [...$import->collections, ...array_values($accountOnly)];
         $toRemove = $this->ownedSubscriptions->resolve($account->getUser()->requireId(), $import->unsubscribe);
 
         // Removals first, so the slots they free count toward the subscription cap.
@@ -121,32 +120,17 @@ final readonly class SocialImporter
     }
 
     /**
-     * @param list<SocialImportFeedModel>       $feeds
-     * @param array<string, HiddenProfileModel> $hidden
+     * @param list<SocialImportFeedModel>     $feeds
+     * @param array<string, PrivateFeedModel> $accountOnly
      *
      * @return list<SocialImportFeedModel>
      */
-    private static function withoutHidden(array $feeds, array $hidden): array
+    private static function withoutAccountOnly(array $feeds, array $accountOnly): array
     {
         return array_values(array_filter(
             $feeds,
-            static fn (SocialImportFeedModel $feed): bool => !isset($hidden[$feed->identity]),
+            static fn (SocialImportFeedModel $feed): bool => !isset($accountOnly[$feed->identity]),
         ));
-    }
-
-    /**
-     * @param array<string, HiddenProfileModel> $hidden
-     *
-     * @return list<PrivateFeedModel>
-     */
-    private static function authorFeedsOf(array $hidden): array
-    {
-        $authorFeeds = [];
-        foreach ($hidden as $profile) {
-            $authorFeeds[] = $profile->toAuthorFeed();
-        }
-
-        return $authorFeeds;
     }
 
     /**
