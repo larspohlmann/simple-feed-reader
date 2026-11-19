@@ -4,7 +4,7 @@
 
 **Goal:** No method in `backend/src/Http` or `Service/Content` is named `of`, `of…` or `…Of`.
 
-**Architecture:** Renames only, 123 methods, the fourth PR for #2360. Each method gets the dictionary verb for what it does; the tables below are the decision. Callers anywhere in `backend/src`, `backend/tests` and `backend/migrations` follow.
+**Architecture:** Renames only, 124 methods (123 in the pattern plus `LinkLanding::outcomeOfFailure`), the fourth PR for #2360. Each method gets the dictionary verb for what it does; the tables below are the decision. Callers anywhere in `backend/src`, `backend/tests` and `backend/migrations` follow.
 
 **Tech Stack:** PHP 8.5, PHPUnit, PHPStan, PHPMD.
 
@@ -24,7 +24,7 @@
 
 - **A name says what the method really does** (Lars, 2026-11-19: "always look at what the method really does and chose the name based on that"). Every row below was named from the method's full body and its callers, not from its return type or its old name. A dictionary verb is used where its meaning matches; where no row of the dictionary fits, the plain verb for what happens (`clip`, `split`, `strip`, `collect`, `detect`, `pick`, `hash`).
 - `of()` on a named constructor or a conversion becomes `from<Source>()` or `to<Target>()`.
-- A `…Json` mapper, page or response built from one source is `from<Source>()`; a private helper that shapes one part of a response is `build…Row()`.
+- **Http keeps its established name for a mapper.** A `…Json` mapper, page or response that takes one source is a bare `from(...)`, as thirteen Http mappers already are; the source is the parameter's type. A second constructor on the same class keeps its qualifier (`fromKind`, `fromReply`); a null-in, null-out mapper of its own is `fromOptional`. A private helper that shapes one part of a response is `build…Row()`. This is the Http layer's convention only: Content's `from<Source>()` rows stay.
 - A method that asks a remote and throws on failure is `fetch…`; one that follows redirects or settles between sources and answers without throwing is `resolve…`.
 - An interface method is renamed with every implementation: `StatusReasonPhrasesInterface` (implemented in `Http`), `EmbedDetailsSourceInterface`, `CommentsSourceInterface`.
 
@@ -36,60 +36,60 @@ The last column is what the method does, which is what the reviewer checks the n
 
 | File | Old | New | What it does |
 |---|---|---|---|
-| `ActiveAiJson.php` | `of` | `fromUser` | the user's active AI connection: ready, model, capabilities |
-| `ChaptersJson.php` | `of` | `fromChapters` | the chapters as a JSON list; null without any |
-| `ComposerContextJson.php` | `of` | `fromContext` | the composer context as its response shape |
+| `ActiveAiJson.php` | `of` | `from` | the user's active AI connection: ready, model, capabilities |
+| `ChaptersJson.php` | `of` | `from` | the chapters as a JSON list; null without any |
+| `ComposerContextJson.php` | `of` | `from` | the composer context as its response shape |
 | `ComposerContextJson.php` | `lemmyOf` (private) | `buildLinkPostRow` | communities, title and title limits of a link post |
 | `ComposerContextJson.php` | `postOf` (private) | `buildPostTargetRow` | a post the composer answers |
 | `ComposerContextJson.php` | `linkOf` (private) | `buildLinkTargetRow` | a link the composer shares |
-| `EmbedDetailsJson.php` | `of` | `fromDetails` | title, duration, chapters and artwork of an embed |
+| `EmbedDetailsJson.php` | `of` | `from` | title, duration, chapters and artwork of an embed |
 | `EntryJson.php` | `discussionOf` (private) | `buildDiscussionRow` | discussion URL, comments mode, score and comment count of a row |
 | `EntryJson.php` | `communityOf` (private) | `buildCommunityRow` | name and URL of the row's community, or null |
 | `EntryJson.php` | `socialOf` (private) | `buildSocialRow` | network and like state of a Bluesky or Mastodon row, or null |
 | `EntryJson.php` | `posterOf` (private) | `buildPosterRow` | who posted the entry when that is not the feed, or null |
 | `EntryJson.php` | `authorPosterOf` (private) | `buildAuthorPosterRow` | the entry's author as poster, or null |
 | `EntryJson.php` | `originPosterOf` (private) | `buildOriginPosterRow` | the saved entry's origin as poster, or null |
-| `EntryPage.php` | `of` | `fromRows` | a page of entries with its next cursor |
-| `EntryTranscriptJson.php` | `of` | `fromTranscript` | language and paragraphs of a transcript, or null |
-| `LinkCardJson.php` | `of` | `fromCard` | a card's fields with its reader token |
-| `LinkCardJson.php` | `fieldsOf` | `buildFields` | a card's stored fields, without a token |
-| `LinkCardJson.php` | `ofOrNull` | `fromOptionalCard` | as `fromCard()`, null for no card |
-| `MeProfileJson.php` | `of` | `fromUser` | the profile, preferences, AI and catalog block of `/me` |
-| `PostDeletionJson.php` | `of` | `fromDeletion` | the deletion outcome |
-| `PreviewedDiscoveryJson.php` | `of` | `fromDiscovery` | the candidates and scrape-failure reason of a discovery |
+| `EntryPage.php` | `of` | `from` | a page of entries with its next cursor |
+| `EntryTranscriptJson.php` | `of` | `from` | language and paragraphs of a transcript, or null |
+| `LinkCardJson.php` | `of` | `from` | a card's fields with its reader token |
+| `LinkCardJson.php` | `fieldsOf` | `toFields` | a card as its stored fields, without a reader token |
+| `LinkCardJson.php` | `ofOrNull` | `fromOptional` | as `fromCard()`, null for no card |
+| `MeProfileJson.php` | `of` | `from` | the profile, preferences, AI and catalog block of `/me` |
+| `PostDeletionJson.php` | `of` | `from` | the deletion outcome |
+| `PreviewedDiscoveryJson.php` | `of` | `from` | the candidates and scrape-failure reason of a discovery |
 | `PreviewedDiscoveryJson.php` | `labelOf` (private) | `formatLabel` | a format's display label |
-| `ProxiedImageResponse.php` | `of` | `fromImage` | the HTTP response that serves a proxied image |
-| `PublishedPostJson.php` | `of` | `fromPost` | address and URL of a published post |
-| `QuotedPostJson.php` | `ofOrNull` | `fromOptionalQuote` | a quoted post as its row, null for none |
-| `ReadingActivityJson.php` | `of` | `fromActivity` | the reading activity payload |
-| `RecommendationCapabilitiesJson.php` | `of` | `fromConnection` | the capabilities of a connection's engine |
+| `ProxiedImageResponse.php` | `of` | `from` | the HTTP response that serves a proxied image |
+| `PublishedPostJson.php` | `of` | `from` | address and URL of a published post |
+| `QuotedPostJson.php` | `ofOrNull` | `fromOptional` | a quoted post as its row, null for none |
+| `ReadingActivityJson.php` | `of` | `from` | the reading activity payload |
+| `RecommendationCapabilitiesJson.php` | `of` | `from` | the capabilities of a connection's engine |
 | `RecommendationCapabilitiesJson.php` | `ofKind` | `fromKind` | the capabilities of an engine kind |
 | `RecommendationRunHistoryJson.php` | `completionOf` (private) | `readCompletedAt` | the run's completed-at, only when its status is terminal |
-| `SavedSearchPage.php` | `of` | `fromResult` | a saved search's entries as a page |
-| `SearchPage.php` | `of` | `fromResult` | a search result as a page with matched words |
+| `SavedSearchPage.php` | `of` | `from` | a saved search's entries as a page |
+| `SearchPage.php` | `of` | `from` | a search result as a page with matched words |
 | `SocialAccountJson.php` | `syncOf` (private) | `buildSyncRow` | last check, skip and recent changes of an account |
-| `SocialCountsJson.php` | `of` | `fromCounts` | a post's counts |
-| `SocialCountsJson.php` | `ofReply` | `fromReplyCounts` | a reply's counts |
-| `SocialLikeJson.php` | `of` | `fromLiked` | the liked flag as its response |
-| `SocialRepostJson.php` | `of` | `fromReposted` | the reposted flag as its response |
-| `SocialViewerJson.php` | `of` | `fromPost` | what the viewer did and may do with a post |
+| `SocialCountsJson.php` | `of` | `from` | a post's counts |
+| `SocialCountsJson.php` | `ofReply` | `fromReply` | a reply's counts |
+| `SocialLikeJson.php` | `of` | `from` | the liked flag as its response |
+| `SocialRepostJson.php` | `of` | `from` | the reposted flag as its response |
+| `SocialViewerJson.php` | `of` | `from` | what the viewer did and may do with a post |
 | `SymfonyStatusReasonPhrases.php` | `of` | `findPhrase` | implements `StatusReasonPhrasesInterface`, see Content |
-| `ThreadPostJson.php` | `of` | `fromPost` | a thread post as its row |
-| `TrendingStoryPage.php` | `of` | `fromResult` | a story's entries as a page with join times |
-| `TrialEndJson.php` | `of` | `fromUser` | the user's trial end as ATOM, or null |
-| `VersionJson.php` | `of` | `fromReport` | running and latest version |
-| `Admin/SelfUpdateStatusJson.php` | `of` | `fromStatus` | the self-update status |
+| `ThreadPostJson.php` | `of` | `from` | a thread post as its row |
+| `TrendingStoryPage.php` | `of` | `from` | a story's entries as a page with join times |
+| `TrialEndJson.php` | `of` | `formatTrialEnd` | the user's trial end as an ATOM string, or null |
+| `VersionJson.php` | `of` | `from` | running and latest version |
+| `Admin/SelfUpdateStatusJson.php` | `of` | `from` | the self-update status |
 
-### Content (80), under `backend/src/Service/Content/`
+### Content (81), under `backend/src/Service/Content/`
 
 | File | Old | New | What it does |
 |---|---|---|---|
-| `Chapter/ChaptersOnOpen.php` | `chaptersOf` (private) | `serveChapters` | fills an entry's chapters on open and returns what the reader is served |
+| `Chapter/ChaptersOnOpen.php` | `chaptersOf` (private) | `serveChapters` | the chapters and body a reader is served: for a YouTube video, chapters read out of the description and stripped from the body; otherwise filled on open, then read from an audio episode's description, else the stored ones with the body unchanged |
 | `Chapter/ChaptersOnOpen.php` | `audioOf` (private) | `findAudio` | the entry's first audio attachment, or null |
 | `Chapter/EmbedDetails.php` | `of` | `fetchDetails` | an embed's details from the cache, else from its provider; throws when unreachable |
 | `Chapter/EmbedDetailsCache.php` | `keyOf` (private) | `buildKey` | the cache key of an embed |
-| `Chapter/GuardedDescriptionRequest.php` | `answerOf` | `fetchAnswer` | sends the request within the guard and returns the decoded answer |
-| `Chapter/GuardedDescriptionRequest.php` | `directAnswerOf` | `fetchDirectAnswer` | the same, directly, after the proxy was refused |
+| `Chapter/GuardedDescriptionRequest.php` | `answerOf` | `fetchAnswer` | sends the request within the guard and returns the decoded answer; empty for a blocked, oversized or unsuccessful answer; throws on a fetch or transient failure |
+| `Chapter/GuardedDescriptionRequest.php` | `directAnswerOf` | `fetchDirectAnswer` | the same, directly, after the proxy was refused; empty for a blocked, oversized or unsuccessful answer; throws on a fetch or transient failure, or when the direct route is unavailable |
 | Chapter/EmbedDetailsSource/EmbedDetailsSourceInterface.php, SoundCloudOembedDetailsSource.php, YouTubePlayerDetailsSource.php | `detailsOf` | `fetchDescription` | asks the provider for an embed's title, duration and description; throws when unreachable (3 methods) |
 | `Chapter/EmbedDetailsSource/YouTubePlayerDetailsSource.php` | `videoOf` (private) | `fetchVideo` | the player answer's video details, asked through the proxy, then directly; throws without them |
 | `Chapter/Support/ChapterLine.php` | `chapterOf` | `parseChapter` | the chapter a description line states, or null |
@@ -118,6 +118,7 @@ The last column is what the method does, which is what the reviewer checks the n
 | `LinkResolution/LinkLanding.php` | `of` | `resolveLanding` | follows a link and says where it lands: changed, unchanged, retryable or unresolved |
 | `LinkResolution/LinkLanding.php` | `landingOf` (private) | `fetchLanding` | follows the link by HEAD, else by GET; throws on a transport failure |
 | `LinkResolution/LinkLanding.php` | `outcomeOf` (private) | `buildOutcome` | the landing outcome for a landing URL |
+| `LinkResolution/LinkLanding.php` | `outcomeOfFailure` (private, outside the pattern) | `buildFailureOutcome` | the landing outcome for a failed landing, named like its sibling `buildOutcome` |
 | `Reader/ArticleContentGate.php` | `contentOf` | `requireContent` | the article's content; throws when it is empty or too short without media |
 | `Reader/RelatedTeaserGridRemover.php` | `cardOf` (private) | `findCard` | the image-carrying ancestor of a heading that holds no real prose, or null |
 | `Reader/BodyCleaning/BodyCleaningStep/AudioPlayerNormalizer.php` | `clipOf` (private) | `buildClip` | the clip of a player; null without a source or for a live stream |
@@ -135,7 +136,7 @@ The last column is what the method does, which is what the reviewer checks the n
 | `Reader/Model/PageHeadModel.php` | `ofFile` | `fromFile` | a head for a file of a given type |
 | `Reader/Model/ParseOffsetUnit.php` | `lengthOf` | `measureLength` | a text's length in this unit, bytes or code points |
 | `Reader/PageRepair/ImageWrapperClassRemover.php` | `stripWrappersOf` (private) | `stripWrapperAttributes` | removes class and id from an image's sole-image wrappers |
-| `Reader/PageRepair/NoscriptImageUnwrapper.php` | `promoteImageOutOf` (private) | `unwrapImage` | replaces a `<noscript>` holding an image with its children |
+| `Reader/PageRepair/NoscriptImageUnwrapper.php` | `promoteImageOutOf` (private) | `unwrapImage` | removes the lazy-load placeholder before a `<noscript>` that holds an image and replaces the `<noscript>` with its children |
 | `Reader/RecipeFacts/RecipeFactsRecognizer.php` | `factsOf` (private) | `collectFacts` | the facts of a container's items |
 | `Reader/RecipeFacts/RecipeFactsRecognizer.php` | `factOf` (private) | `parseFact` | label and value of one item, or null when both are empty |
 | `Reader/RecipeFacts/RecipeFactsRecognizer.php` | `textOf` (private) | `readText` | the trimmed text of an item's child by class, `''` without it |
@@ -167,13 +168,13 @@ The last column is what the method does, which is what the reviewer checks the n
 - **Three interfaces.** `StatusReasonPhrasesInterface` is implemented in `Http`; `EmbedDetailsSourceInterface` and `CommentsSourceInterface` have several implementations and test doubles.
 - **Same new name on purpose:** `fromUser`, `fromPost`, `fromResult` on several mappers; `parseCues`, `parseCue`, `parseStart` on both cue helpers; `requirePost` and `findPost` on the Lemmy and Substack classes; `findDuration` on two audio classes.
 - **Name collisions.** `EntryJson` and `ComposerContextJson` get several `build…Row`; `LinkLanding` gets `fetchLanding` beside `landingByGet()`; `LinkCardJson` gets `fromCard`, `buildFields`, `fromOptionalCard`.
-- **Left alone:** `LinkLanding::outcomeOfFailure()` and other names with `Of` in the middle are not in the pattern and not in this batch.
+- **Left alone:** names with `Of` in the middle are not in the pattern and not in this batch, except `LinkLanding::outcomeOfFailure()`, renamed beside its sibling.
 
 ---
 
 ### Task 1: Http
 
-- [ ] **Step 1:** Rename the 43 Http methods and every caller in `backend/src`, `backend/tests` and `backend/migrations`. `SymfonyStatusReasonPhrases::of()` waits for Task 2.
+- [ ] **Step 1:** Rename the 43 Http methods and every caller in `backend/src`, `backend/tests` and `backend/migrations`. `SymfonyStatusReasonPhrases::of()` waits for Task 3.
 - [ ] **Step 2:** Run `grep -rnE 'function\s+&?(of[A-Z]\w*|of|\w+Of)\s*\(' backend/src/Http`. Expected: one line, `SymfonyStatusReasonPhrases::of`.
 - [ ] **Step 3:** `composer cs:fix && composer check && composer md && php bin/phpunit`. Expected: green, the same test count as develop.
 - [ ] **Step 4:** Commit `refactor(#2360): Http mappers say what they do`.
