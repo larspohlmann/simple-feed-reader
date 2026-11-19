@@ -38,7 +38,7 @@ final readonly class OriginCookies
 
     public function for(string $imageUrl): string
     {
-        $root = OriginRoot::of($imageUrl);
+        $root = OriginRoot::fromUrl($imageUrl);
 
         return $this->cache->get(
             hash('xxh128', $root),

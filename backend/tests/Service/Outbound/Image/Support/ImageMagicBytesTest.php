@@ -34,13 +34,13 @@ final class ImageMagicBytesTest extends TestCase
     #[DataProvider('leadingBytes')]
     public function testTheLeadingBytesNameTheImageType(string $bytes, ?string $expected): void
     {
-        self::assertSame($expected, ImageMagicBytes::typeOf($bytes));
+        self::assertSame($expected, ImageMagicBytes::detectType($bytes));
     }
 
     public function testTheSignatureMustStartTheBody(): void
     {
-        self::assertNull(ImageMagicBytes::typeOf("x\xFF\xD8\xFF\xE0"));
-        self::assertNull(ImageMagicBytes::typeOf(" GIF89a"));
-        self::assertNull(ImageMagicBytes::typeOf("\x00RIFF\x24\x00\x00\x00WEBP"));
+        self::assertNull(ImageMagicBytes::detectType("x\xFF\xD8\xFF\xE0"));
+        self::assertNull(ImageMagicBytes::detectType(" GIF89a"));
+        self::assertNull(ImageMagicBytes::detectType("\x00RIFF\x24\x00\x00\x00WEBP"));
     }
 }

@@ -97,7 +97,7 @@ final readonly class GuardedImageProbe implements GuardedImageProbeInterface
 
     private static function declaresAnImage(LandedResponse $landed): bool
     {
-        return str_starts_with(MediaType::of($landed->header('content-type')), 'image/');
+        return str_starts_with(MediaType::fromHeader($landed->header('content-type')), 'image/');
     }
 
     /**

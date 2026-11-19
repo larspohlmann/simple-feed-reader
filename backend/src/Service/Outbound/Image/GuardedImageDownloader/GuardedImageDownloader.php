@@ -109,7 +109,7 @@ final readonly class GuardedImageDownloader implements GuardedImageDownloaderInt
     private function readSuccessfulResponse(LandedResponse $landed): array
     {
         $this->assertOk($landed->status);
-        $declaredType = MediaType::of($landed->header('content-type'));
+        $declaredType = MediaType::fromHeader($landed->header('content-type'));
         $this->assertAllowedUnlessUndeclared($declaredType);
         $bytes = $landed->response->getContent();
         $contentType = ImageType::declaredOrSniffed($declaredType, $bytes);

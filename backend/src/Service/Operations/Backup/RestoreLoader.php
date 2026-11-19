@@ -36,7 +36,7 @@ final readonly class RestoreLoader
             $this->feeds,
             $this->savedSearchSlug,
             $this->foundationFactory,
-            $this->accountSettings->of($user),
+            $this->accountSettings->loadSettings($user),
         );
 
         return $pass->run($user, $this->reader->read($gzipBytes, $user->requireId()));

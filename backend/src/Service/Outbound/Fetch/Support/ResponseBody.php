@@ -34,7 +34,7 @@ final class ResponseBody
     public static function decoded(ResponseInterface $response, ResponseSizeLimit $limit): string
     {
         $body = $response->getContent(false);
-        $url = self::urlOf($response);
+        $url = self::readUrl($response);
         $encoding = strtolower(trim(ResponseHeader::first($response, 'content-encoding') ?? ''));
         if (self::isUndecodable($encoding)) {
             throw new FeedUnreachableException(sprintf('%s: unsupported Content-Encoding "%s"', $url, $encoding));
@@ -94,7 +94,7 @@ final class ResponseBody
         return \in_array($encoding, self::UNDECODABLE, true) || str_contains($encoding, ',');
     }
 
-    private static function urlOf(ResponseInterface $response): string
+    private static function readUrl(ResponseInterface $response): string
     {
         $url = $response->getInfo('url');
 

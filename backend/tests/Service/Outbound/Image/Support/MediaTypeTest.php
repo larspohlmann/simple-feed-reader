@@ -23,6 +23,6 @@ final class MediaTypeTest extends TestCase
     #[DataProvider('headers')]
     public function testTheMediaTypeOfAContentTypeHeader(?string $header, string $expected): void
     {
-        self::assertSame($expected, MediaType::of($header));
+        self::assertSame($expected, MediaType::fromHeader($header));
     }
 }

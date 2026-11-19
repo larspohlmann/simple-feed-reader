@@ -14,7 +14,7 @@ final class RenditionTargets
 
     private const float TOP_BAND_STRETCH = 1.5;
 
-    public static function bandOf(int $width): ?int
+    public static function pickBand(int $width): ?int
     {
         $band = null;
         foreach (self::WIDTHS as $target) {
@@ -33,7 +33,7 @@ final class RenditionTargets
      */
     public static function uncovered(array $knownWidths): array
     {
-        $covered = array_map(self::bandOf(...), $knownWidths);
+        $covered = array_map(self::pickBand(...), $knownWidths);
 
         return array_values(array_filter(
             self::WIDTHS,

@@ -38,7 +38,7 @@ final readonly class ImageDownloader
     {
         $landed = $this->land($request);
         $this->assertServed($landed);
-        $declaredType = MediaType::of($landed->header('content-type'));
+        $declaredType = MediaType::fromHeader($landed->header('content-type'));
         $this->assertServedUnlessUndeclared($landed, $declaredType);
         $bytes = $this->body($landed);
         $contentType = ImageType::declaredOrSniffed($declaredType, $bytes);
@@ -108,7 +108,7 @@ final readonly class ImageDownloader
         $headers = [
             'Accept' => 'image/avif,image/webp,image/*;q=0.8',
             'Accept-Encoding' => 'identity',
-            'Referer' => OriginRoot::of($request->url),
+            'Referer' => OriginRoot::fromUrl($request->url),
             'User-Agent' => $this->userAgent,
         ];
         if ($request->cookies !== '') {

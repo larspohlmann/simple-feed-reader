@@ -85,7 +85,7 @@ final readonly class LinkResolutionSweep
             return;
         }
         $postedHost = HostKey::forUrl($link->url);
-        $landingSite = LandingSite::hostOf($link->url, $landing->url);
+        $landingSite = LandingSite::pickHost($link->url, $landing->url);
         if ($landingSite !== $postedHost) {
             $this->sharedLinks->renameSite($link->linkId, $postedHost, $landingSite);
         }

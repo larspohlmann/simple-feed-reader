@@ -36,7 +36,7 @@ final class AdminCatalogJsonTest extends TestCase
 
         self::assertSame(
             ['available' => true, 'categories' => 2, 'feeds' => 3],
-            AdminCatalogJson::bundled(BundledCatalogSummaryModel::of($document)),
+            AdminCatalogJson::bundled(BundledCatalogSummaryModel::fromCatalog($document)),
         );
     }
 

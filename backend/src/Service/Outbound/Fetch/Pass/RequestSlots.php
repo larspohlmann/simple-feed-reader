@@ -20,7 +20,7 @@ final class RequestSlots
     public function hasCapacityFor(FetchAttemptModel $attempt): bool
     {
         foreach ($attempt->ticket->slots as $slot) {
-            if ($this->inFlightIn(self::keyOf($slot, $attempt->url)) >= $slot->capacity()) {
+            if ($this->inFlightIn(self::buildKey($slot, $attempt->url)) >= $slot->capacity()) {
                 return false;
             }
         }
@@ -30,14 +30,14 @@ final class RequestSlots
 
     public function acquire(FetchAttemptModel $attempt): void
     {
-        foreach ($this->keysOf($attempt) as $key) {
+        foreach ($this->buildKeys($attempt) as $key) {
             $this->inFlightBySlot[$key] = $this->inFlightIn($key) + 1;
         }
     }
 
     public function release(FetchAttemptModel $attempt): void
     {
-        foreach ($this->keysOf($attempt) as $key) {
+        foreach ($this->buildKeys($attempt) as $key) {
             $this->inFlightBySlot[$key] = max(0, $this->inFlightIn($key) - 1);
         }
     }
@@ -48,17 +48,17 @@ final class RequestSlots
     }
 
     /** @return list<string> */
-    private function keysOf(FetchAttemptModel $attempt): array
+    private function buildKeys(FetchAttemptModel $attempt): array
     {
         $keys = [];
         foreach ($attempt->ticket->slots as $slot) {
-            $keys[] = self::keyOf($slot, $attempt->url);
+            $keys[] = self::buildKey($slot, $attempt->url);
         }
 
         return $keys;
     }
 
-    private static function keyOf(RequestSlotModelInterface $slot, string $url): string
+    private static function buildKey(RequestSlotModelInterface $slot, string $url): string
     {
         return $slot::class . "\0" . $slot->keyFor($url);
     }

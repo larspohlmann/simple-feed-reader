@@ -20,7 +20,7 @@ final class ImageType
             return $declaredType;
         }
 
-        return ImageMagicBytes::typeOf($bytes) ?? $declaredType;
+        return ImageMagicBytes::detectType($bytes) ?? $declaredType;
     }
 
     private function __construct()

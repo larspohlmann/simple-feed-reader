@@ -45,7 +45,7 @@ final readonly class ActiveMailTransportFactory
         return new CurlSmtpTransport($resolved, $proxy, $dispatcher, $logger);
     }
 
-    public function signatureOf(ResolvedMailTransportModel $resolved): string
+    public function buildSignature(ResolvedMailTransportModel $resolved): string
     {
         if (!$resolved->useProxy) {
             return $resolved->signature();

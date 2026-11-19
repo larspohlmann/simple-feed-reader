@@ -13,7 +13,7 @@ final readonly class BundledCatalogSummaryModel
     ) {
     }
 
-    public static function of(ParsedCatalogModel $document): self
+    public static function fromCatalog(ParsedCatalogModel $document): self
     {
         return new self(true, \count($document->categories), $document->feedCount());
     }

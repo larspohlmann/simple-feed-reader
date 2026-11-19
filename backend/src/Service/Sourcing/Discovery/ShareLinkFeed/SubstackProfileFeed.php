@@ -61,11 +61,11 @@ final readonly class SubstackProfileFeed implements ShareLinkFeedInterface
             return null;
         }
 
-        return $this->subdomainOf($response->modifiedBody());
+        return $this->parseSubdomain($response->modifiedBody());
     }
 
     /** Reads and validates `primaryPublication.subdomain` out of a profile-API body. */
-    private function subdomainOf(string $profileJson): ?string
+    private function parseSubdomain(string $profileJson): ?string
     {
         $profile = json_decode($profileJson, true);
         $publication = \is_array($profile) ? ($profile['primaryPublication'] ?? null) : null;

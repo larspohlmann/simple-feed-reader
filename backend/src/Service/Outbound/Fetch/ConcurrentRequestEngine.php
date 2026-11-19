@@ -154,7 +154,7 @@ final readonly class ConcurrentRequestEngine
      */
     private function awaitNext(FetchQueue $queue, \SplObjectStorage $inFlight, SettledAnswers $answers): \Generator
     {
-        foreach ($this->httpClient->stream($inFlight, self::longestTimeoutOf($inFlight)) as $response => $chunk) {
+        foreach ($this->httpClient->stream($inFlight, self::pickLongestTimeout($inFlight)) as $response => $chunk) {
             $attempt = $inFlight[$response];
 
             try {
@@ -243,7 +243,7 @@ final readonly class ConcurrentRequestEngine
      *
      * @param \SplObjectStorage<ResponseInterface, FetchAttemptModel> $inFlight
      */
-    private static function longestTimeoutOf(\SplObjectStorage $inFlight): float
+    private static function pickLongestTimeout(\SplObjectStorage $inFlight): float
     {
         $longest = 0.0;
         foreach ($inFlight as $response) {
@@ -277,10 +277,10 @@ final readonly class ConcurrentRequestEngine
 
         try {
             return $this->httpClient->request($request->method, $attempt->url, EgressOptions::merge([
-                'headers' => $this->headersOf($attempt->ticket),
+                'headers' => $this->buildHeaders($attempt->ticket),
                 'max_redirects' => 0,
                 'timeout' => $request->timeoutSeconds,
-                'max_duration' => ApiBudgetModel::maxDurationOf($request->timeoutSeconds),
+                'max_duration' => ApiBudgetModel::computeMaxDuration($request->timeoutSeconds),
                 ...PersistentConnection::options(),
                 'on_progress' => static function (int $downloaded) use ($sizeLimit): void {
                     ResponseTooLargeException::throwIfExceeded($sizeLimit, $downloaded);
@@ -297,7 +297,7 @@ final readonly class ConcurrentRequestEngine
      *
      * @return array<string, string>
      */
-    private function headersOf(RequestTicketModel $ticket): array
+    private function buildHeaders(RequestTicketModel $ticket): array
     {
         $engineOwned = [
             'Accept' => $ticket->exchange->accept(),

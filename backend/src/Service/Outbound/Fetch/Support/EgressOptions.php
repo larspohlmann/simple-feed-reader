@@ -63,8 +63,8 @@ final class EgressOptions
     public static function merge(array $options, array $egress): array
     {
         $merged = [...$options, ...$egress];
-        $extra = array_replace(self::extraOf($options), self::extraOf($egress));
-        $curl = array_replace(self::curlOf($options), self::curlOf($egress));
+        $extra = array_replace(self::readExtraOptions($options), self::readExtraOptions($egress));
+        $curl = array_replace(self::readCurlOptions($options), self::readCurlOptions($egress));
         if ([] !== $curl) {
             $extra['curl'] = $curl;
         }
@@ -80,7 +80,7 @@ final class EgressOptions
      *
      * @return array<mixed>
      */
-    private static function extraOf(array $options): array
+    private static function readExtraOptions(array $options): array
     {
         return self::arrayAt($options, 'extra');
     }
@@ -102,9 +102,9 @@ final class EgressOptions
      *
      * @return array<mixed>
      */
-    private static function curlOf(array $options): array
+    private static function readCurlOptions(array $options): array
     {
-        return self::arrayAt(self::extraOf($options), 'curl');
+        return self::arrayAt(self::readExtraOptions($options), 'curl');
     }
 
     private static function connectToHost(string $host): string

@@ -74,7 +74,7 @@ final readonly class WellKnownFeedProbe
 
         $feeds = [];
         foreach ($this->fetcher->fetchAll($tickets) as $rank => $outcome) {
-            $feed = $this->feedOf($outcome);
+            $feed = $this->parseFeed($outcome);
             if (null !== $feed) {
                 $feeds[(int) $rank] = $feed;
             }
@@ -83,7 +83,7 @@ final readonly class WellKnownFeedProbe
         return $feeds;
     }
 
-    private function feedOf(FetchOutcomeModel $outcome): ?DiscoveredFeedModel
+    private function parseFeed(FetchOutcomeModel $outcome): ?DiscoveredFeedModel
     {
         if (null !== $outcome->failure()) {
             return null;

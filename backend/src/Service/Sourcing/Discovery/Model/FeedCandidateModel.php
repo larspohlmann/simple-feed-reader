@@ -24,7 +24,7 @@ final readonly class FeedCandidateModel
     ) {
     }
 
-    public static function of(DiscoveredFeedModel $feed): self
+    public static function fromDiscoveredFeed(DiscoveredFeedModel $feed): self
     {
         return new self($feed->url, $feed->document->title, $feed->document->syntax->value ?? self::GUESSED_FORMAT);
     }
