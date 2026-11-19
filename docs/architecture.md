@@ -346,8 +346,7 @@ Decided in #1202.
   profile feed URLs, private feed rules, search, reconnect credentials — is a method on that network's keyed adapter
   (`PostAddressRule/`, `ProfileFeedRule/`, `PrivateFeedRule/`, `SearchSource/`, `NetworkVerifier/`), picked by
   `SocialNetwork->value`. A function only one network needs is a static helper named for it (`Support/BlueskyProfileFeed`).
-  No shared file in `Service/Social/Social` matches on a `SocialNetwork` case to state a fact; the Bluesky-only
-  capability checks (`FollowMatching`, `HiddenImportFollows`, `FollowAvatarCache`) wait for #2359. Since #2367 the
+  No shared file in `Service/Social/Social` matches on a `SocialNetwork` case to state a fact. Since #2367 the
   import questions (`ImportRule/`) and voting (`PostVoter/`) are keyed adapters too, and the private feed rule says
   whether a 404 proves a post gone (`hasFollowersOnlyPosts()`). Network state that must go when an account does listens
   for `SocialAccountDisconnected` (`BlueskySessionForgetListener`) instead of being called by the editor.
