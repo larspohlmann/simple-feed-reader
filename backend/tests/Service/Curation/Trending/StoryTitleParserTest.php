@@ -94,7 +94,6 @@ final class StoryTitleParserTest extends TestCase
         ];
     }
 
-    /** One sentence of exactly $length characters, its full stop included. */
     private static function sentence(int $length): string
     {
         return str_repeat('ä', $length - 1) . '.';

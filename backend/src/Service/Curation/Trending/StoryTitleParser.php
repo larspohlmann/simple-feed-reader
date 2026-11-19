@@ -17,7 +17,7 @@ final readonly class StoryTitleParser
 
     private const string TRAILING_PUNCTUATION = '/[\s.,;:!?…]+$/u';
 
-    private const string SENTENCES_UP_TO_THE_LAST_END = '/^.*[.!?…](?=\s)/su';
+    private const string LAST_SENTENCE_END = '/^.*[.!?…](?=\s)/su';
 
     private const array WRAPPING_QUOTES = ['"' => '"', "'" => "'", '„' => '“', '“' => '”', '«' => '»', '»' => '«'];
 
@@ -30,20 +30,22 @@ final readonly class StoryTitleParser
         $reply = $this->decoder->decode($content);
         $title = $this->parseTitle($reply['title'] ?? null);
 
-        return $title === null
-            ? null
-            : new StoryHeadingModel($title, $this->parseSynopsis($reply['synopsis'] ?? null));
+        return $title === null ? null : new StoryHeadingModel($title, $this->parseSynopsis($reply['synopsis'] ?? null));
     }
 
     private function parseTitle(mixed $title): ?string
     {
-        if (!\is_string($title)) {
-            return null;
-        }
-
-        $cleaned = $this->withoutQuotesAndPunctuation(Whitespace::collapse($title));
+        $collapsed = $this->parseCollapsed($title);
+        $cleaned = $collapsed === null ? '' : $this->withoutQuotesAndPunctuation($collapsed);
 
         return $cleaned === '' || mb_strlen($cleaned) > self::MAXIMUM_LENGTH ? null : $cleaned;
+    }
+
+    private function parseCollapsed(mixed $text): ?string
+    {
+        $collapsed = \is_string($text) ? Whitespace::collapse($text) : '';
+
+        return $collapsed === '' ? null : $collapsed;
     }
 
     private function withoutQuotesAndPunctuation(string $title): string
@@ -53,30 +55,20 @@ final readonly class StoryTitleParser
         );
     }
 
-    /** A synopsis over the limit keeps the sentences that fit; null when not even the first one does. */
     private function parseSynopsis(mixed $synopsis): ?string
     {
-        if (!\is_string($synopsis)) {
-            return null;
-        }
+        $collapsed = $this->parseCollapsed($synopsis);
 
-        $collapsed = Whitespace::collapse($synopsis);
-        if ($collapsed === '') {
-            return null;
-        }
-
-        return mb_strlen($collapsed) <= self::MAXIMUM_SYNOPSIS_LENGTH
+        return $collapsed === null || mb_strlen($collapsed) <= self::MAXIMUM_SYNOPSIS_LENGTH
             ? $collapsed
             : $this->parseSentencesThatFit($collapsed);
     }
 
     private function parseSentencesThatFit(string $synopsis): ?string
     {
-        $headWithTheNextCharacter = mb_substr($synopsis, 0, self::MAXIMUM_SYNOPSIS_LENGTH + 1);
+        $head = mb_substr($synopsis, 0, self::MAXIMUM_SYNOPSIS_LENGTH + 1);
 
-        return preg_match(self::SENTENCES_UP_TO_THE_LAST_END, $headWithTheNextCharacter, $match) === 1
-            ? $match[0]
-            : null;
+        return preg_match(self::LAST_SENTENCE_END, $head, $match) === 1 ? $match[0] : null;
     }
 
     private function withoutWrappingQuotes(string $title): string
