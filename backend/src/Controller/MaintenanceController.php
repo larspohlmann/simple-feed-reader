@@ -67,7 +67,6 @@ final readonly class MaintenanceController
         return new JsonResponse(ForYouSweepReportJson::report($this->forYouSweep->sweepOnce()));
     }
 
-    /** The tick fetches one pass of link cards; this spends a whole window on them. */
     #[Route('/maintenance/link-cards/drain', name: 'maintenance_link_cards_drain', methods: ['POST'])]
     public function drainLinkCards(Request $request): JsonResponse
     {

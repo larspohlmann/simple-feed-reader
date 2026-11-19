@@ -35,16 +35,16 @@ final class LinkCardDrainTest extends DbTestCase
     {
         $this->queuePosts(9);
 
-        self::assertEquals(new LinkCardDrainReportModel(9, true), $this->drain(150)->drain());
+        self::assertEquals(new LinkCardDrainReportModel(9, true), $this->drainWithin(150));
         self::assertSame(9, $this->client->getRequestsCount());
     }
 
     public function testLeavesNoCardedEntryInTheEntityManager(): void
     {
-        $firstPost = $this->queuedPost('https://mastodon.test/@1.rss', 1);
-        $secondPost = $this->queuedPost('https://mastodon.test/@2.rss', 2);
+        $firstPost = $this->queuedPost(1);
+        $secondPost = $this->queuedPost(2);
 
-        $this->drain(150)->drain();
+        $this->drainWithin(150);
 
         self::assertFalse($this->entityManager->contains($firstPost));
         self::assertFalse($this->entityManager->contains($secondPost));
@@ -52,7 +52,7 @@ final class LinkCardDrainTest extends DbTestCase
 
     public function testAnEmptyQueueFetchesNothing(): void
     {
-        self::assertEquals(new LinkCardDrainReportModel(0, true), $this->drain(150)->drain());
+        self::assertEquals(new LinkCardDrainReportModel(0, true), $this->drainWithin(150));
         self::assertSame(0, $this->client->getRequestsCount());
     }
 
@@ -60,23 +60,20 @@ final class LinkCardDrainTest extends DbTestCase
     {
         $this->queuePosts(1);
 
-        self::assertEquals(new LinkCardDrainReportModel(0, false), $this->drain(7)->drain());
+        self::assertEquals(new LinkCardDrainReportModel(0, false), $this->drainWithin(7));
         self::assertSame(0, $this->client->getRequestsCount());
     }
 
     public function testStartsNoFetchThatCannotEndBeforeTheWindowDoes(): void
     {
         $this->queuePosts(9);
-        $this->client = new MockHttpClient(function (string $method, string $url): MockResponse {
+        $this->client = new MockHttpClient(function (): MockResponse {
             $this->clock->sleep(8);
 
-            return new MockResponse(
-                '<html lang="en"><head><title>Card for ' . $url . '</title></head></html>',
-                ['response_headers' => ['content-type' => 'text/html']],
-            );
+            return self::titledPage();
         });
 
-        self::assertEquals(new LinkCardDrainReportModel(2, false), $this->drain(20)->drain());
+        self::assertEquals(new LinkCardDrainReportModel(2, false), $this->drainWithin(20));
         self::assertSame(2, $this->client->getRequestsCount());
     }
 
@@ -85,18 +82,16 @@ final class LinkCardDrainTest extends DbTestCase
         $this->queuePosts(8);
         $this->client = new MockHttpClient(static fn (): MockResponse => new MockResponse('', ['http_code' => 500]));
 
-        self::assertEquals(new LinkCardDrainReportModel(8, true), $this->drain(150)->drain());
+        self::assertEquals(new LinkCardDrainReportModel(8, true), $this->drainWithin(150));
         self::assertSame(8, $this->client->getRequestsCount());
     }
 
     public function testARowAnotherWorkerHoldsIsLeftToThatWorker(): void
     {
         $this->queuePosts(1);
-        $now = (new NaiveUtcClock($this->clock))->now();
-        $enrichments = PostEnrichers::enrichments($this->entityManager);
-        $enrichments->claim($enrichments->findClaimableLinkCards($now, 1), $now);
+        $this->claimTheQueuedRowsAsAnotherWorker();
 
-        self::assertEquals(new LinkCardDrainReportModel(0, true), $this->drain(150)->drain());
+        self::assertEquals(new LinkCardDrainReportModel(0, true), $this->drainWithin(150));
         self::assertSame(0, $this->client->getRequestsCount());
     }
 
@@ -105,39 +100,50 @@ final class LinkCardDrainTest extends DbTestCase
         $this->queuePosts(1);
         $this->client = new MockHttpClient(function (): MockResponse {
             $this->clock->sleep(ShareEnrichment::CLAIM_LEASE_SECONDS + 1);
-            $now = (new NaiveUtcClock($this->clock))->now();
-            $enrichments = PostEnrichers::enrichments($this->entityManager);
-            $enrichments->claim($enrichments->findClaimableLinkCards($now, 1), $now);
+            $this->claimTheQueuedRowsAsAnotherWorker();
 
-            return new MockResponse(
-                '<html lang="en"><head><title>Card</title></head></html>',
-                ['response_headers' => ['content-type' => 'text/html']],
-            );
+            return self::titledPage();
         });
 
-        self::assertEquals(new LinkCardDrainReportModel(0, false), $this->drain(150)->drain());
+        self::assertEquals(new LinkCardDrainReportModel(0, false), $this->drainWithin(150));
     }
 
-    private function drain(int $windowSeconds): LinkCardDrain
+    private function drainWithin(int $windowSeconds): LinkCardDrainReportModel
     {
         return new LinkCardDrain(
             LinkCardSweepWiring::build($this->entityManager, $this->client, $this->clock),
             $this->entityManager,
             $this->clock,
             $windowSeconds,
+        )->drain();
+    }
+
+    private function claimTheQueuedRowsAsAnotherWorker(): void
+    {
+        $now = new NaiveUtcClock($this->clock)->now();
+        $enrichments = PostEnrichers::enrichments($this->entityManager);
+        $enrichments->claim($enrichments->findClaimableLinkCards($now, 1), $now);
+    }
+
+    private static function titledPage(): MockResponse
+    {
+        return new MockResponse(
+            '<html lang="en"><head><title>Card</title></head></html>',
+            ['response_headers' => ['content-type' => 'text/html']],
         );
     }
 
     private function queuePosts(int $count): void
     {
         foreach (range(1, $count) as $order) {
-            $this->queuedPost('https://mastodon.test/@' . $order . '.rss', $order);
+            $this->queuedPost($order);
         }
     }
 
     /** Queued `$order` minutes before now; one shared link, in a feed of its own. */
-    private function queuedPost(string $feedUrl, int $order): Entry
+    private function queuedPost(int $order): Entry
     {
+        $feedUrl = 'https://mastodon.test/@' . $order . '.rss';
         $feed = new Feed($feedUrl);
         $this->entityManager->persist($feed);
 
