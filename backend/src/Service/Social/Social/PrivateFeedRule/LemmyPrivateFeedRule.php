@@ -8,7 +8,6 @@ use App\Entity\SocialAccount;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
-use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Social\Model\LemmyListing;
 use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Service\Social\Social\Model\SearchedPostModel;
@@ -29,7 +28,8 @@ final readonly class LemmyPrivateFeedRule implements PrivateFeedRuleInterface
 
         return match ($privateFeed->kind) {
             SocialFeedKind::Home, SocialFeedKind::Local, SocialFeedKind::All => true,
-            SocialFeedKind::Search => SocialSearchQuery::isValid($remoteId) && $this->isSearchable($remoteId),
+            SocialFeedKind::Search => SocialSearchQuery::isValid($remoteId)
+                && SocialSearchQuery::isSearchable($this->buildSearchQueries(...), $remoteId),
             SocialFeedKind::UserList,
             SocialFeedKind::CustomFeed,
             SocialFeedKind::Author,
@@ -69,16 +69,5 @@ final readonly class LemmyPrivateFeedRule implements PrivateFeedRuleInterface
     public function buildSearchedPost(SocialAccount $account, StoredPostModel $post): SearchedPostModel
     {
         return LemmySearchedPost::of($post->title, $post->contentHtml, $post->authorUrl);
-    }
-
-    private function isSearchable(string $query): bool
-    {
-        try {
-            $this->buildSearchQueries($query);
-        } catch (SearchQueryTooBroadException) {
-            return false;
-        }
-
-        return true;
     }
 }

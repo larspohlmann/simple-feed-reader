@@ -31,7 +31,7 @@ final class SocialRuleWiring
             SocialNetwork::Lemmy->value => new LemmyPostAddressRule(),
         ];
 
-        return new SocialPostAddresses(self::locatorOf($rules), array_values($rules));
+        return new SocialPostAddresses(self::locatorOf($rules));
     }
 
     public static function profileFeeds(): ProfileFeeds

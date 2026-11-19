@@ -38,8 +38,8 @@ final class ProfileIdentityTest extends TestCase
 
     public function testARoundTripIgnoresCaseAndNeedsAParsedIdentity(): void
     {
-        self::assertTrue(ProfileIdentity::isRoundTrip('bob.bsky.social', 'Bob.bsky.social'));
-        self::assertFalse(ProfileIdentity::isRoundTrip('bob.bsky.social', 'carol.bsky.social'));
-        self::assertFalse(ProfileIdentity::isRoundTrip(null, ''));
+        self::assertSame('u', ProfileIdentity::parseRoundTripUrl('u', 'bob.bsky.social', 'Bob.bsky.social'));
+        self::assertNull(ProfileIdentity::parseRoundTripUrl('u', 'bob.bsky.social', 'carol.bsky.social'));
+        self::assertNull(ProfileIdentity::parseRoundTripUrl('u', null, ''));
     }
 }

@@ -28,16 +28,24 @@ final readonly class ProfileFeeds
 
     public function findNetwork(string $feedUrl): ?SocialNetwork
     {
-        return array_find(
-            SocialNetwork::cases(),
-            fn (SocialNetwork $network): bool => null !== $this->selectRule($network)->parseIdentity($feedUrl),
-        );
+        foreach (SocialNetwork::cases() as $network) {
+            if (null !== $this->selectRule($network)->parseIdentity($feedUrl)) {
+                return $network;
+            }
+        }
+
+        return null;
     }
 
     public function findRule(string $feedUrl): ?ProfileFeedRuleInterface
     {
-        $network = $this->findNetwork($feedUrl);
+        foreach (SocialNetwork::cases() as $network) {
+            $rule = $this->selectRule($network);
+            if (null !== $rule->parseIdentity($feedUrl)) {
+                return $rule;
+            }
+        }
 
-        return null === $network ? null : $this->selectRule($network);
+        return null;
     }
 }

@@ -20,7 +20,7 @@ final readonly class MastodonProfileFeedRule implements ProfileFeedRuleInterface
         }
         $url = MastodonProfileFeed::buildUrl(...$nameAndHost);
 
-        return ProfileIdentity::isRoundTrip(MastodonProfileFeed::parseIdentity($url), $identity) ? $url : null;
+        return ProfileIdentity::parseRoundTripUrl($url, MastodonProfileFeed::parseIdentity($url), $identity);
     }
 
     public function parseIdentity(string $feedUrl): ?string

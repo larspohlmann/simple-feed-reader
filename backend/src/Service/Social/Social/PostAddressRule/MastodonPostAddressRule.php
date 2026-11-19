@@ -19,7 +19,8 @@ final readonly class MastodonPostAddressRule implements PostAddressRuleInterface
 {
     public function findPost(Entry $entry): ?SocialPostAddressModel
     {
-        return self::buildStatusAddress(
+        return SocialPostAddressModel::fromNullable(
+            SocialNetwork::Mastodon,
             AbsoluteHttpUrl::orNull($entry->getGuid()) ?? AbsoluteHttpUrl::orNull($entry->getUrl()),
         );
     }
@@ -31,12 +32,14 @@ final readonly class MastodonPostAddressRule implements PostAddressRuleInterface
 
     public function parseReply(string $address): ?SocialPostAddressModel
     {
-        return self::buildStatusAddress(AbsoluteHttpUrl::orNull($address));
+        return SocialPostAddressModel::fromNullable(SocialNetwork::Mastodon, AbsoluteHttpUrl::orNull($address));
     }
 
     public function parsePostUrl(string $url): ?SocialPostAddressModel
     {
-        return null === MastodonStatusAddress::ofOrNull($url) ? null : self::buildStatusAddress($url);
+        $status = null === MastodonStatusAddress::ofOrNull($url) ? null : $url;
+
+        return SocialPostAddressModel::fromNullable(SocialNetwork::Mastodon, $status);
     }
 
     public function findAuthorIdentity(Entry $entry, SocialPostAddressModel $post): ?string
@@ -62,11 +65,6 @@ final readonly class MastodonPostAddressRule implements PostAddressRuleInterface
             ?? throw new SocialPostRefusedException('A reply in the thread names no Mastodon status.');
 
         return [$statusUri, $url];
-    }
-
-    private static function buildStatusAddress(?string $statusAddress): ?SocialPostAddressModel
-    {
-        return null === $statusAddress ? null : new SocialPostAddressModel(SocialNetwork::Mastodon, $statusAddress);
     }
 
     private static function requireOwnStatusId(string $address, SocialAccount $account): string

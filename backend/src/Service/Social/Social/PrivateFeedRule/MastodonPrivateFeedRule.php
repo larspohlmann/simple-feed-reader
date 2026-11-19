@@ -9,7 +9,6 @@ use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Service\Foundation\Text\Support\PlainText;
-use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Service\Social\Social\Model\SearchedPostModel;
 use App\Service\Social\Social\Model\StoredPostModel;
@@ -31,7 +30,8 @@ final readonly class MastodonPrivateFeedRule implements PrivateFeedRuleInterface
             SocialFeedKind::Home, SocialFeedKind::Trending => true,
             SocialFeedKind::UserList => MastodonFeedIds::isListId($remoteId),
             SocialFeedKind::Tag => MastodonFeedIds::isTagName($remoteId),
-            SocialFeedKind::Search => SocialSearchQuery::isValid($remoteId) && $this->isSearchable($remoteId),
+            SocialFeedKind::Search => SocialSearchQuery::isValid($remoteId)
+                && SocialSearchQuery::isSearchable($this->buildSearchQueries(...), $remoteId),
             SocialFeedKind::CustomFeed, SocialFeedKind::Author, SocialFeedKind::Local, SocialFeedKind::All => false,
         };
     }
@@ -74,17 +74,6 @@ final readonly class MastodonPrivateFeedRule implements PrivateFeedRuleInterface
             self::authorNamesOf($account, $post->authorUrl),
             [PlainText::fromHtmlBlocks($post->contentHtml) ?? ''],
         );
-    }
-
-    private function isSearchable(string $query): bool
-    {
-        try {
-            $this->buildSearchQueries($query);
-        } catch (SearchQueryTooBroadException) {
-            return false;
-        }
-
-        return true;
     }
 
     /** @return list<string> */

@@ -14,4 +14,9 @@ final readonly class SocialPostAddressModel
         public string $address,
     ) {
     }
+
+    public static function fromNullable(SocialNetwork $network, ?string $address): ?self
+    {
+        return null === $address ? null : new self($network, $address);
+    }
 }

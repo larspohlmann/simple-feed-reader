@@ -27,14 +27,16 @@ final readonly class BlueskyPostAddressRule implements PostAddressRuleInterface
 
     public function parseReply(string $address): ?SocialPostAddressModel
     {
-        return AtPostUri::matches($address) ? new SocialPostAddressModel(SocialNetwork::Bluesky, $address) : null;
+        $post = AtPostUri::matches($address) ? $address : null;
+
+        return SocialPostAddressModel::fromNullable(SocialNetwork::Bluesky, $post);
     }
 
     public function parsePostUrl(string $url): ?SocialPostAddressModel
     {
         $post = AtPostUri::matches($url) ? $url : AtPostUri::ofWebUrl($url);
 
-        return null === $post ? null : new SocialPostAddressModel(SocialNetwork::Bluesky, $post);
+        return SocialPostAddressModel::fromNullable(SocialNetwork::Bluesky, $post);
     }
 
     public function findAuthorIdentity(Entry $entry, SocialPostAddressModel $post): ?string

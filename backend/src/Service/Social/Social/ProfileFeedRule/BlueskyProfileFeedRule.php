@@ -19,7 +19,7 @@ final readonly class BlueskyProfileFeedRule implements ProfileFeedRuleInterface
     {
         $url = BlueskyProfileFeed::buildUrl($identity);
 
-        return ProfileIdentity::isRoundTrip(BlueskyProfileFeed::parseIdentity($url), $identity) ? $url : null;
+        return ProfileIdentity::parseRoundTripUrl($url, BlueskyProfileFeed::parseIdentity($url), $identity);
     }
 
     public function parseIdentity(string $feedUrl): ?string

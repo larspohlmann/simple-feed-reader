@@ -20,7 +20,7 @@ final readonly class LemmyProfileFeedRule implements ProfileFeedRuleInterface
         }
         $url = LemmyProfileFeed::buildUrl(...$nameAndHost);
 
-        return ProfileIdentity::isRoundTrip(LemmyProfileFeed::parseIdentity($url), $identity) ? $url : null;
+        return ProfileIdentity::parseRoundTripUrl($url, LemmyProfileFeed::parseIdentity($url), $identity);
     }
 
     public function parseIdentity(string $feedUrl): ?string

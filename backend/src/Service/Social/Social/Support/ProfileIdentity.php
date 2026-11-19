@@ -30,10 +30,10 @@ final class ProfileIdentity
         return 2 === \count($nameAndHost) ? [$nameAndHost[0], $nameAndHost[1]] : null;
     }
 
-    /** Whether the identity a built feed URL reads back as is the one it was built from, case aside. */
-    public static function isRoundTrip(?string $parsedIdentity, string $identity): bool
+    /** The built feed URL when the identity it reads back as is the one it was built from, case aside; else null. */
+    public static function parseRoundTripUrl(string $url, ?string $parsedIdentity, string $identity): ?string
     {
-        return null !== $parsedIdentity && 0 === strcasecmp($parsedIdentity, $identity);
+        return null !== $parsedIdentity && 0 === strcasecmp($parsedIdentity, $identity) ? $url : null;
     }
 
     private static function validBlueskyActor(?string $identity): ?string

@@ -12,18 +12,14 @@ use App\Service\Social\Social\Model\SocialPostAddressModel;
 use App\Service\Social\Social\PostAddressRule\PostAddressRuleInterface;
 use App\Service\Social\Social\Support\SocialIdentity;
 use Psr\Container\ContainerInterface;
-use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 
 /** Which network post an entry is: the one rule every interaction with a post (a like, a reply) starts from. */
 final readonly class SocialPostAddresses
 {
-    /** @param iterable<PostAddressRuleInterface> $rules */
     public function __construct(
         #[AutowireLocator('app.social_post_address_rule')]
         private ContainerInterface $rulesByNetwork,
-        #[AutowireIterator('app.social_post_address_rule')]
-        private iterable $rules,
     ) {
     }
 
@@ -85,8 +81,8 @@ final readonly class SocialPostAddresses
     public function parsePostUrl(string $url): ?SocialPostAddressModel
     {
         $address = explode('#', $url)[0];
-        foreach ($this->rules as $rule) {
-            $post = $rule->parsePostUrl($address);
+        foreach (SocialNetwork::cases() as $network) {
+            $post = $this->selectRule($network)->parsePostUrl($address);
             if (null !== $post) {
                 return $post;
             }
@@ -106,8 +102,8 @@ final readonly class SocialPostAddresses
 
     private function findDiscussionPost(Entry $entry): ?SocialPostAddressModel
     {
-        foreach ($this->rules as $rule) {
-            $post = $rule->findDiscussionPost($entry);
+        foreach (SocialNetwork::cases() as $network) {
+            $post = $this->selectRule($network)->findDiscussionPost($entry);
             if (null !== $post) {
                 return $post;
             }

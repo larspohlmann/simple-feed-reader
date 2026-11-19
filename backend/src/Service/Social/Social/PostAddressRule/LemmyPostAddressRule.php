@@ -27,14 +27,14 @@ final readonly class LemmyPostAddressRule implements PostAddressRuleInterface
     {
         $post = LemmyPostAddress::of($entry);
 
-        return null === $post ? null : new SocialPostAddressModel(SocialNetwork::Lemmy, $post->pageUrl());
+        return SocialPostAddressModel::fromNullable(SocialNetwork::Lemmy, $post?->pageUrl());
     }
 
     public function parseReply(string $address): ?SocialPostAddressModel
     {
         $comment = AbsoluteHttpUrl::httpsOrNull($address);
 
-        return null === $comment ? null : new SocialPostAddressModel(SocialNetwork::Lemmy, $comment);
+        return SocialPostAddressModel::fromNullable(SocialNetwork::Lemmy, $comment);
     }
 
     public function parsePostUrl(string $url): ?SocialPostAddressModel
