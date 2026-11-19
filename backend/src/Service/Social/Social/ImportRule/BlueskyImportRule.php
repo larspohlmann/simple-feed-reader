@@ -12,7 +12,6 @@ use App\Service\Social\Social\HiddenImportFollows;
 use App\Service\Social\Social\Model\HiddenProfileModel;
 use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Service\Social\Social\Support\BlueskyProfileActor;
-use App\Service\Social\Social\Support\BlueskyProfileFeed;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Bluesky->value)]
@@ -34,7 +33,7 @@ final readonly class BlueskyImportRule implements ImportRuleInterface
 
     public function parseFollowedIdentity(string $feedUrl): ?string
     {
-        return BlueskyProfileFeed::parseIdentity($feedUrl) ?? BlueskyProfileActor::parseAuthorDid($feedUrl);
+        return BlueskyProfileActor::parseFollowedIdentity($feedUrl);
     }
 
     public function isResolvedIdentity(string $identity): bool

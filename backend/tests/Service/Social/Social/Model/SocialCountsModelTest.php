@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Social\Model;
 
+use App\Service\Content\Comments\Model\CommentCountsModel;
 use App\Service\Social\Social\Model\SocialCountsModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -39,5 +40,14 @@ final class SocialCountsModelTest extends TestCase
         yield 'reposts as text' => [['likes' => 12, 'reposts' => '3', 'replies' => 4, 'quotes' => 1]];
         yield 'replies missing' => [['likes' => 12, 'reposts' => 3, 'quotes' => 1]];
         yield 'quotes as text' => [['likes' => 12, 'reposts' => 3, 'replies' => 4, 'quotes' => '1']];
+    }
+
+    public function testTheCountsCarryOverToAComment(): void
+    {
+        self::assertEquals(
+            new CommentCountsModel(4, 3, 2, null),
+            new SocialCountsModel(4, 3, 2, null)->toCommentCounts(),
+        );
+        self::assertEquals(new CommentCountsModel(1, 2, 3, 5), new SocialCountsModel(1, 2, 3, 5)->toCommentCounts());
     }
 }

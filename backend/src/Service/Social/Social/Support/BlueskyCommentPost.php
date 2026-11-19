@@ -6,7 +6,6 @@ namespace App\Service\Social\Social\Support;
 
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Bluesky\Support\AtPostUri;
-use App\Service\Content\Comments\Model\CommentCountsModel;
 use App\Service\Content\Comments\Model\CommentPostModel;
 use App\Service\Content\Comments\Model\CommentViewerModel;
 
@@ -35,7 +34,7 @@ final class BlueskyCommentPost
 
         return new CommentPostModel(
             $uri,
-            new CommentCountsModel($counts->likes, $counts->reposts, $counts->replies, $counts->quotes),
+            $counts->toCommentCounts(),
             $commentViewer,
             $post->node('author')->string('did'),
         );
