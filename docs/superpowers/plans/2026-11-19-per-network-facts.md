@@ -19,14 +19,28 @@
 - An interface and its same-module adapters share a folder named after the interface without the `Interface` suffix (`ServiceRoleRule`).
 - No `tests/PhpStan` rule or allow-list is edited, no `@phpstan-ignore`, no PHPMD suppression.
 - Commit format `refactor(#2358): …`. No attribution lines.
+- **Method names follow the dictionary below.** It applies to every method this plan creates and to every method it moves out of a deleted helper. Task 1 is a pure move and keeps its names; methods this plan does not touch keep theirs (#2360 renames them).
+
+| Verb | Meaning | Result |
+|---|---|---|
+| `build…` | Assemble a value from parts | Never null unless the signature says so; invalid parts throw |
+| `parse…` | Read a value out of a string or document | Null when the input is not one |
+| `find…` | Look something up among entries, accounts or stored data | Null when absent |
+| `require…` | `parse…` or `find…` where absence is an error | Throws a typed exception |
+| `fetch…` | Ask a network or another remote | Throws on failure |
+| `format…` | Render a value for display | Always a string |
+| `select…` | Pick the adapter for a key | Always an adapter |
+| `is…`, `has…`, `owns…`, `allows…` | Yes/no question | Bool |
+| `from…`, `to…`, `with…` | Named constructor, conversion, wither | unchanged |
 - Out of scope, leave untouched: the Lemmy fields in `EntryListRowEnricher`, `EntryListRowLemmy` and `Http/EntryJson`; `DiscussionVotes`; the `HiddenProfile*` family; `FollowAvatarCache`; the Bluesky guard in `FollowMatching::unmatchedHandles()`; the three connect routes; the frontend. They are capability questions or belong to #2359.
 
 ## Decisions taken while reading (review these first)
 
 1. **Four interfaces, not three.** "Addresses" has 12 facts; one adapter would exceed PHPMD's 10 public methods. It splits into post addresses and profile feeds.
 2. **Credentials need no new interface.** The connect DTOs are network-named and call their own network's static builder. Only the reconnect path dispatches, and it joins the existing `NetworkVerifierInterface`, which already is the per-network credential adapter.
-3. **`fits()`/`requireFits()` disappear.** `searchQueries()` throwing `SearchQueryTooBroadException` is the one fact; callers that only validate discard the result.
+3. **`fits()`/`requireFits()` disappear.** `buildSearchQueries()` throwing `SearchQueryTooBroadException` is the one fact; callers that only validate discard the result.
 4. **The message "This entry is not a Bluesky, Mastodon or Lemmy post." stays verbatim** in the generic service. It is copy, not a branch.
+5. **`buildFeedUrl()` is the one `build…` that may return null**: it answers null when the identity names no account of the network. Splitting it would change behaviour-carrying code.
 
 ## File Structure
 
@@ -44,7 +58,7 @@ New, all under `backend/src/Service/Social/Social/` unless a path says otherwise
 | `SearchSource/SearchSourceInterface.php` + three adapters | One network's newest search results |
 | `SearchAnswers.php` | Sends a list of search requests concurrently and returns the accepted answers in order |
 | `Support/BlueskyProfileFeed.php`, `MastodonProfileFeed.php`, `LemmyProfileFeed.php` | The static, single-network functions of today's `ProfileFeedUrl` |
-| `Support/BlueskyCredentials.php`, `MastodonCredentials.php`, `LemmyCredentials.php`, `InstanceOrigin.php` | The static builders of today's `SocialCredentialsModel` |
+| `Support/BlueskyCredentials.php`, `MastodonCredentials.php`, `LemmyCredentials.php`, `InstanceUrl.php` | The static builders of today's `SocialCredentialsModel` |
 | `Support/MastodonFeedIds.php` | `isListId()`, `isTagName()` from today's `PrivateFeedRules` |
 | `Model/CredentialReplacementModel.php` | The secret and second factor a reconnect sends |
 
@@ -56,7 +70,7 @@ Tests mirror `src`. One shared helper, `backend/tests/Support/SocialRuleWiring.p
 
 1. **A network without an adapter.** The deleted `match` expressions were exhaustive and PHPStan failed on a missing arm; a locator fails at runtime. Expected: a test fails the build. Pinned in Task 2, extended in Tasks 3–5.
 2. **A URL two networks claim.** `ofUrl()` and `networkOf()` tried Bluesky first by code order; an iterator has no promised order. Expected: no URL is claimed twice, so order cannot matter. Pinned in Tasks 2 and 3.
-3. **An entry in a feed with no network that links a Lemmy post.** `respondableOrRefuse()` answers it today although the feed's network is `null`. Expected: still answered. Pinned in Task 2.
+3. **An entry in a feed with no network that links a Lemmy post.** `SocialPostAddress::respondableOrRefuse()` answers it today although the feed's network is `null`. Expected: still answered. Pinned in Task 2.
 4. **A malformed app password on reconnect.** Today it is refused before the rate limiter counts the attempt. Expected: same order. Pinned in Task 6.
 5. **`EntryCompletionController` rows.** The response must stay enriched after `EntryCompletion` stops enriching. Pinned in Task 1.
 
@@ -96,26 +110,26 @@ Tests mirror `src`. One shared helper, `backend/tests/Support/SocialRuleWiring.p
 interface PostAddressRuleInterface
 {
     /** The post an entry of this network's feed is; null when the entry is none. */
-    public function postOf(Entry $entry): ?SocialPostAddressModel;
+    public function findPost(Entry $entry): ?SocialPostAddressModel;
 
     /** The post an entry's discussion is, whatever feed carries the entry; null on a network whose entries are posts. */
-    public function discussionPostOf(Entry $entry): ?SocialPostAddressModel;
+    public function findDiscussionPost(Entry $entry): ?SocialPostAddressModel;
 
-    public function replyAt(string $address): ?SocialPostAddressModel;
+    public function parseReply(string $address): ?SocialPostAddressModel;
 
     /** $url arrives without its fragment. */
-    public function postAtUrl(string $url): ?SocialPostAddressModel;
+    public function parsePostUrl(string $url): ?SocialPostAddressModel;
 
-    public function authorIdentityOf(Entry $entry, SocialPostAddressModel $post): ?string;
-
-    /** @throws SocialPostRefusedException */
-    public function ownPostId(SocialPostAddressModel $post, SocialAccount $account): string;
+    public function findAuthorIdentity(Entry $entry, SocialPostAddressModel $post): ?string;
 
     /** @throws SocialPostRefusedException */
-    public function ownReplyId(string $url, SocialAccount $account): string;
+    public function requireOwnPostId(SocialPostAddressModel $post, SocialAccount $account): string;
+
+    /** @throws SocialPostRefusedException */
+    public function requireOwnReplyId(string $url, SocialAccount $account): string;
 
     /** @return list<string> @throws SocialPostRefusedException */
-    public function ownReplyGuids(string $url, SocialAccount $account): array;
+    public function requireOwnReplyGuids(string $url, SocialAccount $account): array;
 }
 ```
 
@@ -128,15 +142,15 @@ final readonly class SocialPostAddresses
         #[AutowireIterator('app.social_post_address_rule')] private iterable $rules,
     ) {}
 
-    public function ruleOf(SocialNetwork $network): PostAddressRuleInterface;
-    public function of(Entry $entry): ?SocialPostAddressModel;                 // by the feed's network; null feed network → null
-    public function ofOrRefuse(Entry $entry): SocialPostAddressModel;
-    public function replyOrRefuse(Entry $entry, string $address): SocialPostAddressModel;
-    public function respondableOrRefuse(Entry $entry): SocialPostAddressModel; // of() ?? first discussionPostOf() over all rules
-    public function respondableReplyOrRefuse(Entry $entry, string $address): SocialPostAddressModel;
-    public function ofUrl(string $url): ?SocialPostAddressModel;               // strips the fragment, asks every rule
+    public function selectRule(SocialNetwork $network): PostAddressRuleInterface;
+    public function findPost(Entry $entry): ?SocialPostAddressModel;                 // by the feed's network; null feed network → null
+    public function requirePost(Entry $entry): SocialPostAddressModel;
+    public function requireReply(Entry $entry, string $address): SocialPostAddressModel;
+    public function requireRespondablePost(Entry $entry): SocialPostAddressModel; // findPost() ?? first findDiscussionPost() over all rules
+    public function requireRespondableReply(Entry $entry, string $address): SocialPostAddressModel;
+    public function parsePostUrl(string $url): ?SocialPostAddressModel;               // strips the fragment, asks every rule
     /** @param list<SocialAccount> $accounts */
-    public function authorAmong(Entry $entry, array $accounts): ?SocialAccount;
+    public function findAuthorAmong(Entry $entry, array $accounts): ?SocialAccount;
 }
 ```
 
@@ -144,16 +158,16 @@ What each adapter answers, taken from the deleted code:
 
 | Method | Bluesky | Mastodon | Lemmy |
 |---|---|---|---|
-| `postOf` | guid when `AtPostUri::matches` | `AbsoluteHttpUrl::orNull(guid) ?? orNull(url)` | `null` |
-| `discussionPostOf` | `null` | `null` | `LemmyPostAddress::of($entry)?->pageUrl()` as a Lemmy address |
-| `replyAt` | address when `AtPostUri::matches` | `AbsoluteHttpUrl::orNull` | `AbsoluteHttpUrl::httpsOrNull` |
-| `postAtUrl` | `AtPostUri` match or `AtPostUri::ofWebUrl` | when `MastodonStatusAddress::ofOrNull` is not null | `null` |
-| `authorIdentityOf` | `AtPostUri::authorityOf` | today's `MastodonAuthor::identityOfProfileUrl(...)` expression | `null` |
-| `ownPostId` | the address | status id on the account's own host, else refuse | refuse with `OwnPostIds::LEMMY_NOT_DELETED`'s text |
-| `ownReplyId` | `AtPostUri::ofWebUrl` with the account's authority | as `ownPostId` | refuse, same text |
-| `ownReplyGuids` | `[ownReplyId]` | `[status uri, url]` | refuse, same text |
+| `findPost` | guid when `AtPostUri::matches` | `AbsoluteHttpUrl::orNull(guid) ?? orNull(url)` | `null` |
+| `findDiscussionPost` | `null` | `null` | `LemmyPostAddress::of($entry)?->pageUrl()` as a Lemmy address |
+| `parseReply` | address when `AtPostUri::matches` | `AbsoluteHttpUrl::orNull` | `AbsoluteHttpUrl::httpsOrNull` |
+| `parsePostUrl` | `AtPostUri` match or `AtPostUri::ofWebUrl` | when `MastodonStatusAddress::ofOrNull` is not null | `null` |
+| `findAuthorIdentity` | `AtPostUri::authorityOf` | today's `MastodonAuthor::identityOfProfileUrl(...)` expression | `null` |
+| `requireOwnPostId` | the address | status id on the account's own host, else refuse | refuse with `OwnPostIds::LEMMY_NOT_DELETED`'s text |
+| `requireOwnReplyId` | `AtPostUri::ofWebUrl` with the account's authority | as `requireOwnPostId` | refuse, same text |
+| `requireOwnReplyGuids` | `[requireOwnReplyId]` | `[status uri, url]` | refuse, same text |
 
-`replyOrRefuse()` still calls `ofOrRefuse()` first, so a Lemmy entry is refused there as today; only `respondableReplyOrRefuse()` reaches Lemmy's `replyAt`.
+`requireReply()` still calls `requirePost()` first, so a Lemmy entry is refused there as today; only `requireRespondableReply()` reaches Lemmy's `parseReply`.
 
 Callers to convert (inject `SocialPostAddresses`): `ConfirmedDeletion`, `OwnPostDeletion`, `SocialCounts`, `SocialCountsCache`, `SocialPostFinder`, `SocialResponses`, `SocialRepliesSource`, `SelfThreadEnricher`, `SharedPostQuoteFinder`, `ComposerContexts`, `ResponseTargetFinder`, `MastodonPendingThread`, `Library/EntryList/EntryListRowEnricher` (its two static methods that call the helper become instance methods).
 
@@ -164,12 +178,12 @@ Callers to convert (inject `SocialPostAddresses`): `ConfirmedDeletion`, `OwnPost
 ```php
 public function testALemmyPostInAFeedWithoutNetworkIsRespondable(): void
 // entry in a feed whose getNetwork() is null, url a Lemmy post page
-// → respondableOrRefuse() returns network Lemmy, address the page URL
+// → requireRespondablePost() returns network Lemmy, address the page URL
 
 #[DataProvider('postUrls')]
 public function testExactlyOneRuleClaimsAPostUrl(string $url, SocialNetwork $owner): void
 // for a bsky.app post URL, an at:// post URI and a Mastodon status URL (both /@user/id and /users/…/statuses/id):
-// ruleOf($owner)->postAtUrl($url) is not null, and every other rule returns null
+// selectRule($owner)->parsePostUrl($url) is not null, and every other rule returns null
 ```
 
 - [ ] **Step 4: Write `NetworkRulesCompleteTest`** (a `KernelTestCase`):
@@ -177,7 +191,7 @@ public function testExactlyOneRuleClaimsAPostUrl(string $url, SocialNetwork $own
 ```php
 #[DataProvider('ruleTags')]
 public function testEveryNetworkHasARule(string $pickerServiceId): void
-// for each SocialNetwork::cases(): the picker's ruleOf($network) returns without throwing
+// for each SocialNetwork::cases(): the picker's selectRule($network) returns without throwing
 ```
 
 with `SocialPostAddresses::class` as the first provider row.
@@ -198,40 +212,40 @@ with `SocialPostAddresses::class` as the first provider row.
 #[AutoconfigureTag('app.social_profile_feed_rule')]
 interface ProfileFeedRuleInterface
 {
-    /** null when $identity names no account of this network or does not round-trip through identityOf() */
-    public function feedUrlOf(string $identity): ?string;
-    public function identityOf(string $feedUrl): ?string;
-    public function handleOf(string $identity): string;
-    public function titleOf(string $feedUrl, string $channelTitle): string;
+    /** null when $identity names no account of this network or does not round-trip through parseIdentity() */
+    public function buildFeedUrl(string $identity): ?string;
+    public function parseIdentity(string $feedUrl): ?string;
+    public function formatHandle(string $identity): string;
+    public function formatTitle(string $feedUrl, string $channelTitle): string;
 }
 
 final readonly class ProfileFeeds   // locator + iterator, like SocialPostAddresses
 {
-    public function ruleOf(SocialNetwork $network): ProfileFeedRuleInterface;
-    public function networkOf(string $feedUrl): ?SocialNetwork;   // the one network whose identityOf() is not null
-    public function ruleOfUrl(string $feedUrl): ?ProfileFeedRuleInterface;
+    public function selectRule(SocialNetwork $network): ProfileFeedRuleInterface;
+    public function findNetwork(string $feedUrl): ?SocialNetwork;   // the one network whose parseIdentity() is not null
+    public function findRule(string $feedUrl): ?ProfileFeedRuleInterface;
 }
 ```
 
 Static, single-network helpers (called by the adapters and by network-named code):
 
 ```php
-BlueskyProfileFeed::urlOf(string $did): string                    // was ProfileFeedUrl::bluesky
-BlueskyProfileFeed::identityOf(string $url): ?string
-BlueskyProfileFeed::profileActorOf(string $url): ?string          // was blueskyProfileActorOf
-MastodonProfileFeed::urlOf(string $user, string $domain): string  // was ::mastodon
-MastodonProfileFeed::identityOf(string $url): ?string
-LemmyProfileFeed::urlOf(string $community, string $host): string  // was ::lemmy
-LemmyProfileFeed::identityOf(string $url): ?string
-LemmyProfileFeed::userOf(string $identity): ?string               // was lemmyUserOf
+BlueskyProfileFeed::buildUrl(string $did): string                    // was ProfileFeedUrl::bluesky
+BlueskyProfileFeed::parseIdentity(string $url): ?string
+BlueskyProfileFeed::parseProfileActor(string $url): ?string          // was blueskyProfileActorOf
+MastodonProfileFeed::buildUrl(string $user, string $domain): string  // was ::mastodon
+MastodonProfileFeed::parseIdentity(string $url): ?string
+LemmyProfileFeed::buildUrl(string $community, string $host): string  // was ::lemmy
+LemmyProfileFeed::parseIdentity(string $url): ?string
+LemmyProfileFeed::parseUser(string $identity): ?string               // was lemmyUserOf
 ```
 
 Conversions:
 - Network-named callers call their helper directly: `BlueskyCandidateSource`, `Support/ExportedFeed`, `TolerantHiddenProfiles`, `Support/StoredSearchedPost` (until Task 4 moves it), `Support/LemmyCommunity`, `Support/MastodonAccount`, `ProfilePictureSource/LemmyProfilePictures`.
-- `ProfileFeedTitle::of()` returns `$this->profileFeeds->ruleOfUrl($feedUrl)?->titleOf($feedUrl, $channelTitle) ?? $channelTitle`; its two private title methods move into the Bluesky and Lemmy adapters, Mastodon's returns `$channelTitle`.
-- `ProfileFeedSubscriptionModel::handleOn()` is deleted; `ImportCandidateModel`'s factory takes the handle as a `string`, and its caller asks `ProfileFeeds::ruleOf($network)->handleOf(...)`.
-- `SocialFeedClassifier::networkOf()` and `networkFor()` are deleted; `privateAddressOf()` stays. `FeedNetworkListener` injects `ProfileFeeds` and holds the three-way decision (saved feed → `SavedFeedUrl::networkOf`, private address → its network, else `ProfileFeeds::networkOf`).
-- `ProfileIdentity::of()` is deleted; its one caller, `ImportCandidates`, composes `ruleOf($network)->identityOf($url) ?? SocialFeedUrl::authorOf($network, $url)`. The two `validBlueskyActor…` functions stay and call `BlueskyProfileFeed::identityOf`.
+- `ProfileFeedTitle::of()` returns `$this->profileFeeds->findRule($feedUrl)?->formatTitle($feedUrl, $channelTitle) ?? $channelTitle`; its two private title methods move into the Bluesky and Lemmy adapters, Mastodon's returns `$channelTitle`.
+- `ProfileFeedSubscriptionModel::handleOn()` is deleted; `ImportCandidateModel`'s factory takes the handle as a `string`, and its caller asks `ProfileFeeds::selectRule($network)->formatHandle(...)`.
+- `SocialFeedClassifier::networkOf()` and `networkFor()` are deleted; `privateAddressOf()` stays. `FeedNetworkListener` injects `ProfileFeeds` and holds the three-way decision (saved feed → `SavedFeedUrl::networkOf`, private address → its network, else `ProfileFeeds::findNetwork`).
+- `ProfileIdentity::of()` is deleted; its one caller, `ImportCandidates`, composes `selectRule($network)->parseIdentity($url) ?? SocialFeedUrl::authorOf($network, $url)`. The two `validBlueskyActor…` functions stay and call `BlueskyProfileFeed::parseIdentity`.
 - `FollowMatching` takes `ProfileFeedRuleInterface` as a constructor argument next to the network; `ImportCandidates` passes it.
 
 - [ ] **Step 1: Move the test cases** of `ProfileFeedUrlTest`, `ProfileFeedTitleTest`, `SocialFeedClassifierTest` (its network cases go to `FeedNetworkListenerTest`), `ProfileIdentityTest` and `ProfileFeedSubscriptionModelTest` (its `handleOn` cases go to the three adapter tests). Add `SocialRuleWiring::profileFeeds()`. Run — FAIL.
@@ -242,7 +256,7 @@ Conversions:
 public function testExactlyOneRuleClaimsAProfileFeed(string $url, SocialNetwork $owner): void
 // https://bsky.app/profile/did:plc:abc/rss → Bluesky; https://mastodon.social/@user.rss → Mastodon;
 // https://lemmy.world/feeds/c/tech.xml and https://lemmy.world/feeds/u/sam.xml → Lemmy;
-// each other rule's identityOf() returns null
+// each other rule's parseIdentity() returns null
 ```
 
 and add `ProfileFeeds::class` to `NetworkRulesCompleteTest`'s provider.
@@ -265,18 +279,18 @@ and add `ProfileFeeds::class` to `NetworkRulesCompleteTest`'s provider.
 interface PrivateFeedRuleInterface
 {
     public function allows(PrivateFeedModel $privateFeed): bool;
-    public function siteOf(SocialAccount $account, PrivateFeedModel $privateFeed): string;
+    public function buildSiteUrl(SocialAccount $account, PrivateFeedModel $privateFeed): string;
     /** Whether a list the account holds is its own rather than one it saved. Only asked for a UserList. */
     public function ownsList(SocialAccount $account, PrivateFeedModel $list): bool;
     public function sourceFormat(): string;
     /** @return non-empty-list<string> @throws SearchQueryTooBroadException */
-    public function searchQueries(string $query): array;
-    public function searchedPostOf(SocialAccount $account, StoredPostModel $post): SearchedPostModel;
+    public function buildSearchQueries(string $query): array;
+    public function buildSearchedPost(SocialAccount $account, StoredPostModel $post): SearchedPostModel;
 }
 
 final readonly class PrivateFeedRules   // locator only
 {
-    public function ruleOf(SocialNetwork $network): PrivateFeedRuleInterface;
+    public function selectRule(SocialNetwork $network): PrivateFeedRuleInterface;
 }
 ```
 
@@ -285,9 +299,9 @@ final readonly class PrivateFeedRules   // locator only
 Conversions:
 - `PrivateFeedSyncReasons` becomes a `final readonly` service in the module root (it now needs the rule); `added()` and `removed()` keep their signatures; `isOwnedList()` returns `false` unless the kind is `UserList`, then asks `ownsList()`. `PrivateFeedSyncApplier` injects it.
 - `PrivateFeeds::sourceFormatOf()` is deleted in favour of `sourceFormat()`.
-- `SearchFeedEditor` calls `searchQueries()` and discards the result where it called `requireFits()`.
-- Inside the Mastodon and Lemmy adapters, `allows()` for a `Search` feed catches `SearchQueryTooBroadException` from its own `searchQueries()` and answers `false`.
-- `NetworkSocialSearch` and the two timeline sources call their rule's `searchQueries()` (the timeline sources inject their own network's adapter class, not the picker).
+- `SearchFeedEditor` calls `buildSearchQueries()` and discards the result where it called `requireFits()`.
+- Inside the Mastodon and Lemmy adapters, `allows()` for a `Search` feed catches `SearchQueryTooBroadException` from its own `buildSearchQueries()` and answers `false`.
+- `NetworkSocialSearch` and the two timeline sources call their rule's `buildSearchQueries()` (the timeline sources inject their own network's adapter class, not the picker).
 
 - [ ] **Step 1: Move the test cases** of `PrivateFeedRulesTest`, `PrivateFeedSiteTest`, `PrivateFeedSyncReasonsTest`, `NetworkSearchQueriesTest` and `StoredSearchedPostTest` into three `…PrivateFeedRuleTest`s and `PrivateFeedSyncReasonsTest`. Add `SocialRuleWiring::privateFeedRules()` and the `NetworkRulesCompleteTest` provider row. Run — FAIL.
 - [ ] **Step 2: Add** to each adapter test `testSourceFormat()` asserting `SourceFormat::BLUESKY_API`, `MASTODON_API`, `LEMMY_API` respectively.
@@ -309,7 +323,7 @@ Conversions:
 interface SearchSourceInterface
 {
     /** The caller already acts as $account. Throws what TimelineSourceInterface::accepted() throws. */
-    public function newest(SocialAccount $account, string $query): TimelinePageModel;
+    public function fetchNewest(SocialAccount $account, string $query): TimelinePageModel;
 }
 
 final readonly class SearchAnswers
@@ -319,7 +333,7 @@ final readonly class SearchAnswers
      * @param \Closure(FetchOutcomeModel): ApiResponseModel $accept
      * @return list<ApiResponseModel> one accepted answer per request, in the requests' order
      */
-    public function of(SocialAccount $account, array $requests, \Closure $accept): array;
+    public function fetch(SocialAccount $account, array $requests, \Closure $accept): array;
 }
 ```
 
@@ -333,7 +347,7 @@ final readonly class SearchAnswers
 ### Task 6: Credentials
 
 **Files:**
-- Create: `Support/BlueskyCredentials.php`, `Support/MastodonCredentials.php`, `Support/LemmyCredentials.php`, `Support/InstanceOrigin.php`, `Model/CredentialReplacementModel.php`
+- Create: `Support/BlueskyCredentials.php`, `Support/MastodonCredentials.php`, `Support/LemmyCredentials.php`, `Support/InstanceUrl.php`, `Model/CredentialReplacementModel.php`
 - Modify: `Model/SocialCredentialsModel.php`, `NetworkVerifier/NetworkVerifierInterface.php` and its three adapters, `AccountVerifier/AccountVerifierInterface.php`, `AccountVerifier/NetworkAccountVerifier.php`, `SocialAccountConnector.php`, `Factory/SocialAccountFactory.php`, `src/Dto/Social/Connect{Bluesky,Mastodon,Lemmy}Request.php`, `src/Dto/Social/ReplaceCredentialRequest.php`, `src/Controller/Api/SocialAccountController.php`, and every test double of `AccountVerifierInterface`
 
 **Interfaces — produces:**
@@ -356,25 +370,25 @@ final readonly class CredentialReplacementModel
     public function __construct(#[\SensitiveParameter] public string $secret, public ?string $secondFactor) {}
 }
 
-BlueskyCredentials::of(string $handle, string $appPassword): SocialCredentialsModel            // @throws NotAnAppPasswordException
-BlueskyCredentials::forReconnect(SocialAccount $account, CredentialReplacementModel $replacement): SocialCredentialsModel
-MastodonCredentials::of(string $instanceUrl, string $accessToken): SocialCredentialsModel      // @throws InvalidInstanceUrlException
-MastodonCredentials::forReconnect(…): SocialCredentialsModel
-LemmyCredentials::of(string $instanceUrl, string $usernameOrEmail, string $password, ?string $secondFactor): SocialCredentialsModel
-LemmyCredentials::forReconnect(…): SocialCredentialsModel
-InstanceOrigin::of(string $instanceUrl): string                                                // @throws InvalidInstanceUrlException
+BlueskyCredentials::build(string $handle, string $appPassword): SocialCredentialsModel            // @throws NotAnAppPasswordException
+BlueskyCredentials::buildForReconnect(SocialAccount $account, CredentialReplacementModel $replacement): SocialCredentialsModel
+MastodonCredentials::build(string $instanceUrl, string $accessToken): SocialCredentialsModel      // @throws InvalidInstanceUrlException
+MastodonCredentials::buildForReconnect(…): SocialCredentialsModel
+LemmyCredentials::build(string $instanceUrl, string $usernameOrEmail, string $password, ?string $secondFactor): SocialCredentialsModel
+LemmyCredentials::buildForReconnect(…): SocialCredentialsModel
+InstanceUrl::requireOrigin(string $instanceUrl): string                                                // @throws InvalidInstanceUrlException
 
 // added to NetworkVerifierInterface and AccountVerifierInterface:
 /** @throws NotAnAppPasswordException */
-public function reconnectCredentials(SocialAccount $account, CredentialReplacementModel $replacement): SocialCredentialsModel;
+public function buildReconnectCredentials(SocialAccount $account, CredentialReplacementModel $replacement): SocialCredentialsModel;
 
 // added to SocialAccountConnector, delegating to the account verifier:
-public function reconnectCredentials(SocialAccount $account, CredentialReplacementModel $replacement): SocialCredentialsModel;
+public function buildReconnectCredentials(SocialAccount $account, CredentialReplacementModel $replacement): SocialCredentialsModel;
 ```
 
-The hint is the last 4 characters of the secret for Bluesky and Mastodon and `''` for Lemmy, set by each builder; `hint()` becomes the `$hint` property. `ReplaceCredentialRequest::toCredentials()` becomes `toReplacement(): CredentialReplacementModel`. In `SocialAccountController::replaceCredential()` the order stays: require the account, build the credentials (`$this->connector->reconnectCredentials(...)`), enforce the rate limit, reconnect.
+The hint is the last 4 characters of the secret for Bluesky and Mastodon and `''` for Lemmy, set by each builder; `hint()` becomes the `$hint` property. `ReplaceCredentialRequest::toCredentials()` becomes `toReplacement(): CredentialReplacementModel`. In `SocialAccountController::replaceCredential()` the order stays: require the account, build the credentials (`$this->connector->buildReconnectCredentials(...)`), enforce the rate limit, reconnect.
 
-- [ ] **Step 1: Move the cases** of `SocialCredentialsModelTest` into `BlueskyCredentialsTest`, `MastodonCredentialsTest`, `LemmyCredentialsTest` and `InstanceOriginTest`. Run — FAIL.
+- [ ] **Step 1: Move the cases** of `SocialCredentialsModelTest` into `BlueskyCredentialsTest`, `MastodonCredentialsTest`, `LemmyCredentialsTest` and `InstanceUrlTest`. Run — FAIL.
 - [ ] **Step 2: Write the Review Focus test** in `tests/Controller/Api/SocialAccountControllerTest.php`:
 
 ```php
@@ -402,4 +416,5 @@ grep -rnE 'SocialNetwork::(Bluesky|Mastodon|Lemmy)' src/Service/Social/Social | 
 Expected: only the out-of-scope files named in Global Constraints (`DiscussionVotes`, `HiddenProfile*`, `HiddenImportFollows`, `FollowAvatarCache`, `Pass/FollowMatching`, `Support/ExportedFeed`, `Support/ProfileIdentity`) and `AsTaggedItem` lines. Any other hit is unfinished work.
 - [ ] **Step 2: Full gates.** `composer check`, `composer md`, `php bin/phpunit`, `docker compose exec php composer test:parallel`, `composer infection:diff`. All green; paste the tails into the PR.
 - [ ] **Step 3: Scan today's dev log** for new deprecations or container errors.
-- [ ] **Step 4: Commit** `docs(#2358): where a network's facts live`, run `/simplify`, open the PR into `develop` with `Closes #2358`.
+- [ ] **Step 4: Write the dictionary into `CLAUDE.md`**, in "PHP code style — Clean Code" under "Names reveal intent", as one bullet: "**A method name starts with the verb for what it does**" followed by the table from Global Constraints, the sentence "`get…` is for plain property reads on entities", and "Existing `…Of` and `of` names are renamed as #2360 reaches them; write no new one."
+- [ ] **Step 5: Commit** `docs(#2358): where a network's facts live, and the method-name dictionary`, run `/simplify`, open the PR into `develop` with `Closes #2358`.
