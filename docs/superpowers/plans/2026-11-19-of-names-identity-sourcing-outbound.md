@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Renames only: no signature, body, visibility or behaviour change. A docblock changes only where it names the old method.
-- Every caller in `backend/src` and `backend/tests` follows, first-class callables (`self::keyOf(...)`) and strings included. Test method names are not renamed.
+- Every caller in `backend/src`, `backend/tests` and `backend/migrations` follows, first-class callables (`self::keyOf(...)`) and strings included. Test method names are not renamed.
 - Per task: `composer cs:fix`, `composer check`, `composer md`, `php bin/phpunit` green before the commit. Before the PR also `docker compose exec php composer test:parallel` and `composer infection:diff`.
 - No PHPStan rule is added for the names (Lars, 2026-11-19: "No rule"). No `tests/PhpStan` edit, no `@phpstan-ignore`, no PHPMD suppression. No new class.
 - Commits `refactor(#2360): …`. The PR says `Refs #2360`, **not** `Closes`: the issue stays open for the other groups. No attribution lines.
@@ -21,9 +21,9 @@
 
 ## Decisions
 
+- **A name says what the method really does** (Lars, 2026-11-19): "Please always look at what the method really does and chose the name based on that." A dictionary verb is used where its meaning matches the body; where no row fits, the plain verb for what happens (`pick…`, `read…`, `compute…`, `detect…`). No rule keyed on return type or nullability.
 - **`of()` and `of…()` by meaning** (Lars, 2026-11-19): a named constructor that wraps or converts one value is `from<Source>()`; a helper that assembles from parts is `build<Object>()`; one that reads a value out of a string or document is `parse<Object>()`; a lookup is `find<Object>()`.
 - **A yes/no question keeps a trailing `Of`.** `ImageIdentityModel::isRenditionOf($other)` already starts with the dictionary's `is…`; it is not renamed.
-- **No new verb for a derived value.** The dictionary has none for "work a value out of another"; such methods take `build…` (assembled from the arguments) or `find…` (picked among items) here, so the table in `CLAUDE.md` stays as it is.
 - **Smallest groups first** (Lars, 2026-11-19); Identity (1 method), Sourcing (6) and Outbound (15 renamed, 1 kept) go in one PR because none alone proves the approach.
 
 ## The renames
@@ -37,20 +37,20 @@
 | `Sourcing/Discovery/FeedOffer/MixcloudProfileFeed.php` | `cloudcastsOf` (private) | `buildCloudcastsCandidate` |
 | `Sourcing/Discovery/ShareLinkFeed/ApplePodcastShowFeed.php` | `feedUrlOf` (private) | `parseFeedUrl` |
 | `Sourcing/Discovery/ShareLinkFeed/SubstackProfileFeed.php` | `subdomainOf` (private) | `parseSubdomain` |
-| `Outbound/Fetch/ConcurrentRequestEngine.php` | `longestTimeoutOf` (private) | `findLongestTimeout` |
+| `Outbound/Fetch/ConcurrentRequestEngine.php` | `longestTimeoutOf` (private) | `pickLongestTimeout` |
 | `Outbound/Fetch/ConcurrentRequestEngine.php` | `headersOf` (private) | `buildHeaders` |
-| `Outbound/Fetch/Model/ApiBudgetModel.php` | `maxDurationOf(float $timeoutSeconds)` | `buildMaxDuration` |
+| `Outbound/Fetch/Model/ApiBudgetModel.php` | `maxDurationOf(float $timeoutSeconds)` | `computeMaxDuration` |
 | `Outbound/Fetch/Pass/RequestSlots.php` | `keysOf` (private) | `buildKeys` |
 | `Outbound/Fetch/Pass/RequestSlots.php` | `keyOf` (private) | `buildKey` |
 | `Outbound/Fetch/Support/ContentTypeCharset.php` | `of(?string $contentType)` | `parseCharset` |
-| `Outbound/Fetch/Support/EgressOptions.php` | `extraOf` (private) | `parseExtraOptions` |
-| `Outbound/Fetch/Support/EgressOptions.php` | `curlOf` (private) | `parseCurlOptions` |
-| `Outbound/Fetch/Support/LandingSite.php` | `hostOf(string $postedUrl, string $landingUrl)` | `parseHost` |
-| `Outbound/Fetch/Support/ResponseBody.php` | `urlOf` (private) | `parseUrl` |
-| `Outbound/Image/Support/ImageMagicBytes.php` | `typeOf(string $bytes)` | `parseType` |
-| `Outbound/Image/Support/MediaType.php` | `of(?string $contentTypeHeader)` | `parseMediaType` |
-| `Outbound/Image/Support/OriginRoot.php` | `of(string $url)` | `buildRoot` |
-| `Outbound/Image/Support/RenditionTargets.php` | `bandOf(int $width)` | `findBand` |
+| `Outbound/Fetch/Support/EgressOptions.php` | `extraOf` (private) | `readExtraOptions` |
+| `Outbound/Fetch/Support/EgressOptions.php` | `curlOf` (private) | `readCurlOptions` |
+| `Outbound/Fetch/Support/LandingSite.php` | `hostOf(string $postedUrl, string $landingUrl)` | `pickHost` |
+| `Outbound/Fetch/Support/ResponseBody.php` | `urlOf` (private) | `readUrl` |
+| `Outbound/Image/Support/ImageMagicBytes.php` | `typeOf(string $bytes)` | `detectType` |
+| `Outbound/Image/Support/MediaType.php` | `of(?string $contentTypeHeader)` | `fromHeader` |
+| `Outbound/Image/Support/OriginRoot.php` | `of(string $url)` | `fromUrl` |
+| `Outbound/Image/Support/RenditionTargets.php` | `bandOf(int $width)` | `pickBand` |
 | `Outbound/Mail/Transport/Factory/ActiveMailTransportFactory.php` | `signatureOf(ResolvedMailTransportModel $resolved)` | `buildSignature` |
 | `Outbound/Image/Model/ImageIdentityModel.php` | `isRenditionOf` | kept |
 
@@ -60,7 +60,7 @@
 - **A rename that collides with an existing method** of the same class or of a class it extends or implements (`parseUrl`, `buildHeaders`, `buildKey` are common names). Check each target class before renaming; on a collision stop and report.
 - **A same-named method elsewhere renamed by accident.** `of(` is the most common method name in the tree; only the calls on these classes change (`$this->accountSettings->of($user)` in `Http/MeProfileJson`, `Operations/Backup/AccountBackupExporter`, `Operations/Backup/RestoreLoader` and `tests/Http/MeProfileJsonTest`). The diff must hold no `of(` change outside the table's classes and their callers.
 - **A mock that names the method as a string** (`->method('of')`, `->method('signatureOf')`). Grep the tests for each old name in quotes.
-- **A new name that says something the method does not do.** `findBand` returns null below the smallest width; `parseMediaType` returns `''`, never null. If a body contradicts its new verb's row in `CLAUDE.md`, stop and report rather than change the body.
+- **A new name that says something the method does not do.** `pickBand` returns null below the smallest width; `fromHeader` returns `''`, never null. If a body contradicts its new verb's row in `CLAUDE.md`, stop and report rather than change the body.
 
 ---
 
