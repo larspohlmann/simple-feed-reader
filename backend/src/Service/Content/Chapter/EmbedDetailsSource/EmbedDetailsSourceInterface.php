@@ -14,5 +14,5 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 interface EmbedDetailsSourceInterface
 {
     /** @throws EmbedDescriptionUnreachableException */
-    public function detailsOf(EmbedAddressModel $embed): EmbedDescriptionModel;
+    public function fetchDescription(EmbedAddressModel $embed): EmbedDescriptionModel;
 }

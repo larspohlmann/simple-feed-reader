@@ -96,7 +96,7 @@ final readonly class ConnectedAccountStates
     {
         return array_keys(array_filter(
             $entries,
-            static fn (Entry $entry): bool => null !== LemmyPostAddress::of($entry),
+            static fn (Entry $entry): bool => null !== LemmyPostAddress::findPost($entry),
         ));
     }
 

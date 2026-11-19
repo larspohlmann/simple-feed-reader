@@ -92,7 +92,7 @@ final class SavedBlueskyPostInteractionTest extends DbTestCase
         self::assertInstanceOf(SocialRepliesSource::class, $replies);
 
         self::assertTrue($replies->serves($this->savedPost));
-        $audience = $replies->audienceOf($this->owner, $this->savedPost);
+        $audience = $replies->buildAudience($this->owner, $this->savedPost);
         self::assertSame('bluesky ' . self::POST_URI . ' account:' . $this->account->requireId(), $audience->scope);
         self::assertSame($this->account, $audience->actingAccount);
     }

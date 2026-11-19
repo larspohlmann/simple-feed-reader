@@ -17,7 +17,7 @@ use App\Service\Foundation\Url\Support\HttpsImageUrl;
  */
 final class StorableQuotedPost
 {
-    public static function of(QuotedPostContent $quote): ?QuotedPostContent
+    public static function fromQuote(QuotedPostContent $quote): ?QuotedPostContent
     {
         $handle = mb_substr(trim($quote->authorHandle), 0, QuotedPostContent::NAME_MAX);
         if (!self::isWebPage($quote->url) || $handle === '') {
@@ -34,7 +34,7 @@ final class StorableQuotedPost
             WordBoundary::clipped($quote->text, QuotedPostContent::TEXT_MAX),
             self::storableMedia($quote->media),
             self::storableReference($quote->nestedQuote),
-            $quote->linkCard === null ? null : StorableLinkCard::of($quote->linkCard),
+            $quote->linkCard === null ? null : StorableLinkCard::fromCard($quote->linkCard),
         );
     }
 

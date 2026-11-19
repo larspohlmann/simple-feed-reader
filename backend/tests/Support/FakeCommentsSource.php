@@ -60,7 +60,7 @@ final class FakeCommentsSource implements CommentsSourceInterface
         return $this->servesEntries;
     }
 
-    public function audienceOf(User $user, Entry $entry): CommentsAudienceModel
+    public function buildAudience(User $user, Entry $entry): CommentsAudienceModel
     {
         ++$this->audienceAsks;
 

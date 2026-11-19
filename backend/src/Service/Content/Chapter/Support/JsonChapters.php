@@ -25,7 +25,7 @@ final class JsonChapters
 
         $chapters = [];
         foreach ($rows as $row) {
-            $chapter = \is_array($row) ? self::chapterOf($row) : null;
+            $chapter = \is_array($row) ? self::parseChapter($row) : null;
             if ($chapter !== null) {
                 $chapters[] = $chapter;
             }
@@ -35,7 +35,7 @@ final class JsonChapters
     }
 
     /** @param array<mixed> $row */
-    private static function chapterOf(array $row): ?EntryChapter
+    private static function parseChapter(array $row): ?EntryChapter
     {
         $start = $row['startTime'] ?? null;
         $title = \is_string($row['title'] ?? null) ? trim($row['title']) : '';

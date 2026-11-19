@@ -35,7 +35,7 @@ final class MastodonQuotedStatus
         $quoted = QuoteLine::targetIn($content);
         $body = $quoted === null ? $content : QuoteLine::removedFrom($content, $quoted);
 
-        return StorableQuotedPost::of(new QuotedPostContent(
+        return StorableQuotedPost::fromQuote(new QuotedPostContent(
             $url,
             $account->string('display_name') ?? '',
             $handle,

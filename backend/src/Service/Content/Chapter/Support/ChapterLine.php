@@ -20,20 +20,20 @@ final class ChapterLine
     private const string LEADING_RANGE = '/^\s*(' . self::STAMP . ')\s*[-–—~]\s*' . self::STAMP . '(.*)$/su';
     private const string SEPARATORS_AT_THE_ENDS = '/^[\s\-–—:|]+|[\s\-–—:|]+$/u';
 
-    public static function chapterOf(string $text): ?EntryChapter
+    public static function parseChapter(string $text): ?EntryChapter
     {
-        if (self::positionOf($text) === StampPosition::Inner) {
+        if (self::detectStampPosition($text) === StampPosition::Inner) {
             return null;
         }
 
         return match (preg_match_all(self::STAMPS, $text)) {
             1 => self::chapter(self::firstStamp($text), (string) preg_replace(self::BRACKETED_STAMP, ' ', $text, 1)),
-            2 => self::rangeChapterOf($text),
+            2 => self::parseRangeChapter($text),
             default => null,
         };
     }
 
-    public static function positionOf(string $text): StampPosition
+    public static function detectStampPosition(string $text): StampPosition
     {
         return match (true) {
             preg_match(self::LEADING_STAMP, $text) === 1 => StampPosition::Leading,
@@ -47,7 +47,7 @@ final class ChapterLine
         return preg_match(self::STAMPS, $text) !== 1;
     }
 
-    private static function rangeChapterOf(string $text): ?EntryChapter
+    private static function parseRangeChapter(string $text): ?EntryChapter
     {
         if (preg_match(self::LEADING_RANGE, $text, $range) !== 1) {
             return null;

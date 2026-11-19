@@ -36,7 +36,7 @@ final class DescriptionChapters
         }
 
         $document = HtmlDocumentParser::parseFragment($html);
-        $run = self::startingBefore(self::firstRun(DescriptionLines::of($document), $rule), $endSeconds);
+        $run = self::startingBefore(self::firstRun(DescriptionLines::fromDocument($document), $rule), $endSeconds);
         if (\count($run) < self::MINIMUM) {
             return new ServedChaptersModel([], $html);
         }
@@ -45,7 +45,7 @@ final class DescriptionChapters
         foreach ($run as [$line]) {
             $line->remove();
         }
-        foreach (self::blocksOf($run) as $block) {
+        foreach (self::collectBlocks($run) as $block) {
             self::tidy($block);
         }
 
@@ -65,7 +65,7 @@ final class DescriptionChapters
             if (self::passesOver($rule, $run, $line, $text)) {
                 continue;
             }
-            $chapter = ChapterLine::chapterOf($text);
+            $chapter = ChapterLine::parseChapter($text);
             if ($chapter !== null && self::continues($run, $chapter, $text)) {
                 $run[] = [$line, $chapter];
                 continue;
@@ -107,7 +107,7 @@ final class DescriptionChapters
         }
 
         return $chapter->startSeconds > $run[\count($run) - 1][1]->startSeconds
-            && ChapterLine::positionOf($text) === ChapterLine::positionOf($run[0][0]->text());
+            && ChapterLine::detectStampPosition($text) === ChapterLine::detectStampPosition($run[0][0]->text());
     }
 
     /**
@@ -115,7 +115,7 @@ final class DescriptionChapters
      *
      * @return list<Element>
      */
-    private static function blocksOf(array $run): array
+    private static function collectBlocks(array $run): array
     {
         $blocks = [];
         foreach ($run as [$line]) {

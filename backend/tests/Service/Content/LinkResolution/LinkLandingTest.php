@@ -263,7 +263,7 @@ final class LinkLandingTest extends TestCase
     /** @param list<MockResponse> $responses */
     private function landingOf(string $url, array $responses): LinkLandingModel
     {
-        return $this->wiring->landing($responses)->of($url);
+        return $this->wiring->landing($responses)->resolveLanding($url);
     }
 
     /** @return list<string> */

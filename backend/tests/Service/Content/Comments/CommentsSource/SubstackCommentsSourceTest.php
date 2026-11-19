@@ -103,8 +103,8 @@ final class SubstackCommentsSourceTest extends KernelTestCase
     {
         $other = new User('other@example.com', $this->clock->now());
 
-        self::assertSame(self::POST, $this->source->audienceOf($this->user, self::entry())->scope);
-        self::assertSame(self::POST, $this->source->audienceOf($other, self::entry())->scope);
+        self::assertSame(self::POST, $this->source->buildAudience($this->user, self::entry())->scope);
+        self::assertSame(self::POST, $this->source->buildAudience($other, self::entry())->scope);
     }
 
     public function testFlattensTheTreeDepthFirstAndDropsDeletedComments(): void

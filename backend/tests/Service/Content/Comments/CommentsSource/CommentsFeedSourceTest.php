@@ -122,8 +122,8 @@ final class CommentsFeedSourceTest extends KernelTestCase
     {
         $other = new User('other@example.com', $this->clock->now());
 
-        self::assertSame(self::FEED, $this->source->audienceOf($this->user, self::entry())->scope);
-        self::assertSame(self::FEED, $this->source->audienceOf($other, self::entry())->scope);
+        self::assertSame(self::FEED, $this->source->buildAudience($this->user, self::entry())->scope);
+        self::assertSame(self::FEED, $this->source->buildAudience($other, self::entry())->scope);
     }
 
     public function testParsesCommentsAndDropsThePostItself(): void

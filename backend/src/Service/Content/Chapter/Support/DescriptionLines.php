@@ -14,7 +14,7 @@ final class DescriptionLines
         . 'h1,h2,h3,h4,h5,h6,header,hr,li,ol,p,pre,section,table,tbody,td,tfoot,th,thead,tr,ul';
 
     /** @return list<DescriptionLine> */
-    public static function of(Document $document): array
+    public static function fromDocument(Document $document): array
     {
         if ($document->body === null) {
             return [];

@@ -26,7 +26,7 @@ final readonly class LemmyPostAddressRule implements PostAddressRuleInterface
 
     public function findDiscussionPost(Entry $entry): ?SocialPostAddressModel
     {
-        $post = LemmyPostAddress::of($entry);
+        $post = LemmyPostAddress::findPost($entry);
 
         return SocialPostAddressModel::fromNullable(SocialNetwork::Lemmy, $post?->pageUrl());
     }

@@ -33,7 +33,7 @@ final class BlueskyExternalCard
             return null;
         }
 
-        return StorableLinkCard::of(new LinkCardContent(
+        return StorableLinkCard::fromCard(new LinkCardContent(
             $url,
             $title,
             $external->string('description'),

@@ -26,7 +26,7 @@ final readonly class GuardedDescriptionRequest
     }
 
     /** @return array<mixed> */
-    public function answerOf(ApiRequestModel $request, EmbedAddressModel $embed): array
+    public function fetchAnswer(ApiRequestModel $request, EmbedAddressModel $embed): array
     {
         return $this->answerOver($this->api->sendWithin(...), $request, $embed);
     }
@@ -38,7 +38,7 @@ final readonly class GuardedDescriptionRequest
      *
      * @throws DirectRouteUnavailableException when no proxy is configured or its direct fallback is off
      */
-    public function directAnswerOf(ApiRequestModel $request, EmbedAddressModel $embed): array
+    public function fetchDirectAnswer(ApiRequestModel $request, EmbedAddressModel $embed): array
     {
         return $this->answerOver($this->api->sendDirectAfterProxyRefusal(...), $request, $embed);
     }

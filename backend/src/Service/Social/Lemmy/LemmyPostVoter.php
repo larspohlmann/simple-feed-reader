@@ -33,7 +33,7 @@ final readonly class LemmyPostVoter implements PostVoterInterface
 
     public function isVotablePost(Entry $entry): bool
     {
-        return null !== LemmyPostAddress::of($entry);
+        return null !== LemmyPostAddress::findPost($entry);
     }
 
     public function castVoteOnPost(SocialAccount $account, Entry $entry, VoteScore $score): DiscussionVoteResultModel
@@ -80,7 +80,8 @@ final readonly class LemmyPostVoter implements PostVoterInterface
     /** @throws NotASocialPostException */
     private static function requirePost(Entry $entry): LemmyPostModel
     {
-        return LemmyPostAddress::of($entry) ?? throw new NotASocialPostException('This entry is not a Lemmy post.');
+        return LemmyPostAddress::findPost($entry)
+            ?? throw new NotASocialPostException('This entry is not a Lemmy post.');
     }
 
     private static function buildResult(LemmyTargetModel $target): DiscussionVoteResultModel

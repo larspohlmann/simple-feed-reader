@@ -15,38 +15,43 @@ final class StorableLinkCardTest extends TestCase
     {
         $card = new LinkCardContent('https://example.com/a', 'Title', 'About', 'https://example.com/a.jpg', 'Example');
 
-        self::assertEquals($card, StorableLinkCard::of($card));
+        self::assertEquals($card, StorableLinkCard::fromCard($card));
     }
 
     public function testAUrlTooLongToStoreGivesNoCard(): void
     {
-        self::assertNull(StorableLinkCard::of($this->card(url: 'https://example.com/' . str_repeat('a', 2029))));
-        self::assertNotNull(StorableLinkCard::of($this->card(url: 'https://example.com/' . str_repeat('a', 2028))));
+        self::assertNull(StorableLinkCard::fromCard($this->card(url: 'https://example.com/' . str_repeat('a', 2029))));
+        self::assertNotNull(
+            StorableLinkCard::fromCard($this->card(url: 'https://example.com/' . str_repeat('a', 2028))),
+        );
     }
 
     public function testAUrlThatIsNoWebPageGivesNoCard(): void
     {
-        self::assertNull(StorableLinkCard::of($this->card(url: 'javascript:alert(1)')));
-        self::assertNull(StorableLinkCard::of($this->card(url: '/relative/story')));
+        self::assertNull(StorableLinkCard::fromCard($this->card(url: 'javascript:alert(1)')));
+        self::assertNull(StorableLinkCard::fromCard($this->card(url: '/relative/story')));
     }
 
     public function testAnImageUrlThatIsNotHttpsIsDropped(): void
     {
-        self::assertNull(StorableLinkCard::of($this->card(imageUrl: 'http://example.com/a.jpg'))?->imageUrl);
-        self::assertNull(StorableLinkCard::of($this->card(imageUrl: 'javascript:alert(1)'))?->imageUrl);
+        self::assertNull(StorableLinkCard::fromCard($this->card(imageUrl: 'http://example.com/a.jpg'))?->imageUrl);
+        self::assertNull(StorableLinkCard::fromCard($this->card(imageUrl: 'javascript:alert(1)'))?->imageUrl);
     }
 
     public function testAUrlsLengthCountsCharactersNotBytes(): void
     {
         $longest = 'https://example.com/' . str_repeat('ü', 2028);
 
-        self::assertSame($longest, StorableLinkCard::of($this->card(url: $longest, imageUrl: $longest))?->imageUrl);
+        self::assertSame(
+            $longest,
+            StorableLinkCard::fromCard($this->card(url: $longest, imageUrl: $longest))?->imageUrl,
+        );
     }
 
     #[DataProvider('bareUrlDescriptions')]
     public function testABareUrlDescriptionIsDropped(string $description): void
     {
-        self::assertNull(StorableLinkCard::of($this->card(description: $description))?->description);
+        self::assertNull(StorableLinkCard::fromCard($this->card(description: $description))?->description);
     }
 
     /** @return iterable<string, array{string}> */
@@ -61,12 +66,15 @@ final class StorableLinkCardTest extends TestCase
     {
         $description = 'Read more at https://example.com/a today';
 
-        self::assertSame($description, StorableLinkCard::of($this->card(description: $description))?->description);
+        self::assertSame(
+            $description,
+            StorableLinkCard::fromCard($this->card(description: $description))?->description,
+        );
     }
 
     public function testABlankTitleGivesNoCard(): void
     {
-        self::assertNull(StorableLinkCard::of($this->card(title: '  ')));
+        self::assertNull(StorableLinkCard::fromCard($this->card(title: '  ')));
     }
 
     public function testAnImageUrlTooLongToStoreIsDropped(): void
@@ -74,13 +82,13 @@ final class StorableLinkCardTest extends TestCase
         $tooLong = 'https://example.com/' . str_repeat('i', 2029);
         $longest = 'https://example.com/' . str_repeat('i', 2028);
 
-        self::assertNull(StorableLinkCard::of($this->card(imageUrl: $tooLong))?->imageUrl);
-        self::assertSame($longest, StorableLinkCard::of($this->card(imageUrl: $longest))?->imageUrl);
+        self::assertNull(StorableLinkCard::fromCard($this->card(imageUrl: $tooLong))?->imageUrl);
+        self::assertSame($longest, StorableLinkCard::fromCard($this->card(imageUrl: $longest))?->imageUrl);
     }
 
     public function testTheTitleAndTheSiteAreClampedToTheirColumns(): void
     {
-        $card = StorableLinkCard::of($this->card(title: str_repeat('é', 600), siteName: str_repeat('ß', 300)));
+        $card = StorableLinkCard::fromCard($this->card(title: str_repeat('é', 600), siteName: str_repeat('ß', 300)));
 
         self::assertNotNull($card);
         self::assertSame(str_repeat('é', 500), $card->title);
@@ -89,7 +97,7 @@ final class StorableLinkCardTest extends TestCase
 
     public function testTheDescriptionIsCutOnAWordBoundary(): void
     {
-        $card = StorableLinkCard::of($this->card(description: str_repeat('word ', 100)));
+        $card = StorableLinkCard::fromCard($this->card(description: str_repeat('word ', 100)));
 
         self::assertSame(str_repeat('word ', 58) . 'word…', $card?->description);
     }
@@ -98,7 +106,7 @@ final class StorableLinkCardTest extends TestCase
     {
         $card = $this->card(url: 'https://www.heise.de/news/x.html?wt_mc=sm.red&utm_source=mastodon#Echobox=1');
 
-        self::assertSame('https://www.heise.de/news/x.html', StorableLinkCard::of($card)?->url);
+        self::assertSame('https://www.heise.de/news/x.html', StorableLinkCard::fromCard($card)?->url);
     }
 
     private function card(

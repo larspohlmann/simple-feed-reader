@@ -43,7 +43,7 @@ final readonly class ShareLinkCards
     public function complete(array $queued, LinkCardBudgetModel $budget): int
     {
         $storedCards = $this->storedCards($queued);
-        $plansByRowId = self::withinBudget($queued, $this->plansOf($queued, $storedCards), $budget);
+        $plansByRowId = self::withinBudget($queued, $this->buildPlans($queued, $storedCards), $budget);
         $claimedAt = $this->clock->now();
         $claimed = $this->enrichments->claim(
             array_values(array_filter(
@@ -120,7 +120,7 @@ final readonly class ShareLinkCards
      *
      * @return array<int, ShareFetchPlanModel>
      */
-    private function plansOf(array $queued, array $storedCards): array
+    private function buildPlans(array $queued, array $storedCards): array
     {
         $plans = [];
         $reusableUrls = [];
@@ -131,7 +131,7 @@ final readonly class ShareLinkCards
                 $storedCards[$entry->requireId()] ?? [],
             ));
             $plans[$row->requireId()] = $plan;
-            $reusableUrls[$row->requireId()] = ReusableShareUrls::of($entry, $plan);
+            $reusableUrls[$row->requireId()] = ReusableShareUrls::filterUrls($entry, $plan);
         }
         $known = $this->linkWriter->knownFor(array_merge(...array_values($reusableUrls)));
         foreach ($plans as $rowId => $plan) {

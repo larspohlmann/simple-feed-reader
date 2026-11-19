@@ -234,7 +234,7 @@ final readonly class EntryLine
         $nested = LineField::objectOrNull($fields, 'nestedQuote');
         $card = LineField::objectOrNull($fields, 'linkCard');
 
-        return StorableQuotedPost::of(new QuotedPostContent(
+        return StorableQuotedPost::fromQuote(new QuotedPostContent(
             LineField::string($fields, 'url'),
             LineField::string($fields, 'authorName'),
             LineField::string($fields, 'authorHandle'),
@@ -310,7 +310,7 @@ final readonly class EntryLine
      */
     private static function parseLinkCard(array $card): ?LinkCardContent
     {
-        return StorableLinkCard::of(self::linkCardFrom($card));
+        return StorableLinkCard::fromCard(self::linkCardFrom($card));
     }
 
     /** @param array<string, mixed> $card */

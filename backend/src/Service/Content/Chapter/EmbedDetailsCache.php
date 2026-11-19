@@ -22,20 +22,20 @@ final readonly class EmbedDetailsCache
 
     public function find(EmbedAddressModel $embed): ?EmbedDetailsModel
     {
-        $item = $this->cache->getItem(self::keyOf($embed));
+        $item = $this->cache->getItem(self::buildKey($embed));
 
         return $item->isHit() ? EmbedDetailsModel::fromCacheEntryOrNull($item->get()) : null;
     }
 
     public function remember(EmbedAddressModel $embed, EmbedDetailsModel $details): void
     {
-        $item = $this->cache->getItem(self::keyOf($embed));
+        $item = $this->cache->getItem(self::buildKey($embed));
         $item->set($details->toCacheEntry());
         $item->expiresAfter($details->chapters === [] ? self::UNCHAPTERED_SECONDS : self::CHAPTERED_SECONDS);
         $this->cache->save($item);
     }
 
-    private static function keyOf(EmbedAddressModel $embed): string
+    private static function buildKey(EmbedAddressModel $embed): string
     {
         return 'embed_details.' . $embed->cacheKey();
     }

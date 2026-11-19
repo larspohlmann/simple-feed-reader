@@ -35,8 +35,8 @@ final readonly class PageCardReader implements PageCardReaderInterface
         $preview = DeclaredPreview::of($document, $sharedUrl, $page->finalUrl);
 
         return new PageCardModel(
-            StorableLinkCard::of($preview->card()),
-            DeclaredPageMedium::of(MetaTags::contentByKey($document)),
+            StorableLinkCard::fromCard($preview->card()),
+            DeclaredPageMedium::fromMeta(MetaTags::contentByKey($document)),
             new PageIdentityModel(
                 $page->finalUrl,
                 new PageUrls($page->finalUrl)->httpUrl(DeclaredPageAddress::in($document)),

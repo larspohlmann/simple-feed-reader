@@ -23,30 +23,30 @@ final readonly class CommentsCache
 
     public function find(string $key): ?CachedCommentsModel
     {
-        $item = $this->cache->getItem(self::keyOf($key));
+        $item = $this->cache->getItem(self::hashKey($key));
 
         return $item->isHit() ? CachedCommentsModel::fromCacheEntryOrNull($item->get()) : null;
     }
 
     public function remember(string $key, CommentsAnswerModel $answer, \DateTimeImmutable $fetchedAt): void
     {
-        $item = $this->cache->getItem(self::keyOf($key));
+        $item = $this->cache->getItem(self::hashKey($key));
         $item->set(new CachedCommentsModel($answer->body, $fetchedAt)->toCacheEntry());
-        $item->expiresAt($fetchedAt->setTimestamp($fetchedAt->getTimestamp() + $this->lifetimeOf($answer)));
+        $item->expiresAt($fetchedAt->setTimestamp($fetchedAt->getTimestamp() + $this->pickLifetime($answer)));
         $this->cache->save($item);
     }
 
     public function forget(string $key): void
     {
-        $this->cache->deleteItem(self::keyOf($key));
+        $this->cache->deleteItem(self::hashKey($key));
     }
 
-    private function lifetimeOf(CommentsAnswerModel $answer): int
+    private function pickLifetime(CommentsAnswerModel $answer): int
     {
         return $answer->isStillGathering ? $this->gatheringLifetime : $this->settledLifetime;
     }
 
-    private static function keyOf(string $key): string
+    private static function hashKey(string $key): string
     {
         return hash('xxh128', $key);
     }

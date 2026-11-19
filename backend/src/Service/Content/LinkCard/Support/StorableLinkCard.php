@@ -19,7 +19,7 @@ final class StorableLinkCard
 {
     private const string BARE_URL = '~^https?://\S+$~';
 
-    public static function of(LinkCardContent $card): ?LinkCardContent
+    public static function fromCard(LinkCardContent $card): ?LinkCardContent
     {
         if (trim($card->title) === '' || !self::fits($card->url) || !AbsoluteHttpUrl::matches($card->url)) {
             return null;

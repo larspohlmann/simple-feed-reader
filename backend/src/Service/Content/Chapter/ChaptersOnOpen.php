@@ -19,12 +19,12 @@ final readonly class ChaptersOnOpen
 
     public function serve(Entry $entry): ServedChaptersModel
     {
-        $served = $this->chaptersOf($entry);
+        $served = $this->serveChapters($entry);
 
         return new ServedChaptersModel(ChapterSequence::fromZero($served->chapters), $served->contentHtml);
     }
 
-    private function chaptersOf(Entry $entry): ServedChaptersModel
+    private function serveChapters(Entry $entry): ServedChaptersModel
     {
         $body = $entry->getText()->getContentHtml();
         if ($body !== null && self::isYouTubeVideo($entry->getUrl())) {
@@ -33,7 +33,7 @@ final readonly class ChaptersOnOpen
 
         $this->filler->fillOnOpen($entry);
         if ($body !== null && $entry->getChapters() === []) {
-            $audio = self::audioOf($entry);
+            $audio = self::findAudio($entry);
             if ($audio !== null) {
                 return DescriptionChapters::inEpisode($body, $audio->durationInSeconds);
             }
@@ -42,7 +42,7 @@ final readonly class ChaptersOnOpen
         return new ServedChaptersModel($entry->getChapters(), $body);
     }
 
-    private static function audioOf(Entry $entry): ?EntryAttachment
+    private static function findAudio(Entry $entry): ?EntryAttachment
     {
         foreach ($entry->getAttachments() as $attachment) {
             if ($attachment->isAudio()) {

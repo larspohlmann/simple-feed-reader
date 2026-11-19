@@ -32,7 +32,7 @@ final class SoundCloudOembedDetailsSourceTest extends TestCase
             return new MockResponse('{}');
         });
 
-        $this->source($http)->detailsOf($this->embed());
+        $this->source($http)->fetchDescription($this->embed());
 
         $parts = parse_url($seenUrl);
         self::assertIsArray($parts);
@@ -48,7 +48,7 @@ final class SoundCloudOembedDetailsSourceTest extends TestCase
     {
         $http = new MockHttpClient(new MockResponse('{"description":"0:00 Intro\n1:00 Main"}'));
 
-        self::assertSame("0:00 Intro\n1:00 Main", $this->source($http)->detailsOf($this->embed())->description);
+        self::assertSame("0:00 Intro\n1:00 Main", $this->source($http)->fetchDescription($this->embed())->description);
     }
 
     #[DataProvider('answersWithoutADescription')]
@@ -116,7 +116,7 @@ final class SoundCloudOembedDetailsSourceTest extends TestCase
 
     private function detailsAnswering(string $body): EmbedDescriptionModel
     {
-        return $this->source(new MockHttpClient(new MockResponse($body)))->detailsOf($this->embed());
+        return $this->source(new MockHttpClient(new MockResponse($body)))->fetchDescription($this->embed());
     }
 
     private function embed(): EmbedAddressModel

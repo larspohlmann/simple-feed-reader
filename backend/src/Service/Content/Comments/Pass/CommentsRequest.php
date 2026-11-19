@@ -21,7 +21,7 @@ final readonly class CommentsRequest
         public User $user,
         public Entry $entry,
     ) {
-        $this->audience = $source->audienceOf($user, $entry);
+        $this->audience = $source->buildAudience($user, $entry);
         $this->cacheKey = $source::class . ' ' . $this->audience->scope;
     }
 }

@@ -21,7 +21,7 @@ final readonly class LinkCardBudgetModel
             throw new \InvalidArgumentException('A link-card budget cannot be negative.');
         }
 
-        if (self::durationOf($count) >= ShareEnrichment::CLAIM_LEASE_SECONDS) {
+        if (self::computeDuration($count) >= ShareEnrichment::CLAIM_LEASE_SECONDS) {
             throw new \InvalidArgumentException('A link-card budget cannot outlast the claim lease.');
         }
 
@@ -44,12 +44,12 @@ final readonly class LinkCardBudgetModel
 
     public function seconds(): float
     {
-        return self::durationOf($this->fetches);
+        return self::computeDuration($this->fetches);
     }
 
     public function fitsAfter(float $elapsedSeconds, int $fetches): bool
     {
-        return $elapsedSeconds + self::durationOf($fetches) <= $this->seconds();
+        return $elapsedSeconds + self::computeDuration($fetches) <= $this->seconds();
     }
 
     public function isEmpty(): bool
@@ -57,7 +57,7 @@ final readonly class LinkCardBudgetModel
         return $this->fetches === 0;
     }
 
-    private static function durationOf(int $fetches): float
+    private static function computeDuration(int $fetches): float
     {
         return $fetches * PageHeadFetcher::MAX_DURATION_SECONDS;
     }

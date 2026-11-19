@@ -36,7 +36,7 @@ final readonly class EmbedDetailsController
     public function video(string $videoId, #[CurrentUser] User $user): JsonResponse
     {
         $this->rateLimitGuard->enforceForUser($this->embedDetailsLimiter, $user);
-        $details = $this->embedDetails->of(new EmbedAddressModel(ChapteredEmbed::YouTube, $videoId));
+        $details = $this->embedDetails->fetchDetails(new EmbedAddressModel(ChapteredEmbed::YouTube, $videoId));
 
         return new JsonResponse(EmbedDetailsJson::from($details));
     }
@@ -50,7 +50,7 @@ final readonly class EmbedDetailsController
     public function track(string $trackId, #[CurrentUser] User $user): JsonResponse
     {
         $this->rateLimitGuard->enforceForUser($this->embedDetailsLimiter, $user);
-        $details = $this->embedDetails->of(new EmbedAddressModel(ChapteredEmbed::SoundCloud, $trackId));
+        $details = $this->embedDetails->fetchDetails(new EmbedAddressModel(ChapteredEmbed::SoundCloud, $trackId));
 
         return new JsonResponse(EmbedDetailsJson::from($details));
     }

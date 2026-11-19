@@ -18,7 +18,7 @@ final class ReusableShareUrlsTest extends TestCase
     {
         $plan = new ShareFetchPlanModel(['https://a.example/1', 'https://b.example/2']);
 
-        self::assertSame($plan->urls, ReusableShareUrls::of(self::post('<p>Two links</p>'), $plan));
+        self::assertSame($plan->urls, ReusableShareUrls::filterUrls(self::post('<p>Two links</p>'), $plan));
     }
 
     public function testThePostsQuoteLineTargetIsNot(): void
@@ -26,7 +26,7 @@ final class ReusableShareUrlsTest extends TestCase
         $post = self::post('<p>RE: <a href="https://q.example/@a/1?utm_source=x">q</a></p>');
         $plan = new ShareFetchPlanModel(['https://q.example/@a/1', 'https://b.example/2']);
 
-        self::assertSame(['https://b.example/2'], ReusableShareUrls::of($post, $plan));
+        self::assertSame(['https://b.example/2'], ReusableShareUrls::filterUrls($post, $plan));
     }
 
     public function testATitledSharesTargetIsNot(): void
@@ -38,7 +38,7 @@ final class ReusableShareUrlsTest extends TestCase
         $share->setHeadline(Headline::fromFeed('A story'));
         $share->setShareKind(ShareKind::Link);
 
-        self::assertSame([], ReusableShareUrls::of($share, new ShareFetchPlanModel(['https://x.com/a/1'])));
+        self::assertSame([], ReusableShareUrls::filterUrls($share, new ShareFetchPlanModel(['https://x.com/a/1'])));
     }
 
     private static function post(string $html): Entry

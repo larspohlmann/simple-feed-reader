@@ -13,7 +13,7 @@ final class DeclaredPageMedium
     private const array VIDEO_KEYS = ['og:video:secure_url', 'og:video:url', 'og:video'];
 
     /** @param array<string, string> $meta */
-    public static function of(array $meta): ?EntryMedium
+    public static function fromMeta(array $meta): ?EntryMedium
     {
         $poster = $meta['og:image'] ?? null;
         foreach (self::VIDEO_KEYS as $key) {

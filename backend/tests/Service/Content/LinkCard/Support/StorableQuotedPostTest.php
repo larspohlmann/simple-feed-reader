@@ -28,7 +28,7 @@ final class StorableQuotedPostTest extends TestCase
             ),
         );
 
-        self::assertEquals($quote, StorableQuotedPost::of($quote));
+        self::assertEquals($quote, StorableQuotedPost::fromQuote($quote));
     }
 
     /** @return iterable<string, array{QuotedPostContent}> */
@@ -42,24 +42,24 @@ final class StorableQuotedPostTest extends TestCase
     #[DataProvider('unstorable')]
     public function testAQuoteThatCannotBeStoredIsNone(QuotedPostContent $quote): void
     {
-        self::assertNull(StorableQuotedPost::of($quote));
+        self::assertNull(StorableQuotedPost::fromQuote($quote));
     }
 
     public function testAnUrlOfExactlyTheLimitIsKept(): void
     {
         $url = 'https://a.example/' . str_repeat('x', 2048 - 18);
 
-        self::assertSame($url, StorableQuotedPost::of(self::quote(url: $url))?->url);
+        self::assertSame($url, StorableQuotedPost::fromQuote(self::quote(url: $url))?->url);
     }
 
     public function testABlankNameFallsBackToTheHandle(): void
     {
-        self::assertSame('alice@mastodon.example', StorableQuotedPost::of(self::quote(name: ' '))?->authorName);
+        self::assertSame('alice@mastodon.example', StorableQuotedPost::fromQuote(self::quote(name: ' '))?->authorName);
     }
 
     public function testLongNamesAndHandlesAreCutToTheColumn(): void
     {
-        $kept = StorableQuotedPost::of(self::quote(name: str_repeat('n', 300), handle: str_repeat('h', 260)));
+        $kept = StorableQuotedPost::fromQuote(self::quote(name: str_repeat('n', 300), handle: str_repeat('h', 260)));
 
         self::assertSame(
             [255, 255],
@@ -69,19 +69,21 @@ final class StorableQuotedPostTest extends TestCase
 
     public function testAnAvatarThatIsNotHttpsIsDropped(): void
     {
-        self::assertNull(StorableQuotedPost::of(self::quote(avatar: 'http://cdn.example/a.jpg'))?->authorAvatarUrl);
+        self::assertNull(
+            StorableQuotedPost::fromQuote(self::quote(avatar: 'http://cdn.example/a.jpg'))?->authorAvatarUrl,
+        );
     }
 
     public function testAnAvatarUrlPastTheColumnIsDropped(): void
     {
         $avatar = 'https://cdn.example/' . str_repeat('a', 2048);
 
-        self::assertNull(StorableQuotedPost::of(self::quote(avatar: $avatar))?->authorAvatarUrl);
+        self::assertNull(StorableQuotedPost::fromQuote(self::quote(avatar: $avatar))?->authorAvatarUrl);
     }
 
     public function testTheTextIsClippedAtAWordBoundaryJustUnderThreeThousand(): void
     {
-        $kept = (string) StorableQuotedPost::of(self::quote(text: str_repeat('word ', 700)))?->text;
+        $kept = (string) StorableQuotedPost::fromQuote(self::quote(text: str_repeat('word ', 700)))?->text;
 
         self::assertLessThanOrEqual(3000, mb_strlen($kept));
         self::assertGreaterThan(2990, mb_strlen($kept));
@@ -90,7 +92,9 @@ final class StorableQuotedPostTest extends TestCase
 
     public function testATimeWithAnOffsetIsStoredInUtc(): void
     {
-        $kept = StorableQuotedPost::of(self::quote(postedAt: new \DateTimeImmutable('2026-10-13T23:07:00+02:00')));
+        $kept = StorableQuotedPost::fromQuote(
+            self::quote(postedAt: new \DateTimeImmutable('2026-10-13T23:07:00+02:00')),
+        );
 
         self::assertSame('2026-10-13 21:07:00 UTC', $kept?->postedAt?->format('Y-m-d H:i:s e'));
     }
@@ -107,7 +111,7 @@ final class StorableQuotedPostTest extends TestCase
             isAnimated: true,
         );
 
-        self::assertEquals([$gif], StorableQuotedPost::of(self::quote(media: [$gif]))?->media);
+        self::assertEquals([$gif], StorableQuotedPost::fromQuote(self::quote(media: [$gif]))?->media);
     }
 
     public function testMediaPastFourAndNonHttpsMediaAreDropped(): void
@@ -120,7 +124,7 @@ final class StorableQuotedPostTest extends TestCase
             ),
         ];
 
-        $kept = StorableQuotedPost::of(self::quote(media: $media));
+        $kept = StorableQuotedPost::fromQuote(self::quote(media: $media));
 
         self::assertNotNull($kept);
         self::assertSame(
@@ -142,7 +146,7 @@ final class StorableQuotedPostTest extends TestCase
             new EntryMedium('https://cdn.example/c.mp4', 'video', null, null, 'javascript:alert(1)'),
         ];
 
-        $kept = StorableQuotedPost::of(self::quote(media: $media));
+        $kept = StorableQuotedPost::fromQuote(self::quote(media: $media));
 
         self::assertNotNull($kept);
         self::assertEquals(
@@ -159,14 +163,14 @@ final class StorableQuotedPostTest extends TestCase
     {
         $nested = new QuotedPostReference('at://did:plc:n/app.bsky.feed.post/9', 'n.bsky.social');
 
-        self::assertNull(StorableQuotedPost::of(self::quote(nested: $nested))?->nestedQuote);
+        self::assertNull(StorableQuotedPost::fromQuote(self::quote(nested: $nested))?->nestedQuote);
     }
 
     public function testANestedHandleIsTrimmedAndCutToTheColumn(): void
     {
         $nested = new QuotedPostReference('https://other.example/@b/2', ' ' . str_repeat('h', 260));
 
-        $kept = StorableQuotedPost::of(self::quote(nested: $nested));
+        $kept = StorableQuotedPost::fromQuote(self::quote(nested: $nested));
 
         self::assertSame(str_repeat('h', 255), $kept?->nestedQuote?->handle);
     }
@@ -175,7 +179,7 @@ final class StorableQuotedPostTest extends TestCase
     {
         $nested = new QuotedPostReference('https://other.example/@b/2', str_repeat('é', 260));
 
-        $kept = StorableQuotedPost::of(
+        $kept = StorableQuotedPost::fromQuote(
             self::quote(name: str_repeat('é', 260), handle: str_repeat('é', 260), nested: $nested),
         );
 
@@ -189,14 +193,14 @@ final class StorableQuotedPostTest extends TestCase
     {
         $url = 'https://a.example/' . str_repeat('é', 2048 - 18);
 
-        self::assertSame($url, StorableQuotedPost::of(self::quote(url: $url))?->url);
+        self::assertSame($url, StorableQuotedPost::fromQuote(self::quote(url: $url))?->url);
     }
 
     public function testABlankNestedHandleIsNone(): void
     {
         $nested = new QuotedPostReference('https://other.example/@b/2', '  ');
 
-        self::assertNull(StorableQuotedPost::of(self::quote(nested: $nested))?->nestedQuote?->handle);
+        self::assertNull(StorableQuotedPost::fromQuote(self::quote(nested: $nested))?->nestedQuote?->handle);
     }
 
     public function testAQuotesCardPassesTheGateEveryCardPasses(): void
@@ -211,14 +215,14 @@ final class StorableQuotedPostTest extends TestCase
 
         self::assertEquals(
             new LinkCardContent('https://news.example/s', 'Story', null, null, 'news.example'),
-            StorableQuotedPost::of(self::quote(linkCard: $card))?->linkCard,
+            StorableQuotedPost::fromQuote(self::quote(linkCard: $card))?->linkCard,
         );
     }
 
     public function testACardNoCardMayHoldIsDroppedAndTheQuoteKept(): void
     {
         $card = new LinkCardContent('https://news.example/s', '  ', null, null, 'news.example');
-        $quote = StorableQuotedPost::of(self::quote(linkCard: $card));
+        $quote = StorableQuotedPost::fromQuote(self::quote(linkCard: $card));
 
         self::assertNotNull($quote);
         self::assertNull($quote->linkCard);
