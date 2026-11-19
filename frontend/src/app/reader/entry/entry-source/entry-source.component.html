@@ -35,6 +35,9 @@
       rel="noopener noreferrer"
       >c/{{ community.name }}</a
     >
+  } @else if (layout() === 'kicker') {
+    <span class="community-separator" aria-hidden="true">·</span>
+    <span class="community">c/{{ community.name }}</span>
   } @else {
     <span class="community"> · c/{{ community.name }}</span>
   }

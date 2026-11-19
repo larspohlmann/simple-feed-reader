@@ -58,6 +58,7 @@ a.community:hover {
   white-space: pre;
 }
 
-:host(.source-kicker) .community {
+:host(.source-kicker) .community,
+:host(.source-kicker) .community-separator {
   flex: none;
 }
