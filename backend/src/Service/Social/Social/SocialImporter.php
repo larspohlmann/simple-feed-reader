@@ -16,7 +16,6 @@ use App\Service\Social\Social\Model\SocialImportFeedModel;
 use App\Service\Social\Social\Model\SocialImportModel;
 use App\Service\Social\Social\Model\SocialImportResultModel;
 use App\Service\Social\Social\Support\PrivateFeedRules;
-use App\Service\Social\Social\Support\ProfileFeedUrl;
 use App\Service\Library\Subscription\BulkSubscriber;
 use App\Service\Library\Subscription\Exception\SubscriptionLimitReachedException;
 use App\Service\Library\Subscription\Model\BulkSubscribeItemModel;
@@ -36,6 +35,7 @@ final readonly class SocialImporter
         private ImportedProfilePictures $importedPictures,
         private HiddenImportFollows $hiddenFollows,
         private TagStructureLock $tagStructureLock,
+        private ProfileFeeds $profileFeeds,
     ) {
     }
 
@@ -47,7 +47,7 @@ final readonly class SocialImporter
     {
         $network = $account->getNetwork();
         $hidden = $this->hiddenFollows->among($account, $import->subscribe);
-        $items = self::items($network, self::withoutHidden($import->subscribe, $hidden));
+        $items = $this->items($network, self::withoutHidden($import->subscribe, $hidden));
         self::assertCollectionsOf($network, $import->collections);
         $privateFeeds = [...$import->collections, ...self::authorFeedsOf($hidden)];
         $toRemove = $this->ownedSubscriptions->resolve($account->getUser()->requireId(), $import->unsubscribe);
@@ -153,21 +153,22 @@ final readonly class SocialImporter
      *
      * @return list<BulkSubscribeItemModel>
      */
-    private static function items(SocialNetwork $network, array $feeds): array
+    private function items(SocialNetwork $network, array $feeds): array
     {
         return array_map(
-            static fn (SocialImportFeedModel $feed): BulkSubscribeItemModel => new BulkSubscribeItemModel(
-                self::profileFeedOf($network, $feed->identity),
+            fn (SocialImportFeedModel $feed): BulkSubscribeItemModel => new BulkSubscribeItemModel(
+                $this->profileFeedOf($network, $feed->identity),
                 feedTitle: $feed->title,
             ),
             $feeds,
         );
     }
 
-    private static function profileFeedOf(SocialNetwork $network, string $identity): string
+    private function profileFeedOf(SocialNetwork $network, string $identity): string
     {
-        return ProfileFeedUrl::of($network, $identity) ?? throw new InvalidSocialImportFeedException(
-            sprintf('%s is no %s account.', $identity, $network->displayName()),
-        );
+        return $this->profileFeeds->selectRule($network)->buildFeedUrl($identity)
+            ?? throw new InvalidSocialImportFeedException(
+                sprintf('%s is no %s account.', $identity, $network->displayName()),
+            );
     }
 }

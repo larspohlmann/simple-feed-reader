@@ -8,6 +8,10 @@ use App\Enum\SocialNetwork;
 use App\Service\Social\Social\PostAddressRule\BlueskyPostAddressRule;
 use App\Service\Social\Social\PostAddressRule\LemmyPostAddressRule;
 use App\Service\Social\Social\PostAddressRule\MastodonPostAddressRule;
+use App\Service\Social\Social\ProfileFeedRule\BlueskyProfileFeedRule;
+use App\Service\Social\Social\ProfileFeedRule\LemmyProfileFeedRule;
+use App\Service\Social\Social\ProfileFeedRule\MastodonProfileFeedRule;
+use App\Service\Social\Social\ProfileFeeds;
 use App\Service\Social\Social\SocialPostAddresses;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\ServiceLocator;
@@ -24,6 +28,15 @@ final class SocialRuleWiring
         ];
 
         return new SocialPostAddresses(self::locatorOf($rules), array_values($rules));
+    }
+
+    public static function profileFeeds(): ProfileFeeds
+    {
+        return new ProfileFeeds(self::locatorOf([
+            SocialNetwork::Bluesky->value => new BlueskyProfileFeedRule(),
+            SocialNetwork::Mastodon->value => new MastodonProfileFeedRule(),
+            SocialNetwork::Lemmy->value => new LemmyProfileFeedRule(),
+        ]));
     }
 
     /** @param array<string, object> $rules keyed by SocialNetwork value */

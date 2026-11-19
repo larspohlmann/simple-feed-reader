@@ -32,7 +32,7 @@ final class StoredSearchedPost
     /** @return list<string> the handle the author page shows and the DID the post's at:// address carries */
     private static function blueskyNamesOf(StoredPostModel $post): array
     {
-        $handle = null === $post->authorUrl ? null : ProfileFeedUrl::blueskyProfileActorOf($post->authorUrl);
+        $handle = null === $post->authorUrl ? null : BlueskyProfileFeed::parseProfileActor($post->authorUrl);
 
         return array_values(array_filter(
             [$handle, AtPostUri::authorityOf($post->guid)],

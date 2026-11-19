@@ -9,6 +9,7 @@ use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Service\Social\Social\FeedNetworkListener;
 use App\Tests\DbTestCase;
+use App\Tests\Support\SocialRuleWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 final class FeedNetworkListenerTest extends DbTestCase
@@ -36,6 +37,13 @@ final class FeedNetworkListenerTest extends DbTestCase
             SourceFormat::XML,
             SocialNetwork::Mastodon,
         ];
+        yield 'a community RSS feed' => [
+            'https://feddit.example/feeds/c/rss.xml',
+            SourceFormat::XML,
+            SocialNetwork::Lemmy,
+        ];
+        yield 'a synthetic URL under a plain format' => ['social:bluesky:4:home', SourceFormat::XML, null];
+        yield 'a malformed synthetic URL' => ['social:bluesky:x:home', SourceFormat::BLUESKY_API, null];
         yield 'an ordinary feed' => ['https://example.com/feed.xml', SourceFormat::XML, null];
     }
 
@@ -93,7 +101,7 @@ final class FeedNetworkListenerTest extends DbTestCase
         $bluesky->setSourceFormat(SourceFormat::SAVED);
         $feeds = new Feed('saved:5');
         $feeds->setSourceFormat(SourceFormat::SAVED);
-        $listener = new FeedNetworkListener();
+        $listener = new FeedNetworkListener(SocialRuleWiring::profileFeeds());
 
         $listener->preFlush($bluesky);
         $listener->preFlush($feeds);
@@ -106,7 +114,7 @@ final class FeedNetworkListenerTest extends DbTestCase
     public function testASavedUrlStoredAsAnotherFormatGetsNoNetwork(): void
     {
         $feed = new Feed('saved:5:bluesky');
-        (new FeedNetworkListener())->preFlush($feed);
+        (new FeedNetworkListener(SocialRuleWiring::profileFeeds()))->preFlush($feed);
 
         self::assertNull($feed->getNetwork());
     }

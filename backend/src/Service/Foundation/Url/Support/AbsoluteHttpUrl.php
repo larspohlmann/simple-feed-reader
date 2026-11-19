@@ -28,6 +28,22 @@ final class AbsoluteHttpUrl
         return null !== $absolute && mb_strlen($absolute) <= $maxLength ? $absolute : null;
     }
 
+    /** @return array{host: string, path: string}|null the host lower-cased; null for a URL that is not http(s) */
+    public static function parseHostAndPath(string $url): ?array
+    {
+        $parts = parse_url($url);
+        if (false === $parts || !isset($parts['host']) || !self::isWebScheme($parts['scheme'] ?? '')) {
+            return null;
+        }
+
+        return ['host' => strtolower($parts['host']), 'path' => $parts['path'] ?? ''];
+    }
+
+    private static function isWebScheme(string $scheme): bool
+    {
+        return \in_array(strtolower($scheme), ['http', 'https'], true);
+    }
+
     private function __construct()
     {
     }

@@ -4,7 +4,13 @@ declare(strict_types=1);
 
 namespace DoctrineMigrations;
 
-use App\Service\Social\Social\Support\SocialFeedClassifier;
+use App\Enum\SocialNetwork;
+use App\Enum\SourceFormat;
+use App\Service\Library\SavedPosts\Support\SavedFeedUrl;
+use App\Service\Social\Social\Support\BlueskyProfileFeed;
+use App\Service\Social\Social\Support\LemmyProfileFeed;
+use App\Service\Social\Social\Support\MastodonProfileFeed;
+use App\Service\Social\Social\Support\SocialFeedUrl;
 use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\DBAL\Schema\Schema;
@@ -31,7 +37,7 @@ final class Version20261013150000 extends AbstractMigration
         /** @var list<array{id: int|string, url: string, source_format: string}> $feeds */
         $feeds = $this->connection->fetchAllAssociative('SELECT id, url, source_format FROM feed');
         foreach ($feeds as $feed) {
-            $network = SocialFeedClassifier::networkFor($feed['url'], $feed['source_format']);
+            $network = self::networkOf($feed['url'], $feed['source_format']);
             if (null === $network) {
                 continue;
             }
@@ -58,6 +64,26 @@ final class Version20261013150000 extends AbstractMigration
     public function isTransactional(): bool
     {
         return false;
+    }
+
+    private static function networkOf(string $url, string $sourceFormat): ?SocialNetwork
+    {
+        if (SourceFormat::isSaved($sourceFormat)) {
+            return SavedFeedUrl::networkOf($url);
+        }
+        $privateAddress = SourceFormat::isSocial($sourceFormat) ? SocialFeedUrl::addressOf($url) : null;
+
+        return $privateAddress->network ?? self::profileFeedNetworkOf($url);
+    }
+
+    private static function profileFeedNetworkOf(string $url): ?SocialNetwork
+    {
+        return match (true) {
+            null !== BlueskyProfileFeed::parseIdentity($url) => SocialNetwork::Bluesky,
+            null !== MastodonProfileFeed::parseIdentity($url) => SocialNetwork::Mastodon,
+            null !== LemmyProfileFeed::parseIdentity($url) => SocialNetwork::Lemmy,
+            default => null,
+        };
     }
 
     private function abortIfUnsupportedPlatform(): void

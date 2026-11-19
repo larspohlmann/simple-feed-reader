@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Social;
 
 use App\Enum\SocialNetwork;
+use App\Service\Social\Social\ProfileFeeds;
 use App\Service\Social\Social\SocialPostAddresses;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -27,5 +28,6 @@ final class NetworkRulesCompleteTest extends KernelTestCase
     public static function ruleTags(): iterable
     {
         yield 'post addresses' => [SocialPostAddresses::class];
+        yield 'profile feeds' => [ProfileFeeds::class];
     }
 }

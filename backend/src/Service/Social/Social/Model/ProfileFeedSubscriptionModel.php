@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\Model;
 
-use App\Enum\SocialNetwork;
-use App\Service\Social\Bluesky\Support\BlueskyActorKey;
-use App\Service\Social\Social\Support\ProfileFeedUrl;
-
 final readonly class ProfileFeedSubscriptionModel
 {
     public function __construct(
@@ -17,16 +13,5 @@ final readonly class ProfileFeedSubscriptionModel
         public string $title,
         public ?string $imageUrl,
     ) {
-    }
-
-    public function handleOn(SocialNetwork $network): string
-    {
-        return match ($network) {
-            SocialNetwork::Bluesky => BlueskyActorKey::isDid($this->identity) ? $this->identity : '@' . $this->identity,
-            SocialNetwork::Mastodon => '@' . $this->identity,
-            SocialNetwork::Lemmy => null === ProfileFeedUrl::lemmyUserOf($this->identity)
-                ? '!' . $this->identity
-                : $this->identity,
-        };
     }
 }

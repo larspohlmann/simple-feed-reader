@@ -22,7 +22,7 @@ final class ExportedFeed
 
         return null === $did
             ? new ExportedSubscriptionModel($subscription, $feed->getUrl(), $feed->getSourceFormat())
-            : new ExportedSubscriptionModel($subscription, ProfileFeedUrl::bluesky($did), SourceFormat::XML);
+            : new ExportedSubscriptionModel($subscription, BlueskyProfileFeed::buildUrl($did), SourceFormat::XML);
     }
 
     /**

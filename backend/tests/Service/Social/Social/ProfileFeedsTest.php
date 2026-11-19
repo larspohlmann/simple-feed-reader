@@ -2,25 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Social\Support;
+namespace App\Tests\Service\Social\Social;
 
 use App\Enum\SocialNetwork;
-use App\Service\Social\Social\Support\ProfileFeedUrl;
+use App\Tests\Support\SocialRuleWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
-final class ProfileFeedUrlTest extends TestCase
+final class ProfileFeedsTest extends TestCase
 {
-    public function testABlueskyProfileFeedIsBuiltFromTheDid(): void
-    {
-        self::assertSame('https://bsky.app/profile/did:plc:bob/rss', ProfileFeedUrl::bluesky('did:plc:bob'));
-    }
-
-    public function testAMastodonProfileFeedIsBuiltFromTheUserAndDomain(): void
-    {
-        self::assertSame('https://example.social/@bob.rss', ProfileFeedUrl::mastodon('bob', 'example.social'));
-    }
-
     /** @return iterable<string, array{SocialNetwork, string, ?string}> */
     public static function urls(): iterable
     {
@@ -80,7 +70,7 @@ final class ProfileFeedUrlTest extends TestCase
     #[DataProvider('urls')]
     public function testAUrlReadsAsTheIdentityItFollows(SocialNetwork $network, string $url, ?string $identity): void
     {
-        self::assertSame($identity, ProfileFeedUrl::identityOf($network, $url));
+        self::assertSame($identity, SocialRuleWiring::profileFeeds()->selectRule($network)->parseIdentity($url));
     }
 
     /** @return iterable<string, array{string, ?string}> */
@@ -105,50 +95,45 @@ final class ProfileFeedUrlTest extends TestCase
     #[DataProvider('communityFeeds')]
     public function testACommunityFeedIsALemmyProfileFeed(string $url, ?string $identity): void
     {
-        self::assertSame($identity, ProfileFeedUrl::identityOf(SocialNetwork::Lemmy, $url));
-        self::assertSame(null === $identity ? null : SocialNetwork::Lemmy, ProfileFeedUrl::networkOf($url));
+        $profileFeeds = SocialRuleWiring::profileFeeds();
+
+        self::assertSame($identity, $profileFeeds->selectRule(SocialNetwork::Lemmy)->parseIdentity($url));
+        self::assertSame(null === $identity ? null : SocialNetwork::Lemmy, $profileFeeds->findNetwork($url));
     }
 
-    public function testOfBuildsTheCommunityFeed(): void
+    public function testACommunityIdentityBuildsItsCommunityFeed(): void
     {
-        self::assertSame(
-            'https://feddit.example/feeds/c/rss.xml',
-            ProfileFeedUrl::of(SocialNetwork::Lemmy, 'rss@feddit.example'),
-        );
-        self::assertSame(
-            'https://feddit.example/feeds/c/rss.xml',
-            ProfileFeedUrl::lemmy('rss', 'feddit.example'),
-        );
+        $lemmy = SocialRuleWiring::profileFeeds()->selectRule(SocialNetwork::Lemmy);
+
+        self::assertSame('https://feddit.example/feeds/c/rss.xml', $lemmy->buildFeedUrl('rss@feddit.example'));
         self::assertSame(
             'https://feddit.example:8443/feeds/c/rss.xml',
-            ProfileFeedUrl::of(SocialNetwork::Lemmy, 'rss@feddit.example:8443'),
+            $lemmy->buildFeedUrl('rss@feddit.example:8443'),
         );
-        self::assertNull(ProfileFeedUrl::of(SocialNetwork::Lemmy, 'rss'));
+        self::assertNull($lemmy->buildFeedUrl('rss'));
     }
 
-    public function testAUserAndACommunityOfOneNameAreTwoIdentities(): void
+    public function testFindNetworkNamesTheNetworkWhoseProfileFeedTheUrlIs(): void
     {
+        $profileFeeds = SocialRuleWiring::profileFeeds();
+
         self::assertSame(
-            'ada@feddit.example',
-            ProfileFeedUrl::identityOf(SocialNetwork::Lemmy, 'https://feddit.example/feeds/c/ada.xml'),
+            SocialNetwork::Bluesky,
+            $profileFeeds->findNetwork('https://bsky.app/profile/bob.bsky.social/rss'),
         );
+        self::assertSame(SocialNetwork::Mastodon, $profileFeeds->findNetwork('https://mastodon.example/@bob.rss'));
+        self::assertNull($profileFeeds->findNetwork('https://example.com/feed.xml'));
+    }
+
+    public function testFindRuleIsTheRuleOfTheNetworkWhoseProfileFeedTheUrlIs(): void
+    {
+        $profileFeeds = SocialRuleWiring::profileFeeds();
+
         self::assertSame(
-            '@ada@feddit.example',
-            ProfileFeedUrl::identityOf(SocialNetwork::Lemmy, 'https://feddit.example/feeds/u/ada.xml'),
+            $profileFeeds->selectRule(SocialNetwork::Mastodon),
+            $profileFeeds->findRule('https://mastodon.example/@bob.rss'),
         );
-    }
-
-    public function testOfBuildsNoUserFeed(): void
-    {
-        self::assertNull(ProfileFeedUrl::of(SocialNetwork::Lemmy, '@ada@feddit.example'));
-    }
-
-    public function testNetworkOfNamesTheNetworkWhoseProfileFeedTheUrlIs(): void
-    {
-        $bluesky = ProfileFeedUrl::networkOf('https://bsky.app/profile/bob.bsky.social/rss');
-        self::assertSame(SocialNetwork::Bluesky, $bluesky);
-        self::assertSame(SocialNetwork::Mastodon, ProfileFeedUrl::networkOf('https://mastodon.example/@bob.rss'));
-        self::assertNull(ProfileFeedUrl::networkOf('https://example.com/feed.xml'));
+        self::assertNull($profileFeeds->findRule('https://example.com/feed.xml'));
     }
 
     /** @return iterable<string, array{SocialNetwork, string, ?string}> */
@@ -183,27 +168,27 @@ final class ProfileFeedUrlTest extends TestCase
         string $identity,
         ?string $feedUrl,
     ): void {
-        self::assertSame($feedUrl, ProfileFeedUrl::of($network, $identity));
+        self::assertSame($feedUrl, SocialRuleWiring::profileFeeds()->selectRule($network)->buildFeedUrl($identity));
     }
 
-    #[DataProvider('profilePages')]
-    public function testABlueskyProfilePageOrItsFeedNamesItsActor(string $url, ?string $actor): void
+    /** @return iterable<string, array{string, SocialNetwork}> */
+    public static function profileFeedUrls(): iterable
     {
-        self::assertSame($actor, ProfileFeedUrl::blueskyProfileActorOf($url));
+        yield 'a Bluesky profile feed' => ['https://bsky.app/profile/did:plc:abc/rss', SocialNetwork::Bluesky];
+        yield 'a Mastodon profile feed' => ['https://mastodon.social/@user.rss', SocialNetwork::Mastodon];
+        yield 'a Lemmy community feed' => ['https://lemmy.world/feeds/c/tech.xml', SocialNetwork::Lemmy];
+        yield 'a Lemmy user feed' => ['https://lemmy.world/feeds/u/sam.xml', SocialNetwork::Lemmy];
     }
 
-    /** @return iterable<string, array{string, ?string}> */
-    public static function profilePages(): iterable
+    /** The networks were once tried in code order; a rule iterator promises none, so no URL may have two owners. */
+    #[DataProvider('profileFeedUrls')]
+    public function testExactlyOneRuleClaimsAProfileFeed(string $url, SocialNetwork $owner): void
     {
-        yield 'a page by handle' => ['https://bsky.app/profile/Rusty-17.bsky.social', 'rusty-17.bsky.social'];
-        yield 'its feed' => ['https://bsky.app/profile/rusty-17.bsky.social/rss', 'rusty-17.bsky.social'];
-        yield 'a trailing slash' => ['https://bsky.app/profile/rusty-17.bsky.social/', 'rusty-17.bsky.social'];
-        yield 'a page by did' => [
-            'http://bsky.app/profile/did:plc:hczfd45prvqtdrw77256syag',
-            'did:plc:hczfd45prvqtdrw77256syag',
-        ];
-        yield 'a post' => ['https://bsky.app/profile/rusty-17.bsky.social/post/3abc', null];
-        yield 'another host' => ['https://example.com/profile/rusty-17.bsky.social', null];
-        yield 'no actor syntax' => ['https://bsky.app/profile/some%20name', null];
+        $profileFeeds = SocialRuleWiring::profileFeeds();
+
+        foreach (SocialNetwork::cases() as $network) {
+            $identity = $profileFeeds->selectRule($network)->parseIdentity($url);
+            self::assertSame($network === $owner, null !== $identity, $network->value);
+        }
     }
 }

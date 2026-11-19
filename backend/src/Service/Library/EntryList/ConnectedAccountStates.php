@@ -19,7 +19,7 @@ use App\Service\Content\Comments\Support\LemmyPostAddress;
 use App\Service\Library\EntryList\Model\ConnectedAccountStatesModel;
 use App\Service\Social\Social\Model\SocialPostAddressModel;
 use App\Service\Social\Social\SocialPostAddresses;
-use App\Service\Social\Social\Support\ProfileFeedUrl;
+use App\Service\Social\Social\Support\LemmyProfileFeed;
 
 /** What a page of entries looks like to the reader's connected accounts: likes, own posts and Lemmy votes. */
 final readonly class ConnectedAccountStates
@@ -172,7 +172,7 @@ final readonly class ConnectedAccountStates
             return null;
         }
         $community = $post?->getCommunity();
-        $feedIdentity = ProfileFeedUrl::identityOf(SocialNetwork::Lemmy, $entry->getFeed()->getUrl());
+        $feedIdentity = LemmyProfileFeed::parseIdentity($entry->getFeed()->getUrl());
         $inOwnFeed = null !== $feedIdentity && strtolower($feedIdentity) === $community?->identity;
 
         return new EntryListRowLemmy($post?->getScore(), $inOwnFeed ? null : $community, $myVote);

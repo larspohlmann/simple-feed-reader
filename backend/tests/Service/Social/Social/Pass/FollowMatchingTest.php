@@ -8,6 +8,7 @@ use App\Enum\SocialNetwork;
 use App\Service\Social\Social\Model\ImportCandidateModel;
 use App\Service\Social\Social\Model\ProfileFeedSubscriptionModel;
 use App\Service\Social\Social\Pass\FollowMatching;
+use App\Tests\Support\SocialRuleWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -17,7 +18,7 @@ final class FollowMatchingTest extends TestCase
     {
         $byDid = self::profileFeed(1, 'did:plc:bob');
         $byHandle = self::profileFeed(2, 'carol.bsky.social');
-        $matching = new FollowMatching(SocialNetwork::Bluesky, []);
+        $matching = self::matching(SocialNetwork::Bluesky);
         $matching->offer($byDid);
         $matching->offer($byHandle);
 
@@ -39,13 +40,18 @@ final class FollowMatchingTest extends TestCase
         string $identity,
         string $handle,
     ): void {
-        $matching = new FollowMatching($network, []);
+        $matching = self::matching($network);
         $matching->offer(self::profileFeed(1, $identity));
 
         self::assertSame([$handle], array_map(
             static fn (ImportCandidateModel $candidate): string => $candidate->account->handle,
             $matching->candidates(),
         ));
+    }
+
+    private static function matching(SocialNetwork $network): FollowMatching
+    {
+        return new FollowMatching($network, SocialRuleWiring::profileFeeds()->selectRule($network), []);
     }
 
     private static function profileFeed(int $subscriptionId, string $identity): ProfileFeedSubscriptionModel
