@@ -37,6 +37,6 @@ final readonly class EntryPartRestorer
         }
         $loader->finish();
 
-        return RestoreResultModel::ofEntryPart($loader->entriesCreated(), $loader->entryStatesCreated());
+        return RestoreResultModel::fromEntryCounts($loader->entriesCreated(), $loader->entryStatesCreated());
     }
 }

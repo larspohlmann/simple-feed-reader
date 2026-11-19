@@ -15,7 +15,8 @@ final class FooterLineTest extends TestCase
         self::assertSame(
             '{"kind":"footer","counts":{"tag":0,"savedSearch":0,"feed":0,"subscription":0,"entry":4,'
             . '"entryState":2,"entryShare":0}}',
-            FooterLine::of([BackupSchema::KIND_ENTRY_STATE => 2, BackupSchema::KIND_ENTRY => 4])->toBackupLine(),
+            FooterLine::fromCounts([BackupSchema::KIND_ENTRY_STATE => 2, BackupSchema::KIND_ENTRY => 4])
+                ->toBackupLine(),
         );
     }
 }

@@ -18,7 +18,7 @@ final class SavedFeedRefusal
     /**
      * @throws InvalidBackupException
      */
-    public static function ofFeed(string $feedUrl, string $sourceFormat): void
+    public static function throwIfMixedFeed(string $feedUrl, string $sourceFormat): void
     {
         if (SavedFeedUrl::isSaved($feedUrl) === SourceFormat::isSaved($sourceFormat)) {
             return;

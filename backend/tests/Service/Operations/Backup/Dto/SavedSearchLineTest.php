@@ -18,7 +18,7 @@ final class SavedSearchLineTest extends TestCase
 
         self::assertSame(
             '{"kind":"savedSearch","term":"climate","wholeWord":true,"phrase":false,"position":4}',
-            SavedSearchLine::of($savedSearch)->toBackupLine(),
+            SavedSearchLine::fromSavedSearch($savedSearch)->toBackupLine(),
         );
     }
 }

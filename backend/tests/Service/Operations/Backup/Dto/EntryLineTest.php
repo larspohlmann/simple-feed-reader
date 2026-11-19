@@ -430,7 +430,7 @@ final class EntryLineTest extends TestCase
                 . '"effectiveDate":"2026-08-03T00:00:00+00:00"}',
                 $entry->getGuidHash(),
             ),
-            EntryLine::of($entry, 'https://one.example/rss', $companions)->toBackupLine(),
+            EntryLine::fromEntry($entry, 'https://one.example/rss', $companions)->toBackupLine(),
         );
     }
 
@@ -452,7 +452,7 @@ final class EntryLineTest extends TestCase
             '"shareKind":"quote","quote":{"url":"https://bsky.app/profile/q/post/3k","authorName":"Q",'
             . '"authorHandle":"q","authorAvatarUrl":null,"postedAt":"2026-08-01T00:00:00+00:00","text":"hi",'
             . '"media":[],"nestedQuote":{"url":"https://bsky.app/profile/n/post/1","handle":"n"},"linkCard":null}',
-            EntryLine::of($entry, 'https://one.example/rss', new EntryCompanionsModel())->toBackupLine(),
+            EntryLine::fromEntry($entry, 'https://one.example/rss', new EntryCompanionsModel())->toBackupLine(),
         );
     }
 
@@ -465,7 +465,7 @@ final class EntryLineTest extends TestCase
         );
 
         $line = json_decode(
-            EntryLine::of($entry, 'https://one.example/rss', new EntryCompanionsModel())->toBackupLine(),
+            EntryLine::fromEntry($entry, 'https://one.example/rss', new EntryCompanionsModel())->toBackupLine(),
             true,
             flags: \JSON_THROW_ON_ERROR,
         );
@@ -497,12 +497,12 @@ final class EntryLineTest extends TestCase
             . '"authorHandle":"q","authorAvatarUrl":null,"postedAt":null,"text":"hi","media":[],"nestedQuote":null,'
             . '"linkCard":{"url":"https://n.example/s","title":"Story","description":"D",'
             . '"imageUrl":"https://n.example/s.jpg","siteName":"n.example"}},',
-            EntryLine::of($entry, 'https://one.example/rss', $companions)->toBackupLine(),
+            EntryLine::fromEntry($entry, 'https://one.example/rss', $companions)->toBackupLine(),
         );
         self::assertStringContainsString(
             '"linkCards":[{"url":"https://card.example/x","title":"Card","description":null,"imageUrl":null,'
             . '"siteName":"card.example"}],',
-            EntryLine::of($entry, 'https://one.example/rss', $companions)->toBackupLine(),
+            EntryLine::fromEntry($entry, 'https://one.example/rss', $companions)->toBackupLine(),
         );
     }
 }

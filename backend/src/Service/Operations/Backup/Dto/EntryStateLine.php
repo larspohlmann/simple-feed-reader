@@ -45,7 +45,7 @@ final readonly class EntryStateLine
         );
     }
 
-    public static function of(EntryState $state, string $feedUrl): self
+    public static function fromState(EntryState $state, string $feedUrl): self
     {
         return new self(
             feedUrl: $feedUrl,

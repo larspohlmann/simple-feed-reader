@@ -52,7 +52,7 @@ final readonly class SubscriptionLine
         );
     }
 
-    public static function of(ExportedSubscriptionModel $exported): self
+    public static function fromSubscription(ExportedSubscriptionModel $exported): self
     {
         $subscription = $exported->subscription;
 
@@ -62,7 +62,7 @@ final readonly class SubscriptionLine
             position: $subscription->getPosition(),
             markedReadUntil: $subscription->getMarkedReadUntil(),
             createdAt: $subscription->getCreatedAt(),
-            tags: array_map(SubscriptionTagReference::of(...), $subscription->getSubscriptionTags()),
+            tags: array_map(SubscriptionTagReference::fromSubscriptionTag(...), $subscription->getSubscriptionTags()),
             includeInAllItems: $subscription->isIncludedIn(InclusionSurface::AllItems),
             includeInForYou: $subscription->isIncludedIn(InclusionSurface::ForYou),
             includeInSavedSearches: $subscription->isIncludedIn(InclusionSurface::SavedSearches),

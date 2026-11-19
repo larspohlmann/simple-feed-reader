@@ -21,7 +21,7 @@ final class EntryShareLineTest extends TestCase
                 . '"sharedAt":"2026-08-05T07:15:00+00:00"}',
                 $entry->getGuidHash(),
             ),
-            EntryShareLine::of($entry, $sharedAt, 'https://one.example/rss')->toBackupLine(),
+            EntryShareLine::fromEntry($entry, $sharedAt, 'https://one.example/rss')->toBackupLine(),
         );
     }
 }

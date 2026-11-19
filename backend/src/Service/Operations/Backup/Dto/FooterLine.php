@@ -46,7 +46,7 @@ final readonly class FooterLine
     }
 
     /** @param array<string, int> $counts an absent kind counts zero */
-    public static function of(array $counts): self
+    public static function fromCounts(array $counts): self
     {
         return new self(counts: array_replace(self::NO_COUNTS, $counts));
     }

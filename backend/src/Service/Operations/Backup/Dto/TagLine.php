@@ -47,7 +47,7 @@ final readonly class TagLine
         );
     }
 
-    public static function of(Tag $tag): self
+    public static function fromTag(Tag $tag): self
     {
         return new self(
             name: $tag->getName(),

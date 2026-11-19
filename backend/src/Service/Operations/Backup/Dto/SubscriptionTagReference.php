@@ -31,7 +31,7 @@ final readonly class SubscriptionTagReference
         );
     }
 
-    public static function of(SubscriptionTag $subscriptionTag): self
+    public static function fromSubscriptionTag(SubscriptionTag $subscriptionTag): self
     {
         return new self(name: $subscriptionTag->getTag()->getName(), position: $subscriptionTag->getPosition());
     }
