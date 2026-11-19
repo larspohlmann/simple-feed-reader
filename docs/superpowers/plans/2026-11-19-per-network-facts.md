@@ -218,6 +218,29 @@ What each adapter answers, taken from the deleted code:
 
 Callers to convert (inject `SocialPostAddresses`): `ConfirmedDeletion`, `OwnPostDeletion`, `SocialCounts`, `SocialCountsCache`, `SocialPostFinder`, `SocialResponses`, `SocialRepliesSource`, `SelfThreadEnricher`, `SharedPostQuoteFinder`, `ComposerContexts`, `ResponseTargetFinder`, `MastodonPendingThread`, `Library/EntryList/EntryListRowEnricher` (its two static methods that call the helper become instance methods).
 
+**Amendment (Lars's ruling, 2026-11-19): the enricher gets one collaborator for account-dependent state.** Injecting `SocialPostAddresses` gives `EntryListRowEnricher` 11 constructor parameters (PHPMD allows 10), and Task 3 adds `ProfileFeeds`. Everything that depends on the reader's connected accounts moves, verbatim, into one stateless service in `Library/EntryList`:
+
+```php
+final readonly class ConnectedAccountStates
+// injects: SocialAccountRepository, SocialLikeRepository, DiscussionVoteRepository, EntryLemmyPostRepository,
+//          SocialPostAddresses, and ProfileFeeds from Task 3
+{
+    /** @param array<int, Entry> $entries by entry id */
+    public function buildStates(array $entries, int $userId): ConnectedAccountStatesModel;
+}
+
+final readonly class ConnectedAccountStatesModel   // Library/EntryList/Model
+{
+    /**
+     * @param array<int, EntryListRowSocial> $social by entry id, for every post
+     * @param array<int, EntryListRowLemmy>  $lemmy  by entry id, for every entry that has a Lemmy block
+     */
+    public function __construct(public array $social, public array $lemmy) {}
+}
+```
+
+It takes today's `postAddressesOf`, `lemmyPostIdsOf`, `accountsByNetworkOf`, `accountsByNetwork`, `socialStatesOf`, `votesOf` and `lemmyOf`; the Lemmy code moves unchanged. The enricher keeps the six library repositories, `discussionOf()` and the assembly of `EntryListRowEnrichment`. The move does not rename the private methods it carries (#2360 does); only `buildStates()` is new. Tests: the social and Lemmy cases of `EntryListRowEnricherTest` stay where they are and keep passing through the enricher; add `ConnectedAccountStatesTest` only for a case the enricher test cannot reach.
+
 - [ ] **Step 1: Write `SocialRuleWiring::postAddresses(): SocialPostAddresses`** over the three real adapters.
 - [ ] **Step 2: Move the test cases.** `SocialPostAddressTest`, `OwnPostIdsTest`, `OwnReplyGuidsTest` and `PostAuthorTest` become `SocialPostAddressesTest` and the three `…PostAddressRuleTest`s; each case keeps its inputs and expected values and calls the new method. Run — FAIL, classes missing.
 - [ ] **Step 3: Add the Review Focus tests** to `SocialPostAddressesTest`:
