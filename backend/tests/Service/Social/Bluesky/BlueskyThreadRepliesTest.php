@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Bluesky;
 
+use App\Service\Foundation\Json\Model\JsonNodeModel;
+use App\Service\Social\BlueskyPost\PostEmbedRenderer;
 use App\Service\Content\Comments\Exception\CommentsUnavailableException;
 use App\Service\Content\Comments\Model\CommentAuthorModel;
 use App\Service\Content\Comments\Model\EntryCommentModel;
-use App\Service\Foundation\Json\Model\JsonNodeModel;
+use App\Service\Ingestion\Parser\Model\VisualMediaKind;
 use App\Service\Foundation\Sanitize\EntrySanitizer;
 use App\Service\Foundation\Sanitize\TrailingBlankRemover;
-use App\Service\Ingestion\Parser\Model\VisualMediaKind;
 use App\Service\Social\Bluesky\BlueskyThreadReplies;
-use App\Service\Social\BlueskyPost\PostEmbedRenderer;
 use App\Service\Social\Social\Model\SocialCountsModel;
 use App\Service\Social\Social\Pass\ReplyNode;
 use App\Tests\Support\ReadsFixtures;

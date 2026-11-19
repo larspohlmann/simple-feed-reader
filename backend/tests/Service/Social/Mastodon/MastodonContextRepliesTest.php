@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Mastodon;
 
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Content\Comments\Exception\CommentsUnavailableException;
 use App\Service\Content\Comments\Model\CommentAuthorModel;
-use App\Service\Foundation\Json\Model\JsonNodeModel;
+use App\Service\Ingestion\Parser\Model\VisualMediaKind;
 use App\Service\Foundation\Sanitize\EntrySanitizer;
 use App\Service\Foundation\Sanitize\TrailingBlankRemover;
-use App\Service\Ingestion\Parser\Model\VisualMediaKind;
 use App\Service\Social\Mastodon\MastodonContextReplies;
 use App\Service\Social\Social\Model\SocialCountsModel;
 use App\Service\Social\Social\Pass\ReplyNode;
