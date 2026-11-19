@@ -40,6 +40,7 @@
 2. **Credentials need no new interface.** The connect DTOs are network-named and call their own network's static builder. Only the reconnect path dispatches, and it joins the existing `NetworkVerifierInterface`, which already is the per-network credential adapter.
 3. **`fits()`/`requireFits()` disappear.** `buildSearchQueries()` throwing `SearchQueryTooBroadException` is the one fact; callers that only validate discard the result.
 4. **The message "This entry is not a Bluesky, Mastodon or Lemmy post." stays verbatim** in the generic service. It is copy, not a branch.
+6. **`Library/Subscription` loses its dependency on `Curation/Trending`** (Task 0). Without that, the enricher's new home closes a module cycle; the plan's first version checked direct edges only. `ForYouFeed` and `TrendingStories` keep calling the enricher: Trending consumes enriched rows while building story cards, so a controller cannot enrich afterwards.
 5. **`buildFeedUrl()` is the one `build…` that may return null**: it answers null when the identity names no account of the network. Splitting it would change behaviour-carrying code.
 
 ## File Structure
@@ -72,9 +73,51 @@ Tests mirror `src`. One shared helper, `backend/tests/Support/SocialRuleWiring.p
 2. **A URL two networks claim.** `ofUrl()` and `networkOf()` tried Bluesky first by code order; an iterator has no promised order. Expected: no URL is claimed twice, so order cannot matter. Pinned in Tasks 2 and 3.
 3. **An entry in a feed with no network that links a Lemmy post.** `SocialPostAddress::respondableOrRefuse()` answers it today although the feed's network is `null`. Expected: still answered. Pinned in Task 2.
 4. **A malformed app password on reconnect.** Today it is refused before the rate limiter counts the attempt. Expected: same order. Pinned in Task 6.
+6. **The subscription list and counts JSON.** Task 0 re-routes where the Trending count comes from. Expected: both responses are byte-identical. Pinned in Task 0 by the unchanged Http tests.
 5. **`EntryCompletionController` rows.** The response must stay enriched after `EntryCompletion` stops enriching. Pinned in Task 1.
 
 ---
+
+### Task 0: Subscription tallies stop reading Trending
+
+Why first: `Library/Subscription` imports `Curation/Trending` (`SubscriptionTallyReader` injects `TrendingStories`; `SubscriptionTalliesModel` embeds `TrendingUnopenedModel`). With the enricher in a service module that closes a cycle: `Curation/* → Library/EntryList → Social/Social → Library/Subscription → Curation/Trending`. Lars ruled to remove this edge rather than hide the enricher behind an interface. A Library module does not depend on Curation.
+
+**Files:**
+- Create: `backend/src/Service/Curation/Trending/SurfaceTallies.php`, `backend/src/Service/Curation/Trending/Model/SurfaceTalliesModel.php`
+- Modify: `backend/src/Service/Library/Subscription/SubscriptionTallyReader.php`, `backend/src/Service/Library/Subscription/Model/SubscriptionTalliesModel.php`, `backend/src/Http/SubscriptionCountsJson.php`, `backend/src/Http/SubscriptionJson.php`, `backend/src/Controller/Api/SubscriptionController.php`
+- Test: `tests/Service/Curation/Trending/SurfaceTalliesTest.php`, `tests/Service/Library/Subscription/SubscriptionTallyReaderTest.php`, `tests/Http/SubscriptionCountsJsonTest.php`, `tests/Http/SubscriptionJsonListTest.php`
+
+**Interfaces — produces:**
+
+```php
+// Library/Subscription: no Trending left
+SubscriptionTallyReader::forUser(User $user): SubscriptionTalliesModel
+SubscriptionTalliesModel::__construct(array $unreadCounts, array $entryCounts, array $flagCounts, UnreadTotalsModel $unreadTotals, array $notificationsUnseen)
+
+// Curation/Trending
+final readonly class SurfaceTalliesModel
+{
+    public function __construct(public SubscriptionTalliesModel $subscriptions, public TrendingUnopenedModel $trending) {}
+}
+
+final readonly class SurfaceTallies   // injects SubscriptionTallyReader and TrendingStories
+{
+    public function count(User $user, TrendingWindow $trendingWindow): SurfaceTalliesModel;
+}
+
+// Http: the same parameter counts as today, SurfaceTalliesModel in place of SubscriptionTalliesModel
+SubscriptionCountsJson::from(SurfaceTalliesModel $tallies): array
+SubscriptionCountsJson::surfaceTotals(SurfaceTalliesModel $tallies): array
+SubscriptionJson::list(array $subscriptions, SurfaceTalliesModel $tallies, array $socialAccounts): array
+```
+
+`SubscriptionController` injects `SurfaceTallies` in place of `SubscriptionTallyReader`. The JSON of `GET /api/subscriptions` and `GET /api/subscriptions/counts` is byte-identical.
+
+- [ ] **Step 1: Write the failing test** `SurfaceTalliesTest::testCountsCarryTheSubscriptionTalliesAndTheUnopenedStories()`: with a reader that has one unread entry and Trending enabled, `count()` returns a model whose `subscriptions->unreadTotals` equals what `SubscriptionTallyReader::forUser()` returns and whose `trending` equals `TrendingStories::unopenedFor($user, $window)`.
+- [ ] **Step 2: Move the Trending assertions** of `SubscriptionTallyReaderTest` to `SurfaceTalliesTest`; re-point the two Http tests at `SurfaceTalliesModel`, expected arrays unchanged. Run — FAIL.
+- [ ] **Step 3: Implement.** Run `php bin/phpunit tests/Service/Curation/Trending tests/Service/Library/Subscription tests/Http tests/Controller/Api/SubscriptionControllerTest.php` — PASS.
+- [ ] **Step 4: Verify** `grep -rn "Curation" src/Service/Library/Subscription` prints nothing, and `composer stan` reports no `ServiceModuleCycleRule` error.
+- [ ] **Step 5: Commit** `refactor(#2358): subscription tallies no longer read Trending`.
 
 ### Task 1: The row enricher becomes a service
 
