@@ -4,7 +4,7 @@
 
 **Goal:** A cron-facing endpoint that drains the link-card queue for one time window, so an install without the worker keeps up when more cards are queued than the tick's single pass fetches.
 
-**Architecture:** A new service `LinkCardDrain` runs the existing `LinkCardSweep` pass after pass until a pass cards nothing or the window ends, then reports what it carded and what is still pending. `MaintenanceController` gets a third token-guarded action that calls it. Nothing about the tick, the worker or the queue itself changes; the sweep's row claims make the drain safe next to both.
+**Architecture:** A new service `LinkCardDrain` runs the existing `LinkCardSweep` pass after pass until a pass cards nothing or the window ends, then reports what it carded and whether it reached the end of the queue. `MaintenanceController` gets a third token-guarded action that calls it. Nothing about the tick, the worker or the queue itself changes; the sweep's row claims make the drain safe next to both.
 
 **Tech Stack:** PHP 8.5, Symfony 8.1, Doctrine ORM, PHPUnit 12.
 
@@ -22,17 +22,16 @@
 ## Review Focus
 
 1. A page that fails or times out: the row is still marked done (one attempt each), so the drain moves on instead of fetching the same row again. Test in Task 2.
-2. A window shorter than one page fetch (8 s): the drain fetches nothing and still answers with the pending count. Test in Task 2.
-3. A window that ends mid-queue: no fetch starts that cannot end before the deadline; the rest stays pending for the next call. Test in Task 2.
-4. A row another worker holds (the tick's pass running at the same time): not fetched twice, not spun on, counted as pending. Test in Task 2.
+2. A window shorter than one page fetch (8 s): the drain fetches nothing and answers that it has not caught up. Test in Task 2.
+3. A window that ends mid-queue: no fetch starts that cannot end before the deadline; the rest stays queued for the next call and the answer says the drain has not caught up. Test in Task 2.
+4. A row another worker holds (the tick's pass running at the same time): not fetched twice and not spun on. Test in Task 2.
 5. A call without the maintenance token, or with `GET`: refused like the other maintenance actions, before any fetch. Tests in Task 3.
 
 ## File Structure
 
 | File | Responsibility |
 |---|---|
-| `backend/src/Repository/ShareEnrichmentRepository.php` (modify) | Counts the link-card rows still to be attempted |
-| `backend/src/Service/Content/LinkCard/Model/LinkCardDrainReportModel.php` (create) | What one drain carded and what is left |
+| `backend/src/Service/Content/LinkCard/Model/LinkCardDrainReportModel.php` (create) | What one drain carded and whether it caught up |
 | `backend/src/Service/Content/LinkCard/LinkCardDrain.php` (create) | Runs sweep passes until the queue or the window ends |
 | `backend/config/services.yaml` (modify) | Wires the window onto `LinkCardDrain` |
 | `backend/src/Http/LinkCardDrainJson.php` (create) | Response shape of the drain report |
@@ -41,45 +40,9 @@
 
 ---
 
-### Task 1: Count the pending link-card rows
+### Task 1: dropped
 
-**Files:**
-- Modify: `backend/src/Repository/ShareEnrichmentRepository.php`
-- Test: `backend/tests/Repository/ShareEnrichmentRepositoryTest.php`
-
-**Interfaces:**
-- Produces: `ShareEnrichmentRepository::countPendingLinkCards(): int` — rows of kind `ShareEnrichmentKind::LinkCards` with `doneAt IS NULL`, whether a worker holds them or not.
-
-- [ ] **Step 1: Write the failing test**
-
-Add `testCountsTheLinkCardRowsStillToBeAttempted` to `ShareEnrichmentRepositoryTest`. Persist, with the helpers the class already uses: two link-card rows still pending, one of them claimed just now through `claim()`; one link-card row marked done through `markDone()`; one pending row of kind `ShareEnrichmentKind::AppView`.
-
-```php
-self::assertSame(2, $this->enrichments()->countPendingLinkCards());
-```
-
-(Use whatever accessor the class already has for the repository in place of `$this->enrichments()`.)
-
-- [ ] **Step 2: Run it to see it fail**
-
-Run from `backend/`: `php bin/phpunit tests/Repository/ShareEnrichmentRepositoryTest.php --filter testCountsTheLinkCardRowsStillToBeAttempted`
-Expected: FAIL, `Call to undefined method …::countPendingLinkCards()`.
-
-- [ ] **Step 3: Implement `countPendingLinkCards(): int`**
-
-A `COUNT(pending.id)` QueryBuilder query on the repository's own alias `pending`, filtered by kind and `doneAt IS NULL`. It does not go through `claimable()`: held rows count.
-
-- [ ] **Step 4: Run the test class**
-
-Run: `php bin/phpunit tests/Repository/ShareEnrichmentRepositoryTest.php`
-Expected: PASS, all tests.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add backend/src/Repository/ShareEnrichmentRepository.php backend/tests/Repository/ShareEnrichmentRepositoryTest.php
-git commit -m "feat(#2354): count the link-card rows still to be attempted"
-```
+The report was to carry a `pending` count read through a new `ShareEnrichmentRepository::countPendingLinkCards()`. That method would have been the repository's eleventh public one (PHPMD `TooManyPublicMethods`); the class mixes the claim lifecycle with reads of pending state, and splitting it by concern is a refactor of its own. The report says `caughtUp` instead, which the drain knows from its last pass without a query.
 
 ---
 
@@ -92,34 +55,34 @@ git commit -m "feat(#2354): count the link-card rows still to be attempted"
 - Test: `backend/tests/Service/Content/LinkCard/LinkCardDrainTest.php`
 
 **Interfaces:**
-- Consumes: `ShareEnrichmentRepository::countPendingLinkCards(): int` (Task 1); `LinkCardSweep::sweep(LinkCardBudgetModel): LinkCardSweepReportModel`; `LinkCardBudgetModel::fittingBefore(\DateTimeImmutable $deadline, \DateTimeImmutable $now, int $maxFetches)`; `LinkCardBudgetModel::largestPass(): int` (7).
+- Consumes: `LinkCardSweep::sweep(LinkCardBudgetModel): LinkCardSweepReportModel`; `LinkCardBudgetModel::fittingBefore(\DateTimeImmutable $deadline, \DateTimeImmutable $now, int $maxFetches)`; `LinkCardBudgetModel::largestPass(): int` (7); `LinkCardBudgetModel::isEmpty(): bool`; `LinkCardSweepReportModel::$considered`, `::$completed`.
 - Produces:
-  - `final readonly class LinkCardDrainReportModel { public function __construct(public int $completed, public int $pending) }`
-  - `final readonly class LinkCardDrain` with constructor `(LinkCardSweep $sweep, ShareEnrichmentRepository $enrichments, Psr\Clock\ClockInterface $clock, int $windowSeconds)` and `public function drain(): LinkCardDrainReportModel`.
+  - `final readonly class LinkCardDrainReportModel { public function __construct(public int $completed, public bool $caughtUp) }` — `caughtUp` is true when the drain stopped because nothing claimable was left, false when the window ended first.
+  - `final readonly class LinkCardDrain` with constructor `(LinkCardSweep $sweep, Psr\Clock\ClockInterface $clock, int $windowSeconds)` and `public function drain(): LinkCardDrainReportModel`.
 
 - [ ] **Step 1: Write the failing tests**
 
-`LinkCardDrainTest extends DbTestCase`, set up like `LinkCardSweepTest`: `MockClock('2026-10-11 12:00:00', 'UTC')`, a `MockHttpClient`, the sweep from `LinkCardSweepWiring::build(...)`, posts queued through `QueuedLinkPosts::persist(...)` (copy `LinkCardSweepTest::queuedPost()`; a third copy would be the refactor point, this is the second). Build the drain as `new LinkCardDrain($sweep, PostEnrichers::enrichments($this->entityManager), $this->clock, $windowSeconds)`.
+`LinkCardDrainTest extends DbTestCase`, set up like `LinkCardSweepTest`: `MockClock('2026-10-11 12:00:00', 'UTC')`, a `MockHttpClient`, the sweep from `LinkCardSweepWiring::build(...)`, posts queued through `QueuedLinkPosts::persist(...)` (copy `LinkCardSweepTest::queuedPost()`; a third copy would be the refactor point, this is the second). Build the drain as `new LinkCardDrain($sweep, $this->clock, $windowSeconds)`.
 
 ```php
 public function testCardsTheWholeQueueWhenItHoldsMoreThanOnePass(): void
 {
     // 9 queued posts, ShareLinkCardsWiring::titledPages(), window 150
-    self::assertEquals(new LinkCardDrainReportModel(9, 0), $drain->drain());
+    self::assertEquals(new LinkCardDrainReportModel(9, true), $drain->drain());
     self::assertSame(9, $this->client->getRequestsCount());
 }
 
 public function testAnEmptyQueueFetchesNothing(): void
 {
     // nothing queued, window 150
-    self::assertEquals(new LinkCardDrainReportModel(0, 0), $drain->drain());
+    self::assertEquals(new LinkCardDrainReportModel(0, true), $drain->drain());
     self::assertSame(0, $this->client->getRequestsCount());
 }
 
-public function testAWindowShorterThanOneFetchLeavesTheQueuePending(): void
+public function testAWindowShorterThanOneFetchHasNotCaughtUp(): void
 {
     // 1 queued post, window 7 (PageHeadFetcher::MAX_DURATION_SECONDS is 8.0)
-    self::assertEquals(new LinkCardDrainReportModel(0, 1), $drain->drain());
+    self::assertEquals(new LinkCardDrainReportModel(0, false), $drain->drain());
     self::assertSame(0, $this->client->getRequestsCount());
 }
 
@@ -127,26 +90,26 @@ public function testStartsNoFetchThatCannotEndBeforeTheWindowDoes(): void
 {
     // 9 queued posts, window 20, a MockHttpClient whose callback calls $this->clock->sleep(8)
     // before answering the titled page: two fetches fit, the third would end at 24 s
-    self::assertEquals(new LinkCardDrainReportModel(2, 7), $drain->drain());
+    self::assertEquals(new LinkCardDrainReportModel(2, false), $drain->drain());
     self::assertSame(2, $this->client->getRequestsCount());
 }
 
 public function testAPageThatFailsIsNotFetchedAgain(): void
 {
     // 8 queued posts, window 150, a MockHttpClient answering every page with HTTP 500
-    self::assertEquals(new LinkCardDrainReportModel(8, 0), $drain->drain());
+    self::assertEquals(new LinkCardDrainReportModel(8, true), $drain->drain());
     self::assertSame(8, $this->client->getRequestsCount());
 }
 
-public function testARowAnotherWorkerHoldsStaysPendingUnfetched(): void
+public function testARowAnotherWorkerHoldsIsLeftToThatWorker(): void
 {
     // 1 queued post whose row was claimed at $this->clock->now() through ShareEnrichmentRepository::claim()
-    self::assertEquals(new LinkCardDrainReportModel(0, 1), $drain->drain());
+    self::assertEquals(new LinkCardDrainReportModel(0, true), $drain->drain());
     self::assertSame(0, $this->client->getRequestsCount());
 }
 ```
 
-If `testAPageThatFailsIsNotFetchedAgain` shows more than 8 requests because a failed page is retried inside one attempt, assert on the report and on `countPendingLinkCards() === 0` instead of the request count, and say so in the task report.
+If `testAPageThatFailsIsNotFetchedAgain` shows more than 8 requests because a failed page is retried inside one attempt, assert on the report alone and drop the request count, and say so in the task report.
 
 - [ ] **Step 2: Run them to see them fail**
 
@@ -159,16 +122,13 @@ Expected: FAIL, class `LinkCardDrain` not found.
 
 ```php
 do {
-    $pass = $this->sweep->sweep(LinkCardBudgetModel::fittingBefore(
-        $deadline,
-        $this->clock->now(),
-        LinkCardBudgetModel::largestPass(),
-    ));
+    $budget = LinkCardBudgetModel::fittingBefore($deadline, $this->clock->now(), LinkCardBudgetModel::largestPass());
+    $pass = $this->sweep->sweep($budget);
     $completed += $pass->completed;
 } while ($pass->completed > 0);
 ```
 
-A pass that cards nothing ends the drain, whatever the reason: empty queue, spent window, or rows other workers hold. The report's `pending` is `countPendingLinkCards()` read after the loop. Extract the loop into a private method if `drain()` stops reading as one sentence.
+A pass that cards nothing ends the drain, whatever the reason: empty queue, spent window, or rows other workers hold. The drain has caught up when that last pass had a budget (`!$budget->isEmpty()`) and considered no row. Extract the loop into a private method if `drain()` stops reading as one sentence.
 
 Wire the window in `backend/config/services.yaml`:
 
@@ -206,7 +166,7 @@ git commit -m "feat(#2354): drain the link-card queue pass after pass within one
 **Interfaces:**
 - Consumes: `LinkCardDrain::drain(): LinkCardDrainReportModel` (Task 2).
 - Produces:
-  - `LinkCardDrainJson::report(LinkCardDrainReportModel $report): array` returning `array{completed: int, pending: int}`; a static mapper shaped like `App\Http\ForYouSweepReportJson`.
+  - `LinkCardDrainJson::report(LinkCardDrainReportModel $report): array` returning `array{completed: int, caughtUp: bool}`; a static mapper shaped like `App\Http\ForYouSweepReportJson`.
   - Route `maintenance_link_cards_drain`: `POST /maintenance/link-cards/drain`, action `MaintenanceController::drainLinkCards(Request $request): JsonResponse`.
 
 - [ ] **Step 1: Write the failing tests**
@@ -215,8 +175,8 @@ git commit -m "feat(#2354): drain the link-card queue pass after pass within one
 
 ```php
 self::assertSame(
-    ['completed' => 12, 'pending' => 340],
-    LinkCardDrainJson::report(new LinkCardDrainReportModel(12, 340)),
+    ['completed' => 12, 'caughtUp' => false],
+    LinkCardDrainJson::report(new LinkCardDrainReportModel(12, false)),
 );
 ```
 
@@ -241,9 +201,9 @@ public function testLinkCardDrainRunsWithValidToken(): void
     // POST with HTTP_X_MAINTENANCE_TOKEN => 'test-maintenance-token'; the test queues nothing
     self::assertResponseIsSuccessful();
     self::assertResponseHeaderSame('Content-Type', 'application/json');
-    self::assertSame(['completed', 'pending'], array_keys($payload));
+    self::assertSame(['completed', 'caughtUp'], array_keys($payload));
     self::assertIsInt($payload['completed']);
-    self::assertIsInt($payload['pending']);
+    self::assertIsBool($payload['caughtUp']);
 }
 ```
 
@@ -260,7 +220,7 @@ The action is the token guard followed by `new JsonResponse(LinkCardDrainJson::r
 
 - [ ] **Step 4: Document the cron line**
 
-In `deploy/strato/README.md`, extend the "Notes" bullet on the external cron: an install that queues more link cards than the tick's one pass fetches (about 84 per hour at a 5-minute cron) adds a second cron line calling `POST /maintenance/link-cards/drain` with the same header, offset from the tick, with a `curl --max-time` above `MAINTENANCE_TICK_SECONDS`; the answer's `pending` shows whether the queue is shrinking.
+In `deploy/strato/README.md`, extend the "Notes" bullet on the external cron: an install that queues more link cards than the tick's one pass fetches (about 84 per hour at a 5-minute cron) adds a second cron line calling `POST /maintenance/link-cards/drain` with the same header, offset from the tick, with a `curl --max-time` above `MAINTENANCE_TICK_SECONDS`; the answer's `caughtUp` says whether the drain reached the end of the queue or the window ended first.
 
 - [ ] **Step 5: Run the tests and the gates**
 
@@ -294,6 +254,6 @@ git commit -m "feat(#2354): POST /maintenance/link-cards/drain spends one window
 These are operations, not code, and none happens without an explicit yes:
 
 1. **Deploy** a `v1.9.5-dev.N` tag to Strato.
-2. **Smoke** the endpoint once by hand from ganesh.local (`curl --max-time 200 -X POST -H "X-Maintenance-Token: …" https://lars-pohlmann.de/reader/maintenance/link-cards/drain`) and read `completed` and `pending`.
+2. **Smoke** the endpoint once by hand from ganesh.local (`curl --max-time 200 -X POST -H "X-Maintenance-Token: …" https://lars-pohlmann.de/reader/maintenance/link-cards/drain`) and read `completed` and `caughtUp`.
 3. **Cron on ganesh.local:** `~/.local/bin/sfr-link-card-drain.sh`, a copy of `sfr-maintenance-tick.sh` with the URL changed and its own log file, and the crontab line `4-59/5 * * * * /Users/lars/.local/bin/sfr-link-card-drain.sh` (two minutes after the tick's `2-59/5`, never on `:00`). Back the crontab up first.
 4. **Verify** after an hour with a read-only query: open `link_cards` rows and the age of the oldest should both have fallen.
