@@ -11,21 +11,28 @@ use App\Entity\SocialAccount;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Enum\VoteScore;
+use App\Repository\DiscussionVoteRepository;
 use App\Service\Content\Comments\CommentsCache;
+use App\Service\Content\Comments\CommentsLoader;
 use App\Service\Content\Comments\CommentsSource\LemmyCommentsSource;
 use App\Service\Content\Comments\Model\CommentsAnswerModel;
+use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Foundation\Crypto\InstanceSecretCipher;
 use App\Service\Outbound\Fetch\DnsResolver\NativeDnsResolver;
+use App\Service\Social\Social\ActingAccountChooser;
 use App\Service\Social\Social\Crypto\SocialCredentialCipher;
 use App\Service\Social\Social\DiscussionVotes;
 use App\Service\Social\Social\Exception\NotASocialPostException;
 use App\Service\Social\Social\Model\DiscussionVoteResultModel;
+use App\Service\Social\Social\PostVoter\PostVoterInterface;
 use App\Tests\DbTestCase;
 use App\Tests\Support\LemmyPostEntries;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StaticDnsResolver;
+use Psr\Container\ContainerInterface;
+use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class DiscussionVotesTest extends DbTestCase
@@ -141,6 +148,63 @@ final class DiscussionVotesTest extends DbTestCase
         $this->expectExceptionObject(new NotASocialPostException('The address names no Lemmy comment.'));
 
         $votes->voteOnComment($this->owner, $this->lemmyPost(), 'http://origin.example/comment/5', VoteScore::Up);
+    }
+
+    public function testWithSeveralVotersTheRefusalNamesEveryVotingNetwork(): void
+    {
+        $votes = $this->votesOnEveryNetworkThrough(self::createStub(PostVoterInterface::class));
+
+        $this->expectExceptionObject(
+            new NotASocialPostException('This entry is not a Bluesky, Mastodon or Lemmy post.'),
+        );
+
+        $votes->vote($this->owner, $this->rssEntry(), VoteScore::Up);
+    }
+
+    public function testWithSeveralVotersTheCommentRefusalNamesEveryVotingNetwork(): void
+    {
+        $voter = self::createStub(PostVoterInterface::class);
+        $voter->method('isVotablePost')->willReturn(true);
+        $votes = $this->votesOnEveryNetworkThrough($voter);
+
+        $this->expectExceptionObject(
+            new NotASocialPostException('The address names no Bluesky, Mastodon or Lemmy comment.'),
+        );
+
+        $votes->voteOnComment($this->owner, $this->rssEntry(), 'http://origin.example/comment/5', VoteScore::Up);
+    }
+
+    private function votesOnEveryNetworkThrough(PostVoterInterface $voter): DiscussionVotes
+    {
+        $voters = [];
+        foreach (SocialNetwork::cases() as $network) {
+            $voters[$network->value] = static fn (): PostVoterInterface => $voter;
+        }
+        $container = self::getContainer();
+
+        return new DiscussionVotes(
+            self::service($container, ActingAccountChooser::class),
+            new ServiceLocator($voters),
+            self::service($container, DiscussionVoteRepository::class),
+            $this->entityManager,
+            self::service($container, NaiveUtcClock::class),
+            self::service($container, CommentsLoader::class),
+        );
+    }
+
+    /**
+     * @template T of object
+     *
+     * @param class-string<T> $id
+     *
+     * @return T
+     */
+    private static function service(ContainerInterface $container, string $id): object
+    {
+        $service = $container->get($id);
+        self::assertInstanceOf($id, $service);
+
+        return $service;
     }
 
     /** @param array<string, MockResponse> $routes */
