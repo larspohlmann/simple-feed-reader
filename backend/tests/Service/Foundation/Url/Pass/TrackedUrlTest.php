@@ -50,7 +50,7 @@ final class TrackedUrlTest extends TestCase
         string $cleaned,
         bool $undocumented,
     ): void {
-        $read = TrackedUrl::of($url);
+        $read = TrackedUrl::fromUrl($url);
 
         self::assertSame($cleaned, $read->cleaned());
         self::assertSame($undocumented, $read->strippedAnUndocumentedKey());

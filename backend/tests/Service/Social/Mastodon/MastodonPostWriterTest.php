@@ -200,7 +200,7 @@ final class MastodonPostWriterTest extends TestCase
 
         $this->writer($http)->share(SocialAccounts::mastodon(), 'https://e.x/a', new PostDraftModel($text));
 
-        $status = JsonNodeModel::of(json_decode($http->requests[0]['body'], true))->string('status');
+        $status = JsonNodeModel::fromValue(json_decode($http->requests[0]['body'], true))->string('status');
         self::assertNotNull($status);
 
         return $status;

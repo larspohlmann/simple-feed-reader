@@ -15,8 +15,8 @@ final class MastodonAttachmentsTest extends TestCase
     public function testUnusableAttachmentsLeaveAListOfTheUsableOnes(): void
     {
         $media = MastodonAttachments::of([
-            JsonNodeModel::of(['type' => 'image', 'url' => 'http://files.example/plain.jpg']),
-            JsonNodeModel::of(['type' => 'image', 'url' => 'https://files.example/a.jpg']),
+            JsonNodeModel::fromValue(['type' => 'image', 'url' => 'http://files.example/plain.jpg']),
+            JsonNodeModel::fromValue(['type' => 'image', 'url' => 'https://files.example/a.jpg']),
         ]);
 
         self::assertCount(1, $media);
@@ -26,7 +26,7 @@ final class MastodonAttachmentsTest extends TestCase
     public function testAnImageKeepsItsDescriptionAsAltText(): void
     {
         $media = MastodonAttachments::of([
-            JsonNodeModel::of([
+            JsonNodeModel::fromValue([
                 'type' => 'image',
                 'url' => 'https://files.example/a.jpg',
                 'description' => 'A donkey in a field',
@@ -38,7 +38,7 @@ final class MastodonAttachmentsTest extends TestCase
 
     public function testAStatusesAttachmentsBecomeEntryMedia(): void
     {
-        $media = MastodonAttachments::entryMediaOf(JsonNodeModel::of(['media_attachments' => [
+        $media = MastodonAttachments::entryMediaOf(JsonNodeModel::fromValue(['media_attachments' => [
             ['type' => 'audio', 'url' => 'https://files.example/a.mp3'],
             [
                 'type' => 'gifv',
@@ -58,8 +58,8 @@ final class MastodonAttachmentsTest extends TestCase
     public function testAGifIsAnAnimatedVideoAndAVideoStaysAPlainOne(): void
     {
         $media = MastodonAttachments::of([
-            JsonNodeModel::of(['type' => 'gifv', 'url' => 'https://files.example/gif.mp4']),
-            JsonNodeModel::of(['type' => 'video', 'url' => 'https://files.example/clip.mp4']),
+            JsonNodeModel::fromValue(['type' => 'gifv', 'url' => 'https://files.example/gif.mp4']),
+            JsonNodeModel::fromValue(['type' => 'video', 'url' => 'https://files.example/clip.mp4']),
         ]);
 
         self::assertSame(

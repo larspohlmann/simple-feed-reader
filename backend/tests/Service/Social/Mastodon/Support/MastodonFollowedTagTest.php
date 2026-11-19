@@ -16,7 +16,7 @@ final class MastodonFollowedTagTest extends TestCase
     {
         self::assertEquals(
             new SocialCollectionModel('Caturday', '#Caturday'),
-            MastodonFollowedTag::collectionOf(JsonNodeModel::of(['name' => 'Caturday', 'following' => true])),
+            MastodonFollowedTag::collectionOf(JsonNodeModel::fromValue(['name' => 'Caturday', 'following' => true])),
         );
     }
 
@@ -33,6 +33,6 @@ final class MastodonFollowedTagTest extends TestCase
     #[DataProvider('unusableTags')]
     public function testATagWithoutAUsableNameIsLeftOut(array $tag): void
     {
-        self::assertNull(MastodonFollowedTag::collectionOf(JsonNodeModel::of($tag)));
+        self::assertNull(MastodonFollowedTag::collectionOf(JsonNodeModel::fromValue($tag)));
     }
 }

@@ -15,7 +15,7 @@ final class MastodonQuotingTest extends TestCase
     #[DataProvider('statuses')]
     public function testOnlyAnApprovalTheUserIsCoveredByAllowsAQuote(array $status, bool $allowed): void
     {
-        self::assertSame($allowed, MastodonQuoting::allows(JsonNodeModel::of($status)));
+        self::assertSame($allowed, MastodonQuoting::allows(JsonNodeModel::fromValue($status)));
     }
 
     /** @return iterable<string, array{array<string, mixed>, bool}> */

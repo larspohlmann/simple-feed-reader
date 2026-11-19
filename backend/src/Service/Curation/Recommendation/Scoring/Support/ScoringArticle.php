@@ -45,24 +45,24 @@ final class ScoringArticle
 
     private static function title(ArticleLineModel $line): string
     {
-        return ClippedText::ofScrubbed($line->title, self::TITLE_CHARACTERS);
+        return ClippedText::cutScrubbedText($line->title, self::TITLE_CHARACTERS);
     }
 
     private static function feedName(ArticleLineModel $line): string
     {
-        return ClippedText::ofScrubbed($line->feedName, self::FEED_NAME_CHARACTERS);
+        return ClippedText::cutScrubbedText($line->feedName, self::FEED_NAME_CHARACTERS);
     }
 
     private static function sharedArticle(ArticleLineModel $line): ?string
     {
         return null === $line->sharedArticle
             ? null
-            : ClippedText::ofScrubbed($line->sharedArticle->summary(), self::SHARED_ARTICLE_CHARACTERS);
+            : ClippedText::cutScrubbedText($line->sharedArticle->summary(), self::SHARED_ARTICLE_CHARACTERS);
     }
 
     private static function description(string $description, ?string $sharedArticle): string
     {
-        return ClippedText::ofScrubbed(
+        return ClippedText::cutScrubbedText(
             $description,
             self::DESCRIPTION_CHARACTERS - mb_strlen($sharedArticle ?? ''),
         );

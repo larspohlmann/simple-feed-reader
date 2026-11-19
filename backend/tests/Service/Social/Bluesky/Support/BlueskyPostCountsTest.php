@@ -18,13 +18,13 @@ final class BlueskyPostCountsTest extends TestCase
     {
         self::assertEquals(
             new SocialCountsModel(12, 3, 4, 1),
-            BlueskyPostCounts::parsePost(JsonNodeModel::of(self::BLUESKY_POST)),
+            BlueskyPostCounts::parsePost(JsonNodeModel::fromValue(self::BLUESKY_POST)),
         );
     }
 
     public function testABlueskyPostWithoutAQuoteCountHasNoQuotes(): void
     {
-        $post = JsonNodeModel::of(['likeCount' => 12, 'repostCount' => 3, 'replyCount' => 4]);
+        $post = JsonNodeModel::fromValue(['likeCount' => 12, 'repostCount' => 3, 'replyCount' => 4]);
 
         self::assertEquals(new SocialCountsModel(12, 3, 4, null), BlueskyPostCounts::parsePost($post));
     }
@@ -35,7 +35,7 @@ final class BlueskyPostCountsTest extends TestCase
         $post = self::BLUESKY_POST;
         unset($post[$count]);
 
-        self::assertNull(BlueskyPostCounts::parsePost(JsonNodeModel::of($post)));
+        self::assertNull(BlueskyPostCounts::parsePost(JsonNodeModel::fromValue($post)));
     }
 
     /** @return iterable<string, array{string}> */

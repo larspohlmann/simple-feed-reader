@@ -82,6 +82,8 @@ final class MastodonCommentPostTest extends TestCase
     /** @param array<string, string|bool|array<string, string>> $fields */
     private static function mastodonStatus(array $fields): JsonNodeModel
     {
-        return JsonNodeModel::of(['favourites_count' => 7, 'reblogs_count' => 2, 'replies_count' => 1] + $fields);
+        return JsonNodeModel::fromValue(
+            ['favourites_count' => 7, 'reblogs_count' => 2, 'replies_count' => 1] + $fields,
+        );
     }
 }

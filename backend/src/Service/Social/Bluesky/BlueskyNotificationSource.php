@@ -42,11 +42,13 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
     public function fetch(SocialAccount $account): NotificationPageModel
     {
         $unread = BlueskySessions::accepted($this->sessions->askAs($account, self::UNREAD_COUNT));
-        if (JsonNodeModel::of($unread->json())->int('count') === 0) {
+        if (JsonNodeModel::fromValue($unread->json())->int('count') === 0) {
             return new NotificationPageModel([], $this->clock->now());
         }
 
-        $list = JsonNodeModel::of(BlueskySessions::accepted($this->sessions->askAs($account, self::LIST))->json());
+        $list = JsonNodeModel::fromValue(
+            BlueskySessions::accepted($this->sessions->askAs($account, self::LIST))->json(),
+        );
         $known = self::knownEntries($list->nodes('notifications'));
         $likedPosts = $this->posts->byUri($account, self::likedPosts($known));
 
@@ -181,7 +183,7 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
         SocialAccount $account,
         array $likedPosts,
     ): NotificationSubject {
-        $record = ($likedPosts[$postUri] ?? JsonNodeModel::of(null))->node('record');
+        $record = ($likedPosts[$postUri] ?? JsonNodeModel::fromValue(null))->node('record');
         $subject = new NotificationSubject(
             $postUri,
             Excerpt::of($record->text('text')),

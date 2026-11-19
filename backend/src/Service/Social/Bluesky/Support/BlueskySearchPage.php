@@ -41,9 +41,9 @@ final class BlueskySearchPage
     {
         $items = [];
         foreach ($posts as $post) {
-            $node = JsonNodeModel::of($post);
+            $node = JsonNodeModel::fromValue($post);
             if (!$node->node('record')->has('reply') && $matches(self::searchedPostOf($node))) {
-                $items[] = JsonNodeModel::of(['post' => $post]);
+                $items[] = JsonNodeModel::fromValue(['post' => $post]);
             }
         }
 
@@ -67,7 +67,7 @@ final class BlueskySearchPage
         $quoted = match ($embed->type()) {
             self::QUOTE => $embed->node('record'),
             self::QUOTE_WITH_MEDIA => $embed->node('record')->node('record'),
-            default => JsonNodeModel::of(null),
+            default => JsonNodeModel::fromValue(null),
         };
 
         return [$post->node('record')->text('text') ?? '', $quoted->node('value')->text('text') ?? ''];

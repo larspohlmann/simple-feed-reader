@@ -120,7 +120,7 @@ final class BlueskyRichTextTest extends TestCase
     /** @param array<string, string> $feature */
     private static function facet(int $byteStart, int $byteEnd, array $feature): JsonNodeModel
     {
-        return JsonNodeModel::of([
+        return JsonNodeModel::fromValue([
             'index' => ['byteStart' => $byteStart, 'byteEnd' => $byteEnd],
             'features' => [$feature],
         ]);

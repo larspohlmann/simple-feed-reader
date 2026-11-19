@@ -28,18 +28,18 @@ final class BundledStopWordsTest extends TestCase
     {
         $stopWords = $this->stopWordsReturning("['de' => ['und'], 'en' => ['the'], 'fr' => ['les'], 'es' => ['los']]");
 
-        $this->assertSame(['the'], $stopWords->wordsOf(FeedLanguage::English));
-        $this->assertSame(['und'], $stopWords->wordsOf(FeedLanguage::German));
+        $this->assertSame(['the'], $stopWords->listWords(FeedLanguage::English));
+        $this->assertSame(['und'], $stopWords->listWords(FeedLanguage::German));
     }
 
     public function testItLoadsOnFirstUseAndAgainAfterReset(): void
     {
         $stopWords = $this->stopWordsReturning("['de' => ['und']]");
-        $first = $stopWords->wordsOf(FeedLanguage::German);
+        $first = $stopWords->listWords(FeedLanguage::German);
         $this->stopWordsReturning("['de' => ['oder']]");
-        $beforeReset = $stopWords->wordsOf(FeedLanguage::German);
+        $beforeReset = $stopWords->listWords(FeedLanguage::German);
         $stopWords->reset();
-        $afterReset = $stopWords->wordsOf(FeedLanguage::German);
+        $afterReset = $stopWords->listWords(FeedLanguage::German);
 
         $this->assertSame(['und'], $first);
         $this->assertSame(['und'], $beforeReset);
@@ -53,7 +53,7 @@ final class BundledStopWordsTest extends TestCase
         $this->expectException(\UnexpectedValueException::class);
         $this->expectExceptionMessage($this->path);
 
-        $stopWords->wordsOf(FeedLanguage::German);
+        $stopWords->listWords(FeedLanguage::German);
     }
 
     public function testAListHoldingANonStringIsRefused(): void
@@ -62,7 +62,7 @@ final class BundledStopWordsTest extends TestCase
 
         $this->expectException(\UnexpectedValueException::class);
 
-        $stopWords->wordsOf(FeedLanguage::German);
+        $stopWords->listWords(FeedLanguage::German);
     }
 
     public function testAFileReturningNoArrayIsRefused(): void
@@ -71,7 +71,7 @@ final class BundledStopWordsTest extends TestCase
 
         $this->expectException(\UnexpectedValueException::class);
 
-        $stopWords->wordsOf(FeedLanguage::German);
+        $stopWords->listWords(FeedLanguage::German);
     }
 
     public function testAFileMissingALanguageIsRefused(): void
@@ -80,7 +80,7 @@ final class BundledStopWordsTest extends TestCase
 
         $this->expectException(\UnexpectedValueException::class);
 
-        $stopWords->wordsOf(FeedLanguage::French);
+        $stopWords->listWords(FeedLanguage::French);
     }
 
     private function stopWordsReturning(string $phpValue): BundledStopWords

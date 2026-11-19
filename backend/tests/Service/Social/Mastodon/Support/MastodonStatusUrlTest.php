@@ -12,7 +12,7 @@ final class MastodonStatusUrlTest extends TestCase
 {
     public function testTheWebUrlIsPreferred(): void
     {
-        $status = JsonNodeModel::of([
+        $status = JsonNodeModel::fromValue([
             'url' => 'https://a.example/@x/1',
             'uri' => 'https://a.example/users/x/statuses/1',
         ]);
@@ -22,13 +22,13 @@ final class MastodonStatusUrlTest extends TestCase
 
     public function testTheUriServesWhenThereIsNoUsableUrl(): void
     {
-        $status = JsonNodeModel::of(['url' => 'not a url', 'uri' => 'https://a.example/users/x/statuses/1']);
+        $status = JsonNodeModel::fromValue(['url' => 'not a url', 'uri' => 'https://a.example/users/x/statuses/1']);
 
         self::assertSame('https://a.example/users/x/statuses/1', MastodonStatusUrl::of($status));
     }
 
     public function testAStatusWithNeitherHasNoUrl(): void
     {
-        self::assertNull(MastodonStatusUrl::of(JsonNodeModel::of(['uri' => 'tag:a.example,2026:1'])));
+        self::assertNull(MastodonStatusUrl::of(JsonNodeModel::fromValue(['uri' => 'tag:a.example,2026:1'])));
     }
 }

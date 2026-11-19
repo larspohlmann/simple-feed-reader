@@ -25,7 +25,7 @@ final class ProviderErrorReason
 
         return null === $reason
             ? null
-            : ClippedText::ofScrubbed($credentials->withoutApiKey($reason), self::CHARACTERS);
+            : ClippedText::cutScrubbedText($credentials->withoutApiKey($reason), self::CHARACTERS);
     }
 
     /** Short identifiers, never part of a message, so clipped without the reason's redaction. */

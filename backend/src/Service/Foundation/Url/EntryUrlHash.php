@@ -18,7 +18,7 @@ final readonly class EntryUrlHash
     ) {
     }
 
-    public function of(string $guid, ?string $url): ?string
+    public function hashEntryUrl(string $guid, ?string $url): ?string
     {
         return $this->urlNormalizer->hash($this->identityUrl($guid) ?? $url);
     }

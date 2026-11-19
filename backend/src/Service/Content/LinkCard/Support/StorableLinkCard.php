@@ -26,7 +26,7 @@ final class StorableLinkCard
         }
 
         return new LinkCardContent(
-            TrackingFreeUrl::of($card->url),
+            TrackingFreeUrl::stripTracking($card->url),
             mb_substr($card->title, 0, LinkCardContent::TITLE_MAX),
             self::description($card->description),
             self::fits((string) $card->imageUrl) ? HttpsImageUrl::orNull($card->imageUrl) : null,

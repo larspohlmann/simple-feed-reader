@@ -64,7 +64,7 @@ final readonly class HeadlineEquivalents
     public function wordsOf(string $text): array
     {
         return array_values(array_filter(
-            $this->collapsePhrases(CasefoldedWords::of($this->replaceExactWords($text))),
+            $this->collapsePhrases(CasefoldedWords::splitWords($this->replaceExactWords($text))),
             static fn (array $word): bool => HeadlineStems::isKept($word[1]),
         ));
     }

@@ -65,7 +65,7 @@ final class BlueskyPostLikerTest extends TestCase
             date_default_timezone_set($previous);
         }
 
-        $record = JsonNodeModel::of(json_decode($http->requests[1]['body'], true))->node('record');
+        $record = JsonNodeModel::fromValue(json_decode($http->requests[1]['body'], true))->node('record');
         self::assertSame('2026-10-13T06:30:00.007Z', $record->string('createdAt'));
     }
 

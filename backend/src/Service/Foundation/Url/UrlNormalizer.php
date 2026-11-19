@@ -29,7 +29,7 @@ final readonly class UrlNormalizer
     /** The address as a reader shares it: tracking parameters drop, a navigation fragment stays. */
     public function withoutTracking(?string $url): ?string
     {
-        return $url === null || self::absoluteParts($url) === null ? null : TrackingFreeUrl::of($url);
+        return $url === null || self::absoluteParts($url) === null ? null : TrackingFreeUrl::stripTracking($url);
     }
 
     /** Every writer of an article's identity hashes here: a divergence of one byte silently stops dedupe. */

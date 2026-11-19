@@ -28,7 +28,7 @@ final class HeadlineBody
 
     private static function textAfterTitle(string $title, ?string $summary): string
     {
-        $text = EntryPlainText::of($summary) ?? '';
+        $text = EntryPlainText::fromHtml($summary) ?? '';
         $head = trim(preg_replace(self::TRAILING_ELLIPSIS, '', $title) ?? $title);
         if ($head === '' || !str_starts_with($text, $head)) {
             return $text;

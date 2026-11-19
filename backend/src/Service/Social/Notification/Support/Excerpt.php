@@ -15,7 +15,7 @@ final class Excerpt
     {
         $trimmed = trim($text ?? '');
 
-        return $trimmed === '' ? null : ClippedText::ofScrubbed($trimmed, self::LENGTH);
+        return $trimmed === '' ? null : ClippedText::cutScrubbedText($trimmed, self::LENGTH);
     }
 
     public static function ofHtml(?string $html): ?string

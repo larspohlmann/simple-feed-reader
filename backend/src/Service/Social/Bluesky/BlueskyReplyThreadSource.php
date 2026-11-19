@@ -70,6 +70,6 @@ final readonly class BlueskyReplyThreadSource implements ReplyThreadSourceInterf
     private static function isMissingPost(ApiResponseModel $answer): bool
     {
         return Response::HTTP_BAD_REQUEST === $answer->status
-            && 'NotFound' === JsonNodeModel::of($answer->json())->string('error');
+            && 'NotFound' === JsonNodeModel::fromValue($answer->json())->string('error');
     }
 }

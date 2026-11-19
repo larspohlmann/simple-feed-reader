@@ -40,7 +40,7 @@ final class LemmyLanguageTagTest extends TestCase
     /** @return array<string, int> the language id of each code */
     private function idsByCode(): array
     {
-        $site = JsonNodeModel::of(json_decode($this->fixture(self::SITE_LANGUAGES), true));
+        $site = JsonNodeModel::fromValue(json_decode($this->fixture(self::SITE_LANGUAGES), true));
         $idsByCode = [];
         foreach ($site->nodes('all_languages') as $language) {
             $idsByCode[(string) $language->string('code')] = (int) $language->int('id');

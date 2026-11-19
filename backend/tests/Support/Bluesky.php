@@ -24,7 +24,7 @@ final class Bluesky
     public static function post(string $name): JsonNodeModel
     {
         $answer = json_decode(self::fixture($name), true, flags: \JSON_THROW_ON_ERROR);
-        $posts = JsonNodeModel::of($answer)->nodes('posts');
+        $posts = JsonNodeModel::fromValue($answer)->nodes('posts');
         Assert::assertCount(1, $posts);
 
         return $posts[0];

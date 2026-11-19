@@ -176,14 +176,14 @@ final class BlueskyTimelinePageTest extends TestCase
 
     public function testAnItemWithoutAPostUriIsSkipped(): void
     {
-        $item = JsonNodeModel::of(['post' => ['record' => ['text' => 'orphan']]]);
+        $item = JsonNodeModel::fromValue(['post' => ['record' => ['text' => 'orphan']]]);
 
         self::assertSame([], BlueskyTimelinePage::of([$item], self::ALICE)->parsed->entries);
     }
 
     public function testAnItemWhoseUriIsNoPostIsSkipped(): void
     {
-        $item = JsonNodeModel::of(['post' => ['uri' => 'at://did:plc:bob/app.bsky.feed.like/1']]);
+        $item = JsonNodeModel::fromValue(['post' => ['uri' => 'at://did:plc:bob/app.bsky.feed.like/1']]);
 
         self::assertSame([], BlueskyTimelinePage::of([$item], self::ALICE)->parsed->entries);
     }
@@ -296,7 +296,7 @@ final class BlueskyTimelinePageTest extends TestCase
      */
     private static function item(array $overrides = [], array $post = []): JsonNodeModel
     {
-        return JsonNodeModel::of($overrides + [
+        return JsonNodeModel::fromValue($overrides + [
             'post' => $post + [
                 'uri' => self::POST_URI,
                 'author' => ['did' => 'did:plc:bob', 'handle' => 'bob.bsky.social', 'displayName' => 'Bob',

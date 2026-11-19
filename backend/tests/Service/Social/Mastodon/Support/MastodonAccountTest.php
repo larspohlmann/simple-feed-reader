@@ -55,7 +55,7 @@ final class MastodonAccountTest extends TestCase
         string $feedUrl,
     ): void {
         $follow = MastodonAccount::follow(
-            JsonNodeModel::of(['acct' => $accountAddress, 'url' => $profileUrl]),
+            JsonNodeModel::fromValue(['acct' => $accountAddress, 'url' => $profileUrl]),
             'mastodon.example',
         );
 
@@ -64,13 +64,14 @@ final class MastodonAccountTest extends TestCase
 
     public function testALocalAccountTakesTheLowerCasedInstanceHost(): void
     {
-        $follow = MastodonAccount::follow(JsonNodeModel::of(['acct' => 'bob']), 'Mastodon.Example');
+        $follow = MastodonAccount::follow(JsonNodeModel::fromValue(['acct' => 'bob']), 'Mastodon.Example');
 
         self::assertSame('bob@mastodon.example', $follow?->identity);
     }
 
     public function testAnAnswerWithoutAnAccountAddressIsNoFollow(): void
     {
-        self::assertNull(MastodonAccount::follow(JsonNodeModel::of(['username' => 'nobody']), 'mastodon.example'));
+        $account = JsonNodeModel::fromValue(['username' => 'nobody']);
+        self::assertNull(MastodonAccount::follow($account, 'mastodon.example'));
     }
 }

@@ -37,7 +37,7 @@ final readonly class BlueskyThreadReplies
      */
     public function of(string $postAddress, string $answer): array
     {
-        $thread = JsonNodeModel::of(json_decode($answer, true))->node('thread');
+        $thread = JsonNodeModel::fromValue(json_decode($answer, true))->node('thread');
         if ($thread->type() !== self::THREAD_VIEW) {
             throw new CommentsUnavailableException('Bluesky answered without the post\'s thread.');
         }

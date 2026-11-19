@@ -13,7 +13,7 @@ final class EntryPlainText
 {
     private const array JUNK = ['none', 'null', 'undefined', 'nil', 'n/a', '-', '—'];
 
-    public static function of(?string $html): ?string
+    public static function fromHtml(?string $html): ?string
     {
         if ($html === null || $html === '') {
             return null;
@@ -32,7 +32,7 @@ final class EntryPlainText
     /** The plain text cut at a word boundary to at most $maxLength characters; '' when there is none. */
     public static function cut(?string $html, int $maxLength): string
     {
-        return WordBoundary::cut(self::of($html) ?? '', $maxLength);
+        return WordBoundary::cut(self::fromHtml($html) ?? '', $maxLength);
     }
 
     private function __construct()

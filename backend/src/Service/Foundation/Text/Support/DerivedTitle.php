@@ -29,7 +29,7 @@ final class DerivedTitle
 
     private static function holdsWords(string $line): bool
     {
-        return preg_match(self::WORDLESS_PATTERN, LinkFreeText::of($line)) !== 1;
+        return preg_match(self::WORDLESS_PATTERN, LinkFreeText::stripLinks($line)) !== 1;
     }
 
     private static function firstSentence(string $line): string

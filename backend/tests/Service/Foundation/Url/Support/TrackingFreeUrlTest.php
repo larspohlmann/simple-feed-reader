@@ -54,7 +54,10 @@ final class TrackingFreeUrlTest extends TestCase
     #[DataProvider('documentedKeys')]
     public function testEveryDocumentedKeyIsStripped(string $key): void
     {
-        self::assertSame('https://example.com/a', TrackingFreeUrl::of('https://example.com/a?' . $key . '=1'));
+        self::assertSame(
+            'https://example.com/a',
+            TrackingFreeUrl::stripTracking('https://example.com/a?' . $key . '=1'),
+        );
     }
 
     /** @return iterable<string, array{string}> */
@@ -81,7 +84,7 @@ final class TrackingFreeUrlTest extends TestCase
     #[DataProvider('contentUrls')]
     public function testKeysThatNameThePageStay(string $url): void
     {
-        self::assertSame($url, TrackingFreeUrl::of($url));
+        self::assertSame($url, TrackingFreeUrl::stripTracking($url));
     }
 
     /** @return iterable<string, array{string, string}> */
@@ -107,7 +110,7 @@ final class TrackingFreeUrlTest extends TestCase
     #[DataProvider('sharedOnTheirHost')]
     public function testShareKeysGoOnlyOnTheirHost(string $url, string $expected): void
     {
-        self::assertSame($expected, TrackingFreeUrl::of($url));
+        self::assertSame($expected, TrackingFreeUrl::stripTracking($url));
     }
 
     /** @return iterable<string, array{string}> */
@@ -126,7 +129,7 @@ final class TrackingFreeUrlTest extends TestCase
     {
         self::assertSame(
             'https://example.com/a?id=1',
-            TrackingFreeUrl::of('https://example.com/a?id=1&' . $key . '=x'),
+            TrackingFreeUrl::stripTracking('https://example.com/a?id=1&' . $key . '=x'),
         );
     }
 
@@ -145,7 +148,7 @@ final class TrackingFreeUrlTest extends TestCase
     #[DataProvider('hostScopedTrackers')]
     public function testAShortKeyGoesOnlyOnItsHost(string $url, string $expected): void
     {
-        self::assertSame($expected, TrackingFreeUrl::of($url));
+        self::assertSame($expected, TrackingFreeUrl::stripTracking($url));
     }
 
     /** @return iterable<string, array{string}> */
@@ -160,7 +163,7 @@ final class TrackingFreeUrlTest extends TestCase
     #[DataProvider('shortKeysOffTheirHost')]
     public function testAShortKeyStaysOffItsHost(string $url): void
     {
-        self::assertSame($url, TrackingFreeUrl::of($url));
+        self::assertSame($url, TrackingFreeUrl::stripTracking($url));
     }
 
     /** @return iterable<string, array{string, string}> */
@@ -175,7 +178,7 @@ final class TrackingFreeUrlTest extends TestCase
     #[DataProvider('feedMarkers')]
     public function testAFeedMarkerGoes(string $url, string $expected): void
     {
-        self::assertSame($expected, TrackingFreeUrl::of($url));
+        self::assertSame($expected, TrackingFreeUrl::stripTracking($url));
     }
 
     /** @return iterable<string, array{string}> */
@@ -192,14 +195,14 @@ final class TrackingFreeUrlTest extends TestCase
     #[DataProvider('keysWithAnotherValue')]
     public function testAKeyWithAnotherValueStays(string $url): void
     {
-        self::assertSame($url, TrackingFreeUrl::of($url));
+        self::assertSame($url, TrackingFreeUrl::stripTracking($url));
     }
 
     public function testOnlyTheVendorsExactKeyGoes(): void
     {
         self::assertSame(
             'https://www.bbc.com/news/a?at_bbc_team=x',
-            TrackingFreeUrl::of('https://www.bbc.com/news/a?at_medium=RSS&at_bbc_team=x'),
+            TrackingFreeUrl::stripTracking('https://www.bbc.com/news/a?at_medium=RSS&at_bbc_team=x'),
         );
     }
 
@@ -240,18 +243,18 @@ final class TrackingFreeUrlTest extends TestCase
     #[DataProvider('giftLinks')]
     public function testAGiftKeyIsNeverStripped(string $url, string $expected): void
     {
-        self::assertSame($expected, TrackingFreeUrl::of($url));
+        self::assertSame($expected, TrackingFreeUrl::stripTracking($url));
     }
 
     public function testKeptPairsKeepTheirOrderAndBytes(): void
     {
         self::assertSame(
             'https://example.com/a?b=2&a=%20&c',
-            TrackingFreeUrl::of('https://example.com/a?b=2&utm_source=x&a=%20&c'),
+            TrackingFreeUrl::stripTracking('https://example.com/a?b=2&utm_source=x&a=%20&c'),
         );
         self::assertSame(
             'https://example.com/a?id=1#top',
-            TrackingFreeUrl::of('https://example.com/a?id=1&utm_source=x#top'),
+            TrackingFreeUrl::stripTracking('https://example.com/a?id=1&utm_source=x#top'),
         );
     }
 
@@ -270,7 +273,7 @@ final class TrackingFreeUrlTest extends TestCase
     #[DataProvider('untrackedUrls')]
     public function testAUrlWithoutTrackingComesBackByteForByte(string $url): void
     {
-        self::assertSame($url, TrackingFreeUrl::of($url));
+        self::assertSame($url, TrackingFreeUrl::stripTracking($url));
     }
 
     /** @return iterable<string, array{string, string}> */
@@ -283,7 +286,7 @@ final class TrackingFreeUrlTest extends TestCase
     #[DataProvider('fullyTrackedQueries')]
     public function testTheQuestionMarkGoesWhenEveryPairGoes(string $url, string $expected): void
     {
-        self::assertSame($expected, TrackingFreeUrl::of($url));
+        self::assertSame($expected, TrackingFreeUrl::stripTracking($url));
     }
 
     /** @return iterable<string, array{string, string}> */
@@ -306,7 +309,7 @@ final class TrackingFreeUrlTest extends TestCase
     #[DataProvider('misEscapedUrls')]
     public function testAMisEscapedAmpersandStillHidesNoTracker(string $url, string $expected): void
     {
-        self::assertSame($expected, TrackingFreeUrl::of($url));
+        self::assertSame($expected, TrackingFreeUrl::stripTracking($url));
     }
 
     /** @return iterable<string, array{string}> */
@@ -320,7 +323,10 @@ final class TrackingFreeUrlTest extends TestCase
     #[DataProvider('trackingFragments')]
     public function testATrackingFragmentGoes(string $fragment): void
     {
-        self::assertSame('https://example.com/a?id=1', TrackingFreeUrl::of('https://example.com/a?id=1#' . $fragment));
+        self::assertSame(
+            'https://example.com/a?id=1',
+            TrackingFreeUrl::stripTracking('https://example.com/a?id=1#' . $fragment),
+        );
     }
 
     /** @return iterable<string, array{string}> */
@@ -340,7 +346,7 @@ final class TrackingFreeUrlTest extends TestCase
     {
         $url = 'https://example.com/a#' . $fragment;
 
-        self::assertSame($url, TrackingFreeUrl::of($url));
+        self::assertSame($url, TrackingFreeUrl::stripTracking($url));
     }
 
     /** @return iterable<string, array{string}> */
@@ -355,7 +361,7 @@ final class TrackingFreeUrlTest extends TestCase
     #[DataProvider('nonAbsoluteUrls')]
     public function testANonAbsoluteUrlComesBackUnchanged(string $url): void
     {
-        self::assertSame($url, TrackingFreeUrl::of($url));
+        self::assertSame($url, TrackingFreeUrl::stripTracking($url));
     }
 
     public function testNoUrlStaysNone(): void
@@ -466,9 +472,9 @@ final class TrackingFreeUrlTest extends TestCase
     public function testCleaningAgreesWithTheHashAndIsIdempotent(string $url): void
     {
         $normalizer = new UrlNormalizer();
-        $cleaned = TrackingFreeUrl::of($url);
+        $cleaned = TrackingFreeUrl::stripTracking($url);
 
         self::assertSame($normalizer->normalize($url), $normalizer->normalize($cleaned));
-        self::assertSame($cleaned, TrackingFreeUrl::of($cleaned));
+        self::assertSame($cleaned, TrackingFreeUrl::stripTracking($cleaned));
     }
 }

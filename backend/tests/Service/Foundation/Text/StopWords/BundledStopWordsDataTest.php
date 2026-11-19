@@ -22,13 +22,13 @@ final class BundledStopWordsDataTest extends TestCase
     #[DataProvider('languages')]
     public function testEveryLanguageHasWords(FeedLanguage $language): void
     {
-        $this->assertNotEmpty(self::bundled()->wordsOf($language));
+        $this->assertNotEmpty(self::bundled()->listWords($language));
     }
 
     #[DataProvider('languages')]
     public function testEveryWordIsCasefoldedLettersAndSorted(FeedLanguage $language): void
     {
-        $words = self::bundled()->wordsOf($language);
+        $words = self::bundled()->listWords($language);
         $sorted = array_values(array_unique($words));
         sort($sorted, \SORT_STRING);
 
@@ -41,19 +41,19 @@ final class BundledStopWordsDataTest extends TestCase
 
     public function testTheListsHoldTheirLanguagesFunctionWords(): void
     {
-        $this->assertContains('und', self::bundled()->wordsOf(FeedLanguage::German));
-        $this->assertContains('the', self::bundled()->wordsOf(FeedLanguage::English));
-        $this->assertContains('les', self::bundled()->wordsOf(FeedLanguage::French));
-        $this->assertContains('los', self::bundled()->wordsOf(FeedLanguage::Spanish));
+        $this->assertContains('und', self::bundled()->listWords(FeedLanguage::German));
+        $this->assertContains('the', self::bundled()->listWords(FeedLanguage::English));
+        $this->assertContains('les', self::bundled()->listWords(FeedLanguage::French));
+        $this->assertContains('los', self::bundled()->listWords(FeedLanguage::Spanish));
     }
 
     public function testTheFrenchAndSpanishListsHoldTheirClosedClassWords(): void
     {
         foreach (['après', 'contre', 'depuis', 'très'] as $word) {
-            $this->assertContains($word, self::bundled()->wordsOf(FeedLanguage::French));
+            $this->assertContains($word, self::bundled()->listWords(FeedLanguage::French));
         }
         foreach (['tras', 'según'] as $word) {
-            $this->assertContains($word, self::bundled()->wordsOf(FeedLanguage::Spanish));
+            $this->assertContains($word, self::bundled()->listWords(FeedLanguage::Spanish));
         }
     }
 

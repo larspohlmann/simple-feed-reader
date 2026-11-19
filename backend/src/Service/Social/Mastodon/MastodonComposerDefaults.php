@@ -94,9 +94,9 @@ final readonly class MastodonComposerDefaults implements ComposerDefaultsInterfa
         try {
             $answer = $this->mastodon->answer($this->accountApi->authorizedGet($account, $path));
         } catch (SocialNetworkUnreachableException | SocialCredentialsRejectedException) {
-            return JsonNodeModel::of([]);
+            return JsonNodeModel::fromValue([]);
         }
 
-        return JsonNodeModel::of($answer->isSuccessful() ? $answer->json() : []);
+        return JsonNodeModel::fromValue($answer->isSuccessful() ? $answer->json() : []);
     }
 }

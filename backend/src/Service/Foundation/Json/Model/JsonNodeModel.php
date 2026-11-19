@@ -12,7 +12,7 @@ final readonly class JsonNodeModel
     {
     }
 
-    public static function of(mixed $value): self
+    public static function fromValue(mixed $value): self
     {
         return new self(\is_array($value) ? $value : []);
     }
@@ -60,12 +60,12 @@ final readonly class JsonNodeModel
 
     public function node(string $key): self
     {
-        return self::of($this->fields[$key] ?? null);
+        return self::fromValue($this->fields[$key] ?? null);
     }
 
     public function first(string $key): self
     {
-        return $this->nodes($key)[0] ?? self::of(null);
+        return $this->nodes($key)[0] ?? self::fromValue(null);
     }
 
     /** @return list<self> */
@@ -77,12 +77,12 @@ final readonly class JsonNodeModel
     /** @return list<self>|null null when the field is no list */
     public function listAt(string $key): ?array
     {
-        return self::listOf($this->fields[$key] ?? null);
+        return self::parseNodes($this->fields[$key] ?? null);
     }
 
     /** @return list<self>|null null when the value is no list */
-    public static function listOf(mixed $value): ?array
+    public static function parseNodes(mixed $value): ?array
     {
-        return \is_array($value) && array_is_list($value) ? array_map(self::of(...), $value) : null;
+        return \is_array($value) && array_is_list($value) ? array_map(self::fromValue(...), $value) : null;
     }
 }

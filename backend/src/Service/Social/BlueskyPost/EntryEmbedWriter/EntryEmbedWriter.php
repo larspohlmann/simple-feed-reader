@@ -115,7 +115,7 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
         if ($uncarded === null) {
             return $shared;
         }
-        $cleaned = TrackingFreeUrl::of($uncarded);
+        $cleaned = TrackingFreeUrl::stripTracking($uncarded);
         if (\in_array($cleaned, $shared->urls, true)) {
             return $shared;
         }

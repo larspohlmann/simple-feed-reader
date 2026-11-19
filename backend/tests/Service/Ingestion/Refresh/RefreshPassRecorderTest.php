@@ -246,7 +246,7 @@ final class RefreshPassRecorderTest extends DbTestCase
 
     private static function page(): TimelinePageModel
     {
-        return MastodonTimelinePage::of([JsonNodeModel::of([
+        return MastodonTimelinePage::of([JsonNodeModel::fromValue([
             'id' => '109',
             'uri' => 'https://mastodon.example/users/bob/statuses/109',
             'url' => 'https://mastodon.example/@bob/109',

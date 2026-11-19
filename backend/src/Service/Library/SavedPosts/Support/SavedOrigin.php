@@ -26,7 +26,7 @@ final class SavedOrigin
 
         return new EntryAuthor(
             self::nameOf($leaving),
-            AbsoluteHttpUrl::orNull(FeedWebsite::of($feed->getUrl(), $feed->getSiteUrl())),
+            AbsoluteHttpUrl::orNull(FeedWebsite::resolveWebsite($feed->getUrl(), $feed->getSiteUrl())),
             $feed->getImageUrl(),
         );
     }

@@ -69,7 +69,7 @@ final readonly class MastodonCandidateSource implements CandidateSourceInterface
     {
         $answer = $this->mastodon->send($session->get($session->url(MastodonApiClient::VERIFY_CREDENTIALS)));
 
-        return JsonNodeModel::of($answer->json())->string('id')
+        return JsonNodeModel::fromValue($answer->json())->string('id')
             ?? throw new SocialNetworkUnreachableException('The Mastodon instance gave no account for this token.');
     }
 
@@ -152,7 +152,7 @@ final readonly class MastodonCandidateSource implements CandidateSourceInterface
     /** @return list<JsonNodeModel> */
     private static function nodesOf(ApiResponseModel $answer): array
     {
-        return JsonNodeModel::listOf(json_decode($answer->body, true))
+        return JsonNodeModel::parseNodes(json_decode($answer->body, true))
             ?? throw new SocialNetworkUnreachableException('The Mastodon instance answered without a list.');
     }
 }

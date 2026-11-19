@@ -193,14 +193,14 @@ final class PostEmbedRendererTest extends TestCase
 
     public function testAPostWithoutAnEmbedRendersNothing(): void
     {
-        $post = JsonNodeModel::of(['uri' => 'at://did:plc:a/app.bsky.feed.post/b']);
+        $post = JsonNodeModel::fromValue(['uri' => 'at://did:plc:a/app.bsky.feed.post/b']);
 
         self::assertNull($this->renderer()->render($post));
     }
 
     public function testAPostWhoseUriIsNoPostsRendersNothing(): void
     {
-        self::assertNull($this->renderer()->render(JsonNodeModel::of([
+        self::assertNull($this->renderer()->render(JsonNodeModel::fromValue([
             'uri' => 'at://did:plc:a/app.bsky.feed.repost/b',
             'embed' => ['$type' => 'app.bsky.embed.somethingNew#view'],
         ])));
@@ -572,7 +572,7 @@ final class PostEmbedRendererTest extends TestCase
     /** @param array<mixed> $embed */
     private static function post(array $embed): JsonNodeModel
     {
-        return JsonNodeModel::of(['uri' => 'at://did:plc:a/app.bsky.feed.post/b', 'embed' => $embed]);
+        return JsonNodeModel::fromValue(['uri' => 'at://did:plc:a/app.bsky.feed.post/b', 'embed' => $embed]);
     }
 
     private function renderer(): PostEmbedRenderer

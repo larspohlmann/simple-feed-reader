@@ -38,7 +38,7 @@ final class StubPageCardReader implements PageCardReaderInterface
         return new PageCardModel(
             new LinkCardContent($sharedUrl, 'Card for ' . $sharedUrl, null, null, 'example.com'),
             null,
-            new PageIdentityModel($sharedUrl, null, 'Card for ' . TrackingFreeUrl::of($sharedUrl)),
+            new PageIdentityModel($sharedUrl, null, 'Card for ' . TrackingFreeUrl::stripTracking($sharedUrl)),
         );
     }
 

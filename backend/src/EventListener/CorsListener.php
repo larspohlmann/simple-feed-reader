@@ -43,7 +43,7 @@ final readonly class CorsListener
         #[Autowire('%env(APP_FRONTEND_URL)%')] string $frontendUrl,
     ) {
         // An Origin header carries no path, so the raw APP_FRONTEND_URL would never match one with a trailing slash.
-        $this->allowedOrigin = UrlOrigin::of($frontendUrl);
+        $this->allowedOrigin = UrlOrigin::parseOrigin($frontendUrl);
     }
 
     /**

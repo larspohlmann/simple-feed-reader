@@ -42,11 +42,12 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
 
     public function fetch(SocialAccount $account): NotificationPageModel
     {
-        $ownId = JsonNodeModel::of($this->ask($account, MastodonApiClient::VERIFY_CREDENTIALS)->json())->string('id')
+        $credentials = JsonNodeModel::fromValue($this->ask($account, MastodonApiClient::VERIFY_CREDENTIALS)->json());
+        $ownId = $credentials->string('id')
             ?? throw new SocialNetworkUnreachableException('The Mastodon instance named no account id.');
         $markers = $this->ask($account, self::MARKERS . '?timeline[]=notifications');
-        $lastReadId = JsonNodeModel::of($markers->json())->node('notifications')->string('last_read_id');
-        $entries = JsonNodeModel::listOf($this->ask($account, self::LIST)->json()) ?? [];
+        $lastReadId = JsonNodeModel::fromValue($markers->json())->node('notifications')->string('last_read_id');
+        $entries = JsonNodeModel::parseNodes($this->ask($account, self::LIST)->json()) ?? [];
 
         $notifications = [];
         foreach ($entries as $entry) {
@@ -103,7 +104,7 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
             throw SocialNetworkUnreachableException::from($exception);
         }
 
-        return NetworkTimestamp::toUtc(JsonNodeModel::of($item->json())->string('created_at'));
+        return NetworkTimestamp::toUtc(JsonNodeModel::fromValue($item->json())->string('created_at'));
     }
 
     private static function fetched(

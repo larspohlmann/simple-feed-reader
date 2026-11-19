@@ -22,7 +22,7 @@ final class FeedWebsite
     /** A public name ends in letters, or in a punycode label. */
     private const string PUBLIC_TOP_LEVEL = '/^(xn--[a-z0-9-]+|[a-z]{2,})$/i';
 
-    public static function of(string $feedUrl, ?string $publishedLink): ?string
+    public static function resolveWebsite(string $feedUrl, ?string $publishedLink): ?string
     {
         return self::usablePublishedLink($feedUrl, $publishedLink) ?? self::siteOrigin($feedUrl);
     }
@@ -54,7 +54,7 @@ final class FeedWebsite
      */
     private static function siteOrigin(string $feedUrl): ?string
     {
-        $origin = UrlOrigin::of($feedUrl);
+        $origin = UrlOrigin::parseOrigin($feedUrl);
         if ($origin === null) {
             return null;
         }

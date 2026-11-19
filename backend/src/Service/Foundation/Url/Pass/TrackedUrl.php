@@ -53,13 +53,13 @@ final readonly class TrackedUrl
         private ?string $fragment,
         private array $hostKeys,
     ) {
-        $this->queryPairs = self::pairsOf($query);
-        $this->fragmentPairs = self::pairsOf($fragment);
+        $this->queryPairs = self::splitPairs($query);
+        $this->fragmentPairs = self::splitPairs($fragment);
     }
 
-    public static function of(string $url): self
+    public static function fromUrl(string $url): self
     {
-        $host = strpbrk($url, '?#') === false ? null : self::absoluteHostOf($url);
+        $host = strpbrk($url, '?#') === false ? null : self::parseAbsoluteHost($url);
         if ($host === null) {
             return new self($url, null, null, []);
         }
@@ -164,7 +164,7 @@ final readonly class TrackedUrl
             && isset(self::FEED_MARKERS[strtolower(rawurldecode($value))]);
     }
 
-    private static function absoluteHostOf(string $url): ?string
+    private static function parseAbsoluteHost(string $url): ?string
     {
         $parts = parse_url($url);
 
@@ -184,15 +184,15 @@ final readonly class TrackedUrl
     }
 
     /** @return list<array{pair: string, key: string}> */
-    private static function pairsOf(?string $part): array
+    private static function splitPairs(?string $part): array
     {
         return $part === null ? [] : array_map(
-            static fn (string $pair): array => ['pair' => $pair, 'key' => self::keyOf($pair)],
+            static fn (string $pair): array => ['pair' => $pair, 'key' => self::extractKey($pair)],
             explode('&', $part),
         );
     }
 
-    private static function keyOf(string $pair): string
+    private static function extractKey(string $pair): string
     {
         $key = strtolower(rawurldecode(explode('=', $pair)[0]));
 

@@ -27,6 +27,6 @@ final readonly class SharedLinksModel
      */
     public function uncardedBy(array $cardedUrls): array
     {
-        return array_values(array_diff($this->urls, array_map(TrackingFreeUrl::of(...), $cardedUrls)));
+        return array_values(array_diff($this->urls, array_map(TrackingFreeUrl::stripTracking(...), $cardedUrls)));
     }
 }

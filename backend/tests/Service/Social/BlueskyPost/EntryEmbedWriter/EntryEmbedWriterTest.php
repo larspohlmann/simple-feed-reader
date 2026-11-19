@@ -76,7 +76,7 @@ final class EntryEmbedWriterTest extends DbTestCase
     public function testAPostWhoseFacetsLinkNoWebPageKeepsTheRssBodyAndItsLink(): void
     {
         $entry = $this->entry('<p>Read https://example.com/a</p>');
-        $post = JsonNodeModel::of([
+        $post = JsonNodeModel::fromValue([
             'uri' => 'at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3mxjuesq6v62t',
             'record' => [
                 'text' => 'Read @bob',
@@ -181,7 +181,7 @@ final class EntryEmbedWriterTest extends DbTestCase
     {
         $entry = $this->entry('<p>Scores tonight.<br />http://spr.ly/6018AbCdE</p>');
 
-        $this->writer()->fill($entry, JsonNodeModel::of([
+        $this->writer()->fill($entry, JsonNodeModel::fromValue([
             'uri' => 'at://did:plc:a/app.bsky.feed.post/b',
             'embed' => [
                 '$type' => 'app.bsky.embed.external#view',
@@ -203,7 +203,7 @@ final class EntryEmbedWriterTest extends DbTestCase
         $tracked = 'https://example.com/story?utm_source=bsky';
         $entry = $this->entry('<p>Read this.<br />' . $tracked . '</p>');
 
-        $outcome = $this->writer()->fill($entry, JsonNodeModel::of([
+        $outcome = $this->writer()->fill($entry, JsonNodeModel::fromValue([
             'uri' => 'at://did:plc:a/app.bsky.feed.post/b',
             'embed' => [
                 '$type' => 'app.bsky.embed.external#view',
@@ -225,7 +225,7 @@ final class EntryEmbedWriterTest extends DbTestCase
         $tracked = 'https://example.com/story?utm_source=bsky';
         $entry = $this->entry('<p>Read this.<br />' . $tracked . '</p>');
 
-        $this->writer()->fill($entry, JsonNodeModel::of([
+        $this->writer()->fill($entry, JsonNodeModel::fromValue([
             'uri' => 'at://did:plc:a/app.bsky.feed.post/b',
             'embed' => ['$type' => 'app.bsky.embed.external#view', 'external' => ['uri' => $tracked]],
         ]));
@@ -370,7 +370,7 @@ final class EntryEmbedWriterTest extends DbTestCase
 
         self::assertSame(
             FillOutcome::Unfilled,
-            $this->writer()->fill($entry, JsonNodeModel::of(['uri' => 'at://did:plc:a/app.bsky.feed.post/b'])),
+            $this->writer()->fill($entry, JsonNodeModel::fromValue(['uri' => 'at://did:plc:a/app.bsky.feed.post/b'])),
         );
 
         self::assertSame('<p>Plain.</p>', $entry->getText()->getContentHtml());
@@ -412,7 +412,7 @@ final class EntryEmbedWriterTest extends DbTestCase
         $gif = 'https://static.klipy.com/ii/a15b48460c436e1e92c85ffc680932cc/dc/32/MN2h0I1i.gif?hh=237&ww=316';
         $entry = $this->entry('<p>Bravo.</p>');
 
-        $this->writer()->fill($entry, JsonNodeModel::of([
+        $this->writer()->fill($entry, JsonNodeModel::fromValue([
             'uri' => 'at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3mxjuesq6v62t',
             'embed' => [
                 '$type' => 'app.bsky.embed.external#view',
@@ -451,14 +451,14 @@ final class EntryEmbedWriterTest extends DbTestCase
 
     private static function untitledLinkPost(): JsonNodeModel
     {
-        return JsonNodeModel::of(Bluesky::untitledLinkView('at://did:plc:a/app.bsky.feed.post/b'));
+        return JsonNodeModel::fromValue(Bluesky::untitledLinkView('at://did:plc:a/app.bsky.feed.post/b'));
     }
 
     private static function postWithLinkFacet(string $uri): JsonNodeModel
     {
         $text = 'v0.69.0 github.com/webx-ui/mod…';
 
-        return JsonNodeModel::of([
+        return JsonNodeModel::fromValue([
             'uri' => 'at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3mxjuesq6v62t',
             'record' => [
                 'text' => $text,
@@ -472,7 +472,9 @@ final class EntryEmbedWriterTest extends DbTestCase
 
     private static function postWithoutEmbed(): JsonNodeModel
     {
-        return JsonNodeModel::of(['uri' => 'at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3mxjuesq6v62t']);
+        return JsonNodeModel::fromValue(
+            ['uri' => 'at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3mxjuesq6v62t'],
+        );
     }
 
     private function entry(?string $contentHtml): Entry

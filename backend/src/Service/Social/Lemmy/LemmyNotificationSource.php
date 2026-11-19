@@ -43,8 +43,8 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
 
     public function fetch(SocialAccount $account): NotificationPageModel
     {
-        $replies = JsonNodeModel::of($this->ask($account, self::REPLIES)->json())->nodes('replies');
-        $mentions = JsonNodeModel::of($this->ask($account, self::MENTIONS)->json())->nodes('mentions');
+        $replies = JsonNodeModel::fromValue($this->ask($account, self::REPLIES)->json())->nodes('replies');
+        $mentions = JsonNodeModel::fromValue($this->ask($account, self::MENTIONS)->json())->nodes('mentions');
         $notifications = [];
         foreach ($replies as $entry) {
             $notifications[] = $this->fetched($account, $entry, 'comment_reply', SocialNotificationKind::Reply);
@@ -124,7 +124,7 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
 
     private function excerptOf(?string $markdown): ?string
     {
-        return $markdown === null ? null : Excerpt::ofHtml($this->markdown->of($markdown));
+        return $markdown === null ? null : Excerpt::ofHtml($this->markdown->toHtml($markdown));
     }
 
     private static function remoteIdOf(SocialNotificationKind $kind, int $itemId): string

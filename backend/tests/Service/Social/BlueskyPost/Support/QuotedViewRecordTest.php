@@ -233,7 +233,7 @@ final class QuotedViewRecordTest extends TestCase
     #[DataProvider('unavailable')]
     public function testAnUnavailableQuoteIsNone(array $record): void
     {
-        self::assertNull(QuotedViewRecord::of(JsonNodeModel::of($record)));
+        self::assertNull(QuotedViewRecord::of(JsonNodeModel::fromValue($record)));
     }
 
     /**
@@ -243,7 +243,7 @@ final class QuotedViewRecordTest extends TestCase
      */
     private static function viewRecord(array $value = [], ?array $embed = null, array $author = []): JsonNodeModel
     {
-        return JsonNodeModel::of(self::viewRecordArray(value: $value, embed: $embed, author: $author ?: null));
+        return JsonNodeModel::fromValue(self::viewRecordArray(value: $value, embed: $embed, author: $author ?: null));
     }
 
     /**

@@ -23,7 +23,7 @@ final readonly class SocialEntryLanguage
 
     public function of(ParsedEntryModel $entry): ?FeedLanguage
     {
-        $body = EntryPlainText::of($entry->summary ?? $entry->contentHtml) ?? '';
+        $body = EntryPlainText::fromHtml($entry->summary ?? $entry->contentHtml) ?? '';
         if (null === $entry->statedLanguage) {
             return $this->guess($entry, $body);
         }

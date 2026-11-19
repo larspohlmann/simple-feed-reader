@@ -71,6 +71,6 @@ final readonly class PhraseMarkers
 
     private static function shortened(string $text): string
     {
-        return ClippedText::of($text, 120);
+        return ClippedText::cutText($text, 120);
     }
 }

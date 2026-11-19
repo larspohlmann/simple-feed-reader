@@ -95,7 +95,7 @@ final class StopWordVoteTest extends TestCase
     public function testTheVoteReadsTheInjectedLists(): void
     {
         $stopWords = new class implements StopWordsInterface {
-            public function wordsOf(FeedLanguage $language): array
+            public function listWords(FeedLanguage $language): array
             {
                 return FeedLanguage::German === $language ? ['zz'] : ['yy'];
             }

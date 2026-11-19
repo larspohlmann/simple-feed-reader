@@ -18,7 +18,7 @@ final class MastodonPostCountsTest extends TestCase
     {
         self::assertEquals(
             new SocialCountsModel(5, 2, 1, null),
-            MastodonPostCounts::parseStatus(JsonNodeModel::of(self::MASTODON_STATUS)),
+            MastodonPostCounts::parseStatus(JsonNodeModel::fromValue(self::MASTODON_STATUS)),
         );
     }
 
@@ -26,7 +26,7 @@ final class MastodonPostCountsTest extends TestCase
     {
         self::assertEquals(
             new SocialCountsModel(5, 2, 1, 3),
-            MastodonPostCounts::parseStatus(JsonNodeModel::of([...self::MASTODON_STATUS, 'quotes_count' => 3])),
+            MastodonPostCounts::parseStatus(JsonNodeModel::fromValue([...self::MASTODON_STATUS, 'quotes_count' => 3])),
         );
     }
 
@@ -36,7 +36,7 @@ final class MastodonPostCountsTest extends TestCase
         $status = self::MASTODON_STATUS;
         unset($status[$count]);
 
-        self::assertNull(MastodonPostCounts::parseStatus(JsonNodeModel::of($status)));
+        self::assertNull(MastodonPostCounts::parseStatus(JsonNodeModel::fromValue($status)));
     }
 
     /** @return iterable<string, array{string}> */

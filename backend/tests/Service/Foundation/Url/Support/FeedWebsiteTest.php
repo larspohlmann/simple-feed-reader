@@ -116,6 +116,6 @@ final class FeedWebsiteTest extends TestCase
         ?string $publishedLink,
         ?string $expected,
     ): void {
-        self::assertSame($expected, FeedWebsite::of($feedUrl, $publishedLink));
+        self::assertSame($expected, FeedWebsite::resolveWebsite($feedUrl, $publishedLink));
     }
 }

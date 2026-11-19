@@ -24,7 +24,7 @@ final class MastodonAuthorTest extends TestCase
     #[DataProvider('names')]
     public function testTheNameFallsBackToTheAccountAddress(array $account, ?string $name): void
     {
-        self::assertSame($name, MastodonAuthor::name(JsonNodeModel::of($account)));
+        self::assertSame($name, MastodonAuthor::name(JsonNodeModel::fromValue($account)));
     }
 
     /** @return iterable<string, array{array<string, string>, ?string}> */
@@ -43,19 +43,19 @@ final class MastodonAuthorTest extends TestCase
     #[DataProvider('handles')]
     public function testTheHandleIsCompletedWithTheProfileHostWhenLocal(array $account, ?string $handle): void
     {
-        self::assertSame($handle, MastodonAuthor::handle(JsonNodeModel::of($account)));
+        self::assertSame($handle, MastodonAuthor::handle(JsonNodeModel::fromValue($account)));
     }
 
     public function testTheMentionIsTheHandleAfterAnAt(): void
     {
-        $account = JsonNodeModel::of(['acct' => 'ann', 'url' => 'https://hachyderm.io/@ann']);
+        $account = JsonNodeModel::fromValue(['acct' => 'ann', 'url' => 'https://hachyderm.io/@ann']);
 
         self::assertSame('@ann@hachyderm.io', MastodonAuthor::mention($account));
     }
 
     public function testAnAccountWithoutAHandleHasNoMention(): void
     {
-        self::assertNull(MastodonAuthor::mention(JsonNodeModel::of(['url' => 'https://hachyderm.io/@ann'])));
+        self::assertNull(MastodonAuthor::mention(JsonNodeModel::fromValue(['url' => 'https://hachyderm.io/@ann'])));
     }
 
     /** @return iterable<string, array{array<string, string>, ?string}> */
@@ -73,20 +73,20 @@ final class MastodonAuthorTest extends TestCase
     #[DataProvider('avatars')]
     public function testTheAvatarPrefersTheStaticImage(array $account, ?string $avatar): void
     {
-        self::assertSame($avatar, MastodonAuthor::avatar(JsonNodeModel::of($account)));
+        self::assertSame($avatar, MastodonAuthor::avatar(JsonNodeModel::fromValue($account)));
     }
 
     public function testTheProfileIsAnAbsoluteHttpUrlOnly(): void
     {
-        $profile = MastodonAuthor::profile(JsonNodeModel::of(['url' => 'https://h.test/@ann']));
+        $profile = MastodonAuthor::profile(JsonNodeModel::fromValue(['url' => 'https://h.test/@ann']));
 
         self::assertSame('https://h.test/@ann', $profile);
-        self::assertNull(MastodonAuthor::profile(JsonNodeModel::of(['url' => '/@ann'])));
+        self::assertNull(MastodonAuthor::profile(JsonNodeModel::fromValue(['url' => '/@ann'])));
     }
 
     public function testAProfileUrlNamesTheSameIdentityAsTheAccountItShows(): void
     {
-        $account = JsonNodeModel::of(['acct' => 'ZOË', 'url' => 'https://Mastodon.Example/@ZOË']);
+        $account = JsonNodeModel::fromValue(['acct' => 'ZOË', 'url' => 'https://Mastodon.Example/@ZOË']);
 
         self::assertSame('zoë@mastodon.example', MastodonAuthor::identity($account));
         self::assertSame(

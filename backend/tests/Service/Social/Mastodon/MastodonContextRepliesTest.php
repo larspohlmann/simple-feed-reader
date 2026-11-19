@@ -37,7 +37,7 @@ final class MastodonContextRepliesTest extends TestCase
 
     public function testASelfReplyRendersLikeItsThreadComment(): void
     {
-        $descendants = JsonNodeModel::of(json_decode($this->fixture(self::CONTEXT), true))->nodes('descendants');
+        $descendants = JsonNodeModel::fromValue(json_decode($this->fixture(self::CONTEXT), true))->nodes('descendants');
         $status = array_values(array_filter(
             $descendants,
             static fn (JsonNodeModel $candidate): bool => $candidate->string('id') === '201',

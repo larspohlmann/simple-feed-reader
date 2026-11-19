@@ -70,7 +70,7 @@ final readonly class LemmyCommunities
             'page' => $page,
         ]));
 
-        return JsonNodeModel::of($answer->json())->listAt('communities')
+        return JsonNodeModel::fromValue($answer->json())->listAt('communities')
             ?? throw new SocialNetworkUnreachableException('The Lemmy instance answered without communities.');
     }
 }

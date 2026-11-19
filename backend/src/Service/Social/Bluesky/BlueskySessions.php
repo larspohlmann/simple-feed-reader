@@ -139,7 +139,7 @@ final readonly class BlueskySessions
     public static function isStaleSession(ApiResponseModel $answer): bool
     {
         return \in_array($answer->status, self::STALE_SESSION_STATUSES, true)
-            && \in_array(JsonNodeModel::of($answer->json())->string('error'), self::STALE_SESSION_ERRORS, true);
+            && \in_array(JsonNodeModel::fromValue($answer->json())->string('error'), self::STALE_SESSION_ERRORS, true);
     }
 
     private function sendRetryingStale(SocialAccount $account, ApiRequestModel $request): ApiResponseModel

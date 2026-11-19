@@ -16,7 +16,7 @@ final class BlueskyProfileLabelsTest extends TestCase
     #[DataProvider('profiles')]
     public function testOnlyTheProfilesOwnLabelHidesIt(array $profile, bool $hidden): void
     {
-        self::assertSame($hidden, BlueskyProfileLabels::hidesFromLoggedOut(JsonNodeModel::of($profile)));
+        self::assertSame($hidden, BlueskyProfileLabels::hidesFromLoggedOut(JsonNodeModel::fromValue($profile)));
     }
 
     /** @return iterable<string, array{array<string, mixed>, bool}> */

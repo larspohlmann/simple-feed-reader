@@ -64,7 +64,7 @@ final class HeadlineFillerTest extends TestCase
     public function testEveryStopWordIsASeedThroughItsLanguagesStemmer(FeedLanguage $language): void
     {
         $stemmer = TrendingWiring::stemmer();
-        $words = LanguageWiring::stopWords()->wordsOf($language);
+        $words = LanguageWiring::stopWords()->listWords($language);
 
         self::assertNotEmpty($words);
         foreach ($words as $word) {
@@ -76,7 +76,7 @@ final class HeadlineFillerTest extends TestCase
     public function testEveryKeptStopWordsCutIsASeedWithoutALanguage(FeedLanguage $language): void
     {
         $keptWords = array_filter(
-            LanguageWiring::stopWords()->wordsOf($language),
+            LanguageWiring::stopWords()->listWords($language),
             static fn (string $word): bool => HeadlineStems::isKept(HeadlineStems::bare($word)),
         );
 

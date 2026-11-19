@@ -60,6 +60,6 @@ final readonly class BlueskyHomeServerCheck implements HomeServerCheckInterface
         $answer = $this->bluesky->answer(ApiRequestModel::get($identity->pdsUrl . self::GET_RECORD . $query));
 
         return Response::HTTP_BAD_REQUEST === $answer->status
-            && self::RECORD_NOT_FOUND === JsonNodeModel::of($answer->json())->string('error');
+            && self::RECORD_NOT_FOUND === JsonNodeModel::fromValue($answer->json())->string('error');
     }
 }

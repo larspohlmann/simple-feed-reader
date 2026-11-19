@@ -526,7 +526,7 @@ final class MastodonTimelinePageTest extends TestCase
     /** @param array<string, mixed> $overrides */
     private static function timelineStatus(array $overrides = []): JsonNodeModel
     {
-        return JsonNodeModel::of(self::statusFields($overrides));
+        return JsonNodeModel::fromValue(self::statusFields($overrides));
     }
 
     /**

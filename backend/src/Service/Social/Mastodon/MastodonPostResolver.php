@@ -36,7 +36,7 @@ final readonly class MastodonPostResolver implements PostResolverInterface
     public function resolve(SocialAccount $account, string $address): SocialPostModel
     {
         $search = sprintf(self::SEARCH, rawurlencode($address));
-        $status = JsonNodeModel::of($this->mastodon->askAboutPost($account, $search)->json())->first('statuses');
+        $status = JsonNodeModel::fromValue($this->mastodon->askAboutPost($account, $search)->json())->first('statuses');
         $statusId = $status->string('id')
             ?? throw new SocialPostNotFoundException('The post is no longer on Mastodon.');
         if (1 !== preg_match(self::STATUS_ID, $statusId)) {

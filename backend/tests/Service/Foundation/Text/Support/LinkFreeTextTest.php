@@ -11,17 +11,20 @@ final class LinkFreeTextTest extends TestCase
 {
     public function testAWebLinkIsRemoved(): void
     {
-        self::assertSame('Read  now', LinkFreeText::of('Read https://example.com/the-day?a=1 now'));
-        self::assertSame('Read ', LinkFreeText::of('Read http://example.com'));
+        self::assertSame('Read  now', LinkFreeText::stripLinks('Read https://example.com/the-day?a=1 now'));
+        self::assertSame('Read ', LinkFreeText::stripLinks('Read http://example.com'));
     }
 
     public function testTextWithoutALinkStaysAsItIs(): void
     {
-        self::assertSame('example.com/news and ftp://host', LinkFreeText::of('example.com/news and ftp://host'));
+        self::assertSame(
+            'example.com/news and ftp://host',
+            LinkFreeText::stripLinks('example.com/news and ftp://host'),
+        );
     }
 
     public function testASchemeInsideAWordIsNoLink(): void
     {
-        self::assertSame('xhttps://example.com', LinkFreeText::of('xhttps://example.com'));
+        self::assertSame('xhttps://example.com', LinkFreeText::stripLinks('xhttps://example.com'));
     }
 }

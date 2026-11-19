@@ -36,7 +36,7 @@ final readonly class MastodonVerifier implements NetworkVerifierInterface
         $session = new MastodonSessionModel($credentials->address, $credentials->secret);
         $answer = $this->mastodon->send($session->get($session->url(MastodonApiClient::VERIFY_CREDENTIALS)));
 
-        $username = JsonNodeModel::of($answer->json())->string('username')
+        $username = JsonNodeModel::fromValue($answer->json())->string('username')
             ?? throw new SocialNetworkUnreachableException('The Mastodon instance gave no account for this token.');
         $host = $session->host();
 

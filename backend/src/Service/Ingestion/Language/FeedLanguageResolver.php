@@ -34,7 +34,7 @@ final readonly class FeedLanguageResolver
         $passages = [];
         foreach ($parsed->entries as $entry) {
             $passages[] = $entry->headline->text;
-            $passages[] = EntryPlainText::of($entry->summary) ?? '';
+            $passages[] = EntryPlainText::fromHtml($entry->summary) ?? '';
         }
 
         return mb_substr(implode("\n", $passages), 0, self::TEXT_LIMIT);

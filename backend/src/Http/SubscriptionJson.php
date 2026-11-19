@@ -159,7 +159,7 @@ final class SubscriptionJson
 
     private static function siteUrl(Feed $feed): ?string
     {
-        return FeedWebsite::of($feed->getUrl(), $feed->getSiteUrl());
+        return FeedWebsite::resolveWebsite($feed->getUrl(), $feed->getSiteUrl());
     }
 
     /**
