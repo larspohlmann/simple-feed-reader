@@ -22,24 +22,24 @@ final class ConnectedAccountStatesTest extends DbTestCase
     {
         $entry = $this->lemmyPostIn(LemmyProfileFeed::buildUrl('technology', 'lemmy.world'));
 
-        self::assertNull($this->communityOf($entry));
+        self::assertNull($this->findCommunity($entry));
     }
 
     public function testTheOwnCommunityFeedMatchesWhateverCaseTheFeedUrlHas(): void
     {
         $entry = $this->lemmyPostIn(LemmyProfileFeed::buildUrl('Technology', 'lemmy.world'));
 
-        self::assertNull($this->communityOf($entry));
+        self::assertNull($this->findCommunity($entry));
     }
 
     public function testAPostInAnotherFeedCarriesItsCommunity(): void
     {
         $entry = $this->lemmyPostIn('https://example.com/feed.xml');
 
-        self::assertSame('technology@lemmy.world', $this->communityOf($entry)?->identity);
+        self::assertSame('technology@lemmy.world', $this->findCommunity($entry)?->identity);
     }
 
-    private function communityOf(Entry $entry): ?PostCommunity
+    private function findCommunity(Entry $entry): ?PostCommunity
     {
         $states = self::getContainer()->get(ConnectedAccountStates::class);
         self::assertInstanceOf(ConnectedAccountStates::class, $states);
