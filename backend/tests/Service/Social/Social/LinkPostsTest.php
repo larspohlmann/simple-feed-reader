@@ -225,7 +225,7 @@ final class LinkPostsTest extends DbTestCase
 
         self::assertSame('', $plain->text);
         self::assertSame('“foo”', $quoting->text);
-        self::assertSame('A story', $quoting->defaults->lemmyLink?->title);
+        self::assertSame('A story', $quoting->defaults->linkPost?->title);
     }
 
     public function testTheSharedAddressKeepsTheTextFragmentThatPointsAtTheQuote(): void

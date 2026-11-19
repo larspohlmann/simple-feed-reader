@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Social;
 
 use App\Service\Social\Social\LemmyCommunities;
-use App\Service\Social\Social\Model\LemmyCommunityModel;
+use App\Service\Social\Social\Model\CommunityModel;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;
@@ -40,7 +40,7 @@ final class LemmyCommunitiesTest extends TestCase
     /**
      * @param array<string, MockResponse> $routes
      *
-     * @return list<LemmyCommunityModel>
+     * @return list<CommunityModel>
      */
     private static function postable(array $routes): array
     {
@@ -58,7 +58,7 @@ final class LemmyCommunitiesTest extends TestCase
         ])]);
 
         self::assertEquals(
-            [new LemmyCommunityModel(7, '!rss@lemmy.world'), new LemmyCommunityModel(3, '!selfhosted@lemmy.world')],
+            [new CommunityModel(7, '!rss@lemmy.world'), new CommunityModel(3, '!selfhosted@lemmy.world')],
             $postable,
         );
     }
@@ -73,7 +73,7 @@ final class LemmyCommunitiesTest extends TestCase
             self::view(5, 'plain', ['actor_id' => 'http://lemmy.world/c/plain']),
         ])]);
 
-        self::assertEquals([new LemmyCommunityModel(4, '!open@lemmy.world')], $postable);
+        self::assertEquals([new CommunityModel(4, '!open@lemmy.world')], $postable);
     }
 
     public function testPostableReadsEveryPage(): void

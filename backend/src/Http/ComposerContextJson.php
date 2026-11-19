@@ -7,8 +7,8 @@ namespace App\Http;
 use App\Entity\LinkCardContent;
 use App\Entity\SocialAccount;
 use App\Service\Social\Social\Model\ComposerContextModel;
-use App\Service\Social\Social\Model\LemmyCommunityModel;
-use App\Service\Social\Social\Model\LemmyLinkModel;
+use App\Service\Social\Social\Model\CommunityModel;
+use App\Service\Social\Social\Model\LinkPostChoicesModel;
 use App\Service\Social\Social\Model\PostPreviewModel;
 
 /**
@@ -17,7 +17,7 @@ use App\Service\Social\Social\Model\PostPreviewModel;
  * @phpstan-type PostTargetRow array{
  *     kind: 'post', authorName: string|null, authorHandle: string|null, excerpt: string, card: LinkCardFields|null
  * }
- * @phpstan-type LemmyRow array{
+ * @phpstan-type LinkPostRow array{
  *     communities: list<array{id: int, handle: string}>, title: string,
  *     minTitleCharacters: int, maxTitleCharacters: int
  * }
@@ -32,7 +32,7 @@ final class ComposerContextJson
      *     canSend: bool,
      *     maxCharacters: int,
      *     visibility: string|null,
-     *     lemmy: LemmyRow|null,
+     *     lemmy: LinkPostRow|null,
      *     kind: 'reply'|'quote'|'link',
      *     text: string,
      *     target: PostTargetRow|LinkTargetRow,
@@ -52,7 +52,7 @@ final class ComposerContextJson
             'canSend' => $context->canSend,
             'maxCharacters' => $context->defaults->maxCharacters,
             'visibility' => $context->defaults->visibility,
-            'lemmy' => null === $context->defaults->lemmyLink ? null : self::lemmyOf($context->defaults->lemmyLink),
+            'lemmy' => null === $context->defaults->linkPost ? null : self::lemmyOf($context->defaults->linkPost),
             'kind' => $context->kind->value,
             'text' => $context->text,
             'target' => $context->target instanceof PostPreviewModel
@@ -61,20 +61,20 @@ final class ComposerContextJson
         ];
     }
 
-    /** @return LemmyRow */
-    private static function lemmyOf(LemmyLinkModel $link): array
+    /** @return LinkPostRow */
+    private static function lemmyOf(LinkPostChoicesModel $link): array
     {
         return [
             'communities' => array_map(
-                static fn (LemmyCommunityModel $community): array => [
+                static fn (CommunityModel $community): array => [
                     'id' => $community->id,
                     'handle' => $community->handle,
                 ],
                 $link->communities,
             ),
             'title' => $link->title,
-            'minTitleCharacters' => LemmyLinkModel::MIN_TITLE_CHARACTERS,
-            'maxTitleCharacters' => LemmyLinkModel::MAX_TITLE_CHARACTERS,
+            'minTitleCharacters' => LinkPostChoicesModel::MIN_TITLE_CHARACTERS,
+            'maxTitleCharacters' => LinkPostChoicesModel::MAX_TITLE_CHARACTERS,
         ];
     }
 

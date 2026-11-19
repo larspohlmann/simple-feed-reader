@@ -66,7 +66,7 @@ final readonly class ComposerContexts
 
     private function startingTextOf(SharedLinkModel $link, ComposerDefaultsModel $defaults): string
     {
-        if (null !== $defaults->lemmyLink) {
+        if (null !== $defaults->linkPost) {
             return ComposerStartingText::quoting($link->quote, $defaults->maxCharacters);
         }
 

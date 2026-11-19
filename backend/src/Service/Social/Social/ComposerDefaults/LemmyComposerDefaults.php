@@ -9,7 +9,7 @@ use App\Enum\SocialNetwork;
 use App\Service\Foundation\Text\Support\WordBoundary;
 use App\Service\Social\Social\LemmyCommunities;
 use App\Service\Social\Social\Model\ComposerDefaultsModel;
-use App\Service\Social\Social\Model\LemmyLinkModel;
+use App\Service\Social\Social\Model\LinkPostChoicesModel;
 use App\Service\Social\Social\Model\SharedLinkModel;
 use App\Service\Social\Social\Model\SocialPostModel;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
@@ -37,9 +37,9 @@ final readonly class LemmyComposerDefaults implements ComposerDefaultsInterface
     {
         return new ComposerDefaultsModel(
             self::MAX_CHARACTERS,
-            lemmyLink: new LemmyLinkModel(
+            linkPost: new LinkPostChoicesModel(
                 $this->communities->postable($account),
-                WordBoundary::clipped($link->title, LemmyLinkModel::MAX_TITLE_CHARACTERS),
+                WordBoundary::clipped($link->title, LinkPostChoicesModel::MAX_TITLE_CHARACTERS),
             ),
         );
     }

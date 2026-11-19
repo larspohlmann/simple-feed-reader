@@ -7,8 +7,8 @@ namespace App\Tests\Service\Social\Social\ComposerDefaults;
 use App\Service\Social\Social\ComposerDefaults\LemmyComposerDefaults;
 use App\Service\Social\Social\LemmyCommunities;
 use App\Service\Social\Social\Model\ComposerDefaultsModel;
-use App\Service\Social\Social\Model\LemmyCommunityModel;
-use App\Service\Social\Social\Model\LemmyLinkModel;
+use App\Service\Social\Social\Model\CommunityModel;
+use App\Service\Social\Social\Model\LinkPostChoicesModel;
 use App\Service\Social\Social\Model\SharedLinkModel;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
@@ -52,7 +52,7 @@ final class LemmyComposerDefaultsTest extends TestCase
         self::assertEquals(
             new ComposerDefaultsModel(
                 LemmyComposerDefaults::MAX_CHARACTERS,
-                lemmyLink: new LemmyLinkModel([new LemmyCommunityModel(7, '!rss@lemmy.world')], 'The article'),
+                linkPost: new LinkPostChoicesModel([new CommunityModel(7, '!rss@lemmy.world')], 'The article'),
             ),
             $defaults,
         );
@@ -65,10 +65,10 @@ final class LemmyComposerDefaultsTest extends TestCase
         $link = self::defaults()->forLinkFrom(
             SocialAccounts::lemmyOf(SocialAccounts::owner()),
             new SharedLinkModel(self::ARTICLE, $title),
-        )->lemmyLink;
+        )->linkPost;
 
         self::assertNotNull($link);
-        self::assertLessThanOrEqual(LemmyLinkModel::MAX_TITLE_CHARACTERS, mb_strlen($link->title));
+        self::assertLessThanOrEqual(LinkPostChoicesModel::MAX_TITLE_CHARACTERS, mb_strlen($link->title));
         self::assertMatchesRegularExpression('/^(wordy )+wordy…$/u', $link->title);
     }
 }

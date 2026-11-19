@@ -16,7 +16,7 @@ use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Exception\SocialPostTitleTooShortException;
 use App\Service\Social\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Social\LemmyAccountApi;
-use App\Service\Social\Social\Model\LemmyLinkModel;
+use App\Service\Social\Social\Model\LinkPostChoicesModel;
 use App\Service\Social\Social\Model\PostDeletion;
 use App\Service\Social\Social\Model\PostDraftModel;
 use App\Service\Social\Social\Model\PublishedPostModel;
@@ -73,12 +73,16 @@ final readonly class LemmyPostWriter implements PostWriterInterface
     private static function titleOf(PostDraftModel $draft): string
     {
         $title = trim($draft->title ?? '');
-        if (mb_strlen($title) < LemmyLinkModel::MIN_TITLE_CHARACTERS) {
+        if (mb_strlen($title) < LinkPostChoicesModel::MIN_TITLE_CHARACTERS) {
             throw new SocialPostTitleTooShortException(
-                sprintf('A Lemmy title needs at least %d characters.', LemmyLinkModel::MIN_TITLE_CHARACTERS),
+                sprintf('A Lemmy title needs at least %d characters.', LinkPostChoicesModel::MIN_TITLE_CHARACTERS),
             );
         }
-        self::guardLength($title, LemmyLinkModel::MAX_TITLE_CHARACTERS, 'A Lemmy post title holds %d characters.');
+        self::guardLength(
+            $title,
+            LinkPostChoicesModel::MAX_TITLE_CHARACTERS,
+            'A Lemmy post title holds %d characters.',
+        );
 
         return $title;
     }

@@ -10,8 +10,8 @@ use App\Http\ComposerContextJson;
 use App\Service\Social\Social\Model\ComposerContextModel;
 use App\Service\Social\Social\Model\ComposerDefaultsModel;
 use App\Service\Social\Social\Model\ComposerKind;
-use App\Service\Social\Social\Model\LemmyCommunityModel;
-use App\Service\Social\Social\Model\LemmyLinkModel;
+use App\Service\Social\Social\Model\CommunityModel;
+use App\Service\Social\Social\Model\LinkPostChoicesModel;
 use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\TestCase;
 
@@ -28,9 +28,9 @@ final class ComposerContextJsonTest extends TestCase
 
     public function testALemmyLinkListsItsCommunitiesItsTitleAndTheTitleLimit(): void
     {
-        $lemmyLink = new LemmyLinkModel([new LemmyCommunityModel(7, '!rss@lemmy.world')], 'The article');
+        $linkPost = new LinkPostChoicesModel([new CommunityModel(7, '!rss@lemmy.world')], 'The article');
 
-        $row = ComposerContextJson::of(self::linkContext(new ComposerDefaultsModel(10000, lemmyLink: $lemmyLink)));
+        $row = ComposerContextJson::of(self::linkContext(new ComposerDefaultsModel(10000, linkPost: $linkPost)));
 
         self::assertSame(
             [
