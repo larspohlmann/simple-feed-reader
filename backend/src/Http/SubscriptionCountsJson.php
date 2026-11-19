@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Enum\SocialNetwork;
-use App\Service\Library\Subscription\Model\SubscriptionTalliesModel;
+use App\Service\Curation\Trending\Model\SurfaceTalliesModel;
 
 /**
  * The sidebar poll's payload: each subscription's counts and the surface totals, nothing else. A subscription
@@ -27,13 +27,13 @@ final class SubscriptionCountsJson
      *   }
      * }
      */
-    public static function from(SubscriptionTalliesModel $tallies): array
+    public static function from(SurfaceTalliesModel $tallies): array
     {
         $subscriptions = [];
-        foreach ($tallies->entryCounts as $id => $entryCount) {
+        foreach ($tallies->subscriptions->entryCounts as $id => $entryCount) {
             $subscriptions[] = [
                 'id' => $id,
-                'unreadCount' => $tallies->unreadCounts[$id] ?? 0,
+                'unreadCount' => $tallies->subscriptions->unreadCounts[$id] ?? 0,
                 'entryCount' => $entryCount,
             ];
         }
@@ -54,16 +54,16 @@ final class SubscriptionCountsJson
      *   }
      * }
      */
-    public static function surfaceTotals(SubscriptionTalliesModel $tallies): array
+    public static function surfaceTotals(SurfaceTalliesModel $tallies): array
     {
         return [
-            'favoritesCount' => $tallies->flagCounts['favorites'],
-            'keptCount' => $tallies->flagCounts['kept'],
-            'sharedCount' => $tallies->flagCounts['shared'],
-            'viewedCount' => $tallies->flagCounts['viewed'],
+            'favoritesCount' => $tallies->subscriptions->flagCounts['favorites'],
+            'keptCount' => $tallies->subscriptions->flagCounts['kept'],
+            'sharedCount' => $tallies->subscriptions->flagCounts['shared'],
+            'viewedCount' => $tallies->subscriptions->flagCounts['viewed'],
             'trending' => TrendingUnopenedJson::from($tallies->trending),
-            'unreadTotals' => UnreadTotalsJson::from($tallies->unreadTotals),
-            'notifications' => self::notificationCounts($tallies->notificationsUnseen),
+            'unreadTotals' => UnreadTotalsJson::from($tallies->subscriptions->unreadTotals),
+            'notifications' => self::notificationCounts($tallies->subscriptions->notificationsUnseen),
         ];
     }
 
