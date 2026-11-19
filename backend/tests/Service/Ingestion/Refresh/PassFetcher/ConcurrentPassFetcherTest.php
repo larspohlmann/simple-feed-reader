@@ -385,6 +385,45 @@ final class ConcurrentPassFetcherTest extends TestCase
         self::assertSame('The Mastodon instance could not be reached.', $failure->getMessage());
     }
 
+    public function testATooBroadMastodonSearchIsUnreachableWhileTheHomeFeedIsRead(): void
+    {
+        $account = self::mastodonAccount(self::MASTODON, 1);
+        $home = $this->feedOf($account);
+        $search = $this->feedOf($account, SocialFeedKind::Search, '(a || b || c) (d || e || f)');
+        $respond = static fn (): MockResponse => self::statuses();
+
+        $outcomes = self::read($this->fetcher($respond), [$home, $search]);
+
+        $failure = self::failureOf($outcomes[self::idOf($search)]);
+        self::assertInstanceOf(SocialNetworkUnreachableException::class, $failure);
+        self::assertSame(
+            'Each alternative is searched on its own; this query spells out more than 8.',
+            $failure->getMessage(),
+        );
+        self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($home)]);
+        self::assertSame([self::MASTODON_HOME], $this->requestsTo(self::MASTODON));
+    }
+
+    public function testALemmySearchWithAnAlternativeWithoutAWordIsUnreachableWhileTheHomeFeedIsRead(): void
+    {
+        $account = self::withId(SocialAccounts::lemmyOf(SocialAccounts::owner()), 1);
+        $home = $this->feedOf($account);
+        $search = $this->feedOf($account, SocialFeedKind::Search, 'rss || -gazette');
+        $respond = static fn (): MockResponse => self::json(['posts' => []]);
+
+        $outcomes = self::read($this->fetcher($respond), [$home, $search]);
+
+        $failure = self::failureOf($outcomes[self::idOf($search)]);
+        self::assertInstanceOf(SocialNetworkUnreachableException::class, $failure);
+        self::assertSame('Lemmy needs a word to search for in every alternative.', $failure->getMessage());
+        self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($home)]);
+        self::assertCount(1, $this->http->requests);
+        self::assertSame([], array_filter(
+            $this->http->requestLines(),
+            static fn (string $request): bool => str_contains($request, 'search'),
+        ));
+    }
+
     public function testAbandoningTheReadSendsNothingMore(): void
     {
         $account = self::mastodonAccount(self::MASTODON, 1);
