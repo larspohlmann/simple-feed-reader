@@ -47,7 +47,7 @@ final class EntryImage
     public function storeUnverified(?string $url, ?int $width, ?int $height): void
     {
         $this->url = $url;
-        $this->urlHash = $url === null ? null : self::hashOf($url);
+        $this->urlHash = $url === null ? null : self::hashUrl($url);
         $this->width = $width;
         $this->height = $height;
         $this->checkedAt = null;
@@ -97,7 +97,7 @@ final class EntryImage
         $this->verifyAttempts = ($this->verifyAttempts ?? 0) + 1;
     }
 
-    public static function hashOf(string $url): string
+    public static function hashUrl(string $url): string
     {
         return hash('sha256', $url);
     }
@@ -149,7 +149,7 @@ final class EntryImage
         if ($this->url === null) {
             return [];
         }
-        $widest = ImageRendition::widestOf($renditions);
+        $widest = ImageRendition::pickWidestWidth($renditions);
         if ($this->width === null) {
             return $widest >= ImageRendition::WIDEST_LIST_SLOT ? $renditions : [];
         }

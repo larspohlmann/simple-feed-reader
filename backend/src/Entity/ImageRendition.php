@@ -65,7 +65,7 @@ final readonly class ImageRendition implements \JsonSerializable
     }
 
     /** @param non-empty-list<self> $renditions */
-    public static function widestOf(array $renditions): int
+    public static function pickWidestWidth(array $renditions): int
     {
         return max(array_map(static fn (self $rendition): int => $rendition->width, $renditions));
     }

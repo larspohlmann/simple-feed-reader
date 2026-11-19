@@ -66,14 +66,14 @@ final class LemmyPostEntriesTest extends TestCase
         self::assertSame('Ada', $linkPost->author);
         self::assertSame('https://feddit.example/u/ada', $linkPost->authorUrl);
         self::assertSame('https://feddit.example/pictrs/image/ada.png', $linkPost->authorAvatarUrl);
-        self::assertEquals(DiscussionCounts::of(12, 3), $linkPost->discussionCounts);
+        self::assertEquals(DiscussionCounts::fromScoreAndComments(12, 3), $linkPost->discussionCounts);
         self::assertSame('lars', $entries[self::TEXT_POST]->author);
     }
 
     public function testAPostNamesItsCommunity(): void
     {
         self::assertEquals(
-            PostCommunity::of('rss@feddit.example', 'https://feddit.example/c/rss'),
+            PostCommunity::fromIdentityAndUrl('rss@feddit.example', 'https://feddit.example/c/rss'),
             $this->entries()[self::LINK_POST]->community,
         );
     }

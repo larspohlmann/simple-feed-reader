@@ -66,7 +66,7 @@ final class FeedMediaClassifier
 
     public static function kindOfUrl(string $url): FeedMediaKind
     {
-        $extension = EntryAttachment::extensionOf($url);
+        $extension = EntryAttachment::extractExtension($url);
         if (\in_array($extension, EntryAttachment::AUDIO_EXTENSIONS, true)) {
             return FeedMediaKind::Audio;
         }

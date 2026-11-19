@@ -59,7 +59,7 @@ final class ConnectedAccountStatesTest extends DbTestCase
         $entry = LemmyPostEntries::on($feed);
         $this->entityManager->persist($entry);
         $post = new EntryLemmyPost($entry);
-        $post->placeIn(PostCommunity::of('technology@lemmy.world', 'https://lemmy.world/c/technology'));
+        $post->placeIn(PostCommunity::fromIdentityAndUrl('technology@lemmy.world', 'https://lemmy.world/c/technology'));
         $this->entityManager->persist($post);
         $this->entityManager->flush();
 

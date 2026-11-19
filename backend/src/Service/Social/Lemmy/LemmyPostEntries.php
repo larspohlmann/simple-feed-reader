@@ -133,7 +133,7 @@ final readonly class LemmyPostEntries
         $identity = LemmyCommunity::identityOf($community);
         $address = $community->string('actor_id');
 
-        return null === $identity || null === $address ? null : PostCommunity::of($identity, $address);
+        return null === $identity || null === $address ? null : PostCommunity::fromIdentityAndUrl($identity, $address);
     }
 
     private function postEntryOf(JsonNodeModel $postView, string $address): ParsedEntryModel
@@ -174,7 +174,7 @@ final readonly class LemmyPostEntries
 
     private static function countsOf(JsonNodeModel $counts): DiscussionCounts
     {
-        return DiscussionCounts::of($counts->int('score'), $counts->int('comments'));
+        return DiscussionCounts::fromScoreAndComments($counts->int('score'), $counts->int('comments'));
     }
 
     private static function mediaOf(JsonNodeModel $post): ParsedEntryMediaModel

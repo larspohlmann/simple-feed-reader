@@ -27,7 +27,7 @@ final class ProbedLadderRepository extends ServiceEntityRepository implements Pr
             ->select('e.image.renditions AS renditions')
             ->andWhere('e.image.urlHash = :hash')
             ->andWhere('e.image.checkedAt IS NOT NULL')
-            ->setParameter('hash', EntryImage::hashOf($imageUrl))
+            ->setParameter('hash', EntryImage::hashUrl($imageUrl))
             ->orderBy('e.id', 'DESC')
             ->setMaxResults(1)
             ->getQuery()

@@ -118,7 +118,7 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
 
     private static function discussion(CoreElement $item): Discussion
     {
-        return Discussion::of(
+        return Discussion::fromPageAndFeed(
             $item->httpUrl('comments'),
             $item->in(FeedNamespace::WellFormedWeb)->httpUrl('commentRss'),
             CommentsLoad::Manual,

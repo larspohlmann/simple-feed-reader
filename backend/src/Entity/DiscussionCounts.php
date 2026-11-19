@@ -17,7 +17,7 @@ final readonly class DiscussionCounts
         return new self(null, null);
     }
 
-    public static function of(?int $score, ?int $commentCount): self
+    public static function fromScoreAndComments(?int $score, ?int $commentCount): self
     {
         return new self($score, $commentCount);
     }

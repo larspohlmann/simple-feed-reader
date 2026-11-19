@@ -110,9 +110,9 @@ final readonly class AccountLine
                 'countries' => $this->feedDirectoryScope->countries,
                 'languages' => $this->feedDirectoryScope->languages,
             ],
-            'savedSearchIncludedNetworks' => SocialNetwork::valuesOf($this->networks->savedSearchIncludedNetworks),
+            'savedSearchIncludedNetworks' => SocialNetwork::toValues($this->networks->savedSearchIncludedNetworks),
         ], ...array_map(
-            fn (InclusionSurface $surface): array => SocialNetwork::valuesOf($this->networks->excludedFrom($surface)),
+            fn (InclusionSurface $surface): array => SocialNetwork::toValues($this->networks->excludedFrom($surface)),
             self::EXCLUDED_NETWORKS_KEYS,
         )]);
     }

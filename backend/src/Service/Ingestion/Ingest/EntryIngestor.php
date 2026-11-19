@@ -77,7 +77,7 @@ final readonly class EntryIngestor
     {
         return new IncomingEntryModel(
             $entry,
-            EntryGuid::hashOf($entry->guid),
+            EntryGuid::hashGuid($entry->guid),
             $this->urlHash->hashEntryUrl($entry->guid, $entry->url),
         );
     }

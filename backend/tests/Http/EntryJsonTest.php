@@ -462,7 +462,7 @@ final class EntryJsonTest extends TestCase
     public function testTheStoredCommentCountIsEmitted(): void
     {
         $entry = $this->entryTitled('Post');
-        $entry->recordDiscussionCounts(DiscussionCounts::of(-3, 0));
+        $entry->recordDiscussionCounts(DiscussionCounts::fromScoreAndComments(-3, 0));
 
         $json = JsonMappers::entryJson()->listRow($this->row($entry));
 
@@ -880,7 +880,7 @@ final class EntryJsonTest extends TestCase
     private function lemmyRow(): EntryListRow
     {
         $entry = $this->entryTitled('Post');
-        $community = PostCommunity::of('Technology@lemmy.world', 'https://lemmy.world/c/technology');
+        $community = PostCommunity::fromIdentityAndUrl('Technology@lemmy.world', 'https://lemmy.world/c/technology');
 
         return $this->row($entry, new EntryListRowEnrichment(lemmy: new EntryListRowLemmy(5, $community, null)));
     }

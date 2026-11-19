@@ -24,7 +24,7 @@ final class LemmyCommunityLink
         $name = strtolower($matches[1]);
         $home = strtolower($matches[2] ?? $host);
 
-        return PostCommunity::of($name . '@' . $home, 'https://' . $home . '/c/' . $name);
+        return PostCommunity::fromIdentityAndUrl($name . '@' . $home, 'https://' . $home . '/c/' . $name);
     }
 
     private function __construct()

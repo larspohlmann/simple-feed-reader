@@ -52,7 +52,7 @@ final class LemmyPostHeaderTest extends TestCase
     public function testReadsTheCommunity(): void
     {
         self::assertEquals(
-            PostCommunity::of('politics@lemmy.world', 'https://lemmy.world/c/politics'),
+            PostCommunity::fromIdentityAndUrl('politics@lemmy.world', 'https://lemmy.world/c/politics'),
             LemmyPostHeader::read(self::header('5 points | '))?->community,
         );
     }
@@ -61,7 +61,7 @@ final class LemmyPostHeaderTest extends TestCase
     {
         $counts = LemmyPostHeader::read(self::header('5 points | ', 'comments'))?->counts;
 
-        self::assertEquals(DiscussionCounts::of(5, null), $counts);
+        self::assertEquals(DiscussionCounts::fromScoreAndComments(5, null), $counts);
     }
 
     #[DataProvider('scores')]

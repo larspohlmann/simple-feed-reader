@@ -28,7 +28,7 @@ final class EntryDiscussion
 
     public function store(Discussion $discussion): void
     {
-        $bounded = Discussion::of(
+        $bounded = Discussion::fromPageAndFeed(
             self::bounded($discussion->url),
             self::bounded($discussion->commentsFeedUrl),
             $discussion->commentsLoad ?? CommentsLoad::Manual,
@@ -40,7 +40,11 @@ final class EntryDiscussion
 
     public function read(): Discussion
     {
-        return Discussion::of($this->url, $this->commentsFeedUrl, $this->commentsLoad ?? CommentsLoad::Manual);
+        return Discussion::fromPageAndFeed(
+            $this->url,
+            $this->commentsFeedUrl,
+            $this->commentsLoad ?? CommentsLoad::Manual,
+        );
     }
 
     public function storeCommentCount(?int $commentCount): void

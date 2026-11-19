@@ -265,7 +265,7 @@ final class FeedOutcomePersisterTest extends DbTestCase
     {
         $persisters = FeedOutcomePersisters::fromContainer(self::getContainer(), $this->entityManager, $this->clock)
             ->loggingTo($this->logger);
-        $persisters->tombstones()->bury($feed->requireId(), [EntryGuid::hashOf('one-2')]);
+        $persisters->tombstones()->bury($feed->requireId(), [EntryGuid::hashGuid('one-2')]);
 
         return $persisters->idle()->persist(
             $feed,

@@ -49,7 +49,7 @@ final readonly class IndexSearchPredicates
     /** @param non-empty-list<string> $pieces */
     private function indexMatch(QueryBuilder $qb, string $parameter, array $pieces, string $entryAlias): string
     {
-        $qb->setParameter($parameter, SearchIndexQuery::allOf($pieces));
+        $qb->setParameter($parameter, SearchIndexQuery::buildAllPiecesQuery($pieces));
 
         return \sprintf('%s(%s.id, :%s) = 1', SearchIndexMatchFunction::NAME, $entryAlias, $parameter);
     }

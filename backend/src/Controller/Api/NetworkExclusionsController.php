@@ -35,7 +35,7 @@ final readonly class NetworkExclusionsController
     public function excludedNetworks(InclusionSurface $surface, #[CurrentUser] User $user): JsonResponse
     {
         return new JsonResponse([
-            'excludedNetworks' => SocialNetwork::valuesOf(
+            'excludedNetworks' => SocialNetwork::toValues(
                 $this->excludedNetworks->excludedNetworks($user->requireId(), $surface),
             ),
         ]);

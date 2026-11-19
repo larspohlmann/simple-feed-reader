@@ -31,7 +31,7 @@ final readonly class StoredEntryRefresher
         $stored = $this->entries->findByFeedIndexedByGuidHash($feed, $this->hashGuids($parsed->entries));
         $refreshed = [];
         foreach ($parsed->entries as $parsedEntry) {
-            $entry = $stored[EntryGuid::hashOf($parsedEntry->guid)] ?? null;
+            $entry = $stored[EntryGuid::hashGuid($parsedEntry->guid)] ?? null;
             if ($entry === null) {
                 continue;
             }
@@ -59,6 +59,6 @@ final readonly class StoredEntryRefresher
      */
     private function hashGuids(array $entries): array
     {
-        return array_map(static fn (ParsedEntryModel $entry): string => EntryGuid::hashOf($entry->guid), $entries);
+        return array_map(static fn (ParsedEntryModel $entry): string => EntryGuid::hashGuid($entry->guid), $entries);
     }
 }

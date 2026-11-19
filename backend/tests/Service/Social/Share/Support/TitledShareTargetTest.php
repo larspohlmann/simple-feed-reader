@@ -22,7 +22,7 @@ final class TitledShareTargetTest extends TestCase
         $now = new \DateTimeImmutable('2026-10-11 09:00:00');
         $entry = new Entry($feed, $guid, $url, 'Title', $now, $now);
         if ($discussionUrl !== null) {
-            $entry->setDiscussion(Discussion::of($discussionUrl, null, CommentsLoad::Manual));
+            $entry->setDiscussion(Discussion::fromPageAndFeed($discussionUrl, null, CommentsLoad::Manual));
         }
 
         return $entry;

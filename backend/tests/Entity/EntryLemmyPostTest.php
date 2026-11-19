@@ -43,10 +43,10 @@ final class EntryLemmyPostTest extends TestCase
     {
         $post = new EntryLemmyPost($this->entry());
 
-        $post->placeIn(PostCommunity::of('technology@lemmy.world', 'https://lemmy.world/c/technology'));
+        $post->placeIn(PostCommunity::fromIdentityAndUrl('technology@lemmy.world', 'https://lemmy.world/c/technology'));
 
         self::assertEquals(
-            PostCommunity::of('technology@lemmy.world', 'https://lemmy.world/c/technology'),
+            PostCommunity::fromIdentityAndUrl('technology@lemmy.world', 'https://lemmy.world/c/technology'),
             $post->getCommunity(),
         );
     }

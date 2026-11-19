@@ -16,7 +16,7 @@ final readonly class SearchIndexQuery
     }
 
     /** @param non-empty-list<string> $pieces each a literal substring, quotes included */
-    public static function allOf(array $pieces): string
+    public static function buildAllPiecesQuery(array $pieces): string
     {
         return implode(' AND ', array_map(
             static fn (string $piece): string => '"' . str_replace('"', '""', $piece) . '"',

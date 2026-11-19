@@ -60,9 +60,9 @@ final class TrendingExplainCommand extends Command
             return Command::FAILURE;
         }
         $explanation = $this->explainer->explain($userId, $window);
-        $headlines = $this->headlinesOf($explanation);
-        $io->title(self::summaryOf($explanation));
-        $io->writeln(self::languagesOf($explanation->languageCoverage));
+        $headlines = $this->loadHeadlines($explanation);
+        $io->title(self::formatSummary($explanation));
+        $io->writeln(self::formatLanguages($explanation->languageCoverage));
         $this->printGroups($io, $explanation, $headlines);
         $this->printNearMisses($io, $explanation, $headlines);
 
@@ -99,12 +99,12 @@ final class TrendingExplainCommand extends Command
     }
 
     /** @return array<int, string> "[feed] headline" by entry id, for every entry the explanation prints */
-    private function headlinesOf(TrendingExplanationModel $explanation): array
+    private function loadHeadlines(TrendingExplanationModel $explanation): array
     {
         $headlines = [];
         foreach (array_chunk(self::printedEntryIds($explanation), self::TITLE_CHUNK) as $entryIds) {
             foreach ($this->entries->findAllByIds($entryIds) as $entry) {
-                $headlines[$entry->requireId()] = self::headlineOf($entry);
+                $headlines[$entry->requireId()] = self::formatHeadline($entry);
             }
         }
 
@@ -127,12 +127,12 @@ final class TrendingExplainCommand extends Command
         return array_values(array_unique($entryIds));
     }
 
-    private static function headlineOf(Entry $entry): string
+    private static function formatHeadline(Entry $entry): string
     {
         return \sprintf('[%s] %s', $entry->getFeed()->getTitle() ?? $entry->getFeed()->getUrl(), $entry->getTitle());
     }
 
-    private static function languagesOf(LanguageCoverageModel $coverage): string
+    private static function formatLanguages(LanguageCoverageModel $coverage): string
     {
         $counts = array_map(
             static fn (FeedLanguage $language): string
@@ -143,7 +143,7 @@ final class TrendingExplainCommand extends Command
         return \sprintf('Languages: %s, none %d', implode(', ', $counts), $coverage->entriesWithoutLanguage);
     }
 
-    private static function summaryOf(TrendingExplanationModel $explanation): string
+    private static function formatSummary(TrendingExplanationModel $explanation): string
     {
         return \sprintf(
             'Trending %s: %d entries, %d groups, %d ms, peak %.1f MB',

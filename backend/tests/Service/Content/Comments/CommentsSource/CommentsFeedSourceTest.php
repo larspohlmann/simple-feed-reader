@@ -113,7 +113,7 @@ final class CommentsFeedSourceTest extends KernelTestCase
     public function testServesNoEntryWithoutOne(): void
     {
         $entry = self::entry();
-        $entry->setDiscussion(Discussion::of(self::THREAD, null, CommentsLoad::Auto));
+        $entry->setDiscussion(Discussion::fromPageAndFeed(self::THREAD, null, CommentsLoad::Auto));
 
         self::assertFalse($this->source->serves($entry));
     }
@@ -276,7 +276,7 @@ final class CommentsFeedSourceTest extends KernelTestCase
     public function testAnEntryWithoutAFeedIsUnavailableToFetch(): void
     {
         $entry = self::entry();
-        $entry->setDiscussion(Discussion::of(self::THREAD, null, CommentsLoad::Auto));
+        $entry->setDiscussion(Discussion::fromPageAndFeed(self::THREAD, null, CommentsLoad::Auto));
 
         $this->expectException(CommentsUnavailableException::class);
 

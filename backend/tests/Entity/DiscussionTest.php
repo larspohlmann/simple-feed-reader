@@ -21,7 +21,7 @@ final class DiscussionTest extends TestCase
 
     public function testAnAutomaticPageWithoutACommentsFeedKeepsTheLoadMode(): void
     {
-        $discussion = Discussion::of('https://news.example/item?id=1', null, CommentsLoad::Auto);
+        $discussion = Discussion::fromPageAndFeed('https://news.example/item?id=1', null, CommentsLoad::Auto);
 
         self::assertSame('https://news.example/item?id=1', $discussion->url);
         self::assertNull($discussion->commentsFeedUrl);
@@ -30,12 +30,12 @@ final class DiscussionTest extends TestCase
 
     public function testNothingAtAllIsNone(): void
     {
-        self::assertEquals(Discussion::none(), Discussion::of(null, null, CommentsLoad::Manual));
+        self::assertEquals(Discussion::none(), Discussion::fromPageAndFeed(null, null, CommentsLoad::Manual));
     }
 
     public function testACommentsFeedKeepsItsLoadMode(): void
     {
-        $discussion = Discussion::of(
+        $discussion = Discussion::fromPageAndFeed(
             'https://blog.example/post/',
             'https://blog.example/post/feed/',
             CommentsLoad::Auto,
@@ -66,16 +66,18 @@ final class DiscussionTest extends TestCase
 
     public function testAPageWithoutAFeedStillHasNoCommentsLoad(): void
     {
-        self::assertNull(Discussion::of('https://x/p', null, CommentsLoad::Manual)->commentsLoad);
+        self::assertNull(Discussion::fromPageAndFeed('https://x/p', null, CommentsLoad::Manual)->commentsLoad);
     }
 
     public function testALoadWithoutAPageOrAFeedIsDropped(): void
     {
-        self::assertEquals(Discussion::none(), Discussion::of(null, null, CommentsLoad::Auto));
+        self::assertEquals(Discussion::none(), Discussion::fromPageAndFeed(null, null, CommentsLoad::Auto));
     }
 
     public function testAFeedKeepsItsLoadWithoutAPage(): void
     {
-        self::assertSame(CommentsLoad::Auto, Discussion::of(null, 'https://x/c.xml', CommentsLoad::Auto)->commentsLoad);
+        $discussion = Discussion::fromPageAndFeed(null, 'https://x/c.xml', CommentsLoad::Auto);
+
+        self::assertSame(CommentsLoad::Auto, $discussion->commentsLoad);
     }
 }

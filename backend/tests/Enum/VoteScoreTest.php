@@ -23,6 +23,6 @@ final class VoteScoreTest extends TestCase
     #[DataProvider('networkValues')]
     public function testANetworkValueBecomesAScore(?int $value, VoteScore $expected): void
     {
-        self::assertSame($expected, VoteScore::ofNetworkValue($value));
+        self::assertSame($expected, VoteScore::fromNetworkValue($value));
     }
 }

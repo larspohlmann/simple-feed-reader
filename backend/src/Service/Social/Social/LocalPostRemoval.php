@@ -30,7 +30,7 @@ final readonly class LocalPostRemoval
     public function remove(Entry $entry, array $replyGuids): void
     {
         $copies = $this->removals->findCopies($entry);
-        $this->removeCopies($entry, $copies, array_map(EntryGuid::hashOf(...), $replyGuids));
+        $this->removeCopies($entry, $copies, array_map(EntryGuid::hashGuid(...), $replyGuids));
     }
 
     /** Removes the entry alone: every other stored copy of its post stays. */

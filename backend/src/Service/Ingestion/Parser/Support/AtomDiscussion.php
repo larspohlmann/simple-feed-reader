@@ -27,7 +27,7 @@ final class AtomDiscussion
             $page ??= $href;
         }
 
-        return Discussion::of($page, $commentsFeed, CommentsLoad::Manual);
+        return Discussion::fromPageAndFeed($page, $commentsFeed, CommentsLoad::Manual);
     }
 
     private static function isFeedType(string $type): bool

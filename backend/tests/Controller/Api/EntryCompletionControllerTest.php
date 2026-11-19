@@ -435,7 +435,7 @@ final class EntryCompletionControllerTest extends ApiTestCase
                 '<p>Article URL: <a href="' . $target . '">' . $target . '</a></p><p>Points: 110</p>',
             ),
         );
-        $item->setDiscussion(Discussion::of($itemUrl, null, CommentsLoad::Manual));
+        $item->setDiscussion(Discussion::fromPageAndFeed($itemUrl, null, CommentsLoad::Manual));
         $this->entityManager()->persist($item);
         $queue = self::getContainer()->get(ShareEnrichmentQueue::class);
         self::assertInstanceOf(ShareEnrichmentQueue::class, $queue);

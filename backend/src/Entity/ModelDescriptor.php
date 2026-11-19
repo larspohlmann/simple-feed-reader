@@ -29,6 +29,6 @@ final readonly class ModelDescriptor
 
     public function kind(): RecommendationEngineKind
     {
-        return RecommendationEngineKind::of($this->scoringProtocol);
+        return RecommendationEngineKind::fromProtocol($this->scoringProtocol);
     }
 }

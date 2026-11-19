@@ -195,7 +195,7 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
     {
         $feed = $this->feed(self::HOME, SourceFormat::BLUESKY_API);
         $persisters = $this->persisters();
-        $persisters->tombstones()->bury($feed->requireId(), [EntryGuid::hashOf(self::REPLY_ONE)]);
+        $persisters->tombstones()->bury($feed->requireId(), [EntryGuid::hashGuid(self::REPLY_ONE)]);
 
         $result = $this->enriching($persisters)->storeTimeline(
             $feed,

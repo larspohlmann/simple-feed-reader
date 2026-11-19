@@ -24,7 +24,7 @@ final class SocialNetworkTest extends TestCase
     public function testTheRouteRequirementNamesEveryNetwork(): void
     {
         self::assertSame(
-            implode('|', SocialNetwork::valuesOf(SocialNetwork::cases())),
+            implode('|', SocialNetwork::toValues(SocialNetwork::cases())),
             SocialNetwork::ROUTE_REQUIREMENT,
         );
     }
@@ -33,7 +33,7 @@ final class SocialNetworkTest extends TestCase
     {
         $networks = [SocialNetwork::Mastodon, SocialNetwork::Bluesky];
 
-        self::assertSame(['mastodon', 'bluesky'], SocialNetwork::valuesOf($networks));
+        self::assertSame(['mastodon', 'bluesky'], SocialNetwork::toValues($networks));
     }
 
     public function testAnAbsentRequestValueNamesNoNetwork(): void

@@ -494,7 +494,7 @@ final class EntryListRowEnricherTest extends DbTestCase
         $entry = $this->lemmyPost('scored', 31);
         $post = new EntryLemmyPost($entry);
         $post->recordScore(7);
-        $post->placeIn(PostCommunity::of('Technology@lemmy.world', 'https://lemmy.world/c/technology'));
+        $post->placeIn(PostCommunity::fromIdentityAndUrl('Technology@lemmy.world', 'https://lemmy.world/c/technology'));
         $this->entityManager->persist($post);
         $this->entityManager->flush();
 
@@ -648,7 +648,7 @@ final class EntryListRowEnricherTest extends DbTestCase
         $this->entityManager->persist($entry);
         $post = new EntryLemmyPost($entry);
         $post->recordScore(7);
-        $post->placeIn(PostCommunity::of('Technology@lemmy.world', 'https://lemmy.world/c/technology'));
+        $post->placeIn(PostCommunity::fromIdentityAndUrl('Technology@lemmy.world', 'https://lemmy.world/c/technology'));
         $this->entityManager->persist($post);
         $this->entityManager->flush();
 

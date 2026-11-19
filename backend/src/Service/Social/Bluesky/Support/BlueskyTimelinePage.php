@@ -133,7 +133,7 @@ final class BlueskyTimelinePage
             authorUrl: BlueskyAuthor::profile($author),
             authorAvatarUrl: BlueskyAuthor::avatar($author),
             statedLanguage: $record->node('langs')->string('0'),
-        ))->withDiscussionCounts(DiscussionCounts::of(null, $post->int('replyCount')));
+        ))->withDiscussionCounts(DiscussionCounts::fromScoreAndComments(null, $post->int('replyCount')));
     }
 
     /** A repost lands in the timeline when it was reposted, not when the original was written. */

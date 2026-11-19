@@ -25,7 +25,7 @@ final readonly class Discussion
         return new self($pageUrl, $commentsFeedUrl, $load);
     }
 
-    public static function of(?string $pageUrl, ?string $commentsFeedUrl, CommentsLoad $load): self
+    public static function fromPageAndFeed(?string $pageUrl, ?string $commentsFeedUrl, CommentsLoad $load): self
     {
         $keepsLoad = $commentsFeedUrl !== null || ($pageUrl !== null && $load !== CommentsLoad::Manual);
 

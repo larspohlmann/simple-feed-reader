@@ -277,7 +277,7 @@ final class IngestedEntryFactoryTest extends TestCase
             summary: null,
             contentHtml: null,
             publishedAt: null,
-        )->withDiscussionCounts(DiscussionCounts::of(7, 2));
+        )->withDiscussionCounts(DiscussionCounts::fromScoreAndComments(7, 2));
 
         $entry = $this->factory()->create(
             new Feed('https://example.com/feed'),

@@ -117,7 +117,7 @@ final readonly class LemmyThread
     {
         return new CommentVoteModel(
             $address,
-            VoteScore::ofNetworkValue($node->int('my_vote')),
+            VoteScore::fromNetworkValue($node->int('my_vote')),
             !$node->node('post')->isTrue('locked'),
         );
     }

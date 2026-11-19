@@ -39,15 +39,17 @@ final class EntryLemmyPostWriterTest extends DbTestCase
     {
         $this->ingest(
             self::post()
-                ->withDiscussionCounts(DiscussionCounts::of(7, 2))
-                ->inCommunity(PostCommunity::of('technology@lemmy.world', 'https://lemmy.world/c/technology')),
+                ->withDiscussionCounts(DiscussionCounts::fromScoreAndComments(7, 2))
+                ->inCommunity(
+                    PostCommunity::fromIdentityAndUrl('technology@lemmy.world', 'https://lemmy.world/c/technology'),
+                ),
         );
 
         $rows = $this->rows();
         self::assertCount(1, $rows);
         self::assertSame(7, $rows[0]->getScore());
         self::assertEquals(
-            PostCommunity::of('technology@lemmy.world', 'https://lemmy.world/c/technology'),
+            PostCommunity::fromIdentityAndUrl('technology@lemmy.world', 'https://lemmy.world/c/technology'),
             $rows[0]->getCommunity(),
         );
     }
@@ -64,8 +66,8 @@ final class EntryLemmyPostWriterTest extends DbTestCase
         $identity = str_repeat('a', EntryLemmyPost::IDENTITY_MAX_LENGTH + 1);
         $this->ingest(
             self::post()
-                ->withDiscussionCounts(DiscussionCounts::of(1, null))
-                ->inCommunity(PostCommunity::of($identity, 'https://x.test/c/a')),
+                ->withDiscussionCounts(DiscussionCounts::fromScoreAndComments(1, null))
+                ->inCommunity(PostCommunity::fromIdentityAndUrl($identity, 'https://x.test/c/a')),
         );
 
         $rows = $this->rows();
@@ -77,7 +79,7 @@ final class EntryLemmyPostWriterTest extends DbTestCase
     {
         $identity = str_repeat('a', EntryLemmyPost::IDENTITY_MAX_LENGTH);
         $url = 'https://x.test/c/' . str_repeat('a', EntryLemmyPost::URL_MAX_LENGTH - 17);
-        $this->ingest(self::post()->inCommunity(PostCommunity::of($identity, $url)));
+        $this->ingest(self::post()->inCommunity(PostCommunity::fromIdentityAndUrl($identity, $url)));
 
         $rows = $this->rows();
         self::assertCount(1, $rows);
@@ -90,8 +92,8 @@ final class EntryLemmyPostWriterTest extends DbTestCase
         $url = 'https://x.test/c/' . str_repeat('a', EntryLemmyPost::URL_MAX_LENGTH - 16);
         $this->ingest(
             self::post()
-                ->withDiscussionCounts(DiscussionCounts::of(1, null))
-                ->inCommunity(PostCommunity::of('a@x.test', $url)),
+                ->withDiscussionCounts(DiscussionCounts::fromScoreAndComments(1, null))
+                ->inCommunity(PostCommunity::fromIdentityAndUrl('a@x.test', $url)),
         );
 
         $rows = $this->rows();
@@ -103,7 +105,7 @@ final class EntryLemmyPostWriterTest extends DbTestCase
     {
         $identity = str_repeat('é', EntryLemmyPost::IDENTITY_MAX_LENGTH);
         $url = 'https://x.test/c/' . str_repeat('é', EntryLemmyPost::URL_MAX_LENGTH - 17);
-        $this->ingest(self::post()->inCommunity(PostCommunity::of($identity, $url)));
+        $this->ingest(self::post()->inCommunity(PostCommunity::fromIdentityAndUrl($identity, $url)));
 
         $rows = $this->rows();
         self::assertCount(1, $rows);
@@ -114,7 +116,7 @@ final class EntryLemmyPostWriterTest extends DbTestCase
     public function testAnOverlongCommunityAloneLeavesNoRow(): void
     {
         $url = 'https://x.test/c/' . str_repeat('a', EntryLemmyPost::URL_MAX_LENGTH);
-        $this->ingest(self::post()->inCommunity(PostCommunity::of('a@x.test', $url)));
+        $this->ingest(self::post()->inCommunity(PostCommunity::fromIdentityAndUrl('a@x.test', $url)));
 
         self::assertSame([], $this->rows());
     }
@@ -138,13 +140,13 @@ final class EntryLemmyPostWriterTest extends DbTestCase
 
     public function testRefreshingAStoredPostUpdatesItsRowInPlace(): void
     {
-        $this->ingest(self::post()->withDiscussionCounts(DiscussionCounts::of(7, 2)));
+        $this->ingest(self::post()->withDiscussionCounts(DiscussionCounts::fromScoreAndComments(7, 2)));
         $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $this->feed]);
         self::assertInstanceOf(Entry::class, $entry);
         $writer = self::getContainer()->get(EntryLemmyPostWriter::class);
         self::assertInstanceOf(EntryLemmyPostWriter::class, $writer);
 
-        $writer->refresh([[$entry, self::post()->withDiscussionCounts(DiscussionCounts::of(9, 2))]]);
+        $writer->refresh([[$entry, self::post()->withDiscussionCounts(DiscussionCounts::fromScoreAndComments(9, 2))]]);
         $this->entityManager->flush();
         $this->entityManager->clear();
 
