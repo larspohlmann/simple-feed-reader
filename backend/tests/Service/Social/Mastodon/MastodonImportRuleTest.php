@@ -6,14 +6,13 @@ namespace App\Tests\Service\Social\Mastodon;
 
 use App\Service\Social\Mastodon\MastodonImportRule;
 use App\Service\Social\Social\Model\SocialImportFeedModel;
-use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\TestCase;
 
 final class MastodonImportRuleTest extends TestCase
 {
     public function testNoFollowIsAccountOnly(): void
     {
-        self::assertSame([], new MastodonImportRule()->findAccountOnlyFeeds(SocialAccounts::mastodon(), [
+        self::assertSame([], new MastodonImportRule()->findAccountOnlyFeeds([
             new SocialImportFeedModel('did:plc:rusty', null),
         ]));
     }

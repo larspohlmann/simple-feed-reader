@@ -13,7 +13,6 @@ use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Service\Social\Social\Model\SocialImportFeedModel;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\RoutedHttpClient;
-use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;
 use App\Tests\Support\StubHiddenProfiles;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -37,7 +36,7 @@ final class BlueskyImportRuleTest extends TestCase
     {
         $this->hiddenProfiles->hide(new HiddenProfileModel('did:plc:rusty', 'Rusty'), 'rusty-17.bsky.social');
 
-        $accountOnly = $this->rule(new RoutedHttpClient([]))->findAccountOnlyFeeds(SocialAccounts::bluesky(), [
+        $accountOnly = $this->rule(new RoutedHttpClient([]))->findAccountOnlyFeeds([
             new SocialImportFeedModel('Rusty-17.bsky.social', 'Rusty'),
             new SocialImportFeedModel('did:plc:bob', 'Bob'),
         ]);
@@ -53,7 +52,7 @@ final class BlueskyImportRuleTest extends TestCase
         $this->hiddenProfiles->hide(new HiddenProfileModel('did:plc:rusty', 'Rusty'));
         $this->hiddenProfiles->failure = new SocialNetworkUnreachableException('down');
 
-        $accountOnly = $this->rule(new RoutedHttpClient([]))->findAccountOnlyFeeds(SocialAccounts::bluesky(), [
+        $accountOnly = $this->rule(new RoutedHttpClient([]))->findAccountOnlyFeeds([
             new SocialImportFeedModel('did:plc:rusty', 'Rusty'),
         ]);
 

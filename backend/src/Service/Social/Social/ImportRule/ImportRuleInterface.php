@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\ImportRule;
 
-use App\Entity\SocialAccount;
 use App\Service\Social\Social\Exception\SocialAccountUnresolvableException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Model\PrivateFeedModel;
@@ -20,7 +19,7 @@ interface ImportRuleInterface
      *
      * @return array<string, PrivateFeedModel> by the chosen identity: the follows that come in through the account
      */
-    public function findAccountOnlyFeeds(SocialAccount $account, array $feeds): array;
+    public function findAccountOnlyFeeds(array $feeds): array;
 
     /** the identity a subscribed feed follows on this network; null for any other feed */
     public function parseFollowedIdentity(string $feedUrl): ?string;
