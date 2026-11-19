@@ -47,6 +47,7 @@ use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;
 use App\Tests\Support\SocialFeeds;
+use App\Tests\Support\SocialRuleWiring;
 use App\Tests\Support\StubGuardedImageDownloader;
 use App\Tests\Support\StubPageCardReader;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -493,14 +494,21 @@ final class LinkPostsTest extends DbTestCase
             'lemmy' => static fn (): FakeLemmyComposerDefaults => new FakeLemmyComposerDefaults(),
         ]);
         $chooser = SocialFeeds::actingAccountChooser($this->entityManager, $accounts);
-        $posts = new SocialPostFinder($chooser, $guard, $resolvers);
+        $postAddresses = SocialRuleWiring::postAddresses();
+        $posts = new SocialPostFinder($chooser, $guard, $resolvers, $postAddresses);
 
         return new LinkPosts(
             $chooser,
             new UrlNormalizer(),
             new PostWriting($guard, $writers),
-            new SharedPostQuoteFinder($posts),
-            new ComposerContexts($accounts, $posts, new SharedPageCards($pageCards, new NullLogger()), $defaults),
+            new SharedPostQuoteFinder($posts, $postAddresses),
+            new ComposerContexts(
+                $accounts,
+                $posts,
+                new SharedPageCards($pageCards, new NullLogger()),
+                $defaults,
+                $postAddresses,
+            ),
         );
     }
 }

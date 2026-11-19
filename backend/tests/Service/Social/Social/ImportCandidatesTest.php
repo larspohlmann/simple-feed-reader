@@ -35,9 +35,11 @@ use App\Tests\Support\ProfileFeedSubscriptions;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
+use App\Tests\Support\SocialRuleWiring;
 use App\Tests\Support\StaticDnsResolver;
 use App\Tests\Support\StubSocialCandidates;
 use App\Tests\Support\UserFactory;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -89,7 +91,33 @@ final class ImportCandidatesTest extends DbTestCase
             SocialFeeds::repository($this->entityManager),
             new ActingAccountGuard($this->entityManager),
             $this->followAvatars,
+            SocialRuleWiring::profileFeeds(),
+            SocialRuleWiring::privateFeedRules(),
         );
+    }
+
+    /** @return iterable<string, array{string, ?string}> */
+    public static function subscribedFeeds(): iterable
+    {
+        yield 'a profile rss feed' => ['https://bsky.app/profile/did:plc:bob/rss', 'did:plc:bob'];
+        yield 'an author feed' => ['social:bluesky:3:author:did:plc:rusty', 'did:plc:rusty'];
+        yield 'a home timeline' => ['social:bluesky:3:home', null];
+        yield 'an ordinary feed' => ['https://example.com/feed.xml', null];
+    }
+
+    #[DataProvider('subscribedFeeds')]
+    public function testASubscribedFeedFollowsThePersonItsAddressNames(string $feedUrl, ?string $identity): void
+    {
+        $account = $this->account();
+        $this->subscribe($feedUrl);
+        $network = new StubSocialCandidates(new NetworkCandidatesModel([], [], [], false));
+
+        $follows = $this->importCandidates($network)->forAccount($account)->follows;
+
+        self::assertSame(null === $identity ? [] : [$identity], array_map(
+            static fn (ImportCandidateModel $candidate): string => $candidate->account->identity,
+            $follows,
+        ));
     }
 
     public function testAFollowReadThroughAnAuthorFeedReadsAsSubscribed(): void

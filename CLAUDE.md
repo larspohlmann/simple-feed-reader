@@ -89,6 +89,25 @@ unclear, oversized, or duplicated code is not done.
   and loop counters included (`$tag`, `$left`/`$right`, `$exception`, `$index`);
   `$x`/`$y` stay for coordinates, `$qb` and `$io` for the Doctrine and Symfony
   idioms. If a name needs a comment to be understood, rename it.
+- **A method name starts with the verb for what it does**, followed by its object
+  (`buildCredentials()`, `fetchAnswers()`), never bare:
+
+  | Verb | Meaning | Result |
+  |---|---|---|
+  | `build…` | Assemble a value from parts | Never null unless the signature says so; invalid parts throw |
+  | `parse…` | Read a value out of a string or document | Null when the input is not one |
+  | `find…` | Look something up among entries, accounts or stored data | Null when absent |
+  | `require…` | `parse…` or `find…` where absence is an error | Throws a typed exception |
+  | `fetch…` | Ask a network or another remote | Throws on failure |
+  | `count…` | Count rows in our own store | Always the counts |
+  | `format…` | Render a value for display | Always a string |
+  | `select…` | Pick the adapter for a key | Always an adapter |
+  | `is…`, `has…`, `owns…`, `allows…` | Yes/no question | Bool |
+  | `from…`, `to…`, `with…` | Named constructor, conversion, wither | unchanged |
+  | plain noun | A fixed fact that takes no input (`sourceFormat()`) | Always the value |
+
+  `get…` is for plain property reads on entities. Existing `…Of` and `of` names are
+  renamed as #2360 reaches them; write no new one.
 - **Functions do one thing**, at a single level of abstraction, and stay short.
   Extract until each method reads as a sentence about *what*, not *how*.
 - **Few parameters.** Three is a lot; more means a DTO or value object is missing.

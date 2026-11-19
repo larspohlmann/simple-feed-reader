@@ -6,43 +6,13 @@ namespace App\Tests\Service\Social\Social\Support;
 
 use App\Entity\Feed;
 use App\Enum\SocialFeedKind;
-use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Service\Social\Social\Support\SocialFeedClassifier;
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class SocialFeedClassifierTest extends TestCase
 {
     private const string BLUESKY_PROFILE = 'https://bsky.app/profile/alice.bsky.social/rss';
-
-    /** @return iterable<string, array{string, string, SocialNetwork|null}> */
-    public static function feeds(): iterable
-    {
-        $bluesky = SocialNetwork::Bluesky;
-        $mastodon = SocialNetwork::Mastodon;
-        yield 'a Bluesky private feed' => ['social:bluesky:4:home', SourceFormat::BLUESKY_API, $bluesky];
-        yield 'a Mastodon private feed' => ['social:mastodon:7:list:12', SourceFormat::MASTODON_API, $mastodon];
-        yield 'a Bluesky profile feed' => [self::BLUESKY_PROFILE, SourceFormat::XML, $bluesky];
-        yield 'a Mastodon profile feed' => ['https://mastodon.social/@Gargron.rss', SourceFormat::XML, $mastodon];
-        yield 'a community RSS feed' => [
-            'https://feddit.example/feeds/c/rss.xml',
-            SourceFormat::XML,
-            SocialNetwork::Lemmy,
-        ];
-        yield 'a synthetic URL under a plain format' => ['social:bluesky:4:home', SourceFormat::XML, null];
-        yield 'a malformed synthetic URL' => ['social:bluesky:x:home', SourceFormat::BLUESKY_API, null];
-        yield 'an ordinary feed' => ['https://example.com/feed.xml', SourceFormat::XML, null];
-    }
-
-    #[DataProvider('feeds')]
-    public function testItNamesTheNetworkAFeedBelongsTo(
-        string $url,
-        string $sourceFormat,
-        ?SocialNetwork $network,
-    ): void {
-        self::assertSame($network, SocialFeedClassifier::networkOf(self::feed($url, $sourceFormat)));
-    }
 
     public function testAPrivateFeedCarriesItsAddress(): void
     {
@@ -68,14 +38,5 @@ final class SocialFeedClassifierTest extends TestCase
         $feed->setSourceFormat($sourceFormat);
 
         return $feed;
-    }
-
-    #[DataProvider('feeds')]
-    public function testAStoredRowsUrlAndFormatNameTheSameNetwork(
-        string $url,
-        string $sourceFormat,
-        ?SocialNetwork $network,
-    ): void {
-        self::assertSame($network, SocialFeedClassifier::networkFor($url, $sourceFormat));
     }
 }

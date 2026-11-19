@@ -6,6 +6,7 @@ namespace App\Dto\Social;
 
 use App\Service\Social\Social\Exception\InvalidInstanceUrlException;
 use App\Service\Social\Social\Model\SocialCredentialsModel;
+use App\Service\Social\Social\Support\LemmyCredentials;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class ConnectLemmyRequest
@@ -29,6 +30,11 @@ final readonly class ConnectLemmyRequest
     /** @throws InvalidInstanceUrlException */
     public function toCredentials(): SocialCredentialsModel
     {
-        return SocialCredentialsModel::lemmy($this->instanceUrl, $this->username, $this->password, $this->totpToken);
+        return LemmyCredentials::buildCredentials(
+            $this->instanceUrl,
+            $this->username,
+            $this->password,
+            $this->totpToken,
+        );
     }
 }

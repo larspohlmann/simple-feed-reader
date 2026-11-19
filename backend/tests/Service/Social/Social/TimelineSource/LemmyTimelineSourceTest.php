@@ -11,6 +11,7 @@ use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\PrivateFeedRule\LemmyPrivateFeedRule;
 use App\Service\Social\Social\TimelineSource\LemmyTimelineSource;
 use App\Tests\Support\PrivateFeeds;
 use App\Tests\Support\RoutedHttpClient;
@@ -172,6 +173,7 @@ final class LemmyTimelineSourceTest extends TestCase
         return new LemmyTimelineSource(
             SocialApiWiring::lemmyAccountApi((new RoutedHttpClient([]))->client()),
             SocialApiWiring::lemmyPostEntries(),
+            new LemmyPrivateFeedRule(),
         );
     }
 

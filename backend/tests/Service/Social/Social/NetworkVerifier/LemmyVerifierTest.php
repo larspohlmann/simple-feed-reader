@@ -9,10 +9,13 @@ use App\Service\Outbound\Fetch\UrlGuard;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkUnavailableException;
 use App\Service\Social\Social\LemmyApiClient;
+use App\Service\Social\Social\Model\CredentialReplacementModel;
 use App\Service\Social\Social\Model\SocialCredentialsModel;
 use App\Service\Social\Social\NetworkVerifier\LemmyVerifier;
+use App\Service\Social\Social\Support\LemmyCredentials;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\RoutedHttpClient;
+use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StaticDnsResolver;
 use App\Tests\Support\TaggedItemOf;
 use PHPUnit\Framework\TestCase;
@@ -45,7 +48,7 @@ final class LemmyVerifierTest extends TestCase
     {
         $http = $this->http(self::fixture('login.json'), self::fixture('site-logged-in.json'));
 
-        $this->verifier($http)->verify(SocialCredentialsModel::lemmy('lemmy.example', 'lars', 'pw', '123456'));
+        $this->verifier($http)->verify(LemmyCredentials::buildCredentials('lemmy.example', 'lars', 'pw', '123456'));
 
         self::assertSame(
             '{"username_or_email":"lars","password":"pw","totp_2fa_token":"123456"}',
@@ -120,6 +123,17 @@ final class LemmyVerifierTest extends TestCase
         self::assertSame('lemmy', TaggedItemOf::index(LemmyVerifier::class));
     }
 
+    public function testReconnectCredentialsAreTheNetworksOwn(): void
+    {
+        $account = SocialAccounts::lemmyOf(SocialAccounts::owner());
+        $replacement = new CredentialReplacementModel('pw', '123456');
+
+        self::assertEquals(
+            LemmyCredentials::buildReconnectCredentials($account, $replacement),
+            $this->verifier(new RoutedHttpClient([]))->buildReconnectCredentials($account, $replacement),
+        );
+    }
+
     private function http(string $login, string $site): RoutedHttpClient
     {
         return new RoutedHttpClient([self::LOGIN => new MockResponse($login), self::SITE => new MockResponse($site)]);
@@ -134,7 +148,7 @@ final class LemmyVerifierTest extends TestCase
 
     private function credentials(): SocialCredentialsModel
     {
-        return SocialCredentialsModel::lemmy('lemmy.example', 'lars', 'pw', null);
+        return LemmyCredentials::buildCredentials('lemmy.example', 'lars', 'pw', null);
     }
 
     private static function fixture(string $name): string

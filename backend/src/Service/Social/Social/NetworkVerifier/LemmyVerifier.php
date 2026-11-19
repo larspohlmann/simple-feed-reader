@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\NetworkVerifier;
 
+use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Content\Comments\Support\LemmyAuthor;
 use App\Service\Foundation\Url\Support\UrlOrigin;
@@ -11,9 +12,11 @@ use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\LemmyApiClient;
+use App\Service\Social\Social\Model\CredentialReplacementModel;
 use App\Service\Social\Social\Model\LemmySessionModel;
 use App\Service\Social\Social\Model\SocialCredentialsModel;
 use App\Service\Social\Social\Model\VerifiedAccountModel;
+use App\Service\Social\Social\Support\LemmyCredentials;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Lemmy->value)]
@@ -25,6 +28,13 @@ final readonly class LemmyVerifier implements NetworkVerifierInterface
 
     public function __construct(private LemmyApiClient $lemmy)
     {
+    }
+
+    public function buildReconnectCredentials(
+        SocialAccount $account,
+        CredentialReplacementModel $replacement,
+    ): SocialCredentialsModel {
+        return LemmyCredentials::buildReconnectCredentials($account, $replacement);
     }
 
     public function verify(SocialCredentialsModel $credentials): VerifiedAccountModel

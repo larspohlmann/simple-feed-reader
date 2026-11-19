@@ -12,6 +12,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
+use App\Tests\Support\SocialRuleWiring;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 
 final class SharedPostQuoteFinderTest extends DbTestCase
@@ -32,9 +33,12 @@ final class SharedPostQuoteFinderTest extends DbTestCase
     {
         $accounts = $this->entityManager->getRepository(SocialAccount::class);
         $chooser = SocialFeeds::actingAccountChooser($this->entityManager, $accounts);
+        $postAddresses = SocialRuleWiring::postAddresses();
+        $guard = new ActingAccountGuard($this->entityManager);
 
         return new SharedPostQuoteFinder(
-            new SocialPostFinder($chooser, new ActingAccountGuard($this->entityManager), new ServiceLocator([])),
+            new SocialPostFinder($chooser, $guard, new ServiceLocator([]), $postAddresses),
+            $postAddresses,
         );
     }
 }

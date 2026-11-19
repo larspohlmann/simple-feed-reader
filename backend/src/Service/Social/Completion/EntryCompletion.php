@@ -9,7 +9,6 @@ use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
-use App\Repository\EntryListRowEnricher;
 use App\Repository\ShareEnrichmentRepository;
 use App\Service\Social\Bluesky\PostEnricher;
 use App\Service\Foundation\Clock\NaiveUtcClock;
@@ -23,7 +22,6 @@ final readonly class EntryCompletion
 
     public function __construct(
         private EntryListRepository $entryList,
-        private EntryListRowEnricher $enricher,
         private ShareEnrichmentRepository $enrichments,
         private PostEnricher $postEnricher,
         private SelfThreadPassInterface $selfThreads,
@@ -42,7 +40,7 @@ final readonly class EntryCompletion
         $rows = $this->entryList->rowsByIdsForUser($userId, $entryIds);
         $this->completeQueued(array_map(static fn (EntryListRow $row): Entry => $row->entry, $rows));
 
-        return $this->enricher->enrich($rows, $userId);
+        return $rows;
     }
 
     /**

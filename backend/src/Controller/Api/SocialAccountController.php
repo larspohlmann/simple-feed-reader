@@ -94,7 +94,7 @@ final readonly class SocialAccountController
         #[MapRequestPayload] ReplaceCredentialRequest $request,
     ): JsonResponse {
         $account = $this->socialAccount->require($user, $id);
-        $credentials = $request->toCredentials($account);
+        $credentials = $this->connector->buildReconnectCredentials($account, $request->toReplacement());
         $this->rateLimitGuard->enforceForUser($this->socialAccountLimiter, $user);
 
         $account = $this->connector->reconnect($account, $credentials);

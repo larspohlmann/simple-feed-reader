@@ -28,6 +28,7 @@ use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\PrivateFeedsWiring;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
+use App\Tests\Support\SocialRuleWiring;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -276,6 +277,7 @@ final class SearchFeedEditorTest extends DbTestCase
             EntryIndexers::with($this->indexWriter),
             $this->entityManager,
             new NaiveUtcClock($this->clock),
+            SocialRuleWiring::privateFeedRules(),
         );
     }
 

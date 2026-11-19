@@ -22,8 +22,7 @@ use App\Service\Social\Social\Model\SocialCollectionModel;
 use App\Service\Social\Social\Pass\FollowMatching;
 use App\Service\Social\Social\SocialCandidates\SocialCandidatesInterface;
 use App\Service\Social\Social\Support\CandidateOrder;
-use App\Service\Social\Social\Support\PrivateFeedRules;
-use App\Service\Social\Social\Support\ProfileIdentity;
+use App\Service\Social\Social\Support\SocialFeedUrl;
 
 final readonly class ImportCandidates
 {
@@ -34,6 +33,8 @@ final readonly class ImportCandidates
         private SocialFeedRepository $socialFeeds,
         private ActingAccountGuard $guard,
         private FollowAvatarCache $followAvatars,
+        private ProfileFeeds $profileFeeds,
+        private PrivateFeedRules $privateFeedRules,
     ) {
     }
 
@@ -46,7 +47,11 @@ final readonly class ImportCandidates
         $network = $this->networkCandidatesOf($account);
         $this->followAvatars->remember($account, $network->follows);
         $follows = $this->followMatcher->match(
-            new FollowMatching($account->getNetwork(), $network->follows),
+            new FollowMatching(
+                $account->getNetwork(),
+                $this->profileFeeds->selectRule($account->getNetwork()),
+                $network->follows,
+            ),
             $this->profileFeedsOf($account),
         );
         $subscribed = $this->privateFeedSubscriptionsOf($account);
@@ -54,7 +59,7 @@ final readonly class ImportCandidates
         return new ImportCandidatesModel(
             CandidateOrder::follows(self::trustedFollows($network, $follows)),
             [
-                ...self::singletonsOf($account, $subscribed),
+                ...$this->singletonsOf($account, $subscribed),
                 ...self::collections(SocialFeedKind::UserList, $network->lists, $subscribed),
             ],
             self::collections(SocialFeedKind::CustomFeed, $network->customFeeds, $subscribed),
@@ -85,12 +90,13 @@ final readonly class ImportCandidates
      *
      * @return list<CollectionCandidateModel>
      */
-    private static function singletonsOf(SocialAccount $account, array $subscribed): array
+    private function singletonsOf(SocialAccount $account, array $subscribed): array
     {
+        $rule = $this->privateFeedRules->selectRule($account->getNetwork());
         $singletons = [];
         foreach (SocialFeedKind::timelines() as $kind) {
             $privateFeed = PrivateFeedModel::timeline($kind);
-            if (PrivateFeedRules::allows($account->getNetwork(), $privateFeed)) {
+            if ($rule->allows($privateFeed)) {
                 $singletons[] = CollectionCandidateModel::of($privateFeed, $subscribed);
             }
         }
@@ -140,8 +146,11 @@ final readonly class ImportCandidates
     private function profileFeedsOf(SocialAccount $account): array
     {
         $profileFeeds = [];
+        $network = $account->getNetwork();
+        $rule = $this->profileFeeds->selectRule($network);
         foreach ($this->subscriptions->findFeedSummariesForUser($account->getUser()->requireId()) as $subscription) {
-            $identity = ProfileIdentity::of($account->getNetwork(), $subscription['feedUrl']);
+            $identity = $rule->parseIdentity($subscription['feedUrl'])
+                ?? SocialFeedUrl::authorOf($network, $subscription['feedUrl']);
             if (null === $identity) {
                 continue;
             }

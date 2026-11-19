@@ -25,7 +25,7 @@ final class LemmyCommunity
             $identity,
             '!' . $identity,
             $community->string('title'),
-            ProfileFeedUrl::lemmy($lowerName, $lowerHost),
+            LemmyProfileFeed::buildUrl($lowerName, $lowerHost),
             $community->string('icon'),
         );
     }

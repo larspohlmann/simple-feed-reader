@@ -8,7 +8,7 @@ use App\Dto\Entry\EntryPageParameters;
 use App\Dto\Entry\MarkTrendingStoryReadRequest;
 use App\Entity\User;
 use App\Http\TrendingStoryPage;
-use App\Repository\EntryListRowEnricher;
+use App\Service\Library\EntryList\EntryListRowEnricher;
 use App\Repository\TrendingStoryListQuery;
 use App\Service\Curation\Trending\TrendingStoryEntries;
 use App\Service\Library\Reading\TrendingStoryMarkReadService;

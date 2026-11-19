@@ -6,6 +6,7 @@ namespace App\Tests\Support;
 
 use App\Entity\SocialAccount;
 use App\Service\Foundation\Crypto\InstanceSecretCipher;
+use App\Service\Outbound\Fetch\AnswerSettler\PassThroughSettler;
 use App\Service\Outbound\Fetch\ConcurrentRequestEngine;
 use App\Service\Outbound\Fetch\IpValidator;
 use App\Service\Outbound\Fetch\UrlGuard;
@@ -24,6 +25,9 @@ use App\Service\Social\Social\LemmyApiClient;
 use App\Service\Social\Social\LemmyPostEntries;
 use App\Service\Social\Social\MastodonAccountApi;
 use App\Service\Social\Social\MastodonApiClient;
+use App\Service\Social\Social\PrivateFeedRule\LemmyPrivateFeedRule;
+use App\Service\Social\Social\PrivateFeedRule\MastodonPrivateFeedRule;
+use App\Service\Social\Social\SearchAnswers;
 use App\Service\Social\Social\StoredCredential;
 use App\Service\Social\Social\TimelineRounds;
 use App\Service\Foundation\Text\MarkdownHtml;
@@ -207,6 +211,15 @@ final class SocialApiWiring
         return new TimelineRounds(self::timelineSources($http, $cache), $accountConcurrency, 4);
     }
 
+    public static function searchAnswers(HttpClientInterface $http, ArrayAdapter $cache): SearchAnswers
+    {
+        return new SearchAnswers(
+            self::requestEngine($http),
+            new PassThroughSettler(),
+            self::timelineRounds($http, $cache),
+        );
+    }
+
     public static function timelineSources(HttpClientInterface $http, ArrayAdapter $cache): TimelineSources
     {
         return new TimelineSources(new ServiceLocator([
@@ -217,11 +230,13 @@ final class SocialApiWiring
             TaggedItemOf::index(MastodonTimelineSource::class)
                 => static fn (): MastodonTimelineSource => new MastodonTimelineSource(
                     self::mastodonAccountApi($http),
+                    new MastodonPrivateFeedRule(),
                 ),
             TaggedItemOf::index(LemmyTimelineSource::class)
                 => static fn (): LemmyTimelineSource => new LemmyTimelineSource(
                     self::lemmyAccountApi($http),
                     self::lemmyPostEntries(),
+                    new LemmyPrivateFeedRule(),
                 ),
         ]));
     }

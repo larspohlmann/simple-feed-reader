@@ -9,6 +9,7 @@ use App\Entity\Feed;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Service\Social\Social\MastodonPendingThread;
+use App\Tests\Support\SocialRuleWiring;
 use PHPUnit\Framework\TestCase;
 
 final class MastodonPendingThreadTest extends TestCase
@@ -19,14 +20,14 @@ final class MastodonPendingThreadTest extends TestCase
     {
         $entry = self::entry(SocialNetwork::Mastodon, SourceFormat::XML, self::STATUS);
 
-        self::assertTrue((new MastodonPendingThread())->awaitsThread($entry));
+        self::assertTrue((new MastodonPendingThread(SocialRuleWiring::postAddresses()))->awaitsThread($entry));
     }
 
     public function testAMastodonTimelinePostAlreadyCarriesItsThread(): void
     {
         $entry = self::entry(SocialNetwork::Mastodon, SourceFormat::MASTODON_API, self::STATUS);
 
-        self::assertFalse((new MastodonPendingThread())->awaitsThread($entry));
+        self::assertFalse((new MastodonPendingThread(SocialRuleWiring::postAddresses()))->awaitsThread($entry));
     }
 
     public function testABlueskyPostIsNotFoldedHere(): void
@@ -37,14 +38,14 @@ final class MastodonPendingThreadTest extends TestCase
             'at://did:plc:bob/app.bsky.feed.post/3abc',
         );
 
-        self::assertFalse((new MastodonPendingThread())->awaitsThread($entry));
+        self::assertFalse((new MastodonPendingThread(SocialRuleWiring::postAddresses()))->awaitsThread($entry));
     }
 
     public function testAMastodonItemThatIsNoStatusAddressIsNotFolded(): void
     {
         $entry = self::entry(SocialNetwork::Mastodon, SourceFormat::XML, 'https://mastodon.social/about');
 
-        self::assertFalse((new MastodonPendingThread())->awaitsThread($entry));
+        self::assertFalse((new MastodonPendingThread(SocialRuleWiring::postAddresses()))->awaitsThread($entry));
     }
 
     private static function entry(SocialNetwork $network, string $sourceFormat, string $guid): Entry

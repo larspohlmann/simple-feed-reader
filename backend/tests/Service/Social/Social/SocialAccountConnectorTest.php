@@ -21,8 +21,12 @@ use App\Service\Social\Social\Exception\SocialAccountMismatchException;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\TooManySocialAccountsException;
 use App\Service\Social\Social\Factory\SocialAccountFactory;
+use App\Service\Social\Social\Model\CredentialReplacementModel;
 use App\Service\Social\Social\Model\SocialCredentialsModel;
 use App\Service\Social\Social\Model\VerifiedAccountModel;
+use App\Service\Social\Social\Support\BlueskyCredentials;
+use App\Service\Social\Social\Support\LemmyCredentials;
+use App\Service\Social\Social\Support\MastodonCredentials;
 use App\Service\Social\Social\SocialAccountConnector;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PrivateFeedsWiring;
@@ -82,7 +86,7 @@ final class SocialAccountConnectorTest extends DbTestCase
         );
         $mastodon = $this->connector(new StubAccountVerifier($verified))->connect(
             $this->user,
-            SocialCredentialsModel::mastodon('mastodon.example', 'token-1234'),
+            MastodonCredentials::buildCredentials('mastodon.example', 'token-1234'),
         );
 
         self::assertTrue($mastodon->isDefault());
@@ -343,12 +347,12 @@ final class SocialAccountConnectorTest extends DbTestCase
 
     private function lemmyCredentials(): SocialCredentialsModel
     {
-        return SocialCredentialsModel::lemmy('lemmy.example', 'lars', 'a password', null);
+        return LemmyCredentials::buildCredentials('lemmy.example', 'lars', 'a password', null);
     }
 
     private function blueskyCredentials(): SocialCredentialsModel
     {
-        return SocialCredentialsModel::bluesky('alice.bsky.social', self::APP_PASSWORD);
+        return BlueskyCredentials::buildCredentials('alice.bsky.social', self::APP_PASSWORD);
     }
 
     private function racingConnect(string $identity): object
@@ -389,7 +393,10 @@ final class SocialAccountConnectorTest extends DbTestCase
     {
         return $this->connector($verifier)->reconnect(
             $account,
-            SocialCredentialsModel::forReconnect($account, 'wxyz-wxyz-wxyz-9999'),
+            BlueskyCredentials::buildReconnectCredentials(
+                $account,
+                new CredentialReplacementModel('wxyz-wxyz-wxyz-9999', null),
+            ),
         );
     }
 

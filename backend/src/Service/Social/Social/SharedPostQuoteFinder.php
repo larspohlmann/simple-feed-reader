@@ -11,13 +11,14 @@ use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Model\ResponseKind;
 use App\Service\Social\Social\Model\SocialPostModel;
-use App\Service\Social\Social\Support\SocialPostAddress;
 
 /** A shared URL that names a post on the sharing account's own network is quoted, when the post lets it be. */
 final readonly class SharedPostQuoteFinder
 {
-    public function __construct(private SocialPostFinder $posts)
-    {
+    public function __construct(
+        private SocialPostFinder $posts,
+        private SocialPostAddresses $postAddresses,
+    ) {
     }
 
     /**
@@ -28,7 +29,7 @@ final readonly class SharedPostQuoteFinder
      */
     public function quotableAt(SocialAccount $account, string $url): ?SocialPostModel
     {
-        $address = SocialPostAddress::ofUrl($url);
+        $address = $this->postAddresses->parsePostUrl($url);
         if (null === $address || $address->network !== $account->getNetwork()) {
             return null;
         }

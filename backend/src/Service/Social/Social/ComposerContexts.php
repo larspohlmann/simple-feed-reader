@@ -19,7 +19,6 @@ use App\Service\Social\Social\Model\ResponseTargetModel;
 use App\Service\Social\Social\Model\SharedLinkModel;
 use App\Service\Social\Social\Model\SocialPostModel;
 use App\Service\Social\Social\Support\ComposerStartingText;
-use App\Service\Social\Social\Support\SocialPostAddress;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 
@@ -32,6 +31,7 @@ final readonly class ComposerContexts
         private SharedPageCards $pageCards,
         #[AutowireLocator('app.social_composer_defaults')]
         private ServiceLocator $defaults,
+        private SocialPostAddresses $postAddresses,
     ) {
     }
 
@@ -126,7 +126,7 @@ final readonly class ComposerContexts
     private function threadStarterOrNull(SocialPostModel $post, ResponseTargetModel $target): ?SocialPostModel
     {
         try {
-            return $this->posts->findAs($post->account, SocialPostAddress::respondableOrRefuse($target->entry));
+            return $this->posts->findAs($post->account, $this->postAddresses->requireRespondablePost($target->entry));
         } catch (
             SocialPostNotFoundException
             | SocialAccountNeedsReconnectException

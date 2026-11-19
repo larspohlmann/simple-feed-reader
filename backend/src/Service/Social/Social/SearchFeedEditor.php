@@ -14,11 +14,9 @@ use App\Service\Library\Search\EntryIndexer;
 use App\Service\Social\Social\Exception\NotASearchFeedException;
 use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Social\Model\PrivateFeedModel;
-use App\Service\Social\Social\Support\NetworkSearchQueries;
-use App\Service\Social\Social\Support\PrivateFeedSite;
+use App\Service\Social\Social\PrivateFeedRule\PrivateFeedRuleInterface;
 use App\Service\Social\Social\Support\SocialFeedUrl;
 use App\Service\Social\Social\Support\SocialSearchMatch;
-use App\Service\Social\Social\Support\StoredSearchedPost;
 use App\Service\Library\Subscription\Exception\AlreadySubscribedException;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -31,6 +29,7 @@ final readonly class SearchFeedEditor
         private EntryIndexer $indexer,
         private EntityManagerInterface $entityManager,
         private NaiveUtcClock $clock,
+        private PrivateFeedRules $privateFeedRules,
     ) {
     }
 
@@ -47,7 +46,7 @@ final readonly class SearchFeedEditor
             return;
         }
         $this->refuseAnotherSearchFor($socialFeed, $search);
-        self::refuseTooBroadFor($socialFeed, $search);
+        $this->refuseTooBroadFor($socialFeed, $search);
         $nonMatchingIds = $this->nonMatchingIds($socialFeed, $search);
 
         $removedIds = $this->entityManager->wrapInTransaction(
@@ -81,9 +80,9 @@ final readonly class SearchFeedEditor
     }
 
     /** @throws SearchQueryTooBroadException */
-    private static function refuseTooBroadFor(SocialFeed $socialFeed, PrivateFeedModel $search): void
+    private function refuseTooBroadFor(SocialFeed $socialFeed, PrivateFeedModel $search): void
     {
-        NetworkSearchQueries::requireFits($socialFeed->getSocialAccount()->getNetwork(), $search->remoteId);
+        $this->ruleOf($socialFeed)->buildSearchQueries($search->remoteId);
     }
 
     private function retarget(SocialFeed $socialFeed, PrivateFeedModel $search): void
@@ -92,7 +91,7 @@ final readonly class SearchFeedEditor
         $feed = $socialFeed->getFeed();
         $socialFeed->requery($search->remoteId);
         $feed->setUrl(SocialFeedUrl::of($account, $search));
-        $feed->setSiteUrl(PrivateFeedSite::of($account, $search));
+        $feed->setSiteUrl($this->ruleOf($socialFeed)->buildSiteUrl($account, $search));
         $feed->setTitle($search->remoteId);
         $feed->scheduleNextFetchAt($this->clock->now());
     }
@@ -101,13 +100,14 @@ final readonly class SearchFeedEditor
     private function nonMatchingIds(SocialFeed $socialFeed, PrivateFeedModel $search): array
     {
         $account = $socialFeed->getSocialAccount();
+        $rule = $this->ruleOf($socialFeed);
         $matches = SocialSearchMatch::matcher($search->remoteId);
         $nonMatchingIds = [];
         $lastEntryId = 0;
         do {
             $posts = $this->socialFeeds->unprotectedPostsAfter($socialFeed, $lastEntryId);
             foreach ($posts as $post) {
-                if (!$matches(StoredSearchedPost::of($account, $post))) {
+                if (!$matches($rule->buildSearchedPost($account, $post))) {
                     $nonMatchingIds[] = $post->entryId;
                 }
                 $lastEntryId = $post->entryId;
@@ -115,5 +115,10 @@ final readonly class SearchFeedEditor
         } while ([] !== $posts);
 
         return $nonMatchingIds;
+    }
+
+    private function ruleOf(SocialFeed $socialFeed): PrivateFeedRuleInterface
+    {
+        return $this->privateFeedRules->selectRule($socialFeed->getSocialAccount()->getNetwork());
     }
 }

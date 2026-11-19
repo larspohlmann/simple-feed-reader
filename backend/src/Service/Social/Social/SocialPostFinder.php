@@ -17,7 +17,6 @@ use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Model\SocialPostAddressModel;
 use App\Service\Social\Social\Model\SocialPostModel;
 use App\Service\Social\Social\PostResolver\PostResolverInterface;
-use App\Service\Social\Social\Support\SocialPostAddress;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 
@@ -29,6 +28,7 @@ final readonly class SocialPostFinder
         private ActingAccountGuard $guard,
         #[AutowireLocator('app.social_post_resolver')]
         private ContainerInterface $resolvers,
+        private SocialPostAddresses $postAddresses,
     ) {
     }
 
@@ -42,7 +42,7 @@ final readonly class SocialPostFinder
      */
     public function find(User $user, Entry $entry): SocialPostModel
     {
-        return $this->resolvedFor($user, $entry, SocialPostAddress::ofOrRefuse($entry));
+        return $this->resolvedFor($user, $entry, $this->postAddresses->requirePost($entry));
     }
 
     /**
@@ -57,7 +57,7 @@ final readonly class SocialPostFinder
      */
     public function findReply(User $user, Entry $entry, string $address): SocialPostModel
     {
-        return $this->resolvedFor($user, $entry, SocialPostAddress::replyOrRefuse($entry, $address));
+        return $this->resolvedFor($user, $entry, $this->postAddresses->requireReply($entry, $address));
     }
 
     /**

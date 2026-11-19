@@ -19,11 +19,11 @@ use App\Http\SubscriptionJson;
 use App\Repository\SocialAccountRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
+use App\Service\Curation\Trending\SurfaceTallies;
 use App\Service\Library\Subscription\BulkSubscriptionUpdater;
 use App\Service\Library\Subscription\OwnedSubscriptions;
 use App\Service\Library\Subscription\SubscriptionEditor;
 use App\Service\Library\Subscription\SubscriptionService;
-use App\Service\Library\Subscription\SubscriptionTallyReader;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
@@ -39,7 +39,7 @@ final readonly class SubscriptionController
         private SubscriptionRepository $subscriptions,
         private SocialAccountRepository $socialAccounts,
         private TagRepository $tags,
-        private SubscriptionTallyReader $tallies,
+        private SurfaceTallies $tallies,
         private OwnedSubscriptions $ownedSubscriptions,
         private BulkSubscriptionUpdater $bulkUpdater,
         private SubscriptionEditor $editor,
@@ -55,7 +55,7 @@ final readonly class SubscriptionController
 
         return new JsonResponse(SubscriptionJson::list(
             $this->subscriptions->findForUserWithTags($user->requireId(), SubscriptionSet::All),
-            $this->tallies->forUser($user, $window),
+            $this->tallies->buildTallies($user, $window),
             $this->socialAccounts->findAllForUserIdInActingOrder($user->requireId()),
         ));
     }
@@ -67,7 +67,7 @@ final readonly class SubscriptionController
     ): JsonResponse {
         $window = TrendingWindow::fromRequestValue($trendingWindow, 'trendingWindow');
 
-        return new JsonResponse(SubscriptionCountsJson::from($this->tallies->forUser($user, $window)));
+        return new JsonResponse(SubscriptionCountsJson::from($this->tallies->buildTallies($user, $window)));
     }
 
     #[Route('', name: 'api_subscriptions_create', methods: ['POST'])]

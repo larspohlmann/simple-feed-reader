@@ -8,7 +8,7 @@ use App\Dto\Search\MarkSearchReadRequest;
 use App\Entity\User;
 use App\Http\Factory\EntrySearchRequestFactory;
 use App\Http\SearchPage;
-use App\Repository\EntryListRowEnricher;
+use App\Service\Library\EntryList\EntryListRowEnricher;
 use App\Service\Library\Reading\SearchMarkReadService;
 use App\Service\Library\Search\EntrySearch\EntrySearchInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;

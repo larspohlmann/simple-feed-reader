@@ -31,6 +31,7 @@ use App\Tests\Support\FakePostCountsSource;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
+use App\Tests\Support\SocialRuleWiring;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 
@@ -54,7 +55,7 @@ final class SocialCountsTest extends DbTestCase
         $this->publicSource = new FakePostCountsSource(new SocialCountsModel(5, 2, 1, null));
         $this->mastodon = new FakeMastodonNetwork();
         $this->homeServer = new FakeHomeServerCheck();
-        $this->cache = new SocialCountsCache(new ArrayAdapter());
+        $this->cache = new SocialCountsCache(new ArrayAdapter(), SocialRuleWiring::postAddresses());
         $this->owner = $this->user('social-counts-service@example.test');
     }
 
@@ -277,9 +278,11 @@ final class SocialCountsTest extends DbTestCase
                 SocialFeeds::actingAccountChooser($this->entityManager, $accounts),
                 new ActingAccountGuard($this->entityManager),
                 new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon]),
+                SocialRuleWiring::postAddresses(),
             ),
             ConfirmedDeletions::askingOf($this->entityManager, $this->homeServer),
             new ServiceLocator(['mastodon' => static fn (): FakePostCountsSource => $publicSource]),
+            SocialRuleWiring::postAddresses(),
         );
     }
 }

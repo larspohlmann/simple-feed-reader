@@ -15,6 +15,7 @@ use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Social\Social\ActingAccountGuard;
 use App\Service\Social\Social\PrivateFeedSync;
 use App\Service\Social\Social\PrivateFeedSyncApplier;
+use App\Service\Social\Social\PrivateFeedSyncReasons;
 use App\Service\Social\Social\PrivateFeedSyncSkips;
 use App\Service\Social\Social\PrivateFeedSyncSweep;
 use App\Service\Social\Social\SocialCandidates\SocialCandidatesInterface;
@@ -93,6 +94,7 @@ final class PrivateFeedSyncWiring
             $subscriptions,
             new NaiveUtcClock($clock),
             $entityManager,
+            new PrivateFeedSyncReasons(SocialRuleWiring::privateFeedRules()),
         );
     }
 

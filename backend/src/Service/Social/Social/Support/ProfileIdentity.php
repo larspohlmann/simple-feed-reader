@@ -8,22 +8,32 @@ use App\Enum\SocialNetwork;
 
 final class ProfileIdentity
 {
-    /** @return string|null the DID, handle or user@host; null when the feed follows no person on $network */
-    public static function of(SocialNetwork $network, string $feedUrl): ?string
-    {
-        return ProfileFeedUrl::identityOf($network, $feedUrl) ?? SocialFeedUrl::authorOf($network, $feedUrl);
-    }
-
     /** @return string|null the valid Bluesky actor a profile feed or an author feed follows; null for any other feed */
     public static function validBlueskyActorOf(string $feedUrl): ?string
     {
-        return self::validBlueskyActor(self::of(SocialNetwork::Bluesky, $feedUrl));
+        return self::validBlueskyActor(
+            BlueskyProfileFeed::parseIdentity($feedUrl) ?? SocialFeedUrl::authorOf(SocialNetwork::Bluesky, $feedUrl),
+        );
     }
 
     /** @return string|null the valid Bluesky actor a profile's RSS feed follows; null for an author feed or any other */
     public static function validBlueskyActorOfRssFeed(string $feedUrl): ?string
     {
-        return self::validBlueskyActor(ProfileFeedUrl::identityOf(SocialNetwork::Bluesky, $feedUrl));
+        return self::validBlueskyActor(BlueskyProfileFeed::parseIdentity($feedUrl));
+    }
+
+    /** @return array{string, string}|null the name and host of `name@host`; null for any other shape */
+    public static function parseNameAndHost(string $identity): ?array
+    {
+        $nameAndHost = explode('@', $identity);
+
+        return 2 === \count($nameAndHost) ? [$nameAndHost[0], $nameAndHost[1]] : null;
+    }
+
+    /** The built feed URL when the identity it reads back as is the one it was built from, case aside; else null. */
+    public static function parseRoundTripUrl(string $url, ?string $parsedIdentity, string $identity): ?string
+    {
+        return null !== $parsedIdentity && 0 === strcasecmp($parsedIdentity, $identity) ? $url : null;
     }
 
     private static function validBlueskyActor(?string $identity): ?string

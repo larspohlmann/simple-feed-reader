@@ -17,7 +17,7 @@ use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\LemmyApiClient;
 use App\Service\Social\Social\Model\ProfileCallBudgetModel;
 use App\Service\Social\Social\Model\ProfileImageSweepReportModel;
-use App\Service\Social\Social\Support\ProfileFeedUrl;
+use App\Service\Social\Social\Support\LemmyProfileFeed;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
@@ -50,7 +50,7 @@ final readonly class LemmyProfilePictures implements ProfilePictureSourceInterfa
 
     private function check(Feed $feed, \DateTimeImmutable $now): ProfileImageSweepReportModel
     {
-        $identity = ProfileFeedUrl::identityOf(SocialNetwork::Lemmy, $feed->getUrl());
+        $identity = LemmyProfileFeed::parseIdentity($feed->getUrl());
         if (null === $identity) {
             $feed->recordImageCheck($feed->getImageUrl(), $now);
 
@@ -86,7 +86,7 @@ final readonly class LemmyProfilePictures implements ProfilePictureSourceInterfa
      */
     private function pictureOf(string $identity): ?string
     {
-        $user = ProfileFeedUrl::lemmyUserOf($identity);
+        $user = LemmyProfileFeed::parseUser($identity);
         if (null !== $user) {
             return $this->userPictureOf($user);
         }

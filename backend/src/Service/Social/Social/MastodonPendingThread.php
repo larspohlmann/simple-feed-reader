@@ -9,13 +9,16 @@ use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Service\Social\Share\PendingThread\PendingThreadInterface;
 use App\Service\Social\Social\Support\MastodonStatusAddress;
-use App\Service\Social\Social\Support\SocialPostAddress;
 
 final readonly class MastodonPendingThread implements PendingThreadInterface
 {
+    public function __construct(private SocialPostAddresses $postAddresses)
+    {
+    }
+
     public function awaitsThread(Entry $entry): bool
     {
-        $address = SocialPostAddress::of($entry);
+        $address = $this->postAddresses->findPost($entry);
 
         return SocialNetwork::Mastodon === $address?->network
             && null !== MastodonStatusAddress::ofOrNull($address->address)

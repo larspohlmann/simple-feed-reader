@@ -14,7 +14,6 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\SourceFormat;
-use App\Enum\TrendingWindow;
 use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Library\Subscription\SubscriptionTallyReader;
 use App\Tests\DbTestCase;
@@ -41,7 +40,7 @@ final class SubscriptionTallyReaderTest extends DbTestCase
 
         $reader = self::getContainer()->get(SubscriptionTallyReader::class);
         self::assertInstanceOf(SubscriptionTallyReader::class, $reader);
-        $tallies = $reader->forUser($user, TrendingWindow::Day);
+        $tallies = $reader->countTallies($user);
 
         self::assertSame([$subscription->requireId() => 1], $tallies->unreadCounts);
         self::assertSame(1, $tallies->unreadTotals->allItems);
@@ -76,7 +75,7 @@ final class SubscriptionTallyReaderTest extends DbTestCase
 
         $reader = self::getContainer()->get(SubscriptionTallyReader::class);
         self::assertInstanceOf(SubscriptionTallyReader::class, $reader);
-        $totals = $reader->forUser($user, TrendingWindow::Day)->unreadTotals;
+        $totals = $reader->countTallies($user)->unreadTotals;
 
         self::assertSame(3, $totals->allItems);
         self::assertSame([$tag->requireId() => 2], $totals->tags);
@@ -107,7 +106,7 @@ final class SubscriptionTallyReaderTest extends DbTestCase
         $reader = self::getContainer()->get(SubscriptionTallyReader::class);
         self::assertInstanceOf(SubscriptionTallyReader::class, $reader);
 
-        self::assertSame(1, $reader->forUser($user, TrendingWindow::Day)->unreadTotals->forYou);
+        self::assertSame(1, $reader->countTallies($user)->unreadTotals->forYou);
     }
 
     private function completedRun(User $user): RecommendationRun

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Dto\Social;
 
 use App\Service\Social\Social\Model\SocialCredentialsModel;
+use App\Service\Social\Social\Support\BlueskyCredentials;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class ConnectBlueskyRequest
@@ -20,6 +21,6 @@ final readonly class ConnectBlueskyRequest
 
     public function toCredentials(): SocialCredentialsModel
     {
-        return SocialCredentialsModel::bluesky($this->handle, $this->appPassword);
+        return BlueskyCredentials::buildCredentials($this->handle, $this->appPassword);
     }
 }

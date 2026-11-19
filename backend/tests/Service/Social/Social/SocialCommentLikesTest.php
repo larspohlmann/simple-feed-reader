@@ -24,6 +24,7 @@ use App\Tests\Support\FakeMastodonNetwork;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
+use App\Tests\Support\SocialRuleWiring;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\DependencyInjection\ServiceLocator;
@@ -178,6 +179,7 @@ final class SocialCommentLikesTest extends DbTestCase
                 SocialFeeds::actingAccountChooser($this->entityManager, $accounts),
                 $guard,
                 $network,
+                SocialRuleWiring::postAddresses(),
             ),
             new PostLiking($guard, $network),
             $this->comments,

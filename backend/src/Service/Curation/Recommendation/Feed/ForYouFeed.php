@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Curation\Recommendation\Feed;
 
 use App\Repository\EntryListRow;
-use App\Repository\EntryListRowEnricher;
+use App\Service\Library\EntryList\EntryListRowEnricher;
 use App\Repository\ForYouFeedQuery;
 use App\Repository\RecommendationFeedRow;
 use App\Service\Curation\Recommendation\Feed\Model\FeedAnnotationVisibilityModel;

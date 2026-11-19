@@ -12,6 +12,7 @@ use App\Enum\SocialFeedKind;
 use App\Service\Social\Social\AccountVerifier\AccountVerifierInterface;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Model\CredentialReplacementModel;
 use App\Service\Social\Social\Model\SocialCredentialsModel;
 use App\Service\Social\Social\Model\VerifiedAccountModel;
 use App\Tests\Support\ApiTestCase;
@@ -482,6 +483,13 @@ final class SocialAccountControllerTest extends ApiTestCase
                     'https://bsky.social',
                     $credentials->secret,
                 );
+            }
+
+            public function buildReconnectCredentials(
+                SocialAccount $account,
+                CredentialReplacementModel $replacement,
+            ): SocialCredentialsModel {
+                return StubAccountVerifier::buildNetworkReconnectCredentials($account, $replacement);
             }
         };
     }

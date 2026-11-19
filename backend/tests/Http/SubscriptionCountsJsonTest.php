@@ -6,6 +6,7 @@ namespace App\Tests\Http;
 
 use App\Enum\TrendingWindow;
 use App\Http\SubscriptionCountsJson;
+use App\Service\Curation\Trending\Model\SurfaceTalliesModel;
 use App\Service\Library\Subscription\Model\SubscriptionTalliesModel;
 use App\Service\Library\Subscription\Model\UnreadTotalsModel;
 use App\Service\Curation\Trending\Model\TrendingUnopenedModel;
@@ -15,13 +16,15 @@ final class SubscriptionCountsJsonTest extends TestCase
 {
     public function testMapsUnreadAndEntryCountsAndSurfaceTotals(): void
     {
-        $payload = SubscriptionCountsJson::from(new SubscriptionTalliesModel(
-            [12 => 3],
-            [12 => 40, 8 => 5],
-            ['favorites' => 8, 'kept' => 2, 'shared' => 6, 'viewed' => 41],
-            new UnreadTotalsModel(7, [3 => 2], ['bluesky' => 5], ['bluesky' => 2], 3, ['tags' => 0, 'feeds' => 0]),
+        $payload = SubscriptionCountsJson::from(new SurfaceTalliesModel(
+            new SubscriptionTalliesModel(
+                [12 => 3],
+                [12 => 40, 8 => 5],
+                ['favorites' => 8, 'kept' => 2, 'shared' => 6, 'viewed' => 41],
+                new UnreadTotalsModel(7, [3 => 2], ['bluesky' => 5], ['bluesky' => 2], 3, ['tags' => 0, 'feeds' => 0]),
+                [],
+            ),
             new TrendingUnopenedModel(TrendingWindow::Week, 7),
-            [],
         ));
 
         self::assertSame([
@@ -48,13 +51,15 @@ final class SubscriptionCountsJsonTest extends TestCase
     public function testAnEmptyAccountMapsToEmptySubscriptionsAndZeroTotals(): void
     {
         $payload = SubscriptionCountsJson::from(
-            new SubscriptionTalliesModel(
-                [],
-                [],
-                ['favorites' => 0, 'kept' => 0, 'shared' => 0, 'viewed' => 0],
-                new UnreadTotalsModel(0, [], [], [], 0, ['tags' => 0, 'feeds' => 0]),
+            new SurfaceTalliesModel(
+                new SubscriptionTalliesModel(
+                    [],
+                    [],
+                    ['favorites' => 0, 'kept' => 0, 'shared' => 0, 'viewed' => 0],
+                    new UnreadTotalsModel(0, [], [], [], 0, ['tags' => 0, 'feeds' => 0]),
+                    [],
+                ),
                 new TrendingUnopenedModel(TrendingWindow::Day, 0),
-                [],
             ),
         );
 
@@ -67,13 +72,15 @@ final class SubscriptionCountsJsonTest extends TestCase
 
     public function testCarriesNotificationCounts(): void
     {
-        $payload = SubscriptionCountsJson::from(new SubscriptionTalliesModel(
-            [],
-            [],
-            ['favorites' => 0, 'kept' => 0, 'shared' => 0, 'viewed' => 0],
-            new UnreadTotalsModel(0, [], [], [], 0, ['tags' => 0, 'feeds' => 0]),
+        $payload = SubscriptionCountsJson::from(new SurfaceTalliesModel(
+            new SubscriptionTalliesModel(
+                [],
+                [],
+                ['favorites' => 0, 'kept' => 0, 'shared' => 0, 'viewed' => 0],
+                new UnreadTotalsModel(0, [], [], [], 0, ['tags' => 0, 'feeds' => 0]),
+                ['mastodon' => 2, 'bluesky' => 1],
+            ),
             new TrendingUnopenedModel(TrendingWindow::Day, 0),
-            ['mastodon' => 2, 'bluesky' => 1],
         ));
 
         self::assertSame([

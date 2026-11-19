@@ -12,7 +12,7 @@ use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
 use App\Repository\SubscriptionDisplayTitle;
 use App\Service\Social\Social\Support\SocialFeedClassifier;
-use App\Service\Library\Subscription\Model\SubscriptionTalliesModel;
+use App\Service\Curation\Trending\Model\SurfaceTalliesModel;
 use App\Service\Foundation\Text\Support\PlainText;
 use App\Service\Foundation\Url\Support\FeedWebsite;
 
@@ -37,15 +37,15 @@ final class SubscriptionJson
      */
     public static function list(
         array $subscriptions,
-        SubscriptionTalliesModel $tallies,
+        SurfaceTalliesModel $tallies,
         array $socialAccounts,
     ): array {
         return [
             'subscriptions' => array_map(
                 static fn (Subscription $subscription): array => self::one(
                     $subscription,
-                    $tallies->unreadCounts[$subscription->requireId()] ?? 0,
-                    $tallies->entryCounts[$subscription->requireId()] ?? 0,
+                    $tallies->subscriptions->unreadCounts[$subscription->requireId()] ?? 0,
+                    $tallies->subscriptions->entryCounts[$subscription->requireId()] ?? 0,
                 ),
                 $subscriptions,
             ),

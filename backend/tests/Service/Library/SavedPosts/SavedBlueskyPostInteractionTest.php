@@ -11,7 +11,7 @@ use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\EntryListRow;
-use App\Repository\EntryListRowEnricher;
+use App\Service\Library\EntryList\EntryListRowEnricher;
 use App\Repository\EntryListRowMarks;
 use App\Repository\EntryListRowSocial;
 use App\Repository\EntryListRowSubscription;
@@ -31,6 +31,7 @@ use App\Tests\Support\FakeHomeServerCheck;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
+use App\Tests\Support\SocialRuleWiring;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 
@@ -151,16 +152,18 @@ final class SavedBlueskyPostInteractionTest extends DbTestCase
             SocialFeeds::actingAccountChooser($this->entityManager, $accounts),
             new ActingAccountGuard($this->entityManager),
             new ServiceLocator(['bluesky' => static fn (): PostResolverInterface => $resolver]),
+            SocialRuleWiring::postAddresses(),
         );
     }
 
     private function counts(PostCountsSourceInterface $source): SocialCounts
     {
         return new SocialCounts(
-            new SocialCountsCache(new ArrayAdapter()),
+            new SocialCountsCache(new ArrayAdapter(), SocialRuleWiring::postAddresses()),
             $this->finder(),
             ConfirmedDeletions::askingOf($this->entityManager, new FakeHomeServerCheck()),
             new ServiceLocator(['bluesky' => static fn (): PostCountsSourceInterface => $source]),
+            SocialRuleWiring::postAddresses(),
         );
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Social;
 
 use App\Service\Social\Social\ProfileFeedTitle;
+use App\Tests\Support\SocialRuleWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -15,7 +16,7 @@ final class ProfileFeedTitleTest extends TestCase
 
     public function testABlueskyProfileFeedKeepsOnlyTheDisplayName(): void
     {
-        $title = (new ProfileFeedTitle())->of(self::BLUESKY_PROFILE, '@motherjones.com - Mother Jones');
+        $title = self::title(self::BLUESKY_PROFILE, '@motherjones.com - Mother Jones');
 
         self::assertSame('Mother Jones', $title);
     }
@@ -24,41 +25,41 @@ final class ProfileFeedTitleTest extends TestCase
     {
         $url = 'https://bsky.app/profile/did:plc:qobvnkudcv3zlaklxxjduqoi/rss';
 
-        self::assertSame('Mother Jones', (new ProfileFeedTitle())->of($url, '@motherjones.com - Mother Jones'));
+        self::assertSame('Mother Jones', self::title($url, '@motherjones.com - Mother Jones'));
     }
 
     public function testADisplayNameContainingTheSeparatorKeepsAllOfIt(): void
     {
         self::assertSame(
             'Mother Jones - Investigations',
-            (new ProfileFeedTitle())->of(self::BLUESKY_PROFILE, '@motherjones.com - Mother Jones - Investigations'),
+            self::title(self::BLUESKY_PROFILE, '@motherjones.com - Mother Jones - Investigations'),
         );
     }
 
     public function testTheDisplayNameLosesTheSpaceAroundIt(): void
     {
-        $title = (new ProfileFeedTitle())->of(self::BLUESKY_PROFILE, '@motherjones.com -  Mother Jones ');
+        $title = self::title(self::BLUESKY_PROFILE, '@motherjones.com -  Mother Jones ');
 
         self::assertSame('Mother Jones', $title);
     }
 
     public function testALemmyCommunityFeedNamesTheCommunityBeforeTheSite(): void
     {
-        $title = (new ProfileFeedTitle())->of(self::LEMMY_COMMUNITY, 'Lemmy.World - simplefeedreader');
+        $title = self::title(self::LEMMY_COMMUNITY, 'Lemmy.World - simplefeedreader');
 
         self::assertSame('simplefeedreader - Lemmy.World', $title);
     }
 
     public function testASiteNameContainingTheSeparatorStaysWhole(): void
     {
-        $title = (new ProfileFeedTitle())->of(self::LEMMY_COMMUNITY, 'Lemmy - The World - simplefeedreader');
+        $title = self::title(self::LEMMY_COMMUNITY, 'Lemmy - The World - simplefeedreader');
 
         self::assertSame('simplefeedreader - Lemmy - The World', $title);
     }
 
     public function testALemmyUserFeedNamesTheUserBeforeTheSite(): void
     {
-        $title = (new ProfileFeedTitle())->of(
+        $title = self::title(
             'https://lemmy.world/feeds/u/lars_pohlmann.xml',
             'Lemmy.World - lars_pohlmann',
         );
@@ -82,6 +83,11 @@ final class ProfileFeedTitleTest extends TestCase
     #[DataProvider('untouchedTitles')]
     public function testAnyOtherTitleStaysAsItIs(string $feedUrl, string $title): void
     {
-        self::assertSame($title, (new ProfileFeedTitle())->of($feedUrl, $title));
+        self::assertSame($title, self::title($feedUrl, $title));
+    }
+
+    private static function title(string $feedUrl, string $channelTitle): string
+    {
+        return new ProfileFeedTitle(SocialRuleWiring::profileFeeds())->of($feedUrl, $channelTitle);
     }
 }

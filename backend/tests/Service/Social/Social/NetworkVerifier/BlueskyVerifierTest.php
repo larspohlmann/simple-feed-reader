@@ -12,8 +12,10 @@ use App\Service\Social\Social\BlueskySessionOpener;
 use App\Service\Social\Social\Exception\SocialAccountUnresolvableException;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Model\CredentialReplacementModel;
 use App\Service\Social\Social\Model\SocialCredentialsModel;
 use App\Service\Social\Social\NetworkVerifier\BlueskyVerifier;
+use App\Service\Social\Social\Support\BlueskyCredentials;
 use App\Service\Social\Social\StoredCredential;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\RoutedHttpClient;
@@ -68,7 +70,7 @@ final class BlueskyVerifierTest extends TestCase
 
     private function credentials(): SocialCredentialsModel
     {
-        return SocialCredentialsModel::bluesky('@Alice.bsky.social', 'abcd-efgh-ijkl-mnop');
+        return BlueskyCredentials::buildCredentials('@Alice.bsky.social', 'abcd-efgh-ijkl-mnop');
     }
 
     public function testAnAcceptedAppPasswordVerifiesTheAccountAtItsPds(): void
@@ -117,6 +119,17 @@ final class BlueskyVerifierTest extends TestCase
     public function testTheNetworkKeyIsBluesky(): void
     {
         self::assertSame('bluesky', TaggedItemOf::index(BlueskyVerifier::class));
+    }
+
+    public function testReconnectCredentialsAreTheNetworksOwn(): void
+    {
+        $account = SocialAccounts::blueskyAs(SocialAccounts::owner(), 'did:plc:abc123');
+        $replacement = new CredentialReplacementModel('abcd-efgh-ijkl-mnop', null);
+
+        self::assertEquals(
+            BlueskyCredentials::buildReconnectCredentials($account, $replacement),
+            $this->verifier(new RoutedHttpClient([]))->buildReconnectCredentials($account, $replacement),
+        );
     }
 
     public function testAnOutageOnTheSessionCallIsUnreachable(): void

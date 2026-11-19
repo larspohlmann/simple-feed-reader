@@ -32,6 +32,7 @@ use App\Tests\Support\FakeMastodonNetwork;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
+use App\Tests\Support\SocialRuleWiring;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\DependencyInjection\ServiceLocator;
@@ -71,6 +72,20 @@ final class OwnPostDeletionTest extends DbTestCase
         $this->entityManager->clear();
         self::assertNull($this->entityManager->find(Entry::class, $postId));
         self::assertContains(EntryGuid::hashOf(self::STATUS_URL), $this->tombstones->buriedIn($feedId));
+    }
+
+    public function testABlueskyThreadIsDeletedByTheAccountsAtUris(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($this->owner));
+        $post = $this->post('https://bsky.app/profile/did:plc:alice/rss', 'at://did:plc:alice/app.bsky.feed.post/3own');
+        $this->reply($post, 1, 'https://bsky.app/profile/alice.bsky.social/post/3rep');
+
+        $this->deletion()->delete($this->owner, $post);
+
+        self::assertSame(
+            ['delete at://did:plc:alice/app.bsky.feed.post/3rep', 'delete at://did:plc:alice/app.bsky.feed.post/3own'],
+            $this->mastodon->calls,
+        );
     }
 
     public function testEachDeletedReplyIsBuriedUnderTheGuidsAFeedCouldBringItBackUnder(): void
@@ -185,14 +200,18 @@ final class OwnPostDeletionTest extends DbTestCase
             $threadPosts,
             new PostWriting(
                 new ActingAccountGuard($this->entityManager),
-                new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon]),
+                new ServiceLocator([
+                    'mastodon' => static fn (): FakeMastodonNetwork => $mastodon,
+                    'bluesky' => static fn (): FakeMastodonNetwork => $mastodon,
+                ]),
             ),
             new LocalPostRemoval(
                 new PostRemovalRepository($this->entityManager, new RowIds($this->entityManager)),
                 $this->tombstones,
                 EntryIndexers::with(new RecordingSearchIndexWriter()),
-                new SocialCountsCache(new ArrayAdapter()),
+                new SocialCountsCache(new ArrayAdapter(), SocialRuleWiring::postAddresses()),
             ),
+            SocialRuleWiring::postAddresses(),
         );
     }
 

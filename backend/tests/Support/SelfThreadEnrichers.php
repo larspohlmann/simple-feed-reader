@@ -51,6 +51,7 @@ final class SelfThreadEnrichers
             PostEnrichers::linkCards($entityManager),
             new NaiveUtcClock($clock),
             $logger,
+            SocialRuleWiring::postAddresses(),
         );
     }
 

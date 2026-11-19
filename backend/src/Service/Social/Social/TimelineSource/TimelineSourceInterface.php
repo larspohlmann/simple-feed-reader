@@ -22,7 +22,7 @@ interface TimelineSourceInterface
 {
     /**
      * @return non-empty-list<ApiRequestModel> sent one after another, a search once per query
-     *     `NetworkSearchQueries` yields for the network
+     *     the network's `PrivateFeedRuleInterface::buildSearchQueries()` yields
      *
      * @throws SocialCredentialsRejectedException
      * @throws SocialNetworkThrottledException

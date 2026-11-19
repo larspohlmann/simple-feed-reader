@@ -58,7 +58,7 @@ final class EntryIngestors
                 LanguageWiring::socialEntryLanguage(),
             ),
             new FeedMetadataRecorder(
-                new ProfileFeedTitle(),
+                new ProfileFeedTitle(SocialRuleWiring::profileFeeds()),
                 new FeedLanguageResolver(new LanguageGuess(new LanguageDetectionFactory()->create())),
             ),
             new EntryTranscriptWriter($entityManager),

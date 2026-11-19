@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Library\Subscription\Model;
 
-use App\Service\Curation\Trending\Model\TrendingUnopenedModel;
-
 final readonly class SubscriptionTalliesModel
 {
     /**
@@ -19,7 +17,6 @@ final readonly class SubscriptionTalliesModel
         public array $entryCounts,
         public array $flagCounts,
         public UnreadTotalsModel $unreadTotals,
-        public TrendingUnopenedModel $trending,
         public array $notificationsUnseen,
     ) {
     }

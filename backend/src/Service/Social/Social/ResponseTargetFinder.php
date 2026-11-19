@@ -15,13 +15,13 @@ use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Model\ResponseTargetModel;
 use App\Service\Social\Social\Model\SocialPostAddressModel;
 use App\Service\Social\Social\Model\SocialPostModel;
-use App\Service\Social\Social\Support\SocialPostAddress;
 
 final readonly class ResponseTargetFinder
 {
     public function __construct(
         private SocialPostFinder $posts,
         private ActingAccountChooser $actingAccounts,
+        private SocialPostAddresses $postAddresses,
     ) {
     }
 
@@ -36,15 +36,15 @@ final readonly class ResponseTargetFinder
      */
     public function find(User $user, ResponseTargetModel $target): SocialPostModel
     {
-        $address = self::addressOf($target);
+        $address = $this->addressOf($target);
 
         return $this->posts->findAs($this->actingAccounts->forResponse($user, $target, $address->network), $address);
     }
 
-    private static function addressOf(ResponseTargetModel $target): SocialPostAddressModel
+    private function addressOf(ResponseTargetModel $target): SocialPostAddressModel
     {
         return null === $target->address
-            ? SocialPostAddress::respondableOrRefuse($target->entry)
-            : SocialPostAddress::respondableReplyOrRefuse($target->entry, $target->address);
+            ? $this->postAddresses->requireRespondablePost($target->entry)
+            : $this->postAddresses->requireRespondableReply($target->entry, $target->address);
     }
 }

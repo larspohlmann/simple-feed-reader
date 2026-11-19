@@ -18,7 +18,7 @@ use App\Service\Social\Social\Model\NetworkCandidatesModel;
 use App\Service\Social\Social\Model\NetworkCollectionsModel;
 use App\Service\Social\Social\Model\SocialCollectionModel;
 use App\Service\Social\Social\Support\CuratedBlueskyList;
-use App\Service\Social\Social\Support\ProfileFeedUrl;
+use App\Service\Social\Social\Support\BlueskyProfileFeed;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
@@ -110,7 +110,7 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
                     $did,
                     '@' . $handle,
                     $node->string('displayName'),
-                    ProfileFeedUrl::bluesky($did),
+                    BlueskyProfileFeed::buildUrl($did),
                     AbsoluteHttpUrl::orNull($node->string('avatar')),
                 );
             }

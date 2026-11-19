@@ -30,9 +30,10 @@ final class ConfirmedDeletions
                 new PostRemovalRepository($entityManager, new RowIds($entityManager)),
                 new DeletedPostTombstones(new ArrayAdapter(), new MockClock('2026-11-02 12:00:00')),
                 EntryIndexers::with(new RecordingSearchIndexWriter()),
-                new SocialCountsCache(new ArrayAdapter()),
+                new SocialCountsCache(new ArrayAdapter(), SocialRuleWiring::postAddresses()),
             ),
             new ServiceLocator(['mastodon' => $askHomeServer, 'bluesky' => $askHomeServer]),
+            SocialRuleWiring::postAddresses(),
         );
     }
 }

@@ -18,7 +18,7 @@ use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
-use App\Repository\EntryListRowEnricher;
+use App\Service\Library\EntryList\EntryListRowEnricher;
 use App\Repository\ReadingSettingsRepository;
 use App\Repository\TrendingEntryRepository;
 use App\Repository\TrendingStoryRepository;

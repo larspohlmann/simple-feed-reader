@@ -7,8 +7,9 @@ namespace App\Controller\Api;
 use App\Dto\Entry\CompleteEntriesRequest;
 use App\Entity\User;
 use App\Http\EntryJson;
-use App\Service\Social\Completion\EntryCompletion;
 use App\Service\Foundation\RateLimit\RateLimitGuard;
+use App\Service\Library\EntryList\EntryListRowEnricher;
+use App\Service\Social\Completion\EntryCompletion;
 use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
@@ -21,6 +22,7 @@ final readonly class EntryCompletionController
 {
     public function __construct(
         private EntryCompletion $completion,
+        private EntryListRowEnricher $enricher,
         private RateLimitGuard $rateLimitGuard,
         #[Target]
         private RateLimiterFactoryInterface $entryCompletionLimiter,
@@ -35,7 +37,8 @@ final readonly class EntryCompletionController
     ): JsonResponse {
         $this->rateLimitGuard->enforceForUser($this->entryCompletionLimiter, $user);
 
-        $rows = $this->completion->complete($user->requireId(), $request->ids);
+        $userId = $user->requireId();
+        $rows = $this->enricher->enrich($this->completion->complete($userId, $request->ids), $userId);
 
         return new JsonResponse(['entries' => array_map($this->entryJson->completed(...), $rows)]);
     }

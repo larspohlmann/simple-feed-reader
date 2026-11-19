@@ -39,6 +39,7 @@ use App\Tests\Support\FakeReplyThreadSource;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
+use App\Tests\Support\SocialRuleWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\Clock\MockClock;
@@ -439,6 +440,7 @@ final class SocialRepliesSourceTest extends DbTestCase
             new RateLimitGuard(new MockClock('2026-10-16 10:00:00')),
             $limiter,
             $accounts,
+            SocialRuleWiring::postAddresses(),
         );
     }
 }

@@ -9,7 +9,7 @@ use App\Service\Social\Bluesky\Support\BlueskyActorKey;
 use App\Service\Social\Social\Model\FollowedAccountModel;
 use App\Service\Social\Social\Model\ImportCandidateModel;
 use App\Service\Social\Social\Model\ProfileFeedSubscriptionModel;
-use App\Service\Social\Social\Support\ProfileFeedUrl;
+use App\Service\Social\Social\ProfileFeedRule\ProfileFeedRuleInterface;
 
 /** One picker load's matching: each follow answers to its identity, its handle and its own feed's key. */
 final class FollowMatching
@@ -29,6 +29,7 @@ final class FollowMatching
     /** @param list<FollowedAccountModel> $follows */
     public function __construct(
         private readonly SocialNetwork $network,
+        private readonly ProfileFeedRuleInterface $profileFeedRule,
         array $follows,
     ) {
         $this->follows = self::firstOfEachIdentity($follows);
@@ -74,7 +75,10 @@ final class FollowMatching
                 : ImportCandidateModel::subscribed($follow, $subscriptionId);
         }
         foreach ($this->unmatched as $profileFeed) {
-            $candidates[] = ImportCandidateModel::noLongerFollowed($profileFeed, $this->network);
+            $candidates[] = ImportCandidateModel::noLongerFollowed(
+                $profileFeed,
+                $this->profileFeedRule->formatHandle($profileFeed->identity),
+            );
         }
 
         return $candidates;
@@ -125,7 +129,7 @@ final class FollowMatching
         return array_filter([
             $follow->identity,
             ltrim($follow->handle, '@'),
-            ProfileFeedUrl::identityOf($this->network, $follow->feedUrl),
+            $this->profileFeedRule->parseIdentity($follow->feedUrl),
         ]);
     }
 }
