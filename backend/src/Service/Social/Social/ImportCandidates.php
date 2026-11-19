@@ -52,7 +52,6 @@ final readonly class ImportCandidates
         }
         $follows = $this->followMatcher->match(
             new FollowMatching($this->profileFeeds->selectRule($account->getNetwork()), $importRule, $network->follows),
-            $importRule,
             $this->profileFeedsOf($account, $importRule),
         );
         $subscribed = $this->privateFeedSubscriptionsOf($account);

@@ -41,7 +41,7 @@ final class FollowMatcherTest extends TestCase
         $importRule = SocialRuleWiring::importRules($this->http, new StubHiddenProfiles())->selectRule($network);
         $matching = new FollowMatching(SocialRuleWiring::profileFeeds()->selectRule($network), $importRule, $follows);
 
-        return new FollowMatcher()->match($matching, $importRule, $profileFeeds);
+        return new FollowMatcher()->match($matching, $profileFeeds);
     }
 
     private static function bob(): FollowedAccountModel

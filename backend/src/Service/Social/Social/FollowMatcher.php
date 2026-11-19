@@ -6,7 +6,6 @@ namespace App\Service\Social\Social;
 
 use App\Service\Social\Social\Exception\SocialAccountUnresolvableException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Social\ImportRule\ImportRuleInterface;
 use App\Service\Social\Social\Model\ImportCandidateModel;
 use App\Service\Social\Social\Model\ProfileFeedSubscriptionModel;
 use App\Service\Social\Social\Pass\FollowMatching;
@@ -20,21 +19,21 @@ final readonly class FollowMatcher
      *
      * @return list<ImportCandidateModel>
      */
-    public function match(FollowMatching $matching, ImportRuleInterface $importRule, array $profileFeeds): array
+    public function match(FollowMatching $matching, array $profileFeeds): array
     {
         foreach ($profileFeeds as $profileFeed) {
             $matching->offer($profileFeed);
         }
-        self::resolveLeftoverIdentities($matching, $importRule);
+        self::resolveLeftoverIdentities($matching);
 
         return $matching->candidates();
     }
 
-    private static function resolveLeftoverIdentities(FollowMatching $matching, ImportRuleInterface $importRule): void
+    private static function resolveLeftoverIdentities(FollowMatching $matching): void
     {
         foreach (\array_slice($matching->unresolvedProfileFeeds(), 0, self::MAX_IDENTITY_RESOLUTIONS) as $profileFeed) {
             try {
-                $matching->claimAs($profileFeed, $importRule->fetchResolvedIdentity($profileFeed->identity));
+                $matching->claimResolved($profileFeed);
             } catch (SocialAccountUnresolvableException) {
                 continue;
             } catch (SocialNetworkUnreachableException) {

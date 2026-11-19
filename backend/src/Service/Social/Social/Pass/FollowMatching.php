@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\Pass;
 
+use App\Service\Social\Social\Exception\SocialAccountUnresolvableException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\ImportRule\ImportRuleInterface;
 use App\Service\Social\Social\Model\FollowedAccountModel;
 use App\Service\Social\Social\Model\ImportCandidateModel;
@@ -52,11 +54,13 @@ final class FollowMatching
         ));
     }
 
-    public function claimAs(ProfileFeedSubscriptionModel $profileFeed, string $resolvedIdentity): void
+    /**
+     * @throws SocialAccountUnresolvableException
+     * @throws SocialNetworkUnreachableException
+     */
+    public function claimResolved(ProfileFeedSubscriptionModel $profileFeed): void
     {
-        if ($this->claim($profileFeed, $resolvedIdentity)) {
-            unset($this->unmatched[$profileFeed->subscriptionId]);
-        }
+        $this->claimAs($profileFeed, $this->importRule->fetchResolvedIdentity($profileFeed->identity));
     }
 
     /** @return list<ImportCandidateModel> */
@@ -77,6 +81,13 @@ final class FollowMatching
         }
 
         return $candidates;
+    }
+
+    private function claimAs(ProfileFeedSubscriptionModel $profileFeed, string $resolvedIdentity): void
+    {
+        if ($this->claim($profileFeed, $resolvedIdentity)) {
+            unset($this->unmatched[$profileFeed->subscriptionId]);
+        }
     }
 
     private function claim(ProfileFeedSubscriptionModel $profileFeed, string $key): bool
