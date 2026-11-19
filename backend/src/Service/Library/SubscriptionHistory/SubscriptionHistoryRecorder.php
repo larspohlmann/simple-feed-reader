@@ -32,9 +32,9 @@ final readonly class SubscriptionHistoryRecorder
 
     public function recordCompletedDays(): int
     {
-        $window = DayWindowModel::lastDays(UtcDay::of($this->clock->now()));
+        $window = DayWindowModel::lastDays(UtcDay::fromInstant($this->clock->now()));
         $subscriptions = $this->activity->trackedSubscriptions();
-        $missingDays = self::missingDaysOf(
+        $missingDays = self::collectMissingDays(
             $subscriptions,
             $this->daySourcesFactory->forWindow($subscriptions, $window),
             $window->completedDates(),
@@ -59,7 +59,7 @@ final readonly class SubscriptionHistoryRecorder
      *
      * @return array<int, non-empty-list<string>> subscription id => the days only a live count can still fill
      */
-    private static function missingDaysOf(array $subscriptions, DaySources $sources, array $dates): array
+    private static function collectMissingDays(array $subscriptions, DaySources $sources, array $dates): array
     {
         $missingDays = [];
         foreach ($subscriptions as $subscription) {
@@ -84,7 +84,7 @@ final readonly class SubscriptionHistoryRecorder
             $reference = $this->entityManager->getReference(Subscription::class, $subscription->subscriptionId)
                 ?? throw new \LogicException('A tracked subscription has no reference.');
             foreach ($missingDays[$subscription->subscriptionId] as $day) {
-                $counts = $live->of($subscription->subscriptionId, $day);
+                $counts = $live->findDayCount($subscription->subscriptionId, $day);
                 yield new SubscriptionDay($reference, UtcDay::start($day), $counts->arrived, $counts->read);
             }
         }
@@ -96,7 +96,7 @@ final readonly class SubscriptionHistoryRecorder
     private function saveInChunks(iterable $days): int
     {
         $written = 0;
-        foreach (self::chunksOf($days) as $chunk) {
+        foreach (self::chunkDays($days) as $chunk) {
             foreach ($chunk as $day) {
                 $this->entityManager->persist($day);
             }
@@ -115,7 +115,7 @@ final readonly class SubscriptionHistoryRecorder
      *
      * @return \Generator<list<SubscriptionDay>>
      */
-    private static function chunksOf(iterable $days): \Generator
+    private static function chunkDays(iterable $days): \Generator
     {
         $chunk = [];
         foreach ($days as $day) {

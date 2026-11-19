@@ -614,7 +614,7 @@ final class EntryListRowEnricherTest extends DbTestCase
 
     private function savedEntry(string $guid): Entry
     {
-        $feed = new Feed(SavedFeedUrl::of($this->user->requireId(), null));
+        $feed = new Feed(SavedFeedUrl::buildUrl($this->user->requireId(), null));
         $feed->setSourceFormat(SourceFormat::SAVED);
         $this->entityManager->persist($feed);
 

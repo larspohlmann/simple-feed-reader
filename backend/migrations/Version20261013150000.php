@@ -69,7 +69,7 @@ final class Version20261013150000 extends AbstractMigration
     private static function findNetwork(string $url, string $sourceFormat): ?SocialNetwork
     {
         if (SourceFormat::isSaved($sourceFormat)) {
-            return SavedFeedUrl::networkOf($url);
+            return SavedFeedUrl::parseNetwork($url);
         }
         $privateAddress = SourceFormat::isSocial($sourceFormat) ? SocialFeedUrl::addressOf($url) : null;
 

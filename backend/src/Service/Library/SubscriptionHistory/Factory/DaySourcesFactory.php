@@ -22,8 +22,8 @@ final readonly class DaySourcesFactory
     public function forWindow(array $subscriptions, DayWindowModel $window): DaySources
     {
         return new DaySources(
-            $this->storedDays->since(TrackedSubscriptionModel::idsOf($subscriptions), $window->oldest()),
-            $this->horizon->asOf($window->today()),
+            $this->storedDays->since(TrackedSubscriptionModel::collectIds($subscriptions), $window->oldest()),
+            $this->horizon->buildHorizon($window->today()),
         );
     }
 }

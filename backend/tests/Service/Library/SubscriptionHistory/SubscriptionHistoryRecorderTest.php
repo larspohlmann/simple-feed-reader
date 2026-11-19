@@ -28,7 +28,7 @@ final class SubscriptionHistoryRecorderTest extends DbTestCase
     private function recordedDays(Subscription $subscription): array
     {
         $days = array_map(
-            static fn (SubscriptionDay $row): string => UtcDay::of($row->getDay()),
+            static fn (SubscriptionDay $row): string => UtcDay::fromInstant($row->getDay()),
             $this->storedDays()->findBy(['subscription' => $subscription]),
         );
         sort($days);
@@ -51,10 +51,10 @@ final class SubscriptionHistoryRecorderTest extends DbTestCase
         self::assertSame(3, $written);
         self::assertSame(['2026-10-22', '2026-10-23', '2026-10-24'], $this->recordedDays($subscription));
         $stored = $this->storedDays()->since([$subscription->requireId()], '2026-10-22');
-        self::assertSame(0, $stored->of($subscription->requireId(), '2026-10-22')->arrived);
-        self::assertSame(1, $stored->of($subscription->requireId(), '2026-10-23')->arrived);
-        self::assertSame(0, $stored->of($subscription->requireId(), '2026-10-22')->read);
-        self::assertSame(1, $stored->of($subscription->requireId(), '2026-10-23')->read);
+        self::assertSame(0, $stored->findDayCount($subscription->requireId(), '2026-10-22')->arrived);
+        self::assertSame(1, $stored->findDayCount($subscription->requireId(), '2026-10-23')->arrived);
+        self::assertSame(0, $stored->findDayCount($subscription->requireId(), '2026-10-22')->read);
+        self::assertSame(1, $stored->findDayCount($subscription->requireId(), '2026-10-23')->read);
     }
 
     public function testBackfillsAtMostTheThirtyDayWindowForAnOldPlainFeed(): void
@@ -101,7 +101,7 @@ final class SubscriptionHistoryRecorderTest extends DbTestCase
         self::assertSame(0, $secondRun);
         $subscriptionId = $subscription->requireId();
         $stored = $this->storedDays()->since([$subscriptionId], '2026-10-23');
-        self::assertSame(42, $stored->of($subscriptionId, '2026-10-23')->arrived);
+        self::assertSame(42, $stored->findDayCount($subscriptionId, '2026-10-23')->arrived);
     }
 
     public function testOnlyTheDaysNotYetStoredAreWrittenAndAFullyStoredSubscriptionKeepsItsRows(): void
@@ -122,7 +122,7 @@ final class SubscriptionHistoryRecorderTest extends DbTestCase
         self::assertSame(2, $written);
         self::assertSame(['2026-10-23', '2026-10-24'], $this->recordedDays($fresh));
         $stored = $this->storedDays()->since([$complete->requireId()], '2026-10-23');
-        self::assertSame(6, $stored->of($complete->requireId(), '2026-10-24')->arrived);
+        self::assertSame(6, $stored->findDayCount($complete->requireId(), '2026-10-24')->arrived);
     }
 
     public function testAFirstRunBackfillIsWrittenInFlushedChunksAndLeavesNoDayManaged(): void

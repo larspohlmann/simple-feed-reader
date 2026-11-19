@@ -161,7 +161,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
 
         $this->entityManager->clear();
         $savedFeed = $this->entityManager->getRepository(Feed::class)->findOneBy([
-            'url' => SavedFeedUrl::of($user->requireId(), SocialNetwork::Bluesky),
+            'url' => SavedFeedUrl::buildUrl($user->requireId(), SocialNetwork::Bluesky),
         ]);
         self::assertNotNull($savedFeed);
         $saved = $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $savedFeed]);

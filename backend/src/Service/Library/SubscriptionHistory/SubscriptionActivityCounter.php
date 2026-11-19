@@ -28,7 +28,7 @@ final readonly class SubscriptionActivityCounter
 
     public function lastDays(User $user): SubscriptionActivityModel
     {
-        $window = DayWindowModel::lastDays(UtcDay::of($this->clock->now()));
+        $window = DayWindowModel::lastDays(UtcDay::fromInstant($this->clock->now()));
         $subscriptions = $this->activity->plainSubscriptionsOf($user->requireId());
         $sources = $this->daySourcesFactory->forWindow($subscriptions, $window);
         $live = $this->liveCounter->since(
@@ -40,7 +40,7 @@ final readonly class SubscriptionActivityCounter
 
         return new SubscriptionActivityModel(
             array_map($counts->day(...), $window->dates),
-            $this->busiestByArrivals($counts, DayWindowModel::averagedWeekOf($window->dates)),
+            $this->busiestByArrivals($counts, DayWindowModel::sliceAveragedWeek($window->dates)),
         );
     }
 

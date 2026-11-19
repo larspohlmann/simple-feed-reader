@@ -182,7 +182,7 @@ final class SavedPostRescueTest extends DbTestCase
         $this->service()->unsubscribe($subscription);
         $this->entityManager->clear();
 
-        self::assertNull($this->feedAt(SavedFeedUrl::of($this->user->requireId(), null)));
+        self::assertNull($this->feedAt(SavedFeedUrl::buildUrl($this->user->requireId(), null)));
         self::assertTrue($this->stateOfId($twinId)->isFavorite());
     }
 
@@ -460,7 +460,7 @@ final class SavedPostRescueTest extends DbTestCase
 
     private function savedFeed(?SocialNetwork $network): Feed
     {
-        $feed = $this->feedAt(SavedFeedUrl::of($this->user->requireId(), $network));
+        $feed = $this->feedAt(SavedFeedUrl::buildUrl($this->user->requireId(), $network));
         self::assertNotNull($feed);
 
         return $feed;

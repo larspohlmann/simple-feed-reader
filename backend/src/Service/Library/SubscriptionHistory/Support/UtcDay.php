@@ -8,7 +8,7 @@ namespace App\Service\Library\SubscriptionHistory\Support;
 final class UtcDay
 {
     /** The instant must hold a UTC wall clock (naive UTC from Doctrine, or NaiveUtcClock); it is not converted. */
-    public static function of(\DateTimeImmutable $instant): string
+    public static function fromInstant(\DateTimeImmutable $instant): string
     {
         return $instant->format('Y-m-d');
     }
@@ -20,7 +20,7 @@ final class UtcDay
 
     public static function shift(string $day, int $days): string
     {
-        return self::of(self::start($day)->modify(\sprintf('%+d days', $days)));
+        return self::fromInstant(self::start($day)->modify(\sprintf('%+d days', $days)));
     }
 
     private function __construct()

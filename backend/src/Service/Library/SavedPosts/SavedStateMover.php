@@ -31,7 +31,7 @@ final readonly class SavedStateMover
         }
         $sources = $this->entryStates->forUserByEntryIds($userId, array_keys($targetByEntryId));
         foreach ($targetByEntryId as $entryId => $targetId) {
-            $this->entryStates->ensureRow($userId, $targetId, self::hiddenSinceOf($sources[$entryId] ?? null));
+            $this->entryStates->ensureRow($userId, $targetId, self::findHiddenSince($sources[$entryId] ?? null));
         }
         $targets = $this->entryStates->forUserByEntryIds($userId, array_values($targetByEntryId));
         foreach ($targetByEntryId as $entryId => $targetId) {
@@ -74,7 +74,7 @@ final readonly class SavedStateMover
         return $moved;
     }
 
-    private static function hiddenSinceOf(?EntryState $source): ?\DateTimeImmutable
+    private static function findHiddenSince(?EntryState $source): ?\DateTimeImmutable
     {
         return true === $source?->isHidden() ? $source->getHiddenAt() : null;
     }

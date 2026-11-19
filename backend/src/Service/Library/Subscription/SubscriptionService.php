@@ -120,7 +120,7 @@ final readonly class SubscriptionService
         if ([] === $subscriptions) {
             return [];
         }
-        $feedIds = self::feedIdsOf($subscriptions);
+        $feedIds = self::collectFeedIds($subscriptions);
         $this->entityManager->beginTransaction();
         try {
             $result = $this->savedPostRescue->rescueFrom($rescued);
@@ -146,7 +146,7 @@ final readonly class SubscriptionService
      *
      * @return list<int> each distinct feed once: two removed subscriptions may share one
      */
-    private static function feedIdsOf(array $subscriptions): array
+    private static function collectFeedIds(array $subscriptions): array
     {
         $feedIds = [];
         foreach ($subscriptions as $subscription) {

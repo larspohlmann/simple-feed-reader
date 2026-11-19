@@ -35,7 +35,7 @@ final class SavedFeedsTest extends DbTestCase
 
     public function testTheFirstUseCreatesAnUnfetchedFeedOutsideAllItemsAndForYou(): void
     {
-        $subscription = $this->savedFeeds()->of($this->user, SocialNetwork::Bluesky);
+        $subscription = $this->savedFeeds()->ensureSubscription($this->user, SocialNetwork::Bluesky);
 
         $feed = $subscription->getFeed();
         self::assertSame(sprintf('saved:%d:bluesky', $this->user->requireId()), $feed->getUrl());
@@ -49,9 +49,9 @@ final class SavedFeedsTest extends DbTestCase
 
     public function testFeedsAndEachNetworkGetTheirOwnAndARepeatReturnsTheSame(): void
     {
-        $feeds = $this->savedFeeds()->of($this->user, null);
-        $mastodon = $this->savedFeeds()->of($this->user, SocialNetwork::Mastodon);
-        $again = $this->savedFeeds()->of($this->user, null);
+        $feeds = $this->savedFeeds()->ensureSubscription($this->user, null);
+        $mastodon = $this->savedFeeds()->ensureSubscription($this->user, SocialNetwork::Mastodon);
+        $again = $this->savedFeeds()->ensureSubscription($this->user, null);
 
         self::assertSame('Saved from feeds', $feeds->getFeed()->getTitle());
         self::assertNull($feeds->getFeed()->getNetwork());
@@ -67,7 +67,7 @@ final class SavedFeedsTest extends DbTestCase
         $this->entityManager->persist($orphan);
         $this->entityManager->flush();
 
-        $subscription = $this->savedFeeds()->of($this->user, null);
+        $subscription = $this->savedFeeds()->ensureSubscription($this->user, null);
 
         self::assertSame($orphan->requireId(), $subscription->getFeed()->requireId());
     }
@@ -81,7 +81,7 @@ final class SavedFeedsTest extends DbTestCase
         $this->entityManager->persist($existing);
         $this->entityManager->flush();
 
-        $subscription = $this->savedFeeds()->of($this->user, null);
+        $subscription = $this->savedFeeds()->ensureSubscription($this->user, null);
 
         self::assertSame(5, $subscription->getPosition());
     }
@@ -90,7 +90,7 @@ final class SavedFeedsTest extends DbTestCase
     {
         $this->user->setMaxSubscriptions(0);
 
-        self::assertNotNull($this->savedFeeds()->of($this->user, null)->getId());
+        self::assertNotNull($this->savedFeeds()->ensureSubscription($this->user, null)->getId());
     }
 
     private function savedFeeds(): SavedFeeds

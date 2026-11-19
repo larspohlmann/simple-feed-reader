@@ -64,9 +64,9 @@ final readonly class DaySources
     public function countFor(TrackedSubscriptionModel $subscription, string $day, DayCountsModel $live): DayCountModel
     {
         if ($this->stored->has($subscription->subscriptionId, $day)) {
-            return $this->stored->of($subscription->subscriptionId, $day);
+            return $this->stored->findDayCount($subscription->subscriptionId, $day);
         }
 
-        return $live->of($subscription->subscriptionId, $day);
+        return $live->findDayCount($subscription->subscriptionId, $day);
     }
 }

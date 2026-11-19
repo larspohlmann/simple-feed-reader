@@ -61,9 +61,9 @@ final readonly class EntryListRowEnricher
         $savedSearches = $this->memberships->savedSearchesByEntry($userId, $entryIds);
         $linkCards = $this->linkCards->contentsByEntryIds($entryIds);
         $threads = $this->threadPosts->byEntryIds($entryIds);
-        $pendingIds = array_flip($this->shareEnrichments->pendingEntryIdsAmong(self::topLevelEntryIdsOf($rows)));
+        $pendingIds = array_flip($this->shareEnrichments->pendingEntryIdsAmong(self::collectTopLevelEntryIds($rows)));
         $states = $this->connectedAccountStates->buildStates($entries, $userId);
-        $origins = $this->savedOrigins->originsByEntryIds(self::savedEntryIdsOf($entries));
+        $origins = $this->savedOrigins->originsByEntryIds(self::collectSavedEntryIds($entries));
 
         $enrichments = [];
         foreach ($entryIds as $entryId) {
@@ -73,7 +73,7 @@ final readonly class EntryListRowEnricher
                 $linkCards[$entryId] ?? [],
                 isset($pendingIds[$entryId]),
                 $states->social[$entryId] ?? null,
-                self::discussionOf($entries[$entryId], $states->social[$entryId] ?? null),
+                self::buildDiscussionRow($entries[$entryId], $states->social[$entryId] ?? null),
                 $origins[$entryId] ?? null,
                 $threads[$entryId] ?? [],
                 $states->lemmy[$entryId] ?? null,
@@ -88,7 +88,7 @@ final readonly class EntryListRowEnricher
      *
      * @return list<int>
      */
-    private static function savedEntryIdsOf(array $entries): array
+    private static function collectSavedEntryIds(array $entries): array
     {
         return array_keys(array_filter(
             $entries,
@@ -96,7 +96,7 @@ final readonly class EntryListRowEnricher
         ));
     }
 
-    private static function discussionOf(Entry $entry, ?EntryListRowSocial $social): ?EntryListRowDiscussion
+    private static function buildDiscussionRow(Entry $entry, ?EntryListRowSocial $social): ?EntryListRowDiscussion
     {
         $isPlatformThread = null !== $social || null !== SubstackPostAddress::of($entry);
 
@@ -127,7 +127,7 @@ final readonly class EntryListRowEnricher
      *
      * @return list<int>
      */
-    private static function topLevelEntryIdsOf(array $rows): array
+    private static function collectTopLevelEntryIds(array $rows): array
     {
         return array_map(static fn (EntryListRow $row): int => $row->entry->requireId(), $rows);
     }

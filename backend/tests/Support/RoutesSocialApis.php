@@ -41,7 +41,7 @@ trait RoutesSocialApis
         $fixtures = new NetworkFeedSubscriptions($this->entityManager());
         $saved = $fixtures->subscribe(
             $user,
-            SavedFeedUrl::of($user->requireId(), SocialNetwork::Mastodon),
+            SavedFeedUrl::buildUrl($user->requireId(), SocialNetwork::Mastodon),
             SourceFormat::SAVED,
         );
 

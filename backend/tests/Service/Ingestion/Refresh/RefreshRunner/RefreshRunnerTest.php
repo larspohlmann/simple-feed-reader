@@ -956,7 +956,7 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame(5, $report->pruned);
         $subscriptionId = $subscription->requireId();
         $stored = $this->entityManager->getRepository(SubscriptionDay::class)->since([$subscriptionId], '2026-07-20');
-        self::assertSame(25, $stored->of($subscriptionId, '2026-07-20')->arrived);
+        self::assertSame(25, $stored->findDayCount($subscriptionId, '2026-07-20')->arrived);
     }
 
     public function testUserScopedRunDoesNotPrune(): void

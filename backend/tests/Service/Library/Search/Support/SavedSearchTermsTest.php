@@ -16,7 +16,7 @@ final class SavedSearchTermsTest extends TestCase
 
     public function testAPlainSearchReadsAsEachWordMatchedAnywhere(): void
     {
-        $terms = SavedSearchTerms::of($this->search('climate change', wholeWord: false, phrase: false));
+        $terms = SavedSearchTerms::fromSavedSearch($this->search('climate change', wholeWord: false, phrase: false));
 
         self::assertSame(['climate', 'change'], $terms->terms);
         self::assertFalse($terms->isWholeWord);
@@ -25,7 +25,7 @@ final class SavedSearchTermsTest extends TestCase
 
     public function testAWholeWordSearchReadsAsEachWordMatchedOnABoundary(): void
     {
-        $terms = SavedSearchTerms::of($this->search('climate change', wholeWord: true, phrase: false));
+        $terms = SavedSearchTerms::fromSavedSearch($this->search('climate change', wholeWord: true, phrase: false));
 
         self::assertSame(['climate', 'change'], $terms->terms);
         self::assertTrue($terms->isWholeWord);
@@ -34,7 +34,7 @@ final class SavedSearchTermsTest extends TestCase
 
     public function testAPhraseSearchReadsAsOneExactPhrase(): void
     {
-        $terms = SavedSearchTerms::of($this->search('climate  change', wholeWord: false, phrase: true));
+        $terms = SavedSearchTerms::fromSavedSearch($this->search('climate  change', wholeWord: false, phrase: true));
 
         self::assertSame(['climate change'], $terms->terms);
         self::assertFalse($terms->isWholeWord);
@@ -43,7 +43,7 @@ final class SavedSearchTermsTest extends TestCase
 
     public function testAPhraseWinsOverWholeWordWhenBothColumnsAreSet(): void
     {
-        $terms = SavedSearchTerms::of($this->search('climate change', wholeWord: true, phrase: true));
+        $terms = SavedSearchTerms::fromSavedSearch($this->search('climate change', wholeWord: true, phrase: true));
 
         self::assertSame(['climate change'], $terms->terms);
         self::assertTrue($terms->isPhrase);
@@ -55,7 +55,7 @@ final class SavedSearchTermsTest extends TestCase
         $search = $this->search('climate', wholeWord: true, phrase: false);
         self::assignId($search, 42);
 
-        $term = SavedSearchTerms::termOf($search);
+        $term = SavedSearchTerms::buildTermModel($search);
 
         self::assertSame(42, $term->id);
         self::assertSame(['climate'], $term->terms->terms);

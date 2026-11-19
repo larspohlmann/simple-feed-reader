@@ -32,8 +32,8 @@ final class SubscriptionDayRepositoryTest extends DbTestCase
 
         self::assertFalse($stored->has($mine->requireId(), '2026-10-09'));
         self::assertTrue($stored->has($mine->requireId(), '2026-10-10'));
-        self::assertSame(4, $stored->of($mine->requireId(), '2026-10-10')->arrived);
-        self::assertSame(2, $stored->of($mine->requireId(), '2026-10-10')->read);
+        self::assertSame(4, $stored->findDayCount($mine->requireId(), '2026-10-10')->arrived);
+        self::assertSame(2, $stored->findDayCount($mine->requireId(), '2026-10-10')->read);
         self::assertFalse($stored->has($other->requireId(), '2026-10-10'));
     }
 

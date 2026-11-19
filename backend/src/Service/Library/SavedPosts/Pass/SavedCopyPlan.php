@@ -49,7 +49,7 @@ final class SavedCopyPlan
         $hashes = [];
         foreach ($originals as $original) {
             $hashes[] = $original['guidHash'];
-            $hashes[] = self::renamedGuidOf($original)->getHash();
+            $hashes[] = self::buildRenamedGuid($original)->getHash();
         }
 
         return $hashes;
@@ -96,7 +96,7 @@ final class SavedCopyPlan
 
             return;
         }
-        $renamedGuid = self::renamedGuidOf($original);
+        $renamedGuid = self::buildRenamedGuid($original);
         $renamedHeld = $held[$renamedGuid->getHash()] ?? null;
         if (null !== $renamedHeld) {
             $this->merged[$original['id']] = $renamedHeld['id'];
@@ -134,7 +134,7 @@ final class SavedCopyPlan
     }
 
     /** @param array{guid: string, feedId: int} $original */
-    private static function renamedGuidOf(array $original): EntryGuid
+    private static function buildRenamedGuid(array $original): EntryGuid
     {
         return new EntryGuid($original['guid'] . '#' . $original['feedId']);
     }

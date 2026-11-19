@@ -42,13 +42,13 @@ final class OpmlTagTree
     }
 
     /** @return list<Tag> */
-    public function childrenOf(Tag $parent): array
+    public function findChildren(Tag $parent): array
     {
         return $this->ordered(static fn (Tag $tag): bool => $tag->getParent()?->getId() === $parent->getId());
     }
 
     /** @return list<ExportedSubscriptionModel> */
-    public function feedsOf(Tag $tag): array
+    public function findFeeds(Tag $tag): array
     {
         return $this->feedsByTag[$tag->requireId()] ?? [];
     }

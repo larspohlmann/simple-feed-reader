@@ -13,9 +13,9 @@ final class SavedFeedUrlTest extends TestCase
 {
     public function testEachNetworkAndTheFeedsHaveTheirOwnUrlPerUser(): void
     {
-        self::assertSame('saved:42', SavedFeedUrl::of(42, null));
-        self::assertSame('saved:42:bluesky', SavedFeedUrl::of(42, SocialNetwork::Bluesky));
-        self::assertSame('saved:7:mastodon', SavedFeedUrl::of(7, SocialNetwork::Mastodon));
+        self::assertSame('saved:42', SavedFeedUrl::buildUrl(42, null));
+        self::assertSame('saved:42:bluesky', SavedFeedUrl::buildUrl(42, SocialNetwork::Bluesky));
+        self::assertSame('saved:7:mastodon', SavedFeedUrl::buildUrl(7, SocialNetwork::Mastodon));
     }
 
     /** @return iterable<string, array{string, ?SocialNetwork}> */
@@ -34,7 +34,7 @@ final class SavedFeedUrlTest extends TestCase
     #[DataProvider('networks')]
     public function testTheNetworkIsReadFromTheUrl(string $url, ?SocialNetwork $network): void
     {
-        self::assertSame($network, SavedFeedUrl::networkOf($url));
+        self::assertSame($network, SavedFeedUrl::parseNetwork($url));
     }
 
     public function testOnlyTheSavedSchemeIsSaved(): void

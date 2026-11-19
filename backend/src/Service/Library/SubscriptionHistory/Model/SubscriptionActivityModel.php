@@ -16,7 +16,7 @@ final readonly class SubscriptionActivityModel
 
     public function arrivedDailyAverage(): ?float
     {
-        $week = DayWindowModel::averagedWeekOf($this->days);
+        $week = DayWindowModel::sliceAveragedWeek($this->days);
         $known = array_filter(
             array_map(static fn (ActivityDayModel $day): ?int => $day->arrived(), $week),
             static fn (?int $arrived): bool => $arrived !== null,

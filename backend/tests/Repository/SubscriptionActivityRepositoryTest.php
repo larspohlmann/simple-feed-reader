@@ -97,11 +97,11 @@ final class SubscriptionActivityRepositoryTest extends DbTestCase
 
         self::assertSame(
             [$plain->requireId()],
-            TrackedSubscriptionModel::idsOf($this->repository()->plainSubscriptionsOf($user->requireId())),
+            TrackedSubscriptionModel::collectIds($this->repository()->plainSubscriptionsOf($user->requireId())),
         );
         self::assertSame(
             [$plain->requireId()],
-            TrackedSubscriptionModel::idsOf($this->repository()->trackedSubscriptions()),
+            TrackedSubscriptionModel::collectIds($this->repository()->trackedSubscriptions()),
         );
     }
 

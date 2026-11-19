@@ -37,16 +37,16 @@ final readonly class ConnectedAccountStates
     /** @param array<int, Entry> $entries by entry id */
     public function buildStates(array $entries, int $userId): ConnectedAccountStatesModel
     {
-        $postAddresses = $this->postAddressesOf($entries);
-        $lemmyPostIds = self::lemmyPostIdsOf($entries);
-        $accountsByNetwork = $this->accountsByNetworkOf($postAddresses, $lemmyPostIds, $userId);
-        $socialStates = $this->socialStatesOf($entries, $postAddresses, $accountsByNetwork, $userId);
-        $votes = $this->votesOf($lemmyPostIds, $accountsByNetwork, $userId);
+        $postAddresses = $this->collectPostAddresses($entries);
+        $lemmyPostIds = self::collectLemmyPostIds($entries);
+        $accountsByNetwork = $this->loadAccountsByNetwork($postAddresses, $lemmyPostIds, $userId);
+        $socialStates = $this->buildSocialStates($entries, $postAddresses, $accountsByNetwork, $userId);
+        $votes = $this->loadVotes($lemmyPostIds, $accountsByNetwork, $userId);
         $lemmyPosts = $this->lemmyPosts->byEntryIds(array_keys($entries));
 
         $lemmyStates = [];
         foreach ($entries as $entryId => $entry) {
-            $lemmy = $this->lemmyOf($entry, $lemmyPosts[$entryId] ?? null, $votes[$entryId] ?? null);
+            $lemmy = $this->buildLemmyRow($entry, $lemmyPosts[$entryId] ?? null, $votes[$entryId] ?? null);
             if (null !== $lemmy) {
                 $lemmyStates[$entryId] = $lemmy;
             }
@@ -61,7 +61,7 @@ final readonly class ConnectedAccountStates
      *
      * @return array<string, non-empty-list<SocialAccount>> by network value; read only when a post can use them
      */
-    private function accountsByNetworkOf(array $postAddresses, array $lemmyPostIds, int $userId): array
+    private function loadAccountsByNetwork(array $postAddresses, array $lemmyPostIds, int $userId): array
     {
         if ([] === $postAddresses && [] === $lemmyPostIds) {
             return [];
@@ -76,7 +76,7 @@ final readonly class ConnectedAccountStates
      *
      * @return array<int, VoteScore> by entry id, for every Lemmy post of a reader with a Lemmy account in any status
      */
-    private function votesOf(array $lemmyPostIds, array $accountsByNetwork, int $userId): array
+    private function loadVotes(array $lemmyPostIds, array $accountsByNetwork, int $userId): array
     {
         if (!isset($accountsByNetwork[SocialNetwork::Lemmy->value])) {
             return [];
@@ -92,7 +92,7 @@ final readonly class ConnectedAccountStates
      *
      * @return list<int>
      */
-    private static function lemmyPostIdsOf(array $entries): array
+    private static function collectLemmyPostIds(array $entries): array
     {
         return array_keys(array_filter(
             $entries,
@@ -107,7 +107,7 @@ final readonly class ConnectedAccountStates
      *
      * @return array<int, EntryListRowSocial> by entry id, for every post
      */
-    private function socialStatesOf(array $entries, array $posts, array $accountsByNetwork, int $userId): array
+    private function buildSocialStates(array $entries, array $posts, array $accountsByNetwork, int $userId): array
     {
         if ([] === $posts) {
             return [];
@@ -153,7 +153,7 @@ final readonly class ConnectedAccountStates
      *
      * @return array<int, SocialPostAddressModel> the address of each social post, decided without a query
      */
-    private function postAddressesOf(array $entries): array
+    private function collectPostAddresses(array $entries): array
     {
         $addresses = [];
         foreach ($entries as $entryId => $entry) {
@@ -166,7 +166,7 @@ final readonly class ConnectedAccountStates
         return $addresses;
     }
 
-    private function lemmyOf(Entry $entry, ?EntryLemmyPost $post, ?VoteScore $myVote): ?EntryListRowLemmy
+    private function buildLemmyRow(Entry $entry, ?EntryLemmyPost $post, ?VoteScore $myVote): ?EntryListRowLemmy
     {
         if (null === $post && null === $myVote) {
             return null;

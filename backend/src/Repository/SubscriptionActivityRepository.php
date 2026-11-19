@@ -189,7 +189,7 @@ final readonly class SubscriptionActivityRepository
             static fn (array $row): TrackedSubscriptionModel => new TrackedSubscriptionModel(
                 (int) $row['subscriptionId'],
                 (int) $row['feedId'],
-                UtcDay::of($row['createdAt']),
+                UtcDay::fromInstant($row['createdAt']),
                 (int) $row['isSocial'] === 1,
             ),
             $rows,

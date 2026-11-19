@@ -53,7 +53,7 @@ final readonly class DayWindowModel
      *
      * @return list<T>
      */
-    public static function averagedWeekOf(array $series): array
+    public static function sliceAveragedWeek(array $series): array
     {
         return \array_slice($series, -(self::AVERAGE_DAYS + 1), self::AVERAGE_DAYS);
     }

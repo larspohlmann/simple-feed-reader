@@ -51,7 +51,7 @@ final class LocalPostRemovalTest extends DbTestCase
         $user = $this->user('local-removal@example.test');
         $profile = $this->feed('https://mastodon.example/@alice.rss');
         $home = $this->feed('https://other.example/@reader.rss');
-        $saved = $this->feed(SavedFeedUrl::of($user->requireId(), SocialNetwork::Mastodon), SourceFormat::SAVED);
+        $saved = $this->feed(SavedFeedUrl::buildUrl($user->requireId(), SocialNetwork::Mastodon), SourceFormat::SAVED);
         $post = $this->copy($profile, self::STATUS_URL, 'hash-120');
         $copy = $this->copy($home, self::STATUS_USERS_URL, 'hash-120');
         $savedCopy = $this->copy($saved, 'saved:120', 'hash-120');
@@ -100,7 +100,7 @@ final class LocalPostRemovalTest extends DbTestCase
         $user = $this->user('local-removal-replies@example.test');
         $profile = $this->feed('https://mastodon.example/@alice.rss');
         $home = $this->feed('https://other.example/@reader.rss');
-        $saved = $this->feed(SavedFeedUrl::of($user->requireId(), SocialNetwork::Mastodon), SourceFormat::SAVED);
+        $saved = $this->feed(SavedFeedUrl::buildUrl($user->requireId(), SocialNetwork::Mastodon), SourceFormat::SAVED);
         $post = $this->copy($profile, self::STATUS_URL, 'hash-120');
         $this->copy($home, self::STATUS_USERS_URL, 'hash-120');
         $this->copy($saved, 'saved:120', 'hash-120');

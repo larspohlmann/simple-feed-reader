@@ -48,9 +48,9 @@ final class TagTreeTest extends DbTestCase
         [$reading, $longReads, $essays] = $this->chain($this->user('tag-tree-depth@example.com'));
         $tree = TagTree::fromTags([$reading, $longReads, $essays]);
 
-        self::assertSame(0, $tree->depthOf($reading->requireId()));
-        self::assertSame(1, $tree->depthOf($longReads->requireId()));
-        self::assertSame(2, $tree->depthOf($essays->requireId()));
+        self::assertSame(0, $tree->computeDepth($reading->requireId()));
+        self::assertSame(1, $tree->computeDepth($longReads->requireId()));
+        self::assertSame(2, $tree->computeDepth($essays->requireId()));
     }
 
     public function testHeightCountsTheDeepestBranchBelowATag(): void
@@ -60,9 +60,9 @@ final class TagTreeTest extends DbTestCase
         $shallow = $this->tag($user, 'shallow', $reading);
         $tree = TagTree::fromTags([$reading, $longReads, $essays, $shallow]);
 
-        self::assertSame(2, $tree->heightOf($reading->requireId()));
-        self::assertSame(1, $tree->heightOf($longReads->requireId()));
-        self::assertSame(0, $tree->heightOf($essays->requireId()));
+        self::assertSame(2, $tree->computeHeight($reading->requireId()));
+        self::assertSame(1, $tree->computeHeight($longReads->requireId()));
+        self::assertSame(0, $tree->computeHeight($essays->requireId()));
     }
 
     public function testATagIsWithinItselfAndEveryAncestorButNotASibling(): void

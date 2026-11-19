@@ -111,7 +111,7 @@ final readonly class TagEditor
             return null;
         }
         $parent = $this->ownedParent($user, $parentId);
-        $this->assertFitsUnder($this->treeOf($user), $parent, 0);
+        $this->assertFitsUnder($this->loadTree($user), $parent, 0);
 
         return $parent;
     }
@@ -128,11 +128,11 @@ final readonly class TagEditor
             throw InvalidTagParentException::itself();
         }
         $parent = $this->ownedParent($tag->getUser(), $parentId);
-        $tree = $this->treeOf($tag->getUser());
+        $tree = $this->loadTree($tag->getUser());
         if ($tree->isWithin($parent->requireId(), $tag->requireId())) {
             throw InvalidTagParentException::underItsOwnChild();
         }
-        $this->assertFitsUnder($tree, $parent, $tree->heightOf($tag->requireId()));
+        $this->assertFitsUnder($tree, $parent, $tree->computeHeight($tag->requireId()));
 
         return $parent;
     }
@@ -145,12 +145,12 @@ final readonly class TagEditor
 
     private function assertFitsUnder(TagTree $tree, Tag $parent, int $height): void
     {
-        if (!TagTree::fits($tree->depthOf($parent->requireId()), $height)) {
+        if (!TagTree::fits($tree->computeDepth($parent->requireId()), $height)) {
             throw InvalidTagParentException::tooDeep();
         }
     }
 
-    private function treeOf(User $user): TagTree
+    private function loadTree(User $user): TagTree
     {
         return new TagTree($this->tagTrees->parentIdsForUser($user->requireId()));
     }

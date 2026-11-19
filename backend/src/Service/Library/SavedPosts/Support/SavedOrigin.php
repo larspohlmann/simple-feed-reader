@@ -17,7 +17,7 @@ final class SavedOrigin
 {
     private const int NAME_MAX_LENGTH = 255;
 
-    public static function posterOf(Subscription $leaving): ?EntryAuthor
+    public static function buildPoster(Subscription $leaving): ?EntryAuthor
     {
         $feed = $leaving->getFeed();
         if (null === $feed->getNetwork() || SourceFormat::isSocial($feed->getSourceFormat())) {
@@ -25,20 +25,20 @@ final class SavedOrigin
         }
 
         return new EntryAuthor(
-            self::nameOf($leaving),
+            self::cutName($leaving),
             AbsoluteHttpUrl::orNull(FeedWebsite::resolveWebsite($feed->getUrl(), $feed->getSiteUrl())),
             $feed->getImageUrl(),
         );
     }
 
-    public static function originOf(Subscription $leaving): ?EntryOrigin
+    public static function buildOrigin(Subscription $leaving): ?EntryOrigin
     {
         $feed = $leaving->getFeed();
 
-        return null === $feed->getNetwork() ? new EntryOrigin(self::nameOf($leaving), $feed->getFaviconUrl()) : null;
+        return null === $feed->getNetwork() ? new EntryOrigin(self::cutName($leaving), $feed->getFaviconUrl()) : null;
     }
 
-    private static function nameOf(Subscription $leaving): string
+    private static function cutName(Subscription $leaving): string
     {
         return mb_substr(SubscriptionDisplayTitle::ofSubscription($leaving), 0, self::NAME_MAX_LENGTH);
     }

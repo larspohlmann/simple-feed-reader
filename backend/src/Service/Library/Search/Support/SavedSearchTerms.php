@@ -16,7 +16,7 @@ use App\Service\Library\Search\Model\SearchTermsModel;
  */
 final readonly class SavedSearchTerms
 {
-    public static function of(SavedSearch $savedSearch): SearchTermsModel
+    public static function fromSavedSearch(SavedSearch $savedSearch): SearchTermsModel
     {
         return SearchTermsModel::fromTermAndMode(
             $savedSearch->getTerm(),
@@ -24,9 +24,9 @@ final readonly class SavedSearchTerms
         );
     }
 
-    public static function termOf(SavedSearch $savedSearch): SavedSearchTermModel
+    public static function buildTermModel(SavedSearch $savedSearch): SavedSearchTermModel
     {
-        return new SavedSearchTermModel($savedSearch->requireId(), self::of($savedSearch));
+        return new SavedSearchTermModel($savedSearch->requireId(), self::fromSavedSearch($savedSearch));
     }
 
     private function __construct()

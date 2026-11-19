@@ -68,10 +68,10 @@ final readonly class OpmlExporter
         $outline = $document->createElement('outline');
         $outline->setAttribute('text', $tag->getName());
         $outline->setAttribute('title', $tag->getName());
-        foreach ($tree->feedsOf($tag) as $exported) {
+        foreach ($tree->findFeeds($tag) as $exported) {
             $outline->appendChild($this->feedOutline($document, $exported));
         }
-        foreach ($tree->childrenOf($tag) as $child) {
+        foreach ($tree->findChildren($tag) as $child) {
             $outline->appendChild($this->tagOutline($document, $tree, $child));
         }
 

@@ -15,7 +15,7 @@ final readonly class RetentionHorizon
     {
     }
 
-    public function asOf(string $today): RetentionHorizonModel
+    public function buildHorizon(string $today): RetentionHorizonModel
     {
         $windows = $this->settings->current();
 

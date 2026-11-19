@@ -33,7 +33,7 @@ final class BulkSubscribeTagTree
 
     public function fitsUnderANewTag(Tag $tag): bool
     {
-        return TagTree::fits(0, $this->tree()->heightOf(spl_object_id($tag)));
+        return TagTree::fits(0, $this->tree()->computeHeight(spl_object_id($tag)));
     }
 
     private function tree(): TagTree

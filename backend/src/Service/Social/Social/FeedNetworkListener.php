@@ -29,7 +29,7 @@ final readonly class FeedNetworkListener
     private function findNetwork(Feed $feed): ?SocialNetwork
     {
         if (SourceFormat::isSaved($feed->getSourceFormat())) {
-            return SavedFeedUrl::networkOf($feed->getUrl());
+            return SavedFeedUrl::parseNetwork($feed->getUrl());
         }
 
         return SocialFeedClassifier::privateAddressOf($feed)->network
