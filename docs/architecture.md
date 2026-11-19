@@ -292,7 +292,8 @@ So `Service/Curation/Recommendation/Llm` holds the LLM engine, which depends on 
   cycle, so the cycle rule would not stop them; `ServiceModuleBoundaryRule` forbids them. Reading state, the search
   it needs and mark-read live in `Service/Library/Reading`, and the viewer time zone lives in `Service/Foundation/Clock`.
 - **A network's account side is its module** (#2359). `Social/Bluesky`, `Social/Mastodon` and `Social/Lemmy` hold what
-  one network's account does, and depend on `Social/Social` and `Social/Notification`, which name none of them.
+  one network's account does, and depend on `Social/Social`, `Social/Notification` and the other lower Social modules
+  (`BlueskyPost`, `Completion`, `Share`), none of which names them.
 
 Enforced by `ServiceModuleCycleRule` and `ServiceModuleBoundaryRule`, both in `backend/tests/PhpStan/` and run by
 `composer stan`. A collector records every `App\Service` name a module's code mentions (imports, class names and
@@ -346,8 +347,8 @@ Decided in #1202.
   guard it.
 - **A social network's facts live in its adapter** (#2358). What one network does differently — its post addresses,
   profile feed URLs, private feed rules, search, reconnect credentials — is a method on that network's keyed adapter
-  (`PostAddressRule/`, `ProfileFeedRule/`, `PrivateFeedRule/`, `SearchSource/`, `NetworkVerifier/`), picked by
-  `SocialNetwork->value`; the adapters sit in the network module's root. A function only one network needs is a static
+  of an interface in `Social/Social` (`PostAddressRule/`, `ProfileFeedRule/`, `PrivateFeedRule/`, `SearchSource/`,
+  `NetworkVerifier/`), picked by `SocialNetwork->value`; the adapters sit in the network module's root. A function only one network needs is a static
   helper named for it (`Social/Bluesky/Support/BlueskyProfileFeed`).
   No shared file in `Service/Social/Social` matches on a `SocialNetwork` case to state a fact. Since #2367 the
   import questions (`ImportRule/`) and voting (`PostVoter/`) are keyed adapters too, and the private feed rule says
