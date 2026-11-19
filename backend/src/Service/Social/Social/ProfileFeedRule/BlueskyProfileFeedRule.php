@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Social\ProfileFeedRule;
 
 use App\Enum\SocialNetwork;
-use App\Service\Social\Bluesky\Support\BlueskyActorKey;
+use App\Service\Social\BlueskyPost\Support\BlueskyActorKey;
 use App\Service\Social\Social\Support\BlueskyProfileActor;
 use App\Service\Social\Social\Support\BlueskyProfileFeed;
 use App\Service\Social\Social\Support\ProfileIdentity;

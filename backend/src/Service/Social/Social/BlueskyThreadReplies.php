@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Service\Social\Social;
 
 use App\Service\Foundation\Json\Model\JsonNodeModel;
-use App\Service\Social\Bluesky\Model\RenderedEmbedModel;
-use App\Service\Social\Bluesky\PostEmbedRenderer;
-use App\Service\Social\Bluesky\Support\AtPostUri;
-use App\Service\Social\Bluesky\Support\BlueskyRichText;
+use App\Service\Social\BlueskyPost\Model\RenderedEmbedModel;
+use App\Service\Social\BlueskyPost\PostEmbedRenderer;
+use App\Service\Social\BlueskyPost\Support\AtPostUri;
+use App\Service\Social\BlueskyPost\Support\BlueskyRichText;
 use App\Service\Content\Comments\Exception\CommentsUnavailableException;
 use App\Service\Content\Comments\Model\CommentAuthorModel;
 use App\Service\Content\Comments\Model\CommentEmbedsModel;

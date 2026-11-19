@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\HiddenProfiles;
 
-use App\Service\Social\Bluesky\AppViewClient;
+use App\Service\Social\BlueskyPost\AppViewClient;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Model\HiddenProfileModel;
 use App\Service\Social\Social\ProfileVisibilityCache;

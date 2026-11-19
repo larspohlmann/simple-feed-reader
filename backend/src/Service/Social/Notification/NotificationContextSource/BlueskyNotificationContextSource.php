@@ -8,7 +8,7 @@ use App\Entity\NotificationContext;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
-use App\Service\Social\Bluesky\Support\AtPostUri;
+use App\Service\Social\BlueskyPost\Support\AtPostUri;
 use App\Service\Social\Notification\BlueskyPostLookup;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Notification\Support\Excerpt;

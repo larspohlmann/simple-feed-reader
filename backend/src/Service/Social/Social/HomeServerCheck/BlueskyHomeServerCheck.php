@@ -6,7 +6,7 @@ namespace App\Service\Social\Social\HomeServerCheck;
 
 use App\Enum\SocialNetwork;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
-use App\Service\Social\Bluesky\Support\AtPostUri;
+use App\Service\Social\BlueskyPost\Support\AtPostUri;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Social\Social\BlueskyApiClient;
 use App\Service\Social\Social\BlueskyIdentityResolver;

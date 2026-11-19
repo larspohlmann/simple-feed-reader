@@ -7,7 +7,7 @@ namespace App\Service\Social\Social\PostAddressRule;
 use App\Entity\Entry;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Social\Bluesky\Support\AtPostUri;
+use App\Service\Social\BlueskyPost\Support\AtPostUri;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Model\SocialPostAddressModel;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;

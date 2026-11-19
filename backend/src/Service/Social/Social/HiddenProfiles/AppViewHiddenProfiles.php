@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\HiddenProfiles;
 
-use App\Service\Social\Bluesky\AppViewClient;
-use App\Service\Social\Bluesky\Exception\AppViewAnswerException;
+use App\Service\Social\BlueskyPost\AppViewClient;
+use App\Service\Social\BlueskyPost\Exception\AppViewAnswerException;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Outbound\Fetch\Exception\FetchException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;

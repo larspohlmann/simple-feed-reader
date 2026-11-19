@@ -9,7 +9,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\FeedRepository;
-use App\Service\Social\Bluesky\AppViewClient;
+use App\Service\Social\BlueskyPost\AppViewClient;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Outbound\Fetch\HostThrottle;
 use App\Service\Operations\Maintenance\MaintenanceSweep\ProfileImagesTickSweep;

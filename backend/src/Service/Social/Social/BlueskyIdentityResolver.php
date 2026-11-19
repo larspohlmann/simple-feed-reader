@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social;
 
-use App\Service\Social\Bluesky\AppViewClient;
-use App\Service\Social\Bluesky\Support\BlueskyActorKey;
+use App\Service\Social\BlueskyPost\AppViewClient;
+use App\Service\Social\BlueskyPost\Support\BlueskyActorKey;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Social\Social\Exception\SocialAccountUnresolvableException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;

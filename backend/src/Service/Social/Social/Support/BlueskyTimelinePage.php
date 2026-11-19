@@ -6,8 +6,8 @@ namespace App\Service\Social\Social\Support;
 
 use App\Entity\DiscussionCounts;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
-use App\Service\Social\Bluesky\Support\AtPostUri;
-use App\Service\Social\Bluesky\Support\BlueskyRichText;
+use App\Service\Social\BlueskyPost\Support\AtPostUri;
+use App\Service\Social\BlueskyPost\Support\BlueskyRichText;
 use App\Service\Social\Completion\Model\KnownSharesModel;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Parser\Support\DateParser;

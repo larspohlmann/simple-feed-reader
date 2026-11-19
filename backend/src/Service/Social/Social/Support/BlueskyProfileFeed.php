@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Social\Social\Support;
 
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
-use App\Service\Social\Bluesky\Support\BlueskyActorKey;
-use App\Service\Social\Bluesky\Support\BlueskyWeb;
+use App\Service\Social\BlueskyPost\Support\BlueskyActorKey;
+use App\Service\Social\BlueskyPost\Support\BlueskyWeb;
 
 final class BlueskyProfileFeed
 {

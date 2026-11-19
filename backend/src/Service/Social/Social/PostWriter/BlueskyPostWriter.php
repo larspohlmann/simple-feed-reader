@@ -6,7 +6,7 @@ namespace App\Service\Social\Social\PostWriter;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Social\Bluesky\Support\AtPostUri;
+use App\Service\Social\BlueskyPost\Support\AtPostUri;
 use App\Service\Social\Social\BlueskyFacets;
 use App\Service\Social\Social\BlueskyExternalEmbeds;
 use App\Service\Social\Social\BlueskyPostKeys;

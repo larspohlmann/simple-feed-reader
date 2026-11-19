@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Social;
 
 use App\Service\Foundation\Json\Model\JsonNodeModel;
-use App\Service\Social\Bluesky\PostEmbedRenderer;
+use App\Service\Social\BlueskyPost\PostEmbedRenderer;
 use App\Service\Content\Comments\Exception\CommentsUnavailableException;
 use App\Service\Content\Comments\Model\CommentAuthorModel;
 use App\Service\Content\Comments\Model\EntryCommentModel;

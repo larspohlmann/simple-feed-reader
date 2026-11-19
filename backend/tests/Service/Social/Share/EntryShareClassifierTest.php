@@ -11,7 +11,7 @@ use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Enum\CommentsLoad;
 use App\Enum\ShareKind;
-use App\Service\Social\Bluesky\BlueskyPendingEmbed;
+use App\Service\Social\BlueskyPost\BlueskyPendingEmbed;
 use App\Service\Foundation\Sanitize\EntrySanitizer;
 use App\Service\Foundation\Sanitize\TrailingBlankRemover;
 use App\Service\Social\Share\EntryShareClassifier;

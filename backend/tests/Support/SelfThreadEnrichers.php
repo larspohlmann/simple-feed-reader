@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\ThreadPost;
-use App\Service\Social\Bluesky\AppViewClient;
-use App\Service\Social\Bluesky\PostEmbedRenderer;
+use App\Service\Social\BlueskyPost\AppViewClient;
+use App\Service\Social\BlueskyPost\PostEmbedRenderer;
 use App\Repository\ThreadPostRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Foundation\Sanitize\EntrySanitizer;

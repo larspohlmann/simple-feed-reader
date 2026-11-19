@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Social;
 
 use App\Entity\SocialAccount;
-use App\Service\Social\Bluesky\AppViewClient;
+use App\Service\Social\BlueskyPost\AppViewClient;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;

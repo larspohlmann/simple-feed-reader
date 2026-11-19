@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Social\ReplyThreadSource;
 
-use App\Service\Social\Bluesky\AppViewClient;
-use App\Service\Social\Bluesky\PostEmbedRenderer;
+use App\Service\Social\BlueskyPost\AppViewClient;
+use App\Service\Social\BlueskyPost\PostEmbedRenderer;
 use App\Service\Content\Comments\Exception\CommentsUnavailableException;
 use App\Service\Content\Comments\Model\CommentsAnswerModel;
 use App\Service\Outbound\Fetch\Exception\FeedThrottledException;

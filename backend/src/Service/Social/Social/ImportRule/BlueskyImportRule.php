@@ -6,7 +6,7 @@ namespace App\Service\Social\Social\ImportRule;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Social\Bluesky\Support\BlueskyActorKey;
+use App\Service\Social\BlueskyPost\Support\BlueskyActorKey;
 use App\Service\Social\Social\BlueskyIdentityResolver;
 use App\Service\Social\Social\HiddenImportFollows;
 use App\Service\Social\Social\Model\HiddenProfileModel;

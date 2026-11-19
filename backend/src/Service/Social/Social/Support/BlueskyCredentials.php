@@ -6,7 +6,7 @@ namespace App\Service\Social\Social\Support;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Social\Bluesky\Support\BlueskyActorKey;
+use App\Service\Social\BlueskyPost\Support\BlueskyActorKey;
 use App\Service\Social\Social\Exception\NotAnAppPasswordException;
 use App\Service\Social\Social\Model\CredentialReplacementModel;
 use App\Service\Social\Social\Model\SocialCredentialsModel;

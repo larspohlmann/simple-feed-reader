@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Ingestion\Refresh;
 
 use App\Entity\Feed;
-use App\Service\Social\Bluesky\PostEnricher;
+use App\Service\Social\BlueskyPost\PostEnricher;
 use App\Service\Social\Social\SelfThreadEnricher;
 
 final readonly class FeedShareEnrichment

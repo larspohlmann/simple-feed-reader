@@ -7,7 +7,7 @@ namespace App\Service\Social\Completion\Model;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
-use App\Service\Social\Bluesky\Support\BlueskyPostView;
+use App\Service\Social\BlueskyPost\Support\BlueskyPostView;
 
 /** What a network's own answer already says about a new entry's share, keyed by the entry's guid. */
 final readonly class KnownSharesModel

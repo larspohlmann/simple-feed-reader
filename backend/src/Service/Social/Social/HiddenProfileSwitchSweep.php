@@ -6,7 +6,7 @@ namespace App\Service\Social\Social;
 
 use App\Entity\Subscription;
 use App\Repository\RefusedProfileSubscriptionRepository;
-use App\Service\Social\Bluesky\AppViewClient;
+use App\Service\Social\BlueskyPost\AppViewClient;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\HiddenProfiles\CachedHiddenProfiles;
 use App\Service\Social\Social\Model\HiddenProfileModel;

@@ -54,7 +54,7 @@ use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\StubLokiEndpoint;
 use App\Tests\Support\StubPassFetcher;
 use App\Repository\FeedRepository;
-use App\Service\Social\Bluesky\AppViewClient;
+use App\Service\Social\BlueskyPost\AppViewClient;
 use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
 use App\Service\Outbound\Fetch\HostThrottle;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;

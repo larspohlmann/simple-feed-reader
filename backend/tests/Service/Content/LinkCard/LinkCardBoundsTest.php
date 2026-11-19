@@ -10,7 +10,7 @@ use App\Entity\Headline;
 use App\Entity\LinkCardContent;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
-use App\Service\Social\Bluesky\AppViewClient;
+use App\Service\Social\BlueskyPost\AppViewClient;
 use App\Service\Outbound\Fetch\HostThrottle;
 use App\Service\Content\LinkCard\Model\LinkCardBudgetModel;
 use App\Tests\DbTestCase;

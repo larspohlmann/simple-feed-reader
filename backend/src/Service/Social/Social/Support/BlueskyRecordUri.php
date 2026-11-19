@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\Support;
 
-use App\Service\Social\Bluesky\Support\BlueskyWeb;
+use App\Service\Social\BlueskyPost\Support\BlueskyWeb;
 
 /** The AT URI of a Bluesky list, feed generator, like or repost, `at://<did>/<collection>/<rkey>`. */
 final class BlueskyRecordUri

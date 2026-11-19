@@ -6,7 +6,7 @@ namespace App\Service\Social\Social\CandidateSource;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Social\Bluesky\AppViewClient;
+use App\Service\Social\BlueskyPost\AppViewClient;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Social\Social\BlueskyApiClient;
