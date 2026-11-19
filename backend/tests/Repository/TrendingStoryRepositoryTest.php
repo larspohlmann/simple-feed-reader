@@ -462,8 +462,8 @@ final class TrendingStoryRepositoryTest extends DbTestCase
             [$this->articleFeed('third'), 'third.example'],
             [$this->articleFeed('fourth'), 'fourth.example'],
         ]);
-        $this->storeTitles($first, 'Hafenstreik in Hamburg', 'Hafenarbeiter in Hamburg streiken');
-        $this->storeTitles($second, 'Hafenstreik in Hamburg', null);
+        $this->fixtures->storeTitles($first, 'Hafenstreik in Hamburg', 'Hafenarbeiter in Hamburg streiken');
+        $this->fixtures->storeTitles($second, 'Hafenstreik in Hamburg', null);
 
         $headings = $this->entityManager->getRepository(TrendingStory::class)
             ->headingsOf([$first->requireId(), $second->requireId()]);
@@ -483,24 +483,15 @@ final class TrendingStoryRepositoryTest extends DbTestCase
             [$this->articleFeed('outlet'), 'outlet.example'],
             [$this->articleFeed('second'), 'second.example'],
         ]);
-        $this->storeTitles($story, 'Hafenstreik in Hamburg', 'Hafenarbeiter in Hamburg streiken', 'Die Arbeit ruht.');
+        $this->fixtures->storeTitles(
+            $story,
+            'Hafenstreik in Hamburg',
+            'Hafenarbeiter in Hamburg streiken',
+            'Die Arbeit ruht.',
+        );
 
         self::assertEquals(
             [$story->requireId() => new StoryHeadingModel('Hafenarbeiter in Hamburg streiken', 'Die Arbeit ruht.')],
-            $this->entityManager->getRepository(TrendingStory::class)->headingsOf([$story->requireId()]),
-        );
-    }
-
-    public function testAStoryWithoutAnLlmTitleHasNoSynopsis(): void
-    {
-        $story = $this->storyOf([
-            [$this->articleFeed('outlet'), 'outlet.example'],
-            [$this->articleFeed('second'), 'second.example'],
-        ]);
-        $this->storeTitles($story, 'Hafenstreik in Hamburg', null, 'A leftover synopsis.');
-
-        self::assertEquals(
-            [$story->requireId() => new StoryHeadingModel('Hafenstreik in Hamburg', null)],
             $this->entityManager->getRepository(TrendingStory::class)->headingsOf([$story->requireId()]),
         );
     }
@@ -651,19 +642,6 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         );
 
         self::assertSame([$story->requireId()], $due);
-    }
-
-    private function storeTitles(
-        TrendingStory $story,
-        ?string $fallbackTitle,
-        ?string $llmTitle,
-        ?string $llmSynopsis = null,
-    ): void {
-        $this->entityManager->flush();
-        $this->entityManager->getConnection()->executeStatement(
-            'UPDATE trending_story SET fallback_title = ?, llm_title = ?, llm_synopsis = ? WHERE id = ?',
-            [$fallbackTitle, $llmTitle, $llmSynopsis, $story->requireId()],
-        );
     }
 
     /** @param list<array{Feed, ?string}> $feedsAndSites */

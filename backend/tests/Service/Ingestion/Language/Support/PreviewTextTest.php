@@ -14,7 +14,9 @@ final class PreviewTextTest extends TestCase
     #[DataProvider('cards')]
     public function testItIsWhatSharedArticlesGuessesOn(string $title, string $description): void
     {
-        self::assertSame($title . "\n" . HeadlineBody::body($description), PreviewText::of($title, $description));
+        $body = HeadlineBody::body($description, HeadlineBody::BODY_LENGTH);
+
+        self::assertSame($title . "\n" . $body, PreviewText::of($title, $description));
     }
 
     /** @return iterable<string, array{string, string}> */

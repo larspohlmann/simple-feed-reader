@@ -40,8 +40,8 @@ final readonly class TrendingStoryPage
         );
 
         return $page + [
-            'title' => $result->title,
-            'synopsis' => $result->synopsis,
+            'title' => $result->heading?->title,
+            'synopsis' => $result->heading?->synopsis,
             'memberCount' => $result->tally->memberCount,
             'unreadCount' => $result->tally->unreadCount,
             'lastOpenedAt' => $result->lastOpenedAt?->format(\DateTimeInterface::ATOM),

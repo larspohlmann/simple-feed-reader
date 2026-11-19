@@ -36,7 +36,7 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
     {
         /** @var array{title: string|null, synopsis: string|null}|false $row */
         $row = $this->getEntityManager()->getConnection()->fetchAssociative(
-            'SELECT ' . TrendingStoryTitleSql::TITLE . ' AS title, ' . TrendingStoryTitleSql::SYNOPSIS . ' AS synopsis'
+            'SELECT ' . TrendingStoryTitleSql::TITLE . ' AS title, story.llm_synopsis AS synopsis'
             . ' FROM trending_story story WHERE story.id = ? AND story.user_id = ?',
             [$query->storyId, $query->userId],
             [ParameterType::INTEGER, ParameterType::INTEGER],

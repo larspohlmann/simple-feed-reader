@@ -15,8 +15,7 @@ final readonly class TrendingStoryEntriesModel
      */
     public function __construct(
         public array $rows,
-        public ?string $title,
-        public ?string $synopsis,
+        public ?StoryHeadingModel $heading,
         public TrendingStoryTallyModel $tally,
         public ?\DateTimeImmutable $lastOpenedAt,
         public array $joinedAtByEntry,

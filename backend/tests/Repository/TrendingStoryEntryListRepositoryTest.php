@@ -78,8 +78,13 @@ final class TrendingStoryEntryListRepositoryTest extends DbTestCase
         $fixtures = $this->fixtures->ownedBy($reader);
         $written = $this->storyIn($fixtures, $fixtures->feed('written'));
         $fallenBack = $this->storyIn($fixtures, $fixtures->feed('fallen-back'));
-        $this->storeTitles($written, 'Hafenstreik in Hamburg', 'Hafenarbeiter in Hamburg streiken', 'Die Arbeit ruht.');
-        $this->storeTitles($fallenBack, 'Hafenstreik in Hamburg', null);
+        $this->fixtures->storeTitles(
+            $written,
+            'Hafenstreik in Hamburg',
+            'Hafenarbeiter in Hamburg streiken',
+            'Die Arbeit ruht.',
+        );
+        $this->fixtures->storeTitles($fallenBack, 'Hafenstreik in Hamburg', null);
 
         self::assertEquals(
             new StoryHeadingModel('Hafenarbeiter in Hamburg streiken', 'Die Arbeit ruht.'),
@@ -93,10 +98,9 @@ final class TrendingStoryEntryListRepositoryTest extends DbTestCase
 
     public function testTheHeadingOfAStoryWithoutStoredTitlesHasNoSynopsis(): void
     {
-        $reader = $this->fixtures->reader('story-entry-list-heading-leftover@example.com');
+        $reader = $this->fixtures->reader('story-entry-list-heading-untitled@example.com');
         $fixtures = $this->fixtures->ownedBy($reader);
-        $story = $this->storyIn($fixtures, $fixtures->feed('leftover'));
-        $this->storeTitles($story, null, null, 'A leftover synopsis.');
+        $story = $this->storyIn($fixtures, $fixtures->feed('untitled'));
 
         self::assertEquals(new StoryHeadingModel('Member', null), $this->headingOf($reader, $story));
     }
@@ -148,19 +152,6 @@ final class TrendingStoryEntryListRepositoryTest extends DbTestCase
     private function headingOf(User $reader, TrendingStory $story): ?StoryHeadingModel
     {
         return $this->entries->headingOf(new TrendingStoryListQuery($reader->requireId(), $story->requireId()));
-    }
-
-    private function storeTitles(
-        TrendingStory $story,
-        ?string $fallbackTitle,
-        ?string $llmTitle,
-        ?string $llmSynopsis = null,
-    ): void {
-        $this->entityManager->flush();
-        $this->entityManager->getConnection()->executeStatement(
-            'UPDATE trending_story SET fallback_title = ?, llm_title = ?, llm_synopsis = ? WHERE id = ?',
-            [$fallbackTitle, $llmTitle, $llmSynopsis, $story->requireId()],
-        );
     }
 
     /** @return array<int, \DateTimeImmutable> */

@@ -33,8 +33,7 @@ final readonly class TrendingStoryEntries
 
         return new TrendingStoryEntriesModel(
             $rows,
-            $heading?->title,
-            $heading?->synopsis,
+            $heading,
             $this->entries->tallyOf($query),
             $lastOpenedAt,
             $this->entries->joinedAtByEntry($query, $rowIds),

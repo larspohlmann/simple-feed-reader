@@ -12,28 +12,18 @@ final class HeadlineBody
     /** What a query reads of a body before its markup is stripped and BODY_LENGTH cuts it. */
     public const int SOURCE_CHARACTERS = 2_000;
 
-    private const int BODY_LENGTH = 300;
-    private const int EXCERPT_LENGTH = 1_000;
+    public const int BODY_LENGTH = 300;
+    public const int EXCERPT_LENGTH = 1_000;
     private const string TRAILING_ELLIPSIS = '/…$/u';
 
-    public static function body(?string $summary): string
+    public static function body(?string $summary, int $length): string
     {
-        return EntryPlainText::cut($summary, self::BODY_LENGTH);
+        return EntryPlainText::cut($summary, $length);
     }
 
-    public static function bodyAfterTitle(string $title, ?string $summary): string
+    public static function bodyAfterTitle(string $title, ?string $summary, int $length): string
     {
-        return WordBoundary::cut(self::textAfterTitle($title, $summary), self::BODY_LENGTH);
-    }
-
-    public static function excerpt(?string $summary): string
-    {
-        return WordBoundary::cut(EntryPlainText::of($summary) ?? '', self::EXCERPT_LENGTH);
-    }
-
-    public static function excerptAfterTitle(string $title, ?string $summary): string
-    {
-        return WordBoundary::cut(self::textAfterTitle($title, $summary), self::EXCERPT_LENGTH);
+        return WordBoundary::cut(self::textAfterTitle($title, $summary), $length);
     }
 
     private static function textAfterTitle(string $title, ?string $summary): string

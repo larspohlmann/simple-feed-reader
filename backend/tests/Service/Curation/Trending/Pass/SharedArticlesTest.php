@@ -110,8 +110,10 @@ final class SharedArticlesTest extends TestCase
 
         $article = (new SharedArticles(TrendingWiring::cardLanguage()))->of($entry);
 
+        $body = HeadlineBody::body($description, HeadlineBody::BODY_LENGTH);
+
         self::assertSame(
-            TrendingWiring::cardLanguage()->of('Bibliothèque' . "\n" . HeadlineBody::body($description), $postLanguage),
+            TrendingWiring::cardLanguage()->of('Bibliothèque' . "\n" . $body, $postLanguage),
             $article?->language,
         );
     }

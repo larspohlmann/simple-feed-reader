@@ -6,6 +6,7 @@ namespace App\Service\Curation\Trending;
 
 use App\Service\Curation\Recommendation\Llm\Prompt\ModelReplyJsonDecoder;
 use App\Service\Curation\Trending\Model\StoryHeadingModel;
+use App\Service\Foundation\Text\Support\Whitespace;
 
 /** Reads the `{title, synopsis}` reply of the story-title prompt; null for a reply that gives no usable title. */
 final readonly class StoryTitleParser
@@ -32,26 +33,31 @@ final readonly class StoryTitleParser
 
     private function titleOf(mixed $title): ?string
     {
-        if (!\is_string($title)) {
-            return null;
-        }
+        return $this->cleaned($title, self::MAXIMUM_LENGTH, $this->withoutQuotesAndPunctuation(...));
+    }
 
-        $cleaned = $this->withoutTrailingPunctuation(
-            $this->withoutWrappingQuotes($this->withoutTrailingPunctuation(trim($title))),
+    private function withoutQuotesAndPunctuation(string $title): string
+    {
+        return $this->withoutTrailingPunctuation(
+            $this->withoutWrappingQuotes($this->withoutTrailingPunctuation($title)),
         );
-
-        return $cleaned === '' || mb_strlen($cleaned) > self::MAXIMUM_LENGTH ? null : $cleaned;
     }
 
     private function synopsisOf(mixed $synopsis): ?string
     {
-        if (!\is_string($synopsis)) {
+        return $this->cleaned($synopsis, self::MAXIMUM_SYNOPSIS_LENGTH, static fn (string $text): string => $text);
+    }
+
+    /** @param \Closure(string): string $strip */
+    private function cleaned(mixed $text, int $maximumLength, \Closure $strip): ?string
+    {
+        if (!\is_string($text)) {
             return null;
         }
 
-        $collapsed = trim(preg_replace('/\s+/u', ' ', $synopsis) ?? $synopsis);
+        $cleaned = $strip(Whitespace::collapse($text));
 
-        return $collapsed === '' || mb_strlen($collapsed) > self::MAXIMUM_SYNOPSIS_LENGTH ? null : $collapsed;
+        return $cleaned === '' || mb_strlen($cleaned) > $maximumLength ? null : $cleaned;
     }
 
     private function withoutWrappingQuotes(string $title): string

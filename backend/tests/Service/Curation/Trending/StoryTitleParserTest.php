@@ -17,11 +17,11 @@ final class StoryTitleParserTest extends TestCase
     {
         yield 'a trailing full stop is dropped' => [
             '{"title":"Hamburg port strike halts container traffic."}',
-            new StoryHeadingModel('Hamburg port strike halts container traffic', null),
+            self::heading('Hamburg port strike halts container traffic'),
         ];
         yield 'a code fence is tolerated' => [
             "```json\n{\"title\":\"Streik im Hafen\"}\n```",
-            new StoryHeadingModel('Streik im Hafen', null),
+            self::heading('Streik im Hafen'),
         ];
         yield 'a blank title' => ['{"title":"  "}', null];
         yield 'no title key' => ['{"headline":"x"}', null];
@@ -30,59 +30,61 @@ final class StoryTitleParserTest extends TestCase
         yield 'a title over 120 characters' => ['{"title":"' . str_repeat('a', 121) . '"}', null];
         yield 'a title of 120 characters' => [
             '{"title":"' . str_repeat('ä', 120) . '"}',
-            new StoryHeadingModel(str_repeat('ä', 120), null),
+            self::heading(str_repeat('ä', 120), null),
         ];
         yield 'German quotation marks are stripped' => [
             '{"title":"„Streik im Hafen“"}',
-            new StoryHeadingModel('Streik im Hafen', null),
+            self::heading('Streik im Hafen'),
         ];
         yield 'a full stop after the quotes' => [
             '{"title":"„Streik im Hafen“."}',
-            new StoryHeadingModel('Streik im Hafen', null),
+            self::heading('Streik im Hafen'),
         ];
         yield 'straight quotes are stripped' => [
             '{"title":"\"Streik im Hafen\""}',
-            new StoryHeadingModel('Streik im Hafen', null),
+            self::heading('Streik im Hafen'),
         ];
         yield 'surrounding space is trimmed' => [
             '{"title":"  Streik im Hafen  "}',
-            new StoryHeadingModel('Streik im Hafen', null),
+            self::heading('Streik im Hafen'),
         ];
         yield 'trailing marks are dropped together' => [
             '{"title":"Streik im Hafen?! …"}',
-            new StoryHeadingModel('Streik im Hafen', null),
+            self::heading('Streik im Hafen'),
         ];
         yield 'only punctuation' => ['{"title":"…"}', null];
         yield 'an inner quote stays' => [
             '{"title":"Merz nennt Streik \"unnötig\""}',
-            new StoryHeadingModel('Merz nennt Streik "unnötig"', null),
+            self::heading('Merz nennt Streik "unnötig"'),
         ];
         yield 'a synopsis is kept' => [
             '{"title":"Harbour barrier approved","synopsis":"The authority approved it. Work starts in May."}',
-            new StoryHeadingModel('Harbour barrier approved', 'The authority approved it. Work starts in May.'),
+            self::heading('Harbour barrier approved', 'The authority approved it. Work starts in May.'),
         ];
         yield 'a synopsis has its whitespace collapsed and trimmed' => [
             "{\"title\":\"T\",\"synopsis\":\"  Two\\n sentences.  \"}",
-            new StoryHeadingModel('T', 'Two sentences.'),
+            self::heading('T', 'Two sentences.'),
         ];
-        yield 'an empty synopsis keeps the title' => ['{"title":"T","synopsis":""}', new StoryHeadingModel('T', null)];
-        yield 'a blank synopsis keeps the title' => [
-            '{"title":"T","synopsis":"  "}',
-            new StoryHeadingModel('T', null),
-        ];
-        yield 'a missing synopsis keeps the title' => ['{"title":"T"}', new StoryHeadingModel('T', null)];
+        yield 'an empty synopsis keeps the title' => ['{"title":"T","synopsis":""}', self::heading('T')];
+        yield 'a blank synopsis keeps the title' => ['{"title":"T","synopsis":"  "}', self::heading('T')];
+        yield 'a missing synopsis keeps the title' => ['{"title":"T"}', self::heading('T')];
         yield 'a synopsis that is no string keeps the title' => [
             '{"title":"T","synopsis":7}',
-            new StoryHeadingModel('T', null),
+            self::heading('T'),
         ];
         yield 'a synopsis of 500 characters is kept' => [
             '{"title":"T","synopsis":"' . str_repeat('ä', 500) . '"}',
-            new StoryHeadingModel('T', str_repeat('ä', 500)),
+            self::heading('T', str_repeat('ä', 500)),
         ];
         yield 'a synopsis of 501 characters keeps the title' => [
             '{"title":"T","synopsis":"' . str_repeat('ä', 501) . '"}',
-            new StoryHeadingModel('T', null),
+            self::heading('T'),
         ];
+    }
+
+    private static function heading(string $title, ?string $synopsis = null): StoryHeadingModel
+    {
+        return new StoryHeadingModel($title, $synopsis);
     }
 
     #[DataProvider('replies')]

@@ -12,8 +12,6 @@ final class TrendingStoryTitleSql
 {
     public const string STORED = 'COALESCE(story.llm_title, story.fallback_title)';
 
-    public const string SYNOPSIS = 'CASE WHEN story.llm_title IS NOT NULL THEN story.llm_synopsis END';
-
     public const string TITLE = 'COALESCE(' . self::STORED . ','
         . ' (SELECT headline_entry.title FROM trending_story_entry headline_member'
         . ' JOIN entry headline_entry ON headline_entry.id = headline_member.entry_id'

@@ -90,7 +90,7 @@ final readonly class StoryTitleTask implements StoryAiTaskInterface
     private function record(int $storyId, StoryAiOutcomeModel $outcome): void
     {
         if ($outcome->isUsable()) {
-            $this->stories->recordTitle($storyId, $outcome->value(), $this->clock->now());
+            $this->stories->recordHeading($storyId, $outcome->value(), $this->clock->now());
 
             return;
         }

@@ -75,7 +75,9 @@ final class StoryCardSourceTest extends DbTestCase
 
         $cards = $source->cardsOf([new RankedStoryModel(6, 4, new \DateTimeImmutable('2031-05-14 10:00:00'))]);
 
-        self::assertSame('Hafenstreik in Hamburg', $cards[0]->story->title);
-        self::assertSame('Die Arbeit ruht.', $cards[0]->story->synopsis);
+        self::assertEquals(
+            new StoryHeadingModel('Hafenstreik in Hamburg', 'Die Arbeit ruht.'),
+            $cards[0]->story->heading,
+        );
     }
 }

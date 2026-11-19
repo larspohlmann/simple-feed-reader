@@ -88,7 +88,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
         /** @var list<array{id: int|string, title: string, synopsis: string|null}> $rows */
         $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
             'SELECT story.id, ' . TrendingStoryTitleSql::STORED . ' AS title,'
-            . ' ' . TrendingStoryTitleSql::SYNOPSIS . ' AS synopsis FROM trending_story story'
+            . ' story.llm_synopsis AS synopsis FROM trending_story story'
             . ' WHERE story.id IN (:storyIds) AND ' . TrendingStoryTitleSql::STORED . ' IS NOT NULL',
             ['storyIds' => $storyIds],
             ['storyIds' => ArrayParameterType::INTEGER],
@@ -139,7 +139,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
         return array_map(static fn (int|string $storyId): int => (int) $storyId, $storyIds);
     }
 
-    public function recordTitle(int $storyId, StoryHeadingModel $heading, \DateTimeImmutable $attemptedAt): void
+    public function recordHeading(int $storyId, StoryHeadingModel $heading, \DateTimeImmutable $attemptedAt): void
     {
         $this->getEntityManager()->getConnection()->executeStatement(
             'UPDATE trending_story SET llm_title = :title, llm_synopsis = :synopsis,'
@@ -255,8 +255,8 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             static fn (array $row): StoryHeadlineModel => new StoryHeadlineModel(
                 $row['title'],
                 (bool) (int) $row['title_derived']
-                    ? HeadlineBody::excerptAfterTitle($row['title'], $row['summary'])
-                    : HeadlineBody::excerpt($row['summary']),
+                    ? HeadlineBody::bodyAfterTitle($row['title'], $row['summary'], HeadlineBody::EXCERPT_LENGTH)
+                    : HeadlineBody::body($row['summary'], HeadlineBody::EXCERPT_LENGTH),
                 $row['feed_title'],
                 $row['language'] === null ? null : FeedLanguage::from($row['language']),
             ),
@@ -287,7 +287,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
         return array_map(
             static fn (array $row): StoryHeadlineModel => new StoryHeadlineModel(
                 $row['title'],
-                HeadlineBody::body($row['description']),
+                HeadlineBody::body($row['description'], HeadlineBody::BODY_LENGTH),
                 null,
                 $row['language'] === null ? null : FeedLanguage::from($row['language']),
             ),
