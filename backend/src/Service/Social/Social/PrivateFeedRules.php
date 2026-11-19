@@ -25,4 +25,16 @@ final readonly class PrivateFeedRules
 
         return $rule;
     }
+
+    public function findRuleReading(string $sourceFormat): ?PrivateFeedRuleInterface
+    {
+        foreach (SocialNetwork::cases() as $network) {
+            $rule = $this->selectRule($network);
+            if ($rule->sourceFormat() === $sourceFormat) {
+                return $rule;
+            }
+        }
+
+        return null;
+    }
 }

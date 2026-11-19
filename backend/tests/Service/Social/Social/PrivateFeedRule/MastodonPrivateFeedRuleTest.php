@@ -199,4 +199,9 @@ final class MastodonPrivateFeedRuleTest extends TestCase
     {
         self::assertSame(SourceFormat::MASTODON_API, new MastodonPrivateFeedRule()->sourceFormat());
     }
+
+    public function testHasFollowersOnlyPosts(): void
+    {
+        self::assertTrue(new MastodonPrivateFeedRule()->hasFollowersOnlyPosts());
+    }
 }

@@ -135,4 +135,9 @@ final class LemmyPrivateFeedRuleTest extends TestCase
     {
         self::assertSame(SourceFormat::LEMMY_API, new LemmyPrivateFeedRule()->sourceFormat());
     }
+
+    public function testHasFollowersOnlyPosts(): void
+    {
+        self::assertFalse(new LemmyPrivateFeedRule()->hasFollowersOnlyPosts());
+    }
 }

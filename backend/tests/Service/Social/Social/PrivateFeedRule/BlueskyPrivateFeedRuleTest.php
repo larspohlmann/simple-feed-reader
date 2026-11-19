@@ -126,4 +126,9 @@ final class BlueskyPrivateFeedRuleTest extends TestCase
     {
         self::assertSame(SourceFormat::BLUESKY_API, new BlueskyPrivateFeedRule()->sourceFormat());
     }
+
+    public function testHasFollowersOnlyPosts(): void
+    {
+        self::assertFalse(new BlueskyPrivateFeedRule()->hasFollowersOnlyPosts());
+    }
 }
