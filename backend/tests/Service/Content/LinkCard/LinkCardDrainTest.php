@@ -6,6 +6,7 @@ namespace App\Tests\Service\Content\LinkCard;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\ShareEnrichment;
 use App\Service\Content\LinkCard\LinkCardDrain;
 use App\Service\Content\LinkCard\Model\LinkCardDrainReportModel;
 use App\Service\Foundation\Clock\NaiveUtcClock;
@@ -97,6 +98,24 @@ final class LinkCardDrainTest extends DbTestCase
 
         self::assertEquals(new LinkCardDrainReportModel(0, true), $this->drain(150)->drain());
         self::assertSame(0, $this->client->getRequestsCount());
+    }
+
+    public function testAPassThatLosesItsRowsHasNotCaughtUp(): void
+    {
+        $this->queuePosts(1);
+        $this->client = new MockHttpClient(function (): MockResponse {
+            $this->clock->sleep(ShareEnrichment::CLAIM_LEASE_SECONDS + 1);
+            $now = (new NaiveUtcClock($this->clock))->now();
+            $enrichments = PostEnrichers::enrichments($this->entityManager);
+            $enrichments->claim($enrichments->findClaimableLinkCards($now, 1), $now);
+
+            return new MockResponse(
+                '<html lang="en"><head><title>Card</title></head></html>',
+                ['response_headers' => ['content-type' => 'text/html']],
+            );
+        });
+
+        self::assertEquals(new LinkCardDrainReportModel(0, false), $this->drain(150)->drain());
     }
 
     private function drain(int $windowSeconds): LinkCardDrain
