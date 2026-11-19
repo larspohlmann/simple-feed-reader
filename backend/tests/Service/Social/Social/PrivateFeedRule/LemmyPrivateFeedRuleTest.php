@@ -30,7 +30,7 @@ final class LemmyPrivateFeedRuleTest extends TestCase
         self::assertTrue(new LemmyPrivateFeedRule()->allows(PrivateFeedModel::search('rss || atom')));
     }
 
-    public function testLemmyTakesAPlainSearch(): void
+    public function testAPlainSearchIsTaken(): void
     {
         $rule = new LemmyPrivateFeedRule();
 
@@ -40,7 +40,7 @@ final class LemmyPrivateFeedRuleTest extends TestCase
     }
 
     #[DataProvider('verdicts')]
-    public function testLemmyAllowsItsTimelinesAndNoOtherCollection(PrivateFeedModel $privateFeed, bool $allowed): void
+    public function testItsTimelinesAndNoOtherCollectionAreAllowed(PrivateFeedModel $privateFeed, bool $allowed): void
     {
         self::assertSame($allowed, new LemmyPrivateFeedRule()->allows($privateFeed));
     }
@@ -92,7 +92,7 @@ final class LemmyPrivateFeedRuleTest extends TestCase
         );
     }
 
-    public function testLemmyAsksOneTermPerAlternative(): void
+    public function testOneTermIsAskedPerAlternative(): void
     {
         self::assertSame(
             ['rss reader', 'atom'],

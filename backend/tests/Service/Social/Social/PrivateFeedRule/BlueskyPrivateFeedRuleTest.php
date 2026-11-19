@@ -117,7 +117,7 @@ final class BlueskyPrivateFeedRuleTest extends TestCase
         );
     }
 
-    public function testBlueskyRunsTheQueryAsWritten(): void
+    public function testTheQueryRunsAsWritten(): void
     {
         self::assertSame(['a || b'], new BlueskyPrivateFeedRule()->buildSearchQueries('a || b'));
     }

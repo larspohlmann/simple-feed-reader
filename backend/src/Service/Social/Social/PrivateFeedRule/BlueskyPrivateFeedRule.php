@@ -47,7 +47,6 @@ final readonly class BlueskyPrivateFeedRule implements PrivateFeedRuleInterface
         };
     }
 
-    /** A Bluesky list is the account's own when its at-URI names the account's DID. */
     public function ownsList(SocialAccount $account, PrivateFeedModel $list): bool
     {
         return str_starts_with($list->remoteId, 'at://' . $account->getIdentity() . '/');

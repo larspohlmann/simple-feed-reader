@@ -53,7 +53,6 @@ final readonly class MastodonPrivateFeedRule implements PrivateFeedRuleInterface
         };
     }
 
-    /** A Mastodon list is always the account's own. */
     public function ownsList(SocialAccount $account, PrivateFeedModel $list): bool
     {
         return true;

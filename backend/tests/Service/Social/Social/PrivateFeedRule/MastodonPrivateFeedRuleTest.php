@@ -40,9 +40,17 @@ final class MastodonPrivateFeedRuleTest extends TestCase
         yield 'all' => [PrivateFeedModel::timeline(SocialFeedKind::All), false];
     }
 
-    public function testASearchIsAllowedWhenItHasAQuery(): void
+    #[DataProvider('searchesWithinTheCap')]
+    public function testASearchWithinTheCapIsAllowed(string $query): void
     {
-        self::assertTrue(new MastodonPrivateFeedRule()->allows(PrivateFeedModel::search('rss reader')));
+        self::assertTrue(new MastodonPrivateFeedRule()->allows(PrivateFeedModel::search($query)));
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function searchesWithinTheCap(): iterable
+    {
+        yield 'a phrase' => ['rss reader'];
+        yield 'a word' => ['rss'];
     }
 
     public function testASearchIsAllowedOnlyWhileItSpellsOutFewEnoughAlternatives(): void
@@ -51,11 +59,6 @@ final class MastodonPrivateFeedRuleTest extends TestCase
 
         self::assertFalse($rule->allows(PrivateFeedModel::search(self::TOO_BROAD)));
         self::assertTrue($rule->allows(PrivateFeedModel::search('(a || b) (c || d)')));
-    }
-
-    public function testAQueryThatSpellsOutWithinTheCapFits(): void
-    {
-        self::assertTrue(new MastodonPrivateFeedRule()->allows(PrivateFeedModel::search('rss')));
     }
 
     public function testAQueryWithinTheCapBuildsItsSearch(): void
@@ -70,7 +73,7 @@ final class MastodonPrivateFeedRuleTest extends TestCase
         new MastodonPrivateFeedRule()->buildSearchQueries(self::TOO_BROAD);
     }
 
-    public function testMastodonRunsOneSearchPerAlternative(): void
+    public function testOneSearchRunsPerAlternative(): void
     {
         self::assertSame(['a', 'b'], new MastodonPrivateFeedRule()->buildSearchQueries('a || b'));
     }
