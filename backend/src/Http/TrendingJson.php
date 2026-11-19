@@ -30,6 +30,7 @@ final readonly class TrendingJson
      * @return array{
      *     id: int,
      *     title: string,
+     *     synopsis: string|null,
      *     outletCount: int,
      *     viewed: bool,
      *     shareCount: int,
@@ -45,6 +46,7 @@ final readonly class TrendingJson
         return [
             'id' => $card->story->storyId,
             'title' => $card->story->title ?? $articles->lead->row->entry->getTitle(),
+            'synopsis' => $card->story->synopsis,
             'outletCount' => $card->story->outletCount,
             'viewed' => $card->viewed,
             'shareCount' => $articles->shareCount(),

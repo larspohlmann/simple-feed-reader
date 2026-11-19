@@ -14,6 +14,7 @@ use App\Repository\EntryListRowSubscription;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\StoryArticleModel;
 use App\Service\Curation\Trending\Model\StoryArticlesModel;
+use App\Service\Curation\Trending\Model\StoryHeadingModel;
 use App\Service\Curation\Trending\Model\TrendingPageModel;
 use App\Service\Curation\Trending\Model\TrendingStoryCardModel;
 use App\Tests\Support\JsonMappers;
@@ -55,16 +56,21 @@ final class TrendingJsonTest extends TestCase
     public function testAStoryCarriesItsTitle(): void
     {
         $ranked = (new RankedStoryModel(12, 2, new \DateTimeImmutable('2031-05-14 10:00:00')))
-            ->titled('Hafenstreik in Hamburg');
+            ->headed(new StoryHeadingModel('Hafenstreik in Hamburg', 'Die Arbeit ruht.'));
+        $story = $this->storyOf($ranked);
 
-        self::assertSame('Hafenstreik in Hamburg', $this->storyOf($ranked)['title']);
+        self::assertSame('Hafenstreik in Hamburg', $story['title']);
+        self::assertSame('Die Arbeit ruht.', $story['synopsis']);
     }
 
     public function testAStoryWithoutStoredTitlesShowsItsLeadHeadline(): void
     {
         $ranked = new RankedStoryModel(12, 2, new \DateTimeImmutable('2031-05-14 10:00:00'));
 
-        self::assertSame('Entry 501', $this->storyOf($ranked)['title']);
+        $story = $this->storyOf($ranked);
+
+        self::assertSame('Entry 501', $story['title']);
+        self::assertNull($story['synopsis']);
     }
 
     public function testEveryArticleAndShareKeepsTheEntryRowShape(): void

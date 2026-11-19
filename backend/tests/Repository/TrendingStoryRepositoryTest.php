@@ -21,6 +21,7 @@ use App\Repository\TrendingStoryRepository;
 use App\Service\Curation\Trending\Exception\TrendingStoryNotFoundException;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\ReaderWindowModel;
+use App\Service\Curation\Trending\Model\StoryHeadingModel;
 use App\Service\Curation\Trending\Model\StoryHeadlineModel;
 use App\Service\Curation\Trending\ReaderWindows;
 use App\Service\Curation\Trending\TrendingStories;
@@ -464,19 +465,47 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         $this->storeTitles($first, 'Hafenstreik in Hamburg', 'Hafenarbeiter in Hamburg streiken');
         $this->storeTitles($second, 'Hafenstreik in Hamburg', null);
 
-        $titles = $this->entityManager->getRepository(TrendingStory::class)
-            ->titlesOf([$first->requireId(), $second->requireId()]);
+        $headings = $this->entityManager->getRepository(TrendingStory::class)
+            ->headingsOf([$first->requireId(), $second->requireId()]);
 
-        self::assertSame(
+        self::assertEquals(
             [
-                $first->requireId() => 'Hafenarbeiter in Hamburg streiken',
-                $second->requireId() => 'Hafenstreik in Hamburg',
+                $first->requireId() => new StoryHeadingModel('Hafenarbeiter in Hamburg streiken', null),
+                $second->requireId() => new StoryHeadingModel('Hafenstreik in Hamburg', null),
             ],
-            $titles,
+            $headings,
         );
     }
 
-    public function testTitlesLeaveOutAStoryWithoutTitles(): void
+    public function testHeadingsCarryTheLlmSynopsis(): void
+    {
+        $story = $this->storyOf([
+            [$this->articleFeed('outlet'), 'outlet.example'],
+            [$this->articleFeed('second'), 'second.example'],
+        ]);
+        $this->storeTitles($story, 'Hafenstreik in Hamburg', 'Hafenarbeiter in Hamburg streiken', 'Die Arbeit ruht.');
+
+        self::assertEquals(
+            [$story->requireId() => new StoryHeadingModel('Hafenarbeiter in Hamburg streiken', 'Die Arbeit ruht.')],
+            $this->entityManager->getRepository(TrendingStory::class)->headingsOf([$story->requireId()]),
+        );
+    }
+
+    public function testAStoryWithoutAnLlmTitleHasNoSynopsis(): void
+    {
+        $story = $this->storyOf([
+            [$this->articleFeed('outlet'), 'outlet.example'],
+            [$this->articleFeed('second'), 'second.example'],
+        ]);
+        $this->storeTitles($story, 'Hafenstreik in Hamburg', null, 'A leftover synopsis.');
+
+        self::assertEquals(
+            [$story->requireId() => new StoryHeadingModel('Hafenstreik in Hamburg', null)],
+            $this->entityManager->getRepository(TrendingStory::class)->headingsOf([$story->requireId()]),
+        );
+    }
+
+    public function testHeadingsLeaveOutAStoryWithoutTitles(): void
     {
         $untitled = $this->storyOf([
             [$this->articleFeed('outlet'), 'outlet.example'],
@@ -484,12 +513,12 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         ]);
 
         self::assertSame([], $this->entityManager->getRepository(TrendingStory::class)
-            ->titlesOf([$untitled->requireId()]));
+            ->headingsOf([$untitled->requireId()]));
     }
 
-    public function testTitlesOfNoStoriesRunNoQuery(): void
+    public function testHeadingsOfNoStoriesRunNoQuery(): void
     {
-        self::assertSame([], $this->entityManager->getRepository(TrendingStory::class)->titlesOf([]));
+        self::assertSame([], $this->entityManager->getRepository(TrendingStory::class)->headingsOf([]));
     }
 
     public function testMemberHeadlinesTakeOnePerOutletNewestFirst(): void
@@ -624,12 +653,16 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         self::assertSame([$story->requireId()], $due);
     }
 
-    private function storeTitles(TrendingStory $story, ?string $fallbackTitle, ?string $llmTitle): void
-    {
+    private function storeTitles(
+        TrendingStory $story,
+        ?string $fallbackTitle,
+        ?string $llmTitle,
+        ?string $llmSynopsis = null,
+    ): void {
         $this->entityManager->flush();
         $this->entityManager->getConnection()->executeStatement(
-            'UPDATE trending_story SET fallback_title = ?, llm_title = ? WHERE id = ?',
-            [$fallbackTitle, $llmTitle, $story->requireId()],
+            'UPDATE trending_story SET fallback_title = ?, llm_title = ?, llm_synopsis = ? WHERE id = ?',
+            [$fallbackTitle, $llmTitle, $llmSynopsis, $story->requireId()],
         );
     }
 

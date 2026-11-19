@@ -21,6 +21,7 @@ final readonly class TrendingStoryPage
      *   entries: list<array<string, mixed>>,
      *   nextCursor: string|null,
      *   title: string|null,
+     *   synopsis: string|null,
      *   memberCount: int,
      *   unreadCount: int,
      *   lastOpenedAt: string|null,
@@ -40,6 +41,7 @@ final readonly class TrendingStoryPage
 
         return $page + [
             'title' => $result->title,
+            'synopsis' => $result->synopsis,
             'memberCount' => $result->tally->memberCount,
             'unreadCount' => $result->tally->unreadCount,
             'lastOpenedAt' => $result->lastOpenedAt?->format(\DateTimeInterface::ATOM),

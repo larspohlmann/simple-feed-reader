@@ -26,14 +26,15 @@ final readonly class TrendingStoryEntries
     public function list(TrendingStoryListQuery $query): TrendingStoryEntriesModel
     {
         $this->stories->requireOwnedBy($query->userId, $query->storyId);
-        $title = $this->entries->titleOf($query);
+        $heading = $this->entries->headingOf($query);
         $lastOpenedAt = $this->follows->lastOpenedAtIfFollowed($query->userId, $query->storyId);
         $rows = $this->entries->listMembers($query);
         $rowIds = array_map(static fn (EntryListRow $row): int => $row->entry->requireId(), $rows);
 
         return new TrendingStoryEntriesModel(
             $rows,
-            $title,
+            $heading?->title,
+            $heading?->synopsis,
             $this->entries->tallyOf($query),
             $lastOpenedAt,
             $this->entries->joinedAtByEntry($query, $rowIds),

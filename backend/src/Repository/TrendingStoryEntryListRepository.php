@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
 use App\Entity\TrendingStoryEntry;
+use App\Service\Curation\Trending\Model\StoryHeadingModel;
 use App\Service\Curation\Trending\Model\TrendingStoryTallyModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\ParameterType;
@@ -30,18 +31,22 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
         parent::__construct($registry, Entry::class);
     }
 
-    /** @return string|null null for a story with no stored title and no member in a feed its reader subscribes to */
-    public function titleOf(TrendingStoryListQuery $query): ?string
+    /** @return StoryHeadingModel|null null for a story with no stored title and no member in a feed its reader subscribes to */
+    public function headingOf(TrendingStoryListQuery $query): ?StoryHeadingModel
     {
-        /** @var string|null|false $title */
-        $title = $this->getEntityManager()->getConnection()->fetchOne(
-            'SELECT ' . TrendingStoryTitleSql::TITLE . ' AS title FROM trending_story story'
-            . ' WHERE story.id = ? AND story.user_id = ?',
+        /** @var array{title: string|null, synopsis: string|null}|false $row */
+        $row = $this->getEntityManager()->getConnection()->fetchAssociative(
+            'SELECT ' . TrendingStoryTitleSql::TITLE . ' AS title, ' . TrendingStoryTitleSql::SYNOPSIS . ' AS synopsis'
+            . ' FROM trending_story story WHERE story.id = ? AND story.user_id = ?',
             [$query->storyId, $query->userId],
             [ParameterType::INTEGER, ParameterType::INTEGER],
         );
 
-        return $title === false ? null : $title;
+        if ($row === false || $row['title'] === null) {
+            return null;
+        }
+
+        return new StoryHeadingModel($row['title'], $row['synopsis']);
     }
 
     /** @return list<EntryListRow> */

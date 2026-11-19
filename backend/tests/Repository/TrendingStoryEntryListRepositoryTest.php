@@ -14,6 +14,7 @@ use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
 use App\Repository\TrendingStoryEntryListRepository;
 use App\Repository\TrendingStoryListQuery;
+use App\Service\Curation\Trending\Model\StoryHeadingModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
 
@@ -71,17 +72,33 @@ final class TrendingStoryEntryListRepositoryTest extends DbTestCase
         self::assertSame([], $this->entries->joinedAtByEntry(new TrendingStoryListQuery($reader->requireId(), 1), []));
     }
 
-    public function testTitleOfPrefersTheLlmTitleThenTheFallback(): void
+    public function testHeadingOfPrefersTheLlmTitleThenTheFallback(): void
     {
         $reader = $this->fixtures->reader('story-entry-list-title@example.com');
         $fixtures = $this->fixtures->ownedBy($reader);
         $written = $this->storyIn($fixtures, $fixtures->feed('written'));
         $fallenBack = $this->storyIn($fixtures, $fixtures->feed('fallen-back'));
-        $this->storeTitles($written, 'Hafenstreik in Hamburg', 'Hafenarbeiter in Hamburg streiken');
+        $this->storeTitles($written, 'Hafenstreik in Hamburg', 'Hafenarbeiter in Hamburg streiken', 'Die Arbeit ruht.');
         $this->storeTitles($fallenBack, 'Hafenstreik in Hamburg', null);
 
-        self::assertSame('Hafenarbeiter in Hamburg streiken', $this->titleOf($reader, $written));
-        self::assertSame('Hafenstreik in Hamburg', $this->titleOf($reader, $fallenBack));
+        self::assertEquals(
+            new StoryHeadingModel('Hafenarbeiter in Hamburg streiken', 'Die Arbeit ruht.'),
+            $this->headingOf($reader, $written),
+        );
+        self::assertEquals(
+            new StoryHeadingModel('Hafenstreik in Hamburg', null),
+            $this->headingOf($reader, $fallenBack),
+        );
+    }
+
+    public function testTheHeadingOfAStoryWithoutStoredTitlesHasNoSynopsis(): void
+    {
+        $reader = $this->fixtures->reader('story-entry-list-heading-leftover@example.com');
+        $fixtures = $this->fixtures->ownedBy($reader);
+        $story = $this->storyIn($fixtures, $fixtures->feed('leftover'));
+        $this->storeTitles($story, null, null, 'A leftover synopsis.');
+
+        self::assertEquals(new StoryHeadingModel('Member', null), $this->headingOf($reader, $story));
     }
 
     public function testAStoryWithoutStoredTitlesIsTitledByItsNewestSubscribedArticle(): void
@@ -97,17 +114,17 @@ final class TrendingStoryEntryListRepositoryTest extends DbTestCase
             $fixtures->entry($fixtures->feedNobodyFollows('unsubscribed'), 'Not subscribed', '2031-05-14 09:45:00'),
         );
 
-        self::assertSame('Neue Gespräche', $this->titleOf($reader, $story));
+        self::assertSame('Neue Gespräche', $this->headingOf($reader, $story)?->title);
     }
 
-    public function testTitleOfReadsNothingFromAnotherUsersStory(): void
+    public function testHeadingOfReadsNothingFromAnotherUsersStory(): void
     {
         $reader = $this->fixtures->reader('story-entry-list-title-owner@example.com');
         $fixtures = $this->fixtures->ownedBy($reader);
         $story = $this->storyIn($fixtures, $fixtures->feed('owned'));
         $other = $this->fixtures->reader('story-entry-list-title-other@example.com');
 
-        self::assertNull($this->titleOf($other, $story));
+        self::assertNull($this->headingOf($other, $story));
     }
 
     private function storyIn(TrendingFixtures $fixtures, Feed $feed): TrendingStory
@@ -119,17 +136,21 @@ final class TrendingStoryEntryListRepositoryTest extends DbTestCase
         );
     }
 
-    private function titleOf(User $reader, TrendingStory $story): ?string
+    private function headingOf(User $reader, TrendingStory $story): ?StoryHeadingModel
     {
-        return $this->entries->titleOf(new TrendingStoryListQuery($reader->requireId(), $story->requireId()));
+        return $this->entries->headingOf(new TrendingStoryListQuery($reader->requireId(), $story->requireId()));
     }
 
-    private function storeTitles(TrendingStory $story, string $fallbackTitle, ?string $llmTitle): void
-    {
+    private function storeTitles(
+        TrendingStory $story,
+        ?string $fallbackTitle,
+        ?string $llmTitle,
+        ?string $llmSynopsis = null,
+    ): void {
         $this->entityManager->flush();
         $this->entityManager->getConnection()->executeStatement(
-            'UPDATE trending_story SET fallback_title = ?, llm_title = ? WHERE id = ?',
-            [$fallbackTitle, $llmTitle, $story->requireId()],
+            'UPDATE trending_story SET fallback_title = ?, llm_title = ?, llm_synopsis = ? WHERE id = ?',
+            [$fallbackTitle, $llmTitle, $llmSynopsis, $story->requireId()],
         );
     }
 

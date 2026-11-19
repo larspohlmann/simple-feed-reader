@@ -77,28 +77,29 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     /**
      * @param list<int> $storyIds
      *
-     * @return array<int, string> the stories that have a title
+     * @return array<int, StoryHeadingModel> the stories that have a title
      */
-    public function titlesOf(array $storyIds): array
+    public function headingsOf(array $storyIds): array
     {
         if ($storyIds === []) {
             return [];
         }
 
-        /** @var list<array{id: int|string, title: string}> $rows */
+        /** @var list<array{id: int|string, title: string, synopsis: string|null}> $rows */
         $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
-            'SELECT story.id, ' . TrendingStoryTitleSql::STORED . ' AS title FROM trending_story story'
+            'SELECT story.id, ' . TrendingStoryTitleSql::STORED . ' AS title,'
+            . ' ' . TrendingStoryTitleSql::SYNOPSIS . ' AS synopsis FROM trending_story story'
             . ' WHERE story.id IN (:storyIds) AND ' . TrendingStoryTitleSql::STORED . ' IS NOT NULL',
             ['storyIds' => $storyIds],
             ['storyIds' => ArrayParameterType::INTEGER],
         );
 
-        $titles = [];
+        $headings = [];
         foreach ($rows as $row) {
-            $titles[(int) $row['id']] = $row['title'];
+            $headings[(int) $row['id']] = new StoryHeadingModel($row['title'], $row['synopsis']);
         }
 
-        return $titles;
+        return $headings;
     }
 
     /**
