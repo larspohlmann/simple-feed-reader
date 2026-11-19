@@ -20,7 +20,7 @@ use App\Service\Social\Social\Exception\SocialSessionStaleException;
 use App\Service\Social\Social\Model\TimelinePageModel;
 use App\Service\Social\Social\Support\BlueskySearchPage;
 use App\Service\Social\Social\Support\BlueskyTimelinePage;
-use App\Service\Social\Social\Support\SocialSearchPaths;
+use App\Service\Social\Social\Support\BlueskySearchPath;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Bluesky->value)]
@@ -84,7 +84,7 @@ final readonly class BlueskyTimelineSource implements TimelineSourceInterface
     {
         $kind = $socialFeed->getKind();
         if (SocialFeedKind::Search === $kind) {
-            return SocialSearchPaths::bluesky($socialFeed->getRemoteId());
+            return BlueskySearchPath::buildPath($socialFeed->getRemoteId());
         }
         $remoteId = rawurlencode($socialFeed->getRemoteId());
 

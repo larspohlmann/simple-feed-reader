@@ -18,7 +18,8 @@ final class ExportedFeed
     public static function of(Subscription $subscription): ExportedSubscriptionModel
     {
         $feed = $subscription->getFeed();
-        $did = SocialFeedUrl::authorOf(SocialNetwork::Bluesky, $feed->getUrl());
+        $author = SocialFeedUrl::parseAuthor(SocialNetwork::Bluesky, $feed->getUrl());
+        $did = null !== $author && BlueskyActor::isDid($author) ? $author : null;
 
         return null === $did
             ? new ExportedSubscriptionModel($subscription, $feed->getUrl(), $feed->getSourceFormat())

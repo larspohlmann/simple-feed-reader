@@ -13,14 +13,14 @@ use App\Service\Ingestion\Parser\Support\DateParser;
 use App\Service\Foundation\Sanitize\EntrySanitizer;
 use App\Service\Social\Social\Pass\MastodonReplyThread;
 use App\Service\Social\Social\Pass\ReplyNode;
-use App\Service\Social\Social\Support\CommentPost;
+use App\Service\Social\Social\Support\MastodonCommentPost;
 use App\Service\Social\Social\Support\MastodonAttachments;
 use App\Service\Social\Social\Support\MastodonAuthor;
 use App\Service\Social\Social\Support\MastodonCard;
 use App\Service\Social\Social\Support\MastodonQuotedStatus;
 use App\Service\Social\Social\Support\MastodonStatusAddress;
 use App\Service\Social\Social\Support\MastodonStatusUrl;
-use App\Service\Social\Social\Support\PostCounts;
+use App\Service\Social\Social\Support\MastodonPostCounts;
 use App\Service\Foundation\Text\Support\HtmlEscape;
 
 final readonly class MastodonContextReplies
@@ -77,7 +77,7 @@ final readonly class MastodonContextReplies
                     $this->nodesOf($thread->answersTo($status), $thread),
                     url: MastodonStatusUrl::of($status),
                     byEntryAuthor: $byPostAuthor,
-                    counts: PostCounts::ofMastodonStatus($status),
+                    counts: MastodonPostCounts::parseStatus($status),
                 );
             },
             $statuses,
@@ -98,7 +98,7 @@ final readonly class MastodonContextReplies
             $this->htmlOf($status),
             $byPostAuthor,
             self::embedsOf($status),
-            post: CommentPost::ofMastodonStatus($status),
+            post: MastodonCommentPost::parseStatus($status),
         );
     }
 

@@ -13,7 +13,7 @@ use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Model\LemmySessionModel;
-use App\Service\Social\Social\Support\SocialSearchPaths;
+use App\Service\Social\Social\Support\LemmySearchPath;
 
 final readonly class LemmyAccountApi
 {
@@ -46,7 +46,7 @@ final readonly class LemmyAccountApi
     /** @throws SocialCredentialsRejectedException when the stored token no longer opens */
     public function searchGet(SocialAccount $account, string $term): ApiRequestModel
     {
-        return $this->authorizedGet($account, SocialSearchPaths::lemmy($term))
+        return $this->authorizedGet($account, LemmySearchPath::buildPath($term))
             ->waitingUpTo(self::SEARCH_TIMEOUT_SECONDS);
     }
 

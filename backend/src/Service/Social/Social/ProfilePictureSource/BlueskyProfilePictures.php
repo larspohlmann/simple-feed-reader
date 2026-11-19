@@ -15,7 +15,7 @@ use App\Service\Social\Social\Model\ProfileCallBudgetModel;
 use App\Service\Social\Social\Model\ProfileImageSweepReportModel;
 use App\Service\Social\Social\ProfileVisibilityCache;
 use App\Service\Social\Social\Support\BlueskyProfileLabels;
-use App\Service\Social\Social\Support\ProfileIdentity;
+use App\Service\Social\Social\Support\BlueskyProfileActor;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
@@ -130,7 +130,7 @@ final readonly class BlueskyProfilePictures implements ProfilePictureSourceInter
     {
         $actors = [];
         foreach ($batch as $index => $feed) {
-            $actor = ProfileIdentity::validBlueskyActorOf($feed->getUrl());
+            $actor = BlueskyProfileActor::parseFollowedActor($feed->getUrl());
             if (null !== $actor) {
                 $actors[$index] = $actor;
             }

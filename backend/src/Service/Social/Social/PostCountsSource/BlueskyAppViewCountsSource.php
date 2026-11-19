@@ -11,7 +11,7 @@ use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Model\SocialCountsModel;
 use App\Service\Social\Social\Support\AppViewAnswer;
-use App\Service\Social\Social\Support\PostCounts;
+use App\Service\Social\Social\Support\BlueskyPostCounts;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Bluesky->value)]
@@ -28,7 +28,7 @@ final readonly class BlueskyAppViewCountsSource implements PostCountsSourceInter
             fn (): JsonNodeModel => $this->postAt($address),
         );
 
-        return PostCounts::ofBlueskyPost($post)
+        return BlueskyPostCounts::parsePost($post)
             ?? throw new SocialNetworkUnreachableException("Bluesky's AppView answered a post without its counts.");
     }
 

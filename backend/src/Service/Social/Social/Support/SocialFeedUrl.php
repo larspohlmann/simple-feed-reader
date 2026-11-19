@@ -59,15 +59,15 @@ final class SocialFeedUrl
         return new SocialFeedAddressModel($network, (int) $accountId, $kind, $parts[4] ?? '');
     }
 
-    /** @return string|null the DID an author feed of $network follows; null for any other URL */
-    public static function authorOf(SocialNetwork $network, string $url): ?string
+    /** @return string|null the remote id an author feed of $network follows; null for any other URL */
+    public static function parseAuthor(SocialNetwork $network, string $url): ?string
     {
         $address = self::addressOf($url);
         if (null === $address || $network !== $address->network || !$address->kind->followsOnePerson()) {
             return null;
         }
 
-        return BlueskyActor::isDid($address->remoteId) ? $address->remoteId : null;
+        return $address->remoteId;
     }
 
     private static function segmentOf(SocialFeedKind $kind): string

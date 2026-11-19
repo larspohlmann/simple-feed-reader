@@ -22,6 +22,7 @@ use App\Service\Social\Social\Model\SocialCollectionModel;
 use App\Service\Social\Social\Pass\FollowMatching;
 use App\Service\Social\Social\SocialCandidates\SocialCandidatesInterface;
 use App\Service\Social\Social\Support\CandidateOrder;
+use App\Service\Social\Social\Support\BlueskyActor;
 use App\Service\Social\Social\Support\SocialFeedUrl;
 
 final readonly class ImportCandidates
@@ -149,8 +150,9 @@ final readonly class ImportCandidates
         $network = $account->getNetwork();
         $rule = $this->profileFeeds->selectRule($network);
         foreach ($this->subscriptions->findFeedSummariesForUser($account->getUser()->requireId()) as $subscription) {
+            $author = SocialFeedUrl::parseAuthor($network, $subscription['feedUrl']);
             $identity = $rule->parseIdentity($subscription['feedUrl'])
-                ?? SocialFeedUrl::authorOf($network, $subscription['feedUrl']);
+                ?? (null !== $author && BlueskyActor::isDid($author) ? $author : null);
             if (null === $identity) {
                 continue;
             }

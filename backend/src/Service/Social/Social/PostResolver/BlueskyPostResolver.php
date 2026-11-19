@@ -21,7 +21,7 @@ use App\Service\Social\Social\Model\ResponseContextModel;
 use App\Service\Social\Social\Model\SocialPostModel;
 use App\Service\Social\Social\Support\BlueskyAuthor;
 use App\Service\Social\Social\Support\BlueskyRecordUri;
-use App\Service\Social\Social\Support\PostCounts;
+use App\Service\Social\Social\Support\BlueskyPostCounts;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Bluesky->value)]
@@ -47,7 +47,7 @@ final readonly class BlueskyPostResolver implements PostResolverInterface
         $contentId = $post->string('cid')
             ?? throw new SocialNetworkUnreachableException('Bluesky answered a post without a content id.');
         $resolved = SocialPostModel::onBluesky($account, $postUri, $contentId)
-            ->withCounts(PostCounts::ofBlueskyPost($post));
+            ->withCounts(BlueskyPostCounts::parsePost($post));
 
         return self::withViewer($resolved, $post->node('viewer'))->inResponseContext(self::responseContextOf($post));
     }
