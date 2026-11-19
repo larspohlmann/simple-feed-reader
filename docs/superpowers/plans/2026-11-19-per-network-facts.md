@@ -28,10 +28,14 @@
 | `find…` | Look something up among entries, accounts or stored data | Null when absent |
 | `require…` | `parse…` or `find…` where absence is an error | Throws a typed exception |
 | `fetch…` | Ask a network or another remote | Throws on failure |
+| `count…` | Count rows in our own store | Always the counts |
 | `format…` | Render a value for display | Always a string |
 | `select…` | Pick the adapter for a key | Always an adapter |
 | `is…`, `has…`, `owns…`, `allows…` | Yes/no question | Bool |
 | `from…`, `to…`, `with…` | Named constructor, conversion, wither | unchanged |
+| plain noun | A fixed fact that takes no input (`sourceFormat()`) | Always the value |
+
+Every verb is followed by its object (`buildCredentials()`, `fetchAnswers()`), never bare.
 - Out of scope, leave untouched: the Lemmy fields in `EntryListRowEnricher`, `EntryListRowLemmy` and `Http/EntryJson`; `DiscussionVotes`; the `HiddenProfile*` family; `FollowAvatarCache`; the Bluesky guard in `FollowMatching::unmatchedHandles()`; the three connect routes; the frontend. They are capability questions or belong to #2359.
 
 ## Decisions taken while reading (review these first)
@@ -91,7 +95,7 @@ Why first: `Library/Subscription` imports `Curation/Trending` (`SubscriptionTall
 
 ```php
 // Library/Subscription: no Trending left
-SubscriptionTallyReader::forUser(User $user): SubscriptionTalliesModel
+SubscriptionTallyReader::countTallies(User $user): SubscriptionTalliesModel
 SubscriptionTalliesModel::__construct(array $unreadCounts, array $entryCounts, array $flagCounts, UnreadTotalsModel $unreadTotals, array $notificationsUnseen)
 
 // Curation/Trending
@@ -102,7 +106,7 @@ final readonly class SurfaceTalliesModel
 
 final readonly class SurfaceTallies   // injects SubscriptionTallyReader and TrendingStories
 {
-    public function count(User $user, TrendingWindow $trendingWindow): SurfaceTalliesModel;
+    public function buildTallies(User $user, TrendingWindow $trendingWindow): SurfaceTalliesModel;
 }
 
 // Http: the same parameter counts as today, SurfaceTalliesModel in place of SubscriptionTalliesModel
@@ -113,7 +117,7 @@ SubscriptionJson::list(array $subscriptions, SurfaceTalliesModel $tallies, array
 
 `SubscriptionController` injects `SurfaceTallies` in place of `SubscriptionTallyReader`. The JSON of `GET /api/subscriptions` and `GET /api/subscriptions/counts` is byte-identical.
 
-- [ ] **Step 1: Write the failing test** `SurfaceTalliesTest::testCountsCarryTheSubscriptionTalliesAndTheUnopenedStories()`: with a reader that has one unread entry and Trending enabled, `count()` returns a model whose `subscriptions->unreadTotals` equals what `SubscriptionTallyReader::forUser()` returns and whose `trending` equals `TrendingStories::unopenedFor($user, $window)`.
+- [ ] **Step 1: Write the failing test** `SurfaceTalliesTest::testTalliesCarryTheSubscriptionCountsAndTheUnopenedStories()`: with a reader that has one unread entry and Trending enabled, `buildTallies()` returns a model whose `subscriptions->unreadTotals` equals what `SubscriptionTallyReader::countTallies()` returns and whose `trending` equals `TrendingStories::unopenedFor($user, $window)`.
 - [ ] **Step 2: Move the Trending assertions** of `SubscriptionTallyReaderTest` to `SurfaceTalliesTest`; re-point the two Http tests at `SurfaceTalliesModel`, expected arrays unchanged. Run — FAIL.
 - [ ] **Step 3: Implement.** Run `php bin/phpunit tests/Service/Curation/Trending tests/Service/Library/Subscription tests/Http tests/Controller/Api/SubscriptionControllerTest.php` — PASS.
 - [ ] **Step 4: Verify** `grep -rn "Curation" src/Service/Library/Subscription` prints nothing, and `composer stan` reports no `ServiceModuleCycleRule` error.
@@ -376,7 +380,7 @@ final readonly class SearchAnswers
      * @param \Closure(FetchOutcomeModel): ApiResponseModel $accept
      * @return list<ApiResponseModel> one accepted answer per request, in the requests' order
      */
-    public function fetch(SocialAccount $account, array $requests, \Closure $accept): array;
+    public function fetchAnswers(SocialAccount $account, array $requests, \Closure $accept): array;
 }
 ```
 
@@ -413,12 +417,12 @@ final readonly class CredentialReplacementModel
     public function __construct(#[\SensitiveParameter] public string $secret, public ?string $secondFactor) {}
 }
 
-BlueskyCredentials::build(string $handle, string $appPassword): SocialCredentialsModel            // @throws NotAnAppPasswordException
-BlueskyCredentials::buildForReconnect(SocialAccount $account, CredentialReplacementModel $replacement): SocialCredentialsModel
-MastodonCredentials::build(string $instanceUrl, string $accessToken): SocialCredentialsModel      // @throws InvalidInstanceUrlException
-MastodonCredentials::buildForReconnect(…): SocialCredentialsModel
-LemmyCredentials::build(string $instanceUrl, string $usernameOrEmail, string $password, ?string $secondFactor): SocialCredentialsModel
-LemmyCredentials::buildForReconnect(…): SocialCredentialsModel
+BlueskyCredentials::buildCredentials(string $handle, string $appPassword): SocialCredentialsModel            // @throws NotAnAppPasswordException
+BlueskyCredentials::buildReconnectCredentials(SocialAccount $account, CredentialReplacementModel $replacement): SocialCredentialsModel
+MastodonCredentials::buildCredentials(string $instanceUrl, string $accessToken): SocialCredentialsModel      // @throws InvalidInstanceUrlException
+MastodonCredentials::buildReconnectCredentials(…): SocialCredentialsModel
+LemmyCredentials::buildCredentials(string $instanceUrl, string $usernameOrEmail, string $password, ?string $secondFactor): SocialCredentialsModel
+LemmyCredentials::buildReconnectCredentials(…): SocialCredentialsModel
 InstanceUrl::requireOrigin(string $instanceUrl): string                                                // @throws InvalidInstanceUrlException
 
 // added to NetworkVerifierInterface and AccountVerifierInterface:
