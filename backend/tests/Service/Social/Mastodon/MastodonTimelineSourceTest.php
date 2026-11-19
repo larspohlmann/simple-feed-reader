@@ -12,8 +12,8 @@ use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
-use App\Service\Social\Mastodon\MastodonPrivateFeedRule;
 use App\Service\Social\Mastodon\MastodonTimelineSource;
+use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
@@ -23,6 +23,7 @@ use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpFoundation\Response;
 
 final class MastodonTimelineSourceTest extends TestCase
@@ -143,7 +144,7 @@ final class MastodonTimelineSourceTest extends TestCase
 
     public function testASearchTooBroadForMastodonIsNeverTurnedIntoARequest(): void
     {
-        $this->expectException(SocialNetworkUnreachableException::class);
+        $this->expectException(SearchQueryTooBroadException::class);
         $this->expectExceptionMessage('more than 8');
 
         $this->source(new RoutedHttpClient([]))
@@ -304,9 +305,11 @@ final class MastodonTimelineSourceTest extends TestCase
 
     private function source(RoutedHttpClient $http): MastodonTimelineSource
     {
+        $client = $http->client();
+
         return new MastodonTimelineSource(
-            SocialApiWiring::mastodonAccountApi($http->client()),
-            new MastodonPrivateFeedRule(),
+            SocialApiWiring::mastodonAccountApi($client),
+            SocialApiWiring::mastodonSearchSource($client, SocialApiWiring::searchAnswers($client, new ArrayAdapter())),
         );
     }
 

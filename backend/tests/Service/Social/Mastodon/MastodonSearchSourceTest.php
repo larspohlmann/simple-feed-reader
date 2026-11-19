@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Mastodon;
 
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
-use App\Service\Social\Mastodon\MastodonPrivateFeedRule;
 use App\Service\Social\Mastodon\MastodonSearchSource;
 use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
 use App\Tests\Support\RoutedHttpClient;
@@ -91,13 +90,37 @@ final class MastodonSearchSourceTest extends TestCase
         }
     }
 
+    public function testBuildRequestsCarriesTheNewestSeenIdOnEveryAlternative(): void
+    {
+        $requests = $this->source((new RoutedHttpClient([]))->client())->buildRequests(
+            SocialApiWiring::mastodonAccount(),
+            '(rss || atom)',
+            '109',
+        );
+
+        self::assertCount(2, $requests);
+        foreach ($requests as $request) {
+            self::assertStringContainsString('min_id=109', $request->url);
+        }
+    }
+
+    public function testBuildRequestsCarriesNoMinIdWithoutANewestSeenId(): void
+    {
+        $requests = $this->source((new RoutedHttpClient([]))->client())->buildRequests(
+            SocialApiWiring::mastodonAccount(),
+            '(rss || atom)',
+            null,
+        );
+
+        self::assertCount(2, $requests);
+        foreach ($requests as $request) {
+            self::assertStringNotContainsString('min_id', $request->url);
+        }
+    }
+
     private function source(HttpClientInterface $http): MastodonSearchSource
     {
-        return new MastodonSearchSource(
-            SocialApiWiring::mastodonAccountApi($http),
-            new MastodonPrivateFeedRule(),
-            SocialApiWiring::searchAnswers($http, new ArrayAdapter()),
-        );
+        return SocialApiWiring::mastodonSearchSource($http, SocialApiWiring::searchAnswers($http, new ArrayAdapter()));
     }
 
     /** @return array<string, mixed> */

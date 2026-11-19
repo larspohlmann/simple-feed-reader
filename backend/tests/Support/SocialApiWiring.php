@@ -26,10 +26,12 @@ use App\Service\Social\Lemmy\LemmyAccountApi;
 use App\Service\Social\Lemmy\LemmyApiClient;
 use App\Service\Social\Lemmy\LemmyPostEntries;
 use App\Service\Social\Lemmy\LemmyPrivateFeedRule;
+use App\Service\Social\Lemmy\LemmySearchSource;
 use App\Service\Social\Lemmy\LemmyTimelineSource;
 use App\Service\Social\Mastodon\MastodonAccountApi;
 use App\Service\Social\Mastodon\MastodonApiClient;
 use App\Service\Social\Mastodon\MastodonPrivateFeedRule;
+use App\Service\Social\Mastodon\MastodonSearchSource;
 use App\Service\Social\Mastodon\MastodonTimelineSource;
 use App\Service\Social\Social\SearchAnswers;
 use App\Service\Social\Social\StoredCredential;
@@ -124,6 +126,23 @@ final class SocialApiWiring
     public static function lemmyPostEntries(): LemmyPostEntries
     {
         return new LemmyPostEntries(self::markdownHtml());
+    }
+
+    public static function mastodonSearchSource(
+        HttpClientInterface $http,
+        SearchAnswers $searchAnswers,
+    ): MastodonSearchSource {
+        return new MastodonSearchSource(self::mastodonAccountApi($http), new MastodonPrivateFeedRule(), $searchAnswers);
+    }
+
+    public static function lemmySearchSource(HttpClientInterface $http, SearchAnswers $searchAnswers): LemmySearchSource
+    {
+        return new LemmySearchSource(
+            self::lemmyAccountApi($http),
+            self::lemmyPostEntries(),
+            new LemmyPrivateFeedRule(),
+            $searchAnswers,
+        );
     }
 
     /** The container's untrusted-Markdown converter, as config/services.yaml configures it. */
@@ -230,13 +249,13 @@ final class SocialApiWiring
             TaggedItemOf::index(MastodonTimelineSource::class)
                 => static fn (): MastodonTimelineSource => new MastodonTimelineSource(
                     self::mastodonAccountApi($http),
-                    new MastodonPrivateFeedRule(),
+                    self::mastodonSearchSource($http, self::searchAnswers($http, $cache)),
                 ),
             TaggedItemOf::index(LemmyTimelineSource::class)
                 => static fn (): LemmyTimelineSource => new LemmyTimelineSource(
                     self::lemmyAccountApi($http),
                     self::lemmyPostEntries(),
-                    new LemmyPrivateFeedRule(),
+                    self::lemmySearchSource($http, self::searchAnswers($http, $cache)),
                 ),
         ]));
     }

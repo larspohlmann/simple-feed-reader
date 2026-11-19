@@ -6,9 +6,7 @@ namespace App\Tests\Service\Social\Social\SocialSearch;
 
 use App\Enum\SocialAccountStatus;
 use App\Service\Social\Bluesky\BlueskySearchSource;
-use App\Service\Social\Lemmy\LemmyPrivateFeedRule;
 use App\Service\Social\Lemmy\LemmySearchSource;
-use App\Service\Social\Mastodon\MastodonPrivateFeedRule;
 use App\Service\Social\Mastodon\MastodonSearchSource;
 use App\Service\Social\Social\ActingAccountGuard;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
@@ -116,18 +114,10 @@ final class NetworkSocialSearchTest extends TestCase
                         SocialApiWiring::blueskySessions($http, $this->cache),
                     ),
                 TaggedItemOf::index(MastodonSearchSource::class)
-                    => static fn (): MastodonSearchSource => new MastodonSearchSource(
-                        SocialApiWiring::mastodonAccountApi($http),
-                        new MastodonPrivateFeedRule(),
-                        $searchAnswers,
-                    ),
+                    => static fn (): MastodonSearchSource
+                        => SocialApiWiring::mastodonSearchSource($http, $searchAnswers),
                 TaggedItemOf::index(LemmySearchSource::class)
-                    => static fn (): LemmySearchSource => new LemmySearchSource(
-                        SocialApiWiring::lemmyAccountApi($http),
-                        SocialApiWiring::lemmyPostEntries(),
-                        new LemmyPrivateFeedRule(),
-                        $searchAnswers,
-                    ),
+                    => static fn (): LemmySearchSource => SocialApiWiring::lemmySearchSource($http, $searchAnswers),
             ]),
         );
     }

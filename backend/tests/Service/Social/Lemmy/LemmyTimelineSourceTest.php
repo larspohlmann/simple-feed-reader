@@ -8,8 +8,8 @@ use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
-use App\Service\Social\Lemmy\LemmyPrivateFeedRule;
 use App\Service\Social\Lemmy\LemmyTimelineSource;
+use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
@@ -20,6 +20,7 @@ use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpFoundation\Response;
 
 final class LemmyTimelineSourceTest extends TestCase
@@ -156,9 +157,11 @@ final class LemmyTimelineSourceTest extends TestCase
         self::assertSame('A text post', $page->parsed->entries[0]->headline->text);
     }
 
-    public function testATooBroadSearchFeedIsUnreachable(): void
+    public function testATooBroadSearchFeedIsNeverTurnedIntoARequest(): void
     {
-        $this->expectException(SocialNetworkUnreachableException::class);
+        $this->expectExceptionObject(
+            new SearchQueryTooBroadException('Lemmy needs a word to search for in every alternative.'),
+        );
 
         self::source()->requests(self::socialFeed(SocialFeedKind::Search, '-gazette'));
     }
@@ -173,10 +176,12 @@ final class LemmyTimelineSourceTest extends TestCase
 
     private static function source(): LemmyTimelineSource
     {
+        $http = (new RoutedHttpClient([]))->client();
+
         return new LemmyTimelineSource(
-            SocialApiWiring::lemmyAccountApi((new RoutedHttpClient([]))->client()),
+            SocialApiWiring::lemmyAccountApi($http),
             SocialApiWiring::lemmyPostEntries(),
-            new LemmyPrivateFeedRule(),
+            SocialApiWiring::lemmySearchSource($http, SocialApiWiring::searchAnswers($http, new ArrayAdapter())),
         );
     }
 

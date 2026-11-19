@@ -9,6 +9,7 @@ use App\Entity\SocialFeed;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
@@ -27,6 +28,7 @@ interface TimelineSourceInterface
      * @throws SocialCredentialsRejectedException
      * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
+     * @throws SearchQueryTooBroadException when a stored search can no longer run
      */
     public function requests(SocialFeed $socialFeed): array;
 
