@@ -7,7 +7,6 @@ namespace App\Tests\Service\Content\LinkCard;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Service\Content\LinkCard\LinkCardDrain;
-use App\Service\Content\LinkCard\LinkCardSweep;
 use App\Service\Content\LinkCard\Model\LinkCardDrainReportModel;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Tests\DbTestCase;
@@ -18,7 +17,6 @@ use App\Tests\Support\ShareLinkCardsWiring;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final class LinkCardDrainTest extends DbTestCase
 {
@@ -38,6 +36,17 @@ final class LinkCardDrainTest extends DbTestCase
 
         self::assertEquals(new LinkCardDrainReportModel(9, true), $this->drain(150)->drain());
         self::assertSame(9, $this->client->getRequestsCount());
+    }
+
+    public function testLeavesNoCardedEntryInTheEntityManager(): void
+    {
+        $firstPost = $this->queuedPost('https://mastodon.test/@1.rss', 1);
+        $secondPost = $this->queuedPost('https://mastodon.test/@2.rss', 2);
+
+        $this->drain(150)->drain();
+
+        self::assertFalse($this->entityManager->contains($firstPost));
+        self::assertFalse($this->entityManager->contains($secondPost));
     }
 
     public function testAnEmptyQueueFetchesNothing(): void
@@ -92,12 +101,12 @@ final class LinkCardDrainTest extends DbTestCase
 
     private function drain(int $windowSeconds): LinkCardDrain
     {
-        return new LinkCardDrain($this->sweepOver($this->client), $this->clock, $windowSeconds);
-    }
-
-    private function sweepOver(HttpClientInterface $client): LinkCardSweep
-    {
-        return LinkCardSweepWiring::build($this->entityManager, $client, $this->clock);
+        return new LinkCardDrain(
+            LinkCardSweepWiring::build($this->entityManager, $this->client, $this->clock),
+            $this->entityManager,
+            $this->clock,
+            $windowSeconds,
+        );
     }
 
     private function queuePosts(int $count): void

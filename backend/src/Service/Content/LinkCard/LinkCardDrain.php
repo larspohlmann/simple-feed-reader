@@ -6,12 +6,14 @@ namespace App\Service\Content\LinkCard;
 
 use App\Service\Content\LinkCard\Model\LinkCardBudgetModel;
 use App\Service\Content\LinkCard\Model\LinkCardDrainReportModel;
+use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
 final readonly class LinkCardDrain
 {
     public function __construct(
         private LinkCardSweep $sweep,
+        private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
         private int $windowSeconds,
     ) {
@@ -29,6 +31,7 @@ final readonly class LinkCardDrain
                 LinkCardBudgetModel::largestPass(),
             );
             $pass = $this->sweep->sweep($budget);
+            $this->entityManager->clear();
             $completed += $pass->completed;
         } while ($pass->completed > 0);
 
