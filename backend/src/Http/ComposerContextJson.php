@@ -73,8 +73,8 @@ final class ComposerContextJson
                 $link->communities,
             ),
             'title' => $link->title,
-            'minTitleCharacters' => LinkPostChoicesModel::MIN_TITLE_CHARACTERS,
-            'maxTitleCharacters' => LinkPostChoicesModel::MAX_TITLE_CHARACTERS,
+            'minTitleCharacters' => $link->minTitleCharacters,
+            'maxTitleCharacters' => $link->maxTitleCharacters,
         ];
     }
 

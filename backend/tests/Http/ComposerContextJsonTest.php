@@ -28,7 +28,7 @@ final class ComposerContextJsonTest extends TestCase
 
     public function testALemmyLinkListsItsCommunitiesItsTitleAndTheTitleLimit(): void
     {
-        $linkPost = new LinkPostChoicesModel([new CommunityModel(7, '!rss@lemmy.world')], 'The article');
+        $linkPost = new LinkPostChoicesModel([new CommunityModel(7, '!rss@lemmy.world')], 'The article', 4, 150);
 
         $row = ComposerContextJson::of(self::linkContext(new ComposerDefaultsModel(10000, linkPost: $linkPost)));
 
@@ -36,8 +36,8 @@ final class ComposerContextJsonTest extends TestCase
             [
                 'communities' => [['id' => 7, 'handle' => '!rss@lemmy.world']],
                 'title' => 'The article',
-                'minTitleCharacters' => 3,
-                'maxTitleCharacters' => 200,
+                'minTitleCharacters' => 4,
+                'maxTitleCharacters' => 150,
             ],
             $row['lemmy'],
         );

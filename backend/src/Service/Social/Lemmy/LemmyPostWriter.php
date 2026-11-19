@@ -16,7 +16,6 @@ use App\Service\Social\Social\Exception\SocialPostCommunityMissingException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Exception\SocialPostTitleTooShortException;
 use App\Service\Social\Social\Exception\SocialPostTooLongException;
-use App\Service\Social\Social\Model\LinkPostChoicesModel;
 use App\Service\Social\Social\Model\PostDeletion;
 use App\Service\Social\Social\Model\PostDraftModel;
 use App\Service\Social\Social\Model\PublishedPostModel;
@@ -27,6 +26,9 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 #[AsTaggedItem(index: SocialNetwork::Lemmy->value)]
 final readonly class LemmyPostWriter implements PostWriterInterface
 {
+    public const int MIN_TITLE_CHARACTERS = 3;
+    public const int MAX_TITLE_CHARACTERS = 200;
+
     private const string NO_QUOTES = 'Lemmy takes no quotes.';
 
     public function __construct(private LemmyAccountApi $lemmy)
@@ -74,14 +76,14 @@ final readonly class LemmyPostWriter implements PostWriterInterface
     private static function titleOf(PostDraftModel $draft): string
     {
         $title = trim($draft->title ?? '');
-        if (mb_strlen($title) < LinkPostChoicesModel::MIN_TITLE_CHARACTERS) {
+        if (mb_strlen($title) < self::MIN_TITLE_CHARACTERS) {
             throw new SocialPostTitleTooShortException(
-                sprintf('A Lemmy title needs at least %d characters.', LinkPostChoicesModel::MIN_TITLE_CHARACTERS),
+                sprintf('A Lemmy title needs at least %d characters.', self::MIN_TITLE_CHARACTERS),
             );
         }
         self::guardLength(
             $title,
-            LinkPostChoicesModel::MAX_TITLE_CHARACTERS,
+            self::MAX_TITLE_CHARACTERS,
             'A Lemmy post title holds %d characters.',
         );
 

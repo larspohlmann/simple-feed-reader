@@ -26,6 +26,6 @@ final class FakeLemmyComposerDefaults implements ComposerDefaultsInterface
 
     public function forLinkFrom(SocialAccount $account, SharedLinkModel $link): ComposerDefaultsModel
     {
-        return new ComposerDefaultsModel(10000, linkPost: new LinkPostChoicesModel([], $link->title));
+        return new ComposerDefaultsModel(10000, linkPost: new LinkPostChoicesModel([], $link->title, 3, 200));
     }
 }

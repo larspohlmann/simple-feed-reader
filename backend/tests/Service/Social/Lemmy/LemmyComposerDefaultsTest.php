@@ -6,6 +6,7 @@ namespace App\Tests\Service\Social\Lemmy;
 
 use App\Service\Social\Lemmy\LemmyCommunities;
 use App\Service\Social\Lemmy\LemmyComposerDefaults;
+use App\Service\Social\Lemmy\LemmyPostWriter;
 use App\Service\Social\Social\Model\CommunityModel;
 use App\Service\Social\Social\Model\ComposerDefaultsModel;
 use App\Service\Social\Social\Model\LinkPostChoicesModel;
@@ -52,7 +53,7 @@ final class LemmyComposerDefaultsTest extends TestCase
         self::assertEquals(
             new ComposerDefaultsModel(
                 LemmyComposerDefaults::MAX_CHARACTERS,
-                linkPost: new LinkPostChoicesModel([new CommunityModel(7, '!rss@lemmy.world')], 'The article'),
+                linkPost: new LinkPostChoicesModel([new CommunityModel(7, '!rss@lemmy.world')], 'The article', 3, 200),
             ),
             $defaults,
         );
@@ -68,7 +69,7 @@ final class LemmyComposerDefaultsTest extends TestCase
         )->linkPost;
 
         self::assertNotNull($link);
-        self::assertLessThanOrEqual(LinkPostChoicesModel::MAX_TITLE_CHARACTERS, mb_strlen($link->title));
+        self::assertLessThanOrEqual(LemmyPostWriter::MAX_TITLE_CHARACTERS, mb_strlen($link->title));
         self::assertMatchesRegularExpression('/^(wordy )+wordy…$/u', $link->title);
     }
 }
