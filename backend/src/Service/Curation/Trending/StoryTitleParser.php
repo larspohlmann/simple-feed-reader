@@ -13,9 +13,11 @@ final readonly class StoryTitleParser
 {
     private const int MAXIMUM_LENGTH = 120;
 
-    private const int MAXIMUM_SYNOPSIS_LENGTH = 500;
+    private const int MAXIMUM_SYNOPSIS_LENGTH = 900;
 
     private const string TRAILING_PUNCTUATION = '/[\s.,;:!?…]+$/u';
+
+    private const string SENTENCES_UP_TO_THE_LAST_END = '/^.*[.!?…](?=\s)/su';
 
     private const array WRAPPING_QUOTES = ['"' => '"', "'" => "'", '„' => '“', '“' => '”', '«' => '»', '»' => '«'];
 
@@ -26,14 +28,22 @@ final readonly class StoryTitleParser
     public function parse(string $content): ?StoryHeadingModel
     {
         $reply = $this->decoder->decode($content);
-        $title = $this->titleOf($reply['title'] ?? null);
+        $title = $this->parseTitle($reply['title'] ?? null);
 
-        return $title === null ? null : new StoryHeadingModel($title, $this->synopsisOf($reply['synopsis'] ?? null));
+        return $title === null
+            ? null
+            : new StoryHeadingModel($title, $this->parseSynopsis($reply['synopsis'] ?? null));
     }
 
-    private function titleOf(mixed $title): ?string
+    private function parseTitle(mixed $title): ?string
     {
-        return $this->cleaned($title, self::MAXIMUM_LENGTH, $this->withoutQuotesAndPunctuation(...));
+        if (!\is_string($title)) {
+            return null;
+        }
+
+        $cleaned = $this->withoutQuotesAndPunctuation(Whitespace::collapse($title));
+
+        return $cleaned === '' || mb_strlen($cleaned) > self::MAXIMUM_LENGTH ? null : $cleaned;
     }
 
     private function withoutQuotesAndPunctuation(string $title): string
@@ -43,21 +53,30 @@ final readonly class StoryTitleParser
         );
     }
 
-    private function synopsisOf(mixed $synopsis): ?string
+    /** A synopsis over the limit keeps the sentences that fit; null when not even the first one does. */
+    private function parseSynopsis(mixed $synopsis): ?string
     {
-        return $this->cleaned($synopsis, self::MAXIMUM_SYNOPSIS_LENGTH, static fn (string $text): string => $text);
-    }
-
-    /** @param \Closure(string): string $strip */
-    private function cleaned(mixed $text, int $maximumLength, \Closure $strip): ?string
-    {
-        if (!\is_string($text)) {
+        if (!\is_string($synopsis)) {
             return null;
         }
 
-        $cleaned = $strip(Whitespace::collapse($text));
+        $collapsed = Whitespace::collapse($synopsis);
+        if ($collapsed === '') {
+            return null;
+        }
 
-        return $cleaned === '' || mb_strlen($cleaned) > $maximumLength ? null : $cleaned;
+        return mb_strlen($collapsed) <= self::MAXIMUM_SYNOPSIS_LENGTH
+            ? $collapsed
+            : $this->parseSentencesThatFit($collapsed);
+    }
+
+    private function parseSentencesThatFit(string $synopsis): ?string
+    {
+        $headWithTheNextCharacter = mb_substr($synopsis, 0, self::MAXIMUM_SYNOPSIS_LENGTH + 1);
+
+        return preg_match(self::SENTENCES_UP_TO_THE_LAST_END, $headWithTheNextCharacter, $match) === 1
+            ? $match[0]
+            : null;
     }
 
     private function withoutWrappingQuotes(string $title): string

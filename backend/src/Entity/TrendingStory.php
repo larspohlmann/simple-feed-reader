@@ -46,7 +46,7 @@ final class TrendingStory
     #[ORM\Column(name: 'llm_title', length: 255, nullable: true)]
     private ?string $llmTitle = null;
 
-    #[ORM\Column(name: 'llm_synopsis', length: 500, nullable: true)]
+    #[ORM\Column(name: 'llm_synopsis', length: 900, nullable: true)]
     private ?string $llmSynopsis = null;
 
     #[ORM\Column(name: 'llm_title_member_count', nullable: true)]
