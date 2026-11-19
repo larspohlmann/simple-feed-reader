@@ -6,7 +6,7 @@ namespace App\Dto\Social;
 
 use App\Service\Social\Social\Exception\InvalidInstanceUrlException;
 use App\Service\Social\Social\Model\SocialCredentialsModel;
-use App\Service\Social\Social\Support\MastodonCredentials;
+use App\Service\Social\Mastodon\Support\MastodonCredentials;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class ConnectMastodonRequest

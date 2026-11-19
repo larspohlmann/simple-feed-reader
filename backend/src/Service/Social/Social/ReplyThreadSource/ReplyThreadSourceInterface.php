@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Social\ReplyThreadSource;
 
 use App\Entity\SocialAccount;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Content\Comments\Exception\CommentsUnavailableException;
 use App\Service\Content\Comments\Model\CommentsAnswerModel;
 use App\Service\Content\Comments\Model\EntryCommentModel;

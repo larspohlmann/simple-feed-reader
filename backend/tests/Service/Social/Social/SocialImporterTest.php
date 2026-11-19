@@ -25,7 +25,7 @@ use App\Service\Social\Social\Exception\InvalidSocialImportFeedException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\FollowAvatarCache;
 use App\Service\Social\Social\Model\FollowedAccountModel;
-use App\Service\Social\Social\Model\HiddenProfileModel;
+use App\Service\Social\Bluesky\Model\HiddenProfileModel;
 use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Service\Social\Social\Model\SocialImportFeedModel;
 use App\Service\Social\Social\Model\SocialImportModel;

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Operations\Maintenance\MaintenanceSweep;
 
-use App\Service\Social\Social\HiddenProfileSwitchSweep;
-use App\Service\Social\Social\Model\HiddenProfileSwitchReportModel;
+use App\Service\Social\Bluesky\HiddenProfileSwitchSweep;
+use App\Service\Social\Bluesky\Model\HiddenProfileSwitchReportModel;
 use App\Service\Social\Social\Model\ProfileCallBudgetModel;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;

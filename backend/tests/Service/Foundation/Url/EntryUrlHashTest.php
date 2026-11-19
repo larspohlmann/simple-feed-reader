@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Foundation\Url;
 
-use App\Service\Social\Bluesky\BlueskyEntryIdentityUrl;
+use App\Service\Social\BlueskyPost\BlueskyEntryIdentityUrl;
 use App\Service\Foundation\Url\EntryUrlHash;
 use App\Service\Foundation\Url\UrlNormalizer;
 use App\Tests\Support\EntryUrlHashes;

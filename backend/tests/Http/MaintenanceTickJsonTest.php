@@ -16,7 +16,7 @@ use App\Service\Operations\Maintenance\Model\MaintenanceTickReportModel;
 use App\Service\Curation\Recommendation\Run\Model\ForYouSweepReportModel;
 use App\Service\Ingestion\Refresh\Model\RefreshReportModel;
 use App\Service\Library\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
-use App\Service\Social\Social\Model\HiddenProfileSwitchReportModel;
+use App\Service\Social\Bluesky\Model\HiddenProfileSwitchReportModel;
 use App\Service\Social\Notification\Model\NotificationPollReportModel;
 use App\Service\Social\Social\Model\PrivateFeedSyncReportModel;
 use App\Service\Social\Social\Model\ProfileImageSweepReportModel;

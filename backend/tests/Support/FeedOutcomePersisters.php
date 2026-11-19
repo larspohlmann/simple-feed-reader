@@ -6,8 +6,8 @@ namespace App\Tests\Support;
 
 use App\Entity\Feed;
 use App\Repository\FeedRepository;
-use App\Service\Social\Bluesky\BlueskyEntryRule;
-use App\Service\Social\Bluesky\PostEnricher;
+use App\Service\Social\BlueskyPost\BlueskyEntryRule;
+use App\Service\Social\BlueskyPost\PostEnricher;
 use App\Service\Ingestion\Ingest\PlatformEntryRules;
 use App\Service\Ingestion\Refresh\FeedBodyParser;
 use App\Service\Ingestion\Refresh\FeedOutcomePersister;

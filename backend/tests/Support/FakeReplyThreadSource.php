@@ -6,7 +6,7 @@ namespace App\Tests\Support;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Content\Comments\Model\CommentAuthorModel;
 use App\Service\Content\Comments\Model\CommentsAnswerModel;
 use App\Service\Content\Comments\Model\EntryCommentModel;

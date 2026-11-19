@@ -6,7 +6,7 @@ namespace App\Service\Content\Comments\CommentsSource;
 
 use App\Entity\Entry;
 use App\Entity\User;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Content\Comments\CommentsEndpointFetcher;
 use App\Service\Content\Comments\Exception\CommentsThrottledException;
 use App\Service\Content\Comments\Exception\CommentsUnavailableException;

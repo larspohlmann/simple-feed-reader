@@ -11,7 +11,7 @@ use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
 use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
 use App\Service\Outbound\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Outbound\Fetch\Model\FetchResponseModel;
-use App\Service\Social\Social\Model\HiddenProfileModel;
+use App\Service\Social\Bluesky\Model\HiddenProfileModel;
 use App\Tests\Service\Ingestion\Scraper\ScrapedFixtures;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\BlueskyProfiles;

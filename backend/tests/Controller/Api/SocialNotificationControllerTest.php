@@ -15,7 +15,7 @@ use App\Enum\SocialNotificationKind;
 use App\Service\Social\Notification\NotificationSource\NotificationSourceInterface;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Tests\Support\ApiTestCase;
-use App\Service\Social\Notification\NotificationSource\LemmyNotificationSource;
+use App\Service\Social\Lemmy\LemmyNotificationSource;
 use App\Tests\Support\MarkingNotificationSource;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialNotificationRows;

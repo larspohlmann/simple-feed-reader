@@ -38,11 +38,11 @@ services:
     App\Tests\Support\StubHiddenProfiles: ~
 
     # Every test asks StubHiddenProfiles, never the public AppView, whether a Bluesky profile hides itself.
-    App\Service\Social\Social\HiddenProfiles\HiddenProfilesInterface:
+    App\Service\Social\Bluesky\HiddenProfiles\HiddenProfilesInterface:
         alias: App\Tests\Support\StubHiddenProfiles
 
     # The switch sweep takes the cache by its class; here it caches StubHiddenProfiles, not the decorated AppView.
-    App\Service\Social\Social\HiddenProfiles\CachedHiddenProfiles:
+    App\Service\Social\Bluesky\HiddenProfiles\CachedHiddenProfiles:
         autowire: true
         arguments:
             $inner: '@App\Tests\Support\StubHiddenProfiles'
@@ -83,7 +83,7 @@ services:
             $directory: '%kernel.project_dir%/tests/Fixtures/feed-directory'
 
     # The seen-route tests swap the Lemmy source for a recording double through the container.
-    App\Service\Social\Notification\NotificationSource\LemmyNotificationSource:
+    App\Service\Social\Lemmy\LemmyNotificationSource:
         autowire: true
         autoconfigure: true
         public: true
