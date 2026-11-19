@@ -5,13 +5,12 @@ declare(strict_types=1);
 namespace App\Service\Social\Mastodon\Support;
 
 use App\Service\Foundation\Json\Model\JsonNodeModel;
+use App\Service\Social\Social\Model\PostDraftModel;
 
 /** Mastodon boosts only public and unlisted statuses; a status that names no visibility is taken as public. */
 final class MastodonVisibility
 {
     private const array REBLOGGABLE = ['public', 'unlisted'];
-    /** Every visibility, from the most open to the most closed. */
-    public const array ALL = ['public', 'unlisted', 'private', 'direct'];
 
     private function __construct()
     {
@@ -30,11 +29,11 @@ final class MastodonVisibility
 
     private static function closedness(string $visibility): int
     {
-        return (int) array_search(self::known($visibility), self::ALL, true);
+        return (int) array_search(self::known($visibility), PostDraftModel::VISIBILITIES, true);
     }
 
     private static function known(string $visibility): string
     {
-        return \in_array($visibility, self::ALL, true) ? $visibility : 'public';
+        return \in_array($visibility, PostDraftModel::VISIBILITIES, true) ? $visibility : 'public';
     }
 }
