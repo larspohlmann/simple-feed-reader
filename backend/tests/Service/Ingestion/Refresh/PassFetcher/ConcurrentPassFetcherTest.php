@@ -418,10 +418,6 @@ final class ConcurrentPassFetcherTest extends TestCase
         self::assertSame('Lemmy needs a word to search for in every alternative.', $failure->getMessage());
         self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($home)]);
         self::assertCount(1, $this->http->requests);
-        self::assertSame([], array_filter(
-            $this->http->requestLines(),
-            static fn (string $request): bool => str_contains($request, 'search'),
-        ));
     }
 
     public function testAbandoningTheReadSendsNothingMore(): void

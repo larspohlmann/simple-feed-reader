@@ -161,7 +161,9 @@ final class LemmyTimelineSourceTest extends TestCase
 
     public function testATooBroadSearchFeedIsNeverTurnedIntoARequest(): void
     {
-        $this->expectException(SearchQueryTooBroadException::class);
+        $this->expectExceptionObject(
+            new SearchQueryTooBroadException('Lemmy needs a word to search for in every alternative.'),
+        );
 
         self::source()->requests(self::socialFeed(SocialFeedKind::Search, '-gazette'));
     }
@@ -177,13 +179,15 @@ final class LemmyTimelineSourceTest extends TestCase
     private static function source(): LemmyTimelineSource
     {
         $http = (new RoutedHttpClient([]))->client();
+        $lemmy = SocialApiWiring::lemmyAccountApi($http);
+        $entries = SocialApiWiring::lemmyPostEntries();
 
         return new LemmyTimelineSource(
-            SocialApiWiring::lemmyAccountApi($http),
-            SocialApiWiring::lemmyPostEntries(),
+            $lemmy,
+            $entries,
             new LemmySearchSource(
-                SocialApiWiring::lemmyAccountApi($http),
-                SocialApiWiring::lemmyPostEntries(),
+                $lemmy,
+                $entries,
                 new LemmyPrivateFeedRule(),
                 SocialApiWiring::searchAnswers($http, new ArrayAdapter()),
             ),
