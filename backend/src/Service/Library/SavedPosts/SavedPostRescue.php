@@ -63,7 +63,7 @@ final readonly class SavedPostRescue
         if ([] === $flagged) {
             return [];
         }
-        $twins = $this->savedPosts->keptTwinsOf($userId, $flagged, $leavingFeedIds);
+        $twins = $this->savedPosts->findKeptTwins($userId, $flagged, $leavingFeedIds);
         $copies = $this->copied($subscription, array_keys(array_diff_key($flagged, $twins)));
         $this->stateMover->move($userId, $twins + $copies->held + $copies->created);
 
@@ -76,14 +76,17 @@ final readonly class SavedPostRescue
         if ([] === $entryIds) {
             return new SavedCopiesModel([], []);
         }
-        $savedFeed = $this->savedFeeds->of($subscription->getUser(), $subscription->getFeed()->getNetwork());
-        $copy = new SavedCopyModel($savedFeed->getFeed()->requireId(), SavedOrigin::posterOf($subscription));
-        $origin = SavedOrigin::originOf($subscription);
+        $savedFeed = $this->savedFeeds->ensureSubscription(
+            $subscription->getUser(),
+            $subscription->getFeed()->getNetwork(),
+        );
+        $copy = new SavedCopyModel($savedFeed->getFeed()->requireId(), SavedOrigin::buildPoster($subscription));
+        $origin = SavedOrigin::buildOrigin($subscription);
         $held = [];
         $created = [];
         while ([] !== $entryIds) {
             $plan = $this->planFor($copy->savedFeedId, $entryIds);
-            $made = $this->copiesOf($copy, $plan);
+            $made = $this->copyEntries($copy, $plan);
             $this->savedPosts->copyCompanions($made, $origin);
             $held += $plan->merged();
             $created += $made;
@@ -96,7 +99,7 @@ final readonly class SavedPostRescue
     /** @param list<int> $entryIds */
     private function planFor(int $savedFeedId, array $entryIds): SavedCopyPlan
     {
-        $originals = $this->savedPosts->originalsOf($entryIds);
+        $originals = $this->savedPosts->findOriginals($entryIds);
 
         return new SavedCopyPlan(
             $originals,
@@ -105,7 +108,7 @@ final readonly class SavedPostRescue
     }
 
     /** @return array<int, int> */
-    private function copiesOf(SavedCopyModel $copy, SavedCopyPlan $plan): array
+    private function copyEntries(SavedCopyModel $copy, SavedCopyPlan $plan): array
     {
         return $this->savedPosts->copyInto($copy, $plan->plain()) + $this->renamedCopies($copy, $plan->renamed());
     }

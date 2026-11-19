@@ -74,7 +74,7 @@ final readonly class IncomingPageStore
 
         return $incoming->withParsed($incoming->parsed->withEntries(array_values(array_filter(
             $incoming->parsed->entries,
-            static fn (ParsedEntryModel $entry): bool => !isset($buried[EntryGuid::hashOf($entry->guid)]),
+            static fn (ParsedEntryModel $entry): bool => !isset($buried[EntryGuid::hashGuid($entry->guid)]),
         ))));
     }
 

@@ -245,7 +245,7 @@ final class EntryCommentsControllerTest extends ApiTestCase
         $client = self::createClient();
         [$headers, $user] = $this->bearerAndUser('comments-nofeed@example.com');
         $this->installFetcher();
-        $entry = $this->seedEntry($user, Discussion::of(self::THREAD, null, CommentsLoad::Auto));
+        $entry = $this->seedEntry($user, Discussion::fromPageAndFeed(self::THREAD, null, CommentsLoad::Auto));
 
         $client->request('GET', '/api/entries/' . $entry->getId() . '/comments', server: $headers);
 

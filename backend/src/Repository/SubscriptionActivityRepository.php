@@ -45,7 +45,7 @@ final readonly class SubscriptionActivityRepository
     }
 
     /** @return list<TrackedSubscriptionModel> */
-    public function plainSubscriptionsOf(int $userId): array
+    public function findPlainSubscriptions(int $userId): array
     {
         return $this->tracked(
             $this->trackedQuery()
@@ -68,7 +68,7 @@ final readonly class SubscriptionActivityRepository
                 'day' => $row['day'],
                 'count' => (int) $row['total'],
             ],
-            self::inChunks($feedIds, fn (array $chunk): array => $this->arrivalCountsOf($chunk, $since)),
+            self::inChunks($feedIds, fn (array $chunk): array => $this->countArrivalsPerDay($chunk, $since)),
         );
     }
 
@@ -85,7 +85,7 @@ final readonly class SubscriptionActivityRepository
                 'day' => $row['day'],
                 'count' => (int) $row['total'],
             ],
-            self::inChunks($subscriptionIds, fn (array $chunk): array => $this->readCountsOf($chunk, $since)),
+            self::inChunks($subscriptionIds, fn (array $chunk): array => $this->countReadsPerDay($chunk, $since)),
         );
     }
 
@@ -112,7 +112,7 @@ final readonly class SubscriptionActivityRepository
      *
      * @return list<FeedDayRow>
      */
-    private function arrivalCountsOf(array $feedIds, \DateTimeImmutable $since): array
+    private function countArrivalsPerDay(array $feedIds, \DateTimeImmutable $since): array
     {
         /** @var list<FeedDayRow> $rows */
         $rows = $this->entityManager->createQueryBuilder()
@@ -136,7 +136,7 @@ final readonly class SubscriptionActivityRepository
      *
      * @return list<SubscriptionDayRow>
      */
-    private function readCountsOf(array $subscriptionIds, \DateTimeImmutable $since): array
+    private function countReadsPerDay(array $subscriptionIds, \DateTimeImmutable $since): array
     {
         /** @var list<SubscriptionDayRow> $rows */
         $rows = $this->entityManager->createQueryBuilder()
@@ -189,7 +189,7 @@ final readonly class SubscriptionActivityRepository
             static fn (array $row): TrackedSubscriptionModel => new TrackedSubscriptionModel(
                 (int) $row['subscriptionId'],
                 (int) $row['feedId'],
-                UtcDay::of($row['createdAt']),
+                UtcDay::fromInstant($row['createdAt']),
                 (int) $row['isSocial'] === 1,
             ),
             $rows,

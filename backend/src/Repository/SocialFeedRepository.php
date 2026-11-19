@@ -59,14 +59,14 @@ final class SocialFeedRepository extends ServiceEntityRepository
     }
 
     /** @return list<SocialFeed> */
-    public function findAllOf(SocialAccount $account): array
+    public function findAllForAccount(SocialAccount $account): array
     {
         // @phpstan-ignore arrayValues.list (deliberate: findBy() promises a list only in its @phpstan-return)
         return array_values($this->findBy(['socialAccount' => $account], ['id' => 'ASC']));
     }
 
     /** @return list<Subscription> */
-    public function subscriptionsOf(SocialAccount $account): array
+    public function findSubscriptions(SocialAccount $account): array
     {
         /** @var list<Subscription> $subscriptions */
         $subscriptions = $this->getEntityManager()->createQueryBuilder()
@@ -85,7 +85,7 @@ final class SocialFeedRepository extends ServiceEntityRepository
     }
 
     /** @return list<array{kind: SocialFeedKind, remoteId: string, subscriptionId: int}> */
-    public function subscribedCollectionsOf(SocialAccount $account): array
+    public function findSubscribedCollections(SocialAccount $account): array
     {
         return $this->subscribedCollectionsOfKinds($account, SocialFeedKind::cases());
     }

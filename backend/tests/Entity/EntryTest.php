@@ -88,7 +88,7 @@ final class EntryTest extends TestCase
     {
         $entry = $this->entry();
 
-        $entry->recordDiscussionCounts(DiscussionCounts::of(12, 4));
+        $entry->recordDiscussionCounts(DiscussionCounts::fromScoreAndComments(12, 4));
 
         self::assertSame(4, $entry->getCommentCount());
     }
@@ -96,7 +96,7 @@ final class EntryTest extends TestCase
     public function testAnUnknownRecordKeepsTheStoredCommentCount(): void
     {
         $entry = $this->entry();
-        $entry->recordDiscussionCounts(DiscussionCounts::of(12, 4));
+        $entry->recordDiscussionCounts(DiscussionCounts::fromScoreAndComments(12, 4));
 
         $entry->recordDiscussionCounts(DiscussionCounts::unknown());
 

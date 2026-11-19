@@ -105,7 +105,7 @@ final readonly class ReadingHistoryRepository
         $rows = $qb->getQuery()->getResult();
 
         return array_map(
-            static fn (array $row): TitledEntry => TitledEntry::of($row[0]->getEntry(), $row['customTitle']),
+            static fn (array $row): TitledEntry => TitledEntry::fromEntry($row[0]->getEntry(), $row['customTitle']),
             $rows,
         );
     }

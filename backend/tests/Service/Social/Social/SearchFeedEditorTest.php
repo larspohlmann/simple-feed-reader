@@ -65,7 +65,7 @@ final class SearchFeedEditorTest extends DbTestCase
         self::assertSame(sprintf('social:bluesky:%d:search:feed reader', $account->requireId()), $feed->getUrl());
         self::assertSame('https://bsky.app/search?q=feed%20reader', $feed->getSiteUrl());
         self::assertSame('feed reader', $feed->getTitle());
-        self::assertSame('feed reader', SubscriptionDisplayTitle::ofSubscription($subscription));
+        self::assertSame('feed reader', SubscriptionDisplayTitle::fromSubscription($subscription));
         self::assertSame('feed reader', $socialFeed->getRemoteId());
         self::assertNull($socialFeed->getNewestSeenId());
         self::assertEquals(new \DateTimeImmutable(self::NOW), $feed->getNextFetchAt());

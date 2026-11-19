@@ -42,7 +42,7 @@ final class ShareEnrichmentRepository extends ServiceEntityRepository
         \DateTimeImmutable $now,
         int $limit,
     ): array {
-        return self::rowsOf($this->claimableForFeed($feed, $kind, $now)
+        return self::readRows($this->claimableForFeed($feed, $kind, $now)
             ->andWhere('pending.queuedAt < :giveUpCutoff')
             ->setParameter('giveUpCutoff', ShareEnrichment::giveUpCutoff($now), Types::DATETIME_IMMUTABLE)
             ->setMaxResults($limit));
@@ -55,7 +55,7 @@ final class ShareEnrichmentRepository extends ServiceEntityRepository
         \DateTimeImmutable $now,
         int $limit,
     ): array {
-        return self::rowsOf($this->claimableForFeed($feed, $kind, $now)
+        return self::readRows($this->claimableForFeed($feed, $kind, $now)
             ->andWhere('pending.queuedAt >= :giveUpCutoff')
             ->setParameter('giveUpCutoff', ShareEnrichment::giveUpCutoff($now), Types::DATETIME_IMMUTABLE)
             ->setMaxResults($limit));
@@ -160,7 +160,7 @@ final class ShareEnrichmentRepository extends ServiceEntityRepository
             ->select('pending.id')
             ->andWhere('pending.id IN (:ids)')
             ->andWhere('pending.claimedAt = :claimedAt')
-            ->setParameter('ids', self::idsOf($rows))
+            ->setParameter('ids', self::collectIds($rows))
             ->setParameter('claimedAt', $claimedAt, Types::DATETIME_IMMUTABLE)
             ->getQuery()
             ->getSingleColumnResult();
@@ -205,7 +205,7 @@ final class ShareEnrichmentRepository extends ServiceEntityRepository
     }
 
     /** @return list<ShareEnrichment> */
-    private static function rowsOf(QueryBuilder $query): array
+    private static function readRows(QueryBuilder $query): array
     {
         /** @var list<ShareEnrichment> $rows */
         $rows = $query->getQuery()->getResult();
@@ -231,7 +231,7 @@ final class ShareEnrichmentRepository extends ServiceEntityRepository
      *
      * @return list<int>
      */
-    private static function idsOf(array $rows): array
+    private static function collectIds(array $rows): array
     {
         return array_map(static fn (ShareEnrichment $row): int => $row->requireId(), $rows);
     }
@@ -248,7 +248,7 @@ final class ShareEnrichmentRepository extends ServiceEntityRepository
             ShareEnrichment::class,
             $assignments,
         ))
-            ->setParameter('ids', self::idsOf($rows))
+            ->setParameter('ids', self::collectIds($rows))
             ->setParameter('claimedAt', $claimedAt, Types::DATETIME_IMMUTABLE)
             ->execute();
     }

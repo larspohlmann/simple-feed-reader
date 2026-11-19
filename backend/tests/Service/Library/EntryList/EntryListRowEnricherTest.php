@@ -494,7 +494,7 @@ final class EntryListRowEnricherTest extends DbTestCase
         $entry = $this->lemmyPost('scored', 31);
         $post = new EntryLemmyPost($entry);
         $post->recordScore(7);
-        $post->placeIn(PostCommunity::of('Technology@lemmy.world', 'https://lemmy.world/c/technology'));
+        $post->placeIn(PostCommunity::fromIdentityAndUrl('Technology@lemmy.world', 'https://lemmy.world/c/technology'));
         $this->entityManager->persist($post);
         $this->entityManager->flush();
 
@@ -614,7 +614,7 @@ final class EntryListRowEnricherTest extends DbTestCase
 
     private function savedEntry(string $guid): Entry
     {
-        $feed = new Feed(SavedFeedUrl::of($this->user->requireId(), null));
+        $feed = new Feed(SavedFeedUrl::buildUrl($this->user->requireId(), null));
         $feed->setSourceFormat(SourceFormat::SAVED);
         $this->entityManager->persist($feed);
 
@@ -648,7 +648,7 @@ final class EntryListRowEnricherTest extends DbTestCase
         $this->entityManager->persist($entry);
         $post = new EntryLemmyPost($entry);
         $post->recordScore(7);
-        $post->placeIn(PostCommunity::of('Technology@lemmy.world', 'https://lemmy.world/c/technology'));
+        $post->placeIn(PostCommunity::fromIdentityAndUrl('Technology@lemmy.world', 'https://lemmy.world/c/technology'));
         $this->entityManager->persist($post);
         $this->entityManager->flush();
 

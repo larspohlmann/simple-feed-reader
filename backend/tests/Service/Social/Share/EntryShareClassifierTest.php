@@ -53,7 +53,7 @@ final class EntryShareClassifierTest extends TestCase
     private static function hackerNews(string $target): Entry
     {
         $entry = self::entry(self::HN_SITE, self::HN_ITEM, $target, self::HN_BODY);
-        $entry->setDiscussion(Discussion::of(self::HN_ITEM, null, CommentsLoad::Manual));
+        $entry->setDiscussion(Discussion::fromPageAndFeed(self::HN_ITEM, null, CommentsLoad::Manual));
 
         return $entry;
     }

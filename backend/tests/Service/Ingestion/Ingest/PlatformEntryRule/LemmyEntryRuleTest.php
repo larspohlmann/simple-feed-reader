@@ -89,7 +89,7 @@ final class LemmyEntryRuleTest extends TestCase
     {
         $result = (new LemmyEntryRule())->apply($this->post(self::LINK_POST));
 
-        self::assertEquals(DiscussionCounts::of(-3, 19), $result->discussionCounts);
+        self::assertEquals(DiscussionCounts::fromScoreAndComments(-3, 19), $result->discussionCounts);
     }
 
     public function testLeavesAnEntryWhoseHeaderIsNotTheLemmyOneUnchanged(): void

@@ -22,7 +22,7 @@ final readonly class IndexedSavedSearchMatcher implements SavedSearchMatcherInte
     public function matchingIds(array $searches, array $candidateEntryIds): array
     {
         if ($searches === [] || $candidateEntryIds === []) {
-            return array_fill_keys(SavedSearchTermModel::idsOf($searches), []);
+            return array_fill_keys(SavedSearchTermModel::collectIds($searches), []);
         }
 
         $results = $this->index->findMany(array_map(

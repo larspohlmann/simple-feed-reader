@@ -77,7 +77,7 @@ final class RefreshHousekeepingTest extends DbTestCase
 
         $subscriptionId = $subscription->requireId();
         $stored = $this->storedDays()->since([$subscriptionId], '2026-07-20');
-        self::assertSame(3, $stored->of($subscriptionId, '2026-07-20')->arrived);
+        self::assertSame(3, $stored->findDayCount($subscriptionId, '2026-07-20')->arrived);
         self::assertCount(1, $this->logger->records);
         self::assertSame('info', $this->logger->records[0]['level']);
         self::assertSame('Recorded subscription history days', $this->logger->records[0]['message']);

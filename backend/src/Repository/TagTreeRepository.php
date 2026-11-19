@@ -16,7 +16,7 @@ final readonly class TagTreeRepository
     }
 
     /** Locks the user's row until the transaction ends, so tag placements for one user run one at a time. */
-    public function lockTagsOf(int $userId): void
+    public function lockTagPlacements(int $userId): void
     {
         $this->entityManager->createQueryBuilder()
             ->select('u.id')

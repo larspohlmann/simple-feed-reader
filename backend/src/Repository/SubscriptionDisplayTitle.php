@@ -17,7 +17,7 @@ final class SubscriptionDisplayTitle
             return $customTitle;
         }
 
-        $sourceTitle = self::searchQueryOf($feedUrl) ?? $feedTitle;
+        $sourceTitle = self::parseSearchQuery($feedUrl) ?? $feedTitle;
         if (null !== $sourceTitle && '' !== $sourceTitle) {
             return $sourceTitle;
         }
@@ -25,7 +25,7 @@ final class SubscriptionDisplayTitle
         return $feedUrl;
     }
 
-    public static function ofSubscription(Subscription $subscription): string
+    public static function fromSubscription(Subscription $subscription): string
     {
         $feed = $subscription->getFeed();
 
@@ -33,7 +33,7 @@ final class SubscriptionDisplayTitle
     }
 
     /** An unrenamed search follows its query, which a requery changes without touching the stored title. */
-    private static function searchQueryOf(string $feedUrl): ?string
+    private static function parseSearchQuery(string $feedUrl): ?string
     {
         $address = SocialFeedUrl::addressOf($feedUrl);
 

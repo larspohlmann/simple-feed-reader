@@ -71,7 +71,7 @@ final readonly class SavedPostRepository
      *
      * @return array<int, int>
      */
-    public function keptTwinsOf(int $userId, array $urlHashesByEntryId, array $leavingFeedIds): array
+    public function findKeptTwins(int $userId, array $urlHashesByEntryId, array $leavingFeedIds): array
     {
         $hashes = array_values(array_unique(array_filter(
             $urlHashesByEntryId,
@@ -136,7 +136,7 @@ final readonly class SavedPostRepository
      *
      * @return list<array{id: int, guid: string, guidHash: string, urlHash: ?string, feedId: int}>
      */
-    public function originalsOf(array $entryIds): array
+    public function findOriginals(array $entryIds): array
     {
         if ([] === $entryIds) {
             return [];

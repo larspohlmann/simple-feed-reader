@@ -19,10 +19,10 @@ final class EntryGuid
     public function __construct(string $guid)
     {
         $this->value = $guid;
-        $this->hash = self::hashOf($guid);
+        $this->hash = self::hashGuid($guid);
     }
 
-    public static function hashOf(string $guid): string
+    public static function hashGuid(string $guid): string
     {
         return hash('sha256', $guid);
     }

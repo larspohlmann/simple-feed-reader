@@ -32,7 +32,7 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
     }
 
     /** @return StoryHeadingModel|null null for a story with no stored title and no member in a feed its reader subscribes to */
-    public function headingOf(TrendingStoryListQuery $query): ?StoryHeadingModel
+    public function findHeading(TrendingStoryListQuery $query): ?StoryHeadingModel
     {
         /** @var array{title: string|null, synopsis: string|null}|false $row */
         $row = $this->getEntityManager()->getConnection()->fetchAssociative(
@@ -69,7 +69,7 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
         return array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
     }
 
-    public function tallyOf(TrendingStoryListQuery $query): TrendingStoryTallyModel
+    public function countMembersAndUnread(TrendingStoryListQuery $query): TrendingStoryTallyModel
     {
         $qb = $this->createQueryBuilder('e')
             ->select('COUNT(e.id) AS memberCount')

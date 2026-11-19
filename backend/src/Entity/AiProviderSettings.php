@@ -153,7 +153,7 @@ final class AiProviderSettings
     /** An LLM too while no model is chosen: the default kind. */
     public function getModelKind(): RecommendationEngineKind
     {
-        return RecommendationEngineKind::of($this->getScoringProtocol());
+        return RecommendationEngineKind::fromProtocol($this->getScoringProtocol());
     }
 
     public function getScoringProtocol(): ?ScoringProtocol

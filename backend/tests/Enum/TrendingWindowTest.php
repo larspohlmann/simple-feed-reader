@@ -51,8 +51,8 @@ final class TrendingWindowTest extends TestCase
 
     public function testTheWeekLeavesOutTheDaysStoriesAndTheDayLeavesOutNone(): void
     {
-        self::assertSame([TrendingWindow::Day], TrendingWindow::Week->leavesOutTheStoriesOf());
-        self::assertSame([], TrendingWindow::Day->leavesOutTheStoriesOf());
+        self::assertSame([TrendingWindow::Day], TrendingWindow::Week->excludedStoryWindows());
+        self::assertSame([], TrendingWindow::Day->excludedStoryWindows());
     }
 
     public function testAMissingOrEmptyWindowMeansTheDay(): void

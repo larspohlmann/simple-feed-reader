@@ -30,7 +30,7 @@ final class EntryDiscussionTest extends TestCase
     public function testRoundTripsAPageOnly(): void
     {
         $stored = new EntryDiscussion();
-        $stored->store(Discussion::of('https://t.example/1', null, CommentsLoad::Manual));
+        $stored->store(Discussion::fromPageAndFeed('https://t.example/1', null, CommentsLoad::Manual));
 
         self::assertNull($stored->read()->commentsFeedUrl);
         self::assertSame('https://t.example/1', $stored->read()->url);
@@ -56,7 +56,7 @@ final class EntryDiscussionTest extends TestCase
     public function testAUrlOverTheColumnLimitIsDroppedNotTruncated(): void
     {
         $stored = new EntryDiscussion();
-        $stored->store(Discussion::of(str_repeat('a', 2049), null, CommentsLoad::Manual));
+        $stored->store(Discussion::fromPageAndFeed(str_repeat('a', 2049), null, CommentsLoad::Manual));
 
         self::assertNull($stored->read()->url);
     }
@@ -65,7 +65,7 @@ final class EntryDiscussionTest extends TestCase
     {
         $url = str_repeat('a', 2048);
         $stored = new EntryDiscussion();
-        $stored->store(Discussion::of($url, null, CommentsLoad::Manual));
+        $stored->store(Discussion::fromPageAndFeed($url, null, CommentsLoad::Manual));
 
         self::assertSame($url, $stored->read()->url);
     }

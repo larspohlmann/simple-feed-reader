@@ -62,7 +62,7 @@ final class LemmyPostHeader
     /** @param list<Node> $nodes */
     private static function counts(array $nodes): DiscussionCounts
     {
-        return DiscussionCounts::of(
+        return DiscussionCounts::fromScoreAndComments(
             self::capturedNumber(self::SCORE, (string) $nodes[5]->textContent),
             self::capturedNumber(self::COMMENT_COUNT, (string) $nodes[6]->textContent),
         );

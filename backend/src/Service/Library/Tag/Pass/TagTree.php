@@ -34,18 +34,18 @@ final readonly class TagTree
         return new self($parentIds);
     }
 
-    public function depthOf(int $tagId): int
+    public function computeDepth(int $tagId): int
     {
         $parentId = $this->parentIds[$tagId] ?? null;
 
-        return $parentId === null ? 0 : $this->depthOf($parentId) + 1;
+        return $parentId === null ? 0 : $this->computeDepth($parentId) + 1;
     }
 
-    public function heightOf(int $tagId): int
+    public function computeHeight(int $tagId): int
     {
         $height = 0;
         foreach ($this->childIds[$tagId] ?? [] as $childId) {
-            $height = max($height, $this->heightOf($childId) + 1);
+            $height = max($height, $this->computeHeight($childId) + 1);
         }
 
         return $height;
@@ -58,7 +58,8 @@ final readonly class TagTree
 
     public function canPlace(int $tagId, int $parentId): bool
     {
-        return !$this->isWithin($parentId, $tagId) && self::fits($this->depthOf($parentId), $this->heightOf($tagId));
+        return !$this->isWithin($parentId, $tagId)
+            && self::fits($this->computeDepth($parentId), $this->computeHeight($tagId));
     }
 
     /** Whether $tagId is $ancestorId itself or sits anywhere below it. */

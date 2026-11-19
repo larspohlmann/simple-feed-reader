@@ -44,7 +44,7 @@ final class KnownSocialCollectionRepositoryTest extends DbTestCase
 
         self::assertEquals(
             ['list:at://l/1' => true, 'custom_feed:at://f/1' => true],
-            $this->repository()->keysOf($this->account),
+            $this->repository()->findKeys($this->account),
         );
     }
 
@@ -62,8 +62,8 @@ final class KnownSocialCollectionRepositoryTest extends DbTestCase
         );
         $this->entityManager->clear();
 
-        self::assertSame(['custom_feed:at://f/1' => true], $this->repository()->keysOf($this->accountAgain()));
-        self::assertSame(['list:at://l/2' => true], $this->repository()->keysOf($this->otherAccount));
+        self::assertSame(['custom_feed:at://f/1' => true], $this->repository()->findKeys($this->accountAgain()));
+        self::assertSame(['list:at://l/2' => true], $this->repository()->findKeys($this->otherAccount));
     }
 
     public function testEachAccountKeepsItsOwnMemory(): void
@@ -72,8 +72,8 @@ final class KnownSocialCollectionRepositoryTest extends DbTestCase
         $this->repository()->remember($this->otherAccount, SocialFeedKind::CustomFeed, 'at://f/9');
         $this->entityManager->flush();
 
-        self::assertSame(['list:at://l/1' => true], $this->repository()->keysOf($this->account));
-        self::assertSame(['custom_feed:at://f/9' => true], $this->repository()->keysOf($this->otherAccount));
+        self::assertSame(['list:at://l/1' => true], $this->repository()->findKeys($this->account));
+        self::assertSame(['custom_feed:at://f/9' => true], $this->repository()->findKeys($this->otherAccount));
     }
 
     public function testDeletingTheAccountRemovesItsMemory(): void

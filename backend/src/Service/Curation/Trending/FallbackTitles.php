@@ -67,7 +67,7 @@ final readonly class FallbackTitles
      */
     private function titlesOf(TrendingRun $run, array $due, array $storedById): array
     {
-        $linkTitles = $this->windowEntries->linkTitlesOf(self::cardLinkIdsOf($due));
+        $linkTitles = $this->windowEntries->findLinkTitles(self::cardLinkIdsOf($due));
         $titles = [];
         $pools = [];
         foreach ($due as $index => $assignment) {
@@ -93,7 +93,7 @@ final readonly class FallbackTitles
      */
     private function headlineTitles(TrendingRun $run, array $pools): array
     {
-        $headlines = $this->windowEntries->headlinesOf(array_merge(...array_values(array_map(
+        $headlines = $this->windowEntries->findHeadlines(array_merge(...array_values(array_map(
             static fn (HeadlinePoolModel $pool): array => $pool->memberIds(),
             $pools,
         ))));

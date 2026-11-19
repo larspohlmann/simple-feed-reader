@@ -51,7 +51,7 @@ final class LocalPostRemovalTest extends DbTestCase
         $user = $this->user('local-removal@example.test');
         $profile = $this->feed('https://mastodon.example/@alice.rss');
         $home = $this->feed('https://other.example/@reader.rss');
-        $saved = $this->feed(SavedFeedUrl::of($user->requireId(), SocialNetwork::Mastodon), SourceFormat::SAVED);
+        $saved = $this->feed(SavedFeedUrl::buildUrl($user->requireId(), SocialNetwork::Mastodon), SourceFormat::SAVED);
         $post = $this->copy($profile, self::STATUS_URL, 'hash-120');
         $copy = $this->copy($home, self::STATUS_USERS_URL, 'hash-120');
         $savedCopy = $this->copy($saved, 'saved:120', 'hash-120');
@@ -72,7 +72,7 @@ final class LocalPostRemovalTest extends DbTestCase
             array_map(fn (int $id): bool => null !== $this->entityManager->find(Entry::class, $id), $ids),
         );
         self::assertSame([], $this->entityManager->getRepository(EntryState::class)->findAll());
-        self::assertSame([EntryGuid::hashOf(self::STATUS_URL)], $this->tombstones->buriedIn($profile->requireId()));
+        self::assertSame([EntryGuid::hashGuid(self::STATUS_URL)], $this->tombstones->buriedIn($profile->requireId()));
         self::assertCount(1, $this->tombstones->buriedIn($home->requireId()));
         self::assertSame([], $this->tombstones->buriedIn($saved->requireId()));
         self::assertSame([[$ids[0], $ids[1]]], $this->index->forgets);
@@ -90,7 +90,7 @@ final class LocalPostRemovalTest extends DbTestCase
         $this->removal()->remove($post, []);
 
         self::assertSame(
-            [EntryGuid::hashOf(self::STATUS_URL), EntryGuid::hashOf(self::STATUS_USERS_URL)],
+            [EntryGuid::hashGuid(self::STATUS_URL), EntryGuid::hashGuid(self::STATUS_USERS_URL)],
             $this->tombstones->buriedIn($feed->requireId()),
         );
     }
@@ -100,18 +100,18 @@ final class LocalPostRemovalTest extends DbTestCase
         $user = $this->user('local-removal-replies@example.test');
         $profile = $this->feed('https://mastodon.example/@alice.rss');
         $home = $this->feed('https://other.example/@reader.rss');
-        $saved = $this->feed(SavedFeedUrl::of($user->requireId(), SocialNetwork::Mastodon), SourceFormat::SAVED);
+        $saved = $this->feed(SavedFeedUrl::buildUrl($user->requireId(), SocialNetwork::Mastodon), SourceFormat::SAVED);
         $post = $this->copy($profile, self::STATUS_URL, 'hash-120');
         $this->copy($home, self::STATUS_USERS_URL, 'hash-120');
         $this->copy($saved, 'saved:120', 'hash-120');
 
         $this->removal()->remove($post, [self::REPLY_URI]);
 
-        $reply = EntryGuid::hashOf(self::REPLY_URI);
+        $reply = EntryGuid::hashGuid(self::REPLY_URI);
         $profileBuried = $this->tombstones->buriedIn($profile->requireId());
         $homeBuried = $this->tombstones->buriedIn($home->requireId());
-        self::assertSame([EntryGuid::hashOf(self::STATUS_URL), $reply], $profileBuried);
-        self::assertSame([EntryGuid::hashOf(self::STATUS_USERS_URL), $reply], $homeBuried);
+        self::assertSame([EntryGuid::hashGuid(self::STATUS_URL), $reply], $profileBuried);
+        self::assertSame([EntryGuid::hashGuid(self::STATUS_USERS_URL), $reply], $homeBuried);
         self::assertSame([], $this->tombstones->buriedIn($saved->requireId()));
     }
 
@@ -130,7 +130,7 @@ final class LocalPostRemovalTest extends DbTestCase
             [false, true],
             array_map(fn (int $id): bool => null !== $this->entityManager->find(Entry::class, $id), $ids),
         );
-        self::assertSame([EntryGuid::hashOf(self::STATUS_URL)], $this->tombstones->buriedIn($home->requireId()));
+        self::assertSame([EntryGuid::hashGuid(self::STATUS_URL)], $this->tombstones->buriedIn($home->requireId()));
         self::assertSame([], $this->tombstones->buriedIn($otherHome->requireId()));
         self::assertSame([[$ids[0]]], $this->index->forgets);
     }

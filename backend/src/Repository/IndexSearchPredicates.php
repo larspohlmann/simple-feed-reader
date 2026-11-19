@@ -28,7 +28,7 @@ final readonly class IndexSearchPredicates
             if ($terms->isWholeWord) {
                 array_push($indexed, ...SearchIndexQuery::wholeWordPieces($term));
                 $match = $this->wholeWordMatch($qb, $parameter, $term);
-                $checks[] = SearchedColumns::anyOf($match, $parameter, $entryAlias);
+                $checks[] = SearchedColumns::buildAnyColumnMatch($match, $parameter, $entryAlias);
                 continue;
             }
             if (SearchIndexQuery::isIndexable($term)) {
@@ -36,7 +36,7 @@ final readonly class IndexSearchPredicates
                 continue;
             }
             $match = $this->foldedSubstringMatch($qb, $parameter, $term);
-            $checks[] = SearchedColumns::anyOf($match, $parameter, $entryAlias);
+            $checks[] = SearchedColumns::buildAnyColumnMatch($match, $parameter, $entryAlias);
         }
 
         if ($indexed !== []) {
@@ -49,7 +49,7 @@ final readonly class IndexSearchPredicates
     /** @param non-empty-list<string> $pieces */
     private function indexMatch(QueryBuilder $qb, string $parameter, array $pieces, string $entryAlias): string
     {
-        $qb->setParameter($parameter, SearchIndexQuery::allOf($pieces));
+        $qb->setParameter($parameter, SearchIndexQuery::buildAllPiecesQuery($pieces));
 
         return \sprintf('%s(%s.id, :%s) = 1', SearchIndexMatchFunction::NAME, $entryAlias, $parameter);
     }

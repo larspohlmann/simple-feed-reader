@@ -25,7 +25,7 @@ final readonly class SavedFeedFactory
     public function feed(int $userId, ?SocialNetwork $network): Feed
     {
         return $this->feedFactory->create(
-            SavedFeedUrl::of($userId, $network),
+            SavedFeedUrl::buildUrl($userId, $network),
             SourceFormat::SAVED,
             'Saved from ' . ($network?->displayName() ?? 'feeds'),
         );

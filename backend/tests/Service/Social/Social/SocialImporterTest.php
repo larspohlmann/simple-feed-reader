@@ -383,7 +383,7 @@ final class SocialImporterTest extends DbTestCase
         ]));
         /** @var KnownSocialCollectionRepository $known */
         $known = $this->entityManager->getRepository(KnownSocialCollection::class);
-        self::assertSame(['custom_feed:' . self::NEWS => true], $known->keysOf($account));
+        self::assertSame(['custom_feed:' . self::NEWS => true], $known->findKeys($account));
     }
 
     public function testUntickingASubscribedCollectionKeepsItsFavouritesInSavedFromBluesky(): void

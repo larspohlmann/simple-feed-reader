@@ -61,7 +61,7 @@ final class NotificationPollSweepTest extends DbTestCase
     {
         $due = $this->account('did:plc:due');
         $recent = $this->account('did:plc:recent');
-        $this->polls->stampOf($recent)->recordChecked($this->clock->now()->modify('-4 minutes'));
+        $this->polls->ensureStamp($recent)->recordChecked($this->clock->now()->modify('-4 minutes'));
         $this->entityManager->flush();
         $source = new StubNotificationSource();
 

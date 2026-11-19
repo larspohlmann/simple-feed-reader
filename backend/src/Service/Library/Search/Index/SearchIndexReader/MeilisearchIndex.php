@@ -101,7 +101,7 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
 
         // `id` and `feedId` both end in "id", so Meilisearch cannot infer the key (docs/meilisearch-wire-format.md).
         $this->write('POST', '/indexes/' . self::INDEX . '/documents?primaryKey=id', [
-            'json' => array_map($this->documentOf(...), $entries),
+            'json' => array_map($this->buildDocument(...), $entries),
         ]);
     }
 
@@ -237,7 +237,7 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
         /** @var list<array<mixed>> $hits */
         $hits = array_values(array_filter($rawHits, static fn (mixed $hit): bool => \is_array($hit)));
 
-        return new IndexMatchesModel($this->entryIdsOf($hits), $this->matchedWordsOf($hits));
+        return new IndexMatchesModel($this->collectEntryIds($hits), $this->collectMatchedWords($hits));
     }
 
     /**
@@ -245,7 +245,7 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
      *
      * @return list<int>
      */
-    private function entryIdsOf(array $hits): array
+    private function collectEntryIds(array $hits): array
     {
         $ids = [];
         foreach ($hits as $hit) {
@@ -262,7 +262,7 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
      *
      * @return list<string>
      */
-    private function matchedWordsOf(array $hits): array
+    private function collectMatchedWords(array $hits): array
     {
         $words = [];
         foreach ($hits as $hit) {
@@ -309,7 +309,7 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
      *     effectiveDate: int,
      * }
      */
-    private function documentOf(IndexedEntryModel $entry): array
+    private function buildDocument(IndexedEntryModel $entry): array
     {
         return [
             'id' => $entry->id,

@@ -15,7 +15,7 @@ final readonly class TitledEntry
     ) {
     }
 
-    public static function of(Entry $entry, ?string $customTitle): self
+    public static function fromEntry(Entry $entry, ?string $customTitle): self
     {
         $feed = $entry->getFeed();
 

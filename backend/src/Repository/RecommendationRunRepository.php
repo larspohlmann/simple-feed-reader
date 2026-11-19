@@ -67,7 +67,7 @@ final class RecommendationRunRepository extends ServiceEntityRepository
      * Read as a scalar, so the identity map cannot answer with the copy the caller is itself mutating:
      * RecommendationTickCheckpoint must learn whether another process stopped the run meanwhile.
      */
-    public function statusOf(int $runId): ?RunStatus
+    public function findStatus(int $runId): ?RunStatus
     {
         /** @var string|null $status */
         $status = $this->createQueryBuilder('r')

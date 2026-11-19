@@ -18,7 +18,7 @@ final readonly class DayCountsModel
         return isset($this->bySubscription[$subscriptionId][$day]);
     }
 
-    public function of(int $subscriptionId, string $day): DayCountModel
+    public function findDayCount(int $subscriptionId, string $day): DayCountModel
     {
         return $this->bySubscription[$subscriptionId][$day] ?? DayCountModel::none();
     }

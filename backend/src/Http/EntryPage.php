@@ -62,6 +62,6 @@ final readonly class EntryPage
             return null;
         }
 
-        return EntryCursor::encode($sort->instantOf($row), $row->entry->requireId());
+        return EntryCursor::encode($sort->requireInstant($row), $row->entry->requireId());
     }
 }

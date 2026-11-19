@@ -466,7 +466,7 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         $this->fixtures->storeTitles($second, 'Hafenstreik in Hamburg', null);
 
         $headings = $this->entityManager->getRepository(TrendingStory::class)
-            ->headingsOf([$first->requireId(), $second->requireId()]);
+            ->findHeadings([$first->requireId(), $second->requireId()]);
 
         self::assertEquals(
             [
@@ -492,7 +492,7 @@ final class TrendingStoryRepositoryTest extends DbTestCase
 
         self::assertEquals(
             [$story->requireId() => new StoryHeadingModel('Hafenarbeiter in Hamburg streiken', 'Die Arbeit ruht.')],
-            $this->entityManager->getRepository(TrendingStory::class)->headingsOf([$story->requireId()]),
+            $this->entityManager->getRepository(TrendingStory::class)->findHeadings([$story->requireId()]),
         );
     }
 
@@ -504,12 +504,12 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         ]);
 
         self::assertSame([], $this->entityManager->getRepository(TrendingStory::class)
-            ->headingsOf([$untitled->requireId()]));
+            ->findHeadings([$untitled->requireId()]));
     }
 
     public function testHeadingsOfNoStoriesRunNoQuery(): void
     {
-        self::assertSame([], $this->entityManager->getRepository(TrendingStory::class)->headingsOf([]));
+        self::assertSame([], $this->entityManager->getRepository(TrendingStory::class)->findHeadings([]));
     }
 
     public function testMemberHeadlinesTakeOnePerOutletNewestFirst(): void
@@ -538,7 +538,7 @@ final class TrendingStoryRepositoryTest extends DbTestCase
             [$newer->requireId()],
         );
 
-        $headlines = $this->stories()->memberHeadlinesOf($story->requireId(), 12);
+        $headlines = $this->stories()->findMemberHeadlines($story->requireId(), 12);
 
         self::assertSame(
             ['Spiegel: Newer headline', ...array_map(
@@ -569,7 +569,7 @@ final class TrendingStoryRepositoryTest extends DbTestCase
             [$derived->requireId()],
         );
 
-        $headlines = $this->stories()->memberHeadlinesOf($story->requireId(), 12);
+        $headlines = $this->stories()->findMemberHeadlines($story->requireId(), 12);
 
         self::assertSame('Der Hafen steht still', $headlines[0]->headline);
         self::assertSame('. Seit Montag.', $headlines[0]->snippet);
@@ -617,9 +617,9 @@ final class TrendingStoryRepositoryTest extends DbTestCase
                 new StoryHeadlineModel('Dockers walk out', ''),
                 new StoryHeadlineModel('Port strike halts traffic', 'The port is idle.'),
             ],
-            $this->stories()->memberHeadlinesOf($story->requireId(), 12),
+            $this->stories()->findMemberHeadlines($story->requireId(), 12),
         );
-        self::assertCount(1, $this->stories()->memberHeadlinesOf($story->requireId(), 1));
+        self::assertCount(1, $this->stories()->findMemberHeadlines($story->requireId(), 1));
     }
 
     public function testAStoryTitledBeforeSynopsesIsDueAgain(): void
@@ -635,7 +635,7 @@ final class TrendingStoryRepositoryTest extends DbTestCase
             ['Hafenstreik', '2031-05-14 08:00:00', $story->requireId()],
         );
 
-        $due = $this->stories()->titleDueOf(
+        $due = $this->stories()->findStoriesDueForTitle(
             $this->reader->requireId(),
             new \DateTimeImmutable('2031-05-14 11:00:00'),
             new \DateTimeImmutable('2031-05-07 00:00:00'),

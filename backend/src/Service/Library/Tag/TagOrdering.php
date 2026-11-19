@@ -30,7 +30,7 @@ final readonly class TagOrdering
      */
     public function reorder(User $user, array $orderedTagIds): array
     {
-        $siblings = $this->siblingsOf($this->ownedTagsById($user), $orderedTagIds);
+        $siblings = $this->filterSiblings($this->ownedTagsById($user), $orderedTagIds);
         $this->exactSet->assertPermutation($orderedTagIds, array_keys($siblings), self::SIBLING_SET_MESSAGE);
         $this->reorderer->reorder($orderedTagIds, $siblings);
 
@@ -57,7 +57,7 @@ final readonly class TagOrdering
      *
      * @return array<int, Tag>
      */
-    private function siblingsOf(array $byId, array $orderedTagIds): array
+    private function filterSiblings(array $byId, array $orderedTagIds): array
     {
         $first = $byId[$orderedTagIds[0] ?? 0] ?? throw new InvalidSelectionException(self::SIBLING_SET_MESSAGE);
         $parentId = $first->getParent()?->getId();

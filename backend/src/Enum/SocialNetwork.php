@@ -33,7 +33,7 @@ enum SocialNetwork: string
      *
      * @return list<string>
      */
-    public static function valuesOf(array $networks): array
+    public static function toValues(array $networks): array
     {
         return array_map(static fn (self $network): string => $network->value, $networks);
     }

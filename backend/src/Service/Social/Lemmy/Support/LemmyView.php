@@ -53,7 +53,7 @@ final class LemmyView
         return new LemmyTargetModel(
             $postId,
             $commentId,
-            VoteScore::ofNetworkValue($view->int('my_vote')),
+            VoteScore::fromNetworkValue($view->int('my_vote')),
             $view->node('counts')->int('score') ?? 0,
             $post->isTrue('locked'),
             $identity,

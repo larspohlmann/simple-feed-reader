@@ -90,14 +90,14 @@ final readonly class PrivateFeeds
     public function resume(SocialAccount $account): void
     {
         $now = $this->clock->now();
-        foreach ($this->socialFeeds->findAllOf($account) as $socialFeed) {
+        foreach ($this->socialFeeds->findAllForAccount($account) as $socialFeed) {
             $socialFeed->getFeed()->scheduleNextFetchAt($now);
         }
     }
 
     public function removeAllOf(SocialAccount $account): int
     {
-        return $this->subscriptionService->unsubscribeAll($this->socialFeeds->subscriptionsOf($account));
+        return $this->subscriptionService->unsubscribeAll($this->socialFeeds->findSubscriptions($account));
     }
 
     /** @param \Closure(): Subscription $subscribing */

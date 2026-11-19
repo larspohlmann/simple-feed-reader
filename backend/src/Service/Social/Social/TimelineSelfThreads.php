@@ -229,7 +229,7 @@ final readonly class TimelineSelfThreads
     private static function hashesOf(array $guids): array
     {
         return array_values(array_unique(array_map(
-            static fn (string $guid): string => EntryGuid::hashOf($guid),
+            static fn (string $guid): string => EntryGuid::hashGuid($guid),
             $guids,
         )));
     }

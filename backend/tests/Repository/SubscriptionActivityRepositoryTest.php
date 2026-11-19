@@ -77,7 +77,7 @@ final class SubscriptionActivityRepositoryTest extends DbTestCase
 
         self::assertEquals(
             [new TrackedSubscriptionModel($plain->requireId(), $plain->getFeed()->requireId(), '2026-10-03', false)],
-            $this->repository()->plainSubscriptionsOf($user->requireId()),
+            $this->repository()->findPlainSubscriptions($user->requireId()),
         );
         self::assertCount(3, $all);
         self::assertEquals(
@@ -97,11 +97,11 @@ final class SubscriptionActivityRepositoryTest extends DbTestCase
 
         self::assertSame(
             [$plain->requireId()],
-            TrackedSubscriptionModel::idsOf($this->repository()->plainSubscriptionsOf($user->requireId())),
+            TrackedSubscriptionModel::collectIds($this->repository()->findPlainSubscriptions($user->requireId())),
         );
         self::assertSame(
             [$plain->requireId()],
-            TrackedSubscriptionModel::idsOf($this->repository()->trackedSubscriptions()),
+            TrackedSubscriptionModel::collectIds($this->repository()->trackedSubscriptions()),
         );
     }
 

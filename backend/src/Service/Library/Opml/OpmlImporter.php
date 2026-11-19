@@ -63,7 +63,7 @@ final readonly class OpmlImporter
                 $items[] = new BulkSubscribeItemModel(
                     feedUrl: $xmlUrl,
                     tagPath: $groupPath,
-                    sourceFormat: $this->sourceFormatOf($child, $xmlUrl),
+                    sourceFormat: $this->resolveSourceFormat($child, $xmlUrl),
                 );
                 continue;
             }
@@ -91,7 +91,7 @@ final readonly class OpmlImporter
         ));
     }
 
-    private function sourceFormatOf(\DOMElement $outline, string $xmlUrl): string
+    private function resolveSourceFormat(\DOMElement $outline, string $xmlUrl): string
     {
         if (!$outline->hasAttribute('sourceFormat')) {
             return MixcloudUrl::isCloudcastsUrl($xmlUrl) ? SourceFormat::MIXCLOUD_API : SourceFormat::XML;

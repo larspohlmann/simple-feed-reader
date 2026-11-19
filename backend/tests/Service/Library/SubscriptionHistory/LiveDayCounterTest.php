@@ -38,10 +38,10 @@ final class LiveDayCounterTest extends DbTestCase
         $counts = $this->counter()->since([$tracked], '2026-10-10');
 
         $subscriptionId = $subscription->requireId();
-        self::assertSame(0, $counts->of($subscriptionId, '2026-10-10')->arrived);
-        self::assertSame(1, $counts->of($subscriptionId, '2026-10-10')->read);
-        self::assertSame(1, $counts->of($subscriptionId, '2026-10-11')->arrived);
-        self::assertSame(1, $counts->of($subscriptionId, '2026-10-12')->arrived);
+        self::assertSame(0, $counts->findDayCount($subscriptionId, '2026-10-10')->arrived);
+        self::assertSame(1, $counts->findDayCount($subscriptionId, '2026-10-10')->read);
+        self::assertSame(1, $counts->findDayCount($subscriptionId, '2026-10-11')->arrived);
+        self::assertSame(1, $counts->findDayCount($subscriptionId, '2026-10-12')->arrived);
     }
 
     public function testEverySubscriberOfAFeedGetsItsArrivalsAfterTheirOwnSubscribeDay(): void
@@ -59,10 +59,10 @@ final class LiveDayCounterTest extends DbTestCase
             new TrackedSubscriptionModel($late->requireId(), $feed->requireId(), '2026-10-11', false),
         ], '2026-10-10');
 
-        self::assertSame(2, $counts->of($early->requireId(), '2026-10-11')->arrived);
-        self::assertSame(1, $counts->of($early->requireId(), '2026-10-12')->arrived);
+        self::assertSame(2, $counts->findDayCount($early->requireId(), '2026-10-11')->arrived);
+        self::assertSame(1, $counts->findDayCount($early->requireId(), '2026-10-12')->arrived);
         self::assertFalse($counts->has($late->requireId(), '2026-10-11'));
-        self::assertSame(1, $counts->of($late->requireId(), '2026-10-12')->arrived);
+        self::assertSame(1, $counts->findDayCount($late->requireId(), '2026-10-12')->arrived);
     }
 
     public function testNoSubscriptionsCountsNothing(): void

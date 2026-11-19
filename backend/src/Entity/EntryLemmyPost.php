@@ -60,7 +60,7 @@ final class EntryLemmyPost
             return null;
         }
 
-        return PostCommunity::of($this->communityIdentity, (string) $this->communityUrl);
+        return PostCommunity::fromIdentityAndUrl($this->communityIdentity, (string) $this->communityUrl);
     }
 
     public function getEntry(): Entry

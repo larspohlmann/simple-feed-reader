@@ -67,7 +67,7 @@ final readonly class PrivateFeedSyncApplier
     {
         $onNetwork = self::byKey($network);
         $subscribed = $this->subscribedOf($account);
-        $known = $this->knownCollections->keysOf($account);
+        $known = $this->knownCollections->findKeys($account);
 
         return CollectionSyncPlan::following($onNetwork, $subscribed, $known, $account->getKindsNotYetSynced());
     }
@@ -202,7 +202,7 @@ final readonly class PrivateFeedSyncApplier
     {
         $titles = [];
         foreach ($subscriptions as $subscription) {
-            $titles[$subscription->requireId()] = SubscriptionDisplayTitle::ofSubscription($subscription);
+            $titles[$subscription->requireId()] = SubscriptionDisplayTitle::fromSubscription($subscription);
         }
 
         return $titles;

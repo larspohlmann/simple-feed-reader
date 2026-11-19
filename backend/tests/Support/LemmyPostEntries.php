@@ -22,7 +22,7 @@ final class LemmyPostEntries
     {
         $published = new \DateTimeImmutable('2026-11-14T00:00:00Z');
         $entry = new Entry($feed, $guid ?? $page, null, 'A post title', $published, $published);
-        $entry->setDiscussion(Discussion::of($page, null, CommentsLoad::Auto));
+        $entry->setDiscussion(Discussion::fromPageAndFeed($page, null, CommentsLoad::Auto));
 
         return $entry;
     }

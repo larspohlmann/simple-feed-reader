@@ -11,12 +11,12 @@ final class SearchIndexQueryTest extends TestCase
 {
     public function testQuotesEveryPieceAndRequiresThemAll(): void
     {
-        self::assertSame('"angular" AND "C++"', SearchIndexQuery::allOf(['angular', 'C++']));
+        self::assertSame('"angular" AND "C++"', SearchIndexQuery::buildAllPiecesQuery(['angular', 'C++']));
     }
 
     public function testDoublesAQuoteInsideAPiece(): void
     {
-        self::assertSame('"say ""hi"""', SearchIndexQuery::allOf(['say "hi"']));
+        self::assertSame('"say ""hi"""', SearchIndexQuery::buildAllPiecesQuery(['say "hi"']));
     }
 
     public function testIndexesAPieceOfThreeCharactersOrMore(): void

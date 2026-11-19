@@ -26,7 +26,8 @@ final readonly class LiveDayCounter
         $since = UtcDay::start($oldestDay);
         $tally = new DayTally();
         $this->tallyArrivals($tally, $subscriptions, $since);
-        foreach ($this->activity->readCountsSince(TrackedSubscriptionModel::idsOf($subscriptions), $since) as $reads) {
+        $reading = $this->activity->readCountsSince(TrackedSubscriptionModel::collectIds($subscriptions), $since);
+        foreach ($reading as $reads) {
             $tally->add($reads['subscriptionId'], $reads['day'], new DayCountModel(0, $reads['count']));
         }
 

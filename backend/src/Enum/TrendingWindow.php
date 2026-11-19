@@ -51,7 +51,7 @@ enum TrendingWindow: string
      *
      * @return list<self>
      */
-    public function leavesOutTheStoriesOf(): array
+    public function excludedStoryWindows(): array
     {
         return match ($this) {
             self::Day => [],

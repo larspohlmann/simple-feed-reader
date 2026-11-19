@@ -124,7 +124,7 @@ final readonly class SavedSearchMembershipSweep
             }
             $chunk = $this->entries->idsBetween($mark, $stopAt, self::CHUNK);
             if ($chunk === []) {
-                $this->searches->advanceMarks(self::idsOf($group), $stopAt);
+                $this->searches->advanceMarks(self::collectIds($group), $stopAt);
 
                 return true;
             }
@@ -144,7 +144,7 @@ final readonly class SavedSearchMembershipSweep
     private function applyChunk(array $group, array $chunk, SweepTally $tally): bool
     {
         try {
-            $matches = $this->matcher->matchingIds(array_map(SavedSearchTerms::termOf(...), $group), $chunk);
+            $matches = $this->matcher->matchingIds(array_map(SavedSearchTerms::buildTermModel(...), $group), $chunk);
             $tally->matchesInserted += $this->store($group, $chunk, $matches);
         } catch (SearchEngineUnavailableException $exception) {
             $this->logger->warning('Search engine unavailable; the membership sweep stops here and retries next run.', [
@@ -180,7 +180,7 @@ final readonly class SavedSearchMembershipSweep
         // leaves neither half-inserted rows nor a skipped chunk.
         return $this->entityManager->wrapInTransaction(function () use ($group, $matches, $now, $lastId): int {
             $inserted = $this->memberships->insertMissing($matches, $now);
-            $this->searches->advanceMarks(self::idsOf($group), $lastId);
+            $this->searches->advanceMarks(self::collectIds($group), $lastId);
 
             return $inserted;
         });
@@ -191,7 +191,7 @@ final readonly class SavedSearchMembershipSweep
      *
      * @return non-empty-list<int>
      */
-    private static function idsOf(array $group): array
+    private static function collectIds(array $group): array
     {
         return array_map(static fn (SavedSearch $search): int => $search->requireId(), $group);
     }

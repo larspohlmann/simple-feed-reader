@@ -14,7 +14,7 @@ final class LemmyCommunityLinkTest extends TestCase
     public function testALocalCommunityTakesTheLinksHost(): void
     {
         self::assertEquals(
-            PostCommunity::of('technology@lemmy.world', 'https://lemmy.world/c/technology'),
+            PostCommunity::fromIdentityAndUrl('technology@lemmy.world', 'https://lemmy.world/c/technology'),
             LemmyCommunityLink::parseCommunity('https://lemmy.world/c/technology'),
         );
     }
@@ -22,7 +22,7 @@ final class LemmyCommunityLinkTest extends TestCase
     public function testAFederatedCommunityLinkNamesItsHome(): void
     {
         self::assertEquals(
-            PostCommunity::of('technology@lemmy.ml', 'https://lemmy.ml/c/technology'),
+            PostCommunity::fromIdentityAndUrl('technology@lemmy.ml', 'https://lemmy.ml/c/technology'),
             LemmyCommunityLink::parseCommunity('https://lemmy.world/c/Technology@lemmy.ML'),
         );
     }

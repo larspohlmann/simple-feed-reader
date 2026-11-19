@@ -110,6 +110,9 @@ final readonly class RecommendationCandidateRepository
         /** @var list<array{0: Entry, customTitle: ?string}> $rows the joined feed folds into the Entry graph */
         $rows = $qb->getQuery()->getResult();
 
-        return array_map(static fn (array $row): TitledEntry => TitledEntry::of($row[0], $row['customTitle']), $rows);
+        return array_map(
+            static fn (array $row): TitledEntry => TitledEntry::fromEntry($row[0], $row['customTitle']),
+            $rows,
+        );
     }
 }

@@ -158,7 +158,8 @@ final readonly class EntryJson
     /** @return array{discussionUrl: string|null, comments: 'auto'|'manual'|null, score: int|null, commentCount: int|null} */
     private static function discussionOf(EntryListRow $row): array
     {
-        $discussion = $row->enrichment->discussion ?? EntryListRowDiscussion::storedOf($row->entry->getDiscussion());
+        $discussion = $row->enrichment->discussion
+            ?? EntryListRowDiscussion::fromDiscussion($row->entry->getDiscussion());
 
         return [
             'discussionUrl' => $discussion->url,

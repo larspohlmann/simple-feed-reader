@@ -12,7 +12,7 @@ final readonly class PostCommunity
     ) {
     }
 
-    public static function of(string $identity, string $url): self
+    public static function fromIdentityAndUrl(string $identity, string $url): self
     {
         return new self(strtolower($identity), $url);
     }

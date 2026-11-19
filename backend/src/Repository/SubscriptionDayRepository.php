@@ -39,7 +39,7 @@ final class SubscriptionDayRepository extends ServiceEntityRepository
         $bySubscription = [];
         foreach (array_chunk($subscriptionIds, self::ID_CHUNK_SIZE) as $chunk) {
             foreach ($this->rowsSince($chunk, $oldestDay) as $row) {
-                $bySubscription[(int) $row['subscriptionId']][UtcDay::of($row['day'])] =
+                $bySubscription[(int) $row['subscriptionId']][UtcDay::fromInstant($row['day'])] =
                     new DayCountModel((int) $row['arrived'], (int) $row['readCount']);
             }
         }

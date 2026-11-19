@@ -98,7 +98,7 @@ final class SavedPostRepositoryTest extends DbTestCase
         $lonely = $this->entry($leaving, 'lonely', 'https://news.example/only-here');
         $this->entityManager->flush();
 
-        $twins = $this->repository()->keptTwinsOf(
+        $twins = $this->repository()->findKeptTwins(
             $this->user->requireId(),
             [$original->requireId() => $original->getUrlHash(), $lonely->requireId() => $lonely->getUrlHash()],
             [$leaving->requireId(), $alsoLeaving->requireId()],
@@ -113,7 +113,7 @@ final class SavedPostRepositoryTest extends DbTestCase
         $entry = $this->entry($leaving, 'no-url', null);
         $this->entityManager->flush();
 
-        $twins = $this->repository()->keptTwinsOf(
+        $twins = $this->repository()->findKeptTwins(
             $this->user->requireId(),
             [$entry->requireId() => null],
             [$leaving->requireId()],
@@ -188,7 +188,7 @@ final class SavedPostRepositoryTest extends DbTestCase
                 'urlHash' => $entry->getUrlHash(),
                 'feedId' => $source->requireId(),
             ]],
-            $this->repository()->originalsOf([$entry->requireId()]),
+            $this->repository()->findOriginals([$entry->requireId()]),
         );
         self::assertSame(
             [$entry->getGuidHash() => ['id' => $copies[$entry->requireId()], 'urlHash' => $entry->getUrlHash()]],
@@ -445,7 +445,7 @@ final class SavedPostRepositoryTest extends DbTestCase
         $original = $this->entry($kept, 'post', 'https://news.example/no-leaving');
         $this->entityManager->flush();
 
-        $twins = $this->repository()->keptTwinsOf(
+        $twins = $this->repository()->findKeptTwins(
             $this->user->requireId(),
             [999999 => $original->getUrlHash()],
             [],

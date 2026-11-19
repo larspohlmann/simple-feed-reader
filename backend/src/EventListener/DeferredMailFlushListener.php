@@ -53,7 +53,7 @@ final readonly class DeferredMailFlushListener
                 ]);
                 $this->health->recordFailure(
                     MailKind::Account,
-                    $this->recipientOf($message, $envelope),
+                    $this->formatRecipients($message, $envelope),
                     $exception->getMessage(),
                 );
 
@@ -64,7 +64,7 @@ final readonly class DeferredMailFlushListener
         }
     }
 
-    private function recipientOf(RawMessage $message, ?Envelope $envelope): string
+    private function formatRecipients(RawMessage $message, ?Envelope $envelope): string
     {
         $addresses = null !== $envelope
             ? $envelope->getRecipients()

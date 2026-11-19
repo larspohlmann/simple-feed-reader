@@ -75,8 +75,8 @@ final class ReaderAuditReportCommand extends Command
 
         $bySuspect = $findings->tally(static fn (CleanupMarkerModel $marker): string => $marker->suspect);
         $byCode = $findings->tally(static fn (CleanupMarkerModel $marker): string => $marker->code);
-        $io->table(['stage to look at', 'articles'], $this->rowsOf($bySuspect));
-        $io->table(['marker', 'articles'], $this->rowsOf($byCode));
+        $io->table(['stage to look at', 'articles'], $this->toRows($bySuspect));
+        $io->table(['marker', 'articles'], $this->toRows($byCode));
 
         $worst = [];
         foreach (\array_slice($findings->ranked(), 0, self::TERMINAL_ROWS) as $finding) {
@@ -95,7 +95,7 @@ final class ReaderAuditReportCommand extends Command
      *
      * @return list<array{string, int}>
      */
-    private function rowsOf(array $counts): array
+    private function toRows(array $counts): array
     {
         $rows = [];
         foreach ($counts as $key => $count) {

@@ -10,7 +10,7 @@ enum VoteScore: int
     case None = 0;
     case Down = -1;
 
-    public static function ofNetworkValue(?int $value): self
+    public static function fromNetworkValue(?int $value): self
     {
         return self::tryFrom($value ?? self::None->value) ?? self::None;
     }

@@ -28,7 +28,7 @@ final readonly class TagStructureLock
     {
         $this->entityManager->beginTransaction();
         try {
-            $this->tagTrees->lockTagsOf($user->requireId());
+            $this->tagTrees->lockTagPlacements($user->requireId());
             $result = $work();
             $this->entityManager->commit();
         } catch (\Throwable $exception) {

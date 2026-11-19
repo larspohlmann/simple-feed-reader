@@ -50,7 +50,7 @@ final readonly class RetentionRepository
     /** @return list<int> the feed's unprotected entries older than its `keep`-th newest */
     public function idsPastBoundary(int $feedId, int $keep): array
     {
-        return self::idsOf($this->deletablePastBoundary($feedId, $keep));
+        return self::readIds($this->deletablePastBoundary($feedId, $keep));
     }
 
     /** @return list<int> */
@@ -59,7 +59,7 @@ final readonly class RetentionRepository
         $query = $this->deletablePastBoundary($feedId, $keep)
             ?->andWhere('e.createdAt < :cutoff')?->setParameter('cutoff', $cutoff);
 
-        return self::idsOf($query);
+        return self::readIds($query);
     }
 
     /** @return list<int> */
@@ -68,7 +68,7 @@ final readonly class RetentionRepository
         $qb = $this->entityManager->createQueryBuilder()->select('f.id')->from(Feed::class, 'f');
         SavedFeedDql::only($qb, 'f');
 
-        return self::idsOf($qb);
+        return self::readIds($qb);
     }
 
     /** @return list<int> the saved feed's entries that nobody favourites or keeps any more (#1666) */
@@ -81,7 +81,7 @@ final readonly class RetentionRepository
             ->setParameter('feed', $feedId);
         ProtectedEntryDql::exclude($qb, 'e');
 
-        return self::idsOf($qb);
+        return self::readIds($qb);
     }
 
     /**
@@ -129,7 +129,7 @@ final readonly class RetentionRepository
             ->setParameter('ids', $ids);
         ProtectedEntryDql::exclude($qb, 'e');
 
-        return self::idsOf($qb);
+        return self::readIds($qb);
     }
 
     /** @return list<int> */
@@ -201,7 +201,7 @@ final readonly class RetentionRepository
     }
 
     /** @return list<int> */
-    private static function idsOf(?QueryBuilder $query): array
+    private static function readIds(?QueryBuilder $query): array
     {
         if (null === $query) {
             return [];

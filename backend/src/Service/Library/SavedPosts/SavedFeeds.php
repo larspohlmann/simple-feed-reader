@@ -24,10 +24,10 @@ final readonly class SavedFeeds
     ) {
     }
 
-    public function of(User $user, ?SocialNetwork $network): Subscription
+    public function ensureSubscription(User $user, ?SocialNetwork $network): Subscription
     {
         $userId = $user->requireId();
-        $url = SavedFeedUrl::of($userId, $network);
+        $url = SavedFeedUrl::buildUrl($userId, $network);
         $existing = $this->subscriptions->findOneForUserAndFeedUrl($userId, $url);
         if (null !== $existing) {
             return $existing;

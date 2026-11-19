@@ -79,7 +79,7 @@ final readonly class ReaderWindows
     {
         return array_merge([], ...array_map(
             fn (TrendingWindow $shorter): array => RankedStoryModel::storyIdsOf($this->shownStories($userId, $shorter)),
-            $window->leavesOutTheStoriesOf(),
+            $window->excludedStoryWindows(),
         ));
     }
 }

@@ -62,10 +62,10 @@ final readonly class EntryAttachment implements \JsonSerializable
             return str_starts_with(strtolower($this->mimeType), 'audio/');
         }
 
-        return \in_array(self::extensionOf($this->url), self::AUDIO_EXTENSIONS, true);
+        return \in_array(self::extractExtension($this->url), self::AUDIO_EXTENSIONS, true);
     }
 
-    public static function extensionOf(string $url): string
+    public static function extractExtension(string $url): string
     {
         $path = strtolower((string) parse_url(trim($url), \PHP_URL_PATH));
 

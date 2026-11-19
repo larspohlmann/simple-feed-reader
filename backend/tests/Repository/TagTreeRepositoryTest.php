@@ -54,7 +54,7 @@ final class TagTreeRepositoryTest extends DbTestCase
         $recorder->reset();
 
         $this->entityManager->getConnection()->transactional(
-            fn () => $this->repository()->lockTagsOf($owner->requireId()),
+            fn () => $this->repository()->lockTagPlacements($owner->requireId()),
         );
 
         self::assertCount(1, $recorder->queriesMatching('for update'));

@@ -21,7 +21,7 @@ final readonly class SavedSearchTermModel
      *
      * @return list<int>
      */
-    public static function idsOf(array $searches): array
+    public static function collectIds(array $searches): array
     {
         return array_map(static fn (self $search): int => $search->id, $searches);
     }

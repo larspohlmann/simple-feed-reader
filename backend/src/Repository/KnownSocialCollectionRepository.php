@@ -22,7 +22,7 @@ final class KnownSocialCollectionRepository extends ServiceEntityRepository
     }
 
     /** @return array<string, true> by kind:remoteId (PrivateFeedModel::keyOf) */
-    public function keysOf(SocialAccount $account): array
+    public function findKeys(SocialAccount $account): array
     {
         $keys = [];
         foreach ($this->findBy(['socialAccount' => $account]) as $known) {

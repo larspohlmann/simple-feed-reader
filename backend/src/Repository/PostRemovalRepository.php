@@ -16,7 +16,7 @@ final readonly class PostRemovalRepository
     }
 
     /** @return list<StoredPostCopy> the entry, and each copy of its post outside a saved feed, which is an archive */
-    public function copiesOf(Entry $entry): array
+    public function findCopies(Entry $entry): array
     {
         $qb = $this->entityManager->createQueryBuilder()
             ->select('e.id AS entryId', 'IDENTITY(e.feed) AS feedId', 'e.guid.hash AS guidHash')

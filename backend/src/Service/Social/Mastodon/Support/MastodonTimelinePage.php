@@ -162,7 +162,7 @@ final class MastodonTimelinePage
             authorUrl: MastodonAuthor::profile($account),
             authorAvatarUrl: MastodonAuthor::avatar($account),
             statedLanguage: $post->string('language'),
-        ))->withDiscussionCounts(DiscussionCounts::of(null, $post->int('replies_count')));
+        ))->withDiscussionCounts(DiscussionCounts::fromScoreAndComments(null, $post->int('replies_count')));
     }
 
     public static function originalOf(JsonNodeModel $status): JsonNodeModel

@@ -39,7 +39,7 @@ final readonly class SavedSearchRematch
         try {
             $this->memberships->insertMissing(
                 $this->matcher->matchingIds(
-                    array_map(SavedSearchTerms::termOf(...), $searches),
+                    array_map(SavedSearchTerms::buildTermModel(...), $searches),
                     array_map(static fn (Entry $entry): int => $entry->requireId(), $entries),
                 ),
                 $this->clock->now(),
