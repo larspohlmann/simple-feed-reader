@@ -10,7 +10,7 @@ use App\Service\Content\Chapter\Model\EmbedDetailsModel;
 final class EmbedDetailsJson
 {
     /** @return array{title: string|null, durationSeconds: int|null, chapters: list<array{startSeconds: int, title: string}>, artworkUrl: string|null} */
-    public static function of(EmbedDetailsModel $details): array
+    public static function from(EmbedDetailsModel $details): array
     {
         return [
             'title' => $details->title,

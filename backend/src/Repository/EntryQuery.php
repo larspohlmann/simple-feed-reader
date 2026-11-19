@@ -15,7 +15,7 @@ final readonly class EntryQuery
     public const int MAX_LIMIT = 100;
 
     /**
-     * The page size a requested limit becomes; every keyset query applies it at construction. `EntryPage::of()`
+     * The page size a requested limit becomes; every keyset query applies it at construction. `EntryPage::from()`
      * judges a full page against that size, so a second spelling of the clamp drops `nextCursor` at a boundary.
      */
     public static function clampLimit(int $limit): int

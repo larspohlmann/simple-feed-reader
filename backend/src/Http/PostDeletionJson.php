@@ -9,7 +9,7 @@ use App\Service\Social\Social\Model\PostDeletion;
 final class PostDeletionJson
 {
     /** @return array{outcome: 'deleted'|'alreadyGone'} */
-    public static function of(PostDeletion $deletion): array
+    public static function from(PostDeletion $deletion): array
     {
         return ['outcome' => $deletion->value];
     }

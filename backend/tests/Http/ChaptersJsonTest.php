@@ -14,12 +14,12 @@ final class ChaptersJsonTest extends TestCase
     {
         self::assertSame(
             [['startSeconds' => 0, 'title' => 'Intro'], ['startSeconds' => 90, 'title' => 'Talk']],
-            ChaptersJson::of([new EntryChapter(0, 'Intro'), new EntryChapter(90, 'Talk')]),
+            ChaptersJson::from([new EntryChapter(0, 'Intro'), new EntryChapter(90, 'Talk')]),
         );
     }
 
     public function testNoChaptersIsNull(): void
     {
-        self::assertNull(ChaptersJson::of([]));
+        self::assertNull(ChaptersJson::from([]));
     }
 }

@@ -47,7 +47,7 @@ final readonly class TrendingStoryEntriesController
         $result = $this->entries->list($query);
         $rows = $this->enricher->enrich($result->rows, $userId);
 
-        return new JsonResponse($this->storyPage->of($result->withRows($rows), $query->page->limit));
+        return new JsonResponse($this->storyPage->from($result->withRows($rows), $query->page->limit));
     }
 
     #[Route(

@@ -41,7 +41,7 @@ final readonly class SocialAccountJson
             'isDefault' => $account->isDefault(),
             'credentialHint' => $account->getCredentialHint(),
             'connectedAt' => $account->getConnectedAt()->format(\DateTimeInterface::ATOM),
-            'sync' => $this->syncOf($account, $recentChanges[$account->requireId()] ?? []),
+            'sync' => $this->buildSyncRow($account, $recentChanges[$account->requireId()] ?? []),
         ];
     }
 
@@ -50,7 +50,7 @@ final readonly class SocialAccountJson
      *
      * @return array{checkedAt: string|null, skipped: string|null, changes: list<array<string, string>>}
      */
-    private function syncOf(SocialAccount $account, array $recentChanges): array
+    private function buildSyncRow(SocialAccount $account, array $recentChanges): array
     {
         return [
             'checkedAt' => $account->getLastCheckedAt()?->format(\DateTimeInterface::ATOM),

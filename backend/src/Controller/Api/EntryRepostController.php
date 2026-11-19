@@ -37,7 +37,7 @@ final readonly class EntryRepostController
 
         $this->reposts->repost($user, $entry);
 
-        return new JsonResponse(SocialRepostJson::of(true));
+        return new JsonResponse(SocialRepostJson::from(true));
     }
 
     #[Route('/{id}/repost', name: 'api_entries_unrepost', methods: ['DELETE'], requirements: ['id' => '\d+'])]
@@ -48,7 +48,7 @@ final readonly class EntryRepostController
 
         $this->reposts->unrepost($user, $entry);
 
-        return new JsonResponse(SocialRepostJson::of(false));
+        return new JsonResponse(SocialRepostJson::from(false));
     }
 
     #[Route(
@@ -67,7 +67,7 @@ final readonly class EntryRepostController
 
         $this->reposts->repostReply($user, $entry, $address);
 
-        return new JsonResponse(SocialRepostJson::of(true));
+        return new JsonResponse(SocialRepostJson::from(true));
     }
 
     #[Route(
@@ -86,6 +86,6 @@ final readonly class EntryRepostController
 
         $this->reposts->unrepostReply($user, $entry, $address);
 
-        return new JsonResponse(SocialRepostJson::of(false));
+        return new JsonResponse(SocialRepostJson::from(false));
     }
 }

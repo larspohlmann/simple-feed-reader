@@ -38,7 +38,7 @@ final class ComposerContextJson
      *     target: PostTargetRow|LinkTargetRow,
      * }
      */
-    public static function of(ComposerContextModel $context): array
+    public static function from(ComposerContextModel $context): array
     {
         return [
             'accounts' => array_map(
@@ -52,17 +52,19 @@ final class ComposerContextJson
             'canSend' => $context->canSend,
             'maxCharacters' => $context->defaults->maxCharacters,
             'visibility' => $context->defaults->visibility,
-            'lemmy' => null === $context->defaults->linkPost ? null : self::lemmyOf($context->defaults->linkPost),
+            'lemmy' => null === $context->defaults->linkPost
+                ? null
+                : self::buildLinkPostRow($context->defaults->linkPost),
             'kind' => $context->kind->value,
             'text' => $context->text,
             'target' => $context->target instanceof PostPreviewModel
-                ? self::postOf($context->target)
-                : self::linkOf($context->target),
+                ? self::buildPostTargetRow($context->target)
+                : self::buildLinkTargetRow($context->target),
         ];
     }
 
     /** @return LinkPostRow */
-    private static function lemmyOf(LinkPostChoicesModel $link): array
+    private static function buildLinkPostRow(LinkPostChoicesModel $link): array
     {
         return [
             'communities' => array_map(
@@ -79,20 +81,20 @@ final class ComposerContextJson
     }
 
     /** @return PostTargetRow */
-    private static function postOf(PostPreviewModel $post): array
+    private static function buildPostTargetRow(PostPreviewModel $post): array
     {
         return [
             'kind' => 'post',
             'authorName' => $post->authorName,
             'authorHandle' => $post->authorHandle,
             'excerpt' => $post->excerpt,
-            'card' => null === $post->card ? null : LinkCardJson::fieldsOf($post->card),
+            'card' => null === $post->card ? null : LinkCardJson::toFields($post->card),
         ];
     }
 
     /** @return LinkTargetRow */
-    private static function linkOf(LinkCardContent $card): array
+    private static function buildLinkTargetRow(LinkCardContent $card): array
     {
-        return ['kind' => 'link', 'card' => LinkCardJson::fieldsOf($card)];
+        return ['kind' => 'link', 'card' => LinkCardJson::toFields($card)];
     }
 }

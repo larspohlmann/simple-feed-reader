@@ -24,7 +24,7 @@ final readonly class EntryPage
      *
      * @return array{entries: list<array<string, mixed>>, nextCursor: string|null}
      */
-    public function of(array $rows, int $limit, EntryListSort $sort): array
+    public function from(array $rows, int $limit, EntryListSort $sort): array
     {
         return $this->withMatchCount($rows, $limit, \count($rows), $sort);
     }

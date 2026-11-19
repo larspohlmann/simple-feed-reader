@@ -26,7 +26,7 @@ final class MeJson
             'status' => $user->getStatus()->value,
             'createdAt' => $user->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'locale' => $user->getLocale(),
-            'trialEndsAt' => TrialEndJson::of($user),
+            'trialEndsAt' => TrialEndJson::formatTrialEnd($user),
             'mail' => ['enabled' => $mailEnabled],
             'emailVerified' => $user->isEmailVerified(),
         ];

@@ -20,7 +20,7 @@ final readonly class SearchPage
     }
 
     /** @return array{entries: list<array<string, mixed>>, nextCursor: string|null, matchedWords: list<string>} */
-    public function of(EntrySearchResultModel $result, int $limit): array
+    public function from(EntrySearchResultModel $result, int $limit): array
     {
         $page = $this->entryPage->withMatchCount(
             $result->rows,

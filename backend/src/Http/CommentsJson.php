@@ -47,8 +47,8 @@ final readonly class CommentsJson
             'byEntryAuthor' => $comment->byEntryAuthor,
             'depth' => $comment->depth,
             'media' => EntryMedia::toJsonList($comment->embeds->media),
-            'linkCard' => $this->linkCardJson->ofOrNull($comment->embeds->linkCard),
-            'quote' => $this->quotedPostJson->ofOrNull($comment->embeds->quote),
+            'linkCard' => $this->linkCardJson->fromOptional($comment->embeds->linkCard),
+            'quote' => $this->quotedPostJson->fromOptional($comment->embeds->quote),
             'score' => $comment->score,
             'vote' => null === $comment->vote ? null : self::vote($comment->vote),
             'post' => null === $comment->post ? null : self::post($comment->post),
@@ -71,7 +71,7 @@ final readonly class CommentsJson
     {
         return [
             'address' => $post->address,
-            'counts' => SocialCountsJson::ofReply($post->counts),
+            'counts' => SocialCountsJson::fromReply($post->counts),
             'isLiked' => $post->viewer->isLiked,
             'isReposted' => $post->viewer->isReposted,
             'canRepost' => $post->viewer->canRepost,

@@ -153,7 +153,7 @@ final class EntrySearchRequestFactoryTest extends TestCase
 
     public function testClampsALimitAboveMaxLimitToTheCeiling(): void
     {
-        // `$query->limit` is the clamped size, not the requested one: EntryPage::of() compares a page against it, so
+        // `$query->limit` is the clamped size, not the requested one: EntryPage::from() compares a page against it, so
         // a raw 150 would read a full page of 100 rows as short and end the list.
         $request = Request::create('/api/entries/search?q=angular&limit=' . (EntryQuery::MAX_LIMIT + 50));
 

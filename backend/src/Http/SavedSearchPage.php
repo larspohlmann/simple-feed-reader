@@ -21,8 +21,8 @@ final readonly class SavedSearchPage
     /**
      * @return array{entries: list<array<string, mixed>>, nextCursor: string|null}
      */
-    public function of(SavedSearchEntriesResultModel $result, int $limit): array
+    public function from(SavedSearchEntriesResultModel $result, int $limit): array
     {
-        return $this->entryPage->of($result->rows, $limit, EntryListSort::PublishedDate);
+        return $this->entryPage->from($result->rows, $limit, EntryListSort::PublishedDate);
     }
 }

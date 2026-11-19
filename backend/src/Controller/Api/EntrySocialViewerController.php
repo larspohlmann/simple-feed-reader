@@ -38,6 +38,6 @@ final readonly class EntrySocialViewerController
         $entry = $this->entryList->getOneSubscribedForUser($user->requireId(), $id);
         $this->rateLimitGuard->enforceForUser($this->socialViewerLimiter, $user);
 
-        return new JsonResponse(SocialViewerJson::of($this->socialLikes->syncFromNetwork($user, $entry)));
+        return new JsonResponse(SocialViewerJson::from($this->socialLikes->syncFromNetwork($user, $entry)));
     }
 }

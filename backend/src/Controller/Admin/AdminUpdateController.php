@@ -22,7 +22,7 @@ final readonly class AdminUpdateController
     #[Route('', name: 'api_admin_update_status', methods: ['GET'])]
     public function status(): JsonResponse
     {
-        return new JsonResponse(SelfUpdateStatusJson::of($this->updater->status()));
+        return new JsonResponse(SelfUpdateStatusJson::from($this->updater->status()));
     }
 
     #[Route('', name: 'api_admin_update_request', methods: ['POST'])]
@@ -30,6 +30,6 @@ final readonly class AdminUpdateController
     {
         $this->updater->request($admin->getEmail());
 
-        return new JsonResponse(SelfUpdateStatusJson::of($this->updater->status()), Response::HTTP_ACCEPTED);
+        return new JsonResponse(SelfUpdateStatusJson::from($this->updater->status()), Response::HTTP_ACCEPTED);
     }
 }

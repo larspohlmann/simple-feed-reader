@@ -67,7 +67,7 @@ final class RecommendationRunHistoryJson
      */
     private static function row(array $run): array
     {
-        $completedAt = self::completionOf($run);
+        $completedAt = self::readCompletedAt($run);
 
         return [
             'id' => $run['id'],
@@ -91,7 +91,7 @@ final class RecommendationRunHistoryJson
      *
      * @param HistoryRow $run
      */
-    private static function completionOf(array $run): ?\DateTimeImmutable
+    private static function readCompletedAt(array $run): ?\DateTimeImmutable
     {
         if (!$run['status']->isTerminal()) {
             return null;

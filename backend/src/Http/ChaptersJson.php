@@ -14,7 +14,7 @@ final class ChaptersJson
      *
      * @return list<array{startSeconds: int, title: string}>|null
      */
-    public static function of(array $chapters): ?array
+    public static function from(array $chapters): ?array
     {
         return $chapters === [] ? null : EntryMedia::toJsonList($chapters);
     }

@@ -24,7 +24,7 @@ final class EntryPageTest extends TestCase
 
     public function testAShortPageOffersNoNextCursor(): void
     {
-        $page = JsonMappers::entryPage()->of([], 50, EntryListSort::PublishedDate);
+        $page = JsonMappers::entryPage()->from([], 50, EntryListSort::PublishedDate);
 
         self::assertSame([], $page['entries']);
         self::assertNull($page['nextCursor']);
@@ -40,7 +40,7 @@ final class EntryPageTest extends TestCase
         $newer = $this->rowForEntry(3, $newerDate);
         $older = $this->rowForEntry(1, $olderDate);
 
-        $page = JsonMappers::entryPage()->of([$newer, $older], 2, EntryListSort::PublishedDate);
+        $page = JsonMappers::entryPage()->from([$newer, $older], 2, EntryListSort::PublishedDate);
 
         self::assertNotNull($page['nextCursor']);
         $cursor = EntryCursor::decode($page['nextCursor']);
@@ -60,7 +60,7 @@ final class EntryPageTest extends TestCase
         // row look like a short page and drop the cursor.
         $row = $this->rowForEntry(9, new \DateTimeImmutable('2026-07-12T00:00:00Z'));
 
-        $page = JsonMappers::entryPage()->of([$row], 1, EntryListSort::PublishedDate);
+        $page = JsonMappers::entryPage()->from([$row], 1, EntryListSort::PublishedDate);
 
         self::assertNotNull($page['nextCursor']);
         $cursor = EntryCursor::decode($page['nextCursor']);
@@ -79,7 +79,7 @@ final class EntryPageTest extends TestCase
             $rows[] = $this->rowForEntry($id, new \DateTimeImmutable('2026-07-12T00:00:00Z'));
         }
 
-        $page = JsonMappers::entryPage()->of($rows, $query->limit, EntryListSort::PublishedDate);
+        $page = JsonMappers::entryPage()->from($rows, $query->limit, EntryListSort::PublishedDate);
 
         self::assertNotNull(
             $page['nextCursor'],
@@ -97,7 +97,7 @@ final class EntryPageTest extends TestCase
         $this->expectException(UnpersistedEntityException::class);
         $this->expectExceptionMessage(Entry::class);
 
-        JsonMappers::entryPage()->of([$row], 1, EntryListSort::PublishedDate);
+        JsonMappers::entryPage()->from([$row], 1, EntryListSort::PublishedDate);
     }
 
     /**
@@ -151,7 +151,7 @@ final class EntryPageTest extends TestCase
         $row = $this->rowForEntry(9, new \DateTimeImmutable('2026-07-12T00:00:00Z'));
 
         self::assertSame(
-            JsonMappers::entryPage()->of([$row], 1, EntryListSort::PublishedDate),
+            JsonMappers::entryPage()->from([$row], 1, EntryListSort::PublishedDate),
             JsonMappers::entryPage()->withMatchCount([$row], 1, 1, EntryListSort::PublishedDate),
         );
     }
@@ -196,7 +196,7 @@ final class EntryPageTest extends TestCase
         $viewedAt = new \DateTimeImmutable('2026-07-20T09:30:00Z');
         $row = $this->rowForEntry(7, $publishedAt, $viewedAt);
 
-        $page = JsonMappers::entryPage()->of([$row], 1, EntryListSort::ViewedAt);
+        $page = JsonMappers::entryPage()->from([$row], 1, EntryListSort::ViewedAt);
 
         self::assertNotNull($page['nextCursor']);
         $cursor = EntryCursor::decode($page['nextCursor']);
@@ -216,7 +216,7 @@ final class EntryPageTest extends TestCase
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessage('A viewed entry list row must carry a viewedAt instant.');
 
-        JsonMappers::entryPage()->of([$row], 1, EntryListSort::ViewedAt);
+        JsonMappers::entryPage()->from([$row], 1, EntryListSort::ViewedAt);
     }
 
     private function rowForEntry(

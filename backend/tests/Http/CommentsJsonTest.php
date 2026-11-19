@@ -80,7 +80,7 @@ final class CommentsJsonTest extends TestCase
                 'siteName' => 'site.test',
                 'readerToken' => JsonMappers::readerToken('https://site.test/a'),
             ],
-            'quote' => JsonMappers::quotedPostJson()->ofOrNull($quote),
+            'quote' => JsonMappers::quotedPostJson()->fromOptional($quote),
             'score' => -4,
             'vote' => null,
             'post' => [

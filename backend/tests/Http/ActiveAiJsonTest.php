@@ -18,7 +18,7 @@ final class ActiveAiJsonTest extends TestCase
     {
         self::assertSame(
             ['ready' => false, 'model' => null, 'capabilities' => null],
-            $this->json()->of($this->user()),
+            $this->json()->from($this->user()),
         );
     }
 
@@ -29,7 +29,7 @@ final class ActiveAiJsonTest extends TestCase
 
         self::assertSame(
             ['ready' => true, 'model' => 'gpt-4o-mini', 'capabilities' => RecommendationCapabilitiesJsons::LLM],
-            $this->json()->of($user),
+            $this->json()->from($user),
         );
     }
 
@@ -41,7 +41,7 @@ final class ActiveAiJsonTest extends TestCase
 
         self::assertSame(
             ['ready' => false, 'model' => null, 'capabilities' => RecommendationCapabilitiesJsons::LLM],
-            $this->json()->of($user),
+            $this->json()->from($user),
         );
     }
 
@@ -58,7 +58,7 @@ final class ActiveAiJsonTest extends TestCase
 
         self::assertSame(
             ['ready' => true, 'model' => 'gpt-4o-mini', 'capabilities' => RecommendationCapabilitiesJsons::LLM],
-            $this->json()->of($user),
+            $this->json()->from($user),
         );
     }
 

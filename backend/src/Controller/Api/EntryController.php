@@ -82,7 +82,7 @@ final readonly class EntryController
 
         $rows = $this->enricher->enrich($this->entryList->listForUser($query), $user->requireId());
 
-        return new JsonResponse($this->entryPage->of($rows, $query->limit, EntryListSort::forView($entryView)));
+        return new JsonResponse($this->entryPage->from($rows, $query->limit, EntryListSort::forView($entryView)));
     }
 
     #[Route('/{id}/state', name: 'api_entries_state', methods: ['PATCH'], requirements: ['id' => '\d+'])]

@@ -22,7 +22,7 @@ final class RecommendationCapabilitiesJsonTest extends TestCase
 
         self::assertSame(
             RecommendationCapabilitiesJsons::LLM,
-            RecommendationCapabilitiesJsons::ofTheKind()->of($connection),
+            RecommendationCapabilitiesJsons::ofTheKind()->from($connection),
         );
     }
 
@@ -38,7 +38,7 @@ final class RecommendationCapabilitiesJsonTest extends TestCase
 
         self::assertSame(
             RecommendationCapabilitiesJsons::SCORING,
-            RecommendationCapabilitiesJsons::ofTheKind()->of($connection),
+            RecommendationCapabilitiesJsons::ofTheKind()->from($connection),
         );
     }
 
@@ -46,7 +46,7 @@ final class RecommendationCapabilitiesJsonTest extends TestCase
     {
         self::assertSame(
             RecommendationCapabilitiesJsons::SCORING,
-            RecommendationCapabilitiesJsons::ofTheKind()->ofKind(RecommendationEngineKind::Scoring),
+            RecommendationCapabilitiesJsons::ofTheKind()->fromKind(RecommendationEngineKind::Scoring),
         );
     }
 
@@ -54,7 +54,7 @@ final class RecommendationCapabilitiesJsonTest extends TestCase
     {
         self::assertSame(
             RecommendationCapabilitiesJsons::LLM,
-            RecommendationCapabilitiesJsons::ofTheKind()->ofKind(RecommendationEngineKind::Llm),
+            RecommendationCapabilitiesJsons::ofTheKind()->fromKind(RecommendationEngineKind::Llm),
         );
     }
 }

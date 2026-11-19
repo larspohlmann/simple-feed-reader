@@ -14,7 +14,7 @@ final class SocialCountsJsonTest extends TestCase
     {
         self::assertSame(
             ['likes' => 12, 'reposts' => 3, 'replies' => 4, 'quotes' => 1],
-            SocialCountsJson::of(new SocialCountsModel(12, 3, 4, 1)),
+            SocialCountsJson::from(new SocialCountsModel(12, 3, 4, 1)),
         );
     }
 
@@ -22,7 +22,7 @@ final class SocialCountsJsonTest extends TestCase
     {
         self::assertSame(
             ['likes' => 5, 'reposts' => 2, 'replies' => 1, 'quotes' => null],
-            SocialCountsJson::of(new SocialCountsModel(5, 2, 1, null)),
+            SocialCountsJson::from(new SocialCountsModel(5, 2, 1, null)),
         );
     }
 }

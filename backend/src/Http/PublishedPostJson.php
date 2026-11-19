@@ -9,7 +9,7 @@ use App\Service\Social\Social\Model\PublishedPostModel;
 final class PublishedPostJson
 {
     /** @return array{address: string, url: string|null} */
-    public static function of(PublishedPostModel $reply): array
+    public static function from(PublishedPostModel $reply): array
     {
         return ['address' => $reply->address, 'url' => $reply->url];
     }

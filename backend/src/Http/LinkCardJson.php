@@ -23,20 +23,20 @@ final readonly class LinkCardJson
     }
 
     /** @return LinkCardRow */
-    public function of(LinkCardContent $card): array
+    public function from(LinkCardContent $card): array
     {
-        return [...self::fieldsOf($card), 'readerToken' => $this->signature->tokenFor($card->url)];
+        return [...self::toFields($card), 'readerToken' => $this->signature->tokenFor($card->url)];
     }
 
     /** @return LinkCardFields */
-    public static function fieldsOf(LinkCardContent $card): array
+    public static function toFields(LinkCardContent $card): array
     {
         return $card->toStored();
     }
 
     /** @return LinkCardRow|null */
-    public function ofOrNull(?LinkCardContent $card): ?array
+    public function fromOptional(?LinkCardContent $card): ?array
     {
-        return $card === null ? null : $this->of($card);
+        return $card === null ? null : $this->from($card);
     }
 }

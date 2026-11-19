@@ -12,7 +12,7 @@ final class TrialEndJsonTest extends TestCase
 {
     public function testAnAccountWithoutATrialHasNoEnd(): void
     {
-        self::assertNull(TrialEndJson::of($this->user()));
+        self::assertNull(TrialEndJson::formatTrialEnd($this->user()));
     }
 
     public function testATrialEndsAtAnAtomInstantThatKeepsItsOffset(): void
@@ -20,7 +20,7 @@ final class TrialEndJsonTest extends TestCase
         $user = $this->user();
         $user->setTrialEndsAt(new \DateTimeImmutable('2026-10-01T09:30:00+02:00'));
 
-        self::assertSame('2026-10-01T09:30:00+02:00', TrialEndJson::of($user));
+        self::assertSame('2026-10-01T09:30:00+02:00', TrialEndJson::formatTrialEnd($user));
     }
 
     private function user(): User

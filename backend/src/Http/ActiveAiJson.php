@@ -21,14 +21,14 @@ final readonly class ActiveAiJson
      *     capabilities: array{reasons: bool, prompt: bool, profile: string, tuningFields: list<string>}|null,
      * }
      */
-    public function of(User $user): array
+    public function from(User $user): array
     {
         $connection = $user->getActiveAiProviderSettings();
 
         return [
             'ready' => AiReadiness::of($connection),
             'model' => $connection?->getModel(),
-            'capabilities' => null === $connection ? null : $this->capabilities->of($connection),
+            'capabilities' => null === $connection ? null : $this->capabilities->from($connection),
         ];
     }
 }

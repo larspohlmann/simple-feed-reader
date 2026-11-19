@@ -40,7 +40,7 @@ final readonly class EntryCommentLikeController
 
         $this->commentLikes->like($user, $entry, $address);
 
-        return new JsonResponse(SocialLikeJson::of(true));
+        return new JsonResponse(SocialLikeJson::from(true));
     }
 
     #[Route(
@@ -59,6 +59,6 @@ final readonly class EntryCommentLikeController
 
         $this->commentLikes->unlike($user, $entry, $address);
 
-        return new JsonResponse(SocialLikeJson::of(false));
+        return new JsonResponse(SocialLikeJson::from(false));
     }
 }

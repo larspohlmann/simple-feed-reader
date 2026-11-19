@@ -40,7 +40,7 @@ final class MeProfileJsonTest extends DbTestCase
                 'ai' => self::NO_ACTIVE_CONNECTION,
                 'catalog' => self::EMPTY_CATALOG,
             ],
-            $this->profileJson('Europe/Berlin')->of($user),
+            $this->profileJson('Europe/Berlin')->from($user),
         );
     }
 
@@ -56,7 +56,7 @@ final class MeProfileJsonTest extends DbTestCase
                 'ai' => self::NO_ACTIVE_CONNECTION,
                 'catalog' => self::EMPTY_CATALOG,
             ],
-            $this->profileJson('UTC')->of($user),
+            $this->profileJson('UTC')->from($user),
         );
     }
 
@@ -77,7 +77,7 @@ final class MeProfileJsonTest extends DbTestCase
                 'ai' => self::NO_ACTIVE_CONNECTION,
                 'catalog' => ['hasEntries' => true],
             ],
-            $this->profileJson('UTC')->of($user),
+            $this->profileJson('UTC')->from($user),
         );
     }
 

@@ -10,13 +10,13 @@ use App\Service\Social\Social\Model\SocialCountsModel;
 final class SocialCountsJson
 {
     /** @return array{likes: int, reposts: int, replies: int, quotes: int|null} */
-    public static function of(SocialCountsModel $counts): array
+    public static function from(SocialCountsModel $counts): array
     {
         return self::shape($counts->likes, $counts->reposts, $counts->replies, $counts->quotes);
     }
 
     /** @return array{likes: int, reposts: int, replies: int, quotes: int|null} */
-    public static function ofReply(CommentCountsModel $counts): array
+    public static function fromReply(CommentCountsModel $counts): array
     {
         return self::shape($counts->likes, $counts->reposts, $counts->replies, $counts->quotes);
     }

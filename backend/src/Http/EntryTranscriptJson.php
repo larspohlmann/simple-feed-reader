@@ -15,7 +15,7 @@ final class EntryTranscriptJson
      *     paragraphs: list<array{startSeconds: int|null, speaker: string|null, text: string}>,
      * }|null
      */
-    public static function of(?EntryTranscript $transcript): ?array
+    public static function from(?EntryTranscript $transcript): ?array
     {
         if ($transcript === null) {
             return null;

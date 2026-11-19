@@ -38,7 +38,7 @@ final readonly class EmbedDetailsController
         $this->rateLimitGuard->enforceForUser($this->embedDetailsLimiter, $user);
         $details = $this->embedDetails->of(new EmbedAddressModel(ChapteredEmbed::YouTube, $videoId));
 
-        return new JsonResponse(EmbedDetailsJson::of($details));
+        return new JsonResponse(EmbedDetailsJson::from($details));
     }
 
     #[Route(
@@ -52,6 +52,6 @@ final readonly class EmbedDetailsController
         $this->rateLimitGuard->enforceForUser($this->embedDetailsLimiter, $user);
         $details = $this->embedDetails->of(new EmbedAddressModel(ChapteredEmbed::SoundCloud, $trackId));
 
-        return new JsonResponse(EmbedDetailsJson::of($details));
+        return new JsonResponse(EmbedDetailsJson::from($details));
     }
 }

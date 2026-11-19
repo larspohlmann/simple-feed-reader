@@ -19,6 +19,6 @@ final readonly class AdminVersionController
     #[Route('/check', name: 'api_admin_version_check', methods: ['POST'])]
     public function check(): JsonResponse
     {
-        return new JsonResponse(VersionJson::of($this->reporter->freshReport()));
+        return new JsonResponse(VersionJson::from($this->reporter->freshReport()));
     }
 }
