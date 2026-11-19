@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Lemmy;
 
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
-use App\Service\Social\Lemmy\LemmyPrivateFeedRule;
 use App\Service\Social\Lemmy\LemmySearchSource;
 use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
 use App\Tests\Support\ReadsFixtures;
@@ -127,12 +126,7 @@ final class LemmySearchSourceTest extends TestCase
 
     private function source(HttpClientInterface $http): LemmySearchSource
     {
-        return new LemmySearchSource(
-            SocialApiWiring::lemmyAccountApi($http),
-            SocialApiWiring::lemmyPostEntries(),
-            new LemmyPrivateFeedRule(),
-            SocialApiWiring::searchAnswers($http, new ArrayAdapter()),
-        );
+        return SocialApiWiring::lemmySearchSource($http, SocialApiWiring::searchAnswers($http, new ArrayAdapter()));
     }
 
     /** @param list<array<string, mixed>> $posts */

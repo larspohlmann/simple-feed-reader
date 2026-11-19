@@ -12,8 +12,6 @@ use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
-use App\Service\Social\Mastodon\MastodonPrivateFeedRule;
-use App\Service\Social\Mastodon\MastodonSearchSource;
 use App\Service\Social\Mastodon\MastodonTimelineSource;
 use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
@@ -307,13 +305,11 @@ final class MastodonTimelineSourceTest extends TestCase
 
     private function source(RoutedHttpClient $http): MastodonTimelineSource
     {
+        $client = $http->client();
+
         return new MastodonTimelineSource(
-            SocialApiWiring::mastodonAccountApi($http->client()),
-            new MastodonSearchSource(
-                SocialApiWiring::mastodonAccountApi($http->client()),
-                new MastodonPrivateFeedRule(),
-                SocialApiWiring::searchAnswers($http->client(), new ArrayAdapter()),
-            ),
+            SocialApiWiring::mastodonAccountApi($client),
+            SocialApiWiring::mastodonSearchSource($client, SocialApiWiring::searchAnswers($client, new ArrayAdapter())),
         );
     }
 

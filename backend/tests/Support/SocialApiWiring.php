@@ -128,6 +128,23 @@ final class SocialApiWiring
         return new LemmyPostEntries(self::markdownHtml());
     }
 
+    public static function mastodonSearchSource(
+        HttpClientInterface $http,
+        SearchAnswers $searchAnswers,
+    ): MastodonSearchSource {
+        return new MastodonSearchSource(self::mastodonAccountApi($http), new MastodonPrivateFeedRule(), $searchAnswers);
+    }
+
+    public static function lemmySearchSource(HttpClientInterface $http, SearchAnswers $searchAnswers): LemmySearchSource
+    {
+        return new LemmySearchSource(
+            self::lemmyAccountApi($http),
+            self::lemmyPostEntries(),
+            new LemmyPrivateFeedRule(),
+            $searchAnswers,
+        );
+    }
+
     /** The container's untrusted-Markdown converter, as config/services.yaml configures it. */
     public static function markdownHtml(): MarkdownHtml
     {
@@ -232,22 +249,13 @@ final class SocialApiWiring
             TaggedItemOf::index(MastodonTimelineSource::class)
                 => static fn (): MastodonTimelineSource => new MastodonTimelineSource(
                     self::mastodonAccountApi($http),
-                    new MastodonSearchSource(
-                        self::mastodonAccountApi($http),
-                        new MastodonPrivateFeedRule(),
-                        self::searchAnswers($http, $cache),
-                    ),
+                    self::mastodonSearchSource($http, self::searchAnswers($http, $cache)),
                 ),
             TaggedItemOf::index(LemmyTimelineSource::class)
                 => static fn (): LemmyTimelineSource => new LemmyTimelineSource(
                     self::lemmyAccountApi($http),
                     self::lemmyPostEntries(),
-                    new LemmySearchSource(
-                        self::lemmyAccountApi($http),
-                        self::lemmyPostEntries(),
-                        new LemmyPrivateFeedRule(),
-                        self::searchAnswers($http, $cache),
-                    ),
+                    self::lemmySearchSource($http, self::searchAnswers($http, $cache)),
                 ),
         ]));
     }
