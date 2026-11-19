@@ -342,6 +342,12 @@ Decided in #1202.
   type-hints a model, a DTO or a per-call object cannot be autowired. For a private service Symfony reports that only when
   it is first built (`lint:container` passes), so `ServiceRoleRule`'s `rootService` and `EveryApplicationServiceBuildsTest`
   guard it.
+- **A social network's facts live in its adapter** (#2358). What one network does differently — its post addresses,
+  profile feed URLs, private feed rules, search, reconnect credentials — is a method on that network's keyed adapter
+  (`PostAddressRule/`, `ProfileFeedRule/`, `PrivateFeedRule/`, `SearchSource/`, `NetworkVerifier/`), picked by
+  `SocialNetwork->value`. A function only one network needs is a static helper named for it (`Support/BlueskyProfileFeed`).
+  No shared file in `Service/Social/Social` matches on a `SocialNetwork` case to state a fact; the Bluesky-only
+  capability checks (`FollowMatching`, `HiddenImportFollows`, `FollowAvatarCache`) wait for #2359.
 - **`src/Http`** follows the interface and `Factory` rules; its static `…Json` mappers are that layer's own role and
   stay in its area roots.
 
