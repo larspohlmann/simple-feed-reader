@@ -29,7 +29,7 @@ final readonly class MeProfileJson
         return [
             ...MeJson::profile($user, $this->mail->isEnabled()),
             'preferences' => MeJson::preferences(
-                $this->accountSettings->of($user),
+                $this->accountSettings->buildSettings($user),
                 null !== $user->getPasskeyOfferAnsweredAt(),
                 $this->instanceTimezone,
             ),

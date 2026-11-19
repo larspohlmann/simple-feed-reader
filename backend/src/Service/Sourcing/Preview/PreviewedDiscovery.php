@@ -78,7 +78,7 @@ final readonly class PreviewedDiscovery
     private function previewed(DiscoveredFeedModel $feed): PreviewedCandidateModel
     {
         return new PreviewedCandidateModel(
-            FeedCandidateModel::of($feed),
+            FeedCandidateModel::fromDiscoveredFeed($feed),
             $this->previewFactory->fromDocument($feed->document),
         );
     }

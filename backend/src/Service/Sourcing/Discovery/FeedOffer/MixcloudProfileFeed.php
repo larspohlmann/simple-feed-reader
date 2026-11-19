@@ -18,14 +18,17 @@ final readonly class MixcloudProfileFeed implements FeedOfferInterface
     {
         $profileUser = MixcloudUrl::profileUser($pageUrl);
         if ($profileUser !== null) {
-            return $this->cloudcastsOf($profileUser, $this->pageTitle(HtmlDocumentParser::parseOrEmpty($body)));
+            return $this->buildCloudcastsCandidate(
+                $profileUser,
+                $this->pageTitle(HtmlDocumentParser::parseOrEmpty($body)),
+            );
         }
         $user = MixcloudUrl::showUser($pageUrl) ?? MixcloudUrl::apiUser($pageUrl);
 
-        return $user === null ? null : $this->cloudcastsOf($user, null);
+        return $user === null ? null : $this->buildCloudcastsCandidate($user, null);
     }
 
-    private function cloudcastsOf(string $user, ?string $title): FeedCandidateModel
+    private function buildCloudcastsCandidate(string $user, ?string $title): FeedCandidateModel
     {
         return new FeedCandidateModel(MixcloudUrl::cloudcastsUrl($user), $title, SourceFormat::MIXCLOUD_API);
     }

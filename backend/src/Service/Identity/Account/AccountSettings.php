@@ -21,7 +21,7 @@ final readonly class AccountSettings
     ) {
     }
 
-    public function of(User $user): AccountSettingsModel
+    public function buildSettings(User $user): AccountSettingsModel
     {
         return new AccountSettingsModel(
             $this->readingSettings->forUser($user),

@@ -55,10 +55,10 @@ final readonly class ApplePodcastShowFeed implements ShareLinkFeedInterface
             return null;
         }
 
-        return $this->feedUrlOf($response->modifiedBody());
+        return $this->parseFeedUrl($response->modifiedBody());
     }
 
-    private function feedUrlOf(string $lookupJson): ?string
+    private function parseFeedUrl(string $lookupJson): ?string
     {
         $lookup = json_decode($lookupJson, true);
         $results = \is_array($lookup) ? ($lookup['results'] ?? null) : null;

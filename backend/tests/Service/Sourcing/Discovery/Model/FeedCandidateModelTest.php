@@ -21,7 +21,7 @@ final class FeedCandidateModelTest extends TestCase
 
         self::assertEquals(
             new FeedCandidateModel('https://example.com/feed.xml', 'Example', 'atom'),
-            FeedCandidateModel::of($feed),
+            FeedCandidateModel::fromDiscoveredFeed($feed),
         );
     }
 
@@ -29,7 +29,7 @@ final class FeedCandidateModelTest extends TestCase
     {
         $feed = new DiscoveredFeedModel('https://example.com/feed', new ParsedFeedModel(null, null, null, null, []));
 
-        self::assertSame(FeedCandidateModel::GUESSED_FORMAT, FeedCandidateModel::of($feed)->format);
-        self::assertNull(FeedCandidateModel::of($feed)->title);
+        self::assertSame(FeedCandidateModel::GUESSED_FORMAT, FeedCandidateModel::fromDiscoveredFeed($feed)->format);
+        self::assertNull(FeedCandidateModel::fromDiscoveredFeed($feed)->title);
     }
 }

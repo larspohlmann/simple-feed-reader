@@ -44,7 +44,7 @@ final readonly class BundledCatalog
     public function summary(): BundledCatalogSummaryModel
     {
         try {
-            return BundledCatalogSummaryModel::of($this->document());
+            return BundledCatalogSummaryModel::fromCatalog($this->document());
         } catch (InvalidCatalogDocumentException) {
             // Missing or corrupt reads as unavailable, not a 500: the admin can still upload a file.
             return BundledCatalogSummaryModel::unavailable();
