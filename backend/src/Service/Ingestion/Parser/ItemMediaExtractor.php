@@ -39,8 +39,8 @@ final readonly class ItemMediaExtractor
         return new ParsedMediaBundleModel(
             $media,
             $attachments,
-            DeclaredChapters::of($item),
-            DeclaredTranscripts::of($item),
+            DeclaredChapters::fromItem($item),
+            DeclaredTranscripts::findBestTranscript($item),
         );
     }
 

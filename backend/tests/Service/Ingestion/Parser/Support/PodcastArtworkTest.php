@@ -29,7 +29,7 @@ final class PodcastArtworkTest extends TestCase
 
     private function artworkUrl(string $innerXml): ?string
     {
-        return PodcastArtwork::of($this->item($innerXml))?->url;
+        return PodcastArtwork::findArtwork($this->item($innerXml))?->url;
     }
 
     public function testReadsAnItunesImage(): void
@@ -44,7 +44,7 @@ final class PodcastArtworkTest extends TestCase
 
     public function testReadsAPodcastImageWithItsDeclaredDimensions(): void
     {
-        $image = PodcastArtwork::of($this->item(
+        $image = PodcastArtwork::findArtwork($this->item(
             '<podcast:image href="https://i/p.jpg" width="1400" height="1400"/>',
         ));
 
@@ -105,7 +105,7 @@ final class PodcastArtworkTest extends TestCase
 
     public function testReadsTheWidestCandidateOfADeprecatedPodcastImagesSrcset(): void
     {
-        $image = PodcastArtwork::of($this->item(
+        $image = PodcastArtwork::findArtwork($this->item(
             '<podcast:images srcset="https://i/a-300.jpg 300w, https://i/a-1500.jpg 1500w"/>',
         ));
 

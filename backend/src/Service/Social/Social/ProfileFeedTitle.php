@@ -13,7 +13,7 @@ final readonly class ProfileFeedTitle implements FeedTitleInterface
     ) {
     }
 
-    public function of(string $feedUrl, string $channelTitle): string
+    public function formatTitle(string $feedUrl, string $channelTitle): string
     {
         return $this->profileFeeds->findRule($feedUrl)?->formatTitle($feedUrl, $channelTitle) ?? $channelTitle;
     }

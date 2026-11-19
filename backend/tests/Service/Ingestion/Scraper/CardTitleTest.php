@@ -32,7 +32,7 @@ final class CardTitleTest extends TestCase
             . '</a>',
         );
 
-        self::assertSame('Deep title text here', (new CardTitle())->of($anchor, $anchor));
+        self::assertSame('Deep title text here', (new CardTitle())->findTitle($anchor, $anchor));
     }
 
     public function testShallowAnchorTitlesFromTheFirstTextNodeInDocumentOrder(): void
@@ -44,6 +44,6 @@ final class CardTitleTest extends TestCase
             '<a href="/shallow"> <span></span><span><i>Actual title</i></span> trailing text</a>',
         );
 
-        self::assertSame('Actual title', (new CardTitle())->of($anchor, $anchor));
+        self::assertSame('Actual title', (new CardTitle())->findTitle($anchor, $anchor));
     }
 }

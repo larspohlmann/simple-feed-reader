@@ -33,7 +33,7 @@ final readonly class StopWordVote
         $this->stopWordsByLanguage = $sets;
     }
 
-    public function languageOf(string $text): ?FeedLanguage
+    public function detectLanguage(string $text): ?FeedLanguage
     {
         $counts = $this->stopWordCounts($this->votingWords($text));
         arsort($counts);

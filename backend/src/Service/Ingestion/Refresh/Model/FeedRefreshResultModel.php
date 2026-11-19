@@ -17,7 +17,7 @@ final readonly class FeedRefreshResultModel
     ) {
     }
 
-    public static function of(FeedOutcome $outcome): self
+    public static function fromOutcome(FeedOutcome $outcome): self
     {
         return new self($outcome, 0);
     }

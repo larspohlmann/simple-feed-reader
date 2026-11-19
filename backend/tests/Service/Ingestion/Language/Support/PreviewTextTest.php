@@ -16,7 +16,7 @@ final class PreviewTextTest extends TestCase
     {
         $body = HeadlineBody::body($description, HeadlineBody::BODY_LENGTH);
 
-        self::assertSame($title . "\n" . $body, PreviewText::of($title, $description));
+        self::assertSame($title . "\n" . $body, PreviewText::fromTitleAndDescription($title, $description));
     }
 
     /** @return iterable<string, array{string, string}> */
@@ -32,20 +32,20 @@ final class PreviewTextTest extends TestCase
         $description = '<p>Some <i>marked</i> words</p>';
 
         self::assertSame(
-            PreviewText::of('T', $description),
-            PreviewText::joined('T', PreviewText::descriptionOf($description)),
+            PreviewText::fromTitleAndDescription('T', $description),
+            PreviewText::joined('T', PreviewText::cutDescription($description)),
         );
-        self::assertSame('Some marked words', PreviewText::descriptionOf($description));
+        self::assertSame('Some marked words', PreviewText::cutDescription($description));
     }
 
     public function testANullDescriptionLeavesTheTitleAndANewline(): void
     {
-        self::assertSame("Only a title\n", PreviewText::of('Only a title', null));
+        self::assertSame("Only a title\n", PreviewText::fromTitleAndDescription('Only a title', null));
     }
 
     public function testTheDescriptionIsCutAtAWordBoundary(): void
     {
-        $text = PreviewText::of('T', str_repeat('word ', 100));
+        $text = PreviewText::fromTitleAndDescription('T', str_repeat('word ', 100));
 
         self::assertSame("T\n" . rtrim(str_repeat('word ', 60)), $text);
     }

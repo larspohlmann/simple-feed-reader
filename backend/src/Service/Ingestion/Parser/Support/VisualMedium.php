@@ -13,15 +13,15 @@ final class VisualMedium
 {
     public static function at(string $url, ?string $posterUrl = null): ?EntryMedium
     {
-        return self::of($url, FeedMediaClassifier::kindOfUrl($url), $posterUrl);
+        return self::buildMedium($url, FeedMediaClassifier::kindOfUrl($url), $posterUrl);
     }
 
     public static function servedAs(string $url, string $mimeType): ?EntryMedium
     {
-        return self::of($url, FeedMediaClassifier::kindOfMimeType($mimeType), null);
+        return self::buildMedium($url, FeedMediaClassifier::kindOfMimeType($mimeType), null);
     }
 
-    private static function of(string $url, FeedMediaKind $kind, ?string $posterUrl): ?EntryMedium
+    private static function buildMedium(string $url, FeedMediaKind $kind, ?string $posterUrl): ?EntryMedium
     {
         $secure = HttpsImageUrl::orNull($url);
         if ($secure === null) {

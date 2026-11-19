@@ -15,12 +15,12 @@ final class DeclaredTranscriptsTest extends TestCase
 
     public function testAnItemWithoutTranscriptsDeclaresNone(): void
     {
-        self::assertNull(DeclaredTranscripts::of($this->rssItem('<title>x</title>')));
+        self::assertNull(DeclaredTranscripts::findBestTranscript($this->rssItem('<title>x</title>')));
     }
 
     public function testVttWinsOverEveryOtherTypeWhereverItStands(): void
     {
-        $transcript = DeclaredTranscripts::of($this->rssItem(
+        $transcript = DeclaredTranscripts::findBestTranscript($this->rssItem(
             '<podcast:transcript url="https://pod.test/ep.html" type="text/html"/>'
             . '<podcast:transcript url="https://pod.test/ep.json" type="application/json"/>'
             . '<podcast:transcript url=" https://pod.test/ep.vtt " type="text/vtt" language="de" rel="captions"/>',
@@ -34,7 +34,7 @@ final class DeclaredTranscriptsTest extends TestCase
 
     public function testATieGoesToTheFirstDeclared(): void
     {
-        $transcript = DeclaredTranscripts::of($this->rssItem(
+        $transcript = DeclaredTranscripts::findBestTranscript($this->rssItem(
             '<podcast:transcript url="https://pod.test/a.srt" type="application/x-subrip"/>'
             . '<podcast:transcript url="https://pod.test/b.srt" type="application/srt"/>',
         ));
@@ -44,21 +44,21 @@ final class DeclaredTranscriptsTest extends TestCase
 
     public function testAnUnknownTypeIsIgnored(): void
     {
-        self::assertNull(DeclaredTranscripts::of($this->rssItem(
+        self::assertNull(DeclaredTranscripts::findBestTranscript($this->rssItem(
             '<podcast:transcript url="https://pod.test/ep.txt" type="text/plain"/>',
         )));
     }
 
     public function testAMissingUrlIsIgnored(): void
     {
-        self::assertNull(DeclaredTranscripts::of($this->rssItem(
+        self::assertNull(DeclaredTranscripts::findBestTranscript($this->rssItem(
             '<podcast:transcript url=" " type="text/vtt"/>',
         )));
     }
 
     public function testALanguageIsTrimmedAndCutByCharactersNotBytes(): void
     {
-        $transcript = DeclaredTranscripts::of($this->rssItem(
+        $transcript = DeclaredTranscripts::findBestTranscript($this->rssItem(
             '<podcast:transcript url="https://pod.test/ep.vtt" type="text/vtt" language="  '
             . str_repeat('ä', 40) . '  "/>',
         ));
@@ -68,7 +68,7 @@ final class DeclaredTranscriptsTest extends TestCase
 
     public function testAnEmptyLanguageIsNone(): void
     {
-        $transcript = DeclaredTranscripts::of($this->rssItem(
+        $transcript = DeclaredTranscripts::findBestTranscript($this->rssItem(
             '<podcast:transcript url="https://pod.test/ep.vtt" type="text/vtt" language=""/>',
         ));
 
@@ -77,7 +77,7 @@ final class DeclaredTranscriptsTest extends TestCase
 
     public function testALanguageLongerThanTheColumnIsCutToIt(): void
     {
-        $transcript = DeclaredTranscripts::of($this->rssItem(
+        $transcript = DeclaredTranscripts::findBestTranscript($this->rssItem(
             '<podcast:transcript url="https://pod.test/ep.vtt" type="text/vtt" language="'
             . str_repeat('x', 50) . '"/>',
         ));

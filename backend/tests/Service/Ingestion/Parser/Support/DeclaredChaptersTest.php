@@ -15,7 +15,7 @@ final class DeclaredChaptersTest extends TestCase
 
     public function testReadsInlinePodloveChapters(): void
     {
-        $chapters = DeclaredChapters::of($this->rssItem(
+        $chapters = DeclaredChapters::fromItem($this->rssItem(
             '<psc:chapters version="1.2">'
             . '<psc:chapter start="00:00:00.000" title="Intro"/>'
             . '<psc:chapter start="00:04:16.250" title="How did Enigma work?" href="https://x.test"/>'
@@ -31,7 +31,7 @@ final class DeclaredChaptersTest extends TestCase
 
     public function testInlineChaptersWinOverALinkedFile(): void
     {
-        $chapters = DeclaredChapters::of($this->rssItem(
+        $chapters = DeclaredChapters::fromItem($this->rssItem(
             '<podcast:chapters url="https://cdn.test/ch.json" type="application/json+chapters"/>'
             . '<psc:chapters><psc:chapter start="0" title="A"/><psc:chapter start="60" title="B"/></psc:chapters>',
         ));
@@ -42,7 +42,7 @@ final class DeclaredChaptersTest extends TestCase
 
     public function testKeepsTheLinkedFileWhenNothingIsInline(): void
     {
-        $chapters = DeclaredChapters::of($this->rssItem(
+        $chapters = DeclaredChapters::fromItem($this->rssItem(
             '<podcast:chapters url=" https://cdn.test/ch.json " type="application/json+chapters"/>',
         ));
 
@@ -52,7 +52,7 @@ final class DeclaredChaptersTest extends TestCase
 
     public function testReadsALinkWrittenAsHref(): void
     {
-        $chapters = DeclaredChapters::of($this->rssItem(
+        $chapters = DeclaredChapters::fromItem($this->rssItem(
             '<podcast:chapters href="https://cdn.test/ch.json" type="application/json+chapters"/>',
         ));
 
@@ -61,7 +61,7 @@ final class DeclaredChaptersTest extends TestCase
 
     public function testTheSpecUrlWinsOverHref(): void
     {
-        $chapters = DeclaredChapters::of($this->rssItem(
+        $chapters = DeclaredChapters::fromItem($this->rssItem(
             '<podcast:chapters url="https://cdn.test/url.json" href="https://cdn.test/href.json"'
             . ' type="application/json+chapters"/>',
         ));
@@ -71,7 +71,7 @@ final class DeclaredChaptersTest extends TestCase
 
     public function testSkipsAChapterWithoutATitleOrAStart(): void
     {
-        $chapters = DeclaredChapters::of($this->rssItem(
+        $chapters = DeclaredChapters::fromItem($this->rssItem(
             '<psc:chapters><psc:chapter start="0" title="A"/><psc:chapter start="x" title="Bad"/>'
             . '<psc:chapter start="30" title=" "/><psc:chapter start="60" title="B"/></psc:chapters>',
         ));
@@ -81,7 +81,7 @@ final class DeclaredChaptersTest extends TestCase
 
     public function testAnItemWithoutChaptersDeclaresNone(): void
     {
-        $chapters = DeclaredChapters::of($this->rssItem('<title>Plain</title>'));
+        $chapters = DeclaredChapters::fromItem($this->rssItem('<title>Plain</title>'));
 
         self::assertSame([], $chapters->chapters);
         self::assertNull($chapters->url);
@@ -89,7 +89,7 @@ final class DeclaredChaptersTest extends TestCase
 
     public function testReadsChaptersInAnAtomEntry(): void
     {
-        $chapters = DeclaredChapters::of($this->atomEntry(
+        $chapters = DeclaredChapters::fromItem($this->atomEntry(
             '<psc:chapters><psc:chapter start="0" title="A"/><psc:chapter start="60" title="B"/></psc:chapters>',
         ));
 

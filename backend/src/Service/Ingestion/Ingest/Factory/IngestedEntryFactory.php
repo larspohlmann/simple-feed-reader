@@ -54,7 +54,7 @@ final readonly class IngestedEntryFactory
             AbsoluteHttpUrl::orNullWithin($parsed->authorUrl, EntryAuthor::URL_MAX_LENGTH),
             AbsoluteHttpUrl::orNullWithin($parsed->authorAvatarUrl, EntryAuthor::URL_MAX_LENGTH),
         ));
-        $entry->recordText($this->textOf($entry->getText(), $feed, $parsed));
+        $entry->recordText($this->completeText($entry->getText(), $feed, $parsed));
         $entry->setPublishedAt($parsed->publishedAt);
         $entry->setDiscussion($parsed->discussion);
         $entry->recordDiscussionCounts($parsed->discussionCounts);
@@ -65,7 +65,7 @@ final readonly class IngestedEntryFactory
         return $entry;
     }
 
-    private function textOf(EntryText $text, Feed $feed, ParsedEntryModel $parsed): EntryText
+    private function completeText(EntryText $text, Feed $feed, ParsedEntryModel $parsed): EntryText
     {
         $written = $text
             ->withSummary(EntrySnippet::from($parsed->summary ?? $parsed->contentHtml))
@@ -74,7 +74,7 @@ final readonly class IngestedEntryFactory
             return $written;
         }
 
-        return $written->withLanguage($this->socialLanguage->of($parsed));
+        return $written->withLanguage($this->socialLanguage->resolveLanguage($parsed));
     }
 
     private static function cut(?string $value, int $maxLength): ?string

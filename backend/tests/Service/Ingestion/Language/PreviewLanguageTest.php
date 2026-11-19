@@ -22,7 +22,10 @@ final class PreviewLanguageTest extends TestCase
     {
         self::assertEquals(
             LinkLanguage::stated(FeedLanguage::German),
-            self::previewLanguage()->of(self::preview('Reading room', self::ENGLISH), FeedLanguage::German),
+            self::previewLanguage()->resolveLanguage(
+                self::preview('Reading room', self::ENGLISH),
+                FeedLanguage::German,
+            ),
         );
     }
 
@@ -31,7 +34,7 @@ final class PreviewLanguageTest extends TestCase
     {
         self::assertEquals(
             LinkLanguage::guessed($expected),
-            self::previewLanguage()->of(self::preview('Title', $description), null),
+            self::previewLanguage()->resolveLanguage(self::preview('Title', $description), null),
         );
     }
 
@@ -60,27 +63,29 @@ final class PreviewLanguageTest extends TestCase
     {
         $description = str_repeat('a', 149 - mb_strlen("Title\n"));
 
-        self::assertNull(self::previewLanguage()->of(self::preview('Title', $description), null));
+        self::assertNull(self::previewLanguage()->resolveLanguage(self::preview('Title', $description), null));
     }
 
     public function testATextOfTheThresholdIsGuessed(): void
     {
         $description = mb_substr(self::ENGLISH, 0, 150 - mb_strlen("Title\n"));
 
-        self::assertNotNull(self::previewLanguage()->of(self::preview('Title', $description), null));
+        self::assertNotNull(self::previewLanguage()->resolveLanguage(self::preview('Title', $description), null));
     }
 
     public function testAShortTextWithAStatementIsStated(): void
     {
         self::assertEquals(
             LinkLanguage::stated(FeedLanguage::Spanish),
-            self::previewLanguage()->of(self::preview('Hola', null), FeedLanguage::Spanish),
+            self::previewLanguage()->resolveLanguage(self::preview('Hola', null), FeedLanguage::Spanish),
         );
     }
 
     public function testALongTextWithoutLettersIsNull(): void
     {
-        self::assertNull(self::previewLanguage()->of(self::preview('2031', str_repeat('42 % 12:30 ', 20)), null));
+        self::assertNull(
+            self::previewLanguage()->resolveLanguage(self::preview('2031', str_repeat('42 % 12:30 ', 20)), null),
+        );
     }
 
     private static function preview(string $title, ?string $description): LinkCardContent

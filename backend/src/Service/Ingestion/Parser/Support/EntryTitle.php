@@ -10,7 +10,7 @@ use App\Service\Foundation\Text\Support\PlainText;
 
 final class EntryTitle
 {
-    public static function of(?string $feedTitle, ?string $bodyHtml): Headline
+    public static function buildHeadline(?string $feedTitle, ?string $bodyHtml): Headline
     {
         $title = PlainText::from($feedTitle);
         if ($title !== null) {

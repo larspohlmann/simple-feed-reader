@@ -119,7 +119,7 @@ final class EntryMediaAssemblerTest extends TestCase
 
     public function testMediaOfGatesMediaWithoutALeadOrAttachments(): void
     {
-        $media = EntryMediaAssembler::mediaOf([
+        $media = EntryMediaAssembler::assembleVisualMedia([
             new ParsedMediumModel('http://i/insecure.jpg', VisualMediaKind::Image),
             new ParsedMediumModel(
                 'https://i/clip.mp4',
@@ -141,7 +141,7 @@ final class EntryMediaAssemblerTest extends TestCase
 
     public function testAnAnimatedMediumStaysAnimated(): void
     {
-        $media = EntryMediaAssembler::mediaOf([
+        $media = EntryMediaAssembler::assembleVisualMedia([
             new ParsedMediumModel('https://i/a.gif', VisualMediaKind::Image, isAnimated: true),
             new ParsedMediumModel('https://i/b.jpg', VisualMediaKind::Image),
         ]);

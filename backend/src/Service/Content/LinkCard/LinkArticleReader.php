@@ -47,7 +47,7 @@ final readonly class LinkArticleReader
             return;
         }
         $link->refresh($card);
-        $language = $this->previewLanguage->of($card, $preview->language);
+        $language = $this->previewLanguage->resolveLanguage($card, $preview->language);
         if ($language !== null) {
             $link->settleLanguage($language);
         }

@@ -92,7 +92,7 @@ final readonly class EntryIngestor
                 $feed->requireId(),
                 array_map(static fn (IncomingEntryModel $candidate): string => $candidate->guidHash, $incoming),
             ),
-            $this->entries->findExistingUrlHashes($feed, self::urlHashesOf($incoming)),
+            $this->entries->findExistingUrlHashes($feed, self::collectUrlHashes($incoming)),
         );
     }
 
@@ -101,7 +101,7 @@ final readonly class EntryIngestor
      *
      * @return list<string> the url hashes of the entries that have one: a url-less item dedupes on GUID alone
      */
-    private static function urlHashesOf(array $incoming): array
+    private static function collectUrlHashes(array $incoming): array
     {
         $hashes = [];
         foreach ($incoming as $candidate) {

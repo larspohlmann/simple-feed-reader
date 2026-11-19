@@ -46,13 +46,13 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
         return $root instanceof \DOMElement
             && XmlHelper::isRoot($root)
             && self::core($root)->isCore($element, 'item')
-            && self::channelOf($root)?->isSameNode($parent) === true;
+            && self::findChannel($root)?->isSameNode($parent) === true;
     }
 
     public function parseFeed(\DOMDocument $skeleton, array $entries): ParsedFeedModel
     {
         $root = $skeleton->documentElement;
-        $channelElement = $root === null ? null : self::channelOf($root);
+        $channelElement = $root === null ? null : self::findChannel($root);
         if ($channelElement === null) {
             throw new FeedParseException('RSS document without <channel>');
         }
@@ -67,7 +67,7 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
             $channel->text('generator'),
             syntax: FeedSyntax::Rss,
             declaredLanguage: $channel->text('language'),
-        )->withShowArtwork(PodcastArtwork::of($channelElement));
+        )->withShowArtwork(PodcastArtwork::findArtwork($channelElement));
     }
 
     public function parseEntry(\DOMElement $entry): ?ParsedEntryModel
@@ -85,12 +85,12 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
         $image = $this->imageSelector->fromRss2OrAtom($item, [$contentEncoded ?? $description]);
         $mediaBundle = $this->mediaExtractor->extract($item);
 
-        $contentHtml = FeedBodyHtml::of($contentEncoded ?? $description) ?? MediaDescription::html($entry);
+        $contentHtml = FeedBodyHtml::fromBody($contentEncoded ?? $description) ?? MediaDescription::html($entry);
 
         return new ParsedEntryModel(
             guid: GuidFallback::for($item->text('guid'), $link, $title),
             url: $link,
-            headline: EntryTitle::of($title, $contentHtml),
+            headline: EntryTitle::buildHeadline($title, $contentHtml),
             author: self::coreOrDublinCore($item, 'author', 'creator'),
             summary: $contentEncoded !== null ? $description : null,
             contentHtml: $contentHtml,
@@ -106,7 +106,7 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
         return CoreElement::inOwnNamespace($element);
     }
 
-    private static function channelOf(\DOMElement $root): ?\DOMElement
+    private static function findChannel(\DOMElement $root): ?\DOMElement
     {
         return self::core($root)->child('channel');
     }

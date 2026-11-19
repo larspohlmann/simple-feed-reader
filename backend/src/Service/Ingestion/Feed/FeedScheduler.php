@@ -31,7 +31,7 @@ final readonly class FeedScheduler
     public function recordSuccess(Feed $feed, int $newEntryCount): void
     {
         // New entries reset to the floor at once, not by halving, or a burst blocks the top of All items (#643).
-        $interval = $newEntryCount > 0 ? self::floorOf($feed) : $this->grownInterval($feed);
+        $interval = $newEntryCount > 0 ? self::pickFloorMinutes($feed) : $this->grownInterval($feed);
 
         $now = $this->clock->now();
         $feed->recordSuccessfulFetch($now, $interval);
@@ -94,7 +94,7 @@ final readonly class FeedScheduler
     {
         return (int) min(
             self::FAILURE_CAP_MINUTES,
-            max($feed->getFetchIntervalMinutes(), self::floorOf($feed))
+            max($feed->getFetchIntervalMinutes(), self::pickFloorMinutes($feed))
                 * (2 ** min($failures, self::MAX_BACKOFF_EXPONENT)),
         );
     }
@@ -104,11 +104,11 @@ final readonly class FeedScheduler
     {
         $minutes = $feed->getFetchIntervalMinutes();
 
-        return max(self::floorOf($feed), min(self::CEILING_MINUTES, $minutes + intdiv($minutes + 1, 2)));
+        return max(self::pickFloorMinutes($feed), min(self::CEILING_MINUTES, $minutes + intdiv($minutes + 1, 2)));
     }
 
     /** A private social feed costs its account an API call per poll, so it polls at most every 15 minutes. */
-    private static function floorOf(Feed $feed): int
+    private static function pickFloorMinutes(Feed $feed): int
     {
         return SourceFormat::isSocial($feed->getSourceFormat()) ? self::SOCIAL_FLOOR_MINUTES : self::FLOOR_MINUTES;
     }

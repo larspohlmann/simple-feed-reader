@@ -145,7 +145,7 @@ final readonly class LemmyPostEntries
         return new ParsedEntryModel(
             guid: $address,
             url: null,
-            headline: EntryTitle::of($post->string('name'), $body),
+            headline: EntryTitle::buildHeadline($post->string('name'), $body),
             author: $creator->string('display_name') ?? $creator->string('name'),
             summary: null,
             contentHtml: $body,

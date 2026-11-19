@@ -101,11 +101,11 @@ final class StopWordVoteTest extends TestCase
             }
         };
 
-        self::assertSame(FeedLanguage::German, new StopWordVote($stopWords)->languageOf('zz zz yy'));
+        self::assertSame(FeedLanguage::German, new StopWordVote($stopWords)->detectLanguage('zz zz yy'));
     }
 
     private static function vote(string $text): ?FeedLanguage
     {
-        return new StopWordVote(LanguageWiring::stopWords())->languageOf($text);
+        return new StopWordVote(LanguageWiring::stopWords())->detectLanguage($text);
     }
 }

@@ -9,7 +9,7 @@ use App\Service\Foundation\Text\Support\PlainTextBody;
 
 final class FeedBodyHtml
 {
-    public static function of(?string $body): ?string
+    public static function fromBody(?string $body): ?string
     {
         $html = PlainTextBody::asHtml($body);
 

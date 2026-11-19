@@ -143,7 +143,7 @@ final readonly class BlueskyThreadReplies
         }
 
         return new CommentEmbedsModel(
-            EntryMediaAssembler::mediaOf($rendered->media),
+            EntryMediaAssembler::assembleVisualMedia($rendered->media),
             $rendered->linkCards[0] ?? null,
             $rendered->quote,
         );

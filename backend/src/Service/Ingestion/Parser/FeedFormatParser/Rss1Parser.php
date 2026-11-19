@@ -76,12 +76,12 @@ final readonly class Rss1Parser implements FeedFormatParserInterface
         $image = $this->imageSelector->fromRss1($item, $contentEncoded ?? $description);
         $mediaBundle = $this->mediaExtractor->extract($item);
 
-        $contentHtml = FeedBodyHtml::of($contentEncoded ?? $description);
+        $contentHtml = FeedBodyHtml::fromBody($contentEncoded ?? $description);
 
         return new ParsedEntryModel(
             guid: GuidFallback::for($about, $link, $title),
             url: $link ?? $about,
-            headline: EntryTitle::of($title, $contentHtml),
+            headline: EntryTitle::buildHeadline($title, $contentHtml),
             author: $dublinCore->text('creator'),
             summary: $contentEncoded !== null ? $description : null,
             contentHtml: $contentHtml,

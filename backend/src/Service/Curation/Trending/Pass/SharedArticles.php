@@ -38,7 +38,7 @@ final class SharedArticles
 
     private function read(WindowLinkCardModel $card, ?FeedLanguage $postLanguage): SharedArticleModel
     {
-        $body = PreviewText::descriptionOf($card->description);
+        $body = PreviewText::cutDescription($card->description);
 
         return new SharedArticleModel(
             $card->title,

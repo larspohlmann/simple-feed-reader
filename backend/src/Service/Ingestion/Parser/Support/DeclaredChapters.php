@@ -13,7 +13,7 @@ use App\Service\Ingestion\Parser\Pass\CoreElement;
 
 final class DeclaredChapters
 {
-    public static function of(CoreElement $item): ParsedChaptersModel
+    public static function fromItem(CoreElement $item): ParsedChaptersModel
     {
         $inline = self::inline($item);
         if ($inline !== []) {

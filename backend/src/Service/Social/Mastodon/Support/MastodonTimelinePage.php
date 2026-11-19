@@ -153,7 +153,7 @@ final class MastodonTimelinePage
         return (new ParsedEntryModel(
             guid: $uri,
             url: $url,
-            headline: EntryTitle::of(null, $body),
+            headline: EntryTitle::buildHeadline(null, $body),
             author: MastodonAuthor::name($account),
             summary: null,
             contentHtml: self::withBoostAttribution($body, $status),

@@ -40,7 +40,7 @@ final class QuotedViewRecord
             $author->string('avatar'),
             DateParser::parse($value->string('createdAt') ?? $record->string('indexedAt')),
             $value->text('text') ?? '',
-            EntryMediaAssembler::mediaOf(self::mediaOf($embed)),
+            EntryMediaAssembler::assembleVisualMedia(self::mediaOf($embed)),
             self::nestedQuoteOf($embed),
             BlueskyExternalCard::ofEmbed($embed),
         ));

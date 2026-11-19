@@ -90,7 +90,7 @@ final readonly class FeedOutcomePersister
                 ['url' => $feed->getUrl(), 'exception' => $exception],
             );
 
-            return FeedRefreshResultModel::of(FeedOutcome::Aborted);
+            return FeedRefreshResultModel::fromOutcome(FeedOutcome::Aborted);
         }
     }
 
@@ -125,7 +125,7 @@ final readonly class FeedOutcomePersister
         $this->entityManager->flush();
         $this->shareEnrichment->enrich($feed);
 
-        return FeedRefreshResultModel::of(FeedOutcome::NotModified);
+        return FeedRefreshResultModel::fromOutcome(FeedOutcome::NotModified);
     }
 
     /** @throws \DateMalformedStringException */
@@ -135,7 +135,7 @@ final readonly class FeedOutcomePersister
         $this->entityManager->flush();
         $this->logger->info('Feed rate limited: {url}', ['url' => $feed->getUrl()]);
 
-        return FeedRefreshResultModel::of(FeedOutcome::Throttled);
+        return FeedRefreshResultModel::fromOutcome(FeedOutcome::Throttled);
     }
 
     private function recordGone(Feed $feed, FeedGoneException $gone): FeedRefreshResultModel
@@ -144,7 +144,7 @@ final readonly class FeedOutcomePersister
         $this->entityManager->flush();
         $this->logger->warning('Feed gone: {url}', ['url' => $feed->getUrl(), 'exception' => $gone]);
 
-        return FeedRefreshResultModel::of(FeedOutcome::Failed);
+        return FeedRefreshResultModel::fromOutcome(FeedOutcome::Failed);
     }
 
     /** @throws \DateMalformedStringException */
@@ -154,7 +154,7 @@ final readonly class FeedOutcomePersister
         $this->entityManager->flush();
         $this->logger->warning('Feed refresh failed: {url}', ['url' => $feed->getUrl(), 'exception' => $failure]);
 
-        return FeedRefreshResultModel::of(FeedOutcome::Failed);
+        return FeedRefreshResultModel::fromOutcome(FeedOutcome::Failed);
     }
 
     private function applyPermanentRedirect(Feed $feed, FetchResponseModel $response): void

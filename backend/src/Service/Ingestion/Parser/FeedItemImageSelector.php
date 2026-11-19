@@ -26,7 +26,7 @@ final readonly class FeedItemImageSelector
             ?? $this->extractor->fromCustomImageElement($item);
 
         return self::withBodyImage($declared, $this->firstBodyImage($bodyHtmlCandidates))
-            ?? PodcastArtwork::of($item->element);
+            ?? PodcastArtwork::findArtwork($item->element);
     }
 
     public function fromRss1(CoreElement $item, ?string $bodyHtml): ?DeclaredImageModel

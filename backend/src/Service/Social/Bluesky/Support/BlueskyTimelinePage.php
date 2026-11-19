@@ -125,7 +125,7 @@ final class BlueskyTimelinePage
         return (new ParsedEntryModel(
             guid: $uri,
             url: $url,
-            headline: EntryTitle::of(null, $text),
+            headline: EntryTitle::buildHeadline(null, $text),
             author: BlueskyAuthor::name($author),
             summary: null,
             contentHtml: self::withRepostAttribution($text, $item->node('reason')),
