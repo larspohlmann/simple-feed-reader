@@ -142,8 +142,8 @@ final class EntryPageTest extends TestCase
     }
 
     /**
-     * withMatchCount() is what of() delegates to; passing count($rows) as the
-     * match count must reproduce of()'s own behaviour exactly, so the two
+     * withMatchCount() is what from() delegates to; passing count($rows) as the
+     * match count must reproduce from()'s own behaviour exactly, so the two
      * never drift apart for the plain entry list.
      */
     public function testWithMatchCountEqualToRowCountMatchesOf(): void

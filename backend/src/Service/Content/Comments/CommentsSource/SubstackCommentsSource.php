@@ -46,9 +46,9 @@ final readonly class SubstackCommentsSource implements CommentsSourceInterface
             'Substack asked us to wait.',
             'Substack could not be reached.',
         );
-        $commentsOf = fn (): string => $this->body($post->commentsApiUrl($this->fetchPostId($post)));
+        $fetchComments = fn (): string => $this->body($post->commentsApiUrl($this->fetchPostId($post)));
 
-        return CommentsAnswerModel::settled($this->endpointFetcher->guarded($endpoint, $request->user, $commentsOf));
+        return CommentsAnswerModel::settled($this->endpointFetcher->guarded($endpoint, $request->user, $fetchComments));
     }
 
     public function read(CommentsRequest $request, string $answer): CommentsPageModel

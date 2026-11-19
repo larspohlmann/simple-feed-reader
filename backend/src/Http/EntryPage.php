@@ -30,7 +30,7 @@ final readonly class EntryPage
     }
 
     /**
-     * As of(), for a read that can return fewer rows than it matched (search hydration drops ids the caller may not
+     * As from(), for a read that can return fewer rows than it matched (search hydration drops ids the caller may not
      * see): $matchCount decides whether a next page exists, and a post-filtered read resumes past $continuationRow,
      * its last candidate, so a page whose rows were all filtered out still advances.
      *
