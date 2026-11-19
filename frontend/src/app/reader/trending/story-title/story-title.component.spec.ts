@@ -8,7 +8,7 @@ import { StoryTitleComponent } from './story-title.component';
 @Component({ template: '' })
 class StoryListStubComponent {}
 
-function mount(title: string, id = 12): HTMLElement {
+function mount(title: string, id = 12, synopsis: string | null = null): HTMLElement {
   TestBed.configureTestingModule({
     imports: [StoryTitleComponent],
     providers: [
@@ -16,7 +16,7 @@ function mount(title: string, id = 12): HTMLElement {
     ],
   });
   const fixture = TestBed.createComponent(StoryTitleComponent);
-  fixture.componentRef.setInput('story', aStory({ id, title }));
+  fixture.componentRef.setInput('story', aStory({ id, title, synopsis }));
   fixture.detectChanges();
   return fixture.nativeElement as HTMLElement;
 }
@@ -33,10 +33,24 @@ it('leads with the Trending story glyph', () => {
   expect(mount('Any event').querySelector('app-icon')?.textContent?.trim()).toBe(STORY_ICON);
 });
 
-it('carries the full title as a tooltip for when the line is cut short', () => {
+it('shows the whole title, with no tooltip standing in for a cut line', () => {
   const heading = mount('A very long event headline').querySelector('h3.title');
 
-  expect(heading?.getAttribute('title')).toBe('A very long event headline');
+  expect(heading?.hasAttribute('title')).toBe(false);
+});
+
+it('shows the synopsis beneath the title', () => {
+  const synopsis = mount(
+    'Any event',
+    12,
+    'Dockers walked out at dawn. The port is shut.',
+  ).querySelector('h3.title + p.synopsis');
+
+  expect(synopsis?.textContent?.trim()).toBe('Dockers walked out at dawn. The port is shut.');
+});
+
+it('shows no synopsis element without one', () => {
+  expect(mount('Any event').querySelector('.synopsis')).toBeNull();
 });
 
 it("links to the story's list and opens it when clicked", async () => {

@@ -17,6 +17,8 @@ export interface TrendingStoryDto {
   id: number;
   /** The event the story's articles report, as a one-line headline (#2329). */
   title: string;
+  /** Two or three sentences on the event, null when the story's title is no LLM's (#2353). */
+  synopsis: string | null;
   followed: boolean;
   /** The reader's sources: the article feeds they follow and the accounts whose posts share a card (#2229). */
   outletCount: number;
@@ -47,6 +49,7 @@ export interface FollowedStoriesResponseDto {
  *  which is null for a story the reader does not follow. */
 export interface StoryPageDto extends EntriesPage {
   title: string | null;
+  synopsis: string | null;
   /** The rows the story's list holds whichever page it is, and the unread ones among them (#2329). */
   memberCount: number;
   unreadCount: number;

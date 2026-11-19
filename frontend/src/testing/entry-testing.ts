@@ -62,6 +62,7 @@ export function aStory(overrides: Partial<TrendingStoryDto> = {}): TrendingStory
   return {
     id: 1,
     title: 'Harbour authority approves the tidal barrier',
+    synopsis: null,
     followed: false,
     outletCount: 2,
     viewed: false,

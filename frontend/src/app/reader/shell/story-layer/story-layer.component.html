@@ -29,6 +29,10 @@
   </button>
 </ng-template>
 
+<ng-template #synopsisBlock>
+  <p class="story-synopsis">{{ synopsis() }}</p>
+</ng-template>
+
 <app-entry-list
   [layout]="layout()"
   [title]="heading.title()"
@@ -48,6 +52,7 @@
   [headerLeading]="leading"
   [headerActions]="actions"
   [cornerTrailing]="cornerTrailing()"
+  [topBlock]="synopsis() ? synopsisBlock : null"
   (loadMore)="context.entries.loadMore()"
   (retry)="context.entries.retry()"
   (dismiss)="context.entries.dismissError()"

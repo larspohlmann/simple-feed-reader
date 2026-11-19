@@ -1,4 +1,9 @@
 <a class="story-link" [routerLink]="storyLink()" queryParamsHandling="preserve">
   <app-icon class="icon" [name]="storyIcon" size="sm" />
-  <h3 class="title" [attr.title]="story().title">{{ story().title }}</h3>
+  <div class="text">
+    <h3 class="title">{{ story().title }}</h3>
+    @if (story().synopsis; as synopsis) {
+      <p class="synopsis">{{ synopsis }}</p>
+    }
+  </div>
 </a>

@@ -45,6 +45,19 @@ describe('OpenStory (#2329)', () => {
     expect(open.titleOf(7)).toBeNull();
   });
 
+  it("keeps the landed page's synopsis", () => {
+    listLanded.next({
+      query: storyList(42),
+      page: { ...storyPage('Harbour strike', null), synopsis: 'Dockers walked out at dawn.' },
+    });
+
+    expect(open.synopsisOf(42)).toBe('Dockers walked out at dawn.');
+    expect(open.synopsisOf(7)).toBeNull();
+
+    listLanded.next({ query: storyList(42), page: storyPage('Harbour strike', null) });
+    expect(open.synopsisOf(42)).toBeNull();
+  });
+
   it("keeps the tally the story's page carries", () => {
     listLanded.next({ query: storyList(42), page: storyPage('Harbour strike', null) });
 
