@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Social\ImportRule;
 
-use App\Service\Outbound\Fetch\IpValidator;
-use App\Service\Outbound\Fetch\UrlGuard;
-use App\Service\Social\Social\BlueskyApiClient;
-use App\Service\Social\Social\BlueskyIdentityResolver;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\HiddenImportFollows;
 use App\Service\Social\Social\ImportRule\BlueskyImportRule;
@@ -15,11 +11,10 @@ use App\Service\Social\Social\Model\HiddenProfileModel;
 use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Service\Social\Social\Model\SocialImportFeedModel;
 use App\Service\Social\Social\TolerantHiddenProfiles;
-use App\Tests\Support\FetchWiring;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
-use App\Tests\Support\StaticDnsResolver;
+use App\Tests\Support\SocialApiWiring;
 use App\Tests\Support\StubHiddenProfiles;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -110,11 +105,9 @@ final class BlueskyImportRuleTest extends TestCase
 
     private function rule(RoutedHttpClient $http): BlueskyImportRule
     {
-        $guard = new UrlGuard(new StaticDnsResolver(['public.api.bsky.app' => ['93.184.216.34']]), new IpValidator());
-
         return new BlueskyImportRule(
             new HiddenImportFollows(new TolerantHiddenProfiles($this->hiddenProfiles, $this->logger)),
-            new BlueskyIdentityResolver(new BlueskyApiClient(FetchWiring::patientApiClient($http->client(), $guard))),
+            SocialApiWiring::blueskyIdentityResolver($http->client()),
         );
     }
 }

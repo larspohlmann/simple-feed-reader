@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\Model;
 
-/** What the composer starts from on a network: its length limit, visibility, mentions and Lemmy link fields. */
+/** What the composer starts from on a network: its length limit, visibility, mentions and link post fields. */
 final readonly class ComposerDefaultsModel
 {
     /**

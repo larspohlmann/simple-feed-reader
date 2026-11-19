@@ -15,10 +15,15 @@ final class BlueskyProfileActor
     /** @return string|null the valid Bluesky actor a profile feed or an author feed follows; null for any other feed */
     public static function parseFollowedActor(string $feedUrl): ?string
     {
-        $author = SocialFeedUrl::parseAuthor(SocialNetwork::Bluesky, $feedUrl);
-        $did = null !== $author && BlueskyActor::isDid($author) ? $author : null;
+        return self::validActor(BlueskyProfileFeed::parseIdentity($feedUrl) ?? self::parseAuthorDid($feedUrl));
+    }
 
-        return self::validActor(BlueskyProfileFeed::parseIdentity($feedUrl) ?? $did);
+    /** @return string|null the DID an author feed names; null for a handle author or any other feed */
+    public static function parseAuthorDid(string $feedUrl): ?string
+    {
+        $author = SocialFeedUrl::parseAuthor(SocialNetwork::Bluesky, $feedUrl);
+
+        return null !== $author && BlueskyActor::isDid($author) ? $author : null;
     }
 
     /** @return string|null the valid Bluesky actor a profile's RSS feed follows; null for an author feed or any other */

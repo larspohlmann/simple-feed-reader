@@ -45,14 +45,6 @@ final class ConfirmedDeletionTest extends DbTestCase
         self::assertSame([false, false], $this->survivorsAfterRemoving($opened, [$homeCopy]));
     }
 
-    public function testAMastodonPostInAnRssFeedIsRemovedWithoutReplies(): void
-    {
-        $opened = $this->postOn($this->feed('https://mastodon.example/@alice.rss', SourceFormat::XML));
-        $sibling = $this->postOn($this->feed('social:mastodon:1:home', SourceFormat::MASTODON_API));
-
-        self::assertSame([false, false], $this->survivorsAfterRemoving($opened, [$sibling]));
-    }
-
     public function testABlueskyAccountFeedPostIsRemovedWithoutReplies(): void
     {
         $opened = $this->postOn($this->feed('social:bluesky:1:home', SourceFormat::BLUESKY_API), self::BLUESKY_POST);

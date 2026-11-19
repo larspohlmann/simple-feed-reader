@@ -29,6 +29,20 @@ final class BlueskyProfileActorTest extends TestCase
         yield 'a mastodon profile feed' => ['https://mastodon.example/@alice.rss', null, null];
     }
 
+    #[DataProvider('authorDidFeeds')]
+    public function testParseAuthorDidReadsOnlyADidAuthorFeed(string $feedUrl, ?string $expected): void
+    {
+        self::assertSame($expected, BlueskyProfileActor::parseAuthorDid($feedUrl));
+    }
+
+    /** @return iterable<string, array{string, ?string}> */
+    public static function authorDidFeeds(): iterable
+    {
+        yield 'a did author feed' => ['social:bluesky:3:author:did:plc:rusty', 'did:plc:rusty'];
+        yield 'a handle author feed' => ['social:bluesky:3:author:rusty.bsky.social', null];
+        yield 'not an author feed' => ['https://bsky.app/profile/did:plc:bob/rss', null];
+    }
+
     public function testParseFollowedActorRefusesANonDidAuthorFeed(): void
     {
         self::assertNull(BlueskyProfileActor::parseFollowedActor('social:bluesky:12:author:rusty.bsky.social'));

@@ -5,10 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Enum\SocialNetwork;
-use App\Service\Outbound\Fetch\IpValidator;
-use App\Service\Outbound\Fetch\UrlGuard;
-use App\Service\Social\Social\BlueskyApiClient;
-use App\Service\Social\Social\BlueskyIdentityResolver;
 use App\Service\Social\Social\HiddenImportFollows;
 use App\Service\Social\Social\HiddenProfiles\HiddenProfilesInterface;
 use App\Service\Social\Social\ImportRule\BlueskyImportRule;
@@ -67,10 +63,7 @@ final class SocialRuleWiring
     /** Bluesky's handles resolve through $http; no follow is hidden unless $hiddenProfiles hides it. */
     public static function importRules(RoutedHttpClient $http, HiddenProfilesInterface $hiddenProfiles): ImportRules
     {
-        $guard = new UrlGuard(new StaticDnsResolver(['public.api.bsky.app' => ['93.184.216.34']]), new IpValidator());
-        $identities = new BlueskyIdentityResolver(
-            new BlueskyApiClient(FetchWiring::patientApiClient($http->client(), $guard)),
-        );
+        $identities = SocialApiWiring::blueskyIdentityResolver($http->client());
         $hiddenFollows = new HiddenImportFollows(new TolerantHiddenProfiles($hiddenProfiles, new NullLogger()));
 
         return new ImportRules(self::locatorOf([

@@ -11,9 +11,8 @@ use App\Service\Social\Social\BlueskyIdentityResolver;
 use App\Service\Social\Social\HiddenImportFollows;
 use App\Service\Social\Social\Model\HiddenProfileModel;
 use App\Service\Social\Social\Model\PrivateFeedModel;
-use App\Service\Social\Social\Support\BlueskyActor;
+use App\Service\Social\Social\Support\BlueskyProfileActor;
 use App\Service\Social\Social\Support\BlueskyProfileFeed;
-use App\Service\Social\Social\Support\SocialFeedUrl;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Bluesky->value)]
@@ -35,7 +34,7 @@ final readonly class BlueskyImportRule implements ImportRuleInterface
 
     public function parseFollowedIdentity(string $feedUrl): ?string
     {
-        return BlueskyProfileFeed::parseIdentity($feedUrl) ?? self::parseAuthorDid($feedUrl);
+        return BlueskyProfileFeed::parseIdentity($feedUrl) ?? BlueskyProfileActor::parseAuthorDid($feedUrl);
     }
 
     public function isResolvedIdentity(string $identity): bool
@@ -51,12 +50,5 @@ final readonly class BlueskyImportRule implements ImportRuleInterface
     public function allowsFollowAvatarCache(): bool
     {
         return true;
-    }
-
-    private static function parseAuthorDid(string $feedUrl): ?string
-    {
-        $author = SocialFeedUrl::parseAuthor(SocialNetwork::Bluesky, $feedUrl);
-
-        return null !== $author && BlueskyActor::isDid($author) ? $author : null;
     }
 }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\Model;
 
-/** What a Lemmy link post chooses from: the communities it may go to and the title it starts with. */
+/** What a link post chooses from: the communities it may go to and the title it starts with. */
 final readonly class LinkPostChoicesModel
 {
     public const int MIN_TITLE_CHARACTERS = 3;
