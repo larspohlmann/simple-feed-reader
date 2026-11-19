@@ -15,7 +15,7 @@ use App\Entity\SavedSearchEntry;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
-use App\Repository\EntryListRowEnricher;
+use App\Service\Library\EntryList\EntryListRowEnricher;
 use App\Repository\ForYouFeedQuery;
 use App\Repository\RecommendationItemRepository;
 use App\Service\Curation\Ai\Crypto\ApiKeyCipher;

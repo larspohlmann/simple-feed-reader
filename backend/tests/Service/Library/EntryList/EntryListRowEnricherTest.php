@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Repository;
+namespace App\Tests\Service\Library\EntryList;
 
 use App\Entity\Category;
 use App\Entity\Discussion;
@@ -33,12 +33,12 @@ use App\Enum\SourceFormat;
 use App\Enum\VoteScore;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowDiscussion;
-use App\Repository\EntryListRowEnricher;
 use App\Repository\EntryListRowLemmy;
 use App\Repository\EntryListRowMarks;
 use App\Repository\EntryListRowSocial;
 use App\Repository\EntryListRowSubscription;
 use App\Repository\LinkCardRepository;
+use App\Service\Library\EntryList\EntryListRowEnricher;
 use App\Service\Library\SavedPosts\Support\SavedFeedUrl;
 use App\Tests\DbTestCase;
 use App\Tests\Support\LemmyPostEntries;

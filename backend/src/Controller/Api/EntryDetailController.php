@@ -7,7 +7,7 @@ namespace App\Controller\Api;
 use App\Entity\User;
 use App\Http\EntryJson;
 use App\Repository\EntryListRepository;
-use App\Repository\EntryListRowEnricher;
+use App\Service\Library\EntryList\EntryListRowEnricher;
 use App\Service\Content\Chapter\ChaptersOnOpen;
 use App\Service\Content\Transcript\TranscriptOnOpen;
 use Symfony\Component\HttpFoundation\JsonResponse;

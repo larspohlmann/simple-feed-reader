@@ -258,7 +258,7 @@ may run either way (`Ingest → Reader` and `LinkCard → Ingest` both cross `In
 | `Sourcing` (finding feeds) | Discovery, Preview, Catalog, FeedDirectory |
 | `Ingestion` (feed to entries) | Feed, Parser, Category, Scraper, Ingest, Refresh, Retention |
 | `Content` (what an entry shows) | Reader, ReaderAudit, LinkCard, Comments, Transcript, Chapter |
-| `Library` (the user's own state) | Subscription, SubscriptionHistory, Tag, Reading, SavedPosts, Search, Opml |
+| `Library` (the user's own state) | Subscription, SubscriptionHistory, Tag, Reading, SavedPosts, Search, Opml, EntryList |
 | `Social` | Social, Bluesky, Completion, Share |
 | `Curation` | Recommendation, Ai, StoryAi, Trending |
 | `Identity` | Account, Auth, OAuth, Passkey |

@@ -11,7 +11,7 @@ use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\EntryListRow;
-use App\Repository\EntryListRowEnricher;
+use App\Service\Library\EntryList\EntryListRowEnricher;
 use App\Repository\EntryListRowMarks;
 use App\Repository\EntryListRowSocial;
 use App\Repository\EntryListRowSubscription;

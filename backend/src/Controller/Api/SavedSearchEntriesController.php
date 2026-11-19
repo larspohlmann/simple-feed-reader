@@ -8,7 +8,7 @@ use App\Dto\Entry\EntryPageParameters;
 use App\Dto\Entry\MarkSavedSearchesReadRequest;
 use App\Entity\User;
 use App\Http\SavedSearchPage;
-use App\Repository\EntryListRowEnricher;
+use App\Service\Library\EntryList\EntryListRowEnricher;
 use App\Repository\SavedSearchListQuery;
 use App\Repository\SavedSearchRepository;
 use App\Service\Library\Reading\SavedSearchMarkReadService;

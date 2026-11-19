@@ -14,7 +14,7 @@ use App\Http\EntryPage;
 use App\Http\EntryStateJson;
 use App\Http\RecommendationFeedJson;
 use App\Repository\EntryListRepository;
-use App\Repository\EntryListRowEnricher;
+use App\Service\Library\EntryList\EntryListRowEnricher;
 use App\Repository\EntryListSort;
 use App\Repository\EntryQuery;
 use App\Repository\ForYouFeedQuery;

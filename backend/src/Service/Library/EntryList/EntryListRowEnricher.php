@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Repository;
+namespace App\Service\Library\EntryList;
 
 use App\Entity\Entry;
 use App\Entity\EntryLemmyPost;
@@ -11,6 +11,21 @@ use App\Enum\CommentsLoad;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Enum\VoteScore;
+use App\Repository\DiscussionVoteRepository;
+use App\Repository\EntryCategoryRepository;
+use App\Repository\EntryLemmyPostRepository;
+use App\Repository\EntryListRow;
+use App\Repository\EntryListRowDiscussion;
+use App\Repository\EntryListRowEnrichment;
+use App\Repository\EntryListRowLemmy;
+use App\Repository\EntryListRowSocial;
+use App\Repository\LinkCardRepository;
+use App\Repository\SavedEntryOriginRepository;
+use App\Repository\SavedSearchEntryRepository;
+use App\Repository\ShareEnrichmentRepository;
+use App\Repository\SocialAccountRepository;
+use App\Repository\SocialLikeRepository;
+use App\Repository\ThreadPostRepository;
 use App\Service\Content\Comments\Support\LemmyPostAddress;
 use App\Service\Content\Comments\Support\SubstackPostAddress;
 use App\Service\Social\Social\Model\SocialPostAddressModel;
