@@ -72,14 +72,31 @@ final class StoryTitleParserTest extends TestCase
             '{"title":"T","synopsis":7}',
             self::heading('T'),
         ];
-        yield 'a synopsis of 500 characters is kept' => [
-            '{"title":"T","synopsis":"' . str_repeat('ä', 500) . '"}',
-            self::heading('T', str_repeat('ä', 500)),
+        yield 'a synopsis of 900 characters is kept whole' => [
+            '{"title":"T","synopsis":"' . str_repeat('ä', 900) . '"}',
+            self::heading('T', str_repeat('ä', 900)),
         ];
-        yield 'a synopsis of 501 characters keeps the title' => [
-            '{"title":"T","synopsis":"' . str_repeat('ä', 501) . '"}',
+        yield 'a longer synopsis ends at the last sentence that fits' => [
+            '{"title":"T","synopsis":"' . self::sentence(885) . ' Second one! Third? Fourth."}',
+            self::heading('T', self::sentence(885) . ' Second one!'),
+        ];
+        yield 'a longer synopsis ends at an ellipsis that ends a sentence' => [
+            '{"title":"T","synopsis":"' . self::sentence(894) . ' Then… ' . str_repeat('b', 10) . '"}',
+            self::heading('T', self::sentence(894) . ' Then…'),
+        ];
+        yield 'a longer synopsis with no sentence end that fits keeps the title' => [
+            '{"title":"T","synopsis":"' . self::sentence(901) . ' Done."}',
             self::heading('T'),
         ];
+        yield 'a full stop inside a word ends no sentence' => [
+            '{"title":"T","synopsis":"Version 1.5 ships ' . str_repeat('ä', 900) . '"}',
+            self::heading('T'),
+        ];
+    }
+
+    private static function sentence(int $length): string
+    {
+        return str_repeat('ä', $length - 1) . '.';
     }
 
     private static function heading(string $title, ?string $synopsis = null): StoryHeadingModel
