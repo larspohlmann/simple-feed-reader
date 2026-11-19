@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\Support;
 
+use App\Entity\DiscussionCounts;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
@@ -148,7 +149,7 @@ final class MastodonTimelinePage
         $body = self::bodyOf($post);
         $account = $post->node('account');
 
-        return new ParsedEntryModel(
+        return (new ParsedEntryModel(
             guid: $uri,
             url: $url,
             headline: EntryTitle::of(null, $body),
@@ -160,7 +161,7 @@ final class MastodonTimelinePage
             authorUrl: MastodonAuthor::profile($account),
             authorAvatarUrl: MastodonAuthor::avatar($account),
             statedLanguage: $post->string('language'),
-        );
+        ))->withDiscussionCounts(DiscussionCounts::of(null, $post->int('replies_count')));
     }
 
     public static function originalOf(JsonNodeModel $status): JsonNodeModel

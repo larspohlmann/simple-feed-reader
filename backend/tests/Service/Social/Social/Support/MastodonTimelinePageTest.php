@@ -348,17 +348,32 @@ final class MastodonTimelinePageTest extends TestCase
 
     public function testABoostIsKnownAsRepliedByItsOriginalsCount(): void
     {
-        $page = MastodonTimelinePage::of([self::timelineStatus([
-            'id' => '200',
-            'uri' => 'https://mastodon.example/users/carol/statuses/200/activity',
-            'created_at' => '2026-10-12T09:30:00Z',
-            'content' => '',
-            'account' => ['acct' => 'carol', 'display_name' => 'Carol', 'url' => 'https://mastodon.example/@carol'],
-            'replies_count' => 0,
-            'reblog' => self::statusFields(['replies_count' => 3]),
-        ])]);
+        $page = MastodonTimelinePage::of([self::boostOfAStatusRepliedTo(3)]);
 
         self::assertTrue($page->knownShares->hasRepliesFor(self::URI));
+    }
+
+    public function testAStatusCarriesItsReplyCountAsItsCommentCountAndNoScore(): void
+    {
+        $counts = MastodonTimelinePage::of([self::timelineStatus(['replies_count' => 5])])
+            ->parsed->entries[0]->discussionCounts;
+
+        self::assertSame(5, $counts->commentCount);
+        self::assertNull($counts->score);
+    }
+
+    public function testAStatusWithoutAReplyCountHasNoCommentCount(): void
+    {
+        $entry = MastodonTimelinePage::of([self::timelineStatus()])->parsed->entries[0];
+
+        self::assertNull($entry->discussionCounts->commentCount);
+    }
+
+    public function testABoostCarriesItsOriginalsReplyCount(): void
+    {
+        $page = MastodonTimelinePage::of([self::boostOfAStatusRepliedTo(3)]);
+
+        self::assertSame(3, $page->parsed->entries[0]->discussionCounts->commentCount);
     }
 
     public function testAThreadOnThePageFoldsIntoItsRoot(): void
@@ -466,6 +481,19 @@ final class MastodonTimelinePageTest extends TestCase
             LinkCardContent::class,
             $page->knownShares->linkCardFor('https://mastodon.example/users/bob/statuses/101'),
         );
+    }
+
+    private static function boostOfAStatusRepliedTo(int $replies): JsonNodeModel
+    {
+        return self::timelineStatus([
+            'id' => '200',
+            'uri' => 'https://mastodon.example/users/carol/statuses/200/activity',
+            'created_at' => '2026-10-12T09:30:00Z',
+            'content' => '',
+            'account' => ['acct' => 'carol', 'display_name' => 'Carol', 'url' => 'https://mastodon.example/@carol'],
+            'replies_count' => 0,
+            'reblog' => self::statusFields(['replies_count' => $replies]),
+        ]);
     }
 
     private static function selfReply(string $id, string $parentId): JsonNodeModel

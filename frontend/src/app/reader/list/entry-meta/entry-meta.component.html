@@ -1,18 +1,21 @@
 @let score = entry().score;
-@if (score !== null) {
+@let commentBubble = comments();
+@if (score !== null || commentBubble !== null) {
   <span class="discussion">
-    <app-vote-pill
-      [score]="score"
-      [myVote]="entry().myVote"
-      (voted)="actions.vote(entry(), $event)"
-    />
-    @if (comments(); as comments) {
+    @if (score !== null) {
+      <app-vote-pill
+        [score]="score"
+        [myVote]="entry().myVote"
+        (voted)="actions.vote(entry(), $event)"
+      />
+    }
+    @if (commentBubble !== null) {
       <span
         class="comments"
         role="img"
-        [attr.aria-label]="comments.labelKey | transloco: { count: comments.count }"
+        [attr.aria-label]="commentBubble.labelKey | transloco: { count: commentBubble.count }"
       >
-        <app-icon name="chat_bubble" size="sm" aria-hidden="true" />{{ comments.text }}
+        <app-icon name="chat_bubble" size="sm" aria-hidden="true" />{{ commentBubble.text }}
       </span>
     }
   </span>

@@ -228,6 +228,10 @@ services:
         arguments:
             $tickWindowSeconds: '%maintenance_tick_seconds%'
 
+    App\Service\Content\LinkCard\LinkCardDrain:
+        arguments:
+            $windowSeconds: '%maintenance_tick_seconds%'
+
     App\Service\Outbound\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher:
         arguments:
             $hostConcurrency: '%fetch_host_concurrency%'
