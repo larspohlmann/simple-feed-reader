@@ -55,8 +55,10 @@
   - `backend/src/Service/Curation/Trending/StoryTitleTask.php`
   - `backend/src/Service/Curation/Recommendation/Llm/Prompt/Model/RecommendationResponseSchema.php` (`STORY_TITLE_SCHEMA`)
   - `backend/src/Service/Curation/Recommendation/Llm/Prompt/RecommendationAnswerBudget.php` (`STORY_TITLE_ANSWER_TOKENS`)
-  - `backend/src/Repository/TrendingStoryRepository.php` (`recordTitle`)
+  - `backend/src/Repository/TrendingStoryRepository.php` (`recordTitle`, and `memberHeadlinesOf`'s excerpts)
+  - `backend/src/Service/Curation/Trending/Support/HeadlineBody.php`
 - Test:
+  - `tests/Service/Curation/Trending/Support/HeadlineBodyTest.php` (create it if it does not exist)
   - `tests/Service/Curation/Trending/StoryTitleParserTest.php`
   - `tests/Service/Curation/Trending/StoryTitleTaskTest.php`
   - `tests/Repository/TrendingStoryRepositoryTest.php`
@@ -67,6 +69,7 @@
   - `StoryTitleParser::parse(string $content): ?StoryHeadingModel`. Null only when the title is unusable.
   - `TrendingStoryRepository::recordTitle(int $storyId, StoryHeadingModel $heading, \DateTimeImmutable $attemptedAt): void`. It writes `llm_title` and `llm_synopsis` together.
   - The schema becomes `{title: string, synopsis: string}`, with both required and `additionalProperties: false`.
+  - **The synopsis is written from the article texts, not the headlines alone (Lars, 2026-11-19).** `HeadlineBody` gains `excerpt(?string $summary): string` and `excerptAfterTitle(string $title, ?string $summary): string`. They work like `body`/`bodyAfterTitle`, but cut at **1,000** characters on a word boundary. `memberHeadlinesOf` builds its `snippet` with them; the title call is its only caller. The 300-character `body`/`bodyAfterTitle` used by Trending's scoring stay unchanged. `SOURCE_CHARACTERS` (2,000) already reads enough.
 
 - [ ] **Step 1: Write the failing tests.**
   - `StoryTitleParserTest::testParse` data, in the shape `content → expected heading`:
@@ -79,10 +82,12 @@
     - `testAVisibleStoryGetsATitleInTheUsersLanguage` also asserts the stored synopsis.
     - New: `testATitleWithoutAUsableSynopsisIsKept`. The reply `{"title":"T","synopsis":""}` stores `llm_title = 'T'` and `llm_synopsis = null`, and the story is not due within the hour.
     - `testTheRequestCarriesAtMostTwelveHeadlinesAndTheSchema` asserts that the schema requires `synopsis`.
+  - `HeadlineBodyTest`: `testAnExcerptKeepsUpToAThousandCharactersOnAWordBoundary` (a 1,500-character body gives at most 1,000 characters, ending on a whole word); `testAnExcerptAfterTitleDropsTheRepeatedHeadline`.
+  - `StoryTitleTaskTest::testTheRequestCarriesAtMostTwelveHeadlinesAndTheSchema` also asserts that a member with a 900-character body sends all 900 characters.
   - `TrendingStoryRepositoryTest`: new `testAStoryTitledBeforeSynopsesIsDueAgain`. A story with `llm_title` set, `llm_title_member_count = 0`, and an attempt more than an hour ago is in `titleDueOf`. A story with `llm_title` null and no LLM is unaffected (Review Focus 3; the migration sets that count).
 - [ ] **Step 2: Run** `php bin/phpunit tests/Service/Curation/Trending tests/Repository/TrendingStoryRepositoryTest.php`. Expected: FAIL.
 - [ ] **Step 3: Implement.**
-  - **Prompt.** The system text adds one line: `Then write a synopsis of the whole story in %s: two or three plain sentences, at most 350 characters, neutral and factual, naming no outlet.` Its final line becomes `Reply only with JSON: {"title": "...", "synopsis": "..."}`.
+  - **Prompt.** The system text's opening says the input is each article's headline and text. It adds one line: `Then write a synopsis of the whole story in %s from what the article texts report, not from the headlines alone: two or three plain sentences, at most 350 characters, neutral and factual, naming no outlet.` Its final line becomes `Reply only with JSON: {"title": "...", "synopsis": "..."}`.
   - **Token budget.** `STORY_TITLE_ANSWER_TOKENS` = **220**.
   - **Migration.** It adds `llm_synopsis VARCHAR(500) DEFAULT NULL` on both dialects, following `Version20261118130000`'s MySQL and SQLite split, and runs `UPDATE trending_story SET llm_title_member_count = 0 WHERE llm_title IS NOT NULL`. The `down()` drops the column.
 - [ ] **Step 4: Run** the Step 2 command again. Expected: PASS. Then run:
