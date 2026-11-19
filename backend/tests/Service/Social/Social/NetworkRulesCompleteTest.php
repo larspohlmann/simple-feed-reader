@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Social;
 
 use App\Enum\SocialNetwork;
+use App\Service\Social\Social\AccountVerifier\AccountVerifierInterface;
+use App\Service\Social\Social\AccountVerifier\NetworkAccountVerifier;
 use App\Service\Social\Social\PrivateFeedRules;
 use App\Service\Social\Social\ProfileFeeds;
 use App\Service\Social\Social\SocialPostAddresses;
@@ -37,6 +39,18 @@ final class NetworkRulesCompleteTest extends KernelTestCase
 
         foreach (SocialNetwork::cases() as $network) {
             self::assertTrue($sources->has($network->value), $network->value);
+        }
+    }
+
+    public function testEveryNetworkHasAVerifier(): void
+    {
+        $verifier = self::getContainer()->get(AccountVerifierInterface::class);
+        self::assertInstanceOf(NetworkAccountVerifier::class, $verifier);
+        $verifiers = new \ReflectionProperty(NetworkAccountVerifier::class, 'verifiers')->getValue($verifier);
+        self::assertInstanceOf(ContainerInterface::class, $verifiers);
+
+        foreach (SocialNetwork::cases() as $network) {
+            self::assertTrue($verifiers->has($network->value), $network->value);
         }
     }
 

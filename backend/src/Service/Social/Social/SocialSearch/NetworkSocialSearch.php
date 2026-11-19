@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Social\SocialSearch;
 
 use App\Entity\SocialAccount;
+use App\Enum\SocialNetwork;
 use App\Service\Social\Social\ActingAccountGuard;
 use App\Service\Social\Social\Model\TimelinePageModel;
 use App\Service\Social\Social\SearchSource\SearchSourceInterface;
@@ -22,9 +23,16 @@ final readonly class NetworkSocialSearch implements SocialSearchInterface
 
     public function newest(SocialAccount $account, string $query): TimelinePageModel
     {
-        $source = $this->sources->get($account->getNetwork()->value);
-        \assert($source instanceof SearchSourceInterface);
+        $source = $this->selectSource($account->getNetwork());
 
         return $this->guard->actAs($account, static fn (): TimelinePageModel => $source->fetchNewest($account, $query));
+    }
+
+    private function selectSource(SocialNetwork $network): SearchSourceInterface
+    {
+        $source = $this->sources->get($network->value);
+        \assert($source instanceof SearchSourceInterface);
+
+        return $source;
     }
 }

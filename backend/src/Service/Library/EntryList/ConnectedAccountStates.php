@@ -43,7 +43,6 @@ final readonly class ConnectedAccountStates
         $votes = $this->votesOf($lemmyPostIds, $accountsByNetwork, $userId);
         $lemmyPosts = $this->lemmyPosts->byEntryIds(array_keys($entries));
 
-
         $lemmyStates = [];
         foreach ($entries as $entryId => $entry) {
             $lemmy = self::lemmyOf($entry, $lemmyPosts[$entryId] ?? null, $votes[$entryId] ?? null);
