@@ -15,7 +15,5 @@ import { TrendingStoryDto } from '../trending.models';
 export class StoryTitleComponent {
   readonly story = input.required<TrendingStoryDto>();
   protected readonly storyIcon = STORY_ICON;
-  protected readonly titleId = computed(() => `story-title-${this.story().id}`);
-  protected readonly synopsisId = computed(() => `story-synopsis-${this.story().id}`);
   protected readonly storyLink = computed(() => storyListLink(this.story().id));
 }

@@ -26,8 +26,6 @@ import { publishListBarHeight } from '../list-bar-height';
 export class ListFrameComponent {
   readonly problem = input<Problem | null>(null);
   readonly collapsed = input(false);
-  /** The collapsed bar's title may wrap, so its pieces line up with the first line, not the middle (#2353). */
-  readonly collapsedTopAligned = input(false);
   readonly retry = output<void>();
   readonly dismiss = output<void>();
 

@@ -22,7 +22,6 @@ import {
   hasListOrder,
   hasUnreadFilter,
   isSingleStreamView,
-  isStoryView,
   isUnreadOnly,
   listOrderOf,
   notificationsNetworkOf,
@@ -80,7 +79,7 @@ export interface TitleCount {
   host: {
     '[class.collapsed]': 'collapsed()',
     '[class.is-search]': "selection().kind === 'search'",
-    '[class.is-story]': 'isStory()',
+    '[class.is-story]': "selection().kind === 'trending-story'",
   },
 })
 export class ListHeaderComponent {
@@ -110,8 +109,6 @@ export class ListHeaderComponent {
 
   private readonly language = inject(LanguageService);
   private readonly titleElement = viewChild<ElementRef<HTMLElement>>('listTitle');
-
-  protected readonly isStory = computed(() => isStoryView(this.selection()));
 
   /** The refresh button is hidden in the cross-feed saved views. */
   protected readonly canRefresh = computed(() => offersRefresh(this.selection()));

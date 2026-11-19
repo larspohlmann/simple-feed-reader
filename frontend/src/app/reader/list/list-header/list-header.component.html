@@ -33,7 +33,7 @@
         <app-icon
           [name]="icon"
           [size]="collapsed() ? 'xs' : 'md'"
-          [class.story-glyph]="isStory()"
+          [class.story-glyph]="selection().kind === 'trending-story'"
         />
       }
       @if (selection().kind === 'search') {

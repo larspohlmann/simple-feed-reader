@@ -1,10 +1,5 @@
 <div class="list-frame lead">
-  <header
-    class="list-header"
-    #header
-    [class.collapsed]="collapsed()"
-    [class.top-aligned]="collapsedTopAligned()"
-  >
+  <header class="list-header" #header [class.collapsed]="collapsed()">
     <ng-content select="[frameHeader]" />
   </header>
 

@@ -1,15 +1,17 @@
+@let titleId = 'story-title-' + story().id;
+@let synopsisId = 'story-synopsis-' + story().id;
 <a
   class="story-link"
   [routerLink]="storyLink()"
   queryParamsHandling="preserve"
-  [attr.aria-labelledby]="titleId()"
-  [attr.aria-describedby]="story().synopsis ? synopsisId() : null"
+  [attr.aria-labelledby]="titleId"
+  [attr.aria-describedby]="story().synopsis ? synopsisId : null"
 >
   <app-icon class="icon" [name]="storyIcon" size="sm" />
   <div class="text">
-    <h3 class="title" [id]="titleId()">{{ story().title }}</h3>
+    <h3 class="title" [id]="titleId">{{ story().title }}</h3>
     @if (story().synopsis; as synopsis) {
-      <p class="synopsis" [id]="synopsisId()">{{ synopsis }}</p>
+      <p class="synopsis" [id]="synopsisId">{{ synopsis }}</p>
     }
   </div>
 </a>

@@ -194,7 +194,6 @@ h2.search-title {
     display: none;
   }
 
-  /* With the tools gone, a story's slim bar has the room for its whole event title (#2353). */
   :host(.collapsed.is-story) h2 {
     overflow: visible;
     text-overflow: clip;
@@ -202,7 +201,12 @@ h2.search-title {
     line-height: var(--lh-tight);
   }
 
-  /* The bar aligns to the top here: the inset centres the first line on the back button beside it, and mirrors it below the last. */
+  /* The leading buttons are projected from other components, hence `::ng-deep`. */
+  :host(.collapsed.is-story) ::ng-deep > * {
+    align-self: flex-start;
+  }
+
+  /* Centres the first line on the back button beside it. */
   :host(.collapsed.is-story) .title-row {
     align-items: flex-start;
     padding-block: calc((var(--icon-lg) - var(--fs-sm) * var(--lh-tight)) / 2);

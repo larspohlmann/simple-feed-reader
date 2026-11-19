@@ -29,7 +29,7 @@
   </button>
 </ng-template>
 
-<ng-template #synopsisBlock>
+<ng-template #synopsisTemplate>
   <p class="story-synopsis">{{ synopsis() }}</p>
 </ng-template>
 
@@ -52,7 +52,7 @@
   [headerLeading]="leading"
   [headerActions]="actions"
   [cornerTrailing]="cornerTrailing()"
-  [topBlock]="synopsis() ? synopsisBlock : null"
+  [topBlock]="topBlock()"
   (loadMore)="context.entries.loadMore()"
   (retry)="context.entries.retry()"
   (dismiss)="context.entries.dismissError()"
