@@ -20,7 +20,7 @@ final class BlueskyProfileFeed
     /** @return string|null the DID or lower-cased handle a profile feed follows; null when $url is none */
     public static function parseIdentity(string $url): ?string
     {
-        $match = self::matchProfilePage(AbsoluteHttpUrl::parseHostAndPath($url));
+        $match = self::parseProfilePage(AbsoluteHttpUrl::parseHostAndPath($url));
         if (null === $match || '' === ($match['rss'] ?? '')) {
             return null;
         }
@@ -31,7 +31,7 @@ final class BlueskyProfileFeed
     /** @return string|null the DID or lower-cased handle a bsky.app profile page or its feed names; null otherwise */
     public static function parseProfileActor(string $url): ?string
     {
-        $match = self::matchProfilePage(AbsoluteHttpUrl::parseHostAndPath($url));
+        $match = self::parseProfilePage(AbsoluteHttpUrl::parseHostAndPath($url));
         if (null === $match) {
             return null;
         }
@@ -45,7 +45,7 @@ final class BlueskyProfileFeed
      *
      * @return array{actor: string, rss?: string}|null
      */
-    private static function matchProfilePage(?array $parts): ?array
+    private static function parseProfilePage(?array $parts): ?array
     {
         if (
             null === $parts

@@ -37,7 +37,7 @@ final class Version20261013150000 extends AbstractMigration
         /** @var list<array{id: int|string, url: string, source_format: string}> $feeds */
         $feeds = $this->connection->fetchAllAssociative('SELECT id, url, source_format FROM feed');
         foreach ($feeds as $feed) {
-            $network = self::networkOf($feed['url'], $feed['source_format']);
+            $network = self::findNetwork($feed['url'], $feed['source_format']);
             if (null === $network) {
                 continue;
             }
@@ -66,17 +66,17 @@ final class Version20261013150000 extends AbstractMigration
         return false;
     }
 
-    private static function networkOf(string $url, string $sourceFormat): ?SocialNetwork
+    private static function findNetwork(string $url, string $sourceFormat): ?SocialNetwork
     {
         if (SourceFormat::isSaved($sourceFormat)) {
             return SavedFeedUrl::networkOf($url);
         }
         $privateAddress = SourceFormat::isSocial($sourceFormat) ? SocialFeedUrl::addressOf($url) : null;
 
-        return $privateAddress->network ?? self::profileFeedNetworkOf($url);
+        return $privateAddress->network ?? self::findProfileFeedNetwork($url);
     }
 
-    private static function profileFeedNetworkOf(string $url): ?SocialNetwork
+    private static function findProfileFeedNetwork(string $url): ?SocialNetwork
     {
         return match (true) {
             null !== BlueskyProfileFeed::parseIdentity($url) => SocialNetwork::Bluesky,

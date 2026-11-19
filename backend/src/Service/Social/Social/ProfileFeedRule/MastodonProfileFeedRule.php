@@ -6,6 +6,7 @@ namespace App\Service\Social\Social\ProfileFeedRule;
 
 use App\Enum\SocialNetwork;
 use App\Service\Social\Social\Support\MastodonProfileFeed;
+use App\Service\Social\Social\Support\ProfileIdentity;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Mastodon->value)]
@@ -13,14 +14,13 @@ final readonly class MastodonProfileFeedRule implements ProfileFeedRuleInterface
 {
     public function buildFeedUrl(string $identity): ?string
     {
-        $account = explode('@', $identity);
-        if (2 !== \count($account)) {
+        $nameAndHost = ProfileIdentity::parseNameAndHost($identity);
+        if (null === $nameAndHost) {
             return null;
         }
-        $url = MastodonProfileFeed::buildUrl($account[0], $account[1]);
-        $builtIdentity = MastodonProfileFeed::parseIdentity($url);
+        $url = MastodonProfileFeed::buildUrl(...$nameAndHost);
 
-        return null !== $builtIdentity && 0 === strcasecmp($builtIdentity, $identity) ? $url : null;
+        return ProfileIdentity::isRoundTrip(MastodonProfileFeed::parseIdentity($url), $identity) ? $url : null;
     }
 
     public function parseIdentity(string $feedUrl): ?string

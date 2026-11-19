@@ -6,6 +6,7 @@ namespace App\Service\Social\Social\ProfileFeedRule;
 
 use App\Enum\SocialNetwork;
 use App\Service\Social\Social\Support\LemmyProfileFeed;
+use App\Service\Social\Social\Support\ProfileIdentity;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Lemmy->value)]
@@ -13,14 +14,13 @@ final readonly class LemmyProfileFeedRule implements ProfileFeedRuleInterface
 {
     public function buildFeedUrl(string $identity): ?string
     {
-        $community = explode('@', $identity);
-        if (2 !== \count($community)) {
+        $nameAndHost = ProfileIdentity::parseNameAndHost($identity);
+        if (null === $nameAndHost) {
             return null;
         }
-        $url = LemmyProfileFeed::buildUrl($community[0], $community[1]);
-        $builtIdentity = LemmyProfileFeed::parseIdentity($url);
+        $url = LemmyProfileFeed::buildUrl(...$nameAndHost);
 
-        return null !== $builtIdentity && 0 === strcasecmp($builtIdentity, $identity) ? $url : null;
+        return ProfileIdentity::isRoundTrip(LemmyProfileFeed::parseIdentity($url), $identity) ? $url : null;
     }
 
     public function parseIdentity(string $feedUrl): ?string

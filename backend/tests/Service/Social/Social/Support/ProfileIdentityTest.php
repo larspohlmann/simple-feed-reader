@@ -28,4 +28,18 @@ final class ProfileIdentityTest extends TestCase
         yield 'an rss feed naming no actor' => ['https://bsky.app/profile/not_an_actor!/rss', null, null];
         yield 'a mastodon profile feed' => ['https://mastodon.example/@alice.rss', null, null];
     }
+
+    public function testAnAccountIdentitySplitsIntoItsNameAndHost(): void
+    {
+        self::assertSame(['bob', 'mastodon.example'], ProfileIdentity::parseNameAndHost('bob@mastodon.example'));
+        self::assertNull(ProfileIdentity::parseNameAndHost('bob'));
+        self::assertNull(ProfileIdentity::parseNameAndHost('bob@a.example@b.example'));
+    }
+
+    public function testARoundTripIgnoresCaseAndNeedsAParsedIdentity(): void
+    {
+        self::assertTrue(ProfileIdentity::isRoundTrip('bob.bsky.social', 'Bob.bsky.social'));
+        self::assertFalse(ProfileIdentity::isRoundTrip('bob.bsky.social', 'carol.bsky.social'));
+        self::assertFalse(ProfileIdentity::isRoundTrip(null, ''));
+    }
 }

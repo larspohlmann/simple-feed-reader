@@ -7,6 +7,7 @@ namespace App\Service\Social\Social\ProfileFeedRule;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Bluesky\Support\BlueskyActorKey;
 use App\Service\Social\Social\Support\BlueskyProfileFeed;
+use App\Service\Social\Social\Support\ProfileIdentity;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Bluesky->value)]
@@ -17,9 +18,8 @@ final readonly class BlueskyProfileFeedRule implements ProfileFeedRuleInterface
     public function buildFeedUrl(string $identity): ?string
     {
         $url = BlueskyProfileFeed::buildUrl($identity);
-        $builtIdentity = BlueskyProfileFeed::parseIdentity($url);
 
-        return null !== $builtIdentity && 0 === strcasecmp($builtIdentity, $identity) ? $url : null;
+        return ProfileIdentity::isRoundTrip(BlueskyProfileFeed::parseIdentity($url), $identity) ? $url : null;
     }
 
     public function parseIdentity(string $feedUrl): ?string

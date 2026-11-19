@@ -28,7 +28,7 @@ final class AbsoluteHttpUrl
         return null !== $absolute && mb_strlen($absolute) <= $maxLength ? $absolute : null;
     }
 
-    /** @return array{host: string, path: string}|null the host lower-cased; null for a URL that is not http(s) */
+    /** @return array{host: string, path: string}|null the host lower-cased; null for a non-http(s) URL or one without a host */
     public static function parseHostAndPath(string $url): ?array
     {
         $parts = parse_url($url);

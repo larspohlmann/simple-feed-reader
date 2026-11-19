@@ -180,7 +180,6 @@ final class ProfileFeedsTest extends TestCase
         yield 'a Lemmy user feed' => ['https://lemmy.world/feeds/u/sam.xml', SocialNetwork::Lemmy];
     }
 
-    /** The networks were once tried in code order; a rule iterator promises none, so no URL may have two owners. */
     #[DataProvider('profileFeedUrls')]
     public function testExactlyOneRuleClaimsAProfileFeed(string $url, SocialNetwork $owner): void
     {

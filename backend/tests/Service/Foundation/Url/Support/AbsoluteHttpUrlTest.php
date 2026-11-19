@@ -62,4 +62,23 @@ final class AbsoluteHttpUrlTest extends TestCase
         self::assertNull(AbsoluteHttpUrl::httpsOrNull('77'));
         self::assertNull(AbsoluteHttpUrl::httpsOrNull(null));
     }
+
+    public function testHostAndPathAreReadFromAWebUrlWithTheHostLowerCased(): void
+    {
+        self::assertSame(
+            ['host' => 'example.org', 'path' => '/A/b'],
+            AbsoluteHttpUrl::parseHostAndPath('HTTPS://Example.ORG/A/b?q=1'),
+        );
+        $bare = AbsoluteHttpUrl::parseHostAndPath('http://example.org');
+
+        self::assertSame(['host' => 'example.org', 'path' => ''], $bare);
+    }
+
+    public function testHostAndPathAreNullForAUrlWithoutAHostOrAWebScheme(): void
+    {
+        self::assertNull(AbsoluteHttpUrl::parseHostAndPath('https:/a/b'));
+        self::assertNull(AbsoluteHttpUrl::parseHostAndPath('https:///a/b'));
+        self::assertNull(AbsoluteHttpUrl::parseHostAndPath('ftp://example.org/a'));
+        self::assertNull(AbsoluteHttpUrl::parseHostAndPath('//example.org/a'));
+    }
 }

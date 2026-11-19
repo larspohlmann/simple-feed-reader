@@ -23,10 +23,10 @@ final readonly class FeedNetworkListener
 
     public function preFlush(Feed $feed): void
     {
-        $feed->classifyAs($this->networkOf($feed));
+        $feed->classifyAs($this->findNetwork($feed));
     }
 
-    private function networkOf(Feed $feed): ?SocialNetwork
+    private function findNetwork(Feed $feed): ?SocialNetwork
     {
         if (SourceFormat::isSaved($feed->getSourceFormat())) {
             return SavedFeedUrl::networkOf($feed->getUrl());

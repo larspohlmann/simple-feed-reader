@@ -33,7 +33,7 @@ final class Version20261114160000 extends AbstractMigration
         );
         $lemmyIds = [];
         foreach ($candidates as $candidate) {
-            if (SocialNetwork::Lemmy === self::networkOf($candidate['url'], $candidate['source_format'])) {
+            if (SocialNetwork::Lemmy === self::findNetwork($candidate['url'], $candidate['source_format'])) {
                 $lemmyIds[] = (int) $candidate['id'];
             }
         }
@@ -49,17 +49,17 @@ final class Version20261114160000 extends AbstractMigration
         $this->addSql("UPDATE feed SET network = NULL WHERE network = 'lemmy' AND source_format = 'xml'");
     }
 
-    private static function networkOf(string $url, string $sourceFormat): ?SocialNetwork
+    private static function findNetwork(string $url, string $sourceFormat): ?SocialNetwork
     {
         if (SourceFormat::isSaved($sourceFormat)) {
             return SavedFeedUrl::networkOf($url);
         }
         $privateAddress = SourceFormat::isSocial($sourceFormat) ? SocialFeedUrl::addressOf($url) : null;
 
-        return $privateAddress->network ?? self::profileFeedNetworkOf($url);
+        return $privateAddress->network ?? self::findProfileFeedNetwork($url);
     }
 
-    private static function profileFeedNetworkOf(string $url): ?SocialNetwork
+    private static function findProfileFeedNetwork(string $url): ?SocialNetwork
     {
         return match (true) {
             null !== BlueskyProfileFeed::parseIdentity($url) => SocialNetwork::Bluesky,
