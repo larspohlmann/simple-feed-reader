@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\Support;
 
+use App\Entity\DiscussionCounts;
 use App\Service\Social\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Bluesky\Support\AtPostUri;
 use App\Service\Social\Bluesky\Support\BlueskyRichText;
@@ -120,7 +121,7 @@ final class BlueskyTimelinePage
         $author = $post->node('author');
         $text = BlueskyRichText::asHtml($record->text('text') ?? '', $record->nodes('facets'));
 
-        return new ParsedEntryModel(
+        return (new ParsedEntryModel(
             guid: $uri,
             url: $url,
             headline: EntryTitle::of(null, $text),
@@ -131,7 +132,7 @@ final class BlueskyTimelinePage
             authorUrl: BlueskyAuthor::profile($author),
             authorAvatarUrl: BlueskyAuthor::avatar($author),
             statedLanguage: $record->node('langs')->string('0'),
-        );
+        ))->withDiscussionCounts(DiscussionCounts::of(null, $post->int('replyCount')));
     }
 
     /** A repost lands in the timeline when it was reposted, not when the original was written. */

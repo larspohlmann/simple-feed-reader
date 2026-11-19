@@ -92,6 +92,22 @@ final class BlueskyTimelinePageTest extends TestCase
         self::assertFalse($uncounted->knownShares->hasRepliesFor(self::POST_URI));
     }
 
+    public function testAPostCarriesItsReplyCountAsItsCommentCountAndNoScore(): void
+    {
+        $counts = BlueskyTimelinePage::of([self::item(post: ['replyCount' => 4])], self::ALICE)
+            ->parsed->entries[0]->discussionCounts;
+
+        self::assertSame(4, $counts->commentCount);
+        self::assertNull($counts->score);
+    }
+
+    public function testAPostWithoutAReplyCountHasNoCommentCount(): void
+    {
+        $entry = BlueskyTimelinePage::of([self::item()], self::ALICE)->parsed->entries[0];
+
+        self::assertNull($entry->discussionCounts->commentCount);
+    }
+
     public function testARepostShowsTheOriginalWithATrailingAttributionAtTheRepostTime(): void
     {
         $item = self::item(['reason' => [
