@@ -19,13 +19,16 @@
   </app-field>
 }
 <app-field [label]="'reader.composer.title' | transloco">
-  <input
+  <textarea
+    class="title"
+    rows="2"
     [id]="controlId('title')"
     [attr.aria-describedby]="controlId('title-counter')"
     [value]="lane().title()"
     [disabled]="disabled()"
+    (keydown.enter)="$event.preventDefault()"
     (input)="writeTitle($event)"
-  />
+  ></textarea>
 </app-field>
 <p
   class="title-counter"
