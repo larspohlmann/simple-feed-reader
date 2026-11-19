@@ -522,6 +522,20 @@ final class SocialImporterTest extends DbTestCase
         self::assertNull($this->feedAt(sprintf('social:bluesky:%d:author:did:plc:rusty', $account->requireId())));
     }
 
+    public function testALemmyImportTreatsNoFollowAsHidden(): void
+    {
+        $account = $this->storedAccount(SocialAccounts::lemmyOf($this->user));
+
+        $result = $this->importer()->import($account, new SocialImportModel(
+            [new SocialImportFeedModel('rss@feddit.example', 'RSS')],
+            [],
+        ));
+
+        self::assertSame(1, $result->imported);
+        self::assertNotNull($this->feedAt('https://feddit.example/feeds/c/rss.xml'));
+        self::assertSame([], $this->hiddenProfiles()->asked);
+    }
+
     private function hiddenProfiles(): StubHiddenProfiles
     {
         $hiddenProfiles = self::getContainer()->get(StubHiddenProfiles::class);

@@ -11,6 +11,7 @@ use App\Repository\SubscriptionDisplayTitle;
 use App\Repository\SubscriptionRepository;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\ImportRule\ImportRuleInterface;
 use App\Service\Social\Social\Model\CollectionCandidateModel;
 use App\Service\Social\Social\Model\ImportCandidateModel;
 use App\Service\Social\Social\Model\ImportCandidateState;
@@ -22,8 +23,6 @@ use App\Service\Social\Social\Model\SocialCollectionModel;
 use App\Service\Social\Social\Pass\FollowMatching;
 use App\Service\Social\Social\SocialCandidates\SocialCandidatesInterface;
 use App\Service\Social\Social\Support\CandidateOrder;
-use App\Service\Social\Social\Support\BlueskyActor;
-use App\Service\Social\Social\Support\SocialFeedUrl;
 
 final readonly class ImportCandidates
 {
@@ -36,6 +35,7 @@ final readonly class ImportCandidates
         private FollowAvatarCache $followAvatars,
         private ProfileFeeds $profileFeeds,
         private PrivateFeedRules $privateFeedRules,
+        private ImportRules $importRules,
     ) {
     }
 
@@ -46,14 +46,14 @@ final readonly class ImportCandidates
     public function forAccount(SocialAccount $account): ImportCandidatesModel
     {
         $network = $this->networkCandidatesOf($account);
-        $this->followAvatars->remember($account, $network->follows);
+        $importRule = $this->importRules->selectRule($account->getNetwork());
+        if ($importRule->allowsFollowAvatarCache()) {
+            $this->followAvatars->remember($account, $network->follows);
+        }
         $follows = $this->followMatcher->match(
-            new FollowMatching(
-                $account->getNetwork(),
-                $this->profileFeeds->selectRule($account->getNetwork()),
-                $network->follows,
-            ),
-            $this->profileFeedsOf($account),
+            new FollowMatching($this->profileFeeds->selectRule($account->getNetwork()), $importRule, $network->follows),
+            $importRule,
+            $this->profileFeedsOf($account, $importRule),
         );
         $subscribed = $this->privateFeedSubscriptionsOf($account);
 
@@ -144,15 +144,11 @@ final readonly class ImportCandidates
     }
 
     /** @return list<ProfileFeedSubscriptionModel> */
-    private function profileFeedsOf(SocialAccount $account): array
+    private function profileFeedsOf(SocialAccount $account, ImportRuleInterface $importRule): array
     {
         $profileFeeds = [];
-        $network = $account->getNetwork();
-        $rule = $this->profileFeeds->selectRule($network);
         foreach ($this->subscriptions->findFeedSummariesForUser($account->getUser()->requireId()) as $subscription) {
-            $author = SocialFeedUrl::parseAuthor($network, $subscription['feedUrl']);
-            $identity = $rule->parseIdentity($subscription['feedUrl'])
-                ?? (null !== $author && BlueskyActor::isDid($author) ? $author : null);
+            $identity = $importRule->parseFollowedIdentity($subscription['feedUrl']);
             if (null === $identity) {
                 continue;
             }

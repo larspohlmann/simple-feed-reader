@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\Pass;
 
-use App\Enum\SocialNetwork;
-use App\Service\Social\Bluesky\Support\BlueskyActorKey;
+use App\Service\Social\Social\ImportRule\ImportRuleInterface;
 use App\Service\Social\Social\Model\FollowedAccountModel;
 use App\Service\Social\Social\Model\ImportCandidateModel;
 use App\Service\Social\Social\Model\ProfileFeedSubscriptionModel;
@@ -28,8 +27,8 @@ final class FollowMatching
 
     /** @param list<FollowedAccountModel> $follows */
     public function __construct(
-        private readonly SocialNetwork $network,
         private readonly ProfileFeedRuleInterface $profileFeedRule,
+        private readonly ImportRuleInterface $importRule,
         array $follows,
     ) {
         $this->follows = self::firstOfEachIdentity($follows);
@@ -43,23 +42,19 @@ final class FollowMatching
         }
     }
 
-    /** @return list<ProfileFeedSubscriptionModel> leftover Bluesky feeds keyed by a handle rather than a DID */
-    public function unmatchedHandles(): array
+    /** @return list<ProfileFeedSubscriptionModel> leftover feeds keyed by an identity the network can still resolve */
+    public function unresolvedProfileFeeds(): array
     {
-        if (SocialNetwork::Bluesky !== $this->network) {
-            return [];
-        }
-
         return array_values(array_filter(
             $this->unmatched,
-            static fn (ProfileFeedSubscriptionModel $profileFeed): bool
-                => !BlueskyActorKey::isDid($profileFeed->identity),
+            fn (ProfileFeedSubscriptionModel $profileFeed): bool
+                => !$this->importRule->isResolvedIdentity($profileFeed->identity),
         ));
     }
 
-    public function claimAs(ProfileFeedSubscriptionModel $profileFeed, string $did): void
+    public function claimAs(ProfileFeedSubscriptionModel $profileFeed, string $resolvedIdentity): void
     {
-        if ($this->claim($profileFeed, $did)) {
+        if ($this->claim($profileFeed, $resolvedIdentity)) {
             unset($this->unmatched[$profileFeed->subscriptionId]);
         }
     }

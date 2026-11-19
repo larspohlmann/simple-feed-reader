@@ -5,6 +5,16 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Enum\SocialNetwork;
+use App\Service\Outbound\Fetch\IpValidator;
+use App\Service\Outbound\Fetch\UrlGuard;
+use App\Service\Social\Social\BlueskyApiClient;
+use App\Service\Social\Social\BlueskyIdentityResolver;
+use App\Service\Social\Social\HiddenImportFollows;
+use App\Service\Social\Social\HiddenProfiles\HiddenProfilesInterface;
+use App\Service\Social\Social\ImportRule\BlueskyImportRule;
+use App\Service\Social\Social\ImportRule\LemmyImportRule;
+use App\Service\Social\Social\ImportRule\MastodonImportRule;
+use App\Service\Social\Social\ImportRules;
 use App\Service\Social\Social\PostAddressRule\BlueskyPostAddressRule;
 use App\Service\Social\Social\PostAddressRule\LemmyPostAddressRule;
 use App\Service\Social\Social\PostAddressRule\MastodonPostAddressRule;
@@ -17,7 +27,9 @@ use App\Service\Social\Social\ProfileFeedRule\LemmyProfileFeedRule;
 use App\Service\Social\Social\ProfileFeedRule\MastodonProfileFeedRule;
 use App\Service\Social\Social\ProfileFeeds;
 use App\Service\Social\Social\SocialPostAddresses;
+use App\Service\Social\Social\TolerantHiddenProfiles;
 use Psr\Container\ContainerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 
 /** The per-network rule pickers over their real adapters, as the container wires them. */
@@ -49,6 +61,22 @@ final class SocialRuleWiring
             SocialNetwork::Bluesky->value => new BlueskyPrivateFeedRule(),
             SocialNetwork::Mastodon->value => new MastodonPrivateFeedRule(),
             SocialNetwork::Lemmy->value => new LemmyPrivateFeedRule(),
+        ]));
+    }
+
+    /** Bluesky's handles resolve through $http; no follow is hidden unless $hiddenProfiles hides it. */
+    public static function importRules(RoutedHttpClient $http, HiddenProfilesInterface $hiddenProfiles): ImportRules
+    {
+        $guard = new UrlGuard(new StaticDnsResolver(['public.api.bsky.app' => ['93.184.216.34']]), new IpValidator());
+        $identities = new BlueskyIdentityResolver(
+            new BlueskyApiClient(FetchWiring::patientApiClient($http->client(), $guard)),
+        );
+        $hiddenFollows = new HiddenImportFollows(new TolerantHiddenProfiles($hiddenProfiles, new NullLogger()));
+
+        return new ImportRules(self::locatorOf([
+            SocialNetwork::Bluesky->value => new BlueskyImportRule($hiddenFollows, $identities),
+            SocialNetwork::Mastodon->value => new MastodonImportRule(),
+            SocialNetwork::Lemmy->value => new LemmyImportRule(),
         ]));
     }
 

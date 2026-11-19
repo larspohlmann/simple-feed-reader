@@ -10,11 +10,7 @@ use App\Entity\User;
 use App\Enum\SocialAccountStatus;
 use App\Enum\SocialFeedKind;
 use App\Repository\SubscriptionRepository;
-use App\Service\Outbound\Fetch\IpValidator;
-use App\Service\Outbound\Fetch\UrlGuard;
 use App\Service\Social\Social\ActingAccountGuard;
-use App\Service\Social\Social\BlueskyApiClient;
-use App\Service\Social\Social\BlueskyIdentityResolver;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\FollowAvatarCache;
@@ -29,14 +25,13 @@ use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Service\Social\Social\Model\SocialCollectionModel;
 use App\Service\Social\Social\SocialCandidates\SocialCandidatesInterface;
 use App\Tests\DbTestCase;
-use App\Tests\Support\FetchWiring;
 use App\Tests\Support\PrivateFeedsWiring;
 use App\Tests\Support\ProfileFeedSubscriptions;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\SocialRuleWiring;
-use App\Tests\Support\StaticDnsResolver;
+use App\Tests\Support\StubHiddenProfiles;
 use App\Tests\Support\StubSocialCandidates;
 use App\Tests\Support\UserFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -48,12 +43,14 @@ final class ImportCandidatesTest extends DbTestCase
 {
     private User $user;
     private FollowAvatarCache $followAvatars;
+    private RoutedHttpClient $http;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->followAvatars = new FollowAvatarCache(new ArrayAdapter());
+        $this->http = new RoutedHttpClient([]);
 
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
@@ -79,20 +76,16 @@ final class ImportCandidatesTest extends DbTestCase
     {
         $subscriptions = self::getContainer()->get(SubscriptionRepository::class);
         self::assertInstanceOf(SubscriptionRepository::class, $subscriptions);
-        $guard = new UrlGuard(new StaticDnsResolver([]), new IpValidator());
-        $resolver = new BlueskyIdentityResolver(
-            new BlueskyApiClient(FetchWiring::patientApiClient((new RoutedHttpClient([]))->client(), $guard)),
-        );
-
         return new ImportCandidates(
             $network,
             $subscriptions,
-            new FollowMatcher($resolver),
+            new FollowMatcher(),
             SocialFeeds::repository($this->entityManager),
             new ActingAccountGuard($this->entityManager),
             $this->followAvatars,
             SocialRuleWiring::profileFeeds(),
             SocialRuleWiring::privateFeedRules(),
+            SocialRuleWiring::importRules($this->http, new StubHiddenProfiles()),
         );
     }
 
@@ -371,6 +364,33 @@ final class ImportCandidatesTest extends DbTestCase
                 $candidates->lists,
             ),
         );
+    }
+
+    public function testAMastodonImportResolvesNoHandleAndCachesNoAvatar(): void
+    {
+        $account = $this->storedAccount(SocialAccounts::mastodonOf($this->user));
+        $gone = $this->subscribe('https://other.example/@dave.rss');
+        $network = new StubSocialCandidates(new NetworkCandidatesModel(
+            [new FollowedAccountModel(
+                'bob@mastodon.example',
+                '@bob@mastodon.example',
+                null,
+                'https://mastodon.example/@bob.rss',
+                'https://cdn.test/bob.jpg',
+            )],
+            [],
+            [],
+            false,
+        ));
+
+        $follows = $this->importCandidates($network)->forAccount($account)->follows;
+
+        self::assertSame(
+            [['@bob@mastodon.example', 'new', null], ['@dave@other.example', 'no_longer_followed', $gone->requireId()]],
+            self::summary($follows),
+        );
+        self::assertSame([], $this->http->requests);
+        self::assertNull($this->followAvatars->find($account)->avatarOf('bob@mastodon.example'));
     }
 
     public function testALemmyAccountOffersItsThreeTimelines(): void

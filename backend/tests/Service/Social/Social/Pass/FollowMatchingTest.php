@@ -8,7 +8,9 @@ use App\Enum\SocialNetwork;
 use App\Service\Social\Social\Model\ImportCandidateModel;
 use App\Service\Social\Social\Model\ProfileFeedSubscriptionModel;
 use App\Service\Social\Social\Pass\FollowMatching;
+use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialRuleWiring;
+use App\Tests\Support\StubHiddenProfiles;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -22,7 +24,15 @@ final class FollowMatchingTest extends TestCase
         $matching->offer($byDid);
         $matching->offer($byHandle);
 
-        self::assertSame([$byHandle], $matching->unmatchedHandles());
+        self::assertSame([$byHandle], $matching->unresolvedProfileFeeds());
+    }
+
+    public function testALeftoverMastodonFeedIsNeverUnresolved(): void
+    {
+        $matching = self::matching(SocialNetwork::Mastodon);
+        $matching->offer(self::profileFeed(1, 'ada@mastodon.example'));
+
+        self::assertSame([], $matching->unresolvedProfileFeeds());
     }
 
     /** @return iterable<string, array{SocialNetwork, string, string}> */
@@ -51,7 +61,11 @@ final class FollowMatchingTest extends TestCase
 
     private static function matching(SocialNetwork $network): FollowMatching
     {
-        return new FollowMatching($network, SocialRuleWiring::profileFeeds()->selectRule($network), []);
+        return new FollowMatching(
+            SocialRuleWiring::profileFeeds()->selectRule($network),
+            SocialRuleWiring::importRules(new RoutedHttpClient([]), new StubHiddenProfiles())->selectRule($network),
+            [],
+        );
     }
 
     private static function profileFeed(int $subscriptionId, string $identity): ProfileFeedSubscriptionModel

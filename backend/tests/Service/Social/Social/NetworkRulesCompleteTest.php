@@ -7,6 +7,7 @@ namespace App\Tests\Service\Social\Social;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Social\AccountVerifier\AccountVerifierInterface;
 use App\Service\Social\Social\AccountVerifier\NetworkAccountVerifier;
+use App\Service\Social\Social\ImportRules;
 use App\Service\Social\Social\PrivateFeedRules;
 use App\Service\Social\Social\ProfileFeeds;
 use App\Service\Social\Social\SocialPostAddresses;
@@ -60,5 +61,6 @@ final class NetworkRulesCompleteTest extends KernelTestCase
         yield 'post addresses' => [SocialPostAddresses::class];
         yield 'profile feeds' => [ProfileFeeds::class];
         yield 'private feeds' => [PrivateFeedRules::class];
+        yield 'imports' => [ImportRules::class];
     }
 }

@@ -65,13 +65,6 @@ final class FollowAvatarCacheTest extends TestCase
         self::assertTrue($this->pool->hasItem('follow_avatars.3'));
     }
 
-    public function testAMastodonAccountLeavesNothingInThePool(): void
-    {
-        $this->cache->remember(self::withId(SocialAccounts::mastodon(), 5), [self::follow('bob@mastodon.example')]);
-
-        self::assertFalse($this->pool->hasItem('follow_avatars.5'));
-    }
-
     public function testADamagedEntryFindsNone(): void
     {
         $item = $this->pool->getItem('follow_avatars.3');
