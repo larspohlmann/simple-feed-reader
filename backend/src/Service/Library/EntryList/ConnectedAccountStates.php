@@ -18,8 +18,8 @@ use App\Repository\SocialLikeRepository;
 use App\Service\Content\Comments\Support\LemmyPostAddress;
 use App\Service\Library\EntryList\Model\ConnectedAccountStatesModel;
 use App\Service\Social\Social\Model\SocialPostAddressModel;
+use App\Service\Social\Social\ProfileFeeds;
 use App\Service\Social\Social\SocialPostAddresses;
-use App\Service\Social\Lemmy\Support\LemmyProfileFeed;
 
 /** What a page of entries looks like to the reader's connected accounts: likes, own posts and Lemmy votes. */
 final readonly class ConnectedAccountStates
@@ -30,6 +30,7 @@ final readonly class ConnectedAccountStates
         private DiscussionVoteRepository $discussionVotes,
         private EntryLemmyPostRepository $lemmyPosts,
         private SocialPostAddresses $postAddresses,
+        private ProfileFeeds $profileFeeds,
     ) {
     }
 
@@ -45,7 +46,7 @@ final readonly class ConnectedAccountStates
 
         $lemmyStates = [];
         foreach ($entries as $entryId => $entry) {
-            $lemmy = self::lemmyOf($entry, $lemmyPosts[$entryId] ?? null, $votes[$entryId] ?? null);
+            $lemmy = $this->lemmyOf($entry, $lemmyPosts[$entryId] ?? null, $votes[$entryId] ?? null);
             if (null !== $lemmy) {
                 $lemmyStates[$entryId] = $lemmy;
             }
@@ -165,13 +166,14 @@ final readonly class ConnectedAccountStates
         return $addresses;
     }
 
-    private static function lemmyOf(Entry $entry, ?EntryLemmyPost $post, ?VoteScore $myVote): ?EntryListRowLemmy
+    private function lemmyOf(Entry $entry, ?EntryLemmyPost $post, ?VoteScore $myVote): ?EntryListRowLemmy
     {
         if (null === $post && null === $myVote) {
             return null;
         }
         $community = $post?->getCommunity();
-        $feedIdentity = LemmyProfileFeed::parseIdentity($entry->getFeed()->getUrl());
+        $feedUrl = $entry->getFeed()->getUrl();
+        $feedIdentity = $this->profileFeeds->selectRule(SocialNetwork::Lemmy)->parseIdentity($feedUrl);
         $inOwnFeed = null !== $feedIdentity && strtolower($feedIdentity) === $community?->identity;
 
         return new EntryListRowLemmy($post?->getScore(), $inOwnFeed ? null : $community, $myVote);

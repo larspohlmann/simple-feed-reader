@@ -10,6 +10,7 @@ use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Bluesky\BlueskyNotificationContextSource;
 use App\Tests\Support\NotificationRows;
+use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -19,6 +20,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class BlueskyNotificationContextSourceTest extends TestCase
 {
+    use ReadsFixtures;
+
     private const string MINE = 'at://did:plc:alice/app.bsky.feed.post/3lmine';
     private const string ROOT = 'at://did:plc:zoe/app.bsky.feed.post/3lroot';
     private const string OWN_ROOT = 'at://did:plc:alice/app.bsky.feed.post/3lownroot';
@@ -29,7 +32,7 @@ final class BlueskyNotificationContextSourceTest extends TestCase
 
     public function testAddsTheAnsweredPostAndTheThreadStart(): void
     {
-        $http = $this->http(self::posts());
+        $http = $this->http($this->posts());
 
         $contexts = $this->source($http)->contextsOf(
             SocialApiWiring::blueskyAccount(),
@@ -62,7 +65,7 @@ final class BlueskyNotificationContextSourceTest extends TestCase
 
     public function testNoThreadLineForYourOwnThreadOrADirectReplyToItsStart(): void
     {
-        $http = $this->http(self::posts());
+        $http = $this->http($this->posts());
 
         $contexts = $this->source($http)->contextsOf(SocialApiWiring::blueskyAccount(), [
             self::row(SocialNotificationKind::Reply, new ContextReferenceModel(self::MINE, self::OWN_ROOT)),
@@ -107,7 +110,7 @@ final class BlueskyNotificationContextSourceTest extends TestCase
 
     public function testARowWithNeitherPostFoundGetsNoContext(): void
     {
-        $contexts = $this->source($this->http(self::posts()))->contextsOf(SocialApiWiring::blueskyAccount(), [
+        $contexts = $this->source($this->http($this->posts()))->contextsOf(SocialApiWiring::blueskyAccount(), [
             self::row(SocialNotificationKind::Reply, new ContextReferenceModel(self::MINE)),
             self::row(
                 SocialNotificationKind::Reply,
@@ -121,7 +124,7 @@ final class BlueskyNotificationContextSourceTest extends TestCase
 
     public function testTwoRowsAnsweringOnePostAskForItOnce(): void
     {
-        $http = $this->http(self::posts());
+        $http = $this->http($this->posts());
 
         $contexts = $this->source($http)->contextsOf(SocialApiWiring::blueskyAccount(), [
             self::row(SocialNotificationKind::Reply, new ContextReferenceModel(self::MINE)),
@@ -135,7 +138,7 @@ final class BlueskyNotificationContextSourceTest extends TestCase
 
     public function testAQuoteGetsYourQuotedPost(): void
     {
-        $contexts = $this->source($this->http(self::posts()))->contextsOf(
+        $contexts = $this->source($this->http($this->posts()))->contextsOf(
             SocialApiWiring::blueskyAccount(),
             [self::row(SocialNotificationKind::Quote, new ContextReferenceModel(self::QUOTED))],
         );
@@ -227,9 +230,9 @@ final class BlueskyNotificationContextSourceTest extends TestCase
         self::assertSame([], $contexts);
     }
 
-    private static function posts(): string
+    private function posts(): string
     {
-        return (string) file_get_contents(__DIR__ . '/../../../Fixtures/Bluesky/notifications-context-posts.json');
+        return $this->fixture('Bluesky/notifications-context-posts.json');
     }
 
     private static function lookup(string ...$uris): string

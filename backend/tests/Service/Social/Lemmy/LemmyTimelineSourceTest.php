@@ -14,6 +14,7 @@ use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Lemmy\LemmyPrivateFeedRule;
 use App\Service\Social\Lemmy\LemmyTimelineSource;
 use App\Tests\Support\PrivateFeeds;
+use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;
@@ -23,8 +24,10 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class LemmyTimelineSourceTest extends TestCase
 {
-    private const string POST_LIST = __DIR__ . '/../../../Fixtures/lemmy/post-list.json';
-    private const string FOUND = __DIR__ . '/../../../Fixtures/lemmy/search.json';
+    use ReadsFixtures;
+
+    private const string POST_LIST = 'lemmy/post-list.json';
+    private const string FOUND = 'lemmy/search.json';
     private const string SEARCH = 'GET https://lemmy.example/api/v3/search'
         . '?q=rss%20reader&type_=Posts&sort=New&listing_type=All&limit=50';
     private const string LISTING = 'GET https://lemmy.example/api/v3/post/list?type_=%s&sort=New&limit=50';
@@ -102,7 +105,7 @@ final class LemmyTimelineSourceTest extends TestCase
     {
         $source = self::source();
         $home = self::socialFeed(SocialFeedKind::Home);
-        $answer = new ApiResponseModel(Response::HTTP_OK, (string) file_get_contents(self::POST_LIST), []);
+        $answer = new ApiResponseModel(Response::HTTP_OK, $this->fixture(self::POST_LIST), []);
 
         $page = $source->pageOf($home, [$source->accepted($home, FetchOutcomeModel::answered($answer))]);
 
@@ -144,7 +147,7 @@ final class LemmyTimelineSourceTest extends TestCase
     {
         $source = self::source();
         $search = self::socialFeed(SocialFeedKind::Search, 'bold');
-        $answer = new ApiResponseModel(Response::HTTP_OK, (string) file_get_contents(self::FOUND), []);
+        $answer = new ApiResponseModel(Response::HTTP_OK, $this->fixture(self::FOUND), []);
         $accepted = $source->accepted($search, FetchOutcomeModel::answered($answer));
 
         $page = $source->pageOf($search, [$accepted, $accepted]);

@@ -8,6 +8,7 @@ use App\Service\Social\Lemmy\LemmyCandidateSource;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Lemmy\LemmyCommunities;
 use App\Service\Social\Social\Model\CollectedItemsModel;
+use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;
@@ -17,7 +18,9 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class LemmyCandidateSourceTest extends TestCase
 {
-    private const string FIXTURE = __DIR__ . '/../../../Fixtures/lemmy/community-list.json';
+    use ReadsFixtures;
+
+    private const string FIXTURE = 'lemmy/community-list.json';
     private const string PAGE = 'GET https://lemmy.example/api/v3/community/list'
         . '?type_=Subscribed&sort=Old&limit=50&page=';
     private const int FULL_PAGE = 50;
@@ -27,9 +30,9 @@ final class LemmyCandidateSourceTest extends TestCase
         return new LemmyCandidateSource(new LemmyCommunities(SocialApiWiring::lemmyAccountApi($http->client())));
     }
 
-    private static function fixture(): MockResponse
+    private function buildResponse(): MockResponse
     {
-        return new MockResponse((string) file_get_contents(self::FIXTURE));
+        return new MockResponse($this->fixture(self::FIXTURE));
     }
 
     /** @param \Closure(int): int $sizeOfPage */
@@ -60,7 +63,7 @@ final class LemmyCandidateSourceTest extends TestCase
 
     public function testTheSubscribedCommunitiesAreTheFollows(): void
     {
-        $http = new RoutedHttpClient([self::PAGE . '1' => self::fixture()]);
+        $http = new RoutedHttpClient([self::PAGE . '1' => $this->buildResponse()]);
 
         $candidates = $this->source($http)->candidates(SocialAccounts::lemmyOf(SocialAccounts::owner()));
 
@@ -91,7 +94,7 @@ final class LemmyCandidateSourceTest extends TestCase
         );
         $http = new RoutedHttpClient([
             self::PAGE . '1' => new MockResponse(json_encode(['communities' => $full], \JSON_THROW_ON_ERROR)),
-            self::PAGE . '2' => self::fixture(),
+            self::PAGE . '2' => $this->buildResponse(),
         ]);
 
         $candidates = $this->source($http)->candidates(SocialAccounts::lemmyOf(SocialAccounts::owner()));

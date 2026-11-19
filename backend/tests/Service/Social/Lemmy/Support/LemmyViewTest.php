@@ -8,34 +8,37 @@ use App\Enum\VoteScore;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Lemmy\Support\LemmyView;
+use App\Tests\Support\ReadsFixtures;
 use PHPUnit\Framework\TestCase;
 
 final class LemmyViewTest extends TestCase
 {
-    private const string FIXTURES = __DIR__ . '/../../../../Fixtures/lemmy/';
+    use ReadsFixtures;
+
+    private const string FIXTURES = 'lemmy/';
 
     public function testAVoteOfOneIsUp(): void
     {
-        $view = self::post(['my_vote' => 1]);
+        $view = $this->post(['my_vote' => 1]);
 
         self::assertSame(VoteScore::Up, LemmyView::ofPost($view)->myVote);
     }
 
     public function testNoVoteIsNone(): void
     {
-        self::assertSame(VoteScore::None, LemmyView::ofPost(self::post([]))->myVote);
+        self::assertSame(VoteScore::None, LemmyView::ofPost($this->post([]))->myVote);
     }
 
     public function testALockedPostIsLocked(): void
     {
-        $view = self::post(['post' => ['id' => 3, 'name' => 'T', 'locked' => true]]);
+        $view = $this->post(['post' => ['id' => 3, 'name' => 'T', 'locked' => true]]);
 
         self::assertTrue(LemmyView::ofPost($view)->isLocked);
     }
 
     public function testThePostReadsItsAuthorAndPreview(): void
     {
-        $target = LemmyView::ofPost(self::post([]));
+        $target = LemmyView::ofPost($this->post([]));
 
         self::assertSame(3, $target->postId);
         self::assertNull($target->commentId);
@@ -48,7 +51,7 @@ final class LemmyViewTest extends TestCase
 
     public function testAnAuthorHostIsLowerCased(): void
     {
-        $view = self::post(['creator' => ['name' => 'Ada', 'actor_id' => 'https://Origin.Example/u/Ada']]);
+        $view = $this->post(['creator' => ['name' => 'Ada', 'actor_id' => 'https://Origin.Example/u/Ada']]);
 
         self::assertSame('ada@origin.example', LemmyView::ofPost($view)->authorIdentity);
     }
@@ -62,7 +65,7 @@ final class LemmyViewTest extends TestCase
 
     public function testACommentReadsItsPostItsVoteAndItsText(): void
     {
-        $view = JsonNodeModel::of(self::fixture('resolve-comment.json'))->node('comment');
+        $view = JsonNodeModel::of($this->decodeFixture('resolve-comment.json'))->node('comment');
 
         $target = LemmyView::ofComment($view);
 
@@ -97,17 +100,17 @@ final class LemmyViewTest extends TestCase
     }
 
     /** @param array<string, mixed> $overrides */
-    private static function post(array $overrides): JsonNodeModel
+    private function post(array $overrides): JsonNodeModel
     {
-        $view = self::fixture('post-anonymous.json')['post_view'] ?? [];
+        $view = $this->decodeFixture('post-anonymous.json')['post_view'] ?? [];
 
         return JsonNodeModel::of(array_replace(\is_array($view) ? $view : [], $overrides));
     }
 
     /** @return array<array-key, mixed> */
-    private static function fixture(string $name): array
+    private function decodeFixture(string $name): array
     {
-        $decoded = json_decode((string) file_get_contents(self::FIXTURES . $name), true, flags: \JSON_THROW_ON_ERROR);
+        $decoded = json_decode($this->fixture(self::FIXTURES . $name), true, flags: \JSON_THROW_ON_ERROR);
 
         return \is_array($decoded) ? $decoded : [];
     }

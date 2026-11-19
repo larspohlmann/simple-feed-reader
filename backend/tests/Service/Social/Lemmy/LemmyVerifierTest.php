@@ -14,6 +14,7 @@ use App\Service\Social\Social\Model\SocialCredentialsModel;
 use App\Service\Social\Lemmy\LemmyVerifier;
 use App\Service\Social\Lemmy\Support\LemmyCredentials;
 use App\Tests\Support\FetchWiring;
+use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StaticDnsResolver;
@@ -24,14 +25,16 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class LemmyVerifierTest extends TestCase
 {
+    use ReadsFixtures;
+
     private const string LOGIN = 'POST https://lemmy.example/api/v3/user/login';
     private const string SITE = 'GET https://lemmy.example/api/v3/site';
-    private const string FIXTURES = __DIR__ . '/../../../Fixtures/lemmy/';
+    private const string FIXTURES = 'lemmy/';
     private const string TOKEN = 'test-jwt-not-a-real-token';
 
     public function testALoginVerifiesTheAccountAndKeepsTheToken(): void
     {
-        $http = $this->http(self::fixture('login.json'), self::fixture('site-logged-in.json'));
+        $http = $this->http($this->readFixture('login.json'), $this->readFixture('site-logged-in.json'));
 
         $account = $this->verifier($http)->verify($this->credentials());
 
@@ -46,7 +49,7 @@ final class LemmyVerifierTest extends TestCase
 
     public function testASecondFactorCodeRidesAlongOnTheLogin(): void
     {
-        $http = $this->http(self::fixture('login.json'), self::fixture('site-logged-in.json'));
+        $http = $this->http($this->readFixture('login.json'), $this->readFixture('site-logged-in.json'));
 
         $this->verifier($http)->verify(LemmyCredentials::buildCredentials('lemmy.example', 'lars', 'pw', '123456'));
 
@@ -83,7 +86,7 @@ final class LemmyVerifierTest extends TestCase
 
     public function testASiteWithoutAUserRefusesTheSession(): void
     {
-        $http = $this->http(self::fixture('login.json'), self::fixture('site-anonymous.json'));
+        $http = $this->http($this->readFixture('login.json'), $this->readFixture('site-anonymous.json'));
 
         $this->expectException(SocialCredentialsRejectedException::class);
 
@@ -95,9 +98,9 @@ final class LemmyVerifierTest extends TestCase
         $site = str_replace(
             'https://lemmy.example/u/lars',
             'https://other.example/u/lars',
-            self::fixture('site-logged-in.json'),
+            $this->readFixture('site-logged-in.json'),
         );
-        $http = $this->http(self::fixture('login.json'), $site);
+        $http = $this->http($this->readFixture('login.json'), $site);
 
         $this->expectException(SocialCredentialsRejectedException::class);
         $this->expectExceptionMessage('The Lemmy instance answered for an account on another instance.');
@@ -110,10 +113,10 @@ final class LemmyVerifierTest extends TestCase
         $site = str_replace(
             'https://lemmy.example/u/lars',
             'https://LEMMY.Example/u/lars',
-            self::fixture('site-logged-in.json'),
+            $this->readFixture('site-logged-in.json'),
         );
 
-        $account = $this->verifier($this->http(self::fixture('login.json'), $site))->verify($this->credentials());
+        $account = $this->verifier($this->http($this->readFixture('login.json'), $site))->verify($this->credentials());
 
         self::assertSame('lars@lemmy.example', $account->identity);
     }
@@ -146,13 +149,13 @@ final class LemmyVerifierTest extends TestCase
         return new LemmyVerifier(new LemmyApiClient(FetchWiring::patientApiClient($http->client(), $guard)));
     }
 
+    private function readFixture(string $name): string
+    {
+        return $this->fixture(self::FIXTURES . $name);
+    }
+
     private function credentials(): SocialCredentialsModel
     {
         return LemmyCredentials::buildCredentials('lemmy.example', 'lars', 'pw', null);
-    }
-
-    private static function fixture(string $name): string
-    {
-        return (string) file_get_contents(self::FIXTURES . $name);
     }
 }

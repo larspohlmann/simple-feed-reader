@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Social;
+namespace App\Tests\Service\Social\Mastodon;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
@@ -16,16 +16,18 @@ use App\Service\Social\Social\Model\ThreadPostModel;
 use App\Service\Social\Mastodon\MastodonPostResolver;
 use App\Service\Social\Mastodon\MastodonReplyThreadSource;
 use App\Tests\DbTestCase;
+use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SelfThreadEnrichers;
 use App\Tests\Support\SocialApiWiring;
-use PHPUnit\Framework\Assert;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class MastodonSelfThreadFoldTest extends DbTestCase
 {
+    use ReadsFixtures;
+
     private const string POST = 'https://mastodon.social/@Gargron/110';
     private const string PUBLIC_CONTEXT = 'GET https://mastodon.social/api/v1/statuses/110/context';
 
@@ -33,7 +35,9 @@ final class MastodonSelfThreadFoldTest extends DbTestCase
     {
         $clock = new MockClock('2026-10-16 12:00:00', 'UTC');
         $entry = $this->queuedEntry($clock->now());
-        $http = new RoutedHttpClient([self::PUBLIC_CONTEXT => new MockResponse(self::fixture())]);
+        $http = new RoutedHttpClient([
+            self::PUBLIC_CONTEXT => new MockResponse($this->fixture('social/mastodon-self-thread-context.json')),
+        ]);
         $accountApi = SocialApiWiring::mastodonAccountApi($http->client());
         $source = new MastodonReplyThreadSource(
             new MastodonPostResolver($accountApi),
@@ -63,13 +67,5 @@ final class MastodonSelfThreadFoldTest extends DbTestCase
         $this->entityManager->flush();
 
         return $entry;
-    }
-
-    private static function fixture(): string
-    {
-        $contents = file_get_contents(__DIR__ . '/../../../Fixtures/social/mastodon-self-thread-context.json');
-        Assert::assertIsString($contents);
-
-        return $contents;
     }
 }

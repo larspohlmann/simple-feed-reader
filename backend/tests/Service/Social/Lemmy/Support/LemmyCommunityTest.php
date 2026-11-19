@@ -6,15 +6,18 @@ namespace App\Tests\Service\Social\Lemmy\Support;
 
 use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Lemmy\Support\LemmyCommunity;
+use App\Tests\Support\ReadsFixtures;
 use PHPUnit\Framework\TestCase;
 
 final class LemmyCommunityTest extends TestCase
 {
-    private const string FIXTURE = __DIR__ . '/../../../../Fixtures/lemmy/community-list.json';
+    use ReadsFixtures;
 
-    private static function view(int $index): JsonNodeModel
+    private const string FIXTURE = 'lemmy/community-list.json';
+
+    private function view(int $index): JsonNodeModel
     {
-        $views = JsonNodeModel::of(json_decode((string) file_get_contents(self::FIXTURE), true))
+        $views = JsonNodeModel::of(json_decode($this->fixture(self::FIXTURE), true))
             ->listAt('communities');
         self::assertNotNull($views);
 
@@ -23,7 +26,7 @@ final class LemmyCommunityTest extends TestCase
 
     public function testACommunityReadsAsNameAtHostWithItsRssFeedTitleAndIcon(): void
     {
-        $follow = LemmyCommunity::follow(self::view(0));
+        $follow = LemmyCommunity::follow($this->view(0));
 
         self::assertNotNull($follow);
         self::assertSame('rss@feddit.example', $follow->identity);
@@ -35,7 +38,7 @@ final class LemmyCommunityTest extends TestCase
 
     public function testTheIdentityAndTheFeedAreLowerCased(): void
     {
-        $follow = LemmyCommunity::follow(self::view(1));
+        $follow = LemmyCommunity::follow($this->view(1));
 
         self::assertNotNull($follow);
         self::assertSame('linux@lemmy.example', $follow->identity);
@@ -57,7 +60,7 @@ final class LemmyCommunityTest extends TestCase
 
     public function testACommunityOnAPlainHttpInstanceIsLeftOut(): void
     {
-        self::assertNull(LemmyCommunity::follow(self::view(2)));
+        self::assertNull(LemmyCommunity::follow($this->view(2)));
     }
 
     public function testAViewWithoutANameIsLeftOut(): void

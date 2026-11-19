@@ -15,11 +15,14 @@ use App\Service\Social\BlueskyPost\BlueskyPendingEmbed;
 use App\Service\Foundation\Sanitize\EntrySanitizer;
 use App\Service\Foundation\Sanitize\TrailingBlankRemover;
 use App\Service\Social\Share\EntryShareClassifier;
+use App\Tests\Support\ReadsFixtures;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class EntryShareClassifierTest extends TestCase
 {
+    use ReadsFixtures;
+
     private const string HN_SITE = 'https://news.ycombinator.com/';
     private const string HN_ITEM = 'https://news.ycombinator.com/item?id=5';
     private const string HN_BODY = '<p>Article URL: '
@@ -310,7 +313,7 @@ final class EntryShareClassifierTest extends TestCase
 
     public function testAMastodonPostWhoseLinkTextIsSplitIntoSpansKeepsItsLinkCard(): void
     {
-        $body = (string) file_get_contents(__DIR__ . '/../../../Fixtures/Mastodon/discovery-week-post.html');
+        $body = $this->fixture('Mastodon/discovery-week-post.html');
 
         self::assertSame(ShareKind::Link, $this->classified(self::post($body))->getShareKind());
     }

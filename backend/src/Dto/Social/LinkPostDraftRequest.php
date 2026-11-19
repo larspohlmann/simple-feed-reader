@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Dto\Social;
 
 use App\Service\Social\Social\Model\PostDraftModel;
-use App\Service\Social\Mastodon\Support\MastodonVisibility;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class LinkPostDraftRequest
@@ -13,7 +12,7 @@ final readonly class LinkPostDraftRequest
     public function __construct(
         #[Assert\Length(max: 10000)]
         public string $text,
-        #[Assert\Choice(choices: MastodonVisibility::ALL)]
+        #[Assert\Choice(choices: PostDraftModel::VISIBILITIES)]
         public ?string $visibility = null,
         #[Assert\Length(max: 500)]
         public ?string $contentWarning = null,

@@ -16,6 +16,7 @@ use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Bluesky\BlueskyNotificationSource;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -26,6 +27,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class BlueskyNotificationSourceTest extends TestCase
 {
+    use ReadsFixtures;
+
     private const string PDS = 'https://pds.example.test';
     private const string UNREAD = 'GET ' . self::PDS . '/xrpc/app.bsky.notification.getUnreadCount';
     private const string LIST = 'GET ' . self::PDS . '/xrpc/app.bsky.notification.listNotifications?limit=50';
@@ -319,14 +322,9 @@ final class BlueskyNotificationSourceTest extends TestCase
         return $post;
     }
 
-    private static function list(): string
+    private function list(): string
     {
-        return self::fixture('notifications-list.json');
-    }
-
-    private static function fixture(string $name): string
-    {
-        return (string) file_get_contents(__DIR__ . '/../../../Fixtures/Bluesky/' . $name);
+        return $this->fixture('Bluesky/notifications-list.json');
     }
 
     /** @param list<string> $postUris */
@@ -340,10 +338,10 @@ final class BlueskyNotificationSourceTest extends TestCase
         return new RoutedHttpClient([
             'POST ' . self::PDS . '/xrpc/com.atproto.server.createSession'
                 => SocialApiWiring::blueskySessionAnswer('jwt'),
-            self::UNREAD => new MockResponse(self::fixture('notifications-unread.json')),
-            self::LIST => new MockResponse($list ?? self::list()),
+            self::UNREAD => new MockResponse($this->fixture('Bluesky/notifications-unread.json')),
+            self::LIST => new MockResponse($list ?? $this->list()),
             'GET ' . self::PDS . '/xrpc/app.bsky.feed.getPosts?' . $lookup => new MockResponse(
-                $posts ?? self::fixture('notifications-posts.json'),
+                $posts ?? $this->fixture('Bluesky/notifications-posts.json'),
             ),
         ]);
     }

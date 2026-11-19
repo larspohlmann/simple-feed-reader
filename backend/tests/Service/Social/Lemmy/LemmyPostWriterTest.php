@@ -20,6 +20,7 @@ use App\Service\Social\Social\Model\SocialPostModel;
 use App\Service\Social\Lemmy\LemmyPostWriter;
 use App\Service\Social\Social\StoredCredential;
 use App\Tests\Support\FetchWiring;
+use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StaticDnsResolver;
@@ -29,6 +30,8 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class LemmyPostWriterTest extends TestCase
 {
+    use ReadsFixtures;
+
     private const string COMMENT = 'POST https://lemmy.example/api/v3/comment';
     private const string POST = 'POST https://lemmy.example/api/v3/post';
     private const string ARTICLE = 'https://example.com/a';
@@ -36,7 +39,7 @@ final class LemmyPostWriterTest extends TestCase
 
     public function testAReplyToAPostIsACommentOnIt(): void
     {
-        $http = new RoutedHttpClient([self::COMMENT => self::created()]);
+        $http = new RoutedHttpClient([self::COMMENT => $this->created()]);
 
         $published = $this->writer($http)->reply(
             SocialPostModel::onLemmy($this->account(), '42', null),
@@ -50,7 +53,7 @@ final class LemmyPostWriterTest extends TestCase
 
     public function testAReplyToACommentNamesItsParent(): void
     {
-        $http = new RoutedHttpClient([self::COMMENT => self::created()]);
+        $http = new RoutedHttpClient([self::COMMENT => $this->created()]);
 
         $this->writer($http)->reply(
             SocialPostModel::onLemmy($this->account(), '990', '77'),
@@ -77,7 +80,7 @@ final class LemmyPostWriterTest extends TestCase
 
     public function testTenThousandCharactersFit(): void
     {
-        $http = new RoutedHttpClient([self::COMMENT => self::created()]);
+        $http = new RoutedHttpClient([self::COMMENT => $this->created()]);
 
         $this->writer($http)->reply(
             SocialPostModel::onLemmy($this->account(), '42', null),
@@ -265,11 +268,9 @@ final class LemmyPostWriterTest extends TestCase
         return new LemmyPostWriter(new LemmyAccountApi($client, new StoredCredential(SocialAccounts::cipher())));
     }
 
-    private static function created(): MockResponse
+    private function created(): MockResponse
     {
-        $fixture = __DIR__ . '/../../../Fixtures/lemmy/comment-create.json';
-
-        return new MockResponse((string) file_get_contents($fixture));
+        return new MockResponse($this->fixture('lemmy/comment-create.json'));
     }
 
     private static function postCreated(): MockResponse

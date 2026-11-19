@@ -20,6 +20,7 @@ use App\Service\Social\Lemmy\LemmyPosts;
 use App\Service\Social\Social\StoredCredential;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FetchWiring;
+use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
@@ -33,9 +34,11 @@ use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
 final class LemmyAccountThreadsTest extends DbTestCase
 {
+    use ReadsFixtures;
+
     use SeedsUsers;
 
-    private const string FIXTURES = __DIR__ . '/../../../Fixtures/lemmy/';
+    private const string FIXTURES = 'lemmy/';
     private const string FEDERATED_POST = 'GET https://feddit.example/api/v3/post?id=7';
     private const string RESOLVE = 'GET https://lemmy.example/api/v3/resolve_object'
         . '?q=https%3A%2F%2Forigin.example%2Fpost%2F3';
@@ -82,7 +85,7 @@ final class LemmyAccountThreadsTest extends DbTestCase
         self::assertContains('Authorization: Bearer ' . SocialAccounts::LEMMY_JWT, $http->requests[2]['headers']);
         self::assertSame([], self::authorizationOf($http->requests[0]['headers']));
         self::assertNotSame([], self::authorizationOf($http->requests[1]['headers']));
-        self::assertSame(file_get_contents(self::FIXTURES . 'comment-list-as-account.json'), $body);
+        self::assertSame($this->fixture(self::FIXTURES . 'comment-list-as-account.json'), $body);
     }
 
     public function testARefusedSessionIsUnavailableAndMarksTheAccount(): void
@@ -171,11 +174,11 @@ final class LemmyAccountThreadsTest extends DbTestCase
     {
         return new RoutedHttpClient([
             self::FEDERATED_POST => new MockResponse(
-                (string) file_get_contents(self::FIXTURES . 'post-anonymous.json'),
+                $this->fixture(self::FIXTURES . 'post-anonymous.json'),
             ),
-            self::RESOLVE => new MockResponse((string) file_get_contents(self::FIXTURES . 'resolve-post.json')),
+            self::RESOLVE => new MockResponse($this->fixture(self::FIXTURES . 'resolve-post.json')),
             self::THREAD => new MockResponse(
-                (string) file_get_contents(self::FIXTURES . 'comment-list-as-account.json'),
+                $this->fixture(self::FIXTURES . 'comment-list-as-account.json'),
             ),
         ]);
     }

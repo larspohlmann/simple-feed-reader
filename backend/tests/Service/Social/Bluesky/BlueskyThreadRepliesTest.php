@@ -15,11 +15,13 @@ use App\Service\Foundation\Sanitize\TrailingBlankRemover;
 use App\Service\Social\Bluesky\BlueskyThreadReplies;
 use App\Service\Social\Social\Model\SocialCountsModel;
 use App\Service\Social\Social\Pass\ReplyNode;
-use PHPUnit\Framework\Assert;
+use App\Tests\Support\ReadsFixtures;
 use PHPUnit\Framework\TestCase;
 
 final class BlueskyThreadRepliesTest extends TestCase
 {
+    use ReadsFixtures;
+
     private const string POST = 'at://did:plc:op/app.bsky.feed.post/root';
     private const string WEB = 'https://bsky.app/profile/';
 
@@ -61,8 +63,7 @@ final class BlueskyThreadRepliesTest extends TestCase
 
     public function testASelfReplyRendersLikeItsThreadComment(): void
     {
-        $contents = file_get_contents(__DIR__ . '/../../../Fixtures/Bluesky/self-thread-replies.json');
-        Assert::assertIsString($contents);
+        $contents = $this->fixture('Bluesky/self-thread-replies.json');
         $thread = JsonNodeModel::of(json_decode($contents, true))->node('thread');
         $reader = new BlueskyThreadReplies(new PostEmbedRenderer(), new EntrySanitizer(new TrailingBlankRemover()));
         $node = $reader->of($thread->node('post')->string('uri') ?? '', $contents)[0];
@@ -296,15 +297,7 @@ final class BlueskyThreadRepliesTest extends TestCase
     {
         $reader = new BlueskyThreadReplies(new PostEmbedRenderer(), new EntrySanitizer(new TrailingBlankRemover()));
 
-        return $reader->of($post, $answer ?? self::fixture());
-    }
-
-    private static function fixture(): string
-    {
-        $contents = file_get_contents(__DIR__ . '/../../../Fixtures/social/bluesky-post-thread.json');
-        Assert::assertIsString($contents);
-
-        return $contents;
+        return $reader->of($post, $answer ?? $this->fixture('social/bluesky-post-thread.json'));
     }
 
     /**

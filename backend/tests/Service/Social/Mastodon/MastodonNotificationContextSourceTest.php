@@ -10,6 +10,7 @@ use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Mastodon\MastodonNotificationContextSource;
 use App\Tests\Support\NotificationRows;
+use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -19,11 +20,13 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class MastodonNotificationContextSourceTest extends TestCase
 {
+    use ReadsFixtures;
+
     private const string STATUSES = 'https://mastodon.example/api/v1/statuses?';
 
     public function testAddsTheAnsweredPostsInOneCall(): void
     {
-        $http = new RoutedHttpClient(['GET ' . self::STATUSES . 'id[]=4000' => self::statuses()]);
+        $http = new RoutedHttpClient(['GET ' . self::STATUSES . 'id[]=4000' => $this->statuses()]);
 
         $contexts = $this->source($http)->contextsOf(
             SocialApiWiring::mastodonAccount(),
@@ -40,7 +43,7 @@ final class MastodonNotificationContextSourceTest extends TestCase
     public function testAPostMissingFromTheAnswerFindsNoContextForItsRow(): void
     {
         $http = new RoutedHttpClient([
-            'GET ' . self::STATUSES . 'id[]=4000&id[]=4002' => self::statuses(),
+            'GET ' . self::STATUSES . 'id[]=4000&id[]=4002' => $this->statuses(),
         ]);
         $contexts = $this->source($http)->contextsOf(
             SocialApiWiring::mastodonAccount(),
@@ -164,10 +167,10 @@ final class MastodonNotificationContextSourceTest extends TestCase
         self::assertSame('Later', $contexts['21']->answeredExcerpt);
     }
 
-    private static function statuses(): MockResponse
+    private function statuses(): MockResponse
     {
         return new MockResponse(
-            (string) file_get_contents(__DIR__ . '/../../../Fixtures/Mastodon/notifications-statuses.json'),
+            $this->fixture('Mastodon/notifications-statuses.json'),
         );
     }
 
