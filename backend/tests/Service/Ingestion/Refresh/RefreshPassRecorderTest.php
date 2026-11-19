@@ -10,7 +10,7 @@ use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Outbound\Fetch\Model\FetchResponseModel;
 use App\Service\Ingestion\Refresh\Pass\RefreshPass;
 use App\Service\Ingestion\Refresh\RefreshPassRecorder;

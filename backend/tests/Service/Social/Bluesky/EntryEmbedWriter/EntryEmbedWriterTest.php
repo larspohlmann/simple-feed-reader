@@ -13,7 +13,7 @@ use App\Enum\ShareKind;
 use App\Repository\LinkCardRepository;
 use App\Service\Social\Bluesky\EntryEmbedWriter\EntryEmbedWriter;
 use App\Service\Social\Bluesky\Model\FillOutcome;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Bluesky\PostEmbedRenderer;
 use App\Service\Ingestion\Ingest\EntryImageWriter;
 use App\Service\Foundation\Sanitize\EntrySanitizer;

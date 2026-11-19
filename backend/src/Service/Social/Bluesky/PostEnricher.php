@@ -12,7 +12,7 @@ use App\Repository\ShareEnrichmentRepository;
 use App\Service\Social\Bluesky\EntryEmbedWriter\EntryEmbedWriterInterface;
 use App\Service\Social\Bluesky\Exception\AppViewAnswerException;
 use App\Service\Social\Bluesky\Model\FillOutcome;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Bluesky\Support\BlueskyPostView;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Outbound\Fetch\Exception\FetchException;

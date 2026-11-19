@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Social\Support;
 
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Social\Support\BlueskyProfileLabels;
 use App\Tests\Support\BlueskyProfiles;
 use PHPUnit\Framework\Attributes\DataProvider;

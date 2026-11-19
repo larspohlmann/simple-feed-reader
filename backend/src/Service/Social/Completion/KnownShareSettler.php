@@ -10,7 +10,7 @@ use App\Entity\QuotedPostContent;
 use App\Enum\ShareEnrichmentKind;
 use App\Service\Social\Bluesky\EntryEmbedWriter\EntryEmbedWriterInterface;
 use App\Service\Social\Bluesky\Model\FillOutcome;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Content\LinkCard\EntryCardWriter;
 use App\Service\Content\LinkCard\Model\EntryCardsModel;
 use App\Service\Content\LinkCard\Model\PageCardModel;

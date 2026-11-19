@@ -6,7 +6,7 @@ namespace App\Service\Social\Social\PostResolver;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Bluesky\Support\AtPostUri;
 use App\Service\Social\Bluesky\Support\BlueskyActorKey;
 use App\Service\Social\Bluesky\Support\BlueskyExternalCard;

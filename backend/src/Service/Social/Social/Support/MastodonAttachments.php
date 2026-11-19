@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Social\Support;
 
 use App\Entity\EntryMedium;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Ingestion\Ingest\Support\EntryMediaAssembler;
 use App\Service\Ingestion\Parser\Model\ParsedMediumModel;
 use App\Service\Ingestion\Parser\Model\VisualMediaKind;

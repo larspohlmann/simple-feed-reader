@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\Support;
 
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Model\SearchedPostModel;

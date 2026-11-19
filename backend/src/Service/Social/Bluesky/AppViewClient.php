@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Bluesky;
 
 use App\Service\Social\Bluesky\Exception\AppViewAnswerException;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Bluesky\Support\BlueskyActorKey;
 use App\Service\Outbound\Fetch\Exception\FeedGoneException;
 use App\Service\Outbound\Fetch\Exception\FeedThrottledException;

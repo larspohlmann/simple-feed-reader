@@ -9,7 +9,7 @@ use App\Enum\SocialNetwork;
 use App\Repository\FeedRepository;
 use App\Service\Social\Bluesky\AppViewClient;
 use App\Service\Social\Bluesky\Exception\AppViewAnswerException;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Outbound\Fetch\Exception\FetchException;
 use App\Service\Social\Social\Model\ProfileCallBudgetModel;
 use App\Service\Social\Social\Model\ProfileImageSweepReportModel;

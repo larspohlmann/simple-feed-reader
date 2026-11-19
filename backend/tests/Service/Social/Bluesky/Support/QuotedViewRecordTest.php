@@ -7,7 +7,7 @@ namespace App\Tests\Service\Social\Bluesky\Support;
 use App\Entity\EntryMedium;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostReference;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Bluesky\Support\QuotedViewRecord;
 use App\Tests\Support\Bluesky;
 use PHPUnit\Framework\Attributes\DataProvider;

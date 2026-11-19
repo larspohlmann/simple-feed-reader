@@ -6,7 +6,7 @@ namespace App\Service\Social\Bluesky\EntryEmbedWriter;
 
 use App\Entity\Entry;
 use App\Service\Social\Bluesky\Model\FillOutcome;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 
 interface EntryEmbedWriterInterface
 {

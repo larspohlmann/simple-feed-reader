@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Social\Support;
 
 use App\Entity\DiscussionCounts;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Bluesky\Support\AtPostUri;
 use App\Service\Social\Bluesky\Support\BlueskyRichText;
 use App\Service\Social\Completion\Model\KnownSharesModel;

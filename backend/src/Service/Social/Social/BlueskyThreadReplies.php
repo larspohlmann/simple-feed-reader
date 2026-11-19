@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social;
 
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Bluesky\Model\RenderedEmbedModel;
 use App\Service\Social\Bluesky\PostEmbedRenderer;
 use App\Service\Social\Bluesky\Support\AtPostUri;

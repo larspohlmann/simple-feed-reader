@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Social\PostCountsSource;
 
 use App\Enum\SocialNetwork;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Social\Social\Exception\PostNotPubliclyCountableException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;

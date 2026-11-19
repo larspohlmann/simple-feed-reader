@@ -6,7 +6,7 @@ namespace App\Service\Social\Social\Support;
 
 use App\Enum\VoteScore;
 use App\Service\Content\Comments\Support\LemmyAuthor;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Model\LemmyTargetModel;
 use App\Service\Social\Social\Model\PostPreviewModel;

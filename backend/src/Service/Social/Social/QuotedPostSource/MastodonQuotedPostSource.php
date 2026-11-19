@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Social\QuotedPostSource;
 
 use App\Entity\QuotedPostContent;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Content\LinkCard\Exception\QuotedPostUnavailableException;
 use App\Service\Content\LinkCard\QuotedPostSource\QuotedPostSourceInterface;

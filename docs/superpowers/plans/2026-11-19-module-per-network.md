@@ -52,7 +52,7 @@
 **Interfaces:**
 - Produces: `App\Service\Foundation\Json\Model\JsonNodeModel`, API unchanged.
 
-- [ ] **Step 1:** `git mv` both files, set the namespaces, rewrite every `use App\Service\Social\Bluesky\Model\JsonNodeModel;`. Files in the old namespace that used it without an import get one.
+- [ ] **Step 1:** `git mv` both files, set the namespaces, rewrite every `use App\Service\Foundation\Json\Model\JsonNodeModel;`. Files in the old namespace that used it without an import get one.
 - [ ] **Step 2:** The class docblock says "One object of an AppView answer"; it now reads `/** One JSON object, read field by field: a field of the wrong type reads as absent. */`.
 - [ ] **Step 3:** Run `grep -rn 'Social\\Bluesky\\Model\\JsonNodeModel' backend docs`. Expected: no output.
 - [ ] **Step 4:** Run `composer check && composer md && php bin/phpunit` from `backend/`. Expected: green, same test count as develop.

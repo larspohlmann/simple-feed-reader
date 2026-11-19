@@ -9,7 +9,7 @@ use App\Entity\EntryMedium;
 use App\Entity\LinkCardContent;
 use App\Enum\ShareKind;
 use App\Service\Social\Bluesky\Model\FillOutcome;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Bluesky\Model\RenderedEmbedModel;
 use App\Service\Social\Bluesky\PostEmbedRenderer;
 use App\Service\Social\Bluesky\Support\AtPostUri;

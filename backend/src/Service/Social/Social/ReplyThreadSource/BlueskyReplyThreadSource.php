@@ -7,7 +7,7 @@ namespace App\Service\Social\Social\ReplyThreadSource;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Bluesky\AppViewClient;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Content\Comments\Model\CommentsAnswerModel;
 use App\Service\Content\Comments\Model\EntryCommentModel;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;

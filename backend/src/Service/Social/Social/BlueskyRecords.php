@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Social;
 
 use App\Entity\SocialAccount;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;

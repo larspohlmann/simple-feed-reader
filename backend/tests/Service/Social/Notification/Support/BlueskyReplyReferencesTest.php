@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Notification\Support;
 
 use App\Enum\SocialNotificationKind;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Support\BlueskyReplyReferences;
 use PHPUnit\Framework\Attributes\DataProvider;

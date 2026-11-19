@@ -14,7 +14,7 @@ use App\Enum\SocialNotificationKind;
 use App\Service\Content\Comments\Support\LemmyAuthor;
 use App\Service\Foundation\Text\MarkdownHtml;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Notification\Model\NotificationPageModel;

@@ -7,7 +7,7 @@ namespace App\Tests\Support;
 use App\Entity\Entry;
 use App\Service\Social\Bluesky\EntryEmbedWriter\EntryEmbedWriterInterface;
 use App\Service\Social\Bluesky\Model\FillOutcome;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 
 /** Throws for the one post given, and fills every other one through the real writer. */
 final readonly class FailingEmbedWriter implements EntryEmbedWriterInterface

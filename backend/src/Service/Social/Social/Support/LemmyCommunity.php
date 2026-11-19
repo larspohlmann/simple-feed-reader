@@ -6,7 +6,7 @@ namespace App\Service\Social\Social\Support;
 
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use App\Service\Foundation\Url\Support\UrlOrigin;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Social\Model\FollowedAccountModel;
 
 final class LemmyCommunity

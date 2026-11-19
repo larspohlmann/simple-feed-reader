@@ -13,7 +13,7 @@ use App\Enum\ShareKind;
 use App\Enum\SourceFormat;
 use App\Repository\ThreadPostRepository;
 use App\Service\Social\Bluesky\AppViewClient;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Bluesky\Support\AtPostUri;
 use App\Service\Social\Completion\Model\KnownSharesModel;
 use App\Service\Outbound\Fetch\HostThrottle;

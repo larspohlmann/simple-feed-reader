@@ -7,7 +7,7 @@ namespace App\Service\Social\Notification\NotificationContextSource;
 use App\Entity\NotificationContext;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Bluesky\Support\AtPostUri;
 use App\Service\Social\Notification\BlueskyPostLookup;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;

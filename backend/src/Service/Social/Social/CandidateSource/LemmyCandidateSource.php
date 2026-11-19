@@ -6,7 +6,7 @@ namespace App\Service\Social\Social\CandidateSource;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Social\LemmyCommunities;
 use App\Service\Social\Social\Model\FollowedAccountModel;
 use App\Service\Social\Social\Model\NetworkCandidatesModel;

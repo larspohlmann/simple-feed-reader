@@ -17,7 +17,7 @@ use App\Service\Ingestion\Parser\Support\DateParser;
 use App\Service\Ingestion\Parser\Support\EntryTitle;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Outbound\Image\Model\DeclaredImageModel;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Completion\Model\KnownSharesModel;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Model\TimelinePageModel;

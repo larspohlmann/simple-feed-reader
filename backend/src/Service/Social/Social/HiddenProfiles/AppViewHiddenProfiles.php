@@ -6,7 +6,7 @@ namespace App\Service\Social\Social\HiddenProfiles;
 
 use App\Service\Social\Bluesky\AppViewClient;
 use App\Service\Social\Bluesky\Exception\AppViewAnswerException;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Outbound\Fetch\Exception\FetchException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Support\BlueskyProfileLabels;

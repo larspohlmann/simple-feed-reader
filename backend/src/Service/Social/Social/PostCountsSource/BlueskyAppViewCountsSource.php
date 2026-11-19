@@ -6,7 +6,7 @@ namespace App\Service\Social\Social\PostCountsSource;
 
 use App\Enum\SocialNetwork;
 use App\Service\Social\Bluesky\AppViewClient;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Model\SocialCountsModel;

@@ -9,7 +9,7 @@ use App\Enum\SocialNetwork;
 use App\Service\Content\Comments\Support\LemmyAuthor;
 use App\Service\Foundation\Url\Support\UrlOrigin;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\LemmyApiClient;
 use App\Service\Social\Social\Model\CredentialReplacementModel;

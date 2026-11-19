@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Bluesky\Model;
+namespace App\Service\Foundation\Json\Model;
 
-/** One object of an AppView answer, read field by field: a field of the wrong type reads as absent. */
+/** One JSON object, read field by field: a field of the wrong type reads as absent. */
 final readonly class JsonNodeModel
 {
     /** @param array<mixed> $fields */

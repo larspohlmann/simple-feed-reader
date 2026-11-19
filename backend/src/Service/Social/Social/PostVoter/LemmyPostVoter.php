@@ -10,7 +10,7 @@ use App\Enum\SocialNetwork;
 use App\Enum\VoteScore;
 use App\Service\Content\Comments\Model\LemmyPostModel;
 use App\Service\Content\Comments\Support\LemmyPostAddress;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Social\ActingAccountGuard;
 use App\Service\Social\Social\Exception\NotASocialPostException;
 use App\Service\Social\Social\LemmyAccountApi;

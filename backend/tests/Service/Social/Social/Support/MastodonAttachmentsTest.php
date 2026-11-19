@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Social\Support;
 
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Ingestion\Parser\Model\ParsedMediumModel;
 use App\Service\Ingestion\Parser\Model\VisualMediaKind;
 use App\Service\Social\Social\Support\MastodonAttachments;

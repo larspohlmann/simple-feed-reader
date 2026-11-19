@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Social\Pass;
 
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Social\Pass\MastodonReplyThread;
 use PHPUnit\Framework\TestCase;
 

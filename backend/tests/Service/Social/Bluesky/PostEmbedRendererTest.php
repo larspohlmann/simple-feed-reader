@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Bluesky;
 
 use App\Entity\LinkCardContent;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Bluesky\Model\RenderedEmbedModel;
 use App\Service\Social\Bluesky\PostEmbedRenderer;
 use App\Service\Ingestion\Parser\Model\ParsedMediumModel;

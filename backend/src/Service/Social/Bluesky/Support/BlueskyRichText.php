@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Bluesky\Support;
 
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Foundation\Text\Support\HtmlAnchor;
 use App\Service\Foundation\Text\Support\HtmlEscape;
 use App\Service\Foundation\Text\Support\ParagraphedText;

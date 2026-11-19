@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Bluesky\Support;
 
 use App\Entity\LinkCardContent;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Outbound\Fetch\Support\HostKey;
 use App\Service\Content\LinkCard\Support\StorableLinkCard;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;

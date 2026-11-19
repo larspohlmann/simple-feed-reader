@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Content\Comments\Pass;
 
 use App\Enum\VoteScore;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Content\Comments\Model\CommentAuthorModel;
 use App\Service\Content\Comments\Model\CommentVoteModel;
 use App\Service\Content\Comments\Model\EntryCommentModel;

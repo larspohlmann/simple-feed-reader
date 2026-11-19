@@ -6,7 +6,7 @@ namespace App\Service\Social\Notification;
 
 use App\Entity\SocialAccount;
 use App\Service\Social\Bluesky\AppViewClient;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Social\BlueskySessions;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;

@@ -7,7 +7,7 @@ namespace App\Service\Social\Social\Support;
 use App\Entity\DiscussionCounts;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Completion\Model\KnownSharesModel;
 use App\Service\Outbound\Image\Model\DeclaredImageModel;
 use App\Service\Ingestion\Parser\Model\ParsedEntryMediaModel;

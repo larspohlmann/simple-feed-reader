@@ -6,7 +6,7 @@ namespace App\Service\Social\Bluesky\Support;
 
 use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Ingestion\Ingest\Support\EntryMediaAssembler;
 use App\Service\Content\LinkCard\Support\StorableQuotedPost;
 use App\Service\Ingestion\Parser\Model\ParsedMediumModel;

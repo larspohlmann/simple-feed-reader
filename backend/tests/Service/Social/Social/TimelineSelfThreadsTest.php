@@ -9,7 +9,7 @@ use App\Entity\Feed;
 use App\Entity\ThreadPost;
 use App\Enum\SourceFormat;
 use App\Repository\ThreadPostRepository;
-use App\Service\Social\Bluesky\Model\JsonNodeModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Social\Social\Model\ThreadPostModel;
 use App\Service\Social\Social\Model\TimelineThreadsModel;
