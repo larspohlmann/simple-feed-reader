@@ -19,7 +19,9 @@ final readonly class MastodonPostAddressRule implements PostAddressRuleInterface
 {
     public function findPost(Entry $entry): ?SocialPostAddressModel
     {
-        return self::statusAt(AbsoluteHttpUrl::orNull($entry->getGuid()) ?? AbsoluteHttpUrl::orNull($entry->getUrl()));
+        return self::buildStatusAddress(
+            AbsoluteHttpUrl::orNull($entry->getGuid()) ?? AbsoluteHttpUrl::orNull($entry->getUrl()),
+        );
     }
 
     public function findDiscussionPost(Entry $entry): ?SocialPostAddressModel
@@ -29,12 +31,12 @@ final readonly class MastodonPostAddressRule implements PostAddressRuleInterface
 
     public function parseReply(string $address): ?SocialPostAddressModel
     {
-        return self::statusAt(AbsoluteHttpUrl::orNull($address));
+        return self::buildStatusAddress(AbsoluteHttpUrl::orNull($address));
     }
 
     public function parsePostUrl(string $url): ?SocialPostAddressModel
     {
-        return null === MastodonStatusAddress::ofOrNull($url) ? null : self::statusAt($url);
+        return null === MastodonStatusAddress::ofOrNull($url) ? null : self::buildStatusAddress($url);
     }
 
     public function findAuthorIdentity(Entry $entry, SocialPostAddressModel $post): ?string
@@ -62,7 +64,7 @@ final readonly class MastodonPostAddressRule implements PostAddressRuleInterface
         return [$statusUri, $url];
     }
 
-    private static function statusAt(?string $statusAddress): ?SocialPostAddressModel
+    private static function buildStatusAddress(?string $statusAddress): ?SocialPostAddressModel
     {
         return null === $statusAddress ? null : new SocialPostAddressModel(SocialNetwork::Mastodon, $statusAddress);
     }

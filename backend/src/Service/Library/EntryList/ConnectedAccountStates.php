@@ -43,27 +43,16 @@ final readonly class ConnectedAccountStates
         $votes = $this->votesOf($lemmyPostIds, $accountsByNetwork, $userId);
         $lemmyPosts = $this->lemmyPosts->byEntryIds(array_keys($entries));
 
-        return new ConnectedAccountStatesModel($socialStates, self::lemmyStatesOf($entries, $lemmyPosts, $votes));
-    }
 
-    /**
-     * @param array<int, Entry> $entries
-     * @param array<int, EntryLemmyPost> $lemmyPosts
-     * @param array<int, VoteScore> $votes
-     *
-     * @return array<int, EntryListRowLemmy>
-     */
-    private static function lemmyStatesOf(array $entries, array $lemmyPosts, array $votes): array
-    {
-        $states = [];
+        $lemmyStates = [];
         foreach ($entries as $entryId => $entry) {
             $lemmy = self::lemmyOf($entry, $lemmyPosts[$entryId] ?? null, $votes[$entryId] ?? null);
             if (null !== $lemmy) {
-                $states[$entryId] = $lemmy;
+                $lemmyStates[$entryId] = $lemmy;
             }
         }
 
-        return $states;
+        return new ConnectedAccountStatesModel($socialStates, $lemmyStates);
     }
 
     /**
