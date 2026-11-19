@@ -60,7 +60,9 @@ final class FollowMatching
      */
     public function claimResolved(ProfileFeedSubscriptionModel $profileFeed): void
     {
-        $this->claimAs($profileFeed, $this->importRule->fetchResolvedIdentity($profileFeed->identity));
+        if ($this->claim($profileFeed, $this->importRule->fetchResolvedIdentity($profileFeed->identity))) {
+            unset($this->unmatched[$profileFeed->subscriptionId]);
+        }
     }
 
     /** @return list<ImportCandidateModel> */
@@ -81,13 +83,6 @@ final class FollowMatching
         }
 
         return $candidates;
-    }
-
-    private function claimAs(ProfileFeedSubscriptionModel $profileFeed, string $resolvedIdentity): void
-    {
-        if ($this->claim($profileFeed, $resolvedIdentity)) {
-            unset($this->unmatched[$profileFeed->subscriptionId]);
-        }
     }
 
     private function claim(ProfileFeedSubscriptionModel $profileFeed, string $key): bool
