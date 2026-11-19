@@ -41,7 +41,7 @@ final readonly class PageHeadFetcher
             self::options(),
             new RedirectBudget(PageLanding::MAX_REDIRECTS, self::MAX_DURATION_SECONDS),
         );
-        $mediaType = MediaType::of($landed->header('content-type'));
+        $mediaType = MediaType::fromHeader($landed->header('content-type'));
         if (!self::isMarkup($mediaType)) {
             $landed->response->cancel();
 

@@ -54,6 +54,6 @@ final class SizeWalk
 
     private function bandIsUncovered(int $width): bool
     {
-        return \in_array(RenditionTargets::bandOf($width), RenditionTargets::uncovered($this->knownWidths), true);
+        return \in_array(RenditionTargets::pickBand($width), RenditionTargets::uncovered($this->knownWidths), true);
     }
 }

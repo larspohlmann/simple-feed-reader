@@ -11,14 +11,14 @@ final class RenditionTargetsTest extends TestCase
 {
     public function testEachTargetOwnsTheBandUpToTheNextOne(): void
     {
-        self::assertNull(RenditionTargets::bandOf(263));
-        self::assertSame(264, RenditionTargets::bandOf(264));
-        self::assertSame(264, RenditionTargets::bandOf(519));
-        self::assertSame(520, RenditionTargets::bandOf(520));
-        self::assertSame(680, RenditionTargets::bandOf(1099));
-        self::assertSame(1100, RenditionTargets::bandOf(1359));
-        self::assertSame(1360, RenditionTargets::bandOf(2039));
-        self::assertNull(RenditionTargets::bandOf(2040));
+        self::assertNull(RenditionTargets::pickBand(263));
+        self::assertSame(264, RenditionTargets::pickBand(264));
+        self::assertSame(264, RenditionTargets::pickBand(519));
+        self::assertSame(520, RenditionTargets::pickBand(520));
+        self::assertSame(680, RenditionTargets::pickBand(1099));
+        self::assertSame(1100, RenditionTargets::pickBand(1359));
+        self::assertSame(1360, RenditionTargets::pickBand(2039));
+        self::assertNull(RenditionTargets::pickBand(2040));
     }
 
     public function testATargetWithAKnownWidthInItsBandIsCovered(): void

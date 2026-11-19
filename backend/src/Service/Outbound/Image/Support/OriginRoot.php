@@ -6,7 +6,7 @@ namespace App\Service\Outbound\Image\Support;
 
 final class OriginRoot
 {
-    public static function of(string $url): string
+    public static function fromUrl(string $url): string
     {
         $scheme = strtolower((string) parse_url($url, \PHP_URL_SCHEME));
         $host = strtolower((string) parse_url($url, \PHP_URL_HOST));

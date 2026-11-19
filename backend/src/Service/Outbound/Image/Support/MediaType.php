@@ -6,7 +6,7 @@ namespace App\Service\Outbound\Image\Support;
 
 final class MediaType
 {
-    public static function of(?string $contentTypeHeader): string
+    public static function fromHeader(?string $contentTypeHeader): string
     {
         return mb_strtolower(trim(explode(';', $contentTypeHeader ?? '')[0]));
     }

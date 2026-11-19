@@ -20,7 +20,7 @@ final class ImageMagicBytes
         'heix' => 'image/heic',
     ];
 
-    public static function typeOf(string $bytes): ?string
+    public static function detectType(string $bytes): ?string
     {
         foreach (self::SIGNATURES as $signature => $type) {
             if (str_starts_with($bytes, $signature)) {

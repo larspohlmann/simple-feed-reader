@@ -24,6 +24,6 @@ final class OriginRootTest extends TestCase
     #[DataProvider('urls')]
     public function testRootOfTheImageHost(string $imageUrl, string $expected): void
     {
-        self::assertSame($expected, OriginRoot::of($imageUrl));
+        self::assertSame($expected, OriginRoot::fromUrl($imageUrl));
     }
 }

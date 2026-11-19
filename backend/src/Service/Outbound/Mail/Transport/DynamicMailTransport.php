@@ -80,7 +80,7 @@ final class DynamicMailTransport implements TransportInterface
     private function transportFor(?ResolvedMailTransportModel $resolved): TransportInterface
     {
         $signature = null !== $resolved
-            ? 'db:' . $this->transportFactory->signatureOf($resolved)
+            ? 'db:' . $this->transportFactory->buildSignature($resolved)
             : 'fallback:' . $this->settings->activeTransportDsnFallback();
 
         if ($signature === $this->cachedSignature && null !== $this->cached) {
