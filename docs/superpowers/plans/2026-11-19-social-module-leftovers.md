@@ -24,7 +24,7 @@
 ## Decisions
 
 - **Point 5, enum names: closed, no change.** docs/architecture.md §10 says `Model/` holds "the module's enums (plain names)", so `ProfileVisibility`, `HiddenProfileMoveOutcome`, `FillOutcome` and `LemmyListing` are named correctly.
-- **Point 6, import order: closed, not done.** 551 of 3613 PHP files in `src`, `tests` and `migrations` have an unsorted `use` block, 201 of them in social code, and no gate checks it. A pass over the 80 moved files leaves 470 and decays; a gate needs a new dev dependency and a tree-wide commit, which is Lars's call and not part of this issue. The PR text says so.
+- **Point 6, import order: moved to #2378** on Lars's ruling of 2026-11-19 (a phpcs gate plus one tree-wide sort commit). This PR sorts no imports; the PR text points at #2378.
 - **Point 2: the list lives on `PostDraftModel`.** The model that carries `$visibility` owns its allowed values; no new class.
 - **Point 3: `selectRule(SocialNetwork::Lemmy)`, not `findRule($feedUrl)`.** `findRule()` answers for whichever network recognises the URL, which is a different question from "is this a Lemmy community feed".
 
