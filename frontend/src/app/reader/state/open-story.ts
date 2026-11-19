@@ -18,8 +18,8 @@ interface LandedStory {
   readonly tally: StoryTally;
 }
 
-/** What the last story page its host's list landed said of its story (#2329): its title, its synopsis, its tally, and whether
- *  the reader follows it. */
+/** What the last story page its host's list landed said of its story (#2329): its title, synopsis, tally and
+ *  whether the reader follows it. */
 @Injectable()
 export class OpenStory {
   private readonly landedStory = accountSignal<LandedStory | null>(null);

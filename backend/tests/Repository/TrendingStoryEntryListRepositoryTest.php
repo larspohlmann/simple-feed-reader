@@ -117,6 +117,15 @@ final class TrendingStoryEntryListRepositoryTest extends DbTestCase
         self::assertSame('Neue Gespräche', $this->headingOf($reader, $story)?->title);
     }
 
+    public function testTheHeadingOfAStoryWithNoTitleAnywhereIsNull(): void
+    {
+        $reader = $this->fixtures->reader('story-entry-list-heading-titleless@example.com');
+        $fixtures = $this->fixtures->ownedBy($reader);
+        $story = $this->storyIn($fixtures, $fixtures->feedNobodyFollows('unsubscribed-only'));
+
+        self::assertNull($this->headingOf($reader, $story));
+    }
+
     public function testHeadingOfReadsNothingFromAnotherUsersStory(): void
     {
         $reader = $this->fixtures->reader('story-entry-list-title-owner@example.com');

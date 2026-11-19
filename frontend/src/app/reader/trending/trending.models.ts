@@ -15,7 +15,7 @@ export type StoryArticleDto = EntryDto & { shares: EntryDto[] };
 export interface TrendingStoryDto {
   /** Stable across builds (#2128): a hide and a follow name the story by it. */
   id: number;
-  /** The event the story's articles report, as a one-line headline (#2329). */
+  /** The event the story's articles report, as a headline (#2329). */
   title: string;
   /** Two or three sentences on the event, null when the story's title is no LLM's (#2353). */
   synopsis: string | null;

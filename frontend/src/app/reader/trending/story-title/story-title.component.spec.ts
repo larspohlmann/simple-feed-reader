@@ -49,6 +49,22 @@ it('shows the synopsis beneath the title', () => {
   expect(synopsis?.textContent?.trim()).toBe('Dockers walked out at dawn. The port is shut.');
 });
 
+it('names the link by the title and describes it by the synopsis, unique per story', () => {
+  const link = mount('Any event', 12, 'Dockers walked out.').querySelector('a.story-link')!;
+  const heading = link.querySelector('h3.title')!;
+  const synopsis = link.querySelector('p.synopsis')!;
+
+  expect(link.getAttribute('aria-labelledby')).toBe(heading.id);
+  expect(link.getAttribute('aria-describedby')).toBe(synopsis.id);
+  expect(synopsis.id).toBe('story-synopsis-12');
+});
+
+it('describes the link by nothing without a synopsis', () => {
+  expect(mount('Any event').querySelector('a.story-link')!.hasAttribute('aria-describedby')).toBe(
+    false,
+  );
+});
+
 it('shows no synopsis element without one', () => {
   expect(mount('Any event').querySelector('.synopsis')).toBeNull();
 });

@@ -218,9 +218,6 @@ describe('EntryListComponent', () => {
     installMockResizeObserver();
   });
 
-  // #321: the for-you block is now projected into the top of whichever
-  // content branch is live, so it scrolls away with the list instead of
-  // sitting in a permanently reserved bar above it.
   describe("a story's collapsed header (#2353)", () => {
     it("tops-aligns a Trending story's bar, whose title wraps", () => {
       const element = mount({ selection: { kind: 'trending-story', id: 42, unread: false } })
@@ -237,6 +234,9 @@ describe('EntryListComponent', () => {
     });
   });
 
+  // #321: the for-you block is now projected into the top of whichever
+  // content branch is live, so it scrolls away with the list instead of
+  // sitting in a permanently reserved bar above it.
   describe('topBlock', () => {
     it('renders above the list rows', () => {
       const tb = topBlockTemplate();

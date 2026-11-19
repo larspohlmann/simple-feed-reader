@@ -26,7 +26,13 @@ import { ListHeaderComponent, TitleCount } from '../list-header/list-header.comp
 import { ListEmptyStateComponent } from '../list-empty-state/list-empty-state.component';
 import { ReadingLayout } from '../../reading-layout.service';
 import { EntryDto, ListOrder, SubscriptionTagDto, TagDto } from '../../models';
-import { Selection, canScopedRefresh, offersMarkAboveRead, searchTermOf } from '../../query/query';
+import {
+  Selection,
+  canScopedRefresh,
+  isStoryView,
+  offersMarkAboveRead,
+  searchTermOf,
+} from '../../query/query';
 import { searchWords } from '../../query/search-term';
 import { Problem } from '../../../core/problem';
 import { LayoutService } from '../../layout.service';
@@ -203,6 +209,7 @@ export class EntryListComponent {
    *  focus, and the surrounding prose recedes behind it. */
   readonly isSearch = computed(() => this.selection().kind === 'search');
 
+  protected readonly isStory = computed(() => isStoryView(this.selection()));
   protected readonly marksAboveFold = computed(() => offersMarkAboveRead(this.selection()));
 
   private readonly reduceMotion = prefersReducedMotion();

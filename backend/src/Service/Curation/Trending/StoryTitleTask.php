@@ -22,7 +22,7 @@ use App\Service\Curation\Trending\Support\StoryTitlePrompt;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use Psr\Log\LoggerInterface;
 
-/** Writes each shown story's title in the reader's language, at most once an hour and again once it grew by half. */
+/** Writes each shown story's title and synopsis, at most once an hour and again once it grew by half. */
 final readonly class StoryTitleTask implements StoryAiTaskInterface
 {
     private const int HEADLINES = 12;

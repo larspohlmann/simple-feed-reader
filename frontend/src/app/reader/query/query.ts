@@ -190,6 +190,11 @@ export function offersMarkAboveRead(selection: Selection): boolean {
   return selection.kind !== 'trending' && selection.kind !== 'notifications';
 }
 
+/** A Trending story's list, whose collapsed header carries the story's whole wrapped title (#2353). */
+export function isStoryView(selection: Selection): boolean {
+  return selection.kind === 'trending-story';
+}
+
 /** Where a list's order is remembered: per feed, tag, saved search and view, and
  *  once for every direct search, whose terms are throwaway. */
 export function listOrderKey(selection: Selection): string | null {

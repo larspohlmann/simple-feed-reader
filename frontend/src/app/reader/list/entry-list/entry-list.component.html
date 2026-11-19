@@ -1,7 +1,7 @@
 <app-list-frame
   [problem]="error()"
   [collapsed]="collapsed()"
-  [collapsedTopAligned]="selection().kind === 'trending-story'"
+  [collapsedTopAligned]="isStory()"
   (retry)="retry.emit()"
   (dismiss)="dismiss.emit()"
 >

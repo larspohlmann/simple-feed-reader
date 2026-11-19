@@ -22,10 +22,15 @@ final class Version20261119090000 extends AbstractMigration
             $schema->getTable('trending_story')->hasColumn('llm_synopsis'),
             'Trending stories already carry their synopsis.',
         );
-        $this->requireSupported($this->connection->getDatabasePlatform());
-
-        $this->addSql('ALTER TABLE trending_story ADD llm_synopsis VARCHAR(500) DEFAULT NULL');
+        $platform = $this->connection->getDatabasePlatform();
         $this->addSql('UPDATE trending_story SET llm_title_member_count = 0 WHERE llm_title IS NOT NULL');
+        if ($platform instanceof AbstractMySQLPlatform) {
+            $this->addSql('ALTER TABLE trending_story ADD llm_synopsis VARCHAR(500) DEFAULT NULL');
+
+            return;
+        }
+        $this->requireSqlite($platform);
+        $this->addSql('ALTER TABLE trending_story ADD COLUMN llm_synopsis VARCHAR(500) DEFAULT NULL');
     }
 
     public function down(Schema $schema): void
@@ -34,8 +39,10 @@ final class Version20261119090000 extends AbstractMigration
             !$schema->getTable('trending_story')->hasColumn('llm_synopsis'),
             'Trending stories already carry no synopsis.',
         );
-        $this->requireSupported($this->connection->getDatabasePlatform());
-
+        $platform = $this->connection->getDatabasePlatform();
+        if (!$platform instanceof AbstractMySQLPlatform) {
+            $this->requireSqlite($platform);
+        }
         $this->addSql('ALTER TABLE trending_story DROP COLUMN llm_synopsis');
     }
 
@@ -45,9 +52,9 @@ final class Version20261119090000 extends AbstractMigration
         return false;
     }
 
-    private function requireSupported(object $platform): void
+    private function requireSqlite(object $platform): void
     {
-        if (!$platform instanceof AbstractMySQLPlatform && !$platform instanceof SQLitePlatform) {
+        if (!$platform instanceof SQLitePlatform) {
             throw new \RuntimeException('Unsupported database platform for the Trending story synopsis migration.');
         }
     }
