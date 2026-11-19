@@ -199,6 +199,13 @@ h2.search-title {
     overflow: visible;
     text-overflow: clip;
     white-space: normal;
+    line-height: var(--lh-tight);
+  }
+
+  /* The bar aligns to the top here: the inset centres the first line on the back button beside it, and mirrors it below the last. */
+  :host(.collapsed.is-story) .title-row {
+    align-items: flex-start;
+    padding-block: calc((var(--icon-lg) - var(--fs-sm) * var(--lh-tight)) / 2);
   }
 
   :host(.collapsed) .meta,

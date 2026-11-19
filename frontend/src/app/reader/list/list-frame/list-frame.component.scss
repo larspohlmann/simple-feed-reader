@@ -39,6 +39,10 @@
     padding-top: var(--space-1);
     padding-bottom: var(--space-1);
   }
+
+  .list-header.collapsed.top-aligned {
+    align-items: flex-start;
+  }
 }
 
 /* Overlays the rows below the header, which keep their own `$header-clear`, so the

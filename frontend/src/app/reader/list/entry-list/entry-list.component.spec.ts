@@ -221,6 +221,22 @@ describe('EntryListComponent', () => {
   // #321: the for-you block is now projected into the top of whichever
   // content branch is live, so it scrolls away with the list instead of
   // sitting in a permanently reserved bar above it.
+  describe("a story's collapsed header (#2353)", () => {
+    it("tops-aligns a Trending story's bar, whose title wraps", () => {
+      const element = mount({ selection: { kind: 'trending-story', id: 42, unread: false } })
+        .nativeElement as HTMLElement;
+
+      expect(element.querySelector('.list-header.top-aligned')).not.toBeNull();
+    });
+
+    it("leaves every other list's bar centred", () => {
+      const element = mount().nativeElement as HTMLElement;
+
+      expect(element.querySelector('.list-header')).not.toBeNull();
+      expect(element.querySelector('.list-header.top-aligned')).toBeNull();
+    });
+  });
+
   describe('topBlock', () => {
     it('renders above the list rows', () => {
       const tb = topBlockTemplate();
