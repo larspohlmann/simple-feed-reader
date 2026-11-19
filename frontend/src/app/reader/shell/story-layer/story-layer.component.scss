@@ -2,6 +2,9 @@
 :host {
   display: block;
   background: var(--surface-0);
+
+  /* The page opens a layer at its lead (PageScrollOwner); without this spacer the list's top sits under the header. */
+  padding-top: var(--page-lead, 0);
 }
 
 .story-synopsis {
