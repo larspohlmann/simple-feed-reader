@@ -19,7 +19,6 @@ use App\Service\Social\Mastodon\Support\MastodonFeedIds;
 use App\Service\Social\Mastodon\Support\MastodonSearchPage;
 use App\Service\Social\Mastodon\Support\MastodonSearchPath;
 use App\Service\Social\Mastodon\Support\MastodonTimelinePage;
-use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Model\TimelinePageModel;
 use App\Service\Social\Social\TimelineSource\TimelineSourceInterface;
@@ -77,11 +76,7 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
     /** @return non-empty-list<string> */
     private function searchPathsOf(SocialFeed $socialFeed): array
     {
-        try {
-            $queries = $this->privateFeedRule->buildSearchQueries($socialFeed->getRemoteId());
-        } catch (SearchQueryTooBroadException $tooBroad) {
-            throw new SocialNetworkUnreachableException($tooBroad->getMessage(), previous: $tooBroad);
-        }
+        $queries = $this->privateFeedRule->buildSearchQueries($socialFeed->getRemoteId());
 
         return array_map(
             static fn (string $query): string => MastodonSearchPath::buildPath($query, $socialFeed->getNewestSeenId()),

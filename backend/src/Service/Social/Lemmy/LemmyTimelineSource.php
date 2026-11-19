@@ -16,7 +16,6 @@ use App\Service\Social\Lemmy\LemmyApiClient;
 use App\Service\Social\Lemmy\LemmyPostEntries;
 use App\Service\Social\Lemmy\LemmyPrivateFeedRule;
 use App\Service\Social\Lemmy\Model\LemmyListing;
-use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Model\TimelinePageModel;
 use App\Service\Social\Social\TimelineSource\TimelineSourceInterface;
@@ -38,7 +37,7 @@ final readonly class LemmyTimelineSource implements TimelineSourceInterface
         if (SocialFeedKind::Search === $socialFeed->getKind()) {
             return array_map(
                 fn (string $term): ApiRequestModel => $this->lemmy->searchGet($account, $term),
-                $this->searchTermsOf($socialFeed),
+                $this->privateFeedRule->buildSearchQueries($socialFeed->getRemoteId()),
             );
         }
 
@@ -71,15 +70,5 @@ final readonly class LemmyTimelineSource implements TimelineSourceInterface
             ?? throw new SocialNetworkUnreachableException('Lemmy has no such timeline.');
 
         return '/api/v3/post/list?type_=' . $listing->value . '&sort=New&limit=' . LemmyListing::PAGE_SIZE;
-    }
-
-    /** @return non-empty-list<string> */
-    private function searchTermsOf(SocialFeed $socialFeed): array
-    {
-        try {
-            return $this->privateFeedRule->buildSearchQueries($socialFeed->getRemoteId());
-        } catch (SearchQueryTooBroadException $tooBroad) {
-            throw new SocialNetworkUnreachableException($tooBroad->getMessage(), previous: $tooBroad);
-        }
     }
 }

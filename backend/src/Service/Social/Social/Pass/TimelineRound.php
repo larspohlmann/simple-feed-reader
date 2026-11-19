@@ -10,6 +10,7 @@ use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
 use App\Service\Outbound\Fetch\Model\RequestTicketModel;
 use App\Service\Outbound\Fetch\Model\SettlementModel;
 use App\Service\Social\Social\Exception\PrivateFeedOrphanedException;
+use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialSessionStaleException;
@@ -189,6 +190,10 @@ final class TimelineRound
             $read = new TimelineRead($this->sources->of($account)->requests($socialFeed));
         } catch (SocialCredentialsRejectedException | SocialNetworkUnreachableException $failure) {
             return SettlementModel::outcome($this->accounts->settleFailure($account, $failure));
+        } catch (SearchQueryTooBroadException $tooBroad) {
+            $unreachable = new SocialNetworkUnreachableException($tooBroad->getMessage(), previous: $tooBroad);
+
+            return SettlementModel::outcome($this->accounts->settleFailure($account, $unreachable));
         }
         $this->reads[$feedId] = $read;
 

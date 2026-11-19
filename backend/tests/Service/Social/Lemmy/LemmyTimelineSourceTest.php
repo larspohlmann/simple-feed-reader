@@ -10,6 +10,7 @@ use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
 use App\Service\Social\Lemmy\LemmyPrivateFeedRule;
 use App\Service\Social\Lemmy\LemmyTimelineSource;
+use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
@@ -156,9 +157,9 @@ final class LemmyTimelineSourceTest extends TestCase
         self::assertSame('A text post', $page->parsed->entries[0]->headline->text);
     }
 
-    public function testATooBroadSearchFeedIsUnreachable(): void
+    public function testATooBroadSearchFeedIsNeverTurnedIntoARequest(): void
     {
-        $this->expectException(SocialNetworkUnreachableException::class);
+        $this->expectException(SearchQueryTooBroadException::class);
 
         self::source()->requests(self::socialFeed(SocialFeedKind::Search, '-gazette'));
     }

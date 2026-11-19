@@ -14,6 +14,7 @@ use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
 use App\Service\Social\Mastodon\MastodonPrivateFeedRule;
 use App\Service\Social\Mastodon\MastodonTimelineSource;
+use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
@@ -143,7 +144,7 @@ final class MastodonTimelineSourceTest extends TestCase
 
     public function testASearchTooBroadForMastodonIsNeverTurnedIntoARequest(): void
     {
-        $this->expectException(SocialNetworkUnreachableException::class);
+        $this->expectException(SearchQueryTooBroadException::class);
         $this->expectExceptionMessage('more than 8');
 
         $this->source(new RoutedHttpClient([]))
