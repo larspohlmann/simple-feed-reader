@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\NetworkVerifier;
 
+use App\Entity\SocialAccount;
+use App\Service\Social\Social\Exception\NotAnAppPasswordException;
 use App\Service\Social\Social\Exception\SocialAccountUnresolvableException;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Model\CredentialReplacementModel;
 use App\Service\Social\Social\Model\SocialCredentialsModel;
 use App\Service\Social\Social\Model\VerifiedAccountModel;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
@@ -21,4 +24,10 @@ interface NetworkVerifierInterface
      * @throws SocialNetworkUnreachableException
      */
     public function verify(SocialCredentialsModel $credentials): VerifiedAccountModel;
+
+    /** @throws NotAnAppPasswordException */
+    public function buildReconnectCredentials(
+        SocialAccount $account,
+        CredentialReplacementModel $replacement,
+    ): SocialCredentialsModel;
 }

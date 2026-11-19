@@ -6,6 +6,7 @@ namespace App\Dto\Social;
 
 use App\Service\Social\Social\Exception\InvalidInstanceUrlException;
 use App\Service\Social\Social\Model\SocialCredentialsModel;
+use App\Service\Social\Social\Support\MastodonCredentials;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class ConnectMastodonRequest
@@ -23,6 +24,6 @@ final readonly class ConnectMastodonRequest
     /** @throws InvalidInstanceUrlException */
     public function toCredentials(): SocialCredentialsModel
     {
-        return SocialCredentialsModel::mastodon($this->instanceUrl, $this->accessToken);
+        return MastodonCredentials::buildCredentials($this->instanceUrl, $this->accessToken);
     }
 }

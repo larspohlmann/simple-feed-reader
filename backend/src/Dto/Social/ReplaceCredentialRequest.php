@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Social;
 
-use App\Entity\SocialAccount;
-use App\Service\Social\Social\Model\SocialCredentialsModel;
+use App\Service\Social\Social\Model\CredentialReplacementModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class ReplaceCredentialRequest
@@ -19,8 +18,8 @@ final readonly class ReplaceCredentialRequest
     ) {
     }
 
-    public function toCredentials(SocialAccount $account): SocialCredentialsModel
+    public function toReplacement(): CredentialReplacementModel
     {
-        return SocialCredentialsModel::forReconnect($account, $this->secret, $this->totpToken);
+        return new CredentialReplacementModel($this->secret, $this->totpToken);
     }
 }

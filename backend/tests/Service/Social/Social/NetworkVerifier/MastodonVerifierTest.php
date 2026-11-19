@@ -9,10 +9,13 @@ use App\Service\Outbound\Fetch\UrlGuard;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\MastodonApiClient;
+use App\Service\Social\Social\Model\CredentialReplacementModel;
 use App\Service\Social\Social\Model\SocialCredentialsModel;
 use App\Service\Social\Social\NetworkVerifier\MastodonVerifier;
+use App\Service\Social\Social\Support\MastodonCredentials;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\RoutedHttpClient;
+use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StaticDnsResolver;
 use App\Tests\Support\TaggedItemOf;
 use PHPUnit\Framework\TestCase;
@@ -38,7 +41,7 @@ final class MastodonVerifierTest extends TestCase
 
     private function credentials(): SocialCredentialsModel
     {
-        return SocialCredentialsModel::mastodon('mastodon.example.test', 'token-1234');
+        return MastodonCredentials::buildCredentials('mastodon.example.test', 'token-1234');
     }
 
     public function testAnAcceptedTokenVerifiesTheAccount(): void
@@ -103,6 +106,17 @@ final class MastodonVerifierTest extends TestCase
         self::assertSame('mastodon', TaggedItemOf::index(MastodonVerifier::class));
     }
 
+    public function testReconnectCredentialsAreTheNetworksOwn(): void
+    {
+        $account = SocialAccounts::mastodonOn('https://mastodon.example.test');
+        $replacement = new CredentialReplacementModel('token-1234', null);
+
+        self::assertEquals(
+            MastodonCredentials::buildReconnectCredentials($account, $replacement),
+            $this->verifier(new RoutedHttpClient([]))->buildReconnectCredentials($account, $replacement),
+        );
+    }
+
     public function testANonDefaultPortStaysInTheIdentityAndHandle(): void
     {
         $http = new RoutedHttpClient([
@@ -111,7 +125,7 @@ final class MastodonVerifierTest extends TestCase
             ),
         ]);
 
-        $credentials = SocialCredentialsModel::mastodon('social.example.test:8443', 'token-1234');
+        $credentials = MastodonCredentials::buildCredentials('social.example.test:8443', 'token-1234');
         $account = $this->verifier($http)->verify($credentials);
 
         self::assertSame('lars@social.example.test:8443', $account->identity);

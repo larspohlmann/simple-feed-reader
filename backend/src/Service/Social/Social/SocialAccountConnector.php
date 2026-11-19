@@ -10,10 +10,12 @@ use App\Entity\User;
 use App\Repository\SocialAccountRepository;
 use App\Service\Social\Social\AccountVerifier\AccountVerifierInterface;
 use App\Service\Social\Social\Crypto\SocialCredentialCipher;
+use App\Service\Social\Social\Exception\NotAnAppPasswordException;
 use App\Service\Social\Social\Exception\SocialAccountAlreadyConnectedException;
 use App\Service\Social\Social\Exception\SocialAccountMismatchException;
 use App\Service\Social\Social\Exception\TooManySocialAccountsException;
 use App\Service\Social\Social\Factory\SocialAccountFactory;
+use App\Service\Social\Social\Model\CredentialReplacementModel;
 use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Service\Social\Social\Model\SocialCredentialsModel;
 use App\Service\Social\Social\Model\VerifiedAccountModel;
@@ -67,6 +69,14 @@ final readonly class SocialAccountConnector
         return $account;
     }
 
+    /** @throws NotAnAppPasswordException */
+    public function buildReconnectCredentials(
+        SocialAccount $account,
+        CredentialReplacementModel $replacement,
+    ): SocialCredentialsModel {
+        return $this->verifier->buildReconnectCredentials($account, $replacement);
+    }
+
     public function reconnect(SocialAccount $account, SocialCredentialsModel $credentials): SocialAccount
     {
         $verified = $this->verifier->verify($credentials);
@@ -79,7 +89,7 @@ final readonly class SocialAccountConnector
         $account->replaceCredential(
             $verified->handle,
             $this->cipher->seal($account->getUser()->requireId(), $verified->credential),
-            $credentials->hint(),
+            $credentials->hint,
             $this->clock->now()->setTimezone(new \DateTimeZone('UTC')),
         );
         $account->moveTo($verified->serviceUrl);
