@@ -41,7 +41,8 @@ const LISTS = new InjectionToken<EntryListStubComponent[]>('LISTS', {
   selector: 'app-entry-list',
   imports: [NgTemplateOutlet],
   template: `<div class="leading"><ng-container [ngTemplateOutlet]="headerLeading()" /></div>
-    <div class="actions"><ng-container [ngTemplateOutlet]="headerActions()" /></div>`,
+    <div class="actions"><ng-container [ngTemplateOutlet]="headerActions()" /></div>
+    <div class="top"><ng-container [ngTemplateOutlet]="topBlock()" /></div>`,
 })
 class EntryListStubComponent {
   readonly items = input<ListItem[]>([]);
@@ -62,6 +63,7 @@ class EntryListStubComponent {
   readonly headerLeading = input<TemplateRef<unknown> | null>(null);
   readonly headerActions = input<TemplateRef<unknown> | null>(null);
   readonly cornerTrailing = input<TemplateRef<unknown> | null>(null);
+  readonly topBlock = input<TemplateRef<unknown> | null>(null);
   readonly loadMore = output<void>();
   readonly retry = output<void>();
   readonly dismiss = output<void>();
@@ -103,6 +105,7 @@ describe('StoryLayerComponent (#2329)', () => {
     error: signal(null),
     nextCursor: signal<string | null>(null),
   };
+  const synopsis = signal<string | null>(null);
   const heading = {
     title: signal('Harbour strike'),
     titleCount: signal<TitleCount>({ value: 31, counts: 'items' }),
@@ -151,6 +154,10 @@ describe('StoryLayerComponent (#2329)', () => {
           { provide: ListHeading, useValue: heading },
           { provide: FollowedStoryVisit, useValue: { newSinceVisitIds: signal(new Set()) } },
           { provide: StoryFollowing, useValue: { following: signal(false), toggleOpen } },
+          {
+            provide: OpenStory,
+            useValue: { synopsisOf: (id: number) => (id === story.id ? synopsis() : null) },
+          },
         ],
       },
     });
@@ -164,7 +171,10 @@ describe('StoryLayerComponent (#2329)', () => {
     return { element: fixture.nativeElement as HTMLElement, list: TestBed.inject(LISTS).at(-1)! };
   }
 
-  afterEach(() => TestBed.resetTestingModule());
+  afterEach(() => {
+    synopsis.set(null);
+    TestBed.resetTestingModule();
+  });
 
   it("heads the reader's own list with the story's heading and lists its own rows", () => {
     const { list } = mount();
@@ -175,6 +185,25 @@ describe('StoryLayerComponent (#2329)', () => {
     expect(list.selection()).toEqual(story);
     expect(list.items().map((item) => item.id)).toEqual([7, 8]);
     expect(list.canMarkAllRead()).toBe(true);
+  });
+
+  it("shows the story's synopsis above its rows once the page lands", () => {
+    const fixture = mountFixture();
+    const list = TestBed.inject(LISTS).at(-1)!;
+
+    synopsis.set('Dockers walked out at dawn. The port is shut.');
+    fixture.detectChanges();
+
+    expect(list.topBlock()).not.toBeNull();
+    const shown = (fixture.nativeElement as HTMLElement).querySelector('.top .story-synopsis');
+    expect(shown?.textContent?.trim()).toBe('Dockers walked out at dawn. The port is shut.');
+  });
+
+  it('renders no synopsis block before the page lands or without a synopsis', () => {
+    const { element, list } = mount();
+
+    expect(list.topBlock()).toBeNull();
+    expect(element.querySelector('.story-synopsis')).toBeNull();
   });
 
   it('lets rows leave its own list', () => {

@@ -80,7 +80,7 @@ final readonly class TrendingStories
             $this->rowsByEntryId($userId, $shown),
             array_flip($this->stories->viewedStoryIds($userId, $window, $storyIds)),
             array_flip($this->follows->followedStoryIds($userId, $storyIds)),
-            $this->stories->titlesOf($storyIds),
+            $this->stories->headingsOf($storyIds),
         );
     }
 

@@ -79,8 +79,9 @@ enum RecommendationResponseSchema
         'type' => 'object',
         'properties' => [
             'title' => ['type' => 'string'],
+            'synopsis' => ['type' => 'string'],
         ],
-        'required' => ['title'],
+        'required' => ['title', 'synopsis'],
         'additionalProperties' => false,
     ];
 

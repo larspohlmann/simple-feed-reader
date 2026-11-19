@@ -30,6 +30,7 @@ final class StubChatClient implements ChatCompletionClientInterface
      *     messages: list<array{role: string, content: string}>,
      *     maxAnswerTokens: int,
      *     responseSchemaName: string,
+     *     responseSchema: array<string, mixed>,
      *     suppressReasoning: bool,
      * }>
      */
@@ -66,6 +67,7 @@ final class StubChatClient implements ChatCompletionClientInterface
      *     messages: list<array{role: string, content: string}>,
      *     maxAnswerTokens: int,
      *     responseSchemaName: string,
+     *     responseSchema: array<string, mixed>,
      *     suppressReasoning: bool,
      * }>
      */
@@ -135,6 +137,7 @@ final class StubChatClient implements ChatCompletionClientInterface
             'maxAnswerTokens' => $request->maxAnswerTokens,
             // Proves each phase asked for its own structured shape (ranking, duplicate list) rather than sharing one.
             'responseSchemaName' => $request->responseSchema->name,
+            'responseSchema' => $request->responseSchema->schema,
             // Proves the connection's per-config preference reached the request.
             'suppressReasoning' => Reasoning::Suppressed === $request->reasoning,
         ];

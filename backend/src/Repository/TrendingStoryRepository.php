@@ -11,6 +11,7 @@ use App\Service\Curation\Trending\Exception\TrendingStoryNotFoundException;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\ReaderWindowModel;
 use App\Service\Curation\Trending\Model\StoryHeadlineModel;
+use App\Service\Curation\Trending\Model\StoryHeadingModel;
 use App\Service\Curation\Trending\Support\HeadlineBody;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
@@ -76,28 +77,29 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     /**
      * @param list<int> $storyIds
      *
-     * @return array<int, string> the stories that have a title
+     * @return array<int, StoryHeadingModel> the stories that have a title
      */
-    public function titlesOf(array $storyIds): array
+    public function headingsOf(array $storyIds): array
     {
         if ($storyIds === []) {
             return [];
         }
 
-        /** @var list<array{id: int|string, title: string}> $rows */
+        /** @var list<array{id: int|string, title: string, synopsis: string|null}> $rows */
         $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
-            'SELECT story.id, ' . TrendingStoryTitleSql::STORED . ' AS title FROM trending_story story'
+            'SELECT story.id, ' . TrendingStoryTitleSql::STORED . ' AS title,'
+            . ' story.llm_synopsis AS synopsis FROM trending_story story'
             . ' WHERE story.id IN (:storyIds) AND ' . TrendingStoryTitleSql::STORED . ' IS NOT NULL',
             ['storyIds' => $storyIds],
             ['storyIds' => ArrayParameterType::INTEGER],
         );
 
-        $titles = [];
+        $headings = [];
         foreach ($rows as $row) {
-            $titles[(int) $row['id']] = $row['title'];
+            $headings[(int) $row['id']] = new StoryHeadingModel($row['title'], $row['synopsis']);
         }
 
-        return $titles;
+        return $headings;
     }
 
     /**
@@ -137,13 +139,18 @@ final class TrendingStoryRepository extends ServiceEntityRepository
         return array_map(static fn (int|string $storyId): int => (int) $storyId, $storyIds);
     }
 
-    public function recordTitle(int $storyId, string $title, \DateTimeImmutable $attemptedAt): void
+    public function recordHeading(int $storyId, StoryHeadingModel $heading, \DateTimeImmutable $attemptedAt): void
     {
         $this->getEntityManager()->getConnection()->executeStatement(
-            'UPDATE trending_story SET llm_title = :title,'
+            'UPDATE trending_story SET llm_title = :title, llm_synopsis = :synopsis,'
             . ' llm_title_member_count = (SELECT COUNT(*) FROM trending_story_entry member'
             . ' WHERE member.story_id = :story), llm_title_attempted_at = :attemptedAt WHERE id = :story',
-            ['title' => $title, 'attemptedAt' => $attemptedAt, 'story' => $storyId],
+            [
+                'title' => $heading->title,
+                'synopsis' => $heading->synopsis,
+                'attemptedAt' => $attemptedAt,
+                'story' => $storyId,
+            ],
             ['attemptedAt' => Types::DATETIME_IMMUTABLE, 'story' => ParameterType::INTEGER],
         );
     }
@@ -248,8 +255,8 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             static fn (array $row): StoryHeadlineModel => new StoryHeadlineModel(
                 $row['title'],
                 (bool) (int) $row['title_derived']
-                    ? HeadlineBody::bodyAfterTitle($row['title'], $row['summary'])
-                    : HeadlineBody::body($row['summary']),
+                    ? HeadlineBody::bodyAfterTitle($row['title'], $row['summary'], HeadlineBody::EXCERPT_LENGTH)
+                    : HeadlineBody::body($row['summary'], HeadlineBody::EXCERPT_LENGTH),
                 $row['feed_title'],
                 $row['language'] === null ? null : FeedLanguage::from($row['language']),
             ),
@@ -280,7 +287,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
         return array_map(
             static fn (array $row): StoryHeadlineModel => new StoryHeadlineModel(
                 $row['title'],
-                HeadlineBody::body($row['description']),
+                HeadlineBody::body($row['description'], HeadlineBody::BODY_LENGTH),
                 null,
                 $row['language'] === null ? null : FeedLanguage::from($row['language']),
             ),

@@ -13,12 +13,13 @@ export interface StoryTally {
 interface LandedStory {
   readonly id: number;
   readonly title: string | null;
+  readonly synopsis: string | null;
   readonly followed: boolean;
   readonly tally: StoryTally;
 }
 
-/** What the last story page its host's list landed said of its story (#2329): its title, its tally, and whether
- *  the reader follows it. */
+/** What the last story page its host's list landed said of its story (#2329): its title, synopsis, tally and
+ *  whether the reader follows it. */
 @Injectable()
 export class OpenStory {
   private readonly landedStory = accountSignal<LandedStory | null>(null);
@@ -31,6 +32,10 @@ export class OpenStory {
 
   titleOf(id: number): string | null {
     return this.storyOf(id)?.title ?? null;
+  }
+
+  synopsisOf(id: number): string | null {
+    return this.storyOf(id)?.synopsis ?? null;
   }
 
   tallyOf(id: number): StoryTally | null {
@@ -54,6 +59,7 @@ export class OpenStory {
     this.landedStory.set({
       id: query.storyId,
       title: page.title ?? null,
+      synopsis: page.synopsis ?? null,
       followed: typeof page.lastOpenedAt === 'string',
       tally: { memberCount: page.memberCount ?? 0, unreadCount: page.unreadCount ?? 0 },
     });

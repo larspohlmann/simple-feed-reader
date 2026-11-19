@@ -55,13 +55,16 @@ final class StoryTitleTaskTest extends DbTestCase
     {
         $this->runFixtures->seedReadyAiSettingsFor($this->reader, 'qwen3-14b');
         $story = $this->shownStory(3);
-        $this->chat()->queueContent('{"title":"Hafenarbeiter in Hamburg streiken"}');
+        $this->chat()->queueContent(
+            '{"title":"Hafenarbeiter in Hamburg streiken","synopsis":"Die Hafenarbeiter legen die Arbeit nieder."}',
+        );
 
         $this->sweep()->runDue();
 
         self::assertSame(
             [
                 'llm_title' => 'Hafenarbeiter in Hamburg streiken',
+                'llm_synopsis' => 'Die Hafenarbeiter legen die Arbeit nieder.',
                 'llm_title_member_count' => 3,
                 'llm_title_attempted_at' => self::NOW,
             ],
@@ -70,17 +73,38 @@ final class StoryTitleTaskTest extends DbTestCase
         self::assertStringContainsString('in German', $this->chat()->calls()[0]['messages'][0]['content']);
     }
 
+    public function testATitleWithoutAUsableSynopsisIsKept(): void
+    {
+        $this->runFixtures->seedReadyAiSettingsFor($this->reader, 'qwen3-14b');
+        $story = $this->shownStory(3);
+        $this->chat()->queueContent('{"title":"T","synopsis":""}');
+        $this->chat()->queueContent('{"title":"T2","synopsis":""}');
+
+        $this->sweep()->runDue();
+        $this->clock->modify('+2 hours');
+        $this->sweep()->runDue();
+
+        self::assertSame('T', $this->titleColumnsOf($story)['llm_title']);
+        self::assertNull($this->titleColumnsOf($story)['llm_synopsis']);
+        self::assertCount(1, $this->chat()->calls());
+    }
+
     public function testTheRequestCarriesAtMostTwelveHeadlinesAndTheSchema(): void
     {
         $this->runFixtures->seedReadyAiSettingsFor($this->reader, 'qwen3-14b');
-        $this->shownStory(14);
-        $this->chat()->queueContent('{"title":"Hafenarbeiter in Hamburg streiken"}');
+        $this->shownStory(14, str_repeat('word ', 180));
+        $this->chat()->queueContent('{"title":"Hafenarbeiter in Hamburg streiken","synopsis":"S."}');
 
         $this->sweep()->runDue();
 
         $calls = $this->chat()->calls();
         self::assertCount(1, $calls);
         self::assertSame('story_title', $calls[0]['responseSchemaName']);
+        self::assertSame(
+            ['title', 'synopsis'],
+            $calls[0]['responseSchema']['required'],
+        );
+        self::assertStringContainsString(rtrim(str_repeat('word ', 180)), $this->userMessageOf(0));
         self::assertSame(12, preg_match_all('/^\d+\. /m', $this->userMessageOf(0)));
         self::assertStringContainsString("\n\n12. ", $this->userMessageOf(0));
     }
@@ -230,32 +254,43 @@ final class StoryTitleTaskTest extends DbTestCase
         self::assertStringNotContainsString('Spiegel', $this->userMessageOf(0));
     }
 
-    private function shownStory(int $outlets): TrendingStory
+    private function shownStory(int $outlets, ?string $summary = null): TrendingStory
     {
-        return $this->storyLastSeen('2031-05-14 10:00:00', $outlets);
+        return $this->storyLastSeen('2031-05-14 10:00:00', $outlets, $summary);
     }
 
-    private function storyLastSeen(string $lastSeen, int $outlets): TrendingStory
+    private function storyLastSeen(string $lastSeen, int $outlets, ?string $summary = null): TrendingStory
     {
         return $this->fixtures->story(
             TrendingWindow::Day,
             $lastSeen,
             ...array_map(
-                fn (int $variant): Entry => $this->outletEntry('Hafenstreik legt Hamburg lahm, Teil ' . $variant),
+                fn (int $variant): Entry => $this->outletEntry(
+                    'Hafenstreik legt Hamburg lahm, Teil ' . $variant,
+                    $summary,
+                ),
                 range(1, $outlets),
             ),
         );
     }
 
-    private function outletEntry(string $headline): Entry
+    private function outletEntry(string $headline, ?string $summary = null): Entry
     {
         $this->feedCount++;
-
-        return $this->fixtures->entry(
+        $entry = $this->fixtures->entry(
             $this->fixtures->feed('title-outlet-' . $this->feedCount),
             $headline,
             \sprintf('2031-05-14 09:%02d:00', $this->feedCount % 30),
         );
+        if ($summary !== null) {
+            $this->entityManager->flush();
+            $this->entityManager->getConnection()->executeStatement(
+                'UPDATE entry SET summary = ? WHERE id = ?',
+                [$summary, $entry->requireId()],
+            );
+        }
+
+        return $entry;
     }
 
     private function storeTitle(TrendingStory $story, string $title, int $memberCount, string $attemptedAt): void
@@ -268,19 +303,25 @@ final class StoryTitleTaskTest extends DbTestCase
     }
 
     /**
-     * @return array{llm_title: ?string, llm_title_member_count: ?int, llm_title_attempted_at: ?string}
+     * @return array{
+     *     llm_title: ?string,
+     *     llm_synopsis: ?string,
+     *     llm_title_member_count: ?int,
+     *     llm_title_attempted_at: ?string,
+     * }
      */
     private function titleColumnsOf(TrendingStory $story): array
     {
-        /** @var array{llm_title: ?string, llm_title_member_count: int|string|null, llm_title_attempted_at: ?string} $row */
+        /** @var array{llm_title: ?string, llm_synopsis: ?string, llm_title_member_count: int|string|null, llm_title_attempted_at: ?string} $row */
         $row = $this->entityManager->getConnection()->fetchAssociative(
-            'SELECT llm_title, llm_title_member_count, llm_title_attempted_at'
+            'SELECT llm_title, llm_synopsis, llm_title_member_count, llm_title_attempted_at'
             . ' FROM trending_story WHERE id = ?',
             [$story->requireId()],
         );
 
         return [
             'llm_title' => $row['llm_title'],
+            'llm_synopsis' => $row['llm_synopsis'],
             'llm_title_member_count' => $row['llm_title_member_count'] === null
                 ? null
                 : (int) $row['llm_title_member_count'],

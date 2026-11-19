@@ -28,6 +28,7 @@ const story = (
 ): TrendingStoryDto => ({
   id,
   title: `Fixture event ${id}`,
+  synopsis: null,
   followed: false,
   outletCount,
   viewed,

@@ -17,7 +17,11 @@ import type {
 const TITLE = 'Hafenarbeiter in Hamburg streiken';
 const STORY_ID = 601;
 const STORY_IDS = [601, 602, 603, 604, 605, 606, 607, 608];
+const SYNOPSIS =
+  'Die Hafenarbeiter in Hamburg haben am Morgen die Arbeit niedergelegt. Der Containerumschlag steht still.';
+const FALLBACK_ID = 602;
 const titleOf = (id: number) => (id === STORY_ID ? TITLE : `Fixture story ${id}`);
+const synopsisOf = (id: number) => (id === STORY_ID ? SYNOPSIS : null);
 const leadOf = (id: number) =>
   entryWire({ id: id * 10, title: `Fixture lead article ${id}`, source: `Fixture lead ${id}` });
 
@@ -28,6 +32,7 @@ function trendingWith(followed: boolean): TrendingResponseDto {
     stories: STORY_IDS.map((id) => ({
       id,
       title: titleOf(id),
+      synopsis: synopsisOf(id),
       followed: followed && id === STORY_ID,
       outletCount: 1,
       viewed: false,
@@ -54,6 +59,7 @@ function storyPage(id: number, followed: boolean, over: Partial<StoryPageDto> = 
     entries: [leadOf(id)],
     nextCursor: null,
     title: titleOf(id),
+    synopsis: synopsisOf(id),
     memberCount: 1,
     unreadCount: 1,
     lastOpenedAt: followed ? '2026-11-18T06:00:00Z' : null,
@@ -210,6 +216,37 @@ for (const layout of ['magazine', 'list'] as const) {
 
     await expect(layer(page)).toHaveCount(0);
     await expect(page).toHaveURL(/\/$/);
+  });
+}
+
+for (const [device, viewport] of [
+  ['desktop', { width: 1280, height: 900 }],
+  ['phone', { width: 375, height: 667 }],
+] as const) {
+  test.describe(`a story's synopsis (#2353, ${device})`, () => {
+    test.use({ viewport });
+
+    test('shows beneath the title on the card and at the top of its list', async ({ page }) => {
+      await openStoryFromTrending(page, 'magazine');
+
+      await expect(layer(page).locator('.story-synopsis')).toHaveText(SYNOPSIS);
+      await closeStory(page);
+      const card = page.locator('app-story-title', { hasText: TITLE });
+      await expect(card.locator('h3.title + p.synopsis')).toHaveText(SYNOPSIS);
+    });
+
+    test('a story without one shows none, on its card or in its list', async ({ page }) => {
+      await stubStories(page, false);
+      await signIn(page, 'magazine');
+      await openTrending(page);
+      const card = page.locator('app-story-title', { hasText: titleOf(FALLBACK_ID) });
+      await expect(card.locator('h3.title')).toBeVisible();
+      await expect(card.locator('.synopsis')).toHaveCount(0);
+
+      await card.locator('a').click();
+      await expect(layer(page)).toContainText(titleOf(FALLBACK_ID));
+      await expect(layer(page).locator('.story-synopsis')).toHaveCount(0);
+    });
   });
 }
 

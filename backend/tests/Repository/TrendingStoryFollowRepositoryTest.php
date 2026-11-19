@@ -166,7 +166,7 @@ final class TrendingStoryFollowRepositoryTest extends DbTestCase
     public function testAFollowedStoryIsHeadedByItsTitle(): void
     {
         $story = $this->followedStoryNewestHeadlinedNeueGespraeche();
-        $this->storeTitles($story, null, 'Hafenstreik in Hamburg');
+        $this->fixtures->storeTitles($story, 'Hafenstreik in Hamburg', null);
 
         self::assertSame('Hafenstreik in Hamburg', $this->follows->followedBy($this->reader->requireId())[0]->headline);
     }
@@ -174,7 +174,7 @@ final class TrendingStoryFollowRepositoryTest extends DbTestCase
     public function testTheLlmTitleHeadsAFollowedStory(): void
     {
         $story = $this->followedStoryNewestHeadlinedNeueGespraeche();
-        $this->storeTitles($story, 'Streik legt den Hafen lahm', 'Hafenstreik in Hamburg');
+        $this->fixtures->storeTitles($story, 'Hafenstreik in Hamburg', 'Streik legt den Hafen lahm');
 
         self::assertSame(
             'Streik legt den Hafen lahm',
@@ -202,14 +202,6 @@ final class TrendingStoryFollowRepositoryTest extends DbTestCase
         $this->fixtures->follow($this->reader, $story, '2031-05-14 10:00:00');
 
         return $story;
-    }
-
-    private function storeTitles(TrendingStory $story, ?string $llmTitle, string $fallbackTitle): void
-    {
-        $this->entityManager->getConnection()->executeStatement(
-            'UPDATE trending_story SET llm_title = ?, fallback_title = ? WHERE id = ?',
-            [$llmTitle, $fallbackTitle, $story->requireId()],
-        );
     }
 
     private function story(): TrendingStory
