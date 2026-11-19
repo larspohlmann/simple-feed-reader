@@ -13,14 +13,11 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class SocialProblemsTest extends TestCase
 {
-    public function testAHiddenProfileIsAnUnprocessableRequestThatSaysWhatToDo(): void
+    public function testAHiddenBlueskyProfileBelongsToAnotherModule(): void
     {
         $resolved = (new SocialProblems())->resolve(new BlueskyProfileHiddenException('Connect a Bluesky account.'));
 
-        self::assertNotNull($resolved);
-        self::assertSame('bluesky_profile_hidden', $resolved->problem->type);
-        self::assertSame(Response::HTTP_UNPROCESSABLE_ENTITY, $resolved->problem->status);
-        self::assertSame('Connect a Bluesky account.', $resolved->problem->detail);
+        self::assertNull($resolved);
     }
 
     public function testASearchTooBroadForMastodonIsAnUnprocessableRequestThatSaysWhy(): void
