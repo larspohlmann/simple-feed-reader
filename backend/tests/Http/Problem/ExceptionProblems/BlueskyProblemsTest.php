@@ -18,6 +18,7 @@ final class BlueskyProblemsTest extends TestCase
         self::assertNotNull($resolved);
         self::assertSame('bluesky_profile_hidden', $resolved->problem->type);
         self::assertSame(Response::HTTP_UNPROCESSABLE_ENTITY, $resolved->problem->status);
+        self::assertSame('Profile hidden from logged-out readers', $resolved->problem->title);
         self::assertSame('Connect a Bluesky account.', $resolved->problem->detail);
     }
 
