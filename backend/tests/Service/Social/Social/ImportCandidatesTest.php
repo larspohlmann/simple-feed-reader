@@ -393,6 +393,33 @@ final class ImportCandidatesTest extends DbTestCase
         self::assertNull($this->followAvatars->find($account)->avatarOf('bob@mastodon.example'));
     }
 
+    public function testALemmyImportResolvesNoHandleAndCachesNoAvatar(): void
+    {
+        $account = $this->storedAccount(SocialAccounts::lemmyOf($this->user));
+        $gone = $this->subscribe('https://feddit.example/feeds/c/gone.xml');
+        $network = new StubSocialCandidates(new NetworkCandidatesModel(
+            [new FollowedAccountModel(
+                'linux@lemmy.example',
+                '!linux@lemmy.example',
+                null,
+                'https://lemmy.example/feeds/c/linux.xml',
+                'https://cdn.test/linux.jpg',
+            )],
+            [],
+            [],
+            false,
+        ));
+
+        $follows = $this->importCandidates($network)->forAccount($account)->follows;
+
+        self::assertSame(
+            [['!linux@lemmy.example', 'new', null], ['!gone@feddit.example', 'no_longer_followed', $gone->requireId()]],
+            self::summary($follows),
+        );
+        self::assertSame([], $this->http->requests);
+        self::assertNull($this->followAvatars->find($account)->avatarOf('linux@lemmy.example'));
+    }
+
     public function testALemmyAccountOffersItsThreeTimelines(): void
     {
         $account = $this->storedAccount(SocialAccounts::lemmyOf($this->user));
