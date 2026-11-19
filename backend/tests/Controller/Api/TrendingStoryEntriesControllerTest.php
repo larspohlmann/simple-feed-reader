@@ -379,6 +379,28 @@ final class TrendingStoryEntriesControllerTest extends ApiTestCase
         self::assertSame('Harbour strike in Hamburg', $this->page($story)['title']);
     }
 
+    public function testThePageCarriesTheStorysSynopsis(): void
+    {
+        $reader = $this->signInAsOwner('story-list-synopsis@example.com');
+        [$alpha, $beta] = $this->followedFeeds($reader);
+        $story = $this->storyOf($alpha, $beta);
+        $this->entityManager()->getConnection()->executeStatement(
+            'UPDATE trending_story SET llm_title = ?, llm_synopsis = ? WHERE id = ?',
+            ['Harbour strike in Hamburg', 'The dockers have stopped work.', $story->requireId()],
+        );
+
+        self::assertSame('The dockers have stopped work.', $this->page($story)['synopsis']);
+    }
+
+    public function testThePageOfAStoryWithoutAnLlmTitleHasNoSynopsis(): void
+    {
+        $reader = $this->signInAsOwner('story-list-no-synopsis@example.com');
+        [$alpha, $beta] = $this->followedFeeds($reader);
+        $story = $this->storyOf($alpha, $beta);
+
+        self::assertNull($this->page($story)['synopsis']);
+    }
+
     public function testThePageCountsTheStorysRowsAndItsUnreadOnesBeyondThePage(): void
     {
         $reader = $this->signInAsOwner('story-list-tallies@example.com');

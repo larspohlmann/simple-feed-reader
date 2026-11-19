@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  computed,
   TemplateRef,
   inject,
   input,
@@ -84,6 +85,12 @@ export class StoryLayerComponent {
   protected readonly listOrder = inject(ListOrderService);
   protected readonly markRead = inject(MarkReadActions);
   protected readonly gestures = inject(ArticleGestures);
+  private readonly openStory = inject(OpenStory);
+  protected readonly synopsis = computed(() =>
+    this.openStory.synopsisOf(this.context.selection().id),
+  );
+  private readonly synopsisTemplate = viewChild.required<TemplateRef<unknown>>('synopsisTemplate');
+  protected readonly topBlock = computed(() => (this.synopsis() ? this.synopsisTemplate() : null));
   readonly list = viewChild(EntryListComponent);
 
   constructor() {

@@ -194,6 +194,24 @@ h2.search-title {
     display: none;
   }
 
+  :host(.collapsed.is-story) h2 {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    line-height: var(--lh-tight);
+  }
+
+  /* The leading buttons are projected from other components, hence `::ng-deep`. */
+  :host(.collapsed.is-story) ::ng-deep > * {
+    align-self: flex-start;
+  }
+
+  /* Centres the first line on the back button beside it. */
+  :host(.collapsed.is-story) .title-row {
+    align-items: flex-start;
+    padding-block: calc((var(--icon-lg) - var(--fs-sm) * var(--lh-tight)) / 2);
+  }
+
   :host(.collapsed) .meta,
   :host(.collapsed) .whole-word-badge,
   :host(.collapsed) .phrase-badge {

@@ -3,3 +3,11 @@
   display: block;
   background: var(--surface-0);
 }
+
+.story-synopsis {
+  margin: 0;
+  padding: var(--row-pad-comfy-y) var(--row-pad-comfy-x);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+  color: var(--text-secondary);
+}

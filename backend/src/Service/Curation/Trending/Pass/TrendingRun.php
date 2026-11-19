@@ -56,8 +56,8 @@ final class TrendingRun
         $this->headlines->add(
             $entry,
             $entry->titleDerived
-                ? HeadlineBody::bodyAfterTitle($entry->title, $entry->summary)
-                : HeadlineBody::body($entry->summary),
+                ? HeadlineBody::bodyAfterTitle($entry->title, $entry->summary, HeadlineBody::BODY_LENGTH)
+                : HeadlineBody::body($entry->summary, HeadlineBody::BODY_LENGTH),
             $article,
         );
     }

@@ -11,14 +11,14 @@ final readonly class RankedStoryModel
         public int $storyId,
         public int $outletCount,
         public \DateTimeImmutable $lastSeen,
-        public ?string $title = null,
+        public ?StoryHeadingModel $heading = null,
     ) {
     }
 
     #[\NoDiscard]
-    public function titled(?string $title): self
+    public function headed(?StoryHeadingModel $heading): self
     {
-        return clone($this, ['title' => $title]);
+        return clone($this, ['heading' => $heading]);
     }
 
     /**

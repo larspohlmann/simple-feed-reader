@@ -88,6 +88,33 @@ final class TrendingControllerTest extends ApiTestCase
         self::assertIsArray($stories);
         self::assertIsArray($stories[0]);
         self::assertSame('Hafenstreik in Hamburg', $stories[0]['title']);
+        self::assertNull($stories[0]['synopsis']);
+    }
+
+    public function testTheDayPageCarriesTheSynopsisOfAnLlmTitledStory(): void
+    {
+        [$headers, $user] = $this->bearerAndUser('trending-story-synopsis@example.com');
+        $fixtures = (new TrendingFixtures($this->entityManager()))->ownedBy($user);
+        $feeds = [$fixtures->feed('alpha'), $fixtures->feed('beta'), $fixtures->feed('gamma')];
+        $fixtures->subscribe($user, ...$feeds);
+        $story = $fixtures->story(TrendingWindow::Day, '2031-05-14 10:00:00', ...array_map(
+            static fn (Feed $feed): Entry => $fixtures->entry($feed, 'Lead', '2031-05-14 10:00:00'),
+            $feeds,
+        ));
+        $this->entityManager()->flush();
+        $this->entityManager()->getConnection()->executeStatement(
+            'UPDATE trending_story SET llm_title = ?, llm_synopsis = ? WHERE id = ?',
+            ['Hafenstreik in Hamburg', 'Die Hafenarbeiter legen die Arbeit nieder.', $story->requireId()],
+        );
+
+        $this->client->request('GET', '/api/trending?window=day', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $stories = $this->payload($this->client)['stories'];
+        self::assertIsArray($stories);
+        self::assertIsArray($stories[0]);
+        self::assertSame('Hafenstreik in Hamburg', $stories[0]['title']);
+        self::assertSame('Die Hafenarbeiter legen die Arbeit nieder.', $stories[0]['synopsis']);
     }
 
     public function testEachStoryCarriesItsId(): void

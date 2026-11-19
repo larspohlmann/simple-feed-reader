@@ -168,6 +168,19 @@ final readonly class TrendingFixtures
         ));
     }
 
+    public function storeTitles(
+        TrendingStory $story,
+        ?string $fallbackTitle,
+        ?string $llmTitle,
+        ?string $llmSynopsis = null,
+    ): void {
+        $this->entityManager->flush();
+        $this->entityManager->getConnection()->executeStatement(
+            'UPDATE trending_story SET fallback_title = ?, llm_title = ?, llm_synopsis = ? WHERE id = ?',
+            [$fallbackTitle, $llmTitle, $llmSynopsis, $story->requireId()],
+        );
+    }
+
     /** Flushes first: a story entry copies its feed's id. Every member joined at $lastSeen and is placed in $window. */
     public function story(TrendingWindow $window, string $lastSeen, Entry ...$members): TrendingStory
     {

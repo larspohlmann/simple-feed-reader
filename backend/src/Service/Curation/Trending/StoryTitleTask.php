@@ -16,12 +16,13 @@ use App\Service\Curation\StoryAi\StoryAiCalls;
 use App\Service\Curation\StoryAi\StoryAiTask\StoryAiTaskInterface;
 use App\Service\Curation\StoryAi\StorySettingsProvider;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
+use App\Service\Curation\Trending\Model\StoryHeadingModel;
 use App\Service\Curation\Trending\Model\StoryHeadlineModel;
 use App\Service\Curation\Trending\Support\StoryTitlePrompt;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use Psr\Log\LoggerInterface;
 
-/** Writes each shown story's title in the reader's language, at most once an hour and again once it grew by half. */
+/** Writes each shown story's title and synopsis, at most once an hour and again once it grew by half. */
 final readonly class StoryTitleTask implements StoryAiTaskInterface
 {
     private const int HEADLINES = 12;
@@ -85,11 +86,11 @@ final readonly class StoryTitleTask implements StoryAiTaskInterface
         return $outcome;
     }
 
-    /** @param StoryAiOutcomeModel<string> $outcome */
+    /** @param StoryAiOutcomeModel<StoryHeadingModel> $outcome */
     private function record(int $storyId, StoryAiOutcomeModel $outcome): void
     {
         if ($outcome->isUsable()) {
-            $this->stories->recordTitle($storyId, $outcome->value(), $this->clock->now());
+            $this->stories->recordHeading($storyId, $outcome->value(), $this->clock->now());
 
             return;
         }
