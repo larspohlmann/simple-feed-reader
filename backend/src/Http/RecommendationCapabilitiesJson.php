@@ -18,13 +18,13 @@ final readonly class RecommendationCapabilitiesJson
     }
 
     /** @return array{reasons: bool, prompt: bool, profile: string, tuningFields: list<string>} */
-    public function of(AiProviderSettings $connection): array
+    public function from(AiProviderSettings $connection): array
     {
         return self::shape($this->engines->capabilitiesFor($connection));
     }
 
     /** @return array{reasons: bool, prompt: bool, profile: string, tuningFields: list<string>} */
-    public function ofKind(RecommendationEngineKind $kind): array
+    public function fromKind(RecommendationEngineKind $kind): array
     {
         return self::shape(RecommendationEngineCapabilitiesModel::of($kind));
     }

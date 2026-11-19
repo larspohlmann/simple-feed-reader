@@ -126,10 +126,10 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
             return new MediaCandidateModel(
                 MediaKind::Audio,
                 $best,
-                label: $this->clipFacts->titleOf($holders),
+                label: $this->clipFacts->findTitle($holders),
                 precedingText: $precedingText,
                 narrated: $this->narration->narrates($best, $holders[0]),
-                durationSeconds: $this->clipFacts->durationOf($holders),
+                durationSeconds: $this->clipFacts->findDuration($holders),
             );
         }
 

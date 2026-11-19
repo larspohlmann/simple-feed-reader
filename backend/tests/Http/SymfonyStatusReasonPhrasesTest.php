@@ -11,11 +11,11 @@ final class SymfonyStatusReasonPhrasesTest extends TestCase
 {
     public function testAKnownStatusHasItsStandardPhrase(): void
     {
-        self::assertSame('Forbidden', new SymfonyStatusReasonPhrases()->of(403));
+        self::assertSame('Forbidden', new SymfonyStatusReasonPhrases()->findPhrase(403));
     }
 
     public function testAStatusWithoutAStandardPhraseHasNone(): void
     {
-        self::assertSame('', new SymfonyStatusReasonPhrases()->of(499));
+        self::assertSame('', new SymfonyStatusReasonPhrases()->findPhrase(499));
     }
 }

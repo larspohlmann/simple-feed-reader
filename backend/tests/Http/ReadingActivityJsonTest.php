@@ -17,7 +17,7 @@ final class ReadingActivityJsonTest extends TestCase
 {
     public function testShapesEachDayKeepsTheOrderTotalsReadsAndCarriesTheFeedRanking(): void
     {
-        $payload = ReadingActivityJson::of(new ReadingActivityModel(
+        $payload = ReadingActivityJson::from(new ReadingActivityModel(
             new SubscriptionActivityModel([
                 ActivityDayModel::known('2026-09-05', new DayCountModel(0, 0)),
                 ActivityDayModel::known('2026-09-06', new DayCountModel(5, 3)),
@@ -52,7 +52,7 @@ final class ReadingActivityJsonTest extends TestCase
         }
         $days[] = ActivityDayModel::known('2026-09-09', new DayCountModel(9, 0));
 
-        $payload = ReadingActivityJson::of(
+        $payload = ReadingActivityJson::from(
             new ReadingActivityModel(new SubscriptionActivityModel($days, []), [], new ReadingTotalsModel(0, 0)),
         );
 
@@ -63,7 +63,7 @@ final class ReadingActivityJsonTest extends TestCase
 
     public function testAnAccountWithNoKnownDaysHasNoAverage(): void
     {
-        $payload = ReadingActivityJson::of(new ReadingActivityModel(
+        $payload = ReadingActivityJson::from(new ReadingActivityModel(
             new SubscriptionActivityModel([ActivityDayModel::unknown('2026-09-06')], []),
             [],
             new ReadingTotalsModel(0, 0),
@@ -77,7 +77,7 @@ final class ReadingActivityJsonTest extends TestCase
 
     public function testCarriesTheArrivalRankingWithEachAverageRoundedToOneDecimal(): void
     {
-        $payload = ReadingActivityJson::of(new ReadingActivityModel(
+        $payload = ReadingActivityJson::from(new ReadingActivityModel(
             new SubscriptionActivityModel([], [
                 new FeedArrivalRateModel(12, 86 / 7),
                 new FeedArrivalRateModel(4, 2.0),

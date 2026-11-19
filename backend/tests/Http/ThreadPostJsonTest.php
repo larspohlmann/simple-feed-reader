@@ -12,7 +12,7 @@ final class ThreadPostJsonTest extends TestCase
 {
     public function testAnUndatedReplyHasNoPublishedTime(): void
     {
-        $json = JsonMappers::threadPostJson()->of(new ThreadPostModel('https://x/1', null, '<p>one</p>', [], null));
+        $json = JsonMappers::threadPostJson()->from(new ThreadPostModel('https://x/1', null, '<p>one</p>', [], null));
 
         self::assertNull($json['publishedAt']);
         self::assertNull($json['linkCard']);

@@ -191,7 +191,7 @@ final class TranscriptParagraphsTest extends TestCase
     {
         self::assertSame(
             "Ann: Hi.\nUntimed.",
-            TranscriptParagraphs::searchTextOf([
+            TranscriptParagraphs::toSearchText([
                 new TranscriptParagraph(0, 'Ann', 'Hi.'),
                 new TranscriptParagraph(null, null, 'Untimed.'),
             ]),

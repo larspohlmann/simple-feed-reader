@@ -62,7 +62,7 @@ final readonly class ArticleExtractor implements ArticleExtractorInterface
         $containers = $this->slideshowContainers($articlePage->slideshows);
         $article = $this->readability->richest($articlePage->normalized, $page, $containers)
             ?? throw new ArticleNotExtractedException(ExtractionFailure::Unextractable);
-        $content = $this->contentGate->contentOf($article, $articlePage->media);
+        $content = $this->contentGate->requireContent($article, $articlePage->media);
         $body = $this->bodyCleaner->clean($content, $this->bodyCleaningInput($article, $articlePage, $hints));
         $clean = $this->sanitizer->sanitize($body) ?? throw new ArticleNotExtractedException(ExtractionFailure::Empty);
 

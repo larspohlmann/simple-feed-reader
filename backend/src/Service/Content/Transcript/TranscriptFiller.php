@@ -31,19 +31,22 @@ final readonly class TranscriptFiller
             );
         } catch (TranscriptUnusableException $exception) {
             $transcript->fail();
-            $this->logger->info('Transcript unusable; not retried.', $this->contextOf($transcript, $exception));
+            $this->logger->info('Transcript unusable; not retried.', $this->buildLogContext($transcript, $exception));
 
             return;
         } catch (TranscriptUnreachableException $exception) {
             $transcript->retryAfter($this->clock->now());
-            $this->logger->info('Transcript unreachable; retried later.', $this->contextOf($transcript, $exception));
+            $this->logger->info(
+                'Transcript unreachable; retried later.',
+                $this->buildLogContext($transcript, $exception),
+            );
 
             return;
         } catch (\Throwable $exception) {
             $transcript->retryAfter($this->clock->now());
             $this->logger->error(
                 'Transcript fetch failed unexpectedly; retried later.',
-                $this->contextOf($transcript, $exception),
+                $this->buildLogContext($transcript, $exception),
             );
 
             return;
@@ -53,7 +56,7 @@ final readonly class TranscriptFiller
     }
 
     /** @return array{url: string, exception: \Throwable} */
-    private function contextOf(EntryTranscript $transcript, \Throwable $exception): array
+    private function buildLogContext(EntryTranscript $transcript, \Throwable $exception): array
     {
         return ['url' => $transcript->getUrl(), 'exception' => $exception];
     }

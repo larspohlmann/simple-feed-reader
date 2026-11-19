@@ -34,7 +34,7 @@ final class GuardedDescriptionRequestTest extends TestCase
             new MockResponse('{"description":"0:00 Intro"}', ['http_code' => Response::HTTP_OK]),
         )));
 
-        $answer = $request->answerOf(ApiRequestModel::get(self::URL), $this->embed());
+        $answer = $request->fetchAnswer(ApiRequestModel::get(self::URL), $this->embed());
 
         self::assertSame(['description' => '0:00 Intro'], $answer);
     }
@@ -47,7 +47,7 @@ final class GuardedDescriptionRequestTest extends TestCase
             'response_headers' => ['Location' => 'https://elsewhere.test/answer.json'],
         ]))));
 
-        self::assertSame([], $request->answerOf(ApiRequestModel::get(self::URL), $this->embed()));
+        self::assertSame([], $request->fetchAnswer(ApiRequestModel::get(self::URL), $this->embed()));
     }
 
     /** @return iterable<string, array{int}> */
@@ -66,7 +66,7 @@ final class GuardedDescriptionRequestTest extends TestCase
         )));
 
         $this->expectException(EmbedDescriptionUnreachableException::class);
-        $request->answerOf(ApiRequestModel::get(self::URL), $this->embed());
+        $request->fetchAnswer(ApiRequestModel::get(self::URL), $this->embed());
     }
 
     /** @return iterable<string, array{int}> */
@@ -88,7 +88,7 @@ final class GuardedDescriptionRequestTest extends TestCase
         });
 
         $request = new GuardedDescriptionRequest($this->client($http));
-        $request->answerOf(ApiRequestModel::get(self::URL), $this->embed());
+        $request->fetchAnswer(ApiRequestModel::get(self::URL), $this->embed());
 
         self::assertSame(3.0, $seenOptions['timeout']);
         self::assertSame(3.0, $seenOptions['max_duration']);
@@ -101,7 +101,10 @@ final class GuardedDescriptionRequestTest extends TestCase
             new MockResponse(self::answerPaddedTo(ResponseSizeLimit::EmbedDescription->bytes())),
         )));
 
-        self::assertSame(['description' => 'x'], $request->answerOf(ApiRequestModel::get(self::URL), $this->embed()));
+        self::assertSame(
+            ['description' => 'x'],
+            $request->fetchAnswer(ApiRequestModel::get(self::URL), $this->embed()),
+        );
     }
 
     public function testAnAnswerBeyondTheSizeLimitGivesNothing(): void
@@ -110,7 +113,7 @@ final class GuardedDescriptionRequestTest extends TestCase
             new MockResponse(self::answerPaddedTo(ResponseSizeLimit::EmbedDescription->bytes() + 1)),
         )));
 
-        self::assertSame([], $request->answerOf(ApiRequestModel::get(self::URL), $this->embed()));
+        self::assertSame([], $request->fetchAnswer(ApiRequestModel::get(self::URL), $this->embed()));
     }
 
     private static function answerPaddedTo(int $bytes): string
@@ -122,7 +125,7 @@ final class GuardedDescriptionRequestTest extends TestCase
     {
         $request = new GuardedDescriptionRequest($this->client(new MockHttpClient()));
 
-        $answer = $request->answerOf(ApiRequestModel::get('http://127.0.0.1/answer.json'), $this->embed());
+        $answer = $request->fetchAnswer(ApiRequestModel::get('http://127.0.0.1/answer.json'), $this->embed());
 
         self::assertSame([], $answer);
     }
@@ -134,7 +137,7 @@ final class GuardedDescriptionRequestTest extends TestCase
         )));
 
         $this->expectException(EmbedDescriptionUnreachableException::class);
-        $request->answerOf(ApiRequestModel::get(self::URL), $this->embed());
+        $request->fetchAnswer(ApiRequestModel::get(self::URL), $this->embed());
     }
 
     public function testADirectAnswerIsAskedWithinTheShortBudgetOffTheProxy(): void
@@ -147,7 +150,7 @@ final class GuardedDescriptionRequestTest extends TestCase
         });
         $request = new GuardedDescriptionRequest($this->client($http, $this->proxy(directFallback: true)));
 
-        $answer = $request->directAnswerOf(ApiRequestModel::get(self::URL), $this->embed());
+        $answer = $request->fetchDirectAnswer(ApiRequestModel::get(self::URL), $this->embed());
 
         self::assertSame(['description' => '0:00 Intro'], $answer);
         self::assertArrayNotHasKey('proxy', $seenOptions);
@@ -163,7 +166,7 @@ final class GuardedDescriptionRequestTest extends TestCase
         ));
 
         $this->expectException(EmbedDescriptionUnreachableException::class);
-        $request->directAnswerOf(ApiRequestModel::get(self::URL), $this->embed());
+        $request->fetchDirectAnswer(ApiRequestModel::get(self::URL), $this->embed());
     }
 
     public function testNoDirectAnswerIsAskedWhenTheProxyForbidsIt(): void
@@ -174,7 +177,7 @@ final class GuardedDescriptionRequestTest extends TestCase
         ));
 
         $this->expectException(DirectRouteUnavailableException::class);
-        $request->directAnswerOf(ApiRequestModel::get(self::URL), $this->embed());
+        $request->fetchDirectAnswer(ApiRequestModel::get(self::URL), $this->embed());
     }
 
     private function proxy(bool $directFallback): ProxyConfigModel

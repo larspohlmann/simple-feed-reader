@@ -17,7 +17,7 @@ final class JsonCues
      *
      * @throws TranscriptUnusableException
      */
-    public static function of(string $body): array
+    public static function parseCues(string $body): array
     {
         try {
             $document = json_decode($body, true, flags: \JSON_THROW_ON_ERROR);
@@ -28,7 +28,7 @@ final class JsonCues
         $segments = \is_array($document) && \is_array($document['segments'] ?? null) ? $document['segments'] : [];
         $cues = [];
         foreach ($segments as $segment) {
-            $cue = \is_array($segment) ? self::cueOf($segment) : null;
+            $cue = \is_array($segment) ? self::parseCue($segment) : null;
             if ($cue !== null) {
                 $cues[] = $cue;
             }
@@ -38,7 +38,7 @@ final class JsonCues
     }
 
     /** @param array<mixed> $segment */
-    private static function cueOf(array $segment): ?TranscriptCueModel
+    private static function parseCue(array $segment): ?TranscriptCueModel
     {
         $text = \is_string($segment['body'] ?? null) ? trim($segment['body']) : '';
         if ($text === '') {
@@ -49,13 +49,13 @@ final class JsonCues
         $speaker = \is_string($segment['speaker'] ?? null) ? trim($segment['speaker']) : '';
 
         return new TranscriptCueModel(
-            self::startOf($start),
+            self::parseStart($start),
             $speaker === '' ? null : $speaker,
             $text,
         );
     }
 
-    private static function startOf(mixed $start): ?int
+    private static function parseStart(mixed $start): ?int
     {
         $isUsable = (\is_int($start) || \is_float($start)) && is_finite($start)
             && $start >= 0 && $start < self::MAX_START_SECONDS;

@@ -18,7 +18,7 @@ final readonly class SelfUpdateStatusJson
      *     log: string,
      * }
      */
-    public static function of(SelfUpdateStatusModel $status): array
+    public static function from(SelfUpdateStatusModel $status): array
     {
         return [
             'updaterPresent' => $status->updaterPresent,

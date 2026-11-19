@@ -15,7 +15,7 @@ use App\Service\Social\Share\Support\TitledShareTarget;
 final class ReusableShareUrls
 {
     /** @return list<string> */
-    public static function of(Entry $entry, ShareFetchPlanModel $plan): array
+    public static function filterUrls(Entry $entry, ShareFetchPlanModel $plan): array
     {
         if (TitledShareTarget::of($entry) !== null) {
             return [];

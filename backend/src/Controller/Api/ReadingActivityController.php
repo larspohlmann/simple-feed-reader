@@ -25,6 +25,6 @@ final readonly class ReadingActivityController
     #[Route('/activity', name: 'api_reading_activity', methods: ['GET'])]
     public function activity(#[CurrentUser] User $user): JsonResponse
     {
-        return new JsonResponse(ReadingActivityJson::of($this->activity->activity($user)));
+        return new JsonResponse(ReadingActivityJson::from($this->activity->activity($user)));
     }
 }

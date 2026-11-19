@@ -21,7 +21,7 @@ final class PreviewedDiscoveryJson
     ];
 
     /** @return array<string, mixed> */
-    public static function of(PreviewedDiscoveryModel $found): array
+    public static function from(PreviewedDiscoveryModel $found): array
     {
         $payload = ['candidates' => array_map(self::candidate(...), $found->candidates)];
         if (null !== $found->scrapeFailureReason) {
@@ -39,7 +39,7 @@ final class PreviewedDiscoveryJson
             'url' => $candidate->url,
             'title' => $candidate->title,
             'format' => $candidate->format,
-            'label' => self::labelOf($candidate->format),
+            'label' => self::formatLabel($candidate->format),
         ];
         if (SourceFormat::isVerbatim($candidate->format)) {
             $json['storedFormat'] = $candidate->format;
@@ -56,7 +56,7 @@ final class PreviewedDiscoveryJson
         return $json;
     }
 
-    private static function labelOf(string $format): string
+    private static function formatLabel(string $format): string
     {
         return self::FORMAT_LABELS[$format] ?? ucfirst($format);
     }

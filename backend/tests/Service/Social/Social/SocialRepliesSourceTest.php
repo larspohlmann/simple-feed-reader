@@ -227,10 +227,10 @@ final class SocialRepliesSourceTest extends DbTestCase
     public function testTheAudienceSeparatesAccountsFromThePublic(): void
     {
         $post = $this->post();
-        $publicAudience = $this->source()->audienceOf($this->owner, $post)->scope;
+        $publicAudience = $this->source()->buildAudience($this->owner, $post)->scope;
         $account = $this->mastodonAccount();
 
-        $accountAudience = $this->source()->audienceOf($this->owner, $post)->scope;
+        $accountAudience = $this->source()->buildAudience($this->owner, $post)->scope;
 
         self::assertSame('mastodon ' . self::STATUS_URL . ' public', $publicAudience);
         self::assertSame('mastodon ' . self::STATUS_URL . ' account:' . $account->requireId(), $accountAudience);

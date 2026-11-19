@@ -23,9 +23,9 @@ final readonly class SoundCloudOembedDetailsSource implements EmbedDetailsSource
     {
     }
 
-    public function detailsOf(EmbedAddressModel $embed): EmbedDescriptionModel
+    public function fetchDescription(EmbedAddressModel $embed): EmbedDescriptionModel
     {
-        $oembed = $this->request->answerOf(ApiRequestModel::get(
+        $oembed = $this->request->fetchAnswer(ApiRequestModel::get(
             self::OEMBED . http_build_query(['format' => 'json', 'url' => self::TRACK . $embed->id]),
         ), $embed);
         $title = $oembed['title'] ?? null;

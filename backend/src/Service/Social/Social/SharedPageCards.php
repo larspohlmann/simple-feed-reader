@@ -39,6 +39,6 @@ final readonly class SharedPageCards
         $host = HostKey::forUrl($url);
         $card = new LinkCardContent($url, $host, null, null, $host);
 
-        return StorableLinkCard::of($card) ?? $card;
+        return StorableLinkCard::fromCard($card) ?? $card;
     }
 }

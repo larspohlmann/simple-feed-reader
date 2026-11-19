@@ -33,7 +33,7 @@ final class LeadingRegionTest extends TestCase
 
         self::assertSame(['Politik', 'Wirtschaft'], array_map(
             static fn (BodyBlockModel $block): string => $block->text,
-            $this->region->blocksOf($body),
+            $this->region->collectLeadingBlocks($body),
         ));
     }
 
@@ -43,14 +43,17 @@ final class LeadingRegionTest extends TestCase
         // should then see rather than an empty region they cannot judge.
         $body = ExtractedBodyModel::fromHtml('<p><a href="/a">Politik</a></p><p>Kurz</p>');
 
-        self::assertCount(2, $this->region->blocksOf($body));
+        self::assertCount(2, $this->region->collectLeadingBlocks($body));
     }
 
     public function testALongParagraphOfNothingButLinksDoesNotStartTheArticle(): void
     {
         $linked = '<p><a href="/a">' . self::PROSE . '</a></p>';
 
-        self::assertCount(2, $this->region->blocksOf(ExtractedBodyModel::fromHtml($linked . '<p>Kurz</p>')));
+        self::assertCount(
+            2,
+            $this->region->collectLeadingBlocks(ExtractedBodyModel::fromHtml($linked . '<p>Kurz</p>')),
+        );
     }
 
     public function testAParagraphOfExactlyOneHundredAndTwentyCharactersStartsTheArticle(): void
@@ -58,8 +61,8 @@ final class LeadingRegionTest extends TestCase
         $atLimit = '<p>' . str_repeat('a', 120) . '</p><p>Kurz</p>';
         $justUnder = '<p>' . str_repeat('a', 119) . '</p><p>Kurz</p>';
 
-        self::assertSame([], $this->region->blocksOf(ExtractedBodyModel::fromHtml($atLimit)));
-        self::assertCount(2, $this->region->blocksOf(ExtractedBodyModel::fromHtml($justUnder)));
+        self::assertSame([], $this->region->collectLeadingBlocks(ExtractedBodyModel::fromHtml($atLimit)));
+        self::assertCount(2, $this->region->collectLeadingBlocks(ExtractedBodyModel::fromHtml($justUnder)));
     }
 
     public function testProseLengthCountsCharactersNotBytes(): void
@@ -69,11 +72,11 @@ final class LeadingRegionTest extends TestCase
         // leading region.
         $umlauts = '<p>' . str_repeat('ä', 119) . '</p><p>Kurz</p>';
 
-        self::assertCount(2, $this->region->blocksOf(ExtractedBodyModel::fromHtml($umlauts)));
+        self::assertCount(2, $this->region->collectLeadingBlocks(ExtractedBodyModel::fromHtml($umlauts)));
     }
 
     public function testAnUnparseableBodyHasNoLeadingRegion(): void
     {
-        self::assertSame([], $this->region->blocksOf(ExtractedBodyModel::fromHtml('')));
+        self::assertSame([], $this->region->collectLeadingBlocks(ExtractedBodyModel::fromHtml('')));
     }
 }

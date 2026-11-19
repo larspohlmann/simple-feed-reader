@@ -52,7 +52,7 @@ final readonly class SavedSearchEntriesController
         $result = $this->entries->list($query);
         $rows = $this->enricher->enrich($result->rows, $userId);
 
-        return new JsonResponse($this->savedSearchPage->of($result->withRows($rows), $query->page->limit));
+        return new JsonResponse($this->savedSearchPage->from($result->withRows($rows), $query->page->limit));
     }
 
     #[Route('/{id}', name: 'api_entries_saved_search_one', methods: ['GET'], requirements: ['id' => '\d+'])]
@@ -73,7 +73,7 @@ final readonly class SavedSearchEntriesController
         $result = $this->entries->list($query);
         $rows = $this->enricher->enrich($result->rows, $userId);
 
-        return new JsonResponse($this->savedSearchPage->of($result->withRows($rows), $query->page->limit));
+        return new JsonResponse($this->savedSearchPage->from($result->withRows($rows), $query->page->limit));
     }
 
     #[Route('/mark-read', name: 'api_entries_saved_searches_mark_read', methods: ['POST'])]

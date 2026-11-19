@@ -24,7 +24,7 @@ final readonly class MeProfileJson
     }
 
     /** @return array<string, mixed> */
-    public function of(User $user): array
+    public function from(User $user): array
     {
         return [
             ...MeJson::profile($user, $this->mail->isEnabled()),
@@ -33,7 +33,7 @@ final readonly class MeProfileJson
                 null !== $user->getPasskeyOfferAnsweredAt(),
                 $this->instanceTimezone,
             ),
-            'ai' => $this->activeAi->of($user),
+            'ai' => $this->activeAi->from($user),
             'catalog' => ['hasEntries' => $this->catalogFeeds->hasPickableFeed()],
         ];
     }

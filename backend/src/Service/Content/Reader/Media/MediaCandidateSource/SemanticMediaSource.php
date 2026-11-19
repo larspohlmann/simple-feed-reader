@@ -45,7 +45,7 @@ final readonly class SemanticMediaSource implements MediaCandidateSourceInterfac
 
     private function candidateFor(Element $element, ?string $precedingText): ?MediaCandidateModel
     {
-        $resolved = $this->resolvedSourceOf($element);
+        $resolved = $this->resolveSource($element);
         if ($resolved === null) {
             return null;
         }
@@ -61,7 +61,7 @@ final readonly class SemanticMediaSource implements MediaCandidateSourceInterfac
     }
 
     /** The element's own src or its first <source> whose kind fits the element: a <video> plays files and streams, an <audio> plays audio. */
-    private function resolvedSourceOf(Element $element): ?ResolvedMediaUrlModel
+    private function resolveSource(Element $element): ?ResolvedMediaUrlModel
     {
         $urls = [$element->getAttribute('src')];
         foreach ($element->querySelectorAll('source') as $source) {

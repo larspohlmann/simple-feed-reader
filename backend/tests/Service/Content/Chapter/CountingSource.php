@@ -34,7 +34,7 @@ final class CountingSource implements EmbedDetailsSourceInterface
         return 'counting';
     }
 
-    public function detailsOf(EmbedAddressModel $embed): EmbedDescriptionModel
+    public function fetchDescription(EmbedAddressModel $embed): EmbedDescriptionModel
     {
         ++$this->calls;
         if ($this->failingStatus !== null) {

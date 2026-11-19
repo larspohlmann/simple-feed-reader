@@ -12,7 +12,7 @@ final class ProxiedImageResponseTest extends TestCase
 {
     public function testServesTheBytesPrivatelyForADayAndInertOutsideAnImg(): void
     {
-        $response = ProxiedImageResponse::of(new ProxiedImageModel('avif-bytes', 'image/avif'));
+        $response = ProxiedImageResponse::from(new ProxiedImageModel('avif-bytes', 'image/avif'));
 
         self::assertSame(200, $response->getStatusCode());
         self::assertSame('avif-bytes', $response->getContent());

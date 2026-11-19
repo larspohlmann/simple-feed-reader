@@ -45,12 +45,12 @@ final readonly class PageHeadFetcher
         if (!self::isMarkup($mediaType)) {
             $landed->response->cancel();
 
-            return PageHeadModel::ofFile($landed->url, $mediaType);
+            return PageHeadModel::fromFile($landed->url, $mediaType);
         }
         $head = $this->landing->utf8(self::firstBytes($landed), $landed);
         $this->landing->assertNotChallenge($head, $landed);
 
-        return PageHeadModel::ofPage($landed->url, $head);
+        return PageHeadModel::fromPage($landed->url, $head);
     }
 
     private static function isMarkup(string $mediaType): bool

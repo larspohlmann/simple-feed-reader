@@ -26,12 +26,12 @@ final class VersionJsonTest extends TestCase
             'builtAt' => '2026-09-01T10:00:00Z',
             'latest' => ['version' => 'v1.3.0', 'notesUrl' => 'https://example.com/releases/v1.3.0'],
             'updateAvailable' => true,
-        ], VersionJson::of($report));
+        ], VersionJson::from($report));
     }
 
     public function testNoLatestReleaseMapsToNull(): void
     {
-        $payload = VersionJson::of(new VersionReportModel(ReleaseVersionModel::development(), null, false));
+        $payload = VersionJson::from(new VersionReportModel(ReleaseVersionModel::development(), null, false));
 
         self::assertNull($payload['latest']);
         self::assertFalse($payload['updateAvailable']);

@@ -111,7 +111,7 @@ final readonly class PageLanding
 
     private function describeStatus(int $status): string
     {
-        $phrase = $this->reasonPhrases->of($status);
+        $phrase = $this->reasonPhrases->findPhrase($status);
 
         return $phrase === '' ? sprintf('HTTP %d', $status) : sprintf('HTTP %d %s', $status, $phrase);
     }

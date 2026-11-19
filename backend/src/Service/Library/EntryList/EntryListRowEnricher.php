@@ -98,7 +98,7 @@ final readonly class EntryListRowEnricher
 
     private static function buildDiscussionRow(Entry $entry, ?EntryListRowSocial $social): ?EntryListRowDiscussion
     {
-        $isPlatformThread = null !== $social || null !== SubstackPostAddress::of($entry);
+        $isPlatformThread = null !== $social || null !== SubstackPostAddress::findPost($entry);
 
         return $isPlatformThread ? new EntryListRowDiscussion($entry->getUrl(), CommentsLoad::Auto) : null;
     }

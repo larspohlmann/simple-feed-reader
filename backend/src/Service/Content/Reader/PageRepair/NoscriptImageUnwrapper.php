@@ -17,11 +17,11 @@ final readonly class NoscriptImageUnwrapper implements PageRepairInterface
     public function repairIn(HTMLDocument $document): void
     {
         foreach (iterator_to_array($document->getElementsByTagName('noscript')) as $noscript) {
-            $this->promoteImageOutOf($noscript);
+            $this->unwrapImage($noscript);
         }
     }
 
-    private function promoteImageOutOf(Element $noscript): void
+    private function unwrapImage(Element $noscript): void
     {
         if ($noscript->getElementsByTagName('img')->length === 0) {
             return;

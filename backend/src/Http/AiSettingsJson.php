@@ -42,7 +42,7 @@ final readonly class AiSettingsJson
             'maxBatchSize' => $settings->getRunTuning()->maxBatchSize(),
             'ready' => AiReadiness::of($settings),
             'active' => $settings->getId() === $activeId,
-            'capabilities' => $this->capabilities->of($settings),
+            'capabilities' => $this->capabilities->from($settings),
         ];
     }
 
@@ -95,7 +95,7 @@ final readonly class AiSettingsJson
                     'id' => $model->id,
                     'kind' => $model->kind()->value,
                     'family' => $model->scoringProtocol?->family()->value,
-                    'capabilities' => $this->capabilities->ofKind($model->kind()),
+                    'capabilities' => $this->capabilities->fromKind($model->kind()),
                 ],
                 $models,
             ),

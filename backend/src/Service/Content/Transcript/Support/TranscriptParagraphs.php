@@ -29,7 +29,7 @@ final class TranscriptParagraphs
     }
 
     /** @param list<TranscriptParagraph> $paragraphs */
-    public static function searchTextOf(array $paragraphs): string
+    public static function toSearchText(array $paragraphs): string
     {
         return implode("\n", array_map(
             static fn (TranscriptParagraph $paragraph): string => $paragraph->speaker === null

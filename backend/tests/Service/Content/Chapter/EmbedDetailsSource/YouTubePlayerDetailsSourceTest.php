@@ -53,7 +53,7 @@ final class YouTubePlayerDetailsSourceTest extends TestCase
             return new MockResponse('{"videoDetails":{}}');
         });
 
-        $this->source($http)->detailsOf($this->embed());
+        $this->source($http)->fetchDescription($this->embed());
 
         $body = json_decode($seenBody, true, flags: JSON_THROW_ON_ERROR);
         self::assertSame('POST', $seenMethod);
@@ -67,7 +67,7 @@ final class YouTubePlayerDetailsSourceTest extends TestCase
     {
         $http = new MockHttpClient(new MockResponse('{"videoDetails":{"shortDescription":"0:00 Intro\n1:00 Main"}}'));
 
-        self::assertSame("0:00 Intro\n1:00 Main", $this->source($http)->detailsOf($this->embed())->description);
+        self::assertSame("0:00 Intro\n1:00 Main", $this->source($http)->fetchDescription($this->embed())->description);
     }
 
     #[DataProvider('answersWithoutADescription')]
@@ -134,7 +134,7 @@ final class YouTubePlayerDetailsSourceTest extends TestCase
         $this->expectException(EmbedDescriptionUnreachableException::class);
         $this->expectExceptionMessage(self::WITHOUT_THE_VIDEO);
 
-        $this->source(new MockHttpClient(new MockResponse($body)))->detailsOf($this->embed());
+        $this->source(new MockHttpClient(new MockResponse($body)))->fetchDescription($this->embed());
     }
 
     /** @return iterable<string, array{string}> */
@@ -152,7 +152,7 @@ final class YouTubePlayerDetailsSourceTest extends TestCase
         $http = self::answeringThroughTheProxy(self::WALL, $direct, $seenOptions);
         $logger = new RecordingLogger();
 
-        $details = $this->source($http, self::proxy(directFallback: true), $logger)->detailsOf($this->embed());
+        $details = $this->source($http, self::proxy(directFallback: true), $logger)->fetchDescription($this->embed());
 
         self::assertSame('A mix', $details->title);
         self::assertCount(2, $seenOptions);
@@ -173,7 +173,7 @@ final class YouTubePlayerDetailsSourceTest extends TestCase
         $logger = new RecordingLogger();
 
         try {
-            $this->source($http, self::proxy(directFallback: false), $logger)->detailsOf($this->embed());
+            $this->source($http, self::proxy(directFallback: false), $logger)->fetchDescription($this->embed());
             self::fail('expected the walled answer to be an outage');
         } catch (EmbedDescriptionUnreachableException $exception) {
             self::assertSame(self::WITHOUT_THE_VIDEO, $exception->getMessage());
@@ -187,7 +187,7 @@ final class YouTubePlayerDetailsSourceTest extends TestCase
         $http = new MockHttpClient(new MockResponse(self::WALL));
 
         try {
-            $this->source($http)->detailsOf($this->embed());
+            $this->source($http)->fetchDescription($this->embed());
             self::fail('expected the walled answer to be an outage');
         } catch (EmbedDescriptionUnreachableException) {
             self::assertSame(1, $http->getRequestsCount());
@@ -201,7 +201,7 @@ final class YouTubePlayerDetailsSourceTest extends TestCase
         $logger = new RecordingLogger();
 
         try {
-            $this->source($http, self::proxy(directFallback: true), $logger)->detailsOf($this->embed());
+            $this->source($http, self::proxy(directFallback: true), $logger)->fetchDescription($this->embed());
             self::fail('expected the walled answer to be an outage');
         } catch (EmbedDescriptionUnreachableException $exception) {
             self::assertSame(self::WITHOUT_THE_VIDEO, $exception->getMessage());
@@ -215,7 +215,7 @@ final class YouTubePlayerDetailsSourceTest extends TestCase
         $seenOptions = [];
         $http = self::answeringThroughTheProxy('{"videoDetails":{"title":"A mix"}}', self::WALL, $seenOptions);
 
-        $details = $this->source($http, self::proxy(directFallback: true))->detailsOf($this->embed());
+        $details = $this->source($http, self::proxy(directFallback: true))->fetchDescription($this->embed());
 
         self::assertSame('A mix', $details->title);
         self::assertCount(1, $seenOptions);
@@ -237,7 +237,7 @@ final class YouTubePlayerDetailsSourceTest extends TestCase
 
     private function detailsAnswering(string $body): EmbedDescriptionModel
     {
-        return $this->source(new MockHttpClient(new MockResponse($body)))->detailsOf($this->embed());
+        return $this->source(new MockHttpClient(new MockResponse($body)))->fetchDescription($this->embed());
     }
 
     private function embed(): EmbedAddressModel

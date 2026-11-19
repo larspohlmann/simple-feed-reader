@@ -22,12 +22,12 @@ final readonly class ImageWrapperClassRemover implements PageRepairInterface
     {
         foreach ($document->querySelectorAll('img') as $image) {
             if ($image->closest('a') === null && !$this->furniture->holds($image)) {
-                $this->stripWrappersOf($image);
+                $this->stripWrapperAttributes($image);
             }
         }
     }
 
-    private function stripWrappersOf(Element $image): void
+    private function stripWrapperAttributes(Element $image): void
     {
         $wrapper = $image->parentNode;
         while ($wrapper instanceof Element && $this->isSoleImageWrapper($wrapper)) {

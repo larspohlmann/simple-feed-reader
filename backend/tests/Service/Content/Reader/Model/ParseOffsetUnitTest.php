@@ -12,12 +12,12 @@ final class ParseOffsetUnitTest extends TestCase
 {
     public function testBytesCountEveryByteOfAMultibyteCharacter(): void
     {
-        self::assertSame(13, ParseOffsetUnit::Bytes->lengthOf('1. März 2026'));
+        self::assertSame(13, ParseOffsetUnit::Bytes->measureLength('1. März 2026'));
     }
 
     public function testCodePointsCountAMultibyteCharacterOnce(): void
     {
-        self::assertSame(12, ParseOffsetUnit::CodePoints->lengthOf('1. März 2026'));
+        self::assertSame(12, ParseOffsetUnit::CodePoints->measureLength('1. März 2026'));
     }
 
     public function testTheReportedUnitMeasuresAWholeParseOfANonAsciiDateExactly(): void
@@ -27,6 +27,6 @@ final class ParseOffsetUnitTest extends TestCase
         $position = 0;
         $germanLongDate->parse($text, $position);
 
-        self::assertSame($position, ParseOffsetUnit::reportedBy($germanLongDate)->lengthOf($text));
+        self::assertSame($position, ParseOffsetUnit::reportedBy($germanLongDate)->measureLength($text));
     }
 }

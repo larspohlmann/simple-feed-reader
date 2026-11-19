@@ -13,7 +13,7 @@ final class AdminUserLimitsJson
     {
         return [
             'status' => $user->getStatus()->value,
-            'trialEndsAt' => TrialEndJson::of($user),
+            'trialEndsAt' => TrialEndJson::formatTrialEnd($user),
         ];
     }
 

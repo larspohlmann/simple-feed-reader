@@ -15,6 +15,6 @@ final readonly class VersionController
     #[Route('/api/version', name: 'api_version', methods: ['GET'])]
     public function __invoke(VersionReporter $reporter): JsonResponse
     {
-        return new JsonResponse(VersionJson::of($reporter->report()));
+        return new JsonResponse(VersionJson::from($reporter->report()));
     }
 }

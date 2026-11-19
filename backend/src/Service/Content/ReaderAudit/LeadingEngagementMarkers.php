@@ -21,7 +21,7 @@ final readonly class LeadingEngagementMarkers
     public function detect(ExtractedBodyModel $body, ?string $entryAuthor): array
     {
         $blocks = array_values(array_filter(
-            $this->leadingRegion->blocksOf($body),
+            $this->leadingRegion->collectLeadingBlocks($body),
             fn (BodyBlockModel $block): bool => $this->isEngagement($block, $entryAuthor),
         ));
 

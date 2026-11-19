@@ -26,7 +26,7 @@ use App\Service\Library\SubscriptionHistory\Model\FeedArrivalRateModel;
 final class ReadingActivityJson
 {
     /** @return ReadingActivityPayload */
-    public static function of(ReadingActivityModel $activity): array
+    public static function from(ReadingActivityModel $activity): array
     {
         $average = $activity->daily->arrivedDailyAverage();
 

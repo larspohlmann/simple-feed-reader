@@ -29,7 +29,7 @@ final readonly class LeadingChromeMarkers
     /** @return list<CleanupMarkerModel> */
     public function detect(ExtractedBodyModel $body): array
     {
-        $leading = $this->leadingRegion->blocksOf($body);
+        $leading = $this->leadingRegion->collectLeadingBlocks($body);
         $candidates = [
             $this->linkList($leading),
             $this->navigationRun($leading),

@@ -25,9 +25,9 @@ final readonly class YouTubePlayerDetailsSource implements EmbedDetailsSourceInt
     {
     }
 
-    public function detailsOf(EmbedAddressModel $embed): EmbedDescriptionModel
+    public function fetchDescription(EmbedAddressModel $embed): EmbedDescriptionModel
     {
-        $video = $this->videoOf($embed);
+        $video = $this->fetchVideo($embed);
         $title = $video['title'] ?? null;
         $description = $video['shortDescription'] ?? null;
 
@@ -40,10 +40,10 @@ final readonly class YouTubePlayerDetailsSource implements EmbedDetailsSourceInt
     }
 
     /** @return array<mixed> */
-    private function videoOf(EmbedAddressModel $embed): array
+    private function fetchVideo(EmbedAddressModel $embed): array
     {
         $request = self::playerRequestFor($embed);
-        $video = self::videoDetailsIn($this->request->answerOf($request, $embed))
+        $video = self::videoDetailsIn($this->request->fetchAnswer($request, $embed))
             ?? self::videoDetailsIn($this->askedDirectly($request, $embed));
         if ($video === null) {
             throw EmbedDescriptionUnreachableException::withoutTheVideo($embed);
@@ -56,7 +56,7 @@ final readonly class YouTubePlayerDetailsSource implements EmbedDetailsSourceInt
     private function askedDirectly(ApiRequestModel $request, EmbedAddressModel $embed): array
     {
         try {
-            $player = $this->request->directAnswerOf($request, $embed);
+            $player = $this->request->fetchDirectAnswer($request, $embed);
         } catch (DirectRouteUnavailableException) {
             throw EmbedDescriptionUnreachableException::withoutTheVideo($embed);
         }

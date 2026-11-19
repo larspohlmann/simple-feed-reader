@@ -15,7 +15,7 @@ final class QuotedPostJsonTest extends TestCase
 {
     public function testAQuoteIsPlainFieldsWithAnIsoUtcTime(): void
     {
-        $json = JsonMappers::quotedPostJson()->ofOrNull(new QuotedPostContent(
+        $json = JsonMappers::quotedPostJson()->fromOptional(new QuotedPostContent(
             'https://bsky.app/profile/q/post/3k',
             'Quoted Person',
             'quoted.bsky.social',
@@ -41,13 +41,13 @@ final class QuotedPostJsonTest extends TestCase
 
     public function testNoQuoteIsNull(): void
     {
-        self::assertNull(JsonMappers::quotedPostJson()->ofOrNull(null));
+        self::assertNull(JsonMappers::quotedPostJson()->fromOptional(null));
     }
 
     public function testAQuoteWithoutTimeOrNestedQuoteSaysSo(): void
     {
         $quote = new QuotedPostContent('https://x.example/p/1', 'N', 'h', null, null, 't', [], null);
-        $json = JsonMappers::quotedPostJson()->ofOrNull($quote);
+        $json = JsonMappers::quotedPostJson()->fromOptional($quote);
 
         self::assertNotNull($json);
         self::assertNull($json['postedAt']);
@@ -68,7 +68,7 @@ final class QuotedPostJsonTest extends TestCase
                 'siteName' => 'n.example',
                 'readerToken' => JsonMappers::readerToken('https://n.example/s'),
             ],
-            JsonMappers::quotedPostJson()->ofOrNull($quote)['linkCard'] ?? null,
+            JsonMappers::quotedPostJson()->fromOptional($quote)['linkCard'] ?? null,
         );
     }
 }

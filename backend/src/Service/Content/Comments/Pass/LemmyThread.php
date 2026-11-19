@@ -35,11 +35,11 @@ final readonly class LemmyThread
         $unique = self::threadable($nodes);
         $repliesByParent = [];
         foreach ($unique as $node) {
-            $repliesByParent[self::parentOf($node)][] = $node;
+            $repliesByParent[self::extractParentId($node)][] = $node;
         }
         $roots = array_filter(
             $unique,
-            static fn (JsonNodeModel $node): bool => !isset($unique[self::parentOf($node)]),
+            static fn (JsonNodeModel $node): bool => !isset($unique[self::extractParentId($node)]),
         );
 
         return $this->flattened(array_values($roots), $repliesByParent, 0);
@@ -54,8 +54,8 @@ final readonly class LemmyThread
     {
         $unique = [];
         foreach ($nodes as $node) {
-            $id = self::idOf($node);
-            if ('' !== $id && !isset($unique[$id]) && self::parentOf($node) !== $id) {
+            $id = self::readId($node);
+            if ('' !== $id && !isset($unique[$id]) && self::extractParentId($node) !== $id) {
                 $unique[$id] = $node;
             }
         }
@@ -78,7 +78,7 @@ final readonly class LemmyThread
                 $comments[] = $comment;
             }
             $replyDepth = null === $comment ? $depth : $depth + 1;
-            $replies = $repliesByParent[self::idOf($node)] ?? [];
+            $replies = $repliesByParent[self::readId($node)] ?? [];
             array_push($comments, ...$this->flattened($replies, $repliesByParent, $replyDepth));
         }
 
@@ -132,12 +132,12 @@ final readonly class LemmyThread
         );
     }
 
-    private static function idOf(JsonNodeModel $node): string
+    private static function readId(JsonNodeModel $node): string
     {
         return (string) $node->node('comment')->int('id');
     }
 
-    private static function parentOf(JsonNodeModel $node): string
+    private static function extractParentId(JsonNodeModel $node): string
     {
         $segments = explode('.', $node->node('comment')->string('path') ?? '');
 

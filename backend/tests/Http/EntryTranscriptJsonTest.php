@@ -16,7 +16,7 @@ final class EntryTranscriptJsonTest extends TestCase
 {
     public function testNoTranscriptIsNull(): void
     {
-        self::assertNull(EntryTranscriptJson::of(null));
+        self::assertNull(EntryTranscriptJson::from(null));
     }
 
     public function testATranscriptIsShapedAsPlainArrays(): void
@@ -43,7 +43,7 @@ final class EntryTranscriptJsonTest extends TestCase
                     ['startSeconds' => null, 'speaker' => null, 'text' => 'Ende.'],
                 ],
             ],
-            EntryTranscriptJson::of($transcript),
+            EntryTranscriptJson::from($transcript),
         );
     }
 }

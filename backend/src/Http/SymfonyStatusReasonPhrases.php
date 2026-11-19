@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 final readonly class SymfonyStatusReasonPhrases implements StatusReasonPhrasesInterface
 {
-    public function of(int $status): string
+    public function findPhrase(int $status): string
     {
         return Response::$statusTexts[$status] ?? '';
     }

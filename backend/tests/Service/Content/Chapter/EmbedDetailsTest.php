@@ -66,7 +66,7 @@ final class EmbedDetailsTest extends TestCase
     {
         $source = new CountingSource(new EmbedDescriptionModel('A mix', 4964, self::TRACKLIST, null));
 
-        $details = $this->details($source, CountingSource::describing(''))->of($this->youTube());
+        $details = $this->details($source, CountingSource::describing(''))->fetchDetails($this->youTube());
 
         self::assertSame('A mix', $details->title);
         self::assertSame(4964, $details->durationSeconds);
@@ -77,7 +77,7 @@ final class EmbedDetailsTest extends TestCase
     {
         $source = new CountingSource(new EmbedDescriptionModel(null, 465, self::TRACKLIST, null));
 
-        $details = $this->details($source, CountingSource::describing(''))->of($this->youTube());
+        $details = $this->details($source, CountingSource::describing(''))->fetchDetails($this->youTube());
 
         self::assertSame([0, 190], array_map(
             static fn (EntryChapter $chapter): int => $chapter->startSeconds,
@@ -89,7 +89,10 @@ final class EmbedDetailsTest extends TestCase
     {
         $source = new CountingSource(new EmbedDescriptionModel(null, 466, self::TRACKLIST, null));
 
-        self::assertCount(3, $this->details($source, CountingSource::describing(''))->of($this->youTube())->chapters);
+        self::assertCount(
+            3,
+            $this->details($source, CountingSource::describing(''))->fetchDetails($this->youTube())->chapters,
+        );
     }
 
     public function testTheProviderPicksTheSource(): void
@@ -97,7 +100,7 @@ final class EmbedDetailsTest extends TestCase
         $youtube = CountingSource::describing(self::TRACKLIST);
         $soundCloud = CountingSource::describing('');
 
-        $details = $this->details($youtube, $soundCloud)->of($this->youTube());
+        $details = $this->details($youtube, $soundCloud)->fetchDetails($this->youTube());
 
         self::assertCount(3, $details->chapters);
         self::assertSame(1, $youtube->calls);
@@ -109,9 +112,9 @@ final class EmbedDetailsTest extends TestCase
         $source = new CountingSource(new EmbedDescriptionModel('A mix', 4964, self::TRACKLIST, null));
         $details = $this->details($source, CountingSource::describing(''));
 
-        $first = $details->of($this->youTube());
+        $first = $details->fetchDetails($this->youTube());
 
-        self::assertEquals($first, $details->of($this->youTube()));
+        self::assertEquals($first, $details->fetchDetails($this->youTube()));
         self::assertSame(1, $source->calls);
     }
 
@@ -120,8 +123,8 @@ final class EmbedDetailsTest extends TestCase
         $source = CountingSource::describing('');
         $details = $this->details($source, CountingSource::describing(''));
 
-        $details->of($this->youTube());
-        $details->of($this->youTube());
+        $details->fetchDetails($this->youTube());
+        $details->fetchDetails($this->youTube());
 
         self::assertSame(1, $source->calls);
     }
@@ -133,7 +136,7 @@ final class EmbedDetailsTest extends TestCase
 
         for ($attempt = 1; $attempt <= 2; ++$attempt) {
             try {
-                $details->of($this->youTube());
+                $details->fetchDetails($this->youTube());
                 self::fail('The unreachable source should throw.');
             } catch (EmbedDescriptionUnreachableException) {
                 self::assertSame($attempt, $source->calls);
@@ -152,7 +155,7 @@ final class EmbedDetailsTest extends TestCase
         return $this->details(
             CountingSource::describing($description),
             CountingSource::describing($description),
-        )->of($this->youTube());
+        )->fetchDetails($this->youTube());
     }
 
     private function details(CountingSource $youtube, CountingSource $soundCloud): EmbedDetails

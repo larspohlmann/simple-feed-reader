@@ -68,7 +68,7 @@ final readonly class TagesschauCarouselRecognizer implements SlideshowRecognizer
             if (is_string($url) && $url !== '') {
                 return new SlideModel(
                     $url,
-                    $this->stringOf($image['alttext'] ?? null),
+                    $this->readString($image['alttext'] ?? null),
                     $this->captionFrom($image['description'] ?? null, $image['title'] ?? null),
                 );
             }
@@ -80,8 +80,8 @@ final readonly class TagesschauCarouselRecognizer implements SlideshowRecognizer
     /** The caption is the slide's description; the photo credit trails its title after a "|". */
     private function captionFrom(mixed $description, mixed $title): SlideCaptionModel
     {
-        $text = $this->stringOf($description);
-        $credit = $this->creditFrom($this->stringOf($title));
+        $text = $this->readString($description);
+        $credit = $this->creditFrom($this->readString($title));
 
         return new SlideCaptionModel(trim($credit === '' ? $text : "$text ($credit)"), null);
     }
@@ -97,7 +97,7 @@ final readonly class TagesschauCarouselRecognizer implements SlideshowRecognizer
         return trim(array_last($parts));
     }
 
-    private function stringOf(mixed $value): string
+    private function readString(mixed $value): string
     {
         return is_string($value) ? $value : '';
     }

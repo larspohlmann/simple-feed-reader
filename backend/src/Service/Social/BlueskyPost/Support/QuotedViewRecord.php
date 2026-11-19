@@ -33,7 +33,7 @@ final class QuotedViewRecord
         }
         $embed = $record->first('embeds');
 
-        return StorableQuotedPost::of(new QuotedPostContent(
+        return StorableQuotedPost::fromQuote(new QuotedPostContent(
             $url,
             $author->string('displayName') ?? '',
             $handle,

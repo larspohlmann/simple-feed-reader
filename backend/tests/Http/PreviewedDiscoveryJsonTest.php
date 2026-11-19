@@ -30,7 +30,7 @@ final class PreviewedDiscoveryJsonTest extends TestCase
                 ['url' => 'https://example.com/rss', 'title' => 'Example', 'format' => 'rss', 'label' => 'RSS'],
                 ['url' => 'https://example.com/atom', 'title' => null, 'format' => 'atom', 'label' => 'Atom'],
             ]],
-            PreviewedDiscoveryJson::of($found),
+            PreviewedDiscoveryJson::from($found),
         );
     }
 
@@ -50,7 +50,7 @@ final class PreviewedDiscoveryJsonTest extends TestCase
                 'label' => 'RSS',
                 'preview' => FeedPreviewJson::one($preview)['feed'],
             ]]],
-            PreviewedDiscoveryJson::of($found),
+            PreviewedDiscoveryJson::from($found),
         );
     }
 
@@ -58,7 +58,7 @@ final class PreviewedDiscoveryJsonTest extends TestCase
     {
         self::assertSame(
             ['candidates' => [], 'scrapeFailureReason' => 'blocked'],
-            PreviewedDiscoveryJson::of(new PreviewedDiscoveryModel([], ScrapeFailureReason::Blocked)),
+            PreviewedDiscoveryJson::from(new PreviewedDiscoveryModel([], ScrapeFailureReason::Blocked)),
         );
     }
 
@@ -79,7 +79,7 @@ final class PreviewedDiscoveryJsonTest extends TestCase
                 'label' => 'Bluesky',
                 'noPreviewReason' => 'hidden_profile',
             ]]],
-            PreviewedDiscoveryJson::of($found),
+            PreviewedDiscoveryJson::from($found),
         );
     }
 
@@ -92,7 +92,7 @@ final class PreviewedDiscoveryJsonTest extends TestCase
             NoPreviewReason::ConnectBlueskyAccount,
         ))]);
 
-        $candidates = PreviewedDiscoveryJson::of($found)['candidates'] ?? null;
+        $candidates = PreviewedDiscoveryJson::from($found)['candidates'] ?? null;
         self::assertIsArray($candidates);
         self::assertIsArray($candidates[0]);
         self::assertSame('connect_bluesky_account', $candidates[0]['noPreviewReason']);
@@ -118,7 +118,7 @@ final class PreviewedDiscoveryJsonTest extends TestCase
         string $label,
         ?string $storedFormat,
     ): void {
-        $json = PreviewedDiscoveryJson::of(new PreviewedDiscoveryModel([
+        $json = PreviewedDiscoveryJson::from(new PreviewedDiscoveryModel([
             new PreviewedCandidateModel(new FeedCandidateModel('https://example.com/x', null, $format)),
         ]));
 

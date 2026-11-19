@@ -17,7 +17,7 @@ final readonly class ArticleContentGate
 {
     private const int MIN_TEXT_LENGTH = 200;
 
-    public function contentOf(Article $article, ArticleMediaModel $media): string
+    public function requireContent(Article $article, ArticleMediaModel $media): string
     {
         if ($article->content === null || ($media->isEmpty() && $this->textLength($article) < self::MIN_TEXT_LENGTH)) {
             throw new ArticleNotExtractedException(ExtractionFailure::Empty);

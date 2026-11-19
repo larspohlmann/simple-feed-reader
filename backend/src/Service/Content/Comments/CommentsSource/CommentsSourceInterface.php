@@ -21,7 +21,7 @@ interface CommentsSourceInterface
     public function serves(Entry $entry): bool;
 
     /** Who gets the same answer: the cache scope (a feed URL; a post plus the viewing account). */
-    public function audienceOf(User $user, Entry $entry): CommentsAudienceModel;
+    public function buildAudience(User $user, Entry $entry): CommentsAudienceModel;
 
     /**
      * @throws CommentsThrottledException

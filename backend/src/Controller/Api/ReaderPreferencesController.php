@@ -32,7 +32,7 @@ final readonly class ReaderPreferencesController
     ): JsonResponse {
         $this->preferences->changeReadingSettings($user, $request->toChange());
 
-        return new JsonResponse($this->profile->of($user));
+        return new JsonResponse($this->profile->from($user));
     }
 
     #[Route('/api/me/sharing', name: 'api_me_update_sharing', methods: ['PATCH'])]
@@ -42,7 +42,7 @@ final readonly class ReaderPreferencesController
     ): JsonResponse {
         $this->preferences->changeSharing($user, $request->toSettings());
 
-        return new JsonResponse($this->profile->of($user));
+        return new JsonResponse($this->profile->from($user));
     }
 
     #[Route('/api/me/feed-directory-scope', name: 'api_me_update_feed_directory_scope', methods: ['PATCH'])]
@@ -52,6 +52,6 @@ final readonly class ReaderPreferencesController
     ): JsonResponse {
         $this->preferences->changeFeedDirectoryScope($user, $request->toScope());
 
-        return new JsonResponse($this->profile->of($user));
+        return new JsonResponse($this->profile->from($user));
     }
 }

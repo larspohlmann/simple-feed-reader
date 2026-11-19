@@ -18,7 +18,7 @@ final readonly class KeyedOccurrences
     private const int WINDOW = 200;
 
     /** @return list<KeyedOccurrenceModel> */
-    public static function of(string $html, string $id): array
+    public static function findOccurrences(string $html, string $id): array
     {
         $found = [];
         $offset = 0;

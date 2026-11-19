@@ -11,7 +11,7 @@ final class ProxiedImageResponse
 {
     private const int MAX_AGE_SECONDS = 86400;
 
-    public static function of(ProxiedImageModel $image): Response
+    public static function from(ProxiedImageModel $image): Response
     {
         $response = new Response($image->bytes, Response::HTTP_OK, [
             'Content-Type' => $image->contentType,

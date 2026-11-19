@@ -30,25 +30,25 @@ final readonly class SubstackCommentsSource implements CommentsSourceInterface
 
     public function serves(Entry $entry): bool
     {
-        return null !== SubstackPostAddress::of($entry);
+        return null !== SubstackPostAddress::findPost($entry);
     }
 
-    public function audienceOf(User $user, Entry $entry): CommentsAudienceModel
+    public function buildAudience(User $user, Entry $entry): CommentsAudienceModel
     {
-        return new CommentsAudienceModel(self::postOf($entry)->url());
+        return new CommentsAudienceModel(self::requirePost($entry)->url());
     }
 
     public function fetch(CommentsRequest $request): CommentsAnswerModel
     {
-        $post = self::postOf($request->entry);
+        $post = self::requirePost($request->entry);
         $endpoint = new CommentsEndpointModel(
             $post->url(),
             'Substack asked us to wait.',
             'Substack could not be reached.',
         );
-        $commentsOf = fn (): string => $this->body($post->commentsApiUrl($this->postIdOf($post)));
+        $fetchComments = fn (): string => $this->body($post->commentsApiUrl($this->fetchPostId($post)));
 
-        return CommentsAnswerModel::settled($this->endpointFetcher->guarded($endpoint, $request->user, $commentsOf));
+        return CommentsAnswerModel::settled($this->endpointFetcher->guarded($endpoint, $request->user, $fetchComments));
     }
 
     public function read(CommentsRequest $request, string $answer): CommentsPageModel
@@ -57,11 +57,13 @@ final readonly class SubstackCommentsSource implements CommentsSourceInterface
         $nodes = JsonNodeModel::fromValue(json_decode($answer, true))->listAt('comments')
             ?? throw new CommentsUnavailableException('Substack answered without a comment list.');
 
-        return new CommentsPageModel(new SubstackThread(self::postOf($entry), $entry->getAuthor())->comments($nodes));
+        $thread = new SubstackThread(self::requirePost($entry), $entry->getAuthor());
+
+        return new CommentsPageModel($thread->comments($nodes));
     }
 
     /** @throws FetchException */
-    private function postIdOf(SubstackPostModel $post): int
+    private function fetchPostId(SubstackPostModel $post): int
     {
         return JsonNodeModel::fromValue(json_decode($this->body($post->postApiUrl()), true))->int('id')
             ?? throw new CommentsUnavailableException('Substack answered without a post id.');
@@ -73,9 +75,9 @@ final readonly class SubstackCommentsSource implements CommentsSourceInterface
         return $this->fetcher->fetch($url)->modifiedBody();
     }
 
-    private static function postOf(Entry $entry): SubstackPostModel
+    private static function requirePost(Entry $entry): SubstackPostModel
     {
-        return SubstackPostAddress::of($entry)
+        return SubstackPostAddress::findPost($entry)
             ?? throw new CommentsUnavailableException('The entry is not a Substack post.');
     }
 }

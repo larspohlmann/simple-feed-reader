@@ -23,12 +23,12 @@ final readonly class TranscriptReader
     /** @throws TranscriptUnusableException */
     public function read(string $body, TranscriptFormat $format): ReadTranscriptModel
     {
-        $paragraphs = $this->paragraphsOf(mb_scrub($body, 'UTF-8'), $format);
+        $paragraphs = $this->parseParagraphs(mb_scrub($body, 'UTF-8'), $format);
         if ($paragraphs === []) {
             throw TranscriptUnusableException::empty();
         }
 
-        return new ReadTranscriptModel($paragraphs, TranscriptParagraphs::searchTextOf($paragraphs));
+        return new ReadTranscriptModel($paragraphs, TranscriptParagraphs::toSearchText($paragraphs));
     }
 
     /**
@@ -36,11 +36,11 @@ final readonly class TranscriptReader
      *
      * @throws TranscriptUnusableException
      */
-    private function paragraphsOf(string $body, TranscriptFormat $format): array
+    private function parseParagraphs(string $body, TranscriptFormat $format): array
     {
         return match ($format) {
-            TranscriptFormat::Vtt, TranscriptFormat::Srt => TranscriptParagraphs::from(TimedCues::of($body)),
-            TranscriptFormat::Json => TranscriptParagraphs::from(JsonCues::of($body)),
+            TranscriptFormat::Vtt, TranscriptFormat::Srt => TranscriptParagraphs::from(TimedCues::parseCues($body)),
+            TranscriptFormat::Json => TranscriptParagraphs::from(JsonCues::parseCues($body)),
             TranscriptFormat::Html => $this->htmlParagraphs($body),
         };
     }

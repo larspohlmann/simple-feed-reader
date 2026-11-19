@@ -35,7 +35,7 @@ final readonly class MeController
     #[Route('/api/me', name: 'api_me', methods: ['GET'])]
     public function show(#[CurrentUser] User $user): JsonResponse
     {
-        return new JsonResponse($this->profile->of($user));
+        return new JsonResponse($this->profile->from($user));
     }
 
     /**
@@ -49,7 +49,7 @@ final readonly class MeController
     ): JsonResponse {
         $this->preferences->changeLocale($user, $request->locale);
 
-        return new JsonResponse($this->profile->of($user));
+        return new JsonResponse($this->profile->from($user));
     }
 
     #[Route('/api/me/resend-verification', name: 'api_me_resend_verification', methods: ['POST'])]

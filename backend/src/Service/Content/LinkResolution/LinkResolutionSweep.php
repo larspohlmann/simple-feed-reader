@@ -50,7 +50,7 @@ final readonly class LinkResolutionSweep
     private function attempt(PendingLinkModel $link): LinkLandingModel
     {
         try {
-            return $this->settle($link, $this->landing->of($link->url));
+            return $this->settle($link, $this->landing->resolveLanding($link->url));
         } catch (\Throwable $exception) {
             $this->logger->error('Link resolution failed unexpectedly.', [
                 'linkId' => $link->linkId,

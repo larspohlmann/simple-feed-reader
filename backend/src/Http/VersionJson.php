@@ -9,7 +9,7 @@ use App\Service\Operations\Version\Model\VersionReportModel;
 final class VersionJson
 {
     /** @return array<string, mixed> */
-    public static function of(VersionReportModel $report): array
+    public static function from(VersionReportModel $report): array
     {
         $latest = $report->latest;
 

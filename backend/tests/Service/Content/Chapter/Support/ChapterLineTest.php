@@ -32,7 +32,7 @@ final class ChapterLineTest extends TestCase
     #[DataProvider('chapterLines')]
     public function testReadsTheStampAndTheTextAroundIt(string $text, int $start, string $title): void
     {
-        self::assertEquals(new EntryChapter($start, $title), ChapterLine::chapterOf($text));
+        self::assertEquals(new EntryChapter($start, $title), ChapterLine::parseChapter($text));
     }
 
     /** @return iterable<string, array{string}> */
@@ -57,7 +57,7 @@ final class ChapterLineTest extends TestCase
     #[DataProvider('notChapterLines')]
     public function testALineWithoutExactlyOneStampAndATitleIsNoChapter(string $text): void
     {
-        self::assertNull(ChapterLine::chapterOf($text));
+        self::assertNull(ChapterLine::parseChapter($text));
     }
 
     /** @return iterable<string, array{string, bool}> */
@@ -100,6 +100,6 @@ final class ChapterLineTest extends TestCase
     #[DataProvider('stampPositions')]
     public function testTellsWhereTheStampSits(string $text, StampPosition $position): void
     {
-        self::assertSame($position, ChapterLine::positionOf($text));
+        self::assertSame($position, ChapterLine::detectStampPosition($text));
     }
 }

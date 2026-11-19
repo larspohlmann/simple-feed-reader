@@ -7,7 +7,7 @@ namespace App\Http;
 final class SocialRepostJson
 {
     /** @return array{isReposted: bool} */
-    public static function of(bool $isReposted): array
+    public static function from(bool $isReposted): array
     {
         return ['isReposted' => $isReposted];
     }

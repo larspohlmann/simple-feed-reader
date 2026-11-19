@@ -9,7 +9,7 @@ use App\Service\Social\Social\Model\SocialPostModel;
 final class SocialViewerJson
 {
     /** @return array{isLiked: bool, isReposted: bool, canRepost: bool, canReply: bool, canQuote: bool} */
-    public static function of(SocialPostModel $post): array
+    public static function from(SocialPostModel $post): array
     {
         return [
             'isLiked' => null !== $post->existingLikeId,

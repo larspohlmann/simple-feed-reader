@@ -30,6 +30,6 @@ final readonly class ImageProxyController
     {
         $this->rateLimitGuard->enforceForUser($this->imageProxyLimiter, $user);
 
-        return ProxiedImageResponse::of($this->imageProxy->fetch($url));
+        return ProxiedImageResponse::from($this->imageProxy->fetch($url));
     }
 }

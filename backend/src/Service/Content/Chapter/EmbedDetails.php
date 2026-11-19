@@ -28,14 +28,14 @@ final readonly class EmbedDetails
     }
 
     /** @throws EmbedDescriptionUnreachableException */
-    public function of(EmbedAddressModel $embed): EmbedDetailsModel
+    public function fetchDetails(EmbedAddressModel $embed): EmbedDetailsModel
     {
         $cached = $this->cache->find($embed);
         if ($cached !== null) {
             return $cached;
         }
 
-        $details = self::detailsFrom($this->sourceFor($embed->provider)->detailsOf($embed));
+        $details = self::detailsFrom($this->sourceFor($embed->provider)->fetchDescription($embed));
         $this->cache->remember($embed, $details);
 
         return $details;

@@ -25,7 +25,7 @@ final readonly class AuditSampler
         $byFeed = $this->candidatesByFeed($request->userId, $request->seed, $request->before);
         $chosenIds = $this->roundRobin($byFeed, $request->limit, $request->perFeed);
 
-        return $chosenIds === [] ? [] : $this->detailsOf($chosenIds, $request->userId);
+        return $chosenIds === [] ? [] : $this->loadDetails($chosenIds, $request->userId);
     }
 
     /**
@@ -38,7 +38,7 @@ final readonly class AuditSampler
      */
     public function pick(array $entryIds, int $userId): array
     {
-        return $entryIds === [] ? [] : $this->detailsOf($entryIds, $userId);
+        return $entryIds === [] ? [] : $this->loadDetails($entryIds, $userId);
     }
 
     /**
@@ -90,7 +90,7 @@ final readonly class AuditSampler
      *
      * @return list<SampledEntryModel>
      */
-    private function detailsOf(array $entryIds, int $userId): array
+    private function loadDetails(array $entryIds, int $userId): array
     {
         $byId = [];
         foreach ($this->audit->detailRows($userId, $entryIds) as $row) {

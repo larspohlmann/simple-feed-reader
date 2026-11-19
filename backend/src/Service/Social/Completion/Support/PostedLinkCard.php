@@ -25,7 +25,7 @@ final class PostedLinkCard
             return null;
         }
 
-        return StorableLinkCard::of(
+        return StorableLinkCard::fromCard(
             new LinkCardContent($targets[0], $card->title, $card->description, $card->imageUrl, $card->siteName),
         );
     }

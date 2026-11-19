@@ -24,7 +24,7 @@ final class SavedSearchPageTest extends TestCase
     {
         $result = new SavedSearchEntriesResultModel([$this->row(4)]);
 
-        $page = JsonMappers::savedSearchPage()->of($result, 1);
+        $page = JsonMappers::savedSearchPage()->from($result, 1);
 
         self::assertNotNull($page['nextCursor']);
         $cursor = EntryCursor::decode($page['nextCursor']);
@@ -35,7 +35,7 @@ final class SavedSearchPageTest extends TestCase
     {
         $result = new SavedSearchEntriesResultModel([$this->row(4)]);
 
-        self::assertNull(JsonMappers::savedSearchPage()->of($result, 50)['nextCursor']);
+        self::assertNull(JsonMappers::savedSearchPage()->from($result, 50)['nextCursor']);
     }
 
     public function testEachEntryCarriesItsOwnSavedSearchMembership(): void
@@ -46,7 +46,7 @@ final class SavedSearchPageTest extends TestCase
         );
         $result = new SavedSearchEntriesResultModel([$row]);
 
-        $page = JsonMappers::savedSearchPage()->of($result, 50);
+        $page = JsonMappers::savedSearchPage()->from($result, 50);
 
         self::assertSame([['id' => 3, 'slug' => 'climate', 'term' => 'climate']], $page['entries'][0]['savedSearches']);
     }

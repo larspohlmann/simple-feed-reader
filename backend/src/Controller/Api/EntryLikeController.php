@@ -35,7 +35,7 @@ final readonly class EntryLikeController
 
         $this->socialLikes->like($user, $entry);
 
-        return new JsonResponse(SocialLikeJson::of(true));
+        return new JsonResponse(SocialLikeJson::from(true));
     }
 
     #[Route('/{id}/like', name: 'api_entries_unlike', methods: ['DELETE'], requirements: ['id' => '\d+'])]
@@ -46,6 +46,6 @@ final readonly class EntryLikeController
 
         $this->socialLikes->unlike($user, $entry);
 
-        return new JsonResponse(SocialLikeJson::of(false));
+        return new JsonResponse(SocialLikeJson::from(false));
     }
 }

@@ -30,7 +30,7 @@ final class ComposerContextJsonTest extends TestCase
     {
         $linkPost = new LinkPostChoicesModel([new CommunityModel(7, '!rss@lemmy.world')], 'The article', 4, 150);
 
-        $row = ComposerContextJson::of(self::linkContext(new ComposerDefaultsModel(10000, linkPost: $linkPost)));
+        $row = ComposerContextJson::from(self::linkContext(new ComposerDefaultsModel(10000, linkPost: $linkPost)));
 
         self::assertSame(
             [
@@ -45,7 +45,7 @@ final class ComposerContextJsonTest extends TestCase
 
     public function testAComposerOnAnyOtherNetworkHasNoLemmyRow(): void
     {
-        $row = ComposerContextJson::of(self::linkContext(new ComposerDefaultsModel(300)));
+        $row = ComposerContextJson::from(self::linkContext(new ComposerDefaultsModel(300)));
 
         self::assertNull($row['lemmy']);
     }

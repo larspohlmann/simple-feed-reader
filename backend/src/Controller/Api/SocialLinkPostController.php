@@ -44,7 +44,7 @@ final readonly class SocialLinkPostController
 
         $context = $this->links->contextFor($user, $query->toLinkTarget($accountId));
 
-        return new JsonResponse(ComposerContextJson::of($context));
+        return new JsonResponse(ComposerContextJson::from($context));
     }
 
     #[Route('/links', name: 'api_social_link', methods: ['POST'])]
@@ -57,6 +57,6 @@ final readonly class SocialLinkPostController
 
         $published = $this->links->share($user, $query->toLinkTarget($request->accountId), $request->toDraft());
 
-        return new JsonResponse(PublishedPostJson::of($published), Response::HTTP_CREATED);
+        return new JsonResponse(PublishedPostJson::from($published), Response::HTTP_CREATED);
     }
 }

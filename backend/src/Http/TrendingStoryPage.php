@@ -28,9 +28,9 @@ final readonly class TrendingStoryPage
      *   newEntryIds: list<int>,
      * }
      */
-    public function of(TrendingStoryEntriesModel $result, int $limit): array
+    public function from(TrendingStoryEntriesModel $result, int $limit): array
     {
-        $page = $this->entryPage->of($result->rows, $limit, EntryListSort::PublishedDate);
+        $page = $this->entryPage->from($result->rows, $limit, EntryListSort::PublishedDate);
         $page['entries'] = array_map(
             static fn (array $entry, EntryListRow $row): array => $entry + [
                 'joinedAt' => $result->joinedAtByEntry[$row->entry->requireId()]->format(\DateTimeInterface::ATOM),

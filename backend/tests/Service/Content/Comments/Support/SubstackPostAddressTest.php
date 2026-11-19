@@ -23,7 +23,7 @@ final class SubstackPostAddressTest extends TestCase
 
     public function testAPostOfASubstackIsAddressedByItsOriginAndSlug(): void
     {
-        $post = SubstackPostAddress::of(self::entry('https://www.astralcodexten.com/p/against-against-handover'));
+        $post = SubstackPostAddress::findPost(self::entry('https://www.astralcodexten.com/p/against-against-handover'));
 
         self::assertNotNull($post);
         self::assertSame('https://www.astralcodexten.com', $post->origin);
@@ -32,14 +32,14 @@ final class SubstackPostAddressTest extends TestCase
 
     public function testATrailingSlashAndAQueryAreNoPartOfTheSlug(): void
     {
-        $post = SubstackPostAddress::of(self::entry('https://joe.substack.com/p/one-post/?utm_source=rss'));
+        $post = SubstackPostAddress::findPost(self::entry('https://joe.substack.com/p/one-post/?utm_source=rss'));
 
         self::assertSame('one-post', $post?->slug);
     }
 
     public function testTheOriginIsLowercased(): void
     {
-        $post = SubstackPostAddress::of(self::entry('https://JOE.Substack.com/p/one-post'));
+        $post = SubstackPostAddress::findPost(self::entry('https://JOE.Substack.com/p/one-post'));
 
         self::assertSame('https://joe.substack.com', $post?->origin);
     }
@@ -57,11 +57,11 @@ final class SubstackPostAddressTest extends TestCase
     #[DataProvider('notPosts')]
     public function testAnythingButAPostPageIsNoPost(?string $url): void
     {
-        self::assertNull(SubstackPostAddress::of(self::entry($url)));
+        self::assertNull(SubstackPostAddress::findPost(self::entry($url)));
     }
 
     public function testAPostPathOnAFeedThatIsNoSubstackIsNoPost(): void
     {
-        self::assertNull(SubstackPostAddress::of(self::entry('https://blog.example.org/p/one-post', null)));
+        self::assertNull(SubstackPostAddress::findPost(self::entry('https://blog.example.org/p/one-post', null)));
     }
 }

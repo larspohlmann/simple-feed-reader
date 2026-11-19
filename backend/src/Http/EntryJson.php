@@ -88,7 +88,7 @@ final readonly class EntryJson
         return $this->completed($row) + [
             'title' => $entry->getTitle(),
             'url' => $entry->getUrl(),
-        ] + self::discussionOf($row) + [
+        ] + self::buildDiscussionRow($row) + [
             'author' => $entry->getAuthor(),
             'imageAspectRatio' => $shortPlayerUrl === null ? null : self::SHORT_COVER_ASPECT_RATIO,
             'attachments' => EntryMedia::toJsonList($entry->getAttachments()),
@@ -97,7 +97,7 @@ final readonly class EntryJson
             'createdAt' => $entry->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'subscriptionId' => $row->subscription->id,
             'source' => $row->subscription->title,
-            'poster' => self::posterOf($row),
+            'poster' => self::buildPosterRow($row),
             // The feed is fetch-joined in the row query, so this adds no N+1.
             'faviconUrl' => $row->enrichment->origin->faviconUrl ?? $entry->getFeed()->getFaviconUrl(),
             'isHidden' => $row->marks->isHidden,
@@ -108,9 +108,9 @@ final readonly class EntryJson
             'shortPlayerUrl' => $shortPlayerUrl,
             'titleDerived' => $entry->isTitleDerived(),
             'savedSearches' => $row->enrichment->savedSearches,
-            'social' => self::socialOf($row),
+            'social' => self::buildSocialRow($row),
             'myVote' => $row->enrichment->lemmy?->myVote?->value,
-            'community' => self::communityOf($row),
+            'community' => self::buildCommunityRow($row),
             'duplicates' => array_map($this->listRow(...), $row->duplicates),
         ];
     }
@@ -135,11 +135,11 @@ final readonly class EntryJson
             'imageHeight' => $entry->getImageHeight(),
             'imageRenditions' => ImageRendition::toJsonList($entry->getImage()->servedRenditions()),
             'media' => EntryMedia::toJsonList($entry->getMedia()),
-            'linkCards' => array_map($this->linkCardJson->of(...), $row->enrichment->linkCards),
-            'thread' => array_map($this->threadPostJson->of(...), $row->enrichment->threadPosts),
+            'linkCards' => array_map($this->linkCardJson->from(...), $row->enrichment->linkCards),
+            'thread' => array_map($this->threadPostJson->from(...), $row->enrichment->threadPosts),
             'threadLength' => 1 + $entry->getSelfReplyCount(),
             'share' => $entry->getShareKind()?->value,
-            'quote' => $this->quotedPostJson->ofOrNull($entry->getQuotedPost()),
+            'quote' => $this->quotedPostJson->fromOptional($entry->getQuotedPost()),
         ];
     }
 
@@ -150,13 +150,13 @@ final readonly class EntryJson
     {
         return $this->listRow($row) + [
             'contentHtml' => $served->contentHtml,
-            'chapters' => ChaptersJson::of($served->chapters),
-            'transcript' => EntryTranscriptJson::of($transcript),
+            'chapters' => ChaptersJson::from($served->chapters),
+            'transcript' => EntryTranscriptJson::from($transcript),
         ];
     }
 
     /** @return array{discussionUrl: string|null, comments: 'auto'|'manual'|null, score: int|null, commentCount: int|null} */
-    private static function discussionOf(EntryListRow $row): array
+    private static function buildDiscussionRow(EntryListRow $row): array
     {
         $discussion = $row->enrichment->discussion
             ?? EntryListRowDiscussion::fromDiscussion($row->entry->getDiscussion());
@@ -170,7 +170,7 @@ final readonly class EntryJson
     }
 
     /** @return array{name: string, url: string}|null */
-    private static function communityOf(EntryListRow $row): ?array
+    private static function buildCommunityRow(EntryListRow $row): ?array
     {
         $community = $row->enrichment->lemmy?->community;
 
@@ -178,7 +178,7 @@ final readonly class EntryJson
     }
 
     /** @return array{network: 'bluesky'|'mastodon', isLiked: bool, canLike: bool, isOwn: bool}|null */
-    private static function socialOf(EntryListRow $row): ?array
+    private static function buildSocialRow(EntryListRow $row): ?array
     {
         $social = $row->enrichment->social;
 
@@ -201,19 +201,19 @@ final readonly class EntryJson
      *
      * @return array{name: string, url: string|null, imageUrl: string|null}|null
      */
-    private static function posterOf(EntryListRow $row): ?array
+    private static function buildPosterRow(EntryListRow $row): ?array
     {
         $entry = $row->entry;
         $feed = $entry->getFeed();
         $sourceFormat = $feed->getSourceFormat();
         if (SourceFormat::isSaved($sourceFormat)) {
-            return null === $feed->getNetwork() ? self::originPosterOf($row) : self::authorPosterOf($entry);
+            return null === $feed->getNetwork() ? self::buildOriginPosterRow($row) : self::buildAuthorPosterRow($entry);
         }
         if (SourceFormat::isSocial($sourceFormat)) {
-            return self::authorPosterOf($entry);
+            return self::buildAuthorPosterRow($entry);
         }
         if (SocialNetwork::Lemmy === $feed->getNetwork()) {
-            return self::authorPosterOf($entry);
+            return self::buildAuthorPosterRow($entry);
         }
         if (null !== $feed->getNetwork()) {
             return [
@@ -227,7 +227,7 @@ final readonly class EntryJson
     }
 
     /** @return array{name: string, url: string|null, imageUrl: string|null}|null */
-    private static function authorPosterOf(Entry $entry): ?array
+    private static function buildAuthorPosterRow(Entry $entry): ?array
     {
         $author = $entry->getAuthor();
         if (null === $author || '' === $author) {
@@ -238,7 +238,7 @@ final readonly class EntryJson
     }
 
     /** @return array{name: string, url: null, imageUrl: null}|null */
-    private static function originPosterOf(EntryListRow $row): ?array
+    private static function buildOriginPosterRow(EntryListRow $row): ?array
     {
         $title = $row->enrichment->origin?->title;
 

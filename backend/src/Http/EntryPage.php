@@ -24,13 +24,13 @@ final readonly class EntryPage
      *
      * @return array{entries: list<array<string, mixed>>, nextCursor: string|null}
      */
-    public function of(array $rows, int $limit, EntryListSort $sort): array
+    public function from(array $rows, int $limit, EntryListSort $sort): array
     {
         return $this->withMatchCount($rows, $limit, \count($rows), $sort);
     }
 
     /**
-     * As of(), for a read that can return fewer rows than it matched (search hydration drops ids the caller may not
+     * As from(), for a read that can return fewer rows than it matched (search hydration drops ids the caller may not
      * see): $matchCount decides whether a next page exists, and a post-filtered read resumes past $continuationRow,
      * its last candidate, so a page whose rows were all filtered out still advances.
      *

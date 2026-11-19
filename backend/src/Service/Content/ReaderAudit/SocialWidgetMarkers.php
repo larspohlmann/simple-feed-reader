@@ -86,7 +86,7 @@ final readonly class SocialWidgetMarkers
                 continue;
             }
             foreach ($block->links as $link) {
-                $host = $this->socialHostOf($link);
+                $host = $this->findSocialHost($link);
                 if ($host !== null && mb_strlen($link->text) <= self::ICON_TEXT_CHARS) {
                     $hosts[] = $host;
                 }
@@ -105,7 +105,7 @@ final readonly class SocialWidgetMarkers
         );
     }
 
-    private function socialHostOf(BodyLinkModel $link): ?string
+    private function findSocialHost(BodyLinkModel $link): ?string
     {
         $host = $link->host();
         foreach (self::SOCIAL_HOSTS as $social) {

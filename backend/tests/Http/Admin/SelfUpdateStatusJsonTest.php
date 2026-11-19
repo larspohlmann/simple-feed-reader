@@ -31,7 +31,9 @@ final class SelfUpdateStatusJsonTest extends TestCase
                 'exitCode' => null,
                 'log' => 'pulling images',
             ],
-            SelfUpdateStatusJson::of(new SelfUpdateStatusModel(true, SelfUpdatePhase::Running, $run, 'pulling images')),
+            SelfUpdateStatusJson::from(
+                new SelfUpdateStatusModel(true, SelfUpdatePhase::Running, $run, 'pulling images'),
+            ),
         );
     }
 
@@ -45,7 +47,7 @@ final class SelfUpdateStatusJsonTest extends TestCase
             2,
         );
 
-        $json = SelfUpdateStatusJson::of(new SelfUpdateStatusModel(false, SelfUpdatePhase::Failed, $run, ''));
+        $json = SelfUpdateStatusJson::from(new SelfUpdateStatusModel(false, SelfUpdatePhase::Failed, $run, ''));
 
         self::assertNull($json['startedAt']);
         self::assertSame('2026-10-31T10:05:00+00:00', $json['finishedAt']);

@@ -40,7 +40,7 @@ final readonly class MarkupCarouselRecognizer implements SlideshowRecognizerInte
         $found = [];
         foreach (self::RULES as $rule) {
             foreach ($this->containers($document, $rule) as $container) {
-                $show = $this->slideshow($container, $this->slidesOf($container, $rule), $textBlocks);
+                $show = $this->slideshow($container, $this->findSlides($container, $rule), $textBlocks);
                 if ($show !== null) {
                     $found[] = $show;
                 }
@@ -78,7 +78,7 @@ final readonly class MarkupCarouselRecognizer implements SlideshowRecognizerInte
      *
      * @return list<Element>
      */
-    private function slidesOf(Element $container, array $rule): array
+    private function findSlides(Element $container, array $rule): array
     {
         if ($rule['slide'] === null) {
             return $this->directChildren($container);
@@ -130,7 +130,7 @@ final readonly class MarkupCarouselRecognizer implements SlideshowRecognizerInte
             if ($url !== null) {
                 $slides[] = new SlideModel(
                     $url,
-                    $element->getAttribute('title') ?? $this->altOf($element),
+                    $element->getAttribute('title') ?? $this->readAlt($element),
                     $this->captions->resolve($element),
                 );
             }
@@ -139,7 +139,7 @@ final readonly class MarkupCarouselRecognizer implements SlideshowRecognizerInte
         return $slides;
     }
 
-    private function altOf(Element $slide): string
+    private function readAlt(Element $slide): string
     {
         foreach ($slide->getElementsByTagName('img') as $image) {
             $alt = $image->getAttribute('alt') ?? '';

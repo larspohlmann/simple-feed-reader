@@ -19,7 +19,7 @@ final class MastodonCard
             return null;
         }
 
-        return StorableLinkCard::of(new LinkCardContent(
+        return StorableLinkCard::fromCard(new LinkCardContent(
             $url,
             $title,
             $card->string('description'),

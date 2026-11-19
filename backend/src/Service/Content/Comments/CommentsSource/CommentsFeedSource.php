@@ -34,14 +34,14 @@ final readonly class CommentsFeedSource implements CommentsSourceInterface
         return null !== $entry->getDiscussion()->commentsFeedUrl;
     }
 
-    public function audienceOf(User $user, Entry $entry): CommentsAudienceModel
+    public function buildAudience(User $user, Entry $entry): CommentsAudienceModel
     {
         return new CommentsAudienceModel($entry->getDiscussion()->commentsFeedUrl ?? '');
     }
 
     public function fetch(CommentsRequest $request): CommentsAnswerModel
     {
-        $feedUrl = self::feedUrlOf($request->entry);
+        $feedUrl = self::requireFeedUrl($request->entry);
         $endpoint = new CommentsEndpointModel(
             $feedUrl,
             'The comments feed host asked us to wait.',
@@ -86,7 +86,7 @@ final readonly class CommentsFeedSource implements CommentsSourceInterface
         return $comments;
     }
 
-    private static function feedUrlOf(Entry $entry): string
+    private static function requireFeedUrl(Entry $entry): string
     {
         return $entry->getDiscussion()->commentsFeedUrl
             ?? throw new CommentsUnavailableException('The entry has no comments feed.');

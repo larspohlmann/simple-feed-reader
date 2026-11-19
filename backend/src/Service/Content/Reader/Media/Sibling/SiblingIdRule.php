@@ -25,7 +25,7 @@ final readonly class SiblingIdRule
         $search = new SiblingSearch($pageHtml, $this->nearbyPoster);
         $derived = [];
         foreach ($found->candidates as $seed) {
-            foreach ($search->siblingsOf($seed) as $candidate) {
+            foreach ($search->findSiblings($seed) as $candidate) {
                 $derived[$candidate->url] ??= $candidate;
             }
         }

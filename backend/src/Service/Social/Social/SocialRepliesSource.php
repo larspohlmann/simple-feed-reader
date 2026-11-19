@@ -57,7 +57,7 @@ final readonly class SocialRepliesSource implements CommentsSourceInterface
         return null !== $this->postAddresses->findPost($entry);
     }
 
-    public function audienceOf(User $user, Entry $entry): CommentsAudienceModel
+    public function buildAudience(User $user, Entry $entry): CommentsAudienceModel
     {
         $post = $this->postOf($entry);
         $account = $this->accountOrNull($user, $entry, $post->network);

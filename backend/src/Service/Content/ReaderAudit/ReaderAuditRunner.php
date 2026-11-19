@@ -103,7 +103,7 @@ final readonly class ReaderAuditRunner
             'paragraphs' => $body->paragraphCount,
             'links' => \count($body->links),
             'images' => \count($body->imageSources),
-            'leadingBlocks' => \count($this->leadingRegion->blocksOf($body)),
+            'leadingBlocks' => \count($this->leadingRegion->collectLeadingBlocks($body)),
             'paywalled' => (int) $result->paywalled,
         ];
     }

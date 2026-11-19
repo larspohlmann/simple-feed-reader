@@ -12,7 +12,7 @@ final class SubstackPostAddress
 {
     private const string POST_PATH = '#^/p/([A-Za-z0-9-]+)/?$#';
 
-    public static function of(Entry $entry): ?SubstackPostModel
+    public static function findPost(Entry $entry): ?SubstackPostModel
     {
         $url = $entry->getUrl();
         if (null === $url || FeedPlatform::Substack !== $entry->getFeed()->getPlatform()) {

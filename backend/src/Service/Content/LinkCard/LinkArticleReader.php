@@ -42,7 +42,7 @@ final readonly class LinkArticleReader
 
     private function refresh(SharedLink $link, PagePreviewModel $preview): void
     {
-        $card = StorableLinkCard::of($preview->card());
+        $card = StorableLinkCard::fromCard($preview->card());
         if ($card === null) {
             return;
         }

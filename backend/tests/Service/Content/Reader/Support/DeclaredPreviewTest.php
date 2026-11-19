@@ -96,6 +96,6 @@ final class DeclaredPreviewTest extends TestCase
 
     private static function preview(string $head, string $finalUrl = self::SHARED): PagePreviewModel
     {
-        return DeclaredPreview::of(HtmlDocumentParser::parseOrEmpty($head), self::SHARED, $finalUrl);
+        return DeclaredPreview::fromDocument(HtmlDocumentParser::parseOrEmpty($head), self::SHARED, $finalUrl);
     }
 }

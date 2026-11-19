@@ -8,7 +8,7 @@ use App\Entity\User;
 
 final class TrialEndJson
 {
-    public static function of(User $user): ?string
+    public static function formatTrialEnd(User $user): ?string
     {
         return $user->getTrialEndsAt()?->format(\DateTimeInterface::ATOM);
     }

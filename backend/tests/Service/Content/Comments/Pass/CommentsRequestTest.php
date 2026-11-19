@@ -28,7 +28,7 @@ final class CommentsRequestTest extends TestCase
                 return true;
             }
 
-            public function audienceOf(User $user, Entry $entry): CommentsAudienceModel
+            public function buildAudience(User $user, Entry $entry): CommentsAudienceModel
             {
                 return new CommentsAudienceModel('fake:' . $entry->getGuid());
             }

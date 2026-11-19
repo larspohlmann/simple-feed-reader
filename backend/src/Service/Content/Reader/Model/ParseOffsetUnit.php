@@ -20,7 +20,7 @@ enum ParseOffsetUnit
         return $position === \strlen(self::NON_ASCII_DATE) ? self::Bytes : self::CodePoints;
     }
 
-    public function lengthOf(string $text): int
+    public function measureLength(string $text): int
     {
         return match ($this) {
             self::Bytes => \strlen($text),

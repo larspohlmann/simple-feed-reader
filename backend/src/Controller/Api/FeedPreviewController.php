@@ -51,6 +51,6 @@ final readonly class FeedPreviewController
     ): JsonResponse {
         $this->rateLimitGuard->enforceForUser($this->feedDiscoverLimiter, $user);
 
-        return new JsonResponse(PreviewedDiscoveryJson::of($this->discoveries->discover($user, $request->url)));
+        return new JsonResponse(PreviewedDiscoveryJson::from($this->discoveries->discover($user, $request->url)));
     }
 }

@@ -23,7 +23,7 @@ final readonly class QuotedPostJson
     }
 
     /** @return QuoteRow|null */
-    public function ofOrNull(?QuotedPostContent $quote): ?array
+    public function fromOptional(?QuotedPostContent $quote): ?array
     {
         if ($quote === null) {
             return null;
@@ -39,7 +39,7 @@ final readonly class QuotedPostJson
             'text' => $quote->text,
             'media' => EntryMedia::toJsonList($quote->media),
             'nestedQuote' => $nested === null ? null : ['url' => $nested->url, 'handle' => $nested->handle],
-            'linkCard' => $this->linkCardJson->ofOrNull($quote->linkCard),
+            'linkCard' => $this->linkCardJson->fromOptional($quote->linkCard),
         ];
     }
 }

@@ -25,22 +25,22 @@ final readonly class LinkLanding
     ) {
     }
 
-    public function of(string $url): LinkLandingModel
+    public function resolveLanding(string $url): LinkLandingModel
     {
         try {
-            $landed = $this->landingOf($url);
+            $landed = $this->fetchLanding($url);
         } catch (RedirectChainException $exception) {
-            return $this->outcomeOfFailure($url, $exception);
+            return $this->buildFailureOutcome($url, $exception);
         }
         if ($landed->url === $url && self::isShortenerTrouble($landed->status)) {
             return LinkLandingModel::retryable();
         }
 
-        return $this->outcomeOf($url, $landed->url);
+        return $this->buildOutcome($url, $landed->url);
     }
 
     /** @throws RedirectChainException when HEAD timed out or lost its connection, which a GET would only repeat */
-    private function landingOf(string $url): LandedResponse
+    private function fetchLanding(string $url): LandedResponse
     {
         try {
             $head = $this->settled($this->redirects->followHead($url, $this->options(), self::budget()));
@@ -57,16 +57,18 @@ final readonly class LinkLanding
         return $this->settled($this->redirects->follow($url, $this->options(), self::budget()));
     }
 
-    private function outcomeOfFailure(string $url, RedirectChainException $exception): LinkLandingModel
+    private function buildFailureOutcome(string $url, RedirectChainException $exception): LinkLandingModel
     {
         if (!$exception->causedByTransportFailure()) {
             return LinkLandingModel::unresolved();
         }
 
-        return $exception->hopUrl === null ? LinkLandingModel::retryable() : $this->outcomeOf($url, $exception->hopUrl);
+        return $exception->hopUrl === null
+            ? LinkLandingModel::retryable()
+            : $this->buildOutcome($url, $exception->hopUrl);
     }
 
-    private function outcomeOf(string $url, string $landingUrl): LinkLandingModel
+    private function buildOutcome(string $url, string $landingUrl): LinkLandingModel
     {
         $cleaned = (string) $this->urlNormalizer->withoutTracking($landingUrl);
         if (\strlen($cleaned) > LinkCardContent::URL_MAX) {

@@ -23,7 +23,7 @@ final readonly class ThreadPostJson
     }
 
     /** @return ThreadPostRow */
-    public function of(ThreadPostModel $post): array
+    public function from(ThreadPostModel $post): array
     {
         return [
             'url' => $post->url,
@@ -31,7 +31,7 @@ final readonly class ThreadPostJson
             'html' => $post->html,
             'text' => EntrySnippet::from($post->html) ?? '',
             'media' => EntryMedia::toJsonList($post->media),
-            'linkCard' => $this->linkCardJson->ofOrNull($post->linkCard),
+            'linkCard' => $this->linkCardJson->fromOptional($post->linkCard),
         ];
     }
 }

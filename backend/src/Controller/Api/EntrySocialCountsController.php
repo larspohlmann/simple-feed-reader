@@ -38,6 +38,6 @@ final readonly class EntrySocialCountsController
             ? $this->socialCounts->refreshed($user, $entry)
             : $this->socialCounts->of($user, $entry);
 
-        return new JsonResponse(SocialCountsJson::of($counts));
+        return new JsonResponse(SocialCountsJson::from($counts));
     }
 }

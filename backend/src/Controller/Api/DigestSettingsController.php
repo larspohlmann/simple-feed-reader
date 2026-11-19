@@ -39,7 +39,7 @@ final readonly class DigestSettingsController
     ): JsonResponse {
         $this->preferences->changeDigest($user, $request->toConfiguration());
 
-        return new JsonResponse($this->profile->of($user));
+        return new JsonResponse($this->profile->from($user));
     }
 
     #[Route('/api/me/digest/test', name: 'api_me_digest_test', methods: ['POST'])]

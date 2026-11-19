@@ -34,12 +34,12 @@ final readonly class LemmyCommentsSource implements CommentsSourceInterface
 
     public function serves(Entry $entry): bool
     {
-        return null !== LemmyPostAddress::of($entry);
+        return null !== LemmyPostAddress::findPost($entry);
     }
 
-    public function audienceOf(User $user, Entry $entry): CommentsAudienceModel
+    public function buildAudience(User $user, Entry $entry): CommentsAudienceModel
     {
-        $pageUrl = self::postOf($entry)->pageUrl();
+        $pageUrl = self::requirePost($entry)->pageUrl();
         $account = $this->threadReader->readerFor($user);
 
         return null === $account
@@ -49,7 +49,7 @@ final readonly class LemmyCommentsSource implements CommentsSourceInterface
 
     public function fetch(CommentsRequest $request): CommentsAnswerModel
     {
-        $post = self::postOf($request->entry);
+        $post = self::requirePost($request->entry);
         $account = $request->audience->actingAccount;
         if (null !== $account) {
             try {
@@ -88,9 +88,9 @@ final readonly class LemmyCommentsSource implements CommentsSourceInterface
         return new CommentsPageModel($thread->comments($nodes));
     }
 
-    private static function postOf(Entry $entry): LemmyPostModel
+    private static function requirePost(Entry $entry): LemmyPostModel
     {
-        return LemmyPostAddress::of($entry)
+        return LemmyPostAddress::findPost($entry)
             ?? throw new CommentsUnavailableException('The entry is not a Lemmy post.');
     }
 }

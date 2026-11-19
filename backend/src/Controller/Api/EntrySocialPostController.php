@@ -59,7 +59,7 @@ final readonly class EntrySocialPostController
         $target = new ResponseTargetModel($entry, $address, $accountId);
         $context = $this->responses->contextFor($user, $target, $kind);
 
-        return new JsonResponse(ComposerContextJson::of($context));
+        return new JsonResponse(ComposerContextJson::from($context));
     }
 
     #[Route('/{id}/social/replies', name: 'api_entries_social_reply', methods: ['POST'], requirements: ['id' => '\d+'])]
@@ -79,7 +79,7 @@ final readonly class EntrySocialPostController
             $request->toDraft(),
         );
 
-        return new JsonResponse(PublishedPostJson::of($published), Response::HTTP_CREATED);
+        return new JsonResponse(PublishedPostJson::from($published), Response::HTTP_CREATED);
     }
 
     #[Route('/{id}/social/quotes', name: 'api_entries_social_quote', methods: ['POST'], requirements: ['id' => '\d+'])]
@@ -99,7 +99,7 @@ final readonly class EntrySocialPostController
             $request->toDraft(),
         );
 
-        return new JsonResponse(PublishedPostJson::of($published), Response::HTTP_CREATED);
+        return new JsonResponse(PublishedPostJson::from($published), Response::HTTP_CREATED);
     }
 
     #[Route(
@@ -127,6 +127,6 @@ final readonly class EntrySocialPostController
         $entry = $this->entryList->getOneSubscribedForUser($user->requireId(), $id);
         $this->rateLimitGuard->enforceForUser($this->socialWritesLimiter, $user);
 
-        return new JsonResponse(PostDeletionJson::of($this->ownPosts->delete($user, $entry)));
+        return new JsonResponse(PostDeletionJson::from($this->ownPosts->delete($user, $entry)));
     }
 }

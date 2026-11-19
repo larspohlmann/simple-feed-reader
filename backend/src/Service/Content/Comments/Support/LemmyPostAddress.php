@@ -11,7 +11,7 @@ use App\Service\Foundation\Url\Support\LemmyPostUrl;
 
 final class LemmyPostAddress
 {
-    public static function of(Entry $entry): ?LemmyPostModel
+    public static function findPost(Entry $entry): ?LemmyPostModel
     {
         $discussion = $entry->getDiscussion();
         if (

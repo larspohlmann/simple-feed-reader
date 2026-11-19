@@ -145,8 +145,8 @@ final class LemmyCommentsSourceTest extends KernelTestCase
     {
         $other = new User('other@example.com', $this->clock->now());
 
-        self::assertSame(self::POST, $this->source->audienceOf($this->user, self::entry())->scope);
-        self::assertSame(self::POST, $this->source->audienceOf($other, self::entry())->scope);
+        self::assertSame(self::POST, $this->source->buildAudience($this->user, self::entry())->scope);
+        self::assertSame(self::POST, $this->source->buildAudience($other, self::entry())->scope);
     }
 
     public function testAnAccountReadsItsOwnCacheScope(): void
@@ -154,7 +154,7 @@ final class LemmyCommentsSourceTest extends KernelTestCase
         $account = self::account();
         $this->bootWithReader(new StubLemmyThreadReader($account));
 
-        $audience = $this->source->audienceOf($this->user, self::entry());
+        $audience = $this->source->buildAudience($this->user, self::entry());
 
         self::assertSame(self::POST . ' account:5', $audience->scope);
         self::assertSame($account, $audience->actingAccount);
@@ -162,7 +162,7 @@ final class LemmyCommentsSourceTest extends KernelTestCase
 
     public function testWithoutAnAccountTheScopeStaysShared(): void
     {
-        $audience = $this->source->audienceOf($this->user, self::entry());
+        $audience = $this->source->buildAudience($this->user, self::entry());
 
         self::assertSame(self::POST, $audience->scope);
         self::assertNull($audience->actingAccount);
