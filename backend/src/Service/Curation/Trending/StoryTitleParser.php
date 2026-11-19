@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Service\Curation\Trending;
 
 use App\Service\Curation\Recommendation\Llm\Prompt\ModelReplyJsonDecoder;
+use App\Service\Curation\Trending\Model\StoryHeadingModel;
 
-/** Reads the `{title}` reply of the story-title prompt; null for a reply that gives no usable title. */
+/** Reads the `{title, synopsis}` reply of the story-title prompt; null for a reply that gives no usable title. */
 final readonly class StoryTitleParser
 {
     private const int MAXIMUM_LENGTH = 120;
+
+    private const int MAXIMUM_SYNOPSIS_LENGTH = 500;
 
     private const string TRAILING_PUNCTUATION = '/[\s.,;:!?…]+$/u';
 
@@ -19,9 +22,16 @@ final readonly class StoryTitleParser
     {
     }
 
-    public function parse(string $content): ?string
+    public function parse(string $content): ?StoryHeadingModel
     {
-        $title = $this->decoder->decode($content)['title'] ?? null;
+        $reply = $this->decoder->decode($content);
+        $title = $this->titleOf($reply['title'] ?? null);
+
+        return $title === null ? null : new StoryHeadingModel($title, $this->synopsisOf($reply['synopsis'] ?? null));
+    }
+
+    private function titleOf(mixed $title): ?string
+    {
         if (!\is_string($title)) {
             return null;
         }
@@ -31,6 +41,17 @@ final readonly class StoryTitleParser
         );
 
         return $cleaned === '' || mb_strlen($cleaned) > self::MAXIMUM_LENGTH ? null : $cleaned;
+    }
+
+    private function synopsisOf(mixed $synopsis): ?string
+    {
+        if (!\is_string($synopsis)) {
+            return null;
+        }
+
+        $collapsed = trim(preg_replace('/\s+/u', ' ', $synopsis) ?? $synopsis);
+
+        return $collapsed === '' || mb_strlen($collapsed) > self::MAXIMUM_SYNOPSIS_LENGTH ? null : $collapsed;
     }
 
     private function withoutWrappingQuotes(string $title): string

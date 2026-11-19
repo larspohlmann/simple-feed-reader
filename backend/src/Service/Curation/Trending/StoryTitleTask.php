@@ -16,6 +16,7 @@ use App\Service\Curation\StoryAi\StoryAiCalls;
 use App\Service\Curation\StoryAi\StoryAiTask\StoryAiTaskInterface;
 use App\Service\Curation\StoryAi\StorySettingsProvider;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
+use App\Service\Curation\Trending\Model\StoryHeadingModel;
 use App\Service\Curation\Trending\Model\StoryHeadlineModel;
 use App\Service\Curation\Trending\Support\StoryTitlePrompt;
 use App\Service\Foundation\Clock\NaiveUtcClock;
@@ -85,7 +86,7 @@ final readonly class StoryTitleTask implements StoryAiTaskInterface
         return $outcome;
     }
 
-    /** @param StoryAiOutcomeModel<string> $outcome */
+    /** @param StoryAiOutcomeModel<StoryHeadingModel> $outcome */
     private function record(int $storyId, StoryAiOutcomeModel $outcome): void
     {
         if ($outcome->isUsable()) {

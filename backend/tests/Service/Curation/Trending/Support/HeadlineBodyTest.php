@@ -100,4 +100,25 @@ final class HeadlineBodyTest extends TestCase
     {
         self::assertSame('', HeadlineBody::bodyAfterTitle('Title', null));
     }
+
+    public function testAnExcerptKeepsUpToAThousandCharactersOnAWordBoundary(): void
+    {
+        $excerpt = HeadlineBody::excerpt(str_repeat('word ', 300));
+
+        self::assertSame(rtrim(str_repeat('word ', 200)), $excerpt);
+        self::assertLessThanOrEqual(1_000, mb_strlen($excerpt));
+        self::assertSame('Short text', HeadlineBody::excerpt('<p>Short text</p>'));
+    }
+
+    public function testAnExcerptAfterTitleDropsTheRepeatedHeadline(): void
+    {
+        self::assertSame(
+            'Ten dead.',
+            HeadlineBody::excerptAfterTitle('Storm hits coast.', '<p>Storm hits coast. Ten dead.</p>'),
+        );
+        self::assertSame(
+            rtrim(str_repeat('ab ', 333)),
+            HeadlineBody::excerptAfterTitle('Title', 'Title ' . str_repeat('ab ', 400)),
+        );
+    }
 }

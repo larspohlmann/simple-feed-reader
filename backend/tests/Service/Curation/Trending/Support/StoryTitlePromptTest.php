@@ -37,12 +37,15 @@ final class StoryTitlePromptTest extends TestCase
 
         self::assertSame('system', $messages[0]['role']);
         self::assertSame(
-            "You write the headline of one news story from the headlines and openings of the articles that report it.\n"
+            "You write the headline of one news story from the headline and text of each article that reports it.\n"
             . "Write one neutral, factual headline in $language, at most 90 characters, that describes the whole story"
             . " rather than one article.\n"
             . "Name no outlet, publication or author. No clickbait, no quotation marks around it, no trailing"
             . " punctuation.\n"
-            . 'Reply only with JSON: {"title": "..."}',
+            . "Then write a synopsis of the whole story in $language from what the article texts report, not from the"
+            . " headlines alone: two or three plain sentences, at most 350 characters, neutral and factual, naming no"
+            . " outlet.\n"
+            . 'Reply only with JSON: {"title": "...", "synopsis": "..."}',
             $messages[0]['content'],
         );
     }

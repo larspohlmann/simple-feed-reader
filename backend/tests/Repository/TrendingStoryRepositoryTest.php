@@ -602,6 +602,28 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         self::assertCount(1, $this->stories()->memberHeadlinesOf($story->requireId(), 1));
     }
 
+    public function testAStoryTitledBeforeSynopsesIsDueAgain(): void
+    {
+        $story = $this->storyOf([
+            [$this->articleFeed('outlet'), 'outlet.example'],
+            [$this->articleFeed('second'), 'second.example'],
+        ]);
+        $this->entityManager->flush();
+        $this->entityManager->getConnection()->executeStatement(
+            'UPDATE trending_story SET llm_title = ?, llm_title_member_count = 0, llm_title_attempted_at = ?'
+            . ' WHERE id = ?',
+            ['Hafenstreik', '2031-05-14 08:00:00', $story->requireId()],
+        );
+
+        $due = $this->stories()->titleDueOf(
+            $this->reader->requireId(),
+            new \DateTimeImmutable('2031-05-14 11:00:00'),
+            new \DateTimeImmutable('2031-05-07 00:00:00'),
+        );
+
+        self::assertSame([$story->requireId()], $due);
+    }
+
     private function storeTitles(TrendingStory $story, ?string $fallbackTitle, ?string $llmTitle): void
     {
         $this->entityManager->flush();

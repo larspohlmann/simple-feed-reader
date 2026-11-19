@@ -28,7 +28,7 @@ final readonly class RecommendationAnswerBudget
     private const int PROFILE_ANSWER_TOKENS_PER_HUNDRED_WORDS = 400;
 
     /** One `{"title": "..."}` story title of at most ~90 characters. */
-    private const int STORY_TITLE_ANSWER_TOKENS = 40;
+    private const int STORY_TITLE_ANSWER_TOKENS = 220;
 
     /** The distillation reply: one profile string at the cap DISTILL_ROLE sets. */
     public const int PROFILE_ANSWER_TOKENS = RecommendationPromptText::PROFILE_WORD_CAP
