@@ -7,7 +7,7 @@
   [attr.aria-labelledby]="titleId"
   [attr.aria-describedby]="story().synopsis ? synopsisId : null"
 >
-  <app-icon class="icon" [name]="storyIcon" size="sm" />
+  <app-icon class="icon" [name]="storyIcon" size="md" />
   <div class="text">
     <h3 class="title" [id]="titleId">{{ story().title }}</h3>
     @if (story().synopsis; as synopsis) {
