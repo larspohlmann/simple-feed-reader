@@ -16,7 +16,7 @@ final class EntrySnippet
 
     public static function from(?string $html): ?string
     {
-        $text = EntryPlainText::of($html);
+        $text = EntryPlainText::fromHtml($html);
 
         return $text === null ? null : mb_substr($text, 0, self::MAX_LENGTH);
     }

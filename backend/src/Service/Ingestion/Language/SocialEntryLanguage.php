@@ -21,9 +21,9 @@ final readonly class SocialEntryLanguage
     ) {
     }
 
-    public function of(ParsedEntryModel $entry): ?FeedLanguage
+    public function resolveLanguage(ParsedEntryModel $entry): ?FeedLanguage
     {
-        $body = EntryPlainText::of($entry->summary ?? $entry->contentHtml) ?? '';
+        $body = EntryPlainText::fromHtml($entry->summary ?? $entry->contentHtml) ?? '';
         if (null === $entry->statedLanguage) {
             return $this->guess($entry, $body);
         }
@@ -48,6 +48,6 @@ final readonly class SocialEntryLanguage
         }
 
         // A derived headline repeats the body's first sentence: counted twice, it would break the vote's ties.
-        return $this->stopWordVote->languageOf($entry->headline->derived ? $body : $text);
+        return $this->stopWordVote->detectLanguage($entry->headline->derived ? $body : $text);
     }
 }

@@ -71,7 +71,7 @@ final class RestoreEntryLoader
 
     public function bufferEntry(EntryLine $line): void
     {
-        PrivateFeedRefusal::ofUrl($line->feedUrl);
+        PrivateFeedRefusal::throwIfPrivateUrl($line->feedUrl);
         if ($line->feedUrl !== $this->bufferedFeedUrl) {
             $this->closeBufferedFeed();
             $this->bufferedFeedUrl = $line->feedUrl;
@@ -85,7 +85,7 @@ final class RestoreEntryLoader
 
     public function loadState(EntryStateLine $line): void
     {
-        PrivateFeedRefusal::ofUrl($line->feedUrl);
+        PrivateFeedRefusal::throwIfPrivateUrl($line->feedUrl);
         // Every entry the file carries is written before the first state is
         // read, so the hash maps below are final by now.
         $this->closeBufferedFeed();
@@ -105,7 +105,7 @@ final class RestoreEntryLoader
 
     public function loadShare(EntryShareLine $line): void
     {
-        PrivateFeedRefusal::ofUrl($line->feedUrl);
+        PrivateFeedRefusal::throwIfPrivateUrl($line->feedUrl);
         $this->closeBufferedFeed();
 
         $entryId = $this->target($line->feedUrl)->entryId($line->guidHash);
@@ -173,13 +173,13 @@ final class RestoreEntryLoader
             return;
         }
 
-        $fresh = $this->unknownOf($lines, $target);
+        $fresh = $this->filterUnknownLines($lines, $target);
         if ([] === $fresh) {
             return;
         }
 
         try {
-            $linkIdsByUrl = $this->linkWriter->idsFor(self::cardsOf($fresh));
+            $linkIdsByUrl = $this->linkWriter->idsFor(self::collectCards($fresh));
             $this->inserter->insert($target->feedId, $fresh, $linkIdsByUrl);
             $createdIds = $this->recordCreatedIds($target, $fresh);
             $this->inserter->insertLinkCards($createdIds, $fresh, $linkIdsByUrl);
@@ -196,7 +196,7 @@ final class RestoreEntryLoader
      *
      * @return list<LinkCardContent> every root card and quoted card of the lines
      */
-    private static function cardsOf(array $lines): array
+    private static function collectCards(array $lines): array
     {
         return array_merge(...array_map(
             static fn (EntryLine $line): array => [
@@ -215,7 +215,7 @@ final class RestoreEntryLoader
      *
      * @return list<EntryLine>
      */
-    private function unknownOf(array $lines, RestoreFeedTarget $target): array
+    private function filterUnknownLines(array $lines, RestoreFeedTarget $target): array
     {
         $freshByHash = [];
         foreach ($lines as $line) {

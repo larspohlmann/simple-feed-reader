@@ -171,6 +171,6 @@ final readonly class AppViewClient
             throw new AppViewAnswerException(sprintf('The AppView answered without a list of %s.', $field));
         }
 
-        return array_map(JsonNodeModel::of(...), $views);
+        return array_map(JsonNodeModel::fromValue(...), $views);
     }
 }

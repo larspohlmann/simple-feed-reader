@@ -25,7 +25,7 @@ final class RecommendationRunHistoryRepositoryTest extends DbTestCase
         $augustEnd = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-31 23:59:00'));
         $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-09-01 00:00:00'));
 
-        $window = MonthWindowModel::of('2026-08', ViewerTimeZoneModel::of(null));
+        $window = MonthWindowModel::of('2026-08', ViewerTimeZoneModel::fromIdentifier(null));
         $rows = $this->historyRepository()->pageForMonth($user, $window, null);
 
         // Half-open at both ends: the July run at 23:00 and the September run
@@ -44,13 +44,13 @@ final class RecommendationRunHistoryRepositoryTest extends DbTestCase
 
         $repository = $this->historyRepository();
 
-        $august = MonthWindowModel::of('2026-08', ViewerTimeZoneModel::of('Europe/Berlin'));
+        $august = MonthWindowModel::of('2026-08', ViewerTimeZoneModel::fromIdentifier('Europe/Berlin'));
         self::assertSame(
             [$control->getId()],
             array_column($repository->pageForMonth($user, $august, null), 'id'),
         );
 
-        $september = MonthWindowModel::of('2026-09', ViewerTimeZoneModel::of('Europe/Berlin'));
+        $september = MonthWindowModel::of('2026-09', ViewerTimeZoneModel::fromIdentifier('Europe/Berlin'));
         self::assertSame(
             [$boundary->getId()],
             array_column($repository->pageForMonth($user, $september, null), 'id'),
@@ -67,7 +67,7 @@ final class RecommendationRunHistoryRepositoryTest extends DbTestCase
             $fixtures->persistRunAt($user, new \DateTimeImmutable(sprintf('2026-08-01 00:%02d:00', $minute)));
         }
 
-        $window = MonthWindowModel::of('2026-08', ViewerTimeZoneModel::of(null));
+        $window = MonthWindowModel::of('2026-08', ViewerTimeZoneModel::fromIdentifier(null));
         $rows = $this->historyRepository()->pageForMonth($user, $window, null);
 
         self::assertCount(RecommendationRunHistoryRepository::HISTORY_LIMIT + 1, $rows);
@@ -85,7 +85,7 @@ final class RecommendationRunHistoryRepositoryTest extends DbTestCase
             )->getId();
         }
 
-        $window = MonthWindowModel::of('2026-08', ViewerTimeZoneModel::of(null));
+        $window = MonthWindowModel::of('2026-08', ViewerTimeZoneModel::fromIdentifier(null));
         $rows = $this->historyRepository()->pageForMonth($user, $window, $ids[2]);
 
         self::assertSame([$ids[1], $ids[0]], array_column($rows, 'id'));
@@ -99,7 +99,7 @@ final class RecommendationRunHistoryRepositoryTest extends DbTestCase
         $mine = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-05 00:00:00'));
         $this->fixtures()->persistRunAt($otherUser, new \DateTimeImmutable('2026-08-05 00:00:00'));
 
-        $window = MonthWindowModel::of('2026-08', ViewerTimeZoneModel::of(null));
+        $window = MonthWindowModel::of('2026-08', ViewerTimeZoneModel::fromIdentifier(null));
         $rows = $this->historyRepository()->pageForMonth($user, $window, null);
 
         self::assertSame([$mine->getId()], array_column($rows, 'id'));

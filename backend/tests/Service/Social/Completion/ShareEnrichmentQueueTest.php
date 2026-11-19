@@ -187,7 +187,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
 
         $this->queue->queueWithKnownShares(
             [$post],
-            KnownSharesModel::ofBlueskyPosts([self::AT_POST => JsonNodeModel::of(['uri' => self::AT_POST])]),
+            KnownSharesModel::ofBlueskyPosts([self::AT_POST => JsonNodeModel::fromValue(['uri' => self::AT_POST])]),
         );
         $this->entityManager->flush();
 
@@ -201,7 +201,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
 
         $this->queue->queueWithKnownShares(
             [$post],
-            KnownSharesModel::ofBlueskyPosts([self::AT_POST => JsonNodeModel::of(['uri' => self::AT_POST])]),
+            KnownSharesModel::ofBlueskyPosts([self::AT_POST => JsonNodeModel::fromValue(['uri' => self::AT_POST])]),
         );
         $this->entityManager->flush();
 
@@ -216,7 +216,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         $this->queue->queueWithKnownShares(
             [$post],
             KnownSharesModel::ofBlueskyPosts([
-                self::AT_POST => JsonNodeModel::of(['uri' => self::AT_POST, 'replyCount' => 1]),
+                self::AT_POST => JsonNodeModel::fromValue(['uri' => self::AT_POST, 'replyCount' => 1]),
             ]),
         );
         $this->entityManager->flush();
@@ -232,7 +232,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         $this->queue->queueWithKnownShares(
             [$post],
             KnownSharesModel::ofBlueskyPosts([
-                self::AT_POST => JsonNodeModel::of(['uri' => self::AT_POST, 'replyCount' => 1]),
+                self::AT_POST => JsonNodeModel::fromValue(['uri' => self::AT_POST, 'replyCount' => 1]),
             ]),
         );
         $this->entityManager->flush();

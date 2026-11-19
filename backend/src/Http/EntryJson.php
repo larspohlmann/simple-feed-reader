@@ -126,7 +126,7 @@ final readonly class EntryJson
             'id' => $entry->getId(),
             'pending' => $row->enrichment->pending,
             'summary' => $entry->getText()->getSummary(),
-            'excerpt' => EntryExcerpt::of(
+            'excerpt' => EntryExcerpt::fromSummaryOrContent(
                 $entry->getText()->getSummary(),
                 $entry->bodyStandsInForSummary() ? $entry->getText()->getContentHtml() : null,
             ),
@@ -217,7 +217,7 @@ final readonly class EntryJson
         if (null !== $feed->getNetwork()) {
             return [
                 'name' => $row->subscription->title,
-                'url' => AbsoluteHttpUrl::orNull(FeedWebsite::of($feed->getUrl(), $feed->getSiteUrl())),
+                'url' => AbsoluteHttpUrl::orNull(FeedWebsite::resolveWebsite($feed->getUrl(), $feed->getSiteUrl())),
                 'imageUrl' => $entry->getAuthorAvatarUrl() ?? $feed->getImageUrl(),
             ];
         }

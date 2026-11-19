@@ -64,7 +64,7 @@ final class BlueskyThreadRepliesTest extends TestCase
     public function testASelfReplyRendersLikeItsThreadComment(): void
     {
         $contents = $this->fixture('Bluesky/self-thread-replies.json');
-        $thread = JsonNodeModel::of(json_decode($contents, true))->node('thread');
+        $thread = JsonNodeModel::fromValue(json_decode($contents, true))->node('thread');
         $reader = new BlueskyThreadReplies(new PostEmbedRenderer(), new EntrySanitizer(new TrailingBlankRemover()));
         $node = $reader->of($thread->node('post')->string('uri') ?? '', $contents)[0];
 

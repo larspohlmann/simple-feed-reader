@@ -25,7 +25,7 @@ final class EntryStateLineTest extends TestCase
                 . '"viewedAt":"2026-08-04T08:30:00+00:00"}',
                 $state->getEntry()->getGuidHash(),
             ),
-            EntryStateLine::of($state, 'https://one.example/rss')->toBackupLine(),
+            EntryStateLine::fromState($state, 'https://one.example/rss')->toBackupLine(),
         );
     }
 
@@ -40,7 +40,7 @@ final class EntryStateLineTest extends TestCase
                 . '"isFavorite":false,"isKept":true,"hiddenAt":null,"isViewed":false,"viewedAt":null}',
                 $state->getEntry()->getGuidHash(),
             ),
-            EntryStateLine::of($state, 'https://one.example/rss')->toBackupLine(),
+            EntryStateLine::fromState($state, 'https://one.example/rss')->toBackupLine(),
         );
     }
 }

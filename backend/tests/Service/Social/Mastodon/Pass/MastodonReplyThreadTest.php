@@ -65,12 +65,12 @@ final class MastodonReplyThreadTest extends TestCase
         $thread = new MastodonReplyThread(self::POST_ID, self::AUTHOR, [
             self::statusOf('1', self::POST_ID, 'public'),
             self::statusOf('1', '1', 'public'),
-            JsonNodeModel::of(['visibility' => 'public', 'in_reply_to_id' => self::POST_ID]),
+            JsonNodeModel::fromValue(['visibility' => 'public', 'in_reply_to_id' => self::POST_ID]),
         ]);
 
         self::assertSame(['1'], self::idsOf($thread->topLevel()));
         self::assertSame([], $thread->answersTo($thread->topLevel()[0]));
-        self::assertSame([], $thread->answersTo(JsonNodeModel::of([])));
+        self::assertSame([], $thread->answersTo(JsonNodeModel::fromValue([])));
     }
 
     public function testThePostsAuthorIsKnownByProfileOrActorAddress(): void
@@ -78,15 +78,16 @@ final class MastodonReplyThreadTest extends TestCase
         $thread = new MastodonReplyThread(self::POST_ID, self::AUTHOR, []);
         $unaddressable = new MastodonReplyThread(self::POST_ID, null, []);
 
-        self::assertTrue($thread->isByPostAuthor(JsonNodeModel::of(['url' => self::AUTHOR])));
-        self::assertTrue($thread->isByPostAuthor(JsonNodeModel::of(['uri' => self::AUTHOR])));
-        self::assertFalse($thread->isByPostAuthor(JsonNodeModel::of(['url' => 'https://mastodon.social/@other'])));
-        self::assertFalse($unaddressable->isByPostAuthor(JsonNodeModel::of([])));
+        self::assertTrue($thread->isByPostAuthor(JsonNodeModel::fromValue(['url' => self::AUTHOR])));
+        self::assertTrue($thread->isByPostAuthor(JsonNodeModel::fromValue(['uri' => self::AUTHOR])));
+        $other = JsonNodeModel::fromValue(['url' => 'https://mastodon.social/@other']);
+        self::assertFalse($thread->isByPostAuthor($other));
+        self::assertFalse($unaddressable->isByPostAuthor(JsonNodeModel::fromValue([])));
     }
 
     private static function statusOf(string $id, ?string $inReplyToId, string $visibility): JsonNodeModel
     {
-        return JsonNodeModel::of(['id' => $id, 'in_reply_to_id' => $inReplyToId, 'visibility' => $visibility]);
+        return JsonNodeModel::fromValue(['id' => $id, 'in_reply_to_id' => $inReplyToId, 'visibility' => $visibility]);
     }
 
     /**

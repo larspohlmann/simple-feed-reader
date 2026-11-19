@@ -42,7 +42,7 @@ final readonly class BlueskyRecords
             ],
         ]);
 
-        return JsonNodeModel::of($answer->json())->string('uri');
+        return JsonNodeModel::fromValue($answer->json())->string('uri');
     }
 
     /**
@@ -77,7 +77,7 @@ final readonly class BlueskyRecords
             'collection' => BlueskyRecordUri::POST,
             'rkey' => $recordKey,
         ]));
-        if (self::RECORD_NOT_FOUND === JsonNodeModel::of($answer->json())->string('error')) {
+        if (self::RECORD_NOT_FOUND === JsonNodeModel::fromValue($answer->json())->string('error')) {
             return null;
         }
 
@@ -103,13 +103,16 @@ final readonly class BlueskyRecords
             return PostDeletion::AlreadyGone;
         }
 
-        return JsonNodeModel::of($answer->json())->has('commit') ? PostDeletion::Deleted : PostDeletion::AlreadyGone;
+        $committed = JsonNodeModel::fromValue($answer->json())->has('commit');
+
+        return $committed ? PostDeletion::Deleted : PostDeletion::AlreadyGone;
     }
 
     /** @param array<mixed> $answer */
     private static function uriOf(array $answer, string $withoutOne): string
     {
-        return JsonNodeModel::of($answer)->string('uri') ?? throw new SocialNetworkUnreachableException($withoutOne);
+        return JsonNodeModel::fromValue($answer)->string('uri')
+            ?? throw new SocialNetworkUnreachableException($withoutOne);
     }
 
     private function now(): string

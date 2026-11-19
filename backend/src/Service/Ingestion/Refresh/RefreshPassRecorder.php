@@ -24,7 +24,7 @@ final readonly class RefreshPassRecorder
     public function record(RefreshPass $pass, \DateTimeImmutable $now): void
     {
         $outcomes = new PassOutcomeStore($this->outcomePersister, $now);
-        $socialFeedsByFeedId = $this->socialFeeds->findWithAccountByFeedIds(PassTickets::privateFeedIdsOf($pass));
+        $socialFeedsByFeedId = $this->socialFeeds->findWithAccountByFeedIds(PassTickets::collectPrivateFeedIds($pass));
         foreach ($this->fetcher->fetchAll($pass, $socialFeedsByFeedId) as $feedId => $outcome) {
             $feed = $pass->feed($feedId);
             $pass->tally->record($outcome->storeIn($outcomes, $feed), $feed);

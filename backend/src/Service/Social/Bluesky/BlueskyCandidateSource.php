@@ -148,6 +148,6 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
 
     private function json(ApiRequestModel $request): JsonNodeModel
     {
-        return JsonNodeModel::of($this->bluesky->send($request)->json());
+        return JsonNodeModel::fromValue($this->bluesky->send($request)->json());
     }
 }

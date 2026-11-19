@@ -20,12 +20,12 @@ final readonly class RestoreResultModel
     ) {
     }
 
-    public static function ofFoundation(int $tags, int $savedSearches, int $feeds, int $subscriptions): self
+    public static function fromFoundationCounts(int $tags, int $savedSearches, int $feeds, int $subscriptions): self
     {
         return new self($tags, $savedSearches, $feeds, $subscriptions, entries: 0, entryStates: 0);
     }
 
-    public static function ofEntryPart(int $entries, int $entryStates): self
+    public static function fromEntryCounts(int $entries, int $entryStates): self
     {
         return new self(
             tags: 0,

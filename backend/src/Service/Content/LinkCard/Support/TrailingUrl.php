@@ -44,7 +44,9 @@ final class TrailingUrl
         }
         $lastWord = preg_match('/\S+\z/u', $text, $match) === 1 ? $match[0] : '';
 
-        return $lastWord !== '' && TrackingFreeUrl::of($lastWord) === TrackingFreeUrl::of($url) ? $lastWord : null;
+        $isSameUrl = TrackingFreeUrl::stripTracking($lastWord) === TrackingFreeUrl::stripTracking($url);
+
+        return $lastWord !== '' && $isSameUrl ? $lastWord : null;
     }
 
     private static function lastText(Node $node): ?Text

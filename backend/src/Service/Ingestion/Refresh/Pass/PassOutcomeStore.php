@@ -44,8 +44,10 @@ final readonly class PassOutcomeStore
             ),
             $outcome instanceof FailedTimelineModel => $this->outcomePersister->storeFailure($feed, $outcome->failure),
             // Held back this refresh: the feed keeps its schedule for the next one.
-            $outcome instanceof AccountThrottledTimelineModel => FeedRefreshResultModel::of(FeedOutcome::Throttled),
-            $outcome instanceof AccountPausedTimelineModel => FeedRefreshResultModel::of(FeedOutcome::Failed),
+            $outcome instanceof AccountThrottledTimelineModel => FeedRefreshResultModel::fromOutcome(
+                FeedOutcome::Throttled,
+            ),
+            $outcome instanceof AccountPausedTimelineModel => FeedRefreshResultModel::fromOutcome(FeedOutcome::Failed),
         };
     }
 }

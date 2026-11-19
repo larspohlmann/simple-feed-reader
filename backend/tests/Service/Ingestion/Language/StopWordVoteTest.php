@@ -95,17 +95,17 @@ final class StopWordVoteTest extends TestCase
     public function testTheVoteReadsTheInjectedLists(): void
     {
         $stopWords = new class implements StopWordsInterface {
-            public function wordsOf(FeedLanguage $language): array
+            public function listWords(FeedLanguage $language): array
             {
                 return FeedLanguage::German === $language ? ['zz'] : ['yy'];
             }
         };
 
-        self::assertSame(FeedLanguage::German, new StopWordVote($stopWords)->languageOf('zz zz yy'));
+        self::assertSame(FeedLanguage::German, new StopWordVote($stopWords)->detectLanguage('zz zz yy'));
     }
 
     private static function vote(string $text): ?FeedLanguage
     {
-        return new StopWordVote(LanguageWiring::stopWords())->languageOf($text);
+        return new StopWordVote(LanguageWiring::stopWords())->detectLanguage($text);
     }
 }

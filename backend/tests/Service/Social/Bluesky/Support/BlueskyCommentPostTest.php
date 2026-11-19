@@ -59,12 +59,12 @@ final class BlueskyCommentPostTest extends TestCase
 
     public function testABlueskyReplyWithoutCountsIsNoPost(): void
     {
-        self::assertNull(BlueskyCommentPost::parsePost(JsonNodeModel::of(['uri' => self::POST_URI])));
+        self::assertNull(BlueskyCommentPost::parsePost(JsonNodeModel::fromValue(['uri' => self::POST_URI])));
     }
 
     public function testABlueskyReplyNamesItsAuthorsDidAndItsReplyGate(): void
     {
-        $post = BlueskyCommentPost::parsePost(JsonNodeModel::of([
+        $post = BlueskyCommentPost::parsePost(JsonNodeModel::fromValue([
             'uri' => self::POST_URI,
             'author' => ['did' => 'did:plc:ann'],
             'viewer' => ['replyDisabled' => true, 'embeddingDisabled' => true],
@@ -88,7 +88,7 @@ final class BlueskyCommentPostTest extends TestCase
     /** @param array<string, string> $viewer */
     private static function blueskyPost(array $viewer, string $uri = self::POST_URI): JsonNodeModel
     {
-        return JsonNodeModel::of([
+        return JsonNodeModel::fromValue([
             'uri' => $uri,
             'likeCount' => 5,
             'repostCount' => 1,

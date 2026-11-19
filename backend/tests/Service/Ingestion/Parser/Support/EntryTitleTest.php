@@ -11,7 +11,7 @@ final class EntryTitleTest extends TestCase
 {
     public function testAFeedTitleWinsAndIsNotDerived(): void
     {
-        $title = EntryTitle::of('A <em>real</em> title', '<p>Body text here.</p>');
+        $title = EntryTitle::buildHeadline('A <em>real</em> title', '<p>Body text here.</p>');
 
         self::assertSame('A real title', $title->text);
         self::assertFalse($title->derived);
@@ -19,7 +19,7 @@ final class EntryTitleTest extends TestCase
 
     public function testATitleLessItemTakesItsTitleFromTheBody(): void
     {
-        $title = EntryTitle::of(null, '<p>Body text here. And more.</p>');
+        $title = EntryTitle::buildHeadline(null, '<p>Body text here. And more.</p>');
 
         self::assertSame('Body text here.', $title->text);
         self::assertTrue($title->derived);
@@ -27,12 +27,12 @@ final class EntryTitleTest extends TestCase
 
     public function testABlankFeedTitleCountsAsNone(): void
     {
-        self::assertTrue(EntryTitle::of('   ', '<p>Body text here.</p>')->derived);
+        self::assertTrue(EntryTitle::buildHeadline('   ', '<p>Body text here.</p>')->derived);
     }
 
     public function testAnItemWithNeitherIsAnUntitledPost(): void
     {
-        $title = EntryTitle::of(null, null);
+        $title = EntryTitle::buildHeadline(null, null);
 
         self::assertSame('', $title->text);
         self::assertTrue($title->derived);

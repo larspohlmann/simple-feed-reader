@@ -87,7 +87,7 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
             $entries,
             syntax: FeedSyntax::Atom,
             declaredLanguage: self::xmlLang($root),
-        )->withShowArtwork(PodcastArtwork::of($root));
+        )->withShowArtwork(PodcastArtwork::findArtwork($root));
     }
 
     public function parseEntry(\DOMElement $entry): ?ParsedEntryModel
@@ -109,12 +109,12 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
         );
         $mediaBundle = $this->mediaExtractor->extract($atomEntry);
         $summary = $atomEntry->text('summary');
-        $body = FeedBodyHtml::of($contentHtml) ?? ($summary === null ? MediaDescription::html($entry) : null);
+        $body = FeedBodyHtml::fromBody($contentHtml) ?? ($summary === null ? MediaDescription::html($entry) : null);
 
         return new ParsedEntryModel(
             guid: GuidFallback::for($id, $link, $title),
             url: $link,
-            headline: EntryTitle::of($title, $body ?? $summary),
+            headline: EntryTitle::buildHeadline($title, $body ?? $summary),
             author: self::authorChildText($atomEntry, 'name'),
             summary: $summary,
             contentHtml: $body,

@@ -16,7 +16,7 @@ final class DeclaredImages
             $url,
             $width,
             self::positiveDimension($element->getAttribute('height')),
-            DeclaredRenditions::ofWidth($url, $width),
+            DeclaredRenditions::fromWidth($url, $width),
         );
     }
 

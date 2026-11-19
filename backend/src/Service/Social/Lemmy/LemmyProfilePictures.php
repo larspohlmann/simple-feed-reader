@@ -136,7 +136,9 @@ final readonly class LemmyProfilePictures implements ProfilePictureSourceInterfa
      */
     private function answerOf(string $host, string $path, string $view): JsonNodeModel
     {
-        $answer = JsonNodeModel::of($this->lemmy->send(ApiRequestModel::get('https://' . $host . $path))->json());
+        $answer = JsonNodeModel::fromValue(
+            $this->lemmy->send(ApiRequestModel::get('https://' . $host . $path))->json(),
+        );
         if (!$answer->has($view)) {
             throw new SocialNetworkUnreachableException('The Lemmy instance answered without a ' . $view . '.');
         }

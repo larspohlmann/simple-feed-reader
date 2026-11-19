@@ -11,19 +11,19 @@ final class FeedBodyHtmlTest extends TestCase
 {
     public function testNullStaysNull(): void
     {
-        self::assertNull(FeedBodyHtml::of(null));
+        self::assertNull(FeedBodyHtml::fromBody(null));
     }
 
     public function testATagFreeBodyStillBecomesParagraphsAndBreaks(): void
     {
-        self::assertSame('<p>one<br>two</p>', FeedBodyHtml::of("one\ntwo"));
+        self::assertSame('<p>one<br>two</p>', FeedBodyHtml::fromBody("one\ntwo"));
     }
 
     public function testPastedTextInAParagraphGetsItsBreaks(): void
     {
         self::assertSame(
             '<p>Caption<br><br>(Photo: Jane)</p>',
-            FeedBodyHtml::of("<p>Caption\n\n(Photo: Jane)</p>"),
+            FeedBodyHtml::fromBody("<p>Caption\n\n(Photo: Jane)</p>"),
         );
     }
 }

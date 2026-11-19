@@ -11,7 +11,7 @@ final class JsonNodeModelTest extends TestCase
 {
     public function testReadsTypedFieldsAndTreatsTheWrongTypeAsAbsent(): void
     {
-        $node = JsonNodeModel::of([
+        $node = JsonNodeModel::fromValue([
             '$type' => 'app.bsky.embed.images#view',
             'alt' => '  a cat  ',
             'blank' => '   ',
@@ -30,7 +30,7 @@ final class JsonNodeModelTest extends TestCase
 
     public function testNestedNodesAndListsDegradeToEmpty(): void
     {
-        $node = JsonNodeModel::of([
+        $node = JsonNodeModel::fromValue([
             'author' => ['handle' => 'bsky.app'],
             'images' => [['alt' => 'one'], ['alt' => 'two']],
             'map' => ['first' => ['alt' => 'x']],
@@ -45,12 +45,12 @@ final class JsonNodeModelTest extends TestCase
         ));
         self::assertSame([], $node->nodes('map'));
         self::assertSame([], $node->nodes('missing'));
-        self::assertNull(JsonNodeModel::of('scalar')->type());
+        self::assertNull(JsonNodeModel::fromValue('scalar')->type());
     }
 
     public function testFirstReadsAListsFirstNodeOrAnEmptyOne(): void
     {
-        $node = JsonNodeModel::of(['images' => [['alt' => 'one'], ['alt' => 'two']], 'none' => []]);
+        $node = JsonNodeModel::fromValue(['images' => [['alt' => 'one'], ['alt' => 'two']], 'none' => []]);
 
         self::assertSame('one', $node->first('images')->string('alt'));
         self::assertNull($node->first('none')->type());
@@ -59,7 +59,9 @@ final class JsonNodeModelTest extends TestCase
 
     public function testOnlyAListFieldCountsAsAList(): void
     {
-        $node = JsonNodeModel::of(['empty' => [], 'images' => [['alt' => 'one']], 'map' => ['a' => 1], 'text' => 'x']);
+        $node = JsonNodeModel::fromValue(
+            ['empty' => [], 'images' => [['alt' => 'one']], 'map' => ['a' => 1], 'text' => 'x'],
+        );
 
         self::assertSame([], $node->listAt('empty'));
         self::assertSame('one', ($node->listAt('images') ?? [])[0]->string('alt'));
@@ -70,21 +72,21 @@ final class JsonNodeModelTest extends TestCase
 
     public function testOnlyAListValueReadsAsNodes(): void
     {
-        $nodes = JsonNodeModel::listOf([['alt' => 'one'], ['alt' => 'two']]) ?? [];
+        $nodes = JsonNodeModel::parseNodes([['alt' => 'one'], ['alt' => 'two']]) ?? [];
 
         self::assertSame(
             ['one', 'two'],
             array_map(static fn (JsonNodeModel $node): ?string => $node->string('alt'), $nodes),
         );
-        self::assertSame([], JsonNodeModel::listOf([]));
-        self::assertNull(JsonNodeModel::listOf(['a' => 1]));
-        self::assertNull(JsonNodeModel::listOf('text'));
-        self::assertNull(JsonNodeModel::listOf(null));
+        self::assertSame([], JsonNodeModel::parseNodes([]));
+        self::assertNull(JsonNodeModel::parseNodes(['a' => 1]));
+        self::assertNull(JsonNodeModel::parseNodes('text'));
+        self::assertNull(JsonNodeModel::parseNodes(null));
     }
 
     public function testTextKeepsTheStringAsSentWhereStringTrimsIt(): void
     {
-        $node = JsonNodeModel::of(['text' => "  hi\n", 'count' => 3]);
+        $node = JsonNodeModel::fromValue(['text' => "  hi\n", 'count' => 3]);
 
         self::assertSame("  hi\n", $node->text('text'));
         self::assertSame('hi', $node->string('text'));
@@ -94,7 +96,7 @@ final class JsonNodeModelTest extends TestCase
 
     public function testHasTellsAPresentFieldFromAnAbsentOrNullOne(): void
     {
-        $node = JsonNodeModel::of(['reply' => ['parent' => []], 'reblog' => null]);
+        $node = JsonNodeModel::fromValue(['reply' => ['parent' => []], 'reblog' => null]);
 
         self::assertTrue($node->has('reply'));
         self::assertFalse($node->has('reblog'));
@@ -103,7 +105,7 @@ final class JsonNodeModelTest extends TestCase
 
     public function testIsTrueReadsOnlyTheBooleanTrue(): void
     {
-        $node = JsonNodeModel::of(['muted' => true, 'blockedBy' => false, 'flag' => 'true', 'count' => 1]);
+        $node = JsonNodeModel::fromValue(['muted' => true, 'blockedBy' => false, 'flag' => 'true', 'count' => 1]);
 
         self::assertTrue($node->isTrue('muted'));
         self::assertFalse($node->isTrue('blockedBy'));

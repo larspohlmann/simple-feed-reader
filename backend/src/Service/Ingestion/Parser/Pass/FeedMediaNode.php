@@ -92,7 +92,7 @@ final readonly class FeedMediaNode
 
     private function alt(): ?string
     {
-        return MediaDescription::plainText(MediaDescription::descriptionOf($this->element));
+        return MediaDescription::plainText(MediaDescription::findDescription($this->element));
     }
 
     private function intAttribute(string $name): ?int

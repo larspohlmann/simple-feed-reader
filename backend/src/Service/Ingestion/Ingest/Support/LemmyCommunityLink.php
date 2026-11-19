@@ -13,7 +13,7 @@ final class LemmyCommunityLink
     private const string COMMUNITY_PATH = '#^/c/([^/@]+)(?:@([^/@]+))?/?$#';
 
     /** @return PostCommunity|null null unless the link is an https community page */
-    public static function of(string $href): ?PostCommunity
+    public static function parseCommunity(string $href): ?PostCommunity
     {
         $httpsHref = AbsoluteHttpUrl::httpsOrNull($href);
         $host = null === $httpsHref ? null : UrlOrigin::hostWithPort($httpsHref);

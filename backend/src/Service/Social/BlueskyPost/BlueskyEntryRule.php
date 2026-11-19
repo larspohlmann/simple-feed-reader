@@ -27,7 +27,7 @@ final readonly class BlueskyEntryRule implements PlatformEntryRuleInterface
         $contentHtml = self::withoutPlaceholder($entry->contentHtml);
         $stripped = $contentHtml !== $entry->contentHtml || $summary !== $entry->summary;
         $headline = $entry->headline->derived && $stripped
-            ? EntryTitle::of(null, $contentHtml ?? $summary)
+            ? EntryTitle::buildHeadline(null, $contentHtml ?? $summary)
             : $entry->headline;
 
         return $entry->withPostText($headline, $summary, $contentHtml);

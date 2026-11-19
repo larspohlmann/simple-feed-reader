@@ -142,6 +142,6 @@ final readonly class PageLanding
             return null;
         }
 
-        return ClippedText::trimmedOf($text, self::SNIPPET_LENGTH);
+        return ClippedText::cutTrimmedText($text, self::SNIPPET_LENGTH);
     }
 }

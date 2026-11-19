@@ -72,8 +72,11 @@ final readonly class AccountLine
         );
     }
 
-    public static function of(User $user, AccountSettingsModel $settings, AccountNetworkSwitchesModel $networks): self
-    {
+    public static function fromAccount(
+        User $user,
+        AccountSettingsModel $settings,
+        AccountNetworkSwitchesModel $networks,
+    ): self {
         return new self(
             locale: $user->getLocale(),
             scrapeFallbackEnabled: $settings->reading->isScrapeFallbackEnabled(),

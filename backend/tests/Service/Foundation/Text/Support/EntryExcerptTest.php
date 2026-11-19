@@ -14,7 +14,7 @@ final class EntryExcerptTest extends TestCase
     {
         self::assertSame(
             'Summary text.',
-            EntryExcerpt::of('Summary text.', '<p>Body text.</p>'),
+            EntryExcerpt::fromSummaryOrContent('Summary text.', '<p>Body text.</p>'),
         );
     }
 
@@ -22,7 +22,7 @@ final class EntryExcerptTest extends TestCase
     {
         self::assertSame(
             'Body text.',
-            EntryExcerpt::of('', '<p>Body text.</p>'),
+            EntryExcerpt::fromSummaryOrContent('', '<p>Body text.</p>'),
         );
     }
 
@@ -30,25 +30,25 @@ final class EntryExcerptTest extends TestCase
     {
         self::assertSame(
             'Body text.',
-            EntryExcerpt::of(null, '<p>Body text.</p>'),
+            EntryExcerpt::fromSummaryOrContent(null, '<p>Body text.</p>'),
         );
     }
 
     public function testReturnsAnEmptyStringWhenBothAreEmpty(): void
     {
-        self::assertSame('', EntryExcerpt::of(null, null));
+        self::assertSame('', EntryExcerpt::fromSummaryOrContent(null, null));
     }
 
     #[DataProvider('nullLeakProvider')]
     public function testFallsBackToTheBodyForANullLeakSummary(string $junk): void
     {
-        self::assertSame('Body text.', EntryExcerpt::of($junk, '<p>Body text.</p>'));
+        self::assertSame('Body text.', EntryExcerpt::fromSummaryOrContent($junk, '<p>Body text.</p>'));
     }
 
     #[DataProvider('nullLeakProvider')]
     public function testFallsThroughANullLeakBodyToAnEmptyString(string $junk): void
     {
-        self::assertSame('', EntryExcerpt::of(null, $junk));
+        self::assertSame('', EntryExcerpt::fromSummaryOrContent(null, $junk));
     }
 
     /**
@@ -70,7 +70,7 @@ final class EntryExcerptTest extends TestCase
     {
         self::assertSame(
             'Q&A with the team',
-            EntryExcerpt::of(null, 'Q&amp;A with the team'),
+            EntryExcerpt::fromSummaryOrContent(null, 'Q&amp;A with the team'),
         );
     }
 
@@ -79,7 +79,7 @@ final class EntryExcerptTest extends TestCase
         $word = 'lorem ';
         $body = str_repeat($word, 200);
 
-        $excerpt = EntryExcerpt::of(null, $body);
+        $excerpt = EntryExcerpt::fromSummaryOrContent(null, $body);
 
         self::assertLessThanOrEqual(500, mb_strlen($excerpt));
         self::assertSame('lorem', mb_substr($excerpt, -5));
@@ -91,7 +91,7 @@ final class EntryExcerptTest extends TestCase
         $word = 'straße ';
         $body = str_repeat($word, 100);
 
-        $excerpt = EntryExcerpt::of(null, $body);
+        $excerpt = EntryExcerpt::fromSummaryOrContent(null, $body);
 
         // 'ß' is two bytes: a byte-based cut lands mid-character here, unlike
         // a character-based one, so this pins the exact word-boundary result.
@@ -104,14 +104,14 @@ final class EntryExcerptTest extends TestCase
     {
         $body = str_repeat('é', 490) . ' ' . str_repeat('é', 9);
 
-        self::assertSame($body, EntryExcerpt::of(null, $body));
+        self::assertSame($body, EntryExcerpt::fromSummaryOrContent(null, $body));
     }
 
     public function testKeepsTextAtOrUnderTheLimitUnchanged(): void
     {
         $body = str_repeat('a', 500);
 
-        self::assertSame($body, EntryExcerpt::of(null, $body));
+        self::assertSame($body, EntryExcerpt::fromSummaryOrContent(null, $body));
     }
 
     /**
@@ -122,7 +122,7 @@ final class EntryExcerptTest extends TestCase
     {
         $expected = str_repeat('a', 500);
 
-        self::assertSame($expected, EntryExcerpt::of(null, str_repeat('a', 600)));
+        self::assertSame($expected, EntryExcerpt::fromSummaryOrContent(null, str_repeat('a', 600)));
     }
 
     public function testFallsBackToAHardCutWhenTheBodyIsHtmlWithNoSpaceInTheFirst500Characters(): void
@@ -130,14 +130,14 @@ final class EntryExcerptTest extends TestCase
         $expected = str_repeat('a', 500);
         $body = '<p>' . str_repeat('a', 600) . ' with a trailing word</p>';
 
-        self::assertSame($expected, EntryExcerpt::of(null, $body));
+        self::assertSame($expected, EntryExcerpt::fromSummaryOrContent(null, $body));
     }
 
     public function testAnInlineImageBecomesAWordBoundary(): void
     {
         self::assertSame(
             'text more',
-            EntryExcerpt::of(null, 'text<img src="https://i/a.jpg" alt=""/>more'),
+            EntryExcerpt::fromSummaryOrContent(null, 'text<img src="https://i/a.jpg" alt=""/>more'),
         );
     }
 }

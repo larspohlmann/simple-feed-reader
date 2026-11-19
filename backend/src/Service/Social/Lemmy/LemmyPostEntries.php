@@ -68,7 +68,7 @@ final readonly class LemmyPostEntries
      */
     private static function postViewsOf(ApiResponseModel $answer): array
     {
-        return JsonNodeModel::of($answer->json())->listAt('posts')
+        return JsonNodeModel::fromValue($answer->json())->listAt('posts')
             ?? throw new SocialNetworkUnreachableException('The Lemmy instance answered without posts.');
     }
 
@@ -145,7 +145,7 @@ final readonly class LemmyPostEntries
         return new ParsedEntryModel(
             guid: $address,
             url: null,
-            headline: EntryTitle::of($post->string('name'), $body),
+            headline: EntryTitle::buildHeadline($post->string('name'), $body),
             author: $creator->string('display_name') ?? $creator->string('name'),
             summary: null,
             contentHtml: $body,
@@ -162,7 +162,7 @@ final readonly class LemmyPostEntries
         $link = $post->string('url');
         $markdown = $post->string('body');
         $html = (null === $link ? '' : '<p>' . HtmlAnchor::to($link, $link) . '</p>')
-            . (null === $markdown ? '' : $this->markdown->of($markdown));
+            . (null === $markdown ? '' : $this->markdown->toHtml($markdown));
 
         return '' === $html ? null : $html;
     }

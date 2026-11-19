@@ -46,15 +46,15 @@ final readonly class FeedLine
             faviconUrl: LineField::stringOrNull($line, 'faviconUrl'),
             imageUrl: LineField::stringOrNull($line, 'imageUrl'),
             sourceFormat: LineField::string($line, 'sourceFormat'),
-            language: self::languageOf($line),
+            language: self::parseLanguage($line),
         );
-        PrivateFeedRefusal::ofFeed($feedLine->url, $feedLine->sourceFormat);
-        SavedFeedRefusal::ofFeed($feedLine->url, $feedLine->sourceFormat);
+        PrivateFeedRefusal::throwIfPrivateFeed($feedLine->url, $feedLine->sourceFormat);
+        SavedFeedRefusal::throwIfMixedFeed($feedLine->url, $feedLine->sourceFormat);
 
         return $feedLine;
     }
 
-    public static function of(ExportedSubscriptionModel $exported): self
+    public static function fromSubscription(ExportedSubscriptionModel $exported): self
     {
         $feed = $exported->subscription->getFeed();
 
@@ -86,7 +86,7 @@ final readonly class FeedLine
     }
 
     /** @param array<string, mixed> $line */
-    private static function languageOf(array $line): ?FeedLanguage
+    private static function parseLanguage(array $line): ?FeedLanguage
     {
         if (!SourceFormat::carriesFeedLanguage(LineField::string($line, 'sourceFormat'))) {
             return null;

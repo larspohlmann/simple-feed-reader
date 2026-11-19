@@ -18,7 +18,7 @@ final class BundledStopWords implements StopWordsInterface, ResetInterface
     ) {
     }
 
-    public function wordsOf(FeedLanguage $language): array
+    public function listWords(FeedLanguage $language): array
     {
         $this->lists ??= require $this->path;
         $words = \is_array($this->lists) ? $this->lists[$language->value] ?? null : null;

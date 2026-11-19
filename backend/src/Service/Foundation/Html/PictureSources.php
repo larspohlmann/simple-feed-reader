@@ -31,7 +31,7 @@ final readonly class PictureSources
     {
         $widest = null;
         foreach ($picture->getElementsByTagName('source') as $source) {
-            $rendition = $this->renditionOf($source);
+            $rendition = $this->findWidestRendition($source);
             if ($rendition !== null && ($widest === null || $rendition->outsizes($widest))) {
                 $widest = $rendition;
             }
@@ -43,7 +43,7 @@ final readonly class PictureSources
     public function firstUsableUrl(Element $picture): ?string
     {
         foreach ($picture->getElementsByTagName('source') as $source) {
-            $candidate = Srcset::firstUrl($this->srcsetOf($source));
+            $candidate = Srcset::firstUrl($this->findSrcset($source));
             if ($candidate !== null && ImageSourceUrl::isUsable($candidate)) {
                 return $candidate;
             }
@@ -52,13 +52,13 @@ final readonly class PictureSources
         return null;
     }
 
-    private function renditionOf(Element $source): ?ImageRenditionModel
+    private function findWidestRendition(Element $source): ?ImageRenditionModel
     {
         if (!$this->viewport->admits($source->getAttribute('media'))) {
             return null;
         }
 
-        $candidate = Srcset::widest($this->srcsetOf($source));
+        $candidate = Srcset::widest($this->findSrcset($source));
         if ($candidate === null || !ImageSourceUrl::isUsable($candidate->url)) {
             return null;
         }
@@ -67,7 +67,7 @@ final readonly class PictureSources
     }
 
     /** A <source>'s candidate list, from the same lazy attributes an <img> is read by. */
-    private function srcsetOf(Element $source): ?string
+    private function findSrcset(Element $source): ?string
     {
         foreach (self::SRCSET_ATTRIBUTES as $attribute) {
             $srcset = $source->getAttribute($attribute);

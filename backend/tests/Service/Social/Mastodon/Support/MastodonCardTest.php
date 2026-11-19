@@ -12,7 +12,7 @@ final class MastodonCardTest extends TestCase
 {
     public function testACardWithUrlAndTitleNamesItsProviderAsSite(): void
     {
-        $card = MastodonCard::of(JsonNodeModel::of([
+        $card = MastodonCard::of(JsonNodeModel::fromValue([
             'url' => 'https://example.com/a',
             'title' => 'A',
             'description' => 'D',
@@ -27,13 +27,13 @@ final class MastodonCardTest extends TestCase
 
     public function testWithoutAProviderTheHostNamesTheSite(): void
     {
-        $card = MastodonCard::of(JsonNodeModel::of(['url' => 'https://example.com/a', 'title' => 'A']));
+        $card = MastodonCard::of(JsonNodeModel::fromValue(['url' => 'https://example.com/a', 'title' => 'A']));
 
         self::assertSame('example.com', $card?->siteName);
     }
 
     public function testACardWithoutATitleIsNoCard(): void
     {
-        self::assertNull(MastodonCard::of(JsonNodeModel::of(['url' => 'https://example.com/a'])));
+        self::assertNull(MastodonCard::of(JsonNodeModel::fromValue(['url' => 'https://example.com/a'])));
     }
 }

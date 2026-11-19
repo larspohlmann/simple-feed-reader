@@ -73,7 +73,7 @@ final readonly class BlueskyTimelineSource implements TimelineSourceInterface
      */
     private static function timelinePageOf(SocialFeed $socialFeed, ApiResponseModel $accepted): TimelinePageModel
     {
-        $items = JsonNodeModel::of($accepted->json())->listAt('feed')
+        $items = JsonNodeModel::fromValue($accepted->json())->listAt('feed')
             ?? throw new SocialNetworkUnreachableException('Bluesky answered without a feed.');
 
         return SocialFeedKind::Author === $socialFeed->getKind()

@@ -120,7 +120,7 @@ final class FeedLineTest extends TestCase
             '{"kind":"feed","url":"https://one.example/rss","siteUrl":"https://one.example","title":"One",'
             . '"description":null,"faviconUrl":"https://one.example/favicon.ico","imageUrl":null,'
             . '"sourceFormat":"xml","language":"de"}',
-            FeedLine::of($exported)->toBackupLine(),
+            FeedLine::fromSubscription($exported)->toBackupLine(),
         );
     }
 }

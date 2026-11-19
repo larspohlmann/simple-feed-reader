@@ -32,7 +32,7 @@ final class MastodonTimelinePageTest extends TestCase
         self::assertSame('https://mastodon.example/@bob', $entry->authorUrl);
         self::assertSame('https://files.mastodon.example/avatars/bob.png', $entry->authorAvatarUrl);
         self::assertSame(self::CONTENT, $entry->contentHtml);
-        self::assertEquals(EntryTitle::of(null, self::CONTENT), $entry->headline);
+        self::assertEquals(EntryTitle::buildHeadline(null, self::CONTENT), $entry->headline);
         self::assertSame('2026-10-12 08:00:00', $entry->publishedAt?->format('Y-m-d H:i:s'));
         self::assertSame('109', $page->newestId);
     }
@@ -93,7 +93,7 @@ final class MastodonTimelinePageTest extends TestCase
             self::CONTENT . '<p>Boosted by <a href="https://mastodon.example/@carol">@carol@mastodon.example</a></p>',
             $entry->contentHtml,
         );
-        self::assertEquals(EntryTitle::of(null, self::CONTENT), $entry->headline);
+        self::assertEquals(EntryTitle::buildHeadline(null, self::CONTENT), $entry->headline);
         self::assertSame('2026-10-12 09:30:00', $entry->publishedAt?->format('Y-m-d H:i:s'));
         self::assertSame('200', $page->newestId);
     }
@@ -526,7 +526,7 @@ final class MastodonTimelinePageTest extends TestCase
     /** @param array<string, mixed> $overrides */
     private static function timelineStatus(array $overrides = []): JsonNodeModel
     {
-        return JsonNodeModel::of(self::statusFields($overrides));
+        return JsonNodeModel::fromValue(self::statusFields($overrides));
     }
 
     /**

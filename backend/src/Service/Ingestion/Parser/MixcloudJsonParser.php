@@ -82,7 +82,7 @@ final readonly class MixcloudJsonParser
         return new ParsedEntryModel(
             guid: $key,
             url: $url,
-            headline: EntryTitle::of($name, null),
+            headline: EntryTitle::buildHeadline($name, null),
             author: $this->text($this->record($show, 'user'), 'name'),
             summary: null,
             contentHtml: null,

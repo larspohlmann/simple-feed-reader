@@ -114,7 +114,7 @@ final readonly class EntryBatchInserter
     {
         return [
             $feedId, $line->guid, $line->guidHash, $line->url,
-            $this->urlHash->of($line->guid, $line->url), $line->title,
+            $this->urlHash->hashEntryUrl($line->guid, $line->url), $line->title,
             $line->author, $line->summary, $line->contentHtml, $line->language?->value, $line->imageUrl,
             $line->imageUrl === null ? null : EntryImage::hashOf($line->imageUrl),
             $line->imageWidth, $line->imageHeight, self::encodeList($line->imageRenditions),

@@ -76,7 +76,7 @@ final readonly class LemmyCommentsSource implements CommentsSourceInterface
 
     public function read(CommentsRequest $request, string $answer): CommentsPageModel
     {
-        $nodes = JsonNodeModel::of(json_decode($answer, true))->listAt('comments')
+        $nodes = JsonNodeModel::fromValue(json_decode($answer, true))->listAt('comments')
             ?? throw new CommentsUnavailableException('The Lemmy instance answered without a comment list.');
         $thread = new LemmyThread(
             $request->entry->getAuthorUrl(),

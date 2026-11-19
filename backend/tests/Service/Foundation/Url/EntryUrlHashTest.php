@@ -19,8 +19,11 @@ final class EntryUrlHashTest extends TestCase
         $hash = EntryUrlHashes::production();
 
         self::assertSame(
-            $hash->of(self::POST_GUID, 'https://bsky.app/profile/did:plc:xjc7mkotpenvhh6ffewkdpyn/post/3mz7vexdd5c2n'),
-            $hash->of(self::POST_GUID, 'https://bsky.app/profile/meidastouch.com/post/3mz7vexdd5c2n'),
+            $hash->hashEntryUrl(
+                self::POST_GUID,
+                'https://bsky.app/profile/did:plc:xjc7mkotpenvhh6ffewkdpyn/post/3mz7vexdd5c2n',
+            ),
+            $hash->hashEntryUrl(self::POST_GUID, 'https://bsky.app/profile/meidastouch.com/post/3mz7vexdd5c2n'),
         );
     }
 
@@ -30,7 +33,7 @@ final class EntryUrlHashTest extends TestCase
 
         self::assertSame(
             hash('sha256', 'https://bsky.app/profile/did:plc:xjc7mkotpenvhh6ffewkdpyn/post/3mz7vexdd5c2n'),
-            $hash->of(self::POST_GUID, null),
+            $hash->hashEntryUrl(self::POST_GUID, null),
         );
     }
 
@@ -40,11 +43,11 @@ final class EntryUrlHashTest extends TestCase
         $hash = new EntryUrlHash($normalizer, [new BlueskyEntryIdentityUrl()]);
         $url = 'https://example.com/story?utm_source=feed';
 
-        self::assertSame($normalizer->hash($url), $hash->of('https://example.com/story', $url));
+        self::assertSame($normalizer->hash($url), $hash->hashEntryUrl('https://example.com/story', $url));
     }
 
     public function testAnUnlinkedEntryWithAPlainGuidHasNoHash(): void
     {
-        self::assertNull((new EntryUrlHash(new UrlNormalizer(), []))->of('only-guid', null));
+        self::assertNull((new EntryUrlHash(new UrlNormalizer(), []))->hashEntryUrl('only-guid', null));
     }
 }

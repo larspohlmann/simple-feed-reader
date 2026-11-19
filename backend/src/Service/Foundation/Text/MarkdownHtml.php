@@ -15,7 +15,7 @@ final readonly class MarkdownHtml
     ) {
     }
 
-    public function of(string $markdown): string
+    public function toHtml(string $markdown): string
     {
         return $this->converter->convert($markdown)->getContent();
     }

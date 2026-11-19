@@ -88,6 +88,6 @@ final class ProfileFeedTitleTest extends TestCase
 
     private static function title(string $feedUrl, string $channelTitle): string
     {
-        return new ProfileFeedTitle(SocialRuleWiring::profileFeeds())->of($feedUrl, $channelTitle);
+        return new ProfileFeedTitle(SocialRuleWiring::profileFeeds())->formatTitle($feedUrl, $channelTitle);
     }
 }

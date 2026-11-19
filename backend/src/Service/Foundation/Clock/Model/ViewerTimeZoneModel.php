@@ -14,7 +14,7 @@ final readonly class ViewerTimeZoneModel
     {
     }
 
-    public static function of(?string $identifier): self
+    public static function fromIdentifier(?string $identifier): self
     {
         if (null === $identifier || '' === $identifier) {
             return new self(new \DateTimeZone('UTC'));

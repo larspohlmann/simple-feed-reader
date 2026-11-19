@@ -37,7 +37,7 @@ final class EntryMediaAssembler
      *
      * @return list<EntryMedium>
      */
-    public static function mediaOf(array $media): array
+    public static function assembleVisualMedia(array $media): array
     {
         return self::visualMedia(null, $media);
     }

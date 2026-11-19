@@ -91,7 +91,7 @@ final readonly class LemmyThread
         if ($comment->isTrue('removed') || $comment->isTrue('deleted')) {
             return null;
         }
-        $html = $this->sanitizer->sanitize($this->markdown->of($comment->text('content') ?? ''));
+        $html = $this->sanitizer->sanitize($this->markdown->toHtml($comment->text('content') ?? ''));
         if (null === $html) {
             return null;
         }

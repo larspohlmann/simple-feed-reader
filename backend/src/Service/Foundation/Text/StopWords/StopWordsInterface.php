@@ -9,5 +9,5 @@ use App\Enum\FeedLanguage;
 interface StopWordsInterface
 {
     /** @return list<string> casefolded, diacritics kept */
-    public function wordsOf(FeedLanguage $language): array;
+    public function listWords(FeedLanguage $language): array;
 }

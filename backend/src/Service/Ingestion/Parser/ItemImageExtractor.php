@@ -92,7 +92,7 @@ final readonly class ItemImageExtractor
             $width,
             DeclaredImages::positiveDimension($element->getAttribute('height') ?? ''),
             // A `w` descriptor is a file's width; beside one, the width attribute is only a display size.
-            $srcsetRenditions === [] ? DeclaredRenditions::ofWidth($src, $width) : $srcsetRenditions,
+            $srcsetRenditions === [] ? DeclaredRenditions::fromWidth($src, $width) : $srcsetRenditions,
         );
     }
 

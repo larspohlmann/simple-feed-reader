@@ -62,7 +62,7 @@ final readonly class LemmyApiClient
             return $answer;
         }
         SocialNetworkThrottledException::throwIfThrottled($answer, self::THROTTLED);
-        $code = JsonNodeModel::of($answer->json())->string('error');
+        $code = JsonNodeModel::fromValue($answer->json())->string('error');
         throw self::failure($answer->status, $code);
     }
 

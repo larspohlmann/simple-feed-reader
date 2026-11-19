@@ -19,8 +19,9 @@ final readonly class PageIdentityModel
     public function isSamePageAs(self $other): bool
     {
         return $this->title === $other->title
-            && (TrackingFreeUrl::of($this->finalUrl) === TrackingFreeUrl::of($other->finalUrl)
+            && (TrackingFreeUrl::stripTracking($this->finalUrl) === TrackingFreeUrl::stripTracking($other->finalUrl)
                 || ($this->canonicalUrl !== null
-                    && TrackingFreeUrl::of($this->canonicalUrl) === TrackingFreeUrl::orNull($other->canonicalUrl)));
+                    && TrackingFreeUrl::stripTracking($this->canonicalUrl)
+                        === TrackingFreeUrl::orNull($other->canonicalUrl)));
     }
 }

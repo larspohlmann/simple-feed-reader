@@ -21,7 +21,7 @@ final class PrivateFeedRefusal
     /**
      * @throws InvalidBackupException
      */
-    public static function ofUrl(string $feedUrl): void
+    public static function throwIfPrivateUrl(string $feedUrl): void
     {
         if (SocialFeedUrl::isPrivate($feedUrl)) {
             throw self::refusal($feedUrl);
@@ -31,9 +31,9 @@ final class PrivateFeedRefusal
     /**
      * @throws InvalidBackupException
      */
-    public static function ofFeed(string $feedUrl, string $sourceFormat): void
+    public static function throwIfPrivateFeed(string $feedUrl, string $sourceFormat): void
     {
-        self::ofUrl($feedUrl);
+        self::throwIfPrivateUrl($feedUrl);
         if (SourceFormat::isSocial($sourceFormat)) {
             throw self::refusal($feedUrl);
         }

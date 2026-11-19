@@ -21,7 +21,11 @@ final class ShareTargets
     {
         $target = TitledShareTarget::of($entry);
         if ($target !== null) {
-            $carded = \in_array(TrackingFreeUrl::of($target), array_map(TrackingFreeUrl::of(...), $cardedUrls), true);
+            $carded = \in_array(
+                TrackingFreeUrl::stripTracking($target),
+                array_map(TrackingFreeUrl::stripTracking(...), $cardedUrls),
+                true,
+            );
 
             return new ShareFetchPlanModel($carded ? [] : [$target]);
         }

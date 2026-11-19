@@ -62,7 +62,7 @@ final readonly class MastodonPostWriter implements PostWriterInterface
             null === $draft->idempotencyKey ? [] : ['Idempotency-Key' => $draft->idempotencyKey],
         );
         $answer = $this->mastodon->writeAs($account, $request, MastodonAccountApi::STATUSES_SCOPE);
-        $status = JsonNodeModel::of($answer->json());
+        $status = JsonNodeModel::fromValue($answer->json());
         $address = AbsoluteHttpUrl::orNull($status->string('uri')) ?? AbsoluteHttpUrl::orNull($status->string('url'))
             ?? throw new SocialNetworkUnreachableException('Mastodon took the post but named no address for it.');
 

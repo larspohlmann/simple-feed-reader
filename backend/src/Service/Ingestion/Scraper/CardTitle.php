@@ -15,7 +15,7 @@ use Dom\Text;
  */
 final readonly class CardTitle
 {
-    public function of(Element $container, Element $anchor): ?string
+    public function findTitle(Element $container, Element $anchor): ?string
     {
         return self::headingTitle($container)
             ?? self::classHintedTitle($container)

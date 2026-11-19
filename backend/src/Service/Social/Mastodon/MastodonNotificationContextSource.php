@@ -74,7 +74,7 @@ final readonly class MastodonNotificationContextSource implements NotificationCo
         }
 
         $statuses = [];
-        foreach (JsonNodeModel::listOf($answer->json()) ?? [] as $status) {
+        foreach (JsonNodeModel::parseNodes($answer->json()) ?? [] as $status) {
             $id = $status->string('id');
             if ($id !== null) {
                 $statuses[$id] = $status;

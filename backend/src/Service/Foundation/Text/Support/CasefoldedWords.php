@@ -7,7 +7,7 @@ namespace App\Service\Foundation\Text\Support;
 final class CasefoldedWords
 {
     /** @return list<string> casefolded, diacritics kept */
-    public static function of(string $text): array
+    public static function splitWords(string $text): array
     {
         $composed = CaseFold::normalized($text, \Normalizer::FORM_KC);
 

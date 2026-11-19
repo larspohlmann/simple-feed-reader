@@ -33,7 +33,7 @@ final readonly class MastodonOriginCountsSource implements PostCountsSourceInter
             static fn (string $message): PostNotPubliclyCountableException
                 => new PostNotPubliclyCountableException($message),
         );
-        $status = JsonNodeModel::of($answer->json());
+        $status = JsonNodeModel::fromValue($answer->json());
         if (!\in_array($address, [$status->string('uri'), $status->string('url')], true)) {
             throw new PostNotPubliclyCountableException('The instance answered with another status.');
         }

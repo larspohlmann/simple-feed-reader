@@ -8,7 +8,7 @@ final class LinkFreeText
 {
     private const string WEB_LINK = '#\bhttps?://\S+#u';
 
-    public static function of(string $text): string
+    public static function stripLinks(string $text): string
     {
         return preg_replace(self::WEB_LINK, '', $text) ?? $text;
     }

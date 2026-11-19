@@ -34,7 +34,7 @@ final class SubscriptionLineTest extends TestCase
             . '"tags":[{"name":"Science","position":0},{"name":"Reading","position":1}],'
             . '"includeInAllItems":true,"includeInForYou":false,"includeInSavedSearches":true,'
             . '"includeInTrending":false}',
-            SubscriptionLine::of($exported)->toBackupLine(),
+            SubscriptionLine::fromSubscription($exported)->toBackupLine(),
         );
     }
 }

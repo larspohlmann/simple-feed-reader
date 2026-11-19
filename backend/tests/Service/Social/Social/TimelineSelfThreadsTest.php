@@ -178,7 +178,7 @@ final class TimelineSelfThreadsTest extends DbTestCase
 
     private static function timelineStatus(string $id, ?string $parentId = null): JsonNodeModel
     {
-        return JsonNodeModel::of([
+        return JsonNodeModel::fromValue([
             'id' => $id,
             'uri' => self::uri($id),
             'url' => 'https://mastodon.example/@bob/' . $id,

@@ -80,7 +80,7 @@ final readonly class EntryLine
     public static function fromLine(array $line): self
     {
         $shareKind = LineField::stringOrNull($line, 'shareKind');
-        $quote = $shareKind === ShareKind::Quote->value ? self::quoteOf($line) : null;
+        $quote = $shareKind === ShareKind::Quote->value ? self::parseQuote($line) : null;
         $chapters = LineField::objectListOrEmpty($line, 'chapters');
 
         return new self(
@@ -105,19 +105,19 @@ final readonly class EntryLine
             commentsLoad: LineField::stringOrNull($line, 'commentsLoad'),
             imageRenditions: LineField::objectListOrEmpty($line, 'imageRenditions'),
             titleDerived: LineFieldWithDefault::bool($line, 'titleDerived', false),
-            shareKind: self::shareKindOf($shareKind, $quote),
-            linkCards: self::linkCardsOf($line),
-            authorUrl: self::authorUrlOf($line, 'authorUrl'),
-            authorAvatarUrl: self::authorUrlOf($line, 'authorAvatarUrl'),
+            shareKind: self::normalizeShareKind($shareKind, $quote),
+            linkCards: self::parseLinkCards($line),
+            authorUrl: self::parseHttpUrl($line, 'authorUrl'),
+            authorAvatarUrl: self::parseHttpUrl($line, 'authorAvatarUrl'),
             quote: $quote,
-            origin: self::originOf($line),
+            origin: self::parseOrigin($line),
             chapters: $chapters,
-            chaptersUrl: $chapters === [] ? self::chaptersUrlOf($line) : null,
+            chaptersUrl: $chapters === [] ? self::parseChaptersUrl($line) : null,
             language: FeedLanguage::tryFrom((string) LineField::stringOrNull($line, 'language')),
         );
     }
 
-    public static function of(Entry $entry, string $feedUrl, EntryCompanionsModel $companions): self
+    public static function fromEntry(Entry $entry, string $feedUrl, EntryCompanionsModel $companions): self
     {
         $discussion = $entry->getDiscussion();
 
@@ -215,7 +215,7 @@ final readonly class EntryLine
         ];
     }
 
-    private static function shareKindOf(?string $shareKind, ?QuotedPostContent $quote): ?string
+    private static function normalizeShareKind(?string $shareKind, ?QuotedPostContent $quote): ?string
     {
         return $quote === null && $shareKind === ShareKind::Quote->value ? ShareKind::Link->value : $shareKind;
     }
@@ -225,7 +225,7 @@ final readonly class EntryLine
      *
      * @param array<string, mixed> $line
      */
-    private static function quoteOf(array $line): ?QuotedPostContent
+    private static function parseQuote(array $line): ?QuotedPostContent
     {
         $fields = LineField::objectOrNull($line, 'quote');
         if ($fields === null) {
@@ -241,7 +241,7 @@ final readonly class EntryLine
             LineField::stringOrNull($fields, 'authorAvatarUrl'),
             LineField::dateOrNull($fields, 'postedAt'),
             LineField::string($fields, 'text'),
-            self::mediaOf($fields),
+            self::parseMedia($fields),
             $nested === null ? null : new QuotedPostReference(
                 LineField::string($nested, 'url'),
                 LineField::stringOrNull($nested, 'handle'),
@@ -255,7 +255,7 @@ final readonly class EntryLine
      *
      * @return list<EntryMedium>
      */
-    private static function mediaOf(array $fields): array
+    private static function parseMedia(array $fields): array
     {
         $stored = array_filter(LineField::objectListOrEmpty($fields, 'media'), EntryMedium::isComplete(...));
 
@@ -263,13 +263,13 @@ final readonly class EntryLine
     }
 
     /** @param array<string, mixed> $line */
-    private static function authorUrlOf(array $line, string $key): ?string
+    private static function parseHttpUrl(array $line, string $key): ?string
     {
         return AbsoluteHttpUrl::orNullWithin(LineField::stringOrNull($line, $key), EntryAuthor::URL_MAX_LENGTH);
     }
 
     /** @param array<string, mixed> $line */
-    private static function chaptersUrlOf(array $line): ?string
+    private static function parseChaptersUrl(array $line): ?string
     {
         $url = LineField::stringOrNull($line, 'chaptersUrl');
 
@@ -277,7 +277,7 @@ final readonly class EntryLine
     }
 
     /** @param array<string, mixed> $line */
-    private static function originOf(array $line): ?EntryOrigin
+    private static function parseOrigin(array $line): ?EntryOrigin
     {
         $fields = LineField::objectOrNull($line, 'origin');
         if (null === $fields) {
@@ -287,7 +287,7 @@ final readonly class EntryLine
 
         return new EntryOrigin(
             null === $title ? null : mb_substr($title, 0, SavedEntryOrigin::TITLE_MAX),
-            self::authorUrlOf($fields, 'faviconUrl'),
+            self::parseHttpUrl($fields, 'faviconUrl'),
         );
     }
 
@@ -296,9 +296,9 @@ final readonly class EntryLine
      *
      * @return list<LinkCardContent>
      */
-    private static function linkCardsOf(array $line): array
+    private static function parseLinkCards(array $line): array
     {
-        $cards = array_map(self::linkCardOf(...), LineField::objectListOrEmpty($line, 'linkCards'));
+        $cards = array_map(self::parseLinkCard(...), LineField::objectListOrEmpty($line, 'linkCards'));
 
         return array_values(array_filter($cards));
     }
@@ -308,7 +308,7 @@ final readonly class EntryLine
      *
      * @param array<string, mixed> $card
      */
-    private static function linkCardOf(array $card): ?LinkCardContent
+    private static function parseLinkCard(array $card): ?LinkCardContent
     {
         return StorableLinkCard::of(self::linkCardFrom($card));
     }

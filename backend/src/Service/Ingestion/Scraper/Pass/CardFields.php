@@ -48,7 +48,7 @@ final readonly class CardFields
 
     private function title(Element $container, Element $anchor): ?string
     {
-        $title = $this->cardTitle->of($container, $anchor);
+        $title = $this->cardTitle->findTitle($container, $anchor);
         if ($title === null || mb_strlen($title) < self::MIN_TITLE_LENGTH) {
             return null;
         }

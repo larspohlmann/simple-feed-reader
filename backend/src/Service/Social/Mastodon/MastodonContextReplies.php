@@ -45,7 +45,7 @@ final readonly class MastodonContextReplies
      */
     public function of(string $postAddress, string $answer): array
     {
-        $envelope = JsonNodeModel::of(json_decode($answer, true));
+        $envelope = JsonNodeModel::fromValue(json_decode($answer, true));
         $postId = $envelope->string('postId')
             ?? throw new CommentsUnavailableException('The Mastodon answer names no post.');
         $descendants = $envelope->node('context')->listAt('descendants')

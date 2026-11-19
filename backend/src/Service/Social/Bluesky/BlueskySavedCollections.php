@@ -38,7 +38,7 @@ final readonly class BlueskySavedCollections
     public function savedItemsOf(SocialAccount $account): SavedItemsModel
     {
         $answer = BlueskySessions::accepted($this->sessions->askAs($account, self::GET_PREFERENCES));
-        $preferences = JsonNodeModel::of($answer->json())->listAt('preferences')
+        $preferences = JsonNodeModel::fromValue($answer->json())->listAt('preferences')
             ?? throw new SocialNetworkUnreachableException('Bluesky answered without preferences.');
 
         $saved = ['feed' => [], 'list' => []];
@@ -92,7 +92,7 @@ final readonly class BlueskySavedCollections
         foreach (array_chunk($uris, self::GENERATORS_PER_CALL) as $batch) {
             $query = implode('&', array_map(static fn (string $uri): string => 'feeds=' . rawurlencode($uri), $batch));
             $request = ApiRequestModel::get(self::GET_FEED_GENERATORS . '?' . $query);
-            $answer = JsonNodeModel::of($this->bluesky->send($request)->json());
+            $answer = JsonNodeModel::fromValue($this->bluesky->send($request)->json());
             $names = [...$names, ...self::namesIn($answer)];
         }
         $found = [];
@@ -121,7 +121,7 @@ final readonly class BlueskySavedCollections
                 $gone[] = $uri;
                 continue;
             }
-            $list = JsonNodeModel::of(BlueskyApiClient::accepted($answer)->json())->node('list');
+            $list = JsonNodeModel::fromValue(BlueskyApiClient::accepted($answer)->json())->node('list');
             $collection = self::curatedListIn($list);
             if (null !== $collection) {
                 $found[] = $collection;
@@ -174,6 +174,6 @@ final readonly class BlueskySavedCollections
     private static function isMissing(ApiResponseModel $answer): bool
     {
         return Response::HTTP_BAD_REQUEST === $answer->status
-            && self::MISSING_RECORD === JsonNodeModel::of($answer->json())->string('error');
+            && self::MISSING_RECORD === JsonNodeModel::fromValue($answer->json())->string('error');
     }
 }

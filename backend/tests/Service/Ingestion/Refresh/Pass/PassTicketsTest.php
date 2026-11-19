@@ -137,7 +137,7 @@ final class PassTicketsTest extends TestCase
             $clock->now()->getTimestamp() + 5,
         );
 
-        self::assertSame([7, 4], PassTickets::privateFeedIdsOf($pass));
+        self::assertSame([7, 4], PassTickets::collectPrivateFeedIds($pass));
     }
 
     /**

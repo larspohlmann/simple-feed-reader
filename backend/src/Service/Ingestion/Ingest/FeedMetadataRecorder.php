@@ -32,7 +32,7 @@ final readonly class FeedMetadataRecorder
     {
         $this->recordTraits($feed, $parsed);
         if ($parsed->title !== null) {
-            $title = $this->feedTitle->of($feed->getUrl(), $parsed->title);
+            $title = $this->feedTitle->formatTitle($feed->getUrl(), $parsed->title);
             $feed->setTitle(mb_substr($title, 0, self::FEED_TITLE_MAX));
         }
         if ($parsed->siteUrl !== null) {

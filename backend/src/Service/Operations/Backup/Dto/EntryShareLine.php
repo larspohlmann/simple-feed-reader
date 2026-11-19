@@ -31,7 +31,7 @@ final readonly class EntryShareLine
         );
     }
 
-    public static function of(Entry $entry, \DateTimeImmutable $sharedAt, string $feedUrl): self
+    public static function fromEntry(Entry $entry, \DateTimeImmutable $sharedAt, string $feedUrl): self
     {
         return new self(feedUrl: $feedUrl, guidHash: $entry->getGuidHash(), sharedAt: $sharedAt);
     }

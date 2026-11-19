@@ -42,7 +42,7 @@ final readonly class LemmyVerifier implements NetworkVerifierInterface
     {
         $token = $this->login($credentials);
         $session = new LemmySessionModel($credentials->address, $token);
-        $site = JsonNodeModel::of($this->lemmy->send($session->get('/api/v3/site'))->json());
+        $site = JsonNodeModel::fromValue($this->lemmy->send($session->get('/api/v3/site'))->json());
         $person = $site->node('my_user')->node('local_user_view')->node('person');
 
         $actorId = $person->string('actor_id');
@@ -65,7 +65,7 @@ final readonly class LemmyVerifier implements NetworkVerifierInterface
             ApiRequestModel::postJson($credentials->address . '/api/v3/user/login', $body)->changingNothing(),
         );
 
-        return JsonNodeModel::of($answer->json())->string('jwt')
+        return JsonNodeModel::fromValue($answer->json())->string('jwt')
             ?? throw new SocialCredentialsRejectedException(self::NO_SESSION);
     }
 

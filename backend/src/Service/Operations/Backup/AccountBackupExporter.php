@@ -59,7 +59,7 @@ final readonly class AccountBackupExporter
     public function parts(User $user, ?string $sourceUrl): \Generator
     {
         $userId = $user->requireId();
-        $provenance = $this->provenanceOf($user, $sourceUrl);
+        $provenance = $this->buildProvenance($user, $sourceUrl);
         $foundation = $this->foundationSnapshot($userId);
         $walk = $this->walkFactory->create($provenance, $userId);
 
@@ -67,7 +67,7 @@ final readonly class AccountBackupExporter
         yield $this->foundation($foundation, $provenance, $walk);
     }
 
-    private function provenanceOf(User $user, ?string $sourceUrl): BackupProvenanceModel
+    private function buildProvenance(User $user, ?string $sourceUrl): BackupProvenanceModel
     {
         return new BackupProvenanceModel(
             backupId: bin2hex(random_bytes(8)),
@@ -86,22 +86,27 @@ final readonly class AccountBackupExporter
         $user = $this->users->getById($userId);
 
         return new FoundationSnapshotModel(
-            AccountLine::of($user, $this->accountSettings->loadSettings($user), $this->networkSwitchesOf($userId))
-                ->toBackupLine(),
+            AccountLine::fromAccount(
+                $user,
+                $this->accountSettings->loadSettings($user),
+                $this->loadNetworkSwitches($userId),
+            )->toBackupLine(),
             array_map(
-                static fn (Tag $tag): string => TagLine::of($tag)->toBackupLine(),
+                static fn (Tag $tag): string => TagLine::fromTag($tag)->toBackupLine(),
                 self::parentsFirst($this->tags->findForUser($userId)),
             ),
             array_map(
-                static fn (SavedSearch $savedSearch): string => SavedSearchLine::of($savedSearch)->toBackupLine(),
+                static fn (SavedSearch $savedSearch): string => SavedSearchLine::fromSavedSearch($savedSearch)
+                    ->toBackupLine(),
                 $this->savedSearches->findForUser($userId),
             ),
             array_map(
-                static fn (ExportedSubscriptionModel $exported): string => FeedLine::of($exported)->toBackupLine(),
+                static fn (ExportedSubscriptionModel $exported): string => FeedLine::fromSubscription($exported)
+                    ->toBackupLine(),
                 array_values($feedsById),
             ),
             array_map(
-                static fn (ExportedSubscriptionModel $exported): string => SubscriptionLine::of($exported)
+                static fn (ExportedSubscriptionModel $exported): string => SubscriptionLine::fromSubscription($exported)
                     ->toBackupLine(),
                 $subscriptions,
             ),
@@ -109,7 +114,7 @@ final readonly class AccountBackupExporter
         );
     }
 
-    private function networkSwitchesOf(int $userId): AccountNetworkSwitchesModel
+    private function loadNetworkSwitches(int $userId): AccountNetworkSwitchesModel
     {
         return new AccountNetworkSwitchesModel(
             $this->includedNetworks->includedNetworksFor($userId),
@@ -124,7 +129,7 @@ final readonly class AccountBackupExporter
     ): BackupPartModel {
         $header = BackupHeader::foundation($provenance, $walk->partsWritten() + 1, $walk->totals())->toBackupLine();
 
-        return $snapshot->part($header, FooterLine::of($snapshot->counts())->toBackupLine());
+        return $snapshot->part($header, FooterLine::fromCounts($snapshot->counts())->toBackupLine());
     }
 
     /**

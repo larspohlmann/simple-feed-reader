@@ -54,7 +54,7 @@ final readonly class SubstackCommentsSource implements CommentsSourceInterface
     public function read(CommentsRequest $request, string $answer): CommentsPageModel
     {
         $entry = $request->entry;
-        $nodes = JsonNodeModel::of(json_decode($answer, true))->listAt('comments')
+        $nodes = JsonNodeModel::fromValue(json_decode($answer, true))->listAt('comments')
             ?? throw new CommentsUnavailableException('Substack answered without a comment list.');
 
         return new CommentsPageModel(new SubstackThread(self::postOf($entry), $entry->getAuthor())->comments($nodes));
@@ -63,7 +63,7 @@ final readonly class SubstackCommentsSource implements CommentsSourceInterface
     /** @throws FetchException */
     private function postIdOf(SubstackPostModel $post): int
     {
-        return JsonNodeModel::of(json_decode($this->body($post->postApiUrl()), true))->int('id')
+        return JsonNodeModel::fromValue(json_decode($this->body($post->postApiUrl()), true))->int('id')
             ?? throw new CommentsUnavailableException('Substack answered without a post id.');
     }
 

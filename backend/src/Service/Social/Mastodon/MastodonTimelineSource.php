@@ -64,7 +64,7 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
 
     private static function pageFrom(ApiResponseModel $accepted): TimelinePageModel
     {
-        $statuses = JsonNodeModel::listOf(json_decode($accepted->body, true))
+        $statuses = JsonNodeModel::parseNodes(json_decode($accepted->body, true))
             ?? throw new SocialNetworkUnreachableException('The Mastodon instance answered without a timeline.');
 
         return MastodonTimelinePage::of($statuses);

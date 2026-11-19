@@ -57,7 +57,7 @@ final readonly class HeadlineFiller
         foreach (FeedLanguage::cases() as $language) {
             $stems = array_map(
                 static fn (string $word): string => $stemmer->stem($word, $language),
-                $stopWords->wordsOf($language),
+                $stopWords->listWords($language),
             );
             $seedStems[$language->value] = array_fill_keys($stems, true);
         }
@@ -70,7 +70,7 @@ final readonly class HeadlineFiller
     {
         $cutStems = [];
         foreach (FeedLanguage::cases() as $language) {
-            foreach ($stopWords->wordsOf($language) as $word) {
+            foreach ($stopWords->listWords($language) as $word) {
                 if (HeadlineStems::isKept(HeadlineStems::bare($word))) {
                     $cutStems[HeadlineStems::cut($word)] = true;
                 }

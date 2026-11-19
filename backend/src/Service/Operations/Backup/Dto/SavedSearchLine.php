@@ -35,7 +35,7 @@ final readonly class SavedSearchLine
         );
     }
 
-    public static function of(SavedSearch $savedSearch): self
+    public static function fromSavedSearch(SavedSearch $savedSearch): self
     {
         return new self(
             term: $savedSearch->getTerm(),

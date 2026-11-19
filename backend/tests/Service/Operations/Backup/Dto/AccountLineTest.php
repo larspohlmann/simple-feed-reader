@@ -287,7 +287,7 @@ final class AccountLineTest extends TestCase
             . '"forYouExcludedNetworks":["mastodon"],'
             . '"allItemsExcludedNetworks":["bluesky"],'
             . '"trendingExcludedNetworks":["mastodon"]}',
-            AccountLine::of($user, $settings, $networks)->toBackupLine(),
+            AccountLine::fromAccount($user, $settings, $networks)->toBackupLine(),
         );
     }
 }

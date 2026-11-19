@@ -52,7 +52,7 @@ final readonly class WordPressJsonParser
         return new ParsedEntryModel(
             guid: $this->guid($post),
             url: $this->stringOrNull($post['link'] ?? null),
-            headline: EntryTitle::of($this->rendered($post, 'title'), $contentHtml ?? $summary),
+            headline: EntryTitle::buildHeadline($this->rendered($post, 'title'), $contentHtml ?? $summary),
             // No author NAME without _embed (only an id), and _embed is too
             // heavy to request; bylines usually live in content.rendered anyway.
             author: null,

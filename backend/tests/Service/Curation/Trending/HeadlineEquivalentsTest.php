@@ -173,7 +173,7 @@ final class HeadlineEquivalentsTest extends TestCase
 
     public function testASpacingMarkStaysInsideItsWord(): void
     {
-        self::assertSame(['नमस्ते'], CasefoldedWords::of('नमस्ते'));
+        self::assertSame(['नमस्ते'], CasefoldedWords::splitWords('नमस्ते'));
         self::assertCount(1, $this->stemsOf('नमस्ते', null));
     }
 
@@ -362,7 +362,7 @@ final class HeadlineEquivalentsTest extends TestCase
     public function testEveryPhraseKeyIsInFoldedForm(): void
     {
         foreach (array_keys(self::table('PHRASES')) as $phrase) {
-            $words = CasefoldedWords::of($phrase);
+            $words = CasefoldedWords::splitWords($phrase);
             self::assertSame(implode(' ', $words), $phrase);
             self::assertSame(HeadlineStems::bare($phrase), $phrase);
             self::assertGreaterThanOrEqual(2, \count($words), $phrase);

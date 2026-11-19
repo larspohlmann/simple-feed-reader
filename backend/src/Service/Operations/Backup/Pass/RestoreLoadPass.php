@@ -71,7 +71,7 @@ final class RestoreLoadPass
         $this->flush();
         $this->regenerateSavedSearchSlugs();
 
-        return RestoreResultModel::ofFoundation(
+        return RestoreResultModel::fromFoundationCounts(
             tags: $this->counts['tags'],
             savedSearches: $this->counts['savedSearches'],
             feeds: $this->counts['feeds'],

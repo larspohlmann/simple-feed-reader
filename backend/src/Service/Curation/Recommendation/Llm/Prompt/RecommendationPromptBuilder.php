@@ -292,7 +292,7 @@ final readonly class RecommendationPromptBuilder
      */
     private function quotableReply(string $invalidReply): string
     {
-        return ClippedText::of($invalidReply, self::QUOTED_REPLY_LIMIT_CHARS, self::QUOTED_REPLY_ELLIPSIS);
+        return ClippedText::cutText($invalidReply, self::QUOTED_REPLY_LIMIT_CHARS, self::QUOTED_REPLY_ELLIPSIS);
     }
 
     /**
@@ -406,11 +406,11 @@ final readonly class RecommendationPromptBuilder
     {
         $sharedArticle = null === $line->sharedArticle
             ? null
-            : ClippedText::of($line->sharedArticle->summary(), self::SHARED_ARTICLE_CHARS);
+            : ClippedText::cutText($line->sharedArticle->summary(), self::SHARED_ARTICLE_CHARS);
         $descriptionChars = self::DESCRIPTION_CHARS - mb_strlen($sharedArticle ?? '');
         $description = null === $line->description
             ? null
-            : ClippedText::of($line->description, $descriptionChars);
+            : ClippedText::cutText($line->description, $descriptionChars);
 
         return implode(' — ', array_filter(
             [$baseLine, $description, null === $sharedArticle ? null : 'shares: ' . $sharedArticle],

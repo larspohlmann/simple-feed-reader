@@ -27,7 +27,7 @@ final class MastodonAttachments
     /** @return list<EntryMedium> */
     public static function entryMediaOf(JsonNodeModel $status): array
     {
-        return EntryMediaAssembler::mediaOf(self::of($status->nodes('media_attachments')));
+        return EntryMediaAssembler::assembleVisualMedia(self::of($status->nodes('media_attachments')));
     }
 
     private static function mediumOf(JsonNodeModel $attachment): ?ParsedMediumModel

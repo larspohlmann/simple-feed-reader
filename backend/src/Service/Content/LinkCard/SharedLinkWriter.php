@@ -107,7 +107,7 @@ final readonly class SharedLinkWriter
         return new NewSharedLinkModel(
             $urlHash,
             $card,
-            $this->previewLanguage->of($card, $statedLanguage),
+            $this->previewLanguage->resolveLanguage($card, $statedLanguage),
             $this->clock->now(),
         );
     }

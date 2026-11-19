@@ -9,7 +9,7 @@ final class UrlOrigin
 {
     private const array DEFAULT_PORTS = ['http' => 80, 'https' => 443];
 
-    public static function of(string $url): ?string
+    public static function parseOrigin(string $url): ?string
     {
         $parts = parse_url($url);
         if ($parts === false || !isset($parts['scheme'], $parts['host'])) {

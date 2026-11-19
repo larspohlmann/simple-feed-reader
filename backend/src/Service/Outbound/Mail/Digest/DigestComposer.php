@@ -84,6 +84,6 @@ final readonly class DigestComposer
         // would leak into the mail; then cap for one email line.
         $text = PlainText::from($row->entry->getText()->getSummary()) ?? '';
 
-        return ClippedText::trimmedOf($text, self::SUMMARY_MAX);
+        return ClippedText::cutTrimmedText($text, self::SUMMARY_MAX);
     }
 }

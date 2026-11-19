@@ -37,12 +37,12 @@ final readonly class QueueDepths
     public function all(): array
     {
         return array_map(
-            fn (QueueName $queue): QueueDepthModel => $this->backlogOf($queue)->named($queue),
+            fn (QueueName $queue): QueueDepthModel => $this->loadBacklog($queue)->named($queue),
             QueueName::cases(),
         );
     }
 
-    private function backlogOf(QueueName $queue): QueueBacklogModel
+    private function loadBacklog(QueueName $queue): QueueBacklogModel
     {
         return match ($queue) {
             QueueName::FailedMessages => $this->failedMessages->backlog(),

@@ -60,12 +60,12 @@ final class LemmyViewTest extends TestCase
     {
         $this->expectException(SocialPostNotFoundException::class);
 
-        LemmyView::ofPost(JsonNodeModel::of(['post' => ['name' => 'T']]));
+        LemmyView::ofPost(JsonNodeModel::fromValue(['post' => ['name' => 'T']]));
     }
 
     public function testACommentReadsItsPostItsVoteAndItsText(): void
     {
-        $view = JsonNodeModel::of($this->decodeFixture('resolve-comment.json'))->node('comment');
+        $view = JsonNodeModel::fromValue($this->decodeFixture('resolve-comment.json'))->node('comment');
 
         $target = LemmyView::ofComment($view);
 
@@ -78,7 +78,7 @@ final class LemmyViewTest extends TestCase
 
     public function testTheExcerptIsCutToTwoHundredCharacters(): void
     {
-        $view = JsonNodeModel::of([
+        $view = JsonNodeModel::fromValue([
             'comment' => ['id' => 1, 'post_id' => 2, 'content' => str_repeat('ä', 300)],
         ]);
 
@@ -89,14 +89,14 @@ final class LemmyViewTest extends TestCase
     {
         $this->expectException(SocialPostNotFoundException::class);
 
-        LemmyView::ofComment(JsonNodeModel::of(['comment' => ['post_id' => 2]]));
+        LemmyView::ofComment(JsonNodeModel::fromValue(['comment' => ['post_id' => 2]]));
     }
 
     public function testACommentWithoutItsPostIsNotFound(): void
     {
         $this->expectException(SocialPostNotFoundException::class);
 
-        LemmyView::ofComment(JsonNodeModel::of(['comment' => ['id' => 2]]));
+        LemmyView::ofComment(JsonNodeModel::fromValue(['comment' => ['id' => 2]]));
     }
 
     /** @param array<string, mixed> $overrides */
@@ -104,7 +104,7 @@ final class LemmyViewTest extends TestCase
     {
         $view = $this->decodeFixture('post-anonymous.json')['post_view'] ?? [];
 
-        return JsonNodeModel::of(array_replace(\is_array($view) ? $view : [], $overrides));
+        return JsonNodeModel::fromValue(array_replace(\is_array($view) ? $view : [], $overrides));
     }
 
     /** @return array<array-key, mixed> */

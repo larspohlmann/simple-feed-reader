@@ -25,7 +25,7 @@ final class UrlOriginTest extends TestCase
     #[DataProvider('urls')]
     public function testOfIsTheSchemeHostAndPort(string $url, ?string $expected): void
     {
-        self::assertSame($expected, UrlOrigin::of($url));
+        self::assertSame($expected, UrlOrigin::parseOrigin($url));
     }
 
     /** @return iterable<string, array{string, ?string}> */

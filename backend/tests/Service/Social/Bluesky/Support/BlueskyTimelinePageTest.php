@@ -28,7 +28,7 @@ final class BlueskyTimelinePageTest extends TestCase
         self::assertSame('https://bsky.app/profile/bob.bsky.social', $entry->authorUrl);
         self::assertSame('https://cdn.bsky.app/img/avatar/plain/did:plc:bob/abc@jpeg', $entry->authorAvatarUrl);
         self::assertSame('<p>Hello world. More text</p>', $entry->contentHtml);
-        self::assertEquals(EntryTitle::of(null, '<p>Hello world. More text</p>'), $entry->headline);
+        self::assertEquals(EntryTitle::buildHeadline(null, '<p>Hello world. More text</p>'), $entry->headline);
         self::assertTrue($entry->headline->derived);
         self::assertSame('2026-10-12 08:00:00', $entry->publishedAt?->format('Y-m-d H:i:s'));
         self::assertSame('UTC', $entry->publishedAt->getTimezone()->getName());
@@ -123,7 +123,7 @@ final class BlueskyTimelinePageTest extends TestCase
             . '<p>Reposted by <a href="https://bsky.app/profile/carol.bsky.social">Carol &lt;3</a></p>',
             $entry->contentHtml,
         );
-        self::assertEquals(EntryTitle::of(null, '<p>Hello world. More text</p>'), $entry->headline);
+        self::assertEquals(EntryTitle::buildHeadline(null, '<p>Hello world. More text</p>'), $entry->headline);
         self::assertSame('2026-10-12 09:30:00', $entry->publishedAt?->format('Y-m-d H:i:s'));
     }
 
@@ -176,14 +176,14 @@ final class BlueskyTimelinePageTest extends TestCase
 
     public function testAnItemWithoutAPostUriIsSkipped(): void
     {
-        $item = JsonNodeModel::of(['post' => ['record' => ['text' => 'orphan']]]);
+        $item = JsonNodeModel::fromValue(['post' => ['record' => ['text' => 'orphan']]]);
 
         self::assertSame([], BlueskyTimelinePage::of([$item], self::ALICE)->parsed->entries);
     }
 
     public function testAnItemWhoseUriIsNoPostIsSkipped(): void
     {
-        $item = JsonNodeModel::of(['post' => ['uri' => 'at://did:plc:bob/app.bsky.feed.like/1']]);
+        $item = JsonNodeModel::fromValue(['post' => ['uri' => 'at://did:plc:bob/app.bsky.feed.like/1']]);
 
         self::assertSame([], BlueskyTimelinePage::of([$item], self::ALICE)->parsed->entries);
     }
@@ -296,7 +296,7 @@ final class BlueskyTimelinePageTest extends TestCase
      */
     private static function item(array $overrides = [], array $post = []): JsonNodeModel
     {
-        return JsonNodeModel::of($overrides + [
+        return JsonNodeModel::fromValue($overrides + [
             'post' => $post + [
                 'uri' => self::POST_URI,
                 'author' => ['did' => 'did:plc:bob', 'handle' => 'bob.bsky.social', 'displayName' => 'Bob',

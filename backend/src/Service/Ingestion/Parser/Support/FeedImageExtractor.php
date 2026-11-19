@@ -46,7 +46,7 @@ final class FeedImageExtractor
 
     private static function podcastArtwork(\DOMElement $parent): ?string
     {
-        return HttpsImageUrl::orNull(PodcastArtwork::of($parent)?->url);
+        return HttpsImageUrl::orNull(PodcastArtwork::findArtwork($parent)?->url);
     }
 
     private function __construct()

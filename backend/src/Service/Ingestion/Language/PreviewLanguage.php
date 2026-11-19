@@ -18,12 +18,14 @@ final readonly class PreviewLanguage
     ) {
     }
 
-    public function of(LinkCardContent $preview, ?FeedLanguage $statedLanguage): ?LinkLanguage
+    public function resolveLanguage(LinkCardContent $preview, ?FeedLanguage $statedLanguage): ?LinkLanguage
     {
         if ($statedLanguage !== null) {
             return LinkLanguage::stated($statedLanguage);
         }
-        $guess = $this->languageGuess->confidentFor(PreviewText::of($preview->title, $preview->description));
+        $guess = $this->languageGuess->confidentFor(
+            PreviewText::fromTitleAndDescription($preview->title, $preview->description),
+        );
 
         return $guess === null ? null : LinkLanguage::guessed($guess);
     }

@@ -19,10 +19,11 @@ final class QuoteLine
     public static function removedFrom(string $html, string $url): string
     {
         $document = HtmlDocumentParser::parseFragment($html);
-        $target = TrackingFreeUrl::of($url);
+        $target = TrackingFreeUrl::stripTracking($url);
         foreach ($document->querySelectorAll('a[href]') as $anchor) {
             $paragraph = $anchor->closest('p');
-            if ($paragraph === null || TrackingFreeUrl::of((string) $anchor->getAttribute('href')) !== $target) {
+            $href = (string) $anchor->getAttribute('href');
+            if ($paragraph === null || TrackingFreeUrl::stripTracking($href) !== $target) {
                 continue;
             }
             $marker = self::markerBefore($anchor, $paragraph);

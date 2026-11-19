@@ -84,7 +84,7 @@ final class BackupPartWalk
             $batch = $this->entries->forFeedAfterId($feedId, $lastId, self::ENTRY_BATCH);
             yield from $this->bufferBatch($batch, $feedUrl);
             $batchSize = \count($batch);
-            $lastId = $this->lastIdOf($batch, $lastId);
+            $lastId = $this->pickLastId($batch, $lastId);
             $this->entityManager->clear();
         } while (self::ENTRY_BATCH === $batchSize);
     }
@@ -106,14 +106,14 @@ final class BackupPartWalk
             $state = $statesByEntryId[$entry->requireId()] ?? null;
             $sharedAt = $sharedAtByEntryId[$entry->requireId()] ?? null;
             if (null !== $sharedAt) {
-                $this->buffer->addShare(EntryShareLine::of($entry, $sharedAt, $feedUrl)->toBackupLine());
+                $this->buffer->addShare(EntryShareLine::fromEntry($entry, $sharedAt, $feedUrl)->toBackupLine());
             }
             yield from $this->bufferLines(
-                EntryLine::of($entry, $feedUrl, new EntryCompanionsModel(
+                EntryLine::fromEntry($entry, $feedUrl, new EntryCompanionsModel(
                     $cardsByEntryId[$entry->requireId()] ?? [],
                     $originsByEntryId[$entry->requireId()] ?? null,
                 ))->toBackupLine(),
-                null !== $state ? EntryStateLine::of($state, $feedUrl)->toBackupLine() : null,
+                null !== $state ? EntryStateLine::fromState($state, $feedUrl)->toBackupLine() : null,
             );
         }
     }
@@ -138,7 +138,7 @@ final class BackupPartWalk
     {
         ++$this->partsWritten;
         $header = BackupHeader::entryPart($this->provenance, $this->partsWritten)->toBackupLine();
-        $footer = FooterLine::of([
+        $footer = FooterLine::fromCounts([
             BackupSchema::KIND_ENTRY => $this->buffer->entryCount(),
             BackupSchema::KIND_ENTRY_STATE => $this->buffer->entryStateCount(),
             BackupSchema::KIND_ENTRY_SHARE => $this->buffer->entryShareCount(),
@@ -150,7 +150,7 @@ final class BackupPartWalk
     /**
      * @param list<Entry> $batch
      */
-    private function lastIdOf(array $batch, int $fallback): int
+    private function pickLastId(array $batch, int $fallback): int
     {
         return array_last($batch)?->requireId() ?? $fallback;
     }

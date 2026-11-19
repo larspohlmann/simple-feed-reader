@@ -17,7 +17,7 @@ final readonly class PageUrls
 
     public function origin(): ?string
     {
-        return UrlOrigin::of($this->pageUrl);
+        return UrlOrigin::parseOrigin($this->pageUrl);
     }
 
     public function path(): string

@@ -40,7 +40,7 @@ final readonly class BlueskyPostResolver implements PostResolverInterface
     {
         $postUri = $this->byDid($address);
         $answer = BlueskySessions::accepted($this->sessions->askAs($account, self::GET_POSTS . rawurlencode($postUri)));
-        $answerNode = JsonNodeModel::of($answer->json());
+        $answerNode = JsonNodeModel::fromValue($answer->json());
         if ([] === $answerNode->nodes('posts')) {
             throw new SocialPostNotFoundException('The post is no longer on Bluesky.');
         }

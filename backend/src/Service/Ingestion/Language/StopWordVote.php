@@ -28,12 +28,12 @@ final readonly class StopWordVote
     {
         $sets = [];
         foreach (FeedLanguage::cases() as $language) {
-            $sets[$language->value] = array_fill_keys($stopWords->wordsOf($language), true);
+            $sets[$language->value] = array_fill_keys($stopWords->listWords($language), true);
         }
         $this->stopWordsByLanguage = $sets;
     }
 
-    public function languageOf(string $text): ?FeedLanguage
+    public function detectLanguage(string $text): ?FeedLanguage
     {
         $counts = $this->stopWordCounts($this->votingWords($text));
         arsort($counts);
@@ -49,8 +49,8 @@ final readonly class StopWordVote
     private function votingWords(string $text): array
     {
         $notRunningText = [self::BARE_LINK_MENTION_OR_HASHTAG, self::WORD_IN_CAPITALS];
-        $runningText = preg_replace($notRunningText, ' ', LinkFreeText::of($text)) ?? $text;
-        $words = CasefoldedWords::of($runningText);
+        $runningText = preg_replace($notRunningText, ' ', LinkFreeText::stripLinks($text)) ?? $text;
+        $words = CasefoldedWords::splitWords($runningText);
 
         return array_filter($words, static fn (string $word): bool => mb_strlen($word) >= self::MIN_WORD_LENGTH);
     }

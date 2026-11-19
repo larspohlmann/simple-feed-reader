@@ -33,7 +33,7 @@ final readonly class BlueskyPostLookup
         foreach (array_chunk($uris, AppViewClient::URIS_PER_CALL) as $chunk) {
             $query = implode('&', array_map(static fn (string $uri): string => 'uris=' . rawurlencode($uri), $chunk));
             $answer = BlueskySessions::accepted($this->sessions->askAs($account, self::GET_POSTS . $query));
-            foreach (JsonNodeModel::of($answer->json())->nodes('posts') as $post) {
+            foreach (JsonNodeModel::fromValue($answer->json())->nodes('posts') as $post) {
                 $uri = $post->string('uri');
                 if ($uri !== null) {
                     $posts[$uri] = $post;

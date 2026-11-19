@@ -52,7 +52,7 @@ final readonly class BlueskySessionOpener
             throw new SocialCredentialsRejectedException('Bluesky refused this handle and app password.');
         }
 
-        $session = JsonNodeModel::of($answer->isSuccessful() ? $answer->json() : []);
+        $session = JsonNodeModel::fromValue($answer->isSuccessful() ? $answer->json() : []);
         $did = $session->string('did');
         $handle = $session->string('handle');
         $accessJwt = $session->string('accessJwt');

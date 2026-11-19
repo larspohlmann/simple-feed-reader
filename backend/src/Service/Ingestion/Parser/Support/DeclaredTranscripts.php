@@ -12,7 +12,7 @@ use App\Service\Ingestion\Parser\Pass\CoreElement;
 
 final class DeclaredTranscripts
 {
-    public static function of(CoreElement $item): ?ParsedTranscriptModel
+    public static function findBestTranscript(CoreElement $item): ?ParsedTranscriptModel
     {
         $best = null;
         foreach ($item->in(FeedNamespace::Podcast)->children('transcript') as $element) {

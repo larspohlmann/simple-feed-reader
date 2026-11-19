@@ -8,20 +8,20 @@ use App\Service\Foundation\Url\Pass\TrackedUrl;
 
 final class TrackingFreeUrl
 {
-    public static function of(string $url): string
+    public static function stripTracking(string $url): string
     {
-        return TrackedUrl::of($url)->cleaned();
+        return TrackedUrl::fromUrl($url)->cleaned();
     }
 
     public static function orNull(?string $url): ?string
     {
-        return $url === null ? null : self::of($url);
+        return $url === null ? null : self::stripTracking($url);
     }
 
     /** The cleaned URL and what it lost, from one read of the URL. */
     public static function read(string $url): TrackedUrl
     {
-        return TrackedUrl::of($url);
+        return TrackedUrl::fromUrl($url);
     }
 
     public static function query(string $query, string $host): string

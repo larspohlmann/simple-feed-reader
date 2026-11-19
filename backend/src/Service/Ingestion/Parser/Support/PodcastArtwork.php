@@ -16,7 +16,7 @@ final class PodcastArtwork
     /** A <podcast:image> may be a canvas video or a banner; only these purposes picture the show or episode. */
     private const array PICTURE_PURPOSES = ['artwork', 'social'];
 
-    public static function of(\DOMElement $parent): ?DeclaredImageModel
+    public static function findArtwork(\DOMElement $parent): ?DeclaredImageModel
     {
         return self::podcastNamespaceImage($parent)
             ?? self::hrefImage($parent, FeedNamespace::Itunes)

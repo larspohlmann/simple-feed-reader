@@ -27,7 +27,7 @@ final class DeclaredRenditions
     }
 
     /** @return list<ImageRendition> */
-    public static function ofWidth(string $url, ?int $width): array
+    public static function fromWidth(string $url, ?int $width): array
     {
         return $width === null ? [] : [new ImageRendition($url, $width)];
     }

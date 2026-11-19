@@ -28,11 +28,11 @@ final readonly class PassTickets implements AnswerSettlerInterface
         private PassLaneInterface $feedLane,
         private PassLaneInterface $timelineLane,
     ) {
-        $this->privateFeedIds = array_fill_keys(self::privateFeedIdsOf($pass), true);
+        $this->privateFeedIds = array_fill_keys(self::collectPrivateFeedIds($pass), true);
     }
 
     /** @return list<int> every private feed's id, started or not */
-    public static function privateFeedIdsOf(RefreshPass $pass): array
+    public static function collectPrivateFeedIds(RefreshPass $pass): array
     {
         $privateFeedIds = [];
         foreach ($pass->feeds as $feed) {
@@ -48,19 +48,19 @@ final readonly class PassTickets implements AnswerSettlerInterface
     public function tickets(): \Generator
     {
         foreach ($this->pass->startedFeeds() as $feedId => $feed) {
-            yield from $this->laneOf($feedId)->ticketsFor($feed);
+            yield from $this->selectLane($feedId)->ticketsFor($feed);
         }
     }
 
     public function admits(int|string $key): bool
     {
-        return $this->laneOf($key)->admits($key);
+        return $this->selectLane($key)->admits($key);
     }
 
     /** @return SettlementModel<PassOutcomeModelInterface> */
     public function settle(int|string $key, FetchOutcomeModel $outcome): SettlementModel
     {
-        return $this->laneOf($key)->settle($key, $outcome);
+        return $this->selectLane($key)->settle($key, $outcome);
     }
 
     /** @return \Generator<int|string, PassOutcomeModelInterface> */
@@ -70,7 +70,7 @@ final readonly class PassTickets implements AnswerSettlerInterface
         yield from $this->timelineLane->drainUnasked();
     }
 
-    private function laneOf(int|string $feedId): PassLaneInterface
+    private function selectLane(int|string $feedId): PassLaneInterface
     {
         return isset($this->privateFeedIds[$feedId]) ? $this->timelineLane : $this->feedLane;
     }

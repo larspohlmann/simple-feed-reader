@@ -17,7 +17,7 @@ final class LemmyCommunityTest extends TestCase
 
     private function view(int $index): JsonNodeModel
     {
-        $views = JsonNodeModel::of(json_decode($this->fixture(self::FIXTURE), true))
+        $views = JsonNodeModel::fromValue(json_decode($this->fixture(self::FIXTURE), true))
             ->listAt('communities');
         self::assertNotNull($views);
 
@@ -48,7 +48,7 @@ final class LemmyCommunityTest extends TestCase
 
     public function testACommunityOnAPortKeepsThePortInItsIdentityAndFeed(): void
     {
-        $follow = LemmyCommunity::follow(JsonNodeModel::of([
+        $follow = LemmyCommunity::follow(JsonNodeModel::fromValue([
             'community' => ['name' => 'Linux', 'actor_id' => 'https://Lemmy.Example:8443/c/Linux'],
         ]));
 
@@ -65,7 +65,7 @@ final class LemmyCommunityTest extends TestCase
 
     public function testAViewWithoutANameIsLeftOut(): void
     {
-        self::assertNull(LemmyCommunity::follow(JsonNodeModel::of([
+        self::assertNull(LemmyCommunity::follow(JsonNodeModel::fromValue([
             'community' => ['actor_id' => 'https://feddit.example/c/rss'],
         ])));
     }

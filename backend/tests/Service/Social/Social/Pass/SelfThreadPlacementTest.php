@@ -105,7 +105,7 @@ final class SelfThreadPlacementTest extends TestCase
     {
         $entry = new ParsedEntryModel($url, $url, Headline::fromFeed($url), null, null, null, null);
 
-        return new TimelineSelfReplyModel('r', $parentUrl, $entry, JsonNodeModel::of(['uri' => $url]));
+        return new TimelineSelfReplyModel('r', $parentUrl, $entry, JsonNodeModel::fromValue(['uri' => $url]));
     }
 
     /** @return list<array{string, int, string}> */

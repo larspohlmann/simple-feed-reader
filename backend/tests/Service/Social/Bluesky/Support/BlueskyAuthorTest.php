@@ -24,7 +24,7 @@ final class BlueskyAuthorTest extends TestCase
     #[DataProvider('names')]
     public function testTheNameFallsBackToTheHandle(array $actor, ?string $name): void
     {
-        self::assertSame($name, BlueskyAuthor::name(JsonNodeModel::of($actor)));
+        self::assertSame($name, BlueskyAuthor::name(JsonNodeModel::fromValue($actor)));
     }
 
     /** @return iterable<string, array{array<string, string>, ?string}> */
@@ -42,14 +42,14 @@ final class BlueskyAuthorTest extends TestCase
     #[DataProvider('profiles')]
     public function testTheProfileIsFoundByHandleThenDid(array $actor, ?string $profile): void
     {
-        self::assertSame($profile, BlueskyAuthor::profile(JsonNodeModel::of($actor)));
+        self::assertSame($profile, BlueskyAuthor::profile(JsonNodeModel::fromValue($actor)));
     }
 
     public function testOnlyAnAbsoluteAvatarIsKept(): void
     {
         $avatar = 'https://cdn.bsky.app/img/avatar/plain/did:plc:ann/a@jpeg';
 
-        self::assertSame($avatar, BlueskyAuthor::avatar(JsonNodeModel::of(['avatar' => $avatar])));
-        self::assertNull(BlueskyAuthor::avatar(JsonNodeModel::of(['avatar' => '/avatar.jpg'])));
+        self::assertSame($avatar, BlueskyAuthor::avatar(JsonNodeModel::fromValue(['avatar' => $avatar])));
+        self::assertNull(BlueskyAuthor::avatar(JsonNodeModel::fromValue(['avatar' => '/avatar.jpg'])));
     }
 }

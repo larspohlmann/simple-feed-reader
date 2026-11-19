@@ -128,7 +128,7 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
     public function testARootWhoseRepliesAreNotOnThePageIsHandedToTheSelfThreadPass(): void
     {
         $feed = $this->feed(self::HOME, SourceFormat::BLUESKY_API);
-        $root = JsonNodeModel::of(self::itemFields(self::ROOT, null, null, 1));
+        $root = JsonNodeModel::fromValue(self::itemFields(self::ROOT, null, null, 1));
 
         $this->persister()->storeTimeline($feed, self::page([$root]), $this->clock->now());
 
@@ -145,7 +145,7 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
         $this->persister()->storeTimeline($feed, self::page([
             self::item(self::REPLY_TWO, self::ROOT, self::REPLY_ONE),
             self::item(self::REPLY_ONE, self::ROOT, self::ROOT),
-            JsonNodeModel::of(self::itemFields(self::ROOT, null, null, 2)),
+            JsonNodeModel::fromValue(self::itemFields(self::ROOT, null, null, 2)),
         ]), $this->clock->now());
 
         self::assertSame([], $this->threadSource->calls);
@@ -235,7 +235,7 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
         $replyWithCard = array_replace_recursive(self::itemFields(self::REPLY_ONE, self::ROOT, self::ROOT), $linkEmbed);
 
         $this->persister()->storeTimeline($feed, self::page([
-            JsonNodeModel::of($replyWithCard),
+            JsonNodeModel::fromValue($replyWithCard),
             self::item(self::ROOT),
         ]), $this->clock->now());
 
@@ -315,7 +315,7 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
 
     private static function item(string $uri, ?string $replyRoot = null, ?string $replyParent = null): JsonNodeModel
     {
-        return JsonNodeModel::of(self::itemFields($uri, $replyRoot, $replyParent));
+        return JsonNodeModel::fromValue(self::itemFields($uri, $replyRoot, $replyParent));
     }
 
     /** @return array<string, mixed> */

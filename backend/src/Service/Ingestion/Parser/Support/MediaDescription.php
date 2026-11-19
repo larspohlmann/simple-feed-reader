@@ -14,7 +14,7 @@ final class MediaDescription
 {
     public static function html(\DOMElement $item): ?string
     {
-        $description = self::descriptionOf($item) ?? self::groupDescription($item);
+        $description = self::findDescription($item) ?? self::groupDescription($item);
         if ($description === null) {
             return null;
         }
@@ -45,10 +45,10 @@ final class MediaDescription
     {
         $group = CoreElement::extension($item, FeedNamespace::MediaRss)->child('group');
 
-        return $group === null ? null : self::descriptionOf($group);
+        return $group === null ? null : self::findDescription($group);
     }
 
-    public static function descriptionOf(\DOMElement $parent): ?\DOMElement
+    public static function findDescription(\DOMElement $parent): ?\DOMElement
     {
         return CoreElement::extension($parent, FeedNamespace::MediaRss)->child('description');
     }

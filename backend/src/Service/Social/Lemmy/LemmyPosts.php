@@ -38,12 +38,12 @@ final readonly class LemmyPosts
     {
         $path = '/api/v3/post?id=' . $post->postId;
         if (self::isHomeInstance($account, $post)) {
-            $homeView = JsonNodeModel::of($this->account->get($account, $path)->json());
+            $homeView = JsonNodeModel::fromValue($this->account->get($account, $path)->json());
 
             return LemmyView::ofPost($homeView->node('post_view'));
         }
         $feedInstanceView = $this->lemmy->send(ApiRequestModel::get($post->instanceUrl . $path));
-        $origin = JsonNodeModel::of($feedInstanceView->json())->node('post_view')->node('post')->string('ap_id');
+        $origin = JsonNodeModel::fromValue($feedInstanceView->json())->node('post_view')->node('post')->string('ap_id');
 
         return LemmyView::ofPost($this->resolve($account, $origin)->node('post'));
     }
@@ -82,7 +82,7 @@ final readonly class LemmyPosts
         }
         $answer = $this->account->get($account, '/api/v3/resolve_object?q=' . rawurlencode($absolute));
 
-        return JsonNodeModel::of($answer->json());
+        return JsonNodeModel::fromValue($answer->json());
     }
 
     private static function isHomeInstance(SocialAccount $account, LemmyPostModel $post): bool

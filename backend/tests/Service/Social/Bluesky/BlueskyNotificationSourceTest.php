@@ -251,7 +251,7 @@ final class BlueskyNotificationSourceTest extends TestCase
         $this->source($http)->markSeen($account, [$stored], static function (): void {
         });
 
-        $body = JsonNodeModel::of(json_decode($http->requests[1]['body'], true));
+        $body = JsonNodeModel::fromValue(json_decode($http->requests[1]['body'], true));
         self::assertGreaterThanOrEqual($indexedAt, new \DateTimeImmutable((string) $body->string('seenAt')));
     }
 

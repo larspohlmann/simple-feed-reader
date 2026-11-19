@@ -53,11 +53,11 @@ final readonly class LemmyNotificationContextSource implements NotificationConte
 
     private function excerptOf(SocialAccount $account, string $answeredId): ?string
     {
-        $content = JsonNodeModel::of($this->lemmy->get($account, '/api/v3/comment?id=' . $answeredId)->json())
+        $content = JsonNodeModel::fromValue($this->lemmy->get($account, '/api/v3/comment?id=' . $answeredId)->json())
             ->node('comment_view')
             ->node('comment')
             ->string('content');
 
-        return Excerpt::ofHtml($content === null ? null : $this->markdown->of($content));
+        return Excerpt::ofHtml($content === null ? null : $this->markdown->toHtml($content));
     }
 }

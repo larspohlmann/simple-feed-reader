@@ -24,7 +24,7 @@ final class BlueskyReplyReferencesTest extends TestCase
         array $record,
         ContextReferenceModel $expected,
     ): void {
-        self::assertEquals($expected, BlueskyReplyReferences::of(JsonNodeModel::of($record), $kind));
+        self::assertEquals($expected, BlueskyReplyReferences::of(JsonNodeModel::fromValue($record), $kind));
     }
 
     /** @return iterable<string, array{SocialNotificationKind, array<string, mixed>, ContextReferenceModel}> */

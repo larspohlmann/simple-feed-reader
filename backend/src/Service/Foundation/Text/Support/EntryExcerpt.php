@@ -12,14 +12,14 @@ final class EntryExcerpt
 {
     private const int MAX_LENGTH = 500;
 
-    public static function of(?string $summary, ?string $contentHtml): string
+    public static function fromSummaryOrContent(?string $summary, ?string $contentHtml): string
     {
         return self::plainText($summary) ?? self::plainText($contentHtml) ?? '';
     }
 
     private static function plainText(?string $html): ?string
     {
-        $text = EntryPlainText::of($html);
+        $text = EntryPlainText::fromHtml($html);
 
         return $text === null ? null : WordBoundary::cut($text, self::MAX_LENGTH);
     }

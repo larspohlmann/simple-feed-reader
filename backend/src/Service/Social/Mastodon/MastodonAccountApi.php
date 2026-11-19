@@ -80,7 +80,7 @@ final readonly class MastodonAccountApi
         $answer = $this->answer($account, $request);
         if (Response::HTTP_UNPROCESSABLE_ENTITY === $answer->status) {
             throw new SocialPostRefusedException(
-                JsonNodeModel::of($answer->json())->string('error') ?? 'Mastodon refused what was sent.',
+                JsonNodeModel::fromValue($answer->json())->string('error') ?? 'Mastodon refused what was sent.',
             );
         }
 
@@ -118,6 +118,6 @@ final readonly class MastodonAccountApi
 
     private static function isOutsideScopes(ApiResponseModel $answer): bool
     {
-        return str_contains(JsonNodeModel::of($answer->json())->string('error') ?? '', self::OUTSIDE_SCOPES);
+        return str_contains(JsonNodeModel::fromValue($answer->json())->string('error') ?? '', self::OUTSIDE_SCOPES);
     }
 }
