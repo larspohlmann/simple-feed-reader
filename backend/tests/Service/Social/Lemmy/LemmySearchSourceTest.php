@@ -113,6 +113,18 @@ final class LemmySearchSourceTest extends TestCase
         }
     }
 
+    public function testBuildRequestsAsksEachAlternativeInTermOrder(): void
+    {
+        $requests = $this->source((new RoutedHttpClient([]))->client())->buildRequests(
+            SocialApiWiring::lemmyAccount(),
+            'rss || atom',
+        );
+
+        self::assertCount(2, $requests);
+        self::assertStringContainsString('q=rss&', $requests[0]->url);
+        self::assertStringContainsString('q=atom&', $requests[1]->url);
+    }
+
     private function source(HttpClientInterface $http): LemmySearchSource
     {
         return new LemmySearchSource(

@@ -26,6 +26,7 @@ use App\Service\Social\Lemmy\LemmyAccountApi;
 use App\Service\Social\Lemmy\LemmyApiClient;
 use App\Service\Social\Lemmy\LemmyPostEntries;
 use App\Service\Social\Lemmy\LemmyPrivateFeedRule;
+use App\Service\Social\Lemmy\LemmySearchSource;
 use App\Service\Social\Lemmy\LemmyTimelineSource;
 use App\Service\Social\Mastodon\MastodonAccountApi;
 use App\Service\Social\Mastodon\MastodonApiClient;
@@ -241,7 +242,12 @@ final class SocialApiWiring
                 => static fn (): LemmyTimelineSource => new LemmyTimelineSource(
                     self::lemmyAccountApi($http),
                     self::lemmyPostEntries(),
-                    new LemmyPrivateFeedRule(),
+                    new LemmySearchSource(
+                        self::lemmyAccountApi($http),
+                        self::lemmyPostEntries(),
+                        new LemmyPrivateFeedRule(),
+                        self::searchAnswers($http, $cache),
+                    ),
                 ),
         ]));
     }

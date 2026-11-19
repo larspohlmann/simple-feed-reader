@@ -9,6 +9,7 @@ use App\Enum\SocialFeedKind;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
 use App\Service\Social\Lemmy\LemmyPrivateFeedRule;
+use App\Service\Social\Lemmy\LemmySearchSource;
 use App\Service\Social\Lemmy\LemmyTimelineSource;
 use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
@@ -21,6 +22,7 @@ use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpFoundation\Response;
 
 final class LemmyTimelineSourceTest extends TestCase
@@ -174,10 +176,17 @@ final class LemmyTimelineSourceTest extends TestCase
 
     private static function source(): LemmyTimelineSource
     {
+        $http = (new RoutedHttpClient([]))->client();
+
         return new LemmyTimelineSource(
-            SocialApiWiring::lemmyAccountApi((new RoutedHttpClient([]))->client()),
+            SocialApiWiring::lemmyAccountApi($http),
             SocialApiWiring::lemmyPostEntries(),
-            new LemmyPrivateFeedRule(),
+            new LemmySearchSource(
+                SocialApiWiring::lemmyAccountApi($http),
+                SocialApiWiring::lemmyPostEntries(),
+                new LemmyPrivateFeedRule(),
+                SocialApiWiring::searchAnswers($http, new ArrayAdapter()),
+            ),
         );
     }
 
