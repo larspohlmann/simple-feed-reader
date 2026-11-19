@@ -217,6 +217,17 @@ final class LemmyPostWriterTest extends TestCase
         );
     }
 
+    public function testATooLongTitleSaysHowLongATitleMayBe(): void
+    {
+        $this->expectExceptionObject(new SocialPostTooLongException('A Lemmy post title holds 200 characters.'));
+
+        $this->writer(new RoutedHttpClient([]))->share(
+            $this->account(),
+            self::ARTICLE,
+            new PostDraftModel('', title: str_repeat('ä', 201), communityId: 7),
+        );
+    }
+
     public function testATitleOfThreeCharactersFits(): void
     {
         $http = new RoutedHttpClient([self::POST => self::postCreated()]);
