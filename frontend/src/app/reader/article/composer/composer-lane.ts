@@ -140,7 +140,7 @@ export class ComposerLane {
   }
 
   writeTitle(value: string): void {
-    this.typedTitle.set(value);
+    this.typedTitle.set(value.replace(/\s*[\r\n]+\s*/g, ' '));
     this.titleWritten = true;
   }
 

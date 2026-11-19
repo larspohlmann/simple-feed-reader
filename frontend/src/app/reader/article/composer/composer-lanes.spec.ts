@@ -466,6 +466,15 @@ describe('ComposerLanes', () => {
       expect(lane.title()).toBe('Theirs');
     });
 
+    it('collapses a line break in a typed title to one space, as Lemmy titles hold none', () => {
+      api.composer.mockReturnValue(of(lemmyContext()));
+      const lane = lemmyLane();
+
+      lane.writeTitle('A long \r\n  read\nabout\rnothing');
+
+      expect(lane.title()).toBe('A long read about nothing');
+    });
+
     it('is not ready with a title of only whitespace', () => {
       memory.recall.mockReturnValue(41);
       api.composer.mockReturnValue(of(lemmyContext()));

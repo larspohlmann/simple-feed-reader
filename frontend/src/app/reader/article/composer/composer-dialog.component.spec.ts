@@ -1371,8 +1371,8 @@ describe('ComposerDialogComponent', () => {
     const lemmyOnly = () => mount(article({ network: 'lemmy' }));
     const communitySelect = (fixture: ReturnType<typeof mount>) =>
       element(fixture).querySelector('[id^="reply-community"]') as HTMLSelectElement | null;
-    const titleInput = (fixture: ReturnType<typeof mount>) =>
-      element(fixture).querySelector('input[id^="reply-title"]') as HTMLInputElement;
+    const titleField = (fixture: ReturnType<typeof mount>) =>
+      element(fixture).querySelector('textarea[id^="reply-title"]') as HTMLTextAreaElement;
     const titleCounter = (fixture: ReturnType<typeof mount>) =>
       element(fixture).querySelector('.title-counter')!;
     function chooseCommunity(fixture: ReturnType<typeof mount>, id: string): void {
@@ -1381,8 +1381,8 @@ describe('ComposerDialogComponent', () => {
       fixture.detectChanges();
     }
     function writeTitle(fixture: ReturnType<typeof mount>, title: string): void {
-      titleInput(fixture).value = title;
-      titleInput(fixture).dispatchEvent(new Event('input'));
+      titleField(fixture).value = title;
+      titleField(fixture).dispatchEvent(new Event('input'));
       fixture.detectChanges();
     }
 
@@ -1394,7 +1394,7 @@ describe('ComposerDialogComponent', () => {
       );
       expect(options).toEqual(['Choose a community', '!php@programming.dev', '!rss@lemmy.world']);
       expect(communitySelect(fixture)!.value).toBe('');
-      expect(titleInput(fixture).value).toBe(TITLE);
+      expect(titleField(fixture).value).toBe(TITLE);
       expect(titleCounter(fixture).textContent?.trim()).toBe('34 / 200');
       expect(
         textArea(fixture).compareDocumentPosition(communitySelect(fixture)!) &
@@ -1419,11 +1419,21 @@ describe('ComposerDialogComponent', () => {
       expect(sendButton(fixture).disabled).toBe(false);
     });
 
-    it('describes the title input by its counter', () => {
+    it('wraps a long title over lines but keeps Enter from breaking one', () => {
+      const fixture = lemmyOnly();
+      const enter = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true });
+
+      titleField(fixture).dispatchEvent(enter);
+
+      expect(titleField(fixture).rows).toBe(2);
+      expect(enter.defaultPrevented).toBe(true);
+    });
+
+    it('describes the title field by its counter', () => {
       const fixture = lemmyOnly();
 
       expect(titleCounter(fixture).id).toBe('reply-title-counter');
-      expect(titleInput(fixture).getAttribute('aria-describedby')).toBe('reply-title-counter');
+      expect(titleField(fixture).getAttribute('aria-describedby')).toBe('reply-title-counter');
     });
 
     it('turns the title counter red over the limit and Send off', () => {
@@ -1479,8 +1489,8 @@ describe('ComposerDialogComponent', () => {
 
       const visibility = element(fixture).querySelector('#reply-visibility-mastodon')!;
       expect(communitySelect(fixture)!.id).toBe('reply-community-lemmy');
-      expect(titleInput(fixture).id).toBe('reply-title-lemmy');
-      expect(titleInput(fixture).getAttribute('aria-describedby')).toBe(
+      expect(titleField(fixture).id).toBe('reply-title-lemmy');
+      expect(titleField(fixture).getAttribute('aria-describedby')).toBe(
         'reply-title-counter-lemmy',
       );
       expect(
