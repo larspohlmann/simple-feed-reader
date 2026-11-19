@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\Pass;
 
+use App\Service\Social\Social\Exception\SocialAccountUnresolvableException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\ImportRule\ImportRuleInterface;
 use App\Service\Social\Social\Model\FollowedAccountModel;
 use App\Service\Social\Social\Model\ImportCandidateModel;
@@ -13,6 +15,8 @@ use App\Service\Social\Social\ProfileFeedRule\ProfileFeedRuleInterface;
 /** One picker load's matching: each follow answers to its identity, its handle and its own feed's key. */
 final class FollowMatching
 {
+    private const int MAX_IDENTITY_RESOLUTIONS = 25;
+
     /** @var list<FollowedAccountModel> */
     private readonly array $follows;
 
@@ -35,6 +39,21 @@ final class FollowMatching
         $this->followByKey = $this->indexFollows();
     }
 
+    /**
+     * @param list<ProfileFeedSubscriptionModel> $profileFeeds
+     *
+     * @return list<ImportCandidateModel>
+     */
+    public function matchProfileFeeds(array $profileFeeds): array
+    {
+        foreach ($profileFeeds as $profileFeed) {
+            $this->offer($profileFeed);
+        }
+        $this->resolveLeftoverIdentities();
+
+        return $this->candidates();
+    }
+
     public function offer(ProfileFeedSubscriptionModel $profileFeed): void
     {
         if (!$this->claim($profileFeed, $profileFeed->identity)) {
@@ -52,9 +71,13 @@ final class FollowMatching
         ));
     }
 
-    public function claimAs(ProfileFeedSubscriptionModel $profileFeed, string $resolvedIdentity): void
+    /**
+     * @throws SocialAccountUnresolvableException
+     * @throws SocialNetworkUnreachableException
+     */
+    private function claimResolved(ProfileFeedSubscriptionModel $profileFeed): void
     {
-        if ($this->claim($profileFeed, $resolvedIdentity)) {
+        if ($this->claim($profileFeed, $this->importRule->fetchResolvedIdentity($profileFeed->identity))) {
             unset($this->unmatched[$profileFeed->subscriptionId]);
         }
     }
@@ -77,6 +100,19 @@ final class FollowMatching
         }
 
         return $candidates;
+    }
+
+    private function resolveLeftoverIdentities(): void
+    {
+        foreach (\array_slice($this->unresolvedProfileFeeds(), 0, self::MAX_IDENTITY_RESOLUTIONS) as $profileFeed) {
+            try {
+                $this->claimResolved($profileFeed);
+            } catch (SocialAccountUnresolvableException) {
+                continue;
+            } catch (SocialNetworkUnreachableException) {
+                return;
+            }
+        }
     }
 
     private function claim(ProfileFeedSubscriptionModel $profileFeed, string $key): bool

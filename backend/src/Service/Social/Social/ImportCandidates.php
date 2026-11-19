@@ -29,7 +29,6 @@ final readonly class ImportCandidates
     public function __construct(
         private SocialCandidatesInterface $networkCandidates,
         private SubscriptionRepository $subscriptions,
-        private FollowMatcher $followMatcher,
         private SocialFeedRepository $socialFeeds,
         private ActingAccountGuard $guard,
         private FollowAvatarCache $followAvatars,
@@ -50,11 +49,11 @@ final readonly class ImportCandidates
         if ($importRule->allowsFollowAvatarCache()) {
             $this->followAvatars->remember($account, $network->follows);
         }
-        $follows = $this->followMatcher->match(
-            new FollowMatching($this->profileFeeds->selectRule($account->getNetwork()), $importRule, $network->follows),
+        $follows = new FollowMatching(
+            $this->profileFeeds->selectRule($account->getNetwork()),
             $importRule,
-            $this->profileFeedsOf($account, $importRule),
-        );
+            $network->follows,
+        )->matchProfileFeeds($this->profileFeedsOf($account, $importRule));
         $subscribed = $this->privateFeedSubscriptionsOf($account);
 
         return new ImportCandidatesModel(

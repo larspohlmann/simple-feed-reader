@@ -40,7 +40,9 @@ final readonly class LemmyComposerDefaults implements ComposerDefaultsInterface
             self::MAX_CHARACTERS,
             linkPost: new LinkPostChoicesModel(
                 $this->communities->postable($account),
-                WordBoundary::clipped($link->title, LinkPostChoicesModel::MAX_TITLE_CHARACTERS),
+                WordBoundary::clipped($link->title, LemmyPostWriter::MAX_TITLE_CHARACTERS),
+                LemmyPostWriter::MIN_TITLE_CHARACTERS,
+                LemmyPostWriter::MAX_TITLE_CHARACTERS,
             ),
         );
     }

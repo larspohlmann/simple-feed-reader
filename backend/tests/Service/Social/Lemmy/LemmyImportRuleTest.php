@@ -6,16 +6,13 @@ namespace App\Tests\Service\Social\Lemmy;
 
 use App\Service\Social\Lemmy\LemmyImportRule;
 use App\Service\Social\Social\Model\SocialImportFeedModel;
-use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\TestCase;
 
 final class LemmyImportRuleTest extends TestCase
 {
     public function testNoFollowIsAccountOnly(): void
     {
-        $account = SocialAccounts::lemmyOf(SocialAccounts::owner());
-
-        self::assertSame([], new LemmyImportRule()->findAccountOnlyFeeds($account, [
+        self::assertSame([], new LemmyImportRule()->findAccountOnlyFeeds([
             new SocialImportFeedModel('rss@feddit.example', null),
         ]));
     }

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Bluesky;
 
-use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Bluesky\BlueskyIdentityResolver;
 use App\Service\Social\Bluesky\HiddenImportFollows;
@@ -24,7 +23,7 @@ final readonly class BlueskyImportRule implements ImportRuleInterface
     ) {
     }
 
-    public function findAccountOnlyFeeds(SocialAccount $account, array $feeds): array
+    public function findAccountOnlyFeeds(array $feeds): array
     {
         return array_map(
             static fn (HiddenProfileModel $profile): PrivateFeedModel => $profile->toAuthorFeed(),

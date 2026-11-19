@@ -45,7 +45,7 @@ final readonly class SocialImporter
     public function import(SocialAccount $account, SocialImportModel $import): SocialImportResultModel
     {
         $network = $account->getNetwork();
-        $accountOnly = $this->importRules->selectRule($network)->findAccountOnlyFeeds($account, $import->subscribe);
+        $accountOnly = $this->importRules->selectRule($network)->findAccountOnlyFeeds($import->subscribe);
         $items = $this->items($network, self::withoutAccountOnly($import->subscribe, $accountOnly));
         $this->assertCollectionsOf($network, $import->collections);
         $privateFeeds = [...$import->collections, ...array_values($accountOnly)];

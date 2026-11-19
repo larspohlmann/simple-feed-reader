@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Lemmy;
 
-use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Lemmy\Support\LemmyProfileFeed;
 use App\Service\Social\Social\ImportRule\ImportRuleInterface;
@@ -13,7 +12,7 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 #[AsTaggedItem(index: SocialNetwork::Lemmy->value)]
 final readonly class LemmyImportRule implements ImportRuleInterface
 {
-    public function findAccountOnlyFeeds(SocialAccount $account, array $feeds): array
+    public function findAccountOnlyFeeds(array $feeds): array
     {
         return [];
     }
