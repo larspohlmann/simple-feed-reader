@@ -40,12 +40,12 @@ Paths are under `backend/src/Service/`. The third column is what the method does
 | `Foundation/Json/Model/JsonNodeModel.php` | `of` | `fromValue` | wraps a decoded value; a non-array reads as an empty object |
 | `Foundation/Json/Model/JsonNodeModel.php` | `listOf` | `parseNodes` | each item of a decoded list as a node; null when the value is no list |
 | `Foundation/Text/MarkdownHtml.php` | `of` | `toHtml` | converts Markdown to HTML |
-| `Foundation/Text/StopWords/StopWordsInterface.php`, `BundledStopWords.php`, every double | `wordsOf` | `requireWords` | a language's stop words; throws when the bundle holds no list for it |
+| `Foundation/Text/StopWords/StopWordsInterface.php`, `BundledStopWords.php`, every double | `wordsOf` | `listWords` | a language's stop words, loading the bundle once; throws only on a broken bundle |
 | `Foundation/Text/Support/CasefoldedWords.php` | `of` | `splitWords` | casefolds a text and splits it into its words |
-| `Foundation/Text/Support/ClippedText.php` | `of` | `clipText` | cuts a text to N characters and appends the marker |
-| `Foundation/Text/Support/ClippedText.php` | `ofScrubbed` | `clipScrubbedText` | the same after replacing invalid UTF-8 |
-| `Foundation/Text/Support/ClippedText.php` | `trimmedOf` | `clipTrimmedText` | the same with trailing whitespace dropped before the ellipsis |
-| `Foundation/Text/Support/EntryExcerpt.php` | `of` | `fromSummaryOrContent` | the plain text of the summary, else of the content, else `''` |
+| `Foundation/Text/Support/ClippedText.php` | `of` | `cutText` | cuts a text to N characters and appends the marker |
+| `Foundation/Text/Support/ClippedText.php` | `ofScrubbed` | `cutScrubbedText` | the same after replacing invalid UTF-8 |
+| `Foundation/Text/Support/ClippedText.php` | `trimmedOf` | `cutTrimmedText` | the same with trailing whitespace dropped before the ellipsis |
+| `Foundation/Text/Support/EntryExcerpt.php` | `of` | `fromSummaryOrContent` | the plain text of the summary, else of the content, cut to 500 characters at a word boundary |
 | `Foundation/Text/Support/EntryPlainText.php` | `of` | `fromHtml` | HTML without images as plain text; null when empty or junk |
 | `Foundation/Text/Support/LinkFreeText.php` | `of` | `stripLinks` | removes web links from a text |
 | `Foundation/Url/EntryUrlHash.php` | `of` | `hashEntryUrl` | hashes the identity URL a guid names, else the entry's URL; null without either |
@@ -66,17 +66,17 @@ Paths are under `backend/src/Service/`. The third column is what the method does
 | `Ingestion/Feed/FeedScheduler.php` | `floorOf` (private) | `pickFloorMinutes` | the shortest poll interval: 15 minutes for a social feed, else the default |
 | `Ingestion/Ingest/EntryIngestor.php` | `urlHashesOf` (private) | `collectUrlHashes` | the URL hashes of the candidates that have one |
 | `Ingestion/Ingest/StoredEntryRefresher.php` | `guidHashesOf` (private) | `hashGuids` | hashes each entry's guid |
-| `Ingestion/Ingest/Factory/IngestedEntryFactory.php` | `textOf` (private) | `buildText` | the entry text with snippet, sanitised content and, on a social feed, language |
+| `Ingestion/Ingest/Factory/IngestedEntryFactory.php` | `textOf` (private) | `completeText` | finishes the EntryText it is handed: the entry text with snippet, sanitised content and, on a social feed, language |
 | `Ingestion/Ingest/FeedTitle/FeedTitleInterface.php`, `Social/Social/ProfileFeedTitle.php`, every double | `of` | `formatTitle` | the title a feed is stored under, given its channel title |
 | `Ingestion/Ingest/Support/EntryMediaAssembler.php` | `mediaOf` | `assembleVisualMedia` | the visual media of a list without a lead image (beside `assemble()`) |
 | `Ingestion/Ingest/Support/LemmyCommunityLink.php` | `of` | `parseCommunity` | the community an https community link names, or null |
-| `Ingestion/Language/PreviewLanguage.php` | `of` | `detectLanguage` | the stated language, else a confident guess from title and description |
-| `Ingestion/Language/SocialEntryLanguage.php` | `of` | `detectLanguage` | reconciles a post's stated language with a guess from its body |
+| `Ingestion/Language/PreviewLanguage.php` | `of` | `resolveLanguage` | the stated language, else a confident guess from title and description |
+| `Ingestion/Language/SocialEntryLanguage.php` | `of` | `resolveLanguage` | reconciles a post's stated language with a guess from its body |
 | `Ingestion/Language/StopWordVote.php` | `languageOf` | `detectLanguage` | the language whose stop words a text holds most of; null on a tie |
 | `Ingestion/Language/Support/PreviewText.php` | `of` | `fromTitleAndDescription` | joins the title and the cut description |
 | `Ingestion/Language/Support/PreviewText.php` | `descriptionOf` | `cutDescription` | the description as plain text, cut to the card's maximum |
 | `Ingestion/Parser/FeedFormatParser/Rss2Parser.php` | `channelOf` (private) | `findChannel` | the root's `<channel>` child, or null |
-| `Ingestion/Parser/Support/DeclaredChapters.php` | `of` | `parseChapters` | an item's inline chapters, else its linked chapters file |
+| `Ingestion/Parser/Support/DeclaredChapters.php` | `of` | `fromItem` | an item's inline chapters, else a model holding only its chapters file's URL; reads no file |
 | `Ingestion/Parser/Support/DeclaredRenditions.php` | `ofWidth` | `fromWidth` | one rendition when the width is known, none otherwise (beside `fromSrcset()`) |
 | `Ingestion/Parser/Support/DeclaredTranscripts.php` | `of` | `findBestTranscript` | the best of an item's declared transcripts, or null |
 | `Ingestion/Parser/Support/EntryTitle.php` | `of` | `buildHeadline` | a headline from the feed title, else derived from the body, else untitled |
@@ -94,15 +94,15 @@ Paths are under `backend/src/Service/`. The third column is what the method does
 | File | Old | New | What it does |
 |---|---|---|---|
 | `Operations/Backup/AccountBackupExporter.php` | `provenanceOf` (private) | `buildProvenance` | a new backup's id, time, source and account |
-| `Operations/Backup/AccountBackupExporter.php` | `networkSwitchesOf` (private) | `buildNetworkSwitches` | the included and excluded networks of a user as one model |
+| `Operations/Backup/AccountBackupExporter.php` | `networkSwitchesOf` (private) | `loadNetworkSwitches` | the included and excluded networks of a user as one model |
 | `Operations/Backup/Dto/AccountLine.php` | `of` | `fromAccount` | the line from a user, their settings and network switches |
 | `Operations/Backup/Dto/EntryLine.php` | `of` | `fromEntry` | the line from an entry and its companions |
 | `Operations/Backup/Dto/EntryLine.php` | `shareKindOf` (private) | `normalizeShareKind` | turns a quote share without a quote into a link share |
 | `Operations/Backup/Dto/EntryLine.php` | `quoteOf` (private) | `parseQuote` | the quoted post a line carries, or null |
 | `Operations/Backup/Dto/EntryLine.php` | `mediaOf` (private) | `parseMedia` | the complete media a line's fields carry |
-| `Operations/Backup/Dto/EntryLine.php` | `authorUrlOf` (private) | `parseAuthorUrl` | an absolute author URL within the length limit, or null |
+| `Operations/Backup/Dto/EntryLine.php` | `authorUrlOf` (private) | `parseHttpUrl` | the field under a key as an absolute http(s) URL within the author-URL length limit, or null |
 | `Operations/Backup/Dto/EntryLine.php` | `chaptersUrlOf` (private) | `parseChaptersUrl` | an absolute chapters URL within the length limit, or null |
-| `Operations/Backup/Dto/EntryLine.php` | `originOf` (private) | `parseOrigin` | the entry origin a line carries, or null |
+| `Operations/Backup/Dto/EntryLine.php` | `originOf` (private) | `parseOrigin` | the entry origin a line carries, title clipped to its maximum, favicon kept only as a valid URL, or null |
 | `Operations/Backup/Dto/EntryLine.php` | `linkCardsOf` (private) | `parseLinkCards` | the storable link cards of a line |
 | `Operations/Backup/Dto/EntryLine.php` | `linkCardOf` (private) | `parseLinkCard` | one storable link card, or null |
 | `Operations/Backup/Dto/EntryShareLine.php` | `of` | `fromEntry` | the line from a shared entry |
@@ -122,7 +122,7 @@ Paths are under `backend/src/Service/`. The third column is what the method does
 | `Operations/Backup/Support/PrivateFeedRefusal.php` | `ofUrl` | `throwIfPrivateUrl` | throws when the URL is a private feed's |
 | `Operations/Backup/Support/PrivateFeedRefusal.php` | `ofFeed` | `throwIfPrivateFeed` | throws when the URL or the source format is a private feed's |
 | `Operations/Backup/Support/SavedFeedRefusal.php` | `ofFeed` | `throwIfMixedFeed` | throws when a saved-feed address and a saved-feed format do not go together |
-| `Operations/Queue/QueueDepths.php` | `backlogOf` (private) | `countBacklog` | the backlog counts of one queue |
+| `Operations/Queue/QueueDepths.php` | `backlogOf` (private) | `loadBacklog` | hands the question to the queue's repository and returns its backlog model |
 
 ## Review Focus
 
