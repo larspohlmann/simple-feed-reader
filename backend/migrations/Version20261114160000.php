@@ -9,7 +9,7 @@ use App\Enum\SourceFormat;
 use App\Service\Library\SavedPosts\Support\SavedFeedUrl;
 use App\Service\Social\Social\Support\BlueskyProfileFeed;
 use App\Service\Social\Social\Support\LemmyProfileFeed;
-use App\Service\Social\Social\Support\MastodonProfileFeed;
+use App\Service\Social\Mastodon\Support\MastodonProfileFeed;
 use App\Service\Social\Social\Support\SocialFeedUrl;
 use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use Doctrine\DBAL\Platforms\SQLitePlatform;

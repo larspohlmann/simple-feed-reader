@@ -26,7 +26,7 @@ use App\Service\Social\Social\Model\SocialCredentialsModel;
 use App\Service\Social\Social\Model\VerifiedAccountModel;
 use App\Service\Social\Social\Support\BlueskyCredentials;
 use App\Service\Social\Social\Support\LemmyCredentials;
-use App\Service\Social\Social\Support\MastodonCredentials;
+use App\Service\Social\Mastodon\Support\MastodonCredentials;
 use App\Service\Social\Social\SocialAccountConnector;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PrivateFeedsWiring;

@@ -23,7 +23,7 @@ use App\Service\Social\Social\Model\TimelineOutcome\FetchedTimelineModel;
 use App\Service\Social\Social\Model\TimelineOutcome\ThrottledTimelineModel;
 use App\Service\Social\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
 use App\Service\Social\Social\Model\TimelinePageModel;
-use App\Service\Social\Social\Support\MastodonTimelinePage;
+use App\Service\Social\Mastodon\Support\MastodonTimelinePage;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FeedOutcomePersisters;
 use App\Tests\Support\PrivateFeedsWiring;

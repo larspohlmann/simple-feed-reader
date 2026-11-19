@@ -20,7 +20,7 @@ use App\Service\Ingestion\Language\LanguageGuess;
 use App\Service\Ingestion\Language\PreviewLanguage;
 use App\Service\Social\BlueskyPost\AppViewClient;
 use App\Service\Social\BlueskyPost\BlueskyPendingEmbed;
-use App\Service\Social\Social\MastodonPendingThread;
+use App\Service\Social\Mastodon\MastodonPendingThread;
 use App\Service\Social\BlueskyPost\EntryEmbedWriter\EntryEmbedWriter;
 use App\Service\Social\BlueskyPost\PostEmbedRenderer;
 use App\Service\Social\BlueskyPost\PostEnricher;
