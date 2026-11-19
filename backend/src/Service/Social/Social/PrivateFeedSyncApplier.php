@@ -22,7 +22,6 @@ use App\Service\Social\Social\Model\PrivateFeedSyncOutcomeModel;
 use App\Service\Social\Social\Model\SocialCollectionModel;
 use App\Service\Social\Social\Model\SubscribedCollectionModel;
 use App\Service\Social\Social\Pass\CollectionSyncPlan;
-use App\Service\Social\Social\Support\PrivateFeedSyncReasons;
 use App\Service\Library\Subscription\Exception\SubscriptionLimitReachedException;
 use App\Service\Library\Subscription\SubscriptionService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -40,6 +39,7 @@ final readonly class PrivateFeedSyncApplier
         private SubscriptionRepository $subscriptions,
         private NaiveUtcClock $clock,
         private EntityManagerInterface $entityManager,
+        private PrivateFeedSyncReasons $syncReasons,
     ) {
     }
 
@@ -82,7 +82,7 @@ final readonly class PrivateFeedSyncApplier
         foreach ($titles as $subscriptionId => $title) {
             $collection = $removals[$subscriptionId];
             $forgotten[] = $collection;
-            $this->log($account, $collection, $title, PrivateFeedSyncReasons::removed($account, $collection, $network));
+            $this->log($account, $collection, $title, $this->syncReasons->removed($account, $collection, $network));
         }
         $this->knownCollections->forget($account, $forgotten);
         $this->entityManager->flush();
@@ -98,7 +98,7 @@ final readonly class PrivateFeedSyncApplier
             if (!$this->created($account, $collection)) {
                 continue;
             }
-            $this->log($account, $collection, $collection->name, PrivateFeedSyncReasons::added($account, $collection));
+            $this->log($account, $collection, $collection->name, $this->syncReasons->added($account, $collection));
             ++$added;
         }
 

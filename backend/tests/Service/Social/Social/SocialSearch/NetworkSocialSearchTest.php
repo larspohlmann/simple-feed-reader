@@ -15,6 +15,7 @@ use App\Service\Social\Social\SocialSearch\NetworkSocialSearch;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;
+use App\Tests\Support\SocialRuleWiring;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -304,6 +305,7 @@ final class NetworkSocialSearchTest extends TestCase
             SocialApiWiring::timelineRounds($http, $this->cache),
             SocialApiWiring::lemmyAccountApi($http),
             SocialApiWiring::lemmyPostEntries(),
+            SocialRuleWiring::privateFeedRules(),
         );
     }
 

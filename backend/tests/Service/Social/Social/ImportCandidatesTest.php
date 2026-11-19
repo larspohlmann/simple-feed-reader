@@ -92,6 +92,7 @@ final class ImportCandidatesTest extends DbTestCase
             new ActingAccountGuard($this->entityManager),
             $this->followAvatars,
             SocialRuleWiring::profileFeeds(),
+            SocialRuleWiring::privateFeedRules(),
         );
     }
 

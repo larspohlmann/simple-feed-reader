@@ -18,7 +18,7 @@ use App\Service\Social\Social\LemmyApiClient;
 use App\Service\Social\Social\LemmyPostEntries;
 use App\Service\Social\Social\Model\LemmyListing;
 use App\Service\Social\Social\Model\TimelinePageModel;
-use App\Service\Social\Social\Support\NetworkSearchQueries;
+use App\Service\Social\Social\PrivateFeedRule\LemmyPrivateFeedRule;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Lemmy->value)]
@@ -27,6 +27,7 @@ final readonly class LemmyTimelineSource implements TimelineSourceInterface
     public function __construct(
         private LemmyAccountApi $lemmy,
         private LemmyPostEntries $entries,
+        private LemmyPrivateFeedRule $privateFeedRule,
     ) {
     }
 
@@ -36,7 +37,7 @@ final readonly class LemmyTimelineSource implements TimelineSourceInterface
         if (SocialFeedKind::Search === $socialFeed->getKind()) {
             return array_map(
                 fn (string $term): ApiRequestModel => $this->lemmy->searchGet($account, $term),
-                self::searchTermsOf($socialFeed),
+                $this->searchTermsOf($socialFeed),
             );
         }
 
@@ -72,10 +73,10 @@ final readonly class LemmyTimelineSource implements TimelineSourceInterface
     }
 
     /** @return non-empty-list<string> */
-    private static function searchTermsOf(SocialFeed $socialFeed): array
+    private function searchTermsOf(SocialFeed $socialFeed): array
     {
         try {
-            return NetworkSearchQueries::of(SocialNetwork::Lemmy, $socialFeed->getRemoteId());
+            return $this->privateFeedRule->buildSearchQueries($socialFeed->getRemoteId());
         } catch (SearchQueryTooBroadException $tooBroad) {
             throw new SocialNetworkUnreachableException($tooBroad->getMessage(), previous: $tooBroad);
         }

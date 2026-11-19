@@ -20,9 +20,9 @@ use App\Service\Social\Social\LemmyPostEntries;
 use App\Service\Social\Social\MastodonAccountApi;
 use App\Service\Social\Social\MastodonApiClient;
 use App\Service\Social\Social\Model\TimelinePageModel;
+use App\Service\Social\Social\PrivateFeedRules;
 use App\Service\Social\Social\Support\BlueskySearchPage;
 use App\Service\Social\Social\Support\MastodonSearchPage;
-use App\Service\Social\Social\Support\NetworkSearchQueries;
 use App\Service\Social\Social\Support\SocialSearchPaths;
 use App\Service\Social\Social\TimelineRounds;
 
@@ -38,6 +38,7 @@ final readonly class NetworkSocialSearch implements SocialSearchInterface
         private TimelineRounds $timelineRounds,
         private LemmyAccountApi $lemmy,
         private LemmyPostEntries $lemmyEntries,
+        private PrivateFeedRules $privateFeedRules,
     ) {
     }
 
@@ -73,7 +74,7 @@ final readonly class NetworkSocialSearch implements SocialSearchInterface
                     $account,
                     SocialSearchPaths::mastodon($alternative, null),
                 ),
-                NetworkSearchQueries::of(SocialNetwork::Mastodon, $query),
+                $this->searchQueriesOf($account, $query),
             ),
             static fn (FetchOutcomeModel $outcome): ApiResponseModel => MastodonApiClient::accepted(
                 MastodonApiClient::answerOf($outcome),
@@ -88,12 +89,18 @@ final readonly class NetworkSocialSearch implements SocialSearchInterface
             $account,
             array_map(
                 fn (string $term): ApiRequestModel => $this->lemmy->searchGet($account, $term),
-                NetworkSearchQueries::of(SocialNetwork::Lemmy, $query),
+                $this->searchQueriesOf($account, $query),
             ),
             static fn (FetchOutcomeModel $outcome): ApiResponseModel => LemmyApiClient::accepted(
                 LemmyApiClient::answerOf($outcome),
             ),
         );
+    }
+
+    /** @return non-empty-list<string> */
+    private function searchQueriesOf(SocialAccount $account, string $query): array
+    {
+        return $this->privateFeedRules->selectRule($account->getNetwork())->buildSearchQueries($query);
     }
 
     /**

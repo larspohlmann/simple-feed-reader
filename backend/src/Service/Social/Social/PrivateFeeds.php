@@ -10,14 +10,11 @@ use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
-use App\Enum\SocialNetwork;
-use App\Enum\SourceFormat;
 use App\Repository\KnownSocialCollectionRepository;
 use App\Repository\SocialFeedRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Service\Social\Social\Model\PrivateFeedOutcome;
-use App\Service\Social\Social\Support\PrivateFeedSite;
 use App\Service\Social\Social\Support\SocialFeedUrl;
 use App\Service\Library\Subscription\Exception\AlreadySubscribedException;
 use App\Service\Library\Subscription\Exception\SubscriptionLimitReachedException;
@@ -34,6 +31,7 @@ final readonly class PrivateFeeds
         private SubscriptionService $subscriptionService,
         private EntityManagerInterface $entityManager,
         private NaiveUtcClock $clock,
+        private PrivateFeedRules $privateFeedRules,
     ) {
     }
 
@@ -122,17 +120,18 @@ final readonly class PrivateFeeds
     /** @param list<Tag> $tags */
     private function subscribed(SocialAccount $account, PrivateFeedModel $privateFeed, array $tags): Subscription
     {
+        $rule = $this->privateFeedRules->selectRule($account->getNetwork());
         $subscription = $this->subscriptionCreator->create(
             $account->getUser(),
             SocialFeedUrl::of($account, $privateFeed),
-            self::sourceFormatOf($account),
+            $rule->sourceFormat(),
             $tags,
             $privateFeed->name,
         );
         $followsOnePerson = $privateFeed->kind->followsOnePerson();
         $subscription->changeInclusions(new InclusionChange(allItems: $followsOnePerson, forYou: $followsOnePerson));
         $feed = $subscription->getFeed();
-        $feed->setSiteUrl(PrivateFeedSite::of($account, $privateFeed));
+        $feed->setSiteUrl($rule->buildSiteUrl($account, $privateFeed));
         $this->recordSocialFeed($account, $feed, $privateFeed);
         if ($privateFeed->kind->isRememberedCollection()) {
             $this->knownCollections->remember($account, $privateFeed->kind, $privateFeed->remoteId);
@@ -146,15 +145,5 @@ final readonly class PrivateFeeds
         if (null === $this->socialFeeds->findOneFor($account, $privateFeed->kind, $privateFeed->remoteId)) {
             $this->entityManager->persist(new SocialFeed($account, $feed, $privateFeed->kind, $privateFeed->remoteId));
         }
-    }
-
-    /** @return 'bluesky-api'|'mastodon-api'|'lemmy-api' */
-    private static function sourceFormatOf(SocialAccount $account): string
-    {
-        return match ($account->getNetwork()) {
-            SocialNetwork::Bluesky => SourceFormat::BLUESKY_API,
-            SocialNetwork::Mastodon => SourceFormat::MASTODON_API,
-            SocialNetwork::Lemmy => SourceFormat::LEMMY_API,
-        };
     }
 }

@@ -38,6 +38,7 @@ final class PrivateFeedsWiring
             $subscriptionService,
             $entityManager,
             new NaiveUtcClock($clock),
+            SocialRuleWiring::privateFeedRules(),
         );
     }
 

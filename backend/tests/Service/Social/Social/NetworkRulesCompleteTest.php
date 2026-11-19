@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Social;
 
 use App\Enum\SocialNetwork;
+use App\Service\Social\Social\PrivateFeedRules;
 use App\Service\Social\Social\ProfileFeeds;
 use App\Service\Social\Social\SocialPostAddresses;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -29,5 +30,6 @@ final class NetworkRulesCompleteTest extends KernelTestCase
     {
         yield 'post addresses' => [SocialPostAddresses::class];
         yield 'profile feeds' => [ProfileFeeds::class];
+        yield 'private feeds' => [PrivateFeedRules::class];
     }
 }

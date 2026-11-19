@@ -12,7 +12,7 @@ final class MastodonFollowedTag
     public static function collectionOf(JsonNodeModel $tag): ?SocialCollectionModel
     {
         $tagName = $tag->string('name');
-        if (null === $tagName || !PrivateFeedRules::isMastodonTagName($tagName)) {
+        if (null === $tagName || !MastodonFeedIds::isTagName($tagName)) {
             return null;
         }
 

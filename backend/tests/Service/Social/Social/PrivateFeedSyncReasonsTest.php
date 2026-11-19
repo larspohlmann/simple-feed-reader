@@ -2,13 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Social\Support;
+namespace App\Tests\Service\Social\Social;
 
 use App\Enum\PrivateFeedSyncReason;
 use App\Service\Social\Social\Model\NetworkCollectionsModel;
 use App\Service\Social\Social\Model\PrivateFeedModel;
-use App\Service\Social\Social\Support\PrivateFeedSyncReasons;
+use App\Service\Social\Social\PrivateFeedSyncReasons;
 use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\SocialRuleWiring;
 use PHPUnit\Framework\TestCase;
 
 final class PrivateFeedSyncReasonsTest extends TestCase
@@ -22,7 +23,7 @@ final class PrivateFeedSyncReasonsTest extends TestCase
     {
         self::assertSame(
             PrivateFeedSyncReason::Saved,
-            PrivateFeedSyncReasons::added(
+            self::reasons()->added(
                 SocialAccounts::bluesky(),
                 PrivateFeedModel::customFeed(self::CUSTOM_FEED, 'Art'),
             ),
@@ -33,7 +34,7 @@ final class PrivateFeedSyncReasonsTest extends TestCase
     {
         self::assertSame(
             PrivateFeedSyncReason::Created,
-            PrivateFeedSyncReasons::added(SocialAccounts::bluesky(), PrivateFeedModel::userList(self::OWN_LIST, 'Own')),
+            self::reasons()->added(SocialAccounts::bluesky(), PrivateFeedModel::userList(self::OWN_LIST, 'Own')),
         );
     }
 
@@ -41,7 +42,7 @@ final class PrivateFeedSyncReasonsTest extends TestCase
     {
         self::assertSame(
             PrivateFeedSyncReason::Saved,
-            PrivateFeedSyncReasons::added(
+            self::reasons()->added(
                 SocialAccounts::bluesky(),
                 PrivateFeedModel::userList(self::OTHERS_LIST, 'Theirs'),
             ),
@@ -52,7 +53,7 @@ final class PrivateFeedSyncReasonsTest extends TestCase
     {
         self::assertSame(
             PrivateFeedSyncReason::Saved,
-            PrivateFeedSyncReasons::added(
+            self::reasons()->added(
                 SocialAccounts::bluesky(),
                 PrivateFeedModel::userList(self::LOOKALIKE_LIST, 'Theirs'),
             ),
@@ -63,7 +64,7 @@ final class PrivateFeedSyncReasonsTest extends TestCase
     {
         self::assertSame(
             PrivateFeedSyncReason::Created,
-            PrivateFeedSyncReasons::added(SocialAccounts::mastodon(), PrivateFeedModel::userList('42', 'Friends')),
+            self::reasons()->added(SocialAccounts::mastodon(), PrivateFeedModel::userList('42', 'Friends')),
         );
     }
 
@@ -71,7 +72,7 @@ final class PrivateFeedSyncReasonsTest extends TestCase
     {
         self::assertSame(
             PrivateFeedSyncReason::Saved,
-            PrivateFeedSyncReasons::added(
+            self::reasons()->added(
                 SocialAccounts::lemmyOf(SocialAccounts::owner()),
                 PrivateFeedModel::userList('1', 'x'),
             ),
@@ -82,7 +83,7 @@ final class PrivateFeedSyncReasonsTest extends TestCase
     {
         self::assertSame(
             PrivateFeedSyncReason::Deleted,
-            PrivateFeedSyncReasons::removed(
+            self::reasons()->removed(
                 SocialAccounts::bluesky(),
                 PrivateFeedModel::customFeed(self::CUSTOM_FEED, ''),
                 new NetworkCollectionsModel([], [], [self::CUSTOM_FEED]),
@@ -94,7 +95,7 @@ final class PrivateFeedSyncReasonsTest extends TestCase
     {
         self::assertSame(
             PrivateFeedSyncReason::Deleted,
-            PrivateFeedSyncReasons::removed(
+            self::reasons()->removed(
                 SocialAccounts::bluesky(),
                 PrivateFeedModel::userList(self::OWN_LIST, ''),
                 self::emptyNetwork(),
@@ -106,7 +107,7 @@ final class PrivateFeedSyncReasonsTest extends TestCase
     {
         self::assertSame(
             PrivateFeedSyncReason::Deleted,
-            PrivateFeedSyncReasons::removed(
+            self::reasons()->removed(
                 SocialAccounts::mastodon(),
                 PrivateFeedModel::userList('42', ''),
                 self::emptyNetwork(),
@@ -118,7 +119,7 @@ final class PrivateFeedSyncReasonsTest extends TestCase
     {
         self::assertSame(
             PrivateFeedSyncReason::Unsaved,
-            PrivateFeedSyncReasons::removed(
+            self::reasons()->removed(
                 SocialAccounts::bluesky(),
                 PrivateFeedModel::customFeed(self::CUSTOM_FEED, ''),
                 self::emptyNetwork(),
@@ -130,7 +131,7 @@ final class PrivateFeedSyncReasonsTest extends TestCase
     {
         self::assertSame(
             PrivateFeedSyncReason::Unsaved,
-            PrivateFeedSyncReasons::removed(
+            self::reasons()->removed(
                 SocialAccounts::bluesky(),
                 PrivateFeedModel::userList(self::OTHERS_LIST, ''),
                 self::emptyNetwork(),
@@ -142,7 +143,7 @@ final class PrivateFeedSyncReasonsTest extends TestCase
     {
         self::assertSame(
             PrivateFeedSyncReason::Followed,
-            PrivateFeedSyncReasons::added(
+            self::reasons()->added(
                 SocialAccounts::mastodon(),
                 PrivateFeedModel::followedTag('caturday', '#caturday'),
             ),
@@ -153,12 +154,17 @@ final class PrivateFeedSyncReasonsTest extends TestCase
     {
         self::assertSame(
             PrivateFeedSyncReason::Unfollowed,
-            PrivateFeedSyncReasons::removed(
+            self::reasons()->removed(
                 SocialAccounts::mastodon(),
                 PrivateFeedModel::followedTag('caturday', '#caturday'),
                 self::emptyNetwork(),
             ),
         );
+    }
+
+    private static function reasons(): PrivateFeedSyncReasons
+    {
+        return new PrivateFeedSyncReasons(SocialRuleWiring::privateFeedRules());
     }
 
     private static function emptyNetwork(): NetworkCollectionsModel

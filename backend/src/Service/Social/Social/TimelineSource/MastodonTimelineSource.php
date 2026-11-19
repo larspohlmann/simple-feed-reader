@@ -17,10 +17,10 @@ use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\MastodonAccountApi;
 use App\Service\Social\Social\MastodonApiClient;
 use App\Service\Social\Social\Model\TimelinePageModel;
+use App\Service\Social\Social\PrivateFeedRule\MastodonPrivateFeedRule;
+use App\Service\Social\Social\Support\MastodonFeedIds;
 use App\Service\Social\Social\Support\MastodonSearchPage;
-use App\Service\Social\Social\Support\NetworkSearchQueries;
 use App\Service\Social\Social\Support\MastodonTimelinePage;
-use App\Service\Social\Social\Support\PrivateFeedRules;
 use App\Service\Social\Social\Support\SocialSearchPaths;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
@@ -29,8 +29,10 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
 {
     private const int PAGE_SIZE = 40;
 
-    public function __construct(private MastodonAccountApi $mastodon)
-    {
+    public function __construct(
+        private MastodonAccountApi $mastodon,
+        private MastodonPrivateFeedRule $privateFeedRule,
+    ) {
     }
 
     public function requests(SocialFeed $socialFeed): array
@@ -39,7 +41,7 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
 
         return array_map(
             fn (string $path): ApiRequestModel => $this->mastodon->authorizedGet($account, $path),
-            self::pathsOf($socialFeed),
+            $this->pathsOf($socialFeed),
         );
     }
 
@@ -64,18 +66,18 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
     }
 
     /** @return non-empty-list<string> */
-    private static function pathsOf(SocialFeed $socialFeed): array
+    private function pathsOf(SocialFeed $socialFeed): array
     {
         return SocialFeedKind::Search === $socialFeed->getKind()
-            ? self::searchPathsOf($socialFeed)
+            ? $this->searchPathsOf($socialFeed)
             : [self::pathOf($socialFeed)];
     }
 
     /** @return non-empty-list<string> */
-    private static function searchPathsOf(SocialFeed $socialFeed): array
+    private function searchPathsOf(SocialFeed $socialFeed): array
     {
         try {
-            $queries = NetworkSearchQueries::of(SocialNetwork::Mastodon, $socialFeed->getRemoteId());
+            $queries = $this->privateFeedRule->buildSearchQueries($socialFeed->getRemoteId());
         } catch (SearchQueryTooBroadException $tooBroad) {
             throw new SocialNetworkUnreachableException($tooBroad->getMessage(), previous: $tooBroad);
         }
@@ -98,7 +100,7 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
     {
         $listId = $socialFeed->getRemoteId();
 
-        return PrivateFeedRules::isMastodonListId($listId)
+        return MastodonFeedIds::isListId($listId)
             ? $listId
             : throw new SocialNetworkUnreachableException('The Mastodon list id is not a number.');
     }
@@ -107,7 +109,7 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
     {
         $tagName = $socialFeed->getRemoteId();
 
-        return PrivateFeedRules::isMastodonTagName($tagName)
+        return MastodonFeedIds::isTagName($tagName)
             ? $tagName
             : throw new SocialNetworkUnreachableException('The Mastodon tag name is not a hashtag.');
     }

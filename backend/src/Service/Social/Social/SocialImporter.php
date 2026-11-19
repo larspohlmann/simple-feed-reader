@@ -15,7 +15,6 @@ use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Service\Social\Social\Model\SocialImportFeedModel;
 use App\Service\Social\Social\Model\SocialImportModel;
 use App\Service\Social\Social\Model\SocialImportResultModel;
-use App\Service\Social\Social\Support\PrivateFeedRules;
 use App\Service\Library\Subscription\BulkSubscriber;
 use App\Service\Library\Subscription\Exception\SubscriptionLimitReachedException;
 use App\Service\Library\Subscription\Model\BulkSubscribeItemModel;
@@ -36,6 +35,7 @@ final readonly class SocialImporter
         private HiddenImportFollows $hiddenFollows,
         private TagStructureLock $tagStructureLock,
         private ProfileFeeds $profileFeeds,
+        private PrivateFeedRules $privateFeedRules,
     ) {
     }
 
@@ -48,7 +48,7 @@ final readonly class SocialImporter
         $network = $account->getNetwork();
         $hidden = $this->hiddenFollows->among($account, $import->subscribe);
         $items = $this->items($network, self::withoutHidden($import->subscribe, $hidden));
-        self::assertCollectionsOf($network, $import->collections);
+        $this->assertCollectionsOf($network, $import->collections);
         $privateFeeds = [...$import->collections, ...self::authorFeedsOf($hidden)];
         $toRemove = $this->ownedSubscriptions->resolve($account->getUser()->requireId(), $import->unsubscribe);
 
@@ -75,10 +75,11 @@ final readonly class SocialImporter
     }
 
     /** @param list<PrivateFeedModel> $collections */
-    private static function assertCollectionsOf(SocialNetwork $network, array $collections): void
+    private function assertCollectionsOf(SocialNetwork $network, array $collections): void
     {
+        $rule = $this->privateFeedRules->selectRule($network);
         foreach ($collections as $collection) {
-            if (!PrivateFeedRules::allows($network, $collection)) {
+            if (!$rule->allows($collection)) {
                 throw new InvalidSocialImportFeedException(sprintf(
                     '%s is no %s %s.',
                     '' === $collection->remoteId ? $collection->name : $collection->remoteId,

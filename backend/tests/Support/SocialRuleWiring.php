@@ -8,6 +8,10 @@ use App\Enum\SocialNetwork;
 use App\Service\Social\Social\PostAddressRule\BlueskyPostAddressRule;
 use App\Service\Social\Social\PostAddressRule\LemmyPostAddressRule;
 use App\Service\Social\Social\PostAddressRule\MastodonPostAddressRule;
+use App\Service\Social\Social\PrivateFeedRule\BlueskyPrivateFeedRule;
+use App\Service\Social\Social\PrivateFeedRule\LemmyPrivateFeedRule;
+use App\Service\Social\Social\PrivateFeedRule\MastodonPrivateFeedRule;
+use App\Service\Social\Social\PrivateFeedRules;
 use App\Service\Social\Social\ProfileFeedRule\BlueskyProfileFeedRule;
 use App\Service\Social\Social\ProfileFeedRule\LemmyProfileFeedRule;
 use App\Service\Social\Social\ProfileFeedRule\MastodonProfileFeedRule;
@@ -36,6 +40,15 @@ final class SocialRuleWiring
             SocialNetwork::Bluesky->value => new BlueskyProfileFeedRule(),
             SocialNetwork::Mastodon->value => new MastodonProfileFeedRule(),
             SocialNetwork::Lemmy->value => new LemmyProfileFeedRule(),
+        ]));
+    }
+
+    public static function privateFeedRules(): PrivateFeedRules
+    {
+        return new PrivateFeedRules(self::locatorOf([
+            SocialNetwork::Bluesky->value => new BlueskyPrivateFeedRule(),
+            SocialNetwork::Mastodon->value => new MastodonPrivateFeedRule(),
+            SocialNetwork::Lemmy->value => new LemmyPrivateFeedRule(),
         ]));
     }
 

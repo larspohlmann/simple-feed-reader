@@ -16,6 +16,7 @@ use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Model\TimelinePageModel;
+use App\Service\Social\Social\PrivateFeedRule\MastodonPrivateFeedRule;
 use App\Service\Social\Social\TimelineSource\MastodonTimelineSource;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
@@ -303,7 +304,10 @@ final class MastodonTimelineSourceTest extends TestCase
 
     private function source(RoutedHttpClient $http): MastodonTimelineSource
     {
-        return new MastodonTimelineSource(SocialApiWiring::mastodonAccountApi($http->client()));
+        return new MastodonTimelineSource(
+            SocialApiWiring::mastodonAccountApi($http->client()),
+            new MastodonPrivateFeedRule(),
+        );
     }
 
     private static function socialFeed(SocialFeedKind $kind, string $remoteId): SocialFeed

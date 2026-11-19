@@ -13,6 +13,11 @@ final class SocialSearchQuery
         return trim(preg_replace('/\s+/u', ' ', $query) ?? $query);
     }
 
+    public static function isValid(string $query): bool
+    {
+        return '' !== $query && mb_strlen($query) <= self::MAX_LENGTH;
+    }
+
     private function __construct()
     {
     }

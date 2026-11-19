@@ -24,6 +24,8 @@ use App\Service\Social\Social\LemmyApiClient;
 use App\Service\Social\Social\LemmyPostEntries;
 use App\Service\Social\Social\MastodonAccountApi;
 use App\Service\Social\Social\MastodonApiClient;
+use App\Service\Social\Social\PrivateFeedRule\LemmyPrivateFeedRule;
+use App\Service\Social\Social\PrivateFeedRule\MastodonPrivateFeedRule;
 use App\Service\Social\Social\StoredCredential;
 use App\Service\Social\Social\TimelineRounds;
 use App\Service\Foundation\Text\MarkdownHtml;
@@ -217,11 +219,13 @@ final class SocialApiWiring
             TaggedItemOf::index(MastodonTimelineSource::class)
                 => static fn (): MastodonTimelineSource => new MastodonTimelineSource(
                     self::mastodonAccountApi($http),
+                    new MastodonPrivateFeedRule(),
                 ),
             TaggedItemOf::index(LemmyTimelineSource::class)
                 => static fn (): LemmyTimelineSource => new LemmyTimelineSource(
                     self::lemmyAccountApi($http),
                     self::lemmyPostEntries(),
+                    new LemmyPrivateFeedRule(),
                 ),
         ]));
     }
