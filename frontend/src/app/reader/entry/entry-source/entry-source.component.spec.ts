@@ -92,10 +92,11 @@ describe('EntrySourceComponent', () => {
       expect(host.querySelector('a.community')).toBeNull();
     });
 
-    it('names the community in a kicker as plain text', () => {
+    it('names the community in a kicker as its own item after a separator item, so the kicker gap spaces both', () => {
       const host = renderSource(anEntry({ poster: alice, community }), 'xml', 'kicker');
 
-      expect(host.querySelector('span.community')?.textContent?.trim()).toBe('· c/technology');
+      expect(host.querySelector('.community-separator')?.textContent).toBe('·');
+      expect(host.querySelector('span.community')?.textContent).toBe('c/technology');
     });
 
     it('links the community in the article through OwnInstanceLinks', () => {
