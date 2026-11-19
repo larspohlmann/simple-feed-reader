@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Lemmy;
 
 use App\Service\Social\Lemmy\LemmyCandidateSource;
-use App\Service\Social\Lemmy\LemmyCommunities;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Lemmy\LemmyCommunities;
 use App\Service\Social\Social\Model\CollectedItemsModel;
 use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\RoutedHttpClient;

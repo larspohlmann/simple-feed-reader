@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Lemmy;
 
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Lemmy\LemmyPrivateFeedRule;
 use App\Service\Social\Lemmy\LemmySearchSource;
-use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
 use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
