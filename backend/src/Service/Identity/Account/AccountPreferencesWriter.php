@@ -11,11 +11,11 @@ use App\Repository\FeedDirectoryScopeRepository;
 use App\Repository\ReadingSettingsRepository;
 use App\Repository\SharingSettingsRepository;
 use App\Service\Identity\Account\Model\SharingSettingsModel;
-use App\Service\Sourcing\FeedDirectory\FeedDirectoryFiles;
-use App\Service\Sourcing\FeedDirectory\Model\FeedDirectoryScopeModel;
+use App\Service\Identity\Passkey\PasskeyOffer;
 use App\Service\Outbound\Mail\Digest\DigestEnablement;
 use App\Service\Outbound\Mail\Digest\Model\DigestConfigurationModel;
-use App\Service\Identity\Passkey\PasskeyOffer;
+use App\Service\Sourcing\FeedDirectory\FeedDirectoryFiles;
+use App\Service\Sourcing\FeedDirectory\Model\FeedDirectoryScopeModel;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class AccountPreferencesWriter

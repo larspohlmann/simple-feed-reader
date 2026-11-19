@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Sourcing\Discovery\FeedDiscovery;
 
-use App\Service\Sourcing\Discovery\Exception\SiteThrottledException;
-use App\Service\Sourcing\Discovery\Model\ScrapeFailureReason;
-use App\Service\Sourcing\Discovery\Model\ScrapeFallback;
 use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
 use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
 use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Outbound\Fetch\Exception\SsrfBlockedException;
 use App\Service\Outbound\Fetch\Model\FetchResponseModel;
-use App\Tests\Service\Sourcing\Discovery\BuildsFeedDiscovery;
+use App\Service\Sourcing\Discovery\Exception\SiteThrottledException;
+use App\Service\Sourcing\Discovery\Model\ScrapeFailureReason;
+use App\Service\Sourcing\Discovery\Model\ScrapeFallback;
 use App\Tests\Service\Ingestion\Scraper\ScrapedFixtures;
+use App\Tests\Service\Sourcing\Discovery\BuildsFeedDiscovery;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class FeedDiscoveryTest extends KernelTestCase

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Content\Transcript\TranscriptSource;
 
+use App\Service\Content\Transcript\Exception\TranscriptUnreachableException;
+use App\Service\Content\Transcript\Exception\TranscriptUnusableException;
 use App\Service\Outbound\Fetch\Exception\FetchException;
 use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Outbound\Fetch\Exception\SsrfBlockedException;
@@ -12,8 +14,6 @@ use App\Service\Outbound\Fetch\GuardedApiClient;
 use App\Service\Outbound\Fetch\Model\ApiBudgetModel;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Outbound\Fetch\Model\ResponseSizeLimit;
-use App\Service\Content\Transcript\Exception\TranscriptUnreachableException;
-use App\Service\Content\Transcript\Exception\TranscriptUnusableException;
 
 final readonly class GuardedTranscriptSource implements TranscriptSourceInterface
 {

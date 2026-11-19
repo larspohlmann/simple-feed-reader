@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Ingestion\Parser;
 
-use App\Service\Outbound\Image\Model\DeclaredImageModel;
 use App\Service\Ingestion\Parser\Exception\FeedParseException;
 use App\Service\Ingestion\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
 use App\Service\Ingestion\Parser\Support\EntryTitle;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
 
 /**
  * Turns a WordPress `wp/v2/posts` JSON array (`_fields`-pruned, no `_embed`) into a ParsedFeedModel, for the refresh

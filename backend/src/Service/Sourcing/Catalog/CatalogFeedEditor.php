@@ -7,9 +7,9 @@ namespace App\Service\Sourcing\Catalog;
 use App\Entity\CatalogFeed;
 use App\Repository\CatalogCategoryRepository;
 use App\Repository\CatalogFeedRepository;
+use App\Service\Foundation\Ordering\PositionReorderer;
 use App\Service\Sourcing\Catalog\Factory\CatalogFeedFactory;
 use App\Service\Sourcing\Catalog\Model\CatalogFeedDetailsModel;
-use App\Service\Foundation\Ordering\PositionReorderer;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class CatalogFeedEditor

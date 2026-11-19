@@ -7,8 +7,8 @@ namespace App\Service\Social\Lemmy\Support;
 use App\Enum\VoteScore;
 use App\Service\Content\Comments\Support\LemmyAuthor;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
-use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Lemmy\Model\LemmyTargetModel;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Model\PostPreviewModel;
 
 final class LemmyView

@@ -8,8 +8,10 @@ use App\Entity\EntryChapters;
 use App\Entity\EntryMedium;
 use App\Entity\EntryOrigin;
 use App\Entity\LinkCardContent;
+use App\Entity\LinkLanguage;
 use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;
+use App\Entity\SharedLink;
 use App\Enum\FeedLanguage;
 use App\Service\Operations\Backup\Dto\EntryLine;
 use App\Service\Operations\Backup\Exception\InvalidBackupException;
@@ -17,8 +19,6 @@ use App\Service\Operations\Backup\Model\EntryCompanionsModel;
 use App\Tests\Support\BackupLineRecords;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use App\Entity\SharedLink;
-use App\Entity\LinkLanguage;
 
 final class EntryLineTest extends TestCase
 {

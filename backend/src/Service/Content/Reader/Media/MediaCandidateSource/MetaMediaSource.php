@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Content\Reader\Media\MediaCandidateSource;
 
-use App\Service\Foundation\Html\Support\MetaTags;
 use App\Service\Content\Reader\Media\MediaUrlKind;
 use App\Service\Content\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Content\Reader\Media\Model\RawPageModel;
+use App\Service\Foundation\Html\Support\MetaTags;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Identity\Account;
 
-use App\Enum\SocialFeedKind;
 use App\Entity\AiProviderSettings;
 use App\Entity\Feed;
 use App\Entity\ProfileSettingsValues;
@@ -12,10 +11,11 @@ use App\Entity\RecommendationSettings;
 use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Service\Identity\Account\Exception\LastAdminException;
+use App\Enum\SocialFeedKind;
 use App\Exception\ValidationException;
-use App\Service\Identity\Account\AccountDeleter;
 use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
+use App\Service\Identity\Account\AccountDeleter;
+use App\Service\Identity\Account\Exception\LastAdminException;
 use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PrivateFeedsWiring;

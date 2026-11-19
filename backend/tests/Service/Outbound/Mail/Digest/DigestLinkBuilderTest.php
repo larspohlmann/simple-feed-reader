@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Outbound\Mail\Digest;
 
-use App\Service\Outbound\Mail\Digest\DigestLinkBuilder;
 use App\Service\Operations\Settings\PublicBaseUrl\PublicBaseUrlInterface;
+use App\Service\Outbound\Mail\Digest\DigestLinkBuilder;
 use App\Tests\Support\FixedPublicBaseUrl;
 use PHPUnit\Framework\TestCase;
 

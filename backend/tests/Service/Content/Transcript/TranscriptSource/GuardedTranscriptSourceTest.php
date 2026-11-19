@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Content\Transcript\TranscriptSource;
 
+use App\Service\Content\Transcript\Exception\TranscriptUnreachableException;
+use App\Service\Content\Transcript\Exception\TranscriptUnusableException;
+use App\Service\Content\Transcript\TranscriptSource\GuardedTranscriptSource;
 use App\Service\Outbound\Fetch\GuardedApiClient;
 use App\Service\Outbound\Fetch\IpValidator;
 use App\Service\Outbound\Fetch\Model\ResponseSizeLimit;
 use App\Service\Outbound\Fetch\UrlGuard;
-use App\Service\Content\Transcript\Exception\TranscriptUnreachableException;
-use App\Service\Content\Transcript\Exception\TranscriptUnusableException;
-use App\Service\Content\Transcript\TranscriptSource\GuardedTranscriptSource;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\StaticDnsResolver;
 use PHPUnit\Framework\Attributes\DataProvider;

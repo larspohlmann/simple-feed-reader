@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Mastodon\Support;
 
 use App\Service\Foundation\Json\Model\JsonNodeModel;
-use App\Service\Social\Social\Model\SocialCollectionModel;
 use App\Service\Social\Mastodon\Support\MastodonFollowedTag;
+use App\Service\Social\Social\Model\SocialCollectionModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

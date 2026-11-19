@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Service\Content\Reader\Media;
 
-use App\Service\Outbound\Image\Model\ImageIdentityModel;
 use App\Service\Content\Reader\Media\Model\ArticleMediaModel;
 use App\Service\Content\Reader\Media\Model\EmbedTargetModel;
 use App\Service\Content\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Content\Reader\Media\Model\MediaInsertionPlanModel;
 use App\Service\Content\Reader\Media\Model\MediaKind;
 use App\Service\Content\Reader\Media\Model\PageTextBlocksModel;
+use App\Service\Outbound\Image\Model\ImageIdentityModel;
 use Dom\Element;
 use Dom\HTMLDocument;
 

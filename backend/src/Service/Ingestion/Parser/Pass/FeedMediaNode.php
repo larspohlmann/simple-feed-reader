@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Ingestion\Parser\Pass;
 
-use App\Service\Outbound\Image\Model\DeclaredImageModel;
 use App\Service\Ingestion\Parser\Model\FeedMediaKind;
 use App\Service\Ingestion\Parser\Model\FeedNamespace;
 use App\Service\Ingestion\Parser\Model\ParsedAttachmentModel;
@@ -14,6 +13,7 @@ use App\Service\Ingestion\Parser\Support\DeclaredImages;
 use App\Service\Ingestion\Parser\Support\FeedMediaClassifier;
 use App\Service\Ingestion\Parser\Support\MediaDescription;
 use App\Service\Ingestion\Parser\Support\MediaDuration;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
 
 /**
  * One feed media element — a `<media:content>`, `<media:thumbnail>`, or an

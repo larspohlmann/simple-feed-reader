@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Ingestion\Refresh\Pass\PassLane;
 
 use App\Entity\Feed;
+use App\Service\Ingestion\Refresh\Model\PassOutcome\TimelinePassOutcomeModel;
 use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
 use App\Service\Outbound\Fetch\Model\SettlementModel;
-use App\Service\Ingestion\Refresh\Model\PassOutcome\TimelinePassOutcomeModel;
 use App\Service\Social\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
 use App\Service\Social\Social\Pass\TimelineRound;
 

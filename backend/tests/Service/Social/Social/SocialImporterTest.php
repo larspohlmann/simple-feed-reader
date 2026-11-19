@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Social;
 
-use App\Enum\SocialFeedKind;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
@@ -14,6 +13,7 @@ use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Enum\SubscriptionSet;
@@ -21,11 +21,11 @@ use App\Exception\InvalidSelectionException;
 use App\Repository\EntryStateRepository;
 use App\Repository\KnownSocialCollectionRepository;
 use App\Repository\SubscriptionRepository;
+use App\Service\Social\Bluesky\Model\HiddenProfileModel;
 use App\Service\Social\Social\Exception\InvalidSocialImportFeedException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\FollowAvatarCache;
 use App\Service\Social\Social\Model\FollowedAccountModel;
-use App\Service\Social\Bluesky\Model\HiddenProfileModel;
 use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Service\Social\Social\Model\SocialImportFeedModel;
 use App\Service\Social\Social\Model\SocialImportModel;

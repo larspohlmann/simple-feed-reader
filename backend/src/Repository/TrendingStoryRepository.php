@@ -10,15 +10,15 @@ use App\Enum\TrendingWindow;
 use App\Service\Curation\Trending\Exception\TrendingStoryNotFoundException;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\ReaderWindowModel;
-use App\Service\Curation\Trending\Model\StoryHeadlineModel;
+use App\Service\Curation\Trending\Model\ShownEntriesModel;
 use App\Service\Curation\Trending\Model\StoryHeadingModel;
+use App\Service\Curation\Trending\Model\StoryHeadlineModel;
 use App\Service\Curation\Trending\Support\HeadlineBody;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Types\Types;
-use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
-use App\Service\Curation\Trending\Model\ShownEntriesModel;
 
 /**
  * The per-reader reads of the Trending snapshot (#2017).

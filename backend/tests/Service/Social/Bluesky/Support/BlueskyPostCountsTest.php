@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Bluesky\Support;
 
 use App\Service\Foundation\Json\Model\JsonNodeModel;
-use App\Service\Social\Social\Model\SocialCountsModel;
 use App\Service\Social\Bluesky\Support\BlueskyPostCounts;
+use App\Service\Social\Social\Model\SocialCountsModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

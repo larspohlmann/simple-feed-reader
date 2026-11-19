@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Outbound\Fetch\FeedFetcher;
 
-use App\Tests\Support\PinnedRequestOptions;
 use App\Service\Outbound\Fetch\AnswerSettler\PassThroughSettler;
 use App\Service\Outbound\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
 use App\Service\Outbound\Fetch\DnsResolver\DnsResolverInterface;
@@ -18,6 +17,7 @@ use App\Service\Outbound\Fetch\Model\ResponseSizeLimit;
 use App\Service\Outbound\Fetch\UrlGuard;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
+use App\Tests\Support\PinnedRequestOptions;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;

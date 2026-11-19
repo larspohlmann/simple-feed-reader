@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
-use App\Enum\SocialFeedKind;
 use App\Entity\Subscription;
+use App\Enum\SocialFeedKind;
 use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
 use App\Service\Outbound\Fetch\Model\FetchResponseModel;
 use App\Service\Social\Social\Model\PrivateFeedModel;

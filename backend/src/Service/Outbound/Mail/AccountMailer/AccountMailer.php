@@ -6,9 +6,9 @@ namespace App\Service\Outbound\Mail\AccountMailer;
 
 use App\Entity\User;
 use App\Enum\RegistrationMethod;
+use App\Service\Operations\Settings\PublicBaseUrl\PublicBaseUrlInterface;
 use App\Service\Outbound\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use App\Service\Outbound\Mail\Model\PendingApprovalNoticeModel;
-use App\Service\Operations\Settings\PublicBaseUrl\PublicBaseUrlInterface;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;

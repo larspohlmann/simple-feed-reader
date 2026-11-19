@@ -6,15 +6,15 @@ namespace App\Tests\Support;
 
 use App\Repository\EntryMembershipSweepRepository;
 use App\Repository\SavedSearchEntryMembershipRepository;
-use App\Service\Library\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface;
 use App\Repository\SavedSearchRepository;
 use App\Service\Library\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
 use App\Service\Library\Search\Membership\SavedSearchMembershipSweep;
+use App\Service\Library\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
+use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use Psr\Container\ContainerInterface;
 
 /**
  * A membership sweep over the test container's real repositories and a

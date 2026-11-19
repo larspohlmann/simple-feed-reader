@@ -6,11 +6,11 @@ namespace App\Service\Curation\Trending;
 
 use App\Enum\TrendingWindow;
 use App\Repository\TrendingEntryRepository;
-use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Curation\Trending\Model\TrendingStoryModel;
 use App\Service\Curation\Trending\Pass\HeadlineWindow;
 use App\Service\Curation\Trending\Pass\SharedArticles;
 use App\Service\Curation\Trending\Pass\TrendingRun;
+use App\Service\Foundation\Clock\NaiveUtcClock;
 
 /** Reads one window's entries and groups them into stories, in memory; writing them is the builder's (#2017). */
 final readonly class TrendingGrouping

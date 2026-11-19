@@ -7,8 +7,8 @@ namespace App\Service\Operations\Admin;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Service\Operations\Admin\Model\UserFootprintModel;
 use App\Service\Library\Subscription\SubscriptionLimitResolver;
+use App\Service\Operations\Admin\Model\UserFootprintModel;
 use Psr\Clock\ClockInterface;
 
 final readonly class UserStatistics

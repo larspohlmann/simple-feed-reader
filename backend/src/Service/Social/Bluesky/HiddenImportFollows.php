@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Bluesky;
 
-use App\Service\Social\BlueskyPost\Support\BlueskyActorKey;
 use App\Service\Social\Bluesky\Model\HiddenProfileModel;
-use App\Service\Social\Social\Model\SocialImportFeedModel;
 use App\Service\Social\Bluesky\Support\BlueskyActor;
+use App\Service\Social\BlueskyPost\Support\BlueskyActorKey;
+use App\Service\Social\Social\Model\SocialImportFeedModel;
 
 final readonly class HiddenImportFollows
 {

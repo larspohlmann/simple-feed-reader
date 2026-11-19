@@ -7,13 +7,13 @@ namespace App\Service\Outbound\Mail\Digest;
 use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Repository\EntryListRow;
+use App\Service\Foundation\Text\Support\ClippedText;
+use App\Service\Foundation\Text\Support\PlainText;
 use App\Service\Outbound\Mail\Digest\DigestSavedSearches\DigestSavedSearchesInterface;
 use App\Service\Outbound\Mail\Digest\Model\DigestEntryModel;
 use App\Service\Outbound\Mail\Digest\Model\DigestGroupModel;
 use App\Service\Outbound\Mail\Digest\Model\DigestModel;
 use App\Service\Outbound\Mail\Digest\Model\DigestSearchMatchesModel;
-use App\Service\Foundation\Text\Support\ClippedText;
-use App\Service\Foundation\Text\Support\PlainText;
 
 /**
  * One group per `includeInDigest` saved search with new matches, in the user's saved-search order. A user with nothing

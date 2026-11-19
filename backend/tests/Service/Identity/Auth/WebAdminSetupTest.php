@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Identity\Auth;
 
-use App\Service\Identity\Auth\Exception\InvalidSetupSecretException;
-use App\Service\Identity\Auth\Exception\SetupUnavailableException;
 use App\Repository\UserRepository;
 use App\Service\Identity\Auth\BootstrapAdminProvisioner;
+use App\Service\Identity\Auth\Exception\InvalidSetupSecretException;
+use App\Service\Identity\Auth\Exception\SetupUnavailableException;
 use App\Service\Identity\Auth\WebAdminSetup;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;

@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Bluesky;
 
+use App\Service\Social\Bluesky\BlueskyPostReposter;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Model\SocialPostModel;
-use App\Service\Social\Bluesky\BlueskyPostReposter;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\TestCase;

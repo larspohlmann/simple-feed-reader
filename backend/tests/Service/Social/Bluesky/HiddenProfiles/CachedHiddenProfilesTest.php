@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Bluesky\HiddenProfiles;
 
-use App\Service\Social\BlueskyPost\AppViewClient;
-use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Bluesky\HiddenProfiles\CachedHiddenProfiles;
 use App\Service\Social\Bluesky\Model\HiddenProfileModel;
 use App\Service\Social\Bluesky\ProfileVisibilityCache;
+use App\Service\Social\BlueskyPost\AppViewClient;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Tests\Support\BlueskyProfiles;
 use App\Tests\Support\StubHiddenProfiles;
 use PHPUnit\Framework\TestCase;

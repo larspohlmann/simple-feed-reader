@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Operations\Worker\Handler;
 
+use App\Service\Operations\Worker\Message\SwitchHiddenProfileFeeds;
 use App\Service\Social\Bluesky\HiddenProfileSwitchSweep;
 use App\Service\Social\Social\Model\ProfileCallBudgetModel;
-use App\Service\Operations\Worker\Message\SwitchHiddenProfileFeeds;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 

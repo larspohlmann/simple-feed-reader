@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Mastodon;
 
+use App\Service\Social\Mastodon\MastodonOriginCountsSource;
 use App\Service\Social\Social\Exception\PostNotPubliclyCountableException;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Model\SocialCountsModel;
-use App\Service\Social\Mastodon\MastodonOriginCountsSource;
 use App\Tests\Support\AssertsRefusal;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;

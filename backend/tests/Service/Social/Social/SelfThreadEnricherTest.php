@@ -27,8 +27,8 @@ use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\SelfThreadEnrichers;
-use Symfony\Component\Clock\MockClock;
 use App\Tests\Support\SharedLinks;
+use Symfony\Component\Clock\MockClock;
 
 final class SelfThreadEnricherTest extends DbTestCase
 {

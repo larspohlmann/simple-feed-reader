@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Ingestion\Parser;
 
-use App\Service\Outbound\Image\Model\DeclaredImageModel;
+use App\Service\Foundation\Url\Support\HttpsImageUrl;
 use App\Service\Ingestion\Parser\Exception\FeedParseException;
 use App\Service\Ingestion\Parser\Model\ParsedCategoryModel;
 use App\Service\Ingestion\Parser\Model\ParsedEntryMediaModel;
@@ -12,7 +12,7 @@ use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
 use App\Service\Ingestion\Parser\Support\DateParser;
 use App\Service\Ingestion\Parser\Support\EntryTitle;
-use App\Service\Foundation\Url\Support\HttpsImageUrl;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
 
 /**
  * Turns a Mixcloud `/<user>/cloudcasts/` list into a ParsedFeedModel. The list carries no descriptions, and an

@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Entity\EntryMedium;
+use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;
-use App\Entity\LinkCardContent;
 use App\Tests\Support\JsonMappers;
 use PHPUnit\Framework\TestCase;
 

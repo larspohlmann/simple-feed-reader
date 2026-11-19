@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Mastodon;
 
 use App\Entity\LinkCardContent;
+use App\Service\Social\Mastodon\MastodonPostResolver;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
@@ -12,7 +13,6 @@ use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
 use App\Service\Social\Social\Model\PostPreviewModel;
 use App\Service\Social\Social\Model\SocialCountsModel;
-use App\Service\Social\Mastodon\MastodonPostResolver;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;

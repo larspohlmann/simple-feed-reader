@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Social\Bluesky;
 
 use App\Enum\SocialNetwork;
-use App\Service\Social\BlueskyPost\Support\BlueskyActorKey;
 use App\Service\Social\Bluesky\Support\BlueskyProfileActor;
 use App\Service\Social\Bluesky\Support\BlueskyProfileFeed;
+use App\Service\Social\BlueskyPost\Support\BlueskyActorKey;
 use App\Service\Social\Social\ProfileFeedRule\ProfileFeedRuleInterface;
 use App\Service\Social\Social\Support\ProfileIdentity;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;

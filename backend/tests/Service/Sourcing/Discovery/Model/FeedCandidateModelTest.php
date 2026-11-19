@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Sourcing\Discovery\Model;
 
-use App\Service\Sourcing\Discovery\Model\DiscoveredFeedModel;
-use App\Service\Sourcing\Discovery\Model\FeedCandidateModel;
 use App\Service\Ingestion\Parser\Model\FeedSyntax;
 use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
+use App\Service\Sourcing\Discovery\Model\DiscoveredFeedModel;
+use App\Service\Sourcing\Discovery\Model\FeedCandidateModel;
 use PHPUnit\Framework\TestCase;
 
 final class FeedCandidateModelTest extends TestCase

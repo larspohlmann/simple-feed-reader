@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Outbound\Fetch\Pass;
 
+use App\Service\Foundation\Url\Support\UrlOrigin;
 use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
 use App\Service\Outbound\Fetch\Support\UrlResolver;
-use App\Service\Foundation\Url\Support\UrlOrigin;
 
 /** The URL context of one page, bound once and asked many times. */
 final readonly class PageUrls

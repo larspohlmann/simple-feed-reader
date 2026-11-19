@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Operations\Worker\Handler;
 
+use App\Service\Operations\Worker\Message\VerifyPendingImages;
 use App\Service\Outbound\Image\ImageVerificationSweep;
 use App\Service\Outbound\Image\Model\ImageVerificationBudgetModel;
-use App\Service\Operations\Worker\Message\VerifyPendingImages;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 

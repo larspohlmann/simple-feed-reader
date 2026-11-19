@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\Operations\Maintenance\MaintenanceSweep;
 
 use App\Service\Content\Transcript\Model\TranscriptSweepReportModel;
-use App\Service\Operations\Maintenance\MaintenanceSweep\TranscriptsTickSweep;
 use App\Service\Content\Transcript\TranscriptSource\TranscriptSourceInterface;
 use App\Service\Content\Transcript\TranscriptSweep;
+use App\Service\Operations\Maintenance\MaintenanceSweep\TranscriptsTickSweep;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ScriptedTranscriptSource;
 use App\Tests\Support\TranscriptFixtures;

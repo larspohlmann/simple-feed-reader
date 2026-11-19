@@ -8,9 +8,9 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Service\Operations\Admin\UserStatistics;
 use App\Service\Library\Subscription\SubscriptionLimitResolver;
 use App\Service\Library\Subscription\SubscriptionService;
+use App\Service\Operations\Admin\UserStatistics;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 

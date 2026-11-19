@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Operations\Backup\Pass;
 
 use App\Entity\Tag;
+use App\Service\Library\SavedPosts\Support\SavedFeedUrl;
 use App\Service\Operations\Backup\Dto\BackupHeader;
 use App\Service\Operations\Backup\Dto\FeedLine;
 use App\Service\Operations\Backup\Dto\SavedSearchLine;
@@ -12,7 +13,6 @@ use App\Service\Operations\Backup\Dto\SubscriptionLine;
 use App\Service\Operations\Backup\Dto\TagLine;
 use App\Service\Operations\Backup\Exception\InvalidBackupException;
 use App\Service\Operations\Backup\Model\BackupInventoryModel;
-use App\Service\Library\SavedPosts\Support\SavedFeedUrl;
 
 /**
  * One foundation inspection's working state: the header, a count per line

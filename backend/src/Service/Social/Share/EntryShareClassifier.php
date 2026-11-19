@@ -6,13 +6,13 @@ namespace App\Service\Social\Share;
 
 use App\Entity\Entry;
 use App\Enum\ShareKind;
-use App\Service\Ingestion\Parser\Support\VisualMedium;
 use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Foundation\Url\Support\YouTubeUrl;
+use App\Service\Ingestion\Parser\Support\VisualMedium;
 use App\Service\Social\Share\Model\SharedLinksModel;
 use App\Service\Social\Share\PendingEmbed\PendingEmbedInterface;
 use App\Service\Social\Share\Support\SharedLinks;
 use App\Service\Social\Share\Support\TitledShareTarget;
-use App\Service\Foundation\Url\Support\YouTubeUrl;
 
 /**
  * Whether an entry is a shared link or a shared picture or video, so it takes the matching card. Only a short entry

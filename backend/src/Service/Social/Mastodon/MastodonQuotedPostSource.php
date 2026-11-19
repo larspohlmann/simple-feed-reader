@@ -5,15 +5,15 @@ declare(strict_types=1);
 namespace App\Service\Social\Mastodon;
 
 use App\Entity\QuotedPostContent;
-use App\Service\Foundation\Json\Model\JsonNodeModel;
-use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Content\LinkCard\Exception\QuotedPostUnavailableException;
 use App\Service\Content\LinkCard\QuotedPostSource\QuotedPostSourceInterface;
-use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
+use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Social\Mastodon\MastodonApiClient;
 use App\Service\Social\Mastodon\Support\MastodonQuotedStatus;
 use App\Service\Social\Mastodon\Support\MastodonStatusAddress;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 
 /** Reads a quoted status from its own instance, anonymously, as #1615 reads its counts. */
 final readonly class MastodonQuotedPostSource implements QuotedPostSourceInterface

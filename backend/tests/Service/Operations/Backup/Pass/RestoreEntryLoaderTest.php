@@ -6,6 +6,14 @@ namespace App\Tests\Service\Operations\Backup\Pass;
 
 use App\Entity\User;
 use App\Repository\EntryBatchInserter;
+use App\Repository\SharedLinkRepository;
+use App\Repository\SharedLinkResolutionRepository;
+use App\Service\Content\LinkCard\SharedLinkWriter;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Foundation\Url\UrlNormalizer;
+use App\Service\Ingestion\Language\Factory\LanguageDetectionFactory;
+use App\Service\Ingestion\Language\LanguageGuess;
+use App\Service\Ingestion\Language\PreviewLanguage;
 use App\Service\Operations\Backup\Dto\EntryLine;
 use App\Service\Operations\Backup\Dto\EntryStateLine;
 use App\Service\Operations\Backup\Exception\InvalidBackupException;
@@ -22,17 +30,9 @@ use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\EntryUrlHashes;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\Persistence\ManagerRegistry;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
-use Doctrine\Persistence\ManagerRegistry;
-use App\Service\Ingestion\Language\PreviewLanguage;
-use App\Service\Ingestion\Language\LanguageGuess;
-use App\Service\Ingestion\Language\Factory\LanguageDetectionFactory;
-use App\Service\Foundation\Url\UrlNormalizer;
-use App\Service\Foundation\Clock\NaiveUtcClock;
-use App\Service\Content\LinkCard\SharedLinkWriter;
-use App\Repository\SharedLinkRepository;
-use App\Repository\SharedLinkResolutionRepository;
 
 /**
  * Pins the read-back directly: after a batch insert the loader asks for the ids of exactly the hashes it wrote, never

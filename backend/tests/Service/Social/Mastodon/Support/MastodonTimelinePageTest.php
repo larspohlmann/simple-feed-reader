@@ -6,13 +6,13 @@ namespace App\Tests\Service\Social\Mastodon\Support;
 
 use App\Entity\LinkCardContent;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
-use App\Service\Outbound\Image\Model\DeclaredImageModel;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Parser\Model\ParsedMediumModel;
 use App\Service\Ingestion\Parser\Model\VisualMediaKind;
 use App\Service\Ingestion\Parser\Support\EntryTitle;
-use App\Service\Social\Social\Model\TimelineSelfReplyModel;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
 use App\Service\Social\Mastodon\Support\MastodonTimelinePage;
+use App\Service\Social\Social\Model\TimelineSelfReplyModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

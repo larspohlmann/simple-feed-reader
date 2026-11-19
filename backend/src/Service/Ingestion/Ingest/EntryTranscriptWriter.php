@@ -6,8 +6,8 @@ namespace App\Service\Ingestion\Ingest;
 
 use App\Entity\Entry;
 use App\Entity\EntryTranscript;
-use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use Doctrine\ORM\EntityManagerInterface;
 
 /** Queues the transcript a newly created entry declared; TranscriptSweep fetches it. The caller flushes. */

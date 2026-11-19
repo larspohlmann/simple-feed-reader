@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Mastodon;
 
-use App\Service\Social\Social\TimelineSource\TimelineSourceInterface;
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
@@ -13,16 +12,17 @@ use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
-use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
-use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Mastodon\MastodonAccountApi;
 use App\Service\Social\Mastodon\MastodonApiClient;
-use App\Service\Social\Social\Model\TimelinePageModel;
 use App\Service\Social\Mastodon\MastodonPrivateFeedRule;
 use App\Service\Social\Mastodon\Support\MastodonFeedIds;
 use App\Service\Social\Mastodon\Support\MastodonSearchPage;
-use App\Service\Social\Mastodon\Support\MastodonTimelinePage;
 use App\Service\Social\Mastodon\Support\MastodonSearchPath;
+use App\Service\Social\Mastodon\Support\MastodonTimelinePage;
+use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Model\TimelinePageModel;
+use App\Service\Social\Social\TimelineSource\TimelineSourceInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Mastodon->value)]

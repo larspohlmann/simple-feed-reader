@@ -11,9 +11,9 @@ use App\Enum\TrendingWindow;
 use App\Http\SubscriptionJson;
 use App\Http\UnreadTotalsJson;
 use App\Service\Curation\Trending\Model\SurfaceTalliesModel;
+use App\Service\Curation\Trending\Model\TrendingUnopenedModel;
 use App\Service\Library\Subscription\Model\SubscriptionTalliesModel;
 use App\Service\Library\Subscription\Model\UnreadTotalsModel;
-use App\Service\Curation\Trending\Model\TrendingUnopenedModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SocialAccounts;
 

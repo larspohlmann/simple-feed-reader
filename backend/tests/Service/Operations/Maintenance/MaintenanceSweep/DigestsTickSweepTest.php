@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Operations\Maintenance\MaintenanceSweep;
 
-use App\Service\Outbound\Mail\Digest\Model\DigestSweepReportModel;
+use App\Service\Operations\Maintenance\MaintenanceSweep\DigestsTickSweep;
 use App\Service\Outbound\Mail\Digest\DigestComposer;
 use App\Service\Outbound\Mail\Digest\DigestMailer\DigestMailerInterface;
 use App\Service\Outbound\Mail\Digest\DigestRecipients\DigestRecipientsInterface;
 use App\Service\Outbound\Mail\Digest\DigestSchedule;
+use App\Service\Outbound\Mail\Digest\Model\DigestSweepReportModel;
 use App\Service\Outbound\Mail\Digest\SendDueDigests;
 use App\Service\Outbound\Mail\MailCapability;
 use App\Service\Outbound\Mail\MailSendingSettings\MailSendingSettingsInterface;
-use App\Service\Operations\Maintenance\MaintenanceSweep\DigestsTickSweep;
 use App\Tests\DbTestCase;
 use App\Tests\Support\InMemoryMailFailureRecorder;
 use Psr\Log\NullLogger;

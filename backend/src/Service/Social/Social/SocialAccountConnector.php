@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social;
 
-use App\Enum\SocialFeedKind;
 use App\Entity\SocialAccount;
 use App\Entity\User;
+use App\Enum\SocialFeedKind;
 use App\Repository\SocialAccountRepository;
+use App\Service\Library\Subscription\Exception\SubscriptionLimitReachedException;
 use App\Service\Social\Social\AccountVerifier\AccountVerifierInterface;
 use App\Service\Social\Social\Crypto\SocialCredentialCipher;
 use App\Service\Social\Social\Exception\NotAnAppPasswordException;
@@ -19,7 +20,6 @@ use App\Service\Social\Social\Model\CredentialReplacementModel;
 use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Service\Social\Social\Model\SocialCredentialsModel;
 use App\Service\Social\Social\Model\VerifiedAccountModel;
-use App\Service\Library\Subscription\Exception\SubscriptionLimitReachedException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;

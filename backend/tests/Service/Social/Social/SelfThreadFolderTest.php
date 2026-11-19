@@ -9,6 +9,7 @@ use App\Entity\EntryMedium;
 use App\Entity\Feed;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
+use App\Entity\SharedLink;
 use App\Enum\ShareKind;
 use App\Repository\ThreadPostRepository;
 use App\Service\Content\Comments\Model\CommentAuthorModel;
@@ -21,7 +22,6 @@ use App\Service\Social\Social\SelfThreadFolder;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\SharedLinks;
-use App\Entity\SharedLink;
 
 final class SelfThreadFolderTest extends DbTestCase
 {

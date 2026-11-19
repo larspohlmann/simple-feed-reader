@@ -16,6 +16,7 @@ use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
 use App\Entity\SavedEntryOrigin;
+use App\Entity\SharedLink;
 use App\Entity\SocialLike;
 use App\Entity\Subscription;
 use App\Entity\ThreadPost;
@@ -32,12 +33,11 @@ use App\Service\Library\SavedPosts\Model\SavedCopyModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\EntryShareFixtures;
 use App\Tests\Support\SavedPostFixtures;
+use App\Tests\Support\SharedLinks;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
-use App\Tests\Support\SharedLinks;
-use App\Entity\SharedLink;
 
 final class SavedPostRepositoryTest extends DbTestCase
 {

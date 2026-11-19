@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Social\BlueskyPost\EntryEmbedWriter;
 
 use App\Entity\Entry;
-use App\Service\Social\BlueskyPost\Model\FillOutcome;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
+use App\Service\Social\BlueskyPost\Model\FillOutcome;
 
 interface EntryEmbedWriterInterface
 {

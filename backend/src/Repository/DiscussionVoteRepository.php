@@ -8,8 +8,8 @@ use App\Entity\DiscussionVote;
 use App\Entity\Entry;
 use App\Entity\User;
 use App\Enum\VoteScore;
-use Doctrine\DBAL\Types\Types;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**

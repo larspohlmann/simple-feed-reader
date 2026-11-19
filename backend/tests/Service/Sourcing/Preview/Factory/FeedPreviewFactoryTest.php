@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Service\Sourcing\Preview\Factory;
 
 use App\Entity\Headline;
-use App\Service\Outbound\Image\Model\DeclaredImageModel;
+use App\Service\Foundation\Url\Support\HttpsImageUrl;
 use App\Service\Ingestion\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
 use App\Service\Sourcing\Preview\Factory\FeedPreviewFactory;
-use App\Service\Foundation\Url\Support\HttpsImageUrl;
 use PHPUnit\Framework\TestCase;
 
 final class FeedPreviewFactoryTest extends TestCase

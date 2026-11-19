@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Mastodon;
 
-use App\Service\Social\Social\ImportRule\ImportRuleInterface;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Mastodon\Support\MastodonProfileFeed;
+use App\Service\Social\Social\ImportRule\ImportRuleInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Mastodon->value)]

@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Service\Ingestion\Refresh\Pass\PassLane;
 
 use App\Entity\SocialFeed;
-use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
-use App\Service\Outbound\Fetch\Model\ResponseExchangeKind;
 use App\Service\Ingestion\Refresh\Model\PassOutcome\TimelinePassOutcomeModel;
 use App\Service\Ingestion\Refresh\Pass\PassLane\TimelineLane;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
+use App\Service\Outbound\Fetch\Model\ResponseExchangeKind;
 use App\Service\Social\Social\Exception\PrivateFeedOrphanedException;
 use App\Service\Social\Social\Model\SocialAccountSlotModel;
 use App\Service\Social\Social\Model\SocialServerSlotModel;

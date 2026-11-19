@@ -8,7 +8,6 @@ use App\Entity\User;
 use App\Enum\TrendingWindow;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
-use App\Service\Library\EntryList\EntryListRowEnricher;
 use App\Repository\ReadingSettingsRepository;
 use App\Repository\TrendingSnapshotRepository;
 use App\Repository\TrendingStoryFollowRepository;
@@ -16,9 +15,10 @@ use App\Repository\TrendingStoryRepository;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\ShownEntriesModel;
 use App\Service\Curation\Trending\Model\ShownRowModel;
-use App\Service\Curation\Trending\Model\TrendingUnopenedModel;
 use App\Service\Curation\Trending\Model\TrendingPageModel;
+use App\Service\Curation\Trending\Model\TrendingUnopenedModel;
 use App\Service\Curation\Trending\Pass\StoryCardSource;
+use App\Service\Library\EntryList\EntryListRowEnricher;
 
 /** One reader's Trending: their own snapshot cut to their threshold (#2017, #2328). */
 final readonly class TrendingStories

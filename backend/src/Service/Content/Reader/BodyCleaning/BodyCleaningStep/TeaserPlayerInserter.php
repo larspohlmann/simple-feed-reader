@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Content\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Outbound\Image\Model\ImageIdentityModel;
 use App\Service\Content\Reader\BodyCleaning\Pass\BodyCleaningPass;
 use App\Service\Content\Reader\Media\Model\ArticleMediaModel;
 use App\Service\Content\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Content\Reader\Media\Teaser\Model\TeaserPlayerModel;
 use App\Service\Content\Reader\Media\Teaser\TeaserPlayerMarkup;
+use App\Service\Outbound\Image\Model\ImageIdentityModel;
 use Dom\Element;
 use Dom\HTMLDocument;
 

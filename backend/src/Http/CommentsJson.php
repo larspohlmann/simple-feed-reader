@@ -6,9 +6,9 @@ namespace App\Http;
 
 use App\Entity\EntryMedia;
 use App\Service\Content\Comments\Model\CommentPostModel;
-use App\Service\Content\Comments\Model\CommentVoteModel;
 use App\Service\Content\Comments\Model\CommentsResultModel;
 use App\Service\Content\Comments\Model\CommentsStatus;
+use App\Service\Content\Comments\Model\CommentVoteModel;
 use App\Service\Content\Comments\Model\EntryCommentModel;
 
 final readonly class CommentsJson

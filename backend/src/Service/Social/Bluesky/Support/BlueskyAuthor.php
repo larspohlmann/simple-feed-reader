@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Social\Bluesky\Support;
 
 use App\Service\Foundation\Json\Model\JsonNodeModel;
-use App\Service\Social\BlueskyPost\Support\BlueskyWeb;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
+use App\Service\Social\BlueskyPost\Support\BlueskyWeb;
 
 final class BlueskyAuthor
 {

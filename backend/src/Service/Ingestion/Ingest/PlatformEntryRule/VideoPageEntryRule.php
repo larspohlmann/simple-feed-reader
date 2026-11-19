@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Ingestion\Ingest\PlatformEntryRule;
 
-use App\Service\Foundation\Html\Support\HtmlDocumentParser;
-use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Content\Reader\Media\EmbedProviders;
 use App\Service\Content\Reader\Media\MediaMarkup;
 use App\Service\Content\Reader\Media\Model\EmbedTargetModel;
+use App\Service\Foundation\Html\Support\HtmlDocumentParser;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use Dom\HTMLDocument;
 
 final readonly class VideoPageEntryRule implements PlatformEntryRuleInterface

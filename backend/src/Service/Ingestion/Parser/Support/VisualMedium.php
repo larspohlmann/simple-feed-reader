@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Ingestion\Parser\Support;
 
 use App\Entity\EntryMedium;
+use App\Service\Foundation\Url\Support\HttpsImageUrl;
 use App\Service\Ingestion\Parser\Model\FeedMediaKind;
 use App\Service\Ingestion\Parser\Model\VisualMediaKind;
-use App\Service\Foundation\Url\Support\HttpsImageUrl;
 
 final class VisualMedium
 {

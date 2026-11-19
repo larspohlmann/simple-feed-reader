@@ -6,10 +6,10 @@ namespace App\Service\Social\Mastodon\Support;
 
 use App\Entity\EntryMedium;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
+use App\Service\Foundation\Url\Support\HttpsImageUrl;
 use App\Service\Ingestion\Ingest\Support\EntryMediaAssembler;
 use App\Service\Ingestion\Parser\Model\ParsedMediumModel;
 use App\Service\Ingestion\Parser\Model\VisualMediaKind;
-use App\Service\Foundation\Url\Support\HttpsImageUrl;
 
 /** A status's `media_attachments` as pictures and videos; audio and unknown files are left out. */
 final class MastodonAttachments

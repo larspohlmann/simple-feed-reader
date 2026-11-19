@@ -8,15 +8,15 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SourceFormat;
-use App\Service\Sourcing\Discovery\FeedDiscovery\FeedDiscoveryInterface;
-use App\Service\Sourcing\Discovery\Model\ScrapeFallback;
-use App\Service\Sourcing\Discovery\ScrapeFallbackPolicy;
 use App\Service\Ingestion\Feed\OrphanedFeedReclaimer;
 use App\Service\Library\SavedPosts\SavedPostRescue;
 use App\Service\Library\Subscription\Exception\NotAFeedException;
 use App\Service\Library\Subscription\Model\SubscribeOutcomeModel;
 use App\Service\Library\Subscription\Model\SubscribeRequestModel;
 use App\Service\Library\Subscription\SubscribeRoute\SubscribeRouteInterface;
+use App\Service\Sourcing\Discovery\FeedDiscovery\FeedDiscoveryInterface;
+use App\Service\Sourcing\Discovery\Model\ScrapeFallback;
+use App\Service\Sourcing\Discovery\ScrapeFallbackPolicy;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 

@@ -9,8 +9,8 @@ use App\Entity\SocialNotification;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Enum\SocialNotificationKind;
-use Doctrine\DBAL\Types\Types;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 

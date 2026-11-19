@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Ingestion\Scraper\ScrapeLayer;
 
-use App\Service\Outbound\Fetch\Pass\PageUrls;
 use App\Service\Ingestion\Scraper\CardTitle;
 use App\Service\Ingestion\Scraper\Model\ScrapedItemModel;
 use App\Service\Ingestion\Scraper\Pass\CardFields;
+use App\Service\Outbound\Fetch\Pass\PageUrls;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;

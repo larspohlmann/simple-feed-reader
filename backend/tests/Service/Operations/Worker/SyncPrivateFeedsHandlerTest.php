@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Operations\Worker;
 
-use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Operations\Worker\Handler\SyncPrivateFeedsHandler;
 use App\Service\Operations\Worker\Message\SyncPrivateFeeds;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PrivateFeedSyncWiring;
 use App\Tests\Support\RecordingLogger;

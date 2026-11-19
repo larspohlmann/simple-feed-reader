@@ -6,10 +6,10 @@ namespace App\Tests\Service\Social\Mastodon;
 
 use App\Service\Outbound\Fetch\IpValidator;
 use App\Service\Outbound\Fetch\UrlGuard;
+use App\Service\Social\Mastodon\MastodonApiClient;
 use App\Service\Social\Mastodon\MastodonCandidateSource;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Mastodon\MastodonApiClient;
 use App\Service\Social\Social\Model\CollectedItemsModel;
 use App\Service\Social\Social\Model\FollowedAccountModel;
 use App\Service\Social\Social\Model\SocialCollectionModel;

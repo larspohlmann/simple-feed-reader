@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Sourcing\Discovery\ShareLinkFeed;
 
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
 use App\Service\Sourcing\Discovery\Model\FeedCandidateModel;
 use App\Service\Sourcing\Discovery\Model\FeedDiscoveryResultModel;
 use App\Service\Sourcing\Discovery\Model\ScrapeFallback;
-use App\Service\Outbound\Fetch\Model\FetchResponseModel;
 use App\Tests\Service\Sourcing\Discovery\BuildsFeedDiscovery;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;

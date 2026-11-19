@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Bluesky;
 
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
-use App\Service\Social\Bluesky\Model\BlueskySessionModel;
 use App\Service\Social\Bluesky\BlueskySearchSource;
+use App\Service\Social\Bluesky\Model\BlueskySessionModel;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\TestCase;

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Mastodon\Support;
 
-use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Content\Comments\Model\CommentPostModel;
 use App\Service\Content\Comments\Model\CommentViewerModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 
 /** The post a reply in a Mastodon context answer is; null when the answer names no address or no counts for it. */

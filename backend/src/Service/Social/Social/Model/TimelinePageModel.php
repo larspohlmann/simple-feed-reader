@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\Model;
 
-use App\Service\Social\Completion\Model\KnownSharesModel;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
+use App\Service\Social\Completion\Model\KnownSharesModel;
 
 final readonly class TimelinePageModel
 {

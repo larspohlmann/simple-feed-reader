@@ -4,13 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Mastodon\Support;
 
-use App\Service\Social\Social\Support\ShareAttribution;
 use App\Entity\DiscussionCounts;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
-use App\Service\Social\Completion\Model\KnownSharesModel;
-use App\Service\Outbound\Image\Model\DeclaredImageModel;
+use App\Service\Foundation\Text\Support\HtmlEscape;
 use App\Service\Ingestion\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Parser\Model\ParsedMediaBundleModel;
@@ -18,9 +16,11 @@ use App\Service\Ingestion\Parser\Model\ParsedMediumModel;
 use App\Service\Ingestion\Parser\Model\VisualMediaKind;
 use App\Service\Ingestion\Parser\Support\DateParser;
 use App\Service\Ingestion\Parser\Support\EntryTitle;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
+use App\Service\Social\Completion\Model\KnownSharesModel;
 use App\Service\Social\Social\Model\TimelinePageModel;
 use App\Service\Social\Social\Model\TimelineSelfReplyModel;
-use App\Service\Foundation\Text\Support\HtmlEscape;
+use App\Service\Social\Social\Support\ShareAttribution;
 
 /** A home or list timeline answer as entries; a thread of the author's own replies on the page is handed on. */
 final class MastodonTimelinePage

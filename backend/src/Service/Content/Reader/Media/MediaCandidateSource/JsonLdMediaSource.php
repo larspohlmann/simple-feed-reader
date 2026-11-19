@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Service\Content\Reader\Media\MediaCandidateSource;
 
-use App\Service\Foundation\Html\Support\JsonLd;
 use App\Service\Content\Reader\Media\EmbedProviders;
 use App\Service\Content\Reader\Media\MediaUrlKind;
 use App\Service\Content\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Content\Reader\Media\Model\MediaKind;
 use App\Service\Content\Reader\Media\Model\RawPageModel;
 use App\Service\Content\Reader\Media\PageFurniture;
+use App\Service\Foundation\Html\Support\JsonLd;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**

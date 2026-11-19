@@ -6,11 +6,11 @@ namespace App\Service\Library\Search;
 
 use App\DependencyInjection\ProcessLifetimeState;
 use App\Entity\Entry;
+use App\Service\Foundation\Text\Support\PlainText;
 use App\Service\Library\Search\Exception\SearchEngineUnavailableException;
 use App\Service\Library\Search\Index\Model\IndexedEntryModel;
 use App\Service\Library\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
 use App\Service\Library\Search\TranscriptText\TranscriptTextInterface;
-use App\Service\Foundation\Text\Support\PlainText;
 use Psr\Log\LoggerInterface;
 
 /**

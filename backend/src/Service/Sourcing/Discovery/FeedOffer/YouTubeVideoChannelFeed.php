@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Sourcing\Discovery\FeedOffer;
 
-use App\Service\Sourcing\Discovery\Model\FeedCandidateModel;
-use App\Service\Ingestion\Parser\Model\FeedSyntax;
 use App\Service\Foundation\Url\Support\YouTubeUrl;
+use App\Service\Ingestion\Parser\Model\FeedSyntax;
+use App\Service\Sourcing\Discovery\Model\FeedCandidateModel;
 
 /** Offers the channel feed of the video a YouTube watch page plays; the page names the channel but no feed. */
 final readonly class YouTubeVideoChannelFeed implements FeedOfferInterface

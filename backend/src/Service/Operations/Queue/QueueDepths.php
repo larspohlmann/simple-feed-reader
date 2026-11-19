@@ -14,10 +14,10 @@ use App\Repository\ProfileRunRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Repository\ShareEnrichmentBacklogRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Ingestion\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
 use App\Service\Operations\Queue\Model\QueueBacklogModel;
 use App\Service\Operations\Queue\Model\QueueDepthModel;
 use App\Service\Operations\Queue\Model\QueueName;
-use App\Service\Ingestion\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
 
 final readonly class QueueDepths
 {

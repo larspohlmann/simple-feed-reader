@@ -8,9 +8,13 @@ use App\Entity\Entry;
 use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\LinkCard;
+use App\Entity\LinkCardContent;
+use App\Entity\QuotedPostContent;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\RetentionWindows;
+use App\Entity\SharedLink;
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\SourceFormat;
@@ -23,12 +27,8 @@ use App\Service\Library\Search\Exception\SearchEngineUnavailableException;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\EntryIndexers;
-use Symfony\Component\Clock\MockClock;
-use App\Entity\LinkCard;
-use App\Entity\LinkCardContent;
-use App\Entity\QuotedPostContent;
-use App\Entity\SharedLink;
 use App\Tests\Support\PostEnrichers;
+use Symfony\Component\Clock\MockClock;
 
 final class EntryPrunerTest extends DbTestCase
 {

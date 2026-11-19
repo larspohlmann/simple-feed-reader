@@ -9,8 +9,8 @@ use App\Entity\Subscription;
 use App\Entity\SubscriptionDay;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
-use App\Service\Library\SubscriptionHistory\Support\UtcDay;
 use App\Service\Library\SubscriptionHistory\SubscriptionHistoryRecorder;
+use App\Service\Library\SubscriptionHistory\Support\UtcDay;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SubscriptionHistoryFixtures;
 

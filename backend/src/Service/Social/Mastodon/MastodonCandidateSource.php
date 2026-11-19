@@ -4,23 +4,23 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Mastodon;
 
-use App\Service\Social\Social\CandidateSource\CandidateSourceInterface;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
-use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Mastodon\MastodonApiClient;
+use App\Service\Social\Mastodon\Model\MastodonSessionModel;
+use App\Service\Social\Mastodon\Support\LinkHeader;
+use App\Service\Social\Mastodon\Support\MastodonAccount;
+use App\Service\Social\Mastodon\Support\MastodonFollowedTag;
+use App\Service\Social\Social\CandidateSource\CandidateSourceInterface;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Model\CollectedItemsModel;
 use App\Service\Social\Social\Model\FollowedAccountModel;
-use App\Service\Social\Mastodon\Model\MastodonSessionModel;
 use App\Service\Social\Social\Model\NetworkCandidatesModel;
 use App\Service\Social\Social\Model\NetworkCollectionsModel;
 use App\Service\Social\Social\Model\SocialCollectionModel;
 use App\Service\Social\Social\StoredCredential;
-use App\Service\Social\Mastodon\Support\LinkHeader;
-use App\Service\Social\Mastodon\Support\MastodonAccount;
-use App\Service\Social\Mastodon\Support\MastodonFollowedTag;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 use Symfony\Component\HttpFoundation\Response;
 

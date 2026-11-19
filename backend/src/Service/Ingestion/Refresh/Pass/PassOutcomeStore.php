@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Service\Ingestion\Refresh\Pass;
 
 use App\Entity\Feed;
-use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
 use App\Service\Ingestion\Refresh\FeedOutcomePersister;
 use App\Service\Ingestion\Refresh\Model\FeedOutcome;
 use App\Service\Ingestion\Refresh\Model\FeedRefreshResultModel;
+use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
 use App\Service\Social\Social\Model\TimelineOutcome\AccountPausedTimelineModel;
 use App\Service\Social\Social\Model\TimelineOutcome\AccountThrottledTimelineModel;
 use App\Service\Social\Social\Model\TimelineOutcome\FailedTimelineModel;

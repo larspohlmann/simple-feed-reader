@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Operations\Backup\Dto;
 
-use App\Enum\InclusionSurface;
 use App\Enum\Handedness;
+use App\Enum\InclusionSurface;
 use App\Enum\MagazineStyle;
 use App\Enum\SocialNetwork;
 use App\Service\Operations\Backup\Dto\AccountLine;

@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Identity\Auth;
 
 use App\Enum\UserStatus;
-use App\Service\Outbound\Mail\MailCapability;
 use App\Service\Operations\Settings\InstanceSettings;
+use App\Service\Outbound\Mail\MailCapability;
 
 /**
  * What a new registration becomes: the admin's gate toggles, with mail off forcing email confirmation off (nothing

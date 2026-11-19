@@ -10,11 +10,11 @@ use App\Enum\ShareEnrichmentKind;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
 use App\Repository\ShareEnrichmentRepository;
-use App\Service\Social\BlueskyPost\PostEnricher;
-use App\Service\Foundation\Clock\NaiveUtcClock;
-use App\Service\Social\Completion\SelfThreadPass\SelfThreadPassInterface;
 use App\Service\Content\LinkCard\Model\LinkCardBudgetModel;
 use App\Service\Content\LinkCard\ShareLinkCards;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Social\BlueskyPost\PostEnricher;
+use App\Service\Social\Completion\SelfThreadPass\SelfThreadPassInterface;
 
 final readonly class EntryCompletion
 {

@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Service\Sourcing\Discovery;
 
-use App\Service\Sourcing\Discovery\Model\DiscoveredFeedModel;
+use App\Service\Ingestion\Parser\Exception\FeedParseException;
+use App\Service\Ingestion\Parser\FeedParser;
 use App\Service\Outbound\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
 use App\Service\Outbound\Fetch\Model\FetchTicketModel;
 use App\Service\Outbound\Fetch\Pass\PageUrls;
-use App\Service\Ingestion\Parser\Exception\FeedParseException;
-use App\Service\Ingestion\Parser\FeedParser;
+use App\Service\Sourcing\Discovery\Model\DiscoveredFeedModel;
 
 /**
  * Looks for a feed under the conventional paths of a page that named none, for sites that refuse their HTML to

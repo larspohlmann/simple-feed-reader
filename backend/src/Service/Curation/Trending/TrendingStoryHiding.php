@@ -6,8 +6,8 @@ namespace App\Service\Curation\Trending;
 
 use App\Repository\TrendingStoryHideRepository;
 use App\Repository\TrendingStoryRepository;
-use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Curation\Trending\Exception\TrendingStoryNotFoundException;
+use App\Service\Foundation\Clock\NaiveUtcClock;
 
 /** Hides a Trending story for one reader, by its id, in both windows and through every rebuild that keeps it. */
 final readonly class TrendingStoryHiding

@@ -6,9 +6,9 @@ namespace App\Tests\Service\Social\Lemmy;
 
 use App\Entity\NotificationContext;
 use App\Enum\SocialNotificationKind;
+use App\Service\Social\Lemmy\LemmyNotificationContextSource;
 use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
-use App\Service\Social\Lemmy\LemmyNotificationContextSource;
 use App\Tests\Support\NotificationRows;
 use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\RoutedHttpClient;

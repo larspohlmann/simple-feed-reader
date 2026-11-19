@@ -8,12 +8,12 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SourceFormat;
-use App\Service\Ingestion\Feed\Factory\FeedFactory;
-use App\Service\Library\Subscription\Exception\AlreadySubscribedException;
-use App\Service\Library\Subscription\Exception\SubscriptionLimitReachedException;
 use App\Repository\FeedRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\SubscriptionTagRepository;
+use App\Service\Ingestion\Feed\Factory\FeedFactory;
+use App\Service\Library\Subscription\Exception\AlreadySubscribedException;
+use App\Service\Library\Subscription\Exception\SubscriptionLimitReachedException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 

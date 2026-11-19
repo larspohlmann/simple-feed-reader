@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Content\Reader\ArticleExtractor;
 
-use App\Service\Foundation\Html\Exception\UnparseableHtmlException;
 use App\Service\Content\Reader\ArticleContentGate;
 use App\Service\Content\Reader\ArticlePageReader;
 use App\Service\Content\Reader\ArticleReadability;
@@ -22,6 +21,7 @@ use App\Service\Content\Reader\Model\PageResponseModel;
 use App\Service\Content\Reader\ReaderBodyCleaner;
 use App\Service\Content\Reader\Slideshow\Model\ContainerSignatureModel;
 use App\Service\Content\Reader\Slideshow\Model\SlideshowModel;
+use App\Service\Foundation\Html\Exception\UnparseableHtmlException;
 use App\Service\Foundation\Sanitize\EntrySanitizer;
 use fivefilters\Readability\Article;
 

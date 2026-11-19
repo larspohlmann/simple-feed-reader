@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Mastodon;
 
-use App\Service\Social\Social\NetworkVerifier\NetworkVerifierInterface;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
-use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Mastodon\MastodonApiClient;
-use App\Service\Social\Social\Model\CredentialReplacementModel;
 use App\Service\Social\Mastodon\Model\MastodonSessionModel;
+use App\Service\Social\Mastodon\Support\MastodonCredentials;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Model\CredentialReplacementModel;
 use App\Service\Social\Social\Model\SocialCredentialsModel;
 use App\Service\Social\Social\Model\VerifiedAccountModel;
-use App\Service\Social\Mastodon\Support\MastodonCredentials;
+use App\Service\Social\Social\NetworkVerifier\NetworkVerifierInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Mastodon->value)]

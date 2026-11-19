@@ -8,18 +8,18 @@ use App\Entity\SocialAccount;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Exception\InvalidSelectionException;
-use App\Service\Social\Social\Exception\InvalidSocialImportFeedException;
-use App\Service\Social\Social\Model\PrivateFeedImportModel;
-use App\Service\Social\Social\Model\PrivateFeedModel;
-use App\Service\Social\Social\Model\SocialImportFeedModel;
-use App\Service\Social\Social\Model\SocialImportModel;
-use App\Service\Social\Social\Model\SocialImportResultModel;
 use App\Service\Library\Subscription\BulkSubscriber;
 use App\Service\Library\Subscription\Exception\SubscriptionLimitReachedException;
 use App\Service\Library\Subscription\Model\BulkSubscribeItemModel;
 use App\Service\Library\Subscription\OwnedSubscriptions;
 use App\Service\Library\Subscription\SubscriptionService;
 use App\Service\Library\Tag\TagStructureLock;
+use App\Service\Social\Social\Exception\InvalidSocialImportFeedException;
+use App\Service\Social\Social\Model\PrivateFeedImportModel;
+use App\Service\Social\Social\Model\PrivateFeedModel;
+use App\Service\Social\Social\Model\SocialImportFeedModel;
+use App\Service\Social\Social\Model\SocialImportModel;
+use App\Service\Social\Social\Model\SocialImportResultModel;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class SocialImporter

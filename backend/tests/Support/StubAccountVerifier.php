@@ -6,13 +6,13 @@ namespace App\Tests\Support;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
+use App\Service\Social\Bluesky\Support\BlueskyCredentials;
+use App\Service\Social\Lemmy\Support\LemmyCredentials;
+use App\Service\Social\Mastodon\Support\MastodonCredentials;
 use App\Service\Social\Social\AccountVerifier\AccountVerifierInterface;
 use App\Service\Social\Social\Model\CredentialReplacementModel;
 use App\Service\Social\Social\Model\SocialCredentialsModel;
 use App\Service\Social\Social\Model\VerifiedAccountModel;
-use App\Service\Social\Bluesky\Support\BlueskyCredentials;
-use App\Service\Social\Lemmy\Support\LemmyCredentials;
-use App\Service\Social\Mastodon\Support\MastodonCredentials;
 
 final class StubAccountVerifier implements AccountVerifierInterface
 {

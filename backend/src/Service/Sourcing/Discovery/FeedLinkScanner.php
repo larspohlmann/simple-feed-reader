@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Sourcing\Discovery;
 
-use App\Service\Sourcing\Discovery\Model\FeedCandidateModel;
-use App\Service\Sourcing\Discovery\Pass\LinkLabels;
-use App\Service\Outbound\Fetch\Pass\PageUrls;
 use App\Service\Foundation\Html\Support\HtmlDocumentParser;
 use App\Service\Ingestion\Parser\Model\FeedSyntax;
+use App\Service\Outbound\Fetch\Pass\PageUrls;
+use App\Service\Sourcing\Discovery\Model\FeedCandidateModel;
+use App\Service\Sourcing\Discovery\Pass\LinkLabels;
 use Dom\Element;
 use Dom\HTMLDocument;
 

@@ -6,12 +6,12 @@ namespace App\Service\Ingestion\Ingest\Support;
 
 use App\Entity\EntryAttachment;
 use App\Entity\EntryMedium;
-use App\Service\Outbound\Image\Model\DeclaredImageModel;
+use App\Service\Foundation\Url\Support\HttpsImageUrl;
 use App\Service\Ingestion\Ingest\Model\AssembledMediaModel;
 use App\Service\Ingestion\Parser\Model\ParsedAttachmentModel;
 use App\Service\Ingestion\Parser\Model\ParsedMediumModel;
 use App\Service\Ingestion\Parser\Model\VisualMediaKind;
-use App\Service\Foundation\Url\Support\HttpsImageUrl;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
 
 /**
  * Turns the feed's parsed media into the entity's two stored lists. The lead

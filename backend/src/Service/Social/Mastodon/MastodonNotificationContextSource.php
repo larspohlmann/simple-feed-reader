@@ -4,18 +4,18 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Mastodon;
 
-use App\Service\Social\Notification\NotificationContextSource\NotificationContextSourceInterface;
 use App\Entity\NotificationContext;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
+use App\Service\Social\Mastodon\MastodonAccountApi;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
+use App\Service\Social\Notification\NotificationContextSource\NotificationContextSourceInterface;
 use App\Service\Social\Notification\Support\Excerpt;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
-use App\Service\Social\Mastodon\MastodonAccountApi;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Mastodon->value)]

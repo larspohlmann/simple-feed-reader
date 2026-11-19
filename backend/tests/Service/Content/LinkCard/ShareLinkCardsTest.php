@@ -10,9 +10,9 @@ use App\Entity\Headline;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
-use App\Enum\ShareKind;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
+use App\Enum\ShareKind;
 use App\Repository\ShareEnrichmentRepository;
 use App\Service\Content\LinkCard\Model\LinkCardBudgetModel;
 use App\Service\Content\LinkCard\ShareLinkCards;
@@ -20,14 +20,14 @@ use App\Service\Content\Reader\Exception\PageFetchException;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\PostEnrichers;
-use App\Tests\Support\ShareLinkCardsWiring;
 use App\Tests\Support\RecordingLogger;
+use App\Tests\Support\SharedLinks;
+use App\Tests\Support\ShareLinkCardsWiring;
 use App\Tests\Support\StubPageCardReader;
 use App\Tests\Support\StubQuotedPostSource;
 use Doctrine\ORM\Decorator\EntityManagerDecorator;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Clock\MockClock;
-use App\Tests\Support\SharedLinks;
 
 final class ShareLinkCardsTest extends DbTestCase
 {

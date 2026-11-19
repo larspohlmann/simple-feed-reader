@@ -45,9 +45,9 @@ use App\Tests\Support\LemmyPostEntries;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SeedsUsers;
+use App\Tests\Support\SharedLinks;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
-use App\Tests\Support\SharedLinks;
 
 final class EntryListRowEnricherTest extends DbTestCase
 {

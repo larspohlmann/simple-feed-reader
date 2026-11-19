@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Content\Reader;
 
-use App\Service\Outbound\Fetch\IpValidator;
-use App\Service\Outbound\Fetch\UrlGuard;
 use App\Service\Content\Reader\Exception\PageFetchException;
 use App\Service\Content\Reader\PageHeadFetcher;
+use App\Service\Outbound\Fetch\IpValidator;
+use App\Service\Outbound\Fetch\UrlGuard;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
 use App\Tests\Support\StaticDnsResolver;

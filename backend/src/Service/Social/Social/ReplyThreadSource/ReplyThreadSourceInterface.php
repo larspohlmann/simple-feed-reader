@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Service\Social\Social\ReplyThreadSource;
 
 use App\Entity\SocialAccount;
-use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Content\Comments\Exception\CommentsUnavailableException;
 use App\Service\Content\Comments\Model\CommentsAnswerModel;
 use App\Service\Content\Comments\Model\EntryCommentModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;

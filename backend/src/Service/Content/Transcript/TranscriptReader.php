@@ -6,13 +6,13 @@ namespace App\Service\Content\Transcript;
 
 use App\Entity\TranscriptParagraph;
 use App\Enum\TranscriptFormat;
-use App\Service\Foundation\Sanitize\EntrySanitizer;
-use App\Service\Foundation\Text\Support\PlainText;
 use App\Service\Content\Transcript\Exception\TranscriptUnusableException;
 use App\Service\Content\Transcript\Model\ReadTranscriptModel;
 use App\Service\Content\Transcript\Support\JsonCues;
 use App\Service\Content\Transcript\Support\TimedCues;
 use App\Service\Content\Transcript\Support\TranscriptParagraphs;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Foundation\Text\Support\PlainText;
 
 final readonly class TranscriptReader
 {

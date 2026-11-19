@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Social\SocialSearch;
 
 use App\Enum\SocialAccountStatus;
+use App\Service\Social\Bluesky\BlueskySearchSource;
+use App\Service\Social\Lemmy\LemmyPrivateFeedRule;
+use App\Service\Social\Lemmy\LemmySearchSource;
+use App\Service\Social\Mastodon\MastodonPrivateFeedRule;
+use App\Service\Social\Mastodon\MastodonSearchSource;
 use App\Service\Social\Social\ActingAccountGuard;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Lemmy\LemmyPrivateFeedRule;
-use App\Service\Social\Mastodon\MastodonPrivateFeedRule;
-use App\Service\Social\Bluesky\BlueskySearchSource;
-use App\Service\Social\Lemmy\LemmySearchSource;
-use App\Service\Social\Mastodon\MastodonSearchSource;
 use App\Service\Social\Social\SocialSearch\NetworkSocialSearch;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;

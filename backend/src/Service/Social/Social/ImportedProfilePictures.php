@@ -8,9 +8,9 @@ use App\Entity\Feed;
 use App\Entity\SocialAccount;
 use App\Repository\FeedRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use App\Service\Social\Social\Model\FollowAvatarsModel;
 use App\Service\Social\Social\ProfileFeedRule\ProfileFeedRuleInterface;
-use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 
 final readonly class ImportedProfilePictures
 {

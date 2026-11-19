@@ -5,16 +5,16 @@ declare(strict_types=1);
 namespace App\Service\Social\Bluesky;
 
 use App\Entity\SocialAccount;
-use App\Service\Social\BlueskyPost\AppViewClient;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
-use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Social\Model\NetworkCollectionsModel;
 use App\Service\Social\Bluesky\Model\ResolvedCollectionsModel;
 use App\Service\Social\Bluesky\Model\SavedItemsModel;
-use App\Service\Social\Social\Model\SocialCollectionModel;
 use App\Service\Social\Bluesky\Support\CuratedBlueskyList;
+use App\Service\Social\BlueskyPost\AppViewClient;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Model\NetworkCollectionsModel;
+use App\Service\Social\Social\Model\SocialCollectionModel;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class BlueskySavedCollections

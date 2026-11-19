@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Mastodon\Support;
 
-use App\Service\Social\Social\Support\SocialSearchMatch;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
+use App\Service\Foundation\Text\Support\PlainText;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Model\SearchedPostModel;
 use App\Service\Social\Social\Model\TimelinePageModel;
-use App\Service\Foundation\Text\Support\PlainText;
+use App\Service\Social\Social\Support\SocialSearchMatch;
 
 /**
  * A search's answers, one per alternative, as entries: every status but a reply whose author and own text, or the

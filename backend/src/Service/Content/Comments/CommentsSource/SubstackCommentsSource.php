@@ -6,7 +6,6 @@ namespace App\Service\Content\Comments\CommentsSource;
 
 use App\Entity\Entry;
 use App\Entity\User;
-use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Content\Comments\CommentsEndpointFetcher;
 use App\Service\Content\Comments\Exception\CommentsUnavailableException;
 use App\Service\Content\Comments\Model\CommentsAnswerModel;
@@ -17,6 +16,7 @@ use App\Service\Content\Comments\Model\SubstackPostModel;
 use App\Service\Content\Comments\Pass\CommentsRequest;
 use App\Service\Content\Comments\Pass\SubstackThread;
 use App\Service\Content\Comments\Support\SubstackPostAddress;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Outbound\Fetch\Exception\FetchException;
 use App\Service\Outbound\Fetch\FeedFetcher\FeedFetcherInterface;
 

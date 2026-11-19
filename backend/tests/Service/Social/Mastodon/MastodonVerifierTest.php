@@ -6,13 +6,13 @@ namespace App\Tests\Service\Social\Mastodon;
 
 use App\Service\Outbound\Fetch\IpValidator;
 use App\Service\Outbound\Fetch\UrlGuard;
-use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Mastodon\MastodonApiClient;
-use App\Service\Social\Social\Model\CredentialReplacementModel;
-use App\Service\Social\Social\Model\SocialCredentialsModel;
 use App\Service\Social\Mastodon\MastodonVerifier;
 use App\Service\Social\Mastodon\Support\MastodonCredentials;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Model\CredentialReplacementModel;
+use App\Service\Social\Social\Model\SocialCredentialsModel;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;

@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Content\Reader\Media;
 
-use App\Service\Outbound\Fetch\DnsResolver\DnsResolverInterface;
-use App\Service\Outbound\Fetch\IpValidator;
-use App\Service\Outbound\Fetch\UrlGuard;
 use App\Service\Content\Reader\Media\DurableMediaUrl;
 use App\Service\Content\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
 use App\Service\Content\Reader\Media\EmbedProviders;
@@ -16,6 +13,9 @@ use App\Service\Content\Reader\Media\Model\ArticleMediaModel;
 use App\Service\Content\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Content\Reader\Media\Model\MediaKind;
 use App\Service\Content\Reader\Media\StreamLocationResolver;
+use App\Service\Outbound\Fetch\DnsResolver\DnsResolverInterface;
+use App\Service\Outbound\Fetch\IpValidator;
+use App\Service\Outbound\Fetch\UrlGuard;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;

@@ -6,12 +6,12 @@ namespace App\Tests\Service\Ingestion\Refresh\Model;
 
 use App\Enum\SocialNetwork;
 use App\Repository\NetworkScope;
+use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
 use App\Service\Ingestion\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
 use App\Service\Ingestion\Refresh\Model\RefreshTarget\FeedTargetModel;
 use App\Service\Ingestion\Refresh\Model\RefreshTarget\NetworkTargetModel;
 use App\Service\Ingestion\Refresh\Model\RefreshTarget\NeverFetchedTargetModel;
 use App\Service\Ingestion\Refresh\Model\RefreshTarget\TagTargetModel;
-use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
 use PHPUnit\Framework\TestCase;
 
 final class RefreshRequestModelTest extends TestCase

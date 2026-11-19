@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Bluesky\Support;
 
-use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Content\Comments\Model\CommentCountsModel;
 use App\Service\Content\Comments\Model\CommentPostModel;
 use App\Service\Content\Comments\Model\CommentViewerModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Bluesky\Support\BlueskyCommentPost;
 use PHPUnit\Framework\TestCase;
 

@@ -6,9 +6,9 @@ namespace App\Service\Sourcing\Catalog;
 
 use App\Entity\CatalogCategory;
 use App\Repository\CatalogCategoryRepository;
+use App\Service\Foundation\Ordering\PositionReorderer;
 use App\Service\Sourcing\Catalog\Factory\CatalogCategoryFactory;
 use App\Service\Sourcing\Catalog\Model\CatalogCategoryDetailsModel;
-use App\Service\Foundation\Ordering\PositionReorderer;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class CatalogCategoryEditor

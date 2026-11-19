@@ -12,6 +12,10 @@
         <exclude-pattern>*/migrations/*</exclude-pattern>
     </rule>
     <rule ref="Generic.PHP.RequireStrictTypes"/>
+    <rule ref="SlevomatCodingStandard.Namespaces.AlphabeticallySortedUses">
+        <exclude-pattern>*/tests/PhpStan/data/*</exclude-pattern>
+        <exclude-pattern>*/migrations/*</exclude-pattern>
+    </rule>
     <file>src</file>
     <file>tests</file>
     <file>migrations</file>

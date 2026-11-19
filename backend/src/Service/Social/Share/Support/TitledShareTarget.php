@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Social\Share\Support;
 
 use App\Entity\Entry;
-use App\Service\Outbound\Fetch\Support\HostKey;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
+use App\Service\Outbound\Fetch\Support\HostKey;
 
 /**
  * The page a titled entry shares, none for a post: its url, when that leaves the feed's site while the entry itself

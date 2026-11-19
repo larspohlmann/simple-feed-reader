@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Mastodon;
 
-use App\Service\Social\Social\PostAddressRule\PostAddressRuleInterface;
 use App\Entity\Entry;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
-use App\Service\Social\Social\Exception\SocialPostRefusedException;
-use App\Service\Social\Social\Model\SocialPostAddressModel;
 use App\Service\Social\Mastodon\Support\MastodonAuthor;
 use App\Service\Social\Mastodon\Support\MastodonStatusAddress;
+use App\Service\Social\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Social\Model\SocialPostAddressModel;
+use App\Service\Social\Social\PostAddressRule\PostAddressRuleInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Mastodon->value)]

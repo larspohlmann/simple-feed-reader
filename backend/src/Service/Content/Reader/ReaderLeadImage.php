@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Content\Reader;
 
-use App\Service\Outbound\Image\Model\ImageIdentityModel;
 use App\Service\Content\Reader\Model\LeadImageCandidateModel;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
+use App\Service\Outbound\Image\Model\ImageIdentityModel;
 use Dom\Element;
 use Dom\HTMLDocument;
 

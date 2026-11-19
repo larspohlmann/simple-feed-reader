@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Outbound\Fetch;
 
-use App\Tests\Support\PinnedRequestOptions;
 use App\Enum\ProxyType;
 use App\Service\Foundation\Crypto\Exception\SecretUnreadableException;
 use App\Service\Outbound\Fetch\EgressProxySource\EgressProxySourceInterface;
@@ -12,6 +11,7 @@ use App\Service\Outbound\Fetch\Exception\DirectRouteUnavailableException;
 use App\Service\Outbound\Fetch\Model\GuardedUrlModel;
 use App\Service\Outbound\Fetch\Model\ProxyConfigModel;
 use App\Tests\Support\FetchWiring;
+use App\Tests\Support\PinnedRequestOptions;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;

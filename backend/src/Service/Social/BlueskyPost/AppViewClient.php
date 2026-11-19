@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace App\Service\Social\BlueskyPost;
 
-use App\Service\Social\BlueskyPost\Exception\AppViewAnswerException;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
-use App\Service\Social\BlueskyPost\Support\BlueskyActorKey;
 use App\Service\Outbound\Fetch\Exception\FeedGoneException;
 use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
 use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
 use App\Service\Outbound\Fetch\Exception\FetchException;
 use App\Service\Outbound\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Outbound\Fetch\HostThrottle;
+use App\Service\Social\BlueskyPost\Exception\AppViewAnswerException;
+use App\Service\Social\BlueskyPost\Support\BlueskyActorKey;
 
 /** Bluesky's public AppView, asked anonymously through the SSRF-guarded fetcher. */
 final readonly class AppViewClient

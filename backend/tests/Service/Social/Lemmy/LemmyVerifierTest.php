@@ -6,13 +6,13 @@ namespace App\Tests\Service\Social\Lemmy;
 
 use App\Service\Outbound\Fetch\IpValidator;
 use App\Service\Outbound\Fetch\UrlGuard;
-use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Social\Exception\SocialNetworkUnavailableException;
 use App\Service\Social\Lemmy\LemmyApiClient;
-use App\Service\Social\Social\Model\CredentialReplacementModel;
-use App\Service\Social\Social\Model\SocialCredentialsModel;
 use App\Service\Social\Lemmy\LemmyVerifier;
 use App\Service\Social\Lemmy\Support\LemmyCredentials;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkUnavailableException;
+use App\Service\Social\Social\Model\CredentialReplacementModel;
+use App\Service\Social\Social\Model\SocialCredentialsModel;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\RoutedHttpClient;

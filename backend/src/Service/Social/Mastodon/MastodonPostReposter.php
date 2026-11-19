@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Mastodon;
 
-use App\Service\Social\Social\PostReposter\PostReposterInterface;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Mastodon\MastodonAccountApi;
-use App\Service\Social\Social\Model\SocialPostModel;
 use App\Service\Social\Mastodon\Support\MastodonStatusAction;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Model\SocialPostModel;
+use App\Service\Social\Social\PostReposter\PostReposterInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Mastodon->value)]

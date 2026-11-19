@@ -15,6 +15,8 @@ use App\Repository\SocialFeedRepository;
 use App\Repository\SubscriptionDisplayTitle;
 use App\Repository\SubscriptionRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Library\Subscription\Exception\SubscriptionLimitReachedException;
+use App\Service\Library\Subscription\SubscriptionService;
 use App\Service\Social\Social\Model\NetworkCollectionsModel;
 use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Service\Social\Social\Model\PrivateFeedOutcome;
@@ -22,8 +24,6 @@ use App\Service\Social\Social\Model\PrivateFeedSyncOutcomeModel;
 use App\Service\Social\Social\Model\SocialCollectionModel;
 use App\Service\Social\Social\Model\SubscribedCollectionModel;
 use App\Service\Social\Social\Pass\CollectionSyncPlan;
-use App\Service\Library\Subscription\Exception\SubscriptionLimitReachedException;
-use App\Service\Library\Subscription\SubscriptionService;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class PrivateFeedSyncApplier

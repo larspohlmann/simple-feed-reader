@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Mastodon;
 
-use App\Service\Social\Notification\NotificationSource\NotificationSourceInterface;
 use App\Entity\NotificationActor;
 use App\Entity\NotificationContext;
 use App\Entity\NotificationSubject;
@@ -12,20 +11,21 @@ use App\Entity\SocialAccount;
 use App\Entity\SocialNotification;
 use App\Enum\SocialNetwork;
 use App\Enum\SocialNotificationKind;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
-use App\Service\Foundation\Json\Model\JsonNodeModel;
+use App\Service\Social\Mastodon\MastodonAccountApi;
+use App\Service\Social\Mastodon\MastodonApiClient;
+use App\Service\Social\Mastodon\Support\MastodonIds;
 use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Notification\Model\NotificationPageModel;
+use App\Service\Social\Notification\NotificationSource\NotificationSourceInterface;
 use App\Service\Social\Notification\Support\Excerpt;
-use App\Service\Social\Mastodon\Support\MastodonIds;
 use App\Service\Social\Notification\Support\NetworkTimestamp;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
-use App\Service\Social\Mastodon\MastodonAccountApi;
-use App\Service\Social\Mastodon\MastodonApiClient;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Mastodon->value)]

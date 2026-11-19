@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Lemmy\Support;
 
+use App\Service\Social\Lemmy\Support\LemmySearchTerms;
 use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Social\Pass\SearchQueryAlternatives;
-use App\Service\Social\Lemmy\Support\LemmySearchTerms;
 use App\Service\Social\Social\Support\SearchQueryTokens;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

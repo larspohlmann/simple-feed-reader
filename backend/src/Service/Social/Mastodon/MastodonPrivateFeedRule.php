@@ -4,18 +4,18 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Mastodon;
 
-use App\Service\Social\Social\PrivateFeedRule\PrivateFeedRuleInterface;
 use App\Entity\SocialAccount;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Service\Foundation\Text\Support\PlainText;
+use App\Service\Social\Mastodon\Support\MastodonAuthor;
+use App\Service\Social\Mastodon\Support\MastodonFeedIds;
 use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Service\Social\Social\Model\SearchedPostModel;
 use App\Service\Social\Social\Model\StoredPostModel;
 use App\Service\Social\Social\Pass\SearchQueryAlternatives;
-use App\Service\Social\Mastodon\Support\MastodonAuthor;
-use App\Service\Social\Mastodon\Support\MastodonFeedIds;
+use App\Service\Social\Social\PrivateFeedRule\PrivateFeedRuleInterface;
 use App\Service\Social\Social\Support\SearchQueryTokens;
 use App\Service\Social\Social\Support\SocialSearchQuery;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;

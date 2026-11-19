@@ -7,25 +7,25 @@ namespace App\Tests\Repository;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\InclusionChange;
-use App\Entity\Subscription;
-use App\Entity\Tag;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
+use App\Entity\SharedLink;
+use App\Entity\Subscription;
+use App\Entity\Tag;
 use App\Entity\ThreadPost;
 use App\Entity\ThreadPostContent;
 use App\Enum\FeedLanguage;
 use App\Enum\SocialNetwork;
 use App\Repository\TrendingEntryRepository;
+use App\Service\Content\LinkCard\SharedLinkWriter;
 use App\Service\Curation\Trending\Model\MemberHeadlineModel;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Service\Curation\Trending\Model\WindowLinkCardModel;
-use App\Tests\DbTestCase;
-use App\Tests\Support\TrendingFixtures;
-use App\Tests\Support\SharedLinks;
-use App\Entity\SharedLink;
 use App\Service\Foundation\Url\UrlNormalizer;
-use App\Service\Content\LinkCard\SharedLinkWriter;
+use App\Tests\DbTestCase;
 use App\Tests\Support\PostEnrichers;
+use App\Tests\Support\SharedLinks;
+use App\Tests\Support\TrendingFixtures;
 
 final class TrendingEntryRepositoryTest extends DbTestCase
 {

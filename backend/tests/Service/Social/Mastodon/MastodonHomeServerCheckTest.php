@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Mastodon;
 
+use App\Service\Social\Mastodon\MastodonHomeServerCheck;
 use App\Service\Social\Social\Exception\SocialNetworkUnavailableException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Mastodon\MastodonHomeServerCheck;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\Attributes\DataProvider;

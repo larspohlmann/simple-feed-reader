@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Mastodon;
 
-use App\Service\Social\Social\ProfileFeedRule\ProfileFeedRuleInterface;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Mastodon\Support\MastodonProfileFeed;
+use App\Service\Social\Social\ProfileFeedRule\ProfileFeedRuleInterface;
 use App\Service\Social\Social\Support\ProfileIdentity;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 

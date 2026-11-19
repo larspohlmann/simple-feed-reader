@@ -4,20 +4,20 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Mastodon;
 
-use App\Service\Social\Social\PostWriter\PostWriterInterface;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
+use App\Service\Social\Mastodon\MastodonAccountApi;
+use App\Service\Social\Mastodon\Support\MastodonStatusAction;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\Mastodon\MastodonAccountApi;
 use App\Service\Social\Social\Model\PostDeletion;
-use App\Service\Social\Social\Model\PublishedPostModel;
 use App\Service\Social\Social\Model\PostDraftModel;
+use App\Service\Social\Social\Model\PublishedPostModel;
 use App\Service\Social\Social\Model\SocialPostModel;
-use App\Service\Social\Mastodon\Support\MastodonStatusAction;
-use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
+use App\Service\Social\Social\PostWriter\PostWriterInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Mastodon->value)]

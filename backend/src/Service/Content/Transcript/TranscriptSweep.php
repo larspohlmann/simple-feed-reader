@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Content\Transcript;
 
 use App\Repository\EntryTranscriptRepository;
-use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Content\Transcript\Model\TranscriptBudgetModel;
 use App\Service\Content\Transcript\Model\TranscriptSweepReportModel;
+use App\Service\Foundation\Clock\NaiveUtcClock;
 
 /** Completes the newest queued transcripts that are due. */
 final readonly class TranscriptSweep

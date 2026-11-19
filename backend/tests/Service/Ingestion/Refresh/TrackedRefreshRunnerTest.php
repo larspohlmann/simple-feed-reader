@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ingestion\Refresh;
 
-use App\Service\Ingestion\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
 use App\Service\Ingestion\Refresh\Model\RefreshReportModel;
 use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
+use App\Service\Ingestion\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
 use App\Service\Ingestion\Refresh\RefreshRunStore;
 use App\Service\Ingestion\Refresh\TrackedRefreshRunner;
 use PHPUnit\Framework\TestCase;

@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Repository;
 
 use App\Entity\Entry;
+use App\Entity\EntryMedium;
 use App\Entity\EntryOrigin;
 use App\Entity\Feed;
-use App\Entity\EntryMedium;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;

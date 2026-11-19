@@ -14,9 +14,9 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
+use App\Repository\EntryListPage;
 use App\Repository\EntryListRow;
 use App\Repository\SavedSearchEntryRepository;
-use App\Repository\EntryListPage;
 use App\Repository\SavedSearchListQuery;
 use App\Tests\DbTestCase;
 

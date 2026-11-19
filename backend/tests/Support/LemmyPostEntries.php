@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
+use App\Entity\Discussion;
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Entity\Discussion;
 use App\Enum\CommentsLoad;
 
 /** An entry for a Lemmy post, which the caller persists when its test needs a row. */

@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Service\Social\BlueskyPost\Support;
 
 use App\Service\Foundation\Json\Model\JsonNodeModel;
+use App\Service\Foundation\Url\Support\HttpsImageUrl;
 use App\Service\Ingestion\Parser\Model\ParsedMediumModel;
 use App\Service\Ingestion\Parser\Model\VisualMediaKind;
 use App\Service\Ingestion\Parser\Support\DeclaredImages;
-use App\Service\Foundation\Url\Support\HttpsImageUrl;
 
 final class BlueskyEmbedMedia
 {

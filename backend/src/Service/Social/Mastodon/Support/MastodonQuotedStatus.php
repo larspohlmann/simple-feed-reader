@@ -6,11 +6,11 @@ namespace App\Service\Social\Mastodon\Support;
 
 use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;
-use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Content\LinkCard\Support\QuoteLine;
 use App\Service\Content\LinkCard\Support\StorableQuotedPost;
-use App\Service\Ingestion\Parser\Support\DateParser;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Foundation\Text\Support\PlainText;
+use App\Service\Ingestion\Parser\Support\DateParser;
 
 /** A status another one quotes, as its quote card shows it. */
 final class MastodonQuotedStatus
