@@ -46,7 +46,7 @@ final readonly class LemmyPostVoter implements PostVoterInterface
                 ['post_id' => $this->posts->homePostIdOf($account, $post), 'score' => $score->value],
             );
 
-            return self::resultOf(LemmyView::ofPost(JsonNodeModel::of($answer->json())->node('post_view')));
+            return self::buildResult(LemmyView::ofPost(JsonNodeModel::of($answer->json())->node('post_view')));
         });
     }
 
@@ -63,7 +63,7 @@ final readonly class LemmyPostVoter implements PostVoterInterface
                 ['comment_id' => $target->commentId, 'score' => $score->value],
             );
 
-            return self::resultOf(LemmyView::ofComment(JsonNodeModel::of($answer->json())->node('comment_view')));
+            return self::buildResult(LemmyView::ofComment(JsonNodeModel::of($answer->json())->node('comment_view')));
         });
     }
 
@@ -80,7 +80,7 @@ final readonly class LemmyPostVoter implements PostVoterInterface
         return LemmyPostAddress::of($entry) ?? throw new NotASocialPostException('This entry is not a Lemmy post.');
     }
 
-    private static function resultOf(LemmyTargetModel $target): DiscussionVoteResultModel
+    private static function buildResult(LemmyTargetModel $target): DiscussionVoteResultModel
     {
         return new DiscussionVoteResultModel($target->myVote, $target->score);
     }

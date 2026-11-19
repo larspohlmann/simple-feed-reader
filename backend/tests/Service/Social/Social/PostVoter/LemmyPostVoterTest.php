@@ -11,6 +11,7 @@ use App\Enum\VoteScore;
 use App\Service\Outbound\Fetch\IpValidator;
 use App\Service\Outbound\Fetch\UrlGuard;
 use App\Service\Social\Social\ActingAccountGuard;
+use App\Service\Social\Social\Exception\NotASocialPostException;
 use App\Service\Social\Social\LemmyAccountApi;
 use App\Service\Social\Social\LemmyApiClient;
 use App\Service\Social\Social\LemmyPosts;
@@ -82,8 +83,27 @@ final class LemmyPostVoterTest extends TestCase
 
     public function testAnRssEntryIsNotVotable(): void
     {
+        self::assertFalse($this->voter(new RoutedHttpClient([]))->isVotablePost(self::rssEntry()));
+    }
+
+    public function testAVoteOnAnRssEntryIsRefusedBeforeAnyCall(): void
+    {
+        $http = new RoutedHttpClient([]);
+
+        try {
+            $this->voter($http)->castVoteOnPost($this->account(), self::rssEntry(), VoteScore::Up);
+            self::fail('An RSS entry must not be voted on.');
+        } catch (NotASocialPostException $exception) {
+            self::assertSame('This entry is not a Lemmy post.', $exception->getMessage());
+            self::assertSame([], $http->requests);
+        }
+    }
+
+    private static function rssEntry(): Entry
+    {
         $published = new \DateTimeImmutable('2026-10-12 10:00:00');
-        $entry = new Entry(
+
+        return new Entry(
             new Feed('https://example.com/feed.xml'),
             'https://example.com/plain',
             'https://example.com/plain',
@@ -91,8 +111,6 @@ final class LemmyPostVoterTest extends TestCase
             $published,
             $published,
         );
-
-        self::assertFalse($this->voter(new RoutedHttpClient([]))->isVotablePost($entry));
     }
 
     private function account(): SocialAccount

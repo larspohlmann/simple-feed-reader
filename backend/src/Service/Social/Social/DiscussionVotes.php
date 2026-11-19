@@ -54,7 +54,7 @@ final readonly class DiscussionVotes
      */
     public function vote(User $user, Entry $entry, VoteScore $score): DiscussionVoteResultModel
     {
-        $network = $this->selectNetworkOf($entry);
+        $network = $this->requireVotingNetwork($entry);
         $account = $this->accounts->accountFor($user, $entry, $network);
 
         $result = $this->selectVoter($network)->castVoteOnPost($account, $entry, $score);
@@ -79,7 +79,7 @@ final readonly class DiscussionVotes
         string $address,
         VoteScore $score,
     ): DiscussionVoteResultModel {
-        $network = $this->selectNetworkOf($entry);
+        $network = $this->requireVotingNetwork($entry);
         if (null === AbsoluteHttpUrl::httpsOrNull($address)) {
             throw new NotASocialPostException(sprintf('The address names no %s comment.', $this->formatNetworkNames()));
         }
@@ -103,7 +103,7 @@ final readonly class DiscussionVotes
      */
     public function syncFromNetwork(User $user, Entry $entry): VoteScore
     {
-        $network = $this->selectNetworkOf($entry);
+        $network = $this->requireVotingNetwork($entry);
         $account = $this->accounts->accountFor($user, $entry, $network);
 
         $myVote = $this->selectVoter($network)->fetchPostVote($account, $entry);
@@ -113,9 +113,9 @@ final readonly class DiscussionVotes
     }
 
     /** @throws NotASocialPostException */
-    private function selectNetworkOf(Entry $entry): SocialNetwork
+    private function requireVotingNetwork(Entry $entry): SocialNetwork
     {
-        foreach ($this->selectVotingNetworks() as $network) {
+        foreach ($this->votingNetworks() as $network) {
             if ($this->selectVoter($network)->isVotablePost($entry)) {
                 return $network;
             }
@@ -133,7 +133,7 @@ final readonly class DiscussionVotes
     }
 
     /** @return list<SocialNetwork> */
-    private function selectVotingNetworks(): array
+    private function votingNetworks(): array
     {
         $networks = [];
         foreach (SocialNetwork::cases() as $network) {
@@ -149,7 +149,7 @@ final readonly class DiscussionVotes
     {
         $names = array_map(
             static fn (SocialNetwork $network): string => $network->displayName(),
-            $this->selectVotingNetworks(),
+            $this->votingNetworks(),
         );
         $last = (string) array_pop($names);
 
