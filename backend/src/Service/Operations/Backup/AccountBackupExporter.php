@@ -86,7 +86,7 @@ final readonly class AccountBackupExporter
         $user = $this->users->getById($userId);
 
         return new FoundationSnapshotModel(
-            AccountLine::of($user, $this->accountSettings->buildSettings($user), $this->networkSwitchesOf($userId))
+            AccountLine::of($user, $this->accountSettings->loadSettings($user), $this->networkSwitchesOf($userId))
                 ->toBackupLine(),
             array_map(
                 static fn (Tag $tag): string => TagLine::of($tag)->toBackupLine(),

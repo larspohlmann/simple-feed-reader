@@ -30,7 +30,7 @@
 
 | File (under `backend/src/Service/`) | Old | New |
 |---|---|---|
-| `Identity/Account/AccountSettings.php` | `of(User $user)` | `buildSettings` |
+| `Identity/Account/AccountSettings.php` | `of(User $user)` | `loadSettings` |
 | `Sourcing/Catalog/Model/BundledCatalogSummaryModel.php` | `of(ParsedCatalogModel $document)` | `fromCatalog` |
 | `Sourcing/Discovery/Model/FeedCandidateModel.php` | `of(DiscoveredFeedModel $feed)` | `fromDiscoveredFeed` |
 | `Sourcing/Discovery/WellKnownFeedProbe.php` | `feedOf` (private) | `parseFeed` |
