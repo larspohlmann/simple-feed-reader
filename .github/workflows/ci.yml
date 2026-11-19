@@ -50,7 +50,7 @@ jobs:
 
       - uses: ./.github/actions/setup-backend
 
-      - name: PHPCS (PSR-12)
+      - name: PHPCS (PSR-12, sorted imports)
         run: composer cs
 
       - name: Warm cache for symfony-lsp
