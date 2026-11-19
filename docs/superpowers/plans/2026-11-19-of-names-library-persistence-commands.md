@@ -26,7 +26,6 @@
 - `of()` on a named constructor or a conversion becomes `from<Source>()` or `to<Target>()`.
 - A repository query is `find…` and a repository count is `count…`, as the repositories already name them; find-or-create is `ensure…`.
 - **Kept:** `RecommendationRun::guardStatusOneOf()` ("one of" is the phrase, and `guard…` says what it does) and nothing else.
-- **A repository method declared on a consumer-owned interface** is renamed together with that interface, wherever in `src/Service` it lives; a later batch finds it already done.
 
 ## The renames
 
@@ -45,12 +44,12 @@ The last column is what the method does, which is what the reviewer checks the n
 | `EntryList/EntryListRowEnricher.php` | `savedEntryIdsOf` (private) | `collectSavedEntryIds` | the ids of the entries in a saved feed |
 | `EntryList/EntryListRowEnricher.php` | `discussionOf` (private) | `buildDiscussionRow` | the discussion part of a row for a platform thread, else null |
 | `EntryList/EntryListRowEnricher.php` | `topLevelEntryIdsOf` (private) | `collectTopLevelEntryIds` | the entry id of each row |
-| `Opml/OpmlImporter.php` | `sourceFormatOf` (private) | `resolveSourceFormat` | the outline's declared format when valid, else Mixcloud by URL, else XML |
+| `Opml/OpmlImporter.php` | `sourceFormatOf` (private) | `resolveSourceFormat` | without a sourceFormat attribute, Mixcloud by URL, else XML; with one, that format when it is verbatim-valid, else XML |
 | `Opml/Pass/OpmlTagTree.php` | `childrenOf` | `findChildren` | the tags whose parent is the given tag |
 | `Opml/Pass/OpmlTagTree.php` | `feedsOf` | `findFeeds` | the exported subscriptions filed under a tag |
 | `SavedPosts/SavedFeeds.php` | `of` | `ensureSubscription` | the reader's saved-feed subscription, created and stored when missing |
 | `SavedPosts/SavedPostRescue.php` | `copiesOf` (private) | `copyEntries` | copies the planned entries, plain and renamed, and returns the id map |
-| `SavedPosts/SavedStateMover.php` | `hiddenSinceOf` (private) | `readHiddenSince` | the hidden-at instant of a hidden state, else null |
+| `SavedPosts/SavedStateMover.php` | `hiddenSinceOf` (private) | `findHiddenSince` | the hidden-at instant of a state that is hidden, else null |
 | `SavedPosts/Pass/SavedCopyPlan.php` | `renamedGuidOf` (private) | `buildRenamedGuid` | the guid with the feed id appended |
 | `SavedPosts/Support/SavedFeedUrl.php` | `of` | `buildUrl` | the saved-feed URL of a user and network |
 | `SavedPosts/Support/SavedFeedUrl.php` | `networkOf` | `parseNetwork` | the network a saved-feed URL names, or null |
@@ -64,17 +63,17 @@ The last column is what the method does, which is what the reviewer checks the n
 | `Search/Membership/SavedSearchMembershipSweep.php` | `idsOf` (private) | `collectIds` | the id of each saved search |
 | `Search/Model/SavedSearchTermModel.php` | `idsOf` | `collectIds` | the id of each term model |
 | `Search/Support/SavedSearchTerms.php` | `of` | `fromSavedSearch` | the search terms of a saved search |
-| `Search/Support/SavedSearchTerms.php` | `termOf` | `buildTerm` | a saved search's id with its terms |
+| `Search/Support/SavedSearchTerms.php` | `termOf` | `buildTermModel` | a saved search's id with its terms |
 | `Subscription/SubscriptionService.php` | `feedIdsOf` (private) | `collectFeedIds` | the distinct feed ids of the subscriptions |
 | `SubscriptionHistory/RetentionHorizon.php` | `asOf` | `buildHorizon` | the oldest day kept for entries and for social posts, counted back from a day |
 | `SubscriptionHistory/SubscriptionHistoryRecorder.php` | `missingDaysOf` (private) | `collectMissingDays` | per subscription, its live days among the dates |
 | `SubscriptionHistory/SubscriptionHistoryRecorder.php` | `chunksOf` (private) | `chunkDays` | yields the days in flush-sized chunks |
-| `SubscriptionHistory/Model/DayCountsModel.php` | `of` | `readCount` | a subscription's count on a day, zero counts when none is held |
+| `SubscriptionHistory/Model/DayCountsModel.php` | `of` | `findDayCount` | a subscription's arrived and read counts on a day; zero counts when none is held |
 | `SubscriptionHistory/Model/DayWindowModel.php` | `averagedWeekOf` | `sliceAveragedWeek` | the seven days before today out of a series |
 | `SubscriptionHistory/Model/TrackedSubscriptionModel.php` | `idsOf` | `collectIds` | the subscription id of each model |
 | `SubscriptionHistory/Support/UtcDay.php` | `of` | `fromInstant` | an instant's day as `Y-m-d` |
 | `Tag/TagEditor.php` | `treeOf` (private) | `loadTree` | the user's tag tree from the stored parent ids |
-| `Tag/TagOrdering.php` | `siblingsOf` (private) | `requireSiblings` | the owned tags sharing the first listed tag's parent; throws when that tag is not owned |
+| `Tag/TagOrdering.php` | `siblingsOf` (private) | `filterSiblings` | the owned tags in the parent group of the first listed tag; throws when that tag is not owned |
 | `Tag/Pass/TagTree.php` | `depthOf` | `computeDepth` | how many ancestors a tag has |
 | `Tag/Pass/TagTree.php` | `heightOf` | `computeHeight` | how many levels lie below a tag |
 
@@ -86,16 +85,16 @@ The last column is what the method does, which is what the reviewer checks the n
 | `EntryListSort.php` | `instantOf` | `requireInstant` | the row's instant for this sort; throws when the row lacks it |
 | `KnownSocialCollectionRepository.php` | `keysOf` | `findKeys` | the keys of an account's known collections |
 | `PostRemovalRepository.php` | `copiesOf` | `findCopies` | the entry and each copy of its post outside a saved feed |
-| `PrivateFeedSyncChangeRepository.php` | `recentOf` | `findRecentChanges` | the accounts' sync changes, newest first |
+| `PrivateFeedSyncChangeRepository.php` | `recentOf` | `findChangesByAccount` | every sync change of the accounts, by account id, newest first |
 | `RecommendationRunLogRepository.php` | `listRowsOf` (private) | `findListRows` | the log rows of one run for the list |
 | `RecommendationRunLogRepository.php` | `streamingTextOf` (private) | `findStreamingTexts` | the response text of a run's calls still streaming |
 | `RecommendationRunRepository.php` | `statusOf` | `findStatus` | a run's stored status, read as a scalar; null without the run |
-| `RetentionRepository.php` | `idsOf` (private) | `readIds` | runs a query and returns its single id column; none without a query |
+| `RetentionRepository.php` | `idsOf` (private) | `readIds` | runs a query another method built and returns its single id column; none without a query (it owns no query, unlike a find…) |
 | `SavedPostRepository.php` | `keptTwinsOf` | `findKeptTwins` | the entries sharing a URL hash in feeds the reader keeps |
 | `SavedPostRepository.php` | `originalsOf` | `findOriginals` | the guid, hashes and feed of each entry id |
 | `SearchedColumns.php` | `anyOf` | `buildAnyColumnMatch` | the DQL that matches title, summary or transcript |
-| `ShareEnrichmentBacklogRepository.php` | `backlogOf` | `countBacklog` | how many enrichments of a kind wait, and since when |
-| `ShareEnrichmentRepository.php` | `rowsOf` (private) | `readRows` | runs a query and returns its enrichments |
+| `ShareEnrichmentBacklogRepository.php` | `backlogOf` | `findBacklog` | the waiting count and oldest queue time of one kind's undone rows |
+| `ShareEnrichmentRepository.php` | `rowsOf` (private) | `readRows` | runs a query another method built and returns its enrichments (it owns no query, unlike a find…) |
 | `ShareEnrichmentRepository.php` | `idsOf` (private) | `collectIds` | the id of each enrichment |
 | `SharedLinkRepository.php` | `rowOf` (private) | `buildRow` | a new link's values in insert order |
 | `SocialFeedRepository.php` | `findAllOf` | `findAllForAccount` | an account's social feeds by id |
@@ -103,18 +102,18 @@ The last column is what the method does, which is what the reviewer checks the n
 | `SocialFeedRepository.php` | `subscribedCollectionsOf` | `findSubscribedCollections` | the account's subscribed collections of every kind |
 | `SocialNotificationPollRepository.php` | `stampOf` | `ensureStamp` | the account's poll stamp, created and persisted when missing |
 | `SubscriptionActivityRepository.php` | `plainSubscriptionsOf` | `findPlainSubscriptions` | a user's tracked subscriptions to feeds without a network |
-| `SubscriptionActivityRepository.php` | `arrivalCountsOf` (private) | `countArrivals` | entries created per feed and day since an instant |
-| `SubscriptionActivityRepository.php` | `readCountsOf` (private) | `countReads` | entries viewed per subscription and day since an instant |
+| `SubscriptionActivityRepository.php` | `arrivalCountsOf` (private) | `countArrivalsPerDay` | entries created per feed and day, for one chunk of ids |
+| `SubscriptionActivityRepository.php` | `readCountsOf` (private) | `countReadsPerDay` | entries viewed per subscription and day, for one chunk of ids |
 | `SubscriptionDisplayTitle.php` | `ofSubscription` | `fromSubscription` | the display title of a subscription (beside `from()`) |
 | `SubscriptionDisplayTitle.php` | `searchQueryOf` (private) | `parseSearchQuery` | the query a search feed's URL names, or null |
-| `TagTreeRepository.php` | `lockTagsOf` | `lockTags` | locks the user's row so tag placements run one at a time |
+| `TagTreeRepository.php` | `lockTagsOf` | `lockTagPlacements` | locks the user's row so that user's tag placements run one at a time |
 | `TitledEntry.php` | `of` | `fromEntry` | an entry with its subscription's display title |
 | `TrendingEntryRepository.php` | `headlinesOf` | `findHeadlines` | feed title and headline by entry id |
 | `TrendingEntryRepository.php` | `linkTitlesOf` | `findLinkTitles` | the non-blank titles of shared links by id |
 | `TrendingEntryRepository.php` | `modelOf` (private) | `buildEntry` | a window entry from a result row |
 | `TrendingEntryRepository.php` | `cardOf` (private) | `buildCard` | a row's link card; null when a card column is missing |
 | `TrendingStoryEntryListRepository.php` | `headingOf` | `findHeading` | a story's title and synopsis, or null |
-| `TrendingStoryEntryListRepository.php` | `tallyOf` | `countMembers` | a story's member and unread counts for the reader |
+| `TrendingStoryEntryListRepository.php` | `tallyOf` | `countMembersAndUnread` | a story's member and unread counts for the reader |
 | `TrendingStoryHistoryRepository.php` | `followsOf` (private) | `findFollows` | a story's follows by user id |
 | `TrendingStoryHistoryRepository.php` | `fallbackColumnsOf` (private) | `buildFallbackColumns` | the two fallback-title column values |
 | `TrendingStoryHistoryRepository.php` | `earliestJoinsOf` (private) | `findEarliestJoins` | the earliest stored join of each joining entry |
@@ -130,7 +129,7 @@ The last column is what the method does, which is what the reviewer checks the n
 
 | File | Old | New | What it does |
 |---|---|---|---|
-| `Entity/Discussion.php` | `of` | `fromPageAndFeed` | a discussion from its page and comments feed, the load dropped when nothing can load |
+| `Entity/Discussion.php` | `of` | `fromPageAndFeed` | a discussion from its page and comments feed; the load is dropped unless a comments feed exists or the page's load is not Manual |
 | `Entity/DiscussionCounts.php` | `of` | `fromScoreAndComments` | the counts from a score and a comment count |
 | `Entity/EntryAttachment.php` | `extensionOf` | `extractExtension` | the lower-cased file extension of a URL's path |
 | `Entity/EntryGuid.php` | `hashOf` | `hashGuid` | the SHA-256 of a guid |
@@ -138,11 +137,11 @@ The last column is what the method does, which is what the reviewer checks the n
 | `Entity/ImageRendition.php` | `widestOf` | `pickWidestWidth` | the largest width among renditions |
 | `Entity/PostCommunity.php` | `of` | `fromIdentityAndUrl` | a community with its identity lower-cased |
 | `Entity/RecommendationRun.php` | `guardStatusOneOf` (private) | kept | throws unless the run's status is one of the allowed |
-| `Enum/RecommendationEngineKind.php` | `of` | `fromProtocol` | scoring for a model with a scoring protocol, else LLM |
+| `Enum/RecommendationEngineKind.php` | `of` | `fromProtocol` | Scoring for a model that has a scoring protocol, Llm for one without |
 | `Enum/SocialNetwork.php` | `valuesOf` | `toValues` | the string value of each network |
 | `Enum/TrendingWindow.php` | `leavesOutTheStoriesOf` | `excludedStoryWindows` | the windows whose stories this window leaves out |
 | `Enum/VoteScore.php` | `ofNetworkValue` | `fromNetworkValue` | a network's vote number as a score, none when unknown |
-| `Doctrine/SearchIndexQuery.php` | `allOf` | `buildConjunction` | quotes each piece and joins them with AND |
+| `Doctrine/SearchIndexQuery.php` | `allOf` | `buildAllPiecesQuery` | an FTS5 match string that requires every piece: each quoted, embedded quotes doubled, joined with AND |
 | `Command/ReaderAuditReportCommand.php` | `rowsOf` (private) | `toRows` | key and count pairs as table rows |
 | `Command/TrendingExplainCommand.php` | `headlinesOf` (private) | `loadHeadlines` | loads the printed entries and formats a headline for each |
 | `Command/TrendingExplainCommand.php` | `headlineOf` (private) | `formatHeadline` | `[feed] title` for an entry |
@@ -153,7 +152,6 @@ The last column is what the method does, which is what the reviewer checks the n
 ## Review Focus
 
 - **A name that does not say what the body does.** The last column is my reading of each body; for the repository queries I read the first lines and the docblock, not every clause. Where the reviewer reads a body differently, the row comes back to the planner with what the method does; the reviewer picks no name.
-- **Repository methods behind consumer-owned interfaces.** Several public repository methods are declared on an interface in a service module and doubled in tests by that interface. Declaration, implementation and every double are renamed together.
 - **`EntryGuid::hashOf()` and `SocialNetwork::valuesOf()` are called across the whole tree,** also as first-class callables. Rename by the class-qualified name.
 - **A mock that names the method as a string**, and DQL or SQL strings that happen to contain an old name: only method names change.
 - **Name collisions.** Repositories inherit Doctrine's `find…` methods (`findAllForAccount`, `findStatus`, `findHeadings` must not hide one); `SavedFeedUrl` gets `buildUrl`, `parseNetwork`, `parseParts`; `TrendingEntryRepository` gets `buildEntry`, `buildCard`.
@@ -169,7 +167,7 @@ The last column is what the method does, which is what the reviewer checks the n
 
 ### Task 2: Repository
 
-- [ ] **Step 1:** Rename the 43 Repository methods, the interface declarations they implement, every double and every caller.
+- [ ] **Step 1:** Rename the 43 Repository methods and every caller (none is declared on an interface).
 - [ ] **Step 2:** Run the Task 1 grep over `backend/src/Repository`. Expected: no output.
 - [ ] **Step 3:** Gates as in Task 1 Step 3.
 - [ ] **Step 4:** Commit `refactor(#2360): Repository methods say what they do`.
