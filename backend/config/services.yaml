@@ -108,7 +108,7 @@ services:
     App\Service\Sourcing\Discovery\FeedDiscovery\FeedDiscoveryInterface: '@App\Service\Sourcing\Discovery\FeedDiscovery\FeedDiscovery'
     App\Service\Content\Reader\ArticleExtractor\ArticleExtractorInterface: '@App\Service\Content\Reader\ArticleExtractor\ArticleExtractor'
     App\Service\Operations\Settings\ServingHost\ServingHostInterface: '@App\Http\RequestServingHost'
-    App\Service\Social\Social\HiddenProfiles\HiddenProfilesInterface: '@App\Service\Social\Social\HiddenProfiles\AppViewHiddenProfiles'
+    App\Service\Social\Bluesky\HiddenProfiles\HiddenProfilesInterface: '@App\Service\Social\Bluesky\HiddenProfiles\AppViewHiddenProfiles'
     App\Service\Content\Reader\StatusReasonPhrases\StatusReasonPhrasesInterface: '@App\Http\SymfonyStatusReasonPhrases'
     App\Service\Ingestion\Ingest\FeedTitle\FeedTitleInterface: '@App\Service\Social\Social\ProfileFeedTitle'
 

@@ -10,7 +10,7 @@ use App\Service\Social\Social\Model\FollowedAccountModel;
 use App\Service\Social\Social\Model\ImportCandidateModel;
 use App\Service\Social\Social\Model\ProfileFeedSubscriptionModel;
 use App\Service\Social\Social\Pass\FollowMatching;
-use App\Service\Social\Social\Support\BlueskyProfileFeed;
+use App\Service\Social\Bluesky\Support\BlueskyProfileFeed;
 use App\Service\Social\Mastodon\Support\MastodonProfileFeed;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialRuleWiring;

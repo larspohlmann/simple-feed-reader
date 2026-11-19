@@ -21,7 +21,7 @@ use App\Service\Ingestion\Refresh\PassFetcher\ConcurrentPassFetcher;
 use App\Service\Social\Social\Exception\PrivateFeedOrphanedException;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Social\Model\BlueskySessionModel;
+use App\Service\Social\Bluesky\Model\BlueskySessionModel;
 use App\Service\Social\Social\Model\TimelineOutcome\AccountPausedTimelineModel;
 use App\Service\Social\Social\Model\TimelineOutcome\AccountThrottledTimelineModel;
 use App\Service\Social\Social\Model\TimelineOutcome\FailedTimelineModel;

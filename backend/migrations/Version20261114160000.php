@@ -7,7 +7,7 @@ namespace DoctrineMigrations;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Service\Library\SavedPosts\Support\SavedFeedUrl;
-use App\Service\Social\Social\Support\BlueskyProfileFeed;
+use App\Service\Social\Bluesky\Support\BlueskyProfileFeed;
 use App\Service\Social\Lemmy\Support\LemmyProfileFeed;
 use App\Service\Social\Mastodon\Support\MastodonProfileFeed;
 use App\Service\Social\Social\Support\SocialFeedUrl;

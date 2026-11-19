@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ExceptionProblems\SocialProblems;
-use App\Service\Social\Social\Exception\BlueskyProfileHiddenException;
+use App\Service\Social\Bluesky\Exception\BlueskyProfileHiddenException;
 use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Social\Exception\TooManySocialAccountsException;
 use PHPUnit\Framework\TestCase;

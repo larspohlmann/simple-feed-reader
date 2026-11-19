@@ -25,7 +25,7 @@ use App\Service\Ingestion\Refresh\FeedOutcomePersister;
 use App\Service\Ingestion\Refresh\Model\FeedOutcome;
 use App\Service\Social\Social\Model\ThreadPostModel;
 use App\Service\Social\Social\Model\TimelinePageModel;
-use App\Service\Social\Social\Support\BlueskyTimelinePage;
+use App\Service\Social\Bluesky\Support\BlueskyTimelinePage;
 use App\Tests\DbTestCase;
 use App\Tests\Support\Bluesky;
 use App\Tests\Support\FakeAppView;

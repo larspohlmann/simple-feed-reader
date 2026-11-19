@@ -10,7 +10,7 @@ use App\Enum\SocialAccountStatus;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
-use App\Service\Social\Social\Model\RefusedFeedPositionModel;
+use App\Service\Social\Bluesky\Model\RefusedFeedPositionModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\HttpFoundation\Response;

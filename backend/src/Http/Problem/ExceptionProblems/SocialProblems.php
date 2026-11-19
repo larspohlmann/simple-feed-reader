@@ -6,7 +6,7 @@ namespace App\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
-use App\Service\Social\Social\Exception\BlueskyProfileHiddenException;
+use App\Service\Social\Bluesky\Exception\BlueskyProfileHiddenException;
 use App\Service\Social\Social\Exception\InvalidInstanceUrlException;
 use App\Service\Social\Social\Exception\InvalidSocialImportFeedException;
 use App\Service\Social\Social\Exception\NotAnAppPasswordException;

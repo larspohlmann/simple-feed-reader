@@ -12,7 +12,7 @@ use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
 use App\Service\Social\Social\Exception\PrivateFeedOrphanedException;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Social\Model\BlueskySessionModel;
+use App\Service\Social\Bluesky\Model\BlueskySessionModel;
 use App\Service\Social\Social\Model\TimelineOutcome\AccountPausedTimelineModel;
 use App\Service\Social\Social\Model\TimelineOutcome\FailedTimelineModel;
 use App\Service\Social\Social\Model\TimelineOutcome\FetchedTimelineModel;

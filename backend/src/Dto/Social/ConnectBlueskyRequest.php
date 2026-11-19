@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Dto\Social;
 
 use App\Service\Social\Social\Model\SocialCredentialsModel;
-use App\Service\Social\Social\Support\BlueskyCredentials;
+use App\Service\Social\Bluesky\Support\BlueskyCredentials;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class ConnectBlueskyRequest
