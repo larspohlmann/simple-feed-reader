@@ -18,10 +18,6 @@ use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
 use App\Service\Social\Social\Model\PostDeletion;
-use App\Service\Social\Social\Support\OwnPostIds;
-use App\Service\Social\Social\Support\OwnReplyGuids;
-use App\Service\Social\Social\Support\PostAuthor;
-use App\Service\Social\Social\Support\SocialPostAddress;
 
 /** Deletes one of the user's own posts on its network, its folded replies newest first, then every copy here. */
 final readonly class OwnPostDeletion
@@ -31,6 +27,7 @@ final readonly class OwnPostDeletion
         private ThreadPostRepository $threadPosts,
         private PostWriting $writing,
         private LocalPostRemoval $localRemoval,
+        private SocialPostAddresses $postAddresses,
     ) {
     }
 
@@ -47,11 +44,14 @@ final readonly class OwnPostDeletion
      */
     public function delete(User $user, Entry $entry): PostDeletion
     {
-        $post = SocialPostAddress::ofOrRefuse($entry);
+        $post = $this->postAddresses->requirePost($entry);
         $author = $this->authorOf($user, $entry, $post->network);
         $replyUrls = $this->replyUrlsOf($entry);
-        $postIds = [...self::replyIdsOf($replyUrls, $author), OwnPostIds::ofAddress($post, $author)];
-        $replyGuids = self::replyGuidsOf($replyUrls, $author);
+        $postIds = [
+            ...$this->replyIdsOf($replyUrls, $author),
+            $this->postAddresses->selectRule($post->network)->requireOwnPostId($post, $author),
+        ];
+        $replyGuids = $this->replyGuidsOf($replyUrls, $author);
         foreach ($postIds as $postId) {
             $deletion = $this->writing->delete($author, $postId);
         }
@@ -62,7 +62,7 @@ final readonly class OwnPostDeletion
 
     private function authorOf(User $user, Entry $entry, SocialNetwork $network): SocialAccount
     {
-        return PostAuthor::accountAmong($entry, $this->socialAccounts->findAllOnNetwork($user, $network))
+        return $this->postAddresses->findAuthorAmong($entry, $this->socialAccounts->findAllOnNetwork($user, $network))
             ?? throw new SocialPostRefusedException('No connected account wrote this post.');
     }
 
@@ -81,9 +81,11 @@ final readonly class OwnPostDeletion
      *
      * @return list<string>
      */
-    private static function replyIdsOf(array $replyUrls, SocialAccount $author): array
+    private function replyIdsOf(array $replyUrls, SocialAccount $author): array
     {
-        return array_map(static fn (string $url): string => OwnPostIds::ofReplyUrl($url, $author), $replyUrls);
+        $rule = $this->postAddresses->selectRule($author->getNetwork());
+
+        return array_map(static fn (string $url): string => $rule->requireOwnReplyId($url, $author), $replyUrls);
     }
 
     /**
@@ -91,10 +93,12 @@ final readonly class OwnPostDeletion
      *
      * @return list<string>
      */
-    private static function replyGuidsOf(array $replyUrls, SocialAccount $author): array
+    private function replyGuidsOf(array $replyUrls, SocialAccount $author): array
     {
+        $rule = $this->postAddresses->selectRule($author->getNetwork());
+
         return array_merge(...array_map(
-            static fn (string $url): array => OwnReplyGuids::ofUrl($url, $author),
+            static fn (string $url): array => $rule->requireOwnReplyGuids($url, $author),
             $replyUrls,
         ));
     }

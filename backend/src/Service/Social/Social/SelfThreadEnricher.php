@@ -24,7 +24,6 @@ use App\Service\Social\Social\Model\SelfThreadBudgetModel;
 use App\Service\Social\Social\Model\SocialPostAddressModel;
 use App\Service\Social\Share\Support\ShareTargets;
 use App\Service\Social\Social\ReplyThreadSource\ReplyThreadSourceInterface;
-use App\Service\Social\Social\Support\SocialPostAddress;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
@@ -49,6 +48,7 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
         private LinkCardRepository $linkCards,
         private NaiveUtcClock $clock,
         private LoggerInterface $logger,
+        private SocialPostAddresses $postAddresses,
     ) {
     }
 
@@ -157,7 +157,7 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
     /** @return bool false when the row goes back to the queue for a later pass */
     private function settle(ShareEnrichment $row, \DateTimeImmutable $claimedAt): bool
     {
-        $address = SocialPostAddress::of($row->getEntry());
+        $address = $this->postAddresses->findPost($row->getEntry());
         if (
             $address === null
             || $row->isQueuedBefore(ShareEnrichment::giveUpCutoff($claimedAt))

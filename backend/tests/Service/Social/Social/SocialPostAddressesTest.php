@@ -2,31 +2,41 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Social\Support;
+namespace App\Tests\Service\Social\Social;
 
 use App\Entity\Entry;
+use App\Entity\EntryAuthor;
 use App\Entity\Feed;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Service\Social\Social\Exception\NotASocialPostException;
 use App\Service\Social\Social\Model\SocialPostAddressModel;
-use App\Service\Social\Social\Support\SocialPostAddress;
+use App\Service\Social\Social\SocialPostAddresses;
 use App\Tests\Support\LemmyPostEntries;
+use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\SocialRuleWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
-final class SocialPostAddressTest extends TestCase
+final class SocialPostAddressesTest extends TestCase
 {
     private const string POST_URI = 'at://did:plc:bob/app.bsky.feed.post/3abc';
     private const string STATUS_URL = 'https://mastodon.social/@Gargron/110';
     private const string STATUS_URI = 'https://mastodon.social/users/Gargron/statuses/110';
+
+    private SocialPostAddresses $postAddresses;
+
+    protected function setUp(): void
+    {
+        $this->postAddresses = SocialRuleWiring::postAddresses();
+    }
 
     #[DataProvider('posts')]
     public function testAnEntryIsAddressedAsItsNetworkKnowsIt(
         Entry $entry,
         ?SocialPostAddressModel $expected,
     ): void {
-        self::assertEquals($expected, SocialPostAddress::of($entry));
+        self::assertEquals($expected, $this->postAddresses->findPost($entry));
     }
 
     /** @return iterable<string, array{Entry, SocialPostAddressModel|null}> */
@@ -109,7 +119,7 @@ final class SocialPostAddressTest extends TestCase
 
         self::assertEquals(
             new SocialPostAddressModel(SocialNetwork::Mastodon, self::STATUS_URL),
-            SocialPostAddress::ofOrRefuse(self::entry($mastodon, self::STATUS_URL, null)),
+            $this->postAddresses->requirePost(self::entry($mastodon, self::STATUS_URL, null)),
         );
     }
 
@@ -117,17 +127,17 @@ final class SocialPostAddressTest extends TestCase
     {
         $this->expectExceptionObject(new NotASocialPostException('This entry is not a post this reader can act on.'));
 
-        SocialPostAddress::ofOrRefuse(self::entry(new Feed('https://example.com/feed.xml'), self::POST_URI, null));
+        $this->postAddresses->requirePost(self::entry(new Feed('https://example.com/feed.xml'), self::POST_URI, null));
     }
 
     public function testALemmyPostIsRespondableButNoLikeablePost(): void
     {
         $entry = self::lemmyPost();
 
-        self::assertNull(SocialPostAddress::of($entry));
+        self::assertNull($this->postAddresses->findPost($entry));
         self::assertEquals(
             new SocialPostAddressModel(SocialNetwork::Lemmy, 'https://lemmy.example/post/42'),
-            SocialPostAddress::respondableOrRefuse($entry),
+            $this->postAddresses->requireRespondablePost($entry),
         );
     }
 
@@ -137,14 +147,14 @@ final class SocialPostAddressTest extends TestCase
 
         $this->expectException(NotASocialPostException::class);
 
-        SocialPostAddress::respondableOrRefuse($entry);
+        $this->postAddresses->requireRespondablePost($entry);
     }
 
     public function testAReplyUnderALemmyPostIsAnHttpsAddress(): void
     {
         self::assertEquals(
             new SocialPostAddressModel(SocialNetwork::Lemmy, 'https://origin.example/comment/5'),
-            SocialPostAddress::respondableReplyOrRefuse(self::lemmyPost(), 'https://origin.example/comment/5'),
+            $this->postAddresses->requireRespondableReply(self::lemmyPost(), 'https://origin.example/comment/5'),
         );
     }
 
@@ -152,14 +162,14 @@ final class SocialPostAddressTest extends TestCase
     {
         $this->expectException(NotASocialPostException::class);
 
-        SocialPostAddress::respondableReplyOrRefuse(self::lemmyPost(), '77');
+        $this->postAddresses->requireRespondableReply(self::lemmyPost(), '77');
     }
 
     public function testAReplyUnderAMastodonPostIsAddressedAsBefore(): void
     {
         self::assertEquals(
             new SocialPostAddressModel(SocialNetwork::Mastodon, self::STATUS_URI),
-            SocialPostAddress::respondableReplyOrRefuse(self::postOn(SocialNetwork::Mastodon), self::STATUS_URI),
+            $this->postAddresses->requireRespondableReply(self::postOn(SocialNetwork::Mastodon), self::STATUS_URI),
         );
     }
 
@@ -168,7 +178,7 @@ final class SocialPostAddressTest extends TestCase
     {
         self::assertEquals(
             new SocialPostAddressModel($network, $address),
-            SocialPostAddress::replyOrRefuse(self::postOn($network), $address),
+            $this->postAddresses->requireReply(self::postOn($network), $address),
         );
     }
 
@@ -184,7 +194,7 @@ final class SocialPostAddressTest extends TestCase
     {
         $this->expectExceptionObject(new NotASocialPostException('The reply is no post on the entry\'s network.'));
 
-        SocialPostAddress::replyOrRefuse(self::postOn($network), $address);
+        $this->postAddresses->requireReply(self::postOn($network), $address);
     }
 
     /** @return iterable<string, array{SocialNetwork, string}> */
@@ -197,7 +207,7 @@ final class SocialPostAddressTest extends TestCase
     #[DataProvider('sharedUrls')]
     public function testASharedUrlNamesThePostItShows(string $url, ?SocialPostAddressModel $expected): void
     {
-        self::assertEquals($expected, SocialPostAddress::ofUrl($url));
+        self::assertEquals($expected, $this->postAddresses->parsePostUrl($url));
     }
 
     /** @return iterable<string, array{string, SocialPostAddressModel|null}> */
@@ -229,6 +239,95 @@ final class SocialPostAddressTest extends TestCase
         ];
         yield 'an article' => ['https://news.example/article?id=7', null];
         yield 'a mastodon profile' => ['https://mastodon.social/@Gargron', null];
+    }
+
+    public function testALemmyPostInAFeedWithoutNetworkIsRespondable(): void
+    {
+        $feed = new Feed('https://news.example/feed.xml');
+        $entry = LemmyPostEntries::on($feed, 'https://lemmy.example/post/7');
+
+        self::assertNull($feed->getNetwork());
+        self::assertEquals(
+            new SocialPostAddressModel(SocialNetwork::Lemmy, 'https://lemmy.example/post/7'),
+            $this->postAddresses->requireRespondablePost($entry),
+        );
+    }
+
+    #[DataProvider('postUrls')]
+    public function testExactlyOneRuleClaimsAPostUrl(string $url, SocialNetwork $owner): void
+    {
+        foreach (SocialNetwork::cases() as $network) {
+            $claim = $this->postAddresses->selectRule($network)->parsePostUrl($url);
+            if ($network === $owner) {
+                self::assertNotNull($claim, $network->value . ' claims its own post URL');
+            } else {
+                self::assertNull($claim, $network->value . ' leaves another network\'s post URL alone');
+            }
+        }
+    }
+
+    /** @return iterable<string, array{string, SocialNetwork}> */
+    public static function postUrls(): iterable
+    {
+        yield 'a bluesky web url' => ['https://bsky.app/profile/bob.test/post/3abc', SocialNetwork::Bluesky];
+        yield 'a bluesky at uri' => [self::POST_URI, SocialNetwork::Bluesky];
+        yield 'a mastodon status url' => [self::STATUS_URL, SocialNetwork::Mastodon];
+        yield 'a mastodon status uri' => [self::STATUS_URI, SocialNetwork::Mastodon];
+    }
+
+    #[DataProvider('authoredPosts')]
+    public function testThePostIsMineWhenOneOfMyAccountsWroteIt(Entry $entry, ?string $expectedIdentity): void
+    {
+        $accounts = [SocialAccounts::bluesky(), SocialAccounts::mastodon()];
+
+        self::assertSame($expectedIdentity, $this->postAddresses->findAuthorAmong($entry, $accounts)?->getIdentity());
+    }
+
+    /** @return iterable<string, array{Entry, ?string}> */
+    public static function authoredPosts(): iterable
+    {
+        $bluesky = self::classifiedFeed('https://bsky.app/profile/did:plc:alice/rss', SocialNetwork::Bluesky);
+        $mastodon = self::classifiedFeed('https://mastodon.example/@alice.rss', SocialNetwork::Mastodon);
+        $plain = self::classifiedFeed('https://example.com/feed.xml', null);
+
+        yield 'bluesky post by my DID' => [
+            self::authoredEntry($bluesky, 'at://did:plc:alice/app.bsky.feed.post/3own'),
+            'did:plc:alice',
+        ];
+        yield 'bluesky post by another DID' => [
+            self::authoredEntry($bluesky, 'at://did:plc:bob/app.bsky.feed.post/3abc'),
+            null,
+        ];
+        yield 'mastodon post by its author profile' => [
+            self::authoredEntry($mastodon, 'https://elsewhere.example/@x/1', 'https://Mastodon.Example/@Alice'),
+            'alice@mastodon.example',
+        ];
+        yield 'mastodon post without an author, by its status address' => [
+            self::authoredEntry($mastodon, 'https://mastodon.example/users/alice/statuses/120'),
+            'alice@mastodon.example',
+        ];
+        yield 'mastodon post by someone else' => [
+            self::authoredEntry($mastodon, 'https://mastodon.example/@bob/121', 'https://mastodon.example/@bob'),
+            null,
+        ];
+        yield 'an article is nobody\'s post' => [self::authoredEntry($plain, 'https://example.com/a'), null];
+    }
+
+    private static function classifiedFeed(string $url, ?SocialNetwork $network): Feed
+    {
+        $feed = new Feed($url);
+        $feed->classifyAs($network);
+
+        return $feed;
+    }
+
+    private static function authoredEntry(Feed $feed, string $guid, ?string $authorUrl = null): Entry
+    {
+        $now = new \DateTimeImmutable('2026-11-01 10:00:00');
+        $entry = new Entry($feed, $guid, $guid, 'Post', $now, $now);
+        $entry->setAuthor(new EntryAuthor('Alice', $authorUrl));
+
+        return $entry;
     }
 
     private static function lemmyPost(): Entry

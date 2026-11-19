@@ -22,6 +22,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\SeedsUsers;
+use App\Tests\Support\SocialRuleWiring;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 
@@ -42,7 +43,7 @@ final class LocalPostRemovalTest extends DbTestCase
         parent::setUp();
         $this->tombstones = new DeletedPostTombstones(new ArrayAdapter(), new MockClock('2026-11-01 12:00:00'));
         $this->index = new RecordingSearchIndexWriter();
-        $this->countsCache = new SocialCountsCache(new ArrayAdapter());
+        $this->countsCache = new SocialCountsCache(new ArrayAdapter(), SocialRuleWiring::postAddresses());
     }
 
     public function testEveryCopyButASavedOneGoesAndEachIsBuriedInItsFeed(): void

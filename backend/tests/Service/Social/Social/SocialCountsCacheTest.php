@@ -8,6 +8,7 @@ use App\Enum\SocialNetwork;
 use App\Service\Social\Social\Model\SocialCountsModel;
 use App\Service\Social\Social\Model\SocialPostAddressModel;
 use App\Service\Social\Social\SocialCountsCache;
+use App\Tests\Support\SocialRuleWiring;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 
@@ -19,7 +20,7 @@ final class SocialCountsCacheTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->cache = new SocialCountsCache(new ArrayAdapter());
+        $this->cache = new SocialCountsCache(new ArrayAdapter(), SocialRuleWiring::postAddresses());
     }
 
     public function testAnUnaskedPostHasNoCounts(): void

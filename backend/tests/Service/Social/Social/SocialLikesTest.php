@@ -35,6 +35,7 @@ use App\Tests\Support\FakeMastodonNetwork;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
+use App\Tests\Support\SocialRuleWiring;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\DependencyInjection\ServiceLocator;
@@ -55,7 +56,7 @@ final class SocialLikesTest extends DbTestCase
     {
         parent::setUp();
         $this->mastodon = new FakeMastodonNetwork();
-        $this->countsCache = new SocialCountsCache(new ArrayAdapter());
+        $this->countsCache = new SocialCountsCache(new ArrayAdapter(), SocialRuleWiring::postAddresses());
         $this->owner = $this->user('social-likes-service@example.test');
     }
 
@@ -401,6 +402,7 @@ final class SocialLikesTest extends DbTestCase
                 SocialFeeds::actingAccountChooser($this->entityManager, $accounts),
                 $guard,
                 new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon]),
+                SocialRuleWiring::postAddresses(),
             ),
             new PostLiking($guard, new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon])),
             $this->entityManager,

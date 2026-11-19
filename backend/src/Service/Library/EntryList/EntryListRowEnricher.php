@@ -5,33 +5,19 @@ declare(strict_types=1);
 namespace App\Service\Library\EntryList;
 
 use App\Entity\Entry;
-use App\Entity\EntryLemmyPost;
-use App\Entity\SocialAccount;
 use App\Enum\CommentsLoad;
-use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
-use App\Enum\VoteScore;
-use App\Repository\DiscussionVoteRepository;
 use App\Repository\EntryCategoryRepository;
-use App\Repository\EntryLemmyPostRepository;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowDiscussion;
 use App\Repository\EntryListRowEnrichment;
-use App\Repository\EntryListRowLemmy;
 use App\Repository\EntryListRowSocial;
 use App\Repository\LinkCardRepository;
 use App\Repository\SavedEntryOriginRepository;
 use App\Repository\SavedSearchEntryRepository;
 use App\Repository\ShareEnrichmentRepository;
-use App\Repository\SocialAccountRepository;
-use App\Repository\SocialLikeRepository;
 use App\Repository\ThreadPostRepository;
-use App\Service\Content\Comments\Support\LemmyPostAddress;
 use App\Service\Content\Comments\Support\SubstackPostAddress;
-use App\Service\Social\Social\Model\SocialPostAddressModel;
-use App\Service\Social\Social\Support\PostAuthor;
-use App\Service\Social\Social\Support\ProfileFeedUrl;
-use App\Service\Social\Social\Support\SocialPostAddress;
 
 /**
  * Gives a page of rows their categories, saved searches, link cards, thread posts, pending flag, social state,
@@ -44,12 +30,9 @@ final readonly class EntryListRowEnricher
         private SavedSearchEntryRepository $memberships,
         private LinkCardRepository $linkCards,
         private ShareEnrichmentRepository $shareEnrichments,
-        private SocialAccountRepository $socialAccounts,
-        private SocialLikeRepository $socialLikes,
         private ThreadPostRepository $threadPosts,
         private SavedEntryOriginRepository $savedOrigins,
-        private DiscussionVoteRepository $discussionVotes,
-        private EntryLemmyPostRepository $lemmyPosts,
+        private ConnectedAccountStates $connectedAccountStates,
     ) {
     }
 
@@ -79,13 +62,8 @@ final readonly class EntryListRowEnricher
         $linkCards = $this->linkCards->contentsByEntryIds($entryIds);
         $threads = $this->threadPosts->byEntryIds($entryIds);
         $pendingIds = array_flip($this->shareEnrichments->pendingEntryIdsAmong(self::topLevelEntryIdsOf($rows)));
-        $postAddresses = self::postAddressesOf($entries);
-        $lemmyPostIds = self::lemmyPostIdsOf($entries);
-        $accountsByNetwork = $this->accountsByNetworkOf($postAddresses, $lemmyPostIds, $userId);
-        $socialStates = $this->socialStatesOf($entries, $postAddresses, $accountsByNetwork, $userId);
-        $votes = $this->votesOf($lemmyPostIds, $accountsByNetwork, $userId);
+        $states = $this->connectedAccountStates->buildStates($entries, $userId);
         $origins = $this->savedOrigins->originsByEntryIds(self::savedEntryIdsOf($entries));
-        $lemmyPosts = $this->lemmyPosts->byEntryIds($entryIds);
 
         $enrichments = [];
         foreach ($entryIds as $entryId) {
@@ -94,126 +72,15 @@ final readonly class EntryListRowEnricher
                 $savedSearches[$entryId] ?? [],
                 $linkCards[$entryId] ?? [],
                 isset($pendingIds[$entryId]),
-                $socialStates[$entryId] ?? null,
-                self::discussionOf($entries[$entryId], $socialStates[$entryId] ?? null),
+                $states->social[$entryId] ?? null,
+                self::discussionOf($entries[$entryId], $states->social[$entryId] ?? null),
                 $origins[$entryId] ?? null,
                 $threads[$entryId] ?? [],
-                self::lemmyOf($entries[$entryId], $lemmyPosts[$entryId] ?? null, $votes[$entryId] ?? null),
+                $states->lemmy[$entryId] ?? null,
             );
         }
 
         return $enrichments;
-    }
-
-    /**
-     * @param array<int, SocialPostAddressModel> $postAddresses
-     * @param list<int> $lemmyPostIds
-     *
-     * @return array<string, non-empty-list<SocialAccount>> by network value; read only when a post can use them
-     */
-    private function accountsByNetworkOf(array $postAddresses, array $lemmyPostIds, int $userId): array
-    {
-        if ([] === $postAddresses && [] === $lemmyPostIds) {
-            return [];
-        }
-
-        return self::accountsByNetwork($this->socialAccounts->findAllForUserIdInActingOrder($userId));
-    }
-
-    /**
-     * @param list<int> $lemmyPostIds
-     * @param array<string, non-empty-list<SocialAccount>> $accountsByNetwork
-     *
-     * @return array<int, VoteScore> by entry id, for every Lemmy post of a reader with a Lemmy account in any status
-     */
-    private function votesOf(array $lemmyPostIds, array $accountsByNetwork, int $userId): array
-    {
-        if (!isset($accountsByNetwork[SocialNetwork::Lemmy->value])) {
-            return [];
-        }
-
-        $stored = $this->discussionVotes->scoresAmong($userId, $lemmyPostIds);
-
-        return $stored + array_fill_keys($lemmyPostIds, VoteScore::None);
-    }
-
-    /**
-     * @param array<int, Entry> $entries
-     *
-     * @return list<int>
-     */
-    private static function lemmyPostIdsOf(array $entries): array
-    {
-        return array_keys(array_filter(
-            $entries,
-            static fn (Entry $entry): bool => null !== LemmyPostAddress::of($entry),
-        ));
-    }
-
-    /**
-     * @param array<int, Entry> $entries
-     * @param array<int, SocialPostAddressModel> $posts
-     * @param array<string, non-empty-list<SocialAccount>> $accountsByNetwork
-     *
-     * @return array<int, EntryListRowSocial> by entry id, for every post
-     */
-    private function socialStatesOf(array $entries, array $posts, array $accountsByNetwork, int $userId): array
-    {
-        if ([] === $posts) {
-            return [];
-        }
-        $likeable = array_filter(
-            $posts,
-            static fn (SocialPostAddressModel $post): bool => isset($accountsByNetwork[$post->network->value]),
-        );
-        $likedIds = $this->socialLikes->likedEntryIdsAmong($userId, array_keys($likeable));
-
-        $states = [];
-        foreach ($posts as $entryId => $post) {
-            $networkAccounts = $accountsByNetwork[$post->network->value] ?? [];
-            $canLike = [] !== $networkAccounts;
-            $states[$entryId] = new EntryListRowSocial(
-                $post->network,
-                isLiked: isset($likedIds[$entryId]),
-                canLike: $canLike,
-                isOwn: $canLike && null !== PostAuthor::accountAmong($entries[$entryId], $networkAccounts),
-            );
-        }
-
-        return $states;
-    }
-
-    /**
-     * @param list<SocialAccount> $accounts
-     *
-     * @return array<string, non-empty-list<SocialAccount>> by network value
-     */
-    private static function accountsByNetwork(array $accounts): array
-    {
-        $byNetwork = [];
-        foreach ($accounts as $account) {
-            $byNetwork[$account->getNetwork()->value][] = $account;
-        }
-
-        return $byNetwork;
-    }
-
-    /**
-     * @param array<int, Entry> $entries
-     *
-     * @return array<int, SocialPostAddressModel> the address of each social post, decided without a query
-     */
-    private static function postAddressesOf(array $entries): array
-    {
-        $addresses = [];
-        foreach ($entries as $entryId => $entry) {
-            $address = SocialPostAddress::of($entry);
-            if (null !== $address) {
-                $addresses[$entryId] = $address;
-            }
-        }
-
-        return $addresses;
     }
 
     /**
@@ -227,18 +94,6 @@ final readonly class EntryListRowEnricher
             $entries,
             static fn (Entry $entry): bool => SourceFormat::isSaved($entry->getFeed()->getSourceFormat()),
         ));
-    }
-
-    private static function lemmyOf(Entry $entry, ?EntryLemmyPost $post, ?VoteScore $myVote): ?EntryListRowLemmy
-    {
-        if (null === $post && null === $myVote) {
-            return null;
-        }
-        $community = $post?->getCommunity();
-        $feedIdentity = ProfileFeedUrl::identityOf(SocialNetwork::Lemmy, $entry->getFeed()->getUrl());
-        $inOwnFeed = null !== $feedIdentity && strtolower($feedIdentity) === $community?->identity;
-
-        return new EntryListRowLemmy($post?->getScore(), $inOwnFeed ? null : $community, $myVote);
     }
 
     private static function discussionOf(Entry $entry, ?EntryListRowSocial $social): ?EntryListRowDiscussion

@@ -18,7 +18,6 @@ use App\Service\Social\Social\Exception\SocialPostRemovedException;
 use App\Service\Social\Social\Model\SocialCountsModel;
 use App\Service\Social\Social\Model\SocialPostAddressModel;
 use App\Service\Social\Social\PostCountsSource\PostCountsSourceInterface;
-use App\Service\Social\Social\Support\SocialPostAddress;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 
@@ -31,6 +30,7 @@ final readonly class SocialCounts
         private ConfirmedDeletion $confirmedDeletion,
         #[AutowireLocator('app.social_post_counts_source')]
         private ContainerInterface $publicSources,
+        private SocialPostAddresses $postAddresses,
     ) {
     }
 
@@ -45,7 +45,7 @@ final readonly class SocialCounts
      */
     public function of(User $user, Entry $entry): SocialCountsModel
     {
-        $post = SocialPostAddress::ofOrRefuse($entry);
+        $post = $this->postAddresses->requirePost($entry);
         $cached = $this->cache->find($post);
         if (null !== $cached) {
             return $cached;
@@ -74,7 +74,7 @@ final readonly class SocialCounts
      */
     public function refreshed(User $user, Entry $entry): SocialCountsModel
     {
-        $post = SocialPostAddress::ofOrRefuse($entry);
+        $post = $this->postAddresses->requirePost($entry);
         $this->cache->forget($post);
 
         return $this->of($user, $entry);

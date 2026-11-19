@@ -84,7 +84,7 @@ final class PostEnrichers
             new NaiveUtcClock($clock),
             new EntryShareClassifier(new BlueskyPendingEmbed(), new EntrySanitizer(new TrailingBlankRemover())),
             new BlueskyPendingEmbed(),
-            new MastodonPendingThread(),
+            new MastodonPendingThread(SocialRuleWiring::postAddresses()),
             new KnownShareSettler(
                 self::embedWriter($entityManager),
                 ShareLinkCardsWiring::cardWriter($entityManager),

@@ -7,7 +7,6 @@ namespace App\Service\Social\Social;
 use App\Entity\Entry;
 use App\Service\Social\Social\Model\SocialCountsModel;
 use App\Service\Social\Social\Model\SocialPostAddressModel;
-use App\Service\Social\Social\Support\SocialPostAddress;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
@@ -16,6 +15,7 @@ final readonly class SocialCountsCache
     public function __construct(
         #[Autowire(service: 'social.counts.cache')]
         private CacheItemPoolInterface $cache,
+        private SocialPostAddresses $postAddresses,
     ) {
     }
 
@@ -41,7 +41,7 @@ final readonly class SocialCountsCache
     /** An entry that is no network post has no counts to forget. */
     public function forgetEntry(Entry $entry): void
     {
-        $post = SocialPostAddress::of($entry);
+        $post = $this->postAddresses->findPost($entry);
         if (null !== $post) {
             $this->forget($post);
         }

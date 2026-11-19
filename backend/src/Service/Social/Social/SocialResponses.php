@@ -28,7 +28,6 @@ use App\Service\Social\Social\Model\ResponseTargetModel;
 use App\Service\Social\Social\Model\SocialPostAddressModel;
 use App\Service\Social\Social\Model\SocialPostModel;
 use App\Service\Social\Social\Support\SocialIdentity;
-use App\Service\Social\Social\Support\SocialPostAddress;
 
 /** Opens the composer for the user's replies and quotes, publishes them, and deletes the replies an account wrote. */
 final readonly class SocialResponses
@@ -42,6 +41,7 @@ final readonly class SocialResponses
         private SocialCountsCache $countsCache,
         private CommentsLoader $comments,
         private EntryShareRecorder $shares,
+        private SocialPostAddresses $postAddresses,
     ) {
     }
 
@@ -103,7 +103,7 @@ final readonly class SocialResponses
      */
     public function delete(User $user, Entry $entry, string $address): void
     {
-        $ownReply = $this->ownReplyAt($user, SocialPostAddress::replyOrRefuse($entry, $address));
+        $ownReply = $this->ownReplyAt($user, $this->postAddresses->requireReply($entry, $address));
         if (null !== $ownReply) {
             $this->writing->delete($ownReply->account, $ownReply->postId);
         }

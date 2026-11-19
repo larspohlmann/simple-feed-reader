@@ -32,6 +32,7 @@ use App\Tests\Support\FakeMastodonNetwork;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
+use App\Tests\Support\SocialRuleWiring;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\DependencyInjection\ServiceLocator;
@@ -191,8 +192,9 @@ final class OwnPostDeletionTest extends DbTestCase
                 new PostRemovalRepository($this->entityManager, new RowIds($this->entityManager)),
                 $this->tombstones,
                 EntryIndexers::with(new RecordingSearchIndexWriter()),
-                new SocialCountsCache(new ArrayAdapter()),
+                new SocialCountsCache(new ArrayAdapter(), SocialRuleWiring::postAddresses()),
             ),
+            SocialRuleWiring::postAddresses(),
         );
     }
 

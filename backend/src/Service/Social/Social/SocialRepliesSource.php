@@ -29,7 +29,6 @@ use App\Service\Social\Social\Model\SocialPostAddressModel;
 use App\Service\Social\Social\ReplyThreadSource\ReplyThreadSourceInterface;
 use App\Service\Social\Social\Support\CommentsFailures;
 use App\Service\Social\Social\Support\OwnReplies;
-use App\Service\Social\Social\Support\SocialPostAddress;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
@@ -49,17 +48,18 @@ final readonly class SocialRepliesSource implements CommentsSourceInterface
         #[Target]
         private RateLimiterFactoryInterface $socialRepliesLimiter,
         private SocialAccountRepository $socialAccounts,
+        private SocialPostAddresses $postAddresses,
     ) {
     }
 
     public function serves(Entry $entry): bool
     {
-        return null !== SocialPostAddress::of($entry);
+        return null !== $this->postAddresses->findPost($entry);
     }
 
     public function audienceOf(User $user, Entry $entry): CommentsAudienceModel
     {
-        $post = self::postOf($entry);
+        $post = $this->postOf($entry);
         $account = $this->accountOrNull($user, $entry, $post->network);
         $viewer = null === $account ? 'public' : 'account:' . $account->requireId();
 
@@ -68,7 +68,7 @@ final readonly class SocialRepliesSource implements CommentsSourceInterface
 
     public function fetch(CommentsRequest $request): CommentsAnswerModel
     {
-        $post = self::postOf($request->entry);
+        $post = $this->postOf($request->entry);
         $account = $request->audience->actingAccount;
         $thread = $this->threadOn($post->network);
         if (null === $account) {
@@ -84,7 +84,7 @@ final readonly class SocialRepliesSource implements CommentsSourceInterface
 
     public function read(CommentsRequest $request, string $answer): CommentsPageModel
     {
-        $post = self::postOf($request->entry);
+        $post = $this->postOf($request->entry);
         $page = $this->order->pageOf($this->threadOn($post->network)->repliesIn($post->address, $answer));
 
         return new CommentsPageModel(
@@ -165,9 +165,9 @@ final readonly class SocialRepliesSource implements CommentsSourceInterface
         return $thread;
     }
 
-    private static function postOf(Entry $entry): SocialPostAddressModel
+    private function postOf(Entry $entry): SocialPostAddressModel
     {
-        return SocialPostAddress::of($entry)
+        return $this->postAddresses->findPost($entry)
             ?? throw new CommentsUnavailableException('The entry is not a post this reader can act on.');
     }
 }

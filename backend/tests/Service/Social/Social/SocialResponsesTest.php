@@ -49,6 +49,7 @@ use App\Tests\Support\FakeMastodonNetwork;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
+use App\Tests\Support\SocialRuleWiring;
 use App\Tests\Support\StubPageCardReader;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -82,7 +83,7 @@ final class SocialResponsesTest extends DbTestCase
             new CommentsCache(new ArrayAdapter(clock: $clock), 7200, 60),
             $clock,
         );
-        $this->countsCache = new SocialCountsCache(new ArrayAdapter());
+        $this->countsCache = new SocialCountsCache(new ArrayAdapter(), SocialRuleWiring::postAddresses());
         $this->owner = $this->user('social-replies@example.test');
         $this->account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
     }
@@ -497,15 +498,16 @@ final class SocialResponsesTest extends DbTestCase
         $mastodon = $this->mastodon;
         $network = new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon]);
         $chooser = SocialFeeds::actingAccountChooser($this->entityManager, $accounts);
-        $posts = new SocialPostFinder($chooser, $guard, $network);
+        $posts = new SocialPostFinder($chooser, $guard, $network, SocialRuleWiring::postAddresses());
 
         return new SocialResponses(
-            new ResponseTargetFinder($posts, $chooser),
+            new ResponseTargetFinder($posts, $chooser, SocialRuleWiring::postAddresses()),
             new ComposerContexts(
                 $accounts,
                 $posts,
                 new SharedPageCards(new StubPageCardReader(), new NullLogger()),
                 new ServiceLocator(['mastodon' => static fn (): FakeComposerDefaults => new FakeComposerDefaults()]),
+                SocialRuleWiring::postAddresses(),
             ),
             $posts,
             new PostWriting($guard, $network),
@@ -513,6 +515,7 @@ final class SocialResponsesTest extends DbTestCase
             $this->countsCache,
             $this->comments,
             $shareRecorder ?? $this->shareRecorder(),
+            SocialRuleWiring::postAddresses(),
         );
     }
 

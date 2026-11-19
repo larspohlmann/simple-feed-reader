@@ -10,7 +10,6 @@ use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostRemovedException;
 use App\Service\Social\Social\HomeServerCheck\HomeServerCheckInterface;
 use App\Service\Social\Social\Model\SocialPostAddressModel;
-use App\Service\Social\Social\Support\SocialPostAddress;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 
@@ -22,6 +21,7 @@ final readonly class ConfirmedDeletion
         private LocalPostRemoval $localRemoval,
         #[AutowireLocator('app.social_home_server_check')]
         private ServiceLocator $homeServers,
+        private SocialPostAddresses $postAddresses,
     ) {
     }
 
@@ -35,7 +35,7 @@ final readonly class ConfirmedDeletion
         if (SourceFormat::isSaved($entry->getFeed()->getSourceFormat())) {
             return;
         }
-        $post = SocialPostAddress::ofOrRefuse($entry);
+        $post = $this->postAddresses->requirePost($entry);
         if (!$this->confirmsDeleted($post)) {
             return;
         }
