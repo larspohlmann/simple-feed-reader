@@ -13,6 +13,7 @@ use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
 use App\Service\Social\Mastodon\MastodonPrivateFeedRule;
+use App\Service\Social\Mastodon\MastodonSearchSource;
 use App\Service\Social\Mastodon\MastodonTimelineSource;
 use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
@@ -24,6 +25,7 @@ use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpFoundation\Response;
 
 final class MastodonTimelineSourceTest extends TestCase
@@ -307,7 +309,11 @@ final class MastodonTimelineSourceTest extends TestCase
     {
         return new MastodonTimelineSource(
             SocialApiWiring::mastodonAccountApi($http->client()),
-            new MastodonPrivateFeedRule(),
+            new MastodonSearchSource(
+                SocialApiWiring::mastodonAccountApi($http->client()),
+                new MastodonPrivateFeedRule(),
+                SocialApiWiring::searchAnswers($http->client(), new ArrayAdapter()),
+            ),
         );
     }
 

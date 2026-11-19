@@ -30,6 +30,7 @@ use App\Service\Social\Lemmy\LemmyTimelineSource;
 use App\Service\Social\Mastodon\MastodonAccountApi;
 use App\Service\Social\Mastodon\MastodonApiClient;
 use App\Service\Social\Mastodon\MastodonPrivateFeedRule;
+use App\Service\Social\Mastodon\MastodonSearchSource;
 use App\Service\Social\Mastodon\MastodonTimelineSource;
 use App\Service\Social\Social\SearchAnswers;
 use App\Service\Social\Social\StoredCredential;
@@ -230,7 +231,11 @@ final class SocialApiWiring
             TaggedItemOf::index(MastodonTimelineSource::class)
                 => static fn (): MastodonTimelineSource => new MastodonTimelineSource(
                     self::mastodonAccountApi($http),
-                    new MastodonPrivateFeedRule(),
+                    new MastodonSearchSource(
+                        self::mastodonAccountApi($http),
+                        new MastodonPrivateFeedRule(),
+                        self::searchAnswers($http, $cache),
+                    ),
                 ),
             TaggedItemOf::index(LemmyTimelineSource::class)
                 => static fn (): LemmyTimelineSource => new LemmyTimelineSource(

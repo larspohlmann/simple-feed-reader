@@ -14,6 +14,7 @@ use App\Service\Social\Mastodon\MastodonApiClient;
 use App\Service\Social\Mastodon\MastodonPrivateFeedRule;
 use App\Service\Social\Mastodon\Support\MastodonSearchPage;
 use App\Service\Social\Mastodon\Support\MastodonSearchPath;
+use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Social\Model\TimelinePageModel;
 use App\Service\Social\Social\SearchAnswers;
 use App\Service\Social\Social\SearchSource\SearchSourceInterface;
@@ -33,18 +34,34 @@ final readonly class MastodonSearchSource implements SearchSourceInterface
     {
         $answers = $this->searchAnswers->fetchAnswers(
             $account,
-            array_map(
-                fn (string $alternative): ApiRequestModel => $this->mastodon->authorizedGet(
-                    $account,
-                    MastodonSearchPath::buildPath($alternative, null),
-                ),
-                $this->privateFeedRule->buildSearchQueries($query),
-            ),
+            $this->buildRequests($account, $query, null),
             static fn (FetchOutcomeModel $outcome): ApiResponseModel => MastodonApiClient::accepted(
                 MastodonApiClient::answerOf($outcome),
             ),
         );
 
-        return MastodonSearchPage::of($answers, $query);
+        return $this->buildPage($answers, $query);
+    }
+
+    /**
+     * @return non-empty-list<ApiRequestModel>
+     *
+     * @throws SearchQueryTooBroadException
+     */
+    public function buildRequests(SocialAccount $account, string $query, ?string $newestSeenId): array
+    {
+        return array_map(
+            fn (string $alternative): ApiRequestModel => $this->mastodon->authorizedGet(
+                $account,
+                MastodonSearchPath::buildPath($alternative, $newestSeenId),
+            ),
+            $this->privateFeedRule->buildSearchQueries($query),
+        );
+    }
+
+    /** @param list<ApiResponseModel> $accepted one per request, in order */
+    public function buildPage(array $accepted, string $query): TimelinePageModel
+    {
+        return MastodonSearchPage::of($accepted, $query);
     }
 }

@@ -14,10 +14,7 @@ use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
 use App\Service\Social\Mastodon\MastodonAccountApi;
 use App\Service\Social\Mastodon\MastodonApiClient;
-use App\Service\Social\Mastodon\MastodonPrivateFeedRule;
 use App\Service\Social\Mastodon\Support\MastodonFeedIds;
-use App\Service\Social\Mastodon\Support\MastodonSearchPage;
-use App\Service\Social\Mastodon\Support\MastodonSearchPath;
 use App\Service\Social\Mastodon\Support\MastodonTimelinePage;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Model\TimelinePageModel;
@@ -31,7 +28,7 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
 
     public function __construct(
         private MastodonAccountApi $mastodon,
-        private MastodonPrivateFeedRule $privateFeedRule,
+        private MastodonSearchSource $search,
     ) {
     }
 
@@ -39,10 +36,11 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
     {
         $account = $socialFeed->getSocialAccount();
 
-        return array_map(
-            fn (string $path): ApiRequestModel => $this->mastodon->authorizedGet($account, $path),
-            $this->pathsOf($socialFeed),
-        );
+        if (SocialFeedKind::Search === $socialFeed->getKind()) {
+            return $this->search->buildRequests($account, $socialFeed->getRemoteId(), $socialFeed->getNewestSeenId());
+        }
+
+        return [$this->mastodon->authorizedGet($account, self::pathOf($socialFeed))];
     }
 
     public function accepted(SocialFeed $socialFeed, FetchOutcomeModel $outcome): ApiResponseModel
@@ -53,7 +51,7 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
     public function pageOf(SocialFeed $socialFeed, array $accepted): TimelinePageModel
     {
         if (SocialFeedKind::Search === $socialFeed->getKind()) {
-            return MastodonSearchPage::of($accepted, $socialFeed->getRemoteId());
+            return $this->search->buildPage($accepted, $socialFeed->getRemoteId());
         }
 
         $answer = $accepted[0] ?? throw new \LogicException('A Mastodon timeline is read with one request.');
@@ -63,25 +61,6 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
 
     public function dropSession(SocialAccount $account): void
     {
-    }
-
-    /** @return non-empty-list<string> */
-    private function pathsOf(SocialFeed $socialFeed): array
-    {
-        return SocialFeedKind::Search === $socialFeed->getKind()
-            ? $this->searchPathsOf($socialFeed)
-            : [self::pathOf($socialFeed)];
-    }
-
-    /** @return non-empty-list<string> */
-    private function searchPathsOf(SocialFeed $socialFeed): array
-    {
-        $queries = $this->privateFeedRule->buildSearchQueries($socialFeed->getRemoteId());
-
-        return array_map(
-            static fn (string $query): string => MastodonSearchPath::buildPath($query, $socialFeed->getNewestSeenId()),
-            $queries,
-        );
     }
 
     private static function pageFrom(ApiResponseModel $accepted): TimelinePageModel
@@ -117,7 +96,7 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
             SocialFeedKind::UserList => self::timelinePath($socialFeed, 'list/' . self::listId($socialFeed)),
             SocialFeedKind::Tag => self::timelinePath($socialFeed, 'tag/' . rawurlencode(self::tagName($socialFeed))),
             SocialFeedKind::Trending => '/api/v1/trends/statuses?limit=' . self::PAGE_SIZE,
-            SocialFeedKind::Search => throw new \LogicException('A search is asked once per alternative.'),
+            SocialFeedKind::Search,
             SocialFeedKind::Author,
             SocialFeedKind::CustomFeed,
             SocialFeedKind::Local,
