@@ -217,6 +217,43 @@ final class MaintenanceControllerTest extends WebTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_METHOD_NOT_ALLOWED);
     }
 
+    public function testLinkCardDrainRejectsMissingToken(): void
+    {
+        $client = self::createClient();
+        $client->request('POST', '/maintenance/link-cards/drain');
+
+        self::assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
+        self::assertSame(
+            ['error' => 'forbidden'],
+            json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR),
+        );
+    }
+
+    public function testLinkCardDrainGetMethodIsNotAllowed(): void
+    {
+        $client = self::createClient();
+        $client->request('GET', '/maintenance/link-cards/drain?token=test-maintenance-token');
+
+        self::assertResponseStatusCodeSame(Response::HTTP_METHOD_NOT_ALLOWED);
+    }
+
+    public function testLinkCardDrainRunsWithValidToken(): void
+    {
+        $client = self::createClient();
+
+        $client->request('POST', '/maintenance/link-cards/drain', server: [
+            'HTTP_X_MAINTENANCE_TOKEN' => 'test-maintenance-token',
+        ]);
+
+        self::assertResponseIsSuccessful();
+        self::assertResponseHeaderSame('Content-Type', 'application/json');
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame(['completed', 'caughtUp'], array_keys($payload));
+        self::assertIsInt($payload['completed']);
+        self::assertIsBool($payload['caughtUp']);
+    }
+
     public function testTickRejectsMissingToken(): void
     {
         $client = self::createClient();

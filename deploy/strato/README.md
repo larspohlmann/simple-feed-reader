@@ -469,6 +469,10 @@ What a rollback does **not** do, because `activate-release.sh` is not re-run:
   `POST /maintenance/tick` with `MAINTENANCE_TOKEN` in an `X-Maintenance-Token` header. An empty
   token is fail-closed — the endpoint refuses everything until one is set — so without a token
   and a cron, feeds update only when someone presses refresh in the UI.
+  An install that queues more link cards than the tick's one pass fetches (about 84 per hour at a
+  5-minute cron) adds a second cron line calling `POST /maintenance/link-cards/drain` with the same
+  header, offset from the tick, and a `curl --max-time` above `MAINTENANCE_TICK_SECONDS`. The answer's
+  `caughtUp` says whether the drain reached the end of the queue or the window ended first.
 - The server has no composer, no node, and no crontab. Everything is built on the runner.
 - **`api` and `maintenance` are reserved top-level names.** The `.htaccess` routes them to
   Symfony, so a static asset or directory with either name would be swallowed before the SPA

@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Http\ForYouSweepReportJson;
+use App\Http\LinkCardDrainJson;
 use App\Http\MaintenanceTickJson;
 use App\Http\MaintenanceTokenGuard;
 use App\Http\RefreshReportJson;
+use App\Service\Content\LinkCard\LinkCardDrain;
 use App\Service\Operations\Maintenance\MaintenanceTick;
 use App\Service\Curation\Recommendation\Run\ForYouSweep;
 use App\Service\Ingestion\Refresh\Model\RefreshReportModel;
@@ -25,6 +27,7 @@ final readonly class MaintenanceController
         private MaintenanceTokenGuard $tokenGuard,
         private RefreshRunner $refreshRunner,
         private ForYouSweep $forYouSweep,
+        private LinkCardDrain $linkCardDrain,
         private MaintenanceTick $maintenanceTick,
         private MaintenanceTickJson $maintenanceTickJson,
     ) {
@@ -62,6 +65,18 @@ final readonly class MaintenanceController
         }
 
         return new JsonResponse(ForYouSweepReportJson::report($this->forYouSweep->sweepOnce()));
+    }
+
+    /** The tick fetches one pass of link cards; this spends a whole window on them. */
+    #[Route('/maintenance/link-cards/drain', name: 'maintenance_link_cards_drain', methods: ['POST'])]
+    public function drainLinkCards(Request $request): JsonResponse
+    {
+        $rejection = $this->tokenGuard->rejectionResponse($request);
+        if (null !== $rejection) {
+            return $rejection;
+        }
+
+        return new JsonResponse(LinkCardDrainJson::report($this->linkCardDrain->drain()));
     }
 
     /**
