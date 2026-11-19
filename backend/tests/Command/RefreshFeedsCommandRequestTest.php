@@ -6,10 +6,10 @@ namespace App\Tests\Command;
 
 use App\Command\Exception\MalformedOptionException;
 use App\Command\RefreshFeedsCommand;
-use App\Service\Ingestion\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
-use App\Service\Ingestion\Refresh\Model\RefreshTarget\FeedTargetModel;
 use App\Service\Ingestion\Refresh\Model\RefreshReportModel;
 use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
+use App\Service\Ingestion\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
+use App\Service\Ingestion\Refresh\Model\RefreshTarget\FeedTargetModel;
 use App\Tests\Service\Ingestion\Refresh\FakeRefreshRunner;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Tester\CommandTester;

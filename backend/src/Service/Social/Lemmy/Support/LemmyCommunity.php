@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Lemmy\Support;
 
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use App\Service\Foundation\Url\Support\UrlOrigin;
-use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Social\Model\FollowedAccountModel;
 
 final class LemmyCommunity

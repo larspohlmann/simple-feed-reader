@@ -10,6 +10,9 @@ use App\Entity\EntryChapters;
 use App\Entity\EntryText;
 use App\Entity\Feed;
 use App\Enum\SourceFormat;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
+use App\Service\Foundation\Url\Support\TrackingFreeUrl;
 use App\Service\Ingestion\Ingest\EntryImageWriter;
 use App\Service\Ingestion\Ingest\Model\IncomingEntryModel;
 use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
@@ -19,9 +22,6 @@ use App\Service\Ingestion\Ingest\Support\EntrySnippet;
 use App\Service\Ingestion\Language\SocialEntryLanguage;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Parser\Model\ParsedMediaBundleModel;
-use App\Service\Foundation\Sanitize\EntrySanitizer;
-use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
-use App\Service\Foundation\Url\Support\TrackingFreeUrl;
 
 /** Builds the Entry row for an incoming item, cut to its column limits. It persists nothing. */
 final readonly class IngestedEntryFactory

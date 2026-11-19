@@ -6,10 +6,10 @@ namespace App\Tests\Service\Social\Lemmy;
 
 use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
+use App\Service\Social\Lemmy\LemmyPrivateFeedRule;
 use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Service\Social\Social\Model\StoredPostModel;
-use App\Service\Social\Lemmy\LemmyPrivateFeedRule;
 use App\Service\Social\Social\Support\SocialSearchMatch;
 use App\Service\Social\Social\Support\SocialSearchQuery;
 use App\Tests\Support\SocialAccounts;

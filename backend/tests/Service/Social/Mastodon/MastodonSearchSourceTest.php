@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Mastodon;
 
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
-use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Mastodon\MastodonPrivateFeedRule;
 use App\Service\Social\Mastodon\MastodonSearchSource;
+use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;

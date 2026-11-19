@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Content\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Foundation\Html\Support\PastedTextBreaks;
 use App\Service\Content\Reader\BodyCleaning\Pass\BodyCleaningPass;
+use App\Service\Foundation\Html\Support\PastedTextBreaks;
 
 final readonly class PastedTextBreakRestorer implements BodyCleaningStepInterface
 {

@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Mastodon;
 
+use App\Service\Social\Mastodon\MastodonPostReposter;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
 use App\Service\Social\Social\Model\SocialPostModel;
-use App\Service\Social\Mastodon\MastodonPostReposter;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;

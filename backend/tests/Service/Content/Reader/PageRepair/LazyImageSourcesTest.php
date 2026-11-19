@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Content\Reader\PageRepair;
 
+use App\Service\Content\Reader\PageRepair\LazyImageSources;
 use App\Service\Foundation\Html\DesktopViewport;
 use App\Service\Foundation\Html\PictureSources;
-use App\Service\Content\Reader\PageRepair\LazyImageSources;
 use App\Tests\Support\ParsesHtml;
 use Dom\Element;
 use Dom\HTMLDocument;

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Social;
 
-use App\Enum\SocialFeedKind;
 use App\Entity\Entry;
 use App\Entity\EntryAuthor;
 use App\Entity\EntryState;
@@ -13,15 +12,16 @@ use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\SocialFeedKind;
 use App\Repository\RetentionRepository;
 use App\Repository\RowIds;
 use App\Repository\SubscriptionDisplayTitle;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Library\Subscription\Exception\AlreadySubscribedException;
 use App\Service\Social\Social\Exception\NotASearchFeedException;
 use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Service\Social\Social\SearchFeedEditor;
-use App\Service\Library\Subscription\Exception\AlreadySubscribedException;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\EntryIndexers;

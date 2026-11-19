@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ingestion\Ingest\Support;
 
-use App\Service\Outbound\Image\Model\DeclaredImageModel;
 use App\Service\Ingestion\Ingest\Support\EntryMediaAssembler;
 use App\Service\Ingestion\Parser\Model\FeedMediaKind;
 use App\Service\Ingestion\Parser\Model\ParsedAttachmentModel;
 use App\Service\Ingestion\Parser\Model\ParsedMediumModel;
 use App\Service\Ingestion\Parser\Model\VisualMediaKind;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
 use PHPUnit\Framework\TestCase;
 
 final class EntryMediaAssemblerTest extends TestCase

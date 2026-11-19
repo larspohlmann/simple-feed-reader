@@ -5,15 +5,15 @@ declare(strict_types=1);
 namespace App\Service\Social\Bluesky;
 
 use App\Entity\SocialAccount;
-use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
+use App\Service\Social\Bluesky\Support\BlueskyRecordUri;
+use App\Service\Social\Bluesky\Support\BlueskyStrongRef;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Model\PostDeletion;
 use App\Service\Social\Social\Model\SocialPostModel;
-use App\Service\Social\Bluesky\Support\BlueskyRecordUri;
-use App\Service\Social\Bluesky\Support\BlueskyStrongRef;
 
 /** Writes and deletes records in an account's own repo: likes and reposts of a post, and its own posts. */
 final readonly class BlueskyRecords

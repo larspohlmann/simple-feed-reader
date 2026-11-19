@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Content\Reader;
 
+use App\Service\Content\Reader\Exception\PageFetchException;
+use App\Service\Content\Reader\Model\PageHeadModel;
 use App\Service\Outbound\Fetch\Pass\LandedResponse;
 use App\Service\Outbound\Fetch\Pass\RedirectBudget;
 use App\Service\Outbound\Image\Support\MediaType;
-use App\Service\Content\Reader\Exception\PageFetchException;
-use App\Service\Content\Reader\Model\PageHeadModel;
 use Symfony\Component\HttpClient\Response\StreamWrapper;
 
 /**

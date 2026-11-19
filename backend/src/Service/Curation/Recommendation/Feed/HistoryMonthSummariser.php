@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Recommendation\Feed;
 
-use App\Service\Foundation\Clock\Model\ViewerTimeZoneModel;
 use App\Service\Curation\Recommendation\Feed\Model\HistoryMonthModel;
+use App\Service\Foundation\Clock\Model\ViewerTimeZoneModel;
 
 /**
  * Folds the spend timeline into one HistoryMonthModel per calendar month, newest first. Why this happens in PHP:

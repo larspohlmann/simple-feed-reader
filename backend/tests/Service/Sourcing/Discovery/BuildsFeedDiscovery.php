@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Sourcing\Discovery;
 
+use App\Service\Ingestion\Parser\FeedParser;
+use App\Service\Ingestion\Scraper\HtmlItemExtractor;
+use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
 use App\Service\Sourcing\Discovery\BotChallengePage;
 use App\Service\Sourcing\Discovery\FeedDiscovery\FeedDiscovery;
 use App\Service\Sourcing\Discovery\FeedLinkScanner;
@@ -18,10 +22,6 @@ use App\Service\Sourcing\Discovery\ShareLinkFeed\ShareLinkFeedInterface;
 use App\Service\Sourcing\Discovery\ShareLinkFeed\SubstackProfileFeed;
 use App\Service\Sourcing\Discovery\ShareLinkFeed\YouTubePlaylistFeed;
 use App\Service\Sourcing\Discovery\WellKnownFeedProbe;
-use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
-use App\Service\Outbound\Fetch\Model\FetchResponseModel;
-use App\Service\Ingestion\Parser\FeedParser;
-use App\Service\Ingestion\Scraper\HtmlItemExtractor;
 use App\Tests\Support\StubFeedFetcher;
 
 /** Wires a FeedDiscovery around a stub fetcher, so a test names the behaviour it exercises, not the constructor. */

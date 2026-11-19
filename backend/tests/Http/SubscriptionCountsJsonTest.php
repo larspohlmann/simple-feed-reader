@@ -7,9 +7,9 @@ namespace App\Tests\Http;
 use App\Enum\TrendingWindow;
 use App\Http\SubscriptionCountsJson;
 use App\Service\Curation\Trending\Model\SurfaceTalliesModel;
+use App\Service\Curation\Trending\Model\TrendingUnopenedModel;
 use App\Service\Library\Subscription\Model\SubscriptionTalliesModel;
 use App\Service\Library\Subscription\Model\UnreadTotalsModel;
-use App\Service\Curation\Trending\Model\TrendingUnopenedModel;
 use PHPUnit\Framework\TestCase;
 
 final class SubscriptionCountsJsonTest extends TestCase

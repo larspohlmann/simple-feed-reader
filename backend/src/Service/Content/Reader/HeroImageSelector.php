@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Content\Reader;
 
 use App\Service\Foundation\Html\Support\HtmlDocumentParser;
-use App\Service\Outbound\Image\Model\DeclaredImageModel;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
 use Dom\Element;
 
 /**

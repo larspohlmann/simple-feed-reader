@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Bluesky\Support;
 
-use App\Service\Social\BlueskyPost\Exception\AppViewAnswerException;
 use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
 use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Social\BlueskyPost\Exception\AppViewAnswerException;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 

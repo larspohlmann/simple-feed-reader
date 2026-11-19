@@ -8,13 +8,13 @@ use App\Service\Content\Reader\Media\Model\RawPageModel;
 use App\Service\Content\Reader\Media\PageMediaScanner;
 use App\Service\Content\Reader\Media\Teaser\TeaserPlayerScanner;
 use App\Service\Content\Reader\Model\ArticlePageModel;
-use App\Service\Content\Reader\Support\DeclaredPreview;
 use App\Service\Content\Reader\Model\FeedMediaModel;
 use App\Service\Content\Reader\Model\LeadFigureCaptionsModel;
 use App\Service\Content\Reader\Model\PageImageInventoryModel;
 use App\Service\Content\Reader\Model\PageResponseModel;
 use App\Service\Content\Reader\Paywall\PaywallSignals;
 use App\Service\Content\Reader\Slideshow\SlideshowScanner;
+use App\Service\Content\Reader\Support\DeclaredPreview;
 
 /** Every read of a fetched page, taken before readability consumes the normalised document. */
 final readonly class ArticlePageReader

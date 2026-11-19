@@ -6,19 +6,19 @@ namespace App\Service\Social\Bluesky;
 
 use App\Entity\Subscription;
 use App\Repository\RefusedProfileSubscriptionRepository;
-use App\Service\Social\BlueskyPost\AppViewClient;
-use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Library\Subscription\Exception\AlreadySubscribedException;
+use App\Service\Library\Subscription\Exception\SubscriptionLimitReachedException;
 use App\Service\Social\Bluesky\HiddenProfiles\CachedHiddenProfiles;
 use App\Service\Social\Bluesky\Model\HiddenProfileModel;
 use App\Service\Social\Bluesky\Model\HiddenProfileMoveOutcome;
 use App\Service\Social\Bluesky\Model\HiddenProfileSwitchReportModel;
-use App\Service\Social\Social\Model\ProfileCallBudgetModel;
 use App\Service\Social\Bluesky\Model\ProfileVisibilityModel;
 use App\Service\Social\Bluesky\Model\RefusedProfileSubscriptionModel;
 use App\Service\Social\Bluesky\Pass\RefusedSubscriptionSelection;
 use App\Service\Social\Bluesky\Support\BlueskyProfileActor;
-use App\Service\Library\Subscription\Exception\AlreadySubscribedException;
-use App\Service\Library\Subscription\Exception\SubscriptionLimitReachedException;
+use App\Service\Social\BlueskyPost\AppViewClient;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Model\ProfileCallBudgetModel;
 use Psr\Log\LoggerInterface;
 
 /**

@@ -6,8 +6,8 @@ namespace App\Service\Ingestion\Parser\Support;
 
 use App\Entity\Discussion;
 use App\Enum\CommentsLoad;
-use App\Service\Ingestion\Parser\Pass\CoreElement;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
+use App\Service\Ingestion\Parser\Pass\CoreElement;
 
 final class AtomDiscussion
 {

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Content\Transcript\Support;
 
-use App\Service\Foundation\Text\Support\PlainText;
 use App\Service\Content\Transcript\Model\TranscriptCueModel;
+use App\Service\Foundation\Text\Support\PlainText;
 
 /** WebVTT and SubRip cues: a block's timing line starts it, the lines after it are its text. */
 final class TimedCues

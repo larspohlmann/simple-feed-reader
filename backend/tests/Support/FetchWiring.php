@@ -4,20 +4,20 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
+use App\Http\SymfonyStatusReasonPhrases;
+use App\Service\Content\Reader\LandingChallenge;
+use App\Service\Content\Reader\PageLanding;
 use App\Service\Outbound\Fetch\ConcurrentRequestEngine;
 use App\Service\Outbound\Fetch\CrossFamilyFailover;
 use App\Service\Outbound\Fetch\EgressProxySource\EgressProxySourceInterface;
 use App\Service\Outbound\Fetch\FailoverRequestSender;
+use App\Service\Outbound\Fetch\FetchRetryPolicy;
 use App\Service\Outbound\Fetch\GuardedApiClient;
 use App\Service\Outbound\Fetch\Model\ProxyConfigModel;
-use App\Service\Outbound\Fetch\FetchRetryPolicy;
 use App\Service\Outbound\Fetch\RedirectFollower;
 use App\Service\Outbound\Fetch\ResponseExchange\ApiResponseExchange;
 use App\Service\Outbound\Fetch\ResponseExchange\FeedResponseExchange;
 use App\Service\Outbound\Fetch\UrlGuard;
-use App\Http\SymfonyStatusReasonPhrases;
-use App\Service\Content\Reader\LandingChallenge;
-use App\Service\Content\Reader\PageLanding;
 use App\Service\Social\Social\PatientApiClient;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Clock\ClockInterface as SleepingClockInterface;

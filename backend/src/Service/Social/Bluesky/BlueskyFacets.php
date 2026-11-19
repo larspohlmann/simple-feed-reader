@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Bluesky;
 
-use App\Service\Social\Social\Exception\SocialAccountUnresolvableException;
-use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Bluesky\Model\TextSpanModel;
 use App\Service\Social\Bluesky\Support\BlueskyTextSpans;
+use App\Service\Social\Social\Exception\SocialAccountUnresolvableException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 
 /** Turns a post's links, hashtags and mentions into Bluesky rich-text facets; a handle that does not resolve stays text. */
 final readonly class BlueskyFacets

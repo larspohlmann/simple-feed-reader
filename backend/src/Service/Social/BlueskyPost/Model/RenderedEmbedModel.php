@@ -6,8 +6,8 @@ namespace App\Service\Social\BlueskyPost\Model;
 
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
-use App\Service\Outbound\Image\Model\DeclaredImageModel;
 use App\Service\Ingestion\Parser\Model\ParsedMediumModel;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
 
 final readonly class RenderedEmbedModel
 {

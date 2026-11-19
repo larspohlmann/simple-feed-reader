@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ingestion\Scraper\Pass;
 
-use App\Service\Outbound\Fetch\Pass\PageUrls;
 use App\Service\Ingestion\Scraper\Model\ScrapedItemModel;
 use App\Service\Ingestion\Scraper\Pass\CardFields;
 use App\Service\Ingestion\Scraper\Pass\JsonLdArticles;
+use App\Service\Outbound\Fetch\Pass\PageUrls;
 use PHPUnit\Framework\TestCase;
 
 /**

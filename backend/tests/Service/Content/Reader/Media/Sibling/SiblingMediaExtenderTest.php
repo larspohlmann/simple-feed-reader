@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Content\Reader\Media\Sibling;
 
-use App\Service\Outbound\Fetch\DnsResolver\DnsResolverInterface;
-use App\Service\Outbound\Fetch\IpValidator;
-use App\Service\Outbound\Fetch\UrlGuard;
 use App\Service\Content\Reader\Media\DurableMediaUrl;
 use App\Service\Content\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
 use App\Service\Content\Reader\Media\EmbedProviders;
@@ -18,6 +15,9 @@ use App\Service\Content\Reader\Media\Model\MediaKind;
 use App\Service\Content\Reader\Media\Sibling\NearbyPoster;
 use App\Service\Content\Reader\Media\Sibling\SiblingIdRule;
 use App\Service\Content\Reader\Media\Sibling\SiblingMediaExtender;
+use App\Service\Outbound\Fetch\DnsResolver\DnsResolverInterface;
+use App\Service\Outbound\Fetch\IpValidator;
+use App\Service\Outbound\Fetch\UrlGuard;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;

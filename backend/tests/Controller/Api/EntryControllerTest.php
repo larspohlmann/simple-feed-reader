@@ -22,13 +22,13 @@ use App\Enum\CommentsLoad;
 use App\Enum\RecommendationEngineKind;
 use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Tests\Support\ApiTestCase;
-use App\Tests\Support\SeedsFeedEntries;
 use App\Tests\Support\RecommendationRunFixtures;
+use App\Tests\Support\SeedsFeedEntries;
+use App\Tests\Support\SharedLinks;
 use App\Tests\Support\SignsReaderUrls;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use App\Tests\Support\SharedLinks;
 
 final class EntryControllerTest extends ApiTestCase
 {

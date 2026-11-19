@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Content\ReaderAudit\Model;
 
-use App\Service\Foundation\Html\Support\HtmlDocumentParser;
 use App\Service\Content\Reader\Support\LeadingEngagementBlocks;
+use App\Service\Foundation\Html\Support\HtmlDocumentParser;
 use App\Service\Foundation\Text\Support\Whitespace;
 use Dom\Element;
 

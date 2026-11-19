@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Mastodon\Support;
 
-use App\Service\Social\Social\Support\InstanceUrl;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Social\Exception\InvalidInstanceUrlException;
 use App\Service\Social\Social\Model\CredentialReplacementModel;
 use App\Service\Social\Social\Model\SocialCredentialsModel;
+use App\Service\Social\Social\Support\InstanceUrl;
 
 final class MastodonCredentials
 {

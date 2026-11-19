@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Content\Chapter\EmbedDetailsSource;
 
-use App\Tests\Support\PinnedRequestOptions;
 use App\Enum\ProxyType;
 use App\Service\Content\Chapter\EmbedDetailsSource\YouTubePlayerDetailsSource;
 use App\Service\Content\Chapter\Exception\EmbedDescriptionUnreachableException;
@@ -16,6 +15,7 @@ use App\Service\Outbound\Fetch\IpValidator;
 use App\Service\Outbound\Fetch\Model\ProxyConfigModel;
 use App\Service\Outbound\Fetch\UrlGuard;
 use App\Tests\Support\FetchWiring;
+use App\Tests\Support\PinnedRequestOptions;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\StaticDnsResolver;
 use App\Tests\Support\TaggedItemOf;

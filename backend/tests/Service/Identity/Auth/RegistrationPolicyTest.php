@@ -7,9 +7,9 @@ namespace App\Tests\Service\Identity\Auth;
 use App\Entity\InstanceSettingsUpdate;
 use App\Enum\UserStatus;
 use App\Service\Identity\Auth\RegistrationPolicy;
+use App\Service\Operations\Settings\InstanceSettings;
 use App\Service\Outbound\Mail\MailCapability;
 use App\Service\Outbound\Mail\MailSendingSettings\MailSendingSettingsInterface;
-use App\Service\Operations\Settings\InstanceSettings;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /** InstanceSettings is final, so this boots the kernel and drives the real service instead of a double. */

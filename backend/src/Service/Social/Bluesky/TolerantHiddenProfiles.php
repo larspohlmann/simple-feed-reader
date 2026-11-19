@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Bluesky;
 
-use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Bluesky\HiddenProfiles\HiddenProfilesInterface;
 use App\Service\Social\Bluesky\Model\HiddenProfileModel;
 use App\Service\Social\Bluesky\Support\BlueskyProfileFeed;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use Psr\Log\LoggerInterface;
 
 /** For a caller that carries on as if no profile were hidden when Bluesky cannot say, and only logs it. */

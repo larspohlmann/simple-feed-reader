@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Bluesky;
 
-use App\Service\Social\BlueskyPost\AppViewClient;
 use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
 use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
 use App\Service\Outbound\Fetch\HostThrottle;
+use App\Service\Social\Bluesky\BlueskyAppViewCountsSource;
+use App\Service\Social\BlueskyPost\AppViewClient;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Model\SocialCountsModel;
-use App\Service\Social\Bluesky\BlueskyAppViewCountsSource;
 use App\Tests\Support\AssertsRefusal;
 use App\Tests\Support\FakeAppView;
 use PHPUnit\Framework\TestCase;

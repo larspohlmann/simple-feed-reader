@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Mastodon;
 
-use App\Service\Social\Social\HomeServerCheck\HomeServerCheckInterface;
 use App\Enum\SocialNetwork;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Social\Mastodon\MastodonApiClient;
 use App\Service\Social\Mastodon\Support\MastodonStatusAddress;
+use App\Service\Social\Social\HomeServerCheck\HomeServerCheckInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 use Symfony\Component\HttpFoundation\Response;
 

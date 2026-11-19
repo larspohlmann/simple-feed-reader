@@ -13,13 +13,13 @@ use App\Entity\Tag;
 use App\Repository\KnownSocialCollectionRepository;
 use App\Repository\SocialFeedRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
-use App\Service\Social\Social\Model\PrivateFeedModel;
-use App\Service\Social\Social\Model\PrivateFeedOutcome;
-use App\Service\Social\Social\Support\SocialFeedUrl;
 use App\Service\Library\Subscription\Exception\AlreadySubscribedException;
 use App\Service\Library\Subscription\Exception\SubscriptionLimitReachedException;
 use App\Service\Library\Subscription\SubscriptionCreator;
 use App\Service\Library\Subscription\SubscriptionService;
+use App\Service\Social\Social\Model\PrivateFeedModel;
+use App\Service\Social\Social\Model\PrivateFeedOutcome;
+use App\Service\Social\Social\Support\SocialFeedUrl;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class PrivateFeeds

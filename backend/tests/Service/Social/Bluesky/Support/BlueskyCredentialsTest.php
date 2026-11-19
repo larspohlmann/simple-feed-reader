@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Bluesky\Support;
 
 use App\Enum\SocialNetwork;
+use App\Service\Social\Bluesky\Support\BlueskyCredentials;
 use App\Service\Social\Social\Exception\NotAnAppPasswordException;
 use App\Service\Social\Social\Model\CredentialReplacementModel;
-use App\Service\Social\Bluesky\Support\BlueskyCredentials;
 use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\TestCase;
 

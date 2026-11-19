@@ -12,6 +12,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\InclusionSurface;
 use App\Service\Identity\Account\Model\AccountSettingsModel;
+use App\Service\Library\Search\SavedSearchSlug;
 use App\Service\Operations\Backup\Dto\AccountLine;
 use App\Service\Operations\Backup\Dto\FeedLine;
 use App\Service\Operations\Backup\Dto\SavedSearchLine;
@@ -22,7 +23,6 @@ use App\Service\Operations\Backup\Factory\RestoredFoundationFactory;
 use App\Service\Operations\Backup\Model\AccountNetworkSwitchesModel;
 use App\Service\Operations\Backup\Model\RestoreResultModel;
 use App\Service\Operations\Backup\RestoreFeeds\RestoreFeedsInterface;
-use App\Service\Library\Search\SavedSearchSlug;
 use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\ORM\EntityManagerInterface;
 

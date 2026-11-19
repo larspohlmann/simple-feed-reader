@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Content\Reader;
 
+use App\Service\Content\Reader\Exception\PageFetchException;
+use App\Service\Content\Reader\StatusReasonPhrases\StatusReasonPhrasesInterface;
+use App\Service\Foundation\Html\Support\HtmlTranscoder;
+use App\Service\Foundation\Text\Support\ClippedText;
+use App\Service\Foundation\Text\Support\Whitespace;
 use App\Service\Outbound\Fetch\Exception\FetchException;
 use App\Service\Outbound\Fetch\Exception\RedirectChainException;
 use App\Service\Outbound\Fetch\Model\ResponseSizeLimit;
@@ -12,11 +17,6 @@ use App\Service\Outbound\Fetch\Pass\RedirectBudget;
 use App\Service\Outbound\Fetch\RedirectFollower;
 use App\Service\Outbound\Fetch\Support\ContentTypeCharset;
 use App\Service\Outbound\Fetch\Support\ResponseBody;
-use App\Service\Foundation\Html\Support\HtmlTranscoder;
-use App\Service\Content\Reader\Exception\PageFetchException;
-use App\Service\Content\Reader\StatusReasonPhrases\StatusReasonPhrasesInterface;
-use App\Service\Foundation\Text\Support\ClippedText;
-use App\Service\Foundation\Text\Support\Whitespace;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 

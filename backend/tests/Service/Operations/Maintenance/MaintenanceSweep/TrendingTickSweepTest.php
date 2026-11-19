@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Operations\Maintenance\MaintenanceSweep;
 
-use App\Service\Curation\Trending\Model\TrendingRebuildReportModel;
-use App\Service\Curation\Trending\Model\TrendingBuildReportModel;
 use App\Enum\TrendingWindow;
+use App\Service\Curation\Trending\Model\TrendingBuildReportModel;
+use App\Service\Curation\Trending\Model\TrendingRebuildReportModel;
 use App\Service\Operations\Maintenance\MaintenanceSweep\TrendingTickSweep;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;

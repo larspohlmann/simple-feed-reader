@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Mastodon;
 
 use App\Enum\SocialNetwork;
+use App\Service\Social\Mastodon\MastodonPostAddressRule;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Model\SocialPostAddressModel;
-use App\Service\Social\Mastodon\MastodonPostAddressRule;
 use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

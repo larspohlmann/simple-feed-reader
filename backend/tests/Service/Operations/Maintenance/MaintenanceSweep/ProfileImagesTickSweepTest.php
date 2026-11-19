@@ -4,18 +4,18 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Operations\Maintenance\MaintenanceSweep;
 
-use App\Service\Social\Social\Model\ProfileImageSweepReportModel;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\FeedRepository;
-use App\Service\Social\BlueskyPost\AppViewClient;
 use App\Service\Foundation\Clock\NaiveUtcClock;
-use App\Service\Outbound\Fetch\HostThrottle;
 use App\Service\Operations\Maintenance\MaintenanceSweep\ProfileImagesTickSweep;
-use App\Service\Social\Social\ProfileImageSweep;
+use App\Service\Outbound\Fetch\HostThrottle;
 use App\Service\Social\Bluesky\BlueskyProfilePictures;
 use App\Service\Social\Bluesky\ProfileVisibilityCache;
+use App\Service\Social\BlueskyPost\AppViewClient;
+use App\Service\Social\Social\Model\ProfileImageSweepReportModel;
+use App\Service\Social\Social\ProfileImageSweep;
 use App\Tests\DbTestCase;
 use App\Tests\Support\StubFeedFetcher;
 use Psr\Log\NullLogger;

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Ingestion\Parser\FeedFormatParser;
 
+use App\Service\Foundation\Text\Support\PlainText;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use App\Service\Ingestion\Parser\Exception\FeedParseException;
 use App\Service\Ingestion\Parser\FeedItemImageSelector;
 use App\Service\Ingestion\Parser\ItemMediaExtractor;
@@ -23,8 +25,6 @@ use App\Service\Ingestion\Parser\Support\ItemCategoryExtractor;
 use App\Service\Ingestion\Parser\Support\MediaDescription;
 use App\Service\Ingestion\Parser\Support\PodcastArtwork;
 use App\Service\Ingestion\Parser\Support\XmlHelper;
-use App\Service\Foundation\Text\Support\PlainText;
-use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 
 /**
  * Shared parsing for the Atom dialects. Everything but the namespace and a

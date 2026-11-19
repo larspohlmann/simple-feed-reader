@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Service\Ingestion\Refresh\Pass\PassLane;
 
 use App\Entity\Feed;
+use App\Service\Ingestion\Refresh\Model\PassOutcome\FeedPassOutcomeModel;
+use App\Service\Ingestion\Refresh\Pass\PassLane\FeedLane;
 use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
 use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
 use App\Service\Outbound\Fetch\Model\RequestSlot\HostSlotModel;
 use App\Service\Outbound\Fetch\Model\ResponseExchangeKind;
-use App\Service\Ingestion\Refresh\Model\PassOutcome\FeedPassOutcomeModel;
-use App\Service\Ingestion\Refresh\Pass\PassLane\FeedLane;
 use App\Tests\Support\AssignsEntityIds;
 use PHPUnit\Framework\TestCase;
 

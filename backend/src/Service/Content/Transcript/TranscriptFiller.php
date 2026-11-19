@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Service\Content\Transcript;
 
 use App\Entity\EntryTranscript;
-use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Content\Transcript\Exception\TranscriptUnreachableException;
 use App\Service\Content\Transcript\Exception\TranscriptUnusableException;
 use App\Service\Content\Transcript\TranscriptSource\TranscriptSourceInterface;
+use App\Service\Foundation\Clock\NaiveUtcClock;
 use Psr\Log\LoggerInterface;
 
 /** Fills one queued transcript, or fails it for good, or backs it off. The caller flushes. */

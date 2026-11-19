@@ -7,8 +7,8 @@ namespace App\Http\Problem\ExceptionProblems;
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
 use App\Service\Library\Subscription\Exception\AlreadySubscribedException;
-use App\Service\Library\Subscription\Exception\NotAFeedException;
 use App\Service\Library\Subscription\Exception\FeedLanguageNotSettableException;
+use App\Service\Library\Subscription\Exception\NotAFeedException;
 use App\Service\Library\Subscription\Exception\SubscriptionLimitReachedException;
 use Symfony\Component\HttpFoundation\Response;
 

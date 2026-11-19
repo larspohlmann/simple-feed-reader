@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Operations\Maintenance\MaintenanceSweep;
 
-use App\Service\Social\Bluesky\Model\HiddenProfileSwitchReportModel;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Service\Operations\Maintenance\MaintenanceSweep\HiddenProfilesTickSweep;
 use App\Service\Social\Bluesky\HiddenProfileSwitchSweep;
 use App\Service\Social\Bluesky\Model\HiddenProfileModel;
+use App\Service\Social\Bluesky\Model\HiddenProfileSwitchReportModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StubHiddenProfiles;

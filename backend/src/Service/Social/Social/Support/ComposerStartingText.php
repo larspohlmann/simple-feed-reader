@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\Support;
 
-use App\Service\Social\Social\Model\SharedLinkModel;
 use App\Service\Foundation\Text\Support\WordBoundary;
+use App\Service\Social\Social\Model\SharedLinkModel;
 
 /** Where the composer's text starts before the reader types. */
 final class ComposerStartingText

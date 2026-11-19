@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Operations\Backup\Support;
 
 use App\Enum\SourceFormat;
-use App\Service\Operations\Backup\Exception\InvalidBackupException;
 use App\Service\Library\SavedPosts\Support\SavedFeedUrl;
+use App\Service\Operations\Backup\Exception\InvalidBackupException;
 
 /** A saved feed is a saved: URL with the saved format, both or neither: a file must not make a shared feed a saved one. */
 final class SavedFeedRefusal

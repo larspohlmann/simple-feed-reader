@@ -6,8 +6,8 @@ namespace App\Service\Social\Social;
 
 use App\Entity\SocialAccount;
 use App\Service\Social\Social\Model\PostDeletion;
-use App\Service\Social\Social\Model\PublishedPostModel;
 use App\Service\Social\Social\Model\PostDraftModel;
+use App\Service\Social\Social\Model\PublishedPostModel;
 use App\Service\Social\Social\Model\ResponseKind;
 use App\Service\Social\Social\Model\SocialPostModel;
 use App\Service\Social\Social\PostWriter\PostWriterInterface;

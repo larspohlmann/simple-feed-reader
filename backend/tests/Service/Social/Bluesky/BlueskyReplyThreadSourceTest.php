@@ -4,20 +4,20 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Bluesky;
 
-use App\Service\Social\BlueskyPost\AppViewClient;
-use App\Service\Social\BlueskyPost\PostEmbedRenderer;
 use App\Service\Content\Comments\Exception\CommentsUnavailableException;
 use App\Service\Content\Comments\Model\CommentsAnswerModel;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Foundation\Sanitize\TrailingBlankRemover;
 use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
 use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
 use App\Service\Outbound\Fetch\HostThrottle;
-use App\Service\Foundation\Sanitize\EntrySanitizer;
-use App\Service\Foundation\Sanitize\TrailingBlankRemover;
+use App\Service\Social\Bluesky\BlueskyReplyThreadSource;
 use App\Service\Social\Bluesky\BlueskyThreadReplies;
+use App\Service\Social\BlueskyPost\AppViewClient;
+use App\Service\Social\BlueskyPost\PostEmbedRenderer;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\Bluesky\BlueskyReplyThreadSource;
 use App\Tests\Support\AssertsRefusal;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;

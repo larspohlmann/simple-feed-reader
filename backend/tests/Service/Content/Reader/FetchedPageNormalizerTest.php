@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Content\Reader;
 
-use App\Service\Foundation\Html\DesktopViewport;
-use App\Service\Foundation\Html\Exception\UnparseableHtmlException;
-use App\Service\Foundation\Html\PictureSources;
 use App\Service\Content\Reader\EmptiedWrapperRemover;
 use App\Service\Content\Reader\FetchedPageNormalizer;
 use App\Service\Content\Reader\Media\PageFurniture;
@@ -26,6 +23,9 @@ use App\Service\Content\Reader\PageRepair\ShareIntentLinkRemover;
 use App\Service\Content\Reader\PageRepair\ShareWidgetRemover;
 use App\Service\Content\Reader\PageRepair\StylesheetHiddenElementRemover;
 use App\Service\Content\Reader\PageRepair\SubstackGatedVideoPlaceholder;
+use App\Service\Foundation\Html\DesktopViewport;
+use App\Service\Foundation\Html\Exception\UnparseableHtmlException;
+use App\Service\Foundation\Html\PictureSources;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

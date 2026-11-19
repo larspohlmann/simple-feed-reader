@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Ingestion\Ingest\PlatformEntryRule;
 
 use App\Entity\Discussion;
+use App\Service\Foundation\Url\Support\LemmyPostUrl;
 use App\Service\Ingestion\Ingest\Support\LemmyPostHeader;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
-use App\Service\Foundation\Url\Support\LemmyPostUrl;
 
 final readonly class LemmyEntryRule implements PlatformEntryRuleInterface
 {

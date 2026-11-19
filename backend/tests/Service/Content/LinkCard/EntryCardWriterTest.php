@@ -18,8 +18,8 @@ use App\Service\Content\LinkCard\Model\PageCardModel;
 use App\Service\Content\LinkCard\Model\QuotedTargetModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PostEnrichers;
-use App\Tests\Support\ShareLinkCardsWiring;
 use App\Tests\Support\SharedLinks;
+use App\Tests\Support\ShareLinkCardsWiring;
 
 final class EntryCardWriterTest extends DbTestCase
 {

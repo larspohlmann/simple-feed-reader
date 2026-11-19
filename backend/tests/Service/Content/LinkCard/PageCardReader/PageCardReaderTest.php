@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Service\Content\LinkCard\PageCardReader;
 
 use App\Enum\FeedLanguage;
-use App\Service\Outbound\Fetch\DnsResolver\DnsResolverInterface;
-use App\Service\Outbound\Fetch\IpValidator;
-use App\Service\Outbound\Fetch\UrlGuard;
 use App\Service\Content\LinkCard\Model\PageIdentityModel;
 use App\Service\Content\LinkCard\PageCardReader\PageCardReader;
 use App\Service\Content\Reader\Exception\PageFetchException;
 use App\Service\Content\Reader\PageHeadFetcher;
+use App\Service\Outbound\Fetch\DnsResolver\DnsResolverInterface;
+use App\Service\Outbound\Fetch\IpValidator;
+use App\Service\Outbound\Fetch\UrlGuard;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;

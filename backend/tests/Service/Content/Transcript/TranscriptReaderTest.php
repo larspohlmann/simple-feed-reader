@@ -6,10 +6,10 @@ namespace App\Tests\Service\Content\Transcript;
 
 use App\Entity\TranscriptParagraph;
 use App\Enum\TranscriptFormat;
-use App\Service\Foundation\Sanitize\EntrySanitizer;
-use App\Service\Foundation\Sanitize\TrailingBlankRemover;
 use App\Service\Content\Transcript\Exception\TranscriptUnusableException;
 use App\Service\Content\Transcript\TranscriptReader;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Foundation\Sanitize\TrailingBlankRemover;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

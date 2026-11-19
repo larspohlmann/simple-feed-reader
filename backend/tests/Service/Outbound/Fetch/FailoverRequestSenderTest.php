@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Outbound\Fetch;
 
-use App\Tests\Support\PinnedRequestOptions;
 use App\Service\Outbound\Fetch\FailoverRequestSender;
 use App\Service\Outbound\Fetch\Model\GuardedUrlModel;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
+use App\Tests\Support\PinnedRequestOptions;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;

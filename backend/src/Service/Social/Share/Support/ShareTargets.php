@@ -6,8 +6,8 @@ namespace App\Service\Social\Share\Support;
 
 use App\Entity\Entry;
 use App\Enum\ShareKind;
-use App\Service\Social\Share\Model\ShareFetchPlanModel;
 use App\Service\Foundation\Url\Support\TrackingFreeUrl;
+use App\Service\Social\Share\Model\ShareFetchPlanModel;
 
 /** The pages an entry's cards come from: a titled share's one target, or the links a post's text shares. */
 final class ShareTargets

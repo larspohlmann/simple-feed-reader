@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Sourcing\Discovery\ShareLinkFeed;
 
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use App\Service\Outbound\Fetch\Exception\FetchException;
 use App\Service\Outbound\Fetch\FeedFetcher\FeedFetcherInterface;
-use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 
 /**
  * Maps an Apple Podcasts show or episode share link to the show's RSS feed through Apple's public lookup API. Every

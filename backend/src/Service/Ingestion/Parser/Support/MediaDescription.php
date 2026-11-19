@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Ingestion\Parser\Support;
 
-use App\Service\Ingestion\Parser\Model\FeedNamespace;
-use App\Service\Ingestion\Parser\Pass\CoreElement;
 use App\Service\Foundation\Text\Support\LinkedPlainText;
 use App\Service\Foundation\Text\Support\PlainText;
+use App\Service\Ingestion\Parser\Model\FeedNamespace;
+use App\Service\Ingestion\Parser\Pass\CoreElement;
 
 /** A Media RSS description: an item's as its body (its own, else its group's), a media element's as its alt text. */
 final class MediaDescription

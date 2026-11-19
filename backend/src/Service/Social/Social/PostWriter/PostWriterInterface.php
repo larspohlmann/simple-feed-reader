@@ -13,8 +13,8 @@ use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
 use App\Service\Social\Social\Model\PostDeletion;
-use App\Service\Social\Social\Model\PublishedPostModel;
 use App\Service\Social\Social\Model\PostDraftModel;
+use App\Service\Social\Social\Model\PublishedPostModel;
 use App\Service\Social\Social\Model\SocialPostModel;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Content\Reader\Paywall\Support;
 
-use App\Service\Foundation\Html\Support\JsonLd;
 use App\Service\Content\Reader\Paywall\Model\AccessDeclaration;
+use App\Service\Foundation\Html\Support\JsonLd;
 use Dom\HTMLDocument;
 
 /**

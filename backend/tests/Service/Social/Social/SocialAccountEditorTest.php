@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Social;
 
-use App\Enum\SocialFeedKind;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
@@ -13,6 +12,7 @@ use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Repository\EntryStateRepository;
 use App\Repository\SocialAccountRepository;

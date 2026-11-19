@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Social\BlueskyPost;
 
-use App\Service\Social\BlueskyPost\Support\AtPostUri;
 use App\Service\Foundation\Url\EntryIdentityUrl\EntryIdentityUrlInterface;
+use App\Service\Social\BlueskyPost\Support\AtPostUri;
 
 /** The timeline links a post by DID, Bluesky's RSS by handle: the AT URI guid is what both share. */
 final readonly class BlueskyEntryIdentityUrl implements EntryIdentityUrlInterface

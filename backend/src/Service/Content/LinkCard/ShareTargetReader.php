@@ -10,11 +10,11 @@ use App\Service\Content\LinkCard\Exception\QuotedPostUnavailableException;
 use App\Service\Content\LinkCard\Model\EntryCardsModel;
 use App\Service\Content\LinkCard\Model\PageCardModel;
 use App\Service\Content\LinkCard\Model\QuotedTargetModel;
-use App\Service\Social\Share\Model\ShareFetchPlanModel;
 use App\Service\Content\LinkCard\PageCardReader\PageCardReaderInterface;
 use App\Service\Content\LinkCard\QuotedPostSource\QuotedPostSourceInterface;
 use App\Service\Content\LinkCard\Support\QuoteLine;
 use App\Service\Content\Reader\Exception\PageFetchException;
+use App\Service\Social\Share\Model\ShareFetchPlanModel;
 use Psr\Log\LoggerInterface;
 
 /** Reads what a share's uncarded targets show: the post its "RE:" line quotes, and a page card for every other link. */

@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Service\Ingestion\Refresh\Pass;
 
 use App\Enum\SourceFormat;
+use App\Service\Ingestion\Refresh\Model\PassOutcome\PassOutcomeModelInterface;
+use App\Service\Ingestion\Refresh\Pass\PassLane\PassLaneInterface;
 use App\Service\Outbound\Fetch\AnswerSettler\AnswerSettlerInterface;
 use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
 use App\Service\Outbound\Fetch\Model\RequestTicketModel;
 use App\Service\Outbound\Fetch\Model\SettlementModel;
-use App\Service\Ingestion\Refresh\Model\PassOutcome\PassOutcomeModelInterface;
-use App\Service\Ingestion\Refresh\Pass\PassLane\PassLaneInterface;
 
 /**
  * One pass's engine tickets in due order and the engine's settler: each feed id's lane is decided once, here,

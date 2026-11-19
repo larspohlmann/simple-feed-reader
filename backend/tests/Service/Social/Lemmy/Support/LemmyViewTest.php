@@ -6,8 +6,8 @@ namespace App\Tests\Service\Social\Lemmy\Support;
 
 use App\Enum\VoteScore;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
-use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Lemmy\Support\LemmyView;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Tests\Support\ReadsFixtures;
 use PHPUnit\Framework\TestCase;
 

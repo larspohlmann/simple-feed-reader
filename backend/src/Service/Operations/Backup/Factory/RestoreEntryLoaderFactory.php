@@ -11,10 +11,10 @@ use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\FeedRepository;
 use App\Service\Content\LinkCard\SharedLinkWriter;
+use App\Service\Library\Search\EntryIndexer;
 use App\Service\Operations\Backup\Pass\RestoreDestination;
 use App\Service\Operations\Backup\Pass\RestoreEntryLoader;
 use App\Service\Operations\Backup\Pass\RestoreFeedTargets;
-use App\Service\Library\Search\EntryIndexer;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**

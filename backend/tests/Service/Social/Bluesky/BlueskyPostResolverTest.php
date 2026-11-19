@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Bluesky;
 
 use App\Entity\LinkCardContent;
+use App\Service\Social\Bluesky\BlueskyPostResolver;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Model\PostPreviewModel;
 use App\Service\Social\Social\Model\PostReferenceModel;
 use App\Service\Social\Social\Model\SocialCountsModel;
-use App\Service\Social\Bluesky\BlueskyPostResolver;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\Attributes\DataProvider;

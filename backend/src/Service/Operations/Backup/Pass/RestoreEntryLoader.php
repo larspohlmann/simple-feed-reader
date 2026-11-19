@@ -10,6 +10,7 @@ use App\Entity\LinkCardContent;
 use App\Entity\User;
 use App\Repository\EntryBatchInserter;
 use App\Service\Content\LinkCard\SharedLinkWriter;
+use App\Service\Library\Search\EntryIndexer;
 use App\Service\Operations\Backup\Dto\EntryLine;
 use App\Service\Operations\Backup\Dto\EntryShareLine;
 use App\Service\Operations\Backup\Dto\EntryStateLine;
@@ -19,7 +20,6 @@ use App\Service\Operations\Backup\RestoreEntries\RestoreEntriesInterface;
 use App\Service\Operations\Backup\RestoreEntryShares\RestoreEntrySharesInterface;
 use App\Service\Operations\Backup\RestoreEntryStates\RestoreEntryStatesInterface;
 use App\Service\Operations\Backup\Support\PrivateFeedRefusal;
-use App\Service\Library\Search\EntryIndexer;
 use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\ORM\EntityManagerInterface;
 

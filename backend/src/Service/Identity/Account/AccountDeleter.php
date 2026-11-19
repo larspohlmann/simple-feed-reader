@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Service\Identity\Account;
 
 use App\Entity\User;
-use App\Service\Identity\Account\Exception\LastAdminException;
 use App\Repository\FeedRepository;
 use App\Repository\UserRepository;
-use App\Service\Operations\Admin\SelfActionGuard;
+use App\Service\Identity\Account\Exception\LastAdminException;
 use App\Service\Ingestion\Feed\OrphanedFeedReclaimer;
+use App\Service\Operations\Admin\SelfActionGuard;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**

@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Mastodon;
 
 use App\Service\Foundation\Json\Model\JsonNodeModel;
+use App\Service\Social\Mastodon\MastodonPostWriter;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
 use App\Service\Social\Social\Model\PostDeletion;
-use App\Service\Social\Social\Model\PublishedPostModel;
 use App\Service\Social\Social\Model\PostDraftModel;
+use App\Service\Social\Social\Model\PublishedPostModel;
 use App\Service\Social\Social\Model\SocialPostModel;
-use App\Service\Social\Mastodon\MastodonPostWriter;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;

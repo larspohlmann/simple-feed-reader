@@ -7,7 +7,7 @@ namespace App\Service\Ingestion\Scraper;
 use App\Entity\Headline;
 use App\Service\Foundation\Html\Support\MetaName;
 use App\Service\Foundation\Html\Support\MetaProperty;
-use App\Service\Outbound\Image\Model\DeclaredImageModel;
+use App\Service\Foundation\Text\Support\HtmlEscape;
 use App\Service\Ingestion\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
@@ -16,7 +16,7 @@ use App\Service\Ingestion\Scraper\Exception\HtmlExtractionException;
 use App\Service\Ingestion\Scraper\Model\ScrapedItemModel;
 use App\Service\Ingestion\Scraper\ScrapeLayer\ScrapeLayerInterface;
 use App\Service\Ingestion\Scraper\Support\TextNormalizer;
-use App\Service\Foundation\Text\Support\HtmlEscape;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
 use Dom\HTMLDocument;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 

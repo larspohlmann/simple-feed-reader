@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Bluesky;
 
-use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Bluesky\Model\HiddenProfileModel;
 use App\Service\Social\Bluesky\TolerantHiddenProfiles;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Tests\Support\BlueskyProfiles;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\StubHiddenProfiles;

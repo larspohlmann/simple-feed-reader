@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Operations\Worker;
 
-use App\Service\Social\Bluesky\HiddenProfileSwitchSweep;
 use App\Service\Operations\Worker\Handler\SwitchHiddenProfileFeedsHandler;
 use App\Service\Operations\Worker\Message\SwitchHiddenProfileFeeds;
+use App\Service\Social\Bluesky\HiddenProfileSwitchSweep;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecordingLogger;
 

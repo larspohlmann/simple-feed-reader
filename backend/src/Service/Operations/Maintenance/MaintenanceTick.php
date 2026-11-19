@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Operations\Maintenance;
 
+use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
+use App\Service\Ingestion\Refresh\RefreshRunner\RefreshRunner;
 use App\Service\Operations\Logging\Loki\LokiSpoolShipper;
 use App\Service\Operations\Maintenance\MaintenanceSweep\MaintenanceSweepInterface;
 use App\Service\Operations\Maintenance\Model\MaintenanceSweepsModel;
 use App\Service\Operations\Maintenance\Model\MaintenanceTickReportModel;
-use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
-use App\Service\Ingestion\Refresh\RefreshRunner\RefreshRunner;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 

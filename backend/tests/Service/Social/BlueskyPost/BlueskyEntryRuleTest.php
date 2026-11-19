@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\BlueskyPost;
 
 use App\Entity\Headline;
-use App\Service\Social\BlueskyPost\BlueskyEntryRule;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Social\BlueskyPost\BlueskyEntryRule;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

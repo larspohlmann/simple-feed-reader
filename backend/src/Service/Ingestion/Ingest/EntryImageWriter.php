@@ -6,8 +6,8 @@ namespace App\Service\Ingestion\Ingest;
 
 use App\Entity\Entry;
 use App\Entity\ImageRendition;
-use App\Service\Outbound\Image\Model\DeclaredImageModel;
 use App\Service\Foundation\Url\Support\HttpsImageUrl;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
 
 /**
  * Stores a feed-declared image on an entry, pending the background verify: declared dimensions don't prove it loads.

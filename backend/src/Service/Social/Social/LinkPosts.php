@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Social;
 
 use App\Entity\User;
+use App\Service\Foundation\Url\UrlNormalizer;
 use App\Service\Social\Social\Exception\NoSocialAccountForNetworkException;
 use App\Service\Social\Social\Exception\SocialAccountNeedsReconnectException;
 use App\Service\Social\Social\Exception\SocialAccountNotFoundException;
@@ -22,7 +23,6 @@ use App\Service\Social\Social\Model\PostDraftModel;
 use App\Service\Social\Social\Model\PublishedPostModel;
 use App\Service\Social\Social\Model\ResponseKind;
 use App\Service\Social\Social\Model\SharedLinkModel;
-use App\Service\Foundation\Url\UrlNormalizer;
 
 final readonly class LinkPosts
 {

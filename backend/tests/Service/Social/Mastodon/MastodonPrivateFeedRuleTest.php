@@ -6,10 +6,10 @@ namespace App\Tests\Service\Social\Mastodon;
 
 use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
-use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
-use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Service\Social\Mastodon\MastodonPrivateFeedRule;
 use App\Service\Social\Mastodon\Support\MastodonFeedIds;
+use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
+use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

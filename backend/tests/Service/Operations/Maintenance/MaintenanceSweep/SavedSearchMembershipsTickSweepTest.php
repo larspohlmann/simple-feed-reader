@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Operations\Maintenance\MaintenanceSweep;
 
-use App\Service\Library\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\SavedSearch;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Service\Library\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
 use App\Service\Operations\Maintenance\MaintenanceSweep\SavedSearchMembershipsTickSweep;
 use App\Tests\DbTestCase;
 use App\Tests\Support\MembershipSweepFactory;

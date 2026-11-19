@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
-use App\Enum\SocialFeedKind;
 use App\Entity\Discussion;
 use App\Entity\Headline;
 use App\Entity\SocialAccount;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Service\Social\Completion\Model\KnownSharesModel;
+use App\Enum\SocialFeedKind;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use App\Service\Social\Completion\Model\KnownSharesModel;
 use App\Service\Social\Social\Model\NetworkCandidatesModel;
 use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Service\Social\Social\Model\TimelinePageModel;

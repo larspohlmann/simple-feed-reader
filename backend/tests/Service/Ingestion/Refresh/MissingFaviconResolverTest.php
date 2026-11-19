@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\Ingestion\Refresh;
 
 use App\Entity\Feed;
+use App\Service\Ingestion\Refresh\MissingFaviconResolver;
 use App\Service\Outbound\Fetch\FaviconResolver\FaviconResolver;
 use App\Service\Outbound\Fetch\Model\FetchResponseModel;
-use App\Service\Ingestion\Refresh\MissingFaviconResolver;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\ReloadsEntities;

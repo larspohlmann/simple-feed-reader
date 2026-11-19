@@ -12,10 +12,10 @@ use App\Enum\TrendingWindow;
 use App\Service\Curation\Trending\Pass\TrendingRun;
 use App\Service\Foundation\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
+use App\Tests\Support\SharedLinks;
 use App\Tests\Support\TrendingFixtures;
 use App\Tests\Support\TrendingWiring;
 use Symfony\Component\Clock\MockClock;
-use App\Tests\Support\SharedLinks;
 
 final class TrendingGroupingTest extends DbTestCase
 {

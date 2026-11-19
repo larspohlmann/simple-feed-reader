@@ -6,11 +6,11 @@ namespace App\Service\Content\LinkCard;
 
 use App\Entity\Entry;
 use App\Enum\ShareKind;
-use App\Service\Ingestion\Ingest\Support\EntrySnippet;
 use App\Service\Content\LinkCard\Model\EntryCardsModel;
 use App\Service\Content\LinkCard\Model\PageCardModel;
 use App\Service\Content\LinkCard\Support\QuoteLine;
 use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Ingestion\Ingest\Support\EntrySnippet;
 use App\Service\Social\Share\Support\TitledShareTarget;
 
 /** Puts freshly read page cards on their entry: a carded or quoted target's RE: line leaves the body. */

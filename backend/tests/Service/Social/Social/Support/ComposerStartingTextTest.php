@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Social\Support;
 
-use App\Service\Social\Social\Model\SharedLinkModel;
 use App\Service\Social\Bluesky\BlueskyPostWriter;
+use App\Service\Social\Social\Model\SharedLinkModel;
 use App\Service\Social\Social\Support\ComposerStartingText;
 use PHPUnit\Framework\TestCase;
 

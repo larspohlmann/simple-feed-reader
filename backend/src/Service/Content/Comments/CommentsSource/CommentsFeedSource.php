@@ -15,10 +15,10 @@ use App\Service\Content\Comments\Model\CommentsEndpointModel;
 use App\Service\Content\Comments\Model\CommentsPageModel;
 use App\Service\Content\Comments\Model\EntryCommentModel;
 use App\Service\Content\Comments\Pass\CommentsRequest;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
 use App\Service\Ingestion\Parser\Exception\FeedParseException;
 use App\Service\Ingestion\Parser\FeedParser;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
-use App\Service\Foundation\Sanitize\EntrySanitizer;
 
 final readonly class CommentsFeedSource implements CommentsSourceInterface
 {

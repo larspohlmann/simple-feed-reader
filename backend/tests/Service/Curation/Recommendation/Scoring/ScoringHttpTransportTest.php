@@ -6,10 +6,10 @@ namespace App\Tests\Service\Curation\Recommendation\Scoring;
 
 use App\Service\Curation\Ai\Model\ProviderCallReceiptModel;
 use App\Service\Curation\Ai\Model\ProviderCredentialsModel;
-use App\Service\Outbound\Fetch\Support\ResponseHeader;
 use App\Service\Curation\Recommendation\Scoring\Model\ScoringReplyModel;
 use App\Service\Curation\Recommendation\Scoring\Pass\ScoringEndpoint;
 use App\Service\Curation\Recommendation\Scoring\ScoringHttpTransport;
+use App\Service\Outbound\Fetch\Support\ResponseHeader;
 use App\Tests\Support\CountingProviderCallHeartbeat;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;

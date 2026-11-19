@@ -4,22 +4,22 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Mastodon;
 
-use App\Service\Social\Social\PostResolver\PostResolverInterface;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
+use App\Service\Foundation\Text\Support\PlainText;
+use App\Service\Social\Mastodon\MastodonAccountApi;
+use App\Service\Social\Mastodon\Support\MastodonAuthor;
+use App\Service\Social\Mastodon\Support\MastodonCard;
+use App\Service\Social\Mastodon\Support\MastodonPostCounts;
+use App\Service\Social\Mastodon\Support\MastodonQuoting;
+use App\Service\Social\Mastodon\Support\MastodonVisibility;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\Mastodon\MastodonAccountApi;
 use App\Service\Social\Social\Model\PostPreviewModel;
 use App\Service\Social\Social\Model\ResponseContextModel;
 use App\Service\Social\Social\Model\SocialPostModel;
-use App\Service\Social\Mastodon\Support\MastodonAuthor;
-use App\Service\Social\Mastodon\Support\MastodonCard;
-use App\Service\Social\Mastodon\Support\MastodonQuoting;
-use App\Service\Social\Mastodon\Support\MastodonVisibility;
-use App\Service\Social\Mastodon\Support\MastodonPostCounts;
-use App\Service\Foundation\Text\Support\PlainText;
+use App\Service\Social\Social\PostResolver\PostResolverInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /** Asks the account's own instance for the post, so a post from any server gets the id that instance acts on. */

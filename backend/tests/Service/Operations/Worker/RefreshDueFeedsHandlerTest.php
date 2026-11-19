@@ -6,11 +6,11 @@ namespace App\Tests\Service\Operations\Worker;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
-use App\Service\Outbound\Fetch\Model\FetchResponseModel;
 use App\Service\Ingestion\Refresh\RefreshRunner\RefreshRunner;
 use App\Service\Operations\Worker\Handler\RefreshDueFeedsHandler;
 use App\Service\Operations\Worker\Message\RefreshDueFeeds;
 use App\Service\Operations\Worker\RefreshWarmUp;
+use App\Service\Outbound\Fetch\Model\FetchResponseModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RefreshFetchers;
 use App\Tests\Support\SeedsUsers;

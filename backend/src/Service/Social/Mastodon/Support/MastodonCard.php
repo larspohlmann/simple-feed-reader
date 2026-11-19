@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Social\Mastodon\Support;
 
 use App\Entity\LinkCardContent;
+use App\Service\Content\LinkCard\Support\StorableLinkCard;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Outbound\Fetch\Support\HostKey;
-use App\Service\Content\LinkCard\Support\StorableLinkCard;
 
 final class MastodonCard
 {

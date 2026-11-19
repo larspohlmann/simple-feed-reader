@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Content\Reader;
 
-use App\Service\Foundation\Html\Support\HtmlDocumentParser;
 use App\Service\Content\Reader\Model\ExtractionFailure;
 use App\Service\Content\Reader\Model\ExtractionResultModel;
+use App\Service\Foundation\Html\Support\HtmlDocumentParser;
 use App\Service\Foundation\Text\Support\Whitespace;
 
 /**

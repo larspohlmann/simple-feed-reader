@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Ingestion\Scraper\Pass;
 
-use App\Service\Outbound\Fetch\Pass\PageUrls;
 use App\Service\Ingestion\Parser\Support\DateParser;
 use App\Service\Ingestion\Scraper\Model\ScrapedItemModel;
 use App\Service\Ingestion\Scraper\Support\TextNormalizer;
+use App\Service\Outbound\Fetch\Pass\PageUrls;
 
 /** The articles a page's JSON-LD describes, found by recursing through lists, @graph and ItemList entries. */
 final class JsonLdArticles

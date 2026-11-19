@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ingestion\Parser\Support;
 
-use App\Service\Outbound\Image\Model\DeclaredImageModel;
 use App\Service\Ingestion\Parser\Support\DeclaredImages;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

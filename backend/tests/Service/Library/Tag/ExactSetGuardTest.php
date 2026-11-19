@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Library\Tag;
 
+use App\Exception\InvalidSelectionException;
 use App\Service\Library\Tag\ExactSetGuard;
 use PHPUnit\Framework\TestCase;
-use App\Exception\InvalidSelectionException;
 
 final class ExactSetGuardTest extends TestCase
 {

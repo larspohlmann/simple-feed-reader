@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Identity\Auth;
 
+use App\Repository\UserRepository;
 use App\Service\Identity\Auth\Exception\InvalidSetupSecretException;
 use App\Service\Identity\Auth\Exception\SetupUnavailableException;
-use App\Repository\UserRepository;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 

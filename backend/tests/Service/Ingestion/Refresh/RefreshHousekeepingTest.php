@@ -7,20 +7,20 @@ namespace App\Tests\Service\Ingestion\Refresh;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Repository\OrphanedFeedRepository;
-use App\Service\Ingestion\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
 use App\Repository\RetentionRepository;
 use App\Repository\RowIds;
 use App\Service\Ingestion\Feed\OrphanedFeedReclaimer;
 use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
+use App\Service\Ingestion\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
 use App\Service\Ingestion\Refresh\RefreshHousekeeping;
 use App\Service\Ingestion\Retention\EntryPruner;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\EntryIndexers;
+use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\SubscriptionHistoryFixtures;
 use Symfony\Component\Clock\MockClock;
-use App\Tests\Support\PostEnrichers;
 
 /** Pruning itself, and recording before it, are pinned by RefreshRunnerTest against a whole run. */
 final class RefreshHousekeepingTest extends DbTestCase

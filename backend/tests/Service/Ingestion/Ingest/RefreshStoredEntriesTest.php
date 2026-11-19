@@ -8,13 +8,13 @@ use App\Entity\Entry;
 use App\Entity\EntryLemmyPost;
 use App\Entity\Feed;
 use App\Entity\Headline;
-use App\Service\Outbound\Image\Model\DeclaredImageModel;
 use App\Service\Ingestion\Ingest\EntryIngestor;
 use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
 use App\Service\Ingestion\Ingest\StoredEntryRefresher;
 use App\Service\Ingestion\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
 use App\Tests\DbTestCase;
 
 final class RefreshStoredEntriesTest extends DbTestCase

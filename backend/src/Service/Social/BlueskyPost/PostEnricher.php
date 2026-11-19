@@ -9,14 +9,14 @@ use App\Entity\Feed;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Repository\ShareEnrichmentRepository;
+use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
+use App\Service\Library\Search\EntryIndexer;
+use App\Service\Outbound\Fetch\Exception\FetchException;
 use App\Service\Social\BlueskyPost\EntryEmbedWriter\EntryEmbedWriterInterface;
 use App\Service\Social\BlueskyPost\Exception\AppViewAnswerException;
 use App\Service\Social\BlueskyPost\Model\FillOutcome;
-use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\BlueskyPost\Support\BlueskyPostView;
-use App\Service\Foundation\Clock\NaiveUtcClock;
-use App\Service\Outbound\Fetch\Exception\FetchException;
-use App\Service\Library\Search\EntryIndexer;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 

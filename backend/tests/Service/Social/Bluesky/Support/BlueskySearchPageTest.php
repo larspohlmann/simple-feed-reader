@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Bluesky\Support;
 
-use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
-use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Bluesky\Support\BlueskySearchPage;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Response;

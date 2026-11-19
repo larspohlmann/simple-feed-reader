@@ -11,13 +11,13 @@ use App\Repository\RetentionRepository;
 use App\Repository\SocialFeedRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Library\Search\EntryIndexer;
+use App\Service\Library\Subscription\Exception\AlreadySubscribedException;
 use App\Service\Social\Social\Exception\NotASearchFeedException;
 use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
 use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Service\Social\Social\PrivateFeedRule\PrivateFeedRuleInterface;
 use App\Service\Social\Social\Support\SocialFeedUrl;
 use App\Service\Social\Social\Support\SocialSearchMatch;
-use App\Service\Library\Subscription\Exception\AlreadySubscribedException;
 use Doctrine\ORM\EntityManagerInterface;
 
 /** Points a search feed at another query in place, its stored posts that no longer match removed unless protected. */

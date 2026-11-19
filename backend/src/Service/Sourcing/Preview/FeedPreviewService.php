@@ -6,15 +6,15 @@ namespace App\Service\Sourcing\Preview;
 
 use App\Entity\User;
 use App\Enum\SourceFormat;
-use App\Service\Sourcing\Discovery\ScrapeFallbackPolicy;
+use App\Service\Ingestion\Parser\Exception\FeedParseException;
+use App\Service\Ingestion\Refresh\FeedBodyParser;
 use App\Service\Outbound\Fetch\Exception\FetchException;
 use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Outbound\Fetch\FeedFetcher\FeedFetcherInterface;
-use App\Service\Ingestion\Parser\Exception\FeedParseException;
+use App\Service\Sourcing\Discovery\ScrapeFallbackPolicy;
 use App\Service\Sourcing\Preview\Exception\FeedPreviewException;
 use App\Service\Sourcing\Preview\Factory\FeedPreviewFactory;
 use App\Service\Sourcing\Preview\Model\FeedPreviewModel;
-use App\Service\Ingestion\Refresh\FeedBodyParser;
 
 /**
  * Fetches a feed URL and summarizes its content shape — how many items it has,

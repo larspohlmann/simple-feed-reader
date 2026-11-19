@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Sourcing\Discovery\FeedOffer;
 
-use App\Service\Sourcing\Discovery\Model\FeedCandidateModel;
 use App\Service\Foundation\Html\Support\HtmlDocumentParser;
 use App\Service\Foundation\Html\Support\MetaProperty;
 use App\Service\Ingestion\Parser\Model\FeedSyntax;
 use App\Service\Ingestion\Scraper\Support\TextNormalizer;
+use App\Service\Sourcing\Discovery\Model\FeedCandidateModel;
 use Dom\HTMLDocument;
 
 /**

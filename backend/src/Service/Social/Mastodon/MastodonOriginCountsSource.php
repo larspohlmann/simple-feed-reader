@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Mastodon;
 
-use App\Service\Social\Social\PostCountsSource\PostCountsSourceInterface;
 use App\Enum\SocialNetwork;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
+use App\Service\Social\Mastodon\MastodonApiClient;
+use App\Service\Social\Mastodon\Support\MastodonPostCounts;
+use App\Service\Social\Mastodon\Support\MastodonStatusAddress;
 use App\Service\Social\Social\Exception\PostNotPubliclyCountableException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Mastodon\MastodonApiClient;
 use App\Service\Social\Social\Model\SocialCountsModel;
-use App\Service\Social\Mastodon\Support\MastodonStatusAddress;
-use App\Service\Social\Mastodon\Support\MastodonPostCounts;
+use App\Service\Social\Social\PostCountsSource\PostCountsSourceInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /** Asks the status's own instance, anonymously: the counts every reader of the post sees there. */

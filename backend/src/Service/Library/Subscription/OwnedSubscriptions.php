@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Library\Subscription;
 
 use App\Entity\Subscription;
-use App\Repository\SubscriptionRepository;
 use App\Exception\InvalidSelectionException;
+use App\Repository\SubscriptionRepository;
 
 /**
  * Resolves a request's subscription ids to the caller's own subscriptions, refusing foreign, absent and repeated

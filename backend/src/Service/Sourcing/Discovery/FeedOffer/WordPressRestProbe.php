@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Service\Sourcing\Discovery\FeedOffer;
 
 use App\Enum\SourceFormat;
-use App\Service\Sourcing\Discovery\Model\FeedCandidateModel;
+use App\Service\Foundation\Html\Support\HtmlDocumentParser;
+use App\Service\Ingestion\Scraper\Support\TextNormalizer;
 use App\Service\Outbound\Fetch\Exception\FetchException;
 use App\Service\Outbound\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Outbound\Fetch\Pass\PageUrls;
-use App\Service\Foundation\Html\Support\HtmlDocumentParser;
-use App\Service\Ingestion\Scraper\Support\TextNormalizer;
+use App\Service\Sourcing\Discovery\Model\FeedCandidateModel;
 use Dom\HTMLDocument;
 
 /**

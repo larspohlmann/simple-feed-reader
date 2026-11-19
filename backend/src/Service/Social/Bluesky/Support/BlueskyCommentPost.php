@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Bluesky\Support;
 
-use App\Service\Foundation\Json\Model\JsonNodeModel;
-use App\Service\Social\BlueskyPost\Support\AtPostUri;
 use App\Service\Content\Comments\Model\CommentPostModel;
 use App\Service\Content\Comments\Model\CommentViewerModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
+use App\Service\Social\BlueskyPost\Support\AtPostUri;
 
 /** The post a reply in a Bluesky thread answer is; null when the answer names no address or no counts for it. */
 final class BlueskyCommentPost

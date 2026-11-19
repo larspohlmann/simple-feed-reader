@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Bluesky;
 
 use App\Enum\SocialNotificationKind;
+use App\Service\Social\Bluesky\BlueskyNotificationContextSource;
 use App\Service\Social\Bluesky\BlueskyPostLookup;
 use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
-use App\Service\Social\Bluesky\BlueskyNotificationContextSource;
 use App\Tests\Support\NotificationRows;
 use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\RoutedHttpClient;

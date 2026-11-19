@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Outbound\Fetch;
 
-use App\Service\Sourcing\Catalog\CatalogUrlChecker;
+use App\Service\Content\Reader\PageLanding;
 use App\Service\Outbound\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
 use App\Service\Outbound\Fetch\ConcurrentRequestEngine;
-use App\Service\Content\Reader\PageLanding;
+use App\Service\Sourcing\Catalog\CatalogUrlChecker;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 

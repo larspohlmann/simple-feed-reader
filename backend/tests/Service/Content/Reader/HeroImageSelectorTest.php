@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Content\Reader;
 
-use App\Service\Outbound\Image\Model\DeclaredImageModel;
 use App\Service\Content\Reader\HeroImageSelector;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
 use PHPUnit\Framework\TestCase;
 
 final class HeroImageSelectorTest extends TestCase

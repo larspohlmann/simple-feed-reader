@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Mastodon\Support;
 
 use App\Enum\SocialNetwork;
+use App\Service\Social\Mastodon\Support\MastodonCredentials;
 use App\Service\Social\Social\Exception\InvalidInstanceUrlException;
 use App\Service\Social\Social\Model\CredentialReplacementModel;
-use App\Service\Social\Mastodon\Support\MastodonCredentials;
 use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\TestCase;
 

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Foundation\Html\Support\HtmlDocumentParser;
 use App\Service\Content\Reader\BodyCleaning\Model\BodyCleaningInputModel;
 use App\Service\Content\Reader\Media\Model\ArticleMediaModel;
 use App\Service\Content\Reader\Media\Teaser\Model\TeaserPlayerModel;
@@ -12,6 +11,7 @@ use App\Service\Content\Reader\Model\FeedMediaModel;
 use App\Service\Content\Reader\Model\LeadImageCandidateModel;
 use App\Service\Content\Reader\Model\PageImageInventoryModel;
 use App\Service\Content\Reader\Slideshow\Model\SlideshowModel;
+use App\Service\Foundation\Html\Support\HtmlDocumentParser;
 
 final class BodyCleaningInputs
 {

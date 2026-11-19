@@ -6,7 +6,6 @@ namespace App\Service\Social\Bluesky;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Social\BlueskyPost\Support\AtPostUri;
 use App\Service\Social\Bluesky\BlueskyExternalEmbeds;
 use App\Service\Social\Bluesky\BlueskyFacets;
 use App\Service\Social\Bluesky\BlueskyPostKeys;
@@ -14,6 +13,7 @@ use App\Service\Social\Bluesky\BlueskyRecords;
 use App\Service\Social\Bluesky\Model\BlueskyPostKeyModel;
 use App\Service\Social\Bluesky\Support\BlueskyRecordUri;
 use App\Service\Social\Bluesky\Support\BlueskyStrongRef;
+use App\Service\Social\BlueskyPost\Support\AtPostUri;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Social\Model\PostDeletion;

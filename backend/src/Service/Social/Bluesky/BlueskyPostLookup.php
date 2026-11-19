@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Social\Bluesky;
 
 use App\Entity\SocialAccount;
-use App\Service\Social\BlueskyPost\AppViewClient;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Bluesky\BlueskySessions;
+use App\Service\Social\BlueskyPost\AppViewClient;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 

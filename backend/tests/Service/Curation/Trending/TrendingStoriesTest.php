@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Curation\Trending;
 
-use App\Service\Curation\Trending\Model\StoryArticleModel;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\LinkCard;
+use App\Entity\LinkCardContent;
 use App\Entity\TrendingSnapshot;
 use App\Entity\TrendingStory;
 use App\Entity\User;
@@ -15,21 +16,20 @@ use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
-use App\Service\Library\EntryList\EntryListRowEnricher;
 use App\Repository\ReadingSettingsRepository;
 use App\Repository\TrendingEntryRepository;
 use App\Repository\TrendingStoryRepository;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\ReaderWindowModel;
+use App\Service\Curation\Trending\Model\StoryArticleModel;
 use App\Service\Curation\Trending\Model\TrendingStoryCardModel;
 use App\Service\Curation\Trending\ReaderWindows;
 use App\Service\Curation\Trending\TrendingStories;
+use App\Service\Library\EntryList\EntryListRowEnricher;
 use App\Tests\DbTestCase;
+use App\Tests\Support\SharedLinks;
 use App\Tests\Support\TrendingFixtures;
 use App\Tests\Support\TrendingWiring;
-use App\Entity\LinkCardContent;
-use App\Entity\LinkCard;
-use App\Tests\Support\SharedLinks;
 
 final class TrendingStoriesTest extends DbTestCase
 {

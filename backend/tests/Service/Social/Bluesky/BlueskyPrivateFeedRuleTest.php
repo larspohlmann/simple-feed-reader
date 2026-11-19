@@ -6,8 +6,8 @@ namespace App\Tests\Service\Social\Bluesky;
 
 use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
-use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Service\Social\Bluesky\BlueskyPrivateFeedRule;
+use App\Service\Social\Social\Model\PrivateFeedModel;
 use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

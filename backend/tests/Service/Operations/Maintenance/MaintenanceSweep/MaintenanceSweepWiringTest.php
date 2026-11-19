@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Operations\Maintenance\MaintenanceSweep;
 
 use App\Http\MaintenanceTickJson;
+use App\Service\Ingestion\Refresh\Model\RefreshReportModel;
 use App\Service\Operations\Logging\Loki\Model\LokiSpoolReportModel;
 use App\Service\Operations\Maintenance\MaintenanceSweep\DigestsTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\HiddenProfilesTickSweep;
@@ -23,7 +24,6 @@ use App\Service\Operations\Maintenance\MaintenanceSweep\TrendingTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceTick;
 use App\Service\Operations\Maintenance\Model\MaintenanceSweepsModel;
 use App\Service\Operations\Maintenance\Model\MaintenanceTickReportModel;
-use App\Service\Ingestion\Refresh\Model\RefreshReportModel;
 use App\Tests\Support\TaggedItemOf;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 

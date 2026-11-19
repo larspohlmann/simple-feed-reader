@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Outbound\Fetch;
 
-use App\Tests\Support\PinnedRequestOptions;
+use App\Enum\ProxyType;
 use App\Service\Outbound\Fetch\Exception\DirectRouteUnavailableException;
 use App\Service\Outbound\Fetch\Exception\FetchException;
 use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Outbound\Fetch\Exception\SsrfBlockedException;
-use App\Enum\ProxyType;
 use App\Service\Outbound\Fetch\GuardedApiClient;
 use App\Service\Outbound\Fetch\IpValidator;
 use App\Service\Outbound\Fetch\Model\ApiBudgetModel;
@@ -19,6 +18,7 @@ use App\Service\Outbound\Fetch\Model\ResponseSizeLimit;
 use App\Service\Outbound\Fetch\UrlGuard;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\GzipBomb;
+use App\Tests\Support\PinnedRequestOptions;
 use App\Tests\Support\StaticDnsResolver;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;

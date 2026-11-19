@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Mastodon;
 
-use App\Service\Social\Social\ReplyThreadSource\ReplyThreadSourceInterface;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Content\Comments\Model\CommentsAnswerModel;
 use App\Service\Content\Comments\Model\EntryCommentModel;
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
-use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Mastodon\MastodonAccountApi;
 use App\Service\Social\Mastodon\MastodonApiClient;
 use App\Service\Social\Mastodon\MastodonContextReplies;
 use App\Service\Social\Mastodon\MastodonPostResolver;
 use App\Service\Social\Mastodon\Support\MastodonStatusAddress;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\ReplyThreadSource\ReplyThreadSourceInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Mastodon->value)]

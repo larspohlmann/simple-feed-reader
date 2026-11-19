@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Ingestion\Refresh;
 
 use App\Repository\SocialFeedRepository;
-use App\Service\Ingestion\Refresh\Pass\PassTickets;
 use App\Service\Ingestion\Refresh\Pass\PassOutcomeStore;
+use App\Service\Ingestion\Refresh\Pass\PassTickets;
 use App\Service\Ingestion\Refresh\Pass\RefreshPass;
 use App\Service\Ingestion\Refresh\PassFetcher\PassFetcherInterface;
 

@@ -6,11 +6,11 @@ namespace App\Service\Social\Lemmy;
 
 use App\Entity\SocialAccount;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
+use App\Service\Social\Lemmy\Model\LemmyListing;
+use App\Service\Social\Lemmy\Support\LemmyCommunity;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Model\CollectedItemsModel;
 use App\Service\Social\Social\Model\CommunityModel;
-use App\Service\Social\Lemmy\Model\LemmyListing;
-use App\Service\Social\Lemmy\Support\LemmyCommunity;
 
 final readonly class LemmyCommunities
 {

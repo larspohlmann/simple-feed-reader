@@ -6,9 +6,9 @@ namespace App\Tests\Service\Social\Mastodon;
 
 use App\Entity\NotificationContext;
 use App\Enum\SocialNotificationKind;
+use App\Service\Social\Mastodon\MastodonNotificationContextSource;
 use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
-use App\Service\Social\Mastodon\MastodonNotificationContextSource;
 use App\Tests\Support\NotificationRows;
 use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\RoutedHttpClient;

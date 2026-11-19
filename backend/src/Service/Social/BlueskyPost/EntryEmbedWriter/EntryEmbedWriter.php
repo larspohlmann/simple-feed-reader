@@ -8,23 +8,23 @@ use App\Entity\Entry;
 use App\Entity\EntryMedium;
 use App\Entity\LinkCardContent;
 use App\Enum\ShareKind;
-use App\Service\Social\BlueskyPost\Model\FillOutcome;
+use App\Service\Content\LinkCard\EntryLinks;
+use App\Service\Content\LinkCard\Support\TrailingUrl;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Foundation\Text\Support\HtmlEscape;
+use App\Service\Foundation\Url\Support\TrackingFreeUrl;
+use App\Service\Ingestion\Ingest\EntryImageWriter;
+use App\Service\Ingestion\Ingest\Support\EntryMediaAssembler;
+use App\Service\Ingestion\Ingest\Support\EntrySnippet;
+use App\Service\Outbound\Image\Model\DeclaredImageModel;
+use App\Service\Social\BlueskyPost\Model\FillOutcome;
 use App\Service\Social\BlueskyPost\Model\RenderedEmbedModel;
 use App\Service\Social\BlueskyPost\PostEmbedRenderer;
 use App\Service\Social\BlueskyPost\Support\AtPostUri;
 use App\Service\Social\BlueskyPost\Support\BlueskyRichText;
-use App\Service\Content\LinkCard\EntryLinks;
-use App\Service\Content\LinkCard\Support\TrailingUrl;
-use App\Service\Outbound\Image\Model\DeclaredImageModel;
-use App\Service\Ingestion\Ingest\EntryImageWriter;
-use App\Service\Ingestion\Ingest\Support\EntryMediaAssembler;
-use App\Service\Ingestion\Ingest\Support\EntrySnippet;
 use App\Service\Social\Share\Model\SharedLinksModel;
 use App\Service\Social\Share\Support\SharedLinks;
-use App\Service\Foundation\Sanitize\EntrySanitizer;
-use App\Service\Foundation\Text\Support\HtmlEscape;
-use App\Service\Foundation\Url\Support\TrackingFreeUrl;
 
 final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
 {

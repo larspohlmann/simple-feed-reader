@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Content\Reader;
 
-use App\Service\Foundation\Html\Exception\UnparseableHtmlException;
-use App\Service\Foundation\Html\Support\HtmlDocumentParser;
 use App\Service\Content\Reader\BodyCleaning\BodyCleaningStep\BodyCleaningStepInterface;
 use App\Service\Content\Reader\BodyCleaning\Model\BodyCleaningInputModel;
 use App\Service\Content\Reader\BodyCleaning\Pass\BodyCleaningPass;
+use App\Service\Foundation\Html\Exception\UnparseableHtmlException;
+use App\Service\Foundation\Html\Support\HtmlDocumentParser;
 
 /**
  * Cleans readability's article HTML through one shared document: parse once, run the steps in the order

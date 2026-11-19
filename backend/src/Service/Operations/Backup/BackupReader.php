@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Operations\Backup;
 
+use App\Service\Library\SavedPosts\Support\SavedFeedUrl;
 use App\Service\Operations\Backup\Dto\AccountLine;
 use App\Service\Operations\Backup\Dto\BackupHeader;
 use App\Service\Operations\Backup\Dto\EntryLine;
@@ -20,7 +21,6 @@ use App\Service\Operations\Backup\Pass\BackupPartGuard;
 use App\Service\Operations\Backup\Support\BackupSchema;
 use App\Service\Operations\Backup\Support\GzipLineReader;
 use App\Service\Operations\Backup\Support\LineField;
-use App\Service\Library\SavedPosts\Support\SavedFeedUrl;
 
 /**
  * Reads a backup front to back in the order BackupLineOrderModel admits. The footer's counts are the truncation

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Content\Reader\Media\Teaser;
 
-use App\Service\Outbound\Fetch\Pass\PageUrls;
 use App\Service\Content\Reader\Media\MediaUrlKind;
 use App\Service\Content\Reader\Media\Model\MediaKind;
 use App\Service\Content\Reader\Media\Model\ResolvedMediaUrlModel;
@@ -12,6 +11,7 @@ use App\Service\Content\Reader\Media\PageFurniture;
 use App\Service\Content\Reader\Media\PlayerPoster;
 use App\Service\Content\Reader\Media\Teaser\Model\TeaserPlayerModel;
 use App\Service\Foundation\Text\Support\Whitespace;
+use App\Service\Outbound\Fetch\Pass\PageUrls;
 use Dom\Element;
 use Dom\HTMLDocument;
 

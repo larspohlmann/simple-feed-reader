@@ -8,13 +8,13 @@ use App\Entity\Entry;
 use App\Entity\EntryGuid;
 use App\Entity\Feed;
 use App\Repository\EntryRepository;
+use App\Service\Foundation\Url\EntryUrlHash;
 use App\Service\Ingestion\Ingest\Factory\IngestedEntryFactory;
 use App\Service\Ingestion\Ingest\Model\IncomingEntryModel;
 use App\Service\Ingestion\Ingest\Pass\EntryDeduplicator;
 use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
-use App\Service\Foundation\Url\EntryUrlHash;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**

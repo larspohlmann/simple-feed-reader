@@ -5,15 +5,17 @@ declare(strict_types=1);
 namespace App\Tests\Repository;
 
 use App\Entity\Entry;
-use App\Entity\EntryState;
 use App\Entity\EntryAuthor;
+use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\Headline;
 use App\Entity\InclusionChange;
+use App\Entity\LinkCard;
+use App\Entity\LinkCardContent;
 use App\Entity\Subscription;
 use App\Entity\TrendingSnapshot;
 use App\Entity\TrendingStory;
 use App\Entity\User;
-use App\Entity\Headline;
 use App\Enum\FeedLanguage;
 use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
@@ -25,12 +27,10 @@ use App\Service\Curation\Trending\Model\StoryHeadingModel;
 use App\Service\Curation\Trending\Model\StoryHeadlineModel;
 use App\Service\Curation\Trending\ReaderWindows;
 use App\Service\Curation\Trending\TrendingStories;
-use App\Tests\DbTestCase;
-use App\Tests\Support\TrendingFixtures;
-use App\Entity\LinkCard;
-use App\Entity\LinkCardContent;
 use App\Service\Foundation\Url\UrlNormalizer;
+use App\Tests\DbTestCase;
 use App\Tests\Support\SharedLinks;
+use App\Tests\Support\TrendingFixtures;
 
 final class TrendingStoryRepositoryTest extends DbTestCase
 {
