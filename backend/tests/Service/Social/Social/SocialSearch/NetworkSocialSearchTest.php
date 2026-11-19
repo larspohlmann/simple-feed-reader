@@ -5,21 +5,21 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Social\SocialSearch;
 
 use App\Enum\SocialAccountStatus;
-use App\Service\Outbound\Fetch\AnswerSettler\PassThroughSettler;
-use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Social\Social\ActingAccountGuard;
-use App\Service\Social\Social\Exception\SearchQueryTooBroadException;
-use App\Service\Social\Social\Model\BlueskySessionModel;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\PrivateFeedRule\LemmyPrivateFeedRule;
+use App\Service\Social\Social\PrivateFeedRule\MastodonPrivateFeedRule;
+use App\Service\Social\Social\SearchSource\BlueskySearchSource;
+use App\Service\Social\Social\SearchSource\LemmySearchSource;
+use App\Service\Social\Social\SearchSource\MastodonSearchSource;
 use App\Service\Social\Social\SocialSearch\NetworkSocialSearch;
 use App\Tests\Support\RoutedHttpClient;
-use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;
-use App\Tests\Support\SocialRuleWiring;
+use App\Tests\Support\TaggedItemOf;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
-use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -27,15 +27,10 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 final class NetworkSocialSearchTest extends TestCase
 {
     private const string SESSION = 'POST https://pds.example.test/xrpc/com.atproto.server.createSession';
-    private const string BLUESKY_SEARCH = 'GET https://pds.example.test/xrpc/app.bsky.feed.searchPosts'
-        . '?q=rss%20reader&sort=latest&limit=100';
     private const string MASTODON_SEARCH = 'GET https://mastodon.example/api/v2/search'
         . '?type=statuses&resolve=false&limit=40&q=rss%20reader';
     private const string LEMMY_SEARCH = 'GET https://lemmy.example/api/v3/search'
         . '?q=rss%20reader&type_=Posts&sort=New&listing_type=All&limit=50';
-    private const string LEMMY_WORD_SEARCH = 'GET https://lemmy.example/api/v3/search'
-        . '?q=post&type_=Posts&sort=New&listing_type=All&limit=50';
-    private const string LEMMY_FOUND = __DIR__ . '/../../../../Fixtures/lemmy/search.json';
 
     private ArrayAdapter $cache;
 
@@ -47,78 +42,18 @@ final class NetworkSocialSearchTest extends TestCase
         $this->entityManager = $this->createStub(EntityManagerInterface::class);
     }
 
-    public function testABlueskySearchAsksForTheLatestMatchesWithTheSessionsTokenAndReadsThePosts(): void
+    public function testARefusedBlueskySessionMarksTheAccountForReconnecting(): void
     {
+        $http = new RoutedHttpClient([self::SESSION => self::json([], Response::HTTP_UNAUTHORIZED)]);
         $account = SocialApiWiring::blueskyAccount();
-        SocialApiWiring::blueskySessionCache($this->cache)->remember(
-            $account,
-            new BlueskySessionModel('cached-jwt', 'alice.bsky.social'),
-        );
-        $http = new RoutedHttpClient([self::BLUESKY_SEARCH => self::json(['posts' => [self::blueskyPost()]])]);
 
-        $page = $this->search($http->client())->newest($account, 'rss reader');
-
-        self::assertCount(1, $page->parsed->entries);
-        self::assertSame([self::BLUESKY_SEARCH], $http->requestLines());
-        self::assertContains('Authorization: Bearer cached-jwt', $http->requests[0]['headers']);
-    }
-
-    public function testAPreviewHoldsOnlyThePostsWhoseOwnTextMatches(): void
-    {
-        $account = SocialApiWiring::blueskyAccount();
-        SocialApiWiring::blueskySessionCache($this->cache)->remember(
-            $account,
-            new BlueskySessionModel('cached-jwt', 'alice.bsky.social'),
-        );
-        $http = new RoutedHttpClient([self::BLUESKY_SEARCH => self::json(['posts' => [
-            self::blueskyPost(),
-            self::blueskyPost('2', 'A link worth reading'),
-        ]])]);
-
-        $page = $this->search($http->client())->newest($account, 'rss reader');
-
-        self::assertSame(
-            ['at://did:plc:amy/app.bsky.feed.post/1'],
-            array_map(static fn (ParsedEntryModel $entry): string => $entry->guid, $page->parsed->entries),
-        );
-    }
-
-    public function testAStaleBlueskySessionIsRenewedOnceAndTheSearchRetried(): void
-    {
-        $account = SocialApiWiring::blueskyAccount();
-        SocialApiWiring::blueskySessionCache($this->cache)->remember(
-            $account,
-            new BlueskySessionModel('stale-jwt', 'alice.bsky.social'),
-        );
-        $searches = 0;
-        $http = RoutedHttpClient::answering(
-            static function (string $method, string $url) use (&$searches): MockResponse {
-                if (self::SESSION === $method . ' ' . $url) {
-                    return SocialApiWiring::blueskySessionAnswer('fresh-jwt');
-                }
-                ++$searches;
-
-                return 1 === $searches
-                    ? self::json(['error' => 'ExpiredToken'], Response::HTTP_BAD_REQUEST)
-                    : self::json(['posts' => [self::blueskyPost()]]);
-            },
-        );
-
-        $page = $this->search($http->client())->newest($account, 'rss reader');
-
-        self::assertCount(1, $page->parsed->entries);
-        self::assertSame([self::BLUESKY_SEARCH, self::SESSION, self::BLUESKY_SEARCH], $http->requestLines());
-    }
-
-    public function testAMastodonSearchAsksForTheLatestStatusesWithoutAnyLowerBound(): void
-    {
-        $http = new RoutedHttpClient([self::MASTODON_SEARCH => self::json(['statuses' => [self::mastodonStatus()]])]);
-
-        $page = $this->search($http->client())->newest(SocialApiWiring::mastodonAccount(), 'rss reader');
-
-        self::assertCount(1, $page->parsed->entries);
-        self::assertSame([self::MASTODON_SEARCH], $http->requestLines());
-        self::assertContains('Authorization: Bearer ' . SocialAccounts::ACCESS_TOKEN, $http->requests[0]['headers']);
+        try {
+            $this->search($http->client())->newest($account, 'rss reader');
+            self::fail('A refused session must be a refused credential.');
+        } catch (SocialCredentialsRejectedException) {
+            self::assertSame(SocialAccountStatus::NeedsReconnect, $account->getStatus());
+            self::assertSame([self::SESSION], $http->requestLines());
+        }
     }
 
     public function testARefusedMastodonTokenMarksTheAccountForReconnecting(): void
@@ -135,24 +70,6 @@ final class NetworkSocialSearchTest extends TestCase
         } catch (SocialCredentialsRejectedException) {
             self::assertSame(SocialAccountStatus::NeedsReconnect, $account->getStatus());
         }
-    }
-
-    public function testAMastodonPreviewAsksOncePerAlternativeAndMergesTheAnswers(): void
-    {
-        $rss = 'GET https://mastodon.example/api/v2/search?type=statuses&resolve=false&limit=40&q=rss';
-        $atom = 'GET https://mastodon.example/api/v2/search?type=statuses&resolve=false&limit=40&q=atom';
-        $http = new RoutedHttpClient([
-            $rss => self::json(['statuses' => [self::mastodonStatus('1')]]),
-            $atom => self::json(['statuses' => [
-                self::mastodonStatus('1'),
-                self::mastodonStatus('2', '<p>atom feeds</p>'),
-            ]]),
-        ]);
-
-        $page = $this->search($http->client())->newest(SocialApiWiring::mastodonAccount(), '(rss || atom)');
-
-        self::assertCount(2, $page->parsed->entries);
-        self::assertSame([$rss, $atom], $http->requestLines());
     }
 
     public function testARefusedLaterAlternativeMarksTheAccountForReconnecting(): void
@@ -173,156 +90,46 @@ final class NetworkSocialSearchTest extends TestCase
         }
     }
 
-    public function testAMastodonPreviewListsTheMergedAnswersNewestFirst(): void
+    public function testARefusedLemmyTokenMarksTheAccountForReconnecting(): void
     {
-        $rss = 'GET https://mastodon.example/api/v2/search?type=statuses&resolve=false&limit=40&q=rss';
-        $atom = 'GET https://mastodon.example/api/v2/search?type=statuses&resolve=false&limit=40&q=atom';
-        $http = new RoutedHttpClient([
-            $rss => self::json(['statuses' => [self::mastodonStatus('110'), self::mastodonStatus('108')]]),
-            $atom => self::json(['statuses' => [
-                self::mastodonStatus('111', '<p>atom feeds</p>'),
-                self::mastodonStatus('109', '<p>atom feeds</p>'),
-            ]]),
-        ]);
-
-        $page = $this->search($http->client())->newest(SocialApiWiring::mastodonAccount(), '(rss || atom)');
-
-        self::assertSame(
-            [
-                'https://mastodon.example/@bob/111',
-                'https://mastodon.example/@bob/110',
-                'https://mastodon.example/@bob/109',
-                'https://mastodon.example/@bob/108',
-            ],
-            array_map(static fn (ParsedEntryModel $entry): ?string => $entry->url, $page->parsed->entries),
-        );
-    }
-
-    public function testAMastodonPreviewTooBroadIsRefusedBeforeAnyRequest(): void
-    {
-        $http = new RoutedHttpClient([]);
+        $http = new RoutedHttpClient([self::LEMMY_SEARCH => self::json([], Response::HTTP_UNAUTHORIZED)]);
+        $account = SocialApiWiring::lemmyAccount();
 
         try {
-            $this->search($http->client())->newest(SocialApiWiring::mastodonAccount(), '(a || b || c) (d || e || f)');
-            self::fail('Nine alternatives are more than Mastodon is asked for.');
-        } catch (SearchQueryTooBroadException) {
-            self::assertSame([], $http->requestLines());
-        }
-    }
-
-    public function testALemmySearchPreviewsThePostsFound(): void
-    {
-        $http = new RoutedHttpClient([
-            self::LEMMY_WORD_SEARCH => new MockResponse((string) file_get_contents(self::LEMMY_FOUND)),
-        ]);
-
-        $page = $this->search($http->client())->newest(SocialApiWiring::lemmyAccount(), 'post');
-
-        self::assertSame(
-            ['https://lemmy.example/post/102', 'https://feddit.example/post/7'],
-            array_map(static fn (ParsedEntryModel $entry): string => $entry->guid, $page->parsed->entries),
-        );
-        self::assertSame([self::LEMMY_WORD_SEARCH], $http->requestLines());
-        self::assertContains('Authorization: Bearer ' . SocialAccounts::LEMMY_JWT, $http->requests[0]['headers']);
-    }
-
-    public function testALemmySearchPreviewWaitsLongerForItsAnswer(): void
-    {
-        $seenOptions = [];
-        $http = new MockHttpClient(static function (string $method, string $url, array $options) use (&$seenOptions) {
-            $seenOptions = $options;
-
-            return self::lemmyAnswer([]);
-        });
-
-        $this->search($http)->newest(SocialApiWiring::lemmyAccount(), 'post');
-
-        self::assertSame(25.0, $seenOptions['timeout']);
-        self::assertSame(50.0, $seenOptions['max_duration']);
-    }
-
-    public function testALemmySearchPreviewAsksEachAlternative(): void
-    {
-        $rss = 'GET https://lemmy.example/api/v3/search?q=rss&type_=Posts&sort=New&listing_type=All&limit=50';
-        $atom = 'GET https://lemmy.example/api/v3/search?q=atom&type_=Posts&sort=New&listing_type=All&limit=50';
-        $http = new RoutedHttpClient([
-            $rss => self::lemmyAnswer([
-                self::lemmyPost(1, 'rss news', '2026-11-14T05:00:00Z'),
-            ]),
-            $atom => self::lemmyAnswer([
-                self::lemmyPost(1, 'rss news', '2026-11-14T05:00:00Z'),
-                self::lemmyPost(2, 'atom feeds', '2026-11-14T06:00:00Z'),
-            ]),
-        ]);
-
-        $page = $this->search($http->client())->newest(SocialApiWiring::lemmyAccount(), 'rss || atom');
-
-        self::assertSame([$rss, $atom], $http->requestLines());
-        self::assertSame(
-            ['https://feddit.example/post/2', 'https://feddit.example/post/1'],
-            array_map(static fn (ParsedEntryModel $entry): string => $entry->guid, $page->parsed->entries),
-        );
-    }
-
-    public function testALemmySearchPreviewChecksAPhrase(): void
-    {
-        $http = new RoutedHttpClient([
-            self::LEMMY_SEARCH => self::lemmyAnswer([
-                self::lemmyPost(1, 'the rss reader', '2026-11-14T05:00:00Z'),
-                self::lemmyPost(2, 'reader for rss', '2026-11-14T06:00:00Z'),
-            ]),
-        ]);
-
-        $page = $this->search($http->client())->newest(SocialApiWiring::lemmyAccount(), '"rss reader"');
-
-        self::assertSame([self::LEMMY_SEARCH], $http->requestLines());
-        self::assertSame(
-            ['https://feddit.example/post/1'],
-            array_map(static fn (ParsedEntryModel $entry): string => $entry->guid, $page->parsed->entries),
-        );
-    }
-
-    public function testALemmySearchPreviewWithoutATermIsTooBroad(): void
-    {
-        $http = new RoutedHttpClient([]);
-
-        try {
-            $this->search($http->client())->newest(SocialApiWiring::lemmyAccount(), '-gazette');
-            self::fail('Lemmy needs a word to search for.');
-        } catch (SearchQueryTooBroadException) {
-            self::assertSame([], $http->requestLines());
+            $this->search($http->client())->newest($account, '"rss reader"');
+            self::fail('A refused token must be a refused credential.');
+        } catch (SocialCredentialsRejectedException) {
+            self::assertSame(SocialAccountStatus::NeedsReconnect, $account->getStatus());
+            self::assertSame([self::LEMMY_SEARCH], $http->requestLines());
         }
     }
 
     private function search(HttpClientInterface $http): NetworkSocialSearch
     {
-        return new NetworkSocialSearch(
-            SocialApiWiring::blueskySessions($http, $this->cache),
-            SocialApiWiring::mastodonAccountApi($http),
-            SocialApiWiring::requestEngine($http),
-            new PassThroughSettler(),
-            new ActingAccountGuard($this->entityManager),
-            SocialApiWiring::timelineRounds($http, $this->cache),
-            SocialApiWiring::lemmyAccountApi($http),
-            SocialApiWiring::lemmyPostEntries(),
-            SocialRuleWiring::privateFeedRules(),
-        );
-    }
+        $searchAnswers = SocialApiWiring::searchAnswers($http, $this->cache);
 
-    /** @return array<string, mixed> */
-    private static function blueskyPost(string $postId = '1', string $text = 'Which RSS reader?'): array
-    {
-        return [
-            'uri' => 'at://did:plc:amy/app.bsky.feed.post/' . $postId,
-            'cid' => 'c1',
-            'author' => ['did' => 'did:plc:amy', 'handle' => 'amy.bsky.social'],
-            'record' => [
-                '$type' => 'app.bsky.feed.post',
-                'text' => $text,
-                'createdAt' => '2026-11-07T10:00:00.000Z',
-            ],
-            'indexedAt' => '2026-11-07T10:00:01.000Z',
-        ];
+        return new NetworkSocialSearch(
+            new ActingAccountGuard($this->entityManager),
+            new ServiceLocator([
+                TaggedItemOf::index(BlueskySearchSource::class)
+                    => fn (): BlueskySearchSource => new BlueskySearchSource(
+                        SocialApiWiring::blueskySessions($http, $this->cache),
+                    ),
+                TaggedItemOf::index(MastodonSearchSource::class)
+                    => static fn (): MastodonSearchSource => new MastodonSearchSource(
+                        SocialApiWiring::mastodonAccountApi($http),
+                        new MastodonPrivateFeedRule(),
+                        $searchAnswers,
+                    ),
+                TaggedItemOf::index(LemmySearchSource::class)
+                    => static fn (): LemmySearchSource => new LemmySearchSource(
+                        SocialApiWiring::lemmyAccountApi($http),
+                        SocialApiWiring::lemmyPostEntries(),
+                        new LemmyPrivateFeedRule(),
+                        $searchAnswers,
+                    ),
+            ]),
+        );
     }
 
     /** @return array<string, mixed> */
@@ -336,43 +143,6 @@ final class NetworkSocialSearchTest extends TestCase
             'content' => $content,
             'in_reply_to_id' => null,
             'account' => ['acct' => 'bob', 'display_name' => 'Bob', 'url' => 'https://mastodon.example/@bob'],
-        ];
-    }
-
-    /** @param list<array<string, mixed>> $posts */
-    private static function lemmyAnswer(array $posts): MockResponse
-    {
-        return self::json(['type_' => 'Posts', 'comments' => [], 'posts' => $posts]);
-    }
-
-    /** @return array<string, mixed> */
-    private static function lemmyPost(int $id, string $name, string $published): array
-    {
-        return [
-            'post' => [
-                'id' => $id,
-                'name' => $name,
-                'url' => null,
-                'creator_id' => 9,
-                'community_id' => 5,
-                'removed' => false,
-                'deleted' => false,
-                'published' => $published,
-                'ap_id' => 'https://feddit.example/post/' . $id,
-            ],
-            'creator' => [
-                'id' => 9,
-                'name' => 'ada',
-                'display_name' => 'Ada',
-                'actor_id' => 'https://feddit.example/u/ada',
-            ],
-            'community' => [
-                'id' => 5,
-                'name' => 'rss',
-                'title' => 'RSS',
-                'actor_id' => 'https://feddit.example/c/rss',
-            ],
-            'counts' => ['post_id' => $id, 'comments' => 3, 'score' => 12, 'upvotes' => 12, 'downvotes' => 0],
         ];
     }
 

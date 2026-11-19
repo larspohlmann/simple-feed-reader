@@ -6,6 +6,7 @@ namespace App\Tests\Support;
 
 use App\Entity\SocialAccount;
 use App\Service\Foundation\Crypto\InstanceSecretCipher;
+use App\Service\Outbound\Fetch\AnswerSettler\PassThroughSettler;
 use App\Service\Outbound\Fetch\ConcurrentRequestEngine;
 use App\Service\Outbound\Fetch\IpValidator;
 use App\Service\Outbound\Fetch\UrlGuard;
@@ -26,6 +27,7 @@ use App\Service\Social\Social\MastodonAccountApi;
 use App\Service\Social\Social\MastodonApiClient;
 use App\Service\Social\Social\PrivateFeedRule\LemmyPrivateFeedRule;
 use App\Service\Social\Social\PrivateFeedRule\MastodonPrivateFeedRule;
+use App\Service\Social\Social\SearchAnswers;
 use App\Service\Social\Social\StoredCredential;
 use App\Service\Social\Social\TimelineRounds;
 use App\Service\Foundation\Text\MarkdownHtml;
@@ -207,6 +209,15 @@ final class SocialApiWiring
         int $accountConcurrency = 3,
     ): TimelineRounds {
         return new TimelineRounds(self::timelineSources($http, $cache), $accountConcurrency, 4);
+    }
+
+    public static function searchAnswers(HttpClientInterface $http, ArrayAdapter $cache): SearchAnswers
+    {
+        return new SearchAnswers(
+            self::requestEngine($http),
+            new PassThroughSettler(),
+            self::timelineRounds($http, $cache),
+        );
     }
 
     public static function timelineSources(HttpClientInterface $http, ArrayAdapter $cache): TimelineSources

@@ -241,7 +241,7 @@ services:
         arguments:
             $hostConcurrency: '%fetch_host_concurrency%'
 
-    App\Service\Social\Social\SocialSearch\NetworkSocialSearch:
+    App\Service\Social\Social\SearchAnswers:
         arguments:
             $settler: '@App\Service\Outbound\Fetch\AnswerSettler\PassThroughSettler'
 
