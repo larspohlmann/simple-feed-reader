@@ -9,7 +9,7 @@ final class ContentTypeCharset
 {
     private const string CHARSET_PARAMETER = '/;\s*charset\s*=\s*"?([^";\s]+)"?/i';
 
-    public static function of(?string $contentType): ?string
+    public static function parseCharset(?string $contentType): ?string
     {
         if ($contentType === null || preg_match(self::CHARSET_PARAMETER, $contentType, $match) !== 1) {
             return null;

@@ -13,7 +13,7 @@ final class LandingSiteTest extends TestCase
     #[DataProvider('landings')]
     public function testASiteIsNamedAfterWhereItsLinkLands(string $postedUrl, string $landingUrl, string $site): void
     {
-        self::assertSame($site, LandingSite::hostOf($postedUrl, $landingUrl));
+        self::assertSame($site, LandingSite::pickHost($postedUrl, $landingUrl));
     }
 
     /** @return iterable<string, array{string, string, string}> */

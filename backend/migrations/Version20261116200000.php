@@ -25,7 +25,7 @@ final class Version20261116200000 extends AbstractMigration
             . ' WHERE landing.resolved_url IS NOT NULL',
         );
         foreach ($links as $link) {
-            $landingSite = LandingSite::hostOf($link['url'], $link['resolved_url']);
+            $landingSite = LandingSite::pickHost($link['url'], $link['resolved_url']);
             if ($link['site_name'] !== HostKey::forUrl($link['url']) || $link['site_name'] === $landingSite) {
                 continue;
             }

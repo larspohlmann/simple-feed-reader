@@ -58,7 +58,7 @@ final readonly class PageLanding
 
     public function utf8(string $body, LandedResponse $landed): string
     {
-        $charset = ContentTypeCharset::of($landed->header('content-type'));
+        $charset = ContentTypeCharset::parseCharset($landed->header('content-type'));
 
         return $charset === null ? $body : HtmlTranscoder::toUtf8($body, $charset);
     }

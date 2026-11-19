@@ -24,10 +24,10 @@ final readonly class ApiBudgetModel
 
     public static function waitingUpTo(float $timeoutSeconds): self
     {
-        return new self($timeoutSeconds, self::maxDurationOf($timeoutSeconds), ResponseSizeLimit::Api);
+        return new self($timeoutSeconds, self::computeMaxDuration($timeoutSeconds), ResponseSizeLimit::Api);
     }
 
-    public static function maxDurationOf(float $timeoutSeconds): float
+    public static function computeMaxDuration(float $timeoutSeconds): float
     {
         return $timeoutSeconds * 2;
     }

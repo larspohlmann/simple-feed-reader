@@ -25,7 +25,7 @@ final class DeclaredPreview
             self::declared($meta, 'og:title', 'twitter:title') ?: TextNormalizer::normalize($document->title),
             self::declared($meta, 'og:description', 'twitter:description', 'description') ?: null,
             self::image($meta, $finalUrl),
-            self::declared($meta, 'og:site_name') ?: LandingSite::hostOf($addressUrl, $finalUrl),
+            self::declared($meta, 'og:site_name') ?: LandingSite::pickHost($addressUrl, $finalUrl),
             self::statedLanguage($document, $meta),
         );
     }
