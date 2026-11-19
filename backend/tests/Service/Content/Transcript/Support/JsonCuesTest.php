@@ -15,7 +15,7 @@ final class JsonCuesTest extends TestCase
     {
         self::assertEquals(
             [new TranscriptCueModel(0, 'Ann', 'Hi.'), new TranscriptCueModel(12, null, 'Yes.')],
-            JsonCues::of(
+            JsonCues::parseCues(
                 '{"version":"1.0.0","segments":[{"speaker":"Ann","startTime":0.5,"endTime":2,"body":" Hi. "},'
                 . '{"startTime":12.9,"body":"Yes."},{"startTime":13,"body":"  "}]}',
             ),
@@ -24,7 +24,7 @@ final class JsonCuesTest extends TestCase
 
     public function testOnlyFiniteStartsWithinRangeAreKept(): void
     {
-        $cues = JsonCues::of('{"segments":[{"startTime":-1,"body":"A"},{"startTime":1e30,"body":"B"},'
+        $cues = JsonCues::parseCues('{"segments":[{"startTime":-1,"body":"A"},{"startTime":1e30,"body":"B"},'
             . '{"startTime":3599999,"body":"C"},{"startTime":3600000,"body":"D"},{"startTime":"5","body":"E"}]}');
 
         self::assertSame([null, null, 3599999, null, null], array_map(
@@ -35,7 +35,7 @@ final class JsonCuesTest extends TestCase
 
     public function testAStartAtZeroIsKept(): void
     {
-        $cues = JsonCues::of('{"segments":[{"startTime":0,"body":"Opening."}]}');
+        $cues = JsonCues::parseCues('{"segments":[{"startTime":0,"body":"Opening."}]}');
 
         self::assertCount(1, $cues);
         self::assertSame(0, $cues[0]->startSeconds);
@@ -47,7 +47,7 @@ final class JsonCuesTest extends TestCase
     {
         self::assertEquals(
             [new TranscriptCueModel(1, 'Ann', 'A.'), new TranscriptCueModel(2, null, 'B.')],
-            JsonCues::of(
+            JsonCues::parseCues(
                 '{"segments":[{"speaker":"  Ann ","startTime":1,"body":"A."},'
                 . '{"speaker":"   ","startTime":2,"body":"B."}]}',
             ),
@@ -57,17 +57,19 @@ final class JsonCuesTest extends TestCase
     public function testMalformedJsonIsUnusable(): void
     {
         $this->expectException(TranscriptUnusableException::class);
-        JsonCues::of('{"segments":');
+        JsonCues::parseCues('{"segments":');
     }
 
     public function testADocumentWithoutSegmentsHasNoCues(): void
     {
-        self::assertSame([], JsonCues::of('{"chapters":[]}'));
+        self::assertSame([], JsonCues::parseCues('{"chapters":[]}'));
     }
 
     public function testTheSampleFixtureKeepsItsSpeakers(): void
     {
-        $cues = JsonCues::of((string) file_get_contents(__DIR__ . '/../../../../Fixtures/Transcript/sample.json'));
+        $cues = JsonCues::parseCues(
+            (string) file_get_contents(__DIR__ . '/../../../../Fixtures/Transcript/sample.json'),
+        );
 
         self::assertSame(
             ['Ann', 'Ann', 'Bob'],

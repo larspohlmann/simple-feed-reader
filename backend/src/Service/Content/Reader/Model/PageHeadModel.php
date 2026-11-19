@@ -14,12 +14,12 @@ final readonly class PageHeadModel
     ) {
     }
 
-    public static function ofPage(string $finalUrl, string $head): self
+    public static function fromPage(string $finalUrl, string $head): self
     {
         return new self($finalUrl, $head, null);
     }
 
-    public static function ofFile(string $finalUrl, string $fileType): self
+    public static function fromFile(string $finalUrl, string $fileType): self
     {
         return new self($finalUrl, '', $fileType);
     }

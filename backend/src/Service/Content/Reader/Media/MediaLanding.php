@@ -20,7 +20,7 @@ final readonly class MediaLanding
     ) {
     }
 
-    public function urlOf(string $url): ?string
+    public function resolveUrl(string $url): ?string
     {
         try {
             $landed = $this->redirects->follow($url, $this->options(), new RedirectBudget(self::MAX_REDIRECTS));

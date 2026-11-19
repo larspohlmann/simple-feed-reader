@@ -7,5 +7,5 @@ namespace App\Service\Content\Reader\StatusReasonPhrases;
 interface StatusReasonPhrasesInterface
 {
     /** The standard reason phrase for an HTTP status code, or '' for a code without one. */
-    public function of(int $status): string;
+    public function findPhrase(int $status): string;
 }

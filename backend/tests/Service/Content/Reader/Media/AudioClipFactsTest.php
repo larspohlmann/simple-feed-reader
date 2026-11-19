@@ -25,22 +25,22 @@ final class AudioClipFactsTest extends TestCase
             . ' data-audio-download-tracking-title="Tracking copy"></button>',
         );
 
-        self::assertSame('Ohne echte Lobby', new AudioClipFacts()->titleOf($holders));
-        self::assertSame(2871, new AudioClipFacts()->durationOf($holders));
+        self::assertSame('Ohne echte Lobby', new AudioClipFacts()->findTitle($holders));
+        self::assertSame(2871, new AudioClipFacts()->findDuration($holders));
     }
 
     public function testReadsAClockDuration(): void
     {
         $holders = $this->holders('<div data-duration="47:51"></div>');
 
-        self::assertSame(2871, new AudioClipFacts()->durationOf($holders));
+        self::assertSame(2871, new AudioClipFacts()->findDuration($holders));
     }
 
     public function testSkipsADurationThatIsNoDuration(): void
     {
         $holders = $this->holders('<div data-duration="abc"></div><a data-media-duration="300"></a>');
 
-        self::assertSame(300, new AudioClipFacts()->durationOf($holders));
+        self::assertSame(300, new AudioClipFacts()->findDuration($holders));
     }
 
     public function testTheFirstHolderThatStatesAFactWins(): void
@@ -48,30 +48,30 @@ final class AudioClipFactsTest extends TestCase
         $holders = $this->holders('<div data-title="First" data-duration="300"></div>'
             . '<a data-title="Later" data-duration="120"></a>');
 
-        self::assertSame('First', new AudioClipFacts()->titleOf($holders));
-        self::assertSame(300, new AudioClipFacts()->durationOf($holders));
+        self::assertSame('First', new AudioClipFacts()->findTitle($holders));
+        self::assertSame(300, new AudioClipFacts()->findDuration($holders));
     }
 
     public function testTrimsAPaddedTitle(): void
     {
         $holders = $this->holders('<div data-title="  Clip  "></div>');
 
-        self::assertSame('Clip', new AudioClipFacts()->titleOf($holders));
+        self::assertSame('Clip', new AudioClipFacts()->findTitle($holders));
     }
 
     public function testABlankTitleLeavesTheNextHolderToNameTheClip(): void
     {
         $holders = $this->holders('<div data-title="   "></div><a data-title="Named"></a>');
 
-        self::assertSame('Named', new AudioClipFacts()->titleOf($holders));
+        self::assertSame('Named', new AudioClipFacts()->findTitle($holders));
     }
 
     public function testKnowsNothingAHolderDoesNotState(): void
     {
         $holders = $this->holders('<audio title="Play" src="' . self::CLIP . '"></audio>');
 
-        self::assertNull(new AudioClipFacts()->titleOf($holders));
-        self::assertNull(new AudioClipFacts()->durationOf($holders));
+        self::assertNull(new AudioClipFacts()->findTitle($holders));
+        self::assertNull(new AudioClipFacts()->findDuration($holders));
     }
 
     /** @return list<Element> */

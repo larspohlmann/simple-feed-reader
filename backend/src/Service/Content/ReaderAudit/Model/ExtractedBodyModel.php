@@ -71,17 +71,17 @@ final readonly class ExtractedBodyModel
     {
         $blocks = [];
         foreach (LeadingEngagementBlocks::in($body) as $block) {
-            $blocks[] = self::blockOf($block->element, $block->text);
+            $blocks[] = self::buildBlock($block->element, $block->text);
         }
 
         return $blocks;
     }
 
-    private static function blockOf(Element $element, string $text): BodyBlockModel
+    private static function buildBlock(Element $element, string $text): BodyBlockModel
     {
         $links = [];
         foreach ($element->getElementsByTagName('a') as $link) {
-            $links[] = self::linkOf($link);
+            $links[] = self::buildLink($link);
         }
 
         return new BodyBlockModel($element->localName, $text, $links, LeadingEngagementBlocks::isTimeOnly($element));
@@ -92,13 +92,13 @@ final readonly class ExtractedBodyModel
     {
         $links = [];
         foreach ($body->getElementsByTagName('a') as $link) {
-            $links[] = self::linkOf($link);
+            $links[] = self::buildLink($link);
         }
 
         return $links;
     }
 
-    private static function linkOf(Element $link): BodyLinkModel
+    private static function buildLink(Element $link): BodyLinkModel
     {
         return new BodyLinkModel((string) $link->getAttribute('href'), Whitespace::collapse($link->textContent));
     }

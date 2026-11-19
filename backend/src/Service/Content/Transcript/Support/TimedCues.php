@@ -15,11 +15,11 @@ final class TimedCues
     private const string VOICE = '/^<v(?:\.[^\s>]*)?\s+([^>]+)>/';
 
     /** @return list<TranscriptCueModel> */
-    public static function of(string $body): array
+    public static function parseCues(string $body): array
     {
         $cues = [];
         foreach (self::blocks($body) as $lines) {
-            $cue = self::cueOf($lines);
+            $cue = self::parseCue($lines);
             if ($cue !== null) {
                 $cues[] = $cue;
             }
@@ -38,10 +38,10 @@ final class TimedCues
     }
 
     /** @param list<string> $lines */
-    private static function cueOf(array $lines): ?TranscriptCueModel
+    private static function parseCue(array $lines): ?TranscriptCueModel
     {
         foreach ($lines as $index => $line) {
-            $start = self::startOf($line);
+            $start = self::parseStart($line);
             if ($start !== null) {
                 return self::cueAt($start, \array_slice($lines, $index + 1));
             }
@@ -50,7 +50,7 @@ final class TimedCues
         return null;
     }
 
-    private static function startOf(string $line): ?int
+    private static function parseStart(string $line): ?int
     {
         if (preg_match(self::TIMING, trim($line), $match) !== 1) {
             return null;

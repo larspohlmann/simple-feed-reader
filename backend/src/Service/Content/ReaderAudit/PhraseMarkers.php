@@ -41,7 +41,7 @@ final readonly class PhraseMarkers
     private function scopeFor(PhraseFamilyModel $family, ExtractedBodyModel $body): array
     {
         return match ($family->scope) {
-            PhraseScope::AboveTheArticle => $this->leadingRegion->blocksOf($body),
+            PhraseScope::AboveTheArticle => $this->leadingRegion->collectLeadingBlocks($body),
             PhraseScope::OnlyWhenNoArticle => $body->hasArticleText() ? [] : $body->blocks,
         };
     }

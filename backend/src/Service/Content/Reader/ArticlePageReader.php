@@ -44,7 +44,7 @@ final readonly class ArticlePageReader
             media: $this->mediaScanner->scan($rawPage, $feedMedia),
             slideshows: $this->slideshowScanner->scan($normalized),
             teasers: $this->teaserScanner->scan($normalized, $page->finalUrl),
-            preview: DeclaredPreview::of($rawPage->document, $page->finalUrl, $page->finalUrl),
+            preview: DeclaredPreview::fromDocument($rawPage->document, $page->finalUrl, $page->finalUrl),
         );
     }
 }

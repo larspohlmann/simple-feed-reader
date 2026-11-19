@@ -33,7 +33,7 @@ final readonly class RecipeFactsRecognizer
         $cards = [];
         foreach (self::RULES as $rule) {
             foreach ($document->querySelectorAll('.' . $rule['container']) as $container) {
-                $facts = $this->factsOf($container, $rule);
+                $facts = $this->collectFacts($container, $rule);
                 if ($facts !== []) {
                     $cards[] = new RecipeCardModel($container, $facts);
                 }
@@ -48,11 +48,11 @@ final readonly class RecipeFactsRecognizer
      *
      * @return list<RecipeFactModel>
      */
-    private function factsOf(Element $container, array $rule): array
+    private function collectFacts(Element $container, array $rule): array
     {
         $facts = [];
         foreach ($container->querySelectorAll('.' . $rule['item']) as $item) {
-            $fact = $this->factOf($item, $rule);
+            $fact = $this->parseFact($item, $rule);
             if ($fact !== null) {
                 $facts[] = $fact;
             }
@@ -62,10 +62,10 @@ final readonly class RecipeFactsRecognizer
     }
 
     /** @param array{label: string, value: string, unit: string} $rule */
-    private function factOf(Element $item, array $rule): ?RecipeFactModel
+    private function parseFact(Element $item, array $rule): ?RecipeFactModel
     {
-        $label = $this->textOf($item, $rule['label']);
-        $value = $this->joinValueAndUnit($this->textOf($item, $rule['value']), $this->textOf($item, $rule['unit']));
+        $label = $this->readText($item, $rule['label']);
+        $value = $this->joinValueAndUnit($this->readText($item, $rule['value']), $this->readText($item, $rule['unit']));
         if ($label === '' && $value === '') {
             return null;
         }
@@ -78,7 +78,7 @@ final readonly class RecipeFactsRecognizer
         return implode(' ', array_filter([$value, $unit], static fn (string $part): bool => $part !== ''));
     }
 
-    private function textOf(Element $item, string $class): string
+    private function readText(Element $item, string $class): string
     {
         $element = $item->querySelector('.' . $class);
 

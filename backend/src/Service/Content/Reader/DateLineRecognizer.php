@@ -56,7 +56,7 @@ final class DateLineRecognizer
         $position = 0;
         $timestamp = $this->formatter($locale, $style)->parse($text, $position);
 
-        return $timestamp !== false && $position === $this->offsetUnit()->lengthOf($text);
+        return $timestamp !== false && $position === $this->offsetUnit()->measureLength($text);
     }
 
     private function offsetUnit(): ParseOffsetUnit

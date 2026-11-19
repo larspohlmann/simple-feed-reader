@@ -27,15 +27,15 @@ final readonly class SiblingSearch
     }
 
     /** @return list<MediaCandidateModel> */
-    public function siblingsOf(MediaCandidateModel $seed): array
+    public function findSiblings(MediaCandidateModel $seed): array
     {
-        $id = $seed->kind === MediaKind::Embed ? null : self::idOf($seed->url);
+        $id = $seed->kind === MediaKind::Embed ? null : self::parseId($seed->url);
         if ($id === null) {
             return [];
         }
 
         $candidates = [];
-        foreach (KeyedOccurrences::of($this->pageHtml, $id) as $occurrence) {
+        foreach (KeyedOccurrences::findOccurrences($this->pageHtml, $id) as $occurrence) {
             foreach ($this->siblingsIn($occurrence, $id) as $sibling) {
                 $candidate = $this->candidateFor($seed, $id, $sibling);
                 if ($candidate !== null) {
@@ -86,7 +86,7 @@ final readonly class SiblingSearch
             : new MediaCandidateModel($seed->kind, str_replace($seedId, $sibling->id, $seed->url), $poster);
     }
 
-    private static function idOf(string $url): ?string
+    private static function parseId(string $url): ?string
     {
         $path = parse_url($url, \PHP_URL_PATH);
         $stem = pathinfo(\is_string($path) ? $path : '', \PATHINFO_FILENAME);

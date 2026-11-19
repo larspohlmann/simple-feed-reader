@@ -15,7 +15,7 @@ final class KeyedOccurrencesTest extends TestCase
         $html = '<script>self.__next_f.push([1,"{\\"config\\":{\\"isPriority\\":\\"$undefined\\",'
             . '\\"content\\":\\"taktik-analyse-video-100\\",\\"startImage\\":{\\"title\\":\\"x\\"}}}"])</script>';
 
-        $found = KeyedOccurrences::of($html, 'taktik-analyse-video-100');
+        $found = KeyedOccurrences::findOccurrences($html, 'taktik-analyse-video-100');
 
         self::assertCount(1, $found);
         self::assertSame('content', $found[0]->key);
@@ -28,7 +28,7 @@ final class KeyedOccurrencesTest extends TestCase
     {
         $html = '<script type="application/json">{"kind":"clip","id":"clip-77","poster":"p.jpg"}</script>';
 
-        $found = KeyedOccurrences::of($html, 'clip-77');
+        $found = KeyedOccurrences::findOccurrences($html, 'clip-77');
 
         self::assertSame(['kind', 'id', 'poster'], [$found[0]->previousKey, $found[0]->key, $found[0]->nextKey]);
     }
@@ -37,7 +37,7 @@ final class KeyedOccurrencesTest extends TestCase
     {
         $html = '<div class="player" data-content="clip-77" data-poster="p.jpg"></div>';
 
-        $found = KeyedOccurrences::of($html, 'clip-77');
+        $found = KeyedOccurrences::findOccurrences($html, 'clip-77');
 
         $keys = [$found[0]->previousKey, $found[0]->key, $found[0]->nextKey];
         self::assertSame(['class', 'data-content', 'data-poster'], $keys);
@@ -47,7 +47,7 @@ final class KeyedOccurrencesTest extends TestCase
     {
         $html = '<a href="/video/xpress/clip-77.html">x</a> {"contentUrl":"https://a.test/api/video/clip-77.m3u8"}';
 
-        self::assertSame([], KeyedOccurrences::of($html, 'clip-77'));
+        self::assertSame([], KeyedOccurrences::findOccurrences($html, 'clip-77'));
     }
 
     public function testAtReadsOneOccurrenceByPosition(): void
@@ -66,9 +66,9 @@ final class KeyedOccurrencesTest extends TestCase
     public function testContextIsTheKeyAndBothNeighbours(): void
     {
         $html = '{"p":1,"k":"one-1","n":2} {"p":1,"k":"two-2","n":2} {"q":1,"k":"three-3","n":2}';
-        $one = KeyedOccurrences::of($html, 'one-1')[0];
+        $one = KeyedOccurrences::findOccurrences($html, 'one-1')[0];
 
-        self::assertTrue($one->sharesContextWith(KeyedOccurrences::of($html, 'two-2')[0]));
-        self::assertFalse($one->sharesContextWith(KeyedOccurrences::of($html, 'three-3')[0]));
+        self::assertTrue($one->sharesContextWith(KeyedOccurrences::findOccurrences($html, 'two-2')[0]));
+        self::assertFalse($one->sharesContextWith(KeyedOccurrences::findOccurrences($html, 'three-3')[0]));
     }
 }

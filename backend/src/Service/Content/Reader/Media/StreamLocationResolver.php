@@ -30,7 +30,7 @@ final readonly class StreamLocationResolver
         if ($candidate->kind !== MediaKind::Stream) {
             return $candidate;
         }
-        $landing = $this->mediaUrlKind->resolve($this->landings->urlOf($candidate->url) ?? $candidate->url);
+        $landing = $this->mediaUrlKind->resolve($this->landings->resolveUrl($candidate->url) ?? $candidate->url);
 
         return $landing?->kind === MediaKind::Stream ? $candidate->at($landing->url) : $candidate;
     }

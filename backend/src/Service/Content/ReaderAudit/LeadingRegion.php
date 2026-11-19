@@ -19,7 +19,7 @@ final readonly class LeadingRegion
     }
 
     /** @return list<BodyBlockModel> */
-    public function blocksOf(ExtractedBodyModel $body): array
+    public function collectLeadingBlocks(ExtractedBodyModel $body): array
     {
         $leading = [];
         foreach ($body->blocks as $block) {

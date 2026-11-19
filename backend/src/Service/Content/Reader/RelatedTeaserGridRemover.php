@@ -104,7 +104,7 @@ final readonly class RelatedTeaserGridRemover
             if ($href === '') {
                 continue;
             }
-            $card = $this->cardOf($heading);
+            $card = $this->findCard($heading);
             if ($card !== null) {
                 $cards[] = [$card, $href];
             }
@@ -113,7 +113,7 @@ final readonly class RelatedTeaserGridRemover
         return $cards;
     }
 
-    private function cardOf(Element $heading): ?Element
+    private function findCard(Element $heading): ?Element
     {
         $ancestor = $heading->parentElement;
         while ($ancestor !== null && !$this->isLandmark($ancestor)) {

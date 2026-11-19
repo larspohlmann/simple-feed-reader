@@ -33,7 +33,7 @@ final readonly class YouTubeIdAttributeSource implements MediaCandidateSourceInt
     {
         $found = [];
         foreach ($page->document->querySelectorAll('[' . self::VIDEO_ID_ATTRIBUTE . ']') as $element) {
-            $target = $this->targetOf($element);
+            $target = $this->resolveTarget($element);
             if ($target !== null) {
                 $found[$target->url] ??= new MediaCandidateModel(
                     MediaKind::Embed,
@@ -48,7 +48,7 @@ final readonly class YouTubeIdAttributeSource implements MediaCandidateSourceInt
         return array_values($found);
     }
 
-    private function targetOf(Element $element): ?EmbedTargetModel
+    private function resolveTarget(Element $element): ?EmbedTargetModel
     {
         $id = $element->getAttribute(self::VIDEO_ID_ATTRIBUTE) ?? '';
         if ($this->furniture->holds($element)) {

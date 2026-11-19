@@ -13,7 +13,7 @@ final class TimedCuesTest extends TestCase
 {
     public function testReadsVttCuesWithTheirVoices(): void
     {
-        $cues = TimedCues::of(
+        $cues = TimedCues::parseCues(
             "\u{FEFF}WEBVTT\n\nNOTE made by hand\n\n"
             . "1\n00:00:01.500 --> 00:00:04.000 align:start\n<v Holger Klein>Hallo und</v>\nwillkommen.\n\n"
             . "00:01:05.000 --> 00:01:07.000\n<v.loud Philip>Danke &amp; hallo!\n",
@@ -32,7 +32,7 @@ final class TimedCuesTest extends TestCase
     {
         self::assertEquals(
             [new TranscriptCueModel(125, null, 'Zwei Minuten.')],
-            TimedCues::of("WEBVTT\n\n02:05.000 --> 02:06.000\nZwei Minuten.\n"),
+            TimedCues::parseCues("WEBVTT\n\n02:05.000 --> 02:06.000\nZwei Minuten.\n"),
         );
     }
 
@@ -40,7 +40,7 @@ final class TimedCuesTest extends TestCase
     {
         self::assertEquals(
             [new TranscriptCueModel(3661, null, 'Kursiv hier.')],
-            TimedCues::of("1\r\n01:01:01,000 --> 01:01:02,000\r\n<i>Kursiv</i> hier.\r\n"),
+            TimedCues::parseCues("1\r\n01:01:01,000 --> 01:01:02,000\r\n<i>Kursiv</i> hier.\r\n"),
         );
     }
 
@@ -48,7 +48,7 @@ final class TimedCuesTest extends TestCase
     {
         self::assertSame(
             [],
-            TimedCues::of("WEBVTT\n\n99999999999999999999:00:00.000 --> 00:00:02.000\nToo late.\n"),
+            TimedCues::parseCues("WEBVTT\n\n99999999999999999999:00:00.000 --> 00:00:02.000\nToo late.\n"),
         );
     }
 
@@ -56,7 +56,7 @@ final class TimedCuesTest extends TestCase
     {
         self::assertEquals(
             [new TranscriptCueModel(1, null, 'Bare.'), new TranscriptCueModel(3, null, 'Tight.')],
-            TimedCues::of("WEBVTT\n\n00:00:01 --> 00:00:02\nBare.\n\n00:00:03-->00:00:04\nTight.\n"),
+            TimedCues::parseCues("WEBVTT\n\n00:00:01 --> 00:00:02\nBare.\n\n00:00:03-->00:00:04\nTight.\n"),
         );
     }
 
@@ -64,7 +64,7 @@ final class TimedCuesTest extends TestCase
     {
         self::assertEquals(
             [new TranscriptCueModel(7, 'Ann', 'Hi there.')],
-            TimedCues::of("WEBVTT\n\n  00:00:07.000 --> 00:00:08.000  \n   <v  Ann >  <b> Hi there. </b>\n"),
+            TimedCues::parseCues("WEBVTT\n\n  00:00:07.000 --> 00:00:08.000  \n   <v  Ann >  <b> Hi there. </b>\n"),
         );
     }
 
@@ -72,7 +72,7 @@ final class TimedCuesTest extends TestCase
     {
         self::assertEquals(
             [new TranscriptCueModel(1, null, 'First.'), new TranscriptCueModel(3, null, 'Second.')],
-            TimedCues::of("\u{FEFF}00:00:01 --> 00:00:02\rFirst.\r\r00:00:03 --> 00:00:04\rSecond.\r"),
+            TimedCues::parseCues("\u{FEFF}00:00:01 --> 00:00:02\rFirst.\r\r00:00:03 --> 00:00:04\rSecond.\r"),
         );
     }
 
@@ -80,7 +80,7 @@ final class TimedCuesTest extends TestCase
     {
         self::assertEquals(
             [new TranscriptCueModel(1, null, 'It\'s "fine".')],
-            TimedCues::of("00:00:01 --> 00:00:02\nIt&apos;s &quot;fine&quot;.\n"),
+            TimedCues::parseCues("00:00:01 --> 00:00:02\nIt&apos;s &quot;fine&quot;.\n"),
         );
     }
 
@@ -91,7 +91,7 @@ final class TimedCuesTest extends TestCase
                 new TranscriptCueModel(0, 'JACK', '[Music] Hello.'),
                 new TranscriptCueModel(2, 'ALEX HOLDEN', "It's me."),
             ],
-            TimedCues::of(
+            TimedCues::parseCues(
                 "WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nJACK: [Music] Hello.\n\n"
                 . "00:00:02.000 --> 00:00:03.000\nALEX HOLDEN: It's me.\n",
             ),
@@ -102,7 +102,7 @@ final class TimedCuesTest extends TestCase
     {
         self::assertEquals(
             [new TranscriptCueModel(0, 'JACK', 'text')],
-            TimedCues::of("WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nJACK : text\n"),
+            TimedCues::parseCues("WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nJACK : text\n"),
         );
     }
 
@@ -110,7 +110,7 @@ final class TimedCuesTest extends TestCase
     {
         self::assertEquals(
             [new TranscriptCueModel(0, 'Ann', 'BOB: said.')],
-            TimedCues::of("WEBVTT\n\n00:00:00.000 --> 00:00:01.000\n<v Ann>BOB: said.\n"),
+            TimedCues::parseCues("WEBVTT\n\n00:00:00.000 --> 00:00:01.000\n<v Ann>BOB: said.\n"),
         );
     }
 
@@ -120,7 +120,7 @@ final class TimedCuesTest extends TestCase
     {
         self::assertEquals(
             [new TranscriptCueModel(0, null, $text)],
-            TimedCues::of("WEBVTT\n\n00:00:00.000 --> 00:00:01.000\n" . $text . "\n"),
+            TimedCues::parseCues("WEBVTT\n\n00:00:00.000 --> 00:00:01.000\n" . $text . "\n"),
         );
     }
 
@@ -140,13 +140,13 @@ final class TimedCuesTest extends TestCase
 
         self::assertEquals(
             [new TranscriptCueModel(0, $label, 'text')],
-            TimedCues::of("WEBVTT\n\n00:00:00.000 --> 00:00:01.000\n" . $label . ": text\n"),
+            TimedCues::parseCues("WEBVTT\n\n00:00:00.000 --> 00:00:01.000\n" . $label . ": text\n"),
         );
     }
 
     public function testACueWithoutTextIsSkipped(): void
     {
-        self::assertSame([], TimedCues::of("WEBVTT\n\n00:00:01.000 --> 00:00:02.000\n\n"));
+        self::assertSame([], TimedCues::parseCues("WEBVTT\n\n00:00:01.000 --> 00:00:02.000\n\n"));
     }
 
     /**
@@ -156,7 +156,9 @@ final class TimedCuesTest extends TestCase
     public function testTheRealFixturesYieldTimedCues(): void
     {
         foreach (['logbuch.vtt', 'darknet-diaries.vtt', 'lage-der-nation.vtt', 'sample.srt'] as $fixture) {
-            $cues = TimedCues::of((string) file_get_contents(__DIR__ . '/../../../../Fixtures/Transcript/' . $fixture));
+            $cues = TimedCues::parseCues(
+                (string) file_get_contents(__DIR__ . '/../../../../Fixtures/Transcript/' . $fixture),
+            );
 
             self::assertNotSame([], $cues, $fixture);
             self::assertNotNull($cues[0]->startSeconds, $fixture);

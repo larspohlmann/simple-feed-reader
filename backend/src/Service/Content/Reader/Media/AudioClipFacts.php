@@ -17,7 +17,7 @@ final readonly class AudioClipFacts
     private const string DURATION_ATTRIBUTE = '/^data-[\w-]*duration$/';
 
     /** @param list<Element> $holders */
-    public function titleOf(array $holders): ?string
+    public function findTitle(array $holders): ?string
     {
         foreach ($this->valuesNamed($holders, self::TITLE_ATTRIBUTE) as $value) {
             $title = trim($value);
@@ -30,7 +30,7 @@ final readonly class AudioClipFacts
     }
 
     /** @param list<Element> $holders */
-    public function durationOf(array $holders): ?int
+    public function findDuration(array $holders): ?int
     {
         foreach ($this->valuesNamed($holders, self::DURATION_ATTRIBUTE) as $value) {
             $seconds = MediaDuration::seconds($value);

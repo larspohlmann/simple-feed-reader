@@ -26,7 +26,7 @@ final class StylesheetHiddenIds
         $ids = [];
         foreach (self::topLevelRules($stylesheet) as [$selectors, $declarations]) {
             if (preg_match(self::HIDING_DECLARATION_PATTERN, $declarations) === 1) {
-                $ids = [...$ids, ...self::idsOf($selectors)];
+                $ids = [...$ids, ...self::extractIds($selectors)];
             }
         }
 
@@ -44,7 +44,7 @@ final class StylesheetHiddenIds
     }
 
     /** @return list<string> */
-    private static function idsOf(string $selectors): array
+    private static function extractIds(string $selectors): array
     {
         $ids = [];
         foreach (explode(',', $selectors) as $selector) {

@@ -56,26 +56,26 @@ final class MediaLandingTest extends TestCase
             new MockResponse('#EXTM3U', ['http_code' => 200]),
         ]);
 
-        self::assertSame('https://cdn.test/master.m3u8', $landing->urlOf('https://a.test/x.m3u8'));
+        self::assertSame('https://cdn.test/master.m3u8', $landing->resolveUrl('https://a.test/x.m3u8'));
     }
 
     public function testNullWhenTheChainLandsOnAnError(): void
     {
         $landing = $this->landing([new MockResponse('', ['http_code' => 404])]);
 
-        self::assertNull($landing->urlOf('https://a.test/x.m3u8'));
+        self::assertNull($landing->resolveUrl('https://a.test/x.m3u8'));
     }
 
     public function testNullWhenTheChainFails(): void
     {
         $landing = $this->landing([new MockResponse('', ['error' => 'Connection reset by peer'])]);
 
-        self::assertNull($landing->urlOf('https://a.test/x.m3u8'));
+        self::assertNull($landing->resolveUrl('https://a.test/x.m3u8'));
     }
 
     public function testSendsTheMediaAcceptHeaderAndTheTimeBudget(): void
     {
-        $this->landing([new MockResponse('', ['http_code' => 200])])->urlOf('https://a.test/x.m3u8');
+        $this->landing([new MockResponse('', ['http_code' => 200])])->resolveUrl('https://a.test/x.m3u8');
 
         /** @var list<string> $headers */
         $headers = $this->seenOptions['headers'];

@@ -52,7 +52,7 @@ final readonly class SiblingMediaExtender
 
     private function landed(MediaCandidateModel $candidate): ?MediaCandidateModel
     {
-        $landing = $this->landings->urlOf($candidate->url);
+        $landing = $this->landings->resolveUrl($candidate->url);
         $resolved = $landing === null ? null : $this->mediaUrlKind->resolve($landing);
 
         return $resolved?->kind === $candidate->kind ? $candidate->at($resolved->url) : null;

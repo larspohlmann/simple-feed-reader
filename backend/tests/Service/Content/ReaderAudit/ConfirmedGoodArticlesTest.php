@@ -40,7 +40,7 @@ final class ConfirmedGoodArticlesTest extends TestCase
 
         $body = ExtractedBodyModel::fromHtml('<h1>Der Abschied vom Einzelzimmer</h1><p>' . $standfirst . '</p>');
 
-        self::assertCount(1, AuditMarkers::leadingRegion()->blocksOf($body));
+        self::assertCount(1, AuditMarkers::leadingRegion()->collectLeadingBlocks($body));
     }
 
     public function testAKickerRunIntoTheHeadlineIsNotTheHeadlineRepeated(): void

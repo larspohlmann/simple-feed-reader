@@ -16,7 +16,7 @@ use Dom\HTMLDocument;
 /** What a page's head says it is: its title, description, image and site, and the language it states. */
 final class DeclaredPreview
 {
-    public static function of(HTMLDocument $document, string $addressUrl, string $finalUrl): PagePreviewModel
+    public static function fromDocument(HTMLDocument $document, string $addressUrl, string $finalUrl): PagePreviewModel
     {
         $meta = MetaTags::contentByKey($document);
 

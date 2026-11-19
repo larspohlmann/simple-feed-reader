@@ -21,7 +21,7 @@ final readonly class AudioPlayerNormalizer implements BodyCleaningStepInterface
     public function cleanIn(BodyCleaningPass $pass): void
     {
         foreach (iterator_to_array($pass->document->querySelectorAll('audio')) as $player) {
-            $clip = $this->clipOf($player);
+            $clip = $this->buildClip($player);
             if ($clip === null) {
                 $player->remove();
                 continue;
@@ -30,9 +30,9 @@ final readonly class AudioPlayerNormalizer implements BodyCleaningStepInterface
         }
     }
 
-    private function clipOf(Element $player): ?AudioClipModel
+    private function buildClip(Element $player): ?AudioClipModel
     {
-        $url = $this->sourceOf($player);
+        $url = $this->findSource($player);
         if ($url === null || LiveAudioStream::is($url)) {
             return null;
         }
@@ -40,12 +40,12 @@ final readonly class AudioPlayerNormalizer implements BodyCleaningStepInterface
         return new AudioClipModel(
             $url,
             $player->getAttribute('title'),
-            $this->durationOf($player),
+            $this->findDuration($player),
             $player->classList->contains('reader-narration'),
         );
     }
 
-    private function durationOf(Element $player): ?int
+    private function findDuration(Element $player): ?int
     {
         foreach ($this->directChildren($player, 'time') as $time) {
             return ClipDuration::fromIso($time->getAttribute('datetime'));
@@ -54,7 +54,7 @@ final readonly class AudioPlayerNormalizer implements BodyCleaningStepInterface
         return null;
     }
 
-    private function sourceOf(Element $player): ?string
+    private function findSource(Element $player): ?string
     {
         $own = trim($player->getAttribute('src') ?? '');
         if ($own !== '') {
