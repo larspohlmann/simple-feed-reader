@@ -18,7 +18,7 @@ final class EntryCanonicalItemTest extends DbTestCase
         $entry = $this->persistedEntry();
         $entry->discussionCounts()->recordCounts(DiscussionCounts::fromScoreAndComments(null, 7));
         $entry->discussionCounts()->recordSelfReplyCount(3);
-        $item = $this->persistedItem();
+        $item = $this->persistItem();
 
         $entry->linkTo($item);
         $this->entityManager->flush();
@@ -37,7 +37,7 @@ final class EntryCanonicalItemTest extends DbTestCase
     public function testALinkedEntryReadsAndWritesItsCountsOnTheItem(): void
     {
         $entry = $this->persistedEntry();
-        $item = $this->persistedItem();
+        $item = $this->persistItem();
         $entry->linkTo($item);
 
         $entry->discussionCounts()->recordCounts(DiscussionCounts::fromScoreAndComments(12, 4));
@@ -52,7 +52,7 @@ final class EntryCanonicalItemTest extends DbTestCase
 
     public function testALinkedEntryReadsCountsAnotherCopyRecorded(): void
     {
-        $item = $this->persistedItem();
+        $item = $this->persistItem();
         $copyA = $this->persistedEntry('a');
         $copyB = $this->persistedEntry('b');
         $copyA->linkTo($item);
@@ -66,7 +66,7 @@ final class EntryCanonicalItemTest extends DbTestCase
     public function testTheLinkSurvivesAReload(): void
     {
         $entry = $this->persistedEntry();
-        $item = $this->persistedItem();
+        $item = $this->persistItem();
         $entry->linkTo($item);
         $this->entityManager->flush();
         $this->entityManager->clear();
@@ -100,7 +100,7 @@ final class EntryCanonicalItemTest extends DbTestCase
         return $entry;
     }
 
-    private function persistedItem(): CanonicalItem
+    private function persistItem(): CanonicalItem
     {
         $item = new CanonicalItem(CanonicalItemKind::Lemmy, 'https://lemmy.world/post/7');
         $this->entityManager->persist($item);

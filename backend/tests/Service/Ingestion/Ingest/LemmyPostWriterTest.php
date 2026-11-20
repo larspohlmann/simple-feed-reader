@@ -48,7 +48,7 @@ final class LemmyPostWriterTest extends DbTestCase
                 ),
         );
 
-        $rows = $this->findRows();
+        $rows = $this->readRows();
         self::assertCount(1, $rows);
         self::assertEquals(
             PostCommunity::fromIdentityAndUrl('technology@lemmy.world', 'https://lemmy.world/c/technology'),
@@ -60,7 +60,7 @@ final class LemmyPostWriterTest extends DbTestCase
     {
         $this->ingest(self::buildParsedPost());
 
-        self::assertSame([], $this->findRows());
+        self::assertSame([], $this->readRows());
     }
 
     public function testACommunityOverTheColumnLengthIsNotStored(): void
@@ -71,7 +71,7 @@ final class LemmyPostWriterTest extends DbTestCase
                 ->inCommunity(PostCommunity::fromIdentityAndUrl($identity, 'https://x.test/c/a')),
         );
 
-        self::assertSame([], $this->findRows());
+        self::assertSame([], $this->readRows());
     }
 
     public function testACommunityExactlyAtTheColumnLengthsIsStored(): void
@@ -80,7 +80,7 @@ final class LemmyPostWriterTest extends DbTestCase
         $url = 'https://x.test/c/' . str_repeat('a', LemmyPost::URL_MAX_LENGTH - 17);
         $this->ingest(self::buildParsedPost()->inCommunity(PostCommunity::fromIdentityAndUrl($identity, $url)));
 
-        $rows = $this->findRows();
+        $rows = $this->readRows();
         self::assertCount(1, $rows);
         self::assertSame($identity, $rows[0]->getCommunity()?->identity);
         self::assertSame($url, $rows[0]->getCommunity()->url);
@@ -94,7 +94,7 @@ final class LemmyPostWriterTest extends DbTestCase
                 ->inCommunity(PostCommunity::fromIdentityAndUrl('a@x.test', $url)),
         );
 
-        self::assertSame([], $this->findRows());
+        self::assertSame([], $this->readRows());
     }
 
     public function testTheColumnLengthsCountCharactersNotBytes(): void
@@ -103,7 +103,7 @@ final class LemmyPostWriterTest extends DbTestCase
         $url = 'https://x.test/c/' . str_repeat('é', LemmyPost::URL_MAX_LENGTH - 17);
         $this->ingest(self::buildParsedPost()->inCommunity(PostCommunity::fromIdentityAndUrl($identity, $url)));
 
-        $rows = $this->findRows();
+        $rows = $this->readRows();
         self::assertCount(1, $rows);
         self::assertSame($identity, $rows[0]->getCommunity()?->identity);
         self::assertSame($url, $rows[0]->getCommunity()->url);
@@ -114,7 +114,7 @@ final class LemmyPostWriterTest extends DbTestCase
         $url = 'https://x.test/c/' . str_repeat('a', LemmyPost::URL_MAX_LENGTH);
         $this->ingest(self::buildParsedPost()->inCommunity(PostCommunity::fromIdentityAndUrl('a@x.test', $url)));
 
-        self::assertSame([], $this->findRows());
+        self::assertSame([], $this->readRows());
     }
 
     public function testEntriesWithoutACommunityAskForNoRows(): void
@@ -147,7 +147,7 @@ final class LemmyPostWriterTest extends DbTestCase
         $entries = $this->entityManager->getRepository(Entry::class)->findAll();
         self::assertCount(2, $entries);
         self::assertSame($entries[0]->getCanonicalItem()?->getId(), $entries[1]->getCanonicalItem()?->getId());
-        $rows = $this->findRows();
+        $rows = $this->readRows();
         self::assertCount(1, $rows);
         self::assertEquals($community, $rows[0]->getCommunity());
     }
@@ -166,7 +166,7 @@ final class LemmyPostWriterTest extends DbTestCase
         self::getContainer()->get(LemmyPostWriter::class)->attach([$pair($first), $pair($second)]);
         $this->entityManager->flush();
 
-        self::assertCount(1, $this->findRows());
+        self::assertCount(1, $this->readRows());
     }
 
     public function testRefreshingAStoredPostMovesItsCommunityInPlace(): void
@@ -184,7 +184,7 @@ final class LemmyPostWriterTest extends DbTestCase
         $this->entityManager->flush();
         $this->entityManager->clear();
 
-        $rows = $this->findRows();
+        $rows = $this->readRows();
         self::assertCount(1, $rows);
         self::assertEquals($moved, $rows[0]->getCommunity());
     }
@@ -200,7 +200,7 @@ final class LemmyPostWriterTest extends DbTestCase
         $this->entityManager->flush();
 
         self::assertNull($entry->getCanonicalItem());
-        self::assertSame([], $this->findRows());
+        self::assertSame([], $this->readRows());
     }
 
     private function persistCopy(Feed $feed, string $guid): Entry
@@ -228,7 +228,7 @@ final class LemmyPostWriterTest extends DbTestCase
     }
 
     /** @return list<LemmyPost> */
-    private function findRows(): array
+    private function readRows(): array
     {
         return $this->entityManager->getRepository(LemmyPost::class)->findAll();
     }

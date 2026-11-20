@@ -235,6 +235,7 @@ final class EntryListRowEnricherTest extends DbTestCase
             'FROM thread_post',
             'share_enrichment',
             'saved_entry_origin',
+            'FROM social_account',
             'lemmy_post',
         ];
         foreach ($tables as $table) {
