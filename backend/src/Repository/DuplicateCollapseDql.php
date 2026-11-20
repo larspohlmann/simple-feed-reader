@@ -33,7 +33,7 @@ final readonly class DuplicateCollapseDql
         ));
         $qb->andWhere(\sprintf(
             'e.canonicalItem IS NULL OR NOT EXISTS (%s)',
-            $this->buildEarlierCopyDql('canonicalItem', EntryAliases::buildItemCollapse(), $applyScope),
+            $this->buildEarlierCopyDql('canonicalItem', EntryAliases::itemCollapse(), $applyScope),
         ));
         $qb->setParameter('user', $userId);
     }
