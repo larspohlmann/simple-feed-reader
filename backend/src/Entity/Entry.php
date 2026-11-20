@@ -6,7 +6,6 @@ namespace App\Entity;
 
 use App\Enum\ShareKind;
 use App\Repository\EntryRepository;
-use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: EntryRepository::class)]
@@ -62,18 +61,8 @@ final class Entry
     #[ORM\JoinColumn(name: 'quoted_shared_link_id', nullable: true)]
     private ?SharedLink $quotedLink = null;
 
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
-    private ?\DateTimeImmutable $publishedAt = null;
-
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
-    private \DateTimeImmutable $createdAt;
-
-    /**
-     * The list-sort instant, decided at ingest by EntryEffectiveDate from the fetch history and never recomputed here.
-     * Materialized so idx_entry_effective serves the sort; the column default exists only for SQLite's migration.
-     */
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, options: ['default' => '1970-01-01 00:00:00'])]
-    private \DateTimeImmutable $effectiveDate;
+    #[ORM\Embedded(class: EntryDates::class, columnPrefix: false)]
+    private EntryDates $dates;
 
     public function __construct(
         Feed $feed,
@@ -91,8 +80,7 @@ final class Entry
         $this->text = new EntryText();
         $this->headline = new EntryHeadline();
         $this->headline->store(Headline::fromFeed($title));
-        $this->createdAt = $createdAt;
-        $this->effectiveDate = $effectiveDate;
+        $this->dates = new EntryDates($createdAt, $effectiveDate);
         $this->image = new EntryImage();
         $this->mediaSet = new EntryMedia();
         $this->author = new EntryAuthor();
@@ -256,12 +244,12 @@ final class Entry
 
     public function getPublishedAt(): ?\DateTimeImmutable
     {
-        return $this->publishedAt;
+        return $this->dates->getPublishedAt();
     }
 
     public function setPublishedAt(?\DateTimeImmutable $publishedAt): void
     {
-        $this->publishedAt = $publishedAt;
+        $this->dates->setPublishedAt($publishedAt);
     }
 
     public function getDiscussion(): Discussion
@@ -330,11 +318,11 @@ final class Entry
 
     public function getEffectiveDate(): \DateTimeImmutable
     {
-        return $this->effectiveDate;
+        return $this->dates->getEffectiveDate();
     }
 
     public function getCreatedAt(): \DateTimeImmutable
     {
-        return $this->createdAt;
+        return $this->dates->getCreatedAt();
     }
 }

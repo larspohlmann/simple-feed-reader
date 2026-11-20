@@ -92,7 +92,7 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
     {
         $qb = $this->projection->unreadEntriesQueryBuilder($query->userId)
             ->select('e.id')
-            ->andWhere('e.effectiveDate <= :until')
+            ->andWhere('e.dates.effectiveDate <= :until')
             ->setParameter('until', $until)
             ->setParameter('story', $query->storyId);
         $this->applyMembership($qb, EntryAliases::primary());

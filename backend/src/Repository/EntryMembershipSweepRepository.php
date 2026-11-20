@@ -30,7 +30,7 @@ final class EntryMembershipSweepRepository extends ServiceEntityRepository
         /** @var list<array{id: int}> $rows */
         $rows = $this->createQueryBuilder('e')
             ->select('e.id')
-            ->andWhere('e.createdAt <= :createdNoLaterThan')
+            ->andWhere('e.dates.createdAt <= :createdNoLaterThan')
             ->setParameter('createdNoLaterThan', $createdNoLaterThan)
             ->orderBy('e.id', 'DESC')
             ->setMaxResults(1)

@@ -31,7 +31,7 @@ final readonly class RecommendationCandidateRepository
     {
         $qb = $this->candidateQueryBuilder($userId)
             ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
-            ->orderBy('e.effectiveDate', 'DESC')
+            ->orderBy('e.dates.effectiveDate', 'DESC')
             ->addOrderBy('e.id', 'DESC')
             ->setParameter('since', $since)
             ->setParameter('notInteracted', false, Types::BOOLEAN);
@@ -68,7 +68,11 @@ final readonly class RecommendationCandidateRepository
     public function span(int $userId, array $entryIds): array
     {
         $qb = $this->candidateQueryBuilder($userId)
-            ->select('COUNT(e.id) AS total', 'MIN(e.effectiveDate) AS oldest', 'MAX(e.effectiveDate) AS newest')
+            ->select(
+                'COUNT(e.id) AS total',
+                'MIN(e.dates.effectiveDate) AS oldest',
+                'MAX(e.dates.effectiveDate) AS newest',
+            )
             ->andWhere('e.id IN (:ids)')
             ->setParameter('ids', $entryIds);
         InclusionScopeDql::restrict($qb, EntryAliases::primary()->subscription, InclusionSurface::ForYou);
@@ -91,7 +95,7 @@ final readonly class RecommendationCandidateRepository
             $aliases->state,
             EntryShareDql::exists($aliases),
         ));
-        $inner->andWhere(\sprintf('%s.effectiveDate >= :since', $aliases->entry));
+        $inner->andWhere(\sprintf('%s.dates.effectiveDate >= :since', $aliases->entry));
     }
 
     private function candidateQueryBuilder(int $userId): QueryBuilder

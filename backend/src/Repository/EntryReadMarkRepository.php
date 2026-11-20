@@ -24,7 +24,7 @@ final readonly class EntryReadMarkRepository
                  WHERE es.user = :user AND es.isHidden = :false
                  AND es.entry IN (
                      SELECT e.id FROM %s e
-                     WHERE e.feed IN (:feeds) AND e.effectiveDate <= :until
+                     WHERE e.feed IN (:feeds) AND e.dates.effectiveDate <= :until
                  )',
             EntryState::class,
             Entry::class,

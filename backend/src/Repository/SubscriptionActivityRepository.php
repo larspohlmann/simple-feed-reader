@@ -116,11 +116,11 @@ final readonly class SubscriptionActivityRepository
     {
         /** @var list<FeedDayRow> $rows */
         $rows = $this->entityManager->createQueryBuilder()
-            ->select('IDENTITY(entry.feed) AS feedId', \sprintf(self::UTC_DAY_OF, 'entry.createdAt') . ' AS day')
+            ->select('IDENTITY(entry.feed) AS feedId', \sprintf(self::UTC_DAY_OF, 'entry.dates.createdAt') . ' AS day')
             ->addSelect('COUNT(entry.id) AS total')
             ->from(Entry::class, 'entry')
             ->andWhere('IDENTITY(entry.feed) IN (:feedIds)')
-            ->andWhere('entry.createdAt >= :since')
+            ->andWhere('entry.dates.createdAt >= :since')
             ->groupBy('feedId')
             ->addGroupBy('day')
             ->setParameter('feedIds', $feedIds)

@@ -60,7 +60,7 @@ final class EntryListRepository extends ServiceEntityRepository
             return $qb;
         };
         $windowProbe = function () use ($query): QueryBuilder {
-            $probe = $this->createQueryBuilder('e')->select('e.effectiveDate');
+            $probe = $this->createQueryBuilder('e')->select('e.dates.effectiveDate AS effectiveDate');
             $probeOrdering = EntryListOrdering::byPublishedDate($query->order);
             $qb = $this->projection->orderedBy($probe, $probeOrdering);
             $this->projection->applyCursor($qb, $query->cursor, $probeOrdering);
@@ -151,7 +151,7 @@ final class EntryListRepository extends ServiceEntityRepository
             $this->unreadMatchQueryBuilder($query)
                 ->select('e.id')
                 ->distinct()
-                ->andWhere('e.effectiveDate <= :until')
+                ->andWhere('e.dates.effectiveDate <= :until')
                 ->setParameter('until', $until),
         );
     }

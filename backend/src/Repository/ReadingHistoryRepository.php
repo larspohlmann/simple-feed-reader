@@ -27,7 +27,7 @@ final readonly class ReadingHistoryRepository
     {
         $qb = $this->historyQueryBuilder($userId)
             ->andWhere('es.isFavorite = :true')
-            ->orderBy('e.effectiveDate', 'DESC')
+            ->orderBy('e.dates.effectiveDate', 'DESC')
             ->addOrderBy('e.id', 'DESC')
             ->setMaxResults($cap)
             ->setParameter('true', true, Types::BOOLEAN);
@@ -55,7 +55,7 @@ final readonly class ReadingHistoryRepository
         $qb = $this->historyQueryBuilder($userId)
             ->andWhere('es.isKept = :true AND es.isFavorite = :false')
             ->andWhere('NOT ' . EntryShareDql::exists(EntryAliases::primary()))
-            ->orderBy('e.effectiveDate', 'DESC')
+            ->orderBy('e.dates.effectiveDate', 'DESC')
             ->addOrderBy('e.id', 'DESC')
             ->setMaxResults($cap)
             ->setParameter('true', true, Types::BOOLEAN)
