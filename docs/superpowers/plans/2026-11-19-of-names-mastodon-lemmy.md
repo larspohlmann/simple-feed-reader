@@ -55,7 +55,7 @@ The last column is what the method does, which is what the reviewer checks the n
 | `Mastodon/MastodonContextReplies.php` | `authorOf` (private) | `buildAuthor` | an account node as a comment author |
 | `Mastodon/MastodonContextReplies.php` | `htmlOf` (private) | `buildHtml` | a status's content, folded under its content warning |
 | `Mastodon/MastodonContextReplies.php` | `embedsOf` (private) | `buildEmbeds` | a status's media, card and quote as a comment's embeds |
-| `Mastodon/MastodonNotificationContextSource.php` | `statusesOf` (private) | `fetchStatuses` | asks for a batch of statuses by id |
+| `Mastodon/MastodonNotificationContextSource.php` | `statusesOf` (private) | `findStatuses` | asks for a batch of statuses by id |
 | `Mastodon/MastodonNotificationContextSource.php` | `withExcerptOf` (private) | `withAnsweredExcerpt` | the context with the answered status's excerpt, unchanged without one |
 | `Mastodon/MastodonNotificationSource.php` | `actorOf` (private) | `buildActor` | who a notification comes from, or null without an acct |
 | `Mastodon/MastodonNotificationSource.php` | `subjectOf` (private) | `buildSubject` | what a notification is about |
@@ -65,24 +65,24 @@ The last column is what the method does, which is what the reviewer checks the n
 | `Mastodon/MastodonNotificationSource.php` | `kindOf` (private) | `parseKind` | the notification kind an entry's type names, or null |
 | `Mastodon/MastodonPostResolver.php` | `responseContextOf` (private) | `buildResponseContext` | author, visibility and what the viewer may do with a status |
 | `Mastodon/MastodonPostResolver.php` | `previewOf` (private) | `buildPreview` | a status as a preview |
-| `Mastodon/MastodonPostWriter.php` | `statusOf` (private) | `buildStatus` | the fields of the status to post |
-| `Mastodon/MastodonPrivateFeedRule.php` | `authorNamesOf` (private) | `collectAuthorNames` | the names a stored post's author goes by on the account's instance |
+| `Mastodon/MastodonPostWriter.php` | `statusOf` (private) | `buildStatusPayload` | the fields of the status to post |
+| `Mastodon/MastodonPrivateFeedRule.php` | `authorNamesOf` (private) | `parseAuthorNames` | the names a stored post's author goes by on the account's instance |
 | `Mastodon/MastodonTimelineSource.php` | `pathOf` (private) | `buildPath` | the API path a feed is read from |
 | `Mastodon/Support/MastodonAttachments.php` | `of` | `parseMedia` | the usable media of a list of attachments |
-| `Mastodon/Support/MastodonAttachments.php` | `entryMediaOf` | `parseEntryMedia` | a status's attachments as entry media |
+| `Mastodon/Support/MastodonAttachments.php` | `entryMediaOf` | `assembleEntryMedia` | a status's attachments as entry media |
 | `Mastodon/Support/MastodonAttachments.php` | `mediumOf` (private) | `parseMedium` | one attachment as a medium, or null |
 | `Mastodon/Support/MastodonCard.php` | `of` | `fromNode` | a card node as a link card, or null without URL or title |
 | `Mastodon/Support/MastodonFollowedTag.php` | `collectionOf` | `parseCollection` | a followed tag as a collection, or null for an invalid name |
 | `Mastodon/Support/MastodonQuotedStatus.php` | `ofQuote` | `fromQuote` | an accepted quote with its whole status as a quoted post, or null |
 | `Mastodon/Support/MastodonQuotedStatus.php` | `of` | `fromStatus` | a status as a quoted post, or null without URL or handle |
 | `Mastodon/Support/MastodonQuotedStatus.php` | `textOf` (private) | `buildText` | a status's lines as text, its content warning first |
-| `Mastodon/Support/MastodonQuotedStatus.php` | `nestedOf` (private) | `parseNestedQuote` | the post a quoted status itself quotes, or null |
+| `Mastodon/Support/MastodonQuotedStatus.php` | `nestedOf` (private) | `resolveNestedQuote` | the post a quoted status itself quotes: its accepted quote when it carries one, else the link already found in its content, or null |
 | `Mastodon/Support/MastodonSearchPage.php` | `of` | `fromAnswers` | the search answers as one page, each status once |
 | `Mastodon/Support/MastodonSearchPage.php` | `distinctStatusesOf` (private) | `collectDistinctStatuses` | the statuses of all answers, each once; throws without a list |
 | `Mastodon/Support/MastodonSearchPage.php` | `searchedPostOf` (private) | `buildSearchedPost` | author names and own texts of a status |
 | `Mastodon/Support/MastodonSearchPage.php` | `ownTextsOf` (private) | `buildSearchTexts` | the two texts a search matches against: the status's and its quoted status's |
-| `Mastodon/Support/MastodonStatusAddress.php` | `ofOrNull` | `parseStatus` | host, id and account of a status address, or null |
-| `Mastodon/Support/MastodonStatusUrl.php` | `of` | `parseUrl` | a status's `url`, else its `uri`, when absolute; or null |
+| `Mastodon/Support/MastodonStatusAddress.php` | `ofOrNull` | `parseAddress` | host, id, prefix and account of a status address, or null |
+| `Mastodon/Support/MastodonStatusUrl.php` | `of` | `resolveUrl` | a status's `url` when absolute, else its `uri` when absolute, or null |
 | `Mastodon/Support/MastodonTimelinePage.php` | `of` | `fromStatuses` | a timeline's statuses as a page |
 | `Mastodon/Support/MastodonTimelinePage.php` | `selfReplyOf` (private) | `detectSelfReply` | recognises a status that continues the author's own thread on the page and returns it as a self-reply, or null |
 | `Mastodon/Support/MastodonTimelinePage.php` | `rootOf` (private) | `findRoot` | the first post of the own thread a status continues, or null |
@@ -92,8 +92,8 @@ The last column is what the method does, which is what the reviewer checks the n
 | `Mastodon/Support/MastodonTimelinePage.php` | `originalOf` | `resolveOriginal` | the boosted status of a boost, else the status itself |
 | `Mastodon/Support/MastodonTimelinePage.php` | `bodyOf` (private) | `buildBody` | a post's content under its content warning, or null when empty |
 | `Mastodon/Support/MastodonTimelinePage.php` | `mediaOf` (private) | `buildMedia` | a post's attachments as entry media |
-| `Mastodon/Support/MastodonTimelinePage.php` | `leadImageOf` (private) | `findLeadImage` | the first image among the media, or null |
-| `Mastodon/Support/MastodonTimelinePage.php` | `newestIdOf` (private) | `findNewestId` | the highest status id of the page, or null |
+| `Mastodon/Support/MastodonTimelinePage.php` | `leadImageOf` (private) | `pickLeadImage` | the first image among the media as the entry's lead image, or null |
+| `Mastodon/Support/MastodonTimelinePage.php` | `newestIdOf` (private) | `pickNewestId` | the highest status id of the page, or null |
 | `Mastodon/Support/MastodonVisibility.php` | `stricterOf` | `pickStricter` | the more closed of two visibilities |
 
 ### Lemmy, under `backend/src/Service/Social/`
@@ -118,11 +118,11 @@ The last column is what the method does, which is what the reviewer checks the n
 | `Lemmy/LemmyPostEntries.php` | `postPageOf` (private) | `resolvePostPage` | the post's own address when it is a post page, else its page on the home instance |
 | `Lemmy/LemmyPostEntries.php` | `countsOf` (private) | `buildCounts` | score and comment count as discussion counts |
 | `Lemmy/LemmyPostEntries.php` | `mediaOf` (private) | `buildMedia` | a post's thumbnail as entry media |
-| `Lemmy/LemmyPostEntries.php` | `newestIdOf` (private) | `findNewestId` | the highest post id of the views, or null |
+| `Lemmy/LemmyPostEntries.php` | `newestIdOf` (private) | `pickNewestId` | the highest post id of the views, or null |
 | `Lemmy/LemmyPostResolver.php` | `responseContextOf` (private) | `buildResponseContext` | author and what the viewer may do with a post or comment |
-| `Lemmy/LemmyPostWriter.php` | `linkPostOf` (private) | `buildLinkPost` | the fields of a link post; throws without a community |
-| `Lemmy/LemmyPostWriter.php` | `titleOf` (private) | `requireTitle` | the draft's title; throws when it is too short or too long |
-| `Lemmy/LemmyPostWriter.php` | `commentOf` (private) | `buildComment` | the fields of a comment on a post or a comment |
+| `Lemmy/LemmyPostWriter.php` | `linkPostOf` (private) | `buildLinkPostPayload` | the fields of a link post; throws without a community |
+| `Lemmy/LemmyPostWriter.php` | `titleOf` (private) | `requireValidTitle` | the draft's title, trimmed; throws when it is too short or too long |
+| `Lemmy/LemmyPostWriter.php` | `commentOf` (private) | `buildCommentPayload` | the fields of a comment on a post or a comment |
 | `Lemmy/LemmyPosts.php` | `homePostIdOf` | `resolveHomePostId` | a post's id on the account's instance: its own there, looked up elsewhere; throws when not found |
 | `Lemmy/LemmyProfilePictures.php` | `pictureOf` (private) | `fetchPicture` | asks for a user's or community's picture by identity |
 | `Lemmy/LemmyProfilePictures.php` | `communityPictureOf` (private) | `fetchCommunityPicture` | asks a community's instance for its icon |
@@ -138,7 +138,7 @@ The last column is what the method does, which is what the reviewer checks the n
 | `Lemmy/Support/LemmySearchTerms.php` | `longestTermOf` (private) | `pickLongestTerm` | the longest positive term of an alternative's factors |
 | `Lemmy/Support/LemmySearchTerms.php` | `longestOf` (private) | `pickLongest` | the longest of the factors' word runs |
 | `Lemmy/Support/LemmySearchedPost.php` | `of` | `buildSearchedPost` | title, text and author names of a stored post |
-| `Lemmy/Support/LemmySearchedPost.php` | `authorNamesOf` (private) | `collectAuthorNames` | the names in an author's profile URL |
+| `Lemmy/Support/LemmySearchedPost.php` | `authorNamesOf` (private) | `parseAuthorNames` | the names in an author's profile URL |
 | `Lemmy/Support/LemmyView.php` | `ofPost` | `fromPostView` | a post view as a response target; throws without an id |
 | `Lemmy/Support/LemmyView.php` | `ofComment` | `fromCommentView` | a comment view as a response target; throws without ids |
 
