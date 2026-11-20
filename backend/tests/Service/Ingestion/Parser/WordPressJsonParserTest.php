@@ -162,7 +162,7 @@ final class WordPressJsonParserTest extends TestCase
     public function testTitleEntityDecodingUsesEntQuotesAndTrimsWhitespace(): void
     {
         // The whitespace sits INSIDE the tag boundary, so it only surfaces once
-        // strip_tags() removes the <em> — stringOrNull()'s own trim on the raw
+        // strip_tags() removes the <em> — parseString()'s own trim on the raw
         // "rendered" string cannot touch it, isolating plainTitle()'s own trim.
         $body = '[{"id":1,"link":"https://x.example/1",'
             . '"title":{"rendered":"<em>  Ben &#039;s pick  </em>"}}]';

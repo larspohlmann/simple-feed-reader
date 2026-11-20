@@ -37,7 +37,7 @@ final class StreamedFeedDocument
         try {
             $document = new self(\XMLReader::fromStream(self::spooled($xml), null, LIBXML_NONET));
 
-            return $document->parseWith($parserFactory->parserFor($document->readToRoot()));
+            return $document->parseWith($parserFactory->selectParser($document->readToRoot()));
         } finally {
             libxml_clear_errors();
             libxml_use_internal_errors($previousErrorMode);

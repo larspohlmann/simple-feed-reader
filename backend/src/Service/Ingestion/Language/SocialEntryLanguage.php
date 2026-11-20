@@ -39,7 +39,7 @@ final readonly class SocialEntryLanguage
     private function guess(ParsedEntryModel $entry, string $body): ?FeedLanguage
     {
         $text = PreviewText::joined($entry->headline->text, $body);
-        $guess = $this->languageGuess->bestFor($text);
+        $guess = $this->languageGuess->detectLanguage($text);
         if (null !== $guess) {
             return $guess;
         }

@@ -14,7 +14,7 @@ use App\Service\Outbound\Fetch\Model\SettlementModel;
 interface PassLaneInterface
 {
     /** @return \Generator<int|string, RequestTicketModel> none when the feed settles without a request */
-    public function ticketsFor(Feed $feed): \Generator;
+    public function issueTickets(Feed $feed): \Generator;
 
     public function admits(int|string $feedId): bool;
 

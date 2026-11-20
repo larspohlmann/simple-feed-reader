@@ -37,7 +37,7 @@ final readonly class TrackedRefreshRunner
             return new TrackedRefreshReportModel($report, $progress);
         }
 
-        $advanced = $progress->advancedBy($this->handledIn($report), $report->remaining);
+        $advanced = $progress->advancedBy($this->computeHandled($report), $report->remaining);
 
         if (0 === $report->remaining || $report->isAborted()) {
             $this->runs->forget($request);
@@ -54,7 +54,7 @@ final readonly class TrackedRefreshRunner
      * Every outcome that ends a feed's turn: a 304, a failure and a 429 leave `remaining` too. Feeds the budget
      * deferred are absent on purpose, since `remaining` still counts them.
      */
-    private function handledIn(RefreshReportModel $report): int
+    private function computeHandled(RefreshReportModel $report): int
     {
         return $report->fetched + $report->notModified + $report->failed + $report->throttled;
     }

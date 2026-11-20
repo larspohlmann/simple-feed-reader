@@ -26,7 +26,7 @@ final class TimelineLaneTest extends TestCase
     {
         $timeline = PrivateFeeds::mastodon(PrivateFeeds::mastodonAccount(), 2);
 
-        $tickets = iterator_to_array(self::lane([2 => $timeline])->ticketsFor($timeline->getFeed()));
+        $tickets = iterator_to_array(self::lane([2 => $timeline])->issueTickets($timeline->getFeed()));
 
         self::assertSame([2], array_keys($tickets));
         self::assertSame(ResponseExchangeKind::Api, $tickets[2]->exchange);
@@ -41,7 +41,7 @@ final class TimelineLaneTest extends TestCase
         $account = PrivateFeeds::mastodonAccount();
         $timeline = PrivateFeeds::mastodon($account, 2);
         $lane = self::lane([2 => $timeline]);
-        iterator_to_array($lane->ticketsFor($timeline->getFeed()));
+        iterator_to_array($lane->issueTickets($timeline->getFeed()));
         self::assertTrue($lane->admits(2));
 
         $account->markNeedsReconnect();
@@ -54,7 +54,7 @@ final class TimelineLaneTest extends TestCase
         $account = PrivateFeeds::mastodonAccount();
         $timeline = PrivateFeeds::mastodon($account, 2);
         $lane = self::lane([2 => $timeline]);
-        iterator_to_array($lane->ticketsFor($timeline->getFeed()));
+        iterator_to_array($lane->issueTickets($timeline->getFeed()));
         $account->markNeedsReconnect();
 
         $passOutcome = $lane->settle(2, FetchOutcomeModel::withheld())->settledOutcome();
@@ -68,7 +68,7 @@ final class TimelineLaneTest extends TestCase
         $orphan = PrivateFeeds::mastodon(PrivateFeeds::mastodonAccount(), 2)->getFeed();
         $lane = self::lane([]);
 
-        self::assertSame([], iterator_to_array($lane->ticketsFor($orphan)));
+        self::assertSame([], iterator_to_array($lane->issueTickets($orphan)));
         $unasked = iterator_to_array($lane->drainUnasked());
 
         self::assertSame([2], array_keys($unasked));

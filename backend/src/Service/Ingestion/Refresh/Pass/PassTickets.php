@@ -48,7 +48,7 @@ final readonly class PassTickets implements AnswerSettlerInterface
     public function tickets(): \Generator
     {
         foreach ($this->pass->startedFeeds() as $feedId => $feed) {
-            yield from $this->selectLane($feedId)->ticketsFor($feed);
+            yield from $this->selectLane($feedId)->issueTickets($feed);
         }
     }
 

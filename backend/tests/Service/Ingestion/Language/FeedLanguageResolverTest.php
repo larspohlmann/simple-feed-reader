@@ -53,7 +53,7 @@ final class FeedLanguageResolverTest extends TestCase
         $detector = StubbedDetector::saying('de');
         $feed = self::feed(null, [['First', 'One'], ['Second', null], ['Third', 'Three']]);
 
-        new FeedLanguageResolver(new LanguageGuess($detector))->languageFor(new Feed(self::URL), $feed);
+        new FeedLanguageResolver(new LanguageGuess($detector))->resolveLanguage(new Feed(self::URL), $feed);
 
         self::assertSame(["First\nOne\nSecond\n\nThird\nThree"], $detector->seenTexts());
     }
@@ -65,7 +65,7 @@ final class FeedLanguageResolverTest extends TestCase
         $detector = StubbedDetector::saying('de');
         $feed = self::feed(null, [['Headline', str_repeat('x', $limit * 2)]]);
 
-        new FeedLanguageResolver(new LanguageGuess($detector))->languageFor(new Feed(self::URL), $feed);
+        new FeedLanguageResolver(new LanguageGuess($detector))->resolveLanguage(new Feed(self::URL), $feed);
 
         self::assertSame($limit, mb_strlen($detector->seenTexts()[0]));
     }
@@ -77,7 +77,7 @@ final class FeedLanguageResolverTest extends TestCase
         $detector = StubbedDetector::saying('de');
         $feed = self::feed(null, [['Headline', str_repeat('ä', $limit * 2)]]);
 
-        new FeedLanguageResolver(new LanguageGuess($detector))->languageFor(new Feed(self::URL), $feed);
+        new FeedLanguageResolver(new LanguageGuess($detector))->resolveLanguage(new Feed(self::URL), $feed);
 
         self::assertSame($limit, mb_strlen($detector->seenTexts()[0]));
     }
@@ -98,7 +98,7 @@ final class FeedLanguageResolverTest extends TestCase
 
     public function testAFeedWithoutEntriesOrDeclarationStaysWithoutALanguage(): void
     {
-        self::assertNull(self::resolverSaying('de')->languageFor(new Feed(self::URL), self::feed(null, [])));
+        self::assertNull(self::resolverSaying('de')->resolveLanguage(new Feed(self::URL), self::feed(null, [])));
     }
 
     public function testASetLanguageIsKeptWhateverTheBodyDeclaresOrReads(): void
@@ -106,7 +106,7 @@ final class FeedLanguageResolverTest extends TestCase
         $feed = new Feed(self::URL);
         $feed->recordTraits($feed->getTraits()->withLanguage(FeedLanguage::French));
 
-        $language = self::resolverSaying('es')->languageFor($feed, self::feed('de', [['Headline', null]]));
+        $language = self::resolverSaying('es')->resolveLanguage($feed, self::feed('de', [['Headline', null]]));
 
         self::assertSame(FeedLanguage::French, $language);
     }
@@ -116,7 +116,7 @@ final class FeedLanguageResolverTest extends TestCase
         $feed = new Feed(self::URL);
         $feed->setSourceFormat(SourceFormat::MASTODON_API);
 
-        self::assertNull(self::resolverSaying('de')->languageFor($feed, self::feed('de', [['Headline', null]])));
+        self::assertNull(self::resolverSaying('de')->resolveLanguage($feed, self::feed('de', [['Headline', null]])));
     }
 
     public function testASavedFeedIsNotJudged(): void
@@ -124,7 +124,7 @@ final class FeedLanguageResolverTest extends TestCase
         $feed = new Feed(self::URL);
         $feed->setSourceFormat(SourceFormat::SAVED);
 
-        self::assertNull(self::resolverSaying('de')->languageFor($feed, self::feed('de', [['Headline', null]])));
+        self::assertNull(self::resolverSaying('de')->resolveLanguage($feed, self::feed('de', [['Headline', null]])));
     }
 
     public function testARealDetectorGuessesAnUnambiguousFeed(): void
@@ -136,7 +136,10 @@ final class FeedLanguageResolverTest extends TestCase
         );
         $resolver = new FeedLanguageResolver(new LanguageGuess(new LanguageDetectionFactory()->create()));
 
-        self::assertSame(FeedLanguage::German, $resolver->languageFor(new Feed(self::URL), self::feed(null, $entries)));
+        self::assertSame(
+            FeedLanguage::German,
+            $resolver->resolveLanguage(new Feed(self::URL), self::feed(null, $entries)),
+        );
     }
 
     /**
@@ -146,7 +149,7 @@ final class FeedLanguageResolverTest extends TestCase
     {
         $resolver = new FeedLanguageResolver(new LanguageGuess(StubbedDetector::saying($detectorSays)));
 
-        return $resolver->languageFor(new Feed(self::URL), self::feed($declaredLanguage, $entries));
+        return $resolver->resolveLanguage(new Feed(self::URL), self::feed($declaredLanguage, $entries));
     }
 
     /**

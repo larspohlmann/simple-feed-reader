@@ -26,10 +26,10 @@ final readonly class ItemImageExtractor
     /** Media RSS image, searching <media:group> when nothing is attached directly; its other widths join it. */
     public function fromMedia(CoreElement $item): ?DeclaredImageModel
     {
-        $candidates = self::mediaCandidatesIn($item->element);
+        $candidates = self::collectMediaCandidates($item->element);
 
         foreach ($item->in(FeedNamespace::MediaRss)->children('group') as $group) {
-            $candidates = [...$candidates, ...self::mediaCandidatesIn($group)];
+            $candidates = [...$candidates, ...self::collectMediaCandidates($group)];
         }
 
         return DeclaredImages::widest($candidates)?->joinedWith(...$candidates);
@@ -97,7 +97,7 @@ final readonly class ItemImageExtractor
     }
 
     /** @return list<DeclaredImageModel> */
-    private static function mediaCandidatesIn(\DOMElement $parent): array
+    private static function collectMediaCandidates(\DOMElement $parent): array
     {
         $candidates = [];
         foreach ($parent->childNodes as $child) {

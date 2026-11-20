@@ -79,12 +79,12 @@ final readonly class ItemMediaExtractor
 
     private static function fromGroup(\DOMElement $group, ?int $fallbackDuration): ?ParsedMediaBundleModel
     {
-        $nodes = self::mediaNodesIn($group);
+        $nodes = self::collectMediaNodes($group);
 
         $video = self::findFirstWithKind($nodes, FeedMediaKind::Video);
         if ($video !== null) {
             return new ParsedMediaBundleModel(
-                [$video->toVideo(self::posterIn($group))],
+                [$video->toVideo(self::findPoster($group))],
                 [$video->toAttachment($fallbackDuration)],
             );
         }
@@ -139,7 +139,7 @@ final readonly class ItemMediaExtractor
     }
 
     /** @return list<FeedMediaNode> */
-    private static function mediaNodesIn(\DOMElement $group): array
+    private static function collectMediaNodes(\DOMElement $group): array
     {
         $nodes = [];
         foreach ($group->childNodes as $child) {
@@ -155,7 +155,7 @@ final readonly class ItemMediaExtractor
         return $nodes;
     }
 
-    private static function posterIn(\DOMElement $group): ?string
+    private static function findPoster(\DOMElement $group): ?string
     {
         $thumbnail = CoreElement::extension($group, FeedNamespace::MediaRss)->child('thumbnail');
         $url = $thumbnail === null ? '' : trim($thumbnail->getAttribute('url'));

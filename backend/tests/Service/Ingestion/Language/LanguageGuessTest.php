@@ -17,31 +17,31 @@ final class LanguageGuessTest extends TestCase
     {
         $guess = new LanguageGuess(StubbedDetector::saying('fr'));
 
-        self::assertSame(FeedLanguage::French, $guess->bestFor('Some text'));
+        self::assertSame(FeedLanguage::French, $guess->detectLanguage('Some text'));
     }
 
     public function testALanguageOutsideTheFourGetsNoGuess(): void
     {
         $guess = new LanguageGuess(StubbedDetector::saying('it'));
 
-        self::assertNull($guess->bestFor('Some text'));
+        self::assertNull($guess->detectLanguage('Some text'));
     }
 
     public function testADetectorWithoutAnswerGetsNoGuess(): void
     {
-        self::assertNull(new LanguageGuess(StubbedDetector::sayingNothing())->bestFor('Some text'));
+        self::assertNull(new LanguageGuess(StubbedDetector::sayingNothing())->detectLanguage('Some text'));
     }
 
     public function testATextWithoutLettersGetsNoGuessWhateverTheDetectorSays(): void
     {
         $guess = new LanguageGuess(StubbedDetector::saying('de'));
 
-        self::assertNull($guess->bestFor('2031 – 42 % … 12:30!'));
+        self::assertNull($guess->detectLanguage('2031 – 42 % … 12:30!'));
     }
 
     public function testAnEmptyTextGetsNoGuessWhateverTheDetectorSays(): void
     {
-        self::assertNull(new LanguageGuess(StubbedDetector::saying('de'))->bestFor(''));
+        self::assertNull(new LanguageGuess(StubbedDetector::saying('de'))->detectLanguage(''));
     }
 
     public function testTheRealDetectorIsWiredToTheGuess(): void
@@ -49,7 +49,7 @@ final class LanguageGuessTest extends TestCase
         $guess = new LanguageGuess(new LanguageDetectionFactory()->create());
         $german = 'Der Bundeskanzler sagte am Montag in Berlin, dass die Regierung weitere Hilfen vorbereitet.';
 
-        self::assertSame(FeedLanguage::German, $guess->bestFor($german));
+        self::assertSame(FeedLanguage::German, $guess->detectLanguage($german));
     }
 
     public function testTheRealDetectorGuessesAnEnglishText(): void
@@ -57,13 +57,13 @@ final class LanguageGuessTest extends TestCase
         $guess = new LanguageGuess(new LanguageDetectionFactory()->create());
         $english = 'The prime minister said on Monday in London that the government is preparing further support.';
 
-        self::assertSame(FeedLanguage::English, $guess->bestFor($english));
+        self::assertSame(FeedLanguage::English, $guess->detectLanguage($english));
     }
 
     #[DataProvider('textsOutsideTheFour')]
     public function testTheRealDetectorGivesNoGuessForATextOutsideTheFour(string $text): void
     {
-        self::assertNull(new LanguageGuess(new LanguageDetectionFactory()->create())->bestFor($text));
+        self::assertNull(new LanguageGuess(new LanguageDetectionFactory()->create())->detectLanguage($text));
     }
 
     /** @return array<string, array{string}> */
@@ -80,7 +80,7 @@ final class LanguageGuessTest extends TestCase
     {
         $guess = new LanguageGuess(StubbedDetector::saying('fr'));
 
-        self::assertNull($guess->confidentFor(str_repeat('a', 149)));
-        self::assertSame(FeedLanguage::French, $guess->confidentFor(str_repeat('a', 150)));
+        self::assertNull($guess->detectConfidentLanguage(str_repeat('a', 149)));
+        self::assertSame(FeedLanguage::French, $guess->detectConfidentLanguage(str_repeat('a', 150)));
     }
 }

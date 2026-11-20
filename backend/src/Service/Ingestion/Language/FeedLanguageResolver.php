@@ -19,14 +19,14 @@ final readonly class FeedLanguageResolver
     ) {
     }
 
-    public function languageFor(Feed $feed, ParsedFeedModel $parsed): ?FeedLanguage
+    public function resolveLanguage(Feed $feed, ParsedFeedModel $parsed): ?FeedLanguage
     {
         if (null !== $feed->getLanguage() || !SourceFormat::carriesFeedLanguage($feed->getSourceFormat())) {
             return $feed->getLanguage();
         }
 
         return FeedLanguage::fromTag($parsed->declaredLanguage ?? '')
-            ?? $this->guess->bestFor(self::guessText($parsed));
+            ?? $this->guess->detectLanguage(self::guessText($parsed));
     }
 
     private static function guessText(ParsedFeedModel $parsed): string

@@ -24,7 +24,7 @@ final class FeedLaneTest extends TestCase
         $feed->recordCacheValidators('"v1"', 'Mon, 20 Jul 2026 08:30:00 GMT');
         $lane = new FeedLane(2);
 
-        $tickets = iterator_to_array($lane->ticketsFor($feed));
+        $tickets = iterator_to_array($lane->issueTickets($feed));
 
         self::assertSame([1], array_keys($tickets));
         self::assertSame(ResponseExchangeKind::Feed, $tickets[1]->exchange);

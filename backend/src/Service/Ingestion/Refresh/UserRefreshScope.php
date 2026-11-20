@@ -29,10 +29,10 @@ final readonly class UserRefreshScope
     ) {
     }
 
-    public function requestFor(int $userId, ?int $feedId, ?int $tagId): RefreshRequestModel
+    public function resolveRequest(int $userId, ?int $feedId, ?int $tagId): RefreshRequestModel
     {
         if (null !== $feedId) {
-            return $this->forFeed($userId, $feedId);
+            return $this->buildFeedRequest($userId, $feedId);
         }
 
         if (null !== $tagId) {
@@ -44,22 +44,22 @@ final readonly class UserRefreshScope
         return RefreshRequestModel::forUser($userId, new EveryFeedTargetModel(), self::BUDGET_SECONDS);
     }
 
-    public function requestForNetwork(int $userId, NetworkScope $networkScope): RefreshRequestModel
+    public function buildNetworkRequest(int $userId, NetworkScope $networkScope): RefreshRequestModel
     {
         return RefreshRequestModel::forUser($userId, new NetworkTargetModel($networkScope), self::BUDGET_SECONDS);
     }
 
-    public function requestForFeedGroup(int $userId, FeedGroup $feedGroup): RefreshRequestModel
+    public function buildFeedGroupRequest(int $userId, FeedGroup $feedGroup): RefreshRequestModel
     {
         return RefreshRequestModel::forUser($userId, new FeedGroupTargetModel($feedGroup), self::BUDGET_SECONDS);
     }
 
-    public function requestForNeverFetched(int $userId): RefreshRequestModel
+    public function buildNeverFetchedRequest(int $userId): RefreshRequestModel
     {
         return RefreshRequestModel::forUser($userId, new NeverFetchedTargetModel(), self::BUDGET_SECONDS);
     }
 
-    private function forFeed(int $userId, int $feedId): RefreshRequestModel
+    private function buildFeedRequest(int $userId, int $feedId): RefreshRequestModel
     {
         if (!$this->subscriptions->existsForUserAndFeed($userId, $feedId)) {
             throw new RecordNotFoundException('No such subscription.');

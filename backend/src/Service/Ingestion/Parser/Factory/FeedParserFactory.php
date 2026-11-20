@@ -21,7 +21,7 @@ final readonly class FeedParserFactory
     ) {
     }
 
-    public function parserFor(\DOMElement $root): FeedFormatParserInterface
+    public function selectParser(\DOMElement $root): FeedFormatParserInterface
     {
         foreach ($this->parsers as $parser) {
             if ($parser->supports($root)) {

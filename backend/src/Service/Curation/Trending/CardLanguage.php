@@ -19,9 +19,9 @@ final readonly class CardLanguage
     public function resolveLanguage(string $text, ?FeedLanguage $postLanguage): ?FeedLanguage
     {
         if ($postLanguage === null) {
-            return $this->languageGuess->bestFor($text);
+            return $this->languageGuess->detectLanguage($text);
         }
 
-        return $this->languageGuess->confidentFor($text) ?? $postLanguage;
+        return $this->languageGuess->detectConfidentLanguage($text) ?? $postLanguage;
     }
 }

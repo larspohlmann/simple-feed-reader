@@ -11,7 +11,7 @@ final class UndeclaredPrefixes
 {
     private const string ROOT_START_TAG = '/<(?![?!])[A-Za-z_][\w.:-]*/';
 
-    public static function declaredIn(string $xml): string
+    public static function addMissingDeclarations(string $xml): string
     {
         $declarations = self::missingDeclarations($xml);
         if ($declarations === '') {
