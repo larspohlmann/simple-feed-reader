@@ -91,6 +91,17 @@ final class LemmyCommentsSourceTest extends KernelTestCase
         return $this->source->read($this->requestFor($entry), $this->fetch($entry)->body)->comments;
     }
 
+    private function requireComment(string $url): EntryCommentModel
+    {
+        foreach ($this->comments() as $comment) {
+            if ($url === $comment->url) {
+                return $comment;
+            }
+        }
+
+        self::fail('No comment at ' . $url);
+    }
+
     private function fetch(Entry $entry): CommentsAnswerModel
     {
         return $this->source->fetch($this->requestFor($entry));
@@ -256,10 +267,7 @@ final class LemmyCommentsSourceTest extends KernelTestCase
                 ['https://sh.itjust.works/comment/28579580', 1],
                 ['https://piefed.ca/comment/7077799', 0],
             ],
-            array_map(
-                static fn (EntryCommentModel $comment): array => [$comment->url, $comment->depth],
-                $this->comments(),
-            ),
+            self::urlsAndDepths($this->comments()),
         );
     }
 
@@ -419,19 +427,19 @@ final class LemmyCommentsSourceTest extends KernelTestCase
 
     public function testACommenterIsNamedLinkedAndPictured(): void
     {
-        $comments = $this->comments();
+        $comment = $this->requireComment('https://piefed.ca/comment/7077799');
 
-        self::assertSame('ZeroCool', $comments[6]->author->name);
-        self::assertSame('@ZeroCool@piefed.ca', $comments[6]->author->handle);
-        self::assertSame('https://piefed.ca/u/ZeroCool', $comments[6]->author->profileUrl);
-        self::assertSame('https://media.piefed.ca/users/1N/ki/1Nkix9Rh7H5O55T.jpg', $comments[6]->author->avatarUrl);
-        self::assertSame('Pika', $comments[3]->author->name);
-        self::assertEquals(new \DateTimeImmutable('2026-11-14 08:18:08.294711'), $comments[6]->publishedAt);
+        self::assertSame('ZeroCool', $comment->author->name);
+        self::assertSame('@ZeroCool@piefed.ca', $comment->author->handle);
+        self::assertSame('https://piefed.ca/u/ZeroCool', $comment->author->profileUrl);
+        self::assertSame('https://media.piefed.ca/users/1N/ki/1Nkix9Rh7H5O55T.jpg', $comment->author->avatarUrl);
+        self::assertSame('Pika', $this->requireComment('https://sh.itjust.works/comment/28577929')->author->name);
+        self::assertEquals(new \DateTimeImmutable('2026-11-14 08:18:08.294711'), $comment->publishedAt);
     }
 
     public function testACommenterWithoutADisplayNameIsNamedByAccount(): void
     {
-        $author = $this->comments()[4]->author;
+        $author = $this->requireComment('https://lemmy.world/comment/26859426')->author;
 
         self::assertSame('lemonbun', $author->name);
         self::assertSame('@lemonbun@lemmy.world', $author->handle);
@@ -440,9 +448,14 @@ final class LemmyCommentsSourceTest extends KernelTestCase
 
     public function testMarksThePostAuthorsReplies(): void
     {
+        $byAuthor = array_filter(
+            $this->comments(),
+            static fn (EntryCommentModel $comment): bool => $comment->byEntryAuthor,
+        );
+
         self::assertSame(
-            [true, false, false, false, false, false, false],
-            array_map(static fn (EntryCommentModel $comment): bool => $comment->byEntryAuthor, $this->comments()),
+            ['https://lemmy.world/comment/26858462'],
+            array_values(array_map(static fn (EntryCommentModel $comment): ?string => $comment->url, $byAuthor)),
         );
     }
 
