@@ -12,7 +12,7 @@ final class JsonLd
     private const string SCRIPT_SELECTOR = 'script[type="application/ld+json"]';
 
     /** @return iterable<Element> */
-    public static function scriptsIn(HTMLDocument $document): iterable
+    public static function findScripts(HTMLDocument $document): iterable
     {
         yield from $document->querySelectorAll(self::SCRIPT_SELECTOR);
     }
@@ -35,12 +35,12 @@ final class JsonLd
      *
      * @return iterable<array<mixed>>
      */
-    public static function nodesIn(array $block): iterable
+    public static function walkNodes(array $block): iterable
     {
         yield $block;
         foreach ($block as $child) {
             if (\is_array($child)) {
-                yield from self::nodesIn($child);
+                yield from self::walkNodes($child);
             }
         }
     }

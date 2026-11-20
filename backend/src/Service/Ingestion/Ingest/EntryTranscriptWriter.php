@@ -28,7 +28,7 @@ final readonly class EntryTranscriptWriter
     private function attachOne(Entry $entry, ParsedEntryModel $parsed): void
     {
         $declared = $parsed->media->mediaBundle?->transcript;
-        $url = AbsoluteHttpUrl::orNullWithin($declared?->url, EntryTranscript::URL_MAX_LENGTH);
+        $url = AbsoluteHttpUrl::keepIfAbsoluteWithin($declared?->url, EntryTranscript::URL_MAX_LENGTH);
         if ($declared === null || $url === null) {
             return;
         }

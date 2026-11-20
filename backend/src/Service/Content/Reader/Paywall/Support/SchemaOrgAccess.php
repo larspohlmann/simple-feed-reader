@@ -20,8 +20,8 @@ final readonly class SchemaOrgAccess
     public static function declaredIn(HTMLDocument $rawDocument): AccessDeclaration
     {
         $sawDeclaration = false;
-        foreach (JsonLd::scriptsIn($rawDocument) as $script) {
-            foreach (JsonLd::nodesIn(JsonLd::decode($script)) as $node) {
+        foreach (JsonLd::findScripts($rawDocument) as $script) {
+            foreach (JsonLd::walkNodes(JsonLd::decode($script)) as $node) {
                 $declared = self::asBoolean($node[self::KEY] ?? null);
                 if ($declared === false) {
                     return AccessDeclaration::Paywalled;

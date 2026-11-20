@@ -13,7 +13,7 @@ use Webauthn\PublicKeyCredentialRequestOptions;
 /**
  * Login options: discoverable credentials only (no e-mail, no allow list, identical for every caller) and user
  * verification required, the passkey being the account's only factor. AssertionVerifier rebuilds them through
- * optionsFor(), so the two cannot drift. Why: docs/security.md#passkey-ceremonies
+ * buildOptions(), so the two cannot drift. Why: docs/security.md#passkey-ceremonies
  */
 final readonly class AssertionOptionsFactory
 {
@@ -36,12 +36,12 @@ final readonly class AssertionOptionsFactory
         $challenge = random_bytes(self::CHALLENGE_LENGTH_BYTES);
 
         return [
-            'options' => $this->ceremony->encode($this->optionsFor($challenge)),
+            'options' => $this->ceremony->encode($this->buildOptions($challenge)),
             'handle' => $this->challengeStore->issue($challenge, userId: null, userHandle: null),
         ];
     }
 
-    public function optionsFor(string $challenge): PublicKeyCredentialRequestOptions
+    public function buildOptions(string $challenge): PublicKeyCredentialRequestOptions
     {
         return PublicKeyCredentialRequestOptions::create(
             challenge: $challenge,

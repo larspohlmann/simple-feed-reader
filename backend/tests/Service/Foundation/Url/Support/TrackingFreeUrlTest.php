@@ -366,8 +366,8 @@ final class TrackingFreeUrlTest extends TestCase
 
     public function testNoUrlStaysNone(): void
     {
-        self::assertNull(TrackingFreeUrl::orNull(null));
-        self::assertSame('https://example.com/a', TrackingFreeUrl::orNull('https://example.com/a?gclid=1'));
+        self::assertNull(TrackingFreeUrl::stripTrackingIfSet(null));
+        self::assertSame('https://example.com/a', TrackingFreeUrl::stripTrackingIfSet('https://example.com/a?gclid=1'));
     }
 
     /** @return iterable<string, array{string, string, string}> */

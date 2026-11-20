@@ -83,7 +83,7 @@ final class PodcastArtwork
     {
         $href = trim($element->getAttribute('href'));
 
-        return HttpsImageUrl::orNullUpgrading($href) === null ? null : $href;
+        return HttpsImageUrl::parseUrlUpgradingHttp($href) === null ? null : $href;
     }
 
     private function __construct()

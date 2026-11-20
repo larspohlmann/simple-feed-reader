@@ -61,7 +61,7 @@ final class HostLogFileHandlerFactoryTest extends TestCase
 
     public function testFallsBackToTheSharedNameWithoutAHost(): void
     {
-        self::assertSame('/logs/prod.log', HostLogFileHandlerFactory::logFileFor('/logs', 'prod', false));
-        self::assertSame('/logs/prod.log', HostLogFileHandlerFactory::logFileFor('/logs', 'prod', ''));
+        self::assertSame('/logs/prod.log', HostLogFileHandlerFactory::buildLogFilePath('/logs', 'prod', false));
+        self::assertSame('/logs/prod.log', HostLogFileHandlerFactory::buildLogFilePath('/logs', 'prod', ''));
     }
 }

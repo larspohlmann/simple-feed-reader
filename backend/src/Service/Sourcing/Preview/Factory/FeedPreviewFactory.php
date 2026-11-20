@@ -66,7 +66,7 @@ final readonly class FeedPreviewFactory
             return null;
         }
 
-        $url = HttpsImageUrl::orNull($image->url);
+        $url = HttpsImageUrl::parseUrl($image->url);
 
         return $url === null ? null : new DeclaredImageModel($url, $image->width, $image->height, $image->renditions);
     }

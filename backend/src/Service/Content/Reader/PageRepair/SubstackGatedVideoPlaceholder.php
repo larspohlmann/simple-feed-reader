@@ -98,6 +98,6 @@ final readonly class SubstackGatedVideoPlaceholder implements PageRepairInterfac
 
     private function httpUrlFrom(HTMLDocument $page, string $selector, string $attribute): ?string
     {
-        return AbsoluteHttpUrl::orNull($page->querySelector($selector)?->getAttribute($attribute));
+        return AbsoluteHttpUrl::keepIfAbsolute($page->querySelector($selector)?->getAttribute($attribute));
     }
 }

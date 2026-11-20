@@ -31,36 +31,36 @@ final class AbsoluteHttpUrlTest extends TestCase
 
     public function testOrNullKeepsAnAbsoluteHttpUrl(): void
     {
-        self::assertSame('https://example.org/a', AbsoluteHttpUrl::orNull('https://example.org/a'));
+        self::assertSame('https://example.org/a', AbsoluteHttpUrl::keepIfAbsolute('https://example.org/a'));
     }
 
     public function testOrNullDropsAnythingElse(): void
     {
-        self::assertNull(AbsoluteHttpUrl::orNull('/a/b'));
-        self::assertNull(AbsoluteHttpUrl::orNull(null));
+        self::assertNull(AbsoluteHttpUrl::keepIfAbsolute('/a/b'));
+        self::assertNull(AbsoluteHttpUrl::keepIfAbsolute(null));
     }
 
     public function testWithinALengthKeepsAUrlThatFitsAndDropsOneThatDoesNot(): void
     {
-        self::assertSame('https://example.org/a', AbsoluteHttpUrl::orNullWithin('https://example.org/a', 21));
-        self::assertNull(AbsoluteHttpUrl::orNullWithin('https://example.org/ab', 21));
-        self::assertNull(AbsoluteHttpUrl::orNullWithin('javascript:alert(1)', 100));
-        self::assertNull(AbsoluteHttpUrl::orNullWithin(null, 100));
+        self::assertSame('https://example.org/a', AbsoluteHttpUrl::keepIfAbsoluteWithin('https://example.org/a', 21));
+        self::assertNull(AbsoluteHttpUrl::keepIfAbsoluteWithin('https://example.org/ab', 21));
+        self::assertNull(AbsoluteHttpUrl::keepIfAbsoluteWithin('javascript:alert(1)', 100));
+        self::assertNull(AbsoluteHttpUrl::keepIfAbsoluteWithin(null, 100));
     }
 
     public function testTheLengthIsCountedInCharactersNotBytes(): void
     {
         $url = 'https://example.org/' . str_repeat('é', 5);
 
-        self::assertSame($url, AbsoluteHttpUrl::orNullWithin($url, 25));
+        self::assertSame($url, AbsoluteHttpUrl::keepIfAbsoluteWithin($url, 25));
     }
 
     public function testHttpsOrNullKeepsOnlyHttpsInAnyCase(): void
     {
-        self::assertSame('HTTPS://example.org/a', AbsoluteHttpUrl::httpsOrNull('HTTPS://example.org/a'));
-        self::assertNull(AbsoluteHttpUrl::httpsOrNull('http://example.org/a'));
-        self::assertNull(AbsoluteHttpUrl::httpsOrNull('77'));
-        self::assertNull(AbsoluteHttpUrl::httpsOrNull(null));
+        self::assertSame('HTTPS://example.org/a', AbsoluteHttpUrl::keepIfHttps('HTTPS://example.org/a'));
+        self::assertNull(AbsoluteHttpUrl::keepIfHttps('http://example.org/a'));
+        self::assertNull(AbsoluteHttpUrl::keepIfHttps('77'));
+        self::assertNull(AbsoluteHttpUrl::keepIfHttps(null));
     }
 
     public function testHostAndPathAreReadFromAWebUrlWithTheHostLowerCased(): void

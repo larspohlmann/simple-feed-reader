@@ -20,7 +20,7 @@ final class JsonLdTest extends TestCase
             . '<body><script type="application/ld+json">[{"d":4}]</script></body></html>',
         );
 
-        $scripts = iterator_to_array(JsonLd::scriptsIn($document));
+        $scripts = iterator_to_array(JsonLd::findScripts($document));
 
         self::assertCount(2, $scripts);
         self::assertSame(['a' => 1], JsonLd::decode($scripts[0]));
@@ -42,7 +42,7 @@ final class JsonLdTest extends TestCase
 
     public function testABlockThatIsNotAJsonObjectOrArrayDecodesToNothing(): void
     {
-        $scripts = iterator_to_array(JsonLd::scriptsIn($this->document(
+        $scripts = iterator_to_array(JsonLd::findScripts($this->document(
             '<script type="application/ld+json">{not json</script>'
             . '<script type="application/ld+json">"a string"</script>'
             . '<script type="application/ld+json">42</script>',
@@ -58,7 +58,7 @@ final class JsonLdTest extends TestCase
         $block = ['@graph' => [$article, 'a bare string', $page]];
 
         $nodes = [];
-        foreach (JsonLd::nodesIn($block) as $node) {
+        foreach (JsonLd::walkNodes($block) as $node) {
             $nodes[] = $node;
         }
 

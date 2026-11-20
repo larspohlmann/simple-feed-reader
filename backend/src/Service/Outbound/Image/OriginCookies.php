@@ -58,13 +58,13 @@ final readonly class OriginCookies
             return '';
         }
 
-        $cookies = $this->cookiesFor($landed, $root);
+        $cookies = $this->buildCookieHeader($landed, $root);
         $landed->response->cancel();
 
         return $cookies;
     }
 
-    private function cookiesFor(LandedResponse $landed, string $root): string
+    private function buildCookieHeader(LandedResponse $landed, string $root): string
     {
         if (!$landed->isSuccess() || HostKey::forUrl($landed->url) !== HostKey::forUrl($root)) {
             return '';

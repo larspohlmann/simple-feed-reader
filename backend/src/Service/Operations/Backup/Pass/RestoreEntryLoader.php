@@ -137,7 +137,7 @@ final class RestoreEntryLoader
         return $this->entryStatesCreated;
     }
 
-    private function stateFor(EntryStateLine $line, int $entryId): EntryState
+    private function buildState(EntryStateLine $line, int $entryId): EntryState
     {
         $entry = $this->entityManager->getReference(Entry::class, $entryId)
             ?? throw new \LogicException('An entry this restore just wrote has no reference.');
@@ -270,7 +270,7 @@ final class RestoreEntryLoader
                 continue;
             }
 
-            $this->entityManager->persist($this->stateFor($line, $entryId));
+            $this->entityManager->persist($this->buildState($line, $entryId));
             ++$this->entryStatesCreated;
         }
 

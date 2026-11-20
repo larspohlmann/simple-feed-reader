@@ -29,7 +29,7 @@ final class StorableQuotedPost
             $quote->url,
             $name === '' ? $handle : $name,
             $handle,
-            HttpsImageUrl::orNull($quote->authorAvatarUrl),
+            HttpsImageUrl::parseUrl($quote->authorAvatarUrl),
             $quote->postedAt?->setTimezone(new \DateTimeZone('UTC')),
             WordBoundary::clipped($quote->text, QuotedPostContent::TEXT_MAX),
             self::storableMedia($quote->media),
@@ -47,7 +47,7 @@ final class StorableQuotedPost
     {
         $kept = [];
         foreach ($media as $medium) {
-            if (HttpsImageUrl::orNull($medium->url) !== $medium->url) {
+            if (HttpsImageUrl::parseUrl($medium->url) !== $medium->url) {
                 continue;
             }
             $kept[] = new EntryMedium(
@@ -55,7 +55,7 @@ final class StorableQuotedPost
                 $medium->kind,
                 $medium->width,
                 $medium->height,
-                HttpsImageUrl::orNull($medium->previewImageUrl),
+                HttpsImageUrl::parseUrl($medium->previewImageUrl),
                 $medium->alt,
                 $medium->isAnimated,
             );

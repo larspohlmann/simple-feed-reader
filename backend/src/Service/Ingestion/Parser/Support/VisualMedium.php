@@ -23,7 +23,7 @@ final class VisualMedium
 
     private static function buildMedium(string $url, FeedMediaKind $kind, ?string $posterUrl): ?EntryMedium
     {
-        $secure = HttpsImageUrl::orNull($url);
+        $secure = HttpsImageUrl::parseUrl($url);
         if ($secure === null) {
             return null;
         }
@@ -33,7 +33,7 @@ final class VisualMedium
             FeedMediaKind::Video => new EntryMedium(
                 $secure,
                 VisualMediaKind::Video->value,
-                previewImageUrl: HttpsImageUrl::orNull($posterUrl),
+                previewImageUrl: HttpsImageUrl::parseUrl($posterUrl),
             ),
             default => null,
         };

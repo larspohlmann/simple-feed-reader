@@ -13,7 +13,7 @@ final class TrackingFreeUrl
         return TrackedUrl::fromUrl($url)->cleaned();
     }
 
-    public static function orNull(?string $url): ?string
+    public static function stripTrackingIfSet(?string $url): ?string
     {
         return $url === null ? null : self::stripTracking($url);
     }

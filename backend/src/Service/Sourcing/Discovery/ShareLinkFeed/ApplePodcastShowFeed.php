@@ -69,6 +69,6 @@ final readonly class ApplePodcastShowFeed implements ShareLinkFeedInterface
 
         $feedUrl = $show['feedUrl'] ?? null;
 
-        return \is_string($feedUrl) ? AbsoluteHttpUrl::orNull($feedUrl) : null;
+        return \is_string($feedUrl) ? AbsoluteHttpUrl::keepIfAbsolute($feedUrl) : null;
     }
 }

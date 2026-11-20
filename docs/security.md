@@ -249,10 +249,10 @@ response. What must hold between and inside them:
 - **Single use is best-effort under concurrency.** PSR-6 has no compare-and-swap, so two simultaneous redemptions can
   both see the entry. Both racers present the same challenge and only one can pass the signature check: the argument
   `OAuthStateStore` makes for the OAuth flow (`docs/oauth-sign-in.md`).
-- **The user handle is minted once.** `PasskeyCredentials::userHandleFor()` returns the account's existing handle, or a
+- **The user handle is minted once.** `PasskeyCredentials::resolveUserHandle()` returns the account's existing handle, or a
   fresh random one while it has no credential. The handle shown at options time is the one the authenticator stores and
   returns at every login, so `RegistrationOptionsFactory::create()` stores it with the challenge and
-  `AttestationVerifier` reads it from the consumed challenge. Calling `userHandleFor()` again would mint a different
+  `AttestationVerifier` reads it from the consumed challenge. Calling `resolveUserHandle()` again would mint a different
   value and break discoverable login for every first passkey. A handle is 32 random bytes: never the e-mail
   (authenticators sync it to password managers) and never the account id (it would leak the account count and order).
 - **Order inside verification.** Both verifiers consume the challenge (the attestation also checks its owner) before
@@ -265,7 +265,7 @@ response. What must hold between and inside them:
   the client's. The signature-counter check is the library's (`CheckCounter` with `ThrowExceptionIfInvalid`, wired in
   `PasskeyCeremony::request()`); `AssertionVerifier` logs a counter that did not advance, a sign of a cloned
   authenticator or a replay.
-- **One options builder per ceremony.** Each factory's `optionsFor()` is the only place its resident-key and
+- **One options builder per ceremony.** Each factory's `buildOptions()` is the only place its resident-key and
   user-verification requirements live, shared by the options endpoint and the verifier, so the two cannot drift. User
   verification is required: the passkey is the account's only factor, and with `attestation: none` nothing else stops a
   caller from clearing the UV bit.

@@ -18,7 +18,8 @@ final class MastodonCommentPost
 
     public static function parseStatus(JsonNodeModel $status): ?CommentPostModel
     {
-        $address = AbsoluteHttpUrl::orNull($status->string('uri')) ?? AbsoluteHttpUrl::orNull($status->string('url'));
+        $address = AbsoluteHttpUrl::keepIfAbsolute($status->string('uri'))
+            ?? AbsoluteHttpUrl::keepIfAbsolute($status->string('url'));
 
         $counts = MastodonPostCounts::parseStatus($status);
         if (null === $address || null === $counts) {

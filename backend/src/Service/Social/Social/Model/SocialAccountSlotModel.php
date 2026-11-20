@@ -13,7 +13,7 @@ final readonly class SocialAccountSlotModel implements RequestSlotModelInterface
     {
     }
 
-    public function keyFor(string $url): string
+    public function buildKey(string $url): string
     {
         return (string) $this->accountId;
     }

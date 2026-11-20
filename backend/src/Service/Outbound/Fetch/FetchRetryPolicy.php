@@ -34,7 +34,7 @@ final readonly class FetchRetryPolicy
             return null;
         }
 
-        $fallback = $this->directFallbackFor($attempt);
+        $fallback = $this->findDirectFallback($attempt);
         if (null !== $fallback) {
             return $fallback;
         }
@@ -49,10 +49,10 @@ final readonly class FetchRetryPolicy
     /** An error status can be tied to the route: the one direct fallback, else the next address family, may differ. */
     public function nextRouteAfterErrorStatus(FetchAttemptModel $attempt): ?FetchAttemptModel
     {
-        return $this->directFallbackFor($attempt) ?? ($attempt->isProxied() ? null : $this->overNextFamily($attempt));
+        return $this->findDirectFallback($attempt) ?? ($attempt->isProxied() ? null : $this->overNextFamily($attempt));
     }
 
-    public function directFallbackFor(FetchAttemptModel $attempt): ?FetchAttemptModel
+    public function findDirectFallback(FetchAttemptModel $attempt): ?FetchAttemptModel
     {
         $proxy = $attempt->proxy;
 

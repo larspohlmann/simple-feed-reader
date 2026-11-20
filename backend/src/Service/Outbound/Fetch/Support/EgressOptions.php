@@ -82,7 +82,7 @@ final class EgressOptions
      */
     private static function readExtraOptions(array $options): array
     {
-        return self::arrayAt($options, 'extra');
+        return self::readArray($options, 'extra');
     }
 
     /**
@@ -90,7 +90,7 @@ final class EgressOptions
      *
      * @return array<mixed>
      */
-    private static function arrayAt(array $options, string $key): array
+    private static function readArray(array $options, string $key): array
     {
         $value = $options[$key] ?? [];
 
@@ -104,7 +104,7 @@ final class EgressOptions
      */
     private static function readCurlOptions(array $options): array
     {
-        return self::arrayAt(self::readExtraOptions($options), 'curl');
+        return self::readArray(self::readExtraOptions($options), 'curl');
     }
 
     private static function connectToHost(string $host): string

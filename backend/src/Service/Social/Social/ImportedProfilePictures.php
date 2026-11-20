@@ -46,6 +46,6 @@ final readonly class ImportedProfilePictures
             return null;
         }
 
-        return AbsoluteHttpUrl::orNullWithin($avatars->readAvatar($identity), Feed::IMAGE_URL_MAX);
+        return AbsoluteHttpUrl::keepIfAbsoluteWithin($avatars->readAvatar($identity), Feed::IMAGE_URL_MAX);
     }
 }

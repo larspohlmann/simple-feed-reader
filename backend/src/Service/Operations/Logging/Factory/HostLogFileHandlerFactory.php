@@ -28,7 +28,7 @@ final readonly class HostLogFileHandlerFactory
     public function create(): RotatingFileHandler
     {
         $handler = new RotatingFileHandler(
-            self::logFileFor($this->logsDirectory, $this->environment, gethostname()),
+            self::buildLogFilePath($this->logsDirectory, $this->environment, gethostname()),
             self::KEPT_DAYS,
             Level::Info,
         );
@@ -38,7 +38,7 @@ final readonly class HostLogFileHandlerFactory
         return $handler;
     }
 
-    public static function logFileFor(string $logsDirectory, string $environment, string|false $host): string
+    public static function buildLogFilePath(string $logsDirectory, string $environment, string|false $host): string
     {
         if ($host === false || $host === '') {
             return \sprintf('%s/%s.log', $logsDirectory, $environment);

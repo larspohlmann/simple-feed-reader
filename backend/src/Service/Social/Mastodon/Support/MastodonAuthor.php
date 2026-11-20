@@ -55,13 +55,13 @@ final class MastodonAuthor
 
     public static function avatar(JsonNodeModel $account): ?string
     {
-        return AbsoluteHttpUrl::orNull($account->string('avatar_static'))
-            ?? AbsoluteHttpUrl::orNull($account->string('avatar'));
+        return AbsoluteHttpUrl::keepIfAbsolute($account->string('avatar_static'))
+            ?? AbsoluteHttpUrl::keepIfAbsolute($account->string('avatar'));
     }
 
     public static function profile(JsonNodeModel $account): ?string
     {
-        return AbsoluteHttpUrl::orNull($account->string('url'));
+        return AbsoluteHttpUrl::keepIfAbsolute($account->string('url'));
     }
 
     private function __construct()

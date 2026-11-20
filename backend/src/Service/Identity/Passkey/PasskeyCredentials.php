@@ -30,7 +30,7 @@ final readonly class PasskeyCredentials
      *
      * @throws RandomException
      */
-    public function userHandleFor(User $user): string
+    public function resolveUserHandle(User $user): string
     {
         return $this->sharedHandle($this->passkeys->findForUser($user)) ?? self::randomHandle();
     }
@@ -53,7 +53,7 @@ final readonly class PasskeyCredentials
      *
      * @return list<PublicKeyCredentialDescriptor>
      */
-    public function excludeListFor(User $user): array
+    public function loadExcludeList(User $user): array
     {
         return array_map(
             self::toDescriptor(...),

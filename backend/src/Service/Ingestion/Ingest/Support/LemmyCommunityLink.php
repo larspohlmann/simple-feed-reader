@@ -15,7 +15,7 @@ final class LemmyCommunityLink
     /** @return PostCommunity|null null unless the link is an https community page */
     public static function parseCommunity(string $href): ?PostCommunity
     {
-        $httpsHref = AbsoluteHttpUrl::httpsOrNull($href);
+        $httpsHref = AbsoluteHttpUrl::keepIfHttps($href);
         $host = null === $httpsHref ? null : UrlOrigin::hostWithPort($httpsHref);
         $path = null === $httpsHref ? '' : (string) parse_url($httpsHref, \PHP_URL_PATH);
         if (null === $host || preg_match(self::COMMUNITY_PATH, $path, $matches) !== 1) {

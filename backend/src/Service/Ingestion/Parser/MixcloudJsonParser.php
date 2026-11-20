@@ -29,7 +29,7 @@ final readonly class MixcloudJsonParser
             $this->text($owner, 'name'),
             $this->text($owner, 'url'),
             null,
-            HttpsImageUrl::orNull($this->text($this->record($owner, 'pictures'), 'large')),
+            HttpsImageUrl::parseUrl($this->text($this->record($owner, 'pictures'), 'large')),
             $this->entries($shows),
         );
     }

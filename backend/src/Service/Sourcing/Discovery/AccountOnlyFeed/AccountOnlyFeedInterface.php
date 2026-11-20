@@ -11,5 +11,5 @@ use App\Service\Sourcing\Discovery\Model\FeedCandidateModel;
 interface AccountOnlyFeedInterface
 {
     /** @return FeedCandidateModel|null null when the URL is not this source's to offer */
-    public function candidateFor(User $user, string $url): ?FeedCandidateModel;
+    public function findCandidate(User $user, string $url): ?FeedCandidateModel;
 }

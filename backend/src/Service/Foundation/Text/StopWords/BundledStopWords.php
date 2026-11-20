@@ -23,11 +23,11 @@ final class BundledStopWords implements StopWordsInterface, ResetInterface
         $this->lists ??= require $this->path;
         $words = \is_array($this->lists) ? $this->lists[$language->value] ?? null : null;
         if (!\is_array($words) || !array_is_list($words)) {
-            throw $this->noListFor($language);
+            throw $this->buildMissingListException($language);
         }
         $checked = [];
         foreach ($words as $word) {
-            $checked[] = \is_string($word) ? $word : throw $this->noListFor($language);
+            $checked[] = \is_string($word) ? $word : throw $this->buildMissingListException($language);
         }
 
         return $checked;
@@ -38,7 +38,7 @@ final class BundledStopWords implements StopWordsInterface, ResetInterface
         $this->lists = null;
     }
 
-    private function noListFor(FeedLanguage $language): \UnexpectedValueException
+    private function buildMissingListException(FeedLanguage $language): \UnexpectedValueException
     {
         return new \UnexpectedValueException(\sprintf('%s holds no word list for %s', $this->path, $language->value));
     }

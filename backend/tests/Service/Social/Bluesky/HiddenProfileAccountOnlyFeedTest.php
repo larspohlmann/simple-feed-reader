@@ -46,7 +46,7 @@ final class HiddenProfileAccountOnlyFeedTest extends DbTestCase
 
         self::assertEquals(
             new FeedCandidateModel(self::PAGE, 'Rusty', SourceFormat::BLUESKY_API, NoPreviewReason::HiddenProfile),
-            $this->feed()->candidateFor($this->user, self::PAGE),
+            $this->feed()->findCandidate($this->user, self::PAGE),
         );
     }
 
@@ -59,7 +59,7 @@ final class HiddenProfileAccountOnlyFeedTest extends DbTestCase
                 SourceFormat::BLUESKY_API,
                 NoPreviewReason::ConnectBlueskyAccount,
             ),
-            $this->feed()->candidateFor($this->user, self::PAGE),
+            $this->feed()->findCandidate($this->user, self::PAGE),
         );
     }
 
@@ -71,18 +71,18 @@ final class HiddenProfileAccountOnlyFeedTest extends DbTestCase
 
         self::assertSame(
             NoPreviewReason::ConnectBlueskyAccount,
-            $this->feed()->candidateFor($this->user, self::PAGE)?->noPreviewReason,
+            $this->feed()->findCandidate($this->user, self::PAGE)?->noPreviewReason,
         );
     }
 
     public function testAPublicProfileIsLeftToDiscovery(): void
     {
-        self::assertNull($this->feed()->candidateFor($this->user, 'https://bsky.app/profile/bob.bsky.social'));
+        self::assertNull($this->feed()->findCandidate($this->user, 'https://bsky.app/profile/bob.bsky.social'));
     }
 
     public function testAnyOtherUrlIsLeftToDiscoveryUnasked(): void
     {
-        self::assertNull($this->feed()->candidateFor($this->user, 'https://example.com/feed'));
+        self::assertNull($this->feed()->findCandidate($this->user, 'https://example.com/feed'));
         self::assertSame([], $this->hiddenProfiles->asked);
     }
 
@@ -91,7 +91,7 @@ final class HiddenProfileAccountOnlyFeedTest extends DbTestCase
         $failure = new SocialNetworkUnreachableException('down');
         $this->hiddenProfiles->failure = $failure;
 
-        self::assertNull($this->feed()->candidateFor($this->user, self::PAGE));
+        self::assertNull($this->feed()->findCandidate($this->user, self::PAGE));
         self::assertSame('warning', $this->logger->records[0]['level'] ?? null);
         self::assertSame($failure, $this->logger->records[0]['context']['exception'] ?? null);
     }

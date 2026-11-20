@@ -107,7 +107,7 @@ final readonly class LemmyProfilePictures implements ProfilePictureSourceInterfa
         $answer = $this->fetchAnswer($host, '/api/v3/community?name=' . rawurlencode($name), 'community_view');
         $icon = $answer->node('community_view')->node('community')->string('icon');
 
-        return HttpsImageUrl::orNull($icon);
+        return HttpsImageUrl::parseUrl($icon);
     }
 
     /**
@@ -125,7 +125,7 @@ final readonly class LemmyProfilePictures implements ProfilePictureSourceInterfa
             return self::MOUSE;
         }
 
-        return HttpsImageUrl::orNull($avatar);
+        return HttpsImageUrl::parseUrl($avatar);
     }
 
     /**

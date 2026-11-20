@@ -30,7 +30,7 @@ final class BlueskyEmbedMedia
 
     public static function image(JsonNodeModel $image): ?ParsedMediumModel
     {
-        $url = HttpsImageUrl::orNull($image->string('fullsize'));
+        $url = HttpsImageUrl::parseUrl($image->string('fullsize'));
         if ($url === null) {
             return null;
         }
@@ -47,7 +47,7 @@ final class BlueskyEmbedMedia
 
     public static function video(JsonNodeModel $embed): ?ParsedMediumModel
     {
-        $playlist = HttpsImageUrl::orNull($embed->string('playlist'));
+        $playlist = HttpsImageUrl::parseUrl($embed->string('playlist'));
         if ($playlist === null) {
             return null;
         }
@@ -58,14 +58,14 @@ final class BlueskyEmbedMedia
             VisualMediaKind::Video,
             $ratio->int('width'),
             $ratio->int('height'),
-            HttpsImageUrl::orNull($embed->string('thumbnail')),
+            HttpsImageUrl::parseUrl($embed->string('thumbnail')),
             $embed->string('alt'),
         );
     }
 
     public static function gif(JsonNodeModel $external): ?ParsedMediumModel
     {
-        $url = HttpsImageUrl::orNull($external->string('uri'));
+        $url = HttpsImageUrl::parseUrl($external->string('uri'));
         if ($url === null || !self::isGifPath($url)) {
             return null;
         }
@@ -81,7 +81,7 @@ final class BlueskyEmbedMedia
             VisualMediaKind::Image,
             $width,
             $height,
-            HttpsImageUrl::orNull($external->string('thumb')),
+            HttpsImageUrl::parseUrl($external->string('thumb')),
             self::gifAltText($external),
             isAnimated: true,
         );

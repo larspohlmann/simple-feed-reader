@@ -12,7 +12,8 @@ final class MastodonStatusUrl
 {
     public static function resolveUrl(JsonNodeModel $status): ?string
     {
-        return AbsoluteHttpUrl::orNull($status->string('url')) ?? AbsoluteHttpUrl::orNull($status->string('uri'));
+        return AbsoluteHttpUrl::keepIfAbsolute($status->string('url'))
+            ?? AbsoluteHttpUrl::keepIfAbsolute($status->string('uri'));
     }
 
     private function __construct()

@@ -22,7 +22,7 @@ final readonly class MastodonPostAddressRule implements PostAddressRuleInterface
     {
         return SocialPostAddressModel::fromNullable(
             SocialNetwork::Mastodon,
-            AbsoluteHttpUrl::orNull($entry->getGuid()) ?? AbsoluteHttpUrl::orNull($entry->getUrl()),
+            AbsoluteHttpUrl::keepIfAbsolute($entry->getGuid()) ?? AbsoluteHttpUrl::keepIfAbsolute($entry->getUrl()),
         );
     }
 
@@ -33,7 +33,7 @@ final readonly class MastodonPostAddressRule implements PostAddressRuleInterface
 
     public function parseReply(string $address): ?SocialPostAddressModel
     {
-        return SocialPostAddressModel::fromNullable(SocialNetwork::Mastodon, AbsoluteHttpUrl::orNull($address));
+        return SocialPostAddressModel::fromNullable(SocialNetwork::Mastodon, AbsoluteHttpUrl::keepIfAbsolute($address));
     }
 
     public function parsePostUrl(string $url): ?SocialPostAddressModel

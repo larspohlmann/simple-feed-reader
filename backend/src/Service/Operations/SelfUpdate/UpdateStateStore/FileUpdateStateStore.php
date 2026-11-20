@@ -31,7 +31,7 @@ final readonly class FileUpdateStateStore implements UpdateStateStoreInterface
     ) {
     }
 
-    public function heartbeatAt(): ?\DateTimeImmutable
+    public function findHeartbeat(): ?\DateTimeImmutable
     {
         $seconds = trim($this->contents(self::HEARTBEAT) ?? '');
         if (!ctype_digit($seconds)) {

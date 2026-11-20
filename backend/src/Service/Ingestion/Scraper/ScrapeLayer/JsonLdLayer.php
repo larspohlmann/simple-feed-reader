@@ -17,7 +17,7 @@ final readonly class JsonLdLayer implements ScrapeLayerInterface
     public function extract(HTMLDocument $document, string $baseUrl): array
     {
         $articles = new JsonLdArticles(new PageUrls($baseUrl));
-        foreach (JsonLd::scriptsIn($document) as $script) {
+        foreach (JsonLd::findScripts($document) as $script) {
             $articles->collect(JsonLd::decode($script));
             if ($articles->isFull()) {
                 break;

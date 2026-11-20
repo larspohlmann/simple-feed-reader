@@ -38,7 +38,7 @@ final readonly class LinkLabels
         return null;
     }
 
-    public function nameFor(?string $ownLabel): ?string
+    public function resolveName(?string $ownLabel): ?string
     {
         if (null === $this->pageName || null === $ownLabel || 1 !== preg_match(self::GENERIC_LABEL, $ownLabel)) {
             return $ownLabel;

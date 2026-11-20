@@ -32,7 +32,7 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
     public function find(RawPageModel $page): array
     {
         $found = [];
-        foreach (JsonLd::scriptsIn($page->document) as $script) {
+        foreach (JsonLd::findScripts($page->document) as $script) {
             if ($this->furniture->holds($script)) {
                 continue;
             }
@@ -58,7 +58,7 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
     private function declarationsIn(array $block): array
     {
         $declarations = [];
-        foreach (JsonLd::nodesIn($block) as $node) {
+        foreach (JsonLd::walkNodes($block) as $node) {
             $urls = $this->urlsIn($node);
             if ($urls !== []) {
                 $declarations[] = ['urls' => $urls, 'poster' => $this->thumbnailIn($node)];

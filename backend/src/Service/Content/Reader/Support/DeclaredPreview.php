@@ -43,7 +43,7 @@ final class DeclaredPreview
     {
         $declared = self::declared($meta, 'og:image', 'twitter:image');
 
-        return HttpsImageUrl::orNullUpgrading(new PageUrls($finalUrl)->httpUrl($declared));
+        return HttpsImageUrl::parseUrlUpgradingHttp(new PageUrls($finalUrl)->httpUrl($declared));
     }
 
     /**

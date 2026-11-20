@@ -21,7 +21,7 @@ final class InMemoryUpdateStateStore implements UpdateStateStoreInterface
     ) {
     }
 
-    public function heartbeatAt(): ?\DateTimeImmutable
+    public function findHeartbeat(): ?\DateTimeImmutable
     {
         return $this->heartbeat;
     }

@@ -99,7 +99,7 @@ final class ResizerRungsTest extends TestCase
 
     public function testRungsCoverEachUncoveredTargetUpToTheLeadWidth(): void
     {
-        $rungs = new ResizerRungs(new StubGuardedImageProbe())->rungsFor(self::lead(800));
+        $rungs = new ResizerRungs(new StubGuardedImageProbe())->buildRungs(self::lead(800));
 
         self::assertEquals([
             new ImageRendition('https://9to5mac.com/wp-content/uploads/a.jpg?quality=82&w=264', 264),
@@ -109,7 +109,7 @@ final class ResizerRungsTest extends TestCase
 
     public function testNoRungExceedsTheLeadWidth(): void
     {
-        $rungs = new ResizerRungs(new StubGuardedImageProbe())->rungsFor(self::lead(1099));
+        $rungs = new ResizerRungs(new StubGuardedImageProbe())->buildRungs(self::lead(1099));
 
         self::assertSame([264, 520], array_map(static fn (ImageRendition $rung): int => $rung->width, $rungs));
     }
@@ -118,7 +118,7 @@ final class ResizerRungsTest extends TestCase
     {
         $known = [new ImageRendition('https://9to5mac.com/a-300.jpg', 300)];
 
-        $rungs = new ResizerRungs(new StubGuardedImageProbe())->rungsFor(self::lead(2000, $known));
+        $rungs = new ResizerRungs(new StubGuardedImageProbe())->buildRungs(self::lead(2000, $known));
 
         self::assertSame([520, 680, 1100], array_map(static fn (ImageRendition $rung): int => $rung->width, $rungs));
     }

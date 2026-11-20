@@ -35,7 +35,7 @@ final readonly class PasskeyChallengeStore
     {
         $handle = self::randomHandle();
 
-        $item = $this->passkeyChallengeCache->getItem(self::keyFor($handle));
+        $item = $this->passkeyChallengeCache->getItem(self::buildKey($handle));
         // The handle itself is absent from the payload for the same reason it
         // is absent from the key: it is the bearer credential, and a readable
         // cache entry must not hand out a usable one.
@@ -57,7 +57,7 @@ final readonly class PasskeyChallengeStore
      */
     public function consume(string $handle): PasskeyChallengeModel
     {
-        $key = self::keyFor($handle);
+        $key = self::buildKey($handle);
         $item = $this->passkeyChallengeCache->getItem($key);
 
         if (!$item->isHit()) {
@@ -109,7 +109,7 @@ final readonly class PasskeyChallengeStore
     }
 
     /** Unsalted SHA-256 suffices: the handle is 32 random bytes, so there is no guessable preimage to protect. */
-    private static function keyFor(string $handle): string
+    private static function buildKey(string $handle): string
     {
         return self::KEY_PREFIX . hash('sha256', $handle);
     }

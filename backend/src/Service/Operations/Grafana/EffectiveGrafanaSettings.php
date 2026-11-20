@@ -40,7 +40,7 @@ final class EffectiveGrafanaSettings implements ResetInterface
 
     public function effectiveLokiPushUrl(): ?string
     {
-        return $this->stored()->connection->lokiPushUrl ?? $this->defaultOrNull($this->defaults->lokiPushUrl);
+        return $this->stored()->connection->lokiPushUrl ?? $this->keepIfNotEmpty($this->defaults->lokiPushUrl);
     }
 
     public function lokiUsername(): ?string
@@ -62,7 +62,7 @@ final class EffectiveGrafanaSettings implements ResetInterface
         );
     }
 
-    private function defaultOrNull(string $default): ?string
+    private function keepIfNotEmpty(string $default): ?string
     {
         return '' === $default ? null : $default;
     }

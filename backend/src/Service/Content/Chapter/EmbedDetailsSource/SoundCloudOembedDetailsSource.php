@@ -36,7 +36,7 @@ final readonly class SoundCloudOembedDetailsSource implements EmbedDetailsSource
             \is_string($title) && $title !== '' ? $title : null,
             null,
             \is_string($description) ? $description : '',
-            HttpsImageUrl::orNull(\is_string($artwork) ? $artwork : null),
+            HttpsImageUrl::parseUrl(\is_string($artwork) ? $artwork : null),
         );
     }
 }

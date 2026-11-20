@@ -52,8 +52,8 @@ final readonly class GrafanaSettingsSnapshotModel
             return null;
         }
 
-        $connection = self::connectionFromArrayOrNull($stored);
-        $sealedToken = self::sealedTokenFromArrayOrNull($stored);
+        $connection = self::parseConnection($stored);
+        $sealedToken = self::parseSealedToken($stored);
         $tokenHint = $stored['tokenHint'] ?? null;
         if (null === $connection || null === $sealedToken || !\is_string($tokenHint)) {
             return null;
@@ -63,7 +63,7 @@ final readonly class GrafanaSettingsSnapshotModel
     }
 
     /** @param array<array-key, mixed> $stored */
-    private static function connectionFromArrayOrNull(array $stored): ?GrafanaConnection
+    private static function parseConnection(array $stored): ?GrafanaConnection
     {
         $lokiPushUrl = $stored['lokiPushUrl'] ?? null;
         $lokiUsername = $stored['lokiUsername'] ?? null;
@@ -80,7 +80,7 @@ final readonly class GrafanaSettingsSnapshotModel
     }
 
     /** @param array<array-key, mixed> $stored */
-    private static function sealedTokenFromArrayOrNull(array $stored): ?SealedSecret
+    private static function parseSealedToken(array $stored): ?SealedSecret
     {
         $ciphertext = $stored['tokenCiphertext'] ?? null;
         $nonce = $stored['tokenNonce'] ?? null;

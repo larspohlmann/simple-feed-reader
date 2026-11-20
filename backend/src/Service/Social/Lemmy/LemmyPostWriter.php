@@ -99,7 +99,7 @@ final readonly class LemmyPostWriter implements PostWriterInterface
 
     private static function publishedAt(ApiResponseModel $answer, string $view, string $object): PublishedPostModel
     {
-        $address = AbsoluteHttpUrl::httpsOrNull(
+        $address = AbsoluteHttpUrl::keepIfHttps(
             JsonNodeModel::fromValue($answer->json())->node($view)->node($object)->string('ap_id'),
         ) ?? throw new SocialNetworkUnreachableException(
             sprintf('Lemmy took the %s but named no address for it.', $object),

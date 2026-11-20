@@ -51,11 +51,11 @@ final readonly class OAuthStateStore
             $state,
             $nonce,
             $codeVerifier,
-            self::challengeFor($codeVerifier),
+            self::computeChallenge($codeVerifier),
             $browserToken,
         );
 
-        $item = $this->oauthStateCache->getItem(self::keyFor($state));
+        $item = $this->oauthStateCache->getItem(self::buildKey($state));
         // Neither the state nor the browser token is stored in readable form: the
         // state is the hashed key and the token only a digest, so a readable cache
         // file yields neither a usable state nor a usable binding.
@@ -78,7 +78,7 @@ final readonly class OAuthStateStore
      */
     public function consume(string $state, ?string $browserToken): OAuthStartStateModel
     {
-        $key = self::keyFor($state);
+        $key = self::buildKey($state);
         $item = $this->oauthStateCache->getItem($key);
 
         if (!$item->isHit()) {
@@ -107,7 +107,7 @@ final readonly class OAuthStateStore
             $state,
             $stored['nonce'],
             $codeVerifier,
-            self::challengeFor($codeVerifier),
+            self::computeChallenge($codeVerifier),
         );
     }
 
@@ -143,12 +143,12 @@ final readonly class OAuthStateStore
      * plain method is not offered: it would put the verifier in the redirect
      * URL, which is the exact exposure PKCE exists to remove.
      */
-    private static function challengeFor(string $codeVerifier): string
+    private static function computeChallenge(string $codeVerifier): string
     {
         return Base64UrlSafe::encodeUnpadded(hash('sha256', $codeVerifier, true));
     }
 
-    private static function keyFor(string $state): string
+    private static function buildKey(string $state): string
     {
         return self::KEY_PREFIX . self::digest($state);
     }

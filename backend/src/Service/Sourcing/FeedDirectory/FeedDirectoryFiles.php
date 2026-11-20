@@ -36,20 +36,20 @@ final readonly class FeedDirectoryFiles
     /** @return list<string> */
     public function countryCodes(): array
     {
-        return self::countryCodesIn($this->index());
+        return self::collectCountryCodes($this->index());
     }
 
     /** @return list<string> */
     public function languageCodes(): array
     {
-        return self::languageCodesIn($this->index());
+        return self::collectLanguageCodes($this->index());
     }
 
     public function requireKnown(FeedDirectoryScopeModel $scope): void
     {
         $index = $this->index();
-        $unknownCountries = array_diff($scope->countries, self::countryCodesIn($index));
-        $unknownLanguages = array_diff($scope->languages, self::languageCodesIn($index));
+        $unknownCountries = array_diff($scope->countries, self::collectCountryCodes($index));
+        $unknownLanguages = array_diff($scope->languages, self::collectLanguageCodes($index));
         if ($unknownCountries !== [] || $unknownLanguages !== []) {
             throw new InvalidFeedDirectoryScopeException(
                 \sprintf(
@@ -65,10 +65,10 @@ final readonly class FeedDirectoryFiles
      *
      * @return list<string>
      */
-    private static function countryCodesIn(array $index): array
+    private static function collectCountryCodes(array $index): array
     {
         $codes = [];
-        foreach (self::entriesAt($index, 'countries') as $country) {
+        foreach (self::readEntries($index, 'countries') as $country) {
             if (\is_array($country) && \is_string($country['code'] ?? null)) {
                 $codes[] = $country['code'];
             }
@@ -82,9 +82,9 @@ final readonly class FeedDirectoryFiles
      *
      * @return list<string>
      */
-    private static function languageCodesIn(array $index): array
+    private static function collectLanguageCodes(array $index): array
     {
-        return array_values(array_filter(array_keys(self::entriesAt($index, 'languages')), is_string(...)));
+        return array_values(array_filter(array_keys(self::readEntries($index, 'languages')), is_string(...)));
     }
 
     /**
@@ -92,7 +92,7 @@ final readonly class FeedDirectoryFiles
      *
      * @return array<mixed>
      */
-    private static function entriesAt(array $index, string $key): array
+    private static function readEntries(array $index, string $key): array
     {
         $value = $index[$key] ?? [];
 

@@ -120,7 +120,7 @@ final readonly class AccountLine
     /** @param array<string, mixed> $fields */
     private static function feedDirectoryScope(array $fields): FeedDirectoryScopeModel
     {
-        return FeedDirectoryScopeModel::orNone(
+        return FeedDirectoryScopeModel::fromListsOrEmpty(
             LineFieldWithDefault::stringList($fields, 'countries'),
             LineFieldWithDefault::stringList($fields, 'languages'),
         );

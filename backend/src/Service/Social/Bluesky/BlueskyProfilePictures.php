@@ -115,7 +115,7 @@ final readonly class BlueskyProfilePictures implements ProfilePictureSourceInter
 
             return false;
         }
-        $imageUrl = AbsoluteHttpUrl::orNullWithin($profile->string('avatar'), Feed::IMAGE_URL_MAX);
+        $imageUrl = AbsoluteHttpUrl::keepIfAbsoluteWithin($profile->string('avatar'), Feed::IMAGE_URL_MAX);
         $changed = $imageUrl !== $feed->getImageUrl();
         $feed->recordImageCheck($imageUrl, $now);
 

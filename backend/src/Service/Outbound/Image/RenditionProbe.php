@@ -17,15 +17,15 @@ final readonly class RenditionProbe
     }
 
     /** @return list<ImageRendition> */
-    public function rungsFor(LeadImageModel $lead): array
+    public function buildRungs(LeadImageModel $lead): array
     {
         if (RenditionTargets::uncovered($lead->knownWidths()) === []) {
             return [];
         }
         if ($this->resizerRungs->resizes($lead)) {
-            return $this->resizerRungs->rungsFor($lead);
+            return $this->resizerRungs->buildRungs($lead);
         }
 
-        return $this->guessedSizeRungs->rungsFor($lead);
+        return $this->guessedSizeRungs->buildRungs($lead);
     }
 }

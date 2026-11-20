@@ -14,17 +14,17 @@ final class HttpsImageUrl
     /** Matches the length of every column one of these is persisted into. */
     public const int MAX_LENGTH = 2048;
 
-    public static function orNull(?string $url): ?string
+    public static function parseUrl(?string $url): ?string
     {
         return self::withinColumn(self::secure($url ?? ''));
     }
 
     /**
-     * The card-image variant of {@see orNull}: an http:// URL is rewritten to
+     * The card-image variant of {@see parseUrl}: an http:// URL is rewritten to
      * https:// rather than rejected, because the same asset is very often
      * reachable over https; the background verify then confirms it.
      */
-    public static function orNullUpgrading(?string $url): ?string
+    public static function parseUrlUpgradingHttp(?string $url): ?string
     {
         return self::withinColumn(self::secure($url ?? '') ?? self::upgraded($url ?? ''));
     }

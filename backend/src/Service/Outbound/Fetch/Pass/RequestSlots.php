@@ -20,7 +20,7 @@ final class RequestSlots
     public function hasCapacityFor(FetchAttemptModel $attempt): bool
     {
         foreach ($attempt->ticket->slots as $slot) {
-            if ($this->inFlightIn(self::buildKey($slot, $attempt->url)) >= $slot->capacity()) {
+            if ($this->readInFlight(self::buildKey($slot, $attempt->url)) >= $slot->capacity()) {
                 return false;
             }
         }
@@ -31,18 +31,18 @@ final class RequestSlots
     public function acquire(FetchAttemptModel $attempt): void
     {
         foreach ($this->buildKeys($attempt) as $key) {
-            $this->inFlightBySlot[$key] = $this->inFlightIn($key) + 1;
+            $this->inFlightBySlot[$key] = $this->readInFlight($key) + 1;
         }
     }
 
     public function release(FetchAttemptModel $attempt): void
     {
         foreach ($this->buildKeys($attempt) as $key) {
-            $this->inFlightBySlot[$key] = max(0, $this->inFlightIn($key) - 1);
+            $this->inFlightBySlot[$key] = max(0, $this->readInFlight($key) - 1);
         }
     }
 
-    private function inFlightIn(string $key): int
+    private function readInFlight(string $key): int
     {
         return $this->inFlightBySlot[$key] ?? 0;
     }
@@ -60,6 +60,6 @@ final class RequestSlots
 
     private static function buildKey(RequestSlotModelInterface $slot, string $url): string
     {
-        return $slot::class . "\0" . $slot->keyFor($url);
+        return $slot::class . "\0" . $slot->buildKey($url);
     }
 }

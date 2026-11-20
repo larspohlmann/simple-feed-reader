@@ -344,8 +344,8 @@ final class PasskeyRegistrationTest extends ApiTestCase
     }
 
     /**
-     * userHandleFor() mints a fresh handle per call while an account has no credential, so the stored handle must be
-     * the one advertised at options time. Both requests run for real: the shortcut skips exactly that boundary.
+     * resolveUserHandle() mints a fresh handle per call while an account has no credential, so the stored handle must
+     * be the one advertised at options time. Both requests run for real: the shortcut skips exactly that boundary.
      */
     public function testTheStoredUserHandleMatchesTheOneAdvertisedAtOptionsTime(): void
     {
@@ -374,7 +374,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
     }
 
     /**
-     * The mirror case: PasskeyCredentials::userHandleFor() is deterministic
+     * The mirror case: PasskeyCredentials::resolveUserHandle() is deterministic
      * once an account has a credential, so a second enrolment must reuse
      * that same handle rather than the options endpoint minting a new one.
      */
@@ -526,7 +526,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
     }
 
     /**
-     * `response.transports` is unvalidated client data that excludeListFor() echoes to every later registration, so
+     * `response.transports` is unvalidated client data that loadExcludeList() echoes to every later registration, so
      * only the spec's values may reach storage.
      */
     public function testAnUnknownTransportIsFilteredOutBeforeStorage(): void

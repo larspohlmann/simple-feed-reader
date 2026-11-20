@@ -28,7 +28,7 @@ final readonly class LokiSpoolShipper
         $failed = 0;
         foreach ($this->files() as $file) {
             try {
-                $this->client->push(self::linesIn($file));
+                $this->client->push(self::loadLines($file));
                 ++$shipped;
             } catch (CorruptSpoolFileException) {
                 ++$failed;
@@ -58,7 +58,7 @@ final readonly class LokiSpoolShipper
      *
      * @throws CorruptSpoolFileException
      */
-    private static function linesIn(string $file): array
+    private static function loadLines(string $file): array
     {
         // Silenced: a concurrent tick may have shipped the file since glob(), and the error handler would throw.
         $contents = @file_get_contents($file);

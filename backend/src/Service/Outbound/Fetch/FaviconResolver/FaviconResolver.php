@@ -86,7 +86,7 @@ final readonly class FaviconResolver implements FaviconResolverInterface
         try {
             foreach ($this->fetcher->fetchAll($tickets) as $origin => $outcome) {
                 $origin = (string) $origin;
-                $icon = $this->iconOrNull($outcome, $origin);
+                $icon = $this->tryFindIcon($outcome, $origin);
                 if (null !== $icon) {
                     $icons[$origin] = $icon;
                 }
@@ -98,7 +98,7 @@ final readonly class FaviconResolver implements FaviconResolverInterface
         return $icons;
     }
 
-    private function iconOrNull(FetchOutcomeModel $outcome, string $origin): ?string
+    private function tryFindIcon(FetchOutcomeModel $outcome, string $origin): ?string
     {
         try {
             return $this->iconFrom($outcome, $origin);
@@ -146,7 +146,7 @@ final readonly class FaviconResolver implements FaviconResolverInterface
             if (!str_contains(strtolower(trim($link->getAttribute('rel'))), 'icon')) {
                 continue;
             }
-            $resolved = HttpsImageUrl::orNull($pageUrls->httpUrl($link->getAttribute('href')));
+            $resolved = HttpsImageUrl::parseUrl($pageUrls->httpUrl($link->getAttribute('href')));
             if (null === $resolved) {
                 continue;
             }

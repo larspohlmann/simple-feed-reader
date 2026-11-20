@@ -9,7 +9,7 @@ use App\Service\Operations\SelfUpdate\Model\UpdateRunModel;
 
 interface UpdateStateStoreInterface
 {
-    public function heartbeatAt(): ?\DateTimeImmutable;
+    public function findHeartbeat(): ?\DateTimeImmutable;
 
     public function pendingRequestId(): ?string;
 

@@ -31,7 +31,7 @@ final class StoryLinkRule
         if ($reducedTitle === '') {
             return false;
         }
-        $host = HostKey::forUrlOrNull($url) ?? '';
+        $host = HostKey::tryForUrl($url) ?? '';
         $siteNames = [$siteName, $host, explode('.', $host)[0]];
 
         return \in_array($reducedTitle, array_map(self::reduced(...), $siteNames), true);

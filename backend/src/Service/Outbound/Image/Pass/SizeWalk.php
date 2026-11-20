@@ -29,7 +29,7 @@ final class SizeWalk
         return new self($lead->url, $lead->dimensions, $lead->knownWidths());
     }
 
-    public function candidateFor(int $width): ?string
+    public function buildCandidate(int $width): ?string
     {
         if ($width >= $this->basis->width || !$this->bandIsUncovered($width)) {
             return null;

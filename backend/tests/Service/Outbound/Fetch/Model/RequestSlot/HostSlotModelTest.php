@@ -13,8 +13,8 @@ final class HostSlotModelTest extends TestCase
     {
         $slot = new HostSlotModel(2);
 
-        self::assertSame('example.com', $slot->keyFor('https://www.example.com:443/feed'));
-        self::assertSame('other.example.com', $slot->keyFor('https://other.example.com/feed'));
+        self::assertSame('example.com', $slot->buildKey('https://www.example.com:443/feed'));
+        self::assertSame('other.example.com', $slot->buildKey('https://other.example.com/feed'));
     }
 
     public function testCarriesItsCapacity(): void
