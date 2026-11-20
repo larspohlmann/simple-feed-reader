@@ -35,11 +35,11 @@ final readonly class LemmyPostEntries
     /** @throws SocialNetworkUnreachableException */
     public function page(SocialAccount $account, ApiResponseModel $answer): TimelinePageModel
     {
-        $postViews = self::postViewsOf($answer);
+        $postViews = self::requirePostViews($answer);
 
-        $entries = $this->entriesOf($postViews, $account);
+        $entries = $this->buildEntries($postViews, $account);
 
-        return TimelinePageModel::fromEntries($entries, KnownSharesModel::none(), self::newestIdOf($postViews));
+        return TimelinePageModel::fromEntries($entries, KnownSharesModel::none(), self::pickNewestId($postViews));
     }
 
     /**
@@ -49,16 +49,16 @@ final readonly class LemmyPostEntries
      */
     public function searchPage(SocialAccount $account, array $answers, string $query): TimelinePageModel
     {
-        $postViews = self::distinctPostViewsOf($answers);
+        $postViews = self::collectDistinctPostViews($answers);
         $matches = SocialSearchMatch::matcher($query);
         $entries = array_values(array_filter(
-            $this->entriesOf($postViews, $account),
+            $this->buildEntries($postViews, $account),
             static fn (ParsedEntryModel $entry): bool => $matches(
-                LemmySearchedPost::of($entry->headline->text, $entry->contentHtml, $entry->authorUrl),
+                LemmySearchedPost::buildSearchedPost($entry->headline->text, $entry->contentHtml, $entry->authorUrl),
             ),
         ));
 
-        return TimelinePageModel::fromEntries($entries, KnownSharesModel::none(), self::newestIdOf($postViews));
+        return TimelinePageModel::fromEntries($entries, KnownSharesModel::none(), self::pickNewestId($postViews));
     }
 
     /**
@@ -66,7 +66,7 @@ final readonly class LemmyPostEntries
      *
      * @throws SocialNetworkUnreachableException
      */
-    private static function postViewsOf(ApiResponseModel $answer): array
+    private static function requirePostViews(ApiResponseModel $answer): array
     {
         return JsonNodeModel::fromValue($answer->json())->listAt('posts')
             ?? throw new SocialNetworkUnreachableException('The Lemmy instance answered without posts.');
@@ -79,11 +79,11 @@ final readonly class LemmyPostEntries
      *
      * @throws SocialNetworkUnreachableException
      */
-    private static function distinctPostViewsOf(array $answers): array
+    private static function collectDistinctPostViews(array $answers): array
     {
         $postViewsById = [];
         foreach ($answers as $answer) {
-            foreach (self::postViewsOf($answer) as $postView) {
+            foreach (self::requirePostViews($answer) as $postView) {
                 $postViewsById[$postView->node('post')->int('id') ?? 0] ??= $postView;
             }
         }
@@ -97,12 +97,12 @@ final readonly class LemmyPostEntries
      *
      * @return list<ParsedEntryModel>
      */
-    private function entriesOf(array $postViews, SocialAccount $account): array
+    private function buildEntries(array $postViews, SocialAccount $account): array
     {
         $homeInstance = rtrim($account->getServiceUrl(), '/');
         $entries = [];
         foreach ($postViews as $postView) {
-            $entry = $this->entryOf($postView, $homeInstance);
+            $entry = $this->parseEntry($postView, $homeInstance);
             if (null !== $entry) {
                 $entries[] = $entry;
             }
@@ -111,7 +111,7 @@ final readonly class LemmyPostEntries
         return $entries;
     }
 
-    private function entryOf(JsonNodeModel $postView, string $homeInstance): ?ParsedEntryModel
+    private function parseEntry(JsonNodeModel $postView, string $homeInstance): ?ParsedEntryModel
     {
         $post = $postView->node('post');
         $address = $post->string('ap_id');
@@ -119,28 +119,28 @@ final readonly class LemmyPostEntries
         if (null === $address || null === $postId || $post->isTrue('deleted') || $post->isTrue('removed')) {
             return null;
         }
-        $thread = Discussion::platformThread(self::postPageOf($address, $homeInstance, $postId));
+        $thread = Discussion::platformThread(self::resolvePostPage($address, $homeInstance, $postId));
 
 
-        return $this->postEntryOf($postView, $address)
+        return $this->buildPostEntry($postView, $address)
             ->asDiscussionThread($thread)
-            ->withDiscussionCounts(self::countsOf($postView->node('counts')))
-            ->inCommunity(self::communityOf($postView->node('community')));
+            ->withDiscussionCounts(self::buildCounts($postView->node('counts')))
+            ->inCommunity(self::parseCommunity($postView->node('community')));
     }
 
-    private static function communityOf(JsonNodeModel $community): ?PostCommunity
+    private static function parseCommunity(JsonNodeModel $community): ?PostCommunity
     {
-        $identity = LemmyCommunity::identityOf($community);
+        $identity = LemmyCommunity::parseIdentity($community);
         $address = $community->string('actor_id');
 
         return null === $identity || null === $address ? null : PostCommunity::fromIdentityAndUrl($identity, $address);
     }
 
-    private function postEntryOf(JsonNodeModel $postView, string $address): ParsedEntryModel
+    private function buildPostEntry(JsonNodeModel $postView, string $address): ParsedEntryModel
     {
         $post = $postView->node('post');
         $creator = $postView->node('creator');
-        $body = $this->bodyOf($post);
+        $body = $this->buildBody($post);
 
         return new ParsedEntryModel(
             guid: $address,
@@ -150,14 +150,14 @@ final readonly class LemmyPostEntries
             summary: null,
             contentHtml: $body,
             publishedAt: DateParser::parse($post->string('published')),
-            media: self::mediaOf($post),
+            media: self::buildMedia($post),
             authorUrl: $creator->string('actor_id'),
             authorAvatarUrl: $creator->string('avatar'),
-            statedLanguage: LemmyLanguageTag::of($post->int('language_id')),
+            statedLanguage: LemmyLanguageTag::fromLanguageId($post->int('language_id')),
         );
     }
 
-    private function bodyOf(JsonNodeModel $post): ?string
+    private function buildBody(JsonNodeModel $post): ?string
     {
         $link = $post->string('url');
         $markdown = $post->string('body');
@@ -167,17 +167,17 @@ final readonly class LemmyPostEntries
         return '' === $html ? null : $html;
     }
 
-    private static function postPageOf(string $address, string $homeInstance, int $postId): string
+    private static function resolvePostPage(string $address, string $homeInstance, int $postId): string
     {
         return null === LemmyPostUrl::parse($address) ? $homeInstance . '/post/' . $postId : $address;
     }
 
-    private static function countsOf(JsonNodeModel $counts): DiscussionCounts
+    private static function buildCounts(JsonNodeModel $counts): DiscussionCounts
     {
         return DiscussionCounts::fromScoreAndComments($counts->int('score'), $counts->int('comments'));
     }
 
-    private static function mediaOf(JsonNodeModel $post): ParsedEntryMediaModel
+    private static function buildMedia(JsonNodeModel $post): ParsedEntryMediaModel
     {
         $thumbnail = $post->string('thumbnail_url');
 
@@ -185,7 +185,7 @@ final readonly class LemmyPostEntries
     }
 
     /** @param list<JsonNodeModel> $postViews */
-    private static function newestIdOf(array $postViews): ?string
+    private static function pickNewestId(array $postViews): ?string
     {
         $postIds = array_filter(array_map(
             static fn (JsonNodeModel $postView): ?int => $postView->node('post')->int('id'),

@@ -59,7 +59,7 @@ final readonly class LemmyProfilePictures implements ProfilePictureSourceInterfa
         }
 
         try {
-            $imageUrl = $this->pictureOf($identity);
+            $imageUrl = $this->fetchPicture($identity);
         } catch (SocialPostNotFoundException) {
             $imageUrl = $feed->getImageUrl();
         } catch (
@@ -85,14 +85,14 @@ final readonly class LemmyProfilePictures implements ProfilePictureSourceInterfa
      * @throws SocialCredentialsRejectedException
      * @throws SocialPostRefusedException
      */
-    private function pictureOf(string $identity): ?string
+    private function fetchPicture(string $identity): ?string
     {
         $user = LemmyProfileFeed::parseUser($identity);
         if (null !== $user) {
-            return $this->userPictureOf($user);
+            return $this->fetchUserPicture($user);
         }
 
-        return $this->communityPictureOf($identity);
+        return $this->fetchCommunityPicture($identity);
     }
 
     /**
@@ -101,10 +101,10 @@ final readonly class LemmyProfilePictures implements ProfilePictureSourceInterfa
      * @throws SocialCredentialsRejectedException
      * @throws SocialPostRefusedException
      */
-    private function communityPictureOf(string $identity): ?string
+    private function fetchCommunityPicture(string $identity): ?string
     {
         [$name, $host] = $this->splitAtLastAt($identity);
-        $answer = $this->answerOf($host, '/api/v3/community?name=' . rawurlencode($name), 'community_view');
+        $answer = $this->fetchAnswer($host, '/api/v3/community?name=' . rawurlencode($name), 'community_view');
         $icon = $answer->node('community_view')->node('community')->string('icon');
 
         return HttpsImageUrl::orNull($icon);
@@ -116,10 +116,10 @@ final readonly class LemmyProfilePictures implements ProfilePictureSourceInterfa
      * @throws SocialCredentialsRejectedException
      * @throws SocialPostRefusedException
      */
-    private function userPictureOf(string $identity): ?string
+    private function fetchUserPicture(string $identity): ?string
     {
         [$name, $host] = $this->splitAtLastAt($identity);
-        $answer = $this->answerOf($host, '/api/v3/user?username=' . rawurlencode($name) . '&limit=1', 'person_view');
+        $answer = $this->fetchAnswer($host, '/api/v3/user?username=' . rawurlencode($name) . '&limit=1', 'person_view');
         $avatar = $answer->node('person_view')->node('person')->string('avatar');
         if (null === $avatar) {
             return self::MOUSE;
@@ -134,7 +134,7 @@ final readonly class LemmyProfilePictures implements ProfilePictureSourceInterfa
      * @throws SocialCredentialsRejectedException
      * @throws SocialPostRefusedException
      */
-    private function answerOf(string $host, string $path, string $view): JsonNodeModel
+    private function fetchAnswer(string $host, string $path, string $view): JsonNodeModel
     {
         $answer = JsonNodeModel::fromValue(
             $this->lemmy->send(ApiRequestModel::get('https://' . $host . $path))->json(),

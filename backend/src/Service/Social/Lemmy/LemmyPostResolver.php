@@ -34,10 +34,10 @@ final readonly class LemmyPostResolver implements PostResolverInterface
             $account,
             (string) $target->postId,
             null === $target->commentId ? null : (string) $target->commentId,
-        )->inResponseContext(self::responseContextOf($target));
+        )->inResponseContext(self::buildResponseContext($target));
     }
 
-    private static function responseContextOf(LemmyTargetModel $target): ResponseContextModel
+    private static function buildResponseContext(LemmyTargetModel $target): ResponseContextModel
     {
         return new ResponseContextModel(
             authorIdentity: $target->authorIdentity,

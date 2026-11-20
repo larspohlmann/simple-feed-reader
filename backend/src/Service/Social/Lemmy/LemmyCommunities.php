@@ -25,7 +25,7 @@ final readonly class LemmyCommunities
         $views = [];
         $page = 1;
         do {
-            $fresh = $this->pageOf($account, $page++);
+            $fresh = $this->fetchPage($account, $page++);
             array_push($views, ...$fresh);
         } while (LemmyListing::PAGE_SIZE === \count($fresh) && \count($views) <= CollectedItemsModel::MAX_ITEMS);
 
@@ -38,7 +38,7 @@ final readonly class LemmyCommunities
         $communities = [];
         foreach ($this->subscribedViews($account)->items as $view) {
             $community = $view->node('community');
-            $identity = LemmyCommunity::identityOf($community);
+            $identity = LemmyCommunity::parseIdentity($community);
             $id = $community->int('id');
             if (null === $identity || null === $id || self::closedToPosts($community)) {
                 continue;
@@ -61,7 +61,7 @@ final readonly class LemmyCommunities
     }
 
     /** @return list<JsonNodeModel> */
-    private function pageOf(SocialAccount $account, int $page): array
+    private function fetchPage(SocialAccount $account, int $page): array
     {
         $answer = $this->lemmy->get($account, self::COMMUNITIES . http_build_query([
             'type_' => LemmyListing::Subscribed->value,

@@ -36,12 +36,12 @@ final readonly class LemmyTimelineSource implements TimelineSourceInterface
             return $this->search->buildRequests($account, $socialFeed->getRemoteId());
         }
 
-        return [$this->lemmy->authorizedGet($account, self::listingPathOf($socialFeed))];
+        return [$this->lemmy->authorizedGet($account, self::buildListingPath($socialFeed))];
     }
 
     public function accepted(SocialFeed $socialFeed, FetchOutcomeModel $outcome): ApiResponseModel
     {
-        return LemmyApiClient::acceptedInRound(LemmyApiClient::answerOf($outcome));
+        return LemmyApiClient::acceptedInRound(LemmyApiClient::requireAnswer($outcome));
     }
 
     public function buildPage(SocialFeed $socialFeed, array $accepted): TimelinePageModel
@@ -59,9 +59,9 @@ final readonly class LemmyTimelineSource implements TimelineSourceInterface
     {
     }
 
-    private static function listingPathOf(SocialFeed $socialFeed): string
+    private static function buildListingPath(SocialFeed $socialFeed): string
     {
-        $listing = LemmyListing::ofFeedKind($socialFeed->getKind())
+        $listing = LemmyListing::fromFeedKind($socialFeed->getKind())
             ?? throw new SocialNetworkUnreachableException('Lemmy has no such timeline.');
 
         return '/api/v3/post/list?type_=' . $listing->value . '&sort=New&limit=' . LemmyListing::PAGE_SIZE;

@@ -36,7 +36,7 @@ final readonly class LemmyNotificationContextSource implements NotificationConte
             }
             if (!array_key_exists($answeredId, $excerpts)) {
                 try {
-                    $excerpts[$answeredId] = $this->excerptOf($account, $answeredId);
+                    $excerpts[$answeredId] = $this->fetchExcerpt($account, $answeredId);
                 } catch (SocialNetworkThrottledException | SocialNetworkUnavailableException) {
                     break;
                 } catch (SocialPostNotFoundException | SocialPostRefusedException | SocialNetworkUnreachableException) {
@@ -51,7 +51,7 @@ final readonly class LemmyNotificationContextSource implements NotificationConte
         return $contexts;
     }
 
-    private function excerptOf(SocialAccount $account, string $answeredId): ?string
+    private function fetchExcerpt(SocialAccount $account, string $answeredId): ?string
     {
         $content = JsonNodeModel::fromValue($this->lemmy->get($account, '/api/v3/comment?id=' . $answeredId)->json())
             ->node('comment_view')

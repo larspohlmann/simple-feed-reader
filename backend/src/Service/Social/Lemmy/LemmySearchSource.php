@@ -36,7 +36,7 @@ final readonly class LemmySearchSource implements SearchSourceInterface
             $account,
             $this->buildRequests($account, $query),
             static fn (FetchOutcomeModel $outcome): ApiResponseModel => LemmyApiClient::accepted(
-                LemmyApiClient::answerOf($outcome),
+                LemmyApiClient::requireAnswer($outcome),
             ),
         );
 

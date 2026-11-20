@@ -21,24 +21,24 @@ final class LemmyViewTest extends TestCase
     {
         $view = $this->post(['my_vote' => 1]);
 
-        self::assertSame(VoteScore::Up, LemmyView::ofPost($view)->myVote);
+        self::assertSame(VoteScore::Up, LemmyView::fromPostView($view)->myVote);
     }
 
     public function testNoVoteIsNone(): void
     {
-        self::assertSame(VoteScore::None, LemmyView::ofPost($this->post([]))->myVote);
+        self::assertSame(VoteScore::None, LemmyView::fromPostView($this->post([]))->myVote);
     }
 
     public function testALockedPostIsLocked(): void
     {
         $view = $this->post(['post' => ['id' => 3, 'name' => 'T', 'locked' => true]]);
 
-        self::assertTrue(LemmyView::ofPost($view)->isLocked);
+        self::assertTrue(LemmyView::fromPostView($view)->isLocked);
     }
 
     public function testThePostReadsItsAuthorAndPreview(): void
     {
-        $target = LemmyView::ofPost($this->post([]));
+        $target = LemmyView::fromPostView($this->post([]));
 
         self::assertSame(3, $target->postId);
         self::assertNull($target->commentId);
@@ -53,21 +53,21 @@ final class LemmyViewTest extends TestCase
     {
         $view = $this->post(['creator' => ['name' => 'Ada', 'actor_id' => 'https://Origin.Example/u/Ada']]);
 
-        self::assertSame('ada@origin.example', LemmyView::ofPost($view)->authorIdentity);
+        self::assertSame('ada@origin.example', LemmyView::fromPostView($view)->authorIdentity);
     }
 
     public function testAPostWithoutAnIdIsNotFound(): void
     {
         $this->expectException(SocialPostNotFoundException::class);
 
-        LemmyView::ofPost(JsonNodeModel::fromValue(['post' => ['name' => 'T']]));
+        LemmyView::fromPostView(JsonNodeModel::fromValue(['post' => ['name' => 'T']]));
     }
 
     public function testACommentReadsItsPostItsVoteAndItsText(): void
     {
         $view = JsonNodeModel::fromValue($this->decodeFixture('resolve-comment.json'))->node('comment');
 
-        $target = LemmyView::ofComment($view);
+        $target = LemmyView::fromCommentView($view);
 
         self::assertSame(77, $target->commentId);
         self::assertSame(990, $target->postId);
@@ -82,21 +82,21 @@ final class LemmyViewTest extends TestCase
             'comment' => ['id' => 1, 'post_id' => 2, 'content' => str_repeat('ä', 300)],
         ]);
 
-        self::assertSame(str_repeat('ä', 200), LemmyView::ofComment($view)->preview->excerpt);
+        self::assertSame(str_repeat('ä', 200), LemmyView::fromCommentView($view)->preview->excerpt);
     }
 
     public function testACommentWithoutAnIdIsNotFound(): void
     {
         $this->expectException(SocialPostNotFoundException::class);
 
-        LemmyView::ofComment(JsonNodeModel::fromValue(['comment' => ['post_id' => 2]]));
+        LemmyView::fromCommentView(JsonNodeModel::fromValue(['comment' => ['post_id' => 2]]));
     }
 
     public function testACommentWithoutItsPostIsNotFound(): void
     {
         $this->expectException(SocialPostNotFoundException::class);
 
-        LemmyView::ofComment(JsonNodeModel::fromValue(['comment' => ['id' => 2]]));
+        LemmyView::fromCommentView(JsonNodeModel::fromValue(['comment' => ['id' => 2]]));
     }
 
     /** @param array<string, mixed> $overrides */

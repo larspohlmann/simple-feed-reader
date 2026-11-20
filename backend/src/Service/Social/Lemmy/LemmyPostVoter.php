@@ -44,10 +44,12 @@ final readonly class LemmyPostVoter implements PostVoterInterface
             $answer = $this->accountApi->post(
                 $account,
                 '/api/v3/post/like',
-                ['post_id' => $this->posts->homePostIdOf($account, $post), 'score' => $score->value],
+                ['post_id' => $this->posts->resolveHomePostId($account, $post), 'score' => $score->value],
             );
 
-            return self::buildResult(LemmyView::ofPost(JsonNodeModel::fromValue($answer->json())->node('post_view')));
+            return self::buildResult(
+                LemmyView::fromPostView(JsonNodeModel::fromValue($answer->json())->node('post_view')),
+            );
         });
     }
 
@@ -66,7 +68,7 @@ final readonly class LemmyPostVoter implements PostVoterInterface
 
             $comment = JsonNodeModel::fromValue($answer->json())->node('comment_view');
 
-            return self::buildResult(LemmyView::ofComment($comment));
+            return self::buildResult(LemmyView::fromCommentView($comment));
         });
     }
 

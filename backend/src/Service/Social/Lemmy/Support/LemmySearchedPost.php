@@ -11,16 +11,16 @@ final class LemmySearchedPost
 {
     private const string PROFILE_URL = '~^https://([a-z0-9.-]+)/u/([^/?#@]+)/?$~iD';
 
-    public static function of(string $title, ?string $contentHtml, ?string $authorUrl): SearchedPostModel
+    public static function buildSearchedPost(string $title, ?string $contentHtml, ?string $authorUrl): SearchedPostModel
     {
         return new SearchedPostModel(
-            self::authorNamesOf($authorUrl),
+            self::parseAuthorNames($authorUrl),
             [$title, PlainText::fromHtmlBlocks($contentHtml) ?? ''],
         );
     }
 
     /** @return list<string> */
-    private static function authorNamesOf(?string $authorUrl): array
+    private static function parseAuthorNames(?string $authorUrl): array
     {
         if (null === $authorUrl || 1 !== preg_match(self::PROFILE_URL, $authorUrl, $match)) {
             return [];

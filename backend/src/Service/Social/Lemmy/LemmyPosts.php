@@ -40,12 +40,12 @@ final readonly class LemmyPosts
         if (self::isHomeInstance($account, $post)) {
             $homeView = JsonNodeModel::fromValue($this->account->get($account, $path)->json());
 
-            return LemmyView::ofPost($homeView->node('post_view'));
+            return LemmyView::fromPostView($homeView->node('post_view'));
         }
         $feedInstanceView = $this->lemmy->send(ApiRequestModel::get($post->instanceUrl . $path));
         $origin = JsonNodeModel::fromValue($feedInstanceView->json())->node('post_view')->node('post')->string('ap_id');
 
-        return LemmyView::ofPost($this->resolve($account, $origin)->node('post'));
+        return LemmyView::fromPostView($this->resolve($account, $origin)->node('post'));
     }
 
     /**
@@ -57,7 +57,7 @@ final readonly class LemmyPosts
      * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
-    public function homePostIdOf(SocialAccount $account, LemmyPostModel $post): int
+    public function resolveHomePostId(SocialAccount $account, LemmyPostModel $post): int
     {
         return self::isHomeInstance($account, $post) ? $post->postId : $this->postOn($account, $post)->postId;
     }
@@ -71,7 +71,7 @@ final readonly class LemmyPosts
      */
     public function commentOn(SocialAccount $account, string $address): LemmyTargetModel
     {
-        return LemmyView::ofComment($this->resolve($account, $address)->node('comment'));
+        return LemmyView::fromCommentView($this->resolve($account, $address)->node('comment'));
     }
 
     private function resolve(SocialAccount $account, ?string $address): JsonNodeModel

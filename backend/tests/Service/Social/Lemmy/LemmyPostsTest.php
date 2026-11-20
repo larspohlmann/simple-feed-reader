@@ -69,7 +69,10 @@ final class LemmyPostsTest extends TestCase
     {
         $http = new RoutedHttpClient([]);
 
-        $postId = $this->posts($http)->homePostIdOf($this->account(), new LemmyPostModel('https://lemmy.example', 42));
+        $postId = $this->posts($http)->resolveHomePostId(
+            $this->account(),
+            new LemmyPostModel('https://lemmy.example', 42),
+        );
 
         self::assertSame(42, $postId);
         self::assertSame([], $http->requests);
@@ -79,7 +82,10 @@ final class LemmyPostsTest extends TestCase
     {
         $http = $this->federated($this->buildResponse('resolve-post.json'));
 
-        $postId = $this->posts($http)->homePostIdOf($this->account(), new LemmyPostModel('https://feddit.example', 7));
+        $postId = $this->posts($http)->resolveHomePostId(
+            $this->account(),
+            new LemmyPostModel('https://feddit.example', 7),
+        );
 
         self::assertSame(990, $postId);
         self::assertSame([self::FEDERATED_POST, self::RESOLVE . self::ORIGIN_POST], $http->requestLines());

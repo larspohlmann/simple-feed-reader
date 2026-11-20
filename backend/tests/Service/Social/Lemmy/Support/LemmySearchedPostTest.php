@@ -27,19 +27,25 @@ final class LemmySearchedPostTest extends TestCase
     #[DataProvider('queries')]
     public function testAPostIsJudgedByTitleBodyAndAuthor(string $query, bool $expected): void
     {
-        $post = LemmySearchedPost::of('RSS readers compared', '<p>Atom too</p>', 'https://Lemmy.Example/u/ada');
+        $post = LemmySearchedPost::buildSearchedPost(
+            'RSS readers compared',
+            '<p>Atom too</p>',
+            'https://Lemmy.Example/u/ada',
+        );
 
         self::assertSame($expected, SocialSearchMatch::matcher($query)($post));
     }
 
     public function testAPostWithoutAnAuthorUrlHasNoNames(): void
     {
-        self::assertTrue(SocialSearchMatch::matcher('rss -from:ada')(LemmySearchedPost::of('rss', null, null)));
+        self::assertTrue(
+            SocialSearchMatch::matcher('rss -from:ada')(LemmySearchedPost::buildSearchedPost('rss', null, null)),
+        );
     }
 
     public function testAnAuthorUrlWithoutAUserPathHasNoNames(): void
     {
-        $post = LemmySearchedPost::of('rss', null, 'https://lemmy.example/c/news');
+        $post = LemmySearchedPost::buildSearchedPost('rss', null, 'https://lemmy.example/c/news');
 
         self::assertTrue(SocialSearchMatch::matcher('rss -from:news')($post));
     }

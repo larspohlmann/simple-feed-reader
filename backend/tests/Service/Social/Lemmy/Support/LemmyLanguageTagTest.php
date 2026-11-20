@@ -20,21 +20,21 @@ final class LemmyLanguageTagTest extends TestCase
         $idsByCode = $this->idsByCode();
 
         foreach (['de', 'en', 'fr', 'es'] as $code) {
-            self::assertSame($code, LemmyLanguageTag::of($idsByCode[$code]));
+            self::assertSame($code, LemmyLanguageTag::fromLanguageId($idsByCode[$code]));
         }
     }
 
     public function testUndeterminedAndAbsentStateNoLanguage(): void
     {
-        self::assertNull(LemmyLanguageTag::of(0));
-        self::assertNull(LemmyLanguageTag::of(null));
+        self::assertNull(LemmyLanguageTag::fromLanguageId(0));
+        self::assertNull(LemmyLanguageTag::fromLanguageId(null));
     }
 
     public function testAnyOtherLanguageIsStatedButNotOneOfTheFour(): void
     {
         $portuguese = $this->idsByCode()['pt'];
 
-        self::assertSame('x-lemmy-' . $portuguese, LemmyLanguageTag::of($portuguese));
+        self::assertSame('x-lemmy-' . $portuguese, LemmyLanguageTag::fromLanguageId($portuguese));
     }
 
     /** @return array<string, int> the language id of each code */
