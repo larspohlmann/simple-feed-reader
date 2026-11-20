@@ -35,21 +35,21 @@ final readonly class ComposerContexts
     ) {
     }
 
-    public function ofReply(SocialPostModel $post, ResponseTargetModel $target): ComposerContextModel
+    public function buildReplyContext(SocialPostModel $post, ResponseTargetModel $target): ComposerContextModel
     {
         $defaults = $this->defaults->get($post->account->getNetwork()->value)
-            ->defaultsFor($post, $this->threadStarterOf($target, $post));
+            ->defaultsFor($post, $this->buildThreadStarterLookup($target, $post));
         $text = ComposerStartingText::mentioning($defaults->mentions);
 
-        return $this->contextOf($post, ResponseKind::Reply, $defaults, $text);
+        return $this->buildContext($post, ResponseKind::Reply, $defaults, $text);
     }
 
-    public function ofQuote(SocialPostModel $post): ComposerContextModel
+    public function buildQuoteContext(SocialPostModel $post): ComposerContextModel
     {
-        return $this->quoteContextOf($post, '');
+        return $this->buildQuotingContext($post, '');
     }
 
-    public function ofLink(SocialAccount $account, SharedLinkModel $link): ComposerContextModel
+    public function buildLinkContext(SocialAccount $account, SharedLinkModel $link): ComposerContextModel
     {
         $defaults = $this->defaults->get($account->getNetwork()->value)->forLinkFrom($account, $link);
 
@@ -58,13 +58,13 @@ final readonly class ComposerContexts
             $account,
             canSend: true,
             defaults: $defaults,
-            target: $this->pageCards->cardOf($link->url),
+            target: $this->pageCards->resolveCard($link->url),
             kind: ComposerKind::Link,
-            text: $this->startingTextOf($link, $defaults),
+            text: $this->buildStartingText($link, $defaults),
         );
     }
 
-    private function startingTextOf(SharedLinkModel $link, ComposerDefaultsModel $defaults): string
+    private function buildStartingText(SharedLinkModel $link, ComposerDefaultsModel $defaults): string
     {
         if (null !== $defaults->linkPost) {
             return ComposerStartingText::quoting($link->quote, $defaults->maxCharacters);
@@ -74,23 +74,23 @@ final readonly class ComposerContexts
     }
 
     /** A shared link that names a quotable post quotes it, starting with the selection the reader shares. */
-    public function ofQuotedLink(SocialPostModel $post, SharedLinkModel $link): ComposerContextModel
+    public function buildQuotedLinkContext(SocialPostModel $post, SharedLinkModel $link): ComposerContextModel
     {
-        return $this->quoteContextOf($post, $link->quote);
+        return $this->buildQuotingContext($post, $link->quote);
     }
 
     /** A quote names nobody, so it never asks for the thread's starter. */
-    private function quoteContextOf(SocialPostModel $post, string $quote): ComposerContextModel
+    private function buildQuotingContext(SocialPostModel $post, string $quote): ComposerContextModel
     {
         $defaults = $this->defaults->get($post->account->getNetwork()->value)
             ->defaultsFor($post, static fn (): ?SocialPostModel => null)
             ->withoutMentions();
         $text = ComposerStartingText::quoting($quote, $defaults->maxCharacters);
 
-        return $this->contextOf($post, ResponseKind::Quote, $defaults, $text);
+        return $this->buildContext($post, ResponseKind::Quote, $defaults, $text);
     }
 
-    private function contextOf(
+    private function buildContext(
         SocialPostModel $post,
         ResponseKind $kind,
         ComposerDefaultsModel $defaults,
@@ -114,7 +114,7 @@ final readonly class ComposerContexts
     }
 
     /** @return \Closure(): ?SocialPostModel */
-    private function threadStarterOf(ResponseTargetModel $target, SocialPostModel $post): \Closure
+    private function buildThreadStarterLookup(ResponseTargetModel $target, SocialPostModel $post): \Closure
     {
         if (null === $target->address) {
             return static fn (): SocialPostModel => $post;

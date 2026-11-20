@@ -59,8 +59,8 @@ final readonly class SocialResponses
         $post = $this->targets->find($user, $target);
 
         return match ($kind) {
-            ResponseKind::Reply => $this->contexts->ofReply($post, $target),
-            ResponseKind::Quote => $this->contexts->ofQuote($post),
+            ResponseKind::Reply => $this->contexts->buildReplyContext($post, $target),
+            ResponseKind::Quote => $this->contexts->buildQuoteContext($post),
         };
     }
 

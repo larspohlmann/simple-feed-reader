@@ -25,7 +25,7 @@ final class TimelineAccounts
     private array $renewed = [];
 
     /** Why the account's feeds stay unasked this refresh, or null when nothing holds them. */
-    public function heldOutcomeOf(SocialAccount $account): ?TimelineOutcomeModelInterface
+    public function buildHeldOutcome(SocialAccount $account): ?TimelineOutcomeModelInterface
     {
         if (SocialAccountStatus::NeedsReconnect === $account->getStatus()) {
             return new AccountPausedTimelineModel();

@@ -59,7 +59,7 @@ final readonly class SocialRepliesSource implements CommentsSourceInterface
 
     public function buildAudience(User $user, Entry $entry): CommentsAudienceModel
     {
-        $post = $this->postOf($entry);
+        $post = $this->requirePost($entry);
         $account = $this->accountOrNull($user, $entry, $post->network);
         $viewer = null === $account ? 'public' : 'account:' . $account->requireId();
 
@@ -68,24 +68,24 @@ final readonly class SocialRepliesSource implements CommentsSourceInterface
 
     public function fetch(CommentsRequest $request): CommentsAnswerModel
     {
-        $post = $this->postOf($request->entry);
+        $post = $this->requirePost($request->entry);
         $account = $request->audience->actingAccount;
         $thread = $this->threadOn($post->network);
         if (null === $account) {
             self::refuseWhilePublicThreadIsThrottled($thread);
             $this->spendOneFetch($request->user);
 
-            return self::publicThreadOf($thread, $post->address);
+            return self::fetchPublicThread($thread, $post->address);
         }
         $this->spendOneFetch($request->user);
 
-        return $this->accountOrPublicThreadOf($thread, $account, $post->address);
+        return $this->fetchThreadAsAccountOrPublic($thread, $account, $post->address);
     }
 
     public function read(CommentsRequest $request, string $answer): CommentsPageModel
     {
-        $post = $this->postOf($request->entry);
-        $page = $this->order->pageOf($this->threadOn($post->network)->repliesIn($post->address, $answer));
+        $post = $this->requirePost($request->entry);
+        $page = $this->order->buildPage($this->threadOn($post->network)->repliesIn($post->address, $answer));
 
         return new CommentsPageModel(
             OwnReplies::marked(
@@ -97,7 +97,7 @@ final readonly class SocialRepliesSource implements CommentsSourceInterface
     }
 
 
-    private function accountOrPublicThreadOf(
+    private function fetchThreadAsAccountOrPublic(
         ReplyThreadSourceInterface $thread,
         SocialAccount $account,
         string $address,
@@ -115,7 +115,7 @@ final readonly class SocialRepliesSource implements CommentsSourceInterface
             | SocialPostNotFoundException
             | SocialNetworkUnreachableException
         ) {
-            return self::publicThreadOf($thread, $address);
+            return self::fetchPublicThread($thread, $address);
         }
     }
 
@@ -123,7 +123,7 @@ final readonly class SocialRepliesSource implements CommentsSourceInterface
      * @throws CommentsThrottledException
      * @throws CommentsUnavailableException
      */
-    private static function publicThreadOf(ReplyThreadSourceInterface $thread, string $address): CommentsAnswerModel
+    private static function fetchPublicThread(ReplyThreadSourceInterface $thread, string $address): CommentsAnswerModel
     {
         try {
             return $thread->inPublic($address);
@@ -165,7 +165,7 @@ final readonly class SocialRepliesSource implements CommentsSourceInterface
         return $thread;
     }
 
-    private function postOf(Entry $entry): SocialPostAddressModel
+    private function requirePost(Entry $entry): SocialPostAddressModel
     {
         return $this->postAddresses->findPost($entry)
             ?? throw new CommentsUnavailableException('The entry is not a post this reader can act on.');

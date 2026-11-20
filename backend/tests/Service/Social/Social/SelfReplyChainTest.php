@@ -14,7 +14,7 @@ final class SelfReplyChainTest extends TestCase
 {
     public function testFollowsTheAuthorsOldestReplyAtEachLevel(): void
     {
-        $chain = (new SelfReplyChain())->of([
+        $chain = (new SelfReplyChain())->buildChain([
             self::node('stranger', '08:15:40', false),
             self::node('second-by-author', '08:15:50', true),
             self::node('first-by-author', '08:15:32', true, [
@@ -35,7 +35,7 @@ final class SelfReplyChainTest extends TestCase
 
     public function testCountsTheRepliesItDoesNotKeep(): void
     {
-        $chain = (new SelfReplyChain())->of([
+        $chain = (new SelfReplyChain())->buildChain([
             self::node('one', '08:00:00', true, [
                 self::node('two', '08:01:00', true, [
                     self::node('three', '08:02:00', true, [
@@ -53,7 +53,7 @@ final class SelfReplyChainTest extends TestCase
 
     public function testStopsWhereNoReplyIsTheAuthors(): void
     {
-        $chain = (new SelfReplyChain())->of([
+        $chain = (new SelfReplyChain())->buildChain([
             self::node('first', '08:00:00', true, [self::node('stranger', '08:01:00', false)]),
         ]);
 
@@ -63,7 +63,7 @@ final class SelfReplyChainTest extends TestCase
 
     public function testNoAuthorReplyMeansNoChain(): void
     {
-        $chain = (new SelfReplyChain())->of([self::node('stranger', '08:00:00', false)]);
+        $chain = (new SelfReplyChain())->buildChain([self::node('stranger', '08:00:00', false)]);
 
         self::assertSame([], $chain->replies);
         self::assertSame(0, $chain->replyCount);
@@ -71,7 +71,10 @@ final class SelfReplyChainTest extends TestCase
 
     public function testAReplyWithoutADateComesAfterDatedOnes(): void
     {
-        $chain = (new SelfReplyChain())->of([self::node('undated', null, true), self::node('dated', '09:00:00', true)]);
+        $chain = (new SelfReplyChain())->buildChain([
+            self::node('undated', null, true),
+            self::node('dated', '09:00:00', true),
+        ]);
 
         self::assertSame('dated', $chain->replies[0]->html);
     }

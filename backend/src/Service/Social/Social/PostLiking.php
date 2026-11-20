@@ -23,20 +23,20 @@ final readonly class PostLiking
 
     public function like(SocialPostModel $post): SocialLikeResultModel
     {
-        $liker = $this->likerOf($post->account);
+        $liker = $this->selectLiker($post->account);
 
         return $this->guard->actAs($post->account, static fn (): SocialLikeResultModel => $liker->like($post));
     }
 
     public function unlike(SocialAccount $account, string $likeId): void
     {
-        $liker = $this->likerOf($account);
+        $liker = $this->selectLiker($account);
         $this->guard->actAs($account, static function () use ($liker, $account, $likeId): void {
             $liker->unlike($account, $likeId);
         });
     }
 
-    private function likerOf(SocialAccount $account): PostLikerInterface
+    private function selectLiker(SocialAccount $account): PostLikerInterface
     {
         $liker = $this->likers->get($account->getNetwork()->value);
         \assert($liker instanceof PostLikerInterface);

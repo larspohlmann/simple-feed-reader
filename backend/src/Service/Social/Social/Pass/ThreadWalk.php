@@ -45,7 +45,7 @@ final class ThreadWalk
     private function walk(ReplyNode $node, int $depth): void
     {
         if ($depth >= $this->maxDepth || count($this->comments) >= $this->maxCount) {
-            $this->omitted += self::sizeOf($node);
+            $this->omitted += self::countNodes($node);
 
             return;
         }
@@ -60,8 +60,8 @@ final class ThreadWalk
         return $left->sortableTime() <=> $right->sortableTime();
     }
 
-    private static function sizeOf(ReplyNode $node): int
+    private static function countNodes(ReplyNode $node): int
     {
-        return 1 + array_sum(array_map(self::sizeOf(...), $node->replies));
+        return 1 + array_sum(array_map(self::countNodes(...), $node->replies));
     }
 }

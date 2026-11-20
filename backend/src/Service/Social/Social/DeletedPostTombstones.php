@@ -24,7 +24,7 @@ final readonly class DeletedPostTombstones
     /** @param list<string> $guidHashes */
     public function bury(int $feedId, array $guidHashes): void
     {
-        $item = $this->cache->getItem(self::keyOf($feedId));
+        $item = $this->cache->getItem(self::buildKey($feedId));
         $until = array_fill_keys($guidHashes, $this->now() + self::KEPT_SECONDS);
         $item->set([...$this->standing($item), ...$until]);
         $this->cache->save($item);
@@ -33,7 +33,7 @@ final readonly class DeletedPostTombstones
     /** @return list<string> the guid hashes of the feed's posts deleted within the last seven days */
     public function buriedIn(int $feedId): array
     {
-        return array_keys($this->standing($this->cache->getItem(self::keyOf($feedId))));
+        return array_keys($this->standing($this->cache->getItem(self::buildKey($feedId))));
     }
 
     /** @return array<string, int> each guid hash still buried, with the time it may be stored again */
@@ -59,7 +59,7 @@ final readonly class DeletedPostTombstones
         return $this->clock->now()->getTimestamp();
     }
 
-    private static function keyOf(int $feedId): string
+    private static function buildKey(int $feedId): string
     {
         return 'deleted_posts.' . $feedId;
     }

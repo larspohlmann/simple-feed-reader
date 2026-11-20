@@ -22,14 +22,14 @@ final readonly class SocialAccountEditor
     }
 
     /** @return list<SocialAccount> */
-    public function accountsOf(User $user): array
+    public function findAccounts(User $user): array
     {
         return $this->socialAccounts->findAllForUser($user);
     }
 
     public function makeDefault(SocialAccount $account): void
     {
-        foreach ($this->siblingsOf($account) as $sibling) {
+        foreach ($this->findSiblings($account) as $sibling) {
             $sibling->stopBeingDefault();
         }
         $account->becomeDefault();
@@ -38,11 +38,11 @@ final readonly class SocialAccountEditor
 
     public function disconnect(SocialAccount $account): void
     {
-        $successor = $account->isDefault() ? ($this->siblingsOf($account)[0] ?? null) : null;
+        $successor = $account->isDefault() ? ($this->findSiblings($account)[0] ?? null) : null;
         $this->events->dispatch(new SocialAccountDisconnected($account));
 
         $this->entityManager->wrapInTransaction(function () use ($account, $successor): void {
-            $this->privateFeeds->removeAllOf($account);
+            $this->privateFeeds->unsubscribeAllFeeds($account);
             $this->entityManager->remove($account);
             $successor?->becomeDefault();
             $this->entityManager->flush();
@@ -50,7 +50,7 @@ final readonly class SocialAccountEditor
     }
 
     /** @return list<SocialAccount> the user's other accounts on the same network, oldest first */
-    private function siblingsOf(SocialAccount $account): array
+    private function findSiblings(SocialAccount $account): array
     {
         $onNetwork = $this->socialAccounts->findAllOnNetwork($account->getUser(), $account->getNetwork());
 

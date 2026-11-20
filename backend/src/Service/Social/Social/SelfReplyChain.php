@@ -14,7 +14,7 @@ final readonly class SelfReplyChain
     public const int MAX_REPLIES = 4;
 
     /** @param list<ReplyNode> $replies the post's direct replies */
-    public function of(array $replies): SelfReplyChainModel
+    public function buildChain(array $replies): SelfReplyChainModel
     {
         $chain = [];
         $next = self::oldestByAuthor($replies);

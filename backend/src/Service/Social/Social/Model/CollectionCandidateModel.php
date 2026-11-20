@@ -14,7 +14,7 @@ final readonly class CollectionCandidateModel
     }
 
     /** @param array<string, int> $subscriptionIds the account's private-feed subscriptions by PrivateFeedModel::key() */
-    public static function of(PrivateFeedModel $privateFeed, array $subscriptionIds): self
+    public static function fromPrivateFeed(PrivateFeedModel $privateFeed, array $subscriptionIds): self
     {
         $subscriptionId = $subscriptionIds[$privateFeed->key()] ?? null;
 

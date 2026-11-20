@@ -54,7 +54,7 @@ final class Version20261114160000 extends AbstractMigration
         if (SourceFormat::isSaved($sourceFormat)) {
             return SavedFeedUrl::parseNetwork($url);
         }
-        $privateAddress = SourceFormat::isSocial($sourceFormat) ? SocialFeedUrl::addressOf($url) : null;
+        $privateAddress = SourceFormat::isSocial($sourceFormat) ? SocialFeedUrl::parseAddress($url) : null;
 
         return $privateAddress->network ?? self::findProfileFeedNetwork($url);
     }

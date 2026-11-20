@@ -43,7 +43,7 @@ final readonly class SocialCounts
      * @throws SocialAccountNeedsReconnectException
      * @throws SocialCredentialsRejectedException
      */
-    public function of(User $user, Entry $entry): SocialCountsModel
+    public function fetchCounts(User $user, Entry $entry): SocialCountsModel
     {
         $post = $this->postAddresses->requirePost($entry);
         $cached = $this->cache->find($post);
@@ -77,7 +77,7 @@ final readonly class SocialCounts
         $post = $this->postAddresses->requirePost($entry);
         $this->cache->forget($post);
 
-        return $this->of($user, $entry);
+        return $this->fetchCounts($user, $entry);
     }
 
     private function lookedUp(User $user, Entry $entry, SocialPostAddressModel $post): SocialCountsModel
@@ -85,11 +85,11 @@ final readonly class SocialCounts
         try {
             return $this->publicSourceOn($post->network)->fetchCounts($post->address);
         } catch (SocialPostNotFoundException | SocialNetworkUnreachableException $publicFailure) {
-            return $this->actingAccountCountsOf($user, $entry, $publicFailure);
+            return $this->fetchCountsAsActingAccount($user, $entry, $publicFailure);
         }
     }
 
-    private function actingAccountCountsOf(
+    private function fetchCountsAsActingAccount(
         User $user,
         Entry $entry,
         SocialPostNotFoundException|SocialNetworkUnreachableException $publicFailure,

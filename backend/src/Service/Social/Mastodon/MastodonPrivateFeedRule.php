@@ -72,7 +72,7 @@ final readonly class MastodonPrivateFeedRule implements PrivateFeedRuleInterface
 
     public function buildSearchQueries(string $query): array
     {
-        return new SearchQueryAlternatives(SearchQueryTokens::of($query))->queries();
+        return new SearchQueryAlternatives(SearchQueryTokens::tokenizeQuery($query))->queries();
     }
 
     public function buildSearchedPost(SocialAccount $account, StoredPostModel $post): SearchedPostModel

@@ -43,7 +43,7 @@ final class SearchQueryParser
             $alternatives[] = $this->conjunction();
         }
 
-        return self::anyOf(array_values(array_filter($alternatives)));
+        return self::combineAny(array_values(array_filter($alternatives)));
     }
 
     private function conjunction(): ?SearchExpressionModelInterface
@@ -56,7 +56,7 @@ final class SearchQueryParser
             $factors[] = $this->factor();
         }
 
-        return self::allOf(array_values(array_filter($factors)));
+        return self::combineAll(array_values(array_filter($factors)));
     }
 
     private function factor(): ?SearchExpressionModelInterface
@@ -66,8 +66,8 @@ final class SearchQueryParser
         return match ($kind) {
             SearchQueryTokens::NOT => self::negated($this->factor()),
             SearchQueryTokens::OPEN => $this->group(),
-            SearchQueryTokens::PHRASE => self::termOf($text),
-            SearchQueryTokens::WORD => self::wordOf($text),
+            SearchQueryTokens::PHRASE => self::parseTerm($text),
+            SearchQueryTokens::WORD => self::parseWord($text),
             default => null,
         };
     }
@@ -92,18 +92,18 @@ final class SearchQueryParser
         return true;
     }
 
-    private static function wordOf(string $text): ?SearchExpressionModelInterface
+    private static function parseWord(string $text): ?SearchExpressionModelInterface
     {
         return match (true) {
             1 === preg_match(self::AUTHOR_FILTER_PATTERN, $text, $filter) => new AuthorSearchModel($filter['author']),
             SearchQueryTokens::isFilter($text) => new UncheckedSearchModel(),
-            default => self::termOf($text),
+            default => self::parseTerm($text),
         };
     }
 
-    private static function termOf(string $text): ?SearchExpressionModelInterface
+    private static function parseTerm(string $text): ?SearchExpressionModelInterface
     {
-        $words = SearchQueryTokens::wordsOf($text);
+        $words = SearchQueryTokens::splitWords($text);
 
         return [] === $words ? null : new SearchTermModel($words);
     }
@@ -118,13 +118,13 @@ final class SearchQueryParser
     }
 
     /** @param list<SearchExpressionModelInterface> $factors */
-    private static function allOf(array $factors): ?SearchExpressionModelInterface
+    private static function combineAll(array $factors): ?SearchExpressionModelInterface
     {
         return \count($factors) > 1 ? new AllOfSearchModel($factors) : $factors[0] ?? null;
     }
 
     /** @param list<SearchExpressionModelInterface> $alternatives */
-    private static function anyOf(array $alternatives): ?SearchExpressionModelInterface
+    private static function combineAny(array $alternatives): ?SearchExpressionModelInterface
     {
         return \count($alternatives) > 1 ? new AnyOfSearchModel($alternatives) : $alternatives[0] ?? null;
     }

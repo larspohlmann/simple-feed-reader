@@ -42,7 +42,7 @@ final readonly class TimelineSelfThreads
         if ($byRoot === []) {
             return new TimelinePlanModel($page->parsed, TimelineThreadsModel::none());
         }
-        $placements = $this->placementsOf($page, $byRoot, $stored);
+        $placements = $this->loadPlacements($page, $byRoot, $stored);
         $placed = [];
         $unplaced = [];
         $replyCounts = [];
@@ -56,7 +56,7 @@ final readonly class TimelineSelfThreads
         return new TimelinePlanModel(
             $page->parsed->withEntries([
                 ...$page->parsed->entries,
-                ...self::orphansOf($byRoot, $placements),
+                ...self::collectOrphans($byRoot, $placements),
                 ...$unplaced,
             ]),
             new TimelineThreadsModel($placed, array_filter($replyCounts)),
@@ -69,7 +69,7 @@ final readonly class TimelineSelfThreads
         if ($threads->replyCounts === []) {
             return;
         }
-        $roots = $this->rootsOf($feed, $threads, $createdEntries);
+        $roots = $this->loadRoots($feed, $threads, $createdEntries);
         $source = $this->sourceFor($feed);
         foreach ($threads->placed as $reply) {
             $root = $roots[$reply->rootGuid] ?? null;
@@ -106,7 +106,7 @@ final readonly class TimelineSelfThreads
             array_push($guids, $reply->entry->guid, $reply->rootGuid);
         }
         $stored = [];
-        foreach ($this->entries->findByFeedIndexedByGuidHash($feed, self::hashesOf($guids)) as $entry) {
+        foreach ($this->entries->findByFeedIndexedByGuidHash($feed, self::hashGuids($guids)) as $entry) {
             $stored[$entry->getGuid()] = $entry;
         }
 
@@ -139,7 +139,7 @@ final readonly class TimelineSelfThreads
      *
      * @return array<string, SelfThreadPlacement>
      */
-    private function placementsOf(TimelinePageModel $page, array $byRoot, array $stored): array
+    private function loadPlacements(TimelinePageModel $page, array $byRoot, array $stored): array
     {
         $storedRoots = array_intersect_key($stored, $byRoot);
         $threadPositions = $this->threadPosts->positionsByEntryIds(array_values(array_map(
@@ -165,14 +165,14 @@ final readonly class TimelineSelfThreads
      *
      * @return array<string, Entry> by guid
      */
-    private function rootsOf(Feed $feed, TimelineThreadsModel $threads, array $createdEntries): array
+    private function loadRoots(Feed $feed, TimelineThreadsModel $threads, array $createdEntries): array
     {
         $roots = [];
         foreach ($createdEntries as $entry) {
             $roots[$entry->getGuid()] = $entry;
         }
         $storedGuids = array_diff(array_keys($threads->replyCounts), array_keys($roots));
-        foreach ($this->entries->findByFeedIndexedByGuidHash($feed, self::hashesOf($storedGuids)) as $root) {
+        foreach ($this->entries->findByFeedIndexedByGuidHash($feed, self::hashGuids($storedGuids)) as $root) {
             $roots[$root->getGuid()] = $root;
         }
 
@@ -209,7 +209,7 @@ final readonly class TimelineSelfThreads
      *
      * @return list<ParsedEntryModel>
      */
-    private static function orphansOf(array $byRoot, array $placements): array
+    private static function collectOrphans(array $byRoot, array $placements): array
     {
         $orphans = [];
         foreach (array_diff_key($byRoot, $placements) as $replies) {
@@ -226,7 +226,7 @@ final readonly class TimelineSelfThreads
      *
      * @return list<string>
      */
-    private static function hashesOf(array $guids): array
+    private static function hashGuids(array $guids): array
     {
         return array_values(array_unique(array_map(
             static fn (string $guid): string => EntryGuid::hashGuid($guid),

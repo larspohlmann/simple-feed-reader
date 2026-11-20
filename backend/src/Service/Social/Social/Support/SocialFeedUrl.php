@@ -30,10 +30,10 @@ final class SocialFeedUrl
         'all' => 'all',
     ];
 
-    public static function of(SocialAccount $account, PrivateFeedModel $privateFeed): string
+    public static function buildUrl(SocialAccount $account, PrivateFeedModel $privateFeed): string
     {
         $url = self::SCHEME . $account->getNetwork()->value . ':' . $account->requireId() . ':'
-            . self::segmentOf($privateFeed->kind);
+            . self::readSegment($privateFeed->kind);
 
         return '' === $privateFeed->remoteId ? $url : $url . ':' . $privateFeed->remoteId;
     }
@@ -43,14 +43,14 @@ final class SocialFeedUrl
         return str_starts_with($url, self::SCHEME);
     }
 
-    public static function addressOf(string $url): ?SocialFeedAddressModel
+    public static function parseAddress(string $url): ?SocialFeedAddressModel
     {
         if (!self::isPrivate($url)) {
             return null;
         }
         $parts = explode(':', $url, 5);
         $network = SocialNetwork::tryFrom($parts[1] ?? '');
-        $kind = self::kindOf($parts[3] ?? '');
+        $kind = self::parseKind($parts[3] ?? '');
         $accountId = $parts[2] ?? '';
         if (null === $network || null === $kind || 1 !== preg_match(self::ACCOUNT_ID, $accountId)) {
             return null;
@@ -62,7 +62,7 @@ final class SocialFeedUrl
     /** @return string|null the remote id an author feed of $network follows; null for any other URL */
     public static function parseAuthor(SocialNetwork $network, string $url): ?string
     {
-        $address = self::addressOf($url);
+        $address = self::parseAddress($url);
         if (null === $address || $network !== $address->network || !$address->kind->followsOnePerson()) {
             return null;
         }
@@ -70,12 +70,12 @@ final class SocialFeedUrl
         return $address->remoteId;
     }
 
-    private static function segmentOf(SocialFeedKind $kind): string
+    private static function readSegment(SocialFeedKind $kind): string
     {
         return self::SEGMENTS[$kind->value];
     }
 
-    private static function kindOf(string $segment): ?SocialFeedKind
+    private static function parseKind(string $segment): ?SocialFeedKind
     {
         $kind = array_search($segment, self::SEGMENTS, true);
 

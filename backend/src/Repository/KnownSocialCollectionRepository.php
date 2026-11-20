@@ -21,12 +21,12 @@ final class KnownSocialCollectionRepository extends ServiceEntityRepository
         parent::__construct($registry, KnownSocialCollection::class);
     }
 
-    /** @return array<string, true> by kind:remoteId (PrivateFeedModel::keyOf) */
+    /** @return array<string, true> by kind:remoteId (PrivateFeedModel::buildKey) */
     public function findKeys(SocialAccount $account): array
     {
         $keys = [];
         foreach ($this->findBy(['socialAccount' => $account]) as $known) {
-            $keys[PrivateFeedModel::keyOf($known->getKind(), $known->getRemoteId())] = true;
+            $keys[PrivateFeedModel::buildKey($known->getKind(), $known->getRemoteId())] = true;
         }
 
         return $keys;

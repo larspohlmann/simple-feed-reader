@@ -50,7 +50,7 @@ final class LemmySearchTerms
     {
         $longest = '';
         foreach ($factors as $factor) {
-            $term = implode(' ', SearchQueryTokens::wordsOf($factor));
+            $term = implode(' ', SearchQueryTokens::splitWords($factor));
             if (mb_strlen($term) > mb_strlen($longest)) {
                 $longest = $term;
             }

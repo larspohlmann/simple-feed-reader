@@ -35,7 +35,7 @@ final class SubscriptionDisplayTitle
     /** An unrenamed search follows its query, which a requery changes without touching the stored title. */
     private static function parseSearchQuery(string $feedUrl): ?string
     {
-        $address = SocialFeedUrl::addressOf($feedUrl);
+        $address = SocialFeedUrl::parseAddress($feedUrl);
 
         return SocialFeedKind::Search === $address?->kind ? $address->remoteId : null;
     }

@@ -10,9 +10,9 @@ use App\Service\Social\Social\Model\SocialFeedAddressModel;
 
 final class SocialFeedClassifier
 {
-    public static function privateAddressOf(Feed $feed): ?SocialFeedAddressModel
+    public static function parsePrivateAddress(Feed $feed): ?SocialFeedAddressModel
     {
-        return SourceFormat::isSocial($feed->getSourceFormat()) ? SocialFeedUrl::addressOf($feed->getUrl()) : null;
+        return SourceFormat::isSocial($feed->getSourceFormat()) ? SocialFeedUrl::parseAddress($feed->getUrl()) : null;
     }
 
     private function __construct()

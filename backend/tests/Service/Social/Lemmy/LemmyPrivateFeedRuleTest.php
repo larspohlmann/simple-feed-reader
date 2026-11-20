@@ -74,10 +74,19 @@ final class LemmyPrivateFeedRuleTest extends TestCase
         yield 'subscribed' => [PrivateFeedModel::timeline(SocialFeedKind::Home), $listing . 'Subscribed'];
         yield 'local' => [PrivateFeedModel::timeline(SocialFeedKind::Local), $listing . 'Local'];
         yield 'all' => [PrivateFeedModel::timeline(SocialFeedKind::All), $listing . 'All'];
-        yield 'list' => [PrivateFeedModel::of(SocialFeedKind::UserList, '1', 'Friends'), 'https://lemmy.example'];
-        yield 'custom feed' => [PrivateFeedModel::of(SocialFeedKind::CustomFeed, 'f', 'F'), 'https://lemmy.example'];
-        yield 'author' => [PrivateFeedModel::of(SocialFeedKind::Author, 'did:plc:a', 'A'), 'https://lemmy.example'];
-        yield 'tag' => [PrivateFeedModel::of(SocialFeedKind::Tag, 'caturday', '#caturday'), 'https://lemmy.example'];
+        yield 'list' => [PrivateFeedModel::fromKind(SocialFeedKind::UserList, '1', 'Friends'), 'https://lemmy.example'];
+        yield 'custom feed' => [
+            PrivateFeedModel::fromKind(SocialFeedKind::CustomFeed, 'f', 'F'),
+            'https://lemmy.example',
+        ];
+        yield 'author' => [
+            PrivateFeedModel::fromKind(SocialFeedKind::Author, 'did:plc:a', 'A'),
+            'https://lemmy.example',
+        ];
+        yield 'tag' => [
+            PrivateFeedModel::fromKind(SocialFeedKind::Tag, 'caturday', '#caturday'),
+            'https://lemmy.example',
+        ];
         yield 'trending' => [PrivateFeedModel::timeline(SocialFeedKind::Trending), 'https://lemmy.example'];
     }
 

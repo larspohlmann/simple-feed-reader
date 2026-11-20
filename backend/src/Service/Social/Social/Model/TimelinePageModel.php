@@ -24,7 +24,7 @@ final readonly class TimelinePageModel
      *
      * @param list<ParsedEntryModel> $entries
      */
-    public static function of(array $entries, KnownSharesModel $knownShares, ?string $newestId): self
+    public static function fromEntries(array $entries, KnownSharesModel $knownShares, ?string $newestId): self
     {
         return new self(new ParsedFeedModel(null, null, null, null, $entries), $knownShares, $newestId);
     }

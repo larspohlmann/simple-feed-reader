@@ -36,7 +36,7 @@ final readonly class EntrySocialCountsController
 
         $counts = $request->query->getBoolean('refresh')
             ? $this->socialCounts->refreshed($user, $entry)
-            : $this->socialCounts->of($user, $entry);
+            : $this->socialCounts->fetchCounts($user, $entry);
 
         return new JsonResponse(SocialCountsJson::from($counts));
     }

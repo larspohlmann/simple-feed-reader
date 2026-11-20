@@ -91,7 +91,7 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
 
         $result = $persister->storeTimeline(
             $timelineFeed,
-            TimelinePageModel::of(
+            TimelinePageModel::fromEntries(
                 $this->parsedMotherJones($rssFeed)->entries,
                 KnownSharesModel::ofBlueskyPosts([
                     self::TISCH => Bluesky::post('external'),
@@ -214,7 +214,7 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
         $plainReply = self::page([self::item(self::REPLY_ONE)])->parsed->entries;
         $persister->storeTimeline(
             $feed,
-            TimelinePageModel::of($plainReply, KnownSharesModel::none(), null),
+            TimelinePageModel::fromEntries($plainReply, KnownSharesModel::none(), null),
             $this->clock->now(),
         );
 

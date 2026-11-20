@@ -44,7 +44,7 @@ final readonly class ImportCandidates
      */
     public function forAccount(SocialAccount $account): ImportCandidatesModel
     {
-        $network = $this->networkCandidatesOf($account);
+        $network = $this->fetchNetworkCandidates($account);
         $importRule = $this->importRules->selectRule($account->getNetwork());
         if ($importRule->allowsFollowAvatarCache()) {
             $this->followAvatars->remember($account, $network->follows);
@@ -53,13 +53,13 @@ final readonly class ImportCandidates
             $this->profileFeeds->selectRule($account->getNetwork()),
             $importRule,
             $network->follows,
-        )->matchProfileFeeds($this->profileFeedsOf($account, $importRule));
-        $subscribed = $this->privateFeedSubscriptionsOf($account);
+        )->matchProfileFeeds($this->loadProfileFeeds($account, $importRule));
+        $subscribed = $this->loadPrivateFeedSubscriptions($account);
 
         return new ImportCandidatesModel(
             CandidateOrder::follows(self::trustedFollows($network, $follows)),
             [
-                ...$this->singletonsOf($account, $subscribed),
+                ...$this->buildSingletons($account, $subscribed),
                 ...self::collections(SocialFeedKind::UserList, $network->lists, $subscribed),
             ],
             self::collections(SocialFeedKind::CustomFeed, $network->customFeeds, $subscribed),
@@ -77,10 +77,11 @@ final readonly class ImportCandidates
     private static function collections(SocialFeedKind $kind, array $collections, array $subscribed): array
     {
         return array_map(
-            static fn (SocialCollectionModel $collection): CollectionCandidateModel => CollectionCandidateModel::of(
-                PrivateFeedModel::of($kind, $collection->id, $collection->name),
-                $subscribed,
-            ),
+            static fn (SocialCollectionModel $collection): CollectionCandidateModel
+                => CollectionCandidateModel::fromPrivateFeed(
+                    PrivateFeedModel::fromKind($kind, $collection->id, $collection->name),
+                    $subscribed,
+                ),
             CandidateOrder::collections($collections),
         );
     }
@@ -90,14 +91,14 @@ final readonly class ImportCandidates
      *
      * @return list<CollectionCandidateModel>
      */
-    private function singletonsOf(SocialAccount $account, array $subscribed): array
+    private function buildSingletons(SocialAccount $account, array $subscribed): array
     {
         $rule = $this->privateFeedRules->selectRule($account->getNetwork());
         $singletons = [];
         foreach (SocialFeedKind::timelines() as $kind) {
             $privateFeed = PrivateFeedModel::timeline($kind);
             if ($rule->allows($privateFeed)) {
-                $singletons[] = CollectionCandidateModel::of($privateFeed, $subscribed);
+                $singletons[] = CollectionCandidateModel::fromPrivateFeed($privateFeed, $subscribed);
             }
         }
 
@@ -105,11 +106,11 @@ final readonly class ImportCandidates
     }
 
     /** @return array<string, int> subscription id by PrivateFeedModel::key() */
-    private function privateFeedSubscriptionsOf(SocialAccount $account): array
+    private function loadPrivateFeedSubscriptions(SocialAccount $account): array
     {
         $subscribed = [];
         foreach ($this->socialFeeds->findSubscribedCollections($account) as $collection) {
-            $key = PrivateFeedModel::keyOf($collection['kind'], $collection['remoteId']);
+            $key = PrivateFeedModel::buildKey($collection['kind'], $collection['remoteId']);
             $subscribed[$key] = $collection['subscriptionId'];
         }
 
@@ -134,7 +135,7 @@ final readonly class ImportCandidates
         );
     }
 
-    private function networkCandidatesOf(SocialAccount $account): NetworkCandidatesModel
+    private function fetchNetworkCandidates(SocialAccount $account): NetworkCandidatesModel
     {
         return $this->guard->actAs(
             $account,
@@ -143,7 +144,7 @@ final readonly class ImportCandidates
     }
 
     /** @return list<ProfileFeedSubscriptionModel> */
-    private function profileFeedsOf(SocialAccount $account, ImportRuleInterface $importRule): array
+    private function loadProfileFeeds(SocialAccount $account, ImportRuleInterface $importRule): array
     {
         $profileFeeds = [];
         foreach ($this->subscriptions->findFeedSummariesForUser($account->getUser()->requireId()) as $subscription) {

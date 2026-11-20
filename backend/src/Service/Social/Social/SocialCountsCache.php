@@ -21,21 +21,21 @@ final readonly class SocialCountsCache
 
     public function find(SocialPostAddressModel $post): ?SocialCountsModel
     {
-        $item = $this->cache->getItem(self::keyOf($post));
+        $item = $this->cache->getItem(self::buildKey($post));
 
         return $item->isHit() ? SocialCountsModel::fromCacheEntryOrNull($item->get()) : null;
     }
 
     public function remember(SocialPostAddressModel $post, SocialCountsModel $counts): void
     {
-        $item = $this->cache->getItem(self::keyOf($post));
+        $item = $this->cache->getItem(self::buildKey($post));
         $item->set($counts->toCacheEntry());
         $this->cache->save($item);
     }
 
     public function forget(SocialPostAddressModel $post): void
     {
-        $this->cache->deleteItem(self::keyOf($post));
+        $this->cache->deleteItem(self::buildKey($post));
     }
 
     /** An entry that is no network post has no counts to forget. */
@@ -47,7 +47,7 @@ final readonly class SocialCountsCache
         }
     }
 
-    private static function keyOf(SocialPostAddressModel $post): string
+    private static function buildKey(SocialPostAddressModel $post): string
     {
         return 'social_counts.' . hash('xxh128', $post->network->value . ' ' . $post->address);
     }

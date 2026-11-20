@@ -18,7 +18,7 @@ final class SearchQueryTokens
         . '|(?<not>-)(?=[^\s|)])|(?<word>[^\s()"|]+)|\S/u';
 
     /** @return list<array{string, string}> kind and text */
-    public static function of(string $query): array
+    public static function tokenizeQuery(string $query): array
     {
         preg_match_all(self::PATTERN, $query, $matches, \PREG_SET_ORDER | \PREG_UNMATCHED_AS_NULL);
         $tokens = [];
@@ -45,7 +45,7 @@ final class SearchQueryTokens
     }
 
     /** @return list<string> the lower-cased letter and digit runs of a text, as the matcher reads it */
-    public static function wordsOf(string $text): array
+    public static function splitWords(string $text): array
     {
         preg_match_all(self::WORD_PATTERN, mb_strtolower($text), $words);
 

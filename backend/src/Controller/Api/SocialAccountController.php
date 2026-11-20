@@ -41,7 +41,7 @@ final readonly class SocialAccountController
     #[Route('', name: 'api_me_social_accounts_list', methods: ['GET'])]
     public function list(#[CurrentUser] User $user): JsonResponse
     {
-        $accounts = $this->editor->accountsOf($user);
+        $accounts = $this->editor->findAccounts($user);
 
         $changes = $this->syncChanges->findChangesByAccount($accounts);
 

@@ -34,6 +34,6 @@ final readonly class SocialImportCollectionItem
 
     public function toPrivateFeed(): PrivateFeedModel
     {
-        return PrivateFeedModel::of(SocialFeedKind::from($this->kind), trim($this->id ?? ''), trim($this->name));
+        return PrivateFeedModel::fromKind(SocialFeedKind::from($this->kind), trim($this->id ?? ''), trim($this->name));
     }
 }

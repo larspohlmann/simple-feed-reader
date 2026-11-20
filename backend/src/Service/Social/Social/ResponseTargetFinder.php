@@ -36,12 +36,12 @@ final readonly class ResponseTargetFinder
      */
     public function find(User $user, ResponseTargetModel $target): SocialPostModel
     {
-        $address = $this->addressOf($target);
+        $address = $this->requireAddress($target);
 
         return $this->posts->findAs($this->actingAccounts->forResponse($user, $target, $address->network), $address);
     }
 
-    private function addressOf(ResponseTargetModel $target): SocialPostAddressModel
+    private function requireAddress(ResponseTargetModel $target): SocialPostAddressModel
     {
         return null === $target->address
             ? $this->postAddresses->requireRespondablePost($target->entry)

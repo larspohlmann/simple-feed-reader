@@ -20,21 +20,21 @@ final readonly class SharedPageCards
     ) {
     }
 
-    public function cardOf(string $url): LinkCardContent
+    public function resolveCard(string $url): LinkCardContent
     {
         try {
-            return $this->pageCards->read($url)->card ?? self::hostCardOf($url);
+            return $this->pageCards->read($url)->card ?? self::buildHostCard($url);
         } catch (PageFetchException $exception) {
             $this->logger->debug('The link card goes out without the page\'s own card.', [
                 'url' => $url,
                 'reason' => $exception->getMessage(),
             ]);
 
-            return self::hostCardOf($url);
+            return self::buildHostCard($url);
         }
     }
 
-    private static function hostCardOf(string $url): LinkCardContent
+    private static function buildHostCard(string $url): LinkCardContent
     {
         $host = HostKey::forUrl($url);
         $card = new LinkCardContent($url, $host, null, null, $host);

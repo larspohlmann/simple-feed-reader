@@ -63,7 +63,7 @@ final class SocialCountsTest extends DbTestCase
     {
         $this->cache->remember(self::address(), new SocialCountsModel(9, 8, 7, null));
 
-        $counts = $this->counts()->of($this->owner, $this->post());
+        $counts = $this->counts()->fetchCounts($this->owner, $this->post());
 
         self::assertEquals(new SocialCountsModel(9, 8, 7, null), $counts);
         self::assertSame([], $this->publicSource->askedAddresses);
@@ -73,8 +73,8 @@ final class SocialCountsTest extends DbTestCase
     {
         $post = $this->post();
 
-        $this->counts()->of($this->owner, $post);
-        $counts = $this->counts()->of($this->owner, $post);
+        $this->counts()->fetchCounts($this->owner, $post);
+        $counts = $this->counts()->fetchCounts($this->owner, $post);
 
         self::assertEquals(new SocialCountsModel(5, 2, 1, null), $counts);
         self::assertSame([self::STATUS_URL], $this->publicSource->askedAddresses);
@@ -87,7 +87,7 @@ final class SocialCountsTest extends DbTestCase
         $this->cache->remember(self::address(), new SocialCountsModel(9, 8, 7, null));
 
         $refreshed = $this->counts()->refreshed($this->owner, $post);
-        $afterwards = $this->counts()->of($this->owner, $post);
+        $afterwards = $this->counts()->fetchCounts($this->owner, $post);
 
         self::assertEquals(new SocialCountsModel(5, 2, 1, null), $refreshed);
         self::assertEquals($refreshed, $afterwards);
@@ -121,7 +121,7 @@ final class SocialCountsTest extends DbTestCase
         $this->publicSource->failWith($failure);
 
         try {
-            $this->counts()->of($this->owner, $this->post());
+            $this->counts()->fetchCounts($this->owner, $this->post());
             self::fail('The public failure must reach the caller.');
         } catch (SocialNetworkThrottledException $caught) {
             self::assertSame($failure, $caught);
@@ -136,7 +136,7 @@ final class SocialCountsTest extends DbTestCase
         $postId = $post->requireId();
 
         try {
-            $this->counts()->of($this->owner, $post);
+            $this->counts()->fetchCounts($this->owner, $post);
             self::fail('A post nothing proves deleted must stay not found.');
         } catch (SocialPostNotFoundException) {
             self::assertSame([self::STATUS_URL], $this->homeServer->askedAddresses);
@@ -153,7 +153,7 @@ final class SocialCountsTest extends DbTestCase
         $postId = $post->requireId();
 
         try {
-            $this->counts()->of($this->owner, $post);
+            $this->counts()->fetchCounts($this->owner, $post);
             self::fail('A post its home server confirms deleted must be removed.');
         } catch (SocialPostRemovedException) {
             $this->entityManager->clear();
@@ -166,7 +166,7 @@ final class SocialCountsTest extends DbTestCase
         $this->publicSource->failWith(new SocialNetworkUnreachableException('The origin is down.'));
 
         try {
-            $this->counts()->of($this->owner, $this->post());
+            $this->counts()->fetchCounts($this->owner, $this->post());
             self::fail('The unreachable network must reach the caller.');
         } catch (SocialNetworkUnreachableException) {
             self::assertSame([], $this->homeServer->askedAddresses);
@@ -179,7 +179,7 @@ final class SocialCountsTest extends DbTestCase
 
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->counts()->of($this->owner, $this->post());
+        $this->counts()->fetchCounts($this->owner, $this->post());
     }
 
     public function testAFallbackAnswerWithoutCountsIsAnUnreachableNetwork(): void
@@ -189,7 +189,7 @@ final class SocialCountsTest extends DbTestCase
         $this->publicSource->failWith($publicFailure);
 
         try {
-            $this->counts()->of($this->owner, $this->post());
+            $this->counts()->fetchCounts($this->owner, $this->post());
             self::fail('A post resolved without counts must not read as counted.');
         } catch (SocialNetworkUnreachableException $caught) {
             self::assertNotSame($publicFailure, $caught);
@@ -202,20 +202,20 @@ final class SocialCountsTest extends DbTestCase
         $post = $this->post();
         $this->publicSource->failWith(new SocialNetworkUnreachableException('The origin is down.'));
         $this->assertRefused(
-            fn (): SocialCountsModel => $this->counts()->of($this->owner, $post),
+            fn (): SocialCountsModel => $this->counts()->fetchCounts($this->owner, $post),
             SocialNetworkUnreachableException::class,
             'The first ask must fail.',
         );
         $this->publicSource->recovers();
 
-        self::assertEquals(new SocialCountsModel(5, 2, 1, null), $this->counts()->of($this->owner, $post));
+        self::assertEquals(new SocialCountsModel(5, 2, 1, null), $this->counts()->fetchCounts($this->owner, $post));
         self::assertCount(2, $this->publicSource->askedAddresses);
     }
 
     public function testAnEntryThatIsNoPostAsksNothing(): void
     {
         $this->assertRefused(
-            fn (): SocialCountsModel => $this->counts()->of(
+            fn (): SocialCountsModel => $this->counts()->fetchCounts(
                 $this->owner,
                 $this->entryOn('https://example.com/feed.xml', self::STATUS_URL),
             ),
@@ -231,7 +231,7 @@ final class SocialCountsTest extends DbTestCase
         $this->mastodonAccount();
         $this->mastodon->knowsCounts(new SocialCountsModel(7, 1, 0, null));
 
-        $counts = $this->counts()->of($this->owner, $this->post());
+        $counts = $this->counts()->fetchCounts($this->owner, $this->post());
 
         self::assertEquals(new SocialCountsModel(7, 1, 0, null), $counts);
         self::assertSame(['resolve ' . self::STATUS_URL], $this->mastodon->calls);

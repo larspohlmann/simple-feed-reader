@@ -60,7 +60,7 @@ final class BlueskyTimelinePage
             $selfReplies[] = $selfReply;
         }
 
-        return TimelinePageModel::of($entries, KnownSharesModel::ofBlueskyPosts($posts), null)
+        return TimelinePageModel::fromEntries($entries, KnownSharesModel::ofBlueskyPosts($posts), null)
             ->withSelfReplies($selfReplies);
     }
 

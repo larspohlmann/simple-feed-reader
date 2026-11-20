@@ -28,13 +28,13 @@ final class SharedPageCardsTest extends TestCase
     {
         $own = new LinkCardContent(self::URL, 'An article', 'A summary', 'https://example.com/lead.jpg', 'Example');
 
-        self::assertSame($own, $this->cardsReading(new PageCardModel($own, null))->cardOf(self::URL));
+        self::assertSame($own, $this->cardsReading(new PageCardModel($own, null))->resolveCard(self::URL));
         self::assertSame([], $this->logger->records);
     }
 
     public function testAPageWithoutCardOfItsOwnIsTitledWithItsHost(): void
     {
-        $card = $this->cardsReading(new PageCardModel(null, null))->cardOf(self::URL);
+        $card = $this->cardsReading(new PageCardModel(null, null))->resolveCard(self::URL);
 
         self::assertEquals(new LinkCardContent(self::URL, 'example.com', null, null, 'example.com'), $card);
         self::assertSame([], $this->logger->records);
@@ -44,7 +44,7 @@ final class SharedPageCardsTest extends TestCase
     {
         $address = 'https://WWW.Example.com/article';
 
-        $card = $this->cardsReading(new PageCardModel(null, null))->cardOf($address);
+        $card = $this->cardsReading(new PageCardModel(null, null))->resolveCard($address);
 
         self::assertEquals(new LinkCardContent($address, 'example.com', null, null, 'example.com'), $card);
     }
@@ -54,7 +54,7 @@ final class SharedPageCardsTest extends TestCase
         $host = str_repeat('a', LinkCardContent::SITE_NAME_MAX) . '.example';
         $address = 'https://' . $host . '/article';
 
-        $card = $this->cardsReading(new PageCardModel(null, null))->cardOf($address);
+        $card = $this->cardsReading(new PageCardModel(null, null))->resolveCard($address);
 
         self::assertEquals(
             new LinkCardContent($address, $host, null, null, substr($host, 0, LinkCardContent::SITE_NAME_MAX)),
@@ -66,7 +66,7 @@ final class SharedPageCardsTest extends TestCase
     {
         $address = 'mailto:someone';
 
-        $card = $this->cardsReading(new PageCardModel(null, null))->cardOf($address);
+        $card = $this->cardsReading(new PageCardModel(null, null))->resolveCard($address);
 
         self::assertEquals(new LinkCardContent($address, $address, null, null, $address), $card);
     }
@@ -76,7 +76,7 @@ final class SharedPageCardsTest extends TestCase
         $pageCards = $this->createStub(PageCardReaderInterface::class);
         $pageCards->method('read')->willThrowException(new PageFetchException('gone'));
 
-        $card = (new SharedPageCards($pageCards, $this->logger))->cardOf(self::URL);
+        $card = (new SharedPageCards($pageCards, $this->logger))->resolveCard(self::URL);
 
         self::assertEquals(new LinkCardContent(self::URL, 'example.com', null, null, 'example.com'), $card);
         self::assertCount(1, $this->logger->records);

@@ -12,7 +12,7 @@ final readonly class FollowAvatarsModel
     }
 
     /** @param list<FollowedAccountModel> $follows */
-    public static function of(array $follows): self
+    public static function fromFollows(array $follows): self
     {
         $byIdentity = [];
         foreach ($follows as $follow) {
@@ -45,7 +45,7 @@ final readonly class FollowAvatarsModel
         return new self($byIdentity);
     }
 
-    public function avatarOf(string $identity): ?string
+    public function readAvatar(string $identity): ?string
     {
         return $this->byIdentity[$identity] ?? null;
     }

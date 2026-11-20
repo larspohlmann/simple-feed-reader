@@ -58,7 +58,7 @@ final class BlueskyPrivateFeedRuleTest extends TestCase
         yield 'author named by a handle' => [PrivateFeedModel::author('rusty.bsky.social', 'Rusty'), false];
         yield 'author named by a malformed DID' => [PrivateFeedModel::author('did:x&limit=999', 'Rusty'), false];
         yield 'author named by a DID with a space' => [PrivateFeedModel::author('did:a:b c', 'Rusty'), false];
-        yield 'a list without an id' => [PrivateFeedModel::of(SocialFeedKind::UserList, '', 'X'), false];
+        yield 'a list without an id' => [PrivateFeedModel::fromKind(SocialFeedKind::UserList, '', 'X'), false];
         yield 'local' => [PrivateFeedModel::timeline(SocialFeedKind::Local), false];
         yield 'all' => [PrivateFeedModel::timeline(SocialFeedKind::All), false];
     }

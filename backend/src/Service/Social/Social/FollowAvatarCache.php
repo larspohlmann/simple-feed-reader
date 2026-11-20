@@ -21,17 +21,17 @@ final readonly class FollowAvatarCache
     /** @param list<FollowedAccountModel> $follows */
     public function remember(SocialAccount $account, array $follows): void
     {
-        $item = $this->cache->getItem(self::keyOf($account));
-        $item->set(FollowAvatarsModel::of($follows)->toCacheEntry());
+        $item = $this->cache->getItem(self::buildKey($account));
+        $item->set(FollowAvatarsModel::fromFollows($follows)->toCacheEntry());
         $this->cache->save($item);
     }
 
     public function find(SocialAccount $account): FollowAvatarsModel
     {
-        return FollowAvatarsModel::fromCacheEntry($this->cache->getItem(self::keyOf($account))->get());
+        return FollowAvatarsModel::fromCacheEntry($this->cache->getItem(self::buildKey($account))->get());
     }
 
-    private static function keyOf(SocialAccount $account): string
+    private static function buildKey(SocialAccount $account): string
     {
         return 'follow_avatars.' . $account->requireId();
     }

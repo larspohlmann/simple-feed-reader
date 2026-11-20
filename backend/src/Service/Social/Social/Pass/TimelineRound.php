@@ -50,14 +50,14 @@ final class TimelineRound
     public function ticketFor(int|string $feedId): \Generator
     {
         try {
-            $socialFeed = $this->socialFeedOf($feedId);
+            $socialFeed = $this->requireSocialFeed($feedId);
         } catch (PrivateFeedOrphanedException $orphaned) {
             $this->unasked[$feedId] = new FailedTimelineModel($orphaned);
 
             return;
         }
 
-        $settlement = $this->ticketOf($feedId, $socialFeed);
+        $settlement = $this->startRead($feedId, $socialFeed);
         if ($settlement->isRequest()) {
             yield $feedId => $settlement->requestTicket();
 
@@ -69,8 +69,8 @@ final class TimelineRound
 
     public function admits(int|string $key): bool
     {
-        $account = $this->socialFeedOf($key)->getSocialAccount();
-        if (null !== $this->accounts->heldOutcomeOf($account)) {
+        $account = $this->requireSocialFeed($key)->getSocialAccount();
+        if (null !== $this->accounts->buildHeldOutcome($account)) {
             return false;
         }
 
@@ -81,10 +81,10 @@ final class TimelineRound
     /** @return SettlementModel<TimelineOutcomeModelInterface> */
     public function settle(int|string $feedId, FetchOutcomeModel $outcome): SettlementModel
     {
-        $socialFeed = $this->socialFeedOf($feedId);
+        $socialFeed = $this->requireSocialFeed($feedId);
         $account = $socialFeed->getSocialAccount();
         if ($outcome->isWithheld()) {
-            return $this->ticketOf($feedId, $socialFeed);
+            return $this->startRead($feedId, $socialFeed);
         }
 
         try {
@@ -120,11 +120,11 @@ final class TimelineRound
         SocialAccount $account,
         FetchOutcomeModel $outcome,
     ): SettlementModel {
-        $source = $this->sources->of($account);
+        $source = $this->sources->selectSource($account);
         $read = $this->reads[$feedId] ?? throw new \LogicException('A feed is settled before it was asked.');
         $read->accept($source->accepted($socialFeed, $outcome));
         if (!$read->isComplete()) {
-            return $this->requestOf($feedId, $account, $read);
+            return $this->requestNext($feedId, $account, $read);
         }
 
         unset($this->reads[$feedId]);
@@ -154,7 +154,7 @@ final class TimelineRound
         }
         $this->renewOnce($account);
 
-        return $this->ticketOf($feedId, $socialFeed);
+        return $this->startRead($feedId, $socialFeed);
     }
 
     /** @return SettlementModel<TimelineOutcomeModelInterface> */
@@ -174,20 +174,20 @@ final class TimelineRound
             return;
         }
         $this->accounts->markRenewed($account);
-        $this->sources->of($account)->dropSession($account);
+        $this->sources->selectSource($account)->dropSession($account);
     }
 
     /** @return SettlementModel<TimelineOutcomeModelInterface> the feed's ticket, or what it settles at without one */
-    private function ticketOf(int|string $feedId, SocialFeed $socialFeed): SettlementModel
+    private function startRead(int|string $feedId, SocialFeed $socialFeed): SettlementModel
     {
         $account = $socialFeed->getSocialAccount();
-        $held = $this->accounts->heldOutcomeOf($account);
+        $held = $this->accounts->buildHeldOutcome($account);
         if (null !== $held) {
             return SettlementModel::outcome($held);
         }
 
         try {
-            $read = new TimelineRead($this->sources->of($account)->requests($socialFeed));
+            $read = new TimelineRead($this->sources->selectSource($account)->requests($socialFeed));
         } catch (SocialCredentialsRejectedException | SocialNetworkUnreachableException $failure) {
             return SettlementModel::outcome($this->accounts->settleFailure($account, $failure));
         } catch (SearchQueryTooBroadException $tooBroad) {
@@ -197,11 +197,11 @@ final class TimelineRound
         }
         $this->reads[$feedId] = $read;
 
-        return $this->requestOf($feedId, $account, $read);
+        return $this->requestNext($feedId, $account, $read);
     }
 
     /** @return SettlementModel<TimelineOutcomeModelInterface> */
-    private function requestOf(int|string $feedId, SocialAccount $account, TimelineRead $read): SettlementModel
+    private function requestNext(int|string $feedId, SocialAccount $account, TimelineRead $read): SettlementModel
     {
         if ($this->accounts->isRenewed($account)) {
             $this->onRenewedSession[$feedId] = true;
@@ -211,7 +211,7 @@ final class TimelineRound
     }
 
     /** @throws PrivateFeedOrphanedException when the private feed has lost its social feed */
-    private function socialFeedOf(int|string $feedId): SocialFeed
+    private function requireSocialFeed(int|string $feedId): SocialFeed
     {
         return $this->socialFeedsByFeedId[$feedId] ?? throw new PrivateFeedOrphanedException();
     }

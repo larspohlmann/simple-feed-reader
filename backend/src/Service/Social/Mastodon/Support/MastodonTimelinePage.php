@@ -46,7 +46,7 @@ final class MastodonTimelinePage
             $selfReplies[] = $selfReply;
         }
 
-        return TimelinePageModel::of($entries, self::knownSharesOf($postsByGuid), self::newestIdOf($statuses))
+        return TimelinePageModel::fromEntries($entries, self::knownSharesOf($postsByGuid), self::newestIdOf($statuses))
             ->withSelfReplies($selfReplies);
     }
 

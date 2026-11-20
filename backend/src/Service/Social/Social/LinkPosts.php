@@ -47,8 +47,8 @@ final readonly class LinkPosts
         $share = $this->resolve($user, $target);
 
         return null === $share->quoted
-            ? $this->contexts->ofLink($share->account, $share->link)
-            : $this->contexts->ofQuotedLink($share->quoted, $share->link);
+            ? $this->contexts->buildLinkContext($share->account, $share->link)
+            : $this->contexts->buildQuotedLinkContext($share->quoted, $share->link);
     }
 
     /**

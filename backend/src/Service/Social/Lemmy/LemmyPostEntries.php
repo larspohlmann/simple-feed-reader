@@ -39,7 +39,7 @@ final readonly class LemmyPostEntries
 
         $entries = $this->entriesOf($postViews, $account);
 
-        return TimelinePageModel::of($entries, KnownSharesModel::none(), self::newestIdOf($postViews));
+        return TimelinePageModel::fromEntries($entries, KnownSharesModel::none(), self::newestIdOf($postViews));
     }
 
     /**
@@ -58,7 +58,7 @@ final readonly class LemmyPostEntries
             ),
         ));
 
-        return TimelinePageModel::of($entries, KnownSharesModel::none(), self::newestIdOf($postViews));
+        return TimelinePageModel::fromEntries($entries, KnownSharesModel::none(), self::newestIdOf($postViews));
     }
 
     /**
