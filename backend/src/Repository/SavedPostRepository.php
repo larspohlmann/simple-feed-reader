@@ -29,19 +29,23 @@ final readonly class SavedPostRepository
     /** @return array<int, ?string> */
     public function flaggedIn(int $userId, int $feedId): array
     {
-        $flaggedStates = $this->entriesOfFeedWith($userId, $feedId, EntryState::class, 'mark')
+        $flaggedStates = $this->buildMarkedEntriesQuery($userId, $feedId, EntryState::class, 'mark')
             ->andWhere('mark.isFavorite = :flagged OR mark.isKept = :flagged')
             ->setParameter('flagged', true, Types::BOOLEAN);
         $flagged = $this->urlHashesById($flaggedStates) + $this->urlHashesById(
-            $this->entriesOfFeedWith($userId, $feedId, EntryShare::class, 'mark'),
+            $this->buildMarkedEntriesQuery($userId, $feedId, EntryShare::class, 'mark'),
         );
         ksort($flagged);
 
         return $flagged;
     }
 
-    private function entriesOfFeedWith(int $userId, int $feedId, string $markClass, string $markAlias): QueryBuilder
-    {
+    private function buildMarkedEntriesQuery(
+        int $userId,
+        int $feedId,
+        string $markClass,
+        string $markAlias
+    ): QueryBuilder {
         return $this->entityManager->createQueryBuilder()
             ->select('e.id AS id', 'e.location.urlHash AS urlHash')
             ->from(Entry::class, 'e')

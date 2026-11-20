@@ -104,7 +104,7 @@ final class SocialNotificationRepository extends ServiceEntityRepository
      * @param list<int> $accountIds
      * @return list<Group> newest group first, one more than $limit when a further page exists
      */
-    public function pageOfGroups(array $accountIds, ?int $before, int $limit): array
+    public function findGroupPage(array $accountIds, ?int $before, int $limit): array
     {
         if ($accountIds === []) {
             return [];
@@ -130,11 +130,11 @@ final class SocialNotificationRepository extends ServiceEntityRepository
      * @param list<Group> $groups
      * @return array<int, list<SocialNotification>> latestId => the group's newest rows, newest first
      */
-    public function newestOfGroups(array $groups, int $perGroup): array
+    public function findNewestPerGroup(array $groups, int $perGroup): array
     {
         $newest = [];
         foreach ($groups as $group) {
-            $newest[$group['latestId']] = $this->newestOfGroup($group, $perGroup);
+            $newest[$group['latestId']] = $this->findNewestInGroup($group, $perGroup);
         }
 
         return $newest;
@@ -197,7 +197,7 @@ final class SocialNotificationRepository extends ServiceEntityRepository
      * @param Group $group
      * @return list<SocialNotification>
      */
-    private function newestOfGroup(array $group, int $perGroup): array
+    private function findNewestInGroup(array $group, int $perGroup): array
     {
         $qb = $this->createQueryBuilder('notification')
             ->andWhere('notification.socialAccount = :account')

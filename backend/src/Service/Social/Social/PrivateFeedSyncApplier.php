@@ -151,7 +151,7 @@ final readonly class PrivateFeedSyncApplier
     private function loadSubscribedCollections(SocialAccount $account): array
     {
         $subscribed = [];
-        $rows = $this->socialFeeds->subscribedCollectionsOfKinds($account, SocialFeedKind::rememberedCollections());
+        $rows = $this->socialFeeds->findSubscribedCollectionsByKinds($account, SocialFeedKind::rememberedCollections());
         foreach ($rows as $row) {
             $collection = PrivateFeedModel::fromKind($row['kind'], $row['remoteId'], '');
             $subscribed[$collection->key()] = new SubscribedCollectionModel($row['subscriptionId'], $collection);
