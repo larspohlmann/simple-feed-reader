@@ -48,11 +48,12 @@ The last column is what the reviewer checks the name against.
 | `Comments/CommentsLoader.php` | `sourceOrNull` | `findSource` | The first comments source that serves the entry, null when none does |
 | `Comments/CommentsLoader.php` | `sourceFor` | `requireSource` | `findSource`, throwing `NoCommentsFeedException` when none serves the entry |
 | `Comments/LemmyThreadReader/LemmyThreadReaderInterface.php` and every implementation | `readerFor` | `findReader` | The social account a user reads Lemmy threads with, null when they have none |
+| `Comments/LemmyThreadReader/LemmyThreadReaderInterface.php` and every implementation | `threadAs` | `fetchThread` | Asks the instance for the post's thread as the given account, rate-limited; returns the body; throws `CommentsUnavailableException`/`CommentsThrottledException` on failure |
 | `Comments/Pass/LemmyThread.php` | `commentOrNull` | `parseComment` | Interprets a comment node into a comment model; null when it is removed, deleted or has no usable HTML |
 | `Comments/Pass/SubstackThread.php` | `commentOrNull` | `parseComment` | Interprets a comment node into a comment model; null when it has no id, no usable HTML or is deleted |
 | `ReaderAudit/Model/PhraseFamilyModel.php` | `matchIn` | `findPhrase` | The first of the family's phrases a block contains; null when none or the block is too long |
-| `ReaderAudit/PhraseMarkers.php` | `scopeFor` | `collectBlocksInScope` | The body blocks a family looks at: the leading blocks, or all blocks when the body has no article text |
-| `Transcript/Support/TimedCues.php` | `cueAt` | `buildCue` | Assembles a cue from its start time and text lines, taking the voice label out of the text; null when no text is left. `parseCue` exists and calls it once it has found the timing line |
+| `ReaderAudit/PhraseMarkers.php` | `scopeFor` | `collectBlocksInScope` | The body blocks a family looks at: the leading blocks; for `OnlyWhenNoArticle` all blocks when the body has no article text, `[]` when it has |
+| `Transcript/Support/TimedCues.php` | `cueAt` | `parseCueText` | Interprets a cue's text lines (voice tag, inline label, plain text) into a cue with its start time; null when no text is left. `parseCue` finds the timing line and delegates to it |
 | `Transcript/TranscriptSource/TranscriptSourceInterface.php` and every implementation | `bodyAt` | `fetchBody` | Requests a transcript file within a budget and returns its body; throws unreachable or unusable exceptions otherwise |
 
 ### LinkCard (paths under `backend/src/Service/Content/LinkCard/`)
@@ -61,16 +62,17 @@ The last column is what the reviewer checks the name against.
 |---|---|---|---|
 | `PostedUrlCheck.php` | `cardAt` | `resolveCard` | Reads the cleaned URL's card and settles between it and the posted URL's: falls back to the posted one when the cleaned read fails or lands on another page |
 | `QuotedPostSource/QuotedPostSourceInterface.php` and every implementation | `quotedPostAt` | `fetchQuotedPost` | Asks the network for the post at an address; throws `QuotedPostUnavailableException` when it names no post or reading failed |
-| `ShareTargetReader.php` | `cardsFor` | `readEntryCards` | Reads an entry's share targets over the network (the page cards of its uncarded URLs and its quoted post, failures logged and skipped) and returns them with the stored cards. `read` is this class's and `PageCards::read`'s verb for that |
-| `ShareTargetReader.php` | `pageCardAt` | `fetchPageCard` | The card of one URL: the known one, the posted-URL check, or a page read; throws `PageFetchException` |
+| `ShareTargetReader.php` | `cardsFor` | `findEntryCards` | Looks up an entry's share targets over the network (page cards of its uncarded URLs, its quoted post), logging and skipping failures, and returns them with the stored cards |
+| `ShareTargetReader.php` | `pageCardAt` | `resolvePageCard` | Settles one URL's card between three sources: the known one from the plan, the posted-URL check, a page read; the last two throw `PageFetchException` |
 | `ShareTargetReader.php` | `pageCardsFor` | `findPageCards` | Fetches the card of each URL, logging and skipping the ones that fail |
 | `ShareTargetReader.php` | `quotedTargetAmong` | `findQuotedTarget` | The quoted post behind the body's quote line when its link is one of the URLs; logs and answers null when the post is unavailable |
 | `SharedLinkWriter.php` | `linksFor` | `ensureLinks` | Claims the stored links of the cards' URLs, inserts the missing ones and returns a link per URL |
 | `SharedLinkWriter.php` | `linkFor` | `ensureLink` | `ensureLinks` for one card |
 | `SharedLinkWriter.php` | `idsFor` | `ensureLinkIds` | `ensureLinks`, mapped to the links' ids |
 | `SharedLinkWriter.php` | `knownFor` | `claimKnownLinks` | Claims the already stored links of the URLs and returns them; a URL without one is left out, nothing is inserted |
-| `Support/QuoteLine.php` | `targetIn` | `findTarget` | The href of the first link in a "RE:" paragraph of the HTML, null when it quotes nothing |
-| `Support/QuoteLine.php` | `trackingFreeTargetIn` | `findTrackingFreeTarget` | `findTarget` without tracking parameters |
+| `Support/QuoteLine.php` | `targetIn` | `parseTarget` | Parses the HTML and returns the href of the first link in a "RE:" paragraph, null when it quotes nothing |
+| `Support/QuoteLine.php` | `trackingFreeTargetIn` | `parseTrackingFreeTarget` | `parseTarget` without tracking parameters |
+| `Support/QuoteLine.php` | `removedFrom` | `stripQuote` | Returns the HTML without its "RE:" quote paragraph (`TrailingUrl::removedFrom` waits for its batch) |
 
 ### Reader (paths under `backend/src/Service/Content/Reader/`)
 
@@ -86,7 +88,9 @@ The last column is what the reviewer checks the name against.
 | `Media/Sibling/Pass/SiblingSearch.php` | `siblingsIn` | `findOccurrenceSiblings` | Searches the page for other ids under one occurrence's key that share its context; `[]` when there are too many. The public `findSiblings` exists and calls it per occurrence |
 | `Media/Sibling/Support/KeyedOccurrences.php` | `firstKeyIn` | `extractFirstKey` | The first key the pattern matches in a text, `''` when none |
 | `Media/Sibling/Support/KeyedOccurrences.php` | `lastKeyIn` | `extractLastKey` | The last key the pattern matches in a text, `''` when none |
+| `Media/Sibling/Support/KeyedOccurrences.php` | `at` | `findOccurrenceAt` | The keyed occurrence of an id at a position in the text; null when no key precedes it |
 | `Media/PlayerPoster.php` | `firstImageIn` | `findFirstImage` | The `src` of the first `https://` image in a scope, null when none |
+| `Media/PlayerPoster.php` | `near` | `findNearbyPoster` | The first usable image in the holder or its ancestors; null when none |
 | `Media/Teaser/TeaserPlayerMarkup.php` | `figureFor` | `buildFigure` | Creates the teaser's `<figure>` element with player and caption |
 | `RecipeFacts/RecipeFactsMarkup.php` | `figureFor` | `buildFigure` | Creates the recipe facts `<figure>` with a `<dl>` of the facts |
 | `Slideshow/SlideshowMarkup.php` | `figureFor` | `buildFigure` | Creates the slideshow `<figure>` with caption and slide list |
@@ -94,6 +98,7 @@ The last column is what the reviewer checks the name against.
 | `Model/FeedMediaModel.php` | `declaredMediumFor` | `findDeclaredMedium` | The feed medium matching a URL by image identity or bare URL, null when none |
 | `Model/LeadFigureCaptionsModel.php` | `captionFor` | `findCaption` | The caption of the figure that shows the same asset as the lead image, null when none |
 | `PageRepair/LazyImageSources.php` | `candidateFor` | `findCandidate` | The first usable URL among an image's lazy-load attributes, srcsets and enclosing picture; null when none |
+| `PageRepair/LazyImageSources.php` | `candidateFromEnclosingPicture` | `findCandidateInPicture` | The first usable URL among the sources of the image's enclosing picture; null when none |
 | `Paywall/MembershipCheckout.php` | `foundOutsideFurnitureIn` | `hasMatchOutsideFurniture` | Whether a checkout link appears in the document outside page furniture |
 | `Paywall/PaywallBlocks.php` | `foundOutsideFurnitureIn` | `hasMatchOutsideFurniture` | Whether a paywall-classed block appears in the document outside page furniture |
 | `Paywall/Support/SchemaOrgAccess.php` | `declaredIn` | `detectAccess` | Recognises the page's schema.org access declaration: paywalled on the first `false`, free when only `true` was seen, else undeclared |
