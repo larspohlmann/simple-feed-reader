@@ -27,7 +27,7 @@
 - Every row was named from the method's full body and its callers. A `CLAUDE.md` verb where its meaning matches; otherwise the plain verb the tree already uses for that act. The verbs #2360 settled apply: `build…` assembles, `parse…` interprets a string or decoded array into a value that may be absent, `find…` looks up (null when absent), `resolve…` settles between sources or falls back, `read…` is a plain access with a default, `collect…` gathers from a list, `keepIf…` passes a value through or drops it, `try…` swallows failure.
 - In scope is a name that does not start with a verb. `findSubscriptionFor`, `getCreatedAt`, `isDueAt` and the like are not touched.
 - **Kept names: typed field readers.** `JsonNodeModel::listAt`, `LineField::stringOrNull`/`intOrNull`/`dateOrNull`/`objectOrNull`, `BackupLineFormat::dateOrNull`, `StateFileFields::dateOrNull`/`integerOrNull`. In these classes the type is the method name (`string()`, `int()`, `date()`, `node()`) and `…OrNull` marks the nullable twin. Renaming one member would split the family; the families as a whole are named in the PR as a follow-up question.
-- `HostKey::forUrlOrNull` becomes `tryForUrl`: the twin of `forUrl` that answers null, as PHP's `tryFrom` beside `from`.
+- `HostKey::forUrlOrNull` becomes `tryForUrl`: the twin of `forUrl` that answers null when the URL has no host.
 
 ## The renames
 
@@ -104,6 +104,18 @@ Paths are under `backend/src/Service/`. The last column is what the reviewer che
 | `Operations/Logging/Loki/LokiSpoolShipper.php` | `linesIn` | `loadLines` | Reads and decodes a spool file; throws `CorruptSpoolFileException` when unreadable or no list |
 | `Operations/SelfUpdate/UpdateStateStore/UpdateStateStoreInterface.php` and every implementation | `heartbeatAt` | `findHeartbeat` | When the updater last reported, null when no usable heartbeat is stored |
 
+### Foundation: pass-through URL helpers
+
+Ruled after review. The three classes share the old name `orNull`; rename through the type. Paths under `backend/src/Service/Foundation/Url/Support/`.
+
+| File | Old | New | What it does |
+|---|---|---|---|
+| `AbsoluteHttpUrl.php` | `orNull` | `keepIfAbsolute` | Passes a URL through when it starts with `http://` or `https://`, else null |
+| `AbsoluteHttpUrl.php` | `orNullWithin` | `keepIfAbsoluteWithin` | `keepIfAbsolute`, and null when the URL is longer than the given length |
+| `HttpsImageUrl.php` | `orNull` | `parseUrl` | Reads an https image URL out of a string: an `https://` or protocol-relative `//` URL becomes `https://…`, anything else or one longer than `MAX_LENGTH` is null |
+| `HttpsImageUrl.php` | `orNullUpgrading` | `parseUrlUpgradingHttp` | `parseUrl`, except that an `http://` URL is rewritten to `https://` instead of rejected |
+| `TrackingFreeUrl.php` | `orNull` | `stripTrackingIfSet` | `stripTracking` for a URL, null for null |
+
 ## Review Focus
 
 - A shared old name replaced tree-wide: `keyFor` also exists in `RefreshRunStore` and others outside this batch; they must be unchanged after this PR.
@@ -132,6 +144,13 @@ Paths are under `backend/src/Service/`. The last column is what the reviewer che
 - [ ] **Step 2:** Run `grep -rnoE 'function\s+&?\w+(OrNull|OrRefuse|OrNil|For|In|At|Among)\s*\(' backend/src/Service/{Foundation,Identity,Sourcing,Outbound,Operations}`. Expected: only names that start with a verb, and the kept typed field readers.
 - [ ] **Step 3:** Run the same four commands. Expected: all green.
 - [ ] **Step 4:** Commit `refactor(#2400): Operations methods start with their verb`.
+
+### Task 3b: Pass-through URL helpers
+
+- [ ] **Step 1:** Rename the five rows of "Foundation: pass-through URL helpers" and every caller, through the type; update the `{@see orNull}` in `HttpsImageUrl`'s docblock.
+- [ ] **Step 2:** Run `grep -rnE 'function\s+(orNull|orNullWithin|orNullUpgrading)\s*\(' backend/src/Service/Foundation`. Expected: no output.
+- [ ] **Step 3:** Run the same four commands. Expected: all green.
+- [ ] **Step 4:** Commit `refactor(#2400): URL helpers start with their verb`.
 
 ### Task 4: Gates and PR
 
