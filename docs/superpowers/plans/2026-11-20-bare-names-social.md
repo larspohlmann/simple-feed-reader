@@ -43,23 +43,25 @@ The last column is what the reviewer checks the name against.
 | `Bluesky/BlueskyAppViewCountsSource.php` | `postAt` | `requirePost` | The one post view the AppView returns for an address; throws `SocialPostNotFoundException` when it returns none |
 | `Bluesky/BlueskyCandidateSource.php` | `collectionIn` | `requireList` | The list under a field of the answer; throws `SocialNetworkUnreachableException` when the answer has none |
 | `Bluesky/BlueskyFacets.php` | `didOrNull` | `tryFetchDid` | Fetches a handle's DID; null when the account cannot be resolved, an unreachable network still throws |
-| `Bluesky/BlueskyFacets.php` | `mentionsIn` | `buildMentionFacets` | Finds the mention spans of a text, looks their DIDs up and builds a facet per mention whose DID was found |
+| `Bluesky/BlueskyFacets.php` | `mentionsIn` | `findMentionFacets` | Finds the mention spans of a text and builds a facet for each whose DID could be looked up; an unresolvable handle or an unreachable network leaves the mention plain |
 | `Bluesky/BlueskyNotificationContextSource.php` | `postAt` | `findPost` | The post under a URI in a map of posts; null for a null URI or an unknown one |
 | `Bluesky/BlueskyPostKeys.php` | `recordKeyFor` | `ensureRecordKey` | The record key remembered for an idempotency key, or a new one that is remembered; says which |
 | `Bluesky/BlueskyPostResolver.php` | `referenceOrNull` | `parseReference` | Interprets a node into a post reference; null when uri or cid is missing or the uri is no post URI |
-| `Bluesky/BlueskySavedCollections.php` | `curatedListIn` | `parseCuratedList` | Interprets a list node into a collection; null when its purpose is not a curated list; throws when uri, purpose or name is missing |
-| `Bluesky/BlueskySavedCollections.php` | `namesIn` | `parseNames` | Reads the display name of each feed generator out of an answer, by uri and by handle form; throws when the answer has no feeds |
-| `Bluesky/HiddenProfileAccountOnlyFeed.php` | `reasonFor` | `resolveReason` | "Connect a Bluesky account" when the user has no ready acting account, else "hidden profile" |
-| `Bluesky/HiddenProfiles/HiddenProfilesInterface.php` and every implementation | `hiddenAmong` | `findHiddenProfiles` | Which of the given actors hide their profile from logged-out readers, by actor |
+| `Bluesky/BlueskySavedCollections.php` | `curatedListIn` | `parseCuratedList` | Interprets a list node into a collection; null when the list is not a curated one (parse's absence); a list missing uri, purpose or name is a broken answer and throws |
+| `Bluesky/BlueskySavedCollections.php` | `namesIn` | `collectNames` | Gathers the display name of each feed generator in an answer, by uri and by handle form, null where a generator has none; throws when the answer carries no feeds |
+| `Bluesky/HiddenProfileAccountOnlyFeed.php` | `reasonFor` | `detectReason` | Recognises why there is no preview from whether the user has a ready Bluesky account: "connect a Bluesky account" without one, else "hidden profile" |
+| `Bluesky/HiddenProfiles/HiddenProfilesInterface.php` and every implementation | `hiddenAmong` | `fetchHiddenProfiles` | Asks Bluesky, directly or behind the cache, which of the given actors hide their profile from logged-out readers, by actor; throws `SocialNetworkUnreachableException` when it cannot say (`AppViewHiddenProfiles`, `CachedHiddenProfiles`, `tests/Support/StubHiddenProfiles`) |
 | `Bluesky/Support/BlueskyProfileLabels.php` | `hiddenAmong` | `collectHiddenProfiles` | Gathers, from fetched profiles, a hidden-profile model for each one whose labels hide it |
 | `Bluesky/TolerantHiddenProfiles.php` | `hiddenAt` | `findHiddenProfile` | The hidden profile a Bluesky profile URL names; null for any other URL and when Bluesky cannot say |
+| `Bluesky/TolerantHiddenProfiles.php` | `hiddenAmongOrNone` | `fetchHiddenProfilesOrEmpty` | The swallowing twin of `fetchHiddenProfiles`: logs the given warning and answers an empty list when Bluesky cannot say; its docblock reference follows |
+| `Bluesky/HiddenImportFollows.php` | `among` | `findHiddenByIdentity` | Collects the follows' actors, asks through the tolerant wrapper and keys the hidden ones by identity |
 | `Bluesky/Model/SealedBlueskySessionModel.php` | `textOrNull` | `readText` | The string under a key of the stored array, null when absent or no string |
 | `Bluesky/Support/BlueskyProfileFeed.php` | `actorIn` | `decodeActor` | URL-decodes a path segment and normalises it as an actor key |
-| `Bluesky/Support/BlueskyRecordUri.php` | `likeOrNull` | `keepIfLike` | Passes a URI through when it names a like record, else null |
-| `Bluesky/Support/BlueskyRecordUri.php` | `postOrNull` | `keepIfPost` | Passes a URI through when it names a post record, else null |
-| `Bluesky/Support/BlueskyRecordUri.php` | `repostOrNull` | `keepIfRepost` | Passes a URI through when it names a repost record, else null |
-| `Bluesky/Support/BlueskyTimelinePage.php` | `postedAt` | `readPostedAt` | The time a timeline item landed: the repost's `indexedAt`, else the record's `createdAt`, else the post's `indexedAt` |
-| `Bluesky/Support/AppViewAnswer.php` | `orSocialFailure` | `requireAnswer` | Runs the given ask and returns its answer; throws the social throttled or unreachable exception when the AppView is throttled or the ask fails |
+| `Bluesky/Support/BlueskyRecordUri.php` | `likeOrNull` | `keepIfLike` | Passes a URI through when it names a like record, else null, and null for a null input or a URI over 512 characters |
+| `Bluesky/Support/BlueskyRecordUri.php` | `postOrNull` | `keepIfPost` | Passes a URI through when it names a post record, else null, and null for a null input or a URI over 512 characters |
+| `Bluesky/Support/BlueskyRecordUri.php` | `repostOrNull` | `keepIfRepost` | Passes a URI through when it names a repost record, else null, and null for a null input or a URI over 512 characters |
+| `Bluesky/Support/BlueskyTimelinePage.php` | `postedAt` | `resolvePostedAt` | A fallback chain between three fields for the time a timeline item landed: the repost's `indexedAt`, else the record's `createdAt`, else the post's `indexedAt` |
+| `Bluesky/Support/AppViewAnswer.php` | `orSocialFailure` | `askAppView` | Refuses with the throttled exception while the AppView asks us to wait; else runs the given ask and turns a throttle or a failed answer into the social exceptions |
 | `BlueskyPost/AppViewClient.php` | `listIn` | `decodeList` | Decodes a JSON body and returns the list under a field as nodes; throws `AppViewAnswerException` when there is no list |
 
 ### Mastodon, Lemmy, Completion, Share (paths under `backend/src/Service/Social/`)
@@ -71,9 +73,9 @@ The last column is what the reviewer checks the name against.
 | `Completion/Model/KnownSharesModel.php` | `blueskyPostFor` | `findBlueskyPost` | The known Bluesky post of a guid, null when none |
 | `Completion/Model/KnownSharesModel.php` | `linkCardFor` | `findLinkCard` | The known link card of a guid, null when none |
 | `Completion/Model/KnownSharesModel.php` | `quotedPostFor` | `findQuotedPost` | The known quoted post of a guid, null when none |
-| `Share/Support/SharedLinks.php` | `hrefsToCheckIn` | `collectHrefsToCheck` | Gathers the document's share anchors by tracking-free URL, with the posted href where an undocumented key was stripped |
+| `Share/Support/SharedLinks.php` | `hrefsToCheckIn` | `collectSharedUrls` | Gathers the document's share anchors by tracking-free URL, in post order; the value is the posted href where an undocumented key was stripped and has to be checked, else null |
 | `Share/Support/SharedLinks.php` | `linkUrlsIn` | `linkBareUrlsInText` | Replaces the bare URLs of one text node with anchors and returns how many it linked. `linkBareUrls` exists in the class |
-| `Share/EntryShareClassifier.php` | `orProvisionalLink` | `fallBackToProvisionalLink` | Passes a share kind through; answers `Link` for a null kind while the entry still awaits its embed |
+| `Share/EntryShareClassifier.php` | `orProvisionalLink` | `resolveProvisionalKind` | A given kind stands; a missing one falls back to `Link` while the entry awaits its embed, else stays null |
 
 ### Social core (paths under `backend/src/Service/Social/Social/`)
 
@@ -84,33 +86,33 @@ The last column is what the reviewer checks the name against.
 | `ComposerDefaults/ComposerDefaultsInterface.php` and every implementation | `defaultsFor` | `resolveDefaults` | The composer defaults for a target; never fails, what the network does not answer falls back to its documented default |
 | `DeletedPostTombstones.php` | `buriedIn` | `findBuriedHashes` | The guid hashes of a feed's posts deleted within the last seven days, from the cache |
 | `ImportedProfilePictures.php` | `avatarFor` | `findAvatar` | The imported avatar of the identity a feed URL names, when it is an absolute URL that fits the column; null otherwise |
-| `LinkPosts.php` | `contextFor` | `resolveContext` | Resolves the share for a link target and builds the link or quoted-link composer context from it |
-| `SocialResponses.php` | `contextFor` | `resolveContext` | Finds the post a response targets and builds the reply or quote composer context from it |
-| `SocialResponses.php` | `ownReplyAt` | `findOwnReply` | Asks every connected account for a reply and returns it when one of them wrote it; null without accounts; throws when an account failed or another author wrote it |
+| `LinkPosts.php` | `contextFor` | `prepareContext` | Gets the link composer context ready: resolves the share for a link target over the network and builds the link or quoted-link context from it |
+| `SocialResponses.php` | `contextFor` | `prepareContext` | Gets the response composer context ready: finds the post a response targets over the network and builds the reply or quote context from it |
+| `SocialResponses.php` | `ownReplyAt` | `findOwnReply` | The reply when one of the accounts wrote it; throws the first account failure, or `SocialPostRefusedException` when another author wrote it or no account is connected; null only when every account says it is gone |
 | `Model/TimelineSlotsModel.php` | `ticketFor` | `buildTicket` | Assembles the API request ticket with the per-account and per-server slots |
 | `Pass/TimelineRound.php` | `ticketFor` | `issueTicket` | Starts the read of a feed and yields its request ticket; records a failed or settled outcome and yields nothing when the feed needs no request |
 | `PrivateFeedSyncApplier.php` | `planFor` | `loadPlan` | Queries the account's subscribed and known collections and builds the sync plan against the network's |
-| `ReplyThreadSource/ReplyThreadSourceInterface.php` and every implementation | `repliesIn` | `parseReplies` | Interprets a thread answer into the replies under an address |
-| `SharedPostQuoteFinder.php` | `quotableAt` | `findQuotable` | The post a URL names when it is on the account's network, can be found and allows quoting; null otherwise |
+| `ReplyThreadSource/ReplyThreadSourceInterface.php` and every implementation | `repliesIn` | `parseReplies` | Interprets a thread answer into the replies under an address; throws `CommentsUnavailableException` when the answer lacks the thread |
+| `SharedPostQuoteFinder.php` | `quotableAt` | `findQuotable` | The post a URL names when it is on the account's network, can be found and allows quoting; null for another network, unreachable or not found, or quoting disallowed; still throws `SocialAccountNeedsReconnectException` and `SocialCredentialsRejectedException` |
 | `SocialPostFinder.php` | `resolvedFor` | `findAsActingAccount` | Finds the post at an address as the account that acts on the entry for the user |
 | `SocialRepliesSource.php` | `accountOrNull` | `findAccount` | The acting account for an entry and network, null when none is connected |
 | `Support/SocialIdentity.php` | `accountAmong` | `findAccount` | The first of the accounts whose identity is the given author, null when none |
-| `Support/NetworkAnswer.php` | `orUnreachable` | `requireAnswer` | Runs the given answer closure and returns its response; throws `SocialNetworkUnreachableException` when no answer arrived |
+| `Support/NetworkAnswer.php` | `orUnreachable` | `askNetwork` | Runs the given ask against a network and returns its response; a transport failure becomes `SocialNetworkUnreachableException`, any status passes. The clients' `requireAnswer` keeps its name and calls it |
 | `TimelineSelfThreads.php` | `sourceFor` | `selectSource` | Picks the reply thread source registered for the feed's network |
 
 ### One leftover in Content (paths under `backend/src/Service/Content/`)
 
 | File | Old | New | What it does |
 |---|---|---|---|
-| `LinkCard/Support/TrailingUrl.php` | `removedFrom` | `stripTrailingUrl` | Returns the HTML without the given URL at the end of its last text; unchanged when it does not end with it |
+| `LinkCard/Support/TrailingUrl.php` | `removedFrom` | `stripTrailingUrl` | Returns the HTML without the given URL at the end of its last text, removing the text node when it ends up empty with a preceding `<br>` and a now-empty `<p>`; unchanged when it does not end with it |
 
 ## Review Focus
 
 - Three interfaces are renamed with every implementation and test double: `HiddenProfilesInterface::hiddenAmong`, `ComposerDefaultsInterface::defaultsFor`, `ReplyThreadSourceInterface::repliesIn`. `BlueskyProfileLabels::hiddenAmong` is a static helper with the same old name and a different new one.
-- `requireAnswer` already exists on the three API clients, which call `NetworkAnswer::orUnreachable`; after this batch they call `NetworkAnswer::requireAnswer`. If the two `requireAnswer` helpers (`NetworkAnswer`, `AppViewAnswer`) do not do the same act, report it.
+- `requireAnswer` on the three API clients keeps its name; after this batch it calls `NetworkAnswer::askNetwork`. `AppViewAnswer::askAppView` is a different act (throttle check and a wider catch).
 - `ticketFor` is two methods with two new names (`buildTicket`, `issueTicket`); `TimelineLane` calls the second.
 - `publishedAt` and `postedAt` are also properties and array keys across the tree: only `LemmyPostWriter::publishedAt` and `BlueskyTimelinePage::postedAt` are renamed.
-- `hiddenAmongOrNone` in `TolerantHiddenProfiles`, `usableGiven`-style siblings and other bare names in touched classes that the endings pattern misses have no row: report what their bodies do with your review.
+- `hiddenAmongOrNone` and `HiddenImportFollows::among` got rows after review. Contested and kept: `parseCuratedList`, `findOwnReply`, `resolveDefaults`, `parseReplies`, `parseReference`, `linkBareUrlsInText`, `findHiddenProfile`, `collectHiddenProfiles`. Callers outside Social: `Ingestion/Refresh/IncomingPageStore.php` (`buriedIn`), `Content/.../EntryEmbedWriter.php` (`removedFrom`). `SearchAnswers` calls `$slots->ticketFor` in a closure. `FakeReplyThreadSource` logs 'repliesIn ', which follows the method name, and `SocialRepliesSourceTest:285` follows with it. Namesakes that stay: test-private `blueskyPostFor` (`EntrySocialViewerControllerTest`) and `publishedAt` (`SocialSearchControllerTest`), the `hiddenAt`/`postedAt` fields and keys, `namesIn` in `tests/PhpStan`, `DurableEmissionTest::sourceFor`.
 - `findAccount` becomes the name of two methods in different classes (`SocialRepliesSource`, `SocialIdentity`); `ActingAccountChooser` already has a private `findAccount`. Check each class for a collision in its parents.
 
 ---
