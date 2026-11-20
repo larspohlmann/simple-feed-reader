@@ -35,7 +35,7 @@ final readonly class BlueskySavedCollections
     ) {
     }
 
-    public function savedItemsOf(SocialAccount $account): SavedItemsModel
+    public function fetchSavedItems(SocialAccount $account): SavedItemsModel
     {
         $answer = BlueskySessions::accepted($this->sessions->askAs($account, self::GET_PREFERENCES));
         $preferences = JsonNodeModel::fromValue($answer->json())->listAt('preferences')
@@ -156,7 +156,7 @@ final readonly class BlueskySavedCollections
                 continue;
             }
             $name = $generator->string('displayName');
-            foreach ([$uri, self::handleFormOf($uri, $generator->node('creator')->string('handle'))] as $key) {
+            foreach ([$uri, self::buildHandleForm($uri, $generator->node('creator')->string('handle'))] as $key) {
                 $names[$key] = $name ?? ($names[$key] ?? null);
             }
         }
@@ -164,7 +164,7 @@ final readonly class BlueskySavedCollections
         return $names;
     }
 
-    private static function handleFormOf(string $uri, ?string $creatorHandle): string
+    private static function buildHandleForm(string $uri, ?string $creatorHandle): string
     {
         return null === $creatorHandle
             ? $uri

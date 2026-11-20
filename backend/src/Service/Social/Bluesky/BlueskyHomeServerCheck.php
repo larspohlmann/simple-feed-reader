@@ -36,7 +36,7 @@ final readonly class BlueskyHomeServerCheck implements HomeServerCheckInterface
     public function confirmsDeleted(string $address): bool
     {
         $author = AtPostUri::authorityOf($address);
-        $recordKey = BlueskyRecordUri::recordKeyOf($address);
+        $recordKey = BlueskyRecordUri::parseRecordKey($address);
         if (null === $author || null === $recordKey) {
             return false;
         }

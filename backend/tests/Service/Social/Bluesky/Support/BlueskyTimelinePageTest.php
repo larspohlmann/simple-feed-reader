@@ -20,7 +20,7 @@ final class BlueskyTimelinePageTest extends TestCase
 
     public function testAPostBecomesAnEntryWithItsWebUrlAuthorAndUtcDate(): void
     {
-        $entry = BlueskyTimelinePage::of([self::item()], self::ALICE)->parsed->entries[0];
+        $entry = BlueskyTimelinePage::fromItems([self::item()], self::ALICE)->parsed->entries[0];
 
         self::assertSame(self::POST_URI, $entry->guid);
         self::assertSame('https://bsky.app/profile/did:plc:bob/post/3abc', $entry->url);
@@ -42,14 +42,14 @@ final class BlueskyTimelinePageTest extends TestCase
             'langs' => ['de-AT', 'en'],
         ]]);
 
-        $entry = BlueskyTimelinePage::of([$item], self::ALICE)->parsed->entries[0];
+        $entry = BlueskyTimelinePage::fromItems([$item], self::ALICE)->parsed->entries[0];
 
         self::assertSame('de-AT', $entry->statedLanguage);
     }
 
     public function testAPostWithoutLanguagesStatesNone(): void
     {
-        $entry = BlueskyTimelinePage::of([self::item()], self::ALICE)->parsed->entries[0];
+        $entry = BlueskyTimelinePage::fromItems([self::item()], self::ALICE)->parsed->entries[0];
 
         self::assertNull($entry->statedLanguage);
     }
@@ -62,14 +62,14 @@ final class BlueskyTimelinePageTest extends TestCase
             'langs' => [],
         ]]);
 
-        $entry = BlueskyTimelinePage::of([$item], self::ALICE)->parsed->entries[0];
+        $entry = BlueskyTimelinePage::fromItems([$item], self::ALICE)->parsed->entries[0];
 
         self::assertNull($entry->statedLanguage);
     }
 
     public function testThePostViewIsKeptForItsEmbedAndThePageNamesNoTitle(): void
     {
-        $page = BlueskyTimelinePage::of([self::item()], self::ALICE);
+        $page = BlueskyTimelinePage::fromItems([self::item()], self::ALICE);
 
         self::assertSame(self::POST_URI, $page->knownShares->blueskyPostFor(self::POST_URI)?->string('uri'));
         self::assertNull($page->parsed->title);
@@ -78,15 +78,15 @@ final class BlueskyTimelinePageTest extends TestCase
 
     public function testAPostTheNetworkCountsRepliesForIsKnownAsReplied(): void
     {
-        $page = BlueskyTimelinePage::of([self::item(post: ['replyCount' => 1])], self::ALICE);
+        $page = BlueskyTimelinePage::fromItems([self::item(post: ['replyCount' => 1])], self::ALICE);
 
         self::assertTrue($page->knownShares->hasRepliesFor(self::POST_URI));
     }
 
     public function testAPostWithoutRepliesIsNotKnownAsReplied(): void
     {
-        $unreplied = BlueskyTimelinePage::of([self::item(post: ['replyCount' => 0])], self::ALICE);
-        $uncounted = BlueskyTimelinePage::of([self::item()], self::ALICE);
+        $unreplied = BlueskyTimelinePage::fromItems([self::item(post: ['replyCount' => 0])], self::ALICE);
+        $uncounted = BlueskyTimelinePage::fromItems([self::item()], self::ALICE);
 
         self::assertFalse($unreplied->knownShares->hasRepliesFor(self::POST_URI));
         self::assertFalse($uncounted->knownShares->hasRepliesFor(self::POST_URI));
@@ -94,7 +94,7 @@ final class BlueskyTimelinePageTest extends TestCase
 
     public function testAPostCarriesItsReplyCountAsItsCommentCountAndNoScore(): void
     {
-        $counts = BlueskyTimelinePage::of([self::item(post: ['replyCount' => 4])], self::ALICE)
+        $counts = BlueskyTimelinePage::fromItems([self::item(post: ['replyCount' => 4])], self::ALICE)
             ->parsed->entries[0]->discussionCounts;
 
         self::assertSame(4, $counts->commentCount);
@@ -103,7 +103,7 @@ final class BlueskyTimelinePageTest extends TestCase
 
     public function testAPostWithoutAReplyCountHasNoCommentCount(): void
     {
-        $entry = BlueskyTimelinePage::of([self::item()], self::ALICE)->parsed->entries[0];
+        $entry = BlueskyTimelinePage::fromItems([self::item()], self::ALICE)->parsed->entries[0];
 
         self::assertNull($entry->discussionCounts->commentCount);
     }
@@ -116,7 +116,7 @@ final class BlueskyTimelinePageTest extends TestCase
             'indexedAt' => '2026-10-12T09:30:00Z',
         ]]);
 
-        $entry = BlueskyTimelinePage::of([$item], self::ALICE)->parsed->entries[0];
+        $entry = BlueskyTimelinePage::fromItems([$item], self::ALICE)->parsed->entries[0];
 
         self::assertSame(
             '<p>Hello world. More text</p>'
@@ -135,7 +135,10 @@ final class BlueskyTimelinePageTest extends TestCase
     ): void {
         $item = self::item(['reason' => ['$type' => 'app.bsky.feed.defs#reasonRepost', 'by' => $reposter]]);
 
-        self::assertSame($expected, BlueskyTimelinePage::of([$item], self::ALICE)->parsed->entries[0]->contentHtml);
+        self::assertSame(
+            $expected,
+            BlueskyTimelinePage::fromItems([$item], self::ALICE)->parsed->entries[0]->contentHtml,
+        );
     }
 
     /** @return iterable<string, array{array<string, string>, string}> */
@@ -154,7 +157,7 @@ final class BlueskyTimelinePageTest extends TestCase
     {
         $item = self::item(['reply' => ['root' => $parent, 'parent' => $parent]]);
 
-        self::assertCount($shown, BlueskyTimelinePage::of([$item], self::ALICE)->parsed->entries);
+        self::assertCount($shown, BlueskyTimelinePage::fromItems([$item], self::ALICE)->parsed->entries);
     }
 
     /** @return iterable<string, array{array<string, mixed>, int}> */
@@ -178,28 +181,31 @@ final class BlueskyTimelinePageTest extends TestCase
     {
         $item = JsonNodeModel::fromValue(['post' => ['record' => ['text' => 'orphan']]]);
 
-        self::assertSame([], BlueskyTimelinePage::of([$item], self::ALICE)->parsed->entries);
+        self::assertSame([], BlueskyTimelinePage::fromItems([$item], self::ALICE)->parsed->entries);
     }
 
     public function testAnItemWhoseUriIsNoPostIsSkipped(): void
     {
         $item = JsonNodeModel::fromValue(['post' => ['uri' => 'at://did:plc:bob/app.bsky.feed.like/1']]);
 
-        self::assertSame([], BlueskyTimelinePage::of([$item], self::ALICE)->parsed->entries);
+        self::assertSame([], BlueskyTimelinePage::fromItems([$item], self::ALICE)->parsed->entries);
     }
 
     public function testAHiddenReplyDoesNotEndThePage(): void
     {
         $hidden = self::item(['reply' => ['parent' => ['author' => ['did' => 'did:plc:eve', 'viewer' => []]]]]);
 
-        self::assertCount(1, BlueskyTimelinePage::of([$hidden, self::item()], self::ALICE)->parsed->entries);
+        self::assertCount(1, BlueskyTimelinePage::fromItems([$hidden, self::item()], self::ALICE)->parsed->entries);
     }
 
     /** @param array<string, mixed> $overrides */
     #[DataProvider('authorFeedItems')]
     public function testAnAuthorFeedListsOnlyTheProfilesOwnPostsAndSelfThreads(array $overrides, int $shown): void
     {
-        self::assertCount($shown, BlueskyTimelinePage::ofAuthor([self::item($overrides)], self::BOB)->parsed->entries);
+        self::assertCount(
+            $shown,
+            BlueskyTimelinePage::fromAuthorItems([self::item($overrides)], self::BOB)->parsed->entries,
+        );
     }
 
     /** @return iterable<string, array{array<string, mixed>, int}> */
@@ -228,7 +234,7 @@ final class BlueskyTimelinePageTest extends TestCase
     {
         $item = self::item(['reply' => self::reply(self::BOB, self::BOB, self::PARENT_URI)]);
 
-        $page = BlueskyTimelinePage::of([$item], self::ALICE);
+        $page = BlueskyTimelinePage::fromItems([$item], self::ALICE);
 
         self::assertSame([], $page->parsed->entries);
         $selfReply = $page->selfReplies[0];
@@ -243,7 +249,7 @@ final class BlueskyTimelinePageTest extends TestCase
     {
         $item = self::item(['reply' => self::reply(self::BOB, self::BOB, self::ROOT_URI)]);
 
-        $page = BlueskyTimelinePage::ofAuthor([$item], self::BOB);
+        $page = BlueskyTimelinePage::fromAuthorItems([$item], self::BOB);
 
         self::assertSame([], $page->parsed->entries);
         self::assertSame('https://bsky.app/profile/did:plc:bob/post/3root', $page->selfReplies[0]->parentUrl);
@@ -253,7 +259,7 @@ final class BlueskyTimelinePageTest extends TestCase
     #[DataProvider('notSelfReplies')]
     public function testAnythingButASelfReplyStaysAnEntry(array $item): void
     {
-        $page = BlueskyTimelinePage::of([self::item($item)], self::BOB);
+        $page = BlueskyTimelinePage::fromItems([self::item($item)], self::BOB);
 
         self::assertCount(1, $page->parsed->entries);
         self::assertSame([], $page->selfReplies);

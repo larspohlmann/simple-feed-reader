@@ -23,12 +23,12 @@ final readonly class ProfileVisibilityCache
      *
      * @return array<string, ProfileVisibilityModel> by actor
      */
-    public function visibilitiesOf(array $actors): array
+    public function readVisibilities(array $actors): array
     {
-        $items = $this->itemsOf($actors);
+        $items = $this->readItems($actors);
         $visibilities = [];
         foreach ($actors as $actor) {
-            $verdict = $items[self::keyOf($actor)]->get();
+            $verdict = $items[self::hashKey($actor)]->get();
             $visibilities[$actor] = $verdict instanceof ProfileVisibilityModel
                 ? $verdict
                 : ProfileVisibilityModel::unknown();
@@ -43,13 +43,13 @@ final readonly class ProfileVisibilityCache
      */
     public function remember(array $asked, array $hidden): void
     {
-        $items = $this->itemsOf($asked);
+        $items = $this->readItems($asked);
         foreach ($asked as $actor) {
             $profile = $hidden[$actor] ?? null;
             $verdict = null === $profile
                 ? ProfileVisibilityModel::publicProfile()
                 : ProfileVisibilityModel::hiddenProfile($profile);
-            $this->cache->saveDeferred($items[self::keyOf($actor)]->set($verdict));
+            $this->cache->saveDeferred($items[self::hashKey($actor)]->set($verdict));
         }
         $this->cache->commit();
     }
@@ -59,10 +59,10 @@ final readonly class ProfileVisibilityCache
      *
      * @return array<string, CacheItemInterface> by key
      */
-    private function itemsOf(array $actors): array
+    private function readItems(array $actors): array
     {
         /** @var iterable<string, CacheItemInterface> $found PSR-6 keys each item by its key */
-        $found = $this->cache->getItems(array_map(self::keyOf(...), $actors));
+        $found = $this->cache->getItems(array_map(self::hashKey(...), $actors));
         $items = [];
         foreach ($found as $key => $item) {
             $items[$key] = $item;
@@ -72,7 +72,7 @@ final readonly class ProfileVisibilityCache
     }
 
     /** A DID holds colons, which PSR-6 reserves in keys. */
-    private static function keyOf(string $actor): string
+    private static function hashKey(string $actor): string
     {
         return hash('xxh128', $actor);
     }

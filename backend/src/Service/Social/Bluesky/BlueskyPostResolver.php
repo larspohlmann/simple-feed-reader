@@ -50,7 +50,7 @@ final readonly class BlueskyPostResolver implements PostResolverInterface
         $resolved = SocialPostModel::onBluesky($account, $postUri, $contentId)
             ->withCounts(BlueskyPostCounts::parsePost($post));
 
-        return self::withViewer($resolved, $post->node('viewer'))->inResponseContext(self::responseContextOf($post));
+        return self::withViewer($resolved, $post->node('viewer'))->inResponseContext(self::buildResponseContext($post));
     }
 
     /**
@@ -67,24 +67,24 @@ final readonly class BlueskyPostResolver implements PostResolverInterface
         }
 
         try {
-            return AtPostUri::withAuthority($address, $this->identities->didOf($authority));
+            return AtPostUri::withAuthority($address, $this->identities->fetchDid($authority));
         } catch (SocialAccountUnresolvableException $exception) {
             throw new SocialPostNotFoundException($exception->getMessage(), previous: $exception);
         }
     }
 
-    private static function responseContextOf(JsonNodeModel $post): ResponseContextModel
+    private static function buildResponseContext(JsonNodeModel $post): ResponseContextModel
     {
         return new ResponseContextModel(
             authorIdentity: $post->node('author')->string('did'),
             threadRoot: self::referenceOrNull($post->node('record')->node('reply')->node('root')),
             canReply: !$post->node('viewer')->isTrue('replyDisabled'),
             canQuote: !$post->node('viewer')->isTrue('embeddingDisabled'),
-            preview: self::previewOf($post),
+            preview: self::buildPreview($post),
         );
     }
 
-    private static function previewOf(JsonNodeModel $post): PostPreviewModel
+    private static function buildPreview(JsonNodeModel $post): PostPreviewModel
     {
         $author = $post->node('author');
         $handle = $author->string('handle');

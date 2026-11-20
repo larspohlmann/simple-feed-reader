@@ -22,7 +22,7 @@ final readonly class BlueskySearchSource implements SearchSourceInterface
 
     public function fetchNewest(SocialAccount $account, string $query): TimelinePageModel
     {
-        return BlueskySearchPage::of(
+        return BlueskySearchPage::fromAnswer(
             BlueskySessions::accepted($this->sessions->askAs($account, BlueskySearchPath::buildPath($query))),
             $account->getIdentity(),
             $query,

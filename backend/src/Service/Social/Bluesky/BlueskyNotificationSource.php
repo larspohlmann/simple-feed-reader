@@ -90,7 +90,7 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
     {
         $known = [];
         foreach ($entries as $entry) {
-            $kind = self::kindOf($entry);
+            $kind = self::parseKind($entry);
             if ($kind instanceof SocialNotificationKind) {
                 $known[] = [$entry, $kind];
             }
@@ -138,15 +138,15 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
             $remoteId,
             $kind,
             new NotificationActor($handle, $author->string('displayName'), $author->string('avatar'), $profileUrl),
-            self::subjectOf($kind, $entry, $remoteId, $profileUrl, $account, $likedPosts),
+            self::buildSubject($kind, $entry, $remoteId, $profileUrl, $account, $likedPosts),
             $createdAt,
             $entry->isTrue('isRead'),
-            BlueskyReplyReferences::of($entry->node('record'), $kind),
+            BlueskyReplyReferences::fromRecord($entry->node('record'), $kind),
         );
     }
 
     /** @param array<string, JsonNodeModel> $likedPosts */
-    private static function subjectOf(
+    private static function buildSubject(
         SocialNotificationKind $kind,
         JsonNodeModel $entry,
         string $remoteId,
@@ -204,7 +204,7 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
             : null;
     }
 
-    private static function kindOf(JsonNodeModel $entry): ?SocialNotificationKind
+    private static function parseKind(JsonNodeModel $entry): ?SocialNotificationKind
     {
         return match ($entry->string('reason')) {
             'like', 'like-via-repost' => SocialNotificationKind::Like,

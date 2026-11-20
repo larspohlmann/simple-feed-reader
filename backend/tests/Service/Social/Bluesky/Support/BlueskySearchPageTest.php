@@ -16,7 +16,7 @@ final class BlueskySearchPageTest extends TestCase
 {
     public function testEveryPostButAReplyBecomesAnEntry(): void
     {
-        $page = BlueskySearchPage::of(self::answer(['posts' => [
+        $page = BlueskySearchPage::fromAnswer(self::answer(['posts' => [
             self::post('at://did:plc:amy/app.bsky.feed.post/1', 'Which RSS reader do you use?'),
             self::post('at://did:plc:bob/app.bsky.feed.post/2', 'NetNewsWire is my RSS reader', reply: true),
         ]]), 'did:plc:me', 'rss reader');
@@ -32,7 +32,11 @@ final class BlueskySearchPageTest extends TestCase
     {
         $uri = 'at://did:plc:amy/app.bsky.feed.post/1';
 
-        $page = BlueskySearchPage::of(self::answer(['posts' => [self::post($uri, 'Hello')]]), 'did:plc:me', 'hello');
+        $page = BlueskySearchPage::fromAnswer(
+            self::answer(['posts' => [self::post($uri, 'Hello')]]),
+            'did:plc:me',
+            'hello',
+        );
 
         self::assertSame('https://bsky.app/profile/did:plc:amy/post/1', $page->parsed->entries[0]->url);
         self::assertSame($uri, $page->knownShares->blueskyPostFor($uri)?->string('uri'));
@@ -42,7 +46,7 @@ final class BlueskySearchPageTest extends TestCase
     {
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        BlueskySearchPage::of(self::answer(['cursor' => 'x']), 'did:plc:me', 'rss');
+        BlueskySearchPage::fromAnswer(self::answer(['cursor' => 'x']), 'did:plc:me', 'rss');
     }
 
     public function testAPostMatchingOnlyInItsLinkCardIsLeftOut(): void
@@ -54,7 +58,7 @@ final class BlueskySearchPageTest extends TestCase
             'description' => 'An RSS reader review',
         ]];
 
-        $page = BlueskySearchPage::of(self::answer(['posts' => [$post]]), 'did:plc:me', '"rss reader"');
+        $page = BlueskySearchPage::fromAnswer(self::answer(['posts' => [$post]]), 'did:plc:me', '"rss reader"');
 
         self::assertSame([], $page->parsed->entries);
     }
@@ -77,7 +81,7 @@ final class BlueskySearchPageTest extends TestCase
         $post = self::post('at://did:plc:amy/app.bsky.feed.post/1', 'Same here');
         $post['embed'] = $embed;
 
-        $page = BlueskySearchPage::of(self::answer(['posts' => [$post]]), 'did:plc:me', '"rss reader"');
+        $page = BlueskySearchPage::fromAnswer(self::answer(['posts' => [$post]]), 'did:plc:me', '"rss reader"');
 
         self::assertCount(1, $page->parsed->entries);
     }
@@ -87,7 +91,7 @@ final class BlueskySearchPageTest extends TestCase
         $post = self::post('at://did:plc:amy/app.bsky.feed.post/1', 'I want rss');
         $post['embed'] = ['$type' => 'app.bsky.embed.record#view', 'record' => ['value' => ['text' => 'reader apps']]];
 
-        $page = BlueskySearchPage::of(self::answer(['posts' => [$post]]), 'did:plc:me', '"rss reader"');
+        $page = BlueskySearchPage::fromAnswer(self::answer(['posts' => [$post]]), 'did:plc:me', '"rss reader"');
 
         self::assertSame([], $page->parsed->entries);
     }
@@ -107,7 +111,7 @@ final class BlueskySearchPageTest extends TestCase
         $hamburg = self::post('at://did:plc:hamburgnews/app.bsky.feed.post/hamburg', 'RSS news');
         $hamburg['author'] = ['did' => 'did:plc:hamburgnews', 'handle' => 'hamburgnews.bsky.social'];
 
-        $page = BlueskySearchPage::of(self::answer(['posts' => [
+        $page = BlueskySearchPage::fromAnswer(self::answer(['posts' => [
             $hamburg,
             self::post('at://did:plc:amy/app.bsky.feed.post/amy', 'RSS news'),
         ]]), 'did:plc:me', $query);

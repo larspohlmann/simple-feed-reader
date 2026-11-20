@@ -19,7 +19,7 @@ final readonly class BlueskyFacets
     }
 
     /** @return list<array{index: array{byteStart: int, byteEnd: int}, features: list<array<string, string>>}> */
-    public function of(string $text): array
+    public function buildFacets(string $text): array
     {
         return [
             ...array_map(
@@ -38,7 +38,7 @@ final readonly class BlueskyFacets
     private function mentionsIn(string $text): array
     {
         $spans = BlueskyTextSpans::mentions($text);
-        $dids = $this->didsOf(array_map(static fn (TextSpanModel $span): string => $span->value, $spans));
+        $dids = $this->findDids(array_map(static fn (TextSpanModel $span): string => $span->value, $spans));
         $facets = [];
         foreach ($spans as $span) {
             $did = $dids[$span->value] ?? null;
@@ -57,7 +57,7 @@ final readonly class BlueskyFacets
      *
      * @return array<string, string|null>
      */
-    private function didsOf(array $handles): array
+    private function findDids(array $handles): array
     {
         $dids = [];
         try {
@@ -74,7 +74,7 @@ final readonly class BlueskyFacets
     private function didOrNull(string $handle): ?string
     {
         try {
-            return $this->identities->didOf($handle);
+            return $this->identities->fetchDid($handle);
         } catch (SocialAccountUnresolvableException) {
             return null;
         }

@@ -34,7 +34,7 @@ final readonly class BlueskyExternalEmbeds
     }
 
     /** @return array<string, mixed> */
-    public function embedOf(SocialAccount $account, string $url): array
+    public function prepareEmbed(SocialAccount $account, string $url): array
     {
         $card = $this->pageCards->resolveCard($url);
 
@@ -42,12 +42,12 @@ final readonly class BlueskyExternalEmbeds
             'uri' => $url,
             'title' => $card->title,
             'description' => $card->description ?? '',
-            ...$this->thumbnailOf($account, $card->imageUrl),
+            ...$this->tryUploadThumbnail($account, $card->imageUrl),
         ]];
     }
 
     /** @return array{thumb?: array<mixed>} */
-    private function thumbnailOf(SocialAccount $account, ?string $imageUrl): array
+    private function tryUploadThumbnail(SocialAccount $account, ?string $imageUrl): array
     {
         if (null === $imageUrl) {
             return [];

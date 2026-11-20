@@ -70,11 +70,14 @@ final readonly class BlueskyPrivateFeedRule implements PrivateFeedRuleInterface
 
     public function buildSearchedPost(SocialAccount $account, StoredPostModel $post): SearchedPostModel
     {
-        return new SearchedPostModel(self::authorNamesOf($post), [PlainText::fromHtmlBlocks($post->contentHtml) ?? '']);
+        return new SearchedPostModel(
+            self::collectAuthorNames($post),
+            [PlainText::fromHtmlBlocks($post->contentHtml) ?? ''],
+        );
     }
 
     /** @return list<string> the handle the author page shows and the DID the post's at:// address carries */
-    private static function authorNamesOf(StoredPostModel $post): array
+    private static function collectAuthorNames(StoredPostModel $post): array
     {
         $handle = null === $post->authorUrl ? null : BlueskyProfileFeed::parseProfileActor($post->authorUrl);
 

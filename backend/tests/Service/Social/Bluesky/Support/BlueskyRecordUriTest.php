@@ -122,7 +122,7 @@ final class BlueskyRecordUriTest extends TestCase
     #[DataProvider('recordKeys')]
     public function testTheRecordKeyIsTheLastSegmentOfAKnownRecord(string $uri, ?string $recordKey): void
     {
-        self::assertSame($recordKey, BlueskyRecordUri::recordKeyOf($uri));
+        self::assertSame($recordKey, BlueskyRecordUri::parseRecordKey($uri));
     }
 
     /** @return iterable<string, array{string, ?string}> */

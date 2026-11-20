@@ -23,7 +23,7 @@ final readonly class CachedHiddenProfiles implements HiddenProfilesInterface
     {
         $hidden = [];
         $unknown = [];
-        $visibilities = $this->profileVisibility->visibilitiesOf($actors);
+        $visibilities = $this->profileVisibility->readVisibilities($actors);
         foreach ($visibilities as $actor => $visibility) {
             if (null !== $visibility->hidden) {
                 $hidden[$actor] = $visibility->hidden;

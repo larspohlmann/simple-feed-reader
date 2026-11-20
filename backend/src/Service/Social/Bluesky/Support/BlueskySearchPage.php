@@ -21,14 +21,17 @@ final class BlueskySearchPage
     private const string QUOTE_WITH_MEDIA = 'app.bsky.embed.recordWithMedia#view';
 
     /** @throws SocialNetworkUnreachableException */
-    public static function of(ApiResponseModel $accepted, string $accountDid, string $query): TimelinePageModel
+    public static function fromAnswer(ApiResponseModel $accepted, string $accountDid, string $query): TimelinePageModel
     {
         $posts = $accepted->json()['posts'] ?? null;
         if (!\is_array($posts) || !array_is_list($posts)) {
             throw new SocialNetworkUnreachableException('Bluesky answered without search results.');
         }
 
-        return BlueskyTimelinePage::of(self::itemsOf($posts, SocialSearchMatch::matcher($query)), $accountDid);
+        return BlueskyTimelinePage::fromItems(
+            self::filterItems($posts, SocialSearchMatch::matcher($query)),
+            $accountDid,
+        );
     }
 
     /**
@@ -37,12 +40,12 @@ final class BlueskySearchPage
      *
      * @return list<JsonNodeModel>
      */
-    private static function itemsOf(array $posts, \Closure $matches): array
+    private static function filterItems(array $posts, \Closure $matches): array
     {
         $items = [];
         foreach ($posts as $post) {
             $node = JsonNodeModel::fromValue($post);
-            if (!$node->node('record')->has('reply') && $matches(self::searchedPostOf($node))) {
+            if (!$node->node('record')->has('reply') && $matches(self::buildSearchedPost($node))) {
                 $items[] = JsonNodeModel::fromValue(['post' => $post]);
             }
         }
@@ -50,18 +53,18 @@ final class BlueskySearchPage
         return $items;
     }
 
-    private static function searchedPostOf(JsonNodeModel $post): SearchedPostModel
+    private static function buildSearchedPost(JsonNodeModel $post): SearchedPostModel
     {
         $author = $post->node('author');
 
         return new SearchedPostModel(
             array_values(array_filter([$author->string('handle'), $author->string('did')], \is_string(...))),
-            self::ownTextsOf($post),
+            self::buildSearchTexts($post),
         );
     }
 
     /** @return list<string> */
-    private static function ownTextsOf(JsonNodeModel $post): array
+    private static function buildSearchTexts(JsonNodeModel $post): array
     {
         $embed = $post->node('embed');
         $quoted = match ($embed->type()) {

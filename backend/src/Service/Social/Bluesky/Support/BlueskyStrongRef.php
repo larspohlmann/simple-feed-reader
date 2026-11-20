@@ -14,7 +14,7 @@ final class BlueskyStrongRef
     }
 
     /** @return array{uri: string, cid: ?string} */
-    public static function of(SocialPostModel $post): array
+    public static function fromPost(SocialPostModel $post): array
     {
         return ['uri' => $post->postId, 'cid' => $post->contentId];
     }

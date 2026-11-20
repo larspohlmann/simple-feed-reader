@@ -15,7 +15,7 @@ final readonly class RefusedFeedPositionModel
     ) {
     }
 
-    public static function of(Subscription $subscription): self
+    public static function fromSubscription(Subscription $subscription): self
     {
         return new self($subscription->getFeed()->requireId(), $subscription->requireId());
     }

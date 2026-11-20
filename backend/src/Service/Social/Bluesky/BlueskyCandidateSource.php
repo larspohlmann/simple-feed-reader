@@ -49,10 +49,10 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
 
     public function collections(SocialAccount $account): NetworkCollectionsModel
     {
-        $saved = $this->savedCollections->savedItemsOf($account);
+        $saved = $this->savedCollections->fetchSavedItems($account);
         $owned = $this->collect(self::actorPage('app.bsky.graph.getLists', $account->getIdentity()), 'lists');
         $ownedLists = self::curatedLists($owned->items);
-        $others = $this->savedCollections->resolve($saved, self::urisOf($ownedLists));
+        $others = $this->savedCollections->resolve($saved, self::collectUris($ownedLists));
 
         return new NetworkCollectionsModel(
             [...$ownedLists, ...$others->lists],
@@ -69,7 +69,7 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
      *
      * @return array<string, true>
      */
-    private static function urisOf(array $lists): array
+    private static function collectUris(array $lists): array
     {
         return array_fill_keys(array_map(static fn (SocialCollectionModel $list): string => $list->id, $lists), true);
     }

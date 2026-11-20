@@ -99,7 +99,7 @@ final class RefusedProfileSubscriptionRepositoryTest extends DbTestCase
     /** @return list<Subscription> */
     private function subscriptionsAfter(Subscription $subscription): array
     {
-        $position = RefusedFeedPositionModel::of($subscription);
+        $position = RefusedFeedPositionModel::fromSubscription($subscription);
 
         return $this->subscriptions()->findOnRefusedBlueskyProfileFeeds($position, 10);
     }

@@ -10,16 +10,16 @@ use App\Service\Social\Notification\Model\ContextReferenceModel;
 
 final class BlueskyReplyReferences
 {
-    public static function of(JsonNodeModel $record, SocialNotificationKind $kind): ContextReferenceModel
+    public static function fromRecord(JsonNodeModel $record, SocialNotificationKind $kind): ContextReferenceModel
     {
         return match ($kind) {
-            SocialNotificationKind::Reply => self::replyOf($record->node('reply')),
+            SocialNotificationKind::Reply => self::fromReply($record->node('reply')),
             SocialNotificationKind::Quote => new ContextReferenceModel(self::quotedUri($record->node('embed'))),
             default => new ContextReferenceModel(),
         };
     }
 
-    private static function replyOf(JsonNodeModel $reply): ContextReferenceModel
+    private static function fromReply(JsonNodeModel $reply): ContextReferenceModel
     {
         $parent = $reply->node('parent')->string('uri');
         $root = $reply->node('root')->string('uri');

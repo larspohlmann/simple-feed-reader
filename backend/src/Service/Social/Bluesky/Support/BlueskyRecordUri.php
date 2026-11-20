@@ -19,39 +19,39 @@ final class BlueskyRecordUri
 
     public static function isList(string $uri): bool
     {
-        return self::LIST === (self::partsOf($uri)['collection'] ?? null);
+        return self::LIST === (self::parseParts($uri)['collection'] ?? null);
     }
 
     public static function isFeedGenerator(string $uri): bool
     {
-        return self::FEED_GENERATOR === (self::partsOf($uri)['collection'] ?? null);
+        return self::FEED_GENERATOR === (self::parseParts($uri)['collection'] ?? null);
     }
 
     /** @return string|null $uri when it names a like record the remote id column can hold */
     public static function likeOrNull(?string $uri): ?string
     {
-        return self::ofCollection($uri, self::LIKE);
+        return self::keepIfInCollection($uri, self::LIKE);
     }
 
     public static function repostOrNull(?string $uri): ?string
     {
-        return self::ofCollection($uri, self::REPOST);
+        return self::keepIfInCollection($uri, self::REPOST);
     }
 
     public static function postOrNull(?string $uri): ?string
     {
-        return self::ofCollection($uri, self::POST);
+        return self::keepIfInCollection($uri, self::POST);
     }
 
-    public static function recordKeyOf(string $uri): ?string
+    public static function parseRecordKey(string $uri): ?string
     {
-        return self::partsOf($uri)['recordKey'] ?? null;
+        return self::parseParts($uri)['recordKey'] ?? null;
     }
 
     /** @return string|null the record's page on the Bluesky web app; null when $uri is no list or feed generator */
     public static function webUrl(string $uri): ?string
     {
-        $parts = self::partsOf($uri);
+        $parts = self::parseParts($uri);
         if (null === $parts || !\in_array($parts['collection'], [self::LIST, self::FEED_GENERATOR], true)) {
             return null;
         }
@@ -60,17 +60,17 @@ final class BlueskyRecordUri
         return BlueskyWeb::profileUrl($parts['did']) . '/' . $section . '/' . $parts['recordKey'];
     }
 
-    public static function ofCollection(?string $uri, string $collection): ?string
+    public static function keepIfInCollection(?string $uri, string $collection): ?string
     {
         if (null === $uri || \strlen($uri) > self::MAX_RECORD_LENGTH) {
             return null;
         }
 
-        return $collection === (self::partsOf($uri)['collection'] ?? null) ? $uri : null;
+        return $collection === (self::parseParts($uri)['collection'] ?? null) ? $uri : null;
     }
 
     /** @return array{did: string, collection: string, recordKey: string}|null */
-    private static function partsOf(string $uri): ?array
+    private static function parseParts(string $uri): ?array
     {
         $pattern = '#^at://(?<did>' . BlueskyActor::DID_SYNTAX . ')/(?<collection>[a-z.]+)/(?<recordKey>'
             . self::RECORD_KEY . ')$#D';

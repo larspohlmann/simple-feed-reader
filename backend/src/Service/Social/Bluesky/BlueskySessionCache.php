@@ -26,7 +26,7 @@ final readonly class BlueskySessionCache
 
     public function find(SocialAccount $account): ?BlueskySessionModel
     {
-        $item = $this->cache->getItem(self::keyOf($account));
+        $item = $this->cache->getItem(self::buildKey($account));
         $sealed = $item->isHit() ? SealedBlueskySessionModel::fromCacheEntryOrNull($item->get()) : null;
         if (null === $sealed) {
             return null;
@@ -47,7 +47,7 @@ final readonly class BlueskySessionCache
             $this->cipher->seal($account->getUser()->requireId(), $session->accessJwt),
             $session->handle,
         );
-        $item = $this->cache->getItem(self::keyOf($account));
+        $item = $this->cache->getItem(self::buildKey($account));
         $item->set($sealed->toCacheEntry());
         $item->expiresAfter(self::LIFETIME_SECONDS);
         $this->cache->save($item);
@@ -55,11 +55,11 @@ final readonly class BlueskySessionCache
 
     public function forget(SocialAccount $account): void
     {
-        $this->cache->deleteItem(self::keyOf($account));
+        $this->cache->deleteItem(self::buildKey($account));
     }
 
     /** Keyed by the stored credential too: a reconnect seals a new one, and the old password's session must go. */
-    private static function keyOf(SocialAccount $account): string
+    private static function buildKey(SocialAccount $account): string
     {
         return sprintf(
             'bluesky_session.%d.%s',
