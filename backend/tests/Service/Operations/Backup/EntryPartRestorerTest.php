@@ -19,6 +19,7 @@ use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\FeedRepository;
 use App\Repository\SubscribedEntryCountRepository;
+use App\Service\Foundation\CanonicalItem\CanonicalItemLinker;
 use App\Service\Operations\Backup\BackupFitCheck;
 use App\Service\Operations\Backup\BackupReader;
 use App\Service\Operations\Backup\EntryPartInspector;
@@ -27,12 +28,15 @@ use App\Service\Operations\Backup\Exception\BackupDoesNotFitException;
 use App\Service\Operations\Backup\Exception\InvalidBackupException;
 use App\Service\Operations\Backup\Factory\RestoredEntryStateFactory;
 use App\Service\Operations\Backup\Factory\RestoreEntryLoaderFactory;
+use App\Service\Operations\Backup\RestoredEntryFinisher;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\CanonicalItems;
 use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\SharedLinks;
+use App\Tests\Support\SocialRuleWiring;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -601,7 +605,15 @@ final class EntryPartRestorerTest extends DbTestCase
             $entryShares,
             $inserter,
             PostEnrichers::sharedLinkWriter($this->entityManager),
-            EntryIndexers::with($this->indexWriter),
+            new RestoredEntryFinisher(
+                $this->entityManager,
+                $entries,
+                new CanonicalItemLinker(
+                    CanonicalItems::readRepository($this->entityManager),
+                    SocialRuleWiring::canonicalKeys(),
+                ),
+                EntryIndexers::with($this->indexWriter),
+            ),
             new RestoredEntryStateFactory(new MockClock('2026-08-20 00:00:00', 'UTC')),
             $feeds,
         );

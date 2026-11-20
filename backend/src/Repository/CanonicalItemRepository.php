@@ -40,6 +40,15 @@ final class CanonicalItemRepository extends ServiceEntityRepository
         return is_numeric($id) ? (int) $id : throw new RecordNotFoundException('No canonical item for ' . $key->key);
     }
 
+    /** Its votes, likes and Lemmy post row go with it: their foreign keys cascade. */
+    public function deleteUnreferenced(): int
+    {
+        return (int) $this->getEntityManager()->getConnection()->executeStatement(
+            'DELETE FROM canonical_item WHERE NOT EXISTS '
+            . '(SELECT 1 FROM entry WHERE entry.canonical_item_id = canonical_item.id)',
+        );
+    }
+
     /**
      * @param list<int> $ids
      *

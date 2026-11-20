@@ -22,9 +22,13 @@ final class CanonicalItems
         if (null === $key) {
             return;
         }
-        /** @var CanonicalItemRepository $items */
-        $items = $entityManager->getRepository(CanonicalItem::class);
+        $items = self::readRepository($entityManager);
         $itemId = $items->ensure($key);
         $entry->linkTo($items->findByIds([$itemId])[$itemId]);
+    }
+
+    public static function readRepository(EntityManagerInterface $entityManager): CanonicalItemRepository
+    {
+        return $entityManager->getRepository(CanonicalItem::class);
     }
 }

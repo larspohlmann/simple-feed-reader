@@ -214,6 +214,7 @@ final readonly class RefreshRunners
                 $this->clock,
                 $indexer,
                 PostEnrichers::sharedLinks($this->entityManager),
+                CanonicalItems::readRepository($this->entityManager),
             );
         }
 
@@ -223,6 +224,7 @@ final readonly class RefreshRunners
             $this->clock,
             $indexer,
             PostEnrichers::sharedLinks($this->entityManager),
+            CanonicalItems::readRepository($this->entityManager),
             $this->maxEntriesPerFeed,
         );
     }

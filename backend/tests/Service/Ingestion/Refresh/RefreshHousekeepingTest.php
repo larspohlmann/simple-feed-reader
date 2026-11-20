@@ -16,6 +16,7 @@ use App\Service\Ingestion\Refresh\RefreshHousekeeping;
 use App\Service\Ingestion\Retention\EntryPruner;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\CanonicalItems;
 use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\RecordingLogger;
@@ -126,6 +127,7 @@ final class RefreshHousekeepingTest extends DbTestCase
                 new MockClock(self::NOW, 'UTC'),
                 EntryIndexers::with(new RecordingSearchIndexWriter()),
                 PostEnrichers::sharedLinks($this->entityManager),
+                CanonicalItems::readRepository($this->entityManager),
             ),
             $this->historyWiring(self::NOW)->recorder(),
             $this->logger,

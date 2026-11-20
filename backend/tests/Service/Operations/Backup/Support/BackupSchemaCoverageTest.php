@@ -160,7 +160,7 @@ final class BackupSchemaCoverageTest extends DbTestCase
         ThreadPost::class => 'A post\'s self-reply continuation, read from the network at ingest (#1668); a '
             . 'restored entry shows its root post alone.',
         CanonicalItem::class => 'The row every copy of a social post shares, with its score and counts (#2404); '
-            . 'ingest finds or creates it again for each copy a feed lists.',
+            . 'a restore, like ingest, finds or creates it again for each copy it writes.',
         LemmyPost::class => 'A Lemmy post\'s community (#2347), rewritten on every fetch while its feed '
             . 'still lists the post; a restored one would be stale before the reader saw it.',
         EntryTranscript::class => 'An episode\'s transcript, fetched from the URL its feed declares (#1809); a '
@@ -339,7 +339,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
                 . 'while its feed still lists the post; a restored one would be stale before the reader saw it.',
             'discussion.selfReplyCount' => 'The length of the thread whose replies, ThreadPost rows, stay out of '
                 . 'the file (#2269); a restored article shows its root post alone.',
-            'canonicalItem' => 'The shared row of a social post\'s copies (#2404), which the file does not carry.',
+            'canonicalItem' => 'The shared row of a social post\'s copies (#2404), which the file does not carry; '
+                . 'a restore links each restored copy to it again.',
         ],
         LinkCard::class => [
             'threadPost' => 'A reply\'s card stays out of the file with its reply (#1668).',

@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Entity\CanonicalItem;
 use App\Entity\Category;
 use App\Entity\Entry;
 use App\Entity\LemmyPost;
-use App\Repository\CanonicalItemRepository;
 use App\Repository\CategoryRepository;
 use App\Repository\EntryRepository;
+use App\Service\Foundation\CanonicalItem\CanonicalItemLinker;
 use App\Service\Foundation\Sanitize\EntrySanitizer;
 use App\Service\Foundation\Sanitize\TrailingBlankRemover;
 use App\Service\Ingestion\Category\CategoryNormalizer;
@@ -88,10 +87,10 @@ final class EntryIngestors
 
     private static function canonicalItemWriter(EntityManagerInterface $entityManager): CanonicalItemWriter
     {
-        /** @var CanonicalItemRepository $canonicalItems */
-        $canonicalItems = $entityManager->getRepository(CanonicalItem::class);
-
-        return new CanonicalItemWriter($canonicalItems, SocialRuleWiring::canonicalKeys());
+        return new CanonicalItemWriter(new CanonicalItemLinker(
+            CanonicalItems::readRepository($entityManager),
+            SocialRuleWiring::canonicalKeys(),
+        ));
     }
 
     private static function lemmyPostWriter(EntityManagerInterface $entityManager): LemmyPostWriter
