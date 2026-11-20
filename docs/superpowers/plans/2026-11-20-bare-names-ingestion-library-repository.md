@@ -43,6 +43,7 @@ The last column is what the reviewer checks the name against.
 | `Dto/Entry/MarkReadRequest.php` | `requiredIdFor` | `requireId` | The request's id; throws `ValidationException` when the scope needs one and it is missing |
 | `Dto/Entry/MarkReadRequest.php` | `requiredNetworkFor` | `requireNetwork` | The request's network scope; throws `ValidationException` when the scope needs one and it is missing or unknown |
 | `Entity/StoredList.php` | `orNull` | `keepIfNotEmpty` | Passes an encoded list through unless it is empty, then null |
+| `Entity/InclusionChange.php` | `switchFor` | `getSwitch` | Plain read of one of four stored tri-state fields, chosen by surface; null means unchanged |
 | `Entity/SyncStamp.php` | `checkedAt` | `getCheckedAt` | Returns the stored `checkedAt` property |
 | `Enum/TrendingWindow.php` | `minimumOutletsFor` | `computeMinimumOutlets` | The larger of the window's floor and its per-mille share of the active feeds, rounded up |
 
@@ -54,9 +55,9 @@ The last column is what the reviewer checks the name against.
 | `EntryShareDql.php` | `existsFor` | `buildSharedCondition` | Returns the DQL `EXISTS` fragment "the user shared this entry" for an entry alias |
 | `EntryShareRepository.php` | `sharedAtFor` | `findSharedAt` | Queries when the user shared an entry, null when not shared |
 | `EntryTranscriptRepository.php` and `Service/Library/Search/TranscriptText/TranscriptTextInterface.php` | `searchTextsFor` | `findSearchTexts` | Queries the search text of each filled transcript among the given entries, by entry id |
-| `LinkCardRepository.php` | `nextPositionFor` | `findNextPosition` | One above the highest card position of the entry, looking at stored cards and at cards scheduled for insertion |
+| `LinkCardRepository.php` | `nextPositionFor` | `computeNextPosition` | Works the next free position out of the cards scheduled for insertion and the stored maximum: one above the highest; runs no query for an unsaved entry |
 | `ProfileRunRepository.php` | `latestCompletedFingerprintFor` | `findLatestCompletedFingerprint` | Queries the fingerprint of the user's newest completed profile run, null when none |
-| `ReaderAuditRepository.php` | `idOrNull` | `parseId` | Turns a `fetchOne()` result into an int id; null when no row came back (`false`) |
+| `ReaderAuditRepository.php` | `idOrNull` | `parseId` | Turns a `fetchOne()` result into an int id; null when `fetchOne()` answered `false`; a non-numeric value throws in `DatabaseValue::int` |
 | `RecommendationRunHistoryRepository.php` | `historyRowsFor` | `buildHistoryRowsQuery` | Returns a `QueryBuilder` selecting a user's run history columns; runs nothing |
 | `RetentionRepository.php` | `unprotectedAmong` | `findUnprotectedIds` | Queries which of the given entry ids are not protected from retention |
 | `SavedPostRepository.php` | `copiesIn` | `findCopies` | Queries, per original entry id, the id of its copy in the saved feed |
@@ -82,35 +83,40 @@ The last column is what the reviewer checks the name against.
 | `Parser/ItemImageExtractor.php` | `mediaCandidatesIn` | `collectMediaCandidates` | Gathers the Media RSS content and thumbnail children of an element that carry a URL and are images |
 | `Parser/ItemMediaExtractor.php` | `mediaNodesIn` | `collectMediaNodes` | Gathers the Media RSS content and thumbnail children of a group that carry a URL |
 | `Parser/ItemMediaExtractor.php` | `posterIn` | `findPoster` | The URL of the group's `media:thumbnail`, null when there is none |
-| `Parser/Support/UndeclaredPrefixes.php` | `declaredIn` | `declarePrefixes` | Returns the XML with the missing namespace declarations added to its root start tag; unchanged when none is missing |
+| `Parser/Support/UndeclaredPrefixes.php` | `declaredIn` | `addMissingDeclarations` | Returns the XML with the missing namespace declarations added to its root start tag; unchanged when none is missing |
 | `Parser/WordPressJsonParser.php` | `publishedAt` | `parsePublishedAt` | Reads `date_gmt` as a UTC time; null when missing or unreadable |
 | `Parser/WordPressJsonParser.php` | `stringOrNull` | `parseString` | A trimmed non-empty string, or an int as a string; null for anything else |
-| `Refresh/Pass/PassLane/PassLaneInterface.php` and every implementation | `ticketsFor` | `buildTickets` | Yields the request tickets a feed needs in this pass, none when it settles without a request |
+| `Refresh/Pass/PassLane/PassLaneInterface.php` and every implementation | `ticketsFor` | `issueTickets` | Hands out the request tickets a feed needs in this pass; handing out may settle the feed without a ticket and record that (`TimelineLane` via `TimelineRound::ticketFor`, which stays until the Social batch) |
 | `Refresh/RefreshRunStore.php` | `keyFor` | `buildKey` | Cache key from the user id and the target's run key; throws `LogicException` for a request without a user |
-| `Refresh/UserRefreshScope.php` | `requestFor` | `buildRequest` | Assembles the refresh request for one feed, one of the user's tags (which must exist) or every feed |
-| `Refresh/TrackedRefreshRunner.php` | `handledIn` | `countHandled` | Adds up the report's fetched, not modified, failed and throttled feeds |
+| `Refresh/UserRefreshScope.php` | `requestFor` | `resolveRequest` | Settles the refresh target among one feed, one of the user's tags and every feed, checking that the feed or tag is the user's (throws when not) |
+| `Refresh/UserRefreshScope.php` | `requestForNetwork` | `buildNetworkRequest` | Assembles the refresh request for one social network's feeds |
+| `Refresh/UserRefreshScope.php` | `requestForFeedGroup` | `buildFeedGroupRequest` | Assembles the refresh request for a feed group |
+| `Refresh/UserRefreshScope.php` | `requestForNeverFetched` | `buildNeverFetchedRequest` | Assembles the refresh request for the feeds never fetched |
+| `Refresh/UserRefreshScope.php` | `forFeed` (private) | `buildFeedRequest` | Assembles the feed request; throws `RecordNotFoundException` when the user does not subscribe to the feed |
+| `Refresh/TrackedRefreshRunner.php` | `handledIn` | `computeHandled` | Adds up the report's fetched, not modified, failed and throttled feeds (arithmetic over the in-memory report) |
 | `Scraper/Pass/CardFields.php` | `publishedAt` | `parsePublishedAt` | Parses the `datetime` of the container's `<time>` element; null when there is none or it does not parse |
 
 ### Library (paths under `backend/src/Service/Library/`)
 
 | File | Old | New | What it does |
 |---|---|---|---|
-| `Reading/MarkReadService.php` | `subscriptionsIn` | `findSubscriptions` | Looks up the user's subscriptions a read scope covers, by scope kind |
+| `Reading/MarkReadService.php` | `subscriptionsIn` | `resolveSubscriptions` | Turns a read scope into the subscriptions it covers, by scope kind; throws `RecordNotFoundException` when the scope's feed or tag is not the user's |
 | `SavedPosts/SavedPostRescue.php` | `planFor` | `loadPlan` | Queries the originals and the copies already held, and builds the copy plan from them |
-| `SavedPosts/Support/SavedFeedUrl.php` | `networkIn` | `readNetwork` | Reads the network from the second of the URL's already split parts; null when the part is missing or no network. `parseNetwork` exists and calls it after splitting the URL |
+| `SavedPosts/Support/SavedFeedUrl.php` | `networkIn` | `parseNetworkPart` | Parses the network out of the second of the URL's already split parts; null when the part is missing or no network. `parseNetwork` (whole URL) calls it after `parseParts` |
 | `Search/Index/SearchIndexReader/MeilisearchIndex.php` | `highlightedWordsIn` | `extractHighlightedWords` | Pulls every text between the highlight markers out of a formatted field |
 | `Search/Index/SearchIndexReader/MeilisearchIndex.php` | `queryStringFor` | `buildQueryString` | Assembles the Meilisearch `q` string from the terms: quoted as a phrase, quoted per word, or plain |
 | `Search/Index/SearchIndexReader/MeilisearchIndex.php` | `filterFor` | `buildFilter` | Assembles the Meilisearch filter expression from feed ids, entry ids and the cursor, joined with `AND` |
 | `SubscriptionHistory/Pass/DaySources.php` | `countFor` | `resolveDayCount` | The stored count of a subscription's day when one is stored, else the live one |
-| `Subscription/FeedTagMove.php` | `ownedTagOrNull` | `requireOwnedTag` | Null for a null id; else the user's tag with that id, throwing `InvalidSelectionException` when it is not theirs |
-| `Tag/TagEditor.php` | `parentFor` | `requireValidParent` | Null for no parent; else the parent tag after checking ownership, cycles and depth, throwing `InvalidTagParentException` when it may not be the parent |
+| `Subscription/FeedTagMove.php` | `ownedTagOrNull` | `requireOwnedTagIfSet` | Null for a null id (no tag, passes through); else the user's tag with that id, throwing `InvalidSelectionException` when it is not theirs |
+| `Tag/TagEditor.php` | `parentFor` | `resolveParent` | Settles an edited tag's parent from an optional id: none for null, the unchanged current parent when the id is the current one, else the requested tag after the ownership, cycle and depth checks, which throw `InvalidTagParentException` |
+| `Tag/TagEditor.php` | `parentForNewTag` (private) | `resolveNewTagParent` | Settles a new tag's parent from an optional id: none for null, else the requested tag after the ownership and depth checks, which throw |
 
 ## Review Focus
 
 - `publishedAt` is also a property and array key all over the tree (103 files): only the two private methods in `WordPressJsonParser` and `CardFields` are renamed. Rename through the type, never by text.
 - `SyncStamp::checkedAt()` shares its name with the DQL path `syncStamp.checkedAt` and the property: DQL strings and the property stay, only method calls follow.
 - `findSearchTexts` is declared on the consumer-owned `TranscriptTextInterface`; the repository, the interface and every test double follow together. Check the other repository rows for an interface the same way.
-- `PassLaneInterface::ticketsFor` has implementations and doubles in `backend/tests`; `TimelineLane` calls `ticketFor` on the round, which is a different method and stays.
+- `PassLaneInterface::ticketsFor` has two implementations, `FeedLane` and `TimelineLane`; `TimelineLane` calls `ticketFor` on the round, which is a different method and stays until the Social batch.
 - `planFor` also exists in `PrivateFeedSyncApplier` (Social) and `keyFor`, `candidateFor` in other groups: those wait for their own batch.
 - String method names in mocks (`->method('flaggedIn')`, `->method('heldIn')`): search `backend/tests` for the bare names.
 
