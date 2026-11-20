@@ -269,7 +269,7 @@ final class Version20261120120000 extends AbstractMigration
         $this->addSql('UPDATE entry e INNER JOIN ' . self::BACKFILL . ' backfill ON backfill.entry_id = e.id'
             . ' INNER JOIN canonical_item item ON item.kind = backfill.kind AND item.key_hash = backfill.key_hash'
             . ' SET e.canonical_item_id = item.id');
-        $this->addItemCounts();
+        $this->addItemCountsOnMySql();
         $this->addLemmyCommunities();
         $this->addSql('DROP TABLE entry_lemmy_post');
     }
@@ -345,7 +345,7 @@ final class Version20261120120000 extends AbstractMigration
         $this->addSql('UPDATE entry SET canonical_item_id = (SELECT item.id FROM ' . self::BACKFILL . ' backfill'
             . ' INNER JOIN canonical_item item ON item.kind = backfill.kind AND item.key_hash = backfill.key_hash'
             . ' WHERE backfill.entry_id = entry.id) WHERE id IN (SELECT entry_id FROM ' . self::BACKFILL . ')');
-        $this->addItemCounts();
+        $this->addItemCountsOnSqlite();
         $this->addLemmyCommunities();
         $this->addSql('DROP TABLE entry_lemmy_post');
     }
@@ -483,8 +483,27 @@ final class Version20261120120000 extends AbstractMigration
         ));
     }
 
+    /**
+     * The newest copy that carries a count gives it, as the copy fetched last does at ingestion.
+     * Joined, not correlated: MySQL's single-table UPDATE scans entry once per item for the subquery form (75 min on 143k entries).
+     */
+    private function addItemCountsOnMySql(): void
+    {
+        $this->addSql('UPDATE canonical_item item'
+            . ' LEFT JOIN (SELECT canonical_item_id, MAX(id) AS newest_id FROM entry'
+            . ' WHERE canonical_item_id IS NOT NULL AND comment_count IS NOT NULL GROUP BY canonical_item_id) counted'
+            . ' ON counted.canonical_item_id = item.id'
+            . ' LEFT JOIN entry counted_copy ON counted_copy.id = counted.newest_id'
+            . ' LEFT JOIN (SELECT e.canonical_item_id, MAX(e.id) AS newest_id FROM entry e'
+            . ' INNER JOIN entry_lemmy_post post ON post.entry_id = e.id'
+            . ' WHERE e.canonical_item_id IS NOT NULL AND post.score IS NOT NULL GROUP BY e.canonical_item_id) scored'
+            . ' ON scored.canonical_item_id = item.id'
+            . ' LEFT JOIN entry_lemmy_post scored_post ON scored_post.entry_id = scored.newest_id'
+            . ' SET item.comment_count = counted_copy.comment_count, item.score = scored_post.score');
+    }
+
     /** The newest copy that carries a count gives it, as the copy fetched last does at ingestion. */
-    private function addItemCounts(): void
+    private function addItemCountsOnSqlite(): void
     {
         $this->addSql('UPDATE canonical_item SET'
             . ' comment_count = (SELECT e.comment_count FROM entry e WHERE e.canonical_item_id = canonical_item.id'
@@ -496,13 +515,12 @@ final class Version20261120120000 extends AbstractMigration
     private function addLemmyCommunities(): void
     {
         $this->addSql('INSERT INTO lemmy_post (canonical_item_id, community_identity, community_url)'
-            . ' SELECT e.canonical_item_id, post.community_identity, post.community_url'
-            . ' FROM entry_lemmy_post post INNER JOIN entry e ON e.id = post.entry_id'
-            . ' WHERE e.canonical_item_id IS NOT NULL AND post.community_identity IS NOT NULL'
-            . ' AND NOT EXISTS (SELECT 1 FROM lemmy_post moved WHERE moved.canonical_item_id = e.canonical_item_id)'
-            . ' AND NOT EXISTS (SELECT 1 FROM entry_lemmy_post newer INNER JOIN entry copy ON copy.id = newer.entry_id'
-            . ' WHERE copy.canonical_item_id = e.canonical_item_id AND newer.community_identity IS NOT NULL'
-            . ' AND newer.entry_id > post.entry_id)');
+            . ' SELECT newest.canonical_item_id, post.community_identity, post.community_url'
+            . ' FROM (SELECT e.canonical_item_id, MAX(e.id) AS entry_id FROM entry_lemmy_post post'
+            . ' INNER JOIN entry e ON e.id = post.entry_id'
+            . ' WHERE e.canonical_item_id IS NOT NULL AND post.community_identity IS NOT NULL GROUP BY e.canonical_item_id) newest'
+            . ' INNER JOIN entry_lemmy_post post ON post.entry_id = newest.entry_id'
+            . ' WHERE NOT EXISTS (SELECT 1 FROM lemmy_post moved WHERE moved.canonical_item_id = newest.canonical_item_id)');
     }
 
     private function downMySql(): void
