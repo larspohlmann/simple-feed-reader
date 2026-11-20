@@ -102,7 +102,7 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
         }
         $remoteId = self::buildRemoteId($kind, $itemId);
         $answeredId = $kind === SocialNotificationKind::Reply
-            ? LemmyCommentPath::extractParentId($entry->node('comment')->string('path'))
+            ? LemmyCommentPath::parseParentId($entry->node('comment')->string('path'))
             : null;
         $context = self::buildContext($entry);
 
