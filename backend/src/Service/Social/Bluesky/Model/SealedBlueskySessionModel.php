@@ -31,10 +31,10 @@ final readonly class SealedBlueskySessionModel
         if (!\is_array($stored)) {
             return null;
         }
-        $ciphertext = self::textOrNull($stored, 'ciphertext');
-        $nonce = self::textOrNull($stored, 'nonce');
-        $salt = self::textOrNull($stored, 'salt');
-        $handle = self::textOrNull($stored, 'handle');
+        $ciphertext = self::readText($stored, 'ciphertext');
+        $nonce = self::readText($stored, 'nonce');
+        $salt = self::readText($stored, 'salt');
+        $handle = self::readText($stored, 'handle');
         $version = $stored['version'] ?? null;
         if (null === $ciphertext || null === $nonce || null === $salt || null === $handle || !\is_int($version)) {
             return null;
@@ -44,7 +44,7 @@ final readonly class SealedBlueskySessionModel
     }
 
     /** @param array<mixed> $stored */
-    private static function textOrNull(array $stored, string $key): ?string
+    private static function readText(array $stored, string $key): ?string
     {
         return \is_string($stored[$key] ?? null) ? $stored[$key] : null;
     }

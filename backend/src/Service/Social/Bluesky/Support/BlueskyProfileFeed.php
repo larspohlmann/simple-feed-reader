@@ -25,7 +25,7 @@ final class BlueskyProfileFeed
             return null;
         }
 
-        return self::actorIn($match['actor']);
+        return self::decodeActor($match['actor']);
     }
 
     /** @return string|null the DID or lower-cased handle a bsky.app profile page or its feed names; null otherwise */
@@ -35,7 +35,7 @@ final class BlueskyProfileFeed
         if (null === $match) {
             return null;
         }
-        $actor = self::actorIn($match['actor']);
+        $actor = self::decodeActor($match['actor']);
 
         return BlueskyActor::isValid($actor) ? $actor : null;
     }
@@ -58,7 +58,7 @@ final class BlueskyProfileFeed
         return $match;
     }
 
-    private static function actorIn(string $segment): string
+    private static function decodeActor(string $segment): string
     {
         return BlueskyActorKey::normalizeActor(rawurldecode($segment));
     }

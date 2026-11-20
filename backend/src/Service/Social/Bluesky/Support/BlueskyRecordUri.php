@@ -28,17 +28,17 @@ final class BlueskyRecordUri
     }
 
     /** @return string|null $uri when it names a like record the remote id column can hold */
-    public static function likeOrNull(?string $uri): ?string
+    public static function keepIfLike(?string $uri): ?string
     {
         return self::keepIfInCollection($uri, self::LIKE);
     }
 
-    public static function repostOrNull(?string $uri): ?string
+    public static function keepIfRepost(?string $uri): ?string
     {
         return self::keepIfInCollection($uri, self::REPOST);
     }
 
-    public static function postOrNull(?string $uri): ?string
+    public static function keepIfPost(?string $uri): ?string
     {
         return self::keepIfInCollection($uri, self::POST);
     }

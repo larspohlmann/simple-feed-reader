@@ -22,13 +22,13 @@ final readonly class HiddenImportFollows
      * @return array<string, HiddenProfileModel> by the chosen identity; none when Bluesky cannot say, and the 403 of
      *                                          their RSS later moves them
      */
-    public function among(array $feeds): array
+    public function findHiddenByIdentity(array $feeds): array
     {
         $actorByIdentity = self::collectActors($feeds);
         if ([] === $actorByIdentity) {
             return [];
         }
-        $hidden = $this->hiddenProfiles->hiddenAmongOrNone(
+        $hidden = $this->hiddenProfiles->fetchHiddenProfilesOrEmpty(
             array_values($actorByIdentity),
             'Import could not tell which Bluesky follows are hidden; all come in by RSS.',
         );

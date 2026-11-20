@@ -81,7 +81,11 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
         ];
         $uri = null === $draft->idempotencyKey
             ? $this->records->createPost($account, $fields(), null)
-            : $this->publishedOnce($account, $fields, $this->postKeys->recordKeyFor($account, $draft->idempotencyKey));
+            : $this->publishedOnce(
+                $account,
+                $fields,
+                $this->postKeys->ensureRecordKey($account, $draft->idempotencyKey),
+            );
 
         return new PublishedPostModel($uri, AtPostUri::webUrl($uri));
     }

@@ -120,7 +120,7 @@ final readonly class AppViewClient
      */
     private function views(string $url, string $field): array
     {
-        return self::listIn($this->body($url), $field);
+        return self::decodeList($this->body($url), $field);
     }
 
     /** @throws FetchException */
@@ -163,7 +163,7 @@ final readonly class AppViewClient
      *
      * @throws AppViewAnswerException
      */
-    private static function listIn(string $body, string $field): array
+    private static function decodeList(string $body, string $field): array
     {
         $answer = json_decode($body, true);
         $views = \is_array($answer) ? $answer[$field] ?? null : null;

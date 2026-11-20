@@ -129,7 +129,7 @@ final class BlueskyTimelinePage
             author: BlueskyAuthor::name($author),
             summary: null,
             contentHtml: self::withRepostAttribution($text, $item->node('reason')),
-            publishedAt: DateParser::parse(self::postedAt($item)),
+            publishedAt: DateParser::parse(self::resolvePostedAt($item)),
             authorUrl: BlueskyAuthor::profile($author),
             authorAvatarUrl: BlueskyAuthor::avatar($author),
             statedLanguage: $record->node('langs')->string('0'),
@@ -137,7 +137,7 @@ final class BlueskyTimelinePage
     }
 
     /** A repost lands in the timeline when it was reposted, not when the original was written. */
-    private static function postedAt(JsonNodeModel $item): ?string
+    private static function resolvePostedAt(JsonNodeModel $item): ?string
     {
         $reason = $item->node('reason');
         if (self::REPOST === $reason->type()) {

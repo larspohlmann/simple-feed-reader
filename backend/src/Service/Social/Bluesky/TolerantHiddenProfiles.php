@@ -23,12 +23,13 @@ final readonly class TolerantHiddenProfiles
      * @param list<string> $actors
      * @param string       $warning what the caller does without an answer, logged when Bluesky cannot say
      *
-     * @return array<string, HiddenProfileModel> as HiddenProfilesInterface::hiddenAmong(); none when Bluesky cannot say
+     * @return array<string, HiddenProfileModel> as HiddenProfilesInterface::fetchHiddenProfiles(); none when
+     *                                              Bluesky cannot say
      */
-    public function hiddenAmongOrNone(array $actors, string $warning): array
+    public function fetchHiddenProfilesOrEmpty(array $actors, string $warning): array
     {
         try {
-            return $this->hiddenProfiles->hiddenAmong($actors);
+            return $this->hiddenProfiles->fetchHiddenProfiles($actors);
         } catch (SocialNetworkUnreachableException $exception) {
             $this->logger->warning($warning, ['exception' => $exception]);
 
@@ -37,13 +38,13 @@ final readonly class TolerantHiddenProfiles
     }
 
     /** The hidden profile a Bluesky profile URL names; null for any other URL, and when Bluesky cannot say. */
-    public function hiddenAt(string $url, string $warning): ?HiddenProfileModel
+    public function findHiddenProfile(string $url, string $warning): ?HiddenProfileModel
     {
         $actor = BlueskyProfileFeed::parseProfileActor($url);
         if (null === $actor) {
             return null;
         }
 
-        return $this->hiddenAmongOrNone([$actor], $warning)[$actor] ?? null;
+        return $this->fetchHiddenProfilesOrEmpty([$actor], $warning)[$actor] ?? null;
     }
 }

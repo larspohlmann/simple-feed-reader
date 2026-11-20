@@ -31,7 +31,7 @@ final readonly class HiddenProfileSubscribeRoute implements SubscribeRouteInterf
      */
     public function subscribe(SubscribeRequestModel $request): ?SubscribeOutcomeModel
     {
-        $profile = $this->hiddenProfiles->hiddenAt(
+        $profile = $this->hiddenProfiles->findHiddenProfile(
             $request->url,
             'Subscribe could not tell whether a Bluesky profile is hidden; discovery decides.',
         );

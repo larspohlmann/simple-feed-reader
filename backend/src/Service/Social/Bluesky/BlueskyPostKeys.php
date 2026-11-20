@@ -21,7 +21,7 @@ final readonly class BlueskyPostKeys
     ) {
     }
 
-    public function recordKeyFor(SocialAccount $account, string $idempotencyKey): BlueskyPostKeyModel
+    public function ensureRecordKey(SocialAccount $account, string $idempotencyKey): BlueskyPostKeyModel
     {
         $item = $this->recordKeys->getItem(sprintf('%d.%s', $account->requireId(), hash('xxh128', $idempotencyKey)));
         $remembered = $item->get();

@@ -93,7 +93,7 @@ final readonly class BlueskySavedCollections
             $query = implode('&', array_map(static fn (string $uri): string => 'feeds=' . rawurlencode($uri), $batch));
             $request = ApiRequestModel::get(self::GET_FEED_GENERATORS . '?' . $query);
             $answer = JsonNodeModel::fromValue($this->bluesky->send($request)->json());
-            $names = [...$names, ...self::namesIn($answer)];
+            $names = [...$names, ...self::collectNames($answer)];
         }
         $found = [];
         $gone = [];
@@ -122,7 +122,7 @@ final readonly class BlueskySavedCollections
                 continue;
             }
             $list = JsonNodeModel::fromValue(BlueskyApiClient::accepted($answer)->json())->node('list');
-            $collection = self::curatedListIn($list);
+            $collection = self::parseCuratedList($list);
             if (null !== $collection) {
                 $found[] = $collection;
             }
@@ -132,7 +132,7 @@ final readonly class BlueskySavedCollections
     }
 
     /** @throws SocialNetworkUnreachableException when the answer lacks the list's uri, purpose or name */
-    private static function curatedListIn(JsonNodeModel $list): ?SocialCollectionModel
+    private static function parseCuratedList(JsonNodeModel $list): ?SocialCollectionModel
     {
         $uri = $list->string('uri');
         $purpose = $list->string('purpose');
@@ -145,7 +145,7 @@ final readonly class BlueskySavedCollections
     }
 
     /** @return array<string, string|null> display name by uri; null when the generator has none */
-    private static function namesIn(JsonNodeModel $answer): array
+    private static function collectNames(JsonNodeModel $answer): array
     {
         $generators = $answer->listAt('feeds')
             ?? throw new SocialNetworkUnreachableException('Bluesky answered without feeds.');

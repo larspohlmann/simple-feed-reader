@@ -97,7 +97,7 @@ final readonly class BlueskyProfilePictures implements ProfilePictureSourceInter
         $asked = array_values(array_unique($actors));
         $profiles = [] === $asked ? [] : $this->appView->profiles($asked);
         $calls = [] === $asked ? 0 : 1;
-        $this->profileVisibility->remember($asked, BlueskyProfileLabels::hiddenAmong($profiles));
+        $this->profileVisibility->remember($asked, BlueskyProfileLabels::collectHiddenProfiles($profiles));
         $changed = 0;
         foreach ($batch as $index => $feed) {
             $profile = $profiles[$actors[$index] ?? ''] ?? null;

@@ -16,5 +16,5 @@ interface HiddenProfilesInterface
      *
      * @throws SocialNetworkUnreachableException when Bluesky cannot say
      */
-    public function hiddenAmong(array $actors): array;
+    public function fetchHiddenProfiles(array $actors): array;
 }

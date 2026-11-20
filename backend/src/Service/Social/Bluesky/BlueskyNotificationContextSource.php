@@ -79,8 +79,8 @@ final readonly class BlueskyNotificationContextSource implements NotificationCon
         FetchedNotificationModel $row,
         array $posts,
     ): ?NotificationContext {
-        $ownAnswered = self::postAt($posts, self::detectOwnAnswered($account, $row));
-        $threadRoot = self::postAt($posts, self::detectForeignThreadRoot($account, $row));
+        $ownAnswered = self::findPost($posts, self::detectOwnAnswered($account, $row));
+        $threadRoot = self::findPost($posts, self::detectForeignThreadRoot($account, $row));
         if ($ownAnswered === null && $threadRoot === null) {
             return null;
         }
@@ -101,7 +101,7 @@ final readonly class BlueskyNotificationContextSource implements NotificationCon
     }
 
     /** @param array<string, JsonNodeModel> $posts */
-    private static function postAt(array $posts, ?string $uri): ?JsonNodeModel
+    private static function findPost(array $posts, ?string $uri): ?JsonNodeModel
     {
         return $uri === null ? null : $posts[$uri] ?? null;
     }

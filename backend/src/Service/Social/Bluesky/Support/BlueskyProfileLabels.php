@@ -16,7 +16,7 @@ final class BlueskyProfileLabels
      *
      * @return array<string, HiddenProfileModel> the ones hiding from logged-out readers, by the same actor
      */
-    public static function hiddenAmong(array $profiles): array
+    public static function collectHiddenProfiles(array $profiles): array
     {
         $hidden = [];
         foreach ($profiles as $actor => $profile) {

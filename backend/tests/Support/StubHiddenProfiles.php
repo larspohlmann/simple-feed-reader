@@ -31,7 +31,7 @@ final class StubHiddenProfiles implements HiddenProfilesInterface
         }
     }
 
-    public function hiddenAmong(array $actors): array
+    public function fetchHiddenProfiles(array $actors): array
     {
         $this->asked[] = $actors;
         if (null !== $this->failure && \count($this->asked) > $this->answeredBeforeFailure) {

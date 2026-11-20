@@ -45,7 +45,7 @@ final readonly class BlueskyReplyThreadSource implements ReplyThreadSourceInterf
 
     public function inPublic(string $address): CommentsAnswerModel
     {
-        return AppViewAnswer::orSocialFailure(
+        return AppViewAnswer::askAppView(
             $this->publicThreadThrottledForSeconds(),
             fn (): CommentsAnswerModel
                 => CommentsAnswerModel::settled($this->appView->thread($address, $this->maxDepth)),
