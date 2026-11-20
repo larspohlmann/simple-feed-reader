@@ -69,7 +69,7 @@ final readonly class LemmyPrivateFeedRule implements PrivateFeedRuleInterface
 
     public function buildSearchQueries(string $query): array
     {
-        return LemmySearchTerms::of(new SearchQueryAlternatives(SearchQueryTokens::of($query))->factors());
+        return LemmySearchTerms::of(new SearchQueryAlternatives(SearchQueryTokens::tokenizeQuery($query))->factors());
     }
 
     public function buildSearchedPost(SocialAccount $account, StoredPostModel $post): SearchedPostModel

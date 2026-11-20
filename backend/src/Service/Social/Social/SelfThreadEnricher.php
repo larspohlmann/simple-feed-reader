@@ -168,7 +168,7 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
             return true;
         }
 
-        return $this->foldThreadOf($row, $address, $claimedAt);
+        return $this->foldThread($row, $address, $claimedAt);
     }
 
     /**
@@ -176,7 +176,7 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
      *
      * @return bool false when the row goes back to the queue for a later pass
      */
-    private function foldThreadOf(
+    private function foldThread(
         ShareEnrichment $row,
         SocialPostAddressModel $address,
         \DateTimeImmutable $claimedAt,
@@ -186,7 +186,7 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
             return false;
         }
         try {
-            $chain = $this->chainOf($thread, $address);
+            $chain = $this->fetchChainOrEmpty($thread, $address);
         } catch (SocialNetworkThrottledException) {
             return false;
         }
@@ -209,7 +209,7 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
         $entry = $row->getEntry();
         if (
             ShareTargets::isCardableShare($entry)
-            && ShareTargets::planOf($entry, $this->rootCardUrlsOf($entry))->urls !== []
+            && ShareTargets::buildPlan($entry, $this->loadRootCardUrls($entry))->urls !== []
         ) {
             $row->awaitLinkCards();
 
@@ -219,7 +219,7 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
     }
 
     /** @return list<string> */
-    private function rootCardUrlsOf(Entry $entry): array
+    private function loadRootCardUrls(Entry $entry): array
     {
         $rootCards = $this->linkCards->contentsByEntryIds([$entry->requireId()])[$entry->requireId()] ?? [];
 
@@ -236,12 +236,14 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
      *
      * @throws SocialNetworkThrottledException
      */
-    private function chainOf(ReplyThreadSourceInterface $thread, SocialPostAddressModel $address): SelfReplyChainModel
-    {
+    private function fetchChainOrEmpty(
+        ReplyThreadSourceInterface $thread,
+        SocialPostAddressModel $address,
+    ): SelfReplyChainModel {
         try {
             $answer = $thread->inPublic($address->address);
 
-            return $this->chain->of($thread->repliesIn($address->address, $answer->body));
+            return $this->chain->buildChain($thread->repliesIn($address->address, $answer->body));
         } catch (SocialNetworkThrottledException $exception) {
             throw $exception;
         } catch (

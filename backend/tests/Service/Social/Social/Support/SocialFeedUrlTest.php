@@ -26,7 +26,7 @@ final class SocialFeedUrlTest extends TestCase
         PrivateFeedModel $privateFeed,
         string $url,
     ): void {
-        self::assertSame($url, SocialFeedUrl::of(self::withId(SocialAccounts::bluesky(), 12), $privateFeed));
+        self::assertSame($url, SocialFeedUrl::buildUrl(self::withId(SocialAccounts::bluesky(), 12), $privateFeed));
     }
 
     /** @return iterable<string, array{PrivateFeedModel, string}> */
@@ -45,7 +45,10 @@ final class SocialFeedUrlTest extends TestCase
     {
         self::assertSame(
             'social:mastodon:4:list:42',
-            SocialFeedUrl::of(self::withId(SocialAccounts::mastodon(), 4), PrivateFeedModel::userList('42', 'Friends')),
+            SocialFeedUrl::buildUrl(
+                self::withId(SocialAccounts::mastodon(), 4),
+                PrivateFeedModel::userList('42', 'Friends'),
+            ),
         );
     }
 
@@ -53,7 +56,7 @@ final class SocialFeedUrlTest extends TestCase
     {
         self::assertSame(
             'social:mastodon:4:tag:caturday',
-            SocialFeedUrl::of(
+            SocialFeedUrl::buildUrl(
                 self::withId(SocialAccounts::mastodon(), 4),
                 PrivateFeedModel::followedTag('Caturday', '#Caturday'),
             ),
@@ -64,7 +67,7 @@ final class SocialFeedUrlTest extends TestCase
     {
         self::assertSame(
             'social:mastodon:4:trending',
-            SocialFeedUrl::of(
+            SocialFeedUrl::buildUrl(
                 self::withId(SocialAccounts::mastodon(), 4),
                 PrivateFeedModel::timeline(SocialFeedKind::Trending),
             ),
@@ -74,7 +77,7 @@ final class SocialFeedUrlTest extends TestCase
     #[DataProvider('addresses')]
     public function testAnAddressIsReadBackFromTheUrl(string $url, ?SocialFeedAddressModel $address): void
     {
-        self::assertEquals($address, SocialFeedUrl::addressOf($url));
+        self::assertEquals($address, SocialFeedUrl::parseAddress($url));
     }
 
     /** @return iterable<string, array{string, ?SocialFeedAddressModel}> */
@@ -112,10 +115,10 @@ final class SocialFeedUrlTest extends TestCase
     {
         $account = self::withId(SocialAccounts::lemmyOf(SocialAccounts::owner()), 7);
 
-        self::assertSame($url, SocialFeedUrl::of($account, $timeline));
+        self::assertSame($url, SocialFeedUrl::buildUrl($account, $timeline));
         self::assertEquals(
             new SocialFeedAddressModel(SocialNetwork::Lemmy, 7, $timeline->kind, ''),
-            SocialFeedUrl::addressOf($url),
+            SocialFeedUrl::parseAddress($url),
         );
     }
 
@@ -131,9 +134,9 @@ final class SocialFeedUrlTest extends TestCase
     {
         $account = self::withId(SocialAccounts::bluesky(), 12);
         foreach (SocialFeedKind::cases() as $kind) {
-            $url = SocialFeedUrl::of($account, PrivateFeedModel::of($kind, 'remote', 'Name'));
+            $url = SocialFeedUrl::buildUrl($account, PrivateFeedModel::fromKind($kind, 'remote', 'Name'));
 
-            self::assertSame($kind, SocialFeedUrl::addressOf($url)?->kind);
+            self::assertSame($kind, SocialFeedUrl::parseAddress($url)?->kind);
         }
     }
 

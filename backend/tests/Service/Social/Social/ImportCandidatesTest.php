@@ -68,7 +68,7 @@ final class ImportCandidatesTest extends DbTestCase
 
         $this->importCandidates($network)->forAccount($account);
 
-        self::assertSame('https://cdn.test/bob.jpg', $this->followAvatars->find($account)->avatarOf('did:plc:bob'));
+        self::assertSame('https://cdn.test/bob.jpg', $this->followAvatars->find($account)->readAvatar('did:plc:bob'));
     }
 
     private function importCandidates(SocialCandidatesInterface $network): ImportCandidates
@@ -388,7 +388,7 @@ final class ImportCandidatesTest extends DbTestCase
             self::summary($follows),
         );
         self::assertSame([], $this->http->requests);
-        self::assertNull($this->followAvatars->find($account)->avatarOf('bob@mastodon.example'));
+        self::assertNull($this->followAvatars->find($account)->readAvatar('bob@mastodon.example'));
     }
 
     public function testALemmyImportResolvesNoHandleAndCachesNoAvatar(): void
@@ -415,7 +415,7 @@ final class ImportCandidatesTest extends DbTestCase
             self::summary($follows),
         );
         self::assertSame([], $this->http->requests);
-        self::assertNull($this->followAvatars->find($account)->avatarOf('linux@lemmy.example'));
+        self::assertNull($this->followAvatars->find($account)->readAvatar('linux@lemmy.example'));
     }
 
     public function testALemmyAccountOffersItsThreeTimelines(): void

@@ -20,7 +20,7 @@ final readonly class PrivateFeedModel
     /** @throws \InvalidArgumentException for a kind that is no timeline of its own */
     public static function timeline(SocialFeedKind $kind): self
     {
-        return new self($kind, '', self::timelineNameOf($kind));
+        return new self($kind, '', self::requireTimelineName($kind));
     }
 
     public static function userList(string $listId, string $name): self
@@ -50,7 +50,7 @@ final readonly class PrivateFeedModel
         return new self(SocialFeedKind::Search, $normalized, $normalized);
     }
 
-    public static function of(SocialFeedKind $kind, string $remoteId, string $name): self
+    public static function fromKind(SocialFeedKind $kind, string $remoteId, string $name): self
     {
         return match ($kind) {
             SocialFeedKind::UserList => self::userList($remoteId, $name),
@@ -65,17 +65,17 @@ final readonly class PrivateFeedModel
         };
     }
 
-    public static function keyOf(SocialFeedKind $kind, string $remoteId): string
+    public static function buildKey(SocialFeedKind $kind, string $remoteId): string
     {
         return $kind->value . ':' . $remoteId;
     }
 
     public function key(): string
     {
-        return self::keyOf($this->kind, $this->remoteId);
+        return self::buildKey($this->kind, $this->remoteId);
     }
 
-    private static function timelineNameOf(SocialFeedKind $kind): string
+    private static function requireTimelineName(SocialFeedKind $kind): string
     {
         return match ($kind) {
             SocialFeedKind::Home => 'Home',

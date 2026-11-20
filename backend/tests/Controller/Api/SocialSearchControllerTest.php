@@ -343,7 +343,7 @@ final class SocialSearchControllerTest extends ApiTestCase
     /** @param list<ParsedEntryModel> $posts */
     private static function pageWith(array $posts): TimelinePageModel
     {
-        return TimelinePageModel::of($posts, KnownSharesModel::none(), null);
+        return TimelinePageModel::fromEntries($posts, KnownSharesModel::none(), null);
     }
 
     private static function postWith(int $number, ?string $contentHtml): ParsedEntryModel

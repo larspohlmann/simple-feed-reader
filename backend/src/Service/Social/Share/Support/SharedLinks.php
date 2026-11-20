@@ -25,7 +25,7 @@ final class SharedLinks
 
     private const string BARE_URL_SPLIT = '#(' . LinkedPlainText::URL . ')#iu';
 
-    public static function of(string $bodyHtml): SharedLinksModel
+    public static function fromBodyHtml(string $bodyHtml): SharedLinksModel
     {
         $document = HtmlDocumentParser::parseFragment($bodyHtml);
         $linkedHtml = self::linkBareUrls($document) === 0 ? $bodyHtml : ($document->body->innerHTML ?? $bodyHtml);
@@ -36,7 +36,7 @@ final class SharedLinks
         return new SharedLinksModel(
             $urls,
             $linkedHtml,
-            OwnProse::of($document->body),
+            OwnProse::fromBody($document->body),
             array_filter(array_intersect_key($hrefsToCheck, array_flip($urls))),
         );
     }

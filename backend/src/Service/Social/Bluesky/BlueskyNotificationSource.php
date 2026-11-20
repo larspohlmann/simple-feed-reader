@@ -172,7 +172,7 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
     ): NotificationSubject {
         return new NotificationSubject(
             $remoteId,
-            Excerpt::of($entry->node('record')->text('text')),
+            Excerpt::cutText($entry->node('record')->text('text')),
             AtPostUri::webUrl($remoteId) ?? $actorProfileUrl,
         );
     }
@@ -186,7 +186,7 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
         $record = ($likedPosts[$postUri] ?? JsonNodeModel::fromValue(null))->node('record');
         $subject = new NotificationSubject(
             $postUri,
-            Excerpt::of($record->text('text')),
+            Excerpt::cutText($record->text('text')),
             AtPostUri::webUrl($postUri) ?? BlueskyWeb::profileUrl($account->getIdentity()),
         );
 

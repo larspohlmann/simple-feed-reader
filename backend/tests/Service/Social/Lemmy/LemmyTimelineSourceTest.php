@@ -108,7 +108,7 @@ final class LemmyTimelineSourceTest extends TestCase
         $home = self::socialFeed(SocialFeedKind::Home);
         $answer = new ApiResponseModel(Response::HTTP_OK, $this->fixture(self::POST_LIST), []);
 
-        $page = $source->pageOf($home, [$source->accepted($home, FetchOutcomeModel::answered($answer))]);
+        $page = $source->buildPage($home, [$source->accepted($home, FetchOutcomeModel::answered($answer))]);
 
         self::assertCount(3, $page->parsed->entries);
     }
@@ -151,7 +151,7 @@ final class LemmyTimelineSourceTest extends TestCase
         $answer = new ApiResponseModel(Response::HTTP_OK, $this->fixture(self::FOUND), []);
         $accepted = $source->accepted($search, FetchOutcomeModel::answered($answer));
 
-        $page = $source->pageOf($search, [$accepted, $accepted]);
+        $page = $source->buildPage($search, [$accepted, $accepted]);
 
         self::assertCount(1, $page->parsed->entries);
         self::assertSame('A text post', $page->parsed->entries[0]->headline->text);
@@ -171,7 +171,7 @@ final class LemmyTimelineSourceTest extends TestCase
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessage('A Lemmy timeline is read with one request.');
 
-        self::source()->pageOf(self::socialFeed(SocialFeedKind::Home), []);
+        self::source()->buildPage(self::socialFeed(SocialFeedKind::Home), []);
     }
 
     private static function source(): LemmyTimelineSource

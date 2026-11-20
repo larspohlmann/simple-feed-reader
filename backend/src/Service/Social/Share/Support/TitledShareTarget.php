@@ -16,7 +16,7 @@ final class TitledShareTarget
 {
     private const string TAG_AUTHORITY = '#^tag:([^,]+),#i';
 
-    public static function of(Entry $entry): ?string
+    public static function detectTarget(Entry $entry): ?string
     {
         if ($entry->isTitleDerived()) {
             return null;

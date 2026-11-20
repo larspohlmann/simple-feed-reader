@@ -31,8 +31,8 @@ final readonly class EntryShareClassifier
 
     public function classify(Entry $entry): void
     {
-        $body = SharedLinks::of($entry->getText()->getContentHtml() ?? $entry->getText()->getSummary() ?? '');
-        $shareKind = $this->orProvisionalLink($entry, $this->shareKindOf($entry, $body));
+        $body = SharedLinks::fromBodyHtml($entry->getText()->getContentHtml() ?? $entry->getText()->getSummary() ?? '');
+        $shareKind = $this->orProvisionalLink($entry, $this->classifyShareKind($entry, $body));
         $entry->setShareKind($shareKind);
         if ($shareKind === null) {
             return;
@@ -46,7 +46,7 @@ final readonly class EntryShareClassifier
         $this->describeTitledShare($entry, $shareKind, $body->ownProse);
     }
 
-    private function shareKindOf(Entry $entry, SharedLinksModel $body): ?ShareKind
+    private function classifyShareKind(Entry $entry, SharedLinksModel $body): ?ShareKind
     {
         if (YouTubeUrl::isShort($entry->getUrl())) {
             return ShareKind::Media;
@@ -82,7 +82,7 @@ final readonly class EntryShareClassifier
 
     private function titledShareKind(Entry $entry): ?ShareKind
     {
-        $target = TitledShareTarget::of($entry);
+        $target = TitledShareTarget::detectTarget($entry);
         if ($target === null) {
             return null;
         }
@@ -105,7 +105,7 @@ final readonly class EntryShareClassifier
         $entry->recordText(
             $entry->getText()->withSummary($ownProse === '' ? null : mb_substr($ownProse, 0, self::OWN_PROSE_MAX)),
         );
-        $target = $shareKind === ShareKind::Media ? TitledShareTarget::of($entry) : null;
+        $target = $shareKind === ShareKind::Media ? TitledShareTarget::detectTarget($entry) : null;
         $medium = $target === null ? null : VisualMedium::at($target);
         if ($medium !== null) {
             $entry->putMediumFirst($medium);

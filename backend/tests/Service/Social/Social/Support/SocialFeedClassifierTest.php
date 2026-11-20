@@ -18,7 +18,7 @@ final class SocialFeedClassifierTest extends TestCase
     {
         $feed = self::feed('social:mastodon:7:list:12', SourceFormat::MASTODON_API);
 
-        $address = SocialFeedClassifier::privateAddressOf($feed);
+        $address = SocialFeedClassifier::parsePrivateAddress($feed);
 
         self::assertNotNull($address);
         self::assertSame(7, $address->accountId);
@@ -29,7 +29,7 @@ final class SocialFeedClassifierTest extends TestCase
     {
         $feed = self::feed(self::BLUESKY_PROFILE, SourceFormat::XML);
 
-        self::assertNull(SocialFeedClassifier::privateAddressOf($feed));
+        self::assertNull(SocialFeedClassifier::parsePrivateAddress($feed));
     }
 
     private static function feed(string $url, string $sourceFormat): Feed

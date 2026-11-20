@@ -187,7 +187,7 @@ final class PrivateFeedsTest extends DbTestCase
         $follow = (new ProfileFeedSubscriptions($this->entityManager))
             ->subscribe($this->user, 'https://bsky.app/profile/did:plc:bob/rss');
 
-        $removed = $this->privateFeeds()->removeAllOf($account);
+        $removed = $this->privateFeeds()->unsubscribeAllFeeds($account);
 
         self::assertSame(2, $removed);
         $this->entityManager->clear();
@@ -283,9 +283,9 @@ final class PrivateFeedsTest extends DbTestCase
         $subscription = $this->privateFeeds()->subscribe($second, self::rusty(), []);
         $account = $this->stored(SocialAccounts::blueskyOf($this->user));
 
-        self::assertSame($subscription, $this->privateFeeds()->subscriptionOf($account, self::rusty()));
+        self::assertSame($subscription, $this->privateFeeds()->findSubscription($account, self::rusty()));
         self::assertNull(
-            $this->privateFeeds()->subscriptionOf($account, PrivateFeedModel::author('did:plc:someone-else', 'X')),
+            $this->privateFeeds()->findSubscription($account, PrivateFeedModel::author('did:plc:someone-else', 'X')),
         );
     }
 
@@ -296,8 +296,8 @@ final class PrivateFeedsTest extends DbTestCase
         $account = $this->stored(SocialAccounts::blueskyOf($this->user));
 
         $home = PrivateFeedModel::timeline(SocialFeedKind::Home);
-        self::assertNull($this->privateFeeds()->subscriptionOf($account, $home));
-        self::assertSame($subscription, $this->privateFeeds()->subscriptionOf($second, $home));
+        self::assertNull($this->privateFeeds()->findSubscription($account, $home));
+        self::assertSame($subscription, $this->privateFeeds()->findSubscription($second, $home));
     }
 
     public function testAFullAccountGetsNoAuthorFeedAndTheEntityManagerStaysOpen(): void
@@ -322,7 +322,7 @@ final class PrivateFeedsTest extends DbTestCase
         $account = $this->stored(SocialAccounts::blueskyOf($this->user));
         $this->privateFeeds()->subscribe($account, self::rusty(), []);
 
-        self::assertSame(1, $this->privateFeeds()->removeAllOf($account));
+        self::assertSame(1, $this->privateFeeds()->unsubscribeAllFeeds($account));
         $this->entityManager->clear();
         self::assertSame(0, $this->entityManager->getRepository(Subscription::class)->count([]));
         self::assertSame(0, $this->entityManager->getRepository(SocialFeed::class)->count([]));
@@ -337,7 +337,7 @@ final class PrivateFeedsTest extends DbTestCase
         $previous->changeInclusions(new InclusionChange(forYou: false));
         $this->entityManager->flush();
 
-        $subscription = $this->privateFeeds()->subscribeInPlaceOf($account, self::rusty(), $previous);
+        $subscription = $this->privateFeeds()->subscribeKeepingSettings($account, self::rusty(), $previous);
 
         $this->entityManager->clear();
         $reloaded = $this->entityManager->find(Subscription::class, $subscription->requireId());

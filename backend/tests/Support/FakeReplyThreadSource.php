@@ -128,7 +128,7 @@ final class FakeReplyThreadSource implements ReplyThreadSourceInterface
         return $this->replies;
     }
 
-    public function selfReplyOf(JsonNodeModel $post): EntryCommentModel
+    public function buildSelfReply(JsonNodeModel $post): EntryCommentModel
     {
         return new EntryCommentModel(
             new CommentAuthorModel('Fake'),

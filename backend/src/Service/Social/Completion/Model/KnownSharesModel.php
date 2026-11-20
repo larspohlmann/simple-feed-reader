@@ -32,7 +32,7 @@ final readonly class KnownSharesModel
     }
 
     /** @param array<string, JsonNodeModel> $postsByGuid the post views a timeline answered with */
-    public static function ofBlueskyPosts(array $postsByGuid): self
+    public static function fromBlueskyPosts(array $postsByGuid): self
     {
         $replied = array_filter($postsByGuid, BlueskyPostView::hasReplies(...));
 
@@ -44,7 +44,7 @@ final readonly class KnownSharesModel
      * @param array<string, QuotedPostContent> $quotesByGuid the statuses the instance says a post quotes
      * @param list<string>                     $repliedGuids the statuses the instance counts replies for
      */
-    public static function ofMastodonShares(array $cardsByGuid, array $quotesByGuid, array $repliedGuids = []): self
+    public static function fromMastodonShares(array $cardsByGuid, array $quotesByGuid, array $repliedGuids = []): self
     {
         return new self([], $cardsByGuid, $quotesByGuid, array_fill_keys($repliedGuids, true));
     }

@@ -18,7 +18,7 @@ final readonly class ReplyThreadOrder
     }
 
     /** @param list<ReplyNode> $replies the post's direct replies */
-    public function pageOf(array $replies): CommentsPageModel
+    public function buildPage(array $replies): CommentsPageModel
     {
         usort($replies, self::mostInterestingFirst(...));
         $walk = new ThreadWalk($this->maxDepth, $this->maxCount);
@@ -29,10 +29,11 @@ final readonly class ReplyThreadOrder
 
     private static function mostInterestingFirst(ReplyNode $left, ReplyNode $right): int
     {
-        return [self::interestOf($right), $right->sortableTime()] <=> [self::interestOf($left), $left->sortableTime()];
+        return [self::computeInterest($right), $right->sortableTime()]
+            <=> [self::computeInterest($left), $left->sortableTime()];
     }
 
-    private static function interestOf(ReplyNode $reply): int
+    private static function computeInterest(ReplyNode $reply): int
     {
         $counts = $reply->counts;
         if ($counts === null) {

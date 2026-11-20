@@ -107,7 +107,7 @@ final class TitledShareTargetTest extends TestCase
     #[DataProvider('entries')]
     public function testFindsTheTarget(Entry $entry, ?string $expected): void
     {
-        self::assertSame($expected, TitledShareTarget::of($entry));
+        self::assertSame($expected, TitledShareTarget::detectTarget($entry));
     }
 
     public function testAFeedWithoutASiteHasNoTitledShares(): void
@@ -122,7 +122,7 @@ final class TitledShareTargetTest extends TestCase
             $now,
         );
 
-        self::assertNull(TitledShareTarget::of($entry));
+        self::assertNull(TitledShareTarget::detectTarget($entry));
     }
 
     public function testAPostHasNoTitledTarget(): void
@@ -130,6 +130,6 @@ final class TitledShareTargetTest extends TestCase
         $entry = self::entry('https://daringfireball.net/', 'tag:daringfireball.net,2026:/linked//1', 'https://x.com/');
         $entry->setHeadline(Headline::derived('Title'));
 
-        self::assertNull(TitledShareTarget::of($entry));
+        self::assertNull(TitledShareTarget::detectTarget($entry));
     }
 }

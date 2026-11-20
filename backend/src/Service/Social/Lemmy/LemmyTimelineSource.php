@@ -44,7 +44,7 @@ final readonly class LemmyTimelineSource implements TimelineSourceInterface
         return LemmyApiClient::acceptedInRound(LemmyApiClient::answerOf($outcome));
     }
 
-    public function pageOf(SocialFeed $socialFeed, array $accepted): TimelinePageModel
+    public function buildPage(SocialFeed $socialFeed, array $accepted): TimelinePageModel
     {
         $account = $socialFeed->getSocialAccount();
         if (SocialFeedKind::Search === $socialFeed->getKind()) {

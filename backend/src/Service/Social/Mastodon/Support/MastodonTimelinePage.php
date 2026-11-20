@@ -46,7 +46,7 @@ final class MastodonTimelinePage
             $selfReplies[] = $selfReply;
         }
 
-        return TimelinePageModel::of($entries, self::knownSharesOf($postsByGuid), self::newestIdOf($statuses))
+        return TimelinePageModel::fromEntries($entries, self::knownSharesOf($postsByGuid), self::newestIdOf($statuses))
             ->withSelfReplies($selfReplies);
     }
 
@@ -136,7 +136,7 @@ final class MastodonTimelinePage
             static fn (JsonNodeModel $post): bool => ($post->int('replies_count') ?? 0) > 0,
         );
 
-        return KnownSharesModel::ofMastodonShares($cards, $quotes, array_keys($replied));
+        return KnownSharesModel::fromMastodonShares($cards, $quotes, array_keys($replied));
     }
 
     private static function entryOf(JsonNodeModel $status): ?ParsedEntryModel

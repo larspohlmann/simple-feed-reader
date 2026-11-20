@@ -45,13 +45,13 @@ final readonly class OwnPostDeletion
     public function delete(User $user, Entry $entry): PostDeletion
     {
         $post = $this->postAddresses->requirePost($entry);
-        $author = $this->authorOf($user, $entry, $post->network);
-        $replyUrls = $this->replyUrlsOf($entry);
+        $author = $this->requireAuthor($user, $entry, $post->network);
+        $replyUrls = $this->requireReplyUrls($entry);
         $postIds = [
-            ...$this->replyIdsOf($replyUrls, $author),
+            ...$this->requireReplyIds($replyUrls, $author),
             $this->postAddresses->selectRule($post->network)->requireOwnPostId($post, $author),
         ];
-        $replyGuids = $this->replyGuidsOf($replyUrls, $author);
+        $replyGuids = $this->requireReplyGuids($replyUrls, $author);
         foreach ($postIds as $postId) {
             $deletion = $this->writing->delete($author, $postId);
         }
@@ -60,14 +60,14 @@ final readonly class OwnPostDeletion
         return $deletion;
     }
 
-    private function authorOf(User $user, Entry $entry, SocialNetwork $network): SocialAccount
+    private function requireAuthor(User $user, Entry $entry, SocialNetwork $network): SocialAccount
     {
         return $this->postAddresses->findAuthorAmong($entry, $this->socialAccounts->findAllOnNetwork($user, $network))
             ?? throw new SocialPostRefusedException('No connected account wrote this post.');
     }
 
     /** @return list<string> */
-    private function replyUrlsOf(Entry $entry): array
+    private function requireReplyUrls(Entry $entry): array
     {
         return array_map(
             static fn (?string $url): string => $url
@@ -81,7 +81,7 @@ final readonly class OwnPostDeletion
      *
      * @return list<string>
      */
-    private function replyIdsOf(array $replyUrls, SocialAccount $author): array
+    private function requireReplyIds(array $replyUrls, SocialAccount $author): array
     {
         $rule = $this->postAddresses->selectRule($author->getNetwork());
 
@@ -93,7 +93,7 @@ final readonly class OwnPostDeletion
      *
      * @return list<string>
      */
-    private function replyGuidsOf(array $replyUrls, SocialAccount $author): array
+    private function requireReplyGuids(array $replyUrls, SocialAccount $author): array
     {
         $rule = $this->postAddresses->selectRule($author->getNetwork());
 

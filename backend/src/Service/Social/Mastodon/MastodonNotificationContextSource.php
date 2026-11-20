@@ -27,7 +27,7 @@ final readonly class MastodonNotificationContextSource implements NotificationCo
     {
     }
 
-    public function contextsOf(SocialAccount $account, array $fresh): array
+    public function findContexts(SocialAccount $account, array $fresh): array
     {
         $statuses = [];
         foreach (array_chunk(self::answeredIds($fresh), self::STATUSES_PER_CALL) as $ids) {
@@ -102,7 +102,7 @@ final readonly class MastodonNotificationContextSource implements NotificationCo
 
     private static function withExcerptOf(NotificationContext $context, JsonNodeModel $answered): NotificationContext
     {
-        $excerpt = Excerpt::ofHtml($answered->text('content'));
+        $excerpt = Excerpt::cutHtml($answered->text('content'));
         if ($excerpt === null) {
             return $context;
         }

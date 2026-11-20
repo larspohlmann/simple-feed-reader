@@ -17,7 +17,7 @@ final class ReusableShareUrls
     /** @return list<string> */
     public static function filterUrls(Entry $entry, ShareFetchPlanModel $plan): array
     {
-        if (TitledShareTarget::of($entry) !== null) {
+        if (TitledShareTarget::detectTarget($entry) !== null) {
             return [];
         }
         $quoted = QuoteLine::trackingFreeTargetIn((string) $entry->getText()->getContentHtml());

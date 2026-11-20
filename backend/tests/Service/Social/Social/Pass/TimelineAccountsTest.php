@@ -43,7 +43,7 @@ final class TimelineAccountsTest extends TestCase
 
         $accounts->settleFailure($alice, new SocialNetworkThrottledException('Bluesky is rate limiting.', 60));
 
-        self::assertInstanceOf(AccountThrottledTimelineModel::class, $accounts->heldOutcomeOf($alice));
+        self::assertInstanceOf(AccountThrottledTimelineModel::class, $accounts->buildHeldOutcome($alice));
     }
 
     private static function bluesky(int $accountId): SocialAccount

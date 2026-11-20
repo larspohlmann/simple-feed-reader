@@ -13,7 +13,7 @@ final class FollowAvatarsModelTest extends TestCase
 {
     public function testKeepsOnlyTheFollowsWithAnAvatar(): void
     {
-        $avatars = FollowAvatarsModel::of([
+        $avatars = FollowAvatarsModel::fromFollows([
             new FollowedAccountModel(
                 'did:plc:bob',
                 '@bob.test',
@@ -30,8 +30,8 @@ final class FollowAvatarsModelTest extends TestCase
             ),
         ]);
 
-        self::assertSame('https://cdn.test/bob.jpg', $avatars->avatarOf('did:plc:bob'));
-        self::assertNull($avatars->avatarOf('did:plc:amy'));
+        self::assertSame('https://cdn.test/bob.jpg', $avatars->readAvatar('did:plc:bob'));
+        self::assertNull($avatars->readAvatar('did:plc:amy'));
         self::assertSame(['did:plc:bob' => 'https://cdn.test/bob.jpg'], $avatars->toCacheEntry());
     }
 
@@ -58,6 +58,6 @@ final class FollowAvatarsModelTest extends TestCase
     {
         $avatars = FollowAvatarsModel::fromCacheEntry(['did:plc:bob' => 'https://cdn.test/bob.jpg']);
 
-        self::assertSame('https://cdn.test/bob.jpg', $avatars->avatarOf('did:plc:bob'));
+        self::assertSame('https://cdn.test/bob.jpg', $avatars->readAvatar('did:plc:bob'));
     }
 }

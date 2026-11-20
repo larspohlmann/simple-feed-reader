@@ -146,7 +146,7 @@ final class FollowMatching
     {
         $index = [];
         foreach ($this->follows as $position => $follow) {
-            foreach ($this->keysOf($follow) as $key) {
+            foreach ($this->collectKeys($follow) as $key) {
                 $index[strtolower($key)] ??= $position;
             }
         }
@@ -155,7 +155,7 @@ final class FollowMatching
     }
 
     /** @return array<int, string> */
-    private function keysOf(FollowedAccountModel $follow): array
+    private function collectKeys(FollowedAccountModel $follow): array
     {
         return array_filter([
             $follow->identity,

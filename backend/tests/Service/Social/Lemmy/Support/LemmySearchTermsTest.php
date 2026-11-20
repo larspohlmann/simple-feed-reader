@@ -73,6 +73,6 @@ final class LemmySearchTermsTest extends TestCase
     /** @return list<list<string>> */
     private static function factorsOf(string $query): array
     {
-        return new SearchQueryAlternatives(SearchQueryTokens::of($query))->factors();
+        return new SearchQueryAlternatives(SearchQueryTokens::tokenizeQuery($query))->factors();
     }
 }

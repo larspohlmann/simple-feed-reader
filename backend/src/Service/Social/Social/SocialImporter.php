@@ -47,7 +47,7 @@ final readonly class SocialImporter
         $network = $account->getNetwork();
         $accountOnly = $this->importRules->selectRule($network)->findAccountOnlyFeeds($import->subscribe);
         $items = $this->items($network, self::withoutAccountOnly($import->subscribe, $accountOnly));
-        $this->assertCollectionsOf($network, $import->collections);
+        $this->assertCollectionsAllowed($network, $import->collections);
         $privateFeeds = [...$import->collections, ...array_values($accountOnly)];
         $toRemove = $this->ownedSubscriptions->resolve($account->getUser()->requireId(), $import->unsubscribe);
 
@@ -74,7 +74,7 @@ final readonly class SocialImporter
     }
 
     /** @param list<PrivateFeedModel> $collections */
-    private function assertCollectionsOf(SocialNetwork $network, array $collections): void
+    private function assertCollectionsAllowed(SocialNetwork $network, array $collections): void
     {
         $rule = $this->privateFeedRules->selectRule($network);
         foreach ($collections as $collection) {
@@ -142,14 +142,14 @@ final readonly class SocialImporter
     {
         return array_map(
             fn (SocialImportFeedModel $feed): BulkSubscribeItemModel => new BulkSubscribeItemModel(
-                $this->profileFeedOf($network, $feed->identity),
+                $this->requireProfileFeedUrl($network, $feed->identity),
                 feedTitle: $feed->title,
             ),
             $feeds,
         );
     }
 
-    private function profileFeedOf(SocialNetwork $network, string $identity): string
+    private function requireProfileFeedUrl(SocialNetwork $network, string $identity): string
     {
         return $this->profileFeeds->selectRule($network)->buildFeedUrl($identity)
             ?? throw new InvalidSocialImportFeedException(

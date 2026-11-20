@@ -23,7 +23,7 @@ final readonly class BlueskyNotificationContextSource implements NotificationCon
     {
     }
 
-    public function contextsOf(SocialAccount $account, array $fresh): array
+    public function findContexts(SocialAccount $account, array $fresh): array
     {
         try {
             $posts = $this->posts->byUri($account, self::uris($account, $fresh));
@@ -91,7 +91,7 @@ final readonly class BlueskyNotificationContextSource implements NotificationCon
         if ($threadRoot !== null) {
             $author = $threadRoot->node('author');
             $context = $context->withThread(
-                Excerpt::of($threadRoot->node('record')->text('text')),
+                Excerpt::cutText($threadRoot->node('record')->text('text')),
                 $author->string('displayName') ?? $author->string('handle'),
             );
         }
@@ -107,7 +107,7 @@ final readonly class BlueskyNotificationContextSource implements NotificationCon
 
     private static function answering(NotificationContext $context, JsonNodeModel $answeredRecord): NotificationContext
     {
-        $answering = $context->withAnsweredExcerpt(Excerpt::of($answeredRecord->text('text')));
+        $answering = $context->withAnsweredExcerpt(Excerpt::cutText($answeredRecord->text('text')));
         if (!$answeredRecord->has('reply')) {
             return $answering;
         }

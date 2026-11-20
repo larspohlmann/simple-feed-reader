@@ -25,7 +25,7 @@ final readonly class LemmyNotificationContextSource implements NotificationConte
     {
     }
 
-    public function contextsOf(SocialAccount $account, array $fresh): array
+    public function findContexts(SocialAccount $account, array $fresh): array
     {
         $contexts = [];
         $excerpts = [];
@@ -58,6 +58,6 @@ final readonly class LemmyNotificationContextSource implements NotificationConte
             ->node('comment')
             ->string('content');
 
-        return Excerpt::ofHtml($content === null ? null : $this->markdown->toHtml($content));
+        return Excerpt::cutHtml($content === null ? null : $this->markdown->toHtml($content));
     }
 }

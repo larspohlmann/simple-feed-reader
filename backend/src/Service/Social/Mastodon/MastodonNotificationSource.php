@@ -171,7 +171,7 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
 
         return new NotificationSubject(
             $groupKey,
-            Excerpt::ofHtml($status->text('content')),
+            Excerpt::cutHtml($status->text('content')),
             $linkUrl,
             self::contextOf($kind, $status),
         );
@@ -197,7 +197,7 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
     private static function quotedContextOf(JsonNodeModel $quoted): NotificationContext
     {
         return self::aboutYourCommentWhenAReply(
-            new NotificationContext(answeredExcerpt: Excerpt::ofHtml($quoted->text('content'))),
+            new NotificationContext(answeredExcerpt: Excerpt::cutHtml($quoted->text('content'))),
             $quoted,
         );
     }

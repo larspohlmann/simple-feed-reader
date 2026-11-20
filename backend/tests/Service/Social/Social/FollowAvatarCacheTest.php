@@ -32,7 +32,7 @@ final class FollowAvatarCacheTest extends TestCase
 
         $this->cache->remember($account, [self::follow('did:plc:bob')]);
 
-        self::assertSame('https://cdn.test/did:plc:bob.jpg', $this->cache->find($account)->avatarOf('did:plc:bob'));
+        self::assertSame('https://cdn.test/did:plc:bob.jpg', $this->cache->find($account)->readAvatar('did:plc:bob'));
     }
 
     public function testAnUnaskedAccountHasNone(): void
@@ -54,8 +54,11 @@ final class FollowAvatarCacheTest extends TestCase
 
         $this->cache->remember($account, [self::follow('did:plc:carol')]);
 
-        self::assertNull($this->cache->find($account)->avatarOf('did:plc:bob'));
-        self::assertSame('https://cdn.test/did:plc:carol.jpg', $this->cache->find($account)->avatarOf('did:plc:carol'));
+        self::assertNull($this->cache->find($account)->readAvatar('did:plc:bob'));
+        self::assertSame(
+            'https://cdn.test/did:plc:carol.jpg',
+            $this->cache->find($account)->readAvatar('did:plc:carol'),
+        );
     }
 
     public function testARememberedAccountIsKeptUnderItsId(): void

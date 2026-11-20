@@ -13,7 +13,7 @@ final class PrivateFeedModelTest extends TestCase
 {
     public function testAKeyNamesTheKindThenTheRemoteId(): void
     {
-        self::assertSame('list:at://list/a', PrivateFeedModel::keyOf(SocialFeedKind::UserList, 'at://list/a'));
+        self::assertSame('list:at://list/a', PrivateFeedModel::buildKey(SocialFeedKind::UserList, 'at://list/a'));
         self::assertSame('home:', PrivateFeedModel::timeline(SocialFeedKind::Home)->key());
     }
 
@@ -25,7 +25,7 @@ final class PrivateFeedModelTest extends TestCase
         self::assertSame('caturday', $tag->remoteId);
         self::assertSame('#Caturday', $tag->name);
         self::assertSame('tag:caturday', $tag->key());
-        self::assertEquals($tag, PrivateFeedModel::of(SocialFeedKind::Tag, 'CATURDAY', '#Caturday'));
+        self::assertEquals($tag, PrivateFeedModel::fromKind(SocialFeedKind::Tag, 'CATURDAY', '#Caturday'));
     }
 
     public function testAFollowedTagLowercasesBeyondAscii(): void
@@ -43,7 +43,7 @@ final class PrivateFeedModelTest extends TestCase
         self::assertSame(SocialFeedKind::Trending, $trending->kind);
         self::assertSame('', $trending->remoteId);
         self::assertSame('trending:', $trending->key());
-        self::assertEquals($trending, PrivateFeedModel::of(SocialFeedKind::Trending, 'ignored', 'ignored'));
+        self::assertEquals($trending, PrivateFeedModel::fromKind(SocialFeedKind::Trending, 'ignored', 'ignored'));
     }
 
     public function testASearchIsNamedAndKeyedByItsNormalisedQuery(): void
@@ -53,7 +53,7 @@ final class PrivateFeedModelTest extends TestCase
         self::assertSame(SocialFeedKind::Search, $search->kind);
         self::assertSame('rss reader', $search->remoteId);
         self::assertSame('rss reader', $search->name);
-        self::assertEquals($search, PrivateFeedModel::of(SocialFeedKind::Search, ' rss reader', 'ignored'));
+        self::assertEquals($search, PrivateFeedModel::fromKind(SocialFeedKind::Search, ' rss reader', 'ignored'));
     }
 
     public function testEveryTimelineIsNamedAfterItsKindWithoutARemoteId(): void
@@ -63,7 +63,7 @@ final class PrivateFeedModelTest extends TestCase
             $timeline = PrivateFeedModel::timeline($kind);
             self::assertSame($kind, $timeline->kind);
             self::assertSame('', $timeline->remoteId);
-            self::assertEquals($timeline, PrivateFeedModel::of($kind, 'ignored', 'ignored'));
+            self::assertEquals($timeline, PrivateFeedModel::fromKind($kind, 'ignored', 'ignored'));
             $names[] = $timeline->name;
         }
 

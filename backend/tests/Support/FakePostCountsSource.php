@@ -35,7 +35,7 @@ final class FakePostCountsSource implements PostCountsSourceInterface
         $this->failure = null;
     }
 
-    public function countsOf(string $address): SocialCountsModel
+    public function fetchCounts(string $address): SocialCountsModel
     {
         $this->askedAddresses[] = $address;
         if (null !== $this->failure) {

@@ -15,9 +15,9 @@ use App\Service\Social\Share\Support\ShareTargets;
  */
 final class PostedLinkCard
 {
-    public static function of(Entry $entry, LinkCardContent $card): ?LinkCardContent
+    public static function resolveCard(Entry $entry, LinkCardContent $card): ?LinkCardContent
     {
-        $targets = ShareTargets::planOf($entry, [])->urls;
+        $targets = ShareTargets::buildPlan($entry, [])->urls;
         if (\in_array($card->url, $targets, true)) {
             return $card;
         }

@@ -72,7 +72,7 @@ final class SavedBlueskyPostInteractionTest extends DbTestCase
                 return SocialNetwork::Bluesky->value;
             }
 
-            public function countsOf(string $address): SocialCountsModel
+            public function fetchCounts(string $address): SocialCountsModel
             {
                 $this->askedAddresses[] = $address;
 
@@ -80,7 +80,7 @@ final class SavedBlueskyPostInteractionTest extends DbTestCase
             }
         };
 
-        $counts = $this->counts($source)->of($this->owner, $this->savedPost);
+        $counts = $this->counts($source)->fetchCounts($this->owner, $this->savedPost);
 
         self::assertEquals(new SocialCountsModel(3, 2, 1, null), $counts);
         self::assertSame([self::POST_URI], $source->askedAddresses);

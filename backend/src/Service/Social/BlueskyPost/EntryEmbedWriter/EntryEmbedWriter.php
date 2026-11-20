@@ -69,7 +69,7 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
 
     private function fillFromText(Entry $entry, JsonNodeModel $post): FillOutcome
     {
-        $shared = SharedLinks::of(self::textBodyOf($entry, $post));
+        $shared = SharedLinks::fromBodyHtml(self::textBodyOf($entry, $post));
         $pages = array_filter($shared->urls, static fn (string $url): bool => !AtPostUri::isWebUrl($url));
         if ($pages === []) {
             return FillOutcome::Unfilled;
@@ -110,7 +110,7 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
         foreach ($embed->linkCards as $card) {
             $html = TrailingUrl::removedFrom($html, $card->url);
         }
-        $shared = SharedLinks::of($html);
+        $shared = SharedLinks::fromBodyHtml($html);
         $uncarded = $embed->uncardedLink;
         if ($uncarded === null) {
             return $shared;

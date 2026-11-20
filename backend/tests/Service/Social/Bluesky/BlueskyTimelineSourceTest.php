@@ -140,7 +140,7 @@ final class BlueskyTimelineSourceTest extends TestCase
     {
         $source = $this->source(new MockHttpClient());
         $search = $this->socialFeed(SocialFeedKind::Search, 'rss');
-        $page = $source->pageOf($search, [$source->accepted($search, self::answer(['posts' => [
+        $page = $source->buildPage($search, [$source->accepted($search, self::answer(['posts' => [
             self::searchPost('at://did:plc:amy/app.bsky.feed.post/1', null),
             self::searchPost('at://did:plc:bob/app.bsky.feed.post/2', 'at://did:plc:amy/app.bsky.feed.post/1'),
             self::searchPost('at://did:plc:amy/app.bsky.feed.post/3', null, 'Which Atom reader?'),
@@ -179,7 +179,7 @@ final class BlueskyTimelineSourceTest extends TestCase
 
         $source = $this->source(new MockHttpClient());
         $author = $this->socialFeed(SocialFeedKind::Author, 'did:plc:bob');
-        $page = $source->pageOf($author, [$source->accepted($author, self::answer($body))]);
+        $page = $source->buildPage($author, [$source->accepted($author, self::answer($body))]);
 
         self::assertCount(1, $page->parsed->entries);
     }
@@ -281,7 +281,7 @@ final class BlueskyTimelineSourceTest extends TestCase
         $source = $this->source(new MockHttpClient());
         $home = $this->socialFeed(SocialFeedKind::Home, '');
 
-        return $source->pageOf($home, [$source->accepted($home, $outcome)]);
+        return $source->buildPage($home, [$source->accepted($home, $outcome)]);
     }
 
     /**

@@ -40,7 +40,7 @@ final readonly class SearchFeedEditor
      */
     public function requery(Subscription $subscription, string $query): void
     {
-        $socialFeed = $this->searchFeedOf($subscription);
+        $socialFeed = $this->requireSearchFeed($subscription);
         $search = PrivateFeedModel::search($query);
         if ($search->remoteId === $socialFeed->getRemoteId()) {
             return;
@@ -60,7 +60,7 @@ final readonly class SearchFeedEditor
         $this->indexer->forget($removedIds);
     }
 
-    private function searchFeedOf(Subscription $subscription): SocialFeed
+    private function requireSearchFeed(Subscription $subscription): SocialFeed
     {
         $socialFeed = $this->socialFeeds->forFeed($subscription->getFeed());
         if (null === $socialFeed || SocialFeedKind::Search !== $socialFeed->getKind()) {
@@ -82,7 +82,7 @@ final readonly class SearchFeedEditor
     /** @throws SearchQueryTooBroadException */
     private function refuseTooBroadFor(SocialFeed $socialFeed, PrivateFeedModel $search): void
     {
-        $this->ruleOf($socialFeed)->buildSearchQueries($search->remoteId);
+        $this->selectRule($socialFeed)->buildSearchQueries($search->remoteId);
     }
 
     private function retarget(SocialFeed $socialFeed, PrivateFeedModel $search): void
@@ -90,8 +90,8 @@ final readonly class SearchFeedEditor
         $account = $socialFeed->getSocialAccount();
         $feed = $socialFeed->getFeed();
         $socialFeed->requery($search->remoteId);
-        $feed->setUrl(SocialFeedUrl::of($account, $search));
-        $feed->setSiteUrl($this->ruleOf($socialFeed)->buildSiteUrl($account, $search));
+        $feed->setUrl(SocialFeedUrl::buildUrl($account, $search));
+        $feed->setSiteUrl($this->selectRule($socialFeed)->buildSiteUrl($account, $search));
         $feed->setTitle($search->remoteId);
         $feed->scheduleNextFetchAt($this->clock->now());
     }
@@ -100,7 +100,7 @@ final readonly class SearchFeedEditor
     private function nonMatchingIds(SocialFeed $socialFeed, PrivateFeedModel $search): array
     {
         $account = $socialFeed->getSocialAccount();
-        $rule = $this->ruleOf($socialFeed);
+        $rule = $this->selectRule($socialFeed);
         $matches = SocialSearchMatch::matcher($search->remoteId);
         $nonMatchingIds = [];
         $lastEntryId = 0;
@@ -117,7 +117,7 @@ final readonly class SearchFeedEditor
         return $nonMatchingIds;
     }
 
-    private function ruleOf(SocialFeed $socialFeed): PrivateFeedRuleInterface
+    private function selectRule(SocialFeed $socialFeed): PrivateFeedRuleInterface
     {
         return $this->privateFeedRules->selectRule($socialFeed->getSocialAccount()->getNetwork());
     }

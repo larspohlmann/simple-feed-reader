@@ -38,7 +38,7 @@ final readonly class PrivateFeeds
     /** @throws SubscriptionLimitReachedException with nothing written and the entity manager still open */
     public function create(SocialAccount $account, PrivateFeedModel $privateFeed): PrivateFeedOutcome
     {
-        if (null !== $this->subscriptionOf($account, $privateFeed)) {
+        if (null !== $this->findSubscription($account, $privateFeed)) {
             return PrivateFeedOutcome::AlreadySubscribed;
         }
         $this->subscribe($account, $privateFeed, []);
@@ -47,13 +47,13 @@ final readonly class PrivateFeeds
     }
 
     /** A person's feed is the user's through any of their accounts; a collection only through this one. */
-    public function subscriptionOf(SocialAccount $account, PrivateFeedModel $privateFeed): ?Subscription
+    public function findSubscription(SocialAccount $account, PrivateFeedModel $privateFeed): ?Subscription
     {
         return $this->socialFeeds->findSubscriptionFor($account, $privateFeed);
     }
 
     /**
-     * For a caller that has just found no subscriptionOf() the feed.
+     * For a caller whose findSubscription() found none.
      *
      * @param list<Tag> $tags
      *
@@ -73,7 +73,7 @@ final readonly class PrivateFeeds
      * @throws SubscriptionLimitReachedException with nothing written and the entity manager still open
      * @throws AlreadySubscribedException
      */
-    public function subscribeInPlaceOf(
+    public function subscribeKeepingSettings(
         SocialAccount $account,
         PrivateFeedModel $privateFeed,
         Subscription $previous,
@@ -95,7 +95,7 @@ final readonly class PrivateFeeds
         }
     }
 
-    public function removeAllOf(SocialAccount $account): int
+    public function unsubscribeAllFeeds(SocialAccount $account): int
     {
         return $this->subscriptionService->unsubscribeAll($this->socialFeeds->findSubscriptions($account));
     }
@@ -123,7 +123,7 @@ final readonly class PrivateFeeds
         $rule = $this->privateFeedRules->selectRule($account->getNetwork());
         $subscription = $this->subscriptionCreator->create(
             $account->getUser(),
-            SocialFeedUrl::of($account, $privateFeed),
+            SocialFeedUrl::buildUrl($account, $privateFeed),
             $rule->sourceFormat(),
             $tags,
             $privateFeed->name,

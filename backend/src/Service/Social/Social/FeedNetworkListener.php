@@ -32,7 +32,7 @@ final readonly class FeedNetworkListener
             return SavedFeedUrl::parseNetwork($feed->getUrl());
         }
 
-        return SocialFeedClassifier::privateAddressOf($feed)->network
+        return SocialFeedClassifier::parsePrivateAddress($feed)->network
             ?? $this->profileFeeds->findNetwork($feed->getUrl());
     }
 }

@@ -171,7 +171,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
 
         $this->queue->queueWithKnownShares(
             [$post],
-            KnownSharesModel::ofBlueskyPosts([$guid => Bluesky::post('external')]),
+            KnownSharesModel::fromBlueskyPosts([$guid => Bluesky::post('external')]),
         );
         $this->entityManager->flush();
 
@@ -187,7 +187,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
 
         $this->queue->queueWithKnownShares(
             [$post],
-            KnownSharesModel::ofBlueskyPosts([self::AT_POST => JsonNodeModel::fromValue(['uri' => self::AT_POST])]),
+            KnownSharesModel::fromBlueskyPosts([self::AT_POST => JsonNodeModel::fromValue(['uri' => self::AT_POST])]),
         );
         $this->entityManager->flush();
 
@@ -201,7 +201,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
 
         $this->queue->queueWithKnownShares(
             [$post],
-            KnownSharesModel::ofBlueskyPosts([self::AT_POST => JsonNodeModel::fromValue(['uri' => self::AT_POST])]),
+            KnownSharesModel::fromBlueskyPosts([self::AT_POST => JsonNodeModel::fromValue(['uri' => self::AT_POST])]),
         );
         $this->entityManager->flush();
 
@@ -215,7 +215,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
 
         $this->queue->queueWithKnownShares(
             [$post],
-            KnownSharesModel::ofBlueskyPosts([
+            KnownSharesModel::fromBlueskyPosts([
                 self::AT_POST => JsonNodeModel::fromValue(['uri' => self::AT_POST, 'replyCount' => 1]),
             ]),
         );
@@ -231,7 +231,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
 
         $this->queue->queueWithKnownShares(
             [$post],
-            KnownSharesModel::ofBlueskyPosts([
+            KnownSharesModel::fromBlueskyPosts([
                 self::AT_POST => JsonNodeModel::fromValue(['uri' => self::AT_POST, 'replyCount' => 1]),
             ]),
         );
@@ -252,7 +252,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
             'Example',
         );
 
-        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofMastodonShares(([$guid => $card]), []));
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::fromMastodonShares(([$guid => $card]), []));
         $this->entityManager->flush();
 
         self::assertSame([], $this->queuedKinds());
@@ -270,7 +270,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         );
         $card = new LinkCardContent('https://other.example/@them/9', 'Them', 'The quoted post.', null, 'Other');
 
-        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofMastodonShares(([$guid => $card]), []));
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::fromMastodonShares(([$guid => $card]), []));
         $this->entityManager->flush();
 
         self::assertSame([], $this->queuedKinds());
@@ -291,7 +291,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         );
         $card = new LinkCardContent('https://example.com/story', 'The story', null, null, 'Example');
 
-        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofMastodonShares(([$guid => $card]), []));
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::fromMastodonShares(([$guid => $card]), []));
         $this->entityManager->flush();
 
         self::assertSame([], $this->queuedKinds());
@@ -307,7 +307,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         $post = $this->post($guid, '<p>So true.</p><p>RE: <a href="' . $posted . '">' . $posted . '</a></p>');
         $card = new LinkCardContent('https://example.com/story', 'The story', 'What happened.', null, 'Example');
 
-        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofMastodonShares(([$guid => $card]), []));
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::fromMastodonShares(([$guid => $card]), []));
         $this->entityManager->flush();
 
         self::assertSame([], $this->queuedKinds());
@@ -330,7 +330,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         );
         $card = new LinkCardContent('https://other.example/b', 'B', null, null, 'Other');
 
-        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofMastodonShares(([$guid => $card]), []));
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::fromMastodonShares(([$guid => $card]), []));
         $this->entityManager->flush();
 
         self::assertSame([$guid => ShareEnrichmentKind::LinkCards], $this->queuedKinds());
@@ -350,7 +350,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         );
         $card = new LinkCardContent('https://example.com/story', 'The story', null, null, 'Example');
 
-        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofMastodonShares(([$guid => $card]), []));
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::fromMastodonShares(([$guid => $card]), []));
         $this->entityManager->flush();
 
         self::assertSame([$guid => ShareEnrichmentKind::LinkCards], $this->queuedKinds());
@@ -366,7 +366,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         );
         $card = new LinkCardContent('https://other.example/b', 'B', null, null, 'Other');
 
-        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofMastodonShares(([$guid => $card]), []));
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::fromMastodonShares(([$guid => $card]), []));
         $this->entityManager->flush();
 
         self::assertEquals([$card], $this->storedCards($this->reload($post)));
@@ -382,7 +382,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         );
         $quote = self::quotedPost();
 
-        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofMastodonShares([], [$guid => $quote]));
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::fromMastodonShares([], [$guid => $quote]));
         $this->entityManager->flush();
 
         self::assertSame([], $this->queuedKinds());
@@ -402,7 +402,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         );
         $quote = self::quotedPost();
 
-        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofMastodonShares([], [$guid => $quote]));
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::fromMastodonShares([], [$guid => $quote]));
         $this->entityManager->flush();
 
         self::assertSame([], $this->queuedKinds());
@@ -458,7 +458,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
 
         $this->queue->queueWithKnownShares(
             [$post],
-            KnownSharesModel::ofMastodonShares([], [], ['https://mastodon.example/@thread/3']),
+            KnownSharesModel::fromMastodonShares([], [], ['https://mastodon.example/@thread/3']),
         );
         $this->entityManager->flush();
 
@@ -480,7 +480,10 @@ final class ShareEnrichmentQueueTest extends DbTestCase
             'Example',
         );
 
-        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofMastodonShares([$guid => $card], [], [$guid]));
+        $this->queue->queueWithKnownShares(
+            [$post],
+            KnownSharesModel::fromMastodonShares([$guid => $card], [], [$guid]),
+        );
         $this->entityManager->flush();
 
         self::assertSame([$guid => ShareEnrichmentKind::SelfThread], $this->queuedKinds());
@@ -498,7 +501,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
 
         $this->queue->queueWithKnownShares(
             [$post],
-            KnownSharesModel::ofMastodonShares([], [$guid => self::quotedPost()], [$guid]),
+            KnownSharesModel::fromMastodonShares([], [$guid => self::quotedPost()], [$guid]),
         );
         $this->entityManager->flush();
 

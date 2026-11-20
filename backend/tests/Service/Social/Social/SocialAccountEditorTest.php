@@ -82,7 +82,7 @@ final class SocialAccountEditorTest extends DbTestCase
         $this->editor()->disconnect($second);
 
         self::assertTrue($first->isDefault());
-        self::assertSame([$first], $this->editor()->accountsOf($this->user));
+        self::assertSame([$first], $this->editor()->findAccounts($this->user));
     }
 
     public function testDisconnectingTheLastAccountOnANetworkLeavesNoDefault(): void

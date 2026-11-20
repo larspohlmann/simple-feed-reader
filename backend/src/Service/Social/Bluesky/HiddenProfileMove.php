@@ -42,9 +42,9 @@ final readonly class HiddenProfileMove
             return HiddenProfileMoveOutcome::Skipped;
         }
         $author = $profile->toAuthorFeed();
-        $authorSubscription = $this->privateFeeds->subscriptionOf($account, $author);
+        $authorSubscription = $this->privateFeeds->findSubscription($account, $author);
         if (null === $authorSubscription) {
-            $this->privateFeeds->subscribeInPlaceOf($account, $author, $rssSubscription);
+            $this->privateFeeds->subscribeKeepingSettings($account, $author, $rssSubscription);
 
             return HiddenProfileMoveOutcome::Started;
         }

@@ -18,7 +18,7 @@ final class ReplyThreadOrderTest extends TestCase
 
     public function testTopLevelRepliesAreNewestFirst(): void
     {
-        $page = (new ReplyThreadOrder(3, 5))->pageOf([
+        $page = (new ReplyThreadOrder(3, 5))->buildPage([
             $this->node('old', '2026-01-01'),
             $this->node('new', '2026-03-01'),
             $this->node('mid', '2026-02-01'),
@@ -29,7 +29,7 @@ final class ReplyThreadOrderTest extends TestCase
 
     public function testTopLevelRepliesAreMostInterestingFirst(): void
     {
-        $page = (new ReplyThreadOrder(3, 5))->pageOf([
+        $page = (new ReplyThreadOrder(3, 5))->buildPage([
             $this->engaged('quiet', '2026-03-01', new SocialCountsModel(0, 0, 0, null)),
             $this->engaged('loud', '2026-01-01', new SocialCountsModel(9, 0, 0, null)),
             $this->engaged('mid', '2026-02-01', new SocialCountsModel(4, 0, 0, null)),
@@ -40,7 +40,7 @@ final class ReplyThreadOrderTest extends TestCase
 
     public function testAReplyWeighsAsMuchAsThreeLikes(): void
     {
-        $page = (new ReplyThreadOrder(3, 5))->pageOf([
+        $page = (new ReplyThreadOrder(3, 5))->buildPage([
             $this->engaged('replied', '2026-01-01', new SocialCountsModel(0, 0, 1, null)),
             $this->engaged('three likes', '2026-03-01', new SocialCountsModel(3, 0, 0, null)),
             $this->engaged('two likes', '2026-02-01', new SocialCountsModel(2, 0, 0, null)),
@@ -51,7 +51,7 @@ final class ReplyThreadOrderTest extends TestCase
 
     public function testARepostWeighsAsMuchAsTwoLikes(): void
     {
-        $page = (new ReplyThreadOrder(3, 5))->pageOf([
+        $page = (new ReplyThreadOrder(3, 5))->buildPage([
             $this->engaged('reposted', '2026-01-01', new SocialCountsModel(0, 1, 0, null)),
             $this->engaged('two likes', '2026-03-01', new SocialCountsModel(2, 0, 0, 0)),
             $this->engaged('one like', '2026-02-01', new SocialCountsModel(1, 0, 0, 0)),
@@ -62,7 +62,7 @@ final class ReplyThreadOrderTest extends TestCase
 
     public function testAQuoteWeighsAsMuchAsTwoLikes(): void
     {
-        $page = (new ReplyThreadOrder(3, 5))->pageOf([
+        $page = (new ReplyThreadOrder(3, 5))->buildPage([
             $this->engaged('quoted', '2026-01-01', new SocialCountsModel(0, 0, 0, 1)),
             $this->engaged('two likes', '2026-03-01', new SocialCountsModel(2, 0, 0, 0)),
             $this->engaged('one like', '2026-02-01', new SocialCountsModel(1, 0, 0, 0)),
@@ -73,7 +73,7 @@ final class ReplyThreadOrderTest extends TestCase
 
     public function testAReplyWithoutCountsRanksAsOneNobodyEngagedWith(): void
     {
-        $page = (new ReplyThreadOrder(3, 5))->pageOf([
+        $page = (new ReplyThreadOrder(3, 5))->buildPage([
             $this->node('uncounted', '2026-03-01'),
             $this->engaged('unengaged', '2026-02-01', new SocialCountsModel(0, 0, 0, null)),
             $this->engaged('liked', '2026-01-01', new SocialCountsModel(1, 0, 0, null)),
@@ -84,7 +84,7 @@ final class ReplyThreadOrderTest extends TestCase
 
     public function testEquallyInterestingTopLevelRepliesAreNewestFirst(): void
     {
-        $page = (new ReplyThreadOrder(3, 5))->pageOf([
+        $page = (new ReplyThreadOrder(3, 5))->buildPage([
             $this->engaged('old', '2026-01-01', new SocialCountsModel(3, 0, 0, null)),
             $this->engaged('new', '2026-03-01', new SocialCountsModel(3, 0, 0, null)),
         ]);
@@ -94,7 +94,7 @@ final class ReplyThreadOrderTest extends TestCase
 
     public function testRepliesInsideAThreadStayOldestFirstWhateverTheirInterest(): void
     {
-        $page = (new ReplyThreadOrder(3, 5))->pageOf([
+        $page = (new ReplyThreadOrder(3, 5))->buildPage([
             $this->node(
                 'root',
                 '2026-01-01',
@@ -108,7 +108,7 @@ final class ReplyThreadOrderTest extends TestCase
 
     public function testTheCountCapKeepsTheMostInterestingReplies(): void
     {
-        $page = (new ReplyThreadOrder(3, 2))->pageOf([
+        $page = (new ReplyThreadOrder(3, 2))->buildPage([
             $this->engaged('newest', '2026-03-01', new SocialCountsModel(0, 0, 0, null)),
             $this->engaged('loud', '2026-01-01', new SocialCountsModel(7, 0, 0, null)),
             $this->engaged('mid', '2026-02-01', new SocialCountsModel(2, 0, 0, null)),
@@ -120,7 +120,7 @@ final class ReplyThreadOrderTest extends TestCase
 
     public function testRepliesInsideAThreadAreOldestFirst(): void
     {
-        $page = (new ReplyThreadOrder(3, 5))->pageOf([
+        $page = (new ReplyThreadOrder(3, 5))->buildPage([
             $this->node(
                 'root',
                 '2026-01-01',
@@ -134,7 +134,7 @@ final class ReplyThreadOrderTest extends TestCase
 
     public function testEachCommentCarriesItsDepthInThreadOrder(): void
     {
-        $page = (new ReplyThreadOrder(3, 5))->pageOf([
+        $page = (new ReplyThreadOrder(3, 5))->buildPage([
             $this->node('a', '2026-01-01', $this->node('a1', '2026-01-02', $this->node('a1x', '2026-01-03'))),
             $this->node('b', '2026-02-01', $this->node('b1', '2026-02-02')),
         ]);
@@ -154,7 +154,7 @@ final class ReplyThreadOrderTest extends TestCase
             $this->node('d3', '2026-01-04', $this->node('d4', '2026-01-05')),
         )));
 
-        $page = (new ReplyThreadOrder(3, 5))->pageOf([$chain]);
+        $page = (new ReplyThreadOrder(3, 5))->buildPage([$chain]);
 
         self::assertSame(['d0', 'd1', 'd2'], $this->urls($page->comments));
         self::assertSame(2, $page->omitted);
@@ -162,7 +162,7 @@ final class ReplyThreadOrderTest extends TestCase
 
     public function testTheCountCapKeepsWholeEarlierThreadsAndOmitsTheRest(): void
     {
-        $page = (new ReplyThreadOrder(3, 5))->pageOf([
+        $page = (new ReplyThreadOrder(3, 5))->buildPage([
             $this->node('a', '2026-03-01', $this->node('a1', '2026-03-02'), $this->node('a2', '2026-03-03')),
             $this->node('b', '2026-02-01', $this->node('b1', '2026-02-02'), $this->node('b2', '2026-02-03')),
             $this->node('c', '2026-01-01'),
@@ -174,7 +174,7 @@ final class ReplyThreadOrderTest extends TestCase
 
     public function testBothCapsTogetherKeepTheShallowRepliesAndCountEveryOtherOne(): void
     {
-        $page = (new ReplyThreadOrder(2, 3))->pageOf([
+        $page = (new ReplyThreadOrder(2, 3))->buildPage([
             $this->node('a', '2026-03-01', $this->node('a1', '2026-03-02', $this->node('a1x', '2026-03-03'))),
             $this->node('b', '2026-02-01', $this->node('b1', '2026-02-02'), $this->node('b2', '2026-02-03')),
         ]);
@@ -185,7 +185,7 @@ final class ReplyThreadOrderTest extends TestCase
 
     public function testOnlyTheKeptRepliesAreBuilt(): void
     {
-        (new ReplyThreadOrder(2, 3))->pageOf([
+        (new ReplyThreadOrder(2, 3))->buildPage([
             $this->node('a', '2026-03-01', $this->node('a1', '2026-03-02', $this->node('a1x', '2026-03-03'))),
             $this->node('b', '2026-02-01', $this->node('b1', '2026-02-02')),
         ]);
@@ -195,7 +195,7 @@ final class ReplyThreadOrderTest extends TestCase
 
     public function testAnUndatedReplySortsAsTheOldest(): void
     {
-        $page = (new ReplyThreadOrder(3, 5))->pageOf([
+        $page = (new ReplyThreadOrder(3, 5))->buildPage([
             $this->node(
                 'root',
                 '2026-01-01',
@@ -209,7 +209,7 @@ final class ReplyThreadOrderTest extends TestCase
 
     public function testNoRepliesIsAnEmptyPage(): void
     {
-        $page = (new ReplyThreadOrder(3, 5))->pageOf([]);
+        $page = (new ReplyThreadOrder(3, 5))->buildPage([]);
 
         self::assertSame([], $page->comments);
         self::assertSame(0, $page->omitted);

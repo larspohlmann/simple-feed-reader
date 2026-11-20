@@ -135,7 +135,7 @@ final class SubscriptionJson
         if (SourceFormat::isSaved($feed->getSourceFormat())) {
             return ['network' => $network->value, 'accountId' => null, 'kind' => self::SAVED_KIND];
         }
-        $address = SocialFeedClassifier::privateAddressOf($feed);
+        $address = SocialFeedClassifier::parsePrivateAddress($feed);
         if (null === $address || $address->kind->followsOnePerson()) {
             return ['network' => $network->value, 'accountId' => null, 'kind' => self::PROFILE_KIND];
         }

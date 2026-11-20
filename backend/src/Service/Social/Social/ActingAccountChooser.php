@@ -59,15 +59,15 @@ final readonly class ActingAccountChooser
     /** @throws NoSocialAccountForNetworkException */
     public function accountFor(User $user, Entry $entry, SocialNetwork $network): SocialAccount
     {
-        return $this->accountOf($user, $entry->getFeed(), $network)
+        return $this->findAccount($user, $entry->getFeed(), $network)
             ?? throw new NoSocialAccountForNetworkException(
                 sprintf('No %s account is connected to act on this post.', $network->displayName()),
             );
     }
 
-    private function accountOf(User $user, Feed $feed, SocialNetwork $network): ?SocialAccount
+    private function findAccount(User $user, Feed $feed, SocialNetwork $network): ?SocialAccount
     {
-        if (null === SocialFeedClassifier::privateAddressOf($feed)) {
+        if (null === SocialFeedClassifier::parsePrivateAddress($feed)) {
             return $this->socialAccounts->findActingOnNetwork($user, $network);
         }
         $account = $this->socialFeeds->forFeed($feed)?->getSocialAccount();

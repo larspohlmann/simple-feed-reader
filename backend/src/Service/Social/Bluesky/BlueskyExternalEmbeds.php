@@ -36,7 +36,7 @@ final readonly class BlueskyExternalEmbeds
     /** @return array<string, mixed> */
     public function embedOf(SocialAccount $account, string $url): array
     {
-        $card = $this->pageCards->cardOf($url);
+        $card = $this->pageCards->resolveCard($url);
 
         return ['$type' => self::EXTERNAL_EMBED, 'external' => [
             'uri' => $url,

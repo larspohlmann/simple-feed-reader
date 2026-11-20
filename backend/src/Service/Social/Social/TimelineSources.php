@@ -17,7 +17,7 @@ final readonly class TimelineSources
     ) {
     }
 
-    public function of(SocialAccount $account): TimelineSourceInterface
+    public function selectSource(SocialAccount $account): TimelineSourceInterface
     {
         $source = $this->sources->get($account->getNetwork()->value);
         \assert($source instanceof TimelineSourceInterface);

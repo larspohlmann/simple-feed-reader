@@ -63,36 +63,36 @@ final readonly class ShareEnrichmentQueue
             return $this->knownShareSettler->settleEmbedded($entry, $post);
         }
         $this->classifier->classify($entry);
-        $quote = self::postedQuoteOf($entry, $knownShares);
+        $quote = self::findPostedQuote($entry, $knownShares);
         if ($quote !== null) {
             $this->knownShareSettler->settleQuoted($entry, $quote);
 
             return null;
         }
-        $card = self::postedCardOf($entry, $knownShares);
+        $card = self::findPostedCard($entry, $knownShares);
         if ($card !== null) {
             return $this->knownShareSettler->settleCarded($entry, $card);
         }
 
-        return $this->awaitedOfCreated($entry);
+        return $this->detectAwaitedKind($entry);
     }
 
-    private static function postedQuoteOf(Entry $entry, KnownSharesModel $knownShares): ?QuotedPostContent
+    private static function findPostedQuote(Entry $entry, KnownSharesModel $knownShares): ?QuotedPostContent
     {
         return $entry->getShareKind() === ShareKind::Link ? $knownShares->quotedPostFor($entry->getGuid()) : null;
     }
 
-    private static function postedCardOf(Entry $entry, KnownSharesModel $knownShares): ?LinkCardContent
+    private static function findPostedCard(Entry $entry, KnownSharesModel $knownShares): ?LinkCardContent
     {
         $card = $knownShares->linkCardFor($entry->getGuid());
         if ($card === null || $entry->getShareKind() !== ShareKind::Link) {
             return null;
         }
 
-        return PostedLinkCard::of($entry, $card);
+        return PostedLinkCard::resolveCard($entry, $card);
     }
 
-    private function awaitedOfCreated(Entry $entry): ?ShareEnrichmentKind
+    private function detectAwaitedKind(Entry $entry): ?ShareEnrichmentKind
     {
         if ($this->pendingEmbed->awaitsEmbed($entry)) {
             return ShareEnrichmentKind::AppView;

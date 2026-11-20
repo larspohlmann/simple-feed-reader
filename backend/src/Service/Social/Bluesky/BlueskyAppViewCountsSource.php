@@ -22,7 +22,7 @@ final readonly class BlueskyAppViewCountsSource implements PostCountsSourceInter
     {
     }
 
-    public function countsOf(string $address): SocialCountsModel
+    public function fetchCounts(string $address): SocialCountsModel
     {
         $post = AppViewAnswer::orSocialFailure(
             $this->appView->throttledForSeconds(),

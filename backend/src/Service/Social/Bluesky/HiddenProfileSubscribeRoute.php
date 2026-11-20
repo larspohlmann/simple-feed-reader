@@ -42,7 +42,7 @@ final readonly class HiddenProfileSubscribeRoute implements SubscribeRouteInterf
             ?? throw new BlueskyProfileHiddenException(self::CONNECT_AN_ACCOUNT);
 
         $author = $profile->toAuthorFeed();
-        if (null !== $this->privateFeeds->subscriptionOf($account, $author)) {
+        if (null !== $this->privateFeeds->findSubscription($account, $author)) {
             throw new AlreadySubscribedException();
         }
 

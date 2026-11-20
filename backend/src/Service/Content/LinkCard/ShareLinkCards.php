@@ -126,7 +126,7 @@ final readonly class ShareLinkCards
         $reusableUrls = [];
         foreach ($queued as $row) {
             $entry = $row->getEntry();
-            $plan = ShareTargets::planOf($entry, array_map(
+            $plan = ShareTargets::buildPlan($entry, array_map(
                 static fn (LinkCardContent $card): string => $card->url,
                 $storedCards[$entry->requireId()] ?? [],
             ));

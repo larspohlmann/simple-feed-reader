@@ -34,7 +34,7 @@ final class BlueskyNotificationContextSourceTest extends TestCase
     {
         $http = $this->http($this->posts());
 
-        $contexts = $this->source($http)->contextsOf(
+        $contexts = $this->source($http)->findContexts(
             SocialApiWiring::blueskyAccount(),
             [self::row(SocialNotificationKind::Reply, new ContextReferenceModel(self::MINE, self::ROOT))],
         );
@@ -54,7 +54,7 @@ final class BlueskyNotificationContextSourceTest extends TestCase
             'record' => ['text' => 'How do you all handle feeds?'],
         ]]]));
 
-        $contexts = $this->source($http)->contextsOf(
+        $contexts = $this->source($http)->findContexts(
             SocialApiWiring::blueskyAccount(),
             [self::row(SocialNotificationKind::Reply, new ContextReferenceModel(self::MINE, self::ROOT))],
         );
@@ -67,7 +67,7 @@ final class BlueskyNotificationContextSourceTest extends TestCase
     {
         $http = $this->http($this->posts());
 
-        $contexts = $this->source($http)->contextsOf(SocialApiWiring::blueskyAccount(), [
+        $contexts = $this->source($http)->findContexts(SocialApiWiring::blueskyAccount(), [
             self::row(SocialNotificationKind::Reply, new ContextReferenceModel(self::MINE, self::OWN_ROOT)),
             self::row(
                 SocialNotificationKind::Reply,
@@ -97,7 +97,7 @@ final class BlueskyNotificationContextSourceTest extends TestCase
             'record' => ['text' => 'How do you all handle feeds?'],
         ]]]));
 
-        $contexts = $this->source($http)->contextsOf(
+        $contexts = $this->source($http)->findContexts(
             SocialApiWiring::blueskyAccount(),
             [self::row(SocialNotificationKind::Reply, new ContextReferenceModel(self::THEIRS, self::ROOT))],
         );
@@ -110,7 +110,7 @@ final class BlueskyNotificationContextSourceTest extends TestCase
 
     public function testARowWithNeitherPostFoundGetsNoContext(): void
     {
-        $contexts = $this->source($this->http($this->posts()))->contextsOf(SocialApiWiring::blueskyAccount(), [
+        $contexts = $this->source($this->http($this->posts()))->findContexts(SocialApiWiring::blueskyAccount(), [
             self::row(SocialNotificationKind::Reply, new ContextReferenceModel(self::MINE)),
             self::row(
                 SocialNotificationKind::Reply,
@@ -126,7 +126,7 @@ final class BlueskyNotificationContextSourceTest extends TestCase
     {
         $http = $this->http($this->posts());
 
-        $contexts = $this->source($http)->contextsOf(SocialApiWiring::blueskyAccount(), [
+        $contexts = $this->source($http)->findContexts(SocialApiWiring::blueskyAccount(), [
             self::row(SocialNotificationKind::Reply, new ContextReferenceModel(self::MINE)),
             self::row(SocialNotificationKind::Reply, new ContextReferenceModel(self::MINE), self::SECOND_NOTIFICATION),
         ]);
@@ -138,7 +138,7 @@ final class BlueskyNotificationContextSourceTest extends TestCase
 
     public function testAQuoteGetsYourQuotedPost(): void
     {
-        $contexts = $this->source($this->http($this->posts()))->contextsOf(
+        $contexts = $this->source($this->http($this->posts()))->findContexts(
             SocialApiWiring::blueskyAccount(),
             [self::row(SocialNotificationKind::Quote, new ContextReferenceModel(self::QUOTED))],
         );
@@ -195,7 +195,7 @@ final class BlueskyNotificationContextSourceTest extends TestCase
             'record' => $answeredRecord,
         ]]]);
 
-        $contexts = $this->source($this->http($posts))->contextsOf(
+        $contexts = $this->source($this->http($posts))->findContexts(
             SocialApiWiring::blueskyAccount(),
             [self::row($kind, $references)],
         );
@@ -212,7 +212,7 @@ final class BlueskyNotificationContextSourceTest extends TestCase
         });
         $row = self::row(SocialNotificationKind::Reply, new ContextReferenceModel(self::MINE, self::ROOT));
 
-        $contexts = $this->source($http)->contextsOf(SocialApiWiring::blueskyAccount(), [$row]);
+        $contexts = $this->source($http)->findContexts(SocialApiWiring::blueskyAccount(), [$row]);
 
         self::assertSame([], $contexts);
     }
@@ -225,7 +225,7 @@ final class BlueskyNotificationContextSourceTest extends TestCase
         });
         $row = self::row(SocialNotificationKind::Quote, new ContextReferenceModel(self::QUOTED));
 
-        $contexts = $this->source($http)->contextsOf(SocialApiWiring::blueskyAccount(), [$row]);
+        $contexts = $this->source($http)->findContexts(SocialApiWiring::blueskyAccount(), [$row]);
 
         self::assertSame([], $contexts);
     }
