@@ -130,7 +130,7 @@ The last column is what the method does, which is what the reviewer checks the n
 | `Lemmy/LemmyProfilePictures.php` | `answerOf` (private) | `fetchAnswer` | asks an instance path and returns the named view; throws when missing |
 | `Lemmy/LemmyTimelineSource.php` | `listingPathOf` (private) | `buildListingPath` | the API path of a listing feed; throws for a kind Lemmy has not |
 | `Lemmy/Model/LemmyListing.php` | `ofFeedKind` | `fromFeedKind` | the listing a feed kind reads, or null |
-| `Lemmy/Support/LemmyCommentPath.php` | `parentOf` | `extractParentId` | the parent comment's id out of a path, or null for a top-level comment |
+| `Lemmy/Support/LemmyCommentPath.php` | `parentOf` | `parseParentId` | the parent comment's id out of a path, or null for a top-level comment |
 | `Lemmy/Support/LemmyCommunity.php` | `identityOf` | `parseIdentity` | the lower-cased `name@host` of a community on an https instance, or null |
 | `Lemmy/Support/LemmyCommunity.php` | `httpsHostOf` (private) | `parseHttpsHost` | the host of an https actor id, or null |
 | `Lemmy/Support/LemmyLanguageTag.php` | `of` | `fromLanguageId` | the language tag of a Lemmy language id, or null when none is stated |
