@@ -366,26 +366,39 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     /** As in DuplicateCollapseDql, only the lowest-id copy of an article counts; a post counts by its account. */
     private static function buildNoEarlierArticleCopy(TrendingWindow $window): string
     {
-        return '(member_feed.network IS NOT NULL'
-            . ' OR NOT EXISTS (SELECT 1 FROM trending_story_entry earlier_member'
-            . ' JOIN entry earlier_entry ON earlier_entry.id = earlier_member.entry_id'
-            . ' JOIN feed earlier_feed ON earlier_feed.id = earlier_member.feed_id AND earlier_feed.network IS NULL'
-            . ' WHERE earlier_member.story_id = story.id'
-            . ' AND ' . TrendingPlacementSql::buildPlacedCondition($window, 'earlier_member')
-            . ' AND earlier_member.entry_id < story_member.entry_id'
-            . ' AND earlier_entry.url_hash = member_entry.url_hash))';
+        return self::buildNoEarlierCopy(
+            $window,
+            'member_feed.network IS NOT NULL',
+            ' JOIN feed earlier_feed ON earlier_feed.id = earlier_member.feed_id AND earlier_feed.network IS NULL',
+            'earlier_entry.url_hash = member_entry.url_hash',
+        );
     }
 
     /** Only the lowest-id copy of an item counts, in whatever feed: its copies' authors and feeds differ. */
     private static function buildNoEarlierItemCopy(TrendingWindow $window): string
     {
-        return '(member_entry.canonical_item_id IS NULL'
-            . ' OR NOT EXISTS (SELECT 1 FROM trending_story_entry earlier_copy'
-            . ' JOIN entry earlier_copy_entry ON earlier_copy_entry.id = earlier_copy.entry_id'
-            . ' WHERE earlier_copy.story_id = story.id'
-            . ' AND ' . TrendingPlacementSql::buildPlacedCondition($window, 'earlier_copy')
-            . ' AND earlier_copy.entry_id < story_member.entry_id'
-            . ' AND earlier_copy_entry.canonical_item_id = member_entry.canonical_item_id))';
+        return self::buildNoEarlierCopy(
+            $window,
+            'member_entry.canonical_item_id IS NULL',
+            '',
+            'earlier_entry.canonical_item_id = member_entry.canonical_item_id',
+        );
+    }
+
+    /** A member counts when `$exemption` holds, else when no placed member of its story with a lower entry id is `$sameCopy`. */
+    private static function buildNoEarlierCopy(
+        TrendingWindow $window,
+        string $exemption,
+        string $earlierJoin,
+        string $sameCopy,
+    ): string {
+        return '(' . $exemption
+            . ' OR NOT EXISTS (SELECT 1 FROM trending_story_entry earlier_member'
+            . ' JOIN entry earlier_entry ON earlier_entry.id = earlier_member.entry_id' . $earlierJoin
+            . ' WHERE earlier_member.story_id = story.id'
+            . ' AND ' . TrendingPlacementSql::buildPlacedCondition($window, 'earlier_member')
+            . ' AND earlier_member.entry_id < story_member.entry_id'
+            . ' AND ' . $sameCopy . '))';
     }
 
     /**
