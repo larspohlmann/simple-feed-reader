@@ -74,7 +74,7 @@ final class ArticleLinesTest extends DbTestCase
     {
         $articleLines = new ArticleLines($this->linkCards());
 
-        return $articleLines->of(array_map(
+        return $articleLines->loadLines(array_map(
             static fn (Entry $entry): TitledEntry => new TitledEntry($entry, 'Feed'),
             $entries,
         ));

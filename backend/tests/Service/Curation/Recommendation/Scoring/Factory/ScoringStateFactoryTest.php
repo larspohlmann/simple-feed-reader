@@ -71,7 +71,7 @@ final class ScoringStateFactoryTest extends TestCase
         $state = self::state('Likes Rust.', 'More homelab.', $favorites);
 
         self::assertSame(['profile', 'guidance', 'favorites'], array_keys($state));
-        self::assertSame(array_map(ScoringArticle::of(...), $favorites), $state['favorites'] ?? null);
+        self::assertSame(array_map(ScoringArticle::buildFields(...), $favorites), $state['favorites'] ?? null);
     }
 
     /** Profile and guidance stay whole; the newest favorites fill what is left, whole, and the next would not fit. */
@@ -90,11 +90,13 @@ final class ScoringStateFactoryTest extends TestCase
         self::assertGreaterThan(0, $kept);
         self::assertLessThan(200, $kept);
         self::assertSame(
-            array_map(ScoringArticle::of(...), \array_slice($favorites, 0, $kept)),
+            array_map(ScoringArticle::buildFields(...), \array_slice($favorites, 0, $kept)),
             $state['favorites'] ?? null,
         );
         self::assertLessThanOrEqual(self::BUDGET, self::tokensOf($state));
-        $oneMore = ['favorites' => array_map(ScoringArticle::of(...), \array_slice($favorites, 0, $kept + 1))] + $state;
+        $oneMore = [
+            'favorites' => array_map(ScoringArticle::buildFields(...), \array_slice($favorites, 0, $kept + 1)),
+        ] + $state;
         self::assertGreaterThan(self::BUDGET, self::tokensOf($oneMore));
     }
 
@@ -125,7 +127,10 @@ final class ScoringStateFactoryTest extends TestCase
         $overlong = self::favorite(2, str_repeat('Homelab tour ', 20));
         $oldest = new ArticleLineModel(3, 'Kernel', 'Feed', '2026-10-01', null);
         $budget = self::tokensOf(
-            ['profile' => 'Likes Rust.', 'favorites' => array_map(ScoringArticle::of(...), [$newest, $oldest])],
+            [
+                'profile' => 'Likes Rust.',
+                'favorites' => array_map(ScoringArticle::buildFields(...), [$newest, $oldest]),
+            ],
         );
 
         $state = (new ScoringStateFactory())->create(
@@ -133,7 +138,7 @@ final class ScoringStateFactoryTest extends TestCase
             $budget,
         );
 
-        self::assertSame([ScoringArticle::of($newest)], $state['favorites'] ?? null);
+        self::assertSame([ScoringArticle::buildFields($newest)], $state['favorites'] ?? null);
     }
 
     /**
@@ -157,6 +162,6 @@ final class ScoringStateFactoryTest extends TestCase
     /** @param array<string, mixed> $state */
     private static function tokensOf(array $state): int
     {
-        return TokenEstimate::of(CompactJson::encode($state));
+        return TokenEstimate::estimateTokens(CompactJson::encode($state));
     }
 }

@@ -26,7 +26,7 @@ final readonly class ActiveAiJson
         $connection = $user->getActiveAiProviderSettings();
 
         return [
-            'ready' => AiReadiness::of($connection),
+            'ready' => AiReadiness::isReady($connection),
             'model' => $connection?->getModel(),
             'capabilities' => null === $connection ? null : $this->capabilities->from($connection),
         ];

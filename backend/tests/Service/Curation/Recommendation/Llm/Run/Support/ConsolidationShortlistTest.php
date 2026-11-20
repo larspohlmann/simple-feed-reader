@@ -16,7 +16,7 @@ final class ConsolidationShortlistTest extends TestCase
             $ranked[] = ['id' => $id, 'score' => 100 - $id, 'reason' => 'r'];
         }
 
-        $cut = ConsolidationShortlist::of($ranked, 6);
+        $cut = ConsolidationShortlist::sliceShortlist($ranked, 6);
 
         self::assertSame([1, 2, 3, 4, 5, 6], array_column($cut, 'id'));
     }
@@ -25,6 +25,6 @@ final class ConsolidationShortlistTest extends TestCase
     {
         $ranked = [['id' => 1, 'score' => 5, 'reason' => 'r']];
 
-        self::assertSame($ranked, ConsolidationShortlist::of($ranked, 100));
+        self::assertSame($ranked, ConsolidationShortlist::sliceShortlist($ranked, 100));
     }
 }

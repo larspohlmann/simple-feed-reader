@@ -66,7 +66,7 @@ final readonly class SnapshotPhase
         $run->freezeProfile($profileText);
         $run->snapshot(
             $tick->engineKind,
-            $this->engines->engineOf($tick->engineKind)->packBatches($candidates, $tick),
+            $this->engines->selectEngine($tick->engineKind)->packBatches($candidates, $tick),
         );
         $this->entityManager->flush();
 

@@ -15,17 +15,17 @@ final class AiReadinessTest extends TestCase
 {
     public function testARowWithoutAModelIsNotReady(): void
     {
-        self::assertFalse(AiReadiness::of($this->settings(null)));
+        self::assertFalse(AiReadiness::isReady($this->settings(null)));
     }
 
     public function testARowWithAModelIsReady(): void
     {
-        self::assertTrue(AiReadiness::of($this->settings('gpt-4o')));
+        self::assertTrue(AiReadiness::isReady($this->settings('gpt-4o')));
     }
 
     public function testNoRowIsNotReady(): void
     {
-        self::assertFalse(AiReadiness::of(null));
+        self::assertFalse(AiReadiness::isReady(null));
     }
 
     private function settings(?string $model): AiProviderSettings

@@ -21,7 +21,7 @@ final class ScoringProtocolWiringTest extends KernelTestCase
 
         $wired = [];
         foreach (ScoringProtocol::cases() as $protocol) {
-            $implementation = $protocols->protocolOf($protocol);
+            $implementation = $protocols->selectProtocol($protocol);
             $wired[$protocol->value] = $implementation::class;
         }
 

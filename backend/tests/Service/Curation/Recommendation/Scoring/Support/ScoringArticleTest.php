@@ -66,7 +66,7 @@ final class ScoringArticleTest extends TestCase
         self::assertSame(
             ['title' => 'Post', 'feedName' => 'Mastodon', 'date' => '2026-11-10',
                 'sharedArticle' => 'Council votes on budget (Example News)'],
-            ScoringArticle::of(
+            ScoringArticle::buildFields(
                 new ArticleLineModel(7, 'Post', 'Mastodon', '2026-11-10', null, self::councilArticle(null)),
             ),
         );
@@ -83,7 +83,7 @@ final class ScoringArticleTest extends TestCase
             self::councilArticle(str_repeat('c', 400)),
         );
 
-        $article = ScoringArticle::of($line);
+        $article = ScoringArticle::buildFields($line);
 
         self::assertSame(str_repeat('p', 600 - mb_strlen($article['sharedArticle'])) . '…', $article['description']);
         self::assertSame(
@@ -97,7 +97,7 @@ final class ScoringArticleTest extends TestCase
     {
         self::assertSame(
             ['title' => 'Post', 'feedName' => 'Mastodon', 'date' => '2026-11-10', 'description' => 'Text'],
-            ScoringArticle::of(new ArticleLineModel(7, 'Post', 'Mastodon', '2026-11-10', 'Text')),
+            ScoringArticle::buildFields(new ArticleLineModel(7, 'Post', 'Mastodon', '2026-11-10', 'Text')),
         );
     }
 

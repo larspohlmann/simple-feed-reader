@@ -20,7 +20,7 @@ final readonly class ArticleLines
      *
      * @return list<ArticleLineModel> in input order
      */
-    public function of(array $titled): array
+    public function loadLines(array $titled): array
     {
         $stories = $this->linkCards->storyLinksByEntryIds(array_values(array_map(
             static fn (TitledEntry $each): int => $each->entry->requireId(),
@@ -28,7 +28,7 @@ final readonly class ArticleLines
         )));
 
         return array_map(
-            static fn (TitledEntry $each): ArticleLineModel => ArticleLineModel::of(
+            static fn (TitledEntry $each): ArticleLineModel => ArticleLineModel::fromTitledEntry(
                 $each,
                 $stories[$each->entry->requireId()] ?? null,
             ),

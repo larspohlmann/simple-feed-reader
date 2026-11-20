@@ -10,7 +10,7 @@ final class ReportedCost
      * The price in integer nano-credits; null, not zero (a claim of "free"), when unpriced. A negative, non-finite or
      * out-of-range cost is refused as null, never clamped: it would corrupt the all-time spend or overflow the cast.
      */
-    public static function nanoCreditsOf(mixed $cost): ?int
+    public static function parseNanoCredits(mixed $cost): ?int
     {
         if (!\is_float($cost) && !\is_int($cost)) {
             return null;

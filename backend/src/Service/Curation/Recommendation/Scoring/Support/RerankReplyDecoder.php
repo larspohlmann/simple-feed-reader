@@ -43,28 +43,28 @@ final class RerankReplyDecoder
 
         $relevances = [];
         foreach ($results as $result) {
-            $entryId = self::entryIdOf($result, $entryIds);
+            $entryId = self::findEntryId($result, $entryIds);
             if (null === $entryId) {
                 continue;
             }
             if (\array_key_exists($entryId, $relevances)) {
                 return [];
             }
-            $relevances[$entryId] = self::relevanceOf($result);
+            $relevances[$entryId] = self::parseRelevance($result);
         }
 
         return array_filter($relevances, static fn (?float $relevance): bool => null !== $relevance);
     }
 
     /** @param list<int> $entryIds */
-    private static function entryIdOf(mixed $result, array $entryIds): ?int
+    private static function findEntryId(mixed $result, array $entryIds): ?int
     {
         $index = \is_array($result) ? ($result['index'] ?? null) : null;
 
         return \is_int($index) ? ($entryIds[$index] ?? null) : null;
     }
 
-    private static function relevanceOf(mixed $result): ?float
+    private static function parseRelevance(mixed $result): ?float
     {
         $relevance = \is_array($result) ? ($result['relevance_score'] ?? null) : null;
 
@@ -81,7 +81,7 @@ final class RerankReplyDecoder
             completionTokens: 0,
             reasoningTokens: 0,
             cachedTokens: 0,
-            costNanoCredits: ReportedCost::nanoCreditsOf($usage['cost'] ?? null),
+            costNanoCredits: ReportedCost::parseNanoCredits($usage['cost'] ?? null),
         );
     }
 

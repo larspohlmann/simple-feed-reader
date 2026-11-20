@@ -9,7 +9,7 @@ use App\Entity\AiProviderSettings;
 final readonly class ProviderHost
 {
     /** Tested with is_string(): a host of '0' survives, a malformed or hostless URL gives null. */
-    public static function of(?AiProviderSettings $connection): ?string
+    public static function parseHost(?AiProviderSettings $connection): ?string
     {
         $host = parse_url($connection?->getBaseUrl() ?? '', \PHP_URL_HOST);
 

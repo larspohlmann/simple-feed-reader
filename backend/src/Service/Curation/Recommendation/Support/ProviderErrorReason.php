@@ -31,7 +31,7 @@ final class ProviderErrorReason
     /** Short identifiers, never part of a message, so clipped without the reason's redaction. */
     public static function identifiersIn(string $body): ProviderErrorIdentifiersModel
     {
-        $error = self::rootOf($body)['error'] ?? null;
+        $error = self::decodeRoot($body)['error'] ?? null;
         $fields = \is_array($error) ? $error : [];
 
         return new ProviderErrorIdentifiersModel(
@@ -42,7 +42,7 @@ final class ProviderErrorReason
 
     private static function reasonIn(string $body): ?string
     {
-        $root = self::rootOf($body);
+        $root = self::decodeRoot($body);
         $error = $root['error'] ?? null;
         $reason = $root['detail'] ?? (\is_array($error) ? $error['message'] ?? null : null);
 
@@ -54,7 +54,7 @@ final class ProviderErrorReason
     }
 
     /** @return array<mixed> */
-    private static function rootOf(string $body): array
+    private static function decodeRoot(string $body): array
     {
         $root = json_decode($body, true, flags: \JSON_INVALID_UTF8_SUBSTITUTE);
 

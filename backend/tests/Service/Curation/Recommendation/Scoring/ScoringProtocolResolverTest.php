@@ -28,7 +28,7 @@ final class ScoringProtocolResolverTest extends TestCase
             new ServiceLocator(['system_one' => static fn (): SystemOneProtocol => $systemOne]),
         );
 
-        self::assertSame($systemOne, $resolver->protocolOf(ScoringProtocol::SystemOne));
+        self::assertSame($systemOne, $resolver->selectProtocol(ScoringProtocol::SystemOne));
     }
 
     public function testAProtocolWithoutAnImplementationIsAWiringError(): void
@@ -36,7 +36,7 @@ final class ScoringProtocolResolverTest extends TestCase
         $resolver = new ScoringProtocolResolver(new ServiceLocator([]));
 
         try {
-            $resolver->protocolOf(ScoringProtocol::SystemOne);
+            $resolver->selectProtocol(ScoringProtocol::SystemOne);
             self::fail('A missing protocol must not resolve.');
         } catch (\LogicException $exception) {
             self::assertSame('No scoring protocol is wired for "system_one".', $exception->getMessage());

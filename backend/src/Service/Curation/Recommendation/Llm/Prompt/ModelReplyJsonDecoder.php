@@ -30,7 +30,7 @@ final readonly class ModelReplyJsonDecoder
      *
      * @return list<array<mixed>>
      */
-    public function completeItemsOf(string $content, string $key): array
+    public function decodeCompleteItems(string $content, string $key): array
     {
         $keyAt = strpos($content, '"' . $key . '"');
         if (false === $keyAt) {

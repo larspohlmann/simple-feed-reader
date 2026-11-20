@@ -45,7 +45,7 @@ final readonly class DueRecommendationRunFinder
     private function isDue(RecommendationSettings $row, \DateTimeImmutable $now): bool
     {
         $user = $row->getUser();
-        if (!AiReadiness::of($user->getActiveAiProviderSettings())) {
+        if (!AiReadiness::isReady($user->getActiveAiProviderSettings())) {
             return false;
         }
 

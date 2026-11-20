@@ -62,7 +62,7 @@ final readonly class RecommendationConsolidationParser
             return ConsolidationParseResultModel::unusable();
         }
 
-        $picks = $this->salvager->salvage($this->decoder->completeItemsOf($content, 'recommendations'), $shownIds);
+        $picks = $this->salvager->salvage($this->decoder->decodeCompleteItems($content, 'recommendations'), $shownIds);
 
         if ([] === $picks) {
             return ConsolidationParseResultModel::unusable();

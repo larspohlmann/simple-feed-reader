@@ -28,6 +28,9 @@ final readonly class RecommendationWinnerRanker
 
         usort($pool, static fn (array $left, array $right): int => $right['score'] <=> $left['score']);
 
-        return OneWinnerPerArticle::of($pool, $this->candidateLoader->linesForIds($userId, array_column($pool, 'id')));
+        return OneWinnerPerArticle::filterWinners(
+            $pool,
+            $this->candidateLoader->linesForIds($userId, array_column($pool, 'id')),
+        );
     }
 }

@@ -16,7 +16,7 @@ final class OneWinnerPerArticleTest extends TestCase
         $winners = [$this->winner(1, 90), $this->winner(2, 80), $this->winner(3, 70)];
         $lines = [1 => $this->post(1, 'shared'), 2 => $this->post(2, 'shared'), 3 => $this->post(3, 'other')];
 
-        self::assertSame([1, 3], $this->idsOf(OneWinnerPerArticle::of($winners, $lines)));
+        self::assertSame([1, 3], $this->idsOf(OneWinnerPerArticle::filterWinners($winners, $lines)));
     }
 
     public function testTheOutletArticleBeatsBetterRankedPosts(): void
@@ -29,7 +29,7 @@ final class OneWinnerPerArticleTest extends TestCase
             500 => $this->post(500, 'shared'),
         ];
 
-        self::assertSame([700, 600], $this->idsOf(OneWinnerPerArticle::of($winners, $lines)));
+        self::assertSame([700, 600], $this->idsOf(OneWinnerPerArticle::filterWinners($winners, $lines)));
     }
 
     public function testTheBestRankedOutletWinnerOfAKeyStaysAndTheRestDrop(): void
@@ -41,7 +41,7 @@ final class OneWinnerPerArticleTest extends TestCase
             3 => $this->outletArticle(3, 'shared'),
         ];
 
-        self::assertSame([2], $this->idsOf(OneWinnerPerArticle::of($winners, $lines)));
+        self::assertSame([2], $this->idsOf(OneWinnerPerArticle::filterWinners($winners, $lines)));
     }
 
     public function testWinnersWithoutAnArticleKeyAllStay(): void
@@ -49,7 +49,7 @@ final class OneWinnerPerArticleTest extends TestCase
         $winners = [$this->winner(1, 90), $this->winner(2, 80)];
         $lines = [1 => $this->plainLine(1), 2 => $this->plainLine(2)];
 
-        self::assertSame([1, 2], $this->idsOf(OneWinnerPerArticle::of($winners, $lines)));
+        self::assertSame([1, 2], $this->idsOf(OneWinnerPerArticle::filterWinners($winners, $lines)));
     }
 
     public function testAWinnerWithoutALineStaysUngrouped(): void
@@ -57,7 +57,7 @@ final class OneWinnerPerArticleTest extends TestCase
         $winners = [$this->winner(1, 90), $this->winner(2, 80), $this->winner(3, 70)];
         $lines = [2 => $this->post(2, 'shared'), 3 => $this->post(3, 'shared')];
 
-        self::assertSame([1, 2], $this->idsOf(OneWinnerPerArticle::of($winners, $lines)));
+        self::assertSame([1, 2], $this->idsOf(OneWinnerPerArticle::filterWinners($winners, $lines)));
     }
 
     public function testDifferentArticlesAllStay(): void
@@ -65,7 +65,7 @@ final class OneWinnerPerArticleTest extends TestCase
         $winners = [$this->winner(1, 90), $this->winner(2, 80)];
         $lines = [1 => $this->post(1, 'one'), 2 => $this->outletArticle(2, 'two')];
 
-        self::assertSame($winners, OneWinnerPerArticle::of($winners, $lines));
+        self::assertSame($winners, OneWinnerPerArticle::filterWinners($winners, $lines));
     }
 
     /**

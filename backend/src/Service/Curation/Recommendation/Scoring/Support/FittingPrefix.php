@@ -12,7 +12,7 @@ final class FittingPrefix
      *
      * @param \Closure(string): bool $fits
      */
-    public static function of(string $text, \Closure $fits): string
+    public static function cutToFit(string $text, \Closure $fits): string
     {
         if ($fits($text)) {
             return $text;

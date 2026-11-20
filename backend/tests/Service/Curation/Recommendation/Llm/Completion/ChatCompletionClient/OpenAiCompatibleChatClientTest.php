@@ -764,7 +764,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             throw new TransportException('Connection refused');
         });
 
-        // The exact message: contentOf() raises the same exception type of its own for an empty reader.
+        // The exact message: requireContent() raises the same exception type of its own for an empty reader.
         $this->assertCompletionFailsWith($this->clientUsing($client), 'That address did not answer.');
     }
 

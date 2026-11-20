@@ -20,13 +20,13 @@ final readonly class RecommendationFeedPager
 
     public function page(ForYouFeedQuery $query): RecommendationFeedPageModel
     {
-        $rows = $this->items->listForYou($query, self::cursorOf($query));
+        $rows = $this->items->listForYou($query, self::parseCursor($query));
 
         return new RecommendationFeedPageModel($rows, $this->nextCursorFor($rows, $query->limit));
     }
 
     /** A garbled For You cursor restarts the feed instead of breaking it, unlike EntryCursor. */
-    private static function cursorOf(ForYouFeedQuery $query): ?RecommendationCursor
+    private static function parseCursor(ForYouFeedQuery $query): ?RecommendationCursor
     {
         if (null === $query->cursor || '' === $query->cursor) {
             return null;

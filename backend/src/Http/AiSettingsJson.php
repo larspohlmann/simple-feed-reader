@@ -40,7 +40,7 @@ final readonly class AiSettingsJson
             'batchConcurrency' => $settings->getRunTuning()->batchConcurrency(),
             'slowModel' => $settings->isSlowModel(),
             'maxBatchSize' => $settings->getRunTuning()->maxBatchSize(),
-            'ready' => AiReadiness::of($settings),
+            'ready' => AiReadiness::isReady($settings),
             'active' => $settings->getId() === $activeId,
             'capabilities' => $this->capabilities->from($settings),
         ];

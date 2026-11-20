@@ -12,8 +12,8 @@ final class QuestionIdTest extends TestCase
 {
     public function testAnEntrysQuestionIdNamesThatEntry(): void
     {
-        self::assertSame('entry-731', QuestionId::of(731));
-        self::assertSame(731, QuestionId::entryIdOf('entry-731'));
+        self::assertSame('entry-731', QuestionId::fromEntryId(731));
+        self::assertSame(731, QuestionId::parseEntryId('entry-731'));
     }
 
     /** @return iterable<string, array{string}> */
@@ -28,6 +28,6 @@ final class QuestionIdTest extends TestCase
     #[DataProvider('idsNoQuestionCarries')]
     public function testAnIdNoQuestionCarriesNamesNoEntry(string $questionId): void
     {
-        self::assertNull(QuestionId::entryIdOf($questionId));
+        self::assertNull(QuestionId::parseEntryId($questionId));
     }
 }

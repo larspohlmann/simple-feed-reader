@@ -15,7 +15,7 @@ use App\Service\Curation\Recommendation\Profile\Model\ProfileInputsModel;
  */
 final class ProfileInputFingerprint
 {
-    public static function of(
+    public static function hashInputs(
         ProfileInputsModel $inputs,
         RecommendationHistoryCaps $caps,
         AiProviderSettings $connection,

@@ -23,16 +23,32 @@ final class ProfileInputFingerprintTest extends TestCase
     public function testTheSameInputsGiveTheSameFingerprint(): void
     {
         self::assertSame(
-            ProfileInputFingerprint::of($this->inputs([11], [12], [13]), $this->caps(), $this->connection(5, 'm')),
-            ProfileInputFingerprint::of($this->inputs([11], [12], [13]), $this->caps(), $this->connection(5, 'm')),
+            ProfileInputFingerprint::hashInputs(
+                $this->inputs([11], [12], [13]),
+                $this->caps(),
+                $this->connection(5, 'm'),
+            ),
+            ProfileInputFingerprint::hashInputs(
+                $this->inputs([11], [12], [13]),
+                $this->caps(),
+                $this->connection(5, 'm'),
+            ),
         );
     }
 
     public function testAnEntryMovingFromViewedToKeptChangesIt(): void
     {
         self::assertNotSame(
-            ProfileInputFingerprint::of($this->inputs([11], [12], [13]), $this->caps(), $this->connection(5, 'm')),
-            ProfileInputFingerprint::of($this->inputs([11], [12, 13], []), $this->caps(), $this->connection(5, 'm')),
+            ProfileInputFingerprint::hashInputs(
+                $this->inputs([11], [12], [13]),
+                $this->caps(),
+                $this->connection(5, 'm'),
+            ),
+            ProfileInputFingerprint::hashInputs(
+                $this->inputs([11], [12, 13], []),
+                $this->caps(),
+                $this->connection(5, 'm'),
+            ),
         );
     }
 
@@ -44,16 +60,24 @@ final class ProfileInputFingerprintTest extends TestCase
         );
 
         self::assertNotSame(
-            ProfileInputFingerprint::of($this->inputs([11], [12], [13]), $this->caps(), $this->connection(5, 'm')),
-            ProfileInputFingerprint::of($withShared, $this->caps(), $this->connection(5, 'm')),
+            ProfileInputFingerprint::hashInputs(
+                $this->inputs([11], [12], [13]),
+                $this->caps(),
+                $this->connection(5, 'm'),
+            ),
+            ProfileInputFingerprint::hashInputs($withShared, $this->caps(), $this->connection(5, 'm')),
         );
     }
 
     public function testTheSharedCapChangesIt(): void
     {
         self::assertNotSame(
-            ProfileInputFingerprint::of($this->inputs([11], [12], [13]), $this->caps(), $this->connection(5, 'm')),
-            ProfileInputFingerprint::of(
+            ProfileInputFingerprint::hashInputs(
+                $this->inputs([11], [12], [13]),
+                $this->caps(),
+                $this->connection(5, 'm'),
+            ),
+            ProfileInputFingerprint::hashInputs(
                 $this->inputs([11], [12], [13]),
                 new RecommendationHistoryCaps(40, 40, 80, 41),
                 $this->connection(5, 'm'),
@@ -64,8 +88,12 @@ final class ProfileInputFingerprintTest extends TestCase
     public function testACapChangesIt(): void
     {
         self::assertNotSame(
-            ProfileInputFingerprint::of($this->inputs([11], [12], [13]), $this->caps(), $this->connection(5, 'm')),
-            ProfileInputFingerprint::of(
+            ProfileInputFingerprint::hashInputs(
+                $this->inputs([11], [12], [13]),
+                $this->caps(),
+                $this->connection(5, 'm'),
+            ),
+            ProfileInputFingerprint::hashInputs(
                 $this->inputs([11], [12], [13]),
                 new RecommendationHistoryCaps(40, 41, 80),
                 $this->connection(5, 'm'),
@@ -76,8 +104,12 @@ final class ProfileInputFingerprintTest extends TestCase
     public function testTheFavouritesCapChangesIt(): void
     {
         self::assertNotSame(
-            ProfileInputFingerprint::of($this->inputs([11], [12], [13]), $this->caps(), $this->connection(5, 'm')),
-            ProfileInputFingerprint::of(
+            ProfileInputFingerprint::hashInputs(
+                $this->inputs([11], [12], [13]),
+                $this->caps(),
+                $this->connection(5, 'm'),
+            ),
+            ProfileInputFingerprint::hashInputs(
                 $this->inputs([11], [12], [13]),
                 new RecommendationHistoryCaps(41, 40, 80),
                 $this->connection(5, 'm'),
@@ -97,24 +129,44 @@ final class ProfileInputFingerprintTest extends TestCase
         );
 
         self::assertSame(
-            ProfileInputFingerprint::of($this->inputs([11], [12], [13]), $this->caps(), $this->connection(5, 'm')),
-            ProfileInputFingerprint::of($retitled, $this->caps(), $this->connection(5, 'm')),
+            ProfileInputFingerprint::hashInputs(
+                $this->inputs([11], [12], [13]),
+                $this->caps(),
+                $this->connection(5, 'm'),
+            ),
+            ProfileInputFingerprint::hashInputs($retitled, $this->caps(), $this->connection(5, 'm')),
         );
     }
 
     public function testAnotherModelOnTheSameConnectionChangesIt(): void
     {
         self::assertNotSame(
-            ProfileInputFingerprint::of($this->inputs([11], [12], [13]), $this->caps(), $this->connection(5, 'm')),
-            ProfileInputFingerprint::of($this->inputs([11], [12], [13]), $this->caps(), $this->connection(5, 'm2')),
+            ProfileInputFingerprint::hashInputs(
+                $this->inputs([11], [12], [13]),
+                $this->caps(),
+                $this->connection(5, 'm'),
+            ),
+            ProfileInputFingerprint::hashInputs(
+                $this->inputs([11], [12], [13]),
+                $this->caps(),
+                $this->connection(5, 'm2'),
+            ),
         );
     }
 
     public function testAnotherConnectionWithTheSameModelChangesIt(): void
     {
         self::assertNotSame(
-            ProfileInputFingerprint::of($this->inputs([11], [12], [13]), $this->caps(), $this->connection(5, 'm')),
-            ProfileInputFingerprint::of($this->inputs([11], [12], [13]), $this->caps(), $this->connection(6, 'm')),
+            ProfileInputFingerprint::hashInputs(
+                $this->inputs([11], [12], [13]),
+                $this->caps(),
+                $this->connection(5, 'm'),
+            ),
+            ProfileInputFingerprint::hashInputs(
+                $this->inputs([11], [12], [13]),
+                $this->caps(),
+                $this->connection(6, 'm'),
+            ),
         );
     }
 
@@ -122,7 +174,7 @@ final class ProfileInputFingerprintTest extends TestCase
     {
         self::assertMatchesRegularExpression(
             '/^[0-9a-f]{64}$/',
-            ProfileInputFingerprint::of($this->inputs([], [], []), $this->caps(), $this->connection(5, 'm')),
+            ProfileInputFingerprint::hashInputs($this->inputs([], [], []), $this->caps(), $this->connection(5, 'm')),
         );
     }
 
@@ -151,7 +203,7 @@ final class ProfileInputFingerprintTest extends TestCase
      */
     private function fingerprintWith(array $savedSearchTerms): string
     {
-        return ProfileInputFingerprint::of(
+        return ProfileInputFingerprint::hashInputs(
             $this->inputs([11], [12], [13], $savedSearchTerms),
             $this->caps(),
             $this->connection(5, 'm'),

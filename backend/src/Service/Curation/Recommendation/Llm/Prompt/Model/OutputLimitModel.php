@@ -24,7 +24,7 @@ final readonly class OutputLimitModel
         return null === $this->capTokens || $tokens <= $this->capTokens;
     }
 
-    public static function of(AiProviderSettings $connection): self
+    public static function fromConnection(AiProviderSettings $connection): self
     {
         return new self(Reasoning::preferredBy($connection), $connection->getModelMaxOutputTokens());
     }

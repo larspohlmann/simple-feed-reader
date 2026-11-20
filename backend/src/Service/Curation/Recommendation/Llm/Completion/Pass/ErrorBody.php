@@ -50,7 +50,7 @@ final class ErrorBody
         return RejectingStatus::matches($status)
             ? new ProviderRejectedRequestException(
                 $status,
-                RefusalMessage::of($status, $reason),
+                RefusalMessage::formatMessage($status, $reason),
                 ProviderErrorReason::identifiersIn($this->collected),
             )
             : ProviderUnreachableException::answeredWithStatus($status, $reason);

@@ -55,7 +55,7 @@ final class RecommendationEngineResolverTest extends TestCase
 
     public function testTheScoringKindWritesNoReasonsSendsNoPromptAndReadsOnlyTheBatchConcurrency(): void
     {
-        $capabilities = RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Scoring);
+        $capabilities = RecommendationEngineCapabilitiesModel::fromKind(RecommendationEngineKind::Scoring);
 
         self::assertFalse($capabilities->writesReasons);
         self::assertFalse($capabilities->sendsPrompt);
@@ -72,14 +72,14 @@ final class RecommendationEngineResolverTest extends TestCase
         );
 
         self::assertEquals(
-            RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Scoring),
+            RecommendationEngineCapabilitiesModel::fromKind(RecommendationEngineKind::Scoring),
             $resolver->capabilitiesForAccount($account),
         );
     }
 
     public function testTheLlmKindWritesReasonsSendsAPromptAndReadsEveryTuningFieldInTheirOrder(): void
     {
-        $capabilities = RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Llm);
+        $capabilities = RecommendationEngineCapabilitiesModel::fromKind(RecommendationEngineKind::Llm);
 
         self::assertTrue($capabilities->writesReasons);
         self::assertTrue($capabilities->sendsPrompt);
@@ -105,7 +105,7 @@ final class RecommendationEngineResolverTest extends TestCase
         $resolver = new RecommendationEngineResolver($locator);
 
         self::assertEquals(
-            RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Llm),
+            RecommendationEngineCapabilitiesModel::fromKind(RecommendationEngineKind::Llm),
             $resolver->capabilitiesFor($this->connection(new ModelDescriptor('gpt-4o-mini', null))),
         );
     }
@@ -117,7 +117,7 @@ final class RecommendationEngineResolverTest extends TestCase
         $account = new User('no-connection@example.test', new \DateTimeImmutable('2026-10-02 09:00:00'));
 
         self::assertEquals(
-            RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Llm),
+            RecommendationEngineCapabilitiesModel::fromKind(RecommendationEngineKind::Llm),
             $resolver->capabilitiesForAccount($account),
         );
     }
@@ -127,7 +127,7 @@ final class RecommendationEngineResolverTest extends TestCase
         $engine = ScriptedRecommendationEngine::packing([]);
         $resolver = new RecommendationEngineResolver(new ServiceLocator(['llm' => static fn () => $engine]));
 
-        self::assertSame($engine, $resolver->engineOf(RecommendationEngineKind::Llm));
+        self::assertSame($engine, $resolver->selectEngine(RecommendationEngineKind::Llm));
     }
 
     public function testAKindWithoutAnEngineIsAWiringError(): void
@@ -135,7 +135,7 @@ final class RecommendationEngineResolverTest extends TestCase
         $resolver = new RecommendationEngineResolver(new ServiceLocator([]));
 
         try {
-            $resolver->engineOf(RecommendationEngineKind::Llm);
+            $resolver->selectEngine(RecommendationEngineKind::Llm);
             self::fail('A missing engine must not resolve.');
         } catch (\LogicException $exception) {
             self::assertSame('No recommendation engine is wired for "llm".', $exception->getMessage());

@@ -40,7 +40,7 @@ final readonly class ScoringRecommendationEngine implements RecommendationEngine
 
     public function packBatches(array $candidates, TickContext $tick): array
     {
-        $protocol = $this->protocols->protocolOf($tick->requireScoringProtocol());
+        $protocol = $this->protocols->selectProtocol($tick->requireScoringProtocol());
 
         return $protocol->pack($protocol->budget($tick->requireScoringContextWindow()), $candidates);
     }
@@ -59,13 +59,13 @@ final readonly class ScoringRecommendationEngine implements RecommendationEngine
             $tick,
             fn (array $batches): BatchWaveResultModel => $this->rounds->resolve(
                 $this->wave,
-                $this->waveOf($tick, $batches),
+                $this->buildWave($tick, $batches),
             ),
         );
     }
 
     /** @param list<WaveBatchModel> $batches */
-    private function waveOf(TickContext $tick, array $batches): ScoringWave
+    private function buildWave(TickContext $tick, array $batches): ScoringWave
     {
         $profile = $tick->run->getProfileText()
             ?? throw new \LogicException('A scoring wave runs only once the run holds a profile.');

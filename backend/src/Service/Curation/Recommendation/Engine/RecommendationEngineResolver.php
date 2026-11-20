@@ -31,7 +31,7 @@ final readonly class RecommendationEngineResolver
 
     public function capabilitiesFor(AiProviderSettings $connection): RecommendationEngineCapabilitiesModel
     {
-        return RecommendationEngineCapabilitiesModel::of($this->kindFor($connection));
+        return RecommendationEngineCapabilitiesModel::fromKind($this->kindFor($connection));
     }
 
     /** An account with no active connection reads as the default kind, as a model-less connection does. */
@@ -40,11 +40,11 @@ final readonly class RecommendationEngineResolver
         $connection = $user->getActiveAiProviderSettings();
 
         return null === $connection
-            ? RecommendationEngineCapabilitiesModel::of(self::DEFAULT_KIND)
+            ? RecommendationEngineCapabilitiesModel::fromKind(self::DEFAULT_KIND)
             : $this->capabilitiesFor($connection);
     }
 
-    public function engineOf(RecommendationEngineKind $kind): RecommendationEngineInterface
+    public function selectEngine(RecommendationEngineKind $kind): RecommendationEngineInterface
     {
         try {
             $engine = $this->engines->get($kind->value);

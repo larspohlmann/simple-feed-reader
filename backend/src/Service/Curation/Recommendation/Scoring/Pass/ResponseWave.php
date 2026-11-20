@@ -35,7 +35,7 @@ final class ResponseWave
         $this->heardFrom($response);
     }
 
-    public function positionOf(ResponseInterface $response): int
+    public function readPosition(ResponseInterface $response): int
     {
         return $this->positions[$response];
     }

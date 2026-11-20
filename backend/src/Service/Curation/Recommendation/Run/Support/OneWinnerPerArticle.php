@@ -15,7 +15,7 @@ final class OneWinnerPerArticle
      *
      * @return list<array{id: int, score: int, reason: string}>
      */
-    public static function of(array $ranked, array $linesById): array
+    public static function filterWinners(array $ranked, array $linesById): array
     {
         $chosenByKey = self::chosenByKey($ranked, $linesById);
 

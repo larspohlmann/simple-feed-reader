@@ -30,7 +30,10 @@ final class RecommendationEngineWiringTest extends KernelTestCase
             new \DateTimeImmutable('2026-10-02 09:05:00'),
         );
 
-        self::assertInstanceOf(LlmRecommendationEngine::class, $resolver->engineOf($resolver->kindFor($connection)));
+        self::assertInstanceOf(
+            LlmRecommendationEngine::class,
+            $resolver->selectEngine($resolver->kindFor($connection)),
+        );
     }
 
     public function testTheContainerResolvesAScoringConnectionToTheScoringEngine(): void
@@ -48,7 +51,7 @@ final class RecommendationEngineWiringTest extends KernelTestCase
 
         self::assertInstanceOf(
             ScoringRecommendationEngine::class,
-            $resolver->engineOf($resolver->kindFor($connection)),
+            $resolver->selectEngine($resolver->kindFor($connection)),
         );
     }
 
@@ -60,7 +63,7 @@ final class RecommendationEngineWiringTest extends KernelTestCase
 
         $wired = [];
         foreach (RecommendationEngineKind::cases() as $kind) {
-            $engine = $resolver->engineOf($kind);
+            $engine = $resolver->selectEngine($kind);
             $wired[$kind->value] = $engine::class;
         }
 

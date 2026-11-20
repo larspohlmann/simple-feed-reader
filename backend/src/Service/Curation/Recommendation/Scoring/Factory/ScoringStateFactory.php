@@ -17,10 +17,11 @@ final readonly class ScoringStateFactory
     /** @return array{profile: string, guidance?: string, favorites?: non-empty-list<array<string, string>>} */
     public function create(ScoringReaderModel $reader, int $tokenBudget): array
     {
-        $fits = static fn (array $state): bool => TokenEstimate::of(CompactJson::encode($state)) <= $tokenBudget;
+        $fits = static fn (array $state): bool =>
+            TokenEstimate::estimateTokens(CompactJson::encode($state)) <= $tokenBudget;
         $guidanceState = self::guidanceState($reader->guidance, $fits);
         $state = [
-            'profile' => FittingPrefix::of(
+            'profile' => FittingPrefix::cutToFit(
                 mb_scrub($reader->profile, 'UTF-8'),
                 static fn (string $prefix): bool => $fits(['profile' => $prefix] + $guidanceState),
             ),
@@ -42,7 +43,7 @@ final readonly class ScoringStateFactory
             return [];
         }
 
-        return ['guidance' => FittingPrefix::of(
+        return ['guidance' => FittingPrefix::cutToFit(
             mb_scrub($guidance, 'UTF-8'),
             static fn (string $prefix): bool => $fits(['guidance' => $prefix] + ['profile' => '']),
         )];
@@ -58,7 +59,7 @@ final readonly class ScoringStateFactory
     private static function fittingFavorites(array $favorites, array $others, \Closure $fits): array
     {
         $fitting = [];
-        foreach (array_map(ScoringArticle::of(...), $favorites) as $article) {
+        foreach (array_map(ScoringArticle::buildFields(...), $favorites) as $article) {
             $candidate = [...$fitting, $article];
             if (!$fits($others + ['favorites' => $candidate])) {
                 break;

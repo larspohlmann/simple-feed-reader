@@ -9,7 +9,7 @@ final class ScaledScore
 {
     private const int SCALE = 1000;
 
-    public static function of(float $value): int
+    public static function fromValue(float $value): int
     {
         return max(0, min(self::SCALE, (int) round($value * self::SCALE)));
     }

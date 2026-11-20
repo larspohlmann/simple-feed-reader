@@ -26,22 +26,22 @@ final readonly class CompletionBodyDecoder
         $choice = $this->firstChoiceIn($root);
 
         return [
-            'content' => $this->contentOf($choice, 'message'),
-            'reasoning' => $this->reasoningOf($choice, 'message'),
-            'finishReason' => $this->finishReasonOf($choice),
+            'content' => $this->readContent($choice, 'message'),
+            'reasoning' => $this->readReasoning($choice, 'message'),
+            'finishReason' => $this->readFinishReason($choice),
             'usage' => $this->usageIn($root),
         ];
     }
 
     public function deltaContent(string $payload): ?string
     {
-        return $this->contentOf($this->firstChoice($payload), 'delta');
+        return $this->readContent($this->firstChoice($payload), 'delta');
     }
 
     /** Why generation stopped (`length`: `max_tokens` cut it; `stop`: a natural end); null while still streaming. */
     public function finishReason(string $json): ?string
     {
-        return $this->finishReasonOf($this->firstChoice($json));
+        return $this->readFinishReason($this->firstChoice($json));
     }
 
     /**
@@ -56,9 +56,9 @@ final readonly class CompletionBodyDecoder
         $choice = $this->firstChoiceIn($root);
 
         return [
-            'content' => $this->contentOf($choice, 'delta'),
-            'reasoning' => $this->reasoningOf($choice, 'delta'),
-            'finishReason' => $this->finishReasonOf($choice),
+            'content' => $this->readContent($choice, 'delta'),
+            'reasoning' => $this->readReasoning($choice, 'delta'),
+            'finishReason' => $this->readFinishReason($choice),
             'usage' => $this->usageIn($root),
         ];
     }
@@ -105,9 +105,9 @@ final readonly class CompletionBodyDecoder
      *
      * @param array<mixed>|null $choice
      */
-    private function contentOf(?array $choice, string $choiceKey): ?string
+    private function readContent(?array $choice, string $choiceKey): ?string
     {
-        return $this->stringField($this->answerOf($choice, $choiceKey), 'content');
+        return $this->stringField($this->readAnswer($choice, $choiceKey), 'content');
     }
 
     /**
@@ -117,9 +117,9 @@ final readonly class CompletionBodyDecoder
      *
      * @param array<mixed>|null $choice
      */
-    private function reasoningOf(?array $choice, string $choiceKey): ?string
+    private function readReasoning(?array $choice, string $choiceKey): ?string
     {
-        $answer = $this->answerOf($choice, $choiceKey);
+        $answer = $this->readAnswer($choice, $choiceKey);
 
         return $this->stringField($answer, 'reasoning_content') ?? $this->stringField($answer, 'reasoning');
     }
@@ -132,7 +132,7 @@ final readonly class CompletionBodyDecoder
      *
      * @return array<mixed>|null
      */
-    private function answerOf(?array $choice, string $choiceKey): ?array
+    private function readAnswer(?array $choice, string $choiceKey): ?array
     {
         $answer = null === $choice ? null : ($choice[$choiceKey] ?? null);
 
@@ -153,7 +153,7 @@ final readonly class CompletionBodyDecoder
     }
 
     /** @param array<mixed>|null $choice */
-    private function finishReasonOf(?array $choice): ?string
+    private function readFinishReason(?array $choice): ?string
     {
         $reason = null === $choice ? null : ($choice['finish_reason'] ?? null);
 
@@ -174,9 +174,9 @@ final readonly class CompletionBodyDecoder
         return new ProviderCallUsageModel(
             $this->intField($usage, 'prompt_tokens'),
             $this->intField($usage, 'completion_tokens'),
-            $this->intField($this->detailsOf($usage, 'completion_tokens_details'), 'reasoning_tokens'),
-            $this->intField($this->detailsOf($usage, 'prompt_tokens_details'), 'cached_tokens'),
-            ReportedCost::nanoCreditsOf($usage['cost'] ?? null),
+            $this->intField($this->readDetails($usage, 'completion_tokens_details'), 'reasoning_tokens'),
+            $this->intField($this->readDetails($usage, 'prompt_tokens_details'), 'cached_tokens'),
+            ReportedCost::parseNanoCredits($usage['cost'] ?? null),
         );
     }
 
@@ -189,7 +189,7 @@ final readonly class CompletionBodyDecoder
      *
      * @return array<mixed>
      */
-    private function detailsOf(array $usage, string $key): array
+    private function readDetails(array $usage, string $key): array
     {
         $details = $usage[$key] ?? null;
 

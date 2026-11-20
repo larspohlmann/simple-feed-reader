@@ -138,7 +138,7 @@ final class ModelReplyJsonDecoderTest extends TestCase
     {
         self::assertSame(
             [['id' => 1, 'reason' => 'scored 10} points'], ['id' => 2, 'reason' => 'b']],
-            $this->decoder->completeItemsOf(
+            $this->decoder->decodeCompleteItems(
                 '{"recommendations": [{"id": 1, "reason": "scored 10} points"}, {"id": 2, "reason": "b"}, '
                 . '{"id": 3, "reason": "cut o',
                 'recommendations',
@@ -150,7 +150,7 @@ final class ModelReplyJsonDecoderTest extends TestCase
     {
         self::assertSame(
             [['id' => 1]],
-            $this->decoder->completeItemsOf('{"recommendations":[{"id":1},{"id":2,"sc', 'recommendations'),
+            $this->decoder->decodeCompleteItems('{"recommendations":[{"id":1},{"id":2,"sc', 'recommendations'),
         );
     }
 
@@ -158,7 +158,7 @@ final class ModelReplyJsonDecoderTest extends TestCase
     {
         self::assertSame(
             [['id' => 1], ['id' => 2]],
-            $this->decoder->completeItemsOf(
+            $this->decoder->decodeCompleteItems(
                 '{"recommendations": [{"id": 1}, {id: 7}, {"id": 2}, {"id"',
                 'recommendations',
             ),
@@ -170,7 +170,7 @@ final class ModelReplyJsonDecoderTest extends TestCase
     {
         self::assertSame(
             [['id' => 1]],
-            $this->decoder->completeItemsOf(
+            $this->decoder->decodeCompleteItems(
                 'Plan: "recommendations first [a], then recommendations" [b].' . "\n"
                 . '{"recommendations": [{"id": 1}, {"id": 2',
                 'recommendations',
@@ -180,7 +180,7 @@ final class ModelReplyJsonDecoderTest extends TestCase
 
     public function testAReplyThatNeverOpenedTheArrayHasNoItems(): void
     {
-        self::assertSame([], $this->decoder->completeItemsOf('{"recommendations": ', 'recommendations'));
-        self::assertSame([], $this->decoder->completeItemsOf('{"profile": "x"}', 'recommendations'));
+        self::assertSame([], $this->decoder->decodeCompleteItems('{"recommendations": ', 'recommendations'));
+        self::assertSame([], $this->decoder->decodeCompleteItems('{"profile": "x"}', 'recommendations'));
     }
 }

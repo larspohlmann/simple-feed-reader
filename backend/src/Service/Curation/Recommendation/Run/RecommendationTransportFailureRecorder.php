@@ -31,7 +31,10 @@ final readonly class RecommendationTransportFailureRecorder
         $run->getRunningCallAttempts()->recordTransportFailure();
         if ($run->hasExhaustedTransportRetries()) {
             // The call's own detail, not a flat "unreachable", which hid a fixable 400 behind a network story (#329).
-            $run->fail(ProviderFailedMessage::of($settings->getBaseUrl(), $failureDetail), $this->clock->now());
+            $run->fail(
+                ProviderFailedMessage::formatMessage($settings->getBaseUrl(), $failureDetail),
+                $this->clock->now(),
+            );
         }
         $this->entityManager->flush();
     }

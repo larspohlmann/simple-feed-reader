@@ -19,7 +19,7 @@ final readonly class ScoringProtocolResolver
     }
 
     /** @return ScoringProtocolInterface<object> */
-    public function protocolOf(ScoringProtocol $protocol): ScoringProtocolInterface
+    public function selectProtocol(ScoringProtocol $protocol): ScoringProtocolInterface
     {
         try {
             $implementation = $this->protocols->get($protocol->value);

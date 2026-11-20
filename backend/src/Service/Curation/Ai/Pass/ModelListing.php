@@ -26,13 +26,13 @@ final class ModelListing
 
     public function add(ModelCatalogInterface $catalog): void
     {
-        $this->byId += $this->answerOrRecordedFailureOf($catalog);
+        $this->byId += $this->listModelsOrRecordFailure($catalog);
     }
 
     /** The catalog's description wins an id this listing holds already. */
     public function addOverriding(ModelCatalogInterface $catalog): void
     {
-        $this->byId = $this->answerOrRecordedFailureOf($catalog) + $this->byId;
+        $this->byId = $this->listModelsOrRecordFailure($catalog) + $this->byId;
     }
 
     public function offers(ScoringProtocol $protocol): bool
@@ -60,7 +60,7 @@ final class ModelListing
     }
 
     /** @return array<array-key, ModelDescriptor> the catalog's first description per id; none when it failed */
-    private function answerOrRecordedFailureOf(ModelCatalogInterface $catalog): array
+    private function listModelsOrRecordFailure(ModelCatalogInterface $catalog): array
     {
         try {
             $byId = [];

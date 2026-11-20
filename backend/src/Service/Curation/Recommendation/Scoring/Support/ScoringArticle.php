@@ -15,7 +15,7 @@ final class ScoringArticle
     private const int SHARED_ARTICLE_CHARACTERS = 300;
 
     /** @return array<string, string> */
-    public static function of(ArticleLineModel $line): array
+    public static function buildFields(ArticleLineModel $line): array
     {
         $sharedArticle = self::sharedArticle($line);
         $article = [
