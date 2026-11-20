@@ -28,7 +28,9 @@ final readonly class RecommendationCandidateLoader
      */
     public function load(int $userId, CandidatePoolRequestModel $request): array
     {
-        $lines = $this->articleLines->of($this->candidates->newestPool($userId, $request->since, $request->poolSize));
+        $lines = $this->articleLines->loadLines(
+            $this->candidates->newestPool($userId, $request->since, $request->poolSize),
+        );
 
         /** @var list<ArticleLineModel> $shuffled shuffleArray() has no generic stub, so it widens to mixed */
         $shuffled = new Randomizer(new Mt19937($request->orderSeed))->shuffleArray($lines);
@@ -48,7 +50,7 @@ final readonly class RecommendationCandidateLoader
         }
 
         $linesById = [];
-        foreach ($this->articleLines->of($this->candidates->forIds($userId, $entryIds)) as $line) {
+        foreach ($this->articleLines->loadLines($this->candidates->forIds($userId, $entryIds)) as $line) {
             $linesById[$line->entryId] = $line;
         }
 

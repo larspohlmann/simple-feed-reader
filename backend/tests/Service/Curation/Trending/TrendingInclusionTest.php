@@ -235,7 +235,7 @@ final class TrendingInclusionTest extends DbTestCase
     private function rankedDay(): array
     {
         return $this->storyRepository()->rankedForUser(
-            $this->readerWindows()->of($this->reader->requireId(), TrendingWindow::Day),
+            $this->readerWindows()->loadWindow($this->reader->requireId(), TrendingWindow::Day),
             TrendingStories::MAX_STORIES,
         );
     }

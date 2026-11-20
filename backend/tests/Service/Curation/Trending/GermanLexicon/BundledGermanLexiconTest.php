@@ -26,8 +26,8 @@ final class BundledGermanLexiconTest extends TestCase
 
     public function testGivesTheKindAndFrequencyClassOfAKnownForm(): void
     {
-        $police = $this->fixtureLexicon()->entryOf('polizei');
-        $large = $this->fixtureLexicon()->entryOf('groß');
+        $police = $this->fixtureLexicon()->findEntry('polizei');
+        $large = $this->fixtureLexicon()->findEntry('groß');
 
         $this->assertNotNull($police);
         $this->assertTrue($police->isNoun());
@@ -39,20 +39,20 @@ final class BundledGermanLexiconTest extends TestCase
 
     public function testGivesNoEntryForAnUnknownForm(): void
     {
-        $this->assertNull($this->fixtureLexicon()->entryOf('nirgendwo'));
+        $this->assertNull($this->fixtureLexicon()->findEntry('nirgendwo'));
     }
 
     public function testLoadsOnFirstUseAndAgainAfterReset(): void
     {
         $this->writeLexicon('eins');
         $lexicon = new BundledGermanLexicon($this->temporaryDirectory);
-        $this->assertNotNull($lexicon->entryOf('eins'));
+        $this->assertNotNull($lexicon->findEntry('eins'));
 
         $this->writeLexicon('zwei');
-        $this->assertNull($lexicon->entryOf('zwei'));
+        $this->assertNull($lexicon->findEntry('zwei'));
 
         $lexicon->reset();
-        $this->assertNotNull($lexicon->entryOf('zwei'));
+        $this->assertNotNull($lexicon->findEntry('zwei'));
     }
 
     public function testRejectsAMissingTextFile(): void
@@ -62,7 +62,7 @@ final class BundledGermanLexiconTest extends TestCase
 
         $this->expectException(\UnexpectedValueException::class);
 
-        @(new BundledGermanLexicon($this->temporaryDirectory))->entryOf('eins');
+        @(new BundledGermanLexicon($this->temporaryDirectory))->findEntry('eins');
     }
 
     private function fixtureLexicon(): BundledGermanLexicon

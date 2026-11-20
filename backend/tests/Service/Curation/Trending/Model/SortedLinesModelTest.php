@@ -30,7 +30,7 @@ final class SortedLinesModelTest extends TestCase
     #[DataProvider('lookups')]
     public function testFindsTheValueOfAKey(string $key, ?string $expected): void
     {
-        $this->assertSame($expected, (new SortedLinesModel(self::LINES))->valueOf($key));
+        $this->assertSame($expected, (new SortedLinesModel(self::LINES))->findValue($key));
     }
 
     public function testFindsEveryLineOfALargerText(): void
@@ -42,13 +42,13 @@ final class SortedLinesModelTest extends TestCase
         $model = new SortedLinesModel($lines);
 
         for ($number = 0; $number < 500; ++$number) {
-            $this->assertSame((string) $number, $model->valueOf(sprintf('key%04d', $number * 2)));
-            $this->assertNull($model->valueOf(sprintf('key%04d', $number * 2 + 1)));
+            $this->assertSame((string) $number, $model->findValue(sprintf('key%04d', $number * 2)));
+            $this->assertNull($model->findValue(sprintf('key%04d', $number * 2 + 1)));
         }
     }
 
     public function testFindsNothingInAnEmptyText(): void
     {
-        $this->assertNull((new SortedLinesModel(''))->valueOf('ab'));
+        $this->assertNull((new SortedLinesModel(''))->findValue('ab'));
     }
 }

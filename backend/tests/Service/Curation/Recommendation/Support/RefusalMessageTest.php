@@ -13,12 +13,12 @@ final class RefusalMessageTest extends TestCase
     {
         self::assertSame(
             'That provider refused the request (status 422): state too long',
-            RefusalMessage::of(422, 'state too long'),
+            RefusalMessage::formatMessage(422, 'state too long'),
         );
     }
 
     public function testWithoutAReasonItStillNamesTheStatus(): void
     {
-        self::assertSame('That provider refused the request (status 404).', RefusalMessage::of(404, null));
+        self::assertSame('That provider refused the request (status 404).', RefusalMessage::formatMessage(404, null));
     }
 }

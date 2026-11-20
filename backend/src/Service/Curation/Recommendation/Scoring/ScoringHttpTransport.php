@@ -119,7 +119,7 @@ final readonly class ScoringHttpTransport
                 return null;
             }
 
-            return $this->outcomeOf($wave, $response);
+            return $this->buildOutcome($wave, $response);
         } catch (ExceptionInterface $exception) {
             $response->cancel();
 
@@ -127,7 +127,7 @@ final readonly class ScoringHttpTransport
         }
     }
 
-    private function outcomeOf(ResponseWave $wave, ResponseInterface $response): ScoringOutcomeModel
+    private function buildOutcome(ResponseWave $wave, ResponseInterface $response): ScoringOutcomeModel
     {
         $status = $response->getStatusCode();
         $body = $response->getContent(false);
@@ -141,13 +141,13 @@ final readonly class ScoringHttpTransport
             ),
             RejectingStatus::matches($status) => ScoringOutcomeModel::failed(new ProviderRejectedRequestException(
                 $status,
-                RefusalMessage::of($status, ProviderErrorReason::in($body, $wave->credentials)),
+                RefusalMessage::formatMessage($status, ProviderErrorReason::in($body, $wave->credentials)),
             )),
             $status >= Response::HTTP_MULTIPLE_CHOICES => ScoringOutcomeModel::failed(
                 ProviderUnreachableException::answeredWithStatus($status),
             ),
             default => ScoringOutcomeModel::answered(
-                $wave->endpoint->decode($body, $response, $wave->positionOf($response)),
+                $wave->endpoint->decode($body, $response, $wave->readPosition($response)),
             ),
         };
     }

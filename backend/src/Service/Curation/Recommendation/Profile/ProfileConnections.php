@@ -41,7 +41,7 @@ final readonly class ProfileConnections
 
     public function canBuildProfiles(AiProviderSettings $connection): bool
     {
-        return AiReadiness::of($connection)
+        return AiReadiness::isReady($connection)
             && RecommendationProfileSource::Own === $this->engines->capabilitiesFor($connection)->profileSource;
     }
 

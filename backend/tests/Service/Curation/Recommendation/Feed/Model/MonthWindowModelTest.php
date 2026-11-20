@@ -15,7 +15,7 @@ final class MonthWindowModelTest extends TestCase
 {
     public function testSpansTheMonthInUtcWhenTheViewerIsInUtc(): void
     {
-        $window = MonthWindowModel::of('2026-08', ViewerTimeZoneModel::fromIdentifier('UTC'));
+        $window = MonthWindowModel::fromMonth('2026-08', ViewerTimeZoneModel::fromIdentifier('UTC'));
 
         self::assertSame('2026-08', $window->month);
         self::assertSame('2026-08-01 00:00:00', $window->startUtc->format('Y-m-d H:i:s'));
@@ -28,7 +28,7 @@ final class MonthWindowModelTest extends TestCase
      */
     public function testShiftsTheBoundariesIntoUtcForAViewerAheadOfIt(): void
     {
-        $window = MonthWindowModel::of('2026-08', ViewerTimeZoneModel::fromIdentifier('Europe/Berlin'));
+        $window = MonthWindowModel::fromMonth('2026-08', ViewerTimeZoneModel::fromIdentifier('Europe/Berlin'));
 
         self::assertSame('2026-07-31 22:00:00', $window->startUtc->format('Y-m-d H:i:s'));
         self::assertSame('2026-08-31 22:00:00', $window->endUtc->format('Y-m-d H:i:s'));
@@ -40,7 +40,7 @@ final class MonthWindowModelTest extends TestCase
      */
     public function testShiftsTheBoundariesTheOtherWayForAViewerBehindUtc(): void
     {
-        $window = MonthWindowModel::of('2026-08', ViewerTimeZoneModel::fromIdentifier('America/New_York'));
+        $window = MonthWindowModel::fromMonth('2026-08', ViewerTimeZoneModel::fromIdentifier('America/New_York'));
 
         self::assertSame('2026-08-01 04:00:00', $window->startUtc->format('Y-m-d H:i:s'));
         self::assertSame('2026-09-01 04:00:00', $window->endUtc->format('Y-m-d H:i:s'));
@@ -50,7 +50,7 @@ final class MonthWindowModelTest extends TestCase
      *  local midnight at both ends rather than drifting an hour. */
     public function testKeepsLocalMidnightAcrossADaylightSavingChange(): void
     {
-        $window = MonthWindowModel::of('2026-10', ViewerTimeZoneModel::fromIdentifier('Europe/Berlin'));
+        $window = MonthWindowModel::fromMonth('2026-10', ViewerTimeZoneModel::fromIdentifier('Europe/Berlin'));
 
         self::assertSame('2026-09-30 22:00:00', $window->startUtc->format('Y-m-d H:i:s'));
         self::assertSame('2026-10-31 23:00:00', $window->endUtc->format('Y-m-d H:i:s'));
@@ -58,14 +58,14 @@ final class MonthWindowModelTest extends TestCase
 
     public function testSpansDecemberIntoTheFollowingJanuary(): void
     {
-        $window = MonthWindowModel::of('2026-12', ViewerTimeZoneModel::fromIdentifier('UTC'));
+        $window = MonthWindowModel::fromMonth('2026-12', ViewerTimeZoneModel::fromIdentifier('UTC'));
 
         self::assertSame('2027-01-01 00:00:00', $window->endUtc->format('Y-m-d H:i:s'));
     }
 
     public function testBothBoundariesAreExpressedInUtc(): void
     {
-        $window = MonthWindowModel::of('2026-08', ViewerTimeZoneModel::fromIdentifier('Europe/Berlin'));
+        $window = MonthWindowModel::fromMonth('2026-08', ViewerTimeZoneModel::fromIdentifier('Europe/Berlin'));
 
         self::assertSame('UTC', $window->startUtc->getTimezone()->getName());
         self::assertSame('UTC', $window->endUtc->getTimezone()->getName());
@@ -75,20 +75,20 @@ final class MonthWindowModelTest extends TestCase
     {
         $this->expectException(UnknownHistoryMonthException::class);
 
-        MonthWindowModel::of('2026-13', ViewerTimeZoneModel::fromIdentifier('UTC'));
+        MonthWindowModel::fromMonth('2026-13', ViewerTimeZoneModel::fromIdentifier('UTC'));
     }
 
     public function testRefusesAMonthNumberOfZero(): void
     {
         $this->expectException(UnknownHistoryMonthException::class);
 
-        MonthWindowModel::of('2026-00', ViewerTimeZoneModel::fromIdentifier('UTC'));
+        MonthWindowModel::fromMonth('2026-00', ViewerTimeZoneModel::fromIdentifier('UTC'));
     }
 
     public function testRefusesSomethingThatIsNotAMonthAtAll(): void
     {
         $this->expectException(UnknownHistoryMonthException::class);
 
-        MonthWindowModel::of('August', ViewerTimeZoneModel::fromIdentifier('UTC'));
+        MonthWindowModel::fromMonth('August', ViewerTimeZoneModel::fromIdentifier('UTC'));
     }
 }

@@ -25,6 +25,6 @@ final class ArticleSiteTest extends TestCase
     #[DataProvider('urls')]
     public function testTheSiteIsTheHostWithoutALeadingWww(?string $url, ?string $site): void
     {
-        self::assertSame($site, ArticleSite::of($url));
+        self::assertSame($site, ArticleSite::fromUrl($url));
     }
 }

@@ -22,16 +22,16 @@ final readonly class GermanCompoundSplitter
     }
 
     /** @return list<string> the lexicon forms of the word's parts, or none when the word is no compound */
-    public function partsOf(string $word): array
+    public function splitParts(string $word): array
     {
         if (mb_strlen($word) < 2 * self::MIN_PART_LENGTH) {
             return [];
         }
-        $whole = $this->lexicon->entryOf($word);
+        $whole = $this->lexicon->findEntry($word);
         if (null === $whole) {
-            return $this->bestSplitOf($word, self::MAX_PARTS_OF_AN_UNKNOWN_WORD)?->parts() ?? [];
+            return $this->findBestSplit($word, self::MAX_PARTS_OF_AN_UNKNOWN_WORD)?->parts() ?? [];
         }
-        $split = $this->bestSplitOf($word, self::MAX_PARTS);
+        $split = $this->findBestSplit($word, self::MAX_PARTS);
         if (null === $split || $this->staysWhole($whole, $split)) {
             return [];
         }
@@ -39,7 +39,7 @@ final readonly class GermanCompoundSplitter
         return $split->parts();
     }
 
-    private function bestSplitOf(string $word, int $maxParts): ?CompoundSplitModel
+    private function findBestSplit(string $word, int $maxParts): ?CompoundSplitModel
     {
         return (new CompoundSplitSearch($this->lexicon, $word, $maxParts))->bestSplit();
     }

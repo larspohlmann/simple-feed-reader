@@ -22,7 +22,7 @@ final readonly class ReaderWindows
     ) {
     }
 
-    public function of(int $userId, TrendingWindow $window): ReaderWindowModel
+    public function loadWindow(int $userId, TrendingWindow $window): ReaderWindowModel
     {
         [$reader] = $this->cut($userId, $window);
 
@@ -48,7 +48,7 @@ final readonly class ReaderWindows
     /** @return array{ReaderWindowModel, list<RankedStoryModel>} */
     private function cut(int $userId, TrendingWindow $window): array
     {
-        $leftOut = $this->storyIdsLeftOutOf($userId, $window);
+        $leftOut = $this->collectLeftOutStoryIds($userId, $window);
         $atMultipleSources = new ReaderWindowModel($userId, $window, TrendingWindow::MULTIPLE_SOURCES, $leftOut);
         $widest = $this->stories->rankedForUser($atMultipleSources, TrendingStories::MAX_STORIES);
         $minimum = $this->relaxedMinimum($atMultipleSources, $widest);
@@ -75,10 +75,12 @@ final readonly class ReaderWindows
     }
 
     /** @return list<int> */
-    private function storyIdsLeftOutOf(int $userId, TrendingWindow $window): array
+    private function collectLeftOutStoryIds(int $userId, TrendingWindow $window): array
     {
         return array_merge([], ...array_map(
-            fn (TrendingWindow $shorter): array => RankedStoryModel::storyIdsOf($this->shownStories($userId, $shorter)),
+            fn (TrendingWindow $shorter): array => RankedStoryModel::collectStoryIds(
+                $this->shownStories($userId, $shorter),
+            ),
             $window->excludedStoryWindows(),
         ));
     }

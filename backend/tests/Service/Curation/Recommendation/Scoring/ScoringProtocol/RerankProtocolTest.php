@@ -59,7 +59,7 @@ final class RerankProtocolTest extends TestCase
         $worded = $protocol->word($request);
 
         self::assertEquals(self::requestFactory()->create($request), $worded);
-        self::assertSame(PrettyJson::of($worded->payload()), $protocol->renderedRequest($worded));
+        self::assertSame(PrettyJson::encode($worded->payload()), $protocol->renderedRequest($worded));
     }
 
     public function testEveryRequestIsAskedAsItsRerankRequestAndAnsweredInItsPlace(): void

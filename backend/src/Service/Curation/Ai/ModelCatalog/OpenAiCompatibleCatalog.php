@@ -134,7 +134,7 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
                 continue;
             }
             $outputs = self::outputModalities($entry);
-            $protocol = self::scoringProtocolOf($outputs);
+            $protocol = self::findScoringProtocol($outputs);
             $window = self::reportedContextWindow($entry);
             if (self::isTextModel($outputs) || self::isBudgetableScoringModel($protocol, $window)) {
                 yield new ModelDescriptor($entry['id'], $window, $protocol, self::reportedMaxOutputTokens($entry));
@@ -158,7 +158,7 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
     }
 
     /** @param array<mixed>|null $outputs */
-    private static function scoringProtocolOf(?array $outputs): ?ScoringProtocol
+    private static function findScoringProtocol(?array $outputs): ?ScoringProtocol
     {
         foreach (self::SCORING_OUTPUTS as $output => $protocol) {
             if ([$output] === $outputs) {

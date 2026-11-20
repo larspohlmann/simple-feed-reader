@@ -58,7 +58,8 @@ final class SystemOneProtocolTest extends TestCase
         foreach ($batches as $batch) {
             $tokens = 0;
             foreach ($batch as $entryId) {
-                $tokens += TokenEstimate::of(CompactJson::encode($factory->question($candidates[$entryId - 1])));
+                $question = $factory->question($candidates[$entryId - 1]);
+                $tokens += TokenEstimate::estimateTokens(CompactJson::encode($question));
             }
             self::assertLessThanOrEqual(20_400, $tokens);
         }
@@ -72,7 +73,7 @@ final class SystemOneProtocolTest extends TestCase
         $worded = $protocol->word($request);
 
         self::assertEquals(self::requestFactory()->create($request), $worded);
-        self::assertSame(PrettyJson::of($worded->payload()), $protocol->renderedRequest($worded));
+        self::assertSame(PrettyJson::encode($worded->payload()), $protocol->renderedRequest($worded));
     }
 
     public function testEveryRequestIsAskedAsItsSystemOneRequestAndAnsweredInItsPlace(): void

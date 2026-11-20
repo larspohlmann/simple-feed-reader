@@ -79,7 +79,7 @@ final class CompoundPartsTest extends TestCase
 
         self::assertSame(
             [5 => [[self::POLICE_OPERATION => 1.0], []], 10 => [[self::POLICE_OPERATION => 1.0], []]],
-            $this->compoundParts->partLinksOf(self::POLICE, 20, [5 => 1.0, 10 => 0.5]),
+            $this->compoundParts->buildPartLinks(self::POLICE, 20, [5 => 1.0, 10 => 0.5]),
         );
     }
 
@@ -178,6 +178,6 @@ final class CompoundPartsTest extends TestCase
     /** @return array<int, array{}|array{array<int, float>, array<int, float>}> */
     private function linksOf(int $stemId, int $entryId): array
     {
-        return $this->compoundParts->partLinksOf($stemId, $entryId, [10 => 1.0]);
+        return $this->compoundParts->buildPartLinks($stemId, $entryId, [10 => 1.0]);
     }
 }

@@ -44,7 +44,7 @@ final readonly class RecommendationRunHistoryController
     {
         return new JsonResponse(RecommendationRunHistoryJson::monthPage($this->history->month(
             $user,
-            MonthWindowModel::of($month, ViewerTimeZoneModel::fromIdentifier($request->query->get('tz'))),
+            MonthWindowModel::fromMonth($month, ViewerTimeZoneModel::fromIdentifier($request->query->get('tz'))),
             $request->query->getInt('before') ?: null,
         )));
     }

@@ -20,7 +20,7 @@ final readonly class ScoreParser
             if (!self::isWithinUnitInterval($score)) {
                 return ScoreParseResultModel::unusable();
             }
-            $winners[] = ['id' => $entryId, 'score' => ScaledScore::of($score), 'reason' => ''];
+            $winners[] = ['id' => $entryId, 'score' => ScaledScore::fromValue($score), 'reason' => ''];
         }
 
         return ScoreParseResultModel::usable($winners);

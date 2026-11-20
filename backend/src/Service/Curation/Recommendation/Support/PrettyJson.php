@@ -6,7 +6,7 @@ namespace App\Service\Curation\Recommendation\Support;
 
 final class PrettyJson
 {
-    public static function of(mixed $value): string
+    public static function encode(mixed $value): string
     {
         return json_encode(
             $value,

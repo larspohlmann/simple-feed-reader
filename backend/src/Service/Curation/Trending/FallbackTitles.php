@@ -48,7 +48,7 @@ final readonly class FallbackTitles
             static fn (StoryAssignmentModel $assignment): bool => $assignment->storyId === null
                 || !$keepsItsFallback($assignment, $storedById[$assignment->storyId]),
         );
-        $titles = $this->titlesOf($run, $due, $storedById);
+        $titles = $this->resolveTitles($run, $due, $storedById);
         $assignments = array_map(
             static fn (StoryAssignmentModel $assignment, int $index): StoryAssignmentModel
                 => isset($titles[$index]) ? $assignment->titled($titles[$index]) : $assignment,
@@ -65,19 +65,19 @@ final readonly class FallbackTitles
      *
      * @return array<int, FallbackTitleModel> by the assignment's index in the match
      */
-    private function titlesOf(TrendingRun $run, array $due, array $storedById): array
+    private function resolveTitles(TrendingRun $run, array $due, array $storedById): array
     {
-        $linkTitles = $this->windowEntries->findLinkTitles(self::cardLinkIdsOf($due));
+        $linkTitles = $this->windowEntries->findLinkTitles(self::collectCardLinkIds($due));
         $titles = [];
         $pools = [];
         foreach ($due as $index => $assignment) {
-            $cardTitle = self::cardTitleOf($run, $assignment->group, $linkTitles);
+            $cardTitle = self::pickCardTitle($run, $assignment->group, $linkTitles);
             if ($cardTitle !== null) {
                 $titles[$index] = $cardTitle;
                 continue;
             }
             $pools[$index] = new HeadlinePoolModel(
-                self::candidatesOf($run, $assignment->group),
+                self::filterCandidates($run, $assignment->group),
                 $assignment->group->entryIds(),
                 $assignment->storyId === null ? null : $storedById[$assignment->storyId]->fallbackEntryId,
             );
@@ -131,7 +131,7 @@ final readonly class FallbackTitles
             return [];
         }
         $scores = \count($cleaned) > 1
-            ? CentroidScores::of($run->headlines, $pool->storyEntryIds)
+            ? CentroidScores::computeScores($run->headlines, $pool->storyEntryIds)
             : array_fill_keys(array_keys($cleaned), 0.0);
 
         return array_map(
@@ -139,7 +139,7 @@ final readonly class FallbackTitles
                 $entryId,
                 $text,
                 $scores[$entryId],
-                $run->effectiveTimeOf($entryId),
+                $run->readEffectiveTime($entryId),
             ),
             array_keys($cleaned),
             $cleaned,
@@ -151,7 +151,7 @@ final readonly class FallbackTitles
      *
      * @return list<StoryMemberModel>
      */
-    private static function candidatesOf(TrendingRun $run, TrendingStoryModel $group): array
+    private static function filterCandidates(TrendingRun $run, TrendingStoryModel $group): array
     {
         $outlets = $group->outletMembers();
         if ($outlets === []) {
@@ -180,7 +180,7 @@ final readonly class FallbackTitles
     }
 
     /** @param array<int, string> $linkTitles by link id */
-    private static function cardTitleOf(
+    private static function pickCardTitle(
         TrendingRun $run,
         TrendingStoryModel $group,
         array $linkTitles,
@@ -191,14 +191,14 @@ final readonly class FallbackTitles
         $postsByLink = [];
         $newestHolderByLink = [];
         foreach ($group->members as $member) {
-            $linkId = self::cardLinkOf($member);
+            $linkId = self::findCardLinkId($member);
             if ($linkId === null || !isset($linkTitles[$linkId])) {
                 continue;
             }
             $postsByLink[$linkId][$member->urlHash ?? 'entry ' . $member->entryId] = true;
             $newestHolderByLink[$linkId] = max(
                 $newestHolderByLink[$linkId] ?? [0, 0],
-                [$run->effectiveTimeOf($member->entryId), $member->entryId],
+                [$run->readEffectiveTime($member->entryId), $member->entryId],
             );
         }
         if ($newestHolderByLink === []) {
@@ -218,7 +218,7 @@ final readonly class FallbackTitles
      *
      * @return list<int>
      */
-    private static function cardLinkIdsOf(array $due): array
+    private static function collectCardLinkIds(array $due): array
     {
         $linkIds = [];
         foreach ($due as $assignment) {
@@ -226,7 +226,7 @@ final readonly class FallbackTitles
                 continue;
             }
             foreach ($assignment->group->members as $member) {
-                $linkId = self::cardLinkOf($member);
+                $linkId = self::findCardLinkId($member);
                 if ($linkId !== null) {
                     $linkIds[$linkId] = $linkId;
                 }
@@ -236,7 +236,7 @@ final readonly class FallbackTitles
         return array_values($linkIds);
     }
 
-    private static function cardLinkOf(StoryMemberModel $member): ?int
+    private static function findCardLinkId(StoryMemberModel $member): ?int
     {
         return $member->articleSite === null ? null : $member->sharedLinkId;
     }
@@ -251,8 +251,8 @@ final readonly class FallbackTitles
         usort(
             $members,
             static fn (StoryMemberModel $left, StoryMemberModel $right): int
-                => [$run->effectiveTimeOf($right->entryId), $right->entryId]
-                    <=> [$run->effectiveTimeOf($left->entryId), $left->entryId],
+                => [$run->readEffectiveTime($right->entryId), $right->entryId]
+                    <=> [$run->readEffectiveTime($left->entryId), $left->entryId],
         );
 
         return $members;

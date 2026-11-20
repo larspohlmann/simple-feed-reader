@@ -142,10 +142,10 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         $shown = $this->stories()
             ->shownEntriesByStory(TrendingWindow::Day, [$story->requireId()]);
 
-        self::assertNull($shown->linkHashOf($article->requireId(), $article->requireId()));
+        self::assertNull($shown->resolveLinkHash($article->requireId(), $article->requireId()));
         self::assertSame(
             (new UrlNormalizer())->hash('https://outlet.example/storm'),
-            $shown->linkHashOf($carded->requireId(), $carded->requireId()),
+            $shown->resolveLinkHash($carded->requireId(), $carded->requireId()),
         );
     }
 
@@ -169,7 +169,7 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         $shown = $this->stories()
             ->shownEntriesByStory(TrendingWindow::Day, [$story->requireId()]);
 
-        self::assertSame('resolved-hash', $shown->linkHashOf($carded->requireId(), $carded->requireId()));
+        self::assertSame('resolved-hash', $shown->resolveLinkHash($carded->requireId(), $carded->requireId()));
     }
 
     public function testThreeTimelineCopiesOfOnePostCountAsOneSource(): void
@@ -715,7 +715,7 @@ final class TrendingStoryRepositoryTest extends DbTestCase
     /** @return list<int> */
     private function shownStoryIds(): array
     {
-        return RankedStoryModel::storyIdsOf($this->ranked());
+        return RankedStoryModel::collectStoryIds($this->ranked());
     }
 
     /** @return list<RankedStoryModel> */
@@ -727,7 +727,7 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         );
 
         return $this->stories()->rankedForUser(
-            $readerWindows->of($this->reader->requireId(), TrendingWindow::Day),
+            $readerWindows->loadWindow($this->reader->requireId(), TrendingWindow::Day),
             TrendingStories::MAX_STORIES,
         );
     }

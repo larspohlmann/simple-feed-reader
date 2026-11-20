@@ -357,7 +357,7 @@ final class ScoringRecommendationEngineTest extends DbTestCase
 
         $requests = $this->systemOne()->requests();
         self::assertCount(1, $requests);
-        $stateTokens = TokenEstimate::of(CompactJson::encode($requests[0]->state));
+        $stateTokens = TokenEstimate::estimateTokens(CompactJson::encode($requests[0]->state));
         self::assertLessThanOrEqual(2_457, $stateTokens);
         self::assertGreaterThan(2_000, $stateTokens);
     }
@@ -400,7 +400,7 @@ final class ScoringRecommendationEngineTest extends DbTestCase
         $engines = self::getContainer()->get(RecommendationEngineResolver::class);
         self::assertInstanceOf(RecommendationEngineResolver::class, $engines);
 
-        $batches = $engines->engineOf($tick->engineKind)->packBatches(self::heavyCandidates(12), $tick);
+        $batches = $engines->selectEngine($tick->engineKind)->packBatches(self::heavyCandidates(12), $tick);
 
         return array_map(\count(...), $batches);
     }

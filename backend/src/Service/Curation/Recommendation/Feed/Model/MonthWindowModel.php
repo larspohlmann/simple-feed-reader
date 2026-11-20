@@ -23,7 +23,7 @@ final readonly class MonthWindowModel
     /**
      * @throws UnknownHistoryMonthException
      */
-    public static function of(string $month, ViewerTimeZoneModel $viewer): self
+    public static function fromMonth(string $month, ViewerTimeZoneModel $viewer): self
     {
         if (1 !== preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $month)) {
             throw new UnknownHistoryMonthException(sprintf('"%s" is not a calendar month.', $month));

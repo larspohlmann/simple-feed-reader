@@ -19,7 +19,7 @@ final readonly class EntryLinksModel
         public ?WindowLinkCardModel $card,
     ) {
         $this->storyCard = $card?->namesAStory() === true ? $card : null;
-        $this->articleSite = $articleUrl === null ? $this->storyCard?->site : ArticleSite::of($articleUrl);
+        $this->articleSite = $articleUrl === null ? $this->storyCard?->site : ArticleSite::fromUrl($articleUrl);
     }
 
     public function storyCard(): ?WindowLinkCardModel

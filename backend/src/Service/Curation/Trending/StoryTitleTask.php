@@ -63,13 +63,13 @@ final readonly class StoryTitleTask implements StoryAiTaskInterface
             return [];
         }
 
-        return array_values(array_intersect($due, $this->shownStoryIdsOf($user->requireId())));
+        return array_values(array_intersect($due, $this->collectShownStoryIds($user->requireId())));
     }
 
     /** @return StoryAiOutcomeModel<mixed> */
     public function run(StoryAiPass $pass, int $storyId): StoryAiOutcomeModel
     {
-        $headlines = $this->cleanedHeadlinesOf($storyId);
+        $headlines = $this->loadCleanedHeadlines($storyId);
         if ($headlines === []) {
             $this->stories->recordTitleAttempt($storyId, $this->clock->now());
 
@@ -105,7 +105,7 @@ final readonly class StoryTitleTask implements StoryAiTaskInterface
     }
 
     /** @return list<StoryHeadlineModel> */
-    private function cleanedHeadlinesOf(int $storyId): array
+    private function loadCleanedHeadlines(int $storyId): array
     {
         return array_map(
             fn (StoryHeadlineModel $headline): StoryHeadlineModel => $headline->cleaned(
@@ -124,10 +124,10 @@ final readonly class StoryTitleTask implements StoryAiTaskInterface
     }
 
     /** @return list<int> */
-    private function shownStoryIdsOf(int $userId): array
+    private function collectShownStoryIds(int $userId): array
     {
         return array_merge([], ...array_map(
-            fn (TrendingWindow $window): array => RankedStoryModel::storyIdsOf(
+            fn (TrendingWindow $window): array => RankedStoryModel::collectStoryIds(
                 $this->readerWindows->shownStories($userId, $window),
             ),
             TrendingWindow::cases(),

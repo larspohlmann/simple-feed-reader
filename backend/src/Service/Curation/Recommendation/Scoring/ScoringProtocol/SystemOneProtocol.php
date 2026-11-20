@@ -53,7 +53,7 @@ final readonly class SystemOneProtocol implements ScoringProtocolInterface
 
     public function renderedRequest(object $request): string
     {
-        return PrettyJson::of($request->payload());
+        return PrettyJson::encode($request->payload());
     }
 
     public function scoreMany(ProviderCredentialsModel $credentials, array $requests): array
@@ -63,6 +63,6 @@ final readonly class SystemOneProtocol implements ScoringProtocolInterface
 
     private function questionTokens(ArticleLineModel $candidate): int
     {
-        return TokenEstimate::of(CompactJson::encode($this->requestFactory->question($candidate)));
+        return TokenEstimate::estimateTokens(CompactJson::encode($this->requestFactory->question($candidate)));
     }
 }

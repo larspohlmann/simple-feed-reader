@@ -21,16 +21,16 @@ final readonly class CompletionCallRecorder
 
     public function begin(RecommendationRun $run, CallSlotModel $slot, CompletionRequestModel $request): RecordedCall
     {
-        return $this->callRecorder->begin($run, $slot, RenderedCompletionRequest::of($request));
+        return $this->callRecorder->begin($run, $slot, RenderedCompletionRequest::fromRequest($request));
     }
 
     public function beginForProfileRun(ProfileRun $profileRun, CompletionRequestModel $request): RecordedCall
     {
-        return $this->callRecorder->beginForProfileRun($profileRun, RenderedCompletionRequest::of($request));
+        return $this->callRecorder->beginForProfileRun($profileRun, RenderedCompletionRequest::fromRequest($request));
     }
 
     public function beginForStoryAiRun(StoryAiRun $storyAiRun, CompletionRequestModel $request): RecordedCall
     {
-        return $this->callRecorder->beginForStoryAiRun($storyAiRun, RenderedCompletionRequest::of($request));
+        return $this->callRecorder->beginForStoryAiRun($storyAiRun, RenderedCompletionRequest::fromRequest($request));
     }
 }

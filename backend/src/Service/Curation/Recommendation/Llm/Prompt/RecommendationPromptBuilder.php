@@ -71,7 +71,7 @@ final readonly class RecommendationPromptBuilder
         EffectiveRecommendationSettingsModel $settings,
     ): array {
         $favoritesSection = $this->favoritesSection($history);
-        $historyTokens = self::ESTIMATED_PROFILE_TOKENS + TokenEstimate::of($favoritesSection);
+        $historyTokens = self::ESTIMATED_PROFILE_TOKENS + TokenEstimate::estimateTokens($favoritesSection);
         $cap = $settings->packing->batchSize->batchItemCap($settings->packing->maximumBatchSize);
         $responseReserve = $this->answerBudget->answerBoundTokens(
             $cap,
@@ -84,7 +84,7 @@ final readonly class RecommendationPromptBuilder
         $used = 0;
 
         foreach ($candidates as $candidate) {
-            $lineTokens = TokenEstimate::of($this->candidateLine($candidate));
+            $lineTokens = TokenEstimate::estimateTokens($this->candidateLine($candidate));
             $overBudget = $used + $lineTokens > $budget && \count($current) >= self::MINIMUM_BATCH_SIZE;
             $atCapacity = \count($current) >= $cap;
             if ([] !== $current && ($overBudget || $atCapacity)) {
@@ -113,10 +113,10 @@ final readonly class RecommendationPromptBuilder
         $contextWindow = $context->settings->packing->contextWindow;
         $picksLimit = $context->settings->poolLimits->picksLimit;
         $fixedInputTokens = self::FIXED_OVERHEAD_TOKENS
-            + TokenEstimate::of((string) $context->profile)
-            + TokenEstimate::of($this->favoritesSection($context->history));
+            + TokenEstimate::estimateTokens((string) $context->profile)
+            + TokenEstimate::estimateTokens($this->favoritesSection($context->history));
         $lineChars = self::DESCRIPTION_CHARS + self::CANDIDATE_LINE_FRAME_CHARS;
-        $perCandidateInputTokens = TokenEstimate::ofLength($lineChars);
+        $perCandidateInputTokens = TokenEstimate::estimateTokensForLength($lineChars);
 
         $floor = self::CONSOLIDATION_MIN_INPUT_FACTOR * $picksLimit;
         $ceiling = self::CONSOLIDATION_MAX_INPUT_FACTOR * $picksLimit;

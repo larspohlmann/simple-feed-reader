@@ -15,17 +15,17 @@ final readonly class GermanLexiconModel
 
     public static function fromDirectory(string $directory): self
     {
-        return new self(self::contentsOf($directory . '/lexicon.tsv'));
+        return new self(self::readFile($directory . '/lexicon.tsv'));
     }
 
-    public function entryOf(string $form): ?GermanLexiconEntryModel
+    public function findEntry(string $form): ?GermanLexiconEntryModel
     {
-        $line = $this->forms->valueOf($form);
+        $line = $this->forms->findValue($form);
 
         return null === $line ? null : new GermanLexiconEntryModel($line[0], (int) substr($line, 2));
     }
 
-    private static function contentsOf(string $path): string
+    private static function readFile(string $path): string
     {
         $contents = file_get_contents($path);
         if (false === $contents) {

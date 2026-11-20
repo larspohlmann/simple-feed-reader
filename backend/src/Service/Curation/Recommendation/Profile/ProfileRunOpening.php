@@ -31,10 +31,14 @@ final readonly class ProfileRunOpening
     public function open(ProfileTick $tick): void
     {
         $profileRun = $tick->profileRun;
-        $fingerprint = ProfileInputFingerprint::of($tick->inputs, $tick->settings->historyCaps, $tick->connection);
+        $fingerprint = ProfileInputFingerprint::hashInputs(
+            $tick->inputs,
+            $tick->settings->historyCaps,
+            $tick->connection,
+        );
         $unchanged = $this->isUnchangedScheduledRun($tick, $fingerprint);
 
-        $profileRun->start($fingerprint, ProviderHost::of($tick->connection), $this->modelOf($tick));
+        $profileRun->start($fingerprint, ProviderHost::parseHost($tick->connection), $this->requireModel($tick));
 
         if ($tick->inputs->isEmpty()) {
             $profileRun->complete(ProfileRunOutcome::NoHistory, $this->clock->now());
@@ -54,7 +58,7 @@ final readonly class ProfileRunOpening
             && $fingerprint === $this->profileRuns->latestCompletedFingerprintFor($user);
     }
 
-    private function modelOf(ProfileTick $tick): string
+    private function requireModel(ProfileTick $tick): string
     {
         return $tick->connection->getModel()
             ?? throw new \LogicException('A connection that builds profiles has a model.');

@@ -24,7 +24,7 @@ final readonly class SystemOneRequestFactory
     {
         $questions = [];
         foreach ($request->articles as $article) {
-            $questions[QuestionId::of($article->entryId)] = $this->question($article);
+            $questions[QuestionId::fromEntryId($article->entryId)] = $this->question($article);
         }
 
         return new SystemOneRequestModel(
@@ -40,7 +40,7 @@ final readonly class SystemOneRequestFactory
         return [
             'type' => 'noul',
             'instructions' => [
-                'article' => ScoringArticle::of($article),
+                'article' => ScoringArticle::buildFields($article),
                 'question' => self::QUESTION,
             ],
         ];

@@ -46,7 +46,7 @@ final readonly class ProfileRunFailure
 
         $this->fail(
             $tick->profileRun,
-            ProviderFailedMessage::of($tick->connection->getBaseUrl(), $rejection->getMessage()),
+            ProviderFailedMessage::formatMessage($tick->connection->getBaseUrl(), $rejection->getMessage()),
         );
     }
 
@@ -59,7 +59,7 @@ final readonly class ProfileRunFailure
 
         $this->strike(
             $tick->profileRun,
-            ProviderFailedMessage::of($tick->connection->getBaseUrl(), $failureDetail),
+            ProviderFailedMessage::formatMessage($tick->connection->getBaseUrl(), $failureDetail),
         );
     }
 

@@ -73,12 +73,12 @@ final class TrendingRun
         return \count($this->feedOfEntry);
     }
 
-    public function memberOf(int $entryId): StoryMemberModel
+    public function readMember(int $entryId): StoryMemberModel
     {
         return $this->members[$entryId];
     }
 
-    public function effectiveTimeOf(int $entryId): int
+    public function readEffectiveTime(int $entryId): int
     {
         return $this->effectiveTimes[$entryId];
     }

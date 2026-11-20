@@ -43,7 +43,7 @@ final readonly class TrendingStories
         return new TrendingPageModel(
             $window,
             $this->snapshots->lastBuilds($userId)->builtAt($window),
-            $this->sourceFor($userId, $window, $ranked)->cardsOf($ranked),
+            $this->sourceFor($userId, $window, $ranked)->buildCards($ranked),
         );
     }
 
@@ -55,7 +55,7 @@ final readonly class TrendingStories
         }
 
         $userId = $user->requireId();
-        $storyIds = RankedStoryModel::storyIdsOf($this->ranked($userId, $window));
+        $storyIds = RankedStoryModel::collectStoryIds($this->ranked($userId, $window));
 
         return new TrendingUnopenedModel(
             $window,
@@ -72,7 +72,7 @@ final readonly class TrendingStories
     /** @param list<RankedStoryModel> $ranked */
     private function sourceFor(int $userId, TrendingWindow $window, array $ranked): StoryCardSource
     {
-        $storyIds = RankedStoryModel::storyIdsOf($ranked);
+        $storyIds = RankedStoryModel::collectStoryIds($ranked);
         $shown = $this->stories->shownEntriesByStory($window, $storyIds);
 
         return new StoryCardSource(
@@ -99,7 +99,7 @@ final readonly class TrendingStories
                 $shownId = $shown->entry->requireId();
                 $rowsByEntryId[$shownId] = new ShownRowModel(
                     $shown->withDuplicates([]),
-                    self::articleKeyOf($shown, $shownEntries->linkHashOf($shownId, $rowId)),
+                    self::buildArticleKey($shown, $shownEntries->resolveLinkHash($shownId, $rowId)),
                 );
             }
         }
@@ -108,7 +108,7 @@ final readonly class TrendingStories
     }
 
     /** An outlet's row is about its own article, a post's about the shared link its first card names. */
-    private static function articleKeyOf(EntryListRow $row, ?string $linkHash): string
+    private static function buildArticleKey(EntryListRow $row, ?string $linkHash): string
     {
         return $row->keyBy($row->isFromAnOutlet() ? $row->entry->getUrlHash() : $linkHash);
     }

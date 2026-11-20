@@ -403,7 +403,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
     /** @param list<array{role: string, content: string}> $messages */
     private function request(array $messages): string
     {
-        return RenderedCompletionRequest::of(new CompletionRequestModel(
+        return RenderedCompletionRequest::fromRequest(new CompletionRequestModel(
             'm',
             $messages,
             1024,

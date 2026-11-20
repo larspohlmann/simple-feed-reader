@@ -37,7 +37,7 @@ final readonly class StoryWritingConnections
 
     public function canWriteText(AiProviderSettings $connection): bool
     {
-        return AiReadiness::of($connection) && RecommendationEngineKind::Llm === $connection->getModelKind();
+        return AiReadiness::isReady($connection) && RecommendationEngineKind::Llm === $connection->getModelKind();
     }
 
     /** @return list<AiProviderSettings> */

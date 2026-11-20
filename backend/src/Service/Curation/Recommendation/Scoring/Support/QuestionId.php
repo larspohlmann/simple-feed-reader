@@ -9,16 +9,16 @@ final class QuestionId
 {
     private const string PREFIX = 'entry-';
 
-    public static function of(int $entryId): string
+    public static function fromEntryId(int $entryId): string
     {
         return self::PREFIX . $entryId;
     }
 
-    public static function entryIdOf(string $questionId): ?int
+    public static function parseEntryId(string $questionId): ?int
     {
         $entryId = (int) substr($questionId, \strlen(self::PREFIX));
 
-        return self::of($entryId) === $questionId ? $entryId : null;
+        return self::fromEntryId($entryId) === $questionId ? $entryId : null;
     }
 
     private function __construct()

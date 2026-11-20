@@ -86,7 +86,7 @@ final class ScoringPipelineTest extends DbTestCase
         self::assertSame('jev-latest', $requests[0]->model);
         self::assertSame(['profile' => 'Likes Rust and homelab.'], $requests[0]->state);
         self::assertEqualsCanonicalizing(
-            array_map(QuestionId::of(...), $ids),
+            array_map(QuestionId::fromEntryId(...), $ids),
             array_keys($requests[0]->questions),
         );
     }

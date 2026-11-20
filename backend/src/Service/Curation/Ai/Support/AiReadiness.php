@@ -12,7 +12,7 @@ final readonly class AiReadiness
      * No verifiedAt check: chooseModel() is the model's only writer and stamps
      * verifiedAt; replaceConnection() clears the model.
      */
-    public static function of(?AiProviderSettings $settings): bool
+    public static function isReady(?AiProviderSettings $settings): bool
     {
         return null !== $settings && $settings->hasModel();
     }

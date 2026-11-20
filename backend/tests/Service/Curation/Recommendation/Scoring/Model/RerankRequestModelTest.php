@@ -39,7 +39,7 @@ final class RerankRequestModelTest extends TestCase
                     ]
                 }
                 JSON,
-            PrettyJson::of(self::request()->payload()),
+            PrettyJson::encode(self::request()->payload()),
         );
     }
 

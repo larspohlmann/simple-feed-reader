@@ -19,9 +19,9 @@ final class BundledGermanLexicon implements GermanLexiconInterface, ResetInterfa
     ) {
     }
 
-    public function entryOf(string $form): ?GermanLexiconEntryModel
+    public function findEntry(string $form): ?GermanLexiconEntryModel
     {
-        return $this->model()->entryOf($form);
+        return $this->model()->findEntry($form);
     }
 
     public function reset(): void

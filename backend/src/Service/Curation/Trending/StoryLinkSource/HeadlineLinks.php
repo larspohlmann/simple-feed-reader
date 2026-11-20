@@ -43,7 +43,7 @@ final readonly class HeadlineLinks implements StoryLinkSourceInterface
         $nearMisses = [];
         foreach ($run->entryIds() as $entryId) {
             foreach ($this->overlapsWithEarlier($run, $entryId) as $overlap) {
-                $failures = $this->failuresOf($run, $overlap);
+                $failures = $this->collectFailures($run, $overlap);
                 if (\count($failures) === 1 && !$run->sameFeed($overlap->earlierEntryId, $overlap->entryId)) {
                     $nearMisses[] = new NearMissModel($overlap, $failures[0]);
                 }
@@ -54,7 +54,7 @@ final readonly class HeadlineLinks implements StoryLinkSourceInterface
     }
 
     /** @return list<string> */
-    private function failuresOf(TrendingRun $run, HeadlineOverlapModel $overlap): array
+    private function collectFailures(TrendingRun $run, HeadlineOverlapModel $overlap): array
     {
         $failures = [];
         if (!$run->withinGap($overlap->earlierEntryId, $overlap->entryId)) {

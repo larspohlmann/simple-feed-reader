@@ -25,8 +25,8 @@ final readonly class TrendingStoryCardModel
     /** @param non-empty-list<ShownRowModel> $rows the story's outlet and story-card post rows the reader can see */
     public static function fromRows(array $rows, RankedStoryModel $story, bool $viewed, bool $followed): self
     {
-        $articles = self::newestFirst(array_map(self::articleOf(...), self::byArticle($rows)));
-        $lead = self::leadOf($articles);
+        $articles = self::newestFirst(array_map(self::buildArticle(...), self::byArticle($rows)));
+        $lead = self::pickLead($articles);
 
         return new self(
             new StoryArticlesModel($lead, array_values(array_filter(
@@ -55,7 +55,7 @@ final readonly class TrendingStoryCardModel
     }
 
     /** @param non-empty-list<EntryListRow> $rows one article's outlet rows and the posts sharing it */
-    private static function articleOf(array $rows): StoryArticleModel
+    private static function buildArticle(array $rows): StoryArticleModel
     {
         $rows = self::newestRowsFirst($rows);
         $outletRows = array_values(array_filter($rows, static fn (EntryListRow $row): bool => $row->isFromAnOutlet()));
@@ -65,13 +65,13 @@ final readonly class TrendingStoryCardModel
         )));
 
         return new StoryArticleModel(
-            $outletRows === [] ? self::representativeOf($shares) : self::picturedOrNewest($outletRows),
+            $outletRows === [] ? self::pickRepresentative($shares) : self::picturedOrNewest($outletRows),
             $shares,
         );
     }
 
     /** @param non-empty-list<StoryArticleModel> $articles newest first */
-    private static function leadOf(array $articles): StoryArticleModel
+    private static function pickLead(array $articles): StoryArticleModel
     {
         $fromOutlets = array_values(array_filter(
             $articles,
@@ -101,7 +101,7 @@ final readonly class TrendingStoryCardModel
      *
      * @param list<EntryListRow> $posts newest first
      */
-    private static function representativeOf(array $posts): EntryListRow
+    private static function pickRepresentative(array $posts): EntryListRow
     {
         $linkShares = array_values(array_filter(
             $posts,

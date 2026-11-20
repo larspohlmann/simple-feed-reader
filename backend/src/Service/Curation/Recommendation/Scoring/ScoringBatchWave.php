@@ -44,7 +44,7 @@ final readonly class ScoringBatchWave implements BatchWaveEngineInterface
     public function open(BatchWaveInterface $wave, int $position): BatchCall
     {
         $tick = $wave->tick();
-        $protocol = $this->protocols->protocolOf($tick->requireScoringProtocol());
+        $protocol = $this->protocols->selectProtocol($tick->requireScoringProtocol());
         $waveBatch = $wave->batches()[$position];
         $request = $protocol->word(new ScoringRequestModel(
             $tick->connection->getModel() ?? '',
@@ -71,13 +71,13 @@ final readonly class ScoringBatchWave implements BatchWaveEngineInterface
     {
         $tick = $wave->tick();
         $credentials = $this->configurator->credentials($tick->connection);
-        $protocol = $this->protocols->protocolOf($tick->requireScoringProtocol());
+        $protocol = $this->protocols->selectProtocol($tick->requireScoringProtocol());
 
         return $this->rateLimitedCalls->send(
             $calls,
             static fn (array $subset): array => self::receiveAnswers(
                 $subset,
-                $protocol->scoreMany($credentials, self::requestsOf($subset)),
+                $protocol->scoreMany($credentials, self::collectRequests($subset)),
             ),
             $tick->retryPlan(),
         );
@@ -93,7 +93,7 @@ final readonly class ScoringBatchWave implements BatchWaveEngineInterface
         BatchCallOutcomeInterface $outcome,
     ): BatchReplyVerdictModel {
         $reply = $outcome->reply();
-        $parsed = $this->parser->parse($reply, self::idsOf($wave->batches()[$position]));
+        $parsed = $this->parser->parse($reply, self::collectEntryIds($wave->batches()[$position]));
         $transcript = self::logged($reply->body);
 
         return $parsed->usable
@@ -128,7 +128,7 @@ final readonly class ScoringBatchWave implements BatchWaveEngineInterface
      *
      * @return non-empty-list<object>
      */
-    private static function requestsOf(array $calls): array
+    private static function collectRequests(array $calls): array
     {
         return array_map(static fn (BatchCall $call): object => $call->request, $calls);
     }
@@ -140,7 +140,7 @@ final readonly class ScoringBatchWave implements BatchWaveEngineInterface
     }
 
     /** @return list<int> */
-    private static function idsOf(WaveBatchModel $batch): array
+    private static function collectEntryIds(WaveBatchModel $batch): array
     {
         return array_map(static fn (ArticleLineModel $line): int => $line->entryId, $batch->linesInSnapshotOrder());
     }

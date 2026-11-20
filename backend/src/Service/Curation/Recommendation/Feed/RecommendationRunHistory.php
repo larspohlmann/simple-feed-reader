@@ -61,7 +61,7 @@ final readonly class RecommendationRunHistory
             return null;
         }
 
-        return $this->month($user, MonthWindowModel::of($newestMonth->month, $viewer), null);
+        return $this->month($user, MonthWindowModel::fromMonth($newestMonth->month, $viewer), null);
     }
 
     /**

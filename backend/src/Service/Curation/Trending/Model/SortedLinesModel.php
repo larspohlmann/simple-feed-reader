@@ -10,7 +10,7 @@ final readonly class SortedLinesModel
     {
     }
 
-    public function valueOf(string $key): ?string
+    public function findValue(string $key): ?string
     {
         $field = $key . "\t";
         $fieldLength = strlen($field);

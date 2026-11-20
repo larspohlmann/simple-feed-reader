@@ -19,7 +19,7 @@ final readonly class RecommendationCompletionRequestFactory
 
     public function create(AiProviderSettings $connection, CallPromptModel $prompt): CompletionRequestModel
     {
-        $limit = OutputLimitModel::of($connection);
+        $limit = OutputLimitModel::fromConnection($connection);
 
         return new CompletionRequestModel(
             $connection->getModel() ?? '',

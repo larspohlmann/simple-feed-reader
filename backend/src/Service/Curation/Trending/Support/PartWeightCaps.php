@@ -11,16 +11,16 @@ final class PartWeightCaps
      * @param array<int, float> $shared earlier entry id => the weight shared through words
      * @param array<int, list<array{float, array<int, float>}>> $parts earlier entry id => each part's weight, and the
      *     compounds it comes through with their place weight
-     * @param \Closure(int): float $rarityOf
+     * @param \Closure(int): float $rarity
      *
      * @return array<int, float> the shared weights with the parts' capped weight added
      */
-    public static function addedTo(array $shared, array $parts, \Closure $rarityOf): array
+    public static function addedTo(array $shared, array $parts, \Closure $rarity): array
     {
-        foreach ($parts as $earlierEntryId => $partsOfPair) {
-            $shared[$earlierEntryId] = ($shared[$earlierEntryId] ?? 0.0) + (\count($partsOfPair) === 1
-                ? self::cappedWeightOfOne($partsOfPair[0], $rarityOf)
-                : self::cappedWeightOf($partsOfPair, $rarityOf));
+        foreach ($parts as $earlierEntryId => $pairParts) {
+            $shared[$earlierEntryId] = ($shared[$earlierEntryId] ?? 0.0) + (\count($pairParts) === 1
+                ? self::computeOneCappedWeight($pairParts[0], $rarity)
+                : self::computeCappedWeight($pairParts, $rarity));
         }
 
         return $shared;
@@ -28,13 +28,13 @@ final class PartWeightCaps
 
     /**
      * @param array{float, array<int, float>} $part
-     * @param \Closure(int): float $rarityOf
+     * @param \Closure(int): float $rarity
      */
-    private static function cappedWeightOfOne(array $part, \Closure $rarityOf): float
+    private static function computeOneCappedWeight(array $part, \Closure $rarity): float
     {
         [$weight, $compounds] = $part;
         foreach ($compounds as $compoundStemId => $placeWeight) {
-            $weight = min($weight, $placeWeight * $rarityOf($compoundStemId));
+            $weight = min($weight, $placeWeight * $rarity($compoundStemId));
         }
 
         return $weight;
@@ -44,16 +44,16 @@ final class PartWeightCaps
      * A part coming through several compounds is held to the tightest of their caps.
      *
      * @param list<array{float, array<int, float>}> $parts
-     * @param \Closure(int): float $rarityOf
+     * @param \Closure(int): float $rarity
      */
-    private static function cappedWeightOf(array $parts, \Closure $rarityOf): float
+    private static function computeCappedWeight(array $parts, \Closure $rarity): float
     {
         $weightThrough = [];
         $ownWeights = [];
         foreach ($parts as [$weight, $compounds]) {
             foreach ($compounds as $compoundStemId => $placeWeight) {
                 $weightThrough[$compoundStemId] = ($weightThrough[$compoundStemId] ?? 0.0) + $weight;
-                $ownWeights[$compoundStemId] ??= $placeWeight * $rarityOf($compoundStemId);
+                $ownWeights[$compoundStemId] ??= $placeWeight * $rarity($compoundStemId);
             }
         }
         $capped = 0.0;

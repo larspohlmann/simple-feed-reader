@@ -11,7 +11,7 @@ final class PrettyJsonTest extends TestCase
 {
     public function testItIndentsAndKeepsSlashesAndNonAsciiAsTheyAre(): void
     {
-        self::assertSame("{\n    \"url\": \"https://a/b\",\n    \"text\": \"Käse — ok\"\n}", PrettyJson::of(
+        self::assertSame("{\n    \"url\": \"https://a/b\",\n    \"text\": \"Käse — ok\"\n}", PrettyJson::encode(
             ['url' => 'https://a/b', 'text' => 'Käse — ok'],
         ));
     }
@@ -20,6 +20,6 @@ final class PrettyJsonTest extends TestCase
     {
         $this->expectException(\JsonException::class);
 
-        PrettyJson::of("\xB1\x31");
+        PrettyJson::encode("\xB1\x31");
     }
 }

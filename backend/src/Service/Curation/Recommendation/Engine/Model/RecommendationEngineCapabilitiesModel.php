@@ -20,7 +20,7 @@ final readonly class RecommendationEngineCapabilitiesModel
     }
 
     /** Per kind, not per engine: reading them builds no engine. */
-    public static function of(RecommendationEngineKind $kind): self
+    public static function fromKind(RecommendationEngineKind $kind): self
     {
         return match ($kind) {
             RecommendationEngineKind::Llm => new self(

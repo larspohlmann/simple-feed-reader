@@ -24,7 +24,7 @@ final class SystemOneRequestModelTest extends TestCase
         self::assertSame(
             "{\n    \"model\": \"jev-latest\",\n    \"state\": {\n        \"profile\": \"Kernel/Rust, Größe\"\n    },\n"
             . "    \"questions\": {\n        \"entry-1\": {\n            \"type\": \"noul\"\n        }\n    }\n}",
-            PrettyJson::of($this->request()->payload()),
+            PrettyJson::encode($this->request()->payload()),
         );
     }
 

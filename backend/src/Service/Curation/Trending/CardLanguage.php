@@ -16,7 +16,7 @@ final readonly class CardLanguage
     ) {
     }
 
-    public function of(string $text, ?FeedLanguage $postLanguage): ?FeedLanguage
+    public function resolveLanguage(string $text, ?FeedLanguage $postLanguage): ?FeedLanguage
     {
         if ($postLanguage === null) {
             return $this->languageGuess->bestFor($text);

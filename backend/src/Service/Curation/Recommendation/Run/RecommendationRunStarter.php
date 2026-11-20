@@ -36,7 +36,7 @@ final readonly class RecommendationRunStarter
      */
     public function start(User $user): RecommendationRunReportModel
     {
-        if (!AiReadiness::of($user->getActiveAiProviderSettings())) {
+        if (!AiReadiness::isReady($user->getActiveAiProviderSettings())) {
             throw new AiNotConfiguredException('This account has no AI model chosen yet.');
         }
 
@@ -75,7 +75,7 @@ final readonly class RecommendationRunStarter
      */
     public function resume(User $user): RecommendationRunReportModel
     {
-        if (!AiReadiness::of($user->getActiveAiProviderSettings())) {
+        if (!AiReadiness::isReady($user->getActiveAiProviderSettings())) {
             throw new AiNotConfiguredException('This account has no AI model chosen yet.');
         }
 
@@ -97,6 +97,6 @@ final readonly class RecommendationRunStarter
     {
         $settings = $user->getActiveAiProviderSettings();
 
-        $run->stampProvider(ProviderHost::of($settings), $settings?->getModel());
+        $run->stampProvider(ProviderHost::parseHost($settings), $settings?->getModel());
     }
 }

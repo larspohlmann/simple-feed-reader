@@ -6,7 +6,7 @@ namespace App\Service\Curation\Recommendation\Support;
 
 final class RefusalMessage
 {
-    public static function of(int $status, ?string $reason): string
+    public static function formatMessage(int $status, ?string $reason): string
     {
         return null === $reason
             ? sprintf('That provider refused the request (status %d).', $status)

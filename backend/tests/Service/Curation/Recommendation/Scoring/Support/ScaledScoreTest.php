@@ -23,6 +23,6 @@ final class ScaledScoreTest extends TestCase
     #[DataProvider('values')]
     public function testAValueIsAScoreOnTheRunsScale(float $value, int $score): void
     {
-        self::assertSame($score, ScaledScore::of($value));
+        self::assertSame($score, ScaledScore::fromValue($value));
     }
 }

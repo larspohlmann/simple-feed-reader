@@ -24,7 +24,7 @@ final class SharedArticlesTest extends TestCase
 
     public function testAStoryCardIsReadInItsOwnLanguage(): void
     {
-        $article = (new SharedArticles(TrendingWiring::cardLanguage()))->of(self::postSharing(
+        $article = (new SharedArticles(TrendingWiring::cardLanguage()))->buildArticle(self::postSharing(
             1,
             FeedLanguage::English,
             'https://outlet.example/library',
@@ -41,30 +41,30 @@ final class SharedArticlesTest extends TestCase
         $articles = new SharedArticles(TrendingWiring::cardLanguage());
         $url = 'https://outlet.example/library';
 
-        $first = $articles->of(self::postSharing(1, FeedLanguage::German, $url));
+        $first = $articles->buildArticle(self::postSharing(1, FeedLanguage::German, $url));
 
-        self::assertSame($first, $articles->of(self::postSharing(2, FeedLanguage::German, $url)));
-        self::assertNotSame($first, $articles->of(self::postSharing(3, FeedLanguage::Spanish, $url)));
+        self::assertSame($first, $articles->buildArticle(self::postSharing(2, FeedLanguage::German, $url)));
+        self::assertNotSame($first, $articles->buildArticle(self::postSharing(3, FeedLanguage::Spanish, $url)));
     }
 
     public function testTwoLinksInOnePostLanguageAreTwoArticles(): void
     {
         $articles = new SharedArticles(TrendingWiring::cardLanguage());
 
-        $first = $articles->of(self::postSharing(1, FeedLanguage::German, 'https://outlet.example/library'));
+        $first = $articles->buildArticle(self::postSharing(1, FeedLanguage::German, 'https://outlet.example/library'));
 
         self::assertNotSame(
             $first,
-            $articles->of(self::postSharing(2, FeedLanguage::German, 'https://outlet.example/museum')),
+            $articles->buildArticle(self::postSharing(2, FeedLanguage::German, 'https://outlet.example/museum')),
         );
         $storedA = self::postSharing(3, FeedLanguage::German, 'https://outlet.example/a', FeedLanguage::French);
         $storedB = self::postSharing(4, FeedLanguage::German, 'https://outlet.example/b', FeedLanguage::French);
-        self::assertNotSame($articles->of($storedA), $articles->of($storedB));
+        self::assertNotSame($articles->buildArticle($storedA), $articles->buildArticle($storedB));
     }
 
     public function testAPostWithoutAStoryCardSharesNoArticle(): void
     {
-        self::assertNull((new SharedArticles(TrendingWiring::cardLanguage()))->of(
+        self::assertNull((new SharedArticles(TrendingWiring::cardLanguage()))->buildArticle(
             self::postSharing(1, FeedLanguage::German, 'https://outlet.example/'),
         ));
     }
@@ -75,7 +75,7 @@ final class SharedArticlesTest extends TestCase
         $articles = new SharedArticles(new CardLanguage(new LanguageGuess($detector)));
         $url = 'https://outlet.example/library';
 
-        $article = $articles->of(self::postSharing(1, FeedLanguage::English, $url, FeedLanguage::Spanish));
+        $article = $articles->buildArticle(self::postSharing(1, FeedLanguage::English, $url, FeedLanguage::Spanish));
 
         self::assertSame(FeedLanguage::Spanish, $article?->language);
         self::assertSame([], $detector->seenTexts());
@@ -86,17 +86,17 @@ final class SharedArticlesTest extends TestCase
         $articles = new SharedArticles(TrendingWiring::cardLanguage());
         $url = 'https://outlet.example/library';
 
-        $first = $articles->of(self::postSharing(1, FeedLanguage::German, $url, FeedLanguage::French));
+        $first = $articles->buildArticle(self::postSharing(1, FeedLanguage::German, $url, FeedLanguage::French));
 
         self::assertSame(
             $first,
-            $articles->of(self::postSharing(2, FeedLanguage::Spanish, $url, FeedLanguage::French)),
+            $articles->buildArticle(self::postSharing(2, FeedLanguage::Spanish, $url, FeedLanguage::French)),
         );
     }
 
     public function testAnUnsetLanguageFallsBackToTheCardLanguage(): void
     {
-        $article = (new SharedArticles(TrendingWiring::cardLanguage()))->of(
+        $article = (new SharedArticles(TrendingWiring::cardLanguage()))->buildArticle(
             self::postSharing(1, FeedLanguage::English, 'https://outlet.example/library'),
         );
 
@@ -108,12 +108,12 @@ final class SharedArticlesTest extends TestCase
     {
         $entry = self::postSharing(1, $postLanguage, 'https://outlet.example/library', null, $description);
 
-        $article = (new SharedArticles(TrendingWiring::cardLanguage()))->of($entry);
+        $article = (new SharedArticles(TrendingWiring::cardLanguage()))->buildArticle($entry);
 
         $body = HeadlineBody::body($description, HeadlineBody::BODY_LENGTH);
 
         self::assertSame(
-            TrendingWiring::cardLanguage()->of('Bibliothèque' . "\n" . $body, $postLanguage),
+            TrendingWiring::cardLanguage()->resolveLanguage('Bibliothèque' . "\n" . $body, $postLanguage),
             $article?->language,
         );
     }

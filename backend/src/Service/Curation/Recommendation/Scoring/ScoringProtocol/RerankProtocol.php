@@ -51,7 +51,7 @@ final readonly class RerankProtocol implements ScoringProtocolInterface
 
     public function renderedRequest(object $request): string
     {
-        return PrettyJson::of($request->payload());
+        return PrettyJson::encode($request->payload());
     }
 
     public function scoreMany(ProviderCredentialsModel $credentials, array $requests): array

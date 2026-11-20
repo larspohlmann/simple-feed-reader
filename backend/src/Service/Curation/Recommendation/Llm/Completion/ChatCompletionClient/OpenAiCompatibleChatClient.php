@@ -183,7 +183,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
                 return null;
             }
 
-            return CompletionOutcomeModel::answer($this->contentOf($slot->reader));
+            return CompletionOutcomeModel::answer($this->requireContent($slot->reader));
         } catch (ProviderReplyFailureExceptionInterface $spoiledReply) {
             $response->cancel();
 
@@ -200,7 +200,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
         } catch (ExceptionInterface $transportFailure) {
             $response->cancel();
 
-            return CompletionOutcomeModel::failure($this->transportFailureOf($slot, $transportFailure));
+            return CompletionOutcomeModel::failure($this->buildTransportFailure($slot, $transportFailure));
         }
     }
 
@@ -208,7 +208,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
      * A transport cut after the provider reported `length` (its whole `max_tokens` spent) is a runaway. Anything else
      * stays unreachable: a reset mid-answer is a dead connection, whatever the byte count.
      */
-    private function transportFailureOf(CompletionCallSlot $slot, ExceptionInterface $failure): \RuntimeException
+    private function buildTransportFailure(CompletionCallSlot $slot, ExceptionInterface $failure): \RuntimeException
     {
         if ($slot->errorBody->isOpen()) {
             return $slot->errorBody->failure();
@@ -224,7 +224,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
                 $slot->maximumAnswerTokens,
                 $slot->reader->wireBytes(),
             ),
-            $this->quotableAnswerOf($slot),
+            $this->cutQuotableAnswer($slot),
         );
     }
 
@@ -344,7 +344,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
      * Prefers `content`, falling back to the reasoning channel, where LM Studio puts some models' whole answer. The
      * caller's parser still rejects a reply that is only thinking.
      */
-    private function contentOf(CompletionStreamReader $reader): string
+    private function requireContent(CompletionStreamReader $reader): string
     {
         $content = $reader->assistantContent() ?? $reader->reasoningContent();
 
@@ -366,20 +366,20 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
         if ($slot->reader->answerBytes() > $maximumAnswerBytes) {
             throw new ProviderRunawayException(
                 sprintf('That provider answered with more than %d bytes.', $maximumAnswerBytes),
-                $this->quotableAnswerOf($slot),
+                $this->cutQuotableAnswer($slot),
             );
         }
 
         if ($slot->reader->retainedBytes() > self::MAXIMUM_RETAINED_BYTES) {
             throw new ProviderRunawayException(
                 sprintf('That provider sent more than %d bytes without completing.', self::MAXIMUM_RETAINED_BYTES),
-                $this->quotableAnswerOf($slot),
+                $this->cutQuotableAnswer($slot),
             );
         }
     }
 
     /** As much of a spoiled reply as a retry can quote, clipped here so the full runaway travels no further. */
-    private function quotableAnswerOf(CompletionCallSlot $slot): string
+    private function cutQuotableAnswer(CompletionCallSlot $slot): string
     {
         return mb_substr($slot->reader->assistantContent() ?? '', 0, self::QUOTABLE_ANSWER_CHARS);
     }

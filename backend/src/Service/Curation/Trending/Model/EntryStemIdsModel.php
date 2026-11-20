@@ -20,15 +20,15 @@ final readonly class EntryStemIdsModel
      *                                          than only a compound's part
      * @param list<array<int, bool>> $bodies the same for each body text
      */
-    public static function of(array $headlines, array $bodies): self
+    public static function fromHeadlinesAndBodies(array $headlines, array $bodies): self
     {
-        $headline = self::unionOf($headlines);
-        $body = self::unionOf($bodies);
+        $headline = self::mergeStems($headlines);
+        $body = self::mergeStems($bodies);
 
         return new self(
             array_keys($headline),
             array_keys(array_diff_key($body, $headline)),
-            array_keys(self::unionOf([$headline, $body]), false, true),
+            array_keys(self::mergeStems([$headline, $body]), false, true),
         );
     }
 
@@ -37,7 +37,7 @@ final readonly class EntryStemIdsModel
      *
      * @return array<int, bool>
      */
-    private static function unionOf(array $texts): array
+    private static function mergeStems(array $texts): array
     {
         $heldByAWord = [];
         foreach ($texts as $stems) {

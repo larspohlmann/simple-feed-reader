@@ -79,6 +79,6 @@ final class CardLanguageTest extends TestCase
     ): void {
         $languages = new CardLanguage(new LanguageGuess((new LanguageDetectionFactory())->createForFeedLanguages()));
 
-        self::assertSame($cardLanguage, $languages->of($text, $postLanguage));
+        self::assertSame($cardLanguage, $languages->resolveLanguage($text, $postLanguage));
     }
 }

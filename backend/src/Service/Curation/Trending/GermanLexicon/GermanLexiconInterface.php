@@ -8,5 +8,5 @@ use App\Service\Curation\Trending\Model\GermanLexiconEntryModel;
 
 interface GermanLexiconInterface
 {
-    public function entryOf(string $form): ?GermanLexiconEntryModel;
+    public function findEntry(string $form): ?GermanLexiconEntryModel;
 }

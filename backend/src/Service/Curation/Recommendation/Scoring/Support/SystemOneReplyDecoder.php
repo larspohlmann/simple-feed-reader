@@ -41,7 +41,7 @@ final class SystemOneReplyDecoder
 
         $scores = [];
         foreach ($answers as $questionId => $answer) {
-            $entryId = \is_string($questionId) ? QuestionId::entryIdOf($questionId) : null;
+            $entryId = \is_string($questionId) ? QuestionId::parseEntryId($questionId) : null;
             $noul = \is_array($answer) ? ($answer['noul'] ?? null) : null;
             if (null !== $entryId && (\is_float($noul) || \is_int($noul))) {
                 $scores[$entryId] = (float) $noul;
@@ -63,7 +63,7 @@ final class SystemOneReplyDecoder
             completionTokens: self::countIn($usage, 'output_tokens', 'completion_tokens'),
             reasoningTokens: 0,
             cachedTokens: 0,
-            costNanoCredits: ReportedCost::nanoCreditsOf($usage['cost'] ?? null),
+            costNanoCredits: ReportedCost::parseNanoCredits($usage['cost'] ?? null),
         );
     }
 

@@ -14,22 +14,22 @@ final class ProviderHostTest extends TestCase
 {
     public function testItIsTheHostOfTheConnectionsBaseUrl(): void
     {
-        self::assertSame('api.example.test', ProviderHost::of($this->connection('https://api.example.test/v1')));
+        self::assertSame('api.example.test', ProviderHost::parseHost($this->connection('https://api.example.test/v1')));
     }
 
     public function testAHostOfZeroSurvives(): void
     {
-        self::assertSame('0', ProviderHost::of($this->connection('http://0:8080/v1')));
+        self::assertSame('0', ProviderHost::parseHost($this->connection('http://0:8080/v1')));
     }
 
     public function testAHostlessUrlHasNoHost(): void
     {
-        self::assertNull(ProviderHost::of($this->connection('/v1')));
+        self::assertNull(ProviderHost::parseHost($this->connection('/v1')));
     }
 
     public function testNoConnectionHasNoHost(): void
     {
-        self::assertNull(ProviderHost::of(null));
+        self::assertNull(ProviderHost::parseHost(null));
     }
 
     private function connection(string $baseUrl): AiProviderSettings

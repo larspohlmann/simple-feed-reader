@@ -73,12 +73,15 @@ final class HeadlineWindow
     /** Entries must arrive in ascending id order: the postings stay sorted. */
     public function add(WindowEntryModel $entry, string $body, ?SharedArticleModel $article): void
     {
-        $stems = EntryStemIdsModel::of(
+        $stems = EntryStemIdsModel::fromHeadlinesAndBodies(
             [
-                $this->stemIdsOf($entry->title, $entry->language),
-                $this->stemIdsOf($article->title ?? '', $article?->language),
+                $this->indexStemIds($entry->title, $entry->language),
+                $this->indexStemIds($article->title ?? '', $article?->language),
             ],
-            [$this->stemIdsOf($body, $entry->language), $this->stemIdsOf($article->body ?? '', $article?->language)],
+            [
+                $this->indexStemIds($body, $entry->language),
+                $this->indexStemIds($article->body ?? '', $article?->language),
+            ],
         );
         $this->headlineStems[$entry->id] = $stems->headlineIds;
         $this->bodyStems[$entry->id] = $stems->bodyIds;
@@ -88,7 +91,7 @@ final class HeadlineWindow
         $this->feedOfEntry[$entry->id] = $entry->feedId;
         $this->entriesOfFeed[$entry->feedId][] = $entry->id;
         $this->post($entry->id, $stems->headlineIds, $stems->bodyIds);
-        $this->countLanguageOf($entry);
+        $this->tallyLanguage($entry);
     }
 
     public function languageCoverage(): LanguageCoverageModel
@@ -115,9 +118,9 @@ final class HeadlineWindow
         $shared = [];
         $sharingAHeadline = [];
         $parts = [];
-        foreach ($this->placedStemsOf($entryId) as $stemId => $placeWeight) {
-            $holders = $this->earlierHoldersOf($stemId, $entryId);
-            $partLinks = $this->compoundParts->partLinksOf($stemId, $entryId, $holders);
+        foreach ($this->collectPlacedStems($entryId) as $stemId => $placeWeight) {
+            $holders = $this->collectEarlierHolders($stemId, $entryId);
+            $partLinks = $this->compoundParts->buildPartLinks($stemId, $entryId, $holders);
             $rarity = $this->rarity($stemId);
             $wordHolders = $partLinks === [] ? $holders : array_diff_key($holders, $partLinks);
             foreach ($wordHolders as $earlierEntryId => $earlierPlaceWeight) {
@@ -165,7 +168,7 @@ final class HeadlineWindow
         };
     }
 
-    private function countLanguageOf(WindowEntryModel $entry): void
+    private function tallyLanguage(WindowEntryModel $entry): void
     {
         if (null === $entry->language) {
             return;
@@ -175,13 +178,13 @@ final class HeadlineWindow
     }
 
     /** @return array<int, bool> stem id => whether a word of the text holds it, rather than only a compound's part */
-    private function stemIdsOf(string $text, ?FeedLanguage $language): array
+    private function indexStemIds(string $text, ?FeedLanguage $language): array
     {
         $ids = [];
-        foreach ($this->equivalents->wordsOf($text) as [$word, $bare]) {
+        foreach ($this->equivalents->canonicalizeWords($text) as [$word, $bare]) {
             $key = $language?->value . ' ' . $word;
             if (!\array_key_exists($key, $this->stemIdByWord)) {
-                $this->assignStemIds($key, $this->equivalents->wordStemsOf($word, $bare, $language), $language);
+                $this->assignStemIds($key, $this->equivalents->stemWordAndParts($word, $bare, $language), $language);
             }
             $stemId = $this->stemIdByWord[$key];
             if (null !== $stemId) {
@@ -244,7 +247,7 @@ final class HeadlineWindow
     private function weighTotal(int $entryId): float
     {
         $total = 0.0;
-        foreach ($this->placedStemsOf($entryId) as $stemId => $placeWeight) {
+        foreach ($this->collectPlacedStems($entryId) as $stemId => $placeWeight) {
             if (!$this->compoundParts->isOnlyAPartIn($entryId, $stemId)) {
                 $total += $placeWeight * $this->rarity($stemId);
             }
@@ -254,7 +257,7 @@ final class HeadlineWindow
     }
 
     /** @return array<int, float> stem id => place weight, filler left out */
-    private function placedStemsOf(int $entryId): array
+    private function collectPlacedStems(int $entryId): array
     {
         $placed = [];
         $places = [
@@ -273,7 +276,7 @@ final class HeadlineWindow
     }
 
     /** @return array<int, float> earlier entry id => the stem's place weight there, filler for its feed left out */
-    private function earlierHoldersOf(int $stemId, int $entryId): array
+    private function collectEarlierHolders(int $stemId, int $entryId): array
     {
         $holders = [];
         $places = [
@@ -302,11 +305,11 @@ final class HeadlineWindow
 
     private function isFeedFillerFor(int $entryId, int $stemId): bool
     {
-        return isset($this->feedFillerOf($this->feedOfEntry[$entryId])[$stemId]);
+        return isset($this->countFeedFillerOnce($this->feedOfEntry[$entryId])[$stemId]);
     }
 
     /** @return array<int, true> */
-    private function feedFillerOf(int $feedId): array
+    private function countFeedFillerOnce(int $feedId): array
     {
         return $this->feedFiller[$feedId] ??= $this->countFeedFiller($feedId);
     }

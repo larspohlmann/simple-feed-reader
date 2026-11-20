@@ -25,7 +25,7 @@ final class HeadlineEquivalentsTest extends TestCase
     {
         self::assertSame(
             [['streik', 'streik'], ['hamburg', 'hamburg']],
-            $this->equivalents->wordsOf('Streik in Hamburg'),
+            $this->equivalents->canonicalizeWords('Streik in Hamburg'),
         );
     }
 
@@ -303,7 +303,7 @@ final class HeadlineEquivalentsTest extends TestCase
 
     public function testACanonicalIsNeverSplit(): void
     {
-        self::assertSame(['eunion'], $this->equivalents->wordStemsOf('eunion', 'eunion', FeedLanguage::German));
+        self::assertSame(['eunion'], $this->equivalents->stemWordAndParts('eunion', 'eunion', FeedLanguage::German));
     }
 
     public function testTheWholeStemComesBeforeThePartStems(): void
@@ -315,7 +315,7 @@ final class HeadlineEquivalentsTest extends TestCase
                 static fn (string $word): string => $stemmer->stem($word, FeedLanguage::German),
                 ['polizeieinsatz', 'polizei', 'einsatz'],
             ),
-            $this->equivalents->wordStemsOf('polizeieinsatz', 'polizeieinsatz', FeedLanguage::German),
+            $this->equivalents->stemWordAndParts('polizeieinsatz', 'polizeieinsatz', FeedLanguage::German),
         );
     }
 
@@ -325,7 +325,7 @@ final class HeadlineEquivalentsTest extends TestCase
 
         self::assertSame(
             [$stemmer->stem('tagtagbus', FeedLanguage::German), 'tag', 'bus'],
-            $this->equivalents->wordStemsOf('tagtagbus', 'tagtagbus', FeedLanguage::German),
+            $this->equivalents->stemWordAndParts('tagtagbus', 'tagtagbus', FeedLanguage::German),
         );
     }
 
@@ -380,8 +380,8 @@ final class HeadlineEquivalentsTest extends TestCase
     private function stemsOf(string $text, ?FeedLanguage $language): array
     {
         $stems = [];
-        foreach ($this->equivalents->wordsOf($text) as [$word, $bare]) {
-            $stems = [...$stems, ...$this->equivalents->wordStemsOf($word, $bare, $language)];
+        foreach ($this->equivalents->canonicalizeWords($text) as [$word, $bare]) {
+            $stems = [...$stems, ...$this->equivalents->stemWordAndParts($word, $bare, $language)];
         }
 
         return array_values(array_unique($stems));

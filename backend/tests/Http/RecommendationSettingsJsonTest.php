@@ -47,7 +47,7 @@ final class RecommendationSettingsJsonTest extends TestCase
     {
         $state = RecommendationSettingsJson::state(
             $this->effectiveSettings(),
-            RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Scoring),
+            RecommendationEngineCapabilitiesModel::fromKind(RecommendationEngineKind::Scoring),
             workerAlive: true,
         );
 
@@ -123,7 +123,7 @@ final class RecommendationSettingsJsonTest extends TestCase
 
     private static function llm(): RecommendationEngineCapabilitiesModel
     {
-        return RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Llm);
+        return RecommendationEngineCapabilitiesModel::fromKind(RecommendationEngineKind::Llm);
     }
 
     private function effectiveSettings(bool $showScoreAndReasons = false): EffectiveRecommendationSettingsModel

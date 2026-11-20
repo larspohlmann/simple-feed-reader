@@ -53,8 +53,14 @@ final readonly class RecommendationConsolidationResolver
             $tick->settings,
             $run->getProfileText(),
         );
-        $inputSize = $this->promptBuilder->consolidationInputSize($prompt, OutputLimitModel::of($tick->connection));
-        $pool = ConsolidationShortlist::of($this->ranker->ranked($tick->userId(), $run->getWinners()), $inputSize);
+        $inputSize = $this->promptBuilder->consolidationInputSize(
+            $prompt,
+            OutputLimitModel::fromConnection($tick->connection),
+        );
+        $pool = ConsolidationShortlist::sliceShortlist(
+            $this->ranker->ranked($tick->userId(), $run->getWinners()),
+            $inputSize,
+        );
         $linesById = $this->candidateLoader->linesForIds($tick->userId(), array_column($pool, 'id'));
         $pool = self::stillPresent($pool, $linesById);
 

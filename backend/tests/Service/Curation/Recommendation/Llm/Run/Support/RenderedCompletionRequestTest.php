@@ -18,7 +18,7 @@ final class RenderedCompletionRequestTest extends TestCase
         self::assertSame(
             "{\n    \"model\": \"m\",\n    \"messages\": [\n        {\n            \"role\": \"user\",\n"
             . "            \"content\": \"héllo/wörld\"\n        }\n    ]\n}",
-            RenderedCompletionRequest::of(new CompletionRequestModel(
+            RenderedCompletionRequest::fromRequest(new CompletionRequestModel(
                 'm',
                 [['role' => 'user', 'content' => 'héllo/wörld']],
                 1024,

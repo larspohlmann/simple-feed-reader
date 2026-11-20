@@ -14,7 +14,7 @@ final class ConsolidationShortlist
      *
      * @return list<array{id: int, score: int, reason: string}>
      */
-    public static function of(array $ranked, int $inputSize): array
+    public static function sliceShortlist(array $ranked, int $inputSize): array
     {
         return \array_slice($ranked, 0, $inputSize);
     }

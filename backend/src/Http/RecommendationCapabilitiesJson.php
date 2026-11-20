@@ -26,7 +26,7 @@ final readonly class RecommendationCapabilitiesJson
     /** @return array{reasons: bool, prompt: bool, profile: string, tuningFields: list<string>} */
     public function fromKind(RecommendationEngineKind $kind): array
     {
-        return self::shape(RecommendationEngineCapabilitiesModel::of($kind));
+        return self::shape(RecommendationEngineCapabilitiesModel::fromKind($kind));
     }
 
     /** @return array{reasons: bool, prompt: bool, profile: string, tuningFields: list<string>} */

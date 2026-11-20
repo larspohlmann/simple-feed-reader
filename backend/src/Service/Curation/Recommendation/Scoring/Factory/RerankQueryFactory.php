@@ -19,10 +19,10 @@ final readonly class RerankQueryFactory
 
     public function create(ScoringReaderModel $reader, int $tokenBudget): string
     {
-        $bytesFit = static fn (int $bytes): bool => TokenEstimate::ofLength($bytes) <= $tokenBudget;
+        $bytesFit = static fn (int $bytes): bool => TokenEstimate::estimateTokensForLength($bytes) <= $tokenBudget;
         $opening = self::QUESTION . self::guidanceLine($reader->guidance, $bytesFit) . self::PROFILE_LABEL;
 
-        return $opening . FittingPrefix::of(
+        return $opening . FittingPrefix::cutToFit(
             mb_scrub($reader->profile, 'UTF-8'),
             static fn (string $prefix): bool => $bytesFit(\strlen($opening) + \strlen($prefix)),
         );
@@ -41,7 +41,7 @@ final readonly class RerankQueryFactory
 
         $framing = \strlen(self::QUESTION) + \strlen(self::GUIDANCE_LABEL) + \strlen(self::PROFILE_LABEL);
 
-        return self::GUIDANCE_LABEL . FittingPrefix::of(
+        return self::GUIDANCE_LABEL . FittingPrefix::cutToFit(
             mb_scrub($guidance, 'UTF-8'),
             static fn (string $prefix): bool => $bytesFit($framing + \strlen($prefix)),
         );

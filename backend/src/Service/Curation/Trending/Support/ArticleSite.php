@@ -9,7 +9,7 @@ use App\Service\Outbound\Fetch\Support\HostKey;
 final class ArticleSite
 {
     /** The URL's host as HostKey keys it, or null when the URL has none. */
-    public static function of(?string $url): ?string
+    public static function fromUrl(?string $url): ?string
     {
         return $url === null ? null : HostKey::forUrlOrNull($url);
     }

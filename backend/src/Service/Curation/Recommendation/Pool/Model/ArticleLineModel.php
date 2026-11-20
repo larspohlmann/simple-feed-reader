@@ -31,7 +31,7 @@ final readonly class ArticleLineModel
         return $this->ownArticleHash !== null;
     }
 
-    public static function of(TitledEntry $titled, ?StoryLinkModel $storyLink): self
+    public static function fromTitledEntry(TitledEntry $titled, ?StoryLinkModel $storyLink): self
     {
         $entry = $titled->entry;
         $isOutlet = $entry->getFeed()->isFromAnOutlet();

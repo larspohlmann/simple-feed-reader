@@ -50,7 +50,7 @@ final readonly class TickPhases
             return RecommendationRunReportModel::fromRun($run);
         }
 
-        return $this->advanceWithinTheEnvelope($this->engines->engineOf($tick->engineKind), $tick);
+        return $this->advanceWithinTheEnvelope($this->engines->selectEngine($tick->engineKind), $tick);
     }
 
     private function advanceWithinTheEnvelope(

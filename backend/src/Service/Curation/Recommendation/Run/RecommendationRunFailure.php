@@ -42,7 +42,7 @@ final readonly class RecommendationRunFailure
 
         return $this->failGuarded(
             $tick->run,
-            ProviderFailedMessage::of($tick->connection->getBaseUrl(), $rejection->getMessage()),
+            ProviderFailedMessage::formatMessage($tick->connection->getBaseUrl(), $rejection->getMessage()),
         );
     }
 

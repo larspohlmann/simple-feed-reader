@@ -82,8 +82,8 @@ final class TrendingRunTest extends TestCase
             null,
         );
 
-        $article = $run->memberOf(1);
-        $post = $run->memberOf(2);
+        $article = $run->readMember(1);
+        $post = $run->readMember(2);
 
         self::assertSame(FeedLanguage::German, $article->language);
         self::assertTrue($article->fromAnOutlet);

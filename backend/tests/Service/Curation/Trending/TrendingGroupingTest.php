@@ -42,7 +42,7 @@ final class TrendingGroupingTest extends DbTestCase
         $run = $this->collect();
 
         self::assertArrayHasKey($article->requireId(), $run->headlines->sharedWeightsWithEarlier($post->requireId()));
-        self::assertSame('shared.example', $run->memberOf($post->requireId())->articleSite);
+        self::assertSame('shared.example', $run->readMember($post->requireId())->articleSite);
     }
 
     public function testAPostWhoseCardNamesNoStoryTakesNeitherItsTextNorItsSite(): void
@@ -53,14 +53,14 @@ final class TrendingGroupingTest extends DbTestCase
         $run = $this->collect();
 
         self::assertSame([], $run->headlines->sharedWeightsWithEarlier($post->requireId()));
-        self::assertNull($run->memberOf($post->requireId())->articleSite);
+        self::assertNull($run->readMember($post->requireId())->articleSite);
     }
 
     public function testAnArticleEntryTakesItsOwnSite(): void
     {
         $article = $this->article();
 
-        self::assertSame('outlet.example', $this->collect()->memberOf($article->requireId())->articleSite);
+        self::assertSame('outlet.example', $this->collect()->readMember($article->requireId())->articleSite);
     }
 
     public function testAPostAndItsCardKeepLinkingByTheCardsUrl(): void
@@ -98,7 +98,7 @@ final class TrendingGroupingTest extends DbTestCase
         $run = $this->collect();
 
         self::assertSame([[$article->requireId(), $post->requireId()]], $run->entriesSharingAUrl());
-        self::assertSame('outlet.example', $run->memberOf($post->requireId())->articleSite);
+        self::assertSame('outlet.example', $run->readMember($post->requireId())->articleSite);
     }
 
     public function testAMemberCarriesItsCardsLink(): void
@@ -110,7 +110,7 @@ final class TrendingGroupingTest extends DbTestCase
 
         self::assertSame(
             $this->entityManager->getConnection()->fetchOne('SELECT shared_link_id FROM link_card'),
-            $run->memberOf($post->requireId())->sharedLinkId,
+            $run->readMember($post->requireId())->sharedLinkId,
         );
     }
 

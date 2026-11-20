@@ -70,7 +70,7 @@ final class TrendingContainerWiringTest extends DbTestCase
     {
         $equivalents = self::getContainer()->get(HeadlineEquivalents::class);
         self::assertInstanceOf(HeadlineEquivalents::class, $equivalents);
-        $stems = $equivalents->wordStemsOf('polizeieinsatz', 'polizeieinsatz', FeedLanguage::German);
+        $stems = $equivalents->stemWordAndParts('polizeieinsatz', 'polizeieinsatz', FeedLanguage::German);
 
         self::assertContains('polizei', $stems);
     }

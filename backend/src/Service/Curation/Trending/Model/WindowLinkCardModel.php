@@ -22,7 +22,7 @@ final readonly class WindowLinkCardModel
         public string $siteName,
         public ?FeedLanguage $language,
     ) {
-        $this->site = ArticleSite::of($url);
+        $this->site = ArticleSite::fromUrl($url);
     }
 
     public function namesAStory(): bool

@@ -9,9 +9,9 @@ use App\Service\Curation\Recommendation\Support\PrettyJson;
 
 final class RenderedCompletionRequest
 {
-    public static function of(CompletionRequestModel $request): string
+    public static function fromRequest(CompletionRequestModel $request): string
     {
-        return PrettyJson::of(['model' => $request->model, 'messages' => $request->messages]);
+        return PrettyJson::encode(['model' => $request->model, 'messages' => $request->messages]);
     }
 
     private function __construct()

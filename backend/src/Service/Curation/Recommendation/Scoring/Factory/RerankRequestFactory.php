@@ -33,9 +33,9 @@ final readonly class RerankRequestFactory
 
     private static function document(ArticleLineModel $article, int $tokenBudget): string
     {
-        return FittingPrefix::of(
+        return FittingPrefix::cutToFit(
             ScoringArticle::line($article),
-            static fn (string $prefix): bool => TokenEstimate::of($prefix) <= $tokenBudget,
+            static fn (string $prefix): bool => TokenEstimate::estimateTokens($prefix) <= $tokenBudget,
         );
     }
 }
