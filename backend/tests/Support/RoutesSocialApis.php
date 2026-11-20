@@ -92,7 +92,7 @@ trait RoutesSocialApis
     {
         $fixtures = new NetworkFeedSubscriptions($this->entityManager());
         $subscription = $fixtures->subscribe($user, 'https://lemmy.example/feeds/' . md5($page) . '.xml');
-        $entry = LemmyPostEntries::on($subscription->getFeed(), $page);
+        $entry = LemmyPostEntries::buildEntry($subscription->getFeed(), $page);
         $this->entityManager()->persist($entry);
         $this->entityManager()->flush();
 

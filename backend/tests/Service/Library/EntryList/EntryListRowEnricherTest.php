@@ -9,9 +9,9 @@ use App\Entity\Discussion;
 use App\Entity\DiscussionVote;
 use App\Entity\Entry;
 use App\Entity\EntryCategory;
-use App\Entity\EntryLemmyPost;
 use App\Entity\EntryOrigin;
 use App\Entity\Feed;
+use App\Entity\LemmyPost;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 use App\Entity\PostCommunity;
@@ -221,12 +221,13 @@ final class EntryListRowEnricherTest extends DbTestCase
         $this->category($duplicate, 0, 'Science');
         $this->card($second, 0, 'https://a.test/');
         $this->savedSearchWithMember('climate', $first);
+        $lemmy = $this->lemmyPost('lemmy', 99);
         $recorder = $this->recorder();
 
-        $this->enrich([$this->row($first), $this->row($second, [$this->row($duplicate)])]);
+        $this->enrich([$this->row($first), $this->row($second, [$this->row($duplicate)]), $this->row($lemmy)]);
 
         $queries = implode("\n", $recorder->queries());
-        self::assertCount(7, $recorder->queries(), $queries);
+        self::assertCount(9, $recorder->queries(), $queries);
         $tables = [
             'entry_category',
             'saved_search_entry',
@@ -234,7 +235,8 @@ final class EntryListRowEnricherTest extends DbTestCase
             'FROM thread_post',
             'share_enrichment',
             'saved_entry_origin',
-            'entry_lemmy_post',
+            'FROM canonical_item',
+            'lemmy_post',
         ];
         foreach ($tables as $table) {
             self::assertCount(1, $recorder->queriesMatching($table), $table . ":\n" . $queries);
@@ -380,7 +382,7 @@ final class EntryListRowEnricherTest extends DbTestCase
         $recorder = $this->recorder();
         $this->enrich($many);
 
-        self::assertSame(8, $singleCount);
+        self::assertSame(7, $singleCount);
         self::assertCount($singleCount, $recorder->queries(), implode("\n", $recorder->queries()));
         self::assertCount(1, $recorder->queriesMatching('social_like'));
     }
@@ -492,8 +494,8 @@ final class EntryListRowEnricherTest extends DbTestCase
     public function testALemmyPostCarriesItsScoreAndCommunityWithoutAnAccount(): void
     {
         $entry = $this->lemmyPost('scored', 31);
-        $post = new EntryLemmyPost($entry);
-        $post->recordScore(7);
+        $entry->getCanonicalItem()?->recordScore(7);
+        $post = new LemmyPost($entry->getCanonicalItem() ?? self::fail('linked'));
         $post->placeIn(PostCommunity::fromIdentityAndUrl('Technology@lemmy.world', 'https://lemmy.world/c/technology'));
         $this->entityManager->persist($post);
         $this->entityManager->flush();
@@ -532,7 +534,7 @@ final class EntryListRowEnricherTest extends DbTestCase
     {
         $feed = new Feed('https://lemmy.world/feeds/c/technology.xml');
         $this->entityManager->persist($feed);
-        $entry = LemmyPostEntries::on($feed, 'https://lemmy.world/post/78', 'vote-only');
+        $entry = LemmyPostEntries::buildEntry($feed, 'https://lemmy.world/post/78', 'vote-only');
         $this->entityManager->persist($entry);
         $this->entityManager->flush();
         $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::lemmyOf($this->user));
@@ -563,7 +565,7 @@ final class EntryListRowEnricherTest extends DbTestCase
 
         $this->enrich($rows);
 
-        self::assertCount(1, $recorder->queriesMatching('entry_lemmy_post'));
+        self::assertCount(1, $recorder->queriesMatching('lemmy_post'));
     }
 
     public function testNoRowsStayNoRowsWithoutAQuery(): void
@@ -644,10 +646,12 @@ final class EntryListRowEnricherTest extends DbTestCase
     {
         $feed = new Feed($feedUrl);
         $this->entityManager->persist($feed);
-        $entry = LemmyPostEntries::on($feed, 'https://lemmy.world/post/77', 'own-feed-' . $feedUrl);
+        $entry = LemmyPostEntries::buildEntry($feed, 'https://lemmy.world/post/77', 'own-feed-' . $feedUrl);
+        $item = LemmyPostEntries::linkItem($entry, 'https://lemmy.world/post/77');
+        $item->recordScore(7);
+        $this->entityManager->persist($item);
         $this->entityManager->persist($entry);
-        $post = new EntryLemmyPost($entry);
-        $post->recordScore(7);
+        $post = new LemmyPost($item);
         $post->placeIn(PostCommunity::fromIdentityAndUrl('Technology@lemmy.world', 'https://lemmy.world/c/technology'));
         $this->entityManager->persist($post);
         $this->entityManager->flush();
@@ -657,7 +661,8 @@ final class EntryListRowEnricherTest extends DbTestCase
 
     private function lemmyPost(string $guid, int $postId): Entry
     {
-        $entry = LemmyPostEntries::on($this->feed, 'https://lemmy.example/post/' . $postId, $guid);
+        $entry = LemmyPostEntries::buildEntry($this->feed, 'https://lemmy.example/post/' . $postId, $guid);
+        $this->entityManager->persist(LemmyPostEntries::linkItem($entry, 'https://lemmy.example/post/' . $postId));
         $this->entityManager->persist($entry);
         $this->entityManager->flush();
 

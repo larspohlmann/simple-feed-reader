@@ -7,7 +7,7 @@ namespace App\Tests\Support;
 use App\Entity\CanonicalItem;
 use App\Entity\Category;
 use App\Entity\Entry;
-use App\Entity\EntryLemmyPost;
+use App\Entity\LemmyPost;
 use App\Repository\CanonicalItemRepository;
 use App\Repository\CategoryRepository;
 use App\Repository\EntryRepository;
@@ -18,10 +18,10 @@ use App\Service\Ingestion\Ingest\CanonicalItemWriter;
 use App\Service\Ingestion\Ingest\EntryCategoryWriter;
 use App\Service\Ingestion\Ingest\EntryImageWriter;
 use App\Service\Ingestion\Ingest\EntryIngestor;
-use App\Service\Ingestion\Ingest\EntryLemmyPostWriter;
 use App\Service\Ingestion\Ingest\EntryTranscriptWriter;
 use App\Service\Ingestion\Ingest\Factory\IngestedEntryFactory;
 use App\Service\Ingestion\Ingest\FeedMetadataRecorder;
+use App\Service\Ingestion\Ingest\LemmyPostWriter;
 use App\Service\Ingestion\Ingest\PlatformEntryRules;
 use App\Service\Ingestion\Ingest\StoredEntryRefresher;
 use App\Service\Ingestion\Language\Factory\LanguageDetectionFactory;
@@ -94,8 +94,8 @@ final class EntryIngestors
         return new CanonicalItemWriter($canonicalItems, SocialRuleWiring::canonicalKeys());
     }
 
-    private static function lemmyPostWriter(EntityManagerInterface $entityManager): EntryLemmyPostWriter
+    private static function lemmyPostWriter(EntityManagerInterface $entityManager): LemmyPostWriter
     {
-        return new EntryLemmyPostWriter($entityManager, $entityManager->getRepository(EntryLemmyPost::class));
+        return new LemmyPostWriter($entityManager, $entityManager->getRepository(LemmyPost::class));
     }
 }

@@ -4,15 +4,18 @@ declare(strict_types=1);
 
 namespace App\Service\Library\EntryList;
 
+use App\Entity\CanonicalItem;
 use App\Entity\Entry;
-use App\Entity\EntryLemmyPost;
+use App\Entity\LemmyPost;
 use App\Entity\SocialAccount;
+use App\Enum\CanonicalItemKind;
 use App\Enum\SocialNetwork;
 use App\Enum\VoteScore;
+use App\Repository\CanonicalItemRepository;
 use App\Repository\DiscussionVoteRepository;
-use App\Repository\EntryLemmyPostRepository;
 use App\Repository\EntryListRowLemmy;
 use App\Repository\EntryListRowSocial;
+use App\Repository\LemmyPostRepository;
 use App\Repository\SocialAccountRepository;
 use App\Repository\SocialLikeRepository;
 use App\Service\Content\Comments\Support\LemmyPostAddress;
@@ -28,7 +31,8 @@ final readonly class ConnectedAccountStates
         private SocialAccountRepository $socialAccounts,
         private SocialLikeRepository $socialLikes,
         private DiscussionVoteRepository $discussionVotes,
-        private EntryLemmyPostRepository $lemmyPosts,
+        private CanonicalItemRepository $canonicalItems,
+        private LemmyPostRepository $lemmyPosts,
         private SocialPostAddresses $postAddresses,
         private ProfileFeeds $profileFeeds,
     ) {
@@ -42,17 +46,43 @@ final readonly class ConnectedAccountStates
         $accountsByNetwork = $this->loadAccountsByNetwork($postAddresses, $lemmyPostIds, $userId);
         $socialStates = $this->buildSocialStates($entries, $postAddresses, $accountsByNetwork, $userId);
         $votes = $this->loadVotes($lemmyPostIds, $accountsByNetwork, $userId);
-        $lemmyPosts = $this->lemmyPosts->byEntryIds(array_keys($entries));
+        $itemIds = self::collectItemIds($entries);
+        $items = $this->canonicalItems->findByIds($itemIds);
+        $lemmyPosts = $this->lemmyPosts->byCanonicalItemIds($itemIds);
 
         $lemmyStates = [];
         foreach ($entries as $entryId => $entry) {
-            $lemmy = $this->buildLemmyRow($entry, $lemmyPosts[$entryId] ?? null, $votes[$entryId] ?? null);
+            $itemId = $entry->getCanonicalItem()?->getId();
+            $lemmy = $this->buildLemmyRow(
+                $entry,
+                null === $itemId ? null : ($items[$itemId] ?? null),
+                null === $itemId ? null : ($lemmyPosts[$itemId] ?? null),
+                $votes[$entryId] ?? null,
+            );
             if (null !== $lemmy) {
                 $lemmyStates[$entryId] = $lemmy;
             }
         }
 
         return new ConnectedAccountStatesModel($socialStates, $lemmyStates);
+    }
+
+    /**
+     * @param array<int, Entry> $entries
+     *
+     * @return list<int>
+     */
+    private static function collectItemIds(array $entries): array
+    {
+        $itemIds = [];
+        foreach ($entries as $entry) {
+            $itemId = $entry->getCanonicalItem()?->getId();
+            if (null !== $itemId) {
+                $itemIds[$itemId] = $itemId;
+            }
+        }
+
+        return array_values($itemIds);
     }
 
     /**
@@ -166,9 +196,14 @@ final readonly class ConnectedAccountStates
         return $addresses;
     }
 
-    private function buildLemmyRow(Entry $entry, ?EntryLemmyPost $post, ?VoteScore $myVote): ?EntryListRowLemmy
-    {
-        if (null === $post && null === $myVote) {
+    private function buildLemmyRow(
+        Entry $entry,
+        ?CanonicalItem $item,
+        ?LemmyPost $post,
+        ?VoteScore $myVote,
+    ): ?EntryListRowLemmy {
+        $score = CanonicalItemKind::Lemmy === $item?->getKind() ? $item->getScore() : null;
+        if (null === $post && null === $score && null === $myVote) {
             return null;
         }
         $community = $post?->getCommunity();
@@ -176,6 +211,6 @@ final readonly class ConnectedAccountStates
         $feedIdentity = $this->profileFeeds->selectRule(SocialNetwork::Lemmy)->parseIdentity($feedUrl);
         $inOwnFeed = null !== $feedIdentity && strtolower($feedIdentity) === $community?->identity;
 
-        return new EntryListRowLemmy($post?->getScore(), $inOwnFeed ? null : $community, $myVote);
+        return new EntryListRowLemmy($score, $inOwnFeed ? null : $community, $myVote);
     }
 }

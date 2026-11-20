@@ -167,7 +167,7 @@ final class DiscussionVoteRepositoryTest extends DbTestCase
 
     private function entry(string $guid): Entry
     {
-        $entry = LemmyPostEntries::on($this->feed, 'https://lemmy.example/post/' . $guid, $guid);
+        $entry = LemmyPostEntries::buildEntry($this->feed, 'https://lemmy.example/post/' . $guid, $guid);
         $this->entityManager->persist($entry);
         $this->entityManager->flush();
 

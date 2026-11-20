@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\Ingestion\Ingest;
 
 use App\Entity\Entry;
-use App\Entity\EntryLemmyPost;
 use App\Entity\Feed;
 use App\Entity\Headline;
+use App\Entity\LemmyPost;
 use App\Service\Ingestion\Ingest\EntryIngestor;
 use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
 use App\Service\Ingestion\Ingest\StoredEntryRefresher;
@@ -92,9 +92,11 @@ final class RefreshStoredEntriesTest extends DbTestCase
         return $entry;
     }
 
-    private function lemmyPostRow(Entry $entry): ?EntryLemmyPost
+    private function lemmyPostRow(Entry $entry): ?LemmyPost
     {
-        return $this->entityManager->getRepository(EntryLemmyPost::class)->findOneBy(['entry' => $entry]);
+        return $this->entityManager->getRepository(LemmyPost::class)->findOneBy([
+            'canonicalItem' => $entry->getCanonicalItem(),
+        ]);
     }
 
     private function parsedEntry(string $guid, ?DeclaredImageModel $image): ParsedEntryModel
@@ -170,7 +172,7 @@ final class RefreshStoredEntriesTest extends DbTestCase
         $this->refresher()->refreshStoredEntries($feed, new ParsedFeedModel('T', null, null, null, [$unknown, $known]));
         $this->entityManager->flush();
 
-        self::assertSame(3, $this->lemmyPostRow($entry)?->getScore());
+        self::assertSame(3, $entry->getCanonicalItem()?->getScore());
     }
 
     public function testSkipsParsedEntriesThatCarryNoImage(): void
@@ -271,7 +273,7 @@ final class RefreshStoredEntriesTest extends DbTestCase
     {
         $feed = $this->feed();
         $entry = $this->storedPost($feed);
-        self::assertSame(10, $this->lemmyPostRow($entry)?->getScore());
+        self::assertSame(10, $entry->getCanonicalItem()?->getScore());
 
         $this->refresher()->refreshStoredEntries(
             $feed,
@@ -280,9 +282,9 @@ final class RefreshStoredEntriesTest extends DbTestCase
         $this->entityManager->flush();
         $this->entityManager->clear();
 
-        $rows = $this->entityManager->getRepository(EntryLemmyPost::class)->findAll();
+        $rows = $this->entityManager->getRepository(LemmyPost::class)->findAll();
         self::assertCount(1, $rows);
-        self::assertSame(9, $rows[0]->getScore());
+        self::assertSame(9, $rows[0]->getCanonicalItem()->getScore());
         self::assertSame('politics@lemmy.world', $rows[0]->getCommunity()?->identity);
     }
 
@@ -302,7 +304,7 @@ final class RefreshStoredEntriesTest extends DbTestCase
         $this->entityManager->flush();
 
         $created = $this->lemmyPostRow($entry);
-        self::assertSame(4, $created?->getScore());
+        self::assertSame(4, $created?->getCanonicalItem()->getScore());
         self::assertSame('politics@lemmy.world', $created->getCommunity()?->identity);
     }
 
@@ -319,6 +321,6 @@ final class RefreshStoredEntriesTest extends DbTestCase
         $this->refresher()->refreshStoredEntries($feed, new ParsedFeedModel('T', null, null, null, [$once, $once]));
         $this->entityManager->flush();
 
-        self::assertCount(1, $this->entityManager->getRepository(EntryLemmyPost::class)->findAll());
+        self::assertCount(1, $this->entityManager->getRepository(LemmyPost::class)->findAll());
     }
 }

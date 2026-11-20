@@ -247,7 +247,7 @@ final class DiscussionVotesTest extends DbTestCase
 
     private function lemmyPost(): Entry
     {
-        $entry = LemmyPostEntries::on($this->feed('https://lemmy.example/feeds/c/technology.xml'));
+        $entry = LemmyPostEntries::buildEntry($this->feed('https://lemmy.example/feeds/c/technology.xml'));
         $this->entityManager->persist($entry);
         $this->entityManager->flush();
 

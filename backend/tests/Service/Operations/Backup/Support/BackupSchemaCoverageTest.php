@@ -14,7 +14,6 @@ use App\Entity\DigestSettings;
 use App\Entity\DiscussionVote;
 use App\Entity\Entry;
 use App\Entity\EntryCategory;
-use App\Entity\EntryLemmyPost;
 use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\EntryTranscript;
@@ -23,6 +22,7 @@ use App\Entity\FeedDirectoryScope;
 use App\Entity\GrafanaSettings;
 use App\Entity\InstanceSetting;
 use App\Entity\KnownSocialCollection;
+use App\Entity\LemmyPost;
 use App\Entity\LinkCard;
 use App\Entity\MailSendFailure;
 use App\Entity\MailServerSettings;
@@ -161,7 +161,7 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . 'restored entry shows its root post alone.',
         CanonicalItem::class => 'The row every copy of a social post shares, with its score and counts (#2404); '
             . 'ingest finds or creates it again for each copy a feed lists.',
-        EntryLemmyPost::class => 'A Lemmy post\'s score and community (#2347), rewritten on every fetch while its feed '
+        LemmyPost::class => 'A Lemmy post\'s score and community (#2347), rewritten on every fetch while its feed '
             . 'still lists the post; a restored one would be stale before the reader saw it.',
         EntryTranscript::class => 'An episode\'s transcript, fetched from the URL its feed declares (#1809); a '
             . 'restored episode has none, since a backup carries no transcript declaration.',
