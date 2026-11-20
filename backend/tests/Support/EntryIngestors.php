@@ -9,7 +9,6 @@ use App\Entity\Entry;
 use App\Entity\LemmyPost;
 use App\Repository\CategoryRepository;
 use App\Repository\EntryRepository;
-use App\Service\Foundation\CanonicalItem\CanonicalItemLinker;
 use App\Service\Foundation\Sanitize\EntrySanitizer;
 use App\Service\Foundation\Sanitize\TrailingBlankRemover;
 use App\Service\Ingestion\Category\CategoryNormalizer;
@@ -29,6 +28,7 @@ use App\Service\Ingestion\Language\LanguageGuess;
 use App\Service\Social\Social\ProfileFeedTitle;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
+use Symfony\Component\Clock\NativeClock;
 
 /** An EntryIngestor over the EntityManager's real repositories: the one assembly the ingest and refresh tests share. */
 final class EntryIngestors
@@ -65,7 +65,7 @@ final class EntryIngestors
             ),
             new EntryTranscriptWriter($entityManager),
             self::lemmyPostWriter($entityManager),
-            self::canonicalItemWriter($entityManager),
+            self::canonicalItemWriter($entityManager, $clock),
         );
     }
 
@@ -81,16 +81,15 @@ final class EntryIngestors
             $platformRules,
             new EntryImageWriter(),
             self::lemmyPostWriter($entityManager),
-            self::canonicalItemWriter($entityManager),
+            self::canonicalItemWriter($entityManager, new NativeClock()),
         );
     }
 
-    private static function canonicalItemWriter(EntityManagerInterface $entityManager): CanonicalItemWriter
-    {
-        return new CanonicalItemWriter(new CanonicalItemLinker(
-            CanonicalItems::readRepository($entityManager),
-            SocialRuleWiring::canonicalKeys(),
-        ));
+    private static function canonicalItemWriter(
+        EntityManagerInterface $entityManager,
+        ClockInterface $clock,
+    ): CanonicalItemWriter {
+        return new CanonicalItemWriter(CanonicalItems::buildLinker($entityManager, $clock));
     }
 
     private static function lemmyPostWriter(EntityManagerInterface $entityManager): LemmyPostWriter

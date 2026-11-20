@@ -19,7 +19,6 @@ use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\FeedRepository;
 use App\Repository\SubscribedEntryCountRepository;
-use App\Service\Foundation\CanonicalItem\CanonicalItemLinker;
 use App\Service\Operations\Backup\BackupFitCheck;
 use App\Service\Operations\Backup\BackupReader;
 use App\Service\Operations\Backup\EntryPartInspector;
@@ -36,7 +35,6 @@ use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\SharedLinks;
-use App\Tests\Support\SocialRuleWiring;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -605,20 +603,21 @@ final class EntryPartRestorerTest extends DbTestCase
             $entryShares,
             $inserter,
             PostEnrichers::sharedLinkWriter($this->entityManager),
-            new RestoredEntryFinisher(
-                $this->entityManager,
-                $entries,
-                new CanonicalItemLinker(
-                    CanonicalItems::readRepository($this->entityManager),
-                    SocialRuleWiring::canonicalKeys(),
-                ),
-                EntryIndexers::with($this->indexWriter),
-            ),
             new RestoredEntryStateFactory(new MockClock('2026-08-20 00:00:00', 'UTC')),
             $feeds,
         );
 
-        return new EntryPartRestorer($inspector, $reader, $loaderFactory);
+        return new EntryPartRestorer(
+            $inspector,
+            $reader,
+            $loaderFactory,
+            new RestoredEntryFinisher(
+                $this->entityManager,
+                $entries,
+                CanonicalItems::buildLinker($this->entityManager, new MockClock('2026-08-20 00:00:00', 'UTC')),
+                EntryIndexers::with($this->indexWriter),
+            ),
+        );
     }
 
     private function subscribedUser(string $feedUrl): User

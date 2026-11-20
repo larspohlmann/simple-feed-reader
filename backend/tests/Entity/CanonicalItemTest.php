@@ -6,6 +6,7 @@ namespace App\Tests\Entity;
 
 use App\Entity\CanonicalItem;
 use App\Enum\CanonicalItemKind;
+use App\Tests\Support\CanonicalItems;
 use PHPUnit\Framework\TestCase;
 
 final class CanonicalItemTest extends TestCase
@@ -80,6 +81,6 @@ final class CanonicalItemTest extends TestCase
 
     private static function item(): CanonicalItem
     {
-        return new CanonicalItem(CanonicalItemKind::Lemmy, 'https://lemmy.world/post/7');
+        return CanonicalItems::buildItem(CanonicalItemKind::Lemmy, 'https://lemmy.world/post/7');
     }
 }

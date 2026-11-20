@@ -10,6 +10,7 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Enum\CanonicalItemKind;
 use App\Tests\DbTestCase;
+use App\Tests\Support\CanonicalItems;
 
 final class EntryCanonicalItemTest extends DbTestCase
 {
@@ -102,7 +103,7 @@ final class EntryCanonicalItemTest extends DbTestCase
 
     private function persistItem(): CanonicalItem
     {
-        $item = new CanonicalItem(CanonicalItemKind::Lemmy, 'https://lemmy.world/post/7');
+        $item = CanonicalItems::buildItem(CanonicalItemKind::Lemmy, 'https://lemmy.world/post/7');
         $this->entityManager->persist($item);
         $this->entityManager->flush();
 

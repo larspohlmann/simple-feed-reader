@@ -618,20 +618,34 @@ final class EntryPrunerTest extends DbTestCase
         );
     }
 
-    public function testAnItemNoEntryEverReferencedGoes(): void
+    public function testAnUnreferencedItemOlderThanADayGoes(): void
     {
-        $this->entityManager->persist(new CanonicalItem(CanonicalItemKind::Lemmy, LemmyPostEntries::PAGE));
-        $this->entityManager->flush();
+        $this->persistItemCreatedAt($this->daysAgo(1)->modify('-1 minute'));
 
         self::assertSame(0, $this->pruner->prune());
 
         self::assertSame(0, $this->countItemRows()['canonical_item']);
     }
 
+    public function testAnUnreferencedItemYoungerThanADayStaysForTheIngestStillLinkingIt(): void
+    {
+        $this->persistItemCreatedAt($this->daysAgo(1)->modify('+1 minute'));
+
+        $this->pruner->prune();
+
+        self::assertSame(1, $this->countItemRows()['canonical_item']);
+    }
+
+    private function persistItemCreatedAt(\DateTimeImmutable $createdAt): void
+    {
+        $this->entityManager->persist(new CanonicalItem(CanonicalItemKind::Lemmy, LemmyPostEntries::PAGE, $createdAt));
+        $this->entityManager->flush();
+    }
+
     /** One item the copies share, with a vote, a like and its Lemmy post row. */
     private function persistEngagedItem(Entry ...$copies): void
     {
-        $item = new CanonicalItem(CanonicalItemKind::Lemmy, LemmyPostEntries::PAGE);
+        $item = new CanonicalItem(CanonicalItemKind::Lemmy, LemmyPostEntries::PAGE, $this->daysAgo(200));
         $this->entityManager->persist($item);
         foreach ($copies as $copy) {
             $copy->linkTo($item);

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
-use App\Entity\CanonicalItem;
 use App\Entity\Entry;
 use App\Entity\EntryAuthor;
 use App\Entity\EntryState;
@@ -31,6 +30,7 @@ use App\Service\Curation\Trending\ReaderWindows;
 use App\Service\Curation\Trending\TrendingStories;
 use App\Service\Foundation\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
+use App\Tests\Support\CanonicalItems;
 use App\Tests\Support\LemmyPostEntries;
 use App\Tests\Support\SharedLinks;
 use App\Tests\Support\TrendingFixtures;
@@ -325,7 +325,7 @@ final class TrendingStoryRepositoryTest extends DbTestCase
     {
         [[$withAuthor, $site], [$withoutAuthor]] = $this->copiesOf(self::POST, 'shared.example', 'home', 'discover');
         $withoutAuthor->setAuthor(new EntryAuthor());
-        $item = new CanonicalItem(CanonicalItemKind::Mastodon, self::POST);
+        $item = CanonicalItems::buildItem(CanonicalItemKind::Mastodon, self::POST);
         $this->entityManager->persist($item);
         $withAuthor->linkTo($item);
         $withoutAuthor->linkTo($item);

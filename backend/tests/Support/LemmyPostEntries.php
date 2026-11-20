@@ -55,7 +55,7 @@ final class LemmyPostEntries
     /** The item a Lemmy post's copies share, linked to the entry; the caller persists it. */
     public static function linkItem(Entry $entry, string $page = self::PAGE): CanonicalItem
     {
-        $item = new CanonicalItem(CanonicalItemKind::Lemmy, $page);
+        $item = CanonicalItems::buildItem(CanonicalItemKind::Lemmy, $page);
         $entry->linkTo($item);
 
         return $item;

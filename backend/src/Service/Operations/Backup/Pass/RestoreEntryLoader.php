@@ -15,7 +15,6 @@ use App\Service\Operations\Backup\Dto\EntryShareLine;
 use App\Service\Operations\Backup\Dto\EntryStateLine;
 use App\Service\Operations\Backup\Exception\BackupLoadFailedException;
 use App\Service\Operations\Backup\Factory\RestoredEntryStateFactory;
-use App\Service\Operations\Backup\RestoredEntryFinisher;
 use App\Service\Operations\Backup\RestoreEntries\RestoreEntriesInterface;
 use App\Service\Operations\Backup\RestoreEntryShares\RestoreEntrySharesInterface;
 use App\Service\Operations\Backup\RestoreEntryStates\RestoreEntryStatesInterface;
@@ -61,7 +60,6 @@ final class RestoreEntryLoader
         private readonly RestoreEntrySharesInterface $entryShares,
         private readonly EntryBatchInserter $inserter,
         private readonly SharedLinkWriter $linkWriter,
-        private readonly RestoredEntryFinisher $finisher,
         private readonly RestoredEntryStateFactory $stateFactory,
         RestoreDestination $destination,
     ) {
@@ -124,7 +122,12 @@ final class RestoreEntryLoader
         $this->closeBufferedFeed();
         $this->writeHeldStates();
         $this->writeHeldShares();
-        $this->finisher->finishCreated($this->createdEntryIds);
+    }
+
+    /** @return list<int> */
+    public function createdEntryIds(): array
+    {
+        return array_keys($this->createdEntryIds);
     }
 
     public function entriesCreated(): int

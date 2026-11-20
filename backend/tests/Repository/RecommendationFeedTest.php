@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
-use App\Entity\CanonicalItem;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
@@ -20,6 +19,7 @@ use App\Pagination\RecommendationCursor;
 use App\Repository\ForYouFeedQuery;
 use App\Repository\RecommendationItemRepository;
 use App\Tests\DbTestCase;
+use App\Tests\Support\CanonicalItems;
 use App\Tests\Support\QueryRecorder;
 
 final class RecommendationFeedTest extends DbTestCase
@@ -175,7 +175,7 @@ final class RecommendationFeedTest extends DbTestCase
 
     public function testARowReadsItsCanonicalItemWithoutAQueryOfItsOwn(): void
     {
-        $item = new CanonicalItem(CanonicalItemKind::Lemmy, 'https://lemmy.world/post/7');
+        $item = CanonicalItems::buildItem(CanonicalItemKind::Lemmy, 'https://lemmy.world/post/7');
         $item->recordCommentCount(5);
         $this->entityManager->persist($item);
         $entry = $this->entry('linked');

@@ -6,6 +6,7 @@ namespace App\Service\Foundation\CanonicalItem;
 
 use App\Entity\Entry;
 use App\Repository\CanonicalItemRepository;
+use App\Service\Foundation\Clock\NaiveUtcClock;
 
 /** Links each unlinked entry a key rule claims to its canonical item, inserting the item when missing. The caller flushes. */
 final readonly class CanonicalItemLinker
@@ -13,6 +14,7 @@ final readonly class CanonicalItemLinker
     public function __construct(
         private CanonicalItemRepository $canonicalItems,
         private CanonicalKeys $canonicalKeys,
+        private NaiveUtcClock $clock,
     ) {
     }
 
@@ -40,10 +42,11 @@ final readonly class CanonicalItemLinker
     private function ensureItemIds(array $entries): array
     {
         $itemIds = [];
+        $now = $this->clock->now();
         foreach ($entries as $position => $entry) {
             $key = $entry->getCanonicalItem() === null ? $this->canonicalKeys->findKey($entry) : null;
             if ($key !== null) {
-                $itemIds[$position] = $this->canonicalItems->ensure($key);
+                $itemIds[$position] = $this->canonicalItems->ensure($key, $now);
             }
         }
 

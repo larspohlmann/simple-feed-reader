@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
-use App\Entity\CanonicalItem;
 use App\Entity\Category;
 use App\Entity\Entry;
 use App\Entity\EntryAuthor;
@@ -31,6 +30,7 @@ use App\Repository\SavedPostRepository;
 use App\Repository\ThreadPostRepository;
 use App\Service\Library\SavedPosts\Model\SavedCopyModel;
 use App\Tests\DbTestCase;
+use App\Tests\Support\CanonicalItems;
 use App\Tests\Support\EntryShareFixtures;
 use App\Tests\Support\SavedPostFixtures;
 use App\Tests\Support\SharedLinks;
@@ -337,7 +337,7 @@ final class SavedPostRepositoryTest extends DbTestCase
     {
         $source = $this->subscribedFeed('https://item.example/feed.xml');
         $entry = $this->entry($source, 'linked', 'https://item.example/1');
-        $item = new CanonicalItem(CanonicalItemKind::Bluesky, 'at://did:plc:bob/app.bsky.feed.post/1');
+        $item = CanonicalItems::buildItem(CanonicalItemKind::Bluesky, 'at://did:plc:bob/app.bsky.feed.post/1');
         $this->entityManager->persist($item);
         $entry->linkTo($item);
         $this->entityManager->flush();

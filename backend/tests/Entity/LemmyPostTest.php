@@ -8,6 +8,7 @@ use App\Entity\CanonicalItem;
 use App\Entity\LemmyPost;
 use App\Entity\PostCommunity;
 use App\Enum\CanonicalItemKind;
+use App\Tests\Support\CanonicalItems;
 use PHPUnit\Framework\TestCase;
 
 final class LemmyPostTest extends TestCase
@@ -38,6 +39,6 @@ final class LemmyPostTest extends TestCase
 
     private function buildItem(): CanonicalItem
     {
-        return new CanonicalItem(CanonicalItemKind::Lemmy, 'https://lemmy.example/post/42');
+        return CanonicalItems::buildItem(CanonicalItemKind::Lemmy, 'https://lemmy.example/post/42');
     }
 }

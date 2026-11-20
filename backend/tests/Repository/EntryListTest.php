@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
-use App\Entity\CanonicalItem;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
@@ -33,6 +32,7 @@ use App\Repository\NetworkScope;
 use App\Repository\SearchTermsPredicateBuilder;
 use App\Repository\SubscriptionScopeRepository;
 use App\Tests\DbTestCase;
+use App\Tests\Support\CanonicalItems;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\QueryRecorder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -310,7 +310,7 @@ final class EntryListTest extends DbTestCase
     public function testListedRowsReadTheirCanonicalItemWithoutAQueryEach(): void
     {
         foreach (['https://lemmy.world/post/1', 'https://lemmy.world/post/2'] as $index => $key) {
-            $item = new CanonicalItem(CanonicalItemKind::Lemmy, $key);
+            $item = CanonicalItems::buildItem(CanonicalItemKind::Lemmy, $key);
             $item->recordCommentCount($index + 3);
             $this->entityManager->persist($item);
             $this->entry('item-' . $index, '2026-07-0' . ($index + 2) . 'T00:00:00Z')->linkTo($item);

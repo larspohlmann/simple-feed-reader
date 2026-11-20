@@ -13,6 +13,7 @@ use App\Enum\CanonicalItemKind;
 use App\Enum\VoteScore;
 use App\Repository\DiscussionVoteRepository;
 use App\Tests\DbTestCase;
+use App\Tests\Support\CanonicalItems;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
@@ -180,7 +181,7 @@ final class DiscussionVoteRepositoryTest extends DbTestCase
 
     private function persistItem(string $postId): CanonicalItem
     {
-        $item = new CanonicalItem(CanonicalItemKind::Lemmy, 'https://lemmy.example/post/' . $postId);
+        $item = CanonicalItems::buildItem(CanonicalItemKind::Lemmy, 'https://lemmy.example/post/' . $postId);
         $this->entityManager->persist($item);
         $this->entityManager->flush();
 

@@ -11,6 +11,7 @@ use App\Entity\User;
 use App\Enum\CanonicalItemKind;
 use App\Repository\SocialLikeRepository;
 use App\Tests\DbTestCase;
+use App\Tests\Support\CanonicalItems;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
@@ -122,7 +123,7 @@ final class SocialLikeRepositoryTest extends DbTestCase
     private function persistItem(string $statusId): CanonicalItem
     {
         $statusUri = 'https://mastodon.social/users/Gargron/statuses/' . $statusId;
-        $item = new CanonicalItem(CanonicalItemKind::Mastodon, $statusUri);
+        $item = CanonicalItems::buildItem(CanonicalItemKind::Mastodon, $statusUri);
         $this->entityManager->persist($item);
         $this->entityManager->flush();
 

@@ -13,8 +13,8 @@ use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Links the entries a restore wrote natively to their canonical items and hands them to the search index, in the
- * same keyset batches app:search:reindex walks in, so a restore of any size hydrates one batch at a time.
+ * Completes the entries a restore wrote natively: links them to their canonical items and hands them to the search
+ * index, in the keyset batches app:search:reindex walks in, so a restore of any size hydrates one batch at a time.
  */
 final readonly class RestoredEntryFinisher
 {
@@ -28,14 +28,15 @@ final readonly class RestoredEntryFinisher
     ) {
     }
 
-    /** @param array<int, true> $createdEntryIds the ids the restore created, as a set */
-    public function finishCreated(array $createdEntryIds): void
+    /** @param list<int> $entryIds the entries a restore created */
+    public function finishCreated(array $entryIds): void
     {
-        if ([] === $createdEntryIds) {
+        if ([] === $entryIds) {
             return;
         }
 
-        $lastId = min(array_keys($createdEntryIds)) - 1;
+        $createdEntryIds = array_flip($entryIds);
+        $lastId = min($entryIds) - 1;
         do {
             $batch = $this->entries->entriesAfterId($lastId, self::BATCH);
             $created = [];
@@ -55,8 +56,8 @@ final readonly class RestoredEntryFinisher
     /** @param list<Entry> $created */
     private function linkToItems(array $created): void
     {
-        $this->linker->linkClaimed($created);
         try {
+            $this->linker->linkClaimed($created);
             $this->entityManager->flush();
         } catch (DbalException $exception) {
             throw BackupLoadFailedException::duringEntries($exception);

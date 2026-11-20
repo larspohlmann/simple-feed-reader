@@ -7,8 +7,12 @@ namespace App\Tests\Service\Operations\Backup;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\EntryView;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
+use App\Repository\EntryListRepository;
+use App\Repository\EntryListRow;
+use App\Repository\EntryQuery;
 use App\Service\Library\SavedPosts\Support\SavedFeedUrl;
 use App\Service\Operations\Backup\AccountBackupExporter;
 use App\Service\Operations\Backup\AccountRestorer;
@@ -35,7 +39,7 @@ final class CanonicalItemRestoreTest extends DbTestCase
     public function testRestoredCopiesShareOneItem(): void
     {
         $user = $this->userFactory->create('canonical-restore@example.test');
-        $this->persistCopiesOfOnePost($user);
+        $this->persistOnePostInThreeFeeds($user);
         $parts = $this->exportParts($user);
         $connection = $this->entityManager->getConnection();
         $connection->executeStatement('DELETE FROM feed');
@@ -52,6 +56,16 @@ final class CanonicalItemRestoreTest extends DbTestCase
         self::assertNotNull($itemIds[0]);
         self::assertSame([$itemIds[0]], array_values(array_unique($itemIds)), 'every copy links to one item');
         self::assertSame(1, self::readNumeric($connection->fetchOne('SELECT COUNT(*) FROM canonical_item')));
+        self::assertCount(1, $this->listAllItems($user), 'the restored copies show as one row');
+    }
+
+    /** @return list<EntryListRow> */
+    private function listAllItems(User $user): array
+    {
+        $entryList = self::getContainer()->get(EntryListRepository::class);
+        self::assertInstanceOf(EntryListRepository::class, $entryList);
+
+        return $entryList->listForUser(new EntryQuery($user->requireId(), view: EntryView::All));
     }
 
     private static function readNumeric(mixed $value): int
@@ -62,7 +76,7 @@ final class CanonicalItemRestoreTest extends DbTestCase
     }
 
     /** The post in an instance's Local and All feeds, and saved from Local. */
-    private function persistCopiesOfOnePost(User $user): void
+    private function persistOnePostInThreeFeeds(User $user): void
     {
         $local = $this->persistSubscribedFeed($user, 'https://lemmy.example/feeds/local.xml', SourceFormat::XML);
         $all = $this->persistSubscribedFeed($user, 'https://lemmy.example/feeds/all.xml', SourceFormat::XML);

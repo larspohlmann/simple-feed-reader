@@ -32,6 +32,7 @@ use App\Service\Social\Social\SocialLikes;
 use App\Service\Social\Social\SocialPostFinder;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AssertsRefusal;
+use App\Tests\Support\CanonicalItems;
 use App\Tests\Support\ConfirmedDeletions;
 use App\Tests\Support\FakeHomeServerCheck;
 use App\Tests\Support\FakeMastodonNetwork;
@@ -474,7 +475,7 @@ final class SocialLikesTest extends DbTestCase
     private function ensureItem(): CanonicalItem
     {
         if (null === $this->item) {
-            $this->item = new CanonicalItem(CanonicalItemKind::Mastodon, self::STATUS_KEY);
+            $this->item = CanonicalItems::buildItem(CanonicalItemKind::Mastodon, self::STATUS_KEY);
             $this->entityManager->persist($this->item);
         }
 

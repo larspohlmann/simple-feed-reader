@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Social;
 
-use App\Entity\CanonicalItem;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Enum\CanonicalItemKind;
@@ -12,6 +11,7 @@ use App\Enum\SocialNetwork;
 use App\Service\Social\Social\Model\SocialCountsModel;
 use App\Service\Social\Social\SocialCountsCache;
 use App\Tests\Support\AssignsEntityIds;
+use App\Tests\Support\CanonicalItems;
 use App\Tests\Support\SocialRuleWiring;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -63,7 +63,7 @@ final class SocialCountsCacheTest extends TestCase
 
     public function testCopiesOfOneItemShareTheirCountsWhateverAddressEachCarries(): void
     {
-        $item = self::withId(new CanonicalItem(CanonicalItemKind::Mastodon, self::URI), 7);
+        $item = self::withId(CanonicalItems::buildItem(CanonicalItemKind::Mastodon, self::URI), 7);
         $rssCopy = self::buildEntry(SocialNetwork::Mastodon, self::ADDRESS);
         $rssCopy->linkTo($item);
         $uriCopy = self::buildEntry(SocialNetwork::Mastodon, self::URI);

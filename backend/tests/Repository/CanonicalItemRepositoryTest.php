@@ -26,8 +26,8 @@ final class CanonicalItemRepositoryTest extends DbTestCase
     {
         $key = new CanonicalKeyModel(CanonicalItemKind::Lemmy, 'https://lemmy.world/post/7');
 
-        $first = $this->items->ensure($key);
-        $second = $this->items->ensure($key);
+        $first = $this->items->ensure($key, self::createdAt());
+        $second = $this->items->ensure($key, self::createdAt());
 
         self::assertSame($first, $second);
         self::assertSame(1, $this->rowCount());
@@ -37,12 +37,17 @@ final class CanonicalItemRepositoryTest extends DbTestCase
     {
         $key = new CanonicalKeyModel(CanonicalItemKind::Mastodon, 'https://mastodon.social/users/a/statuses/1');
 
-        $id = $this->items->ensure($key);
+        $id = $this->items->ensure($key, self::createdAt());
 
         self::assertSame(
-            ['kind' => 'mastodon', 'canonical_key' => $key->key, 'key_hash' => $key->keyHash()],
+            [
+                'kind' => 'mastodon',
+                'canonical_key' => $key->key,
+                'key_hash' => $key->keyHash(),
+                'created_at' => '2026-11-20 08:30:00',
+            ],
             $this->entityManager->getConnection()->fetchAssociative(
-                'SELECT kind, canonical_key, key_hash FROM canonical_item WHERE id = ?',
+                'SELECT kind, canonical_key, key_hash, created_at FROM canonical_item WHERE id = ?',
                 [$id],
             ),
         );
@@ -50,8 +55,8 @@ final class CanonicalItemRepositoryTest extends DbTestCase
 
     public function testOneKeyOfTwoKindsIsTwoItems(): void
     {
-        $lemmy = $this->items->ensure(new CanonicalKeyModel(CanonicalItemKind::Lemmy, 'https://x.test/post/1'));
-        $mastodon = $this->items->ensure(new CanonicalKeyModel(CanonicalItemKind::Mastodon, 'https://x.test/post/1'));
+        $lemmy = $this->ensureItem(CanonicalItemKind::Lemmy, 'https://x.test/post/1');
+        $mastodon = $this->ensureItem(CanonicalItemKind::Mastodon, 'https://x.test/post/1');
 
         self::assertNotSame($lemmy, $mastodon);
         self::assertSame(2, $this->rowCount());
@@ -59,8 +64,8 @@ final class CanonicalItemRepositoryTest extends DbTestCase
 
     public function testFindByIdsKeysTheItemsByIdAndSkipsUnknownIds(): void
     {
-        $first = $this->items->ensure(new CanonicalKeyModel(CanonicalItemKind::Lemmy, 'https://x.test/post/1'));
-        $second = $this->items->ensure(new CanonicalKeyModel(CanonicalItemKind::Lemmy, 'https://x.test/post/2'));
+        $first = $this->ensureItem(CanonicalItemKind::Lemmy, 'https://x.test/post/1');
+        $second = $this->ensureItem(CanonicalItemKind::Lemmy, 'https://x.test/post/2');
 
         $found = $this->items->findByIds([$first, $second, $second + 100]);
 
@@ -71,6 +76,16 @@ final class CanonicalItemRepositoryTest extends DbTestCase
     public function testFindByIdsOfNoIdsAsksNothing(): void
     {
         self::assertSame([], $this->items->findByIds([]));
+    }
+
+    private function ensureItem(CanonicalItemKind $kind, string $canonicalKey): int
+    {
+        return $this->items->ensure(new CanonicalKeyModel($kind, $canonicalKey), self::createdAt());
+    }
+
+    private static function createdAt(): \DateTimeImmutable
+    {
+        return new \DateTimeImmutable('2026-11-20 08:30:00');
     }
 
     private function rowCount(): int

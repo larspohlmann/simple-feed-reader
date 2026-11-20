@@ -25,6 +25,8 @@ final readonly class EntryPruner
 
     private const int LINK_GRACE_DAYS = 1;
 
+    private const int ITEM_GRACE_DAYS = 1;
+
     public function __construct(
         private RetentionRepository $retention,
         private RetentionSettings $settings,
@@ -45,7 +47,7 @@ final readonly class EntryPruner
     {
         $deletedEntries = $this->pruneByAge() + $this->pruneByFeedCap() + $this->pruneUnsaved();
         $this->sharedLinks->sweepUnreferenced($this->clock->now(), $this->daysAgo(self::LINK_GRACE_DAYS));
-        $this->canonicalItems->deleteUnreferenced();
+        $this->canonicalItems->deleteUnreferenced($this->daysAgo(self::ITEM_GRACE_DAYS));
         $this->retention->deleteEmptyCompletedRuns();
 
         return $deletedEntries;

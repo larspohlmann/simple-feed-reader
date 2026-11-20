@@ -13,6 +13,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: CanonicalItemRepository::class)]
 #[ORM\Table(name: 'canonical_item')]
 #[ORM\UniqueConstraint(name: 'uniq_canonical_item_kind_key', columns: ['kind', 'key_hash'])]
+#[ORM\Index(name: 'idx_canonical_item_created_at', columns: ['created_at'])]
 final class CanonicalItem implements DiscussionCountStoreInterface
 {
     use PersistedId;
@@ -40,11 +41,15 @@ final class CanonicalItem implements DiscussionCountStoreInterface
     #[ORM\Column(name: 'self_reply_count', type: Types::SMALLINT, options: ['default' => 0])]
     private int $selfReplyCount = 0;
 
-    public function __construct(CanonicalItemKind $kind, string $canonicalKey)
+    #[ORM\Column(name: 'created_at', type: Types::DATETIME_IMMUTABLE)]
+    private \DateTimeImmutable $createdAt;
+
+    public function __construct(CanonicalItemKind $kind, string $canonicalKey, \DateTimeImmutable $createdAt)
     {
         $this->kind = $kind;
         $this->canonicalKey = $canonicalKey;
         $this->keyHash = self::hashKey($canonicalKey);
+        $this->createdAt = $createdAt;
     }
 
     public static function hashKey(string $canonicalKey): string

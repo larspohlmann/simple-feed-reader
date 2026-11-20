@@ -9,6 +9,7 @@ use App\Entity\LemmyPost;
 use App\Enum\CanonicalItemKind;
 use App\Repository\LemmyPostRepository;
 use App\Tests\DbTestCase;
+use App\Tests\Support\CanonicalItems;
 
 final class LemmyPostRepositoryTest extends DbTestCase
 {
@@ -53,7 +54,7 @@ final class LemmyPostRepositoryTest extends DbTestCase
 
     private function persistItem(string $name): CanonicalItem
     {
-        $item = new CanonicalItem(CanonicalItemKind::Lemmy, 'https://lemmy.test/post/' . $name);
+        $item = CanonicalItems::buildItem(CanonicalItemKind::Lemmy, 'https://lemmy.test/post/' . $name);
         $this->entityManager->persist($item);
         $this->entityManager->flush();
 

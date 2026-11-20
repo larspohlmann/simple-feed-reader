@@ -13,7 +13,8 @@ use App\Service\Operations\Backup\Model\RestoreResultModel;
 
 /**
  * The entries endpoint's restore: additive and idempotent, with no confirmation phrase and no wipe. EntryPartInspector
- * validates while writing nothing, then a fresh RestoreEntryLoader, built for this call alone, loads.
+ * validates while writing nothing, then a fresh RestoreEntryLoader, built for this call alone, loads, and
+ * RestoredEntryFinisher links and indexes what it created.
  */
 final readonly class EntryPartRestorer
 {
@@ -21,6 +22,7 @@ final readonly class EntryPartRestorer
         private EntryPartInspector $inspector,
         private BackupReader $reader,
         private RestoreEntryLoaderFactory $loaderFactory,
+        private RestoredEntryFinisher $finisher,
     ) {
     }
 
@@ -36,6 +38,7 @@ final readonly class EntryPartRestorer
             };
         }
         $loader->finish();
+        $this->finisher->finishCreated($loader->createdEntryIds());
 
         return RestoreResultModel::fromEntryCounts($loader->entriesCreated(), $loader->entryStatesCreated());
     }

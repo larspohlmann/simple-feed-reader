@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Http;
 
-use App\Entity\CanonicalItem;
 use App\Entity\Discussion;
 use App\Entity\DiscussionCounts;
 use App\Entity\Entry;
@@ -34,6 +33,7 @@ use App\Repository\EntryListRowSubscription;
 use App\Service\Content\Chapter\Model\ServedChaptersModel;
 use App\Service\Social\Social\Model\ThreadPostModel;
 use App\Tests\Support\AssignsEntityIds;
+use App\Tests\Support\CanonicalItems;
 use App\Tests\Support\JsonMappers;
 use PHPUnit\Framework\TestCase;
 
@@ -353,7 +353,7 @@ final class EntryJsonTest extends TestCase
 
     public function testPostCarriesItsItemId(): void
     {
-        $item = self::withId(new CanonicalItem(CanonicalItemKind::Lemmy, 'https://lemmy.world/post/7'), 41);
+        $item = self::withId(CanonicalItems::buildItem(CanonicalItemKind::Lemmy, 'https://lemmy.world/post/7'), 41);
         $item->recordCounts(DiscussionCounts::fromScoreAndComments(12, 5));
         $lemmy = new EntryListRowLemmy(score: 12, community: null, myVote: VoteScore::Up);
         $copies = [$this->entryTitled('Copy one'), $this->entryTitled('Copy two')];

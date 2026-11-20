@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Service\Library\SavedPosts;
 
 use App\Entity\BackedUpReadMark;
-use App\Entity\CanonicalItem;
 use App\Entity\Entry;
 use App\Entity\EntryOrigin;
 use App\Entity\EntryShare;
@@ -30,6 +29,7 @@ use App\Service\Library\SavedPosts\Support\SavedFeedUrl;
 use App\Service\Library\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\CanonicalItems;
 use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\EntryShareFixtures;
 use App\Tests\Support\SavedPostFixtures;
@@ -85,7 +85,7 @@ final class SavedPostRescueTest extends DbTestCase
             'https://bsky.app/profile/did:plc:bob/post/1',
         );
         $this->state($this->user, $kept)->markKept();
-        $item = new CanonicalItem(CanonicalItemKind::Bluesky, 'at://did:plc:bob/app.bsky.feed.post/1');
+        $item = CanonicalItems::buildItem(CanonicalItemKind::Bluesky, 'at://did:plc:bob/app.bsky.feed.post/1');
         $this->entityManager->persist($item);
         $kept->linkTo($item);
         $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($this->user));

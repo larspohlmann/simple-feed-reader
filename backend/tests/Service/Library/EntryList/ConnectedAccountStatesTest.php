@@ -18,6 +18,7 @@ use App\Service\Library\EntryList\ConnectedAccountStates;
 use App\Service\Library\EntryList\Model\ConnectedAccountStatesModel;
 use App\Service\Social\Lemmy\Support\LemmyProfileFeed;
 use App\Tests\DbTestCase;
+use App\Tests\Support\CanonicalItems;
 use App\Tests\Support\LemmyPostEntries;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
@@ -95,7 +96,10 @@ final class ConnectedAccountStatesTest extends DbTestCase
     public function testALikeOnOneCopyShowsOnTheOther(): void
     {
         $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->reader));
-        $item = new CanonicalItem(CanonicalItemKind::Mastodon, 'https://mastodon.example/users/alice/statuses/1');
+        $item = CanonicalItems::buildItem(
+            CanonicalItemKind::Mastodon,
+            'https://mastodon.example/users/alice/statuses/1',
+        );
         $this->entityManager->persist($item);
         $first = $this->persistMastodonCopy('https://mastodon.example/@alice.rss', $item);
         $second = $this->persistMastodonCopy('https://mastodon.social/@alice.rss', $item);
@@ -113,7 +117,7 @@ final class ConnectedAccountStatesTest extends DbTestCase
     public function testAnItemOfAnotherKindShowsNoLemmyScore(): void
     {
         $entry = LemmyPostEntries::buildEntry($this->persistFeed('https://example.com/feed.xml'));
-        $item = new CanonicalItem(CanonicalItemKind::Bluesky, 'at://did:plc:x/app.bsky.feed.post/1');
+        $item = CanonicalItems::buildItem(CanonicalItemKind::Bluesky, 'at://did:plc:x/app.bsky.feed.post/1');
         $item->recordScore(5);
         $entry->linkTo($item);
         $this->entityManager->persist($item);

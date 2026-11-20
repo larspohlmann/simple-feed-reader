@@ -5,12 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Service\Operations\Backup\Pass;
 
 use App\Entity\User;
-use App\Repository\CanonicalItemRepository;
 use App\Repository\EntryBatchInserter;
 use App\Repository\SharedLinkRepository;
 use App\Repository\SharedLinkResolutionRepository;
 use App\Service\Content\LinkCard\SharedLinkWriter;
-use App\Service\Foundation\CanonicalItem\CanonicalItemLinker;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Foundation\Url\UrlNormalizer;
 use App\Service\Ingestion\Language\Factory\LanguageDetectionFactory;
@@ -23,15 +21,11 @@ use App\Service\Operations\Backup\Factory\RestoredEntryStateFactory;
 use App\Service\Operations\Backup\Pass\RestoreDestination;
 use App\Service\Operations\Backup\Pass\RestoreEntryLoader;
 use App\Service\Operations\Backup\Pass\RestoreFeedTargets;
-use App\Service\Operations\Backup\RestoredEntryFinisher;
 use App\Service\Operations\Backup\RestoreEntries\RestoreEntriesInterface;
 use App\Service\Operations\Backup\RestoreEntryShares\RestoreEntrySharesInterface;
 use App\Service\Operations\Backup\RestoreEntryStates\RestoreEntryStatesInterface;
 use App\Service\Operations\Backup\RestoreFeeds\RestoreFeedsInterface;
-use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
-use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\EntryUrlHashes;
-use App\Tests\Support\SocialRuleWiring;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
@@ -126,15 +120,6 @@ final class RestoreEntryLoaderTest extends TestCase
                 new UrlNormalizer(),
                 new PreviewLanguage(new LanguageGuess(new LanguageDetectionFactory()->createForFeedLanguages())),
                 new NaiveUtcClock(new MockClock('2026-08-01 00:00:00', 'UTC')),
-            ),
-            new RestoredEntryFinisher(
-                $this->createStub(EntityManagerInterface::class),
-                $entries,
-                new CanonicalItemLinker(
-                    new CanonicalItemRepository($this->createStub(ManagerRegistry::class)),
-                    SocialRuleWiring::canonicalKeys(),
-                ),
-                EntryIndexers::with(new RecordingSearchIndexWriter()),
             ),
             new RestoredEntryStateFactory(new MockClock('2026-08-01 00:00:00', 'UTC')),
             new RestoreDestination($this->user(), $this->targets($entries)),
