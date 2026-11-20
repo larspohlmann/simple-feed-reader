@@ -8,11 +8,14 @@ use App\Entity\LemmyPost;
 use App\Entity\PostCommunity;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
+use Doctrine\ORM\Query;
 use Doctrine\Persistence\ManagerRegistry;
 
 /** @extends ServiceEntityRepository<LemmyPost> */
 final class LemmyPostRepository extends ServiceEntityRepository
 {
+    private const int ROWS_PER_STATEMENT = 100;
+
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, LemmyPost::class);
@@ -34,6 +37,7 @@ final class LemmyPostRepository extends ServiceEntityRepository
             ->where('IDENTITY(post.canonicalItem) IN (:canonicalItemIds)')
             ->setParameter('canonicalItemIds', $canonicalItemIds)
             ->getQuery()
+            ->setHint(Query::HINT_REFRESH, true)
             ->getResult();
 
         $byItemId = [];
@@ -44,21 +48,32 @@ final class LemmyPostRepository extends ServiceEntityRepository
         return $byItemId;
     }
 
-    /** An upsert, because two copies of one new post can be stored at once; the later community wins. */
-    public function storeCommunity(int $canonicalItemId, PostCommunity $community): void
+    /**
+     * Upserts, because two copies of one new post can be stored at once; the later community wins.
+     *
+     * @param array<int, PostCommunity> $communitiesByItemId
+     */
+    public function storeCommunities(array $communitiesByItemId): void
     {
         $connection = $this->getEntityManager()->getConnection();
-        $onConflict = DatabasePlatform::isMySql($connection)
-            ? 'ON DUPLICATE KEY UPDATE community_identity = VALUES(community_identity),'
-                . ' community_url = VALUES(community_url)'
-            : 'ON CONFLICT (canonical_item_id) DO UPDATE SET community_identity = excluded.community_identity,'
-                . ' community_url = excluded.community_url';
-
-        $connection->executeStatement(
-            'INSERT INTO lemmy_post (canonical_item_id, community_identity, community_url) VALUES (?, ?, ?) '
-                . $onConflict,
-            [$canonicalItemId, $community->identity, $community->url],
-            [Types::INTEGER, Types::STRING, Types::STRING],
+        $onConflict = DatabasePlatform::buildUpsertClause(
+            $connection,
+            ['canonical_item_id'],
+            ['community_identity', 'community_url'],
         );
+
+        foreach (array_chunk($communitiesByItemId, self::ROWS_PER_STATEMENT, true) as $chunk) {
+            $parameters = [];
+            foreach ($chunk as $itemId => $community) {
+                array_push($parameters, $itemId, $community->identity, $community->url);
+            }
+
+            $connection->executeStatement(
+                'INSERT INTO lemmy_post (canonical_item_id, community_identity, community_url) VALUES '
+                    . implode(', ', array_fill(0, count($chunk), '(?, ?, ?)')) . ' ' . $onConflict,
+                $parameters,
+                array_merge(...array_fill(0, count($chunk), [Types::INTEGER, Types::STRING, Types::STRING])),
+            );
+        }
     }
 }

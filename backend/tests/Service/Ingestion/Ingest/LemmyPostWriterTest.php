@@ -189,6 +189,46 @@ final class LemmyPostWriterTest extends DbTestCase
         self::assertEquals($moved, $rows[0]->getCommunity());
     }
 
+    public function testTheLastCopyOfABatchDecidesTheCommunity(): void
+    {
+        $otherFeed = new Feed('https://example.com/other');
+        $this->entityManager->persist($otherFeed);
+        $this->entityManager->flush();
+        $first = $this->persistCopy($this->feed, 'a');
+        $second = $this->persistCopy($otherFeed, 'b');
+        $technology = PostCommunity::fromIdentityAndUrl('technology@lemmy.world', 'https://lemmy.world/c/technology');
+        $news = PostCommunity::fromIdentityAndUrl('news@lemmy.world', 'https://lemmy.world/c/news');
+        $pairs = [
+            [$first, self::buildParsedPost()->inCommunity($technology)],
+            [$second, self::buildParsedPost()->inCommunity($news)],
+        ];
+
+        self::getContainer()->get(CanonicalItemWriter::class)->attach($pairs);
+        self::getContainer()->get(LemmyPostWriter::class)->attach($pairs);
+        $this->entityManager->flush();
+
+        $rows = $this->readRows();
+        self::assertCount(1, $rows);
+        self::assertEquals($news, $rows[0]->getCommunity());
+    }
+
+    public function testAStoredPostWithTheSameCommunityIsNotWrittenAgain(): void
+    {
+        $community = PostCommunity::fromIdentityAndUrl('technology@lemmy.world', 'https://lemmy.world/c/technology');
+        $this->ingestEntry(self::buildParsedPost()->inCommunity($community));
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $this->feed]);
+        self::assertInstanceOf(Entry::class, $entry);
+        /** @var QueryRecorder $recorder */
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        $recorder->reset();
+        $writer = self::getContainer()->get(LemmyPostWriter::class);
+        self::assertInstanceOf(LemmyPostWriter::class, $writer);
+
+        $writer->attach([[$entry, self::buildParsedPost()->inCommunity($community)]]);
+
+        self::assertSame([], $recorder->queriesMatching('INSERT INTO lemmy_post'));
+    }
+
     public function testAnEntryWithoutAnItemStoresNothing(): void
     {
         $entry = $this->persistCopy($this->feed, 'unlinked');

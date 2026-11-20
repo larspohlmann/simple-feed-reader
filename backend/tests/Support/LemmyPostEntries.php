@@ -70,6 +70,6 @@ final class LemmyPostEntries
         PostCommunity $community,
     ): void {
         $entityManager->flush();
-        $entityManager->getRepository(LemmyPost::class)->storeCommunity($item->requireId(), $community);
+        $entityManager->getRepository(LemmyPost::class)->storeCommunities([$item->requireId() => $community]);
     }
 }

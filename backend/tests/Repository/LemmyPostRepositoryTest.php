@@ -45,13 +45,33 @@ final class LemmyPostRepositoryTest extends DbTestCase
         $first = PostCommunity::fromIdentityAndUrl('technology@lemmy.world', 'https://lemmy.world/c/technology');
         $later = PostCommunity::fromIdentityAndUrl('news@lemmy.world', 'https://lemmy.world/c/news');
 
-        $this->posts->storeCommunity($item->requireId(), $first);
-        $this->posts->storeCommunity($item->requireId(), $later);
+        $this->posts->storeCommunities([$item->requireId() => $first]);
+        $this->posts->storeCommunities([$item->requireId() => $later]);
         $this->entityManager->clear();
 
         $rows = $this->posts->findAll();
         self::assertCount(1, $rows);
         self::assertEquals($later, $rows[0]->getCommunity());
+    }
+
+    public function testManyItemsAreStoredAcrossStatementsWithEachItsOwnCommunity(): void
+    {
+        $communities = [];
+        foreach (range(1, 120) as $number) {
+            $communities[$this->persistItem('many-' . $number)->requireId()] = PostCommunity::fromIdentityAndUrl(
+                'c' . $number . '@lemmy.world',
+                'https://lemmy.world/c/c' . $number,
+            );
+        }
+
+        $this->posts->storeCommunities($communities);
+        $this->entityManager->clear();
+
+        $found = $this->posts->findByCanonicalItemIds(array_keys($communities));
+        self::assertCount(120, $found);
+        foreach ($communities as $itemId => $community) {
+            self::assertEquals($community, $found[$itemId]->getCommunity());
+        }
     }
 
     public function testRemovingTheItemRemovesItsRow(): void
@@ -67,10 +87,12 @@ final class LemmyPostRepositoryTest extends DbTestCase
 
     private function storeCommunity(CanonicalItem $item): void
     {
-        $this->posts->storeCommunity(
-            $item->requireId(),
-            PostCommunity::fromIdentityAndUrl('technology@lemmy.world', 'https://lemmy.world/c/technology'),
-        );
+        $this->posts->storeCommunities([
+            $item->requireId() => PostCommunity::fromIdentityAndUrl(
+                'technology@lemmy.world',
+                'https://lemmy.world/c/technology',
+            ),
+        ]);
     }
 
     private function persistItem(string $name): CanonicalItem

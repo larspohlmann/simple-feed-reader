@@ -20,9 +20,25 @@ final readonly class LemmyPostWriter
     /** @param list<array{0: Entry, 1: ParsedEntryModel}> $pairs new entries, or stored ones a refetch served again */
     public function attach(array $pairs): void
     {
-        foreach (self::collectCommunities($pairs) as $itemId => $community) {
-            $this->lemmyPosts->storeCommunity($itemId, $community);
-        }
+        $communities = self::collectCommunities($pairs);
+        $stored = $this->lemmyPosts->findByCanonicalItemIds(array_keys($communities));
+        $changed = array_filter(
+            $communities,
+            static fn (PostCommunity $community, int $itemId): bool => !self::isStoredAs(
+                $stored[$itemId] ?? null,
+                $community,
+            ),
+            ARRAY_FILTER_USE_BOTH,
+        );
+
+        $this->lemmyPosts->storeCommunities($changed);
+    }
+
+    private static function isStoredAs(?LemmyPost $row, PostCommunity $community): bool
+    {
+        $stored = $row?->getCommunity();
+
+        return $stored !== null && $stored->identity === $community->identity && $stored->url === $community->url;
     }
 
     /**
