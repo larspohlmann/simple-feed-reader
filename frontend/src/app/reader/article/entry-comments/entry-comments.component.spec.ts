@@ -291,6 +291,29 @@ describe('EntryCommentsComponent', () => {
     expect(element.querySelector('a.all')?.getAttribute('href')).toBe(DISCUSSION);
   });
 
+  it('counts the stored comments in the heading before they load (#2414)', () => {
+    fixture.componentRef.setInput('entry', {
+      id: 5,
+      comments: 'auto',
+      commentCount: 38,
+      discussionUrl: DISCUSSION,
+      social: null,
+    });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.title .total')?.textContent?.trim()).toBe('38');
+  });
+
+  it('counts the loaded and omitted comments in the heading once they are in (#2414)', () => {
+    show('auto');
+    const element = settleComments([anEntryComment(), anEntryComment()], 3);
+    expect(element.querySelector('.title .total')?.textContent?.trim()).toBe('5');
+  });
+
+  it('shows no count in the heading when there are no comments (#2414)', () => {
+    show('auto');
+    expect(settleComments([]).querySelector('.title .total')).toBeNull();
+  });
+
   it('shows the empty line for zero comments', () => {
     show('auto');
     const element = settle({
