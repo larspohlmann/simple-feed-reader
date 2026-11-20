@@ -493,7 +493,7 @@ final class SavedPostRescueTest extends DbTestCase
         /** @var EntryShareRepository $shares */
         $shares = $this->entityManager->getRepository(EntryShare::class);
 
-        return $shares->sharedAtFor($this->user->requireId(), $entryId);
+        return $shares->findSharedAt($this->user->requireId(), $entryId);
     }
 
     private function stateOf(Entry $entry): EntryState

@@ -43,7 +43,7 @@ final class UserRefreshScopeTest extends DbTestCase
 
     public function testNoTargetRefreshesEveryFeedOfTheUser(): void
     {
-        $request = $this->scope()->requestFor($this->user->requireId(), null, null);
+        $request = $this->scope()->resolveRequest($this->user->requireId(), null, null);
 
         self::assertSame($this->user->requireId(), $request->userId);
         self::assertEquals(new EveryFeedTargetModel(), $request->target);
@@ -52,7 +52,7 @@ final class UserRefreshScopeTest extends DbTestCase
 
     public function testASubscribedFeedIsRefreshedAlone(): void
     {
-        $request = $this->scope()->requestFor($this->user->requireId(), $this->feed->requireId(), null);
+        $request = $this->scope()->resolveRequest($this->user->requireId(), $this->feed->requireId(), null);
 
         self::assertSame($this->user->requireId(), $request->userId);
         self::assertEquals(new FeedTargetModel($this->feed->requireId()), $request->target);
@@ -68,14 +68,14 @@ final class UserRefreshScopeTest extends DbTestCase
         $this->expectException(RecordNotFoundException::class);
         $this->expectExceptionMessage('No such subscription.');
 
-        $this->scope()->requestFor($this->user->requireId(), $other->requireId(), null);
+        $this->scope()->resolveRequest($this->user->requireId(), $other->requireId(), null);
     }
 
     public function testAnOwnTagIsRefreshedAlone(): void
     {
         $tag = $this->tag($this->user);
 
-        $request = $this->scope()->requestFor($this->user->requireId(), null, $tag->requireId());
+        $request = $this->scope()->resolveRequest($this->user->requireId(), null, $tag->requireId());
 
         self::assertSame($this->user->requireId(), $request->userId);
         self::assertEquals(new TagTargetModel($tag->requireId()), $request->target);
@@ -89,21 +89,25 @@ final class UserRefreshScopeTest extends DbTestCase
         $this->expectException(RecordNotFoundException::class);
         $this->expectExceptionMessage('No such tag.');
 
-        $this->scope()->requestFor($this->user->requireId(), null, $tag->requireId());
+        $this->scope()->resolveRequest($this->user->requireId(), null, $tag->requireId());
     }
 
     public function testAFeedTakesPrecedenceOverATag(): void
     {
         $tag = $this->tag($this->user);
 
-        $request = $this->scope()->requestFor($this->user->requireId(), $this->feed->requireId(), $tag->requireId());
+        $request = $this->scope()->resolveRequest(
+            $this->user->requireId(),
+            $this->feed->requireId(),
+            $tag->requireId(),
+        );
 
         self::assertEquals(new FeedTargetModel($this->feed->requireId()), $request->target);
     }
 
     public function testANetworkRefreshIsAForcedRunOverThatNetworksFeeds(): void
     {
-        $request = $this->scope()->requestForNetwork(
+        $request = $this->scope()->buildNetworkRequest(
             $this->user->requireId(),
             NetworkScope::whole(SocialNetwork::Bluesky),
         );
@@ -116,7 +120,7 @@ final class UserRefreshScopeTest extends DbTestCase
 
     public function testAFeedGroupRefreshIsAForcedRunOverThatGroupsFeeds(): void
     {
-        $request = $this->scope()->requestForFeedGroup($this->user->requireId(), FeedGroup::Feeds);
+        $request = $this->scope()->buildFeedGroupRequest($this->user->requireId(), FeedGroup::Feeds);
 
         self::assertSame($this->user->requireId(), $request->userId);
         self::assertEquals(new FeedGroupTargetModel(FeedGroup::Feeds), $request->target);
@@ -126,7 +130,7 @@ final class UserRefreshScopeTest extends DbTestCase
 
     public function testANeverFetchedRefreshIsAForcedRunOverTheUsersUnfetchedFeeds(): void
     {
-        $request = $this->scope()->requestForNeverFetched($this->user->requireId());
+        $request = $this->scope()->buildNeverFetchedRequest($this->user->requireId());
 
         self::assertSame($this->user->requireId(), $request->userId);
         self::assertEquals(new NeverFetchedTargetModel(), $request->target);

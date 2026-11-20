@@ -62,7 +62,7 @@ final class EntryImage
      */
     public function storeRenditions(array $renditions): void
     {
-        $this->renditions = StoredList::orNull(ImageRendition::toJsonList($renditions));
+        $this->renditions = StoredList::keepIfNotEmpty(ImageRendition::toJsonList($renditions));
     }
 
     public function recordMeasurement(int $width, int $height, \DateTimeImmutable $checkedAt): void

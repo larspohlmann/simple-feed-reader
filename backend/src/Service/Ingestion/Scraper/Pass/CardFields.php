@@ -42,7 +42,7 @@ final readonly class CardFields
             title: $title,
             teaser: self::teaser($container, $title),
             imageUrl: $this->image($container),
-            publishedAt: self::publishedAt($container),
+            publishedAt: self::parsePublishedAt($container),
         );
     }
 
@@ -126,7 +126,7 @@ final readonly class CardFields
         return $value === '' ? null : $value;
     }
 
-    private static function publishedAt(Element $container): ?\DateTimeImmutable
+    private static function parsePublishedAt(Element $container): ?\DateTimeImmutable
     {
         $time = $container->querySelector('time[datetime]');
         if (!$time instanceof Element) {

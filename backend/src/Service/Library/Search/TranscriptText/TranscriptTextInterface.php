@@ -11,5 +11,5 @@ interface TranscriptTextInterface
      *
      * @return array<int, string> the filled transcripts' search text, by entry id
      */
-    public function searchTextsFor(array $entryIds): array;
+    public function findSearchTexts(array $entryIds): array;
 }

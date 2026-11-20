@@ -51,14 +51,14 @@ final readonly class WordPressJsonParser
 
         return new ParsedEntryModel(
             guid: $this->guid($post),
-            url: $this->stringOrNull($post['link'] ?? null),
+            url: $this->parseString($post['link'] ?? null),
             headline: EntryTitle::buildHeadline($this->rendered($post, 'title'), $contentHtml ?? $summary),
             // No author NAME without _embed (only an id), and _embed is too
             // heavy to request; bylines usually live in content.rendered anyway.
             author: null,
             summary: $summary,
             contentHtml: $contentHtml,
-            publishedAt: $this->publishedAt($post),
+            publishedAt: $this->parsePublishedAt($post),
             media: new ParsedEntryMediaModel($image),
         );
     }
@@ -71,7 +71,7 @@ final readonly class WordPressJsonParser
      */
     private function image(array $post): ?DeclaredImageModel
     {
-        $jetpackUrl = $this->stringOrNull($post['jetpack_featured_media_url'] ?? null);
+        $jetpackUrl = $this->parseString($post['jetpack_featured_media_url'] ?? null);
         if ($jetpackUrl !== null) {
             return new DeclaredImageModel($jetpackUrl);
         }
@@ -84,8 +84,8 @@ final readonly class WordPressJsonParser
     private function guid(array $post): string
     {
         $guid = $this->rendered($post, 'guid')
-            ?? $this->stringOrNull($post['id'] ?? null)
-            ?? $this->stringOrNull($post['link'] ?? null);
+            ?? $this->parseString($post['id'] ?? null)
+            ?? $this->parseString($post['link'] ?? null);
 
         if (null === $guid) {
             throw new FeedParseException('WordPress post has no id, guid or link');
@@ -103,13 +103,13 @@ final readonly class WordPressJsonParser
     {
         $value = $post[$field] ?? null;
 
-        return \is_array($value) ? $this->stringOrNull($value['rendered'] ?? null) : null;
+        return \is_array($value) ? $this->parseString($value['rendered'] ?? null) : null;
     }
 
     /** @param array<string, mixed> $post */
-    private function publishedAt(array $post): ?\DateTimeImmutable
+    private function parsePublishedAt(array $post): ?\DateTimeImmutable
     {
-        $dateGmt = $this->stringOrNull($post['date_gmt'] ?? null);
+        $dateGmt = $this->parseString($post['date_gmt'] ?? null);
         if (null === $dateGmt) {
             return null;
         }
@@ -123,7 +123,7 @@ final readonly class WordPressJsonParser
         }
     }
 
-    private function stringOrNull(mixed $value): ?string
+    private function parseString(mixed $value): ?string
     {
         if (\is_string($value)) {
             $trimmed = trim($value);

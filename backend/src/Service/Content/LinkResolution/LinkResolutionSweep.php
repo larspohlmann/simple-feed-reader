@@ -34,7 +34,7 @@ final readonly class LinkResolutionSweep
     public function resolvePending(LinkResolutionBudgetModel $budget): LinkResolutionReportModel
     {
         $report = LinkResolutionReportModel::none();
-        foreach ($this->linkResolutions->pendingAt($this->clock->now(), $budget->links) as $link) {
+        foreach ($this->linkResolutions->findDuePending($this->clock->now(), $budget->links) as $link) {
             if (!$budget->fitsAfter($report->seconds)) {
                 break;
             }

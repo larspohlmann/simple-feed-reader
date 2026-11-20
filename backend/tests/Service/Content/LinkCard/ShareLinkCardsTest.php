@@ -71,7 +71,7 @@ final class ShareLinkCardsTest extends DbTestCase
             ['Card for https://example.com/a', 'Card for https://example.com/b'],
             $this->cardTitles($post),
         );
-        self::assertSame([], $this->enrichments()->pendingEntryIdsAmong([$post->requireId()]));
+        self::assertSame([], $this->enrichments()->findPendingEntryIds([$post->requireId()]));
     }
 
     public function testIndexesTheCardedPostWithTheTextItWasLeft(): void
@@ -107,7 +107,7 @@ final class ShareLinkCardsTest extends DbTestCase
         self::assertEquals($quote, $post->getQuotedPost());
         self::assertSame([], $this->cardTitles($post));
         self::assertSame(0, $this->pages->reads());
-        self::assertSame([], $this->enrichments()->pendingEntryIdsAmong([$post->requireId()]));
+        self::assertSame([], $this->enrichments()->findPendingEntryIds([$post->requireId()]));
     }
 
     public function testACallSpendsFiveFetchesOnTheOldestPostsThatFit(): void
@@ -151,7 +151,7 @@ final class ShareLinkCardsTest extends DbTestCase
         $this->shareLinkCards->complete([$this->rowOf($post)], self::fiveFetches());
 
         self::assertSame(0, $this->pages->reads());
-        self::assertSame([$post->requireId()], $this->enrichments()->pendingEntryIdsAmong([$post->requireId()]));
+        self::assertSame([$post->requireId()], $this->enrichments()->findPendingEntryIds([$post->requireId()]));
         self::assertSame([], $this->indexWriter->upserts);
     }
 
@@ -187,7 +187,7 @@ final class ShareLinkCardsTest extends DbTestCase
 
         self::assertSame(0, $completed);
         self::assertSame([], $this->cardTitles($post));
-        self::assertSame([$post->requireId()], $this->enrichments()->pendingEntryIdsAmong([$post->requireId()]));
+        self::assertSame([$post->requireId()], $this->enrichments()->findPendingEntryIds([$post->requireId()]));
     }
 
     public function testAKnownPostLinkIsNotRead(): void
@@ -199,7 +199,7 @@ final class ShareLinkCardsTest extends DbTestCase
 
         self::assertSame(0, $this->pages->reads());
         self::assertSame(['Stored https://example.com/known'], $this->cardTitles($post));
-        self::assertSame([], $this->enrichments()->pendingEntryIdsAmong([$post->requireId()]));
+        self::assertSame([], $this->enrichments()->findPendingEntryIds([$post->requireId()]));
     }
 
     public function testAKnownLinkIsKeptAliveBeforeItIsAttached(): void
@@ -425,7 +425,7 @@ final class ShareLinkCardsTest extends DbTestCase
             self::assertSame('Simulated flush failure.', $exception->getMessage());
         }
 
-        self::assertSame([$post->requireId()], $this->enrichments()->pendingEntryIdsAmong([$post->requireId()]));
+        self::assertSame([$post->requireId()], $this->enrichments()->findPendingEntryIds([$post->requireId()]));
     }
 
     public function testACallSpendsNoMoreFetchesThanItsBudget(): void
@@ -438,7 +438,7 @@ final class ShareLinkCardsTest extends DbTestCase
         self::assertSame(1, $completed);
         self::assertSame(1, $this->pages->reads());
         self::assertCount(1, $this->cardTitles($oldest));
-        self::assertSame([$newer->requireId()], $this->enrichments()->pendingEntryIdsAmong([$newer->requireId()]));
+        self::assertSame([$newer->requireId()], $this->enrichments()->findPendingEntryIds([$newer->requireId()]));
     }
 
     public function testAPostWithMoreLinksThanTheBudgetIsStillCardedWhole(): void

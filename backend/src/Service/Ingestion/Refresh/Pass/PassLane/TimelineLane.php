@@ -18,7 +18,7 @@ final readonly class TimelineLane implements PassLaneInterface
     {
     }
 
-    public function ticketsFor(Feed $feed): \Generator
+    public function issueTickets(Feed $feed): \Generator
     {
         return $this->round->ticketFor($feed->requireId());
     }

@@ -94,7 +94,7 @@ final class EntryIndexerTest extends DbTestCase
             /** @var list<list<int>> */
             public array $lookups = [];
 
-            public function searchTextsFor(array $entryIds): array
+            public function findSearchTexts(array $entryIds): array
             {
                 $this->lookups[] = $entryIds;
 
@@ -185,7 +185,7 @@ final class EntryIndexerTest extends DbTestCase
             {
             }
 
-            public function searchTextsFor(array $entryIds): array
+            public function findSearchTexts(array $entryIds): array
             {
                 return $this->texts;
             }

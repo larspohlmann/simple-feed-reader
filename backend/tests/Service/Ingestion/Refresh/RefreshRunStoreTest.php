@@ -213,7 +213,7 @@ final class RefreshRunStoreTest extends TestCase
     }
 
     /**
-     * `keyFor()` is private, so the key is observed the way the real cache backend would see it: by asking
+     * `buildKey()` is private, so the key is observed the way the real cache backend would see it: by asking
      * the pool for its stored keys. Each scope must produce its own distinct string, not merely A distinct string.
      */
     public function testTheCacheKeyEncodesTheUserAndTheRequestsScope(): void

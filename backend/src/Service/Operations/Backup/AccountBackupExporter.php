@@ -117,7 +117,7 @@ final readonly class AccountBackupExporter
     private function loadNetworkSwitches(int $userId): AccountNetworkSwitchesModel
     {
         return new AccountNetworkSwitchesModel(
-            $this->includedNetworks->includedNetworksFor($userId),
+            $this->includedNetworks->findIncludedNetworks($userId),
             $this->excludedNetworks->excludedNetworksBySurface($userId),
         );
     }

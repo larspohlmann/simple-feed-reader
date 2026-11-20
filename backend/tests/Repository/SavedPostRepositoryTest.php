@@ -64,7 +64,7 @@ final class SavedPostRepositoryTest extends DbTestCase
         $this->state($readOnly)->hide(new \DateTimeImmutable(self::AT));
         $this->entityManager->flush();
 
-        $flagged = $this->repository()->flaggedIn($this->user->requireId(), $feed->requireId());
+        $flagged = $this->repository()->findFlagged($this->user->requireId(), $feed->requireId());
 
         self::assertSame([$favourite->requireId(), $kept->requireId()], array_keys($flagged));
         self::assertSame($favourite->getUrlHash(), $flagged[$favourite->requireId()]);
@@ -78,7 +78,7 @@ final class SavedPostRepositoryTest extends DbTestCase
         EntryShareFixtures::share($this->entityManager, $this->user, $shared, new \DateTimeImmutable(self::AT));
         $this->entityManager->flush();
 
-        $flagged = $this->repository()->flaggedIn($this->user->requireId(), $feed->requireId());
+        $flagged = $this->repository()->findFlagged($this->user->requireId(), $feed->requireId());
 
         self::assertSame([$shared->requireId()], array_keys($flagged));
     }
@@ -149,7 +149,7 @@ final class SavedPostRepositoryTest extends DbTestCase
         self::assertEquals($entry->getEffectiveDate(), $copy->getEffectiveDate());
         self::assertSame(
             [$entry->requireId() => $copy->requireId()],
-            $this->repository()->copiesIn($saved->requireId(), [$entry->requireId()]),
+            $this->repository()->findCopies($saved->requireId(), [$entry->requireId()]),
         );
     }
 
@@ -192,7 +192,7 @@ final class SavedPostRepositoryTest extends DbTestCase
         );
         self::assertSame(
             [$entry->getGuidHash() => ['id' => $copies[$entry->requireId()], 'urlHash' => $entry->getUrlHash()]],
-            $this->repository()->heldIn($saved->requireId(), [$entry->getGuidHash(), hash('sha256', 'absent')]),
+            $this->repository()->findHeld($saved->requireId(), [$entry->getGuidHash(), hash('sha256', 'absent')]),
         );
     }
 
@@ -406,7 +406,7 @@ final class SavedPostRepositoryTest extends DbTestCase
         $this->entityManager->persist($otherState);
         $this->entityManager->flush();
 
-        $flagged = $this->repository()->flaggedIn($this->user->requireId(), $feed->requireId());
+        $flagged = $this->repository()->findFlagged($this->user->requireId(), $feed->requireId());
 
         self::assertSame([$mine->requireId()], array_keys($flagged));
     }

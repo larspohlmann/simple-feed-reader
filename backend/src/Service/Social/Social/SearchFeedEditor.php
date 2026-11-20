@@ -62,7 +62,7 @@ final readonly class SearchFeedEditor
 
     private function requireSearchFeed(Subscription $subscription): SocialFeed
     {
-        $socialFeed = $this->socialFeeds->forFeed($subscription->getFeed());
+        $socialFeed = $this->socialFeeds->findOneForFeed($subscription->getFeed());
         if (null === $socialFeed || SocialFeedKind::Search !== $socialFeed->getKind()) {
             throw new NotASearchFeedException('Only a search feed has a query to change.');
         }

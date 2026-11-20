@@ -29,7 +29,7 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
 
     /**
      * Sentinels, not <mark>: a feed body can contain a literal "<mark>", which would fake or hide a match in
-     * highlightedWordsIn(). Distinct open and close strings let the pattern require both ends.
+     * extractHighlightedWords(). Distinct open and close strings let the pattern require both ends.
      */
     private const string HIGHLIGHT_START = '[[sfr:hl]]';
     private const string HIGHLIGHT_END = '[[/sfr:hl]]';
@@ -127,8 +127,8 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
     private function searchPayload(IndexSearchModel $search): array
     {
         return [
-            'q' => $this->queryStringFor($search->terms),
-            'filter' => $this->filterFor($search),
+            'q' => $this->buildQueryString($search->terms),
+            'filter' => $this->buildFilter($search),
             'sort' => ['effectiveDate:' . $search->order->value, 'id:' . $search->order->value],
             // Every term must match; the default ("last") drops trailing terms until something matches.
             'matchingStrategy' => 'all',
@@ -145,7 +145,7 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
      * Whole-word quotes each term: a bare term also matches by prefix and typo ("punk" found "Pünktlichkeit", #450).
      * Phrase quotes the whole term, Meilisearch's way of asking for the words in order and adjacent.
      */
-    private function queryStringFor(SearchTermsModel $terms): string
+    private function buildQueryString(SearchTermsModel $terms): string
     {
         $words = array_map(self::withoutPhraseDelimiters(...), $terms->terms);
 
@@ -172,7 +172,7 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
         return ['indexUid' => self::INDEX, ...$this->searchPayload($search)];
     }
 
-    private function filterFor(IndexSearchModel $search): string
+    private function buildFilter(IndexSearchModel $search): string
     {
         $clauses = [];
         if ($search->feedIds !== null) {
@@ -273,7 +273,7 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
 
             foreach (['title', 'summary'] as $field) {
                 if (isset($formatted[$field]) && \is_string($formatted[$field])) {
-                    array_push($words, ...$this->highlightedWordsIn($formatted[$field]));
+                    array_push($words, ...$this->extractHighlightedWords($formatted[$field]));
                 }
             }
         }
@@ -285,7 +285,7 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
     }
 
     /** @return list<string> */
-    private function highlightedWordsIn(string $formattedField): array
+    private function extractHighlightedWords(string $formattedField): array
     {
         // Non-greedy: a greedy capture would swallow the text between two separate matches.
         $pattern = '/' . preg_quote(self::HIGHLIGHT_START, '/') . '(.*?)' . preg_quote(self::HIGHLIGHT_END, '/') . '/';

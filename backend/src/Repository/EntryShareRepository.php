@@ -70,7 +70,7 @@ final class EntryShareRepository extends ServiceEntityRepository implements
     }
 
     /** Read as a scalar, so a share written by record() is never answered from a stale identity map. */
-    public function sharedAtFor(int $userId, int $entryId): ?\DateTimeImmutable
+    public function findSharedAt(int $userId, int $entryId): ?\DateTimeImmutable
     {
         /** @var list<array{sharedAt: \DateTimeImmutable}> $rows */
         $rows = $this->createQueryBuilder('share')

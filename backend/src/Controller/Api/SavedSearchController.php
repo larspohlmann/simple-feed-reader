@@ -48,7 +48,7 @@ final readonly class SavedSearchController
                 ),
                 $rows,
             ),
-            'includedNetworks' => SocialNetwork::toValues($this->includedNetworks->includedNetworksFor($userId)),
+            'includedNetworks' => SocialNetwork::toValues($this->includedNetworks->findIncludedNetworks($userId)),
         ]);
     }
 

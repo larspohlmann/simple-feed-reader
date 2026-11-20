@@ -49,14 +49,14 @@ final class DiscussionVoteRepositoryTest extends DbTestCase
         $this->vote($stranger, $strangerAccount, $entry, VoteScore::Down);
         $this->vote($this->owner, $this->account, $this->entry('unasked'), VoteScore::Down);
 
-        $scores = $this->repository()->scoresAmong($this->owner->requireId(), [$entry->requireId()]);
+        $scores = $this->repository()->findScores($this->owner->requireId(), [$entry->requireId()]);
 
         self::assertSame([$entry->requireId() => VoteScore::Up], $scores);
     }
 
     public function testScoresAmongAnEmptyListAsksNothing(): void
     {
-        self::assertSame([], $this->repository()->scoresAmong($this->owner->requireId(), []));
+        self::assertSame([], $this->repository()->findScores($this->owner->requireId(), []));
     }
 
     public function testAVoteIsFoundForItsOwnUserAndEntryOnly(): void

@@ -43,7 +43,7 @@ final class LinkCardSweepTest extends DbTestCase
         self::assertSame(2, $this->client->getRequestsCount());
         self::assertSame(
             [$newest->requireId()],
-            PostEnrichers::enrichments($this->entityManager)->pendingEntryIdsAmong(
+            PostEnrichers::enrichments($this->entityManager)->findPendingEntryIds(
                 [$older->requireId(), $old->requireId(), $newest->requireId()],
             ),
         );

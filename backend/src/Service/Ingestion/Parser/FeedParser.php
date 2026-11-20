@@ -19,7 +19,9 @@ final readonly class FeedParser
     public function parse(string $xml): ParsedFeedModel
     {
         return StreamedFeedDocument::parse(
-            UndeclaredPrefixes::declaredIn($this->fromTheDeclaration($this->withoutIllegalControlCharacters($xml))),
+            UndeclaredPrefixes::addMissingDeclarations(
+                $this->fromTheDeclaration($this->withoutIllegalControlCharacters($xml)),
+            ),
             $this->parserFactory,
         );
     }

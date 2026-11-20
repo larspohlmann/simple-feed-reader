@@ -54,9 +54,9 @@ final class DaySourcesTest extends TestCase
         $live = new DayCountsModel([4 => ['2026-10-10' => new DayCountModel(1, 1)]]);
 
         self::assertFalse($this->sources($stored)->needsLive($plain, '2026-10-10'));
-        self::assertSame(7, $this->sources($stored)->countFor($plain, '2026-10-10', $live)->arrived);
+        self::assertSame(7, $this->sources($stored)->resolveDayCount($plain, '2026-10-10', $live)->arrived);
         $liveOnly = new DayCountsModel([4 => ['2026-10-11' => new DayCountModel(1, 0)]]);
-        self::assertSame(1, $this->sources($stored)->countFor($plain, '2026-10-11', $liveOnly)->arrived);
+        self::assertSame(1, $this->sources($stored)->resolveDayCount($plain, '2026-10-11', $liveOnly)->arrived);
     }
 
     public function testOldestLiveDayIsTheEarliestDayAnySubscriptionMustCountLive(): void

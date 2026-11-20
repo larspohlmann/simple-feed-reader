@@ -81,7 +81,7 @@ final class BackupPartWalk
     {
         $lastId = 0;
         do {
-            $batch = $this->entries->forFeedAfterId($feedId, $lastId, self::ENTRY_BATCH);
+            $batch = $this->entries->findForFeedAfterId($feedId, $lastId, self::ENTRY_BATCH);
             yield from $this->bufferBatch($batch, $feedUrl);
             $batchSize = \count($batch);
             $lastId = $this->pickLastId($batch, $lastId);

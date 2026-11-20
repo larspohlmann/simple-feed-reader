@@ -30,7 +30,7 @@ final class SocialLikeRepository extends ServiceEntityRepository
      *
      * @return array<int, true> the liked ones, by entry id
      */
-    public function likedEntryIdsAmong(int $userId, array $entryIds): array
+    public function findLikedEntryIds(int $userId, array $entryIds): array
     {
         if ([] === $entryIds) {
             return [];

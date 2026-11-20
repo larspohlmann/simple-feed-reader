@@ -38,7 +38,7 @@ final class TrendingPlacementSqlTest extends DbTestCase
         /** @var list<int|string> $entryIds */
         $entryIds = $this->entityManager->getConnection()->fetchFirstColumn(
             'SELECT member.entry_id FROM trending_story_entry member WHERE member.story_id = ? AND '
-            . TrendingPlacementSql::placedIn($window, 'member') . ' ORDER BY member.entry_id',
+            . TrendingPlacementSql::buildPlacedCondition($window, 'member') . ' ORDER BY member.entry_id',
             [$storyId],
         );
 

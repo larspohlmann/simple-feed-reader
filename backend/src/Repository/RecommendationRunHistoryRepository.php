@@ -49,7 +49,7 @@ final class RecommendationRunHistoryRepository extends ServiceEntityRepository
      */
     public function pageForMonth(User $user, MonthWindowModel $window, ?int $beforeRunId): array
     {
-        $query = $this->historyRowsFor($user)
+        $query = $this->buildHistoryRowsQuery($user)
             ->andWhere('r.createdAt >= :start')->setParameter('start', $window->startUtc)
             ->andWhere('r.createdAt < :end')->setParameter('end', $window->endUtc)
             ->orderBy('r.id', 'DESC')
@@ -97,7 +97,7 @@ final class RecommendationRunHistoryRepository extends ServiceEntityRepository
         return null === $total ? null : (int) $total;
     }
 
-    private function historyRowsFor(User $user): QueryBuilder
+    private function buildHistoryRowsQuery(User $user): QueryBuilder
     {
         return $this->createQueryBuilder('r')
             ->select(

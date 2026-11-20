@@ -17,7 +17,7 @@ final readonly class InclusionChange
     ) {
     }
 
-    public function switchFor(InclusionSurface $surface): ?bool
+    public function getSwitch(InclusionSurface $surface): ?bool
     {
         return match ($surface) {
             InclusionSurface::AllItems => $this->allItems,

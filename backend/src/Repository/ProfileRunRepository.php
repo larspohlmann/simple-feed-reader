@@ -72,7 +72,7 @@ final class ProfileRunRepository extends ServiceEntityRepository
             ->getArrayResult();
     }
 
-    public function latestCompletedFingerprintFor(User $user): ?string
+    public function findLatestCompletedFingerprint(User $user): ?string
     {
         /** @var list<array{fingerprint: ?string}> $rows */
         $rows = $this->createQueryBuilder('p')

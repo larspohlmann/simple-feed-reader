@@ -52,7 +52,7 @@ final class ProfileRunRepositoryTest extends DbTestCase
         $this->failed($owner);
         $this->running($owner, 'fp-running');
 
-        self::assertSame('fp-newest-completed', $this->profileRuns()->latestCompletedFingerprintFor($owner));
+        self::assertSame('fp-newest-completed', $this->profileRuns()->findLatestCompletedFingerprint($owner));
     }
 
     public function testAnAccountWithoutACompletedRunHasNoFingerprint(): void
@@ -60,7 +60,7 @@ final class ProfileRunRepositoryTest extends DbTestCase
         $owner = $this->user('profile-runs-no-fingerprint@example.test');
         $this->running($owner, 'fp-running');
 
-        self::assertNull($this->profileRuns()->latestCompletedFingerprintFor($owner));
+        self::assertNull($this->profileRuns()->findLatestCompletedFingerprint($owner));
     }
 
     public function testEveryActiveRunComesOldestFirst(): void

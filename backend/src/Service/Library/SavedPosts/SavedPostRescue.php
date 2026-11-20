@@ -59,7 +59,7 @@ final readonly class SavedPostRescue
     private function rescue(Subscription $subscription, array $leavingFeedIds): array
     {
         $userId = $subscription->getUser()->requireId();
-        $flagged = $this->savedPosts->flaggedIn($userId, $subscription->getFeed()->requireId());
+        $flagged = $this->savedPosts->findFlagged($userId, $subscription->getFeed()->requireId());
         if ([] === $flagged) {
             return [];
         }
@@ -85,7 +85,7 @@ final readonly class SavedPostRescue
         $held = [];
         $created = [];
         while ([] !== $entryIds) {
-            $plan = $this->planFor($copy->savedFeedId, $entryIds);
+            $plan = $this->loadPlan($copy->savedFeedId, $entryIds);
             $made = $this->copyEntries($copy, $plan);
             $this->savedPosts->copyCompanions($made, $origin);
             $held += $plan->merged();
@@ -97,13 +97,13 @@ final readonly class SavedPostRescue
     }
 
     /** @param list<int> $entryIds */
-    private function planFor(int $savedFeedId, array $entryIds): SavedCopyPlan
+    private function loadPlan(int $savedFeedId, array $entryIds): SavedCopyPlan
     {
         $originals = $this->savedPosts->findOriginals($entryIds);
 
         return new SavedCopyPlan(
             $originals,
-            $this->savedPosts->heldIn($savedFeedId, SavedCopyPlan::heldHashesToAsk($originals)),
+            $this->savedPosts->findHeld($savedFeedId, SavedCopyPlan::heldHashesToAsk($originals)),
         );
     }
 

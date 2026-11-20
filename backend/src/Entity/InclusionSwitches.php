@@ -44,7 +44,7 @@ final readonly class InclusionSwitches
     {
         $switches = $this;
         foreach (InclusionSurface::cases() as $surface) {
-            $switches = $switches->with($surface, $change->switchFor($surface) ?? $this->isIncludedIn($surface));
+            $switches = $switches->with($surface, $change->getSwitch($surface) ?? $this->isIncludedIn($surface));
         }
 
         return $switches;

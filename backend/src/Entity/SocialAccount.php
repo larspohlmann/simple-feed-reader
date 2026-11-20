@@ -190,7 +190,7 @@ final class SocialAccount
 
     public function getLastCheckedAt(): ?\DateTimeImmutable
     {
-        return $this->syncStamp->checkedAt();
+        return $this->syncStamp->getCheckedAt();
     }
 
     public function getLastSyncSkip(): ?PrivateFeedSyncSkip

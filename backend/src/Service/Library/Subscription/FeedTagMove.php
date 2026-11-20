@@ -35,8 +35,8 @@ final readonly class FeedTagMove
         }
 
         $userId = $subscription->getUser()->requireId();
-        $fromTag = $this->ownedTagOrNull($move->fromTagId, $userId);
-        $toTag = $this->ownedTagOrNull($move->toTagId, $userId);
+        $fromTag = $this->requireOwnedTagIfSet($move->fromTagId, $userId);
+        $toTag = $this->requireOwnedTagIfSet($move->toTagId, $userId);
 
         if (null !== $fromTag) {
             $subscription->removeTag($fromTag);
@@ -53,7 +53,7 @@ final readonly class FeedTagMove
         }
     }
 
-    private function ownedTagOrNull(?int $tagId, int $userId): ?Tag
+    private function requireOwnedTagIfSet(?int $tagId, int $userId): ?Tag
     {
         if (null === $tagId) {
             return null;

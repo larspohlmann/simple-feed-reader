@@ -18,7 +18,7 @@ final class SavedSearchNetworkInclusionRepository extends ServiceEntityRepositor
     }
 
     /** @return list<SocialNetwork> */
-    public function includedNetworksFor(int $userId): array
+    public function findIncludedNetworks(int $userId): array
     {
         /** @var list<string> $networks */
         $networks = $this->createQueryBuilder('inclusion')

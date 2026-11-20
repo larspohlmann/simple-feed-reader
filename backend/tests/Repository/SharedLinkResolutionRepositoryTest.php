@@ -26,7 +26,7 @@ final class SharedLinkResolutionRepositoryTest extends DbTestCase
 
         self::assertEquals(
             [new PendingLinkModel($first, 'https://n.pr/a', 0), new PendingLinkModel($second, 'https://n.pr/b', 0)],
-            $this->repository()->pendingAt(new \DateTimeImmutable(self::NOW), 2),
+            $this->repository()->findDuePending(new \DateTimeImmutable(self::NOW), 2),
         );
     }
 
@@ -35,7 +35,7 @@ final class SharedLinkResolutionRepositoryTest extends DbTestCase
         $linkId = $this->linkOf('https://n.pr/a');
         $this->repository()->settle(new PendingLinkModel($linkId, 'https://n.pr/a', 0), LinkLandingModel::unchanged());
 
-        self::assertSame([], $this->repository()->pendingAt(new \DateTimeImmutable(self::NOW), 5));
+        self::assertSame([], $this->repository()->findDuePending(new \DateTimeImmutable(self::NOW), 5));
     }
 
     public function testADeferredRowWaitsForItsRetry(): void
@@ -46,10 +46,10 @@ final class SharedLinkResolutionRepositoryTest extends DbTestCase
             new \DateTimeImmutable('2026-11-15 13:00:00'),
         );
 
-        self::assertSame([], $this->repository()->pendingAt(new \DateTimeImmutable('2026-11-15 12:59:59'), 5));
+        self::assertSame([], $this->repository()->findDuePending(new \DateTimeImmutable('2026-11-15 12:59:59'), 5));
         self::assertEquals(
             [new PendingLinkModel($linkId, 'https://n.pr/a', 1)],
-            $this->repository()->pendingAt(new \DateTimeImmutable('2026-11-15 13:00:00'), 5),
+            $this->repository()->findDuePending(new \DateTimeImmutable('2026-11-15 13:00:00'), 5),
         );
     }
 

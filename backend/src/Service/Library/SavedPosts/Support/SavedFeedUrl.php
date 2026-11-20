@@ -26,7 +26,7 @@ final class SavedFeedUrl
 
     public static function parseNetwork(string $url): ?SocialNetwork
     {
-        return self::networkIn(self::parseParts($url) ?? []);
+        return self::parseNetworkPart(self::parseParts($url) ?? []);
     }
 
     /** A restore names the restoring user's own saved feed, never the one the file came from. */
@@ -34,7 +34,7 @@ final class SavedFeedUrl
     {
         $parts = self::parseParts($url);
 
-        return null === $parts ? $url : self::buildUrl($userId, self::networkIn($parts));
+        return null === $parts ? $url : self::buildUrl($userId, self::parseNetworkPart($parts));
     }
 
     /** @return array<int, string>|null */
@@ -44,7 +44,7 @@ final class SavedFeedUrl
     }
 
     /** @param array<int, string> $parts */
-    private static function networkIn(array $parts): ?SocialNetwork
+    private static function parseNetworkPart(array $parts): ?SocialNetwork
     {
         return SocialNetwork::tryFrom($parts[1] ?? '');
     }

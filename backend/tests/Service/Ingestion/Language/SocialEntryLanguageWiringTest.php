@@ -22,7 +22,7 @@ final class SocialEntryLanguageWiringTest extends DbTestCase
     public function testTheContainersIngestorStoresAShortEnglishPostTheDetectorReadsAsInterlinguaAsEnglish(): void
     {
         $detector = new LanguageGuess(new LanguageDetectionFactory()->create());
-        self::assertNull($detector->bestFor("…\nPalantir exec nominated to lead CISA"));
+        self::assertNull($detector->detectLanguage("…\nPalantir exec nominated to lead CISA"));
         $ingestor = self::getContainer()->get(EntryIngestor::class);
         self::assertInstanceOf(EntryIngestor::class, $ingestor);
         $feed = new Feed('https://bsky.app/profile/news.example');

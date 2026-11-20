@@ -25,7 +25,7 @@ final class SavedSearchNetworksTest extends DbTestCase
 
     public function testEveryNetworkStartsExcluded(): void
     {
-        self::assertSame([], $this->inclusions()->includedNetworksFor($this->user->requireId()));
+        self::assertSame([], $this->inclusions()->findIncludedNetworks($this->user->requireId()));
     }
 
     public function testIncludingTwiceStoresOneRowAndExcludingRemovesIt(): void
@@ -34,12 +34,12 @@ final class SavedSearchNetworksTest extends DbTestCase
         $this->networks()->include($this->user, SocialNetwork::Bluesky);
         self::assertSame(
             [SocialNetwork::Bluesky],
-            $this->inclusions()->includedNetworksFor($this->user->requireId()),
+            $this->inclusions()->findIncludedNetworks($this->user->requireId()),
         );
 
         $this->networks()->exclude($this->user, SocialNetwork::Bluesky);
         $this->networks()->exclude($this->user, SocialNetwork::Bluesky);
-        self::assertSame([], $this->inclusions()->includedNetworksFor($this->user->requireId()));
+        self::assertSame([], $this->inclusions()->findIncludedNetworks($this->user->requireId()));
     }
 
     public function testIncludedNetworksAreListedInNetworkOrder(): void
@@ -49,7 +49,7 @@ final class SavedSearchNetworksTest extends DbTestCase
 
         self::assertSame(
             [SocialNetwork::Bluesky, SocialNetwork::Mastodon],
-            $this->inclusions()->includedNetworksFor($this->user->requireId()),
+            $this->inclusions()->findIncludedNetworks($this->user->requireId()),
         );
     }
 
@@ -63,7 +63,7 @@ final class SavedSearchNetworksTest extends DbTestCase
 
         $userId = $this->user->requireId();
 
-        self::assertSame([SocialNetwork::Mastodon], $this->inclusions()->includedNetworksFor($userId));
+        self::assertSame([SocialNetwork::Mastodon], $this->inclusions()->findIncludedNetworks($userId));
         self::assertNull($this->inclusions()->findOneFor($userId, SocialNetwork::Bluesky));
         self::assertNotNull($this->inclusions()->findOneFor($userId, SocialNetwork::Mastodon));
     }

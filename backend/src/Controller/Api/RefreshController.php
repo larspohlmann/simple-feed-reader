@@ -49,10 +49,10 @@ final readonly class RefreshController
         $networkScope = NetworkScope::fromRequestValues($network, $feedKind);
         $feedGroup = FeedGroup::fromRequestValue($group);
         $request = match (true) {
-            null !== $networkScope => $this->scope->requestForNetwork($user->requireId(), $networkScope),
-            null !== $feedGroup => $this->scope->requestForFeedGroup($user->requireId(), $feedGroup),
-            $neverFetched => $this->scope->requestForNeverFetched($user->requireId()),
-            default => $this->scope->requestFor($user->requireId(), $feedId, $tag),
+            null !== $networkScope => $this->scope->buildNetworkRequest($user->requireId(), $networkScope),
+            null !== $feedGroup => $this->scope->buildFeedGroupRequest($user->requireId(), $feedGroup),
+            $neverFetched => $this->scope->buildNeverFetchedRequest($user->requireId()),
+            default => $this->scope->resolveRequest($user->requireId(), $feedId, $tag),
         };
 
         return new JsonResponse(RefreshJson::slice($this->trackedRefreshRunner->run($request)));

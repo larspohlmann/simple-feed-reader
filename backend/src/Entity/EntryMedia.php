@@ -59,8 +59,8 @@ final class EntryMedia
      */
     public function set(array $media, array $attachments): void
     {
-        $this->media = StoredList::orNull(self::toJsonList($media));
-        $this->attachments = StoredList::orNull(self::toJsonList($attachments));
+        $this->media = StoredList::keepIfNotEmpty(self::toJsonList($media));
+        $this->attachments = StoredList::keepIfNotEmpty(self::toJsonList($attachments));
     }
 
     /** A medium already held under the same url moves first, keeping what it records; attachments are untouched. */
@@ -69,7 +69,9 @@ final class EntryMedia
         $media = $this->getMedia();
         $isSameUrl = static fn (EntryMedium $held): bool => $held->url === $medium->url;
         $others = array_filter($media, static fn (EntryMedium $held): bool => !$isSameUrl($held));
-        $this->media = StoredList::orNull(self::toJsonList([array_find($media, $isSameUrl) ?? $medium, ...$others]));
+        $this->media = StoredList::keepIfNotEmpty(
+            self::toJsonList([array_find($media, $isSameUrl) ?? $medium, ...$others]),
+        );
     }
 
     /** Removes every medium whose url matches, re-indexed; attachments are untouched. */

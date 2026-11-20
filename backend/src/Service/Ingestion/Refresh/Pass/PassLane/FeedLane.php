@@ -18,7 +18,7 @@ final readonly class FeedLane implements PassLaneInterface
     {
     }
 
-    public function ticketsFor(Feed $feed): \Generator
+    public function issueTickets(Feed $feed): \Generator
     {
         yield $feed->requireId() => RequestTicketModel::feed(
             new FetchTicketModel($feed->getUrl(), $feed->getEtag(), $feed->getLastModified()),

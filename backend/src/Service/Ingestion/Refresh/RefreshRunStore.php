@@ -31,7 +31,7 @@ final readonly class RefreshRunStore
     /** @throws InvalidArgumentException */
     public function open(RefreshRequestModel $request): RefreshRunProgressModel
     {
-        $item = $this->refreshRunCache->getItem($this->keyFor($request));
+        $item = $this->refreshRunCache->getItem($this->buildKey($request));
         $stored = $item->isHit() ? $item->get() : null;
 
         // A cache file is not a contract: it survives deploys that change this
@@ -47,7 +47,7 @@ final readonly class RefreshRunStore
     /** @throws InvalidArgumentException */
     public function save(RefreshRequestModel $request, RefreshRunProgressModel $progress): void
     {
-        $item = $this->refreshRunCache->getItem($this->keyFor($request));
+        $item = $this->refreshRunCache->getItem($this->buildKey($request));
         $item->set(['done' => $progress->done, 'total' => $progress->total]);
         $item->expiresAfter(self::LIFETIME_SECONDS);
         $this->refreshRunCache->save($item);
@@ -56,10 +56,10 @@ final readonly class RefreshRunStore
     /** @throws InvalidArgumentException */
     public function forget(RefreshRequestModel $request): void
     {
-        $this->refreshRunCache->deleteItem($this->keyFor($request));
+        $this->refreshRunCache->deleteItem($this->buildKey($request));
     }
 
-    private function keyFor(RefreshRequestModel $request): string
+    private function buildKey(RefreshRequestModel $request): string
     {
         if (null === $request->userId) {
             throw new \LogicException(

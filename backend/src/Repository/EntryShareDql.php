@@ -11,10 +11,10 @@ final class EntryShareDql
 {
     public static function exists(EntryAliases $aliases): string
     {
-        return self::existsFor($aliases->entry);
+        return self::buildSharedCondition($aliases->entry);
     }
 
-    public static function existsFor(string $entryAlias): string
+    public static function buildSharedCondition(string $entryAlias): string
     {
         $share = 'share' . ucfirst($entryAlias);
 

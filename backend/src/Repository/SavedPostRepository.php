@@ -27,7 +27,7 @@ final readonly class SavedPostRepository
     }
 
     /** @return array<int, ?string> */
-    public function flaggedIn(int $userId, int $feedId): array
+    public function findFlagged(int $userId, int $feedId): array
     {
         $flaggedStates = $this->buildMarkedEntriesQuery($userId, $feedId, EntryState::class, 'mark')
             ->andWhere('mark.isFavorite = :flagged OR mark.isKept = :flagged')
@@ -111,7 +111,7 @@ final readonly class SavedPostRepository
      *
      * @return array<int, int>
      */
-    public function copiesIn(int $savedFeedId, array $entryIds): array
+    public function findCopies(int $savedFeedId, array $entryIds): array
     {
         if ([] === $entryIds) {
             return [];
@@ -173,7 +173,7 @@ final readonly class SavedPostRepository
      *
      * @return array<string, array{id: int, urlHash: ?string}>
      */
-    public function heldIn(int $savedFeedId, array $guidHashes): array
+    public function findHeld(int $savedFeedId, array $guidHashes): array
     {
         if ([] === $guidHashes) {
             return [];
@@ -209,7 +209,7 @@ final readonly class SavedPostRepository
         if ([] === $entryIds) {
             return [];
         }
-        $held = $this->copiesIn($copy->savedFeedId, $entryIds);
+        $held = $this->findCopies($copy->savedFeedId, $entryIds);
         [$posterOverrides, $posterParameters] = $this->posterColumns($copy->poster);
         $this->entityManager->getConnection()->executeStatement(
             $this->copySql($posterOverrides),
@@ -217,7 +217,7 @@ final readonly class SavedPostRepository
             ['entryIds' => ArrayParameterType::INTEGER],
         );
 
-        return array_diff_key($this->copiesIn($copy->savedFeedId, $entryIds), $held);
+        return array_diff_key($this->findCopies($copy->savedFeedId, $entryIds), $held);
     }
 
     public function copyRenamed(SavedCopyModel $copy, int $entryId, EntryGuid $guid): int

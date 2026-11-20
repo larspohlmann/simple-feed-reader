@@ -560,7 +560,7 @@ final class AccountRestorerTest extends DbTestCase
         $inclusions = self::getContainer()->get(SavedSearchNetworkInclusionRepository::class);
         self::assertInstanceOf(SavedSearchNetworkInclusionRepository::class, $inclusions);
 
-        return $inclusions->includedNetworksFor($user->requireId());
+        return $inclusions->findIncludedNetworks($user->requireId());
     }
 
     /**

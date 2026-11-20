@@ -51,7 +51,7 @@ final readonly class TagEditor
         }
 
         $tag = $this->tagFactory->create($user, $details, $this->tags->nextPositionForUser($user->requireId()));
-        $tag->setParent($this->parentForNewTag($user, $details->parentId));
+        $tag->setParent($this->resolveNewTagParent($user, $details->parentId));
         $this->entityManager->persist($tag);
         $this->entityManager->flush();
 
@@ -64,7 +64,7 @@ final readonly class TagEditor
             throw new TagNameTakenException();
         }
 
-        $this->moveUnder($tag, $this->parentFor($tag, $details->parentId));
+        $this->moveUnder($tag, $this->resolveParent($tag, $details->parentId));
         $tag->setName($details->name);
         $tag->setColor($details->color);
         $tag->setIcon($details->icon);
@@ -105,18 +105,18 @@ final readonly class TagEditor
         }
     }
 
-    private function parentForNewTag(User $user, ?int $parentId): ?Tag
+    private function resolveNewTagParent(User $user, ?int $parentId): ?Tag
     {
         if ($parentId === null) {
             return null;
         }
-        $parent = $this->ownedParent($user, $parentId);
+        $parent = $this->requireOwnedParent($user, $parentId);
         $this->assertFitsUnder($this->loadTree($user), $parent, 0);
 
         return $parent;
     }
 
-    private function parentFor(Tag $tag, ?int $parentId): ?Tag
+    private function resolveParent(Tag $tag, ?int $parentId): ?Tag
     {
         if ($parentId === null) {
             return null;
@@ -127,7 +127,7 @@ final readonly class TagEditor
         if ($tag->requireId() === $parentId) {
             throw InvalidTagParentException::itself();
         }
-        $parent = $this->ownedParent($tag->getUser(), $parentId);
+        $parent = $this->requireOwnedParent($tag->getUser(), $parentId);
         $tree = $this->loadTree($tag->getUser());
         if ($tree->isWithin($parent->requireId(), $tag->requireId())) {
             throw InvalidTagParentException::underItsOwnChild();
@@ -137,7 +137,7 @@ final readonly class TagEditor
         return $parent;
     }
 
-    private function ownedParent(User $user, int $parentId): Tag
+    private function requireOwnedParent(User $user, int $parentId): Tag
     {
         return $this->tags->findOneForUser($user->requireId(), $parentId)
             ?? throw InvalidTagParentException::unknown();

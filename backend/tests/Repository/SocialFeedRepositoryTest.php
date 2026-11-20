@@ -286,8 +286,8 @@ final class SocialFeedRepositoryTest extends DbTestCase
         $this->entityManager->persist($ordinary);
         $this->entityManager->flush();
 
-        self::assertSame($home, SocialFeeds::repository($this->entityManager)->forFeed($home->getFeed()));
-        self::assertNull(SocialFeeds::repository($this->entityManager)->forFeed($ordinary));
+        self::assertSame($home, SocialFeeds::repository($this->entityManager)->findOneForFeed($home->getFeed()));
+        self::assertNull(SocialFeeds::repository($this->entityManager)->findOneForFeed($ordinary));
     }
 
     public function testTheUnprotectedPostsOfAFeedCarryTheirTextAndAuthorPage(): void

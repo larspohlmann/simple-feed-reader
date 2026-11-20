@@ -38,28 +38,28 @@ final readonly class MarkReadRequest
 
         return match ($kind) {
             ReadScopeKind::All => ReadScopeModel::all(),
-            ReadScopeKind::Feed => ReadScopeModel::feed($this->requiredIdFor($kind)),
-            ReadScopeKind::Tag => ReadScopeModel::tag($this->requiredIdFor($kind)),
-            ReadScopeKind::Network => ReadScopeModel::network($this->requiredNetworkFor($kind)),
-            ReadScopeKind::Group => ReadScopeModel::group($this->requiredGroupFor($kind)),
+            ReadScopeKind::Feed => ReadScopeModel::feed($this->requireId($kind)),
+            ReadScopeKind::Tag => ReadScopeModel::tag($this->requireId($kind)),
+            ReadScopeKind::Network => ReadScopeModel::network($this->requireNetwork($kind)),
+            ReadScopeKind::Group => ReadScopeModel::group($this->requireGroup($kind)),
         };
     }
 
-    private function requiredGroupFor(ReadScopeKind $kind): FeedGroup
+    private function requireGroup(ReadScopeKind $kind): FeedGroup
     {
         return FeedGroup::fromRequestValue($this->group) ?? throw new ValidationException([
             'group' => [sprintf('A group is required when scope is "%s".', $kind->value)],
         ]);
     }
 
-    private function requiredNetworkFor(ReadScopeKind $kind): NetworkScope
+    private function requireNetwork(ReadScopeKind $kind): NetworkScope
     {
         return NetworkScope::fromRequestValues($this->network, $this->feedKind) ?? throw new ValidationException([
             'network' => [sprintf('A network is required when scope is "%s".', $kind->value)],
         ]);
     }
 
-    private function requiredIdFor(ReadScopeKind $kind): int
+    private function requireId(ReadScopeKind $kind): int
     {
         return $this->id ?? throw new ValidationException([
             'id' => [sprintf('An id is required when scope is "%s".', $kind->value)],

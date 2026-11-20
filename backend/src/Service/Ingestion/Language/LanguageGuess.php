@@ -24,12 +24,12 @@ final readonly class LanguageGuess
     }
 
     /** The guess where it may overrule a stated language, on a long text; null on a short one. */
-    public function confidentFor(string $text): ?FeedLanguage
+    public function detectConfidentLanguage(string $text): ?FeedLanguage
     {
-        return $this->readsReliably($text) ? $this->bestFor($text) : null;
+        return $this->readsReliably($text) ? $this->detectLanguage($text) : null;
     }
 
-    public function bestFor(string $text): ?FeedLanguage
+    public function detectLanguage(string $text): ?FeedLanguage
     {
         if (preg_match('/\p{L}/u', $text) !== 1) {
             return null;

@@ -82,7 +82,7 @@ final readonly class ConnectedAccountStates
             return [];
         }
 
-        $stored = $this->discussionVotes->scoresAmong($userId, $lemmyPostIds);
+        $stored = $this->discussionVotes->findScores($userId, $lemmyPostIds);
 
         return $stored + array_fill_keys($lemmyPostIds, VoteScore::None);
     }
@@ -116,7 +116,7 @@ final readonly class ConnectedAccountStates
             $posts,
             static fn (SocialPostAddressModel $post): bool => isset($accountsByNetwork[$post->network->value]),
         );
-        $likedIds = $this->socialLikes->likedEntryIdsAmong($userId, array_keys($likeable));
+        $likedIds = $this->socialLikes->findLikedEntryIds($userId, array_keys($likeable));
 
         $states = [];
         foreach ($posts as $entryId => $post) {

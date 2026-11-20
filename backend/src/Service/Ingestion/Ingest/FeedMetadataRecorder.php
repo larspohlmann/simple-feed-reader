@@ -51,7 +51,7 @@ final readonly class FeedMetadataRecorder
     {
         $traits = $feed->getTraits()
             ->withPlatform(FeedPlatform::fromGenerator($parsed->generator))
-            ->withLanguage($this->languageResolver->languageFor($feed, $parsed));
+            ->withLanguage($this->languageResolver->resolveLanguage($feed, $parsed));
         $feed->recordTraits($traits);
     }
 }

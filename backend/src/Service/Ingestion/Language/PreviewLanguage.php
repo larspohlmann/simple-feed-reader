@@ -23,7 +23,7 @@ final readonly class PreviewLanguage
         if ($statedLanguage !== null) {
             return LinkLanguage::stated($statedLanguage);
         }
-        $guess = $this->languageGuess->confidentFor(
+        $guess = $this->languageGuess->detectConfidentLanguage(
             PreviewText::fromTitleAndDescription($preview->title, $preview->description),
         );
 

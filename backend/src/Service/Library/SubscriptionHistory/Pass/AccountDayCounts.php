@@ -32,7 +32,7 @@ final readonly class AccountDayCounts
             if (!$this->sources->isKnown($subscription, $date)) {
                 return ActivityDayModel::unknown($date);
             }
-            $total = $total->plus($this->sources->countFor($subscription, $date, $this->live));
+            $total = $total->plus($this->sources->resolveDayCount($subscription, $date, $this->live));
         }
 
         return ActivityDayModel::known($date, $total);
@@ -52,7 +52,7 @@ final readonly class AccountDayCounts
             return 0.0;
         }
         $arrivals = array_map(
-            fn (string $day): int => $this->sources->countFor($subscription, $day, $this->live)->arrived,
+            fn (string $day): int => $this->sources->resolveDayCount($subscription, $day, $this->live)->arrived,
             $knownDays,
         );
 

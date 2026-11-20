@@ -77,7 +77,7 @@ final class EntryIndexer
      */
     public function toIndexedEntries(array $entries): array
     {
-        $texts = $this->transcriptTexts->searchTextsFor(
+        $texts = $this->transcriptTexts->findSearchTexts(
             array_map(static fn (Entry $entry): int => $entry->requireId(), $entries),
         );
 

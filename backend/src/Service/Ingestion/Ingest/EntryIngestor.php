@@ -50,7 +50,7 @@ final readonly class EntryIngestor
                 => $this->incoming($this->platformRules->apply($parsedEntry)),
             $parsed->entries,
         );
-        $deduplicator = $this->deduplicatorFor($feed, $incoming);
+        $deduplicator = $this->loadDeduplicator($feed, $incoming);
 
         $created = [];
         $newPairs = [];
@@ -85,7 +85,7 @@ final readonly class EntryIngestor
     /**
      * @param list<IncomingEntryModel> $incoming
      */
-    private function deduplicatorFor(Feed $feed, array $incoming): EntryDeduplicator
+    private function loadDeduplicator(Feed $feed, array $incoming): EntryDeduplicator
     {
         return new EntryDeduplicator(
             $this->entries->existingGuidHashesForFeed(

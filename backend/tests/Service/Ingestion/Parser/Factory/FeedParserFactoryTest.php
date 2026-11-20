@@ -38,7 +38,7 @@ final class FeedParserFactoryTest extends TestCase
 
     public function testSelectsRss2ParserForRssRoot(): void
     {
-        $parser = $this->factory()->parserFor(
+        $parser = $this->factory()->selectParser(
             $this->root('<rss version="2.0"><channel><title>x</title></channel></rss>'),
         );
 
@@ -47,7 +47,7 @@ final class FeedParserFactoryTest extends TestCase
 
     public function testSelectsRss1ParserForRdfRoot(): void
     {
-        $parser = $this->factory()->parserFor(
+        $parser = $this->factory()->selectParser(
             $this->root('<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"'
                 . ' xmlns="http://purl.org/rss/1.0/"><channel><title>x</title></channel></rdf:RDF>'),
         );
@@ -57,7 +57,7 @@ final class FeedParserFactoryTest extends TestCase
 
     public function testSelectsAtom10ParserForModernAtomNamespace(): void
     {
-        $parser = $this->factory()->parserFor(
+        $parser = $this->factory()->selectParser(
             $this->root('<feed xmlns="http://www.w3.org/2005/Atom"><title>x</title></feed>'),
         );
 
@@ -66,7 +66,7 @@ final class FeedParserFactoryTest extends TestCase
 
     public function testSelectsAtom03ParserForLegacyAtomNamespace(): void
     {
-        $parser = $this->factory()->parserFor(
+        $parser = $this->factory()->selectParser(
             $this->root('<feed xmlns="http://purl.org/atom/ns#"><title>x</title></feed>'),
         );
 
@@ -76,13 +76,13 @@ final class FeedParserFactoryTest extends TestCase
     public function testThrowsForUnknownRootElement(): void
     {
         $this->expectException(FeedParseException::class);
-        $this->factory()->parserFor($this->root('<unknown><child/></unknown>'));
+        $this->factory()->selectParser($this->root('<unknown><child/></unknown>'));
     }
 
     public function testThrowsForUnsupportedAtomNamespace(): void
     {
         $this->expectException(FeedParseException::class);
-        $this->factory()->parserFor(
+        $this->factory()->selectParser(
             $this->root('<feed xmlns="http://example.com/not-atom"><title>x</title></feed>'),
         );
     }
@@ -101,6 +101,6 @@ final class FeedParserFactoryTest extends TestCase
     {
         $this->expectException(FeedParseException::class);
         $this->expectExceptionMessage('No parser for feed root <RDF>');
-        $this->factory()->parserFor($this->root($xml));
+        $this->factory()->selectParser($this->root($xml));
     }
 }
