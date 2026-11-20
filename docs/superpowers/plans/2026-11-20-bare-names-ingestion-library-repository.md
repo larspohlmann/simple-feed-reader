@@ -110,6 +110,7 @@ The last column is what the reviewer checks the name against.
 | `Subscription/FeedTagMove.php` | `ownedTagOrNull` | `requireOwnedTagIfSet` | Null for a null id (no tag, passes through); else the user's tag with that id, throwing `InvalidSelectionException` when it is not theirs |
 | `Tag/TagEditor.php` | `parentFor` | `resolveParent` | Settles an edited tag's parent from an optional id: none for null, the unchanged current parent when the id is the current one, else the requested tag after the ownership, cycle and depth checks, which throw `InvalidTagParentException` |
 | `Tag/TagEditor.php` | `parentForNewTag` (private) | `resolveNewTagParent` | Settles a new tag's parent from an optional id: none for null, else the requested tag after the ownership and depth checks, which throw |
+| `Tag/TagEditor.php` | `ownedParent` (private) | `requireOwnedParent` | The user's tag with that id; throws `InvalidTagParentException` when the user has no such tag |
 
 ## Review Focus
 
