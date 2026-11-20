@@ -300,7 +300,7 @@ describe('EntryCommentsComponent', () => {
       social: null,
     });
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.title .total')?.textContent?.trim()).toBe('38');
+    expect(fixture.nativeElement.querySelector('.title')?.textContent).toMatch(/Comments\s+·\s+38/);
   });
 
   it('counts the loaded and omitted comments in the heading once they are in (#2414)', () => {
