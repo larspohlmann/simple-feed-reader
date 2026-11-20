@@ -55,7 +55,7 @@ final readonly class DiscussionVotes
     public function vote(User $user, Entry $entry, VoteScore $score): DiscussionVoteResultModel
     {
         $network = $this->requireVotingNetwork($entry);
-        $account = $this->accounts->accountFor($user, $entry, $network);
+        $account = $this->accounts->requireAccount($user, $entry, $network);
 
         $result = $this->selectVoter($network)->castVoteOnPost($account, $entry, $score);
         $this->mirror($user, $entry, $account, $result->myVote);
@@ -83,7 +83,7 @@ final readonly class DiscussionVotes
         if (null === AbsoluteHttpUrl::keepIfHttps($address)) {
             throw new NotASocialPostException(sprintf('The address names no %s comment.', $this->formatNetworkNames()));
         }
-        $account = $this->accounts->accountFor($user, $entry, $network);
+        $account = $this->accounts->requireAccount($user, $entry, $network);
 
         $result = $this->selectVoter($network)->castVoteOnComment($account, $address, $score);
         $this->comments->forget($user, $entry);
@@ -104,7 +104,7 @@ final readonly class DiscussionVotes
     public function syncFromNetwork(User $user, Entry $entry): VoteScore
     {
         $network = $this->requireVotingNetwork($entry);
-        $account = $this->accounts->accountFor($user, $entry, $network);
+        $account = $this->accounts->requireAccount($user, $entry, $network);
 
         $myVote = $this->selectVoter($network)->fetchPostVote($account, $entry);
         $this->mirror($user, $entry, $account, $myVote);

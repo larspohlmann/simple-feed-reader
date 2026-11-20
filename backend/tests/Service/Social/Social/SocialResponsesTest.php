@@ -104,7 +104,7 @@ final class SocialResponsesTest extends DbTestCase
         $this->entityManager->flush();
         $this->mastodon->knowsTheResponseContext(new ResponseContextModel(canReply: false));
 
-        $context = $this->responses()->contextFor(
+        $context = $this->responses()->prepareContext(
             $this->owner,
             new ResponseTargetModel($this->post()),
             ResponseKind::Reply,
@@ -129,7 +129,7 @@ final class SocialResponsesTest extends DbTestCase
         );
         $this->mastodon->knowsTheResponseContext(new ResponseContextModel(preview: $preview));
 
-        $context = $this->responses()->contextFor(
+        $context = $this->responses()->prepareContext(
             $this->owner,
             new ResponseTargetModel($this->post()),
             ResponseKind::Quote,
@@ -141,7 +141,7 @@ final class SocialResponsesTest extends DbTestCase
     public function testAReplyInTheThreadAlsoLooksUpTheEntrysPostAsItsStarter(): void
     {
 
-        $this->responses()->contextFor(
+        $this->responses()->prepareContext(
             $this->owner,
             new ResponseTargetModel($this->post(), self::REPLY_URI),
             ResponseKind::Reply,
@@ -159,7 +159,7 @@ final class SocialResponsesTest extends DbTestCase
             }
         });
 
-        $context = $this->responses()->contextFor(
+        $context = $this->responses()->prepareContext(
             $this->owner,
             new ResponseTargetModel($this->post(), self::REPLY_URI),
             ResponseKind::Reply,
@@ -173,14 +173,14 @@ final class SocialResponsesTest extends DbTestCase
         $this->mastodon->knowsTheResponseContext(new ResponseContextModel(canQuote: false));
         $target = new ResponseTargetModel($this->post());
 
-        self::assertFalse($this->responses()->contextFor($this->owner, $target, ResponseKind::Quote)->canSend);
-        self::assertTrue($this->responses()->contextFor($this->owner, $target, ResponseKind::Reply)->canSend);
+        self::assertFalse($this->responses()->prepareContext($this->owner, $target, ResponseKind::Quote)->canSend);
+        self::assertTrue($this->responses()->prepareContext($this->owner, $target, ResponseKind::Reply)->canSend);
     }
 
     public function testAQuoteOfAReplyStartsWithNoMentionsAndNeverLooksUpTheThreadStarter(): void
     {
 
-        $context = $this->responses()->contextFor(
+        $context = $this->responses()->prepareContext(
             $this->owner,
             new ResponseTargetModel($this->post(), self::REPLY_URI),
             ResponseKind::Quote,

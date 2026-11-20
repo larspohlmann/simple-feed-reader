@@ -34,6 +34,6 @@ final class OwnReplies
     /** @param list<SocialAccount> $ownAccounts */
     private static function isOwn(EntryCommentModel $comment, array $ownAccounts): bool
     {
-        return null !== SocialIdentity::accountAmong($comment->post?->authorIdentity, $ownAccounts);
+        return null !== SocialIdentity::findAccount($comment->post?->authorIdentity, $ownAccounts);
     }
 }

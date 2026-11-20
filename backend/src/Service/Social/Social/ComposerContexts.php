@@ -38,7 +38,7 @@ final readonly class ComposerContexts
     public function buildReplyContext(SocialPostModel $post, ResponseTargetModel $target): ComposerContextModel
     {
         $defaults = $this->defaults->get($post->account->getNetwork()->value)
-            ->defaultsFor($post, $this->buildThreadStarterLookup($target, $post));
+            ->resolveDefaults($post, $this->buildThreadStarterLookup($target, $post));
         $text = ComposerStartingText::mentioning($defaults->mentions);
 
         return $this->buildContext($post, ResponseKind::Reply, $defaults, $text);
@@ -83,7 +83,7 @@ final readonly class ComposerContexts
     private function buildQuotingContext(SocialPostModel $post, string $quote): ComposerContextModel
     {
         $defaults = $this->defaults->get($post->account->getNetwork()->value)
-            ->defaultsFor($post, static fn (): ?SocialPostModel => null)
+            ->resolveDefaults($post, static fn (): ?SocialPostModel => null)
             ->withoutMentions();
         $text = ComposerStartingText::quoting($quote, $defaults->maxCharacters);
 
@@ -120,10 +120,10 @@ final readonly class ComposerContexts
             return static fn (): SocialPostModel => $post;
         }
 
-        return fn (): ?SocialPostModel => $this->threadStarterOrNull($post, $target);
+        return fn (): ?SocialPostModel => $this->tryFindThreadStarter($post, $target);
     }
 
-    private function threadStarterOrNull(SocialPostModel $post, ResponseTargetModel $target): ?SocialPostModel
+    private function tryFindThreadStarter(SocialPostModel $post, ResponseTargetModel $target): ?SocialPostModel
     {
         try {
             return $this->posts->findAs($post->account, $this->postAddresses->requireRespondablePost($target->entry));

@@ -153,7 +153,7 @@ final class MastodonTimelinePageTest extends TestCase
                 'https://files.mastodon.example/card.jpg',
                 'Example News',
             ),
-            $page->knownShares->linkCardFor(self::URI),
+            $page->knownShares->findLinkCard(self::URI),
         );
     }
 
@@ -163,7 +163,7 @@ final class MastodonTimelinePageTest extends TestCase
     {
         $page = MastodonTimelinePage::fromStatuses([self::timelineStatus(['card' => $card])]);
 
-        self::assertNull($page->knownShares->linkCardFor(self::URI));
+        self::assertNull($page->knownShares->findLinkCard(self::URI));
     }
 
     /** @return iterable<string, array{array<string, mixed>}> */
@@ -304,7 +304,7 @@ final class MastodonTimelinePageTest extends TestCase
     {
         $page = MastodonTimelinePage::fromStatuses([self::timelineStatus(['quote' => self::acceptedQuote()])]);
 
-        self::assertSame('carol@third.example', $page->knownShares->quotedPostFor(self::URI)?->authorHandle);
+        self::assertSame('carol@third.example', $page->knownShares->findQuotedPost(self::URI)?->authorHandle);
     }
 
     public function testABoostedStatusesQuoteIsReadOffTheReblog(): void
@@ -321,7 +321,7 @@ final class MastodonTimelinePageTest extends TestCase
 
         self::assertSame(
             'carol@third.example',
-            $page->knownShares->quotedPostFor(self::URI)?->authorHandle,
+            $page->knownShares->findQuotedPost(self::URI)?->authorHandle,
         );
     }
 
@@ -329,7 +329,7 @@ final class MastodonTimelinePageTest extends TestCase
     {
         $page = MastodonTimelinePage::fromStatuses([self::timelineStatus()]);
 
-        self::assertNull($page->knownShares->quotedPostFor(self::URI));
+        self::assertNull($page->knownShares->findQuotedPost(self::URI));
     }
 
     public function testAStatusTheInstanceCountsRepliesForIsKnownAsReplied(): void
@@ -481,7 +481,7 @@ final class MastodonTimelinePageTest extends TestCase
         self::assertCount(1, $page->selfReplies);
         self::assertInstanceOf(
             LinkCardContent::class,
-            $page->knownShares->linkCardFor('https://mastodon.example/users/bob/statuses/101'),
+            $page->knownShares->findLinkCard('https://mastodon.example/users/bob/statuses/101'),
         );
     }
 

@@ -52,12 +52,12 @@ final readonly class ActingAccountChooser
     public function forResponse(User $user, ResponseTargetModel $target, SocialNetwork $network): SocialAccount
     {
         return null === $target->accountId
-            ? $this->accountFor($user, $target->entry, $network)
+            ? $this->requireAccount($user, $target->entry, $network)
             : $this->chosenAccounts->requireConnectedOn($user, $target->accountId, $network);
     }
 
     /** @throws NoSocialAccountForNetworkException */
-    public function accountFor(User $user, Entry $entry, SocialNetwork $network): SocialAccount
+    public function requireAccount(User $user, Entry $entry, SocialNetwork $network): SocialAccount
     {
         return $this->findAccount($user, $entry->getFeed(), $network)
             ?? throw new NoSocialAccountForNetworkException(

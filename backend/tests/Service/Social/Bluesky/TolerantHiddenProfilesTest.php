@@ -28,7 +28,10 @@ final class TolerantHiddenProfilesTest extends TestCase
         $rusty = new HiddenProfileModel(BlueskyProfiles::RUSTY, 'Rusty');
         $this->hiddenProfiles->hide($rusty);
 
-        $hidden = $this->tolerant()->hiddenAmongOrNone([BlueskyProfiles::RUSTY, 'did:plc:bob'], 'Carrying on.');
+        $hidden = $this->tolerant()->fetchHiddenProfilesOrEmpty(
+            [BlueskyProfiles::RUSTY, 'did:plc:bob'],
+            'Carrying on.',
+        );
 
         self::assertSame([BlueskyProfiles::RUSTY => $rusty], $hidden);
         self::assertSame([], $this->logger->records);
@@ -39,7 +42,7 @@ final class TolerantHiddenProfilesTest extends TestCase
         $failure = new SocialNetworkUnreachableException('down');
         $this->hiddenProfiles->failure = $failure;
 
-        self::assertSame([], $this->tolerant()->hiddenAmongOrNone([BlueskyProfiles::RUSTY], 'Carrying on.'));
+        self::assertSame([], $this->tolerant()->fetchHiddenProfilesOrEmpty([BlueskyProfiles::RUSTY], 'Carrying on.'));
         self::assertSame('warning', $this->logger->records[0]['level'] ?? null);
         self::assertSame('Carrying on.', $this->logger->records[0]['message'] ?? null);
         self::assertSame($failure, $this->logger->records[0]['context']['exception'] ?? null);

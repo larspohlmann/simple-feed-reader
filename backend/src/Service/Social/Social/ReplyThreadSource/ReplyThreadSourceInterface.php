@@ -50,7 +50,7 @@ interface ReplyThreadSourceInterface
      *
      * @throws CommentsUnavailableException
      */
-    public function repliesIn(string $address, string $answer): array;
+    public function parseReplies(string $address, string $answer): array;
 
     /** The author's own reply, from a timeline's post view, as a thread fold stores it. */
     public function buildSelfReply(JsonNodeModel $post): EntryCommentModel;

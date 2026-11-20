@@ -25,7 +25,7 @@ final class TimelineRoundsTest extends TestCase
         $account = self::withId(SocialAccounts::mastodonOn('https://mastodon.example'), 7);
         $socialFeed = PrivateFeeds::mastodon($account, 1);
 
-        $tickets = iterator_to_array($rounds->start([1 => $socialFeed])->ticketFor(1));
+        $tickets = iterator_to_array($rounds->start([1 => $socialFeed])->issueTicket(1));
 
         self::assertEquals(
             [new SocialAccountSlotModel(7, 3), new SocialServerSlotModel(4)],

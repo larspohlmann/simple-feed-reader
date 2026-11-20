@@ -14,7 +14,7 @@ use App\Service\Social\Social\Model\SocialPostModel;
 /** A Lemmy link composer that offers no communities and the page title as it is. */
 final class FakeLemmyComposerDefaults implements ComposerDefaultsInterface
 {
-    public function defaultsFor(SocialPostModel $target, \Closure $threadStarter): ComposerDefaultsModel
+    public function resolveDefaults(SocialPostModel $target, \Closure $threadStarter): ComposerDefaultsModel
     {
         return new ComposerDefaultsModel(10000);
     }

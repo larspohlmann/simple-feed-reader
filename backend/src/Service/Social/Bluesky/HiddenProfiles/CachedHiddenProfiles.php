@@ -19,7 +19,7 @@ final readonly class CachedHiddenProfiles implements HiddenProfilesInterface
     ) {
     }
 
-    public function hiddenAmong(array $actors): array
+    public function fetchHiddenProfiles(array $actors): array
     {
         $hidden = [];
         $unknown = [];
@@ -49,7 +49,7 @@ final readonly class CachedHiddenProfiles implements HiddenProfilesInterface
     {
         $hidden = [];
         foreach (array_chunk($unknown, AppViewClient::URIS_PER_CALL) as $batch) {
-            $hiddenInBatch = $this->inner->hiddenAmong($batch);
+            $hiddenInBatch = $this->inner->fetchHiddenProfiles($batch);
             $this->profileVisibility->remember($batch, $hiddenInBatch);
             $hidden += $hiddenInBatch;
         }

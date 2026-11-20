@@ -31,7 +31,7 @@ final readonly class SearchAnswers
     {
         $slots = $this->timelineRounds->slots();
         $tickets = array_map(
-            static fn (ApiRequestModel $request): RequestTicketModel => $slots->ticketFor($account, $request),
+            static fn (ApiRequestModel $request): RequestTicketModel => $slots->buildTicket($account, $request),
             $requests,
         );
 

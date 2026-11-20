@@ -32,14 +32,14 @@ final readonly class ImportedProfilePictures
             if (null !== $feed->getImageCheckedAt()) {
                 continue;
             }
-            $avatarUrl = self::avatarFor($feed, $rule, $avatars);
+            $avatarUrl = self::findAvatar($feed, $rule, $avatars);
             if (null !== $avatarUrl) {
                 $feed->recordImageCheck($avatarUrl, $now);
             }
         }
     }
 
-    private static function avatarFor(Feed $feed, ProfileFeedRuleInterface $rule, FollowAvatarsModel $avatars): ?string
+    private static function findAvatar(Feed $feed, ProfileFeedRuleInterface $rule, FollowAvatarsModel $avatars): ?string
     {
         $identity = $rule->parseIdentity($feed->getUrl());
         if (null === $identity) {

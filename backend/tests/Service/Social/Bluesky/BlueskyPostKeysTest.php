@@ -21,8 +21,8 @@ final class BlueskyPostKeysTest extends TestCase
         $postKeys = SocialApiWiring::blueskyPostKeys(new ArrayAdapter(), '2026-11-17T13:00:00+01:00');
         $account = SocialApiWiring::blueskyAccount();
 
-        $first = $postKeys->recordKeyFor($account, 'key-1');
-        $second = $postKeys->recordKeyFor($account, 'key-1');
+        $first = $postKeys->ensureRecordKey($account, 'key-1');
+        $second = $postKeys->ensureRecordKey($account, 'key-1');
 
         $recordKey = BlueskyTid::at(new \DateTimeImmutable('2026-11-17T12:00:00Z'), crc32('key-1'));
         self::assertEquals(new BlueskyPostKeyModel($recordKey, seenBefore: false), $first);
@@ -35,9 +35,9 @@ final class BlueskyPostKeysTest extends TestCase
         $account = SocialApiWiring::blueskyAccount();
         $otherAccount = self::withId(SocialAccounts::bluesky(), 4);
 
-        $first = $postKeys->recordKeyFor($account, 'key-1');
-        $otherKey = $postKeys->recordKeyFor($account, 'key-2');
-        $onOtherAccount = $postKeys->recordKeyFor($otherAccount, 'key-1');
+        $first = $postKeys->ensureRecordKey($account, 'key-1');
+        $otherKey = $postKeys->ensureRecordKey($account, 'key-2');
+        $onOtherAccount = $postKeys->ensureRecordKey($otherAccount, 'key-1');
 
         self::assertNotSame($first->recordKey, $otherKey->recordKey);
         self::assertFalse($otherKey->seenBefore);

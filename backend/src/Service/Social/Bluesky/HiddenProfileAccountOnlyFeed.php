@@ -22,7 +22,7 @@ final readonly class HiddenProfileAccountOnlyFeed implements AccountOnlyFeedInte
 
     public function findCandidate(User $user, string $url): ?FeedCandidateModel
     {
-        $profile = $this->hiddenProfiles->hiddenAt(
+        $profile = $this->hiddenProfiles->findHiddenProfile(
             $url,
             'Discover could not tell whether a Bluesky profile is hidden; discovery decides.',
         );
@@ -30,10 +30,10 @@ final readonly class HiddenProfileAccountOnlyFeed implements AccountOnlyFeedInte
             return null;
         }
 
-        return new FeedCandidateModel($url, $profile->name, SourceFormat::BLUESKY_API, $this->reasonFor($user));
+        return new FeedCandidateModel($url, $profile->name, SourceFormat::BLUESKY_API, $this->detectReason($user));
     }
 
-    private function reasonFor(User $user): NoPreviewReason
+    private function detectReason(User $user): NoPreviewReason
     {
         return null === $this->socialAccounts->findReadyActingOnNetwork($user, SocialNetwork::Bluesky)
             ? NoPreviewReason::ConnectBlueskyAccount

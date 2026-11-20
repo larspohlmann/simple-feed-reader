@@ -59,7 +59,7 @@ final readonly class MastodonReplyThreadSource implements ReplyThreadSourceInter
         return 0;
     }
 
-    public function repliesIn(string $address, string $answer): array
+    public function parseReplies(string $address, string $answer): array
     {
         return $this->replies->parseReplies($address, $answer);
     }

@@ -87,7 +87,7 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
             $page = $this->json(ApiRequestModel::get(
                 null === $cursor ? $firstPage : $firstPage . '&cursor=' . rawurlencode($cursor),
             ));
-            $fresh = self::collectionIn($page, $field);
+            $fresh = self::requireList($page, $field);
             array_push($items, ...$fresh);
             $cursor = $page->string('cursor');
         } while (null !== $cursor && [] !== $fresh && \count($items) <= CollectedItemsModel::MAX_ITEMS);
@@ -140,7 +140,7 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
     }
 
     /** @return list<JsonNodeModel> */
-    private static function collectionIn(JsonNodeModel $answer, string $field): array
+    private static function requireList(JsonNodeModel $answer, string $field): array
     {
         return $answer->listAt($field)
             ?? throw new SocialNetworkUnreachableException(sprintf('Bluesky answered without %s.', $field));

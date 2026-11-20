@@ -45,7 +45,7 @@ final readonly class PrivateFeedSyncApplier
 
     public function apply(SocialAccount $account, NetworkCollectionsModel $network): PrivateFeedSyncOutcomeModel
     {
-        $plan = $this->planFor($account, $network);
+        $plan = $this->loadPlan($account, $network);
         $this->entityManager->beginTransaction();
         try {
             $removed = $this->remove($account, $network, $plan->removals());
@@ -63,7 +63,7 @@ final readonly class PrivateFeedSyncApplier
         return $outcome;
     }
 
-    private function planFor(SocialAccount $account, NetworkCollectionsModel $network): CollectionSyncPlan
+    private function loadPlan(SocialAccount $account, NetworkCollectionsModel $network): CollectionSyncPlan
     {
         $onNetwork = self::byKey($network);
         $subscribed = $this->loadSubscribedCollections($account);

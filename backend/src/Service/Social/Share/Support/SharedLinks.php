@@ -30,7 +30,7 @@ final class SharedLinks
         $document = HtmlDocumentParser::parseFragment($bodyHtml);
         $linkedHtml = self::linkBareUrls($document) === 0 ? $bodyHtml : ($document->body->innerHTML ?? $bodyHtml);
 
-        $hrefsToCheck = self::hrefsToCheckIn($document);
+        $hrefsToCheck = self::collectSharedUrls($document);
         $urls = \array_slice(array_keys($hrefsToCheck), 0, self::MAX);
 
         return new SharedLinksModel(
@@ -45,7 +45,7 @@ final class SharedLinks
      * @return array<string, ?string> each shared link's first posted href, when it lost an undocumented key, by its
      *                                tracking-free URL, in post order
      */
-    private static function hrefsToCheckIn(HTMLDocument $document): array
+    private static function collectSharedUrls(HTMLDocument $document): array
     {
         $hrefsToCheck = [];
         foreach ($document->querySelectorAll('a[href]') as $anchor) {
@@ -68,14 +68,14 @@ final class SharedLinks
         $linked = 0;
         foreach (TextNodes::in($document->body) as $text) {
             if ($text->parentElement?->closest('a, code, pre') === null) {
-                $linked += self::linkUrlsIn($text, $document);
+                $linked += self::linkBareUrlsInText($text, $document);
             }
         }
 
         return $linked;
     }
 
-    private static function linkUrlsIn(Text $text, HTMLDocument $document): int
+    private static function linkBareUrlsInText(Text $text, HTMLDocument $document): int
     {
         $pieces = preg_split(self::BARE_URL_SPLIT, $text->data, -1, \PREG_SPLIT_DELIM_CAPTURE);
         if ($pieces === false || \count($pieces) < 2) {

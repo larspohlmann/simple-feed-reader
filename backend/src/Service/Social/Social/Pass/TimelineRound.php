@@ -47,7 +47,7 @@ final class TimelineRound
     }
 
     /** @return \Generator<int|string, RequestTicketModel> none when the feed settles without a request */
-    public function ticketFor(int|string $feedId): \Generator
+    public function issueTicket(int|string $feedId): \Generator
     {
         try {
             $socialFeed = $this->requireSocialFeed($feedId);
@@ -207,7 +207,7 @@ final class TimelineRound
             $this->onRenewedSession[$feedId] = true;
         }
 
-        return SettlementModel::request($this->slots->ticketFor($account, $read->current()));
+        return SettlementModel::request($this->slots->buildTicket($account, $read->current()));
     }
 
     /** @throws PrivateFeedOrphanedException when the private feed has lost its social feed */

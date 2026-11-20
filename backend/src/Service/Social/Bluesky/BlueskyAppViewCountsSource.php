@@ -24,9 +24,9 @@ final readonly class BlueskyAppViewCountsSource implements PostCountsSourceInter
 
     public function fetchCounts(string $address): SocialCountsModel
     {
-        $post = AppViewAnswer::orSocialFailure(
+        $post = AppViewAnswer::askAppView(
             $this->appView->throttledForSeconds(),
-            fn (): JsonNodeModel => $this->postAt($address),
+            fn (): JsonNodeModel => $this->requirePost($address),
         );
 
         return BlueskyPostCounts::parsePost($post)
@@ -34,7 +34,7 @@ final readonly class BlueskyAppViewCountsSource implements PostCountsSourceInter
     }
 
     /** The one view asked for, whether the address names its author by DID or by handle. */
-    private function postAt(string $address): JsonNodeModel
+    private function requirePost(string $address): JsonNodeModel
     {
         return array_values($this->appView->posts([$address]))[0]
             ?? throw new SocialPostNotFoundException('The post is no longer on Bluesky.');

@@ -19,7 +19,7 @@ final class SocialIdentity
     }
 
     /** @param list<SocialAccount> $accounts */
-    public static function accountAmong(?string $author, array $accounts): ?SocialAccount
+    public static function findAccount(?string $author, array $accounts): ?SocialAccount
     {
         return array_find($accounts, static fn (SocialAccount $account): bool => self::isAccount($author, $account));
     }

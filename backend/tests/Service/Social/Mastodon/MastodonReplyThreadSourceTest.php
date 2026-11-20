@@ -160,7 +160,7 @@ final class MastodonReplyThreadSourceTest extends TestCase
 
     public function testTheRepliesAreReadFromTheContext(): void
     {
-        $replies = $this->source(new RoutedHttpClient([]))->repliesIn(
+        $replies = $this->source(new RoutedHttpClient([]))->parseReplies(
             self::STATUS_URL,
             MastodonContextReplies::buildEnvelope('110', self::CONTEXT),
         );
@@ -173,7 +173,7 @@ final class MastodonReplyThreadSourceTest extends TestCase
     {
         $this->expectException(CommentsUnavailableException::class);
 
-        $this->source(new RoutedHttpClient([]))->repliesIn(self::STATUS_URL, '{}');
+        $this->source(new RoutedHttpClient([]))->parseReplies(self::STATUS_URL, '{}');
     }
 
     private function answeringTheAccount(MockResponse $context): RoutedHttpClient

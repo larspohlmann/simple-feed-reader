@@ -58,7 +58,7 @@ final readonly class ShareEnrichmentQueue
     /** @return ShareEnrichmentKind|null what the entry still waits for once its known shares are written */
     private function settle(Entry $entry, KnownSharesModel $knownShares): ?ShareEnrichmentKind
     {
-        $post = $knownShares->blueskyPostFor($entry->getGuid());
+        $post = $knownShares->findBlueskyPost($entry->getGuid());
         if ($post !== null) {
             return $this->knownShareSettler->settleEmbedded($entry, $post);
         }
@@ -79,12 +79,12 @@ final readonly class ShareEnrichmentQueue
 
     private static function findPostedQuote(Entry $entry, KnownSharesModel $knownShares): ?QuotedPostContent
     {
-        return $entry->getShareKind() === ShareKind::Link ? $knownShares->quotedPostFor($entry->getGuid()) : null;
+        return $entry->getShareKind() === ShareKind::Link ? $knownShares->findQuotedPost($entry->getGuid()) : null;
     }
 
     private static function findPostedCard(Entry $entry, KnownSharesModel $knownShares): ?LinkCardContent
     {
-        $card = $knownShares->linkCardFor($entry->getGuid());
+        $card = $knownShares->findLinkCard($entry->getGuid());
         if ($card === null || $entry->getShareKind() !== ShareKind::Link) {
             return null;
         }

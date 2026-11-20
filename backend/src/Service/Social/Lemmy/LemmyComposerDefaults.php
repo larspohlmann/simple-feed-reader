@@ -24,7 +24,7 @@ final readonly class LemmyComposerDefaults implements ComposerDefaultsInterface
     {
     }
 
-    public function defaultsFor(SocialPostModel $target, \Closure $threadStarter): ComposerDefaultsModel
+    public function resolveDefaults(SocialPostModel $target, \Closure $threadStarter): ComposerDefaultsModel
     {
         return self::defaults();
     }

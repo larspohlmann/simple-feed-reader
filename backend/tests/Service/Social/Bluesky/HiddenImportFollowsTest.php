@@ -29,7 +29,7 @@ final class HiddenImportFollowsTest extends TestCase
     {
         $this->hiddenProfiles->hide(new HiddenProfileModel('did:plc:carol', 'Carol'));
 
-        $hidden = $this->follows()->among([
+        $hidden = $this->follows()->findHiddenByIdentity([
             new SocialImportFeedModel('did:plc:rusty', 'Rusty'),
             new SocialImportFeedModel('did:plc:bob', 'Bob'),
             new SocialImportFeedModel('did:plc:carol', 'Carol'),
@@ -45,7 +45,7 @@ final class HiddenImportFollowsTest extends TestCase
     {
         $this->hiddenProfiles->hide(new HiddenProfileModel('did:plc:rusty', 'Rusty'), 'rusty-17.bsky.social');
 
-        $hidden = $this->follows()->among([
+        $hidden = $this->follows()->findHiddenByIdentity([
             new SocialImportFeedModel('Rusty-17.bsky.social', 'Rusty'),
         ]);
 
@@ -55,7 +55,7 @@ final class HiddenImportFollowsTest extends TestCase
 
     public function testAnIdentityThatIsNoActorIsNeverAsked(): void
     {
-        $this->follows()->among([
+        $this->follows()->findHiddenByIdentity([
             new SocialImportFeedModel('did:plc:rusty', null),
             new SocialImportFeedModel('not an actor', null),
         ]);
@@ -65,7 +65,7 @@ final class HiddenImportFollowsTest extends TestCase
 
     public function testNothingToAskAsksNothing(): void
     {
-        self::assertSame([], $this->follows()->among([]));
+        self::assertSame([], $this->follows()->findHiddenByIdentity([]));
         self::assertSame([], $this->hiddenProfiles->asked);
     }
 
@@ -74,7 +74,7 @@ final class HiddenImportFollowsTest extends TestCase
         $failure = new SocialNetworkUnreachableException('down');
         $this->hiddenProfiles->failure = $failure;
 
-        self::assertSame([], $this->follows()->among([
+        self::assertSame([], $this->follows()->findHiddenByIdentity([
             new SocialImportFeedModel('did:plc:rusty', null),
         ]));
         self::assertSame('warning', $this->logger->records[0]['level'] ?? null);

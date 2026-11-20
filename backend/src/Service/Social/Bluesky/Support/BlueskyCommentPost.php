@@ -25,8 +25,8 @@ final class BlueskyCommentPost
         }
         $viewer = $post->node('viewer');
         $commentViewer = new CommentViewerModel(
-            null !== BlueskyRecordUri::likeOrNull($viewer->string('like')),
-            null !== BlueskyRecordUri::repostOrNull($viewer->string('repost')),
+            null !== BlueskyRecordUri::keepIfLike($viewer->string('like')),
+            null !== BlueskyRecordUri::keepIfRepost($viewer->string('repost')),
             canRepost: true,
             canReply: !$viewer->isTrue('replyDisabled'),
             canQuote: !$viewer->isTrue('embeddingDisabled'),

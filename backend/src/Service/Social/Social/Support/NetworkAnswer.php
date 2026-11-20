@@ -20,7 +20,7 @@ final class NetworkAnswer
      *
      * @throws SocialNetworkUnreachableException only when no answer arrived; any status is returned
      */
-    public static function orUnreachable(\Closure $answer, string $network): ApiResponseModel
+    public static function askNetwork(\Closure $answer, string $network): ApiResponseModel
     {
         try {
             return $answer();

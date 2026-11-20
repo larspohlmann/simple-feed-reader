@@ -20,12 +20,12 @@ final class DeletedPostTombstonesTest extends TestCase
         $clock->modify('+6 days');
         $tombstones->bury(3, ['hash-b']);
 
-        self::assertSame(['hash-a', 'hash-c', 'hash-b'], $tombstones->buriedIn(3));
-        self::assertSame([], $tombstones->buriedIn(4));
+        self::assertSame(['hash-a', 'hash-c', 'hash-b'], $tombstones->findBuriedHashes(3));
+        self::assertSame([], $tombstones->findBuriedHashes(4));
         $clock->modify('+1 day');
-        self::assertSame(['hash-b'], $tombstones->buriedIn(3));
+        self::assertSame(['hash-b'], $tombstones->findBuriedHashes(3));
         $clock->modify('+6 days');
-        self::assertSame([], $tombstones->buriedIn(3));
+        self::assertSame([], $tombstones->findBuriedHashes(3));
     }
 
     public function testAStoredEntryWithoutAnExpiryIsNoTombstone(): void
@@ -38,6 +38,6 @@ final class DeletedPostTombstonesTest extends TestCase
 
         $tombstones = new DeletedPostTombstones($cache, $clock);
 
-        self::assertSame(['hash-b'], $tombstones->buriedIn(3));
+        self::assertSame(['hash-b'], $tombstones->findBuriedHashes(3));
     }
 }

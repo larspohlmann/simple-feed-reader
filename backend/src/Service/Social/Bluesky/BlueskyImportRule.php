@@ -27,7 +27,7 @@ final readonly class BlueskyImportRule implements ImportRuleInterface
     {
         return array_map(
             static fn (HiddenProfileModel $profile): PrivateFeedModel => $profile->toAuthorFeed(),
-            $this->hiddenFollows->among($feeds),
+            $this->hiddenFollows->findHiddenByIdentity($feeds),
         );
     }
 

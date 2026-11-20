@@ -410,7 +410,7 @@ final class BlueskyPostWriterTest extends TestCase
     private function rememberedRecordKey(): string
     {
         return SocialApiWiring::blueskyPostKeys($this->postKeyCache)
-            ->recordKeyFor(SocialApiWiring::blueskyAccount(), self::IDEMPOTENCY_KEY)
+            ->ensureRecordKey(SocialApiWiring::blueskyAccount(), self::IDEMPOTENCY_KEY)
             ->recordKey;
     }
 

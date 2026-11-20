@@ -158,7 +158,7 @@ final class BlueskyReplyThreadSourceTest extends TestCase
 
     public function testTheRepliesAreReadFromTheThread(): void
     {
-        $replies = $this->source(new RoutedHttpClient([]))->repliesIn(self::POST_URI, self::THREAD);
+        $replies = $this->source(new RoutedHttpClient([]))->parseReplies(self::POST_URI, self::THREAD);
 
         self::assertCount(1, $replies);
         self::assertSame('https://bsky.app/profile/did:plc:ann/post/r1', $replies[0]->comment()->url);
@@ -168,7 +168,7 @@ final class BlueskyReplyThreadSourceTest extends TestCase
     {
         $this->expectException(CommentsUnavailableException::class);
 
-        $this->source(new RoutedHttpClient([]))->repliesIn(self::POST_URI, '{}');
+        $this->source(new RoutedHttpClient([]))->parseReplies(self::POST_URI, '{}');
     }
 
     private function answeringTheAccount(MockResponse $thread): RoutedHttpClient

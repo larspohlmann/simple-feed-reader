@@ -32,7 +32,7 @@ final readonly class EntryShareClassifier
     public function classify(Entry $entry): void
     {
         $body = SharedLinks::fromBodyHtml($entry->getText()->getContentHtml() ?? $entry->getText()->getSummary() ?? '');
-        $shareKind = $this->orProvisionalLink($entry, $this->classifyShareKind($entry, $body));
+        $shareKind = $this->resolveProvisionalKind($entry, $this->classifyShareKind($entry, $body));
         $entry->setShareKind($shareKind);
         if ($shareKind === null) {
             return;
@@ -61,7 +61,7 @@ final readonly class EntryShareClassifier
         return $entry->isTitleDerived() ? $this->postShareKind($entry, $body) : $this->titledShareKind($entry);
     }
 
-    private function orProvisionalLink(Entry $entry, ?ShareKind $shareKind): ?ShareKind
+    private function resolveProvisionalKind(Entry $entry, ?ShareKind $shareKind): ?ShareKind
     {
         return $shareKind === null && $this->pendingEmbed->awaitsEmbed($entry) ? ShareKind::Link : $shareKind;
     }

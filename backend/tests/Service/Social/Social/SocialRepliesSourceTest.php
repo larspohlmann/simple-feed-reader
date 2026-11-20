@@ -282,7 +282,7 @@ final class SocialRepliesSourceTest extends DbTestCase
             static fn (EntryCommentModel $comment): string => $comment->html,
             $page->comments,
         ));
-        self::assertSame(['repliesIn ' . self::STATUS_URL . ' the thread'], $this->threads->calls);
+        self::assertSame(['parseReplies ' . self::STATUS_URL . ' the thread'], $this->threads->calls);
     }
 
     public function testAFoldedReplyStillShowsWithItsChildren(): void

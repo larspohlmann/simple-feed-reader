@@ -71,7 +71,7 @@ final class BlueskyTimelinePageTest extends TestCase
     {
         $page = BlueskyTimelinePage::fromItems([self::item()], self::ALICE);
 
-        self::assertSame(self::POST_URI, $page->knownShares->blueskyPostFor(self::POST_URI)?->string('uri'));
+        self::assertSame(self::POST_URI, $page->knownShares->findBlueskyPost(self::POST_URI)?->string('uri'));
         self::assertNull($page->parsed->title);
         self::assertNull($page->newestId);
     }
@@ -242,7 +242,7 @@ final class BlueskyTimelinePageTest extends TestCase
         self::assertSame('https://bsky.app/profile/did:plc:bob/post/3parent', $selfReply->parentUrl);
         self::assertSame(self::POST_URI, $selfReply->entry->guid);
         self::assertSame(self::POST_URI, $selfReply->post->string('uri'));
-        self::assertSame(self::POST_URI, $page->knownShares->blueskyPostFor(self::POST_URI)?->string('uri'));
+        self::assertSame(self::POST_URI, $page->knownShares->findBlueskyPost(self::POST_URI)?->string('uri'));
     }
 
     public function testTheAuthorsOwnFeedHandsItsSelfRepliesOnToo(): void

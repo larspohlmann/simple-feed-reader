@@ -12,7 +12,7 @@ use Dom\Text;
 
 final class TrailingUrl
 {
-    public static function removedFrom(string $html, string $url): string
+    public static function stripTrailingUrl(string $html, string $url): string
     {
         $body = HtmlDocumentParser::parseFragment($html)->body;
         if ($body === null) {

@@ -16,7 +16,7 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 #[AsTaggedItem(index: SocialNetwork::Bluesky->value)]
 final readonly class BlueskyComposerDefaults implements ComposerDefaultsInterface
 {
-    public function defaultsFor(SocialPostModel $target, \Closure $threadStarter): ComposerDefaultsModel
+    public function resolveDefaults(SocialPostModel $target, \Closure $threadStarter): ComposerDefaultsModel
     {
         return $this->forAccount($target->account);
     }

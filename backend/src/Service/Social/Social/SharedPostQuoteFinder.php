@@ -27,7 +27,7 @@ final readonly class SharedPostQuoteFinder
      * @throws SocialAccountNeedsReconnectException
      * @throws SocialCredentialsRejectedException
      */
-    public function quotableAt(SocialAccount $account, string $url): ?SocialPostModel
+    public function findQuotable(SocialAccount $account, string $url): ?SocialPostModel
     {
         $address = $this->postAddresses->parsePostUrl($url);
         if (null === $address || $address->network !== $account->getNetwork()) {

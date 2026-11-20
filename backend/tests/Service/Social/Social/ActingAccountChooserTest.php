@@ -39,7 +39,7 @@ final class ActingAccountChooserTest extends DbTestCase
         $default->becomeDefault();
         $this->entityManager->flush();
 
-        self::assertSame($default, $this->chooser()->accountFor(
+        self::assertSame($default, $this->chooser()->requireAccount(
             $this->owner,
             $this->entryOn(new Feed('https://bsky.app/profile/did:plc:bob/rss')),
             SocialNetwork::Bluesky,
@@ -52,7 +52,7 @@ final class ActingAccountChooserTest extends DbTestCase
         $default->becomeDefault();
         $own = $this->account($this->owner, 'did:plc:own', '2026-10-05 10:00:00');
 
-        self::assertSame($own, $this->chooser()->accountFor(
+        self::assertSame($own, $this->chooser()->requireAccount(
             $this->owner,
             $this->entryOn($this->privateFeedOf($own)),
             SocialNetwork::Bluesky,
@@ -67,7 +67,7 @@ final class ActingAccountChooserTest extends DbTestCase
 
         $this->expectException(NoSocialAccountForNetworkException::class);
 
-        $this->chooser()->accountFor(
+        $this->chooser()->requireAccount(
             $this->owner,
             $this->entryOn($this->privateFeedOf($theirs)),
             SocialNetwork::Bluesky,
@@ -82,7 +82,7 @@ final class ActingAccountChooserTest extends DbTestCase
 
         $this->expectException(NoSocialAccountForNetworkException::class);
 
-        $this->chooser()->accountFor($this->owner, $this->entryOn($orphan), SocialNetwork::Bluesky);
+        $this->chooser()->requireAccount($this->owner, $this->entryOn($orphan), SocialNetwork::Bluesky);
     }
 
     public function testNoAccountOnTheNetworkIsRefused(): void
@@ -92,7 +92,7 @@ final class ActingAccountChooserTest extends DbTestCase
         $this->expectException(NoSocialAccountForNetworkException::class);
         $this->expectExceptionMessage('No Mastodon account');
 
-        $this->chooser()->accountFor(
+        $this->chooser()->requireAccount(
             $this->owner,
             $this->entryOn(new Feed('https://mastodon.social/@Gargron.rss')),
             SocialNetwork::Mastodon,

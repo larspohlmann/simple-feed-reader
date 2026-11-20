@@ -31,7 +31,7 @@ final readonly class DeletedPostTombstones
     }
 
     /** @return list<string> the guid hashes of the feed's posts deleted within the last seven days */
-    public function buriedIn(int $feedId): array
+    public function findBuriedHashes(int $feedId): array
     {
         return array_keys($this->standing($this->cache->getItem(self::buildKey($feedId))));
     }

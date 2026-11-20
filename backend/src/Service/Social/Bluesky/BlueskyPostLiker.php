@@ -26,7 +26,7 @@ final readonly class BlueskyPostLiker implements PostLikerInterface
         if (null !== $post->existingLikeId) {
             return new SocialLikeResultModel($post->existingLikeId);
         }
-        $likeId = BlueskyRecordUri::likeOrNull($this->records->createAbout($post, BlueskyRecordUri::LIKE))
+        $likeId = BlueskyRecordUri::keepIfLike($this->records->createAbout($post, BlueskyRecordUri::LIKE))
             ?? throw new SocialNetworkUnreachableException('Bluesky did not name the like it created.');
 
         return new SocialLikeResultModel($likeId);

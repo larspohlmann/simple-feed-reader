@@ -108,7 +108,7 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
     private static function sharedBody(string $html, RenderedEmbedModel $embed): SharedLinksModel
     {
         foreach ($embed->linkCards as $card) {
-            $html = TrailingUrl::removedFrom($html, $card->url);
+            $html = TrailingUrl::stripTrailingUrl($html, $card->url);
         }
         $shared = SharedLinks::fromBodyHtml($html);
         $uncarded = $embed->uncardedLink;

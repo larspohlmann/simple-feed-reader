@@ -15,7 +15,7 @@ final readonly class TimelineSlotsModel
     {
     }
 
-    public function ticketFor(SocialAccount $account, ApiRequestModel $request): RequestTicketModel
+    public function buildTicket(SocialAccount $account, ApiRequestModel $request): RequestTicketModel
     {
         return RequestTicketModel::api($request, [
             new SocialAccountSlotModel($account->requireId(), $this->perAccount),

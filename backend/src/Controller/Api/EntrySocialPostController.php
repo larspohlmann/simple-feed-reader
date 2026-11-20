@@ -57,7 +57,7 @@ final readonly class EntrySocialPostController
         $this->rateLimitGuard->enforceForUser($this->socialViewerLimiter, $user);
 
         $target = new ResponseTargetModel($entry, $address, $accountId);
-        $context = $this->responses->contextFor($user, $target, $kind);
+        $context = $this->responses->prepareContext($user, $target, $kind);
 
         return new JsonResponse(ComposerContextJson::from($context));
     }

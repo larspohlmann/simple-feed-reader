@@ -59,7 +59,7 @@ final class TrailingUrlTest extends TestCase
     #[DataProvider('bodies')]
     public function testRemovesTheUrlTheTextEndsWith(string $html, string $url, string $expected): void
     {
-        self::assertSame($expected, TrailingUrl::removedFrom($html, $url));
+        self::assertSame($expected, TrailingUrl::stripTrailingUrl($html, $url));
     }
 
     /** @return iterable<string, array{string}> */
@@ -74,6 +74,6 @@ final class TrailingUrlTest extends TestCase
     #[DataProvider('untouched')]
     public function testLeavesABodyThatDoesNotEndWithTheUrl(string $html): void
     {
-        self::assertSame($html, TrailingUrl::removedFrom($html, self::URL));
+        self::assertSame($html, TrailingUrl::stripTrailingUrl($html, self::URL));
     }
 }

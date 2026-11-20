@@ -17,7 +17,7 @@ final class NetworkAnswerTest extends TestCase
     {
         $answer = new ApiResponseModel(Response::HTTP_BAD_GATEWAY, '');
 
-        self::assertSame($answer, NetworkAnswer::orUnreachable(static fn (): ApiResponseModel => $answer, 'Bluesky'));
+        self::assertSame($answer, NetworkAnswer::askNetwork(static fn (): ApiResponseModel => $answer, 'Bluesky'));
     }
 
     public function testNoAnswerIsAnUnreachableNetworkNamedInTheMessage(): void
@@ -25,7 +25,7 @@ final class NetworkAnswerTest extends TestCase
         $cause = new FeedUnreachableException('https://pds.example.test: timed out');
 
         try {
-            NetworkAnswer::orUnreachable(static fn (): ApiResponseModel => throw $cause, 'The Mastodon instance');
+            NetworkAnswer::askNetwork(static fn (): ApiResponseModel => throw $cause, 'The Mastodon instance');
             self::fail('No answer must not pass as one.');
         } catch (SocialNetworkUnreachableException $exception) {
             self::assertSame('The Mastodon instance could not be reached.', $exception->getMessage());

@@ -64,7 +64,7 @@ final class BlueskyRecordUriTest extends TestCase
     #[DataProvider('reposts')]
     public function testOnlyARepostRecordIsARepost(?string $uri, ?string $repost): void
     {
-        self::assertSame($repost, BlueskyRecordUri::repostOrNull($uri));
+        self::assertSame($repost, BlueskyRecordUri::keepIfRepost($uri));
     }
 
     /** @return iterable<string, array{?string, ?string}> */
@@ -84,7 +84,7 @@ final class BlueskyRecordUriTest extends TestCase
     #[DataProvider('likes')]
     public function testOnlyALikeRecordTheColumnCanHoldIsALike(?string $uri, ?string $like): void
     {
-        self::assertSame($like, BlueskyRecordUri::likeOrNull($uri));
+        self::assertSame($like, BlueskyRecordUri::keepIfLike($uri));
     }
 
     /** @return iterable<string, array{?string, ?string}> */
@@ -107,7 +107,7 @@ final class BlueskyRecordUriTest extends TestCase
     #[DataProvider('posts')]
     public function testOnlyAPostRecordIsAPost(?string $uri, ?string $post): void
     {
-        self::assertSame($post, BlueskyRecordUri::postOrNull($uri));
+        self::assertSame($post, BlueskyRecordUri::keepIfPost($uri));
     }
 
     /** @return iterable<string, array{?string, ?string}> */

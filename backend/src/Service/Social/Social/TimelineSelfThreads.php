@@ -70,7 +70,7 @@ final readonly class TimelineSelfThreads
             return;
         }
         $roots = $this->loadRoots($feed, $threads, $createdEntries);
-        $source = $this->sourceFor($feed);
+        $source = $this->selectSource($feed);
         foreach ($threads->placed as $reply) {
             $root = $roots[$reply->rootGuid] ?? null;
             if ($root === null) {
@@ -179,7 +179,7 @@ final readonly class TimelineSelfThreads
         return $roots;
     }
 
-    private function sourceFor(Feed $feed): ReplyThreadSourceInterface
+    private function selectSource(Feed $feed): ReplyThreadSourceInterface
     {
         $source = $this->threads->get($feed->getNetwork()->value ?? '');
         \assert($source instanceof ReplyThreadSourceInterface);

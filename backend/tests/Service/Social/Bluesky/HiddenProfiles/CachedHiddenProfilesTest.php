@@ -33,8 +33,8 @@ final class CachedHiddenProfilesTest extends TestCase
         $rusty = new HiddenProfileModel(BlueskyProfiles::RUSTY, 'Rusty');
         $actors = [BlueskyProfiles::RUSTY, 'did:plc:bob'];
 
-        self::assertEquals([BlueskyProfiles::RUSTY => $rusty], $this->hiddenProfiles->hiddenAmong($actors));
-        self::assertEquals([BlueskyProfiles::RUSTY => $rusty], $this->hiddenProfiles->hiddenAmong($actors));
+        self::assertEquals([BlueskyProfiles::RUSTY => $rusty], $this->hiddenProfiles->fetchHiddenProfiles($actors));
+        self::assertEquals([BlueskyProfiles::RUSTY => $rusty], $this->hiddenProfiles->fetchHiddenProfiles($actors));
         self::assertSame([[BlueskyProfiles::RUSTY, 'did:plc:bob']], $this->appView->asked);
     }
 
@@ -42,7 +42,7 @@ final class CachedHiddenProfilesTest extends TestCase
     {
         $this->profileVisibility->remember(['did:plc:bob'], []);
 
-        $this->hiddenProfiles->hiddenAmong(['did:plc:bob', 'did:plc:carol', 'did:plc:carol']);
+        $this->hiddenProfiles->fetchHiddenProfiles(['did:plc:bob', 'did:plc:carol', 'did:plc:carol']);
 
         self::assertSame([['did:plc:carol']], $this->appView->asked);
     }
@@ -52,7 +52,7 @@ final class CachedHiddenProfilesTest extends TestCase
         $this->appView->failure = new SocialNetworkUnreachableException('down');
 
         try {
-            $this->hiddenProfiles->hiddenAmong([BlueskyProfiles::RUSTY]);
+            $this->hiddenProfiles->fetchHiddenProfiles([BlueskyProfiles::RUSTY]);
             self::fail('The failure should have surfaced.');
         } catch (SocialNetworkUnreachableException) {
         }

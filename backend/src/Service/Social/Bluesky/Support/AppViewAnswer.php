@@ -28,7 +28,7 @@ final class AppViewAnswer
      * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
-    public static function orSocialFailure(int $throttledForSeconds, \Closure $ask): mixed
+    public static function askAppView(int $throttledForSeconds, \Closure $ask): mixed
     {
         if ($throttledForSeconds > 0) {
             throw new SocialNetworkThrottledException(self::THROTTLED, $throttledForSeconds);

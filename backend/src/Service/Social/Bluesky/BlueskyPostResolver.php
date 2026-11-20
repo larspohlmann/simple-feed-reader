@@ -77,7 +77,7 @@ final readonly class BlueskyPostResolver implements PostResolverInterface
     {
         return new ResponseContextModel(
             authorIdentity: $post->node('author')->string('did'),
-            threadRoot: self::referenceOrNull($post->node('record')->node('reply')->node('root')),
+            threadRoot: self::parseReference($post->node('record')->node('reply')->node('root')),
             canReply: !$post->node('viewer')->isTrue('replyDisabled'),
             canQuote: !$post->node('viewer')->isTrue('embeddingDisabled'),
             preview: self::buildPreview($post),
@@ -97,7 +97,7 @@ final readonly class BlueskyPostResolver implements PostResolverInterface
         );
     }
 
-    private static function referenceOrNull(JsonNodeModel $reference): ?PostReferenceModel
+    private static function parseReference(JsonNodeModel $reference): ?PostReferenceModel
     {
         $uri = $reference->string('uri');
         $contentId = $reference->string('cid');
@@ -110,8 +110,8 @@ final readonly class BlueskyPostResolver implements PostResolverInterface
 
     private static function withViewer(SocialPostModel $resolved, JsonNodeModel $viewer): SocialPostModel
     {
-        $likeId = BlueskyRecordUri::likeOrNull($viewer->string('like'));
-        $repostId = BlueskyRecordUri::repostOrNull($viewer->string('repost'));
+        $likeId = BlueskyRecordUri::keepIfLike($viewer->string('like'));
+        $repostId = BlueskyRecordUri::keepIfRepost($viewer->string('repost'));
         $liked = null === $likeId ? $resolved : $resolved->alreadyLikedAs($likeId);
 
         return null === $repostId ? $liked : $liked->alreadyRepostedAs($repostId);

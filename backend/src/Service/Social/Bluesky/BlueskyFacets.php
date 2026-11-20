@@ -30,12 +30,12 @@ final readonly class BlueskyFacets
                 static fn (TextSpanModel $span): array => self::facet($span, ['tag' => $span->value], 'tag'),
                 BlueskyTextSpans::tags($text),
             ),
-            ...$this->mentionsIn($text),
+            ...$this->findMentionFacets($text),
         ];
     }
 
     /** @return list<array{index: array{byteStart: int, byteEnd: int}, features: list<array<string, string>>}> */
-    private function mentionsIn(string $text): array
+    private function findMentionFacets(string $text): array
     {
         $spans = BlueskyTextSpans::mentions($text);
         $dids = $this->findDids(array_map(static fn (TextSpanModel $span): string => $span->value, $spans));
@@ -62,7 +62,7 @@ final readonly class BlueskyFacets
         $dids = [];
         try {
             foreach (array_unique($handles) as $handle) {
-                $dids[$handle] = $this->didOrNull($handle);
+                $dids[$handle] = $this->tryFetchDid($handle);
             }
         } catch (SocialNetworkUnreachableException) {
         }
@@ -71,7 +71,7 @@ final readonly class BlueskyFacets
     }
 
     /** @throws SocialNetworkUnreachableException */
-    private function didOrNull(string $handle): ?string
+    private function tryFetchDid(string $handle): ?string
     {
         try {
             return $this->identities->fetchDid($handle);

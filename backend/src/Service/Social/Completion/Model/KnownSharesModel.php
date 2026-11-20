@@ -54,17 +54,17 @@ final readonly class KnownSharesModel
         return isset($this->repliedGuids[$guid]);
     }
 
-    public function blueskyPostFor(string $guid): ?JsonNodeModel
+    public function findBlueskyPost(string $guid): ?JsonNodeModel
     {
         return $this->blueskyPosts[$guid] ?? null;
     }
 
-    public function linkCardFor(string $guid): ?LinkCardContent
+    public function findLinkCard(string $guid): ?LinkCardContent
     {
         return $this->linkCards[$guid] ?? null;
     }
 
-    public function quotedPostFor(string $guid): ?QuotedPostContent
+    public function findQuotedPost(string $guid): ?QuotedPostContent
     {
         return $this->quotedPosts[$guid] ?? null;
     }
