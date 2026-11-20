@@ -44,7 +44,7 @@ final readonly class SavedPostRepository
         int $userId,
         int $feedId,
         string $markClass,
-        string $markAlias
+        string $markAlias,
     ): QueryBuilder {
         return $this->entityManager->createQueryBuilder()
             ->select('e.id AS id', 'e.location.urlHash AS urlHash')
