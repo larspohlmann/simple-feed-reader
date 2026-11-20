@@ -18,7 +18,7 @@ interface ComposerDefaultsInterface
      *
      * @param \Closure(): ?SocialPostModel $threadStarter the entry's own post, found only when a network asks for it
      */
-    public function defaultsFor(SocialPostModel $target, \Closure $threadStarter): ComposerDefaultsModel;
+    public function resolveDefaults(SocialPostModel $target, \Closure $threadStarter): ComposerDefaultsModel;
 
     /** The defaults of a post the account writes on its own, mentioning no one. */
     public function forAccount(SocialAccount $account): ComposerDefaultsModel;

@@ -76,7 +76,7 @@ final readonly class MastodonApiClient
     /** @throws SocialNetworkUnreachableException when no answer arrived or it was a 5xx */
     public function answer(ApiRequestModel $request): ApiResponseModel
     {
-        $answer = NetworkAnswer::orUnreachable(fn (): ApiResponseModel => $this->api->send($request), self::NETWORK);
+        $answer = NetworkAnswer::askNetwork(fn (): ApiResponseModel => $this->api->send($request), self::NETWORK);
         ServerFailure::throwIfServerError($request, $answer, $request->host());
 
         return $answer;
@@ -85,6 +85,6 @@ final readonly class MastodonApiClient
     /** @throws SocialNetworkUnreachableException only when no answer arrived; any status is returned */
     public static function requireAnswer(FetchOutcomeModel $outcome): ApiResponseModel
     {
-        return NetworkAnswer::orUnreachable($outcome->answerOrThrow(...), self::NETWORK);
+        return NetworkAnswer::askNetwork($outcome->answerOrThrow(...), self::NETWORK);
     }
 }

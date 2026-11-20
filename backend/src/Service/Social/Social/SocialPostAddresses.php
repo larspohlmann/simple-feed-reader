@@ -97,7 +97,7 @@ final readonly class SocialPostAddresses
         $post = $this->findPost($entry);
         $identity = null === $post ? null : $this->selectRule($post->network)->findAuthorIdentity($entry, $post);
 
-        return SocialIdentity::accountAmong($identity, $accounts);
+        return SocialIdentity::findAccount($identity, $accounts);
     }
 
     private function findDiscussionPost(Entry $entry): ?SocialPostAddressModel

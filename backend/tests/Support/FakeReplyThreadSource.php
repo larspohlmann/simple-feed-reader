@@ -118,9 +118,9 @@ final class FakeReplyThreadSource implements ReplyThreadSourceInterface
         return $this->publicThrottleSeconds;
     }
 
-    public function repliesIn(string $address, string $answer): array
+    public function parseReplies(string $address, string $answer): array
     {
-        $this->calls[] = 'repliesIn ' . $address . ' ' . $answer;
+        $this->calls[] = 'parseReplies ' . $address . ' ' . $answer;
         if (null !== $this->repliesFailure) {
             throw $this->repliesFailure;
         }

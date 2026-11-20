@@ -42,7 +42,7 @@ final readonly class LinkPosts
      * @throws SocialAccountNeedsReconnectException
      * @throws SocialCredentialsRejectedException
      */
-    public function contextFor(User $user, LinkTargetModel $target): ComposerContextModel
+    public function prepareContext(User $user, LinkTargetModel $target): ComposerContextModel
     {
         $share = $this->resolve($user, $target);
 
@@ -95,7 +95,7 @@ final readonly class LinkPosts
         return new LinkShareModel(
             $account,
             new SharedLinkModel($url, $target->title, $target->quote),
-            $this->quotes->quotableAt($account, $url),
+            $this->quotes->findQuotable($account, $url),
         );
     }
 

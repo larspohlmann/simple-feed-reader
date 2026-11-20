@@ -96,7 +96,7 @@ final class LinkPostsTest extends DbTestCase
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($this->owner));
         $this->entityManager->flush();
 
-        $context = $this->linkPosts()->contextFor($this->owner, self::target(null));
+        $context = $this->linkPosts()->prepareContext($this->owner, self::target(null));
 
         self::assertSame([$default, $first], $context->accounts);
         self::assertSame($default, $context->account);
@@ -110,7 +110,7 @@ final class LinkPostsTest extends DbTestCase
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
         $target = new LinkTargetModel(SocialNetwork::Mastodon, null, self::ARTICLE_URL . '&utm_source=x', 'A story');
 
-        $context = $this->linkPosts()->contextFor($this->owner, $target);
+        $context = $this->linkPosts()->prepareContext($this->owner, $target);
 
         self::assertSame(ComposerKind::Link, $context->kind);
         self::assertSame('A story', $context->text);
@@ -122,7 +122,7 @@ final class LinkPostsTest extends DbTestCase
         $page = 'https://news.example/page';
         $target = new LinkTargetModel(SocialNetwork::Mastodon, null, $page . '?utm_source=x#comment-5', 'A story');
 
-        $context = $this->linkPosts()->contextFor($this->owner, $target);
+        $context = $this->linkPosts()->prepareContext($this->owner, $target);
 
         self::assertSame('A story', $context->text);
         self::assertSame([$page . '#comment-5'], $this->pages->readUrls());
@@ -132,7 +132,7 @@ final class LinkPostsTest extends DbTestCase
     {
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
 
-        $context = $this->linkPosts()->contextFor($this->owner, self::target(null));
+        $context = $this->linkPosts()->prepareContext($this->owner, self::target(null));
 
         self::assertEquals(
             new LinkCardContent(self::ARTICLE_URL, 'Card for ' . self::ARTICLE_URL, null, null, 'example.com'),
@@ -146,7 +146,7 @@ final class LinkPostsTest extends DbTestCase
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
         $missing = 'https://news.example/missing';
 
-        $context = $this->linkPosts()->contextFor($this->owner, self::target(null, $missing));
+        $context = $this->linkPosts()->prepareContext($this->owner, self::target(null, $missing));
 
         self::assertEquals(new LinkCardContent($missing, 'news.example', null, null, 'news.example'), $context->target);
     }
@@ -159,7 +159,7 @@ final class LinkPostsTest extends DbTestCase
             SocialAccounts::mastodonAs($this->owner, 'bea@mastodon.example'),
         );
 
-        $context = $this->linkPosts()->contextFor($this->owner, self::target($chosen->requireId()));
+        $context = $this->linkPosts()->prepareContext($this->owner, self::target($chosen->requireId()));
 
         self::assertSame($chosen, $context->account);
     }
@@ -188,7 +188,7 @@ final class LinkPostsTest extends DbTestCase
         $preview = new PostPreviewModel('Eugen', '@Gargron@mastodon.social', 'Hello');
         $this->mastodon->knowsTheResponseContext(new ResponseContextModel(preview: $preview));
 
-        $context = $this->linkPosts()->contextFor($this->owner, self::target(null, self::STATUS_URL));
+        $context = $this->linkPosts()->prepareContext($this->owner, self::target(null, self::STATUS_URL));
 
         self::assertSame($preview, $context->target);
         self::assertSame(ComposerKind::Quote, $context->kind);
@@ -208,7 +208,7 @@ final class LinkPostsTest extends DbTestCase
             'A line worth sharing',
         );
 
-        $context = $this->linkPosts()->contextFor($this->owner, $target);
+        $context = $this->linkPosts()->prepareContext($this->owner, $target);
 
         self::assertSame(ComposerKind::Link, $context->kind);
         self::assertSame('“A line worth sharing”', $context->text);
@@ -220,8 +220,8 @@ final class LinkPostsTest extends DbTestCase
         $withoutQuote = new LinkTargetModel(SocialNetwork::Lemmy, null, self::ARTICLE_URL, 'A story');
         $withQuote = new LinkTargetModel(SocialNetwork::Lemmy, null, self::ARTICLE_URL, 'A story', 'foo');
 
-        $plain = $this->linkPosts()->contextFor($this->owner, $withoutQuote);
-        $quoting = $this->linkPosts()->contextFor($this->owner, $withQuote);
+        $plain = $this->linkPosts()->prepareContext($this->owner, $withoutQuote);
+        $quoting = $this->linkPosts()->prepareContext($this->owner, $withQuote);
 
         self::assertSame('', $plain->text);
         self::assertSame('“foo”', $quoting->text);
@@ -234,7 +234,7 @@ final class LinkPostsTest extends DbTestCase
         $page = 'https://news.example/page#:~:text=A%20line%20worth%20sharing';
         $target = new LinkTargetModel(SocialNetwork::Mastodon, null, $page, 'A story', 'A line worth sharing');
 
-        $context = $this->linkPosts()->contextFor($this->owner, $target);
+        $context = $this->linkPosts()->prepareContext($this->owner, $target);
 
         self::assertSame('“A line worth sharing”', $context->text);
     }
@@ -246,7 +246,7 @@ final class LinkPostsTest extends DbTestCase
         $this->mastodon->knowsTheResponseContext(new ResponseContextModel(preview: $preview));
         $target = new LinkTargetModel(SocialNetwork::Mastodon, null, self::STATUS_URL, '', 'A line worth sharing');
 
-        $context = $this->linkPosts()->contextFor($this->owner, $target);
+        $context = $this->linkPosts()->prepareContext($this->owner, $target);
 
         self::assertSame(ComposerKind::Quote, $context->kind);
         self::assertSame($preview, $context->target);
@@ -258,7 +258,7 @@ final class LinkPostsTest extends DbTestCase
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
         $this->mastodon->knowsTheResponseContext(new ResponseContextModel(canQuote: false));
 
-        $context = $this->linkPosts()->contextFor($this->owner, self::target(null, self::STATUS_URL));
+        $context = $this->linkPosts()->prepareContext($this->owner, self::target(null, self::STATUS_URL));
 
         self::assertInstanceOf(LinkCardContent::class, $context->target);
         self::assertSame(self::STATUS_URL, $context->target->url);
@@ -406,7 +406,7 @@ final class LinkPostsTest extends DbTestCase
 
         $this->expectException(NoSocialAccountForNetworkException::class);
 
-        $this->linkPosts()->contextFor($this->owner, self::target(null));
+        $this->linkPosts()->prepareContext($this->owner, self::target(null));
     }
 
     /** @return iterable<string, array{string}> */

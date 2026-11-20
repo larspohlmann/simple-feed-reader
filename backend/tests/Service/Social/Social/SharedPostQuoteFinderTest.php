@@ -26,7 +26,7 @@ final class SharedPostQuoteFinderTest extends DbTestCase
             SocialAccounts::lemmyOf($this->user('quote-finder@example.test')),
         );
 
-        self::assertNull($this->finder()->quotableAt($account, 'https://lemmy.example/post/42'));
+        self::assertNull($this->finder()->findQuotable($account, 'https://lemmy.example/post/42'));
     }
 
     private function finder(): SharedPostQuoteFinder

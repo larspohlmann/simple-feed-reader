@@ -42,7 +42,7 @@ final readonly class SocialLinkPostController
     ): JsonResponse {
         $this->rateLimitGuard->enforceForUser($this->socialViewerLimiter, $user);
 
-        $context = $this->links->contextFor($user, $query->toLinkTarget($accountId));
+        $context = $this->links->prepareContext($user, $query->toLinkTarget($accountId));
 
         return new JsonResponse(ComposerContextJson::from($context));
     }

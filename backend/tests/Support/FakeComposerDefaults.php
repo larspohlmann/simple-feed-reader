@@ -19,7 +19,7 @@ final class FakeComposerDefaults implements ComposerDefaultsInterface
         return SocialNetwork::Mastodon->value;
     }
 
-    public function defaultsFor(SocialPostModel $target, \Closure $threadStarter): ComposerDefaultsModel
+    public function resolveDefaults(SocialPostModel $target, \Closure $threadStarter): ComposerDefaultsModel
     {
         $threadStarterId = $threadStarter()->postId ?? 'no thread starter';
 

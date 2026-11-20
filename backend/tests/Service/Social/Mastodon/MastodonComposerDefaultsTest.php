@@ -27,7 +27,7 @@ final class MastodonComposerDefaultsTest extends TestCase
         $target = self::post(new ResponseContextModel('ann@hachyderm.io', visibility: 'unlisted'));
         $starter = self::post(new ResponseContextModel('Gargron@mastodon.social', visibility: 'public'));
 
-        $defaults = $this->defaults($http)->defaultsFor($target, static fn (): SocialPostModel => $starter);
+        $defaults = $this->defaults($http)->resolveDefaults($target, static fn (): SocialPostModel => $starter);
 
         self::assertEquals(
             new ComposerDefaultsModel(1000, 'private', ['@ann@hachyderm.io', '@gargron@mastodon.social']),
@@ -42,8 +42,8 @@ final class MastodonComposerDefaultsTest extends TestCase
         $starter = self::post(new ResponseContextModel('ann@hachyderm.io'));
         $again = self::post(new ResponseContextModel('ann@hachyderm.io'));
 
-        $first = $this->defaults($http)->defaultsFor($target, static fn (): SocialPostModel => $starter);
-        $second = $this->defaults($http)->defaultsFor($again, static fn (): SocialPostModel => $again);
+        $first = $this->defaults($http)->resolveDefaults($target, static fn (): SocialPostModel => $starter);
+        $second = $this->defaults($http)->resolveDefaults($again, static fn (): SocialPostModel => $again);
 
         self::assertSame(['@ann@hachyderm.io'], $first->mentions);
         self::assertSame('direct', $first->visibility);
@@ -58,7 +58,7 @@ final class MastodonComposerDefaultsTest extends TestCase
         ]);
         $target = self::post(new ResponseContextModel());
 
-        $defaults = $this->defaults($http)->defaultsFor($target, static fn (): SocialPostModel => $target);
+        $defaults = $this->defaults($http)->resolveDefaults($target, static fn (): SocialPostModel => $target);
 
         self::assertEquals(new ComposerDefaultsModel(500, 'public', []), $defaults);
     }

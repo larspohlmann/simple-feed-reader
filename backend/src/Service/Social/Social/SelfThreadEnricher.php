@@ -243,7 +243,7 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
         try {
             $answer = $thread->inPublic($address->address);
 
-            return $this->chain->buildChain($thread->repliesIn($address->address, $answer->body));
+            return $this->chain->buildChain($thread->parseReplies($address->address, $answer->body));
         } catch (SocialNetworkThrottledException $exception) {
             throw $exception;
         } catch (

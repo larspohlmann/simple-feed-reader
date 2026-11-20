@@ -70,7 +70,7 @@ final readonly class IncomingPageStore
         if (null === $feed->getNetwork()) {
             return $incoming;
         }
-        $buried = array_flip($this->tombstones->buriedIn($feed->requireId()));
+        $buried = array_flip($this->tombstones->findBuriedHashes($feed->requireId()));
 
         return $incoming->withParsed($incoming->parsed->withEntries(array_values(array_filter(
             $incoming->parsed->entries,

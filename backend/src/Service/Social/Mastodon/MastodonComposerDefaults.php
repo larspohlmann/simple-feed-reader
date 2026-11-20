@@ -34,7 +34,7 @@ final readonly class MastodonComposerDefaults implements ComposerDefaultsInterfa
     ) {
     }
 
-    public function defaultsFor(SocialPostModel $target, \Closure $threadStarter): ComposerDefaultsModel
+    public function resolveDefaults(SocialPostModel $target, \Closure $threadStarter): ComposerDefaultsModel
     {
         $account = $target->account;
 

@@ -54,7 +54,7 @@ final class TimelineRoundTest extends TestCase
     {
         $round = self::orphanRound();
 
-        self::assertSame([], iterator_to_array($round->ticketFor(999)));
+        self::assertSame([], iterator_to_array($round->issueTicket(999)));
         $unasked = iterator_to_array($round->drainUnasked());
 
         self::assertSame([999], array_keys($unasked));
@@ -107,9 +107,9 @@ final class TimelineRoundTest extends TestCase
     public function testAFeedsFirstStaleAnswerOnTheRenewedSessionRefusesItsAccountAtOnce(): void
     {
         $round = $this->round();
-        iterator_to_array($round->ticketFor(self::HOME));
+        iterator_to_array($round->issueTicket(self::HOME));
         $round->settle(self::HOME, self::stale());
-        iterator_to_array($round->ticketFor(self::LIST));
+        iterator_to_array($round->issueTicket(self::LIST));
 
         $refused = $round->settle(self::LIST, self::stale())->settledOutcome();
 
@@ -135,10 +135,10 @@ final class TimelineRoundTest extends TestCase
     public function testATicketBuiltAfterItsAccountsRenewalIsAdmitted(): void
     {
         $round = $this->round();
-        iterator_to_array($round->ticketFor(self::HOME));
+        iterator_to_array($round->issueTicket(self::HOME));
         $round->settle(self::HOME, self::stale());
 
-        iterator_to_array($round->ticketFor(self::LIST));
+        iterator_to_array($round->issueTicket(self::LIST));
 
         self::assertTrue($round->admits(self::LIST));
     }
@@ -148,7 +148,7 @@ final class TimelineRoundTest extends TestCase
         $search = self::rssOrAtomSearch();
         $round = SocialApiWiring::timelineRounds($this->http->client(), $this->cache)->start([self::SEARCH => $search]);
 
-        $tickets = iterator_to_array($round->ticketFor(self::SEARCH));
+        $tickets = iterator_to_array($round->issueTicket(self::SEARCH));
         self::assertSame(self::SEARCH_URL . 'rss', $tickets[self::SEARCH]->request->url);
 
         $followUp = $round->settle(self::SEARCH, self::mastodonSearchAnswer('111', 'rss'));
@@ -164,7 +164,7 @@ final class TimelineRoundTest extends TestCase
     {
         $search = self::rssOrAtomSearch();
         $round = SocialApiWiring::timelineRounds($this->http->client(), $this->cache)->start([self::SEARCH => $search]);
-        iterator_to_array($round->ticketFor(self::SEARCH));
+        iterator_to_array($round->issueTicket(self::SEARCH));
 
         $refused = $round->settle(
             self::SEARCH,
@@ -190,8 +190,8 @@ final class TimelineRoundTest extends TestCase
     private function ticketedRound(): TimelineRound
     {
         $round = $this->round();
-        iterator_to_array($round->ticketFor(self::HOME));
-        iterator_to_array($round->ticketFor(self::LIST));
+        iterator_to_array($round->issueTicket(self::HOME));
+        iterator_to_array($round->issueTicket(self::LIST));
 
         return $round;
     }

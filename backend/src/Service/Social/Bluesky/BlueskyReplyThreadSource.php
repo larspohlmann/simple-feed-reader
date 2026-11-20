@@ -57,7 +57,7 @@ final readonly class BlueskyReplyThreadSource implements ReplyThreadSourceInterf
         return $this->appView->throttledForSeconds();
     }
 
-    public function repliesIn(string $address, string $answer): array
+    public function parseReplies(string $address, string $answer): array
     {
         return $this->replies->parseReplies($address, $answer);
     }

@@ -54,7 +54,7 @@ final readonly class SocialResponses
      * @throws SocialCredentialsRejectedException
      * @throws SocialNetworkUnreachableException
      */
-    public function contextFor(User $user, ResponseTargetModel $target, ResponseKind $kind): ComposerContextModel
+    public function prepareContext(User $user, ResponseTargetModel $target, ResponseKind $kind): ComposerContextModel
     {
         $post = $this->targets->find($user, $target);
 
@@ -103,7 +103,7 @@ final readonly class SocialResponses
      */
     public function delete(User $user, Entry $entry, string $address): void
     {
-        $ownReply = $this->ownReplyAt($user, $this->postAddresses->requireReply($entry, $address));
+        $ownReply = $this->findOwnReply($user, $this->postAddresses->requireReply($entry, $address));
         if (null !== $ownReply) {
             $this->writing->delete($ownReply->account, $ownReply->postId);
         }
@@ -115,7 +115,7 @@ final readonly class SocialResponses
      *
      * @return ?SocialPostModel null when no account finds the reply any more, so it is already deleted
      */
-    private function ownReplyAt(User $user, SocialPostAddressModel $reply): ?SocialPostModel
+    private function findOwnReply(User $user, SocialPostAddressModel $reply): ?SocialPostModel
     {
         $accounts = $this->socialAccounts->findConnectedOnNetwork($user, $reply->network);
         $failure = null;

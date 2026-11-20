@@ -42,7 +42,7 @@ final readonly class SocialPostFinder
      */
     public function find(User $user, Entry $entry): SocialPostModel
     {
-        return $this->resolvedFor($user, $entry, $this->postAddresses->requirePost($entry));
+        return $this->findAsActingAccount($user, $entry, $this->postAddresses->requirePost($entry));
     }
 
     /**
@@ -57,7 +57,7 @@ final readonly class SocialPostFinder
      */
     public function findReply(User $user, Entry $entry, string $address): SocialPostModel
     {
-        return $this->resolvedFor($user, $entry, $this->postAddresses->requireReply($entry, $address));
+        return $this->findAsActingAccount($user, $entry, $this->postAddresses->requireReply($entry, $address));
     }
 
     /**
@@ -76,9 +76,9 @@ final readonly class SocialPostFinder
         );
     }
 
-    private function resolvedFor(User $user, Entry $entry, SocialPostAddressModel $address): SocialPostModel
+    private function findAsActingAccount(User $user, Entry $entry, SocialPostAddressModel $address): SocialPostModel
     {
-        return $this->findAs($this->accounts->accountFor($user, $entry, $address->network), $address);
+        return $this->findAs($this->accounts->requireAccount($user, $entry, $address->network), $address);
     }
 
     private function resolverOn(SocialNetwork $network): PostResolverInterface

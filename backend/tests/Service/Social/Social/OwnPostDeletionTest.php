@@ -71,7 +71,7 @@ final class OwnPostDeletionTest extends DbTestCase
         self::assertSame(['delete 122', 'delete 121', 'delete 120'], $this->mastodon->calls);
         $this->entityManager->clear();
         self::assertNull($this->entityManager->find(Entry::class, $postId));
-        self::assertContains(EntryGuid::hashGuid(self::STATUS_URL), $this->tombstones->buriedIn($feedId));
+        self::assertContains(EntryGuid::hashGuid(self::STATUS_URL), $this->tombstones->findBuriedHashes($feedId));
     }
 
     public function testABlueskyThreadIsDeletedByTheAccountsAtUris(): void
@@ -102,7 +102,7 @@ final class OwnPostDeletionTest extends DbTestCase
                 'https://mastodon.example/users/alice/statuses/121',
                 'https://mastodon.example/@alice/121',
             ]),
-            $this->tombstones->buriedIn($feedId),
+            $this->tombstones->findBuriedHashes($feedId),
         );
     }
 

@@ -60,7 +60,7 @@ final readonly class SocialRepliesSource implements CommentsSourceInterface
     public function buildAudience(User $user, Entry $entry): CommentsAudienceModel
     {
         $post = $this->requirePost($entry);
-        $account = $this->accountOrNull($user, $entry, $post->network);
+        $account = $this->findAccount($user, $entry, $post->network);
         $viewer = null === $account ? 'public' : 'account:' . $account->requireId();
 
         return new CommentsAudienceModel($post->network->value . ' ' . $post->address . ' ' . $viewer, $account);
@@ -85,7 +85,7 @@ final readonly class SocialRepliesSource implements CommentsSourceInterface
     public function read(CommentsRequest $request, string $answer): CommentsPageModel
     {
         $post = $this->requirePost($request->entry);
-        $page = $this->order->buildPage($this->threadOn($post->network)->repliesIn($post->address, $answer));
+        $page = $this->order->buildPage($this->threadOn($post->network)->parseReplies($post->address, $answer));
 
         return new CommentsPageModel(
             OwnReplies::marked(
@@ -148,10 +148,10 @@ final readonly class SocialRepliesSource implements CommentsSourceInterface
         $this->rateLimitGuard->enforceForUser($this->socialRepliesLimiter, $user);
     }
 
-    private function accountOrNull(User $user, Entry $entry, SocialNetwork $network): ?SocialAccount
+    private function findAccount(User $user, Entry $entry, SocialNetwork $network): ?SocialAccount
     {
         try {
-            return $this->accounts->accountFor($user, $entry, $network);
+            return $this->accounts->requireAccount($user, $entry, $network);
         } catch (NoSocialAccountForNetworkException) {
             return null;
         }
