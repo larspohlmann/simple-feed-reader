@@ -20,7 +20,7 @@ final class SocialServerSlotModelTest extends TestCase
     {
         $slot = new SocialServerSlotModel(4);
 
-        self::assertSame('mastodon.example', $slot->keyFor('https://www.Mastodon.example:443/api/v1/timelines/home'));
+        self::assertSame('mastodon.example', $slot->buildKey('https://www.Mastodon.example:443/api/v1/timelines/home'));
     }
 
     public function testCarriesItsCapacity(): void

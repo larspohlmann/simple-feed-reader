@@ -25,7 +25,7 @@ final readonly class GuessedSizeRungs
     }
 
     /** @return list<ImageRendition> */
-    public function rungsFor(LeadImageModel $lead): array
+    public function buildRungs(LeadImageModel $lead): array
     {
         if (SizedImageUrl::hasSizeSuffix($lead->url)) {
             return $this->walk($this->fromOriginalOrLead($lead));
@@ -68,7 +68,7 @@ final readonly class GuessedSizeRungs
     private function probeGuessedWidths(SizeWalk $walk): void
     {
         foreach (self::GUESSED_WIDTHS as $width) {
-            $candidate = $walk->candidateFor($width);
+            $candidate = $walk->buildCandidate($width);
             if ($candidate !== null && $this->probe->exists($candidate, $width)) {
                 $walk->keep(new ImageRendition($candidate, $width));
             }

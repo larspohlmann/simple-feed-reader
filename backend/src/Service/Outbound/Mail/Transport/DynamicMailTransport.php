@@ -46,7 +46,7 @@ final class DynamicMailTransport implements TransportInterface
     {
         $resolved = $this->configuredTransport();
         try {
-            return $this->transportFor($resolved);
+            return $this->resolveTransport($resolved);
         } catch (IncompleteMailConfigurationException $exception) {
             // A row that routes through the egress proxy after that proxy's config
             // was removed. Surfaced as a transport failure so the send path degrades
@@ -77,7 +77,7 @@ final class DynamicMailTransport implements TransportInterface
         }
     }
 
-    private function transportFor(?ResolvedMailTransportModel $resolved): TransportInterface
+    private function resolveTransport(?ResolvedMailTransportModel $resolved): TransportInterface
     {
         $signature = null !== $resolved
             ? 'db:' . $this->transportFactory->buildSignature($resolved)

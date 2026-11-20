@@ -70,7 +70,7 @@ final readonly class FeedLinkScanner
                 continue;
             }
 
-            $candidates[$url] = new FeedCandidateModel($url, $labels->nameFor($labels->ownLabel($link)), $format);
+            $candidates[$url] = new FeedCandidateModel($url, $labels->resolveName($labels->ownLabel($link)), $format);
         }
 
         return array_values($candidates);
@@ -93,7 +93,7 @@ final readonly class FeedLinkScanner
 
             $candidates[$url] = new FeedCandidateModel(
                 $url,
-                $labels->nameFor($ownLabel),
+                $labels->resolveName($ownLabel),
                 FeedCandidateModel::GUESSED_FORMAT,
             );
             if (\count($candidates) === self::MAX_GUESSES) {

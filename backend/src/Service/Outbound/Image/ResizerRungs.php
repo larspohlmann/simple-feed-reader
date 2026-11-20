@@ -38,7 +38,7 @@ final readonly class ResizerRungs
     }
 
     /** @return list<ImageRendition> */
-    public function rungsFor(LeadImageModel $lead): array
+    public function buildRungs(LeadImageModel $lead): array
     {
         $rungs = [];
         foreach (RenditionTargets::uncovered($lead->knownWidths()) as $target) {

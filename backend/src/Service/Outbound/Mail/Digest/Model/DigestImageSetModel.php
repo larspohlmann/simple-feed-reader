@@ -16,7 +16,7 @@ final readonly class DigestImageSetModel
     ) {
     }
 
-    public function cidFor(?string $url): ?string
+    public function findCid(?string $url): ?string
     {
         return $url === null ? null : ($this->cidByUrl[$url] ?? null);
     }

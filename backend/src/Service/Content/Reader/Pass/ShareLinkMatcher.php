@@ -115,7 +115,7 @@ final readonly class ShareLinkMatcher
     /** Lowercased throughout — LinkedIn's own share link uses `/shareArticle`. */
     private static function hostAndPath(string $href): string
     {
-        return (HostKey::forUrlOrNull($href) ?? '') . strtolower((string) parse_url($href, PHP_URL_PATH));
+        return (HostKey::tryForUrl($href) ?? '') . strtolower((string) parse_url($href, PHP_URL_PATH));
     }
 
     private function carriesTheSharedAddress(string $href): bool

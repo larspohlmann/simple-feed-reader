@@ -13,8 +13,8 @@ final class SocialAccountSlotModelTest extends TestCase
     {
         $slot = new SocialAccountSlotModel(7, 3);
 
-        self::assertSame('7', $slot->keyFor('https://one.example.com/a'));
-        self::assertSame('7', $slot->keyFor('https://two.example.com/b'));
+        self::assertSame('7', $slot->buildKey('https://one.example.com/a'));
+        self::assertSame('7', $slot->buildKey('https://two.example.com/b'));
     }
 
     public function testCarriesItsCapacity(): void

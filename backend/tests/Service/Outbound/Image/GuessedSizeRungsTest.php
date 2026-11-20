@@ -34,7 +34,7 @@ final class GuessedSizeRungsTest extends TestCase
         $probe = new StubGuardedImageProbe();
         $probe->willExist($base . '-768x403.jpg');
 
-        $rungs = new GuessedSizeRungs($probe)->rungsFor(self::lead($base . '.jpg', 1200, 630));
+        $rungs = new GuessedSizeRungs($probe)->buildRungs(self::lead($base . '.jpg', 1200, 630));
 
         self::assertEquals([new ImageRendition($base . '-768x403.jpg', 768)], $rungs);
         self::assertSame([
@@ -53,7 +53,7 @@ final class GuessedSizeRungsTest extends TestCase
         $probe->willMeasure($base . '.jpg', 1200, 630);
         $probe->willExist($base . '-768x403.jpg');
 
-        $rungs = new GuessedSizeRungs($probe)->rungsFor(self::lead($base . '-202x202.jpg', 202, 202));
+        $rungs = new GuessedSizeRungs($probe)->buildRungs(self::lead($base . '-202x202.jpg', 202, 202));
 
         self::assertSame([768, 1200], self::widths(ImageRendition::ladder($rungs)));
     }
@@ -67,7 +67,7 @@ final class GuessedSizeRungsTest extends TestCase
         $probe->willExist($base . '-768x432.jpg');
         $probe->willExist($base . '-1280x720.jpg');
 
-        $rungs = new GuessedSizeRungs($probe)->rungsFor(self::lead($base . '-1152x648.jpg', 1152, 648));
+        $rungs = new GuessedSizeRungs($probe)->buildRungs(self::lead($base . '-1152x648.jpg', 1152, 648));
 
         self::assertSame([640, 768], self::widths(ImageRendition::ladder($rungs)));
         self::assertNotContains($base . '-1280x720.jpg', $probe->requestedUrls());
@@ -80,7 +80,7 @@ final class GuessedSizeRungsTest extends TestCase
         $probe = new StubGuardedImageProbe();
         $probe->willMeasure($base . '.jpg', 1360, 700);
 
-        $rungs = new GuessedSizeRungs($probe)->rungsFor(self::lead($base . '-202x202.jpg', 202, 202));
+        $rungs = new GuessedSizeRungs($probe)->buildRungs(self::lead($base . '-202x202.jpg', 202, 202));
 
         self::assertSame([1360], self::widths($rungs));
     }
@@ -90,7 +90,7 @@ final class GuessedSizeRungsTest extends TestCase
         $base = 'https://h.example/wp-content/uploads/a';
         $probe = new StubGuardedImageProbe();
 
-        new GuessedSizeRungs($probe)->rungsFor(self::lead($base . '.jpg', 768, 403));
+        new GuessedSizeRungs($probe)->buildRungs(self::lead($base . '.jpg', 768, 403));
 
         self::assertNotContains($base . '-768x403.jpg', $probe->requestedUrls());
         self::assertContains($base . '-640x336.jpg', $probe->requestedUrls());
@@ -104,7 +104,7 @@ final class GuessedSizeRungsTest extends TestCase
         $probe->willExist($base . '-768x768.jpg');
         $probe->willExist($base . '-1280x1280.jpg');
 
-        $rungs = new GuessedSizeRungs($probe)->rungsFor(self::lead($base . '-1920x1920.jpg', 1920, 1920));
+        $rungs = new GuessedSizeRungs($probe)->buildRungs(self::lead($base . '-1920x1920.jpg', 1920, 1920));
 
         self::assertSame([512, 768, 1280], self::widths(ImageRendition::ladder($rungs)));
         self::assertNotContains($base . '-1024x1024.jpg', $probe->requestedUrls());
@@ -120,7 +120,7 @@ final class GuessedSizeRungsTest extends TestCase
             [new ImageRendition($base . '-300x150.jpg', 300)],
         );
 
-        new GuessedSizeRungs($probe)->rungsFor($lead);
+        new GuessedSizeRungs($probe)->buildRungs($lead);
 
         self::assertSame([$base . '-640x320.jpg'], $probe->requestedUrls());
     }
@@ -129,7 +129,7 @@ final class GuessedSizeRungsTest extends TestCase
     {
         $probe = new StubGuardedImageProbe();
 
-        $rungs = new GuessedSizeRungs($probe)->rungsFor(self::lead('https://i.guim.co.uk/a.jpg', 1200, 800));
+        $rungs = new GuessedSizeRungs($probe)->buildRungs(self::lead('https://i.guim.co.uk/a.jpg', 1200, 800));
 
         self::assertSame([], $rungs);
         self::assertSame([], $probe->requestedUrls());
@@ -142,7 +142,7 @@ final class GuessedSizeRungsTest extends TestCase
         $probe->willExist($base . '-300x158.jpg');
         $probe->willBeUnreachable($base . '-640x336.jpg');
 
-        $rungs = new GuessedSizeRungs($probe)->rungsFor(self::lead($base . '.jpg', 1200, 630));
+        $rungs = new GuessedSizeRungs($probe)->buildRungs(self::lead($base . '.jpg', 1200, 630));
 
         self::assertSame([300], self::widths($rungs));
         self::assertSame([$base . '-300x158.jpg', $base . '-640x336.jpg'], $probe->requestedUrls());
@@ -154,7 +154,7 @@ final class GuessedSizeRungsTest extends TestCase
         $probe = new StubGuardedImageProbe();
         $probe->willExist($url);
 
-        $rungs = new GuessedSizeRungs($probe)->rungsFor(self::lead($url, 1200, 630));
+        $rungs = new GuessedSizeRungs($probe)->buildRungs(self::lead($url, 1200, 630));
 
         self::assertSame([], $rungs);
         self::assertSame([], $probe->requestedUrls());
@@ -166,7 +166,7 @@ final class GuessedSizeRungsTest extends TestCase
         $probe = new StubGuardedImageProbe();
         $probe->willExist($base . '-768x403.jpg');
 
-        $rungs = new GuessedSizeRungs($probe)->rungsFor(self::lead($base . '-scaled.jpg', 2560, 1344));
+        $rungs = new GuessedSizeRungs($probe)->buildRungs(self::lead($base . '-scaled.jpg', 2560, 1344));
 
         self::assertContains(768, self::widths($rungs));
     }

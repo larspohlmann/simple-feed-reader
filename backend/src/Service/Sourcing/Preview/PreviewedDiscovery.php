@@ -66,7 +66,7 @@ final readonly class PreviewedDiscovery
     private function accountOnlyCandidate(User $user, string $url): ?FeedCandidateModel
     {
         foreach ($this->accountOnlyFeeds as $accountOnlyFeed) {
-            $candidate = $accountOnlyFeed->candidateFor($user, $url);
+            $candidate = $accountOnlyFeed->findCandidate($user, $url);
             if (null !== $candidate) {
                 return $candidate;
             }

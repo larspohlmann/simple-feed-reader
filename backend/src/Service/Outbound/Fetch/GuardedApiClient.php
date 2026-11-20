@@ -41,7 +41,7 @@ final readonly class GuardedApiClient
                 $request->method,
                 $request->url,
                 $guarded,
-                $this->optionsFor($request, $budget),
+                $this->buildOptions($request, $budget),
             ), $budget->sizeLimit);
         } catch (ExceptionInterface $exception) {
             throw FetchException::from($request->url, $exception);
@@ -63,7 +63,7 @@ final readonly class GuardedApiClient
                 $request->method,
                 $request->url,
                 $guarded,
-                $this->optionsFor($request, $budget),
+                $this->buildOptions($request, $budget),
             ), $budget->sizeLimit);
         } catch (ExceptionInterface $exception) {
             throw FetchException::from($request->url, $exception);
@@ -84,7 +84,7 @@ final readonly class GuardedApiClient
     }
 
     /** @return array<string, mixed> */
-    private function optionsFor(ApiRequestModel $request, ApiBudgetModel $budget): array
+    private function buildOptions(ApiRequestModel $request, ApiBudgetModel $budget): array
     {
         $sizeLimit = $budget->sizeLimit;
 

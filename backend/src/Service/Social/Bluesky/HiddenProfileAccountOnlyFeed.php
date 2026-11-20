@@ -20,7 +20,7 @@ final readonly class HiddenProfileAccountOnlyFeed implements AccountOnlyFeedInte
     ) {
     }
 
-    public function candidateFor(User $user, string $url): ?FeedCandidateModel
+    public function findCandidate(User $user, string $url): ?FeedCandidateModel
     {
         $profile = $this->hiddenProfiles->hiddenAt(
             $url,

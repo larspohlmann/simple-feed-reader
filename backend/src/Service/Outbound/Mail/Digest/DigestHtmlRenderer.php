@@ -65,8 +65,8 @@ final readonly class DigestHtmlRenderer
             'shortDescription' => $card->shortDescription,
             'url' => $card->url,
             'when' => $this->when($card->publishedAt, $dateFormatter),
-            'imageCid' => $images->cidFor($card->imageUrl),
-            'faviconCid' => $images->cidFor($card->faviconUrl),
+            'imageCid' => $images->findCid($card->imageUrl),
+            'faviconCid' => $images->findCid($card->faviconUrl),
         ];
     }
 

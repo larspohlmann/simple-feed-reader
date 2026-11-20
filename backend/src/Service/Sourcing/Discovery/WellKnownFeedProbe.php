@@ -45,7 +45,7 @@ final readonly class WellKnownFeedProbe
             return null;
         }
 
-        $feeds = $this->feedsAmong($candidateUrls);
+        $feeds = $this->findFeeds($candidateUrls);
 
         // Preference, not arrival order: the outcomes come back as the hosts
         // answer, and `.rss` beating `index.xml` is the point of the list.
@@ -65,7 +65,7 @@ final readonly class WellKnownFeedProbe
      *
      * @return array<int, DiscoveredFeedModel>
      */
-    private function feedsAmong(array $candidateUrls): array
+    private function findFeeds(array $candidateUrls): array
     {
         $tickets = array_map(
             static fn (string $url): FetchTicketModel => new FetchTicketModel($url),

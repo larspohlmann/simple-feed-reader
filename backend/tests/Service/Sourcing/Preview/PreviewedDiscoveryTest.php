@@ -55,7 +55,7 @@ final class PreviewedDiscoveryTest extends DbTestCase
             {
             }
 
-            public function candidateFor(User $user, string $url): ?FeedCandidateModel
+            public function findCandidate(User $user, string $url): ?FeedCandidateModel
             {
                 return $this->candidate;
             }

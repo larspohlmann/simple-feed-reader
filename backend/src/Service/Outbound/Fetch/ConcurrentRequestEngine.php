@@ -126,7 +126,7 @@ final readonly class ConcurrentRequestEngine
             try {
                 $response = $this->send($attempt);
             } catch (FetchException $exception) {
-                $fallback = $this->retryPolicy->directFallbackFor($attempt);
+                $fallback = $this->retryPolicy->findDirectFallback($attempt);
                 if (null !== $fallback) {
                     $queue->requeue($fallback);
                     continue;
@@ -201,7 +201,7 @@ final readonly class ConcurrentRequestEngine
         FetchAttemptModel $attempt,
     ): ExchangeStepModel {
         try {
-            $exchange = $this->exchangeFor($attempt);
+            $exchange = $this->selectExchange($attempt);
             // Order is load-bearing: on a timeout chunk isFirst() throws while isTimeout() returns true, so asking
             // isFirst() first would report every timeout as a transport failure. On an error chunk isTimeout() throws,
             // and the catch below keeps the real cause.
@@ -222,7 +222,7 @@ final readonly class ConcurrentRequestEngine
     }
 
     /** @throws FeedUnreachableException when no exchange reads the ticket's kind of answer */
-    private function exchangeFor(FetchAttemptModel $attempt): ResponseExchangeInterface
+    private function selectExchange(FetchAttemptModel $attempt): ResponseExchangeInterface
     {
         $kind = $attempt->ticket->exchange->value;
         try {

@@ -35,7 +35,7 @@ final class DigestImageEmbedderTest extends TestCase
 
     private function embeddedFor(DigestImageSetModel $set, string $url): EmbeddedImageModel
     {
-        $cid = $set->cidFor($url);
+        $cid = $set->findCid($url);
         self::assertNotNull($cid, "No image was embedded for {$url}.");
 
         foreach ($set->images as $image) {
@@ -64,8 +64,8 @@ final class DigestImageEmbedderTest extends TestCase
 
         // 2 distinct thumbnails + 1 shared favicon = 3 embeds, not 4.
         self::assertCount(3, $set->images);
-        self::assertNotNull($set->cidFor('https://cdn/1.jpg'));
-        self::assertSame($set->cidFor('https://site/favicon.ico'), $set->cidFor('https://site/favicon.ico'));
+        self::assertNotNull($set->findCid('https://cdn/1.jpg'));
+        self::assertSame($set->findCid('https://site/favicon.ico'), $set->findCid('https://site/favicon.ico'));
     }
 
     public function testAFetchFailureDropsThatImageOnly(): void
@@ -88,8 +88,8 @@ final class DigestImageEmbedderTest extends TestCase
             $this->card('https://cdn/bad.jpg', 'https://site/favicon.ico'),
         ));
 
-        self::assertNull($set->cidFor('https://cdn/bad.jpg'));
-        self::assertNotNull($set->cidFor('https://site/favicon.ico'));
+        self::assertNull($set->findCid('https://cdn/bad.jpg'));
+        self::assertNotNull($set->findCid('https://site/favicon.ico'));
     }
 
     /**
@@ -117,8 +117,8 @@ final class DigestImageEmbedderTest extends TestCase
             $this->card('https://cdn/1.jpg', 'https://site/bad.ico'),
         ));
 
-        self::assertNull($set->cidFor('https://site/bad.ico'));
-        self::assertNotNull($set->cidFor('https://cdn/1.jpg'));
+        self::assertNull($set->findCid('https://site/bad.ico'));
+        self::assertNotNull($set->findCid('https://cdn/1.jpg'));
     }
 
     public function testAUrlSeenOnlyAsAFaviconIsResizedWithContainPngToPng(): void
@@ -198,7 +198,7 @@ final class DigestImageEmbedderTest extends TestCase
         $set = (new DigestImageEmbedder($downloader, $resizer, new NullLogger()))
             ->embed($this->page($this->card($url, null)));
 
-        self::assertSame('img' . substr(hash('xxh128', $url), 0, 16), $set->cidFor($url));
+        self::assertSame('img' . substr(hash('xxh128', $url), 0, 16), $set->findCid($url));
     }
 
     public function testAnImageProcessingExceptionAlsoDropsOnlyThatImage(): void
@@ -211,7 +211,7 @@ final class DigestImageEmbedderTest extends TestCase
         $set = (new DigestImageEmbedder($downloader, $resizer, new NullLogger()))
             ->embed($this->page($this->card('https://cdn/broken.jpg', null)));
 
-        self::assertNull($set->cidFor('https://cdn/broken.jpg'));
+        self::assertNull($set->findCid('https://cdn/broken.jpg'));
         self::assertCount(0, $set->images);
     }
 

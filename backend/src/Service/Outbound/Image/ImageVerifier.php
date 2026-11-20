@@ -78,7 +78,7 @@ final readonly class ImageVerifier
     {
         $known = $image->getRenditions();
         $probed = $this->probedLadders->findProbedLadder($url)
-            ?? $this->renditionProbe->rungsFor(new LeadImageModel($url, $dimensions, $known));
+            ?? $this->renditionProbe->buildRungs(new LeadImageModel($url, $dimensions, $known));
         if ($probed === []) {
             return;
         }

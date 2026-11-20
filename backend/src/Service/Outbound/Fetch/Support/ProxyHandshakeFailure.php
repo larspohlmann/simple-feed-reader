@@ -30,12 +30,12 @@ final readonly class ProxyHandshakeFailure
 
     public static function explain(string $transportMessage): string
     {
-        $reason = self::reasonFor($transportMessage);
+        $reason = self::parseReason($transportMessage);
 
         return null === $reason ? $transportMessage : self::withRawText($reason, $transportMessage);
     }
 
-    private static function reasonFor(string $transportMessage): ?string
+    private static function parseReason(string $transportMessage): ?string
     {
         if (1 === preg_match(self::REJECTED_LOGIN, $transportMessage)) {
             return self::REJECTED_LOGIN_REASON;

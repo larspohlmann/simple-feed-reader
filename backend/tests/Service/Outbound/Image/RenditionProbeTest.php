@@ -19,7 +19,7 @@ final class RenditionProbeTest extends TestCase
         $probe = new StubGuardedImageProbe();
         $probe->willMeasure($lead . '?w=264', 264, 149);
 
-        $rungs = RenditionProbes::over($probe)->rungsFor(
+        $rungs = RenditionProbes::over($probe)->buildRungs(
             new LeadImageModel($lead, new ImageDimensionsModel(1152, 648), []),
         );
 
@@ -36,7 +36,7 @@ final class RenditionProbeTest extends TestCase
         $probe = new StubGuardedImageProbe();
         $probe->willExist($base . '-768x432.jpg');
 
-        $rungs = RenditionProbes::over($probe)->rungsFor(
+        $rungs = RenditionProbes::over($probe)->buildRungs(
             new LeadImageModel($base . '.jpg', new ImageDimensionsModel(1600, 900), []),
         );
 
@@ -48,7 +48,7 @@ final class RenditionProbeTest extends TestCase
         $base = 'https://h.example/wp-content/uploads/a';
         $probe = new StubGuardedImageProbe();
 
-        $rungs = RenditionProbes::over($probe)->rungsFor(new LeadImageModel(
+        $rungs = RenditionProbes::over($probe)->buildRungs(new LeadImageModel(
             $base . '-1152x648.jpg',
             new ImageDimensionsModel(1152, 648),
             array_map(
