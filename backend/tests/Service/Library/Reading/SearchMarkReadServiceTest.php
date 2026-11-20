@@ -13,9 +13,12 @@ use App\Service\Library\Reading\SearchMarkReadService;
 use App\Tests\DbTestCase;
 use App\Tests\Support\LemmyPostCopies;
 use App\Tests\Support\NetworkFeedSubscriptions;
+use App\Tests\Support\RequiresServices;
 
 final class SearchMarkReadServiceTest extends DbTestCase
 {
+    use RequiresServices;
+
     private User $user;
     private Feed $feed;
 
@@ -34,14 +37,6 @@ final class SearchMarkReadServiceTest extends DbTestCase
             new Subscription($this->user, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
         );
         $this->entityManager->flush();
-    }
-
-    private function service(): SearchMarkReadService
-    {
-        $service = self::getContainer()->get(SearchMarkReadService::class);
-        self::assertInstanceOf(SearchMarkReadService::class, $service);
-
-        return $service;
     }
 
     private function entry(
@@ -99,7 +94,7 @@ final class SearchMarkReadServiceTest extends DbTestCase
     {
         $entry = $this->entry('a', 'Klima report');
 
-        $this->service()->mark($this->user, 'klima', new \DateTimeImmutable('2100-01-01'));
+        $this->requireService()->mark($this->user, 'klima', new \DateTimeImmutable('2100-01-01'));
 
         $state = $this->stateOf($entry);
         self::assertNotNull($state);
@@ -111,7 +106,7 @@ final class SearchMarkReadServiceTest extends DbTestCase
         $entry = $this->entry('b', 'Klima update');
         $this->unreadStateFor($entry);
 
-        $this->service()->mark($this->user, 'klima', new \DateTimeImmutable('2100-01-01'));
+        $this->requireService()->mark($this->user, 'klima', new \DateTimeImmutable('2100-01-01'));
 
         $state = $this->stateOf($entry);
         self::assertNotNull($state);
@@ -124,7 +119,7 @@ final class SearchMarkReadServiceTest extends DbTestCase
         $this->unreadStateFor($entry);
         $before = (new \DateTimeImmutable())->modify('-1 second');
 
-        $this->service()->mark($this->user, 'klima', new \DateTimeImmutable('2100-01-01'));
+        $this->requireService()->mark($this->user, 'klima', new \DateTimeImmutable('2100-01-01'));
 
         $after = (new \DateTimeImmutable())->modify('+1 second');
         $hiddenAt = $this->stateOf($entry)?->getHiddenAt();
@@ -139,7 +134,7 @@ final class SearchMarkReadServiceTest extends DbTestCase
         $existing = $this->readStateFor($entry);
         $hiddenAt = $existing->getHiddenAt();
 
-        $this->service()->mark($this->user, 'klima', new \DateTimeImmutable('2100-01-01'));
+        $this->requireService()->mark($this->user, 'klima', new \DateTimeImmutable('2100-01-01'));
 
         $state = $this->stateOf($entry);
         self::assertNotNull($state);
@@ -151,7 +146,7 @@ final class SearchMarkReadServiceTest extends DbTestCase
     {
         $entry = $this->entry('d', 'Cooking tips');
 
-        $this->service()->mark($this->user, 'klima', new \DateTimeImmutable('2100-01-01'));
+        $this->requireService()->mark($this->user, 'klima', new \DateTimeImmutable('2100-01-01'));
 
         self::assertNull($this->stateOf($entry));
     }
@@ -161,7 +156,7 @@ final class SearchMarkReadServiceTest extends DbTestCase
         $whole = $this->entry('e', 'A punk revival');
         $substring = $this->entry('f', 'Steampunk gadgets');
 
-        $this->service()->mark($this->user, 'punk ', new \DateTimeImmutable('2100-01-01'));
+        $this->requireService()->mark($this->user, 'punk ', new \DateTimeImmutable('2100-01-01'));
 
         $wholeState = $this->stateOf($whole);
         self::assertNotNull($wholeState);
@@ -173,7 +168,7 @@ final class SearchMarkReadServiceTest extends DbTestCase
     {
         $entry = $this->entry('g', 'Klima forecast', '2026-08-01T00:00:00Z');
 
-        $this->service()->mark($this->user, 'klima', new \DateTimeImmutable('2026-07-15T00:00:00Z'));
+        $this->requireService()->mark($this->user, 'klima', new \DateTimeImmutable('2026-07-15T00:00:00Z'));
 
         self::assertNull($this->stateOf($entry));
     }
@@ -191,8 +186,13 @@ final class SearchMarkReadServiceTest extends DbTestCase
             '2026-11-20T00:00:00Z',
         );
 
-        $this->service()->mark($this->user, 'post', new \DateTimeImmutable('2026-11-15T00:00:00Z'));
+        $this->requireService()->mark($this->user, 'post', new \DateTimeImmutable('2026-11-15T00:00:00Z'));
 
         self::assertTrue($this->stateOf($lateCopy)?->isHidden());
+    }
+
+    private function requireService(): SearchMarkReadService
+    {
+        return $this->requireFromContainer(SearchMarkReadService::class);
     }
 }

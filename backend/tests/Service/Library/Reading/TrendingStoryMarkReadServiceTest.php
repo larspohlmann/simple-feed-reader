@@ -10,11 +10,13 @@ use App\Repository\TrendingStoryListQuery;
 use App\Service\Library\Reading\TrendingStoryMarkReadService;
 use App\Tests\DbTestCase;
 use App\Tests\Support\LemmyPostCopies;
+use App\Tests\Support\RequiresServices;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\TrendingFixtures;
 
 final class TrendingStoryMarkReadServiceTest extends DbTestCase
 {
+    use RequiresServices;
     use SeedsUsers;
 
     public function testMarkingAStoryLeavesNoCopyOfAMemberUnread(): void
@@ -24,7 +26,7 @@ final class TrendingStoryMarkReadServiceTest extends DbTestCase
         $story = new TrendingFixtures($this->entityManager, $reader)
             ->story(TrendingWindow::Day, '2026-11-14 09:00:00', $copies->localCopy);
 
-        $this->service()->mark(
+        $this->requireService()->mark(
             new TrendingStoryListQuery($reader->requireId(), $story->requireId()),
             new \DateTimeImmutable('2026-11-15T00:00:00Z'),
         );
@@ -35,11 +37,8 @@ final class TrendingStoryMarkReadServiceTest extends DbTestCase
         self::assertTrue($copyState?->isHidden());
     }
 
-    private function service(): TrendingStoryMarkReadService
+    private function requireService(): TrendingStoryMarkReadService
     {
-        $service = self::getContainer()->get(TrendingStoryMarkReadService::class);
-        self::assertInstanceOf(TrendingStoryMarkReadService::class, $service);
-
-        return $service;
+        return $this->requireFromContainer(TrendingStoryMarkReadService::class);
     }
 }

@@ -11,10 +11,12 @@ use App\Enum\RecommendationEngineKind;
 use App\Service\Library\Reading\ForYouMarkReadService;
 use App\Tests\DbTestCase;
 use App\Tests\Support\LemmyPostCopies;
+use App\Tests\Support\RequiresServices;
 use App\Tests\Support\SeedsUsers;
 
 final class ForYouMarkReadServiceTest extends DbTestCase
 {
+    use RequiresServices;
     use SeedsUsers;
 
     public function testMarkingThePicksLeavesNoCopyUnread(): void
@@ -28,7 +30,7 @@ final class ForYouMarkReadServiceTest extends DbTestCase
         $this->entityManager->persist(new RecommendationItem($run, $copies->localCopy, 1, 'reason', 50));
         $this->entityManager->flush();
 
-        $this->service()->mark($reader, new \DateTimeImmutable('2026-11-15T12:00:00Z'));
+        $this->requireService()->mark($reader, new \DateTimeImmutable('2026-11-15T12:00:00Z'));
 
         $this->entityManager->clear();
         $copyState = $this->entityManager->getRepository(EntryState::class)
@@ -36,11 +38,8 @@ final class ForYouMarkReadServiceTest extends DbTestCase
         self::assertTrue($copyState?->isHidden());
     }
 
-    private function service(): ForYouMarkReadService
+    private function requireService(): ForYouMarkReadService
     {
-        $service = self::getContainer()->get(ForYouMarkReadService::class);
-        self::assertInstanceOf(ForYouMarkReadService::class, $service);
-
-        return $service;
+        return $this->requireFromContainer(ForYouMarkReadService::class);
     }
 }

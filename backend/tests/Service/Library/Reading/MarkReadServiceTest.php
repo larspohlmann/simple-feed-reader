@@ -23,16 +23,11 @@ use App\Service\Library\Reading\Model\ReadScopeModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\LemmyPostCopies;
 use App\Tests\Support\NetworkFeedSubscriptions;
+use App\Tests\Support\RequiresServices;
 
 final class MarkReadServiceTest extends DbTestCase
 {
-    private function service(): MarkReadService
-    {
-        $markReadService = self::getContainer()->get(MarkReadService::class);
-        self::assertInstanceOf(MarkReadService::class, $markReadService);
-
-        return $markReadService;
-    }
+    use RequiresServices;
 
     /** @return array{User, Subscription, Entry, Entry} */
     private function seed(): array
@@ -66,7 +61,7 @@ final class MarkReadServiceTest extends DbTestCase
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
-        $this->service()->mark($user, ReadScopeModel::all(), new \DateTimeImmutable('2026-07-10T00:00:00Z'));
+        $this->requireService()->mark($user, ReadScopeModel::all(), new \DateTimeImmutable('2026-07-10T00:00:00Z'));
         $this->entityManager->clear();
 
         $reloaded = $this->entityManager->getRepository(Subscription::class)->find($subscription->getId());
@@ -89,7 +84,7 @@ final class MarkReadServiceTest extends DbTestCase
         $subscription->setMarkedReadUntil(new \DateTimeImmutable('2026-07-15T00:00:00Z'));
         $this->entityManager->flush();
 
-        $this->service()->mark($user, ReadScopeModel::all(), new \DateTimeImmutable('2026-07-10T00:00:00Z'));
+        $this->requireService()->mark($user, ReadScopeModel::all(), new \DateTimeImmutable('2026-07-10T00:00:00Z'));
         $this->entityManager->clear();
 
         $reloaded = $this->entityManager->getRepository(Subscription::class)->find($subscription->getId());
@@ -104,7 +99,11 @@ final class MarkReadServiceTest extends DbTestCase
     {
         [$user] = $this->seed();
         $this->expectException(RecordNotFoundException::class);
-        $this->service()->mark($user, ReadScopeModel::feed(999999), new \DateTimeImmutable('2026-07-10T00:00:00Z'));
+        $this->requireService()->mark(
+            $user,
+            ReadScopeModel::feed(999999),
+            new \DateTimeImmutable('2026-07-10T00:00:00Z'),
+        );
     }
 
     public function testTagScope(): void
@@ -115,7 +114,7 @@ final class MarkReadServiceTest extends DbTestCase
         $subscription->addTag($tag);
         $this->entityManager->flush();
 
-        $this->service()->mark(
+        $this->requireService()->mark(
             $user,
             ReadScopeModel::tag($tag->requireId()),
             new \DateTimeImmutable('2026-07-25T00:00:00Z'),
@@ -142,7 +141,7 @@ final class MarkReadServiceTest extends DbTestCase
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
-        $this->service()->mark($user, ReadScopeModel::all(), new \DateTimeImmutable('2026-07-10T00:00:00Z'));
+        $this->requireService()->mark($user, ReadScopeModel::all(), new \DateTimeImmutable('2026-07-10T00:00:00Z'));
         $this->entityManager->clear();
 
         $reloaded = $this->entityManager->getRepository(EntryState::class)
@@ -162,7 +161,7 @@ final class MarkReadServiceTest extends DbTestCase
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
-        $this->service()->mark($user, ReadScopeModel::all(), new \DateTimeImmutable('2026-07-10T00:00:00Z'));
+        $this->requireService()->mark($user, ReadScopeModel::all(), new \DateTimeImmutable('2026-07-10T00:00:00Z'));
         $this->entityManager->clear();
 
         $reloaded = $this->entityManager->getRepository(EntryState::class)
@@ -186,7 +185,7 @@ final class MarkReadServiceTest extends DbTestCase
         $this->entityManager->flush();
 
         $this->expectException(RecordNotFoundException::class);
-        $this->service()->mark(
+        $this->requireService()->mark(
             $user,
             ReadScopeModel::tag($strangerTag->requireId()),
             new \DateTimeImmutable('2026-07-10T00:00:00Z'),
@@ -235,7 +234,7 @@ final class MarkReadServiceTest extends DbTestCase
 
         [$excludedSubscription, $excludedEntry] = $this->seedExcludedFeedSubscription($user);
 
-        $this->service()->mark($user, ReadScopeModel::all(), new \DateTimeImmutable('2026-07-10T00:00:00Z'));
+        $this->requireService()->mark($user, ReadScopeModel::all(), new \DateTimeImmutable('2026-07-10T00:00:00Z'));
         $this->entityManager->clear();
 
         $reloadedIncludedSubscription = $this->entityManager->getRepository(Subscription::class)
@@ -270,7 +269,7 @@ final class MarkReadServiceTest extends DbTestCase
         [$user] = $this->seed();
         [$excludedSubscription, $excludedEntry] = $this->seedExcludedFeedSubscription($user);
 
-        $this->service()->mark(
+        $this->requireService()->mark(
             $user,
             ReadScopeModel::feed($excludedSubscription->requireId()),
             new \DateTimeImmutable('2026-07-10T00:00:00Z'),
@@ -300,7 +299,7 @@ final class MarkReadServiceTest extends DbTestCase
         $excludedSubscription->addTag($tag);
         $this->entityManager->flush();
 
-        $this->service()->mark(
+        $this->requireService()->mark(
             $user,
             ReadScopeModel::tag($tag->requireId()),
             new \DateTimeImmutable('2026-07-10T00:00:00Z'),
@@ -334,7 +333,7 @@ final class MarkReadServiceTest extends DbTestCase
         $foreign = $fixtures->subscribe($stranger, 'https://bsky.app/profile/bob.bsky.social/rss');
         $this->entityManager->flush();
 
-        $this->service()->mark(
+        $this->requireService()->mark(
             $user,
             ReadScopeModel::network(NetworkScope::whole(SocialNetwork::Bluesky)),
             new \DateTimeImmutable('2026-07-25T00:00:00Z'),
@@ -364,7 +363,7 @@ final class MarkReadServiceTest extends DbTestCase
         );
         $this->entityManager->flush();
 
-        $this->service()->mark($user, ReadScopeModel::all(), new \DateTimeImmutable('2026-07-25T00:00:00Z'));
+        $this->requireService()->mark($user, ReadScopeModel::all(), new \DateTimeImmutable('2026-07-25T00:00:00Z'));
         $this->entityManager->clear();
 
         self::assertSame(
@@ -392,7 +391,7 @@ final class MarkReadServiceTest extends DbTestCase
         $belowTagged = $this->subscriptionTagged($user, 'https://below.example.com/f.xml', [$below]);
         $onTagged = $this->subscriptionTagged($user, 'https://on.example.com/f.xml', [$included]);
 
-        $this->service()->mark($user, ReadScopeModel::all(), new \DateTimeImmutable('2026-07-25T00:00:00Z'));
+        $this->requireService()->mark($user, ReadScopeModel::all(), new \DateTimeImmutable('2026-07-25T00:00:00Z'));
         $this->entityManager->clear();
 
         self::assertSame(
@@ -413,7 +412,7 @@ final class MarkReadServiceTest extends DbTestCase
         $unrelated = $this->persistUnrelatedEntry($copies->all->getFeed());
         $unreadInAll = $this->countUnread($user)[$copies->all->requireId()];
 
-        $this->service()->mark(
+        $this->requireService()->mark(
             $user,
             ReadScopeModel::feed($copies->local->requireId()),
             new \DateTimeImmutable('2026-11-15T00:00:00Z'),
@@ -433,7 +432,7 @@ final class MarkReadServiceTest extends DbTestCase
         $copies->local->addTag($tag);
         $this->entityManager->flush();
 
-        $this->service()->mark(
+        $this->requireService()->mark(
             $user,
             ReadScopeModel::tag($tag->requireId()),
             new \DateTimeImmutable('2026-11-15T00:00:00Z'),
@@ -460,7 +459,7 @@ final class MarkReadServiceTest extends DbTestCase
             '2026-11-20T00:00:00Z',
         );
 
-        $this->service()->mark(
+        $this->requireService()->mark(
             $user,
             ReadScopeModel::tag($tag->requireId()),
             new \DateTimeImmutable('2026-11-15T00:00:00Z'),
@@ -476,7 +475,7 @@ final class MarkReadServiceTest extends DbTestCase
         $copies->all->changeInclusions(new InclusionChange(allItems: false));
         $this->entityManager->flush();
 
-        $this->service()->mark($user, ReadScopeModel::all(), new \DateTimeImmutable('2026-11-15T00:00:00Z'));
+        $this->requireService()->mark($user, ReadScopeModel::all(), new \DateTimeImmutable('2026-11-15T00:00:00Z'));
 
         self::assertTrue($this->findState($user, $copies->allCopy)?->isHidden());
     }
@@ -549,5 +548,10 @@ final class MarkReadServiceTest extends DbTestCase
         }
 
         return $watermarks;
+    }
+
+    private function requireService(): MarkReadService
+    {
+        return $this->requireFromContainer(MarkReadService::class);
     }
 }

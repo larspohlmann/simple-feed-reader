@@ -10,10 +10,12 @@ use App\Entity\SavedSearchEntry;
 use App\Service\Library\Reading\SavedSearchMarkReadService;
 use App\Tests\DbTestCase;
 use App\Tests\Support\LemmyPostCopies;
+use App\Tests\Support\RequiresServices;
 use App\Tests\Support\SeedsUsers;
 
 final class SavedSearchMarkReadServiceTest extends DbTestCase
 {
+    use RequiresServices;
     use SeedsUsers;
 
     public function testMarkingASearchLeavesNoCopyOfAMemberUnread(): void
@@ -27,7 +29,7 @@ final class SavedSearchMarkReadServiceTest extends DbTestCase
         );
         $this->entityManager->flush();
 
-        $this->service()->markOne($reader, $search->requireId(), new \DateTimeImmutable('2026-11-15T00:00:00Z'));
+        $this->requireService()->markOne($reader, $search->requireId(), new \DateTimeImmutable('2026-11-15T00:00:00Z'));
 
         $this->entityManager->clear();
         $copyState = $this->entityManager->getRepository(EntryState::class)
@@ -35,11 +37,8 @@ final class SavedSearchMarkReadServiceTest extends DbTestCase
         self::assertTrue($copyState?->isHidden());
     }
 
-    private function service(): SavedSearchMarkReadService
+    private function requireService(): SavedSearchMarkReadService
     {
-        $service = self::getContainer()->get(SavedSearchMarkReadService::class);
-        self::assertInstanceOf(SavedSearchMarkReadService::class, $service);
-
-        return $service;
+        return $this->requireFromContainer(SavedSearchMarkReadService::class);
     }
 }
