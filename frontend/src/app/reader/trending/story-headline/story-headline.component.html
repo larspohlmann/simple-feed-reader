@@ -1,7 +1,7 @@
 <app-icon class="icon" [name]="storyIcon" size="md" />
 <div class="text">
-  <h3 class="title" [id]="titleId(storyId())">{{ title() }}</h3>
+  <h3 class="title" [id]="titleId()">{{ title() }}</h3>
   @if (synopsis(); as synopsis) {
-    <p class="synopsis" [id]="synopsisId(storyId())">{{ synopsis }}</p>
+    <p class="synopsis" [id]="synopsisId()">{{ synopsis }}</p>
   }
 </div>

@@ -33,7 +33,6 @@
   @if (title(); as title) {
     <app-story-headline
       class="story-headline"
-      [class.in-magazine]="layout() === 'magazine'"
       [storyId]="context.selection().id"
       [title]="title"
       [synopsis]="synopsis()"

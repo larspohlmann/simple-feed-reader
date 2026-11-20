@@ -12,9 +12,6 @@
 .story-headline {
   @include story-card.card;
   @include story-card.card-padding;
-}
 
-/* A list row draws no card, so the headline is inset to the row's text, as a list's story title is. */
-.story-headline:not(.in-magazine) {
-  margin: var(--row-pad-comfy-y) var(--row-pad-comfy-x) 0;
+  margin: var(--list-card-inset, 0);
 }

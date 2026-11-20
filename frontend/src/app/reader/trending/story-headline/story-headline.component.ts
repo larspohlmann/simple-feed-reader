@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { STORY_ICON, storySynopsisId, storyTitleId } from '../story';
 
@@ -15,6 +15,6 @@ export class StoryHeadlineComponent {
   readonly title = input.required<string>();
   readonly synopsis = input<string | null>(null);
   protected readonly storyIcon = STORY_ICON;
-  protected readonly titleId = storyTitleId;
-  protected readonly synopsisId = storySynopsisId;
+  protected readonly titleId = computed(() => storyTitleId(this.storyId()));
+  protected readonly synopsisId = computed(() => storySynopsisId(this.storyId()));
 }
