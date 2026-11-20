@@ -1446,7 +1446,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
 
     private static function placedFlag(TrendingWindow $window): string
     {
-        return 'CASE WHEN ' . TrendingPlacementSql::placedIn($window, 'member') . ' THEN 1 ELSE 0 END';
+        return 'CASE WHEN ' . TrendingPlacementSql::buildPlacedCondition($window, 'member') . ' THEN 1 ELSE 0 END';
     }
 
     /** @return list<array<string, mixed>> */
@@ -1504,7 +1504,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
     {
         return $this->intColumn(
             'SELECT member.entry_id FROM trending_story_entry member WHERE member.story_id = ? AND '
-            . TrendingPlacementSql::placedIn(TrendingWindow::Week, 'member') . ' ORDER BY member.entry_id',
+            . TrendingPlacementSql::buildPlacedCondition(TrendingWindow::Week, 'member') . ' ORDER BY member.entry_id',
             [$storyId],
         );
     }
@@ -1515,7 +1515,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         return $this->entityManager->getConnection()->fetchAllAssociative(
             'SELECT story.first_seen, story.last_seen FROM trending_story story WHERE EXISTS (SELECT 1'
             . ' FROM trending_story_entry member WHERE member.story_id = story.id AND '
-            . TrendingPlacementSql::placedIn($window, 'member') . ')',
+            . TrendingPlacementSql::buildPlacedCondition($window, 'member') . ')',
         );
     }
 

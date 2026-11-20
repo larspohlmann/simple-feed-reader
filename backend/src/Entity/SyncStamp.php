@@ -44,7 +44,7 @@ final readonly class SyncStamp
         return new self($at, $skip, $this->syncedKinds);
     }
 
-    public function checkedAt(): ?\DateTimeImmutable
+    public function getCheckedAt(): ?\DateTimeImmutable
     {
         return $this->checkedAt;
     }

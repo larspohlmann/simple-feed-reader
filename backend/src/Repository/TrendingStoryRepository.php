@@ -192,7 +192,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             . ' JOIN feed shown_feed ON shown_feed.id = shown.feed_id'
             . ' LEFT JOIN shared_link link ON link.id = shown.shared_link_id'
             . LinkLandingSql::JOIN
-            . ' WHERE shown.story_id IN (:storyIds) AND ' . TrendingPlacementSql::placedIn($window, 'shown')
+            . ' WHERE shown.story_id IN (:storyIds) AND ' . TrendingPlacementSql::buildPlacedCondition($window, 'shown')
             . ' AND (shown_feed.network IS NULL OR shown.article_site IS NOT NULL)',
             ['storyIds' => $storyIds],
             ['storyIds' => ArrayParameterType::INTEGER],
@@ -222,7 +222,8 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             'SELECT DISTINCT opened.story_id FROM trending_story_entry opened'
             . ' JOIN entry_state reading ON reading.entry_id = opened.entry_id'
             . ' AND reading.user_id = :user AND reading.is_viewed = 1'
-            . ' WHERE opened.story_id IN (:storyIds) AND ' . TrendingPlacementSql::placedIn($window, 'opened'),
+            . ' WHERE opened.story_id IN (:storyIds) AND '
+            . TrendingPlacementSql::buildPlacedCondition($window, 'opened'),
             ['user' => $userId, 'storyIds' => $storyIds],
             ['user' => ParameterType::INTEGER, 'storyIds' => ArrayParameterType::INTEGER],
         );
@@ -315,7 +316,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             . ' WHERE ' . implode(' AND ', [
                 'story.user_id = :user',
                 'hidden.story_id IS NULL',
-                TrendingPlacementSql::placedIn($reader->window, 'story_member'),
+                TrendingPlacementSql::buildPlacedCondition($reader->window, 'story_member'),
                 self::noEarlierCopy($reader->window),
                 ...self::notShownInAShorterWindow($reader),
             ]);
@@ -366,7 +367,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             . ' JOIN entry earlier_entry ON earlier_entry.id = earlier_member.entry_id'
             . ' JOIN feed earlier_feed ON earlier_feed.id = earlier_member.feed_id AND earlier_feed.network IS NULL'
             . ' WHERE earlier_member.story_id = story.id'
-            . ' AND ' . TrendingPlacementSql::placedIn($window, 'earlier_member')
+            . ' AND ' . TrendingPlacementSql::buildPlacedCondition($window, 'earlier_member')
             . ' AND earlier_member.entry_id < story_member.entry_id'
             . ' AND earlier_entry.url_hash = member_entry.url_hash))';
     }

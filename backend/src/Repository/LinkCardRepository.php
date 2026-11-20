@@ -26,7 +26,7 @@ final class LinkCardRepository extends ServiceEntityRepository
     /** @param list<SharedLink> $links in post order */
     public function append(Entry $entry, array $links): void
     {
-        $next = $this->nextPositionFor($entry);
+        $next = $this->computeNextPosition($entry);
         foreach ($links as $index => $link) {
             $this->getEntityManager()->persist(new LinkCard($entry, $next + $index, $link));
         }
@@ -35,7 +35,7 @@ final class LinkCardRepository extends ServiceEntityRepository
     public function appendToThreadPost(ThreadPost $post, SharedLink $link): void
     {
         $entry = $post->getEntry();
-        $this->getEntityManager()->persist(new LinkCard($entry, $this->nextPositionFor($entry), $link, $post));
+        $this->getEntityManager()->persist(new LinkCard($entry, $this->computeNextPosition($entry), $link, $post));
     }
 
     /**
@@ -123,7 +123,7 @@ final class LinkCardRepository extends ServiceEntityRepository
     }
 
     /** An entry's root and reply cards share one numbering, cards still waiting for the flush included. */
-    private function nextPositionFor(Entry $entry): int
+    private function computeNextPosition(Entry $entry): int
     {
         $highest = -1;
         foreach ($this->getEntityManager()->getUnitOfWork()->getScheduledEntityInsertions() as $scheduled) {

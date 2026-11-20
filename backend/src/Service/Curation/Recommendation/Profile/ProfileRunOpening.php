@@ -55,7 +55,7 @@ final readonly class ProfileRunOpening
 
         return ProfileRunTrigger::Scheduled === $tick->profileRun->getTrigger()
             && null !== $this->recommendationSettings->findForUser($user)?->getStoredProfile()->getText()
-            && $fingerprint === $this->profileRuns->latestCompletedFingerprintFor($user);
+            && $fingerprint === $this->profileRuns->findLatestCompletedFingerprint($user);
     }
 
     private function requireModel(ProfileTick $tick): string

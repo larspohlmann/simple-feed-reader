@@ -83,7 +83,7 @@ final class EntryStateUpdaterTest extends DbTestCase
     private function sharedAtOf(User $user, Entry $entry): ?\DateTimeImmutable
     {
         return $this->entityManager->getRepository(EntryShare::class)
-            ->sharedAtFor($user->requireId(), $entry->requireId());
+            ->findSharedAt($user->requireId(), $entry->requireId());
     }
 
     /**

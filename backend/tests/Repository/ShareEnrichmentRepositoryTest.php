@@ -182,7 +182,7 @@ final class ShareEnrichmentRepositoryTest extends DbTestCase
         self::assertSame([$row], $this->repository()->stillHeld([$row], $current));
         self::assertSame(
             [$row->getEntry()->requireId()],
-            $this->repository()->pendingEntryIdsAmong([$row->getEntry()->requireId()]),
+            $this->repository()->findPendingEntryIds([$row->getEntry()->requireId()]),
         );
     }
 
@@ -211,7 +211,7 @@ final class ShareEnrichmentRepositoryTest extends DbTestCase
 
         self::assertSame(
             [$waiting->getEntry()->requireId()],
-            $this->repository()->pendingEntryIdsAmong([
+            $this->repository()->findPendingEntryIds([
                 $done->getEntry()->requireId(),
                 $waiting->getEntry()->requireId(),
                 $plain->requireId(),
@@ -230,7 +230,7 @@ final class ShareEnrichmentRepositoryTest extends DbTestCase
 
         self::assertSame(
             [$row->getEntry()->requireId()],
-            $this->repository()->pendingEntryIdsAmong([$row->getEntry()->requireId()]),
+            $this->repository()->findPendingEntryIds([$row->getEntry()->requireId()]),
         );
     }
 

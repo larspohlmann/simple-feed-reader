@@ -59,7 +59,7 @@ final readonly class SavedPostRescue
     private function rescue(Subscription $subscription, array $leavingFeedIds): array
     {
         $userId = $subscription->getUser()->requireId();
-        $flagged = $this->savedPosts->flaggedIn($userId, $subscription->getFeed()->requireId());
+        $flagged = $this->savedPosts->findFlagged($userId, $subscription->getFeed()->requireId());
         if ([] === $flagged) {
             return [];
         }
@@ -103,7 +103,7 @@ final readonly class SavedPostRescue
 
         return new SavedCopyPlan(
             $originals,
-            $this->savedPosts->heldIn($savedFeedId, SavedCopyPlan::heldHashesToAsk($originals)),
+            $this->savedPosts->findHeld($savedFeedId, SavedCopyPlan::heldHashesToAsk($originals)),
         );
     }
 

@@ -140,7 +140,7 @@ final class EntryShareRepositoryTest extends DbTestCase
 
     private function sharedAtOf(Entry $entry): ?\DateTimeImmutable
     {
-        return $this->shares()->sharedAtFor($this->user->requireId(), $entry->requireId());
+        return $this->shares()->findSharedAt($this->user->requireId(), $entry->requireId());
     }
 
     private function shareRows(): int

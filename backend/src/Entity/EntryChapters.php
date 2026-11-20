@@ -52,6 +52,6 @@ final class EntryChapters
      */
     private static function stored(array $chapters): ?array
     {
-        return StoredList::orNull(EntryMedia::toJsonList($chapters));
+        return StoredList::keepIfNotEmpty(EntryMedia::toJsonList($chapters));
     }
 }

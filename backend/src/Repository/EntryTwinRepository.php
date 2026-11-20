@@ -40,7 +40,7 @@ final class EntryTwinRepository extends ServiceEntityRepository
                 . ' OR %s)',
                 EntryState::class,
                 SocialLike::class,
-                EntryShareDql::existsFor('sourceEntry'),
+                EntryShareDql::buildSharedCondition('sourceEntry'),
             ))
             ->setParameter('targetFeed', $targetFeedId)
             ->setParameter('sourceFeed', $sourceFeedId)

@@ -81,7 +81,7 @@ final class EntryTranscriptRepository extends ServiceEntityRepository implements
      *
      * @return array<int, string> the filled transcripts' search text, by entry id
      */
-    public function searchTextsFor(array $entryIds): array
+    public function findSearchTexts(array $entryIds): array
     {
         if ($entryIds === []) {
             return [];

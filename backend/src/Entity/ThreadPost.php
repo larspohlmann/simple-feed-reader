@@ -46,7 +46,7 @@ final class ThreadPost
         $this->url = $content->url;
         $this->publishedAt = $content->publishedAt;
         $this->contentHtml = $content->html;
-        $this->media = StoredList::orNull(EntryMedia::toJsonList($content->media));
+        $this->media = StoredList::keepIfNotEmpty(EntryMedia::toJsonList($content->media));
     }
 
     public function getEntry(): Entry

@@ -50,7 +50,7 @@ final class EntryQuotedPost
         $this->authorAvatarUrl = $quote->authorAvatarUrl;
         $this->postedAt = $quote->postedAt;
         $this->text = $quote->text;
-        $this->media = StoredList::orNull(EntryMedia::toJsonList($quote->media));
+        $this->media = StoredList::keepIfNotEmpty(EntryMedia::toJsonList($quote->media));
         $this->nestedUrl = $quote->nestedQuote?->url;
         $this->nestedHandle = $quote->nestedQuote?->handle;
     }

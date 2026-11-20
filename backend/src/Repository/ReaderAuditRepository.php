@@ -19,14 +19,14 @@ final readonly class ReaderAuditRepository
     {
         $column = ctype_digit($idOrEmail) ? 'id' : 'email';
 
-        return self::idOrNull(
+        return self::parseId(
             $this->connection->fetchOne("SELECT id FROM app_user WHERE {$column} = :value", ['value' => $idOrEmail]),
         );
     }
 
     public function widestSubscriberId(): ?int
     {
-        return self::idOrNull($this->connection->fetchOne(
+        return self::parseId($this->connection->fetchOne(
             'SELECT user_id FROM subscription GROUP BY user_id ORDER BY COUNT(*) DESC, user_id ASC',
         ));
     }
@@ -65,7 +65,7 @@ final readonly class ReaderAuditRepository
         );
     }
 
-    private static function idOrNull(mixed $id): ?int
+    private static function parseId(mixed $id): ?int
     {
         return $id === false ? null : DatabaseValue::int($id);
     }

@@ -686,7 +686,7 @@ final class EntryPartRestorerTest extends DbTestCase
         /** @var EntryShareRepository $shares */
         $shares = $this->entityManager->getRepository(EntryShare::class);
 
-        return $shares->sharedAtFor($user->requireId(), $entry->requireId());
+        return $shares->findSharedAt($user->requireId(), $entry->requireId());
     }
 
     private function restoredStateOf(User $user, string $token): EntryState

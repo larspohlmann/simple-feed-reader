@@ -32,7 +32,7 @@ final class ReaderWindowsTest extends DbTestCase
 
     public function testRelaxedMinimumUsesTheSnapshotsActiveFeedCount(): void
     {
-        $minimum = TrendingWindow::Day->minimumOutletsFor(self::SNAPSHOT_ACTIVE_FEEDS);
+        $minimum = TrendingWindow::Day->computeMinimumOutlets(self::SNAPSHOT_ACTIVE_FEEDS);
         $feeds = array_map(
             fn (int $index): Feed => $this->fixtures->feed('outlet-' . $index),
             range(1, $minimum),

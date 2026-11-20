@@ -72,7 +72,7 @@ final class EntryTranscriptRepositoryTest extends DbTestCase
 
         self::assertSame(
             [$filledEntryId => 'Hallo'],
-            $this->transcripts->searchTextsFor([$filledEntryId, $pending->getEntry()->requireId()]),
+            $this->transcripts->findSearchTexts([$filledEntryId, $pending->getEntry()->requireId()]),
         );
     }
 
@@ -87,13 +87,13 @@ final class EntryTranscriptRepositoryTest extends DbTestCase
 
         self::assertSame(
             [$firstId => 'Eins', $secondId => 'Zwei'],
-            $this->transcripts->searchTextsFor([$firstId, $secondId]),
+            $this->transcripts->findSearchTexts([$firstId, $secondId]),
         );
     }
 
     public function testNoEntryIdsFindNoSearchTexts(): void
     {
-        self::assertSame([], $this->transcripts->searchTextsFor([]));
+        self::assertSame([], $this->transcripts->findSearchTexts([]));
     }
 
     public function testFindsTheTranscriptOfAnEntry(): void

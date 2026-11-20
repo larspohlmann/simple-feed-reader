@@ -94,7 +94,7 @@ enum TrendingWindow: string
     }
 
     /** The preferred minimum: the floor, or this window's share of the reader's active feeds when that is more. */
-    public function minimumOutletsFor(int $activeFeeds): int
+    public function computeMinimumOutlets(int $activeFeeds): int
     {
         $shareRoundedUp = intdiv($this->activeSharePerMille() * $activeFeeds + self::PER_MILLE - 1, self::PER_MILLE);
 

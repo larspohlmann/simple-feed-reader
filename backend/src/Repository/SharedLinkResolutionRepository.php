@@ -20,7 +20,7 @@ final class SharedLinkResolutionRepository extends ServiceEntityRepository
     }
 
     /** @return list<PendingLinkModel> the queued links due at $now, oldest first */
-    public function pendingAt(\DateTimeImmutable $now, int $limit): array
+    public function findDuePending(\DateTimeImmutable $now, int $limit): array
     {
         /** @var list<array{shared_link_id: int|string, url: string, attempts: int|string}> $rows */
         $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(

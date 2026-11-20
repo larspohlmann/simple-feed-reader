@@ -14,7 +14,7 @@ final readonly class SubscribedEntryCountRepository
     {
     }
 
-    public function countFor(int $userId): int
+    public function countSubscribedEntries(int $userId): int
     {
         return (int) $this->entityManager->createQueryBuilder()
             ->select('COUNT(e.id)')

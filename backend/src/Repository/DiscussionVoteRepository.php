@@ -56,7 +56,7 @@ final class DiscussionVoteRepository extends ServiceEntityRepository
      *
      * @return array<int, VoteScore> the user's votes, by entry id
      */
-    public function scoresAmong(int $userId, array $entryIds): array
+    public function findScores(int $userId, array $entryIds): array
     {
         if ([] === $entryIds) {
             return [];

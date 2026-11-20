@@ -34,7 +34,7 @@ final class SubscribedEntryCountRepositoryTest extends DbTestCase
         $this->entry($unsubscribed, 'c');
         $this->entityManager->flush();
 
-        self::assertSame(2, $this->repository()->countFor($user->requireId()));
+        self::assertSame(2, $this->repository()->countSubscribedEntries($user->requireId()));
     }
 
     public function testAUserWithNoSubscriptionsCountsZero(): void
@@ -43,7 +43,7 @@ final class SubscribedEntryCountRepositoryTest extends DbTestCase
         $this->entityManager->persist($user);
         $this->entityManager->flush();
 
-        self::assertSame(0, $this->repository()->countFor($user->requireId()));
+        self::assertSame(0, $this->repository()->countSubscribedEntries($user->requireId()));
     }
 
     private function feed(string $url): Feed

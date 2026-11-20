@@ -177,7 +177,7 @@ final class ShareEnrichmentRepository extends ServiceEntityRepository
      *
      * @return list<int> those among them whose embed or cards are still to come
      */
-    public function pendingEntryIdsAmong(array $entryIds): array
+    public function findPendingEntryIds(array $entryIds): array
     {
         if ($entryIds === []) {
             return [];

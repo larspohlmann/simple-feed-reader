@@ -28,7 +28,7 @@ final class StoredList
      *
      * @return list<T>|null
      */
-    public static function orNull(array $encoded): ?array
+    public static function keepIfNotEmpty(array $encoded): ?array
     {
         return $encoded === [] ? null : $encoded;
     }

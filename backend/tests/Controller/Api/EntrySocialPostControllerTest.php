@@ -689,6 +689,6 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         $shares = $this->entityManager()->getRepository(EntryShare::class);
         self::assertInstanceOf(EntryShareRepository::class, $shares);
 
-        return $shares->sharedAtFor($user->requireId(), $entryId);
+        return $shares->findSharedAt($user->requireId(), $entryId);
     }
 }

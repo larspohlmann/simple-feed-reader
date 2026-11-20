@@ -33,7 +33,7 @@ final class TrendingWindowTest extends TestCase
         int $activeFeeds,
         int $minimum,
     ): void {
-        self::assertSame($minimum, $window->minimumOutletsFor($activeFeeds));
+        self::assertSame($minimum, $window->computeMinimumOutlets($activeFeeds));
     }
 
     /** @return iterable<string, array{TrendingWindow, int, int}> */

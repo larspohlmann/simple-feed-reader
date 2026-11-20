@@ -8,7 +8,7 @@ use App\Service\Library\Search\TranscriptText\TranscriptTextInterface;
 
 final readonly class NoTranscriptTexts implements TranscriptTextInterface
 {
-    public function searchTextsFor(array $entryIds): array
+    public function findSearchTexts(array $entryIds): array
     {
         return [];
     }

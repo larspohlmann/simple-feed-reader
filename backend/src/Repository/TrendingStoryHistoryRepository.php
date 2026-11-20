@@ -120,7 +120,7 @@ final readonly class TrendingStoryHistoryRepository
      */
     public function place(StoryBuildModel $build, array $storyIdByEntry): int
     {
-        $placed = $this->placedIn($build);
+        $placed = $this->findPlacedStories($build);
         $leaving = array_diff_assoc($placed, $storyIdByEntry);
         $arriving = array_diff_assoc($storyIdByEntry, $placed);
         foreach (array_chunk(array_keys($leaving), self::INSERT_ROWS) as $chunk) {
@@ -288,7 +288,7 @@ final readonly class TrendingStoryHistoryRepository
     }
 
     /** @return array<int, int|string> the story of each entry the reader's window places */
-    private function placedIn(StoryBuildModel $build): array
+    private function findPlacedStories(StoryBuildModel $build): array
     {
         /** @var array<int, int|string> $placed */
         $placed = $this->connection()->fetchAllKeyValue(

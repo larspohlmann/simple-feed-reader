@@ -95,7 +95,7 @@ final readonly class RetentionRepository
     {
         $deleted = [];
         foreach (array_chunk($ids, self::ID_CHUNK_SIZE) as $chunk) {
-            $unprotected = $this->unprotectedAmong($chunk);
+            $unprotected = $this->findUnprotectedIds($chunk);
             $this->rowIds->delete(Entry::class, $unprotected);
             $deleted = [...$deleted, ...$unprotected];
         }
@@ -120,7 +120,7 @@ final readonly class RetentionRepository
      *
      * @return list<int>
      */
-    private function unprotectedAmong(array $ids): array
+    private function findUnprotectedIds(array $ids): array
     {
         $qb = $this->entityManager->createQueryBuilder()
             ->select('e.id')

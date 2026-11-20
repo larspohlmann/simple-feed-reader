@@ -71,7 +71,7 @@ final readonly class ReaderWindows
         $window = $atMultipleSources->window;
         $activeFeeds = $this->snapshots->lastBuilds($atMultipleSources->userId)->activeFeedCount($window);
 
-        return min($window->minimumOutletsFor($activeFeeds), $lastWorthShowing->outletCount);
+        return min($window->computeMinimumOutlets($activeFeeds), $lastWorthShowing->outletCount);
     }
 
     /** @return list<int> */
