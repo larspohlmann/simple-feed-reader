@@ -90,11 +90,11 @@ final readonly class HeadlineEquivalents
         }
         $stem = $this->stemmer->stem($word, $language);
 
-        return self::stemsFor($language)[$stem] ?? $stem;
+        return self::readStems($language)[$stem] ?? $stem;
     }
 
     /** @return array<string, string> */
-    private static function stemsFor(?FeedLanguage $language): array
+    private static function readStems(?FeedLanguage $language): array
     {
         return $language === null ? self::CUT_STEMS : self::STEMS_BY_LANGUAGE[$language->value];
     }
@@ -143,7 +143,7 @@ final readonly class HeadlineEquivalents
         $collapsed = [];
         $index = 0;
         while ($index < \count($words)) {
-            [$length, $canonical] = $this->phraseAt($bareWords, $index);
+            [$length, $canonical] = $this->matchPhrase($bareWords, $index);
             $collapsed[] = $canonical === null ? [$words[$index], $bareWords[$index]] : [$canonical, $canonical];
             $index += $length;
         }
@@ -156,7 +156,7 @@ final readonly class HeadlineEquivalents
      *
      * @return array{int, ?string} how many words it covers, and the phrase's canonical if one starts here
      */
-    private function phraseAt(array $bareWords, int $index): array
+    private function matchPhrase(array $bareWords, int $index): array
     {
         foreach ($this->phrasesByFirstWord[$bareWords[$index]] ?? [] as [$phraseWords, $canonical]) {
             if (\array_slice($bareWords, $index, \count($phraseWords)) === $phraseWords) {

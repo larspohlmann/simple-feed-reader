@@ -50,7 +50,7 @@ final class RecommendationEngineResolverTest extends TestCase
             $connection->chooseModel($model, new \DateTimeImmutable('2026-10-02 09:05:00'));
         }
 
-        self::assertSame($kind, $resolver->kindFor($connection));
+        self::assertSame($kind, $resolver->readKind($connection));
     }
 
     public function testTheScoringKindWritesNoReasonsSendsNoPromptAndReadsOnlyTheBatchConcurrency(): void
@@ -73,7 +73,7 @@ final class RecommendationEngineResolverTest extends TestCase
 
         self::assertEquals(
             RecommendationEngineCapabilitiesModel::fromKind(RecommendationEngineKind::Scoring),
-            $resolver->capabilitiesForAccount($account),
+            $resolver->resolveAccountCapabilities($account),
         );
     }
 
@@ -106,7 +106,7 @@ final class RecommendationEngineResolverTest extends TestCase
 
         self::assertEquals(
             RecommendationEngineCapabilitiesModel::fromKind(RecommendationEngineKind::Llm),
-            $resolver->capabilitiesFor($this->connection(new ModelDescriptor('gpt-4o-mini', null))),
+            $resolver->buildCapabilities($this->connection(new ModelDescriptor('gpt-4o-mini', null))),
         );
     }
 
@@ -118,7 +118,7 @@ final class RecommendationEngineResolverTest extends TestCase
 
         self::assertEquals(
             RecommendationEngineCapabilitiesModel::fromKind(RecommendationEngineKind::Llm),
-            $resolver->capabilitiesForAccount($account),
+            $resolver->resolveAccountCapabilities($account),
         );
     }
 

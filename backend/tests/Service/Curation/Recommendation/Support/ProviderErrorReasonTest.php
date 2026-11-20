@@ -95,7 +95,7 @@ final class ProviderErrorReasonTest extends TestCase
     {
         self::assertEquals(
             new ProviderErrorIdentifiersModel('invalid_value', 'max_tokens'),
-            ProviderErrorReason::identifiersIn(
+            ProviderErrorReason::parseIdentifiers(
                 '{"error":{"message":"max_tokens is too large: 35000.","type":"invalid_request_error",'
                 . '"param":"max_tokens","code":"invalid_value"}}',
             ),
@@ -115,7 +115,7 @@ final class ProviderErrorReasonTest extends TestCase
     #[DataProvider('bodiesWithoutIdentifiers')]
     public function testABodyWithoutIdentifiersGivesNone(string $body): void
     {
-        self::assertEquals(new ProviderErrorIdentifiersModel(null, null), ProviderErrorReason::identifiersIn($body));
+        self::assertEquals(new ProviderErrorIdentifiersModel(null, null), ProviderErrorReason::parseIdentifiers($body));
     }
 
     public function testAnIdentifierIsClippedAfterSixtyFourCharactersNotBytes(): void
@@ -127,7 +127,7 @@ final class ProviderErrorReasonTest extends TestCase
 
         self::assertEquals(
             new ProviderErrorIdentifiersModel(str_repeat('c', 64), str_repeat('ä', 64)),
-            ProviderErrorReason::identifiersIn($body),
+            ProviderErrorReason::parseIdentifiers($body),
         );
     }
 

@@ -183,7 +183,7 @@ final class TrendingStoriesTest extends DbTestCase
         }
 
         self::assertCount(15, $this->storiesFor(TrendingWindow::Day));
-        self::assertSame(15, $this->stories()->unopenedFor($this->reader, TrendingWindow::Day)->unopened);
+        self::assertSame(15, $this->stories()->tallyUnopened($this->reader, TrendingWindow::Day)->unopened);
     }
 
     public function testOnlyArticlesAndCardedPostsAreListedPerStory(): void
@@ -465,7 +465,7 @@ final class TrendingStoriesTest extends DbTestCase
         $earlier = $this->storyOf('2031-05-12 10:00:00', $feeds, TrendingWindow::Week);
 
         self::assertSame([$earlier->requireId()], $this->storyIdsFor(TrendingWindow::Week));
-        self::assertSame(1, $this->stories()->unopenedFor($this->reader, TrendingWindow::Week)->unopened);
+        self::assertSame(1, $this->stories()->tallyUnopened($this->reader, TrendingWindow::Week)->unopened);
     }
 
     public function testADayStoryTheReaderIsNotShownLeavesTheWeekAlone(): void
@@ -494,7 +494,7 @@ final class TrendingStoriesTest extends DbTestCase
 
         self::assertCount(15, $shown);
         self::assertNotContains($excluded->requireId(), $shown);
-        self::assertSame(15, $this->stories()->unopenedFor($this->reader, TrendingWindow::Week)->unopened);
+        self::assertSame(15, $this->stories()->tallyUnopened($this->reader, TrendingWindow::Week)->unopened);
     }
 
     public function testThePageCarriesTheWindowAndWhenItsSnapshotWasBuilt(): void
@@ -546,14 +546,14 @@ final class TrendingStoriesTest extends DbTestCase
         }
 
         self::assertContains($story->requireId(), $this->rankedDayStoryIdsOf($this->reader));
-        self::assertSame(6, $this->stories()->unopenedFor($this->reader, TrendingWindow::Day)->unopened);
+        self::assertSame(6, $this->stories()->tallyUnopened($this->reader, TrendingWindow::Day)->unopened);
 
         $this->followFeedsPostingAt(97, '2031-05-13 12:00:00');
         $this->recordTheDaysBuild();
 
         self::assertNotContains($story->requireId(), $this->rankedDayStoryIdsOf($this->reader));
         self::assertNotContains($story->requireId(), $this->storyIdsFor(TrendingWindow::Day));
-        self::assertSame(5, $this->stories()->unopenedFor($this->reader, TrendingWindow::Day)->unopened);
+        self::assertSame(5, $this->stories()->tallyUnopened($this->reader, TrendingWindow::Day)->unopened);
     }
 
     public function testFeedsThatPostedOnlyBeforeTheWindowAreNotActive(): void
@@ -644,7 +644,7 @@ final class TrendingStoriesTest extends DbTestCase
             ],
             $this->storyIdsFor(TrendingWindow::Week),
         );
-        self::assertSame(5, $this->stories()->unopenedFor($this->reader, TrendingWindow::Week)->unopened);
+        self::assertSame(5, $this->stories()->tallyUnopened($this->reader, TrendingWindow::Week)->unopened);
     }
 
     public function testFiveStoriesAtThePreferredMinimumKeepIt(): void

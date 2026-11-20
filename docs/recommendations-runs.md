@@ -176,7 +176,7 @@ waiting run go on. A host with none of them never builds the profile, and the ru
 
 ### The tick lock
 
-Every tick runs behind a per-user lock (`UserTickLock::nameFor()`), so two drivers never advance
+Every tick runs behind a per-user lock (`UserTickLock::buildName()`), so two drivers never advance
 the same account's run at once. Profile runs take the same per-user lock (`UserTickLock`), so a profile tick and a
 recommendation tick never overlap; each sizes the TTL by the connection it calls. `RecommendationRun` has no optimistic-version guard: a second tick that took the lock
 mid-call could bank the same batch twice and pay for its provider call twice.

@@ -45,7 +45,7 @@ final readonly class ProfileRunStarter
         if (null !== $active) {
             return $active;
         }
-        if (null === $this->profileConnections->usableFor($user)) {
+        if (null === $this->profileConnections->findUsableConnection($user)) {
             throw new ProfileConnectionMissingException(ProfileConnections::MISSING);
         }
         $this->rateLimitGuard->enforceForUser($this->aiProfileRunsLimiter, $user);

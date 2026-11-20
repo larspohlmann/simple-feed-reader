@@ -136,7 +136,7 @@ final class TrendingExplainCommand extends Command
     {
         $counts = array_map(
             static fn (FeedLanguage $language): string
-                => \sprintf('%s %d', $language->value, $coverage->entriesIn($language)),
+                => \sprintf('%s %d', $language->value, $coverage->readEntryCount($language)),
             FeedLanguage::cases(),
         );
 

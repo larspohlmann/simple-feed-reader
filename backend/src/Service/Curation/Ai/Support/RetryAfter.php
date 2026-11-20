@@ -14,7 +14,7 @@ final class RetryAfter
      * Integer seconds only: an HTTP-date form is left to the caller's backoff, as turning a date into a wait needs a
      * clock, and the standard rate-limit form is a seconds count anyway.
      */
-    public static function secondsIn(ResponseInterface $response): ?int
+    public static function parseSeconds(ResponseInterface $response): ?int
     {
         return RetryAfterHeader::seconds(ResponseHeader::first($response, 'retry-after'));
     }

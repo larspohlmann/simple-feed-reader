@@ -27,7 +27,7 @@ final readonly class OutputCapFallback implements RejectedRequestFallbackInterfa
         AiProviderSettings $connection,
         ProviderRejectedRequestException $rejection,
     ): ?RequestAdjustmentModel {
-        $cap = $this->capNamedIn($rejection);
+        $cap = $this->parseCap($rejection);
         if (null === $cap) {
             return null;
         }
@@ -42,7 +42,7 @@ final readonly class OutputCapFallback implements RejectedRequestFallbackInterfa
         return RequestAdjustmentModel::outputCap($cap);
     }
 
-    private function capNamedIn(ProviderRejectedRequestException $rejection): ?int
+    private function parseCap(ProviderRejectedRequestException $rejection): ?int
     {
         if (!self::isTooLarge($rejection)) {
             return null;

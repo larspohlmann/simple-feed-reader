@@ -58,7 +58,7 @@ final readonly class TrendingStoryFollowing
                     => new FollowedStoryModel($row, $row->lastJoinedAt <= $quietSince),
                 $this->follows->followedBy($userId),
             ),
-            $this->snapshots->lastBuilds($userId)->nextBuildDueAt(),
+            $this->snapshots->lastBuilds($userId)->computeNextBuildDueAt(),
         );
     }
 }

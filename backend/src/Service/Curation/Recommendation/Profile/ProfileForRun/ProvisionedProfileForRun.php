@@ -21,7 +21,7 @@ final readonly class ProvisionedProfileForRun implements ProfileForRunInterface
     ) {
     }
 
-    public function profileFor(User $user, \DateTimeImmutable $runCreatedAt): RunProfileModel
+    public function prepareProfile(User $user, \DateTimeImmutable $runCreatedAt): RunProfileModel
     {
         $stored = $this->recommendationSettings->findForUser($user)?->getStoredProfile()->getText();
         if (null !== $stored) {

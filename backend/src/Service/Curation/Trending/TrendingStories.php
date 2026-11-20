@@ -42,13 +42,13 @@ final readonly class TrendingStories
 
         return new TrendingPageModel(
             $window,
-            $this->snapshots->lastBuilds($userId)->builtAt($window),
-            $this->sourceFor($userId, $window, $ranked)->buildCards($ranked),
+            $this->snapshots->lastBuilds($userId)->findBuiltAt($window),
+            $this->loadCardSource($userId, $window, $ranked)->buildCards($ranked),
         );
     }
 
     /** Runs no query for a reader who switched Trending off (D39). */
-    public function unopenedFor(User $user, TrendingWindow $window): TrendingUnopenedModel
+    public function tallyUnopened(User $user, TrendingWindow $window): TrendingUnopenedModel
     {
         if (!$this->readingSettings->forUser($user)->isTrendingEnabled()) {
             return new TrendingUnopenedModel($window, 0);
@@ -70,7 +70,7 @@ final readonly class TrendingStories
     }
 
     /** @param list<RankedStoryModel> $ranked */
-    private function sourceFor(int $userId, TrendingWindow $window, array $ranked): StoryCardSource
+    private function loadCardSource(int $userId, TrendingWindow $window, array $ranked): StoryCardSource
     {
         $storyIds = RankedStoryModel::collectStoryIds($ranked);
         $shown = $this->stories->shownEntriesByStory($window, $storyIds);

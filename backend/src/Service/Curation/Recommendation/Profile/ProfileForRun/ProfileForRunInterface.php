@@ -11,7 +11,7 @@ use App\Service\Curation\Recommendation\Profile\Model\RunProfileModel;
 interface ProfileForRunInterface
 {
     /** Starts a profile run when there is no profile and none has run since $runCreatedAt. */
-    public function profileFor(User $user, \DateTimeImmutable $runCreatedAt): RunProfileModel;
+    public function prepareProfile(User $user, \DateTimeImmutable $runCreatedAt): RunProfileModel;
 
     public function isBuildingFor(User $user): bool;
 }

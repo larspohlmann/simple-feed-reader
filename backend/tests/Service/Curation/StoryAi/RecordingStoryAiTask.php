@@ -40,7 +40,7 @@ final class RecordingStoryAiTask implements StoryAiTaskInterface
         return StoryAiTask::Title;
     }
 
-    public function connectionFor(User $user): ?AiProviderSettings
+    public function findConnection(User $user): ?AiProviderSettings
     {
         $this->connectionAskedFor[] = $user->requireId();
 

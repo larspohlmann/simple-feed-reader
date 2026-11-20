@@ -21,7 +21,7 @@ final readonly class SurfaceTallies
     {
         return new SurfaceTalliesModel(
             $this->subscriptionTallies->countTallies($user),
-            $this->trendingStories->unopenedFor($user, $trendingWindow),
+            $this->trendingStories->tallyUnopened($user, $trendingWindow),
         );
     }
 }

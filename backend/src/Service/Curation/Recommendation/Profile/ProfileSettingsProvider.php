@@ -25,8 +25,8 @@ final readonly class ProfileSettingsProvider
         return new ProfileSettingsModel(
             $storedSettings?->getStoredProfile() ?? StoredProfile::none(),
             $storedSettings?->profileSettings() ?? ProfileSettingsValues::defaults(),
-            $this->profileConnections->usableGiven($user, $storedSettings),
-            $this->profileConnections->candidatesFor($user),
+            $this->profileConnections->findUsableConnectionGiven($user, $storedSettings),
+            $this->profileConnections->findCandidates($user),
             $storedSettings?->values()->debugEnabled ?? false,
         );
     }

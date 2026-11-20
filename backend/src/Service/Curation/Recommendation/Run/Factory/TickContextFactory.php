@@ -31,7 +31,7 @@ final readonly class TickContextFactory
         return new TickContext(
             $run,
             $connection,
-            $this->engines->kindFor($connection),
+            $this->engines->readKind($connection),
             $this->settingsResolver->forAccount($user)->forConnection($connection),
             $driver,
         );

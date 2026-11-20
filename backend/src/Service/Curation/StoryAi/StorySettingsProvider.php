@@ -23,24 +23,24 @@ final readonly class StorySettingsProvider
         $storedSettings = $this->storySettings->findForUser($user);
 
         return new StorySettingsModel(
-            self::titlesEnabledIn($storedSettings),
+            self::hasTitlesEnabled($storedSettings),
             $storedSettings?->getWritingConnection(),
-            $this->writingConnections->usableGiven($user, $storedSettings),
-            $this->writingConnections->candidatesFor($user),
+            $this->writingConnections->findUsableConnectionGiven($user, $storedSettings),
+            $this->writingConnections->findCandidates($user),
         );
     }
 
     /** The connection that writes the user's story titles; null while titles are off or none can write. */
-    public function titleConnectionFor(User $user): ?AiProviderSettings
+    public function findTitleConnection(User $user): ?AiProviderSettings
     {
         $storedSettings = $this->storySettings->findForUser($user);
 
-        return self::titlesEnabledIn($storedSettings)
-            ? $this->writingConnections->usableGiven($user, $storedSettings)
+        return self::hasTitlesEnabled($storedSettings)
+            ? $this->writingConnections->findUsableConnectionGiven($user, $storedSettings)
             : null;
     }
 
-    private static function titlesEnabledIn(?StorySettings $storedSettings): bool
+    private static function hasTitlesEnabled(?StorySettings $storedSettings): bool
     {
         return $storedSettings?->isTitlesEnabled() ?? StorySettings::DEFAULT_TITLES_ENABLED;
     }

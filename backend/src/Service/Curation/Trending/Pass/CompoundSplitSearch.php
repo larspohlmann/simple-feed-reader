@@ -26,27 +26,27 @@ final class CompoundSplitSearch
         $this->letters = mb_str_split($word);
     }
 
-    public function bestSplit(): ?CompoundSplitModel
+    public function findBestSplit(): ?CompoundSplitModel
     {
-        return $this->bestCompoundFrom(0);
+        return $this->findBestCompoundFrom(0);
     }
 
-    private function bestFrom(int $offset): ?CompoundSplitModel
+    private function findBestFrom(int $offset): ?CompoundSplitModel
     {
         if (!array_key_exists($offset, $this->bestByOffset)) {
             $suffix = implode('', array_slice($this->letters, $offset));
-            $this->bestByOffset[$offset] = $this->findNounPart($suffix) ?? $this->bestCompoundFrom($offset);
+            $this->bestByOffset[$offset] = $this->findNounPart($suffix) ?? $this->findBestCompoundFrom($offset);
         }
 
         return $this->bestByOffset[$offset];
     }
 
-    private function bestCompoundFrom(int $offset): ?CompoundSplitModel
+    private function findBestCompoundFrom(int $offset): ?CompoundSplitModel
     {
         $best = null;
         $lastEnd = count($this->letters) - GermanCompoundSplitter::MIN_PART_LENGTH;
         for ($end = $offset + GermanCompoundSplitter::MIN_PART_LENGTH; $end <= $lastEnd; ++$end) {
-            $candidate = $this->compoundSplitAt($offset, $end);
+            $candidate = $this->findCompoundSplit($offset, $end);
             if (null !== $candidate && (null === $best || $candidate->beats($best))) {
                 $best = $candidate;
             }
@@ -55,18 +55,18 @@ final class CompoundSplitSearch
         return $best;
     }
 
-    private function compoundSplitAt(int $offset, int $end): ?CompoundSplitModel
+    private function findCompoundSplit(int $offset, int $end): ?CompoundSplitModel
     {
-        $tail = $this->bestFrom($end);
+        $tail = $this->findBestFrom($end);
         if (null === $tail || $tail->partCount() >= $this->maxParts) {
             return null;
         }
-        $modifier = $this->modifierBetween($offset, $end);
+        $modifier = $this->findModifierBetween($offset, $end);
 
         return null === $modifier ? null : $tail->prependedBy($modifier);
     }
 
-    private function modifierBetween(int $offset, int $end): ?CompoundSplitModel
+    private function findModifierBetween(int $offset, int $end): ?CompoundSplitModel
     {
         $segment = implode('', array_slice($this->letters, $offset, $end - $offset));
         $best = null;

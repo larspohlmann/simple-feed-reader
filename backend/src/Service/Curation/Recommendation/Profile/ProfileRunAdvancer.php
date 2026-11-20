@@ -26,8 +26,8 @@ final readonly class ProfileRunAdvancer
     public function advance(ProfileRun $profileRun, TickDriver $driver): void
     {
         $user = $profileRun->getUser();
-        $connection = $this->profileConnections->usableFor($user);
-        $held = $this->tickLock->acquire($user, $this->lockTtl->secondsForConnection($connection));
+        $connection = $this->profileConnections->findUsableConnection($user);
+        $held = $this->tickLock->acquire($user, $this->lockTtl->computeSecondsForConnection($connection));
         if (null === $held) {
             return;
         }

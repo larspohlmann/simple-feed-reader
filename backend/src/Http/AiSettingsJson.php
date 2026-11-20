@@ -34,7 +34,7 @@ final readonly class AiSettingsJson
             'baseUrl' => $settings->getBaseUrl(),
             'apiKeyHint' => $settings->getApiKeyHint(),
             'model' => $settings->getModel(),
-            'kind' => $this->engines->kindFor($settings)->value,
+            'kind' => $this->engines->readKind($settings)->value,
             'suppressReasoning' => $settings->suppressesReasoning(),
             'suppressionRefused' => $settings->refusesSuppressedReasoning(),
             'batchConcurrency' => $settings->getRunTuning()->batchConcurrency(),

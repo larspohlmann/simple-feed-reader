@@ -32,7 +32,7 @@ final readonly class RecommendationRunForecaster
             return null;
         }
 
-        $elapsed = $report->start->elapsedSecondsAt($this->clock->now());
+        $elapsed = $report->start->computeElapsedSeconds($this->clock->now());
         $durations = PhaseDurationsModel::fromCompletedRunSpans(
             $this->timings->completedRunPhaseSpans($user, $plan->engineKind, RunLogRetention::RUNS),
             $plan->engineKind,

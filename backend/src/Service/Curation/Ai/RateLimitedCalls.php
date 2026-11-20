@@ -41,7 +41,7 @@ final readonly class RateLimitedCalls
             }
 
             $observed = true;
-            $wait = $plan->waitSecondsFor($retry, self::retryAfterAcross($outcomes, $pending));
+            $wait = $plan->resolveWaitSeconds($retry, self::retryAfterAcross($outcomes, $pending));
 
             if (!$plan->blocks()) {
                 return RateLimitedResultModel::deferred($wait);

@@ -18,7 +18,7 @@ interface StoryAiTaskInterface
     public function task(): StoryAiTask;
 
     /** The connection this task calls for the user; null skips the user for this task. */
-    public function connectionFor(User $user): ?AiProviderSettings;
+    public function findConnection(User $user): ?AiProviderSettings;
 
     /** @return list<int> */
     public function dueStoryIds(User $user, \DateTimeImmutable $now): array;

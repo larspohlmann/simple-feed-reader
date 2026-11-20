@@ -32,7 +32,7 @@ final readonly class RecommendationSettingsController
     {
         return new JsonResponse(RecommendationSettingsJson::state(
             $this->resolver->forUser($user),
-            $this->engines->capabilitiesForAccount($user),
+            $this->engines->resolveAccountCapabilities($user),
             $this->presence->hasPersistentRecommendationWorker(),
         ));
     }
@@ -46,7 +46,7 @@ final readonly class RecommendationSettingsController
 
         return new JsonResponse(RecommendationSettingsJson::state(
             $this->resolver->forUser($user),
-            $this->engines->capabilitiesForAccount($user),
+            $this->engines->resolveAccountCapabilities($user),
             $this->presence->hasPersistentRecommendationWorker(),
         ));
     }

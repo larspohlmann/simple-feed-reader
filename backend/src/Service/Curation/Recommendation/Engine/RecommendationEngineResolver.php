@@ -24,24 +24,24 @@ final readonly class RecommendationEngineResolver
     ) {
     }
 
-    public function kindFor(AiProviderSettings $connection): RecommendationEngineKind
+    public function readKind(AiProviderSettings $connection): RecommendationEngineKind
     {
         return $connection->getModelKind();
     }
 
-    public function capabilitiesFor(AiProviderSettings $connection): RecommendationEngineCapabilitiesModel
+    public function buildCapabilities(AiProviderSettings $connection): RecommendationEngineCapabilitiesModel
     {
-        return RecommendationEngineCapabilitiesModel::fromKind($this->kindFor($connection));
+        return RecommendationEngineCapabilitiesModel::fromKind($this->readKind($connection));
     }
 
     /** An account with no active connection reads as the default kind, as a model-less connection does. */
-    public function capabilitiesForAccount(User $user): RecommendationEngineCapabilitiesModel
+    public function resolveAccountCapabilities(User $user): RecommendationEngineCapabilitiesModel
     {
         $connection = $user->getActiveAiProviderSettings();
 
         return null === $connection
             ? RecommendationEngineCapabilitiesModel::fromKind(self::DEFAULT_KIND)
-            : $this->capabilitiesFor($connection);
+            : $this->buildCapabilities($connection);
     }
 
     public function selectEngine(RecommendationEngineKind $kind): RecommendationEngineInterface

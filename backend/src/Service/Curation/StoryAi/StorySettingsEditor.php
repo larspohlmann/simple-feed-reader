@@ -35,7 +35,7 @@ final readonly class StorySettingsEditor
     public function save(User $user, StorySettingsChangeModel $change): void
     {
         $storedSettings = $this->storySettings->findForUser($user);
-        $writingConnection = $this->connectionFor($user, $storedSettings, $change->writingConnectionId);
+        $writingConnection = $this->requireAllowedConnectionIfSet($user, $storedSettings, $change->writingConnectionId);
 
         if (null === $storedSettings) {
             $storedSettings = new StorySettings($user);
@@ -45,8 +45,11 @@ final readonly class StorySettingsEditor
         $this->entityManager->flush();
     }
 
-    private function connectionFor(User $user, ?StorySettings $storedSettings, ?int $connectionId): ?AiProviderSettings
-    {
+    private function requireAllowedConnectionIfSet(
+        User $user,
+        ?StorySettings $storedSettings,
+        ?int $connectionId,
+    ): ?AiProviderSettings {
         if (null === $connectionId) {
             return null;
         }

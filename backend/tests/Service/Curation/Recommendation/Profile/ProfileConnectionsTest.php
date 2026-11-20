@@ -32,7 +32,7 @@ final class ProfileConnectionsTest extends DbTestCase
     {
         $active = $this->fixtures->seedReadyAiSettingsFor($this->owner, 'qwen3-14b');
 
-        self::assertSame($active, $this->connections()->usableFor($this->owner));
+        self::assertSame($active, $this->connections()->findUsableConnection($this->owner));
     }
 
     public function testAChosenConnectionWinsOverTheActiveOne(): void
@@ -41,7 +41,7 @@ final class ProfileConnectionsTest extends DbTestCase
         $chosen = $this->fixtures->seedInactiveAiSettingsFor($this->owner, 'gpt-4o');
         $this->fixtures->chooseProfileConnection($this->owner, $chosen);
 
-        self::assertSame($chosen, $this->connections()->usableFor($this->owner));
+        self::assertSame($chosen, $this->connections()->findUsableConnection($this->owner));
     }
 
     public function testAChosenConnectionThatCannotBuildAProfileGivesNoneRatherThanTheActiveOne(): void
@@ -52,14 +52,14 @@ final class ProfileConnectionsTest extends DbTestCase
             $this->fixtures->seedInactiveScoringSettings($this->owner),
         );
 
-        self::assertNull($this->connections()->usableFor($this->owner));
+        self::assertNull($this->connections()->findUsableConnection($this->owner));
     }
 
     public function testAnActiveScoringConnectionWithNothingChosenGivesNone(): void
     {
         $this->fixtures->seedReadyScoringSettings($this->owner);
 
-        self::assertNull($this->connections()->usableFor($this->owner));
+        self::assertNull($this->connections()->findUsableConnection($this->owner));
     }
 
     public function testTheCandidatesAreTheConnectionsThatCanBuildAProfile(): void
@@ -71,7 +71,7 @@ final class ProfileConnectionsTest extends DbTestCase
             [$llm->getId()],
             array_map(
                 static fn (AiProviderSettings $connection): ?int => $connection->getId(),
-                $this->connections()->candidatesFor($this->owner),
+                $this->connections()->findCandidates($this->owner),
             ),
         );
     }

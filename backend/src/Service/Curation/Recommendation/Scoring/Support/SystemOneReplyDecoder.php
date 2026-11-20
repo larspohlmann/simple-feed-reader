@@ -23,17 +23,17 @@ final class SystemOneReplyDecoder
 
         return new ScoringReplyModel(
             $body,
-            self::scoresIn($root['answers'] ?? null),
+            self::parseScores($root['answers'] ?? null),
             new ProviderCallReceiptModel(
                 ReplyField::text($requestIdHeader) ?? ReplyField::text($root['id'] ?? null),
                 ReplyField::text($root['model'] ?? null),
-                self::usageIn($root['usage'] ?? null),
+                self::parseUsage($root['usage'] ?? null),
             ),
         );
     }
 
     /** @return array<int, float> each answered question's Noul, by the entry its id names */
-    private static function scoresIn(mixed $answers): array
+    private static function parseScores(mixed $answers): array
     {
         if (!\is_array($answers)) {
             return [];
@@ -52,15 +52,15 @@ final class SystemOneReplyDecoder
     }
 
     /** TypeSafe documents `input_tokens`/`output_tokens`; an OpenAI-style gateway may say prompt/completion. */
-    private static function usageIn(mixed $usage): ?ProviderCallUsageModel
+    private static function parseUsage(mixed $usage): ?ProviderCallUsageModel
     {
         if (!\is_array($usage)) {
             return null;
         }
 
         return new ProviderCallUsageModel(
-            promptTokens: self::countIn($usage, 'input_tokens', 'prompt_tokens'),
-            completionTokens: self::countIn($usage, 'output_tokens', 'completion_tokens'),
+            promptTokens: self::readCount($usage, 'input_tokens', 'prompt_tokens'),
+            completionTokens: self::readCount($usage, 'output_tokens', 'completion_tokens'),
             reasoningTokens: 0,
             cachedTokens: 0,
             costNanoCredits: ReportedCost::parseNanoCredits($usage['cost'] ?? null),
@@ -68,7 +68,7 @@ final class SystemOneReplyDecoder
     }
 
     /** @param array<mixed> $usage */
-    private static function countIn(array $usage, string $documentedKey, string $gatewayKey): int
+    private static function readCount(array $usage, string $documentedKey, string $gatewayKey): int
     {
         return ReplyField::count($usage[$documentedKey] ?? $usage[$gatewayKey] ?? null);
     }

@@ -21,14 +21,14 @@ final readonly class StoryWritingConnections
     ) {
     }
 
-    public function usableFor(User $user): ?AiProviderSettings
+    public function findUsableConnection(User $user): ?AiProviderSettings
     {
-        return $this->usableGiven($user, $this->storySettings->findForUser($user));
+        return $this->findUsableConnectionGiven($user, $this->storySettings->findForUser($user));
     }
 
-    public function usableGiven(User $user, ?StorySettings $storedSettings): ?AiProviderSettings
+    public function findUsableConnectionGiven(User $user, ?StorySettings $storedSettings): ?AiProviderSettings
     {
-        return $this->connectionPicks->usableGiven(
+        return $this->connectionPicks->findUsableConnectionGiven(
             $user,
             $storedSettings?->getWritingConnection(),
             $this->canWriteText(...),
@@ -41,8 +41,8 @@ final readonly class StoryWritingConnections
     }
 
     /** @return list<AiProviderSettings> */
-    public function candidatesFor(User $user): array
+    public function findCandidates(User $user): array
     {
-        return $this->connectionPicks->candidatesFor($user, $this->canWriteText(...));
+        return $this->connectionPicks->findCandidates($user, $this->canWriteText(...));
     }
 }

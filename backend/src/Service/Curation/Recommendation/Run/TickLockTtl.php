@@ -26,17 +26,17 @@ final readonly class TickLockTtl
     ) {
     }
 
-    public function secondsFor(User $user): float
+    public function computeSeconds(User $user): float
     {
-        return $this->secondsForConnection($user->getActiveAiProviderSettings());
+        return $this->computeSecondsForConnection($user->getActiveAiProviderSettings());
     }
 
     /** No connection gets the standard bound: a tick that only fails its run still holds the lock briefly. */
-    public function secondsForConnection(?AiProviderSettings $connection): float
+    public function computeSecondsForConnection(?AiProviderSettings $connection): float
     {
         $timeouts = null === $connection
             ? ProviderTimeoutsModel::standard()
-            : $this->connectionFactory->timeoutsFor($connection);
+            : $this->connectionFactory->buildTimeouts($connection);
 
         return $timeouts->firstByteSeconds + self::MARGIN_SECONDS;
     }

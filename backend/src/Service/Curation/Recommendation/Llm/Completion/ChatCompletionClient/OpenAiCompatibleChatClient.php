@@ -96,7 +96,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
         [$context, $outcomes] = $this->fireRequests($connection, $calls);
 
         $responses = $this->httpClient->stream(
-            $this->responsesIn($context),
+            $this->collectResponses($context),
             $connection->timeouts->firstByteSeconds,
         );
         foreach ($responses as $response => $chunk) {
@@ -164,7 +164,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
      *
      * @return list<ResponseInterface>
      */
-    private function responsesIn(\SplObjectStorage $context): array
+    private function collectResponses(\SplObjectStorage $context): array
     {
         return iterator_to_array($context, false);
     }
@@ -320,7 +320,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
         }
 
         if (\in_array($status, self::RETRYABLE_STATUSES, true)) {
-            throw new RetryableProviderException($status, RetryAfter::secondsIn($response));
+            throw new RetryableProviderException($status, RetryAfter::parseSeconds($response));
         }
 
         if ($status >= Response::HTTP_MULTIPLE_CHOICES) {

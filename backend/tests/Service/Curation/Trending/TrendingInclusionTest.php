@@ -56,7 +56,7 @@ final class TrendingInclusionTest extends DbTestCase
         $this->fixtures->flush();
 
         self::assertSame([3], self::outletCountsOf($this->rankedDay()));
-        self::assertSame(1, $this->stories()->unopenedFor($this->reader, TrendingWindow::Day)->unopened);
+        self::assertSame(1, $this->stories()->tallyUnopened($this->reader, TrendingWindow::Day)->unopened);
     }
 
     public function testASwitchedOutFeedIsNotBuilt(): void

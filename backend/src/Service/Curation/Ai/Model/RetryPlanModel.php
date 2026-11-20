@@ -47,7 +47,7 @@ final readonly class RetryPlanModel
         return self::BLOCKING_BUDGET_SECONDS;
     }
 
-    public function waitSecondsFor(int $retryIndex, ?int $retryAfterSeconds): float
+    public function resolveWaitSeconds(int $retryIndex, ?int $retryAfterSeconds): float
     {
         if (null !== $retryAfterSeconds) {
             return (float) $retryAfterSeconds;

@@ -72,7 +72,7 @@ final readonly class TrendingSnapshotBuilder implements SnapshotBuilderInterface
         $entryCount = $run->entryCount();
         $build = new StoryBuildModel($userId, $window, $run->since, $builtAt);
         $activeFeedCount = $this->windowEntries->activeFeedCount($userId, $build->since);
-        $policy = $this->policyFor($window);
+        $policy = $this->selectPolicy($window);
         $stored = $this->history->storedInWindow($build->userId, $build->since);
         $match = $policy->match($run, $groups, $stored);
         unset($run, $stored);
@@ -126,7 +126,7 @@ final readonly class TrendingSnapshotBuilder implements SnapshotBuilderInterface
         return $policy->prune($build);
     }
 
-    private function policyFor(TrendingWindow $window): StoryBuildPolicyInterface
+    private function selectPolicy(TrendingWindow $window): StoryBuildPolicyInterface
     {
         try {
             $policy = $this->policies->get($window->value);

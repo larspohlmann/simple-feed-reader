@@ -14,7 +14,7 @@ final readonly class LanguageCoverageModel
     {
     }
 
-    public function entriesIn(FeedLanguage $language): int
+    public function readEntryCount(FeedLanguage $language): int
     {
         return $this->entriesByLanguage[$language->value] ?? 0;
     }

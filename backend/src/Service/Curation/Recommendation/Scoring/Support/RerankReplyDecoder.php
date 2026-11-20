@@ -21,11 +21,11 @@ final class RerankReplyDecoder
 
         return new ScoringReplyModel(
             $body,
-            self::scoresIn($root['results'] ?? null, $entryIds),
+            self::parseScores($root['results'] ?? null, $entryIds),
             new ProviderCallReceiptModel(
                 ReplyField::text($root['id'] ?? null),
                 ReplyField::text($root['model'] ?? null),
-                self::usageIn($root['usage'] ?? null),
+                self::parseUsage($root['usage'] ?? null),
             ),
         );
     }
@@ -35,7 +35,7 @@ final class RerankReplyDecoder
      *
      * @return array<int, float> by entry id; none at all when an entry is answered twice
      */
-    private static function scoresIn(mixed $results, array $entryIds): array
+    private static function parseScores(mixed $results, array $entryIds): array
     {
         if (!\is_array($results) || !array_is_list($results)) {
             return [];
@@ -71,7 +71,7 @@ final class RerankReplyDecoder
         return \is_float($relevance) || \is_int($relevance) ? $relevance : null;
     }
 
-    private static function usageIn(mixed $usage): ?ProviderCallUsageModel
+    private static function parseUsage(mixed $usage): ?ProviderCallUsageModel
     {
         if (!\is_array($usage)) {
             return null;
