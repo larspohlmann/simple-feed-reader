@@ -52,12 +52,13 @@ Paths are under `backend/src/Service/`. The last column is what the reviewer che
 | `Identity/OAuth/OAuthStateStore.php` | `challengeFor` | `computeChallenge` | The PKCE S256 challenge: base64url of the verifier's SHA-256 |
 | `Identity/Passkey/PasskeyChallengeStore.php` | `keyFor` | `buildKey` | Cache key: prefix plus the handle's SHA-256 |
 | `Identity/Passkey/AssertionVerifier.php` | `credentialRecordFor` | `buildCredentialRecord` | Assembles the library's `CredentialRecord` from a stored passkey |
-| `Identity/Passkey/AssertionVerifier.php` | `aaguidOrNil` | `fromStoredAaguid` | A stored null becomes the all-zero AAGUID, a stored string its `Uuid` |
-| `Identity/Passkey/Factory/UserPasskeyFactory.php` | `aaguidOrNull` | `toStoredAaguid` | The all-zero AAGUID becomes null, any other its RFC 4122 string |
+| `Identity/Passkey/AssertionVerifier.php` | `aaguidOrNil` | `deserializeAaguid` | The inverse of `serializeAaguid`: a stored null becomes the all-zero AAGUID, a stored string its `Uuid` |
+| `Identity/Passkey/Factory/UserPasskeyFactory.php` | `aaguidOrNull` | `serializeAaguid` | The all-zero AAGUID becomes null, any other its RFC 4122 string |
 | `Identity/Passkey/Factory/AssertionOptionsFactory.php` | `optionsFor` | `buildOptions` | Assembles the request options for a login ceremony |
 | `Identity/Passkey/Factory/RegistrationOptionsFactory.php` | `optionsFor` | `buildOptions` | Assembles the creation options for a registration ceremony |
 | `Identity/Passkey/Factory/RegistrationOptionsFactory.php` | `userEntityFor` | `buildUserEntity` | Assembles the library's user entity from a user and a handle |
 | `Identity/Passkey/PasskeyCredentials.php` | `userHandleFor` | `resolveUserHandle` | The handle the user's credentials already share, else a freshly minted one |
+| `Identity/Passkey/PasskeyCredentials.php` | `excludeListFor` | `loadExcludeList` | Queries the user's stored passkeys and builds a credential descriptor for each |
 
 ### Sourcing
 
@@ -65,7 +66,7 @@ Paths are under `backend/src/Service/`. The last column is what the reviewer che
 |---|---|---|---|
 | `Sourcing/Discovery/AccountOnlyFeed/AccountOnlyFeedInterface.php` and every implementation | `candidateFor` | `findCandidate` | The feed candidate this source offers for a URL, null when the URL is not its own |
 | `Sourcing/Discovery/Pass/LinkLabels.php` | `nameFor` | `resolveName` | The link's own label, or the page name when that label is generic |
-| `Sourcing/Discovery/WellKnownFeedProbe.php` | `feedsAmong` | `fetchFeeds` | Fetches every candidate URL and returns those that served a feed, keyed by rank |
+| `Sourcing/Discovery/WellKnownFeedProbe.php` | `feedsAmong` | `findFeeds` | Asks every candidate URL and returns those that answered with a parseable feed, keyed by rank; failures are skipped |
 | `Sourcing/FeedDirectory/FeedDirectoryFiles.php` | `countryCodesIn` | `collectCountryCodes` | Gathers the string `code` of each country entry of the index |
 | `Sourcing/FeedDirectory/FeedDirectoryFiles.php` | `languageCodesIn` | `collectLanguageCodes` | Gathers the string keys of the index's languages |
 | `Sourcing/FeedDirectory/FeedDirectoryFiles.php` | `entriesAt` | `readEntries` | The array under a key of the index, `[]` when absent or no array |
@@ -74,11 +75,12 @@ Paths are under `backend/src/Service/`. The last column is what the reviewer che
 
 | File | Old | New | What it does |
 |---|---|---|---|
-| `Outbound/Fetch/FaviconResolver/FaviconResolver.php` | `iconOrNull` | `tryParseIcon` | Parses the icon out of a fetch outcome; logs and answers null when parsing throws |
+| `Outbound/Fetch/FaviconResolver/FaviconResolver.php` | `iconOrNull` | `tryFindIcon` | Finds the icon in a fetch outcome via `iconFrom`; logs and answers null when that throws |
+| `Outbound/Fetch/ConcurrentRequestEngine.php` | `exchangeFor` (private) | `selectExchange` | Picks the response exchange registered for the attempt's exchange kind; throws `FeedUnreachableException` when none is |
 | `Outbound/Fetch/FetchRetryPolicy.php` | `directFallbackFor` | `findDirectFallback` | The same attempt without its proxy when the proxy allows a direct fallback, else null |
 | `Outbound/Fetch/GuardedApiClient.php` | `optionsFor` | `buildOptions` | Assembles the HTTP client options for a request and its budget |
 | `Outbound/Fetch/Model/RequestSlot/RequestSlotModelInterface.php` and every implementation | `keyFor` | `buildKey` | The slot key a URL falls under |
-| `Outbound/Fetch/Pass/RequestSlots.php` | `inFlightIn` | `countInFlight` | How many requests are in flight in a slot, 0 when none |
+| `Outbound/Fetch/Pass/RequestSlots.php` | `inFlightIn` | `readInFlight` | How many requests are in flight in a slot, read from the in-memory map; 0 when none |
 | `Outbound/Fetch/Support/EgressOptions.php` | `arrayAt` | `readArray` | The array under an option key, `[]` when absent or no array |
 | `Outbound/Fetch/Support/HostKey.php` | `forUrlOrNull` | `tryForUrl` | The host key of a URL (lower case, no `www.`), null when the URL has no host |
 | `Outbound/Fetch/Support/ProxyHandshakeFailure.php` | `reasonFor` | `parseReason` | Reads the failure reason out of a transport message; null when the message is not a proxy handshake failure |
@@ -99,7 +101,7 @@ Paths are under `backend/src/Service/`. The last column is what the reviewer che
 | `Operations/Grafana/Model/GrafanaSettingsSnapshotModel.php` | `connectionFromArrayOrNull` | `parseConnection` | Reads the connection out of a stored array; null when a field has the wrong type |
 | `Operations/Grafana/Model/GrafanaSettingsSnapshotModel.php` | `sealedTokenFromArrayOrNull` | `parseSealedToken` | Reads the sealed token out of a stored array; null when a field is missing or mistyped |
 | `Operations/Logging/Factory/HostLogFileHandlerFactory.php` | `logFileFor` | `buildLogFilePath` | The log file path for an environment, with the host name when there is one |
-| `Operations/Logging/Loki/LokiSpoolShipper.php` | `linesIn` | `readLines` | Reads and decodes a spool file; throws `CorruptSpoolFileException` when unreadable or no list |
+| `Operations/Logging/Loki/LokiSpoolShipper.php` | `linesIn` | `loadLines` | Reads and decodes a spool file; throws `CorruptSpoolFileException` when unreadable or no list |
 | `Operations/SelfUpdate/UpdateStateStore/UpdateStateStoreInterface.php` and every implementation | `heartbeatAt` | `findHeartbeat` | When the updater last reported, null when no usable heartbeat is stored |
 
 ## Review Focus
