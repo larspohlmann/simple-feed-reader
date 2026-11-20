@@ -41,13 +41,13 @@ final readonly class LemmyThread
             $unique,
             static fn (JsonNodeModel $node): bool => !isset($unique[self::extractParentId($node)]),
         );
-        $roots = $this->arranged(array_values($topLevel), $repliesByParent, self::mostInterestingFirst(...));
+        $roots = $this->arranged($topLevel, $repliesByParent, self::mostInterestingFirst(...));
 
         return $this->flattened($roots, $repliesByParent, 0);
     }
 
     /**
-     * @param list<JsonNodeModel>                                                      $nodes
+     * @param array<JsonNodeModel>                                                      $nodes
      * @param array<string, list<JsonNodeModel>>                                       $repliesByParent
      * @param \Closure(array{JsonNodeModel, EntryCommentModel}, array{JsonNodeModel, EntryCommentModel}): int $order
      *
@@ -62,7 +62,7 @@ final readonly class LemmyThread
     }
 
     /**
-     * @param list<JsonNodeModel>                $nodes
+     * @param array<JsonNodeModel>               $nodes
      * @param array<string, list<JsonNodeModel>> $repliesByParent
      *
      * @return list<array{JsonNodeModel, EntryCommentModel}> each hidden comment replaced by the replies it leaves

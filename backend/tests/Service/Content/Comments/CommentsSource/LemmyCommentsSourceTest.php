@@ -37,6 +37,8 @@ final class LemmyCommentsSourceTest extends KernelTestCase
 {
     use BuildsCommentsSources;
 
+    private const array ZERO_COUNTS = ['counts' => ['score' => 0, 'child_count' => 0]];
+
     private const string FIXTURE = __DIR__ . '/../../../../Fixtures/lemmy/comment-list.json';
     private const string POST = 'https://lemmy.world/post/54385737';
     private const string COMMENTS_API =
@@ -274,8 +276,8 @@ final class LemmyCommentsSourceTest extends KernelTestCase
     public function testATopLevelCommentsInterestIsItsScorePlusThreeTimesItsReplies(): void
     {
         $answer = (string) json_encode(['comments' => [
-            self::node(5, '0.5') + ['counts' => ['score' => 10, 'child_count' => 0]],
-            self::node(6, '0.6') + ['counts' => ['score' => 1, 'child_count' => 2]],
+            self::node(5, '0.5') + ['counts' => ['score' => 11, 'child_count' => 0]],
+            self::node(6, '0.6') + ['counts' => ['score' => 1, 'child_count' => 3]],
             self::node(7, '0.7') + ['counts' => ['score' => -2, 'child_count' => 5]],
         ]]);
 
@@ -286,6 +288,34 @@ final class LemmyCommentsSourceTest extends KernelTestCase
                 ['https://lemmy.world/comment/6', 0],
             ],
             self::urlsAndDepths($this->read($answer)),
+        );
+    }
+
+    /** @return iterable<string, array{array<string, int>, string, list<int>}> */
+    public static function missingCounts(): iterable
+    {
+        yield 'no counts, newest' => [[], '2026-11-14T07:00:00Z', [7, 5, 6]];
+        yield 'no counts, oldest' => [[], '2026-11-14T05:00:00Z', [5, 6, 7]];
+        yield 'no reply count, newest' => [['score' => 0], '2026-11-14T07:00:00Z', [7, 5, 6]];
+        yield 'no reply count, oldest' => [['score' => 0], '2026-11-14T05:00:00Z', [5, 6, 7]];
+    }
+
+    /**
+     * @param array<string, int> $counts
+     * @param list<int>          $expectedIds
+     */
+    #[DataProvider('missingCounts')]
+    public function testAMissingCountWeighsAsZero(array $counts, string $published, array $expectedIds): void
+    {
+        $answer = (string) json_encode(['comments' => [
+            self::node(5, '0.5', ['published' => '2026-11-14T06:30:00Z']) + self::ZERO_COUNTS,
+            self::node(6, '0.6', ['published' => '2026-11-14T06:00:00Z']) + self::ZERO_COUNTS,
+            self::node(7, '0.7', ['published' => $published]) + ['counts' => $counts],
+        ]]);
+
+        self::assertSame(
+            array_map(static fn (int $id): string => 'https://lemmy.world/comment/' . $id, $expectedIds),
+            array_map(static fn (EntryCommentModel $comment): ?string => $comment->url, $this->read($answer)),
         );
     }
 
