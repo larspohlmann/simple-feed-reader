@@ -66,7 +66,7 @@ final readonly class FirstFetchRecorder
         // Index and inherit after the flush: an entry has no id before it.
         $this->indexer->index($createdEntries);
 
-        return \count($createdEntries) - $this->copyReadStates->inherit($createdEntries);
+        return \count($createdEntries) - $this->copyReadStates->inheritRead($createdEntries);
     }
 
     /**

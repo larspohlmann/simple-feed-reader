@@ -228,7 +228,7 @@ final class EntryReadMarkRepositoryTest extends DbTestCase
         self::assertNull($this->findState($second));
     }
 
-    public function testAnAddressReachesOnlyTheItemlessEntriesAtIt(): void
+    public function testAnAddressReachesEveryEntryAtItLinkedOrNot(): void
     {
         $source = $this->persistArticle($this->swept, 'source', 'shared-hash');
         $copy = $this->persistArticle($this->other, 'copy', 'shared-hash');
@@ -245,7 +245,7 @@ final class EntryReadMarkRepositoryTest extends DbTestCase
 
         self::assertTrue($this->findState($copy)?->isHidden());
         self::assertNull($this->findState($stranger));
-        self::assertNull($this->findState($linked));
+        self::assertTrue($this->findState($linked)?->isHidden());
     }
 
     public function testAnArrivingCopyIsReadOnlyForTheSubscriberWhoseOwnWatermarkCoversTheOtherCopy(): void

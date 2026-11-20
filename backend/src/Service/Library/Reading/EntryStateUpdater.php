@@ -12,7 +12,10 @@ use App\Service\Library\Reading\Model\UpdatedEntryStateModel;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
-/** isHidden and isViewed reach every copy of the entry, so a collapse-hidden copy cannot resurface as unread. */
+/**
+ * isHidden and isViewed reach the entry's copies, its item's entries or, for an article, every entry at its address,
+ * so a collapse-hidden copy does not resurface as unread.
+ */
 final readonly class EntryStateUpdater
 {
     public function __construct(

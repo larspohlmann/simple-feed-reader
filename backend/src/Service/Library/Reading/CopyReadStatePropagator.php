@@ -18,8 +18,6 @@ use Psr\Clock\ClockInterface;
  */
 final readonly class CopyReadStatePropagator
 {
-    private const int BATCH = 500;
-
     public function __construct(
         private EntryReadMarkRepository $readMarks,
         private ClockInterface $clock,
@@ -38,13 +36,14 @@ final readonly class CopyReadStatePropagator
         }
     }
 
-    /** @param list<int> $entryIds */
+    /** @param list<int> $entryIds one batch */
     public function spreadRead(int $userId, array $entryIds): void
     {
-        $marking = new ReadMarking($userId, $this->clock->now());
-        foreach (array_chunk($entryIds, self::BATCH) as $chunk) {
-            $this->readMarks->spreadToItemCopies(CopyReadChange::Read, $marking, $chunk);
-        }
+        $this->readMarks->spreadToItemCopies(
+            CopyReadChange::Read,
+            new ReadMarking($userId, $this->clock->now()),
+            $entryIds,
+        );
     }
 
     /** @param list<int> $feedIds */
@@ -58,7 +57,7 @@ final readonly class CopyReadStatePropagator
      *
      * @return int the read states inherited
      */
-    public function inherit(array $created): int
+    public function inheritRead(array $created): int
     {
         $linkedIds = [];
         foreach ($created as $entry) {

@@ -62,7 +62,7 @@ final readonly class IncomingPageStore
         $this->entityManager->flush();
         // Only the flush assigns ids, so indexing and inheriting have to follow it.
         $this->indexer->index($createdEntries);
-        $this->copyReadStates->inherit($createdEntries);
+        $this->copyReadStates->inheritRead($createdEntries);
         $this->shareEnrichment->enrich($feed);
 
         return FeedRefreshResultModel::fetched(\count($createdEntries));

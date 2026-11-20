@@ -71,8 +71,8 @@ final readonly class EntryReadMarkRepository
     }
 
     /**
-     * Writes $change onto the caller's subscribed copies of $entryIds at the same address, where neither copy
-     * belongs to a canonical item; the entries themselves left out.
+     * Writes $change onto the caller's subscribed entries at the same address as $entryIds, linked to an item or
+     * not; the entries themselves left out.
      *
      * @param list<int> $entryIds
      */

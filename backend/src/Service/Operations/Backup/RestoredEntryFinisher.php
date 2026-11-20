@@ -49,8 +49,7 @@ final readonly class RestoredEntryFinisher
                     $created[] = $entry;
                 }
             }
-            $this->linkToItems($created);
-            $this->copyReadStates->inherit($created);
+            $this->linkToItemsAndInheritRead($created);
             $this->indexer->index($created);
             $batchSize = \count($batch);
             $this->entityManager->clear();
@@ -58,11 +57,12 @@ final readonly class RestoredEntryFinisher
     }
 
     /** @param list<Entry> $created */
-    private function linkToItems(array $created): void
+    private function linkToItemsAndInheritRead(array $created): void
     {
         try {
             $this->linker->linkClaimed($created);
             $this->entityManager->flush();
+            $this->copyReadStates->inheritRead($created);
         } catch (DbalException $exception) {
             throw BackupLoadFailedException::duringEntries($exception);
         }
