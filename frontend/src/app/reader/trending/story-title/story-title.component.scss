@@ -1,16 +1,15 @@
-@use '../../../theme/glass-rim';
+@use '../story-card';
 
 /* `.tucked` is set by a parent whose card follows: the card's top edge covers the
    title's square bottom, so the two read as stacked cards. The airy magazine draws no card. */
 :host {
   --story-title-tuck: var(--space-3);
 
-  @include glass-rim.filled(var(--surface-sunken));
+  @include story-card.card;
 
   display: block;
   min-width: 0;
   margin-bottom: var(--space-2);
-  border-radius: var(--radius-lg);
 }
 
 :host(.tucked:not(.airy *)) {
@@ -21,11 +20,9 @@
 }
 
 .story-link {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  min-width: 0;
-  padding: var(--space-2) var(--space-3);
+  @include story-card.card-padding;
+
+  display: block;
   border-radius: inherit;
   color: inherit;
   text-decoration: none;
@@ -34,35 +31,4 @@
 /* Inside the link: the card tucked under the title covers its bottom edge. */
 .story-link:focus-visible {
   outline-offset: -2px;
-}
-
-.icon {
-  flex: none;
-  color: var(--accent);
-}
-
-.text {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
-}
-
-.title,
-.synopsis {
-  margin: 0;
-  font-size: var(--fs-base);
-  line-height: var(--lh-tight);
-  overflow-wrap: break-word;
-}
-
-.title {
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.synopsis {
-  font-weight: 400;
-  color: var(--text-secondary);
 }

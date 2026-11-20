@@ -1,3 +1,5 @@
+@use '../../trending/story-card';
+
 /* Opaque, as the article's sliding frame is: a back-swipe moves it aside to show the pinned list beneath. */
 :host {
   display: block;
@@ -7,10 +9,9 @@
   padding-top: var(--page-lead, 0);
 }
 
-.story-synopsis {
-  margin: 0;
-  padding: var(--row-pad-comfy-y) var(--row-pad-comfy-x);
-  font-size: var(--fs-sm);
-  line-height: var(--lh-normal);
-  color: var(--text-secondary);
+.story-headline {
+  @include story-card.card;
+  @include story-card.card-padding;
+
+  margin: var(--list-card-inset, 0);
 }

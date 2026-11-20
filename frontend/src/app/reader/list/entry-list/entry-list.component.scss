@@ -104,9 +104,15 @@ app-progress-rail {
   overflow: hidden;
 }
 
-/* A list row draws no card to tuck under, so its story title stands alone, inset to the row's text. */
+/* A list row draws no card to tuck under, so a story card stands alone, inset to the row's text: its
+   story title here, and a top block's card that takes `--list-card-inset`. A magazine column sets none. */
+.rows:not(.magazine),
+.empty-wrap:not(.magazine) {
+  --list-card-inset: var(--row-pad-comfy-y) var(--row-pad-comfy-x) 0;
+}
+
 app-story-title {
-  margin: var(--row-pad-comfy-y) var(--row-pad-comfy-x) 0;
+  margin: var(--list-card-inset);
 }
 
 .row-slot.leaving {
