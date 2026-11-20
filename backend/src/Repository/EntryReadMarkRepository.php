@@ -86,14 +86,14 @@ final readonly class EntryReadMarkRepository
     }
 
     /**
-     * The copies a sweep of $feedIds up to $until must still reach: the caller's unread subscribed entries outside
-     * those feeds whose canonical item has an entry inside them dated no later than $until.
+     * The copies a sweep of $feedIds up to $until must still reach: the caller's unread subscribed entries, in those
+     * feeds or not, whose canonical item has an entry in them dated no later than $until.
      *
      * @param list<int> $feedIds
      *
      * @return list<int>
      */
-    public function findUnreadCopyIdsOutsideFeeds(int $userId, array $feedIds, \DateTimeImmutable $until): array
+    public function findUnreadCopyIdsForSweep(int $userId, array $feedIds, \DateTimeImmutable $until): array
     {
         if ($feedIds === []) {
             return [];
@@ -108,7 +108,6 @@ final readonly class EntryReadMarkRepository
             ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
             ->andWhere('swept.feed IN (:feeds)')
             ->andWhere('swept.dates.effectiveDate <= :until')
-            ->andWhere('e.feed NOT IN (:feeds)')
             ->andWhere(UnreadDql::predicate())
             ->setParameter('user', $userId)
             ->setParameter('feeds', $feedIds)

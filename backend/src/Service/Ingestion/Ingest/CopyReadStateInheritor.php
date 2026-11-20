@@ -17,8 +17,12 @@ final readonly class CopyReadStateInheritor
     ) {
     }
 
-    /** @param list<Entry> $created flushed, so each has its id */
-    public function inherit(array $created): void
+    /**
+     * @param list<Entry> $created flushed, so each has its id
+     *
+     * @return int the read states inherited
+     */
+    public function inherit(array $created): int
     {
         $linkedIds = [];
         foreach ($created as $entry) {
@@ -26,6 +30,7 @@ final readonly class CopyReadStateInheritor
                 $linkedIds[] = $entry->requireId();
             }
         }
-        $this->states->ensureReadWhereAnotherCopyIsRead($linkedIds, $this->clock->now());
+
+        return $this->states->ensureReadWhereAnotherCopyIsRead($linkedIds, $this->clock->now());
     }
 }

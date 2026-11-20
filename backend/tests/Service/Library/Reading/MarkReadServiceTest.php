@@ -442,6 +442,33 @@ final class MarkReadServiceTest extends DbTestCase
         self::assertTrue($this->findState($user, $copies->allCopy)?->isHidden());
     }
 
+    public function testTagSweepMarksACopyInASweptFeedDatedAfterUntil(): void
+    {
+        $user = $this->persistReader();
+        $subscriptions = new NetworkFeedSubscriptions($this->entityManager);
+        $local = $subscriptions->subscribe($user, LemmyPostCopies::LOCAL_FEED);
+        $all = $subscriptions->subscribe($user, LemmyPostCopies::ALL_FEED);
+        $tag = new Tag($user, 'lemmy');
+        $this->entityManager->persist($tag);
+        $local->addTag($tag);
+        $all->addTag($tag);
+        LemmyPostCopies::persistCopy($this->entityManager, $local->getFeed(), 'local-copy');
+        $lateCopy = LemmyPostCopies::persistCopy(
+            $this->entityManager,
+            $all->getFeed(),
+            'all-copy',
+            '2026-11-20T00:00:00Z',
+        );
+
+        $this->service()->mark(
+            $user,
+            ReadScopeModel::tag($tag->requireId()),
+            new \DateTimeImmutable('2026-11-15T00:00:00Z'),
+        );
+
+        self::assertTrue($this->findState($user, $lateCopy)?->isHidden());
+    }
+
     public function testAllSweepLeavesNoCopyUnreadInAFeedOutsideAllItems(): void
     {
         $user = $this->persistReader();

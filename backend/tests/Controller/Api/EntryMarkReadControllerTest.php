@@ -10,9 +10,11 @@ use App\Entity\EntryState;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
+use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
 use App\Repository\EntryStateRepository;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\LemmyPostCopies;
 use App\Tests\Support\SeedsFeedEntries;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -241,6 +243,26 @@ final class EntryMarkReadControllerTest extends ApiTestCase
 
         $this->postMarkReadBatch($client, [], [1]);
         self::assertResponseStatusCodeSame(401);
+    }
+
+    public function testMarkReadBatchMarksTheCopyInTheOtherFeed(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->bearerAndUser('e-markbatch-copy@example.com');
+        $copies = LemmyPostCopies::persistPair($this->entityManager(), $user);
+
+        $this->postMarkReadBatch($client, $headers, [$copies->localCopy->requireId()]);
+
+        self::assertResponseStatusCodeSame(204);
+        self::assertTrue($this->findState($user, $copies->allCopy)?->isHidden());
+    }
+
+    private function findState(User $user, Entry $entry): ?EntryState
+    {
+        $states = self::getContainer()->get(EntryStateRepository::class);
+        self::assertInstanceOf(EntryStateRepository::class, $states);
+
+        return $states->findOneForUserEntry($user->requireId(), $entry->requireId());
     }
 
     /**

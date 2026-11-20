@@ -6,6 +6,7 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\Discussion;
 use App\Entity\Entry;
+use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Entity\ImageRendition;
@@ -20,8 +21,10 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\CommentsLoad;
 use App\Enum\RecommendationEngineKind;
+use App\Repository\EntryStateRepository;
 use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\LemmyPostCopies;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\SeedsFeedEntries;
 use App\Tests\Support\SharedLinks;
@@ -1397,5 +1400,31 @@ final class EntryControllerTest extends ApiTestCase
         $client->request('GET', '/api/entries/99999999', server: $headers);
 
         self::assertResponseStatusCodeSame(404);
+    }
+
+    public function testMarkingACopyUnreadMarksItsCopyUnread(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->bearerAndUser('e-copy-unread@example.com');
+        $copies = LemmyPostCopies::persistPair($this->entityManager(), $user);
+        $id = $copies->localCopy->requireId();
+        foreach ([true, false] as $isHidden) {
+            $client->request(
+                'PATCH',
+                "/api/entries/$id/state",
+                server: $headers + ['CONTENT_TYPE' => 'application/json'],
+                content: json_encode(['isHidden' => $isHidden], \JSON_THROW_ON_ERROR),
+            );
+            self::assertResponseIsSuccessful();
+            self::assertSame($isHidden, $this->findState($user, $copies->allCopy)?->isHidden());
+        }
+    }
+
+    private function findState(User $user, Entry $entry): ?EntryState
+    {
+        $states = self::getContainer()->get(EntryStateRepository::class);
+        self::assertInstanceOf(EntryStateRepository::class, $states);
+
+        return $states->findOneForUserEntry($user->requireId(), $entry->requireId());
     }
 }

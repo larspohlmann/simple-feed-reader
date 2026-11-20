@@ -40,6 +40,7 @@ use App\Service\Sourcing\Discovery\Model\ScrapeFallback;
 use App\Service\Sourcing\Discovery\ScrapeFallbackPolicy;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\CopyReadStateInheritors;
 use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\EntryIngestors;
 use App\Tests\Support\FeedSchedulers;
@@ -122,6 +123,7 @@ final class SubscriptionServiceTest extends DbTestCase
                 $clock,
                 EntryIndexers::with(new RecordingSearchIndexWriter()),
                 PostEnrichers::queue($this->entityManager, $clock),
+                CopyReadStateInheritors::build($this->entityManager, $clock),
             ),
             new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->entityManager)),
             $this->savedPostRescue(),

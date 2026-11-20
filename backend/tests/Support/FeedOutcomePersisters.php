@@ -4,11 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Entity\EntryState;
 use App\Entity\Feed;
-use App\Repository\EntryStateRepository;
 use App\Repository\FeedRepository;
-use App\Service\Ingestion\Ingest\CopyReadStateInheritor;
 use App\Service\Ingestion\Ingest\PlatformEntryRules;
 use App\Service\Ingestion\Refresh\FeedBodyParser;
 use App\Service\Ingestion\Refresh\FeedOutcomePersister;
@@ -141,18 +138,10 @@ final class FeedOutcomePersisters
                 PostEnrichers::queue($this->entityManager, $this->clock),
                 $this->timelineSelfThreads,
                 $this->tombstones,
-                new CopyReadStateInheritor($this->entryStates(), $this->clock),
+                CopyReadStateInheritors::build($this->entityManager, $this->clock),
             ),
             $shareEnrichment,
             $this->logger,
         );
-    }
-
-    private function entryStates(): EntryStateRepository
-    {
-        /** @var EntryStateRepository $states */
-        $states = $this->entityManager->getRepository(EntryState::class);
-
-        return $states;
     }
 }

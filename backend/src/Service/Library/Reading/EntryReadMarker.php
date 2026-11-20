@@ -47,7 +47,7 @@ final readonly class EntryReadMarker
         $this->entityManager->wrapInTransaction(function () use ($userId, $feedIds, $until): void {
             $this->readMarks->hideUnreadInFeedsUntil(new ReadMarking($userId, $this->clock->now()), $feedIds, $until);
         });
-        $this->markIdsRead($userId, $this->readMarks->findUnreadCopyIdsOutsideFeeds($userId, $feedIds, $until));
+        $this->markIdsRead($userId, $this->readMarks->findUnreadCopyIdsForSweep($userId, $feedIds, $until));
     }
 
     /**

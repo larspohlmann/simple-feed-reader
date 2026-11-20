@@ -74,15 +74,18 @@ final class EntryStateRepository extends ServiceEntityRepository implements Rest
      * hidden state or a watermark, gets a hidden (not viewed) state on the entry.
      *
      * @param list<int> $entryIds
+     *
+     * @return int the states inserted
      */
-    public function ensureReadWhereAnotherCopyIsRead(array $entryIds, \DateTimeImmutable $hiddenAt): void
+    public function ensureReadWhereAnotherCopyIsRead(array $entryIds, \DateTimeImmutable $hiddenAt): int
     {
         if ($entryIds === []) {
-            return;
+            return 0;
         }
 
         $connection = $this->getEntityManager()->getConnection();
-        $connection->executeStatement(
+
+        return (int) $connection->executeStatement(
             sprintf(
                 'INSERT %s INTO entry_state'
                 . ' (user_id, entry_id, is_hidden, hidden_at, is_favorite, is_kept, is_viewed, viewed_at)'
