@@ -13,7 +13,7 @@ final class UnreadDql
 
         return \sprintf(
             '%1$s.isHidden = :notHidden OR (%1$s.isHidden IS NULL AND '
-            . '(%2$s.markedReadUntil IS NULL OR %3$s.effectiveDate > %2$s.markedReadUntil))',
+            . '(%2$s.markedReadUntil IS NULL OR %3$s.dates.effectiveDate > %2$s.markedReadUntil))',
             $alias->state,
             $alias->subscription,
             $alias->entry,

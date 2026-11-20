@@ -32,7 +32,8 @@ final readonly class EntryIngestor
         private IngestedEntryFactory $entryFactory,
         private FeedMetadataRecorder $metadataRecorder,
         private EntryTranscriptWriter $transcriptWriter,
-        private EntryLemmyPostWriter $lemmyPostWriter,
+        private LemmyPostWriter $lemmyPostWriter,
+        private CanonicalItemWriter $canonicalItemWriter,
     ) {
     }
 
@@ -68,6 +69,7 @@ final readonly class EntryIngestor
 
         $this->categoryWriter->attach($newPairs);
         $this->transcriptWriter->attach($newPairs);
+        $this->canonicalItemWriter->attach($newPairs);
         $this->lemmyPostWriter->attach($newPairs);
 
         return $created;

@@ -25,8 +25,6 @@ use App\Service\Operations\Backup\RestoreEntries\RestoreEntriesInterface;
 use App\Service\Operations\Backup\RestoreEntryShares\RestoreEntrySharesInterface;
 use App\Service\Operations\Backup\RestoreEntryStates\RestoreEntryStatesInterface;
 use App\Service\Operations\Backup\RestoreFeeds\RestoreFeedsInterface;
-use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
-use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\EntryUrlHashes;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
@@ -123,7 +121,6 @@ final class RestoreEntryLoaderTest extends TestCase
                 new PreviewLanguage(new LanguageGuess(new LanguageDetectionFactory()->createForFeedLanguages())),
                 new NaiveUtcClock(new MockClock('2026-08-01 00:00:00', 'UTC')),
             ),
-            EntryIndexers::with(new RecordingSearchIndexWriter()),
             new RestoredEntryStateFactory(new MockClock('2026-08-01 00:00:00', 'UTC')),
             new RestoreDestination($this->user(), $this->targets($entries)),
         );

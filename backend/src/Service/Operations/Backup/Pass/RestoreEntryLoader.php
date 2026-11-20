@@ -10,7 +10,6 @@ use App\Entity\LinkCardContent;
 use App\Entity\User;
 use App\Repository\EntryBatchInserter;
 use App\Service\Content\LinkCard\SharedLinkWriter;
-use App\Service\Library\Search\EntryIndexer;
 use App\Service\Operations\Backup\Dto\EntryLine;
 use App\Service\Operations\Backup\Dto\EntryShareLine;
 use App\Service\Operations\Backup\Dto\EntryStateLine;
@@ -61,7 +60,6 @@ final class RestoreEntryLoader
         private readonly RestoreEntrySharesInterface $entryShares,
         private readonly EntryBatchInserter $inserter,
         private readonly SharedLinkWriter $linkWriter,
-        private readonly EntryIndexer $indexer,
         private readonly RestoredEntryStateFactory $stateFactory,
         RestoreDestination $destination,
     ) {
@@ -124,7 +122,12 @@ final class RestoreEntryLoader
         $this->closeBufferedFeed();
         $this->writeHeldStates();
         $this->writeHeldShares();
-        $this->indexCreatedEntries();
+    }
+
+    /** @return list<int> */
+    public function createdEntryIds(): array
+    {
+        return array_keys($this->createdEntryIds);
     }
 
     public function entriesCreated(): int
@@ -304,32 +307,5 @@ final class RestoreEntryLoader
         $this->entityManager->clear();
         $this->user = $this->entityManager->getReference(User::class, $userId)
             ?? throw new \LogicException('A user just referenced by id cannot be re-acquired after clear().');
-    }
-
-    /**
-     * Hands the created entries to the search index in the same keyset batches
-     * app:search:reindex walks in, so a restore of any size costs one batch of
-     * hydrated entities at a time. Nothing created means nothing to walk.
-     */
-    private function indexCreatedEntries(): void
-    {
-        if ([] === $this->createdEntryIds) {
-            return;
-        }
-
-        $lastId = min(array_keys($this->createdEntryIds)) - 1;
-        do {
-            $batch = $this->entries->entriesAfterId($lastId, self::BATCH);
-            $created = [];
-            foreach ($batch as $entry) {
-                $lastId = $entry->requireId();
-                if (isset($this->createdEntryIds[$lastId])) {
-                    $created[] = $entry;
-                }
-            }
-            $this->indexer->index($created);
-            $batchSize = \count($batch);
-            $this->entityManager->clear();
-        } while (self::BATCH === $batchSize);
     }
 }

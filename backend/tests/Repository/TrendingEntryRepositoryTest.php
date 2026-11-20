@@ -23,6 +23,7 @@ use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Service\Curation\Trending\Model\WindowLinkCardModel;
 use App\Service\Foundation\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
+use App\Tests\Support\LemmyPostEntries;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\SharedLinks;
 use App\Tests\Support\TrendingFixtures;
@@ -185,6 +186,25 @@ final class TrendingEntryRepositoryTest extends DbTestCase
         );
 
         self::assertSame(FeedLanguage::French, $rows[0]->language);
+    }
+
+    public function testAWindowEntryCarriesItsCanonicalItem(): void
+    {
+        $fixtures = new TrendingFixtures($this->entityManager);
+        $copy = LemmyPostEntries::buildEntry(
+            $fixtures->feed('lemmy', SocialNetwork::Lemmy),
+            publishedAt: '2031-05-14 09:00:00',
+        );
+        $item = LemmyPostEntries::linkItem($copy);
+        $this->entityManager->persist($item);
+        $this->entityManager->persist($copy);
+        $fixtures->entry($fixtures->feed('plain'), 'No item', '2031-05-14 09:00:00');
+        $fixtures->flush();
+
+        self::assertSame(
+            [$item->getId(), null],
+            array_map(static fn (WindowEntryModel $row): ?int => $row->canonicalItemId, $this->readWindowEntries()),
+        );
     }
 
     public function testAWindowEntryReadsItsOwnLanguageBeforeItsFeeds(): void
@@ -376,15 +396,18 @@ final class TrendingEntryRepositoryTest extends DbTestCase
     /** @return list<int> */
     private function windowEntryIds(): array
     {
-        return array_map(
-            static fn (WindowEntryModel $row): int => $row->id,
-            iterator_to_array(
-                (new TrendingEntryRepository($this->entityManager))->windowEntries(
-                    $this->ownerId(),
-                    new \DateTimeImmutable('2031-05-13 12:00:00', new \DateTimeZone('UTC')),
-                ),
-                false,
+        return array_map(static fn (WindowEntryModel $row): int => $row->id, $this->readWindowEntries());
+    }
+
+    /** @return list<WindowEntryModel> */
+    private function readWindowEntries(): array
+    {
+        return iterator_to_array(
+            (new TrendingEntryRepository($this->entityManager))->windowEntries(
+                $this->ownerId(),
+                new \DateTimeImmutable('2031-05-13 12:00:00', new \DateTimeZone('UTC')),
             ),
+            false,
         );
     }
 

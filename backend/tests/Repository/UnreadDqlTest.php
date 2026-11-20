@@ -14,7 +14,7 @@ final class UnreadDqlTest extends TestCase
     {
         self::assertSame(
             'es.isHidden = :notHidden OR (es.isHidden IS NULL AND '
-            . '(s.markedReadUntil IS NULL OR e.effectiveDate > s.markedReadUntil))',
+            . '(s.markedReadUntil IS NULL OR e.dates.effectiveDate > s.markedReadUntil))',
             UnreadDql::predicate(),
         );
     }
@@ -23,7 +23,7 @@ final class UnreadDqlTest extends TestCase
     {
         self::assertSame(
             'es2.isHidden = :notHidden OR (es2.isHidden IS NULL AND '
-            . '(s2.markedReadUntil IS NULL OR e2.effectiveDate > s2.markedReadUntil))',
+            . '(s2.markedReadUntil IS NULL OR e2.dates.effectiveDate > s2.markedReadUntil))',
             UnreadDql::predicate(EntryAliases::collapse()),
         );
     }

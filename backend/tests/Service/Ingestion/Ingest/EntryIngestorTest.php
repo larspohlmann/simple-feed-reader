@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Ingestion\Ingest;
 
 use App\Entity\Discussion;
+use App\Entity\DiscussionCounts;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Headline;
@@ -288,6 +289,29 @@ final class EntryIngestorTest extends DbTestCase
 
         self::assertSame('https://blog.example/post/feed/', $entry->getDiscussion()->commentsFeedUrl);
         self::assertSame(CommentsLoad::Manual, $entry->getDiscussion()->commentsLoad);
+    }
+
+    public function testArticleGetsNoItem(): void
+    {
+        $entry = $this->ingestOne(
+            $this->parsedEntryAt('g-article', 'https://blog.example/post')
+                ->withDiscussionCounts(DiscussionCounts::fromScoreAndComments(null, 6)),
+        );
+
+        self::assertNull($entry->getCanonicalItem());
+        self::assertSame(6, $entry->selectDiscussionCounts()->getCommentCount());
+    }
+
+    public function testALemmyThreadIsLinkedToItsItemWithItsCounts(): void
+    {
+        $entry = $this->ingestOne(
+            $this->parsedEntryAt('https://lemmy.world/post/7', 'https://lemmy.world/post/7')
+                ->asDiscussionThread(Discussion::platformThread('https://lemmy.world/post/7'))
+                ->withDiscussionCounts(DiscussionCounts::fromScoreAndComments(11, 6)),
+        );
+
+        self::assertSame(11, $entry->getCanonicalItem()?->getScore());
+        self::assertSame(6, $entry->selectDiscussionCounts()->getCommentCount());
     }
 
     public function testAppliesPlatformRulesBeforePersisting(): void

@@ -14,6 +14,7 @@ use App\Repository\EntryListRepository;
 use App\Service\Library\Reading\EntryStateUpdater;
 use App\Service\Library\Reading\Model\EntryStateChangeModel;
 use App\Tests\DbTestCase;
+use App\Tests\Support\LemmyPostCopies;
 use App\Tests\Support\StoredUserSettings;
 
 final class EntryStateUpdaterTest extends DbTestCase
@@ -68,30 +69,30 @@ final class EntryStateUpdaterTest extends DbTestCase
         return new EntryStateChangeModel($isHidden, $isFavorite, $isKept, $isViewed, $isShared);
     }
 
-    /**
-     * The persisted state, or an unpersisted all-false default when no row was
-     * ever created for it — a mirror that only touches isHidden/isViewed
-     * leaves an untouched sibling with no row at all.
-     */
-    private function stateOf(User $user, Entry $entry): EntryState
+    /** The persisted state, or an unpersisted all-false default when no row was ever created for it. */
+    private function readStateOrDefault(User $user, Entry $entry): EntryState
     {
+        $this->entityManager->clear();
+
         return $this->entityManager->getRepository(EntryState::class)
             ->findOneForUserEntry($user->requireId(), $entry->requireId())
             ?? new EntryState($user, $entry);
     }
 
-    private function sharedAtOf(User $user, Entry $entry): ?\DateTimeImmutable
+    private function findSharedAt(User $user, Entry $entry): ?\DateTimeImmutable
     {
         return $this->entityManager->getRepository(EntryShare::class)
             ->findSharedAt($user->requireId(), $entry->requireId());
     }
 
     /**
-     * Null when no row was ever created. stateOf() cannot tell that apart from a row created but never written
-     * to: its unpersisted fallback reads all-false too.
+     * Null when no row was ever created. readStateOrDefault() cannot tell that apart from a row created but never
+     * written to: its unpersisted fallback reads all-false too.
      */
-    private function persistedStateOf(User $user, Entry $entry): ?EntryState
+    private function findPersistedState(User $user, Entry $entry): ?EntryState
     {
+        $this->entityManager->clear();
+
         return $this->entityManager->getRepository(EntryState::class)
             ->findOneForUserEntry($user->requireId(), $entry->requireId());
     }
@@ -119,8 +120,8 @@ final class EntryStateUpdaterTest extends DbTestCase
 
         $this->updater()->apply($user, $row, $this->change(isHidden: true));
 
-        self::assertTrue($this->stateOf($user, $target)->isHidden());
-        self::assertTrue($this->stateOf($user, $sibling)->isHidden());
+        self::assertTrue($this->readStateOrDefault($user, $target)->isHidden());
+        self::assertTrue($this->readStateOrDefault($user, $sibling)->isHidden());
     }
 
     public function testFavoriteDoesNotMirror(): void
@@ -130,9 +131,9 @@ final class EntryStateUpdaterTest extends DbTestCase
 
         $this->updater()->apply($user, $row, $this->change(isFavorite: true));
 
-        self::assertTrue($this->stateOf($user, $target)->isFavorite());
-        self::assertFalse($this->stateOf($user, $sibling)->isFavorite());
-        self::assertNull($this->persistedStateOf($user, $sibling));
+        self::assertTrue($this->readStateOrDefault($user, $target)->isFavorite());
+        self::assertFalse($this->readStateOrDefault($user, $sibling)->isFavorite());
+        self::assertNull($this->findPersistedState($user, $sibling));
     }
 
     public function testKeptDoesNotMirror(): void
@@ -142,9 +143,9 @@ final class EntryStateUpdaterTest extends DbTestCase
 
         $this->updater()->apply($user, $row, $this->change(isKept: true));
 
-        self::assertTrue($this->stateOf($user, $target)->isKept());
-        self::assertFalse($this->stateOf($user, $sibling)->isKept());
-        self::assertNull($this->persistedStateOf($user, $sibling));
+        self::assertTrue($this->readStateOrDefault($user, $target)->isKept());
+        self::assertFalse($this->readStateOrDefault($user, $sibling)->isKept());
+        self::assertNull($this->findPersistedState($user, $sibling));
     }
 
     public function testSharingOneCopyDoesNotMarkTheSibling(): void
@@ -154,8 +155,8 @@ final class EntryStateUpdaterTest extends DbTestCase
 
         $this->updater()->apply($user, $row, $this->change(isShared: true));
 
-        self::assertNotNull($this->sharedAtOf($user, $target));
-        self::assertNull($this->sharedAtOf($user, $sibling));
+        self::assertNotNull($this->findSharedAt($user, $target));
+        self::assertNull($this->findSharedAt($user, $sibling));
     }
 
     public function testSharingAgainMovesTheShareOnToTheNewInstant(): void
@@ -185,7 +186,7 @@ final class EntryStateUpdaterTest extends DbTestCase
 
         $updated = $this->updater()->apply($user, $sharedRow, $this->change(isShared: true));
 
-        self::assertEquals($this->sharedAtOf($user, $target), $updated->sharedAt);
+        self::assertEquals($this->findSharedAt($user, $target), $updated->sharedAt);
         self::assertNotNull($updated->sharedAt);
     }
 
@@ -197,8 +198,8 @@ final class EntryStateUpdaterTest extends DbTestCase
 
         $this->updater()->apply($user, $row, $this->change(isFavorite: false, isKept: false));
 
-        self::assertFalse($this->stateOf($user, $target)->isFavorite());
-        self::assertFalse($this->stateOf($user, $target)->isKept());
+        self::assertFalse($this->readStateOrDefault($user, $target)->isFavorite());
+        self::assertFalse($this->readStateOrDefault($user, $target)->isKept());
     }
 
     public function testViewedMirrorsToTheSubscribedSiblingAndImpliesHiddenThere(): void
@@ -208,23 +209,130 @@ final class EntryStateUpdaterTest extends DbTestCase
 
         $this->updater()->apply($user, $row, $this->change(isViewed: true));
 
-        self::assertTrue($this->stateOf($user, $target)->isViewed());
-        self::assertTrue($this->stateOf($user, $sibling)->isViewed());
+        self::assertTrue($this->readStateOrDefault($user, $target)->isViewed());
+        self::assertTrue($this->readStateOrDefault($user, $sibling)->isViewed());
         // A viewed row is always hidden, on the mirrored copy too.
-        self::assertTrue($this->stateOf($user, $sibling)->isHidden());
+        self::assertTrue($this->readStateOrDefault($user, $sibling)->isHidden());
     }
 
-    public function testSiblingRowsForUserExcludesTheTargetAndIsNotCollapsed(): void
+    public function testReadReachesOnlyTheEntriesAtTheSameAddress(): void
     {
         [$user, $target, $sibling] = $this->seedGroup();
-
-        $siblingRows = $this->rows()->siblingRowsForUser(
-            $user->requireId(),
-            'shared-url-hash',
-            $target->requireId(),
+        $effectiveDate = new \DateTimeImmutable('2026-07-05T00:00:00Z');
+        $stranger = new Entry(
+            $sibling->getFeed(),
+            'mirror-stranger',
+            'https://news.example.com/other',
+            'Other Article',
+            $effectiveDate,
+            $effectiveDate,
+            'other-url-hash',
         );
+        $this->entityManager->persist($stranger);
+        $this->entityManager->flush();
 
-        self::assertCount(1, $siblingRows);
-        self::assertSame($sibling->requireId(), $siblingRows[0]->entry->requireId());
+        $this->applyChange($user, $target, $this->change(isHidden: true));
+
+        self::assertTrue($this->readStateOrDefault($user, $sibling)->isHidden());
+        self::assertNull($this->findPersistedState($user, $stranger));
+    }
+
+    public function testReadOfAnEntryWithoutItemOrAddressReachesNoOtherEntry(): void
+    {
+        [$user, $target, $sibling] = $this->seedGroup();
+        $effectiveDate = new \DateTimeImmutable('2026-07-05T00:00:00Z');
+        $lone = new Entry($target->getFeed(), 'mirror-lone', null, 'Lone', $effectiveDate, $effectiveDate);
+        $this->entityManager->persist($lone);
+        $this->entityManager->flush();
+
+        $this->applyChange($user, $lone, $this->change(isHidden: true));
+
+        self::assertTrue($this->readStateOrDefault($user, $lone)->isHidden());
+        self::assertNull($this->findPersistedState($user, $sibling));
+    }
+
+    public function testToggleReadMarksTheCopy(): void
+    {
+        $user = $this->persistReader();
+        $copies = LemmyPostCopies::persistPair($this->entityManager, $user);
+
+        $this->applyChange($user, $copies->localCopy, $this->change(isHidden: true));
+
+        self::assertTrue($this->readStateOrDefault($user, $copies->allCopy)->isHidden());
+    }
+
+    public function testToggleUnreadUnmarksTheCopy(): void
+    {
+        $user = $this->persistReader();
+        $copies = LemmyPostCopies::persistPair($this->entityManager, $user);
+        $this->applyChange($user, $copies->localCopy, $this->change(isHidden: true));
+
+        $this->applyChange($user, $copies->localCopy, $this->change(isHidden: false));
+
+        self::assertFalse($this->readStateOrDefault($user, $copies->localCopy)->isHidden());
+        self::assertNotNull($this->findPersistedState($user, $copies->allCopy));
+        self::assertFalse($this->readStateOrDefault($user, $copies->allCopy)->isHidden());
+    }
+
+    public function testArticleCopiesKeepUrlHashMirror(): void
+    {
+        [$user, $target, $sibling] = $this->seedGroup();
+        $this->applyChange($user, $target, $this->change(isHidden: true));
+        self::assertTrue($this->readStateOrDefault($user, $sibling)->isHidden());
+
+        $this->applyChange($user, $target, $this->change(isHidden: false));
+
+        self::assertFalse($this->readStateOrDefault($user, $sibling)->isHidden());
+    }
+
+    public function testALinkedCopyReachesOnlyItsItemNotItsAddress(): void
+    {
+        $user = $this->persistReader();
+        $copies = LemmyPostCopies::persistPair($this->entityManager, $user);
+        $published = new \DateTimeImmutable('2026-11-14T00:00:00Z');
+        $linkedArticle = new Entry(
+            $copies->local->getFeed(),
+            'linked-article',
+            'https://news.example.com/linked',
+            'Linked',
+            $published,
+            $published,
+            'linked-url-hash',
+        );
+        $item = $copies->localCopy->getCanonicalItem();
+        self::assertNotNull($item);
+        $linkedArticle->linkTo($item);
+        $unlinkedArticle = new Entry(
+            $copies->all->getFeed(),
+            'unlinked-article',
+            'https://news.example.com/linked',
+            'Unlinked',
+            $published,
+            $published,
+            'linked-url-hash',
+        );
+        $this->entityManager->persist($linkedArticle);
+        $this->entityManager->persist($unlinkedArticle);
+        $this->entityManager->flush();
+
+        $this->applyChange($user, $linkedArticle, $this->change(isHidden: true));
+
+        self::assertTrue($this->readStateOrDefault($user, $copies->localCopy)->isHidden());
+        self::assertTrue($this->readStateOrDefault($user, $copies->allCopy)->isHidden());
+        self::assertNull($this->findPersistedState($user, $unlinkedArticle));
+    }
+
+    private function persistReader(): User
+    {
+        $user = new User('copies@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
+
+        return $user;
+    }
+
+    private function applyChange(User $user, Entry $entry, EntryStateChangeModel $change): void
+    {
+        $this->updater()->apply($user, $this->rows()->getRowForUser($user->requireId(), $entry->requireId()), $change);
     }
 }

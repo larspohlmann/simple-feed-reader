@@ -798,7 +798,7 @@ final class AccountRestorerTest extends DbTestCase
 
     /**
      * Derives the getter from the field's path (`image.url` -> getImageUrl()), trying the bare name first so `isHidden`
-     * finds isHidden(), not isIsHidden().
+     * finds isHidden(), not isIsHidden(), and the last segment last (`dates.createdAt` -> getCreatedAt()).
      */
     private function getterValue(object $entity, string $field): mixed
     {
@@ -806,7 +806,9 @@ final class AccountRestorerTest extends DbTestCase
             return $entity->isIncludedIn($this->surfaceSwitchedBy(substr($field, \strlen('inclusions.'))));
         }
         $pascal = implode('', array_map(ucfirst(...), explode('.', $field)));
-        foreach ([lcfirst($pascal), 'get' . $pascal, 'is' . $pascal, 'has' . $pascal] as $method) {
+        $lastSegment = ucfirst(substr((string) strrchr('.' . $field, '.'), 1));
+        $candidates = [lcfirst($pascal), 'get' . $pascal, 'is' . $pascal, 'has' . $pascal, 'get' . $lastSegment];
+        foreach ($candidates as $method) {
             if (method_exists($entity, $method)) {
                 return $entity->$method();
             }

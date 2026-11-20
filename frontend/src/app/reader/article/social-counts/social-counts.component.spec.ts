@@ -24,7 +24,7 @@ describe('SocialCountsComponent', () => {
   beforeEach(() => {
     states = new Map();
     service = {
-      state: jest.fn((id: number) => stateOf(id)),
+      state: jest.fn((item: { id: number }) => stateOf(item.id)),
       load: jest.fn(),
       toggleRepost: jest.fn(),
     };
@@ -100,7 +100,7 @@ describe('SocialCountsComponent', () => {
     const entry = post();
     show(entry);
 
-    expect(service.load).toHaveBeenCalledWith({ id: 1, social: entry.social });
+    expect(service.load).toHaveBeenCalledWith(entry);
   });
 
   it('loads a post once, however often its like changes', () => {
@@ -227,7 +227,11 @@ describe('SocialCountsComponent', () => {
       expect(button.getAttribute('aria-label')).toBe('Add comment, 7 replies');
       button.click();
 
-      expect(responses.reply).toHaveBeenCalledWith(1, 'bluesky', null);
+      expect(responses.reply).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 1 }),
+        'bluesky',
+        null,
+      );
     });
 
     it('offers the reply disabled, with its reason, on a post the author closed', () => {
@@ -283,7 +287,11 @@ describe('SocialCountsComponent', () => {
       expect(button.querySelector('.number')?.textContent?.trim()).toBe('2');
       button.click();
 
-      expect(responses.quote).toHaveBeenCalledWith(1, 'bluesky', null);
+      expect(responses.quote).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 1 }),
+        'bluesky',
+        null,
+      );
     });
 
     it('offers the quote disabled, with its reason, on a post the author keeps from quotes', () => {
@@ -401,7 +409,11 @@ describe('SocialCountsComponent', () => {
       fixture.detectChanges();
       document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')[1].click();
 
-      expect(responses.quote).toHaveBeenCalledWith(1, 'bluesky', null);
+      expect(responses.quote).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 1 }),
+        'bluesky',
+        null,
+      );
     });
   });
 });

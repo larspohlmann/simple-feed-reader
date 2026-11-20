@@ -13,9 +13,9 @@ use Doctrine\ORM\Mapping as ORM;
 /** A user's vote on a discussion post at its origin, cast through a connected account. */
 #[ORM\Entity(repositoryClass: DiscussionVoteRepository::class)]
 #[ORM\Table(name: 'discussion_vote')]
-#[ORM\Index(name: 'idx_discussion_vote_entry', columns: ['entry_id'])]
+#[ORM\Index(name: 'idx_discussion_vote_canonical_item', columns: ['canonical_item_id'])]
 #[ORM\Index(name: 'idx_discussion_vote_account', columns: ['social_account_id'])]
-#[ORM\UniqueConstraint(name: 'uniq_discussion_vote_user_entry', columns: ['user_id', 'entry_id'])]
+#[ORM\UniqueConstraint(name: 'uniq_discussion_vote_user_canonical_item', columns: ['user_id', 'canonical_item_id'])]
 final class DiscussionVote
 {
     use PersistedId;
@@ -30,8 +30,8 @@ final class DiscussionVote
     private User $user;
 
     #[ORM\ManyToOne]
-    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
-    private Entry $entry;
+    #[ORM\JoinColumn(name: 'canonical_item_id', nullable: false, onDelete: 'CASCADE')]
+    private CanonicalItem $canonicalItem;
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
@@ -46,14 +46,14 @@ final class DiscussionVote
     /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(
         User $user,
-        Entry $entry,
+        CanonicalItem $canonicalItem,
         SocialAccount $socialAccount,
         VoteScore $score,
         \DateTimeImmutable $votedAt,
     ) {
         self::refuseNone($score);
         $this->user = $user;
-        $this->entry = $entry;
+        $this->canonicalItem = $canonicalItem;
         $this->socialAccount = $socialAccount;
         $this->score = $score;
         $this->votedAt = $votedAt;
@@ -69,9 +69,9 @@ final class DiscussionVote
         return $this->user;
     }
 
-    public function getEntry(): Entry
+    public function getCanonicalItem(): CanonicalItem
     {
-        return $this->entry;
+        return $this->canonicalItem;
     }
 
     public function getSocialAccount(): SocialAccount
@@ -89,10 +89,9 @@ final class DiscussionVote
         return $this->votedAt;
     }
 
-    public function recast(SocialAccount $account, VoteScore $score, \DateTimeImmutable $votedAt): void
+    public function recast(VoteScore $score, \DateTimeImmutable $votedAt): void
     {
         self::refuseNone($score);
-        $this->socialAccount = $account;
         $this->score = $score;
         $this->votedAt = $votedAt;
     }

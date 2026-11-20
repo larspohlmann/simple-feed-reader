@@ -9,7 +9,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Embeddable]
-final class EntryDiscussion
+final class EntryDiscussion implements DiscussionCountStoreInterface
 {
     #[ORM\Column(name: 'discussion_url', length: 2048, nullable: true)]
     private ?string $url = null;
@@ -47,25 +47,30 @@ final class EntryDiscussion
         );
     }
 
-    public function storeCommentCount(?int $commentCount): void
+    public function recordCounts(DiscussionCounts $counts): void
     {
-        $this->commentCount = $commentCount ?? $this->commentCount;
+        $this->commentCount = $counts->commentCount ?? $this->commentCount;
     }
 
-    public function readCommentCount(): ?int
+    public function getCommentCount(): ?int
     {
         return $this->commentCount;
     }
 
-    /** A read sees only part of a thread, a timeline page most of all, so the count only ever grows. */
-    public function storeSelfReplyCount(int $selfReplyCount): void
+    public function recordSelfReplyCount(int $selfReplyCount): void
     {
         $this->selfReplyCount = max($this->selfReplyCount, $selfReplyCount);
     }
 
-    public function readSelfReplyCount(): int
+    public function getSelfReplyCount(): int
     {
         return $this->selfReplyCount;
+    }
+
+    public function clearCounts(): void
+    {
+        $this->commentCount = null;
+        $this->selfReplyCount = 0;
     }
 
     private static function bounded(?string $url): ?string

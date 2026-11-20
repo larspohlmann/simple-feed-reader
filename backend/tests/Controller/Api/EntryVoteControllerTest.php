@@ -71,7 +71,7 @@ final class EntryVoteControllerTest extends ApiTestCase
         ]);
         $user = $this->signIn($client, 'vote-up@example.test');
         $this->lemmyAccountOf($user);
-        $entryId = $this->lemmyPostFor($user);
+        $entryId = $this->persistLemmyPost($user);
 
         $this->vote($client, $entryId, 1);
 
@@ -91,7 +91,7 @@ final class EntryVoteControllerTest extends ApiTestCase
         ]);
         $user = $this->signIn($client, 'vote-federated@example.test');
         $this->lemmyAccountOf($user);
-        $entryId = $this->lemmyPostFor($user, 'https://feddit.example/post/7');
+        $entryId = $this->persistLemmyPost($user, 'https://feddit.example/post/7');
 
         $this->vote($client, $entryId, 1);
 
@@ -106,7 +106,7 @@ final class EntryVoteControllerTest extends ApiTestCase
         ]);
         $user = $this->signIn($client, 'vote-clear@example.test');
         $account = $this->lemmyAccountOf($user);
-        $entryId = $this->lemmyPostFor($user);
+        $entryId = $this->persistLemmyPost($user);
         $this->storeVote($user, $entryId, $account, VoteScore::Up);
 
         $this->vote($client, $entryId, 0);
@@ -126,7 +126,7 @@ final class EntryVoteControllerTest extends ApiTestCase
         ]);
         $user = $this->signIn($client, 'vote-refused@example.test');
         $account = $this->lemmyAccountOf($user);
-        $entryId = $this->lemmyPostFor($user);
+        $entryId = $this->persistLemmyPost($user);
         $this->storeVote($user, $entryId, $account, VoteScore::Up);
 
         $this->vote($client, $entryId, -1);
@@ -145,7 +145,7 @@ final class EntryVoteControllerTest extends ApiTestCase
         ]);
         $user = $this->signIn($client, 'vote-session@example.test');
         $accountId = $this->lemmyAccountOf($user)->requireId();
-        $entryId = $this->lemmyPostFor($user);
+        $entryId = $this->persistLemmyPost($user);
 
         $this->vote($client, $entryId, 1);
 
@@ -184,7 +184,7 @@ final class EntryVoteControllerTest extends ApiTestCase
         $client = $this->clientRouting(self::ROUTED_HOSTS, []);
         $user = $this->signIn($client, 'vote-no-account@example.test');
 
-        $this->vote($client, $this->lemmyPostFor($user), 1);
+        $this->vote($client, $this->persistLemmyPost($user), 1);
 
         self::assertResponseStatusCodeSame(Response::HTTP_CONFLICT);
         self::assertSame('social_account_missing', $this->payload($client)['type']);
@@ -196,7 +196,7 @@ final class EntryVoteControllerTest extends ApiTestCase
         $user = $this->signIn($client, 'vote-range@example.test');
         $this->lemmyAccountOf($user);
 
-        $this->vote($client, $this->lemmyPostFor($user), 2);
+        $this->vote($client, $this->persistLemmyPost($user), 2);
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
         self::assertSame([], $this->http->requests);
@@ -206,7 +206,7 @@ final class EntryVoteControllerTest extends ApiTestCase
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, []);
         $stranger = $this->factory()->create('vote-stranger@example.test');
-        $entryId = $this->lemmyPostFor($stranger);
+        $entryId = $this->persistLemmyPost($stranger);
         $user = $this->signIn($client, 'vote-own@example.test');
         $this->lemmyAccountOf($user);
 
@@ -233,7 +233,7 @@ final class EntryVoteControllerTest extends ApiTestCase
         $container->set(NativeDnsResolver::class, new StaticDnsResolver(['lemmy.example' => ['93.184.216.34']]));
         $user = $this->signIn($client, 'vote-read@example.test');
         $this->lemmyAccountOf($user);
-        $entryId = $this->lemmyPostFor($user);
+        $entryId = $this->persistLemmyPost($user);
 
         $client->request('GET', sprintf('/api/entries/%d/vote', $entryId));
 
@@ -254,7 +254,7 @@ final class EntryVoteControllerTest extends ApiTestCase
         ]);
         $user = $this->signIn($client, 'vote-recast@example.test');
         $account = $this->lemmyAccountOf($user);
-        $entryId = $this->lemmyPostFor($user);
+        $entryId = $this->persistLemmyPost($user);
         $this->storeVote($user, $entryId, $account, VoteScore::Up);
 
         $this->vote($client, $entryId, -1);
@@ -302,7 +302,7 @@ final class EntryVoteControllerTest extends ApiTestCase
         ]);
         $user = $this->signIn($client, 'vote-comment@example.test');
         $this->lemmyAccountOf($user);
-        $entryId = $this->lemmyPostFor($user);
+        $entryId = $this->persistLemmyPost($user);
 
         $this->voteOnComment($client, $entryId, self::COMMENT_ADDRESS, 1);
 
@@ -321,7 +321,7 @@ final class EntryVoteControllerTest extends ApiTestCase
         ]);
         $user = $this->signIn($client, 'vote-comment-cache@example.test');
         $accountId = $this->lemmyAccountOf($user)->requireId();
-        $entryId = $this->lemmyPostFor($user);
+        $entryId = $this->persistLemmyPost($user);
         $cache = self::getContainer()->get(CommentsCache::class);
         self::assertInstanceOf(CommentsCache::class, $cache);
         $key = LemmyCommentsSource::class . ' https://lemmy.example/post/42 account:' . $accountId;
@@ -342,7 +342,7 @@ final class EntryVoteControllerTest extends ApiTestCase
         $client = $this->clientRouting(self::ROUTED_HOSTS, []);
         $user = $this->signIn($client, 'vote-comment-address@example.test');
         $this->lemmyAccountOf($user);
-        $entryId = $this->lemmyPostFor($user);
+        $entryId = $this->persistLemmyPost($user);
 
         $this->voteOnComment($client, $entryId, '77', 1);
 
@@ -372,7 +372,7 @@ final class EntryVoteControllerTest extends ApiTestCase
         $user = $this->signIn($client, 'vote-comment-http@example.test');
         $this->lemmyAccountOf($user);
 
-        $this->voteOnComment($client, $this->lemmyPostFor($user), 'http://origin.example/comment/5', 1);
+        $this->voteOnComment($client, $this->persistLemmyPost($user), 'http://origin.example/comment/5', 1);
 
         self::assertResponseStatusCodeSame(Response::HTTP_CONFLICT);
         self::assertSame('social_post_unsupported', $this->payload($client)['type']);
@@ -387,7 +387,7 @@ final class EntryVoteControllerTest extends ApiTestCase
         $user = $this->signIn($client, 'vote-comment-empty@example.test');
         $this->lemmyAccountOf($user);
 
-        $this->voteOnComment($client, $this->lemmyPostFor($user), self::COMMENT_ADDRESS, 1);
+        $this->voteOnComment($client, $this->persistLemmyPost($user), self::COMMENT_ADDRESS, 1);
 
         self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
         self::assertSame([self::RESOLVE_COMMENT], $this->routesAsked());
@@ -398,7 +398,7 @@ final class EntryVoteControllerTest extends ApiTestCase
         $client = $this->clientRouting(self::ROUTED_HOSTS, []);
         $user = $this->signIn($client, 'vote-comment-missing@example.test');
         $this->lemmyAccountOf($user);
-        $entryId = $this->lemmyPostFor($user);
+        $entryId = $this->persistLemmyPost($user);
 
         $client->jsonRequest('PUT', sprintf('/api/entries/%d/comments/vote', $entryId), ['score' => 1]);
 
@@ -418,7 +418,7 @@ final class EntryVoteControllerTest extends ApiTestCase
     {
         $fixtures = new NetworkFeedSubscriptions($this->entityManager());
 
-        return $fixtures->post(
+        return $fixtures->persistPost(
             $fixtures->subscribe($user, NetworkFeedSubscriptions::PLAIN),
             'https://example.com/plain',
             '2026-10-12T10:00:00Z',
@@ -437,10 +437,10 @@ final class EntryVoteControllerTest extends ApiTestCase
 
     private function storeVote(User $user, int $entryId, SocialAccount $account, VoteScore $score): void
     {
-        $entry = $this->entityManager()->find(Entry::class, $entryId);
-        self::assertInstanceOf(Entry::class, $entry);
+        $item = $this->entityManager()->find(Entry::class, $entryId)?->getCanonicalItem();
+        self::assertNotNull($item);
         $this->entityManager()->persist(
-            new DiscussionVote($user, $entry, $account, $score, new \DateTimeImmutable('2026-10-12 10:00:00')),
+            new DiscussionVote($user, $item, $account, $score, new \DateTimeImmutable('2026-10-12 10:00:00')),
         );
         $this->entityManager()->flush();
     }

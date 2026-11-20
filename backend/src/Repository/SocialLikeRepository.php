@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Entity\Entry;
+use App\Entity\CanonicalItem;
 use App\Entity\SocialLike;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -20,45 +20,32 @@ final class SocialLikeRepository extends ServiceEntityRepository
         parent::__construct($registry, SocialLike::class);
     }
 
-    public function findOneFor(User $user, Entry $entry): ?SocialLike
+    public function findOneFor(User $user, CanonicalItem $item): ?SocialLike
     {
-        return $this->findOneBy(['user' => $user, 'entry' => $entry]);
+        return $this->findOneBy(['user' => $user, 'canonicalItem' => $item]);
     }
 
     /**
-     * @param list<int> $entryIds
+     * @param list<int> $itemIds
      *
-     * @return array<int, true> the liked ones, by entry id
+     * @return array<int, true> the liked ones, by canonical item id
      */
-    public function findLikedEntryIds(int $userId, array $entryIds): array
+    public function findLikedItemIds(int $userId, array $itemIds): array
     {
-        if ([] === $entryIds) {
+        if ([] === $itemIds) {
             return [];
         }
-        /** @var list<int> $likedEntryIds e.id, unlike IDENTITY(), is hydrated as an int on every driver */
-        $likedEntryIds = $this->createQueryBuilder('sl')
-            ->select('e.id')
-            ->join('sl.entry', 'e')
+        /** @var list<int> $likedItemIds item.id, unlike IDENTITY(), is hydrated as an int on every driver */
+        $likedItemIds = $this->createQueryBuilder('sl')
+            ->select('item.id')
+            ->join('sl.canonicalItem', 'item')
             ->andWhere('sl.user = :user')
-            ->andWhere('e.id IN (:entryIds)')
+            ->andWhere('item.id IN (:itemIds)')
             ->setParameter('user', $userId)
-            ->setParameter('entryIds', $entryIds)
+            ->setParameter('itemIds', $itemIds)
             ->getQuery()
             ->getSingleColumnResult();
 
-        return array_fill_keys($likedEntryIds, true);
-    }
-
-    /** The like moves with a saved post; a like the target already carries wins. */
-    public function copyLike(int $userId, int $fromEntryId, int $toEntryId): void
-    {
-        $this->getEntityManager()->getConnection()->executeStatement(
-            'INSERT INTO social_like (user_id, entry_id, social_account_id, remote_id, liked_at)'
-            . ' SELECT user_id, :toEntry, social_account_id, remote_id, liked_at FROM social_like'
-            . ' WHERE user_id = :user AND entry_id = :fromEntry'
-            . ' AND NOT EXISTS (SELECT 1 FROM social_like held'
-            . ' WHERE held.user_id = :user AND held.entry_id = :toEntry)',
-            ['user' => $userId, 'fromEntry' => $fromEntryId, 'toEntry' => $toEntryId],
-        );
+        return array_fill_keys($likedItemIds, true);
     }
 }

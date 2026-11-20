@@ -45,7 +45,7 @@ describe('EntryCommentsComponent', () => {
     responses = { reply: jest.fn(), quote: jest.fn(), delete: jest.fn() };
     states = new Map();
     service = {
-      state: jest.fn((id: number) => stateOf(id)),
+      state: jest.fn((item: { id: number }) => stateOf(item.id)),
       load: jest.fn(),
       reload: jest.fn(),
       toggleLike: jest.fn(),
@@ -80,11 +80,12 @@ describe('EntryCommentsComponent', () => {
 
   function showEntry(entry: {
     id: number;
+    canonicalItemId?: number | null;
     comments: CommentsLoad;
     discussionUrl: string | null;
     social: EntrySocialDto | null;
   }): void {
-    fixture.componentRef.setInput('entry', entry);
+    fixture.componentRef.setInput('entry', { canonicalItemId: null, ...entry });
     fixture.detectChanges();
   }
 
@@ -165,7 +166,7 @@ describe('EntryCommentsComponent', () => {
       fixture.detectChanges();
       (document.querySelector('[role="menuitem"]') as HTMLButtonElement).click();
 
-      expect(service.toggleRepost).toHaveBeenCalledWith(5, post);
+      expect(service.toggleRepost).toHaveBeenCalledWith(expect.objectContaining({ id: 5 }), post);
     });
 
     it('quotes the comment from its repost menu', () => {
@@ -175,14 +176,18 @@ describe('EntryCommentsComponent', () => {
       fixture.detectChanges();
       document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')[1].click();
 
-      expect(responses.quote).toHaveBeenCalledWith(5, 'bluesky', post.address);
+      expect(responses.quote).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 5 }),
+        'bluesky',
+        post.address,
+      );
     });
 
     it('likes the comment through the service', () => {
       showEntry({ id: 5, comments: 'manual', discussionUrl: DISCUSSION, social: BLUESKY });
       likeButton(settleComments([anEntryComment({ post })]))?.click();
 
-      expect(service.toggleLike).toHaveBeenCalledWith(5, post);
+      expect(service.toggleLike).toHaveBeenCalledWith(expect.objectContaining({ id: 5 }), post);
     });
 
     it('counts likes without a button when the reader has no account to like with', () => {
@@ -206,7 +211,11 @@ describe('EntryCommentsComponent', () => {
         settleComments([comment]).querySelector('.comment button.reply') as HTMLButtonElement
       ).click();
 
-      expect(responses.reply).toHaveBeenCalledWith(5, 'bluesky', post.address);
+      expect(responses.reply).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 5 }),
+        'bluesky',
+        post.address,
+      );
     });
 
     it('offers to delete only a reply the reader wrote', () => {
@@ -217,7 +226,11 @@ describe('EntryCommentsComponent', () => {
 
       expect(deletes).toHaveLength(1);
       (deletes[0] as HTMLButtonElement).click();
-      expect(responses.delete).toHaveBeenCalledWith(5, 'bluesky', own);
+      expect(responses.delete).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 5 }),
+        'bluesky',
+        own,
+      );
     });
 
     it('shows no row for a comment from a feed', () => {
@@ -229,20 +242,20 @@ describe('EntryCommentsComponent', () => {
 
   it('auto-loads as soon as it shows, so the header can count the comments (#1740)', () => {
     show('auto');
-    expect(service.load).toHaveBeenCalledWith(5);
+    expect(service.load).toHaveBeenCalledWith(expect.objectContaining({ id: 5 }));
   });
 
   it('loads the next entry when the reader moves on', () => {
     show('auto');
     show('auto', 6);
-    expect(service.load).toHaveBeenLastCalledWith(6);
+    expect(service.load).toHaveBeenLastCalledWith(expect.objectContaining({ id: 6 }));
   });
 
   it('never auto-loads a manual source; the button loads it', () => {
     show('manual');
     expect(service.load).not.toHaveBeenCalled();
     fixture.nativeElement.querySelector('button.load').click();
-    expect(service.load).toHaveBeenCalledWith(5);
+    expect(service.load).toHaveBeenCalledWith(expect.objectContaining({ id: 5 }));
   });
 
   it('offers no load button for an auto source', () => {
@@ -350,7 +363,7 @@ describe('EntryCommentsComponent', () => {
     const reload = element.querySelector<HTMLButtonElement>('button.reload')!;
     expect(reload.getAttribute('aria-label')).toBe('Reload comments');
     reload.click();
-    expect(service.reload).toHaveBeenCalledWith(5);
+    expect(service.reload).toHaveBeenCalledWith(expect.objectContaining({ id: 5 }));
   });
 
   it('indents a reply by its depth', () => {
@@ -458,7 +471,7 @@ describe('EntryCommentsComponent', () => {
         .querySelector<HTMLButtonElement>('app-social-counts-row button[aria-label="Upvote"]')!
         .click();
 
-      expect(service.vote).toHaveBeenCalledWith(5, lemmy(true), 1);
+      expect(service.vote).toHaveBeenCalledWith(expect.objectContaining({ id: 5 }), lemmy(true), 1);
     });
 
     it('offersReplyOnAReplyableLemmyComment', () => {
@@ -470,7 +483,11 @@ describe('EntryCommentsComponent', () => {
       expect(button.textContent).toContain('Reply');
       button.click();
 
-      expect(responses.reply).toHaveBeenCalledWith(5, 'lemmy', address);
+      expect(responses.reply).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 5 }),
+        'lemmy',
+        address,
+      );
     });
 
     it('refusesReplyOnALockedPostWithItsReason', () => {
@@ -517,7 +534,7 @@ describe('EntryCommentsComponent', () => {
 
     fixture.nativeElement.querySelector('button.reload').click();
 
-    expect(service.reload).toHaveBeenCalledWith(5);
+    expect(service.reload).toHaveBeenCalledWith(expect.objectContaining({ id: 5 }));
     expect(refreshed).toHaveBeenCalledTimes(1);
   });
 
@@ -529,7 +546,7 @@ describe('EntryCommentsComponent', () => {
 
     fixture.nativeElement.querySelector('button.retry').click();
 
-    expect(service.reload).toHaveBeenCalledWith(5);
+    expect(service.reload).toHaveBeenCalledWith(expect.objectContaining({ id: 5 }));
     expect(refreshed).not.toHaveBeenCalled();
   });
 
@@ -578,7 +595,7 @@ describe('EntryCommentsComponent', () => {
       expect(box.querySelector('a')?.getAttribute('href')).toBe(DISCUSSION);
 
       box.querySelector<HTMLButtonElement>('button.retry')!.click();
-      expect(service.reload).toHaveBeenCalledWith(5);
+      expect(service.reload).toHaveBeenCalledWith(expect.objectContaining({ id: 5 }));
     });
 
     it('stops ticking once the countdown reaches zero', () => {
@@ -607,6 +624,6 @@ describe('EntryCommentsComponent', () => {
     expect(failed.querySelector('a')?.getAttribute('href')).toBe(DISCUSSION);
     expect(element.querySelector('app-warning-box')).toBeNull();
     failed.querySelector<HTMLButtonElement>('button.retry')!.click();
-    expect(service.reload).toHaveBeenCalledWith(5);
+    expect(service.reload).toHaveBeenCalledWith(expect.objectContaining({ id: 5 }));
   });
 });

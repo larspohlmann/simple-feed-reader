@@ -123,7 +123,7 @@ final class LemmyPostVoterTest extends TestCase
 
     private function lemmyPost(): Entry
     {
-        return LemmyPostEntries::on(new Feed('https://lemmy.example/feeds/c/technology.xml'));
+        return LemmyPostEntries::buildEntry(new Feed('https://lemmy.example/feeds/c/technology.xml'));
     }
 
     private function voter(RoutedHttpClient $http): LemmyPostVoter

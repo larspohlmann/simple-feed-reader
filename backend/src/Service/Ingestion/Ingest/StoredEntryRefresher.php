@@ -18,7 +18,8 @@ final readonly class StoredEntryRefresher
         private EntryRepository $entries,
         private PlatformEntryRules $platformRules,
         private EntryImageWriter $imageWriter,
-        private EntryLemmyPostWriter $lemmyPostWriter,
+        private LemmyPostWriter $lemmyPostWriter,
+        private CanonicalItemWriter $canonicalItemWriter,
     ) {
     }
 
@@ -37,10 +38,11 @@ final readonly class StoredEntryRefresher
             }
             $this->fillMissingImage($entry, $parsedEntry);
             $applied = $this->platformRules->apply($parsedEntry);
-            $entry->recordDiscussionCounts($applied->discussionCounts);
+            $entry->selectDiscussionCounts()->recordCounts($applied->discussionCounts);
             $refreshed[] = [$entry, $applied];
         }
-        $this->lemmyPostWriter->refresh($refreshed);
+        $this->canonicalItemWriter->attach($refreshed);
+        $this->lemmyPostWriter->attach($refreshed);
     }
 
     private function fillMissingImage(Entry $entry, ParsedEntryModel $parsedEntry): void

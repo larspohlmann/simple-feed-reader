@@ -8,6 +8,7 @@ import { StoryArticleDto, TrendingStoryDto } from '../app/reader/trending/trendi
 export function anEntry(overrides: Partial<EntryDto> = {}): EntryDto {
   return {
     id: 1,
+    canonicalItemId: null,
     title: 'A headline',
     url: null,
     author: null,

@@ -13,7 +13,7 @@ final class EntryChaptersPersistenceTest extends DbTestCase
 {
     public function testChaptersSurviveAReloadAndTheUrlIsForgottenOnFill(): void
     {
-        $entry = $this->persistedEntry('guid-chapters');
+        $entry = $this->persistEntry('guid-chapters');
         $entry->declareChapters([], 'https://cdn.test/ch.json');
         $this->entityManager->flush();
         $this->entityManager->clear();
@@ -33,7 +33,7 @@ final class EntryChaptersPersistenceTest extends DbTestCase
 
     public function testDeclaredChaptersReadBackThroughTheEntry(): void
     {
-        $entry = $this->persistedEntry('guid-declared');
+        $entry = $this->persistEntry('guid-declared');
 
         $chapters = [new EntryChapter(0, 'Intro'), new EntryChapter(90, 'Main')];
         $entry->declareChapters($chapters, 'https://cdn.test/x.json');
@@ -45,7 +45,7 @@ final class EntryChaptersPersistenceTest extends DbTestCase
         self::assertNull($reloaded->getChaptersUrl());
     }
 
-    private function persistedEntry(string $guid): Entry
+    private function persistEntry(string $guid): Entry
     {
         $feed = new Feed('https://chapters-persist.example/feed.xml');
         $this->entityManager->persist($feed);

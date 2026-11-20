@@ -8,7 +8,6 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\SocialAccount;
 use App\Entity\User;
-use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
 use App\Service\Social\Social\ActingAccountGuard;
 use App\Service\Social\Social\Exception\NotASocialPostException;
@@ -18,7 +17,6 @@ use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Exception\SocialPostRemovedException;
 use App\Service\Social\Social\Model\SocialCountsModel;
-use App\Service\Social\Social\Model\SocialPostAddressModel;
 use App\Service\Social\Social\SocialCounts;
 use App\Service\Social\Social\SocialCountsCache;
 use App\Service\Social\Social\SocialPostFinder;
@@ -61,9 +59,10 @@ final class SocialCountsTest extends DbTestCase
 
     public function testCachedCountsAskNoSource(): void
     {
-        $this->cache->remember(self::address(), new SocialCountsModel(9, 8, 7, null));
+        $post = $this->post();
+        $this->cache->remember($post, new SocialCountsModel(9, 8, 7, null));
 
-        $counts = $this->counts()->fetchCounts($this->owner, $this->post());
+        $counts = $this->counts()->fetchCounts($this->owner, $post);
 
         self::assertEquals(new SocialCountsModel(9, 8, 7, null), $counts);
         self::assertSame([], $this->publicSource->askedAddresses);
@@ -84,7 +83,7 @@ final class SocialCountsTest extends DbTestCase
     public function testRefreshedAsksTheSourceAgainAndCachesTheNewCounts(): void
     {
         $post = $this->post();
-        $this->cache->remember(self::address(), new SocialCountsModel(9, 8, 7, null));
+        $this->cache->remember($post, new SocialCountsModel(9, 8, 7, null));
 
         $refreshed = $this->counts()->refreshed($this->owner, $post);
         $afterwards = $this->counts()->fetchCounts($this->owner, $post);
@@ -231,17 +230,15 @@ final class SocialCountsTest extends DbTestCase
         $this->mastodonAccount();
         $this->mastodon->knowsCounts(new SocialCountsModel(7, 1, 0, null));
 
-        $counts = $this->counts()->fetchCounts($this->owner, $this->post());
+        $post = $this->post();
+
+        $counts = $this->counts()->fetchCounts($this->owner, $post);
 
         self::assertEquals(new SocialCountsModel(7, 1, 0, null), $counts);
         self::assertSame(['resolve ' . self::STATUS_URL], $this->mastodon->calls);
-        self::assertEquals($counts, $this->cache->find(self::address()));
+        self::assertEquals($counts, $this->cache->find($post));
     }
 
-    private static function address(): SocialPostAddressModel
-    {
-        return new SocialPostAddressModel(SocialNetwork::Mastodon, self::STATUS_URL);
-    }
 
     private function mastodonAccount(): SocialAccount
     {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social;
 
+use App\Entity\CanonicalItem;
 use App\Entity\DiscussionVote;
 use App\Entity\Entry;
 use App\Entity\SocialAccount;
@@ -28,7 +29,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 
-/** The reader's vote on a post of a network that votes: cast through their account, kept as the network reports it. */
+/** The reader's vote on a post of a network that votes: one per item, cast through the account that cast it first. */
 final readonly class DiscussionVotes
 {
     public function __construct(
@@ -55,10 +56,11 @@ final readonly class DiscussionVotes
     public function vote(User $user, Entry $entry, VoteScore $score): DiscussionVoteResultModel
     {
         $network = $this->requireVotingNetwork($entry);
-        $account = $this->accounts->requireAccount($user, $entry, $network);
+        $item = $this->requireItem($entry);
+        $account = $this->requireVotingAccount($user, $entry, $item, $network);
 
         $result = $this->selectVoter($network)->castVoteOnPost($account, $entry, $score);
-        $this->mirror($user, $entry, $account, $result->myVote);
+        $this->mirror($user, $item, $account, $result->myVote);
 
         return $result;
     }
@@ -104,12 +106,28 @@ final readonly class DiscussionVotes
     public function syncFromNetwork(User $user, Entry $entry): VoteScore
     {
         $network = $this->requireVotingNetwork($entry);
-        $account = $this->accounts->requireAccount($user, $entry, $network);
+        $item = $this->requireItem($entry);
+        $account = $this->requireVotingAccount($user, $entry, $item, $network);
 
         $myVote = $this->selectVoter($network)->fetchPostVote($account, $entry);
-        $this->mirror($user, $entry, $account, $myVote);
+        $this->mirror($user, $item, $account, $myVote);
 
         return $myVote;
+    }
+
+    /** @throws NoSocialAccountForNetworkException */
+    private function requireVotingAccount(
+        User $user,
+        Entry $entry,
+        CanonicalItem $item,
+        SocialNetwork $network,
+    ): SocialAccount {
+        return $this->accounts->requireStoredOrActing(
+            $this->votes->findOneFor($user, $item)?->getSocialAccount(),
+            $user,
+            $entry,
+            $network,
+        );
     }
 
     /** @throws NotASocialPostException */
@@ -122,6 +140,13 @@ final readonly class DiscussionVotes
         }
 
         throw new NotASocialPostException(sprintf('This entry is not a %s post.', $this->formatNetworkNames()));
+    }
+
+    /** @throws NotASocialPostException */
+    private function requireItem(Entry $entry): CanonicalItem
+    {
+        return $entry->getCanonicalItem()
+            ?? throw new NotASocialPostException(sprintf('This entry is not a %s post.', $this->formatNetworkNames()));
     }
 
     private function selectVoter(SocialNetwork $network): PostVoterInterface
@@ -156,23 +181,26 @@ final readonly class DiscussionVotes
         return [] === $names ? $last : implode(', ', $names) . ' or ' . $last;
     }
 
-    private function mirror(User $user, Entry $entry, SocialAccount $account, VoteScore $myVote): void
+    private function mirror(User $user, CanonicalItem $item, SocialAccount $account, VoteScore $myVote): void
     {
-        $stored = $this->votes->findOneFor($user, $entry);
+        $stored = $this->votes->findOneFor($user, $item);
+        if (null !== $stored && $stored->getSocialAccount()->requireId() !== $account->requireId()) {
+            return;
+        }
         if (VoteScore::None === $myVote) {
             $this->drop($stored);
 
             return;
         }
         if (null === $stored) {
-            $this->votes->store(new DiscussionVote($user, $entry, $account, $myVote, $this->clock->now()));
+            $this->votes->store(new DiscussionVote($user, $item, $account, $myVote, $this->clock->now()));
 
             return;
         }
-        if ($stored->getScore() === $myVote && $stored->getSocialAccount() === $account) {
+        if ($stored->getScore() === $myVote) {
             return;
         }
-        $stored->recast($account, $myVote, $this->clock->now());
+        $stored->recast($myVote, $this->clock->now());
         $this->entityManager->flush();
     }
 

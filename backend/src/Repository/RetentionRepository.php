@@ -57,7 +57,7 @@ final readonly class RetentionRepository
     public function staleIdsPastBoundary(int $feedId, int $keep, \DateTimeImmutable $cutoff): array
     {
         $query = $this->deletablePastBoundary($feedId, $keep)
-            ?->andWhere('e.createdAt < :cutoff')?->setParameter('cutoff', $cutoff);
+            ?->andWhere('e.dates.createdAt < :cutoff')?->setParameter('cutoff', $cutoff);
 
         return self::readIds($query);
     }
@@ -137,7 +137,7 @@ final readonly class RetentionRepository
     {
         /** @var list<int> $feedIds */
         $feedIds = $this->entityManager->createQuery(sprintf(
-            'SELECT DISTINCT IDENTITY(e.feed) FROM %s e JOIN e.feed f WHERE %s AND e.createdAt < :cutoff',
+            'SELECT DISTINCT IDENTITY(e.feed) FROM %s e JOIN e.feed f WHERE %s AND e.dates.createdAt < :cutoff',
             Entry::class,
             $networkPredicate,
         ))
@@ -176,9 +176,9 @@ final readonly class RetentionRepository
     {
         /** @var list<array{createdAt: \DateTimeImmutable, id: int}> $rows */
         $rows = $this->entityManager->createQuery(sprintf(
-            'SELECT e.createdAt AS createdAt, e.id AS id FROM %s e
+            'SELECT e.dates.createdAt AS createdAt, e.id AS id FROM %s e
              WHERE e.feed = :feed
-             ORDER BY e.createdAt DESC, e.id DESC',
+             ORDER BY e.dates.createdAt DESC, e.id DESC',
             Entry::class,
         ))
             ->setParameter('feed', $feedId)
@@ -196,8 +196,8 @@ final readonly class RetentionRepository
     /** Strictly older than the boundary: a keyset range that idx_entry_feed_created serves. */
     private function pastBoundaryDql(): string
     {
-        return '(e.createdAt < :boundaryCreatedAt
-                 OR (e.createdAt = :boundaryCreatedAt AND e.id < :boundaryId))';
+        return '(e.dates.createdAt < :boundaryCreatedAt
+                 OR (e.dates.createdAt = :boundaryCreatedAt AND e.id < :boundaryId))';
     }
 
     /** @return list<int> */

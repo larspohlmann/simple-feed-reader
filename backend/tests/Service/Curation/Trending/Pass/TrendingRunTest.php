@@ -93,6 +93,30 @@ final class TrendingRunTest extends TestCase
         self::assertSame('post-hash', $post->urlHash);
     }
 
+    public function testCopiesGroupIntoOneStory(): void
+    {
+        $run = TrendingRuns::of(TrendingWindow::Day);
+        foreach ([[1, 10, 7], [2, 20, 7], [3, 30, null]] as [$entryId, $feedId, $canonicalItemId]) {
+            $run->add(
+                new WindowEntryModel(
+                    $entryId,
+                    $feedId,
+                    null,
+                    'Hafenstreik',
+                    false,
+                    null,
+                    self::later(),
+                    new EntryLinksModel(null, null, null),
+                    $canonicalItemId,
+                ),
+                [],
+                null,
+            );
+        }
+
+        self::assertSame([[1, 2]], $run->collectEntriesSharingAUrlOrItem());
+    }
+
     private function weightSharedWith(WindowEntryModel $later): float
     {
         $run = TrendingRuns::of(TrendingWindow::Day);

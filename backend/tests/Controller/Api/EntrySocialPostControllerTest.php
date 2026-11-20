@@ -150,7 +150,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         $user = $this->signIn($client, 'composer-lemmy@example.test');
         $account = $this->lemmyAccountOf($user);
 
-        $client->request('GET', sprintf('/api/entries/%d/social/composer', $this->lemmyPostFor($user)));
+        $client->request('GET', sprintf('/api/entries/%d/social/composer', $this->persistLemmyPost($user)));
 
         self::assertResponseIsSuccessful();
         $payload = $this->payload($client);
@@ -174,7 +174,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         $user = $this->signIn($client, 'reply-lemmy-post@example.test');
         $this->lemmyAccountOf($user);
 
-        $this->postReply($client, $this->lemmyPostFor($user), ['text' => 'Hello **there**']);
+        $this->postReply($client, $this->persistLemmyPost($user), ['text' => 'Hello **there**']);
 
         self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
         self::assertSame(
@@ -192,7 +192,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         ]);
         $user = $this->signIn($client, 'reply-lemmy-comment@example.test');
         $this->lemmyAccountOf($user);
-        $entryId = $this->lemmyPostFor($user);
+        $entryId = $this->persistLemmyPost($user);
 
         $this->send(
             $client,
@@ -212,7 +212,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         $client = $this->clientRouting(self::ROUTED_HOSTS, [self::LEMMY_POST => new MockResponse($locked)]);
         $user = $this->signIn($client, 'reply-lemmy-locked@example.test');
         $this->lemmyAccountOf($user);
-        $entryId = $this->lemmyPostFor($user);
+        $entryId = $this->persistLemmyPost($user);
 
         $client->request('GET', sprintf('/api/entries/%d/social/composer', $entryId));
         self::assertResponseIsSuccessful();
@@ -231,7 +231,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         ]);
         $user = $this->signIn($client, 'quote-lemmy@example.test');
         $this->lemmyAccountOf($user);
-        $entryId = $this->lemmyPostFor($user);
+        $entryId = $this->persistLemmyPost($user);
 
         $this->send($client, 'POST', $this->quotePath($entryId), ['text' => 'Worth reading']);
 
@@ -247,7 +247,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         ]);
         $user = $this->signIn($client, 'reply-lemmy-cache@example.test');
         $accountId = $this->lemmyAccountOf($user)->requireId();
-        $entryId = $this->lemmyPostFor($user);
+        $entryId = $this->persistLemmyPost($user);
         $cache = self::getContainer()->get(CommentsCache::class);
         self::assertInstanceOf(CommentsCache::class, $cache);
         $key = LemmyCommentsSource::class . ' https://lemmy.example/post/42 account:' . $accountId;
@@ -551,7 +551,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         ]);
         $user = $this->signIn($client, 'own-post-delete@example.test');
         $this->mastodonAccountOf($user);
-        $entryId = $this->ownPostFor($user);
+        $entryId = $this->persistOwnPost($user);
 
         $client->request('DELETE', sprintf('/api/entries/%d/post', $entryId));
 
@@ -568,7 +568,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         $user = $this->signIn($client, 'own-post-article@example.test');
         $this->mastodonAccountOf($user);
 
-        $client->request('GET', sprintf('/api/entries/%d', $this->ownPostFor($user)));
+        $client->request('GET', sprintf('/api/entries/%d', $this->persistOwnPost($user)));
         self::assertTrue($this->socialOf($client)['isOwn']);
         $client->request('GET', sprintf('/api/entries/%d', $this->mastodonPostFor($user)));
         self::assertFalse($this->socialOf($client)['isOwn']);
@@ -581,7 +581,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         ]);
         $user = $this->signIn($client, 'own-post-gone@example.test');
         $this->mastodonAccountOf($user);
-        $entryId = $this->ownPostFor($user);
+        $entryId = $this->persistOwnPost($user);
 
         $client->request('DELETE', sprintf('/api/entries/%d/post', $entryId));
 
@@ -613,7 +613,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         ]);
         $user = $this->signIn($client, 'own-post-down@example.test');
         $this->mastodonAccountOf($user);
-        $entryId = $this->ownPostFor($user);
+        $entryId = $this->persistOwnPost($user);
 
         $client->request('DELETE', sprintf('/api/entries/%d/post', $entryId));
 
@@ -622,12 +622,13 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         self::assertNotNull($this->entityManager()->find(Entry::class, $entryId));
     }
 
-    private function ownPostFor(User $user): int
+    private function persistOwnPost(User $user): int
     {
         $fixtures = new NetworkFeedSubscriptions($this->entityManager());
 
-        return $fixtures->post($fixtures->subscribe($user, self::OWN_PROFILE), self::OWN_STATUS, '2026-10-12T10:00:00Z')
-            ->requireId();
+        $profile = $fixtures->subscribe($user, self::OWN_PROFILE);
+
+        return $fixtures->persistPost($profile, self::OWN_STATUS, '2026-10-12T10:00:00Z')->requireId();
     }
 
     /** @return array{network: string, isLiked: bool, canLike: bool, isOwn: bool} */

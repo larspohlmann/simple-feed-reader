@@ -216,6 +216,8 @@ export type CommentsLoad = 'auto' | 'manual';
 
 export interface EntryDto {
   id: number;
+  /** The item behind every feed copy of one social post; null for an article or a post no rule claims (#2404). */
+  canonicalItemId: number | null;
   title: string;
   url: string | null;
   author: string | null;

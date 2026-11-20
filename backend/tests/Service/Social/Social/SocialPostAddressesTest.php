@@ -244,7 +244,7 @@ final class SocialPostAddressesTest extends TestCase
     public function testALemmyPostInAFeedWithoutNetworkIsRespondable(): void
     {
         $feed = new Feed('https://news.example/feed.xml');
-        $entry = LemmyPostEntries::on($feed, 'https://lemmy.example/post/7');
+        $entry = LemmyPostEntries::buildEntry($feed, 'https://lemmy.example/post/7');
 
         self::assertNull($feed->getNetwork());
         self::assertEquals(
@@ -332,7 +332,7 @@ final class SocialPostAddressesTest extends TestCase
 
     private static function lemmyPost(): Entry
     {
-        return LemmyPostEntries::on(new Feed('https://lemmy.example/feeds/a.xml'));
+        return LemmyPostEntries::buildEntry(new Feed('https://lemmy.example/feeds/a.xml'));
     }
 
     private static function postOn(SocialNetwork $network): Entry

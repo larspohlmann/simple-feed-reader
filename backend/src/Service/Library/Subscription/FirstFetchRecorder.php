@@ -10,6 +10,7 @@ use App\Service\Ingestion\Ingest\EntryIngestor;
 use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
+use App\Service\Library\Reading\CopyReadStatePropagator;
 use App\Service\Library\Search\EntryIndexer;
 use App\Service\Social\Completion\ShareEnrichmentQueue;
 use App\Service\Sourcing\Discovery\Model\DiscoveredFeedModel;
@@ -36,12 +37,14 @@ final readonly class FirstFetchRecorder
         private ClockInterface $clock,
         private EntryIndexer $indexer,
         private ShareEnrichmentQueue $enrichmentQueue,
+        private CopyReadStatePropagator $copyReadStates,
     ) {
     }
 
     /**
-     * The number of entries stored, which is the new feed's unread count, so the subscribe need not count it. A feed
-     * somebody already fetched is left alone: its schedule and history are its own.
+     * The number of entries stored minus those a copy already read made read: the new feed's unread count, so the
+     * subscribe need not count it. A feed somebody already fetched is left alone: its schedule and history are its
+     * own.
      *
      * @throws \DateMalformedStringException
      */
@@ -60,10 +63,10 @@ final readonly class FirstFetchRecorder
         $this->scheduler->recordSuccess($feed, \count($createdEntries));
         $this->enrichmentQueue->queue($createdEntries);
         $this->entityManager->flush();
-        // Index after the flush: an entry has no id before it.
+        // Index and inherit after the flush: an entry has no id before it.
         $this->indexer->index($createdEntries);
 
-        return \count($createdEntries);
+        return \count($createdEntries) - $this->copyReadStates->inheritRead($createdEntries);
     }
 
     /**

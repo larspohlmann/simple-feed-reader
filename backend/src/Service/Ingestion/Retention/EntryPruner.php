@@ -4,15 +4,16 @@ declare(strict_types=1);
 
 namespace App\Service\Ingestion\Retention;
 
+use App\Repository\CanonicalItemRepository;
 use App\Repository\RetentionRepository;
 use App\Repository\SharedLinkRepository;
 use App\Service\Library\Search\EntryIndexer;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * Five passes: entries fetched before their retention window (a social network's feeds have their own), a feed's
+ * Six passes: entries fetched before their retention window (a social network's feeds have their own), a feed's
  * entries beyond its cap, a saved feed's entries nobody flags any more, then the shared links no card or quote uses
- * any more, and completed runs left empty.
+ * any more, the canonical items no entry is a copy of any more, and completed runs left empty.
  * Age counts from the fetch (`createdAt`), never `effectiveDate`: a backfilled article was re-added forever (#384).
  */
 final readonly class EntryPruner
@@ -24,12 +25,15 @@ final readonly class EntryPruner
 
     private const int LINK_GRACE_DAYS = 1;
 
+    private const int ITEM_GRACE_DAYS = 1;
+
     public function __construct(
         private RetentionRepository $retention,
         private RetentionSettings $settings,
         private ClockInterface $clock,
         private EntryIndexer $indexer,
         private SharedLinkRepository $sharedLinks,
+        private CanonicalItemRepository $canonicalItems,
         private int $maxEntriesPerFeed = self::DEFAULT_MAX_ENTRIES_PER_FEED,
     ) {
     }
@@ -43,6 +47,7 @@ final readonly class EntryPruner
     {
         $deletedEntries = $this->pruneByAge() + $this->pruneByFeedCap() + $this->pruneUnsaved();
         $this->sharedLinks->sweepUnreferenced($this->clock->now(), $this->daysAgo(self::LINK_GRACE_DAYS));
+        $this->canonicalItems->deleteUnreferenced($this->daysAgo(self::ITEM_GRACE_DAYS));
         $this->retention->deleteEmptyCompletedRuns();
 
         return $deletedEntries;

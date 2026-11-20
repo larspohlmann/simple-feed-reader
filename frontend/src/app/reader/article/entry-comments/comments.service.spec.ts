@@ -12,6 +12,7 @@ describe('CommentsService', () => {
   let api: { comments: jest.Mock };
   let toast: { showProblem: jest.Mock };
   let service: CommentsService;
+  const buildItemRef = (id: number) => ({ id, canonicalItemId: null });
 
   const ok: CommentsResponse = {
     status: 'ok',
@@ -59,44 +60,44 @@ describe('CommentsService', () => {
       api.comments.mockReturnValue(
         of({ ...ok, comments: [anEntryComment({ post }), anEntryComment()] }),
       );
-      service.load(1);
+      service.load(buildItemRef(1));
     });
 
     const shownPost = () => {
-      const state = service.state(1)();
+      const state = service.state(buildItemRef(1))();
       return state.status === 'ok' ? state.comments[0].post : undefined;
     };
 
     it('likes the comment at once and counts the like', () => {
-      service.toggleLike(1, post);
+      service.toggleLike(buildItemRef(1), post);
 
       expect(likes.likeComment).toHaveBeenCalledWith(1, address);
       expect(shownPost()).toEqual({ ...post, isLiked: true, counts: { ...post.counts, likes: 5 } });
     });
 
     it('takes a like back through the unlike call', () => {
-      service.toggleLike(1, post);
+      service.toggleLike(buildItemRef(1), post);
       answer.next({ isLiked: true });
       answer.complete();
       answer = new Subject();
       likes.unlikeComment.mockReturnValue(answer);
 
-      service.toggleLike(1, { ...post, isLiked: true });
+      service.toggleLike(buildItemRef(1), { ...post, isLiked: true });
 
       expect(likes.unlikeComment).toHaveBeenCalledWith(1, address);
       expect(shownPost()).toEqual(post);
     });
 
     it('ignores a second toggle while the first is on the wire', () => {
-      service.toggleLike(1, post);
-      service.toggleLike(1, { ...post, isLiked: true });
+      service.toggleLike(buildItemRef(1), post);
+      service.toggleLike(buildItemRef(1), { ...post, isLiked: true });
 
       expect(likes.unlikeComment).not.toHaveBeenCalled();
       expect(shownPost()?.isLiked).toBe(true);
     });
 
     it('puts the like back and reports the problem when the call fails', () => {
-      service.toggleLike(1, post);
+      service.toggleLike(buildItemRef(1), post);
 
       answer.error(new HttpErrorResponse({ status: 409, error: { title: 'No account' } }));
 
@@ -105,9 +106,9 @@ describe('CommentsService', () => {
     });
 
     it('leaves the other comments alone', () => {
-      service.toggleLike(1, post);
+      service.toggleLike(buildItemRef(1), post);
 
-      const state = service.state(1)();
+      const state = service.state(buildItemRef(1))();
       expect(state.status === 'ok' && state.comments[1].post).toBeNull();
     });
   });
@@ -127,16 +128,16 @@ describe('CommentsService', () => {
           comments: [anEntryComment({ score: 3, vote: { address, myVote: -1, canReply: true } })],
         }),
       );
-      service.load(1);
+      service.load(buildItemRef(1));
     });
 
     const shown = () => {
-      const state = service.state(1)();
+      const state = service.state(buildItemRef(1))();
       return state.status === 'ok' ? state.comments[0] : undefined;
     };
 
     it('votesOnACommentAtOnce', () => {
-      service.vote(1, shown()!, 1);
+      service.vote(buildItemRef(1), shown()!, 1);
 
       expect(voteComment).toHaveBeenCalledWith(1, address, 1);
       expect(shown()?.score).toBe(5);
@@ -144,7 +145,7 @@ describe('CommentsService', () => {
     });
 
     it('adoptsTheAnswerScore', () => {
-      service.vote(1, shown()!, 1);
+      service.vote(buildItemRef(1), shown()!, 1);
       answer.next({ myVote: 1, score: 9 });
       answer.complete();
 
@@ -153,7 +154,7 @@ describe('CommentsService', () => {
     });
 
     it('revertsAFailedCommentVote', () => {
-      service.vote(1, shown()!, 1);
+      service.vote(buildItemRef(1), shown()!, 1);
 
       answer.error(new HttpErrorResponse({ status: 409, error: { title: 'No account' } }));
 
@@ -163,8 +164,8 @@ describe('CommentsService', () => {
     });
 
     it('dropsASecondVoteOnTheSameComment', () => {
-      service.vote(1, shown()!, 1);
-      service.vote(1, shown()!, 0);
+      service.vote(buildItemRef(1), shown()!, 1);
+      service.vote(buildItemRef(1), shown()!, 0);
 
       expect(voteComment).toHaveBeenCalledTimes(1);
     });
@@ -190,16 +191,16 @@ describe('CommentsService', () => {
       reposts = { repostComment: jest.fn(() => answer), unrepostComment: jest.fn(() => answer) };
       Object.assign(api, reposts);
       api.comments.mockReturnValue(of({ ...ok, comments: [anEntryComment({ post })] }));
-      service.load(1);
+      service.load(buildItemRef(1));
     });
 
     const shownPost = () => {
-      const state = service.state(1)();
+      const state = service.state(buildItemRef(1))();
       return state.status === 'ok' ? state.comments[0].post : undefined;
     };
 
     it('reposts the comment at once and counts the repost', () => {
-      service.toggleRepost(1, post);
+      service.toggleRepost(buildItemRef(1), post);
 
       expect(reposts.repostComment).toHaveBeenCalledWith(1, address);
       expect(shownPost()).toEqual({
@@ -210,13 +211,13 @@ describe('CommentsService', () => {
     });
 
     it('undoes a repost through the unrepost call', () => {
-      service.toggleRepost(1, { ...post, isReposted: true });
+      service.toggleRepost(buildItemRef(1), { ...post, isReposted: true });
 
       expect(reposts.unrepostComment).toHaveBeenCalledWith(1, address);
     });
 
     it('puts the repost back and reports the problem when the call fails', () => {
-      service.toggleRepost(1, post);
+      service.toggleRepost(buildItemRef(1), post);
 
       answer.error(new HttpErrorResponse({ status: 409, error: { title: 'Refused' } }));
 
@@ -225,8 +226,8 @@ describe('CommentsService', () => {
     });
 
     it('ignores a second toggle while the first is on the wire', () => {
-      service.toggleRepost(1, post);
-      service.toggleRepost(1, { ...post, isReposted: true });
+      service.toggleRepost(buildItemRef(1), post);
+      service.toggleRepost(buildItemRef(1), { ...post, isReposted: true });
 
       expect(reposts.unrepostComment).not.toHaveBeenCalled();
     });
@@ -234,23 +235,23 @@ describe('CommentsService', () => {
     it('lets a like through while a repost of the same comment is on the wire', () => {
       const likeComment = jest.fn(() => new Subject());
       Object.assign(api, { likeComment, unlikeComment: jest.fn() });
-      service.toggleRepost(1, post);
+      service.toggleRepost(buildItemRef(1), post);
 
-      service.toggleLike(1, { ...post, isLiked: false });
+      service.toggleLike(buildItemRef(1), { ...post, isLiked: false });
 
       expect(likeComment).toHaveBeenCalledWith(1, address);
     });
 
     it('holds a reload back until the repost settles', () => {
-      service.toggleRepost(1, post);
+      service.toggleRepost(buildItemRef(1), post);
 
-      service.reload(1);
+      service.reload(buildItemRef(1));
 
       expect(api.comments).toHaveBeenCalledTimes(1);
     });
 
     it('does nothing on a comment the network keeps from reposts', () => {
-      service.toggleRepost(1, { ...post, canRepost: false });
+      service.toggleRepost(buildItemRef(1), { ...post, canRepost: false });
 
       expect(reposts.repostComment).not.toHaveBeenCalled();
       expect(shownPost()).toEqual(post);
@@ -258,15 +259,15 @@ describe('CommentsService', () => {
   });
 
   it('starts idle and fetches nothing until asked', () => {
-    expect(service.state(1)()).toEqual({ status: 'idle' });
+    expect(service.state(buildItemRef(1))()).toEqual({ status: 'idle' });
     expect(api.comments).not.toHaveBeenCalled();
   });
 
   it('loads once and serves the cache inside the hour', () => {
-    service.load(1);
-    service.load(1);
+    service.load(buildItemRef(1));
+    service.load(buildItemRef(1));
     expect(api.comments).toHaveBeenCalledTimes(1);
-    expect(service.state(1)()).toEqual({
+    expect(service.state(buildItemRef(1))()).toEqual({
       status: 'ok',
       comments: ok.comments,
       omitted: 3,
@@ -276,28 +277,28 @@ describe('CommentsService', () => {
   });
 
   it('refetches once the hour has passed', () => {
-    service.load(1);
+    service.load(buildItemRef(1));
     jest.setSystemTime(new Date('2026-09-24T13:00:01Z'));
-    service.load(1);
+    service.load(buildItemRef(1));
     expect(api.comments).toHaveBeenCalledTimes(2);
   });
 
   it('reload bypasses the cache', () => {
-    service.load(1);
-    service.reload(1);
+    service.load(buildItemRef(1));
+    service.reload(buildItemRef(1));
     expect(api.comments).toHaveBeenCalledTimes(2);
   });
 
   it('asks the server to refresh on reload only', () => {
-    service.load(1);
-    service.reload(1);
+    service.load(buildItemRef(1));
+    service.reload(buildItemRef(1));
     expect(api.comments).toHaveBeenNthCalledWith(1, 1);
     expect(api.comments).toHaveBeenNthCalledWith(2, 1, true);
   });
 
   it('keeps the fetch time and the omitted count of an ok answer', () => {
-    service.load(1);
-    expect(service.state(1)()).toMatchObject({
+    service.load(buildItemRef(1));
+    expect(service.state(buildItemRef(1))()).toMatchObject({
       status: 'ok',
       omitted: 3,
       fetchedAt: '2026-09-24T11:59:00Z',
@@ -306,8 +307,8 @@ describe('CommentsService', () => {
 
   it('maps throttled to a retry instant', () => {
     api.comments.mockReturnValue(of({ status: 'throttled', retryAfter: 40 }));
-    service.load(1);
-    expect(service.state(1)()).toEqual({
+    service.load(buildItemRef(1));
+    expect(service.state(buildItemRef(1))()).toEqual({
       status: 'throttled',
       retryAt: Date.parse('2026-09-24T12:00:40Z'),
     });
@@ -315,50 +316,50 @@ describe('CommentsService', () => {
 
   it('does not retry a failed load within the minute', () => {
     api.comments.mockReturnValue(of({ status: 'failed' }));
-    service.load(1);
+    service.load(buildItemRef(1));
     jest.setSystemTime(new Date('2026-09-24T12:00:59Z'));
-    service.load(1);
+    service.load(buildItemRef(1));
     expect(api.comments).toHaveBeenCalledTimes(1);
   });
 
   it('loads a failed entry again once a minute has passed', () => {
     api.comments.mockReturnValue(of({ status: 'failed' }));
-    service.load(1);
+    service.load(buildItemRef(1));
     jest.setSystemTime(new Date('2026-09-24T12:01:00Z'));
-    service.load(1);
+    service.load(buildItemRef(1));
     expect(api.comments).toHaveBeenCalledTimes(2);
   });
 
   it('does not retry a throttled load before its wait is over', () => {
     api.comments.mockReturnValue(of({ status: 'throttled', retryAfter: 40 }));
-    service.load(1);
+    service.load(buildItemRef(1));
     jest.setSystemTime(new Date('2026-09-24T12:00:39Z'));
-    service.load(1);
+    service.load(buildItemRef(1));
     expect(api.comments).toHaveBeenCalledTimes(1);
   });
 
   it('loads a throttled entry again once its wait is over', () => {
     api.comments.mockReturnValue(of({ status: 'throttled', retryAfter: 40 }));
-    service.load(1);
+    service.load(buildItemRef(1));
     jest.setSystemTime(new Date('2026-09-24T12:00:40Z'));
-    service.load(1);
+    service.load(buildItemRef(1));
     expect(api.comments).toHaveBeenCalledTimes(2);
   });
 
   it('retries a failed or throttled load when asked to', () => {
     api.comments.mockReturnValue(of({ status: 'failed' }));
-    service.load(1);
-    service.reload(1);
+    service.load(buildItemRef(1));
+    service.reload(buildItemRef(1));
     api.comments.mockReturnValue(of({ status: 'throttled', retryAfter: 40 }));
-    service.load(2);
-    service.reload(2);
+    service.load(buildItemRef(2));
+    service.reload(buildItemRef(2));
     expect(api.comments).toHaveBeenCalledTimes(4);
   });
 
   it('maps a transport error to failed', () => {
     api.comments.mockReturnValue(throwError(() => new Error('offline')));
-    service.load(1);
-    expect(service.state(1)()).toEqual({
+    service.load(buildItemRef(1));
+    expect(service.state(buildItemRef(1))()).toEqual({
       status: 'failed',
       failedAt: Date.parse('2026-09-24T12:00:00Z'),
     });
@@ -367,10 +368,10 @@ describe('CommentsService', () => {
   it('ignores a second load while one is in flight', () => {
     const pending = new Subject<CommentsResponse>();
     api.comments.mockReturnValue(pending);
-    service.load(1);
-    service.load(1);
+    service.load(buildItemRef(1));
+    service.load(buildItemRef(1));
     expect(api.comments).toHaveBeenCalledTimes(1);
-    expect(service.state(1)()).toEqual({ status: 'loading' });
+    expect(service.state(buildItemRef(1))()).toEqual({ status: 'loading' });
   });
 
   describe('a reply the reader changed', () => {
@@ -383,17 +384,17 @@ describe('CommentsService', () => {
           fetchedAt: 'now',
         }),
       );
-      service.load(1);
+      service.load(buildItemRef(1));
       const reply = anEntryComment({
         html: 'mine',
         post: aCommentPost({ address: 'at://mine', isOwn: true }),
       });
 
-      service.insertReply(1, null, reply);
-      expect(htmlOf(service.state(1)())).toEqual(['mine', 'old']);
+      service.insertReply(buildItemRef(1), null, reply);
+      expect(htmlOf(service.state(buildItemRef(1))())).toEqual(['mine', 'old']);
 
-      service.removeReply(1, 'at://mine');
-      expect(htmlOf(service.state(1)())).toEqual(['old']);
+      service.removeReply(buildItemRef(1), 'at://mine');
+      expect(htmlOf(service.state(buildItemRef(1))())).toEqual(['old']);
     });
 
     it('counts a quote on the quoted comment, where its network counts quotes', () => {
@@ -410,21 +411,52 @@ describe('CommentsService', () => {
           fetchedAt: 'now',
         }),
       );
-      service.load(1);
+      service.load(buildItemRef(1));
 
-      service.countQuote(1, 'at://quoted');
-      service.countQuote(1, 'at://toot');
+      service.countQuote(buildItemRef(1), 'at://quoted');
+      service.countQuote(buildItemRef(1), 'at://toot');
 
-      const state = service.state(1)();
+      const state = service.state(buildItemRef(1))();
       const quotes =
         state.status === 'ok' ? state.comments.map((comment) => comment.post?.counts.quotes) : [];
       expect(quotes).toEqual([3, null]);
     });
 
     it('leaves a thread that is not loaded alone', () => {
-      service.insertReply(2, null, anEntryComment());
+      service.insertReply(buildItemRef(2), null, anEntryComment());
 
-      expect(service.state(2)()).toEqual({ status: 'idle' });
+      expect(service.state(buildItemRef(2))()).toEqual({ status: 'idle' });
+    });
+  });
+
+  describe('copies of one item (#2404)', () => {
+    const copyA = { id: 1, canonicalItemId: 7 };
+    const copyB = { id: 2, canonicalItemId: 7 };
+
+    it('insertReply on copy A shows in copy B’s thread', () => {
+      service.load(copyA);
+      service.insertReply(copyA, null, anEntryComment({ author: 'me' }));
+
+      const state = service.state(copyB)();
+
+      expect(state.status === 'ok' && state.comments.map((comment) => comment.author)).toEqual([
+        'me',
+        '/u/a',
+      ]);
+    });
+
+    it('loads the thread once for both copies, asking through the copy at hand', () => {
+      service.load(copyA);
+      service.load(copyB);
+
+      expect(api.comments).toHaveBeenCalledTimes(1);
+      expect(api.comments).toHaveBeenCalledWith(1);
+    });
+
+    it('keeps two entries without an item apart', () => {
+      service.load({ id: 1, canonicalItemId: null });
+
+      expect(service.state({ id: 2, canonicalItemId: null })().status).toBe('idle');
     });
   });
 });

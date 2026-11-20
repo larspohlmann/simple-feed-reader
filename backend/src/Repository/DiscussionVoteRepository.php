@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Entity\CanonicalItem;
 use App\Entity\DiscussionVote;
-use App\Entity\Entry;
 use App\Entity\User;
 use App\Enum\VoteScore;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -22,27 +22,27 @@ final class DiscussionVoteRepository extends ServiceEntityRepository
         parent::__construct($registry, DiscussionVote::class);
     }
 
-    public function findOneFor(User $user, Entry $entry): ?DiscussionVote
+    public function findOneFor(User $user, CanonicalItem $item): ?DiscussionVote
     {
-        return $this->findOneBy(['user' => $user, 'entry' => $entry]);
+        return $this->findOneBy(['user' => $user, 'canonicalItem' => $item]);
     }
 
-    /** An upsert, because two first votes of one user on one post can race for the unique row. */
+    /** An upsert, because two first votes of one user on one item can race; the first row's account stays. */
     public function store(DiscussionVote $vote): void
     {
         $connection = $this->getEntityManager()->getConnection();
-        $onConflict = DatabasePlatform::isMySql($connection)
-            ? 'ON DUPLICATE KEY UPDATE social_account_id = VALUES(social_account_id), score = VALUES(score),'
-                . ' voted_at = VALUES(voted_at)'
-            : 'ON CONFLICT (user_id, entry_id) DO UPDATE SET social_account_id = excluded.social_account_id,'
-                . ' score = excluded.score, voted_at = excluded.voted_at';
+        $onConflict = DatabasePlatform::buildUpsertClause(
+            $connection,
+            ['user_id', 'canonical_item_id'],
+            ['score', 'voted_at'],
+        );
 
         $connection->executeStatement(
-            'INSERT INTO discussion_vote (user_id, entry_id, social_account_id, score, voted_at)'
+            'INSERT INTO discussion_vote (user_id, canonical_item_id, social_account_id, score, voted_at)'
                 . ' VALUES (?, ?, ?, ?, ?) ' . $onConflict,
             [
                 $vote->getUser()->requireId(),
-                $vote->getEntry()->requireId(),
+                $vote->getCanonicalItem()->requireId(),
                 $vote->getSocialAccount()->requireId(),
                 $vote->getScore()->value,
                 $vote->getVotedAt(),
@@ -52,31 +52,26 @@ final class DiscussionVoteRepository extends ServiceEntityRepository
     }
 
     /**
-     * @param list<int> $entryIds
+     * @param list<int> $itemIds
      *
-     * @return array<int, VoteScore> the user's votes, by entry id
+     * @return array<int, VoteScore> the user's votes, by canonical item id
      */
-    public function findScores(int $userId, array $entryIds): array
+    public function findScores(int $userId, array $itemIds): array
     {
-        if ([] === $entryIds) {
+        if ([] === $itemIds) {
             return [];
         }
-        /** @var list<array{entryId: int, score: VoteScore}> $rows */
+        /** @var list<array{itemId: int, score: VoteScore}> $rows */
         $rows = $this->createQueryBuilder('dv')
-            ->select('e.id AS entryId', 'dv.score AS score')
-            ->join('dv.entry', 'e')
+            ->select('item.id AS itemId', 'dv.score AS score')
+            ->join('dv.canonicalItem', 'item')
             ->andWhere('dv.user = :user')
-            ->andWhere('e.id IN (:entryIds)')
+            ->andWhere('item.id IN (:itemIds)')
             ->setParameter('user', $userId)
-            ->setParameter('entryIds', $entryIds)
+            ->setParameter('itemIds', $itemIds)
             ->getQuery()
             ->getArrayResult();
 
-        $scores = [];
-        foreach ($rows as $row) {
-            $scores[$row['entryId']] = $row['score'];
-        }
-
-        return $scores;
+        return array_column($rows, 'score', 'itemId');
     }
 }

@@ -6,6 +6,7 @@ namespace App\Tests\Service\Operations\Backup\Support;
 
 use App\Entity\ActionToken;
 use App\Entity\AiProviderSettings;
+use App\Entity\CanonicalItem;
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
 use App\Entity\Category;
@@ -13,7 +14,6 @@ use App\Entity\DigestSettings;
 use App\Entity\DiscussionVote;
 use App\Entity\Entry;
 use App\Entity\EntryCategory;
-use App\Entity\EntryLemmyPost;
 use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\EntryTranscript;
@@ -22,6 +22,7 @@ use App\Entity\FeedDirectoryScope;
 use App\Entity\GrafanaSettings;
 use App\Entity\InstanceSetting;
 use App\Entity\KnownSocialCollection;
+use App\Entity\LemmyPost;
 use App\Entity\LinkCard;
 use App\Entity\MailSendFailure;
 use App\Entity\MailServerSettings;
@@ -158,7 +159,9 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . '(#1499, #1502, #1524); instance data, not the reader\'s.',
         ThreadPost::class => 'A post\'s self-reply continuation, read from the network at ingest (#1668); a '
             . 'restored entry shows its root post alone.',
-        EntryLemmyPost::class => 'A Lemmy post\'s score and community (#2347), rewritten on every fetch while its feed '
+        CanonicalItem::class => 'The row every copy of a social post shares, with its score and counts (#2404); '
+            . 'a restore, like ingest, finds or creates it again for each copy it writes.',
+        LemmyPost::class => 'A Lemmy post\'s community (#2347), rewritten on every fetch while its feed '
             . 'still lists the post; a restored one would be stale before the reader saw it.',
         EntryTranscript::class => 'An episode\'s transcript, fetched from the URL its feed declares (#1809); a '
             . 'restored episode has none, since a backup carries no transcript declaration.',
@@ -336,6 +339,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
                 . 'while its feed still lists the post; a restored one would be stale before the reader saw it.',
             'discussion.selfReplyCount' => 'The length of the thread whose replies, ThreadPost rows, stay out of '
                 . 'the file (#2269); a restored article shows its root post alone.',
+            'canonicalItem' => 'The shared row of a social post\'s copies (#2404), which the file does not carry; '
+                . 'a restore links each restored copy to it again.',
         ],
         LinkCard::class => [
             'threadPost' => 'A reply\'s card stays out of the file with its reply (#1668).',

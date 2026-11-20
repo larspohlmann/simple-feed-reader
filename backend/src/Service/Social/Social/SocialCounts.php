@@ -46,7 +46,7 @@ final readonly class SocialCounts
     public function fetchCounts(User $user, Entry $entry): SocialCountsModel
     {
         $post = $this->postAddresses->requirePost($entry);
-        $cached = $this->cache->find($post);
+        $cached = $this->cache->find($entry);
         if (null !== $cached) {
             return $cached;
         }
@@ -58,7 +58,7 @@ final readonly class SocialCounts
 
             throw $notFound;
         }
-        $this->cache->remember($post, $counts);
+        $this->cache->remember($entry, $counts);
 
         return $counts;
     }
@@ -74,8 +74,7 @@ final readonly class SocialCounts
      */
     public function refreshed(User $user, Entry $entry): SocialCountsModel
     {
-        $post = $this->postAddresses->requirePost($entry);
-        $this->cache->forget($post);
+        $this->cache->forget($entry);
 
         return $this->fetchCounts($user, $entry);
     }

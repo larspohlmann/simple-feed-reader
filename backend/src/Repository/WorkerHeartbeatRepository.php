@@ -26,14 +26,12 @@ final class WorkerHeartbeatRepository extends ServiceEntityRepository
     public function touch(string $name, \DateTimeImmutable $when): void
     {
         $connection = $this->getEntityManager()->getConnection();
-        $onConflict = DatabasePlatform::isMySql($connection)
-            ? 'ON DUPLICATE KEY UPDATE'
-            : 'ON CONFLICT (name) DO UPDATE SET';
+        $onConflict = DatabasePlatform::buildUpsertClause($connection, ['name'], ['touched_at']);
 
         $connection->executeStatement(
-            sprintf('INSERT INTO worker_heartbeat (name, touched_at) VALUES (?, ?) %s touched_at = ?', $onConflict),
-            [$name, $when, $when],
-            [Types::STRING, Types::DATETIME_IMMUTABLE, Types::DATETIME_IMMUTABLE],
+            'INSERT INTO worker_heartbeat (name, touched_at) VALUES (?, ?) ' . $onConflict,
+            [$name, $when],
+            [Types::STRING, Types::DATETIME_IMMUTABLE],
         );
     }
 

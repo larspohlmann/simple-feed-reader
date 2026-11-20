@@ -27,6 +27,7 @@ final readonly class EntryReadMarker
         private EntryReadMarkRepository $readMarks,
         private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
+        private CopyReadStatePropagator $copyReadStates,
     ) {
     }
 
@@ -47,11 +48,13 @@ final readonly class EntryReadMarker
         $this->entityManager->wrapInTransaction(function () use ($userId, $feedIds, $until): void {
             $this->readMarks->hideUnreadInFeedsUntil(new ReadMarking($userId, $this->clock->now()), $feedIds, $until);
         });
+        $this->copyReadStates->spreadSweep($userId, $feedIds, $until);
     }
 
     /**
-     * Batched, so a broad list never loads every id at once. The ids must be distinct and exist: a missing state
-     * row is persisted by reference, so a pruned or repeated id fails the insert.
+     * Every item copy of each entry the caller follows is marked too, batched, so a broad list never loads every id
+     * at once. The ids must be distinct and exist: a missing state row is persisted by reference, so a pruned or
+     * repeated id fails the insert.
      *
      * @param list<int> $entryIds
      */
@@ -67,6 +70,7 @@ final readonly class EntryReadMarker
             $this->createMissing($marking, $chunk);
             $this->entityManager->flush();
             $this->entityManager->clear();
+            $this->copyReadStates->spreadRead($userId, $chunk);
         }
     }
 

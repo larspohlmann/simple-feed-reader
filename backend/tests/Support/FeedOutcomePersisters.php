@@ -138,6 +138,7 @@ final class FeedOutcomePersisters
                 PostEnrichers::queue($this->entityManager, $this->clock),
                 $this->timelineSelfThreads,
                 $this->tombstones,
+                CopyReadStatePropagators::build($this->entityManager, $this->clock),
             ),
             $shareEnrichment,
             $this->logger,

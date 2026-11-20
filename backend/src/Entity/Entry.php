@@ -6,7 +6,6 @@ namespace App\Entity;
 
 use App\Enum\ShareKind;
 use App\Repository\EntryRepository;
-use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: EntryRepository::class)]
@@ -18,6 +17,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(name: 'idx_entry_url_hash', columns: ['url_hash', 'id'])]
 #[ORM\Index(name: 'idx_entry_image_verify', columns: ['image_verify_attempts', 'id'])]
 #[ORM\Index(name: 'idx_entry_image_url_hash', columns: ['image_url_hash'])]
+#[ORM\Index(name: 'idx_entry_canonical_item', columns: ['canonical_item_id', 'id'])]
+#[ORM\Index(name: 'idx_entry_item_feed_date', columns: ['canonical_item_id', 'feed_id', 'effective_date'])]
 final class Entry
 {
     use PersistedId;
@@ -55,6 +56,10 @@ final class Entry
     #[ORM\Embedded(class: EntryDiscussion::class, columnPrefix: false)]
     private EntryDiscussion $discussion;
 
+    #[ORM\ManyToOne(targetEntity: CanonicalItem::class)]
+    #[ORM\JoinColumn(name: 'canonical_item_id', nullable: true, onDelete: 'SET NULL')]
+    private ?CanonicalItem $canonicalItem = null;
+
     #[ORM\Embedded(class: EntrySharedContent::class, columnPrefix: false)]
     private EntrySharedContent $share;
 
@@ -62,19 +67,10 @@ final class Entry
     #[ORM\JoinColumn(name: 'quoted_shared_link_id', nullable: true)]
     private ?SharedLink $quotedLink = null;
 
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
-    private ?\DateTimeImmutable $publishedAt = null;
+    #[ORM\Embedded(class: EntryDates::class, columnPrefix: false)]
+    private EntryDates $dates;
 
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
-    private \DateTimeImmutable $createdAt;
-
-    /**
-     * The list-sort instant, decided at ingest by EntryEffectiveDate from the fetch history and never recomputed here.
-     * Materialized so idx_entry_effective serves the sort; the column default exists only for SQLite's migration.
-     */
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, options: ['default' => '1970-01-01 00:00:00'])]
-    private \DateTimeImmutable $effectiveDate;
-
+    /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(
         Feed $feed,
         string $guid,
@@ -91,8 +87,7 @@ final class Entry
         $this->text = new EntryText();
         $this->headline = new EntryHeadline();
         $this->headline->store(Headline::fromFeed($title));
-        $this->createdAt = $createdAt;
-        $this->effectiveDate = $effectiveDate;
+        $this->dates = new EntryDates($createdAt, $effectiveDate);
         $this->image = new EntryImage();
         $this->mediaSet = new EntryMedia();
         $this->author = new EntryAuthor();
@@ -256,12 +251,12 @@ final class Entry
 
     public function getPublishedAt(): ?\DateTimeImmutable
     {
-        return $this->publishedAt;
+        return $this->dates->getPublishedAt();
     }
 
     public function setPublishedAt(?\DateTimeImmutable $publishedAt): void
     {
-        $this->publishedAt = $publishedAt;
+        $this->dates->setPublishedAt($publishedAt);
     }
 
     public function getDiscussion(): Discussion
@@ -279,14 +274,27 @@ final class Entry
         $this->discussion->store($discussion);
     }
 
-    public function getCommentCount(): ?int
+    public function getCanonicalItem(): ?CanonicalItem
     {
-        return $this->discussion->readCommentCount();
+        return $this->canonicalItem;
     }
 
-    public function recordDiscussionCounts(DiscussionCounts $counts): void
+    public function getCanonicalItemId(): ?int
     {
-        $this->discussion->storeCommentCount($counts->commentCount);
+        return $this->canonicalItem?->requireId();
+    }
+
+    public function linkTo(CanonicalItem $item): void
+    {
+        $item->recordCommentCount($this->discussion->getCommentCount());
+        $item->recordSelfReplyCount($this->discussion->getSelfReplyCount());
+        $this->discussion->clearCounts();
+        $this->canonicalItem = $item;
+    }
+
+    public function selectDiscussionCounts(): DiscussionCountStoreInterface
+    {
+        return $this->canonicalItem ?? $this->discussion;
     }
 
     public function getShareKind(): ?ShareKind
@@ -313,16 +321,6 @@ final class Entry
         $this->quotedLink = $link;
     }
 
-    public function getSelfReplyCount(): int
-    {
-        return $this->discussion->readSelfReplyCount();
-    }
-
-    public function countSelfReplies(int $selfReplyCount): void
-    {
-        $this->discussion->storeSelfReplyCount($selfReplyCount);
-    }
-
     public function bodyStandsInForSummary(): bool
     {
         return !$this->headline->read()->isUntitledPost() && $this->share->kind() === null;
@@ -330,11 +328,11 @@ final class Entry
 
     public function getEffectiveDate(): \DateTimeImmutable
     {
-        return $this->effectiveDate;
+        return $this->dates->getEffectiveDate();
     }
 
     public function getCreatedAt(): \DateTimeImmutable
     {
-        return $this->createdAt;
+        return $this->dates->getCreatedAt();
     }
 }

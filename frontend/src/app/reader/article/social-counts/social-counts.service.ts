@@ -14,6 +14,7 @@ import {
 } from '../../entry-social';
 import { EntryDto } from '../../models';
 import { SocialPostApi } from '../../social-post-api';
+import { ItemRef, buildItemKey } from '../../state/item-key';
 import { EntryRowCache } from '../../state/entry-row-cache';
 import { RemovedPosts } from '../../removed-posts.service';
 import { NetworkShares } from '../share/network-shares.service';
@@ -22,7 +23,7 @@ const CACHE_CAP = 50;
 const FRESH_MS = 120 * 1000;
 const FAILED_RETRY_MS = 60 * 1000;
 
-export type CountedEntry = Pick<EntryDto, 'id' | 'social'>;
+export type CountedEntry = Pick<EntryDto, 'id' | 'canonicalItemId' | 'social'>;
 
 /**
  * `likedAtLoad`: whether the loaded counts include the reader's like; the shown likes count from it.
@@ -46,7 +47,7 @@ export class SocialCountsService {
   private readonly rows = inject(EntryRowCache);
   private readonly removedPosts = inject(RemovedPosts);
   private readonly shares = inject(NetworkShares);
-  private readonly states = new Map<number, WritableSignal<SocialCountsState>>();
+  private readonly states = new Map<string, WritableSignal<SocialCountsState>>();
   private readonly toggles = new OptimisticToggles(inject(ToastService));
   private generation = 0;
 
@@ -54,29 +55,29 @@ export class SocialCountsService {
     onIdentityChange(() => this.clear());
   }
 
-  state(id: number): Signal<SocialCountsState> {
-    return this.stateFor(id).asReadonly();
+  state(item: ItemRef): Signal<SocialCountsState> {
+    return this.stateFor(item).asReadonly();
   }
 
   load(entry: CountedEntry): void {
-    const state = this.stateFor(entry.id);
+    const state = this.stateFor(entry);
     if (isStale(state())) this.fetch(entry, state, this.api.counts(entry.id));
   }
 
   /** A reload waits out a repost on the wire, whose answer the reloaded counts might not include yet. */
   reload(entry: CountedEntry): void {
-    const state = this.stateFor(entry.id);
-    if (state().status === 'loading' || this.toggles.isBusy(entry.id)) return;
+    const state = this.stateFor(entry);
+    if (state().status === 'loading' || this.toggles.isBusy(buildItemKey(entry))) return;
     this.fetch(entry, state, this.api.counts(entry.id, true));
   }
 
   /** Optimistic repost of the entry's post; dropped while one is on the wire or the network forbids it. */
   toggleRepost(entry: CountedEntry): void {
-    const state = this.stateFor(entry.id);
+    const state = this.stateFor(entry);
     const current = state();
     if (current.status !== 'ok' || !current.actions?.canRepost) return;
     const isReposted = !current.actions.isReposted;
-    this.toggles.run(entry.id, {
+    this.toggles.run(buildItemKey(entry), {
       key: 'repost',
       send: () => (isReposted ? this.repost(entry.id) : this.api.unrepost(entry.id)),
       to: isReposted,
@@ -85,16 +86,16 @@ export class SocialCountsService {
   }
 
   /** Counts a reply the reader published to the post, or one they deleted, before the network does. */
-  stepReplies(entryId: number, up: boolean): void {
-    this.stepCount(entryId, 'replies', up);
+  stepReplies(item: ItemRef, up: boolean): void {
+    this.stepCount(item, 'replies', up);
   }
 
-  stepQuotes(entryId: number): void {
-    this.stepCount(entryId, 'quotes', true);
+  stepQuotes(item: ItemRef): void {
+    this.stepCount(item, 'quotes', true);
   }
 
-  private stepCount(entryId: number, kind: keyof SocialCountsDto, up: boolean): void {
-    this.stateFor(entryId).update((state) => {
+  private stepCount(item: ItemRef, kind: keyof SocialCountsDto, up: boolean): void {
+    this.stateFor(item).update((state) => {
       if (state.status !== 'ok') return state;
       const counts = steppedCounts(state.counts, kind, up);
       return counts === state.counts ? state : { ...state, counts };
@@ -105,10 +106,11 @@ export class SocialCountsService {
     return this.api.repost(entryId).pipe(tap(() => this.shares.reflect(entryId)));
   }
 
-  private stateFor(id: number): WritableSignal<SocialCountsState> {
-    const state = this.states.get(id) ?? signal<SocialCountsState>({ status: 'idle' });
-    this.states.delete(id);
-    this.states.set(id, state);
+  private stateFor(item: ItemRef): WritableSignal<SocialCountsState> {
+    const key = buildItemKey(item);
+    const state = this.states.get(key) ?? signal<SocialCountsState>({ status: 'idle' });
+    this.states.delete(key);
+    this.states.set(key, state);
     const oldest = this.states.size > CACHE_CAP ? this.states.keys().next().value : undefined;
     if (oldest !== undefined) this.states.delete(oldest);
     return state;

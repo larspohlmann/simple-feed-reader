@@ -89,7 +89,8 @@ export class EntryRowCache {
       return;
     const patch = { myVote: to, score: steppedScore(entry.score, from, to) };
     this.optimistic(entry, patch, this.socialPosts.vote(entry.id, to)).subscribe({
-      next: (answer) => this.patch([entry.id], (row) => ({ ...row, myVote: answer.myVote })),
+      next: (answer) =>
+        this.patch(this.collectCopyIds(entry), (row) => ({ ...row, myVote: answer.myVote })),
       error: (error: HttpErrorResponse) => onError(parseProblem(error)),
     });
   }
@@ -130,7 +131,7 @@ export class EntryRowCache {
   /** Restyles entries as read in every list that holds them, with no request: the caller has marked them read on
    *  the server. */
   markHiddenLocally(ids: number[]): void {
-    this.patch(ids, (entry) => ({ ...entry, isHidden: true }));
+    this.patch(this.collectIdsWithCopies(ids), (entry) => ({ ...entry, isHidden: true }));
   }
 
   /** Reflects a share the server already recorded, as for a repost; no request. */
@@ -160,24 +161,84 @@ export class EntryRowCache {
     field: keyof RowPatch,
     adopt: (entry: EntryDto) => EntryDto,
   ): void {
-    if (!this.inFlight.onTheWire(entryId, field)) this.patch([entryId], adopt);
+    for (const id of this.collectIdsWithCopies([entryId])) {
+      if (!this.inFlight.onTheWire(id, field)) this.patch([id], adopt);
+    }
   }
 
-  /** Lays `patch` over `target` until `request$` settles, and puts the old values back if it fails. */
+  /** Lays `patch` over `target` until `request$` settles, and puts the old values back if it fails. What the
+   *  copies of one canonical item share goes onto each of them too (#2404). */
   private optimistic<T>(target: EntryDto, patch: RowPatch, request$: Observable<T>): Observable<T> {
-    const before = valuesBefore(target, patch);
-    const release = this.inFlight.add(target.id, patch);
-    this.patch([target.id], (entry) => ({ ...entry, ...patch }));
-    return request$.pipe(
-      tap({ error: () => this.patch([target.id], (entry) => ({ ...entry, ...before })) }),
-      finalize(release),
+    const changes = [target, ...this.findCopies(target)].map((entry) => ({
+      entry,
+      patch: entry === target ? patch : buildSharedPatch(entry, patch),
+    }));
+    const befores = changes.map((change) => valuesBefore(change.entry, change.patch));
+    const releases = changes.map((change) => this.inFlight.add(change.entry.id, change.patch));
+    changes.forEach((change) =>
+      this.patch([change.entry.id], (row) => ({ ...row, ...change.patch })),
     );
+    return request$.pipe(
+      tap({
+        error: () =>
+          changes.forEach((change, index) =>
+            this.patch([change.entry.id], (row) => ({ ...row, ...befores[index] })),
+          ),
+      }),
+      finalize(() => releases.forEach((release) => release())),
+    );
+  }
+
+  private findCopies(entry: EntryDto): EntryDto[] {
+    if (entry.canonicalItemId === null) return [];
+    return [...this.records.values()]
+      .map((record) => record())
+      .filter((row) => row.id !== entry.id && row.canonicalItemId === entry.canonicalItemId);
+  }
+
+  private collectCopyIds(entry: EntryDto): number[] {
+    return [entry.id, ...this.findCopies(entry).map((copy) => copy.id)];
+  }
+
+  private collectIdsWithCopies(ids: Iterable<number>): number[] {
+    const distinct = [...new Set(ids)];
+    const itemIds = distinct.map((id) => this.entry(id)?.canonicalItemId ?? null);
+    if (itemIds.every((itemId) => itemId === null)) return distinct;
+    const idsByItem = this.groupIdsByItem();
+    return distinct.flatMap((id, index) => {
+      const itemId = itemIds[index];
+      return (itemId === null ? undefined : idsByItem.get(itemId)) ?? [id];
+    });
+  }
+
+  private groupIdsByItem(): Map<number, number[]> {
+    const idsByItem = new Map<number, number[]>();
+    for (const [id, record] of this.records) {
+      const itemId = record().canonicalItemId;
+      if (itemId === null) continue;
+      idsByItem.set(itemId, [...(idsByItem.get(itemId) ?? []), id]);
+    }
+    return idsByItem;
   }
 
   /** An entry keeps its identity when `patch` hands it back, so nothing derived from it recomputes. */
   private patch(ids: Iterable<number>, patch: (entry: EntryDto) => EntryDto): void {
     for (const id of new Set(ids)) this.records.get(id)?.update(patch);
   }
+}
+
+const SHARED_KEYS = ['isHidden', 'isViewed', 'myVote', 'score'] as const;
+
+/** What of `patch` the copies of one item share: the read flags, the score and vote, and the like. */
+function buildSharedPatch(copy: EntryDto, patch: RowPatch): RowPatch {
+  const shared: RowPatch = {};
+  for (const key of SHARED_KEYS) {
+    if (patch[key] !== undefined) Object.assign(shared, { [key]: patch[key] });
+  }
+  if (copy.social && patch.social) {
+    shared.social = { ...copy.social, isLiked: patch.social.isLiked };
+  }
+  return shared;
 }
 
 /** Mirrors the backend's flag coupling (#482): viewing also hides

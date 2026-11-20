@@ -11,6 +11,7 @@ import { ToastService } from '../../../shared/toast/toast.service';
 import { EntryCommentDto } from '../../entry-comment';
 import { EntryDto } from '../../models';
 import { PostTargetDto, SharedLinkDto } from '../../entry-social';
+import { ItemRef } from '../../state/item-key';
 import { SocialPostApi } from '../../social-post-api';
 import { CommentsService } from '../entry-comments/comments.service';
 import { SocialCountsService } from '../social-counts/social-counts.service';
@@ -37,18 +38,18 @@ export class PostActions {
   private readonly transloco = inject(TranslocoService);
 
   /** Replies to the entry's own post, or to the reply in its thread named by `address`. */
-  reply(entryId: number, network: SocialNetworkName, address: string | null): void {
-    this.respond({ kind: 'reply', entryId, network, address }).subscribe(([sent]) => {
-      this.comments.insertReply(entryId, address, sentComment(sent, new Date()));
-      if (address === null) this.counts.stepReplies(entryId, true);
+  reply(item: ItemRef, network: SocialNetworkName, address: string | null): void {
+    this.respond({ kind: 'reply', entryId: item.id, network, address }).subscribe(([sent]) => {
+      this.comments.insertReply(item, address, sentComment(sent, new Date()));
+      if (address === null) this.counts.stepReplies(item, true);
     });
   }
 
   /** Quotes the entry's own post, or the reply in its thread named by `address`. */
-  quote(entryId: number, network: SocialNetworkName, address: string | null): void {
-    this.respond({ kind: 'quote', entryId, network, address }).subscribe((posts) => {
-      if (address === null) this.quotedPost(entryId);
-      else this.comments.countQuote(entryId, address);
+  quote(item: ItemRef, network: SocialNetworkName, address: string | null): void {
+    this.respond({ kind: 'quote', entryId: item.id, network, address }).subscribe((posts) => {
+      if (address === null) this.quotedPost(item);
+      else this.comments.countQuote(item, address);
       this.announce(posts);
     });
   }
@@ -60,7 +61,7 @@ export class PostActions {
     );
   }
 
-  delete(entryId: number, network: SocialNetworkName, comment: EntryCommentDto): void {
+  delete(item: ItemRef, network: SocialNetworkName, comment: EntryCommentDto): void {
     const address = comment.post?.address;
     if (address === undefined) return;
     this.confirmedDelete(
@@ -72,10 +73,10 @@ export class PostActions {
         confirmLabel: this.transloco.translate('reader.deleteReply.confirm'),
         danger: true,
       },
-      () => this.api.deleteReply(entryId, address),
+      () => this.api.deleteReply(item.id, address),
     ).subscribe(() => {
-      this.comments.removeReply(entryId, address);
-      if (comment.depth === 0) this.counts.stepReplies(entryId, false);
+      this.comments.removeReply(item, address);
+      if (comment.depth === 0) this.counts.stepReplies(item, false);
     });
   }
 
@@ -126,9 +127,9 @@ export class PostActions {
       .closed.pipe(filter((posts): posts is SentPost[] => posts !== undefined));
   }
 
-  private quotedPost(entryId: number): void {
-    this.counts.stepQuotes(entryId);
-    this.shares.reflect(entryId);
+  private quotedPost(item: ItemRef): void {
+    this.counts.stepQuotes(item);
+    this.shares.reflect(item.id);
   }
 
   private deletePostTitle(replies: number): string {

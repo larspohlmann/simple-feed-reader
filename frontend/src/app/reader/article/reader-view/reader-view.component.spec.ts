@@ -284,7 +284,11 @@ describe('ReaderViewComponent', () => {
           button.compareDocumentPosition(pill) & Node.DOCUMENT_POSITION_FOLLOWING,
         ).toBeTruthy();
         button.click();
-        expect(TestBed.inject(PostActions).reply).toHaveBeenCalledWith(7, 'lemmy', null);
+        expect(TestBed.inject(PostActions).reply).toHaveBeenCalledWith(
+          expect.objectContaining({ id: 7 }),
+          'lemmy',
+          null,
+        );
       });
 
       it('offersNoReplyWithoutAConnectedAccount', () => {

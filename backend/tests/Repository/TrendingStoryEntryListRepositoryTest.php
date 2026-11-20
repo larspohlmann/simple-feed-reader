@@ -12,10 +12,12 @@ use App\Entity\TrendingStory;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
+use App\Repository\EntryListRow;
 use App\Repository\TrendingStoryEntryListRepository;
 use App\Repository\TrendingStoryListQuery;
 use App\Service\Curation\Trending\Model\StoryHeadingModel;
 use App\Tests\DbTestCase;
+use App\Tests\Support\LemmyPostEntries;
 use App\Tests\Support\TrendingFixtures;
 
 final class TrendingStoryEntryListRepositoryTest extends DbTestCase
@@ -30,6 +32,35 @@ final class TrendingStoryEntryListRepositoryTest extends DbTestCase
         parent::setUp();
         $this->fixtures = new TrendingFixtures($this->entityManager);
         $this->entries = self::getContainer()->get(TrendingStoryEntryListRepository::class);
+    }
+
+    public function testStoryCountsAnItemOnce(): void
+    {
+        $reader = $this->fixtures->reader('story-entry-list-item-once@example.com');
+        $fixtures = $this->fixtures->ownedBy($reader);
+        [$localCopy, $allCopy] = $this->persistLocalAndAllCopies($fixtures);
+        $story = $fixtures->story(TrendingWindow::Day, '2031-05-14 09:00:00', $localCopy, $allCopy);
+        $query = new TrendingStoryListQuery($reader->requireId(), $story->requireId());
+
+        self::assertSame(1, $this->entries->countMembersAndUnread($query)->memberCount);
+        self::assertSame(
+            [$localCopy->getId()],
+            array_map(static fn (EntryListRow $row): ?int => $row->entry->getId(), $this->entries->listMembers($query)),
+        );
+    }
+
+    public function testJoinedAtByEntryReadsACopyOfTheSameItem(): void
+    {
+        $reader = $this->fixtures->reader('story-entry-list-joined-at-item@example.com');
+        $fixtures = $this->fixtures->ownedBy($reader);
+        [$shown, $laterCopy] = $this->persistLocalAndAllCopies($fixtures);
+        $story = $fixtures->story(TrendingWindow::Day, '2031-05-14 09:00:00', $shown);
+        $fixtures->join($story, '2031-05-14 10:00:00', $laterCopy);
+
+        self::assertEquals(
+            [$shown->requireId() => self::at('2031-05-14 10:00:00')],
+            $this->joinedAtOf($reader, $story, $shown),
+        );
     }
 
     public function testJoinedAtByEntryReadsOnlyCopiesTheReaderSees(): void
@@ -160,6 +191,16 @@ final class TrendingStoryEntryListRepositoryTest extends DbTestCase
         return $this->entries->joinedAtByEntry(
             new TrendingStoryListQuery($reader->requireId(), $story->requireId()),
             [$entry->requireId()],
+        );
+    }
+
+    /** @return array{Entry, Entry} */
+    private function persistLocalAndAllCopies(TrendingFixtures $fixtures): array
+    {
+        return LemmyPostEntries::persistCopies(
+            $this->entityManager,
+            $fixtures->feed('local', SocialNetwork::Lemmy),
+            $fixtures->feed('all', SocialNetwork::Lemmy),
         );
     }
 

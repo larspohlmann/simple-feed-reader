@@ -12,6 +12,7 @@ use App\Entity\NetworkExclusion;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\CanonicalItemKind;
 use App\Enum\EntryView;
 use App\Enum\FeedGroup;
 use App\Enum\InclusionSurface;
@@ -31,6 +32,7 @@ use App\Repository\NetworkScope;
 use App\Repository\SearchTermsPredicateBuilder;
 use App\Repository\SubscriptionScopeRepository;
 use App\Tests\DbTestCase;
+use App\Tests\Support\CanonicalItems;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\QueryRecorder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -303,6 +305,30 @@ final class EntryListTest extends DbTestCase
 
         self::assertCount(1, $this->joinPrefixQueries(new EntryQuery($userId, EntryView::All)));
         self::assertCount(1, $this->joinPrefixQueries(new EntryQuery($userId, EntryView::Unread)));
+    }
+
+    public function testListedRowsReadTheirCanonicalItemWithoutAQueryEach(): void
+    {
+        foreach (['https://lemmy.world/post/1', 'https://lemmy.world/post/2'] as $index => $key) {
+            $item = CanonicalItems::buildItem(CanonicalItemKind::Lemmy, $key);
+            $item->recordCommentCount($index + 3);
+            $this->entityManager->persist($item);
+            $this->entry('item-' . $index, '2026-07-0' . ($index + 2) . 'T00:00:00Z')->linkTo($item);
+        }
+        $this->entityManager->flush();
+        $this->entityManager->clear();
+
+        $listed = $this->recordedList($this->repository(), new EntryQuery($this->user->requireId()));
+        /** @var QueryRecorder $recorder */
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        $recorder->reset();
+        $counts = array_map(
+            static fn (EntryListRow $row): ?int => $row->entry->selectDiscussionCounts()->getCommentCount(),
+            $listed['rows'],
+        );
+
+        self::assertSame([4, 3], $counts);
+        self::assertSame([], $recorder->queries());
     }
 
     public function testOldestFirstReversesTheListIdTieBreakIncluded(): void

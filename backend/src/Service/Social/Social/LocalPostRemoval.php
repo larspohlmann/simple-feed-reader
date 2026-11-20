@@ -49,7 +49,7 @@ final readonly class LocalPostRemoval
         foreach (self::guidHashesByFeed($copies) as $feedId => $guidHashes) {
             $this->tombstones->bury($feedId, [...$guidHashes, ...$replyHashes]);
         }
-        $this->countsCache->forgetEntry($entry);
+        $this->countsCache->forget($entry);
         $entryIds = array_map(static fn (StoredPostCopy $copy): int => $copy->entryId, $copies);
         $this->removals->deleteEntries($entryIds);
         $this->indexer->forget($entryIds);

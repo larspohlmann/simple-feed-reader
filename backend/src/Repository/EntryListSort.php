@@ -38,7 +38,7 @@ enum EntryListSort
     public function orderColumn(): string
     {
         return match ($this) {
-            self::PublishedDate => 'e.effectiveDate',
+            self::PublishedDate => 'e.dates.effectiveDate',
             self::ViewedAt => 'es.viewedAt',
             self::SharedAt => 'esh.sharedAt',
         };

@@ -63,6 +63,7 @@ final class RecommendationItemRepository extends ServiceEntityRepository
 
         return QuotedLinkJoin::onto($forYou, 'e')
             ->leftJoin('e.feed', 'f')->addSelect('f')
+            ->leftJoin('e.canonicalItem', 'ci')->addSelect('ci')
             ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
             ->leftJoin(EntryShare::class, 'esh', 'ON', 'esh.entry = e AND esh.user = :user')
             ->addSelect('s.id AS subscriptionId')

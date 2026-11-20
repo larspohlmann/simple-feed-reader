@@ -105,7 +105,7 @@ final readonly class DateOrderedPage
     private function windowed(QueryBuilder $pageQuery, \DateTimeImmutable $windowEdge, ListOrder $order): QueryBuilder
     {
         return $pageQuery
-            ->andWhere(\sprintf('e.effectiveDate %s :windowEdge', $order->atOrBefore()))
+            ->andWhere(\sprintf('e.dates.effectiveDate %s :windowEdge', $order->atOrBefore()))
             ->setParameter('windowEdge', $windowEdge, Types::DATETIME_IMMUTABLE);
     }
 

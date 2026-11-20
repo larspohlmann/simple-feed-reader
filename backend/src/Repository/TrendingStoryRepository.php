@@ -33,9 +33,6 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     private const string ARTICLE_FEEDS
         = 'COUNT(DISTINCT CASE WHEN member_feed.network IS NULL THEN story_member.feed_id END)';
 
-    private const string MEMBER_COUNT
-        = '(SELECT COUNT(*) FROM trending_story_entry member WHERE member.story_id = story.id)';
-
     private const array VISIBILITY_TYPES = [
         'user' => ParameterType::INTEGER,
         'minimum' => ParameterType::INTEGER,
@@ -129,7 +126,8 @@ final class TrendingStoryRepository extends ServiceEntityRepository
         $storyIds = $this->getEntityManager()->getConnection()->fetchFirstColumn(
             'SELECT story.id FROM trending_story story WHERE story.user_id = :user AND story.last_seen >= :seenSince'
             . ' AND (story.llm_title_attempted_at IS NULL OR story.llm_title_attempted_at <= :attemptedBefore)'
-            . ' AND (story.llm_title IS NULL OR ' . self::MEMBER_COUNT . ' * 2 >= story.llm_title_member_count * 3)'
+            . ' AND (story.llm_title IS NULL OR ' . self::buildMemberCount('story.id')
+            . ' * 2 >= story.llm_title_member_count * 3)'
             . ' ORDER BY story.id',
             ['user' => $userId, 'attemptedBefore' => $attemptedBefore, 'seenSince' => $seenSince],
             [
@@ -146,8 +144,8 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     {
         $this->getEntityManager()->getConnection()->executeStatement(
             'UPDATE trending_story SET llm_title = :title, llm_synopsis = :synopsis,'
-            . ' llm_title_member_count = (SELECT COUNT(*) FROM trending_story_entry member'
-            . ' WHERE member.story_id = :story), llm_title_attempted_at = :attemptedAt WHERE id = :story',
+            . ' llm_title_member_count = ' . self::buildMemberCount(':story') . ','
+            . ' llm_title_attempted_at = :attemptedAt WHERE id = :story',
             [
                 'title' => $heading->title,
                 'synopsis' => $heading->synopsis,
@@ -299,6 +297,14 @@ final class TrendingStoryRepository extends ServiceEntityRepository
         );
     }
 
+    /** Copies of one canonical item count once; negated, an entry id never equals an item id. */
+    private static function buildMemberCount(string $storyId): string
+    {
+        return '(SELECT COUNT(DISTINCT COALESCE(member_entry.canonical_item_id, -member.entry_id))'
+            . ' FROM trending_story_entry member JOIN entry member_entry ON member_entry.id = member.entry_id'
+            . ' WHERE member.story_id = ' . $storyId . ')';
+    }
+
     /**
      * The reader's stories of the window, counting their members in it, an article once and a post by its account,
      * leaving out those they hid or are shown in a shorter window; an `AND` on `story`, then visibleCoverage().
@@ -317,7 +323,8 @@ final class TrendingStoryRepository extends ServiceEntityRepository
                 'story.user_id = :user',
                 'hidden.story_id IS NULL',
                 TrendingPlacementSql::buildPlacedCondition($reader->window, 'story_member'),
-                self::noEarlierCopy($reader->window),
+                self::buildNoEarlierArticleCopy($reader->window),
+                self::buildNoEarlierItemCopy($reader->window),
                 ...self::notShownInAShorterWindow($reader),
             ]);
     }
@@ -356,20 +363,42 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             . ' THEN story_member.feed_id END))';
     }
 
-    /**
-     * As in DuplicateCollapseDql, only the lowest-id copy of an article in the story counts. A post counts by its
-     * account.
-     */
-    private static function noEarlierCopy(TrendingWindow $window): string
+    /** As in DuplicateCollapseDql, only the lowest-id copy of an article counts; a post counts by its account. */
+    private static function buildNoEarlierArticleCopy(TrendingWindow $window): string
     {
-        return '(member_feed.network IS NOT NULL'
+        return self::buildNoEarlierCopy(
+            $window,
+            'member_feed.network IS NOT NULL',
+            ' JOIN feed earlier_feed ON earlier_feed.id = earlier_member.feed_id AND earlier_feed.network IS NULL',
+            'earlier_entry.url_hash = member_entry.url_hash',
+        );
+    }
+
+    /** Only the lowest-id copy of an item counts, in whatever feed: its copies' authors and feeds differ. */
+    private static function buildNoEarlierItemCopy(TrendingWindow $window): string
+    {
+        return self::buildNoEarlierCopy(
+            $window,
+            'member_entry.canonical_item_id IS NULL',
+            '',
+            'earlier_entry.canonical_item_id = member_entry.canonical_item_id',
+        );
+    }
+
+    /** A member counts when `$exemption` holds, else when no placed member of its story with a lower entry id is `$sameCopy`. */
+    private static function buildNoEarlierCopy(
+        TrendingWindow $window,
+        string $exemption,
+        string $earlierJoin,
+        string $sameCopy,
+    ): string {
+        return '(' . $exemption
             . ' OR NOT EXISTS (SELECT 1 FROM trending_story_entry earlier_member'
-            . ' JOIN entry earlier_entry ON earlier_entry.id = earlier_member.entry_id'
-            . ' JOIN feed earlier_feed ON earlier_feed.id = earlier_member.feed_id AND earlier_feed.network IS NULL'
+            . ' JOIN entry earlier_entry ON earlier_entry.id = earlier_member.entry_id' . $earlierJoin
             . ' WHERE earlier_member.story_id = story.id'
             . ' AND ' . TrendingPlacementSql::buildPlacedCondition($window, 'earlier_member')
             . ' AND earlier_member.entry_id < story_member.entry_id'
-            . ' AND earlier_entry.url_hash = member_entry.url_hash))';
+            . ' AND ' . $sameCopy . '))';
     }
 
     /**

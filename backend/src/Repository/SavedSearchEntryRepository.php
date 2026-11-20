@@ -148,7 +148,7 @@ final class SavedSearchEntryRepository extends ServiceEntityRepository
 
         $qb = $this->projection->unreadEntriesQueryBuilder($userId)
             ->select('e.id')
-            ->andWhere('e.effectiveDate <= :until')
+            ->andWhere('e.dates.effectiveDate <= :until')
             ->setParameter('until', $until);
         $this->restrictToMembers($qb, $savedSearchIds, $userId);
 
@@ -164,7 +164,7 @@ final class SavedSearchEntryRepository extends ServiceEntityRepository
     {
         $qb = $this->projection->unreadEntriesQueryBuilder($userId)
             ->select('e.id')
-            ->andWhere('e.effectiveDate > :since')
+            ->andWhere('e.dates.effectiveDate > :since')
             ->setParameter('since', $since);
         $this->restrictToMembers($qb, [$savedSearchId], $userId);
 

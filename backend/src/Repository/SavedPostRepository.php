@@ -319,7 +319,7 @@ final readonly class SavedPostRepository
     /**
      * Every entry column but its id is copied; an override replaces a column's value by an SQL expression. The guard
      * compares the guid hash the copy will carry, overridden or not. Join columns are missing from the column
-     * list: feed_id is the saved feed's, and the quoted link's is added.
+     * list: feed_id is the saved feed's, and the quoted link's and the canonical item's are added.
      *
      * @param array<string, string> $overrides
      */
@@ -329,7 +329,11 @@ final readonly class SavedPostRepository
         $guidHash = $metadata->getColumnName('guid.hash');
         $skipped = [$metadata->getColumnName('id'), ...array_keys($overrides)];
         $copied = array_values(array_diff(
-            [...$metadata->getColumnNames(), $metadata->getSingleAssociationJoinColumnName('quotedLink')],
+            [
+                ...$metadata->getColumnNames(),
+                $metadata->getSingleAssociationJoinColumnName('quotedLink'),
+                $metadata->getSingleAssociationJoinColumnName('canonicalItem'),
+            ],
             $skipped,
         ));
         $sources = [

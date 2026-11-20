@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Entity;
 
 use App\Entity\Discussion;
+use App\Entity\DiscussionCounts;
 use App\Entity\EntryDiscussion;
 use App\Enum\CommentsLoad;
 use PHPUnit\Framework\TestCase;
@@ -104,5 +105,17 @@ final class EntryDiscussionTest extends TestCase
         $stored->store(Discussion::platformThread(str_repeat('a', 2049)));
 
         self::assertEquals(Discussion::none(), $stored->read());
+    }
+
+    public function testNewCommentCountReplacesTheStoredOneAndUnknownKeepsIt(): void
+    {
+        $discussion = new EntryDiscussion();
+
+        $discussion->recordCounts(DiscussionCounts::fromScoreAndComments(null, 3));
+        $discussion->recordCounts(DiscussionCounts::fromScoreAndComments(null, 5));
+        self::assertSame(5, $discussion->getCommentCount());
+
+        $discussion->recordCounts(DiscussionCounts::unknown());
+        self::assertSame(5, $discussion->getCommentCount());
     }
 }

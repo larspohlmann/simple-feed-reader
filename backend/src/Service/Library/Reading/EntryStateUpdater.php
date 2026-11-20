@@ -6,7 +6,6 @@ namespace App\Service\Library\Reading;
 
 use App\Entity\EntryState;
 use App\Entity\User;
-use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
 use App\Service\Library\Reading\Model\EntryStateChangeModel;
 use App\Service\Library\Reading\Model\UpdatedEntryStateModel;
@@ -14,17 +13,17 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
 /**
- * Mirrors isHidden/isViewed onto every other subscribed copy of the same article, so a collapse-hidden duplicate
- * cannot resurface as unread; isFavorite/isKept/isShared stay per copy.
+ * isHidden and isViewed reach the entry's copies, its item's entries or, for an article, every entry at its address,
+ * so a collapse-hidden copy does not resurface as unread.
  */
 final readonly class EntryStateUpdater
 {
     public function __construct(
         private EntryStateResolver $states,
-        private EntryListRepository $rows,
         private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
         private EntryShares $shares,
+        private CopyReadStatePropagator $copyReadStates,
     ) {
     }
 
@@ -34,8 +33,8 @@ final readonly class EntryStateUpdater
         $this->applyReadFlags($state, $change);
         $this->applyMarks($state, $change);
         $sharedAt = $this->applyShared($user, $row, $change);
-        $this->mirror($user, $row, $change);
         $this->entityManager->flush();
+        $this->copyReadStates->spreadChange($user->requireId(), $row->entry, $change);
 
         return new UpdatedEntryStateModel($state, $sharedAt);
     }
@@ -75,32 +74,5 @@ final readonly class EntryStateUpdater
         }
 
         return $this->shares->record($user, $row->entry) ?? $row->marks->sharedAt;
-    }
-
-    private function mirror(User $user, EntryListRow $row, EntryStateChangeModel $change): void
-    {
-        if ($change->isHidden === null && $change->isViewed === null) {
-            return;
-        }
-        $hash = $row->entry->getUrlHash();
-        if ($hash === null) {
-            return;
-        }
-
-        $siblings = $this->rows->siblingRowsForUser($user->requireId(), $hash, $row->entry->requireId());
-        foreach ($siblings as $siblingRow) {
-            $this->mirrorOnto($this->states->resolve($user, $siblingRow), $change);
-        }
-    }
-
-    private function mirrorOnto(EntryState $sibling, EntryStateChangeModel $change): void
-    {
-        // Same isHidden/isViewed invariants as applyTo() above: mirroring must not sidestep them.
-        if ($change->isHidden !== null) {
-            $change->isHidden ? $sibling->hide($this->clock->now()) : $sibling->markUnread();
-        }
-        if ($change->isViewed !== null) {
-            $change->isViewed ? $sibling->markViewed($this->clock->now()) : $sibling->clearViewed();
-        }
     }
 }

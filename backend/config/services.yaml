@@ -338,6 +338,10 @@ services:
               max_nesting_level: 20
               max_delimiters_per_line: 1000
 
+    App\Service\Foundation\CanonicalItem\CanonicalKeys:
+        arguments:
+            $rules: !tagged_iterator app.canonical_key_rule
+
     App\Service\Operations\Logging\Loki\LokiPushHandler:
         arguments:
             $appLabel: 'simple-feed-reader'

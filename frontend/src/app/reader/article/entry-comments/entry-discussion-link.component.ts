@@ -19,6 +19,6 @@ export class EntryDiscussionLinkComponent {
   private readonly comments = inject(CommentsService);
 
   protected readonly commentCount = computed(() =>
-    commentTotal(this.entry(), this.comments.state(this.entry().id)()),
+    commentTotal(this.entry(), this.comments.state(this.entry())()),
   );
 }

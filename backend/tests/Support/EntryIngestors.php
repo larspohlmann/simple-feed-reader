@@ -6,19 +6,20 @@ namespace App\Tests\Support;
 
 use App\Entity\Category;
 use App\Entity\Entry;
-use App\Entity\EntryLemmyPost;
+use App\Entity\LemmyPost;
 use App\Repository\CategoryRepository;
 use App\Repository\EntryRepository;
 use App\Service\Foundation\Sanitize\EntrySanitizer;
 use App\Service\Foundation\Sanitize\TrailingBlankRemover;
 use App\Service\Ingestion\Category\CategoryNormalizer;
+use App\Service\Ingestion\Ingest\CanonicalItemWriter;
 use App\Service\Ingestion\Ingest\EntryCategoryWriter;
 use App\Service\Ingestion\Ingest\EntryImageWriter;
 use App\Service\Ingestion\Ingest\EntryIngestor;
-use App\Service\Ingestion\Ingest\EntryLemmyPostWriter;
 use App\Service\Ingestion\Ingest\EntryTranscriptWriter;
 use App\Service\Ingestion\Ingest\Factory\IngestedEntryFactory;
 use App\Service\Ingestion\Ingest\FeedMetadataRecorder;
+use App\Service\Ingestion\Ingest\LemmyPostWriter;
 use App\Service\Ingestion\Ingest\PlatformEntryRules;
 use App\Service\Ingestion\Ingest\StoredEntryRefresher;
 use App\Service\Ingestion\Language\Factory\LanguageDetectionFactory;
@@ -27,6 +28,7 @@ use App\Service\Ingestion\Language\LanguageGuess;
 use App\Service\Social\Social\ProfileFeedTitle;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
+use Symfony\Component\Clock\NativeClock;
 
 /** An EntryIngestor over the EntityManager's real repositories: the one assembly the ingest and refresh tests share. */
 final class EntryIngestors
@@ -62,7 +64,8 @@ final class EntryIngestors
                 new FeedLanguageResolver(new LanguageGuess(new LanguageDetectionFactory()->create())),
             ),
             new EntryTranscriptWriter($entityManager),
-            self::lemmyPostWriter($entityManager),
+            self::buildLemmyPostWriter($entityManager),
+            self::buildCanonicalItemWriter($entityManager, $clock),
         );
     }
 
@@ -77,12 +80,20 @@ final class EntryIngestors
             $entryRepository,
             $platformRules,
             new EntryImageWriter(),
-            self::lemmyPostWriter($entityManager),
+            self::buildLemmyPostWriter($entityManager),
+            self::buildCanonicalItemWriter($entityManager, new NativeClock()),
         );
     }
 
-    private static function lemmyPostWriter(EntityManagerInterface $entityManager): EntryLemmyPostWriter
+    private static function buildCanonicalItemWriter(
+        EntityManagerInterface $entityManager,
+        ClockInterface $clock,
+    ): CanonicalItemWriter {
+        return new CanonicalItemWriter(CanonicalItems::buildLinker($entityManager, $clock));
+    }
+
+    private static function buildLemmyPostWriter(EntityManagerInterface $entityManager): LemmyPostWriter
     {
-        return new EntryLemmyPostWriter($entityManager, $entityManager->getRepository(EntryLemmyPost::class));
+        return new LemmyPostWriter($entityManager->getRepository(LemmyPost::class));
     }
 }

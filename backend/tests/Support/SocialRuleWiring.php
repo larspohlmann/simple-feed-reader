@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Enum\SocialNetwork;
+use App\Service\Foundation\CanonicalItem\CanonicalKeys;
+use App\Service\Social\Bluesky\BlueskyCanonicalKeyRule;
 use App\Service\Social\Bluesky\BlueskyImportRule;
 use App\Service\Social\Bluesky\BlueskyPostAddressRule;
 use App\Service\Social\Bluesky\BlueskyPrivateFeedRule;
@@ -12,10 +14,12 @@ use App\Service\Social\Bluesky\BlueskyProfileFeedRule;
 use App\Service\Social\Bluesky\HiddenImportFollows;
 use App\Service\Social\Bluesky\HiddenProfiles\HiddenProfilesInterface;
 use App\Service\Social\Bluesky\TolerantHiddenProfiles;
+use App\Service\Social\Lemmy\LemmyCanonicalKeyRule;
 use App\Service\Social\Lemmy\LemmyImportRule;
 use App\Service\Social\Lemmy\LemmyPostAddressRule;
 use App\Service\Social\Lemmy\LemmyPrivateFeedRule;
 use App\Service\Social\Lemmy\LemmyProfileFeedRule;
+use App\Service\Social\Mastodon\MastodonCanonicalKeyRule;
 use App\Service\Social\Mastodon\MastodonImportRule;
 use App\Service\Social\Mastodon\MastodonPostAddressRule;
 use App\Service\Social\Mastodon\MastodonPrivateFeedRule;
@@ -31,6 +35,15 @@ use Symfony\Component\DependencyInjection\ServiceLocator;
 /** The per-network rule pickers over their real adapters, as the container wires them. */
 final class SocialRuleWiring
 {
+    public static function buildCanonicalKeys(): CanonicalKeys
+    {
+        return new CanonicalKeys([
+            new BlueskyCanonicalKeyRule(),
+            new MastodonCanonicalKeyRule(),
+            new LemmyCanonicalKeyRule(),
+        ]);
+    }
+
     public static function postAddresses(): SocialPostAddresses
     {
         $rules = [

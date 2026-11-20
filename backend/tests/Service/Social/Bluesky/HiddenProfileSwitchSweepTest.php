@@ -20,7 +20,6 @@ use App\Repository\EntryStateRepository;
 use App\Repository\EntryTwinRepository;
 use App\Repository\RefusedProfileSubscriptionRepository;
 use App\Repository\SocialAccountRepository;
-use App\Repository\SocialLikeRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Library\SavedPosts\SavedStateMover;
 use App\Service\Library\SavedPosts\Support\SavedFeedUrl;
@@ -540,7 +539,6 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
             new SavedStateMover(
                 self::service(EntryStateRepository::class),
                 self::service(EntryShareRepository::class),
-                self::service(SocialLikeRepository::class),
                 $this->entityManager,
             ),
             self::service(SubscriptionService::class),

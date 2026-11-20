@@ -9,15 +9,12 @@ use App\Entity\Entry;
 use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
-use App\Entity\SocialLike;
 use App\Entity\User;
 use App\Repository\EntryShareRepository;
-use App\Repository\SocialLikeRepository;
 use App\Service\Library\SavedPosts\SavedStateMover;
 use App\Tests\DbTestCase;
 use App\Tests\Support\EntryShareFixtures;
 use App\Tests\Support\SavedPostFixtures;
-use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -227,25 +224,6 @@ final class SavedStateMoverTest extends DbTestCase
         $this->moveSourceToTarget();
 
         self::assertTrue($this->stateOf($this->target->requireId())->isFavorite());
-    }
-
-    public function testTheLikeIsCopied(): void
-    {
-        $account = SocialAccounts::blueskyOf($this->user);
-        $this->entityManager->persist($account);
-        $this->entityManager->persist(
-            new SocialLike($this->user, $this->source, $account, 'at://like', new \DateTimeImmutable(self::READ_AT)),
-        );
-        $this->entityManager->flush();
-        $targetId = $this->target->requireId();
-
-        $this->moveSourceToTarget();
-
-        $likes = $this->entityManager->getRepository(SocialLike::class);
-        self::assertInstanceOf(SocialLikeRepository::class, $likes);
-        $target = $this->entityManager->find(Entry::class, $targetId);
-        self::assertInstanceOf(Entry::class, $target);
-        self::assertSame('at://like', $likes->findOneFor($this->user, $target)?->getRemoteId());
     }
 
     private function moveSourceToTarget(): void

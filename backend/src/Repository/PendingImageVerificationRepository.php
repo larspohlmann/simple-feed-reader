@@ -42,7 +42,7 @@ final class PendingImageVerificationRepository extends ServiceEntityRepository
     {
         /** @var array{waiting: int|string, oldest: ?string} $row */
         $row = $this->pendingQuery()
-            ->select('COUNT(e.id) AS waiting', 'MIN(e.createdAt) AS oldest')
+            ->select('COUNT(e.id) AS waiting', 'MIN(e.dates.createdAt) AS oldest')
             ->getQuery()
             ->getSingleResult();
 

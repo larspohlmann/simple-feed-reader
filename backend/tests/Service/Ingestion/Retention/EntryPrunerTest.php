@@ -4,20 +4,26 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ingestion\Retention;
 
+use App\Entity\CanonicalItem;
+use App\Entity\DiscussionVote;
 use App\Entity\Entry;
 use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
+use App\Entity\PostCommunity;
 use App\Entity\QuotedPostContent;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\RetentionWindows;
 use App\Entity\SharedLink;
+use App\Entity\SocialLike;
 use App\Entity\User;
+use App\Enum\CanonicalItemKind;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\SourceFormat;
+use App\Enum\VoteScore;
 use App\Repository\RetentionRepository;
 use App\Repository\RowIds;
 use App\Service\Ingestion\Retention\EntryPruner;
@@ -26,8 +32,11 @@ use App\Service\Library\Search\EntryIndexer;
 use App\Service\Library\Search\Exception\SearchEngineUnavailableException;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\CanonicalItems;
 use App\Tests\Support\EntryIndexers;
+use App\Tests\Support\LemmyPostEntries;
 use App\Tests\Support\PostEnrichers;
+use App\Tests\Support\SocialAccounts;
 use Symfony\Component\Clock\MockClock;
 
 final class EntryPrunerTest extends DbTestCase
@@ -53,6 +62,7 @@ final class EntryPrunerTest extends DbTestCase
             $this->clock,
             $this->indexer(),
             PostEnrichers::sharedLinks($this->entityManager),
+            CanonicalItems::readRepository($this->entityManager),
         );
     }
 
@@ -69,6 +79,7 @@ final class EntryPrunerTest extends DbTestCase
             $this->clock,
             $this->indexer(),
             PostEnrichers::sharedLinks($this->entityManager),
+            CanonicalItems::readRepository($this->entityManager),
             $cap,
         );
     }
@@ -299,6 +310,7 @@ final class EntryPrunerTest extends DbTestCase
             $this->clock,
             EntryIndexers::with($failingWriter),
             PostEnrichers::sharedLinks($this->entityManager),
+            CanonicalItems::readRepository($this->entityManager),
         );
 
         self::assertSame(10, $pruner->prune());
@@ -571,6 +583,99 @@ final class EntryPrunerTest extends DbTestCase
     private function linkUrls(): array
     {
         return $this->entityManager->getConnection()->fetchFirstColumn('SELECT url FROM shared_link ORDER BY url');
+    }
+
+    public function testItemSurvivesWhileACopyRemains(): void
+    {
+        $prunedFeed = $this->feedWithEntries(self::FLOOR, $this->daysAgo(5));
+        $keptFeed = $this->feedWithEntries(0);
+        $prunedCopy = $this->seedEntry($prunedFeed, LemmyPostEntries::PAGE, $this->daysAgo(120));
+        $keptCopy = $this->seedEntry($keptFeed, LemmyPostEntries::PAGE, $this->daysAgo(5));
+        $this->persistEngagedItem($prunedCopy, $keptCopy);
+
+        self::assertSame(1, $this->pruner->prune());
+
+        self::assertSame(
+            ['canonical_item' => 1, 'discussion_vote' => 1, 'social_like' => 1, 'lemmy_post' => 1],
+            $this->countItemRows(),
+        );
+    }
+
+    public function testLastCopyPrunedRemovesItem(): void
+    {
+        $firstFeed = $this->feedWithEntries(self::FLOOR, $this->daysAgo(5));
+        $secondFeed = $this->feedWithEntries(self::FLOOR, $this->daysAgo(5));
+        $this->persistEngagedItem(
+            $this->seedEntry($firstFeed, LemmyPostEntries::PAGE, $this->daysAgo(120)),
+            $this->seedEntry($secondFeed, LemmyPostEntries::PAGE, $this->daysAgo(120)),
+        );
+
+        self::assertSame(2, $this->pruner->prune());
+
+        self::assertSame(
+            ['canonical_item' => 0, 'discussion_vote' => 0, 'social_like' => 0, 'lemmy_post' => 0],
+            $this->countItemRows(),
+        );
+    }
+
+    public function testAnUnreferencedItemOlderThanADayGoes(): void
+    {
+        $this->persistItemCreatedAt($this->daysAgo(1)->modify('-1 minute'));
+
+        self::assertSame(0, $this->pruner->prune());
+
+        self::assertSame(0, $this->countItemRows()['canonical_item']);
+    }
+
+    public function testAnUnreferencedItemYoungerThanADayStaysForTheIngestStillLinkingIt(): void
+    {
+        $this->persistItemCreatedAt($this->daysAgo(1)->modify('+1 minute'));
+
+        $this->pruner->prune();
+
+        self::assertSame(1, $this->countItemRows()['canonical_item']);
+    }
+
+    private function persistItemCreatedAt(\DateTimeImmutable $createdAt): void
+    {
+        $this->entityManager->persist(new CanonicalItem(CanonicalItemKind::Lemmy, LemmyPostEntries::PAGE, $createdAt));
+        $this->entityManager->flush();
+    }
+
+    /** One item the copies share, with a vote, a like and its Lemmy post row. */
+    private function persistEngagedItem(Entry ...$copies): void
+    {
+        $item = new CanonicalItem(CanonicalItemKind::Lemmy, LemmyPostEntries::PAGE, $this->daysAgo(200));
+        $this->entityManager->persist($item);
+        foreach ($copies as $copy) {
+            $copy->linkTo($item);
+        }
+        $user = new User('voter@example.com', $this->clock->now());
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
+        $account = SocialAccounts::lemmyOf($user);
+        $this->entityManager->persist($account);
+        $this->entityManager->persist(new DiscussionVote($user, $item, $account, VoteScore::Up, $this->clock->now()));
+        $this->entityManager->persist(new SocialLike($user, $item, $account, '42', $this->clock->now()));
+        LemmyPostEntries::storeCommunity(
+            $this->entityManager,
+            $item,
+            PostCommunity::fromIdentityAndUrl('technology@lemmy.world', 'https://lemmy.world/c/technology'),
+        );
+    }
+
+    /** @return array<string, int> rows per table that hangs off a canonical item */
+    private function countItemRows(): array
+    {
+        $connection = $this->entityManager->getConnection();
+        $counts = [];
+        foreach (['canonical_item', 'discussion_vote', 'social_like', 'lemmy_post'] as $table) {
+            $count = $connection->fetchOne('SELECT COUNT(*) FROM ' . $table);
+            self::assertIsNumeric($count);
+            $counts[$table] = (int) $count;
+        }
+
+        return $counts;
     }
 
     public function testNothingToPruneReturnsZero(): void

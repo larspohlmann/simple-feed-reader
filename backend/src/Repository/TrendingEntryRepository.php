@@ -123,7 +123,8 @@ final readonly class TrendingEntryRepository
     /**
      * @return list<array{
      *   id: int|string, feed_id: int|string, language: string|null, title: string, title_derived: bool|int|string,
-     *   summary: string|null, effective_date: string, url_hash: string|null, article_url: string|null,
+     *   summary: string|null, effective_date: string, url_hash: string|null, canonical_item_id: int|string|null,
+     *   article_url: string|null,
      *   card_link_id: int|string|null, card_url_hash: string|null, card_url: string|null, card_title: string|null,
      *   card_description: string|null, card_site_name: string|null, card_language: string|null
      * }>
@@ -133,7 +134,8 @@ final readonly class TrendingEntryRepository
         /**
          * @var list<array{
          *   id: int|string, feed_id: int|string, language: string|null, title: string, title_derived: bool|int|string,
-         *   summary: string|null, effective_date: string, url_hash: string|null, article_url: string|null,
+         *   summary: string|null, effective_date: string, url_hash: string|null, canonical_item_id: int|string|null,
+         *   article_url: string|null,
          *   card_link_id: int|string|null, card_url_hash: string|null, card_url: string|null, card_title: string|null,
          *   card_description: string|null, card_site_name: string|null, card_language: string|null
          * }> $rows
@@ -142,7 +144,8 @@ final readonly class TrendingEntryRepository
             \sprintf(
                 'SELECT e.id, e.feed_id, COALESCE(e.language, f.language) AS language, e.title, e.title_derived,'
                 . ' SUBSTR(e.summary, 1, %d) AS summary,'
-                . ' e.effective_date, e.url_hash, CASE WHEN f.network IS NULL THEN e.url END AS article_url,'
+                . ' e.effective_date, e.url_hash, e.canonical_item_id,'
+                . ' CASE WHEN f.network IS NULL THEN e.url END AS article_url,'
                 . ' link.id AS card_link_id, ' . LinkLandingSql::URL_HASH . ' AS card_url_hash,'
                 . ' ' . LinkLandingSql::URL . ' AS card_url,'
                 . ' link.title AS card_title, link.site_name AS card_site_name, link.language AS card_language,'
@@ -167,7 +170,8 @@ final readonly class TrendingEntryRepository
     /**
      * @param array{
      *   id: int|string, feed_id: int|string, language: string|null, title: string, title_derived: bool|int|string,
-     *   summary: string|null, effective_date: string, url_hash: string|null, article_url: string|null,
+     *   summary: string|null, effective_date: string, url_hash: string|null, canonical_item_id: int|string|null,
+     *   article_url: string|null,
      *   card_link_id: int|string|null, card_url_hash: string|null, card_url: string|null, card_title: string|null,
      *   card_description: string|null, card_site_name: string|null, card_language: string|null
      * } $row
@@ -183,6 +187,7 @@ final readonly class TrendingEntryRepository
             $row['summary'],
             NaiveUtc::parse($row['effective_date']),
             new EntryLinksModel($row['url_hash'], $row['article_url'], self::buildCard($row)),
+            $row['canonical_item_id'] === null ? null : (int) $row['canonical_item_id'],
         );
     }
 

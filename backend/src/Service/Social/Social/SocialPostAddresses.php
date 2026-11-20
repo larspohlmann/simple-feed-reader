@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social;
 
+use App\Entity\CanonicalItem;
 use App\Entity\Entry;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
@@ -42,6 +43,13 @@ final readonly class SocialPostAddresses
     public function requirePost(Entry $entry): SocialPostAddressModel
     {
         return $this->findPost($entry)
+            ?? throw new NotASocialPostException('This entry is not a post this reader can act on.');
+    }
+
+    /** @throws NotASocialPostException */
+    public function requireItem(Entry $entry): CanonicalItem
+    {
+        return $entry->getCanonicalItem()
             ?? throw new NotASocialPostException('This entry is not a post this reader can act on.');
     }
 

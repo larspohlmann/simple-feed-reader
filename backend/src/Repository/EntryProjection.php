@@ -62,6 +62,7 @@ final readonly class EntryProjection
     {
         return QuotedLinkJoin::onto($this->entries(), 'e')
             ->leftJoin('e.feed', 'f')->addSelect('f')
+            ->leftJoin('e.canonicalItem', 'ci')->addSelect('ci')
             // Unrelated-entity joins: the caller's subscription to this entry's
             // feed, and the caller's optional per-entry state row.
             ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')

@@ -11,7 +11,6 @@ use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\FeedRepository;
 use App\Service\Content\LinkCard\SharedLinkWriter;
-use App\Service\Library\Search\EntryIndexer;
 use App\Service\Operations\Backup\Pass\RestoreDestination;
 use App\Service\Operations\Backup\Pass\RestoreEntryLoader;
 use App\Service\Operations\Backup\Pass\RestoreFeedTargets;
@@ -30,7 +29,6 @@ final readonly class RestoreEntryLoaderFactory
         private EntryShareRepository $entryShares,
         private EntryBatchInserter $inserter,
         private SharedLinkWriter $linkWriter,
-        private EntryIndexer $indexer,
         private RestoredEntryStateFactory $stateFactory,
         private FeedRepository $feeds,
     ) {
@@ -48,7 +46,6 @@ final readonly class RestoreEntryLoaderFactory
             $this->entryShares,
             $this->inserter,
             $this->linkWriter,
-            $this->indexer,
             $this->stateFactory,
             new RestoreDestination(
                 $user,

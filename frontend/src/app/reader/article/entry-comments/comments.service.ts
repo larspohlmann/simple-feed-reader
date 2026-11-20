@@ -9,6 +9,7 @@ import { EntryDto } from '../../models';
 import { ReaderApi } from '../../reader-api';
 import { SocialPostApi, VoteAnswer } from '../../social-post-api';
 import { VoteValue, steppedScore } from '../../vote-pill/vote';
+import { ItemRef, buildItemKey } from '../../state/item-key';
 import { withReply, withoutReply } from './thread-edits';
 
 const CACHE_CAP = 50;
@@ -52,7 +53,7 @@ export function commentTotal(
 export class CommentsService {
   private readonly api = inject(ReaderApi);
   private readonly socialPosts = inject(SocialPostApi);
-  private readonly states = new Map<number, WritableSignal<CommentsState>>();
+  private readonly states = new Map<string, WritableSignal<CommentsState>>();
   private readonly toggles = new OptimisticToggles(inject(ToastService));
   private generation = 0;
 
@@ -60,74 +61,74 @@ export class CommentsService {
     onIdentityChange(() => this.clear());
   }
 
-  state(id: number): Signal<CommentsState> {
-    return this.stateFor(id).asReadonly();
+  state(item: ItemRef): Signal<CommentsState> {
+    return this.stateFor(item).asReadonly();
   }
 
-  load(id: number): void {
-    const state = this.stateFor(id);
-    if (isStale(state())) this.fetch(state, this.api.comments(id));
+  load(item: ItemRef): void {
+    const state = this.stateFor(item);
+    if (isStale(state())) this.fetch(state, this.api.comments(item.id));
   }
 
   /** A reload waits out a like or repost on the wire, whose answer the reloaded thread might not include yet. */
-  reload(id: number): void {
-    const state = this.stateFor(id);
-    if (state().status === 'loading' || this.toggles.isBusy(id)) return;
-    this.fetch(state, this.api.comments(id, true));
+  reload(item: ItemRef): void {
+    const state = this.stateFor(item);
+    if (state().status === 'loading' || this.toggles.isBusy(buildItemKey(item))) return;
+    this.fetch(state, this.api.comments(item.id, true));
   }
 
   /** Optimistic like of one comment; dropped while a like of the same comment is on the wire. */
-  toggleLike(entryId: number, post: EntryCommentPostDto): void {
-    this.toggle(entryId, post, 'isLiked');
+  toggleLike(item: ItemRef, post: EntryCommentPostDto): void {
+    this.toggle(item, post, 'isLiked');
   }
 
   /** Optimistic repost of one comment; dropped while one is on the wire or the network forbids it. */
-  toggleRepost(entryId: number, post: EntryCommentPostDto): void {
-    if (post.canRepost) this.toggle(entryId, post, 'isReposted');
+  toggleRepost(item: ItemRef, post: EntryCommentPostDto): void {
+    if (post.canRepost) this.toggle(item, post, 'isReposted');
   }
 
-  vote(entryId: number, comment: EntryCommentDto, to: VoteValue): void {
+  vote(item: ItemRef, comment: EntryCommentDto, to: VoteValue): void {
     if (comment.vote === null) return;
     const { address, myVote: from } = comment.vote;
     const score = comment.score ?? 0;
-    const state = this.stateFor(entryId);
+    const state = this.stateFor(item);
     const show = (shown: VoteAnswer) =>
       state.update((current) => withVote(current, address, shown));
-    this.toggles.change(entryId, {
+    this.toggles.change(buildItemKey(item), {
       key: `vote ${address}`,
-      send: () => this.socialPosts.voteComment(entryId, address, to).pipe(tap(show)),
+      send: () => this.socialPosts.voteComment(item.id, address, to).pipe(tap(show)),
       apply: () => show({ myVote: to, score: steppedScore(score, from, to) }),
       revert: () => show({ myVote: from, score }),
     });
   }
 
   /** Shows a reply the reader just published, until the next load brings it from the network. */
-  insertReply(entryId: number, parentAddress: string | null, reply: EntryCommentDto): void {
-    this.stateFor(entryId).update((state) =>
+  insertReply(item: ItemRef, parentAddress: string | null, reply: EntryCommentDto): void {
+    this.stateFor(item).update((state) =>
       state.status === 'ok'
         ? { ...state, comments: withReply(state.comments, parentAddress, reply) }
         : state,
     );
   }
 
-  removeReply(entryId: number, address: string): void {
-    this.stateFor(entryId).update((state) =>
+  removeReply(item: ItemRef, address: string): void {
+    this.stateFor(item).update((state) =>
       state.status === 'ok' ? { ...state, comments: withoutReply(state.comments, address) } : state,
     );
   }
 
-  countQuote(entryId: number, address: string): void {
-    this.stateFor(entryId).update((state) => withQuote(state, address));
+  countQuote(item: ItemRef, address: string): void {
+    this.stateFor(item).update((state) => withQuote(state, address));
   }
 
-  private toggle(entryId: number, post: EntryCommentPostDto, flag: PostFlag): void {
+  private toggle(item: ItemRef, post: EntryCommentPostDto, flag: PostFlag): void {
     const { address } = post;
     const to = !post[flag];
-    const state = this.stateFor(entryId);
+    const state = this.stateFor(item);
     const { set, unset } = POST_FLAGS[flag];
-    this.toggles.run(entryId, {
+    this.toggles.run(buildItemKey(item), {
       key: `${flag} ${address}`,
-      send: () => this.socialPosts[to ? set : unset](entryId, address),
+      send: () => this.socialPosts[to ? set : unset](item.id, address),
       to,
       show: (value) =>
         state.update((current) =>
@@ -136,10 +137,11 @@ export class CommentsService {
     });
   }
 
-  private stateFor(id: number): WritableSignal<CommentsState> {
-    const state = this.states.get(id) ?? signal<CommentsState>({ status: 'idle' });
-    this.states.delete(id);
-    this.states.set(id, state);
+  private stateFor(item: ItemRef): WritableSignal<CommentsState> {
+    const key = buildItemKey(item);
+    const state = this.states.get(key) ?? signal<CommentsState>({ status: 'idle' });
+    this.states.delete(key);
+    this.states.set(key, state);
     const oldest = this.states.size > CACHE_CAP ? this.states.keys().next().value : undefined;
     if (oldest !== undefined) this.states.delete(oldest);
     return state;

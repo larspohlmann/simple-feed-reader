@@ -27,7 +27,7 @@ use App\Service\Foundation\Url\Support\YouTubeUrl;
  * @phpstan-import-type LinkCardRow from LinkCardJson
  * @phpstan-import-type ThreadPostRow from ThreadPostJson
  * @phpstan-type EntryRow array{
- *   id: int|null, title: string, url: string|null, author: string|null,
+ *   id: int|null, canonicalItemId: int|null, title: string, url: string|null, author: string|null,
  *   summary: string|null, excerpt: string, contentHtml?: string|null,
  *   chapters?: list<array{startSeconds: int, title: string}>|null,
  *   transcript?: array{
@@ -86,6 +86,7 @@ final readonly class EntryJson
         $shortPlayerUrl = YouTubeUrl::shortPlayerUrl($entry->getUrl());
 
         return $this->completed($row) + [
+            'canonicalItemId' => $entry->getCanonicalItemId(),
             'title' => $entry->getTitle(),
             'url' => $entry->getUrl(),
         ] + self::buildDiscussionRow($row) + [
@@ -137,7 +138,7 @@ final readonly class EntryJson
             'media' => EntryMedia::toJsonList($entry->getMedia()),
             'linkCards' => array_map($this->linkCardJson->from(...), $row->enrichment->linkCards),
             'thread' => array_map($this->threadPostJson->from(...), $row->enrichment->threadPosts),
-            'threadLength' => 1 + $entry->getSelfReplyCount(),
+            'threadLength' => 1 + $entry->selectDiscussionCounts()->getSelfReplyCount(),
             'share' => $entry->getShareKind()?->value,
             'quote' => $this->quotedPostJson->fromOptional($entry->getQuotedPost()),
         ];
@@ -165,7 +166,7 @@ final readonly class EntryJson
             'discussionUrl' => $discussion->url,
             'comments' => $discussion->commentsLoad?->value,
             'score' => $row->enrichment->lemmy?->score,
-            'commentCount' => $row->entry->getCommentCount(),
+            'commentCount' => $row->entry->selectDiscussionCounts()->getCommentCount(),
         ];
     }
 

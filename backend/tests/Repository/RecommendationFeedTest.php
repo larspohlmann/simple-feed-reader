@@ -12,12 +12,15 @@ use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\CanonicalItemKind;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\RunStatus;
 use App\Pagination\RecommendationCursor;
 use App\Repository\ForYouFeedQuery;
 use App\Repository\RecommendationItemRepository;
 use App\Tests\DbTestCase;
+use App\Tests\Support\CanonicalItems;
+use App\Tests\Support\QueryRecorder;
 
 final class RecommendationFeedTest extends DbTestCase
 {
@@ -168,6 +171,26 @@ final class RecommendationFeedTest extends DbTestCase
             new \DateTimeImmutable('2026-08-07T09:05:00Z'),
             $rows[0]->runGeneratedAt,
         );
+    }
+
+    public function testARowReadsItsCanonicalItemWithoutAQueryOfItsOwn(): void
+    {
+        $item = CanonicalItems::buildItem(CanonicalItemKind::Lemmy, 'https://lemmy.world/post/7');
+        $item->recordCommentCount(5);
+        $this->entityManager->persist($item);
+        $entry = $this->entry('linked');
+        $entry->linkTo($item);
+        $this->item($this->seedRun($this->user, RunStatus::Completed), $entry, 1, 'reason');
+        $this->entityManager->clear();
+
+        $rows = $this->repository()->listForYou(new ForYouFeedQuery($this->user, null, 20), null);
+        /** @var QueryRecorder $recorder */
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        $recorder->reset();
+
+        self::assertCount(1, $rows);
+        self::assertSame(5, $rows[0]->row->entry->selectDiscussionCounts()->getCommentCount());
+        self::assertSame([], $recorder->queries());
     }
 
     public function testCarriesFlagsAndFoldsTheWatermark(): void

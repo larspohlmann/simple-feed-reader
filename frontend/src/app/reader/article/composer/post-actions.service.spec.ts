@@ -31,6 +31,7 @@ describe('PostActions', () => {
   let dialog: { open: jest.Mock };
   let actions: PostActions;
 
+  const item = { id: 7, canonicalItemId: 3 };
   const sent: SentPost = {
     address: 'https://x/9',
     url: null,
@@ -81,7 +82,7 @@ describe('PostActions', () => {
   });
 
   it('opens the composer as an app dialog for the reply', () => {
-    actions.reply(7, 'mastodon', null);
+    actions.reply(item, 'mastodon', null);
 
     expect(dialog.open).toHaveBeenCalledWith(ComposerDialogComponent, {
       panelClass: 'app-dialog',
@@ -90,21 +91,21 @@ describe('PostActions', () => {
   });
 
   it('shows a reply to the post at once and counts it on the post', () => {
-    actions.reply(7, 'mastodon', null);
+    actions.reply(item, 'mastodon', null);
 
     expect(comments.insertReply).toHaveBeenCalledWith(
-      7,
+      item,
       null,
       expect.objectContaining({ authorHandle: '@a' }),
     );
-    expect(counts.stepReplies).toHaveBeenCalledWith(7, true);
+    expect(counts.stepReplies).toHaveBeenCalledWith(item, true);
     expect(sentOverlays()).toEqual([]);
   });
 
   it('shows a reply to a comment under it, which counts it there, not on the post', () => {
-    actions.reply(7, 'mastodon', ADDRESS);
+    actions.reply(item, 'mastodon', ADDRESS);
 
-    expect(comments.insertReply).toHaveBeenCalledWith(7, ADDRESS, expect.anything());
+    expect(comments.insertReply).toHaveBeenCalledWith(item, ADDRESS, expect.anything());
     expect(counts.stepReplies).not.toHaveBeenCalled();
   });
 
@@ -112,14 +113,14 @@ describe('PostActions', () => {
     const posted: SentPost = { ...sent, url: 'https://x.test/@a/9', kind: 'quote' };
     composed = of([posted]);
 
-    actions.quote(7, 'mastodon', null);
+    actions.quote(item, 'mastodon', null);
 
     expect(dialog.open).toHaveBeenCalledWith(
       ComposerDialogComponent,
       expect.objectContaining({ data: expect.objectContaining({ kind: 'quote' }) }),
     );
     expect(comments.insertReply).not.toHaveBeenCalled();
-    expect(counts.stepQuotes).toHaveBeenCalledWith(7);
+    expect(counts.stepQuotes).toHaveBeenCalledWith(item);
     expect(shares.reflect).toHaveBeenCalledWith(7);
     expect(dialog.open).toHaveBeenCalledWith(
       PostSentDialogComponent,
@@ -128,10 +129,10 @@ describe('PostActions', () => {
   });
 
   it('counts a quote of a reply on that reply', () => {
-    actions.quote(7, 'mastodon', ADDRESS);
+    actions.quote(item, 'mastodon', ADDRESS);
 
     expect(counts.stepQuotes).not.toHaveBeenCalled();
-    expect(comments.countQuote).toHaveBeenCalledWith(7, ADDRESS);
+    expect(comments.countQuote).toHaveBeenCalledWith(item, ADDRESS);
     expect(shares.reflect).not.toHaveBeenCalled();
     expect(sentOverlays()).toHaveLength(1);
   });
@@ -139,7 +140,7 @@ describe('PostActions', () => {
   it('shares nothing when the quote composer closes unsent', () => {
     composed = of(undefined);
 
-    actions.quote(7, 'mastodon', null);
+    actions.quote(item, 'mastodon', null);
 
     expect(shares.reflect).not.toHaveBeenCalled();
   });
@@ -208,14 +209,14 @@ describe('PostActions', () => {
   it('changes nothing when the composer closes without sending', () => {
     composed = of(undefined);
 
-    actions.reply(7, 'mastodon', null);
+    actions.reply(item, 'mastodon', null);
 
     expect(comments.insertReply).not.toHaveBeenCalled();
     expect(sentOverlays()).toEqual([]);
   });
 
   it('deletes a reply only after the reader confirms, then drops it and its count', () => {
-    actions.delete(7, 'mastodon', comment(0));
+    actions.delete(item, 'mastodon', comment(0));
 
     expect(confirm.ask).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -224,12 +225,12 @@ describe('PostActions', () => {
       }),
     );
     expect(api.deleteReply).toHaveBeenCalledWith(7, ADDRESS);
-    expect(comments.removeReply).toHaveBeenCalledWith(7, ADDRESS);
-    expect(counts.stepReplies).toHaveBeenCalledWith(7, false);
+    expect(comments.removeReply).toHaveBeenCalledWith(item, ADDRESS);
+    expect(counts.stepReplies).toHaveBeenCalledWith(item, false);
   });
 
   it('leaves the post count alone when the deleted reply answered a comment', () => {
-    actions.delete(7, 'mastodon', comment(1));
+    actions.delete(item, 'mastodon', comment(1));
 
     expect(counts.stepReplies).not.toHaveBeenCalled();
   });
@@ -237,7 +238,7 @@ describe('PostActions', () => {
   it('deletes nothing when the reader cancels', () => {
     confirm.ask.mockReturnValue(of(false));
 
-    actions.delete(7, 'mastodon', comment(0));
+    actions.delete(item, 'mastodon', comment(0));
 
     expect(api.deleteReply).not.toHaveBeenCalled();
   });
@@ -257,7 +258,7 @@ describe('PostActions', () => {
       ),
     );
 
-    actions.delete(7, 'mastodon', comment(0));
+    actions.delete(item, 'mastodon', comment(0));
 
     expect(comments.removeReply).not.toHaveBeenCalled();
     expect(toast.showProblem).toHaveBeenCalledWith(
@@ -356,11 +357,11 @@ describe('PostActions', () => {
     it('reply and quote still use the single post', () => {
       composed = of([{ ...first, kind: 'reply' }, second]);
 
-      actions.reply(7, 'mastodon', null);
+      actions.reply(item, 'mastodon', null);
 
       expect(comments.insertReply).toHaveBeenCalledTimes(1);
       expect(comments.insertReply).toHaveBeenCalledWith(
-        7,
+        item,
         null,
         expect.objectContaining({ post: expect.objectContaining({ address: 'https://x/10' }) }),
       );

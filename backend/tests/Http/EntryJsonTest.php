@@ -17,6 +17,7 @@ use App\Entity\ImageRendition;
 use App\Entity\LinkCardContent;
 use App\Entity\PostCommunity;
 use App\Entity\QuotedPostContent;
+use App\Enum\CanonicalItemKind;
 use App\Enum\CommentsLoad;
 use App\Enum\ShareKind;
 use App\Enum\SocialNetwork;
@@ -31,11 +32,15 @@ use App\Repository\EntryListRowSocial;
 use App\Repository\EntryListRowSubscription;
 use App\Service\Content\Chapter\Model\ServedChaptersModel;
 use App\Service\Social\Social\Model\ThreadPostModel;
+use App\Tests\Support\AssignsEntityIds;
+use App\Tests\Support\CanonicalItems;
 use App\Tests\Support\JsonMappers;
 use PHPUnit\Framework\TestCase;
 
 final class EntryJsonTest extends TestCase
 {
+    use AssignsEntityIds;
+
     public function testEmitsMediaAndAttachmentsAsStructuredArrays(): void
     {
         $entry = new Entry(
@@ -256,7 +261,7 @@ final class EntryJsonTest extends TestCase
     public function testTheThreadLengthCountsTheRepliesNotFolded(): void
     {
         $entry = $this->entryTitled('Root');
-        $entry->countSelfReplies(6);
+        $entry->selectDiscussionCounts()->recordSelfReplyCount(6);
         $post = new ThreadPostModel('https://x/2', null, '<p>two</p>', [], null);
         $row = $this->row($entry, new EntryListRowEnrichment(threadPosts: [$post]));
 
@@ -344,6 +349,39 @@ final class EntryJsonTest extends TestCase
         self::assertSame('A short summary.', $json['summary']);
         self::assertSame('2026-09-06T10:00:00+00:00', $json['publishedAt']);
         self::assertSame('2026-09-07T00:00:00+00:00', $json['createdAt']);
+    }
+
+    public function testPostCarriesItsItemId(): void
+    {
+        $item = self::withId(CanonicalItems::buildItem(CanonicalItemKind::Lemmy, 'https://lemmy.world/post/7'), 41);
+        $item->recordCounts(DiscussionCounts::fromScoreAndComments(12, 5));
+        $lemmy = new EntryListRowLemmy(score: 12, community: null, myVote: VoteScore::Up);
+        $copies = [$this->entryTitled('Copy one'), $this->entryTitled('Copy two')];
+        foreach ($copies as $copy) {
+            $copy->linkTo($item);
+        }
+
+        [$first, $second] = array_map(
+            fn (Entry $copy): array => JsonMappers::entryJson()->listRow(
+                $this->row($copy, new EntryListRowEnrichment(lemmy: $lemmy)),
+            ),
+            $copies,
+        );
+
+        self::assertSame(41, $first['canonicalItemId']);
+        self::assertSame($first['canonicalItemId'], $second['canonicalItemId']);
+        self::assertSame(5, $first['commentCount']);
+        self::assertSame($first['commentCount'], $second['commentCount']);
+        self::assertSame($first['myVote'], $second['myVote']);
+        self::assertSame($first['score'], $second['score']);
+    }
+
+    public function testArticleCarriesNullItemId(): void
+    {
+        $json = JsonMappers::entryJson()->listRow($this->row($this->entryTitled('Article')));
+
+        self::assertArrayHasKey('canonicalItemId', $json);
+        self::assertNull($json['canonicalItemId']);
     }
 
     public function testAnEntryWithoutASocialStateSaysSo(): void
@@ -462,7 +500,7 @@ final class EntryJsonTest extends TestCase
     public function testTheStoredCommentCountIsEmitted(): void
     {
         $entry = $this->entryTitled('Post');
-        $entry->recordDiscussionCounts(DiscussionCounts::fromScoreAndComments(-3, 0));
+        $entry->selectDiscussionCounts()->recordCounts(DiscussionCounts::fromScoreAndComments(-3, 0));
 
         $json = JsonMappers::entryJson()->listRow($this->row($entry));
 
@@ -508,8 +546,8 @@ final class EntryJsonTest extends TestCase
         self::assertSame(
             [
                 'id', 'pending', 'summary', 'excerpt', 'imageUrl', 'imageWidth', 'imageHeight',
-                'imageRenditions', 'media', 'linkCards', 'thread', 'threadLength', 'share', 'quote', 'title', 'url',
-                'discussionUrl',
+                'imageRenditions', 'media', 'linkCards', 'thread', 'threadLength', 'share', 'quote',
+                'canonicalItemId', 'title', 'url', 'discussionUrl',
                 'comments', 'score', 'commentCount',
                 'author', 'imageAspectRatio', 'attachments', 'categories', 'publishedAt', 'createdAt',
                 'subscriptionId', 'source', 'poster',

@@ -4,25 +4,35 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Library\Subscription;
 
+use App\Entity\Discussion;
 use App\Entity\Entry;
+use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
+use App\Repository\EntryStateRepository;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
 use App\Service\Library\Subscription\FirstFetchRecorder;
 use App\Service\Sourcing\Discovery\Model\DiscoveredFeedModel;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\CopyReadStatePropagators;
 use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\EntryIngestors;
 use App\Tests\Support\FeedSchedulers;
+use App\Tests\Support\LemmyPostCopies;
+use App\Tests\Support\LemmyPostEntries;
+use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\PostEnrichers;
+use App\Tests\Support\SeedsUsers;
 use Symfony\Component\Clock\MockClock;
 
 final class FirstFetchRecorderTest extends DbTestCase
 {
+    use SeedsUsers;
+
     private FirstFetchRecorder $recorder;
     private RecordingSearchIndexWriter $indexWriter;
 
@@ -39,6 +49,7 @@ final class FirstFetchRecorderTest extends DbTestCase
             $clock,
             EntryIndexers::with($this->indexWriter),
             PostEnrichers::queue($this->entityManager, $clock),
+            CopyReadStatePropagators::build($this->entityManager, $clock),
         );
     }
 
@@ -173,6 +184,42 @@ final class FirstFetchRecorderTest extends DbTestCase
         $feed = $this->feed();
 
         self::assertSame(200, $this->recorder->record($feed, $this->discovered($feed, $this->parsedEntries(200))));
+    }
+
+    public function testACopyOfAPostAlreadyReadArrivesReadAndOutOfTheUnreadCount(): void
+    {
+        $reader = $this->user('first-fetch-copy@example.com');
+        $subscriptions = new NetworkFeedSubscriptions($this->entityManager);
+        $local = $subscriptions->subscribe($reader, LemmyPostCopies::LOCAL_FEED)->getFeed();
+        $readCopy = LemmyPostCopies::persistCopy($this->entityManager, $local, 'local-copy');
+        $state = new EntryState($reader, $readCopy);
+        $state->hide(new \DateTimeImmutable('2026-05-31T00:00:00Z'));
+        $this->entityManager->persist($state);
+        $all = $subscriptions->subscribe($reader, LemmyPostCopies::ALL_FEED)->getFeed();
+        $lateCopy = $this->parsedEntry('all-copy', new \DateTimeImmutable('2026-05-30 00:00:00'))
+            ->asDiscussionThread(Discussion::platformThread(LemmyPostEntries::PAGE));
+
+        $unread = $this->recorder->record($all, $this->discovered($all, [
+            $lateCopy,
+            $this->parsedEntry('unrelated', new \DateTimeImmutable('2026-05-29 00:00:00')),
+        ]));
+
+        self::assertSame(1, $unread);
+        $this->entityManager->clear();
+        $copy = $this->findByGuid($all, 'all-copy');
+        self::assertNotNull($copy);
+        $copyState = $this->requireEntryStates()->findOneForUserEntry($reader->requireId(), $copy->requireId());
+        self::assertNotNull($copyState);
+        self::assertTrue($copyState->isHidden());
+        self::assertFalse($copyState->isViewed());
+    }
+
+    private function requireEntryStates(): EntryStateRepository
+    {
+        /** @var EntryStateRepository $states */
+        $states = $this->entityManager->getRepository(EntryState::class);
+
+        return $states;
     }
 
     private function feed(): Feed

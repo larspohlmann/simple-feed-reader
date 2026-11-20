@@ -21,20 +21,20 @@ export interface OptimisticChange {
 }
 
 /**
- * Flags toggled ahead of their answer; a toggle whose key is still on the wire for its entry is dropped, and a failed
+ * Flags toggled ahead of their answer; a toggle whose key is still on the wire for its item is dropped, and a failed
  * one is toasted.
  */
 export class OptimisticToggles {
-  private readonly inFlight = new Map<number, Set<string>>();
+  private readonly inFlight = new Map<string, Set<string>>();
 
   constructor(private readonly toast: ToastService) {}
 
-  isBusy(entryId: number): boolean {
-    return this.inFlight.has(entryId);
+  isBusy(itemKey: string): boolean {
+    return this.inFlight.has(itemKey);
   }
 
-  run(entryId: number, toggle: OptimisticToggle): void {
-    this.change(entryId, {
+  run(itemKey: string, toggle: OptimisticToggle): void {
+    this.change(itemKey, {
       key: toggle.key,
       apply: () => toggle.show(toggle.to),
       revert: () => toggle.show(!toggle.to),
@@ -42,15 +42,15 @@ export class OptimisticToggles {
     });
   }
 
-  change(entryId: number, change: OptimisticChange): void {
-    const keys = this.inFlight.get(entryId) ?? new Set<string>();
+  change(itemKey: string, change: OptimisticChange): void {
+    const keys = this.inFlight.get(itemKey) ?? new Set<string>();
     if (keys.has(change.key)) return;
     keys.add(change.key);
-    this.inFlight.set(entryId, keys);
+    this.inFlight.set(itemKey, keys);
     change.apply();
     change
       .send()
-      .pipe(finalize(() => this.settle(entryId, change.key)))
+      .pipe(finalize(() => this.settle(itemKey, change.key)))
       .subscribe({
         error: (error: HttpErrorResponse) => {
           change.revert();
@@ -63,10 +63,10 @@ export class OptimisticToggles {
     this.inFlight.clear();
   }
 
-  private settle(entryId: number, key: string): void {
-    const keys = this.inFlight.get(entryId);
+  private settle(itemKey: string, key: string): void {
+    const keys = this.inFlight.get(itemKey);
     keys?.delete(key);
-    if (keys?.size === 0) this.inFlight.delete(entryId);
+    if (keys?.size === 0) this.inFlight.delete(itemKey);
   }
 }
 

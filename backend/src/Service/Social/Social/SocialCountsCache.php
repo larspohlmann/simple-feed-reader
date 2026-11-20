@@ -6,10 +6,10 @@ namespace App\Service\Social\Social;
 
 use App\Entity\Entry;
 use App\Service\Social\Social\Model\SocialCountsModel;
-use App\Service\Social\Social\Model\SocialPostAddressModel;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
+/** A post's counts for a short while, kept per canonical item so every copy shows what one copy fetched. */
 final readonly class SocialCountsCache
 {
     public function __construct(
@@ -19,36 +19,44 @@ final readonly class SocialCountsCache
     ) {
     }
 
-    public function find(SocialPostAddressModel $post): ?SocialCountsModel
+    public function find(Entry $entry): ?SocialCountsModel
     {
-        $item = $this->cache->getItem(self::buildKey($post));
+        $key = $this->findKey($entry);
+        if (null === $key) {
+            return null;
+        }
+        $item = $this->cache->getItem($key);
 
         return $item->isHit() ? SocialCountsModel::fromCacheEntryOrNull($item->get()) : null;
     }
 
-    public function remember(SocialPostAddressModel $post, SocialCountsModel $counts): void
+    public function remember(Entry $entry, SocialCountsModel $counts): void
     {
-        $item = $this->cache->getItem(self::buildKey($post));
+        $key = $this->findKey($entry);
+        if (null === $key) {
+            return;
+        }
+        $item = $this->cache->getItem($key);
         $item->set($counts->toCacheEntry());
         $this->cache->save($item);
     }
 
-    public function forget(SocialPostAddressModel $post): void
+    public function forget(Entry $entry): void
     {
-        $this->cache->deleteItem(self::buildKey($post));
-    }
-
-    /** An entry that is no network post has no counts to forget. */
-    public function forgetEntry(Entry $entry): void
-    {
-        $post = $this->postAddresses->findPost($entry);
-        if (null !== $post) {
-            $this->forget($post);
+        $key = $this->findKey($entry);
+        if (null !== $key) {
+            $this->cache->deleteItem($key);
         }
     }
 
-    private static function buildKey(SocialPostAddressModel $post): string
+    private function findKey(Entry $entry): ?string
     {
-        return 'social_counts.' . hash('xxh128', $post->network->value . ' ' . $post->address);
+        $itemId = $entry->getCanonicalItemId();
+        if (null !== $itemId) {
+            return 'social_counts.item.' . $itemId;
+        }
+        $post = $this->postAddresses->findPost($entry);
+
+        return null === $post ? null : 'social_counts.' . hash('xxh128', $post->network->value . ' ' . $post->address);
     }
 }

@@ -57,7 +57,7 @@ final readonly class IngestedEntryFactory
         $entry->recordText($this->completeText($entry->getText(), $feed, $parsed));
         $entry->setPublishedAt($parsed->publishedAt);
         $entry->setDiscussion($parsed->discussion);
-        $entry->recordDiscussionCounts($parsed->discussionCounts);
+        $entry->selectDiscussionCounts()->recordCounts($parsed->discussionCounts);
         $this->imageWriter->writeOrMarkNone($entry, $parsed->media->image);
         self::attachMedia($entry, $parsed);
         self::declareChapters($entry, $parsed);

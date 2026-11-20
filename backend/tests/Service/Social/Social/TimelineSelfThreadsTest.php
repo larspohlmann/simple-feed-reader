@@ -83,7 +83,7 @@ final class TimelineSelfThreadsTest extends DbTestCase
             $this->threadHtmlOf(self::uri('100')),
         );
         self::assertSame(4, $this->entityManager->getRepository(ThreadPost::class)->count());
-        self::assertSame(6, $this->rootOf(self::uri('100'))->getSelfReplyCount());
+        self::assertSame(6, $this->rootOf(self::uri('100'))->selectDiscussionCounts()->getSelfReplyCount());
     }
 
     public function testAStoredRootKeepsTheLongerCountItAlreadyHas(): void
@@ -91,7 +91,7 @@ final class TimelineSelfThreadsTest extends DbTestCase
         $feed = $this->feed();
         $now = new \DateTimeImmutable('2026-10-10 17:00:00');
         $root = new Entry($feed, self::uri('100'), 'https://mastodon.example/@bob/100', 'Status 100', $now, $now);
-        $root->countSelfReplies(6);
+        $root->selectDiscussionCounts()->recordSelfReplyCount(6);
         $this->entityManager->persist($root);
         $this->entityManager->flush();
 
@@ -102,7 +102,7 @@ final class TimelineSelfThreadsTest extends DbTestCase
         $this->selfThreads()->fold($feed, $plan->threads, []);
 
         self::assertSame([self::uri('100') => 1], $plan->threads->replyCounts);
-        self::assertSame(6, $root->getSelfReplyCount());
+        self::assertSame(6, $root->selectDiscussionCounts()->getSelfReplyCount());
     }
 
     public function testAPageWhoseRepliesJoinNoChainCountsNothing(): void

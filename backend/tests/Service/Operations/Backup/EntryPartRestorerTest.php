@@ -27,8 +27,11 @@ use App\Service\Operations\Backup\Exception\BackupDoesNotFitException;
 use App\Service\Operations\Backup\Exception\InvalidBackupException;
 use App\Service\Operations\Backup\Factory\RestoredEntryStateFactory;
 use App\Service\Operations\Backup\Factory\RestoreEntryLoaderFactory;
+use App\Service\Operations\Backup\RestoredEntryFinisher;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\CanonicalItems;
+use App\Tests\Support\CopyReadStatePropagators;
 use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\ReloadsEntities;
@@ -601,12 +604,22 @@ final class EntryPartRestorerTest extends DbTestCase
             $entryShares,
             $inserter,
             PostEnrichers::sharedLinkWriter($this->entityManager),
-            EntryIndexers::with($this->indexWriter),
             new RestoredEntryStateFactory(new MockClock('2026-08-20 00:00:00', 'UTC')),
             $feeds,
         );
 
-        return new EntryPartRestorer($inspector, $reader, $loaderFactory);
+        return new EntryPartRestorer(
+            $inspector,
+            $reader,
+            $loaderFactory,
+            new RestoredEntryFinisher(
+                $this->entityManager,
+                $entries,
+                CanonicalItems::buildLinker($this->entityManager, new MockClock('2026-08-20 00:00:00', 'UTC')),
+                EntryIndexers::with($this->indexWriter),
+                CopyReadStatePropagators::build($this->entityManager, new MockClock('2026-08-20 00:00:00', 'UTC')),
+            ),
+        );
     }
 
     private function subscribedUser(string $feedUrl): User

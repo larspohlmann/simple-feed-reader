@@ -230,6 +230,6 @@ final class EntrySocialCountsControllerTest extends ApiTestCase
         $fixtures = new NetworkFeedSubscriptions($this->entityManager());
         $subscription = $fixtures->subscribe($user, NetworkFeedSubscriptions::PLAIN);
 
-        return $fixtures->post($subscription, self::MASTODON_POST_URL, '2026-10-12T10:00:00Z')->requireId();
+        return $fixtures->persistPost($subscription, self::MASTODON_POST_URL, '2026-10-12T10:00:00Z')->requireId();
     }
 }

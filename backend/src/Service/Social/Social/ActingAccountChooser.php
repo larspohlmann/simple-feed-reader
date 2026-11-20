@@ -65,6 +65,20 @@ final readonly class ActingAccountChooser
             );
     }
 
+    /**
+     * The account that already acted on the item, else the one the entry's feed picks.
+     *
+     * @throws NoSocialAccountForNetworkException
+     */
+    public function requireStoredOrActing(
+        ?SocialAccount $stored,
+        User $user,
+        Entry $entry,
+        SocialNetwork $network,
+    ): SocialAccount {
+        return $stored ?? $this->requireAccount($user, $entry, $network);
+    }
+
     private function findAccount(User $user, Feed $feed, SocialNetwork $network): ?SocialAccount
     {
         if (null === SocialFeedClassifier::parsePrivateAddress($feed)) {

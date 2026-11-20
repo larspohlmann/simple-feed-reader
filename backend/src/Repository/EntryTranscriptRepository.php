@@ -109,7 +109,7 @@ final class EntryTranscriptRepository extends ServiceEntityRepository implements
     {
         /** @var array{waiting: int|string, oldest: ?string} $row */
         $row = $this->pendingQuery()
-            ->select('COUNT(transcript.id) AS waiting', 'MIN(entry.createdAt) AS oldest')
+            ->select('COUNT(transcript.id) AS waiting', 'MIN(entry.dates.createdAt) AS oldest')
             ->join('transcript.entry', 'entry')
             ->getQuery()
             ->getSingleResult();
