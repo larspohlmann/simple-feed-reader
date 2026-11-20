@@ -11,6 +11,10 @@ describe('buildItemKey', () => {
     expect(buildItemKey({ id: 2, canonicalItemId: null })).toBe('entry:2');
   });
 
+  it('treats a missing canonical item id like none', () => {
+    expect(buildItemKey({ id: 3 })).toBe('entry:3');
+  });
+
   it('keeps an entry id apart from an item id of the same number', () => {
     expect(buildItemKey({ id: 7, canonicalItemId: null })).not.toBe(
       buildItemKey({ id: 1, canonicalItemId: 7 }),
